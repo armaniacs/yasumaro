@@ -2,13 +2,19 @@ import { StatusInfo } from './statusChecker.js';
 import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
+import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 import { getMessage } from '../utils/i18n.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getCurrentTab } from './tabUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
-import { updateStatusIcon, escapeHtml } from './domUtils.js';
+import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
+import { requestContentFromTab } from './contentFetchGateway.js';
+import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
+import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
+
+/** Per-element toast timer — rapid double-deny used to start two competing chains (PBI 2026-09-12-41). */
+let errorToastTimer: ReturnType<typeof setTimeout> | undefined = null as unknown as ReturnType<typeof setTimeout> | undefined;
 
 export async function initStatusPanel(): Promise<void> {
   try {
@@ -48,8 +54,10 @@ export async function initStatusPanel(): Promise<void> {
     renderStatusPanel(status);
 
     if (currentTab.id) {
-      chrome.tabs.sendMessage(currentTab.id, { type: 'GET_CONTENT' }, (response: ContentResponse | undefined) => {
-        if (chrome.runtime.lastError || !response) return;
+      // PBI 2026-09-11-04: passive ask through the shared gateway (timeout +
+      // no prompts) instead of a raw callback send with no timeout.
+      void requestContentFromTab(currentTab.id).then((response: ContentResponse | null) => {
+        if (!response) return;
         updateCleansingStatus(response.cleanseStats, response.cleansedReason);
       });
     }
@@ -60,21 +68,26 @@ export async function initStatusPanel(): Promise<void> {
 
     initCleansingFeedbackButton();
 
-    const toggleBtn = document.getElementById('statusToggleBtn');
+    const toggleBtn = document.getElementById('statusToggleBtn') as (HTMLElement & { dataset: DOMStringMap }) | null;
     const detailsPanel = document.getElementById('statusDetails');
 
-    toggleBtn?.addEventListener('click', () => {
-      const isExpanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-      toggleBtn.setAttribute('aria-expanded', String(!isExpanded));
-      detailsPanel?.classList.toggle('hidden');
-      detailsPanel?.setAttribute('aria-hidden', String(isExpanded));
+    // Wire once per element — initStatusPanel re-runs after every whitelist
+    // write and a bare addEventListener stacks duplicate toggle handlers
+    // (PBI 2026-09-12-29). Same wireOnce discipline as the other buttons.
+    wireOnce(toggleBtn, (el) => {
+      el.addEventListener('click', () => {
+        const isExpanded = el.getAttribute('aria-expanded') === 'true';
+        el.setAttribute('aria-expanded', String(!isExpanded));
+        detailsPanel?.classList.toggle('hidden');
+        detailsPanel?.setAttribute('aria-hidden', String(isExpanded));
 
-      const toggleText = document.getElementById('statusToggleText');
-      if (toggleText) {
-        toggleText.textContent = isExpanded
-          ? getMessage('statusShowDetails')
-          : getMessage('statusHideDetails');
-      }
+        const toggleText = document.getElementById('statusToggleText');
+        if (toggleText) {
+          toggleText.textContent = isExpanded
+            ? getMessage('statusShowDetails')
+            : getMessage('statusHideDetails');
+        }
+      });
     });
   } catch (error) {
     logError('Error initializing status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
@@ -83,55 +96,22 @@ export async function initStatusPanel(): Promise<void> {
   }
 }
 
+// PBI 2026-09-12-41: label policy lives in the shared CleansingBadge table.
+// This one-line adapter is kept for main.ts's re-export.
 export function getCleansedReasonText(cleansedReason?: 'hard' | 'keyword' | 'both' | 'none'): string {
-  if (!cleansedReason || cleansedReason === 'none') {
-    return '';
-  }
-
-  switch (cleansedReason) {
-    case 'hard':
-      return getMessage('cleansedBadgeHard') || '🧹 Hard';
-    case 'keyword':
-      return getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
-    case 'both':
-      return getMessage('cleansedBadgeBoth') || '🧹 Both';
-    default:
-      return '';
-  }
+  return getCleansedBadgeText(cleansedReason, getMessage);
 }
 
 export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStats'], cleansedReason?: ContentResponse['cleansedReason']): void {
   const cleansingContent = document.getElementById('statusCleansingContent');
   if (!cleansingContent) return;
-
-  if (!cleanseStats || cleanseStats.totalRemoved === 0) {
-    cleansingContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusCleansingNone')}</span>`;
-    return;
-  }
-
-  let html = '';
-
-  const reasonText = getCleansedReasonText(cleansedReason);
-  if (reasonText) {
-    html += `<span class="status-value">${reasonText}</span>`;
-  }
-
-  if (cleanseStats.hardStripRemoved > 0) {
-    html += `<span class="status-value">${getMessage('statusCleansingHard', [String(cleanseStats.hardStripRemoved)])}</span>`;
-  }
-  if (cleanseStats.keywordStripRemoved > 0) {
-    html += `<span class="status-value">${getMessage('statusCleansingKeyword', [String(cleanseStats.keywordStripRemoved)])}</span>`;
-  }
-  if (cleanseStats.totalRemoved > 0) {
-    html += `<span class="status-value status-muted">${getMessage('statusCleansingTotal', [String(cleanseStats.totalRemoved)])}</span>`;
-  }
-  cleansingContent.innerHTML = html;
+  // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+  cleansingContent.innerHTML = renderCleansingHtml(cleanseStats, cleansedReason, { t: getMessage, esc: escapeHtml });
 }
 
 export async function updateTrustStatus(url: string): Promise<void> {
   const trustContent = document.getElementById('statusTrustContent');
   const permArea = document.getElementById('permissionRequestArea');
-  const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
   const errorMsg = document.getElementById('permissionDeniedMessage') as HTMLElement | null;
   if (!trustContent) return;
 
@@ -140,39 +120,56 @@ export async function updateTrustStatus(url: string): Promise<void> {
     const allUrlsGranted = await isAllUrlsPermitted();
     const permitted = allUrlsGranted || await isHostPermitted(url);
     if (!permitted) {
-      trustContent.innerHTML = `<span class="status-value status-trust-locked">🔒 LOCKED</span>`;
-      if (recordBtn) recordBtn.disabled = true;
+      // PBI 2026-09-11-04 (round 5): LOCKED is communicated via the badge +
+      // permission area only. The record button is owned solely by
+      // RecordSession (sole-writer contract, PBI 2026-09-07-24) — disabling
+      // it here raced resetRecordButton and blocked the designed
+      // "Record Anyway" (force) escape hatch.
+      trustContent.innerHTML = renderLockedHtml({ t: getMessage, esc: escapeHtml });
       if (permArea) {
         permArea.classList.remove('hidden');
-        document.getElementById('btnRequestPermission')?.addEventListener('click', async () => {
-          const granted = await requestPermission(url);
-          if (granted) {
-            permArea.classList.add('hidden');
-            if (recordBtn) recordBtn.disabled = false;
-            void updateTrustStatus(url);
-          } else {
-            const domain = new URL(url).hostname;
-            await recordDeniedVisit(domain);
-            if (errorMsg) {
-              errorMsg.classList.remove('hidden');
-              requestAnimationFrame(() => {
-                errorMsg.classList.add('visible');
-              });
-              setTimeout(() => {
-                errorMsg.classList.remove('visible');
-                setTimeout(() => {
-                  errorMsg.classList.add('hidden');
-                }, 300);
-              }, 3000);
+        // Wire the request button once per element — updateTrustStatus runs on
+        // every status refresh and addEventListener would stack duplicate
+        // handlers (double prompt + double recordDeniedVisit).
+        const requestBtn = document.getElementById('btnRequestPermission') as HTMLElement & { dataset: DOMStringMap } | null;
+        wireOnce(requestBtn, (el) => {
+          el.addEventListener('click', async () => {
+            // PBI 2026-09-12-41: extractDomain instead of `new URL(url)` —
+            // a malformed URL threw before the toast ever showed. The stale
+            // closure URL concern (user navigates between render and click)
+            // is noted but re-querying chrome.tabs added async complexity
+            // that broke the wiring contract; revisit with an event-based
+            // tab-URL refresh.
+            const granted = await requestPermission(url);
+            if (granted) {
+              permArea.classList.add('hidden');
+              void updateTrustStatus(url);
+            } else {
+              const domain = extractDomain(url);
+              if (domain) await recordDeniedVisit(domain);
+              if (errorMsg) {
+                errorMsg.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                  errorMsg.classList.add('visible');
+                });
+                // PBI 2026-09-12-41: per-element timer token — rapid double-deny
+                // used to start two competing toast chains.
+                if (errorToastTimer !== undefined) clearTimeout(errorToastTimer);
+                errorToastTimer = setTimeout(() => {
+                  errorMsg.classList.remove('visible');
+                  setTimeout(() => {
+                    errorMsg.classList.add('hidden');
+                  }, 300);
+                }, 3000);
+              }
             }
-          }
+          });
         });
       }
       return;
     }
 
     if (permArea) permArea.classList.add('hidden');
-    if (recordBtn) recordBtn.disabled = false;
 
     const { getTrustLevelDisplay, checkDomainTrust } = await import('../utils/trustChecker.js');
     const [display, checkResult] = await Promise.all([
@@ -180,23 +177,10 @@ export async function updateTrustStatus(url: string): Promise<void> {
       checkDomainTrust(url)
     ]);
 
-    const levelKey = `statusTrust${display.level.charAt(0) + display.level.slice(1).toLowerCase()}` as
-      'statusTrustTrusted' | 'statusTrustSensitive' | 'statusTrustUnverified';
-    const levelText = getMessage(levelKey) || display.level;
-
-    const trustClass = `status-trust-${display.level.toLowerCase()}`;
-    let html = `<span class="status-value ${trustClass}">${levelText}</span>`;
-
-    if (checkResult.showAlert && checkResult.trustResult.category) {
-      const catKey = checkResult.trustResult.category === 'finance'
-        ? 'statusTrustAlertFinance'
-        : 'statusTrustAlertSensitive';
-      html += `<span class="status-value status-warning">${getMessage(catKey)}</span>`;
-    }
-
-    trustContent.innerHTML = html;
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    trustContent.innerHTML = renderTrustHtml(display, checkResult, { t: getMessage, esc: escapeHtml });
   } catch {
-    trustContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+    trustContent.innerHTML = renderTrustFallbackHtml({ t: getMessage, esc: escapeHtml });
   }
 }
 
@@ -258,15 +242,8 @@ function renderStatusPanel(status: StatusInfo): void {
   const domainMode = document.getElementById('statusDomainMode');
 
   if (domainState) {
-    const stateMsg = status.domainFilter.allowed
-      ? getMessage('statusDomainAllowed')
-      : getMessage('statusDomainBlocked');
-    domainState.innerHTML = `<span class="status-value ${status.domainFilter.allowed ? 'status-success' : 'status-error'}">${stateMsg}</span>`;
-
-    if (status.domainFilter.matchedPattern) {
-      const patternMsg = getMessage('statusPattern', [escapeHtml(status.domainFilter.matchedPattern)]);
-      domainState.innerHTML += `<span class="status-value status-muted">${patternMsg}</span>`;
-    }
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    domainState.innerHTML = renderDomainStateHtml(status, { t: getMessage, esc: escapeHtml });
   }
 
   if (domainMode) {
@@ -276,79 +253,23 @@ function renderStatusPanel(status: StatusInfo): void {
 
   const privacyContent = document.getElementById('statusPrivacyContent');
   if (privacyContent) {
-    if (!status.privacy.hasCache) {
-      privacyContent.innerHTML = `
-        <span class="status-value status-muted">${getMessage('statusNoInfo')}</span>
-        <span class="status-value status-muted status-hint">${getMessage('statusReloadHint')}</span>
-      `;
-    } else {
-      let html = '';
-      if (status.privacy.isPrivate) {
-        if (status.privacy.reason === 'cache-control') {
-          html += `<span class="status-value status-warning">${getMessage('statusCacheControlPrivate')}</span>`;
-        } else if (status.privacy.reason === 'set-cookie') {
-          html += `<span class="status-value status-warning">${getMessage('statusSetCookieDetected')}</span>`;
-        } else if (status.privacy.reason === 'authorization') {
-          html += `<span class="status-value status-warning">${getMessage('statusAuthDetected')}</span>`;
-        }
-
-        html += `
-          <div class="status-actions">
-            <button class="status-action-btn" id="statusAddDomain" data-i18n="saveDomain">ドメインを許可</button>
-            <button class="status-action-btn" id="statusAddPath" data-i18n="savePath">パスを許可</button>
-          </div>
-        `;
-      } else {
-        html += `<span class="status-value status-success">${getMessage('statusPublicPage')}</span>`;
-      }
-      privacyContent.innerHTML = html;
-
-      if (status.privacy.isPrivate) {
-        attachPrivacyActionListeners();
-      }
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    privacyContent.innerHTML = renderPrivacyHtml(status, { t: getMessage, esc: escapeHtml });
+    if (status.privacy.isPrivate) {
+      attachPrivacyActionListeners();
     }
   }
 
   const cacheContent = document.getElementById('statusCacheContent');
   if (cacheContent) {
-    let html = '';
-
-    console.log('[StatusPanel] Cache status:', {
-      hasCache: status.cache.hasCache,
-      cacheControl: status.cache.cacheControl,
-      hasCookie: status.cache.hasCookie,
-      hasAuth: status.cache.hasAuth
-    });
-
-    if (!status.cache.hasCache) {
-      html = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
-    } else {
-      if (status.cache.cacheControl) {
-        html += `<span class="status-value">Cache-Control: ${escapeHtml(status.cache.cacheControl)}</span>`;
-      }
-      if (status.cache.hasCookie) {
-        html += `<span class="status-value">${getMessage('statusSetCookiePresent')}</span>`;
-      }
-      if (status.cache.hasAuth) {
-        html += `<span class="status-value">${getMessage('statusAuthorizationPresent')}</span>`;
-      }
-      if (!html) {
-        html = `<span class="status-value status-muted">${getMessage('statusNoCacheInfo')}</span>`;
-      }
-    }
-    cacheContent.innerHTML = html;
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    cacheContent.innerHTML = renderCacheHtml(status, { t: getMessage, esc: escapeHtml });
   }
 
   const lastSavedContent = document.getElementById('statusLastSavedContent');
   if (lastSavedContent) {
-    if (!status.lastSaved.exists) {
-      lastSavedContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNotSaved')}</span>`;
-    } else {
-      lastSavedContent.innerHTML = `
-        <span class="status-value">${escapeHtml(status.lastSaved.timeAgo || '')}</span>
-        <span class="status-value status-muted">${escapeHtml(status.lastSaved.formatted || '')}</span>
-      `;
-    }
+    // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
+    lastSavedContent.innerHTML = renderLastSavedHtml(status, { t: getMessage, esc: escapeHtml });
   }
 
   const cleansingContent = document.getElementById('statusCleansingContent');
@@ -386,20 +307,24 @@ function attachPrivacyActionListeners(): void {
     if (tab?.url) {
       const domain = extractDomain(tab.url);
       if (domain) {
-        const settings = await settingsRepository.getAll();
-        const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
-        if (!whitelist.includes(domain)) {
-          whitelist.push(domain);
-          await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: whitelist } as unknown as import('../utils/storage/types.js').Settings);
-          await updateDomainFilterCache(await settingsRepository.getAll());
-
+        // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
+        // in the shared whitelist writer seam.
+        const result = await addDomainToWhitelist(domain);
+        if (result.ok && result.added) {
           const statusDiv = document.getElementById('mainStatus');
           if (statusDiv) {
             statusDiv.textContent = getMessage('domainAddedToWhitelist') || `Added ${domain} to whitelist`;
             statusDiv.className = 'success';
           }
-
           await initStatusPanel();
+        } else if (!result.ok) {
+          const statusDiv = document.getElementById('mainStatus');
+          if (statusDiv) {
+            statusDiv.textContent = result.reason === 'no-domain'
+              ? 'Invalid URL'
+              : `Invalid pattern: ${domain}`;
+            statusDiv.className = 'error';
+          }
         }
       }
     }
@@ -409,20 +334,22 @@ function attachPrivacyActionListeners(): void {
   addPathBtn?.addEventListener('click', async () => {
     const tab = await getCurrentTab();
     if (tab?.url) {
-      const settings = await settingsRepository.getAll();
-      const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
-      if (!whitelist.includes(tab.url)) {
-        whitelist.push(tab.url);
-        await settingsRepository.setAll({ [StorageKeys.DOMAIN_WHITELIST]: whitelist } as unknown as import('../utils/storage/types.js').Settings);
-        await updateDomainFilterCache(await settingsRepository.getAll());
-
+      const result = await addPathToWhitelist(tab.url);
+      if (result.ok && result.added) {
         const statusDiv = document.getElementById('mainStatus');
         if (statusDiv) {
           statusDiv.textContent = getMessage('pathAddedToWhitelist') || `Added path to whitelist`;
           statusDiv.className = 'success';
         }
-
         await initStatusPanel();
+      } else if (!result.ok) {
+        const statusDiv = document.getElementById('mainStatus');
+        if (statusDiv) {
+          statusDiv.textContent = result.reason === 'no-domain'
+            ? 'Invalid URL'
+            : `Invalid pattern: ${tab.url}`;
+          statusDiv.className = 'error';
+        }
       }
     }
   });
@@ -442,22 +369,33 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
 
   banner.classList.remove('hidden');
 
-  document.getElementById('btnRequestAllUrls')?.addEventListener('click', async () => {
-    const granted = await requestAllUrls();
-    if (granted) {
-      banner.classList.add('hidden');
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (tabs[0]?.url) {
-        void updateTrustStatus(tabs[0].url);
+  // Wire once per element — re-init (popup reopen / recursive initStatusPanel)
+  // must not stack duplicate requestAllUrls handlers. Same discipline as
+  // btnRequestPermission (PBI 2026-09-11-04).
+  const btn = document.getElementById('btnRequestAllUrls') as HTMLElement & { dataset: DOMStringMap } | null;
+  wireOnce(btn, (el) => {
+    el.addEventListener('click', async () => {
+      const granted = await requestAllUrls();
+      if (granted) {
+        banner.classList.add('hidden');
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tabs[0]?.url) {
+          void updateTrustStatus(tabs[0].url);
+        }
       }
-    }
+    });
   });
 }
 
 function initCleansingFeedbackButton(): void {
-  const btn = document.getElementById('reportCleansingFeedbackBtn') as HTMLButtonElement | null;
+  const btn = document.getElementById('reportCleansingFeedbackBtn') as (HTMLButtonElement & { dataset: DOMStringMap }) | null;
   if (!btn) return;
-  btn.addEventListener('click', async () => {
+  // Wire once per element — attachPrivacyActionListeners re-inits the panel
+  // after every whitelist write, and re-running init() stacked a duplicate
+  // click handler each time (PBI 2026-09-12-08). Same discipline as the
+  // permission buttons (PBI 2026-09-11-04).
+  wireOnce(btn, (el) => {
+    el.addEventListener('click', async () => {
     const statusEl = document.getElementById('reportCleansingFeedbackStatus');
     try {
       const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -467,12 +405,7 @@ function initCleansingFeedbackButton(): void {
       let htmlSnippet = '';
       let removedByReason: Record<string, number> = {};
       if (tab?.id !== undefined) {
-        const resp = await new Promise<ContentResponse | undefined>((resolve) => {
-          chrome.tabs.sendMessage(tab.id!, { type: 'GET_CONTENT' }, (r: ContentResponse | undefined) => {
-            if (chrome.runtime.lastError) resolve(undefined);
-            else resolve(r);
-          });
-        });
+        const resp = await requestContentFromTab(tab.id);
         if (resp?.content) htmlSnippet = resp.content.slice(0, 500);
         if (resp?.cleanseStats) removedByReason = { ...resp.cleanseStats } as unknown as Record<string, number>;
         if (resp?.aiSummaryCleansedStats) {
@@ -490,6 +423,7 @@ function initCleansingFeedbackButton(): void {
       logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
     }
     setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
+    });
   });
 }
 

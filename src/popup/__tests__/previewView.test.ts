@@ -99,50 +99,6 @@ describe('PreviewViewImpl', () => {
     expect(() => view.setPreviewContent('hello')).not.toThrow();
   });
 
-  it('show opens modal with showModal when available', () => {
-    const doc = createMockDoc();
-    const view = new PreviewViewImpl(doc);
-    const modal = view.getModal() as HTMLDialogElement;
-    let called = false;
-    modal.showModal = () => { called = true; };
-    view.show('<b>html</b>');
-    expect(called).toBe(true);
-  });
-
-  it('show falls back to open=true when showModal throws', () => {
-    const doc = createMockDoc();
-    const view = new PreviewViewImpl(doc);
-    const modal = view.getModal() as HTMLDialogElement;
-    modal.showModal = () => { throw new Error('not allowed'); };
-    view.show('<b>html</b>');
-    expect((modal as any).open).toBe(true);
-  });
-
-  it('show handles missing modal gracefully', () => {
-    const emptyDoc = document.implementation.createHTMLDocument();
-    const view = new PreviewViewImpl(emptyDoc);
-    expect(() => view.show('html')).not.toThrow();
-  });
-
-  it('onConfirm and onCancel register handlers', () => {
-    const view = new PreviewViewImpl();
-    const h1 = vi.fn();
-    const h2 = vi.fn();
-    view.onConfirm(h1);
-    view.onCancel(h2);
-    expect(view.getConfirmHandlers()).toContain(h1);
-    expect(view.getCancelHandlers()).toContain(h2);
-  });
-
-  it('clearHandlers removes all handlers', () => {
-    const view = new PreviewViewImpl();
-    view.onConfirm(vi.fn());
-    view.onCancel(vi.fn());
-    view.clearHandlers();
-    expect(view.getConfirmHandlers()).toHaveLength(0);
-    expect(view.getCancelHandlers()).toHaveLength(0);
-  });
-
   it('ensureMaskStatusElement returns existing element', () => {
     const doc = createMockDoc();
     const view = new PreviewViewImpl(doc);
@@ -181,13 +137,6 @@ describe('PreviewViewImpl', () => {
     const emptyDoc = document.implementation.createHTMLDocument();
     const view = new PreviewViewImpl(emptyDoc);
     expect(() => view.updateMaskStatus('x', true)).not.toThrow();
-  });
-
-  it('resetBodyWidth sets width', () => {
-    const doc = document.implementation.createHTMLDocument();
-    const view = new PreviewViewImpl(doc);
-    view.resetBodyWidth();
-    expect(doc.body.style.width).toBe('320px');
   });
 
   it('focusPreview does not throw when element missing', () => {
@@ -282,11 +231,43 @@ describe('PreviewViewImpl', () => {
     expect(anchor.querySelector(`#${DOM_IDS.MASK_NAV}`)).not.toBeNull();
   });
 
-  describe('focusTrap wiring (PBI-25)', () => {
-    afterEach(() => {
-      focusTrapManager.releaseAll();
-    });
+  it('buildNavigation rewires on second show — stale closures do not survive (PBI 2026-09-12-10)', () => {
+    const doc = createMockDoc();
+    const view = new PreviewViewImpl(doc);
+    doc.getElementById(DOM_IDS.MASK_NAV)?.remove();
+    const firstPrev = vi.fn();
+    const firstNext = vi.fn();
+    view.buildNavigation([{ start: 0, end: 1 }], firstPrev, firstNext);
+    const secondPrev = vi.fn();
+    const secondNext = vi.fn();
+    view.buildNavigation(
+      [{ start: 0, end: 1 }, { start: 5, end: 9 }],
+      secondPrev,
+      secondNext,
+    );
+    const prevBtn = doc.getElementById(DOM_IDS.MASK_NAV_PREV) as HTMLButtonElement;
+    const nextBtn = doc.getElementById(DOM_IDS.MASK_NAV_NEXT) as HTMLButtonElement;
+    prevBtn.click();
+    nextBtn.click();
+    expect(firstPrev).not.toHaveBeenCalled();
+    expect(firstNext).not.toHaveBeenCalled();
+    expect(secondPrev).toHaveBeenCalledTimes(1);
+    expect(secondNext).toHaveBeenCalledTimes(1);
+    const counter = doc.getElementById(DOM_IDS.MASK_NAV_COUNTER);
+    expect(counter?.textContent).toBe('0/2');
+  });
 
+  it('refreshLabels re-resolves button titles', () => {
+    const doc = createMockDoc();
+    const view = new PreviewViewImpl(doc);
+    doc.getElementById(DOM_IDS.MASK_NAV)?.remove();
+    view.buildNavigation([{ start: 0, end: 1 }], vi.fn(), vi.fn());
+    expect(() => view.refreshLabels()).not.toThrow();
+    expect(doc.getElementById(DOM_IDS.MASK_NAV_PREV)).not.toBeNull();
+    expect(doc.getElementById(DOM_IDS.MASK_NAV_NEXT)).not.toBeNull();
+  });
+
+  describe('trap ownership (PBI 2026-09-11-03)', () => {
     function setupOpenableModal(doc: Document): HTMLDialogElement {
       const modal = doc.getElementById(DOM_IDS.MODAL) as HTMLDialogElement;
       (modal as any).showModal = () => { (modal as any).open = true; };
@@ -297,65 +278,16 @@ describe('PreviewViewImpl', () => {
       return modal;
     }
 
-    it('show traps focus and close releases it', () => {
+    // PBI 2026-09-12-37: view.show/close were removed (the presenter owns
+    // modal lifecycle). The trap-ownership assertion now runs against the
+    // presenter's own inline open/close — verified in previewPresenter tests.
+    it('view exposes no show/close members at all', () => {
       const doc = createMockDoc();
       const view = new PreviewViewImpl(doc);
-      const modal = setupOpenableModal(doc);
-      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
-      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
-      try {
-        view.show('<b>html</b>');
-        expect((modal as any).open).toBe(true);
-        expect(trapSpy).toHaveBeenCalledTimes(1);
-        expect(trapSpy).toHaveBeenCalledWith(modal, expect.any(Function));
-
-        view.close();
-        expect(releaseSpy).toHaveBeenCalled();
-        expect((modal as any).open).toBe(false);
-      } finally {
-        trapSpy.mockRestore();
-        releaseSpy.mockRestore();
-      }
-    });
-
-    it('native close event releases the trap (Escape path)', () => {
-      const doc = createMockDoc();
-      const view = new PreviewViewImpl(doc);
-      const modal = setupOpenableModal(doc);
-      const releaseSpy = vi.spyOn(focusTrapManager, 'release');
-      try {
-        view.show('<b>html</b>');
-        expect(
-          [...focusTrapManager.handlers.values()].filter((h) => h.element === modal)
-        ).toHaveLength(1);
-
-        modal.close();
-        expect(releaseSpy).toHaveBeenCalled();
-        expect(
-          [...focusTrapManager.handlers.values()].filter((h) => h.element === modal)
-        ).toHaveLength(0);
-      } finally {
-        releaseSpy.mockRestore();
-      }
-    });
-
-    it('re-show does not double-trap', () => {
-      const doc = createMockDoc();
-      const view = new PreviewViewImpl(doc);
-      setupOpenableModal(doc);
-      const modal = view.getModal() as HTMLDialogElement;
-      const trapSpy = vi.spyOn(focusTrapManager, 'trap');
-      try {
-        view.show('first');
-        view.show('second');
-        expect(trapSpy).toHaveBeenCalledTimes(2);
-        expect(
-          [...focusTrapManager.handlers.values()].filter((h) => h.element === modal)
-        ).toHaveLength(1);
-        view.close();
-      } finally {
-        trapSpy.mockRestore();
-      }
+      expect((view as unknown as Record<string, unknown>).show).toBeUndefined();
+      expect((view as unknown as Record<string, unknown>).close).toBeUndefined();
+      expect((view as unknown as Record<string, unknown>).setCleansingInfo).toBeUndefined();
+      expect((view as unknown as Record<string, unknown>).resetBodyWidth).toBeUndefined();
     });
   });
 });

@@ -31,11 +31,13 @@ import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
-import { StorageKeys } from '../utils/storage/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { normalizeStorageQuery } from './queryNormalize.js';
+import { planQuery, planSearch, planPurge } from './queryPlanner.js';
+import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
+import { supportsArchive, type ArchiveStaging } from './archiveStaging.js';
 import { UPDATABLE_FIELDS } from './schema.js';
 import { buildRecordFromPayload } from './browsingLogCodec.js';
+import { collectMigrationExtras } from './sqliteStatus.js';
 import type { SqliteMessage, SqliteMessageType } from '../messaging/sqliteMessages.js';
 
 export type SqliteHandler = (
@@ -69,8 +71,7 @@ async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) 
 
 async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
-  const options: import('../utils/sqlite-types.js').StorageQuery = normalizeStorageQuery(payload);
-  const result = await sqliteQuery(options);
+  const result = await sqliteQuery(planQuery(payload));
   sendResponse(result);
 }
 
@@ -97,11 +98,7 @@ async function handleAuditLogQuery(msg: SqliteMessage, sendResponse: (r: unknown
 
 async function handleSearch(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const p = (msg as Extract<SqliteMessage, { type: 'SQLITE_SEARCH' }>).payload;
-  const q: import('../utils/sqlite-types.js').StorageQuery = {
-    text: String(p.query || ''),
-    ...normalizeStorageQuery(p as unknown as Record<string, unknown>),
-  };
-  const result = await sqliteQuery(q);
+  const result = await sqliteQuery(planSearch(p as unknown as Record<string, unknown>));
   sendResponse(result);
 }
 
@@ -135,64 +132,17 @@ async function handleCount(_msg: SqliteMessage, sendResponse: (r: unknown) => vo
   sendResponse(result);
 }
 
-// Old-path constants — must match opfsMigrationV2Reader.ts / migrationBackup.ts
-// exactly, since they name pre-migration storage locations that must never change.
-const OLD_OPFS_POOL_DIR = 'yasumaro-opfs';
-const OLD_OPFS_DB_FILENAME = 'yasumaro.db';
-const OLD_IDB_NAME = 'idb-batch-atomic';
-
-/** Origin Private File System has no path API — only directory/file existence can be checked. */
-async function oldOpfsDbExists(): Promise<boolean> {
-  try {
-    const root = await navigator.storage.getDirectory();
-    const dir = await root.getDirectoryHandle(OLD_OPFS_POOL_DIR, { create: false });
-    await dir.getFileHandle(OLD_OPFS_DB_FILENAME, { create: false });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function oldIdbDbExists(): Promise<boolean> {
-  try {
-    const databases = await indexedDB.databases?.() ?? [];
-    return databases.some((d) => d.name === OLD_IDB_NAME);
-  } catch {
-    return false;
-  }
-}
-
+// PBI 2026-09-11-06: STATUS enrichment (migration flags + legacy-DB probes)
+// moved to sqliteStatus.ts — field-isolated collection + the SSOT legacy-path
+// constants. This handler only merges the extras onto the backend's base shape.
 async function handleStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const result = await sqliteGetStatus();
-  if (result.success) {
-    try {
-      const [items, opfsLegacyExists, idbLegacyExists] = await Promise.all([
-        chrome.storage.local.get([
-          StorageKeys.OPFS_MIGRATION_V2_DONE,
-          StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
-          StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
-          StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
-          StorageKeys.IDB_MIGRATION_V2_DONE,
-        ]),
-        oldOpfsDbExists(),
-        oldIdbDbExists(),
-      ]);
-      sendResponse({
-        ...result,
-        opfsMigrationV2Done: items[StorageKeys.OPFS_MIGRATION_V2_DONE] ?? false,
-        opfsMigrationV2LastAttemptedAt: items[StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT] ?? null,
-        opfsMigrationV2CompletedAt: items[StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT] ?? null,
-        opfsMigrationV2RecordCount: items[StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT] ?? null,
-        idbMigrationV2Done: items[StorageKeys.IDB_MIGRATION_V2_DONE] ?? false,
-        opfsLegacyDbPath: opfsLegacyExists ? `${OLD_OPFS_POOL_DIR}/${OLD_OPFS_DB_FILENAME}` : null,
-        idbLegacyDbName: idbLegacyExists ? OLD_IDB_NAME : null,
-      });
-    } catch {
-      sendResponse(result);
-    }
-  } else {
+  if (!result.success) {
     sendResponse(result);
+    return;
   }
+  const extras = await collectMigrationExtras();
+  sendResponse({ ...result, ...extras });
 }
 
 async function handleClearAll(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
@@ -223,13 +173,25 @@ async function handleRestore(msg: SqliteMessage, sendResponse: (r: unknown) => v
 
 async function handlePurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_PURGE' }>).payload;
-  const result = await sqlitePurgeOldRecords(payload?.retentionDays, payload?.maxRecords);
+  // PBI 2026-09-12-19: the trust boundary for the destructive purge —
+  // garbage numbers fail closed instead of silently purging nothing.
+  const planned = planPurge(payload?.retentionDays, payload?.maxRecords);
+  if (!planned.ok) {
+    sendResponse({ success: false, error: planned.error });
+    return;
+  }
+  const result = await sqlitePurgeOldRecords(planned.retentionDays, planned.maxRecords);
   sendResponse(result);
 }
 
 async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'CONTENT_PURGE' }>).payload;
-  const result = await sqlitePurgeContent(payload?.retentionDays, payload?.maxRecords, payload?.includeStarred);
+  const planned = planPurge(payload?.retentionDays, payload?.maxRecords, payload?.includeStarred);
+  if (!planned.ok) {
+    sendResponse({ success: false, error: planned.error });
+    return;
+  }
+  const result = await sqlitePurgeContent(planned.retentionDays, planned.maxRecords, planned.includeStarred);
   sendResponse(result);
 }
 
@@ -293,11 +255,23 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
   const entry = ARCHIVE_DISPATCH[op];
   const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
   const backend = await engine.getBackend();
+  // PBI 2026-09-11-06: archive lives behind ArchiveStaging, not StorageBackend.
+  // PBI 2026-09-12-32: narrowing uses the exported `supportsArchive` seam (one
+  // rule — the former inline per-method probe duplicated it and the
+  // StorageBackend comments documented the wrong spelling). Non-staging
+  // backends (IDB / fallback / noop) fail closed here — the same error the
+  // per-adapter stubs used to return, now from one place.
+  if (!supportsArchive(backend)) {
+    sendResponse({ success: false, error: ARCHIVE_UNSUPPORTED_ERROR });
+    return;
+  }
+  const stagingBackend = backend as StorageBackend & ArchiveStaging;
   // WHY: extracting the method unbound drops `this` — OpfsWorkerBackend's
   // archive methods read this.proxyArchive, so a bare call threw
   // "Cannot read properties of undefined (reading 'proxyArchive')" in
   // OPFS mode (e2e @extension suite). Bind before invoking.
-  const call = (backend[entry.method] as unknown as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
+  const raw = (stagingBackend as unknown as Record<string, unknown>)[entry.method];
+  const call = (raw as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
   const result = await call(...entry.args(payload));
   if (!result.success) {
     sendResponse({ success: false, error: result.error });

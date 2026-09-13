@@ -17,7 +17,7 @@
  */
 
 import { CONTENT_SCRIPT_ALLOWED_TYPES } from '../messageTypes.js';
-import { checkSenderTrust } from './senderTrust.js';
+import { checkSenderTrust, type SenderTrustLevel } from './senderTrust.js';
 import {
   createValidVisitHandler,
   createManualRecordHandler,
@@ -127,7 +127,7 @@ export type MessageRouterDeps =
 
 export class MessageRouter {
   private handlers = new Map<string, MessageHandler>();
-  private trustLevels = new Map<string, 'extension-only' | 'content-script-allowed'>();
+  private trustLevels = new Map<string, SenderTrustLevel>();
   private validators = new Map<string, MessageValidator<unknown>>();
   private runtimeId: string | undefined;
 
@@ -162,7 +162,7 @@ export class MessageRouter {
       MANUAL_RECORD: createManualRecordHandler(deps.manualRecordDeps),
       PREVIEW_RECORD: createManualRecordHandler(deps.manualRecordDeps),
       SAVE_RECORD: createSaveRecordHandler(deps.saveRecordDeps),
-      CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({ hasBadgeTab: (tabId) => deps.autoSavedBadgeTabs.has(tabId) }),
+      CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({}),
       CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
       TEST_CONNECTIONS: createTestConnectionsHandler({
         testObsidian: () => deps.obsidian.testConnection(),
@@ -191,7 +191,15 @@ export class MessageRouter {
     const contentScriptAllowed = new Set<string>(CONTENT_SCRIPT_ALLOWED_TYPES as readonly string[]);
     for (const [type, handler] of Object.entries(handlers)) {
       this.handlers.set(type, handler);
-      this.trustLevels.set(type, contentScriptAllowed.has(type) ? 'content-script-allowed' : 'extension-only');
+      // VALID_VISIT/CHECK_DOMAIN must originate from a live web page —
+      // the 'tab-page-only' tier (PBI 2026-09-12-12). Everything else keeps
+      // the previous mapping.
+      this.trustLevels.set(
+        type,
+        type === 'VALID_VISIT' || type === 'CHECK_DOMAIN'
+          ? 'tab-page-only'
+          : contentScriptAllowed.has(type) ? 'content-script-allowed' : 'extension-only',
+      );
     }
 
     this.validators.set('VALID_VISIT', validVisitValidator as unknown as MessageValidator<unknown>);
@@ -223,26 +231,13 @@ export class MessageRouter {
       return false;
     }
     const trust = this.trustLevels.get(type)!;
+    // PBI 2026-09-12-12: the strict tab-page rule lives in senderTrust
+    // (tier 'tab-page-only') — the router makes a single checkSenderTrust
+    // call and owns no trust literals of its own.
     const decision = checkSenderTrust(sender, trust, type, this.runtimeId);
     if (!decision.allowed) {
       sendResponse({ success: false, error: decision.error });
       return false;
-    }
-    // Strict content-script sender check for message types that must originate
-    // from a web page (VALID_VISIT, CHECK_DOMAIN). The generic trust level
-    // 'content-script-allowed' permits both extension pages and content scripts;
-    // these two types require a valid tab + http/https sender URL to prevent
-    // spoofing from extension pages. This preserves the pre-refactor behavior
-    // previously enforced in the legacy handler gate, now consolidated as the
-    // single routing seam.
-    if (type === 'VALID_VISIT' || type === 'CHECK_DOMAIN') {
-      const hasValidTab = Boolean(sender.tab?.id && sender.tab?.url);
-      const senderUrl = sender.url;
-      const hasValidSenderUrl = typeof senderUrl === 'string' && (senderUrl.startsWith('http://') || senderUrl.startsWith('https://'));
-      if (!hasValidTab || !hasValidSenderUrl) {
-        sendResponse({ success: false, error: 'Invalid sender' });
-        return false;
-      }
     }
     const validator = this.validators.get(type);
     if (validator) {
@@ -274,7 +269,7 @@ export class MessageRouter {
     return this.handlers.get(type);
   }
 
-  getTrustLevel(type: string): 'extension-only' | 'content-script-allowed' | undefined {
+  getTrustLevel(type: string): SenderTrustLevel | undefined {
     return this.trustLevels.get(type);
   }
 

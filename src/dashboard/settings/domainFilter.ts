@@ -187,6 +187,14 @@ function showTab(tabName: 'general' | 'domain' | 'prompt' | 'privacy'): void {
 }
 
 function updateDomainListVisibility(): void {
+    // 新タグ UI（domainTagArea）が存在する場合は旧 UI を表示しない。
+    // 旧 textarea セクションが新タグ UI と二重に表示され、空の保存ボタンが
+    // 漏出するのを防ぐ（画像の紫の空ボタンの原因）。
+    if (document.getElementById('domainTagArea')) {
+        if (domainListSection) domainListSection.style.display = 'none';
+        return;
+    }
+
     const checkedRadio = document.querySelector('input[name="domainFilter"]:checked') as HTMLInputElement | null;
     if (!checkedRadio) return;
 
@@ -218,7 +226,11 @@ function updateDomainListVisibility(): void {
  * フォーマットUIの切替
  */
 export function toggleFormatUI(): void {
-    if (simpleFormatUI && simpleFormatEnabledCheckbox) {
+    // 新タグ UI が存在する場合は旧 simpleFormatUI を常に非表示にする。
+    // 旧 UI の textarea と保存ボタンが新 UI と二重に表示されるのを防ぐ。
+    if (document.getElementById('domainTagArea')) {
+        if (simpleFormatUI) simpleFormatUI.style.display = 'none';
+    } else if (simpleFormatUI && simpleFormatEnabledCheckbox) {
         simpleFormatUI.style.display = simpleFormatEnabledCheckbox.checked ? 'block' : 'none';
     }
     if (uBlockFormatUI && ublockFormatEnabledCheckbox) {
@@ -300,14 +312,18 @@ export async function handleSaveDomainSettings(): Promise<void> {
 }
 
 /**
- * シンプル形式の設定を保存
+ * Save the domain lists and report the outcome as a value (PBI 2026-09-12-15).
+ *
+ * The tag UI used to click the hidden save button and transcribe the status
+ * through a MutationObserver on the hidden status node — a DOM-node contract
+ * instead of an interface. Both the legacy button path and the tag UI now
+ * call this seam and render the returned message themselves.
  */
-async function saveSimpleFormatSettings(): Promise<void> {
+export async function saveDomainLists(): Promise<{ ok: boolean; message: string }> {
     // Check if filter mode is selected
     const selectedMode = document.querySelector('input[name="domainFilter"]:checked') as HTMLInputElement | null;
     if (!selectedMode) {
-        showStatus('domainStatus', getMessage('filterModeRequired'), 'error');
-        return;
+        return { ok: false, message: getMessage('filterModeRequired') };
     }
 
     const mode = selectedMode.value;
@@ -340,8 +356,7 @@ async function saveSimpleFormatSettings(): Promise<void> {
     const blRes = filter.parseAndValidate(blacklist);
     const errors = [...wlRes.errors, ...blRes.errors];
     if (errors.length > 0) {
-        showStatus('domainStatus', `${getMessage('domainListError')}\n${errors.join('\n')}`, 'error');
-        return;
+        return { ok: false, message: `${getMessage('domainListError')}\n${errors.join('\n')}` };
     }
 
     // Prepare settings object - save both lists
@@ -357,10 +372,18 @@ async function saveSimpleFormatSettings(): Promise<void> {
     // Save settings
     try {
         await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(newSettings);
-        showStatus('domainStatus', getMessage('domainFilterSaved'), 'success');
+        return { ok: true, message: getMessage('domainFilterSaved') };
     } catch (error: unknown) {
         addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: errorMessage(error) });
-        showStatus('domainStatus', `${getMessage('saveError')}: ${errorMessage(error)}`, 'error');
+        return { ok: false, message: `${getMessage('saveError')}: ${errorMessage(error)}` };
     }
+}
+
+/**
+ * シンプル形式の設定を保存
+ */
+async function saveSimpleFormatSettings(): Promise<void> {
+    const { ok, message } = await saveDomainLists();
+    showStatus('domainStatus', message, ok ? 'success' : 'error');
 }
 

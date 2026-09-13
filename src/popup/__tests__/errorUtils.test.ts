@@ -28,7 +28,7 @@ const MOCK_SUCCESS = '✓ Saved to Obsidian';
 const MOCK_CANCELLED = 'Cancelled';
 
 describe('ErrorMessages', () => {
-  test('必要なメッセージが定義されている', () => {
+  test('defines the required messages', () => {
     expect(ErrorMessages.CONNECTION_ERROR).toBe(MOCK_CONNECTION_ERROR);
     expect(ErrorMessages.DOMAIN_BLOCKED).toBe(MOCK_DOMAIN_BLOCKED_DISPLAY);
     expect(ErrorMessages.ERROR_PREFIX).toBe(MOCK_ERROR_PREFIX);
@@ -38,13 +38,13 @@ describe('ErrorMessages', () => {
 });
 
 describe('DOMAIN_BLOCKED_ERROR_CODE', () => {
-  test('エラーコード定数が定義されている', () => {
+  test('defines the error code constant', () => {
     expect(DOMAIN_BLOCKED_ERROR_CODE).toBe('DOMAIN_BLOCKED');
   });
 });
 
 describe('ErrorType', () => {
-  test('必要なエラータイプが定義されている', () => {
+  test('defines the required error types', () => {
     expect(ErrorType.CONNECTION).toBe('CONNECTION');
     expect(ErrorType.DOMAIN_BLOCKED).toBe('DOMAIN_BLOCKED');
     expect(ErrorType.GENERAL).toBe('GENERAL');
@@ -52,85 +52,85 @@ describe('ErrorType', () => {
 });
 
 describe('isConnectionError', () => {
-  test('Receiving end does not existエラーを判定できる', () => {
+  test("detects a 'Receiving end does not exist' error", () => {
     const error = new Error('Receiving end does not exist');
     expect(isConnectionError(error)).toBe(true);
   });
 
-  test('他のエラーは判定しない', () => {
+  test('returns false for other errors', () => {
     const error = new Error('Some other error');
     expect(isConnectionError(error)).toBe(false);
   });
 
-  test('null/undefinedエラーを安全に処理', () => {
+  test('handles null/undefined errors safely', () => {
     expect(isConnectionError(null)).toBe(false);
     expect(isConnectionError(undefined)).toBe(false);
   });
 
-  test('messageプロパティがないオブジェクトを安全に処理', () => {
+  test('handles objects without a message property safely', () => {
     expect(isConnectionError({})).toBe(false);
   });
 });
 
 describe('isDomainBlockedError', () => {
-  test('ドメインブロックエラーを判定できる', () => {
+  test('detects a domain-blocked error', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
     expect(isDomainBlockedError(error)).toBe(true);
   });
 
-  test('他のエラーは判定しない', () => {
+  test('returns false for other errors', () => {
     const error = new Error('Some other error');
     expect(isDomainBlockedError(error)).toBe(false);
   });
 
-  test('null/undefinedエラーを安全に処理', () => {
+  test('handles null/undefined errors safely', () => {
     expect(isDomainBlockedError(null)).toBe(false);
     expect(isDomainBlockedError(undefined)).toBe(false);
   });
 });
 
 describe('getErrorType', () => {
-  test('コネクションエラーを正しく判定', () => {
+  test('classifies a connection error correctly', () => {
     const error = new Error('Receiving end does not exist');
     expect(getErrorType(error)).toBe(ErrorType.CONNECTION);
   });
 
-  test('ドメインブロックエラーを正しく判定', () => {
+  test('classifies a domain-blocked error correctly', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
     expect(getErrorType(error)).toBe(ErrorType.DOMAIN_BLOCKED);
   });
 
-  test('一般エラーを正しく判定', () => {
+  test('classifies a general error correctly', () => {
     const error = new Error('Some other error');
     expect(getErrorType(error)).toBe(ErrorType.GENERAL);
   });
 });
 
 describe('getUserErrorMessage', () => {
-  test('コネクションエラーメッセージを取得', () => {
+  test('returns the connection error message', () => {
     const error = new Error('Receiving end does not exist');
     expect(getUserErrorMessage(error)).toBe(`${MOCK_ERROR_PREFIX} ${MOCK_CONNECTION_ERROR}`);
   });
 
-  test('ドメインブロックエラーメッセージを取得', () => {
+  test('returns the domain-blocked error message', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
     expect(getUserErrorMessage(error)).toBe(MOCK_DOMAIN_BLOCKED_DISPLAY);
   });
 
-  test('一般エラーメッセージを取得', () => {
+  test('returns the general error message', () => {
     const error = new Error('Some other error');
     expect(getUserErrorMessage(error)).toContain('Error:');
     expect(getUserErrorMessage(error)).toContain('Some other error');
   });
 
-  test('messageがないエラーの場合', () => {
+  test('falls back when the error has no message', () => {
     const error = {};
     expect(getUserErrorMessage(error)).toContain('Error:');
     expect(getUserErrorMessage(error)).toContain('Unknown error');
   });
 
   // FEATURE-001: 内部情報の漏洩を確認するテスト
-  test('スタックトレースがエラーメッセージに含まれないこと（内部情報保護）', () => {
+  test('excludes stack traces from the error message (internal info protection)', () => {
     const error = new Error('Some error');
     error.stack = 'Error: Some error\n    at file.js:10:5\n    at file.js:20:10';
 
@@ -142,7 +142,7 @@ describe('getUserErrorMessage', () => {
     expect(message).not.toContain('at file.js'); // スタックトレースが含まれない
   });
 
-  test('内部実装の詳細がエラーメッセージに含まれないこと（内部情報保護、改善後）', () => {
+  test('excludes internal implementation details from the error message (internal info protection)', () => {
     const error = new Error('Internal implementation error: function xyz failed');
 
     const message = getUserErrorMessage(error);
@@ -153,7 +153,7 @@ describe('getUserErrorMessage', () => {
     expect(message).not.toContain('function'); // 内部情報が含まれない
   });
 
-  test('エラーメッセージが改行を含まないこと（内部情報保護）', () => {
+  test('strips newlines from the error message (internal info protection)', () => {
     const error = new Error('Error: Some error at file.js:10:5\n    at file.js:20:10');
 
     const message = getUserErrorMessage(error);
@@ -196,7 +196,7 @@ describe('showError', () => {
     // jsdom 環境の document は環境側が管理するのでここでは触らない
   });
 
-  test('一般エラーを表示', () => {
+  test('renders a general error', () => {
     const error = new Error('Some error');
     showError(statusElement, error);
 
@@ -204,7 +204,7 @@ describe('showError', () => {
     expect(statusElement.textContent).toContain('Error:');
   });
 
-  test('ドメインブロックエラーで強制記録ボタンを表示', () => {
+  test('renders the force-record button for a domain-blocked error', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
 
     showError(statusElement, error, mockForceRecordCallback as unknown as () => void);
@@ -214,7 +214,7 @@ describe('showError', () => {
     expect(statusElement.appendChild).toHaveBeenCalled();
   });
 
-  test('強制記録ボタンのクリックハンドラーが設定される', () => {
+  test('wires the force-record button click handler', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
 
     showError(statusElement, error, mockForceRecordCallback as unknown as () => void);
@@ -237,14 +237,14 @@ describe('showSuccess', () => {
     } as unknown as HTMLElement;
   });
 
-  test('デフォルトの成功メッセージを表示', () => {
+  test('renders the default success message', () => {
     showSuccess(statusElement);
 
     expect(statusElement.className).toBe('success');
     expect(statusElement.textContent).toBe(MOCK_SUCCESS);
   });
 
-  test('カスタムメッセージを表示', () => {
+  test('renders a custom message', () => {
     showSuccess(statusElement, 'Custom success message');
 
     expect(statusElement.className).toBe('success');
@@ -253,7 +253,7 @@ describe('showSuccess', () => {
 });
 
 describe('handleError', () => {
-  test('コネクションエラーハンドラーを呼び出す', () => {
+  test('invokes the connection error handler', () => {
     const error = new Error('Receiving end does not exist');
     const handlers = {
       onConnectionError: vi.fn()
@@ -264,7 +264,7 @@ describe('handleError', () => {
     expect(handlers.onConnectionError).toHaveBeenCalledWith(error);
   });
 
-  test('ドメインブロックエラーハンドラーを呼び出す', () => {
+  test('invokes the domain-blocked error handler', () => {
     const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
     const handlers = {
       onDomainBlocked: vi.fn()
@@ -275,7 +275,7 @@ describe('handleError', () => {
     expect(handlers.onDomainBlocked).toHaveBeenCalledWith(error);
   });
 
-  test('一般エラーハンドラーを呼び出す', () => {
+  test('invokes the general error handler', () => {
     const error = new Error('Some other error');
     const handlers = {
       onGeneralError: vi.fn()
@@ -286,7 +286,7 @@ describe('handleError', () => {
     expect(handlers.onGeneralError).toHaveBeenCalledWith(error);
   });
 
-  test('対応するハンドラーがない場合は何もしない', () => {
+  test('does nothing when no matching handler exists', () => {
     const error = new Error('Some error');
     const handlers = {};
 
@@ -295,37 +295,37 @@ describe('handleError', () => {
 });
 describe('escapeHtml - XSS対策テスト（問題点3）', () => {
   describe('HTMLエンティティのエスケープ', () => {
-    it('アンパーサンドをエスケープする', () => {
+    it('escapes ampersands', () => {
       const result = escapeHtml('&');
       expect(result).toBe('&amp;');
       expect(result).not.toBe('&');
     });
 
-    it('小なり記号をエスケープする', () => {
+    it('escapes less-than signs', () => {
       const result = escapeHtml('<');
       expect(result).toBe('&lt;');
       expect(result).not.toBe('<');
     });
 
-    it('大なり記号をエスケープする', () => {
+    it('escapes greater-than signs', () => {
       const result = escapeHtml('>');
       expect(result).toBe('&gt;');
       expect(result).not.toBe('>');
     });
 
-    it('ダブルクォートをエスケープする', () => {
+    it('escapes double quotes', () => {
       const result = escapeHtml('"');
       expect(result).toBe('&quot;');
       expect(result).not.toBe('"');
     });
 
-    it('シングルクォートをエスケープする', () => {
+    it('escapes single quotes', () => {
       const result = escapeHtml("'");
       expect(result).toBe('&#039;');
       expect(result).not.toBe("'");
     });
 
-    it('スラッシュをエスケープする', () => {
+    it('escapes slashes', () => {
       const result = escapeHtml('/');
       expect(result).toBe('&#x2F;');
       expect(result).not.toBe('/');
@@ -333,36 +333,36 @@ describe('escapeHtml - XSS対策テスト（問題点3）', () => {
   });
 
   describe('XSS攻撃の防止', () => {
-    it('スクリプトタグインジェクションを防ぐ', () => {
+    it('blocks script tag injection', () => {
       const result = escapeHtml('<script>alert("xss")</script>');
       expect(result).not.toContain('<script>');
       expect(result).toContain('&lt;script&gt;');
     });
 
-    it('イベントハンドラーのインジェクションを防ぐ', () => {
+    it('blocks event handler injection', () => {
       const result = escapeHtml('<img src=x onerror="alert(1)">');
       expect(result).not.toContain('onerror="');
       expect(result).toContain('onerror=&quot;');
     });
 
-    it('一般的なテキストを保持する', () => {
+    it('preserves plain text', () => {
       const result = escapeHtml('This is safe text');
       expect(result).toBe('This is safe text');
     });
   });
 
   describe('エッジケース', () => {
-    it('空文字列は空文字を返す', () => {
+    it('returns an empty string for empty input', () => {
       const result = escapeHtml('');
       expect(result).toBe('');
     });
 
-    it('nullは空文字を返す', () => {
+    it('returns an empty string for null', () => {
       const result = escapeHtml(null);
       expect(result).toBe('');
     });
 
-    it('undefinedは空文字を返す', () => {
+    it('returns an empty string for undefined', () => {
       const result = escapeHtml(undefined);
       expect(result).toBe('');
     });

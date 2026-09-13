@@ -112,7 +112,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
   });
 
   describe('_fetchExistingContent - ボディ読み込みタイムアウト', () => {
-    it('ボディが返ってこない場合にタイムアウトエラーをスローすること', async () => {
+    it('throws a timeout error when no body is returned', async () => {
       vi.useFakeTimers();
       mockFetch.mockResolvedValue({
         ok: true,
@@ -133,7 +133,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       vi.useRealTimers();
     });
 
-    it('タイムアウトエラーのnameがAbortErrorであること（_handleErrorで検出可能）', async () => {
+    it('sets the timeout error name to AbortError (detectable by _handleError)', async () => {
       vi.useFakeTimers();
       mockFetch.mockResolvedValue({
         ok: true,
@@ -155,7 +155,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
   });
 
   describe('appendToDailyNote - タイムアウト時のMutex解放', () => {
-    it('ボディ読み込みタイムアウト後もMutexが解放されること', async () => {
+    it('releases the Mutex after a body read timeout', async () => {
       vi.useFakeTimers();
       mockFetch.mockResolvedValue({
         ok: true,
@@ -178,7 +178,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
   });
 
   describe('ボディが正常に読み込める場合', () => {
-    it('タイムアウトが発生せずコンテンツを返すこと', async () => {
+    it('returns content without a timeout', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         body: bodyOf("Existing content")
@@ -194,7 +194,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
   });
 
   describe('_fetchExistingContent - バイト上限', () => {
-    it('Content-Length なしで 10MB を超える chunked 応答は打ち切られエラー分類に乗ること', async () => {
+    it('aborts chunked responses over 10MB without Content-Length and classifies them as errors', async () => {
       const chunk = new Uint8Array(1024 * 1024); // 1MB
       let count = 0;
       mockFetch.mockResolvedValue({
@@ -222,7 +222,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
   });
 
   describe('_handleError - タイムアウト時のログ出力', () => {
-    it('AbortError時はWARNログを出力してタイムアウトエラーを返すこと', () => {
+    it('logs WARN and returns a timeout error on AbortError', () => {
       const err = new Error('The operation was aborted.');
       err.name = 'AbortError';
 
@@ -236,7 +236,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       );
     });
 
-    it('timed out を含むエラーメッセージでもWARNログを出力すること', () => {
+    it('logs WARN even when the error message contains timed out', () => {
       const result = client._handleError(
         new Error('Body read timed out after 15000ms'),
         'https://127.0.0.1:27123/'
@@ -250,7 +250,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
       );
     });
 
-    it('タイムアウト以外のエラーは従来どおりERRORログを出力する', () => {
+    it('logs ERROR for non-timeout errors as before', () => {
       const result = client._handleError(
         new Error('Some other error'),
         'https://127.0.0.1:27123/'

@@ -23,7 +23,7 @@ const LOCALES_DIR = join(ROOT_DIR, 'public', '_locales');
 const SRC_DIR = join(ROOT_DIR, 'src');
 
 const { header, pass, fail, warn, info, sectionBreak, summary } = await import('./utils/reporter.mjs');
-const { checkI18nCompleteness, checkSourceI18nKeys } = await import('./i18n-core.mjs');
+const { checkI18nCompleteness, checkSourceI18nKeys, checkUnusedLocaleKeys } = await import('./i18n-core.mjs');
 
 // Run only when invoked directly (index.mjs spawns this file); importing it
 // for tests must not produce output or exit.
@@ -32,7 +32,13 @@ if (process.argv[1] && process.argv[1].endsWith('check-i18n.mjs')) {
   const i18nOk = checkI18nCompleteness(LOCALES_DIR, reporter);
   const sourceOk = checkSourceI18nKeys(SRC_DIR, LOCALES_DIR, reporter);
 
+  // PBI 2026-09-11-04 (round 6): unused-key inventory (warning-only — the
+  // static scan over-approximates; see i18n-core.mjs). The full list is
+  // written beside this script's output for a manual per-key pass.
+  const entrypointsDir = join(ROOT_DIR, 'entrypoints');
+  const unusedOk = checkUnusedLocaleKeys(SRC_DIR, entrypointsDir, LOCALES_DIR, reporter);
+
   sectionBreak();
-  const allPassed = summary() && i18nOk && sourceOk;
+  const allPassed = summary() && i18nOk && sourceOk && unusedOk;
   process.exit(allPassed ? 0 : 1);
 }

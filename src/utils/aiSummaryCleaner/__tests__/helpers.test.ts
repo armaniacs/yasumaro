@@ -386,13 +386,13 @@ describe('aiSummaryCleaner/helpers', () => {
       expect(isLikelyAd(el)).toBe(true);
     });
 
-    it('detects Chinese 广告', () => {
+    it('detects Chinese ad keyword', () => {
       const el = document.createElement('div');
       el.textContent = '本页面包含广告内容';
       expect(isLikelyAd(el)).toBe(true);
     });
 
-    it('detects Chinese 推广', () => {
+    it('detects Chinese promotion keyword', () => {
       const el = document.createElement('div');
       el.textContent = '推广信息，点击查看';
       expect(isLikelyAd(el)).toBe(true);
@@ -443,13 +443,13 @@ describe('aiSummaryCleaner/helpers', () => {
       expect(isLikelySocial(el)).toBe(true);
     });
 
-    it('detects Chinese 分享', () => {
+    it('detects Chinese share keyword', () => {
       const el = document.createElement('div');
       el.textContent = '分享到微信';
       expect(isLikelySocial(el)).toBe(true);
     });
 
-    it('detects Chinese 关注我们', () => {
+    it('detects Chinese follow-us keyword', () => {
       const el = document.createElement('div');
       el.textContent = '关注我们获取更多信息';
       expect(isLikelySocial(el)).toBe(true);

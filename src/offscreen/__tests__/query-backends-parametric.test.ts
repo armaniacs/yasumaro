@@ -110,6 +110,97 @@ describe('PBI-34 parametric: same logical search, SQL ORDER parity (idb vs opfs)
     }
   });
 
+  it('tag filter parity: idb.query and opfs handleQuery emit the same tag condition (PBI 2026-09-11 unification)', async () => {
+    // >= 3 chars + FTS5 available: both backends use the trigram MATCH
+    // sub-query with the phrase-quoted raw term (no # prefix).
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ tag: 'news', limit: 10, offset: 0 });
+    const opfs = makeOpfsStub();
+    await handleQuery({ engine: opfs.engine as never }, { tag: 'news', limit: 10, offset: 0 });
+    for (const sql of [rowSql(idb.calls), rowSql(opfs.calls)]) {
+      expect(sql).toContain('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
+      expect(sql).not.toContain('tags LIKE');
+    }
+    // The 33-vs-13 column projection difference is the documented 2026-09-09-03
+    // intentional divergence — the tag condition and params must be identical.
+    const idbParams = idb.calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql))!.params;
+    const opfsParams = opfs.calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql))!.params;
+    expect(idbParams).toEqual(opfsParams);
+    expect(rowSql(idb.calls)).toMatch(/WHERE is_deleted = 0 AND id IN \(SELECT rowid FROM browsing_logs_fts WHERE tags MATCH \?\) ORDER BY created_at DESC LIMIT \? OFFSET \?$/);
+    expect(rowSql(opfs.calls)).toMatch(/AND id IN \(SELECT rowid FROM browsing_logs_fts WHERE tags MATCH \?\) ORDER BY created_at DESC LIMIT \? OFFSET \?$/);
+
+    // < 3 chars: both backends fall back to tags LIKE.
+    const idbShort = makeIdbStub(true);
+    await idbShort.backend.query({ tag: 'AI', limit: 10, offset: 0 });
+    const opfsShort = makeOpfsStub();
+    await handleQuery({ engine: opfsShort.engine as never }, { tag: 'AI', limit: 10, offset: 0 });
+    for (const sql of [rowSql(idbShort.calls), rowSql(opfsShort.calls)]) {
+      expect(sql).toContain('tags LIKE ?');
+      expect(sql).not.toContain('browsing_logs_fts');
+    }
+  });
+
+  it('tag filter: the former idb tag-ignore divergence is gone (regression pin)', async () => {
+    // PBI-34 documented that IdbVfsBackend.query dropped the tag filter while
+    // opfs honoured it. PBI 2026-09-11 unified the semantics — this pins the
+    // fix so the divergence cannot silently return.
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ tag: 'typescript', limit: 10, offset: 0 });
+    expect(rowSql(idb.calls)).toContain('browsing_logs_fts');
+  });
+
+  it('text + tag parity: BOTH conditions apply on idb FTS/LIKE and opfs FTS/LIKE search (PBI 2026-09-11-06)', async () => {
+    // FTS search (>= 3 chars): tag condition joins the FTS MATCH condition.
+    const idbFts = makeIdbStub(true);
+    await idbFts.backend.query({ text: 'rust', tag: 'typescript', limit: 10, offset: 0 });
+    const opfsFts = makeOpfsStub();
+    await handleSearchFts('rust', 10, 0, undefined, undefined, { text: 'rust', tag: 'typescript', limit: 10, offset: 0 });
+
+    for (const calls of [idbFts.calls, opfsFts.calls]) {
+      const rows = calls.find((c) => /FROM browsing_logs_fts[\s\S]*LIMIT/.test(c.sql))!;
+      expect(rows.sql).toContain('browsing_logs_fts MATCH ?');
+      expect(rows.sql).toContain('id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)');
+    }
+    // Round-4 bug class pinned: the search path must not drop the tag.
+    const idbFtsRows = idbFts.calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql) && /MATCH/.test(c.sql))!;
+    expect(idbFtsRows.params).toEqual(['"rust"', '"typescript"', 10, 0]);
+
+    // LIKE search (short term): tags LIKE condition applies too.
+    const idbLike = makeIdbStub(false);
+    await idbLike.backend.query({ text: 'ru', tag: 'typescript', limit: 10, offset: 0 });
+    const opfsLike = makeOpfsStub();
+    await handleSearchLike('ru', 10, 0, undefined, undefined, { text: 'ru', tag: 'typescript', limit: 10, offset: 0 });
+    for (const calls of [idbLike.calls, opfsLike.calls]) {
+      const rows = calls.find((c) => /LIMIT \? OFFSET \?/.test(c.sql))!;
+      expect(rows.sql).toContain('url LIKE ?');
+      expect(rows.sql).toContain('tags LIKE ?');
+      // The tag condition is its own LIKE param (5th LIKE: 4 search columns + tag).
+      expect(rows.params).toEqual(['%ru%', '%ru%', '%ru%', '%ru%', '%typescript%', 10, 0]);
+    }
+  });
+
+  it('ids filter parity: fallback honours ids like the SQL backends (PBI 2026-09-11-06)', async () => {
+    // SQL side: ids become an IN(...) condition via buildExtraWhereSql.
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ ids: [3, 7], limit: 10, offset: 0 });
+    expect(rowSql(idb.calls)).toMatch(/id IN \(\?,\?\)/);
+
+    // Fallback side: matchesExtraWhere delegates the same predicate. The
+    // fallback assigns its own autoincrement ids, so select two of them.
+    const storage = new FallbackStorage();
+    await storage.insert({ url: 'https://a.example.com', created_at: 100 });
+    await storage.insert({ url: 'https://b.example.com', created_at: 200 });
+    await storage.insert({ url: 'https://c.example.com', created_at: 300 });
+    const all = await storage.getAllRecords();
+    const picked = [all[0].id as number, all[2].id as number];
+    const result = await storage.query({ ids: picked, limit: 10, offset: 0 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows.map((r) => r.id).sort((a, b) => (a as number) - (b as number))).toEqual(picked.sort((a, b) => a - b));
+      expect(result.total).toBe(2);
+    }
+  });
+
   it('purge cap-delete: idb and opfs both preserve starred rows (same condition)', async () => {
     const idb = makeIdbStub(true, 1005);
     await idb.backend.purgeOldRecords(90, 1000);
@@ -150,17 +241,17 @@ describe('PBI-34 parametric: documented intentional divergences (do NOT unify si
     expect(sql).not.toContain('DROP TABLE');
   });
 
-  it('INTENTIONAL: fallback search without orderBy keeps insertion order (no FTS5 rank)', async () => {
-    // FallbackStorage has no FTS5, so rank is always 0 and there is nothing
-    // relevance-ordered to sort by. SQL backends ORDER BY rank instead.
+  it('PBI 2026-09-12-40: fallback search without orderBy coerces rank to created_at DESC (parity with SQL backends)', async () => {
+    // The former "insertion order" divergence is gone: the fallback text path
+    // now mirrors buildLikeOrderClause (rank → created_at DESC).
     const storage = new FallbackStorage();
     await storage.insert({ url: 'https://a.example.com', created_at: 100 });
     await storage.insert({ url: 'https://b.example.com', created_at: 300 });
     await storage.insert({ url: 'https://c.example.com', created_at: 200 });
-    const result = await storage.search('example', 10, 0);
+    const result = await storage.query({ text: 'example', limit: 10, offset: 0 });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.rows.map((r) => r.created_at)).toEqual([100, 300, 200]);
+      expect(result.rows.map((r) => r.created_at)).toEqual([300, 200, 100]);
       expect(result.rows.every((r) => r.rank === 0)).toBe(true);
     }
   });
@@ -205,5 +296,51 @@ describe('PBI-34 parametric: shared LIMIT clamp across backends', () => {
     await idb.backend.queryAuditLog({ limit: raw as number });
     const rowQuery = idb.calls.find((c) => /FROM audit_log ORDER BY/i.test(c.sql));
     expect(rowQuery?.params[0]).toBe(expected);
+  });
+});
+
+describe('PBI 2026-09-12-06 parametric: offset/limit clamp is the same on every backend', () => {
+  beforeEach(() => {
+    __setEngineForTesting(null, false);
+  });
+
+  it.each([
+    ['negative offset', -5],
+    ['fractional offset', 2.5],
+    ['NaN offset', Number.NaN],
+  ])('%s normalizes to 0 on idb and opfs (was backend-divergent: SQL errored, fallback sliced from the end)', async (_label, rawOffset) => {
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ limit: 10, offset: rawOffset as number });
+    const idbRows = idb.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    const idbOffsetParam = idbRows?.params[idbRows.params.length - 1];
+    expect(idbOffsetParam).toBe(0);
+
+    const opfs = makeOpfsStub();
+    await handleQuery({ engine: opfs.engine } as never, { limit: 10, offset: rawOffset } as never);
+    const opfsRows = opfs.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    const opfsOffsetParam = opfsRows?.params[opfsRows.params.length - 1];
+    expect(opfsOffsetParam).toBe(0);
+  });
+
+  it('a huge limit caps at QUERY_CAPS.plain on idb, opfs, and fallback alike', async () => {
+    const idb = makeIdbStub(true);
+    await idb.backend.query({ limit: 1e9, offset: 0 });
+    const idbRows = idb.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    expect(idbRows?.params[idbRows.params.length - 2]).toBe(QUERY_CAPS.plain);
+
+    const opfs = makeOpfsStub();
+    await handleQuery({ engine: opfs.engine } as never, { limit: 1e9, offset: 0 } as never);
+    const opfsRows = opfs.calls.find((c) => /ORDER BY/i.test(c.sql) && !/COUNT\(\*\)/i.test(c.sql));
+    expect(opfsRows?.params[opfsRows.params.length - 2]).toBe(QUERY_CAPS.plain);
+
+    // The former OPFS spread `{...spec, limit, offset}` bypassed this cap and
+    // made the OPFS path the only backend honouring unbounded limits.
+    const storage = new FallbackStorage();
+    await storage.insert({ url: 'https://cap.example.com', created_at: 1 });
+    const result = await storage.query({ limit: 1e9, offset: 0 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows.length).toBeLessThanOrEqual(QUERY_CAPS.plain);
+    }
   });
 });

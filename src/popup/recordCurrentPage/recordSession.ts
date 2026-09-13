@@ -10,10 +10,11 @@ import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
 import { showError } from '../errorUtils.js';
+import { resolveReasonLabel } from '../../utils/reasonLabel.js';
 import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
-import { TabContentFetcher } from './tabContentFetcher.js';
+import { ContentFetchGateway } from '../contentFetchGateway.js';
 import { PreviewFlow, type PreviewSaveResult, type SaveRecordResult } from './previewFlow.js';
 
 /**
@@ -53,7 +54,7 @@ export class RecordSession {
   private resultTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    private readonly tabContentFetcher: TabContentFetcher = new TabContentFetcher(),
+    private readonly tabContentFetcher: ContentFetchGateway = new ContentFetchGateway(),
     private readonly previewFlow: PreviewFlow = new PreviewFlow(),
   ) {}
 
@@ -92,8 +93,11 @@ export class RecordSession {
         recordBtn.disabled = true;
         recordBtn.textContent = getMessage('cannotRecordPage');
       } else {
-        recordBtn.disabled = false;
-        recordBtn.textContent = getMessage('recordNow') || '📝 Record Now';
+        // PBI 0913a: resetRecordButton is documented as "sole button writer,
+        // called on load/finish paths" but nothing on the load path actually
+        // called it — removing main.ts's addEventListener (PBI 09) left the
+        // button with no onclick at all until the first finish/error cycle.
+        await this.resetRecordButton(recordBtn);
       }
     }
   }
@@ -115,7 +119,7 @@ export class RecordSession {
       recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
       recordBtn.onclick = () => this.handleRecordNowClick(true);
     } else {
-      recordBtn.textContent = getMessage('recordNow');
+      recordBtn.textContent = getMessage('recordNow') || '📝 Record Now';
       recordBtn.onclick = () => this.handleRecordNowClick(false);
     }
   }
@@ -225,8 +229,9 @@ export class RecordSession {
    * ErrorPresenter pass-through (wording unchanged).
    */
   private buildPrivatePageErrorMessage(reason?: string): string {
-    const reasonKey = `privatePageReason_${reason?.replace('-', '') || 'cacheControl'}`;
-    const reasonText = getMessage(reasonKey) || reason || 'unknown';
+    // PBI 2026-09-12-34: canonical-first resolution via the shared ReasonLabel
+    // table (the legacy-only key missed for cache-control / set-cookie).
+    const reasonText = resolveReasonLabel(reason, getMessage);
     return `${getMessage('errorPrefix')} PRIVATE_PAGE_DETECTED (${reasonText})`;
   }
 
@@ -358,17 +363,18 @@ export class RecordSession {
     return { kind: 'ok', result: previewSave.result ?? null };
   }
 
-  /** Normal branch: fetch tab content, then preview + save. */
-  private async runNormalBranch(force: boolean): Promise<void> {
-    const startTime = performance.now();
+  /**
+   * PBI 2026-09-12-23: shared prelude for the normal/force branches — the
+   * ~60-line contract each branch hand-spelled (guard → arm button → spinner
+   * → clear status). Degenerate DOM returns null and settles the session to
+   * idle itself, exactly as the former early returns did.
+   */
+  private openAttempt(): { statusDiv: HTMLElement; recordBtn: HTMLButtonElement | null } | null {
     const statusDiv = document.getElementById('mainStatus');
     const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
-
-    // Degenerate DOM: the former flow returned before touching anything.
-    // Settle to idle directly so finishToIdle() leaves the button alone.
     if (!statusDiv) {
       this.sessionState = 'idle';
-      return;
+      return null;
     }
 
     if (recordBtn) {
@@ -376,9 +382,19 @@ export class RecordSession {
       recordBtn.textContent = getMessage('recordNowProgress') || 'Recording...';
     }
 
-    hideSpinner();
     statusDiv.textContent = '';
     statusDiv.className = '';
+    return { statusDiv, recordBtn };
+  }
+
+  /** Normal branch: fetch tab content, then preview + save. */
+  private async runNormalBranch(force: boolean): Promise<void> {
+    const startTime = performance.now();
+    const attempt = this.openAttempt();
+    if (!attempt) return;
+    const { statusDiv, recordBtn } = attempt;
+
+    hideSpinner();
     const tagPanel = document.getElementById('tagResultPanel');
     if (tagPanel) { tagPanel.textContent = ''; tagPanel.classList.add('hidden'); }
 
@@ -395,6 +411,10 @@ export class RecordSession {
 
       let contentResponse: ContentResponse;
       try {
+        // Spinner ownership lives here (PBI 2026-09-11-04): the gateway is a
+        // pure data seam — show/hide pairs belong to the flow that owns the
+        // operation. hideSpinner() on the finish paths below closes the pair.
+        showSpinner(getMessage('fetchingContent'));
         contentResponse = await this.tabContentFetcher.fetch(tab, force);
       } catch (e: unknown) {
         if (force) {
@@ -469,24 +489,11 @@ export class RecordSession {
 
   /** Force branch: skip fetch (content given), preview + save with force. */
   private async runForceBranch(tab: chrome.tabs.Tab, content: string): Promise<void> {
-    const button = document.getElementById('recordBtn') as HTMLButtonElement | null;
-    // Degenerate DOM: the former flow returned before touching anything.
-    if (!button) {
-      this.sessionState = 'idle';
-      return;
-    }
-
     const startTime = performance.now();
-    const statusDiv = document.getElementById('mainStatus');
-    if (!statusDiv) {
-      this.sessionState = 'idle';
-      return;
-    }
+    const attempt = this.openAttempt();
+    if (!attempt) return;
+    const { statusDiv, recordBtn: button } = attempt;
 
-    button.disabled = true;
-    button.textContent = getMessage('recordNowProgress') || 'Recording...';
-    statusDiv.textContent = '';
-    statusDiv.className = '';
     showSpinner(getMessage('saving'));
 
     try {
@@ -508,16 +515,16 @@ export class RecordSession {
         this.reportActivity();
         this.showSuccessMessage(statusDiv, startTime, result);
         await this.showCopyMarkdownButton(tab, result);
-        this.showButtonResultState(button, 'done');
+        if (button) this.showButtonResultState(button, 'done');
       } else {
         statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || previewSave.error || 'Unknown error'}`;
         statusDiv.className = 'error';
-        this.showButtonResultState(button, 'error');
+        if (button) this.showButtonResultState(button, 'error');
       }
     } catch (error: unknown) {
       hideSpinner();
       showError(statusDiv, error, () => this.start(true, tab, content));
-      this.showButtonResultState(button, 'error');
+      if (button) this.showButtonResultState(button, 'error');
     }
   }
 }

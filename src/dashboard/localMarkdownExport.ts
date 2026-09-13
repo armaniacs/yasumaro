@@ -107,11 +107,15 @@ export async function handleExportLocalMarkdown(): Promise<void> {
 /**
  * Handle local markdown export from History panel (all records)
  */
+/**
+ * Handle local markdown export from Export Logs panel (all records, no date
+ * range) — the button moved here from the legacy history panel (PBI 2026-09-11-02).
+ */
 export async function handleHistoryExportLocalMarkdown(): Promise<void> {
   return exportLocalMarkdownCore({
     dateRange: null,
-    exportBtnId: 'historyExportLocalMarkdownBtn',
-    statusElId: 'historyExportLocalMarkdownStatus',
+    exportBtnId: 'historyExportAllMarkdownBtn',
+    statusElId: 'historyExportAllMarkdownStatus',
     emptyMessage: 'エクスポートする記録がありません。',
   });
 }

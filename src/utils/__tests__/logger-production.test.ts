@@ -19,7 +19,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
      *
      * Redフェーズ目的: 環境判定関数が存在しないため失敗することを確認
      */
-    test('本番環境判定ロジックが存在する', async () => {
+    test('exposes production environment detection logic', async () => {
         // 【テスト目的】: 環境判定用の関数が存在することを確認
         // 【テスト内容】：logger.tsに環境判定用のシンボルがエクスポートされていることを確認
         // 【期待される動作】: isDevelopment または同等の関数が存在する
@@ -39,7 +39,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
      *
      * Greenフェーズ目的: 実装によりDEBUGが保存されないことを確認
      */
-    test('本番環境のDEBUGログが保存されない', async () => {
+    test('does not persist DEBUG logs in production', async () => {
         // 【テスト目的】: 実装後のlogger.tsでは本番環境でもDEBUGが保存されないことを検証
         // 【テスト内容】：本番環境設定でDEBUGログを追加し、flushしてstorageに保存されないことを確認
         // 【期待される動作】: 実装後はDEBUGが保存されない
@@ -65,7 +65,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
     /**
      * 正常系テスト: 本番環境のERRORログが出力される
      */
-    test('本番環境のERRORログが出力される', async () => {
+    test('persists ERROR logs in production', async () => {
         // 【テスト目的】: 本番環境でもERROR等の重要ログは保存されることを確認
         // 【テスト内容】：本番環境設定でERRORログを追加し、storageに保存されることを検証
         // 【期待される動作】: ERRORログは本番環境でも保存される
@@ -95,7 +95,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
     /**
      * 正常系テスト: 開発環境のDEBUGログが出力される
      */
-    test('開発環境のDEBUGログが出力される', async () => {
+    test('persists DEBUG logs in development', async () => {
         // 【テスト目的】: 開発環境ではDEBUGログが保存されることを確認
         // 【テスト内容】：開発環境設定でDEBUGログを追加し、storageに保存されることを検証
         // 【期待される動作】: 開発環境ではDEBUGログも保存される
@@ -125,7 +125,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
     /**
      * エラー系テスト: 未定義のノード環境でのデフォルト挙動
      */
-    test('未定義のノード環境でのデフォルト挙動', async () => {
+    test('treats undefined NODE_ENV as production by default', async () => {
         // 【テスト目的】: NODE_ENVが未定義の場合のisDevelopmentの挙動を確認
         // 【テスト内容】：NODE_ENVがundefinedの場合の本番環境挙動を検証
         // 【期待される動作】: NODE_ENVが未定義の場合は本番環境として扱われる（isDevelopment=false）
@@ -154,7 +154,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
     /**
      * エラー系テスト: 不正な環境文字列の処理
      */
-    test('不正な環境文字列の処理', async () => {
+    test('treats non-development NODE_ENV values as production', async () => {
         // 【テスト目的】: NODE_ENVにdevelopment以外の値が設定された場合の挙動を確認
         // 【テスト内容】：'test'や'staging'などの環境値でのDEBUGログ処理を検証
         // 【期待される動作】: 'development'以外の環境値は本番環境として扱われる
@@ -183,7 +183,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
     /**
      * 境界値テスト: ログ型列挙値の全種類が正しく扱われる
      */
-    test('ログ型列挙値の全種類が正しく扱われる', async () => {
+    test('handles every log type enum value correctly', async () => {
         // 【テスト目的】: 全てのログタイプ（INFO, WARN, ERROR, SANITIZE, DEBUG）が正しく処理されることを確認
         // 【テスト内容】：各ログタイプを追加し、正常に保存されることを検証
         // 【期待される動作】: 全てのログタイプが正しく認識・保存される
@@ -220,7 +220,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
     /**
      * 境界値テスト: 空メッセージのログ追加
      */
-    test('空メッセージのログ追加', async () => {
+    test('persists a log with an empty message', async () => {
         // 【テスト目的】: 空文字列メッセージでもロギングが機能するか確認
         // 【テスト内容】：空メッセージのログを追加し、正常に保存されることを検証
         // 【期待される動作】: ユーザー入力ではない空メッセージも保存される

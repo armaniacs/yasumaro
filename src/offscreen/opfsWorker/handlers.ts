@@ -10,6 +10,7 @@
  */
 
 import type { SqliteEngine, SqliteValue, SqliteRow } from '../sqliteEngine.js';
+import { withTransaction as withTransactionNeutral } from '../sqliteTransaction.js';
 
 export interface HandlerContext {
   engine: SqliteEngine;
@@ -29,41 +30,11 @@ export async function sqlQuery(
 
 /**
  * Execute `fn` inside a `BEGIN IMMEDIATE` / `COMMIT` transaction.
- * BEGIN is outside the try so a BEGIN failure does not trigger a spurious
- * ROLLBACK that could hide the original error. On fn/COMMIT failure a
- * best-effort ROLLBACK is attempted but its error never masks the original.
+ * PBI 2026-09-12-20: the discipline moved to the neutral
+ * `sqliteTransaction.ts` (the host-layer IdbVfsBackend must not import
+ * worker internals). Worker call sites keep this one-line adapter over
+ * `sqlExec`.
  */
-export async function withTransaction<T>(ctx: HandlerContext, fn: () => Promise<T>): Promise<T>;
-export async function withTransaction<T>(
-  engine: { execWithCache(sql: string, params?: SqliteValue[]): Promise<void> },
-  fn: () => Promise<T>,
-): Promise<T>;
-export async function withTransaction<T>(
-  ctxOrEngine: HandlerContext | { execWithCache(sql: string, params?: SqliteValue[]): Promise<void> },
-  fn: () => Promise<T>,
-): Promise<T> {
-  const isHandlerContext = (v: unknown): v is HandlerContext =>
-    typeof v === 'object' && v !== null && 'engine' in v;
-
-  const exec = async (sql: string): Promise<void> => {
-    if (isHandlerContext(ctxOrEngine)) {
-      await sqlExec(ctxOrEngine, sql);
-    } else {
-      await ctxOrEngine.execWithCache(sql);
-    }
-  };
-
-  await exec('BEGIN IMMEDIATE');
-  try {
-    const result = await fn();
-    await exec('COMMIT');
-    return result;
-  } catch (err) {
-    try {
-      await exec('ROLLBACK');
-    } catch {
-      // ROLLBACK failure must not hide the original error
-    }
-    throw err;
-  }
+export function withTransaction<T>(ctx: HandlerContext, fn: () => Promise<T>): Promise<T> {
+  return withTransactionNeutral({ exec: (sql) => sqlExec(ctx, sql) }, fn);
 }

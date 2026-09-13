@@ -15,22 +15,22 @@ import {
 } from '../aiTestResultView.js';
 
 describe('formatElapsed', () => {
-  it('1秒未満はミリ秒で表示する（0.0秒に丸めない）', () => {
+  it('renders sub-second durations in milliseconds without rounding to 0.0s', () => {
     expect(formatElapsed(42)).toBe('42ms');
     expect(formatElapsed(1)).toBe('1ms');
     expect(formatElapsed(999)).toBe('999ms');
   });
 
-  it('1秒以上は秒で表示する', () => {
+  it('renders durations of one second or more in seconds', () => {
     expect(formatElapsed(1000)).toBe('1.0s');
     expect(formatElapsed(16200)).toBe('16.2s');
   });
 
-  it('0msでも 0ms と表示し、情報を失わない', () => {
+  it('renders 0ms as 0ms without losing information', () => {
     expect(formatElapsed(0)).toBe('0ms');
   });
 
-  it('不正値は - を返す', () => {
+  it('returns - for invalid values', () => {
     expect(formatElapsed(NaN)).toBe('-');
     expect(formatElapsed(-1)).toBe('-');
     expect(formatElapsed(Infinity)).toBe('-');
@@ -38,15 +38,15 @@ describe('formatElapsed', () => {
 });
 
 describe('providerLabel', () => {
-  it('既知のプロバイダは表示名に変換する', () => {
+  it('converts known providers to display names', () => {
     expect(providerLabel('gemini')).toBe('Google Gemini');
   });
 
-  it('未知のプロバイダはIDをそのまま返す', () => {
+  it('returns unknown provider IDs as-is', () => {
     expect(providerLabel('unknown-provider')).toBe('unknown-provider');
   });
 
-  it('Object.prototype のキーを拾わない（catalog は Map なので安全）', () => {
+  it('does not pick up Object.prototype keys (catalog is a Map so it is safe)', () => {
     expect(providerLabel('toString')).toBe('toString');
     expect(providerLabel('constructor')).toBe('constructor');
   });
@@ -61,17 +61,17 @@ describe('formatProviderHeadline', () => {
     elapsedMs: 320,
   };
 
-  it('成功時はチェックマークと所要時間を含む', () => {
+  it('includes a checkmark and duration on success', () => {
     expect(formatProviderHeadline(base))
       .toBe('✓ Google Gemini (gemini-test): Connected to Gemini API. (320ms)');
   });
 
-  it('失敗時は✗を使う', () => {
+  it('uses ✗ on failure', () => {
     expect(formatProviderHeadline({ ...base, success: false, message: 'Invalid API key' }))
       .toContain('✗');
   });
 
-  it('モデル未指定なら括弧を出さない', () => {
+  it('omits parentheses when no model is specified', () => {
     const { model: _model, ...noModel } = base;
     expect(formatProviderHeadline(noModel as AiTestProviderView))
       .toBe('✓ Google Gemini: Connected to Gemini API. (320ms)');
@@ -79,7 +79,7 @@ describe('formatProviderHeadline', () => {
 });
 
 describe('formatProviderDetailLines', () => {
-  it('送信内容と受信内容を明示的に出す', () => {
+  it('renders sent and received content explicitly', () => {
     const lines = formatProviderDetailLines({
       provider: 'gemini',
       success: true,
@@ -97,7 +97,7 @@ describe('formatProviderDetailLines', () => {
     expect(lines.some(l => l.includes('受信内容') && l.includes('OK'))).toBe(true);
   });
 
-  it('トークン数やHTTPステータスをメタ行にまとめる', () => {
+  it('summarizes token counts and HTTP status in a meta line', () => {
     const lines = formatProviderDetailLines({
       provider: 'openai-compatible',
       success: true,
@@ -113,7 +113,7 @@ describe('formatProviderDetailLines', () => {
     expect(meta).toContain('model=test-model');
   });
 
-  it('エラーがあれば表示する', () => {
+  it('renders the error when present', () => {
     const lines = formatProviderDetailLines({
       provider: 'gemini',
       success: false,
@@ -125,7 +125,7 @@ describe('formatProviderDetailLines', () => {
     expect(lines.some(l => l.includes('エラー') && l.includes('Invalid API key'))).toBe(true);
   });
 
-  it('debugが無ければ空配列を返す', () => {
+  it('returns an empty array when debug is missing', () => {
     expect(formatProviderDetailLines({
       provider: 'gemini', success: true, message: 'ok', elapsedMs: 10,
     })).toEqual([]);

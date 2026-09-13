@@ -3,7 +3,8 @@ import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml } from './domUtils.js';
-import { StorageKeys } from '../utils/storage/types.js';
+import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
+import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 
 export async function loadPendingPages(): Promise<void> {
   try {
@@ -54,29 +55,20 @@ export async function loadPendingPages(): Promise<void> {
   }
 }
 
-function escapeRegex(string: string): string {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
 async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'path'): Promise<void> {
-  // Read/write the shared key every other consumer uses. Any data left under the
-  // legacy orphan key 'domainWhitelist' is discarded, not migrated: the user
-  // already perceives those adds as having done nothing.
-  const stored = await chrome.storage.local.get(StorageKeys.DOMAIN_WHITELIST) as { [key: string]: string[] | undefined };
-  const currentList = stored[StorageKeys.DOMAIN_WHITELIST] ?? [];
-
-  const newEntries = urls.map(url => {
+  // PBI 2026-09-12-05: validated + deduped + cache-refreshing writes live in
+  // the shared whitelist writer seam. Path adds normalize to the URL's
+  // hostname — the historical raw-URL / anchored-regex entries could never
+  // match any whitelist consumer (all of them match hostnames) and failed
+  // pattern validation.
+  for (const url of urls) {
     if (type === 'domain') {
       const domain = new URL(url).hostname;
-      return domain;
+      await addDomainToWhitelist(domain);
     } else {
-      const urlObj = new URL(url);
-      return `^${escapeRegex(urlObj.origin + urlObj.pathname)}$`;
+      await addPathToWhitelist(url);
     }
-  });
-
-  const updatedList = [...currentList, ...newEntries];
-  await chrome.storage.local.set({ [StorageKeys.DOMAIN_WHITELIST]: updatedList });
+  }
 }
 
 export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Promise<void> {
@@ -89,19 +81,16 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
     await addDomainsOrPathsToWhitelist(urls, whitelistType);
   }
 
+  // Single read for the whole batch — the per-URL read inside the loop was an
+  // N+1 over chrome.storage (PBI 2026-09-11-03).
+  const pages = await getPendingPages();
+
   for (const url of urls) {
-    const pages = await getPendingPages();
     const page = pages.find(p => p.url === url);
     if (page) {
-      await chrome.runtime.sendMessage({
-        type: 'record',
-        data: {
-          title: page.title,
-          url: page.url,
-          content: '',
-          force: true
-        }
-      });
+      // PBI 2026-09-12-01: envelope + timeout contract lives in the shared
+      // pending-record seam (the dead {type:'record'} copy here predates it).
+      await recordPendingPage({ title: page.title, url: page.url, force: true });
     }
   }
 

@@ -4,14 +4,14 @@ import { computeCleansingStats, renderStatsSummary, renderFunnelChart, makeClean
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
 
 describe('computeCleansingStats', () => {
-  it('データなしのとき count=0 を返す', () => {
+  it('returns count=0 when there is no data', () => {
     const stats = computeCleansingStats([]);
     expect(stats.count).toBe(0);
     expect(stats.avgReductionRate).toBe(0);
     expect(stats.totalSavedBytes).toBe(0);
   });
 
-  it('pageBytes のみのエントリはカウントしない', () => {
+  it('does not count entries with only pageBytes', () => {
     const entries: SavedUrlEntry[] = [
       { url: 'https://a.com', timestamp: 1, pageBytes: 10000 }
     ];
@@ -19,7 +19,7 @@ describe('computeCleansingStats', () => {
     expect(stats.count).toBe(0);
   });
 
-  it('pageBytes と aiSummaryCleansedBytes が両方あるエントリを集計する', () => {
+  it('aggregates entries having both pageBytes and aiSummaryCleansedBytes', () => {
     const entries: SavedUrlEntry[] = [
       {
         url: 'https://a.com',
@@ -49,7 +49,7 @@ describe('computeCleansingStats', () => {
     expect(stats.funnelAvg.aiCleansed).toBe(6000);
   });
 
-  it('aiSummaryCleansedBytes がないとき cleansedBytes を最終値として使う', () => {
+  it('uses cleansedBytes as the final value when aiSummaryCleansedBytes is absent', () => {
     const entries: SavedUrlEntry[] = [
       {
         url: 'https://c.com',
@@ -66,13 +66,13 @@ describe('computeCleansingStats', () => {
 });
 
 describe('renderFunnelChart', () => {
-  it('count=0 のとき canvas に何も描画せずエラーにならない', () => {
+  it('does not draw on canvas and does not throw when count=0', () => {
     const canvas = document.createElement('canvas') as HTMLCanvasElement;
     const stats = computeCleansingStats([]);
     expect(() => renderFunnelChart(canvas, stats)).not.toThrow();
   });
 
-  it('有効なデータで呼び出してもエラーにならない', () => {
+  it('does not throw when called with valid data', () => {
     const canvas = document.createElement('canvas') as HTMLCanvasElement;
     const entries: SavedUrlEntry[] = [
       {
@@ -90,17 +90,17 @@ describe('renderFunnelChart', () => {
 });
 
 describe('makeCleansingProgressBar', () => {
-  it('pageBytes がない場合 null を返す', () => {
+  it('returns null when pageBytes is missing', () => {
     const entry: SavedUrlEntry = { url: 'https://a.com', timestamp: 1 };
     expect(makeCleansingProgressBar(entry)).toBeNull();
   });
 
-  it('pageBytes のみある場合 null を返す', () => {
+  it('returns null when only pageBytes is present', () => {
     const entry: SavedUrlEntry = { url: 'https://a.com', timestamp: 1, pageBytes: 10000 };
     expect(makeCleansingProgressBar(entry)).toBeNull();
   });
 
-  it('pageBytes と aiSummaryOriginalBytes がある場合 HTMLElement を返す', () => {
+  it('returns an HTMLElement when pageBytes and aiSummaryOriginalBytes are present', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -115,7 +115,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el!.textContent).toContain('60.0% reduction');
   });
 
-  it('aiSummaryCleansedBytes がなく cleansedBytes がある場合も機能する', () => {
+  it('works when aiSummaryCleansedBytes is absent but cleansedBytes is present', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -129,7 +129,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el!.textContent).toContain('75.0% reduction');
   });
 
-  it('pageBytes が 0 の場合 null を返す', () => {
+  it('returns null when pageBytes is 0', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -139,7 +139,7 @@ describe('makeCleansingProgressBar', () => {
     expect(makeCleansingProgressBar(entry)).toBeNull();
   });
 
-  it('fallbackTriggered が true の場合 cleansedBytes を sentToAI として使う', () => {
+  it('uses cleansedBytes as sentToAI when fallbackTriggered is true', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -156,7 +156,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el!.textContent).toContain('70.0% reduction');
   });
 
-  it('MB単位のバイト表示が正しい（>= 1MB）', () => {
+  it('formats byte display in MB correctly (>= 1MB)', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -168,7 +168,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el!.textContent).toContain('MB');
   });
 
-  it('KB単位のバイト表示が正しい（>= 1KB, < 1MB）', () => {
+  it('formats byte display in KB correctly (>= 1KB, < 1MB)', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -180,7 +180,7 @@ describe('makeCleansingProgressBar', () => {
     expect(el!.textContent).toContain('KB');
   });
 
-  it('B単位のバイト表示が正しい（< 1KB）', () => {
+  it('formats byte display in B correctly (< 1KB)', () => {
     const entry: SavedUrlEntry = {
       url: 'https://a.com',
       timestamp: 1,
@@ -194,7 +194,7 @@ describe('makeCleansingProgressBar', () => {
 });
 
 describe('renderStatsSummary', () => {
-  it('count=0 のとき no-data クラスとメッセージを表示', () => {
+  it('shows no-data class and message when count=0', () => {
     const container = document.createElement('div');
     const stats = computeCleansingStats([]);
     renderStatsSummary(container, stats);
@@ -202,7 +202,7 @@ describe('renderStatsSummary', () => {
     expect(container.textContent).toContain('No reduction rate data available');
   });
 
-  it('count>0 のとき統計カードを描画', () => {
+  it('renders stat cards when count>0', () => {
     const container = document.createElement('div');
     const entries: SavedUrlEntry[] = [
       {
@@ -221,7 +221,7 @@ describe('renderStatsSummary', () => {
     expect(container.innerHTML).toContain('Records');
   });
 
-  it('統計カードの値が正しい', () => {
+  it('renders stat cards with correct values', () => {
     const container = document.createElement('div');
     const entries: SavedUrlEntry[] = [
       {

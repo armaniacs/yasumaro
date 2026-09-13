@@ -44,16 +44,22 @@ function runUnitTests() {
 
 function checkCoverage() {
   sectionBreak();
-  info('Checking coverage thresholds (>= 90% for lines and branches)...');
+  info('Checking coverage thresholds (>= 80% for lines and branches — vitest.config policy)...');
 
   const coverageSummaryPath = join(COVERAGE_DIR, 'coverage-summary.json');
+  // PBI 2026-09-11-07 (round 7): a release with zero coverage evidence must
+  // not pass silently.
   if (!existsSync(coverageSummaryPath)) {
-    warn('coverage-summary.json not found — run `npm run test:coverage` first');
-    return true; // Non-blocking
+    fail('coverage-summary.json not found — run `npm run test:coverage` first');
+    return false;
   }
 
   const summary = JSON.parse(readFileSync(coverageSummaryPath, 'utf-8'));
-  const thresholds = { lines: 0.9, branches: 0.9 };
+  // PBI 2026-09-11-07 (round 7): thresholds follow the project's own vitest
+  // config (testDir/vitest.config.ts: lines 80 / branches 80). The old 90/90
+  // here contradicted that policy — the gate had never passed on a real
+  // coverage run (the stale artifact on disk reported 0%).
+  const thresholds = { lines: 0.8, branches: 0.8 };
   let allPassed = true;
 
   // coverage-summary.json has top-level keys for each file
@@ -120,7 +126,9 @@ function checkTestCategories() {
         countTests(fullPath, prefix + entry.name + '/');
       } else if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.spec.ts')) {
         const content = readFileSync(fullPath, 'utf-8');
-        const count = (content.match(/\b(it|test|describe)\s*\(/g) || []).length;
+        // PBI 2026-09-11-07: count actual test cases, not describe() blocks
+        // (a describe with 5 its is 5 tests, not 6).
+        const count = (content.match(/\b(?:it|test)\s*\(/g) || []).length;
         totalTests += count;
         for (const cat of Object.keys(categories)) {
           if (prefix.startsWith(cat + '/')) {

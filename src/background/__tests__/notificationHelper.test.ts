@@ -24,20 +24,20 @@ describe('NotificationHelper', () => {
     beforeEach(() => { vi.clearAllMocks(); });
 
     describe('PRIVACY_CONFIRM_NOTIFICATION_PREFIX', () => {
-        test('正しいプレフィックス', () => {
+        test('has the correct prefix', () => {
             expect(PRIVACY_CONFIRM_NOTIFICATION_PREFIX).toBe('privacy-confirm-');
         });
     });
 
     describe('getIconUrl', () => {
-        test('アイコンURLを返す', () => {
+        test('returns the icon URL', () => {
             const url = NotificationHelper.getIconUrl();
             expect(url).toBe('chrome-extension://mock-id/icons/icon48.png');
         });
     });
 
     describe('notifySuccess', () => {
-        test('成功通知を作成する', () => {
+        test('creates a success notification', () => {
             NotificationHelper.notifySuccess('Title', 'Message');
             expect(mockCreate).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -49,7 +49,7 @@ describe('NotificationHelper', () => {
     });
 
     describe('notifyError', () => {
-        test('エラー通知を作成する', () => {
+        test('creates an error notification', () => {
             NotificationHelper.notifyError('Something failed');
             expect(mockCreate).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -59,7 +59,7 @@ describe('NotificationHelper', () => {
             );
         });
 
-        test('i18n空の場合はフォールバックタイトル', () => {
+        test('falls back to the default title when i18n is empty', () => {
             mockGetMessage.mockReturnValue('');
             NotificationHelper.notifyError('err');
             expect(mockCreate).toHaveBeenCalledWith(
@@ -69,7 +69,7 @@ describe('NotificationHelper', () => {
     });
 
     describe('notifyPrivacyConfirm', () => {
-        test('確認通知を作成する', () => {
+        test('creates a confirmation notification', () => {
             NotificationHelper.notifyPrivacyConfirm('test-id', 'Page', 'auth');
             expect(mockCreate).toHaveBeenCalledWith(
                 'test-id',
@@ -83,13 +83,13 @@ describe('NotificationHelper', () => {
             );
         });
 
-        test('ページタイトルがコンテキストメッセージ', () => {
+        test('includes the page title in the context message', () => {
             NotificationHelper.notifyPrivacyConfirm('id', 'Secret', 'auth');
             const opts = mockCreate.mock.calls[0]?.[1];
             expect(opts.message).toContain('Secret');
         });
 
-        test('i18n空の場合はフォールバック', () => {
+        test('falls back when i18n is empty', () => {
             mockGetMessage.mockReturnValue('');
             NotificationHelper.notifyPrivacyConfirm('id', 'Page', 'reason');
             const opts = mockCreate.mock.calls[0]?.[1];

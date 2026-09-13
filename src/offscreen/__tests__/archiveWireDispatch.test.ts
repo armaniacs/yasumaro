@@ -184,6 +184,9 @@ describe('archiveWireDispatch: backend receives its own `this`', () => {
   // backend[entry.method] and calls it, which drops `this` for class-based
   // backends whose archive methods read instance state. The plain-object fake
   // above cannot catch this, so this suite uses a real class.
+  // PBI 2026-09-12-32: narrowing now goes through supportsArchive, which
+  // probes archiveStatus — a staging backend must expose it (all 14 travel
+  // together per the ArchiveStaging contract).
   class ClassBasedBackend {
     public proxyCalls = 0;
     private proxyArchive(op: string): { op: string } {
@@ -191,6 +194,9 @@ describe('archiveWireDispatch: backend receives its own `this`', () => {
       // OpfsWorkerBackend did when the dispatch loses the receiver.
       this.proxyCalls++;
       return { op };
+    }
+    archiveStatus(): { success: true } {
+      return { success: true };
     }
     archiveCreate(params: Record<string, unknown>): { success: true; stagingName: string; recordCount: number } {
       this.proxyArchive('archiveCreate');
@@ -204,5 +210,19 @@ describe('archiveWireDispatch: backend receives its own `this`', () => {
     const response = await dispatch('SQLITE_ARCHIVE_CREATE', { cutoffDate: '2026-01-01', cutoffMs: 1000, includeDeleted: false, yasumaroVersion: 'test' });
     expect(response).toEqual({ success: true, stagingName: '2026-01-01', recordCount: 1 });
     expect(backend.proxyCalls).toBe(1);
+  });
+});
+
+describe('archiveWireDispatch: non-staging backend fails closed (PBI 2026-09-11-06)', () => {
+  it.each([
+    'SQLITE_ARCHIVE_PREVIEW',
+    'SQLITE_ARCHIVE_CREATE',
+    'SQLITE_ARCHIVE_STATUS',
+  ])('%s on a backend without archive methods returns the OPFS error', async (type) => {
+    getBackendMock.mockResolvedValue({});
+    await expect(dispatch(type, {})).resolves.toEqual({
+      success: false,
+      error: 'Archive requires OPFS storage.',
+    });
   });
 });

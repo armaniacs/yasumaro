@@ -4,14 +4,17 @@
  *
  * PBI-12: Phase 2 — QueryPlanner as pure function.
  * Grilling decision: Fallback を含めつつ QuerySpec 構造体で統一。
- * LIMIT は fts:100000 / plain:1000 の2種を cap として明示。
+ * LIMIT は fts:100000 / plain:10000 の2種を cap として明示。定義本体は
+ * messaging/limits.ts にあり、queryPlanner が cap 選択を所有する
+ * (PBI 2026-09-12-16)。ここの clamp は worker 境界での防御的再適用。
  */
 
-import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildFtsTagMatchCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
-import { sanitizeFtsTerm } from './schema.js';
+import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
+import type { TagFilterCondition } from './sqliteQueryBuilder.js';
 import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
+import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../messaging/limits.js';
 
 /**
  * Unified extra WHERE fragment for FTS/LIKE search paths.
@@ -22,34 +25,160 @@ import type { SqliteValue } from './sqliteEngine.js';
  */
 export interface ExtraWhere {
   extraWhereSql: string;
-  extraWhereSqlFts: string;
   extraParams: SqliteValue[];
+  /** Whether the is_deleted filter rode on this WHERE (search builders drop their hardcoded base condition when false). */
+  includeDeletedFilter: boolean;
 }
 
-export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids'>): ExtraWhere {
-  const extraConds: string[] = [];
-  const extraParams: SqliteValue[] = [];
-  if ((query as StorageQuery).dateFrom != null) { extraConds.push('created_at >= ?'); extraParams.push((query as StorageQuery).dateFrom as number); }
-  if ((query as StorageQuery).dateTo != null) { extraConds.push('created_at <= ?'); extraParams.push((query as StorageQuery).dateTo as number); }
-  if ((query as StorageQuery).domain) { extraConds.push('domain = ?'); extraParams.push((query as StorageQuery).domain as string); }
-  if ((query as StorageQuery).starred != null) { extraConds.push('is_starred = ?'); extraParams.push(((query as StorageQuery).starred ? 1 : 0) as unknown as SqliteValue); }
-  if ((query as StorageQuery).gistSynced != null) { extraConds.push('gist_synced = ?'); extraParams.push((query as StorageQuery).gistSynced as unknown as SqliteValue); }
-  if ((query as StorageQuery).ids != null && (query as StorageQuery).ids!.length > 0) {
-    extraConds.push(`id IN (${(query as StorageQuery).ids!.map(() => '?').join(',')})`);
-    extraParams.push(...((query as StorageQuery).ids as unknown as SqliteValue[]));
+/**
+ * PBI 2026-09-12-27/35: single structured condition set — the ONE spelling of
+ * the shared filter vocabulary (dateFrom/dateTo/domain/starred/gistSynced/
+ * ids/excludeDeleted). `buildWhereClause` (plain SQL, sqliteQueryBuilder
+ * adapter), `buildExtraWhereSql` (search SQL) and `matchesExtraWhere`
+ * (non-SQL parity) all derive from this list, so a new filter is one row here
+ * instead of three synchronized edits.
+ *
+ * `params` is ALWAYS a flat `SqliteValue[]` vector — the round-12 version
+ * stored the whole `ids` array as one bind value, so search+ids bound a
+ * nested array against `id IN (?,?)` on both SQL search paths.
+ *
+ * `qualifier` prefixes column names for the FTS JOIN path (`b.`), replacing
+ * the former regex string-rewrite of the assembled SQL (the most fragile
+ * point: a new column that is a substring of an existing one silently
+ * produced wrong SQL).
+ */
+export interface FilterCondition {
+  sql: string;
+  params: SqliteValue[];
+}
+
+export function buildFilterConditions(
+  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>,
+): FilterCondition[] {
+  const conditions: FilterCondition[] = [];
+  if (query.excludeDeleted !== false) {
+    conditions.push({ sql: 'is_deleted = 0', params: [] });
   }
+  if (query.dateFrom != null) conditions.push({ sql: 'created_at >= ?', params: [query.dateFrom] });
+  if (query.dateTo != null) conditions.push({ sql: 'created_at <= ?', params: [query.dateTo] });
+  if (query.domain) conditions.push({ sql: 'domain = ?', params: [query.domain] });
+  if (query.starred != null) conditions.push({ sql: 'is_starred = ?', params: [query.starred ? 1 : 0] });
+  if (query.gistSynced != null) conditions.push({ sql: 'gist_synced = ?', params: [query.gistSynced] });
+  if (query.ids != null && query.ids.length > 0) {
+    conditions.push({ sql: `id IN (${query.ids.map(() => '?').join(',')})`, params: query.ids as unknown as SqliteValue[] });
+  }
+  return conditions;
+}
+
+/** Qualify column names in a condition for the FTS JOIN path (`b.` prefix). */
+export function qualifyCondition(condition: FilterCondition, qualifier: string): FilterCondition {
+  const qualified = condition.sql
+    .replace(/\b(created_at|domain|is_starred|gist_synced|is_deleted)\b/g, `${qualifier}$&`)
+    .replace(/\bid IN \(/g, `${qualifier}id IN (`);
+  return { ...condition, sql: qualified };
+}
+
+export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>, options: { qualified?: boolean } = {}): ExtraWhere {
+  const conditions = buildFilterConditions(query);
+  const qualified = options.qualified === true;
+  const projected = conditions
+    .map((c) => (qualified ? qualifyCondition(c, 'b.') : c));
+  const extraConds = projected.map((c) => c.sql);
+  // PBI 2026-09-12-35: flatMap over the vector — the round-12 version kept
+  // the ids array as ONE bind value, so text+ids searches bound a nested
+  // array against `id IN (?,?)` on both SQL search paths.
+  const extraParams = projected.flatMap((c) => c.params);
+  // PBI 2026-09-12-38: the vestigial extraWhereSqlFts duplicate field is
+  // gone — the round-13 filter unification made both fields always identical,
+  // and "one ExtraWhere serves both paths" was false for SQL text (the LIKE
+  // path is unaliased). Callers now build one projection per search path.
   const extraWhereSql = extraConds.length > 0 ? ` AND ${extraConds.join(' AND ')}` : '';
-  const extraWhereSqlFts = extraWhereSql
-    .replace(/domain = \?/g, 'b.domain = ?')
-    .replace(/created_at/g, 'b.created_at')
-    .replace(/is_starred/g, 'b.is_starred')
-    .replace(/gist_synced/g, 'b.gist_synced')
-    .replace(/\bid\b/g, 'b.id');
-  return { extraWhereSql, extraWhereSqlFts, extraParams };
+  // The is_deleted condition rode on this WHERE only when excludeDeleted was
+  // not explicitly false — search builders read this flag instead of their
+  // hardcoded base condition (PBI 2026-09-12-27).
+  const includeDeletedFilter = query.excludeDeleted !== false;
+  return { extraWhereSql, extraParams, includeDeletedFilter };
 }
 
 /** @deprecated alias — use buildExtraWhereSql */
 export const extraWhereSql = buildExtraWhereSql;
+
+/**
+ * Path-aware tag-filter seam (PBI 2026-09-12-39).
+ *
+ * Five call sites used to hand-pick `(fts5Available, idColumn)` pairs:
+ * - plain listing:  (engine's fts5Available, 'id')      — rides on spec
+ * - FTS search:     (true, 'b.id')                       — JOIN needs qualification
+ * - LIKE search:    (false, 'id')                        — no FTS, no alias
+ * The rebuilds are load-bearing in the cross cases (FTS path with a long tag
+ * needs `b.id` qualification the spec lacks; LIKE path on an FTS-capable
+ * engine with a long tag needs `tags LIKE ?` while the spec derived MATCH),
+ * so this 3-way selector owns the mapping instead.
+ *
+ * `fts5Available` is the ENGINE capability — the selector overrides it to
+ * `false` for the LIKE path and to the true-engine value for the FTS path,
+ * so a future non-FTS OPFS engine (or a direct handleSearchFts call on a
+ * non-FTS engine) gets `tags LIKE ?` instead of a MATCH against a missing
+ * table.
+ */
+export type SearchPath = 'plain' | 'fts' | 'like';
+
+export function selectTagFilter(
+  tag: string | undefined,
+  path: SearchPath,
+  engineFts5Available: boolean,
+): { condition: string; params: SqliteValue[] } | null {
+  if (!tag) return null;
+  if (path === 'like') {
+    return buildTagFilterCondition(tag, { fts5Available: false });
+  }
+  if (path === 'fts') {
+    return buildTagFilterCondition(tag, { fts5Available: engineFts5Available, idColumn: 'b.id' });
+  }
+  return buildTagFilterCondition(tag, { fts5Available: engineFts5Available });
+}
+
+/**
+ * Tag predicate shared by the non-SQL paths (matchesExtraWhere consumers and
+ * FallbackStorage) — mirrors the SQL semantics of buildTagFilterCondition:
+ * comma-split partial match on the raw tag text, exactly the former
+ * client-side filterRowsByTag rule. Rows with unset/non-string tags never
+ * match (existing rule).
+ */
+/**
+ * Row-level tag predicate shared by the non-SQL paths (PBI 2026-09-12-40).
+ *
+ * Policy (decided once, here — was prose-only "mirrors the SQL" while the
+ * JS matched case-sensitively and treated commas as separators, diverging
+ * from SQL `tags LIKE ?` on six concrete inputs):
+ * - CASE: case-insensitive substring match (SQL `LIKE` folds ASCII case).
+ * - COMMA: the raw tag text (including commas) is matched against the raw
+ *   tags column — commas are NOT treated as separators. The SQL side
+ *   `tags LIKE '%a,b%'` matches the identical row.
+ * - WILDCARD: `%` and `_` are treated as wildcards (SQL `LIKE` semantics),
+ *   not literals.
+ * Rows with unset/non-string tags never match (existing rule).
+ */
+export function rowMatchesTagLike(tags: string | null | undefined, tagFilter: string): boolean {
+  const tagsString = tags || '';
+  if (typeof tagsString !== 'string' || !tagFilter) return false;
+  // SQL LIKE wildcards → regex, escaping the rest of the pattern.
+  const escaped = tagFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = escaped.replace(/%/g, '.*').replace(/_/g, '.');
+  return new RegExp(pattern, 'i').test(tagsString);
+}
+
+/**
+ * Back-compat alias: comma-split partial match on the raw tag text.
+ * PBI 2026-09-12-40: the fallback read path now uses `rowMatchesTagLike`
+ * (SQL-parity). This function remains for direct callers that explicitly
+ * want the legacy comma-split semantics.
+ */
+export function tagMatchesFilter(tags: string | null | undefined, tagFilter: string): boolean {
+  const tagsString = tags || '';
+  if (typeof tagsString !== 'string') return false;
+  return tagsString.split(',').some(tag => tag.trim().includes(tagFilter));
+}
 
 /**
  * Shared in-memory predicate mirroring buildExtraWhereSql's semantics.
@@ -57,8 +186,8 @@ export const extraWhereSql = buildExtraWhereSql;
  * both the SQL generator and the JS fallback read from the same source.
  */
 export function matchesExtraWhere(
-  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number },
-  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids'>
+  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number; tags?: string | null },
+  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'tag'>
 ): boolean {
   if (query.domain != null && query.domain !== '' && record.domain !== query.domain) return false;
   if (query.starred != null && Boolean(record.is_starred) !== query.starred) return false;
@@ -68,13 +197,16 @@ export function matchesExtraWhere(
   if (query.ids != null && query.ids.length > 0) {
     if (record.id == null || !query.ids.includes(record.id)) return false;
   }
+  if (query.tag != null && query.tag !== '' && !rowMatchesTagLike(record.tags, query.tag)) return false;
   return true;
 }
 
-export const QUERY_CAPS = {
-  fts: 100000,
-  plain: 1000,
-} as const;
+/**
+ * Re-exported for the OPFS worker boundary (PBI 2026-09-12-16): worker code
+ * cannot import the messaging layer directly, so the single definition in
+ * messaging/limits.ts is surfaced here. Do not re-declare the values here.
+ */
+export const QUERY_CAPS: typeof QUERY_CAPS_SOURCE = QUERY_CAPS_SOURCE;
 
 /**
  * Both-sided LIMIT clamp for the trust boundary.
@@ -92,13 +224,34 @@ export function clampLimit(raw: unknown, cap: number, fallback: number): number 
   return Math.max(1, Math.min(cap, Math.floor(raw)));
 }
 
+/**
+ * Offset clamp next to clampLimit so the read policy owns both paging values.
+ *
+ * SQLite errors on a negative OFFSET while FallbackStorage's `slice(-n, …)`
+ * counts from the end of the array — an unvalidated offset made the same
+ * query return different rows per backend (PBI 2026-09-12-06). Non-integer,
+ * non-finite, or negative input normalizes to 0; 0 is a legitimate value.
+ */
+export function clampOffset(raw: unknown): number {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+    return 0;
+  }
+  return raw;
+}
+
 export interface QuerySpec {
   where: string;
   order: string;
   limit: number;
   offset: number;
   cap: typeof QUERY_CAPS;
-  ftsTag: string | null;
+  /**
+   * Tag-filter condition for the plain listing path (PBI 2026-09-11 tag SQL
+   * migration): unified partial-match semantics on every backend — trigram
+   * MATCH (>= 3 chars, FTS5 available) or `tags LIKE '%term%'`. Null when the
+   * query carries no tag (or the tag sanitizes to nothing usable).
+   */
+  tagFilter: { condition: string; params: SqliteValue[] } | null;
   bareText: string | null;
   params: SqliteValue[];
   useFts: boolean;
@@ -142,7 +295,7 @@ export function buildQuerySpec(
       limit: 0,
       offset: 0,
       cap: caps,
-      ftsTag: null,
+      tagFilter: null,
       bareText,
       params: whereParams,
       useFts,
@@ -152,16 +305,13 @@ export function buildQuerySpec(
 
   const cap = useFts ? caps.fts : caps.plain;
   const limit = clampLimit(query.limit, cap, 100);
-  const offset = query.offset ?? 0;
+  const offset = clampOffset(query.offset ?? 0);
 
-  // FTS tag handling
-  let ftsTag: string | null = null;
-  if (query.tag) {
-    const sanitizedTag = sanitizeFtsTerm(query.tag.slice(0, 200));
-    if (sanitizedTag) {
-      ftsTag = `#${sanitizedTag}`;
-    }
-  }
+  // Tag filter condition (PBI 2026-09-11): partial-match semantics, built once
+  // here so every backend reads the same condition set.
+  const tagFilter = query.tag
+    ? selectTagFilter(query.tag, 'plain', fts5Available)
+    : null;
 
   return {
     where,
@@ -169,7 +319,7 @@ export function buildQuerySpec(
     limit,
     offset,
     cap: caps,
-    ftsTag,
+    tagFilter,
     bareText,
     params: whereParams,
     useFts,
@@ -259,75 +409,92 @@ export interface SearchStatements {
  * FTS5 search statements (browsing_logs_fts JOIN browsing_logs AS b).
  * `extra` comes from buildExtraWhereSql; `orderClause` from
  * buildSearchOrderClause({ fts: true }) or QuerySpec.order.
+ * `tagFilter` (PBI 2026-09-11-06, round 5): the shared tag condition built
+ * with buildTagFilterCondition({ idColumn: 'b.id' }) — text+tag applies BOTH
+ * conditions on every SQL backend instead of silently dropping the tag.
  */
 export function buildFtsSearchStatements(
   extra: ExtraWhere,
-  opts: { ftsQuery: string; orderClause: string; limit: number; offset: number }
+  opts: { ftsQuery: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
 ): SearchStatements {
   // `AS c` alias: required by the opfs named-row reader (row.c), ignored by
   // the idb positional reader (row[0]) — one text serves both (PBI-34).
   // rowCodec.test.ts pins this: every COUNT emits `AS c`, every FTS rows
   // query emits `rank AS rank`, so the codec mappers never read bare names.
+  const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
+  const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
+  // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (built from
+  // the shared condition set) instead of a hardcoded `b.is_deleted = 0` —
+  // `excludeDeleted: false` now reaches the FTS path like fallback/InMemory.
+  const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
   const countSql =
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts}`;
+    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql}`;
   const rowsSql =
     'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank ' +
     'FROM browsing_logs_fts ' +
     'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0${extra.extraWhereSqlFts} ` +
+    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql} ` +
     `ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`;
   return {
     countSql,
     rowsSql,
-    countParams: [opts.ftsQuery, ...extra.extraParams],
-    rowsParams: [opts.ftsQuery, ...extra.extraParams, opts.limit, opts.offset],
+    countParams: [opts.ftsQuery, ...extra.extraParams, ...tagParams],
+    rowsParams: [opts.ftsQuery, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],
   };
 }
 
 /**
  * LIKE-fallback search statements (no FTS available or term too short).
  * `orderClause` comes from buildSearchOrderClause({ fts: false }).
+ * `tagFilter` (PBI 2026-09-11-06): built with buildTagFilterCondition
+ * ({ fts5Available: false }) so short/absent FTS still honours the tag.
  */
 export function buildLikeSearchStatements(
   extra: ExtraWhere,
-  opts: { likePattern: string; orderClause: string; limit: number; offset: number }
+  opts: { likePattern: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
 ): SearchStatements {
-  const likeConds = 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const conditions = extra.extraWhereSql ? `${likeConds}${extra.extraWhereSql}` : likeConds;
+  // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (shared
+  // condition set) instead of a hardcoded base — `excludeDeleted: false`
+  // now reaches the LIKE path like fallback/InMemory.
+  const baseConds = extra.includeDeletedFilter
+    ? 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)'
+    : '(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
+  const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
+  const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
+  const conditions = extra.extraWhereSql
+    ? `${baseConds}${extra.extraWhereSql}${tagSql}`
+    : `${baseConds}${tagSql}`;
   const likeParams: SqliteValue[] = [opts.likePattern, opts.likePattern, opts.likePattern, opts.likePattern];
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
     rowsSql:
       'SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred ' +
       `FROM browsing_logs WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
-    countParams: [...likeParams, ...extra.extraParams],
-    rowsParams: [...likeParams, ...extra.extraParams, opts.limit, opts.offset],
+    countParams: [...likeParams, ...extra.extraParams, ...tagParams],
+    rowsParams: [...likeParams, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],
   };
 }
 
 /**
- * Plain filtered-listing statements. The optional `#tag` filter is appended
- * via buildFtsTagMatchCondition; callers pass null to skip it.
- *
- * INTENTIONAL divergence preserved by PBI-34: opfs QUERY honours the tag
- * filter, IdbVfsBackend.query ignores it (passes null), and the fallback /
- * in-memory paths ignore it as well. Unifying that would change idb query
- * results, so the gap stays explicit at the call site instead.
+ * Plain filtered-listing statements. The tag filter rides on the spec
+ * (QuerySpec.tagFilter — built by buildQuerySpec with the backend's
+ * fts5Available), so every backend assembles the same condition set
+ * (PBI 2026-09-11 tag SQL migration: the former "opfs honours tag, idb/fallback
+ * ignore it" divergence is gone — all backends honour the tag).
  */
 /** Canonical plain-list projection — owned by rowCodec; kept here so existing importers keep working. */
 export const PLAIN_LIST_COLUMNS = BROWSING_LOG_COLUMNS_SQL;
 
 export function buildPlainListStatements(
-  spec: Pick<QuerySpec, 'where' | 'order' | 'limit' | 'offset' | 'params'>,
-  opts: { tag?: string | null; columns: string },
+  spec: Pick<QuerySpec, 'where' | 'order' | 'limit' | 'offset' | 'params' | 'tagFilter'>,
+  opts: { columns: string },
 ): SearchStatements {
   let where = spec.where;
   const params: SqliteValue[] = [...spec.params];
-  if (opts.tag) {
-    const { condition, param } = buildFtsTagMatchCondition(opts.tag);
-    where = where ? `${where} AND ${condition}` : `WHERE ${condition}`;
-    params.push(param);
+  if (spec.tagFilter) {
+    where = where ? `${where} AND ${spec.tagFilter.condition}` : `WHERE ${spec.tagFilter.condition}`;
+    params.push(...spec.tagFilter.params);
   }
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs ${where}`,

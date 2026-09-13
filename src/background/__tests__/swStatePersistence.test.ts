@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CACHE_INITIALIZED_KEY } from '../../background/swStatePersistence.js';
 import {
     loadCacheInitializedState,
     saveCacheInitializedState,
@@ -46,7 +47,7 @@ describe('swStatePersistence', () => {
 
         it('persists the flag when set via createCacheInitializedFlag', async () => {
             const flag = createCacheInitializedFlag();
-            flag.value = true;
+            flag.set(true);
 
             const stored = await loadCacheInitializedState();
             expect(stored).toBe(true);
@@ -62,15 +63,37 @@ describe('swStatePersistence', () => {
             expect(flag.value).toBe(true);
         });
 
-        it('does not persist when setting non-value property via proxy', async () => {
+        it('restore-once: later restores are no-ops until reset (PBI 2026-09-12-33)', async () => {
+            await saveCacheInitializedState(true);
             const flag = createCacheInitializedFlag();
-            // setting a different property should not trigger saveCacheInitializedState
-            // proxy returns true but does not set the property on target (current implementation)
-            (flag as any).otherProp = true;
-            const stored = await loadCacheInitializedState();
-            expect(stored).toBe(false);
-            // flag.value should remain false
+            await flag.restore();
+            expect(flag.value).toBe(true);
+
+            const getSession = (globalThis as unknown as { chrome: { storage: { session: { get: ReturnType<typeof vi.fn> } } } }).chrome.storage.session.get;
+            const callsAfterFirst = getSession.mock.calls.length;
+
+            // Session still holds true; even if it changed, restore-once skips the re-read
+            await flag.restore();
+            await flag.restore();
+            expect(getSession.mock.calls.length).toBe(callsAfterFirst);
+            expect(flag.value).toBe(true);
+
+            // Prune-triggering events re-arm the restore
+            flag.resetRestoreOnce();
+            sessionStorage[CACHE_INITIALIZED_KEY] = false;
+            await flag.restore();
             expect(flag.value).toBe(false);
+        });
+
+        it('restore performs no echo write-back of the loaded value (Proxy removed)', async () => {
+            await saveCacheInitializedState(true);
+            const setSession = (globalThis as unknown as { chrome: { storage: { session: { set: ReturnType<typeof vi.fn> } } } }).chrome.storage.session.set;
+            setSession.mockClear();
+            const flag = createCacheInitializedFlag();
+            await flag.restore();
+            expect(flag.value).toBe(true);
+            // The loaded value must not be written back (echo removal)
+            expect(setSession).not.toHaveBeenCalled();
         });
 
         it('handles storage get failure gracefully on load', async () => {

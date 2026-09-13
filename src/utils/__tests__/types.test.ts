@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest';
 import type { CustomPrompt, TagCategory, Source, UblockRule, UblockRules } from '../types.js';
 
 describe('types: TagCategory', () => {
-    it('有効な TagCategory オブジェクトが構築できる', () => {
+    it('builds a valid TagCategory object', () => {
         const category: TagCategory = {
             name: 'TestCategory',
             isDefault: false,
@@ -19,7 +19,7 @@ describe('types: TagCategory', () => {
         expect(typeof category.createdAt).toBe('number');
     });
 
-    it('isDefault = true の TagCategory が構築できる', () => {
+    it('builds a TagCategory with isDefault = true', () => {
         const category: TagCategory = {
             name: 'Default',
             isDefault: true,
@@ -30,7 +30,7 @@ describe('types: TagCategory', () => {
 });
 
 describe('types: CustomPrompt', () => {
-    it('必須フィールドのみで CustomPrompt を構築できる', () => {
+    it('builds a CustomPrompt with only required fields', () => {
         const now = Date.now();
         const prompt: CustomPrompt = {
             id: 'prompt-1',
@@ -46,7 +46,7 @@ describe('types: CustomPrompt', () => {
         expect(prompt.systemPrompt).toBeUndefined();
     });
 
-    it('全プロバイダー値で CustomPrompt を構築できる', () => {
+    it('builds a CustomPrompt for every provider value', () => {
         const providers: CustomPrompt['provider'][] = ['gemini', 'openai', 'openai2', 'all'];
         const now = Date.now();
         providers.forEach((provider) => {
@@ -63,7 +63,7 @@ describe('types: CustomPrompt', () => {
         });
     });
 
-    it('systemPrompt を含む CustomPrompt が構築できる', () => {
+    it('builds a CustomPrompt including systemPrompt', () => {
         const now = Date.now();
         const prompt: CustomPrompt = {
             id: 'prompt-2',
@@ -80,14 +80,14 @@ describe('types: CustomPrompt', () => {
 });
 
 describe('types: UblockRule', () => {
-    it('オプションなしで UblockRule を構築できる', () => {
+    it('builds a UblockRule without options', () => {
         const rule: UblockRule = {
             domain: 'example.com',
         };
         expect(rule.domain).toBe('example.com');
     });
 
-    it('オプション付きで UblockRule を構築できる', () => {
+    it('builds a UblockRule with options', () => {
         const rule: UblockRule = {
             domain: 'example.com',
             options: { block: true },
@@ -95,7 +95,7 @@ describe('types: UblockRule', () => {
         expect(rule.options).toEqual({ block: true });
     });
 
-    it('追加プロパティを持つ UblockRule を構築できる', () => {
+    it('builds a UblockRule with extra properties', () => {
         const rule: UblockRule = {
             domain: 'example.com',
             foo: 'bar',
@@ -105,7 +105,7 @@ describe('types: UblockRule', () => {
 });
 
 describe('types: UblockRules', () => {
-    it('最小構成の UblockRules を構築できる', () => {
+    it('builds a minimal UblockRules', () => {
         const rules: UblockRules = {
             blockDomains: [],
             exceptionDomains: [],
@@ -116,7 +116,7 @@ describe('types: UblockRules', () => {
         expect(rules.metadata).toBeUndefined();
     });
 
-    it('完全な UblockRules を構築できる', () => {
+    it('builds a complete UblockRules', () => {
         const rules: UblockRules = {
             blockDomains: ['ads.example.com'],
             exceptionDomains: ['safe.example.com'],
@@ -133,7 +133,7 @@ describe('types: UblockRules', () => {
 });
 
 describe('types: Source', () => {
-    it('有効な Source オブジェクトを構築できる', () => {
+    it('builds a valid Source object', () => {
         const source: Source = {
             url: 'https://example.com/filters.txt',
             ruleCount: 100,
@@ -147,12 +147,12 @@ describe('types: Source', () => {
 });
 
 describe('types: 型定義のファイル内整合性チェック', () => {
-    it('UblockRules の blockDomains は string[] である', () => {
+    it('types blockDomains of UblockRules as string[]', () => {
         const r: UblockRules = { blockDomains: ['a.com', 'b.com'], exceptionDomains: [] };
         expect(r.blockDomains.every((d) => typeof d === 'string')).toBe(true);
     });
 
-    it('CustomPrompt の provider は4種類の文字列リテラルのいずれか', () => {
+    it('restricts CustomPrompt provider to one of four string literals', () => {
         const validProviders = new Set(['gemini', 'openai', 'openai2', 'all']);
         const now = Date.now();
         const prompt: CustomPrompt = {

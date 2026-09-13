@@ -102,24 +102,20 @@ describe('Trust Database - Domain/TLD Validation', () => {
       expect(result.error).toContain('already exists');
     });
 
-    test('MISSING: Should reject TLD with special characters', async () => {
+    test('should reject TLD with special characters', async () => {
       const result = await trustDb.addUserTld('.com<script>alert(1)</script>');
-      // Currently this may not be properly validated
-      // Expected: should reject or sanitize
-      console.log('Result for special chars:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject TLD with spaces', async () => {
+    test('should reject TLD with spaces', async () => {
       const result = await trustDb.addUserTld('.com test');
-      // Expected: should reject
-      console.log('Result for spaces:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject overly long TLD (>63 chars after dot)', async () => {
+    test('should reject overly long TLD (>63 chars after dot)', async () => {
       const longTld = '.' + 'a'.repeat(64);
       const result = await trustDb.addUserTld(longTld);
-      // Expected: should reject (RFC 1035 limits labels to 63 chars)
-      console.log('Result for long TLD:', result);
+      expect(result.success).toBe(false);
     });
   });
 
@@ -142,30 +138,30 @@ describe('Trust Database - Domain/TLD Validation', () => {
       expect(result.error).toContain('Invalid domain format');
     });
 
-    test('MISSING: Should reject domain with special characters', async () => {
+    test('should reject domain with special characters', async () => {
       const result = await trustDb.addSensitiveDomain('example<script>.com');
-      console.log('Result for special chars:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject domain with invalid characters', async () => {
+    test('should reject domain with invalid characters', async () => {
       const result = await trustDb.addSensitiveDomain('ex@mple.com');
-      console.log('Result for invalid chars:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject domain starting/ending with hyphen', async () => {
+    test('should reject domain starting/ending with hyphen', async () => {
       const result = await trustDb.addSensitiveDomain('-example.com');
-      console.log('Result for leading hyphen:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject domain starting with dot', async () => {
+    test('should reject domain starting with dot', async () => {
       const result = await trustDb.addSensitiveDomain('.example.com');
-      console.log('Result for leading dot:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject overly long domain (>253 chars)', async () => {
+    test('should reject overly long domain (>253 chars)', async () => {
       const longDomain = 'a'.repeat(250) + '.com';
       const result = await trustDb.addSensitiveDomain(longDomain);
-      console.log('Result for long domain:', result);
+      expect(result.success).toBe(false);
     });
   });
 
@@ -175,14 +171,15 @@ describe('Trust Database - Domain/TLD Validation', () => {
       expect(result.success).toBe(true);
     });
 
-    test('MISSING: Should validate domain format', async () => {
+    test('should validate domain format', async () => {
       const result = await trustDb.addToWhitelist('invalid<script>.com');
-      console.log('Result for invalid format:', result);
+      expect(result.success).toBe(false);
     });
 
-    test('MISSING: Should reject duplicate trusted domains', async () => {
-      // This depends on the implementation
-      console.log('Skipping duplicate test until implementation verified');
+    test('should reject duplicate trusted domains', async () => {
+      await trustDb.addToWhitelist('trustedsite.com');
+      const result = await trustDb.addToWhitelist('trustedsite.com');
+      expect(result.success).toBe(false);
     });
   });
 

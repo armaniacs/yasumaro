@@ -18,7 +18,7 @@ function createDownloadBtn(): HTMLButtonElement {
 }
 
 describe('renderBuiltInAiStatus', () => {
-  test('available: ステータス行のみ表示し、ダウンロードボタンは隠す', () => {
+  test('available: renders only the status row and hides the download button', () => {
     const statsEl = createStatsEl();
     const downloadBtn = createDownloadBtn();
     const result: BuiltInAiDiagnosticsResult = { status: 'available', guidance: null };
@@ -29,7 +29,7 @@ describe('renderBuiltInAiStatus', () => {
     expect(downloadBtn.classList.contains('hidden')).toBe(true);
   });
 
-  test('downloadable: ダウンロードボタンを表示する', () => {
+  test('downloadable: shows the download button', () => {
     const statsEl = createStatsEl();
     const downloadBtn = createDownloadBtn();
     const result: BuiltInAiDiagnosticsResult = { status: 'downloadable', guidance: null };
@@ -39,7 +39,7 @@ describe('renderBuiltInAiStatus', () => {
     expect(downloadBtn.classList.contains('hidden')).toBe(false);
   });
 
-  test('downloading: ダウンロードボタンは隠したまま', () => {
+  test('downloading: keeps the download button hidden', () => {
     const statsEl = createStatsEl();
     const downloadBtn = createDownloadBtn();
     const result: BuiltInAiDiagnosticsResult = { status: 'downloading', guidance: null };
@@ -49,7 +49,7 @@ describe('renderBuiltInAiStatus', () => {
     expect(downloadBtn.classList.contains('hidden')).toBe(true);
   });
 
-  test('unavailable かつ guidance あり: フラグURL/フラグ名を表示する', () => {
+  test('unavailable with guidance: shows the flag URL and flag name', () => {
     const statsEl = createStatsEl();
     const downloadBtn = createDownloadBtn();
     const result: BuiltInAiDiagnosticsResult = {
@@ -64,7 +64,7 @@ describe('renderBuiltInAiStatus', () => {
     expect(downloadBtn.classList.contains('hidden')).toBe(true);
   });
 
-  test('unavailable かつ guidance なし: 汎用の非対応メッセージを表示する', () => {
+  test('unavailable without guidance: shows the generic unsupported message', () => {
     const statsEl = createStatsEl();
     const downloadBtn = createDownloadBtn();
     const result: BuiltInAiDiagnosticsResult = { status: 'unavailable', guidance: null };
@@ -74,7 +74,7 @@ describe('renderBuiltInAiStatus', () => {
     expect(statsEl.textContent).toContain('This browser does not support built-in AI.');
   });
 
-  test('再描画時に既存の内容をクリアする', () => {
+  test('clears existing content on re-render', () => {
     const statsEl = createStatsEl();
     const downloadBtn = createDownloadBtn();
 

@@ -10,8 +10,9 @@
  *   through queryPlan.ts shared builders, so identical expectations prove
  *   the unification; the malicious-orderDir row encodes the INTENTIONAL
  *   policy split (idb fails closed, opfs coerces to DESC).
- * - fallback (no FTS5): assert observable row order instead. Default search
- *   keeps insertion order (no rank); explicit created_at sorts. Intentional.
+ * - fallback (no FTS5): assert observable row order instead. PBI
+ *   2026-09-12-40: rank now coerces to created_at DESC (parity with the SQL
+ *   backends — the former insertion-order divergence is gone).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
@@ -108,22 +109,22 @@ describe('search-sort parametric — LIKE fallback ORDER BY (idb vs opfs SQL vs 
 
     if (rowsExpect) {
       const storage = await seedFallback();
-      const result = await storage.search('example', 10, 0, { orderBy: 'created_at', orderDir: 'ASC' });
+      const result = await storage.query({ text: 'example', limit: 10, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
       expect(result.success).toBe(true);
       if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual(rowsExpect);
     }
   });
 
-  it('fallback search without orderBy keeps insertion order (no FTS5 rank — intentional)', async () => {
+  it('fallback search without orderBy coerces rank to created_at DESC (PBI 2026-09-12-40 — parity with SQL backends)', async () => {
     const storage = await seedFallback();
-    const result = await storage.search('example', 10, 0);
+    const result = await storage.query({ text: 'example', limit: 10, offset: 0 });
     expect(result.success).toBe(true);
-    if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual([100, 300, 200]);
+    if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual([300, 200, 100]);
   });
 
   it('fallback explicit created_at DESC sorts newest first', async () => {
     const storage = await seedFallback();
-    const result = await storage.search('example', 10, 0, { orderBy: 'created_at', orderDir: 'DESC' });
+    const result = await storage.query({ text: 'example', limit: 10, offset: 0, orderBy: 'created_at', orderDir: 'DESC' });
     expect(result.success).toBe(true);
     if (result.success) expect(result.rows.map((r) => r.created_at)).toEqual([300, 200, 100]);
   });
@@ -164,8 +165,8 @@ describe('search-sort parametric — invalid orderDir policy split (intentional)
 
   it('fallback fails closed via the shared spec (no interpolation)', async () => {
     const storage = await seedFallback();
-    const result = await storage.search('example', 10, 0, {
-      orderBy: 'created_at',
+    const result = await storage.query({
+      text: 'example', limit: 10, offset: 0, orderBy: 'created_at',
       orderDir: malicious as unknown as 'ASC' | 'DESC',
     });
     expect(result.success).toBe(false);

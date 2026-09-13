@@ -1,9 +1,10 @@
 /**
  * RecordingOrchestrator — deep module hiding 13 steps + PerUrlMutex + PipelineKernel
  *
- * Interface is one method: record(data, opts) -> RecordingResult.
- * All 13 steps, mutex, kernel, executor, traceId generation, and the
- * retry/preview modes are hidden behind the seam.
+ * Interface is three entry points:
+ * - record(data, opts) -> RecordingResult (full 13 steps)
+ * - preview(data, opts) -> RecordingResult (previewBreakpoint short-circuit)
+ * - retryObsidianWrite(job) -> boolean (2-step retry, no AI re-run)
  *
  * Deletion test: deleting this module forces 13 step registrations + mutex +
  * kernel to reappear in every caller. Deleting a shallow factory only moves one line.
@@ -43,15 +44,7 @@ export interface RecordingOrchestratorDeps {
   outcomeAdapters?: OutcomeAdapters;
 }
 
-/**
- * @internal — Prefer distinct entry points `record()` / `preview()` / `retryObsidianWrite()`.
- * Kept only for backward compat with `record(data, { mode })`. New code must not import this.
- */
-export type RecordMode = 'normal' | 'preview' | 'retryObsidian';
-
 export interface RecordOptions {
-  /** @deprecated — use distinct entry points `preview()` / `retryObsidianWrite()` instead */
-  mode?: RecordMode;
   previewOnly?: boolean;
   /**
    * Explicit settings, bypassing getSettingsWithCache. Used by the
@@ -150,23 +143,11 @@ export class RecordingOrchestrator {
   }
 
   /**
-   * @deprecated — Prefer distinct entry points:
-   * - `record()` for normal full pipeline (13 steps)
-   * - `preview()` for previewBreakpoint short-circuit
-   * - `retryObsidianWrite(job)` for 2-step retry (no AI re-run)
-   * This wrapper is kept for backward compat and delegates to the compiled subsets.
-   * The `mode` branching is the only place `RecordMode` is read; no inline
-   * `formatMarkdownStep + saveToObsidianStep` exists here (see `retrySteps`).
+   * Normal path: full 13 steps. Preview requests must use `preview()` —
+   * the `previewOnly` data flag short-circuits at the previewBreakpoint step.
    */
   async record(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
-    const mode: RecordMode = opts.mode ?? (opts.previewOnly || (data as { previewOnly?: boolean }).previewOnly ? 'preview' : 'normal');
-    if (mode === 'retryObsidian') return this.retryObsidian(data, opts);
-    if (mode === 'preview') return this.preview(data, opts);
-    return this.recordFull(data, opts);
-  }
-
-  /** Normal path: full 13 steps */
-  async recordFull(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
+    if (opts.previewOnly || (data as { previewOnly?: boolean }).previewOnly) return this.preview(data, opts);
     const settings = opts.settings ?? await this.getSettingsWithCache();
     return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
   }
@@ -176,34 +157,6 @@ export class RecordingOrchestrator {
     const settings = opts.settings ?? await this.getSettingsWithCache();
     const effectiveData = { ...data, previewOnly: true } as RecordingData;
     return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
-  }
-
-  /** Retry Obsidian path: 2-step subset compiled at construction (no inline) */
-  private async retryObsidian(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
-    return this.mutexMap.runExclusive(data.url, async () => {
-      const settings = opts.settings ?? await this.getSettingsWithCache();
-      const job = {
-        title: (data as unknown as { title: string }).title ?? '',
-        url: data.url,
-        summary: (data as unknown as { summary: string }).summary ?? '',
-        tags: (data as unknown as { tags?: string[] }).tags,
-      };
-      const traceId = this.generateTraceId();
-      // Typed builder replaces `...pickDefined({ tags })` spread — tags handling is explicit
-      const context = createRetryContext(job, settings, traceId);
-      const deps = createStepDeps({
-        obsidian: this.obsidian,
-        aiService: this.aiService,
-        urlStore: this.urlStore,
-        sqliteClient: this.sqliteClient,
-      });
-      const retryResult = await this.executeRetrySubset(context, deps, traceId);
-      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) {
-        this.outcomeAdapters.notifier.notifySaveSuccess(job.title || data.url);
-        return { success: true } as unknown as RecordingResult;
-      }
-      return { success: false, error: 'Obsidian sync did not complete' } as unknown as RecordingResult;
-    });
   }
 
   private async executeRetrySubset(context: RecordingContext, deps: StepDeps, traceId: string): Promise<RecordingContext> {
@@ -237,14 +190,6 @@ export class RecordingOrchestrator {
       }
       return false;
     });
-  }
-
-  /**
-   * Backward-compat alias for offline queue. Delegates to `retryObsidianWrite`.
-   * @deprecated — use `retryObsidianWrite(job)` directly
-   */
-  async retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
-    return this.retryObsidianWrite(job);
   }
 
   /**

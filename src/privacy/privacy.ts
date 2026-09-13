@@ -21,8 +21,9 @@ export function renderMarkdown(md: string): string {
     let i = 0;
 
     while (i < lines.length) {
-        const line = lines[i];
-        if (line === undefined) continue;
+        // split('\n') never yields undefined — the guard below is the loop's
+        // real bound (PBI 2026-09-11-03 round 7 removed an i++-less branch).
+        const line = lines[i] ?? '';
 
         // Horizontal rule
         if (/^---+$/.test(line.trim())) {
@@ -37,7 +38,7 @@ export function renderMarkdown(md: string): string {
             const level = (hMatch[1] ?? '').length;
             const headingText = hMatch[2] ?? '';
             const text = renderInline(headingText);
-            const id = headingText.replace(/[^\p{L}\p{N}\s-]/gu, '').trim().toLowerCase().replace(/\s+/g, '-');
+            const id = escapeHtml(headingText.replace(/[^\p{L}\p{N}\s-]/gu, '').trim().toLowerCase().replace(/\s+/g, '-'));
             out.push(`<h${level} id="${id}">${text}</h${level}>`);
             i++;
             continue;
@@ -160,8 +161,6 @@ export function renderInline(text: string): string {
     text = text.replace(/\*\*(.+?)\*\*/g, (_, t) => `<strong>${escapeHtml(t)}</strong>`);
     // Code
     text = text.replace(/`([^`]+)`/g, (_, t) => `<code>${escapeHtml(t)}</code>`);
-    // Escape remaining < >
-    text = text.replace(/(?<!<[^>]*)(?<!&(?:[a-z]+|#\d+);)(?<![<>])([^<>&"'`*[\]()]+)/g, m => m);
     return text;
 }
 
@@ -174,7 +173,10 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
     if (!content) return;
 
     try {
-        const res = await fetch('../PRIVACY.md');
+        // PBI 2026-09-11-03 (round 7): chrome.runtime.getURL instead of a
+        // relative path — the old '../PRIVACY.md' only worked because of the
+        // current dist layout (permissions/ one level below the root).
+        const res = await fetch(chrome.runtime.getURL('PRIVACY.md'));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const contentLength = res.headers.get('content-length');
         const maxSize = 1024 * 1024; // 1MB limit for privacy policy
@@ -188,10 +190,16 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
     }
 }
 
-// Initialize i18n and load the policy when the DOM is ready.
-document.addEventListener('DOMContentLoaded', () => {
-    setHtmlLangAndDir();
-    applyI18n();
-    translatePageTitle('privacyPolicyTitle');
-    loadPrivacyPolicy().catch(console.error);
-});
+/**
+ * PBI 2026-09-11-03 (round 7): exported init instead of an import-time
+ * DOMContentLoaded side effect — importing this module (tests, tooling) no
+ * longer touches the page.
+ */
+export function initPrivacyPage(): void {
+    document.addEventListener('DOMContentLoaded', () => {
+        setHtmlLangAndDir();
+        applyI18n();
+        translatePageTitle('privacyPolicyTitle');
+        loadPrivacyPolicy().catch(console.error);
+    });
+}

@@ -199,7 +199,7 @@ async function loadFreshModule() {
 
 describe('sessionAlarmsManager', () => {
   describe('updateActivity', () => {
-    it('chrome.storage.local に last_activity を保存する', async () => {
+    it('saves last_activity to chrome.storage.local', async () => {
       const { updateActivity } = await loadFreshModule();
       await updateActivity();
 
@@ -208,7 +208,7 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('chrome.storage.local.set が失敗しても throw しない', async () => {
+    it('does not throw even when chrome.storage.local.set fails', async () => {
       const { updateActivity } = await loadFreshModule();
       (chrome.storage.local.set as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
@@ -217,7 +217,7 @@ describe('sessionAlarmsManager', () => {
   });
 
   describe('startTimeoutChecker', () => {
-    it('既存アラームをクリアしてから新規アラームを作成する', async () => {
+    it('clears the existing alarm before creating a new alarm', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -228,14 +228,14 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('chrome.alarms が失敗しても throw しない', async () => {
+    it('does not throw even when chrome.alarms fails', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       mockAlarmsCreate.mockRejectedValueOnce(new Error('Alarm error'));
 
       await expect(startTimeoutChecker()).resolves.not.toThrow();
     });
 
-    it('INFO ログが出力される', async () => {
+    it('logs an INFO message', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -247,7 +247,7 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('アラームリスナーが登録される', async () => {
+    it('registers the alarm listener', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -255,7 +255,7 @@ describe('sessionAlarmsManager', () => {
       expect(capturedListener).not.toBeNull();
     });
 
-    it('2回目のstartTimeoutCheckerでもリスナーは重複登録されない', async () => {
+    it('does not register the listener twice on the second startTimeoutChecker call', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
       await startTimeoutChecker();
@@ -265,21 +265,21 @@ describe('sessionAlarmsManager', () => {
   });
 
   describe('stopTimeoutChecker', () => {
-    it('chrome.alarms.clear が呼ばれる', async () => {
+    it('calls chrome.alarms.clear', async () => {
       const { stopTimeoutChecker } = await loadFreshModule();
       await stopTimeoutChecker();
 
       expect(mockAlarmsClear).toHaveBeenCalledWith('check_session_timeout');
     });
 
-    it('chrome.alarms.clear が失敗しても throw しない', async () => {
+    it('does not throw even when chrome.alarms.clear fails', async () => {
       const { stopTimeoutChecker } = await loadFreshModule();
       mockAlarmsClear.mockRejectedValueOnce(new Error('Clear error'));
 
       await expect(stopTimeoutChecker()).resolves.not.toThrow();
     });
 
-    it('エラー時にWARNログが出力される', async () => {
+    it('logs a WARN on error', async () => {
       const { stopTimeoutChecker } = await loadFreshModule();
       mockAlarmsClear.mockRejectedValueOnce(new Error('Clear error'));
 
@@ -296,21 +296,21 @@ describe('sessionAlarmsManager', () => {
   });
 
   describe('initialize', () => {
-    it('startTimeoutChecker を呼び出す', async () => {
+    it('calls startTimeoutChecker', async () => {
       const { initialize } = await loadFreshModule();
       await initialize();
 
       expect(mockAlarmsCreate).toHaveBeenCalled();
     });
 
-    it('startTimeoutChecker が失敗しても throw しない', async () => {
+    it('does not throw even when startTimeoutChecker fails', async () => {
       const { initialize } = await loadFreshModule();
       mockAlarmsCreate.mockRejectedValueOnce(new Error('Create error'));
 
       await expect(initialize()).resolves.not.toThrow();
     });
 
-    it('initialize のエラー時にERRORログが出る', async () => {
+    it('logs an ERROR on initialize failure', async () => {
       const { initialize } = await loadFreshModule();
       mockAlarmsCreate.mockRejectedValueOnce(new Error('Init alarm error'));
 
@@ -328,7 +328,7 @@ describe('sessionAlarmsManager', () => {
   });
 
   describe('アラームリスナー', () => {
-    it('check_session_timeout アラームでロックが実行される（タイムアウト超過時、マスターパスワード有効時のみ）', async () => {
+    it('locks on the check_session_timeout alarm only when timed out with the master password enabled', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
       expect(capturedListener).not.toBeNull();
@@ -347,7 +347,7 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('タイムアウト時にINFOログが出る', async () => {
+    it('logs an INFO on timeout', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -365,7 +365,7 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('lockSession の storage エラー時も throw しない', async () => {
+    it('does not throw on lockSession storage errors', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -386,7 +386,7 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('check_session_timeout 以外のアラームは無視される', async () => {
+    it('ignores alarms other than check_session_timeout', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -400,7 +400,7 @@ describe('sessionAlarmsManager', () => {
       expect(setCalls.length).toBe(0);
     });
 
-    it('マスターパスワード未設定の場合、タイムアウト超過してもロックしない', async () => {
+    it('does not lock on timeout when the master password is unset', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -419,7 +419,7 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('アクティビティ記録がない場合はロックしない', async () => {
+    it('does not lock when no activity is recorded', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -433,7 +433,7 @@ describe('sessionAlarmsManager', () => {
       expect(setCalls.length).toBe(0);
     });
 
-    it('タイムアウト未満の場合はロックしない', async () => {
+    it('does not lock before the timeout elapses', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
@@ -448,7 +448,7 @@ describe('sessionAlarmsManager', () => {
       expect(setCalls.length).toBe(0);
     });
 
-    it('checkTimeout の storage エラー時も throw しない', async () => {
+    it('does not throw on checkTimeout storage errors', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 

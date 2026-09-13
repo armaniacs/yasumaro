@@ -150,7 +150,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     setOpfsAvailable(true);
   });
 
-  it('ハッピーパス: OPFS Worker が正常に初期化され fts5Available が true になる', async () => {
+  it('Happy path: initializes the OPFS Worker successfully and sets fts5Available to true', async () => {
     // MockWorker が INIT に対して initialized:true を返す
     const MockWorker = installMockWorker();
     // createOpfsWorker が作る Worker の postMessage をフックして即時解決させるため、
@@ -179,7 +179,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     expect(chrome.storage.local.set).not.toHaveBeenCalledWith({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
   });
 
-  it('エッジケース: OPFS 不可 → IDB にフォールバックし fts5Available が反映される', async () => {
+  it('Edge case: falls back to IDB when OPFS is unavailable and reflects fts5Available', async () => {
     setOpfsAvailable(false);
     mockInitIdbEngine.mockImplementation(async (state: { fts5Available: boolean; idbEngine: unknown }) => {
       state.fts5Available = true;
@@ -199,7 +199,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     expect(ctx.usingFallbackStorage).toBe(false);
   });
 
-  it('エッジケース: OPFS も IDB も失敗 → FallbackStorage にフォールバックし FALLBACK_MODE が立つ', async () => {
+  it('Edge case: falls back to FallbackStorage and sets FALLBACK_MODE when both OPFS and IDB fail', async () => {
     setOpfsAvailable(false);
     mockInitIdbEngine.mockImplementation(async (state: { lastInitError: string | null }) => {
       state.lastInitError = 'IDB blocked';
@@ -215,7 +215,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
   });
 
-  it('IDB 初期化失敗時は lastInitError フォールバックメッセージで throw される', async () => {
+  it('throws with the lastInitError fallback message when IDB initialization fails', async () => {
     setOpfsAvailable(false);
     mockInitIdbEngine.mockResolvedValue(false);
     // lastInitError が null の場合はデフォルトメッセージが throw される
@@ -228,7 +228,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     expect(ctx.usingFallbackStorage).toBe(true);
   });
 
-  it('catch で OPFS Worker が存在すれば terminate される', async () => {
+  it('terminates the OPFS Worker when it exists in catch', async () => {
     // Worker は作られるが INIT が失敗 → IDB も失敗 → catch で terminate
     // OPFS を成功させないために、INIT が unexpected result を返すようにする
     const MockWorker = installMockWorker();
@@ -257,7 +257,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     expect(ctx.usingFallbackStorage).toBe(true);
   });
 
-  it('chrome.storage.local.set が throw しても fallback は継続する（offscreen context）', async () => {
+  it('continues the fallback even when chrome.storage.local.set throws (offscreen context)', async () => {
     setOpfsAvailable(false);
     mockInitIdbEngine.mockResolvedValue(false);
     (chrome.storage.local.set as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('storage blocked'));
@@ -268,7 +268,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     expect(ctx.usingFallbackStorage).toBe(true);
   });
 
-  it('init の早期 return 分岐をカバーする', async () => {
+  it('covers the early-return branches of init', async () => {
     // opfsWorker が既にある場合は true
     ctx.opfsWorker = { terminate: vi.fn() } as unknown as Worker;
     await expect(ctx.init()).resolves.toBe(true);
@@ -299,7 +299,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     await expect(ctx.init()).resolves.toBe(true);
   });
 
-  it('resetForTesting / resetBackend / extractDomain / execWithCache / backend 解決をカバーする', async () => {
+  it('covers resetForTesting / resetBackend / extractDomain / execWithCache / backend resolution', async () => {
     // extractDomain: www 除去とパース失敗
     expect(extractDomain('https://www.example.com/path')).toBe('example.com');
     expect(extractDomain('not a url')).toBeNull();
@@ -349,7 +349,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     vi.useRealTimers();
   });
 
-  it('sendToOpfsWorker は 15s 応答なしで timeout し pending から削除される', async () => {
+  it('sendToOpfsWorker times out after 15s without a response and is removed from pending', async () => {
     vi.useFakeTimers();
     const state = makeOpfsState({ postMessage: vi.fn() });
 
@@ -363,7 +363,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     expect(state.opfsPending.size).toBe(0);
   });
 
-  it('timeout 前に resolve されればタイマーは clear され reject されない', async () => {
+  it('clears the timer and avoids rejection when resolved before the timeout', async () => {
     vi.useFakeTimers();
     const state = makeOpfsState({ postMessage: vi.fn() });
 
@@ -379,7 +379,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     // 手動でクリアしても size は残るが、timeout の reject が無いことを確認できればよい
   });
 
-  it('terminate は pending を全て reject し Worker を null にする', async () => {
+  it('terminate rejects all pending entries and nulls the Worker', async () => {
     const terminate = vi.fn();
     const state = makeOpfsState({ terminate });
     const pendingErrors: Error[] = [];
@@ -394,7 +394,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     expect(pendingErrors.every((e) => e.message === 'OPFS Worker terminated')).toBe(true);
   });
 
-  it('isOpfsAvailable / canCreateWorker の分岐をカバーする', () => {
+  it('covers the isOpfsAvailable / canCreateWorker branches', () => {
     // available: true — Worker も用意する
     setOpfsAvailable(true);
     installMockWorker();
@@ -416,7 +416,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     }
   });
 
-  it('createOpfsWorker は Worker 生成失敗で null を返す', () => {
+  it('createOpfsWorker returns null when Worker creation fails', () => {
     // Worker コンストラクタが throw する
     (globalThis as unknown as { Worker: unknown }).Worker = class {
       constructor() { throw new Error('Worker blocked'); }
@@ -427,7 +427,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     expect(w).toBeNull();
   });
 
-  it('createOpfsWorker は onmessage で __log と通常メッセージを分岐し、onerror で pending を reject する', async () => {
+  it('createOpfsWorker branches __log and normal messages on onmessage and rejects pending on onerror', async () => {
     let capturedOnMessage: ((e: MessageEvent) => void) | null = null;
     let capturedOnError: ((e: ErrorEvent) => void) | null = null;
     class CapturingWorker {
@@ -480,7 +480,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     expect(state.opfsPending.size).toBe(0);
   });
 
-  it('initOpfsWorker の全分岐: isOpfsAvailable false / canCreateWorker false / Worker null / INIT 成功・失敗・例外', async () => {
+  it('covers all initOpfsWorker branches: isOpfsAvailable false / canCreateWorker false / Worker null / INIT success, failure, and exception', async () => {
     // 1. isOpfsAvailable false
     setOpfsAvailable(false);
     const s1 = makeOpfsState(null);
@@ -559,7 +559,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     vi.useRealTimers();
   });
 
-  it('tryOpfsProxy は worker 無しで null、失敗で null、成功で値を返す', async () => {
+  it('tryOpfsProxy returns null without a worker, null on failure, and the value on success', async () => {
     const sNull = makeOpfsState(null);
     await expect(tryOpfsProxy(sNull, 'QUERY')).resolves.toBeNull();
 

@@ -737,11 +737,4 @@ describe('customPromptManager', () => {
     });
   });
 
-  describe('edge cases', () => {
-    it('should handle when currentSettings is null gracefully', async () => {
-      // initCustomPromptManager sets currentSettings, so this tests initial state
-      // via isDefaultActive which returns true when currentSettings is null
-      // This is tested implicitly by default being active when no settings are applied
-    });
-  });
 });

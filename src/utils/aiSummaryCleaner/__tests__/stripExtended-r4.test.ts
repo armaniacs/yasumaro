@@ -27,7 +27,7 @@ describe('stripExtended - R4 remaining statements', () => {
 
   // 147-149 + 366 : text-based cookie consent via COOKIE_TEXT_PATTERNS
   describe('collectCookieConsentElements via popup & cookieConsent', () => {
-    it('removes element with Cookieの管理 text via stripPopupElements', () => {
+    it('removes element with cookie-management text via stripPopupElements', () => {
       root.innerHTML = '<div>Cookieの管理について説明します。 Cookieポリシーを参照してください。</div><p>content</p>';
       const count = stripPopupElements(root);
       expect(count).toBeGreaterThanOrEqual(1);

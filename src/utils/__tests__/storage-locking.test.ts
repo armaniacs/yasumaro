@@ -91,7 +91,7 @@ describe('saveSettings - 楽観的ロック', () => {
         vi.clearAllMocks();
     });
 
-    it('単一の設定を正常に保存できる', async () => {
+    it('saves a single setting successfully', async () => {
         const settings = {
             [StorageKeys.OBSIDIAN_API_KEY]: 'test-key',
             [StorageKeys.OBSIDIAN_PORT]: '27124'
@@ -104,7 +104,7 @@ describe('saveSettings - 楽観的ロック', () => {
         expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.OBSIDIAN_PORT]).toBe('27124');
     });
 
-    it('同時実行時の競合を検出し、データ整合性を維持する', async () => {
+    it('detects concurrent-write conflicts and preserves data integrity', async () => {
         const baseSettings = {
             [StorageKeys.OBSIDIAN_PORT]: '27123',
             [StorageKeys.MIN_VISIT_DURATION]: 5
@@ -126,7 +126,7 @@ describe('saveSettings - 楽観的ロック', () => {
         expect(result[StorageKeys.MIN_VISIT_DURATION] || result[StorageKeys.OBSIDIAN_PORT]).toBeTruthy();
     });
 
-    it('複数回の同時保存でデータ損失が発生しない', async () => {
+    it('avoids data loss across repeated concurrent saves', async () => {
         const initialSettings = {
             [StorageKeys.OBSIDIAN_PORT]: '27123',
             [StorageKeys.MIN_VISIT_DURATION]: 5,
@@ -152,7 +152,7 @@ describe('saveSettings - 楽観的ロック', () => {
         expect(savedPorts).toContain(result[StorageKeys.OBSIDIAN_PORT]);
     });
 
-    it('updateAllowedUrlsFlag=trueで許可URLリストを正しく更新する', async () => {
+    it('updates the allowed-URL list correctly with updateAllowedUrlsFlag=true', async () => {
         const settings = {
             [StorageKeys.OBSIDIAN_PORT]: '27123',
             [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1'
@@ -166,7 +166,7 @@ describe('saveSettings - 楽観的ロック', () => {
         expect(Array.isArray((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS])).toBe(true);
     });
 
-    it('nullやundefinedの値を正しく扱える', async () => {
+    it('handles null and undefined values correctly', async () => {
         const settings = {
             [StorageKeys.OBSIDIAN_API_KEY]: null,
             [StorageKeys.GEMINI_API_KEY]: undefined,
@@ -193,7 +193,7 @@ describe('migrateToSingleSettingsObject', () => {
         vi.clearAllMocks();
     });
 
-    it('個別キーから単一settingsオブジェクトにマイグレーションできる', async () => {
+    it('migrates individual keys into a single settings object', async () => {
         // 旧方式の個別キーを設定
         mockStorage[StorageKeys.OBSIDIAN_PORT] = '27123';
         mockStorage[StorageKeys.MIN_VISIT_DURATION] = 10;
@@ -213,7 +213,7 @@ describe('migrateToSingleSettingsObject', () => {
         expect(mockStorage[StorageKeys.MIN_VISIT_DURATION]).toBeUndefined();
     });
 
-    it('既に移行済みの場合はスキップされる', async () => {
+    it('skips migration when already migrated', async () => {
         mockStorage['settings_migrated'] = true;
         mockStorage['settings'] = {
             [StorageKeys.OBSIDIAN_PORT]: '27123'
@@ -236,7 +236,7 @@ describe('暗号化エラーハンドリング', () => {
         mockStorage['settings_migrated'] = true;
     });
 
-    it('APIキー暗号化失敗時にエラーを投げて保存を中断する', async () => {
+    it('throws and aborts saving when API key encryption fails', async () => {
         // subtle.encrypt を失敗させる
         const originalEncrypt = (global.crypto as any).subtle.encrypt;
         (global.crypto as any).subtle.encrypt = vi.fn().mockRejectedValue(new Error('encryption failed'));

@@ -6,13 +6,8 @@
  * All methods delegate to the active StorageBackend returned by engine.getBackend().
  */
 
-import { errorMessage } from '../utils/errorUtils.js';
-import { logError, ErrorCode } from '../utils/logger.js';
-import { engine, DB_FILENAME, MAX_QUERY_LIMIT } from './sqliteEngineHost.js';
-import { clampLimit } from './queryPlan.js';
-import type { SqliteValue } from './sqliteEngine.js';
-import { FTS_QUERY_MAX_LENGTH } from './schema.js';
-import { pickDefined } from '../utils/objectUtils.js';
+import { engine, DB_FILENAME } from './sqliteEngineHost.js';
+import { applyReadPolicy } from './queryPlanner.js';
 
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
 
@@ -27,12 +22,12 @@ export async function insert(record: BrowsingLogRecord): Promise<{ success: true
 /**
  * Insert a batch of records atomically using a transaction.
  * Uses INSERT OR IGNORE to handle UNIQUE constraint violations (url, created_at).
+ * PBI 2026-09-11-07: keeps `skipped` in the return so the dashboard import
+ * flow can report duplicates without re-deriving them per row.
  */
-export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; count: number } | { success: false; error: string }> {
+export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; inserted: number; skipped: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
-  const result = await backend.insertBatch(records);
-  if (!result.success) return result;
-  return { success: true, count: result.inserted };
+  return backend.insertBatch(records);
 }
 
 /**
@@ -42,12 +37,10 @@ export async function insertBatch(records: BrowsingLogRecord[]): Promise<{ succe
 export async function query(q: StorageQuery = {}): Promise<{
   success: true; rows: (BrowsingLogEntry & { rank: number })[]; total: number
 } | { success: false; error: string }> {
-  const cappedLimit = clampLimit(q.limit, MAX_QUERY_LIMIT, 100);
-  // Truncate tag and text to prevent expensive FTS5 queries on extremely long input
-  const tag = q.tag ? q.tag.slice(0, FTS_QUERY_MAX_LENGTH) : q.tag;
-  const text = q.text ? q.text.slice(0, FTS_QUERY_MAX_LENGTH) : q.text;
+  // Read policy (limit clamp, FTS input truncation) is owned by queryPlanner.
+  const planned = applyReadPolicy(q);
   const backend = await engine.getBackend();
-  return backend.query({ ...q, limit: cappedLimit, ...pickDefined({ tag, text }) });
+  return backend.query(planned);
 }
 
 /**
@@ -94,7 +87,9 @@ export async function getStatus(): Promise<{ success: true; initialized: boolean
   // 'OPFS:<file>') must not be overwritten with the generic DB_FILENAME —
   // that erased the OPFS/IDB distinction the diagnostics panel relies on.
   const path = result.path ?? DB_FILENAME;
-  return { success: true, ...result, path };
+  // fts5 is part of the base contract every backend reports (SqliteStatusExtras
+  // carries it optional for hop-shape reuse); re-assert the backend guarantee.
+  return { success: true, ...result, path, fts5: result.fts5 ?? false };
 }
 
 /**
@@ -108,68 +103,13 @@ export async function clearAll(): Promise<{ success: boolean; error?: string }> 
 /**
  * Export all browsing_logs as a JSON Uint8Array (NOT a SQLite binary .db file).
  * For true SQLite binary serialization, use wa-sqlite backup API.
+ *
+ * PBI 2026-09-12-22: `serialize` now lives on the `Queryable` interface and
+ * every backend returns the shared envelope (exportEnvelope.ts) — previously
+ * the OPFS worker returned a bare array over 13 columns while IDB/fallback
+ * returned an envelope over 11, so the export schema depended on the backend.
  */
 export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
-  try {
-    const opfsResult = await engine.tryOpfsProxy<Uint8Array>('SERIALIZE');
-    if (opfsResult !== null) return { success: true, data: opfsResult };
-
-    if (!engine.idbEngine && !engine.usingFallbackStorage) {
-      await engine.init();
-    }
-
-    if (engine.usingFallbackStorage && engine.fallbackStorage) {
-      const queryResult = await engine.fallbackStorage.query({ excludeDeleted: true, orderBy: 'created_at', orderDir: 'DESC', limit: 100000 });
-      if (!queryResult.success) {
-        return { success: false, error: queryResult.error };
-      }
-      const rows = queryResult.rows.map(r => ({
-        id: r.id,
-        url: r.url,
-        title: r.title,
-        summary: r.summary,
-        tags: r.tags,
-        created_at: r.created_at,
-        domain: r.domain,
-        visit_duration: r.visit_duration,
-        scroll_ratio: r.scroll_ratio,
-        is_starred: r.is_starred,
-        is_deleted: r.is_deleted,
-      }));
-      const json = JSON.stringify({ version: 1, table: 'browsing_logs', rows }, null, 2);
-      const encoder = new TextEncoder();
-      return { success: true, data: encoder.encode(json) };
-    }
-
-    // Export all rows as a JSON byte array
-    // (wa-sqlite doesn't support sqlite3_serialize; for true .db export use backup API)
-    const rows: Record<string, unknown>[] = [];
-    await engine.execWithCache(
-      `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted
-       FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
-      [],
-      (row: SqliteValue[]) => {
-        rows.push({
-          id: Number(row[0]),
-          url: String(row[1]),
-          title: row[2],
-          summary: row[3],
-          tags: row[4],
-          created_at: Number(row[5]),
-          domain: row[6],
-          visit_duration: row[7],
-          scroll_ratio: row[8],
-          is_starred: Number(row[9]),
-          is_deleted: Number(row[10]),
-        });
-      }
-    );
-
-    const json = JSON.stringify({ version: 1, table: 'browsing_logs', rows }, null, 2);
-    const encoder = new TextEncoder();
-    return { success: true, data: encoder.encode(json) };
-  } catch (error) {
-    logError('SQLite: serialize failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'sqlite');
-    return { success: false, error: errorMessage(error) };
-  }
+  const backend = await engine.getBackend();
+  return backend.serialize();
 }

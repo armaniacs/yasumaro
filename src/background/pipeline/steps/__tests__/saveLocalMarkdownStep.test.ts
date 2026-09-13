@@ -238,7 +238,7 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('無効な場合', () => {
-    it('markdownEntryData が undefined の場合はスキップ(markdown フィールドの有無には依存しない)', async () => {
+    it('skips when markdownEntryData is undefined regardless of the markdown field', async () => {
       const context = makeContext({ markdown: undefined, markdownEntryData: undefined });
 
       const result = await saveLocalMarkdownStep(context);
@@ -248,7 +248,7 @@ describe('saveLocalMarkdownStep', () => {
       expect(result).toBe(context);
     });
 
-    it('markdown フィールドが空文字/未設定でも markdownEntryData があればバッファに蓄積される(Fix 4: markdown への依存を除去)', async () => {
+    it('buffers when markdownEntryData exists even if the markdown field is empty or unset (Fix 4: removes markdown dependency)', async () => {
       const context = makeContext({ markdown: '' });
 
       const result = await saveLocalMarkdownStep(context);
@@ -258,7 +258,7 @@ describe('saveLocalMarkdownStep', () => {
       expect(result).toBe(context);
     });
 
-    it('local_markdown_export_enabled が false の場合はスキップ', async () => {
+    it('skips when local_markdown_export_enabled is false', async () => {
       const context = makeContext({
         settings: { local_markdown_export_enabled: false } as any,
       });
@@ -269,7 +269,7 @@ describe('saveLocalMarkdownStep', () => {
       expect(result).toBe(context);
     });
 
-    it('local_markdown_export_enabled が未設定の場合はスキップ', async () => {
+    it('skips when local_markdown_export_enabled is unset', async () => {
       const context = makeContext({ settings: {} as any });
 
       const result = await saveLocalMarkdownStep(context);
@@ -280,7 +280,7 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('有効な場合（バッファ蓄積のみ、ダウンロードなし）', () => {
-    it('バッファに蓄積され、ダウンロードは呼ばれない', async () => {
+    it('buffers without calling download', async () => {
       const context = makeContext();
 
       await saveLocalMarkdownStep(context);
@@ -297,7 +297,7 @@ describe('saveLocalMarkdownStep', () => {
       expect(mockChrome.downloads.download).not.toHaveBeenCalled();
     });
 
-    it('markdownEntryData がない場合はバッファに追記せずスキップ', async () => {
+    it('skips without appending to the buffer when markdownEntryData is missing', async () => {
       const context = makeContext({ markdownEntryData: undefined });
 
       const result = await saveLocalMarkdownStep(context);
@@ -306,7 +306,7 @@ describe('saveLocalMarkdownStep', () => {
       expect(result).toBe(context);
     });
 
-    it('2回目の実行で既存エントリに追加される', async () => {
+    it('appends to the existing entry on the second run', async () => {
       const context1 = makeContext({
         markdown: '- 14:30 [Page 1](https://example.com)\n    - Summary 1',
       });
@@ -322,7 +322,7 @@ describe('saveLocalMarkdownStep', () => {
       expect(setCall[key]).toHaveLength(2);
     });
 
-    it('コンテキストをそのまま返す（downloadId/duration なし）', async () => {
+    it('returns the context as-is without downloadId/duration', async () => {
       const context = makeContext();
 
       const result = await saveLocalMarkdownStep(context);
@@ -333,7 +333,7 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('エラー処理', () => {
-    it('storage.get が失敗してもエラーを throw しない', async () => {
+    it('does not throw even when storage.get fails', async () => {
       mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage error'));
       const context = makeContext();
 
@@ -344,7 +344,7 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('日付バッファ', () => {
-    it('今日の日付が YYYY-MM-DD 形式で使用される', async () => {
+    it('uses today date in YYYY-MM-DD format', async () => {
       const context = makeContext();
 
       await saveLocalMarkdownStep(context);
@@ -357,7 +357,7 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('flushスケジュール', () => {
-    it('timing=immediate の場合、日次アラームを作成する', async () => {
+    it('creates a daily alarm when timing=immediate', async () => {
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -374,7 +374,7 @@ describe('saveLocalMarkdownStep', () => {
       );
     });
 
-    it('timing=idle の場合も日次アラームを作成する', async () => {
+    it('creates a daily alarm when timing=idle', async () => {
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -391,7 +391,7 @@ describe('saveLocalMarkdownStep', () => {
       );
     });
 
-    it('timing=manual の場合はバッファに追記されない（スキップ扱い）', async () => {
+    it('does not append to the buffer when timing=manual (treated as skipped)', async () => {
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -424,7 +424,7 @@ describe('buildDailyMarkdown', () => {
     },
   ];
 
-  it('デフォルトテンプレートで現行と同じ出力形式を生成する(Fix 3: タグなしは1スペース、タグありは末尾スペース込みの tags 値でつながる)', () => {
+  it('renders the same output format with the default template (Fix 3: one space without tags, tags value with trailing space when tags exist)', () => {
     const result = buildDailyMarkdown('2026-08-07', entries, DEFAULT_MARKDOWN_TEMPLATE);
     expect(result).toBe(
       '# 2026-08-07\n\n' +
@@ -433,7 +433,7 @@ describe('buildDailyMarkdown', () => {
     );
   });
 
-  it('カスタムテンプレートで異なる出力形式を生成する', () => {
+  it('renders a different output format with a custom template', () => {
     const customTemplate = {
       ...DEFAULT_MARKDOWN_TEMPLATE,
       id: 'custom',
@@ -445,7 +445,7 @@ describe('buildDailyMarkdown', () => {
     expect(result).toBe('## 2026-08-07 (2)\n* First - a.example.com\n\n* Second - b.example.com');
   });
 
-  it('最終レビュー Fix 1: entryData を持たない旧形式エントリが混在していても throw せず、有効なエントリのみ描画する', () => {
+  it('renders only valid entries without throwing when legacy entries without entryData are mixed in (final review Fix 1)', () => {
     // Legacy pre-branch shape: { url, title, visitedAt, markdown: string }, no entryData.
     const legacyEntry = {
       url: 'https://legacy.example.com',

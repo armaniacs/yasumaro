@@ -12,18 +12,23 @@
 
 import type { SqliteMessage } from '../messaging/sqliteMessages.js';
 import { COLUMN_NAMES, SCHEMA_SQL } from './schema.js';
+import {
+  MAX_PAYLOAD_STRING_BYTES,
+  MAX_BATCH_TOTAL_BYTES,
+  MAX_PAYLOAD_TOTAL_BYTES,
+} from '../messaging/limits.js';
 
-/** Per-field cap for large text fields. */
-export const MAX_PAYLOAD_STRING_BYTES = 1024 * 1024; // 1 MB
+/** Per-field cap for large text fields (PBI 2026-09-11-08: value lives in limits.ts). */
+export { MAX_PAYLOAD_STRING_BYTES };
 
 /** Maximum records per INSERT_BATCH. */
 export const MAX_BATCH_RECORDS = 2000;
 
-/** Total bytes of text across a batch. */
-export const MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024; // 20 MB
+/** Total bytes of text across a batch (PBI 2026-09-11-08: value lives in limits.ts). */
+export { MAX_BATCH_TOTAL_BYTES };
 
 /** Total bytes of text across a single write payload (all TEXT columns summed). */
-export const MAX_PAYLOAD_TOTAL_BYTES = 20 * 1024 * 1024; // 20 MB
+export { MAX_PAYLOAD_TOTAL_BYTES };
 
 /** Maximum bytes for RESTORE binary payload. */
 export const MAX_RESTORE_BYTES = 100 * 1024 * 1024; // 100 MB

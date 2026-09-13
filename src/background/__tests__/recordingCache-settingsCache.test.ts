@@ -139,14 +139,14 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   });
 
   describe('getSettingsWithCache', () => {
-    it('初回呼び出し時にstorageから設定を取得する', async () => {
+    it('fetches settings from storage on the first call', async () => {
       const settings = await RecordingCache.getSettingsWithCache();
 
       expect(mockGetAll).toHaveBeenCalledTimes(1);
       expect(settings).toHaveProperty('AI_PROVIDER', 'gemini');
     });
 
-    it('2回目の呼び出し時にキャッシュを使用する', async () => {
+    it('uses the cache on the second call', async () => {
       await RecordingCache.getSettingsWithCache();
       mockGetAll.mockClear();
 
@@ -158,7 +158,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(settings).toHaveProperty('AI_PROVIDER', 'gemini');
     });
 
-    it('キャッシュが期限切れの場合にstorageから設定を再取得する', async () => {
+    it('refetches settings from storage when the cache expires', async () => {
       await RecordingCache.getSettingsWithCache();
 
       // fake timers で TTL を経過させる（timestamp 直書きの代替）
@@ -186,9 +186,9 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
 
     // Problem #3: 2重キャッシュ構造を1段階に簡素化したため、バージョンチェック
     // ロジック自体が存在しない（TTLに基づく期限切れチェックのみ行われる）。
-    it.skip('キャッシュバージョンが変更された場合に再取得する', () => {});
+    it.skip('refetches when the cache version changes', () => {});
 
-    it('静的キャッシュが使用可能な場合は静的キャッシュを使用する', async () => {
+    it('uses the static cache when available', async () => {
       const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
       await RecordingCache.getSettingsWithCache();
       mockGetAll.mockClear();
@@ -201,7 +201,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(mockGetAll).not.toHaveBeenCalled();
     });
 
-    it('静的キャッシュが期限切れの場合にstorageから再取得する', async () => {
+    it('refetches from storage when the static cache expires', async () => {
       const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
       await RecordingCache.getSettingsWithCache();
 
@@ -229,7 +229,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   });
 
   describe('invalidateSettingsCache', () => {
-    it('静的キャッシュを無効化する', async () => {
+    it('invalidates the static cache', async () => {
       // 最初の呼び出しでキャッシュを作成
       await RecordingCache.getSettingsWithCache();
 
@@ -241,7 +241,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(mockGetAll).toHaveBeenCalledTimes(1);
     });
 
-    it('無効化後のgetSettingsWithCacheでstorageから再取得する', async () => {
+    it('refetches from storage via getSettingsWithCache after invalidation', async () => {
       await RecordingCache.getSettingsWithCache();
 
       RecordingCache.invalidateSettingsCache();
@@ -257,7 +257,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(settings).toHaveProperty('AI_PROVIDER', 'new-provider');
     });
 
-    it('すべてのインスタンスが無効化されたキャッシュを検知する', async () => {
+    it('detects the invalidated cache from all instances', async () => {
       // Problem #3: 2重キャッシュ構造を1段階に簡素化
       // インスタンスキャッシュがないため、このテストは簡素化
       const instance1 = makeRecordingLogic(mockObsidianClient, mockAiClient);
@@ -279,7 +279,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   // invalidateInstanceCacheはno-opになったため、テストを削除
 
   describe('recordメソッドでのキャッシュ使用', () => {
-    it('recordメソッドがキャッシュを使用する', async () => {
+    it('record method uses the cache', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
       mockObsidianClient.appendToDailyNote = vi.fn().mockResolvedValue();
@@ -306,7 +306,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(mockGetAll.mock.calls.length).toBe(mockGetAllCallsAfterFirst);
     });
 
-    it('キャッシュ期限切れ後にrecordメソッドがstorageから再取得する', async () => {
+    it('record method refetches from storage after cache expiry', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockResolvedValue(undefined)
       };
@@ -339,7 +339,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   });
 
   describe('並列呼び出しの処理', () => {
-    it('複数のrecord呼び出しが並行であっても安全に処理する', async () => {
+    it('handles concurrent record calls safely', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockResolvedValue(undefined)
       };
@@ -365,7 +365,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       });
     });
 
-    it('複数のgetSettingsWithCache呼び出しが安全に処理する', async () => {
+    it('handles concurrent getSettingsWithCache calls safely', async () => {
       const promises = [];
       for (let i = 0; i < 10; i++) {
         promises.push(RecordingCache.getSettingsWithCache());
@@ -384,7 +384,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   });
 
   describe('エッジケース', () => {
-    it('設定がnullの場合の処理', async () => {
+    it('handles null settings', async () => {
 
       mockGetAll.mockResolvedValue(null);
 
@@ -393,7 +393,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(settings).toBeNull();
     });
 
-    it('設定が空オブジェクトの場合の処理', async () => {
+    it('handles empty object settings', async () => {
 
       mockGetAll.mockResolvedValue({});
 
@@ -402,7 +402,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       expect(settings).toEqual({});
     });
 
-    it('getSettingsがrejectした場合のエラー伝播', async () => {
+    it('propagates errors when getSettings rejects', async () => {
       const error = new Error('Storage error');
 
       mockGetAll.mockRejectedValue(error);
@@ -410,7 +410,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       await expect(RecordingCache.getSettingsWithCache()).rejects.toThrow('Storage error');
     });
 
-    it('リセット後の読み取りが正常に動作する（version seam 撤去に伴い smoke 化）', async () => {
+    it('reads normally after reset (smoke coverage after version seam removal)', async () => {
       // version は typed 実装の内部状態になり外部から設定不可。
       // live-view 撤去によりオーバーフローを外部から再現できないため、
       // リセット→読み取りの基本動作を smoke として残す。
@@ -425,7 +425,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
   });
 
   describe('パフォーマンス検証', () => {
-    it('キャッシュ使用時のパフォーマンス向上を検証する', async () => {
+    it('verifies performance gains when using the cache', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
       mockObsidianClient.appendToDailyNote = vi.fn().mockResolvedValue();

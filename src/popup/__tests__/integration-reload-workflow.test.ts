@@ -24,7 +24,7 @@ describe('フローワーク: URLからインポートしてソースを再読�
     vi.clearAllMocks();
   });
 
-  test('URLからフィルターを取得してパース', async () => {
+  test('fetches a filter list from a URL and parses it', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
   
     global.fetch.mockResolvedValueOnce({
@@ -43,7 +43,7 @@ describe('フローワーク: URLからインポートしてソースを再読�
     expect(result.errors.length).toBe(0);
   });
 
-  test('複数ソースからのルール再構築', () => {
+  test('rebuilds rules from multiple sources', () => {
     const multiSources = [
       { blockDomains: ['example.com'], exceptionDomains: [] },
       { blockDomains: ['test.com'], exceptionDomains: ['safe.com'] }
@@ -55,7 +55,7 @@ describe('フローワーク: URLからインポートしてソースを再読�
     expect(new Set(merged.exceptionDomains)).toEqual(new Set(['safe.com']));
   });
 
-  test('無効な行がエラーとして報告される（サフィックスなしのドメインルールは無効）', () => {
+  test('reports invalid lines as errors (domain rules without a suffix are invalid)', () => {
     const mixedFilterText = `
 ||example.com
 invalid line without caret
@@ -69,7 +69,7 @@ invalid line without caret
     expect(result.rules.exceptionRules.length).toBe(1); // @@||safe.com^は有効
   });
 
-  test('空のフィルターリストを検出', () => {
+  test('handles an empty filter list', () => {
     const emptyFilterText = `
 # Only comments here
 !
@@ -82,7 +82,7 @@ invalid line without caret
     expect(result.rules.exceptionRules.length).toBe(0);
   });
 
-  test('重複するドメインがマージされる', () => {
+  test('merges duplicate domains', () => {
     const duplicateSources = [
       { blockDomains: ['example.com', 'test.com'], exceptionDomains: ['safe.com'] },
       { blockDomains: ['example.com', 'other.com'], exceptionDomains: ['safe.com', 'another.com'] }
@@ -94,7 +94,7 @@ invalid line without caret
     expect(new Set(merged.exceptionDomains)).toEqual(new Set(['safe.com', 'another.com']));
   });
 
-  test('metadataが正しく生成される', () => {
+  test('generates metadata correctly', () => {
     const sources = [
       { blockDomains: ['example.com', 'test.com'], exceptionDomains: ['safe.com'] },
       { blockDomains: ['other.com'], exceptionDomains: [] }
@@ -107,7 +107,7 @@ invalid line without caret
     expect(merged.metadata.importedAt).toBeDefined();
   });
 
-  test('空のソースリストが処理される', () => {
+  test('handles an empty source list', () => {
     const emptySources: Parameters<typeof rebuildRulesFromSources>[0] = [];
 
     const merged = rebuildRulesFromSources(emptySources);
@@ -117,7 +117,7 @@ invalid line without caret
     expect(merged.metadata.ruleCount).toBe(0);
   });
 
-  test('ワイルドカードドメインが含まれるソースがマージされる', () => {
+  test('merges sources containing wildcard domains', () => {
     const wildcardSources = [
       { blockDomains: ['*.example.com', 'example.*'], exceptionDomains: ['*.safe.com'] },
       { blockDomains: ['*.test.com'], exceptionDomains: [] }

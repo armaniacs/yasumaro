@@ -243,6 +243,8 @@ global.chrome = mockChrome as any;
 // Helper to build status panel DOM for domain whitelist tests
 // Default i18n messages
 const defaultMessages: Record<string, string> = {
+  // statusTrustLocked — PBI 2026-09-11-04: the LOCKED badge text is i18n now.
+  statusTrustLocked: 'LOCKED',
   statusCleansingNone: 'No cleansing',
   cleansedBadgeHard: '🧹 Hard',
   cleansedBadgeKeyword: '🧹 Keyword',
@@ -421,12 +423,15 @@ describe('updateTrustStatus', () => {
     expect(trustContent.innerHTML).toContain('LOCKED');
   });
 
-  it('disables recordBtn when permission denied', async () => {
+  it('keeps recordBtn untouched when permission denied (sole-writer contract, PBI 2026-09-11-04)', async () => {
     mockIsAllUrlsPermitted.mockResolvedValue(false);
     mockIsHostPermitted.mockResolvedValue(false);
-    await updateTrustStatus('https://example.com');
     const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
-    expect(recordBtn.disabled).toBe(true);
+    recordBtn.disabled = false; // RecordSession owns this state
+    await updateTrustStatus('https://example.com');
+    // statusPanel must NOT write recordBtn.disabled — LOCKED is communicated
+    // via the badge + permission area; "Record Anyway" stays available.
+    expect(recordBtn.disabled).toBe(false);
   });
 
   it('shows permissionRequestArea when permission denied', async () => {

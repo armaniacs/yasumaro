@@ -126,8 +126,8 @@ function buildDom() {
         <input id="exportLocalEndDate" value="2026-01-02" />
         <button id="exportLocalMarkdownBtn"></button>
         <div id="exportLocalMarkdownStatus"></div>
-        <button id="historyExportLocalMarkdownBtn"></button>
-        <div id="historyExportLocalMarkdownStatus"></div>
+        <button id="historyExportAllMarkdownBtn"></button>
+        <div id="historyExportAllMarkdownStatus"></div>
         </div>
     `;
 }
@@ -258,7 +258,6 @@ vi.mock('../settings/trustSettings.js', () => ({
 vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
 
 // Same-directory mocks (relative from __tests__ to parent src/dashboard/)
-vi.mock('../historyPanel.js', () => ({ initHistoryPanel: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../models-dev-dialog.js', () => ({
     ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },
 }));
@@ -839,7 +838,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         await handleHistoryExportLocalMarkdown();
 
         expect(mockQueryLogs).toHaveBeenCalledWith({ limit: 1000, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
-        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe('エクスポートする記録がありません。');
+        expect(document.getElementById('historyExportAllMarkdownStatus')?.textContent).toBe('エクスポートする記録がありません。');
     });
 
     it('downloads one file per distinct date and reports the count', async () => {
@@ -857,18 +856,18 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         await handleHistoryExportLocalMarkdown();
 
         expect(mockDownload).toHaveBeenCalledTimes(2);
-        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+        expect(document.getElementById('historyExportAllMarkdownStatus')?.textContent).toBe(
             '3件の記録を2ファイルにエクスポートしました。'
         );
     });
 
     it('shows an error message and re-enables the button when queryLogs reports an error', async () => {
         mockQueryLogs.mockResolvedValue({ error: 'boom' });
-        const btn = document.getElementById('historyExportLocalMarkdownBtn') as HTMLButtonElement;
+        const btn = document.getElementById('historyExportAllMarkdownBtn') as HTMLButtonElement;
 
         await handleHistoryExportLocalMarkdown();
 
-        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toContain('boom');
+        expect(document.getElementById('historyExportAllMarkdownStatus')?.textContent).toContain('boom');
         expect(btn.disabled).toBe(false);
     });
 
@@ -888,7 +887,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         expect(mockQueryLogs).toHaveBeenCalledTimes(2);
         expect(mockQueryLogs).toHaveBeenNthCalledWith(1, { limit: 1000, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
         expect(mockQueryLogs).toHaveBeenNthCalledWith(2, { limit: 1000, offset: 1000, orderBy: 'created_at', orderDir: 'ASC' });
-        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+        expect(document.getElementById('historyExportAllMarkdownStatus')?.textContent).toBe(
             '1001件の記録を1ファイルにエクスポートしました。'
         );
     });
@@ -902,7 +901,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         await handleHistoryExportLocalMarkdown();
 
         expect(mockQueryLogs).toHaveBeenCalledTimes(2);
-        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+        expect(document.getElementById('historyExportAllMarkdownStatus')?.textContent).toBe(
             '1000件の記録を1ファイルにエクスポートしました。'
         );
     });
@@ -933,7 +932,7 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         expect(mockQueryLogs).toHaveBeenNthCalledWith(1, { limit: 500, offset: 0, orderBy: 'created_at', orderDir: 'ASC' });
         expect(mockQueryLogs).toHaveBeenNthCalledWith(2, { limit: 500, offset: 500, orderBy: 'created_at', orderDir: 'ASC' });
         expect(mockDownload).toHaveBeenCalledTimes(3); // Jan 1, Jan 2 (rows spanning both batches), Jan 3
-        expect(document.getElementById('historyExportLocalMarkdownStatus')?.textContent).toBe(
+        expect(document.getElementById('historyExportAllMarkdownStatus')?.textContent).toBe(
             '502件の記録を3ファイルにエクスポートしました。'
         );
     });

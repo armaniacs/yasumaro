@@ -8,6 +8,7 @@
  * phase B (pbi/2026-09-06-04), intentionally not wired here.
  */
 
+import { MAX_ARCHIVE_EXPORT_CHUNK_BYTES } from '../../../messaging/limits.js';
 import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus } from '../../dashboardSqliteService.js';
 
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
@@ -20,7 +21,7 @@ import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { getMessage } from '../../../utils/i18n.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
-const EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
+const EXPORT_CHUNK_BYTES = MAX_ARCHIVE_EXPORT_CHUNK_BYTES;
 
 function localized(key: string, args?: Record<string, string | number>): string {
   return getMessage(key, args ?? null) || key;
@@ -475,14 +476,17 @@ export function createArchivePanel(): PanelLifecycle {
               date: meta.cutoffDate,
             });
           }
-          void (async () => {
-            const openResult = await archiveOpen(restoreStagingName as string);
-            if ('error' in openResult) throw new Error(openResult.error);
-            if (sessionSection) sessionSection.hidden = false;
-            await renderSessionList();
-          })().catch((err) => showStatus(statusTarget(statusEl), errorMessage(err), 'error'));
+          // PBI 2026-09-12-02: hand off to the session viewer inside the busy
+          // scope. sessionStaging must be set BEFORE renderSessionList — its
+          // guard returns without it, which used to leave the restored
+          // session list empty (and save/close dead) until a remount.
+          const openResult = await archiveOpen(restoreStagingName);
+          if ('error' in openResult) throw new Error(openResult.error);
+          sessionStaging = restoreStagingName;
+          if (sessionSection) sessionSection.hidden = false;
+          await renderSessionList();
           if (restoreBtn) restoreBtn.hidden = false;
-          showStatus(statusTarget(statusEl), localized('archiveStatusWorking') === 'Working… other archive operations are disabled until this finishes.' ? 'Preview ready.' : 'Preview ready.', 'success');
+          showStatus(statusTarget(statusEl), localized('archiveRestorePreviewReady'), 'success');
         } catch (err) {
           showStatus(statusTarget(statusEl), `${localized('archiveRestorePreviewFailed')}: ${errorMessage(err)}`, 'error');
         } finally {
@@ -529,18 +533,13 @@ export function createArchivePanel(): PanelLifecycle {
 // Edit modal (PBI 2026-09-06-07) — accessible dialog replacing window.prompt
 // ============================================================================
 
-interface ArchiveSessionRowLike {
-  id: number;
-  title: string | null;
-}
-
-
 interface EditModalHooks {
   onSave: (newTitle: string) => Promise<void>;
   onClosed?: () => Promise<void> | void;
   onError: (message: string) => void;
 }
 
+// PBI 2026-09-11-09 (round 6): single definition — was byte-identical twice.
 interface ArchiveSessionRowLike {
   id: number;
   title: string | null;

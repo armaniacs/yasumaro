@@ -40,15 +40,15 @@ describe('TabCache', () => {
     });
 
     describe('初期化', () => {
-        it('初期化状態はfalseであること', () => {
+        it('reports false as the initial state', () => {
             expect(tabCache.isInitializedCache()).toBe(false);
         });
 
-        it('isInitializedメソッドで初期化状態を取得できること', () => {
+        it('returns the initialization state via the isInitialized method', () => {
             expect(tabCache.isInitializedCache()).toBe(false);
         });
 
-        it('initialize() でタブ一覧をキャッシュにロードできること', async () => {
+        it('loads the tab list into the cache via initialize()', async () => {
           // Mock chrome.tabs.query to return some tabs (callback-style API)
           const mockTabs = asTabs([
             { id: 1, title: 'Tab 1', url: 'https://example.com/1', favIconUrl: null },
@@ -78,7 +78,7 @@ describe('TabCache', () => {
       });
 
     describe('タブ情報の追加', () => {
-        it('有効なhttp URLのタブを追加できること', () => {
+        it('adds a tab with a valid http URL', () => {
             const tab = {
                 id: 1,
                 title: 'Test Page',
@@ -89,7 +89,7 @@ describe('TabCache', () => {
             expect(tabCache.size()).toBe(1);
         });
 
-        it('有効なhttps URLのタブを追加できること', () => {
+        it('adds a tab with a valid https URL', () => {
             const tab = {
                 id: 2,
                 title: 'Test Page',
@@ -100,7 +100,7 @@ describe('TabCache', () => {
             expect(tabCache.size()).toBe(1);
         });
 
-        it('非http URLのタブは追加されないこと', () => {
+        it('does not add a tab with a non-http URL', () => {
             const tab = {
                 id: 3,
                 title: 'Chrome Extensions',
@@ -111,7 +111,7 @@ describe('TabCache', () => {
             expect(tabCache.size()).toBe(0);
         });
 
-        it('タブIDがない場合は追加されないこと', () => {
+        it('does not add a tab without a tab ID', () => {
             const tab = {
                 url: 'https://example.com',
                 title: 'Test Page'
@@ -120,7 +120,7 @@ describe('TabCache', () => {
             expect(tabCache.size()).toBe(0);
         });
 
-        it('URLがない場合は追加されないこと', () => {
+        it('does not add a tab without a URL', () => {
             const tab = {
                 id: 1,
                 title: 'Test Page'
@@ -129,7 +129,7 @@ describe('TabCache', () => {
             expect(tabCache.size()).toBe(0);
         });
 
-        it('複数のタブを一度に追加できること', () => {
+        it('adds multiple tabs at once', () => {
             const tabs = [
                 { id: 1, title: 'Page 1', url: 'https://example.com/page1' },
                 { id: 2, title: 'Page 2', url: 'https://example.com/page2' },
@@ -141,7 +141,7 @@ describe('TabCache', () => {
     });
 
     describe('タブ情報の取得', () => {
-        it('存在するタブIDで情報を取得できること', () => {
+        it('retrieves info for an existing tab ID', () => {
             const tab = {
                 id: 1,
                 title: 'Test Page',
@@ -156,14 +156,14 @@ describe('TabCache', () => {
             expect(retrieved!.favIconUrl).toBe('https://example.com/favicon.ico');
         });
 
-        it('存在しないタブIDではnullを返すこと', () => {
+        it('returns null for an unknown tab ID', () => {
             const retrieved = tabCache.get(999);
             expect(retrieved).toBeNull();
         });
     });
 
     describe('タブ情報の更新', () => {
-        it('存在するタブの情報を更新できること', () => {
+        it('updates info for an existing tab', () => {
             const tab = {
                 id: 1,
                 title: 'Old Title',
@@ -178,7 +178,7 @@ describe('TabCache', () => {
             expect(retrieved!.url).toBe('https://example.com');
         });
 
-        it('存在しないタブIDで更新してもエラーにならないこと', () => {
+        it('does not throw when updating an unknown tab ID', () => {
             expect(() => {
                 tabCache.update(999, { title: 'New Title' });
             }).not.toThrow();
@@ -186,7 +186,7 @@ describe('TabCache', () => {
     });
 
     describe('タブ情報の削除', () => {
-        it('存在するタブIDで削除できること', () => {
+        it('removes an existing tab ID', () => {
             const tab = {
                 id: 1,
                 title: 'Test Page',
@@ -199,13 +199,13 @@ describe('TabCache', () => {
             expect(tabCache.get(1)).toBeNull();
         });
 
-        it('存在しないタブIDで削除してもエラーにならないこと', () => {
+        it('does not throw when removing an unknown tab ID', () => {
             expect(() => {
                 tabCache.remove(999);
             }).not.toThrow();
         });
 
-        it('複数のタブを一度に削除できること', () => {
+        it('removes multiple tabs at once', () => {
             tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
             tabCache.add(asTab({ id: 2, title: 'Page 2', url: 'https://example.com/page2' }));
             tabCache.add(asTab({ id: 3, title: 'Page 3', url: 'https://example.com/page3' }));
@@ -217,7 +217,7 @@ describe('TabCache', () => {
     });
 
     describe('キャッシュクリア', () => {
-        it('全キャッシュをクリアできること', () => {
+        it('clears the entire cache', () => {
             tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
             tabCache.add(asTab({ id: 2, title: 'Page 2', url: 'https://example.com/page2' }));
             expect(tabCache.size()).toBe(2);
@@ -228,7 +228,7 @@ describe('TabCache', () => {
     });
 
     describe('全タブ情報の取得', () => {
-        it('全てのタブ情報をイテレータとして取得できること', () => {
+        it('returns all tab info as an iterator', () => {
             tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
             tabCache.add(asTab({ id: 2, title: 'Page 2', url: 'https://example.com/page2' }));
             const all = collectAll(tabCache);
@@ -237,7 +237,7 @@ describe('TabCache', () => {
             expect(all[1]!.title).toBe('Page 2');
         });
 
-        it('空のキャッシュから取得してもエラーにならないこと', () => {
+        it('does not throw when reading from an empty cache', () => {
             expect(() => {
                 const all = collectAll(tabCache);
                 expect(all).toHaveLength(0);
@@ -246,7 +246,7 @@ describe('TabCache', () => {
     });
 
     describe('初期化Promise', () => {
-        it('初期化メソッドが呼ばれると初期化フラグがtrueになること', async () => {
+        it('sets the initialized flag to true when initialize is called', async () => {
             // chrome.tabs.queryをモック
             stubChromeTabsQuery((_query, callback) => {
                 callback(asTabs([
@@ -262,7 +262,7 @@ describe('TabCache', () => {
             clearChromeStub();
         });
 
-        it('連続呼び出し時に適切に処理されること', async () => {
+        it('initializes only once on concurrent calls', async () => {
             // chrome.tabs.queryをモック
             let callCount = 0;
             stubChromeTabsQuery((_query, callback) => {
@@ -288,10 +288,35 @@ describe('TabCache', () => {
             // cleanup
             clearChromeStub();
         });
+
+        it('rejects instead of hanging when chrome.tabs.query reports lastError (PBI 2026-09-12-08)', async () => {
+            // Chrome invokes the callback with lastError set — the old code
+            // read it nowhere, hit `tabs.forEach` on the empty result path
+            // and left initPromise pending forever on a throwing callback.
+            stubChromeTabsQuery((_query, callback) => {
+                (global as { chrome?: { runtime?: { lastError?: { message?: string } } } }).chrome!.runtime = {
+                    lastError: { message: 'tabs query denied' },
+                };
+                callback([]);
+            });
+
+            await expect(tabCache.initialize()).rejects.toThrow('tabs query denied');
+
+            // The failed probe must not poison the next call: initPromise is
+            // reset so a retry actually re-runs the query.
+            stubChromeTabsQuery((_query, callback) => {
+                delete (global as { chrome?: { runtime?: { lastError?: unknown } } }).chrome!.runtime;
+                callback(asTabs([{ id: 1, title: 'Page 1', url: 'https://example.com/page1' }]));
+            });
+            await tabCache.initialize();
+            expect(tabCache.isInitializedCache()).toBe(true);
+
+            clearChromeStub();
+        });
     });
 
     describe('エッジケース', () => {
-        it('同じIDでタブを追加すると上書きされること', () => {
+        it('overwrites the tab when adding the same ID', () => {
             tabCache.add(asTab({ id: 1, title: 'Page 1', url: 'https://example.com/page1' }));
             tabCache.add(asTab({ id: 1, title: 'Page 1 (Updated)', url: 'https://example.com/page1-updated' }));
             expect(tabCache.size()).toBe(1);
@@ -300,7 +325,7 @@ describe('TabCache', () => {
             expect(retrieved!.url).toBe('https://example.com/page1-updated');
         });
 
-        it('不正な形式のURLでもhttp始まりなら追加されること', () => {
+        it('adds a malformed URL when it starts with http', () => {
             const tab = {
                 id: 1,
                 title: 'Test Page',

@@ -7,34 +7,34 @@ import { describe, it, expect } from 'vitest';
 import { pickDefined } from '../objectUtils.js';
 
 describe('pickDefined', () => {
-    it('undefined のプロパティをキーごと除去する', () => {
+    it('removes undefined properties along with their keys', () => {
         const input = { a: 1, b: undefined, c: 'x' };
         expect(pickDefined(input)).toEqual({ a: 1, c: 'x' });
     });
 
-    it('undefined のプロパティは Object.keys にも現れない', () => {
+    it('keeps undefined properties out of Object.keys', () => {
         const input = { a: 1, b: undefined };
         const result = pickDefined(input);
         expect(Object.keys(result)).toEqual(['a']);
         expect('b' in result).toBe(false);
     });
 
-    it('undefined を含まないオブジェクトはそのまま返す', () => {
+    it('returns objects without undefined unchanged', () => {
         const input = { a: 1, c: 'x' };
         expect(pickDefined(input)).toEqual({ a: 1, c: 'x' });
     });
 
-    it('null は undefined と区別して保持する', () => {
+    it('keeps null distinct from undefined', () => {
         const input = { a: null, b: undefined };
         const result = pickDefined(input);
         expect(result).toEqual({ a: null });
     });
 
-    it('空オブジェクトは空オブジェクトのまま', () => {
+    it('leaves an empty object as an empty object', () => {
         expect(pickDefined({})).toEqual({});
     });
 
-    it('全プロパティが undefined なら空オブジェクトになる', () => {
+    it('returns an empty object when every property is undefined', () => {
         const input = { a: undefined, b: undefined };
         expect(pickDefined(input)).toEqual({});
     });

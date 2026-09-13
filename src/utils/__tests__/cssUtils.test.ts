@@ -10,7 +10,7 @@ import { escapeCssSelector } from '../cssUtils.js';
 
 describe('cssUtils', () => {
     describe('escapeCssSelector', () => {
-        test('CSS.escape が利用可能な場合はそれを使用する', () => {
+        test('uses CSS.escape when it is available', () => {
             // グローバル CSS.escape が定義されている場合、それを使用する
             const cssGlobal = (globalThis as any).CSS;
             expect(cssGlobal).toBeDefined();
@@ -22,23 +22,23 @@ describe('cssUtils', () => {
             spy.mockRestore();
         });
 
-        test('英数字のみの文字列はそのまま返す', () => {
+        test('returns alphanumeric-only strings unchanged', () => {
             const result = escapeCssSelector('abc123');
             expect(result).toBe('abc123');
         });
 
-        test('ハイフンとアンダースコアはエスケープしない', () => {
+        test('does not escape hyphens and underscores', () => {
             const result = escapeCssSelector('my-class_name');
             expect(result).toBe('my-class_name');
         });
 
-        test('特殊文字をエスケープする', () => {
+        test('escapes special characters', () => {
             const result = escapeCssSelector('test.class#id');
             expect(result).toContain('test');
             expect(result).not.toBe('test.class#id');
         });
 
-        test('CSS が undefined の場合フォールバックを使用する', async () => {
+        test('uses the fallback when CSS is undefined', async () => {
             const originalCSS = (global as any).CSS;
             (global as any).CSS = undefined;
 
@@ -55,7 +55,7 @@ describe('cssUtils', () => {
             }
         });
 
-        test('CSS.escape が undefined の場合フォールバックを使用する', async () => {
+        test('uses the fallback when CSS.escape is undefined', async () => {
             const originalCSS = (global as any).CSS;
             (global as any).CSS = {};
 
@@ -71,7 +71,7 @@ describe('cssUtils', () => {
             }
         });
 
-        test('フォールバックで日本語文字をエスケープする', async () => {
+        test('escapes Japanese characters in the fallback', async () => {
             const originalCSS = (global as any).CSS;
             (global as any).CSS = undefined;
 
@@ -87,12 +87,12 @@ describe('cssUtils', () => {
             }
         });
 
-        test('空文字列を渡すと空文字列を返す', () => {
+        test('returns an empty string when given an empty string', () => {
             const result = escapeCssSelector('');
             expect(result).toBe('');
         });
 
-        test('数字で始まる文字列をエスケープする', () => {
+        test('escapes strings starting with a digit', () => {
             const result = escapeCssSelector('123abc');
             expect(typeof result).toBe('string');
             expect(result.length).toBeGreaterThan(0);

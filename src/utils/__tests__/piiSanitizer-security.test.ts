@@ -9,7 +9,7 @@ import { sanitizeRegex, MAX_INPUT_SIZE, MAX_OUTPUT_SIZE } from '../piiSanitizer.
 
 describe('PIIサニタイザ - セキュリティテスト', () => {
   describe('エラーハンドリングの安全性', () => {
-    test('タイムアウト時に生テキストが返されない', async () => {
+    test('never returns raw text on timeout', async () => {
       const piiText = 'my email is user@example.com and phone is 01234567890';
 
       // sanitizeRegexはエラー時に例外をスローする。
@@ -20,7 +20,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
       expect(result.maskedItems.length).toBeGreaterThan(0);
     });
 
-    test('大量のPIIパターンでタイムアウトを強制', async () => {
+    test('forces a timeout with many PII patterns', async () => {
       // 極端に多くのPIIパターンを含むテキスト
       const manyPII = Array.from({ length: 1000 }, (_, i) =>
         `user${i}@example.com phone${i}01234567890 number${i}1234567`
@@ -32,7 +32,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
       ).rejects.toThrow();
     });
 
-    test('大量の入力による処理失敗時に生テキストが返されない', async () => {
+    test('never returns raw text when large-input processing fails', async () => {
       const hugePII = 'x'.repeat(100000) + 'test@example.com';
 
       // 入力サイズ制限をスキップしない
@@ -53,7 +53,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
   });
 
   describe('RedDoS対策の有効性', () => {
-    test('複雑な正規表現パターンによる攻撃に対処できる', async () => {
+    test('withstands complex-regex-pattern attacks', async () => {
       // ネストされた構造による潜在的なReDoS攻撃パターン
       const maliciousInput = 'AAAAAAAAAAAA'.repeat(1000) + 'user@example.com';
 
@@ -72,7 +72,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
       expect(result.text).not.toContain('user@example.com');
     });
 
-    test('マッチ件数制限が適切に機能する', async () => {
+    test('enforces the match-count limit correctly', async () => {
       // 多量のメールアドレスパターンを含むテキスト
       const manyEmails = Array.from({ length: 1001 }, (_, i) =>
         `user${i}@example.com`
@@ -86,7 +86,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
   });
 
   describe('出力サイズ制限の安全性', () => {
-    test('置換によるサイズ増大に対処できる', async () => {
+    test('handles replacement-driven size growth', async () => {
       // 多くの短いPIIパターンを含むテキスト（置換によりサイズが増大）
       const manyPII = Array.from({ length: 500 }, (_, i) =>
         `user${i}@example.com phone${i}01234567890`
@@ -114,7 +114,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
   });
 
   describe('エッジケースのセキュリティ', () => {
-    test('無効な文字を含むテキストの安全な処理', async () => {
+    test('safely processes text containing invalid characters', async () => {
       const invalidText = '\x00\x01\x02 email@example.com åäö ñ';
 
       const result = await sanitizeRegex(invalidText);
@@ -123,7 +123,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
       expect(result.text).not.toContain('email@example.com');
     });
 
-    test('非常に長い文字列単一の処理', async () => {
+    test('processes a single very long string', async () => {
       const singleLongString = 'a'.repeat(50000) + 'user@example.com';
 
       // sanitizeRegexはエラー時に例外をスローする
@@ -136,7 +136,7 @@ describe('PIIサニタイザ - セキュリティテスト', () => {
       expect(result.text).not.toContain('user@example.com');
     });
 
-    test('nullおよびundefinedの安全な処理', async () => {
+    test('safely processes null and undefined', async () => {
       const result1 = await sanitizeRegex(null as any);
       expect(result1.text).toBe('');
       expect(result1.maskedItems).toEqual([]);

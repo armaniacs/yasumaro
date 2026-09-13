@@ -1,10 +1,11 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
+import type { ArchiveStaging } from './archiveStaging.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorResponse } from '../messaging/archiveWireTable.js';
 
-export class OpfsWorkerBackend implements StorageBackend {
+export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   constructor(private engine: SqliteEngineHost) {}
 
   /**
@@ -33,7 +34,13 @@ export class OpfsWorkerBackend implements StorageBackend {
   }
 
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
-    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>('QUERY', q);
+    // Text search MUST route to the worker SEARCH handler (FTS5/LIKE), not
+    // the plain-listing QUERY handler — the plain path ignores `text` and
+    // rejects `orderBy: 'rank'` (which dashboard text search sends), so every
+    // text search on the OPFS backend returned empty. Mirrors
+    // IdbVfsBackend.query's `if (q.text)` branch and FallbackStorage.query.
+    const workerType = q.text ? 'SEARCH' : 'QUERY';
+    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>(workerType, q);
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
   }
@@ -160,6 +167,14 @@ export class OpfsWorkerBackend implements StorageBackend {
     const result = await this.engine.tryOpfsProxy<{ rows: AuditLogRecord[]; total: number }>('AUDIT_LOG_QUERY', options);
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, rows: result.rows as AuditLogEntry[], total: result.total };
+  }
+
+  async serialize(): Promise<BackendOrError<SerializeResult>> {
+    // PBI 2026-09-12-22: the worker handler now returns the shared envelope
+    // (was a bare array over 13 hand-mapped columns).
+    const result = await this.engine.tryOpfsProxy<Uint8Array>('SERIALIZE');
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, data: result };
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {

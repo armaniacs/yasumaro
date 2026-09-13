@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanseViaOffscreen, cleanseHtmlSync, isCleansingOffscreenEnabled } from '../cleansingOffscreenDelegate.js';
+import { cleanseViaOffscreen, cleanseHtmlSync, isCleansingOffscreenEnabled, __resetCleansingFlagCacheForTesting } from '../cleansingOffscreenDelegate.js';
 import { cleanseHtmlOffscreen } from '../../offscreen/cleansingOffscreen.js';
 
 function setChromeMock(opts: {
@@ -25,6 +25,12 @@ function setChromeMock(opts: {
     };
 }
 
+// PBI 2026-09-11-05 (round 7): the flag is module-cached — reset before every
+// test across all describes.
+beforeEach(() => {
+    __resetCleansingFlagCacheForTesting();
+});
+
 describe('isCleansingOffscreenEnabled — feature flag', () => {
     afterEach(() => {
         delete (globalThis as unknown as Record<string, unknown>).chrome;
@@ -43,6 +49,36 @@ describe('isCleansingOffscreenEnabled — feature flag', () => {
 
     it('returns false when chrome is undefined', async () => {
         delete (globalThis as unknown as Record<string, unknown>).chrome;
+        expect(await isCleansingOffscreenEnabled()).toBe(false);
+    });
+
+    it('caches the flag — repeated calls hit storage once (PBI 2026-09-11-05)', async () => {
+        const storageGet = vi.fn(async () => ({ cleansing_offscreen_enabled: true }));
+        setChromeMock({ storageGet: storageGet as unknown as (key: string) => Promise<Record<string, unknown>> });
+        expect(await isCleansingOffscreenEnabled()).toBe(true);
+        expect(await isCleansingOffscreenEnabled()).toBe(true);
+        expect(storageGet).toHaveBeenCalledTimes(1);
+    });
+
+    it('invalidates the cache on chrome.storage.onChanged (PBI 2026-09-11-05)', async () => {
+        let stored = { cleansing_offscreen_enabled: true };
+        const onChangedListeners: Array<(c: Record<string, unknown>, area: string) => void> = [];
+        (globalThis as unknown as Record<string, unknown>).chrome = {
+            storage: {
+                local: {
+                    get: vi.fn(async () => stored),
+                },
+                onChanged: {
+                    addListener: vi.fn((l: Array<(c: Record<string, unknown>, area: string) => void>[number]) => onChangedListeners.push(l)),
+                },
+            },
+        } as unknown;
+        expect(await isCleansingOffscreenEnabled()).toBe(true);
+        // Flag flips off in storage → onChanged fires → cache invalidated.
+        stored = { cleansing_offscreen_enabled: false };
+        for (const l of onChangedListeners) {
+            l({ cleansing_offscreen_enabled: { newValue: false } }, 'local');
+        }
         expect(await isCleansingOffscreenEnabled()).toBe(false);
     });
 });

@@ -57,7 +57,7 @@ describe('watchDynamicContent (30-13)', () => {
     for (const cb of [...mockCallbacks]) cb();
   }
 
-  it('MutationObserver で DOM 追加を検出し debounce 500ms で onChange を呼ぶ', async () => {
+  it('detects DOM additions via MutationObserver and calls onChange with a 500ms debounce', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
@@ -74,7 +74,7 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('連続した変化は debounce で1回にまとまる', async () => {
+  it('coalesces consecutive changes into one call via debounce', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
@@ -90,7 +90,7 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('変化がなければ onChange は呼ばれない', async () => {
+  it('does not call onChange when nothing changes', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
@@ -100,7 +100,7 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('disconnect後は onChange が呼ばれない', async () => {
+  it('does not call onChange after disconnect', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
@@ -111,7 +111,7 @@ describe('watchDynamicContent (30-13)', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('target null のとき document.body を監視する', async () => {
+  it('watches document.body when target is null', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const disconnect = watchDynamicContent(null, onChange, 500);
@@ -123,7 +123,7 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('impl module の単一 signature (target, onChange, debounceMs) で監視できる', async () => {
+  it('watches with the impl module single signature (target, onChange, debounceMs)', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
@@ -134,7 +134,7 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('カスタム debounceMs で動作する', async () => {
+  it('works with a custom debounceMs', async () => {
     const { watchDynamicContent } = await import('../watchDynamicContent.js');
     const onChange = vi.fn();
     const target = document.getElementById('root')!;
@@ -147,7 +147,7 @@ describe('watchDynamicContent (30-13)', () => {
     disconnect();
   });
 
-  it('実DOM変化でもMutationObserverが発火する統合', async () => {
+  it('fires MutationObserver on real DOM changes in integration', async () => {
     // モックを一旦戻して実DOMで1件だけ確認（先頭テストの代替）
     if (OriginalMutationObserver) {
       (globalThis as unknown as { MutationObserver: unknown }).MutationObserver = OriginalMutationObserver as unknown;

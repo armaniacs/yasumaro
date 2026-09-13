@@ -48,7 +48,7 @@ describe('settingsUiHelper', () => {
     });
 
     describe('showStatus', () => {
-        test('success メッセージを表示する', () => {
+        test('displays a success message', () => {
             vi.useFakeTimers();
             showStatus('status-message', 'Saved!', 'success');
 
@@ -57,7 +57,7 @@ describe('settingsUiHelper', () => {
             expect(el?.className).toBe('success');
         });
 
-        test('error メッセージを表示する', () => {
+        test('displays an error message', () => {
             vi.useFakeTimers();
             showStatus('status-message', 'Error!', 'error');
 
@@ -66,7 +66,7 @@ describe('settingsUiHelper', () => {
             expect(el?.className).toBe('error');
         });
 
-        test('success メッセージは3秒後にクリアされる', () => {
+        test('clears a success message after 3 seconds', () => {
             vi.useFakeTimers();
             showStatus('status-message', 'Saved!', 'success');
 
@@ -77,7 +77,7 @@ describe('settingsUiHelper', () => {
             expect(el?.className).toBe('');
         });
 
-        test('error メッセージは5秒後にクリアされる', () => {
+        test('clears an error message after 5 seconds', () => {
             vi.useFakeTimers();
             showStatus('status-message', 'Error!', 'error');
 
@@ -89,27 +89,27 @@ describe('settingsUiHelper', () => {
             expect(document.getElementById('status-message')?.className).toBe('');
         });
 
-        test('存在しない要素IDの場合は何もしない', () => {
+        test('does nothing for a nonexistent element ID', () => {
             expect(() => showStatus('nonexistent', 'msg', 'success')).not.toThrow();
         });
     });
 
     describe('loadSettingsToInputs', () => {
-        test('テキスト入力に設定値をロードする', () => {
+        test('loads settings into text inputs', () => {
             loadSettingsToInputs(form(), { obsidian_port: '27123', obsidian_protocol: 'http' });
 
             expect((document.getElementById('obsidian_port') as HTMLInputElement).value).toBe('27123');
             expect((document.getElementById('obsidian_protocol') as HTMLInputElement).value).toBe('http');
         });
 
-        test('チェックボックスの checked を設定する', () => {
+        test('sets checkbox checked state', () => {
             loadSettingsToInputs(form(), { ublock_format_enabled: true, simple_format_enabled: false });
 
             expect((document.getElementById('ublock_format_enabled') as HTMLInputElement).checked).toBe(true);
             expect((document.getElementById('simple_format_enabled') as HTMLInputElement).checked).toBe(false);
         });
 
-        test('APIキーが設定済みの場合はプレースホルダーを表示', () => {
+        test('shows a placeholder when an API key is already set', () => {
             loadSettingsToInputs(form(), { obsidian_api_key: 'secret_key_123' });
 
             const apiKeyInput = document.getElementById('obsidian_api_key') as HTMLInputElement;
@@ -117,48 +117,48 @@ describe('settingsUiHelper', () => {
             expect(apiKeyInput.value).toBe('');
         });
 
-        test('APIキーが空の場合はプレースホルダーを設定しない', () => {
+        test('sets no placeholder when the API key is empty', () => {
             loadSettingsToInputs(form(), { obsidian_api_key: '' });
 
             expect((document.getElementById('obsidian_api_key') as HTMLInputElement).placeholder).toBe('');
         });
 
-        test('select 要素に値をロードする', () => {
+        test('loads a value into a select element', () => {
             loadSettingsToInputs(form(), { ai_provider: 'openai' });
 
             expect((document.getElementById('ai_provider') as HTMLSelectElement).value).toBe('openai');
         });
 
-        test('textarea に値をロードする', () => {
+        test('loads a value into a textarea', () => {
             loadSettingsToInputs(form(), { obsidian_daily_path: 'Daily/{{date:YYYY-MM-DD}}' });
 
             expect((document.getElementById('obsidian_daily_path') as HTMLTextAreaElement).value).toBe('Daily/{{date:YYYY-MM-DD}}');
         });
 
-        test('null の container でもエラーにならない', () => {
+        test('does not throw for a null container', () => {
             expect(() => loadSettingsToInputs(document.createElement('div'), { obsidian_port: '27123' })).not.toThrow();
         });
 
-        test('設定値が undefined の場合は何もしない', () => {
+        test('does nothing when a setting is undefined', () => {
             loadSettingsToInputs(form(), {});
             expect((document.getElementById('obsidian_port') as HTMLInputElement).value).toBe('');
         });
 
-        test('設定値が null の場合は何もしない', () => {
+        test('does nothing when a setting is null', () => {
             loadSettingsToInputs(form(), { obsidian_port: null });
             expect((document.getElementById('obsidian_port') as HTMLInputElement).value).toBe('');
         });
     });
 
     describe('extractSettingsFromInputs', () => {
-        test('テキスト入力から値を抽出する', () => {
+        test('extracts values from text inputs', () => {
             (document.getElementById('obsidian_port') as HTMLInputElement).value = '27123';
 
             const settings = extractSettingsFromInputs(form());
             expect(settings.obsidian_port).toBe('27123');
         });
 
-        test('number 入力は Number に変換される', () => {
+        test('converts number inputs to Number', () => {
             const numInput = document.getElementById('min_visit_duration') as HTMLInputElement;
             numInput.type = 'number';
             numInput.value = '30';
@@ -167,7 +167,7 @@ describe('settingsUiHelper', () => {
             expect(settings.min_visit_duration).toBe(30);
         });
 
-        test('checkbox は checked を抽出する', () => {
+        test('extracts checkbox checked state', () => {
             const checkbox = document.getElementById('ublock_format_enabled') as HTMLInputElement;
             checkbox.type = 'checkbox';
             checkbox.checked = true;
@@ -176,7 +176,7 @@ describe('settingsUiHelper', () => {
             expect(settings.ublock_format_enabled).toBe(true);
         });
 
-        test('checkbox の unchecked は false を返す', () => {
+        test('returns false for an unchecked checkbox', () => {
             const checkbox = document.getElementById('simple_format_enabled') as HTMLInputElement;
             checkbox.type = 'checkbox';
             checkbox.checked = false;
@@ -185,21 +185,21 @@ describe('settingsUiHelper', () => {
             expect(settings.simple_format_enabled).toBe(false);
         });
 
-        test('APIキー空欄はスキップする', () => {
+        test('skips an empty API key', () => {
             (document.getElementById('obsidian_api_key') as HTMLInputElement).value = '';
 
             const settings = extractSettingsFromInputs(form());
             expect(settings.obsidian_api_key).toBeUndefined();
         });
 
-        test('APIキーに入力がある場合は含まれる', () => {
+        test('includes an API key when one is entered', () => {
             (document.getElementById('gemini_api_key') as HTMLInputElement).value = 'new_key_123';
 
             const settings = extractSettingsFromInputs(form());
             expect(settings.gemini_api_key).toBe('new_key_123');
         });
 
-        test('container に data-storage-key がない要素があっても動作する', () => {
+        test('works when the container has elements without data-storage-key', () => {
             const el = document.createElement('input');
             el.id = 'no-key';
             el.value = 'ignored';
@@ -209,14 +209,14 @@ describe('settingsUiHelper', () => {
             expect(Object.keys(settings)).not.toContain('no-key');
         });
 
-        test('文字列値は trim される', () => {
+        test('trims string values', () => {
             (document.getElementById('obsidian_port') as HTMLInputElement).value = '  27123  ';
 
             const settings = extractSettingsFromInputs(form());
             expect(settings.obsidian_port).toBe('27123');
         });
 
-        test('複数フィールドを同時に抽出できる', () => {
+        test('extracts multiple fields at once', () => {
             (document.getElementById('obsidian_port') as HTMLInputElement).value = '27123';
             (document.getElementById('obsidian_protocol') as HTMLInputElement).value = 'https';
             const checkbox = document.getElementById('ublock_format_enabled') as HTMLInputElement;

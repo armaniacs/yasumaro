@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () => {
-    it('クレンジング実行時に sender へ 1 回通知する', async () => {
+    it('notifies the sender once on cleansing', async () => {
         const { kernel, sendMessageWithRetry } = makeKernel(async () => ({ success: true }));
         document.body.innerHTML = `
             <article>
@@ -59,7 +59,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         );
     });
 
-    it('recount-only ページでは通知しない（recount が totalRemoved を埋めても）', async () => {
+    it('does not notify on recount-only pages even when recount fills totalRemoved', async () => {
         const { kernel, sendMessageWithRetry } = makeKernel(async () => ({ success: true }));
         document.body.innerHTML = `
             <article>
@@ -77,7 +77,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         expect(sendMessageWithRetry).not.toHaveBeenCalled();
     });
 
-    it('クレンジング無効時は通知しない', async () => {
+    it('does not notify when cleansing is disabled', async () => {
         const { kernel, sendMessageWithRetry } = makeKernel(async () => ({ success: true }));
         document.body.innerHTML = `
             <article>
@@ -97,7 +97,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         expect(sendMessageWithRetry).not.toHaveBeenCalled();
     });
 
-    it('クレンジング後にフォールバックが発効した場合は通知しない（結果が破棄されるため）', async () => {
+    it('does not notify when fallback takes effect after cleansing because the result is discarded', async () => {
         // クレンジングで script が除去（totalRemoved > 0）されるが、残りテキストが
         // 短すぎて short_content フォールバックが発効 → settleFallback がカウンタを
         // ゼロ化するため、最終コンテンツにクレンジングは反映されない。
@@ -121,7 +121,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         expect(sendMessageWithRetry).not.toHaveBeenCalled();
     });
 
-    it('sender が throw しても抽出フローは失敗しない', async () => {
+    it('does not fail the extraction flow even when the sender throws', async () => {
         const { kernel, sendMessageWithRetry } = makeKernel(async () => {
             throw new Error('Port closed');
         });

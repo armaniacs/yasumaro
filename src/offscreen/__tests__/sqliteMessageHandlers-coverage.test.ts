@@ -230,10 +230,13 @@ describe('sqliteMessageHandlers — handleQuery branching', () => {
     expect(opts.domain).toBe('example.com');
   });
 
-  it('omits limit/offset when null (Number undefined branch)', async () => {
+  it('defaults limit via queryPlanner, omits offset when null', async () => {
     await callHandler('SQLITE_QUERY', {});
     const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
-    expect(opts).not.toHaveProperty('limit');
+    // PBI 2026-09-11-05: the read policy moved into queryPlanner — the
+    // handler->repo handoff now carries the default limit (backend behavior
+    // unchanged: recordsRepo used to default it one hop later).
+    expect(opts.limit).toBe(100);
     expect(opts).not.toHaveProperty('offset');
   });
 
@@ -488,10 +491,10 @@ describe('sqliteMessageHandlers — handleSearch branching', () => {
     expect(arg.text).toBe('');
   });
 
-  it('omits optional fields when null (pickDefined branches)', async () => {
+  it('defaults limit via queryPlanner, omits offset when null', async () => {
     await callHandler('SQLITE_SEARCH', { query: 'x' });
     const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
-    expect(arg).not.toHaveProperty('limit');
+    expect(arg.limit).toBe(100);
     expect(arg).not.toHaveProperty('offset');
   });
 
@@ -617,14 +620,22 @@ describe('sqliteMessageHandlers — purge handlers', () => {
     expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(30, 500);
   });
 
-  it('SQLITE_PURGE forwards undefined when payload undefined', async () => {
+  it('SQLITE_PURGE applies planner defaults when payload undefined (PBI 2026-09-12-19)', async () => {
     await callHandler('SQLITE_PURGE', undefined as never);
-    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(undefined, undefined);
+    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(90, 1000);
   });
 
-  it('SQLITE_PURGE handles partial payload', async () => {
+  it('SQLITE_PURGE handles partial payload (missing maxRecords takes the default)', async () => {
     await callHandler('SQLITE_PURGE', { retentionDays: 10 });
-    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(10, undefined);
+    expect(dbMaintenanceMock.purgeOldRecords).toHaveBeenCalledWith(10, 1000);
+  });
+
+  it('SQLITE_PURGE fail-closes on garbage numbers instead of binding NaN', async () => {
+    const response = await callHandler('SQLITE_PURGE', { retentionDays: Number('abc') });
+    expect(dbMaintenanceMock.purgeOldRecords).not.toHaveBeenCalled();
+    expect(response).toEqual(
+      expect.objectContaining({ success: false, error: expect.stringContaining('retentionDays') }),
+    );
   });
 
   it('CONTENT_PURGE forwards all three args', async () => {
@@ -632,14 +643,14 @@ describe('sqliteMessageHandlers — purge handlers', () => {
     expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(7, 100, true);
   });
 
-  it('CONTENT_PURGE forwards undefined when empty', async () => {
+  it('CONTENT_PURGE applies planner defaults when empty (PBI 2026-09-12-19)', async () => {
     await callHandler('CONTENT_PURGE', {} as never);
-    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(undefined, undefined, undefined);
+    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(90, 1000, undefined);
   });
 
   it('CONTENT_PURGE handles includeStarred false', async () => {
     await callHandler('CONTENT_PURGE', { includeStarred: false } as never);
-    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(undefined, undefined, false);
+    expect(dbMaintenanceMock.purgeContent).toHaveBeenCalledWith(90, 1000, false);
   });
 });
 
@@ -751,19 +762,21 @@ describe('sqliteMessageHandlers — handleStatus branching', () => {
     expect(res.idbLegacyDbName).toBe('idb-batch-atomic');
   });
 
-  it('covers oldIdbDbExists fallback when indexedDB.databases is undefined (?? [] branch) and when it throws', async () => {
+  it('covers legacy IDB probe branches: unsupported databases API omits the field, throw reports null (PBI 2026-09-11-06)', async () => {
     (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (globalThis.navigator as unknown as Record<string, unknown>).storage = {
       getDirectory: vi.fn().mockResolvedValue({
         getDirectoryHandle: vi.fn().mockRejectedValue(new Error('no dir')),
       }),
     } as never;
-    // databases undefined -> ?? []
+    // databases unsupported -> probe returns null ("unknown") -> field omitted
+    // (asserting absence from a missing probe would make the panel show
+    // "Not applicable" on browsers without the API).
     (globalThis as unknown as Record<string, unknown>).indexedDB = {} as never;
     let res = await callHandler('SQLITE_STATUS') as Record<string, unknown>;
-    expect(res.idbLegacyDbName).toBeNull();
+    expect(res).not.toHaveProperty('idbLegacyDbName');
 
-    // now make databases throw
+    // now make databases throw -> probe false -> explicit null ("confirmed absent")
     (globalThis as unknown as Record<string, unknown>).indexedDB = {
       databases: vi.fn().mockRejectedValue(new Error('boom')),
     } as never;

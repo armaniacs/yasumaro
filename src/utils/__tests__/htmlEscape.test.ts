@@ -2,7 +2,7 @@ import { describe, test, expect } from 'vitest';
 import { escapeHtml } from '../htmlEscape.js';
 
 describe('escapeHtml', () => {
-    test('特殊文字をHTMLエンティティに変換する', () => {
+    test('converts special characters to HTML entities', () => {
         expect(escapeHtml('&')).toBe('&amp;');
         expect(escapeHtml('<')).toBe('&lt;');
         expect(escapeHtml('>')).toBe('&gt;');
@@ -10,16 +10,16 @@ describe('escapeHtml', () => {
         expect(escapeHtml("'")).toBe('&#039;');
         expect(escapeHtml('/')).toBe('&#x2F;');
     });
-    test('複数の特殊文字を含む文字列を変換する', () => {
+    test('converts a string with multiple special characters', () => {
         expect(escapeHtml('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;&#x2F;script&gt;');
     });
-    test('特殊文字がない場合はそのまま返す', () => {
+    test('returns strings without special characters unchanged', () => {
         expect(escapeHtml('Hello World')).toBe('Hello World');
     });
-    test('空文字列を返す', () => {
+    test('returns an empty string for empty input', () => {
         expect(escapeHtml('')).toBe('');
     });
-    test('文字列以外の入力は空文字列を返す', () => {
+    test('returns an empty string for non-string input', () => {
         expect(escapeHtml(null as any)).toBe('');
         expect(escapeHtml(undefined as any)).toBe('');
         expect(escapeHtml(123 as any)).toBe('');
@@ -28,7 +28,7 @@ describe('escapeHtml', () => {
         expect(escapeHtml(true as any)).toBe('');
         expect(escapeHtml(Symbol('x') as any)).toBe('');
     });
-    test('nullish coalescing fallbackは到達不能だが、置換が常にマップ済みであることを確認', () => {
+    test('verifies replacements are always mapped although the nullish coalescing fallback is unreachable', () => {
         // 全ての正規表現マッチ文字がマップに存在するため、フォールバック '' は到達不能。
         // このテストは分岐が意図的に到達不能な防御的コードであることを文書化する。
         // 置換結果が undefined にならないことを確認

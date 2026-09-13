@@ -14,6 +14,7 @@ import {
   contentPurgeStarredClause,
   buildContentPurgeStatements,
 } from '../queryPlan.js';
+import { DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from '../queryPlanner.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 export interface PurgeLogCallback {
@@ -22,23 +23,28 @@ export interface PurgeLogCallback {
 
 export async function handlePurgeOldRecords(
   ctx: HandlerContext,
-  payload: { retentionDays: number; maxRecords: number },
+  payload: { retentionDays?: number; maxRecords?: number },
   log: PurgeLogCallback,
 ): Promise<{ purged: number }> {
   const { retentionDays, maxRecords } = payload;
-  const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays));
+  // PBI 2026-09-12-36: skip guards — same contract as purgeContent. Before
+  // this, (0,0) purged everything (cutoff = now) while content-purge(0,0)
+  // was a no-op.
+  const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays ?? DEFAULT_PURGE_RETENTION_DAYS));
   let totalPurged = 0;
 
   try {
     await withTransaction(ctx, async () => {
-      await sqlExec(ctx, stmts.deleteOldSql, [...stmts.deleteOldParams]);
+      if (retentionDays != null && retentionDays > 0) {
+        await sqlExec(ctx, stmts.deleteOldSql, [...stmts.deleteOldParams]);
 
-      await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
+        await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged = Number(row.c); });
+      }
 
       let count = 0;
       await sqlQuery(ctx, stmts.countSql, [], (row) => { count = Number(row.c); });
 
-      if (count > maxRecords) {
+      if (maxRecords != null && maxRecords > 0 && count > maxRecords) {
         const toDelete = count - maxRecords;
         await sqlExec(ctx, stmts.deleteExcessSql, [toDelete]);
         await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { totalPurged += Number(row.c); });

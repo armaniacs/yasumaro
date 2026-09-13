@@ -11,7 +11,7 @@ describe('withAtomicKeys', () => {
     });
 
     describe('二重key原子性', () => {
-        it('両キーが単一トランザクションで更新される', async () => {
+        it('updates both keys in a single transaction', async () => {
             await chrome.storage.local.set({
                 savedUrls: ['https://a.com'],
                 savedUrlsWithTimestamps: [{ url: 'https://a.com', timestamp: 1 }],
@@ -34,7 +34,7 @@ describe('withAtomicKeys', () => {
             expect(stored.savedUrlsWithTimestamps).toHaveLength(2);
         });
 
-        it('中間状態が観測されない（片方だけ書かれることがない）', async () => {
+        it('never exposes intermediate state (never writes only one key)', async () => {
             await chrome.storage.local.set({ keyA: ['a'], keyB: ['b'] });
 
             const setSpy = vi.spyOn(chrome.storage.local, 'set');
@@ -61,7 +61,7 @@ describe('withAtomicKeys', () => {
     });
 
     describe('行順序脆弱性の再現', () => {
-        it('post-write verification がキー順序に依存せず一致判定する', async () => {
+        it('post-write verification compares values independent of key order', async () => {
             await chrome.storage.local.set({ objKey: { b: 2, a: 1 } });
 
             // updater returns a logically-identical object but with keys in a
@@ -75,7 +75,7 @@ describe('withAtomicKeys', () => {
             expect(result[0]).toEqual({ a: 1, b: 2 });
         });
 
-        it('キー順序が異なっても同一内容なら競合と判定しない', async () => {
+        it('does not report a conflict when content is identical despite different key order', async () => {
 
             const original = chrome.storage.local.get;
             const original_set = chrome.storage.local.set;
@@ -113,7 +113,7 @@ describe('withAtomicKeys', () => {
     });
 
     describe('並行更新の競合検出', () => {
-        it('バージョン競合時にConflictErrorをスローする（リトライ0回）', async () => {
+        it('throws ConflictError on version conflict (zero retries)', async () => {
             await chrome.storage.local.set({ keyA: ['a'], keyB: ['b'] });
 
             const originalGet = chrome.storage.local.get;
@@ -131,7 +131,7 @@ describe('withAtomicKeys', () => {
             chrome.storage.local.get = originalGet;
         });
 
-        it('並行更新はリトライの上で最終的に整合する', async () => {
+        it('converges concurrent updates via retries', async () => {
             await chrome.storage.local.set({ keyA: [], keyB: [] });
 
             const p1 = withAtomicKeys(['keyA', 'keyB'], ([a, b]) => [

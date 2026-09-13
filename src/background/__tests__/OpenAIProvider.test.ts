@@ -243,12 +243,12 @@ describe('OpenAIProvider', () => {
     beforeEach(() => { vi.clearAllMocks(); });
 
     describe('constructor', () => {
-        test('openai プロバイダーを作成', () => {
+        test('creates the openai provider', () => {
             const p = new OpenAIProvider(baseSettings);
             expect(p.getName()).toBe('openai');
         });
 
-        test('openai2 プロバイダーを作成', () => {
+        test('creates the openai2 provider', () => {
             const p = new OpenAIProvider({
                 ...baseSettings,
                 openai_2_api_key: 'key2',
@@ -258,7 +258,7 @@ describe('OpenAIProvider', () => {
             expect(p.getName()).toBe('openai2');
         });
 
-        test('openai-compatible プロバイダーを作成', () => {
+        test('creates the openai-compatible provider', () => {
             const p = new OpenAIProvider({
                 ...baseSettings,
                 provider_base_url: 'https://custom.api.com/v1',
@@ -270,7 +270,7 @@ describe('OpenAIProvider', () => {
     });
 
     describe('generateSummary', () => {
-        test('baseUrl が未設定の場合はデフォルトURLを使用', async () => {
+        test('uses the default URL when baseUrl is not set', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -283,7 +283,7 @@ describe('OpenAIProvider', () => {
             expect(url).toContain('https://api.openai.com/v1/chat/completions');
         });
 
-        test('レート制限時はエラー', async () => {
+        test('returns an error on rate limiting', async () => {
             checkRateLimit.mockResolvedValueOnce({ allowed: false, remaining: 0, resetTime: 30 });
 
             const p = new OpenAIProvider(baseSettings);
@@ -291,7 +291,7 @@ describe('OpenAIProvider', () => {
             expect(result.summary).toContain('Wait');
         });
 
-        test('成功時にサマリーを返す', async () => {
+        test('returns a summary on success', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -308,7 +308,7 @@ describe('OpenAIProvider', () => {
             expect(result.receivedTokens).toBe(50);
         });
 
-        test('APIキーがない場合もリクエストを送る（Authorization なし）', async () => {
+        test('sends the request without Authorization when the API key is missing', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -323,7 +323,7 @@ describe('OpenAIProvider', () => {
             expect(headers['Authorization']).toBeUndefined();
         });
 
-        test('APIエラーでエラーメッセージ', async () => {
+        test('returns an error message on an API error', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 500 });
 
             const p = new OpenAIProvider(baseSettings);
@@ -331,7 +331,7 @@ describe('OpenAIProvider', () => {
             expect(result.summary).toContain('Error');
         });
 
-        test('タイムアウトエラーでタイムアウトメッセージ', async () => {
+        test('returns a timeout message on a timeout error', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('timed out'));
 
             const p = new OpenAIProvider(baseSettings);
@@ -339,7 +339,7 @@ describe('OpenAIProvider', () => {
             expect(result.summary).toContain('timed out');
         });
 
-        test('プロンプトインジェクション HIGH でブロック', async () => {
+        test('blocks on HIGH prompt-injection danger level', async () => {
             sanitizePromptContent.mockReturnValueOnce({
                 sanitized: 'x', warnings: ['attack'], dangerLevel: 'high'
             });
@@ -349,7 +349,7 @@ describe('OpenAIProvider', () => {
             expect(result.summary).toContain('security risk');
         });
 
-        test('choices が空の場合はスキーマエラー', async () => {
+        test('returns a schema error when choices is empty', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [] })
@@ -362,7 +362,7 @@ describe('OpenAIProvider', () => {
             expect(result.error).toContain('choices is missing or empty');
         });
 
-        test('message.content がない場合はスキーマエラー', async () => {
+        test('returns a schema error when message.content is missing', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { role: 'assistant' } }] })
@@ -375,7 +375,7 @@ describe('OpenAIProvider', () => {
             expect(result.error).toContain('message.content is not a string');
         });
 
-        test('ローカルURLの場合、コンテンツを4000文字に切り詰める', async () => {
+        test('truncates content to 4000 characters for local URLs', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -397,7 +397,7 @@ describe('OpenAIProvider', () => {
             expect(userPrompt.length).toBeLessThanOrEqual(4200); // プロンプトテンプレート分の余裕を含む
         });
 
-        test('クラウドURLの場合、コンテンツを10000文字に切り詰める', async () => {
+        test('truncates content to 10000 characters for cloud URLs', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -415,7 +415,7 @@ describe('OpenAIProvider', () => {
             expect(userPrompt.length).toBeLessThanOrEqual(10200);
         });
 
-        test('openai_content_chars 設定で切り詰め文字数を上書きする', async () => {
+        test('overrides the truncation length with the openai_content_chars setting', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -434,7 +434,7 @@ describe('OpenAIProvider', () => {
             expect(userPrompt.length).toBeLessThanOrEqual(15200);
         });
 
-        test('成功時に使用量を記録する', async () => {
+        test('records usage on success', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({
@@ -449,7 +449,7 @@ describe('OpenAIProvider', () => {
             expect(recordUsage).toHaveBeenCalledWith(10, 5);
         });
 
-        test('usage がない場合は使用量を記録しない', async () => {
+        test('does not record usage when usage is missing', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -461,7 +461,7 @@ describe('OpenAIProvider', () => {
             expect(recordUsage).not.toHaveBeenCalled();
         });
 
-        test('baseUrl 末尾スラッシュを除去', async () => {
+        test('strips the trailing slash from baseUrl', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
@@ -477,7 +477,7 @@ describe('OpenAIProvider', () => {
     });
 
     describe('testConnection', () => {
-        test('baseUrl 未設定でもデフォルトURLでテストする', async () => {
+        test('tests with the default URL when baseUrl is not set', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 status: 200,
@@ -489,7 +489,7 @@ describe('OpenAIProvider', () => {
             expect(result.success).toBe(true);
         });
 
-        test('接続成功時', async () => {
+        test('succeeds on a successful connection', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: true,
                 status: 200,
@@ -501,7 +501,7 @@ describe('OpenAIProvider', () => {
             expect(result.success).toBe(true);
         });
 
-        test('401 で認証エラー', async () => {
+        test('returns an authentication error on 401', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 401 });
 
             const p = new OpenAIProvider(baseSettings);
@@ -510,7 +510,7 @@ describe('OpenAIProvider', () => {
             expect(result.message).toContain('Authentication failed');
         });
 
-        test('404 でエンドポイント未発見', async () => {
+        test('returns an endpoint-not-found error on 404', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 404 });
 
             const p = new OpenAIProvider(baseSettings);
@@ -519,7 +519,7 @@ describe('OpenAIProvider', () => {
             expect(result.message).toContain('not found');
         });
 
-        test('429 でレート制限', async () => {
+        test('returns a rate-limit error on 429', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 429 });
 
             const p = new OpenAIProvider(baseSettings);
@@ -528,7 +528,7 @@ describe('OpenAIProvider', () => {
             expect(result.message).toContain('Rate limit');
         });
 
-        test('ネットワークエラーで Cannot connect', async () => {
+        test('returns Cannot connect on a network error', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('Failed to fetch'));
 
             const p = new OpenAIProvider(baseSettings);
@@ -537,7 +537,7 @@ describe('OpenAIProvider', () => {
             expect(result.message).toContain('Cannot connect');
         });
 
-        test('タイムアウトエラー', async () => {
+        test('returns a timeout error message on timeout', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('timeout'));
 
             const p = new OpenAIProvider(baseSettings);
@@ -546,7 +546,7 @@ describe('OpenAIProvider', () => {
             expect(result.message).toContain('timeout');
         });
 
-        test('AbortError でタイムアウトメッセージ', async () => {
+        test('returns a timeout message on AbortError', async () => {
             const abortError = new Error('The operation was aborted');
             abortError.name = 'AbortError';
             (fetchWithRetry as Mock).mockRejectedValue(abortError);
@@ -557,7 +557,7 @@ describe('OpenAIProvider', () => {
             expect(result.message).toContain('timed out');
         });
 
-        test('HTTP 404 のスローエラーでエンドポイント未発見', async () => {
+        test('returns an endpoint-not-found error on a thrown HTTP 404 error', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('HTTP 404: Not Found'));
 
             const p = new OpenAIProvider(baseSettings);

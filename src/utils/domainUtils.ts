@@ -52,10 +52,13 @@ export function matchesPattern(domain: string, pattern: string): boolean {
  * Check if a domain is in a list (supports wildcards)
  * @param {string} domain - The domain to check
  * @param {string[]} domainList - The list of domains/patterns to check against
+ * @param {boolean} matchSubdomains - Subdomain auto-matching toggle (PBI
+ *   2026-09-12-03: default OFF keeps exact-match behavior, but the flag must
+ *   be honored everywhere the list is evaluated, not only in isDomainAllowed)
  * @returns {boolean} - True if the domain is in the list
  */
-export function isDomainInList(domain: string, domainList: string[] | undefined): boolean {
-    return isDomainInListShared(domain, domainList);
+export function isDomainInList(domain: string, domainList: string[] | undefined, matchSubdomains = false): boolean {
+    return isDomainInListShared(domain, domainList, matchSubdomains);
 }
 
 /**

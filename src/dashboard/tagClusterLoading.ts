@@ -14,24 +14,37 @@ interface LoadingStep {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** i18n keys in step order — labels re-resolve on each show (PBI 2026-09-12-29). */
+const LOADING_STEP_KEYS = [
+  'tagClusterLoadingStep1',
+  'tagClusterLoadingStep2',
+  'tagClusterLoadingStep3',
+  'tagClusterLoadingStep4',
+] as const;
+
 export class TagClusterLoadingManager {
   private svgElement: SVGSVGElement;
   private overlayGroup: SVGGElement | null = null;
   private currentStep = 0;
-  private steps: LoadingStep[] = [
-    { number: 1, label: getMessage('tagClusterLoadingStep1'), completed: false },
-    { number: 2, label: getMessage('tagClusterLoadingStep2'), completed: false },
-    { number: 3, label: getMessage('tagClusterLoadingStep3'), completed: false },
-    { number: 4, label: getMessage('tagClusterLoadingStep4'), completed: false },
-  ];
+  private steps: LoadingStep[] = [];
 
   constructor(svgElement: SVGSVGElement) {
     this.svgElement = svgElement;
   }
 
+  /** Re-resolve labels from i18n — locale switches after construction now apply. */
+  private buildSteps(): LoadingStep[] {
+    return LOADING_STEP_KEYS.map((key, i) => ({
+      number: i + 1,
+      label: getMessage(key),
+      completed: false,
+    }));
+  }
+
   /** Show the loading overlay with the first step active. */
   show(): void {
     this.cleanup();
+    this.steps = this.buildSteps();
 
     this.overlayGroup = document.createElementNS(SVG_NS, 'g');
     this.overlayGroup.setAttribute('class', 'tag-cluster-loading-overlay');

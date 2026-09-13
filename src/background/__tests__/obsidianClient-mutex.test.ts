@@ -99,7 +99,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       return null;
     }
 
-    it('appendToDailyNoteが正常に動作すること', async () => {
+    it('appendToDailyNote works normally', async () => {
       global.fetch = vi.fn()
   
         .mockResolvedValueOnce({
@@ -120,7 +120,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('同じデータでの並列呼び出しがシリアライズされること', async () => {
+    it('serializes parallel calls with the same data', async () => {
       // Fetchのモック（MERGE用）
       const fetchMock = vi.fn()
   
@@ -152,7 +152,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('エラーが発生してもロックが解放されること', async () => {
+    it('releases the lock even when an error occurs', async () => {
   
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
@@ -177,7 +177,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('エラー後の2回目の呼び出しが正常に動作すること', async () => {
+    it('second call after an error works normally', async () => {
       // 最初の呼び出しは失敗
   
       global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
@@ -206,7 +206,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
   });
 
   describe('並列実行の競合回避', () => {
-    it('異なるコンテンツを並列で書き込んでも正しく処理されること', async () => {
+    it('handles parallel writes of different content correctly', async () => {
       const callOrder = [];
       const fetchMock = vi.fn()
   
@@ -247,7 +247,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('大量の並列呼び出しを正常に処理すること', async () => {
+    it('handles many parallel calls normally', async () => {
       const fetchMock = vi.fn()
   
         .mockImplementation((url, options) => {
@@ -280,7 +280,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
   });
 
   describe('エッジケース', () => {
-    it('空文字列のコンテンツを書き込めること', async () => {
+    it('writes empty string content', async () => {
       global.fetch = vi.fn()
   
         .mockResolvedValueOnce({
@@ -298,7 +298,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('非常に長いコンテンツを書き込めること', async () => {
+    it('writes very long content', async () => {
       const longContent = 'a'.repeat(100000);
 
       global.fetch = vi.fn()
@@ -318,7 +318,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('APIキーが空の場合のエラーハンドリング', async () => {
+    it('handles the error when the API key is empty', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: '',
@@ -357,7 +357,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
   });
 
   describe('パフォーマンス検証', () => {
-    it('Mutexのオーバーヘッドが最小限であること', async () => {
+    it('keeps Mutex overhead minimal', async () => {
       global.fetch = vi.fn()
   
         .mockResolvedValueOnce({
@@ -381,7 +381,7 @@ describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('連続呼び出しでのオーバーヘッド検証', async () => {
+    it('verifies overhead for sequential calls', async () => {
       const fetchMock = vi.fn()
   
         .mockImplementation((url, options) => {
@@ -456,7 +456,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
     // 並列リクエストを作成する必要がありますが、テスト環境では
     // 現実的に実行が難しいため、ログ出力による検証にとどめます
 
-    it('大量の並列リクエスト（50個以内）を正常に処理できること', async () => {
+    it('handles many parallel requests (up to 50) normally', async () => {
       const fetchMock = vi.fn()
   
         .mockImplementation((url, options) => {
@@ -487,7 +487,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('キューサイズ超過時のエラーメッセージを確認（ログによる検証）', async () => {
+    it('reports an error message when the queue size is exceeded (verified via logs)', async () => {
       // 注: MAX_QUEUE_SIZE（50）を超えるリクエストを作成するのは
       // 現実的に難しいため、エラーログが出力されることを想定します
       // 実際のブラウザ環境で検証が必要
@@ -496,7 +496,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
   });
 
   describe('タイムアウト（30秒）', () => {
-    it('タイムアウト設定が定義されていること（動作検証）', async () => {
+    it('defines the timeout setting (behavioral verification)', async () => {
       // タイムアウト設定がモジュール内で定義されていることを確認
       // 注: 実際のタイムアウト動作をテストするにはfetchモックを
       // 永久に待機させる必要がありますが、テスト環境では難しい
@@ -519,7 +519,7 @@ describe('Problem #6: Mutexキューサイズ制限とタイムアウト', () =>
       vi.mocked(global.fetch).mockRestore();
     });
 
-    it('30秒以内で正常なリクエストが完了すること', async () => {
+    it('completes normal requests within 30 seconds', async () => {
       global.fetch = vi.fn()
   
         .mockResolvedValueOnce({

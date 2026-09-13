@@ -301,25 +301,25 @@ describe('リトライ方針は全プロバイダーで揃っている', () => {
     },
   ];
 
-  it.each(cases)('$name はリトライ述語を渡す', async ({ run }) => {
+  it.each(cases)('$name passes a retry predicate', async ({ run }) => {
     await run();
     // Regression: GeminiProvider used to omit shouldRetry entirely.
     expect(retryOptions().shouldRetry).toBeTypeOf('function');
   });
 
-  it.each(cases)('$name は429でリトライしない', async ({ run }) => {
+  it.each(cases)('$name does not retry on 429', async ({ run }) => {
     await run();
     const shouldRetry = retryOptions().shouldRetry!;
     expect(shouldRetry(new Error('rate limited'), 1, httpResponse(429), 'POST')).toBe(false);
   });
 
-  it.each(cases)('$name は非冪等POSTの5xxでリトライしない', async ({ run }) => {
+  it.each(cases)('$name does not retry a non-idempotent POST 5xx', async ({ run }) => {
     await run();
     const shouldRetry = retryOptions().shouldRetry!;
     expect(shouldRetry(new Error('server error'), 1, httpResponse(503), 'POST')).toBe(false);
   });
 
-  it.each(cases)('$name はネットワークエラーでリトライする', async ({ run }) => {
+  it.each(cases)('$name retries on a network error', async ({ run }) => {
     await run();
     const shouldRetry = retryOptions().shouldRetry!;
     const err = new Error('fetch failed');
@@ -328,7 +328,7 @@ describe('リトライ方針は全プロバイダーで揃っている', () => {
 });
 
 describe('使用量記録は全プロバイダーで揃っている', () => {
-  it('Gemini: usageMetadata が無い場合は記録しない', async () => {
+  it('Gemini: skips recording when usageMetadata is missing', async () => {
     mockedFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
@@ -340,7 +340,7 @@ describe('使用量記録は全プロバイダーで揃っている', () => {
     expect(mockRecordUsage).not.toHaveBeenCalled();
   });
 
-  it('Gemini: usageMetadata がある場合は記録する', async () => {
+  it('Gemini: records usage when usageMetadata is present', async () => {
     mockedFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -354,7 +354,7 @@ describe('使用量記録は全プロバイダーで揃っている', () => {
     expect(mockRecordUsage).toHaveBeenCalledWith(11, 3);
   });
 
-  it('OpenAI互換: usage が無い場合は記録しない', async () => {
+  it('OpenAI-compatible: skips recording when usage is missing', async () => {
     mockedFetch.mockResolvedValue({
       ok: true,
       json: async () => ({ choices: [{ message: { content: 'ok' } }] }),
@@ -365,7 +365,7 @@ describe('使用量記録は全プロバイダーで揃っている', () => {
     expect(mockRecordUsage).not.toHaveBeenCalled();
   });
 
-  it('OpenAI互換: usage がある場合は記録する', async () => {
+  it('OpenAI-compatible: records usage when usage is present', async () => {
     mockedFetch.mockResolvedValue({
       ok: true,
       json: async () => ({

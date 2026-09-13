@@ -1,6 +1,5 @@
 import { RecordSession } from './recordCurrentPage/recordSession.js';
 
-export { TabContentFetcher } from './recordCurrentPage/tabContentFetcher.js';
 export { PreviewFlow } from './recordCurrentPage/previewFlow.js';
 export { RecordSession, type RecordSessionState } from './recordCurrentPage/recordSession.js';
 

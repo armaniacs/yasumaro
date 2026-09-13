@@ -1,6 +1,5 @@
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
-import type { SqliteError } from '../../sqlite/offscreenGateway.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
 import type { MaintenanceBatchDeps } from './deps.js';
 import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';
@@ -33,44 +32,26 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         if (rows.length > MAX_IMPORT_ROWS) {
           return { success: false, error: `Maximum ${MAX_IMPORT_ROWS} rows allowed` };
         }
-        const BATCH = 50;
-        let inserted = 0;
-        let skipped = 0;
-        // Kept in a local instead of shared state: the reason belongs to
-        // this call, not to whatever else on the client failed most
-        // recently — see the module doc comment in deps.ts.
-        let lastInsertError: SqliteError | null = null;
-        for (let i = 0; i < rows.length; i += BATCH) {
-          const batch = rows.slice(i, i + BATCH);
-          for (const row of batch) {
-            try {
-              const result = await deps.insert({
-                url: row.url,
-                title: row.title ?? null,
-                summary: row.summary ?? null,
-                tags: row.tags ?? null,
-                created_at: row.created_at,
-                domain: row.domain ?? null,
-                visit_duration: row.visit_duration ?? null,
-                scroll_ratio: row.scroll_ratio ?? null,
-                is_starred: row.is_starred ?? 0,
-                is_deleted: row.is_deleted ?? 0,
-              });
-              if (result.success) {
-                inserted++;
-              } else {
-                skipped++;
-                lastInsertError = result.error;
-              }
-            } catch {
-              skipped++;
-            }
-          }
+        // PBI 2026-09-11-07: one insertBatch round trip instead of one `insert`
+        // per row (MAX_IMPORT_ROWS round trips over SW→offscreen→backend).
+        // Duplicates surface as `skipped` from the backend's INSERT OR IGNORE
+        // instead of per-row errors that only kept the last reason.
+        const result = await deps.insertBatch(rows.map(row => ({
+          url: row.url,
+          title: row.title ?? null,
+          summary: row.summary ?? null,
+          tags: row.tags ?? null,
+          created_at: row.created_at,
+          domain: row.domain ?? null,
+          visit_duration: row.visit_duration ?? null,
+          scroll_ratio: row.scroll_ratio ?? null,
+          is_starred: row.is_starred ?? 0,
+          is_deleted: row.is_deleted ?? 0,
+        })));
+        if (!result.success) {
+          return { success: false, error: result.error.message };
         }
-        if (lastInsertError && inserted === 0) {
-          return { success: false, error: lastInsertError.message };
-        }
-        return { success: true, inserted, skipped, total: rows.length };
+        return { success: true, inserted: result.data.count, skipped: result.data.skipped, total: rows.length };
       }
       case 'restore_db': {
         const data = payload.data;

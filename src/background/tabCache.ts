@@ -30,8 +30,16 @@ export class TabCache {
         if (this.isInitialized) return;
         if (this.initPromise) return this.initPromise;
 
-        this.initPromise = new Promise((resolve) => {
+        this.initPromise = new Promise<void>((resolve, reject) => {
             chrome.tabs.query({}, (tabs) => {
+                // PBI 2026-09-12-08: check lastError and settle the promise on
+                // failure — an unchecked query error left initPromise pending
+                // forever and hung every message awaiting initialize().
+                const error = chrome.runtime?.lastError;
+                if (error) {
+                    reject(new Error(error.message || 'chrome.tabs.query failed'));
+                    return;
+                }
                 tabs.forEach(tab => {
                     if (tab.id && tab.url && tab.url.startsWith('http')) {
                         this.cache.set(tab.id, {
@@ -46,7 +54,15 @@ export class TabCache {
                 resolve();
             });
         });
-        await this.initPromise;
+        try {
+            await this.initPromise;
+        } catch (error) {
+            // A failed probe must not poison later initialize() calls: reset
+            // so the next message retries instead of reusing the rejected
+            // promise forever.
+            this.initPromise = null;
+            throw error;
+        }
         await this.loadFromSession();
     }
 
@@ -66,9 +82,12 @@ export class TabCache {
 
     /**
      * キャッシュを session storage に保存
+     * PBI 2026-09-12-24: `remove` は SW suspend に消え得るため即時 flush
+     * （rateLimiter の flushImmediately 紀律と同一）。hot path の add/update
+     * は debounced のまま。
      */
-    private saveToSession(): void {
-        this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache));
+    private saveToSession(immediate = false): void {
+        this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache), immediate ? { flushImmediately: true } : undefined);
     }
 
     /**
@@ -116,14 +135,26 @@ export class TabCache {
      */
     remove(tabId: number): void {
         this.cache.delete(tabId);
-        this.saveToSession();
+        this.saveToSession(true);
     }
 
     /**
-     * 複数のタブを削除
+     * タブ情報を削除し、session への即時 flush を await する（PBI
+     * 2026-09-12-24）。SW suspend 窓で削除が消えないよう、remove を
+     * 待ち合わせたい呼び出し側（handleTabRemoved）向け。
+     */
+    async removeAndFlush(tabId: number): Promise<void> {
+        this.cache.delete(tabId);
+        await this.sessionStore.set(SESSION_KEYS.TAB_CACHE, SessionStore.mapToEntries(this.cache), { flushImmediately: true });
+    }
+
+    /**
+     * 複数のタブを削除（PBI 2026-09-12-29: batch — 個々の remove が即時
+     * flush を N 回発火していたのを単一 flush に統一）
      */
     removeAll(tabIds: number[]): void {
-        tabIds.forEach(tabId => this.remove(tabId));
+        tabIds.forEach(tabId => this.cache.delete(tabId));
+        this.saveToSession(true);
     }
 
     /**

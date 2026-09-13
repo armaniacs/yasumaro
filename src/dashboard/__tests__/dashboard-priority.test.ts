@@ -24,13 +24,13 @@ describe('AIプロバイダ優先度スロットのDOM連携', () => {
     `;
   });
 
-  it('1位のみ選択されている場合、長さ1の配列を返す', () => {
+  it('returns an array of length 1 when only the first priority is selected', () => {
     (document.getElementById('aiProvider') as HTMLSelectElement).value = 'gemini';
     const slots = collectProviderPrioritySlots();
     expect(slots).toEqual([{ provider: 'gemini' }]);
   });
 
-  it('1位・2位にモデル指定ありで選択されている場合、両方をスロットとして返す', () => {
+  it('returns both slots when first and second priorities are selected with models', () => {
     (document.getElementById('aiProvider') as HTMLSelectElement).value = 'gemini';
     (document.getElementById('aiProviderPriority1Model') as HTMLInputElement).value = 'gemini-2.5-pro';
     (document.getElementById('aiProviderPriority2') as HTMLSelectElement).value = 'openai2';
@@ -43,7 +43,7 @@ describe('AIプロバイダ優先度スロットのDOM連携', () => {
     ]);
   });
 
-  it('applyProviderPrioritySlotsは配列をDOMに反映する', () => {
+  it('applyProviderPrioritySlots reflects the array into the DOM', () => {
     applyProviderPrioritySlots([
       { provider: 'openai2' },
       { provider: 'ollama', model: 'llama3' }

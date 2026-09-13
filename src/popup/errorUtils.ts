@@ -100,13 +100,18 @@ interface MessagesCache {
  * ErrorMessages getterで毎回getMsgが呼ばれないようにキャッシュ
  */
 let messagesCache: MessagesCache | null = null;
+let messagesCacheLocale: string | null = null;
 
 /**
  * 翻訳メッセージ取得ヘルパー（キャッシュあり）
  */
 function getMsgWithCache(key: keyof MessagesCache | string, substitutions?: string | string[]): string {
-  // 初回のみメッセージを取得してキャッシュに保存
-  if (!messagesCache) {
+  // PBI 2026-09-12-08: key the cache by UI language — a once-filled cache
+  // kept serving the old language after a locale switch (formatDuration
+  // already bypassed the cache via a direct getMessage, so the two paths
+  // disagreed).
+  const locale = chrome.i18n.getUILanguage?.() ?? '';
+  if (!messagesCache || messagesCacheLocale !== locale) {
     messagesCache = {
       connectionError: chrome.i18n.getMessage('connectionError'),
       domainBlockedError: chrome.i18n.getMessage('domainBlockedError'),
@@ -117,6 +122,7 @@ function getMsgWithCache(key: keyof MessagesCache | string, substitutions?: stri
       forceRecord: chrome.i18n.getMessage('forceRecord'),
       recording: chrome.i18n.getMessage('recording')
     };
+    messagesCacheLocale = locale;
   }
 
   // Type guard or casting to keyof MessagesCache if key is one of the cached keys

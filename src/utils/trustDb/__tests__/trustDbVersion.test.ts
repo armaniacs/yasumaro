@@ -15,14 +15,14 @@ function makeDatabase(overrides: Partial<TrustDatabase> = {}): TrustDatabase {
 }
 
 describe('TrustDbVersion', () => {
-  test('getVersion は現在のスキーマバージョンを返す', () => {
+  test('getVersion returns the current schema version', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const version = new TrustDbVersion({ save });
     expect(version.getVersion()).toBe(DB_VERSION);
     expect(DB_VERSION).toBe('1.0.0');
   });
 
-  test('compareVersions は domainValidation の実装に委譲する', () => {
+  test('compareVersions delegates to the domainValidation implementation', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const version = new TrustDbVersion({ save });
     expect(version.compareVersions('1.0.0', '1.0.0')).toBe(0);
@@ -30,7 +30,7 @@ describe('TrustDbVersion', () => {
     expect(version.compareVersions('1.10.0', '1.9.0')).toBeGreaterThan(0);
   });
 
-  test('migrateDatabase は旧バージョンを最新に更新し2回保存する', async () => {
+  test('migrateDatabase updates an old version to latest and saves twice', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const version = new TrustDbVersion({ save });
     const db = makeDatabase({ version: '0.0.0' });
@@ -41,7 +41,7 @@ describe('TrustDbVersion', () => {
     expect(save).toHaveBeenCalledTimes(2);
   });
 
-  test('migrateDatabase は同一バージョンなら何もしない', async () => {
+  test('migrateDatabase does nothing for the same version', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const version = new TrustDbVersion({ save });
     const db = makeDatabase({ version: DB_VERSION });
@@ -51,7 +51,7 @@ describe('TrustDbVersion', () => {
     expect(save).not.toHaveBeenCalled();
   });
 
-  test('applyMigrations は欠損フィールドにデフォルト値を補完する', async () => {
+  test('applyMigrations fills missing fields with defaults', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const version = new TrustDbVersion({ save });
     const db = { version: '0.0.0', lastUpdated: new Date().toISOString() } as TrustDatabase;

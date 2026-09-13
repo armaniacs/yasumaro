@@ -3,6 +3,7 @@
  * ダッシュボードの「暗号化バックアップ」ボタン・モーダルの結線
  */
 
+import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../messaging/limits.js';
 import { showPasswordAuthModal } from './masterPassword.js';
 import {
   exportEncryptedBackup,
@@ -14,7 +15,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 /** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
 const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
 /** Upper bound on the base64 ciphertext field of an envelope. */
-const MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
+const MAX_ENVELOPE_CIPHERTEXT_LENGTH = ENVELOPE_CIPHERTEXT_LIMIT;
 
 function getExportFilename(): string {
   const date = new Date();

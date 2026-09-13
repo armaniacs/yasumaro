@@ -32,7 +32,7 @@ const KNOWN_STORAGE_KEYS = new Set<string>(Object.values(StorageKeys));
 describe('ProviderCatalog conformance', () => {
   it('resolves every ProviderId', () => {
     for (const id of ALL_PROVIDER_IDS) {
-      expect(() => ProviderCatalog.resolve(id), id).not.toThrow();
+      expect(() => ProviderCatalog.resolve(id)).not.toThrow();
     }
   });
 
@@ -48,19 +48,19 @@ describe('ProviderCatalog conformance', () => {
   it('every referenced storage key is a real StorageKeys value', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
       for (const key of [entry.baseUrlKey, entry.apiKeyKey, entry.contentCharsKey]) {
-        if (key) expect(KNOWN_STORAGE_KEYS.has(key), `${id}: ${key}`).toBe(true);
+        if (key) expect(KNOWN_STORAGE_KEYS.has(key)).toBe(true);
       }
       // built-in-ai has modelKey === '' (no model to configure)
       if (entry.modelKey !== '') {
-        expect(KNOWN_STORAGE_KEYS.has(entry.modelKey), `${id}: ${entry.modelKey}`).toBe(true);
+        expect(KNOWN_STORAGE_KEYS.has(entry.modelKey)).toBe(true);
       }
     }
   });
 
   it('every entry has a non-empty label', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
-      expect(typeof entry.label, id).toBe('string');
-      expect(entry.label.length, id).toBeGreaterThan(0);
+      expect(typeof entry.label).toBe('string');
+      expect(entry.label.length).toBeGreaterThan(0);
     }
   });
 
@@ -68,15 +68,15 @@ describe('ProviderCatalog conformance', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
       if (!entry.cspDomain) continue;
       let url: URL | undefined;
-      expect(() => { url = new URL(entry.cspDomain!); }, id).not.toThrow();
-      expect(['http:', 'https:'], id).toContain(url!.protocol);
+      expect(() => { url = new URL(entry.cspDomain!); }).not.toThrow();
+      expect(['http:', 'https:']).toContain(url!.protocol);
     }
   });
 
   it('requiresApiKey and isLocal are booleans on every entry', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
-      expect(typeof entry.requiresApiKey, id).toBe('boolean');
-      expect(typeof entry.isLocal, id).toBe('boolean');
+      expect(typeof entry.requiresApiKey).toBe('boolean');
+      expect(typeof entry.isLocal).toBe('boolean');
     }
   });
 
@@ -98,7 +98,7 @@ describe('ProviderCatalog conformance', () => {
     // A superset check: every key must be real; no assertion on the exact set
     // so adding a provider does not force a test edit here.
     for (const key of providerKeys) {
-      expect(KNOWN_STORAGE_KEYS.has(key), key).toBe(true);
+      expect(KNOWN_STORAGE_KEYS.has(key)).toBe(true);
     }
   });
 
@@ -106,8 +106,8 @@ describe('ProviderCatalog conformance', () => {
 
   it('every entry has a labelI18nKey that resolves to a message', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
-      expect(entry.labelI18nKey, id).toBeTruthy();
-      expect(getMessage(entry.labelI18nKey), `${id}: ${entry.labelI18nKey}`).toBeTruthy();
+      expect(entry.labelI18nKey).toBeTruthy();
+      expect(getMessage(entry.labelI18nKey)).toBeTruthy();
     }
   });
 
@@ -133,7 +133,7 @@ describe('ProviderCatalog conformance', () => {
 
   it('settingsBlockKind is set on every entry', () => {
     for (const [id, entry] of PROVIDER_CATALOG) {
-      expect(['generic', 'models-dev', 'built-in-ai'], id).toContain(entry.settingsBlockKind);
+      expect(['generic', 'models-dev', 'built-in-ai']).toContain(entry.settingsBlockKind);
     }
   });
 
@@ -144,13 +144,13 @@ describe('ProviderCatalog conformance', () => {
     const schemaByKey = new Map(GENERAL_SETTINGS_SCHEMA.map((f) => [f.key as string, f.type]));
     for (const [id, entry] of PROVIDER_CATALOG) {
       if (entry.baseUrlKey) {
-        expect(schemaByKey.get(entry.baseUrlKey), `${id}: ${entry.baseUrlKey}`).toBe('text');
+        expect(schemaByKey.get(entry.baseUrlKey)).toBe('text');
       }
       if (entry.apiKeyKey && entry.requiresApiKey) {
-        expect(schemaByKey.get(entry.apiKeyKey), `${id}: ${entry.apiKeyKey}`).toBe('password');
+        expect(schemaByKey.get(entry.apiKeyKey)).toBe('password');
       }
       if (entry.modelKey) {
-        expect(schemaByKey.get(entry.modelKey), `${id}: ${entry.modelKey}`).toBe('text');
+        expect(schemaByKey.get(entry.modelKey)).toBe('text');
       }
     }
   });

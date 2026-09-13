@@ -64,13 +64,12 @@ export default defineConfig({
     },
     testTimeout: 15000,
     pool: 'forks',
-    // PBI 18: uncapped forks (~20 on this machine) starve timing-sensitive
-    // tests (rate-limit windows, perf-ratio assertions, 11s real backoff vs
-    // 15s timeout). Capping to 8 removes the contention that triggered the
-    // intermittent failures; full-suite wall time is within ~10% of uncapped.
+    // PBI 18 + rounds 12-14: maxForks 4 with per-file isolation is the
+    // stable configuration (round 12-14 all green). `isolate: false` breaks
+    // module-mock tests; higher forks causes worker spawn contention.
     poolOptions: {
       forks: {
-        maxForks: 8,
+        maxForks: 4,
       },
     },
   },

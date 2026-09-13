@@ -8,25 +8,25 @@ import { sanitizePathSegment, sanitizePathForUrl, encodePathForUrl, resolveSafeE
 
 describe('sanitizePathSegment - セキュリティサニタイズ関数（問題点2の修正）', () => {
   describe('パストラバーサル攻撃のブロック', () => {
-    it('親ディレクトリ参照（../）がエラーをスローする', () => {
+    it('throws for parent directory references (../)', () => {
       const input = '../malicious';
 
       expect(() => sanitizePathSegment(input)).toThrow('Path traversal attempt detected');
     });
 
-    it('複数の親ディレクトリ参照（../../）がエラーをスローする', () => {
+    it('throws for multiple parent directory references (../../)', () => {
       const input = '../../malicious/path';
 
       expect(() => sanitizePathSegment(input)).toThrow('Path traversal attempt detected');
     });
 
-    it('現在ディレクトリ参照（./）がエラーをスローする', () => {
+    it('throws for current directory references (./)', () => {
       const input = './malicious';
 
       expect(() => sanitizePathSegment(input)).toThrow('Path traversal attempt detected');
     });
 
-    it('ルートパス（/）から始まる入力は先頭のスラッシュを削除する', () => {
+    it('strips the leading slash from root-path (/) input', () => {
       const result = sanitizePathSegment('/absolute/path');
 
       expect(result).not.toMatch(/^\//);
@@ -36,19 +36,19 @@ describe('sanitizePathSegment - セキュリティサニタイズ関数（問題
   });
 
   describe('プロトコルスキーム注入のブロック', () => {
-    it('https:// スキームがエラーをスローする（../含むため）', () => {
+    it('throws for the https:// scheme (contains ../)', () => {
       const input = 'https://evil.com/../path';
 
       expect(() => sanitizePathSegment(input)).toThrow('Path traversal attempt detected');
     });
 
-    it('ftp:// スキームがエラーをスローする（含まれる文字が許可範囲外のため）', () => {
+    it('throws for the ftp:// scheme (contains out-of-range characters)', () => {
       const input = 'ftp://evil.com/path';
 
       expect(() => sanitizePathSegment(input)).toThrow();
     });
 
-    it('file:// スキームがエラーをスローする（含まれる文字が許可範囲外のため）', () => {
+    it('throws for the file:// scheme (contains out-of-range characters)', () => {
       const input = 'file:///etc/passwd';
 
       expect(() => sanitizePathSegment(input)).toThrow();
@@ -56,19 +56,19 @@ describe('sanitizePathSegment - セキュリティサニタイズ関数（問題
   });
 
   describe('特殊文字の制御', () => {
-    it('ヌルバイトがエラーをスローする', () => {
+    it('throws for null bytes', () => {
       const input = 'path/with/\0/null';
 
       expect(() => sanitizePathSegment(input)).toThrow('Dangerous character detected in path');
     });
 
-    it('改行文字がエラーをスローする', () => {
+    it('throws for newline characters', () => {
       const input = 'path/with\nnewline';
 
       expect(() => sanitizePathSegment(input)).toThrow('Dangerous character detected in path');
     });
 
-    it('制御文字（\r）がエラーをスローする', () => {
+    it('throws for control characters (\r)', () => {
       const input = 'path/\rmalicious';
 
       expect(() => sanitizePathSegment(input)).toThrow('Dangerous character detected in path');
@@ -76,37 +76,37 @@ describe('sanitizePathSegment - セキュリティサニタイズ関数（問題
   });
 
   describe('安全な入力の維持', () => {
-    it('正当なパス構造を維持する', () => {
+    it('preserves a valid path structure', () => {
       const result = sanitizePathSegment('journal/daily');
 
       expect(result).toBe('journal/daily');
     });
 
-    it('スラッシュ区切りのパス構造を許可する', () => {
+    it('allows slash-separated path structures', () => {
       const result = sanitizePathSegment('2024/01/15');
 
       expect(result).toBe('2024/01/15');
     });
 
-    it('日本語を含むパスを許可する', () => {
+    it('allows paths containing Japanese', () => {
       const result = sanitizePathSegment('日記/2024年/1月');
 
       expect(result).toBe('日記/2024年/1月');
     });
 
-    it('ひらがなを含むパスを許可する', () => {
+    it('allows paths containing hiragana', () => {
       const result = sanitizePathSegment('にっき/2月');
 
       expect(result).toBe('にっき/2月');
     });
 
-    it('カタカナを含むパスを許可する', () => {
+    it('allows paths containing katakana', () => {
       const result = sanitizePathSegment('ニッキ/3月');
 
       expect(result).toBe('ニッキ/3月');
     });
 
-    it('スペースを含むパスを許可する', () => {
+    it('allows paths containing spaces', () => {
       const result = sanitizePathSegment('my folder/path with spaces');
 
       expect(result).toBe('my folder/path with spaces');
@@ -114,31 +114,31 @@ describe('sanitizePathSegment - セキュリティサニタイズ関数（問題
   });
 
   describe('エッジケース', () => {
-    it('空文字列は空文字を返す', () => {
+    it('returns an empty string for empty input', () => {
       const result = sanitizePathSegment('');
 
       expect(result).toBe('');
     });
 
-    it('nullは空文字を返す', () => {
+    it('returns an empty string for null', () => {
       const result = sanitizePathSegment(null as unknown as string);
 
       expect(result).toBe('');
     });
 
-    it('undefinedは空文字を返す', () => {
+    it('returns an empty string for undefined', () => {
       const result = sanitizePathSegment(undefined as unknown as string);
 
       expect(result).toBe('');
     });
 
-    it('パス長制限を超える入力はエラーをスローする', () => {
+    it('throws for input exceeding the path length limit', () => {
       const longPath = 'a'.repeat(501);
 
       expect(() => sanitizePathSegment(longPath)).toThrow('Path length exceeds maximum limit');
     });
 
-    it('セグメント数制限を超える入力はエラーをスローする', () => {
+    it('throws for input exceeding the segment count limit', () => {
       const manySegments = 'a/b/c/d/e/f/g/h/i/j/k/l/m/n/o/p/q/r/s/t/u/v/w/x/y/z';
 
       expect(() => sanitizePathSegment(manySegments)).toThrow('Too many path segments');
@@ -148,18 +148,18 @@ describe('sanitizePathSegment - セキュリティサニタイズ関数（問題
 
 describe('sanitizePathForUrl - URL用のセキュアパス生成', () => {
   describe('日付プレースホルダーとの連携', () => {
-    it('YYYY-MM-DD形式のパスを正しく処理する', () => {
+    it('handles YYYY-MM-DD paths correctly', () => {
       const result = sanitizePathForUrl('journal/YYYY-MM-DD');
 
       expect(result).toBe('journal/YYYY-MM-DD');
     });
-    it('別の日付形式のパスを正しく処理する', () => {
+    it('handles other date-format paths correctly', () => {
       const result = sanitizePathForUrl('notes/YYYY/MM/DD');
 
       expect(result).toBe('notes/YYYY/MM/DD');
     });
 
-    it('プレースホルダーとパスサニタイズの組み合わせを処理できる', () => {
+    it('handles combined placeholders and path sanitization', () => {
       const result = sanitizePathForUrl('../../notes/YYYY-MM-DD');
 
       // sanitizePathSegmentがエラーをスローするため、sanitizePathForUrlはエラーをキャッチして空文字を返す
@@ -168,7 +168,7 @@ describe('sanitizePathForUrl - URL用のセキュアパス生成', () => {
   });
 
   describe('複合的な攻撃の検証', () => {
-    it('パストラバーサルとスキーム注入の組み合わせに対処する', () => {
+    it('handles combined path traversal and scheme injection', () => {
       const input = 'https://evil.com/../../path';
       const result = sanitizePathForUrl(input);
 
@@ -176,7 +176,7 @@ describe('sanitizePathForUrl - URL用のセキュアパス生成', () => {
       expect(result).toBe('');
     });
 
-    it('URLエンコードされた特殊文字に対処する', () => {
+    it('handles URL-encoded special characters', () => {
       const input = '%2e%2e/%2f';
       const result = sanitizePathForUrl(input);
 
@@ -188,14 +188,14 @@ describe('sanitizePathForUrl - URL用のセキュアパス生成', () => {
   });
 
   describe('日付プレースホルダー保護', () => {
-    it('プレースホルダーが正しく保護される', () => {
+    it('protects placeholders correctly', () => {
       const result = sanitizePathForUrl('notes/YYYY-MM-DD');
 
       expect(result).toContain('YYYY-MM-DD');
       expect(result).not.toContain('__PLACEHOLDER_');
     });
 
-    it('複数のプレースホルダーを正しく保護する', () => {
+    it('protects multiple placeholders correctly', () => {
       const result = sanitizePathForUrl('notes/YYYY/MM/DD');
 
       expect(result).toContain('YYYY');
@@ -206,19 +206,19 @@ describe('sanitizePathForUrl - URL用のセキュアパス生成', () => {
 });
 
 describe('encodePathForUrl - URLエンコード関数', () => {
-  it('スラッシュを含むパスを正しくエンコードする', () => {
+  it('encodes paths containing slashes correctly', () => {
     const result = encodePathForUrl('path/with/slashes');
 
     expect(result).toBe('path%2Fwith%2Fslashes');
   });
 
-  it('スペースを含むパスを正しくエンコードする', () => {
+  it('encodes paths containing spaces correctly', () => {
     const result = encodePathForUrl('path with spaces');
 
     expect(result).toBe('path%20with%20spaces');
   });
 
-  it('日本語を含むパスを正しくエンコードする', () => {
+  it('encodes paths containing Japanese correctly', () => {
     const result = encodePathForUrl('日記/2024年');
 
     expect(result).toContain('%E6%97%A5%E8%A8%98'); // 日記
@@ -226,13 +226,13 @@ describe('encodePathForUrl - URLエンコード関数', () => {
     expect(result).toContain('%E5%B9%B4'); // 年
   });
 
-  it('空文字に対して空文字を返す', () => {
+  it('returns an empty string for empty input', () => {
     const result = encodePathForUrl('');
 
     expect(result).toBe('');
   });
 
-  it('nullに対して空文字を返す', () => {
+  it('returns an empty string for null', () => {
     const result = encodePathForUrl(null as unknown as string);
 
     expect(result).toBe('');
@@ -240,7 +240,7 @@ describe('encodePathForUrl - URLエンコード関数', () => {
 });
 
 describe('既存コードとの統合検証', () => {
-  it('buildDailyNotePathと組み合わせた統合テスト', async () => {
+  it('integrates with buildDailyNotePath', async () => {
     const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
     const testDate = new Date('2026-02-07');
 
@@ -255,7 +255,7 @@ describe('既存コードとの統合検証', () => {
     expect(result).toBe('2026-02-07');
   });
 
-  it('安全な入力は正常に処理される統合テスト', async () => {
+  it('processes safe input normally in integration', async () => {
     const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
     const testDate = new Date('2026-02-07');
 
@@ -268,7 +268,7 @@ describe('既存コードとの統合検証', () => {
     expect(result).toBe('journal/2026-02-07');
   });
 
-  it('dailyNotePathBuilder-security.test.tsの結果に基づいたテスト', () => {
+  it('reproduces the dailyNotePathBuilder-security.test.ts cases', () => {
     // ユーザー入力 '../../malicious/' をサニタイズして確認
     const dangerousInput = '../../malicious/';
 
@@ -277,19 +277,19 @@ describe('既存コードとの統合検証', () => {
 });
 
 describe('セキュリティテストまとめ', () => {
-  it('パストラバーサル攻撃(../)をブロックすることを確認', () => {
+  it('blocks path traversal attacks (../)', () => {
     expect(() => sanitizePathSegment('../')).toThrow();
   });
 
-  it('パストラバーサル攻撃(../../)をブロックすることを確認', () => {
+  it('blocks path traversal attacks (../../)', () => {
     expect(() => sanitizePathSegment('../../')).toThrow();
   });
 
-  it('パストラバーサル攻撃(../../../)をブロックすることを確認', () => {
+  it('blocks path traversal attacks (../../../)', () => {
     expect(() => sanitizePathSegment('../../../')).toThrow();
   });
 
-  it('すべてのプロトコルスキーム注入をブロックすることを確認', () => {
+  it('blocks all protocol scheme injections', () => {
     const schemeAttacks: string[] = [
       'https://evil.com/path',
       'http://evil.com/path',
@@ -305,7 +305,7 @@ describe('セキュリティテストまとめ', () => {
     });
   });
 
-  it('すべての制御文字をブロックすることを確認', () => {
+  it('blocks all control characters', () => {
     const controlCharAttacks: string[] = [
       'path/\0null',
       'path\nwith\nnewlines',
@@ -319,7 +319,7 @@ describe('セキュリティテストまとめ', () => {
     });
   });
 
-  it('正当なパスはすべて通過することを確認', () => {
+  it('passes all valid paths', () => {
     const validPaths: string[] = [
       'journal',
       'journal/daily',
@@ -338,27 +338,27 @@ describe('セキュリティテストまとめ', () => {
   });
 });
 describe('resolveSafeExportDir - PBI 27 ダウンロード filename ガード', () => {
-  it('正常な書き出し先はそのまま保たれる', () => {
+  it('keeps a valid export directory unchanged', () => {
     expect(resolveSafeExportDir('Yasumaro')).toBe('Yasumaro');
     expect(resolveSafeExportDir('MyExport')).toBe('MyExport');
   });
 
-  it('トラバーサル試行はフォールバックに置換される', () => {
+  it('replaces traversal attempts with the fallback', () => {
     expect(resolveSafeExportDir('../evil')).toBe('Yasumaro');
     expect(resolveSafeExportDir('../../etc/passwd')).toBe('Yasumaro');
   });
 
-  it('制御文字入りはフォールバックに置換される', () => {
+  it('replaces input with control characters by the fallback', () => {
     expect(resolveSafeExportDir('evil\npath')).toBe('Yasumaro');
     expect(resolveSafeExportDir('a\x00b')).toBe('Yasumaro');
   });
 
-  it('空・空白のみはフォールバックに置換される', () => {
+  it('replaces empty or whitespace-only input with the fallback', () => {
     expect(resolveSafeExportDir('')).toBe('Yasumaro');
     expect(resolveSafeExportDir('   ')).toBe('Yasumaro');
   });
 
-  it('カスタムフォールバックが使われる', () => {
+  it('uses a custom fallback', () => {
     expect(resolveSafeExportDir('../evil', 'Fallback')).toBe('Fallback');
   });
 });

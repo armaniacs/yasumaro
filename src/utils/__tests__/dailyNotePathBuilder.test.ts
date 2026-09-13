@@ -56,23 +56,23 @@ describe('buildDailyNotePath - URLメタ文字エンコード', () => {
     vi.useRealTimers();
   });
 
-  it('# を含むパスを %23 にエンコードする', () => {
+  it('encodes # in paths as %23', () => {
     expect(buildDailyNotePath('notes#1/YYYY-MM-DD')).toBe('notes%231/2026-02-04');
   });
 
-  it('? を含むパスを %3F にエンコードする', () => {
+  it('encodes ? in paths as %3F', () => {
     expect(buildDailyNotePath('my?folder/YYYY-MM-DD')).toBe('my%3Ffolder/2026-02-04');
   });
 
-  it('# と ? の両方を含むパスをエンコードする', () => {
+  it('encodes paths containing both # and ?', () => {
     expect(buildDailyNotePath('a#b?c/YYYY')).toBe('a%23b%3Fc/2026');
   });
 
-  it('スラッシュは区切りとして維持する', () => {
+  it('keeps slashes as separators', () => {
     expect(buildDailyNotePath('a/b#c/d?e/YYYY-MM-DD')).toBe('a/b%23c/d%3Fe/2026-02-04');
   });
 
-  it('エンコード対象外の通常パスは変更しない', () => {
+  it('leaves regular paths outside the encoding scope unchanged', () => {
     expect(buildDailyNotePath('092.Daily/YYYY-MM-DD')).toBe('092.Daily/2026-02-04');
     expect(buildDailyNotePath('my folder/YYYY-MM-DD')).toBe('my folder/2026-02-04');
     expect(buildDailyNotePath('%2e%2e/%2f')).toBe('%2e%2e/%2f');

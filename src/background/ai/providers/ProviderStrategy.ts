@@ -92,7 +92,9 @@ export interface HttpSummaryHooks {
  * Byte cap for AI provider HTTP JSON responses (summary + testConnection).
  * Single source of truth — both flows read via readJsonCapped with this value.
  */
-export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
+import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
+
+export { MAX_AI_HTTP_RESPONSE_BYTES };
 
 export abstract class AIProviderStrategy {
     protected settings: Settings;

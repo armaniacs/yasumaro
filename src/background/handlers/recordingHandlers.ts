@@ -2,15 +2,17 @@ import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { TabData } from '../tabCache.js';
 import type { Settings } from '../../utils/storage/types.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
-import { BADGE_COLORS } from '../../constants/appConstants.js';
+import { setBadge } from '../badgePolicy.js';
 import { logDebug, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
+import { resolveReasonLabel } from '../../utils/reasonLabel.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { buildRecordRequest } from '../recordRequestBuilder.js';
 import { visitRateLimiter } from '../visitRateLimiter.js';
 
 import type {
@@ -106,12 +108,10 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
 
     deps.cacheTab(sender.tab);
 
-    const result = await deps.recordVisit({
+    const result = await deps.recordVisit(buildRecordRequest('valid-visit', {
       title: sender.tab.title || '',
       url: sender.tab.url || '',
       content: message.payload?.content || '',
-      skipDuplicateCheck: false,
-      recordType: 'auto',
       ...pickDefined({
         pageBytes: message.payload?.pageBytes,
         candidateBytes: message.payload?.candidateBytes,
@@ -123,7 +123,7 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
         aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
         aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons,
       }),
-    });
+    }));
 
     if (sender.tab.id) {
       deps.updateCachedTab(sender.tab.id, {
@@ -137,16 +137,18 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
     if (result.success && !result.skipped && sender.tab.id) {
       const savedTabId = sender.tab.id;
       deps.addBadgeTab(savedTabId);
-      chrome.action.setBadgeText({ text: '◎', tabId: savedTabId });
-      chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: savedTabId });
+      // PBI 2026-09-12-07: badge display lives in the shared BadgePolicy seam.
+      await setBadge({ kind: 'recorded' }, savedTabId);
     }
 
     if (result.confirmationRequired) {
       const url = sender.tab.url || '';
       const title = sender.tab.title || url;
       const reason = result.reason || 'cache-control';
-      const reasonKey = `privatePageReason_${reason.replace('-', '')}`;
-      const reasonLabel = chrome.i18n.getMessage(reasonKey) || reason;
+      // PBI 2026-09-12-34: canonical-first resolution via the shared
+      // ReasonLabel table (the legacy-only key missed for cache-control /
+      // set-cookie — the locales ship canonical keys only for those).
+      const reasonLabel = resolveReasonLabel(reason, (k) => chrome.i18n.getMessage(k));
       try {
         const notificationId = await encodeUrlSafeBase64(url);
         NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);
@@ -163,6 +165,9 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
     sendResponse(result);
   };
 }
+
+/** SPA host whose client render defeats server-side content fetch — skip the fetch when forced (was an inline literal). */
+const GOOGLE_SITES_HOST = 'sites.google.com';
 
 export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
   return async (
@@ -207,7 +212,7 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
     const autoContentFetchEnabled = settings[StorageKeys.AUTO_CONTENT_FETCH_ENABLED] as boolean;
     const sanitizedUrl = sanitizeUrlForLogging(message.payload.url);
 
-    const isGoogleSites = message.payload.url.includes('sites.google.com');
+    const isGoogleSites = message.payload.url.includes(GOOGLE_SITES_HOST);
     if (!content && !skipAi) {
       if (isGoogleSites && message.payload.force) {
         await logDebug('Google Sites detected with force flag, skipping content fetch', { url: sanitizedUrl }, 'service-worker');
@@ -231,27 +236,25 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
 
     const pipeline = deps.recordingPipeline;
 
-    const result = await pipeline.record({
+    // PBI 2026-09-12-04: field whitelist + source policy live in the shared
+    // builder (was a hand-spread literal duplicated with SAVE_RECORD).
+    const result = await pipeline.record(buildRecordRequest('manual', {
       title: message.payload.title,
       url: message.payload.url,
       content,
-      skipDuplicateCheck: true,
+      skipAi,
       previewOnly: message.type === 'PREVIEW_RECORD',
-      recordType: 'manual',
-      ...pickDefined({
-        skipAi,
-        force: message.payload.force,
-        pageBytes: message.payload.pageBytes,
-        candidateBytes: message.payload.candidateBytes,
-        originalBytes: message.payload.originalBytes,
-        cleansedBytes: message.payload.cleansedBytes,
-        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
-      }),
-    }, { settings });
+      force: message.payload.force,
+      pageBytes: message.payload.pageBytes,
+      candidateBytes: message.payload.candidateBytes,
+      originalBytes: message.payload.originalBytes,
+      cleansedBytes: message.payload.cleansedBytes,
+      aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+      aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+      aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+      aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+      aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+    }), { settings });
 
     if (result.success) {
       await deps.setUrlContent(message.payload.url, content);
@@ -290,27 +293,22 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
 
     const pipeline = deps.recordingPipeline;
 
-    const result = await pipeline.record({
+    const result = await pipeline.record(buildRecordRequest('save', {
       title: message.payload.title,
       url: message.payload.url,
       content: message.payload.content,
-      skipDuplicateCheck: true,
-      alreadyProcessed: true,
-      recordType: 'manual',
-      ...pickDefined({
-        force: message.payload.force,
-        maskedCount: message.payload.maskedCount,
-        pageBytes: message.payload.pageBytes,
-        candidateBytes: message.payload.candidateBytes,
-        originalBytes: message.payload.originalBytes,
-        cleansedBytes: message.payload.cleansedBytes,
-        aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-        aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-        aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-        aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-        aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
-      }),
-    }, { settings });
+      force: message.payload.force,
+      maskedCount: message.payload.maskedCount,
+      pageBytes: message.payload.pageBytes,
+      candidateBytes: message.payload.candidateBytes,
+      originalBytes: message.payload.originalBytes,
+      cleansedBytes: message.payload.cleansedBytes,
+      aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
+      aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
+      aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
+      aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
+      aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+    }), { settings });
 
     if (result.success && message.payload.content) {
       await deps.setUrlContent(message.payload.url, message.payload.content);

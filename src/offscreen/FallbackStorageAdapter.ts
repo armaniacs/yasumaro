@@ -1,6 +1,8 @@
 // src/offscreen/FallbackStorageAdapter.ts
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR, AUDIT_LOG_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { FallbackStorage } from './storageFallback.js';
+import { buildExportEnvelope } from './exportEnvelope.js';
 import type { BrowsingLogRecord, StorageQuery, AuditLogRecord } from '../utils/sqlite-types.js';
 
 export class FallbackStorageAdapter implements StorageBackend {
@@ -50,68 +52,22 @@ export class FallbackStorageAdapter implements StorageBackend {
     return { success: true, count: 0 };
   }
 
+  async serialize(): Promise<BackendOrError<SerializeResult>> {
+    // PBI 2026-09-12-28: direct scan — the capped `query()` clamps limit to
+    // QUERY_CAPS.plain (10000), so >10k-record DBs exported truncated on
+    // this backend only. The full-table scan mirrors the SQL backends'
+    // unbounded serialize SELECT.
+    const result = await this.fallback.exportAllRecords();
+    if (!result.success) return { success: false, error: result.error };
+    return { success: true, data: buildExportEnvelope(result.rows as unknown as Parameters<typeof buildExportEnvelope>[0]) };
+  }
+
   async backupDb(): Promise<BackendOrError<BackupResult>> {
-    return { success: false, error: 'Binary backup requires OPFS storage.' };
-  }
-
-  async archivePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePreviewResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveCreate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCreateResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveCleanup(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCleanupResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveExportChunk(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveExportChunkResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archivePrepareIncoming(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePrepareIncomingResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveRestorePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestorePreviewResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveRestore(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestoreResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveDeleteByStaging(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveDeleteByStagingResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveOpen(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveOpenResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveQuery(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveQueryResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveUpdate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveUpdateResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveSave(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveSaveResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveClose(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCloseResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveStatus(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveStatusResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
   }
 
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: 'Binary restore requires OPFS storage.' };
+    return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {
@@ -125,11 +81,11 @@ export class FallbackStorageAdapter implements StorageBackend {
   }
 
   async insertAuditLog(_record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
-    return { success: false, error: 'Audit log not supported in fallback mode' };
+    return { success: false, error: AUDIT_LOG_UNSUPPORTED_ERROR };
   }
 
   async queryAuditLog(_options?: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
-    return { success: false, error: 'Audit log not supported in fallback mode' };
+    return { success: false, error: AUDIT_LOG_UNSUPPORTED_ERROR };
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {

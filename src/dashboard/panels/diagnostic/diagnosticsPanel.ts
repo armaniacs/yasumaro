@@ -219,10 +219,12 @@ function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot):
   }
 }
 
-// New-DB filenames are fixed constants in the offscreen module (DB_FILENAME /
-// OLD_IDB_NAME) — safe to inline here since a diagnostics label, not runtime logic.
-const OPFS_DB_FILE = 'yasumaro.db (OPFS)';
-const IDB_DB_NAME = 'yasumaro.db (IndexedDB)';
+// Legacy-path names come from the shared STATUS contract (PBI 2026-09-11-06) —
+// labels only, but sourced from the SSOT instead of inlined literals.
+import { LEGACY_OPFS_POOL_DIR, LEGACY_OPFS_DB_FILENAME, LEGACY_IDB_NAME } from '../../../messaging/sqliteMessages.js';
+
+const OPFS_DB_FILE = `${LEGACY_OPFS_DB_FILENAME} (OPFS)`;
+const IDB_DB_NAME = `${LEGACY_OPFS_DB_FILENAME} (IndexedDB)`;
 const FALLBACK_STORAGE_NAME = 'chrome.storage.local';
 
 function getCurrentEngineLabel(snap: DiagnosticsSnapshot): string {
@@ -287,8 +289,8 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
       : (getMessage('diagMigrationNotCompleted') || 'Not completed (includes fresh installs)');
   el.appendChild(makeStatRow(overallLabel, overallValue, !allDone && !opfsChecking));
 
-  const opfsLabel = `${getMessage('diagMigrationOpfsPath') || 'OPFS path'} (yasumaro-opfs/yasumaro.db)`;
-  const idbLabel = `${getMessage('diagMigrationIdbPath') || 'IDB path'} (idb-batch-atomic)`;
+  const opfsLabel = `${getMessage('diagMigrationOpfsPath') || 'OPFS path'} (${LEGACY_OPFS_POOL_DIR}/${LEGACY_OPFS_DB_FILENAME})`;
+  const idbLabel = `${getMessage('diagMigrationIdbPath') || 'IDB path'} (${LEGACY_IDB_NAME})`;
   const opfsValue = opfsDone ? doneSuffix : (opfsNotApplicable ? notApplicableSuffix : (opfsChecking ? checkingSuffix : pendingSuffix));
   const idbValue = idbDone ? doneSuffix : (idbNotApplicable ? notApplicableSuffix : pendingSuffix);
   el.appendChild(makeStatRow(opfsLabel, opfsValue, opfsWarn));

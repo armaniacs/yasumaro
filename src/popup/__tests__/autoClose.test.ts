@@ -42,7 +42,7 @@ describe('画面状態追跡 (screenState.js)', () => {
     clearScreenState();
   });
 
-  test('getScreenStateで初期状態がmainであること', () => {
+  test('getScreenState returns main as the initial state', () => {
     // 【テスト目的】: 初期画面状態の確認
     // 【テスト内容】: 何も設定していない状態でgetScreenStateを呼び出すと'main'が返ることをテスト
     // 【期待される動作】: 初期状態として'main'が返ること
@@ -56,7 +56,7 @@ describe('画面状態追跡 (screenState.js)', () => {
     expect(screenState).toBe('main'); // 【確認内容】: デフォルトの画面状態が'main'であること
   });
 
-  test('setScreenStateで設定画面に切り替えることができる', () => {
+  test('setScreenState switches to the settings screen', () => {
     // 【テスト目的】: 画面状態の切り替え機能の確認
     // 【テスト内容】: setScreenState('settings')を呼び出し後、getScreenStateで確認
     // 【期待される動作】: 画面状態が'settings'に変更されること
@@ -70,7 +70,7 @@ describe('画面状態追跡 (screenState.js)', () => {
     expect(getScreenState()).toBe('settings'); // 【確認内容】: 設定画面に切り替わったこと
   });
 
-  test('setScreenStateの後、clearScreenStateで初期状態に戻る', () => {
+  test('returns to the initial state via clearScreenState after setScreenState', () => {
     // 【テスト目的】: 画面状態のクリア機能の確認
     // 【テスト内容】: 画面を設定に変更した後、クリアすると'main'に戻る
     // 【期待される動作】: クリア後に画面状態が'main'に戻ること
@@ -132,7 +132,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     vi.restoreAllMocks();
   });
 
-  test('startAutoCloseTimerでタイマーが起動し、2000ms後にwindow.closeが呼ばれる', () => {
+  test('startAutoCloseTimer starts the timer and calls window.close after 2000ms', () => {
     // 【テスト目的】: 自動クローズ基本動作の確認
     // 【テスト内容】: startAutoCloseTimer呼び出し後、2000ms経過でwindow.closeが呼ばれること
     // 【期待される動作】: タイマーが設定され、正しい遅延時間後にwindow.closeが実行される
@@ -152,7 +152,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: 2000ms後に1回呼ばれたこと
   });
 
-  test('カウントダウン表示が正しく更新される', () => {
+  test('updates the countdown display correctly', () => {
     // 【テスト目的】: カウントダウン表示の確認
     // 【テスト内容】: showCountdownを呼び出すとステータスエリアにカウントダウンが表示される
     // 【期待される動作】: ステータスエリアのtextContentが「3...2...自動閉じる」に更新される
@@ -176,7 +176,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(statusDiv.textContent).toContain('1...'); // 【確認内容】: 1に更新されたこと
   });
 
-  test('カウントダウン完了時に「自動閉じる」メッセージが表示される', () => {
+  test('shows the auto-close message when the countdown completes', () => {
     const statusDiv = document.getElementById('mainStatus')!;
     showCountdown(statusDiv);
 
@@ -188,7 +188,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(statusDiv.textContent).toBe('自動閉じる...');
   });
 
-  test('カウントダウン完了後はintervalがクリアされる', () => {
+  test('clears the interval after the countdown completes', () => {
     const statusDiv = document.getElementById('mainStatus')!;
     showCountdown(statusDiv);
 
@@ -200,7 +200,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(statusDiv.textContent).toBe('自動閉じる...');
   });
 
-  test('カウントダウン中にclearAutoCloseTimerでキャンセルされる', () => {
+  test('cancels via clearAutoCloseTimer during the countdown', () => {
     const statusDiv = document.getElementById('mainStatus')!;
     showCountdown(statusDiv);
 
@@ -214,7 +214,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(statusDiv.textContent).toContain('2...');
   });
 
-  test('設定画面では自動クローズタイマーが起動しない', () => {
+  test('does not start the auto-close timer on the settings screen', () => {
     // 【テスト目的】: 画面条件による自動クローズ制御の確認
     // 【テスト内容】: 設定画面でstartAutoCloseTimerを呼び出してもタイマーが動作しない
     // 【期待される動作】: タイマーが設定されず、window.closeも呼ばれないこと
@@ -234,7 +234,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
     expect(mockWindowClose).not.toHaveBeenCalled(); // 【確認内容】: 設定画面ではクローズされないこと
   });
 
-  test('clearAutoCloseTimerでタイマーがキャンセルされる', () => {
+  test('cancels the timer via clearAutoCloseTimer', () => {
     // 【テスト目的】: タイマーキャンセル機能の確認
     // 【テスト内容】: タイマー設定後にclearAutoCloseTimerを呼び出すとクローズされない
     // 【期待される動作】: タイマーがクリアされ、window.closeが呼ばれないこと
@@ -294,7 +294,7 @@ describe('連続記録時のタイマー管理', () => {
     vi.restoreAllMocks();
   });
 
-  test('連続してタイマーを設定すると前のタイマーがキャンセルされる', () => {
+  test('cancels the previous timer when timers are set consecutively', () => {
     // 【テスト目的】: 連続記録時のタイマー管理の確認
     // 【テスト内容】: 2回連続でstartAutoCloseTimerを呼び出し、クローズ回数を確認
     // 【期待される動作】: 1回だけwindow.closeが呼ばれること（2回目のみ実行）
@@ -355,7 +355,7 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     vi.restoreAllMocks();
   });
 
-  test('showSettingsScreenを呼び出すと自動でタイマーがキャンセルされる', async () => {
+  test('cancels the timer automatically when showSettingsScreen is called', async () => {
     // 【テスト目的】: navigation.showSettingsScreen() の統合動作を確認
     // 【テスト内容】: タイマー設定後にshowSettingsScreen()を呼び出し、タイマーがキャンセルされることを確認
     // 【期待される動作】: showSettingsScreen() が内部で clearAutoCloseTimer() を呼び出し、タイマーがクリアされる

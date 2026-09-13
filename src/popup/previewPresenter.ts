@@ -5,6 +5,7 @@
 
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
+import { buildCleansingCountDetail, getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { MaskNavigator } from './maskNavigator.js';
@@ -58,23 +59,14 @@ function updateCleansingInfo(
     return;
   }
   cleansingInfo.classList.remove('hidden');
-  let badgeText = '';
-  switch (cleansedReason) {
-    case 'hard':
-      badgeText = getMessage('cleansedBadgeHard') || '🧹 Hard';
-      break;
-    case 'keyword':
-      badgeText = getMessage('cleansedBadgeKeyword') || '🧹 Keyword';
-      break;
-    case 'both':
-      badgeText = getMessage('cleansedBadgeBoth') || '🧹 Both';
-      break;
-  }
+  // PBI 2026-09-11-05: badge text comes from the shared CleansingBadge table
+  // (same table as statusPanel) instead of a per-view switch.
+  // PBI 2026-09-11-07: the count detail is also badge-module policy now
+  // (i18n'd — was an English literal).
+  let badgeText = getCleansedBadgeText(cleansedReason, getMessage);
   if (cleanseStats && cleanseStats.totalRemoved > 0) {
-    const details: string[] = [];
-    if (cleanseStats.hardStripRemoved > 0) details.push(`Hard: ${cleanseStats.hardStripRemoved}`);
-    if (cleanseStats.keywordStripRemoved > 0) details.push(`Keyword: ${cleanseStats.keywordStripRemoved}`);
-    if (details.length > 0) badgeText += ` (${details.join(', ')})`;
+    const detail = buildCleansingCountDetail(cleanseStats, getMessage);
+    if (detail) badgeText += ` (${detail})`;
   }
   cleansingBadge.textContent = badgeText;
   cleansingBadge.className = 'cleansing-badge';
@@ -84,7 +76,6 @@ export class PreviewPresenter {
   private resolvePromise: ((result: ConfirmationResult) => void) | null = null;
   private rejectPromise: ((err: Error) => void) | null = null;
   private resizeObserver: ResizeObserver | null = null;
-  private modalEventListenersAttached = false;
   private trapId: string | null = null;
   private boundHandleActionTrue: () => void;
   private boundHandleActionFalse: () => void;
@@ -96,14 +87,11 @@ export class PreviewPresenter {
   ) {
     this.boundHandleActionTrue = () => this.handleAction(true);
     this.boundHandleActionFalse = () => this.handleAction(false);
+    // PBI 2026-09-11-03 (round 6): routes through the settle seam — nulls
+    // callbacks + disconnects observer + releases trap + settles once.
     this.boundHandleClose = () => {
-      this.releaseTrap();
-      if (this.resolvePromise) {
-        const resolve = this.resolvePromise;
-        this.resolvePromise = null;
-        this.rejectPromise = null;
-        resolve({ confirmed: false, content: null });
-      }
+      if (!this.resolvePromise) return;
+      this.settle({ confirmed: false, content: null });
     };
   }
 
@@ -125,13 +113,20 @@ export class PreviewPresenter {
     const cancelBtn = doc.getElementById('cancelPreviewBtn');
     const confirmBtn = doc.getElementById('confirmPreviewBtn');
 
-    const shouldAttach = !this.modalEventListenersAttached;
-    if (modal && closeModalBtn && cancelBtn && confirmBtn && shouldAttach) {
+    // PBI 2026-09-11-03 (round 6): detach-then-attach unconditionally — the
+    // modal DOM may have been rebuilt between shows (or a previous cleanup
+    // may or may not have run), so idempotent re-wiring beats a flag whose
+    // claim ("attached") no longer matches the nodes.
+    modal?.removeEventListener('close', this.boundHandleClose);
+    doc.getElementById('closeModalBtn')?.removeEventListener('click', this.boundHandleActionFalse);
+    doc.getElementById('cancelPreviewBtn')?.removeEventListener('click', this.boundHandleActionFalse);
+    doc.getElementById('confirmPreviewBtn')?.removeEventListener('click', this.boundHandleActionTrue);
+
+    if (modal && closeModalBtn && cancelBtn && confirmBtn) {
       closeModalBtn.addEventListener('click', this.boundHandleActionFalse);
       cancelBtn.addEventListener('click', this.boundHandleActionFalse);
       confirmBtn.addEventListener('click', this.boundHandleActionTrue);
       modal.addEventListener('close', this.boundHandleClose);
-      this.modalEventListenersAttached = true;
     }
 
     const previewContent = this.view.getPreviewContent();
@@ -153,7 +148,16 @@ export class PreviewPresenter {
       this.resizeObserver = null;
     }
     this.releaseTrap();
-    this.modalEventListenersAttached = false;
+    // PBI 2026-09-11-03 (round 6): actually detach — the old cleanup only
+    // lowered the flag while the bound handlers stayed attached, so every
+    // cleanup→init cycle stacked duplicate click/close listeners (benign
+    // only because the settle null-guard absorbed the doubles).
+    const modal = this.view.getModal();
+    const doc = this.view.doc;
+    doc.getElementById('closeModalBtn')?.removeEventListener('click', this.boundHandleActionFalse);
+    doc.getElementById('cancelPreviewBtn')?.removeEventListener('click', this.boundHandleActionFalse);
+    doc.getElementById('confirmPreviewBtn')?.removeEventListener('click', this.boundHandleActionTrue);
+    modal?.removeEventListener('close', this.boundHandleClose);
   }
 
   showPreview(
@@ -229,25 +233,50 @@ export class PreviewPresenter {
     const modal = this.view.getModal();
     const previewContent = this.view.getPreviewContent();
     if (!modal || !previewContent) {
-      logError('Modal or preview content not found in DOM', {}, ErrorCode.INTERNAL_ERROR);
-      this.resolvePromise = null;
-      this.rejectPromise = null;
+      // PBI 2026-09-11-03 (round 6): DOM nodes vanished mid-confirm. The old
+      // code nulled both callbacks without settling — the caller's promise
+      // hung forever (the record flow's only permanent-hang path). Reject.
+      const message = 'Preview modal or content not found in DOM';
+      logError(message, {}, ErrorCode.INTERNAL_ERROR);
+      this.settle({ error: new Error(message) });
       return;
     }
-    const resolve = this.resolvePromise;
-    this.resolvePromise = null;
-    this.rejectPromise = null;
-    // close fires 'close' event synchronously — detach guard by nulling first
+    const content = (previewContent as HTMLTextAreaElement).value;
+    // Settle BEFORE modal.close(): the synchronous 'close' event routes to
+    // boundHandleClose, whose null-guard then no-ops (exactly-one-settle).
+    this.settle({ confirmed, content: confirmed ? content : null });
     try {
       modal.close();
     } catch {
       (modal as unknown as { open: boolean }).open = false;
       modal.dispatchEvent(new Event('close'));
     }
-    this.releaseTrap();
     this.view.doc.body.style.width = DEFAULT_WIDTH;
-    const content = (previewContent as HTMLTextAreaElement).value;
-    resolve({ confirmed, content: confirmed ? content : null });
+  }
+
+  /**
+   * PBI 2026-09-11-03 (round 6): the single settlement seam — nulls the
+   * pending callbacks, disconnects the resize observer, releases the focus
+   * trap, and settles the caller's promise exactly once. handleAction
+   * (both branches) and boundHandleClose route through here; the supersede
+   * path in showPreview does NOT (the fresh show owns the new observer/trap,
+   * so tearing down there would kill the replacement's lifecycle).
+   */
+  private settle(result: ConfirmationResult | { error: Error }): void {
+    const resolve = this.resolvePromise;
+    const reject = this.rejectPromise;
+    this.resolvePromise = null;
+    this.rejectPromise = null;
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    this.releaseTrap();
+    if ('error' in result) {
+      reject?.(result.error);
+    } else {
+      resolve?.(result);
+    }
   }
 
   /**

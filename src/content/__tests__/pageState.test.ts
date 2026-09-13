@@ -22,10 +22,11 @@ describe('DEFAULT_CLEANSING_CONFIG — rule flags derived from CLEANSING_RULES',
     }
   });
 
+  // eslint-disable-next-line vitest/expect-expect -- expectTypeOf() below IS the assertion (compile-time check, not counted by the rule)
   it('type-level: all RuleKey entries map to CleansingConfig properties', () => {
     // This is a compile-time assertion: if AssertAllRuleKeysPresent has any
     // missing key, the test file will fail to compile.
-    expectTypeOf<AssertAllRuleKeysPresent>().not.toBeNever;
+    expectTypeOf<AssertAllRuleKeysPresent>().not.toBeNever();
   });
 });
 

@@ -19,7 +19,14 @@ export type SenderTrustLevel =
    * Content scripts are expected callers, alongside extension pages. Use only
    * where a web page's tab is the legitimate source of the message.
    */
-  | 'content-script-allowed';
+  | 'content-script-allowed'
+  /**
+   * A live web page only (PBI 2026-09-12-12): valid tab + http/https sender
+   * URL. Extension pages are rejected even though they are same-extension —
+   * this is the tier that used to live inline in `MessageRouter.dispatch`
+   * for VALID_VISIT/CHECK_DOMAIN.
+   */
+  | 'tab-page-only';
 
 export interface SenderTrustDecision {
   allowed: boolean;
@@ -34,6 +41,19 @@ export interface SenderTrustDecision {
  */
 function isContentScriptSender(sender: chrome.runtime.MessageSender): boolean {
   return Boolean(sender.tab) && (!sender.url || !sender.url.startsWith('chrome-extension://'));
+}
+
+/**
+ * A sender that must originate from a web page: a valid tab plus an
+ * http/https sender URL. Rejects spoofing from extension pages (which carry
+ * a chrome-extension:// URL or no tab).
+ */
+function isTabPageSender(sender: chrome.runtime.MessageSender): boolean {
+  const hasValidTab = Boolean(sender.tab?.id && sender.tab?.url);
+  const senderUrl = sender.url;
+  const hasValidSenderUrl =
+    typeof senderUrl === 'string' && (senderUrl.startsWith('http://') || senderUrl.startsWith('https://'));
+  return hasValidTab && hasValidSenderUrl;
 }
 
 /**
@@ -54,6 +74,10 @@ export function checkSenderTrust(
 
   if (level === 'extension-only' && isContentScriptSender(sender)) {
     return { allowed: false, error: `${messageType} is not allowed from content scripts` };
+  }
+
+  if (level === 'tab-page-only' && !isTabPageSender(sender)) {
+    return { allowed: false, error: 'Invalid sender' };
   }
 
   return { allowed: true };

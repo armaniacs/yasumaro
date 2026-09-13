@@ -2,8 +2,8 @@
  * sqliteQueryBuilder-comprehensive.test.ts
  * Comprehensive tests for all SQL clause builder functions:
  * buildWhereClause, buildOrderByClause, buildFts5OrderClause,
- * buildLikeOrderClause, buildFtsTagMatchCondition, shouldUseFts5,
- * sanitizeTextForFts5, buildTagFilterClause.
+ * buildLikeOrderClause, buildTagFilterCondition, shouldUseFts5,
+ * sanitizeTextForFts5.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,10 +12,9 @@ import {
   buildOrderByClause,
   buildFts5OrderClause,
   buildLikeOrderClause,
-  buildFtsTagMatchCondition,
+  buildTagFilterCondition,
   shouldUseFts5,
   sanitizeTextForFts5,
-  buildTagFilterClause,
 } from '../sqliteQueryBuilder.js';
 
 // ── buildWhereClause ───────────────────────────────────────────────────
@@ -234,45 +233,57 @@ describe('buildLikeOrderClause', () => {
   });
 });
 
-// ── buildFtsTagMatchCondition ──────────────────────────────────────────
+// ── buildTagFilterCondition ────────────────────────────────────────────
 
-describe('buildFtsTagMatchCondition', () => {
-  it('builds a MATCH condition with # prefix', () => {
-    const { condition, param } = buildFtsTagMatchCondition('programming');
-    expect(condition).toContain('browsing_logs_fts');
-    expect(condition).toContain('MATCH');
-    expect(param).toBe('"#programming"');
+describe('buildTagFilterCondition (PBI 2026-09-11 tag SQL migration)', () => {
+  it('builds a trigram MATCH condition without the # prefix when FTS5 is available and tag >= 3 chars', () => {
+    const result = buildTagFilterCondition('programming', { fts5Available: true });
+    expect(result).not.toBeNull();
+    expect(result!.condition).toContain('browsing_logs_fts');
+    expect(result!.condition).toContain('MATCH');
+    // Partial-match semantics: the raw term, phrase-quoted, no # prefix —
+    // matches inside '#programming' like the old client-side includes().
+    expect(result!.params).toEqual(['"programming"']);
   });
 
-  it('strips FTS5 special characters from tag', () => {
-    const { param } = buildFtsTagMatchCondition('test*~^');
-    expect(param).not.toContain('*');
-    expect(param).not.toContain('~');
-    expect(param).not.toContain('^');
+  it('falls back to tags LIKE for short tags even when FTS5 is available', () => {
+    const result = buildTagFilterCondition('AI', { fts5Available: true });
+    expect(result).toEqual({ condition: 'tags LIKE ?', params: ['%AI%'] });
   });
 
-  it('strips FTS5 operator keywords from tag', () => {
-    const { param } = buildFtsTagMatchCondition('OR AND NOT NEAR');
-    expect(param).not.toMatch(/\bOR\b/);
-    expect(param).not.toMatch(/\bAND\b/);
+  it('falls back to tags LIKE when FTS5 is unavailable regardless of length', () => {
+    const result = buildTagFilterCondition('programming', { fts5Available: false });
+    expect(result).toEqual({ condition: 'tags LIKE ?', params: ['%programming%'] });
   });
 
-  it('truncates tag to FTS_QUERY_MAX_LENGTH', () => {
+  it('strips FTS5 special characters from the FTS term', () => {
+    const result = buildTagFilterCondition('test*~^', { fts5Available: true });
+    expect(result!.params[0]).not.toContain('*');
+    expect(result!.params[0]).not.toContain('~');
+    expect(result!.params[0]).not.toContain('^');
+  });
+
+  it('falls back to LIKE on the raw term when the sanitized term is only operator words', () => {
+    // 'OR AND' sanitizes to empty — the FTS path would match nothing; the raw
+    // LIKE keeps the client-side partial-match semantics.
+    const result = buildTagFilterCondition('OR AND', { fts5Available: true });
+    expect(result).toEqual({ condition: 'tags LIKE ?', params: ['%OR AND%'] });
+  });
+
+  it('truncates the tag to FTS_QUERY_MAX_LENGTH', () => {
     const longTag = 'a'.repeat(300);
-    const { param } = buildFtsTagMatchCondition(longTag);
-    // sliced to 200, then wrapped as "\"#\" + 200 + \"\""
-    expect(param.length).toBeLessThanOrEqual(200 + 3);
+    const result = buildTagFilterCondition(longTag, { fts5Available: true });
+    // sliced to FTS_QUERY_MAX_LENGTH (200), then phrase-quoted
+    expect(result!.params[0]!.length).toBeLessThanOrEqual(200 + 2);
   });
 
   it('handles CJK tag names', () => {
-    const { param } = buildFtsTagMatchCondition('日本語テスト');
-    expect(param).toBe('"#日本語テスト"');
+    const result = buildTagFilterCondition('日本語テスト', { fts5Available: true });
+    expect(result!.params).toEqual(['"日本語テスト"']);
   });
 
-  it('handles empty tag', () => {
-    const { condition, param } = buildFtsTagMatchCondition('');
-    expect(condition).toContain('MATCH');
-    expect(param).toBe('"#"');
+  it('returns null for an empty tag', () => {
+    expect(buildTagFilterCondition('', { fts5Available: true })).toBeNull();
   });
 });
 
@@ -320,12 +331,3 @@ describe('sanitizeTextForFts5', () => {
   });
 });
 
-// ── buildTagFilterClause ───────────────────────────────────────────────
-
-describe('buildTagFilterClause', () => {
-  it('returns LIKE clause with # prefix', () => {
-    const { tagCondition, tagParam } = buildTagFilterClause();
-    expect(tagCondition).toBe('tags LIKE ?');
-    expect(tagParam).toBe('#%');
-  });
-});

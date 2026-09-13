@@ -54,7 +54,7 @@ describe('SettingsRepository — deep module via StorageAdapter', () => {
     expect(typeof all[StorageKeys.OBSIDIAN_PORT]).toBe('string');
   });
 
-  it('onChange is called when adapter set is invoked (interface越し)', async () => {
+  it('onChange is called when adapter set is invoked (via interface)', async () => {
     const changes: Array<Record<string, unknown>> = [];
     repo.onChange((c) => changes.push(c as Record<string, unknown>));
     await repo.set(StorageKeys.OBSIDIAN_HOST, '9.9.9.9');

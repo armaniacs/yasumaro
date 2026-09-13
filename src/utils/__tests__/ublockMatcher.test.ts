@@ -223,7 +223,7 @@ describe('isUrlBlocked', () => {
   });
 
   // UF-302 performance test
-  test('ルールインデックス機能により大量ルールのマッチングが高速化されること', async () => {
+  test('matches many rules faster via the rule index', async () => {
     const blockLines = Array.from({ length: 10000 }, (_, i) => `||domain${i}.com^`);
     const exceptionLines = Array.from({ length: 100 }, (_, i) => `@@||exception${i}.com^`);
     const allLines = [...blockLines, ...exceptionLines];
@@ -240,5 +240,53 @@ describe('isUrlBlocked', () => {
     const endTime = performance.now();
 
     expect(endTime - startTime).toBeLessThan(1000);
+  });
+
+  describe('legacy + lightweight format mixing (PBI 2026-09-12-08)', () => {
+    test('warns when both blockDomains and legacy blockRules are present', async () => {
+      const logger = await import('../logger/api.js');
+      const warnSpy = vi.spyOn(logger, 'logWarn').mockResolvedValue(undefined);
+      try {
+        // Both shapes present: the priority rule (domains win) must stay
+        // unchanged — the mixed store only gains observability.
+        const ublockRules: UblockRules = {
+          blockDomains: ['blocked.example.com'],
+          exceptionDomains: [],
+          blockRules: [{ domain: 'legacy.example.com', options: {} }],
+          exceptionRules: [],
+          metadata: { importedAt: 0, ruleCount: 2 },
+        };
+        const matched = await isUrlBlocked('https://blocked.example.com/page', ublockRules);
+        expect(matched).toBe(true);
+        const legacyMatched = await isUrlBlocked('https://legacy.example.com/page', ublockRules);
+        expect(legacyMatched).toBe(false); // legacy set ignored (by design)
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('legacy blockRules'),
+          expect.objectContaining({ blockRules: 1, blockDomains: 1 }),
+          undefined,
+          'ublockMatcher',
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
+
+    test('does not warn for the single-format stores', async () => {
+      const logger = await import('../logger/api.js');
+      const warnSpy = vi.spyOn(logger, 'logWarn').mockResolvedValue(undefined);
+      try {
+        const ublockRules: UblockRules = {
+          blockDomains: ['blocked.example.com'],
+          exceptionDomains: [],
+          blockRules: [],
+          exceptionRules: [],
+          metadata: { importedAt: 0, ruleCount: 1 },
+        };
+        await isUrlBlocked('https://blocked.example.com/page', ublockRules);
+        expect(warnSpy).not.toHaveBeenCalled();
+      } finally {
+        warnSpy.mockRestore();
+      }
+    });
   });
 });

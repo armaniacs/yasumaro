@@ -47,13 +47,13 @@ describe('STATIC_FORM_PANELS', () => {
 
   it('registers every panel as static-form', () => {
     for (const panel of STATIC_FORM_PANELS) {
-      expect(panel.category, panel.id).toBe('static-form');
+      expect(panel.category).toBe('static-form');
     }
   });
 
   it('gives every panel a mount function', () => {
     for (const panel of STATIC_FORM_PANELS) {
-      expect(typeof panel.mount, panel.id).toBe('function');
+      expect(typeof panel.mount).toBe('function');
     }
   });
 

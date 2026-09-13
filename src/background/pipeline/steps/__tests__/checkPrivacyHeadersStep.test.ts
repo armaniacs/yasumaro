@@ -43,7 +43,7 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 
 describe('PrivacyHeadersChecker', () => {
   describe('force=true の場合', () => {
-    it('AUTO_SAVE_PRIVACY_BEHAVIOR=skip でもプライバシーチェックをスキップして記録を許可する', async () => {
+    it('skips the privacy check and allows recording even when AUTO_SAVE_PRIVACY_BEHAVIOR=skip', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
@@ -68,7 +68,7 @@ describe('PrivacyHeadersChecker', () => {
       await expect(checker.execute(context)).resolves.toBe(context);
     });
 
-    it('AUTO_SAVE_PRIVACY_BEHAVIOR=confirm でもプライバシーチェックをスキップして記録を許可する', async () => {
+    it('skips the privacy check and allows recording even when AUTO_SAVE_PRIVACY_BEHAVIOR=confirm', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
@@ -93,7 +93,7 @@ describe('PrivacyHeadersChecker', () => {
       await expect(checker.execute(context)).resolves.toBe(context);
     });
 
-    it('force=true かつ isPrivate=false の場合も正常に通過する', async () => {
+    it('passes normally when force=true and isPrivate=false', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: false,
       });
@@ -106,7 +106,7 @@ describe('PrivacyHeadersChecker', () => {
   });
 
   describe('force=false の場合', () => {
-    it('AUTO_SAVE_PRIVACY_BEHAVIOR=skip で PRIVATE_PAGE_DETECTED を throw する', async () => {
+    it('throws PRIVATE_PAGE_DETECTED when AUTO_SAVE_PRIVACY_BEHAVIOR=skip', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
@@ -125,7 +125,7 @@ describe('PrivacyHeadersChecker', () => {
       await expect(checker.execute(context)).rejects.toThrow('PRIVATE_PAGE_DETECTED');
     });
 
-    it('AUTO_SAVE_PRIVACY_BEHAVIOR=save で正常に通過する', async () => {
+    it('passes normally when AUTO_SAVE_PRIVACY_BEHAVIOR=save', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
@@ -144,7 +144,7 @@ describe('PrivacyHeadersChecker', () => {
       await expect(checker.execute(context)).resolves.toBe(context);
     });
 
-    it('isPrivate=false の場合は正常に通過する', async () => {
+    it('passes normally when isPrivate=false', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: false,
       });
@@ -157,7 +157,7 @@ describe('PrivacyHeadersChecker', () => {
   });
 
   describe('ホワイトリスト', () => {
-    it('ホワイトリストに含まれるドメインはプライバシーチェックをスキップする', async () => {
+    it('skips the privacy check for whitelisted domains', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
@@ -188,7 +188,7 @@ describe('PrivacyHeadersChecker', () => {
       (pendingStorage.addPendingPage as vi.Mock).mockResolvedValue(undefined);
     });
 
-    it('authorization reason の場合は headerValue が [REDACTED] で保存される', async () => {
+    it('stores headerValue as [REDACTED] for the authorization reason', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'authorization',
@@ -218,7 +218,7 @@ describe('PrivacyHeadersChecker', () => {
       );
     });
 
-    it('cache-control reason の場合は headerValue がそのまま保存される', async () => {
+    it('stores headerValue as-is for the cache-control reason', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'cache-control',
@@ -249,7 +249,7 @@ describe('PrivacyHeadersChecker', () => {
       );
     });
 
-    it('requireConfirmation=true + authorization の場合も [REDACTED] で保存される', async () => {
+    it('stores [REDACTED] for requireConfirmation=true with authorization', async () => {
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
         reason: 'authorization',

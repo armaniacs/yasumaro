@@ -10,6 +10,17 @@
  */
 import { expect } from '@playwright/test';
 import type { BrowserContext, Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+/** Extension version read from package.json — never a pinned literal, so the
+ * audit metadata in archive_create cannot drift from the build (PBI 2026-09-11-05). */
+const EXTENSION_VERSION: string = JSON.parse(
+  readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'package.json'), 'utf-8'),
+).version as string;
+
+export { EXTENSION_VERSION };
 
 type Payload = Record<string, unknown>;
 
@@ -127,7 +138,7 @@ export async function runPhaseA(
     cutoffDate,
     cutoffMs,
     includeDeleted,
-    yasumaroVersion: '6.7.114',
+    yasumaroVersion: EXTENSION_VERSION,
     confirmToken: token,
     scopeHash: await client.scopeHash([cutoffMs, includeDeleted]),
   });

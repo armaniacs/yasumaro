@@ -125,15 +125,17 @@ describe('MessageTransport', () => {
         expect(clock.sleep).not.toHaveBeenCalled();
     });
 
-    it('throws immediately on lastError retryable pattern', async () => {
+    it('returns the resolved response even when a stale lastError exists (promise contract)', async () => {
         const port = new ImmediateTransport(vi.fn().mockResolvedValue({ ok: true }));
         const transport = new MessageTransport(port);
 
+        // Promise-style sendMessage never populates chrome.runtime.lastError
+        // (callback-only API). A stale value must not fail a resolved send.
         (chrome.runtime as unknown as { lastError?: { message?: string } }).lastError = {
             message: 'Receiving end does not exist',
         };
 
-        await expect(transport.send({ type: 'PING' } as any)).rejects.toThrow('Receiving end does not exist');
+        await expect(transport.send({ type: 'PING' } as any)).resolves.toEqual({ ok: true });
     });
 
     it('uses opts.clock over instance clock', async () => {

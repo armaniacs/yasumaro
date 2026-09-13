@@ -3,6 +3,7 @@
  * popup.test.ts
  * Unit tests for popup.ts after PBI-27 (settings UI moved to dashboard)
  */
+import { setHtmlLangAndDir } from '../../utils/i18n-dom.js';
 import { describe, it, expect, vi } from 'vitest';
 
 // Setup chrome mock BEFORE importing popup
@@ -98,21 +99,16 @@ vi.mock('../onboardingWizard.js', () => ({
 
 // Import after mocks
 import {
-    setHtmlLangDir,
     initPopup,
 } from '../popup.js';
 
 describe('popup.ts exports', () => {
-    it('exports setHtmlLangDir', () => {
-        expect(typeof setHtmlLangDir).toBe('function');
-    });
-
     it('exports initPopup', () => {
         expect(typeof initPopup).toBe('function');
     });
 });
 
-describe('setHtmlLangDir', () => {
+describe('setHtmlLangAndDir (single lang/dir helper — PBI 2026-09-11-04)', () => {
     it('sets RTL for Arabic', () => {
         vi.stubGlobal('chrome', {
             ...chrome,
@@ -122,9 +118,10 @@ describe('setHtmlLangDir', () => {
             },
         });
 
-        setHtmlLangDir();
+        setHtmlLangAndDir();
         expect(document.documentElement.lang).toBe('ar');
         expect(document.documentElement.dir).toBe('rtl');
+        vi.unstubAllGlobals();
     });
 
     it('sets LTR for English', () => {
@@ -136,9 +133,10 @@ describe('setHtmlLangDir', () => {
             },
         });
 
-        setHtmlLangDir();
+        setHtmlLangAndDir();
         expect(document.documentElement.lang).toBe('en');
         expect(document.documentElement.dir).toBe('ltr');
+        vi.unstubAllGlobals();
     });
 });
 
@@ -157,8 +155,8 @@ describe('initPopup error handling', () => {
         expect(logErrorMock).not.toHaveBeenCalled();
     });
 
-    it('setHtmlLangDir handles RTL languages', () => {
-        setHtmlLangDir();
+    it('setHtmlLangAndDir handles RTL languages', () => {
+        setHtmlLangAndDir();
         expect(document.documentElement.dir).toBe('ltr');
     });
 });
@@ -173,7 +171,7 @@ describe('initPopup coverage', () => {
         vi.mocked(getPendingPages).mockResolvedValue([
             { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
-        await initPopup();
+        await expect(initPopup()).resolves.not.toThrow();
         await new Promise(r => setTimeout(r, 50));
     });
 
@@ -291,11 +289,11 @@ describe('initPopup coverage', () => {
     it('catches error in pending pages getPendingPages', async () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         vi.mocked(getPendingPages).mockRejectedValue(new Error('fail'));
-        await initPopup();
+        await expect(initPopup()).resolves.not.toThrow();
         await new Promise(r => setTimeout(r, 50));
     });
 
-    it('catches error in setHtmlLangDir', async () => {
+    it('catches error in setHtmlLangAndDir (navigation init)', async () => {
         vi.stubGlobal('chrome', {
             ...chrome,
             i18n: {
@@ -355,7 +353,7 @@ describe('initPopup coverage', () => {
         await new Promise(r => setTimeout(r, 50));
     });
 
-    it('covers setHtmlLangDir with locale containing hyphen', () => {
+    it('covers setHtmlLangAndDir with locale containing hyphen (PBI 2026-09-11-04)', () => {
         vi.stubGlobal('chrome', {
             ...chrome,
             i18n: {
@@ -363,8 +361,9 @@ describe('initPopup coverage', () => {
                 getUILanguage: vi.fn().mockReturnValue('en-US'),
             },
         });
-        setHtmlLangDir();
+        setHtmlLangAndDir();
         expect(document.documentElement.lang).toBe('en-US');
         expect(document.documentElement.dir).toBe('ltr');
+        vi.unstubAllGlobals();
     });
 });

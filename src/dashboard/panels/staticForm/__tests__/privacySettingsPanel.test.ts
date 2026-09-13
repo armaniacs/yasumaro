@@ -74,7 +74,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
   });
 
-  it('確認ダイアログでキャンセルした場合、SQLite削除も同意撤回も実行されない', async () => {
+  it('runs neither SQLite deletion nor consent withdrawal when the confirm dialog is cancelled', async () => {
     mockShowConfirmDialog.mockResolvedValue(false);
 
     const panel = createPrivacySettingsPanel();
@@ -90,7 +90,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(mockWithdrawPrivacyConsent).not.toHaveBeenCalled();
   });
 
-  it('確認後、SQLite削除→同意撤回の順で実行される', async () => {
+  it('runs SQLite deletion before consent withdrawal after confirmation', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
     mockClearAllLogs.mockResolvedValue({ data: undefined });
     mockWithdrawPrivacyConsent.mockResolvedValue({ withdrawalDate: '2026-07-26T00:00:00.000Z' });
@@ -114,7 +114,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(clearOrder!).toBeLessThan(withdrawOrder!);
   });
 
-  it('SQLite削除が失敗した場合、同意撤回は呼ばれない（不整合防止）', async () => {
+  it('does not call consent withdrawal when SQLite deletion fails (prevents inconsistency)', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
     mockClearAllLogs.mockResolvedValue({ error: 'Database is locked' });
 
@@ -136,7 +136,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(statusEl.textContent).toContain('Database is locked');
   });
 
-  it('全データ削除の失敗理由が画面に出る', async () => {
+  it('renders the delete-all-data failure reason on screen', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
     mockClearAllLogs.mockResolvedValue({ error: 'Disk is full' });
 
@@ -153,7 +153,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(statusEl.textContent).toContain('Disk is full');
   });
 
-  it('同意撤回が成功した場合、状態表示とステータスが i18n キー経由で更新される', async () => {
+  it('updates the status display and status via i18n keys when consent withdrawal succeeds', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
     mockClearAllLogs.mockResolvedValue({ data: undefined });
     mockWithdrawPrivacyConsent.mockResolvedValue({ withdrawalDate: '2026-07-26T00:00:00.000Z' });
@@ -173,7 +173,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(btn.classList.contains('hidden')).toBe(true);
   });
 
-  it('同意撤回が失敗した場合、ステータスが i18n キー経由で更新される', async () => {
+  it('updates the status via i18n keys when consent withdrawal fails', async () => {
     mockShowConfirmDialog.mockResolvedValue(true);
     mockClearAllLogs.mockResolvedValue({ data: undefined });
     mockWithdrawPrivacyConsent.mockResolvedValue(null);
@@ -190,7 +190,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(statusEl.textContent).toBe('consentWithdrawFailed');
   });
 
-  it('同意済み・同意日ありの場合、consented キーに同意日を渡して表示する', async () => {
+  it('renders via the consented key with the consent date when consented with a date', async () => {
     mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
     const getMessage = (globalThis as any).chrome.i18n.getMessage;
 
@@ -203,7 +203,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(display.textContent).toBe('consented');
   });
 
-  it('同意済み・同意日なしの場合、日付を欠いた consentedNoDate キーで表示する', async () => {
+  it('renders via the consentedNoDate key when consented without a date', async () => {
     mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '' });
 
     const panel = createPrivacySettingsPanel();
@@ -214,7 +214,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(display.textContent).toBe('consentedNoDate');
   });
 
-  it('未同意の場合、notConsented キーで表示する', async () => {
+  it('renders via the notConsented key when not consented', async () => {
     mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false, consentDate: '' });
 
     const panel = createPrivacySettingsPanel();
@@ -225,7 +225,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(display.textContent).toBe('notConsented');
   });
 
-  it('consented キー未定義時は英語フォールバックで表示が破綻しない', async () => {
+  it('falls back to English without breaking the display when the consented key is undefined', async () => {
     mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
     (globalThis as any).chrome = {
       i18n: { getMessage: () => '' },
@@ -240,7 +240,7 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
     expect(display.textContent).toBe('Consented (2026-01-01)');
   });
 
-  it('export-logs 遷移が registry.navigate 経由で行われる（DOM 迂回なし）', async () => {
+  it('navigates to export-logs via registry.navigate (without DOM detour)', async () => {
     const panel = createPrivacySettingsPanel();
     const container = buildContainer();
     await panel.mount(container);
