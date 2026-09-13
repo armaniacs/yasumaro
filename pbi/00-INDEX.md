@@ -18,7 +18,6 @@
 
 設定画面/ダッシュボード・ポップアップのユーザビリティテストを1から設計し、GitHub issue報告導線（診断情報自動サニタイズ＋確認プレビュー）を新規実装。台帳は `2026-09-13-00-backlog-0913a.md`。実行順 = 46 → 45 → 51 → 49 → 50 → 48 → 47 → 52（RICE降順＋依存関係優先）。
 
-- ⬜🟢🟢✨ 2026-09-13-46-feat-issue-template-privacy-doc.md（`.github/ISSUE_TEMPLATE/bug_report.md`新設 + PRIVACY.md両方への追記）
 - ⬜🟢🟢🔧 2026-09-13-51-test-issue-report-e2e.md（issue報告導線のE2E検証。PBI 45・46に依存）
 - ⬜🟡🟢🔧 2026-09-13-49-test-popup-usability-e2e.md（ポップアップ記録フロー・オンボーディングのユーザビリティE2E）
 - ⬜🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知）
@@ -118,7 +117,10 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46 完了
+
 - 2026-09-13-45-feat-issue-report-link.md（✅ 完了・アーカイブ済 — 診断パネルへ「不具合を報告」ボタン + プレビューダイアログを実装。`buildIssueReportBody()`でapiKey/baseUrl/dailyPath/ログ本文をサニタイズしGitHub issueへ`chrome.tabs.create({ url })`で新規タブを開く。単体テスト11件green）
+- 2026-09-13-46-feat-issue-template-privacy-doc.md（✅ 完了・アーカイブ済 — `.github/ISSUE_TEMPLATE/bug_report.md` 新設 + `public/PRIVACY.md`・`docs/PRIVACY.md` 両方の Third-Party Services セクションにissue報告機能（ユーザー操作時のみ診断情報送信）の記述を追記）
 
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
