@@ -61,6 +61,7 @@ vi.mock('../navigation.js', () => ({
 vi.mock('../privacyConsentController.js', () => ({
     initPrivacyConsent: vi.fn(),
     setupPrivacyConsentListeners: vi.fn(),
+    setConsentCallback: vi.fn(),
 }));
 
 // Mock trancoNotification
@@ -332,6 +333,32 @@ describe('initPopup coverage', () => {
         await initPopup();
         await new Promise(r => setTimeout(r, 50));
         expect(initOnboardingWizard).not.toHaveBeenCalled();
+    });
+
+    it('shows onboarding wizard right after the user accepts consent in this same session', async () => {
+        // First-run: initPopup()'s one-shot check runs BEFORE the user has
+        // accepted consent (hasConsented starts false). Accepting later in
+        // the same popup session must still trigger the wizard via the
+        // consent callback, not require reopening the popup.
+        const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        const { setConsentCallback } = await import('../privacyConsentController.js');
+        vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
+        vi.mocked(hasCompletedWizard).mockResolvedValue(false);
+
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(initOnboardingWizard).not.toHaveBeenCalled();
+
+        // Simulate the user accepting consent: getPrivacyConsent now resolves
+        // true, and privacyConsentController invokes the registered callback.
+        vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
+        const registeredCallback = vi.mocked(setConsentCallback).mock.calls.at(-1)?.[0];
+        expect(registeredCallback).toBeTypeOf('function');
+        registeredCallback?.(true);
+        await new Promise(r => setTimeout(r, 50));
+
+        expect(initOnboardingWizard).toHaveBeenCalled();
     });
 
     it('handles pending page with null entry (length 1 but page is null)', async () => {
