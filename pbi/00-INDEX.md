@@ -25,7 +25,6 @@
 - ⬜🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知）
 - ⬜🟡🟡🔧 2026-09-13-48-test-error-recovery-usability-e2e.md（AI未設定・Obsidian未接続・ネットワーク断のエラーメッセージ品質検証）
 - ⬜🔴🟢🔧 2026-09-13-47-test-dashboard-usability-e2e.md（sidebar到達性・設定変更タスク・検索・タグクラウド・Markdownエクスポートの5シナリオ）
-- ⬜🔴🟡✨ 2026-09-13-52-feat-friction-metrics-ci.md（クリック数/ステップ数の定量化基盤 + CI回帰防止。PBI 47・48・49・50に依存）
 
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
 
@@ -118,6 +117,8 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+- 2026-09-13-52-feat-friction-metrics-ci.md（✅ 完了・アーカイブ済 — `frictionMeter.ts` 新設（`page.click`/`page.fill`ラップでステップ数計測）+ `usability-budget.json`（タスク別しきい値）+ `task-friction-metrics.spec.ts`（ドメインフィルタ追加・検索・Markdownエクスポート・issue報告プレビューの4タスク計測）。`playwright.config.ts` に `usability` プロジェクト追加・`package.json` に `test:e2e:usability(:ci)` 追加・`.github/workflows/tests.yml` に usability ジョブ追加）
 
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
