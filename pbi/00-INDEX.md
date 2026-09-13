@@ -20,7 +20,6 @@
 
 - ⬜🟢🟢✨ 2026-09-13-46-feat-issue-template-privacy-doc.md（`.github/ISSUE_TEMPLATE/bug_report.md`新設 + PRIVACY.md両方への追記）
 - ⬜🟡🟡✨ 2026-09-13-45-feat-issue-report-link.md（診断パネルへの「不具合を報告」ボタン + `buildIssueReportBody()`によるAPIキー等サニタイズ）
-- ⬜🟢🟢🔧 2026-09-13-51-test-issue-report-e2e.md（issue報告導線のE2E検証。PBI 45・46に依存）
 - ⬜🟡🟢🔧 2026-09-13-49-test-popup-usability-e2e.md（ポップアップ記録フロー・オンボーディングのユーザビリティE2E）
 - ⬜🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知）
 - ⬜🟡🟡🔧 2026-09-13-48-test-error-recovery-usability-e2e.md（AI未設定・Obsidian未接続・ネットワーク断のエラーメッセージ品質検証）
@@ -118,6 +117,8 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+- 2026-09-13-51-test-issue-report-e2e.md（✅ 完了・アーカイブ済 — `dashboard-issue-report.spec.ts` 新設（4 tests: プレビュー本文のAPIキー非混入・chrome.tabs.create の issue URL 検証・Cancel時の非オープン・サイドバー導線）。専用fixtureでGemini APIキーをseedして漏洩なきことを実証。usability 4 tests green）
 
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 

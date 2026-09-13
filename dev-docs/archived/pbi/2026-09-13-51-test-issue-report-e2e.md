@@ -31,10 +31,10 @@ Scenario: プレビューをキャンセルした場合はタブが開かない
 ```
 
 ## 受け入れ基準
-- [ ] `testDir/e2e/usability/dashboard-issue-report.spec.ts` が新規作成されている
-- [ ] プレビュー本文にAPIキー・baseUrl・dailyPathの値が一切含まれないことをテキスト検証している
-- [ ] `chrome.tabs.create` が正しいissue URL（`armaniacs/yasumaro/issues/new`起点）で呼ばれることを検証している
-- [ ] キャンセル時にタブが開かないことも検証している
+- [x] `testDir/e2e/usability/dashboard-issue-report.spec.ts` が新規作成されている
+- [x] プレビュー本文にAPIキー・baseUrl・dailyPathの値が一切含まれないことをテキスト検証している
+- [x] `chrome.tabs.create` が正しいissue URL（`armaniacs/yasumaro/issues/new`起点）で呼ばれることを検証している
+- [x] キャンセル時にタブが開かないことも検証している
 
 ## テスト戦略
 - E2E: `testDir/e2e/usability/dashboard-issue-report.spec.ts`（新設の`usability`プロジェクト、`@usability`タグ）
@@ -45,6 +45,6 @@ Scenario: プレビューをキャンセルした場合はタブが開かない
 1pt（既存fixtureパターンの再利用による1シナリオファイルの追加）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run test:e2e:usability` で本テストがPASSする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run test:e2e:usability` で本テストがPASSする
+- [x] コードレビュー完了
