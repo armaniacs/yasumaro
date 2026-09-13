@@ -11,11 +11,6 @@ import { test, expect } from '../fixtures/dashboard-locale.fixture.js';
 
 const SAMPLE_PANELS = ['panel-general', 'panel-domain', 'panel-diagnostics'];
 
-// A raw i18n key left in the DOM looks like snake_case/camelCase identifier
-// text with no spaces and no punctuation — real UI copy (ja or en) always
-// has spaces or is a single short word, never this shape at meaningful length.
-const RAW_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{8,}$/;
-
 for (const locale of ['en-US', 'ja-JP'] as const) {
   test.describe(`Dashboard i18n layout @extension (${locale})`, () => {
     test.use({ locale });
@@ -54,19 +49,21 @@ for (const locale of ['en-US', 'ja-JP'] as const) {
         const panel = page.locator(`#${panelId}`);
         await expect(panel).toBeVisible();
 
-        const suspects = await panel.evaluate((el, patternSource) => {
-          const pattern = new RegExp(patternSource);
+        // Compare each data-i18n element's own key against its rendered text —
+        // a mistranslation only ever regresses to the literal key string, so
+        // this can't false-positive on ordinary English words the way a
+        // shape-based regex over all text nodes did.
+        const suspects = await panel.evaluate((el) => {
           const found: string[] = [];
-          const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-          let node: Node | null;
-          while ((node = walker.nextNode())) {
+          el.querySelectorAll<HTMLElement>('[data-i18n]').forEach((node) => {
+            const key = node.getAttribute('data-i18n');
             const text = node.textContent?.trim() ?? '';
-            if (text && pattern.test(text)) found.push(text);
-          }
+            if (key && text === key) found.push(key);
+          });
           return found;
-        }, RAW_KEY_PATTERN.source);
+        });
 
-        expect(suspects, `possible untranslated i18n keys: ${suspects.join(', ')}`).toEqual([]);
+        expect(suspects, `untranslated i18n keys (text equals key): ${suspects.join(', ')}`).toEqual([]);
       });
     }
   });
