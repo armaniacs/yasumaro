@@ -29,6 +29,22 @@ import type { StorageQuery } from '../utils/sqlite-types.js';
 /** Default page size when the caller supplies no limit. */
 export const DEFAULT_QUERY_LIMIT = 100;
 
+/** Query dispatch mode: whether a StorageQuery is a text search or a plain listing. */
+export type QueryMode = 'search' | 'listing';
+
+/**
+ * Single decision point for search-vs-listing dispatch (root cause of
+ * 4a1f6093 and 43385d95): each backend used to re-test `if (q.text)`
+ * independently — OpfsWorkerBackend picking the worker message type,
+ * IdbVfsBackend picking its FTS/LIKE/plain SQL path, storageFallback
+ * picking its filter path. Preserves the exact prior truthiness check
+ * (empty string was already "listing" on every backend) — backends now
+ * read this instead of re-deriving the check themselves.
+ */
+export function planQueryMode(q: Pick<StorageQuery, 'text'>): QueryMode {
+  return q.text ? 'search' : 'listing';
+}
+
 /** Retention defaults for the purge seam (mirror dbMaintenance's values). */
 export const DEFAULT_RETENTION_DAYS = 90;
 export const DEFAULT_MAX_RECORDS = 1000;

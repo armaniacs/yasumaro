@@ -15,6 +15,7 @@ import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../messaging/limits.js';
+import { planQueryMode, type QueryMode } from './queryPlanner.js';
 
 /**
  * Unified extra WHERE fragment for FTS/LIKE search paths.
@@ -255,6 +256,12 @@ export interface QuerySpec {
   bareText: string | null;
   params: SqliteValue[];
   useFts: boolean;
+  /**
+   * Search-vs-listing dispatch decision (PBI 2026-09-14-01), decided once by
+   * `planQueryMode` and read by all three backends. Root cause of 4a1f6093 /
+   * 43385d95 was each backend re-deriving `if (q.text)` independently.
+   */
+  mode: QueryMode;
   error?: string;
 }
 
@@ -270,6 +277,7 @@ export function buildQuerySpec(
   const fts5Available = opts.fts5Available ?? false;
 
   const { where, params: whereParams } = buildWhereClause(query);
+  const mode = planQueryMode(query);
   const bareText = query.text ? sanitizeTextForFts5(query.text) : null;
   const useFts = bareText ? shouldUseFts5(fts5Available, bareText) : false;
 
@@ -299,6 +307,7 @@ export function buildQuerySpec(
       bareText,
       params: whereParams,
       useFts,
+      mode,
       error: orderError,
     };
   }
@@ -323,6 +332,7 @@ export function buildQuerySpec(
     bareText,
     params: whereParams,
     useFts,
+    mode,
   };
 }
 
