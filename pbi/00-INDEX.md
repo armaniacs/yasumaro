@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線 — 8件（0913a）
+
+設定画面/ダッシュボード・ポップアップのユーザビリティテストを1から設計し、GitHub issue報告導線（診断情報自動サニタイズ＋確認プレビュー）を新規実装。台帳は `2026-09-13-00-backlog-0913a.md`。実行順 = 46 → 45 → 51 → 49 → 50 → 48 → 47 → 52（RICE降順＋依存関係優先）。
+
+- ⬜🟢🟢✨ 2026-09-13-46-feat-issue-template-privacy-doc.md（`.github/ISSUE_TEMPLATE/bug_report.md`新設 + PRIVACY.md両方への追記）
+- ⬜🟡🟡✨ 2026-09-13-45-feat-issue-report-link.md（診断パネルへの「不具合を報告」ボタン + `buildIssueReportBody()`によるAPIキー等サニタイズ）
+- ⬜🟢🟢🔧 2026-09-13-51-test-issue-report-e2e.md（issue報告導線のE2E検証。PBI 45・46に依存）
+- ⬜🟡🟢🔧 2026-09-13-49-test-popup-usability-e2e.md（ポップアップ記録フロー・オンボーディングのユーザビリティE2E）
+- ⬜🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知）
+- ⬜🟡🟡🔧 2026-09-13-48-test-error-recovery-usability-e2e.md（AI未設定・Obsidian未接続・ネットワーク断のエラーメッセージ品質検証）
+- ⬜🔴🟢🔧 2026-09-13-47-test-dashboard-usability-e2e.md（sidebar到達性・設定変更タスク・検索・タグクラウド・Markdownエクスポートの5シナリオ）
+- ⬜🔴🟡✨ 2026-09-13-52-feat-friction-metrics-ci.md（クリック数/ステップ数の定量化基盤 + CI回帰防止。PBI 47・48・49・50に依存）
+
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
 
 round 14 のテキスト検索回帰（normalizeStorageQuery text 欠落 + OPFS routing 誤配送）の恒久防止。なぜなぜ分析 60 連鎖で 5 根本原因を特定（seam 移行漏れ・allowlist 漏れ・as-is テスト・日本語 corpus 欠落・smoke test 欠落）。BDDシナリオ別に縦割り。
