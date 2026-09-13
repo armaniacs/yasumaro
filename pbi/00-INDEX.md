@@ -21,6 +21,49 @@
 - 🔶🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知。**部分実装**: 「記録開始」「検索」タスクのキーボード操作検証が未実装。a11y/i18n検証部分は完了済み。残タスクの実装ガイド（追加先ファイル・テストコード雛形・fixture選定理由）をPBI本文に記載済み・残0.5pt相当）
 
 
+### 2026-09-14 adversarial-code-review 指摘のPBI化 — 4件（ラウンド15レビュー由来）
+
+アーキテクチャ深化ラウンド15（PBI 01〜04）へのadversarial-code-reviewで、裏取りを経て確定した保守担当者視点の指摘4件。ハッカー視点の指摘は全件却下。台帳は `2026-09-14-00-backlog-review-findings.md`。実行順 = 05 → 06 → 07 → 08（RICE降順、ただし 07 → 08 は同一型を触るため順序依存）。各PBIに実装ガイド（現状コード引用・変更方針・テスト雛形・検証コマンド）を記載済み。
+
+- ⬜🟢🟢🔧 2026-09-14-05-refactor-issue-report-attach-trigger-guard.md（RICE 16.0 — `attachTrigger` にWeakSetで多重登録防止ガードを追加。現状は`NavigationRegistry`のmount-once保証に依存する暗黙の前提）
+- ⬜🟢🟢🔧 2026-09-14-06-refactor-consent-state-changed-payload.md（RICE 8.0 — `CONSENT_STATE_CHANGED`のaccept/decline区別不能を解消。**調査済**: `NO_PAYLOAD_TYPES`登録によりpayload追加はSSOT 3ファイル改修が必要なため、契約をコードに明示する案Aを推奨）
+- ⬜🟢🟢🔧 2026-09-14-07-test-opfs-done-legacy-path-contradiction.md（RICE 3.2 — 「移行済みだがレガシーDB残存」状態の可視化。**調査済**: storage由来のDoneフラグとライブprobeは独立情報源のため実発生する）
+- ⬜🟡🟢🔧 2026-09-14-08-refactor-migration-section-display-state.md（RICE 1.6 — `renderMigrationSection`の表示優先順位を`displayState`判別ユニオンに統合。**07の後に着手**）
+
+
+### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
+
+- 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A。2026-09-14 再調査で実装ガイドを追加 — 対象リストに `wa-sqlite.d.ts` 漏れ・STATUS 公開部は `sqliteStatus.ts` が正・`migrationBackup.ts` の `extractDomain` re-export に現役依存あり）
+
+
+### 将来候補の統合台帳（live）
+
+- [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
+
+## 運用ルール
+
+- 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成する
+  （`type` は `feat` / `fix` / `refactor` / `doc` / `test` / `investigate`。
+  ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）
+- **NN は 1 日付内で通し番号（実行順の鍵）であり、重複させてはならない。**
+  複数セッションが並行して PBI を作成する場合も、この INDEX の「実装順（確定）」
+  セクションを確認して空き番号を採番すること。衝突が起きた場合は
+  実装が進行していない側をリネームする（進行中の側を壊さない）
+- 実装計画は `dev-docs/plans/YYYY-MM-DD-pbiNN-<slug>-plan.md` として作成する
+- **`plans/` ディレクトリは廃止。** 今後はすべて `dev-docs/plans/` に一本化する
+- **完了したPBIは `dev-docs/archived/pbi/` へ、対応する実装計画は
+  `dev-docs/archived/plans/` へ `git mv` で移動する**
+- 対応する dig-findings ファイル（`dev-docs/dig-findings-*.md`）は
+  `dev-docs/archived/` へ `git mv` で移動する
+- 移動したらこのINDEXの表から行を削除し、下の「アーカイブ履歴」に1行追記する
+
+---
+
+## アーカイブ履歴
+
+完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
+その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
 
 round 14 のテキスト検索回帰（normalizeStorageQuery text 欠落 + OPFS routing 誤配送）の恒久防止。なぜなぜ分析 60 連鎖で 5 根本原因を特定（seam 移行漏れ・allowlist 漏れ・as-is テスト・日本語 corpus 欠落・smoke test 欠落）。BDDシナリオ別に縦割り。
@@ -75,43 +118,6 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 - 2026-09-12-22-refactor-export-serialize-seam.md（✅ 完了・アーカイブ済 — `Queryable.serialize()` 昇格 + `exportEnvelope.ts` SSOT（EXPORT_COLUMNS whitelist + envelope builder + drift guard）。worker の手書き mapper（`as` 6 箇所）削除、recordsRepo を 3 行委譲に（60 行迂回分岐削除）。coverage pin 6 件更新・offscreen 1055 tests green）
 - 2026-09-12-23-refactor-record-session-attempt-context.md（✅ 完了・アーカイブ済 — `openAttempt()` prelude seam 新設（guard → arm button → clear status の単一化・degenerate DOM で idle 自己復帰）。normal/force の 2 重手書き ~60 行を統合。popup 870 tests green・type-check green）
 - 2026-09-12-24-refactor-tab-state-seam.md（✅ 完了・アーカイブ済 — `createAutoSavedBadgeTabs(tabExistence?)` に prune 追加（restore 時に stale tabId を刈り込み永続化）・TabCache remove を flushImmediately + `removeAndFlush` で耐久化。durability 3 tests 新設・background 2306 tests green）
-
-### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
-
-- 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A。2026-09-14 再調査で実装ガイドを追加 — 対象リストに `wa-sqlite.d.ts` 漏れ・STATUS 公開部は `sqliteStatus.ts` が正・`migrationBackup.ts` の `extractDomain` re-export に現役依存あり）
-
-### 2026-09-07 architecture review round — 7 件完了（16 は 2026-09-11 round 5 の 09 として完了）
-
-（`2026-09-05-00-backlog-future.md` の「次ラウンド再評価」項目 + 型債務返済で発見したドリフトを RICE 採点し PBI 化。2026-09-07。AI slot-runner 統合と fallback 再入ギャップは RICE 低・トリガー未発生で PBI 化せず台帳据え置き）
-
-
-### 将来候補の統合台帳（live）
-
-- [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
-
-## 運用ルール
-
-- 新規PBIは `pbi/YYYY-MM-DD-NN-type-slug.md` として作成する
-  （`type` は `feat` / `fix` / `refactor` / `doc` / `test` / `investigate`。
-  ファイル名の種別がそのまま機能追加/非機能追加の判定基準になる）
-- **NN は 1 日付内で通し番号（実行順の鍵）であり、重複させてはならない。**
-  複数セッションが並行して PBI を作成する場合も、この INDEX の「実装順（確定）」
-  セクションを確認して空き番号を採番すること。衝突が起きた場合は
-  実装が進行していない側をリネームする（進行中の側を壊さない）
-- 実装計画は `dev-docs/plans/YYYY-MM-DD-pbiNN-<slug>-plan.md` として作成する
-- **`plans/` ディレクトリは廃止。** 今後はすべて `dev-docs/plans/` に一本化する
-- **完了したPBIは `dev-docs/archived/pbi/` へ、対応する実装計画は
-  `dev-docs/archived/plans/` へ `git mv` で移動する**
-- 対応する dig-findings ファイル（`dev-docs/dig-findings-*.md`）は
-  `dev-docs/archived/` へ `git mv` で移動する
-- 移動したらこのINDEXの表から行を削除し、下の「アーカイブ履歴」に1行追記する
-
----
-
-## アーカイブ履歴
-
-完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
-その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
 ### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46・47・48・49・51・52 完了（50は基準1件未達のため進行中に残置）
 
@@ -168,7 +174,7 @@ round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc000
 
 ### 2026-09-11 architecture review round 8 — 3件完了（autonomous-task-closer）
 
-診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2338-r8.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03。主軸: round 7 台帳の「e2e gap 2 spec」— トリガー（e2e 実行可能環境）が本環境で**発火**。台帳は `2026-09-11-00-backlog-0911e.md`（`pbi/` に残置 — round 7 台帳と同列の live 記録）。
+診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260911-2338-r8.html`）→ RICE 採点 → 実装。実行順 = 01 → 02 → 03。主軸: round 7 台帳の「e2e gap 2 spec」— トリガー（e2e 実行可能環境）が本環境で**発火**。台帳は `2026-09-11-00-backlog-0911e.md`（2026-09-14 にアーカイブ済 — 記載のトリガー未発火 10 項目は `2026-09-05-00-backlog-future.md` に統合済みで、live な追跡先はそちら）。
 
 - 2026-09-11-01-test-e2e-history-panel-ui.md（✅ 完了・アーカイブ済 — seedRows 25 行で tag filter / pagination / star の 4 振る舞いを pin。PBI 記載の `--project=chromium` は誤記で `extension` に修正。全セレクタを実 DOM に対照。headless では全 @extension spec と同様 skip。testDir tsc 新規 0 errors）
 - 2026-09-11-02-test-e2e-cleansing-preview.md（✅ 完了・アーカイブ済 — modal open / mask 遷移 / confirm→SAVE_RECORD の 3 振る舞いを pin。**fixture の headless ガード欠落を検出・修正**（extension.fixture と同一の tryLaunch + fixme — 無ければ headless で hard-fail）。プロジェクト名も `extension` に修正）
@@ -239,6 +245,10 @@ round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc000
 - 2026-09-11-07-fix-dashboard-import-batch.md（✅ 完了・アーカイブ済 — dashboard import を行毎 N+1 round-trip（MAX_IMPORT_ROWS 往復）から `insertBatch` 1 往復に統合。`recordsRepo.insertBatch` が `skipped` を wire まで保持（旧 `{count}` 潰れ）し dashboard の自前 reconstruct を削除。lastInsertError のみ保持で 99 成功 1 失敗が成功報告になる問題も解消）
 - 2026-09-11-08-refactor-storage-backend-capability.md（✅ 完了・アーカイブ済 — StorageBackend の archive 不可 stub 28+6 重複を `ARCHIVE_UNSUPPORTED_ERROR` 定数 + `archiveUnsupported()` 共有 stub 1 箇所に統合。テストは定数参照で pin。capability クエリと facets 分割は呼び出し経路が無いため不導入（1 adapter = 仮の seam 原則・PBI 実装メモに記録））
 - 2026-09-07-15-fix-history-tag-filter-sql-migration.md（✅ 完了・アーカイブ済 — 保留 3 論点を自律決定して実装: セマンティクス=部分一致維持（FTS trigram は `#` prefix 無し phrase、<3 文字は `tags LIKE`）、性能=better-sqlite3 50k 行実測で LIKE 全走査 median 3.2ms（10s timeout に対し 3 桁余裕・許容）、backend 分岐=統合（PBI-34 divergence 削除・pinning test 無し確認済み）。`TAG_FILTER_FETCH_LIMIT`/`filterRowsByTag`/client slice 削除、`queryPlan.tagFilter` SSOT 化、parametric tag parity テスト新設）
+
+### 2026-09-07 architecture review round — 7 件完了（16 は 2026-09-11 round 5 の 09 として完了）
+
+（`2026-09-05-00-backlog-future.md` の「次ラウンド再評価」項目 + 型債務返済で発見したドリフトを RICE 採点し PBI 化。2026-09-07。AI slot-runner 統合と fallback 再入ギャップは RICE 低・トリガー未発生で PBI 化せず台帳据え置き）
 
 ### 2026-09-07 architecture review round 2 — 6件完了（arch-delivery-loop・0907a ブランチ）
 
