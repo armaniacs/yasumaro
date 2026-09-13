@@ -241,11 +241,24 @@ function getCurrentEngineLabel(snap: DiagnosticsSnapshot): string {
 /** Hints are keyed so the renderer can map each to its own DOM element without re-deriving conditions. */
 export type MigrationHintKind = 'noAbsolutePath' | 'idbExplanation' | 'opfsCheckingStale' | 'legacyStillPresent';
 
+/**
+ * Display bucket for the migration status — the precedence
+ * (done > notApplicable > checking > pending) is resolved exactly once here
+ * in deriveMigrationStatus; the renderer only maps this to a label and never
+ * re-derives the precedence.
+ *
+ * IDB never takes 'checking': OPFS can detect "the migration routine has not
+ * run yet" via LAST_ATTEMPTED_AT / RECORD_COUNT, but the IDB side has no
+ * corresponding measured fields (see sqliteStatus.ts extras).
+ */
+export type MigrationDisplayState = 'done' | 'notApplicable' | 'checking' | 'pending';
+
 export interface MigrationOpfsStatus {
   done: boolean;
   notApplicable: boolean;
   checking: boolean;
   warn: boolean;
+  displayState: MigrationDisplayState;
   /**
    * Migration routine finished but the live probe still detects the legacy file.
    * Possible failed/skipped legacy cleanup causing double disk usage. Independent of done.
@@ -261,6 +274,8 @@ export interface MigrationIdbStatus {
   done: boolean;
   notApplicable: boolean;
   warn: boolean;
+  /** IDB never takes 'checking' (see MigrationDisplayState). */
+  displayState: Exclude<MigrationDisplayState, 'checking'>;
   /**
    * Migration routine finished but the live probe still detects the legacy DB.
    * Possible failed/skipped legacy cleanup causing double disk usage. Independent of done.
@@ -323,6 +338,22 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
     hints.push('legacyStillPresent');
   }
 
+  // Same precedence the renderer used to re-derive from the individual bools
+  // (done > notApplicable > checking > pending) — kept identical so the panel
+  // renders byte-for-byte the same output.
+  const opfsDisplayState: MigrationDisplayState = opfsDone
+    ? 'done'
+    : opfsNotApplicable
+      ? 'notApplicable'
+      : opfsChecking
+        ? 'checking'
+        : 'pending';
+  const idbDisplayState: Exclude<MigrationDisplayState, 'checking'> = idbDone
+    ? 'done'
+    : idbNotApplicable
+      ? 'notApplicable'
+      : 'pending';
+
   return {
     overall: {
       allDone,
@@ -334,6 +365,7 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
       notApplicable: opfsNotApplicable,
       checking: opfsChecking,
       warn: opfsWarn,
+      displayState: opfsDisplayState,
       legacyStillPresent: opfsLegacyStillPresent,
       legacyPath: opfsLegacyPath,
       lastAttemptedAt: sqlite?.opfsMigrationV2LastAttemptedAt,
@@ -344,6 +376,7 @@ export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): Mi
       done: idbDone,
       notApplicable: idbNotApplicable,
       warn: idbWarn,
+      displayState: idbDisplayState,
       legacyStillPresent: idbLegacyStillPresent,
       legacyName: idbLegacyName,
     },
@@ -381,8 +414,14 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
 
   const opfsLabel = `${getMessage('diagMigrationOpfsPath') || 'OPFS path'} (${LEGACY_OPFS_POOL_DIR}/${LEGACY_OPFS_DB_FILENAME})`;
   const idbLabel = `${getMessage('diagMigrationIdbPath') || 'IDB path'} (${LEGACY_IDB_NAME})`;
-  const opfsValue = opfs.done ? doneSuffix : (opfs.notApplicable ? notApplicableSuffix : (opfs.checking ? checkingSuffix : pendingSuffix));
-  const idbValue = idb.done ? doneSuffix : (idb.notApplicable ? notApplicableSuffix : pendingSuffix);
+  const suffixByState: Record<MigrationDisplayState, string> = {
+    done: doneSuffix,
+    notApplicable: notApplicableSuffix,
+    checking: checkingSuffix,
+    pending: pendingSuffix,
+  };
+  const opfsValue = suffixByState[opfs.displayState];
+  const idbValue = suffixByState[idb.displayState];
   el.appendChild(makeStatRow(opfsLabel, opfsValue, opfs.warn));
   el.appendChild(makeStatRow(idbLabel, idbValue, idb.warn));
 

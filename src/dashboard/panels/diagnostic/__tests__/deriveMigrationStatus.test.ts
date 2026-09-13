@@ -157,4 +157,38 @@ describe('deriveMigrationStatus', () => {
     expect(status.hints).toContain('noAbsolutePath');
     expect(status.hints).toContain('idbExplanation');
   });
+
+  it('resolves opfs displayState to done when the migration flag is set', () => {
+    expect(deriveMigrationStatus(sqlite()).opfs.displayState).toBe('done');
+  });
+
+  it('resolves opfs displayState to notApplicable when not done and no legacy DB exists', () => {
+    const status = deriveMigrationStatus(sqlite({ opfsMigrationV2Done: false, opfsLegacyDbPath: null }));
+
+    expect(status.opfs.displayState).toBe('notApplicable');
+  });
+
+  it('resolves opfs displayState to checking when not done, legacy DB unconfirmed, and never attempted', () => {
+    const status = deriveMigrationStatus(sqlite({
+      opfsMigrationV2Done: false,
+      opfsMigrationV2LastAttemptedAt: null,
+    }));
+
+    expect(status.opfs.displayState).toBe('checking');
+  });
+
+  it('resolves opfs displayState to pending when the migration was attempted but did not finish', () => {
+    const status = deriveMigrationStatus(sqlite({
+      opfsMigrationV2Done: false,
+      opfsMigrationV2LastAttemptedAt: '2026-08-29T00:00:00.000Z',
+    }));
+
+    expect(status.opfs.displayState).toBe('pending');
+  });
+
+  it('resolves idb displayState across its three states (never checking)', () => {
+    expect(deriveMigrationStatus(sqlite()).idb.displayState).toBe('done');
+    expect(deriveMigrationStatus(sqlite({ idbMigrationV2Done: false, idbLegacyDbName: null })).idb.displayState).toBe('notApplicable');
+    expect(deriveMigrationStatus(sqlite({ idbMigrationV2Done: false, idbLegacyDbName: 'idb-batch-atomic' })).idb.displayState).toBe('pending');
+  });
 });
