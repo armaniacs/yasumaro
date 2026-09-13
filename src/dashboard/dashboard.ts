@@ -28,6 +28,11 @@ import {
   resolvePanelIdForSection,
   resolvePanelIdForTab,
 } from './panels/panelCatalog.js';
+// Not a panel implementation (no PanelLifecycle, no panel registry
+// dependency) — a standalone module the diagnostics panel also wires its
+// own "Report a Bug" button through. Safe to import at page-init time.
+import { wireIssueReportButton } from './panels/diagnostic/issueReportLink.js';
+import { diagnosticsCollector } from './panels/diagnostic/DiagnosticsCollector.js';
 
 /**
  * Which panel the page should open on, from ?tab= / ?section=.
@@ -88,6 +93,25 @@ export async function initDashboard(): Promise<void> {
   document.getElementById('historyExportAllMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
   try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
+
+  // Sidebar "Report a Bug" — reuses the diagnostics panel's preview modal
+  // (#bugReportPreviewModal lives outside any panel) so the button works
+  // from any panel without requiring the user to navigate to Diagnostics
+  // first. The diagnostics panel wires its own #diagReportBugBtn to the
+  // same modal independently; both share one DiagnosticsCollector instance.
+  try {
+    wireIssueReportButton(
+      {
+        reportBtn: document.getElementById('sidebarReportBugBtn') as HTMLButtonElement | null,
+        previewModal: document.getElementById('bugReportPreviewModal') as HTMLDialogElement | null,
+        previewContent: document.getElementById('bugReportPreviewContent') as HTMLTextAreaElement | null,
+        cancelBtn: document.getElementById('bugReportCancelBtn') as HTMLButtonElement | null,
+        closeBtn: document.getElementById('bugReportPreviewCloseBtn') as HTMLButtonElement | null,
+        openBtn: document.getElementById('bugReportOpenBtn') as HTMLButtonElement | null,
+      },
+      () => diagnosticsCollector.collect(),
+    );
+  } catch (e) { console.error('[Dashboard] wireIssueReportButton (sidebar) error:', e); }
 
   console.log('[Dashboard] Initialization complete');
 }
