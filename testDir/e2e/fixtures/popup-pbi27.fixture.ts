@@ -51,6 +51,12 @@ export const test = base.extend<Pbi27Fixtures>({
       chrome.storage.local.set({
         privacyConsent: { accepted: true, timestamp: Date.now() },
         settings_migrated: true,
+        // Not this spec's concern — the onboarding wizard now launches
+        // reactively right after the user accepts consent in the same
+        // session (PBI 0913a popup.ts fix), which would otherwise cover
+        // #menuBtn here. Mark onboarding done so this fixture's UI-driven
+        // consent acceptance below doesn't trigger it.
+        settings: { onboarding_wizard_completed: true },
       });
 
       window.close = () => {
