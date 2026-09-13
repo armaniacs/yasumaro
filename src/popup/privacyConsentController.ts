@@ -163,7 +163,11 @@ function showPrivacyConsentModal(): void {
 }
 
 /**
- * Service Workerに同意状態変更を通知し、ツールバーバッジを即座に更新させる（M3）
+ * Notify the Service Worker of a consent state change so it refreshes the toolbar badge (M3).
+ *
+ * INTENTIONAL: called from both the accept and decline paths with the
+ * identical bare envelope — no accept/decline distinction is carried.
+ * Receivers must re-read consent state from storage.
  */
 function notifyConsentStateChanged(): void {
     try {

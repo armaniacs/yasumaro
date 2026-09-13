@@ -348,6 +348,63 @@ describe('privacyConsentController', () => {
       });
     });
 
+    it('sends an identical bare envelope for both accept and decline (INTENTIONAL: value lives in storage)', async () => {
+      const sendMessage = vi.mocked(chrome.runtime.sendMessage);
+      sendMessage.mockClear();
+
+      // Accept path: capture the broadcast envelope.
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockSavePrivacyConsent.mockResolvedValue(undefined);
+      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+
+      await initPrivacyConsent();
+
+      const cb = getCheckbox();
+      cb!.checked = true;
+      cb!.dispatchEvent(new Event('change'));
+      getAcceptBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(sendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+        );
+      });
+      const acceptEnvelope = sendMessage.mock.calls
+        .map((call) => call[0] as Record<string, unknown>)
+        .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
+      expect(acceptEnvelope).toBeDefined();
+
+      // Decline path: reset DOM and listeners, then capture again.
+      sendMessage.mockClear();
+      setupDom();
+      setupPrivacyConsentListeners();
+      window.alert = vi.fn();
+
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+
+      await initPrivacyConsent();
+
+      getDeclineBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(sendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+        );
+      });
+      const declineEnvelope = sendMessage.mock.calls
+        .map((call) => call[0] as Record<string, unknown>)
+        .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
+      expect(declineEnvelope).toBeDefined();
+
+      // Contract: both paths send the same shape with the same values —
+      // no accept/decline distinction is carried on the message.
+      expect(Object.keys(declineEnvelope!).sort()).toEqual(Object.keys(acceptEnvelope!).sort());
+      expect(declineEnvelope).toEqual(acceptEnvelope);
+      // Bare envelope: no payload and no consent value field.
+      expect(declineEnvelope).not.toHaveProperty('payload');
+      expect(declineEnvelope).not.toHaveProperty('consented');
+    });
+
     it('should show error text when save fails during accept', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
       mockSavePrivacyConsent.mockRejectedValue(new Error('Save failed'));

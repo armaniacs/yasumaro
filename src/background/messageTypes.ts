@@ -124,6 +124,19 @@ type RefreshLocalMarkdownSchedulerMessage = {
     type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
 };
 
+/**
+ * Consent accept/decline trigger.
+ *
+ * INTENTIONAL: this message carries no consent value. Both accept and
+ * decline send the identical bare envelope (registered in NO_PAYLOAD_TYPES;
+ * PayloadForType resolves to never). Receivers must re-read the current
+ * state via getPrivacyConsent() from chrome.storage.
+ *
+ * Rationale: the SSOT for consent state is chrome.storage. Carrying the
+ * value on the message would open a path where a stale value is trusted
+ * when message arrival order and storage write order diverge. When the
+ * value is needed, read storage.
+ */
 type ConsentStateChangedMessage = {
     type: 'CONSENT_STATE_CHANGED';
 };

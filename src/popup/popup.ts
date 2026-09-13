@@ -15,6 +15,7 @@ import { loadPendingPages } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog, showRecordingFailedDialog } from './privatePageDialog.js';
 import { getPrivacyConsent } from '../utils/storage/privacyConsent.js';
+import type { ExtensionMessage } from '../background/messageTypes.js';
 import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
 
 // ============================================================================
@@ -88,7 +89,7 @@ export async function initPopup(): Promise<void> {
     // ran with hasConsented=false, so re-check whenever privacyConsentController
     // broadcasts CONSENT_STATE_CHANGED (accept or decline) rather than relying
     // on a single-shot callback tied to initialization order.
-    chrome.runtime.onMessage.addListener((message: { type?: string }) => {
+    chrome.runtime.onMessage.addListener((message: Partial<ExtensionMessage>) => {
         if (message?.type === 'CONSENT_STATE_CHANGED') {
             void maybeShowOnboardingWizard();
         }
