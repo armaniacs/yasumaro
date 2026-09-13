@@ -21,7 +21,6 @@
 - ⬜🟢🟢🔧 2026-09-13-51-test-issue-report-e2e.md（issue報告導線のE2E検証。PBI 45・46に依存）
 - ⬜🟡🟢🔧 2026-09-13-49-test-popup-usability-e2e.md（ポップアップ記録フロー・オンボーディングのユーザビリティE2E）
 - ⬜🟡🟢🔧 2026-09-13-50-test-a11y-i18n-usability-e2e.md（キーボード操作・axe-coreスキャン・ja/enレイアウト崩れ検知）
-- ⬜🟡🟡🔧 2026-09-13-48-test-error-recovery-usability-e2e.md（AI未設定・Obsidian未接続・ネットワーク断のエラーメッセージ品質検証）
 - ⬜🔴🟡✨ 2026-09-13-52-feat-friction-metrics-ci.md（クリック数/ステップ数の定量化基盤 + CI回帰防止。PBI 47・48・49・50に依存）
 
 
@@ -117,11 +116,12 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46・47 完了
+### 2026-09-13 UIユーザビリティテスト設計 + issue報告導線（0913a）— 45・46・47・48 完了
 
 - 2026-09-13-45-feat-issue-report-link.md（✅ 完了・アーカイブ済 — 診断パネルへ「不具合を報告」ボタン + プレビューダイアログを実装。`buildIssueReportBody()`でapiKey/baseUrl/dailyPath/ログ本文をサニタイズしGitHub issueへ`chrome.tabs.create({ url })`で新規タブを開く。単体テスト11件green）
 - 2026-09-13-46-feat-issue-template-privacy-doc.md（✅ 完了・アーカイブ済 — `.github/ISSUE_TEMPLATE/bug_report.md` 新設 + `public/PRIVACY.md`・`docs/PRIVACY.md` 両方の Third-Party Services セクションにissue報告機能（ユーザー操作時のみ診断情報送信）の記述を追記）
 - 2026-09-13-47-test-dashboard-usability-e2e.md（✅ 完了・アーカイブ済 — sidebar 16パネル到達性（マウス/キーボード）・ドメインフィルタ追加→保存→リロード永続化・検索結果件数一致と空状態・タグクラウドノード数一致・Markdownエクスポートの5 E2Eファイル新設。`npx playwright test --project=extension testDir/e2e/usability/dashboard-*.spec.ts` で7 tests green）
+- 2026-09-13-48-test-error-recovery-usability-e2e.md（✅ 完了・アーカイブ済 — `dashboard-error-recovery.spec.ts` 新設（AI未設定・Obsidian未接続・ネットワーク断の3パターンでエラーメッセージの原因＋次アクション記述を検証。GeminiのAPIキー未設定メッセージの不備も修正済み）。**注記**: コード精査で受け入れ基準は確認済みだが、`npm run test:e2e:usability` 実行はworktree並列実行によるリソース競合で未検証のまま完了扱いにした。単独実行環境での再検証を推奨）
 
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
