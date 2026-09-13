@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.19` リリース。
+> - 現時点では `v6.8.20` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,27 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.20] - 2026-09-13
+
+設定画面にGitHub issue報告導線を新設し、ユーザビリティE2Eテスト群（ナビゲーション・設定変更タスク・検索・タグクラウド・Markdownエクスポート・エラーメッセージ・アクセシビリティ・i18nレイアウト・ポップアップ記録/オンボーディング）を新規に整備したリリースです。テスト作成の過程で実バグ7件を発見・修正しました。
+
+### Added
+
+- **診断パネルに「不具合を報告」ボタンを新設**: `buildIssueReportBody()` が拡張バージョン・SQLite状態・AIプロバイダー種別・Obsidian接続protocol/port・直近のエラーコード種別と件数のみを含むサマリーを生成し、APIキー・baseUrl・Obsidianのdaily note path・ログ本文は除外する。ユーザーが確認プレビューで内容を見てから「GitHubを開く」を押すまで送信は発生しない
+- **`.github/ISSUE_TEMPLATE/bug_report.md` を新設**し、PRIVACY.md（public/docs両方）にissue報告機能によるユーザー操作時のみの情報送信を明記
+- **ユーザビリティE2Eテスト一式を新設**（`testDir/e2e/usability/`）: sidebar 18パネルの到達性、ドメインフィルタ追加タスクの完了、検索結果の件数・空状態、タグクラウドのノード数一致、Markdownエクスポートの実ダウンロード、AI/Obsidian/オフライン時のエラーメッセージ品質、axe-coreによるWCAG AAスキャン、ja/enレイアウト崩れ検知、ポップアップの記録フロー/オンボーディングフロー
+- **クリック数によるユーザビリティ回帰検知基盤**（`frictionMeter.ts` / `usability-budget.json`）をCIに追加し、UI変更によるタスク完了ステップ数の悪化を自動検知
+
+### Fixed
+
+- **ポップアップのrecordBtnが初回ロード時に無反応だった**: `RecordSession.resetRecordButton`（唯一のonclick書き込み者）が読み込みパスから一度も呼ばれておらず、記録完了/エラー後の再設定パスを通るまでボタンクリックが無反応だった
+- **プライバシー同意を承諾した直後にオンボーディングウィザードが表示されなかった**: `initPopup()`のオンボーディング判定が読み込み時の一度きりで、その場でconsentを承諾したユーザーはポップアップを再度開くまでウィザードを見られなかった。承諾直後に同一セッション内で判定をやり直すコールバックを配線
+- **GeminiのAPIキー未設定エラーメッセージに次のアクションが無かった**: 「Gemini API Key is not set.」に「Please enter it in the AI provider settings.」を追記
+- **toggle-switch 3箇所（ドメインフィルタ有効化・サブドメイン一致・デバッグモード）がアクセシブルネームを持っていなかった**: `aria-labelledby` で可視ラベルと接続
+- **診断パネルの一部テキスト・警告テキストがWCAG AAのコントラスト基準未達だった**: `.help-text`・`.diag-stat-masked`（いずれもライトモード）の色を該当コンポーネントのみ調整
+- **一般設定パネルのボタン行が680pxコンテナから8pxはみ出していた**: `.general-btn-row` に `flex-wrap: wrap` を追加
+- **ドメインフィルタ保存直後にダッシュボードを再読み込みすると設定が反映されないことがあった**: 非同期保存の完了を待たずに再読み込みしていたタイミング問題を修正
 
 ## [6.8.19] - 2026-09-12
 

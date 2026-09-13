@@ -7,7 +7,7 @@
  * - captures every SAVE_RECORD payload into window.__saveRecordPayloads
  * - passes everything else through to the real service worker
  */
-import { test as base, chromium, ChromiumBrowserContext, Page } from '@playwright/test';
+import { test as base, expect, chromium, ChromiumBrowserContext, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -77,6 +77,12 @@ export const test = base.extend<PreviewFixtures>({
       chrome.storage.local.set({
         privacyConsent: { accepted: true, timestamp: Date.now() },
         settings_migrated: true,
+        // Not this spec's concern — the onboarding wizard now launches
+        // reactively right after the user accepts consent in the same
+        // session (PBI 0913a popup.ts fix), which would otherwise cover
+        // #recordBtn here. Mark onboarding done so this fixture's UI-driven
+        // consent acceptance below doesn't trigger it.
+        settings: { onboarding_wizard_completed: true },
       });
 
       // Fixed page tab: the record target for this spec.
@@ -162,6 +168,15 @@ export const test = base.extend<PreviewFixtures>({
       await page.locator('#consentCheckbox').check();
       await page.locator('#acceptConsentBtn').click();
     }
+
+    // page.goto() resolving only means the 'load' event fired — initPopup()'s
+    // async chain (loadCurrentTab → resetRecordButton, the sole place that
+    // wires recordBtn.onclick) may still be in flight. Clicking recordBtn
+    // before that wiring lands is a silent no-op: the modal then never
+    // opens and the test times out waiting for it. Wait for the button to
+    // reach its wired, enabled state first (this fixture's stubbed tab is
+    // always recordable, so it always ends up enabled).
+    await expect(page.locator('#recordBtn')).toBeEnabled({ timeout: 15000 });
 
     await use(page);
   },

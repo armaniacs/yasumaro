@@ -1680,6 +1680,27 @@
   "diagBuiltInAiDownloadBtn": {
     "message": "Download Model"
   },
+  "diagBugReportTitle": {
+    "message": "Report a Bug"
+  },
+  "diagBugReportDescription": {
+    "message": "Opens a GitHub issue with sanitized diagnostic information attached. No data is sent until you confirm."
+  },
+  "diagBugReportBtn": {
+    "message": "Report a Bug"
+  },
+  "diagBugReportPreviewTitle": {
+    "message": "Review Before Sending"
+  },
+  "diagBugReportPreviewDesc": {
+    "message": "This text will be prefilled into a new GitHub issue. Nothing is sent until you click \"Open GitHub\"."
+  },
+  "diagBugReportPreviewContent": {
+    "message": "Bug report preview"
+  },
+  "diagBugReportOpenBtn": {
+    "message": "Open GitHub"
+  },
   "diagBuiltInAiDownloadStarting": {
     "message": "Starting download... 0%"
   },

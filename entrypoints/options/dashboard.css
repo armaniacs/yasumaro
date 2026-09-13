@@ -536,6 +536,17 @@ textarea[aria-invalid="true"]:focus {
   white-space: pre-line;
 }
 
+/* Light-mode --color-text-muted (#64748b) on --color-bg-code (#f1f5f9) is
+   4.34:1, just under WCAG AA's 4.5:1 for normal text. Dark mode's pairing
+   is already 5.26:1 (see --color-text-muted's dark-mode value), so this
+   override is scoped to light mode only rather than changing the shared
+   variable (44+ other uses across this stylesheet). */
+@media (prefers-color-scheme: light) {
+  .help-text {
+    color: #56647a;
+  }
+}
+
 .inline-label {
   display: inline;
   font-size: 13px;
@@ -1881,6 +1892,16 @@ mark.domain-match-highlight {
   font-style: italic;
 }
 
+/* Light-mode --color-danger (#ef4444) on white is 3.76:1, under WCAG AA's
+   4.5:1 for normal text. Dark mode's pairing is already 5.65:1, so this
+   override is scoped to light mode only rather than changing the shared
+   variable (used across many non-text contexts like borders/backgrounds). */
+@media (prefers-color-scheme: light) {
+  .diag-stat-masked {
+    color: #c81e1e;
+  }
+}
+
 .diag-result {
   margin-top: 12px;
   padding: 12px 14px;
@@ -2493,6 +2514,7 @@ details[open] .advanced-details-summary {
 /* Button Row (Save + Test side by side) */
 .general-btn-row {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
   margin-top: var(--space-4);
