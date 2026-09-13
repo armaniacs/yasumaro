@@ -142,11 +142,11 @@ Scenario: reportBtnがnullの場合は何もしない
 ```
 
 ## 受け入れ基準
-- [ ] `createIssueReportModalController`の関数スコープに`WeakSet<HTMLButtonElement>`を追加し、`attachTrigger`が配線済みボタンへの再呼び出しで`addEventListener`をスキップする
-- [ ] 異なるボタン要素への`attachTrigger`は引き続き独立して正しく配線される（診断パネル・サイドバーの2箇所を壊さない）
-- [ ] `issueReportLink.wire.test.ts`に「同一ボタンへの複数回`attachTrigger`で`collectSnapshot`が1回だけ呼ばれる」テストを追加する
-- [ ] 名前と実装が乖離していた既存の`reentrancy guard`テスト（145-167行目）を、実態に合う内容に修正するか削除する
-- [ ] `npx vitest run src/dashboard` が全件green
+- [x] `createIssueReportModalController`の関数スコープに`WeakSet<HTMLButtonElement>`を追加し、`attachTrigger`が配線済みボタンへの再呼び出しで`addEventListener`をスキップする
+- [x] 異なるボタン要素への`attachTrigger`は引き続き独立して正しく配線される（診断パネル・サイドバーの2箇所を壊さない）
+- [x] `issueReportLink.wire.test.ts`に「同一ボタンへの複数回`attachTrigger`で`collectSnapshot`が1回だけ呼ばれる」テストを追加する
+- [x] 名前と実装が乖離していた既存の`reentrancy guard`テスト（145-167行目）を、実態に合う内容に修正するか削除する
+- [x] `npx vitest run src/dashboard` が全件green
 
 ## テスト戦略
 - E2E: 既存のissue報告導線E2E（`testDir/e2e/usability/dashboard-issue-report.spec.ts`）をそのまま再実行し回帰がないことを確認
@@ -157,6 +157,6 @@ Scenario: reportBtnがnullの場合は何もしない
 1ポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
