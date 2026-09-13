@@ -85,10 +85,21 @@ export interface IssueReportElements {
   openBtn: HTMLButtonElement | null;
 }
 
+// The preview modal and its Cancel/Close/Open buttons are shared, page-level
+// elements (outside any panel) — the diagnostics panel and the sidebar each
+// have their own reportBtn but must open/confirm the SAME modal. State lives
+// at module scope (not per-call closure) so a click on either reportBtn is
+// visible to whichever call's Cancel/Close/Open listeners end up attached.
+// Keyed by the modal element itself (not a boolean) so the shared listeners
+// re-attach if the modal is ever replaced with a new element.
+let pendingUrl: string | null = null;
+let modalWiredTo: HTMLDialogElement | null = null;
+
 /**
- * Wire the "Report a Bug" button: clicking it fills the preview modal with
- * buildIssueReportBody()'s output, and only "Open GitHub" opens the tab —
- * no network/tab action happens on the initial click.
+ * Wire one "Report a Bug" entry-point button to the shared preview modal.
+ * Call once per entry-point button (diagnostics panel, sidebar, ...); the
+ * modal's own Cancel/Close/Open listeners are attached only on the first
+ * call, since all callers share the same modal elements.
  */
 export function wireIssueReportButton(
   elements: IssueReportElements,
@@ -97,13 +108,6 @@ export function wireIssueReportButton(
   const { reportBtn, previewModal, previewContent, cancelBtn, closeBtn, openBtn } = elements;
   if (!reportBtn || !previewModal || !previewContent || !openBtn) return;
 
-  let pendingUrl: string | null = null;
-
-  const closeModal = (): void => {
-    pendingUrl = null;
-    previewModal.close();
-  };
-
   reportBtn.addEventListener('click', async () => {
     const snapshot = await collectSnapshot();
     const recentLogs = await getLogs();
@@ -111,6 +115,14 @@ export function wireIssueReportButton(
     pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
     previewModal.showModal();
   });
+
+  if (modalWiredTo === previewModal) return;
+  modalWiredTo = previewModal;
+
+  const closeModal = (): void => {
+    pendingUrl = null;
+    previewModal.close();
+  };
 
   cancelBtn?.addEventListener('click', closeModal);
   closeBtn?.addEventListener('click', closeModal);
