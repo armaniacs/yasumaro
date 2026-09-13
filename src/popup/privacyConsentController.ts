@@ -168,9 +168,17 @@ function showPrivacyConsentModal(): void {
  * INTENTIONAL: called from both the accept and decline paths with the
  * identical bare envelope — no accept/decline distinction is carried.
  * Receivers must re-read consent state from storage.
+ *
+ * Also dispatches a same-document consent-state-changed event: this popup is
+ * the SENDER of the CONSENT_STATE_CHANGED message, and chrome.runtime
+ * messages are never delivered back to the sender's own context, so in-page
+ * listeners cannot rely on the onMessage subscription alone.
  */
+export const CONSENT_STATE_CHANGED_EVENT = 'consent-state-changed';
+
 function notifyConsentStateChanged(): void {
     try {
+        document.dispatchEvent(new CustomEvent(CONSENT_STATE_CHANGED_EVENT));
         chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION });
     } catch (error) {
         logError('[PrivacyConsent] Failed to notify consent state change', { cause: error }, ErrorCode.INTERNAL_ERROR);

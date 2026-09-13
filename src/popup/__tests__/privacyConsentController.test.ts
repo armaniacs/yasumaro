@@ -45,6 +45,7 @@ vi.stubGlobal('chrome', {
 });
 
 import {
+  CONSENT_STATE_CHANGED_EVENT,
   initPrivacyConsent,
   setupPrivacyConsentListeners,
 } from '../privacyConsentController.js';
@@ -403,6 +404,44 @@ describe('privacyConsentController', () => {
       // Bare envelope: no payload and no consent value field.
       expect(declineEnvelope).not.toHaveProperty('payload');
       expect(declineEnvelope).not.toHaveProperty('consented');
+    });
+
+    it('dispatches the same-document consent-state-changed event on both accept and decline', async () => {
+      // chrome.runtime messages are never delivered back to the sender's own
+      // context, so in-page consumers (e.g. popup.ts onboarding re-check) can
+      // only react via this same-document event — it must fire on both paths.
+      const events: Event[] = [];
+      const listener = (event: Event): void => { events.push(event); };
+      document.addEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
+
+      try {
+        mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+        mockSavePrivacyConsent.mockResolvedValue(undefined);
+        mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+
+        await initPrivacyConsent();
+
+        const cb = getCheckbox();
+        cb!.checked = true;
+        cb!.dispatchEvent(new Event('change'));
+        getAcceptBtn()!.click();
+
+        await vi.waitFor(() => expect(events.length).toBeGreaterThanOrEqual(1));
+
+        // Decline path: reset DOM and listeners, then capture again.
+        setupDom();
+        setupPrivacyConsentListeners();
+        window.alert = vi.fn();
+        mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+
+        await initPrivacyConsent();
+
+        getDeclineBtn()!.click();
+
+        await vi.waitFor(() => expect(events.length).toBeGreaterThanOrEqual(2));
+      } finally {
+        document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
+      }
     });
 
     it('should show error text when save fails during accept', async () => {
