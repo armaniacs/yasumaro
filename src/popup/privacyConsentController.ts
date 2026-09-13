@@ -34,7 +34,6 @@ function getPrivacyConsentTitleEl(): HTMLElement | null {
 }
 
 // State
-let onConsentCallback: ((consented: boolean) => void) | null = null;
 let consentTrapId: string | null = null;
 
 function releaseConsentTrap(): void {
@@ -206,11 +205,6 @@ async function handleAcceptConsent(): Promise<void> {
         await recordPolicyVersionAcknowledgment();
         notifyConsentStateChanged();
         hidePrivacyConsentModal();
-
-        if (onConsentCallback) {
-            onConsentCallback(true);
-            onConsentCallback = null;
-        }
     } catch (error) {
         logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
 
@@ -235,11 +229,6 @@ async function handleDeclineConsent(): Promise<void> {
     notifyConsentStateChanged();
 
     hidePrivacyConsentModal();
-
-    if (onConsentCallback) {
-        onConsentCallback(false);
-        onConsentCallback = null;
-    }
 
     if (newCount >= 3) {
         return;
@@ -291,11 +280,4 @@ export function setupPrivacyConsentListeners(): void {
             chrome.tabs.create({ url: policyBtn.href });
         });
     }
-}
-
-/**
- * テスト用コールバック設定
- */
-export function setConsentCallback(callback: (consented: boolean) => void): void {
-    onConsentCallback = callback;
 }

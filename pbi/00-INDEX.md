@@ -119,6 +119,8 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+- 2026-09-14-02-refactor-popup-consent-event-subscription.md（✅ 完了・アーカイブ済 — `privacyConsentController.ts` の module-scoped 単発コールバック `onConsentCallback`/`setConsentCallback` を削除。`popup.ts` が既存の `CONSENT_STATE_CHANGED` ブロードキャストを `chrome.runtime.onMessage` で購読しオンボーディング表示判定を再実行する方式に変更。初期化順序依存バグ（`a81d8c1c`, `707f647f`）の再発源を解消。`resetRecordButton` の load/finish 呼び出し保証は既存のまま回帰確認。popup関連ユニットテスト65件 + popup配下867件 green）
+
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
 round 10 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260912-1455-r10.html`）→ RICE 採点 → 実装。実行順 = 09 → 16。実バグ 2 件（preview nav stale-closure / fallback alias 分岐）を解消。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-12-0912b.md`。台帳は `2026-09-12-00-backlog-0912b.md`。
