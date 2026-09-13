@@ -37,12 +37,12 @@ Scenario: ステップ数が基準値以下であれば問題なく通過する
 ```
 
 ## 受け入れ基準
-- [ ] `testDir/e2e/usability/support/frictionMeter.ts` が新規作成され、`page.click`/`page.fill`をラップしてステップ数をカウントする
-- [ ] `testDir/e2e/usability/support/usability-budget.json` が新規作成され、タスクごとの許容クリック数/ステップ数のしきい値を保持する
-- [ ] `testDir/e2e/usability/task-friction-metrics.spec.ts` が新規作成され、主要タスクごとの計測としきい値比較を行う
-- [ ] `testDir/playwright.config.ts` に`usability`プロジェクト（`@usability`タグ）が追加されている
-- [ ] `package.json` に `test:e2e:usability` スクリプトが追加されている
-- [ ] CIワークフロー（`.github/workflows/`）に `test:e2e:usability` の実行が組み込まれている
+- [x] `testDir/e2e/usability/support/frictionMeter.ts` が新規作成され、`page.click`/`page.fill`をラップしてステップ数をカウントする
+- [x] `testDir/e2e/usability/support/usability-budget.json` が新規作成され、タスクごとの許容クリック数/ステップ数のしきい値を保持する
+- [x] `testDir/e2e/usability/task-friction-metrics.spec.ts` が新規作成され、主要タスクごとの計測としきい値比較を行う
+- [x] `testDir/playwright.config.ts` に`usability`プロジェクト（`@usability`タグ）が追加されている
+- [x] `package.json` に `test:e2e:usability` スクリプトが追加されている
+- [x] CIワークフロー（`.github/workflows/`）に `test:e2e:usability` の実行が組み込まれている
 
 ## テスト戦略
 - E2E: `testDir/e2e/usability/task-friction-metrics.spec.ts`（`@usability`タグ）。PBI 47〜50の全シナリオに対してfrictionMeterを適用する形で計測
@@ -53,7 +53,7 @@ Scenario: ステップ数が基準値以下であれば問題なく通過する
 3pt（新規計測基盤の実装＋CI組み込み＋既存4PBI分のタスクフローへの適用）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run test:e2e:usability` で`task-friction-metrics.spec.ts`を含む全ファイルがPASSする
-- [ ] CIワークフローに `test:e2e:usability` が組み込まれ、PRで自動実行される
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run test:e2e:usability` で`task-friction-metrics.spec.ts`を含む全ファイルがPASSする
+- [x] CIワークフローに `test:e2e:usability` が組み込まれ、PRで自動実行される
+- [x] コードレビュー完了
