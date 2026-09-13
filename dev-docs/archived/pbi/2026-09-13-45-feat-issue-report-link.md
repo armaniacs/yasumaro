@@ -40,11 +40,11 @@ Scenario: 診断情報に機密情報が含まれる状態でもサニタイズ�
 ```
 
 ## 受け入れ基準
-- [ ] `src/dashboard/panels/diagnostic/issueReportLink.ts` が新規作成され、`buildIssueReportBody(snapshot)` を実装している
-- [ ] `panel-diagnostics` に「不具合を報告」ボタンとプレビュー確認ダイアログが追加されている
-- [ ] `apiKey`、`baseUrl`、`dailyPath`、ログ本文がissue本文に一切含まれないことがテストで保証されている
-- [ ] issueリンクは `chrome.tabs.create({ url })` で新規タブとして開く
-- [ ] URLの長さ制限を考慮し、本文が要点のみに絞られている
+- [x] `src/dashboard/panels/diagnostic/issueReportLink.ts` が新規作成され、`buildIssueReportBody(snapshot)` を実装している
+- [x] `panel-diagnostics` に「不具合を報告」ボタンとプレビュー確認ダイアログが追加されている
+- [x] `apiKey`、`baseUrl`、`dailyPath`、ログ本文がissue本文に一切含まれないことがテストで保証されている
+- [x] issueリンクは `chrome.tabs.create({ url })` で新規タブとして開く
+- [x] URLの長さ制限を考慮し、本文が要点のみに絞られている
 
 ## テスト戦略
 - E2E: 本PBIでは実装のみ。E2E検証は依存先のPBI 51（`dashboard-issue-report.spec.ts`）で実施
@@ -55,7 +55,7 @@ Scenario: 診断情報に機密情報が含まれる状態でもサニタイズ�
 3pt（新規モジュール実装＋TDDでのサニタイズロジック＋UI組み込み）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `issueReportBody.test.ts` が診断スナップショットのあらゆるフィールド変化に対してAPIキー等を漏らさないことを確認している
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（PBI 46で追記したPRIVACY.mdとの整合性を再確認）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `issueReportBody.test.ts` が診断スナップショットのあらゆるフィールド変化に対してAPIキー等を漏らさないことを確認している
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（PBI 46で追記したPRIVACY.mdとの整合性を再確認）
