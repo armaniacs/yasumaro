@@ -109,6 +109,9 @@ export function createIssueReportModalController(
   const { previewModal, previewContent, cancelBtn, closeBtn, openBtn } = modalEls;
 
   let pendingUrl: string | null = null;
+  // Skip duplicate wiring for the same button. WeakSet so entries for
+  // removed DOM elements are collectable without manual cleanup.
+  const wiredTriggers = new WeakSet<HTMLButtonElement>();
 
   const closeModal = (): void => {
     pendingUrl = null;
@@ -130,6 +133,8 @@ export function createIssueReportModalController(
   return {
     attachTrigger(reportBtn: HTMLButtonElement | null): void {
       if (!reportBtn || !previewModal || !previewContent || !openBtn) return;
+      if (wiredTriggers.has(reportBtn)) return;
+      wiredTriggers.add(reportBtn);
 
       reportBtn.addEventListener('click', async () => {
         const snapshot = await collectSnapshot();
