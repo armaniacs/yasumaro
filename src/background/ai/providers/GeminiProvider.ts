@@ -139,7 +139,7 @@ export class GeminiProvider extends AIProviderStrategy {
         if (!this.apiKey) {
             return {
                 success: false,
-                message: 'Gemini API Key is not set.',
+                message: 'Gemini API Key is not set. Please enter it in the AI provider settings.',
                 debug: { error: 'API key is missing' },
             };
         }

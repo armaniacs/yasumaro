@@ -522,19 +522,19 @@
         <!-- トグル ON/OFF -->
         <div class="domain-toggle-row">
           <label class="toggle-switch" for="domainFilterToggle">
-            <input type="checkbox" id="domainFilterToggle" role="switch" aria-checked="false">
+            <input type="checkbox" id="domainFilterToggle" role="switch" aria-checked="false" aria-labelledby="domainFilterEnableLabel">
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
-          <span class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
+          <span id="domainFilterEnableLabel" class="toggle-label" data-i18n="domainFilterEnable">Enable domain filter</span>
         </div>
 
         <!-- サブドメイン自動マッチング -->
         <div class="domain-toggle-row">
           <label class="toggle-switch" for="domainSubdomainToggle">
-            <input type="checkbox" id="domainSubdomainToggle" role="switch" aria-checked="false">
+            <input type="checkbox" id="domainSubdomainToggle" role="switch" aria-checked="false" aria-labelledby="domainSubdomainMatchingLabel">
             <span class="toggle-slider" aria-hidden="true"></span>
           </label>
-          <span class="toggle-label" data-i18n="domainSubdomainMatching">Match subdomains too</span>
+          <span id="domainSubdomainMatchingLabel" class="toggle-label" data-i18n="domainSubdomainMatching">Match subdomains too</span>
         </div>
 
         <!-- タブ（ON時のみ表示） -->
@@ -1883,10 +1883,10 @@
         <div class="diag-section">
           <div class="domain-toggle-row">
             <label class="toggle-switch" for="diagDebugModeToggle">
-              <input type="checkbox" id="diagDebugModeToggle" role="switch" aria-checked="false">
+              <input type="checkbox" id="diagDebugModeToggle" role="switch" aria-checked="false" aria-labelledby="diagDebugModeLabel">
               <span class="toggle-slider" aria-hidden="true"></span>
             </label>
-            <span class="toggle-label" data-i18n="diagDebugMode">Debug Mode</span>
+            <span id="diagDebugModeLabel" class="toggle-label" data-i18n="diagDebugMode">Debug Mode</span>
           </div>
           <p class="diag-debug-description" data-i18n="diagDebugDescription">Show detailed diagnostics and debugging tools for developers.</p>
         </div>
@@ -1908,6 +1908,15 @@
           <div id="diagBuiltInAiStats" class="diag-stats"></div>
           <button id="diagBuiltInAiDownloadBtn" class="secondary-btn hidden" data-i18n="diagBuiltInAiDownloadBtn">Download Model</button>
           <div id="diagBuiltInAiDownloadResult" class="diag-result" aria-live="polite"></div>
+        </div>
+
+        <!-- Bug Report -->
+        <div class="diag-section">
+          <h3 class="diag-section-title" data-i18n="diagBugReportTitle">Report a Bug</h3>
+          <p class="diag-debug-description" data-i18n="diagBugReportDescription">
+            Opens a GitHub issue with sanitized diagnostic information attached. No data is sent until you confirm.
+          </p>
+          <button id="diagReportBugBtn" class="secondary-btn" data-i18n="diagBugReportBtn">Report a Bug</button>
         </div>
 
         <div class="diag-section">
@@ -2158,6 +2167,26 @@
   <!-- Tag Edit Modal -->
 
   </div>
+
+  <!-- Bug Report Preview Modal -->
+  <dialog id="bugReportPreviewModal" class="modal-dialog" aria-labelledby="bugReportPreviewTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="bugReportPreviewTitle" data-i18n="diagBugReportPreviewTitle">Review Before Sending</h3>
+        <button id="bugReportPreviewCloseBtn" class="icon-btn modal-close" data-i18n-aria-label="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p class="mt-0 text-xs text-gray" data-i18n="diagBugReportPreviewDesc">
+          This text will be prefilled into a new GitHub issue. Nothing is sent until you click "Open GitHub".
+        </p>
+        <textarea id="bugReportPreviewContent" class="preview-textarea" readonly data-i18n-aria-label="diagBugReportPreviewContent" aria-label="Bug report preview"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="bugReportCancelBtn" class="btn-cancel" data-i18n="cancel">Cancel</button>
+        <button id="bugReportOpenBtn" class="btn-confirm" data-i18n="diagBugReportOpenBtn">Open GitHub</button>
+      </div>
+    </div>
+  </dialog>
 
   <script type="module" src="./main.ts"></script>
 </body>
