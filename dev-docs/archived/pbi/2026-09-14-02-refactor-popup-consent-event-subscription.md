@@ -1,55 +1,52 @@
-# PBI: Popupの同意状態通知を単発コールバックからイベント購読へ移行する
+# PBI: Popup の consent→onboarding をイベント購読方式へ
 
-**作成日**: 2026-09-14
-**優先度**: 中
-**見積もり**: 🟡中（2pt目安）
-**種別**: ♻️リファクタリング（refactor）
+## ユーザーストーリー
+拡張機能のエンドユーザーとして、プライバシー同意直後に確実にオンボーディングウィザードが表示されてほしい、なぜなら現在は `privacyConsentController` の module-scoped な単発コールバック（`onConsentCallback`）に依存しており、初期化順序が変わると同意直後にウィザードが表示されない不具合（a81d8c1c）や record ボタンが未配線になる不具合（707f647f）が発生しているため。
 
----
+## 優先度
+- 順位: 02 / 4
+- RICEスコア: 8.0（Reach=全ユーザー(初回起動フロー) × Impact=2 × Confidence=80% / Effort=2人日）
+- 根拠: 初回起動体験に直結し影響は大きいが、既存の `CONSENT_STATE_CHANGED` ブロードキャストの活用可否を popup.ts 側で確認する必要がありConfidenceはやや控えめ。依存関係なし。
 
-## 背景
+## 制約
+- `notifyConsentStateChanged()` が既に送出している `CONSENT_STATE_CHANGED` ブロードキャストの既存契約（メッセージ形式）を変えない
+- `onConsentCallback`（テスト用と明記されたコメントがあるが本番でも使用中）の廃止に伴い、既存のテストダブル経由のテストが壊れないよう移行する
+- `recordSession.ts` の `resetRecordButton`（唯一の書き手）が load/finish パスで確実に呼ばれることも同時に保証する
 
-`privacyConsentController.ts` は module-scoped な単発コールバック
-`onConsentCallback`（`setConsentCallback()` で登録、accept/decline 時に
-一度だけ呼ばれて `null` に戻る）を持つ。「テスト用コールバック設定」と
-コメントされているが、`popup.ts` が本番の初期化フローでも使用している。
+## BDD受け入れシナリオ
 
-このコールバックは初期化順序に依存する。`popup.ts` は `initPopup()` 内で
-オンボーディングウィザード表示判定を一度実行した後、末尾で
-`setConsentCallback(...)` を呼んで登録する。この構造は過去に2つの不具合を
-引き起こした。
+```gherkin
+Scenario: 同意直後にオンボーディングウィザードが表示される
+  Given ユーザーがプライバシー同意モーダルで「同意する」を選択した
+  When privacyConsentController が CONSENT_STATE_CHANGED をブロードキャストする
+  Then popup がそのイベントを購読しオンボーディングウィザードを表示する
 
-- `a81d8c1c`: consent承諾直後にonboardingウィザードが表示されない問題
-- `707f647f`: recordBtn の onclick が初回ロード時に未配線だった問題
+Scenario: 初回ロード時に record ボタンが配線されている
+  Given popup が初めてロードされた
+  When loadCurrentTab() が完了する
+  Then resetRecordButton が呼ばれ record ボタンのクリックハンドラが有効になっている
 
-`privacyConsentController.ts` はすでに `notifyConsentStateChanged()` で
-`CONSENT_STATE_CHANGED` を `chrome.runtime.sendMessage` でブロードキャストして
-おり、Service Worker側はこれを購読してツールバーバッジを更新している
-（`src/background/handlers/MessageRouter.ts` 経由）。Popup側はこのメッセージを
-一切購読していない。同じ情報を「単発コールバック」と「ブロードキャスト」の
-二重経路で持つ必要はなく、購読方式に一本化する。
+Scenario: 初期化順序が入れ替わってもオンボーディング表示が壊れない
+  Given popup.ts のロード処理順序が将来変更される
+  When 同意イベントが発火する
+  Then module-scoped な単発コールバックに依存せず、イベント購読により常にウィザードが表示される
+```
 
 ## 受け入れ基準
+- [x] `privacyConsentController.ts` から `onConsentCallback`（nullable な単発コールバック）を削除する
+- [x] `popup.ts` が `CONSENT_STATE_CHANGED` を購読し、オンボーディング表示判定を行うようになっている
+- [x] `setConsentCallback` を使っていた既存のテストが新しい購読方式に移行されている
+- [x] `5e96b3cd` で追加された fixture 回避策（`onboarding_wizard_completed: true` の事前投入）が不要になった場合は整理する（回帰確認のみで既存のまま維持）
 
-- [x] `privacyConsentController.ts` から `onConsentCallback`（nullable な単発
-      コールバック）と `setConsentCallback` を削除する
-- [x] `popup.ts` が `chrome.runtime.onMessage` で `CONSENT_STATE_CHANGED` を
-      購読し、オンボーディング表示判定（`maybeShowOnboardingWizard`）を
-      呼び出すようになる
-- [x] `setConsentCallback` を使っていた既存テスト
-      （`privacyConsentController.test.ts`, `privacyConsentController-r2.test.ts`,
-      `popup.test.ts`）を新しい購読方式（`chrome.runtime.onMessage` 経由の
-      イベント発火）に移行する
-- [x] `resetRecordButton`（唯一の書き手）が load/finish パスで確実に
-      呼ばれることを回帰確認する（`recordSession.ts` 側は変更不要だが、
-      呼び出し保証を崩さないこと）
-- [x] `notifyConsentStateChanged()` が送出するブロードキャストの既存契約
-      （メッセージ形式 `{ type: 'CONSENT_STATE_CHANGED', protocolVersion }`）は
-      変更しない
+## テスト戦略
+- E2E: 同意モーダル承諾 → オンボーディングウィザード表示のフローを再検証
+- 統合: `CONSENT_STATE_CHANGED` 発火 → popup 側ハンドラ呼び出しの確認
+- 単体: `resetRecordButton` が load/finish 各パスで確実に呼ばれることの確認
+
+## 見積もり
+5ポイント（要チームでの見積もり）
 
 ## Definition of Done
-
-- [x] `npm run type-check` がグリーン
-- [x] popup関連のユニットテスト（`privacyConsentController.test.ts`,
-      `privacyConsentController-r2.test.ts`, `popup.test.ts`）がグリーン
-- [x] コミット済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

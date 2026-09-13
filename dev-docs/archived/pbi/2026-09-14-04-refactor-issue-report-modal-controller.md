@@ -1,59 +1,51 @@
-# PBI: issue報告モーダルの隠れた再入防止ガードをcontrollerオブジェクトへ集約
+# PBI: Issue報告モーダルの状態をcontrollerオブジェクトへ集約
 
 ## ユーザーストーリー
-保守担当者として、`issueReportLink.ts`の`wireIssueReportButton()`を読んだときに、関数シグネチャだけで正しい呼び出し方（診断パネル・サイドバー双方から呼ぶ、呼び出し順序に意味がある）が分かるようにしたい。なぜなら、現状は`pendingUrl`・`modalWiredTo`というmodule-scoped変数が隠れた再入防止ガードとして機能しており、関数を1回だけ呼ぶ・別の順序で呼ぶといった誤用がテストなしでは検出できないから。
+拡張機能の開発者として、issue報告モーダルの共有状態（`pendingUrl`・`modalWiredTo`）を module-scoped 変数ではなく専用のcontrollerオブジェクトに持たせたい、なぜなら現在 `wireIssueReportButton()` は「ボタンを配線するだけ」に見える関数シグネチャの裏で、2箇所（診断パネル・サイドバー）から呼ばれる前提の再入防止ガードを隠し持っており、呼び出し順序に意味があることが実装を読まないと分からないため。
 
 ## 優先度
-- 順位: 04
-- 根拠: 機能追加ではなく可読性・保守性のためのリファクタリング。挙動を変えないため独立して実施可能。
+- 順位: 04 / 4（最後に着手）
+- RICEスコア: 0.4（Reach=開発者のみ(低頻度変更) × Impact=0.5 × Confidence=80% / Effort=1人日）
+- 根拠: 既存の147行の配線テストが既に保険として機能しており緊急性は低い。他候補と比べ相対的にリスク軽減効果が小さいため最後に配置。依存関係なし。
 
 ## 制約
-- 診断パネル・サイドバーの2箇所からの呼び出しAPIは変更しないか、変更する場合は両呼び出し元を同時に更新すること
-- 共有モーダル（`#bugReportPreviewModal`）の表示・Cancel/Close/Openの既存動作を変えないこと
-- `pendingUrl`・`modalWiredTo`のmodule-scoped変数を残さないこと
+- 診断パネル・サイドバーの2箇所からの呼び出し方（呼び出しAPI）は変更しない、または変更する場合は両呼び出し元を同時に更新する
+- 共有モーダルの表示・Cancel/Close/Open の既存動作は変えない
 
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: createIssueReportModalControllerがcontrollerオブジェクトを返す
-  Given モーダル要素一式とcollectSnapshot関数がある
-  When createIssueReportModalController(modalEls, collectSnapshot) を呼び出す
-  Then { attachTrigger(btn) } を持つオブジェクトが返る
-  And module-scopeのpendingUrl・modalWiredTo変数は存在しない
+Scenario: 2つのボタンが同一のcontrollerインスタンスを共有する
+  Given IssueReportModalController が1つ生成されている
+  When 診断パネルのボタンとサイドバーのボタンそれぞれで attachTrigger(btn) を呼ぶ
+  Then 両ボタンとも同じモーダルを正しく開閉できる
 
-Scenario: 診断パネル・サイドバー双方からattachTriggerで配線する
-  Given dashboard.tsが1つのcontrollerインスタンスを生成済み
-  When 診断パネルが自身の#diagReportBugBtnをattachTriggerで配線する
-  And サイドバーが自身の#sidebarReportBugBtnをattachTriggerで配線する
-  Then どちらのボタンをクリックしても同じ共有モーダルが開く
-  And Cancel/Close/Openの挙動はどちらの経路でも変わらない
+Scenario: 2回目のattachTriggerでリスナーが二重登録されない
+  Given controller が既に1つのボタンにアタッチ済み
+  When 2つ目のボタンに attachTrigger(btn) を呼ぶ
+  Then モーダルのCancel/Close/Openリスナーは1セットのみ存在する
 
-Scenario: サイドバーボタンから開いてOpenで確認する
-  Given controllerがサイドバーボタンにattachTrigger済み
-  When サイドバーの「不具合を報告」ボタンを押す
-  And プレビューダイアログの「開く」ボタンを押す
-  Then chrome.tabs.createが正しいURLで1回だけ呼ばれる
-  And プレビューダイアログは閉じる
-
-Scenario: Cancelでタブを開かず閉じる
-  Given controllerがボタンにattachTrigger済みでモーダルが開いている
-  When 「キャンセル」ボタンを押す
-  Then プレビューダイアログが閉じる
-  And 「開く」ボタンを押してもchrome.tabs.createは呼ばれない
+Scenario: 既存の配線テストがcontroller化後も意味を持つ
+  Given issueReportLink.wire.test.ts が存在する
+  When controller化後のコードに対してテストを実行する
+  Then 再入防止の検証が引き続き意味のあるテストとして通過する（または縮小されたテストに置き換わる）
 ```
 
-## 実装ノート
-- `createIssueReportModalController(modalEls, collectSnapshot)` が `{ attachTrigger(btn) }` を返すオブジェクトとして実装される
-- `pendingUrl`・`modalWiredTo` のmodule-scoped変数はcontroller内部のクロージャ変数に置き換える
-- `dashboard.ts` でcontrollerを1度だけ生成し、`getIssueReportModalController()` 経由で診断パネル・サイドバー双方の配線に使い回す
-- 診断パネル単体でマウントされる既存のパネル単体テスト（`initDashboard()`を経由しない）を壊さないよう、controller未生成時は`getIssueReportModalController()`が`null`を返し、呼び出し側は`?.attachTrigger(...)`で安全にスキップする
+## 受け入れ基準
+- [x] `createIssueReportModalController(modalEls, collectSnapshot)` が `{ attachTrigger(btn) }` を返すオブジェクトとして実装される
+- [x] `pendingUrl`・`modalWiredTo` の module-scoped 変数がcontroller内部の状態に置き換わる
+- [x] `dashboard.ts` でcontrollerを1度だけ生成し、診断パネル・サイドバー双方の配線に使い回す
+- [x] 既存の `issueReportLink.wire.test.ts`（147行）が新しい構造に合わせて見直され、再入防止の保証がテストで示される（全15件green）
+
+## テスト戦略
+- E2E: 既存のissue報告導線E2E（PBI 51）をそのまま再実行し回帰がないことを確認
+- 統合: 2つのボタンからのattachTrigger呼び出しでモーダル挙動が一致することを確認
+- 単体: controller生成直後の初期状態、attachTrigger複数回呼び出し時のリスナー重複がないことの確認
+
+## 見積もり
+2ポイント（要チームでの見積もり）
 
 ## Definition of Done
-- [x] `createIssueReportModalController`が`{ attachTrigger(btn) }`を返すオブジェクトとして実装されている
-- [x] `pendingUrl`・`modalWiredTo`のmodule-scoped変数が削除されている
-- [x] `dashboard.ts`でcontrollerを1度だけ生成し、診断パネル・サイドバー双方の配線に使い回している
-- [x] `issueReportLink.wire.test.ts`が新しい構造に合わせて更新され、再入防止の保証がテストで示されている
-- [x] 診断パネル・サイドバーの呼び出し方は変更しないか、変更する場合は両呼び出し元を同時に更新した
-- [x] 共有モーダルの表示・Cancel/Close/Openの既存動作が変わっていない
-- [x] `npm run type-check`がグリーン
-- [x] 該当ユニットテスト（`issueReportLink.wire.test.ts`、`issueReportLink.test.ts`、`diagnosticsPanel.*.test.ts`）がグリーン
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
