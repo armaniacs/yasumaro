@@ -1623,6 +1623,27 @@
   "diagBuiltInAiDownloadBtn": {
     "message": "モデルをダウンロード"
   },
+  "diagBugReportTitle": {
+    "message": "不具合を報告"
+  },
+  "diagBugReportDescription": {
+    "message": "サニタイズ済みの診断情報を添付した状態でGitHub issueを開きます。確認して送信するまでデータは送信されません。"
+  },
+  "diagBugReportBtn": {
+    "message": "不具合を報告"
+  },
+  "diagBugReportPreviewTitle": {
+    "message": "送信前の確認"
+  },
+  "diagBugReportPreviewDesc": {
+    "message": "このテキストが新規GitHub issueに入力された状態で開きます。「GitHubを開く」を押すまで何も送信されません。"
+  },
+  "diagBugReportPreviewContent": {
+    "message": "不具合報告のプレビュー"
+  },
+  "diagBugReportOpenBtn": {
+    "message": "GitHubを開く"
+  },
   "diagBuiltInAiDownloadStarting": {
     "message": "ダウンロードを開始しています... 0%"
   },

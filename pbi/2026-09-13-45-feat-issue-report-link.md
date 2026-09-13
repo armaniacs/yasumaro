@@ -49,7 +49,7 @@ Scenario: 診断情報に機密情報が含まれる状態でもサニタイズ�
 ## テスト戦略
 - E2E: 本PBIでは実装のみ。E2E検証は依存先のPBI 51（`dashboard-issue-report.spec.ts`）で実施
 - 統合: なし（診断情報収集自体は既存の`DiagnosticsCollector`を再利用するため新規統合テストは不要）
-- 単体: `testDir/unit/usability/issueReportBody.test.ts` をTDDで先に書き、`buildIssueReportBody()` の実装をこのテストに追わせる。境界値（apiKey未設定、null/undefinedフィールド）も網羅する
+- 単体: `src/dashboard/panels/diagnostic/__tests__/issueReportLink.test.ts` をTDDで先に書き、`buildIssueReportBody()` の実装をこのテストに追わせる（vitestの`include`パターンは`**/__tests__/**/*.test.ts`のみのため、`testDir/unit/`配下ではなく既存の`__tests__`配置に従う）。境界値（apiKey未設定、null/undefinedフィールド）も網羅する
 
 ## 見積もり
 3pt（新規モジュール実装＋TDDでのサニタイズロジック＋UI組み込み）
