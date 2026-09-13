@@ -17,7 +17,7 @@ import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
 import { getDebugMode, setDebugMode } from './debugModeStore.js';
 import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
-import { wireIssueReportButton } from './issueReportLink.js';
+import { getIssueReportModalController } from '../../dashboard.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -577,16 +577,8 @@ export function createDiagnosticsPanel(): PanelLifecycle {
         },
       });
 
-      wireIssueReportButton(
-        {
-          reportBtn: container.querySelector('#diagReportBugBtn'),
-          previewModal: document.getElementById('bugReportPreviewModal') as HTMLDialogElement | null,
-          previewContent: document.getElementById('bugReportPreviewContent') as HTMLTextAreaElement | null,
-          cancelBtn: document.getElementById('bugReportCancelBtn') as HTMLButtonElement | null,
-          closeBtn: document.getElementById('bugReportPreviewCloseBtn') as HTMLButtonElement | null,
-          openBtn: document.getElementById('bugReportOpenBtn') as HTMLButtonElement | null,
-        },
-        () => diagnosticsCollector.collect(),
+      getIssueReportModalController()?.attachTrigger(
+        container.querySelector('#diagReportBugBtn'),
       );
     },
     async load() {

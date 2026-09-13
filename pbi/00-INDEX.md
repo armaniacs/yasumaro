@@ -125,8 +125,10 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 
 ### 2026-09-14 アーキテクチャ深化ラウンド15 — 4件（/improve-codebase-architecture）
 
+- 2026-09-14-01-refactor-storage-query-dispatch.md（✅ 完了・アーカイブ済 — OpfsWorkerBackend・IdbVfsBackend・storageFallbackの3箇所に独立して埋め込まれていたtext有無によるsearch/listing分岐判断を`queryPlanner.ts`の`planQueryMode()`に一元化。直近2件の回帰（`4a1f6093`のOPFS誤配送、`43385d95`のtext欠落）と同型の回帰テストを新設。offscreen 1107 tests green）
 - 2026-09-14-02-refactor-popup-consent-event-subscription.md（✅ 完了・アーカイブ済 — `privacyConsentController.ts` の module-scoped 単発コールバック `onConsentCallback`/`setConsentCallback` を削除。`popup.ts` が既存の `CONSENT_STATE_CHANGED` ブロードキャストを `chrome.runtime.onMessage` で購読しオンボーディング表示判定を再実行する方式に変更。初期化順序依存バグ（`a81d8c1c`, `707f647f`）の再発源を解消。`resetRecordButton` の load/finish 呼び出し保証は既存のまま回帰確認。popup関連ユニットテスト65件 + popup配下867件 green）
 - 2026-09-14-03-refactor-diagnostics-panel-status-derivation.md（✅ 完了・アーカイブ済 — `renderMigrationSection` からOPFS/IDB移行ステータス判定を `deriveMigrationStatus` ピュア関数として分離。`renderMigrationSection` は戻り値をDOMにマッピングするだけに縮小。視覚的差分ゼロ。`deriveMigrationStatus.test.ts` にjsdom不要の単体テスト10件新設。type-check / dashboard 2239 tests green）
+- 2026-09-14-04-refactor-issue-report-modal-controller.md（✅ 完了・アーカイブ済 — `createIssueReportModalController` を `{ attachTrigger(btn) }` を返すオブジェクトとして新設。module-scopeの`pendingUrl`・`modalWiredTo`をcontroller内部の状態に置換。`dashboard.ts`でcontrollerを1度だけ生成し診断パネル・サイドバー双方で使い回す構成に変更。`issueReportLink.wire.test.ts`に再入防止シナリオを追加・全15件green）
 
 ### 2026-09-12 architecture deepening round 10（0912b）— 8件完了（arch-delivery-loop・0911a ブランチ）
 
