@@ -20,7 +20,7 @@ if (!process.env.CI && !process.env.DISPLAY) {
 }
 
 test.describe('Cleansing preview @extension', () => {
-  test('preview modal opens with masked content and counter at 0/2', async ({ previewPage: page }) => {
+  test('preview modal opens with masked content and counter at 1/2', async ({ previewPage: page }) => {
     // Trigger the record flow — the fixture stubs tabs.query + PREVIEW_RECORD.
     await page.locator('#recordBtn').click();
 
@@ -30,8 +30,10 @@ test.describe('Cleansing preview @extension', () => {
     const content = await page.locator('#previewContent').inputValue();
     expect(content).toBe(MASKED_CONTENT);
 
-    // Two masks → counter starts at 0/2.
-    await expect(page.locator('#maskNavCounter')).toHaveText('0/2');
+    // showPreview() auto-jumps to the first mask on open (see
+    // sanitizePreview.test.ts "collects positions of multiple MASKED
+    // tokens"), so the 1-indexed counter reads 1/2 before any navigation.
+    await expect(page.locator('#maskNavCounter')).toHaveText('1/2');
   });
 
   test('mask navigation moves the counter and selection', async ({ previewPage: page }) => {
@@ -39,9 +41,10 @@ test.describe('Cleansing preview @extension', () => {
     const modal = page.locator('#confirmationModal');
     await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
 
-    // Next: counter 0/2 → 1/2, selection moves onto a masked span.
+    // Next: counter 1/2 → 2/2 (auto-jump to the first mask already put us at
+    // 1/2 on open), selection moves onto a masked span.
     await page.locator('#maskNavNext').click();
-    await expect(page.locator('#maskNavCounter')).toHaveText('1/2');
+    await expect(page.locator('#maskNavCounter')).toHaveText('2/2');
     const selAfterNext = await page.locator('#previewContent').evaluate(
       (el: HTMLTextAreaElement) => ({
         start: el.selectionStart,
@@ -51,9 +54,9 @@ test.describe('Cleansing preview @extension', () => {
     );
     expect(selAfterNext.selected).toMatch(/^\[MASKED:\w+\]$/);
 
-    // Prev: back to 0/2.
+    // Prev: back to 1/2.
     await page.locator('#maskNavPrev').click();
-    await expect(page.locator('#maskNavCounter')).toHaveText('0/2');
+    await expect(page.locator('#maskNavCounter')).toHaveText('1/2');
   });
 
   test('confirm closes the modal and captures SAVE_RECORD with edited content', async ({ previewPage: page }) => {
