@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.18` リリース。
+> - 現時点では `v6.8.19` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,20 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.19] - 2026-09-12
+
+このリリースは `v6.8.18` に対する hotfix です。ダッシュボードのテキスト検索が全クエリで同一の最新レコードを返す回帰（round 12/14 のリファクタで発生）を修正し、再発防止の多層防御テストを追加しました。
+
+### Fixed
+
+- **テキスト検索の検索語が正規化で欠落していた**: `normalizeStorageQuery` の allowlist に `text` フィールドが含まれておらず、ダッシュボードのテキスト検索フロー（searchLogs → buildSearchParams → gateway → SQLITE_QUERY → planQuery）で検索語が欠落し、全クエリが同一の最新レコードを返していた。`text` を保持するよう修正
+- **OPFS backend のテキスト検索が plain listing に誤配送されていた**: `OpfsWorkerBackend.query()` が `q.text` の有無に関わらず常に worker の plain-listing ハンドラ（'QUERY'）を送信していたため、検索語を無視した結果を返していた。`q.text` の有無で 'SEARCH'（FTS5/LIKE）に振り分けるよう修正
+
+### Added
+
+- **テキスト検索回帰の多層防御テストを追加**: 症状テスト（3 トピック distinct・field preservation contract 13 フィールド全生存）、ホップ契約テスト（buildSearchParams / gateway / planQuery の各 hop で text 保持を pin）、日本語 corpus テスト（CJK trigram/LIKE 境界）、実エンジン regression test（better-sqlite3 で LIKE SQL を実行）、Playwright UI 検索 e2e（検索ボックス入力 → カード表示）
+- **TEST_RULE に「検索パス変更時の smoke test 必須化」セクション追加**: 検索パスに触る変更の PR で 4 種 smoke test（symptom / real-engine / routing pin / UI E2E）の実行を必須化
 
 ## [6.8.18] - 2026-09-12
 
