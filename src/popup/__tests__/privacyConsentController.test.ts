@@ -36,7 +36,10 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 vi.stubGlobal('chrome', {
-  runtime: { getURL: vi.fn((path: string) => `chrome-extension://test/${path}`) },
+  runtime: {
+    getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
+    sendMessage: vi.fn(),
+  },
   tabs: { create: mockChromeTabsCreate },
   storage: { local: { get: vi.fn(), set: mockChromeStorageSet } },
 });
@@ -44,7 +47,6 @@ vi.stubGlobal('chrome', {
 import {
   initPrivacyConsent,
   setupPrivacyConsentListeners,
-  setConsentCallback,
 } from '../privacyConsentController.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
@@ -290,12 +292,10 @@ describe('privacyConsentController', () => {
       expect(modal?.open).toBe(false);
     });
 
-    it('should call consent callback on accept', async () => {
+    it('should broadcast CONSENT_STATE_CHANGED on accept', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
       mockSavePrivacyConsent.mockResolvedValue(undefined);
-
-      const callback = vi.fn();
-      setConsentCallback(callback);
+      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
 
       await initPrivacyConsent();
 
@@ -305,8 +305,12 @@ describe('privacyConsentController', () => {
       getAcceptBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(callback).toHaveBeenCalledWith(true);
+        expect(mockSavePrivacyConsent).toHaveBeenCalled();
       });
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+      );
     });
 
     it('should decline and close modal permanently when decline is clicked', async () => {
@@ -328,19 +332,19 @@ describe('privacyConsentController', () => {
       expect(modal?.open).toBe(false);
     });
 
-    it('should call consent callback on decline', async () => {
+    it('should broadcast CONSENT_STATE_CHANGED on decline', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
 
       window.alert = vi.fn();
-      const callback = vi.fn();
-      setConsentCallback(callback);
 
       await initPrivacyConsent();
 
       getDeclineBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(callback).toHaveBeenCalledWith(false);
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+        );
       });
     });
 
