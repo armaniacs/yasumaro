@@ -4,6 +4,7 @@ import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import type { ArchiveStaging } from './archiveStaging.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorResponse } from '../messaging/archiveWireTable.js';
+import { planQueryMode } from './queryPlanner.js';
 
 export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   constructor(private engine: SqliteEngineHost) {}
@@ -37,9 +38,10 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     // Text search MUST route to the worker SEARCH handler (FTS5/LIKE), not
     // the plain-listing QUERY handler — the plain path ignores `text` and
     // rejects `orderBy: 'rank'` (which dashboard text search sends), so every
-    // text search on the OPFS backend returned empty. Mirrors
-    // IdbVfsBackend.query's `if (q.text)` branch and FallbackStorage.query.
-    const workerType = q.text ? 'SEARCH' : 'QUERY';
+    // text search on the OPFS backend returned empty. Dispatch is decided
+    // once by queryPlanner.planQueryMode (PBI 2026-09-14-01) and mirrored by
+    // IdbVfsBackend.query's `spec.mode` check and FallbackStorage.query's.
+    const workerType = planQueryMode(q) === 'search' ? 'SEARCH' : 'QUERY';
     const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>(workerType, q);
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
     return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
