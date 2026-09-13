@@ -1,0 +1,124 @@
+/**
+ * issueReportLink.ts (PBI 2026-09-13-45)
+ *
+ * Builds a sanitized, human-reviewable issue body from a DiagnosticsSnapshot
+ * and recent log entries, then opens a prefilled GitHub "new issue" tab.
+ *
+ * Security contract: buildIssueReportBody() is the ONLY path allowed to turn
+ * a DiagnosticsSnapshot into outbound text. It must never forward apiKey,
+ * baseUrl, the Obsidian dailyPath, or raw log message contents — only error
+ * code names and counts. Callers must not read those snapshot fields
+ * directly for reporting purposes.
+ */
+
+import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
+import type { LogEntry } from '../../../utils/logger/types.js';
+import { getLogs } from '../../../utils/logger/core.js';
+
+const GITHUB_ISSUE_URL = 'https://github.com/armaniacs/yasumaro/issues/new';
+const MAX_ERROR_CODES_LISTED = 10;
+
+function summarizeErrorCodes(logs: LogEntry[]): string {
+  const counts = new Map<string, number>();
+  for (const log of logs) {
+    if (!log.errorCode) continue;
+    counts.set(log.errorCode, (counts.get(log.errorCode) ?? 0) + 1);
+  }
+  if (counts.size === 0) return '(none)';
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_ERROR_CODES_LISTED)
+    .map(([code, count]) => `${code}: ${count}`)
+    .join(', ');
+}
+
+function summarizeAiProviders(details: DiagnosticsSnapshot['aiProviderDetails']): string {
+  if (details.length === 0) return '(none configured)';
+  // Provider/model names only — apiKey and baseUrl are intentionally dropped.
+  return details.map((d) => `${d.provider} (${d.model ?? 'no model'})`).join(', ');
+}
+
+/**
+ * Build the sanitized issue body text. Never includes apiKey, baseUrl, the
+ * Obsidian dailyPath, or log message contents — see module doc comment.
+ */
+export function buildIssueReportBody(snapshot: DiagnosticsSnapshot, recentLogs: LogEntry[]): string {
+  const sqliteLine = snapshot.sqlite
+    ? `SQLite: initialized=${snapshot.sqlite.initialized}, fallback=${snapshot.sqlite.fallback}, fts5=${snapshot.sqlite.fts5}`
+    : 'SQLite: (not initialized)';
+
+  const lines = [
+    '## Diagnostic Information',
+    '',
+    `- Extension version: ${snapshot.extInfo.version}`,
+    `- Browser: ${navigator.userAgent}`,
+    `- Debug mode: ${snapshot.debugMode}`,
+    `- ${sqliteLine}`,
+    `- AI providers: ${summarizeAiProviders(snapshot.aiProviderDetails)}`,
+    `- Obsidian connection: protocol=${snapshot.obsidian.protocol}, port=${snapshot.obsidian.port}`,
+    `- Recent error codes: ${summarizeErrorCodes(recentLogs)}`,
+    '',
+    '## What happened',
+    '',
+    '<!-- Describe the problem here -->',
+  ];
+
+  return lines.join('\n');
+}
+
+/** Build the GitHub "new issue" URL with the sanitized body prefilled. */
+export function buildIssueReportUrl(snapshot: DiagnosticsSnapshot, recentLogs: LogEntry[]): string {
+  const body = buildIssueReportBody(snapshot, recentLogs);
+  const params = new URLSearchParams({
+    template: 'bug_report.md',
+    body,
+  });
+  return `${GITHUB_ISSUE_URL}?${params.toString()}`;
+}
+
+export interface IssueReportElements {
+  reportBtn: HTMLButtonElement | null;
+  previewModal: HTMLDialogElement | null;
+  previewContent: HTMLTextAreaElement | null;
+  cancelBtn: HTMLButtonElement | null;
+  closeBtn: HTMLButtonElement | null;
+  openBtn: HTMLButtonElement | null;
+}
+
+/**
+ * Wire the "Report a Bug" button: clicking it fills the preview modal with
+ * buildIssueReportBody()'s output, and only "Open GitHub" opens the tab —
+ * no network/tab action happens on the initial click.
+ */
+export function wireIssueReportButton(
+  elements: IssueReportElements,
+  collectSnapshot: () => Promise<DiagnosticsSnapshot>,
+): void {
+  const { reportBtn, previewModal, previewContent, cancelBtn, closeBtn, openBtn } = elements;
+  if (!reportBtn || !previewModal || !previewContent || !openBtn) return;
+
+  let pendingUrl: string | null = null;
+
+  const closeModal = (): void => {
+    pendingUrl = null;
+    previewModal.close();
+  };
+
+  reportBtn.addEventListener('click', async () => {
+    const snapshot = await collectSnapshot();
+    const recentLogs = await getLogs();
+    previewContent.value = buildIssueReportBody(snapshot, recentLogs);
+    pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
+    previewModal.showModal();
+  });
+
+  cancelBtn?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModal);
+
+  openBtn.addEventListener('click', () => {
+    if (pendingUrl) {
+      chrome.tabs.create({ url: pendingUrl });
+    }
+    closeModal();
+  });
+}
