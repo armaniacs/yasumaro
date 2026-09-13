@@ -7,12 +7,16 @@ import { getPluralKey } from '../../../utils/i18nPlural.js';
 import type { SqliteHistoryState } from './sqliteHistoryModel.js';
 import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
+import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
+import type { PendingPage } from '../../../utils/pendingStorage.js';
+import { recordPendingPage, PENDING_RECORD_TIMEOUT_ERROR } from '../../../messaging/pendingRecordGateway.js';
 import {
   formatDiagnosticMetadataHtml,
   render as renderHistoryView,
+  renderPendingRegion,
   toggleContentArea,
 } from './sqliteHistoryPanelView.js';
-import type { SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 
 export { formatDiagnosticMetadataHtml };
 
@@ -27,11 +31,18 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
 
   const model = createSqliteHistoryModel();
   // Panel shrinks to model.subscribe(refresh): every state change funnels
-  // through view.render()'s single entry (PBI 23).
-  let unsubscribe: (() => void) | null = null;
+  // through view.render()'s single entry (PBI 23). The subscription is taken
+  // in load() (PBI 2026-09-11-06) — see modelUnsubscribe below.
   // init() may run without a container (registry init→load order), so init
   // stays side-effect-free and only stashes params for load().
   let pendingNavParams: { searchTag?: string; searchDomain?: string } | null = null;
+
+  // --- Pending pages (PBI 2026-09-11-02, PBI-P) -----------------------------
+  // Panel-local state (NOT model state): pending pages are chrome.storage
+  // content, independent of the SQLite query pipeline. Live updates come from
+  // a chrome.storage.onChanged subscription, released in destroy().
+  let pendingPages: PendingPage[] = [];
+  let unsubscribePendingStorage: (() => void) | null = null;
 
   function state(): SqliteHistoryState {
     return model.getState();
@@ -136,8 +147,60 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     renderHistoryView(container, state(), createCallbacks());
   }
 
-  // Model subscription — thin alias of former onStateChange, completes BDD happy path
-  unsubscribe = model.subscribe(() => refresh());
+  // --- Pending pages (PBI-P) ------------------------------------------------
+
+  function renderPending(): void {
+    if (!container) return;
+    renderPendingRegion(container, pendingPages, createPendingActions());
+  }
+
+  async function loadPending(): Promise<void> {
+    pendingPages = await getPendingPages();
+    renderPending();
+  }
+
+  function createPendingActions(): PendingRegionActions {
+    return {
+      onRecord: (url) => recordPending(url, false),
+      onRecordWithoutAi: (url) => recordPending(url, true),
+      onDelete: async (url) => {
+        await removePendingPages([url]);
+        await loadPending();
+      },
+    };
+  }
+
+  /** Pending re-record — envelope + timeout contract lives in the shared seam (PBI 2026-09-12-01). */
+  async function recordPending(url: string, skipAi: boolean): Promise<{ ok: boolean; error?: string }> {
+    const page = pendingPages.find((p) => p.url === url);
+    if (!page) return { ok: false, error: t('recordError') };
+    const result = await recordPendingPage({ title: page.title, url: page.url, force: true, skipAi });
+    if (result.success) {
+      await removePendingPages([url]);
+      await loadPending();
+      return { ok: true };
+    }
+    const error = result.error === PENDING_RECORD_TIMEOUT_ERROR
+      ? t('recordRequestTimedOut')
+      : result.error || t('recordError');
+    return { ok: false, error };
+  }
+
+  function subscribePendingStorage(): void {
+    if (unsubscribePendingStorage || typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
+    const listener = (changes: Record<string, unknown>, areaName: string) => {
+      if (areaName === 'local' && changes['pending_pages']) {
+        void loadPending();
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
+  }
+
+  // Model subscription — thin alias of former onStateChange, completes BDD happy path.
+  // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
+  // created-but-never-loaded panel does not hold a live subscription.
+  let modelUnsubscribe: (() => void) | null = null;
 
   return {
     id: 'panel-sqlite-history',
@@ -161,10 +224,20 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       if (!container) return;
 
       _isMounted = true;
+      // PBI 2026-09-11-06 (round 6): subscribe here (not at creation) — a
+      // created-but-never-loaded panel must not hold a live subscription.
+      if (!modelUnsubscribe) {
+        modelUnsubscribe = model.subscribe(() => refresh());
+      }
       // Pre-fetch paint at today's position (before the initial fetch
       // resolves). The subscription refresh() calls below then paint results.
       // First call takes the View's full-build path (no shell mounted yet).
       refresh();
+
+      // Pending pages render into the shell's dedicated region (PBI-P) and
+      // live-update through the chrome.storage.onChanged subscription.
+      subscribePendingStorage();
+      void loadPending();
 
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
@@ -185,10 +258,15 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
         searchDebounceTimer = null;
       }
       _isMounted = false;
-      if (unsubscribe) {
-        unsubscribe();
-        unsubscribe = null;
+      if (modelUnsubscribe) {
+        modelUnsubscribe();
+        modelUnsubscribe = null;
       }
+      if (unsubscribePendingStorage) {
+        unsubscribePendingStorage();
+        unsubscribePendingStorage = null;
+      }
+      pendingPages = [];
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.
       // (Also clears bulk bar listener references via the selection clear.)

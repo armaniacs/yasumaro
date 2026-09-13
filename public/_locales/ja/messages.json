@@ -23,9 +23,6 @@
   "close": {
     "message": "閉じる"
   },
-  "saveAndTest": {
-    "message": "保存 & 接続テスト"
-  },
   "loading": {
     "message": "読み込み中..."
   },
@@ -194,9 +191,6 @@
   "geminiApiKeyPlaceholder": {
     "message": "Geminiキーをここに貼り付けてください..."
   },
-  "geminiApiKeyHelp": {
-    "message": "Google AI Studio で取得できます。"
-  },
   "label_gemini_api_version": {
     "message": "Gemini API バージョン"
   },
@@ -251,21 +245,6 @@
   "filterBlacklist": {
     "message": "ブラックリスト（指定ドメインを除外）"
   },
-  "filterDisabledDesc": {
-    "message": "ドメインに関係なく、訪問したすべてのWebサイトを記録します。",
-    "description": "ドメインフィルタ無効モードの説明"
-  },
-  "filterWhitelistDesc": {
-    "message": "ホワイトリストに含まれるドメインのWebサイトのみを記録します。",
-    "description": "ホワイトリストモードの説明"
-  },
-  "filterBlacklistDesc": {
-    "message": "ブラックリストに含まれるドメイン以外のWebサイトを記録します。",
-    "description": "ブラックリストモードの説明"
-  },
-  "filterFormat": {
-    "message": "フィルター形式（併用可能）"
-  },
   "simpleFormat": {
     "message": "シンプル（1行1ドメイン）"
   },
@@ -277,12 +256,6 @@
   },
   "domainListPlaceholder": {
     "message": "example.com\n*.example.org\ncompany.net"
-  },
-  "wildcardHelp": {
-    "message": "ワイルドカードも使用できます（例: *.example.com）"
-  },
-  "addCurrentDomain": {
-    "message": "現在のページドメインを追加"
   },
   "saveDomainSettings": {
     "message": "保存"
@@ -458,9 +431,6 @@
   "forceRecordAnyway": {
     "message": "それでも記録"
   },
-  "cannotRecordHttpHttps": {
-    "message": "現在のページはHTTP/HTTPSページではありません"
-  },
   "failedToExtractDomain": {
     "message": "ドメインを抽出できませんでした"
   },
@@ -553,15 +523,16 @@
   "reloadError": {
     "message": "更新エラー"
   },
-  "updateError": {
-    "message": "更新エラー"
-  },
   "saveError": {
     "message": "保存エラー"
   },
   "recordError": {
     "message": "記録に失敗しました",
     "description": "ダッシュボードで手動記録が失敗した場合のエラーメッセージ"
+  },
+  "recordRequestTimedOut": {
+    "message": "リクエストが20秒でタイムアウトしました。ページの読み込みや処理に時間がかかっている可能性があります。",
+    "description": "手動記録リクエストが20秒以内に完了しなかった場合のメッセージ"
   },
   "recordingFailed": {
     "message": "記録に失敗しました"
@@ -611,9 +582,6 @@
   "sourceUpdatedWithDiff": {
     "message": "ソースを更新しました（合計: {ruleCount} {diff}）"
   },
-  "autoCloseError": {
-    "message": "自動クローズに失敗しました"
-  },
   "testingConnection": {
     "message": "接続テスト中..."
   },
@@ -623,9 +591,6 @@
   "aiTestElapsedTime": {
     "message": "経過時間: {seconds}秒"
   },
-  "aiProviderTestDuration": {
-    "message": "{seconds}秒"
-  },
   "connectionSuccess": {
     "message": "接続成功"
   },
@@ -634,15 +599,6 @@
   },
   "successAllConnected": {
     "message": "成功！Obsidian・AI両方に接続しました。設定を保存しました。"
-  },
-  "obsidianOkAiFailed": {
-    "message": "Obsidian: OK / AI接続失敗: {message}"
-  },
-  "obsidianFailedAiOk": {
-    "message": "Obsidian接続失敗: {message} / AI: OK"
-  },
-  "bothConnectionFailed": {
-    "message": "Obsidian接続失敗: {obsidianMessage} / AI接続失敗: {aiMessage}"
   },
   "connectionFailed": {
     "message": "接続失敗: {message}"
@@ -673,9 +629,6 @@
   },
   "domainListError": {
     "message": "ドメインリストのエラー:"
-  },
-  "noActiveTab": {
-    "message": "アクティブなタブが見つかりません"
   },
   "errorColon": {
     "message": "エラー:"
@@ -742,9 +695,6 @@
   },
   "closeModal": {
     "message": "閉じる"
-  },
-  "settingsMenu": {
-    "message": "設定メニュー"
   },
   "exportSettings": {
     "message": "エクスポート"
@@ -1020,9 +970,6 @@
   "importPreviewNote": {
     "message": "注: すべての設定が適用されます。APIキーとリストも含まれます。"
   },
-  "importNoSignatureWarning": {
-    "message": "⚠️ この設定ファイルには署名が含まれていません。\n\n署名は設定ファイルの改ざん防止のために使用されます。\n信頼できないソースからのファイルはインポートしないことを推奨します。\n\nインポートを続行しますか？"
-  },
   "errorNetwork": {
     "message": "ネットワークエラーが発生しました。インターネット接続を確認してください。"
   },
@@ -1110,9 +1057,6 @@
   "setMasterPasswordDesc": {
     "message": "マスターパスワードを作成して設定を保護します。このパスワードは復元できません。"
   },
-  "changeMasterPasswordDesc": {
-    "message": "変更するには現在のマスターパスワードを入力してください。"
-  },
   "masterPassword": {
     "message": "マスターパスワード"
   },
@@ -1197,20 +1141,6 @@
   },
   "notifyPrivacyConfirmSkip": {
     "message": "スキップ"
-  },
-  "privatePageWarning": {
-    "message": "このページには個人情報が含まれている可能性があります（検出理由: $REASON$）。それでも保存しますか?",
-    "placeholders": {
-      "reason": {
-        "content": "$1"
-      }
-    }
-  },
-  "privatePageReason_cacheControl": {
-    "message": "プライベートキャッシュヘッダー"
-  },
-  "privatePageReason_setCookie": {
-    "message": "認証Cookie"
   },
   "privatePageReason_authorization": {
     "message": "認証ヘッダー"
@@ -1304,18 +1234,6 @@
   "warningConfirmSave": {
     "message": "保存しますか？"
   },
-  "btnCancel": {
-    "message": "キャンセル"
-  },
-  "btnSaveOnce": {
-    "message": "今回のみ保存"
-  },
-  "btnSaveWhitelistDomain": {
-    "message": "ドメイン全体を許可して保存"
-  },
-  "btnSaveWhitelistPath": {
-    "message": "このパスのみ許可して保存"
-  },
   "pendingPagesTitle": {
     "message": "保留中のページ"
   },
@@ -1361,17 +1279,8 @@
   "whitelistHelp": {
     "message": "このリストのドメインが記録されます（ホワイトリストモード有効時）"
   },
-  "blacklistHelp": {
-    "message": "このリストのドメインが除外されます（ブラックリストモード有効時）"
-  },
   "whitelistTab": {
     "message": "ホワイトリスト"
-  },
-  "blacklistTab": {
-    "message": "ブラックリスト"
-  },
-  "ublockFormatDesc": {
-    "message": "上級者向け: uBlock Originからフィルターリストをインポート"
   },
   "settingsSection": {
     "message": "設定"
@@ -1381,9 +1290,6 @@
   },
   "toolsSection": {
     "message": "ツール"
-  },
-  "historyTab": {
-    "message": "記録履歴"
   },
   "domainSearchTab": {
     "message": "ドメイン検索"
@@ -1409,62 +1315,41 @@
   "domainNoMatches": {
     "message": "一致するルールが見つかりません。"
   },
-  "historyDescription": {
-    "message": "Yasumaroが記録したURLの一覧です。検索ボックスで絞り込み、× で個別に削除できます。"
-  },
-  "historySearchLabel": {
-    "message": "URL・要約・タグで検索"
-  },
-  "recordTypeAuto": {
-    "message": "自動"
-  },
-  "recordTypeManual": {
-    "message": "手動"
-  },
-  "maskedBadge": {
-    "message": "🔒 {count}件マスク"
-  },
-  "maskedBadgeTitle": {
-    "message": "{count}件の個人情報をマスクしてAIに送信しました"
-  },
   "cleansedBadgeHard": {
     "message": "🧹 Hard"
   },
-  "cleansedBadgeHardTitle": {
-    "message": "タグ・属性ベース削除"
+  "cleansingDetailHard": {
+    "message": "ハード: $1$件",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cleansingDetailKeyword": {
+    "message": "キーワード: $1$件",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "cleansedBadgeKeyword": {
     "message": "🧹 Keyword"
   },
-  "cleansedBadgeKeywordTitle": {
-    "message": "キーワードベース削除"
-  },
   "cleansedBadgeBoth": {
     "message": "🧹 Both"
   },
-  "cleansedBadgeBothTitle": {
-    "message": "Hard Strip + Keyword Strip"
-  },
-  "filterMasked": {
-    "message": "🔒 マスクあり"
-  },
-  "filterCleansed": {
-    "message": "🧹 クレンジング"
-  },
-  "filterAll": {
-    "message": "すべて"
-  },
-  "filterAuto": {
-    "message": "自動"
-  },
-  "filterManual": {
-    "message": "手動"
-  },
-  "filterSkipped": {
-    "message": "スキップ"
-  },
   "pendingSectionTitle": {
     "message": "記録できなかったページ"
+  },
+  "pendingMoreCount": {
+    "message": "ほか $1$ 件の保留ページがあります",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "pendingSectionDesc": {
     "message": "PII保護やCacheヘッダーの理由で自動記録がスキップされました。内容を確認して手動で記録できます。"
@@ -1523,9 +1408,6 @@
     "message": "AI 設定"
   },
   "diagConnectionTitle": {
-    "message": "接続テスト"
-  },
-  "diagTestConnectionBtn": {
     "message": "接続テスト"
   },
   "diagInfoTitle": {
@@ -2064,17 +1946,8 @@
   "currentTags": {
     "message": "現在のタグ"
   },
-  "addTag": {
-    "message": "タグを追加"
-  },
   "selectCategory": {
     "message": "カテゴリを選択..."
-  },
-  "noTags": {
-    "message": "なし"
-  },
-  "editTags": {
-    "message": "タグを編集"
   },
   "tagFilterAriaLabel": {
     "message": "タグ #$TAG$ でフィルター",
@@ -2083,9 +1956,6 @@
         "content": "$1"
       }
     }
-  },
-  "saveTagError": {
-    "message": "タグの保存に失敗しました"
   },
   "tagsTab": {
     "message": "タグ"
@@ -2140,10 +2010,6 @@
     "message": "新しいカテゴリ名",
     "description": "ARIA label for new category name input"
   },
-  "filterOptions": {
-    "message": "フィルターオプション",
-    "description": "ARIA label for history filter buttons"
-  },
   "tagClusterDescription": {
     "message": "タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。"
   },
@@ -2188,9 +2054,6 @@
   "tagCategory": {
     "message": "タグカテゴリ",
     "description": "ARIA label for tag category select"
-  },
-  "hmacVerificationFailedConfirm": {
-    "message": "設定ファイルの署名検証に失敗しました。\n\n原因: HMACシークレットが変更された可能性があります（拡張機能の更新・再ロード等）。\n\n信頼できる設定ファイルの場合は「OK」をクリックして強制インポートしてください。\n信頼できない場合は「キャンセル」をクリックしてください。"
   },
   "importNoSignature": {
     "message": "設定ファイルに署名が含まれていません。署名付きのファイルのみインポート可能です。"
@@ -2240,9 +2103,6 @@
   },
   "consentRequired": {
     "message": "この拡張機能を使用するにはプライバシーポリシーへの同意が必要です。"
-  },
-  "consentRequiredFeature": {
-    "message": "同意が必要です"
   },
   "saveFailed": {
     "message": "同意の保存に失敗しました"
@@ -2724,12 +2584,6 @@
   "sensitiveAddHelp": {
     "message": "ドメイン名を入力してください"
   },
-  "sensitiveInvalidDomain": {
-    "message": "無効なドメイン形式です"
-  },
-  "sensitiveDuplicate": {
-    "message": "ドメインはすでに登録されています"
-  },
   "sensitiveAdded": {
     "message": "ドメインを追加しました"
   },
@@ -2802,6 +2656,9 @@
   "statusTrustTrusted": {
     "message": "🟢 TRUSTED"
   },
+  "statusTrustLocked": {
+    "message": "LOCKED"
+  },
   "statusTrustSensitive": {
     "message": "🟡 SENSITIVE"
   },
@@ -2870,9 +2727,6 @@
   },
   "selectProvidersDesc": {
     "message": "利用したい中小AIプロバイダーを選択してください"
-  },
-  "providerList": {
-    "message": "利用可能なAIプロバイダー"
   },
   "cspSaveSuccess": {
     "message": "CSP設定を保存しました"
@@ -2976,9 +2830,6 @@
   "geminiContentCharsError": {
     "message": "Gemini コンテンツ文字数は 1,000 〜 100,000 の範囲で入力してください"
   },
-  "externalEndpointControlsSection": {
-    "message": "外部エンドポイント"
-  },
   "error_max_tokens_range": {
     "message": "トークン数は 10 〜 16,000 の範囲で入力してください"
   },
@@ -3005,12 +2856,6 @@
   },
   "withdrawConsent": {
     "message": "同意を撤回する"
-  },
-  "withdrawConsentConfirm": {
-    "message": "同意を撤回すると一部の機能が使えなくなります。続行しますか？"
-  },
-  "withdrawConsentSuccess": {
-    "message": "同意が撤回されました"
   },
   "privacyConsentStatus": {
     "message": "プライバシー同意状態"
@@ -3066,18 +2911,6 @@
   "diagProvider": {
     "message": "プロバイダー"
   },
-  "diagModel": {
-    "message": "モデル"
-  },
-  "diagBaseUrl": {
-    "message": "ベース URL"
-  },
-  "diagAiApiCalls": {
-    "message": "今月のAPI呼び出し回数"
-  },
-  "diagAiTotalTokens": {
-    "message": "今月の合計トークン消費量"
-  },
   "defaultValue": {
     "message": "(デフォルト)"
   },
@@ -3098,30 +2931,6 @@
   },
   "historyReceivedTokens": {
     "message": "受信"
-  },
-  "historyOriginalTokens": {
-    "message": "Content Cleansing (トークン): 前"
-  },
-  "historyCleansedTokens": {
-    "message": "後"
-  },
-  "historyTokenReduction": {
-    "message": "削減"
-  },
-  "historyOriginalBytes": {
-    "message": "Content Cleansing (バイト数): 前"
-  },
-  "historyCleansedBytes": {
-    "message": "後"
-  },
-  "historyByteReduction": {
-    "message": "削減"
-  },
-  "historyAiSummaryCleansedBytes": {
-    "message": "AI要約クレンジング (バイト数): 後"
-  },
-  "historyAiSummaryCleansedElements": {
-    "message": "AI要約クレンジング: {count}要素削除"
   },
   "historyAiSummaryCleansedReason": {
     "message": "AI要約クレンジング理由"
@@ -3261,44 +3070,14 @@
   "trancoUpdateNotificationDescription": {
     "message": "Tranco Top 1000 リストが更新されました。信頼ドメインの変更を確認してください。"
   },
-  "trancoUpdateModalTitle": {
-    "message": "Tranco信頼ドメインリストの更新"
-  },
-  "trancoUpdateModalCurrentVersion": {
-    "message": "現在のバージョン"
-  },
-  "trancoUpdateModalNewVersion": {
-    "message": "新しいバージョン"
-  },
-  "trancoUpdateModalExcludedDomains": {
-    "message": "除外された信頼ドメイン"
-  },
-  "trancoUpdateModalAddedDomains": {
-    "message": "追加された信頼ドメイン"
-  },
   "trancoUpdateModalConfirmLabel": {
     "message": "新しいリストを使用します"
-  },
-  "trancoUpdateModalConfirmDescription": {
-    "message": "新しいTrancoリストを使用して、信頼ドメイン判定を更新します"
   },
   "trancoUpdateModalDenyLabel": {
     "message": "古いリストを継続使用"
   },
-  "trancoUpdateModalDenyDescription": {
-    "message": "古いTrancoリストを引き続き使用します。30日後に再確認を求められます。"
-  },
-  "trancoUpdateModalRetryLaterLabel": {
-    "message": "あとで確認"
-  },
-  "trancoUpdateModalRetryLaterDescription": {
-    "message": "現在のまま古いリストを使用し、30日後に再確認を求めます。"
-  },
   "trancoSectionTitle": {
     "message": "Tranco信頼ドメイン"
-  },
-  "trancoSectionDescription": {
-    "message": "Tranco Top 1000 ドメインリストに基づいた信頼ドメイン管理"
   },
   "trancoCurrentVersion": {
     "message": "現在のバージョン"
@@ -3320,12 +3099,6 @@
   },
   "trancoConsentRetryDaysRemaining": {
     "message": "再確認まで{days}日"
-  },
-  "trancoDropdownHeader": {
-    "message": "Tranco"
-  },
-  "trancoDropdownSettings": {
-    "message": "Tranco設定"
   },
   "trancoUpdateConfirm": {
     "message": "同意"
@@ -3431,9 +3204,6 @@
         "example": "3"
       }
     }
-  },
-  "historyAppendObsidianNotConfigured": {
-    "message": "Obsidian を設定してください"
   },
   "historyAppendFailed": {
     "message": "追記に失敗しました"
@@ -3561,6 +3331,9 @@
   "archiveRestorePreviewFailed": {
     "message": "アーカイブ復元の確認に失敗しました"
   },
+  "archiveRestorePreviewReady": {
+    "message": "プレビューを準備しました。"
+  },
   "archivePurgeBtn": {
     "message": "メインDBからレコードを削除"
   },
@@ -3634,24 +3407,6 @@
       }
     }
   },
-  "triggerTabClose": {
-    "message": "タブを閉じた時"
-  },
-  "triggerTabCloseDesc": {
-    "message": "タブが閉じられた時に記録"
-  },
-  "triggerValidationAtLeastOne": {
-    "message": "少なくとも1つのトリガーを有効にする必要があります。"
-  },
-  "triggerSaveError": {
-    "message": "エラー: $ERROR$",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "ネットワークエラー"
-      }
-    }
-  },
   "cleansingStatsNoData": {
     "message": "削減率データがありません。クレンジングを有効にして数件記録すると統計が表示されます。"
   },
@@ -3706,12 +3461,6 @@
   "criticalAlertBody": {
     "message": "重大なエラーが発生しました: $1。設定の「診断」パネルを確認してください。"
   },
-  "sqliteAlertTitle": {
-    "message": "SQLite 初期化エラー"
-  },
-  "sqliteAlertMessage": {
-    "message": "履歴データベースの初期化に繰り返し失敗しています。設定の「診断」パネルを確認してください。"
-  },
   "previewContent": {
     "message": "プレビュー内容",
     "description": "プレビューコンテンツテキストエリアのaria-label"
@@ -3760,9 +3509,6 @@
   },
   "historyHideReceivedData": {
     "message": "データを非表示"
-  },
-  "showContentToggleLabel": {
-    "message": "一覧に本文表示ボタンを出す"
   },
   "retention7days": {
     "message": "7日"
@@ -3911,14 +3657,6 @@
     "message": "{count}件",
     "description": "Generic items count plural"
   },
-  "maskedBadgeTitle_one": {
-    "message": "AI送信前に個人情報を1件マスキング",
-    "description": "Badge title for masked items singular"
-  },
-  "maskedBadgeTitle_other": {
-    "message": "AI送信前に個人情報を{count}件マスキング",
-    "description": "Badge title for masked items plural"
-  },
   "diagSqliteChecking": {
     "message": "SQLiteの状態を確認中...",
     "description": "Message shown while checking SQLite status"
@@ -3947,14 +3685,6 @@
     "message": "ドメイン: {count} | ティア: {tier} | 最終更新: {lastUpdated}",
     "description": "Tranco status format plural"
   },
-  "historyAiSummaryCleansedElements_one": {
-    "message": "AI要約クレンジング: 1要素を除去",
-    "description": "AI summary cleansed elements singular"
-  },
-  "historyAiSummaryCleansedElements_other": {
-    "message": "AI要約クレンジング: {count}要素を除去",
-    "description": "AI summary cleansed elements plural"
-  },
   "historyRecordCount_one": {
     "message": "$1件のレコード",
     "description": "History record count singular"
@@ -3971,41 +3701,9 @@
     "message": "$1件のレコードをObsidianに追記しました",
     "description": "History append success plural"
   },
-  "triggerScrollTime": {
-    "message": "スクロール & 時間",
-    "description": "Trigger mode label for scroll and time based recording"
-  },
-  "triggerScrollTimeDesc": {
-    "message": "スクロール深度≥50%かつ訪問時間≥5秒で記録",
-    "description": "Description for scroll and time trigger mode"
-  },
-  "triggerManual": {
-    "message": "手動保存",
-    "description": "Trigger mode label for manual recording"
-  },
-  "triggerManualDesc": {
-    "message": "手動トリガーで記録",
-    "description": "Description for manual trigger mode"
-  },
-  "triggerSnapshot": {
-    "message": "定期スナップショット",
-    "description": "Trigger mode label for periodic snapshot"
-  },
-  "triggerSnapshotDesc": {
-    "message": "一定間隔で記録",
-    "description": "Description for periodic snapshot trigger"
-  },
-  "snapshotIntervalLabel": {
-    "message": "間隔（分）",
-    "description": "Label for snapshot interval input"
-  },
   "saveTriggers": {
     "message": "保存",
     "description": "Button label to save trigger settings"
-  },
-  "triggersSaved": {
-    "message": "設定を保存しました。",
-    "description": "Message shown when trigger settings are saved"
   },
   "contentPurgeNowSuccess_one": {
     "message": "$1件のコンテンツを削除しました",
@@ -4143,5 +3841,160 @@
   },
   "cleansingFeedbackAction": {
     "message": "操作"
+  },
+  "cleansingNoRemoval": {
+    "message": "クレンジングによる除去はありません"
+  },
+  "cleansingRule": {
+    "message": "ルール"
+  },
+  "cleansingCount": {
+    "message": "件数"
+  },
+  "cleansingLargeRemovalWarning": {
+    "message": "多くの内容が除去されました。原文を確認してください"
+  },
+  "testError": {
+    "message": "接続テストに失敗しました。"
+  },
+  "checking": {
+    "message": "確認中..."
+  },
+  "domainAllowed": {
+    "message": "許可（記録されます）"
+  },
+  "domainBlocked": {
+    "message": "ブロック（記録されません）"
+  },
+  "checkError": {
+    "message": "ドメインの確認中にエラーが発生しました。"
+  },
+  "archiveModalTitle": {
+    "message": "アーカイブ管理"
+  },
+  "aiProviderPrioritySection": {
+    "message": "優先順位（フェイルオーバー順）"
+  },
+  "aiProviderSettingsSection": {
+    "message": "プロバイダー設定"
+  },
+  "apiKey": {
+    "message": "APIキー"
+  },
+  "archiveModalCancel": {
+    "message": "キャンセル"
+  },
+  "archiveModalSave": {
+    "message": "保存"
+  },
+  "archiveModalTitleLabel": {
+    "message": "アーカイブタイトル"
+  },
+  "archiveModalTitleRequired": {
+    "message": "タイトルを入力してください"
+  },
+  "archiveModalTitleTooLong": {
+    "message": "タイトルが長すぎます"
+  },
+  "builtInAiHelpLink": {
+    "message": "組み込みAIのセットアップガイド"
+  },
+  "confirm": {
+    "message": "確認"
+  },
+  "deleteAllDataFailed": {
+    "message": "閲覧ログの削除に失敗しました。もう一度お試しください。"
+  },
+  "error": {
+    "message": "エラー"
+  },
+  "errorConsentData": {
+    "message": "同意の保存中にエラーが発生しました"
+  },
+  "errorLoadTrancoData": {
+    "message": "Trancoデータの読み込みに失敗しました"
+  },
+  "filterFreeTier": {
+    "message": "無料枠のみ表示"
+  },
+  "loadingProviders": {
+    "message": "プロバイダーを読み込み中..."
+  },
+  "maxTokensError": {
+    "message": "値が許容範囲外です"
+  },
+  "minScrollDepthError": {
+    "message": "値が許容範囲外です"
+  },
+  "minVisitDurationError": {
+    "message": "値が許容範囲外です"
+  },
+  "openHistory": {
+    "message": "履歴を開く"
+  },
+  "providerSearchPlaceholder": {
+    "message": "プロバイダーを検索..."
+  },
+  "reportCleansingFeedback": {
+    "message": "誤削除を報告"
+  },
+  "reportCleansingFeedbackError": {
+    "message": "報告に失敗しました"
+  },
+  "reportCleansingFeedbackSuccess": {
+    "message": "報告しました"
+  },
+  "selectModel": {
+    "message": "モデル（任意）:"
+  },
+  "selectedProvider": {
+    "message": "選択中のプロバイダー:"
+  },
+  "settingsSaveError": {
+    "message": "設定の保存に失敗しました"
+  },
+  "statusAuthorizationPresent": {
+    "message": "Authorizationヘッダーあり"
+  },
+  "statusNoCacheInfo": {
+    "message": "キャッシュ情報はありません"
+  },
+  "statusPageNotRecordable": {
+    "message": "このページは記録できません"
+  },
+  "statusPattern": {
+    "message": "パターン: $1$",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSetCookiePresent": {
+    "message": "Set-Cookieあり"
+  },
+  "tagClusterTab": {
+    "message": "タグクラスタ"
+  },
+  "testComplete": {
+    "message": "テスト完了。"
+  },
+  "testFailed": {
+    "message": "✗ 接続に失敗しました"
+  },
+  "testSuccess": {
+    "message": "✓ 接続に成功しました"
+  },
+  "trancoConsentDenied": {
+    "message": "拒否を保存しました"
+  },
+  "trancoConsentGranted": {
+    "message": "同意を保存しました"
+  },
+  "trancoStatusNotUpdated": {
+    "message": "Trancoリストは未更新です"
+  },
+  "warningTitle": {
+    "message": "警告"
   }
 }

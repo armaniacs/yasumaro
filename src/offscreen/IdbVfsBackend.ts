@@ -7,11 +7,12 @@ import type {
   BackupResult, CountResult, HealthResult, AuditLogQueryResult,
   StatusResult, BackendOrError,
 } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
-  buildQuerySpec, QUERY_CAPS, clampLimit, buildExtraWhereSql,
+  buildQuerySpec, QUERY_CAPS, buildExtraWhereSql,
   buildFtsMatchQuery, buildLikePattern,
   buildFtsSearchStatements, buildLikeSearchStatements, buildPlainListStatements,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
@@ -19,7 +20,12 @@ import {
   buildAuditLogStatements,
 } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { withTransaction } from './opfsWorker/handlers.js';
+import { withTransaction } from './sqliteTransaction.js';
+import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
+import { selectTagFilter } from './queryPlan.js';
+import { AUDIT_CAP_IDB } from '../messaging/limits.js';
+import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
+import type { SerializeResult } from './StorageBackend.js';
 import {
   SEARCH_COLUMNS_WITH_RANK, BROWSING_LOG_FULL_COLUMNS, BROWSING_LOG_FULL_COLUMNS_SQL,
   mapPositional,
@@ -48,7 +54,7 @@ export class IdbVfsBackend implements StorageBackend {
 
     let inserted = 0;
     let skipped = 0;
-    await withTransaction(this.engine, async () => {
+    await withTransaction({ exec: (sql) => this.engine.execWithCache(sql) }, async () => {
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
         await this.engine.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
@@ -67,18 +73,30 @@ export class IdbVfsBackend implements StorageBackend {
     const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
-    const extra = buildExtraWhereSql(q);
+    // PBI 2026-09-12-38: build the projection PER SEARCH PATH. The round-12
+    // version built one `{qualified: true}` ExtraWhere and fed it to both
+    // paths — but the LIKE SQL is `FROM browsing_logs` (no alias) while the
+    // FTS JOIN needs `b.` qualification, so every short-text IDB search
+    // (useFts=false) threw `no such column: b.is_deleted`. Params are
+    // positionally identical; the SQL TEXT is not.
+    const extraFts = buildExtraWhereSql(q, { qualified: true });
+    const extraLike = buildExtraWhereSql(q, { qualified: false });
 
     if (q.text) {
       const bare = spec.bareText;
       if (!bare) return { success: true, rows: [], total: 0 };
 
       if (spec.useFts) {
-        const stmts = buildFtsSearchStatements(extra, {
+        // PBI 2026-09-11-06 (round 5): text+tag applies BOTH conditions — the
+        // tag rides on the FTS/LIKE statements like any other extra filter.
+        // PBI 2026-09-12-39: path-aware tag seam (FTS needs b.id qualification).
+        const tagFilter = selectTagFilter(q.tag, 'fts', this.engine.fts5Available);
+        const stmts = buildFtsSearchStatements(extraFts, {
           ftsQuery: buildFtsMatchQuery(bare),
           orderClause: spec.order,
           limit: spec.limit,
           offset: spec.offset,
+          tagFilter,
         });
 
         let total = 0;
@@ -100,11 +118,14 @@ export class IdbVfsBackend implements StorageBackend {
       }
 
       // LIKE fallback
-      const stmts = buildLikeSearchStatements(extra, {
+      // PBI 2026-09-12-39: path-aware tag seam (LIKE never MATCHes).
+      const likeTagFilter = selectTagFilter(q.tag, 'like', this.engine.fts5Available);
+      const stmts = buildLikeSearchStatements(extraLike, {
         likePattern: buildLikePattern(q.text),
         orderClause: spec.order,
         limit: spec.limit,
         offset: spec.offset,
+        tagFilter: likeTagFilter,
       });
 
       let total = 0;
@@ -126,10 +147,10 @@ export class IdbVfsBackend implements StorageBackend {
       return { success: true, rows, total };
     }
 
-    // Plain filtered listing (no text search). NOTE: the #tag filter is
-    // intentionally NOT applied here — opfs QUERY honours it while this
-    // backend ignores it. PBI-34 keeps that gap explicit (see
-    // buildPlainListStatements) instead of silently changing results.
+    // Plain filtered listing (no text search). The tag filter rides on the
+    // spec (QuerySpec.tagFilter, built with this backend's fts5Available) —
+    // PBI 2026-09-11 unified tag semantics: this backend honours the tag the
+    // same way the OPFS worker does (the former PBI-34 divergence is gone).
     // Columns are explicit (was SELECT *): same 33 fields, codec order.
     const stmts = buildPlainListStatements(spec, { columns: BROWSING_LOG_FULL_COLUMNS_SQL });
 
@@ -197,15 +218,21 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: true, is_starred: newStarred };
   }
 
-  async purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>> {
+  async purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays));
+    // PBI 2026-09-12-36: skip guards — same contract as purgeContent. Before
+    // this, (0,0) purged everything (cutoff = now) while content-purge(0,0)
+    // was a no-op. Statements are built unconditionally (plain SQL strings);
+    // only their EXECUTION is gated.
+    const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays ?? DEFAULT_PURGE_RETENTION_DAYS));
     let totalPurged = 0;
 
-    await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
-    let changes1 = 0;
-    await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
-    totalPurged += changes1;
+    if (retentionDays != null && retentionDays > 0) {
+      await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
+      let changes1 = 0;
+      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
+      totalPurged += changes1;
+    }
 
     let totalCount = 0;
     await this.engine.execWithCache(
@@ -214,7 +241,7 @@ export class IdbVfsBackend implements StorageBackend {
       (row: SqliteValue[]) => { totalCount = Number(row[0]); }
     );
 
-    if (totalCount > maxRecords) {
+    if (maxRecords != null && maxRecords > 0 && totalCount > maxRecords) {
       const excess = totalCount - maxRecords;
       await this.engine.execWithCache(stmts.deleteExcessSql, [excess]);
       let changes2 = 0;
@@ -270,67 +297,11 @@ export class IdbVfsBackend implements StorageBackend {
   }
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
-    return { success: false, error: 'Binary backup requires OPFS storage.' };
-  }
-
-  async archivePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePreviewResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveCreate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCreateResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveCleanup(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCleanupResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveExportChunk(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveExportChunkResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archivePrepareIncoming(): Promise<BackendOrError<import('./StorageBackend.js').ArchivePrepareIncomingResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveRestorePreview(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestorePreviewResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveRestore(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveRestoreResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveDeleteByStaging(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveDeleteByStagingResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveOpen(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveOpenResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveQuery(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveQueryResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveUpdate(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveUpdateResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveSave(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveSaveResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveClose(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveCloseResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
-  }
-
-  async archiveStatus(): Promise<BackendOrError<import('./StorageBackend.js').ArchiveStatusResult>> {
-    return { success: false, error: 'Archive requires OPFS storage.' };
+    return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
   }
 
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: 'Binary restore requires OPFS storage.' };
+    return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {
@@ -369,10 +340,10 @@ export class IdbVfsBackend implements StorageBackend {
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
     this.ensureDb();
-    // NOTE: audit cap 100000 differs intentionally from the opfs worker
-    // cap (1000) — preserved, see buildAuditLogStatements.
-    const limit = clampLimit(options.limit, 100000, 100);
-    const offset = options.offset ?? 0;
+    // PBI 2026-09-12-17: paging policy lives in the planner seam — this
+    // backend receives already-clamped values (was a per-backend re-derivation
+    // riding QUERY_CAPS.fts with no offset policy).
+    const { limit, offset } = planAuditLog(options, AUDIT_CAP_IDB);
     const stmts = buildAuditLogStatements({ limit, offset });
 
     const rows: AuditLogEntry[] = [];
@@ -395,6 +366,23 @@ export class IdbVfsBackend implements StorageBackend {
     });
 
     return { success: true, rows, total };
+  }
+
+  async serialize(): Promise<BackendOrError<SerializeResult>> {
+    this.ensureDb();
+    // PBI 2026-09-12-22: shared envelope + column SSOT (was an 11-column
+    // hand-mapped positional SELECT inside recordsRepo).
+    const rows: Record<string, unknown>[] = [];
+    await this.engine.execWithCache(
+      `SELECT ${EXPORT_COLUMNS.join(', ')} FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
+      [],
+      (row: SqliteValue[]) => {
+        const named: Record<string, unknown> = {};
+        EXPORT_COLUMNS.forEach((col, i) => { named[col] = row[i]; });
+        rows.push(named);
+      }
+    );
+    return { success: true, data: buildExportEnvelope(rows as unknown as Parameters<typeof buildExportEnvelope>[0]) };
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {

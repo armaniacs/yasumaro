@@ -3,43 +3,31 @@
  * Backup, restore, and serialize operations.
  */
 
-import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { sqlQuery } from './handlers.js';
-import type { HandlerContext } from './handlers.js';
+import { sqlQuery, type HandlerContext } from './handlers.js';
+import { buildExportEnvelope, EXPORT_COLUMNS } from '../exportEnvelope.js';
+import type { NamedRow } from '../rowCodec.js';
 
 const DB_FILENAME = 'yasumaro.db';
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
 
 export async function handleSerialize(ctx: HandlerContext): Promise<Uint8Array> {
-  const rows: BrowsingLogRecord[] = [];
+  // PBI 2026-09-12-22: rows go through the shared envelope + column SSOT
+  // (was a bare-array JSON over 13 hand-mapped columns with 6 `as` casts
+  // outside rowCodec — a different export schema than IDB/fallback).
+  const rows: NamedRow[] = [];
   await sqlQuery(
     ctx,
-    `SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced
+    `SELECT ${EXPORT_COLUMNS.join(', ')}
      FROM browsing_logs WHERE is_deleted = 0 ORDER BY created_at DESC`,
     [],
     (row) => {
-      rows.push({
-        id: Number(row.id),
-        url: String(row.url),
-        title: row.title as string | null,
-        summary: row.summary as string | null,
-        tags: row.tags as string | null,
-        created_at: Number(row.created_at),
-        domain: row.domain as string | null,
-        visit_duration: row.visit_duration as number | null,
-        scroll_ratio: row.scroll_ratio as number | null,
-        is_starred: Number(row.is_starred),
-        is_deleted: Number(row.is_deleted),
-        obsidian_synced: Number(row.obsidian_synced),
-        gist_synced: Number(row.gist_synced),
-      });
+      rows.push(row as NamedRow);
     }
   );
 
-  const encoder = new TextEncoder();
-  return encoder.encode(JSON.stringify(rows));
+  return buildExportEnvelope(rows);
 }
 
 /**

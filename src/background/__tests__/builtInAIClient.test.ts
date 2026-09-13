@@ -78,49 +78,49 @@ describe('BuiltInAIClient', () => {
     });
 
     describe('constructor', () => {
-        test('インスタンスを作成できる', () => {
+        test('creates an instance', () => {
             expect(client).toBeInstanceOf(BuiltInAIClient);
         });
     });
 
     describe('getAvailability', () => {
-        test('available を返す', async () => {
+        test('returns available', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('available');
             const result = await client.getAvailability();
             expect(result).toBe('available');
         });
 
-        test('downloadable を返す', async () => {
+        test('returns downloadable', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('downloadable');
             const result = await client.getAvailability();
             expect(result).toBe('downloadable');
         });
 
-        test('downloading を返す', async () => {
+        test('returns downloading', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('downloading');
             const result = await client.getAvailability();
             expect(result).toBe('downloading');
         });
 
-        test('unavailable を返す', async () => {
+        test('returns unavailable', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
             const result = await client.getAvailability();
             expect(result).toBe('unavailable');
         });
 
-        test('LanguageModel が存在しない場合は unavailable を返す', async () => {
+        test('returns unavailable when LanguageModel is missing', async () => {
             delete (globalThis as unknown as { LanguageModel?: unknown }).LanguageModel;
             const result = await client.getAvailability();
             expect(result).toBe('unavailable');
         });
 
-        test('availability() が例外を投げた場合は unavailable を返す', async () => {
+        test('returns unavailable when availability() throws', async () => {
             mockLanguageModel.availability.mockRejectedValueOnce(new Error('boom'));
             const result = await client.getAvailability();
             expect(result).toBe('unavailable');
         });
 
-        test('availability() は create() と同じ expectedOutputs を指定して呼ぶ', async () => {
+        test('calls availability() with the same expectedOutputs as create()', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('available');
             await client.getAvailability();
             expect(mockLanguageModel.availability).toHaveBeenCalledWith({
@@ -128,7 +128,7 @@ describe('BuiltInAIClient', () => {
             });
         });
 
-        test('キャッシュされた availability を再利用する（2回目は API を呼ばない）', async () => {
+        test('reuses the cached availability (does not call the API a second time)', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('available');
             const result1 = await client.getAvailability();
             expect(result1).toBe('available');
@@ -139,7 +139,7 @@ describe('BuiltInAIClient', () => {
             expect(mockLanguageModel.availability).toHaveBeenCalledTimes(1);
         });
 
-        test('downloading はキャッシュされず毎回再チェックする', async () => {
+        test('does not cache downloading and rechecks every time', async () => {
             mockLanguageModel.availability.mockResolvedValue('downloading');
             const result1 = await client.getAvailability();
             expect(result1).toBe('downloading');
@@ -151,13 +151,13 @@ describe('BuiltInAIClient', () => {
     });
 
     describe('isAvailable', () => {
-        test('available の場合は true', async () => {
+        test('returns true when available', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('available');
             const result = await client.isAvailable();
             expect(result).toBe(true);
         });
 
-        test('available 以外の場合は false', async () => {
+        test('returns false when not available', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('downloadable');
             const result = await client.isAvailable();
             expect(result).toBe(false);
@@ -165,7 +165,7 @@ describe('BuiltInAIClient', () => {
     });
 
     describe('resetAvailabilityCache', () => {
-        test('キャッシュをクリアすると次の getAvailability で API を再呼び出しする', async () => {
+        test('recalls the API on the next getAvailability after clearing the cache', async () => {
             mockLanguageModel.availability.mockResolvedValue('available');
             await client.getAvailability(); // キャッシュされる
             client.resetAvailabilityCache();
@@ -177,13 +177,13 @@ describe('BuiltInAIClient', () => {
     });
 
     describe('summarize', () => {
-        test('空コンテンツでエラーを返す', async () => {
+        test('returns an error for empty content', async () => {
             const result = await client.summarize('');
             expect(result.success).toBe(false);
             expect(result.error).toBe('Invalid content');
         });
 
-        test('成功時にサマリーを返す', async () => {
+        test('returns a summary on success', async () => {
             const session = createMockSession({ prompt: vi.fn(async () => 'Test summary') });
             mockLanguageModel.create.mockResolvedValueOnce(session);
 
@@ -195,7 +195,7 @@ describe('BuiltInAIClient', () => {
             expect(result.receivedTokens).toBeGreaterThan(0);
         });
 
-        test('成功後に session.destroy() が呼ばれる', async () => {
+        test('calls session.destroy() after success', async () => {
             const session = createMockSession();
             mockLanguageModel.create.mockResolvedValueOnce(session);
 
@@ -204,7 +204,7 @@ describe('BuiltInAIClient', () => {
             expect(session.destroy).toHaveBeenCalled();
         });
 
-        test('unavailable の場合はエラーを返し create() を呼ばない', async () => {
+        test('returns an error without calling create() when unavailable', async () => {
             mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
 
             const result = await client.summarize('Some content');
@@ -214,7 +214,7 @@ describe('BuiltInAIClient', () => {
             expect(mockLanguageModel.create).not.toHaveBeenCalled();
         });
 
-        test('create() が失敗した場合はエラーを返す', async () => {
+        test('returns an error when create() fails', async () => {
             mockLanguageModel.create.mockRejectedValueOnce(new Error('Unable to create a text session because the service is not running.'));
 
             const result = await client.summarize('Some content');
@@ -223,7 +223,7 @@ describe('BuiltInAIClient', () => {
             expect(result.error).toContain('service is not running');
         });
 
-        test('prompt() が失敗した場合はエラーを返し session.destroy() が呼ばれる', async () => {
+        test('returns an error and calls session.destroy() when prompt() fails', async () => {
             const session = createMockSession({
                 prompt: vi.fn(async () => { throw new Error('QuotaExceededError'); })
             });
@@ -236,7 +236,7 @@ describe('BuiltInAIClient', () => {
             expect(session.destroy).toHaveBeenCalled();
         });
 
-        test('プロンプトインジェクション HIGH でブロックする', async () => {
+        test('blocks on HIGH prompt injection', async () => {
             sanitizePromptContent.mockReturnValueOnce({
                 sanitized: 'blocked',
                 warnings: ['injection detected'],
@@ -249,7 +249,7 @@ describe('BuiltInAIClient', () => {
             expect(mockLanguageModel.create).not.toHaveBeenCalled();
         });
 
-        test('プロンプトインジェクション LOW 時は警告ログを出力して処理を続行する', async () => {
+        test('logs a warning and continues processing on LOW prompt injection', async () => {
             sanitizePromptContent.mockReturnValueOnce({
                 sanitized: 'sanitized content',
                 warnings: ['Detected potential command: "system"'],
@@ -270,7 +270,7 @@ describe('BuiltInAIClient', () => {
             );
         });
 
-        test('入力を aiLimits.ts の上限（16,384文字）に切り詰める', async () => {
+        test('truncates input to the aiLimits.ts limit (16,384 chars)', async () => {
             const longContent = 'a'.repeat(20000);
             const session = createMockSession();
             mockLanguageModel.create.mockResolvedValueOnce(session);
@@ -281,7 +281,7 @@ describe('BuiltInAIClient', () => {
             expect(sentText.length).toBeLessThanOrEqual(16384);
         });
 
-        test('キャッシュされた availability を使用する（2回目の summarize は LanguageModel.availability() を呼ばない）', async () => {
+        test('uses the cached availability (the second summarize does not call LanguageModel.availability())', async () => {
             const session1 = createMockSession({ prompt: vi.fn(async () => 'summary 1') });
             const session2 = createMockSession({ prompt: vi.fn(async () => 'summary 2') });
             mockLanguageModel.create.mockResolvedValueOnce(session1).mockResolvedValueOnce(session2);
@@ -295,7 +295,7 @@ describe('BuiltInAIClient', () => {
             expect(mockLanguageModel.availability).toHaveBeenCalledTimes(1); // 変わらず1回
         });
 
-        test('session.contextWindow が静的上限より狭い場合、その値に基づいて切り詰める（Edge Phi-mini実測値相当）', async () => {
+        test('truncates based on session.contextWindow when it is narrower than the static limit (Edge Phi-mini measured value)', async () => {
             const longContent = 'a'.repeat(20000);
             // 実機検証済みの Edge Phi-mini contextWindow 実測値
             const session = createMockSession({ contextWindow: 9216 });
@@ -309,7 +309,7 @@ describe('BuiltInAIClient', () => {
             expect(sentText.length).toBeLessThan(16384);
         });
 
-        test('session.contextWindow が未定義の場合は静的上限（16,384文字）のみを使う', async () => {
+        test('uses only the static limit (16,384 chars) when session.contextWindow is undefined', async () => {
             const longContent = 'a'.repeat(20000);
             const session = createMockSession({ contextWindow: undefined });
             mockLanguageModel.create.mockResolvedValueOnce(session);
@@ -320,7 +320,7 @@ describe('BuiltInAIClient', () => {
             expect(sentText.length).toBe(16384);
         });
 
-        test('session.contextWindow が静的上限より広い場合は静的上限（16,384文字）が使われる', async () => {
+        test('uses the static limit (16,384 chars) when session.contextWindow is wider than it', async () => {
             const longContent = 'a'.repeat(20000);
             const session = createMockSession({ contextWindow: 100000 });
             mockLanguageModel.create.mockResolvedValueOnce(session);
@@ -331,7 +331,7 @@ describe('BuiltInAIClient', () => {
             expect(sentText.length).toBe(16384);
         });
 
-        test('session.oncontextoverflow が設定される', async () => {
+        test('sets session.oncontextoverflow', async () => {
             const session = createMockSession();
             mockLanguageModel.create.mockResolvedValueOnce(session);
 
@@ -340,7 +340,7 @@ describe('BuiltInAIClient', () => {
             expect(session.oncontextoverflow).toBeInstanceOf(Function);
         });
 
-        test('contextoverflow 発生後も成功結果は返る（警告はログのみ、型は変更しない）', async () => {
+        test('still returns a success result after contextoverflow (warning is logged only, type is unchanged)', async () => {
             // prompt() 呼び出し内で oncontextoverflow を同期的に発火させ、
             // マイクロタスクのタイミングに依存せず contextOverflowed の捕捉を検証する。
             const session = createMockSession({
@@ -363,7 +363,7 @@ describe('BuiltInAIClient', () => {
             vi.unstubAllGlobals();
         });
 
-        test('Chrome では chrome://flags の案内を含む', async () => {
+        test('includes the chrome://flags guidance in Chrome', async () => {
             vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 Chrome/126.0.0.0' });
             mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
 
@@ -372,7 +372,7 @@ describe('BuiltInAIClient', () => {
             expect(result.error).toContain('chrome://flags');
         });
 
-        test('Edge では edge://flags の案内を含む', async () => {
+        test('includes the edge://flags guidance in Edge', async () => {
             vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0 Chrome/126.0.0.0 Edg/126.0.0.0' });
             mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
 
@@ -381,7 +381,7 @@ describe('BuiltInAIClient', () => {
             expect(result.error).toContain('edge://flags');
         });
 
-        test('未知のブラウザではフラグURLを含まない汎用案内になる', async () => {
+        test('falls back to generic guidance without a flags URL in unknown browsers', async () => {
             vi.stubGlobal('navigator', { userAgent: 'SomeOtherBrowser/1.0' });
             mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
 

@@ -10,13 +10,12 @@
  */
 
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { LEGACY_OPFS_POOL_DIR, LEGACY_OPFS_DB_FILENAME } from '../messaging/sqliteMessages.js';
 
-// ---------------------------------------------------------------------------
-// Old constants (do NOT change — must match the pre-migration paths)
-// ---------------------------------------------------------------------------
-
-const OLD_POOL_DIR = 'yasumaro-opfs';
-const OLD_DB_FILENAME = 'yasumaro.db';
+// Old constants live in sqliteMessages.ts as the single source (PBI 2026-09-11-06);
+// they name pre-migration storage locations that must never change.
+const OLD_POOL_DIR = LEGACY_OPFS_POOL_DIR;
+const OLD_DB_FILENAME = LEGACY_OPFS_DB_FILENAME;
 
 // ---------------------------------------------------------------------------
 // Helpers

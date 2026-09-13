@@ -28,7 +28,7 @@ describe('updateConsentBadge', () => {
     vi.clearAllMocks();
   });
 
-  it('未同意の場合、グローバルバッジに警告表示を設定する', async () => {
+  it('sets a warning on the global badge when consent is missing', async () => {
     mockHasPrivacyConsent.mockResolvedValue(false);
 
     await updateConsentBadge();
@@ -39,7 +39,7 @@ describe('updateConsentBadge', () => {
     );
   });
 
-  it('同意済みの場合、グローバルバッジをクリアする', async () => {
+  it('clears the global badge when consent is given', async () => {
     mockHasPrivacyConsent.mockResolvedValue(true);
 
     await updateConsentBadge();
@@ -47,7 +47,7 @@ describe('updateConsentBadge', () => {
     expect(mockSetBadgeText).toHaveBeenCalledWith({ text: '' });
   });
 
-  it('tabIdを指定しない（グローバルバッジのため、個別タブの一時バッジと競合しない）', async () => {
+  it('omits tabId (uses the global badge to avoid clashing with per-tab badges)', async () => {
     mockHasPrivacyConsent.mockResolvedValue(false);
 
     await updateConsentBadge();
@@ -56,7 +56,7 @@ describe('updateConsentBadge', () => {
     expect(call).not.toHaveProperty('tabId');
   });
 
-  it('hasPrivacyConsentが例外を投げても呼び出し元に伝播しない', async () => {
+  it('does not propagate even when hasPrivacyConsent throws', async () => {
     mockHasPrivacyConsent.mockRejectedValue(new Error('storage error'));
 
     await expect(updateConsentBadge()).resolves.toBeUndefined();

@@ -304,7 +304,7 @@ describe('handleDashboardSqlite — query', () => {
     ['negative', -1, 100],
     ['zero', 0, 100],
     ['non-integer', 0.5, 100],
-    ['huge', 1e9, 1000],
+    ['huge', 1e9, 10000],
     ['normal', 50, 50],
   ])('clamps limit=%s at the trust boundary (query)', async (_label, raw, expected) => {
     const mock = createMockSqliteClient();
@@ -318,12 +318,13 @@ describe('handleDashboardSqlite — query', () => {
     expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ kind: 'search', limit: 50 }));
   });
 
-  it('clamps a negative audit_log_query limit to a positive value within cap', async () => {
+  it('passes the audit_log_query limit through — clamping moved to the offscreen planner seam (PBI 2026-09-12-17)', async () => {
     const mock = createMockSqliteClient();
     await dispatchDashboardSqlite({ subtype: 'audit_log_query', limit: -1 } as any, mock as any);
     const call = mock.query.mock.calls.find((c: unknown[]) => (c[0] as { kind?: string }).kind === 'auditLog');
-    expect(call[0].limit).toBeGreaterThanOrEqual(1);
-    expect(call[0].limit).toBeLessThanOrEqual(1000);
+    // The dashboard hop no longer pre-clamps: planAuditLog (offscreen
+    // queryPlanner) owns cap/offset per backend — pinned there.
+    expect(call[0].limit).toBe(-1);
   });
 
   it('returns error when sqliteClient.query fails', async () => {
@@ -437,20 +438,23 @@ describe('handleDashboardSqlite — get_count', () => {
 });
 
 describe('handleDashboardSqlite — import', () => {
-  it('imports rows in batches and returns inserted/skipped counts', async () => {
+  it('imports rows with one insertBatch round trip and returns inserted/skipped counts (PBI 2026-09-11-07)', async () => {
     const mock = createMockSqliteClient();
     const rows = Array.from({ length: 3 }, (_, i) => ({
       url: `https://page${i}.com`,
       title: `Page ${i}`,
       created_at: Date.now(),
     }));
+    mock.mutate.mockResolvedValue({ success: true, data: { count: 3, skipped: 0 } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
       mock as any,
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 3, skipped: 0, total: 3 });
-    expect(mock.mutate).toHaveBeenCalledTimes(3);
+    // One insertBatch round trip instead of one mutate per row.
+    expect(mock.mutate).toHaveBeenCalledTimes(1);
+    expect(mock.mutate).toHaveBeenCalledWith({ type: 'insertBatch', records: expect.any(Array) });
   });
 
   it('returns error when rows is empty array', async () => {
@@ -476,32 +480,31 @@ describe('handleDashboardSqlite — import', () => {
     expect(result).toEqual({ success: false, error: 'No rows provided' });
   });
 
-  it('handles batch size correctly for many rows', async () => {
+  it('passes every row to the single batch for many rows', async () => {
     const mock = createMockSqliteClient();
     const rows = Array.from({ length: 120 }, (_, i) => ({
       url: `https://page${i}.com`,
       created_at: Date.now(),
     }));
+    mock.mutate.mockResolvedValue({ success: true, data: { count: 120, skipped: 0 } });
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
       mock as any,
       { getConfirmToken: async () => VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 120, skipped: 0, total: 120 });
-    expect(mock.mutate).toHaveBeenCalledTimes(120);
+    expect(mock.mutate).toHaveBeenCalledTimes(1);
+    expect(mock.mutate.mock.calls[0]![0].records).toHaveLength(120);
   });
 
-  it('increments skipped counter when mutate insert fails', async () => {
+  it('reports backend skipped counts (duplicates) through the wire (PBI 2026-09-11-07)', async () => {
     const mock = createMockSqliteClient();
-    // mutate insert failure value is a CallResult carrying the reason,
-    // matching how the handler treats a failed insert as a skip.
-    mock.mutate
-      .mockResolvedValueOnce({ success: false, error: { kind: 'unknown', message: 'Insert failed', retriable: false } })
-      .mockResolvedValueOnce({ success: false, error: { kind: 'unknown', message: 'Insert failed', retriable: false } })
-      .mockResolvedValue({ success: true, data: { id: 1 } });
+    // The backend reports duplicates as `skipped` from INSERT OR IGNORE —
+    // the handler surfaces them instead of counting per-row insert failures.
+    mock.mutate.mockResolvedValue({ success: true, data: { count: 1, skipped: 2 } });
     const rows = [
-      { url: 'https://fail1.com', created_at: Date.now() },
-      { url: 'https://fail2.com', created_at: Date.now() },
+      { url: 'https://dup1.com', created_at: Date.now() },
+      { url: 'https://dup2.com', created_at: Date.now() },
       { url: 'https://ok.com', created_at: Date.now() },
     ];
     const result = await dispatchDashboardSqlite(
@@ -512,7 +515,7 @@ describe('handleDashboardSqlite — import', () => {
     expect(result).toEqual({ success: true, inserted: 1, skipped: 2, total: 3 });
   });
 
-  it('increments skipped counter when mutate insert throws', async () => {
+  it('returns a sanitized error when the batch insert fails', async () => {
     const mock = createMockSqliteClient();
     mock.mutate.mockRejectedValueOnce(new Error('DB error'));
     const rows = [{ url: 'https://a.com', created_at: Date.now() }];
@@ -521,7 +524,8 @@ describe('handleDashboardSqlite — import', () => {
       mock as any,
       { getConfirmToken: async () => VALID_TOKEN }
     );
-    expect(result).toEqual({ success: true, inserted: 0, skipped: 1, total: 1 });
+    // The wire never leaks internal exception text (index.ts sanitizes).
+    expect(result).toEqual({ success: false, error: 'An internal error occurred' });
   });
 });
 

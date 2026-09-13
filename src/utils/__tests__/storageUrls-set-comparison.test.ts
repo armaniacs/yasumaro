@@ -63,7 +63,7 @@ function getSavedUrlsSetCalls(): string[][] {
 
 describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
     describe('変更なし時の early-return', () => {
-        it('同じURLセットを再度保存しても savedUrls の内容は変わらない', async () => {
+        it('keeps savedUrls unchanged when re-saving the same URL set', async () => {
             const urlMap = new Map([
                 ['https://example.com/a', Date.now()],
                 ['https://example.com/b', Date.now()],
@@ -91,7 +91,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
     });
 
     describe('サイズ不一致時の即時更新', () => {
-        it('URLが追加されると savedUrls が更新される', async () => {
+        it('updates savedUrls when a URL is added', async () => {
             const initialUrls = ['https://example.com/a', 'https://example.com/b'];
             storedData['savedUrls'] = initialUrls;
 
@@ -110,7 +110,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
             expect(saved.length).toBe(3);
         });
 
-        it('URLが削除されると savedUrls が更新される', async () => {
+        it('updates savedUrls when a URL is removed', async () => {
             storedData['savedUrls'] = [
                 'https://example.com/a',
                 'https://example.com/b',
@@ -133,7 +133,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
     });
 
     describe('Set差分あり（サイズ同一・内容変化）', () => {
-        it('URLが置き換わると savedUrls が更新される', async () => {
+        it('updates savedUrls when a URL is replaced', async () => {
             storedData['savedUrls'] = [
                 'https://example.com/old',
                 'https://example.com/b',
@@ -155,7 +155,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
     });
 
     describe('空集合のエッジケース', () => {
-        it('空の urlMap を渡すと savedUrls が空配列になる', async () => {
+        it('sets savedUrls to an empty array when given an empty urlMap', async () => {
             storedData['savedUrls'] = ['https://example.com/a'];
 
             await setSavedUrlsWithTimestamps(new Map());
@@ -166,7 +166,7 @@ describe('setSavedUrlsWithTimestamps: savedUrls Set比較ロジック', () => {
             expect(saved).toEqual([]);
         });
 
-        it('既に空の savedUrls に空の urlMap を渡しても問題ない', async () => {
+        it('handles an empty urlMap against already-empty savedUrls without error', async () => {
             storedData['savedUrls'] = [];
 
             await setSavedUrlsWithTimestamps(new Map());

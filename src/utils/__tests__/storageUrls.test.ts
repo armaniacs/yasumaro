@@ -167,8 +167,11 @@ describe('setUrlTags', () => {
     });
 
     it('does nothing when URL not found', async () => {
-        // Should not throw
-        await setUrlTags('https://nonexistent.com', ['tag']);
+        await addSavedUrl('https://example.com');
+        await expect(setUrlTags('https://nonexistent.com', ['tag'])).resolves.not.toThrow();
+        const entries = await getSavedUrlEntries();
+        expect(entries).toHaveLength(1);
+        expect(entries[0]!.tags).toBeUndefined();
     });
 });
 
@@ -199,8 +202,11 @@ describe('addUrlTag', () => {
     });
 
     it('does nothing when URL not found', async () => {
-        // Should not throw
-        await addUrlTag('https://nonexistent.com', 'tag');
+        await addSavedUrl('https://example.com');
+        await expect(addUrlTag('https://nonexistent.com', 'tag')).resolves.not.toThrow();
+        const entries = await getSavedUrlEntries();
+        expect(entries).toHaveLength(1);
+        expect(entries[0]!.tags).toBeUndefined();
     });
 });
 
@@ -229,8 +235,10 @@ describe('removeUrlTag', () => {
     });
 
     it('does nothing when URL not found', async () => {
-        await removeUrlTag('https://nonexistent.com', 'tag');
-        // Should not throw
+        await addSavedUrl('https://example.com');
+        await expect(removeUrlTag('https://nonexistent.com', 'tag')).resolves.not.toThrow();
+        const entries = await getSavedUrlEntries();
+        expect(entries).toHaveLength(1);
     });
 });
 
@@ -699,7 +707,7 @@ describe('buildAllowedUrls', () => {
         // normalizeUrl throws for invalid URLs, which the try/catch should catch
         // The URL constructor accepts most inputs, so this path is hard to trigger naturally.
         // But we can at least verify the function handles weird settings gracefully.
-        buildAllowedUrls({ obsidian_port: '' }, whitelistFn);
+        expect(() => buildAllowedUrls({ obsidian_port: '' }, whitelistFn)).not.toThrow();
         warnSpy.mockRestore();
     });
 });

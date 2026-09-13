@@ -150,7 +150,7 @@ export interface SqliteRpcClient {
   query(op: QueryOp | StorageQuery): Promise<SqliteRpcResult<unknown>>;
 
   mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteRpcResult<{ id: number }>>;
-  mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number }>>;
+  mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number; skipped: number }>>;
   mutate(op: Extract<MutateOp, { type: 'update' } | Extract<MutateOp, { type: 'delete' }>>): Promise<SqliteRpcResult<void>>;
   mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteRpcResult<{ is_starred: number }>>;
   mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteRpcResult<{ id: number }>>;

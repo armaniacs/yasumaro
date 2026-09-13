@@ -14,21 +14,33 @@ import {
   PayloadForType
 } from '../messaging/types.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
+import { NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
 
 describe('Messaging Types Uniformity Tests', () => {
-  test('CHECK_DOMAIN payload type should be never', () => {
+  test('CHECK_DOMAIN has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'CHECK_DOMAIN'>;
-    // never型であることを確認 - 実際には何も代入できない
+    // Compile-time check: Payload must be never (a number literal only casts to never cleanly).
     const assertNever: never = 1 as Payload;
-    // 型チェックのみ
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('CHECK_DOMAIN');
+    expect(isServiceWorkerRequest({ type: 'CHECK_DOMAIN' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'CHECK_DOMAIN', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'CHECK_DOMAIN' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'CHECK_DOMAIN', payload: {} })).toBe(false);
   });
 
-  test('GET_CONTENT payload type should be never', () => {
+  test('GET_CONTENT has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'GET_CONTENT'>;
-    // never型であることを確認
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('GET_CONTENT');
+    expect(isServiceWorkerRequest({ type: 'GET_CONTENT' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'GET_CONTENT', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'GET_CONTENT' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'GET_CONTENT', payload: {} })).toBe(false);
   });
 
   test('SAVE_RECORD payload type should include required fields', () => {
@@ -43,25 +55,43 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(payload.content).toBe('Content');
   });
 
-  test('TEST_CONNECTIONS payload type should be never', () => {
+  test('TEST_CONNECTIONS has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'TEST_CONNECTIONS'>;
-    // never型であることを確認
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('TEST_CONNECTIONS');
+    expect(isServiceWorkerRequest({ type: 'TEST_CONNECTIONS' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'TEST_CONNECTIONS', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'TEST_CONNECTIONS' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'TEST_CONNECTIONS', payload: {} })).toBe(false);
   });
 
-  test('TEST_AI payload type should be never', () => {
+  test('TEST_AI has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'TEST_AI'>;
-    // never型であることを確認
+    // Compile-time check: Payload must be never (runId lives beside payload, not inside it).
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('TEST_AI');
+    expect(isServiceWorkerRequest({ type: 'TEST_AI' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'TEST_AI', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'TEST_AI' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'TEST_AI', payload: {} })).toBe(false);
   });
 
-  test('GET_PRIVACY_CACHE payload type should be never', () => {
+  test('GET_PRIVACY_CACHE has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'GET_PRIVACY_CACHE'>;
-    // never型であることを確認
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('GET_PRIVACY_CACHE');
+    expect(isServiceWorkerRequest({ type: 'GET_PRIVACY_CACHE' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'GET_PRIVACY_CACHE', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'GET_PRIVACY_CACHE' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'GET_PRIVACY_CACHE', payload: {} })).toBe(false);
   });
 
   test('ACTIVITY_UPDATE payload type reflects its optional empty-object payload', () => {
@@ -75,29 +105,56 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(payload).toEqual({});
   });
 
-  test('SESSION_LOCK_REQUEST payload type should be never', () => {
+  test('SESSION_LOCK_REQUEST has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'SESSION_LOCK_REQUEST'>;
-    // never型であることを確認
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('SESSION_LOCK_REQUEST');
+    expect(isServiceWorkerRequest({ type: 'SESSION_LOCK_REQUEST' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'SESSION_LOCK_REQUEST', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'SESSION_LOCK_REQUEST' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'SESSION_LOCK_REQUEST', payload: {} })).toBe(false);
   });
 
-  test('PING payload type should be never', () => {
+  test('PING has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'PING'>;
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('PING');
+    expect(isServiceWorkerRequest({ type: 'PING' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'PING', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'PING' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'PING', payload: {} })).toBe(false);
   });
 
-  test('REFRESH_LOCAL_MARKDOWN_SCHEDULER payload type should be never', () => {
+  test('REFRESH_LOCAL_MARKDOWN_SCHEDULER has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'REFRESH_LOCAL_MARKDOWN_SCHEDULER'>;
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('REFRESH_LOCAL_MARKDOWN_SCHEDULER');
+    expect(isServiceWorkerRequest({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', payload: {} })).toBe(false);
   });
 
-  test('CONSENT_STATE_CHANGED payload type should be never', () => {
+  test('CONSENT_STATE_CHANGED has never payload — bare envelope passes guard, any payload is rejected', () => {
     type Payload = PayloadForType<'CONSENT_STATE_CHANGED'>;
+    // Compile-time check: Payload must be never.
     const assertNever: never = 1 as Payload;
-    expect(true).toBe(true);
+    expect(assertNever).toBe(1);
+    // Runtime contract: registered as no-payload, bare envelope validates, any payload rejected.
+    expect(NO_PAYLOAD_TYPES).toContain('CONSENT_STATE_CHANGED');
+    expect(isServiceWorkerRequest({ type: 'CONSENT_STATE_CHANGED' })).toBe(true);
+    expect(isServiceWorkerRequest({ type: 'CONSENT_STATE_CHANGED', payload: undefined })).toBe(true);
+    expect(Object.keys({ type: 'CONSENT_STATE_CHANGED' })).toEqual(['type']);
+    expect(isServiceWorkerRequest({ type: 'CONSENT_STATE_CHANGED', payload: {} })).toBe(false);
   });
 
   test('TEST_OBSIDIAN payload type should allow optional apiKey', () => {
@@ -128,7 +185,7 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(payload.content).toBe('test');
   });
 
-  test('VALID_VISIT payload accepts byte tracking fields (system-architect指摘修正)', () => {
+  test('VALID_VISIT payload accepts byte tracking fields', () => {
     type Payload = PayloadForType<'VALID_VISIT'>;
     const payloadWithBytes = {
       content: 'test',
@@ -146,7 +203,7 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(payloadWithBytes.cleansedBytes).toBe(350);
   });
 
-  test('sendFromPopup with no-payload type should not include payload field (legacy-bridge指摘修正)', () => {
+  test('sendFromPopup with no-payload type should not include payload field', () => {
     // sendFromPopup はno-payloadタイプで payload: {} を付与するバグを修正済み
     // isServiceWorkerRequest は no-payload タイプで msg.payload === undefined を必須とするため
     // payload: {} があるとバリデーション失敗する

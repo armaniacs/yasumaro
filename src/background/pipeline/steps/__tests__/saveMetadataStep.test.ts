@@ -84,7 +84,7 @@ beforeEach(() => {
 
 describe('saveMetadataStep', () => {
   describe('一括metadata保存', () => {
-    it('全フィールドがある場合、saveSavedUrlEntryMetadata が一回だけ呼ばれる', async () => {
+    it('calls saveSavedUrlEntryMetadata exactly once when all fields exist', async () => {
       const context = makeContext({
         aiDuration: 100,
         obsidianDuration: 200,
@@ -161,7 +161,7 @@ describe('saveMetadataStep', () => {
   });
 
   describe('条件分岐', () => {
-    it('maskedCount=0 かつ privacyResult.maskedCount も未定義の場合は patch に含めない', async () => {
+    it('excludes from the patch when maskedCount=0 and privacyResult.maskedCount is also undefined', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: '', maskedCount: undefined } as unknown as RecordingContext['data'],
         privacyResult: { summary: '', maskedCount: undefined } as any,
@@ -173,7 +173,7 @@ describe('saveMetadataStep', () => {
       expect('maskedCount' in patch).toBe(false);
     });
 
-    it('content が空の場合は patch に含めない', async () => {
+    it('excludes empty content from the patch', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: '' },
       });
@@ -184,7 +184,7 @@ describe('saveMetadataStep', () => {
       expect('content' in patch).toBe(false);
     });
 
-    it('tags が空配列の場合は patch に含めない', async () => {
+    it('excludes empty tags array from the patch', async () => {
       const context = makeContext({
         privacyResult: { summary: '', maskedCount: 0, tags: [] } as any,
       });
@@ -195,7 +195,7 @@ describe('saveMetadataStep', () => {
       expect('tags' in patch).toBe(false);
     });
 
-    it('privacyResult.summary がない場合は patch に含めない（aiSummary）', async () => {
+    it('excludes aiSummary from the patch when privacyResult.summary is missing', async () => {
       const context = makeContext({
         privacyResult: { summary: undefined, maskedCount: 0 } as any,
       });
@@ -206,7 +206,7 @@ describe('saveMetadataStep', () => {
       expect('aiSummary' in patch).toBe(false);
     });
 
-    it('recordType が未定義の場合は "auto" で保存する', async () => {
+    it('saves with "auto" when recordType is undefined', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: '', recordType: undefined } as unknown as RecordingContext['data'],
       });
@@ -219,7 +219,7 @@ describe('saveMetadataStep', () => {
   });
 
   describe('legacy dual-write gate', () => {
-    it('legacy_dual_write_enabled が false の場合は保存をスキップする', async () => {
+    it('skips saving when legacy_dual_write_enabled is false', async () => {
       const context = makeContext({
         settings: { [StorageKeys.LEGACY_DUAL_WRITE_ENABLED]: false },
       });
@@ -230,7 +230,7 @@ describe('saveMetadataStep', () => {
       expect(pendingQueue.enqueuePendingWrite).not.toHaveBeenCalled();
     });
 
-    it('legacy_dual_write_enabled が未設定の場合は保存を実行する', async () => {
+    it('saves when legacy_dual_write_enabled is unset', async () => {
       const context = makeContext({ settings: {} });
 
       await saveMetadataStep(context);
@@ -240,7 +240,7 @@ describe('saveMetadataStep', () => {
   });
 
   describe('失敗時の queue 保持', () => {
-    it('保存失敗時に metadata patch payload が queue へ保持される', async () => {
+    it('retains the metadata patch payload in the queue on save failure', async () => {
       (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
@@ -268,7 +268,7 @@ describe('saveMetadataStep', () => {
       }));
     });
 
-    it('失敗時に WARN ログが出力される', async () => {
+    it('logs a WARN on failure', async () => {
       (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
@@ -284,7 +284,7 @@ describe('saveMetadataStep', () => {
       expect(warnCalls.length).toBeGreaterThan(0);
     });
 
-    it('全て成功した場合は WARN ログが出力されない', async () => {
+    it('logs no WARN when all succeed', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: '', maskedCount: undefined } as unknown as RecordingContext['data'],
         privacyResult: undefined,

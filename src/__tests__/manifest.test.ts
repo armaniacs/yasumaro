@@ -168,7 +168,7 @@ describe('Manifest - Host Permissions Minimization', () => {
       return resources;
     }
 
-    it('content/extractor.js の全 import チェーンが web_accessible_resources に登録されている', () => {
+    it('registers the full import chain of content/extractor.js in web_accessible_resources', () => {
       const distDir = join(process.cwd(), 'dist');
       const entryPoint = join(distDir, 'content/extractor.js');
 
@@ -197,7 +197,7 @@ describe('Manifest - Host Permissions Minimization', () => {
       expect(missing).toEqual([]);
     });
 
-    it('web_accessible_resources に登録された utils/*.js が dist/ に実際に存在する', () => {
+    it('has every utils/*.js registered in web_accessible_resources actually present in dist/', () => {
       const distDir = join(process.cwd(), 'dist');
       if (!existsSync(distDir)) {
         console.warn('dist/ not found — run npm run build first');

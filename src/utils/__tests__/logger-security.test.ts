@@ -16,7 +16,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
     });
 
     describe('深度制限のテスト', () => {
-        test('深いネスト（MAX_RECURSION_DEPTH 枠内）は正常に処理される', async () => {
+        test('processes deep nesting within MAX_RECURSION_DEPTH normally', async () => {
             // 50レベルのネスト（制限内）
             let nested: Record<string, any> = { url: 'example.com' };
             for (let i = 0; i < 50; i++) {
@@ -31,7 +31,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect((logs[0]!.details as Record<string, unknown>).data).toBeDefined();
         });
 
-        test('深いネスト（MAX_RECURSION_DEPTH + 1）は安全なプレースホルダーに置換される', async () => {
+        test('replaces nesting deeper than MAX_RECURSION_DEPTH with a safe placeholder', async () => {
             // 101レベルのネスト（制限超過）
             let nested: Record<string, any> = { url: 'example.com' };
             for (let i = 0; i < 101; i++) {
@@ -47,7 +47,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[SANITIZED: too deep]');
         });
 
-        test('配列の深いネストも制限される', async () => {
+        test('limits deeply nested arrays as well', async () => {
             // 深度100を超えるオブジェクト構造の配列
             let nested: Record<string, any> = { value: 'example.com' };
             for (let i = 0; i < 101; i++) {
@@ -65,7 +65,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
     });
 
     describe('循環参照検出のテスト', () => {
-        test('オブジェクトの循環参照が検出される', async () => {
+        test('detects object circular references', async () => {
             // a -> b -> a 循環参照
             const a: Record<string, any> = { url: 'example.com' };
             const b = { ref: a };
@@ -80,7 +80,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
-        test('オブジェクトの自己参照が検出される', async () => {
+        test('detects object self-references', async () => {
             // a -> a 自己参照
             const a: Record<string, any> = { url: 'example.com' };
             a.self = a;
@@ -94,7 +94,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
-        test('配列の循環参照が検出される', async () => {
+        test('detects array circular references', async () => {
             // [] -> [] 循環参照
             const arr: any[] = ['example.com'];
             arr[1] = arr;
@@ -108,7 +108,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
-        test('オブジェクトと配列の混合循環参照が検出される', async () => {
+        test('detects mixed object-array circular references', async () => {
             // [] -> {} -> [] 混合循環参照
             const arr: any[] = ['example.com'];
             const obj = { ref: arr };
@@ -125,7 +125,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
     });
 
     describe('境界値とエッジケース', () => {
-        test('null と undefined は安全に処理される', async () => {
+        test('handles null and undefined safely', async () => {
             await addLog('INFO', 'null/undefined test', { a: null, b: undefined });
             await flushLogs(true);
 
@@ -135,7 +135,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect((logs[0]!.details as Record<string, unknown>).b).toBeUndefined();
         });
 
-        test('Date オブジェクトは文字列化される', async () => {
+        test('stringifies Date objects', async () => {
             const date = new Date('2024-01-01T12:00:00Z');
             await addLog('INFO', 'Date test', { timestamp: date });
             await flushLogs(true);
@@ -145,7 +145,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect((logs[0]!.details as Record<string, unknown>).timestamp).toEqual({ __value: date.toISOString() });
         });
 
-        test('Error オブジェクトは message と stack に変換される', async () => {
+        test('converts Error objects to message and stack', async () => {
             const error = new Error('Test error');
             await addLog('INFO', 'Error test', { error });
             await flushLogs(true);
@@ -156,7 +156,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(((logs[0]!.details as Record<string, unknown>).error as Record<string, unknown>).stack).toBeDefined();
         });
 
-        test('プリミティブ型はそのまま渡される', async () => {
+        test('passes primitive values through unchanged', async () => {
             await addLog('INFO', 'Primitive test', {
                 num: 42,
                 bool: true,
@@ -171,7 +171,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect((logs[0]!.details as Record<string, unknown>).str).toBe('hello');
         });
 
-        test('配列内の循環参照以外の要素は通常通り処理される', async () => {
+        test('processes non-circular array elements normally', async () => {
             const a: Record<string, any> = { url: 'example.com' };
             const b: Record<string, any> = { url: 'example.org' };
             a.cycle = b;
@@ -188,7 +188,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
     });
 
     describe('セキュリティ検証', () => {
-        test('PII がマスクされることを確認（深度制限なし）', async () => {
+        test('masks PII with no depth limit', async () => {
             await addLog('INFO', 'PII test', {
                 contact: {
                     email: 'user@example.com',
@@ -204,7 +204,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[MASKED:email]');
         });
 
-        test('循環参照が見つかっても生データはリークしない', async () => {
+        test('does not leak raw data when a circular reference is found', async () => {
             const sensitiveData = 'secret@example.com';
             const a: Record<string, any> = { data: sensitiveData };
             const b = { ref: a };
@@ -220,7 +220,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[SANITIZED: circular reference]');
         });
 
-        test('深度超過時も生データはリークしない', async () => {
+        test('does not leak raw data when depth is exceeded', async () => {
             const sensitiveData = 'secret@example.com';
             let nested: Record<string, any> = { level: 0, data: sensitiveData };
             for (let i = 1; i < 102; i++) {
@@ -237,7 +237,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(jsonStr).toContain('[SANITIZED: too deep]');
         });
 
-        test('messageパラメータ内のPIIもマスクされる', async () => {
+        test('masks PII inside the message parameter as well', async () => {
             await addLog('ERROR', 'Failed to fetch https://example.com/user@test.com');
             await flushLogs(true);
 
@@ -247,7 +247,7 @@ describe('Logger - 深度制限と循環参照検出', () => {
             expect(logs[0]!.message).toContain('[MASKED:email]');
         });
 
-        test('PIIを含まないmessageは変化しない', async () => {
+        test('leaves a message without PII unchanged', async () => {
             await addLog('INFO', 'Recording pipeline completed successfully');
             await flushLogs(true);
 

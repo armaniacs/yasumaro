@@ -31,33 +31,33 @@ describe('localeUtils', () => {
   });
 
   describe('getUserLocale', () => {
-    it('ブラウザ環境で正しいロケールを返す', () => {
+    it('returns the correct locale in a browser environment', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       expect(getUserLocale()).toBe('ja-JP');
     });
 
-    it('英語のロケールを正しく返す', () => {
+    it('returns the English locale correctly', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       expect(getUserLocale()).toBe('en-US');
     });
 
-    it('シンプルな言語コードも正しく返す', () => {
+    it('returns a bare language code correctly', () => {
       mockGetUILanguage.mockReturnValue('ja');
       expect(getUserLocale()).toBe('ja');
     });
 
-    it('chrome.i18nが未定義の場合はフォールバックを返す', () => {
+    it('returns the fallback when chrome.i18n is undefined', () => {
       global.chrome = undefined as any;
       const result = getUserLocale();
       expect(result).toBe('en-US');
     });
 
-    it('chrome.i18n.getUILanguageが未定義の場合はフォールバックを返す', () => {
+    it('returns the fallback when chrome.i18n.getUILanguage is undefined', () => {
       global.chrome = { i18n: {} } as any;
       expect(getUserLocale()).toBe('en-US');
     });
 
-    it('例外がスローされた場合はフォールバックを返す', () => {
+    it('returns the fallback when an exception is thrown', () => {
   
       mockGetUILanguage.mockImplementation(() => {
         throw new Error('API error');
@@ -68,104 +68,104 @@ describe('localeUtils', () => {
 
   describe('isRTL', () => {
     // RTL言語テスト
-    it('アラビア語でtrueを返す', () => {
+    it('returns true for Arabic', () => {
       mockGetUILanguage.mockReturnValue('ar');
       expect(isRTL()).toBe(true);
     });
 
-    it('アラビア語の地域指定でもtrueを返す', () => {
+    it('returns true for regional Arabic', () => {
       mockGetUILanguage.mockReturnValue('ar-SA');
       expect(isRTL()).toBe(true);
     });
 
-    it('ヘブライ語でtrueを返す', () => {
+    it('returns true for Hebrew', () => {
       mockGetUILanguage.mockReturnValue('he');
       expect(isRTL()).toBe(true);
     });
 
-    it('ペルシャ語でtrueを返す', () => {
+    it('returns true for Persian', () => {
       mockGetUILanguage.mockReturnValue('fa');
       expect(isRTL()).toBe(true);
     });
 
-    it('ウルドゥー語でtrueを返す', () => {
+    it('returns true for Urdu', () => {
       mockGetUILanguage.mockReturnValue('ur');
       expect(isRTL()).toBe(true);
     });
 
-    it('イディッシュ語でtrueを返す', () => {
+    it('returns true for Yiddish', () => {
       mockGetUILanguage.mockReturnValue('yi');
       expect(isRTL()).toBe(true);
     });
 
-    it('クルド語（ソラニー）でtrueを返す', () => {
+    it('returns true for Kurdish (Sorani)', () => {
       mockGetUILanguage.mockReturnValue('ckb');
       expect(isRTL()).toBe(true);
     });
 
-    it('シンド語でtrueを返す', () => {
+    it('returns true for Sindhi', () => {
       mockGetUILanguage.mockReturnValue('sd');
       expect(isRTL()).toBe(true);
     });
 
-    it('パシュトー語でtrueを返す', () => {
+    it('returns true for Pashto', () => {
       mockGetUILanguage.mockReturnValue('ps');
       expect(isRTL()).toBe(true);
     });
 
     // LTR言語テスト
-    it('英語でfalseを返す', () => {
+    it('returns false for English', () => {
       mockGetUILanguage.mockReturnValue('en');
       expect(isRTL()).toBe(false);
     });
 
-    it('英語の地域指定でもfalseを返す', () => {
+    it('returns false for regional English', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       expect(isRTL()).toBe(false);
     });
 
-    it('日本語でfalseを返す', () => {
+    it('returns false for Japanese', () => {
       mockGetUILanguage.mockReturnValue('ja');
       expect(isRTL()).toBe(false);
     });
 
-    it('日本語の地域指定でもfalseを返す', () => {
+    it('returns false for regional Japanese', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       expect(isRTL()).toBe(false);
     });
 
-    it('中国語でfalseを返す', () => {
+    it('returns false for Chinese', () => {
       mockGetUILanguage.mockReturnValue('zh');
       expect(isRTL()).toBe(false);
     });
 
-    it('韓国語でfalseを返す', () => {
+    it('returns false for Korean', () => {
       mockGetUILanguage.mockReturnValue('ko');
       expect(isRTL()).toBe(false);
     });
 
-    it('スペイン語でfalseを返す', () => {
+    it('returns false for Spanish', () => {
       mockGetUILanguage.mockReturnValue('es');
       expect(isRTL()).toBe(false);
     });
 
-    it('フランス語でfalseを返す', () => {
+    it('returns false for French', () => {
       mockGetUILanguage.mockReturnValue('fr');
       expect(isRTL()).toBe(false);
     });
 
-    it('ドイツ語でfalseを返す', () => {
+    it('returns false for German', () => {
       mockGetUILanguage.mockReturnValue('de');
       expect(isRTL()).toBe(false);
     });
 
-    it('不明なロケールでfalseを返す', () => {
+    it('returns false for an unknown locale', () => {
       mockGetUILanguage.mockReturnValue('xx');
       expect(isRTL()).toBe(false);
     });
 
     // 明示的なロケール指定テスト
-    it('ロケールパラメータを指定した場合、そのロケールで判定する', () => {
+    it('judges with the given locale when a locale parameter is specified', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       expect(isRTL('ar')).toBe(true);
       expect(isRTL('ja')).toBe(false);
@@ -173,7 +173,7 @@ describe('localeUtils', () => {
   });
 
   describe('formatDate', () => {
-    it('日付を正しくフォーマットする', () => {
+    it('formats the date correctly', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const date = new Date('2026-02-11');
       const result = formatDate(date);
@@ -182,39 +182,39 @@ describe('localeUtils', () => {
       expect(result).toContain('11');
     });
 
-    it('null入力で現在日時を使用する', () => {
+    it('uses the current date and time for null input', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const result = formatDate(null as unknown as Date);
       expect(typeof result).toBe('string');
     });
 
-    it('undefined入力で現在日時を使用する', () => {
+    it('uses the current date and time for undefined input', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       const result = formatDate(undefined);
       expect(typeof result).toBe('string');
     });
 
-    it('無効な日付に対して現在日時を使用する', () => {
+    it('uses the current date and time for an invalid date', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const result = formatDate('invalid-date' as any);
       expect(result).toBeTruthy();
     });
 
-    it('カスタムオプションを適用する', () => {
+    it('applies custom options', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const date = new Date('2026-02-11');
       const result = formatDate(date, { year: 'numeric', month: 'short' });
       expect(result).toBeTruthy();
     });
 
-    it('数値（タイムスタンプ）を受け付ける', () => {
+    it('accepts a numeric timestamp', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       const timestamp = Date.now();
       const result = formatDate(timestamp);
       expect(result).toBeTruthy();
     });
 
-    it('文字列形式の日付を受け付ける', () => {
+    it('accepts a string-form date', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const dateString = '2026-02-11T12:00:00Z';
       const result = formatDate(dateString);
@@ -223,7 +223,7 @@ describe('localeUtils', () => {
   });
 
   describe('formatDateTime', () => {
-    it('日時を正しくフォーマットする', () => {
+    it('formats the date and time correctly', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const date = new Date('2026-02-11T14:30:00');
       const result = formatDateTime(date);
@@ -231,33 +231,33 @@ describe('localeUtils', () => {
       expect(result).toContain('2026');
     });
 
-    it('null入力で現在日時を使用する', () => {
+    it('uses the current date and time for null input', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       const result = formatDateTime(null as unknown as Date);
       expect(typeof result).toBe('string');
     });
 
-    it('カスタムオプションを適用する', () => {
+    it('applies custom options', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const date = new Date('2026-02-11T14:30:00');
       const result = formatDateTime(date, { hour: '2-digit', minute: '2-digit' });
       expect(result).toBeTruthy();
     });
 
-    it('無効な日付に対して現在日時を使用する', () => {
+    it('uses the current date and time for an invalid date', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const result = formatDateTime('invalid-date' as any);
       expect(result).toBeTruthy();
     });
 
-    it('文字列形式の日付を受け付ける', () => {
+    it('accepts a string-form date', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const dateString = '2026-02-11T12:00:00Z';
       const result = formatDateTime(dateString);
       expect(result).toBeTruthy();
     });
 
-    it('数値（タイムスタンプ）を受け付ける', () => {
+    it('accepts a numeric timestamp', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       const timestamp = Date.now();
       const result = formatDateTime(timestamp);
@@ -266,24 +266,24 @@ describe('localeUtils', () => {
   });
 
   describe('getDateSeparator', () => {
-    it('デフォルトでハイフンを返す', () => {
+    it('returns a hyphen by default', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       expect(getDateSeparator()).toBe('-');
     });
 
-    it('日本語ロケールでもハイフンを返す', () => {
+    it('returns a hyphen for the Japanese locale as well', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
       expect(getDateSeparator()).toBe('-');
     });
 
-    it('アラビア語ロケールでもハイフンを返す', () => {
+    it('returns a hyphen for the Arabic locale as well', () => {
       mockGetUILanguage.mockReturnValue('ar-SA');
       expect(getDateSeparator()).toBe('-');
     });
   });
 
   describe('縮合テスト', () => {
-    it('一連の動作を確認する', () => {
+    it('verifies the combined locale workflow end to end', () => {
       mockGetUILanguage.mockReturnValue('ja-JP');
 
       // ロケール確認
@@ -306,7 +306,7 @@ describe('localeUtils', () => {
       global.Intl = originalIntl;
     });
 
-    it('formatDate: Intl未対応時にISO文字列の日付部分を返す', () => {
+    it('formatDate: returns the date part of the ISO string when Intl is unavailable', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       global.Intl = {
         ...originalIntl,
@@ -322,7 +322,7 @@ describe('localeUtils', () => {
       expect(result).toBe('2026-03-15');
     });
 
-    it('formatDateTime: Intl未対応時にISO文字列を返す', () => {
+    it('formatDateTime: returns the ISO string when Intl is unavailable', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       global.Intl = {
         ...originalIntl,
@@ -338,7 +338,7 @@ describe('localeUtils', () => {
       expect(result).toBe(date.toISOString());
     });
 
-    it('formatDate: toLocaleDateString失敗時にISOStringを返す', () => {
+    it('formatDate: returns the ISO string when toLocaleDateString fails', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const originalToLocaleDateString = Date.prototype.toLocaleDateString;
       Date.prototype.toLocaleDateString = function () {
@@ -352,7 +352,7 @@ describe('localeUtils', () => {
       Date.prototype.toLocaleDateString = originalToLocaleDateString;
     });
 
-    it('formatDateTime: toLocaleString失敗時にISOStringを返す', () => {
+    it('formatDateTime: returns the ISO string when toLocaleString fails', () => {
       mockGetUILanguage.mockReturnValue('en-US');
       const originalToLocaleString = Date.prototype.toLocaleString;
       Date.prototype.toLocaleString = function () {

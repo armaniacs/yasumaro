@@ -56,6 +56,53 @@ describe('checkSenderTrust', () => {
     });
   });
 
+  describe('tab-page-only (PBI 2026-09-12-12)', () => {
+    const tabPageSender: chrome.runtime.MessageSender = {
+      id: RUNTIME_ID,
+      tab: { id: 7, url: 'https://example.com/article' } as chrome.tabs.Tab,
+      url: 'https://example.com/article',
+    };
+
+    it('allows a live web page sender', () => {
+      expect(checkSenderTrust(tabPageSender, 'tab-page-only', 'VALID_VISIT', RUNTIME_ID).allowed).toBe(true);
+    });
+
+    it('rejects tab-less senders with the router-compatible error', () => {
+      const decision = checkSenderTrust(
+        { id: RUNTIME_ID, url: 'https://example.com/article' },
+        'tab-page-only',
+        'VALID_VISIT',
+        RUNTIME_ID,
+      );
+      expect(decision).toEqual({ allowed: false, error: 'Invalid sender' });
+    });
+
+    it('rejects extension pages even though they are same-extension', () => {
+      const decision = checkSenderTrust(extensionPageSender, 'tab-page-only', 'CHECK_DOMAIN', RUNTIME_ID);
+      expect(decision).toEqual({ allowed: false, error: 'Invalid sender' });
+    });
+
+    it('rejects about:blank targets', () => {
+      const decision = checkSenderTrust(
+        {
+          id: RUNTIME_ID,
+          tab: { id: 7, url: 'about:blank' } as chrome.tabs.Tab,
+          url: 'about:blank',
+        },
+        'tab-page-only',
+        'VALID_VISIT',
+        RUNTIME_ID,
+      );
+      expect(decision).toEqual({ allowed: false, error: 'Invalid sender' });
+    });
+
+    it('still rejects external extensions first', () => {
+      const decision = checkSenderTrust(externalSender, 'tab-page-only', 'VALID_VISIT', RUNTIME_ID);
+      expect(decision.allowed).toBe(false);
+      expect(decision.error).toContain('not allowed from external extensions');
+    });
+  });
+
   describe('external extensions', () => {
     it('rejects them regardless of trust level', () => {
       for (const level of ['extension-only', 'content-script-allowed'] as const) {

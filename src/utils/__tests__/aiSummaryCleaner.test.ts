@@ -59,7 +59,7 @@ describe('aiSummaryCleaner', () => {
     });
 
     describe('cleanseAISummaryContent', () => {
-        test('画像alt属性を削除する', () => {
+        test('removes img alt attributes', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: true,
@@ -77,7 +77,7 @@ describe('aiSummaryCleaner', () => {
             });
         });
 
-        test('メタデータ要素を削除する', () => {
+        test('removes metadata elements', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: false,
@@ -93,7 +93,7 @@ describe('aiSummaryCleaner', () => {
             expect(element.querySelector('title')).toBeNull();
         });
 
-        test('広告要素を削除する', () => {
+        test('removes ad elements', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: false,
@@ -110,7 +110,7 @@ describe('aiSummaryCleaner', () => {
             expect(element.querySelector('#ad-banner-1')).toBeNull();
         });
 
-        test('ナビゲーション要素を削除する', () => {
+        test('removes navigation elements', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: false,
@@ -126,7 +126,7 @@ describe('aiSummaryCleaner', () => {
             expect(element.querySelector('footer')).toBeNull();
         });
 
-        test('ソーシャル要素を削除する', () => {
+        test('removes social elements', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: false,
@@ -141,7 +141,7 @@ describe('aiSummaryCleaner', () => {
             expect(element.querySelector('#comments')).toBeNull();
         });
 
-        test('ディープクレンジングで aside/form/script を削除する', () => {
+        test('removes aside/form/script in deep cleansing', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: false,
@@ -158,7 +158,7 @@ describe('aiSummaryCleaner', () => {
             expect(element.querySelector('script')).toBeNull();
         });
 
-        test('デフォルトオプションで全機能（deep以外）を実行する', () => {
+        test('runs all features except deep with default options', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element);
 
@@ -182,7 +182,7 @@ describe('aiSummaryCleaner', () => {
             );
         });
 
-        test('bytesBefore と bytesAfter を計算する', () => {
+        test('computes bytesBefore and bytesAfter', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element);
 
@@ -191,7 +191,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.bytesBefore).toBeGreaterThan(result.bytesAfter);
         });
 
-        test('すべてのオプション無効では何も削除しない', () => {
+        test('removes nothing when all options are disabled', () => {
             const element = document.getElementById('content')!;
             const result = cleanseAISummaryContent(element, {
                 altEnabled: false,
@@ -229,7 +229,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.totalRemoved).toBe(0);
         });
 
-        test('NAV拡張: copyright/legal クラス要素を削除する', () => {
+        test('NAV extension: removes copyright/legal class elements', () => {
             const dom2 = new JSDOM(`<html><body><div id="root">
                 <p class="footer__copyright-text">© 2026 CNN</p>
                 <div class="legal-notice">Terms of Service</div>
@@ -252,7 +252,7 @@ describe('aiSummaryCleaner', () => {
             dom2.window.close();
         });
 
-        test('NAV拡張: role="contentinfo" 要素を削除する', () => {
+        test('NAV extension: removes role="contentinfo" elements', () => {
             const dom2 = new JSDOM(`<html><body><div id="root">
                 <div role="contentinfo">Site footer region</div>
                 <p class="article-body">Article text here.</p>
@@ -268,7 +268,7 @@ describe('aiSummaryCleaner', () => {
             dom2.window.close();
         });
 
-        test('広告拡張: data-ad/data-gpt/ins.adsbygoogle を削除する', () => {
+        test('ad extension: removes data-ad/data-gpt/ins.adsbygoogle', () => {
             const dom2 = new JSDOM(`<html><body><div id="root">
                 <div data-ad="banner">Ad content</div>
                 <div data-gpt-ad="slot1">GPT ad</div>
@@ -291,7 +291,7 @@ describe('aiSummaryCleaner', () => {
             dom2.window.close();
         });
 
-        test('stripLegalTextNodes: © 年号パターンを含む短い要素を削除する', () => {
+        test('stripLegalTextNodes: removes short elements containing a © year pattern', () => {
             const dom2 = new JSDOM(`<html><body><div id="root">
                 <p>© 2026 Cable News Network. All Rights Reserved.</p>
                 <p>Copyright 2026 togetter.com. All Rights Reserved.</p>
@@ -314,7 +314,7 @@ describe('aiSummaryCleaner', () => {
             dom2.window.close();
         });
 
-        test('stripHighLinkDensityElements: リンク密度0.7以上のブロックを削除する', () => {
+        test('stripHighLinkDensityElements: removes blocks with link density >= 0.7', () => {
             const dom2 = new JSDOM(`<html><body><div id="root"><ul class="related-links"><li><a href="/a">Related article one long title</a></li><li><a href="/b">Related article two long title</a></li><li><a href="/c">Related article three long title</a></li><li><a href="/d">Related article four long title</a></li></ul><div class="article-content"><p>This is the main article content. It has lots of <a href="/x">one link</a> among regular text that makes up the majority of the text content here so link density stays low.</p></div></div></body></html>`, { url: 'http://localhost' });
             const el = dom2.window.document.getElementById('root')!;
             (global as any).document = dom2.window.document;
@@ -331,7 +331,7 @@ describe('aiSummaryCleaner', () => {
     });
 
     describe('countAISummaryTargets', () => {
-        test('画像alt属性をカウントする', () => {
+        test('counts img alt attributes', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element, {
                 altEnabled: true,
@@ -345,7 +345,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.altRemoved).toBe(2);
         });
 
-        test('メタデータをカウントする', () => {
+        test('counts metadata', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element, {
                 altEnabled: false,
@@ -359,7 +359,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.metadataRemoved).toBeGreaterThan(0);
         });
 
-        test('広告をカウントする', () => {
+        test('counts ads', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element, {
                 altEnabled: false,
@@ -373,7 +373,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.adsRemoved).toBeGreaterThan(0);
         });
 
-        test('カウントしてもDOMを変更しない', () => {
+        test('leaves the DOM unchanged when counting', () => {
             const element = document.getElementById('content')!;
             const htmlBefore = element.innerHTML;
 
@@ -382,7 +382,7 @@ describe('aiSummaryCleaner', () => {
             expect(element.innerHTML).toBe(htmlBefore);
         });
 
-        test('bytesBefore / bytesAfter はクローン上の実測値を返す', () => {
+        test('returns measured bytesBefore/bytesAfter from the clone', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element);
 
@@ -393,7 +393,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.bytesAfter).toBeLessThanOrEqual(result.bytesBefore);
         });
 
-        test('totalRemoved が各カウントの合計と一致する', () => {
+        test('matches totalRemoved to the sum of counts', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element);
 
@@ -404,7 +404,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.totalRemoved).toBe(sum);
         });
 
-        test('ディープクレンジングカウント', () => {
+        test('counts deep-cleansing targets', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element, {
                 altEnabled: false,
@@ -418,7 +418,7 @@ describe('aiSummaryCleaner', () => {
             expect(result.deepRemoved).toBeGreaterThan(0);
         });
 
-        test('空要素をカウント（ディープ）', () => {
+        test('counts empty elements (deep)', () => {
             const element = document.getElementById('content')!;
             const result = countAISummaryTargets(element, {
                 altEnabled: false,
@@ -435,7 +435,7 @@ describe('aiSummaryCleaner', () => {
     });
 
     describe('nav ID selector elements', () => {
-        test('ナビゲーションIDを含む要素を削除する', () => {
+        test('removes elements containing navigation IDs', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div id="main-navigation">Nav</div>
@@ -460,7 +460,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('ナビゲーションIDを含む要素をカウントする', () => {
+        test('counts elements containing navigation IDs', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div id="site-nav">Nav</div>
@@ -484,7 +484,7 @@ describe('aiSummaryCleaner', () => {
     });
 
     describe('social ID selector elements', () => {
-        test('ソーシャルIDを含む要素を削除する', () => {
+        test('removes elements containing social IDs', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div id="share-buttons">Share</div>
@@ -507,7 +507,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('ソーシャルIDを含む要素をカウントする', () => {
+        test('counts elements containing social IDs', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div id="fb-like-box">Facebook</div>
@@ -531,7 +531,7 @@ describe('aiSummaryCleaner', () => {
     });
 
     describe('deep cleansing edge cases', () => {
-        test('高リンク密度リストを削除する', () => {
+        test('removes high-link-density lists', () => {
             const container = document.createElement('div');
             container.innerHTML = '<ul><li><a href="#">First Link Text</a></li><li><a href="#">Second Link Text</a></li><li><a href="#">Third Link Text</a></li></ul><p>Content</p>';
             document.body.appendChild(container);
@@ -550,7 +550,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('高リンク密度リストをカウントする（ディープ）', () => {
+        test('counts high-link-density lists (deep)', () => {
             const container = document.createElement('div');
             container.innerHTML = '<ol><li><a href="#">Alpha Link Content</a></li><li><a href="#">Beta Link Content Here</a></li></ol><p>Content</p>';
             document.body.appendChild(container);
@@ -568,7 +568,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('低リンク密度リストは削除しない', () => {
+        test('keeps low-link-density lists', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <ul>
@@ -594,7 +594,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('role属性でディープ要素をカウントする', () => {
+        test('counts deep elements by role attribute', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div role="banner">Banner</div>
@@ -617,7 +617,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('role属性のディープ要素を削除する', () => {
+        test('removes deep elements by role attribute', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div role="banner">Header Banner</div>
@@ -641,7 +641,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('DEEP_CLASS_PATTERNSに一致するIDの要素を削除する', () => {
+        test('removes elements whose IDs match DEEP_CLASS_PATTERNS', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div id="cookie-consent-banner">Cookie Banner</div>
@@ -664,7 +664,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('空のリストは高リンク密度チェックをスキップする', () => {
+        test('skips the high-link-density check for empty lists', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <ul></ul>
@@ -711,7 +711,7 @@ describe('aiSummaryCleaner', () => {
             }
         });
 
-        test('最適化後も同じ要素が削除される', () => {
+        test('removes the same elements after optimization', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div class="advertisement">ad1</div>
@@ -739,7 +739,7 @@ describe('aiSummaryCleaner', () => {
             document.body.removeChild(container);
         });
 
-        test('querySelectorAllの呼び出しが20回未満になる', () => {
+        test('keeps querySelectorAll calls under 20', () => {
             const container = document.createElement('div');
             container.innerHTML = `
                 <div class="advertisement">ad1</div>

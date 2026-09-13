@@ -1,5 +1,23 @@
 export { escapeHtml } from '../utils/htmlEscape.js';
 
+/**
+ * Wire a click handler once per element (PBI 2026-09-12-20).
+ *
+ * Status refresh re-runs init functions, and a bare addEventListener stacks a
+ * duplicate handler on every refresh (double prompt, double record). The
+ * `dataset.wired` guard had been copy-pasted per button; this is the shared
+ * seam. Returns true when the handler was attached this call.
+ */
+export function wireOnce(
+  el: (HTMLElement & { dataset: DOMStringMap }) | null,
+  attach: (el: HTMLElement) => void,
+): boolean {
+  if (!el || el.dataset.wired === 'true') return false;
+  el.dataset.wired = 'true';
+  attach(el);
+  return true;
+}
+
 function createStatusCircle(svg: SVGSVGElement): SVGElement {
   const ns = 'http://www.w3.org/2000/svg';
   const circle = document.createElementNS(ns, 'circle');

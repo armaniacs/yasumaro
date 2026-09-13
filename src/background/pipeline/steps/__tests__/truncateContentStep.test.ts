@@ -42,7 +42,7 @@ beforeEach(() => {
 
 describe('truncateContentStep', () => {
   describe('MAX_RECORD_SIZE 以内', () => {
-    it('コンテンツサイズが MAX_RECORD_SIZE 以内の場合そのまま通過', async () => {
+    it('passes through when content size is within MAX_RECORD_SIZE', async () => {
       const content = 'Short content';
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content },
@@ -54,7 +54,7 @@ describe('truncateContentStep', () => {
       expect(result.data.content).toBe(content);
     });
 
-    it('MAX_RECORD_SIZE ちょうどのコンテンツはそのまま通過', async () => {
+    it('passes through content exactly at MAX_RECORD_SIZE', async () => {
       // MAX_RECORD_SIZE = 64KB の ASCII 文字列
       const content = 'a'.repeat(MAX_RECORD_SIZE);
       const context = makeContext({
@@ -69,7 +69,7 @@ describe('truncateContentStep', () => {
   });
 
   describe('MAX_RECORD_SIZE 超過', () => {
-    it('コンテンツが MAX_RECORD_SIZE を超える場合切り詰められる', async () => {
+    it('truncates content exceeding MAX_RECORD_SIZE', async () => {
       const content = 'a'.repeat(MAX_RECORD_SIZE + 1000);
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content },
@@ -82,7 +82,7 @@ describe('truncateContentStep', () => {
       expect(result.data.content).toBe(result.truncatedContent);
     });
 
-    it('切り詰め時に WARN ログが出力される', async () => {
+    it('logs a WARN on truncation', async () => {
       const content = 'a'.repeat(MAX_RECORD_SIZE + 100);
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content },
@@ -100,7 +100,7 @@ describe('truncateContentStep', () => {
   });
 
   describe('空コンテンツ', () => {
-    it('content が空文字の場合はそのまま通過', async () => {
+    it('passes through when content is empty', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: '' },
       });
@@ -112,7 +112,7 @@ describe('truncateContentStep', () => {
       expect(result.truncatedContent).toBeUndefined();
     });
 
-    it('content が undefined の場合はそのまま通過', async () => {
+    it('passes through when content is undefined', async () => {
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: undefined as any },
       });
@@ -125,7 +125,7 @@ describe('truncateContentStep', () => {
   });
 
   describe('マルチバイト文字（UTF-8）', () => {
-    it('日本語文字が安全に切り詰められる（文字化けなし）', async () => {
+    it('truncates Japanese characters safely without mojibake', async () => {
       // 日本語1文字 = 3バイト UTF-8
       // MAX_RECORD_SIZE を超える日本語文字列を作成
       const charCount = Math.ceil(MAX_RECORD_SIZE / 3) + 100;
@@ -148,7 +148,7 @@ describe('truncateContentStep', () => {
       expect(() => decoder.decode(truncatedBytes)).not.toThrow();
     });
 
-    it('絵文字（4バイト UTF-8）が安全に切り詰められる', async () => {
+    it('truncates emoji (4-byte UTF-8) safely', async () => {
       // 絵文字は UTF-8 で4バイト
       const charCount = Math.ceil(MAX_RECORD_SIZE / 4) + 100;
       const content = '😀'.repeat(charCount);
@@ -168,7 +168,7 @@ describe('truncateContentStep', () => {
       expect(() => decoder.decode(truncatedBytes)).not.toThrow();
     });
 
-    it('ASCII と日本語の混合テキストが安全に切り詰められる', async () => {
+    it('truncates mixed ASCII and Japanese text safely', async () => {
       const mixedContent = 'Hello 世界! '.repeat(Math.ceil(MAX_RECORD_SIZE / 15) + 100);
 
       const context = makeContext({

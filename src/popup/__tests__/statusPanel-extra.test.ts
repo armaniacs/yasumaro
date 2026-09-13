@@ -64,10 +64,14 @@ vi.mock('../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));
 
-vi.mock('../domUtils.js', () => ({
-  updateStatusIcon: vi.fn(),
-  escapeHtml: vi.fn((s: string) => s),
-}));
+vi.mock('../domUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../domUtils.js')>();
+  return {
+    ...actual,
+    updateStatusIcon: vi.fn(),
+    escapeHtml: vi.fn((s: string) => s),
+  };
+});
 
 vi.mock('../../utils/domainUtils.js', () => ({
   extractDomain: mockExtractDomain,
@@ -81,6 +85,8 @@ import {
 } from '../statusPanel.js';
 
 const defaultMessages: Record<string, string> = {
+  // statusTrustLocked — PBI 2026-09-11-04: the LOCKED badge text is i18n now.
+  statusTrustLocked: 'LOCKED',
   statusRecordable: 'Recordable',
   statusBlocked: 'Blocked',
   statusPrivateDetected: 'Private page detected',
@@ -889,10 +895,11 @@ describe('initStatusPanel — additional branches', () => {
       ...global.chrome,
       tabs: {
         query: vi.fn().mockResolvedValue([fakeTab]),
-        sendMessage: vi.fn((tabId: number, msg: any, cb: any) => {
+        // PBI 2026-09-11-04: the status path sends via the promise contract.
+        sendMessage: vi.fn((tabId: number, msg: any) => {
           expect(tabId).toBe(42);
           expect(msg.type).toBe('GET_CONTENT');
-          cb({ cleanseStats: { totalRemoved: 3, hardStripRemoved: 2, keywordStripRemoved: 1 }, cleansedReason: 'both' });
+          return Promise.resolve({ cleanseStats: { totalRemoved: 3, hardStripRemoved: 2, keywordStripRemoved: 1 }, cleansedReason: 'both' });
         }),
       },
       runtime: { lastError: null, sendMessage: vi.fn() },
@@ -1187,7 +1194,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     if (orig) mockGetMessage.mockImplementation(orig as any);
   });
 
-  it('addPath: success path — adds full url', async () => {
+  it('addPath: success path — adds the URL hostname (PBI 2026-09-12-05)', async () => {
     mockGetAll.mockResolvedValue({ domain_whitelist: [] });
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
@@ -1196,13 +1203,14 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await new Promise((r) => setTimeout(r, 20));
     expect(mockSetAll).toHaveBeenCalled();
     const savedArg = mockSetAll.mock.calls[0]![0] as any;
-    // Settings repository receives whitelist array containing full URL
-    expect(savedArg.domain_whitelist).toContain('https://example.com/page');
+    // The historical raw-URL entry could never match any whitelist consumer
+    // (all match hostnames) — the writer normalizes to the hostname.
+    expect(savedArg.domain_whitelist).toContain('example.com');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Path added');
   });
 
   it('addPath: url already in whitelist — skips save', async () => {
-    mockGetAll.mockResolvedValue({ domain_whitelist: ['https://example.com/page'] });
+    mockGetAll.mockResolvedValue({ domain_whitelist: ['example.com'] });
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();

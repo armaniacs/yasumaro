@@ -4,6 +4,7 @@
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { pickStatusExtras } from '../../messaging/sqliteValidators.js';
 import { recordSqliteFailure, recordSqliteSuccess } from '../sqliteAlert.js';
 import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord, SqliteRpcClient, SqliteRpcResult } from '../../messaging/sqliteRpcClient.js';
 import { categorizeError } from '../../messaging/sqliteRpcClient.js';
@@ -137,14 +138,14 @@ export class OffscreenGateway {
   }
 
   async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteResult<{ id: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteResult<{ count: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteResult<{ count: number; skipped: number }>>;
   async mutate(op: Extract<MutateOp, { type: 'update' }> | Extract<MutateOp, { type: 'delete' }>): Promise<SqliteResult<void>>;
   async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteResult<{ is_starred: number }>>;
   async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteResult<{ id: number }>>;
   async mutate(op: MutateOp): Promise<SqliteResult<unknown>> {
     switch (op.type) {
       case 'insert': return this.callInternal<{ id: number }, OffscreenInsertResponse>('SQLITE_INSERT', op.record as unknown as Record<string, unknown>, (res) => ({ id: res.id }), op.traceId);
-      case 'insertBatch': return this.callInternal<{ count: number }, OffscreenCountResponse>('SQLITE_INSERT_BATCH', { records: op.records as unknown as Record<string, unknown>[] }, (res) => ({ count: res.count }));
+      case 'insertBatch': return this.callInternal<{ count: number; inserted?: number; skipped?: number }, OffscreenCountResponse>('SQLITE_INSERT_BATCH', { records: op.records as unknown as Record<string, unknown>[] }, (res) => ({ count: res.inserted ?? res.count, skipped: res.skipped ?? 0 }));
       /**
        * Flattened wire contract: changes travel as `{ id, ...changes }`,
        * not nested under a `changes` key. The offscreen update handler
@@ -213,7 +214,11 @@ export class OffscreenGateway {
   }
 
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> {
-    const result = await this.callInternal<Omit<OffscreenStatusData, 'success'>, OffscreenStatusResponse>('SQLITE_STATUS', {}, (r) => ({ initialized: r.initialized, path: r.path, fallback: r.fallback, ...pickDefined({ fts5: r.fts5, initError: r.initError, compileOptions: r.compileOptions, compileOptionsSource: r.compileOptionsSource, opfsMigrationV2Done: r.opfsMigrationV2Done, opfsMigrationV2LastAttemptedAt: r.opfsMigrationV2LastAttemptedAt, opfsMigrationV2CompletedAt: r.opfsMigrationV2CompletedAt, opfsMigrationV2RecordCount: r.opfsMigrationV2RecordCount }) }));
+    // PBI 2026-09-11-03 (round 5): the extras projection is DERIVED from
+    // SqliteStatusExtras via pickStatusExtras — adding a field to the STATUS
+    // contract compiles here automatically (round 4's silent-drop bug class
+    // is closed by construction instead of by list maintenance).
+    const result = await this.callInternal<Omit<OffscreenStatusData, 'success'>, OffscreenStatusResponse>('SQLITE_STATUS', {}, (r) => ({ initialized: r.initialized, path: r.path, fallback: r.fallback, ...pickStatusExtras(r) }));
     return result;
   }
 
@@ -241,7 +246,7 @@ export class SqliteClient implements SqliteRpcClient {
   async query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteRpcResult<{ rows: AuditLogRecord[]; total: number }>>;
   async query(op: QueryOp | StorageQuery = {}): Promise<SqliteRpcResult<unknown>> { return this.gateway.query(op as QueryOp & StorageQuery) as Promise<SqliteRpcResult<unknown>>; }
   async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteRpcResult<{ id: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number; skipped: number }>>;
   async mutate(op: Extract<MutateOp, { type: 'update' }> | Extract<MutateOp, { type: 'delete' }>): Promise<SqliteRpcResult<void>>;
   async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteRpcResult<{ is_starred: number }>>;
   async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteRpcResult<{ id: number }>>;

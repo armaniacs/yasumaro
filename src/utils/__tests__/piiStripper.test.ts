@@ -8,7 +8,7 @@ import type { MaskedItem } from '../../messaging/types.js';
 
 describe('stripPiiFromMaskedItems', () => {
   describe('基本機能', () => {
-    it('MaskedItem配列からoriginalフィールドを削除できる', () => {
+    it('removes the original field from a MaskedItem array', () => {
       const items: MaskedItem[] = [
         { type: 'email', original: 'test@example.com' },
         { type: 'creditCard', original: '1234-5678-9012-3456' }
@@ -23,7 +23,7 @@ describe('stripPiiFromMaskedItems', () => {
       expect(result[1]).not.toHaveProperty('original');
     });
 
-    it('string型のアイテムはそのまま返す', () => {
+    it('returns string items unchanged', () => {
       const items: (string | MaskedItem)[] = [
         'email',
         { type: 'creditCard', original: '1234-5678-9012-3456' }
@@ -36,7 +36,7 @@ describe('stripPiiFromMaskedItems', () => {
       expect(result[1]).toEqual({ type: 'creditCard' });
     });
 
-    it('空配列を処理できる', () => {
+    it('handles empty arrays', () => {
       const items: MaskedItem[] = [];
 
       const result = stripPiiFromMaskedItems(items);
@@ -44,7 +44,7 @@ describe('stripPiiFromMaskedItems', () => {
       expect(result).toEqual([]);
     });
 
-    it('originalフィールドがないアイテムはそのまま返す', () => {
+    it('returns items without an original field unchanged', () => {
       // deliberately omits the `original` field to exercise the passthrough path
       const items = [
         { type: 'email' },
@@ -58,7 +58,7 @@ describe('stripPiiFromMaskedItems', () => {
       expect(result[1]).toEqual({ type: 'creditCard', position: 'body' });
     });
 
-    it('positionとindexフィールドは保持される', () => {
+    it('preserves position and index fields', () => {
       const items: MaskedItem[] = [
         { type: 'email', position: 'header', original: 'test@example.com', index: 1 },
         { type: 'creditCard', position: 'body', original: '1234-5678-9012-3456', index: 2 }
@@ -73,7 +73,7 @@ describe('stripPiiFromMaskedItems', () => {
   });
 
   describe('セキュリティ', () => {
-    it('PIIデータが含まれるoriginalフィールドが完全に削除される', () => {
+    it('fully removes original fields containing PII data', () => {
       const items: MaskedItem[] = [
         { type: 'email', original: 'sensitive@example.com' },
         { type: 'myNumber', original: '123456789012' },
@@ -94,7 +94,7 @@ describe('stripPiiFromMaskedItems', () => {
       expect(jsonString).not.toContain('1234567');
     });
 
-    it('大量のアイテムを効率的に処理できる', () => {
+    it('processes many items efficiently', () => {
       const items: MaskedItem[] = Array.from({ length: 1000 }, (_, i) => ({
         type: 'email',
         original: `user${i}@example.com`
@@ -116,7 +116,7 @@ describe('stripPiiFromMaskedItems', () => {
 });
 
 describe('stripPiiFromMaskedItem', () => {
-  it('単一のMaskedItemからoriginalフィールドを削除できる', () => {
+  it('removes the original field from a single MaskedItem', () => {
     const item: MaskedItem = { type: 'email', original: 'test@example.com' };
 
     const result = stripPiiFromMaskedItem(item);
@@ -125,7 +125,7 @@ describe('stripPiiFromMaskedItem', () => {
     expect(result).not.toHaveProperty('original');
   });
 
-  it('positionとindexフィールドは保持される', () => {
+  it('preserves position and index fields', () => {
     const item: MaskedItem = {
       type: 'email',
       position: 'header',
@@ -138,7 +138,7 @@ describe('stripPiiFromMaskedItem', () => {
     expect(result).toEqual({ type: 'email', position: 'header', index: 1 });
   });
 
-  it('originalフィールドがないアイテムはそのまま返す', () => {
+  it('returns items without an original field unchanged', () => {
     // deliberately omits the `original` field to exercise the passthrough path
     const item = { type: 'email', position: 'body' } as unknown as MaskedItem;
 

@@ -56,7 +56,7 @@ describe('processPrivacyPipelineStep', () => {
   });
 
   describe('aiService の受け渡し（回帰テスト: null問題）', () => {
-    it('context.aiService を PrivacyPipeline コンストラクタに渡す', async () => {
+    it('passes context.aiService to the PrivacyPipeline constructor', async () => {
       const mockAiService = {
         getSupportedModes: vi.fn(),
         generateSummary: vi.fn(),
@@ -73,7 +73,7 @@ describe('processPrivacyPipelineStep', () => {
       );
     });
 
-    it('aiService が null の場合も PrivacyPipeline に null を渡す（クラッシュしない）', async () => {
+    it('passes null to PrivacyPipeline when aiService is null without crashing', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary not available.', maskedCount: 0 });
 
       const context = makeContext({ aiService: null });
@@ -86,7 +86,7 @@ describe('processPrivacyPipelineStep', () => {
       );
     });
 
-    it('aiService が undefined の場合も PrivacyPipeline に undefined を渡す', async () => {
+    it('passes undefined to PrivacyPipeline when aiService is undefined', async () => {
       mockProcess.mockResolvedValue({ summary: 'Summary not available.', maskedCount: 0 });
 
       // makeContext() leaves aiService unset (undefined) by default.
@@ -102,7 +102,7 @@ describe('processPrivacyPipelineStep', () => {
   });
 
   describe('通常フロー', () => {
-    it('AI要約が正常に返される', async () => {
+    it('returns the AI summary normally', async () => {
       mockProcess.mockResolvedValue({
         summary: 'Generated summary',
         maskedCount: 2,
@@ -116,7 +116,7 @@ describe('processPrivacyPipelineStep', () => {
       expect(result.sanitizedSummary).toBe('Generated summary');
     });
 
-    it('summary が返されない場合は "Summary not available." にフォールバック', async () => {
+    it('falls back to "Summary not available." when no summary is returned', async () => {
       mockProcess.mockResolvedValue({ maskedCount: 0 });
 
       const context = makeContext({ aiService: null });
@@ -127,7 +127,7 @@ describe('processPrivacyPipelineStep', () => {
   });
 
   describe('previewOnly モード', () => {
-    it('processedContent と maskedItems を context.result に含める', async () => {
+    it('includes processedContent and maskedItems in context.result', async () => {
       mockProcess.mockResolvedValue({
         success: true,
         preview: true,
@@ -155,7 +155,7 @@ describe('processPrivacyPipelineStep', () => {
       expect(result.result?.success).toBe(true);
     });
 
-    it('processedContent が空でも result が設定される', async () => {
+    it('sets result even when processedContent is empty', async () => {
       mockProcess.mockResolvedValue({
         success: true,
         preview: true,
@@ -182,7 +182,7 @@ describe('processPrivacyPipelineStep', () => {
   });
 
   describe('aiDuration（クラウドAI呼び出し時間）の伝播', () => {
-    it('pipelineResult.aiCallDurationMs を context.aiDuration にそのまま反映する', async () => {
+    it('reflects pipelineResult.aiCallDurationMs directly in context.aiDuration', async () => {
       mockProcess.mockResolvedValue({
         summary: 'Cloud summary',
         maskedCount: 0,
@@ -196,7 +196,7 @@ describe('processPrivacyPipelineStep', () => {
       expect(result.aiDuration).toBe(842);
     });
 
-    it('previewOnly 時、pipelineResult に aiCallDurationMs が含まれない場合 aiDuration は undefined になる（クラウドAI未呼び出し）', async () => {
+    it('sets aiDuration to undefined when pipelineResult lacks aiCallDurationMs in previewOnly (cloud AI not called)', async () => {
       mockProcess.mockResolvedValue({
         success: true,
         preview: true,
@@ -221,7 +221,7 @@ describe('processPrivacyPipelineStep', () => {
       expect(result.result?.aiDuration).toBeUndefined();
     });
 
-    it('alreadyProcessed=true（SAVE_RECORD相当）でも、context の既存 aiDuration を使い回さず実測値をそのまま使う', async () => {
+    it('uses the measured value directly instead of reusing context aiDuration even when alreadyProcessed=true (SAVE_RECORD equivalent)', async () => {
       mockProcess.mockResolvedValue({
         summary: 'Cloud summary',
         maskedCount: 0,
@@ -246,7 +246,7 @@ describe('processPrivacyPipelineStep', () => {
       expect(result.aiDuration).toBe(1234);
     });
 
-    it('local_onlyモード等クラウドAI未使用時、aiCallDurationMs が返らないため aiDuration は undefined になる', async () => {
+    it('sets aiDuration to undefined when aiCallDurationMs is not returned without cloud AI usage such as local_only mode', async () => {
       mockProcess.mockResolvedValue({
         summary: 'Local summary',
         maskedCount: 0,
@@ -261,7 +261,7 @@ describe('processPrivacyPipelineStep', () => {
   });
 
   describe('エラーハンドリング', () => {
-    it('previewOnly 時のエラーは result にセットして throw しない', async () => {
+    it('sets the error on result without throwing in previewOnly', async () => {
       mockProcess.mockRejectedValue(new Error('AI service unavailable'));
 
       const context = makeContext({
@@ -280,7 +280,7 @@ describe('processPrivacyPipelineStep', () => {
       expect(result.result?.error).toBe('AI service unavailable');
     });
 
-    it('previewOnly でない時のエラーは再スロー', async () => {
+    it('rethrows the error when not in previewOnly', async () => {
       mockProcess.mockRejectedValue(new Error('Network error'));
 
       const context = makeContext({ aiService: null });

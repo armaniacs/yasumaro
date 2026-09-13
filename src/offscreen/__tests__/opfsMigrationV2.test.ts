@@ -129,7 +129,7 @@ describe('migrateOldOpfsDb', () => {
     expect(mocks.deleteOldDb).not.toHaveBeenCalled();
   });
 
-  it('deleteOldDb が insert 後に throw した場合、error を返し setMigrationDone を呼ばない', async () => {
+  it('returns an error and skips setMigrationDone when deleteOldDb throws after insert', async () => {
     const insertBatch = vi.fn().mockResolvedValue({ count: sampleRecords.length });
     const { deps, mocks } = makeDeps({
       readOldRecords: vi.fn().mockResolvedValue(sampleRecords),

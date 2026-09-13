@@ -66,7 +66,7 @@ describe('handleStartup — pending SQLite queue flush (M14)', () => {
   it('flushes the pending queue on startup with the shared sqliteClient', async () => {
     const sqliteClient = { insert: vi.fn() } as any;
     const { handleStartup } = createLifecycleHandlers({
-      isCacheInitialized: { value: true, restore: vi.fn().mockResolvedValue(undefined) },
+      isCacheInitialized: { value: true, set: vi.fn(), restore: vi.fn().mockResolvedValue(undefined) },
       rateLimiter: { reload: vi.fn().mockResolvedValue(undefined) } as any,
       sqliteClient,
     });
@@ -80,7 +80,7 @@ describe('handleStartup — pending SQLite queue flush (M14)', () => {
     mockFlushPendingRecords.mockRejectedValueOnce(new Error('flush failed'));
     const sqliteClient = { insert: vi.fn() } as any;
     const { handleStartup } = createLifecycleHandlers({
-      isCacheInitialized: { value: true, restore: vi.fn().mockResolvedValue(undefined) },
+      isCacheInitialized: { value: true, set: vi.fn(), restore: vi.fn().mockResolvedValue(undefined) },
       rateLimiter: { reload: vi.fn().mockResolvedValue(undefined) } as any,
       sqliteClient,
     });

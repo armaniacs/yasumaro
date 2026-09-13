@@ -267,7 +267,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       }));
     });
 
-    it('GETでのモデル一覧取得ではなくPOSTで推論を要求する', async () => {
+    it('requests inference via POST instead of fetching the model list via GET', async () => {
       await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
 
       const { url, init } = firstCall();
@@ -277,7 +277,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(url).not.toMatch(/\/models$/);
     });
 
-    it('接続テスト用プロンプトを本文に載せる', async () => {
+    it('includes the connection-test prompt in the body', async () => {
       await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
 
       const body = JSON.parse(String(firstCall().init.body));
@@ -285,7 +285,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(body.model).toBe('test-model');
     });
 
-    it('送信内容と受信内容を debug に記録する', async () => {
+    it('records the sent and received content in debug', async () => {
       const result = await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
 
       expect(result.success).toBe(true);
@@ -296,7 +296,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(result.debug?.receivedTokens).toBe(1);
     });
 
-    it('応答本文が空なら成功扱いにしない', async () => {
+    it('does not treat an empty response body as success', async () => {
       mockedFetchWithRetry.mockResolvedValue(jsonResponse({ choices: [{ message: { content: '   ' } }] }));
 
       const result = await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
@@ -314,7 +314,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       }));
     });
 
-    it('GETでのモデル一覧取得ではなくPOSTで推論を要求する', async () => {
+    it('requests inference via POST instead of fetching the model list via GET', async () => {
       await new GeminiProvider(geminiSettings).testConnection();
 
       const { url, init } = firstCall();
@@ -323,7 +323,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(url).not.toMatch(/\/models$/);
     });
 
-    it('送信内容と受信内容を debug に記録する', async () => {
+    it('records the sent and received content in debug', async () => {
       const result = await new GeminiProvider(geminiSettings).testConnection();
 
       expect(result.success).toBe(true);
@@ -334,7 +334,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(result.debug?.receivedTokens).toBe(1);
     });
 
-    it('応答本文が空なら成功扱いにしない', async () => {
+    it('does not treat an empty response body as success', async () => {
       mockedFetchWithRetry.mockResolvedValue(jsonResponse({ candidates: [] }));
 
       const result = await new GeminiProvider(geminiSettings).testConnection();
@@ -343,7 +343,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(result.debug?.hasContent).toBe(false);
     });
 
-    it('thinkingを無効化して送る（思考がトークン枠を食い潰すのを防ぐ）', async () => {
+    it('sends with thinking disabled (prevents thinking from consuming the token budget)', async () => {
       await new GeminiProvider(geminiSettings).testConnection();
 
       const body = JSON.parse(String(firstCall().init.body));
@@ -352,7 +352,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(body.generationConfig.maxOutputTokens).toBeGreaterThanOrEqual(256);
     });
 
-    it('MAX_TOKENSで本文が空な場合、原因が分かるメッセージを返す', async () => {
+    it('returns an explanatory message when the body is empty with MAX_TOKENS', async () => {
       // Gemini 2.5系以降の thinking がトークン枠を使い切ったケース
       mockedFetchWithRetry.mockResolvedValue(jsonResponse({
         candidates: [{ content: { parts: [] }, finishReason: 'MAX_TOKENS' }],
@@ -368,7 +368,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(result.debug?.error).toContain('thinking consumed the output budget');
     });
 
-    it('複数partsに分かれた応答を結合する', async () => {
+    it('concatenates a response split across multiple parts', async () => {
       mockedFetchWithRetry.mockResolvedValue(jsonResponse({
         candidates: [{ content: { parts: [{ text: 'O' }, { text: 'K' }] } }],
       }));
@@ -379,7 +379,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
       expect(result.debug?.response).toBe('OK');
     });
 
-    it('セーフティフィルタでブロックされた場合はその旨を返す', async () => {
+    it('returns a blocked message when the safety filter blocks the response', async () => {
       mockedFetchWithRetry.mockResolvedValue(jsonResponse({
         candidates: [{ content: { parts: [] }, finishReason: 'SAFETY' }],
       }));

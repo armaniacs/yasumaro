@@ -128,7 +128,7 @@ describe('flushBufferedExports', () => {
     await expect(flushBufferedExports()).resolves.toBeUndefined();
   });
 
-  it('最終レビュー Fix 1: 1日分の buildDailyMarkdown が throw しても、他の日のフラッシュは継続される', async () => {
+  it('Final review Fix 1: continues flushing other days even when one day of buildDailyMarkdown throws', async () => {
     const { buildDailyMarkdown } = await import('../pipeline/steps/saveLocalMarkdownStep.js');
     const mockBuildDailyMarkdown = buildDailyMarkdown as unknown as ReturnType<typeof vi.fn>;
     mockBuildDailyMarkdown.mockImplementation((date: string, entries: string[]) => {

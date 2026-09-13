@@ -88,6 +88,16 @@ export function createExportLogsPanel(): PanelLifecycle {
               if (auditStatusEl) auditStatusEl.textContent = 'データがありません';
               return;
             }
+            // PBI 2026-09-12-17: a backend audit cap (e.g. OPFS 1000) can make
+            // `rows` shorter than `total` — reporting success while silently
+            // distributing a partial log is worse than stating the limit
+            // (mirrors exportLogsService.queryAllData's guard).
+            if (result.data.total > rows.length) {
+              if (auditStatusEl) {
+                auditStatusEl.textContent = `監査ログは ${rows.length} / ${result.data.total} 件のみ取得できました（バックエンドの取得上限）。.db エクスポートをご利用ください。`;
+              }
+              return;
+            }
             const tsv = toTsvString(rows);
             const filename = `yasumaro-audit-log-${new Date().toISOString().split('T')[0]}.tsv`;
             downloadText(tsv, filename, 'text/tab-separated-values');

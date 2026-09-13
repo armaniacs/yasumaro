@@ -63,6 +63,7 @@ import {
   PasswordStrength,
 } from '../../utils/masterPassword.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../../utils/rateLimiter.js';
+import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
 /**
  * All-null DOM refs so every field can be overridden per-test to isolate
@@ -118,6 +119,8 @@ describe('masterPassword-branches — showPasswordModal null-element branches', 
     const controller = new MasterPasswordController(refs);
     expect(() => controller.showPasswordModal('set')).not.toThrow();
     // no throw and no crash proves the early-return branch executed
+    // The early return happens before any DOM mutation or focus-trap setup.
+    expect(focusTrapManager.trap).not.toHaveBeenCalled();
   });
 
   it('skips optional title/desc/input/confirm/error fields when absent, modal present', () => {

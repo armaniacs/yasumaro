@@ -12,7 +12,7 @@ describe('getSettings key refinement', () => {
     vi.restoreAllMocks();
   });
 
-  test('StorageKeysのみを取得する', async () => {
+  test('fetches only StorageKeys', async () => {
     await chrome.storage.local.set({ extra_key: 'should_not', another_junk: 123 });
     settingsRepository.clearCache();
 
@@ -51,7 +51,7 @@ describe('getSettings key refinement', () => {
     });
   });
 
-  test('空ストレージの場合はデフォルト値のみを返す', async () => {
+  test('returns only defaults for empty storage', async () => {
     const settings = await settingsRepository.getAll();
 
     expect(settings).toHaveProperty(StorageKeys.OBSIDIAN_PROTOCOL);
@@ -59,7 +59,7 @@ describe('getSettings key refinement', () => {
     expect(settings).not.toHaveProperty('extra_key');
   });
 
-  test('保存した値が正しく取得できる', async () => {
+  test('retrieves saved values correctly', async () => {
     await chrome.storage.local.set({
       [StorageKeys.OBSIDIAN_API_KEY]: 'my-api-key',
       [StorageKeys.OBSIDIAN_PORT]: '8000'

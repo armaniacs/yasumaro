@@ -20,7 +20,7 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     created_at: 1700000000000,
   };
 
-  it('ai_provider に HTML ペイロードが含まれてもエスケープされる', () => {
+  it('escapes ai_provider even when it contains an HTML payload', () => {
     const entry: BrowsingLogEntry = {
       ...baseEntry,
       sent_tokens: 10,
@@ -36,7 +36,7 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     expect(html).toContain('gpt-4');
   });
 
-  it('ai_model に HTML ペイロードが含まれてもエスケープされる', () => {
+  it('escapes ai_model even when it contains an HTML payload', () => {
     const entry: BrowsingLogEntry = {
       ...baseEntry,
       sent_tokens: 10,
@@ -49,7 +49,7 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     expect(html).toContain('openai');
   });
 
-  it('ai_provider のみで ai_model がない場合も ai_provider はエスケープされる', () => {
+  it('escapes ai_provider when only ai_provider is present without ai_model', () => {
     const entry: BrowsingLogEntry = {
       ...baseEntry,
       ai_provider: '<script>alert(3)</script>',
@@ -59,7 +59,7 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     expect(html).toContain('&lt;script&gt;alert(3)&lt;&#x2F;script&gt;');
   });
 
-  it('エスケープされない正常値はそのまま表示される', () => {
+  it('renders normal values as-is without escaping', () => {
     const entry: BrowsingLogEntry = {
       ...baseEntry,
       sent_tokens: 100,
@@ -72,7 +72,7 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     expect(html).not.toContain('&amp;');
   });
 
-  it('ai_provider / ai_model がない場合は AI セクションを生成しない', () => {
+  it('does not render the AI section when ai_provider / ai_model are absent', () => {
     const html = formatDiagnosticMetadataHtml({ ...baseEntry, sent_tokens: 10 });
     expect(html).not.toContain('AI:');
     expect(html).not.toContain('(AI:');

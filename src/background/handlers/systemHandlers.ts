@@ -1,11 +1,12 @@
 import type { Settings } from '../../utils/storage/types.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
-import { BADGE_COLORS } from '../../constants/appConstants.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorClassification.js';
 import { readBodyCapped } from '../../utils/readBodyCapped.js';
 import { updateSavedUrlEntry } from '../../utils/storage/savedUrlRepository.js';
+import { deriveCleansedReasonFromCounts } from '../../utils/cleansingBadge.js';
+import { setBadge } from '../badgePolicy.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 import type {
@@ -30,7 +31,7 @@ export interface FetchUrlHandlerDeps {
 }
 
 export interface ContentCleansingExecutedHandlerDeps {
-  hasBadgeTab: (tabId: number) => boolean;
+  /** PBI 2026-09-12-07: the timed clear is gone — no badge-tab lookup needed. */
 }
 
 export interface CheckDomainHandlerDeps {
@@ -70,7 +71,7 @@ export interface GenerateReviewSummaryHandlerDeps {
 
 export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
   // VULN-012 fix: limit response size to prevent memory exhaustion
-  const MAX_FILTER_LIST_SIZE = 10 * 1024 * 1024; // 10MB
+  // (value lives in messaging/limits.ts — PBI 2026-09-11-08 round 6)
 
   return async (
     message: FetchUrlMessage,
@@ -116,11 +117,11 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
       const contentType = response.headers.get('content-type');
       // Cap the streamed body on actual bytes; Content-Length is not trusted
       // (attacker can omit it via chunked transfer-encoding).
-      const text = await readBodyCapped(response, MAX_FILTER_LIST_SIZE);
+      const text = await readBodyCapped(response, LIMIT_MAX_FILTER_LIST_SIZE);
 
       // Defense in depth: keep the post-read size check.
-      if (text.length > MAX_FILTER_LIST_SIZE) {
-        throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
+      if (text.length > LIMIT_MAX_FILTER_LIST_SIZE) {
+        throw new Error(`Filter list too large: ${Math.round(text.length / 1024 / 1024)}MB exceeds ${LIMIT_MAX_FILTER_LIST_SIZE / 1024 / 1024}MB limit`);
       }
 
       sendResponse({ success: true, data: text, contentType });
@@ -136,33 +137,31 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
   };
 }
 
-export function createContentCleansingExecutedHandler(deps: ContentCleansingExecutedHandlerDeps) {
+export function createContentCleansingExecutedHandler(_deps: ContentCleansingExecutedHandlerDeps) {
   return async (
     message: ContentCleansingExecutedMessage,
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void,
   ): Promise<void> => {
     const { hardStripRemoved, keywordStripRemoved, totalRemoved } = message.payload || {};
-    const tabId = sender.tab!.id!;
+    // PBI 2026-09-12-07: tab-less senders (direct dispatch paths bypassing
+    // the envelope null guard) crashed on the old `sender.tab!.id!`.
+    const tabId = sender.tab?.id;
+    if (tabId === undefined) {
+      sendResponse({ success: false, error: 'Sender has no tab' });
+      return;
+    }
 
-    chrome.action.setBadgeText({ text: `C${totalRemoved || 0}`, tabId });
-    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
-
-    setTimeout(() => {
-      if (!deps.hasBadgeTab(tabId)) {
-        chrome.action.setBadgeText({ text: '', tabId });
-      }
-    }, 3000);
+    // PBI 2026-09-12-07: badge display lives in the shared BadgePolicy seam.
+    // No timed clear — the old setTimeout died with SW suspension (the clear
+    // almost never fired); the per-tab badge persists until the tab's next
+    // state transition (navigation clears it in handleTabUpdated).
+    await setBadge({ kind: 'cleansed', count: totalRemoved || 0 }, tabId);
 
     if (sender.tab?.url && (totalRemoved ?? 0) > 0) {
-      const hardEnabled = (hardStripRemoved ?? 0) > 0;
-      const keywordEnabled = (keywordStripRemoved ?? 0) > 0;
-      let cleansedReason: 'hard' | 'keyword' | 'both' = 'both';
-      if (hardEnabled && !keywordEnabled) {
-        cleansedReason = 'hard';
-      } else if (!hardEnabled && keywordEnabled) {
-        cleansedReason = 'keyword';
-      }
+      // PBI 2026-09-11-05: counts→reason derivation is the shared CleansingBadge
+      // policy (was an inline hard/keyword/both branch here).
+      const cleansedReason = deriveCleansedReasonFromCounts({ hardStripRemoved, keywordStripRemoved });
       await updateSavedUrlEntry(sender.tab.url, (entry) => ({ ...entry, cleansedReason }));
     }
 
@@ -286,10 +285,15 @@ export function deriveLogSource(sender: chrome.runtime.MessageSender): string {
 
 // Per-entry size bounds for forwarded logs (VULN-004). Count caps in
 // LogBuffer / storageAdapter bound entry COUNT, not per-entry size or CPU;
-// the trust boundary is this handler, so the bounds live here.
-const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
-const MAX_LOG_FORWARD_DETAILS_KEYS = 64;
-const MAX_LOG_FORWARD_SERIALIZED_CHARS = 256 * 1024;
+// the trust boundary is this handler, so enforcement lives here — the values
+// themselves moved to messaging/limits.ts (PBI 2026-09-11-08) so they are
+// greppable from the cap registry.
+import {
+  MAX_LOG_FORWARD_MESSAGE_CHARS,
+  MAX_LOG_FORWARD_DETAILS_KEYS,
+  MAX_LOG_FORWARD_SERIALIZED_CHARS,
+  MAX_FILTER_LIST_SIZE as LIMIT_MAX_FILTER_LIST_SIZE,
+} from '../../messaging/limits.js';
 
 export function createLogForwardHandler() {
   return async (

@@ -277,22 +277,23 @@ describe('RecordSession.resetRecordButton', () => {
     const mocks = createMocks();
     mocks.previewFlow.run.mockResolvedValue({ success: true, result: { success: true, tags: [] } });
     const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);
-    // stub recordCurrentPage path via handleRecordNowClick -> recordCurrentPage
-    // For this test, ensure handleRecordNowClick will call recordCurrentPage which needs DOM
-    // Make fetch succeed
+    // resetRecordButton wires onclick to handleRecordNowClick(force), which
+    // delegates to start(). start() only calls recordCurrentPage() from its
+    // error-retry callback, not on the normal click path — so spy on start()
+    // itself to verify onclick invokes handleRecordNowClick with the right force value.
     await o.resetRecordButton(btn);
-    // btn.onclick should be set to handleRecordNowClick(true)
-    // Instead of executing full flow, spy on recordCurrentPage
-    const spy = vi.spyOn(o as any, 'recordCurrentPage').mockResolvedValue(undefined);
+    // btn.onclick should be set to handleRecordNowClick(true) (domainFilter.allowed === false)
+    const spy = vi.spyOn(o, 'start').mockResolvedValue(undefined);
     await (btn.onclick as any)();
-    expect(spy).toHaveBeenCalled;
+    expect(spy).toHaveBeenCalledWith(true, undefined, undefined);
     spy.mockRestore();
     // allowed case
     mockCheckPageStatus.mockResolvedValueOnce({ domainFilter: { allowed: true } } as any);
     (chrome.tabs.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([{ url: 'https://example.com' }]);
     await o.resetRecordButton(btn);
-    const spy2 = vi.spyOn(o as any, 'recordCurrentPage').mockResolvedValue(undefined);
+    const spy2 = vi.spyOn(o, 'start').mockResolvedValue(undefined);
     await (btn.onclick as any)();
+    expect(spy2).toHaveBeenCalledWith(false, undefined, undefined);
     spy2.mockRestore();
   });
 });
@@ -719,7 +720,10 @@ describe('RecordSession.recordCurrentPage', () => {
     const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);
     mockGetCurrentTab.mockResolvedValueOnce({ id: 1, url: 'https://example.com', title: 'T' } as any);
     await o.recordCurrentPage();
-    expect(document.getElementById('mainStatus')!.textContent).toBe('errorPrefix PRIVATE_PAGE_DETECTED (privatePageReason_cachecontrol)');
+    // PBI 2026-09-12-34: canonical-first resolution — the mock returns the
+    // key itself, so the canonical key surfaces here (was the raw legacy
+    // key 'privatePageReason_cachecontrol').
+    expect(document.getElementById('mainStatus')!.textContent).toBe('errorPrefix PRIVATE_PAGE_DETECTED (privacyStatus_cacheControl)');
     expect(document.getElementById('mainStatus')!.className).toBe('error');
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(btn.textContent).toBe('forceRecordAnyway');

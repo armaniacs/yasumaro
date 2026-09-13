@@ -5,7 +5,9 @@
  * savedUrlStore. Split out of storage.ts (PBI: storage.ts deepening).
  */
 
-export const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024; // 10MB (chrome.storage.local.QUOTA_BYTES)
+import { STORAGE_QUOTA_BYTES } from '../../messaging/limits.js';
+
+export { STORAGE_QUOTA_BYTES }; // 10MB (chrome.storage.local.QUOTA_BYTES) — value lives in messaging/limits.ts (PBI 2026-09-11-08 round 6)
 
 /**
  * ストレージ使用量を取得

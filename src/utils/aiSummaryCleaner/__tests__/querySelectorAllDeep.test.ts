@@ -10,13 +10,13 @@ describe('querySelectorAllDeep (30-03)', () => {
     document.body.innerHTML = '';
   });
 
-  it('Light DOMは従来通り取得できる', () => {
+  it('Light DOM retrieves elements as before', () => {
     document.body.innerHTML = `<div class="ad-banner">ad</div><div class="ad-banner">ad2</div><p>body</p>`;
     const result = querySelectorAllDeep(document.body, '.ad-banner');
     expect(result.length).toBe(2);
   });
 
-  it('shadowRoot 内の要素を取得できる (open)', () => {
+  it('retrieves elements inside an open shadowRoot', () => {
     const host = document.createElement('div');
     host.id = 'host';
     document.body.appendChild(host);
@@ -29,7 +29,7 @@ describe('querySelectorAllDeep (30-03)', () => {
     expect(result[0]!.textContent).toBe('shadow ad');
   });
 
-  it('ネストした shadowRoot 2階層を取得できる', () => {
+  it('retrieves elements across two nested shadowRoot levels', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const shadow = host.attachShadow({ mode: 'open' });
@@ -44,13 +44,13 @@ describe('querySelectorAllDeep (30-03)', () => {
     expect(result[0]!.textContent).toBe('deep ad');
   });
 
-  it('shadowRootなしの要素でもエラーにならない', () => {
+  it('does not throw for elements without shadowRoot', () => {
     document.body.innerHTML = `<div><p>hello</p></div>`;
     const result = querySelectorAllDeep(document.body, 'p');
     expect(result.length).toBe(1);
   });
 
-  it('closed shadowRoot は取得できない (仕様)', () => {
+  it('does not retrieve a closed shadowRoot (by design)', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const shadow = host.attachShadow({ mode: 'closed' });
@@ -61,7 +61,7 @@ describe('querySelectorAllDeep (30-03)', () => {
     expect(host.shadowRoot).toBeNull();
   });
 
-  it('空 shadowRoot でもエラーにならない', () => {
+  it('does not throw for an empty shadowRoot', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     host.attachShadow({ mode: 'open' });
@@ -69,18 +69,18 @@ describe('querySelectorAllDeep (30-03)', () => {
     expect(result.length).toBe(0);
   });
 
-  it('collectElementsDeep は querySelectorAllDeep のエイリアス', () => {
+  it('collectElementsDeep is an alias of querySelectorAllDeep', () => {
     expect(collectElementsDeep).toBe(querySelectorAllDeep);
   });
 
-  it('selector が不正でも例外を投げない', () => {
+  it('does not throw for an invalid selector', () => {
     document.body.innerHTML = `<div>test</div>`;
     expect(() => querySelectorAllDeep(document.body, ':::invalid')).not.toThrow();
     const result = querySelectorAllDeep(document.body, ':::invalid');
     expect(result.length).toBe(0);
   });
 
-  it('shadowRoot をルートにして直接走査できる', () => {
+  it('scans directly from a shadowRoot root', () => {
     const host = document.createElement('div');
     document.body.appendChild(host);
     const shadow = host.attachShadow({ mode: 'open' });
@@ -89,7 +89,7 @@ describe('querySelectorAllDeep (30-03)', () => {
     expect(result.length).toBe(2);
   });
 
-  it('iframe same-origin 内の要素を取得できる (モック)', () => {
+  it('retrieves elements inside a same-origin iframe (mock)', () => {
     // jsdom では iframe.contentDocument をモックして検証
     const iframe = document.createElement('iframe');
     document.body.appendChild(iframe);
@@ -106,7 +106,7 @@ describe('querySelectorAllDeep (30-03)', () => {
     expect(result[0]!.textContent).toBe('iframe ad');
   });
 
-  it('iframe が cross-origin 相当で例外でもスキップ', () => {
+  it('skips an iframe that throws as a cross-origin equivalent', () => {
     const iframe = document.createElement('iframe');
     document.body.appendChild(iframe);
     Object.defineProperty(iframe, 'contentDocument', {

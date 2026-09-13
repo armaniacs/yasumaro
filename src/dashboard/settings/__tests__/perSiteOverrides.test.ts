@@ -43,14 +43,14 @@ beforeEach(() => {
 });
 
 describe('perSiteOverrides — 空リスト表示の i18n', () => {
-  it('オーバーライド無しの場合、noPerSiteOverrides キーを参照する', async () => {
+  it('references the noPerSiteOverrides key when there are no overrides', async () => {
     initPerSiteOverrides();
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockedGetMessage).toHaveBeenCalledWith('noPerSiteOverrides');
     expect(document.getElementById('perSiteOverrideList')!.textContent).toBe('noPerSiteOverrides');
   });
 
-  it('キーが無い場合は英語フォールバックを表示する（英語ロケールの従来表示を維持）', async () => {
+  it('shows the English fallback when the key is missing (keeps legacy English display)', async () => {
     mockedGetMessage.mockReturnValue('' as unknown as string);
     initPerSiteOverrides();
     await new Promise((resolve) => setTimeout(resolve, 0));

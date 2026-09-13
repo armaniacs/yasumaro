@@ -3,6 +3,7 @@
 // This module is used by domainUtils.js to extend domain filtering with uBlock rules.
 
 import { extractDomain, matchesPattern } from './domainUtils.js';
+import { logWarn } from './logger/api.js';
 import type { UblockRules } from './types.js';
 
 /**
@@ -48,9 +49,19 @@ class RuleIndex {
     // 【修正】: 移行前の元のルールを直接使用する
     const rules = ublockRules;
 
-    // 【優先度設定】: 新しい軽量形式（blockDomains）が存在する場合は、古い形式（blockRules）を処理しない
+    // 【優先度設定】: 新しい軽量形式（blockDomains）が存在する場合は、古い形式（blockRules）を処理しない。
+    // PBI 2026-09-12-08: 両形式が混在する store（移行残骸）では旧形式が無警告で無視されて
+    // いたため、最低限の観測可能性として警告を残す。挙動（優先規則）自体は意図的に不変。
     const hasBlockDomains = rules.blockDomains && rules.blockDomains.length > 0;
     const shouldProcessBlockRules = !hasBlockDomains && rules.blockRules;
+    if (hasBlockDomains && rules.blockRules && rules.blockRules.length > 0) {
+      logWarn(
+        'UblockRules carry both legacy blockRules and blockDomains — legacy rules are ignored by design',
+        { blockRules: rules.blockRules.length, blockDomains: rules.blockDomains.length },
+        undefined,
+        'ublockMatcher'
+      );
+    }
 
     if (shouldProcessBlockRules && rules.blockRules) {
       // Handle blockRules (old format)
@@ -90,6 +101,14 @@ class RuleIndex {
     // 【優先度設定】: 例外ルールについても同様の優先度設定
     const hasExceptionDomains = rules.exceptionDomains && rules.exceptionDomains.length > 0;
     const shouldProcessExceptionRules = !hasExceptionDomains && rules.exceptionRules;
+    if (hasExceptionDomains && rules.exceptionRules && rules.exceptionRules.length > 0) {
+      logWarn(
+        'UblockRules carry both legacy exceptionRules and exceptionDomains — legacy rules are ignored by design',
+        { exceptionRules: rules.exceptionRules.length, exceptionDomains: rules.exceptionDomains.length },
+        undefined,
+        'ublockMatcher'
+      );
+    }
 
     if (shouldProcessExceptionRules && rules.exceptionRules) {
       // Handle exceptionRules (old format)

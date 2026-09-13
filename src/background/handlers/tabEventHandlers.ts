@@ -4,9 +4,9 @@
  * Extracted from service-worker.ts for modularization (PBI-26).
  * Handles tab removal, activation, and navigation badge updates.
  */
-import { BADGE_COLORS } from '../../constants/appConstants.js';
-import { isDomainAllowed } from '../../utils/domainUtils.js';
 import { HeaderDetector } from '../headerDetector.js';
+import { setBadge } from '../badgePolicy.js';
+import { resolveTabBadge } from './tabBadgeResolver.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { TabCache } from '../tabCache.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
@@ -18,28 +18,20 @@ export interface TabHandlerContext {
         has: (tabId: number) => boolean;
         delete: (tabId: number) => void;
         restore: () => Promise<void>;
+        resetRestoreOnce?: () => void;
     };
     getPrivacyCache?: () => Map<string, PrivacyInfo> | null;
     /** 記録ゲート（同意状態）。未指定の場合は「記録中」バッジを表示しない。 */
     isRecordingAllowed?: () => Promise<boolean>;
 }
 
-/**
- * Domain filter の除外判定。storage 未設定など失敗時は「除外ではない」に倒す
- * （バッジ表示は補助情報であり、判定不能を「記録されない」と誤表示しない）。
- */
-async function isDomainExcluded(url: string): Promise<boolean> {
-    try {
-        return !(await isDomainAllowed(url));
-    } catch {
-        return false;
-    }
-}
-
 export function createTabEventHandlers(ctx: TabHandlerContext) {
     async function handleTabRemoved(tabId: number): Promise<void> {
+        // PBI 2026-09-12-25: re-arm restore so the next restore (e.g. badge
+        // determination) re-prunes against the post-removal tab set.
+        ctx.autoSavedBadgeTabs.resetRestoreOnce?.();
         await ctx.autoSavedBadgeTabs.restore();
-        ctx.tabCache.remove(tabId);
+        ctx.tabCache.removeAndFlush ? await ctx.tabCache.removeAndFlush(tabId) : ctx.tabCache.remove(tabId);
         ctx.autoSavedBadgeTabs.delete(tabId);
     }
 
@@ -47,42 +39,27 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         await ctx.autoSavedBadgeTabs.restore();
         try {
             const tab = await chrome.tabs.get(activeInfo.tabId);
-            // 自動保存バッジ表示中のタブは ◎ を維持
-            if (ctx.autoSavedBadgeTabs.has(activeInfo.tabId)) {
-                chrome.action.setBadgeText({ text: '◎', tabId: activeInfo.tabId });
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.BLUE as string, tabId: activeInfo.tabId });
-                return;
-            }
-            if (!tab.url) {
-                chrome.action.setBadgeText({ text: '' });
-                return;
-            }
-            const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-            let privacyInfo: PrivacyInfo | undefined;
+            const tabId = activeInfo.tabId;
+            const normalizedUrl = tab.url ? HeaderDetector.normalizeUrl(tab.url) : undefined;
             const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-            privacyInfo = cache?.get(normalizedUrl);
-            if (privacyInfo?.isPrivate) {
-                chrome.action.setBadgeText({ text: '!' });
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string });
-            } else if (await isDomainExcluded(tab.url)) {
-                chrome.action.setBadgeText({ text: '∉' });
-                chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
-            } else {
-                // 記録が有効なタブでは「記録中」を常時可視化する（PBI 2026-09-05-10）。
-                // ゲート（同意）が無い場合は無表示を維持する。
-                if (ctx.isRecordingAllowed ? await ctx.isRecordingAllowed() : false) {
-                    chrome.action.setBadgeText({ text: '●' });
-                    chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string });
-                } else {
-                    chrome.action.setBadgeText({ text: '' });
-                }
-            }
+            const privacyInfo = normalizedUrl ? cache?.get(normalizedUrl) : undefined;
+            // Decision lives in TabBadgeResolver (PBI 2026-09-12-09); this
+            // handler keeps only I/O. Tab-derived states are written PER-TAB
+            // (PBI 2026-09-12-07).
+            const state = await resolveTabBadge({
+                privacyInfo,
+                url: tab.url,
+                isRecorded: ctx.autoSavedBadgeTabs.has(tabId),
+                forActivation: true,
+                isRecordingAllowed: ctx.isRecordingAllowed,
+            });
+            await setBadge(state, tabId);
         } catch (error) {
             await logError('Failed to update badge on tab activation', {
                 tabId: activeInfo.tabId,
                 error: errorMessage(error)
             }, ErrorCode.BADGE_UPDATE_FAILED, 'service-worker.ts');
-            chrome.action.setBadgeText({ text: '' });
+            await setBadge({ kind: 'clear' }, activeInfo.tabId);
         }
     }
 
@@ -95,18 +72,15 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
         ctx.autoSavedBadgeTabs.delete(tabId);
         const normalizedUrl = HeaderDetector.normalizeUrl(tab.url);
-        let privacyInfo: PrivacyInfo | undefined;
         const cache = ctx.getPrivacyCache ? ctx.getPrivacyCache() : null;
-        privacyInfo = cache?.get(normalizedUrl);
-        if (privacyInfo?.isPrivate) {
-            chrome.action.setBadgeText({ text: '!', tabId });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.ORANGE as string, tabId });
-        } else if (await isDomainExcluded(tab.url)) {
-            chrome.action.setBadgeText({ text: '∉', tabId });
-            chrome.action.setBadgeBackgroundColor({ color: BADGE_COLORS.GREEN as string, tabId });
-        } else {
-            chrome.action.setBadgeText({ text: '', tabId });
-        }
+        const privacyInfo = cache?.get(normalizedUrl);
+        const state = await resolveTabBadge({
+            privacyInfo,
+            url: tab.url,
+            isRecorded: false,
+            forActivation: false,
+        });
+        await setBadge(state, tabId);
     }
 
     return { handleTabRemoved, handleTabActivated, handleTabUpdated };

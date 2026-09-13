@@ -8,8 +8,10 @@
  * parse of an attacker-sized payload). See VULN-023/034/035/036.
  */
 
-/** Default read cap shared by import paths (10 MiB). */
-export const DEFAULT_IMPORT_SIZE_CAP_BYTES = 10 * 1024 * 1024;
+/** Default read cap shared by import paths (10 MiB) — value lives in messaging/limits.ts (PBI 2026-09-11-08 round 6). */
+import { DEFAULT_IMPORT_SIZE_CAP_BYTES } from '../messaging/limits.js';
+
+export { DEFAULT_IMPORT_SIZE_CAP_BYTES };
 
 export class ImportPipelineError extends Error {
   readonly stage: ImportStage;

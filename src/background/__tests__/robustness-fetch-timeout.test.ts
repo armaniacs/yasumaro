@@ -89,7 +89,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   });
 
   describe('_fetchExistingContent - タイムアウト', () => {
-    it('正常応答の場合はタイムアウトが発生しないこと', async () => {
+    it('does not time out on normal responses', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('Existing content')
@@ -114,7 +114,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       );
     });
 
-    it('404の場合は空文字列を返すこと', async () => {
+    it('returns an empty string on 404', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 404,
@@ -129,7 +129,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       expect(result).toBe('');
     });
 
-    it('AbortErrorでタイムアウトエラーをスローすること', async () => {
+    it('throws a timeout error on AbortError', async () => {
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       await expect(
@@ -140,7 +140,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       ).rejects.toThrow('timed out');
     });
 
-    it('AbortControllerのsignalがfetchに渡される', async () => {
+    it('passes the AbortController signal to fetch', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         text: () => Promise.resolve('content')
@@ -158,7 +158,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   });
 
   describe('_writeContent - タイムアウト', () => {
-    it('正常応答の場合はタイムアウトが発生しないこと', async () => {
+    it('does not time out on normal responses', async () => {
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -183,7 +183,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       );
     });
 
-    it('エラー応答の場合はエラーをスローすること', async () => {
+    it('throws an error on error responses', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         text: () => Promise.resolve('Error')
@@ -198,7 +198,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       ).rejects.toThrow();
     });
 
-    it('AbortErrorでタイムアウトエラーをスローすること', async () => {
+    it('throws a timeout error on AbortError', async () => {
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       await expect(
@@ -212,7 +212,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   });
 
   describe('testConnection - タイムアウト', () => {
-    it('正常応答の場合は成功を返すこと', async () => {
+    it('returns success on normal responses', async () => {
       mockFetch.mockResolvedValue({
         ok: true
       });
@@ -223,7 +223,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       expect(result.message).toContain('Success');
     });
 
-    it('エラー応答の場合は失敗を返すこと', async () => {
+    it('returns failure on error responses', async () => {
       mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
@@ -236,7 +236,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       expect(result.message).toContain('Connection failed');
     });
 
-    it('タイムアウト時はタイムアウトメッセージを返すこと', async () => {
+    it('returns a timeout message on timeout', async () => {
       mockFetch.mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
 
       const result = await obsidianClient.testConnection();
@@ -245,7 +245,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
       expect(result.message).toContain('timeout');
     });
 
-    it('ネットワークエラー時は適切なメッセージを返すこと', async () => {
+    it('returns an appropriate message on network errors', async () => {
       mockFetch.mockRejectedValue(new Error('Failed to fetch'));
 
       const result = await obsidianClient.testConnection();
@@ -256,7 +256,7 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   });
 
   describe('ネットワークエラー処理', () => {
-    it('ネットワークエラーが適切に伝播される', async () => {
+    it('propagates network errors correctly', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
 
       await expect(

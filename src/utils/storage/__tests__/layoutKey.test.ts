@@ -4,13 +4,13 @@ import { DEFAULT_SETTINGS } from '../defaults.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 
 describe('AI_PROVIDER_LAYOUT key', () => {
-  it('StorageKeysにAI_PROVIDER_LAYOUTが存在する', () => {
+  it('StorageKeys exposes AI_PROVIDER_LAYOUT', () => {
     expect(StorageKeys.AI_PROVIDER_LAYOUT).toBe('ai_provider_layout');
   });
-  it('DEFAULT_SETTINGSでデフォルトは a', () => {
+  it('DEFAULT_SETTINGS defaults to a', () => {
     expect(DEFAULT_SETTINGS[StorageKeys.AI_PROVIDER_LAYOUT]).toBe('a');
   });
-  it('GENERAL_SETTINGS_SCHEMAにAI_PROVIDER_LAYOUTが登録されている', () => {
+  it('GENERAL_SETTINGS_SCHEMA registers AI_PROVIDER_LAYOUT', () => {
     const keys = GENERAL_SETTINGS_SCHEMA.map(s => s.key);
     expect(keys).toContain(StorageKeys.AI_PROVIDER_LAYOUT);
   });

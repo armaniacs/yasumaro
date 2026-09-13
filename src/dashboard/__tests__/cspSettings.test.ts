@@ -369,8 +369,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       } as any);
       (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
 
-      // Should not throw
-      await cspSettings.loadCSPSettings();
+      await expect(cspSettings.loadCSPSettings()).resolves.not.toThrow();
     });
   });
 

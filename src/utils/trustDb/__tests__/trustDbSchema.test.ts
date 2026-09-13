@@ -8,23 +8,23 @@ import { DomainTrustLevel, type TrustResult, type TrustDatabase, type SafetyConf
 
 describe('trustDbSchema', () => {
   describe('DomainTrustLevel enum', () => {
-    test('TRUSTED は "trusted"', () => {
+    test('TRUSTED equals "trusted"', () => {
       expect(DomainTrustLevel.TRUSTED).toBe('trusted');
     });
 
-    test('SENSITIVE は "sensitive"', () => {
+    test('SENSITIVE equals "sensitive"', () => {
       expect(DomainTrustLevel.SENSITIVE).toBe('sensitive');
     });
 
-    test('UNVERIFIED は "unverified"', () => {
+    test('UNVERIFIED equals "unverified"', () => {
       expect(DomainTrustLevel.UNVERIFIED).toBe('unverified');
     });
 
-    test('LOCKED は "locked"', () => {
+    test('LOCKED equals "locked"', () => {
       expect(DomainTrustLevel.LOCKED).toBe('locked');
     });
 
-    test('全メンバが定義されている', () => {
+    test('defines all members', () => {
       const values = Object.values(DomainTrustLevel);
       expect(values).toHaveLength(4);
       expect(values).toContain('trusted');
@@ -35,7 +35,7 @@ describe('trustDbSchema', () => {
   });
 
   describe('TrustResult 型の構造確認', () => {
-    test('全フィールド付きのTrustResultが代入可能', () => {
+    test('accepts a TrustResult with all fields', () => {
       const result: TrustResult = {
         level: DomainTrustLevel.TRUSTED,
         source: 'tranco',
@@ -46,7 +46,7 @@ describe('trustDbSchema', () => {
       expect(result.source).toBe('tranco');
     });
 
-    test('最小フィールドのTrustResultが代入可能', () => {
+    test('accepts a TrustResult with minimal fields', () => {
       const result: TrustResult = {
         level: DomainTrustLevel.UNVERIFIED,
         source: 'unknown',
@@ -57,7 +57,7 @@ describe('trustDbSchema', () => {
   });
 
   describe('TrustDatabase 型の構造確認', () => {
-    test('完全なTrustDatabaseが代入可能', () => {
+    test('accepts a complete TrustDatabase', () => {
       const db: TrustDatabase = {
         version: '1.0.0',
         lastUpdated: '2026-01-01T00:00:00Z',
@@ -71,7 +71,7 @@ describe('trustDbSchema', () => {
   });
 
   describe('SafetyConfig 型の構造確認', () => {
-    test('SafetyConfigが代入可能', () => {
+    test('accepts a SafetyConfig', () => {
       const config: SafetyConfig = {
         mode: 'balanced',
         trancoTier: 'top10k',

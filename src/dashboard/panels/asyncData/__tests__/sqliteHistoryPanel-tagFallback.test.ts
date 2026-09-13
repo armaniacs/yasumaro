@@ -80,12 +80,9 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     document.body.appendChild(container);
     const panel = makePanel(container);
 
-    // queryLogs returns rows that do NOT carry the "教育" tag.
+    // SQL tag filter finds nothing for "教育" (total 0).
     mockedDb.queryLogs.mockResolvedValue({
-      data: {
-        rows: [makeRow(1, 'tech'), makeRow(2, 'business')],
-        total: 2,
-      },
+      data: { rows: [], total: 0 },
     });
     // Full-text search for "教育" finds 54 rows.
     const searchRows = Array.from({ length: 54 }, (_, i) => makeRow(i + 10, ''));
@@ -189,13 +186,10 @@ describe('createSqliteHistoryPanel — tag fallback to full-text search', () => 
     document.body.appendChild(container);
     const panel = makePanel(container);
 
-    // queryLogs returns rows that do NOT carry the "教育" tag, so the fallback
+    // SQL tag filter finds nothing for "教育" (total 0), so the fallback
     // search is attempted; that search fails.
     mockedDb.queryLogs.mockResolvedValue({
-      data: {
-        rows: [makeRow(1, 'tech')],
-        total: 1,
-      },
+      data: { rows: [], total: 0 },
     });
     mockedDb.searchLogs.mockResolvedValue({ error: 'Search failed' });
 

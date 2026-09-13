@@ -34,11 +34,11 @@ describe('i18n', () => {
   });
 
   describe('getUserLocale', () => {
-    it('getUserLocaleがエクスポートされていること', () => {
+    it('exports getUserLocale', () => {
       expect(typeof getUserLocale).toBe('function');
     });
 
-    it('getUserLocaleがlocaleUtilsから取り込まれていること', () => {
+    it('re-exports getUserLocale from localeUtils', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       const result = getUserLocale();
       expect(result).toBe('ja-JP');
@@ -46,28 +46,28 @@ describe('i18n', () => {
   });
 
   describe('getMessage', () => {
-    it('単一の翻訳キーから翻訳文字列を取得できる', () => {
+    it('retrieves the translated string for a single translation key', () => {
       const result = getMessage('testKey');
       expect(result).toBe('Test Message');
     });
 
-    it('存在しないキーの場合は空文字を返す', () => {
+    it('returns an empty string for a missing key', () => {
       const result = getMessage('nonExistentKey');
       expect(result).toBe('');
     });
 
-    it('置換パラメータで変数を置換できる', () => {
+    it('substitutes variables with replacement parameters', () => {
       const result = getMessage('testWithArgs', { name: 'World' });
       expect(result).toBe('Hello World');
     });
 
-    it('置換パラメータなしの呼び出しで正しく動作する', () => {
+    it('works correctly when called without replacement parameters', () => {
       vi.mocked(global.chrome.i18n.getMessage).mockReturnValue('Test Message');
       const result = getMessage('testKey');
       expect(result).toBe('Test Message');
     });
 
-    it('配列形式の置換パラメータはそのまま返す', () => {
+    it('passes array-form substitution parameters through to chrome.i18n', () => {
       vi.mocked(global.chrome.i18n.getMessage).mockReturnValue('Test Message');
       const result = getMessage('testKey', ['arg1', 'arg2']);
       expect(result).toBe('Test Message');
@@ -75,7 +75,7 @@ describe('i18n', () => {
   });
 
   describe('applyI18n', () => {
-    it('data-i18n属性を持つ要素を翻訳する', () => {
+    it('translates elements with the data-i18n attribute', () => {
       const div = document.createElement('div');
       div.setAttribute('data-i18n', 'testKey');
       document.body.appendChild(div);
@@ -85,7 +85,7 @@ describe('i18n', () => {
       expect(div.textContent).toBe('Test Message');
     });
 
-    it('入力要素のプレースホルダーを翻訳する', () => {
+    it('translates the placeholder of input elements', () => {
       const input = document.createElement('input');
       input.setAttribute('data-i18n', 'testKey');
       document.body.appendChild(input);
@@ -95,7 +95,7 @@ describe('i18n', () => {
       expect(input.placeholder).toBe('Test Message');
     });
 
-    it('textarea要素のプレースホルダーを翻訳する', () => {
+    it('translates the placeholder of textarea elements', () => {
       const textarea = document.createElement('textarea');
       textarea.setAttribute('data-i18n', 'testKey');
       document.body.appendChild(textarea);
@@ -105,7 +105,7 @@ describe('i18n', () => {
       expect(textarea.placeholder).toBe('Test Message');
     });
 
-    it('data-i18n-input-placeholder属性を持つ要素のプレースホルダーを翻訳する', () => {
+    it('translates the placeholder of elements with the data-i18n-input-placeholder attribute', () => {
       const input = document.createElement('input');
       input.setAttribute('data-i18n-input-placeholder', 'testKey');
       document.body.appendChild(input);
@@ -115,7 +115,7 @@ describe('i18n', () => {
       expect(input.placeholder).toBe('Test Message');
     });
 
-    it('data-i18n-aria-label属性を持つ要素のaria-labelを翻訳する', () => {
+    it('translates the aria-label of elements with the data-i18n-aria-label attribute', () => {
       const button = document.createElement('button');
       button.setAttribute('data-i18n-aria-label', 'testKey');
       document.body.appendChild(button);
@@ -125,7 +125,7 @@ describe('i18n', () => {
       expect(button.getAttribute('aria-label')).toBe('Test Message');
     });
 
-    it('data-i18n-args属性を持つ要素で置換パラメータを使用する', () => {
+    it('uses substitution parameters for elements with the data-i18n-args attribute', () => {
       const div = document.createElement('div');
       div.setAttribute('data-i18n', 'testWithArgs');
       div.setAttribute('data-i18n-args', '{"name":"User"}');
@@ -136,7 +136,7 @@ describe('i18n', () => {
       expect(div.textContent).toBe('Hello User');
     });
 
-    it('無効なJSON argsの場合は無視する', () => {
+    it('ignores invalid JSON args', () => {
       const div = document.createElement('div');
       div.setAttribute('data-i18n', 'testKey');
       div.setAttribute('data-i18n-args', 'invalid json');
@@ -147,7 +147,7 @@ describe('i18n', () => {
       expect(div.textContent).toBe('Test Message');
     });
 
-    it('countを含むdata-i18n-argsで英語ロケール時に複数形キーが解決される', () => {
+    it('resolves the plural key for the English locale with data-i18n-args containing count', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('en-US');
       vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         const messages: Record<string, string> = {
@@ -173,7 +173,7 @@ describe('i18n', () => {
       expect(plural.textContent).toBe('5 items');
     });
 
-    it('日本語ロケールではcountがあっても複数形サフィックスなしのキーが使われる', () => {
+    it('uses the key without a plural suffix for the Japanese locale even with count', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         const messages: Record<string, string> = { 'itemCount': '{count}件' };
@@ -190,7 +190,7 @@ describe('i18n', () => {
       expect(div.textContent).toBe('5件');
     });
 
-    it('countを含まないdata-i18n-argsは従来通り動作する', () => {
+    it('behaves as before for data-i18n-args without count', () => {
       const div = document.createElement('div');
       div.setAttribute('data-i18n', 'testWithArgs');
       div.setAttribute('data-i18n-args', '{"name":"NoCount"}');
@@ -201,7 +201,7 @@ describe('i18n', () => {
       expect(div.textContent).toBe('Hello NoCount');
     });
 
-    it('data-i18n属性を持つIMG要素のtitleを翻訳する', () => {
+    it('translates the title of IMG elements with the data-i18n attribute', () => {
       const img = document.createElement('img');
       img.setAttribute('data-i18n', 'testKey');
       document.body.appendChild(img);
@@ -211,7 +211,7 @@ describe('i18n', () => {
       expect(img.title).toBe('Test Message');
     });
 
-    it('select内のoption[data-i18n-opt]を翻訳する', () => {
+    it('translates option[data-i18n-opt] inside select elements', () => {
       vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         if (key === 'optionLabel') return 'Translated Option';
         return '';
@@ -228,7 +228,7 @@ describe('i18n', () => {
       expect(option.text).toBe('Translated Option');
     });
 
-    it('[data-i18n-label]ボタンのtextContentを翻訳する', () => {
+    it('translates the textContent of [data-i18n-label] buttons', () => {
       vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         if (key === 'btnLabel') return 'Click Me';
         return '';
@@ -243,7 +243,7 @@ describe('i18n', () => {
       expect(btn.textContent).toBe('Click Me');
     });
 
-    it('.help-text[data-i18n]を翻訳する', () => {
+    it('translates .help-text[data-i18n] elements', () => {
       vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
         if (key === 'helpMsg') return 'Help text here';
         return '';
@@ -259,11 +259,11 @@ describe('i18n', () => {
       expect(help.textContent).toBe('Help text here');
     });
 
-    it('data-i18n属性を持つ要素が存在しない場合にエラーを投げない', () => {
+    it('throws no error when no elements with the data-i18n attribute exist', () => {
       expect(() => applyI18n()).not.toThrow();
     });
 
-    it('特定の要素を指定して翻訳を適用できる', () => {
+    it('applies translation to a specified element', () => {
       const container = document.createElement('div');
       const div = document.createElement('div');
       div.setAttribute('data-i18n', 'testKey');
@@ -282,27 +282,27 @@ describe('i18n', () => {
   });
 
   describe('translatePageTitle', () => {
-    it('ページタイトルを翻訳する', () => {
+    it('translates the page title', () => {
       translatePageTitle('extensionName');
       expect(document.title).toBe('Yasumaro');
     });
 
-    it('存在しないキーの場合は空文字を設定する', () => {
+    it('sets an empty string for a missing key', () => {
       translatePageTitle('nonExistentKey');
       expect(document.title).toBe('');
     });
   });
 
   describe('setHtmlLangAndDir', () => {
-    it('isRTLがエクスポートされていること', () => {
+    it('exports isRTL', () => {
       expect(typeof isRTL).toBe('function');
     });
 
-    it('setHtmlLangAndDirがエクスポートされていること', () => {
+    it('exports setHtmlLangAndDir', () => {
       expect(typeof setHtmlLangAndDir).toBe('function');
     });
 
-    it('日本語ロケールでlangとdirを設定する', () => {
+    it('sets lang and dir for the Japanese locale', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       setHtmlLangAndDir();
 
@@ -310,7 +310,7 @@ describe('i18n', () => {
       expect(document.documentElement.dir).toBe('ltr');
     });
 
-    it('アラビア語ロケールでlangとdirを設定する', () => {
+    it('sets lang and dir for the Arabic locale', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ar-EG');
       setHtmlLangAndDir();
 
@@ -318,7 +318,7 @@ describe('i18n', () => {
       expect(document.documentElement.dir).toBe('rtl');
     });
 
-    it('英語ロケールでlangとdirを設定する', () => {
+    it('sets lang and dir for the English locale', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('en-US');
       setHtmlLangAndDir();
 
@@ -326,7 +326,7 @@ describe('i18n', () => {
       expect(document.documentElement.dir).toBe('ltr');
     });
 
-    it('RTL言語でdirがrtlになる', () => {
+    it('sets dir to rtl for RTL languages', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('he');
       setHtmlLangAndDir();
 
@@ -334,7 +334,7 @@ describe('i18n', () => {
       expect(document.documentElement.dir).toBe('rtl');
     });
 
-    it('フォールバックの英語ロケールで正しく設定する', () => {
+    it('falls back to the English locale correctly', () => {
       // Chrome APIを削除してフォールバックをテスト
       delete (global as { chrome?: typeof chrome }).chrome;
       setHtmlLangAndDir();
@@ -345,7 +345,7 @@ describe('i18n', () => {
   });
 
   describe('縮合テスト', () => {
-    it('getUserLocaleとgetMessageを kombinatして使用する', () => {
+    it('uses getUserLocale combined with getMessage', () => {
       vi.mocked(global.chrome.i18n.getUILanguage).mockReturnValue('ja-JP');
       const locale = getUserLocale();
       expect(locale).toBe('ja-JP');
@@ -354,7 +354,7 @@ describe('i18n', () => {
       expect(message).toBe('Test Message');
     });
 
-    it('applyI18n後にDOMが正しく翻訳されていること', () => {
+    it('leaves the DOM correctly translated after applyI18n', () => {
       const div = document.createElement('div');
       div.setAttribute('data-i18n', 'testKey');
       document.body.appendChild(div);

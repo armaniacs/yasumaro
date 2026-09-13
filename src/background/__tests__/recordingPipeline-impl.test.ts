@@ -406,7 +406,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('aiClient の伝達（回帰テスト: null問題）', () => {
-    it('コンストラクタに渡した aiClient が PrivacyPipeline コンストラクタに届く', async () => {
+    it('passes the constructor aiClient to the PrivacyPipeline constructor', async () => {
       const mockProcess = vi.fn<() => Promise<any>>().mockResolvedValue({
         summary: 'AI summary',
         maskedCount: 0,
@@ -436,7 +436,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    it('aiClient なし（null）で構築すると PrivacyPipeline に null が渡される', async () => {
+    it('passes null to PrivacyPipeline when constructed without aiClient (null)', async () => {
       const mockProcess = vi.fn<() => Promise<any>>().mockResolvedValue({
         summary: 'Summary not available.',
         maskedCount: 0,
@@ -466,7 +466,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('previewOnly モード', () => {
-    it('processedContent と maskedItems を返す', async () => {
+    it('returns processedContent and maskedItems', async () => {
       const mockProcess = vi.fn<() => Promise<any>>().mockResolvedValue({
         success: true,
         preview: true,
@@ -498,7 +498,7 @@ describe('RecordingPipeline', () => {
       expect(result.maskedItems).toEqual([{ type: 'email' }]);
     });
 
-    it('previewOnly 時は Obsidian に保存しない', async () => {
+    it('does not save to Obsidian in previewOnly mode', async () => {
       const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       const mockObsidian = makeObsidian();
       mockObsidian.appendToDailyNote = mockAppend;
@@ -532,7 +532,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('通常記録フロー', () => {
-    it('AI要約が Obsidian に保存される', async () => {
+    it('saves the AI summary to Obsidian', async () => {
       const mockAppend = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
       const mockObsidian = makeObsidian();
       mockObsidian.appendToDailyNote = mockAppend;
@@ -563,7 +563,7 @@ describe('RecordingPipeline', () => {
       expect(callArg).toContain('Generated AI summary');
     });
 
-    it('ドメインブロック時は DOMAIN_BLOCKED エラーを返す', async () => {
+    it('returns a DOMAIN_BLOCKED error when the domain is blocked', async () => {
       // @ts-expect-error - mock
       domainUtils.isDomainAllowed.mockResolvedValue(false);
 
@@ -593,7 +593,7 @@ describe('RecordingPipeline', () => {
       vi.useRealTimers();
     });
 
-    it('リトライ時の delayMs が常に 5000ms 以下である', async () => {
+    it('keeps retry delayMs at or below 5000ms', async () => {
       // privacyPipeline ステップ（maxRetries=3）が RETRY 対象
       // retries=1: 2^1*1000=2000ms, retries=2: 2^2*1000=4000ms, retries=3: 2^3*1000=8000ms→cap→5000ms
       MockedPrivacyPipeline.mockImplementation(function () {
@@ -630,21 +630,21 @@ describe('RecordingPipeline', () => {
       }
     });
 
-    it('retries=3 のバックオフ（8000ms）が 5000ms にキャップされる', () => {
+    it('caps the retries=3 backoff (8000ms) at 5000ms', () => {
       // 直接計算を検証: Math.min(Math.pow(2, 3) * 1000, 5000) = Math.min(8000, 5000) = 5000
       const retries = 3;
       const delayMs = Math.min(Math.pow(2, retries) * 1000, 5000);
       expect(delayMs).toBe(5000);
     });
 
-    it('retries=1,2 のバックオフは上限未満なのでそのまま', () => {
+    it('leaves retries=1,2 backoffs unchanged below the cap', () => {
       expect(Math.min(Math.pow(2, 1) * 1000, 5000)).toBe(2000);
       expect(Math.min(Math.pow(2, 2) * 1000, 5000)).toBe(4000);
     });
   });
 
   describe('buildErrorResult - ErrorCode.INTERNAL_ERROR', () => {
-    it('ステップで例外が発生した場合、logError に ErrorCode.INTERNAL_ERROR が渡される', async () => {
+    it('passes ErrorCode.INTERNAL_ERROR to logError when a step throws', async () => {
       MockedPrivacyPipeline.mockImplementation(function () {
         return {
           process: vi.fn<() => Promise<any>>().mockRejectedValue(new Error('Unexpected failure')),
@@ -672,7 +672,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    it('エラー結果に success=false と error メッセージが含まれる', async () => {
+    it('includes success=false and an error message in error results', async () => {
       MockedPrivacyPipeline.mockImplementation(function () {
         return {
           process: vi.fn<() => Promise<any>>().mockRejectedValue(new Error('Step crashed')),

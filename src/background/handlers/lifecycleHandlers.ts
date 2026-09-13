@@ -41,7 +41,7 @@ async function syncOllamaOriginRuleFromSettings(context: string): Promise<void> 
 
 export interface LifecycleHandlerContext {
     /** Mutable flag — the handler may set it to true */
-    isCacheInitialized: { value: boolean; restore: () => Promise<void> };
+    isCacheInitialized: { value: boolean; set: (value: boolean) => void; restore: () => Promise<void> };
     rateLimiter: RateLimiter;
     sqliteClient: SqliteClient;
     recordingCache?: RecordingCacheInstance | null;
@@ -112,7 +112,10 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
                 if (ctx.recordingCache) await ctx.recordingCache.invalidateSettingsCache();
                 const settings = await settingsRepository.getAll();
                 await updateDomainFilterCache(settings);
-                ctx.isCacheInitialized.value = true;
+                // PBI 2026-09-12-33: flag mutation goes through set() — the
+                // value property became read-only when the Proxy echo trap
+                // was removed.
+                ctx.isCacheInitialized.set(true);
 
                 // Reload recording cache from session
                 if (ctx.recordingCache) await ctx.recordingCache.loadCacheFromSession();

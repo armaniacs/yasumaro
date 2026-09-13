@@ -78,8 +78,8 @@ const SECTION_LABEL_TO_CATALOG: Record<string, string> = {
 };
 
 describe('panelCatalog — 単一ソース', () => {
-  it('declares 19 panels with no duplicate ids', () => {
-    expect(PANEL_CATALOG).toHaveLength(19);
+  it('declares 18 panels with no duplicate ids', () => {
+    expect(PANEL_CATALOG).toHaveLength(18);
     const ids = PANEL_CATALOG.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -104,17 +104,13 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-domain-search',
       'panel-export-logs',
       'panel-export-import',
-      'panel-history',
     ]);
   });
 
-  it('keeps legacy panel-history registered but hidden from the sidebar (PBI 16 pending)', () => {
-    const legacy = PANEL_CATALOG.find((e) => e.id === 'panel-history');
-    expect(legacy).toBeDefined();
-    expect(legacy?.sidebarSection).toBeNull();
-    expect(legacy?.sidebarI18nKey).toBeNull();
-    // The section element still exists (registry navigate targets it).
-    expect(html).toContain('id="panel-history"');
+  it('no longer registers the legacy panel-history (removed, PBI 2026-09-11-09)', () => {
+    expect(PANEL_CATALOG.find((e) => e.id === 'panel-history')).toBeUndefined();
+    // The section element is gone from the HTML too.
+    expect(html).not.toContain('id="panel-history"');
     expect(sidebarNav).not.toContain('data-panel="panel-history"');
   });
 
@@ -134,14 +130,14 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
   it('places every button under its catalog section', () => {
     for (const b of buttons) {
       const entry = SIDEBAR_PANELS.find((e) => e.id === b.panelId);
-      expect(SECTION_LABEL_TO_CATALOG[b.sectionLabel], b.panelId).toBe(entry?.sidebarSection);
+      expect(SECTION_LABEL_TO_CATALOG[b.sectionLabel]).toBe(entry?.sidebarSection);
     }
   });
 
   it('keeps sidebar i18n keys identical to the catalog declaration', () => {
     for (const b of buttons) {
       const entry = SIDEBAR_PANELS.find((e) => e.id === b.panelId);
-      expect(b.i18nKey, b.panelId).toBe(entry?.sidebarI18nKey);
+      expect(b.i18nKey).toBe(entry?.sidebarI18nKey);
     }
   });
 
@@ -149,9 +145,9 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
     const navRole = /<nav id="sidebar" class="sidebar" role="([^"]+)"/.exec(sidebarNav);
     expect(navRole?.[1]).toBe('tablist');
     for (const b of buttons) {
-      expect(b.role, b.panelId).toBe('tab');
-      expect(b.ariaSelected, b.panelId).toMatch(/^(true|false)$/);
-      expect(b.ariaControls, b.panelId).toBe(b.panelId);
+      expect(b.role).toBe('tab');
+      expect(b.ariaSelected).toMatch(/^(true|false)$/);
+      expect(b.ariaControls).toBe(b.panelId);
     }
     // Exactly the default panel starts selected.
     expect(buttons.filter((b) => b.ariaSelected === 'true').map((b) => b.panelId)).toEqual([
@@ -209,7 +205,7 @@ describe('panelCatalog — factory 網羅', () => {
   it('keeps every static spec key registered in the catalog', () => {
     const catalogIds = new Set(PANEL_CATALOG.map((e) => e.id));
     for (const id of Object.keys(STATIC_FORM_SPECS)) {
-      expect(catalogIds.has(id), id).toBe(true);
+      expect(catalogIds.has(id)).toBe(true);
     }
   });
 });

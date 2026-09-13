@@ -15,13 +15,13 @@ describe('ublockImport - RulesBuilder Module', () => {
   // ============================================================================
 
   describe('rebuildRulesFromSources', () => {
-    test('空のソースリストでは空のルールを返す', () => {
+    test('returns empty rules for an empty source list', () => {
       const result = rebuildRulesFromSources([]);
       expect(result.blockRules).toEqual([]);
       expect(result.exceptionRules).toEqual([]);
     });
 
-    test('単一ソースのルールを再構築', () => {
+    test('rebuilds rules from a single source', () => {
       const sources = [
         {
           url: 'https://example.com/filters.txt',
@@ -37,7 +37,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.exceptionRules).toHaveLength(0);
     });
 
-    test('複数ソースのルールをマージ', () => {
+    test('merges rules from multiple sources', () => {
       const sources = [
         {
           url: 'https://example.com/filters1.txt',
@@ -60,7 +60,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.exceptionRules).toHaveLength(1);
     });
 
-    test('重複するドメインをマージ', () => {
+    test('merges duplicate domains', () => {
       const sources = [
         {
           url: 'https://example.com/filters1.txt',
@@ -82,7 +82,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.blockRules).toHaveLength(2);
     });
 
-    test('ワイルドカードドメインを処理', () => {
+    test('handles wildcard domains', () => {
       const sources = [
         {
           url: 'https://example.com/filters.txt',
@@ -98,7 +98,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.blockRules).toContain('*.example.com');
     });
 
-    test('null/undefinedソースを安全に処理', () => {
+    test('handles null/undefined sources safely', () => {
       expect(rebuildRulesFromSources(null as unknown as Parameters<typeof rebuildRulesFromSources>[0])).toBeDefined();
       expect(rebuildRulesFromSources(undefined as unknown as Parameters<typeof rebuildRulesFromSources>[0])).toBeDefined();
     });
@@ -109,7 +109,7 @@ describe('ublockImport - RulesBuilder Module', () => {
   // ============================================================================
 
   describe('previewUblockFilter', () => {
-    test('有効なルールをプレビュー', () => {
+    test('previews valid rules', () => {
       const filterText = '||example.com^\n||test.com^\n@@||trusted.com^';
       const result = previewUblockFilter(filterText);
 
@@ -119,7 +119,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.errorDetails).toHaveLength(0);
     });
 
-    test('エラーを含むルールをプレビュー', () => {
+    test('previews rules containing errors', () => {
       const filterText = '||example.com^\ninvalid line\n||test.com^';
       const result = previewUblockFilter(filterText);
 
@@ -128,7 +128,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(Array.isArray(result.errorDetails)).toBe(true);
     });
 
-    test('空のフィルターテキストを処理', () => {
+    test('handles empty filter text', () => {
       const result = previewUblockFilter('');
 
       expect(result.blockCount).toBe(0);
@@ -136,7 +136,7 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.errorCount).toBe(0);
     });
 
-    test('コメントと空行をスキップ', () => {
+    test('skips comments and empty lines', () => {
       const filterText = '! Comment\n\n||example.com^\n';
       const result = previewUblockFilter(filterText);
 
@@ -144,12 +144,12 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.errorCount).toBe(0);
     });
 
-    test('null/undefinedを安全に処理', () => {
+    test('handles null/undefined safely', () => {
       expect(previewUblockFilter(null as unknown as string)).toBeDefined();
       expect(previewUblockFilter(undefined as unknown as string)).toBeDefined();
     });
 
-    test('大量の有効なルールを処理', () => {
+    test('handles a large number of valid rules', () => {
       const rules = Array(1000).fill(0).map((_, i) => `||domain${i}.com^`).join('\n');
       const result = previewUblockFilter(rules);
 
@@ -157,14 +157,14 @@ describe('ublockImport - RulesBuilder Module', () => {
       expect(result.errorCount).toBe(0);
     });
 
-    test('hosts形式のルールを処理', () => {
+    test('handles hosts-format rules', () => {
       const filterText = '0.0.0.0 example.com\n127.0.0.1 test.com';
       const result = previewUblockFilter(filterText);
 
       expect(result.blockCount).toBeGreaterThan(0);
     });
 
-    test('エラーメッセージが正しくフォーマットされる', () => {
+    test('formats error messages correctly', () => {
       const filterText = '||example.com^\ninvalid rule without ^^';
       const result = previewUblockFilter(filterText);
 
@@ -184,7 +184,7 @@ describe('ublockImport - RulesBuilder Module', () => {
   // ============================================================================
 
   describe('Integration Tests', () => {
-    test('プレビューからルール再構築へのフロー', () => {
+    test('flows from preview to rule rebuild', () => {
       const filterText = '||example.com^\n||test.com^\n@@||trusted.com^';
       const preview = previewUblockFilter(filterText);
 

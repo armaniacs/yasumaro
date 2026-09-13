@@ -169,10 +169,20 @@ vi.mock('../statusChecker.js', () => ({
     formatTimeAgo: vi.fn().mockReturnValue(''),
 }));
 
-vi.mock('../spinner.js', () => ({
-    showSpinner: vi.fn(),
-    hideSpinner: vi.fn(),
-}));
+vi.mock('../spinner.js', () => {
+    const showSpinner = vi.fn();
+    const hideSpinner = vi.fn();
+    // PBI 2026-09-12-14: PreviewFlow owns its pairings through SpinnerScope.
+    class SpinnerScope {
+      show(text?: string): void {
+        showSpinner(text);
+      }
+      hide(): void {
+        hideSpinner();
+      }
+    }
+    return { showSpinner, hideSpinner, SpinnerScope };
+});
 
 vi.mock('../errorUtils.js', () => ({
     showError: vi.fn(),
@@ -366,7 +376,7 @@ describe('recordCurrentPage', () => {
         );
     });
 
-    it('handles chrome.runtime.lastError after sendMessage (L225)', async () => {
+    it('returns the resolved content even when a stale lastError exists (promise contract, PBI 2026-09-11-04)', async () => {
         (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
             id: 1,
             url: 'https://example.com',
@@ -377,10 +387,9 @@ describe('recordCurrentPage', () => {
 
         await recordCurrentPage();
 
-        expect(chrome.scripting.executeScript).toHaveBeenCalledWith({
-            target: { tabId: 1 },
-            func: expect.any(Function),
-        });
+        // Promise-style sendMessage never populates runtime.lastError; a
+        // resolved response is taken as-is and no scripting fallback runs.
+        expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
     });
 
     it('falls back to chrome.scripting.executeScript when sendMessage fails (L243)', async () => {

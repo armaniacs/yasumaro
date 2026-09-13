@@ -83,7 +83,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
   }
 
   describe('validateMessage関数', () => {
-    it('有効なVALID_VISITメッセージを検証できる', () => {
+    it('validates a valid VALID_VISIT message', () => {
       const message = {
         type: 'VALID_VISIT',
         payload: {
@@ -95,7 +95,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('有効なMANUAL_RECORDメッセージを検証できる', () => {
+    it('validates a valid MANUAL_RECORD message', () => {
       const message = {
         type: 'MANUAL_RECORD',
         payload: {
@@ -109,7 +109,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('有効なPREVIEW_RECORDメッセージを検証できる', () => {
+    it('validates a valid PREVIEW_RECORD message', () => {
       const message = {
         type: 'PREVIEW_RECORD',
         payload: {
@@ -123,7 +123,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('有効なSAVE_RECORDメッセージを検証できる', () => {
+    it('validates a valid SAVE_RECORD message', () => {
       const message = {
         type: 'SAVE_RECORD',
         payload: {
@@ -137,18 +137,18 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('nullメッセージを拒否する', () => {
+    it('rejects a null message', () => {
       const result = validateMessage(null);
       expect(result.valid).toBe(false);
       expect(result.reason).toBe('Message must be an object');
     });
 
-    it('オブジェクト以外を拒否する', () => {
+    it('rejects a non-object message', () => {
       const result = validateMessage('string');
       expect(result.valid).toBe(false);
     });
 
-    it('typeがないメッセージを拒否する', () => {
+    it('rejects a message without a type', () => {
       const message = {
         payload: { content: 'test' }
       };
@@ -158,7 +158,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.reason).toBe('Message must have a valid type');
     });
 
-    it('許可されていないtypeを拒否する', () => {
+    it('rejects a message with a disallowed type', () => {
       const message = {
         type: 'MALICIOUS_TYPE',
         payload: { content: 'test' }
@@ -169,7 +169,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.reason).toBe('Invalid message type');
     });
 
-    it('payloadがないメッセージを拒否する', () => {
+    it('rejects a message without a payload', () => {
       const message = {
         type: 'VALID_VISIT'
       };
@@ -178,7 +178,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(false);
     });
 
-    it('MANUAL_RECORDで必須フィールドがない場合を拒否する', () => {
+    it('rejects MANUAL_RECORD with missing required fields', () => {
       const message = {
         type: 'MANUAL_RECORD',
         payload: {
@@ -190,7 +190,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(false);
     });
 
-    it('非HTTP/HTTPS URLを拒否する', () => {
+    it('rejects a non-HTTP/HTTPS URL', () => {
       const message = {
         type: 'MANUAL_RECORD',
         payload: {
@@ -205,7 +205,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.reason).toBe('Only http/https URLs are allowed');
     });
 
-    it('data: URLを拒否する', () => {
+    it('rejects a data: URL', () => {
       const message = {
         type: 'MANUAL_RECORD',
         payload: {
@@ -219,7 +219,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
       expect(result.valid).toBe(false);
     });
 
-    it('不正なURL形式を拒否する', () => {
+    it('rejects a malformed URL', () => {
       const message = {
         type: 'MANUAL_RECORD',
         payload: {
@@ -235,7 +235,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
     });
 
     describe('XSS攻撃の検出', () => {
-      it('scriptタグを含むメッセージを拒否する', () => {
+      it('rejects a message containing a script tag', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -248,7 +248,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.reason).toBe('Message contains potentially malicious content');
       });
 
-      it('onerrorイベントハンドラーを含むメッセージを拒否する', () => {
+      it('rejects a message containing an onerror handler', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -260,7 +260,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(false);
       });
 
-      it('javascript:プロトコルを含むメッセージを拒否する', () => {
+      it('rejects a message containing the javascript: protocol', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -272,7 +272,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(false);
       });
 
-      it('iframeタグを含むメッセージを拒否する', () => {
+      it('rejects a message containing an iframe tag', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -284,7 +284,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(false);
       });
 
-      it('イベントハンドラーを含むメッセージを拒否する', () => {
+      it('rejects a message containing an event handler', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -296,7 +296,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(false);
       });
 
-      it('objectタグを含むメッセージを拒否する', () => {
+      it('rejects a message containing an object tag', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -308,7 +308,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(false);
       });
 
-      it('embedタグを含むメッセージを拒否する', () => {
+      it('rejects a message containing an embed tag', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -322,7 +322,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
     });
 
     describe('有効なコンテンツの許可', () => {
-      it('安全なHTMLタグを含むメッセージを許可する', () => {
+      it('allows a message with safe HTML tags', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -335,7 +335,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(true);
       });
 
-      it('プレインテキストを含むメッセージを許可する', () => {
+      it('allows a message with plain text', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -347,7 +347,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(true);
       });
 
-      it('正しいHTTP URLを含むメッセージを許可する', () => {
+      it('allows a message with a valid HTTP URL', () => {
         const message = {
           type: 'MANUAL_RECORD',
           payload: {
@@ -361,7 +361,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(true);
       });
 
-      it('正しいHTTPS URLを含むメッセージを許可する', () => {
+      it('allows a message with a valid HTTPS URL', () => {
         const message = {
           type: 'MANUAL_RECORD',
           payload: {
@@ -377,7 +377,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
     });
 
     describe('エッジケース', () => {
-      it('空の文字列のcontentを許可する', () => {
+      it('allows empty string content', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {
@@ -389,7 +389,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(true);
       });
 
-      it('非常に長い文字列を処理できる', () => {
+      it('handles a very long string', () => {
         const longContent = 'a'.repeat(100000);
         const message = {
           type: 'VALID_VISIT',
@@ -402,7 +402,7 @@ describe('Service Worker: メッセージ検証強化（タスク1）', () => {
         expect(result.valid).toBe(true);
       });
 
-      it('特殊文字を含むが安全なコンテンツを許可する', () => {
+      it('allows safe content containing special characters', () => {
         const message = {
           type: 'VALID_VISIT',
           payload: {

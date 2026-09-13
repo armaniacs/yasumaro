@@ -160,4 +160,62 @@ describe('archivePanel mount (PBI 2026-09-06-02)', () => {
     await vi.waitFor(() => expect(statusEl.textContent).toContain('out of range'));
     expect(archivePreview).not.toHaveBeenCalled();
   });
+
+  it('restore preview hands the staging name to the session viewer (PBI 2026-09-12-02)', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(svc.archivePrepareIncoming).mockResolvedValue({ data: 'archive_incoming_test.db' } as never);
+    vi.mocked(svc.archiveRestorePreview).mockResolvedValue({
+      data: { recordCount: 3, cutoffDate: '2026-09-01' },
+    } as never);
+    vi.mocked(svc.archiveOpen).mockResolvedValue({ data: {} } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({
+      data: { rows: [{ id: 1, created_at: 1727000000000, title: 'Row A', url: 'https://a.example.com' }], total: 1 },
+    } as never);
+
+    // Stub the OPFS write the restore flow uses to stage the picked file.
+    const writable = { write: vi.fn(), close: vi.fn(), abort: vi.fn() };
+    (globalThis.navigator as unknown as { storage: unknown }).storage = {
+      getDirectory: async () => ({
+        getFileHandle: async () => ({ createWritable: async () => writable }),
+      }),
+    };
+
+    const container = document.createElement('section');
+    container.innerHTML = `
+      <input type="date" id="archive-date">
+      <input type="checkbox" id="archive-include-deleted">
+      <button id="archive-preview-btn"></button>
+      <button id="archive-create-btn"></button>
+      <div id="archive-preview-summary" hidden></div>
+      <div id="archive-status" aria-live="polite"></div>
+      <section id="archive-session-section" hidden>
+        <input id="archive-session-query">
+        <button id="archive-session-query-btn"></button>
+        <div id="archive-session-list"></div>
+        <button id="archive-session-save-btn"></button>
+        <button id="archive-session-close-btn"></button>
+      </section>
+      <input type="file" id="archive-restore-file">
+      <div id="archive-restore-preview-summary" hidden></div>
+      <button id="archive-restore-btn" hidden></button>
+    `;
+    document.body.appendChild(container);
+    const panel = createArchivePanel();
+    await panel.mount(container);
+
+    const input = container.querySelector('#archive-restore-file') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: [new File(['sqlite-bytes'], 'backup.db')] });
+    input.dispatchEvent(new Event('change'));
+
+    const list = container.querySelector('#archive-session-list') as HTMLElement;
+    const sessionSection = container.querySelector('#archive-session-section') as HTMLElement;
+    await vi.waitFor(() => expect(list.querySelectorAll('.archive-session-row').length).toBe(1));
+
+    // The handoff fix: open succeeded → sessionStaging is set → the list
+    // renders (previously the guard returned and the section stayed empty)
+    // and the query runs against the restored staging name.
+    expect(svc.archiveOpen).toHaveBeenCalledWith('archive_incoming_test.db');
+    expect(svc.archiveQuery).toHaveBeenCalledWith('archive_incoming_test.db', '', 100, 0);
+    expect(sessionSection.hidden).toBe(false);
+  });
 });

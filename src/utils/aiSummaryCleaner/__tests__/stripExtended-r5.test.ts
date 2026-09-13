@@ -201,7 +201,7 @@ describe('stripExtended - R5 remaining branches', () => {
   });
 
   describe('stripCookieConsentElements extra', () => {
-    it('removes via Cookieの管理 pattern', () => {
+    it('removes via cookie-management text pattern', () => {
       root.innerHTML = '<p>Cookieの管理について</p>';
       expect(stripCookieConsentElements(root)).toBe(1);
     });
@@ -531,7 +531,7 @@ describe('stripExtended - R5 remaining branches', () => {
       root.innerHTML = '<div data-ow-body-protected="true"><div class="global-nav">protected</div></div>';
       expect(stripJPNavigationPatterns(root)).toBe(0);
     });
-    it('removes via pagination keyword ページメニュー', () => {
+    it('removes via pagination keyword for page menu', () => {
       root.innerHTML = '<div>ページメニュー content</div>';
       expect(stripJPNavigationPatterns(root)).toBe(1);
     });
@@ -556,11 +556,11 @@ describe('stripExtended - R5 remaining branches', () => {
       root.innerHTML = '<div>' + 'プロフィール' + 'x'.repeat(200) + '</div>';
       expect(stripAuthorMetaElements(root)).toBe(0);
     });
-    it('removes via 更新日 keyword', () => {
+    it('removes via updated-date keyword', () => {
       root.innerHTML = '<div>更新日 2024-01-01</div>';
       expect(stripAuthorMetaElements(root)).toBe(1);
     });
-    it('removes via 著者 keyword', () => {
+    it('removes via author keyword', () => {
       root.innerHTML = '<span>著者: 田中</span>';
       expect(stripAuthorMetaElements(root)).toBe(1);
     });

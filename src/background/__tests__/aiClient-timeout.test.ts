@@ -31,7 +31,7 @@ describe('AI Provider timeout', () => {
     vi.clearAllMocks();
   });
 
-  test('GeminiProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
+  test('GeminiProvider passes the proper timeout to fetchWithRetry', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue({
@@ -69,7 +69,7 @@ describe('AI Provider timeout', () => {
     expect(callArgs[1].method).toBe('POST');
   });
 
-  test('GeminiProvider：タイムアウトエラーを適切に処理', async () => {
+  test('GeminiProvider handles timeout errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));
@@ -84,7 +84,7 @@ describe('AI Provider timeout', () => {
     expect(result.summary).toMatch(/timed out/);
   });
 
-  test('OpenAIProvider：fetchWithRetryに適切なタイムアウトを渡す', async () => {
+  test('OpenAIProvider passes the proper timeout to fetchWithRetry', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue({
@@ -120,7 +120,7 @@ describe('AI Provider timeout', () => {
     );
   });
 
-  test('OpenAIProvider：タイムアウトエラーを適切に処理', async () => {
+  test('OpenAIProvider handles timeout errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));

@@ -64,6 +64,8 @@ export interface QueuePort<T> {
   flush(handler: (item: T) => Promise<boolean>): Promise<T[]>;
   getQueueSize(): Promise<number>;
   filterExpiredAndOverRetry(items: T[]): { kept: T[]; dropped: T[] };
+  /** In-lock read-modify-write (VULN-056). dequeue/peek route through this. */
+  mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<void>;
 }
 
 /** Builds OfflineJob values with generated id/createdAt/retryCount so callers only supply intent. */
@@ -89,16 +91,21 @@ export class OfflineNetworkQueue {
   }
 
   async dequeue(): Promise<OfflineJob | null> {
-    const jobs = await this.port.load();
-    // TTL/retry filtering lives only in PersistentRetryQueue.filterExpiredAndOverRetry
-    // so flush()/flushBatch() and this facade never diverge on expiry policy.
-    const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
-    if (dropped.length > 0) {
-      addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: dropped.length });
-    }
-    if (kept.length === 0) return null;
-    const job = kept.shift()!;
-    await this.port.save(kept);
+    // PBI 2026-09-12-08: route through the queue lock — the old direct
+    // load→filter→save raced an in-flight flush (the exact VULN-056
+    // interleave the lock exists for).
+    let job: OfflineJob | null = null;
+    await this.port.mutate((jobs) => {
+      // TTL/retry filtering lives only in PersistentRetryQueue.filterExpiredAndOverRetry
+      // so flush()/flushBatch() and this facade never diverge on expiry policy.
+      const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
+      if (dropped.length > 0) {
+        addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: dropped.length });
+      }
+      if (kept.length === 0) return [];
+      job = kept.shift()!;
+      return kept;
+    });
     return job;
   }
 
@@ -111,12 +118,17 @@ export class OfflineNetworkQueue {
   }
 
   async peek(): Promise<OfflineJob | null> {
-    const jobs = await this.port.load();
-    const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
-    if (dropped.length > 0) {
-      await this.port.save(kept);
-    }
-    return kept[0] ?? null;
+    let first: OfflineJob | null = null;
+    await this.port.mutate((jobs) => {
+      const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
+      if (dropped.length > 0) {
+        addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: dropped.length });
+      }
+      first = kept[0] ?? null;
+      // Pure read when expiry changed nothing — keep the stored list as-is.
+      return dropped.length > 0 ? kept : jobs;
+    });
+    return first;
   }
 }
 
@@ -145,6 +157,9 @@ export class NoOpQueuePort implements QueuePort<OfflineJob> {
   }
   filterExpiredAndOverRetry(items: OfflineJob[]): { kept: OfflineJob[]; dropped: OfflineJob[] } {
     return { kept: items, dropped: [] };
+  }
+  async mutate(fn: (items: OfflineJob[]) => OfflineJob[] | Promise<OfflineJob[]>): Promise<void> {
+    await fn([]);
   }
 }
 

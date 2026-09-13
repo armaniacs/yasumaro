@@ -29,7 +29,7 @@ describe('Integration: Robustness improvements', () => {
     // ストレージのクリアはjest.setup.jsのbeforeEachで行われています
   });
 
-  test('settings.getがStorageKeysのみを取得', async () => {
+  test('settings.get fetches only StorageKeys', async () => {
     // ゴミデータをセット
     await chrome.storage.local.set({
       junk1: 1,
@@ -55,7 +55,7 @@ describe('Integration: Robustness improvements', () => {
     expect(settings[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
   });
 
-  test('Mutex Mapが正しく動作', async () => {
+  test('Mutex Map works correctly', async () => {
     const client = new ObsidianClient();
     const mutex = client._globalWriteMutex;
 
@@ -80,7 +80,7 @@ describe('Integration: Robustness improvements', () => {
     expect((mutex as unknown as { queue: { size: number } }).queue.size).toBe(0);
   });
 
-  test('fetchWithRetryが正常に動作', async () => {
+  test('fetchWithRetry works normally', async () => {
     const mockResponse = { ok: true, json: async () => ({ data: 'test' }) };
     // @ts-expect-error - vi.fn() type narrowing issue
 
@@ -90,7 +90,7 @@ describe('Integration: Robustness improvements', () => {
     expect(response.ok).toBe(true);
   });
 
-  test('GeminiProviderがfetchWithRetryを使用', async () => {
+  test('GeminiProvider uses fetchWithRetry', async () => {
     // fetchWithRetryが呼ばれることを確認
     const mockResponse = {
       ok: true,

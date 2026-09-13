@@ -55,39 +55,39 @@ describe('builtInAiDiagnosticsService', () => {
   });
 
   describe('checkBuiltInAiAvailability', () => {
-    test('LanguageModel が存在しない場合 unavailable を返す', async () => {
+    test('returns unavailable when LanguageModel is absent', async () => {
       delete (globalThis as unknown as { LanguageModel?: unknown }).LanguageModel;
       const result = await checkBuiltInAiAvailability();
       expect(result.status).toBe('unavailable');
     });
 
-    test('available を返す', async () => {
+    test('returns available', async () => {
       mockLanguageModel.availability.mockResolvedValueOnce('available');
       const result = await checkBuiltInAiAvailability();
       expect(result.status).toBe('available');
       expect(result.guidance).toBeNull();
     });
 
-    test('availability() は create() と同じ expectedOutputs を指定して呼ぶ', async () => {
+    test('calls availability() with the same expectedOutputs as create()', async () => {
       await checkBuiltInAiAvailability();
       expect(mockLanguageModel.availability).toHaveBeenCalledWith({
         expectedOutputs: [{ type: 'text', languages: ['ja'] }],
       });
     });
 
-    test('downloadable を返す', async () => {
+    test('returns downloadable', async () => {
       mockLanguageModel.availability.mockResolvedValueOnce('downloadable');
       const result = await checkBuiltInAiAvailability();
       expect(result.status).toBe('downloadable');
     });
 
-    test('downloading を返す', async () => {
+    test('returns downloading', async () => {
       mockLanguageModel.availability.mockResolvedValueOnce('downloading');
       const result = await checkBuiltInAiAvailability();
       expect(result.status).toBe('downloading');
     });
 
-    test('unavailable の場合 Chrome 向けフラグ案内を含む', async () => {
+    test('includes Chrome flag guidance when unavailable', async () => {
       mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
       getBrowserName.mockReturnValue('chrome');
       const result = await checkBuiltInAiAvailability();
@@ -98,14 +98,14 @@ describe('builtInAiDiagnosticsService', () => {
       });
     });
 
-    test('unavailable かつ未知ブラウザの場合 guidance は null', async () => {
+    test('returns null guidance when unavailable on an unknown browser', async () => {
       mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
       getBrowserName.mockReturnValue('unknown');
       const result = await checkBuiltInAiAvailability();
       expect(result.guidance).toBeNull();
     });
 
-    test('availability() が例外を投げた場合 unavailable を返す', async () => {
+    test('returns unavailable when availability() throws', async () => {
       mockLanguageModel.availability.mockRejectedValueOnce(new Error('boom'));
       const result = await checkBuiltInAiAvailability();
       expect(result.status).toBe('unavailable');
@@ -113,7 +113,7 @@ describe('builtInAiDiagnosticsService', () => {
   });
 
   describe('startBuiltInAiDownload', () => {
-    test('LanguageModel が存在しない場合 unavailable を返しダウンロードを試みない', async () => {
+    test('returns unavailable without attempting download when LanguageModel is absent', async () => {
       delete (globalThis as unknown as { LanguageModel?: unknown }).LanguageModel;
       const onProgress = vi.fn();
       const result = await startBuiltInAiDownload(onProgress);
@@ -121,7 +121,7 @@ describe('builtInAiDiagnosticsService', () => {
       expect(onProgress).not.toHaveBeenCalled();
     });
 
-    test('monitor 経由の downloadprogress イベントで進捗を通知する', async () => {
+    test('reports progress via downloadprogress events from monitor', async () => {
       let capturedListener: ((event: { loaded: number }) => void) | undefined;
       const mockMonitorTarget = {
         addEventListener: vi.fn((eventName: string, listener: (event: { loaded: number }) => void) => {
@@ -147,14 +147,14 @@ describe('builtInAiDiagnosticsService', () => {
       expect(result.status).toBe('available');
     });
 
-    test('create() が失敗した場合 unavailable を返す', async () => {
+    test('returns unavailable when create() fails', async () => {
       mockLanguageModel.create.mockRejectedValueOnce(new Error('download failed'));
       const onProgress = vi.fn();
       const result = await startBuiltInAiDownload(onProgress);
       expect(result.status).toBe('unavailable');
     });
 
-    test('ダウンロード後に破棄したセッションを再利用しない（session.destroy が呼ばれる）', async () => {
+    test('does not reuse the destroyed session after download (calls session.destroy)', async () => {
       const session = createMockSession();
       mockLanguageModel.create.mockResolvedValueOnce(session);
       mockLanguageModel.availability.mockResolvedValue('available');

@@ -163,7 +163,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
     // saveObsidian is BEST_EFFORT with offlineRetry (obsidian_sync): a failed
     // Obsidian write no longer fails the recording; it is queued for retry.
     // The legacy URL-marking path must stay untouched on that failure path.
-    it('Obsidian書き込み失敗時もベストエフォートで記録が完了し、URL保存は行われないこと', async () => {
+    it('completes recording best-effort without saving the URL when the Obsidian write fails', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
@@ -180,20 +180,20 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
     });
 
     // SKIPPED: Pre-existing test issues - mock setup incomplete for Vitest
-    it.skip('Obsidian書き込み成功時にのみURLが保存されていることを確認', async () => {
+    it.skip('saves the URL only when the Obsidian write succeeds', async () => {
       // Test expects result.success=true but RecordingPipeline mock not properly set up
     });
 
     // SKIPPED: Pre-existing test issues - error message mismatch
-    it.skip('ネットワークエラー時にURLが保存されないこと', async () => {
+    it.skip('does not save the URL on network errors', async () => {
       // Test expects result.error='Network error' but actual error handling differs
     });
 
-    it.skip('APIエラー時にURLが保存されないこと', async () => {
+    it.skip('does not save the URL on API errors', async () => {
       // Test expects result.error='API Error' but actual error handling differs
     });
 
-    it.skip('タイムアウト時にURLが保存されないこと', async () => {
+    it.skip('does not save the URL on timeout', async () => {
       // Test expects result.error='Request timeout' but actual error handling differs
     });
   });
@@ -204,7 +204,7 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
   });
 
   describe('エッジケース: 重複URLの処理', () => {
-    it('既存のURLが保存されている場合、重複チェックが正しく動作すること', async () => {
+    it('checks duplicates correctly when the URL is already saved', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockResolvedValue(undefined)
       };
@@ -226,13 +226,13 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
     });
 
     // SKIPPED: Mock issues - need further investigation
-    it.skip('新しいURLの場合にのみsetSavedUrlsWithTimestampsが呼ばれること', async () => {
+    it.skip('calls setSavedUrlsWithTimestamps only for new URLs', async () => {
     });
   });
 
   describe('エッジケース: force記録の場合', () => {
     // saveObsidian is BEST_EFFORT (offlineRetry queued) — see the contract note above.
-    it('force=trueの場合でもObsidian書き込み失敗時はURL保存を行わないこと', async () => {
+    it('skips URL saving on Obsidian write failure even with force=true', async () => {
       const mockObsidianClient = {
         appendToDailyNote: vi.fn().mockRejectedValue(new Error('Network error'))
       };
@@ -253,11 +253,11 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
 
   describe('エッジケース: 並列呼び出し時の整合性', () => {
     // SKIPPED: Mock issues - need further investigation
-    it.skip('並列呼び出し時にURLが正しく保存されること', async () => {
+    it.skip('saves URLs correctly for parallel calls', async () => {
     });
 
     // SKIPPED: Mock issues - need further investigation
-    it.skip('並列呼び出し時に一部のリクエストが失敗した場合の整合性を確認', async () => {
+    it.skip('keeps consistency when some parallel requests fail', async () => {
     });
   });
 });

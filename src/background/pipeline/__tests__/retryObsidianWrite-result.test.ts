@@ -59,21 +59,4 @@ describe('RecordingOrchestrator retry result reflects Obsidian outcome', () => {
     expect(obsidian.appendToDailyNote).not.toHaveBeenCalled();
   });
 
-  it('deprecated retryObsidian mode reports failure when the write is skipped', async () => {
-    const obsidian = mockObsidian();
-    const pipeline = makeOrchestrator(
-      () => Promise.resolve(null),
-      obsidian,
-      null,
-      null,
-      null,
-      undefined,
-      async () => ({ [StorageKeys.OBSIDIAN_ENABLED]: false }) as unknown as Settings,
-    );
-    const result = await pipeline.record(
-      { title: job.title, url: job.url, summary: job.summary, tags: job.tags } as never,
-      { mode: 'retryObsidian' },
-    );
-    expect(result.success).toBe(false);
-  });
 });

@@ -19,7 +19,7 @@ function makeDatabase(): TrustDatabase {
 }
 
 describe('TrancoManager', () => {
-  test('rebuildCachesFromDatabase は trancoSet と trancoRankMap を再構築する', () => {
+  test('rebuildCachesFromDatabase rebuilds trancoSet and trancoRankMap', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const manager = new TrancoManager({ bloomFilterManager: new BloomFilterManager(), save });
     const db = makeDatabase();
@@ -33,7 +33,7 @@ describe('TrancoManager', () => {
     expect(manager.trancoRankMap.get('b.com')).toBe(1);
   });
 
-  test('updateTranco はデータベース・キャッシュを更新し保存する', async () => {
+  test('updateTranco updates database and caches then saves', async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const manager = new TrancoManager({ bloomFilterManager: new BloomFilterManager(), save });
     const db = makeDatabase();
@@ -49,7 +49,7 @@ describe('TrancoManager', () => {
     expect(save).toHaveBeenCalledTimes(1);
   });
 
-  test('isTrancoDomain は trancoSet を参照して判定する', () => {
+  test('isTrancoDomain judges by looking up trancoSet', () => {
     const save = vi.fn().mockResolvedValue(undefined);
     const manager = new TrancoManager({ bloomFilterManager: new BloomFilterManager(), save });
     manager.trancoSet = new Set(['cnn.com']);

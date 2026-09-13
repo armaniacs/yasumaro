@@ -46,7 +46,7 @@ beforeEach(() => {
 
 describe('checkDomainFilterStep', () => {
   describe('ドメイン許可', () => {
-    it('isDomainAllowed=true の場合 isDomainAllowed=true を返す', async () => {
+    it('returns isDomainAllowed=true when isDomainAllowed=true', async () => {
       mockIsDomainAllowed.mockResolvedValue(true);
 
       const context = makeContext();
@@ -57,7 +57,7 @@ describe('checkDomainFilterStep', () => {
   });
 
   describe('ドメイン拒否 + force=false', () => {
-    it('isDomainAllowed=false かつ force=false の場合 DOMAIN_BLOCKED を throw する', async () => {
+    it('throws DOMAIN_BLOCKED when isDomainAllowed=false and force=false', async () => {
       mockIsDomainAllowed.mockResolvedValue(false);
 
       const context = makeContext({ force: false });
@@ -66,7 +66,7 @@ describe('checkDomainFilterStep', () => {
   });
 
   describe('ドメイン拒否 + force=true', () => {
-    it('isDomainAllowed=false でも force=true なら通過する', async () => {
+    it('passes when force=true even if isDomainAllowed=false', async () => {
       mockIsDomainAllowed.mockResolvedValue(false);
 
       const context = makeContext({ force: true });
@@ -75,7 +75,7 @@ describe('checkDomainFilterStep', () => {
       expect(result.isDomainAllowed).toBe(false);
     });
 
-    it('force=true 時に WARN ログが出力される', async () => {
+    it('emits a WARN log when force=true', async () => {
       mockIsDomainAllowed.mockResolvedValue(false);
 
       const context = makeContext({
@@ -95,7 +95,7 @@ describe('checkDomainFilterStep', () => {
   });
 
   describe('URL パススルー', () => {
-    it('isDomainAllowed に URL が渡される', async () => {
+    it('passes the URL to isDomainAllowed', async () => {
       mockIsDomainAllowed.mockResolvedValue(true);
 
       const context = makeContext({

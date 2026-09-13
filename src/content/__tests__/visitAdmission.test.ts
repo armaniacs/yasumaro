@@ -20,6 +20,7 @@ function snapshot(overrides: Record<string, unknown> = {}) {
     blacklist: [],
     simpleEnabled: true,
     ublockEnabled: false,
+    matchSubdomains: false,
     ...overrides,
   };
 }
@@ -61,6 +62,42 @@ describe('evaluateDomainPolicy', () => {
     expect(
       evaluateDomainPolicy('c.com', snapshot({ mode: 'blacklist', ublockEnabled: true }), NOW),
     ).toEqual({ allowed: false, useCache: false });
+  });
+
+  it('honors matchSubdomains on the whitelist branch (PBI 2026-09-12-03)', () => {
+    // Toggle OFF (default): exact match only — same verdict as the SW path.
+    expect(
+      evaluateDomainPolicy(
+        'sub.example.com',
+        snapshot({ mode: 'whitelist', cachedWhitelist: ['example.com'] }),
+        NOW,
+      ),
+    ).toEqual({ allowed: false, useCache: true });
+    // Toggle ON: subdomains admitted, matching the SW isDomainAllowed verdict.
+    expect(
+      evaluateDomainPolicy(
+        'sub.example.com',
+        snapshot({ mode: 'whitelist', cachedWhitelist: ['example.com'], matchSubdomains: true }),
+        NOW,
+      ),
+    ).toEqual({ allowed: true, useCache: true });
+  });
+
+  it('honors matchSubdomains on the blacklist branch', () => {
+    expect(
+      evaluateDomainPolicy(
+        'sub.blocked.com',
+        snapshot({ mode: 'blacklist', blacklist: ['blocked.com'], matchSubdomains: true }),
+        NOW,
+      ),
+    ).toEqual({ allowed: false, useCache: true });
+    expect(
+      evaluateDomainPolicy(
+        'sub.blocked.com',
+        snapshot({ mode: 'blacklist', blacklist: ['blocked.com'] }),
+        NOW,
+      ),
+    ).toEqual({ allowed: true, useCache: true });
   });
 });
 

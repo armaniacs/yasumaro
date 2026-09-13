@@ -31,7 +31,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
     };
   });
   describe('スタックトレースの除去', () => {
-    it('スタックトレースを含む行を削除する', () => {
+    it('removes lines containing stack traces', () => {
       const message = 'Error occurred\n    at file.js:10:5\n    at another.js:20:10\nError details';
       const result = sanitizeErrorMessage(message);
 
@@ -41,7 +41,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).toContain('Error details'); // 内部キーワードを含まない行は保持される
     });
 
-    it('.js:パターンを含む行を削除する', () => {
+    it('removes lines containing a .js: pattern', () => {
       const message = 'Error at index.js:42\nAnother line\nMore error at app.js:100';
       const result = sanitizeErrorMessage(message);
 
@@ -50,7 +50,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).toContain('Another line'); // 内部キーワードを含まない行は保持される
     });
 
-    it('.ts:パターンを含む行を削除する', () => {
+    it('removes lines containing a .ts: pattern', () => {
       const message = 'TypeScript error at component.ts:56\nAnother error';
       const result = sanitizeErrorMessage(message);
 
@@ -61,7 +61,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   });
 
   describe('内部実装キーワードの除去', () => {
-    it('Internalを含む行を削除する', () => {
+    it('removes lines containing Internal', () => {
       const message = 'Internal implementation error\nNormal error message\nInternal server error';
       const result = sanitizeErrorMessage(message);
 
@@ -70,7 +70,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).toContain('Normal error message');
     });
 
-    it('implementationを含む行を削除する', () => {
+    it('removes lines containing implementation', () => {
       const message = 'Implementation detail: function xyz failed\nThis should remain';
       const result = sanitizeErrorMessage(message);
 
@@ -79,7 +79,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).toContain('This should remain');
     });
 
-    it('functionを含む行を削除する', () => {
+    it('removes lines containing function', () => {
       const message = 'function xyz is undefined\nError: Something went wrong';
       const result = sanitizeErrorMessage(message);
 
@@ -87,7 +87,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).toContain('Error: Something went wrong');
     });
 
-    it('moduleを含む行を削除する', () => {
+    it('removes lines containing module', () => {
       const message = 'Module not found\nmodule.js could not be loaded\nConnection error';
       const result = sanitizeErrorMessage(message);
 
@@ -96,7 +96,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).toContain('Connection error');
     });
 
-    it('0x（16進数アドレス）を含む行を削除する', () => {
+    it('removes lines containing a 0x hex address', () => {
       const message = 'Error at address 0x7f8a5b3d2c10\nSegfault occurred';
       const result = sanitizeErrorMessage(message);
 
@@ -108,7 +108,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   });
 
   describe('日本語スタックトレースの除去', () => {
-    it('スタックという日本語キーワードを含む行を削除する', () => {
+    it('removes lines containing the Japanese stack keyword', () => {
       const message = 'エラーが発生\nスタックトレース:\n  at file.js:10\n正常なメッセージ';
       const result = sanitizeErrorMessage(message);
 
@@ -119,29 +119,29 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   });
 
   describe('エッジケース', () => {
-    it('空文字列を安全に処理する', () => {
+    it('handles empty strings safely', () => {
       const result = sanitizeErrorMessage('');
       expect(result).toBe('');
     });
 
-    it('nullを安全に処理する', () => {
+    it('handles null safely', () => {
       const result = sanitizeErrorMessage(null as unknown as string);
       expect(result).toBe('');
     });
 
-    it('undefinedを安全に処理する', () => {
+    it('handles undefined safely', () => {
       const result = sanitizeErrorMessage(undefined as unknown as string);
       expect(result).toBe('');
     });
 
-    it('すべての行が除外される場合は空文字を返す', () => {
+    it('returns an empty string when every line is filtered out', () => {
       const message = 'Internal implementation error\n  at file.js:10\n  at another.js:20';
       const result = sanitizeErrorMessage(message);
 
       expect(result).toBe('');
     });
 
-    it('長いメッセージを処理できる', () => {
+    it('handles long messages', () => {
       const longMessage = 'Error occurred\n' +
         '  at file1.js:1\n'.repeat(100) +
         '  at file2.js:2\n'.repeat(100) +
@@ -154,28 +154,28 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   });
 
   describe('有効なエラーメッセージの保持', () => {
-    it('一般的なエラーメッセージを保持する', () => {
+    it('preserves generic error messages', () => {
       const message = 'Network connection failed';
       const result = sanitizeErrorMessage(message);
 
       expect(result).toBe(message);
     });
 
-    it('ユーザーフレンドリーなメッセージを保持する', () => {
+    it('preserves user-friendly messages', () => {
       const message = 'Please check your internet connection and try again';
       const result = sanitizeErrorMessage(message);
 
       expect(result).toBe(message);
     });
 
-    it('一貫したエラーメッセージ形式を保持する', () => {
+    it('preserves a consistent error message format', () => {
       const message = 'Error: Failed to fetch data';
       const result = sanitizeErrorMessage(message);
 
       expect(result).toBe(message);
     });
 
-    it('複数行の有効なエラーメッセージを1行に結合する', () => {
+    it('joins multi-line valid error messages into one line', () => {
       const message = 'Error: Operation failed\nPlease try again later\nContact support if problem persists';
       const result = sanitizeErrorMessage(message);
 
@@ -185,7 +185,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   });
 
   describe('複合的なシナリオ - 現実的な実装', () => {
-    it('生のJavaScriptエラーからの情報削除', () => {
+    it('strips internals from raw JavaScript errors', () => {
       const rawError = `TypeError: Cannot read property 'x' of undefined
     at Object.processData (src/data/processor.js:45:12)
     at App.handleData (src/components/App.js:123:8)
@@ -200,7 +200,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).not.toContain('node_modules');
     });
 
-    it('ネットワークエラーからの詳細情報削除', () => {
+    it('strips details from network errors', () => {
       const networkError = `Failed to fetch: Network request failed
   URL: https://api.example.com/v1/data
   Status: 500 Internal Server Error
@@ -215,7 +215,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).not.toContain('.js:');
     });
 
-    it('Obsidian接続エラーからのスタックトレース削除', () => {
+    it('strips stack traces from Obsidian connection errors', () => {
       const obsidianError = `Error: Failed to connect to Obsidian
   URL: http://127.0.0.1:27123/vault/2026-02-07.md
   at ObsidianClient._fetchExistingContent (src/background/obsidianClient.js:52:10)
@@ -231,7 +231,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
   });
 
   describe('XSS対策', () => {
-    it('スクリプトタグを含むエラーメッセージを処理する', () => {
+    it('handles error messages containing script tags', () => {
       const message = `Error: <script>alert('xss')</script> occurred
     at handler.js:10`;
       const result = sanitizeErrorMessage(message);
@@ -241,7 +241,7 @@ describe('sanitizeErrorMessage - 内部情報保護テスト（タスク3）', (
       expect(result).not.toContain('handler.js');
     });
 
-    it('onerrorイベントハンドラーを含むエラープレフィックスを処理する', () => {
+    it('handles error prefixes containing onerror handlers', () => {
       const message = `Internal function handling onerror=alert(1) failed
 Normal error message`;
       const result = sanitizeErrorMessage(message);
@@ -253,14 +253,14 @@ Normal error message`;
   });
 
   describe('Unicodeと国際化', () => {
-    it('日本語エラーメッセージを保持する', () => {
+    it('preserves Japanese error messages', () => {
       const message = '接続エラーが発生しました。ネットワークを確認してください。';
       const result = sanitizeErrorMessage(message);
 
       expect(result).toBe(message);
     });
 
-    it('英語と日本語の混合メッセージで日本語スタックを削除する', () => {
+    it('removes Japanese stack lines from mixed English/Japanese messages', () => {
       const message = 'Connection error\nスタックトレース:\n  at file.js:10\n接続を確認してください';
       const result = sanitizeErrorMessage(message);
 
@@ -270,7 +270,7 @@ Normal error message`;
       expect(result).toContain('接続を確認してください');
     });
 
-    it('特殊Unicode文字を含むメッセージを保持する', () => {
+    it('preserves messages with special Unicode characters', () => {
       const message = 'Error: 操作失敗 ⚠️ Please try again ！';
       const result = sanitizeErrorMessage(message);
 
@@ -302,19 +302,19 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
   });
 
   describe('Problem #1: sanitizeErrorMessage()の2重呼び出し削除', () => {
-    it('sanitizeErrorMessageの呼び出し回数を検証', () => {
-      // sanitizeErrorMessageをモックし、実際の動作を維持しつつ呼び出し回数をカウント
-
+    it('returns ERROR_PREFIX followed by the sanitized message for generic errors', () => {
+      // sanitizeErrorMessage is idempotent (keyword lines are already gone on a
+      // second pass), so output comparison cannot detect how many times it was
+      // called internally; this test only pins the single-sanitize output format.
       const error = new Error('Test error message');
 
-      getUserErrorMessage(error);
+      const direct = sanitizeErrorMessage(error.message);
+      const viaGetUserErrorMessage = getUserErrorMessage(error);
 
-      // 現在の実装では呼び出し回数は1回（修正後）
-      // 修正前は2回同じメッセージをsanitizeしていたため無駄
-
+      expect(viaGetUserErrorMessage).toBe(`${ErrorMessages.ERROR_PREFIX} ${direct}`);
     });
 
-    it('一般エラーで正しく処理される', () => {
+    it('handles generic errors correctly', () => {
       const error = new Error('Test error message');
       const result = getUserErrorMessage(error);
 
@@ -322,7 +322,7 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
       expect(result).toContain('Test error message');
     });
 
-    it('空のメッセージの場合にデフォルトメッセージを返す', () => {
+    it('returns the default message for empty messages', () => {
       const error = new Error('');
       const result = getUserErrorMessage(error);
 
@@ -330,7 +330,7 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
       expect(result).toContain('Unknown error occurred');
     });
 
-    it('nullエラーの場合も正しく処理される', () => {
+    it('handles null errors correctly', () => {
       const error = null;
       const result = getUserErrorMessage(error);
 
@@ -338,7 +338,7 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
       expect(result).toContain('Unknown error occurred');
     });
 
-    it('コネクションエラーで専用メッセージを返す', () => {
+    it('returns the dedicated message for connection errors', () => {
       const error = new Error('Receiving end does not exist');
       const result = getUserErrorMessage(error);
 
@@ -346,7 +346,7 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
       expect(result).toContain('Connection failed');
     });
 
-    it('ドメインブロックエラーで専用メッセージを返す', () => {
+    it('returns the dedicated message for domain-blocked errors', () => {
       const error = new Error('DOMAIN_BLOCKED');
       const result = getUserErrorMessage(error);
 
@@ -355,7 +355,7 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
   });
 
   describe('ErrorMessages getter呼び出し回数の検証', () => {
-    it('ErrorMessagesのgetterが正しく動作する（Problem #5用）', () => {
+    it('reads ErrorMessages getters correctly (Problem #5)', () => {
       // ErrorMessagesオブジェクト正しく動作することを確認
 
       expect(ErrorMessages.ERROR_PREFIX).toBe('Error:');

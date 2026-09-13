@@ -237,23 +237,15 @@ describe('messageTransport - branch coverage', () => {
     });
   });
 
-  describe('chrome.runtime.lastError polling branch', () => {
-    it('throws retryable lastError after successful port.send and retries', async () => {
+  describe('promise contract: stale chrome.runtime.lastError is ignored (PBI 2026-09-11-04)', () => {
+    it('returns the resolved response without retrying when a stale lastError exists', async () => {
       const clock = { now: vi.fn(() => 0), sleep: vi.fn(() => Promise.resolve()) };
-      let callCount = 0;
       const port = {
         send: vi.fn(async () => {
-          callCount++;
-          if (callCount === 1) {
-            // Simulate callback-style lastError
-            (globalThis as unknown as Record<string, unknown>).chrome = {
-              runtime: { lastError: { message: 'Receiving end does not exist' } },
-            } as unknown;
-          } else {
-            (globalThis as unknown as Record<string, unknown>).chrome = {
-              runtime: { lastError: null },
-            } as unknown;
-          }
+          // Simulate a stale callback-era lastError while the promise resolves.
+          (globalThis as unknown as Record<string, unknown>).chrome = {
+            runtime: { lastError: { message: 'Receiving end does not exist' } },
+          } as unknown;
           return { success: true };
         }),
       };
@@ -261,8 +253,9 @@ describe('messageTransport - branch coverage', () => {
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: { lastError: null } } as unknown;
       const res = await mt.send({ type: 'PING' } as never, { retries: 2 });
       expect(res).toEqual({ success: true });
-      expect(port.send).toHaveBeenCalledTimes(2);
-      expect(clock.sleep).toHaveBeenCalledTimes(1);
+      // A resolved send is success — no retry, no sleep.
+      expect(port.send).toHaveBeenCalledTimes(1);
+      expect(clock.sleep).not.toHaveBeenCalled();
     });
 
     it('does not throw when lastError is non-retryable', async () => {
@@ -293,12 +286,9 @@ describe('messageTransport - branch coverage', () => {
       expect(res).toEqual({ ok: true });
     });
 
-    it('retries when lastError is retryable and eventually fails if persists', async () => {
+    it('retries on rejected sends with a retryable pattern and fails if it persists', async () => {
       const clock = { now: vi.fn(() => 0), sleep: vi.fn(() => Promise.resolve()) };
-      const port = { send: vi.fn(() => Promise.resolve({ ok: true })) };
-      (globalThis as unknown as Record<string, unknown>).chrome = {
-        runtime: { lastError: { message: 'Extension context invalidated' } },
-      } as unknown;
+      const port = { send: vi.fn(() => Promise.reject(new Error('Extension context invalidated'))) };
       const mt = new MessageTransport(port as never, clock);
       await expect(mt.send({ type: 'PING' } as never, { retries: 1 })).rejects.toThrow('Extension context invalidated');
       expect(port.send).toHaveBeenCalledTimes(2);

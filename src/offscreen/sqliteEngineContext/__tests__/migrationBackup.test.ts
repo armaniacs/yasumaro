@@ -18,11 +18,11 @@ const { extractDomain, runMigrationRestore } = await import('../migrationBackup.
 
 describe('migrationBackup', () => {
   describe('extractDomain', () => {
-    it('www プレフィックスを除去する', () => {
+    it('strips the www prefix', () => {
       expect(extractDomain('https://www.example.com/path')).toBe('example.com');
     });
 
-    it('パース失敗時は null を返す', () => {
+    it('returns null when parsing fails', () => {
       expect(extractDomain('not a url')).toBeNull();
     });
   });
@@ -41,7 +41,7 @@ describe('migrationBackup', () => {
       } as unknown as typeof chrome;
     });
 
-    it('バックアップが無い場合は migration done フラグを立てるだけで終了する', async () => {
+    it('only sets the migration done flag and finishes when there is no backup', async () => {
       (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
 
       await runMigrationRestore({ idbEngine: {} as never });
@@ -50,7 +50,7 @@ describe('migrationBackup', () => {
       expect(mockExecWithCache).not.toHaveBeenCalled();
     });
 
-    it('件数が一致する場合はバックアップを削除し done フラグを立てる', async () => {
+    it('deletes the backup and sets the done flag when the counts match', async () => {
       const backup = JSON.stringify({ version: 1, createdAt: 0, records: [{ url: 'https://a.com' }] });
       (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         [StorageKeys.IDB_MIGRATION_BACKUP]: backup,

@@ -23,9 +23,6 @@
   "close": {
     "message": "Close"
   },
-  "saveAndTest": {
-    "message": "Save & Test Connection"
-  },
   "loading": {
     "message": "Loading..."
   },
@@ -194,9 +191,6 @@
   "geminiApiKeyPlaceholder": {
     "message": "Paste your Gemini key here..."
   },
-  "geminiApiKeyHelp": {
-    "message": "Get it from Google AI Studio."
-  },
   "label_gemini_api_version": {
     "message": "Gemini API Version"
   },
@@ -251,21 +245,6 @@
   "filterBlacklist": {
     "message": "Blacklist (exclude specified domains)"
   },
-  "filterDisabledDesc": {
-    "message": "Record all visited websites regardless of domain.",
-    "description": "Description for the Disabled domain filter mode"
-  },
-  "filterWhitelistDesc": {
-    "message": "Only record websites from domains in your whitelist.",
-    "description": "Description for the Whitelist domain filter mode"
-  },
-  "filterBlacklistDesc": {
-    "message": "Record all websites except those in your blacklist.",
-    "description": "Description for the Blacklist domain filter mode"
-  },
-  "filterFormat": {
-    "message": "Filter Format (can be combined)"
-  },
   "simpleFormat": {
     "message": "Simple (1 domain per line)"
   },
@@ -277,12 +256,6 @@
   },
   "domainListPlaceholder": {
     "message": "example.com\n*.example.org\ncompany.net"
-  },
-  "wildcardHelp": {
-    "message": "Wildcards are supported (e.g. *.example.com)"
-  },
-  "addCurrentDomain": {
-    "message": "Add Current Page Domain"
   },
   "saveDomainSettings": {
     "message": "Save"
@@ -476,9 +449,6 @@
   "forceRecordAnyway": {
     "message": "Record Anyway"
   },
-  "cannotRecordHttpHttps": {
-    "message": "Current page is not an HTTP/HTTPS page"
-  },
   "failedToExtractDomain": {
     "message": "Failed to extract domain"
   },
@@ -595,15 +565,16 @@
   "reloadError": {
     "message": "Reload error"
   },
-  "updateError": {
-    "message": "Update error"
-  },
   "saveError": {
     "message": "Save error"
   },
   "recordError": {
     "message": "Failed to record",
     "description": "Error message shown when manual recording fails in dashboard"
+  },
+  "recordRequestTimedOut": {
+    "message": "Request timed out after 20 seconds. The page may be taking too long to load or process.",
+    "description": "Shown when a manual record request does not complete within 20 seconds"
   },
   "recordingFailed": {
     "message": "Recording Failed"
@@ -653,9 +624,6 @@
   "sourceUpdatedWithDiff": {
     "message": "Source updated (Total: {ruleCount} {diff})"
   },
-  "autoCloseError": {
-    "message": "Auto-close failed"
-  },
   "testingConnection": {
     "message": "Testing connection..."
   },
@@ -665,9 +633,6 @@
   "aiTestElapsedTime": {
     "message": "Elapsed: {seconds}s"
   },
-  "aiProviderTestDuration": {
-    "message": "{seconds}s"
-  },
   "connectionSuccess": {
     "message": "Connection successful"
   },
@@ -676,15 +641,6 @@
   },
   "successAllConnected": {
     "message": "Success! Connected to both Obsidian and AI. Settings Saved."
-  },
-  "obsidianOkAiFailed": {
-    "message": "Obsidian: OK / AI Connection Failed: {message}"
-  },
-  "obsidianFailedAiOk": {
-    "message": "Obsidian Connection Failed: {message} / AI: OK"
-  },
-  "bothConnectionFailed": {
-    "message": "Obsidian Failed: {obsidianMessage} / AI Failed: {aiMessage}"
   },
   "connectionFailed": {
     "message": "Connection Failed: {message}"
@@ -715,9 +671,6 @@
   },
   "domainListError": {
     "message": "Domain list errors:"
-  },
-  "noActiveTab": {
-    "message": "No active tab found"
   },
   "errorColon": {
     "message": "Error:"
@@ -796,9 +749,6 @@
   },
   "closeModal": {
     "message": "Close Modal"
-  },
-  "settingsMenu": {
-    "message": "Settings menu"
   },
   "exportSettings": {
     "message": "Export"
@@ -1074,9 +1024,6 @@
   "importPreviewNote": {
     "message": "Note: Full settings will be applied. API keys and lists are included in the file."
   },
-  "importNoSignatureWarning": {
-    "message": "⚠️ This settings file contains no signature.\n\nSignatures are used to prevent settings file tampering.\nIt is recommended not to import files from untrusted sources.\n\nDo you want to continue importing?"
-  },
   "errorNetwork": {
     "message": "A network error occurred. Please check your internet connection."
   },
@@ -1164,9 +1111,6 @@
   "setMasterPasswordDesc": {
     "message": "Create a master password to protect your settings. This password cannot be recovered."
   },
-  "changeMasterPasswordDesc": {
-    "message": "Enter your current master password to change it."
-  },
   "masterPassword": {
     "message": "Master Password"
   },
@@ -1251,20 +1195,6 @@
   },
   "notifyPrivacyConfirmSkip": {
     "message": "Skip"
-  },
-  "privatePageWarning": {
-    "message": "This page may contain private information (detected: $REASON$). Save anyway?",
-    "placeholders": {
-      "reason": {
-        "content": "$1"
-      }
-    }
-  },
-  "privatePageReason_cacheControl": {
-    "message": "private cache headers"
-  },
-  "privatePageReason_setCookie": {
-    "message": "authentication cookies"
   },
   "privatePageReason_authorization": {
     "message": "authorization headers"
@@ -1358,18 +1288,6 @@
   "warningConfirmSave": {
     "message": "Do you want to save?"
   },
-  "btnCancel": {
-    "message": "Cancel"
-  },
-  "btnSaveOnce": {
-    "message": "Save Once"
-  },
-  "btnSaveWhitelistDomain": {
-    "message": "Save & Allow Domain"
-  },
-  "btnSaveWhitelistPath": {
-    "message": "Save & Allow Path"
-  },
   "pendingPagesTitle": {
     "message": "Pending Pages"
   },
@@ -1415,17 +1333,8 @@
   "whitelistHelp": {
     "message": "Domains in this list will be recorded (when Whitelist mode is enabled)"
   },
-  "blacklistHelp": {
-    "message": "Domains in this list will be excluded (when Blacklist mode is enabled)"
-  },
   "whitelistTab": {
     "message": "Whitelist"
-  },
-  "blacklistTab": {
-    "message": "Blacklist"
-  },
-  "ublockFormatDesc": {
-    "message": "Advanced: Import filter lists from uBlock Origin"
   },
   "settingsSection": {
     "message": "Settings"
@@ -1435,9 +1344,6 @@
   },
   "toolsSection": {
     "message": "Tools"
-  },
-  "historyTab": {
-    "message": "History"
   },
   "domainSearchTab": {
     "message": "Domain Search"
@@ -1463,68 +1369,41 @@
   "domainNoMatches": {
     "message": "No matching rules found."
   },
-  "historyDescription": {
-    "message": "URLs recorded by Yasumaro. Use the search box to filter entries. Click × to delete an individual URL."
-  },
-  "historySearchLabel": {
-    "message": "Search URLs, summaries, and tags"
-  },
-  "recordTypeAuto": {
-    "message": "Auto"
-  },
-  "recordTypeManual": {
-    "message": "Manual"
-  },
-  "maskedBadge": {
-    "message": "🔒 {count} masked"
-  },
-  "maskedBadgeTitle": {
-    "message": "Masked {count} personal info item(s) before sending to AI"
-  },
-  "maskedBadgeTitle_one": {
-    "message": "Masked 1 personal info item before sending to AI"
-  },
-  "maskedBadgeTitle_other": {
-    "message": "Masked {count} personal info items before sending to AI"
-  },
   "cleansedBadgeHard": {
     "message": "🧹 Hard"
   },
-  "cleansedBadgeHardTitle": {
-    "message": "Tag/Attribute-based removal"
+  "cleansingDetailHard": {
+    "message": "Hard: $1$",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
+  "cleansingDetailKeyword": {
+    "message": "Keyword: $1$",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "cleansedBadgeKeyword": {
     "message": "🧹 Keyword"
   },
-  "cleansedBadgeKeywordTitle": {
-    "message": "Keyword-based removal"
-  },
   "cleansedBadgeBoth": {
     "message": "🧹 Both"
   },
-  "cleansedBadgeBothTitle": {
-    "message": "Hard Strip + Keyword Strip"
-  },
-  "filterMasked": {
-    "message": "🔒 Masked"
-  },
-  "filterCleansed": {
-    "message": "🧹 Cleansed"
-  },
-  "filterAll": {
-    "message": "All"
-  },
-  "filterAuto": {
-    "message": "Auto"
-  },
-  "filterManual": {
-    "message": "Manual"
-  },
-  "filterSkipped": {
-    "message": "Skipped"
-  },
   "pendingSectionTitle": {
     "message": "Pages that could not be recorded"
+  },
+  "pendingMoreCount": {
+    "message": "...and $1$ more pending page(s)",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
   },
   "pendingSectionDesc": {
     "message": "These pages were skipped due to privacy headers (Cache-Control, Set-Cookie, etc.). You can manually record them here."
@@ -1584,9 +1463,6 @@
   },
   "diagConnectionTitle": {
     "message": "Connection Test"
-  },
-  "diagTestConnectionBtn": {
-    "message": "Test Connection"
   },
   "diagInfoTitle": {
     "message": "Extension Info"
@@ -2152,17 +2028,8 @@
   "currentTags": {
     "message": "Current Tags"
   },
-  "addTag": {
-    "message": "Add Tag"
-  },
   "selectCategory": {
     "message": "Select category..."
-  },
-  "noTags": {
-    "message": "None"
-  },
-  "editTags": {
-    "message": "Edit Tags"
   },
   "tagFilterAriaLabel": {
     "message": "Filter by tag #$TAG$",
@@ -2171,9 +2038,6 @@
         "content": "$1"
       }
     }
-  },
-  "saveTagError": {
-    "message": "Failed to save tags"
   },
   "tagsTab": {
     "message": "Tags"
@@ -2228,10 +2092,6 @@
     "message": "New category name",
     "description": "ARIA label for new category name input"
   },
-  "filterOptions": {
-    "message": "Filter Options",
-    "description": "ARIA label for history filter buttons"
-  },
   "tagClusterDescription": {
     "message": "Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag."
   },
@@ -2276,9 +2136,6 @@
   "tagCategory": {
     "message": "Tag Category",
     "description": "ARIA label for tag category select"
-  },
-  "hmacVerificationFailedConfirm": {
-    "message": "Settings file signature verification failed.\n\nReason: HMAC secret may have changed (extension update/reload, etc.).\n\nIf this is a trusted settings file, click \"OK\" to force import.\nIf not, click \"Cancel\"."
   },
   "importNoSignature": {
     "message": "Settings file does not contain a signature. Only signed files can be imported."
@@ -2328,9 +2185,6 @@
   },
   "consentRequired": {
     "message": "Privacy consent is required to use this extension."
-  },
-  "consentRequiredFeature": {
-    "message": "Privacy consent required"
   },
   "saveFailed": {
     "message": "Failed to save consent"
@@ -2815,12 +2669,6 @@
   "sensitiveAddHelp": {
     "message": "Enter domain name"
   },
-  "sensitiveInvalidDomain": {
-    "message": "Invalid domain format"
-  },
-  "sensitiveDuplicate": {
-    "message": "Domain already exists"
-  },
   "sensitiveAdded": {
     "message": "Domain added"
   },
@@ -2893,6 +2741,9 @@
   "statusTrustTrusted": {
     "message": "🟢 TRUSTED"
   },
+  "statusTrustLocked": {
+    "message": "LOCKED"
+  },
   "statusTrustSensitive": {
     "message": "🟡 SENSITIVE"
   },
@@ -2961,9 +2812,6 @@
   },
   "selectProvidersDesc": {
     "message": "Select the medium/small AI providers you want to use"
-  },
-  "providerList": {
-    "message": "Available AI providers"
   },
   "cspSaveSuccess": {
     "message": "CSP settings saved successfully"
@@ -3067,9 +2915,6 @@
   "geminiContentCharsError": {
     "message": "Gemini content characters must be between 1,000 and 100,000"
   },
-  "externalEndpointControlsSection": {
-    "message": "External Endpoints"
-  },
   "error_max_tokens_range": {
     "message": "Please enter a value between 10 and 16,000 tokens"
   },
@@ -3096,12 +2941,6 @@
   },
   "withdrawConsent": {
     "message": "Withdraw Consent"
-  },
-  "withdrawConsentConfirm": {
-    "message": "Withdrawing consent will disable some features. Continue?"
-  },
-  "withdrawConsentSuccess": {
-    "message": "Consent withdrawn successfully"
   },
   "privacyConsentStatus": {
     "message": "Privacy Consent Status"
@@ -3157,18 +2996,6 @@
   "diagProvider": {
     "message": "Provider"
   },
-  "diagModel": {
-    "message": "Model"
-  },
-  "diagBaseUrl": {
-    "message": "Base URL"
-  },
-  "diagAiApiCalls": {
-    "message": "Monthly API Calls"
-  },
-  "diagAiTotalTokens": {
-    "message": "Monthly Total Tokens"
-  },
   "defaultValue": {
     "message": "(default)"
   },
@@ -3189,36 +3016,6 @@
   },
   "historyReceivedTokens": {
     "message": "Received"
-  },
-  "historyOriginalTokens": {
-    "message": "Content Cleansing (Tokens): Before"
-  },
-  "historyCleansedTokens": {
-    "message": "After"
-  },
-  "historyTokenReduction": {
-    "message": "Reduced"
-  },
-  "historyOriginalBytes": {
-    "message": "Content Cleansing (Bytes): Before"
-  },
-  "historyCleansedBytes": {
-    "message": "After"
-  },
-  "historyByteReduction": {
-    "message": "Reduced"
-  },
-  "historyAiSummaryCleansedBytes": {
-    "message": "AI Summary Cleansing (Bytes): After"
-  },
-  "historyAiSummaryCleansedElements": {
-    "message": "AI Summary Cleansing: {count} elements removed"
-  },
-  "historyAiSummaryCleansedElements_one": {
-    "message": "AI Summary Cleansing: 1 element removed"
-  },
-  "historyAiSummaryCleansedElements_other": {
-    "message": "AI Summary Cleansing: {count} elements removed"
   },
   "historyAiSummaryCleansedReason": {
     "message": "AI Summary Cleansing Reason"
@@ -3358,44 +3155,14 @@
   "trancoUpdateNotificationDescription": {
     "message": "The Tranco Top 1000 list has been updated. Please verify the changes to trusted domains."
   },
-  "trancoUpdateModalTitle": {
-    "message": "Tranco Trusted Domains Update"
-  },
-  "trancoUpdateModalCurrentVersion": {
-    "message": "Current Version"
-  },
-  "trancoUpdateModalNewVersion": {
-    "message": "New Version"
-  },
-  "trancoUpdateModalExcludedDomains": {
-    "message": "Excluded Trusted Domains"
-  },
-  "trancoUpdateModalAddedDomains": {
-    "message": "Added Trusted Domains"
-  },
   "trancoUpdateModalConfirmLabel": {
     "message": "Use New List"
-  },
-  "trancoUpdateModalConfirmDescription": {
-    "message": "Update trusted domain checking with the new Tranco list"
   },
   "trancoUpdateModalDenyLabel": {
     "message": "Keep Old List"
   },
-  "trancoUpdateModalDenyDescription": {
-    "message": "Continue using the old Tranco list. You will be prompted for confirmation in 30 days."
-  },
-  "trancoUpdateModalRetryLaterLabel": {
-    "message": "Review Later"
-  },
-  "trancoUpdateModalRetryLaterDescription": {
-    "message": "Keep using the old list for now. You will be prompted for confirmation in 30 days."
-  },
   "trancoSectionTitle": {
     "message": "Tranco Trusted Domains"
-  },
-  "trancoSectionDescription": {
-    "message": "Trusted domain management based on Tranco Top 1000 list"
   },
   "trancoCurrentVersion": {
     "message": "Current Version"
@@ -3417,12 +3184,6 @@
   },
   "trancoConsentRetryDaysRemaining": {
     "message": "{days} days until retry"
-  },
-  "trancoDropdownHeader": {
-    "message": "Tranco"
-  },
-  "trancoDropdownSettings": {
-    "message": "Tranco Settings"
   },
   "trancoUpdateConfirm": {
     "message": "Accept"
@@ -3565,9 +3326,6 @@
       }
     }
   },
-  "historyAppendObsidianNotConfigured": {
-    "message": "Please configure Obsidian"
-  },
   "historyAppendFailed": {
     "message": "Failed to append to Obsidian"
   },
@@ -3694,6 +3452,9 @@
   "archiveRestorePreviewFailed": {
     "message": "Archive restore preview failed"
   },
+  "archiveRestorePreviewReady": {
+    "message": "Preview ready."
+  },
   "archivePurgeBtn": {
     "message": "Delete records from main database"
   },
@@ -3767,44 +3528,8 @@
       }
     }
   },
-  "triggerScrollTime": {
-    "message": "Scroll & Time"
-  },
-  "triggerScrollTimeDesc": {
-    "message": "Record when scroll depth ≥50% and visit duration ≥5s"
-  },
-  "triggerManual": {
-    "message": "Manual Save"
-  },
-  "triggerManualDesc": {
-    "message": "Record when manually triggered"
-  },
-  "triggerSnapshot": {
-    "message": "Periodic Snapshot"
-  },
-  "triggerSnapshotDesc": {
-    "message": "Record at regular intervals"
-  },
-  "snapshotIntervalLabel": {
-    "message": "Interval (minutes)"
-  },
   "saveTriggers": {
     "message": "Save"
-  },
-  "triggersSaved": {
-    "message": "Settings saved."
-  },
-  "triggerValidationAtLeastOne": {
-    "message": "At least one trigger must be enabled."
-  },
-  "triggerSaveError": {
-    "message": "Error: $ERROR$",
-    "placeholders": {
-      "error": {
-        "content": "$1",
-        "example": "Network error"
-      }
-    }
   },
   "cleansingStatsNoData": {
     "message": "No reduction rate data available. Enable cleansing and record a few pages to see statistics."
@@ -3860,12 +3585,6 @@
   "criticalAlertBody": {
     "message": "A critical error occurred: $1. Check the Diagnostics panel in settings."
   },
-  "sqliteAlertTitle": {
-    "message": "SQLite Initialization Error"
-  },
-  "sqliteAlertMessage": {
-    "message": "History database initialization has failed repeatedly. Check the Diagnostics panel in settings."
-  },
   "previewContent": {
     "message": "Preview content",
     "description": "aria-label for the preview content textarea"
@@ -3914,9 +3633,6 @@
   },
   "historyHideReceivedData": {
     "message": "Hide data"
-  },
-  "showContentToggleLabel": {
-    "message": "Show content toggle button in list"
   },
   "retention7days": {
     "message": "7 days"
@@ -4016,14 +3732,6 @@
   "clearAllFilters": {
     "message": "Clear filters",
     "description": "Button label to clear all active filters (search, date, tag)"
-  },
-  "triggerTabClose": {
-    "message": "When tab is closed",
-    "description": "Recording trigger label: record when the tab is closed"
-  },
-  "triggerTabCloseDesc": {
-    "message": "Record when the tab is closed",
-    "description": "Recording trigger description: record when the tab is closed"
   },
   "dashboardTitle": {
     "message": "Yasumaro Dashboard",
@@ -4153,5 +3861,160 @@
   },
   "cleansingFeedbackAction": {
     "message": "Action"
+  },
+  "cleansingNoRemoval": {
+    "message": "No removals by cleansing"
+  },
+  "cleansingRule": {
+    "message": "Rule"
+  },
+  "cleansingCount": {
+    "message": "Count"
+  },
+  "cleansingLargeRemovalWarning": {
+    "message": "A large portion of the content was removed. Please review the original text."
+  },
+  "testError": {
+    "message": "Connection test failed."
+  },
+  "checking": {
+    "message": "Checking..."
+  },
+  "domainAllowed": {
+    "message": "Allowed (will be recorded)"
+  },
+  "domainBlocked": {
+    "message": "Blocked (will not be recorded)"
+  },
+  "checkError": {
+    "message": "Error checking domain."
+  },
+  "archiveModalTitle": {
+    "message": "Archive Management"
+  },
+  "aiProviderPrioritySection": {
+    "message": "Priority (Failover Order)"
+  },
+  "aiProviderSettingsSection": {
+    "message": "Provider Settings"
+  },
+  "apiKey": {
+    "message": "API key"
+  },
+  "archiveModalCancel": {
+    "message": "Cancel"
+  },
+  "archiveModalSave": {
+    "message": "Save"
+  },
+  "archiveModalTitleLabel": {
+    "message": "Archive title"
+  },
+  "archiveModalTitleRequired": {
+    "message": "Please enter a title"
+  },
+  "archiveModalTitleTooLong": {
+    "message": "Title is too long"
+  },
+  "builtInAiHelpLink": {
+    "message": "Built-in AI setup guide"
+  },
+  "confirm": {
+    "message": "Confirm"
+  },
+  "deleteAllDataFailed": {
+    "message": "Failed to clear browsing logs. Please try again."
+  },
+  "error": {
+    "message": "Error"
+  },
+  "errorConsentData": {
+    "message": "Failed to save your consent"
+  },
+  "errorLoadTrancoData": {
+    "message": "Failed to load Tranco data"
+  },
+  "filterFreeTier": {
+    "message": "Free Tier Only"
+  },
+  "loadingProviders": {
+    "message": "Loading providers..."
+  },
+  "maxTokensError": {
+    "message": "Value is out of the allowed range"
+  },
+  "minScrollDepthError": {
+    "message": "Value is out of the allowed range"
+  },
+  "minVisitDurationError": {
+    "message": "Value is out of the allowed range"
+  },
+  "openHistory": {
+    "message": "Open history"
+  },
+  "providerSearchPlaceholder": {
+    "message": "Search providers..."
+  },
+  "reportCleansingFeedback": {
+    "message": "Report false removal"
+  },
+  "reportCleansingFeedbackError": {
+    "message": "Failed to report"
+  },
+  "reportCleansingFeedbackSuccess": {
+    "message": "Reported"
+  },
+  "selectModel": {
+    "message": "Model (optional):"
+  },
+  "selectedProvider": {
+    "message": "Selected Provider:"
+  },
+  "settingsSaveError": {
+    "message": "Failed to save settings"
+  },
+  "statusAuthorizationPresent": {
+    "message": "Authorization header present"
+  },
+  "statusNoCacheInfo": {
+    "message": "No cache information available"
+  },
+  "statusPageNotRecordable": {
+    "message": "This page cannot be recorded"
+  },
+  "statusPattern": {
+    "message": "pattern: $1$",
+    "placeholders": {
+      "1": {
+        "content": "$1"
+      }
+    }
+  },
+  "statusSetCookiePresent": {
+    "message": "Set-Cookie present"
+  },
+  "tagClusterTab": {
+    "message": "Tag Cluster"
+  },
+  "testComplete": {
+    "message": "Test complete."
+  },
+  "testFailed": {
+    "message": "✗ Connection failed"
+  },
+  "testSuccess": {
+    "message": "✓ Connection successful"
+  },
+  "trancoConsentDenied": {
+    "message": "Consent denied saved"
+  },
+  "trancoConsentGranted": {
+    "message": "Consent saved"
+  },
+  "trancoStatusNotUpdated": {
+    "message": "Tranco list not updated yet"
+  },
+  "warningTitle": {
+    "message": "Warning"
   }
 }

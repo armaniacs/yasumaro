@@ -175,8 +175,10 @@ describe('FallbackStorage', () => {
     });
 
     it('filters by starred', async () => {
-      // Legacy key names (isStarred/since/until) are still accepted by the fallback for back-compat.
-      const result = await storage.query({ isStarred: true, excludeDeleted: false } as StorageQuery);
+      // PBI 2026-09-12-13: legacy key names collapse at the planner seam;
+      // the fallback consumes the normalized query verbatim (product path).
+      const { normalizeStorageQuery } = await import('../queryNormalize.js');
+      const result = await storage.query({ ...normalizeStorageQuery({ isStarred: true }), excludeDeleted: false });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(1);
@@ -185,7 +187,9 @@ describe('FallbackStorage', () => {
     });
 
     it('filters by time range', async () => {
-      const result = await storage.query({ since: 100, until: 200 } as StorageQuery);
+      // PBI 2026-09-12-13: aliases collapse at the planner seam (see above).
+      const { normalizeStorageQuery } = await import('../queryNormalize.js');
+      const result = await storage.query(normalizeStorageQuery({ since: 100, until: 200 }));
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(2);
@@ -226,7 +230,7 @@ describe('FallbackStorage', () => {
     });
 
     it('finds records matching query in url', async () => {
-      const result = await storage.search('alpha');
+      const result = await storage.query({ text: 'alpha' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.total).toBe(1);
@@ -235,7 +239,7 @@ describe('FallbackStorage', () => {
     });
 
     it('finds records matching query in title', async () => {
-      const result = await storage.search('Beta');
+      const result = await storage.query({ text: 'Beta' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.total).toBe(1);
@@ -243,7 +247,7 @@ describe('FallbackStorage', () => {
     });
 
     it('returns empty for unmatched query', async () => {
-      const result = await storage.search('zzzzz');
+      const result = await storage.query({ text: 'zzzzz' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.total).toBe(0);
@@ -252,7 +256,7 @@ describe('FallbackStorage', () => {
     });
 
     it('paginates results', async () => {
-      const result = await storage.search('alpha', 1, 0);
+      const result = await storage.query({ text: 'alpha', limit: 1, offset: 0 });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows.length).toBe(1);
@@ -262,12 +266,12 @@ describe('FallbackStorage', () => {
 
     it('handles error gracefully', async () => {
       vi.spyOn(chrome.storage.local, 'get').mockRejectedValueOnce(new Error('Search error'));
-      const result = await storage.search('test');
+      const result = await storage.query({ text: 'test' });
       expect(result.success).toBe(false);
     });
 
     it('includes rank field in search results', async () => {
-      const result = await storage.search('alpha');
+      const result = await storage.query({ text: 'alpha' });
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.rows[0]).toHaveProperty('rank');
@@ -511,5 +515,41 @@ describe('FallbackStorage', () => {
         expect(result.rows[2]!.url).toBe('https://z.com');
       }
     });
+  });
+});
+
+describe('planner-trust seam (PBI 2026-09-12-13)', () => {
+  it('consumes normalized queries verbatim — since/until/isStarred need no local aliases', async () => {
+    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const storage = new FallbackStorage();
+    await storage.insertBatch([
+      { url: 'https://a.com', created_at: 1000, is_starred: 0 },
+      { url: 'https://b.com', created_at: 2000, is_starred: 1 },
+      { url: 'https://c.com', created_at: 3000, is_starred: 0 },
+    ]);
+    // Raw aliases go through the planner seam first, exactly like the
+    // product path (sqliteMessageHandlers → planQuery → backend).
+    const normalized = normalizeStorageQuery({ since: 1500, until: 2500, isStarred: true });
+    expect(normalized).toMatchObject({ dateFrom: 1500, dateTo: 2500, starred: true });
+    const result = await storage.query(normalized);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows.map((r) => r.url)).toEqual(['https://b.com']);
+    }
+  });
+
+  it('honors the normalized is_starred numeric alias', async () => {
+    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const storage = new FallbackStorage();
+    await storage.insertBatch([
+      { url: 'https://a.com', created_at: 1000, is_starred: 0 },
+      { url: 'https://b.com', created_at: 2000, is_starred: 1 },
+    ]);
+    const normalized = normalizeStorageQuery({ is_starred: 1 });
+    const result = await storage.query(normalized);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows.map((r) => r.url)).toEqual(['https://b.com']);
+    }
   });
 });

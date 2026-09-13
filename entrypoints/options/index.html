@@ -1663,60 +1663,6 @@
         <svg id="tagClusterSvg" width="800" height="600"></svg>
       </section>
 
-      <!-- History Panel (New) -->
-      <section id="panel-history" class="panel data-panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="historyTab">History</h2>
-
-        <p class="panel-description" data-i18n="historyDescription">
-          URLs recorded by Yasumaro. Use the search box to filter entries. Click × to delete an individual URL.
-        </p>
-        <div class="help-text">
-          <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/STORAGE_MODES.md"
-             target="_blank"
-             rel="noopener noreferrer"
-             data-i18n="storageModesGuideLink">View Storage Modes (SQLite / Obsidian) Guide (opens in new tab)</a>
-        </div>
-
-        <!-- 保留中（記録できなかった）ページ -->
-        <div id="pendingSection" class="pending-section" hidden>
-          <h3 class="pending-section-title">
-            <span class="pending-section-icon">⚠️</span>
-            <span data-i18n="pendingSectionTitle">Pages that could not be recorded</span>
-          </h3>
-          <p class="panel-description" data-i18n="pendingSectionDesc">
-            These pages were skipped due to privacy headers (Cache-Control, Set-Cookie, etc.). You can manually record them here.
-          </p>
-          <div id="pendingList" class="pending-list" aria-live="polite"></div>
-        </div>
-
-        <hr class="settings-hr" id="pendingDivider">
-
-        <!-- 記録済み履歴 -->
-        <div class="history-controls">
-          <div class="form-group history-search-group">
-            <label for="historySearch" data-i18n="historySearchLabel">Search URLs, summaries, and tags</label>
-            <input type="search" id="historySearch" class="history-search"
-              data-i18n-input-placeholder="historySearchPlaceholder">
-          </div>
-          <div class="history-filter-bar" role="group" data-i18n-aria-label="filterOptions">
-            <button id="filterAll" class="history-filter-btn active" data-filter="all" data-i18n="filterAll">All</button>
-            <button id="filterAuto" class="history-filter-btn" data-filter="auto" data-i18n="filterAuto">Auto</button>
-            <button id="filterManual" class="history-filter-btn" data-filter="manual" data-i18n="filterManual">Manual</button>
-            <button id="filterSkipped" class="history-filter-btn" data-filter="skipped" data-i18n="filterSkipped">Skipped</button>
-            <button id="filterMasked" class="history-filter-btn" data-filter="masked" data-i18n="filterMasked">🔒 Masked</button>
-            <button id="filterCleansed" class="history-filter-btn" data-filter="cleansed" data-i18n="filterCleansed">🧹 Cleansed</button>
-          </div>
-        </div>
-
-        <div id="historyStats" class="history-stats"></div>
-        <div id="historyList" class="history-list" aria-live="polite"></div>
-
-        <!-- Local Markdown Export -->
-        <div class="top-bordered-flex-row">
-          <button id="historyExportLocalMarkdownBtn" class="secondary-btn" data-i18n="historyExportLocalMarkdownBtn">Export all as Markdown</button>
-          <span id="historyExportLocalMarkdownStatus" class="status-message" aria-live="polite"></span>
-        </div>
-      </section>
 
       <!-- Recording Conditions Panel -->
       <section id="panel-recording-conditions" class="panel" role="tabpanel">
@@ -1769,6 +1715,11 @@
             <button id="exportLocalMarkdownBtn" class="secondary-btn export-btn-spaced" data-i18n="localExportManualBtn">Export</button>
           </div>
           <div id="exportLocalMarkdownStatus" class="status-message status-message-spaced" aria-live="polite"></div>
+          <!-- Export all records (no date range) — moved from the legacy history panel (PBI 2026-09-11-02) -->
+          <div class="top-bordered-flex-row">
+            <button id="historyExportAllMarkdownBtn" class="secondary-btn" data-i18n="historyExportLocalMarkdownBtn">Export all as Markdown</button>
+            <span id="historyExportAllMarkdownStatus" class="status-message" aria-live="polite"></span>
+          </div>
         </div>
 
         <!-- Audit Log TSV Export -->
@@ -2205,36 +2156,7 @@
   </div>
 
   <!-- Tag Edit Modal -->
-  <div id="tagEditModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tagEditTitle">
-    <div class="modal-content tag-edit-modal">
-      <div class="modal-header">
-        <h3 id="tagEditTitle" data-i18n="tagEditTitle">Edit Tags</h3>
-      </div>
-      <div class="modal-body">
-        <p class="url-display" id="tagEditUrl"></p>
 
-        <!-- Current Tags -->
-        <div class="tag-edit-section">
-          <h4 class="tag-edit-section-title" data-i18n="currentTags">Current Tags</h4>
-          <div id="currentTagsList" class="current-tags-list"></div>
-          <p id="noCurrentTagsMsg" class="no-tags-msg" data-i18n="noTags" hidden>None</p>
-        </div>
-
-        <!-- Add Tags -->
-        <div class="tag-edit-section">
-          <h4 class="tag-edit-section-title" data-i18n="addTag">Add Tag</h4>
-          <div class="form-group">
-            <select id="tagCategorySelect" class="tag-category-select" data-i18n-aria-label="tagCategory">
-              <option value="" data-i18n="selectCategory" disabled selected>Select category...</option>
-            </select>
-          </div>
-          <button id="addTagBtn" class="secondary-btn" data-i18n="add" disabled>Add</button>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button id="saveTagEditsBtn" class="btn-primary" data-i18n="save">Save</button>
-      </div>
-    </div>
   </div>
 
   <script type="module" src="./main.ts"></script>

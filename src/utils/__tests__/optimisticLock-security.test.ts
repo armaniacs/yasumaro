@@ -48,7 +48,7 @@ beforeEach(() => {
 
 describe('楽観的ロック - セキュリティテスト', () => {
   describe('基本動作', () => {
-    test('単一プロセスでの正常動作', async () => {
+    test('works normally in a single process', async () => {
       mockStorage['testKey'] = 'initial';
 
       const result = await withOptimisticLock('testKey', (current) => `${current}-updated`);
@@ -57,7 +57,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(mockStorage['testKey']).toBe('initial-updated');
     });
 
-    test('数値の更新', async () => {
+    test('updates a number', async () => {
       mockStorage['counter'] = 0;
 
       const result1 = await withOptimisticLock('counter', (current) => (current as number) + 1);
@@ -69,7 +69,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(mockStorage['counter']).toBe(11);
     });
 
-    test('オブジェクトの更新', async () => {
+    test('updates an object', async () => {
       mockStorage['test'] = { value: 'initial' };
 
       await withOptimisticLock('test', (current) => ({
@@ -91,7 +91,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
   });
 
   describe('エラー処理', () => {
-    test('updateFn内で発生したエラーが適切に処理される', async () => {
+    test('handles errors thrown inside updateFn properly', async () => {
       mockStorage['test'] = 'initial';
 
       await expect(
@@ -101,7 +101,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       ).rejects.toThrow('User error');
     });
 
-    test('ストレージエラーが適切に処理される', async () => {
+    test('handles storage errors properly', async () => {
       mockStorage['test'] = 'initial';
 
       // ストレージエラーをシミュレート
@@ -114,7 +114,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
   });
 
   describe('データ整合性', () => {
-    test('更新中にエラーが発生してもデータは整合性を保つ', async () => {
+    test('keeps data consistent when an error occurs mid-update', async () => {
       mockStorage['account'] = { balance: 100 };
 
       const result = await withOptimisticLock('account', (current) => ({
@@ -128,7 +128,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(mockStorage['account']).toEqual({ balance: 150 });
     });
 
-    test('複雑なオブジェクトの更新', async () => {
+    test('updates a complex object', async () => {
       mockStorage['config'] = { a: 1, b: { c: 2 } };
 
       await withOptimisticLock('config', (current) => ({
@@ -141,7 +141,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
   });
 
   describe('再帰的更新', () => {
-    test('複数回の更新が正しく処理される', async () => {
+    test('processes repeated updates correctly', async () => {
       mockStorage['counter'] = 0;
 
       for (let i = 0; i < 5; i++) {
@@ -151,7 +151,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(mockStorage['counter']).toBe(5);
     });
 
-    test('異なるキーへの更新が干渉しない', async () => {
+    test('keeps updates to different keys independent', async () => {
       mockStorage['key1'] = 'value1';
       mockStorage['key2'] = 'value2';
 
@@ -168,7 +168,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
   });
 
   describe('エッジケース', () => {
-    test('未定義の値を更新できる', async () => {
+    test('updates an undefined value', async () => {
       mockStorage['test'] = undefined;
 
       const result = await withOptimisticLock('test', () => 'new-value');
@@ -177,7 +177,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(mockStorage['test']).toBe('new-value');
     });
 
-    test('nullを更新できる', async () => {
+    test('updates null', async () => {
       mockStorage['test'] = null;
 
       const result = await withOptimisticLock('test', () => 'new-value');
@@ -186,7 +186,7 @@ describe('楽観的ロック - セキュリティテスト', () => {
       expect(mockStorage['test']).toBe('new-value');
     });
 
-    test('空配列を更新できる', async () => {
+    test('updates an empty array', async () => {
       mockStorage['test'] = [];
 
       const result = await withOptimisticLock('test', (current) => [...(current as any[]), 'item']);

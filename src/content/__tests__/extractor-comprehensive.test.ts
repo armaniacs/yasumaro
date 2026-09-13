@@ -181,8 +181,8 @@ describe('extractor-comprehensive: loadSettings 分支', () => {
     logInfoMock.mockRejectedValueOnce(new Error('fail'));
     setStorageSettings({});
     await expect(loadSettings()).resolves.not.toThrow();
-    // catch does not propagate
-    expect(true).toBe(true);
+    // loadSettings attempted its logInfo call and swallowed the rejection
+    expect(logInfoMock).toHaveBeenCalled();
   });
 });
 
@@ -261,21 +261,19 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     vi.useRealTimers();
   });
 
-  it('throttle uses rAF and beforeunload cleanup', async () => {
+  it('throttle: leading + guaranteed trailing, beforeunload flush must not throw (PBI 2026-09-11-07)', async () => {
     vi.useFakeTimers();
     const fn = vi.fn();
-    const throttled = throttle(fn);
-    // first call
-    throttled('arg1');
-    // cancelAnimationFrame should have been called on second rapid call
-    const cafSpy = vi.spyOn(globalThis, 'cancelAnimationFrame');
-    throttled('arg2');
-    expect(cafSpy).toHaveBeenCalled();
-    // trigger rAF
-    await vi.advanceTimersByTimeAsync(150);
-    // beforeunload cleanup
+    const handle = throttle(fn);
+    // leading call fires immediately; second rapid call arms trailing
+    handle.fn('arg1');
+    handle.fn('arg2');
+    expect(fn).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(150);
+    // trailing fired with the latest args; beforeunload cleanup must not throw
+    expect(fn).toHaveBeenLastCalledWith('arg2');
     window.dispatchEvent(new Event('beforeunload'));
-    expect(true).toBe(true);
+    handle.dispose();
   });
 
   it('updateMaxScroll early return when docHeight <=0', () => {
@@ -309,8 +307,9 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     expect(window.__OW_TEST_STATE).toBeDefined();
     expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('maxScrollPercentage');
     // second call when reportable => should trigger reportValidVisit and update isValidVisitReported true
-    // set mocks to allow report
-    expect(ps.isValidVisitReported).toBe(true); // reportValidVisit sets it
+    // PBI 2026-09-12-18: the flag commits AFTER the async send resolves
+    // (success-only commit rule) — wait for the microtask chain to settle.
+    await vi.waitFor(() => expect(ps.isValidVisitReported).toBe(true));
     expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('isValidVisitReported');
     document.documentElement.removeAttribute('data-ow-e2e-test');
   });
@@ -388,8 +387,9 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     stopPeriodicCheck();
     expect(clearSpy).toHaveBeenCalled();
     startPeriodicCheck();
-    expect(true).toBe(true);
+    expect(ps.checkIntervalId).not.toBeNull();
     stopPeriodicCheck();
+    expect(ps.checkIntervalId).toBeNull();
   });
 });
 
@@ -477,12 +477,28 @@ describe('extractor-comprehensive: reportValidVisit branches', () => {
   });
 
   it('PRIVATE_PAGE_DETECTED force save failure logs error', async () => {
-    // This test will be limited: we mock showPrivacyConfirmDialog indirectly by forcing userConfirmed true via overriding module
-    // To cover the catch after force save, we need second send to reject
-    // We'll patch window to make showPrivacyConfirmDialog return true by creating host and clicking
-    // Instead, we will directly test the inner try/catch by mocking showPrivacyConfirmDialog to return true via vi.fn
-    // Since we already imported extractor with original, we can attempt to cover by not calling the private path but ensuring the catch block line is hit via Extension context path already.
-    expect(true).toBe(true);
+    // First VALID_VISIT returns PRIVATE_PAGE_DETECTED with confirmationRequired;
+    // the user confirms, then the forced re-send rejects, which must be logged.
+    const privacyMod = await import('../privacyDialog.js');
+    const spy = vi.spyOn(privacyMod, 'showPrivacyConfirmDialog').mockResolvedValue(true as unknown as boolean);
+    sendMessageWithRetryMock.mockReset();
+    sendMessageWithRetryMock
+      .mockResolvedValueOnce({ success: false, error: 'PRIVATE_PAGE_DETECTED', confirmationRequired: true, reason: 'cache-control' })
+      .mockRejectedValueOnce(new Error('force fail'));
+    const ps = getPageStateForTesting() as unknown as PageState;
+    ps.isValidVisitReported = false;
+    document.body.innerHTML = `<article><p>private ${'a '.repeat(600)}</p></article>`;
+    logErrorMock.mockClear();
+    await reportValidVisit();
+    expect(sendMessageWithRetryMock).toHaveBeenCalledTimes(2);
+    expect((sendMessageWithRetryMock.mock.calls[1]![0] as { payload: { force: boolean } }).payload.force).toBe(true);
+    expect(logErrorMock).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to force save private page'),
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
+    spy.mockRestore();
   });
 });
 
@@ -511,7 +527,8 @@ describe('extractor-comprehensive: init and message handler', () => {
     const scrollHandlers = (addSpy.mock.calls.filter(c => (c[0] as string) === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>);
     const fakeEvent = { isTrusted: false } as unknown as Event;
     for (const h of scrollHandlers) h(fakeEvent);
-    expect(true).toBe(true);
+    // Untrusted scroll must not evaluate synchronously; it arms a deferred check instead
+    expect((getPageStateForTesting() as unknown as PageState).maxScrollPercentage).toBe(0);
     // visibilitychange hidden true => stop, hidden false => start
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
@@ -615,41 +632,31 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     expect(g2.shouldRecord(0, 0)).toBe(false);
   });
 
-  it('throttle callNow true branch (covers 309,312)', async () => {
+  it('throttle leading then trailing (covers old 309,312)', async () => {
+    vi.useFakeTimers();
     const fn = vi.fn();
-    const origRAF = (globalThis as unknown as Record<string, unknown>).requestAnimationFrame;
-    const origCAF = (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame;
-    const origWindowRAF = (window as unknown as Record<string, unknown>).requestAnimationFrame;
-    const origWindowCAF = (window as unknown as Record<string, unknown>).cancelAnimationFrame;
-    const rafMock = (cb: FrameRequestCallback) => { setTimeout(() => cb(performance.now()), 5); return 1 as unknown as number; };
-    (globalThis as unknown as Record<string, unknown>).requestAnimationFrame = rafMock as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).requestAnimationFrame = rafMock as unknown as FrameRequestCallback;
-    (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame = (() => {}) as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).cancelAnimationFrame = (() => {}) as unknown as FrameRequestCallback;
-    const throttled = throttle(fn);
-    throttled('a');
-    await new Promise(r => setTimeout(r, 30));
-    expect(fn).toHaveBeenCalled();
-    fn.mockClear();
-    // wait for THROTTLE_DELAY (100ms) to pass so next call will be callNow true again
-    await new Promise(r => setTimeout(r, 120));
-    throttled('b');
-    throttled('c');
-    await new Promise(r => setTimeout(r, 30));
-    expect(fn).toHaveBeenCalled();
-    (globalThis as unknown as Record<string, unknown>).requestAnimationFrame = origRAF as unknown as FrameRequestCallback;
-    (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame = origCAF as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).requestAnimationFrame = origWindowRAF as unknown as FrameRequestCallback;
-    (window as unknown as Record<string, unknown>).cancelAnimationFrame = origWindowCAF as unknown as FrameRequestCallback;
+    const handle = throttle(fn);
+    handle.fn('a');
+    expect(fn).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(120);
+    handle.fn('b');
+    vi.advanceTimersByTime(120);
+    // Both calls fire: leading immediately, trailing within the window.
+    expect(fn).toHaveBeenCalledTimes(2);
+    handle.dispose();
   });
 
-  it('throttle beforeunload with rafId not null (covers 323)', () => {
+  it('beforeunload flushes the pending trailing call (covers old 323)', () => {
+    vi.useFakeTimers();
     const fn = vi.fn();
-    const throttled = throttle(fn);
-    throttled('x');
-    // rafId is now pending
+    const handle = throttle(fn);
+    handle.fn('x'); // leading
+    handle.fn('y'); // arms trailing
     window.dispatchEvent(new Event('beforeunload'));
-    expect(true).toBe(true);
+    // beforeunload flushes the pending trailing call with the latest args.
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(fn).toHaveBeenLastCalledWith('y');
+    vi.useRealTimers();
   });
 
   it('updateMaxScroll maxScroll not overwritten when smaller (covers 350 false)', () => {
@@ -770,7 +777,6 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     const fakeUntrusted = { isTrusted: false } as unknown as Event;
     for (const h of scrollHandlers) { try { h(fakeUntrusted); } catch {} }
     await new Promise(r => setTimeout(r, 30));
-    expect(true).toBe(true);
     document.documentElement.removeAttribute('data-ow-e2e-test');
     document.documentElement.removeAttribute('data-ow-test-state');
     stopPeriodicCheck();
@@ -785,9 +791,10 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     ps.isValidVisitReported = false;
     Object.defineProperty(document, 'hidden', { value: true, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
+    expect(ps.checkIntervalId).toBeNull();
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(true).toBe(true);
+    expect(ps.checkIntervalId).not.toBeNull();
     stopPeriodicCheck();
   });
 });

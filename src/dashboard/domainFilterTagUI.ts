@@ -1,6 +1,7 @@
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
-import { loadDomainSettings } from './settings/domainFilter.js';
+import { loadDomainSettings, saveDomainLists } from './settings/domainFilter.js';
+import { normalizeDomainInput, validateDomainInput } from './domainInputPolicy.js';
 
 /**
  * Initialize the domain filter tag UI in settings panel
@@ -14,8 +15,9 @@ export async function initDomainFilterTagUI(): Promise<void> {
   const blacklistTA     = document.getElementById('blacklistTextarea') as HTMLTextAreaElement | null;
   const whitelistTA     = document.getElementById('whitelistTextarea') as HTMLTextAreaElement | null;
   const domainListTA    = document.getElementById('domainList')        as HTMLTextAreaElement | null;
-  const realSaveBtn     = document.getElementById('saveDomainSettings') as HTMLButtonElement | null;
-  const realStatus      = document.getElementById('domainStatus')      as HTMLElement | null;
+  // Note: the legacy hidden save button (#saveDomainSettings) and status
+  // (#domainStatus) stay in the DOM as the legacy-fallback path — the tag UI
+  // no longer clicks or observes them (PBI 2026-09-12-15).
 
   // --- 新UI要素参照 ---
   const toggle          = document.getElementById('domainFilterToggle')       as HTMLInputElement | null;
@@ -99,11 +101,12 @@ export async function initDomainFilterTagUI(): Promise<void> {
   function addDomain(rawInput: string, mode: 'blacklist' | 'whitelist'): void {
     if (!tagError) return;
     tagError.textContent = '';
-    const domain = rawInput.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    // PBI 2026-09-12-15: normalize+validate through the shared
+    // DomainInputPolicy (the save path stays authoritative).
+    const domain = normalizeDomainInput(rawInput);
     if (!domain) return;
 
-    // 簡易バリデーション
-    if (!/^[a-z0-9.*-]+$/.test(domain)) {
+    if (!validateDomainInput(domain)) {
       tagError.textContent = getMessage('domainTagInvalidError') || '無効なドメイン形式です。';
       return;
     }
@@ -200,20 +203,19 @@ export async function initDomainFilterTagUI(): Promise<void> {
     if (tagError) tagError.textContent = '';
   });
 
-  // 保存ボタン → 既存の hidden saveDomainSettings ボタンに委譲
-  saveBtn?.addEventListener('click', () => {
+  // 保存ボタン → 既存 save interface を直接呼び出し (PBI 2026-09-12-15)。
+  // 以前の hidden-button click + MutationObserver 転写は DOM ノード契約で、
+  // mutation timing への依存と転写順序が untested だった。hidden textarea
+  // はデータ担体として残し（legacy の hidden 保存ボタンも動作する）、
+  // 結果は戻り値で受けて直接描画する。
+  saveBtn?.addEventListener('click', async () => {
     if (saveStatus) saveStatus.textContent = '';
-    realSaveBtn?.click();
+    const { ok, message } = await saveDomainLists();
+    if (saveStatus) {
+      saveStatus.textContent = message;
+      saveStatus.className = `status-message ${ok ? 'success' : 'error'}`;
+    }
   });
-
-  // realStatus を MutationObserver で監視して saveStatus に転写
-  if (realStatus && saveStatus) {
-    const observer = new MutationObserver(() => {
-      saveStatus.textContent = realStatus.textContent || '';
-      saveStatus.className = `status-message ${realStatus.className}`;
-    });
-    observer.observe(realStatus, { childList: true, characterData: true, subtree: true, attributes: true });
-  }
 
   // 初期化: loadDomainSettings() を await して確実に同期
   await loadDomainSettings();

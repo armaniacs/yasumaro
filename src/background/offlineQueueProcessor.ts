@@ -7,6 +7,8 @@
 import type { OfflineJob } from './offlineNetworkQueue.js';
 import type { RecordingData } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { logError, logWarn, ErrorCode } from '../utils/logger.js';
+import { buildOfflineRetryRequest, type OfflineJobPayload } from './recordRequestBuilder.js';
 
 interface OfflineNetworkQueueLike {
     retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void>;
@@ -14,7 +16,7 @@ interface OfflineNetworkQueueLike {
 
 interface RecordingPipelineLike {
     record(data: RecordingData): Promise<{ success: boolean; skipped?: boolean }>;
-    retryObsidianWriteOnly(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean>;
+    retryObsidianWrite(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean>;
 }
 
 export interface OfflineQueueProcessorDeps {
@@ -25,14 +27,9 @@ export interface OfflineQueueProcessorDeps {
 export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): () => Promise<void> {
     return async function processOfflineNetworkQueue(): Promise<void> {
         await deps.offlineNetworkQueue.retryAll(async (job: OfflineJob) => {
-            const payload = job.payload as {
-                title: string;
-                url: string;
-                content: string;
-                summary?: string;
-                maskedCount?: number;
-                tags?: string[];
-            };
+            // PBI 2026-09-12-11: the payload shape is owned by the shared
+            // field table (OfflineJobPayload) — no third spelling here.
+            const payload = job.payload as OfflineJobPayload;
 
             // obsidian_sync jobs mean the AI summary already succeeded and only the
             // Obsidian append failed — retry that write only, without re-calling the
@@ -40,28 +37,27 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
             // summary) fall through to the full pipeline for backward compatibility.
             if (job.type === 'obsidian_sync' && payload.summary) {
                 try {
-                    return await deps.recordingPipeline.retryObsidianWriteOnly({
+                    return await deps.recordingPipeline.retryObsidianWrite({
                         title: payload.title,
                         url: payload.url,
                         summary: payload.summary,
                         ...pickDefined({ tags: payload.tags }),
                     });
-                } catch {
+                } catch (error) {
+                    // Poison jobs must be distinguishable from transient
+                    // failures in telemetry (PBI 2026-09-12-04).
+                    logWarn('Offline obsidian_sync retry failed', { url: payload.url, error: error instanceof Error ? error.message : String(error) }, undefined, 'service-worker');
                     return false;
                 }
             }
 
             try {
-                const result = await deps.recordingPipeline.record({
-                    title: payload.title,
-                    url: payload.url,
-                    content: payload.content,
-                    force: false,
-                    skipDuplicateCheck: true,
-                    recordType: 'manual',
-                } as RecordingData);
+                // PBI 2026-09-12-11: rebuild through the shared field table so
+                // the retry cannot drop fields the enqueue packed.
+                const result = await deps.recordingPipeline.record(buildOfflineRetryRequest(payload));
                 return result.success && !result.skipped;
-            } catch {
+            } catch (error) {
+                logError('Offline full-pipeline retry failed', { cause: error, url: payload.url }, ErrorCode.INTERNAL_ERROR, 'service-worker');
                 return false;
             }
         });

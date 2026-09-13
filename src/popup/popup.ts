@@ -18,35 +18,12 @@ import { getPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
 
 // ============================================================================
-// Helper Functions (exported for testability)
-// ============================================================================
-
-export function setHtmlLangDir(): void {
-    const locale = chrome.i18n.getUILanguage();
-    const langCode = locale.split('-')[0];
-    document.documentElement.lang = locale;
-
-    const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ku', 'yi', 'dv'];
-    if (langCode != null && rtlLanguages.includes(langCode)) {
-        document.documentElement.dir = 'rtl';
-    } else {
-        document.documentElement.dir = 'ltr';
-    }
-}
-
-// ============================================================================
 // Main Initialization Function (exported for testability)
 // ============================================================================
 
 export async function initPopup(): Promise<void> {
-    // HTML lang/dir setup
-    try {
-        setHtmlLangDir();
-    } catch (error) {
-        logError('[Popup] Error setting HTML lang/dir', { cause: error }, ErrorCode.INTERNAL_ERROR);
-    }
-
-    // Navigation initialization
+    // Navigation initialization (sets lang/dir via i18n-dom's
+    // setHtmlLangAndDir — the single lang/dir helper, PBI 2026-09-11-04).
     try {
         initNavigation();
     } catch (error) {
@@ -103,10 +80,6 @@ export async function initPopup(): Promise<void> {
     }
 }
 
-// ============================================================================
-// Auto-initialize when loaded in browser context
-// ============================================================================
-
-if (typeof window !== 'undefined') {
-    initPopup();
-}
+// PBI 2026-09-11-04 (round 7): the import-time auto-run is gone — the
+// entrypoint (entrypoints/popup/main.ts) calls initPopup() once after
+// applyI18n, so initialization has a single entry point and order.

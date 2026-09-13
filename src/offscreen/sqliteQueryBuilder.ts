@@ -5,52 +5,72 @@
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import { sanitizeFtsTerm, ALLOWED_ORDER_COLUMNS, FTS_QUERY_MAX_LENGTH } from './schema.js';
+import { buildFilterConditions, type FilterCondition } from './queryPlan.js';
+
+/** WHERE-prefix projection over the shared filter conditions. */
+function buildWhereFromConditions(conditions: FilterCondition[]): { where: string; params: SqliteValue[] } {
+  const fragments = conditions.map((c) => c.sql);
+  const params = conditions.flatMap((c) => c.params);
+  return { where: fragments.length > 0 ? `WHERE ${fragments.join(' AND ')}` : '', params };
+}
 
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
 
 /**
  * Build a WHERE clause + params array from a StorageQuery.
  * When `excludeDeleted` is not explicitly false, filters out soft-deleted rows.
+ *
+ * PBI 2026-09-12-35: this is now a thin projection over the shared
+ * `buildFilterConditions` vocabulary (queryPlan.ts) — the vocabulary used to
+ * be duplicated here, and the duplicate could not express multi-value params
+ * (ids) as a vector, so search+ids bound a nested array as one value.
  */
 export function buildWhereClause(q: StorageQuery): { where: string; params: SqliteValue[] } {
-  const conditions: string[] = [];
-  const params: SqliteValue[] = [];
-
-  if (q.excludeDeleted !== false) {
-    conditions.push('is_deleted = 0');
-  }
-
-  if (q.dateFrom != null) { conditions.push('created_at >= ?'); params.push(q.dateFrom); }
-  if (q.dateTo != null) { conditions.push('created_at <= ?'); params.push(q.dateTo); }
-  if (q.domain) { conditions.push('domain = ?'); params.push(q.domain); }
-  if (q.starred != null) { conditions.push('is_starred = ?'); params.push(q.starred ? 1 : 0); }
-  if (q.gistSynced != null) { conditions.push('gist_synced = ?'); params.push(q.gistSynced); }
-  if (q.ids != null && q.ids.length > 0) {
-    conditions.push(`id IN (${q.ids.map(() => '?').join(',')})`);
-    params.push(...q.ids);
-  }
-
-  const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  const { where, params } = buildWhereFromConditions(buildFilterConditions(q));
   return { where, params };
 }
 
 /**
- * Build an FTS5 MATCH sub-query condition for a `#tag` filter, matching the
- * browsing_logs_fts virtual table (rather than a plain LIKE scan). The
- * caller passes the tag value WITHOUT the `#` prefix.
+ * Build the tag-filter condition for the plain listing path (PBI 2026-09-11
+ * PBI-15: unified partial-match semantics across all backends).
+ *
+ * Semantics match the former client-side filter (comma-split partial match on
+ * the raw tag text):
+ * - >= 3 chars AND FTS5 available: trigram MATCH on the FTS tags column with
+ *   the phrase-quoted sanitized term. NO `#` prefix — trigram MATCH is a
+ *   contiguous substring match, so `AI` matches inside `#AImaster` exactly
+ *   like the old client-side `includes` did.
+ * - otherwise (short tag, or no FTS table on this backend): `tags LIKE ?`
+ *   with `%term%` (full scan; no index on tags). Wildcard semantics for
+ *   `%`/`_` in the term are shared with the LIKE search path (documented).
+ *
+ * Returns null when the tag produces no usable condition (empty input).
  */
-export function buildFtsTagMatchCondition(tag: string): { condition: string; param: string } {
+export function buildTagFilterCondition(
+  tag: string,
+  opts: { fts5Available: boolean; idColumn?: 'id' | 'b.id' },
+): { condition: string; params: SqliteValue[] } | null {
   const limitedTag = tag.slice(0, FTS_QUERY_MAX_LENGTH);
-  const cleanTag = limitedTag
-    .replace(/["'*^~:()+\-\\]/g, ' ')
-    .replace(/\b(OR|AND|NOT|NEAR)\b/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return {
-    condition: 'id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)',
-    param: `"#${cleanTag}"`,
-  };
+  if (!limitedTag) return null;
+  // PBI 2026-09-12-44: route the tag FTS branch through the shared
+  // sanitizeFtsTerm (was an inline cleaner that only stripped operator chars
+  // — diverging from the text-path sanitizer on `%`, `_`, and other
+  // whitelist-external chars).
+  const cleanTag = sanitizeFtsTerm(limitedTag);
+  const charLen = [...cleanTag].length;
+  if (opts.fts5Available && charLen >= 3) {
+    // idColumn: the FTS search path reads from a JOIN (browsing_logs AS b),
+    // so the outer id reference must be table-qualified there.
+    return {
+      condition: `${opts.idColumn ?? 'id'} IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)`,
+      params: [`"${cleanTag}"`],
+    };
+  }
+  return { condition: 'tags LIKE ?', params: [`%${limitedTag}%`] };
 }
+
+/** Condition shape shared by the plain-list and search tag filters. */
+export type TagFilterCondition = { condition: string; params: SqliteValue[] };
 
 /**
  * Validate and build an ORDER BY clause for plain (non-FTS) queries.
@@ -112,12 +132,4 @@ export function sanitizeTextForFts5(text: string): string {
 export function shouldUseFts5(fts5Available: boolean, bareTerm: string): boolean {
   const charLen = [...bareTerm].length;
   return fts5Available && charLen >= 3;
-}
-
-/**
- * Build an FTS5-compatible tag filter condition.
- * The caller passes the tag value WITHOUT the `#` prefix.
- */
-export function buildTagFilterClause(): { tagCondition: string; tagParam: string } {
-  return { tagCondition: 'tags LIKE ?', tagParam: '#%' };
 }

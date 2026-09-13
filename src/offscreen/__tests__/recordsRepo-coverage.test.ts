@@ -71,27 +71,27 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
   // ── query: MAX_QUERY_LIMIT cap ──────────────────────────────────────────
   describe('query — MAX_QUERY_LIMIT cap', () => {
-    it('limit 未指定は 100 に default', async () => {
+    it('defaults to 100 when limit is unspecified', async () => {
       await query({});
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
     });
 
-    it('limit 50 はそのまま通る', async () => {
+    it('passes limit 50 through as-is', async () => {
       await query({ limit: 50 });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }));
     });
 
-    it('limit 100000 は cap ちょうどで通る', async () => {
+    it('passes limit 100000 through at exactly the cap', async () => {
       await query({ limit: 100000 });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ limit: 100000 }));
     });
 
-    it('limit 100001 は 100000 に cap される', async () => {
+    it('caps limit 100001 to 100000', async () => {
       await query({ limit: 200000 });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ limit: 100000 }));
     });
 
-    it('limit 100000 *10 も cap される', async () => {
+    it('caps even limit 100000*10', async () => {
       await query({ limit: 100000 * 10 });
       const arg = mockBackend.query.mock.calls[0]![0] as { limit: number };
       expect(arg.limit).toBe(100000);
@@ -102,7 +102,7 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       ['ゼロ', 0],
       ['非整数', 0.5],
       ['非有限', Infinity],
-    ])('%s は既定値 100 にフォールバックする', async (_label, raw) => {
+    ])('%s falls back to the default value 100', async (_label, raw) => {
       await query({ limit: raw as number });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ limit: 100 }));
     });
@@ -110,7 +110,7 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
   // ── query: tag / text truncation (FTS_QUERY_MAX_LENGTH=200) ────────────
   describe('query — tag/text truncation', () => {
-    it('tag が 200 超なら切り詰められる', async () => {
+    it('truncates tag when it exceeds 200 characters', async () => {
       const longTag = 'a'.repeat(250);
       await query({ tag: longTag });
       const arg = mockBackend.query.mock.calls[0]![0] as { tag: string };
@@ -118,37 +118,37 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       expect(arg.tag).toBe('a'.repeat(200));
     });
 
-    it('tag が 200 以内なら切り詰められない', async () => {
+    it('leaves tag untruncated when it is within 200 characters', async () => {
       const shortTag = 'hello';
       await query({ tag: shortTag });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ tag: 'hello' }));
     });
 
-    it('tag が undefined なら tag キー自体が付与されない (pickDefined)', async () => {
+    it('omits the tag key itself when tag is undefined (pickDefined)', async () => {
       await query({ limit: 10 });
       const arg = mockBackend.query.mock.calls[0]![0] as Record<string, unknown>;
       expect(arg).not.toHaveProperty('tag');
     });
 
-    it('text が 200 超なら切り詰められる', async () => {
+    it('truncates text when it exceeds 200 characters', async () => {
       const longText = 'x'.repeat(300);
       await query({ text: longText });
       const arg = mockBackend.query.mock.calls[0]![0] as { text: string };
       expect(arg.text.length).toBe(FTS_QUERY_MAX_LENGTH);
     });
 
-    it('text が 200 以内ならそのまま', async () => {
+    it('passes text through as-is when it is within 200 characters', async () => {
       await query({ text: 'hello world' });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ text: 'hello world' }));
     });
 
-    it('text が undefined なら text キー自体が付与されない', async () => {
+    it('omits the text key itself when text is undefined', async () => {
       await query({});
       const arg = mockBackend.query.mock.calls[0]![0] as Record<string, unknown>;
       expect(arg).not.toHaveProperty('text');
     });
 
-    it('text と tag 両方が長い場合ともに切り詰められる', async () => {
+    it('truncates both text and tag when both are long', async () => {
       const long = 'z'.repeat(250);
       await query({ text: long, tag: long });
       const arg = mockBackend.query.mock.calls[0]![0] as { text: string; tag: string };
@@ -171,7 +171,7 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       { text: 'a'.repeat(250), len: 250, desc: 'text length 250 (200 で切り詰め → 200)' },
     ];
 
-    it.each(cases)('$desc — backend に正しい text が届く', async ({ text }) => {
+    it.each(cases)('$desc — delivers the correct text to the backend', async ({ text }) => {
       await query({ text });
       const arg = mockBackend.query.mock.calls[0]![0] as Record<string, unknown>;
       if (text.length === 0) {
@@ -186,19 +186,19 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       }
     });
 
-    it('fts5Available が false でも recordsRepo は text をそのままフォワードする (責務は backend)', async () => {
+    it('forwards text as-is even when fts5Available is false (backend owns the responsibility)', async () => {
       // backend の FTS 可否は recordsRepo の責務外 — truncation のみを保証
       await query({ text: 'abc' });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ text: 'abc' }));
     });
 
-    it('fts5Available が true でも同様にフォワードする', async () => {
+    it('forwards text likewise even when fts5Available is true', async () => {
       mockBackend.getStatus.mockResolvedValue({ success: true, initialized: true, fallback: false, fts5: true, supportsBinaryBackup: false } as never);
       await query({ text: 'abc' });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ text: 'abc' }));
     });
 
-    it('text length 2 と 3 の両方が正しくフォワードされる (LIKE vs FTS 境界)', async () => {
+    it('forwards both text lengths 2 and 3 correctly (LIKE vs FTS boundary)', async () => {
       await query({ text: 'ab' });
       expect(mockBackend.query).toHaveBeenCalledWith(expect.objectContaining({ text: 'ab' }));
       mockBackend.query.mockClear();
@@ -209,140 +209,86 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
 
   // ── delegations: statements 90% 到達のための残りメソッド ─────────────────
   describe('other delegations (statements 90% gate)', () => {
-    it('insert は backend.insert に委譲する', async () => {
+    it('delegates insert to backend.insert', async () => {
       const rec: BrowsingLogRecord = { url: 'https://example.com', created_at: 1000 };
       await insert(rec);
       expect(mockBackend.insert).toHaveBeenCalledWith(rec);
     });
 
-    it('insertBatch は backend.insertBatch の inserted を count に詰める', async () => {
+    it('returns backend.insertBatch inserted and skipped (PBI 2026-09-11-07 wire shape)', async () => {
       mockBackend.insertBatch.mockResolvedValue({ success: true, inserted: 2, skipped: 1 } as never);
       const result = await insertBatch([
         { url: 'https://a.com', created_at: 1 },
         { url: 'https://b.com', created_at: 2 },
       ]);
-      expect(result).toEqual({ success: true, count: 2 });
+      expect(result).toEqual({ success: true, inserted: 2, skipped: 1 });
     });
 
-    it('insertBatch 失敗時はそのまま error を返す', async () => {
+    it('returns the error as-is when insertBatch fails', async () => {
       mockBackend.insertBatch.mockResolvedValue({ success: false, error: 'fail' } as never);
       const result = await insertBatch([{ url: 'https://a.com', created_at: 1 }]);
       expect(result).toEqual({ success: false, error: 'fail' });
     });
 
-    it('update は backend.update に委譲', async () => {
+    it('delegates update to backend.update', async () => {
       await update(1, { title: 'new' } as never);
       expect(mockBackend.update).toHaveBeenCalledWith(1, { title: 'new' });
     });
 
-    it('hardDelete は backend.delete に委譲', async () => {
+    it('delegates hardDelete to backend.delete', async () => {
       await hardDelete(42);
       expect(mockBackend.delete).toHaveBeenCalledWith(42);
     });
 
-    it('toggleStar は backend.toggleStar に委譲', async () => {
+    it('delegates toggleStar to backend.toggleStar', async () => {
       await toggleStar(7);
       expect(mockBackend.toggleStar).toHaveBeenCalledWith(7);
     });
 
-    it('getCount は backend.getCount に委譲', async () => {
+    it('delegates getCount to backend.getCount', async () => {
       await getCount();
       expect(mockBackend.getCount).toHaveBeenCalled();
     });
 
-    it('getStatus は backend.getStatus 成功時に path を付与して返す', async () => {
+    it('returns backend.getStatus with path attached on success', async () => {
       mockBackend.getStatus.mockResolvedValue({ success: true, initialized: true, fallback: false, fts5: true, supportsBinaryBackup: false, compileOptions: ['ENABLE_FTS5'] } as never);
       const result = await getStatus();
       expect(result).toEqual(expect.objectContaining({ success: true, path: 'test.db', fts5: true }));
     });
 
-    it('getStatus は backend error をそのまま返す', async () => {
+    it('returns a backend error as-is for getStatus', async () => {
       mockBackend.getStatus.mockResolvedValue({ success: false, error: 'ng' } as never);
       const result = await getStatus();
       expect(result).toEqual({ success: false, error: 'ng' });
     });
 
-    it('clearAll は backend.clearAll に委譲', async () => {
+    it('delegates clearAll to backend.clearAll', async () => {
       await clearAll();
       expect(mockBackend.clearAll).toHaveBeenCalled();
     });
   });
 
-  // ── serialize: 3 分岐 + error ───────────────────────────────────────────
-  describe('serialize — OPFS / Fallback / IDB / error', () => {
-    it('OPFS proxy が Uint8Array を返せばそれを返す', async () => {
-      const data = new TextEncoder().encode('opfs-data');
-      engineMock.tryOpfsProxy.mockResolvedValue(data as never);
+  // ── serialize: backend delegation（PBI 2026-09-12-22）──────────────────
+  describe('serialize — delegation to Queryable.serialize', () => {
+    it('delegates to backend.serialize and returns the Uint8Array', async () => {
+      const data = new TextEncoder().encode('export-data');
+      mockBackend.serialize = vi.fn().mockResolvedValue({ success: true, data });
       const result = await serialize();
+      expect(mockBackend.serialize).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ success: true, data });
-      expect(engineMock.tryOpfsProxy).toHaveBeenCalledWith('SERIALIZE');
     });
 
-    it('FallbackStorage 経由で JSON を返す', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = true;
-      engineMock.fallbackStorage = {
-        query: vi.fn().mockResolvedValue({
-          success: true,
-          rows: [{ id: 1, url: 'https://a.com', title: 't', summary: 's', tags: null, created_at: 1000, domain: 'a.com', visit_duration: null, scroll_ratio: null, is_starred: 0, is_deleted: 0 }],
-        }),
-      } as unknown as never;
-
+    it('returns the backend error when serialize fails', async () => {
+      mockBackend.serialize = vi.fn().mockResolvedValue({ success: false, error: 'serialize failed' });
       const result = await serialize();
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const json = JSON.parse(new TextDecoder().decode(result.data));
-        expect(json.table).toBe('browsing_logs');
-        expect(json.rows).toHaveLength(1);
-      }
+      expect(result).toEqual({ success: false, error: 'serialize failed' });
     });
 
-    it('FallbackStorage query 失敗時は error を返す', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = true;
-      engineMock.fallbackStorage = {
-        query: vi.fn().mockResolvedValue({ success: false, error: 'fallback fail' }),
-      } as unknown as never;
-
-      const result = await serialize();
-      expect(result).toEqual({ success: false, error: 'fallback fail' });
-    });
-
-    it('IDB 経由で execWithCache で行を集めて JSON を返す', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = false;
-      engineMock.fallbackStorage = null;
-      engineMock.idbEngine = {} as never;
-      // execWithCache は callback に row を渡す
-      engineMock.execWithCache.mockImplementation(async (_sql: string, _params: unknown[], cb?: (row: unknown[]) => void) => {
-        if (cb) cb([1, 'https://b.com', 'title', 'summary', 'tags', 2000, 'b.com', null, null, 0, 0]);
-      });
-
-      const result = await serialize();
-      expect(result.success).toBe(true);
-      if (result.success) {
-        const json = JSON.parse(new TextDecoder().decode(result.data));
-        expect(json.rows[0].url).toBe('https://b.com');
-      }
-    });
-
-    it('IDB 未初期化で init が呼ばれる (usingFallback でも opfs でもない)', async () => {
-      engineMock.tryOpfsProxy.mockResolvedValue(null);
-      engineMock.usingFallbackStorage = false;
-      engineMock.fallbackStorage = null;
-      engineMock.idbEngine = null;
-      engineMock.init.mockResolvedValue(false);
-      engineMock.execWithCache.mockResolvedValue(undefined);
-
-      const result = await serialize();
-      expect(engineMock.init).toHaveBeenCalled();
-      expect(result.success).toBe(true);
-    });
-
-    it('例外時は success:false を返す', async () => {
-      engineMock.tryOpfsProxy.mockRejectedValue(new Error('boom'));
-      const result = await serialize();
-      expect(result).toEqual({ success: false, error: 'boom' });
+    it('does NOT touch tryOpfsProxy / execWithCache / fallback directly (single seam)', async () => {
+      mockBackend.serialize = vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() });
+      await serialize();
+      expect(engineMock.tryOpfsProxy).not.toHaveBeenCalledWith('SERIALIZE');
+      expect(engineMock.execWithCache).not.toHaveBeenCalled();
     });
   });
 });

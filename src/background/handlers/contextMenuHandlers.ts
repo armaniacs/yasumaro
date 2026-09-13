@@ -6,7 +6,11 @@
  */
 import { isSecureUrl } from '../../utils/urlUtils.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { SingleFlight } from '../../utils/singleFlight.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
+
+/** Page-body slice cap for the context-menu record path (was an inline 5000). */
+const CONTEXT_MENU_CONTENT_MAX_CHARS = 5000;
 
 export interface ContextMenuHandlerDeps {
     handleManualRecord: (
@@ -35,7 +39,10 @@ export function registerManualRecordContextMenu(): void {
 }
 
 export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
-    let contextMenuRecordInProgress: Promise<void> | null = null;
+    // PBI 2026-09-12-30: keyed by tab with the 'drop' policy in the shared
+    // SingleFlight seam (was a hand-rolled Map; before that a single global
+    // slot that dropped a concurrent click even for a different URL).
+    const inFlightByTabId = new SingleFlight<number>();
 
     return async (info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab): Promise<void> => {
         if (info.menuItemId !== 'yasumaro-manual-record' || !tab?.id || !tab.url) return;
@@ -45,21 +52,20 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             return;
         }
 
-        if (contextMenuRecordInProgress) return;
-
         const targetTabId = tab.id;
         const targetTabUrl = tab.url;
         if (!targetTabId || !targetTabUrl) return;
 
-        contextMenuRecordInProgress = (async () => {
+        await inFlightByTabId.run(targetTabId, async () => {
             try {
                 const [result] = await chrome.scripting.executeScript({
                     target: { tabId: targetTabId },
-                    func: () => ({
+                    func: (maxChars: number) => ({
                         url: window.location.href,
                         title: document.title,
-                        content: document.body?.innerText?.slice(0, 5000) || '',
+                        content: document.body?.innerText?.slice(0, maxChars) || '',
                     }),
+                    args: [CONTEXT_MENU_CONTENT_MAX_CHARS],
                 });
 
                 const raw = result?.result;
@@ -92,12 +98,6 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
             } catch (error) {
                 logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
             }
-        })();
-
-        try {
-            await contextMenuRecordInProgress;
-        } finally {
-            contextMenuRecordInProgress = null;
-        }
+        }, 'drop');
     };
 }

@@ -12,12 +12,51 @@ export const READ_ONLY_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
   'create_confirm_token', 'query', 'search', 'get_count', 'status', 'audit_log_query',
 ]);
 
+/**
+ * buildListParams / buildSearchParams — the projection seam of the read route
+ * (PBI 2026-09-11-07 spike slice). The dashboard-hop param shape (alias names,
+ * per-surface caps, order defaults) previously lived inline in the handler
+ * closure; extracted as pure builders so the projection is unit-testable and
+ * reviewed in one place. Behavior is unchanged — the builders return exactly
+ * the objects the inline code constructed.
+ */
+export function buildListParams(
+  payload: Extract<DashboardSqliteRequest, { subtype: 'query' }>,
+): Record<string, unknown> {
+  return {
+    limit: clampLimit(payload.limit, QUERY_CAPS.plain, 100),
+    offset: payload.offset ?? 0,
+    domain: payload.domain,
+    isStarred: payload.isStarred,
+    since: payload.since,
+    until: payload.until,
+    orderBy: payload.orderBy || 'created_at',
+    orderDir: payload.orderDir || 'DESC',
+    tagFilter: payload.tagFilter,
+  };
+}
+
+export function buildSearchParams(
+  payload: Extract<DashboardSqliteRequest, { subtype: 'search' }>,
+): {
+  text: string;
+  limit: number;
+  offset: number;
+  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' };
+} {
+  return {
+    text: payload.query || '',
+    limit: clampLimit(payload.limit, QUERY_CAPS.fts, 50),
+    offset: payload.offset ?? 0,
+    options: pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
+  };
+}
+
 export function createReadOnlyHandler(deps: ReadOnlyDeps) {
   return async (payload: DashboardSqliteRequest): Promise<unknown> => {
     const subtype = payload.subtype;
     switch (subtype) {
-      case 'create_confirm_token': {
-        const action = (payload as { action?: string }).action;
+      case 'create_confirm_token': {        const action = (payload as { action?: string }).action;
         const id = (payload as { id?: number }).id;
         const scopeHash = (payload as { scopeHash?: unknown }).scopeHash;
         if (!action || typeof action !== 'string') {
@@ -31,29 +70,15 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
         return { success: true, confirmToken: token };
       }
       case 'query': {
-        const result = await deps.query({
-          limit: clampLimit(payload.limit, QUERY_CAPS.plain, 100),
-          offset: payload.offset ?? 0,
-          domain: payload.domain,
-          isStarred: payload.isStarred,
-          since: payload.since,
-          until: payload.until,
-          orderBy: payload.orderBy || 'created_at',
-          orderDir: payload.orderDir || 'DESC',
-          tagFilter: payload.tagFilter,
-        });
+        const result = await deps.query(buildListParams(payload));
         if (!result.success) {
           return toFailure(result);
         }
         return { success: true, rows: result.data.rows, total: result.data.total };
       }
       case 'search': {
-        const result = await deps.search(
-          payload.query || '',
-          clampLimit(payload.limit, QUERY_CAPS.fts, 50),
-          payload.offset ?? 0,
-          pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
-        );
+        const { text, limit, offset, options } = buildSearchParams(payload);
+        const result = await deps.search(text, limit, offset, options);
         if (!result.success) {
           return toFailure(result);
         }
@@ -77,11 +102,12 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
         return { success: false, error: 'Status check failed' };
       }
       case 'audit_log_query': {
-        // Dashboard-hop pre-clamp only; each storage backend enforces its
-        // own audit cap downstream (OPFS 1000 vs IDB 100000, intentional).
+        // PBI 2026-09-12-17: the dashboard hop passes the wire values through
+        // — cap/offset policy lives in the offscreen planner seam
+        // (planAuditLog), which applies each backend's documented cap.
         const result = await deps.queryAuditLog(
           pickDefined({
-            limit: payload.limit === undefined ? undefined : clampLimit(payload.limit, QUERY_CAPS.plain, 1000),
+            limit: payload.limit,
             offset: payload.offset,
           }),
         );

@@ -18,6 +18,7 @@ vi.mock('../../utils/i18n.js', () => ({
 
 vi.mock('../settings/domainFilter.js', () => ({
   loadDomainSettings: vi.fn().mockResolvedValue(undefined),
+  saveDomainLists: vi.fn().mockResolvedValue({ ok: true, message: 'saved' }),
 }));
 
 function setupFullDOM() {
@@ -442,7 +443,12 @@ describe('initDomainFilterTagUI', () => {
       expect(tagError.textContent).toBe('');
     });
 
-    it('save button clears saveStatus and clicks real save button', () => {
+    it('save button calls the save seam and renders the returned message (PBI 2026-09-12-15)', async () => {
+      setupFullDOM();
+      const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
+      await initDomainFilterTagUI();
+      const { saveDomainLists } = await import('../settings/domainFilter.js');
+
       const saveBtn = document.getElementById('domainSaveBtn') as HTMLButtonElement;
       const saveStatus = document.getElementById('domainSaveStatus')!;
       const realSaveBtn = document.getElementById('saveDomainSettings') as HTMLButtonElement;
@@ -452,14 +458,18 @@ describe('initDomainFilterTagUI', () => {
       realSaveBtn.addEventListener('click', () => { realSaveClicked = true; });
 
       saveBtn.click();
+      await new Promise(r => setTimeout(r, 0));
 
-      expect(saveStatus.textContent).toBe('');
-      expect(realSaveClicked).toBe(true);
+      // Direct seam call — the hidden button is no longer clicked.
+      expect(saveDomainLists).toHaveBeenCalled();
+      expect(realSaveClicked).toBe(false);
+      expect(saveStatus.textContent).toBe('saved');
+      expect(saveStatus.className).toBe('status-message success');
     });
   });
 
-  describe('MutationObserver', () => {
-    it('updates saveStatus when realStatus changes', async () => {
+  describe('MutationObserver removed (PBI 2026-09-12-15)', () => {
+    it('does NOT transcribe hidden status changes into saveStatus', async () => {
       setupFullDOM();
       const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
       await initDomainFilterTagUI();
@@ -472,8 +482,7 @@ describe('initDomainFilterTagUI', () => {
 
       await new Promise(r => setTimeout(r, 0));
 
-      expect(saveStatus.textContent).toBe('saved successfully');
-      expect(saveStatus.className).toBe('status-message success');
+      expect(saveStatus.textContent).toBe('');
     });
   });
 
@@ -667,14 +676,13 @@ describe('initDomainFilterTagUI', () => {
 
       const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
       await initDomainFilterTagUI();
+      const { saveDomainLists } = await import('../settings/domainFilter.js');
 
       const saveBtn = document.getElementById('domainSaveBtn') as HTMLButtonElement;
-      const realSaveBtn = document.getElementById('saveDomainSettings') as HTMLButtonElement;
-      let clicked = false;
-      realSaveBtn.addEventListener('click', () => { clicked = true; });
 
       expect(() => saveBtn.click()).not.toThrow();
-      expect(clicked).toBe(true);
+      await new Promise(r => setTimeout(r, 0));
+      expect(saveDomainLists).toHaveBeenCalled();
     });
   });
 
@@ -697,24 +705,22 @@ describe('initDomainFilterTagUI', () => {
     });
   });
 
-  describe('MutationObserver className fallback', () => {
-    it('falls back to empty string when realStatus.className is falsy-checked via textContent branch', async () => {
+  describe('save failure rendering (PBI 2026-09-12-15)', () => {
+    it('renders the error message with error class when the seam reports failure', async () => {
       setupFullDOM();
+      const { saveDomainLists } = await import('../settings/domainFilter.js');
+      vi.mocked(saveDomainLists).mockResolvedValueOnce({ ok: false, message: 'bad pattern' });
       const { initDomainFilterTagUI } = await import('../domainFilterTagUI.js');
       await initDomainFilterTagUI();
 
-      const realStatus = document.getElementById('domainStatus')!;
+      const saveBtn = document.getElementById('domainSaveBtn') as HTMLButtonElement;
       const saveStatus = document.getElementById('domainSaveStatus')!;
 
-      // realStatus.textContent left empty -> exercises `realStatus.textContent || ''` false branch
-      realStatus.className = 'idle';
-      realStatus.dispatchEvent(new Event('mutation'));
-      realStatus.setAttribute('data-x', '1');
-
+      saveBtn.click();
       await new Promise(r => setTimeout(r, 0));
 
-      expect(saveStatus.textContent).toBe('');
-      expect(saveStatus.className).toBe('status-message idle');
+      expect(saveStatus.textContent).toBe('bad pattern');
+      expect(saveStatus.className).toBe('status-message error');
     });
   });
 });

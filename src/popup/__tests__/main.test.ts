@@ -12,10 +12,20 @@ vi.mock('../sanitizePreview.js', () => ({
   initializeModalEvents: vi.fn()
 }));
 
-vi.mock('../spinner.js', () => ({
-  showSpinner: vi.fn(),
-  hideSpinner: vi.fn()
-}));
+vi.mock('../spinner.js', () => {
+  const showSpinner = vi.fn();
+  const hideSpinner = vi.fn();
+  // PBI 2026-09-12-14: PreviewFlow owns its pairings through SpinnerScope.
+  class SpinnerScope {
+    show(text?: string): void {
+      showSpinner(text);
+    }
+    hide(): void {
+      hideSpinner();
+    }
+  }
+  return { showSpinner, hideSpinner, SpinnerScope };
+});
 
 vi.mock('../autoClose.js', () => ({
   startAutoCloseTimer: vi.fn()
@@ -155,6 +165,7 @@ import {
   formatSuccessMessage as formatSuccessMessageModule,
 } from '../errorUtils.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 
 // These modules are vi.mock()-ed above; bind the mock-typed views once so the
@@ -1671,8 +1682,8 @@ describe('main', () => {
 
       expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({
-          type: 'record',
-          data: expect.objectContaining({ url: 'https://a.com', force: true })
+          type: 'MANUAL_RECORD',
+          payload: expect.objectContaining({ url: 'https://a.com', force: true })
         })
       );
       expect(removePendingPages).toHaveBeenCalledWith(['https://a.com']);
@@ -1691,7 +1702,9 @@ describe('main', () => {
 
       await saveSelectedPages('domain');
 
-      expect(mockChrome.storage.local.set).toHaveBeenCalledWith(
+      // PBI 2026-09-11-03: whitelist writes go through the SettingsRepository
+      // seam (settings blob), not a top-level scattered key.
+      expect(settingsRepository.setAll).toHaveBeenCalledWith(
         expect.objectContaining({ domain_whitelist: expect.arrayContaining(['example.com']) })
       );
     });

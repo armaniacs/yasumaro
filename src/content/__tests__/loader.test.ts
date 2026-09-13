@@ -292,9 +292,10 @@ describe('loader.ts', () => {
 
     it('blocks domain when background check returns no response and logs warning', async () => {
       setStorageData({});
-      // Default mock returns undefined (no Promise) → 3 immediate retries, no delay
+      // Default mock returns undefined → 3 attempts with the 200ms linear
+      // backoff (PBI 2026-09-12-20: empty responses now back off too).
       await importLoader('https://example.com/page');
-      expect(sendMessageSpy).toHaveBeenCalledTimes(3);
+      await vi.waitFor(() => expect(sendMessageSpy).toHaveBeenCalledTimes(3));
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
@@ -306,11 +307,11 @@ describe('loader.ts', () => {
 
     it('blocks domain after retries when sendMessage rejects', async () => {
       setStorageData({});
+      sendMessageSpy.mockClear();
       sendMessageSpy.mockRejectedValue(new Error('Connection failed'));
       await importLoader('https://example.com/page');
-      // Need extra time for retry backoff (200 + 400 + 600ms)
-      await new Promise((r) => setTimeout(r, 1500));
-      expect(sendMessageSpy).toHaveBeenCalledTimes(3);
+      // 3 attempts with the 200ms linear backoff (200 + 400ms)
+      await vi.waitFor(() => expect(sendMessageSpy).toHaveBeenCalledTimes(3));
       expect(getURLSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Domain check failed: no response from service worker',

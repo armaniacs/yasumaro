@@ -207,19 +207,19 @@ describe('RecordingPipeline', () => {
   });
 
   describe('urlRecordMutexes のリソース管理', () => {
-    it('record() 完了後に URL 別 Mutex エントリが解放・削除される', async () => {
+    it('removes the per-URL mutex entry after record() completes', async () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
       const url = 'https://mutex-cleanup.example.com';
 
-      await logic.record({ url, title: 'Mutex Cleanup', content: 'content' });
+      const result = await logic.record({ url, title: 'Mutex Cleanup', content: 'content' });
 
-      // Static urlRecordMutexes removed — instance map is tested via PerUrlMutexMap directly
-      const map = new PerUrlMutexMap(new Map());
-      await map.runExclusive(url, async () => {});
-      expect(true).toBe(true); // Mutex cleanup tested in perUrlMutex unit tests
+      // Recorded through the orchestrator mutex path, then the entry is cleaned up.
+      expect(result.success).toBe(true);
+      expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
+      expect((logic as unknown as { mutexMap: { mutexes: Map<string, unknown> } }).mutexMap.mutexes.has(url)).toBe(false);
     });
 
-    it('同じ URL の処理が待機中は Mutex エントリを保持する', async () => {
+    it('retains the mutex entry while a same-URL task is queued', async () => {
       const mutexMap = new PerUrlMutexMap(new Map());
       const url = 'https://mutex-queue.example.com';
 
@@ -238,11 +238,11 @@ describe('RecordingPipeline', () => {
     });
   });
 
-  describe('retryObsidianWriteOnly', () => {
+  describe('retryObsidianWrite', () => {
     it('saves to Obsidian using the already-computed summary without calling the AI provider', async () => {
       const logic = makeRecordingLogic(mockObsidian, mockAiClient);
 
-      const result = await logic.retryObsidianWriteOnly({
+      const result = await logic.retryObsidianWrite({
         title: 'Retry Page',
         url: 'https://retry.example.com',
         summary: 'Already summarized content',
@@ -263,7 +263,7 @@ describe('RecordingPipeline', () => {
       mockObsidian.appendToDailyNote.mockRejectedValueOnce(new Error('network down'));
 
       await expect(
-        logic.retryObsidianWriteOnly({
+        logic.retryObsidianWrite({
           title: 'Retry Page',
           url: 'https://retry.example.com',
           summary: 'Already summarized content',
@@ -281,7 +281,7 @@ describe('RecordingPipeline', () => {
   });
 
   describe('同一URLへの並行 record() の直列化', () => {
-    it('2件目の record() は1件目の完了後に処理が開始される', async () => {
+    it('starts the second record() only after the first one finishes', async () => {
       const processOrder: string[] = [];
       let callCount = 0;
       let resolveFirstProcess: (() => void) | undefined;
@@ -312,7 +312,7 @@ describe('RecordingPipeline', () => {
       expect(processOrder).toEqual(['start-1', 'end-1', 'start-2', 'end-2']);
     });
 
-    it('skipDuplicateCheck: true（MANUAL_RECORD/SAVE_RECORD相当）で execute() を直接呼んでも直列化される', async () => {
+    it('serializes direct execute() calls with skipDuplicateCheck: true (MANUAL_RECORD/SAVE_RECORD path)', async () => {
       // recordingHandlers.ts の MANUAL_RECORD/SAVE_RECORD は record() ではなく
       // pipeline.execute() を直接呼び出す（duplicate check step をスキップするため）。
       // execute() の入口で mutexMap.runExclusive を通ることを検証する。
@@ -354,7 +354,7 @@ describe('RecordingPipeline', () => {
       RecordingCache.invalidatePrivacyCache();
     });
 
-    test('getPrivacyInfoWithCache - キャッシュヒット時にPrivacyInfoを返す', async () => {
+    test('getPrivacyInfoWithCache - returns PrivacyInfo on cache hit', async () => {
       const url = 'https://example.com/private';
       const mockInfo = {
         isPrivate: true,
@@ -374,7 +374,7 @@ describe('RecordingPipeline', () => {
       expect(result).toEqual(mockInfo);
     });
 
-    test('getPrivacyInfoWithCache - キャッシュミス時にnullを返す', async () => {
+    test('getPrivacyInfoWithCache - returns null on cache miss', async () => {
       const url = 'https://example.com/unknown';
 
       RecordingCache.resetCacheState();
@@ -388,7 +388,7 @@ describe('RecordingPipeline', () => {
       expect(result).toBeNull();
     });
 
-    test('getPrivacyInfoWithCache - TTL期限切れ時にnullを返す', async () => {
+    test('getPrivacyInfoWithCache - returns null when the TTL has expired', async () => {
       const url = 'https://example.com/expired';
       const oldTimestamp = Date.now() - 6 * 60 * 1000; // 6分前
       const mockInfo = {
@@ -408,7 +408,7 @@ describe('RecordingPipeline', () => {
       expect(result).toBeNull();
     });
 
-    test('invalidatePrivacyCache - キャッシュを無効化できる', async () => {
+    test('invalidatePrivacyCache - invalidates the cache', async () => {
       RecordingCache.setPrivacyCacheEntry('test', {} as never);
 
       await RecordingCache.invalidatePrivacyCache();
@@ -447,7 +447,7 @@ describe('RecordingPipeline', () => {
       });
     });
 
-    test('プライベートページの場合 PRIVATE_PAGE_DETECTED エラーを返す', async () => {
+    test('returns PRIVATE_PAGE_DETECTED for a private page', async () => {
       const url = 'https://example.com/private';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -473,7 +473,7 @@ describe('RecordingPipeline', () => {
       expect(result.reason).toBe('cache-control');
     });
 
-    test('force=true の場合はプライバシーチェックをスキップする', async () => {
+    test('skips the privacy check when force=true', async () => {
       const url = 'https://example.com/private';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -500,7 +500,7 @@ describe('RecordingPipeline', () => {
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
     });
 
-    test('キャッシュミス時は通常通り保存を続行する', async () => {
+    test('continues saving normally on cache miss', async () => {
       const url = 'https://example.com/unknown';
 
       RecordingCache.resetCacheState();
@@ -552,7 +552,7 @@ describe('RecordingPipeline', () => {
       });
     });
 
-    test('プライベートページ → 警告 → キャンセル → 保存されない', async () => {
+    test('private page with warning then cancel is not saved', async () => {
       const url = 'https://bank.example.com/account';
 
       // ヘッダー検出をシミュレート
@@ -578,7 +578,7 @@ describe('RecordingPipeline', () => {
       expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     });
 
-    test('プライベートページ → 警告 → 強制保存 → 保存される', async () => {
+    test('private page with warning then forced save is saved', async () => {
       const url = 'https://bank.example.com/account';
 
       RecordingCache.setPrivacyCacheEntry(url, {
@@ -605,7 +605,7 @@ describe('RecordingPipeline', () => {
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
     });
 
-    test('通常ページ → 警告なし → 保存される', async () => {
+    test('public page without warning is saved', async () => {
       const url = 'https://public.example.com/article';
 
       RecordingCache.setPrivacyCacheEntry(url, {
@@ -629,7 +629,7 @@ describe('RecordingPipeline', () => {
       expect(mockObsidian.appendToDailyNote).toHaveBeenCalled();
     });
 
-    test('キャッシュなし(ヘッダー未取得) → 保存継続', async () => {
+    test('continues saving when no header cache entry exists', async () => {
       const url = 'https://unknown.example.com/page';
 
       RecordingCache.resetCacheState();
@@ -687,7 +687,7 @@ describe('RecordingPipeline', () => {
       pendingStorage.addPendingPage.mockResolvedValue(undefined);
     });
 
-    test('プライベートページかつrequireConfirmation=trueの場合、pendingに保存してconfirmationRequiredを返す', async () => {
+    test('saves a private page to pending and returns confirmationRequired when requireConfirmation=true', async () => {
       const url = 'https://bank.example.com/account';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -730,7 +730,7 @@ describe('RecordingPipeline', () => {
       expect(mockObsidian.appendToDailyNote).not.toHaveBeenCalled();
     });
 
-    test('requireConfirmation=falseのプライベートページはpendingに保存してエラーを返す', async () => {
+    test('saves a private page to pending and returns an error when requireConfirmation=false', async () => {
       const url = 'https://bank.example.com/account';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -774,7 +774,7 @@ describe('RecordingPipeline', () => {
       expect(result.error).toBe('PRIVATE_PAGE_DETECTED');
     });
 
-    test('公開ページの場合、requireConfirmation=trueでも通常通り保存される', async () => {
+    test('saves a public page normally even when requireConfirmation=true', async () => {
       const url = 'https://public.example.com/article';
       const mockPrivacyInfo = {
         isPrivate: false,
@@ -919,7 +919,7 @@ describe('RecordingPipeline', () => {
       pendingStorage.addPendingPage.mockResolvedValue(undefined);
     });
 
-    test('headerValueはpendingページに正しく保存される', async () => {
+    test('stores headerValue correctly in the pending page', async () => {
       const url = 'https://example.com/private';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -953,7 +953,7 @@ describe('RecordingPipeline', () => {
       expect(result.confirmationRequired).toBe(true);
     });
 
-    test('headerValueが未指定の場合は空文字列で保存される', async () => {
+    test('stores an empty string when headerValue is missing', async () => {
       const url = 'https://example.com/private';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -987,7 +987,7 @@ describe('RecordingPipeline', () => {
       expect(result.confirmationRequired).toBe(true);
     });
 
-    test('headerValueが1024文字を超える場合は切り詰められて保存される', async () => {
+    test('truncates headerValue longer than 1024 characters when storing', async () => {
       const url = 'https://example.com/private';
       const mockPrivacyInfo = {
         isPrivate: true,
@@ -1024,7 +1024,7 @@ describe('RecordingPipeline', () => {
       expect(result.confirmationRequired).toBe(true);
     });
 
-    test('authorization reason の場合は headerValue が [REDACTED] でマスクされる', async () => {
+    test('masks headerValue as [REDACTED] for the authorization reason', async () => {
       const url = 'https://api.example.com/data';
       RecordingCache.setPrivacyCacheEntry(url, {
         isPrivate: true,
@@ -1051,7 +1051,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    test('cache-control reason の場合は headerValue がそのまま保存される', async () => {
+    test('stores headerValue as-is for the cache-control reason', async () => {
       const url = 'https://example.com/private';
       const cacheControlValue = 'private, no-store';
       RecordingCache.setPrivacyCacheEntry(url, {
@@ -1079,7 +1079,7 @@ describe('RecordingPipeline', () => {
       );
     });
 
-    test('set-cookie reason の場合は headerValue がそのまま保存される', async () => {
+    test('stores headerValue as-is for the set-cookie reason', async () => {
       const url = 'https://example.com/cookie';
       const cookieValue = 'session=abc; HttpOnly; Secure';
       RecordingCache.setPrivacyCacheEntry(url, {

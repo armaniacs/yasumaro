@@ -154,4 +154,66 @@ describe('VisitReporter policy matrix', () => {
 
     expect(deps.stopPeriodicCheck).toHaveBeenCalledTimes(1);
   });
+
+  describe('commit rule — flag commits on success/terminal only (PBI 2026-09-12-18)', () => {
+    it('commits the flag on success', async () => {
+      const deps = makeDeps();
+      await new VisitReporter(deps).report();
+      expect(deps.pageState.isValidVisitReported).toBe(true);
+    });
+
+    it('commits the flag on terminal rejection (DOMAIN_BLOCKED)', async () => {
+      const deps = makeDeps();
+      deps.sender.sendMessageWithRetry.mockResolvedValueOnce({ success: false, error: 'DOMAIN_BLOCKED' });
+      await new VisitReporter(deps).report();
+      expect(deps.pageState.isValidVisitReported).toBe(true);
+    });
+
+    it('leaves the flag false on a transient transport failure so the visit is not lost', async () => {
+      vi.useFakeTimers();
+      try {
+        // Both the initial send and the single bounded retry fail.
+        const deps = makeDeps();
+        deps.sender.sendMessageWithRetry.mockRejectedValue(new Error('Service worker busy'));
+        const report = new VisitReporter(deps).report();
+        await vi.runAllTimersAsync();
+        await report;
+        expect(deps.pageState.isValidVisitReported).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('retries once after a transient failure and commits on success', async () => {
+      vi.useFakeTimers();
+      try {
+        const deps = makeDeps();
+        deps.sender.sendMessageWithRetry
+          .mockRejectedValueOnce(new Error('Service worker busy'))
+          .mockResolvedValueOnce({ success: true });
+        const report = new VisitReporter(deps).report();
+        await vi.runAllTimersAsync();
+        await report;
+        expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(2);
+        expect(deps.pageState.isValidVisitReported).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('does not re-enter while an attempt is in flight', async () => {
+      let release: (value: unknown) => void = () => undefined;
+      const deps = makeDeps();
+      deps.sender.sendMessageWithRetry.mockImplementationOnce(
+        () => new Promise((resolve) => { release = resolve; }),
+      );
+      const reporter = new VisitReporter(deps);
+      const first = reporter.report();
+      const second = reporter.report();
+      release({ success: true });
+      await Promise.all([first, second]);
+      expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(1);
+      expect(deps.pageState.isValidVisitReported).toBe(true);
+    });
+  });
 });

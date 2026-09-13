@@ -22,12 +22,12 @@ function makeState(worker: Partial<Worker> | null): OpfsProxyState {
 
 describe('opfsWorkerProxy', () => {
   describe('sendToOpfsWorker', () => {
-    it('worker が無い場合は reject する', async () => {
+    it('rejects when the worker is missing', async () => {
       const state = makeState(null);
       await expect(sendToOpfsWorker(state, 'QUERY')).rejects.toThrow('OPFS Worker not available');
     });
 
-    it('リクエストごとに ID をインクリメントして割り当てる', () => {
+    it('assigns incrementing IDs per request', () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -39,7 +39,7 @@ describe('opfsWorkerProxy', () => {
       expect(state.opfsPending.size).toBe(2);
     });
 
-    it('resolve されたら Promise が解決される（削除は onmessage ハンドラ側の責務）', async () => {
+    it('resolves the Promise when resolved (removal is the onmessage handler responsibility)', async () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -49,7 +49,7 @@ describe('opfsWorkerProxy', () => {
       await expect(promise).resolves.toBe('ok');
     });
 
-    it('reject されたら Promise が拒否される（削除は onmessage ハンドラ側の責務）', async () => {
+    it('rejects the Promise when rejected (removal is the onmessage handler responsibility)', async () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -61,12 +61,12 @@ describe('opfsWorkerProxy', () => {
   });
 
   describe('tryOpfsProxy', () => {
-    it('worker が無い場合は null を返す', async () => {
+    it('returns null when the worker is missing', async () => {
       const state = makeState(null);
       await expect(tryOpfsProxy(state, 'QUERY')).resolves.toBeNull();
     });
 
-    it('sendToOpfsWorker が失敗したら null にフォールバックする', async () => {
+    it('falls back to null when sendToOpfsWorker fails', async () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -76,7 +76,7 @@ describe('opfsWorkerProxy', () => {
       await expect(result).resolves.toBeNull();
     });
 
-    it('成功時は結果をそのまま返す', async () => {
+    it('returns the result as-is on success', async () => {
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -88,7 +88,7 @@ describe('opfsWorkerProxy', () => {
   });
 
   describe('terminateOpfsWorker', () => {
-    it('worker を terminate し、pending 中の全リクエストを reject する', async () => {
+    it('terminates the worker and rejects all pending requests', async () => {
       const terminate = vi.fn();
       const state = makeState({ terminate });
 
@@ -107,7 +107,7 @@ describe('opfsWorkerProxy', () => {
       expect((err as Error).message).toBe('OPFS Worker terminated');
     });
 
-    it('worker が無い場合は何もしない', () => {
+    it('does nothing when the worker is missing', () => {
       const state = makeState(null);
       expect(() => terminateOpfsWorker(state)).not.toThrow();
     });

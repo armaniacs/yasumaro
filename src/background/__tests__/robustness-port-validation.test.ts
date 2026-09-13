@@ -91,7 +91,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   describe('現在の実装の確認', () => {
-    it('有効なポート番号（1-65535）の場合は正常に動作すること', async () => {
+    it('works normally with valid port numbers (1-65535)', async () => {
       const validPorts = ['1', '80', '443', '27123', '8080', '65535'];
 
       for (const port of validPorts) {
@@ -108,7 +108,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       }
     });
 
-    it('現在の実装ではポート番号の範囲検証があること', async () => {
+    it('validates the port number range in the current implementation', async () => {
       // 注: 実装後は無効なポート番号を指定するとエラーがスローされる
 
       const invalidPorts = ['0', '65536', '99999', 'abc', '-1'];
@@ -129,7 +129,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   describe('無効なポート番号のエッジケース', () => {
-    it('ポート番号が0の場合はエラーをスローすべき', async () => {
+    it('throws when the port number is 0', async () => {
       // ポート番号0は予約されているため、使用すべきでない
   
       mockGetSettings.mockResolvedValue({
@@ -142,7 +142,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       await expect(obsidianClient._getConfig()).rejects.toThrow();
     });
 
-    it('ポート番号が65535より大きい場合はエラーをスローすべき', async () => {
+    it('throws when the port number exceeds 65535', async () => {
       // ポート番号の最大値は65535
   
       mockGetSettings.mockResolvedValue({
@@ -155,7 +155,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       await expect(obsidianClient._getConfig()).rejects.toThrow();
     });
 
-    it('ポート番号が負の値の場合はエラーをスローすべき', async () => {
+    it('throws when the port number is negative', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -167,7 +167,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       await expect(obsidianClient._getConfig()).rejects.toThrow();
     });
 
-    it('ポート番号が非数値の場合はエラーをスローすべき', async () => {
+    it('throws when the port number is non-numeric', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -179,7 +179,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       await expect(obsidianClient._getConfig()).rejects.toThrow();
     });
 
-    it('ポート番号が小数の場合はエラーをスローすべき', async () => {
+    it('throws when the port number is fractional', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -193,7 +193,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   describe('予約されたポート番号', () => {
-    it('ポート番号が未指定の場合はデフォルト値（27124）を使用すべき', async () => {
+    it('uses the default value (27124) when the port number is unspecified', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -206,7 +206,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       expect(config.baseUrl).toContain(':27124');
     });
 
-    it('ポート番号が空文字列の場合はデフォルト値（27124）を使用すべき', async () => {
+    it('uses the default value (27124) when the port number is an empty string', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -221,7 +221,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   describe('エラーメッセージ', () => {
-    it('無効なポート番号の場合に適切なエラーメッセージを表示すべき', async () => {
+    it('shows an appropriate error message for invalid port numbers', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -235,7 +235,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       );
     });
 
-    it('ポート番号が非数値の場合に適切なエラーメッセージを表示すべき', async () => {
+    it('shows an appropriate error message for non-numeric port numbers', async () => {
   
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
@@ -251,7 +251,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
   });
 
   describe('推奨される検証実装', () => {
-    it('ポート番号が1-65535の範囲内であることを検証すべき', () => {
+    it('validates that the port number is within 1-65535', () => {
       const isValidPort = (port: string) => {
         const portNum = parseInt(port, 10);
         return !isNaN(portNum) && portNum >= 1 && portNum <= 65535;
@@ -262,7 +262,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       expect(isValidPort('65536')).toBe(false);
     });
 
-    it('ポート番号が整数であることを検証すべき', () => {
+    it('validates that the port number is an integer', () => {
       const isIntegerPort = (port: string) => {
         const portNum = Number(port);
         return Number.isInteger(portNum);
@@ -272,7 +272,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       expect(isIntegerPort('8080.0')).toBe(true);
     });
 
-    it('設定時だけでなく使用時にも検証すべき', async () => {
+    it('validates both at configuration time and at use time', async () => {
       // 設定時と使用時の両方で検証を行うべき
       // validateObsidianPort関数が呼び出されることを確認
   

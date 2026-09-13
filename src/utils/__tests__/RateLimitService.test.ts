@@ -67,13 +67,13 @@ describe('RateLimitService', () => {
     service = new RateLimitService(clock, storage);
   });
 
-  test('初回認証は許可される', async () => {
+  test('allows the first auth attempt', async () => {
     const result = await service.checkRateLimit();
     expect(result.success).toBe(true);
     expect(result.error).toBeUndefined();
   });
 
-  test('5回失敗すると30分ロックされる', async () => {
+  test('locks for 30 minutes after 5 failures', async () => {
     for (let i = 0; i < 5; i++) {
       await service.recordFailedAttempt();
     }
@@ -84,7 +84,7 @@ describe('RateLimitService', () => {
     expect(result.error).toContain('30 minutes');
   });
 
-  test('ロック中はcheckRateLimitが失敗し続ける', async () => {
+  test('keeps checkRateLimit failing while locked', async () => {
     for (let i = 0; i < 5; i++) {
       await service.recordFailedAttempt();
     }
@@ -96,7 +96,7 @@ describe('RateLimitService', () => {
     expect(result.success).toBe(false);
   });
 
-  test('ロック期間経過後はcheckRateLimitが成功する', async () => {
+  test('passes checkRateLimit after the lock expires', async () => {
     for (let i = 0; i < 5; i++) {
       await service.recordFailedAttempt();
     }
@@ -108,7 +108,7 @@ describe('RateLimitService', () => {
     expect(result.success).toBe(true);
   });
 
-  test('評価ウインドウ(5分)経過後は失敗回数がリセットされる', async () => {
+  test('resets the failure count after the 5-minute evaluation window', async () => {
     for (let i = 0; i < 4; i++) {
       await service.recordFailedAttempt();
     }
@@ -119,7 +119,7 @@ describe('RateLimitService', () => {
     expect(result.success).toBe(true);
   });
 
-  test('resetFailedAttemptsは失敗回数とロックをクリアする', async () => {
+  test('clears failures and the lock in resetFailedAttempts', async () => {
     for (let i = 0; i < 5; i++) {
       await service.recordFailedAttempt();
     }
@@ -131,7 +131,7 @@ describe('RateLimitService', () => {
     expect(result.success).toBe(true);
   });
 
-  test('NTP skew: local と session の lockedUntil の大きい方を採用する (二重ロック)', async () => {
+  test('NTP skew: adopts the later lockedUntil of local and session (double lock)', async () => {
     // session storage に古いロック解除時刻、local storage に新しいロック解除時刻を直接注入し、
     // max(session, local) が使われることを検証する。
     const futureLocal = clock.now() + 20 * 60 * 1000;
@@ -145,7 +145,7 @@ describe('RateLimitService', () => {
   });
 
   // M3: local 永続化 — session clear でもカウンタが継続すること
-  test('recordFailedAttempt は local にも永続化され、session clear 後も継続する', async () => {
+  test('persists recordFailedAttempt to local so it survives a session clear', async () => {
     for (let i = 0; i < 3; i++) {
       await service.recordFailedAttempt();
     }
@@ -165,7 +165,7 @@ describe('RateLimitService', () => {
     expect(result.success).toBe(false);
   });
 
-  test('checkRateLimit は session と local の attempts の大きい方を採用する', async () => {
+  test('adopts the larger attempts count of session and local in checkRateLimit', async () => {
     // attacker が session だけクリアしても local が残るケース
     await storage.local.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
     await storage.session.set({ passwordFailedAttempts: 1, firstFailedAttemptTime: clock.now() });
@@ -179,7 +179,7 @@ describe('RateLimitService', () => {
     expect(localAfter.passwordFailedAttempts).toBe(5);
   });
 
-  test('resetFailedAttempts は local のカウンタもクリアする', async () => {
+  test('clears the local counter in resetFailedAttempts', async () => {
     for (let i = 0; i < 5; i++) {
       await service.recordFailedAttempt();
     }
@@ -222,7 +222,7 @@ describe('RateLimitService 書き込み合体 (PBI-17)', () => {
     vi.useRealTimers();
   });
 
-  test('連続した失敗試行の書き込みが合体される', async () => {
+  test('coalesces writes from consecutive failed attempts', async () => {
     await service.recordFailedAttempt();
     await service.recordFailedAttempt();
     await service.recordFailedAttempt();
@@ -244,7 +244,7 @@ describe('RateLimitService 書き込み合体 (PBI-17)', () => {
     expect(sessionData.firstFailedAttemptTime).toBe(1_000_000);
   });
 
-  test('ロックアウト到達時は遅延なく両ストアへ即時フラッシュされる', async () => {
+  test('flushes both stores immediately on lockout without delay', async () => {
     for (let i = 0; i < 4; i++) {
       await service.recordFailedAttempt();
     }
@@ -264,7 +264,7 @@ describe('RateLimitService 書き込み合体 (PBI-17)', () => {
     expect(localLock.lockedUntil).toBe(1_000_000 + 30 * 60 * 1000);
   });
 
-  test('デバウンス待ち中の checkRateLimit はメモリ上の最新値を読む', async () => {
+  test('reads the latest in-memory value in checkRateLimit during debounce', async () => {
     await session.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
     await local.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
     session.setCalls = 0;
@@ -278,7 +278,7 @@ describe('RateLimitService 書き込み合体 (PBI-17)', () => {
     expect(result.error).toContain('30 minutes');
   });
 
-  test('resetFailedAttempts は保留中の書き込みを破棄し復活させない', async () => {
+  test('discards pending writes in resetFailedAttempts without resurrecting them', async () => {
     await service.recordFailedAttempt();
     await service.recordFailedAttempt();
     await service.resetFailedAttempts();

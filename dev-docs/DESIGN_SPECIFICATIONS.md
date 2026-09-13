@@ -104,9 +104,9 @@ RecordingCache is implemented as `RecordingCacheInstance` — a **facade composi
 ### 5.4 SQLite Secondary Store (OPFS + FTS5)
 A local SQLite database acts as a **secondary store for browsing/search**, independent of the Obsidian integration. It runs in the offscreen document, which proxies operations to a Web Worker over `postMessage`. See [ADR-014](ADR/2026-06-17-opfs-fts5-coexistence.md).
 
-- **Engine**: `@subframe7536/sqlite-wasm` (`OPFSCoopSyncVFS` + FTS5-enabled WASM, SQLite 3.53.0). `createSyncAccessHandle` requires a Worker context, so all OPFS SQLite work happens in `src/offscreen/opfsWorker.ts`.
+- **Engine**: `@subframe7536/sqlite-wasm` (`OPFSCoopSyncVFS` + FTS5-enabled WASM, SQLite 3.53.0). `createSyncAccessHandle` requires a Worker context, so all OPFS SQLite work happens in the `src/offscreen/opfsWorker/` directory (dispatch, CRUD/search handlers, archive validation).
 - **Persistence + full-text search coexist** in the same database (previously mutually exclusive with the old `wa-sqlite` npm builds).
-- **3-tier fallback**: OPFS Worker → IndexedDB (`wa-sqlite` async, also FTS5-capable) → `chrome.storage.local`. Status is reported per active path via the `STATUS` message (`fts5`, `fallback`, `path`).
+- **3-tier fallback**: OPFS Worker → IndexedDB (`wa-sqlite` async, also FTS5-capable) → `chrome.storage.local`. Status is reported per active path via the `STATUS` message: base shape (`initialized` / `path` / `fallback` / `fts5`) plus migration extras (`opfsMigrationV2*` flags, `idbMigrationV2Done`, legacy-DB probes `opfsLegacyDbPath` / `idbLegacyDbName`). Extras are collected field-isolated by `src/offscreen/sqliteStatus.ts` (`collectMigrationExtras`, `allSettled`) — a failing probe omits its field instead of discarding all extras; the legacy storage-location constants live in `sqliteMessages.ts` as the shared contract.
 - **Full-text search**: FTS5 virtual table `browsing_logs_fts` (external content, synced by triggers) with the **`trigram` tokenizer** to support Japanese/CJK substring search. Queries shorter than 3 code points fall back to LIKE (trigram cannot match < 3 chars). User input is whitelisted and phrase-quoted (`sanitizeFtsTerm`) to prevent FTS5 operator injection.
 - **Migration**: existing users' old `AccessHandlePoolVFS` database is migrated once (idempotent) into the new DB via `opfsMigrationV2.ts` (old `wa-sqlite` dependency is confined to `opfsMigrationV2Reader.ts`). Tracked by `StorageKeys.OPFS_MIGRATION_V2_DONE`.
 - **Dashboard access**: the dashboard talks to the store via `DASHBOARD_SQLITE` messages (subtypes `query`/`search`/`status`/`import`/...). All read handlers wrap results as `{ success: true, rows, total }` so the dashboard service can distinguish success from failure.
@@ -209,13 +209,12 @@ All Obsidian write operations are serialized via global mutex:
 All recording paths go through **`RecordingOrchestrator`** (`src/background/pipeline/RecordingOrchestrator.js`) — **3 distinct entry points** compiled at construction:
 
 ```
-record(data: RecordingData, opts?: RecordOptions)            // delegates to one of below for backward compat
-recordFull(data, opts)                                       // normal: full 13 steps
+record(data: RecordingData, opts?: RecordOptions)            // normal: full 13 steps (previewOnly data/opts delegates to preview())
 preview(data, opts)                                          // preview: short-circuits after privacy step (previewBreakpoint) via the same 13-step kernel with `previewOnly:true`
-retryObsidianWrite(job: { title, url, summary, tags? })      // retryObsidian: 2-step subset `retrySteps` (formatMarkdown + saveObsidian) compiled at construction, no inline 2-step in `record()`; exposed also as `retryObsidianWriteOnly(job)` for backward compat
+retryObsidianWrite(job: { title, url, summary, tags? })      // retry: 2-step subset `retrySteps` (formatMarkdown + saveObsidian) compiled at construction, no AI re-run
 ```
 
-- `RecordMode` (`normal`/`preview`/`retryObsidian`) is now `@internal` on the delegating `record()` wrapper; new code should call the 3 distinct methods. `retryObsidian` no longer has an inline `formatMarkdownStep + saveToObsidianStep` inside `record()` — the 2-step subset is a `retrySteps` array compiled at construction and executed via `executeRetrySubset` + `PerUrlMutexMap.runExclusive`, so `PipelineKernel` sees one list per mode.
+- The `RecordMode` union (`normal`/`preview`/`retryObsidian`), the `record(mode)` wrapper branch, `recordFull`, the private `retryObsidian`, and the `retryObsidianWriteOnly` alias were removed (PBI 2026-09-11-04) — the 3 methods above are the entire public surface (pinned by `orchestrator-surface.test.ts`). The `previewOnly` data flag remains as the step-level breakpoint seam (read by `executeInternal` and `processPrivacyPipelineStep`).
 - `opts.settings` bypasses `getSettingsWithCache`; the manual/preview record handlers pass their already-resolved settings this way so a concurrent cache refresh cannot race them.
 - **Typed context** (`src/background/pipeline/contextBuilder.ts`): the canonical context is `StagedContext<S>` (brand type `ContextStage` = `initial`/`checked`/`privacy`/`extracted`/`formatted`) with `createInitialContext` / `createRetryContext` / `createStepDeps` / `createSaveSqliteParams`. The 7-way `RecordingContext` intersection in `types.ts` is superseded; `pickDefined` conditional spreads are replaced by explicit `if (x !== undefined)` builders so `exactOptionalPropertyTypes` is satisfied and out-of-order reads become type errors.
 - **`RetryPolicy`** (`src/background/pipeline/retryPolicy.ts`): `isNetworkError` / `shouldEnqueueForOffline` (string heuristic including `'ai '`) is extracted from `StepExecutor` so the policy is unit-testable without network; `StepExecutor` is injected with `RetryPolicy` (default `defaultRetryPolicy`) and no longer owns the heuristic.
@@ -384,7 +383,10 @@ Users can add domains/paths to the whitelist from the confirmation dialog:
 - **Source**: Confirmation dialog provides whitelist options
 - **Pattern Support**:
   - Domain whitelist: Simple domain names or wildcard patterns (e.g., `*.example.com`)
-  - Path whitelist: Regex patterns for precise path matching
+  - Path whitelist: All whitelist consumers match hostnames only; a path add
+    normalizes to the URL's hostname through the popup `whitelistWriter` seam
+    (popup writes validate via `DomainFilter.parseAndValidate` before storage).
+    Path-level matching is not implemented (PBI 2026-09-12-05)
 - **PII Masking**: Always applied even for whitelisted domains
 - **Privacy Bypass**: Whitelisted domains skip private page detection warning
 

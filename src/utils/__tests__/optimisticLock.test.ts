@@ -14,7 +14,7 @@ describe('withOptimisticLock', () => {
             await chrome.storage.local.set({});
         });
 
-        it('新しい値を更新して返す', async () => {
+        it('updates and returns a new value', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const result = await withOptimisticLock<unknown[]>('testKey', (current) => {
@@ -26,7 +26,7 @@ describe('withOptimisticLock', () => {
             expect(stored.testKey).toEqual(['initial', 'item']);
         });
 
-        it('未定義の値に対しても動作する', async () => {
+        it('works with an undefined value', async () => {
             const result = await withOptimisticLock('testKey', (_current) => {
                 return ['new'];
             });
@@ -36,7 +36,7 @@ describe('withOptimisticLock', () => {
             expect(stored.testKey).toEqual(['new']);
         });
 
-        it('複数の更新を連続して実行できる', async () => {
+        it('runs consecutive updates', async () => {
             await chrome.storage.local.set({ testKey: [1] });
 
             const result1 = await withOptimisticLock<unknown[]>('testKey', (current) => {
@@ -51,7 +51,7 @@ describe('withOptimisticLock', () => {
             expect(result2).toEqual([1, 2, 3]);
         });
 
-        it('URLを追加するユースケース', async () => {
+        it('supports adding a URL', async () => {
             await chrome.storage.local.set({ savedUrls: ['https://example.com'] });
 
             const newUrl = 'https://new-website.com';
@@ -66,7 +66,7 @@ describe('withOptimisticLock', () => {
             expect(stored.savedUrls).toContain('https://example.com');
         });
 
-        it('URLを削除するユースケース', async () => {
+        it('supports removing a URL', async () => {
             await chrome.storage.local.set({
                 savedUrls: ['https://example.com', 'https://to-remove.com']
             });
@@ -83,7 +83,7 @@ describe('withOptimisticLock', () => {
             expect(stored.savedUrls).toContain('https://example.com');
         });
 
-        it('最大値制限でLRU削除するユースケース', async () => {
+        it('evicts LRU entries under a max-size limit', async () => {
             type UrlEntry = { url: string; timestamp: number };
             await chrome.storage.local.set({
                 savedUrlsWithTimestamps: [
@@ -109,7 +109,7 @@ describe('withOptimisticLock', () => {
             await chrome.storage.local.set({});
         });
 
-        it('並行した複数の操作でデータが破損しない', async () => {
+        it('keeps data intact across concurrent operations', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             // 並行実行
@@ -148,7 +148,7 @@ describe('withOptimisticLock', () => {
             chrome.storage.local.set = originalSet;
         });
 
-        it('ConflictErrorが正しくスローされる', async () => {
+        it('throws ConflictError correctly', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             // chrome.storage.local.getをモックして競合をシミュレート
@@ -172,7 +172,7 @@ describe('withOptimisticLock', () => {
             ).rejects.toThrow(ConflictError);
         });
 
-        it('ConflictErrorに正しいプロパティが設定される', async () => {
+        it('sets the correct properties on ConflictError', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             // chrome.storage.local.getをモックして競合をシミュレート
@@ -201,7 +201,7 @@ describe('withOptimisticLock', () => {
             }
         });
 
-        it('書き込み後の再検証でバージョン不一致を検出する', async () => {
+        it('detects a version mismatch in post-write revalidation', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
@@ -226,7 +226,7 @@ describe('withOptimisticLock', () => {
             ).rejects.toThrow(ConflictError);
         });
 
-        it('書き込み後の再検証で値の不一致を検出する', async () => {
+        it('detects a value mismatch in post-write revalidation', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
@@ -249,7 +249,7 @@ describe('withOptimisticLock', () => {
             ).rejects.toThrow(ConflictError);
         });
 
-        it('書き込み後の再検証が成功する', async () => {
+        it('passes post-write revalidation', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
@@ -272,7 +272,7 @@ describe('withOptimisticLock', () => {
             expect(stored.testKey).toEqual(['initial', 'item']);
         });
 
-        it('競合が統計に記録される', async () => {
+        it('records the conflict when one occurs', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             // chrome.storage.local.getをモックして競合をシミュレート
@@ -288,12 +288,9 @@ describe('withOptimisticLock', () => {
                 return setupOriginalGet.call(chrome.storage.local, keys);
             }) as unknown) as typeof chrome.storage.local.get;
 
-            try {
-                await withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 });
-            } catch (error) {
-                // Expected ConflictError
-            }
-
+            await expect(
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { maxRetries: 0 })
+            ).rejects.toThrow(ConflictError);
         });
     });
 
@@ -302,7 +299,7 @@ describe('withOptimisticLock', () => {
             await chrome.storage.local.set({});
         });
 
-        it('updateFnでスローされたエラーを伝播する', async () => {
+        it('propagates errors thrown by updateFn', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             await expect(
@@ -314,7 +311,7 @@ describe('withOptimisticLock', () => {
             // 失敗してもstatは記録される
         });
 
-        it('chrome.storage.local.setが失敗した場合にエラーを伝播する', async () => {
+        it('propagates errors when chrome.storage.local.set fails', async () => {
             const originalSet = chrome.storage.local.set;
             chrome.storage.local.set = vi.fn(() => Promise.reject(new Error('Storage error')));
 
@@ -343,7 +340,7 @@ describe('withOptimisticLock', () => {
             chrome.storage.local.set = originalSet;
         });
 
-        it('競合が発生した場合に指数バックオックでリトライする', async () => {
+        it('retries with exponential backoff on conflict', async () => {
             await chrome.storage.local.set({ testKey: ['initial'], testKey_version: 0 });
 
             const setupOriginalGet = originalGet;
@@ -388,7 +385,7 @@ describe('withOptimisticLock', () => {
             expect(stored.testKey).toEqual(['initial', 'item']);
         });
 
-        it('リトライ回数上限を超えるとエラーをスローする', async () => {
+        it('throws after exceeding the retry limit', async () => {
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
@@ -408,7 +405,7 @@ describe('withOptimisticLock', () => {
             ).rejects.toThrow(ConflictError);
         });
 
-        it('default maxRetriesでリトライが機能する', async () => {
+        it('retries with the default maxRetries', async () => {
             // Note: Using vi.useFakeTimers to control async timing if needed
             await chrome.storage.local.set({ testKey: ['initial'] });
 

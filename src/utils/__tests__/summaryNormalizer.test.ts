@@ -2,42 +2,42 @@
 import { normalizeJapaneseSummary } from '../summaryNormalizer.js';
 
 describe('normalizeJapaneseSummary', () => {
-  it('英語テキストはそのまま返す', () => {
+  it('returns English text unchanged', () => {
     const input = 'This is an English summary.';
     expect(normalizeJapaneseSummary(input)).toBe(input);
   });
 
-  it('空文字列はそのまま返す', () => {
+  it('returns an empty string unchanged', () => {
     expect(normalizeJapaneseSummary('')).toBe('');
   });
 
-  it('「〜です。」を「〜だ。」に変換する', () => {
+  it('converts polite -desu endings to plain -da endings', () => {
     const input = 'これは重要な発見です。研究の成果です。';
     const result = normalizeJapaneseSummary(input);
     expect(result).toBe('これは重要な発見だ。研究の成果だ。');
   });
 
-  it('「〜でした。」を「〜だった。」に変換する', () => {
+  it('converts polite -deshita endings to plain -datta endings', () => {
     const input = '結果は成功でした。';
     expect(normalizeJapaneseSummary(input)).toBe('結果は成功だった。');
   });
 
-  it('「〜ています。」を「〜ている。」に変換する', () => {
+  it('converts polite -teimasu endings to plain -teiru endings', () => {
     const input = '研究が進んでいます。';
     expect(normalizeJapaneseSummary(input)).toBe('研究が進んでいる。');
   });
 
-  it('「〜ていました。」を「〜ていた。」に変換する', () => {
+  it('converts polite -teimashita endings to plain -teita endings', () => {
     const input = '以前は普及していました。';
     expect(normalizeJapaneseSummary(input)).toBe('以前は普及していた。');
   });
 
-  it('「〜でしょう。」を「〜だろう。」に変換する', () => {
+  it('converts polite -deshou endings to plain -darou endings', () => {
     const input = '今後も続くでしょう。';
     expect(normalizeJapaneseSummary(input)).toBe('今後も続くだろう。');
   });
 
-  it('複数パターンが混在するテキストを正しく変換する', () => {
+  it('converts text mixing multiple polite patterns correctly', () => {
     const input = 'この技術は革新的です。普及が進んでいます。将来性があるでしょう。';
     const result = normalizeJapaneseSummary(input);
     expect(result).toBe('この技術は革新的だ。普及が進んでいる。将来性があるだろう。');

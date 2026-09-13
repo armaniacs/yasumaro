@@ -162,7 +162,7 @@ describe('createErrorResponse', () => {
     expect(message).not.toContain('undefined');
   });
 
-  it('redacts sensitive information from context (PBI-19: errorMessages.test から移植)', () => {
+  it('redacts sensitive information from context (PBI-19: ported from errorMessages.test)', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const response = createErrorResponse(new Error('Auth failed'), {
       apiKey: 'secret-key-123',

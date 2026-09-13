@@ -295,6 +295,14 @@ describe('LegacyMigrationService', () => {
       );
       // should not throw
       await expect(brokenService.run()).resolves.toBeUndefined();
+      // The outer catch swallows the failure: the status is never updated and
+      // no SQLite writes are attempted. Retry tracking itself fails because
+      // getRetryCount rejects, so setRetryCount is never reached.
+      expect(brokenState.getStatus).toHaveBeenCalled();
+      expect(brokenState.getRetryCount).toHaveBeenCalled();
+      expect(brokenState.setRetryCount).not.toHaveBeenCalled();
+      expect(brokenState.setStatus).not.toHaveBeenCalled();
+      expect(sqliteClient.mutate).not.toHaveBeenCalled();
     });
 
     it('skips rewriting progress when a later insertBatch failure recomputes the same currentProgress already written', async () => {

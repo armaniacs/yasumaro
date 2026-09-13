@@ -33,7 +33,7 @@ describe('loader.ts - Content Script 静的インポート方針', () => {
         source = fs.readFileSync(LOADER_PATH, 'utf8');
     });
 
-    it('静的 import はプロジェクト内の相対パス（./ または ../）のみであること', () => {
+    it('allows only project-relative paths (./ or ../) for static imports', () => {
         const lines = source.split('\n');
         const staticImportLines = lines.filter((line) => {
             const trimmed = line.trimStart();
@@ -63,9 +63,11 @@ describe('loader.ts - Content Script 静的インポート方針', () => {
                 `検出された import 文:\n${detail}`
             );
         }
+
+        expect(nonRelativeImports).toHaveLength(0);
     });
 
-    it('loader.ts が urlSkipper と visitAdmission に委譲し、ローカル再実装を持たない（重複コード排除の確認）', () => {
+    it('delegates to urlSkipper and visitAdmission in loader.ts without local reimplementation (verifies duplicate code elimination)', () => {
         expect(source).toMatch(/import\s*\{[^}]*shouldSkipUrl[^}]*\}\s*from\s*['"]\.\/urlSkipper\.js['"]/);
         expect(source).toMatch(/import\s*\{[^}]*resolveVisitAdmission[^}]*\}\s*from\s*['"]\.\/visitAdmission\.js['"]/);
         // retry ループ・分岐のローカル再実装がないこと（単一 seam に集約）
@@ -75,7 +77,7 @@ describe('loader.ts - Content Script 静的インポート方針', () => {
         expect(source).not.toMatch(/const\s+StorageKeys\s*=/);
     });
 
-    it('loader.ts は export {} のみを含むこと（isolatedModules 用ダミーは許容）', () => {
+    it('contains only export {} in loader.ts (allows the isolatedModules dummy)', () => {
         const lines = source.split('\n');
         const exportLines = lines.filter(line => {
             const trimmed = line.trimStart();

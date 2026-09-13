@@ -64,40 +64,40 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('isLocalUrl static helper', () => {
-    it('localhost を local と判定する', () => {
+    it('classifies localhost as local', () => {
       expect(GenericOpenAICompatibleProvider.isLocalUrl('http://localhost:1234/v1')).toBe(true);
     });
 
-    it('.localhost サブドメインを local と判定する', () => {
+    it('classifies a .localhost subdomain as local', () => {
       expect(GenericOpenAICompatibleProvider.isLocalUrl('http://foo.localhost:1234/v1')).toBe(true);
     });
 
-    it('127.x.x.x を local と判定する', () => {
+    it('classifies 127.x.x.x as local', () => {
       expect(GenericOpenAICompatibleProvider.isLocalUrl('http://127.0.0.1:1234/v1')).toBe(true);
     });
 
-    it('::1 を local と判定する', () => {
+    it('classifies ::1 as local', () => {
       // new URL().hostname for IPv6 keeps brackets ("[::1]"), so only the bracketed
       // form matches the "hostname.toLowerCase() === '::1'" branch as-is; this
       // documents the current (non-matching) behavior rather than assuming otherwise.
       expect(GenericOpenAICompatibleProvider.isLocalUrl('http://[::1]:1234/v1')).toBe(false);
     });
 
-    it('通常のリモートホストは local ではない', () => {
+    it('does not classify a regular remote host as local', () => {
       expect(GenericOpenAICompatibleProvider.isLocalUrl('https://api.openai.com/v1')).toBe(false);
     });
 
-    it('不正なURLは非ローカル扱いになる', () => {
+    it('treats a malformed URL as non-local', () => {
       expect(GenericOpenAICompatibleProvider.isLocalUrl('not a url')).toBe(false);
     });
 
-    it('OpenAIProvider の static isLocalUrl も同じ挙動になる', () => {
+    it('matches the same behavior in the OpenAIProvider static isLocalUrl', () => {
       expect(OpenAIProvider.isLocalUrl('http://127.0.0.1:11434')).toBe(true);
     });
   });
 
   describe('unknown provider fallback (registry未登録)', () => {
-    it('未知のプロバイダー名でも legacy フォールバックで動作する', () => {
+    it('works via the legacy fallback for an unknown provider name', () => {
       const settings = {
         unknownprov_base_url: 'https://example.com/v1',
         unknownprov_api_key: 'k',
@@ -107,7 +107,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(provider.getName()).toBe('unknownprov');
     });
 
-    it('openai-compatible は PROVIDER_MODEL キーを使う', () => {
+    it('uses the PROVIDER_MODEL key for openai-compatible', () => {
       const settings = {
         provider_base_url: 'https://example.com/v1',
         provider_api_key: 'k',
@@ -117,13 +117,13 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(provider.getName()).toBe('openai-compatible');
     });
 
-    it('ハイフンを含むプロバイダー名は normalize される (name2 pattern)', () => {
+    it('normalizes a hyphenated provider name (name2 pattern)', () => {
       const settings = {} as unknown as Settings;
       const provider = new GenericOpenAICompatibleProvider(settings, 'foo-bar2');
       expect(provider.getName()).toBe('foo-bar2');
     });
 
-    it('baseUrl が未設定の場合 isLocal は false になる', () => {
+    it('returns false for isLocal when baseUrl is unset', () => {
       const settings = {} as unknown as Settings;
       // legacy fallback always has a default base URL, so isLocal derives from that URL (remote by default)
       const provider = new GenericOpenAICompatibleProvider(settings, 'customprov');
@@ -132,13 +132,13 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('registry entry without baseUrlKey/modelKey (built-in-ai)', () => {
-    it('baseUrlKeyが無いentryはdefaultBaseUrlの空文字にfallbackする', () => {
+    it('falls back to the empty defaultBaseUrl for an entry without baseUrlKey', () => {
       const settings = {} as unknown as Settings;
       const provider = new GenericOpenAICompatibleProvider(settings, 'built-in-ai');
       expect(provider.getName()).toBe('built-in-ai');
     });
 
-    it('modelKeyが無いentryはdefaultModelの空文字にfallbackする', async () => {
+    it('falls back to the empty defaultModel for an entry without modelKey', async () => {
       const settings = {} as unknown as Settings;
       const provider = new GenericOpenAICompatibleProvider(settings, 'built-in-ai');
       // baseUrl is empty (no baseUrlKey/defaultBaseUrl), so generateSummary short-circuits
@@ -149,7 +149,7 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('AI_TIMEOUT_MS storage override', () => {
-    it('storedTimeout > 0 の場合はその値を timeoutMs として使う', async () => {
+    it('uses the stored value as timeoutMs when storedTimeout > 0', async () => {
       const settings = {
         openai_base_url: 'https://api.openai.com/v1',
         openai_api_key: 'test_key',
@@ -171,7 +171,7 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('baseUrl SSRF検証', () => {
-    it('validateUrlForAIRequests が例外を投げた場合はコンストラクタが失敗する', async () => {
+    it('throws in the constructor when validateUrlForAIRequests throws', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.validateUrlForAIRequests).mockImplementationOnce(() => {
         throw new Error('blocked url');
@@ -179,7 +179,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(() => new OpenAIProvider(baseSettings, 'openai')).toThrow('Invalid baseUrl');
     });
 
-    it('registry allowlist で許可されないURLはコンストラクタが失敗する', () => {
+    it('throws in the constructor for a URL rejected by the registry allowlist', () => {
       const settings = {
         openai_base_url: 'http://169.254.169.254/v1',
         openai_api_key: 'test_key',
@@ -190,7 +190,7 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('generateSummary: preflight / sanitize / timeout branches', () => {
-    it('baseUrl が空の場合エラーを返す (baseUrlKeyもdefaultBaseUrlも無いprovider)', async () => {
+    it('returns an error when baseUrl is empty (provider without baseUrlKey or defaultBaseUrl)', async () => {
       // 'openai-compatible' has no defaultBaseUrl in the registry, so an unset
       // provider_base_url resolves to an actually-empty baseUrl.
       const settings = { provider_api_key: 'k', provider_model: 'm' } as unknown as Settings;
@@ -200,7 +200,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('Base URL is missing');
     });
 
-    it('hardLimit で blocked の場合はエラーを返す', async () => {
+    it('returns an error when blocked by hardLimit', async () => {
       const usageTracker = await import('../../../../utils/aiUsageTracker.js');
       vi.mocked(usageTracker.checkHardLimit).mockResolvedValueOnce({ blocked: true, message: 'limit reached' } as never);
       const provider = new OpenAIProvider(baseSettings, 'openai');
@@ -209,7 +209,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('limit reached');
     });
 
-    it('dangerLevel high の場合はコンテンツをブロックする', async () => {
+    it('blocks content when dangerLevel is high', async () => {
       const sanitizer = await import('../../../../utils/promptSanitizer.js');
       vi.mocked(sanitizer.sanitizePromptContent).mockReturnValueOnce({
         sanitized: 'x',
@@ -223,7 +223,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('dangerous pattern');
     });
 
-    it('response.ok が false の場合、汎用エラーを返す', async () => {
+    it('returns a generic error when response.ok is false', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: false,
@@ -236,7 +236,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('Failed to generate summary');
     });
 
-    it('AbortError の場合タイムアウトメッセージを返す', async () => {
+    it('returns a timeout message on AbortError', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       const abortError = new Error('aborted');
       abortError.name = 'AbortError';
@@ -246,7 +246,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('timed out');
     });
 
-    it('"timed out" を含むメッセージの場合もタイムアウト扱いになる', async () => {
+    it('treats a message containing "timed out" as a timeout', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('request timed out'));
       const provider = new OpenAIProvider(baseSettings, 'openai');
@@ -254,7 +254,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('timed out');
     });
 
-    it('その他のエラーの場合、汎用エラーを返す', async () => {
+    it('returns a generic error for other errors', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('boom'));
       const provider = new OpenAIProvider(baseSettings, 'openai');
@@ -262,7 +262,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.summary).toContain('Failed to generate summary');
     });
 
-    it('isLocal な場合コンテンツ長を4000文字に制限する', async () => {
+    it('limits content length to 4000 characters when isLocal', async () => {
       const settings = {
         lm_studio_base_url: 'http://127.0.0.1:1234/v1',
         lm_studio_model: 'local-model',
@@ -278,7 +278,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.success).toBe(true);
     });
 
-    it('apiKeyが無い場合はAuthorizationヘッダーを付けない', async () => {
+    it('omits the Authorization header when apiKey is missing', async () => {
       const settings = {
         lm_studio_base_url: 'http://127.0.0.1:1234/v1',
         lm_studio_model: 'local-model',
@@ -296,7 +296,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(headers['Authorization']).toBeUndefined();
     });
 
-    it('成功時、正しい要約結果を返す', async () => {
+    it('returns the correct summary result on success', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -316,7 +316,7 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('_extractSummary schema validation branches', () => {
-    it('choices が無い場合はスキーマエラーを返す', async () => {
+    it('returns a schema error when choices is missing', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -330,7 +330,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.error).toContain('choices is missing or empty');
     });
 
-    it('choices が空配列の場合はスキーマエラーを返す', async () => {
+    it('returns a schema error when choices is an empty array', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -343,7 +343,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.error).toContain('choices is missing or empty');
     });
 
-    it('message が無い場合はスキーマエラーを返す', async () => {
+    it('returns a schema error when message is missing', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -356,7 +356,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.error).toContain('message is missing');
     });
 
-    it('content が文字列でない場合はスキーマエラーを返す', async () => {
+    it('returns a schema error when content is not a string', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -369,7 +369,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.error).toContain('not a string');
     });
 
-    it('usageが無い場合はトークンを記録しない (recordUsageIfPresent early return)', async () => {
+    it('skips token recording when usage is missing (recordUsageIfPresent early return)', async () => {
       const usageTracker = await import('../../../../utils/aiUsageTracker.js');
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
@@ -386,7 +386,7 @@ describe('OpenAIProvider: branch coverage', () => {
   });
 
   describe('testConnection', () => {
-    it('baseUrl が空の場合エラーを返す (baseUrlKeyもdefaultBaseUrlも無いprovider)', async () => {
+    it('returns an error when baseUrl is empty (provider without baseUrlKey or defaultBaseUrl)', async () => {
       const settings = { provider_api_key: 'k', provider_model: 'm' } as unknown as Settings;
       const provider = new GenericOpenAICompatibleProvider(settings, 'openai-compatible');
       const result = await provider.testConnection();
@@ -394,7 +394,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.message).toContain('Base URL is not set');
     });
 
-    it('response.ok が false の場合 mapConnectionError を使ったエラーを返す (401)', async () => {
+    it('returns a mapConnectionError-based error when response.ok is false (401)', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: false,
@@ -409,7 +409,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.debug?.endpoint).toContain('POST');
     });
 
-    it('response.ok が false の場合 404 エラーを返す', async () => {
+    it('returns a 404 error when response.ok is false', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: false,
@@ -421,7 +421,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.message).toContain('Endpoint not found');
     });
 
-    it('成功時、hasContent=true で成功結果を返す', async () => {
+    it('returns a success result with hasContent=true on success', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -441,7 +441,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.debug?.receivedTokens).toBe(1);
     });
 
-    it('成功時でもcontentが空文字の場合は失敗扱いになる', async () => {
+    it('treats empty content as failure even on success', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -457,7 +457,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.debug?.response).toBeUndefined();
     });
 
-    it('choicesが無い場合でも空文字として扱われる', async () => {
+    it('treats missing choices as an empty string', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -469,7 +469,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.success).toBe(false);
     });
 
-    it('usage が無い場合 sentTokens/receivedTokens を含めない', async () => {
+    it('omits sentTokens/receivedTokens when usage is missing', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
         ok: true,
@@ -482,7 +482,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.debug?.receivedTokens).toBeUndefined();
     });
 
-    it('AbortErrorの場合はタイムアウトメッセージを返す', async () => {
+    it('returns a timeout message on AbortError', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       const abortError = new Error('aborted');
       abortError.name = 'AbortError';
@@ -492,7 +492,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.message).toContain('timed out');
     });
 
-    it('"Failed to fetch" を含むエラーは接続不可メッセージを返す', async () => {
+    it('returns an unreachable message for an error containing "Failed to fetch"', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('Failed to fetch'));
       const provider = new OpenAIProvider(baseSettings, 'openai');
@@ -500,7 +500,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.message).toContain('Cannot connect');
     });
 
-    it('HTTP 500系メッセージはサーバーエラーとして扱う', async () => {
+    it('treats an HTTP 5xx message as a server error', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('HTTP 503: Service Unavailable'));
       const provider = new OpenAIProvider(baseSettings, 'openai');
@@ -508,7 +508,7 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.message).toContain('server error');
     });
 
-    it('未知のエラーは汎用接続エラーメッセージを返す', async () => {
+    it('returns a generic connection error message for an unknown error', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('mystery failure'));
       const provider = new OpenAIProvider(baseSettings, 'openai');

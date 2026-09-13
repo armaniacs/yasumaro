@@ -79,14 +79,18 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
     async flushPendingWrites(
       retryFn: (write: QueuedChromeStorageWrite) => Promise<boolean>
     ): Promise<void> {
-      const writes = await queue.load();
-      if (writes.length === 0) return;
+      // PBI 2026-09-12-20: measure inside the flush, not from a pre-flush
+      // snapshot. `flush` reloads the queue under the lock, so items enqueued
+      // mid-flush made `writes.length - stillPending.length` go negative.
+      const before = await queue.load();
+      if (before.length === 0) return;
 
       const stillPending = await queue.flush(retryFn);
 
-      if (stillPending.length < writes.length) {
+      const recovered = before.length - stillPending.length;
+      if (recovered > 0) {
         addLog(LogType.INFO, 'pendingChromeStorageQueue: flushed queued writes', {
-          recovered: writes.length - stillPending.length,
+          recovered,
           remaining: stillPending.length,
         });
       }

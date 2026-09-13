@@ -153,9 +153,10 @@ describe('createSqliteHistoryPanel — sort control', () => {
     document.body.appendChild(container);
     const panel = makePanel(container);
 
-    // Tag filter matches nothing -> fallback to searchLogs, which finds rows.
+    // Tag filter finds nothing in SQL (total 0) -> fallback to searchLogs,
+    // which finds rows.
     mockedDb.queryLogs.mockResolvedValue({
-      data: { rows: [makeRow(1, 'tech'), makeRow(2, 'business')], total: 2 },
+      data: { rows: [], total: 0 },
     });
     const searchRows = Array.from({ length: 5 }, (_, i) => makeRow(i + 10, ''));
     mockedDb.searchLogs.mockResolvedValue({ data: { rows: searchRows, total: 5 } });

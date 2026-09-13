@@ -60,6 +60,7 @@ import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 import type { SqliteEngine } from '../sqliteEngine.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+import { LEGACY_IDB_NAME } from '../../messaging/sqliteMessages.js';
 import { execWithCache, DB_FILENAME } from './idbEngineLifecycle.js';
 import { extractDomain } from '../../utils/domainUtils.js';
 
@@ -133,7 +134,9 @@ export { extractDomain } from '../../utils/domainUtils.js';
  * up to chrome.storage.local before the new engine opens DB_FILENAME.
  */
 export async function runMigrationBackup(_state: MigrationBackupState): Promise<void> {
-  const OLD_IDB_NAME = 'idb-batch-atomic';
+  // PBI 2026-09-11-06: the legacy IDB name is the shared sqliteMessages constant
+  // (was a local literal — same name, comment-enforced "do NOT change").
+  const OLD_IDB_NAME = LEGACY_IDB_NAME;
   try {
     const done = await isIdbMigrationDone();
     if (done) return;

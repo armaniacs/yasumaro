@@ -78,7 +78,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       (global.fetch as Mock).mockRestore();
     });
 
-    it('HTTPS接続が許可されること', async () => {
+    it('allows HTTPS connections', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'https',
@@ -106,7 +106,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       );
     });
 
-    it('HTTP URLがHTTPのまま使用されること', async () => {
+    it('uses HTTP URLs as HTTP', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -135,7 +135,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       );
     });
 
-    it('urlパラメータがnullの場合のエラーハンドリング', async () => {
+    it('handles the error when the url parameter is null', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       global.fetch.mockRejectedValue(new Error('Invalid URL'));
 
@@ -153,7 +153,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       (global.fetch as Mock).mockRestore();
     });
 
-    it('HTTPS接続で書き込みが成功すること', async () => {
+    it('writes successfully over HTTPS connections', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       global.fetch.mockResolvedValue({
         ok: true
@@ -173,7 +173,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       );
     });
 
-    it('HTTP URLで_writeContentが呼ばれた場合はHTTPのまま使用される', async () => {
+    it('uses HTTP as-is when _writeContent is called with an HTTP URL', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       global.fetch.mockResolvedValue({
         ok: true
@@ -203,7 +203,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       (global.fetch as Mock).mockRestore();
     });
 
-    it('HTTPS接続テストが成功すること', async () => {
+    it('succeeds the HTTPS connection test', async () => {
       // @ts-expect-error - vi.fn() type narrowing issue
       global.fetch.mockResolvedValue({
         ok: true
@@ -223,7 +223,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
   });
 
   describe('プロトコル設定の検証', () => {
-    it('設定にhttpが含まれている場合はHTTPでfetchされる', async () => {
+    it('fetches over HTTP when settings contain http', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -251,7 +251,7 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       (global.fetch as Mock).mockRestore();
     });
 
-    it('無効なプロトコル設定は拒否される', async () => {
+    it('rejects invalid protocol settings', async () => {
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'ftp',

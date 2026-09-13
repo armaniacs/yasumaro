@@ -8,7 +8,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import { buildQuerySpec, QUERY_CAPS } from './queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, matchesExtraWhere } from './queryPlan.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -172,29 +172,28 @@ export class FallbackStorage {
   }
 
   /**
-   * Unified read path — handles both plain filtered listing and text search.
+   * Full-table scan for the export path (PBI 2026-09-12-28).
+   *
+   * The capped `query()` clamps `limit` to QUERY_CAPS.plain (10000), which
+   * silently truncated exports on this backend while the SQL backends'
+   * serialize SELECTs are unbounded. This bypasses the paging policy on
+   * purpose: export is an explicit full-snapshot request, not a paged read.
    */
-  // Compatibility shim: old tests call storage.search(query, limit, offset, options).
-  // After PBI-03 the search is unified into query({ text, ... }). Keep a
-  // thin wrapper so pre-existing tests that use the old search API still pass
-  // without editing 10+ files. New code should call query({ text }) directly.
-  async search(
-    searchQuery: string,
-    limit: number = 50,
-    offset: number = 0,
-    options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {},
-  ): Promise<{
-    success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
-  } | { success: false; error: string }> {
-    return this.query({
-      text: searchQuery,
-      limit,
-      offset,
-      orderBy: options.orderBy as unknown as StorageQuery['orderBy'],
-      orderDir: options.orderDir,
-    } as StorageQuery);
+  async exportAllRecords(): Promise<{ success: true; rows: BrowsingLogRecord[] } | { success: false; error: string }> {
+    try {
+      const data = await this.loadData();
+      const rows = data.records
+        .filter(r => r.is_deleted === 0)
+        .sort((a, b) => b.created_at - a.created_at);
+      return { success: true, rows };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
   }
 
+  /**
+   * Unified read path — handles both plain filtered listing and text search.
+   */
   async query(q: StorageQuery = {}): Promise<{
     success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
   } | { success: false; error: string }> {
@@ -203,36 +202,14 @@ export class FallbackStorage {
       if (spec.error) return { success: false, error: spec.error };
       const data = await this.loadData();
       let filtered = data.records;
-      // Compatibility: support both old (isStarred/since/until) and new (starred/dateFrom/dateTo) param names
-      const qAny = q as unknown as Record<string, unknown>;
-      const effectiveStarred = (q.starred as unknown) ?? qAny['isStarred'] ?? qAny['starred'];
-      const effectiveDateFrom = (q.dateFrom as unknown) ?? qAny['since'] ?? qAny['dateFrom'];
-      const effectiveDateTo = (q.dateTo as unknown) ?? qAny['until'] ?? qAny['dateTo'];
-      const effectiveExcludeDeleted = q.excludeDeleted ?? (qAny['excludeDeleted'] as boolean | undefined);
-
-      if (effectiveExcludeDeleted !== false) {
+      // PBI 2026-09-12-13: trust the planner seam — `q` arrives normalized
+      // (normalizeStorageQuery collapses starred|isStarred|is_starred,
+      // dateFrom|since, dateTo|until), so the local alias re-derivation is
+      // deleted and the canonical query feeds matchesExtraWhere directly.
+      if (q.excludeDeleted !== false) {
         filtered = filtered.filter(r => r.is_deleted === 0);
       }
-      if (q.domain) {
-        filtered = filtered.filter(r => r.domain === q.domain);
-      }
-      if (effectiveStarred !== undefined) {
-        filtered = filtered.filter(r => r.is_starred === (effectiveStarred ? 1 : 0));
-      }
-      if (effectiveDateFrom !== undefined) {
-        filtered = filtered.filter(r => r.created_at >= (effectiveDateFrom as number));
-      }
-      if (effectiveDateTo !== undefined) {
-        filtered = filtered.filter(r => r.created_at <= (effectiveDateTo as number));
-      }
-      if (q.gistSynced !== undefined) {
-        filtered = filtered.filter(r => r.gist_synced === q.gistSynced);
-      }
-      // Also support is_starred passed via q
-      if (qAny['is_starred'] !== undefined && q.starred === undefined && effectiveStarred === undefined) {
-        const v = qAny['is_starred'] as number | boolean;
-        filtered = filtered.filter(r => r.is_starred === (v ? 1 : 0));
-      }
+      filtered = filtered.filter(r => matchesExtraWhere(r, q));
 
       // Text search (LIKE fallback — no FTS5 in chrome.storage path)
       if (q.text) {
@@ -274,11 +251,11 @@ export class FallbackStorage {
         return 0;
       };
       if (q.text) {
-        if (q.orderBy === 'created_at') {
-          const dir = q.orderDir === 'ASC' ? 1 : -1;
-          filtered.sort((a, b) => compareCreatedAt(a, b, dir));
-        }
-        // else: no FTS5 rank in fallback path, keep insertion order
+        // PBI 2026-09-12-40: mirror the SQL coercion (buildLikeOrderClause —
+        // orderBy:rank coerces to created_at DESC since fallback has no FTS
+        // rank). The former code kept insertion order for orderBy:rank.
+        const dir = q.orderDir === 'ASC' ? 1 : -1;
+        filtered.sort((a, b) => compareCreatedAt(a, b, dir));
       } else {
         if (!q.orderBy || q.orderBy === 'created_at') {
           const dir = q.orderDir === 'ASC' ? 1 : -1;
@@ -384,32 +361,39 @@ export class FallbackStorage {
     }
   }
 
-  async purgeOldRecords(retentionDays: number = 90, maxRecords: number = 1000): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  async purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<{ success: true; purged: number } | { success: false; error: string }> {
     try {
+      // PBI 2026-09-12-36: skip guards — same contract as purgeContent and
+      // the SQL backends. Before this, (0,0) purged everything (cutoff = now)
+      // while content-purge(0,0) was a no-op.
       const purged = await this.mutate<number>(data => {
-        const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
         let count = 0;
 
-        data.records = data.records.filter(r => {
-          if (r.is_starred === 1 || r.is_deleted === 1) return true;
-          if (r.created_at < cutoffMs) {
-            count++;
-            return false;
-          }
-          return true;
-        });
-
-        const activeRecords = data.records.filter(r => r.is_deleted === 0);
-        if (activeRecords.length > maxRecords) {
-          const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
-          const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
+        if (retentionDays != null && retentionDays > 0) {
+          const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
           data.records = data.records.filter(r => {
-            if (toRemove.has(r.id)) {
+            if (r.is_starred === 1 || r.is_deleted === 1) return true;
+            if (r.created_at < cutoffMs) {
               count++;
               return false;
             }
             return true;
           });
+        }
+
+        if (maxRecords != null && maxRecords > 0) {
+          const activeRecords = data.records.filter(r => r.is_deleted === 0);
+          if (activeRecords.length > maxRecords) {
+            const sorted = [...activeRecords].sort((a, b) => a.created_at - b.created_at);
+            const toRemove = new Set(sorted.slice(0, activeRecords.length - maxRecords).map(r => r.id));
+            data.records = data.records.filter(r => {
+              if (toRemove.has(r.id)) {
+                count++;
+                return false;
+              }
+              return true;
+            });
+          }
         }
 
         return { next: data, result: count };

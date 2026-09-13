@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { API_KEY_FIELDS } from '../settingsMigration.js';
 
 describe('settingsStore API_KEY_FIELDS', () => {
-  it('6つのAPIキーフィールドをエクスポートしている', () => {
+  it('exports 6 API key fields', () => {
     expect(API_KEY_FIELDS).toEqual([
       'obsidian_api_key',
       'gemini_api_key',

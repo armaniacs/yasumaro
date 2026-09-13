@@ -5,7 +5,6 @@
 
 import { getMessage } from '../utils/i18n.js';
 import type { MaskedPosition } from './maskNavigator.js';
-import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 export const DOM_IDS = {
   MODAL: 'confirmationModal',
@@ -21,21 +20,23 @@ export const CLASS_NAMES = {
   MASK_STATUS_MESSAGE: 'mask-status-message',
 } as const;
 
+/**
+ * PBI 2026-09-12-37: interface pruned to the implemented seam. The former
+ * `show`/`close` duplicated the presenter's inlined modal lifecycle (settle
+ * ordering is load-bearing there), `setCleansingInfo` was an empty body, and
+ * `resetBodyWidth` duplicated the presenter's DEFAULT_WIDTH constant — the
+ * presenter owns modal lifecycle + width, the view owns DOM queries +
+ * navigation.
+ */
 export interface PreviewView {
   readonly doc: Document;
   getModal(): HTMLDialogElement | null;
   getPreviewContent(): HTMLTextAreaElement | null;
   getMaskStatusMessage(): HTMLElement | null;
   setPreviewContent(text: string): void;
-  show(html: string): void;
-  close(): void;
-  onConfirm(handler: () => void): void;
-  onCancel(handler: () => void): void;
   /** Full show flow used by presenter — kept separate for testability */
   ensureMaskStatusElement(): HTMLElement | null;
   updateMaskStatus(text: string, visible: boolean): void;
-  setCleansingInfo(): void;
-  resetBodyWidth(): void;
   focusPreview(): void;
   jumpToPosition(pos: MaskedPosition, index: number, total: number): void;
   buildNavigation(positions: MaskedPosition[], onPrev: () => void, onNext: () => void): void;
@@ -44,11 +45,6 @@ export interface PreviewView {
 
 export class PreviewViewImpl implements PreviewView {
   readonly doc: Document;
-
-  // store handlers for onConfirm/onCancel interface
-  private confirmHandlers: Array<() => void> = [];
-  private cancelHandlers: Array<() => void> = [];
-  private trapId: string | null = null;
 
   constructor(doc: Document = document) {
     this.doc = doc;
@@ -69,72 +65,6 @@ export class PreviewViewImpl implements PreviewView {
   setPreviewContent(text: string): void {
     const el = this.getPreviewContent();
     if (el) el.value = text;
-  }
-
-  /** Minimal interface: show html in textarea and open modal */
-  show(html: string): void {
-    this.setPreviewContent(html);
-    const modal = this.getModal();
-    if (modal && typeof modal.showModal === 'function') {
-      try {
-        modal.showModal();
-      } catch {
-        // jsdom fallback
-        (modal as unknown as { open: boolean }).open = true;
-      }
-      this.ensureCloseRelease(modal);
-      this.releaseTrap();
-      // Escape routes to the existing cancel path (close + release)
-      this.trapId = focusTrapManager.trap(modal, () => this.close());
-    }
-  }
-
-  /** Close the modal and release the focus trap (balanced with show) */
-  close(): void {
-    const modal = this.getModal();
-    this.releaseTrap();
-    if (!modal) return;
-    try {
-      modal.close();
-    } catch {
-      (modal as unknown as { open: boolean }).open = false;
-      modal.dispatchEvent(new Event('close'));
-    }
-  }
-
-  /** 'close' event (native Escape/backdrop/close) must always release the trap */
-  private ensureCloseRelease(modal: HTMLDialogElement): void {
-    const el = modal as HTMLDialogElement & { dataset: DOMStringMap };
-    if (el.dataset.focusTrapWired === 'true') return;
-    el.dataset.focusTrapWired = 'true';
-    modal.addEventListener('close', () => this.releaseTrap());
-  }
-
-  private releaseTrap(): void {
-    if (this.trapId) {
-      focusTrapManager.release(this.trapId);
-      this.trapId = null;
-    }
-  }
-
-  onConfirm(handler: () => void): void {
-    this.confirmHandlers.push(handler);
-  }
-
-  onCancel(handler: () => void): void {
-    this.cancelHandlers.push(handler);
-  }
-
-  /** Exposed for presenter to wire DOM buttons to handlers */
-  getConfirmHandlers(): Array<() => void> {
-    return this.confirmHandlers;
-  }
-  getCancelHandlers(): Array<() => void> {
-    return this.cancelHandlers;
-  }
-  clearHandlers(): void {
-    this.confirmHandlers = [];
-    this.cancelHandlers = [];
   }
 
   ensureMaskStatusElement(): HTMLElement | null {
@@ -162,15 +92,6 @@ export class PreviewViewImpl implements PreviewView {
     }
   }
 
-  setCleansingInfo(): void {
-    // placeholder — presenter will update via existing function;
-    // view only needs doc access, presenter imports update logic
-  }
-
-  resetBodyWidth(): void {
-    this.doc.body.style.width = '320px';
-  }
-
   focusPreview(): void {
     this.getPreviewContent()?.focus();
   }
@@ -192,6 +113,14 @@ export class PreviewViewImpl implements PreviewView {
     if (counter) counter.textContent = `${index + 1}/${total}`;
   }
 
+  private navHandlers: { prev: (() => void) | null; next: (() => void) | null } = { prev: null, next: null };
+
+  /**
+   * Idempotent navigation wiring (PBI 2026-09-12-10): every show rewires
+   * prev/next to the current run's callbacks. Previously the buttons were
+   * created once and later shows only toggled display, so the second show
+   * navigated with the first run's stale closures.
+   */
   buildNavigation(
     positions: MaskedPosition[],
     onPrev: () => void,
@@ -211,14 +140,10 @@ export class PreviewViewImpl implements PreviewView {
       const prevBtn = this.doc.createElement('button');
       prevBtn.id = DOM_IDS.MASK_NAV_PREV;
       prevBtn.textContent = '▲';
-      prevBtn.title = getMessage('previousMaskedItem');
-      prevBtn.addEventListener('click', onPrev);
 
       const nextBtn = this.doc.createElement('button');
       nextBtn.id = DOM_IDS.MASK_NAV_NEXT;
       nextBtn.textContent = '▼';
-      nextBtn.title = getMessage('nextMaskedItem');
-      nextBtn.addEventListener('click', onNext);
 
       const counter = this.doc.createElement('span');
       counter.id = DOM_IDS.MASK_NAV_COUNTER;
@@ -229,6 +154,20 @@ export class PreviewViewImpl implements PreviewView {
       container.appendChild(nav);
     }
 
+    // Always rewire: detach previous run's handlers, attach current ones.
+    const prevBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_PREV);
+    const nextBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_NEXT);
+    if (prevBtn && this.navHandlers.prev) {
+      prevBtn.removeEventListener('click', this.navHandlers.prev);
+    }
+    if (nextBtn && this.navHandlers.next) {
+      nextBtn.removeEventListener('click', this.navHandlers.next);
+    }
+    if (prevBtn) prevBtn.addEventListener('click', onPrev);
+    if (nextBtn) nextBtn.addEventListener('click', onNext);
+    this.navHandlers = { prev: onPrev, next: onNext };
+    this.refreshLabels();
+
     if (positions.length > 0) {
       (nav as HTMLElement).style.display = 'flex';
       const counter = this.doc.getElementById(DOM_IDS.MASK_NAV_COUNTER);
@@ -236,5 +175,13 @@ export class PreviewViewImpl implements PreviewView {
     } else {
       (nav as HTMLElement).style.display = 'none';
     }
+  }
+
+  /** Re-resolve creation-time labels so a locale switch does not leave stale titles. */
+  refreshLabels(): void {
+    const prevBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_PREV);
+    const nextBtn = this.doc.getElementById(DOM_IDS.MASK_NAV_NEXT);
+    if (prevBtn) (prevBtn as HTMLElement).title = getMessage('previousMaskedItem');
+    if (nextBtn) (nextBtn as HTMLElement).title = getMessage('nextMaskedItem');
   }
 }

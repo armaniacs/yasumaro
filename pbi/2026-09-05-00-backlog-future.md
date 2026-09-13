@@ -69,6 +69,83 @@
 | SqliteHistoryModel 21→8 畳み込み（contract test `sqliteHistoryModel.navigate.test.ts` 既存。着手時は `toHaveLength(21)` pin を更新） | 2.5 | テスト改修 ~200 行に対する payoff 再評価後 |
 | statusPanel の render-only 狩窄（`recordBtn.disabled` 二重所有解消・cleansing if-chain テーブル化） | 1.6 | recordBtn 二重所有の bug が顕在化したとき |
 
+（statusPanel recordBtn 二重所有は 2026-09-11 再評価で**解消済み**を確認 — PBI 2026-09-05-06 / 2026-09-07-24 の着地で RecordSession が唯一の書き手。cleansing if-chain テーブル化は 2026-09-11 round 4 の PBI 05 で実装済み）
+
+**2026-09-11 round 5（arch-delivery-loop・0911b ブランチ）で台帳入り（7 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| sqliteMessages.ts 分割（wire / responses / legacy constants）+ OffscreenResponse 完全性の型ガード（exhaustive assert） | 6.0 | 次に archive/STATUS 改修時（union の 6 変数欠落は round 5 PBI 03 で解消済み） |
+| StorageBackend capability query（supportsArchive — round 4 で意図的先送り） | 8.0 | archive panel gate 改修時 |
+| popup 3 重 GET_CONTENT coalescing（popup lifetime 計測が前提）+ i18n 英語フォールバック撲滅（`(getMessage(key) \|\| 'English')` の全数洗い出し） | 5.3 | popup lifetime 計測後 / 次回 popup UI 改修時 |
+| content scheduler 統合（throttle rAF / IdleScheduler / DeadlineTimer の 3 系統）+ ContentKernel.dispose + cleansing PoC wire-or-delete（content bundle 計測が前提） | 5.3 | 次回 content perf 改修時 |
+| 小型バグ群（全件 2026-09-11 round 5 で現存確認・file path 一部移動済）: throttle beforeunload listener 漏れ（src/content/throttle.ts:32-39）・DeadlineTimer 非null assert（deadlineTimer.ts:70,97）・**previewPresenter promise leak（:219-228 — popup modal で永久ハング、最も本物に近い）**・CSP/allowlist 3 テーブル drift（urlWhitelist ⊊ cspValidator ⊆ manifest）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:48-55） | — | 個別に顕在化したとき（previewPresenter hang は popup modal 不具合報告時に最優先） |
+| dailyNotePath %2e%2e | — | **sink 追跡完了（round 5）**: URL path 経由だが attacker は自分自身の OBSIDIAN_DAILY_PATH 設定のみ → 脆弱性昇格せず。hardening（%2e-aware reject in sanitizePathComponent）として随時可 |
+| ADR 2026-08-27-limit-policy / panel-lifecycle-wave1 の status note 追加 | — | PBI 08 で limit-policy は対応済み。wave1 は次回 panel lifecycle 改修時 |
+
+（round 4 台帳の InMemoryTransport default-limit 乖離は round 4 で解消済み、query cap 統合のトリガーは round 5 で発火し PBI 08 として完了）
+
+**2026-09-12 round 9（arch-delivery-loop・0911a ブランチ）で台帳入り（10 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| RecordPayload builder（previewFlow の 3 payload リテラルがMANUAL_RECORD で cleansedReason/cleanseStats/maskedCount を欠落・PBI 04 と近接だが popup 側） | 5.3 | PBI 2026-09-12-04 着地後、previewFlow 改修時 |
+| RecordSession branch prelude/tail 統合（normal/force で panel clear・auto-close・cleansing/trust refresh が skew） | 4.0 | 次回 RecordSession 改修時 |
+| Entry-diagnostics byte dialects（sqliteHistoryPanelView の 5 byte 語彙・\|\| で 0 を欠落・削減計算 3 重） | 4.0 | 次回 history view 改修時 |
+| Export/serialize 3 owner（recordsRepo 11 列 / worker 13 列・envelope 2 流儀） | 3.2 | 次に export 列を追加するとき |
+| QueueFacade 統合（PendingChromeStorageQueue / PendingSqliteQueue / OfflineNetworkQueue の 3 interface・sqlite は注入 seam 無し・offline dequeue は PBI 08 で lock 化済み） | 4.0 | 4 つ目の queue consumer 出現時・VULN-056 周辺改修時 |
+| UblockPipeline parse 統合（parseUblockFilterListWithErrors と parseUblockFilterList が ~80 行重複・options $important 非対応・MAX_INPUT_SIZE/MAX_LINES が limits.ts 外） | 3.2 | 次に ublock 改修時（両形式警告は PBI 08 で実施済み） |
+| FallbackStorage.query の alias 再派生削除（planner が正規化済み・test-only shim が production に残留） | 2.7 | 次に fallback storage 改修時 |
+| supportsArchive doc/code 一致（handleArchive は per-method probe・StorageBackend コメントは unit-travel 主張・subset backend 実装時の bug クラス） | 2.4 | 次に archive dispatch 改修時 |
+| repo facade 3 枚（recordsRepo / dbMaintenance / auditLogRepo が delegate のみ・ getStatus だけが実ロジック） | 2.0 | 横断 concern（retry/tracing）導入時 |
+| 予備観察: previewView dead interface members（show/close/setCleansingInfo/resetBodyWidth は production 未使用・test のみ） | — | 次に preview view 改修時（interface 縮小か test-only 文書化） |
+
+**2026-09-11 round 7（arch-delivery-loop・0911a ブランチ）で台帳入り（2 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| e2e gap: history panel UI spec（tag filter / pagination / star — High）+ cleansing preview confirm-send spec（High） | 4.0 | e2e 実行可能環境（xvfb あり）でのラウンド — 本環境では check-e2e が skip になり新規 spec を実行検証できない |
+| popup/settingsScreen 復活の要否（dead code は round 7 PBI 04 で削除済み — 将来 settings 画面を戻す場合は新規実装） | — | 製品判断が出たとき |
+
+（round 6 台帳の「i18n 未使用キー手動パス」は round 7 PBI 02 で機械化・実行（104 key 削除・残り 177 件は kept 判定）。「cleanse flag cache」は round 7 PBI 05 で解消。台帳トリガー駆動項目（archive codec / testConnection / Local AI / DialogShell / trustSettings / archivePanel 分離 / SqliteHistoryModel / DashboardSqlite 3-seam / ErrorTaxonomy / offscreen-cleanse PoC）は全件トリガー未発火で維持。）
+
+**2026-09-11 round 6（arch-delivery-loop・0911a ブランチ）の主要な完了事項:**
+DeadlineTimer getter 非対称解消、queryNormalize ids 上限、previewPresenter settle 単一 seam（promise 永久ハング解消）+ focus trap 単一 owner、i18n 参照済み欠落 50 件補完 + 未使用キー検出器、LIST_SOURCES 単一テーブル（OISD gate/grant 不一致解消）、pending region 摩擦解消、throttle 再実装、limits drift ガード拡張（10MiB family 6 件吸収）、popup 二重配線削除。
+
+（round 5 台帳の「previewPresenter promise leak」「throttle leak」「DeadlineTimer 非null assert」「CSP/allowlist drift」「focusTrap 無境界」は **round 6 PBI 01/03/05/07 で解消済み**。「dailyNotePath %2e」は round 5 の sink 追跡で昇格見送り確定。）
+
+**2026-09-11 round 5（arch-delivery-loop・0911b ブランチ）の主要な完了事項:**
+pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1,600 LOC）、STATUS extras 単一 field list 化、search+tag / ids 条件セット統合、上限定数 14 箇所の limits.ts 取り込み（drift ガード新設）、popup クラスタ修正（recordBtn sole-writer 契約回復）、クレンジング reason の resolveCleanseReason 統一、queryNormalize ids 検証、e2e version pin 撤去。
+
+**2026-09-11 round 4（arch-delivery-loop・0911a ブランチ）で台帳入り（10 項目 + 小型バグ群）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| testConnection を generateSummary の template hook 化（Gemini ~130 行 / OpenAI ~85 行の骨格重複・debug envelope 組み立て反復） | 6.4 | 次に HTTP provider を追加・testConnection 改修時 |
+| Local AI session manager（session 毎 call create/destroy・`prompt()` 無 timeout/AbortSignal・overflow retry 無し。adapter 3 層の畳み込みも含む） | 6.0 | local AI 不調の報告時 / 次回 LocalAIService 改修時 |
+| archive codec の 5 projections → descriptor 1 箇所（0909-05 の続き。project / pickProjectedFields / ARCHIVE_GATEWAY_DECODERS / projectDeps / decodeResponse が field-for-field で一致する必要） | 4.8 | 次に archive op を追加するとき |
+| query cap/alias 統合（4 clamp・3 predicate・alias 3 流儀）+ limits.ts 外の上限 5 件取り込み（log-forward 3 / MAX_QUERY_LIMIT / MAX_TOKENS_PER_CALL）+ 8MB chunk 二重定義 + InMemoryTransport default-limit 乖離 | 4.8 | 上限 drift を次に検出したとき |
+| DialogShell（preview view/presenter の trap 二重所有・`getConfirmHandlers` が interface 越えテスト面・focusTrap map 無境界） | 4.0 | 次に modal 系 a11y 改修時 |
+| offscreen-cleanse PoC wire-or-delete（isolation seam を跨ぐ浅い module・content bundle に strip engine が静的添付・flag 毎回 storage 読み・flag OFF） | 4.0 | flag ON の製品判断時（静的→dynamic import は小型 fix として分離可能） |
+| ErrorTaxonomy（4 分類器 errorClassification / popup errorUtils / categorizeError / mapConnectionError 系 + ERROR_CODES.md 未参照・statusCode 0 の正規表現） | 3.2 | エラー分類大改修時（段階移行必須） |
+| DashboardSqlite deps 30 メソッド shallow adapter → query/mutate/maintain 3 seam + READ_ONLY/TOKEN_EXEMPT 統合（セキュリティゲート触及・dashboardSqliteMock 対応が必要） | 2.7 | dashboard-sqlite ハンドラ改修時 |
+| SqliteEngineHost 14 accessor 崩し + getBackend/ensureBackend キャッシュ二重経路（stale backend の恐れ） | 1.6 | init/fallback 系バグが顕在化したとき |
+| 小型バグ群（各個に顕在化時 fix）: throttle beforeunload listener 漏れ（src/content/utils/throttle.ts:32-39）・DeadlineTimer 非null assert で pre-init crash（deadlineTimer.ts:70,96-106）・previewPresenter promise leak（DOM 欠損で永久ハング・:227-236）・CSP/allowlist 3 テーブル membership drift（nsfw.oisd.nl / tranco-list.eu）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:49-54）・dailyNotePath の %2e%2e 通過（sink 実証後 security fix 昇格） | — | 個別に顕在化したとき |
+
+**2026-09-12 round 10（arch-delivery-loop・0911a ブランチ）で台帳入り（9 項目）:**
+
+| 項目 | RICE | 再評価条件 |
+|------|------|-----------|
+| recordsRepo.serialize の interface 化（active/total 二重 select・delete/ids LIKE リポジトリ重複・`as` 3 箇所。Strong だが Effort 大） | 2.0 | export 列追加時 |
+| IdbVfsBackend の withTransaction 越境 import（opfsWorker/handlers.js から。Worth・中立 module への移動） | — | 次回 backend 改修に同梱 |
+| audit read path の orphan cap 配線（handleAuditLogQuery/queryAuditLog のデフォルト・QUERY_CAPS 参照なし。Worth） | — | STATUS 改修時に同梱（PBI 16 で idb 側 100000 は配線済み） |
+| purge trust-boundary（retentionDays/NaN bind・LIMIT -1 無制限。Speculative） | — | NaN bind 実測後に再評価 |
+| StatusPanel 分割（1456 行 god render・9 セクションの局在化。Worth） | — | 次回 popup 改修時 |
+| TagCluster overlay pipeline（geometry 6 成分 useState・基準半径単一テスト。Worth・視覚のみ） | — | 次回 tag 改修時 |
+| single-flight 統合（generateSummary 3  spellings・TTL/Mode/Trace 欠落。Worth） | — | 4 つ目の consumer 出現時 |
+| notification codec + reason ラベル（4 inline 型 + ラベル 2 重定義。Worth） | — | 次回 notification 改修時 |
+| VisitRateLimiter clock + TabCache twin（直注入 Date.now・SessionStore twin・autoSavedBadgeTabs 2 系統。Speculative） | — | 次回該当改修時 |
+
 ## 運用
 
 - 次ラウンドの architecture review（`/improve-codebase-architecture`）は本台帳を入力に再評価する

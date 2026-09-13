@@ -45,13 +45,13 @@ beforeEach(() => {
 
 describe('crypto', () => {
     describe('generateSalt', () => {
-        test('16バイトのソルトを生成できる', () => {
+        test('generates a 16-byte salt', () => {
             const salt = generateSalt();
             expect(salt).toBeInstanceOf(Uint8Array);
             expect(salt.length).toBe(16);
         });
 
-        test('毎回異なるソルトを生成する', () => {
+        test('generates a different salt each time', () => {
             const salt1 = generateSalt();
             const salt2 = generateSalt();
             expect(salt1).not.toEqual(salt2);
@@ -59,13 +59,13 @@ describe('crypto', () => {
     });
 
     describe('generateIV', () => {
-        test('12バイトのIVを生成できる', () => {
+        test('generates a 12-byte IV', () => {
             const iv = generateIV();
             expect(iv).toBeInstanceOf(Uint8Array);
             expect(iv.length).toBe(12);
         });
 
-        test('毎回異なるIVを生成する', () => {
+        test('generates a different IV each time', () => {
             const iv1 = generateIV();
             const iv2 = generateIV();
             expect(iv1).not.toEqual(iv2);
@@ -78,7 +78,7 @@ describe('crypto', () => {
     // verifyPasswordWithPBKDF2 below.
 
     describe('deriveKey', () => {
-        test('パスワードとソルトからキーを導出できる', async () => {
+        test('derives a key from a password and salt', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
@@ -87,7 +87,7 @@ describe('crypto', () => {
             expect(key.extractable).toBe(false);
         });
 
-        test('同じパスワードとソルトで同じキーを導出できる', async () => {
+        test('derives the same key from the same password and salt', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const key1 = await deriveKey(password, salt);
@@ -96,7 +96,7 @@ describe('crypto', () => {
             expect(key1.algorithm).toEqual(key2.algorithm);
         });
 
-        test('異なるソルトで異なるキーを導出する', async () => {
+        test('derives different keys from different salts', async () => {
             const password = 'test-password';
             const salt1 = generateSalt();
             const salt2 = generateSalt();
@@ -115,7 +115,7 @@ describe('crypto', () => {
     });
 
     describe('encrypt and decrypt', () => {
-        test('平文を暗号化して復号化できる', async () => {
+        test('encrypts and decrypts plaintext', async () => {
             const plaintext = 'This is a secret message';
             const password = 'test-password';
             const salt = generateSalt();
@@ -129,7 +129,7 @@ describe('crypto', () => {
             expect(decrypted).toBe(plaintext);
         });
 
-        test('異なるキーで復号化できない', async () => {
+        test('fails to decrypt with a different key', async () => {
             const plaintext = 'This is a secret message';
             const password1 = 'password1';
             const password2 = 'password2';
@@ -143,7 +143,7 @@ describe('crypto', () => {
                 .rejects.toThrow('Decryption failed');
         });
 
-        test('異なるIVで復号化できない', async () => {
+        test('fails to decrypt with a different IV', async () => {
             const plaintext = 'This is a secret message';
             const password = 'test-password';
             const salt = generateSalt();
@@ -156,7 +156,7 @@ describe('crypto', () => {
                 .rejects.toThrow('Decryption failed');
         });
 
-        test('空文字列を暗号化して復号化できる', async () => {
+        test('encrypts and decrypts an empty string', async () => {
             const plaintext = '';
             const password = 'test-password';
             const salt = generateSalt();
@@ -167,7 +167,7 @@ describe('crypto', () => {
             expect(decrypted).toBe(plaintext);
         });
 
-        test('長いテキストを暗号化して復号化できる', async () => {
+        test('encrypts and decrypts long text', async () => {
             const plaintext = 'a'.repeat(10000);
             const password = 'test-password';
             const salt = generateSalt();
@@ -180,7 +180,7 @@ describe('crypto', () => {
     });
 
     describe('decryptData', () => {
-        test('オブジェクト形式の暗号化データを復号化できる', async () => {
+        test('decrypts object-form encrypted data', async () => {
             const plaintext = 'This is a secret message';
             const password = 'test-password';
             const salt = generateSalt();
@@ -191,7 +191,7 @@ describe('crypto', () => {
             expect(decrypted).toBe(plaintext);
         });
 
-        test('無効なデータ形式でエラーをスローする', async () => {
+        test('throws for invalid data format', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
@@ -204,7 +204,7 @@ describe('crypto', () => {
     });
 
     describe('isEncrypted', () => {
-        test('暗号化されたデータを正しく識別する', () => {
+        test('identifies encrypted data correctly', () => {
             const encryptedData: EncryptedData = {
                 ciphertext: 'base64-encoded-ciphertext',
                 iv: 'base64-encoded-iv'
@@ -212,7 +212,7 @@ describe('crypto', () => {
             expect(isEncrypted(encryptedData)).toBe(true);
         });
 
-        test('平文を正しく識別する', () => {
+        test('identifies plaintext correctly', () => {
             expect(isEncrypted('plaintext')).toBe(false);
             expect(isEncrypted(null)).toBe(false);
             expect(isEncrypted(undefined)).toBe(false);
@@ -220,20 +220,20 @@ describe('crypto', () => {
             expect(isEncrypted({ ciphertext: 'test' as const })).toBe(false);
         });
 
-        test('空文字列のciphertext/ivは暗号化データとみなさない', () => {
+        test('does not treat empty ciphertext/iv as encrypted data', () => {
             expect(isEncrypted({ ciphertext: '', iv: 'base64-iv' })).toBe(false);
             expect(isEncrypted({ ciphertext: 'base64-ciphertext', iv: '' })).toBe(false);
             expect(isEncrypted({ ciphertext: '', iv: '' })).toBe(false);
         });
 
-        test('非文字列のciphertext/ivは暗号化データとみなさない', () => {
+        test('does not treat non-string ciphertext/iv as encrypted data', () => {
             expect(isEncrypted({ ciphertext: 123, iv: 'base64-iv' })).toBe(false);
             expect(isEncrypted({ ciphertext: 'base64-ciphertext', iv: null })).toBe(false);
         });
     });
 
     describe('encryptApiKey and decryptApiKey', () => {
-        test('APIキーを暗号化して復号化できる', async () => {
+        test('encrypts and decrypts an API key', async () => {
             const apiKey = 'sk-1234567890abcdef';
             const password = 'test-password';
             const salt = generateSalt();
@@ -246,7 +246,7 @@ describe('crypto', () => {
             expect(decrypted).toBe(apiKey);
         });
 
-        test('平文のAPIキーをそのまま返す（後方互換性）', async () => {
+        test('returns a plaintext API key as-is (backward compatibility)', async () => {
             const apiKey = 'sk-1234567890abcdef';
             const password = 'test-password';
             const salt = generateSalt();
@@ -256,7 +256,7 @@ describe('crypto', () => {
             expect(decrypted).toBe(apiKey);
         });
 
-        test('無効なAPIキーでエラーをスローする', async () => {
+        test('throws for an invalid API key', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
@@ -265,7 +265,7 @@ describe('crypto', () => {
             await expect(encryptApiKey(123 as unknown as string, key)).rejects.toThrow('Invalid API key');
         });
 
-        test('無効な暗号化データでエラーをスローする', async () => {
+        test('throws for invalid encrypted data', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
@@ -276,27 +276,27 @@ describe('crypto', () => {
 
     // セキュリティテスト追加（Checking Team Review #3）
     describe('constantTimeCompare', () => {
-        test('同一文字列でtrueを返す', async () => {
+        test('returns true for identical strings', async () => {
             const result = await constantTimeCompare('password123', 'password123');
             expect(result).toBe(true);
         });
 
-        test('異なる文字列（同長）でfalseを返す', async () => {
+        test('returns false for different strings of the same length', async () => {
             const result = await constantTimeCompare('password123', 'password456');
             expect(result).toBe(false);
         });
 
-        test('異なる長さの文字列でfalseを返す', async () => {
+        test('returns false for strings of different lengths', async () => {
             const result = await constantTimeCompare('password123', 'password45678');
             expect(result).toBe(false);
         });
 
-        test('空文字列でtrueを返す', async () => {
+        test('returns true for empty strings', async () => {
             const result = await constantTimeCompare('', '');
             expect(result).toBe(true);
         });
 
-        test('タイミング攻撃耐性: 実行時間の分散を検証', async () => {
+        test('timing-attack resistance: verifies execution-time variance', async () => {
             // 同じ長さの一致・不一致の場合、実行時間が同程度であることを確認
             // iterationsを200に増やし、GC・コンテキストスイッチの分散を吸収する
             const iterations = 200;
@@ -326,7 +326,7 @@ describe('crypto', () => {
             expect(ratio).toBeLessThan(10);
         });
 
-        test('タイミング攻撃耐性: 異なる長さでも固定実行時間', async () => {
+        test('timing-attack resistance: keeps execution time stable across lengths', async () => {
             // 異なる長さの文字列を比較しても、実行時間が長さに依存しないことを確認
             const iterations = 50;
             const timesShort: number[] = [];
@@ -358,7 +358,7 @@ describe('crypto', () => {
     });
 
     describe('computeHMAC', () => {
-        test('同じ入力で同じハッシュを生成する（決定性）', async () => {
+        test('generates the same hash for the same input (deterministic)', async () => {
             const secret = 'test-secret';
             const message = 'test-message';
 
@@ -368,7 +368,7 @@ describe('crypto', () => {
             expect(hash1).toBe(hash2);
         });
 
-        test('異なる入力で異なるハッシュを生成する', async () => {
+        test('generates different hashes for different inputs', async () => {
             const secret = 'test-secret';
 
             const hash1 = await computeHMAC(secret, 'message-1');
@@ -377,7 +377,7 @@ describe('crypto', () => {
             expect(hash1).not.toBe(hash2);
         });
 
-        test('シークレットが異なると異なるハッシュを生成する', async () => {
+        test('generates different hashes for different secrets', async () => {
             const message = 'test-message';
 
             const hash1 = await computeHMAC('secret-1', message);
@@ -386,7 +386,7 @@ describe('crypto', () => {
             expect(hash1).not.toBe(hash2);
         });
 
-        test('有効なBase64出力を生成する', async () => {
+        test('generates valid Base64 output', async () => {
             const hash = await computeHMAC('secret', 'message');
             expect(typeof hash).toBe('string');
 
@@ -396,7 +396,7 @@ describe('crypto', () => {
     });
 
     describe('hashPasswordWithPBKDF2', () => {
-        test('PBKDF2でパスワードハッシュを生成できる', async () => {
+        test('generates a password hash with PBKDF2', async () => {
             const password = 'test-password';
             const salt = generateSalt();
 
@@ -409,7 +409,7 @@ describe('crypto', () => {
             expect(() => atob(hash)).not.toThrow();
         });
 
-        test('同じパスワードとソルトで同じハッシュを生成する', async () => {
+        test('generates the same hash for the same password and salt', async () => {
             const password = 'test-password';
             const salt = generateSalt();
 
@@ -419,7 +419,7 @@ describe('crypto', () => {
             expect(hash1).toBe(hash2);
         });
 
-        test('異なるソルトで異なるハッシュを生成する', async () => {
+        test('generates different hashes for different salts', async () => {
             const password = 'test-password';
             const salt1 = generateSalt();
             const salt2 = generateSalt();
@@ -430,7 +430,7 @@ describe('crypto', () => {
             expect(hash1).not.toBe(hash2);
         });
 
-        test('異なるパスワードで異なるハッシュを生成する', async () => {
+        test('generates different hashes for different passwords', async () => {
             const salt = generateSalt();
 
             const hash1 = await hashPasswordWithPBKDF2('password-1', salt);
@@ -441,7 +441,7 @@ describe('crypto', () => {
     });
 
     describe('verifyPasswordWithPBKDF2', () => {
-        test('正しいパスワードを検証できる', async () => {
+        test('verifies a correct password', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const storedHash = await hashPasswordWithPBKDF2(password, salt);
@@ -450,7 +450,7 @@ describe('crypto', () => {
             expect(result.isValid).toBe(true);
         });
 
-        test('間違ったパスワードを拒否できる', async () => {
+        test('rejects a wrong password', async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const storedHash = await hashPasswordWithPBKDF2(password, salt);
@@ -459,7 +459,7 @@ describe('crypto', () => {
             expect(result.isValid).toBe(false);
         });
 
-        test('定数時間比較を使用している', { timeout: 60000 }, async () => {
+        test('uses constant-time comparison', { timeout: 60000 }, async () => {
             const password = 'test-password';
             const salt = generateSalt();
             const storedHash = await hashPasswordWithPBKDF2(password, salt);
@@ -489,7 +489,7 @@ describe('crypto', () => {
         });
 
         describe('レガシーパス（iterations未指定）', () => {
-            test('新iteration countで生成されたハッシュは一致し再ハッシュ不要と判定される', async () => {
+            test('matches a hash from the new iteration count and reports no rehash needed', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
                 const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
@@ -499,7 +499,7 @@ describe('crypto', () => {
                 expect(result.needsRehash).toBe(false);
             });
 
-            test('旧iteration countで生成されたハッシュは一致し再ハッシュ要と判定される', async () => {
+            test('matches a hash from the old iteration count and reports rehash needed', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
                 const storedHash = await hashPasswordWithPBKDF2(password, salt, 100000);
@@ -509,7 +509,7 @@ describe('crypto', () => {
                 expect(result.needsRehash).toBe(true);
             });
 
-            test('新旧どちらにも一致しない場合は無効と判定される', async () => {
+            test('reports invalid when matching neither old nor new iteration hash', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
                 const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
@@ -521,7 +521,7 @@ describe('crypto', () => {
         });
 
         describe('iterations指定パス（定数時間比較）', () => {
-            test('保存iterationが現在のデフォルトと一致する場合は再ハッシュ不要', async () => {
+            test('reports no rehash needed when the stored iteration matches the current default', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
                 const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
@@ -531,7 +531,7 @@ describe('crypto', () => {
                 expect(result.needsRehash).toBe(false);
             });
 
-            test('保存iterationが現在のデフォルトと異なる場合は再ハッシュ要', async () => {
+            test('reports rehash needed when the stored iteration differs from the current default', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
                 const storedHash = await hashPasswordWithPBKDF2(password, salt, 100000);
@@ -541,7 +541,7 @@ describe('crypto', () => {
                 expect(result.needsRehash).toBe(true);
             });
 
-            test('誤ったパスワードで無効かつ再ハッシュフラグを返す', async () => {
+            test('returns invalid with rehash flag for a wrong password', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
                 const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
@@ -555,7 +555,7 @@ describe('crypto', () => {
 });
 
 describe('generateHmacSignature', () => {
-    test('URL-safe base64 HMAC署名を生成できる', async () => {
+    test('generates a URL-safe base64 HMAC signature', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -572,7 +572,7 @@ describe('generateHmacSignature', () => {
         expect(signature).not.toContain('=');
     });
 
-    test('同じデータと鍵で同じ署名を生成する', async () => {
+    test('generates the same signature for the same data and key', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -585,7 +585,7 @@ describe('generateHmacSignature', () => {
         expect(sig1).toBe(sig2);
     });
 
-    test('異なるデータで異なる署名を生成する', async () => {
+    test('generates different signatures for different data', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -600,7 +600,7 @@ describe('generateHmacSignature', () => {
 });
 
 describe('verifyHmacSignature', () => {
-    test('有効な署名を検証できる', async () => {
+    test('verifies a valid signature', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -613,7 +613,7 @@ describe('verifyHmacSignature', () => {
         expect(isValid).toBe(true);
     });
 
-    test('不正な署名は false を返す', async () => {
+    test('returns false for an invalid signature', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -625,7 +625,7 @@ describe('verifyHmacSignature', () => {
         expect(isValid).toBe(false);
     });
 
-    test('異なるデータの署名は false を返す', async () => {
+    test('returns false for a signature of different data', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -638,7 +638,7 @@ describe('verifyHmacSignature', () => {
         expect(isValid).toBe(false);
     });
 
-    test('長さが異なる署名は false を返す', async () => {
+    test('returns false for a signature of different length', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -652,18 +652,18 @@ describe('verifyHmacSignature', () => {
 });
 
 describe('hashUrl', () => {
-    test('URLのSHA-256ハッシュプレフィックスを返す', async () => {
+    test('returns the SHA-256 hash prefix of a URL', async () => {
         const hash = await hashUrl('https://example.com');
         expect(hash).toMatch(/^\[hash:[0-9a-f]{16}\]$/);
     });
 
-    test('同じURLで同じハッシュを返す', async () => {
+    test('returns the same hash for the same URL', async () => {
         const hash1 = await hashUrl('https://example.com');
         const hash2 = await hashUrl('https://example.com');
         expect(hash1).toBe(hash2);
     });
 
-    test('異なるURLで異なるハッシュを返す', async () => {
+    test('returns different hashes for different URLs', async () => {
         const hash1 = await hashUrl('https://example.com');
         const hash2 = await hashUrl('https://other.com');
         expect(hash1).not.toBe(hash2);
@@ -671,14 +671,14 @@ describe('hashUrl', () => {
 });
 
 describe('getNotificationHmacKey', () => {
-    test('新規HMAC鍵を生成して保存する', async () => {
+    test('generates and stores a new HMAC key', async () => {
         const key = await getNotificationHmacKey();
         expect(key).toBeDefined();
         expect(key.type).toBe('secret');
         expect(key.algorithm).toHaveProperty('name', 'HMAC');
     });
 
-    test('保存済みのHMAC鍵を読み込める', async () => {
+    test('loads a stored HMAC key', async () => {
         // 最初の呼び出しで鍵を生成・保存
         const key1 = await getNotificationHmacKey();
         // 2回目の呼び出しで保存済み鍵を読み込み
@@ -687,7 +687,7 @@ describe('getNotificationHmacKey', () => {
         expect(key2).toBeDefined();
     });
 
-    test('破損したストレージデータから新規鍵を生成する', async () => {
+    test('generates a new key from corrupted storage data', async () => {
         // isEncrypted()がtrueを返すが、復号化に失敗するデータを設定
         await chrome.storage.local.set({
             'notification-signature-key': {
@@ -824,7 +824,7 @@ describe('wrapSecretString / unwrapSecretString (hmac_secret encryption)', () =>
 });
 
 describe('verifyHmacSignature edge cases', () => {
-    test('空のデータでfalseを返す', async () => {
+    test('returns false for empty data', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -837,7 +837,7 @@ describe('verifyHmacSignature edge cases', () => {
         expect(isValid).toBe(false);
     });
 
-    test('不正な鍵で生成された署名は検証に失敗する', async () => {
+    test('fails to verify a signature made with a wrong key', async () => {
         const webcrypto = new Crypto();
         const key1 = await webcrypto.subtle.generateKey(
             { name: 'HMAC', hash: 'SHA-256' },
@@ -857,7 +857,7 @@ describe('verifyHmacSignature edge cases', () => {
 });
 
 describe('deriveKey', () => {
-    test('secretとsaltから暗号化キーを導出できる', async () => {
+    test('derives an encryption key from secret and salt', async () => {
         const { deriveKey } = await import('../index.js');
         const salt = generateSalt();
         const key = await deriveKey('secret', salt);
@@ -865,7 +865,7 @@ describe('deriveKey', () => {
         expect(key.type).toBe('secret');
     });
 
-    test('異なるsaltで異なるキーを導出する', async () => {
+    test('derives different keys from different salts', async () => {
         const { deriveKey } = await import('../index.js');
         const salt1 = generateSalt();
         const salt2 = generateSalt();

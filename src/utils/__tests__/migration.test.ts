@@ -30,7 +30,7 @@ describe('migration', () => {
   });
 
   describe('migrateToLightweightFormat', () => {
-    test('旧形式から新形式にマイグレーション', () => {
+    test('migrates from the old format to the new format', () => {
       // 【テスト目的】: migrateToLightweightFormat関数の基本動作を確認
       // 【テスト内容】: 旧形式のルールセットを新形式（ドメイン配列のみ）に変換する処理をテスト
       // 【期待される動作】: blockRules/exceptionRulesの配列からdomainのみを抽出してblockDomains/exceptionDomains配列を生成する
@@ -61,7 +61,7 @@ describe('migration', () => {
       });
     });
 
-    test('既に新形式の場合はそのまま返す', () => {
+    test('returns new-format input unchanged', () => {
       // 【テスト目的】: 新形式に対する検出と早期リターン機能の確認
       // 【テスト内容】: すでにblockDomains/exceptionDomainsを持つルールセットが変更されないことをテスト
       // 【期待される動作】: 新形式のルールセットはそのまま返される（新たなオブジェクト作成はされない）
@@ -77,7 +77,7 @@ describe('migration', () => {
       expect(result).toBe(newRules);
     });
 
-    test('空のルールセットをハンドル', () => {
+    test('handles an empty rule set', () => {
       // 【テスト目的】: 空データに対する堅牢性の確認
       // 【テスト内容】: 空の配列を含むルールセットのマイグレーションをテスト
       // 【期待される動作】: 空の配列に対してエラーが発生せず、適切なデフォルトmetadataが付与される
@@ -100,7 +100,7 @@ describe('migration', () => {
       });
     });
 
-    test('blockRulesまたはexceptionRulesが存在しない場合の処理', () => {
+    test('handles missing blockRules or exceptionRules', () => {
       // 【テスト目的】: プロパティ欠落に対する堅牢性の確認
       // 【テスト内容】: blockRulesまたはexceptionRulesがundefinedのケースをテスト
       // 【期待される動作】: デフォルトの空配列が使用され、空の結果が返される
@@ -124,7 +124,7 @@ describe('migration', () => {
       });
     });
 
-    test('metadataがない場合はデフォルト値を生成', () => {
+    test('generates default values when metadata is missing', () => {
       // 【テスト目的】: デフォルト値生成機能の確認
       // 【テスト内容】: metadataが欠落している場合の自動生成処理をテスト
       // 【期待される動作】: importedAtに現在時刻、ruleCountにルール数、migratedフラグがtrueで生成される
@@ -152,7 +152,7 @@ describe('migration', () => {
       });
     });
 
-    test('ワイルドカードを含むドメインも正しく抽出', () => {
+    test('extracts wildcard domains correctly', () => {
       // 【テスト目的】: ワイルドカードを含むドメインの抽出を確認
       // 【テスト内容】: *.example.comなどのワイルドカードパターンも正しく変換されることをテスト
       // 【期待される動作】: ドメイン文字列としてそのまま抽出される
@@ -196,7 +196,7 @@ describe('migration', () => {
       } as unknown as typeof chrome;
     });
 
-    test('旧形式のルール exists場合にマイグレーションを実行', async () => {
+    test('runs migration when old-format rules exist', async () => {
       // 【テスト目的】: chrome.storageから旧形式ルールの読み取りとマイグレーション実行を確認
       // 【テスト内容】: 保存された旧形式ルールを取得し、新形式に変換して保存する処理をテスト
       // 【期待される動作】: StorageKeys.UBLOCK_RULES経由で旧形式を取得し、新形式で保存する
@@ -238,7 +238,7 @@ describe('migration', () => {
       });
     });
 
-    test('既に新形式の場合はマイグレーションを実行しない', async () => {
+    test('skips migration when already in the new format', async () => {
       // 【テスト目的】: 新形式ルールの検出とスキップ動作を確認
       // 【テスト内容】: すでに新形式のルールが保存されている場合はマイグレーションをスキップする処理をテスト
       // 【期待される動作】: ルールが新形式の場合、getのみ実行され、setされずにfalseが返される
@@ -264,7 +264,7 @@ describe('migration', () => {
       expect(global.chrome.storage.local.set).not.toHaveBeenCalled();
     });
 
-    test('ルールデータがない場合はマイグレーションを実行しない', async () => {
+    test('skips migration when no rule data exists', async () => {
       // 【テスト目的】: ルール未保存時の動作を確認
       // 【テスト内容】: ストレージにuBlockルールが保存されていないケースをテスト
       // 【期待される動作】: getが実行され、setされずにfalseが返される
@@ -333,7 +333,7 @@ describe('migration rollback integrity', () => {
 });
 
 describe('cleanupOldBackups (via migrateUblockSettings)', () => {
-  test('古いバックアップを削除する', async () => {
+  test('deletes old backups', async () => {
     // 【テスト目的】: 保持期間を超えたバックアップがクリーンアップされることを確認
     // 【テスト内容】: 8日前のバックアップが存在する状態でmigrateUblockSettingsを実行
     // 【期待される動作】: cleanupOldBackupsがremoveを呼び、その後マイグレーションが実行される
@@ -371,7 +371,7 @@ describe('cleanupOldBackups (via migrateUblockSettings)', () => {
 });
 
 describe('migrateUblockSettings error handling', () => {
-  test('マイグレーション失敗時にロールバックを実行して元のエラーを再スロー', async () => {
+  test('rolls back and rethrows the original error when migration fails', async () => {
     // 【テスト目的】: マイグレーション中のエラー時にロールバックが実行されることを確認
     // 【テスト内容】: storage.setが2回目の呼び出し（マイグレーション保存時）で失敗
     // 【期待される動作】: restoreFromMigrationBackupが呼ばれ、元のエラーが再スローされる
@@ -429,7 +429,7 @@ describe('migrateUblockSettings error handling', () => {
     consoleSpy.mockRestore();
   });
 
-  test('マイグレーション失敗後ロールバックが成功した場合は元のエラーを再スロー', async () => {
+  test('rethrows the original error when rollback succeeds after migration failure', async () => {
     // 【テスト目的】: マイグレーション失敗→ロールバック成功時に元のエラーがそのまま再スローされることを確認
     // 【テスト内容】: storage.setがマイグレーション保存時のみ失敗し、restoreFromMigrationBackupは成功するケース
     // 【期待される動作】: rollback成功ログが出力され、元のエラー（Storage write failed）が再スローされる
@@ -485,7 +485,7 @@ describe('migrateUblockSettings error handling', () => {
     consoleWarnSpy.mockRestore();
   });
 
-  test('マイグレーション失敗かつロールバックも失敗した場合に複合エラーをスロー', async () => {
+  test('throws a combined error when migration and rollback both fail', async () => {
     // 【テスト目的】: マイグレーションとロールバック両方が失敗した場合の動作を確認
     // 【テスト内容】: storage.setが失敗し、restoreFromMigrationBackupもバックアップ不在で失敗
     // 【期待される動作】: 両方のエラーを含む新しいエラーがスローされる
@@ -521,7 +521,7 @@ describe('migrateUblockSettings error handling', () => {
 });
 
 describe('initializeTrancoVersion', () => {
-  test('非推奨警告を出力してTrustDb.initializeを委譲呼び出し', async () => {
+  test('warns about deprecation and delegates to TrustDb.initialize', async () => {
     // 【テスト目的】: 非推奨関数がTrustDbに委譲することを確認
     // 【テスト内容】: initializeTrancoVersionがgetTrustDb().initialize()を呼び出す
     // 【期待される動作】: 警告ログ出力後、TrustDbのinitializeメソッドが実行される

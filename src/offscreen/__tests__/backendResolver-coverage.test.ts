@@ -69,7 +69,7 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
       { name: 'IDB優先 (IDB+Fallback)', state: { opfsWorker: false, idbEngine: true, usingFallbackStorage: true, fallbackStorage: true }, expected: 'idb' },
     ];
 
-    it.each(table)('$name: $expected を返す', ({ state, expected }) => {
+    it.each(table)('$name: returns $expected', ({ state, expected }) => {
       expect(resolveBackend(state)).toBe(expected);
     });
   });
@@ -84,7 +84,7 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
       { caps: { opfsDirectory: true, syncAccessHandle: true, worker: false }, expected: { opfsDirectory: true, syncAccessHandle: true, worker: false } },
     ];
 
-    it.each(capsTable)('caps $caps をそのまま返す', ({ caps, expected }) => {
+    it.each(capsTable)('returns caps $caps as-is', ({ caps, expected }) => {
       mockDetectLiveVfsStrategy.mockReturnValue({ caps, strategy: caps.opfsDirectory ? 'opfs-sync-worker' : 'fallback' } as never);
       const result = detectOpfsCapabilitiesForResolver();
       expect(result).toEqual(expected);
@@ -94,19 +94,19 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
 
   // ── createBackend: 4パターン + Noop フォールバック ─────────────────────
   describe('createBackend — 動的 import と Noop フォールバック', () => {
-    it('opfs: OpfsWorkerBackend を返す', async () => {
+    it('opfs: returns OpfsWorkerBackend', async () => {
       const ctx = makeContext({ opfsWorker: {} });
       const backend = await createBackend(ctx, 'opfs');
       expect(backend).toBe(mockOpfsBackend);
     });
 
-    it('idb: idbEngine が存在すれば IdbVfsBackend を返す', async () => {
+    it('idb: returns IdbVfsBackend when idbEngine exists', async () => {
       const ctx = makeContext({ idbEngine: {} });
       const backend = await createBackend(ctx, 'idb');
       expect(backend).toBe(mockIdbBackend);
     });
 
-    it('idb: idbEngine が null なら init を呼び出してから IdbVfsBackend を返す (init で engine が立つ)', async () => {
+    it('idb: calls init then returns IdbVfsBackend when idbEngine is null (init brings the engine up)', async () => {
       const init = vi.fn().mockImplementation(async function (this: unknown) {
         (this as { idbEngine: unknown }).idbEngine = {};
       });
@@ -121,7 +121,7 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
       expect(backend).toBe(mockIdbBackend);
     });
 
-    it('idb: idbEngine が null のままなら NoopBackend にフォールバック', async () => {
+    it('idb: falls back to NoopBackend when idbEngine stays null', async () => {
       const ctx = makeContext({ idbEngine: null, init: vi.fn().mockResolvedValue(undefined) } as never);
       const backend = await createBackend(ctx, 'idb');
       // NoopBackend は healthCheck が false になる backend
@@ -129,19 +129,19 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
       expect(health.success).toBe(false);
     });
 
-    it('fallback: fallbackStorage があれば FallbackStorageAdapter を返す', async () => {
+    it('fallback: returns FallbackStorageAdapter when fallbackStorage exists', async () => {
       const ctx = makeContext({ fallbackStorage: {} });
       const backend = await createBackend(ctx, 'fallback');
       expect(backend).toBe(mockFallbackBackend);
     });
 
-    it('fallback: fallbackStorage が null なら NoopBackend にフォールバック', async () => {
+    it('fallback: falls back to NoopBackend when fallbackStorage is null', async () => {
       const ctx = makeContext({ fallbackStorage: null });
       const backend = await createBackend(ctx, 'fallback');
       expect((await backend.healthCheck()).success).toBe(false);
     });
 
-    it('none: NoopBackend を返す', async () => {
+    it('none: returns NoopBackend', async () => {
       const ctx = makeContext();
       const backend = await createBackend(ctx, 'none');
       expect((await backend.healthCheck()).success).toBe(false);
@@ -150,7 +150,7 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
       expect(status.success).toBe(false);
     });
 
-    it('未知の resolved でも NoopBackend (exhaustive switch の default)', async () => {
+    it('returns NoopBackend even for unknown resolved values (exhaustive switch default)', async () => {
       const ctx = makeContext();
       const backend = await createBackend(ctx, 'none' as never);
       expect((await backend.healthCheck()).success).toBe(false);

@@ -1,173 +1,158 @@
 /**
- * @jest-environment jsdom
- */
-
-/**
  * models-dev-dialog-accessibility.test.ts
- * Accessibility tests for models-dev-dialog.html
- * Validates ARIA attributes for WCAG 2.1 Level AA compliance
+ * Accessibility tests for the Models.dev dialog.
+ *
+ * PBI 2026-09-11-01 (round 7): the static HTML twin was deleted — the TS
+ * class builds the dialog via createDialog(). This test now instantiates the
+ * real dialog and inspects the SHIPPED DOM (previously it string-matched a
+ * drifted static copy whose a11y attributes the implementation did not fully
+ * meet — the parity gaps were closed in the same change).
  */
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-import { vi } from 'vitest';;
+const source = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), '..', 'models-dev-dialog.ts'),
+  'utf-8'
+);
+
+async function createMountedDialog() {
+  const { ModelsDevDialog } = await import('../models-dev-dialog.js');
+  const dialog = new ModelsDevDialog({ onCancel: vi.fn(), onSave: vi.fn() } as never);
+  await dialog.show();
+  return dialog;
+}
 
 describe('Models Dev Dialog - Accessibility (ARIA Attributes)', () => {
-  let htmlContent: string;
-
-  beforeAll(async () => {
-    // Load the HTML file as text
-    const fs = (await import('fs'));
-    const path = (await import('path'));
-
-    const { readFileSync } = fs;
-    const { resolve } = path;
-
-    htmlContent = readFileSync(
-      resolve(__dirname, '../models-dev-dialog.html'),
-      'utf-8'
-    );
+  beforeEach(() => {
+    vi.spyOn(window, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
   });
 
-  describe('Error message area', () => {
-    it('should have aria-live="polite" on error message element in HTML source', () => {
-      expect(htmlContent).toContain('id="dialog-error"');
-      expect(htmlContent).toContain('aria-live="polite"');
-      // Verify they are close together (same element)
-      const errorElementMatch = htmlContent.match(/id="dialog-error"[^>]*aria-live="polite"/);
-      expect(errorElementMatch).not.toBeNull();
-    });
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
 
-    it('should have error-message class on dialog-error element', () => {
-      const errorElementMatch = htmlContent.match(/id="dialog-error"[^>]*class="[^"]*error-message[^"]*"/);
-      expect(errorElementMatch).not.toBeNull();
+  async function mounted(): Promise<HTMLElement> {
+    const dialog = await createMountedDialog();
+    return (dialog as unknown as { dialog: HTMLElement }).dialog;
+  }
+
+  describe('Error message area', () => {
+    it('has aria-live="polite" on the shipped dialog-error element', async () => {
+      const el = await mounted();
+      const error = el.querySelector('#dialog-error');
+      expect(error).not.toBeNull();
+      expect(error!.getAttribute('aria-live')).toBe('polite');
+      expect(error!.className).toContain('error-message');
     });
   });
 
   describe('Loading state', () => {
-    it('should have aria-live="polite" on loading element in HTML source', () => {
-      expect(htmlContent).toContain('id="dialog-loading"');
-      expect(htmlContent).toContain('aria-live="polite"');
-      const loadingElementMatch = htmlContent.match(/id="dialog-loading"[^>]*aria-live="polite"/);
-      expect(loadingElementMatch).not.toBeNull();
-    });
-
-    it('should have aria-busy="true" on loading element', () => {
-      expect(htmlContent).toContain('aria-busy="true"');
-      const loadingElementWithBusy = htmlContent.match(/id="dialog-loading"[^>]*aria-busy="true"/);
-      expect(loadingElementWithBusy).not.toBeNull();
-    });
-
-    it('should have loading-state class', () => {
-      expect(htmlContent).toContain('loading-state');
+    it('has aria-live="polite" and aria-busy on the shipped dialog-loading element', async () => {
+      const el = await mounted();
+      const loading = el.querySelector('#dialog-loading');
+      expect(loading).not.toBeNull();
+      expect(loading!.getAttribute('aria-live')).toBe('polite');
+      expect(loading!.getAttribute('aria-busy')).toBe('true');
+      expect(loading!.className).toContain('loading-state');
     });
   });
 
   describe('API Key input', () => {
-    it('should have aria-required="true" on API key input in HTML source', () => {
-      expect(htmlContent).toContain('id="api-key-input"');
-      expect(htmlContent).toContain('aria-required="true"');
-      const apiKeyInputMatch = htmlContent.match(/id="api-key-input"[^>]*aria-required="true"/);
-      expect(apiKeyInputMatch).not.toBeNull();
+    it('has aria-required="true" on the API key input', async () => {
+      const el = await mounted();
+      const input = el.querySelector('#api-key-input');
+      expect(input).not.toBeNull();
+      expect(input!.getAttribute('aria-required')).toBe('true');
+      expect(input!.getAttribute('type')).toBe('password');
     });
 
-    it('should have type="password" on API key input', () => {
-      // Look for the input with id="api-key-input" and check it has type="password"
-      // Handle both type before/after id patterns
-      const apiKeyInputMatch = htmlContent.match(/(?:type="password"[^>]*id="api-key-input"|id="api-key-input"[^>]*type="password")/);
-      expect(apiKeyInputMatch).not.toBeNull();
-    });
-
-    it('should have associated label', () => {
-      expect(htmlContent).toContain('label for="api-key-input"');
+    it('has an associated label', async () => {
+      const el = await mounted();
+      expect(el.querySelector('label[for="api-key-input"]')).not.toBeNull();
+      expect(el.querySelector('#api-key-input')).not.toBeNull();
     });
   });
 
   describe('Modal dialog accessibility', () => {
-    it('should have role="dialog"', () => {
-      expect(htmlContent).toContain('role="dialog"');
+    it('has role="dialog" and aria-modal="true"', async () => {
+      const el = await mounted();
+      expect(el.getAttribute('role')).toBe('dialog');
+      expect(el.getAttribute('aria-modal')).toBe('true');
     });
 
-    it('should have aria-modal="true"', () => {
-      expect(htmlContent).toContain('aria-modal="true"');
-    });
-
-    it('should have aria-labelledby pointing to title', () => {
-      expect(htmlContent).toContain('aria-labelledby="dialog-title"');
-      expect(htmlContent).toContain('id="dialog-title"');
+    it('has aria-labelledby pointing to the title', async () => {
+      const el = await mounted();
+      expect(el.getAttribute('aria-labelledby')).toBe('dialog-title');
+      expect(el.querySelector('#dialog-title')).not.toBeNull();
     });
   });
 
   describe('Tab navigation (ARIA tab pattern)', () => {
-    it('should have tablist role', () => {
-      expect(htmlContent).toContain('role="tablist"');
-    });
-
-    it('should have aria-label on tablist', () => {
-      expect(htmlContent).toContain('aria-label="Provider categories"');
-    });
-
-    it('should have all tabs with role="tab"', () => {
-      const tabMatches = htmlContent.match(/role="tab"/g);
-      expect(tabMatches).not.toBeNull();
-      expect(tabMatches!.length).toBeGreaterThan(0);
-    });
-
-    it('should have aria-controls pointing to provider-list', () => {
-      expect(htmlContent).toContain('aria-controls="provider-list"');
-    });
-
-    it('should have tabpanel role', () => {
-      expect(htmlContent).toContain('role="tabpanel"');
-    });
-
-    it('should have aria-labelledby on tabpanel', () => {
-      const tabPanelMatch = htmlContent.match(/id="provider-list"[^>]*aria-labelledby="tab-all"/);
-      expect(tabPanelMatch).not.toBeNull();
+    it('has a tablist with aria-label and tab buttons', async () => {
+      const el = await mounted();
+      expect(el.querySelector('[role="tablist"]')!.getAttribute('aria-label')).toBe('Provider categories');
+      expect(el.querySelectorAll('[role="tab"]').length).toBeGreaterThan(0);
+      expect(el.querySelector('[role="tabpanel"]')).not.toBeNull();
+      expect(el.querySelector('#provider-list')!.getAttribute('aria-labelledby')).toBe('tab-all');
     });
   });
 
   describe('Button accessibility', () => {
-    it('should have type="button" on all buttons', () => {
-      const buttonMatches = htmlContent.match(/type="button"/g);
-      expect(buttonMatches).not.toBeNull();
-      expect(buttonMatches!.length).toBeGreaterThan(0);
+    it('has type="button" on all buttons and a labelled close button', async () => {
+      const el = await mounted();
+      const buttons = el.querySelectorAll('button');
+      expect(buttons.length).toBeGreaterThan(0);
+      for (const b of buttons) {
+        expect(b.getAttribute('type')).toBe('button');
+      }
+      expect(el.querySelector('#dialog-close')!.getAttribute('aria-label')).toContain('Close');
     });
 
-    it('should have non-empty aria-label on close button', () => {
-      const closeButtonMatch = htmlContent.match(/id="dialog-close"[^>]*aria-label="Close"/);
-      expect(closeButtonMatch).not.toBeNull();
-    });
-
-    it('should have data-i18n attributes on buttons with text', () => {
-      expect(htmlContent).toContain('data-i18n="cancel"');
-      expect(htmlContent).toContain('data-i18n="save"');
+    it('keeps data-i18n on the footer buttons (cancel/save)', async () => {
+      const el = await mounted();
+      expect(el.querySelector('#dialog-cancel')!.getAttribute('data-i18n')).toBe('cancel');
+      expect(el.querySelector('#dialog-save')!.getAttribute('data-i18n')).toBe('save');
     });
   });
 
   describe('Input accessibility', () => {
-    it('should have placeholder for search input', () => {
-      const searchInputMatch = htmlContent.match(/id="provider-search"[^>]*placeholder/);
-      expect(searchInputMatch).not.toBeNull();
-    });
-
-    it('should have data-i18n-placeholder for search input', () => {
-      expect(htmlContent).toContain('data-i18n-placeholder="searchPlaceholder"');
-    });
-
-    it('should have placeholder for model input', () => {
-      const modelInputMatch = htmlContent.match(/id="model-input"[^>]*placeholder/);
-      expect(modelInputMatch).not.toBeNull();
+    it('has placeholders on search and model inputs', async () => {
+      const el = await mounted();
+      expect(el.querySelector('#provider-search')!.getAttribute('placeholder')).toBeTruthy();
+      expect(el.querySelector('#model-input')!.getAttribute('placeholder')).toBeTruthy();
     });
   });
 
   describe('Label associations', () => {
-    it('should have model label associated with model input', () => {
-      expect(htmlContent).toContain('label for="model-input"');
-      expect(htmlContent).toContain('id="model-input"');
+    it('associates model and API key labels', async () => {
+      const el = await mounted();
+      expect(el.querySelector('label[for="model-input"]')).not.toBeNull();
+      expect(el.querySelector('label[for="api-key-input"]')).not.toBeNull();
+    });
+  });
+
+  describe('Esc handling (PBI 2026-09-11-01)', () => {
+    it('routes Escape through the focusTrap closeCallback — hide() is idempotent', async () => {
+      const dialog = await createMountedDialog();
+      const el = (dialog as unknown as { dialog: HTMLElement }).dialog;
+      const onCancel = vi.fn();
+      (dialog as unknown as { options: { onCancel: unknown } }).options.onCancel = onCancel;
+      // Press Escape twice: the focusTrap closeCallback runs hide(); the
+      // second invocation (from any stray path) must be a no-op.
+      dialog.hide();
+      dialog.hide();
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(el.classList.contains('hidden')).toBe(true);
     });
 
-    it('should have apiKey label associated with apiKey input', () => {
-      expect(htmlContent).toContain('label for="api-key-input"');
-      expect(htmlContent).toContain('id="api-key-input"');
+    it('keeps the source free of a document-level Esc listener', () => {
+      // The deleted duplicate: document.addEventListener('keydown', Escape → hide()).
+      expect(source).not.toMatch(/document\.addEventListener\(\s*['"]keydown['"]/);
     });
   });
 });

@@ -67,7 +67,13 @@ export class DeadlineTimer {
         this.stop(); // idempotent: a stray direct call must not leak a second timer
         this.refreshCachesIfStale();
         if (this.deadlineMs === null) {
-            this.deadlineMs = pageState.startTime + this.cachedThresholds!.minDuration * 1000;
+            // PBI 2026-09-11-01 (round 6): refreshCachesIfStale above guarantees
+            // cachedThresholds is built (a null forces stale = true). The old
+            // non-null assertion hid that contract; this throw states it.
+            if (this.cachedThresholds === null) {
+                throw new Error('DeadlineTimer: thresholds unavailable after refresh');
+            }
+            this.deadlineMs = pageState.startTime + this.cachedThresholds.minDuration * 1000;
         }
         const remaining = Math.max(0, this.deadlineMs - this.deps.clock());
         pageState.checkIntervalId = this.deps.scheduler.schedule(() => {
@@ -93,15 +99,19 @@ export class DeadlineTimer {
         }
     }
 
-    get thresholds(): VisitGateThresholds {
-        return this.cachedThresholds!;
+    get thresholds(): VisitGateThresholds | null {
+        // PBI 2026-09-11-01 (round 6): mirrors `gate` — pre-init readers get
+        // null instead of a crash from the non-null assertion.
+        return this.cachedThresholds;
     }
 
     get gate(): VisitGate | null {
         return this.cachedGate;
     }
 
-    get isE2E(): boolean | null {
-        return this.isE2ECached;
+    get isE2E(): boolean {
+        // PBI 2026-09-11-01 (round 6): non-null contract — until initialize()
+        // runs (or refresh caches) the safe default is "not an e2e test".
+        return this.isE2ECached ?? false;
     }
 }

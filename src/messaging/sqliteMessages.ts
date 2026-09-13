@@ -129,8 +129,11 @@ export type OffscreenHealthResponse =
 /** INSERT / AUDIT_LOG_INSERT: returns the new row id. */
 export type OffscreenInsertResponse = { success: true; id: number } | OffscreenFailure;
 
-/** INSERT_BATCH / COUNT: returns a count. */
-export type OffscreenCountResponse = { success: true; count: number } | OffscreenFailure;
+/** INSERT_BATCH / COUNT: returns a count. INSERT_BATCH additionally reports
+ * the duplicate-skip count (PBI 2026-09-11-07). */
+export type OffscreenCountResponse =
+  | { success: true; count: number; inserted?: number; skipped?: number }
+  | OffscreenFailure;
 
 /** QUERY / SEARCH / AUDIT_LOG_QUERY: returns rows + total. */
 export type OffscreenQueryResponse = {
@@ -144,6 +147,17 @@ export type OffscreenWriteResponse = { success: true } | OffscreenFailure;
 
 /** TOGGLE_STAR: returns the new star state. */
 export type OffscreenToggleStarResponse = { success: true; is_starred: number } | OffscreenFailure;
+
+// ============================================================================
+// Legacy storage locations (PBI 2026-09-11-06) — pre-migration names that must
+// never change. Single source for the offscreen probes, the migration readers,
+// and the diagnostics labels; previously re-declared in 4 files with a
+// comment-enforced "must match" contract.
+// ============================================================================
+
+export const LEGACY_OPFS_POOL_DIR = 'yasumaro-opfs';
+export const LEGACY_OPFS_DB_FILENAME = 'yasumaro.db';
+export const LEGACY_IDB_NAME = 'idb-batch-atomic';
 
 /** STATUS: diagnostic info, present even on a partially-initialized DB. */
 export type OffscreenStatusResponse = {
@@ -165,6 +179,42 @@ export type OffscreenStatusResponse = {
 } | OffscreenFailure;
 
 export type OffscreenStatusData = Extract<OffscreenStatusResponse, { success: true }>;
+
+/**
+ * Single field list for every STATUS enrichment beyond the universal base
+ * (initialized / path / fallback) — PBI 2026-09-11-03 (round 5). All hops
+ * derive from this type:
+ * - producer: `src/offscreen/sqliteStatus.ts` (collectMigrationExtras)
+ * - gateway: `offscreenGateway.status()` pick (derived via pickStatusExtras)
+ * - validator: `decodeStatusExtras` (decoder table keyed by this type)
+ * - dashboard: `getSqliteStatus` return type
+ * Adding a field here forces each hop to compile-time acknowledge it — the
+ * silent-drop class from the round-4 fix is gone.
+ */
+export type SqliteStatusExtras = {
+  fts5?: boolean;
+  initError?: string;
+  compileOptions?: string[];
+  compileOptionsSource?: 'opfs-worker' | 'idb' | 'fallback';
+  opfsMigrationV2Done?: boolean;
+  opfsMigrationV2LastAttemptedAt?: string | null;
+  opfsMigrationV2CompletedAt?: string | null;
+  opfsMigrationV2RecordCount?: number | null;
+  idbMigrationV2Done?: boolean;
+  opfsLegacyDbPath?: string | null;
+  idbLegacyDbName?: string | null;
+};
+
+/** Dashboard-facing STATUS shape (base + extras). fts5 is guaranteed present
+ * at this hop (requiredBoolean in the decode) — backend shapes carry it
+ * optional via SqliteStatusExtras. */
+export type SqliteStatusResult = {
+  initialized: boolean;
+  fallback: boolean;
+  path: string;
+  fts5: boolean;
+} & Omit<SqliteStatusExtras, 'fts5'>;
+
 
 /** EXPORT / BACKUP: binary data as a JSON-safe number array. */
 export type OffscreenBinaryResponse = { success: true; data: number[] } | OffscreenFailure;
@@ -309,4 +359,13 @@ export type OffscreenResponse =
   | OffscreenArchivePrepareIncomingResponse
   | OffscreenArchiveRestorePreviewResponse
   | OffscreenArchiveRestoreResponse
-  | OffscreenArchivePurgeResponse;
+  | OffscreenArchivePurgeResponse
+  // PBI 2026-09-11-03 (round 5): archive session responses were sendable but
+  // missing here — an exhaustive switch over OffscreenResponse silently
+  // excluded real traffic.
+  | OffscreenArchiveOpenResponse
+  | OffscreenArchiveQueryResponse
+  | OffscreenArchiveUpdateResponse
+  | OffscreenArchiveSaveResponse
+  | OffscreenArchiveCloseResponse
+  | OffscreenArchiveStatusResponse;

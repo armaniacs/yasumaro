@@ -102,6 +102,35 @@ Yasumaroで使用するエラーコードの定義と使用ガイドラインで
 | `UNKN_001` | UNKNOWN_ERROR | 不明なエラー | Low |
 | `INT_001` | INTERNAL_ERROR | 内部エラー | Critical |
 
+### Trust Database 関連 (TRUST_, TRANCO_, BLM_)
+
+| コード | 名称 | 説明 | 重要度 |
+|--------|------|------|--------|
+| `TRUST_INIT_001` | TRUST_DB_INIT_FAILED | 信頼 DB の初期化失敗 | High |
+| `TRUST_NOT_INIT_001` | TRUST_DB_NOT_INITIALIZED | 信頼 DB が未初期化 | High |
+| `TRUST_MIG_001` | TRUST_DB_MIGRATION_FAILED | 信頼 DB のマイグレーション失敗 | High |
+| `TRANCO_FETCH_001` | TRANCO_FETCH_FAILED | Tranco リストの取得失敗 | Medium |
+| `TRANCO_PARSE_001` | TRANCO_PARSE_FAILED | Tranco リストの解析失敗 | Medium |
+| `BLM_FLT_001` | BLOOM_FILTER_ERROR | Bloom フィルタの操作エラー | Medium |
+
+### CSP/AI プロバイダー関連 (CSP_)
+
+| コード | 名称 | 説明 | 重要度 |
+|--------|------|------|--------|
+| `CSP_AI_001` | UNKNOWN_AI_PROVIDER | 未登録の AI プロバイダー名 | Medium |
+
+### UI/Badge 関連 (UI_)
+
+| コード | 名称 | 説明 | 重要度 |
+|--------|------|------|--------|
+| `UI_BADGE_001` | BADGE_UPDATE_FAILED | アクションバッジの更新失敗 | Low |
+
+### Permission Manager 関連 (PERM_)
+
+| コード | 名称 | 説明 | 重要度 |
+|--------|------|------|--------|
+| `PERM_REQ_001` | PERMISSION_REQUIRED | 追加のホスト権限が必要（ユーザー操作が必要な状態） | Medium |
+
 ## 使用例
 
 ### TypeScript
@@ -151,7 +180,7 @@ await logWarn(
 新しいエラーコードを追加する際の手順：
 
 1. **カテゴリ決定**: 該当するカテゴリを選択または新規作成
-2. **コード定義**: `src/utils/logger.ts` の `ErrorCode` オブジェクトに追加
+2. **コード定義**: `src/utils/logger/types.ts` の `ErrorCode` オブジェクトに追加
 3. **ドキュメント更新**: 本ファイルにコードの説明を追加
 4. **使用実装**: 適切な箇所で `logError()` / `logWarn()` 等で使用
 
