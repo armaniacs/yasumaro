@@ -45,4 +45,45 @@ test.describe('Dashboard bug report link @extension', () => {
     const createdUrls = await page.evaluate(() => (window as any).__createdTabUrls as string[]);
     expect(createdUrls.length).toBe(0);
   });
+
+  test('sidebar button opens the same preview from any panel, without navigating to Diagnostics', async ({ dashboardPage: page }) => {
+    // Stay on the default (General) panel — never click into Diagnostics.
+    await expect(page.locator('#panel-diagnostics')).toBeHidden();
+
+    await page.locator('#sidebarReportBugBtn').click();
+
+    const modal = page.locator('#bugReportPreviewModal');
+    await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+
+    const previewText = await page.locator('#bugReportPreviewContent').inputValue();
+    expect(previewText).not.toContain(SEEDED_API_KEY);
+    expect(previewText).toContain('gemini');
+
+    await page.locator('#bugReportOpenBtn').click();
+    await expect(modal).toHaveJSProperty('open', false, { timeout: 15000 });
+
+    const createdUrls = await page.evaluate(() => (window as any).__createdTabUrls as string[]);
+    expect(createdUrls.length).toBeGreaterThanOrEqual(1);
+    expect(createdUrls[createdUrls.length - 1]).toContain('https://github.com/armaniacs/yasumaro/issues/new');
+  });
+
+  test('the diagnostics panel button and the sidebar button both work in the same session', async ({ dashboardPage: page }) => {
+    // Diagnostics panel button first.
+    await page.locator('[data-panel="panel-diagnostics"]').click();
+    await page.locator('#diagReportBugBtn').click();
+    const modal = page.locator('#bugReportPreviewModal');
+    await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+    await page.locator('#bugReportOpenBtn').click();
+    await expect(modal).toHaveJSProperty('open', false, { timeout: 15000 });
+
+    // Then the sidebar button, in the same page session.
+    await page.locator('[data-panel="panel-general"]').click();
+    await page.locator('#sidebarReportBugBtn').click();
+    await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+    await page.locator('#bugReportOpenBtn').click();
+    await expect(modal).toHaveJSProperty('open', false, { timeout: 15000 });
+
+    const createdUrls = await page.evaluate(() => (window as any).__createdTabUrls as string[]);
+    expect(createdUrls.length).toBe(2);
+  });
 });
