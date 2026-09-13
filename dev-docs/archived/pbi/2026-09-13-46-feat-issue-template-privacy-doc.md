@@ -25,10 +25,10 @@ Scenario: ユーザーがプライバシーポリシーでissue報告時の情�
 ```
 
 ## 受け入れ基準
-- [ ] `.github/ISSUE_TEMPLATE/bug_report.md` が新規作成され、既存 `.github/pull_request_template.md` と同様のMarkdown構成に準拠している
-- [ ] `public/PRIVACY.md` の「Third-Party Services」セクションにissue報告機能の記述が追加されている
-- [ ] `docs/PRIVACY.md` に同一内容が反映されている（CLAUDE.md記載のPRIVACY.md同期ルール順守）
-- [ ] 自動送信ではなくユーザーの明示的操作が必要である旨が明記されている
+- [x] `.github/ISSUE_TEMPLATE/bug_report.md` が新規作成され、既存 `.github/pull_request_template.md` と同様のMarkdown構成に準拠している
+- [x] `public/PRIVACY.md` の「Third-Party Services」セクションにissue報告機能の記述が追加されている
+- [x] `docs/PRIVACY.md` に同一内容が反映されている（CLAUDE.md記載のPRIVACY.md同期ルール順守）
+- [x] 自動送信ではなくユーザーの明示的操作が必要である旨が明記されている
 
 ## テスト戦略
 - E2E: なし（本PBIはドキュメントのみ。E2E検証はPBI 51の `dashboard-issue-report.spec.ts` で行う）
@@ -39,6 +39,6 @@ Scenario: ユーザーがプライバシーポリシーでissue報告時の情�
 1pt（ドキュメント作成のみ、コード変更なし）
 
 ## Definition of Done
-- [ ] 全BDDシナリオの内容が実際のファイルに反映されている
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` が完全一致している
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオの内容が実際のファイルに反映されている
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` が完全一致している
+- [x] コードレビュー完了
