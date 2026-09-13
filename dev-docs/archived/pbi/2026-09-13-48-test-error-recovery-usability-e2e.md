@@ -30,10 +30,10 @@ Scenario: ネットワーク断の状態で保存を実行するとわかりや�
 ```
 
 ## 受け入れ基準
-- [ ] `testDir/e2e/usability/dashboard-error-recovery.spec.ts` が新規作成されている
-- [ ] AIプロバイダー未設定・Obsidian未接続・ネットワーク断の3パターンでエラーメッセージ文言を検証している
-- [ ] 各エラーメッセージに「原因」と「次に取るべき行動」の両方が含まれることを検証している
-- [ ] 単なる汎用エラー文言のみのケースをFAILとする基準が実装されている
+- [x] `testDir/e2e/usability/dashboard-error-recovery.spec.ts` が新規作成されている
+- [x] AIプロバイダー未設定・Obsidian未接続・ネットワーク断の3パターンでエラーメッセージ文言を検証している
+- [x] 各エラーメッセージに「原因」と「次に取るべき行動」の両方が含まれることを検証している
+- [x] 単なる汎用エラー文言のみのケースをFAILとする基準が実装されている
 
 ## テスト戦略
 - E2E: `testDir/e2e/usability/dashboard-error-recovery.spec.ts`（`@usability`タグ、既存`dashboard.fixture.ts`パターンを再利用。ネットワーク断はPlaywrightの`context.setOffline(true)`を利用）
@@ -44,6 +44,6 @@ Scenario: ネットワーク断の状態で保存を実行するとわかりや�
 2pt（3パターンのエラー誘発シナリオを1ファイルに実装するため、通常のE2Eシナリオよりやや工数大）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run test:e2e:usability` で本テストがPASSする
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run test:e2e:usability` で本テストがPASSする
+- [x] コードレビュー完了
