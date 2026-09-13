@@ -238,6 +238,102 @@ function getCurrentEngineLabel(snap: DiagnosticsSnapshot): string {
   return getMessage('diagMigrationEngineUnknown') || 'Unknown';
 }
 
+/** Hints are keyed so the renderer can map each to its own DOM element without re-deriving conditions. */
+export type MigrationHintKind = 'noAbsolutePath' | 'idbExplanation' | 'opfsCheckingStale';
+
+export interface MigrationOpfsStatus {
+  done: boolean;
+  notApplicable: boolean;
+  checking: boolean;
+  warn: boolean;
+  legacyPath: string | null | undefined;
+  lastAttemptedAt: string | null | undefined;
+  completedAt: string | null | undefined;
+  recordCount: number | null | undefined;
+}
+
+export interface MigrationIdbStatus {
+  done: boolean;
+  notApplicable: boolean;
+  warn: boolean;
+  legacyName: string | null | undefined;
+}
+
+export interface MigrationStatus {
+  overall: {
+    allDone: boolean;
+    checking: boolean;
+    warn: boolean;
+  };
+  opfs: MigrationOpfsStatus;
+  idb: MigrationIdbStatus;
+  hints: MigrationHintKind[];
+}
+
+/**
+ * Pure domain judgment for the legacy-DB migration status — no DOM, no i18n.
+ * Kept separate from renderMigrationSection so the branching below (done vs.
+ * not-applicable vs. checking vs. pending/warn) is unit-testable without jsdom.
+ */
+export function deriveMigrationStatus(sqlite: DiagnosticsSnapshot['sqlite']): MigrationStatus {
+  const opfsDone = sqlite?.opfsMigrationV2Done ?? false;
+  const idbDone = sqlite?.idbMigrationV2Done ?? false;
+
+  // The live existence check (opfsLegacyDbPath / idbLegacyDbName) is the
+  // ground truth for "is there anything to migrate at all" — it is queried
+  // fresh on every diagnostics load, unlike the Done flags below which only
+  // update once the migration routine actually runs. When the legacy source
+  // is confirmed absent, "not done" cannot mean "failed"; it can only mean
+  // "the flag hasn't caught up yet" or "nothing was ever there to migrate" —
+  // either way, not a warning-worthy state.
+  const opfsLegacyPath = sqlite?.opfsLegacyDbPath;
+  const idbLegacyName = sqlite?.idbLegacyDbName;
+  const opfsNotApplicable = !opfsDone && opfsLegacyPath === null;
+  const idbNotApplicable = !idbDone && idbLegacyName === null;
+  const allDone = (opfsDone || opfsNotApplicable) && (idbDone || idbNotApplicable);
+
+  // OPFS side additionally sets LAST_ATTEMPTED_AT before the migration runs
+  // and RECORD_COUNT after it finishes; their absence — with a legacy DB that
+  // DOES exist — means the migration routine hasn't executed yet (offscreen
+  // not initialized), distinct from "ran but not done" (a real failure state).
+  const opfsAttempted = sqlite?.opfsMigrationV2LastAttemptedAt != null
+    || sqlite?.opfsMigrationV2CompletedAt != null
+    || sqlite?.opfsMigrationV2RecordCount != null;
+  const opfsChecking = !opfsDone && !opfsNotApplicable && !opfsAttempted;
+  const opfsWarn = !opfsDone && !opfsNotApplicable && !opfsChecking;
+  const idbWarn = !idbDone && !idbNotApplicable;
+
+  const hints: MigrationHintKind[] = ['noAbsolutePath', 'idbExplanation'];
+  if (opfsChecking) {
+    hints.push('opfsCheckingStale');
+  }
+
+  return {
+    overall: {
+      allDone,
+      checking: opfsChecking,
+      warn: !allDone && !opfsChecking,
+    },
+    opfs: {
+      done: opfsDone,
+      notApplicable: opfsNotApplicable,
+      checking: opfsChecking,
+      warn: opfsWarn,
+      legacyPath: opfsLegacyPath,
+      lastAttemptedAt: sqlite?.opfsMigrationV2LastAttemptedAt,
+      completedAt: sqlite?.opfsMigrationV2CompletedAt,
+      recordCount: sqlite?.opfsMigrationV2RecordCount,
+    },
+    idb: {
+      done: idbDone,
+      notApplicable: idbNotApplicable,
+      warn: idbWarn,
+      legacyName: idbLegacyName,
+    },
+    hints,
+  };
+}
+
 function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el) return;
 
@@ -250,99 +346,79 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
   el.appendChild(makeStatRow(getMessage('diagMigrationRecordCount') || 'Saved record count', snap.storage.savedUrls));
   el.appendChild(makeStatRow(getMessage('diagMigrationStorageUsed') || 'Storage used (whole extension)', `${snap.storage.bytesUsedKb} KB`));
 
-  const opfsDone = snap.sqlite.opfsMigrationV2Done ?? false;
-  const idbDone = snap.sqlite.idbMigrationV2Done ?? false;
-
-  // The live existence check (opfsLegacyDbPath / idbLegacyDbName) is the
-  // ground truth for "is there anything to migrate at all" — it is queried
-  // fresh on every diagnostics load, unlike the Done flags below which only
-  // update once the migration routine actually runs. When the legacy source
-  // is confirmed absent, "not done" cannot mean "failed"; it can only mean
-  // "the flag hasn't caught up yet" or "nothing was ever there to migrate" —
-  // either way, not a warning-worthy state.
-  const opfsLegacyPath = snap.sqlite.opfsLegacyDbPath;
-  const idbLegacyName = snap.sqlite.idbLegacyDbName;
-  const opfsNotApplicable = !opfsDone && opfsLegacyPath === null;
-  const idbNotApplicable = !idbDone && idbLegacyName === null;
-  const allDone = (opfsDone || opfsNotApplicable) && (idbDone || idbNotApplicable);
+  const status = deriveMigrationStatus(snap.sqlite);
+  const { overall, opfs, idb } = status;
 
   const doneSuffix = getMessage('diagMigrationDoneSuffix') || 'Done';
   const pendingSuffix = getMessage('diagMigrationPendingSuffix') || 'Pending';
   const checkingSuffix = getMessage('diagMigrationCheckingSuffix') || 'Checking...';
   const notApplicableSuffix = getMessage('diagMigrationNotApplicableSuffix') || 'Not applicable (no legacy data)';
 
-  // OPFS side additionally sets LAST_ATTEMPTED_AT before the migration runs
-  // and RECORD_COUNT after it finishes; their absence — with a legacy DB that
-  // DOES exist — means the migration routine hasn't executed yet (offscreen
-  // not initialized), distinct from "ran but not done" (a real failure state).
-  const opfsAttempted = snap.sqlite.opfsMigrationV2LastAttemptedAt != null
-    || snap.sqlite.opfsMigrationV2CompletedAt != null
-    || snap.sqlite.opfsMigrationV2RecordCount != null;
-  const opfsChecking = !opfsDone && !opfsNotApplicable && !opfsAttempted;
-  const opfsWarn = !opfsDone && !opfsNotApplicable && !opfsChecking;
-  const idbWarn = !idbDone && !idbNotApplicable;
-
   const overallLabel = getMessage('diagMigrationOverall') || 'Legacy DB Migration';
-  const overallValue = allDone
+  const overallValue = overall.allDone
     ? (getMessage('diagMigrationCompleted') || 'Completed')
-    : opfsChecking
+    : overall.checking
       ? checkingSuffix
       : (getMessage('diagMigrationNotCompleted') || 'Not completed (includes fresh installs)');
-  el.appendChild(makeStatRow(overallLabel, overallValue, !allDone && !opfsChecking));
+  el.appendChild(makeStatRow(overallLabel, overallValue, overall.warn));
 
   const opfsLabel = `${getMessage('diagMigrationOpfsPath') || 'OPFS path'} (${LEGACY_OPFS_POOL_DIR}/${LEGACY_OPFS_DB_FILENAME})`;
   const idbLabel = `${getMessage('diagMigrationIdbPath') || 'IDB path'} (${LEGACY_IDB_NAME})`;
-  const opfsValue = opfsDone ? doneSuffix : (opfsNotApplicable ? notApplicableSuffix : (opfsChecking ? checkingSuffix : pendingSuffix));
-  const idbValue = idbDone ? doneSuffix : (idbNotApplicable ? notApplicableSuffix : pendingSuffix);
-  el.appendChild(makeStatRow(opfsLabel, opfsValue, opfsWarn));
-  el.appendChild(makeStatRow(idbLabel, idbValue, idbWarn));
+  const opfsValue = opfs.done ? doneSuffix : (opfs.notApplicable ? notApplicableSuffix : (opfs.checking ? checkingSuffix : pendingSuffix));
+  const idbValue = idb.done ? doneSuffix : (idb.notApplicable ? notApplicableSuffix : pendingSuffix);
+  el.appendChild(makeStatRow(opfsLabel, opfsValue, opfs.warn));
+  el.appendChild(makeStatRow(idbLabel, idbValue, idb.warn));
 
   // Live existence check of the pre-migration source, not just the done flags —
   // this is what actually answers "where is the old database and is it still there?"
   el.appendChild(makeStatRow(
     getMessage('diagMigrationOpfsLegacyFound') || 'OPFS legacy DB detected',
-    opfsLegacyPath
-      ? `${getMessage('diagMigrationYes') || 'Yes'} — origin-private:/${opfsLegacyPath}`
+    opfs.legacyPath
+      ? `${getMessage('diagMigrationYes') || 'Yes'} — origin-private:/${opfs.legacyPath}`
       : (getMessage('diagMigrationNo') || 'No (nothing to migrate)')
   ));
   el.appendChild(makeStatRow(
     getMessage('diagMigrationIdbLegacyFound') || 'IDB legacy DB detected',
-    idbLegacyName
-      ? `${getMessage('diagMigrationYes') || 'Yes'} — indexeddb://${location.origin}/${idbLegacyName}`
+    idb.legacyName
+      ? `${getMessage('diagMigrationYes') || 'Yes'} — indexeddb://${location.origin}/${idb.legacyName}`
       : (getMessage('diagMigrationNo') || 'No (nothing to migrate)')
   ));
 
-  const noAbsolutePathNote = document.createElement('p');
-  noAbsolutePathNote.className = 'help-text';
-  noAbsolutePathNote.textContent = getMessage('diagMigrationNoAbsolutePath')
-    || 'Neither OPFS nor IndexedDB exposes an OS-level absolute file path via any Web API — this is a browser sandbox restriction, not a limitation of this extension.';
-  el.appendChild(noAbsolutePathNote);
+  if (status.hints.includes('noAbsolutePath')) {
+    const noAbsolutePathNote = document.createElement('p');
+    noAbsolutePathNote.className = 'help-text';
+    noAbsolutePathNote.textContent = getMessage('diagMigrationNoAbsolutePath')
+      || 'Neither OPFS nor IndexedDB exposes an OS-level absolute file path via any Web API — this is a browser sandbox restriction, not a limitation of this extension.';
+    el.appendChild(noAbsolutePathNote);
+  }
 
-  const idbExplanation = document.createElement('p');
-  idbExplanation.className = 'help-text';
-  idbExplanation.textContent = getMessage('diagMigrationIdbExplanation')
-    || 'The IndexedDB path is a fallback used when OPFS is unavailable.';
-  el.appendChild(idbExplanation);
+  if (status.hints.includes('idbExplanation')) {
+    const idbExplanation = document.createElement('p');
+    idbExplanation.className = 'help-text';
+    idbExplanation.textContent = getMessage('diagMigrationIdbExplanation')
+      || 'The IndexedDB path is a fallback used when OPFS is unavailable.';
+    el.appendChild(idbExplanation);
+  }
 
   // Surface the raw fields already collected but previously unused, so a
   // "pending" status is never a dead end — the reader can see when the last
   // attempt ran and how many records it actually migrated.
-  if (snap.sqlite.opfsMigrationV2LastAttemptedAt) {
+  if (opfs.lastAttemptedAt) {
     el.appendChild(makeStatRow(
       getMessage('diagMigrationOpfsLastAttempted') || 'OPFS last attempted',
-      snap.sqlite.opfsMigrationV2LastAttemptedAt
+      opfs.lastAttemptedAt
     ));
   }
-  if (snap.sqlite.opfsMigrationV2CompletedAt) {
+  if (opfs.completedAt) {
     el.appendChild(makeStatRow(
       getMessage('diagMigrationOpfsCompletedAt') || 'OPFS completed at',
-      snap.sqlite.opfsMigrationV2CompletedAt
+      opfs.completedAt
     ));
   }
-  if (snap.sqlite.opfsMigrationV2RecordCount != null) {
+  if (opfs.recordCount != null) {
     el.appendChild(makeStatRow(
       getMessage('diagMigrationOpfsRecordCount') || 'OPFS records migrated',
-      String(snap.sqlite.opfsMigrationV2RecordCount)
+      String(opfs.recordCount)
     ));
   }
 
@@ -350,7 +426,7 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
   // migration routine has never recorded an attempt — most likely explanation
   // given the architecture: the OPFS Worker's chrome.storage.local write
   // silently no-ops if the Worker context lacks extension API access.
-  if (opfsChecking && Number(snap.storage.savedUrls) > 0) {
+  if (status.hints.includes('opfsCheckingStale') && Number(snap.storage.savedUrls) > 0) {
     const staleChecking = document.createElement('p');
     staleChecking.className = 'help-text';
     staleChecking.textContent = getMessage('diagMigrationCheckingStaleHint')
