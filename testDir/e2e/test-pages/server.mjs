@@ -5,10 +5,13 @@ import { fileURLToPath } from 'url';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const PORT = 8080;
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.wasm': 'application/wasm' };
 
 createServer((req, res) => {
-  const filePath = join(__dirname, req.url === '/' ? 'long-page.html' : req.url);
+  // Strip the query string before mapping to a file path (e.g. probe pages
+  // pass worker URLs via ?worker=...).
+  const pathOnly = (req.url || '/').split('?')[0];
+  const filePath = join(__dirname, pathOnly === '/' ? 'long-page.html' : pathOnly);
   try {
     const content = readFileSync(filePath);
     res.writeHead(200, { 'Content-Type': MIME[extname(filePath)] || 'text/plain' });

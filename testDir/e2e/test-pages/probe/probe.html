@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Yasumaro VFS probe</title>
+</head>
+<body data-status="running">
+  <h1>Yasumaro wa-sqlite VFS probe</h1>
+  <pre id="result">running...</pre>
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const workerUrl = params.get('worker') || './dist/worker.js';
+    const pre = document.getElementById('result');
+    const worker = new Worker(workerUrl, { type: 'module' });
+    worker.onmessage = (e) => {
+      pre.textContent = JSON.stringify(e.data, null, 2);
+      document.body.dataset.status = 'done';
+    };
+    worker.onerror = (e) => {
+      pre.textContent = JSON.stringify({ fatal: e.message || 'worker error' }, null, 2);
+      document.body.dataset.status = 'done';
+    };
+  </script>
+</body>
+</html>
