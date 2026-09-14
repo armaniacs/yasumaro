@@ -30,7 +30,9 @@ describe('version consistency', () => {
     const versions = readVersions(ROOT);
 
     for (const [file, version] of Object.entries(versions)) {
-      expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+      // main carries a development marker (e.g. "6.9.0-dev"); a bare
+      // X.Y.Z is the released form.
+      expect(version).toMatch(/^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/);
     }
   });
 
