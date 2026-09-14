@@ -109,3 +109,6 @@ docs/superpowers
 
 dev-docs/whitelist-adapter-draft.json
 dev-docs/whitelist-adapter-prompt.md
+
+# Generated probe bundles (firefox-opfs-probe.spec.ts)
+testDir/e2e/test-pages/probe/dist/
