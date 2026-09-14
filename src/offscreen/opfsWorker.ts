@@ -12,7 +12,7 @@
  */
 /// <reference lib="webworker" />
 
-import { createEngine, type SqliteEngine, type SqliteValue } from './sqliteEngine.js';
+import { createEngine, setSqliteWasmUrlOverride, type SqliteEngine, type SqliteValue } from './sqliteEngine.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
 import { runMigrations, type MigrationEngine } from './migrations.js';
@@ -209,6 +209,14 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
 
     switch (type) {
       case 'INIT': {
+        // The container may carry an explicit wasm URL (Firefox: the bundled
+        // URL is an unusable data: inline — see setSqliteWasmUrlOverride).
+        // Apply it before the first engine init; absent on Chromium, where the
+        // bundled asset URL is a valid file.
+        const initWasmUrl = (payload as { wasmUrl?: unknown } | undefined)?.wasmUrl;
+        if (typeof initWasmUrl === 'string' && initWasmUrl.length > 0) {
+          setSqliteWasmUrlOverride(initWasmUrl);
+        }
         result = { initialized: true };
         break;
       }
