@@ -14,6 +14,7 @@ import { assertPayloadSize } from './payloadGuard.js';
 import { sqliteMessageHandlers } from './sqliteMessageHandlers.js';
 import { CLEANSING_OFFSCREEN_TYPE, handleCleansingOffscreenPayload } from './cleansingOffscreen.js';
 import { setOpfsWorkerFactory } from './sqliteEngineContext/opfsWorkerProxy.js';
+import { isContentScriptSender } from '../utils/extensionOrigin.js';
 
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
@@ -65,12 +66,15 @@ export function handleOffscreenMessage(
     if (msg.target !== 'offscreen') return false;
 
     // Security: SQLite operations must only come from the service worker,
-    // not from content scripts running in web pages (which would have a tab)
-    // or from external extensions.
+    // not from content scripts running in web pages. sender.tab alone is NOT
+    // the signal: Firefox also sets it for extension pages running in normal
+    // tabs (e.g. the dashboard), while Chrome only sets it for content
+    // scripts. The extension origin in sender.url is the discriminator on
+    // both browsers (see src/utils/extensionOrigin.ts).
     const isSqliteMessage = isSqliteMessageType(msg.type);
     if (isSqliteMessage) {
-      // Block content scripts (which have a tab)
-      if (_sender.tab) {
+      // Block content scripts (web-origin senders).
+      if (isContentScriptSender(_sender)) {
         sendResponse({
           success: false,
           error: 'Forbidden: SQLite operations are not available from content scripts.',
