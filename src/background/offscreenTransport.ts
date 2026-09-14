@@ -1,22 +1,21 @@
 /**
- * OffscreenTransport
- * Handles Chrome offscreen document lifecycle and message passing.
+ * offscreenTransport.ts — transport seam for the storage-engine container.
  *
- * Extracted from SqliteClient (PBI-2026-08-17-13) to separate transport
- * concerns from domain operations. This makes the transport layer testable
- * independently of SQLite semantics.
+ * Two containers host the storage engine (see createOffscreenTransport):
+ * - Chromium: the offscreen document (chrome.offscreen), reached via
+ *   chrome.runtime.sendMessage — ChromeOffscreenTransport.ts.
+ * - Firefox: the background event page itself (no offscreen API exists) —
+ *   handleOffscreenMessage is invoked in-process — InPageOffscreenTransport.ts.
+ *
+ * The container choice is resolved at BUILD time (import.meta.env.FIREFOX is
+ * a wxt build-time constant), so each shipped build contains only its own
+ * transport and the engine graph never enters the wrong bundle.
  */
 
-import { addLog, LogType } from '../utils/logger.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { Mutex } from '../utils/Mutex.js';
-import { getPlatformOs } from '../utils/deviceUtils.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
 
-const OFFSCREEN_DOCUMENT_PATH = 'offscreen.html';
-const MESSAGE_TIMEOUT_MS_DESKTOP = 10000; // 10 seconds
-const MESSAGE_TIMEOUT_MS_MOBILE = 5000; // 5 seconds
+export { ChromeOffscreenTransport } from './ChromeOffscreenTransport.js';
 
 /**
  * Transport interface for sending messages to the offscreen document.
@@ -44,143 +43,19 @@ export interface MsgOffscreenOptions {
 }
 
 /**
- * Chrome offscreen document transport.
- * Manages the offscreen document lifecycle, message passing, timeout handling,
- * and retry logic.
+ * Create the transport for the current build target. Dynamic imports + the
+ * build-time browser constant keep the engine graph out of the wrong bundle:
+ * the Firefox branch (including its import of the in-page offscreen host) is
+ * dead-code eliminated from the Chromium build, and vice versa.
  */
-export class ChromeOffscreenTransport implements OffscreenTransport {
-  private creatingOffscreenPromise: Promise<void> | null;
-  /** Cached knowledge that the offscreen document is alive. Reset on error. */
-  private offscreenAlive: boolean;
-  /**
-   * Serializes requests to the offscreen document (M7). The offscreen
-   * document processes one SQLite operation at a time; without this,
-   * overlapping requests from multiple tabs would race each other.
-   */
-  private readonly requestQueue: Mutex;
-
-  /** Per-message timeout, shortened on mobile (see MESSAGE_TIMEOUT_MS_MOBILE). */
-  private readonly messageTimeoutMs: number;
-
-  constructor() {
-    this.creatingOffscreenPromise = null;
-    this.offscreenAlive = false;
-    const os = getPlatformOs();
-    const isMobile = os === 'android' || os === 'ios';
-    // Reduce the queue size on mobile devices to limit memory consumption.
-    const maxQueueSize = isMobile ? 50 : 200;
-    this.messageTimeoutMs = isMobile ? MESSAGE_TIMEOUT_MS_MOBILE : MESSAGE_TIMEOUT_MS_DESKTOP;
-    this.requestQueue = new Mutex({ maxQueueSize, timeoutMs: this.messageTimeoutMs * 2 });
+export async function createOffscreenTransport(): Promise<OffscreenTransport> {
+  if (import.meta.env.FIREFOX) {
+    const [{ InPageOffscreenTransport }, { handleOffscreenMessage }] = await Promise.all([
+      import('./InPageOffscreenTransport.js'),
+      import('../offscreen/offscreen.js'),
+    ]);
+    return new InPageOffscreenTransport(handleOffscreenMessage);
   }
-
-  /**
-   * Ensure the offscreen document is open.
-   */
-  private async ensureOffscreenDocument(): Promise<void> {
-    // Skip redundant browser IPC if we know the document is alive.
-    if (this.offscreenAlive) return;
-
-    const hasOffscreen = await chrome.offscreen.hasDocument();
-    if (hasOffscreen) {
-      this.offscreenAlive = true;
-      return;
-    }
-
-    if (this.creatingOffscreenPromise) {
-      await this.creatingOffscreenPromise;
-      return;
-    }
-
-    this.creatingOffscreenPromise = chrome.offscreen.createDocument({
-      url: OFFSCREEN_DOCUMENT_PATH,
-      reasons: [chrome.offscreen.Reason.WORKERS, chrome.offscreen.Reason.LOCAL_STORAGE],
-      justification: 'To access SQLite (wa-sqlite) for local browsing log storage.',
-    });
-
-    try {
-      await this.creatingOffscreenPromise;
-      this.offscreenAlive = true;
-    } finally {
-      this.creatingOffscreenPromise = null;
-    }
-  }
-
-  /**
-   * Send a single message to the offscreen document and await the response.
-   * Does not retry — callers needing reconnect-on-failure should use msgOffscreen().
-   */
-  private async sendOnce(
-    type: SqliteMessageType,
-    payload: Record<string, unknown>,
-    traceId: string = ''
-  ): Promise<OffscreenResponse> {
-    await this.ensureOffscreenDocument();
-    return new Promise<OffscreenResponse>((resolve, reject) => {
-      let settled = false;
-      const settle = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        fn();
-      };
-      const timeoutId = setTimeout(() => {
-        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${this.messageTimeoutMs}ms`)));
-      }, this.messageTimeoutMs);
-
-      chrome.runtime.sendMessage(
-        { type, target: 'offscreen', payload, traceId },
-        (response: OffscreenResponse) => {
-          if (chrome.runtime.lastError) {
-            settle(() => reject(new Error(chrome.runtime.lastError?.message ?? 'Unknown error')));
-          } else if (response && 'error' in response && response.error) {
-            settle(() => reject(new Error(response.error)));
-          } else {
-            settle(() => resolve(response));
-          }
-        }
-      );
-    });
-  }
-
-  /**
-   * Send a message to the offscreen document and await the response.
-   *
-   * Retries once on failure (M12): a mobile Chrome offscreen document can be
-   * suspended between requests, so the first attempt after idle may fail
-   * with a connection error. Resetting offscreenAlive and recreating the
-   * document lets the retry succeed instead of surfacing a transient error.
-   */
-  async msgOffscreen(
-    type: SqliteMessageType,
-    payload: Record<string, unknown> = {},
-    traceId: string = '',
-    opts: MsgOffscreenOptions = {},
-  ): Promise<OffscreenResponse> {
-    await this.requestQueue.acquire();
-    try {
-      try {
-        return await this.sendOnce(type, payload, traceId);
-      } catch (firstError) {
-        if (opts.noRetry) {
-          // Bulk operations: the offscreen side may still be running. Surface
-          // the failure immediately ("result unknown" for the caller) instead
-          // of executing the operation a second time.
-          this.offscreenAlive = false;
-          throw firstError;
-        }
-        this.offscreenAlive = false;
-        addLog(LogType.WARN, `ChromeOffscreenTransport: '${type}' failed, retrying once`, {
-          error: errorMessage(firstError),
-          traceId,
-        });
-        return await this.sendOnce(type, payload, traceId);
-      }
-    } catch (error) {
-      // Reset the cached alive flag so the next call re-checks the document.
-      this.offscreenAlive = false;
-      throw error;
-    } finally {
-      this.requestQueue.release();
-    }
-  }
+  const { ChromeOffscreenTransport } = await import('./ChromeOffscreenTransport.js');
+  return new ChromeOffscreenTransport();
 }
