@@ -37,12 +37,28 @@ export function canCreateWorker(): boolean {
   }
 }
 
+// How to construct the OPFS Worker. Injected by the hosting container
+// (setOpfsWorkerFactory) BEFORE the first init: the offscreen document
+// (Chromium) uses the bundled worker via vite:worker-import-meta-url, while
+// the Firefox background event page uses chrome.runtime.getURL. The literal
+// must live in opfsWorkerFactory.ts, not here — this module is part of the
+// background bundle on Firefox, and the worker-URL literal would make the
+// vite:worker-import-meta-url plugin try to build a worker inside the
+// service worker build (INVALID_OPTION: iife + code-splitting).
+let workerFactory: (() => Worker | null) | null = null;
+
+export function setOpfsWorkerFactory(fn: () => Worker | null): void {
+  workerFactory = fn;
+}
+
 export function createOpfsWorker(state: OpfsProxyState): Worker | null {
   try {
-    const worker = new Worker(
-      new URL('../opfsWorker.js', import.meta.url),
-      { type: 'module' }
-    );
+    if (!workerFactory) {
+      logWarn('OPFS Worker factory not configured', {}, undefined, 'sqlite');
+      return null;
+    }
+    const worker = workerFactory();
+    if (!worker) return null;
 
     worker.onmessage = (e: MessageEvent<{ id: number; success: boolean; result?: unknown; error?: string } | WorkerLogMessage>) => {
       const data = e.data;

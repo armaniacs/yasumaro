@@ -12,7 +12,6 @@
  */
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 
 // ---------------------------------------------------------------------------
 // FakeWorker — tracks received messages and responds like the real opfsWorker
@@ -110,9 +109,14 @@ beforeEach(async () => {
 
   // Stub the Worker constructor
   vi.stubGlobal('Worker', FakeWorker);
+  // The proxy creates workers via the injected factory (PBI 2026-09-14-09).
 
   // Import fresh module after stubs are in place
   const mod = await import('./sqliteTestApi.js');
+  // The proxy creates workers via the injected factory (PBI 2026-09-14-09) —
+  // set it on the FRESH module instance (vi.resetModules above resets state).
+  const proxy = await import('../sqliteEngineContext/opfsWorkerProxy.js');
+  proxy.setOpfsWorkerFactory(() => new FakeWorker() as unknown as Worker);
   resetForTesting = mod._resetForTesting;
 });
 

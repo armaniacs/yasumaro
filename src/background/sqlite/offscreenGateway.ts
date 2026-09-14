@@ -44,7 +44,7 @@ import type {
   ArchiveRestoreData,
 } from '../../messaging/sqliteMessages.js';
 import type { OffscreenTransport } from '../offscreenTransport.js';
-import { ChromeOffscreenTransport } from '../offscreenTransport.js';
+import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
 import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
 
@@ -94,12 +94,21 @@ const ARCHIVE_GATEWAY_DECODERS: Record<ArchiveOpType, (res: GatewaySuccessRespon
 };
 
 export class OffscreenGateway {
-  private readonly transport: OffscreenTransport;
-  constructor(transport?: OffscreenTransport) { this.transport = transport ?? new ChromeOffscreenTransport(); }
+  private readonly injectedTransport: OffscreenTransport | null;
+  private transportPromise: Promise<OffscreenTransport> | null = null;
+  constructor(transport?: OffscreenTransport) { this.injectedTransport = transport ?? null; }
+
+  /** Resolve the container transport once (build-time browser split inside). */
+  private getTransport(): Promise<OffscreenTransport> {
+    if (this.injectedTransport) return Promise.resolve(this.injectedTransport);
+    this.transportPromise ??= createOffscreenTransport();
+    return this.transportPromise;
+  }
 
   private async callInternal<T, R = unknown>(type: SqliteMessageType, payload: Record<string, unknown> = {}, transform?: (res: Extract<R, { success: true }>) => T, traceId?: string, transportOpts?: { noRetry?: boolean }): Promise<SqliteResult<T>> {
     try {
-      const res = await this.transport.msgOffscreen(type, payload, traceId, transportOpts);
+      const transport = await this.getTransport();
+      const res = await transport.msgOffscreen(type, payload, traceId, transportOpts);
       if (!res?.success) {
         const msg = res && 'error' in res ? String(res.error) : `${type} failed`;
         recordSqliteFailure(type, msg);
