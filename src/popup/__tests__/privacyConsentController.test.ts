@@ -36,15 +36,18 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 vi.stubGlobal('chrome', {
-  runtime: { getURL: vi.fn((path: string) => `chrome-extension://test/${path}`) },
+  runtime: {
+    getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
+    sendMessage: vi.fn(),
+  },
   tabs: { create: mockChromeTabsCreate },
   storage: { local: { get: vi.fn(), set: mockChromeStorageSet } },
 });
 
 import {
+  CONSENT_STATE_CHANGED_EVENT,
   initPrivacyConsent,
   setupPrivacyConsentListeners,
-  setConsentCallback,
 } from '../privacyConsentController.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
@@ -290,12 +293,10 @@ describe('privacyConsentController', () => {
       expect(modal?.open).toBe(false);
     });
 
-    it('should call consent callback on accept', async () => {
+    it('should broadcast CONSENT_STATE_CHANGED on accept', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
       mockSavePrivacyConsent.mockResolvedValue(undefined);
-
-      const callback = vi.fn();
-      setConsentCallback(callback);
+      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
 
       await initPrivacyConsent();
 
@@ -305,8 +306,12 @@ describe('privacyConsentController', () => {
       getAcceptBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(callback).toHaveBeenCalledWith(true);
+        expect(mockSavePrivacyConsent).toHaveBeenCalled();
       });
+
+      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+      );
     });
 
     it('should decline and close modal permanently when decline is clicked', async () => {
@@ -328,20 +333,115 @@ describe('privacyConsentController', () => {
       expect(modal?.open).toBe(false);
     });
 
-    it('should call consent callback on decline', async () => {
+    it('should broadcast CONSENT_STATE_CHANGED on decline', async () => {
       mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
 
       window.alert = vi.fn();
-      const callback = vi.fn();
-      setConsentCallback(callback);
 
       await initPrivacyConsent();
 
       getDeclineBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(callback).toHaveBeenCalledWith(false);
+        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+        );
       });
+    });
+
+    it('sends an identical bare envelope for both accept and decline (INTENTIONAL: value lives in storage)', async () => {
+      const sendMessage = vi.mocked(chrome.runtime.sendMessage);
+      sendMessage.mockClear();
+
+      // Accept path: capture the broadcast envelope.
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockSavePrivacyConsent.mockResolvedValue(undefined);
+      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+
+      await initPrivacyConsent();
+
+      const cb = getCheckbox();
+      cb!.checked = true;
+      cb!.dispatchEvent(new Event('change'));
+      getAcceptBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(sendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+        );
+      });
+      const acceptEnvelope = sendMessage.mock.calls
+        .map((call) => call[0] as Record<string, unknown>)
+        .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
+      expect(acceptEnvelope).toBeDefined();
+
+      // Decline path: reset DOM and listeners, then capture again.
+      sendMessage.mockClear();
+      setupDom();
+      setupPrivacyConsentListeners();
+      window.alert = vi.fn();
+
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+
+      await initPrivacyConsent();
+
+      getDeclineBtn()!.click();
+
+      await vi.waitFor(() => {
+        expect(sendMessage).toHaveBeenCalledWith(
+          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+        );
+      });
+      const declineEnvelope = sendMessage.mock.calls
+        .map((call) => call[0] as Record<string, unknown>)
+        .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
+      expect(declineEnvelope).toBeDefined();
+
+      // Contract: both paths send the same shape with the same values —
+      // no accept/decline distinction is carried on the message.
+      expect(Object.keys(declineEnvelope!).sort()).toEqual(Object.keys(acceptEnvelope!).sort());
+      expect(declineEnvelope).toEqual(acceptEnvelope);
+      // Bare envelope: no payload and no consent value field.
+      expect(declineEnvelope).not.toHaveProperty('payload');
+      expect(declineEnvelope).not.toHaveProperty('consented');
+    });
+
+    it('dispatches the same-document consent-state-changed event on both accept and decline', async () => {
+      // chrome.runtime messages are never delivered back to the sender's own
+      // context, so in-page consumers (e.g. popup.ts onboarding re-check) can
+      // only react via this same-document event — it must fire on both paths.
+      const events: Event[] = [];
+      const listener = (event: Event): void => { events.push(event); };
+      document.addEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
+
+      try {
+        mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+        mockSavePrivacyConsent.mockResolvedValue(undefined);
+        mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+
+        await initPrivacyConsent();
+
+        const cb = getCheckbox();
+        cb!.checked = true;
+        cb!.dispatchEvent(new Event('change'));
+        getAcceptBtn()!.click();
+
+        await vi.waitFor(() => expect(events.length).toBeGreaterThanOrEqual(1));
+
+        // Decline path: reset DOM and listeners, then capture again.
+        setupDom();
+        setupPrivacyConsentListeners();
+        window.alert = vi.fn();
+        mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+
+        await initPrivacyConsent();
+
+        getDeclineBtn()!.click();
+
+        await vi.waitFor(() => expect(events.length).toBeGreaterThanOrEqual(2));
+      } finally {
+        document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
+      }
     });
 
     it('should show error text when save fails during accept', async () => {

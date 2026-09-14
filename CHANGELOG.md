@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.20` リリース。
+> - 現時点では `v6.8.21` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -36,6 +36,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.8.21] - 2026-09-14
+
+アーキテクチャ深化ラウンド（2026-09-14 round 15、`arch-delivery-loop`）と adversarial-code-review 検証済み指摘（PBI 05〜08）の実装リリースです。実バグ 2 件の解消（同意承諾直後にオンボーディングウィザードが表示されない退行、診断パネル直行時の「不具合を報告」ボタン無反応）と、移行ステータス表示の強化・内部構造改善を含みます。全テスト（12,024 件）がグリーンです。
+
+### Added
+
+- **診断パネルに「移行済みだがレガシーDBが残存」状態の表示を追加**: 移行完了フラグが立っていてもライブプローブが旧データベースを検出した場合に説明文を表示する `legacyStillPresent` フラグ（OPFS / IndexedDB 両方・`undefined` はプローブ未確認のため非判定）と i18n メッセージ（ja/en）を追加。移行ルーチン完走後のクリーンアップ失敗によるディスク二重消費に気づけるようにした（移行完了判定 `allDone` は不変）
+- **「記録開始」「検索」タスクをキーボードのみで完了できることを検証するE2Eを追加**: 検索は dashboard fixture に SQLite seed パターンで追加（`fill()` ではなく実キー入力の `keyboard.type` を使用）、記録開始は popup の cleansing-preview fixture を使う新規 spec として切り出し（headless スキップガード付き・headed 実行で実走確認済み）
+
+### Fixed
+
+- **プライバシー同意を承諾した直後にオンボーディングウィザードが表示されない退行を修正**: consent 変化のイベント購読方式へのリファクタ後、再判定が `CONSENT_STATE_CHANGED` の `chrome.runtime.onMessage` 購読に依存していたが、このメッセージは popup 自身が送信者であり、Chrome は送信者自身のコンテキストには配送しないため同一セッション内の再判定が発火しなかった。`privacyConsentController` が同一ドキュメントイベントを dispatch し popup が購読する併用方式で修復（単体テストはメッセージ配送をシミュレートするため検出不可で、onboarding E2E の失敗で判明）
+- **診断パネルが初期表示（`?tab=` 深いリンク）だと「不具合を報告」ボタンが無反応だった**: ボタン配線が非同期のページ初期化で生成される共有 controller に依存するようになった後、mount 時に controller が未生成でもオプショナルチェーンが黙ってスキップし、mount-once のため以後一切配線されなかった。controller 生成前のトリガをキューし生成直後にフラッシュする方式で解消
+
+### Refactored
+
+- アーキテクチャ Deepening round 15（PBI 01〜04）: OPFS / IndexedDB / fallback 3 バックエンドに独立して埋め込まれていた検索・一覧の分岐判断を `planQueryMode()` に一元化（直近2件の検索回帰と同型の回帰テスト付き）、consent 状態変化を module-scoped 単発コールバックからイベント購読方式に変更（初期化順序依存バグの再発源を解消）、診断パネルの移行ステータス判定を `deriveMigrationStatus` 純粋関数に分離、issue報告モーダルの状態を controller オブジェクトに集約
+- adversarial-code-review 検証済み指摘 4 件（PBI 05〜08）: `attachTrigger` に WeakSet ガードを追加し同一ボタンの二重配線を防止（名前と実装が乖離していた reentrancy テストも実態合わせ）、`CONSENT_STATE_CHANGED` が値を運ばない契約を doc comment と accept/decline 同一形状の pin テストで明示、移行ステータスの表示優先順位を `displayState` 判別ユニオンに統一（レンダーは Record マッピングのみに。既存の描画テストが無変更でパス = 視覚的差分ゼロを証明）
+- サイドバータブ数を数えるE2Eの期待値を `panelCatalog.ts` SSOT から導出するよう修正（「不具合を報告」ボタンはナビゲーションタブではないため `role="tab"` セレクタで除外）
 
 ## [6.8.20] - 2026-09-13
 

@@ -59,9 +59,9 @@ vi.mock('../navigation.js', () => ({
 
 // Mock privacyConsentController
 vi.mock('../privacyConsentController.js', () => ({
+    CONSENT_STATE_CHANGED_EVENT: 'consent-state-changed',
     initPrivacyConsent: vi.fn(),
     setupPrivacyConsentListeners: vi.fn(),
-    setConsentCallback: vi.fn(),
 }));
 
 // Mock trancoNotification
@@ -339,10 +339,10 @@ describe('initPopup coverage', () => {
         // First-run: initPopup()'s one-shot check runs BEFORE the user has
         // accepted consent (hasConsented starts false). Accepting later in
         // the same popup session must still trigger the wizard via the
-        // consent callback, not require reopening the popup.
+        // CONSENT_STATE_CHANGED broadcast subscription, not require
+        // reopening the popup.
         const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
         const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
-        const { setConsentCallback } = await import('../privacyConsentController.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
 
@@ -351,11 +351,32 @@ describe('initPopup coverage', () => {
         expect(initOnboardingWizard).not.toHaveBeenCalled();
 
         // Simulate the user accepting consent: getPrivacyConsent now resolves
-        // true, and privacyConsentController invokes the registered callback.
+        // true, and the background broadcasts CONSENT_STATE_CHANGED, which
+        // popup.ts's onMessage listener re-checks the wizard condition on.
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
-        const registeredCallback = vi.mocked(setConsentCallback).mock.calls.at(-1)?.[0];
-        expect(registeredCallback).toBeTypeOf('function');
-        registeredCallback?.(true);
+        const registeredListener = vi.mocked(chrome.runtime.onMessage.addListener).mock.calls.at(-1)?.[0];
+        expect(registeredListener).toBeTypeOf('function');
+        registeredListener?.({ type: 'CONSENT_STATE_CHANGED' }, {} as chrome.runtime.MessageSender, vi.fn());
+        await new Promise(r => setTimeout(r, 50));
+
+        expect(initOnboardingWizard).toHaveBeenCalled();
+    });
+
+    it('shows onboarding wizard when the same-document consent-state-changed event fires', async () => {
+        // The popup is the SENDER of CONSENT_STATE_CHANGED, and runtime
+        // messages never loop back to the sender's own context — the in-page
+        // re-check rides privacyConsentController's same-document event.
+        const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
+        vi.mocked(hasCompletedWizard).mockResolvedValue(false);
+
+        await initPopup();
+        await new Promise(r => setTimeout(r, 50));
+        expect(initOnboardingWizard).not.toHaveBeenCalled();
+
+        vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
+        document.dispatchEvent(new CustomEvent('consent-state-changed'));
         await new Promise(r => setTimeout(r, 50));
 
         expect(initOnboardingWizard).toHaveBeenCalled();
