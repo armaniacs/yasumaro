@@ -14,12 +14,20 @@
   </a>
 </p>
 
+<p align="center">
+  <strong>流動的なブラウジング体験を、構造化された不変の記録に変換する</strong><br/>
+  <em>Turn fluid browsing into structured, immutable records.</em>
+</p>
+
 ---
 
 ## 日本語
 
 ### 概要
-ブラウザの閲覧履歴を、AIによる要約付きでObsidianのデイリーノートに自動保存するChrome拡張機能です。
+
+**「流動的なブラウジング体験を、構造化された不変の記録に変換する」**
+
+技術ドキュメントや論文、長文記事をよく読むエンジニアやリサーチャーにとって強力なツール。ブラウザの閲覧履歴を、AIによる要約付きでObsidianのデイリーノートに自動保存するChrome拡張機能です。
 
 ### オリジナルの Obsidian Smart History について
 Yasumaroは、[こちらの記事](https://note.com/izuru_tcnkc/n/nd0a758483901)で紹介されている Obsidian Smart History をフォークして作成しました。シンプルながら実用的なアイデアを形にしてくれたオリジナル作者に感謝します。
@@ -236,7 +244,10 @@ flowchart LR
 ## English
 
 ### Overview
-A Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
+
+**"Turn fluid browsing into structured, immutable records."**
+
+A powerful tool for engineers and researchers who read technical documentation, papers, and long-form articles — a Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
 ### About the Original — Obsidian Smart History
 Yasumaro is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901). Credit goes to the original author for a simple, genuinely useful idea.
