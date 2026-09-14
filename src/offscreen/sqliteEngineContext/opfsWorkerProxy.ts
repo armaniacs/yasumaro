@@ -7,6 +7,7 @@
 
 import { errorMessage } from '../../utils/errorUtils.js';
 import { logError, logInfo, logWarn, ErrorCode } from '../../utils/logger.js';
+import { getSqliteWasmUrlOverride } from '../sqliteEngine.js';
 import type { WorkerLogMessage } from '../opfsWorker.js';
 
 function isWorkerLogMessage(
@@ -154,8 +155,15 @@ export async function initOpfsWorker(state: OpfsProxyState): Promise<boolean> {
       return false;
     }
 
-    // Send INIT to the worker
-    const result = await sendToOpfsWorker(state, 'INIT') as { initialized: boolean } | undefined;
+    // Send INIT to the worker. The container may carry an explicit wasm URL
+    // override (Firefox: the bundled URL is an unusable data: inline); the
+    // worker applies it before initializing its engine.
+    const wasmUrlOverride = getSqliteWasmUrlOverride();
+    const result = await sendToOpfsWorker(
+      state,
+      'INIT',
+      wasmUrlOverride === null ? undefined : { wasmUrl: wasmUrlOverride }
+    ) as { initialized: boolean } | undefined;
     if (result?.initialized) {
       return true;
     }

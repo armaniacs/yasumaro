@@ -341,6 +341,31 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(await initOpfsWorker(state)).toBe(false);
     });
 
+    it('carries the wasm URL override in INIT when set (Firefox)', async () => {
+      vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
+      const posted: Array<{ id: number; type: string; payload?: unknown }> = [];
+      class CapturingWorker {
+        onmessage: unknown = null;
+        onerror: unknown = null;
+        postMessage(msg: { id: number; type: string; payload?: unknown }) {
+          posted.push(msg);
+        }
+      }
+      vi.stubGlobal('Worker', CapturingWorker as never);
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
+      const { setSqliteWasmUrlOverride } = await import('../sqliteEngine.js');
+      setSqliteWasmUrlOverride('moz-extension://test-uuid/wasm/wa-sqlite-async.wasm');
+      try {
+        const state = makeState(null);
+        void initOpfsWorker(state);
+        await vi.waitFor(() => expect(posted.length).toBeGreaterThan(0));
+        const init = posted.find((m) => m.type === 'INIT');
+        expect(init?.payload).toEqual({ wasmUrl: 'moz-extension://test-uuid/wasm/wa-sqlite-async.wasm' });
+      } finally {
+        setSqliteWasmUrlOverride(null);
+      }
+    });
+
     it('returns false when canCreateWorker is false', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       const g = globalThis as unknown as Record<string, unknown>;
