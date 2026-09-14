@@ -6,7 +6,9 @@ All notable changes to this project will be documented in this file.
 >
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - 現時点では `v6.8.21` リリース。
+> - `v6.8` は **stable ライン**。6.8.x の bug fix は `support/6.8` ブランチから `v6.8.x` タグでリリースする。
+> - `main` は次期 `v6.9` の開発ライン。開発中のバージョン表記は `6.9.0-dev`。Chrome の manifest version はドット区切り整数のみ許容するため、dist の manifest version は `6.9.0` に正規化される（`wxt.config.ts` が prerelease 接尾辞を剥離）。
+> - 現時点では stable は `v6.8.21` リリース、`main` は `6.9.0-dev` を開発中。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >

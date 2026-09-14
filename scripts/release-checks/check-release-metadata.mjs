@@ -28,6 +28,16 @@ function readPkgVersion() {
   return pkg.version;
 }
 
+/**
+ * package.json on main carries a development marker (e.g. "6.9.0-dev") while
+ * the Chrome manifest only allows dot-separated integers — wxt.config.ts
+ * strips the prerelease suffix when writing the manifest, so the manifest
+ * comparison uses the same sanitized value.
+ */
+function stripPrerelease(version) {
+  return version.replace(/-[0-9A-Za-z.-]+$/, '');
+}
+
 function extractVersionFromManifest() {
   const manifestPath = join(ROOT_DIR, 'dist', 'chromium-mv3', 'manifest.json');
   if (!existsSync(manifestPath)) {
@@ -64,26 +74,24 @@ function checkVersionConsistency() {
   info(`Current version: ${version}`);
 
   const checks = [
-    { name: 'package.json', value: version },
-    { name: 'manifest.json', value: extractVersionFromManifest() },
-    { name: 'wxt.config.ts', value: extractVersionFromWxtConfig() },
-    { name: 'docs/version.json', value: extractVersionFromDocsVersion() },
+    { name: 'package.json', value: version, expected: version },
+    { name: 'manifest.json', value: extractVersionFromManifest(), expected: stripPrerelease(version) },
+    { name: 'wxt.config.ts', value: extractVersionFromWxtConfig(), expected: version },
+    { name: 'docs/version.json', value: extractVersionFromDocsVersion(), expected: version },
   ];
-
-  const values = checks.filter((c) => c.value !== null).map((c) => c.value);
-  const unique = [...new Set(values)];
 
   for (const c of checks) {
     if (c.value === null) {
       warn(`${c.name}: not found or could not extract version`);
-    } else if (c.value === version) {
+    } else if (c.value === c.expected) {
       pass(`${c.name}: ${c.value}`);
     } else {
-      fail(`${c.name}: ${c.value} (expected ${version})`);
+      fail(`${c.name}: ${c.value} (expected ${c.expected})`);
     }
   }
 
-  if (unique.length === 1 && unique[0] === version) {
+  const mismatched = checks.filter((c) => c.value !== null && c.value !== c.expected);
+  if (mismatched.length === 0) {
     pass('All version files are consistent');
     return true;
   }

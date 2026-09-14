@@ -11,6 +11,13 @@ import {
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string };
 
+// Chrome's manifest "version" only allows 1-4 dot-separated integers, while
+// package.json carries a development marker on main (e.g. "6.9.0-dev").
+// Strip the prerelease suffix so the shipped manifest stays loadable and
+// Chrome Web Store-compatible; the -dev notation lives in package.json and
+// docs/version.json only.
+const manifestVersion = pkg.version.replace(/-[0-9A-Za-z.-]+$/, '');
+
 const localConnectSrc = buildLocalConnectSrc();
 const aiConnectSrc = buildConnectSrcDomains();
 validateCspDomains([...localConnectSrc, ...aiConnectSrc]);
@@ -48,7 +55,7 @@ export default defineConfig({
   manifest: {
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
-    version: pkg.version,
+    version: manifestVersion,
     description: '__MSG_extensionDescription__',
     default_locale: 'en',
     homepage_url: 'https://github.com/armaniacs/yasumaro',
