@@ -1,6 +1,6 @@
 # PBI: Firefox ストレージ移植の中核 — StorageHost seam と manifest/build 整備
 
-## ステータス: 🔶 部分実装（順位1 / RICE 36.0 / 台帳: 2026-09-14-00-backlog-firefox-support.md）
+## ステータス: ✅ 完了（2026-09-14 実機 smoke で記録→検索を確認）
 
 **進捗（2026-09-14・ブランチ 0914c）**: StorageHost seam・manifest/build 整備を実装。chromium ビルドは unit 12,024 + 拡張 e2e（記録・検索）green で無回帰、firefox ビルドは build 成功・manifest 検証済み（gecko.id・権限分岐・opfs-worker エントリ）。実機 smoke（受け入れ基準5）は PBI 11 の QA で実施する。
 
@@ -78,10 +78,12 @@ Scenario: offscreen 非対応環境で transport が分岐する
 
 - [x] `chrome.offscreen` 直参照が分岐の内側にのみ存在する（実装は `import.meta.env.FIREFOX` ビルド時分岐 — 上記「実装上の決定」参照）
 - [x] `npx wxt build -b firefox` が成功し、unit tests 全件 green
-- [ ] Firefox（about:debugging 一時読み込み）で記録 → ダッシュボード検索の smoke が通る（PBI 11 の QA で実施）
+- [x] Firefox（about:debugging 一時読み込み）で記録 → ダッシュボード検索の smoke が通る（2026-09-14 実機確認済み）
 - [x] manifest に `browser_specific_settings.gecko.id` があり、`offscreen` / `favicon` 権限が chromium ビルドのみ
 - [x] `npm run build:firefox` スクリプトが存在する
 - [x] chromium ビルドの既存挙動が不変（unit tests + 拡張 e2e（記録・検索）で確認）
+
+実機 smoke で発見・修正した追加不具合2件: 送信者識別の Chrome 前提（senderTrust/offscreen の URL オリジン方式に修正）、worker の wasm インライン化による CSP ブロック（安定パスの公開アセット + INIT ペイロード方式に修正）。いずれも `0914c` ブランチに fix コミット済み。
 
 ## テスト戦略
 
