@@ -16,10 +16,10 @@
 
 ### 2026-09-14 Firefox 対応 — 3件（VFS プローブ検証済み・autonomous-task-closer 発見）
 
-Firefox は `chrome.offscreen` 非依存化により対応可能と確定。ストレージ中核（wa-sqlite OPFS SAH / FTS5 / IDB fallback）は VFS プローブ（`0914b` ブランチ・Firefox 155）で全 green 済み。台帳は `2026-09-14-00-backlog-firefox-support.md`。実行順 = 09 → 10 → 11（依存関係順。10 は 09 の gecko.id と 0914b 取り込みが前提、11 は 09・10 成果物が前提）。
+Firefox は `chrome.offscreen` 非依存化により対応可能と確定。ストレージ中核（wa-sqlite OPFS SAH / FTS5 / IDB fallback）は VFS プローブ（Firefox 155）で全 green 済み。台帳は `2026-09-14-00-backlog-firefox-support.md`。実行順 = 09 → 10 → 11（依存関係順。10 は 09 の gecko.id と動くビルドが前提、11 は 09・10 成果物が前提）。
 
 - ⬜🟢🟢🔧 2026-09-14-09-feat-firefox-storage-port.md（RICE 36.0 — `supportsOffscreen()` 分岐による StorageHost seam 新設（OffscreenDocumentTransport / EventPageWorkerTransport）+ gecko.id・権限分岐・`build:firefox`。offscreen 直参照は `offscreenTransport.ts:83,94` のみ。wasm は `@subframe7536/dist/wa-sqlite-async.wasm` に固定 — glue と同一ファミリー必須）
-- ⬜🟡🟢🔧 2026-09-14-10-test-firefox-e2e-ci.md（RICE 32.0 — `0914b` の VFS プローブを main 取り込み + 事前シードプロファイル方式の Firefox 拡張 smoke（Developer Edition）+ CI 追加。**09 依存**）
+- ⬜🟡🟢🔧 2026-09-14-10-test-firefox-e2e-ci.md（RICE 32.0 — VFS プローブ回帰の維持（main 取り込み済み）+ 事前シードプロファイル方式の Firefox 拡張 smoke（Developer Edition）+ CI 追加。**09 依存**）
 - ⬜🟡🟡🔧 2026-09-14-11-chore-firefox-release-readiness.md（RICE 30.0 — 実機 QA チェックリスト（moz-extension origin での OPFS 最終確認を含む）・FAQ/README 更新・配布方針決定（初期 = GitHub Releases 継続推奨・AMO は broad host permission 審査リスク）。**09・10 依存**）
 
 
