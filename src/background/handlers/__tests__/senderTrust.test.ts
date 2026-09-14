@@ -56,6 +56,47 @@ describe('checkSenderTrust', () => {
     });
   });
 
+  describe('firefox sender shapes (RICE 36.0 follow-up)', () => {
+    // Firefox attaches sender.tab to extension pages running in normal tabs
+    // and uses the moz-extension://<uuid>/ scheme. The dashboard regression
+    // (options.html opened as a tab rejected as "from content scripts") pins
+    // this behavior here.
+    const FIREFOX_UUID = 'b3a95006-cdfd-49b8-95db-e75c94834b48';
+
+    beforeEach(() => {
+      vi.stubGlobal('chrome', {
+        runtime: {
+          id: RUNTIME_ID,
+          getURL: (path: string) => `moz-extension://${FIREFOX_UUID}/${path}`,
+        },
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('allows a Firefox extension page running in a normal tab', () => {
+      const firefoxTabPage: chrome.runtime.MessageSender = {
+        id: RUNTIME_ID,
+        tab: { id: 7 } as chrome.tabs.Tab,
+        url: `moz-extension://${FIREFOX_UUID}/options.html?tab=history`,
+      };
+      expect(checkSenderTrust(firefoxTabPage, 'extension-only', 'DASHBOARD_SQLITE', RUNTIME_ID).allowed).toBe(true);
+    });
+
+    it('still rejects Firefox content scripts', () => {
+      const firefoxContentScript: chrome.runtime.MessageSender = {
+        id: RUNTIME_ID,
+        tab: { id: 7 } as chrome.tabs.Tab,
+        url: 'https://example.com/article',
+      };
+      const decision = checkSenderTrust(firefoxContentScript, 'extension-only', 'DASHBOARD_SQLITE', RUNTIME_ID);
+      expect(decision.allowed).toBe(false);
+      expect(decision.error).toContain('not allowed from content scripts');
+    });
+  });
+
   describe('tab-page-only (PBI 2026-09-12-12)', () => {
     const tabPageSender: chrome.runtime.MessageSender = {
       id: RUNTIME_ID,

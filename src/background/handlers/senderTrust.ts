@@ -34,19 +34,23 @@ export interface SenderTrustDecision {
   error?: string;
 }
 
+import { extensionOrigin } from '../../utils/extensionOrigin.js';
+
 /**
- * A content script's sender has a `tab` and a page URL (http/https). Extension
- * pages and the offscreen document either have no tab or carry a
- * `chrome-extension://` URL.
+ * A content script's sender runs in a tab on a URL outside the extension
+ * origin (http/https). Extension pages run under the extension origin
+ * whether or not the browser attaches a tab to them (Firefox attaches a tab
+ * to extension pages opened in normal tabs; Chrome only attaches one to
+ * content scripts), so the origin — not the tab — is the discriminator.
  */
 function isContentScriptSender(sender: chrome.runtime.MessageSender): boolean {
-  return Boolean(sender.tab) && (!sender.url || !sender.url.startsWith('chrome-extension://'));
+  return Boolean(sender.tab) && (!sender.url || !sender.url.startsWith(extensionOrigin()));
 }
 
 /**
  * A sender that must originate from a web page: a valid tab plus an
  * http/https sender URL. Rejects spoofing from extension pages (which carry
- * a chrome-extension:// URL or no tab).
+ * the extension-origin URL or no tab).
  */
 function isTabPageSender(sender: chrome.runtime.MessageSender): boolean {
   const hasValidTab = Boolean(sender.tab?.id && sender.tab?.url);

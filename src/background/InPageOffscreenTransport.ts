@@ -41,7 +41,14 @@ export class InPageOffscreenTransport extends BaseOffscreenTransport {
     payload: Record<string, unknown>,
     traceId: string = ''
   ): Promise<OffscreenResponse> {
-    const sender = { id: chrome.runtime.id } as chrome.runtime.MessageSender;
+    // The offscreen handler authorizes callers by extension origin (see
+    // src/utils/extensionOrigin.ts): the in-process call from the event page
+    // carries its own extension URL, satisfying the same contract as a
+    // chrome.runtime message from an extension page.
+    const sender = {
+      id: chrome.runtime.id,
+      url: chrome.runtime.getURL('background.js'),
+    } as chrome.runtime.MessageSender;
     return new Promise<OffscreenResponse>((resolve, reject) => {
       let settled = false;
       const settle = (fn: () => void) => {
