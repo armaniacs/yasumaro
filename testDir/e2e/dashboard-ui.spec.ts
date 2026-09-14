@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { SIDEBAR_PANELS } from '../../src/dashboard/panels/panelCatalog.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +18,10 @@ const OPTIONS_PATH = path.join(__dirname, '../../dist/chromium-mv3/options.html'
  * 動作しない。このテストは DOM 構造の存在確認のみを検証する。
  *
  * HTML 構造:
- * - サイドバー: div.sidebar-section-label (Settings/Data/Tools) + button.sidebar-nav-btn[role="tab"] (17個)
+ * - サイドバー: div.sidebar-section-label (Settings/Data/Tools) + button.sidebar-nav-btn[role="tab"]
+ *   （パネル数 = SIDEBAR_PANELS.length。Tools 欄末尾の「不具合を報告」ボタン
+ *   (#sidebarReportBugBtn) はナビゲーションタブではなくアクションボタンのため
+ *   role="tab" を持たない → role セレクタで数えることでカタログと1対1に対応）
  * - パネル: section.panel[role="tabpanel"] (ID: panel-general, panel-domain, ...)
  */
 
@@ -41,11 +45,15 @@ test.describe('Dashboard - Initial Load @ui', () => {
     await expect(sectionLabels.nth(2)).toHaveText('Tools');
   });
 
-  test('has 18 sidebar navigation tabs', async ({ page }) => {
+  test('has one sidebar tab per catalog panel', async ({ page }) => {
     await page.goto(`file://${OPTIONS_PATH}`);
 
-    const sidebarTabs = page.locator('.sidebar-nav-btn');
-    await expect(sidebarTabs).toHaveCount(18);
+    // role="tab" スコープ: #sidebarReportBugBtn は見た目を .sidebar-nav-btn と
+    // 共用するがナビゲーションタブではない（role/aria-controls/data-panel なし）。
+    // 期待値を SIDEBAR_PANELS から取ることで、パネル追加時にテスト側の
+    // ハードコードが陳腐化しない（SSOT = panelCatalog.ts）。
+    const sidebarTabs = page.locator('#sidebar .sidebar-nav-btn[role="tab"]');
+    await expect(sidebarTabs).toHaveCount(SIDEBAR_PANELS.length);
   });
 
   test('initial tab (panel-general) is selected', async ({ page }) => {
@@ -107,7 +115,7 @@ test.describe('Dashboard - Sidebar Navigation @ui', () => {
   }
 
   test('only one tab is initially selected', async ({ page }) => {
-    const selectedTabs = page.locator('.sidebar-nav-btn[aria-selected="true"]');
+    const selectedTabs = page.locator('#sidebar .sidebar-nav-btn[role="tab"][aria-selected="true"]');
     await expect(selectedTabs).toHaveCount(1);
   });
 });
