@@ -211,9 +211,14 @@ export class FallbackStorage {
       }
       filtered = filtered.filter(r => matchesExtraWhere(r, q));
 
+      // Dispatch decided once by queryPlanner.planQueryMode (spec.mode) — see
+      // PBI 2026-09-14-01. Root cause of 4a1f6093/43385d95: this branch used
+      // to re-test `if (q.text)` independently of the other backends.
       // Text search (LIKE fallback — no FTS5 in chrome.storage path)
-      if (q.text) {
-        const query = q.text.toLowerCase();
+      if (spec.mode === 'search') {
+        // Non-null: spec.mode === 'search' is derived from `q.text` truthiness
+        // (planQueryMode), so this branch is only reached when it is set.
+        const query = q.text!.toLowerCase();
         // Cache lowercased searchable strings for the lifetime of this query so
         // each record is materialized at most once (query never persists data).
         const searchCache = new Map<number, string>();
@@ -250,7 +255,7 @@ export class FallbackStorage {
         if (aVal > bVal) return 1 * dir;
         return 0;
       };
-      if (q.text) {
+      if (spec.mode === 'search') {
         // PBI 2026-09-12-40: mirror the SQL coercion (buildLikeOrderClause —
         // orderBy:rank coerces to created_at DESC since fallback has no FTS
         // rank). The former code kept insertion order for orderBy:rank.

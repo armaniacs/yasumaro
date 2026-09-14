@@ -42,12 +42,12 @@ Scenario: Markdownエクスポートが実際にダウンロードされる
 ```
 
 ## 受け入れ基準
-- [ ] `testDir/e2e/usability/dashboard-navigation.spec.ts` が新規作成されている
-- [ ] `testDir/e2e/usability/dashboard-task-flows.spec.ts` が新規作成されている
-- [ ] `testDir/e2e/usability/dashboard-search-results.spec.ts` が新規作成されている
-- [ ] `testDir/e2e/usability/dashboard-tag-cluster.spec.ts` が新規作成されている
-- [ ] `testDir/e2e/usability/dashboard-markdown-export.spec.ts` が新規作成されている
-- [ ] テストデータ投入用ヘルパー（既存パターンの流用または`seedRecords.ts`新規作成）が整備されている
+- [x] `testDir/e2e/usability/dashboard-navigation.spec.ts` が新規作成されている
+- [x] `testDir/e2e/usability/dashboard-task-flows.spec.ts` が新規作成されている
+- [x] `testDir/e2e/usability/dashboard-search-results.spec.ts` が新規作成されている
+- [x] `testDir/e2e/usability/dashboard-tag-cluster.spec.ts` が新規作成されている
+- [x] `testDir/e2e/usability/dashboard-markdown-export.spec.ts` が新規作成されている
+- [x] テストデータ投入用ヘルパー（既存パターンの流用または`seedRecords.ts`新規作成）が整備されている
 
 ## テスト戦略
 - E2E: 上記5ファイル（`@extension`タグ、既存`dashboard.fixture.ts`パターンを再利用。データ投入は`dashboardSqliteHelpers.ts`の`seedRows`）。Markdownエクスポートは`page.waitForEvent('download')`でダウンロードイベントを捕捉
@@ -58,6 +58,6 @@ Scenario: Markdownエクスポートが実際にダウンロードされる
 3pt（5つのE2Eシナリオファイル。当初想定のユニットテスト2件は既存カバレッジで充足のためスコープから除外）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `npx playwright test --project=extension testDir/e2e/usability/dashboard-*.spec.ts` で5ファイルすべてがPASSする
-- [ ] コードレビュー完了
+- [x] コードレビュー完了

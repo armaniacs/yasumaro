@@ -34,7 +34,6 @@ function getPrivacyConsentTitleEl(): HTMLElement | null {
 }
 
 // State
-let onConsentCallback: ((consented: boolean) => void) | null = null;
 let consentTrapId: string | null = null;
 
 function releaseConsentTrap(): void {
@@ -164,10 +163,22 @@ function showPrivacyConsentModal(): void {
 }
 
 /**
- * Service Workerに同意状態変更を通知し、ツールバーバッジを即座に更新させる（M3）
+ * Notify the Service Worker of a consent state change so it refreshes the toolbar badge (M3).
+ *
+ * INTENTIONAL: called from both the accept and decline paths with the
+ * identical bare envelope — no accept/decline distinction is carried.
+ * Receivers must re-read consent state from storage.
+ *
+ * Also dispatches a same-document consent-state-changed event: this popup is
+ * the SENDER of the CONSENT_STATE_CHANGED message, and chrome.runtime
+ * messages are never delivered back to the sender's own context, so in-page
+ * listeners cannot rely on the onMessage subscription alone.
  */
+export const CONSENT_STATE_CHANGED_EVENT = 'consent-state-changed';
+
 function notifyConsentStateChanged(): void {
     try {
+        document.dispatchEvent(new CustomEvent(CONSENT_STATE_CHANGED_EVENT));
         chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION });
     } catch (error) {
         logError('[PrivacyConsent] Failed to notify consent state change', { cause: error }, ErrorCode.INTERNAL_ERROR);
@@ -206,11 +217,6 @@ async function handleAcceptConsent(): Promise<void> {
         await recordPolicyVersionAcknowledgment();
         notifyConsentStateChanged();
         hidePrivacyConsentModal();
-
-        if (onConsentCallback) {
-            onConsentCallback(true);
-            onConsentCallback = null;
-        }
     } catch (error) {
         logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
 
@@ -235,11 +241,6 @@ async function handleDeclineConsent(): Promise<void> {
     notifyConsentStateChanged();
 
     hidePrivacyConsentModal();
-
-    if (onConsentCallback) {
-        onConsentCallback(false);
-        onConsentCallback = null;
-    }
 
     if (newCount >= 3) {
         return;
@@ -291,11 +292,4 @@ export function setupPrivacyConsentListeners(): void {
             chrome.tabs.create({ url: policyBtn.href });
         });
     }
-}
-
-/**
- * テスト用コールバック設定
- */
-export function setConsentCallback(callback: (consented: boolean) => void): void {
-    onConsentCallback = callback;
 }

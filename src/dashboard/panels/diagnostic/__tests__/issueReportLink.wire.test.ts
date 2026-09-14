@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { wireIssueReportButton } from '../issueReportLink.js';
+import { createIssueReportModalController } from '../issueReportLink.js';
 import type { DiagnosticsSnapshot } from '../DiagnosticsCollector.js';
 
 vi.mock('../../../../utils/logger/core.js', () => ({
@@ -45,7 +45,7 @@ function buildDom(): {
     </dialog>
   `;
   // jsdom doesn't implement <dialog>.showModal()/close() — stub them so
-  // wireIssueReportButton's calls don't throw, and toggle .open like the
+  // the controller's calls don't throw, and toggle .open like the
   // browser would.
   const modal = document.getElementById('bugReportPreviewModal') as HTMLDialogElement;
   modal.showModal = function (this: HTMLDialogElement) { this.open = true; };
@@ -62,7 +62,7 @@ function buildDom(): {
   };
 }
 
-describe('wireIssueReportButton — multiple entry points sharing one modal', () => {
+describe('createIssueReportModalController — multiple entry points sharing one modal', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
     (globalThis as unknown as { chrome: unknown }).chrome = {
@@ -74,14 +74,12 @@ describe('wireIssueReportButton — multiple entry points sharing one modal', ()
     const dom = buildDom();
     const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
 
-    wireIssueReportButton(
-      { reportBtn: dom.diagReportBtn, previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
       collectSnapshot,
     );
-    wireIssueReportButton(
-      { reportBtn: dom.sidebarReportBtn, previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
-      collectSnapshot,
-    );
+    controller.attachTrigger(dom.diagReportBtn);
+    controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.sidebarReportBtn.click();
     await Promise.resolve();
@@ -98,18 +96,16 @@ describe('wireIssueReportButton — multiple entry points sharing one modal', ()
     expect(dom.previewModal.open).toBe(false);
   });
 
-  it('opening via the diagnostics panel button and confirming also opens a tab (second wiring call still functions)', async () => {
+  it('opening via the diagnostics panel button and confirming also opens a tab (second attachTrigger call still functions)', async () => {
     const dom = buildDom();
     const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
 
-    wireIssueReportButton(
-      { reportBtn: dom.diagReportBtn, previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
       collectSnapshot,
     );
-    wireIssueReportButton(
-      { reportBtn: dom.sidebarReportBtn, previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
-      collectSnapshot,
-    );
+    controller.attachTrigger(dom.diagReportBtn);
+    controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.diagReportBtn.click();
     await Promise.resolve();
@@ -127,10 +123,11 @@ describe('wireIssueReportButton — multiple entry points sharing one modal', ()
     const dom = buildDom();
     const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
 
-    wireIssueReportButton(
-      { reportBtn: dom.sidebarReportBtn, previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
       collectSnapshot,
     );
+    controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.sidebarReportBtn.click();
     await Promise.resolve();
@@ -143,5 +140,63 @@ describe('wireIssueReportButton — multiple entry points sharing one modal', ()
     dom.openBtn.click();
     const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it('reentrancy guard: two controllers over the same modal do not double-fire open/cancel listeners', async () => {
+    const dom = buildDom();
+    const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
+
+    // Simulates accidentally constructing the controller twice instead of
+    // sharing the singleton: the second instance wires its own Open/Cancel
+    // listeners, but its pendingUrl stays null so only the triggering
+    // controller opens a tab.
+    const controllerA = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    controllerA.attachTrigger(dom.sidebarReportBtn);
+
+    dom.sidebarReportBtn.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    dom.openBtn.click();
+    const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('attaching the same button twice only wires one click listener', async () => {
+    const dom = buildDom();
+    const collectSnapshot = vi.fn().mockResolvedValue(makeSnapshot());
+
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    controller.attachTrigger(dom.sidebarReportBtn);
+    controller.attachTrigger(dom.sidebarReportBtn);
+
+    dom.sidebarReportBtn.click();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(collectSnapshot).toHaveBeenCalledTimes(1);
+
+    dom.openBtn.click();
+    const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it('attachTrigger(null) is a no-op and does not throw', () => {
+    const dom = buildDom();
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      vi.fn().mockResolvedValue(makeSnapshot()),
+    );
+    expect(() => controller.attachTrigger(null)).not.toThrow();
   });
 });

@@ -82,7 +82,10 @@ export class IdbVfsBackend implements StorageBackend {
     const extraFts = buildExtraWhereSql(q, { qualified: true });
     const extraLike = buildExtraWhereSql(q, { qualified: false });
 
-    if (q.text) {
+    // Dispatch decided once by queryPlanner.planQueryMode (spec.mode) — see
+    // PBI 2026-09-14-01. Root cause of 4a1f6093/43385d95: this branch used
+    // to re-test `if (q.text)` independently of the other backends.
+    if (spec.mode === 'search') {
       const bare = spec.bareText;
       if (!bare) return { success: true, rows: [], total: 0 };
 
@@ -121,7 +124,9 @@ export class IdbVfsBackend implements StorageBackend {
       // PBI 2026-09-12-39: path-aware tag seam (LIKE never MATCHes).
       const likeTagFilter = selectTagFilter(q.tag, 'like', this.engine.fts5Available);
       const stmts = buildLikeSearchStatements(extraLike, {
-        likePattern: buildLikePattern(q.text),
+        // Non-null: spec.mode === 'search' is derived from `q.text` truthiness
+        // (planQueryMode), so this branch is only reached when it is set.
+        likePattern: buildLikePattern(q.text!),
         orderClause: spec.order,
         limit: spec.limit,
         offset: spec.offset,

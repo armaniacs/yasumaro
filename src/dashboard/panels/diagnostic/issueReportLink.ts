@@ -76,8 +76,7 @@ export function buildIssueReportUrl(snapshot: DiagnosticsSnapshot, recentLogs: L
   return `${GITHUB_ISSUE_URL}?${params.toString()}`;
 }
 
-export interface IssueReportElements {
-  reportBtn: HTMLButtonElement | null;
+export interface IssueReportModalElements {
   previewModal: HTMLDialogElement | null;
   previewContent: HTMLTextAreaElement | null;
   cancelBtn: HTMLButtonElement | null;
@@ -85,52 +84,65 @@ export interface IssueReportElements {
   openBtn: HTMLButtonElement | null;
 }
 
-// The preview modal and its Cancel/Close/Open buttons are shared, page-level
-// elements (outside any panel) — the diagnostics panel and the sidebar each
-// have their own reportBtn but must open/confirm the SAME modal. State lives
-// at module scope (not per-call closure) so a click on either reportBtn is
-// visible to whichever call's Cancel/Close/Open listeners end up attached.
-// Keyed by the modal element itself (not a boolean) so the shared listeners
-// re-attach if the modal is ever replaced with a new element.
-let pendingUrl: string | null = null;
-let modalWiredTo: HTMLDialogElement | null = null;
+export interface IssueReportModalController {
+  /**
+   * Wire one "Report a Bug" entry-point button (diagnostics panel, sidebar,
+   * ...) to this controller's shared modal. Safe to call multiple times with
+   * different buttons; the modal's own Cancel/Close/Open listeners are
+   * attached only once, on controller creation.
+   */
+  attachTrigger(reportBtn: HTMLButtonElement | null): void;
+}
 
 /**
- * Wire one "Report a Bug" entry-point button to the shared preview modal.
- * Call once per entry-point button (diagnostics panel, sidebar, ...); the
- * modal's own Cancel/Close/Open listeners are attached only on the first
- * call, since all callers share the same modal elements.
+ * Create a controller owning the shared "Report a Bug" preview modal state.
+ * The modal and its Cancel/Close/Open buttons are shared, page-level elements
+ * (outside any panel); multiple entry-point buttons (diagnostics panel,
+ * sidebar, ...) attach to the SAME controller instance via attachTrigger()
+ * so a click on any of them is visible to the one set of Cancel/Close/Open
+ * listeners wired here, at controller-creation time.
  */
-export function wireIssueReportButton(
-  elements: IssueReportElements,
+export function createIssueReportModalController(
+  modalEls: IssueReportModalElements,
   collectSnapshot: () => Promise<DiagnosticsSnapshot>,
-): void {
-  const { reportBtn, previewModal, previewContent, cancelBtn, closeBtn, openBtn } = elements;
-  if (!reportBtn || !previewModal || !previewContent || !openBtn) return;
+): IssueReportModalController {
+  const { previewModal, previewContent, cancelBtn, closeBtn, openBtn } = modalEls;
 
-  reportBtn.addEventListener('click', async () => {
-    const snapshot = await collectSnapshot();
-    const recentLogs = await getLogs();
-    previewContent.value = buildIssueReportBody(snapshot, recentLogs);
-    pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
-    previewModal.showModal();
-  });
-
-  if (modalWiredTo === previewModal) return;
-  modalWiredTo = previewModal;
+  let pendingUrl: string | null = null;
+  // Skip duplicate wiring for the same button. WeakSet so entries for
+  // removed DOM elements are collectable without manual cleanup.
+  const wiredTriggers = new WeakSet<HTMLButtonElement>();
 
   const closeModal = (): void => {
     pendingUrl = null;
-    previewModal.close();
+    previewModal?.close();
   };
 
-  cancelBtn?.addEventListener('click', closeModal);
-  closeBtn?.addEventListener('click', closeModal);
+  if (previewModal && previewContent && openBtn) {
+    cancelBtn?.addEventListener('click', closeModal);
+    closeBtn?.addEventListener('click', closeModal);
 
-  openBtn.addEventListener('click', () => {
-    if (pendingUrl) {
-      chrome.tabs.create({ url: pendingUrl });
-    }
-    closeModal();
-  });
+    openBtn.addEventListener('click', () => {
+      if (pendingUrl) {
+        chrome.tabs.create({ url: pendingUrl });
+      }
+      closeModal();
+    });
+  }
+
+  return {
+    attachTrigger(reportBtn: HTMLButtonElement | null): void {
+      if (!reportBtn || !previewModal || !previewContent || !openBtn) return;
+      if (wiredTriggers.has(reportBtn)) return;
+      wiredTriggers.add(reportBtn);
+
+      reportBtn.addEventListener('click', async () => {
+        const snapshot = await collectSnapshot();
+        const recentLogs = await getLogs();
+        previewContent.value = buildIssueReportBody(snapshot, recentLogs);
+        pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
+        previewModal.showModal();
+      });
+    },
+  };
 }

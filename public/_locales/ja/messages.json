@@ -1509,6 +1509,9 @@
   "diagMigrationCheckingStaleHint": {
     "message": "データは既に保存されているのに「確認中」が続く場合、OPFS Worker内の移行処理がステータスフラグを書き込めていない可能性があります（専用Worker（Worker()コンストラクタで生成されるスレッド）からchrome.storage.localにアクセスできないケースが原因として考えられます）。保存済みデータには影響しません。拡張機能の再読み込みで解消することがあります。解消しない場合も情報表示上の問題として扱って差し支えありません。"
   },
+  "diagMigrationLegacyStillPresent": {
+    "message": "移行は完了していますが、旧データベースファイルがまだ残っています。保持していても問題はありませんが、ストレージを消費します。拡張機能を再読み込みすると削除される場合があります。"
+  },
   "diagSqliteTitle": {
     "message": "SQLite データベース"
   },
