@@ -1,0 +1,83 @@
+# PBI: Firefox リリース準備 — 実機 QA・ドキュメント・配布方針
+
+## ステータス: ⬜ 未着手（順位3 / RICE 30.0 / 台帳: 2026-09-14-00-backlog-firefox-support.md）
+
+## ユーザーストーリー
+
+Firefox ユーザーとして、インストール手順と動作範囲（対応機能・既知制限）が明記された状態でリリースを使いたい。なぜなら非対応機能を試してから失望するのを避けたいから。
+
+## 優先度
+
+- 順位: 3 / 全候補数 3
+- RICEスコア: 30.0（Reach=30 / Impact=2 / Confidence=50% / Effort=1人日）
+- 根拠: 実機 QA の発見事項量が最大の不確実要素（Confidence 50%）。**09・10 に依存**（QA 対象と smoke 基盤が前提）
+
+## 背景
+
+- API 差分の大部分は事前検出済み（`browserSupport.ts` の feature-detect + 診断パネル表示）。Built-in AI（Gemini Nano）は Chromium 専用で Firefox では「非対応」表示になる
+- **配布の意思決定が必要**: AMO は `<all_urls>` コンテンツスクリプトの broad host permission 審査が厳格。初期リリースは現行の GitHub Releases zip 配布（Developer Edition + `xpinstall.signatures.required=false` 手順）を継続し、AMO は別判断とするのが安全
+
+## 実装ガイド
+
+### 1. 実機 QA 総点検（チェックリスト）
+
+Firefox（about:debugging 一時読み込み or Developer Edition）で以下を通し、発見事項をこの PBI のコメント欄または別 fix PBI に記録する:
+
+- [ ] 同意モーダル → オンボーディングウィザード表示
+- [ ] コンテンツスクリプト自動記録（閲覧 → daily note / SQLite 保存）
+- [ ] ポップアップ手動記録 → プレビュー → 保存
+- [ ] ダッシュボード: 検索（FTS5）・タグクラウド・ドメインフィルタ
+- [ ] Markdown エクスポート（Downloads API）
+- [ ] 日次パージ alarm・バッジ表示
+- [ ] アーカイブ作成・復元（staging OPFS）
+- [ ] i18n ja/en 切替・ライトモード
+- [ ] 診断パネルの SQLite テスト（moz-extension origin での OPFS 最終確認 — プローブは localhost 実測のため）
+
+### 2. ドキュメント更新
+
+- `docs/FAQ.md`（ja/en 両方）: 「Firefox ビルドは可能だが主要サポートは Chromium 系」→ 対応状況・インストール手順（Developer Edition 手順含む）・既知制限（Built-in AI 非対応等）に更新
+- `README.md` の対応ブラウザ記載
+- `dev-docs/TESTING_GUIDE.md`: Firefox QA 手順
+
+### 3. CHANGELOG とリリース
+
+- v6.9.0 の CHANGELOG エントリに Firefox 対応を記載
+- release ワークフローの firefox zip は既存（`npx wxt zip -b firefox`）— 成果物の動作確認
+- 配布方針の決定を ADR または本 PBI に記録（初期 = GitHub Releases 継続推奨）
+
+## BDD受け入れシナリオ
+
+```gherkin
+Scenario: QA で発見した不具合が PBI 化される
+  Given 実機 QA チェックリストの全項目を実行した
+  When  不具合が発見される
+  Then  各不具合が個別 fix PBI として起票され、ブロッカーは v6.9.0 スコープに含まれる
+
+Scenario: ドキュメントが実態と一致する
+  Given Firefox 対応が v6.9.0 に含まれた
+  When  ユーザーが FAQ / README を読む
+  Then  インストール手順と対応機能の範囲が実態と一致している
+```
+
+## 受け入れ基準
+
+- [ ] 実機 QA チェックリスト全項目を実行し、結果を記録した
+- [ ] QA 発見のブロッカーが fix 済みまたは個別 PBI 化されている
+- [ ] FAQ / README / TESTING_GUIDE が更新済み（ja/en）
+- [ ] v6.9.0 の CHANGELOG エントリに Firefox 対応が記載されている
+- [ ] 配布方針（AMO vs GitHub Releases）が決定・記録されている
+
+## テスト戦略
+
+- E2E: PBI 10 の smoke + 実機 QA（手動・チェックリスト）
+- 単体: QA 発見事項に応じて追加
+
+## 見積もり
+
+1人日
+
+## Definition of Done
+
+- [ ] 全BDDシナリオが完了している（QA 記録・ドキュメント・CHANGELOG）
+- [ ] コードレビュー完了（ドキュメント変更分）
+- [ ] ドキュメント更新済み
