@@ -47,36 +47,41 @@ export function resolveBackend(state: PostInitState): BackendType {
 /**
  * Create the appropriate StorageBackend adapter for the resolved backend type.
  * Falls back to NoopBackend if the resolved type has no matching adapter.
+ *
+ * Registry form (PBI 2026-09-15-10): adding a backend is one entry here —
+ * the resolver's priority logic and this table are the only two edit points.
+ * The 'idb' entry keeps its lazy engine-init precondition (the resolver may
+ * return 'idb' before the engine is fully set up).
  */
+const BACKEND_FACTORIES = {
+  opfs: (context: SqliteEngineHost): StorageBackend => new OpfsWorkerBackend(context),
+  idb: async (context: SqliteEngineHost): Promise<StorageBackend | null> => {
+    // Ensure the IDB engine is initialized — the resolver may have
+    // returned 'idb' before the engine was fully set up.
+    if (!context.idbEngine) {
+      await context.init();
+    }
+    if (context.idbEngine) {
+      return new IdbVfsBackend(context);
+    }
+    return null;
+  },
+  fallback: (context: SqliteEngineHost): StorageBackend | null => {
+    if (context.fallbackStorage) {
+      return new FallbackStorageAdapter(context.fallbackStorage);
+    }
+    return null;
+  },
+  none: (): StorageBackend | null => null,
+} satisfies Record<BackendType, (context: SqliteEngineHost) => StorageBackend | null | Promise<StorageBackend | null>>;
+
 export async function createBackend(
   context: SqliteEngineHost,
   resolved: BackendType
 ): Promise<StorageBackend> {
-  switch (resolved) {
-    case 'opfs':
-      return new OpfsWorkerBackend(context);
-    case 'idb': {
-      // Ensure the IDB engine is initialized — the resolver may have
-      // returned 'idb' before the engine was fully set up.
-      if (!context.idbEngine) {
-        await context.init();
-      }
-      if (context.idbEngine) {
-        return new IdbVfsBackend(context);
-      }
-      break;
-    }
-    case 'fallback': {
-      if (context.fallbackStorage) {
-        return new FallbackStorageAdapter(context.fallbackStorage);
-      }
-      break;
-    }
-    case 'none':
-      break;
-  }
-
-  return new NoopBackend();
+  const factory = BACKEND_FACTORIES[resolved];
+  const backend = await factory(context);
+  return backend ?? new NoopBackend();
 }
 
 /**

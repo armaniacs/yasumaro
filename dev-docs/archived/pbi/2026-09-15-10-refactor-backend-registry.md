@@ -1,6 +1,6 @@
 # PBI: createBackend のレジストリ化 — backend 追加を2箇所編集に
 
-## ステータス: ⬜ 未着手（順位2 / RICE 7.5 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補9）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -53,10 +53,10 @@ Scenario: 未解決 backend が NoopBackend に落ちる
 
 ## 受け入れ基準
 
-- [ ] `createBackend` の switch が `satisfies` 付き Map レジストリに置換されている
-- [ ] backendResolver / sqliteEngineHost 関連テスト全件 green
-- [ ] 'none' → NoopBackend のフォールバックが維持されている
-- [ ] `setOpfsWorkerFactory` の API が不変
+- [x] `createBackend` の switch が `satisfies` 付き Map レジストリに置換されている（null 許容の factory 型で 'idb'/'fallback' の前提不成立を表現）
+- [x] backendResolver / sqliteEngineHost 関連テスト全件 green（offscreen 1075 passed）
+- [x] 'none' → NoopBackend のフォールバックが維持されている
+- [x] `setOpfsWorkerFactory` の API が不変
 
 ## テスト戦略
 
