@@ -11,6 +11,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
+import { toValidVisitPayload } from './visitPayload.js';
 
 /** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
 export interface VisitByteStats {
@@ -168,15 +169,9 @@ export class VisitReporter {
         benchMark('ow-send-ready');
 
         try {
-            const stats = buildVisitStats(pageState);
             const response = await sender.sendMessageWithRetry({
                 type: 'VALID_VISIT',
-                payload: {
-                    content,
-                    ...stats.byteStats,
-                    ...stats.aiStats,
-                    fallbackTriggered: stats.fallbackTriggered,
-                },
+                payload: toValidVisitPayload(pageState, content),
             });
             void logDebug('VALID_VISIT response', { response }, 'visitReporter');
             console.info('[OWeave] VALID_VISIT レスポンス:', JSON.stringify(response));
@@ -205,9 +200,13 @@ export class VisitReporter {
                     const userConfirmed = await (confirm as (a: string, b: string) => Promise<boolean>)(statusCode, reasonLabel);
                     if (userConfirmed) {
                         try {
+                            // PBI 2026-09-15-14: the force re-send uses the same
+                            // payload builder — the stats-drop drift (force
+                            // re-sends omitting byte/ai fields) is structurally
+                            // impossible now.
                             await sender.sendMessageWithRetry({
                                 type: 'VALID_VISIT',
-                                payload: { content, force: true },
+                                payload: toValidVisitPayload(pageState, content, { force: true }),
                             });
                         } catch (retryError: unknown) {
                             await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'visitReporter');

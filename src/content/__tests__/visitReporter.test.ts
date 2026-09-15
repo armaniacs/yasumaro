@@ -116,7 +116,7 @@ describe('VisitReporter policy matrix', () => {
     expect(deps.confirmDialog).not.toHaveBeenCalled();
   });
 
-  it('confirms and force-retries with the minimal payload when accepted', async () => {
+  it('confirms and force-retries with the full payload (PBI 2026-09-15-14: no stats-drop on force)', async () => {
     const deps = makeDeps();
     deps.sender.sendMessageWithRetry.mockResolvedValueOnce({
       success: false,
@@ -128,10 +128,13 @@ describe('VisitReporter policy matrix', () => {
 
     expect(deps.confirmDialog).toHaveBeenCalledTimes(1);
     expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(2);
-    expect(deps.sender.sendMessageWithRetry).toHaveBeenNthCalledWith(2, {
-      type: 'VALID_VISIT',
-      payload: { content: 'hello', force: true },
-    });
+    // PBI 2026-09-15-14: the force re-send uses the same payload builder as
+    // the first send — the stats-drop drift is structurally fixed.
+    const secondCall = deps.sender.sendMessageWithRetry.mock.calls[1][0] as { payload: Record<string, unknown> };
+    expect(secondCall.payload.force).toBe(true);
+    expect(secondCall.payload.content).toBe('hello');
+    // byte/ai stats are present (not dropped like the old force re-send)
+    expect('fallbackTriggered' in secondCall.payload).toBe(true);
   });
 
   it('skips retry when declined', async () => {

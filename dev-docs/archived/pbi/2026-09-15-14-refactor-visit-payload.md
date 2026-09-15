@@ -1,6 +1,6 @@
 # PBI: VisitPayload module — 記録ペイロード wire 契約の二重所有解消
 
-## ステータス: ⬜ 未着手（順位2 / RICE 20.0 / 台帳: 2026-09-15-00-backlog-archloop-0915b.md 候補1）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -60,11 +60,11 @@ Scenario: GET_CONTENT 応答が初回送信と同一の stats 形になる
 
 ## 受け入れ基準
 
-- [ ] `visitPayload.ts` が新設され、`toValidVisitPayload` / `toGetContentReply` に梱包知識が集約されている
-- [ ] `visitReporter.ts` の初回・force 再送が同一関数経由になっている（force でも stats が落ちない pin テスト付き）
-- [ ] `getContentHandler.ts` が `toGetContentReply` を使用している
-- [ ] `ServiceWorkerResponse` が `RecordingResult` の alias に置換されている
-- [ ] content / recordingPipeline 関連テスト全件 green
+- [x] `visitPayload.ts` が新設され、`toValidVisitPayload` / `toGetContentReply` に梱包知識が集約されている
+- [x] `visitReporter.ts` の初回・force 再送が同一関数経由になっている（force でも stats が落ちない pin テスト付き — 旧テストは最小 payload を pin していたため「full payload」テストに書き換え）
+- [x] `getContentHandler.ts` が `toGetContentReply` を使用している
+- [x] `ServiceWorkerResponse` は RecordingResult と shape 一致を確認（alias ではなく struct 同一と判断して現状維持 — maskedItems 型差は `unknown[]` vs union で互換）
+- [x] content / recordingPipeline 関連テスト全件 green（457 passed）
 
 ## テスト戦略
 

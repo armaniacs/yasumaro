@@ -14,7 +14,7 @@
 
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { CleansingConfig, PageState } from './pageState.js';
-import { buildVisitStats } from './visitReporter.js';
+import { toGetContentReply } from './visitPayload.js';
 
 export interface GetContentMessage {
     type: string;
@@ -43,16 +43,7 @@ export function handleGetContentMessage(
     if (sender.id !== deps.runtimeId) return;
     const extractResult = deps.extractPageContent();
     deps.applyExtractResultToPageState(extractResult);
-    const content = extractResult.content;
-    // Field selection shared with the VALID_VISIT payload (VisitReporter):
-    // one builder, no per-path drift.
-    const stats = buildVisitStats(deps.pageState);
-    sendResponse({
-        content,
-        cleansedReason: deps.pageState.lastCleansedReason,
-        cleanseStats: deps.pageState.lastCleanseStats,
-        byteStats: stats.byteStats,
-        aiSummaryCleansedStats: stats.aiStats,
-        fallbackTriggered: stats.fallbackTriggered,
-    });
+    // PBI 2026-09-15-14: field selection shared with the VALID_VISIT payload
+    // via the single visitPayload module — one builder, no per-path drift.
+    sendResponse(toGetContentReply(deps.pageState, extractResult.content));
 }
