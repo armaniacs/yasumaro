@@ -22,6 +22,11 @@ Firefox は `chrome.offscreen` 非依存化により対応可能と確定。ス�
 - ⬜🟡🟡🔧 2026-09-14-11-chore-firefox-release-readiness.md（RICE 30.0 — 実機 QA チェックリスト（moz-extension origin での OPFS 最終確認を含む）・FAQ/README 更新・配布方針決定（初期 = GitHub Releases 継続推奨・AMO は broad host permission 審査リスク）。**09・10 依存**）
 
 
+### 2026-09-15 AMO 公開 — 将来対応（着手禁止）
+
+- 🔒 2026-09-15-01-backlog-firefox-amo-publish.md（**将来対応・着手禁止**: PBI 09/10/11 完了 + PBI 11 での AMO 採用決定が着手条件。AMO 署名・リスティング・権限正当化文の準備。RICE 12.0 は参考値で着手時に再採点）
+
+
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
 
 - 2026-09-05-32-refactor-wasqlite-sunset.md（⬜ **ゲート付き**: ADR-014 ゲート 2026-12-17 到達＋診断パネル未完了報告ゼロを確認してから着手。wa-sqlite 依存・移行系削除。S。スパイク PBI-A。2026-09-14 再調査で実装ガイドを追加 — 対象リストに `wa-sqlite.d.ts` 漏れ・STATUS 公開部は `sqliteStatus.ts` が正・`migrationBackup.ts` の `extractDomain` re-export に現役依存あり）
