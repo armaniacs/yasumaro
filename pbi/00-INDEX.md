@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-15 arch-delivery-loop 0915（第3ループ）— 4件（台帳の残り4候補を全て PBI 化）
+
+第1・2ループで8件を消化し、残っていた4候補（ArchiveSessionStore 10.0 / createBackend 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）を全て PBI 化。実行順 = 09 → 10 → 11 → 12（依存関係なし・直列）。これで arch-loop 0915 の11候補が全て PBI 化される。
+
+- ⬜🟡🟡🔧 2026-09-15-09-refactor-archive-session-store.md（RICE 10.0 — archivePanel の約500行 mount から staging ライフサイクルを ArchiveSessionStore 状態機械（idle→staged→open→dirty）に抽出。illegal 遷移ガード + 6.8.11 の staging 退行回帰テスト付き。**Confidence 50% — 抽出スパイク要因**）
+- ⬜🟡🟢🔧 2026-09-15-10-refactor-backend-registry.md（RICE 7.5 — backendResolver の switch を `satisfies` 付き Map レジストリに。バックエンド追加の6箇所編集をレジストリ1行に）
+- ⬜🟡🟢🔧 2026-09-15-11-refactor-sqlite-history-presentation.md（RICE 4.0 — 削減率計算・FTS 判定の View/Model 二重所有を純粋関数 module に集約 + Model の sort 永続化を deps 注入に）
+- ⬜🟡🟡🔧 2026-09-15-12-refactor-hmac-keystore-seam.md（RICE 3.75 — KEK 候補チェーンの session/local 読みを注入可能にし、チェーン順序（session → legacy → durable → generate）をテスト可能に。同意リセット修正直後の品質強化）
+
+
 ### 2026-09-15 arch-delivery-loop 0915（第2ループ）— 3件（台帳の次点候補を PBI 化）
 
 第1ループ（02〜05）の残り候補のうち、RICE 上位3件を PBI 化。残り4件は台帳に将来候補として記録（ArchiveSessionStore 10.0 / createBackend レジストリ 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）。実行順 = 06 → 07 → 08（依存関係なし・直列）。

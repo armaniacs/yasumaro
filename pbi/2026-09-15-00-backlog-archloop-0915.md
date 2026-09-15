@@ -13,17 +13,17 @@
 | 5 | diagnostics section のデータ駆動化 | 6 | 1 | 0.8 | 0.3 | 16.0 | → **PBI 06**（第2ループ） |
 | 6 | Transport timeout/settle の重複除去 | 3 | 0.5 | 0.8 | 0.1 | 12.0 | → **PBI 07**（第2ループ） |
 | 7 | consent module の深掘り（状態遷移の locality 回復） | 4 | 2 | 0.8 | 0.6 | 10.7 | → **PBI 08**（第2ループ） |
-| 8 | ArchiveSessionStore 抽出（500行 mount の状態機械化） | 8 | 2 | 0.5 | 0.8 | 10.0 | 将来候補 |
-| 9 | createBackend のレジストリ化 | 6 | 1 | 0.5 | 0.4 | 7.5 | 将来候補 |
-| 10 | sqliteHistory presentation 抽出 | 4 | 1 | 0.5 | 0.5 | 4.0 | 将来候補 |
-| 11 | hmacKeyStore 候補チェーンの内部 seam | 3 | 0.5 | 0.5 | 0.2 | 3.75 | 将来候補 |
+| 8 | ArchiveSessionStore 抽出（500行 mount の状態機械化） | 8 | 2 | 0.5 | 0.8 | 10.0 | → **PBI 09**（第3ループ） |
+| 9 | createBackend のレジストリ化 | 6 | 1 | 0.5 | 0.4 | 7.5 | → **PBI 10**（第3ループ） |
+| 10 | sqliteHistory presentation 抽出 | 4 | 1 | 0.5 | 0.5 | 4.0 | → **PBI 11**（第3ループ） |
+| 11 | hmacKeyStore 候補チェーンの内部 seam | 3 | 0.5 | 0.5 | 0.2 | 3.75 | → **PBI 12**（第3ループ） |
 
 ## 実行順
 
 ```
 第1ループ（2026-09-15）: 02 → 03 → 04 → 05 完了
-第2ループ（2026-09-15）: 06 → 07 → 08
-残り（将来候補）: ArchiveSessionStore → createBackend → sqliteHistory → hmacKeyStore の順で再採点
+第2ループ（2026-09-15）: 06 → 07 → 08 完了
+第3ループ（2026-09-15）: 09 → 10 → 11 → 12（全11候補がこのループで閉じられる）
 ```
 依存関係なし（互いに独立）。実装は直列で進める。
 
