@@ -49,9 +49,7 @@ All notable changes to this project will be documented in this file.
 - **queryPlanner ⇄ queryPlan の循環 import を解消**: 双方向だった依存を planner→plan の一方向に。`AlreadyCappedQuery` ブランド型により、cap 未適用のクエリが SQL 組立に到達できないことを型で保証（worker 境界の1箇所だけ文書化キャスト）
 - **archive wireTable 派生化**: gateway decoders（14個の手書き投影）と offscreen dispatch（14行の手書き列挙）を wireTable の descriptor 派生に統合。新 archive op 追加が1行で完結し、response field 欠落時の silent-drop が decodeResponse の throw 契約で表面化
 - **CleansingPresetStore 抽出**: クレンジングプリセットの適用・マイグレーション・custom 遷移の順序制約（apply epoch・二重書き込み・busy 窓）が呼び出し側に漏れていた（直近のプリセット競合バグの構造的原因）→ store に集約し、`aiSummaryCleansingSettingsV2.ts` から chrome.storage 直打ちを排除
-
-### Changed
-
+- **第2ルール（arch-loop 0915 第2ループ）**: 診断 section 追加の4箇所編集を `SECTIONS` テーブル化で1行に（診断パネルは30コミットで6回変更のホットスポット）/ Chrome・Firefox 両 transport の timeout/settle 定型25行を Base に集約 / 拒否カウンタ・本文保存フラグ・通知 fan-out を privacyConsent 深い module に集約し、Chrome の送信者非配送仕様を `subscribeConsentChanges` seam の内部に隠蔽
 - vitest の testTimeout を 15s → 30s に引き上げ（`make clean test` の 746 ファイル並列実行時に、分離実行では 1 秒未満の暗号/タイマー系テストがロード競合で超過するため。分離実行は全 green を確認済み）
 
 ## [6.9.0] - 2026-09-15
