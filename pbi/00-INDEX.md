@@ -14,7 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-15 arch-delivery-loop 0915 — 4件（診断11候補から上位4件を PBI 化）
+### 2026-09-15 arch-delivery-loop 0915（第2ループ）— 3件（台帳の次点候補を PBI 化）
+
+第1ループ（02〜05）の残り候補のうち、RICE 上位3件を PBI 化。残り4件は台帳に将来候補として記録（ArchiveSessionStore 10.0 / createBackend レジストリ 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）。実行順 = 06 → 07 → 08（依存関係なし・直列）。
+
+- ⬜🟢🟢🔧 2026-09-15-06-refactor-diagnostics-sections.md（RICE 16.0 — 診断 section 追加の4箇所編集を SECTIONS テーブル化で1行に + issue report entry point の `registerReportBugButton` 集約。ホットスポット（6回変更）の変更半径縮小）
+- ⬜🟡🟢🔧 2026-09-15-07-refactor-transport-timeout-seam.md（RICE 12.0 — Chrome/InPage 両 sendOnce の 25行コピーを Base の `sendOnceWithTimeout` に集約 + invalidateContainer 二重呼び出し解消 + 具象再 export 除去）
+- ⬜🟢🟢🔧 2026-09-15-08-refactor-consent-module.md（RICE 10.7 — 拒否カウンタ・本文保存フラグ・通知 fan-out を privacyConsent 深い module に集約し、`subscribe` seam で Chrome の送信者非配送仕様を隠蔽。**Strong**・直近3回の変更が同一 seam 不在に起因）
+
+
+### 2026-09-15 arch-delivery-loop 0915（第1ループ）— 4件（診断11候補から上位4件を PBI 化）
 
 `arch-delivery-loop` の Phase 0 診断（3サブエージェント探索 + HTML レポート `/tmp/architecture-review-20260915.html`）で抽出した11候補のうち、RICE 上位4件を PBI 化。残り7件は将来候補として台帳 `2026-09-15-00-backlog-archloop-0915.md` に記録（diagnostics section データ駆動 16.0 / transport timeout 重複 12.0 / consent module 深掘り 10.7 / ArchiveSessionStore 10.0 / createBackend レジストリ 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）。実行順 = 02 → 03 → 04 → 05（依存関係なし・直列）。
 
