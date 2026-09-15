@@ -83,6 +83,8 @@ export const API_KEY_FIELDS: StorageKey[] = asStorageKeys();
  * with 100k-derived keys fail to decrypt with 600k. Try legacy 100k
  * for both anonymous (secret/salt) and master-password modes.
  */
+import { deriveLegacyKeyFromStoredSecret } from '../crypto/kdfNegotiator.js';
+
 async function tryDecryptWithLegacyFallback(
     encryptedValue: unknown,
     currentKey: CryptoKey,
@@ -93,15 +95,10 @@ async function tryDecryptWithLegacyFallback(
     } catch {
         // Try legacy 100k iteration fallback
         try {
-            const { CRYPTO_PARAMS } = await import('../crypto/cryptoParams.js');
             const stored = await chrome.storage.local.get([
-                StorageKeys.ENCRYPTION_SALT,
-                StorageKeys.ENCRYPTION_SECRET,
                 StorageKeys.MASTER_PASSWORD_ENABLED,
-                StorageKeys.MASTER_PASSWORD_SALT,
             ]);
             const isMasterEnabled = Boolean(stored[StorageKeys.MASTER_PASSWORD_ENABLED]);
-            const webcrypto = (globalThis.crypto || crypto) as Crypto;
 
             if (isMasterEnabled) {
                 // Master-password mode: legacy fallback requires cached password which is not exposed.
@@ -111,21 +108,10 @@ async function tryDecryptWithLegacyFallback(
             }
 
             // Anonymous mode: derive legacy 100k key from same secret/salt
-            const saltB64 = stored[StorageKeys.ENCRYPTION_SALT] as string | undefined;
-            const secretB64 = stored[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
-            if (!saltB64 || !secretB64) return { decrypted: null, legacySucceeded: false };
-            const salt = Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0));
-            const secret = atob(secretB64);
-            const encoder = new TextEncoder();
-            const secretBytes = encoder.encode(secret);
-            const baseKey = await webcrypto.subtle.importKey('raw', secretBytes, 'PBKDF2', false, ['deriveKey']);
-            const legacyKey = await webcrypto.subtle.deriveKey(
-                { name: 'PBKDF2', salt: salt as BufferSource, iterations: CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS, hash: 'SHA-256' },
-                baseKey,
-                { name: 'AES-GCM', length: 256 },
-                false,
-                ['encrypt', 'decrypt'],
-            );
+            // PBI 2026-09-15-13: the hand-written PBKDF2 derive moved to
+            // kdfNegotiator.deriveLegacyKeyFromStoredSecret.
+            const legacyKey = await deriveLegacyKeyFromStoredSecret();
+            if (!legacyKey) return { decrypted: null, legacySucceeded: false };
             const decrypted = await decryptApiKey(encryptedValue as never, legacyKey);
             return { decrypted, legacySucceeded: true };
         } catch {

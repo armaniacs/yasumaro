@@ -1,6 +1,6 @@
 # PBI: KdfNegotiator — KDF 交渉の3箇所手書き集約
 
-## ステータス: ⬜ 未着手（順位1 / RICE 20.0 / 台帳: 2026-09-15-00-backlog-archloop-0915b.md 候補3）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -64,10 +64,10 @@ Scenario: legacy 100k の EncryptedData がフォールバックで復号され�
 
 ## 受け入れ基準
 
-- [ ] `kdfNegotiator.ts` が新設され、`decryptWithKdfNegotiation` が envelope/legacy の両形式を処理している
-- [ ] `settingsExportImport.decryptWithFallback` と `settingsMigration.tryDecryptWithLegacyFallback` が委譲に置換されている
-- [ ] legacy 100k / 現行 600k / master 有効のテストが全件 green
-- [ ] crypto 関連テスト全件 green
+- [x] `kdfNegotiator.ts` が新設され、`decryptWithIterationCandidates` が envelope/legacy の両形式を処理している（legacy 形式は `deriveLegacyKeyFromStoredSecret` も提供）
+- [x] `settingsExportImport.decryptWithFallback` と `settingsMigration.tryDecryptWithLegacyFallback` が委譲に置換されている
+- [x] legacy 100k / 現行 600k / master 有効のテストが全件 green（128 passed）
+- [x] crypto 関連テスト全件 green
 
 ## テスト戦略
 

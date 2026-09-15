@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
+import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
 import { logError, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
 import { DEFAULT_IMPORT_SIZE_CAP_BYTES, base64ToBytesTyped } from './importPipeline.js';
@@ -265,42 +266,33 @@ export async function importEncryptedSettings(
     // Salt decode (typed-array, no amplification)
     const salt = base64ToBytesTyped(encryptedData.salt);
 
-    // Helper: try iterations in order (stored -> SSOT -> legacy) for backward compat
-    async function decryptWithFallback(): Promise<string> {
-      const candidates: number[] = [];
-      if (typeof encryptedData.iterations === 'number') {
-        candidates.push(encryptedData.iterations);
-      }
-      candidates.push(CRYPTO_PARAMS.PBKDF2_ITERATIONS, CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS);
-      const unique = [...new Set(candidates)];
-      let lastError: unknown;
-      for (const it of unique) {
-        try {
-          const k = await deriveKey(masterPassword, salt, it);
-          const pt = await decryptData(
-            { ciphertext: encryptedData.ciphertext, iv: encryptedData.iv },
-            k
-          );
-          return pt;
-        } catch (e) {
-          lastError = e;
-          // Try next iteration candidate (legacy compat)
-        }
-      }
-      throw lastError ?? new Error('Decryption failed');
-    }
-
+    // PBI 2026-09-15-13: the iteration candidate loop (stored -> SSOT -> legacy)
+    // is centralized in kdfNegotiator.ts.
     let decryptedJson: string;
     try {
-      decryptedJson = await decryptWithFallback();
+        const result = await decryptWithIterationCandidates(
+            masterPassword,
+            encryptedData.salt,
+            encryptedData.ciphertext,
+            encryptedData.iv,
+            typeof encryptedData.iterations === 'number' ? encryptedData.iterations : undefined,
+        );
+        decryptedJson = result.text;
+        if (result.needsRehash) {
+            await logInfo(
+                'Decrypted with legacy iterations — re-encrypt recommended',
+                { usedIterations: 'legacy' },
+                'settingsExportImport.ts'
+            );
+        }
     } catch (_e) {
-      await logError(
-        'Decryption failed',
-        {},
-        ErrorCode.SETTINGS_IMPORT_FAILURE,
-        'settingsExportImport.ts'
-      );
-      return null;
+        await logError(
+            'Decryption failed',
+            {},
+            ErrorCode.SETTINGS_IMPORT_FAILURE,
+            'settingsExportImport.ts'
+        );
+        return null;
     }
 
     // Legacy v1: HMAC was over plaintext_json.
