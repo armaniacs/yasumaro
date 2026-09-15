@@ -3,7 +3,8 @@ import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { initialize as initializeSessionAlarms } from './sessionAlarmsManager.js';
+import { SessionAlarmService } from './SessionAlarmService.js';
+import { setReviewSummaryGeneratorRef, setSessionTimeoutRefs } from './alarmRegistryRefs.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { createCacheInitializedFlag } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
@@ -28,11 +29,14 @@ import { createOllamaSettingsObserver } from './net/ollamaSettingsObserver.js';
  */
 export function init(): void {
     // Session alarm initialization for master password timeout
-    initializeSessionAlarms();
+    // (PBI 2026-09-15-15: the alarm creation + listener live in the registry)
+    void sessionAlarmService.initialize();
 
-    // Unconditional alarms (daily purge + offline retry) are created from the
-    // registry table; conditional ones stay in their own init functions.
-    alarmRegistry.installStaticAlarms();
+    // PBI 2026-09-15-15: all timed jobs (daily purge, local-md, offline retry,
+    // review-summary, session-timeout) are unified under the registry's
+    // installAll() — static schedules + conditional install hooks + uniform
+    // failure policy live in alarmRegistry.ts's table.
+    void alarmRegistry.installAll();
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
     (async () => {
@@ -41,17 +45,6 @@ export function init(): void {
         await initExportScheduler();
       } catch (err) {
         logError('Failed to init export scheduler', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
-      }
-    })();
-
-    // Initialize weekly/monthly review summary alarms
-    (async () => {
-      try {
-        const { initializeReviewSummaryAlarms, setupReviewSummaryAlarmListener } = await import('./reviewSummaryAlarm.js');
-        await initializeReviewSummaryAlarms(reviewSummaryGenerator);
-        setupReviewSummaryAlarmListener(reviewSummaryGenerator);
-      } catch (err) {
-        logError('Failed to init review summary alarms', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
     })();
 
@@ -176,13 +169,22 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({ handleManualRecord: handleManualRecordForContextMenu });
 
-// Alarm registry (routing table + static creation + uniform failure logging)
+// Alarm registry (routing table + install hooks + uniform failure logging)
+const sessionAlarmService = new SessionAlarmService();
 const alarmRegistry = createAlarmRegistry({
   sqliteClient,
   recordingPipeline,
   getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
   retryPendingChromeStorageWrite,
+  settingsReader: settingsRepository,
+  sessionTimeoutChecker: async () => { sessionAlarmService.checkTimeout(); },
+  sessionTimeoutInstall: async () => { await sessionAlarmService.startTimeoutChecker(); },
 });
+setReviewSummaryGeneratorRef(reviewSummaryGenerator);
+setSessionTimeoutRefs(
+  async () => { await sessionAlarmService.startTimeoutChecker(); },
+  async () => { sessionAlarmService.checkTimeout(); },
+);
 const handleAlarm = alarmRegistry.handleAlarm;
 
 // Re-export createMessageHandler for backward compatibility with tests

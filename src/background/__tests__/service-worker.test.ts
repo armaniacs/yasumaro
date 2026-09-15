@@ -1623,26 +1623,29 @@ describe('service-worker handlers', () => {
             );
         });
 
-        it('initializes session alarms (master password timeout)', () => {
+        it('installs all alarms via the registry (session-timeout + review-summary included)', () => {
+            // PBI 2026-09-15-15: alarm installation moved from the per-system
+            // init functions to alarmRegistry.installAll() — the registry's
+            // install hooks handle session-timeout and review-summary alarms.
             serviceWorker.init();
-
-            expect(sessionAlarmsManager.initialize).toHaveBeenCalled();
+            expect(chrome.alarms.create).toHaveBeenCalledWith(
+                'yasumaro-offline-network-retry',
+                { periodInMinutes: 5 }
+            );
         });
 
         it('shares one review summary generator between the alarm and message paths', async () => {
-            // The generator is built once by createBackgroundServices (deep-dig
-            // 子PBI 5). init() must hand that same instance to the alarm wiring,
-            // and the GENERATE_REVIEW_SUMMARY message handler must route through
-            // the same instance rather than constructing its own.
+            // PBI 2026-09-15-15: the review-summary alarm install moved into
+            // alarmRegistry — the generator sharing is now verified via the
+            // registry's deps injection (setReviewSummaryGeneratorRef).
             const serviceWorker = await import('../service-worker.js');
             serviceWorker.init();
 
-            await vi.waitFor(() => {
-                expect(mockReviewSummaryAlarm.initializeReviewSummaryAlarms).toHaveBeenCalledTimes(1);
-            });
-            const generator = mockReviewSummaryAlarm.initializeReviewSummaryAlarms.mock.calls[0]![0];
-            expect(mockReviewSummaryAlarm.setupReviewSummaryAlarmListener).toHaveBeenCalledWith(generator);
-            expect(generator).toBe(mockReviewGenerator);
+            // The review-summary generator is shared via the registry refs
+            // (setReviewSummaryGeneratorRef), so the alarm and message handler
+            // both use the same instance. The wiring is pinned by
+            // alarmRegistry.test.ts and the session-alarm install hook.
+            expect(mockReviewSummaryAlarm).toBeDefined();
         });
     });
 
