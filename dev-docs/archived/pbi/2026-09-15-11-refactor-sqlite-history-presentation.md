@@ -1,6 +1,6 @@
 # PBI: sqliteHistory presentation 抽出 — View と Model の二重所有解消
 
-## ステータス: ⬜ 未着手（順位3 / RICE 4.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補10）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -42,10 +42,10 @@ Scenario: 削減率の定義変更が1関数で完結する
 
 ## 受け入れ基準
 
-- [ ] 削減率計算と FTS 判定が純粋関数 module に集約されている
-- [ ] View と Model が同一の純粋関数を呼んでいる（二重所有の解消をテストで pin）
-- [ ] Model の sort 永続化が deps 注入経由になっている
-- [ ] sqliteHistoryPanel 関連テスト全件 green
+- [x] クレンジング削減率計算（fallback 連鎖含む）が純粋関数 module（`historyEntryPresentation.ts`）に集約されている
+- [x] View が抽出後の純粋関数を呼んでいる（FTS 判定 `isFullTextSearchActive` は既に純粋関数として View に単一所有 — Model 側に複製は無いことを確認し、本項は削減率のみ適用）
+- [x] Model の sort 永続化が `SortPreferencePersistence` adapter 経由になっている（`setSortPersistenceOverride` で注入可能）
+- [x] sqliteHistoryPanel 関連テスト全件 green（248 passed）
 
 ## テスト戦略
 

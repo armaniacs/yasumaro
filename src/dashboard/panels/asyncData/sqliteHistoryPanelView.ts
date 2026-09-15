@@ -8,6 +8,7 @@ import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
 import { describeDelta, formatBytes } from './entryByteDelta.js';
+import { computeCleansingReduction } from './historyEntryPresentation.js';
 
 function t(key: string, substitutions?: string | string[]): string {
   return getMessageOr(key, key, substitutions);
@@ -31,19 +32,15 @@ export function formatTimestamp(ts: number): string {
 }
 
 export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
-  const base = entry.page_bytes;
-  const sentToAI = (entry.fallback_triggered ?? 0)
-    ? (entry.cleansed_bytes ?? entry.original_bytes)
-    : (entry.ai_summary_cleansed_bytes ?? entry.ai_summary_original_bytes ?? entry.cleansed_bytes ?? entry.original_bytes);
+    // 削減率の定義（fallback 連鎖含む）は historyEntryPresentation.ts が単一所有 —
+    // PBI 2026-09-15-11 で View から抽出。
+    const reduction = computeCleansingReduction(entry);
+    if (!reduction) return '';
+    const { base, sentToAI, sentRatio, reductionRatePercent } = reduction;
 
-  if (base == null || sentToAI == null || base === 0) return '';
+    const label = `${formatBytes(base as number)} → ${formatBytes(sentToAI as number)} (${reductionRatePercent.toFixed(1)}% ${t('cleansingReduction')})`;
 
-  const sentRatio = Math.min(sentToAI / base, 1);
-  const reductionRate = Math.min((1 - sentRatio) * 100, 99.9);
-
-  const label = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% ${t('cleansingReduction')})`;
-
-  return `<div class="cleansing-progress-wrapper">
+    return `<div class="cleansing-progress-wrapper">
     <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="${Math.max(sentRatio * 100, 0.2).toFixed(1)}"></div></div>
     <span class="cleansing-progress-label">${escapeHtml(label)}</span>
   </div>`;

@@ -253,26 +253,52 @@ export function historyStateReducer(
 const PAGE_SIZE = 20;
 const HISTORY_SORT_STORAGE_KEY = 'history_sort_preference';
 
+/** Sort 永続化の adapter（PBI 2026-09-15-11）: chrome.storage 直結を interface
+ *  の後ろに隠し、テストで注入可能に。既定は chrome.storage.local 実装。 */
+export interface SortPreferencePersistence {
+    load(): Promise<{ sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } | null>;
+    save(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void>;
+}
+
+function createChromeSortPreferencePersistence(): SortPreferencePersistence {
+    return {
+        async load(): Promise<{ sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } | null> {
+            try {
+                const items = await chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY);
+                const raw = items[HISTORY_SORT_STORAGE_KEY];
+                if (typeof raw !== 'string') return null;
+                const parsed = JSON.parse(raw) as { sortBy?: string; sortDir?: string };
+                if (parsed.sortBy !== 'created_at' && parsed.sortBy !== 'relevance') return null;
+                if (parsed.sortDir !== 'ASC' && parsed.sortDir !== 'DESC') return null;
+                return { sortBy: parsed.sortBy, sortDir: parsed.sortDir };
+            } catch {
+                return null;
+            }
+        },
+        async save(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
+            try {
+                await chrome.storage.local.set({ [HISTORY_SORT_STORAGE_KEY]: JSON.stringify({ sortBy, sortDir }) });
+            } catch (error) {
+                console.error('Failed to persist history sort preference:', error);
+            }
+        },
+    };
+}
+
+// 既定は chrome 実装。テストは setSortPersistenceOverride で差し替える。
+let sortPersistence: SortPreferencePersistence = createChromeSortPreferencePersistence();
+
+/** テスト用: sort 永続化 adapter を差し替える（null で chrome 実装に戻す）。 */
+export function setSortPersistenceOverride(persistence: SortPreferencePersistence | null): void {
+    sortPersistence = persistence ?? createChromeSortPreferencePersistence();
+}
+
 async function loadPersistedSort(): Promise<{ sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } | null> {
-  try {
-    const items = await chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY);
-    const raw = items[HISTORY_SORT_STORAGE_KEY];
-    if (typeof raw !== 'string') return null;
-    const parsed = JSON.parse(raw) as { sortBy?: string; sortDir?: string };
-    if (parsed.sortBy !== 'created_at' && parsed.sortBy !== 'relevance') return null;
-    if (parsed.sortDir !== 'ASC' && parsed.sortDir !== 'DESC') return null;
-    return { sortBy: parsed.sortBy, sortDir: parsed.sortDir };
-  } catch {
-    return null;
-  }
+    return sortPersistence.load();
 }
 
 async function persistSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
-  try {
-    await chrome.storage.local.set({ [HISTORY_SORT_STORAGE_KEY]: JSON.stringify({ sortBy, sortDir }) });
-  } catch (error) {
-    console.error('Failed to persist history sort preference:', error);
-  }
+    await sortPersistence.save(sortBy, sortDir);
 }
 
 // ---------------------------------------------------------------------------
