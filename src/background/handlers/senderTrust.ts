@@ -34,7 +34,7 @@ export interface SenderTrustDecision {
   error?: string;
 }
 
-import { extensionOrigin, isContentScriptSender } from '../../utils/extensionOrigin.js';
+import { isContentScriptSender } from '../../utils/extensionOrigin.js';
 
 /**
  * A sender that must originate from a web page: a valid tab plus an

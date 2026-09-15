@@ -62,7 +62,13 @@ export default defineConfig({
         branches: 80,
       },
     },
-    testTimeout: 15000,
+    // 30s: `make clean test` runs the full 746-file suite with max forks —
+    // under that load, crypto/timer tests (PBKDF2, real setTimeout waits)
+    // exceed 15s even though they pass in <1s in isolation. The margin is
+    // for suite-level load, not for hiding hangs: genuine hangs still time
+    // out at 30s (PBI 2026-09-15 arch-loop Phase 3, 7 timeout flakes under
+    // `make clean test` with all 7 green in isolation).
+    testTimeout: 30000,
     pool: 'forks',
     // PBI 18 + rounds 12-14: maxForks 4 with per-file isolation is the
     // stable configuration (round 12-14 all green). `isolate: false` breaks
