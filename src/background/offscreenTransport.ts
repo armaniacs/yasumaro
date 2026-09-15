@@ -16,7 +16,7 @@ import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
 import { authorizeSqliteSender } from '../utils/extensionOrigin.js';
 
-export { ChromeOffscreenTransport } from './ChromeOffscreenTransport.js';
+export type { AuthorizedSqliteSender } from '../utils/extensionOrigin.js';
 
 /**
  * Transport interface for sending messages to the offscreen document.

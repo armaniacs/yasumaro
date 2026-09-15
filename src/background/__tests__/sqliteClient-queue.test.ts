@@ -10,7 +10,7 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-import { ChromeOffscreenTransport } from '../offscreenTransport.js';
+import { ChromeOffscreenTransport } from '../ChromeOffscreenTransport.js';
 import { Mutex } from '../../utils/Mutex.js';
 
 vi.mock('../../utils/logger.js', () => ({

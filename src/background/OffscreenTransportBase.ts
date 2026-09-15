@@ -61,7 +61,6 @@ export abstract class BaseOffscreenTransport implements OffscreenTransport {
           // Bulk operations: the container side may still be running. Surface
           // the failure immediately ("result unknown" for the caller) instead
           // of executing the operation a second time.
-          this.invalidateContainer();
           throw firstError;
         }
         this.invalidateContainer();
@@ -72,7 +71,8 @@ export abstract class BaseOffscreenTransport implements OffscreenTransport {
         return await this.sendOnce(type, payload, traceId);
       }
     } catch (error) {
-      // Reset the container state so the next call re-initializes it.
+      // Reset the container state so the next call re-initializes it —
+      // exactly once per failure (the inner noRetry path rethrows here).
       this.invalidateContainer();
       throw error;
     } finally {
@@ -89,4 +89,38 @@ export abstract class BaseOffscreenTransport implements OffscreenTransport {
 
   /** Drop cached container state so the next sendOnce re-initializes it. */
   protected abstract invalidateContainer(): void;
+
+  /**
+   * Shared timeout/settle plumbing for both containers (PBI 2026-09-15-07):
+   * owns the settled flag, the per-message timeout, and the response
+   * unwrapping. `invoke` performs only the container-specific send — a
+   * runtime.sendMessage (Chromium) or an in-process handler call (Firefox) —
+   * and must call exactly one of `signal.done(response)` / `signal.fail(error)`.
+   */
+  protected sendOnceWithTimeout(
+    type: SqliteMessageType,
+    traceId: string,
+    invoke: (signal: {
+      done: (response: OffscreenResponse) => void;
+      fail: (error: Error) => void;
+    }) => void
+  ): Promise<OffscreenResponse> {
+    return new Promise<OffscreenResponse>((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        fn();
+      };
+      const timeoutId = setTimeout(() => {
+        settle(() => reject(new Error(`${type} message timed out after ${this.messageTimeoutMs}ms`)));
+      }, this.messageTimeoutMs);
+
+      invoke({
+        done: (response) => settle(() => resolve(response)),
+        fail: (error) => settle(() => reject(error)),
+      });
+    });
+  }
 }
