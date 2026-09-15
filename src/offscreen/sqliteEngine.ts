@@ -44,8 +44,29 @@ function wrapDb(db: { run: (sql: string, params?: SqliteValue[]) => Promise<Sqli
   };
 }
 
+/**
+ * Explicit wasm URL override (Firefox only). The bundler inlines `new URL()`
+ * asset references in some entry builds (unlisted worker, background), and an
+ * inlined data: URL cannot be fetched under the extension CSP
+ * (connect-src 'self') — the worker then dies with NetworkError. The
+ * container (background event page on Firefox) points this at the stable
+ * public asset (wasm/wa-sqlite-async.wasm, copied by the build) so both the
+ * in-page engines and the worker (via the INIT payload) load the wasm from a
+ * same-origin file URL. Never set on Chromium: the bundled asset URLs there
+ * are valid files.
+ */
+let wasmUrlOverride: string | null = null;
+
+export function setSqliteWasmUrlOverride(url: string | null): void {
+  wasmUrlOverride = url;
+}
+
+export function getSqliteWasmUrlOverride(): string | null {
+  return wasmUrlOverride;
+}
+
 export async function createEngine(dbPath: string, wasmUrl: string): Promise<SqliteEngine> {
-  const storage = await useOpfsStorage(dbPath, { url: wasmUrl });
+  const storage = await useOpfsStorage(dbPath, { url: wasmUrlOverride ?? wasmUrl });
   const db = await initSQLite(storage);
   return wrapDb(db);
 }
@@ -64,7 +85,7 @@ export async function createEngine(dbPath: string, wasmUrl: string): Promise<Sql
  * PBI 2026-07-16-06).
  */
 export async function createIdbEngine(dbFileName: string, wasmUrl: string): Promise<SqliteEngine> {
-  const storage = await useIdbStorage(dbFileName, { url: wasmUrl, lockPolicy: 'exclusive' });
+  const storage = await useIdbStorage(dbFileName, { url: wasmUrlOverride ?? wasmUrl, lockPolicy: 'exclusive' });
   const db = await initSQLite(storage);
   return wrapDb(db);
 }

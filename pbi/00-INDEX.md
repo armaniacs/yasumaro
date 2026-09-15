@@ -14,11 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-14 Firefox 対応 — 3件（VFS プローブ検証済み・autonomous-task-closer 発見）
+### 2026-09-14 Firefox 対応 — 残2件（09 完了・アーカイブ済み）
 
-Firefox は `chrome.offscreen` 非依存化により対応可能と確定。ストレージ中核（wa-sqlite OPFS SAH / FTS5 / IDB fallback）は VFS プローブ（Firefox 155）で全 green 済み。台帳は `2026-09-14-00-backlog-firefox-support.md`。実行順 = 09 → 10 → 11（依存関係順。10 は 09 の gecko.id と動くビルドが前提、11 は 09・10 成果物が前提）。
+Firefox は `chrome.offscreen` 非依存化により対応可能と確定。ストレージ中核（wa-sqlite OPFS SAH / FTS5 / IDB fallback）は VFS プローブ（Firefox 155）で全 green 済み。台帳は `2026-09-14-00-backlog-firefox-support.md`。実行順 = 10 → 11（10 は 09 の gecko.id と動くビルドが前提、11 は 09・10 成果物が前提）。
 
-- ⬜🟢🟢🔧 2026-09-14-09-feat-firefox-storage-port.md（RICE 36.0 — `supportsOffscreen()` 分岐による StorageHost seam 新設（OffscreenDocumentTransport / EventPageWorkerTransport）+ gecko.id・権限分岐・`build:firefox`。offscreen 直参照は `offscreenTransport.ts:83,94` のみ。wasm は `@subframe7536/dist/wa-sqlite-async.wasm` に固定 — glue と同一ファミリー必須）
 - ⬜🟡🟢🔧 2026-09-14-10-test-firefox-e2e-ci.md（RICE 32.0 — VFS プローブ回帰の維持（main 取り込み済み）+ 事前シードプロファイル方式の Firefox 拡張 smoke（Developer Edition）+ CI 追加。**09 依存**）
 - ⬜🟡🟡🔧 2026-09-14-11-chore-firefox-release-readiness.md（RICE 30.0 — 実機 QA チェックリスト（moz-extension origin での OPFS 最終確認を含む）・FAQ/README 更新・配布方針決定（初期 = GitHub Releases 継続推奨・AMO は broad host permission 審査リスク）。**09・10 依存**）
 
@@ -121,6 +120,10 @@ round 11 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc00
 - 2026-09-13-50-test-a11y-i18n-usability-e2e.md（✅ 完了・アーカイブ済 — 残タスク（「記録開始」「検索」のキーボードのみ操作検証）を2026-09-14に実装。検索は `a11y-usability.spec.ts` に seed→focus+Enter→`keyboard.type` で追加、記録開始は `popup-a11y-keyboard.spec.ts` 新設（headless スキップガード付き・DISPLAY=1 の headed 実行で実走確認済み）。`test:e2e:usability` 単独実行で 40 passed / 3 skipped（skip は popup 系 headless ガード仕様））
 - 2026-09-13-51-test-issue-report-e2e.md（✅ 完了・アーカイブ済 — `dashboard-issue-report.spec.ts` 新設（4 tests: プレビュー本文のAPIキー非混入・chrome.tabs.create の issue URL 検証・Cancel時の非オープン・サイドバー導線）。専用fixtureでGemini APIキーをseedして漏洩なきことを実証。usability 4 tests green）
 - 2026-09-13-52-feat-friction-metrics-ci.md（✅ 完了・アーカイブ済 — `frictionMeter.ts` 新設（`page.click`/`page.fill`ラップでステップ数計測）+ `usability-budget.json`（タスク別しきい値）+ `task-friction-metrics.spec.ts`（ドメインフィルタ追加・検索・Markdownエクスポート・issue報告プレビューの4タスク計測）。`playwright.config.ts` に `usability` プロジェクト追加・`package.json` に `test:e2e:usability(:ci)` 追加・`.github/workflows/tests.yml` に usability ジョブ追加）
+
+### 2026-09-14 Firefox 対応（順位1 完了 — 09 storage-port）
+
+- 2026-09-14-09-feat-firefox-storage-port.md（✅ 完了・アーカイブ済 — `supportsOffscreen()` 分岐ではなく `import.meta.env.FIREFOX` ビルド時分岐による StorageHost seam（未使用 transport は各ビルドから物理除去）+ gecko.id・権限分岐・`build:firefox`。実機検証で発覚した追加修正2件（拡張ページの送信者識別を URL オリジン方式に・worker の wasm を安定パスの公開アセット経由に）も同ブランチ（`0914c`）に含む。unit 12,028 + 拡張 e2e（記録・検索）+ firefox worker smoke 全 green）
 
 ### 2026-09-14 adversarial-code-review 指摘のPBI化 — 4件（ラウンド15レビュー由来・autonomous-task-closer）
 

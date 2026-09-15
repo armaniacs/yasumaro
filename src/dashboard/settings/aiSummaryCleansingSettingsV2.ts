@@ -77,11 +77,29 @@ export function detectPreset(config: Partial<CleansingConfig> | AiSummaryCleansi
  * 初回起動時に cleansing_preset がなければ migrate して保存。
  * 既存 32値は上書きしない（preset は view としてのみ機能）。
  */
+let migrationPromise: Promise<void> | null = null;
+/** Bumped synchronously by every applyPreset — the migration's detect read may
+ *  predate an in-flight apply, so the migration must yield when they overlap. */
+let applyEpoch = 0;
+
 export async function ensureCleansingPresetMigrated(): Promise<void> {
+    if (migrationPromise) return migrationPromise;
+    migrationPromise = (async () => {
     try {
         const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
         if (stored[StorageKeys.CLEANSING_PRESET]) return;
+        const myEpoch = applyEpoch;
         const cfg = await getAiSummaryCleansingSettings();
+        // An applyPreset started while the repository read above was in
+        // flight: its values are newer than what detectPreset would see, so
+        // the migration must not overwrite them. Without this, a late
+        // migration write reverted the user's just-applied selection back to
+        // the stale detected value (verified by
+        // dashboard-cleansing-preset.spec.ts).
+        if (myEpoch !== applyEpoch) return;
+        // Re-check before writing: a concurrent applyPreset may have written meanwhile.
+        const recheck = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
+        if (recheck[StorageKeys.CLEANSING_PRESET]) return;
         // 既存ユーザーのカスタム設定を尊重: 完全一致しない場合は custom として保存
         const exact = detectPreset(cfg);
         const preset: PresetId = exact !== 'custom' ? exact : (() => {
@@ -108,6 +126,8 @@ export async function ensureCleansingPresetMigrated(): Promise<void> {
     } catch (e) {
         logError('Failed to migrate cleansing preset', { cause: e }, ErrorCode.STORAGE_WRITE_FAILURE);
     }
+    })();
+    return migrationPromise;
 }
 
 /**
@@ -115,6 +135,7 @@ export async function ensureCleansingPresetMigrated(): Promise<void> {
  * custom の場合は 32値を上書きせず preset キーのみ保存。
  */
 export async function applyPreset(presetId: PresetId): Promise<void> {
+    applyEpoch++;
     _isApplyingPreset = true;
     try {
         const preset = PRESETS[presetId];
@@ -130,6 +151,10 @@ export async function applyPreset(presetId: PresetId): Promise<void> {
         }
         (current as Record<string, unknown>)[StorageKeys.CLEANSING_PRESET] = presetId;
         await settingsRepository.setAll(current);
+        // The select reads the top-level key (see the init restore block and
+        // switchToCustomIfNeeded), while the repository stores the blob — keep
+        // both in sync or the read source stays stale and reverts the UI.
+        await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: presetId });
         const settings = await getAiSummaryCleansingSettings();
         applyAiSummaryCleansingSettingsToUI(settings);
         const select = document.getElementById('cleansing-preset') as HTMLSelectElement | null;
@@ -328,15 +353,12 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
         subGroup.style.display = settings.enabled ? 'block' : 'none';
     }
 
-    // プリセットセレクトの同期（非同期だが fire-and-forget）
-    void (async () => {
-        try {
-            const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-            const preset = (stored[StorageKeys.CLEANSING_PRESET] as string) || 'balanced';
-            const select = document.getElementById('cleansing-preset') as HTMLSelectElement | null;
-            if (select) select.value = preset;
-        } catch {}
-    })();
+    // NOTE: 以前ここにあったプリセットセレクトの fire-and-forget 同期は削除した。
+    // applyPreset() が select.value を明示設定した直後に古いトップレベル値を
+    // 読み直して上書きし、選択が必ず 'custom' に戻る競合になっていた。セレクトの
+    // 初期値は配線時（このファイル末尾の init）の復元ブロックが担当する。
+    // The select's initial value is restored by the wiring block below; callers
+    // that change the preset set select.value explicitly.
 
     setTimeout(() => { _isApplyingPreset = false; _initialRenderGuard = false; }, 0);
 }
@@ -426,7 +448,9 @@ export function setupAiSummaryCleansingEventListeners(): void {
     // プリセットセレクトのイベント
     const presetSelect = document.getElementById('cleansing-preset') as HTMLSelectElement | null;
     if (presetSelect) {
-        // 初期値をストレージから復元
+        // 初期値をストレージから復元。復元完了まで disabled にする —
+        // 復元前のユーザー選択を後から来た古い値で上書きする競合を防ぐ。
+        presetSelect.disabled = true;
         void (async () => {
             try {
                 const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
@@ -437,7 +461,11 @@ export function setupAiSummaryCleansingEventListeners(): void {
                     const after = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
                     if (after[StorageKeys.CLEANSING_PRESET]) presetSelect.value = after[StorageKeys.CLEANSING_PRESET] as string;
                 }
-            } catch {}
+            } catch {
+                // fall through to enabling the select below
+            } finally {
+                presetSelect.disabled = false;
+            }
         })();
         presetSelect.addEventListener('change', async (e) => {
             const pid = (e.target as HTMLSelectElement).value as PresetId;

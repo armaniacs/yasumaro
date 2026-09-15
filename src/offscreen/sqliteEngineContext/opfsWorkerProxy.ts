@@ -7,6 +7,7 @@
 
 import { errorMessage } from '../../utils/errorUtils.js';
 import { logError, logInfo, logWarn, ErrorCode } from '../../utils/logger.js';
+import { getSqliteWasmUrlOverride } from '../sqliteEngine.js';
 import type { WorkerLogMessage } from '../opfsWorker.js';
 
 function isWorkerLogMessage(
@@ -37,12 +38,28 @@ export function canCreateWorker(): boolean {
   }
 }
 
+// How to construct the OPFS Worker. Injected by the hosting container
+// (setOpfsWorkerFactory) BEFORE the first init: the offscreen document
+// (Chromium) uses the bundled worker via vite:worker-import-meta-url, while
+// the Firefox background event page uses chrome.runtime.getURL. The literal
+// must live in opfsWorkerFactory.ts, not here — this module is part of the
+// background bundle on Firefox, and the worker-URL literal would make the
+// vite:worker-import-meta-url plugin try to build a worker inside the
+// service worker build (INVALID_OPTION: iife + code-splitting).
+let workerFactory: (() => Worker | null) | null = null;
+
+export function setOpfsWorkerFactory(fn: () => Worker | null): void {
+  workerFactory = fn;
+}
+
 export function createOpfsWorker(state: OpfsProxyState): Worker | null {
   try {
-    const worker = new Worker(
-      new URL('../opfsWorker.js', import.meta.url),
-      { type: 'module' }
-    );
+    if (!workerFactory) {
+      logWarn('OPFS Worker factory not configured', {}, undefined, 'sqlite');
+      return null;
+    }
+    const worker = workerFactory();
+    if (!worker) return null;
 
     worker.onmessage = (e: MessageEvent<{ id: number; success: boolean; result?: unknown; error?: string } | WorkerLogMessage>) => {
       const data = e.data;
@@ -138,8 +155,15 @@ export async function initOpfsWorker(state: OpfsProxyState): Promise<boolean> {
       return false;
     }
 
-    // Send INIT to the worker
-    const result = await sendToOpfsWorker(state, 'INIT') as { initialized: boolean } | undefined;
+    // Send INIT to the worker. The container may carry an explicit wasm URL
+    // override (Firefox: the bundled URL is an unusable data: inline); the
+    // worker applies it before initializing its engine.
+    const wasmUrlOverride = getSqliteWasmUrlOverride();
+    const result = await sendToOpfsWorker(
+      state,
+      'INIT',
+      wasmUrlOverride === null ? undefined : { wasmUrl: wasmUrlOverride }
+    ) as { initialized: boolean } | undefined;
     if (result?.initialized) {
       return true;
     }

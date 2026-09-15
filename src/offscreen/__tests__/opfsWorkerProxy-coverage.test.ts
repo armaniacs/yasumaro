@@ -21,6 +21,7 @@ import {
   tryOpfsProxy,
   initOpfsWorker,
   terminateOpfsWorker,
+  setOpfsWorkerFactory,
   type OpfsProxyState,
 } from '../sqliteEngineContext/opfsWorkerProxy.js';
 import { logError, logInfo, logWarn } from '../../utils/logger.js';
@@ -96,6 +97,9 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
         }
       }
       vi.stubGlobal('Worker', FakeWorker as never);
+      // Deferred-global factory: resolves globalThis.Worker at call time so
+      // tests that re-stub Worker after this helper are picked up too.
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
       return instance;
     }
 
@@ -114,6 +118,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     it('returns null and calls logWarn when Worker creation throws', () => {
       class ThrowingWorker { constructor() { throw new Error('no worker'); } }
       vi.stubGlobal('Worker', ThrowingWorker as never);
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
       const state = makeState(null);
       const worker = createOpfsWorker(state);
       expect(worker).toBeNull();
@@ -336,6 +341,31 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       expect(await initOpfsWorker(state)).toBe(false);
     });
 
+    it('carries the wasm URL override in INIT when set (Firefox)', async () => {
+      vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
+      const posted: Array<{ id: number; type: string; payload?: unknown }> = [];
+      class CapturingWorker {
+        onmessage: unknown = null;
+        onerror: unknown = null;
+        postMessage(msg: { id: number; type: string; payload?: unknown }) {
+          posted.push(msg);
+        }
+      }
+      vi.stubGlobal('Worker', CapturingWorker as never);
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
+      const { setSqliteWasmUrlOverride } = await import('../sqliteEngine.js');
+      setSqliteWasmUrlOverride('moz-extension://test-uuid/wasm/wa-sqlite-async.wasm');
+      try {
+        const state = makeState(null);
+        void initOpfsWorker(state);
+        await vi.waitFor(() => expect(posted.length).toBeGreaterThan(0));
+        const init = posted.find((m) => m.type === 'INIT');
+        expect(init?.payload).toEqual({ wasmUrl: 'moz-extension://test-uuid/wasm/wa-sqlite-async.wasm' });
+      } finally {
+        setSqliteWasmUrlOverride(null);
+      }
+    });
+
     it('returns false when canCreateWorker is false', async () => {
       vi.stubGlobal('navigator', { storage: { getDirectory: () => {} } } as never);
       const g = globalThis as unknown as Record<string, unknown>;
@@ -359,6 +389,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       const mockWorker: Record<string, unknown> = { postMessage: vi.fn() };
       class FakeWorker { constructor() { return mockWorker as never; } }
       vi.stubGlobal('Worker', FakeWorker as never);
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
 
       const state = makeState(null);
       const initPromise = initOpfsWorker(state);
@@ -376,6 +407,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       const mockWorker: Record<string, unknown> = { postMessage: vi.fn() };
       class FakeWorker { constructor() { return mockWorker as never; } }
       vi.stubGlobal('Worker', FakeWorker as never);
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
       const state = makeState(null);
       const p = initOpfsWorker(state);
       await Promise.resolve();
@@ -389,6 +421,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
       const mockWorker: Record<string, unknown> = { postMessage: vi.fn() };
       class FakeWorker { constructor() { return mockWorker as never; } }
       vi.stubGlobal('Worker', FakeWorker as never);
+      setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
       const state = makeState(null);
       const p = initOpfsWorker(state);
       await Promise.resolve();

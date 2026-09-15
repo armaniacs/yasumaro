@@ -1,5 +1,6 @@
 import { defineConfig } from 'wxt';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   AI_PROVIDER_HOST_PERMISSIONS,
   OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS,
@@ -21,6 +22,12 @@ const manifestVersion = pkg.version.replace(/-[0-9A-Za-z.-]+$/, '');
 const localConnectSrc = buildLocalConnectSrc();
 const aiConnectSrc = buildConnectSrcDomains();
 validateCspDomains([...localConnectSrc, ...aiConnectSrc]);
+
+// Stable Gecko add-on ID (email-style, anchored to the org's GitHub Pages
+// domain) — required for profile-based installs and reliable extension
+// storage on Firefox. 'offscreen' / 'favicon' permissions are also dropped on
+// Firefox (unknown-permission warnings; see the manifest fn below).
+const GECKO_ADDON_ID = 'yasumaro@armaniacs.github.io';
 
 export default defineConfig({
   outDir: 'dist',
@@ -49,10 +56,59 @@ export default defineConfig({
     },
     build: {
       modulePreload: false,
+      // Never inline assets as data: URLs. The OPFS worker (used by both the
+      // offscreen document and the Firefox event page) fetches its wasm
+      // binary at runtime, and the extension CSP (connect-src 'self') blocks
+      // data: fetches — an inlined wasm dies with NetworkError (verified on
+      // Firefox, background event page console). Emitted files stay same-
+      // origin fetchable and compress better in the store zip.
+      assetsInlineLimit: 0,
+    },
+    // ESM workers: the OPFS worker is created with { type: 'module' } and the
+    // Firefox background bundle includes the same worker graph via a dynamic
+    // import — IIFE workers are rejected for code-splitting builds.
+    worker: {
+      format: 'es',
     },
   }),
 
-  manifest: {
+  // The background builds as an IIFE library; the Firefox in-page offscreen
+  // host (PBI 2026-09-14-09) pulls the storage engine's nested dynamic
+  // imports into its graph, which makes rolldown demand code-splitting —
+  // incompatible with IIFE. Inline every dynamic import into background.js
+  // instead (existing lazy chunks were already inlined by lib-iife mode).
+  hooks: {
+    'vite:build:extendConfig'(entrypoints, config) {
+      const group = Array.isArray(entrypoints) ? entrypoints : [entrypoints];
+      const isBackground = group.some((e) => e.type === 'background');
+      if (!isBackground) return;
+      config.build ??= {};
+      const rollup = (config.build.rollupOptions ??= {}) as {
+        output?: { codeSplitting?: boolean; inlineDynamicImports?: boolean };
+      };
+      rollup.output ??= {};
+      // rolldown option: single-file IIFE build with all dynamic imports inlined
+      rollup.output.codeSplitting = false;
+    },
+    // Firefox-only: copy the @subframe7536 async wasm to a stable public path.
+    // This is the exact binary the production OPFS/IDB engines fetch
+    // (dist asset wa-sqlite-async-ac_ajG-V.wasm). The unlisted opfs-worker
+    // entry builds in lib mode, which inlines its `new URL()` assets as
+    // data: URLs — unusable under the extension CSP (connect-src 'self'
+    // blocks data: fetches with NetworkError). The event page points the
+    // engine at this file via INIT (see setSqliteWasmUrlOverride).
+    // Glue and wasm must come from the same build family (a wa-sqlite-build
+    // binary aborts with "indirect call to null" under this glue).
+    'build:publicAssets'(wxt, files) {
+      if (wxt.config.browser !== 'firefox') return;
+      files.push({
+        absoluteSrc: resolve(wxt.config.root, 'node_modules/@subframe7536/sqlite-wasm/dist/wa-sqlite-async.wasm'),
+        relativeDest: 'wasm/wa-sqlite-async.wasm',
+      });
+    },
+  },
+
+  manifest: (env) => ({
     name: '__MSG_extensionName__',
     short_name: '__MSG_extensionShortName__',
     version: manifestVersion,
@@ -64,17 +120,20 @@ export default defineConfig({
       '48': 'icons/icon48.png',
       '128': 'icons/icon128.png',
     },
+    // Firefox: gecko id + drop the Chromium-only permissions.
+    ...(env.browser === 'firefox'
+      ? { browser_specific_settings: { gecko: { id: GECKO_ADDON_ID } } }
+      : {}),
     permissions: [
       'storage',
       'unlimitedStorage',
       'scripting',
       'activeTab',
-      'offscreen',
+      ...(env.browser === 'firefox' ? [] : ['offscreen', 'favicon']),
       'notifications',
       'webRequest',
       'declarativeNetRequest',
       'alarms',
-      'favicon',
       'contextMenus',
       'downloads',
     ],
@@ -114,5 +173,5 @@ export default defineConfig({
         matches: ['http://*/*', 'https://*/*'],
       },
     ],
-  },
+  }),
 });

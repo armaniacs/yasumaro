@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Yasumaro worker smoke</title>
+</head>
+<body data-status="running">
+  <h1>Yasumaro worker smoke</h1>
+  <p>Drives a real built worker bundle (e.g. dist/firefox-mv3/opfs-worker.js)
+  through INIT → INSERT → QUERY → STATUS and reports the outcome as JSON.</p>
+  <pre id="result">running...</pre>
+  <script type="module">
+    const params = new URLSearchParams(location.search);
+    const workerUrl = params.get('worker');
+    const pre = document.getElementById('result');
+    const finish = (obj) => {
+      pre.textContent = JSON.stringify(obj, null, 2);
+      document.body.dataset.status = 'done';
+    };
+    if (!workerUrl) {
+      finish({ fatal: 'missing ?worker=' });
+    } else {
+      const worker = new Worker(workerUrl, { type: 'module' });
+      let id = 0;
+      const pending = new Map();
+      worker.onmessage = (e) => {
+        const m = e.data;
+        const resolve = pending.get(m.id);
+        if (resolve) {
+          pending.delete(m.id);
+          resolve(m);
+        }
+      };
+      worker.onerror = (e) => finish({ fatal: e.message || 'worker error' });
+      const call = (type, payload) =>
+        new Promise((resolve) => {
+          const nextId = ++id;
+          pending.set(nextId, resolve);
+          worker.postMessage({ id: nextId, type, payload });
+        });
+      (async () => {
+        try {
+          // The worker needs its wasm binary: same directory, stable name.
+          const workerAbs = new URL(workerUrl, location.href).href;
+          const wasmUrl = new URL('wasm/wa-sqlite-async.wasm', workerAbs).href;
+          const stamp = Date.now();
+          // Single alphanumeric token: present identically in the URL and the
+          // title so both LIKE and FTS5 MATCH find it regardless of tokenizer.
+          const token = `ffsmoke${stamp}`;
+          const url = `https://example.com/${token}`;
+          const init = await call('INIT', { wasmUrl });
+          if (!init.success) return finish({ fatal: `INIT failed: ${init.error}` });
+          const insert = await call('INSERT', {
+            url,
+            title: `Firefox worker smoke ${token}`,
+            created_at: Math.floor(stamp / 1000),
+          });
+          if (!insert.success) return finish({ fatal: `INSERT failed: ${insert.error}` });
+          const q = await call('SEARCH', { text: token, limit: 10 });
+          const rows = q.success ? q.result.rows : [];
+          const status = await call('STATUS', {});
+          finish({
+            initialized: init.success === true,
+            inserted: insert.success === true,
+            queried: q.success === true && rows.some((r) => r.url === url),
+            statusOk: status.success === true,
+            rowCount: rows.length,
+          });
+        } catch (e) {
+          finish({ fatal: e.message || String(e) });
+        }
+      })();
+    }
+  </script>
+</body>
+</html>

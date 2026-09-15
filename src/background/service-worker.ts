@@ -54,6 +54,28 @@ export function init(): void {
         logError('Failed to init review summary alarms', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
     })();
+
+    // Firefox has no offscreen API: the background event page hosts the
+    // storage engine itself and answers target:'offscreen' messages in-page.
+    // Order matters — inject the event-page worker factory BEFORE importing
+    // the offscreen host module (whose import registers the runtime listener
+    // and keeps the engine resident). Build-time constant — dead on Chromium.
+    if (import.meta.env.FIREFOX) {
+      (async () => {
+        try {
+          const { setOpfsWorkerFactory } = await import('../offscreen/sqliteEngineContext/opfsWorkerProxy.js');
+          setOpfsWorkerFactory(() => new Worker(chrome.runtime.getURL('opfs-worker.js'), { type: 'module' }));
+          // The Firefox worker bundle inlines its wasm as data: (unusable
+          // under the extension CSP) — point the engine at the stable public
+          // asset instead. Propagates to the worker via the INIT payload.
+          const { setSqliteWasmUrlOverride } = await import('../offscreen/sqliteEngine.js');
+          setSqliteWasmUrlOverride(chrome.runtime.getURL('wasm/wa-sqlite-async.wasm'));
+          await import('../offscreen/offscreen.js');
+        } catch (err) {
+          logError('Failed to start in-page offscreen host', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+        }
+      })();
+    }
 }
 
 // ============================================================================
