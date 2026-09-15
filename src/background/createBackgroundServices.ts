@@ -27,6 +27,8 @@ import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { MessageRouter, MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
+import type { SessionAlarmService } from './SessionAlarmService.js';
+import type { AlarmRegistry } from './alarmRegistry.js';
 import { ServiceContainer } from './serviceContainer.js';
 import { compositionManifest } from './compositionManifest.js';
 
@@ -74,6 +76,10 @@ export interface BackgroundServicesComposition extends BackgroundServices {
   saveRecordDeps: SaveRecordHandlerDeps;
   messageRouter: MessageRouter;
   autoSavedBadgeTabs: AutoSavedBadgeTabs;
+  /** PBI 2026-09-15-17: promoted from service-worker.ts direct creation. */
+  sessionAlarmService: SessionAlarmService;
+  alarmRegistry: AlarmRegistry;
+  deferredMigrationRunner: () => Promise<void>;
 }
 
 export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
@@ -110,6 +116,9 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     saveRecordDeps: container.resolve<SaveRecordHandlerDeps>('saveRecordDeps'),
     messageRouter: container.resolve<MessageRouter>('messageRouter'),
     autoSavedBadgeTabs: container.resolve<AutoSavedBadgeTabs>('autoSavedBadgeTabs'),
+    sessionAlarmService: container.resolve<SessionAlarmService>('sessionAlarmService'),
+    alarmRegistry: container.resolve<AlarmRegistry>('alarmRegistry'),
+    deferredMigrationRunner: container.resolve<() => Promise<void>>('deferredMigrationRunner'),
   };
 }
 

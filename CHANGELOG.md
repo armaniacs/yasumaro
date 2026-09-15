@@ -51,6 +51,7 @@ All notable changes to this project will be documented in this file.
 - **CleansingPresetStore 抽出**: クレンジングプリセットの適用・マイグレーション・custom 遷移の順序制約（apply epoch・二重書き込み・busy 窓）が呼び出し側に漏れていた（直近のプリセット競合バグの構造的原因）→ store に集約し、`aiSummaryCleansingSettingsV2.ts` から chrome.storage 直打ちを排除
 - **第2ルール（arch-loop 0915 第2ループ）**: 診断 section 追加の4箇所編集を `SECTIONS` テーブル化で1行に（診断パネルは30コミットで6回変更のホットスポット）/ Chrome・Firefox 両 transport の timeout/settle 定型25行を Base に集約 / 拒否カウンタ・本文保存フラグ・通知 fan-out を privacyConsent 深い module に集約し、Chrome の送信者非配送仕様を `subscribeConsentChanges` seam の内部に隠蔽
 - **第3ルール（arch-loop 0915 第3ループ）**: アーカイブの staging セッションライフサイクル（open/dirty/save/close/reconnect）を `ArchiveSessionStore` 状態機械に抽出（illegal 遷移のガードを構造化・6.8.11 の退行回帰 pin）/ `createBackend` の switch を `satisfies` 付き Map レジストリに置換（バックエンド追加の6箇所編集を1行に）/ 履歴の削減率計算を純粋関数 `historyEntryPresentation.ts` に集約し、sort 永続化を注入可能 adapter 化 / KEK 候補チェーンの session/local 読みを注入可能にし、チェーン順序（session → legacy → durable → generate）をテスト可能化
+- **第4ルール（arch-loop 0915b 第4ループ）**: `sessionAlarmService` / `deferredMigrationRunner` / `alarmRegistry` を compositionManifest に昇格し、service-worker.ts を thin root 化。alarm install hooks・handler dispatch・deps 注入が manifest の1箇所に集約され、新規 background 依存の追加手順が manifest 1行 + token に統一
 - vitest の testTimeout を 15s → 30s に引き上げ（`make clean test` の 746 ファイル並列実行時に、分離実行では 1 秒未満の暗号/タイマー系テストがロード競合で超過するため。分離実行は全 green を確認済み）
 
 ## [6.9.0] - 2026-09-15

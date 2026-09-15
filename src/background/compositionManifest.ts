@@ -47,8 +47,12 @@ import type { MessageHandler } from './handlers/MessageRouter.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
+import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter, settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
+import { SessionAlarmService } from './SessionAlarmService.js';
+import { createDeferredMigrationRunner } from './deferredMigrations.js';
+import { createAlarmRegistry, type AlarmRegistry } from './alarmRegistry.js';
 import type { ServiceContainer } from './serviceContainer.js';
 
 export interface CompositionEntry {
@@ -143,6 +147,37 @@ export const compositionManifest: readonly CompositionEntry[] = [
           }
         },
       }),
+  },
+  {
+    key: 'sessionAlarmService',
+    singleton: true,
+    // PBI 2026-09-15-15: the alarm creation + listener live in the registry.
+    factory: () => new SessionAlarmService(),
+  },
+  {
+    key: 'deferredMigrationRunner',
+    singleton: true,
+    factory: (c) => createDeferredMigrationRunner(c.resolve<SqliteClient>('sqliteClient')),
+  },
+  {
+    key: 'alarmRegistry',
+    singleton: true,
+    // PBI 2026-09-15-15: the unified alarm seam — install hooks + handleAlarm
+    // cover daily purge, local-md, offline retry, review-summary, and
+    // session-timeout. The refs (reviewSummaryGeneratorRef etc.) are set by
+    // service-worker.ts after createBackgroundServices resolves.
+    factory: (c) => {
+      const sessionAlarmService = c.resolve<SessionAlarmService>('sessionAlarmService');
+      return createAlarmRegistry({
+        sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
+        recordingPipeline: c.resolve<RecordingOrchestrator>('recordingPipeline'),
+        getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
+        retryPendingChromeStorageWrite,
+        settingsReader: c.resolve<SettingsRepository>('settingsRepository'),
+        sessionTimeoutChecker: async () => { sessionAlarmService.checkTimeout(); },
+        sessionTimeoutInstall: async () => { await sessionAlarmService.startTimeoutChecker(); },
+      }) as AlarmRegistry;
+    },
   },
   {
     key: 'manualRecordDeps',
