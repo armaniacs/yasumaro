@@ -20,6 +20,21 @@ vi.mock('../recordsRepo.js', () => ({
   serialize: vi.fn(),
 }));
 
+// Mock the storage engine: this suite validates SENDER GATES, not the engine.
+// Without the mock, SQLITE_HEALTH_CHECK reaches sqliteHealthCheck → engine
+// init → a real wasm fetch that fails in jsdom and leaves an unhandled
+// rejection from the emscripten glue (both-fetch race).
+vi.mock('../sqliteEngineHost.js', () => ({
+  engine: {
+    init: vi.fn().mockResolvedValue(true),
+    ensureBackend: vi.fn().mockResolvedValue(undefined),
+    getBackend: vi.fn().mockResolvedValue({
+      healthCheck: vi.fn().mockResolvedValue({ success: true }),
+    }),
+    resetForTesting: vi.fn(),
+  },
+}));
+
 import { handleOffscreenMessage } from '../offscreen.js';
 
 const EXTENSION_ID = 'test-extension-id';
