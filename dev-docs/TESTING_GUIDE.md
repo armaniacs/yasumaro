@@ -37,6 +37,16 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 - Content script tests require jsdom environment
 - Service worker tests have limitations
 - Always verify with actual Chrome browser
+- **Firefox**: the extension-level E2E (moz-extension:// origin) cannot be automated — Playwright only loads extensions in Chromium, and Playwright's Firefox build rejects unsigned sideloaded extensions (release-channel signature enforcement is locked; see PBI 2026-09-14-10 for the experiment record). Firefox coverage is: VFS probe + worker smoke in CI (`firefox-storage` job, real dist artifacts on http origin) + the manual checklist below.
+
+### Firefox manual smoke procedure
+
+1. `npm run build:firefox` → `dist/firefox-mv3/`
+2. `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on…" → `manifest.json`
+3. Verify: consent modal → record a page → dashboard search (FTS5) → preset switching (AI Summary Cleansing panel) → restart Firefox → records persist and no consent re-prompt
+4. Diagnostics panel → SQLite test (final OPFS confirmation on the moz-extension:// origin)
+
+## Test-support placement convention (PBI-14)
 
 ## Test-support placement convention (PBI-14)
 
