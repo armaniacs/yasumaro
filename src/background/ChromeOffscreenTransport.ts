@@ -1,7 +1,9 @@
 /**
  * ChromeOffscreenTransport.ts
  * Chromium container: manages the offscreen document lifecycle, message
- * passing, timeout handling, and retry logic.
+ * passing, timeout handling, and retry logic. Timeout/settle plumbing lives
+ * in BaseOffscreenTransport — this class supplies only the container-specific
+ * invoke (chrome.runtime.sendMessage) and the offscreen document lifecycle.
  */
 
 import { errorMessage } from '../utils/errorUtils.js';
@@ -69,27 +71,16 @@ export class ChromeOffscreenTransport extends BaseOffscreenTransport {
     traceId: string = ''
   ): Promise<OffscreenResponse> {
     await this.ensureOffscreenDocument();
-    return new Promise<OffscreenResponse>((resolve, reject) => {
-      let settled = false;
-      const settle = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        fn();
-      };
-      const timeoutId = setTimeout(() => {
-        settle(() => reject(new Error(`Offscreen message '${type}' timed out after ${this.messageTimeoutMs}ms`)));
-      }, this.messageTimeoutMs);
-
+    return this.sendOnceWithTimeout(type, traceId, (signal) => {
       chrome.runtime.sendMessage(
         { type, target: 'offscreen', payload, traceId },
         (response: OffscreenResponse) => {
           if (chrome.runtime.lastError) {
-            settle(() => reject(new Error(chrome.runtime.lastError?.message ?? 'Unknown error')));
+            signal.fail(new Error(chrome.runtime.lastError?.message ?? 'Unknown error'));
           } else if (response && 'error' in response && response.error) {
-            settle(() => reject(new Error(errorMessage(response.error))));
+            signal.fail(new Error(errorMessage(response.error)));
           } else {
-            settle(() => resolve(response));
+            signal.done(response);
           }
         }
       );

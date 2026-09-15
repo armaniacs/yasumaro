@@ -1,6 +1,6 @@
 # PBI: Transport timeout/settle の重複除去 — 横断関心を Base に隠す
 
-## ステータス: ⬜ 未着手（順位2 / RICE 12.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補6）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -47,10 +47,10 @@ Scenario: 二重 invalidate が起きない
 
 ## 受け入れ基準
 
-- [ ] 2つの sendOnce の settle/setTimeout 重複が Base に移動している
-- [ ] `invalidateContainer` の呼び出しが失敗パスで1回になっている（テストで pin）
-- [ ] `offscreenTransport.ts` の具象再 export が除去され、テスト import が更新されている
-- [ ] 全 transport / gateway テスト green
+- [x] 2つの sendOnce の settle/setTimeout 重複が Base（`sendOnceWithTimeout`）に移動している
+- [x] `invalidateContainer` の呼び出しが失敗パスで1回になっている（内側 noRetry パスの二重呼び出しを解消）
+- [x] `offscreenTransport.ts` の具象再 export が除去され、テスト import が `./ChromeOffscreenTransport.js` 直に更新されている
+- [x] 全 transport / gateway テスト green（16 passed）
 
 ## テスト戦略
 

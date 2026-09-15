@@ -47,34 +47,21 @@ export class InPageOffscreenTransport extends BaseOffscreenTransport {
     payload: Record<string, unknown>,
     traceId: string = ''
   ): Promise<OffscreenResponse> {
-    return new Promise<OffscreenResponse>((resolve, reject) => {
-      let settled = false;
-      const settle = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(timeoutId);
-        fn();
-      };
-      const timeoutId = setTimeout(() => {
-        settle(() => reject(new Error(`In-page offscreen message '${type}' timed out after ${this.messageTimeoutMs}ms`)));
-      }, this.messageTimeoutMs);
-
+    return this.sendOnceWithTimeout(type, traceId, (signal) => {
       const accepted = this.handleOffscreenMessage(
         { type, target: 'offscreen', payload, traceId },
         this.authorizedSender as unknown as chrome.runtime.MessageSender,
         (response: unknown) => {
-          settle(() => {
-            const res = response as OffscreenResponse;
-            if (res && 'error' in res && res.error) {
-              reject(new Error(res.error));
-            } else {
-              resolve(res);
-            }
-          });
+          const res = response as OffscreenResponse;
+          if (res && 'error' in res && res.error) {
+            signal.fail(new Error(res.error));
+          } else {
+            signal.done(res);
+          }
         }
       );
       if (!accepted) {
-        settle(() => reject(new Error('In-page offscreen handler did not accept the message')));
+        signal.fail(new Error('In-page offscreen handler did not accept the message'));
       }
     });
   }
