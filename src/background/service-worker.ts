@@ -3,16 +3,12 @@ import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { SessionAlarmService } from './SessionAlarmService.js';
 import { setReviewSummaryGeneratorRef, setSessionTimeoutRefs } from './alarmRegistryRefs.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { createCacheInitializedFlag } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
 import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
-import { createAlarmRegistry } from './alarmRegistry.js';
-import { createDeferredMigrationRunner } from './deferredMigrations.js';
 import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
-import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { syncOllamaOriginRule } from './net/ollamaOriginRule.js';
@@ -86,6 +82,9 @@ const {
     reviewSummaryGenerator,
     messageRouter,
     autoSavedBadgeTabs,
+    sessionAlarmService,
+    alarmRegistry,
+    deferredMigrationRunner,
 } = services;
 export const rateLimiterForTest = rateLimiter;
 
@@ -101,8 +100,8 @@ export function resetManualRecordCache(): void {
     manualContentFetcher.clear();
 }
 
-// Extracted modules
-const runDeferredStartupMigrations = createDeferredMigrationRunner(sqliteClient);
+// Extracted modules (PBI 2026-09-15-17: resolved via the manifest)
+const runDeferredStartupMigrations = deferredMigrationRunner;
 
 // Individual handlers are exposed via the router's observable accessor —
 // no cast into private state. Used by tests and the context-menu path.
@@ -169,17 +168,10 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({ handleManualRecord: handleManualRecordForContextMenu });
 
-// Alarm registry (routing table + install hooks + uniform failure logging)
-const sessionAlarmService = new SessionAlarmService();
-const alarmRegistry = createAlarmRegistry({
-  sqliteClient,
-  recordingPipeline,
-  getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
-  retryPendingChromeStorageWrite,
-  settingsReader: settingsRepository,
-  sessionTimeoutChecker: async () => { sessionAlarmService.checkTimeout(); },
-  sessionTimeoutInstall: async () => { await sessionAlarmService.startTimeoutChecker(); },
-});
+// PBI 2026-09-15-17: alarmRegistry is resolved via the manifest (deps include
+// sessionAlarmService and settingsReader). The refs (reviewSummaryGeneratorRef
+// etc.) must be injected after resolution so the registry's install/run hooks
+// can reach the generator.
 setReviewSummaryGeneratorRef(reviewSummaryGenerator);
 setSessionTimeoutRefs(
   async () => { await sessionAlarmService.startTimeoutChecker(); },
