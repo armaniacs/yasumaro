@@ -75,7 +75,9 @@ export function authorizeSqliteSender(sender: SenderLike & { id?: string }, runt
   if (isContentScriptSender(sender)) {
     return { ok: false, reason: 'content-script' };
   }
-  if (runtimeId !== undefined && sender.id !== runtimeId) {
+  // runtimeId が undefined（テスト環境など）でも常に比較する — 無条件許可は
+  // 恒真式になり sender ゲートが空洞化する（offscreen-security テストが pin）。
+  if (sender.id !== runtimeId) {
     return { ok: false, reason: 'external-extension' };
   }
   return { ok: true, proof: { __brand: 'AuthorizedSqliteSender' } };

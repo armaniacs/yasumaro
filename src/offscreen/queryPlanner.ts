@@ -20,7 +20,7 @@
 
 import { normalizeStorageQuery } from './queryNormalize.js';
 import { clampLimit, clampOffset, selectReadCap, DEFAULT_QUERY_LIMIT, type AlreadyCappedQuery } from './queryPlan.js';
-import { MAX_QUERY_LIMIT, QUERY_CAPS, AUDIT_CAP_IDB } from '../messaging/limits.js';
+import { MAX_QUERY_LIMIT, AUDIT_CAP_IDB } from '../messaging/limits.js';
 import { sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';

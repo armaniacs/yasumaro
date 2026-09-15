@@ -7,13 +7,9 @@ import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
-import type { RuleKey } from '../../utils/aiSummaryCleaner/types.js';
-import { PRESETS, type PresetId, type CleansingConfig } from '../../utils/aiSummaryCleaner/presets.js';
-import {
-    createCleansingPresetStore,
-    migrateToPreset as storeMigrateToPreset,
-    detectPreset as storeDetectPreset,
-} from './cleansingPresetStore.js';
+import { type RuleKey } from '../../utils/aiSummaryCleaner/types.js';
+import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
+import { createCleansingPresetStore } from './cleansingPresetStore.js';
 
 // The preset store owns the ordering constraints (apply epoch, dual write,
 // busy windows) that used to leak into this file's module state. migrateTo
