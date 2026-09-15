@@ -23,8 +23,8 @@ Firefox ユーザーとして、インストール手順と動作範囲（対応
 
 Firefox（about:debugging 一時読み込み or Developer Edition）で以下を通し、発見事項をこの PBI のコメント欄または別 fix PBI に記録する:
 
-- [ ] 同意モーダル → オンボーディングウィザード表示
-- [ ] コンテンツスクリプト自動記録（閲覧 → daily note / SQLite 保存）
+- [x] 同意モーダル → オンボーディングウィザード表示（2026-09-14 実機確認）
+- [x] コンテンツスクリプト自動記録（閲覧 → SQLite 保存）（2026-09-14 実機確認 — 保存不能は wasm data: インライン化の CSP ブロックが原因で修正済み）
 - [ ] ポップアップ手動記録 → プレビュー → 保存
 - [ ] ダッシュボード: 検索（FTS5）・タグクラウド・ドメインフィルタ
 - [ ] Markdown エクスポート（Downloads API）
@@ -32,6 +32,9 @@ Firefox（about:debugging 一時読み込み or Developer Edition）で以下を
 - [ ] アーカイブ作成・復元（staging OPFS）
 - [ ] i18n ja/en 切替・ライトモード
 - [ ] 診断パネルの SQLite テスト（moz-extension origin での OPFS 最終確認 — プローブは localhost 実測のため）
+- [ ] **Firefox 再起動後の永続化**（2026-09-15 実機確認 — 記録は残る。発見事項: 同意モーダルが再表示された → **修正済み**: HMAC KEK が session-only だったため再起動ごとに consent 署名が無効化される回帰（678f879d の意図を VULN-010/M3 対策が無効化していた）。`0915a` で KEK を IndexedDB の非抽出可能 CryptoKey として永続化し解消。再確認済み）
+
+QA で発見・修正済みの追加不具合（0914c/0915a に含む）: ダッシュボード拒否（送信者識別の Chrome 前提）・保存不能（wasm data: インライン化）・プリセット選択の非同期競合・同意リセット（KEK session-only）。
 
 ### 2. ドキュメント更新
 
