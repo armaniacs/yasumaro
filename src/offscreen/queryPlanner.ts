@@ -19,58 +19,27 @@
  */
 
 import { normalizeStorageQuery } from './queryNormalize.js';
-import { clampLimit, clampOffset } from './queryPlan.js';
+import { clampLimit, clampOffset, selectReadCap, DEFAULT_QUERY_LIMIT, type AlreadyCappedQuery } from './queryPlan.js';
 import { MAX_QUERY_LIMIT, QUERY_CAPS, AUDIT_CAP_IDB } from '../messaging/limits.js';
 import { sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 
-/** Default page size when the caller supplies no limit. */
-export const DEFAULT_QUERY_LIMIT = 100;
-
-/** Query dispatch mode: whether a StorageQuery is a text search or a plain listing. */
-export type QueryMode = 'search' | 'listing';
-
-/**
- * Single decision point for search-vs-listing dispatch (root cause of
- * 4a1f6093 and 43385d95): each backend used to re-test `if (q.text)`
- * independently — OpfsWorkerBackend picking the worker message type,
- * IdbVfsBackend picking its FTS/LIKE/plain SQL path, storageFallback
- * picking its filter path. Preserves the exact prior truthiness check
- * (empty string was already "listing" on every backend) — backends now
- * read this instead of re-deriving the check themselves.
- */
-export function planQueryMode(q: Pick<StorageQuery, 'text'>): QueryMode {
-  return q.text ? 'search' : 'listing';
-}
-
 /** Retention defaults for the purge seam (mirror dbMaintenance's values). */
 export const DEFAULT_RETENTION_DAYS = 90;
 export const DEFAULT_MAX_RECORDS = 1000;
-
-/**
- * Cap selection, owned by the planner seam (PBI 2026-09-12-16).
- *
- * The fts/plain choice used to be re-derived inline at every call site
- * (buildQuerySpec, OPFS handleSearch), so a cap change needed N synchronized
- * edits. Callers ask here; `buildQuerySpec` keeps only a defensive re-clamp
- * at the worker boundary.
- */
-export function selectReadCap(useFts: boolean): number {
-  return useFts ? QUERY_CAPS.fts : QUERY_CAPS.plain;
-}
 
 /**
  * Apply the read policy to an already-normalized query: clamp the limit and
  * truncate tag/text so extremely long input cannot become an expensive FTS5
  * query. Pure — safe to unit-test without a backend.
  */
-export function applyReadPolicy(q: StorageQuery): StorageQuery {
+export function applyReadPolicy(q: StorageQuery): AlreadyCappedQuery {
   const cappedLimit = clampLimit(q.limit, MAX_QUERY_LIMIT, DEFAULT_QUERY_LIMIT);
   const tag = q.tag ? q.tag.slice(0, FTS_QUERY_MAX_LENGTH) : q.tag;
   const text = q.text ? q.text.slice(0, FTS_QUERY_MAX_LENGTH) : q.text;
-  return { ...q, limit: cappedLimit, ...pickDefined({ tag, text }) };
+  return { ...q, limit: cappedLimit, ...pickDefined({ tag, text }) } as AlreadyCappedQuery;
 }
 
 /**
@@ -78,7 +47,7 @@ export function applyReadPolicy(q: StorageQuery): StorageQuery {
  * the read policy. Replaces the handler-side `normalizeStorageQuery` +
  * repo-side clamp/truncate split.
  */
-export function planQuery(payload: Record<string, unknown>): StorageQuery {
+export function planQuery(payload: Record<string, unknown>): AlreadyCappedQuery {
   return applyReadPolicy(normalizeStorageQuery(payload));
 }
 
@@ -86,7 +55,7 @@ export function planQuery(payload: Record<string, unknown>): StorageQuery {
  * Plan a text search from a wire payload: the free-text `query` field rides
  * alongside the normalized filters, then the read policy applies.
  */
-export function planSearch(payload: Record<string, unknown>): StorageQuery {
+export function planSearch(payload: Record<string, unknown>): AlreadyCappedQuery {
   const text = String((payload as { query?: unknown }).query ?? '');
   return applyReadPolicy({ text, ...normalizeStorageQuery(payload) });
 }

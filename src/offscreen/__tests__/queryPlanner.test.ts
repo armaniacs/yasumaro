@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { planQuery, planSearch, applyReadPolicy, DEFAULT_QUERY_LIMIT } from '../queryPlanner.js';
+import { planQuery, planSearch, applyReadPolicy, applySearchPolicy, selectReadCap } from '../queryPlanner.js';
+import { DEFAULT_QUERY_LIMIT } from '../queryPlan.js';
 import { MAX_QUERY_LIMIT } from '../../messaging/limits.js';
 import { FTS_QUERY_MAX_LENGTH } from '../schema.js';
 
@@ -55,7 +56,7 @@ describe('queryPlanner — read policy composition', () => {
 
 describe('selectReadCap / applySearchPolicy (PBI 2026-09-12-16)', () => {
   it('selects the fts cap for FTS searches and the plain cap otherwise', async () => {
-    const { selectReadCap } = await import('../queryPlanner.js');
+    const { selectReadCap } = await import('../queryPlan.js');
     const { QUERY_CAPS } = await import('../../messaging/limits.js');
     expect(selectReadCap(true)).toBe(QUERY_CAPS.fts);
     expect(selectReadCap(false)).toBe(QUERY_CAPS.plain);

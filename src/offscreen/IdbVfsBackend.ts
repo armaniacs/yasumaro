@@ -18,6 +18,7 @@ import {
   purgeCutoffMs, buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements,
+  type AlreadyCappedQuery,
 } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction } from './sqliteTransaction.js';
@@ -70,7 +71,9 @@ export class IdbVfsBackend implements StorageBackend {
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
     this.ensureDb();
 
-    const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
+    // q is the planQuery output that reached this backend through the engine;
+    // the worker-boundary cast is the documented defensive re-clamp point.
+    const spec = buildQuerySpec(q as unknown as AlreadyCappedQuery, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
     // PBI 2026-09-12-38: build the projection PER SEARCH PATH. The round-12

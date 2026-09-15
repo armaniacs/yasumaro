@@ -4,7 +4,7 @@ import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import type { ArchiveStaging } from './archiveStaging.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorResponse } from '../messaging/archiveWireTable.js';
-import { planQueryMode } from './queryPlanner.js';
+import { planQueryMode } from './queryPlan.js';
 
 export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   constructor(private engine: SqliteEngineHost) {}

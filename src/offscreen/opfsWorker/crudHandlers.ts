@@ -7,7 +7,7 @@ import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 import { INSERT_SQL, INSERT_IGNORE_RETURNING_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
-import { buildQuerySpec, QUERY_CAPS, buildPlainListStatements } from '../queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, buildPlainListStatements, type AlreadyCappedQuery } from '../queryPlan.js';
 import { BROWSING_LOG_COLUMNS, BROWSING_LOG_COLUMNS_SQL, mapNamed } from '../rowCodec.js';
 import type { QueryPayload } from './types.js';
 import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
@@ -31,7 +31,10 @@ export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): P
   // the same query return different rows per backend.
   // fts5Available: true — the OPFS engine is FTS5-enabled and the tag filter
   // uses the trigram MATCH path for terms >= 3 chars (PBI 2026-09-11).
-  const spec = buildQuerySpec({ ...(payload as StorageQuery) }, { caps: QUERY_CAPS, fts5Available: true });
+  // Worker boundary: the AlreadyCappedQuery brand does not survive the
+  // structured clone of the wire payload — the caps re-application inside
+  // buildQuerySpec is the documented defensive point here.
+  const spec = buildQuerySpec({ ...(payload as StorageQuery) } as unknown as AlreadyCappedQuery, { caps: QUERY_CAPS, fts5Available: true });
   if (spec.error) {
     throw new Error(spec.error);
   }

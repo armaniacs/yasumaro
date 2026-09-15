@@ -8,7 +8,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import { buildQuerySpec, QUERY_CAPS, matchesExtraWhere } from './queryPlan.js';
+import { buildQuerySpec, QUERY_CAPS, matchesExtraWhere, type AlreadyCappedQuery } from './queryPlan.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -198,7 +198,7 @@ export class FallbackStorage {
     success: true; rows: (BrowsingLogRecord & { rank: number })[]; total: number
   } | { success: false; error: string }> {
     try {
-      const spec = buildQuerySpec(q, { caps: QUERY_CAPS, fts5Available: false });
+      const spec = buildQuerySpec(q as unknown as AlreadyCappedQuery, { caps: QUERY_CAPS, fts5Available: false });
       if (spec.error) return { success: false, error: spec.error };
       const data = await this.loadData();
       let filtered = data.records;
