@@ -1,8 +1,15 @@
-.PHONY: build build-store build-edge clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast bench bench-micro bench-e2e bench-check bench-baseline bench-clean
+.PHONY: build build-store build-edge build-firefox clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast bench bench-micro bench-e2e bench-check bench-baseline bench-clean
 
-# build: TypeScript + WXT ビルド（node_modules/wa-sqlite 経由）
+# build: TypeScript + WXT ビルド — chromium（chrome）と firefox の両方を出力
+# （node_modules/wa-sqlite 経由）。firefox は -b firefox で dist/firefox-mv3 に
+# 出力され、wasm の公開アセット配置（build:publicAssets hook）も行われる。
 build:
 	npm run build
+	npm run build:firefox
+
+# build-firefox: firefox ビルドのみ（chromium は既存 dist を使う場合に）
+build-firefox:
+	npm run build:firefox
 
 # build-store: バージョン整合性チェック → ビルド → ZIP 生成
 build-store:
