@@ -1620,6 +1620,9 @@
   "diagBuiltInAiFlagGuidance": {
     "message": "「{flagUrl}」を開き「{flagName}」を有効にしてください。"
   },
+  "diagBuiltInAiDiskSpaceGuidance": {
+    "message": "端末内AIモデルの初期化には約{requiredGb}の空き容量が必要ですが、現在の空き容量は{freeGb}です。ディスクの空き容量を増やしてください。"
+  },
   "diagBuiltInAiUnsupportedBrowser": {
     "message": "このブラウザはブラウザ内蔵AIに対応していません。"
   },
@@ -2199,6 +2202,9 @@
   },
   "builtInAiUnavailableWithFlag": {
     "message": "Built-in AIは現在利用できません（状態: {status}）。「{flagUrl}」を開き「{flagName}」を有効にしてください。"
+  },
+  "builtInAiUnavailableDiskSpace": {
+    "message": "Built-in AIは現在利用できません（状態: {status}）。端末内AIモデルの初期化には約{requiredGb}の空き容量が必要ですが、現在の空き容量は{freeGb}です。ディスクの空き容量を増やしてから再度お試しください。"
   },
   "modelsDevDescription": {
     "message": "70以上のOpenAI互換プロバイダー（OpenRouter、Hugging Face、DeepSeek等）から選択"
