@@ -234,22 +234,12 @@ function archiveDispatchEntry(descriptor: ArchiveDescriptor): ArchiveDispatchEnt
   };
 }
 
-const ARCHIVE_DISPATCH: Record<ArchiveOpType, ArchiveDispatchEntry> = {
-  archivePreview: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archivePreview),
-  archiveCreate: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveCreate),
-  archiveCleanup: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveCleanup),
-  archiveExport: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveExport),
-  archivePrepareIncoming: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archivePrepareIncoming),
-  archiveRestorePreview: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveRestorePreview),
-  archiveRestore: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveRestore),
-  archiveDeleteByStaging: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging),
-  archiveOpen: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveOpen),
-  archiveQuery: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveQuery),
-  archiveUpdate: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveUpdate),
-  archiveSave: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveSave),
-  archiveClose: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveClose),
-  archiveStatus: archiveDispatchEntry(ARCHIVE_DESCRIPTORS.archiveStatus),
-};
+// Derived from the wire table (PBI 2026-09-15-04): the per-op hand-written
+// enumeration duplicated ARCHIVE_DESCRIPTORS op-for-op. Adding an op is now a
+// single table row.
+const ARCHIVE_DISPATCH = Object.fromEntries(
+  (Object.keys(ARCHIVE_DESCRIPTORS) as ArchiveOpType[]).map((op) => [op, archiveDispatchEntry(ARCHIVE_DESCRIPTORS[op])]),
+) as Record<ArchiveOpType, ArchiveDispatchEntry>;
 
 async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const entry = ARCHIVE_DISPATCH[op];

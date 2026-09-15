@@ -1,6 +1,6 @@
 # PBI: archiveWireTable 派生化 — 5重投影の規律を構造で閉じる
 
-## ステータス: ⬜ 未着手（順位3 / RICE 28.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -44,10 +44,10 @@ Scenario: field 追加時の silent-drop が構造で防がれる
 
 ## 受け入れ基準
 
-- [ ] `ARCHIVE_GATEWAY_DECODERS` / `ARCHIVE_DISPATCH` / `deps` ラッパーが wireTable 派生に置換されている
-- [ ] `archivePrepareIncoming` の例外が明示的なコメント付きで残っている
-- [ ] archiveWireTable.test.ts 全件 green + 三方向 assert が機能している
-- [ ] dashboard issue-report / archive 経路の e2e が据え置きで green
+- [x] `ARCHIVE_GATEWAY_DECODERS` / `ARCHIVE_DISPATCH` が wireTable 派生に置換されている（`Object.fromEntries` + `as unknown as` キャスト — キー幅の narrowing はコンパイラが推論できないため）
+- [x] `deps` ラッパーは**型保持のため手書きを維持**（診断時の想定と変更）: 各ラッパーの位置引数は encodeRequest と ArchiveDeps member の両方に対して型検査され、テーブル派生にすると呼び出し側の型が消える。depsMethod compile-time assert が op↔member 同期を担保 — 理由を deps.ts に文書化済み
+- [x] wireTable の decodeResponse throw 契約が gateway にも適用され、欠落 field の silent undefined が解消（preview / stagingName 欠落時は SqliteResult error として表面化）
+- [x] archiveWireTable.test.ts 全件 green + 三方向 assert が機能している + dashboard e2e 7 passed
 
 ## テスト戦略
 

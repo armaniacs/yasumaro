@@ -21,19 +21,6 @@ import type {
   OffscreenContentPurgeResponse,
   OffscreenWriteResponse,
   OffscreenHealthResponse,
-  OffscreenArchivePreviewResponse,
-  OffscreenArchiveCreateResponse,
-  OffscreenArchiveCleanupResponse,
-  OffscreenArchiveExportResponse,
-  OffscreenArchivePrepareIncomingResponse,
-  OffscreenArchiveRestorePreviewResponse,
-  OffscreenArchiveRestoreResponse,
-  OffscreenArchivePurgeResponse,
-  OffscreenArchiveQueryResponse,
-  OffscreenArchiveUpdateResponse,
-  OffscreenArchiveSaveResponse,
-  OffscreenArchiveCloseResponse,
-  OffscreenArchiveStatusResponse,
   ArchiveSessionRow,
   ArchiveSessionStatusData,
   ArchivePurgeData,
@@ -46,7 +33,7 @@ import type {
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
-import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
+import { archiveWireFor, archiveNoRetry, isArchiveOpType, ARCHIVE_DESCRIPTORS, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
@@ -61,37 +48,17 @@ type GatewaySuccessResponse = { success: true } & Record<string, unknown>;
  * type so a shape change fails compilation here instead of silently
  * returning undefined.
  */
-const ARCHIVE_GATEWAY_DECODERS: Record<ArchiveOpType, (res: GatewaySuccessResponse) => unknown> = {
-  archivePreview: (res) => (res as unknown as OffscreenArchivePreviewResponse & { success: true }).preview,
-  archiveCreate: (res) => {
-    const r = res as unknown as OffscreenArchiveCreateResponse & { success: true };
-    return { stagingName: r.stagingName, recordCount: r.recordCount };
-  },
-  archiveCleanup: (res) => ({ removed: (res as unknown as OffscreenArchiveCleanupResponse & { success: true }).removed }),
-  archiveExport: (res) => {
-    const r = res as unknown as OffscreenArchiveExportResponse & { success: true };
-    return { chunk: r.chunk, nextOffset: r.nextOffset, total: r.total, done: r.done };
-  },
-  archivePrepareIncoming: (res) => (res as unknown as OffscreenArchivePrepareIncomingResponse & { success: true }).stagingName,
-  archiveRestorePreview: (res) => (res as unknown as OffscreenArchiveRestorePreviewResponse & { success: true }).preview,
-  archiveRestore: (res) => {
-    const r = res as unknown as OffscreenArchiveRestoreResponse & { success: true };
-    return { restored: r.restored, restoredDeleted: r.restoredDeleted, skipped: r.skipped, skippedInvalid: r.skippedInvalid };
-  },
-  archiveDeleteByStaging: (res) => {
-    const r = res as unknown as OffscreenArchivePurgeResponse & { success: true };
-    return { deleted: r.deleted, remaining: r.remaining, freelistBefore: r.freelistBefore, freelistAfter: r.freelistAfter, vacuumOk: r.vacuumOk };
-  },
-  archiveOpen: () => undefined,
-  archiveQuery: (res) => {
-    const r = res as unknown as OffscreenArchiveQueryResponse & { success: true };
-    return { rows: r.rows, total: r.total };
-  },
-  archiveUpdate: (res) => ({ dirty: (res as unknown as OffscreenArchiveUpdateResponse & { success: true }).dirty }),
-  archiveSave: (res) => ({ dirty: (res as unknown as OffscreenArchiveSaveResponse & { success: true }).dirty }),
-  archiveClose: (res) => ({ dirty: (res as unknown as OffscreenArchiveCloseResponse & { success: true }).dirty }),
-  archiveStatus: (res) => (res as unknown as OffscreenArchiveStatusResponse & { success: true }).status,
-};
+// Derived from the wire table's decodeResponse (PBI 2026-09-15-04): the
+// per-op hand-written projections used to duplicate these shapes field-for-
+// field, and a missing field (e.g. preview) silently decoded to undefined.
+// Reusing decodeResponse closes that class — its throws surface as
+// SqliteResult errors instead of silent undefined.
+const ARCHIVE_GATEWAY_DECODERS = Object.fromEntries(
+  (Object.keys(ARCHIVE_DESCRIPTORS) as ArchiveOpType[]).map((op) => [
+    op,
+    (res: GatewaySuccessResponse) => ARCHIVE_DESCRIPTORS[op].decodeResponse(res),
+  ]),
+) as Record<ArchiveOpType, (res: GatewaySuccessResponse) => unknown>;
 
 export class OffscreenGateway {
   private readonly injectedTransport: OffscreenTransport | null;
