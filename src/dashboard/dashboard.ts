@@ -28,44 +28,7 @@ import {
   resolvePanelIdForSection,
   resolvePanelIdForTab,
 } from './panels/panelCatalog.js';
-// Not a panel implementation (no PanelLifecycle, no panel registry
-// dependency) — a standalone module the diagnostics panel also wires its
-// own "Report a Bug" button through. Safe to import at page-init time.
-import {
-  createIssueReportModalController,
-  type IssueReportModalController,
-} from './panels/diagnostic/issueReportLink.js';
-import { diagnosticsCollector } from './panels/diagnostic/DiagnosticsCollector.js';
-
-/**
- * Single shared controller for the "Report a Bug" preview modal, created
- * lazily by initDashboard() (DOM must be ready first). The diagnostics panel
- * attaches its own #diagReportBugBtn to the same modal state as the sidebar
- * button via attachIssueReportTrigger(), which queues the request when the
- * controller does not exist yet — a panel's mount() can run before the async
- * page init creates the controller (e.g. diagnostics as the ?tab= deep-link
- * initial panel), and mount never re-runs, so a silent skip would leave the
- * button permanently unwired.
- */
-let issueReportModalController: IssueReportModalController | null = null;
-
-// Entry-point buttons captured before initDashboard() created the controller.
-// attachTrigger is idempotent per button (WeakSet guard), so the flush after
-// creation can never double-wire an entry point.
-const pendingIssueReportTriggers: Array<HTMLButtonElement | null> = [];
-
-/**
- * Wire a "Report a Bug" entry-point button to the shared preview-modal
- * controller. Safe to call before initDashboard() — the button is queued and
- * wired as soon as the controller exists.
- */
-export function attachIssueReportTrigger(reportBtn: HTMLButtonElement | null): void {
-  if (issueReportModalController) {
-    issueReportModalController.attachTrigger(reportBtn);
-    return;
-  }
-  pendingIssueReportTriggers.push(reportBtn);
-}
+import { initIssueReportEntry } from './panels/diagnostic/issueReportEntry.js';
 
 /**
  * Which panel the page should open on, from ?tab= / ?section=.
@@ -127,33 +90,9 @@ export async function initDashboard(): Promise<void> {
   document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
   try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
 
-  // Sidebar "Report a Bug" — reuses the diagnostics panel's preview modal
-  // (#bugReportPreviewModal lives outside any panel) so the button works
-  // from any panel without requiring the user to navigate to Diagnostics
-  // first. The diagnostics panel attaches its own #diagReportBugBtn to the
-  // same controller instance (via attachIssueReportTrigger()), so both
-  // entry points share one modal state and one DiagnosticsCollector.
-  try {
-    const controller = createIssueReportModalController(
-      {
-        previewModal: document.getElementById('bugReportPreviewModal') as HTMLDialogElement | null,
-        previewContent: document.getElementById('bugReportPreviewContent') as HTMLTextAreaElement | null,
-        cancelBtn: document.getElementById('bugReportCancelBtn') as HTMLButtonElement | null,
-        closeBtn: document.getElementById('bugReportPreviewCloseBtn') as HTMLButtonElement | null,
-        openBtn: document.getElementById('bugReportOpenBtn') as HTMLButtonElement | null,
-      },
-      () => diagnosticsCollector.collect(),
-    );
-    issueReportModalController = controller;
-    controller.attachTrigger(
-      document.getElementById('sidebarReportBugBtn') as HTMLButtonElement | null,
-    );
-    // Panels that mounted before this point queued their buttons — wire them
-    // now (idempotent, and mount never re-runs so there is no later chance).
-    for (const btn of pendingIssueReportTriggers.splice(0)) {
-      controller.attachTrigger(btn);
-    }
-  } catch (e) { console.error('[Dashboard] issueReportModalController (sidebar) error:', e); }
+  // Sidebar + panel "Report a Bug" entry points — the shared controller and
+  // the queued-button flush live in panels/diagnostic/issueReportEntry.ts.
+  initIssueReportEntry();
 
   console.log('[Dashboard] Initialization complete');
 }

@@ -17,7 +17,7 @@ import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
 import { getDebugMode, setDebugMode } from './debugModeStore.js';
 import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
-import { attachIssueReportTrigger } from '../../dashboard.js';
+import { registerReportBugButton } from './issueReportEntry.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -59,56 +59,125 @@ export function renderBuiltInAiStatus(
   }
 }
 
-interface SectionElements {
-  storageStats: HTMLElement | null;
-  extInfo: HTMLElement | null;
-  obsidianSettingsEl: HTMLElement | null;
-  aiSettingsEl: HTMLElement | null;
-  connectionResult: HTMLElement | null;
-  sqliteStats: HTMLElement | null;
-  diagDeficiencyStats: HTMLElement | null;
-  diagBuiltInAiStats: HTMLElement | null;
-  diagBuiltInAiDownloadBtn: HTMLButtonElement | null;
-  diagCompileOptionsStats: HTMLElement | null;
-  diagDivergenceWarning: HTMLElement | null;
-  diagMigrationStats: HTMLElement | null;
-  compileOptionsSection: HTMLElement | null;
+/**
+ * Section table (PBI 2026-09-15-06): adding a diagnostic item is one row here
+ * plus its render function — query/clear/render lifecycles all run from this
+ * table, replacing the hand-written querySections/clearSections switches and
+ * the inline render calls in loadAndPopulate.
+ */
+interface DiagSection {
+  selector: string;
+  clear(el: HTMLElement | null): void;
+  render(el: HTMLElement | null, snap: DiagnosticsSnapshot): void;
 }
 
-function querySections(container: HTMLElement): SectionElements {
-  return {
-    storageStats: container.querySelector('#diagStorageStats') as HTMLElement | null,
-    extInfo: container.querySelector('#diagExtInfo') as HTMLElement | null,
-    obsidianSettingsEl: container.querySelector('#diagObsidianSettings') as HTMLElement | null,
-    aiSettingsEl: container.querySelector('#diagAiSettings') as HTMLElement | null,
-    connectionResult: container.querySelector('#diagConnectionResult') as HTMLElement | null,
-    sqliteStats: container.querySelector('#diagSqliteStats') as HTMLElement | null,
-    diagDeficiencyStats: container.querySelector('#diagDeficiencyStats') as HTMLElement | null,
-    diagBuiltInAiStats: container.querySelector('#diagBuiltInAiStats') as HTMLElement | null,
-    diagBuiltInAiDownloadBtn: container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null,
-    diagCompileOptionsStats: container.querySelector('#diagCompileOptionsStats') as HTMLElement | null,
-    diagDivergenceWarning: container.querySelector('#diagDivergenceWarning') as HTMLElement | null,
-    diagMigrationStats: container.querySelector('#diagMigrationStats') as HTMLElement | null,
-    compileOptionsSection: container.querySelector('#diagCompileOptionsSection') as HTMLElement | null,
-  };
-}
+const clearChildren = (el: HTMLElement | null): void => {
+  el?.replaceChildren();
+};
 
-function clearSections(s: SectionElements): void {
-  s.storageStats?.replaceChildren();
-  s.extInfo?.replaceChildren();
-  s.obsidianSettingsEl?.replaceChildren();
-  s.aiSettingsEl?.replaceChildren();
-  if (s.sqliteStats) {
-    s.sqliteStats.replaceChildren();
-    s.sqliteStats.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...';
-  }
-  s.diagDeficiencyStats?.replaceChildren();
-  s.diagBuiltInAiStats?.replaceChildren();
-  s.diagBuiltInAiDownloadBtn?.classList.add('hidden');
-  s.diagCompileOptionsStats?.replaceChildren();
-  s.diagDivergenceWarning?.classList.add('hidden');
-  s.diagMigrationStats?.replaceChildren();
-}
+const SECTIONS: DiagSection[] = [
+  {
+    selector: '#diagStorageStats',
+    clear: clearChildren,
+    render(el, snap) {
+      if (!el) return;
+      el.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${snap.storage.bytesUsedKb} KB`));
+      el.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', snap.storage.savedUrls));
+    },
+  },
+  {
+    selector: '#diagExtInfo',
+    clear: clearChildren,
+    render(el, snap) {
+      if (!el) return;
+      el.appendChild(makeStatRow(getMessage('diagVersion') || 'Version', snap.extInfo.version));
+      el.appendChild(makeStatRow(getMessage('diagExtName') || 'Extension', snap.extInfo.name));
+    },
+  },
+  {
+    selector: '#diagObsidianSettings',
+    clear: clearChildren,
+    render: (el, snap) => renderObsidianSection(el, snap),
+  },
+  {
+    selector: '#diagAiSettings',
+    clear: clearChildren,
+    render: (el, snap) => renderAiSection(el, snap),
+  },
+  {
+    selector: '#diagConnectionResult',
+    clear: () => undefined,
+    render(el) {
+      if (el) el.dataset['placeholder'] = getMessage('diagConnectionPlaceholder') || 'Click "Test Connection" to check the Obsidian API connection.';
+    },
+  },
+  {
+    selector: '#diagSqliteStats',
+    // Clear first so the sqlite "Checking..." placeholder is visible during
+    // collect()'s retrying status fetch (legacy UX), not just after it.
+    clear(el) {
+      clearChildren(el);
+      if (el) el.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...';
+    },
+    render: (el, snap) => renderSqliteSection(el, snap),
+  },
+  {
+    selector: '#diagDeficiencyStats',
+    clear: clearChildren,
+    render(el, snap) {
+      if (!el || !snap.sqlite) return;
+      const deficiencies = snap.deficiencies;
+      if (deficiencies.length === 0) {
+        el.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.', '✓'));
+        return;
+      }
+      for (const item of deficiencies) {
+        const severityLabel = getSeverityLabel(item.severity);
+        const summaryText = getMessage(item.summaryKey) || item.id;
+        el.appendChild(makeStatRow(`${summaryText} [${severityLabel}]`, getMessage(item.recommendedActionKey) || ''));
+      }
+    },
+  },
+  {
+    selector: '#diagBuiltInAiStats',
+    clear(el) {
+      clearChildren(el);
+      document.getElementById('diagBuiltInAiDownloadBtn')?.classList.add('hidden');
+    },
+    render(el, snap) {
+      const stats = el as HTMLElement | null;
+      const downloadBtn = document.getElementById('diagBuiltInAiDownloadBtn') as HTMLButtonElement | null;
+      if (stats && snap.builtInAi) {
+        renderBuiltInAiStatus(stats, downloadBtn, snap.builtInAi);
+      }
+    },
+  },
+  {
+    selector: '#diagCompileOptionsStats',
+    clear: clearChildren,
+    render(el, snap) {
+      el?.classList.toggle('hidden', !snap.debugMode);
+      renderCompileOptions(el, snap);
+    },
+  },
+  {
+    selector: '#diagDivergenceWarning',
+    // Divergence warning: offscreen fell back while the dashboard still sees OPFS
+    clear(el) {
+      el?.classList.add('hidden');
+    },
+    render(el, snap) {
+      if (el && snap.divergence.offscreenUsesFallback && snap.divergence.dashboardDetectsOpfs) {
+        el.classList.remove('hidden');
+      }
+    },
+  },
+  {
+    selector: '#diagMigrationStats',
+    clear: clearChildren,
+     render: (el, snap) => renderMigrationSection(el, snap),
+   },
+];
 
 function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el) return;
@@ -531,58 +600,15 @@ export function createDiagnosticsPanel(): PanelLifecycle {
     const container = _container;
     if (!container) return;
 
-    const sections = querySections(container);
     // Clear first so the sqlite "Checking..." placeholder is visible during
     // collect()'s retrying status fetch (legacy UX), not just after it.
-    clearSections(sections);
+    for (const section of SECTIONS) {
+      section.clear(container.querySelector(section.selector) as HTMLElement | null);
+    }
     const snapshot = await diagnosticsCollector.collect();
 
-    sections.compileOptionsSection?.classList.toggle('hidden', !snapshot.debugMode);
-
-    renderObsidianSection(sections.obsidianSettingsEl, snapshot);
-    renderAiSection(sections.aiSettingsEl, snapshot);
-
-    if (sections.storageStats) {
-      sections.storageStats.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${snapshot.storage.bytesUsedKb} KB`));
-      sections.storageStats.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', snapshot.storage.savedUrls));
-    }
-
-    renderSqliteSection(sections.sqliteStats, snapshot);
-    renderMigrationSection(sections.diagMigrationStats, snapshot);
-
-    if (sections.diagDeficiencyStats && snapshot.sqlite) {
-      const deficiencies = snapshot.deficiencies;
-      if (deficiencies.length === 0) {
-        sections.diagDeficiencyStats.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.', '✓'));
-      } else {
-        for (const item of deficiencies) {
-          const severityLabel = getSeverityLabel(item.severity);
-          const summaryText = getMessage(item.summaryKey) || item.id;
-          sections.diagDeficiencyStats.appendChild(makeStatRow(`${summaryText} [${severityLabel}]`, getMessage(item.recommendedActionKey) || ''));
-        }
-      }
-    }
-
-    if (sections.diagBuiltInAiStats && snapshot.builtInAi) {
-      renderBuiltInAiStatus(sections.diagBuiltInAiStats, sections.diagBuiltInAiDownloadBtn, snapshot.builtInAi);
-    }
-
-    renderCompileOptions(sections.diagCompileOptionsStats, snapshot);
-
-    // Divergence warning: offscreen fell back while the dashboard still sees OPFS
-    if (sections.diagDivergenceWarning
-        && snapshot.divergence.offscreenUsesFallback
-        && snapshot.divergence.dashboardDetectsOpfs) {
-      sections.diagDivergenceWarning.classList.remove('hidden');
-    }
-
-    if (sections.extInfo) {
-      sections.extInfo.appendChild(makeStatRow(getMessage('diagVersion') || 'Version', snapshot.extInfo.version));
-      sections.extInfo.appendChild(makeStatRow(getMessage('diagExtName') || 'Extension', snapshot.extInfo.name));
-    }
-
-    if (sections.connectionResult) {
-      sections.connectionResult.dataset['placeholder'] = getMessage('diagConnectionPlaceholder') || 'Click "Test Connection" to check the Obsidian API connection.';
+    for (const section of SECTIONS) {
+      section.render(container.querySelector(section.selector) as HTMLElement | null, snapshot);
     }
   }
 
@@ -613,8 +639,6 @@ export function createDiagnosticsPanel(): PanelLifecycle {
         }
       });
 
-      const sections = querySections(container);
-
       const actionEls: DiagnosticActionElements = {
         testObsidianBtn: container.querySelector('#diagTestObsidianBtn'),
         testAiBtn: container.querySelector('#diagTestAiBtn'),
@@ -623,25 +647,27 @@ export function createDiagnosticsPanel(): PanelLifecycle {
         backfillBtn: container.querySelector('#diagBackfillBtn'),
         resyncBtn: container.querySelector('#diagResyncBtn'),
         cleanupBtn: container.querySelector('#diagCleanupBtn'),
-        builtInAiDownloadBtn: sections.diagBuiltInAiDownloadBtn,
-        connectionResult: sections.connectionResult,
+        builtInAiDownloadBtn: container.querySelector('#diagBuiltInAiDownloadBtn'),
+        connectionResult: container.querySelector('#diagConnectionResult'),
         sqliteResult: container.querySelector('#diagSqliteResult'),
         migrateResult: container.querySelector('#diagMigrateResult'),
         backfillResult: container.querySelector('#diagBackfillResult'),
         resyncResult: container.querySelector('#diagResyncResult'),
         cleanupResult: container.querySelector('#diagCleanupResult'),
-        builtInAiStats: sections.diagBuiltInAiStats,
+        builtInAiStats: container.querySelector('#diagBuiltInAiStats'),
         builtInAiDownloadResult: container.querySelector('#diagBuiltInAiDownloadResult'),
       };
       createDiagnosticActions(actionEls, {
         onBuiltInAiDownloaded: (result) => {
-          if (sections.diagBuiltInAiStats) {
-            renderBuiltInAiStatus(sections.diagBuiltInAiStats, sections.diagBuiltInAiDownloadBtn, result);
+          const stats = container.querySelector('#diagBuiltInAiStats') as HTMLElement | null;
+          const downloadBtn = container.querySelector('#diagBuiltInAiDownloadBtn') as HTMLButtonElement | null;
+          if (stats) {
+            renderBuiltInAiStatus(stats, downloadBtn, result);
           }
         },
       });
 
-      attachIssueReportTrigger(
+      registerReportBugButton(
         container.querySelector('#diagReportBugBtn'),
       );
     },
