@@ -9,6 +9,20 @@ import { logError, ErrorCode } from '../../utils/logger.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
 import type { RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 import { PRESETS, type PresetId, type CleansingConfig } from '../../utils/aiSummaryCleaner/presets.js';
+import {
+    createCleansingPresetStore,
+    migrateToPreset as storeMigrateToPreset,
+    detectPreset as storeDetectPreset,
+} from './cleansingPresetStore.js';
+
+// The preset store owns the ordering constraints (apply epoch, dual write,
+// busy windows) that used to leak into this file's module state. migrateTo
+// Preset/detectPreset moved there too — re-exported for backward compat.
+export { migrateToPreset, detectPreset } from './cleansingPresetStore.js';
+
+export const presetStore = createCleansingPresetStore();
+// Guard window: module load → setup + 300ms (replaces _initialRenderGuard).
+presetStore.holdBusy();
 
 /**
  * Rule key -> checkbox element id, e.g. `jsonLd` -> `ai-summary-cleansing-json-ld`.
@@ -31,153 +45,35 @@ function ruleOptionKey(rule: CleansingRule): string {
 }
 
 // ---------------------------------------------------------------------------
-// Preset handling — 32トグルの view として機能、保存形式は壊さない
+// Preset handling — 32トグルの view として機能、保存形式は壊さない。
+// 順序制約（epoch・二重書き込み・busy 窓）は cleansingPresetStore.ts が所有。
 // ---------------------------------------------------------------------------
-
-let _isApplyingPreset = false;
-let _initialRenderGuard = true;
-
-function _setInitialRenderGuard(value: boolean): void {
-    _initialRenderGuard = value;
-}
-void _setInitialRenderGuard;
-
-function isGuarded(): boolean {
-    return _isApplyingPreset || _initialRenderGuard;
-}
-
-/**
- * 既存の 32値から preset を推定（マイグレーション用）
- * - deepEnabled→aggressive, news/ec→balanced, else minimal
- * 純粋関数でストレージへの副作用なし。
- */
-export function migrateToPreset(config: Partial<CleansingConfig> | AiSummaryCleansingSettings): PresetId {
-    const c = config as Record<string, unknown>;
-    if (c['deepEnabled'] === true) return 'aggressive';
-    if (c['newsMediaEnabled'] === true || c['ecSiteEnabled'] === true) return 'balanced';
-    return 'minimal';
-}
-
-/**
- * config がいずれかの preset と完全一致するか判定。カスタム検出用。
- */
-export function detectPreset(config: Partial<CleansingConfig> | AiSummaryCleansingSettings): PresetId {
-    for (const pid of ['minimal', 'balanced', 'aggressive'] as const) {
-        const preset = PRESETS[pid];
-        let match = true;
-        for (const [k, v] of Object.entries(preset)) {
-            if ((config as Record<string, unknown>)[k] !== v) { match = false; break; }
-        }
-        if (match) return pid;
-    }
-    return 'custom';
-}
 
 /**
  * 初回起動時に cleansing_preset がなければ migrate して保存。
- * 既存 32値は上書きしない（preset は view としてのみ機能）。
+ * 順序制約（epoch・再チェック・busy 窓）は cleansingPresetStore が所有。
  */
-let migrationPromise: Promise<void> | null = null;
-/** Bumped synchronously by every applyPreset — the migration's detect read may
- *  predate an in-flight apply, so the migration must yield when they overlap. */
-let applyEpoch = 0;
-
 export async function ensureCleansingPresetMigrated(): Promise<void> {
-    if (migrationPromise) return migrationPromise;
-    migrationPromise = (async () => {
-    try {
-        const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-        if (stored[StorageKeys.CLEANSING_PRESET]) return;
-        const myEpoch = applyEpoch;
-        const cfg = await getAiSummaryCleansingSettings();
-        // An applyPreset started while the repository read above was in
-        // flight: its values are newer than what detectPreset would see, so
-        // the migration must not overwrite them. Without this, a late
-        // migration write reverted the user's just-applied selection back to
-        // the stale detected value (verified by
-        // dashboard-cleansing-preset.spec.ts).
-        if (myEpoch !== applyEpoch) return;
-        // Re-check before writing: a concurrent applyPreset may have written meanwhile.
-        const recheck = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-        if (recheck[StorageKeys.CLEANSING_PRESET]) return;
-        // 既存ユーザーのカスタム設定を尊重: 完全一致しない場合は custom として保存
-        const exact = detectPreset(cfg);
-        const preset: PresetId = exact !== 'custom' ? exact : (() => {
-            // exact が custom の場合でも、ヒューリスティックで minimal/balanced/aggressive を推定する仕様だが、
-            // 既存ユーザーの 32値を勝手に上書きしないため、保存は 'custom' にフォールバックして
-            // 値の消失を防ぐ。ヒューリスティックが必要な場合は migrateToPreset(cfg) を直接呼べる。
-            // テストで「既存ユーザーが minimal にリセットされない」ことを担保するため custom を優先。
-            const hasAnyStored = Object.keys(cfg).length > 0;
-            if (hasAnyStored) {
-                // 既存設定があれば custom、カスタムでなければ heuristic
-                // 新規インストール相当（全て newUserDefault）なら balanced 扱いだが、
-                // ここでは保存形式を壊さないため custom でなく heuristic を使う選択も可能。
-                // 仕様の「deep→aggressive else minimal」を尊重しつつ、既存カスタムは custom にする分岐:
-                const _heuristic = migrateToPreset(cfg);
-                void _heuristic;
-                // _heuristic と exact が異なる場合は custom とみなす（値の上書き防止）
-                // ただし fresh install のデフォルト (newUserDefault = balanced相当) が custom にならないよう、
-                // _heuristic が balanced/aggressive の場合はそちらを優先しない — 既存値があれば custom
-                return 'custom' as PresetId;
-            }
-            return migrateToPreset(cfg);
-        })();
-        await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: preset });
-    } catch (e) {
-        logError('Failed to migrate cleansing preset', { cause: e }, ErrorCode.STORAGE_WRITE_FAILURE);
-    }
-    })();
-    return migrationPromise;
+    await presetStore.ensureMigrated();
 }
 
 /**
- * プリセットを適用: PRESETS[presetId] の値を chrome.storage.local.set で一括保存し、UI を更新。
- * custom の場合は 32値を上書きせず preset キーのみ保存。
+ * プリセットを適用: PRESETS[presetId] の値で 32値と preset キーを更新し、UI を反映。
+ * 反映（applyToUI + select 同期）は busy 窓の中で runReflecting 経由で行う。
  */
 export async function applyPreset(presetId: PresetId): Promise<void> {
-    applyEpoch++;
-    _isApplyingPreset = true;
-    try {
-        const preset = PRESETS[presetId];
-        const current = await settingsRepository.getAll();
-        if (presetId !== 'custom') {
-            for (const rule of CLEANSING_RULES) {
-                const optKey = ruleOptionKey(rule) as keyof CleansingConfig;
-                const val = (preset as Record<string, unknown>)[optKey as string];
-                if (typeof val === 'boolean') {
-                    (current as Record<string, unknown>)[rule.storageKey] = val;
-                }
-            }
-        }
-        (current as Record<string, unknown>)[StorageKeys.CLEANSING_PRESET] = presetId;
-        await settingsRepository.setAll(current);
-        // The select reads the top-level key (see the init restore block and
-        // switchToCustomIfNeeded), while the repository stores the blob — keep
-        // both in sync or the read source stays stale and reverts the UI.
-        await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: presetId });
+    await presetStore.runReflecting(async () => {
+        await presetStore.applyPreset(presetId);
         const settings = await getAiSummaryCleansingSettings();
         applyAiSummaryCleansingSettingsToUI(settings);
-        const select = document.getElementById('cleansing-preset') as HTMLSelectElement | null;
-        if (select) select.value = presetId;
-    } finally {
-        setTimeout(() => { _isApplyingPreset = false; }, 0);
-    }
+    });
 }
 
 /**
- * 手動トグルで custom へ遷移（ガード付き）
+ * 手動トグルで custom へ遷移（busy 窓中はスキップ — ガードは store 内部）
  */
 async function switchToCustomIfNeeded(): Promise<void> {
-    if (isGuarded()) return;
-    try {
-        const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-        const cur = stored[StorageKeys.CLEANSING_PRESET] as string | undefined;
-        if (cur && cur !== 'custom') {
-            await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: 'custom' });
-            const select = document.getElementById('cleansing-preset') as HTMLSelectElement | null;
-            if (select) select.value = 'custom';
-        }
-    } catch {}
+    await presetStore.markCustomOnManualEdit();
 }
 
 /**
@@ -270,7 +166,10 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
  * @param settings AI要約クレンジング設定
  */
 export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansingSettings): void {
-    _isApplyingPreset = true;
+    // UI 反映は busy 窓の中で行う（presetStore.runReflecting 経由の呼び出し
+    // では窓が延長され、直打ちの呼び出しでも窓が開く — 旧 _isApplyingPreset 相当）。
+    // Guard window: presetStore.holdBusy() at module scope covers module load →
+    // setup + 300ms; callers use presetStore.runReflecting for scoped windows.
     const enabledCheckbox = document.getElementById('ai-summary-cleansing-enabled') as HTMLInputElement;
     const whitelistExtractionCheckbox = document.getElementById('whitelist-extraction-enabled') as HTMLInputElement;
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
@@ -353,14 +252,10 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
         subGroup.style.display = settings.enabled ? 'block' : 'none';
     }
 
-    // NOTE: 以前ここにあったプリセットセレクトの fire-and-forget 同期は削除した。
-    // applyPreset() が select.value を明示設定した直後に古いトップレベル値を
-    // 読み直して上書きし、選択が必ず 'custom' に戻る競合になっていた。セレクトの
-    // 初期値は配線時（このファイル末尾の init）の復元ブロックが担当する。
     // The select's initial value is restored by the wiring block below; callers
-    // that change the preset set select.value explicitly.
-
-    setTimeout(() => { _isApplyingPreset = false; _initialRenderGuard = false; }, 0);
+    // that change the preset set select.value explicitly. The busy window is
+    // closed by presetStore.runReflecting's finally (replaces the setTimeout
+    // guards that used to clear _isApplyingPreset/_initialRenderGuard here).
 }
 
 /**
@@ -453,14 +348,7 @@ export function setupAiSummaryCleansingEventListeners(): void {
         presetSelect.disabled = true;
         void (async () => {
             try {
-                const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-                const preset = stored[StorageKeys.CLEANSING_PRESET] as string | undefined;
-                if (preset) presetSelect.value = preset;
-                else {
-                    await ensureCleansingPresetMigrated();
-                    const after = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-                    if (after[StorageKeys.CLEANSING_PRESET]) presetSelect.value = after[StorageKeys.CLEANSING_PRESET] as string;
-                }
+                presetSelect.value = await presetStore.getPreset();
             } catch {
                 // fall through to enabling the select below
             } finally {
@@ -469,11 +357,19 @@ export function setupAiSummaryCleansingEventListeners(): void {
         })();
         presetSelect.addEventListener('change', async (e) => {
             const pid = (e.target as HTMLSelectElement).value as PresetId;
-            await applyPreset(pid);
+            // UI 反映（applyToUI + select 同期）を busy 窓の中で実行 —
+            // 反映中の checkbox change が custom 遷移を起こさないようガードする。
+            await presetStore.runReflecting(async () => {
+                await presetStore.applyPreset(pid);
+                const settings = await getAiSummaryCleansingSettings();
+                applyAiSummaryCleansingSettingsToUI(settings);
+            });
         });
+        // プリセット変更を select に反映（store 購読 — 手動 custom 遷移もカバー）
+        presetStore.subscribe((pid) => { presetSelect.value = pid; });
     } else {
         // select がない環境でもマイグレーションは実行
-        void ensureCleansingPresetMigrated();
+        void presetStore.ensureMigrated();
     }
 
     const checkboxes = [
@@ -533,8 +429,9 @@ export function setupAiSummaryCleansingEventListeners(): void {
         }
     }
 
-    // 初期描画ガード解除（preset適用直後の checkbox 変更は custom にしない）
-    setTimeout(() => { _initialRenderGuard = false; }, 300);
+    // 初期描画窓の解除（preset適用直後の checkbox 変更は custom にしない —
+    // 旧 _initialRenderGuard の 300ms 相当。presetStore.holdBusy() と対になる）
+    presetStore.releaseInitialRenderWindow();
 
     // 保存ボタンのイベントリスナーを設定
     const saveButton = document.getElementById('saveAiSummaryCleansingSettings') as HTMLButtonElement;
