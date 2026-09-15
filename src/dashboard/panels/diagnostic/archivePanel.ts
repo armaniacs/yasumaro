@@ -19,6 +19,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { cutoffMsFromLocalDate, assertCutoffPair, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
 import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { getMessage } from '../../../utils/i18n.js';
+import { createArchiveSessionStore } from './archiveSessionStore.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
 const EXPORT_CHUNK_BYTES = MAX_ARCHIVE_EXPORT_CHUNK_BYTES;
@@ -212,11 +213,14 @@ export function createArchivePanel(): PanelLifecycle {
         }
       });
 
-      let sessionStaging: string | null = null;
+      // セッションビューアの staging ライフサイクル（PBI 2026-09-15-09）:
+      // idle → staged → open → dirty の状態機械は ArchiveSessionStore が所有。
+      const sessionStore = createArchiveSessionStore();
 
       const renderSessionList = async (): Promise<void> => {
-        if (!sessionStaging || !sessionListEl) return;
-        const result = await archiveQuery(sessionStaging, sessionQueryInput?.value ?? '', 100, 0);
+        const staging = sessionStore.getSessionName();
+        if (!staging || !sessionListEl) return;
+        const result = await archiveQuery(staging, sessionQueryInput?.value ?? '', 100, 0);
         if ('error' in result) throw new Error(result.error);
         const rows = result.data.rows;
         if (!rows.length) {
@@ -236,9 +240,9 @@ export function createArchivePanel(): PanelLifecycle {
             editBtn.addEventListener('click', () => {
               openEditModal(row, editBtn, {
                 onSave: async (newTitle: string) => {
-                  const update = await archiveUpdate(sessionStaging as string, row.id, { title: newTitle });
+                  const update = await archiveUpdate(staging, row.id, { title: newTitle });
                   if ('error' in update) throw new Error(update.error);
-                  archiveDirtyLocal = true;
+                  sessionStore.markDirty();
                 },
                 onClosed: async () => {
                   await renderSessionList();
@@ -252,8 +256,6 @@ export function createArchivePanel(): PanelLifecycle {
           }),
         );
       };
-
-      let archiveDirtyLocal = false;
 
       const openEditModal = (
         row: ArchiveSessionRowLike,
@@ -368,8 +370,7 @@ export function createArchivePanel(): PanelLifecycle {
         const status = await archiveStatus();
         if ('error' in status) return;
         if (status.data.open && status.data.stagingName) {
-          sessionStaging = status.data.stagingName;
-          archiveDirtyLocal = status.data.dirty;
+          sessionStore.reopen(status.data.stagingName, status.data.dirty);
           if (sessionSection) sessionSection.hidden = false;
           try {
             await renderSessionList();
@@ -391,12 +392,13 @@ export function createArchivePanel(): PanelLifecycle {
       });
 
       sessionSaveBtn?.addEventListener('click', async () => {
-        if (!sessionStaging || !sessionSaveBtn) return;
+        const staging = sessionStore.getSessionName();
+        if (!staging || !sessionSaveBtn) return;
         try {
           setBusy(true);
-          const result = await archiveSave(sessionStaging);
+          const result = await archiveSave(staging);
           if ('error' in result) throw new Error(result.error);
-          archiveDirtyLocal = false;
+          sessionStore.markSaved();
           showStatus(statusTarget(statusEl), localized('archiveSessionSaved'), 'success');
         } catch (err) {
           showStatus(statusTarget(statusEl), errorMessage(err), 'error');
@@ -406,9 +408,10 @@ export function createArchivePanel(): PanelLifecycle {
       });
 
       sessionCloseBtn?.addEventListener('click', async () => {
-        if (!sessionStaging || !sessionCloseBtn) return;
+        const staging = sessionStore.getSessionName();
+        if (!staging || !sessionCloseBtn) return;
         try {
-          if (archiveDirtyLocal) {
+          if (sessionStore.isDirty()) {
             const confirmed = await showConfirmDialog({
               title: localized('archiveSessionDiscardTitle'),
               message: localized('archiveSessionDiscardMessage'),
@@ -417,10 +420,9 @@ export function createArchivePanel(): PanelLifecycle {
             if (!confirmed) return;
           }
           setBusy(true);
-          const result = await archiveClose(sessionStaging);
+          const result = await archiveClose(staging);
           if ('error' in result) throw new Error(result.error);
-          sessionStaging = null;
-          archiveDirtyLocal = false;
+          sessionStore.clear();
           if (sessionSection) sessionSection.hidden = true;
         } catch (err) {
           showStatus(statusTarget(statusEl), errorMessage(err), 'error');
@@ -477,12 +479,14 @@ export function createArchivePanel(): PanelLifecycle {
             });
           }
           // PBI 2026-09-12-02: hand off to the session viewer inside the busy
-          // scope. sessionStaging must be set BEFORE renderSessionList — its
-          // guard returns without it, which used to leave the restored
-          // session list empty (and save/close dead) until a remount.
+          // scope. The staged name must reach the store BEFORE
+          // renderSessionList — its guard returns without it, which used to
+          // leave the restored session list empty (and save/close dead) until
+          // a remount.
           const openResult = await archiveOpen(restoreStagingName);
           if ('error' in openResult) throw new Error(openResult.error);
-          sessionStaging = restoreStagingName;
+          sessionStore.stageSession(restoreStagingName);
+          sessionStore.markOpen();
           if (sessionSection) sessionSection.hidden = false;
           await renderSessionList();
           if (restoreBtn) restoreBtn.hidden = false;
