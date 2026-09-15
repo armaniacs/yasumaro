@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
+
+第1回診断（archloop-0915）で未消化だった領域（content/visitReporter、crypto/sessionStore、background services）を第2回診断で探索し、8候補を抽出。上位4件（KdfNegotiator 20.0 / VisitPayload 20.0 / alarm seam 統合 10.0 / crypto codec-HMAC 統合 8.0）を PBI 化。残り3件（合成ルート 7.0 / reviewSummary 2.5 / SessionStore durability 1.9）は台帳に将来候補として記録。実行順 = 13 → 14 → 15 → 16（16 は 13 と同じ領域のため最後に置く）。
+
+- ⬜🟢🟢🔧 2026-09-15-13-refactor-kdf-negotiator.md（RICE 20.0 — KDF iteration 交渉の3箇所手書き集約。復号不能＝APIキー喪失リスクの解消）
+- ⬜🟢🟢🔧 2026-09-15-14-refactor-visit-payload.md（RICE 20.0 — 記録ペイロード wire 契約の二重所有解消。force 再送で stats 落下する drift 実在）
+- ⬜🟢🟢🔧 2026-09-15-15-refactor-alarm-registry-seam.md（RICE 10.0 — onAlarm リスナー3箇所分散の統合。SW wake correctness リスク直結・診断の最推奨）
+- ⬜🟡🟢🔧 2026-09-15-16-refactor-crypto-codec.md（RICE 8.0 — atob/btoa 直書き6箇所の全廃 + HmacSigner 統合 + hashUrl 移動。**13 と同じ領域のため最後に置く**）
+
+
 ### 2026-09-15 arch-delivery-loop 0915（第3ループ）— 4件（台帳の残り4候補を全て PBI 化）
 
 第1・2ループで8件を消化し、残っていた4候補（ArchiveSessionStore 10.0 / createBackend 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）を全て PBI 化。実行順 = 09 → 10 → 11 → 12（依存関係なし・直列）。これで arch-loop 0915 の11候補が全て PBI 化される。
