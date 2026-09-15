@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-15 arch-delivery-loop 0915 — 4件（診断11候補から上位4件を PBI 化）
+
+`arch-delivery-loop` の Phase 0 診断（3サブエージェント探索 + HTML レポート `/tmp/architecture-review-20260915.html`）で抽出した11候補のうち、RICE 上位4件を PBI 化。残り7件は将来候補として台帳 `2026-09-15-00-backlog-archloop-0915.md` に記録（diagnostics section データ駆動 16.0 / transport timeout 重複 12.0 / consent module 深掘り 10.7 / ArchiveSessionStore 10.0 / createBackend レジストリ 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）。実行順 = 02 → 03 → 04 → 05（依存関係なし・直列）。
+
+- ⬜🟢🟢🔧 2026-09-15-02-refactor-sender-trust-seam.md（RICE 48.0 — 送信者検証の二重綴り解消 + InPage transport の sender 捏造を AuthorizedSqliteSender の internal seam で明示化。**Strong・セキュリティ seam**）
+- ⬜🟡🟢🔧 2026-09-15-03-refactor-query-planner-cycle.md（RICE 32.0 — queryPlanner⇄queryPlan の循環 import を一方向化し、再 clamp を AlreadyCappedQuery ブランド型で表現）
+- ⬜🟢🟢🔧 2026-09-15-04-refactor-archive-wire-derived.md（RICE 28.0 — GATEWAY_DECODERS / ARCHIVE_DISPATCH / deps ラッパーを wireTable 派生に置換し、新 op 追加を1行に）
+- ⬜🟡🟢🔧 2026-09-15-05-refactor-cleansing-preset-store.md（RICE 20.0 — CleansingPresetStore 抽出。直近バグの火元（順序制約が呼び出し側に漏洩）を interface 内部に隠す）
+
+
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
 Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべて完了。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。実機 QA で発見した4不具合（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）はすべて修正済み。AMO 公開は将来対応（`2026-09-15-01`・着手禁止）。台帳は `2026-09-14-00-backlog-firefox-support.md`。
