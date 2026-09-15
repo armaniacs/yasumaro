@@ -14,6 +14,7 @@
 
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
+import { authorizeSqliteSender } from '../utils/extensionOrigin.js';
 
 export { ChromeOffscreenTransport } from './ChromeOffscreenTransport.js';
 
@@ -50,11 +51,23 @@ export interface MsgOffscreenOptions {
  */
 export async function createOffscreenTransport(): Promise<OffscreenTransport> {
   if (import.meta.env.FIREFOX) {
-    const [{ InPageOffscreenTransport }, { handleOffscreenMessage }] = await Promise.all([
+    const [
+      { InPageOffscreenTransport },
+      offscreen,
+    ] = await Promise.all([
       import('./InPageOffscreenTransport.js'),
       import('../offscreen/offscreen.js'),
     ]);
-    return new InPageOffscreenTransport(handleOffscreenMessage);
+    // The event-page sender is authorized by the same SSOT policy the offscreen
+    // document uses; the resulting proof is dispatched as the sender identity.
+    const auth = authorizeSqliteSender(
+      { id: chrome.runtime.id, url: chrome.runtime.getURL('background.js') },
+      chrome.runtime.id,
+    );
+    if (!auth.ok) {
+      throw new Error(`In-page offscreen host context rejected: ${auth.reason}`);
+    }
+    return new InPageOffscreenTransport(offscreen.handleOffscreenMessage, auth.proof);
   }
   const { ChromeOffscreenTransport } = await import('./ChromeOffscreenTransport.js');
   return new ChromeOffscreenTransport();

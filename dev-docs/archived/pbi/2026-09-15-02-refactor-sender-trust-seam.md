@@ -1,6 +1,6 @@
 # PBI: 送信者検証 seam の一本化 — AuthorizedSqliteSender
 
-## ステータス: ⬜ 未着手（順位1 / RICE 48.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -47,10 +47,10 @@ Scenario: content script からの偽装が拒否される
 
 ## 受け入れ基準
 
-- [ ] `senderTrust.ts` 内のローカル `isContentScriptSender` 定義が削除され、共有関数に一本化されている
-- [ ] `offscreen.ts` の送信者チェックが `authorizeOffscreenSender` に委譲されている
-- [ ] `InPageOffscreenTransport` が sender を捏造せず、承認証明を経由して dispatch している
-- [ ] 既存の senderTrust / offscreen / transport テスト全件が green
+- [x] `senderTrust.ts` 内のローカル `isContentScriptSender` 定義が削除され、共有関数に一本化されている
+- [x] `offscreen.ts` の送信者チェックが `authorizeSqliteSender` に委譲されている
+- [x] `InPageOffscreenTransport` が sender を捏造せず、承認証明を経由して dispatch している（`createOffscreenTransport` が `authorizeSqliteSender` で proof を生成）
+- [x] 既存の senderTrust / offscreen / transport テスト全件が green（41 passed）
 
 ## テスト戦略
 

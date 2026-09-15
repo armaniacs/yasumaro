@@ -14,18 +14,18 @@ import { assertPayloadSize } from './payloadGuard.js';
 import { sqliteMessageHandlers } from './sqliteMessageHandlers.js';
 import { CLEANSING_OFFSCREEN_TYPE, handleCleansingOffscreenPayload } from './cleansingOffscreen.js';
 import { setOpfsWorkerFactory } from './sqliteEngineContext/opfsWorkerProxy.js';
-import { isContentScriptSender } from '../utils/extensionOrigin.js';
+import { authorizeSqliteSender, type AuthorizedSqliteSender } from '../utils/extensionOrigin.js';
 
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
     engine.resetForTesting();
 };
 
-// Opaque marker produced only by handleOffscreenMessage's sender-authorization
-// check (below). dispatchSqliteMessage requires one as a parameter, so a call
-// site cannot reach the switch below without having passed that check —
-// the coupling is enforced by the type checker, not by convention.
-type AuthorizedSqliteSender = { readonly __brand: 'AuthorizedSqliteSender' };
+// AuthorizedSqliteSender is produced only by authorizeSqliteSender
+// (src/utils/extensionOrigin.ts) — the SSOT for the SQLite sender policy.
+// dispatchSqliteMessage requires one as a parameter, so a call site cannot
+// reach the switch below without having passed that check — the coupling is
+// enforced by the type checker, not by convention.
 
 // Dispatch a SqliteMessage (SW↔offscreen, see src/messaging/sqliteMessages.ts) to
 // the matching handler via the registry Map with a common payload-size guard.
@@ -66,32 +66,30 @@ export function handleOffscreenMessage(
     if (msg.target !== 'offscreen') return false;
 
     // Security: SQLite operations must only come from the service worker,
-    // not from content scripts running in web pages. sender.tab alone is NOT
-    // the signal: Firefox also sets it for extension pages running in normal
-    // tabs (e.g. the dashboard), while Chrome only sets it for content
-    // scripts. The extension origin in sender.url is the discriminator on
-    // both browsers (see src/utils/extensionOrigin.ts).
+    // not from content scripts running in web pages. The sender policy
+    // (content-script rejection + runtime id match) lives in
+    // authorizeSqliteSender (src/utils/extensionOrigin.ts) — shared with the
+    // background's senderTrust gate so Chrome and Firefox cannot diverge.
     const isSqliteMessage = isSqliteMessageType(msg.type);
     if (isSqliteMessage) {
-      // Block content scripts (web-origin senders).
-      if (isContentScriptSender(_sender)) {
+      const auth = authorizeSqliteSender(_sender, chrome.runtime.id);
+      if (!auth.ok) {
         sendResponse({
           success: false,
-          error: 'Forbidden: SQLite operations are not available from content scripts.',
+          error:
+            auth.reason === 'content-script'
+              ? 'Forbidden: SQLite operations are not available from content scripts.'
+              : 'Forbidden: SQLite operations are not available from external extensions.',
         });
         return true;
       }
-      // Block external extensions (sender.id must match our extension)
-      if (_sender.id !== chrome.runtime.id) {
-        sendResponse({
-          success: false,
-          error: 'Forbidden: SQLite operations are not available from external extensions.',
-        });
-        return true;
-      }
+      // The in-page Firefox transport dispatches with this proof directly —
+      // it was produced by the same authorization function, so the check is
+      // not bypassed (see InPageOffscreenTransport).
+      void auth.proof;
     }
 
-    // Only constructible here, after both checks above have passed — this is
+    // Only constructible here, after the sender authorization above — this is
     // the sole authorization proof dispatchSqliteMessage accepts.
     const authorizedSender: AuthorizedSqliteSender = { __brand: 'AuthorizedSqliteSender' };
 
