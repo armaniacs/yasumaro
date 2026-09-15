@@ -191,6 +191,11 @@ export function createSqliteClientDeps(
     // the offscreen document / OPFS worker where the staging registry lives.
     // Each delegate encodes its MaintainOp through the wire-table descriptor
     // (PBI 2026-09-09-05), so the SqliteClient overloads resolve without casts.
+    // These typed wrappers are deliberately hand-written (PBI 2026-09-15-04):
+    // each positional signature is type-checked against BOTH encodeRequest and
+    // the ArchiveDeps member — deriving them from the table would erase the
+    // per-op param types at handler call sites. The depsMethod compile-time
+    // assert in archiveWireTable.ts pins the op ↔ member sync instead.
     archivePreview: (cutoffDate, cutoffMs, includeDeleted) =>
       sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archivePreview.encodeRequest(cutoffDate, cutoffMs, includeDeleted)),
     archiveCreate: (params) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveCreate.encodeRequest(params)),
