@@ -14,6 +14,7 @@ import {
     bytesToBase64,
     base64ToBytes,
 } from './primitives.js';
+import { loadDurableWrappingKey, saveDurableWrappingKey } from './durableKeyStore.js';
 
 // Serialises get-or-create so two contexts calling in parallel converge on a
 // single persisted key instead of each generating its own (VULN-039).
@@ -114,52 +115,79 @@ async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
 async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
 
-    try {
-        // Try session storage first (current session)
-        const sessionResult = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
-        const sessionStored = sessionResult[HMAC_WRAPPING_KEY_SESSION];
-        if (typeof sessionStored === 'string' && sessionStored.length > 0) {
-            return await webcrypto.subtle.importKey(
-                'raw',
-                base64ToBytes(sessionStored) as BufferSource,
-                { name: 'AES-GCM', length: KEY_LENGTH },
-                false,
-                ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
-            );
-        }
+    // Candidate KEKs, in order: session cache (current session), the legacy
+    // storage.local key (pre-M3 envelopes), and the durable IndexedDB key
+    // (PBI 2026-09-14-09: non-extractable CryptoKey, survives restarts
+    // without key material ever existing as bytes — restores the intent of
+    // fix 678f879d while keeping the M3/VULN-010 posture). The first
+    // candidate that unwraps the stored envelope wins.
+    const candidates: Array<() => Promise<CryptoKey>> = [
+        async () => {
+            const sessionResult = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
+            const sessionStored = sessionResult[HMAC_WRAPPING_KEY_SESSION];
+            if (typeof sessionStored === 'string' && sessionStored.length > 0) {
+                return await webcrypto.subtle.importKey(
+                    'raw',
+                    base64ToBytes(sessionStored) as BufferSource,
+                    { name: 'AES-GCM', length: KEY_LENGTH },
+                    false,
+                    ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
+                );
+            }
+            throw new Error('no session KEK');
+        },
+        async () => {
+            const localResult = await chrome.storage.local.get(HMAC_WRAPPING_KEY_SESSION);
+            const localStored = localStored_Extract(localResult);
+            if (typeof localStored === 'string' && localStored.length > 0) {
+                const key = await webcrypto.subtle.importKey(
+                    'raw',
+                    base64ToBytes(localStored) as BufferSource,
+                    { name: 'AES-GCM', length: KEY_LENGTH },
+                    false,
+                    ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
+                );
+                // Cache in session for this browser session
+                await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: localStored });
+                return key;
+            }
+            throw new Error('no legacy local KEK');
+        },
+        async () => {
+            const key = await loadDurableWrappingKey();
+            if (key) return key;
+            throw new Error('no durable KEK');
+        },
+    ];
 
-        // Fallback to local storage (persistent across restarts)
-        const localResult = await chrome.storage.local.get(HMAC_WRAPPING_KEY_SESSION);
-        const localStored = localResult[HMAC_WRAPPING_KEY_SESSION];
-        if (typeof localStored === 'string' && localStored.length > 0) {
-            const key = await webcrypto.subtle.importKey(
-                'raw',
-                base64ToBytes(localStored) as BufferSource,
-                { name: 'AES-GCM', length: KEY_LENGTH },
-                false,
-                ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
-            );
-            // Cache in session for this browser session
-            await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: localStored });
-            return key;
+    for (const candidate of candidates) {
+        try {
+            return await candidate();
+        } catch {
+            // Try the next candidate.
         }
-    } catch (error: unknown) {
-        console.warn('Failed to load HMAC wrapping key, generating new one:', errorMessage(error));
     }
 
+    // All candidates exhausted (fresh install or post-restart with no durable
+    // key): generate a new KEK. M3 mitigation: key material never touches
+    // storage as bytes — persist it as a non-extractable CryptoKey in the
+    // durable store (IndexedDB) and cache it in session.
     const keyBytes = webcrypto.getRandomValues(new Uint8Array(32));
     const keyBase64 = bytesToBase64(keyBytes);
-    // M3 mitigation: KEK is session-only. Local fallback read is retained for
-    // backward compat, but new KEKs are never written to storage.local (prevents
-    // VULN-010 plaintext adjacency). Wrapped envelopes remain in storage.local.
     await chrome.storage.session.set({ [HMAC_WRAPPING_KEY_SESSION]: keyBase64 });
-    return webcrypto.subtle.importKey(
+    const key = await webcrypto.subtle.importKey(
         'raw',
         keyBytes as BufferSource,
         { name: 'AES-GCM', length: KEY_LENGTH },
         false,
         ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
     );
+    await saveDurableWrappingKey(key);
+    return key;
+}
+
+function localStored_Extract(result: Record<string, unknown>): unknown {
+    return result[HMAC_WRAPPING_KEY_SESSION];
 }
 
 /**
