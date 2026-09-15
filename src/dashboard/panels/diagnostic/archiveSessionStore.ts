@@ -23,7 +23,7 @@
  * のまま）。
  */
 
-import { logWarn, ErrorCode } from '../../../utils/logger.js';
+import { logWarn } from '../../../utils/logger/api.js';
 
 export type ArchiveLifecycleState = 'idle' | 'staged' | 'open' | 'dirty';
 
