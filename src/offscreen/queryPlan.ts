@@ -15,7 +15,51 @@ import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../messaging/limits.js';
-import { planQueryMode, type QueryMode } from './queryPlanner.js';
+
+// ============================================================================
+// Mode + cap policy (moved from queryPlanner, PBI 2026-09-15-03) — breaking
+// the queryPlanner ⇄ queryPlan cycle: the planner (policy application:
+// normalize → clamp → truncate) imports from here, and this module never
+// imports the planner. Direction: planner → plan.
+// ============================================================================
+
+/** Default page size when the caller supplies no limit. */
+export const DEFAULT_QUERY_LIMIT = 100;
+
+/** Query dispatch mode: whether a StorageQuery is a text search or a plain listing. */
+export type QueryMode = 'search' | 'listing';
+
+/**
+ * Single decision point for search-vs-listing dispatch (root cause of
+ * 4a1f6093 and 43385d95): each backend used to re-test `if (q.text)`
+ * independently — OpfsWorkerBackend picking the worker message type,
+ * IdbVfsBackend picking its FTS/LIKE/plain SQL path, storageFallback
+ * picking its filter path. Preserves the exact prior truthiness check
+ * (empty string was already "listing" on every backend) — backends now
+ * read this instead of re-deriving the check themselves.
+ */
+export function planQueryMode(q: Pick<StorageQuery, 'text'>): QueryMode {
+  return q.text ? 'search' : 'listing';
+}
+
+/**
+ * Cap selection, owned by the planner seam (PBI 2026-09-12-16).
+ *
+ * The fts/plain choice used to be re-derived inline at every call site
+ * (buildQuerySpec, OPFS handleSearch), so a cap change needed N synchronized
+ * edits. Callers ask here; `buildQuerySpec` keeps only a defensive re-clamp
+ * at the worker boundary.
+ */
+export function selectReadCap(useFts: boolean): number {
+  return useFts ? QUERY_CAPS_SOURCE.fts : QUERY_CAPS_SOURCE.plain;
+}
+
+/** Brand proving a query has passed the planner's read policy (cap + truncate).
+ *  Produced only by applyReadPolicy / planQuery / planSearch / applySearchPolicy;
+ *  buildQuerySpec accepts nothing else, so an uncapped query cannot reach SQL
+ *  assembly without an explicit (documented) worker-boundary cast. */
+declare const __capped: unique symbol;
+export type AlreadyCappedQuery = StorageQuery & { readonly [__capped]: true };
 
 /**
  * Unified extra WHERE fragment for FTS/LIKE search paths.
@@ -270,7 +314,7 @@ export interface QuerySpec {
  * Pure function — fts5Available and caps are injected by the caller (Idb/OPFS/Fallback).
  */
 export function buildQuerySpec(
-  query: StorageQuery,
+  query: AlreadyCappedQuery,
   opts: { caps?: typeof QUERY_CAPS; fts5Available?: boolean } = {}
 ): QuerySpec {
   const caps = opts.caps ?? QUERY_CAPS;

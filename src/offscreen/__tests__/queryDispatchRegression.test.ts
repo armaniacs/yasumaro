@@ -19,7 +19,7 @@
  * listing shape.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { planQueryMode } from '../queryPlanner.js';
+import { planQueryMode } from '../queryPlan.js';
 import { buildQuerySpec } from '../queryPlan.js';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
 import { OpfsWorkerBackend } from '../OpfsWorkerBackend.js';

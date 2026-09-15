@@ -1,6 +1,6 @@
 # PBI: queryPlanner ⇄ queryPlan の循環 import 解消
 
-## ステータス: ⬜ 未着手（順位2 / RICE 32.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -35,9 +35,9 @@ Scenario: 依存が一方向になる
 
 ## 受け入れ基準
 
-- [ ] plan が planner を import していない（grep で確認）
-- [ ] `AlreadyCappedQuery` ブランド型により `buildQuerySpec` が正規化済みクエリのみ受け付ける
-- [ ] 既存の queryPlan / queryPlanner / backend テスト全件 green
+- [x] plan が planner を import していない（grep で確認 — `planQueryMode` / `selectReadCap` / `DEFAULT_QUERY_LIMIT` / `QueryMode` は queryPlan に移動）
+- [x] `AlreadyCappedQuery` ブランド型により `buildQuerySpec` が正規化済みクエリのみ受け付ける（worker 境界の構造化クローンでは brand が落ちるため、crudHandlers の1箇所だけ文書化キャスト）
+- [x] 既存の queryPlan / queryPlanner / backend テスト全件 green（26 passed）
 
 ## テスト戦略
 
