@@ -1,6 +1,6 @@
 # PBI: hmacKeyStore 候補チェーンの内部 seam — implementation 単体テスト可能化
 
-## ステータス: ⬜ 未着手（順位4 / RICE 3.75 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補11）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -53,10 +53,10 @@ Scenario: session ヒットが最優先であることが pin される
 
 ## 受け入れ基準
 
-- [ ] session/local の読みが注入可能（override）になり、チェーン順序が実ブラウザなしでテスト可能
-- [ ] `localStored_Extract` が削除されている
-- [ ] チェーン順序の正当化コメントが interface ドキュメントに記載されている
-- [ ] hmacKeyStore 関連テスト全件 green（既存 + 追加）
+- [x] session/local の読みが注入可能（`setWrappingKeyStoresOverride`）になり、チェーン順序が実ブラウザなしでテスト可能（chain テスト3件）
+- [x] `localStored_Extract` が削除されている
+- [x] チェーン順序の正当化コメントが module ドキュメントに記載されている（PBI 2026-09-15-08 のフォローアップとして session 最優先の pin も追加）
+- [x] hmacKeyStore 関連テスト全件 green（chain 3 + restart 2 + crypto 93）
 
 ## テスト戦略
 

@@ -16,6 +16,45 @@ import {
 } from './primitives.js';
 import { loadDurableWrappingKey, saveDurableWrappingKey } from './durableKeyStore.js';
 
+// ============================================================================
+// Wrapping-key candidate stores — internal seam (PBI 2026-09-15-12)
+// ============================================================================
+// KEK 候補チェーン（session → legacy local → durable IDB → generate）の
+// session/local 読みを注入可能にする seam。durableKeyStore と同じ override
+// パターンで、チェーン全体（順序・最終 generate）を実ブラウザなしでテスト
+// できる。ポリシー変更（候補の追加・順序変更）も override 経由で検証する。
+
+export interface WrappingKeyCandidateStores {
+    /** session から KEK の base64 を読む（現行セッション高速パス）。 */
+    getSession(): Promise<string | undefined>;
+    /** storage.local から旧 KEK の base64 を読む（678f879d 時代のエンベロープ互換）。 */
+    getLegacyLocal(): Promise<string | undefined>;
+}
+
+function defaultWrappingKeyStores(): WrappingKeyCandidateStores {
+    return {
+        async getSession(): Promise<string | undefined> {
+            const sessionResult = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
+            return sessionResult[HMAC_WRAPPING_KEY_SESSION] as string | undefined;
+        },
+        async getLegacyLocal(): Promise<string | undefined> {
+            const localResult = await chrome.storage.local.get(HMAC_WRAPPING_KEY_SESSION);
+            return localResult[HMAC_WRAPPING_KEY_SESSION] as string | undefined;
+        },
+    };
+}
+
+let candidateStoresOverride: WrappingKeyCandidateStores | null = null;
+
+/** Test-only: replace the candidate stores (null restores the chrome default). */
+export function setWrappingKeyStoresOverride(s: WrappingKeyCandidateStores | null): void {
+    candidateStoresOverride = s;
+}
+
+function wrappingKeyStores(): WrappingKeyCandidateStores {
+    return candidateStoresOverride ?? defaultWrappingKeyStores();
+}
+
 // Serialises get-or-create so two contexts calling in parallel converge on a
 // single persisted key instead of each generating its own (VULN-039).
 // Two locks, always acquired outer (signing key) -> inner (wrapping key), so
@@ -114,6 +153,7 @@ async function getOrCreateHmacWrappingKey(): Promise<CryptoKey> {
 
 async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
     const webcrypto = getWebCrypto();
+    const stores = wrappingKeyStores();
 
     // Candidate KEKs, in order: session cache (current session), the legacy
     // storage.local key (pre-M3 envelopes), and the durable IndexedDB key
@@ -123,8 +163,7 @@ async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
     // candidate that unwraps the stored envelope wins.
     const candidates: Array<() => Promise<CryptoKey>> = [
         async () => {
-            const sessionResult = await chrome.storage.session.get(HMAC_WRAPPING_KEY_SESSION);
-            const sessionStored = sessionResult[HMAC_WRAPPING_KEY_SESSION];
+            const sessionStored = await stores.getSession();
             if (typeof sessionStored === 'string' && sessionStored.length > 0) {
                 return await webcrypto.subtle.importKey(
                     'raw',
@@ -137,8 +176,7 @@ async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
             throw new Error('no session KEK');
         },
         async () => {
-            const localResult = await chrome.storage.local.get(HMAC_WRAPPING_KEY_SESSION);
-            const localStored = localStored_Extract(localResult);
+            const localStored = await stores.getLegacyLocal();
             if (typeof localStored === 'string' && localStored.length > 0) {
                 const key = await webcrypto.subtle.importKey(
                     'raw',
@@ -184,10 +222,6 @@ async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
     );
     await saveDurableWrappingKey(key);
     return key;
-}
-
-function localStored_Extract(result: Record<string, unknown>): unknown {
-    return result[HMAC_WRAPPING_KEY_SESSION];
 }
 
 /**
