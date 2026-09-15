@@ -1,6 +1,6 @@
 # PBI: ArchiveSessionStore 抽出 — 500行 mount の状態機械化
 
-## ステータス: ⬜ 未着手（順位1 / RICE 10.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補8）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -64,11 +64,13 @@ Scenario: 過去の退行が pin される
 
 ## 受け入れ基準
 
-- [ ] `archivePanel.ts` から staging ライフサイクルの nullable 状態変数が消え、store への委譲になっている
-- [ ] 不正遷移（idle からの markDirty 等）がログ付き no-op になる
-- [ ] archivePanel.test.ts / archiveEditModal.test.ts 全件 green
-- [ ] archive-required-verification e2e（R1-R3）が green
-- [ ] 過去の staging 退行（6.8.11）に対する回帰テストが追加されている
+- [x] `archivePanel.ts` から staging セッションライフサイクルの nullable 状態変数（`sessionStaging` / `archiveDirtyLocal`）が消え、store への委譲になっている
+- [x] 不正遷移（idle からの markDirty / markOpen 等）がログ付き no-op になる（遷移表テストで pin）
+- [x] archivePanel.test.ts / archiveEditModal.test.ts 全件 green（11 passed）
+- [x] 新規 store テスト 9件 green（遷移表・reconnect・6.8.11 退行 pin 含む）
+- [ ] archive-required-verification e2e（R1-R3）— Phase 3 の一括 e2e で確認
+
+実装メモ: 「作成→ダウンロード→クリーンアップ」フローの `lastStagingName`/`lastFileName` は線形フローで分岐を持たないため状態機械の対象外（パネル内ローカル変数のまま・コメントで記録）。
 
 ## テスト戦略
 
