@@ -73,11 +73,16 @@ export default defineConfig({
     // PBI 18 + rounds 12-14: maxForks 4 with per-file isolation is the
     // stable configuration (round 12-14 all green). `isolate: false` breaks
     // module-mock tests; higher forks causes worker spawn contention.
+    // The 30s testTimeout above absorbs suite-level load spikes on top of
+    // this (see that comment).
     poolOptions: {
       forks: {
         maxForks: 4,
       },
     },
+  },
+    },
+    fileParallelism: true,
   },
   resolve: {
     alias: {

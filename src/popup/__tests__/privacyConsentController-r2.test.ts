@@ -1,38 +1,27 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-const mockGetPrivacyConsent = vi.hoisted(() => vi.fn());
-const mockSavePrivacyConsent = vi.hoisted(() => vi.fn());
-const mockMigrateLegacyPrivacyConsent = vi.hoisted(() => vi.fn());
-const mockRecordPolicyVersionAcknowledgment = vi.hoisted(() => vi.fn());
+// PBI 2026-09-15-08: the controller delegates state transitions to the deep
+// module (src/utils/storage/privacyConsent.ts). These tests pin the WIRING —
+// shouldPromptForConsent gates the modal, accept/decline reach the module,
+// and the DOM/error branches behave as before. The denial-counter math and
+// the 30-day rule are module tests (see privacyConsent-version.test.ts).
+
+const mockShouldPromptForConsent = vi.hoisted(() => vi.fn());
+const mockAcceptConsent = vi.hoisted(() => vi.fn());
+const mockDeclineConsent = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
-
-const storageData: Record<string, any> = {};
-const mockChromeStorageGet = vi.hoisted(() => vi.fn(async (key: string | string[]) => {
-  if (Array.isArray(key)) {
-    const result: Record<string, any> = {};
-    for (const k of key) {
-      if (k in storageData) result[k] = storageData[k];
-    }
-    return result;
-  }
-  return { [key as string]: storageData[key as string] };
-}));
-const mockChromeStorageSet = vi.hoisted(() => vi.fn(async (items: Record<string, any>) => {
-  Object.assign(storageData, items);
-}));
 
 vi.mock('../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 
 vi.mock('../../utils/storage/privacyConsent.js', () => ({
-  getPrivacyConsent: mockGetPrivacyConsent,
-  savePrivacyConsent: mockSavePrivacyConsent,
-  migrateLegacyPrivacyConsent: mockMigrateLegacyPrivacyConsent,
-  recordPolicyVersionAcknowledgment: mockRecordPolicyVersionAcknowledgment,
+  shouldPromptForConsent: mockShouldPromptForConsent,
+  acceptConsent: mockAcceptConsent,
+  declineConsent: mockDeclineConsent,
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -46,12 +35,6 @@ vi.stubGlobal('chrome', {
     sendMessage: vi.fn(),
   },
   tabs: { create: mockChromeTabsCreate },
-  storage: {
-    local: {
-      get: mockChromeStorageGet,
-      set: mockChromeStorageSet,
-    },
-  },
 });
 
 import {
@@ -103,17 +86,12 @@ describe('privacyConsentController - r2 missed branches', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setupDom();
-    for (const key of Object.keys(storageData)) {
-      delete storageData[key];
-    }
-    mockGetPrivacyConsent.mockReset();
-    mockSavePrivacyConsent.mockReset();
-    mockMigrateLegacyPrivacyConsent.mockReset();
+    mockShouldPromptForConsent.mockReset();
+    mockAcceptConsent.mockReset();
+    mockDeclineConsent.mockReset();
     mockLogError.mockReset();
     mockGetMessage.mockReset();
     mockChromeTabsCreate.mockReset();
-    mockChromeStorageGet.mockClear();
-    mockChromeStorageSet.mockClear();
 
     mockGetMessage.mockImplementation((key: string) => {
       const messages: Record<string, string> = {
@@ -132,83 +110,21 @@ describe('privacyConsentController - r2 missed branches', () => {
     vi.restoreAllMocks();
   });
 
-  describe('initPrivacyConsent - needsReconsent path', () => {
-    it('should show modal when needsReconsent is true', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false, needsReconsent: true });
+  describe('initPrivacyConsent - prompt gate', () => {
+    it('should show modal when shouldPromptForConsent is true (needsReconsent path)', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
 
       await initPrivacyConsent();
 
       const modal = getModal();
       expect(modal?.open).toBe(true);
-      expect(mockChromeStorageSet).toHaveBeenCalledWith(
-        expect.objectContaining({ privacy_consent_denied_count: 0 })
-      );
-    });
-  });
-
-  describe('initPrivacyConsent - denial count paths', () => {
-    it('should show modal when denied 0 times', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 0;
-
-      await initPrivacyConsent();
-
-      const modal = getModal();
-      expect(modal?.open).toBe(true);
-    });
-
-    it('should hide modal when denied 3+ times within 30 days', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 3;
-      storageData['privacy_consent_last_denial_time'] = Date.now() - 1000;
-
-      await initPrivacyConsent();
-
-      const modal = getModal();
-      expect(modal?.open).toBe(false);
-    });
-
-    it('should show modal when denied 3+ times but 30 days have passed', async () => {
-      const THIRTY_ONE_DAYS_MS = 31 * 24 * 60 * 60 * 1000;
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 3;
-      storageData['privacy_consent_last_denial_time'] = Date.now() - THIRTY_ONE_DAYS_MS;
-
-      await initPrivacyConsent();
-
-      const modal = getModal();
-      expect(modal?.open).toBe(true);
-    });
-
-    it('should show modal when lastDenialTime is null despite 3+ denials', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 3;
-      delete storageData['privacy_consent_last_denial_time'];
-
-      await initPrivacyConsent();
-
-      const modal = getModal();
-      expect(modal?.open).toBe(true);
-    });
-  });
-
-  describe('getConsentDeniedCount error path', () => {
-    it('should return 0 when storage throws', async () => {
-      mockChromeStorageGet.mockRejectedValueOnce(new Error('Storage error'));
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-
-      await initPrivacyConsent();
-
-      const modal = getModal();
-      expect(modal?.open).toBe(true);
-      mockChromeStorageGet.mockRestore();
     });
   });
 
   describe('showPrivacyConsentModal - missing modal', () => {
     it('should log error when modal element is not found', async () => {
       document.body.innerHTML = '';
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
 
       setupPrivacyConsentListeners();
       await initPrivacyConsent();
@@ -222,9 +138,9 @@ describe('privacyConsentController - r2 missed branches', () => {
   });
 
   describe('handleDeclineConsent - alert behavior', () => {
-    it('should show alert when count < 3', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 0;
+    it('should show alert when the module reports count < 3', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockDeclineConsent.mockResolvedValue(1);
 
       window.alert = vi.fn();
 
@@ -239,9 +155,9 @@ describe('privacyConsentController - r2 missed branches', () => {
       });
     });
 
-    it('should NOT show alert when count reaches 3', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 2;
+    it('should NOT show alert when the module reports count reaching 3', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockDeclineConsent.mockResolvedValue(3);
 
       window.alert = vi.fn();
 
@@ -252,15 +168,16 @@ describe('privacyConsentController - r2 missed branches', () => {
       declineBtn.click();
 
       await vi.waitFor(() => {
-        expect(window.alert).not.toHaveBeenCalled();
+        expect(mockDeclineConsent).toHaveBeenCalledTimes(1);
       });
+      expect(window.alert).not.toHaveBeenCalled();
     });
   });
 
   describe('handleAcceptConsent error branch', () => {
     it('should show error text on save button when save fails', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockRejectedValue(new Error('Save failed'));
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockAcceptConsent.mockRejectedValue(new Error('Save failed'));
 
       setupPrivacyConsentListeners();
       await initPrivacyConsent();
@@ -289,7 +206,7 @@ describe('privacyConsentController - r2 missed branches', () => {
 
   describe('hidePrivacyConsentModal (M21: native dialog)', () => {
     it('calls showModal()/close() instead of the old focus-trap flow', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
       const modal = getModal()!;
       const showModalSpy = vi.spyOn(modal, 'showModal');
       const closeSpy = vi.spyOn(modal, 'close');
@@ -303,70 +220,13 @@ describe('privacyConsentController - r2 missed branches', () => {
       cb.checked = true;
       cb.dispatchEvent(new Event('change'));
 
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
-      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+      mockAcceptConsent.mockResolvedValue(undefined);
 
       getAcceptBtn()!.click();
 
       await vi.waitFor(() => {
         expect(closeSpy).toHaveBeenCalled();
       });
-    });
-  });
-
-  describe('incrementConsentDeniedCount', () => {
-    it('should increment from 0 to 1', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 0;
-
-      window.alert = vi.fn();
-
-      setupPrivacyConsentListeners();
-      await initPrivacyConsent();
-
-      document.getElementById('declineConsentBtn')!.click();
-
-      await vi.waitFor(() => {
-        expect(mockChromeStorageSet).toHaveBeenCalledWith(
-          expect.objectContaining({ privacy_consent_denied_count: 1 })
-        );
-      });
-    });
-
-    it('should increment from 2 to 3', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      storageData['privacy_consent_denied_count'] = 2;
-
-      window.alert = vi.fn();
-
-      setupPrivacyConsentListeners();
-      await initPrivacyConsent();
-
-      document.getElementById('declineConsentBtn')!.click();
-
-      await vi.waitFor(() => {
-        expect(mockChromeStorageSet).toHaveBeenCalledWith(
-          expect.objectContaining({ privacy_consent_denied_count: 3 })
-        );
-      });
-    });
-  });
-
-  describe('resetConsentDeniedCount', () => {
-    it('should reset denial count and last denial time to 0', async () => {
-      storageData['privacy_consent_denied_count'] = 5;
-      storageData['privacy_consent_last_denial_time'] = 999;
-
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false, needsReconsent: true });
-
-      await initPrivacyConsent();
-
-      expect(mockChromeStorageSet).toHaveBeenCalledWith(
-        expect.objectContaining({
-          privacy_consent_denied_count: 0,
-          privacy_consent_last_denial_time: 0,
-        })
-      );
     });
   });
 });

@@ -66,8 +66,12 @@ import {
     savePrivacyConsent,
     recordPolicyVersionAcknowledgment,
     isPolicyVersionChanged,
+    shouldPromptForConsent,
     acceptConsent,
     declineConsent,
+    incrementConsentDeniedCount,
+    resetConsentDeniedCount,
+    getConsentDeniedCount,
     CONSENT_STATE_CHANGED_EVENT,
     PRIVACY_POLICY_VERSION,
 } from '../../utils/storage/privacyConsent.js';
@@ -164,6 +168,85 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             storageMock['privacy_consent_version'] = PRIVACY_POLICY_VERSION;
             const result = await isPolicyVersionChanged();
             expect(result).toBe(false);
+        });
+    });
+
+    // PBI 2026-09-15-08: the denial-counter rules moved into the module from
+    // privacyConsentController — these tests moved with them (r2 suite).
+    describe('shouldPromptForConsent - denial count paths', () => {
+        it('should show prompt when denied 0 times', async () => {
+            storageMock['privacy_consent_denied_count'] = 0;
+            const result = await shouldPromptForConsent();
+            expect(result).toBe(true);
+        });
+
+        it('should not show prompt when denied 3+ times within 30 days', async () => {
+            storageMock['privacy_consent_denied_count'] = 3;
+            storageMock['privacy_consent_last_denial_time'] = Date.now() - 1000;
+            const result = await shouldPromptForConsent();
+            expect(result).toBe(false);
+        });
+
+        it('should show prompt when denied 3+ times but 30 days have passed', async () => {
+            const THIRTY_ONE_DAYS_MS = 31 * 24 * 60 * 60 * 1000;
+            storageMock['privacy_consent_denied_count'] = 3;
+            storageMock['privacy_consent_last_denial_time'] = Date.now() - THIRTY_ONE_DAYS_MS;
+            const result = await shouldPromptForConsent();
+            expect(result).toBe(true);
+        });
+
+        it('should show prompt when lastDenialTime is null despite 3+ denials', async () => {
+            storageMock['privacy_consent_denied_count'] = 3;
+            delete storageMock['privacy_consent_last_denial_time'];
+            const result = await shouldPromptForConsent();
+            expect(result).toBe(true);
+        });
+
+        it('should return true when needsReconsent and reset the denial counter', async () => {
+            storageMock['privacy_consent'] = { hasConsented: true, needsReconsent: true };
+            const result = await shouldPromptForConsent();
+            expect(result).toBe(true);
+            expect(storageMock['privacy_consent_denied_count']).toBe(0);
+            expect(storageMock['privacy_consent_last_denial_time']).toBe(0);
+        });
+    });
+
+    describe('denial counters - moved from the controller (r2 suite)', () => {
+        it('getConsentDeniedCount returns 0 when storage throws', async () => {
+            const brokenGet = vi.fn(async () => { throw new Error('Storage error'); });
+            const originalGet = chrome.storage.local.get;
+            (chrome.storage.local as unknown as { get: unknown }).get = brokenGet;
+
+            const { getConsentDeniedCount } = await import('../../utils/storage/privacyConsent.js');
+            const result = await getConsentDeniedCount();
+
+            (chrome.storage.local as unknown as { get: unknown }).get = originalGet;
+            expect(result).toBe(0);
+        });
+
+        it('incrementConsentDeniedCount increments from 0 to 1', async () => {
+            storageMock['privacy_consent_denied_count'] = 0;
+            const { incrementConsentDeniedCount } = await import('../../utils/storage/privacyConsent.js');
+            const next = await incrementConsentDeniedCount();
+            expect(next).toBe(1);
+            expect(storageMock['privacy_consent_denied_count']).toBe(1);
+        });
+
+        it('incrementConsentDeniedCount increments from 2 to 3', async () => {
+            storageMock['privacy_consent_denied_count'] = 2;
+            const { incrementConsentDeniedCount } = await import('../../utils/storage/privacyConsent.js');
+            const next = await incrementConsentDeniedCount();
+            expect(next).toBe(3);
+            expect(storageMock['privacy_consent_denied_count']).toBe(3);
+        });
+
+        it('resetConsentDeniedCount resets count and last denial time to 0', async () => {
+            storageMock['privacy_consent_denied_count'] = 5;
+            storageMock['privacy_consent_last_denial_time'] = 999;
+            const { resetConsentDeniedCount } = await import('../../utils/storage/privacyConsent.js');
+            await resetConsentDeniedCount();
+            expect(storageMock['privacy_consent_denied_count']).toBe(0);
+            expect(storageMock['privacy_consent_last_denial_time']).toBe(0);
         });
     });
 
