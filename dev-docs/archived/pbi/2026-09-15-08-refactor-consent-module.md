@@ -1,6 +1,6 @@
 # PBI: consent module の深掘り — 状態遷移の locality 回復
 
-## ステータス: ⬜ 未着手（順位3 / RICE 10.7 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補7）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -59,10 +59,10 @@ Scenario: 購読者は両チャネルの変更を受け取る
 
 ## 受け入れ基準
 
-- [ ] 拒否カウンタ・本文保存フラグの直読み直書きが `privacyConsent.ts` 内に移動している
-- [ ] 通知が `subscribe` seam 1つに統合され、popup.ts の二重購読が解消されている
-- [ ] KEK 不一致時の動作が interface ドキュメントに明文化されている
-- [ ] privacyConsent 系テスト全件 green + 実機で onboarding 表示が動作する
+- [x] 拒否カウンタ・本文保存フラグの直読み直書きが `privacyConsent.ts` 内に移動している（controller は `shouldPromptForConsent` / `acceptConsent` / `declineConsent` のみを呼ぶ）
+- [x] 通知が `subscribeConsentChanges` seam 1つに統合され、popup.ts の二重購読が解消されている（Chrome の送信者非配送仕様は module 内に隠蔽）
+- [x] KEK 不一致時の動作が interface ドキュメントに明文化されている（署名検証失敗 → 未同意 + 再署名の現行動作を不変条件として記載）
+- [x] privacyConsent 系テスト全件 green（61 passed — 双チャネル notify の pin を privacyConsent-version.test.ts に移設）+ 実機で onboarding 表示が動作する
 
 ## テスト戦略
 

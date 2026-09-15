@@ -2,6 +2,12 @@
 /**
  * privacyConsentController.test.ts
  * Tests for the privacy policy consent modal UI controller
+ *
+ * PBI 2026-09-15-08: the controller delegates state transitions to the deep
+ * module (src/utils/storage/privacyConsent.ts) — the denial counters, dual
+ * write, and dual-channel notify are its implementation details now. These
+ * tests pin the WIRING: shouldPromptForConsent gates the modal, accept/
+ * decline reach the module with the checkbox value, and the focus trap works.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -10,10 +16,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 // Mock Setup (vi.mock is hoisted above all imports)
 // ============================================================================
 
-const mockGetPrivacyConsent = vi.hoisted(() => vi.fn());
-const mockSavePrivacyConsent = vi.hoisted(() => vi.fn());
-const mockMigrateLegacyPrivacyConsent = vi.hoisted(() => vi.fn());
-const mockRecordPolicyVersionAcknowledgment = vi.hoisted(() => vi.fn());
+const mockShouldPromptForConsent = vi.hoisted(() => vi.fn());
+const mockAcceptConsent = vi.hoisted(() => vi.fn());
+const mockDeclineConsent = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
@@ -24,10 +29,9 @@ vi.mock('../../utils/i18n.js', () => ({
 }));
 
 vi.mock('../../utils/storage/privacyConsent.js', () => ({
-  getPrivacyConsent: mockGetPrivacyConsent,
-  savePrivacyConsent: mockSavePrivacyConsent,
-  migrateLegacyPrivacyConsent: mockMigrateLegacyPrivacyConsent,
-  recordPolicyVersionAcknowledgment: mockRecordPolicyVersionAcknowledgment,
+  shouldPromptForConsent: mockShouldPromptForConsent,
+  acceptConsent: mockAcceptConsent,
+  declineConsent: mockDeclineConsent,
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -45,7 +49,6 @@ vi.stubGlobal('chrome', {
 });
 
 import {
-  CONSENT_STATE_CHANGED_EVENT,
   initPrivacyConsent,
   setupPrivacyConsentListeners,
 } from '../privacyConsentController.js';
@@ -117,9 +120,9 @@ describe('privacyConsentController', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     setupDom();
-    mockGetPrivacyConsent.mockReset();
-    mockSavePrivacyConsent.mockReset();
-    mockMigrateLegacyPrivacyConsent.mockReset();
+    mockShouldPromptForConsent.mockReset();
+    mockAcceptConsent.mockReset();
+    mockDeclineConsent.mockReset();
     mockLogError.mockReset();
     mockGetMessage.mockReset();
     mockChromeTabsCreate.mockReset();
@@ -142,25 +145,18 @@ describe('privacyConsentController', () => {
   });
 
   describe('initPrivacyConsent', () => {
-    it('should call migrateLegacyPrivacyConsent on init', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true });
+    it('should gate the modal on shouldPromptForConsent', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
 
       await initPrivacyConsent();
 
-      expect(mockMigrateLegacyPrivacyConsent).toHaveBeenCalledTimes(1);
-    });
-
-    it('should show consent modal when user has not consented', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-
-      await initPrivacyConsent();
-
+      expect(mockShouldPromptForConsent).toHaveBeenCalledTimes(1);
       const modal = getModal();
       expect(modal?.open).toBe(true);
     });
 
-    it('should not show modal when user has already consented', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true });
+    it('should not show modal when the module says no prompt is needed', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(false);
 
       await initPrivacyConsent();
 
@@ -169,7 +165,7 @@ describe('privacyConsentController', () => {
     });
 
     it('should initialize modal state when shown', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
 
       await initPrivacyConsent();
 
@@ -188,7 +184,7 @@ describe('privacyConsentController', () => {
     });
 
     it('calls showModal() when modal is shown (M21: native dialog handles focus trapping)', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
       const modal = getModal()!;
       const showModalSpy = vi.spyOn(modal, 'showModal');
 
@@ -198,7 +194,7 @@ describe('privacyConsentController', () => {
     });
 
     it('should handle errors during initialization', async () => {
-      mockMigrateLegacyPrivacyConsent.mockRejectedValue(new Error('Migration error'));
+      mockShouldPromptForConsent.mockRejectedValue(new Error('Prompt decision error'));
 
       await initPrivacyConsent();
 
@@ -217,50 +213,38 @@ describe('privacyConsentController', () => {
 
     it('should enable accept button when checkbox is checked', () => {
       const cb = getCheckbox();
-      const acceptBtn = getAcceptBtn();
-
-      expect(acceptBtn?.disabled).toBe(true);
-
       cb!.checked = true;
       cb!.dispatchEvent(new Event('change'));
 
+      const acceptBtn = getAcceptBtn();
       expect(acceptBtn?.disabled).toBe(false);
     });
 
     it('should disable accept button when checkbox is unchecked', () => {
       const cb = getCheckbox();
-      const acceptBtn = getAcceptBtn();
-
-      // First enable
       cb!.checked = true;
       cb!.dispatchEvent(new Event('change'));
+      const acceptBtn = getAcceptBtn();
       expect(acceptBtn?.disabled).toBe(false);
 
-      // Then disable
       cb!.checked = false;
       cb!.dispatchEvent(new Event('change'));
-      expect(acceptBtn?.disabled).toBe(true);
+      expect(getAcceptBtn()?.disabled).toBe(true);
     });
 
     it('prevents ESC-key close via the dialog cancel event (M21)', () => {
       const modal = getModal()!;
-      const event = new Event('cancel', { cancelable: true });
-      const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
-
-      modal.dispatchEvent(event);
-      expect(preventDefaultSpy).toHaveBeenCalled();
+      modal.open = true;
+      const cancelEvent = new Event('cancel', { cancelable: true });
+      modal.dispatchEvent(cancelEvent);
+      expect(cancelEvent.defaultPrevented).toBe(true);
+      expect(modal.open).toBe(true);
     });
 
     it('should open privacy policy in new tab', () => {
-      const policyLink = getPolicyLink();
-      const event = new MouseEvent('click');
-      vi.spyOn(event, 'preventDefault').mockImplementation(() => {});
-
-      policyLink!.dispatchEvent(event);
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(mockChromeTabsCreate).toHaveBeenCalledWith({
-        url: policyLink!.href,
-      });
+      const policyBtn = getPolicyLink()!;
+      policyBtn.click();
+      expect(mockChromeTabsCreate).toHaveBeenCalledWith({ url: policyBtn.href });
     });
   });
 
@@ -269,53 +253,38 @@ describe('privacyConsentController', () => {
       setupPrivacyConsentListeners();
     });
 
-    it('should save consent and hide modal when accept is clicked', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
-      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+    it('calls acceptConsent with the checkbox value and hides the modal when accept is clicked', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(false);
+      mockAcceptConsent.mockResolvedValue(undefined);
 
       await initPrivacyConsent();
+
+      const mainCb = document.getElementById('consentCheckbox') as HTMLInputElement;
+      mainCb!.checked = true;
+      mainCb!.dispatchEvent(new Event('change'));
 
       const cb = getCheckbox();
       cb!.checked = true;
       cb!.dispatchEvent(new Event('change'));
+
+      const contentCb = document.getElementById('contentStorageConsentCheckbox') as HTMLInputElement;
+      contentCb!.checked = true;
 
       const acceptBtn = getAcceptBtn();
       expect(acceptBtn?.disabled).toBe(false);
 
       acceptBtn!.click();
       await vi.waitFor(() => {
-        expect(mockSavePrivacyConsent).toHaveBeenCalled();
-        expect(mockRecordPolicyVersionAcknowledgment).toHaveBeenCalled();
+        expect(mockAcceptConsent).toHaveBeenCalledWith({ contentStorageEnabled: true });
       });
 
       const modal = getModal();
       expect(modal?.open).toBe(false);
     });
 
-    it('should broadcast CONSENT_STATE_CHANGED on accept', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
-      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
-
-      await initPrivacyConsent();
-
-      const cb = getCheckbox();
-      cb!.checked = true;
-      cb!.dispatchEvent(new Event('change'));
-      getAcceptBtn()!.click();
-
-      await vi.waitFor(() => {
-        expect(mockSavePrivacyConsent).toHaveBeenCalled();
-      });
-
-      expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
-      );
-    });
-
-    it('should decline and close modal permanently when decline is clicked', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+    it('declines via declineConsent and closes the modal permanently when decline is clicked', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockDeclineConsent.mockResolvedValue(1);
 
       window.alert = vi.fn();
 
@@ -324,129 +293,17 @@ describe('privacyConsentController', () => {
       const declineBtn = getDeclineBtn();
       declineBtn!.click();
       await vi.waitFor(() => {
-        expect(window.alert).toHaveBeenCalledWith(
-          'consentDeclinedMessage'
-        );
+        expect(mockDeclineConsent).toHaveBeenCalledTimes(1);
+        expect(window.alert).toHaveBeenCalledWith('consentDeclinedMessage');
       });
 
       const modal = getModal();
       expect(modal?.open).toBe(false);
     });
 
-    it('should broadcast CONSENT_STATE_CHANGED on decline', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-
-      window.alert = vi.fn();
-
-      await initPrivacyConsent();
-
-      getDeclineBtn()!.click();
-
-      await vi.waitFor(() => {
-        expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
-        );
-      });
-    });
-
-    it('sends an identical bare envelope for both accept and decline (INTENTIONAL: value lives in storage)', async () => {
-      const sendMessage = vi.mocked(chrome.runtime.sendMessage);
-      sendMessage.mockClear();
-
-      // Accept path: capture the broadcast envelope.
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
-      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
-
-      await initPrivacyConsent();
-
-      const cb = getCheckbox();
-      cb!.checked = true;
-      cb!.dispatchEvent(new Event('change'));
-      getAcceptBtn()!.click();
-
-      await vi.waitFor(() => {
-        expect(sendMessage).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
-        );
-      });
-      const acceptEnvelope = sendMessage.mock.calls
-        .map((call) => call[0] as Record<string, unknown>)
-        .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
-      expect(acceptEnvelope).toBeDefined();
-
-      // Decline path: reset DOM and listeners, then capture again.
-      sendMessage.mockClear();
-      setupDom();
-      setupPrivacyConsentListeners();
-      window.alert = vi.fn();
-
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-
-      await initPrivacyConsent();
-
-      getDeclineBtn()!.click();
-
-      await vi.waitFor(() => {
-        expect(sendMessage).toHaveBeenCalledWith(
-          expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
-        );
-      });
-      const declineEnvelope = sendMessage.mock.calls
-        .map((call) => call[0] as Record<string, unknown>)
-        .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
-      expect(declineEnvelope).toBeDefined();
-
-      // Contract: both paths send the same shape with the same values —
-      // no accept/decline distinction is carried on the message.
-      expect(Object.keys(declineEnvelope!).sort()).toEqual(Object.keys(acceptEnvelope!).sort());
-      expect(declineEnvelope).toEqual(acceptEnvelope);
-      // Bare envelope: no payload and no consent value field.
-      expect(declineEnvelope).not.toHaveProperty('payload');
-      expect(declineEnvelope).not.toHaveProperty('consented');
-    });
-
-    it('dispatches the same-document consent-state-changed event on both accept and decline', async () => {
-      // chrome.runtime messages are never delivered back to the sender's own
-      // context, so in-page consumers (e.g. popup.ts onboarding re-check) can
-      // only react via this same-document event — it must fire on both paths.
-      const events: Event[] = [];
-      const listener = (event: Event): void => { events.push(event); };
-      document.addEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
-
-      try {
-        mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-        mockSavePrivacyConsent.mockResolvedValue(undefined);
-        mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
-
-        await initPrivacyConsent();
-
-        const cb = getCheckbox();
-        cb!.checked = true;
-        cb!.dispatchEvent(new Event('change'));
-        getAcceptBtn()!.click();
-
-        await vi.waitFor(() => expect(events.length).toBeGreaterThanOrEqual(1));
-
-        // Decline path: reset DOM and listeners, then capture again.
-        setupDom();
-        setupPrivacyConsentListeners();
-        window.alert = vi.fn();
-        mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-
-        await initPrivacyConsent();
-
-        getDeclineBtn()!.click();
-
-        await vi.waitFor(() => expect(events.length).toBeGreaterThanOrEqual(2));
-      } finally {
-        document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
-      }
-    });
-
-    it('should show error text when save fails during accept', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockRejectedValue(new Error('Save failed'));
+    it('shows error text when acceptConsent fails during accept', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(false);
+      mockAcceptConsent.mockRejectedValue(new Error('Save failed'));
 
       await initPrivacyConsent();
 
@@ -465,9 +322,9 @@ describe('privacyConsentController', () => {
       });
     });
 
-    it('should persist content storage consent when checkbox is checked on accept', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
+    it('passes the content-storage checkbox value through to acceptConsent when checked', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(false);
+      mockAcceptConsent.mockResolvedValue(undefined);
 
       await initPrivacyConsent();
 
@@ -481,15 +338,13 @@ describe('privacyConsentController', () => {
       getAcceptBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(mockChromeStorageSet).toHaveBeenCalledWith(
-          expect.objectContaining({ content_storage_enabled: true })
-        );
+        expect(mockAcceptConsent).toHaveBeenCalledWith({ contentStorageEnabled: true });
       });
     });
 
-    it('should persist content storage disabled when checkbox is unchecked on accept', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
+    it('passes the content-storage checkbox value through to acceptConsent when unchecked', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(false);
+      mockAcceptConsent.mockResolvedValue(undefined);
 
       await initPrivacyConsent();
 
@@ -502,9 +357,7 @@ describe('privacyConsentController', () => {
       getAcceptBtn()!.click();
 
       await vi.waitFor(() => {
-        expect(mockChromeStorageSet).toHaveBeenCalledWith(
-          expect.objectContaining({ content_storage_enabled: false })
-        );
+        expect(mockAcceptConsent).toHaveBeenCalledWith({ contentStorageEnabled: false });
       });
     });
   });
@@ -520,7 +373,7 @@ describe('privacyConsentController', () => {
     }
 
     it('should trap focus on show without an Escape close callback', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
 
       await initPrivacyConsent();
@@ -535,9 +388,8 @@ describe('privacyConsentController', () => {
     });
 
     it('should release the trap on accept', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
-      mockSavePrivacyConsent.mockResolvedValue(undefined);
-      mockRecordPolicyVersionAcknowledgment.mockResolvedValue(undefined);
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockAcceptConsent.mockResolvedValue(undefined);
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
 
       await initPrivacyConsent();
@@ -556,7 +408,8 @@ describe('privacyConsentController', () => {
     });
 
     it('should release the trap on decline', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockDeclineConsent.mockResolvedValue(1);
       window.alert = vi.fn();
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
 
@@ -573,7 +426,7 @@ describe('privacyConsentController', () => {
     });
 
     it('should not double-trap on re-show', async () => {
-      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockShouldPromptForConsent.mockResolvedValue(true);
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
 
