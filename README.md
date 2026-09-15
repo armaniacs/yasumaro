@@ -137,6 +137,17 @@ flowchart LR
 3. 右上の「デベロッパーモード」を有効にします。
 4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、展開したフォルダを選択します。
 
+#### 方法2b: Firefox（実験的サポート）
+
+Firefox 版もビルドでき、記録・保存・検索（FTS5 含む）が動作します（2026-09 から）。ブラウザ内蔵 AI は非対応です（外部 AI プロバイダーは利用可）。
+
+1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-firefox.zip` をダウンロードして展開します。
+2. Firefox で `about:debugging#/runtime/this-firefox` を開きます。
+3. 「一時的なアドオンを読み込む…」→ 展開したフォルダ内の `manifest.json` を選択します。
+4. 一時読み込みは Firefox 再起動で消えます。永続的に使う場合は Firefox Developer Edition / Nightly で `xpinstall.signatures.required` を `false` にしたプロファイルへインストールしてください。
+
+> Firefox は実験的サポートのため、動作確認は Chromium 系ほど網羅されていません。不具合は GitHub issue で報告をお願いします。
+
 #### 方法3: ソースからビルド（開発者向け）
 
 1. このリポジトリをクローンまたはダウンロードします:
@@ -353,6 +364,17 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 2. Open Chrome and navigate to `chrome://extensions`.
 3. Enable "Developer mode" in the top right.
 4. Click "Load unpacked" and select the unzipped folder.
+
+#### Option 2b: Firefox (experimental support)
+
+The Firefox build works for recording, saving, and search (including FTS5) as of September 2026. Built-in AI is not supported (external AI providers work).
+
+1. Download `yasumaro-<version>-firefox.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it.
+2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+3. Click "Load Temporary Add-on…" and select `manifest.json` inside the unzipped folder.
+4. Temporary installs are removed when Firefox restarts. For persistent use, install it into a Firefox Developer Edition / Nightly profile with `xpinstall.signatures.required` set to `false`.
+
+> Firefox is experimental support — it is less thoroughly tested than Chromium-based builds. Please report issues via GitHub issues.
 
 #### Option 3: Build from Source (For Developers)
 

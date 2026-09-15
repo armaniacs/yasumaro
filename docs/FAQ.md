@@ -38,7 +38,16 @@ AI 要約を使わないのであれば不要です。ダッシュボードで�
 
 **Q5. Chrome 以外のブラウザでも使えますか？**
 
-Yasumaro は Microsoft Edge や Brave など Chromium 系ブラウザで動作し、実際に作者自身も日常的に Microsoft Edge で使用しています。Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) からインストールできます。Chrome / Brave では、GitHub Releases の zip を読み込むか、ソースからビルドしてください（Chrome Web Store での配布は現在停止しています。Q7 参照）。Firefox 版もビルド可能ですが、主要サポートは Chromium 系です。
+Yasumaro は Microsoft Edge や Brave など Chromium 系ブラウザで動作し、実際に作者自身も日常的に Microsoft Edge で使用しています。Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) からインストールできます。Chrome / Brave では、GitHub Releases の zip を読み込むか、ソースからビルドしてください（Chrome Web Store での配布は現在停止しています。Q7 参照）。
+
+**Firefox 版**も `make build` でビルドでき、2026-09 から記録・保存・検索（FTS5 含む）が動作します。インストールは次の手順で行います（AMO からの配布は未定です。将来対応として記録されています）:
+
+1. GitHub Releases から `yasumaro-*-firefox.zip` をダウンロードして展開するか、`npm run build:firefox` でビルドする
+2. Firefox で `about:debugging#/runtime/this-firefox` を開く
+3. 「一時的なアドオンを読み込む…」→ 展開したフォルダ内の `manifest.json` を選択（一時読み込みは Firefox 再起動で消えます）
+4. 永続的に使う場合は Firefox Developer Edition / Nightly で `xpinstall.signatures.required` を `false` にしたプロファイルにインストールしてください
+
+Firefox 版の既知の制限: ブラウザ内蔵 AI（Gemini Nano / Phi-mini）は非対応です（設定画面では「非対応」と表示されます）。外部 AI プロバイダー（Gemini API、OpenAI 互換、Ollama など）は利用できます。
 
 **Q6. スマートフォンの Chrome でも使えますか？**
 
