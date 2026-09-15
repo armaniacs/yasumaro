@@ -81,9 +81,6 @@ export default defineConfig({
       },
     },
   },
-    },
-    fileParallelism: true,
-  },
   resolve: {
     alias: {
       'src/': path.resolve(projectRoot, 'src/'),
