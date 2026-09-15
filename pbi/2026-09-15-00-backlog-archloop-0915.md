@@ -1,27 +1,29 @@
 # バックログ: arch-delivery-loop 0915 — アーキテクチャ診断（2026-09-15）
 
-`arch-delivery-loop` による Phase 0 診断（3つのサブエージェント探索 + HTML レポート `/tmp/architecture-review-20260915.html`）で抽出した11候補の RICE スコア表。上位4件を PBI 化（02〜05）、残り7件は将来候補として本台帳に記録する。
+`arch-delivery-loop` による Phase 0 診断（3つのサブエージェント探索 + HTML レポート `/tmp/architecture-review-20260915.html`）で抽出した11候補の RICE スコア表。上位4件を PBI 化（02〜05・**2026-09-15 実装完了・アーカイブ済み**）、次点3件を第2ループで PBI 化（06〜08・2026-09-15）、残り4件は将来候補。
 
 ## RICE スコア表（全11候補・同基準）
 
 | スコア順 | 候補 | R | I | C | E(人週) | RICE | 判定 |
 |---|---|---|---|---|---|---|---|
-| 1 | 送信者検証 seam の一本化（AuthorizedSqliteSender） | 6 | 2 | 0.8 | 0.2 | **48.0** | → **PBI 02** |
-| 2 | queryPlanner⇄queryPlan 循環 import 解消 | 4 | 1 | 0.8 | 0.1 | **32.0** | → **PBI 03** |
-| 3 | archiveWireTable 派生化（5重投影の規律を構造で閉じる） | 14 | 1 | 0.8 | 0.4 | **28.0** | → **PBI 04** |
-| 4 | CleansingPresetStore 抽出（順序制約を interface に隠す） | 5 | 2 | 0.8 | 0.4 | **20.0** | → **PBI 05** |
-| 5 | diagnostics section のデータ駆動化 | 6 | 1 | 0.8 | 0.3 | 16.0 | 将来候補 |
-| 6 | Transport timeout/settle の重複除去 | 3 | 0.5 | 0.8 | 0.1 | 12.0 | 将来候補 |
-| 7 | consent module の深掘り（状態遷移の locality 回復） | 4 | 2 | 0.8 | 0.6 | 10.7 | 将来候補 |
+| 1 | 送信者検証 seam の一本化（AuthorizedSqliteSender） | 6 | 2 | 0.8 | 0.2 | **48.0** | ✅ PBI 02 完了 |
+| 2 | queryPlanner⇄queryPlan 循環 import 解消 | 4 | 1 | 0.8 | 0.1 | **32.0** | ✅ PBI 03 完了 |
+| 3 | archiveWireTable 派生化（5重投影の規律を構造で閉じる） | 14 | 1 | 0.8 | 0.4 | **28.0** | ✅ PBI 04 完了 |
+| 4 | CleansingPresetStore 抽出（順序制約を interface に隠す） | 5 | 2 | 0.8 | 0.4 | **20.0** | ✅ PBI 05 完了 |
+| 5 | diagnostics section のデータ駆動化 | 6 | 1 | 0.8 | 0.3 | 16.0 | → **PBI 06**（第2ループ） |
+| 6 | Transport timeout/settle の重複除去 | 3 | 0.5 | 0.8 | 0.1 | 12.0 | → **PBI 07**（第2ループ） |
+| 7 | consent module の深掘り（状態遷移の locality 回復） | 4 | 2 | 0.8 | 0.6 | 10.7 | → **PBI 08**（第2ループ） |
 | 8 | ArchiveSessionStore 抽出（500行 mount の状態機械化） | 8 | 2 | 0.5 | 0.8 | 10.0 | 将来候補 |
 | 9 | createBackend のレジストリ化 | 6 | 1 | 0.5 | 0.4 | 7.5 | 将来候補 |
 | 10 | sqliteHistory presentation 抽出 | 4 | 1 | 0.5 | 0.5 | 4.0 | 将来候補 |
 | 11 | hmacKeyStore 候補チェーンの内部 seam | 3 | 0.5 | 0.5 | 0.2 | 3.75 | 将来候補 |
 
-## 実行順（Phase 2）
+## 実行順
 
 ```
-02（sender seam・1日）→ 03（循環解消・0.5日）→ 04（archive 派生化・1-2日）→ 05（preset store・2日）
+第1ループ（2026-09-15）: 02 → 03 → 04 → 05 完了
+第2ループ（2026-09-15）: 06 → 07 → 08
+残り（将来候補）: ArchiveSessionStore → createBackend → sqliteHistory → hmacKeyStore の順で再採点
 ```
 依存関係なし（互いに独立）。実装は直列で進める。
 
