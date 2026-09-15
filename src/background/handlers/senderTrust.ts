@@ -34,23 +34,16 @@ export interface SenderTrustDecision {
   error?: string;
 }
 
-import { extensionOrigin } from '../../utils/extensionOrigin.js';
-
-/**
- * A content script's sender runs in a tab on a URL outside the extension
- * origin (http/https). Extension pages run under the extension origin
- * whether or not the browser attaches a tab to them (Firefox attaches a tab
- * to extension pages opened in normal tabs; Chrome only attaches one to
- * content scripts), so the origin — not the tab — is the discriminator.
- */
-function isContentScriptSender(sender: chrome.runtime.MessageSender): boolean {
-  return Boolean(sender.tab) && (!sender.url || !sender.url.startsWith(extensionOrigin()));
-}
+import { extensionOrigin, isContentScriptSender } from '../../utils/extensionOrigin.js';
 
 /**
  * A sender that must originate from a web page: a valid tab plus an
  * http/https sender URL. Rejects spoofing from extension pages (which carry
  * the extension-origin URL or no tab).
+ *
+ * NOTE: the content-script rejection used by 'extension-only' lives in
+ * src/utils/extensionOrigin.ts (isContentScriptSender) — the SQLite dispatch
+ * path and this trust gate share the same policy through that module.
  */
 function isTabPageSender(sender: chrome.runtime.MessageSender): boolean {
   const hasValidTab = Boolean(sender.tab?.id && sender.tab?.url);
@@ -76,7 +69,7 @@ export function checkSenderTrust(
     return { allowed: false, error: `${messageType} is not allowed from external extensions` };
   }
 
-  if (level === 'extension-only' && isContentScriptSender(sender)) {
+  if (level === 'extension-only' && isContentScriptSender({ tab: sender.tab, url: sender.url ?? undefined })) {
     return { allowed: false, error: `${messageType} is not allowed from content scripts` };
   }
 

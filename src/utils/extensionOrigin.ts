@@ -18,7 +18,7 @@
 /** Minimal sender shape needed for origin identification. */
 export interface SenderLike {
   tab?: unknown;
-  url?: string;
+  url?: string | undefined;
 }
 
 /**
@@ -46,4 +46,37 @@ export function extensionOrigin(): string {
  */
 export function isContentScriptSender(sender: SenderLike): boolean {
   return Boolean(sender.tab) && (!sender.url || !sender.url.startsWith(extensionOrigin()));
+}
+
+// ============================================================================
+// SQLite sender authorization (SSOT — PBI 2026-09-15-02)
+// ============================================================================
+// The "content scripts may not send SQLITE_*" policy used to be spelled twice
+// (senderTrust.ts local redefinition + offscreen.ts inline checks), and the
+// Firefox in-page transport fabricated a sender to pass it. Both paths now
+// delegate to this module: one authorization function, one opaque proof type.
+
+/** Opaque marker produced only by authorizeSqliteSender after both checks
+ *  (content-script rejection + runtime id match) have passed. Consumers that
+ *  require an authorized sender cannot reach the dispatch without this proof —
+ *  enforced by the type checker, not by convention. */
+export type AuthorizedSqliteSender = { readonly __brand: 'AuthorizedSqliteSender' };
+
+export type SqliteSenderAuthorization =
+  | { ok: true; proof: AuthorizedSqliteSender }
+  | { ok: false; reason: 'content-script' | 'external-extension' };
+
+/**
+ * Authorize a sender for SQLITE_* message dispatch.
+ * @param sender Message sender (real or the in-page transport's own context).
+ * @param runtimeId chrome.runtime.id of this extension.
+ */
+export function authorizeSqliteSender(sender: SenderLike & { id?: string }, runtimeId: string | undefined): SqliteSenderAuthorization {
+  if (isContentScriptSender(sender)) {
+    return { ok: false, reason: 'content-script' };
+  }
+  if (runtimeId !== undefined && sender.id !== runtimeId) {
+    return { ok: false, reason: 'external-extension' };
+  }
+  return { ok: true, proof: { __brand: 'AuthorizedSqliteSender' } };
 }
