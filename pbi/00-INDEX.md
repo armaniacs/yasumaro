@@ -14,11 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-14 Firefox 対応 — 残1件（09・10 完了・アーカイブ済み）
+### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
-Firefox は `chrome.offscreen` 非依存化により対応可能と確定。ストレージ中核（wa-sqlite OPFS SAH / FTS5 / IDB fallback）は VFS プローブ（Firefox 155）で全 green 済み。台帳は `2026-09-14-00-backlog-firefox-support.md`。実行順 = 11（09・10 成果物が前提）。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。
-
-- ⬜🟡🟡🔧 2026-09-14-11-chore-firefox-release-readiness.md（RICE 30.0 — 実機 QA チェックリスト（moz-extension origin での OPFS 最終確認を含む）・FAQ/README 更新・配布方針決定（初期 = GitHub Releases 継続推奨・AMO は broad host permission 審査リスク）。**09・10 依存**）
+Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべて完了。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。実機 QA で発見した4不具合（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）はすべて修正済み。AMO 公開は将来対応（`2026-09-15-01`・着手禁止）。台帳は `2026-09-14-00-backlog-firefox-support.md`。
 - ⬜🟡🟡🔧 2026-09-14-11-chore-firefox-release-readiness.md（RICE 30.0 — 実機 QA チェックリスト（moz-extension origin での OPFS 最終確認を含む）・FAQ/README 更新・配布方針決定（初期 = GitHub Releases 継続推奨・AMO は broad host permission 審査リスク）。**09・10 依存**）
 
 
