@@ -332,7 +332,9 @@ vi.mock('../crypto/index.js', () => ({
     constantTimeCompare: vi.fn(async (a: string, b: string) => a === b),
     hashPasswordWithPBKDF2: vi.fn(async () => 'hashed'),
     verifyPasswordWithPBKDF2: vi.fn(async () => ({ isValid: true, needsRehash: false })),
-    generateSalt: vi.fn(() => new Uint8Array(16).fill(42))
+    generateSalt: vi.fn(() => new Uint8Array(16).fill(42)),
+    bytesToBase64: vi.fn((bytes: Uint8Array) => Buffer.from(bytes).toString('base64')),
+    base64ToBytes: vi.fn((b64: string) => new Uint8Array(Buffer.from(b64, 'base64'))),
 }));
 
 import {
