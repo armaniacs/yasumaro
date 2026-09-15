@@ -4,10 +4,12 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
-import { getPrivacyConsent, savePrivacyConsent, migrateLegacyPrivacyConsent, recordPolicyVersionAcknowledgment } from '../utils/storage/privacyConsent.js';
+import {
+    shouldPromptForConsent,
+    acceptConsent,
+    declineConsent,
+} from '../utils/storage/privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
-import { StorageKeys } from '../utils/storage/types.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
@@ -48,71 +50,14 @@ function releaseConsentTrap(): void {
  */
 export async function initPrivacyConsent(): Promise<void> {
     try {
-        await migrateLegacyPrivacyConsent();
-
-        const state = await getPrivacyConsent();
-
-        // ポリシーバージョンが変更された場合、拒否カウンターをリセットして再同意を促す
-        if (state.needsReconsent) {
-            await resetConsentDeniedCount();
-            showPrivacyConsentModal();
-            return;
-        }
-
-        if (!state.hasConsented) {
-            const denialCount = await getConsentDeniedCount();
-            // After 3+ rejections, wait 30 days before showing the modal again
-            if (denialCount >= 3) {
-                const lastDenialTime = await getLastConsentDenialTime();
-                const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-                if (lastDenialTime && (Date.now() - lastDenialTime < THIRTY_DAYS_MS)) {
-                    return;
-                }
-            }
+        // モーダル表示判定（レガシーマイグレーション・拒否カウンタの30日猶予規則は
+        // privacyConsent.ts 内部 — PBI 2026-09-15-08 で locality を回復）
+        if (await shouldPromptForConsent()) {
             showPrivacyConsentModal();
         }
     } catch (error) {
         logError('[PrivacyConsent] Error in initialization', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
-}
-
-async function getConsentDeniedCount(): Promise<number> {
-    try {
-        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_DENIED_COUNT);
-        return Number(result[StorageKeys.PRIVACY_CONSENT_DENIED_COUNT] ?? 0);
-    } catch {
-        return 0;
-    }
-}
-
-async function getLastConsentDenialTime(): Promise<number | null> {
-    try {
-        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME);
-        return (result[StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME] as number) ?? null;
-    } catch {
-        return null;
-    }
-}
-
-async function incrementConsentDeniedCount(): Promise<number> {
-    const current = await getConsentDeniedCount();
-    const next = current + 1;
-    await chrome.storage.local.set({
-        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: next,
-        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: Date.now(),
-    });
-    return next;
-}
-
-/**
- * 同意拒否カウンターをリセットする
- * ポリシーバージョン変更時に呼び出す
- */
-async function resetConsentDeniedCount(): Promise<void> {
-    await chrome.storage.local.set({
-        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 0,
-        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: 0,
-    });
 }
 
 /**
@@ -163,29 +108,6 @@ function showPrivacyConsentModal(): void {
 }
 
 /**
- * Notify the Service Worker of a consent state change so it refreshes the toolbar badge (M3).
- *
- * INTENTIONAL: called from both the accept and decline paths with the
- * identical bare envelope — no accept/decline distinction is carried.
- * Receivers must re-read consent state from storage.
- *
- * Also dispatches a same-document consent-state-changed event: this popup is
- * the SENDER of the CONSENT_STATE_CHANGED message, and chrome.runtime
- * messages are never delivered back to the sender's own context, so in-page
- * listeners cannot rely on the onMessage subscription alone.
- */
-export const CONSENT_STATE_CHANGED_EVENT = 'consent-state-changed';
-
-function notifyConsentStateChanged(): void {
-    try {
-        document.dispatchEvent(new CustomEvent(CONSENT_STATE_CHANGED_EVENT));
-        chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION });
-    } catch (error) {
-        logError('[PrivacyConsent] Failed to notify consent state change', { cause: error }, ErrorCode.INTERNAL_ERROR);
-    }
-}
-
-/**
  * 同意モーダルを非表示にする
  */
 function hidePrivacyConsentModal(): void {
@@ -207,15 +129,10 @@ function hidePrivacyConsentModal(): void {
  */
 async function handleAcceptConsent(): Promise<void> {
     try {
-        // PBI 2026-07-09-02: persist optional local content-storage consent
+        // 同意レコード（署名付き）+ 本文保存フラグ + ack の3点セットと状態変更
+        // 通知は privacyConsent.ts（深い module）が所有 — PBI 2026-09-15-08。
         const contentCb = getContentStorageCheckboxEl();
-        await chrome.storage.local.set({
-            [StorageKeys.CONTENT_STORAGE_ENABLED]: contentCb?.checked ?? false,
-        });
-
-        await savePrivacyConsent();
-        await recordPolicyVersionAcknowledgment();
-        notifyConsentStateChanged();
+        await acceptConsent({ contentStorageEnabled: contentCb?.checked ?? false });
         hidePrivacyConsentModal();
     } catch (error) {
         logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
@@ -236,9 +153,7 @@ async function handleAcceptConsent(): Promise<void> {
  * 拒否ボタンハンドラー
  */
 async function handleDeclineConsent(): Promise<void> {
-    const newCount = await incrementConsentDeniedCount();
-    await recordPolicyVersionAcknowledgment();
-    notifyConsentStateChanged();
+    const newCount = await declineConsent();
 
     hidePrivacyConsentModal();
 

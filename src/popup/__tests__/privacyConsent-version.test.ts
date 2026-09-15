@@ -18,6 +18,9 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 vi.stubGlobal('chrome', {
+    runtime: {
+        sendMessage: vi.fn(async (message: unknown) => message),
+    },
     storage: {
         local: {
             get: vi.fn(async (key: string | string[]) => {
@@ -63,6 +66,9 @@ import {
     savePrivacyConsent,
     recordPolicyVersionAcknowledgment,
     isPolicyVersionChanged,
+    acceptConsent,
+    declineConsent,
+    CONSENT_STATE_CHANGED_EVENT,
     PRIVACY_POLICY_VERSION,
 } from '../../utils/storage/privacyConsent.js';
 
@@ -171,6 +177,56 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             };
             expect(consent.hasConsented).toBe(true);
             expect(consent.consentVersion).toBe(PRIVACY_POLICY_VERSION);
+        });
+    });
+
+    // PBI 2026-09-15-08: the accept/decline transitions own the dual-channel
+    // notify (same-document event + runtime message). These pins moved here
+    // from the controller suite, where the transitions are now mocked.
+    describe('consent transitions - dual-channel notify', () => {
+        it('accept sends the runtime broadcast and fires the same-document event', async () => {
+            const events: Event[] = [];
+            const listener = (event: Event): void => { events.push(event); };
+            document.addEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
+
+            try {
+                await acceptConsent({ contentStorageEnabled: false });
+
+                expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+                    expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+                );
+                expect(events.length).toBeGreaterThanOrEqual(1);
+            } finally {
+                document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
+            }
+        });
+
+        it('decline sends the same bare envelope as accept (INTENTIONAL: value lives in storage)', async () => {
+            const sendMessage = vi.mocked(chrome.runtime.sendMessage);
+            sendMessage.mockClear();
+
+            await acceptConsent({ contentStorageEnabled: false });
+            const acceptEnvelope = sendMessage.mock.calls
+                .map((call) => call[0] as Record<string, unknown>)
+                .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
+
+            document.addEventListener(CONSENT_STATE_CHANGED_EVENT, () => {});
+            await declineConsent();
+            document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, () => {});
+
+            const declineEnvelope = sendMessage.mock.calls
+                .map((call) => call[0] as Record<string, unknown>)
+                .filter((arg) => arg?.type === 'CONSENT_STATE_CHANGED')
+                .at(-1);
+            expect(acceptEnvelope).toBeDefined();
+            expect(declineEnvelope).toBeDefined();
+
+            // Contract: both paths send the same shape with the same values —
+            // no accept/decline distinction is carried on the message.
+            expect(declineEnvelope).toEqual(acceptEnvelope);
+            // Bare envelope: no payload and no consent value field.
+            expect(declineEnvelope).not.toHaveProperty('payload');
+            expect(declineEnvelope).not.toHaveProperty('consented');
         });
     });
 });

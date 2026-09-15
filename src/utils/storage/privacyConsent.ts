@@ -9,6 +9,7 @@ import { errorMessage } from '../errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../logger.js';
 import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../crypto/index.js';
 import { pickDefined } from '../objectUtils.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
 export const PRIVACY_POLICY_VERSION = '2026-07-31';
@@ -285,6 +286,180 @@ export async function recordPolicyVersionAcknowledgment(): Promise<void> {
             undefined,
             'privacyConsent.ts'
         );
+    }
+}
+
+// ============================================================================
+// Consent state-change notification (PBI 2026-09-15-08) — dual-channel subscribe
+// ============================================================================
+// Chrome 仕様: chrome.runtime メッセージは送信者自身のコンテキストへは配送され
+// ない（過去に onboarding が再表示されない退行を生んだ）。同一コンテキストの
+// 購読者には same-document イベントで、他コンテキスト（SW バッジ更新など）
+// には runtime メッセージで届く — どちらの経路もこの subscribe が隠蔽する。
+
+/** 同意状態変更の same-document イベント名（controller から移動）。 */
+export const CONSENT_STATE_CHANGED_EVENT = 'consent-state-changed';
+
+export function subscribeConsentChanges(listener: () => void): () => void {
+    const docListener = () => listener();
+    let onMessageListener: ((message: unknown) => void) | null = null;
+    if (typeof document !== 'undefined') {
+        document.addEventListener(CONSENT_STATE_CHANGED_EVENT, docListener);
+    }
+    if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+        onMessageListener = (message: unknown) => {
+            if ((message as { type?: string } | undefined)?.type === 'CONSENT_STATE_CHANGED') {
+                listener();
+            }
+        };
+        chrome.runtime.onMessage.addListener(onMessageListener);
+    }
+    return () => {
+        if (typeof document !== 'undefined') {
+            document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, docListener);
+        }
+        if (onMessageListener) {
+            chrome.runtime.onMessage.removeListener(onMessageListener);
+        }
+    };
+}
+
+function notifyConsentChanged(): void {
+    try {
+        if (typeof document !== 'undefined') {
+            document.dispatchEvent(new CustomEvent(CONSENT_STATE_CHANGED_EVENT));
+        }
+        chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION });
+    } catch (error) {
+        logWarn(
+            'Failed to notify consent state change',
+            { error: errorMessage(error) },
+            undefined,
+            'privacyConsent.ts'
+        );
+    }
+}
+
+// ============================================================================
+// 高レベル遷移（同意/拒否）— 原子性と通知を内部化（PBI 2026-09-15-08）
+// ============================================================================
+
+/** 同意受け入れのオプション（本文保存のオプトイン）。 */
+export interface AcceptConsentOptions {
+    /** コンテンツ保存のオプトイン（モーダルのチェックボックス値）。 */
+    contentStorageEnabled: boolean;
+}
+
+/**
+ * 同意を受け入れる: consent レコード（署名付き）+ 本文保存フラグ + ack を
+ * 一貫して書き込み、状態変更を通知する。
+ */
+export async function acceptConsent(options: AcceptConsentOptions): Promise<void> {
+    await chrome.storage.local.set({
+        [StorageKeys.CONTENT_STORAGE_ENABLED]: options.contentStorageEnabled,
+    });
+    await savePrivacyConsent();
+    await recordPolicyVersionAcknowledgment();
+    notifyConsentChanged();
+}
+
+/**
+ * 同意を拒否する: 拒否カウンタ更新 + ack + 通知。新しいカウントを返す。
+ */
+export async function declineConsent(): Promise<number> {
+    const newCount = await incrementConsentDeniedCount();
+    await recordPolicyVersionAcknowledgment();
+    notifyConsentChanged();
+    return newCount;
+}
+
+// ============================================================================
+// 拒否カウンタ（privacyConsentController から移動 — locality 回復）
+// ============================================================================
+
+/** 直近の拒否回数を取得（未設定は 0）。 */
+export async function getConsentDeniedCount(): Promise<number> {
+    try {
+        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_DENIED_COUNT);
+        return Number(result[StorageKeys.PRIVACY_CONSENT_DENIED_COUNT] ?? 0);
+    } catch {
+        return 0;
+    }
+}
+
+/** 直近の拒否時刻を取得（未設定は null）。 */
+export async function getLastConsentDenialTime(): Promise<number | null> {
+    try {
+        const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME);
+        return (result[StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME] as number) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/** 拒否を記録（カウンタ + 時刻）。 */
+export async function incrementConsentDeniedCount(): Promise<number> {
+    const current = await getConsentDeniedCount();
+    const next = current + 1;
+    await chrome.storage.local.set({
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: next,
+        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: Date.now(),
+    });
+    return next;
+}
+
+/**
+ * 同意拒否カウンターをリセットする
+ * ポリシーバージョン変更時に呼び出す
+ */
+export async function resetConsentDeniedCount(): Promise<void> {
+    await chrome.storage.local.set({
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 0,
+        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: 0,
+    });
+}
+
+/**
+ * 同意モーダルを表示すべきか（拒否カウンタの30日猶予規則を含む判定）。
+ * マイグレーションも内部で実行する。
+ */
+export async function shouldPromptForConsent(): Promise<boolean> {
+    await migrateLegacyPrivacyConsent();
+
+    const state = await getPrivacyConsent();
+
+    // ポリシーバージョンが変更された場合、拒否カウンターをリセットして再同意を促す
+    if (state.needsReconsent) {
+        await resetConsentDeniedCount();
+        return true;
+    }
+
+    if (!state.hasConsented) {
+        const denialCount = await getConsentDeniedCount();
+        // After 3+ rejections, wait 30 days before showing the modal again
+        if (denialCount >= 3) {
+            const lastDenialTime = await getLastConsentDenialTime();
+            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            if (lastDenialTime && (Date.now() - lastDenialTime < THIRTY_DAYS_MS)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * 同意を受け入れた際にオプトインされたコンテンツ保存フラグを読む
+ * （controller の checkbox から移動した書き込み先の整合確認用）。
+ */
+export async function getContentStorageEnabled(): Promise<boolean> {
+    try {
+        const result = await chrome.storage.local.get(StorageKeys.CONTENT_STORAGE_ENABLED);
+        return result[StorageKeys.CONTENT_STORAGE_ENABLED] === true;
+    } catch {
+        return false;
     }
 }
 
