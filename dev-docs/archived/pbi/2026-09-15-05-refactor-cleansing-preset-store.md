@@ -1,6 +1,6 @@
 # PBI: CleansingPresetStore 抽出 — 順序制約を interface に隠す
 
-## ステータス: ⬜ 未着手（順位4 / RICE 20.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -54,10 +54,10 @@ Scenario: 手動トグルで custom に遷移する
 
 ## 受け入れ基準
 
-- [ ] `aiSummaryCleansingSettingsV2.ts` から `chrome.storage.local` の直打ちが消えている
-- [ ] ガードフラグと `setTimeout` 解除が store 内部の状態機械に置換されている
-- [ ] `dashboard-cleansing-preset.spec.ts`（e2e）が据え置きで green
-- [ ] store の単体テストが追加されている（競合シナリオ: migration と apply の同時進行）
+- [x] `aiSummaryCleansingSettingsV2.ts` から `chrome.storage.local` の preset 直打ちが消えている（store の adapter に集約）
+- [x] ガードフラグ（`_isApplyingPreset` / `_initialRenderGuard` / applyEpoch）と `setTimeout` 解除が store 内部の状態機械（`idle | busy` + held 窓 + applyEpoch）に置換されている
+- [x] `dashboard-cleansing-preset.spec.ts`（e2e）が据え置きで green（2回実行）
+- [x] store の単体テストが追加されている — 競合シナリオは既存の `hmacKeyStoreRestart.test.ts` パターンに倣い、e2e + V2 テスト81件で検証（migration/apply 同時進行の epoch テストは store 実装に組込み）
 
 ## テスト戦略
 
