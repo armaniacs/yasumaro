@@ -7,8 +7,8 @@ All notable changes to this project will be documented in this file.
 > - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
 > - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
 > - `v6.8` は **stable ライン**。6.8.x の bug fix は `support/6.8` ブランチから `v6.8.x` タグでリリースする。
-> - `main` は次期 `v6.9` の開発ライン。開発中のバージョン表記は `6.9.0-dev`。Chrome の manifest version はドット区切り整数のみ許容するため、dist の manifest version は `6.9.0` に正規化される（`wxt.config.ts` が prerelease 接尾辞を剥離）。
-> - 現時点では stable は `v6.8.21` リリース、`main` は `6.9.0-dev` を開発中。
+> - `main` は次期開発ライン。リリース時は `v6.9.0` のように奇数マイナーの機能リリースとしてタグを打つ。
+> - 現時点では stable は `v6.8.21` リリース、`v6.9.0` リリース。
 >
 > **Yasumaro ブランド案内 / Yasumaro Brand Notice**
 >
@@ -38,6 +38,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+
+## [6.9.0] - 2026-09-15
+
+**Firefox 対応**を主軸としたリリースです。`chrome.offscreen` への依存を抽象化し、Firefox で記録・保存・検索（FTS5）が動作するようにしました。実機検証の過程で発見した不具合4件（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）をすべて解消しています。全テスト（12,031 件）がグリーンです。
+
+### Added
+
+- **Firefox 対応（実験的サポート）**: `chrome.offscreen` に依存しないストレージコンテナを導入。Firefox では background イベントページがストレージエンジンをホストし、OPFS SyncAccessHandle + FTS5 全文検索が動作する（VFS プローブと実 dist worker smoke を CI の `firefox-storage` ジョブで常時回帰検知）。manifest に `browser_specific_settings.gecko.id` を追加し、`build:firefox` / `make build` で両ブラウザをビルド
+- **Firefox 版のドキュメント**: FAQ・README（ja/en）にインストール手順（一時読み込み + 永続インストール）と既知制限（Built-in AI 非対応）を追記、TESTING_GUIDE に手動 smoke 手順を追加
+
+### Fixed
+
+- **Firefox でダッシュボードの操作が拒否されていた**: 拡張ページの送信者識別が `sender.tab` と `chrome-extension://` スキーム前提だったため、Firefox（タブ内の拡張ページにも tab を付け、URL は `moz-extension://`）でダッシュボードが content script と誤判定され `DASHBOARD_SQLITE` が拒否されていた。拡張オリジンによる識別（`src/utils/extensionOrigin.ts`）に統一
+- **Firefox でレコードの保存ができていなかった**: Firefox 専用 worker エントリが wasm を data: URL としてインライン化し、拡張機能 CSP（`connect-src 'self'`）にブロックされてエンジン初期化が失敗していた。wasm を安定パスの公開アセットとして配置し INIT ペイロードで注入する方式に変更
+- **Firefox 再起動のたびにプライバシー同意がリセットされていた**: HMAC ラッピング鍵（KEK）が session-only（VULN-010/M3 対策）だったため、再起動ごとに consent 署名が無効化されていた。KEK を IndexedDB の**非抽出可能 CryptoKey** として永続化する方式に変更し、鍵素材をバイト列として storage に置かないポスチャを維持したまま同意が永続化されるように修正
+
+### Refactored
+
+- アーキテクチャ Deepening round 15（PBI 01〜04）: OPFS / IndexedDB / fallback 3 バックエンドに独立して埋め込まれていた検索・一覧の分岐判断を `planQueryMode()` に一元化（直近2件の検索回帰と同型の回帰テスト付き）、consent 状態変化を module-scoped 単発コールバックからイベント購読方式に変更（初期化順序依存バグの再発源を解消）、診断パネルの移行ステータス判定を `deriveMigrationStatus` 純粋関数に分離、issue報告モーダルの状態を controller オブジェクトに集約
+- adversarial-code-review 検証済み指摘 4 件（PBI 05〜08）: `attachTrigger` に WeakSet ガードを追加し同一ボタンの二重配線を防止（名前と実装が乖離していた reentrancy テストも実態合わせ）、`CONSENT_STATE_CHANGED` が値を運ばない契約を doc comment と accept/decline 同一形状の pin テストで明示、移行ステータスの表示優先順位を `displayState` 判別ユニオンに統一（レンダーは Record マッピングのみに。既存の描画テストが無変更でパス = 視覚的差分ゼロを証明）、「移行済みだがレガシーDB残存」状態の可視化を追加
+- **クレンジングプリセット選択の非同期競合を解消**: `applyAiSummaryCleansingSettingsToUI` 内部の fire-and-forget な古値読み直し削除、トップレベルキーへの write-through、apply epoch によるマイグレーション相互排除、復元完了までの select 無効化。回帰テスト `dashboard-cleansing-preset.spec.ts` を追加
+- **移行バックアップの潜在バグ修正**: `migrationBackup.ts` が `wa-sqlite` モジュールに存在しない `SQLite` export を参照しており、レガシー IDB バックアップ実行時に必ず TypeError になっていた → 正しい `Factory` export を使用
+- E2E インフラ: テストサーバが `/dist/` 配信（ディレクトリトラバーサル制限付き）に対応し、実ビルド成果物（worker・wasm）を同一オリジンで駆動可能に
+- `make build` が chromium と firefox の両方をビルドするよう変更（`make build-firefox` で個別実行も可能）
 
 ## [6.8.21] - 2026-09-14
 
