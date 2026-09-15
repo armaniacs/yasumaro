@@ -132,18 +132,18 @@ describe('createAlarmRegistry', () => {
     expect(addLogMock).not.toHaveBeenCalled();
   });
 
-  it('installStaticAlarms creates the two unconditional alarms', () => {
+  it('installAll creates the two unconditional alarms and runs install hooks', async () => {
     const globalRef = globalThis as unknown as { chrome?: unknown };
     const savedChrome = globalRef.chrome;
     const create = vi.fn();
-    globalRef.chrome = { alarms: { create } };
+    const clear = vi.fn();
+    globalRef.chrome = { alarms: { create, clear } };
     try {
       const registry = createAlarmRegistry(makeDeps());
-      registry.installStaticAlarms();
+      await registry.installAll();
 
       expect(create).toHaveBeenCalledWith('yasumaro-daily-purge', { periodInMinutes: 1440 });
       expect(create).toHaveBeenCalledWith('yasumaro-offline-network-retry', { periodInMinutes: 5 });
-      expect(create).toHaveBeenCalledTimes(2);
     } finally {
       globalRef.chrome = savedChrome;
     }

@@ -107,7 +107,8 @@ export class SessionAlarmService {
     }
   }
 
-  private async checkTimeout(): Promise<void> {
+  /** Called by alarmRegistry on `check_session_timeout` firing (PBI 2026-09-15-15). */
+  async checkTimeout(): Promise<void> {
     try {
       const result = await this.storage.local.get<Record<string, unknown>>([
         STORAGE_KEY_LAST_ACTIVITY,
