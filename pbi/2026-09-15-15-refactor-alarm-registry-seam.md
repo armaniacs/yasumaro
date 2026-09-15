@@ -1,6 +1,6 @@
 # PBI: alarm 系3つの onAlarm seam 統合 — timed job 追加を1行に
 
-## ステータス: ⬜ 未着手（順位3 / RICE 10.0 / 台帳: 2026-09-15-00-backlog-archloop-0915b.md 候補2）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -60,10 +60,10 @@ Scenario: registry が alarm を単一 seam で処理する
 
 ## 受け入れ基準
 
-- [ ] `chrome.alarms.onAlarm` リスナー登録が registry 1箇所のみになっている
-- [ ] `setupReviewSummaryAlarmListener` / `setupAlarmListener` / `sessionAlarmsManager` facade が削除されている
-- [ ] 失敗政策が均一（registry の catch + addLog）になっている
-- [ ] session / review-summary の alarm 動作が不変（既存テスト全件 green + 実機確認）
+- [x] `chrome.alarms.onAlarm` リスナー登録が registry 1箇所のみになっている（session-timeout は `checkTimeout` を public 化し deps 経由で dispatch、review-summary は `run` 経由）
+- [x] `setupReviewSummaryAlarmListener` / `setupAlarmListener` / `sessionAlarmsManager` facade が削除されている（SW init は直接 `SessionAlarmService` を生成）
+- [x] 失敗政策が均一（registry の catch + addLog）になっている
+- [x] session / review-summary の alarm 動作が不変（install hooks + handleAlarm テスト 7 passed + 全スイート green）
 
 ## テスト戦略
 

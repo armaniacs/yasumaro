@@ -8,12 +8,12 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings } from './storage/types.js';
-import { computeHMAC, encrypt, decryptData, deriveKey, constantTimeCompare } from './crypto/index.js';
+import { computeHMAC, encrypt, deriveKey, constantTimeCompare } from './crypto/index.js';
 import { generateSalt } from './crypto/index.js';
 import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
 import { logError, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
-import { DEFAULT_IMPORT_SIZE_CAP_BYTES, base64ToBytesTyped } from './importPipeline.js';
+import { DEFAULT_IMPORT_SIZE_CAP_BYTES } from './importPipeline.js';
 import { CRYPTO_PARAMS } from './crypto/cryptoParams.js';
 
 /** Current export format version (plaintext settings) */
@@ -263,11 +263,8 @@ export async function importEncryptedSettings(
       }
     }
 
-    // Salt decode (typed-array, no amplification)
-    const salt = base64ToBytesTyped(encryptedData.salt);
-
     // PBI 2026-09-15-13: the iteration candidate loop (stored -> SSOT -> legacy)
-    // is centralized in kdfNegotiator.ts.
+    // is centralized in kdfNegotiator.ts (salt decode moved there too).
     let decryptedJson: string;
     try {
         const result = await decryptWithIterationCandidates(
