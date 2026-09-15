@@ -1,6 +1,6 @@
 # PBI: diagnostics section のデータ駆動化 — section 追加を4箇所編集から1行に
 
-## ステータス: ⬜ 未着手（順位1 / RICE 16.0 / 台帳: 2026-09-15-00-backlog-archloop-0915.md 候補5）
+## ステータス: ✅ 完了（2026-09-15）
 
 ## ユーザーストーリー
 
@@ -57,10 +57,10 @@ Scenario: 診断データの再取得で全 section が一括クリアされる
 
 ## 受け入れ基準
 
-- [ ] `querySections` / `clearSections` の switch が `SECTIONS` テーブルのループに置換されている
-- [ ] `dashboard.ts` の issue report キューが `registerReportBugButton` 1関数に集約されている
-- [ ] `dashboard-diagnostics` e2e + 診断パネル unit テスト全件 green
-- [ ] section 追加時の編集箇所が1行（テーブル）+ render 関数になる（ドキュメント化）
+- [x] `querySections` / `clearSections` の switch が `SECTIONS` テーブルのループに置換されている
+- [x] `dashboard.ts` の issue report キューが `registerReportBugButton` 1関数に集約されている（`issueReportEntry.ts` 新設 — panel → dashboard の依存も解消）
+- [x] `dashboard-diagnostics` e2e + 診断パネル unit テスト全件 green（diagnostics 関連 e2e 4/4・unit 107 passed）
+- [x] section 追加時の編集箇所が1行（テーブル）+ render 関数になる（SECTIONS テーブルの先頭コメントに記載）
 
 ## テスト戦略
 
