@@ -65,6 +65,7 @@ const {
   canCreateWorker,
   createOpfsWorker,
   initOpfsWorker,
+  setOpfsWorkerFactory,
 } = await import('../opfsWorkerProxy.js');
 
 // ── Helpers ─────────────────────────────────────────────────────────────
@@ -107,6 +108,9 @@ function installMockWorker(respond: (msg: { id: number; type: string; payload?: 
     }
   }
   (globalThis as unknown as { Worker: unknown }).Worker = MockWorker as unknown as typeof Worker;
+  // Deferred-global factory: resolves globalThis.Worker at call time so tests
+  // that re-stub Worker after this helper are picked up too.
+  setOpfsWorkerFactory(() => new (globalThis.Worker as unknown as new () => Worker)());
   return MockWorker;
 }
 

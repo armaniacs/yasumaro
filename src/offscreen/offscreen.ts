@@ -13,6 +13,8 @@ import { isSqliteMessageType, type SqliteMessage } from '../messaging/sqliteMess
 import { assertPayloadSize } from './payloadGuard.js';
 import { sqliteMessageHandlers } from './sqliteMessageHandlers.js';
 import { CLEANSING_OFFSCREEN_TYPE, handleCleansingOffscreenPayload } from './cleansingOffscreen.js';
+import { setOpfsWorkerFactory } from './sqliteEngineContext/opfsWorkerProxy.js';
+import { isContentScriptSender } from '../utils/extensionOrigin.js';
 
 // For testing only - reset SQLite state
 export const _resetSqliteForTesting = (): void => {
@@ -64,12 +66,15 @@ export function handleOffscreenMessage(
     if (msg.target !== 'offscreen') return false;
 
     // Security: SQLite operations must only come from the service worker,
-    // not from content scripts running in web pages (which would have a tab)
-    // or from external extensions.
+    // not from content scripts running in web pages. sender.tab alone is NOT
+    // the signal: Firefox also sets it for extension pages running in normal
+    // tabs (e.g. the dashboard), while Chrome only sets it for content
+    // scripts. The extension origin in sender.url is the discriminator on
+    // both browsers (see src/utils/extensionOrigin.ts).
     const isSqliteMessage = isSqliteMessageType(msg.type);
     if (isSqliteMessage) {
-      // Block content scripts (which have a tab)
-      if (_sender.tab) {
+      // Block content scripts (web-origin senders).
+      if (isContentScriptSender(_sender)) {
         sendResponse({
           success: false,
           error: 'Forbidden: SQLite operations are not available from content scripts.',
@@ -120,6 +125,29 @@ export function handleOffscreenMessage(
     return true; // Keep channel open for async response
 }
 
+// Container wiring: on Chromium this module runs inside the offscreen
+// document and pairs the engine with the bundled OPFS worker. On Firefox the
+// same module is loaded by the background event page (no offscreen API) —
+// the event page injects its own chrome.runtime.getURL-based worker factory
+// BEFORE importing this module, so the bundled-worker factory (whose
+// new Worker(new URL(...)) literal must not enter the background bundle) is
+// skipped there.
+const factoryReady: Promise<void> = import.meta.env.FIREFOX
+  ? Promise.resolve()
+  : import('./sqliteEngineContext/opfsWorkerFactory.js')
+      .then((m) => setOpfsWorkerFactory(m.createOpfsWorkerFromBundle))
+      .then(() => undefined)
+      .catch((err: unknown) => {
+        // Test environments stub chrome minimally (runtime.onMessage may lack
+        // addListener); the registration below re-checks and skips instead of
+        // crashing via an unhandled rejection.
+        forwardError('Offscreen: OPFS worker factory setup failed', { error: errorMessage(err) }, 'offscreen');
+      });
+
 if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
-    chrome.runtime.onMessage.addListener(handleOffscreenMessage);
+    void factoryReady.then(() => {
+        if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
+            chrome.runtime.onMessage.addListener(handleOffscreenMessage);
+        }
+    });
 }

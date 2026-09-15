@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import type { SearchResult } from '../../utils/sqlite-types.js';
 
 interface WorkerMessage {
   id: number;
@@ -74,8 +73,13 @@ beforeEach(async () => {
   });
 
   vi.stubGlobal('Worker', FakeWorker);
+  // The proxy creates workers via the injected factory (PBI 2026-09-14-09).
 
   const mod = await import('./sqliteTestApi.js');
+  // The proxy creates workers via the injected factory (PBI 2026-09-14-09) —
+  // set it on the FRESH module instance (vi.resetModules above resets state).
+  const proxy = await import('../sqliteEngineContext/opfsWorkerProxy.js');
+  proxy.setOpfsWorkerFactory(() => new FakeWorker() as unknown as Worker);
   resetForTesting = mod._resetForTesting;
 });
 

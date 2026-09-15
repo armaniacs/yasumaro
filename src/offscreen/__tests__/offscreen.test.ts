@@ -112,6 +112,62 @@ describe('handleOffscreenMessage - unknown type', () => {
     });
 });
 
+describe('handleOffscreenMessage - Firefox extension pages in tabs (PBI 2026-09-14-09)', () => {
+    // Regression pin for the Firefox dashboard rejection: Firefox attaches
+    // sender.tab to extension pages running in normal tabs, and their sender
+    // URLs use the moz-extension://<uuid>/ scheme. The offscreen sender gate
+    // must accept them as extension pages, not reject them as content scripts.
+    const FIREFOX_UUID = 'b3a95006-cdfd-49b8-95db-e75c94834b48';
+
+    beforeEach(() => {
+        (globalThis as unknown as Record<string, unknown>).chrome = {
+            runtime: {
+                id: 'test-extension-id',
+                getURL: (path: string) => `moz-extension://${FIREFOX_UUID}/${path}`,
+            },
+        };
+    });
+
+    afterEach(() => {
+        delete (globalThis as unknown as Record<string, unknown>).chrome;
+    });
+
+    it('does not reject SQLITE from a Firefox dashboard sender (tab + moz-extension URL)', async () => {
+        const responses: unknown[] = [];
+        handleOffscreenMessage(
+            makeMessage('SQLITE_HEALTH_CHECK'),
+            {
+                id: 'test-extension-id',
+                tab: { id: 3 },
+                url: `moz-extension://${FIREFOX_UUID}/options.html?tab=history`,
+            } as chrome.runtime.MessageSender,
+            (r) => responses.push(r)
+        );
+        await vi.waitFor(() => expect(responses.length).toBe(1));
+        const resp = responses[0] as { success: boolean; error?: string };
+        // The sqliteHealthCheck mock resolves; what matters here is that the
+        // sender gate did not fire — the content-script error must be absent.
+        expect(String(resp.error ?? '')).not.toContain('content scripts');
+    });
+
+    it('still rejects SQLITE from a Firefox web page sender', async () => {
+        const responses: unknown[] = [];
+        handleOffscreenMessage(
+            makeMessage('SQLITE_HEALTH_CHECK'),
+            {
+                id: 'test-extension-id',
+                tab: { id: 3 },
+                url: 'https://example.com/article',
+            } as chrome.runtime.MessageSender,
+            (r) => responses.push(r)
+        );
+        await vi.waitFor(() => expect(responses.length).toBe(1));
+        const resp = responses[0] as { success: boolean; error?: string };
+        expect(resp.success).toBe(false);
+        expect(resp.error).toContain('content scripts');
+    });
+});
+
 describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
     beforeEach(() => {
         (globalThis as unknown as Record<string, unknown>).chrome = {

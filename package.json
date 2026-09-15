@@ -58,7 +58,8 @@
     "generate-sbom": "node scripts/generate-sbom.mjs",
     "verify:vulnhunt-fix": "node scripts/verify-vulnhunt-fix.mjs",
     "release:check": "node scripts/release-checks/index.mjs",
-    "release:check:fast": "node scripts/release-checks/index.mjs --skip-e2e"
+    "release:check:fast": "node scripts/release-checks/index.mjs --skip-e2e",
+    "build:firefox": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build -b firefox"
   },
   "keywords": [
     "obsidian",

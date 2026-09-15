@@ -63,6 +63,14 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { LEGACY_IDB_NAME } from '../../messaging/sqliteMessages.js';
 import { execWithCache, DB_FILENAME } from './idbEngineLifecycle.js';
 import { extractDomain } from '../../utils/domainUtils.js';
+// Static imports (not dynamic): the Firefox background hosts the engine
+// in-page, and nested dynamic imports inside an IIFE library build force
+// rolldown into code-splitting, which IIFE rejects. Only used by the legacy
+// IDB backup path (wa-sqlite IDBBatchAtomicVFS databases predating the
+// @subframe7536 migration).
+import SQLiteAsyncFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
+import { Factory as waSqliteFactory, SQLITE_OPEN_READWRITE } from 'wa-sqlite';
+import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 
 /** Columns selected by the pre-migration backup / post-migration restore, in order. */
 const MIGRATION_BACKUP_COLUMNS = [...COLUMN_NAMES];
@@ -177,17 +185,11 @@ async function setIdbMigrationDone(): Promise<void> {
  * save them to chrome.storage.local as a JSON snapshot.
  */
 async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
-  const [{ default: SQLiteESMFactory }, SQLite, { IDBBatchAtomicVFS }] = await Promise.all([
-    import('wa-sqlite/dist/wa-sqlite-async.mjs'),
-    import('wa-sqlite'),
-    import('wa-sqlite/src/examples/IDBBatchAtomicVFS.js'),
-  ]);
-
-  const asyncModule = await SQLiteESMFactory();
+  const asyncModule = await SQLiteAsyncFactory();
   if (!asyncModule.registerVFS && typeof asyncModule.vfs_register === 'function') {
     asyncModule.registerVFS = asyncModule.vfs_register;
   }
-  const sqlite3 = SQLite.Factory(asyncModule);
+  const sqlite3 = waSqliteFactory(asyncModule);
   const vfs = new IDBBatchAtomicVFS(oldIdbName);
   if (typeof (vfs as { hasAsyncMethod?: unknown }).hasAsyncMethod !== 'function') {
     // WHY: IDBBatchAtomicVFS `hasAsyncMethod` not in TypeScript types; patched at runtime for compatibility
@@ -200,7 +202,7 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
   try {
     dbHandle = await sqlite3.open_v2(
       DB_FILENAME,
-      SQLite.SQLITE_OPEN_READWRITE,
+      SQLITE_OPEN_READWRITE,
       oldIdbName
     );
 
