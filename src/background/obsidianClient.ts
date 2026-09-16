@@ -17,6 +17,7 @@ import {
     type ObsidianProtocol,
 } from '../utils/obsidianConfigValidator.js';
 import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
+import { describeHttpFailure } from '../utils/httpFailureMessages.js';
 import { readBodyCapped } from '../utils/readBodyCapped.js';
 
 /**
@@ -255,9 +256,9 @@ export class ObsidianClient {
 
                 // 具体的なHTTPステータスコードに基づくエラーメッセージ
                 if (response.status === 401 || response.status === 403) {
-                    return { success: false, message: `Authentication failed (${response.status}). Check your API key.` };
+                    return { success: false, message: describeHttpFailure(response.status, 'Obsidian') };
                 } else if (response.status === 404) {
-                    return { success: false, message: `Endpoint not found (404). Is Local REST API plugin enabled?` };
+                    return { success: false, message: describeHttpFailure(response.status, 'Obsidian') };
                 } else {
                     return { success: false, message: `Connection failed: ${errorMsg}` };
                 }

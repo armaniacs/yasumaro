@@ -14,6 +14,7 @@ import { buildEntryMarkdown } from '../../utils/markdownFormatter.js';
 import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout } from '../../utils/fetch.js';
 import { readJsonCapped } from '../../utils/readBodyCapped.js';
 import { isCredentialConfigured } from './settingsConfiguredCheck.js';
+import { describeHttpFailure } from '../../utils/httpFailureMessages.js';
 import { SyncBatchRunner, type PendingSyncRow } from './SyncBatchRunner.js';
 
 const GIST_API_BASE = 'https://api.github.com';
@@ -144,10 +145,10 @@ export class GistSyncTarget implements SyncTarget {
       }
 
       if (response.status === 401) {
-        return { success: false, message: 'Invalid GitHub PAT (unauthorized)' };
+        return { success: false, message: describeHttpFailure(response.status, 'GitHub') };
       }
 
-      return { success: false, message: `GitHub API error: ${response.status}` };
+      return { success: false, message: describeHttpFailure(response.status, 'GitHub') };
     } catch (error) {
       return {
         success: false,

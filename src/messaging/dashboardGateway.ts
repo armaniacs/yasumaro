@@ -4,6 +4,7 @@
 // developer's view (execution context), not to background/ adjacency.
 
 import { errorMessage } from '../utils/errorUtils.js';
+import { backoffDelayMs } from '../utils/backoff.js';
 import { categorizeError } from './sqliteRpcClient.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
@@ -122,7 +123,8 @@ export class DashboardGateway {
         response = await sendDashboard(payload);
       } catch (error) {
         if (!last) {
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          // Constant inter-attempt delay expressed as multiplier 1.
+          await new Promise(resolve => setTimeout(resolve, backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 })));
           continue;
         }
         const classified = categorizeError(errorMessage(error));
@@ -132,7 +134,7 @@ export class DashboardGateway {
       if (!response.success) {
         const retriable = (response as { retriable?: boolean }).retriable ?? false;
         if (retriable && !last) {
-          await new Promise(resolve => setTimeout(resolve, delayMs));
+          await new Promise(resolve => setTimeout(resolve, backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 })));
           continue;
         }
         const msg = String((response as { error?: string }).error || defaultErrorMessage);
