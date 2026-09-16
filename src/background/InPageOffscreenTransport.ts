@@ -2,13 +2,11 @@
  * InPageOffscreenTransport.ts
  * Firefox container: there is no chrome.offscreen API, so the background
  * event page hosts the storage engine directly and handleOffscreenMessage is
- * invoked in-process. The handler and the sender authorization proof are both
- * produced by the host module (offscreen.ts) and handed to this transport via
- * the constructor — this file never imports the engine graph, so the Chromium
- * build stays free of it, and the sender is not fabricated here.
+ * invoked in-process. The handler is produced by the host module (offscreen.ts)
+ * and handed to this transport via the constructor — this file never imports
+ * the engine graph, so the Chromium build stays free of it.
  */
 
-import type { AuthorizedSqliteSender } from '../utils/extensionOrigin.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
 import { BaseOffscreenTransport } from './OffscreenTransportBase.js';
@@ -21,14 +19,10 @@ type OffscreenMessageHandler = (
 
 export class InPageOffscreenTransport extends BaseOffscreenTransport {
   private readonly handleOffscreenMessage: OffscreenMessageHandler;
-  /** Authorization proof for the event-page context, produced by
-   *  authorizeSqliteSender — dispatched as the sender identity. */
-  private readonly authorizedSender: AuthorizedSqliteSender;
 
-  constructor(handleOffscreenMessage: OffscreenMessageHandler, authorizedSender: AuthorizedSqliteSender) {
+  constructor(handleOffscreenMessage: OffscreenMessageHandler) {
     super();
     this.handleOffscreenMessage = handleOffscreenMessage;
-    this.authorizedSender = authorizedSender;
   }
 
   protected invalidateContainer(): void {
@@ -38,19 +32,27 @@ export class InPageOffscreenTransport extends BaseOffscreenTransport {
 
   /**
    * Send one message by invoking the offscreen message handler in-process.
-   * The dispatched sender is this transport's own authorization proof — the
-   * offscreen gate (authorizeSqliteSender) accepted the event-page context at
-   * construction time, so no sender fabrication happens here.
+   *
+   * The dispatched sender describes the real event-page context (our runtime id
+   * + our own extension URL), because the offscreen gate authorizes every
+   * SQLITE_* message itself via authorizeSqliteSender. Handing it the opaque
+   * authorization proof instead does not work: the proof carries no `id`, so
+   * the gate re-authorizes it as an external extension and rejects every
+   * SQLite call on Firefox.
    */
   protected async sendOnce(
     type: SqliteMessageType,
     payload: Record<string, unknown>,
     traceId: string = ''
   ): Promise<OffscreenResponse> {
+    const sender = {
+      id: chrome.runtime.id,
+      url: chrome.runtime.getURL('background.js'),
+    } as chrome.runtime.MessageSender;
     return this.sendOnceWithTimeout(type, traceId, (signal) => {
       const accepted = this.handleOffscreenMessage(
         { type, target: 'offscreen', payload, traceId },
-        this.authorizedSender as unknown as chrome.runtime.MessageSender,
+        sender,
         (response: unknown) => {
           const res = response as OffscreenResponse;
           if (res && 'error' in res && res.error) {

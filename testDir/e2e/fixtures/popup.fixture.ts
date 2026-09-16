@@ -2,6 +2,7 @@ import { test as base, expect, Page, BrowserContext } from '@playwright/test';
 import { chromium, type ChromiumBrowserContext } from 'playwright';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { dismissConsentModal } from './consentModal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -102,12 +103,7 @@ const testExt = base.extend<PopupFixtures>({
 
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-    // Accept privacy consent if modal is visible
-    const consentModal = page.locator('#privacyConsentModal');
-    if (await consentModal.isVisible().catch(() => false)) {
-      await page.locator('#consentCheckbox').check();
-      await page.locator('#acceptConsentBtn').click();
-    }
+    await dismissConsentModal(page);
 
     await use(page);
   },
