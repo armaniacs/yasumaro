@@ -15,9 +15,9 @@
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
-import { renderFileTemplate, getActiveTemplate, getHostname } from '../utils/markdownTemplateUtils.js';
+import { renderFileTemplate, getActiveTemplate } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
-import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
+import { buildTemplateEntryData } from '../utils/markdownFormatter.js';
 import { getPlatformOs } from '../utils/deviceUtils.js';
 import { resolveSafeExportDir } from '../utils/pathSanitizer.js';
 
@@ -57,6 +57,8 @@ export function getLocalDateString(timestamp: number): string {
 /**
  * Convert a single browsing log entry into template entry data.
  * VULN-020: sanitize title and URL to prevent Markdown injection.
+ * Delegates to the entry-markdown SSOT (PBI-04); the tag chain here is
+ * obsidian-only (legacy), unlike the pipeline's linkText-wrapped tags.
  */
 export function toMarkdownTemplateEntryData(entry: {
   title?: string | null;
@@ -65,23 +67,16 @@ export function toMarkdownTemplateEntryData(entry: {
   tags?: string | null;
   created_at: number;
 }): MarkdownTemplateEntryData {
-  const timestamp = new Date(entry.created_at).toLocaleTimeString('ja-JP', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  // VULN-017: title is placed inside `[title](url)`; escape link-breakout chars
-  // so a `](url)` suffix cannot close the wrapper.
-  const title = sanitizeForMarkdownLinkText(entry.title || entry.url || 'Untitled');
-  const url = sanitizeUrlForMarkdownTarget(entry.url);
-  const summary = sanitizeForObsidian(
-    (entry.summary || 'Summary not available.').replace(/\n+/g, ' ').replace(/  +/g, ' ').trim(),
+  return buildTemplateEntryData(
+    {
+      title: entry.title,
+      url: entry.url,
+      summary: entry.summary,
+      tags: entry.tags,
+      createdAt: entry.created_at,
+    },
+    { tagChain: 'obsidian' },
   );
-  const tagsList = entry.tags
-    ? entry.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => `#${sanitizeForObsidian(t)}`)
-    : [];
-  const tags = tagsList.length > 0 ? tagsList.join(' ') + ' ' : '';
-  const domain = getHostname(url);
-  return { timestamp, title, url, summary, tags, domain };
 }
 
 /** Group entries by their local date. Insertion order is preserved. */
