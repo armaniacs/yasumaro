@@ -27,16 +27,21 @@ src/utils/pathSanitizer.ts
 src/utils/cssUtils.ts
 src/utils/crypto/primitives.ts
 src/utils/crypto/envelope.ts
-src/utils/crypto/hmacKeyStore.ts
+src/utils/crypto/types.ts
+src/utils/crypto/cryptoParams.ts
 src/utils/logger/types.ts
 src/utils/logger/buffer.ts
-src/utils/logger/sanitize.ts
 src/utils/commonTypes.ts
-src/utils/buffer.ts
-src/utils/i18nPlural.ts
+src/utils/types.ts
+src/utils/urlEntry.ts
+src/utils/luhn.ts
 ```
 
 `logger/` の一部は `piiSanitizer` に依存するが、これは Layer 0 内の相互依存として許容する。
+ただし `logger/sanitize.ts` は Layer 2 の `piiSanitizer` を静的に import するため Layer 2 に分類する
+（PBI 2026-09-17-05 で機械検査の対象外から除外し、Layer 0 リストから移動）。
+`crypto/hmacKeyStore.ts` は `chrome.storage` への副作用を持つため Layer 1 に分類する
+（旧分類 Layer 0 は誤り。PBI 2026-09-17-05 で訂正）。
 
 ### Layer 1 — Infrastructure (Layer 0 のみ依存)
 
@@ -44,33 +49,46 @@ src/utils/i18nPlural.ts
 src/utils/storage/types.ts
 src/utils/storage/defaults.ts
 src/utils/storage/encryptionSession.ts
-src/utils/storage/settingsStore.ts  — ただし trustDb との循環あり (Layer 1-循環として例外扱い)
+src/utils/storage/SettingsRepository.ts — 旧 settingsStore.ts の後継。trustDb 系との循環は dynamic import で回避（Layer 1-循環の後継関係）
 src/utils/storage/savedUrlRepository.ts
 src/utils/storage/domainFilterCache.ts
 src/utils/storage/privacyConsent.ts — 同意状態ロジック。background/popup/dashboard から直接 import する中立配置
 src/utils/storage/quota.ts
 src/utils/storage/storageMaintenance.ts
-src/utils/optimisticLock.ts
+src/utils/storage/storageTransaction.ts — withOptimisticLock 等（旧 optimisticLock.ts の後継）
 src/utils/Mutex.ts
 src/utils/rateLimiter.ts
-src/utils/domainUtils.ts
 src/utils/trustDb/domainValidation.ts
 src/utils/trustDb/managedStringList.ts
+src/utils/crypto/hmacKeyStore.ts — chrome.storage への副作用を持つため Layer 0 から移動（PBI 2026-09-17-05）
+src/utils/masterPassword.ts — chrome.storage への副作用を持つ Infrastructure として Layer 1 に分類（PBI 2026-09-17-05）
+src/utils/i18nPlural.ts — chrome.i18n を参照するため Layer 0 から移動（PBI 2026-09-17-05）
 ```
+
+旧 `settingsStore.ts`・旧 `optimisticLock.ts` は削除済み（後継は上記の通り）。旧分類表に残っていた
+`src/utils/buffer.ts` は存在しないファイルのため削除（`logger/buffer.ts` は Layer 0 として存続）。
 
 ### Layer 1-循環 — Infrastructure (循環あり・例外)
 
-```
-src/utils/storage/settingsStore.ts  ↔  src/utils/trustDb/trustDb.ts
-  - settingsStore.ts: getSettings() 初回実行時に TrustDb 初期化を dynamic import でトリガー (L72)
-  - trustDb.ts: Tranco version の保存/読取で getSettings/saveSettings を dynamic import で利用 (L62-66)
-  - 回避手法: 双方とも await import() による遅延 import。ESM モジュールキャッシュで2回目以降即時解決
-  - 詳細は ADR 2026-08-20-utils-layer-circular-dependency を参照
+旧 `settingsStore.ts` ↔ 旧 `trustDb.ts` は分割済み。現行の後継関係（PBI 2026-09-17-05 で確認）:
 
-src/utils/trustDb/trancoConsentManager.ts → src/utils/storage.ts (barrel) + settingsStore (dynamic)
+```
+src/utils/trustDb/TrustDbKernel.ts → src/utils/storage/SettingsRepository.ts (dynamic のみ)
+  - TrustDbKernel: settingsReader の getAll/setAll が await import() で遅延参照
+  - 回避手法: await import() による遅延 import。ESM モジュールキャッシュで2回目以降即時解決
+  - 詳細は ADR 2026-08-20-utils-layer-circular-dependency を参照（旧ファイル名時代の記録）
+
+src/utils/trustDb/trancoConsentManager.ts → src/utils/storage.ts (barrel) + settingsStore 系 (dynamic)
+  - getSettings/saveSettings を await import('../storage.js') で実行時に取得
+
+src/utils/storage/storageMaintenance.ts → src/background/sqlite/offscreenGateway.js (dynamic)
+  - SqliteClient を await import() で遅延参照し、utils → background の静的逆辺を回避
 ```
 
 これらは削除不可。将来のリファクタで「なぜこんな複雑な import？」と除去しないこと。
+循環例外ファイル群は現状ルールの検査対象外（未分類）のため、dynamic → static 化の検出は
+レビュー＋下記「機械検査」節の grep 例で行う。分類済みファイルへの新規の上位層 static import
+は `local/utils-layer-boundary` が検出する。
 
 ### Layer 2 — High-level Utilities (Layer 0/1 依存)
 
@@ -88,6 +106,8 @@ src/utils/cspValidator.ts
 src/utils/trustDb/  — 上記循環を除き Layer 0/1 のみに依存するモジュール群
 src/utils/ublockParser/
 src/utils/ublockMatcher/
+src/utils/domainUtils.ts — Layer 2 の ublockMatcher を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
+src/utils/logger/sanitize.ts — Layer 2 の piiSanitizer を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
 ```
 
 ### Barrel — Re-export (retired)
@@ -122,11 +142,51 @@ grep -rn "@layer" src/utils/ | wc -l
 grep -rn "from.*storage" src/utils/errorUtils.ts src/utils/objectUtils.ts src/utils/crypto/primitives.ts
 
 # 循環 import が dynamic import であることを検証
-grep -n "await import" src/utils/storage/settingsStore.ts src/utils/trustDb/trustDb.ts
+grep -n "await import" src/utils/storage/SettingsRepository.ts src/utils/trustDb/TrustDbKernel.ts
 
 # background から UI 層 (popup/dashboard) への上向き import がないことを検証 (出力がなければ正常)
 grep -rn "from.*popup/" src/background/
 grep -rn "from.*dashboard/" src/background/
+```
+
+## 機械検査（PBI 2026-09-17-05）
+
+層境界の一部は `local/utils-layer-boundary`（`eslint/rules/utils-layer-boundary.mjs`、
+`eslint.config.js` で error 配線）により lint で強制される。層ファイルリストの SSOT は
+ルール内の `LAYER0_FILES`／`LAYER1_FILES`／`LAYER2_MODULES` であり、本ドキュメントの分類表と
+対応する。両者に差異を見つけたら分類表・ルールのどちらが正しいかを判断し、揃えること。
+
+検査範囲（v1 — 最大の利益・最小のリスト）:
+
+- Layer 0: `chrome` グローバル参照の禁止（AST の MemberExpression 検出のため、
+  コメント・文字列リテラル内の `chrome.*` 言及は誤検出しない。ローカル変数の
+  shadowing は scope 解決で除外）。Layer 1／Layer 2／Barrel への静的 import 禁止。
+- Layer 1: Layer 2 への静的 import 禁止。
+- 検査対象は静的 `ImportDeclaration` のみ。dynamic `import()` は循環回避の正規手法として
+  一律対象外（ADR 記録済み例外は構成上 lint を通過する）。`import type` は消去されるため対象外。
+- Barrel 経由の新規 import 抑制は既存 `no-restricted-imports`（warn）を維持する。
+  本ルールの Layer 1 検査は Barrel 宛を対象外とし二重報告を避ける（Layer 0 の純粋性としての
+  Barrel 禁止のみ本ルールが担う）。warn → error への引き上げは barrel 移行の進捗を見て別途判断する。
+
+既知の暫定許可（`eslint.config.js` の `allow`、ADR 未記録）:
+
+- `storage/defaults.ts` → `aiSummaryCleaner/rules.js`: DEFAULT_SETTINGS が SSOT ルール表の
+  閾値を束ねるための静的 import。表の複製は drift を再発させるため現状維持。
+  後続対応として ADR 化が必要（純粋定数の抽出か分類見直しのいずれか）。
+
+未分類・後続対応（本ルールの検査対象外。手を付ける際は分類→リスト追加の順で行う）:
+
+- `domainFilter/DomainFilter.ts`（`// @layer 1` 自己宣言だが `domainUtils` 経由で Layer 2 に到達）
+- `storage/SettingsRepository.ts`・`storage/storageTransaction.ts`・`RateLimitService.ts` 等の
+  Wave 以降の新規モジュール群
+- Layer 1 の厳密化（「Layer 0 以外への静的 import 禁止」）は上記分類の完了後に検討する
+
+```bash
+# 循環 import が dynamic import のままであることを検証（出力の static 化に注意）
+grep -n "await import" src/utils/trustDb/TrustDbKernel.ts src/utils/storage/SettingsRepository.ts src/utils/trustDb/trancoConsentManager.ts src/utils/storage/storageMaintenance.ts
+
+# 未分類モジュールの洗い出し（ルール対象外の src/utils ファイル）
+comm -23 <(find src/utils -name '*.ts' -not -path '*__tests__*' | sort) <(grep -o "src/utils/[^']*\.ts" eslint/rules/utils-layer-boundary.mjs | sort -u)
 ```
 
 ## 新規ファイル配置チェックリスト
