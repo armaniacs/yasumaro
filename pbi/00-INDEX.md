@@ -14,12 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-16 hashUrl の locality 改善 — 1件（04 から分離）
-
-HMAC 統合（04）の残項目。`hashUrl` はログ出力時の URL マスキング専用で暗号プリミティブとしての用途を持たないが、移動先によっては **logger → crypto の依存**が生まれ層構造に影響しうる。配置先の判断を着手条件とした。
-
-- ⬜🟢🟡🔧 2026-09-16-05-refactor-hash-url-locality.md（`hashUrl` を crypto から移動し暗号モジュールの責務を絞る。呼び出しは16箇所。**配置先の判断が先** — logger 配下 / 独立モジュール / 移動しない の3案）
-
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
 Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべて完了。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。実機 QA で発見した4不具合（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）はすべて修正済み。AMO 公開は将来対応（`2026-09-15-01`・着手禁止）。台帳は `2026-09-14-00-backlog-firefox-support.md`。
@@ -66,6 +60,14 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-17 hashUrl の locality 改善 — 1件完了（05）
+
+`hashUrl` を `crypto/` から `utils/urlHash.ts` へ移し、暗号モジュールの責務を暗号操作だけに絞った。
+
+着手条件としていた「logger → crypto の依存が層構造を変えるのでは」という懸念は、実測で否定された（crypto は logger を import しておらず、logger は既に `piiSanitizer` 等に依存している）。`piiSanitizer.ts` がプライバシー保護目的のマスキングとして `utils/` 直下に置かれている先例に沿い、独立モジュールとした。
+
+動作は一切変えていない。ログに出るハッシュ値が変われば過去ログとの突合ができなくなるため、固定値でのテストを追加して固定した。
 
 ### 2026-09-16 crypto の HMAC 統合 — 1件完了（04）
 

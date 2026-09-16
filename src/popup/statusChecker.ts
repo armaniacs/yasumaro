@@ -5,7 +5,7 @@ import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { hashUrl } from '../utils/crypto/index.js';
+import { hashUrl } from '../utils/urlHash.js';
 import { matchesDomainPattern } from '../utils/wildcardToRegex.js';
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { pickDefined } from '../utils/objectUtils.js';
