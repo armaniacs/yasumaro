@@ -84,4 +84,10 @@ export class MessageTransport {
   }
 }
 
+/**
+ * Stateless convenience singleton: MessageTransport holds no SW-lifetime state
+ * (transport and clock are constructor-injected for tests), so a shared
+ * instance needs neither container registration nor restart handling.
+ * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
+ */
 export const messageTransport = new MessageTransport();
