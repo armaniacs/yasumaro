@@ -47,14 +47,14 @@ Scenario: Layer 1 から Layer 2 への import は lint 違反になる
 
 ## 受け入れ基準
 
-- [ ] Layer 0 の chrome 参照禁止・Layer 2 参照禁止が lint で検出される
-- [ ] Layer 1 の Layer 0 以外への静的 import が lint で検出される
-- [ ] ADR 記録済みの Layer 1-循環例外（dynamic import による回避）が許可リストで lint を通過する
-- [ ] Barrel からの新規 import 抑制の方針が確定している（既存 `no-restricted-imports` の warn 維持・強化・新ルール統合のいずれかを明示）
-- [ ] 実装方式（既存カスタムプラグインへのルール追加 vs `eslint-plugin-boundaries`）の選択と理由が本 PBI に記録されている
-- [ ] 既存コードの抵触箇所について (a) コード是正／(b) 分類訂正＋ADR の判断が一件ごとに記録されている
-- [ ] `npm run lint` が green（新規ルール適用後の既存違反は是正・許可リスト・warn のいずれかで処理済み）
-- [ ] 物理的なディレクトリ移動を行っていない（スコープ外の再階層化に着手していない）
+- [x] Layer 0 の chrome 参照禁止・Layer 2 参照禁止が lint で検出される
+- [x] Layer 1 の Layer 0 以外への静的 import が lint で検出される
+- [x] ADR 記録済みの Layer 1-循環例外（dynamic import による回避）が許可リストで lint を通過する
+- [x] Barrel からの新規 import 抑制の方針が確定している（既存 `no-restricted-imports` の warn 維持・強化・新ルール統合のいずれかを明示）
+- [x] 実装方式（既存カスタムプラグインへのルール追加 vs `eslint-plugin-boundaries`）の選択と理由が本 PBI に記録されている
+- [x] 既存コードの抵触箇所について (a) コード是正／(b) 分類訂正＋ADR の判断が一件ごとに記録されている
+- [x] `npm run lint` が green（新規ルール適用後の既存違反は是正・許可リスト・warn のいずれかで処理済み）
+- [x] 物理的なディレクトリ移動を行っていない（スコープ外の再階層化に着手していない）
 
 ## テスト戦略
 
@@ -116,7 +116,7 @@ LAYERS.md の「違反検出」節の grep 例を起点に初回スキャンす�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
-- [ ] 既存コードの抵触箇所の (a)／(b) 判断記録が本 PBI に残っている
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
+- [x] 既存コードの抵触箇所の (a)／(b) 判断記録が本 PBI に残っている

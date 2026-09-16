@@ -42,12 +42,12 @@ Scenario: 脱出文字を含むタグが obsidianList スタイルで無害化�
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/markdownFormatter.ts` に `buildEntryMarkdown(input, style)` が新設され、サニタイズ適用順序を唯一ここで所有している
-- [ ] 4箇所（`formatMarkdownStep`／`formatEntriesToMarkdown`／`markdownExport`／`gistSyncTarget`）が `buildEntryMarkdown` への委譲に置換され、重複実装が削除されている
-- [ ] 同一入力に対する生成 Markdown が置換前と byte-identical である（parity テストで全スタイルを pin）
-- [ ] 本 PBI による挙動変更がない（統合のみ。出力差分ゼロ）
-- [ ] 既存テスト（`markdownJoinSafety.test.ts`／`markdownFormatter.test.ts`／`formatMarkdownStep` 系／dashboardSqlite の append 系ハンドラ）が green のままである
-- [ ] `npm run type-check`／`npm run lint`／`npm test` が green である
+- [x] `src/utils/markdownFormatter.ts` に `buildEntryMarkdown(input, style)` が新設され、サニタイズ適用順序を唯一ここで所有している
+- [x] 4箇所（`formatMarkdownStep`／`formatEntriesToMarkdown`／`markdownExport`／`gistSyncTarget`）が `buildEntryMarkdown` への委譲に置換され、重複実装が削除されている
+- [x] 同一入力に対する生成 Markdown が置換前と byte-identical である（parity テストで全スタイルを pin）
+- [x] 本 PBI による挙動変更がない（統合のみ。出力差分ゼロ）
+- [x] 既存テスト（`markdownJoinSafety.test.ts`／`markdownFormatter.test.ts`／`formatMarkdownStep` 系／dashboardSqlite の append 系ハンドラ）が green のままである
+- [x] `npm run type-check`／`npm run lint`／`npm test` が green である
 
 ## テスト戦略
 - parity テスト: 各呼び出し元・各スタイルについて、置換前の出力を期待値として pin し、委譲置換後も byte-identical であることを検証する（タグ有無・summary の区切り・timestamp 出所の違いを網羅）
@@ -78,7 +78,7 @@ Scenario: 脱出文字を含むタグが obsidianList スタイルで無害化�
 - 確認ポイント: 上記 5 ファイル、`markdownJoinSafety.test.ts`、`markdownFormatter.test.ts`、dashboardSqlite の append 系ハンドラ（`deps.ts` の `formatEntriesToMarkdown` 注入）。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
-- [ ] 置換前後の出力 byte-identical を parity テストで確認済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
+- [x] 置換前後の出力 byte-identical を parity テストで確認済み

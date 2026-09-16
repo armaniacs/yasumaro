@@ -35,12 +35,12 @@ Scenario: MV3 SW 再起動時の挙動が ADR に明記される（境界）
 ```
 
 ## 受け入れ基準
-- [ ] 上記6件の singleton それぞれについて「container 経由に寄せるべきか、現状維持で正当か」の裁定が記録されている（テストで InMemory 差し替えが必要な `pendingChromeStorageQueue` 型は seam として意味がある旨を含む）
-- [ ] 新規 SW 依存の推奨パターン（例：新規は manifest 登録を原則とする）が ADR に明記されている
-- [ ] `setPendingWriteQueue` 型の「`onReady` で注入する module 状態」を認める条件が ADR に明記されている
-- [ ] 全面移行はしない方針の場合、その理由と、残す例外の一覧・理由が ADR に列挙されている
-- [ ] コード変更は doc comment レベルに留まっている（挙動変更なし）
-- [ ] `npm run type-check` / `npm test` が green のままである
+- [x] 上記6件の singleton それぞれについて「container 経由に寄せるべきか、現状維持で正当か」の裁定が記録されている（テストで InMemory 差し替えが必要な `pendingChromeStorageQueue` 型は seam として意味がある旨を含む）
+- [x] 新規 SW 依存の推奨パターン（例：新規は manifest 登録を原則とする）が ADR に明記されている
+- [x] `setPendingWriteQueue` 型の「`onReady` で注入する module 状態」を認める条件が ADR に明記されている
+- [x] 全面移行はしない方針の場合、その理由と、残す例外の一覧・理由が ADR に列挙されている
+- [x] コード変更は doc comment レベルに留まっている（挙動変更なし）
+- [x] `npm run type-check` / `npm test` が green のままである
 
 ## 調査手順（investigate 型なのでテスト戦略の代わりにこのセクション）
 1. 事実確認の起点を読む：`createBackgroundServices`（`createBackgroundServices.ts` の composition 構築関数）、`compositionManifest`（`compositionManifest.ts` の登録リスト、`onReady` の有無と内容）、`ServiceContainer`（`serviceContainer.ts` の register/resolve/override）、`service-worker.ts`（起動時の `createBackgroundServices()` 呼び出し）
@@ -60,6 +60,6 @@ Scenario: MV3 SW 再起動時の挙動が ADR に明記される（境界）
 - `createBackgroundServices.ts` の `onReady` 実行ループは現状の登録内容と合わせて確認し、「`onReady` で注入する module 状態」の実態（何が・いつ注入されるか）を事実ベースで ADR に書くこと
 
 ## Definition of Done
-- [ ] 調査結果が ADR として記録される
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 調査結果が ADR として記録される
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
