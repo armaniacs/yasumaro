@@ -14,14 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-16 confirm token 機構の再設計 — 1件（方針決定済み・実装は見送り）
-
-2026-09-16-01 の調査で、confirm token が想定された防御を果たしていないことが判明した。外部からの到達はトークンより手前の3層（`externally_connectable` 未宣言 / `sender.id` 照合 / `extension-only` 登録）で完全に阻止されており、トークンに到達する主体は既に自拡張の拡張ページに限られる。そしてその主体は `create_confirm_token` を自由に呼べるため、**攻撃者に対する追加の障壁はゼロ**。
-
-セキュリティ方針を確認した結果（想定脅威=外部攻撃、ダッシュボードの XSS は対象外）、**現状維持 + ドキュメント修正**を選択した。動作しているものを置き換えるリスクより、何が実際に守っているのかを記録する価値を優先している。
-
-- 🔶🔴🟡🔧 2026-09-16-03-refactor-confirm-token-signature.md（**保留** — 認識のズレは `sqliteOperationSecurity.ts` と `SECURITY_REVIEW_GUIDE.md` で解消済み。payload 署名への置き換えは将来の検討課題として分析を保存）
-
 ### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
 
 第1回診断（archloop-0915）で未消化だった領域（content/visitReporter、crypto/sessionStore、background services）を第2回診断で探索し、8候補を抽出。上位4件（KdfNegotiator 20.0 / VisitPayload 20.0 / alarm seam 統合 10.0 / crypto codec-HMAC 統合 8.0）を PBI 化。残り3件（合成ルート 7.0 / reviewSummary 2.5 / SessionStore durability 1.9）は台帳に将来候補として記録。実行順 = 13 → 14 → 15 → 16（16 は 13 と同じ領域のため最後に置く）。
@@ -105,7 +97,7 @@ Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべ
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-16 archive 系 e2e の恒常的失敗 — 2件完了（01・02）
+### 2026-09-16 archive 系 e2e の恒常的失敗 — 3件完了（01・02・03）
 
 v6.9.2 のリリース確認中に発見した CI `test` ジョブの failure を解消し、**archive 系 e2e を全件グリーンに戻した**（着手時: failed 1 + flaky 5）。原因は独立した3件だった。
 
@@ -113,7 +105,11 @@ v6.9.2 のリリース確認中に発見した CI `test` ジョブの failure �
 - offscreen 喪失が `categorizeError()` の分類から漏れ、Chrome の原文がそのままユーザーに出ていた → 実際の文言2パターンを判定に追加し `retriable: true` へ（01）
 - offscreen のリスナー登録が動的 import の後だったため、生成直後のメッセージが拒否されていた → 同期登録に変更しファクトリ待機をハンドラ内へ（02）
 
-02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、**実測でその前提が誤りと判明**した（破棄されておらず、リスナー未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要だった。派生した設計課題は 2026-09-16-03 に起票済み。
+02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、**実測でその前提が誤りと判明**した（破棄されておらず、リスナー未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要だった。
+
+03 は 01 から派生した設計課題（confirm token の2段階を payload 署名の1段階へ）。セキュリティ方針を確認したうえで **置き換えは実施しないと決定**し、代わりに防御範囲をコードコメントと `SECURITY_REVIEW_GUIDE.md` に記録した。外部からの到達はトークンより手前の3層（`externally_connectable` 未宣言 / `sender.id` 照合 / `extension-only` 登録）で阻止されており、トークンが攻撃者に対して追加の障壁を持たないことが判明したため。再検討する条件も PBI に明記してある。
+
+**v6.9.2 / v6.9.3 としてリリース済み。** 実機で起動直後の操作・SW 終了後の再接続・アーカイブの一連の流れを確認済み。
 
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
 
