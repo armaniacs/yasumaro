@@ -34,6 +34,54 @@ export function getBuiltInAIFlagGuidance(browserName: BrowserName): BuiltInAIFla
 }
 
 /**
+ * Free disk space (bytes) Chromium requires before it will initialize the
+ * on-device model. Chromium enforces 22 GiB; below it `availability()` reports
+ * a bare 'unavailable' with no machine-readable reason, so we re-derive the
+ * cause ourselves to avoid telling users to enable a flag they already enabled.
+ */
+const BUILT_IN_AI_REQUIRED_FREE_BYTES = 22 * 1024 * 1024 * 1024;
+
+/** Free-space reading used to explain an 'unavailable' Built-in AI status. */
+export interface BuiltInAIDiskSpace {
+    freeBytes: number;
+    requiredBytes: number;
+    sufficient: boolean;
+}
+
+/**
+ * Estimate whether the device has enough free space for the on-device model,
+ * or null when the browser gives no usable reading.
+ *
+ * `navigator.storage.estimate()` reports the origin's quota, not the real disk,
+ * but Chromium derives that quota from actual free space, so `quota - usage`
+ * tracks it closely enough to distinguish "no space" from "flag disabled".
+ */
+export async function getBuiltInAIDiskSpace(): Promise<BuiltInAIDiskSpace | null> {
+    if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
+        return null;
+    }
+    try {
+        const { quota, usage } = await navigator.storage.estimate();
+        if (typeof quota !== 'number') {
+            return null;
+        }
+        const freeBytes = Math.max(0, quota - (usage ?? 0));
+        return {
+            freeBytes,
+            requiredBytes: BUILT_IN_AI_REQUIRED_FREE_BYTES,
+            sufficient: freeBytes >= BUILT_IN_AI_REQUIRED_FREE_BYTES
+        };
+    } catch {
+        return null;
+    }
+}
+
+/** Format a byte count as whole gigabytes for user-facing guidance. */
+export function formatGigabytes(bytes: number): string {
+    return `${Math.round(bytes / (1024 * 1024 * 1024))} GB`;
+}
+
+/**
  * Check if the browser supports the side panel API.
  * Available in Chrome 114+ and Edge 114+.
  */

@@ -17,7 +17,7 @@ import { checkPromptSafety } from '../utils/promptSafety.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getProviderMaxTokens } from '../utils/aiLimits.js';
 import { getMessage } from '../utils/i18n.js';
-import { getBrowserName, getBuiltInAIFlagGuidance } from '../utils/browserSupport.js';
+import { getBrowserName, getBuiltInAIFlagGuidance, getBuiltInAIDiskSpace, formatGigabytes } from '../utils/browserSupport.js';
 
 export type BuiltInAIAvailability = 'available' | 'downloadable' | 'downloading' | 'unavailable';
 
@@ -98,11 +98,23 @@ function computeEffectiveMaxChars(staticMaxChars: number, contextWindowTokens: n
 }
 
 /**
- * Build the localized "unavailable" error message, including flag guidance
- * (URL + name) for the detected browser when one is known (Chrome/Edge).
- * Falls back to a generic message when the browser or flag is unrecognized.
+ * Build the localized "unavailable" error message.
+ *
+ * Insufficient disk space is checked first: Chromium reports it as a plain
+ * 'unavailable', so without this the user is told to enable a flag that is
+ * already enabled and the real cause stays hidden.
+ * Otherwise falls back to flag guidance (URL + name) for the detected browser,
+ * or a generic message when the browser or flag is unrecognized.
  */
-function buildUnavailableMessage(status: BuiltInAIAvailability): string {
+async function buildUnavailableMessage(status: BuiltInAIAvailability): Promise<string> {
+    const diskSpace = await getBuiltInAIDiskSpace();
+    if (diskSpace && !diskSpace.sufficient) {
+        const requiredGb = formatGigabytes(diskSpace.requiredBytes);
+        const freeGb = formatGigabytes(diskSpace.freeBytes);
+        return getMessage('builtInAiUnavailableDiskSpace', { status, requiredGb, freeGb })
+            || `Built-in AI is currently ${status}. The on-device model needs about ${requiredGb} of free disk space (currently ${freeGb} free).`;
+    }
+
     const browserName = getBrowserName();
     const guidance = getBuiltInAIFlagGuidance(browserName);
     if (!guidance) {
@@ -182,7 +194,7 @@ export class BuiltInAIClient {
             ? this._availabilityCache
             : await this.getAvailability();
         if (status !== 'available') {
-            return { success: false, error: buildUnavailableMessage(status) };
+            return { success: false, error: await buildUnavailableMessage(status) };
         }
 
         const languageModel = globalThis.LanguageModel;

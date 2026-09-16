@@ -10,6 +10,7 @@
 import { test as base, expect, chromium, ChromiumBrowserContext, Page } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { dismissConsentModal } from './consentModal.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -162,12 +163,7 @@ export const test = base.extend<PreviewFixtures>({
 
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
 
-    // Dismiss the consent modal if present.
-    const consentModal = page.locator('#privacyConsentModal');
-    if (await consentModal.isVisible().catch(() => false)) {
-      await page.locator('#consentCheckbox').check();
-      await page.locator('#acceptConsentBtn').click();
-    }
+    await dismissConsentModal(page);
 
     // page.goto() resolving only means the 'load' event fired — initPopup()'s
     // async chain (loadCurrentTab → resetRecordButton, the sole place that

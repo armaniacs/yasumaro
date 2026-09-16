@@ -58,8 +58,9 @@ export async function createOffscreenTransport(): Promise<OffscreenTransport> {
       import('./InPageOffscreenTransport.js'),
       import('../offscreen/offscreen.js'),
     ]);
-    // The event-page sender is authorized by the same SSOT policy the offscreen
-    // document uses; the resulting proof is dispatched as the sender identity.
+    // Fail fast at wiring time if the event-page context would not satisfy the
+    // offscreen gate; the gate still authorizes every message itself, against
+    // the real sender the transport dispatches.
     const auth = authorizeSqliteSender(
       { id: chrome.runtime.id, url: chrome.runtime.getURL('background.js') },
       chrome.runtime.id,
@@ -67,7 +68,7 @@ export async function createOffscreenTransport(): Promise<OffscreenTransport> {
     if (!auth.ok) {
       throw new Error(`In-page offscreen host context rejected: ${auth.reason}`);
     }
-    return new InPageOffscreenTransport(offscreen.handleOffscreenMessage, auth.proof);
+    return new InPageOffscreenTransport(offscreen.handleOffscreenMessage);
   }
   const { ChromeOffscreenTransport } = await import('./ChromeOffscreenTransport.js');
   return new ChromeOffscreenTransport();

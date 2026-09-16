@@ -390,5 +390,33 @@ describe('BuiltInAIClient', () => {
             expect(result.error).not.toContain('://flags');
             expect(result.error).toContain('unavailable');
         });
+
+        test('reports insufficient disk space instead of flag guidance', async () => {
+            const GIB = 1024 * 1024 * 1024;
+            vi.stubGlobal('navigator', {
+                userAgent: 'Mozilla/5.0 Chrome/126.0.0.0 Edg/126.0.0.0',
+                storage: { estimate: async () => ({ quota: 20 * GIB, usage: 10 * GIB }) }
+            });
+            mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+            const result = await client.summarize('Some content');
+
+            expect(result.error).toContain('disk space');
+            expect(result.error).toContain('10 GB');
+            expect(result.error).not.toContain('://flags');
+        });
+
+        test('keeps flag guidance when disk space is sufficient', async () => {
+            const GIB = 1024 * 1024 * 1024;
+            vi.stubGlobal('navigator', {
+                userAgent: 'Mozilla/5.0 Chrome/126.0.0.0 Edg/126.0.0.0',
+                storage: { estimate: async () => ({ quota: 100 * GIB, usage: 10 * GIB }) }
+            });
+            mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+            const result = await client.summarize('Some content');
+
+            expect(result.error).toContain('edge://flags');
+        });
     });
 });
