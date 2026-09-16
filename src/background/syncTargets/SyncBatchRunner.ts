@@ -3,6 +3,10 @@
  * Shared batch-sync policy for SyncTarget implementations (Gist, Obsidian).
  * Centralizes BATCH_SIZE and the listPending -> sync -> markSynced loop so
  * individual targets only implement their own I/O (fetch pending rows, mark one row synced).
+ *
+ * NOTE: currently dedicated to GistSyncTarget, the only active implementation.
+ * Re-evaluate this abstraction when adding a new sync destination
+ * (Obsidian writes are owned by the pipeline's saveToObsidianStep).
  */
 
 import { addLog, LogType } from '../../utils/logger.js';

@@ -2,6 +2,10 @@
  * SyncTarget.ts
  * Interface for sync targets (Obsidian, Gist, etc.).
  * Each target implements sync/syncBatch/testConnection for its specific API.
+ *
+ * NOTE: currently dedicated to GistSyncTarget, the only active implementation.
+ * Re-evaluate this abstraction when adding a new sync destination
+ * (Obsidian writes are owned by the pipeline's saveToObsidianStep).
  */
 
 export interface SyncTarget {

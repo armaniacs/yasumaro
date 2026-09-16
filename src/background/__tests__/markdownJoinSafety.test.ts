@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ObsidianSyncService } from '../obsidianSyncService.js';
 import { GistSyncTarget } from '../syncTargets/gistSyncTarget.js';
 import { formatEntryToMarkdown } from '../../utils/markdownFormatter.js';
 import { formatMarkdownStep } from '../pipeline/steps/formatMarkdownStep.js';
@@ -59,32 +58,6 @@ describe('markdown join safety - title `](url)` suffix cannot break out', () => 
     } as unknown as BrowsingLogEntry;
     const md = formatEntryToMarkdown(entry);
     expect(hasUnescapedEvilLink(md)).toBe(false);
-  });
-
-  it('ObsidianSyncService: title suffix does not break out', async () => {
-    const appended: string[] = [];
-    const mockObsidianClient = {
-      appendToDailyNote: vi.fn(async (m: string) => { appended.push(m); }),
-      testConnection: vi.fn().mockResolvedValue({ success: true }),
-    };
-    const mockSqliteClient = {
-      mutate: vi.fn().mockResolvedValue({ success: true }),
-      query: vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } }),
-      getStatus: vi.fn().mockResolvedValue({ initialized: true }),
-    };
-    const mockSettingsReader = {
-      getMany: vi.fn().mockResolvedValue({ obsidian_api_key: 'test-api-key-1234567' }),
-      getAll: vi.fn(),
-    };
-    const service = new ObsidianSyncService(
-      mockObsidianClient as never,
-      mockSqliteClient as never,
-      mockSettingsReader as never,
-    );
-    await service.sync(1, 'https://example.com', EVIL_TITLE, 'clean summary');
-    expect(appended).toHaveLength(1);
-    expect(appended[0]).toBeDefined();
-    expect(hasUnescapedEvilLink(appended[0]!)).toBe(false);
   });
 
   it('GistSyncTarget: title suffix does not break out', async () => {
