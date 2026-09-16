@@ -89,6 +89,46 @@ export interface HttpSummaryHooks {
     extractSummary(data: unknown, traceId: string): Promise<AISummaryResult>;
 }
 
+/** HTTP接続テストリクエスト（hooks.buildRequest の成功形） */
+export interface HttpTestRequest {
+    url: string;
+    headers: Record<string, string>;
+    body: string;
+    /** debug.modelName に記録するモデル名（Gemini は models/ 接頭辞除去後） */
+    modelName?: string | undefined;
+}
+
+/** extractResponse に渡すテンプレート確定済みの診断情報 */
+export interface HttpTestContext {
+    /** `POST ${url}` 形式の診断用エンドポイント表記 */
+    endpoint: string;
+    statusCode: number;
+    modelName?: string | undefined;
+}
+
+/**
+ * HTTP接続テストフローのプロバイダー固有フック。順序・fetch・リトライ・
+ * HTTPエラー変換・上限付き読み取り・例外変換・debug 組み立てはテンプレートが
+ * 所有し、ここには資格文面・リクエスト構築・parse の癖だけを置く。
+ */
+export interface HttpTestHooks {
+    /** mapConnectionError に渡す表示ラベル */
+    providerLabel: string;
+    /**
+     * parseAndMapFetchError に渡す表示ラベル。現行挙動維持のため providerLabel
+     * とは分離している（OpenAI 系の catch 側は 'OpenAI' 固定が既存仕様）。
+     * 文言の統一は別 PBI の範囲。
+     */
+    fetchErrorLabel: string;
+    timeoutMs: number;
+    /** 資格不備があればその失敗結果、なければ null */
+    checkCredentials(): AIProviderConnectionResult | null;
+    /** リクエスト構築。構築に失敗したら { failure } を返す */
+    buildRequest(): Promise<HttpTestRequest | { failure: AIProviderConnectionResult }>;
+    /** 応答 JSON のプロバイダー固有 parse */
+    extractResponse(data: unknown, ctx: HttpTestContext): Promise<AIProviderConnectionResult> | AIProviderConnectionResult;
+}
+
 /**
  * Byte cap for AI provider HTTP JSON responses (summary + testConnection).
  * Single source of truth — both flows read via readJsonCapped with this value.
@@ -294,6 +334,70 @@ export abstract class AIProviderStrategy {
                 return { success: false, summary: 'Error: AI request timed out. Please check your connection.' };
             }
             return { success: false, summary: 'Error: Failed to generate summary. Please try again or check your settings.' };
+        }
+    }
+
+    /**
+     * HTTP接続テストフローのテンプレートメソッド。資格確認→リクエスト構築→
+     * fetch（接続テスト共通リトライ方針）→HTTPエラー変換→上限付き読み取り→
+     * parse→例外変換の順序を所有し、プロバイダー固有の癖だけを hooks に委譲する。
+     *
+     * executeHttpSummaryFlow と対称の Template Method。Gemini / OpenAI の
+     * 2 adapter が使う real seam。
+     */
+    protected async executeHttpTestFlow(
+        hooks: HttpTestHooks,
+    ): Promise<AIProviderConnectionResult> {
+        const credentialFailure = hooks.checkCredentials();
+        if (credentialFailure) {
+            return credentialFailure;
+        }
+
+        const built = await hooks.buildRequest();
+        if ('failure' in built) {
+            return built.failure;
+        }
+
+        const endpoint = `POST ${built.url}`;
+        try {
+            const allowedUrls = await this.getAllowedUrlsForRequests();
+
+            const response = await fetchWithRetry(built.url, {
+                method: 'POST',
+                headers: built.headers,
+                body: built.body,
+                allowedUrls,
+                timeoutMs: hooks.timeoutMs,
+            }, {
+                maxRetryCount: 1,
+                initialDelayMs: 500,
+                backoffMultiplier: 2,
+                maxDelayMs: 3000,
+            });
+
+            if (!response.ok) {
+                const mapped = this.mapConnectionError(response.status, hooks.providerLabel);
+                return {
+                    ...mapped,
+                    debug: {
+                        ...mapped.debug,
+                        prompt: CONNECTION_TEST_PROMPT,
+                        endpoint,
+                        statusCode: response.status,
+                    },
+                };
+            }
+
+            const data = await readJsonCapped(response, MAX_AI_HTTP_RESPONSE_BYTES);
+            return hooks.extractResponse(data, { endpoint, statusCode: response.status, modelName: built.modelName });
+        } catch (e: unknown) {
+            const msg = errorMessage(e);
+            const errorName = e instanceof Error ? e.name : undefined;
+            const mapped = this.parseAndMapFetchError(msg, hooks.fetchErrorLabel, errorName);
+            return {
+                ...mapped,
+                debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint },
+            };
         }
     }
 

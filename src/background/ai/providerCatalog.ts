@@ -3,7 +3,7 @@
 // Adding a provider = one row in PROVIDER_CATALOG + i18n keys.
 
 import { StorageKeys } from '../../utils/storage/types.js';
-import type { ProviderId } from '../../utils/storage/types.js';
+import type { ProviderId, StorageKey } from '../../utils/storage/types.js';
 import type { Settings } from '../../utils/storage/types.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../utils/storage/providerAllowlist.js';
 import type { AIProviderStrategy } from './providers/index.js';
@@ -27,7 +27,7 @@ export interface ProviderCatalogEntry {
   readonly isLocal: boolean;
   readonly label: string;
   readonly cspDomain?: string;
-  readonly contentCharsKey?: string;
+  readonly contentCharsKey?: StorageKey;
   readonly labelI18nKey: string;
   readonly fieldPlaceholders?: {
     readonly apiKey?: string;
@@ -215,16 +215,21 @@ export { isAllowedProviderBaseUrl } from './providerSecurityPolicy.js';
 /**
  * Single seam for strategy creation — hides the if (gemini) / if (built-in-ai) switch.
  * RemoteAIService and tests should use this instead of branching on providerId.
+ *
+ * Resolved catalog entry's contentCharsKey is handed to the provider so the
+ * catalog is the SSOT for the truncation-limit key (PBI 2026-09-17-10).
+ * Entries without the key (lm-studio/ollama) fall back inside the provider to
+ * the legacy key, preserving current behavior.
  */
 export function createProviderStrategy(providerId: string, settings: Settings): AIProviderStrategy {
-  void resolveCatalogEntry(providerId);
+  const entry = resolveCatalogEntry(providerId);
   // Use entry to determine strategy; no caller needs to know the branching.
   if (providerId === 'gemini') {
-    return new GeminiProvider(settings);
+    return new GeminiProvider(settings, entry.contentCharsKey ?? StorageKeys.GEMINI_CONTENT_CHARS);
   }
   if (providerId === 'built-in-ai') {
     return new BuiltInAiProvider(settings);
   }
-  return new GenericOpenAICompatibleProvider(settings, providerId);
+  return new GenericOpenAICompatibleProvider(settings, providerId, entry.contentCharsKey);
 }
 

@@ -3,15 +3,14 @@
  * Google Gemini APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT, MAX_AI_HTTP_RESPONSE_BYTES } from './ProviderStrategy.js';
-import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
-import { Settings, StorageKeys } from '../../../utils/storage/types.js';
+import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
-import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 
 interface GeminiApiResponse {
     candidates?: Array<{
@@ -32,8 +31,14 @@ export class GeminiProvider extends AIProviderStrategy {
     private apiKey: string;
     private model: string;
     private timeoutMs: number;
+    /**
+     * 要約切り詰め上限を参照するストレージキー。providerCatalog の
+     * contentCharsKey が SSOT であり、createProviderStrategy がエントリ値を
+     * 渡す。デフォルトは現行キーと同一のため、直接構築時の挙動は不変。
+     */
+    private readonly contentCharsKey: StorageKey;
 
-    constructor(settings: Settings) {
+    constructor(settings: Settings, contentCharsKey: StorageKey = StorageKeys.GEMINI_CONTENT_CHARS) {
         super(settings);
         // storage.jsのStorageKeysと対応するキー名を使用（snake_case）。
         // GEMINI_API_KEY は復号済みで string として返るが、型上 EncryptedData も
@@ -45,6 +50,7 @@ export class GeminiProvider extends AIProviderStrategy {
         // タイムアウト設定: 設定値が0の場合はデフォルト30000ms
         const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
         this.timeoutMs = storedTimeout > 0 ? storedTimeout : 30000;
+        this.contentCharsKey = contentCharsKey;
     }
 
     getName(): string {
@@ -80,7 +86,7 @@ export class GeminiProvider extends AIProviderStrategy {
             checkCredentials: () => !this.apiKey
                 ? "Error: API key is missing. Please check your settings."
                 : null,
-            contentLimit: () => this.getMaxContentChars(30_000, StorageKeys.GEMINI_CONTENT_CHARS),
+            contentLimit: () => this.getMaxContentChars(30_000, this.contentCharsKey),
             prepareRequest: async (userPrompt, systemPrompt) => {
                 let modelSegment: string;
                 try {
@@ -136,135 +142,111 @@ export class GeminiProvider extends AIProviderStrategy {
     }
 
     async testConnection(): Promise<AIProviderConnectionResult> {
-        if (!this.apiKey) {
-            return {
-                success: false,
-                message: 'Gemini API Key is not set. Please enter it in the AI provider settings.',
-                debug: { error: 'API key is missing' },
-            };
-        }
+        // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
+        // 基底テンプレートが所有。ここには Gemini の癖だけを hooks として渡す。
+        return this.executeHttpTestFlow({
+            providerLabel: 'Gemini',
+            fetchErrorLabel: 'Gemini',
+            timeoutMs: this.timeoutMs,
+            checkCredentials: () => !this.apiKey
+                ? {
+                    success: false,
+                    message: 'Gemini API Key is not set. Please enter it in the AI provider settings.',
+                    debug: { error: 'API key is missing' },
+                }
+                : null,
+            buildRequest: async () => {
+                // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
+                // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
+                const cleanModelName = this.model.replace(/^models\//, '');
+                let modelSegment: string;
+                try {
+                    modelSegment = this.buildModelPathSegment();
+                } catch (error: unknown) {
+                    return {
+                        failure: {
+                            success: false,
+                            message: `Invalid model name: ${errorMessage(error)}`,
+                            debug: { error: errorMessage(error) },
+                        },
+                    };
+                }
+                const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
 
-        // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
-        // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
-        const cleanModelName = this.model.replace(/^models\//, '');
-        let modelSegment: string;
-        try {
-            modelSegment = this.buildModelPathSegment();
-        } catch (error: unknown) {
-            return {
-                success: false,
-                message: `Invalid model name: ${errorMessage(error)}`,
-                debug: { error: errorMessage(error) },
-            };
-        }
-        const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
+                // BaseUrl SSRF対策 - テストURLの検証
+                try {
+                    validateUrlForAIRequests(testUrl);
+                } catch (error: unknown) {
+                    addLog(LogType.ERROR, `Invalid test URL for Gemini: ${errorMessage(error)}`);
+                    return {
+                        failure: {
+                            success: false,
+                            message: `Invalid test URL: ${errorMessage(error)}`,
+                            debug: { error: errorMessage(error) },
+                        },
+                    };
+                }
 
-        // BaseUrl SSRF対策 - テストURLの検証
-        try {
-            validateUrlForAIRequests(testUrl);
-        } catch (error: unknown) {
-            addLog(LogType.ERROR, `Invalid test URL for Gemini: ${errorMessage(error)}`);
-            return {
-                success: false,
-                message: `Invalid test URL: ${errorMessage(error)}`,
-                debug: { error: errorMessage(error) },
-            };
-        }
-
-        // Gemini 2.5系以降は thinking(推論)がデフォルト有効で、思考トークンが
-        // maxOutputTokens に加算される。枠が小さいと思考だけで使い切り、本文が
-        // 空のまま finishReason=MAX_TOKENS で返る。そのため
-        //   - thinkingBudget: 0 で思考を明示的に切る（対応モデルのみ有効）
-        //   - maxOutputTokens は思考が入っても本文が残る余裕を持たせる
-        // の二段構えにする。
-        const payload = {
-            contents: [{ parts: [{ text: CONNECTION_TEST_PROMPT }] }],
-            generationConfig: {
-                maxOutputTokens: 256,
-                temperature: 0,
-                thinkingConfig: { thinkingBudget: 0 },
-            },
-        };
-
-        try {
-            const allowedUrls = await this.getAllowedUrlsForRequests();
-
-            const response = await fetchWithRetry(
-                testUrl,
-                {
-                    method: 'POST',
+                // Gemini 2.5系以降は thinking(推論)がデフォルト有効で、思考トークンが
+                // maxOutputTokens に加算される。枠が小さいと思考だけで使い切り、本文が
+                // 空のまま finishReason=MAX_TOKENS で返る。そのため
+                //   - thinkingBudget: 0 で思考を明示的に切る（対応モデルのみ有効）
+                //   - maxOutputTokens は思考が入っても本文が残る余裕を持たせる
+                // の二段構えにする。
+                const payload = {
+                    contents: [{ parts: [{ text: CONNECTION_TEST_PROMPT }] }],
+                    generationConfig: {
+                        maxOutputTokens: 256,
+                        temperature: 0,
+                        thinkingConfig: { thinkingBudget: 0 },
+                    },
+                };
+                return {
+                    url: testUrl,
                     headers: {
                         'x-goog-api-key': this.apiKey,
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(payload),
-                    allowedUrls,
-                    timeoutMs: this.timeoutMs
-                },
-                {
-                    maxRetryCount: 1,
-                    initialDelayMs: 500,
-                    backoffMultiplier: 2,
-                    maxDelayMs: 3000
-                }
-            );
+                    modelName: cleanModelName,
+                };
+            },
+            extractResponse: (data, ctx) => {
+                const typed = data as GeminiApiResponse;
+                const candidate = typed.candidates?.[0];
+                // 応答が複数 parts に分かれる場合があるため全て結合する
+                const text = (candidate?.content?.parts ?? [])
+                    .map(part => part.text ?? '')
+                    .join('')
+                    .trim();
+                const hasContent = text.length > 0;
+                const usage = typed.usageMetadata;
 
-            if (!response.ok) {
-                const mapped = this.mapConnectionError(response.status, 'Gemini');
                 return {
-                    ...mapped,
+                    success: hasContent,
+                    message: hasContent
+                        ? 'Connected to Gemini API.'
+                        : GeminiProvider.describeEmptyResponse(candidate?.finishReason, typed.promptFeedback?.blockReason),
                     debug: {
-                        ...mapped.debug,
                         prompt: CONNECTION_TEST_PROMPT,
-                        endpoint: `POST ${testUrl}`,
-                        statusCode: response.status,
+                        endpoint: ctx.endpoint,
+                        ...pickDefined({ modelName: ctx.modelName }),
+                        statusCode: ctx.statusCode,
+                        hasContent,
+                        ...pickDefined({ response: hasContent ? text : undefined }),
+                        ...(usage?.promptTokenCount !== undefined ? { sentTokens: usage.promptTokenCount } : {}),
+                        ...(usage?.candidatesTokenCount !== undefined ? { receivedTokens: usage.candidatesTokenCount } : {}),
+                        ...(hasContent ? {} : {
+                            error: GeminiProvider.describeEmptyResponseDetail(
+                                candidate?.finishReason,
+                                typed.promptFeedback?.blockReason,
+                                usage?.thoughtsTokenCount,
+                            ),
+                        }),
                     },
                 };
-            }
-
-            const data = await readJsonCapped(response, MAX_AI_HTTP_RESPONSE_BYTES) as GeminiApiResponse;
-            const candidate = data.candidates?.[0];
-            // 応答が複数 parts に分かれる場合があるため全て結合する
-            const text = (candidate?.content?.parts ?? [])
-                .map(part => part.text ?? '')
-                .join('')
-                .trim();
-            const hasContent = text.length > 0;
-            const usage = data.usageMetadata;
-
-            return {
-                success: hasContent,
-                message: hasContent
-                    ? 'Connected to Gemini API.'
-                    : GeminiProvider.describeEmptyResponse(candidate?.finishReason, data.promptFeedback?.blockReason),
-                debug: {
-                    prompt: CONNECTION_TEST_PROMPT,
-                    endpoint: `POST ${testUrl}`,
-                    modelName: cleanModelName,
-                    statusCode: response.status,
-                    hasContent,
-                    ...pickDefined({ response: hasContent ? text : undefined }),
-                    ...(usage?.promptTokenCount !== undefined ? { sentTokens: usage.promptTokenCount } : {}),
-                    ...(usage?.candidatesTokenCount !== undefined ? { receivedTokens: usage.candidatesTokenCount } : {}),
-                    ...(hasContent ? {} : {
-                        error: GeminiProvider.describeEmptyResponseDetail(
-                            candidate?.finishReason,
-                            data.promptFeedback?.blockReason,
-                            usage?.thoughtsTokenCount,
-                        ),
-                    }),
-                },
-            };
-        } catch (e: unknown) {
-            const msg = errorMessage(e);
-            const errorName = e instanceof Error ? e.name : undefined;
-            // 共通エラーパース
-            const mapped = this.parseAndMapFetchError(msg, 'Gemini', errorName);
-            return {
-                ...mapped,
-                debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint: `POST ${testUrl}` },
-            };
-        }
+            },
+        });
     }
 
     /**

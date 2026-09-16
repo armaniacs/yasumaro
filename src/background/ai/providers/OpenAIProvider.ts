@@ -3,14 +3,13 @@
  * OpenAI互換APIを使用するAIプロバイダー — registry 駆動の Generic 実装
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT, MAX_AI_HTTP_RESPONSE_BYTES } from './ProviderStrategy.js';
-import { fetchWithRetry, validateUrlForAIRequests } from '../../../utils/fetch.js';
+import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { addLog, LogType } from '../../../utils/logger.js';
-import { Settings, StorageKeys } from '../../../utils/storage/types.js';
+import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
-import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
@@ -24,8 +23,15 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
     protected model: string;
     protected timeoutMs: number;
     protected isLocal: boolean;
+    /**
+     * 要約切り詰め上限を参照するストレージキー。providerCatalog の
+     * contentCharsKey が SSOT であり、createProviderStrategy がエントリ値を
+     * 渡す。エントリにキーがない場合と直接構築時は現行キーと同一の
+     * OPENAI_CONTENT_CHARS に倒すため、挙動は不変。
+     */
+    protected readonly contentCharsKey: StorageKey;
 
-    constructor(settings: Settings, providerName: string = 'openai') {
+    constructor(settings: Settings, providerName: string = 'openai', contentCharsKey?: StorageKey) {
         super(settings);
         this.providerName = providerName;
 
@@ -51,7 +57,12 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             }
             this.isLocal = entry.isLocal;
         } else {
-            // Fallback for unknown providers — preserve legacy string-replace behavior
+            // Fallback for unknown providers — preserve legacy string-replace behavior.
+            // Placement decision (PBI 2026-09-17-10): kept here, not moved into the
+            // catalog. Cataloging it would ripple into dropdown order, conformance
+            // tests, and createProviderStrategy's UnknownProviderError contract.
+            // createProviderStrategy rejects unknown ids before reaching this branch;
+            // this path serves direct construction only.
             const normalizedName = providerName.replace('2', '_2').replace(/-/g, '_').toLowerCase();
             this.baseUrl = str(`${normalizedName}_base_url`, 'https://api.openai.com/v1');
             this.apiKey = s[`${normalizedName}_api_key`] as string | undefined;
@@ -59,6 +70,8 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             this.model = str(modelKey, 'gpt-3.5-turbo');
             this.isLocal = this.baseUrl ? GenericOpenAICompatibleProvider.isLocalUrl(this.baseUrl) : false;
         }
+
+        this.contentCharsKey = contentCharsKey ?? entry?.contentCharsKey ?? StorageKeys.OPENAI_CONTENT_CHARS;
 
         // BaseUrl SSRF対策 — validateUrlForAIRequests + registry allowlist (PBI04)
         if (this.baseUrl) {
@@ -96,7 +109,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
     }
 
     private getMaxContentLength(): number {
-        return this.getMaxContentChars(10_000, StorageKeys.OPENAI_CONTENT_CHARS);
+        return this.getMaxContentChars(10_000, this.contentCharsKey);
     }
 
     getName(): string {
@@ -150,90 +163,63 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
     }
 
     async testConnection(): Promise<AIProviderConnectionResult> {
-        if (!this.baseUrl) {
-            return {
-                success: false,
-                message: 'Base URL is not set.',
-                debug: { error: 'Base URL is missing' },
-            };
-        }
+        // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
+        // 基底テンプレートが所有。ここには OpenAI の癖だけを hooks として渡す。
+        // fetchErrorLabel の 'OpenAI' 固定は既存仕様の温存であり、PBI 01 で
+        // mapConnectionError 側だけ this.providerName 化した状態と同一に保つ。
+        // 文言の統一は別 PBI の範囲。
+        return this.executeHttpTestFlow({
+            providerLabel: this.providerName,
+            fetchErrorLabel: 'OpenAI',
+            timeoutMs: this.timeoutMs,
+            checkCredentials: () => !this.baseUrl
+                ? {
+                    success: false,
+                    message: 'Base URL is not set.',
+                    debug: { error: 'Base URL is missing' },
+                }
+                : null,
+            buildRequest: async () => {
+                const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
+                // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
+                // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
+                const url = `${trimmedBaseUrl}/chat/completions`;
 
-        const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
-        // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
-        // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
-        const url = `${trimmedBaseUrl}/chat/completions`;
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (this.apiKey) {
+                    headers['Authorization'] = `Bearer ${this.apiKey}`;
+                }
 
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-        if (this.apiKey) {
-            headers['Authorization'] = `Bearer ${this.apiKey}`;
-        }
+                const payload = {
+                    model: this.model,
+                    messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
+                    max_tokens: 16,
+                    temperature: 0,
+                };
+                return { url, headers, body: JSON.stringify(payload), modelName: this.model };
+            },
+            extractResponse: (data, ctx) => {
+                const typed = data as OpenAIApiResponse;
+                const text = typed.choices?.[0]?.message?.content ?? '';
+                const hasContent = text.trim().length > 0;
 
-        const payload = {
-            model: this.model,
-            messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
-            max_tokens: 16,
-            temperature: 0,
-        };
-
-        try {
-            const allowedUrls = await this.getAllowedUrlsForRequests();
-
-            const response = await fetchWithRetry(url, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(payload),
-                allowedUrls,
-                timeoutMs: this.timeoutMs
-            }, {
-                maxRetryCount: 1,
-                initialDelayMs: 500,
-                backoffMultiplier: 2,
-                maxDelayMs: 3000
-            });
-
-            if (!response.ok) {
-                // 共通HTTPステータスマッピング（エンドポイントは診断用に残す）
-                const mapped = this.mapConnectionError(response.status, this.providerName);
                 return {
-                    ...mapped,
+                    success: hasContent,
+                    message: hasContent ? 'Connected to AI API.' : 'Response contained no content.',
                     debug: {
-                        ...mapped.debug,
                         prompt: CONNECTION_TEST_PROMPT,
-                        endpoint: `POST ${url}`,
-                        statusCode: response.status,
+                        endpoint: ctx.endpoint,
+                        ...pickDefined({ modelName: ctx.modelName }),
+                        statusCode: ctx.statusCode,
+                        hasContent,
+                        ...pickDefined({ response: hasContent ? text : undefined }),
+                        ...(typed.usage?.prompt_tokens !== undefined ? { sentTokens: typed.usage.prompt_tokens } : {}),
+                        ...(typed.usage?.completion_tokens !== undefined ? { receivedTokens: typed.usage.completion_tokens } : {}),
+                        ...(hasContent ? {} : { error: 'choices[0].message.content was empty' }),
                     },
                 };
-            }
-
-            const data = await readJsonCapped(response, MAX_AI_HTTP_RESPONSE_BYTES) as OpenAIApiResponse;
-            const text = data.choices?.[0]?.message?.content ?? '';
-            const hasContent = text.trim().length > 0;
-
-            return {
-                success: hasContent,
-                message: hasContent ? 'Connected to AI API.' : 'Response contained no content.',
-                debug: {
-                    prompt: CONNECTION_TEST_PROMPT,
-                    endpoint: `POST ${url}`,
-                    modelName: this.model,
-                    statusCode: response.status,
-                    hasContent,
-                    ...pickDefined({ response: hasContent ? text : undefined }),
-                    ...(data.usage?.prompt_tokens !== undefined ? { sentTokens: data.usage.prompt_tokens } : {}),
-                    ...(data.usage?.completion_tokens !== undefined ? { receivedTokens: data.usage.completion_tokens } : {}),
-                    ...(hasContent ? {} : { error: 'choices[0].message.content was empty' }),
-                },
-            };
-        } catch (e: unknown) {
-            const msg = errorMessage(e);
-            const errorName = e instanceof Error ? e.name : undefined;
-            // 共通エラーパース
-            const mapped = this.parseAndMapFetchError(msg, 'OpenAI', errorName);
-            return {
-                ...mapped,
-                debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint: `POST ${url}` },
-            };
-        }
+            },
+        });
     }
 
     private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {
@@ -267,8 +253,8 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
  * @deprecated Use GenericOpenAICompatibleProvider directly. Kept for backward compatibility.
  */
 export class OpenAIProvider extends GenericOpenAICompatibleProvider {
-    constructor(settings: Settings, providerName: string = 'openai') {
-        super(settings, providerName);
+    constructor(settings: Settings, providerName: string = 'openai', contentCharsKey?: StorageKey) {
+        super(settings, providerName, contentCharsKey);
     }
 
     // Keep static helper for callers that reference OpenAIProvider.isLocalUrl
