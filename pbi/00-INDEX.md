@@ -14,16 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-16 CI の test ジョブ回復 — 2件（v6.9.2 リリース時に別課題として切り出し）
+### 2026-09-16 confirm token 機構の再設計 — 1件（着手前にセキュリティ方針の確定が必要）
 
-v6.9.2（PR #137）のリリース確認中に発見。`usability` の失敗は同 PR で解消したが、アーカイブ系 e2e の失敗が残った。main を worktree に切り出して同条件で実行し、変更なしの main でも同一の失敗が再現することを確認済み（PR #137 とは無関係の既存問題）。
+2026-09-16-01 の調査で、confirm token が想定された防御を果たしていないことが判明した（`create_confirm_token` は誰でも呼べるため、送信者検証を通過できる主体はいつでもトークンを取得できる）。実質的な価値は scopeHash によるパラメータ束縛にある。「発行→検証」の2段階を payload 署名の1段階に置き換えれば、SW 終了の影響を原理的に受けず往復も減る。
 
-01 で原因2件（confirm token の揮発 / offscreen 喪失の分類漏れ）を修正し、**failed 1 + flaky 5 → failed 1 + flaky 0** まで回復。残った G5 は 02 で解決し、archive 系 e2e は全件グリーンになった。
+不具合対応ではなく設計改善であり、着手前に「何を守るべきか」を確定させること。
 
-02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、実測の結果その前提が誤りと判明した（破棄されておらず、生成直後でリスナーが未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要で、原因は send 側と offscreen 側で「準備完了」の定義が食い違っていたことにあった。
-
-- 🔶🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（**原因2件を修正済み** — confirm token を mismatch 時に1回再発行 / offscreen 喪失の分類漏れを解消。flaky 5件が解消）
-- ✅🟢🟢🔧 2026-09-16-02-fix-offscreen-teardown-during-archive.md（**完了** — offscreen のリスナーを同期登録に変更し、ファクトリ待機をハンドラ内へ移動。G5 通過・archive 系 e2e 全件グリーン）
+- ⬜🔴🟡🔧 2026-09-16-03-refactor-confirm-token-signature.md（トークンの2段階を payload 署名の1段階へ。**セキュリティ設計のレビューが前提**。単回使用の担保方法と fail-safe 維持が論点）
 
 ### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
 
@@ -107,6 +104,16 @@ Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべ
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-16 archive 系 e2e の恒常的失敗 — 2件完了（01・02）
+
+v6.9.2 のリリース確認中に発見した CI `test` ジョブの failure を解消し、**archive 系 e2e を全件グリーンに戻した**（着手時: failed 1 + flaky 5）。原因は独立した3件だった。
+
+- confirm token が `chrome.storage.session` 保存のため MV3 の SW 終了で揮発する → 送信側が mismatch 時に1回だけ再発行して再送（01）
+- offscreen 喪失が `categorizeError()` の分類から漏れ、Chrome の原文がそのままユーザーに出ていた → 実際の文言2パターンを判定に追加し `retriable: true` へ（01）
+- offscreen のリスナー登録が動的 import の後だったため、生成直後のメッセージが拒否されていた → 同期登録に変更しファクトリ待機をハンドラ内へ（02）
+
+02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、**実測でその前提が誤りと判明**した（破棄されておらず、リスナー未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要だった。派生した設計課題は 2026-09-16-03 に起票済み。
 
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
 
