@@ -8,7 +8,7 @@ import type { SyncTarget } from './SyncTarget.js';
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { SettingsRepository, settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
+import { settingsRepository, type SettingsReader, type SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
 import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout } from '../../utils/fetch.js';
@@ -18,12 +18,21 @@ import { SyncBatchRunner, type PendingSyncRow } from './SyncBatchRunner.js';
 
 const GIST_API_BASE = 'https://api.github.com';
 
+/**
+ * Minimal read+write settings port for GistSyncTarget.
+ * WHY: SettingsReader is read-only (getMany/getAll) but sync() must persist
+ * GIST_ID after creating a gist. Widening the seam by just `set` (option A)
+ * keeps `new GistSyncTarget(sqliteClient)` callers source-compatible because
+ * the shared SettingsRepository instance already satisfies this type.
+ */
+export type GistSettingsStore = SettingsReader & Pick<SettingsRepository, 'set'>;
+
 export class GistSyncTarget implements SyncTarget {
   private sqliteClient: SqliteClient;
-  private settingsReader: SettingsReader;
+  private settingsReader: GistSettingsStore;
   private batchRunner: SyncBatchRunner;
 
-  constructor(sqliteClient: SqliteClient, settingsReader: SettingsReader = settingsRepository) {
+  constructor(sqliteClient: SqliteClient, settingsReader: GistSettingsStore = settingsRepository) {
     this.sqliteClient = sqliteClient;
     this.settingsReader = settingsReader;
     this.batchRunner = new SyncBatchRunner({
@@ -43,7 +52,7 @@ export class GistSyncTarget implements SyncTarget {
     }
 
     try {
-      const settings = await new SettingsRepository().getAll();
+      const settings = await this.settingsReader.getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
       const gistId = settings[StorageKeys.GIST_ID] as string | undefined;
       const defaultEntry = () => {
@@ -60,7 +69,7 @@ export class GistSyncTarget implements SyncTarget {
       } else {
         // Create new Gist
         const newGistId = await this.createGist(entry, pat);
-        await new SettingsRepository().set(StorageKeys.GIST_ID, newGistId);
+        await this.settingsReader.set(StorageKeys.GIST_ID, newGistId);
       }
 
       await this.sqliteClient.mutate({ type: 'update', id: logId, changes: { gist_synced: 1 } });
@@ -115,7 +124,7 @@ export class GistSyncTarget implements SyncTarget {
     }
 
     try {
-      const settings = await new SettingsRepository().getAll();
+      const settings = await this.settingsReader.getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
 
       const response = await fetchWithTimeout(`${GIST_API_BASE}/user`, {
