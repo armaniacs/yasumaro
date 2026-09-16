@@ -28,6 +28,21 @@
 | Local REST API | Self-signed certificate support |
 | Content Script Injection | Runs on all web pages with user consent |
 | PKI/Certificate | HTTPS with protocol/port validation |
+| Forged extension messages | No `externally_connectable`; `sender.id` match; `extension-only` registration |
+
+### Who can invoke destructive DASHBOARD_SQLITE operations
+
+Assessed 2026-09-16. Three layers stop an outside caller, in this order:
+
+1. **No `externally_connectable` in the manifest.** Web pages and other extensions cannot reach `chrome.runtime.sendMessage` at all — the browser refuses to deliver.
+2. **`checkSenderTrust` requires `sender.id === chrome.runtime.id`** (`src/background/handlers/senderTrust.ts`). The browser assigns that id; it cannot be forged.
+3. **`DASHBOARD_SQLITE` is registered `extension-only`**, so even our own content scripts are rejected.
+
+**The confirmToken is not one of these layers.** Anything that reaches the token check is already one of our own extension pages, and any such page may call `create_confirm_token` freely (it is in `TOKEN_EXEMPT_OPS`). The token's real contributions are parameter binding via `scopeHash`, single-use + 60s TTL, and defence in depth should layers 1–3 regress.
+
+When reviewing, do not accept "this operation requires a confirmToken" as the argument that it is safe from outside callers. Point at layers 1–3 instead. Details and the full analysis: `src/messaging/sqliteOperationSecurity.ts` and PBI 2026-09-16-03.
+
+**Out of scope:** XSS inside our own dashboard. A script running there can mint its own tokens, so the gate cannot help; this is a deliberate scope decision. Revisit it if the dashboard ever renders untrusted HTML.
 
 ## Security Controls
 

@@ -13,6 +13,49 @@
  *
  * Both the receiver gate (`handlers`) and the sender (`dashboardSqliteService`)
  * derive their decision from this one table, so the two can never drift.
+ *
+ * ---------------------------------------------------------------------------
+ * What the confirmToken actually defends against (assessed 2026-09-16)
+ * ---------------------------------------------------------------------------
+ *
+ * NOT external attackers. Three layers already stop those, all of them ahead
+ * of this one:
+ *
+ *   1. No `externally_connectable` in the manifest, so web pages and other
+ *      extensions cannot reach chrome.runtime.sendMessage here at all — the
+ *      browser refuses to deliver.
+ *   2. `checkSenderTrust` rejects any sender whose `sender.id` is not our
+ *      runtime id. That id is assigned by the browser and cannot be forged.
+ *   3. DASHBOARD_SQLITE is registered `extension-only`, so even our own
+ *      content scripts are rejected.
+ *
+ * Whatever reaches the token check is therefore already one of our own
+ * extension pages — and any such page can call `create_confirm_token` freely
+ * (it is in TOKEN_EXEMPT_OPS). So the token adds no barrier an attacker has to
+ * clear. Do not treat "this op requires a token" as the reason a destructive
+ * operation is safe from outside callers; layers 1–3 are that reason.
+ *
+ * What the token DOES provide:
+ *
+ *   - Parameter binding (scopeHash). A token issued for "archive before
+ *     Sept 1" cannot authorize "archive everything": the receiver re-derives
+ *     the hash from the payload it actually got and compares strictly. This
+ *     catches our own bugs — a payload mutated between issuance and send —
+ *     rather than an adversary.
+ *   - Single use + 60s TTL, which bound how long an issued authorization
+ *     stays meaningful.
+ *   - Defence in depth if layers 1–3 ever regress.
+ *
+ * XSS inside our own dashboard is explicitly OUT of scope: a script running
+ * there can mint its own tokens, so the gate cannot help. Keeping it out of
+ * scope is a deliberate decision, not an oversight.
+ *
+ * A note on cost: tokens live in chrome.storage.session, which dies with the
+ * MV3 service worker, so an issued token can vanish before it is verified.
+ * dashboardGateway re-issues once on mismatch to absorb that (PBI
+ * 2026-09-16-01). Replacing the two-step handshake with a single signed
+ * payload was analysed in PBI 2026-09-16-03 and deliberately NOT done — see
+ * that PBI for why the current shape was kept.
  */
 
 /**
