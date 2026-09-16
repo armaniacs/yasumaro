@@ -14,6 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-16 CI の test ジョブ回復 — 1件（v6.9.2 リリース時に別課題として切り出し）
+
+v6.9.2（PR #137）のリリース確認中に発見。`usability` の失敗は同 PR で解消したが、アーカイブ系 e2e の失敗が残った。main を worktree に切り出して同条件で実行し、変更なしの main でも同一の失敗が再現することを確認済み（PR #137 とは無関係の既存問題）。CI が赤いままだと以後の変更で回帰検知が効かないため、次バージョンで対応する。
+
+- ⬜🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（archive e2e の `Receiving end does not exist` / `Confirmation token mismatch` を解消し test ジョブを緑に戻す）
+
 ### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
 
 第1回診断（archloop-0915）で未消化だった領域（content/visitReporter、crypto/sessionStore、background services）を第2回診断で探索し、8候補を抽出。上位4件（KdfNegotiator 20.0 / VisitPayload 20.0 / alarm seam 統合 10.0 / crypto codec-HMAC 統合 8.0）を PBI 化。残り3件（合成ルート 7.0 / reviewSummary 2.5 / SessionStore durability 1.9）は台帳に将来候補として記録。実行順 = 13 → 14 → 15 → 16（16 は 13 と同じ領域のため最後に置く）。
