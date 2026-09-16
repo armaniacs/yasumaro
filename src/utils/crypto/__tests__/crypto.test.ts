@@ -23,7 +23,6 @@ import {
     constantTimeCompare,
     generateHmacSignature,
     verifyHmacSignature,
-    hashUrl,
     getNotificationHmacKey,
     getConsentHmacKey,
     wrapSecretString,
@@ -648,25 +647,6 @@ describe('verifyHmacSignature', () => {
 
         const isValid = await verifyHmacSignature('test', 'short', key);
         expect(isValid).toBe(false);
-    });
-});
-
-describe('hashUrl', () => {
-    test('returns the SHA-256 hash prefix of a URL', async () => {
-        const hash = await hashUrl('https://example.com');
-        expect(hash).toMatch(/^\[hash:[0-9a-f]{16}\]$/);
-    });
-
-    test('returns the same hash for the same URL', async () => {
-        const hash1 = await hashUrl('https://example.com');
-        const hash2 = await hashUrl('https://example.com');
-        expect(hash1).toBe(hash2);
-    });
-
-    test('returns different hashes for different URLs', async () => {
-        const hash1 = await hashUrl('https://example.com');
-        const hash2 = await hashUrl('https://other.com');
-        expect(hash1).not.toBe(hash2);
     });
 });
 
