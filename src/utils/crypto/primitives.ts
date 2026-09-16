@@ -256,6 +256,13 @@ export async function decryptApiKey(encryptedApiKey: EncryptedData | string, key
  * @param {string} secret - 共有シークレット
  * @param {string} message - メッセージ
  * @returns {Promise<string>} Base64エンコードされたHMACハッシュ
+ *
+ * @deprecated 新しい呼び出しでは HmacSigner を使うこと
+ * （crypto/hmacSigner.ts の `hmacSignerForSecret`、または用途別の
+ * `exportHmacSigner` / `consentHmacSigner` / `notificationHmacSigner`）。
+ * こちらは検証時の定数時間比較を呼び出し側任せにするため、書き忘れると
+ * タイミング攻撃の穴になる。本番の呼び出しは PBI 2026-09-16-04 で全て
+ * 移行済みで、残っているのは互換のための公開のみ。
  */
 export async function computeHMAC(secret: string, message: string): Promise<string> {
     const webcrypto = getWebCrypto();
