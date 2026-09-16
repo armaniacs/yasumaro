@@ -14,57 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-16 confirm token 機構の再設計 — 1件（方針決定済み・実装は見送り）
+### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 残り1件
 
-2026-09-16-01 の調査で、confirm token が想定された防御を果たしていないことが判明した。外部からの到達はトークンより手前の3層（`externally_connectable` 未宣言 / `sender.id` 照合 / `extension-only` 登録）で完全に阻止されており、トークンに到達する主体は既に自拡張の拡張ページに限られる。そしてその主体は `create_confirm_token` を自由に呼べるため、**攻撃者に対する追加の障壁はゼロ**。
+第1回・第2回診断で PBI 化した13件のうち12件は完了済み（アーカイブ履歴を参照）。未着手はこの1件のみ。
 
-セキュリティ方針を確認した結果（想定脅威=外部攻撃、ダッシュボードの XSS は対象外）、**現状維持 + ドキュメント修正**を選択した。動作しているものを置き換えるリスクより、何が実際に守っているのかを記録する価値を優先している。
-
-- 🔶🔴🟡🔧 2026-09-16-03-refactor-confirm-token-signature.md（**保留** — 認識のズレは `sqliteOperationSecurity.ts` と `SECURITY_REVIEW_GUIDE.md` で解消済み。payload 署名への置き換えは将来の検討課題として分析を保存）
-
-### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
-
-第1回診断（archloop-0915）で未消化だった領域（content/visitReporter、crypto/sessionStore、background services）を第2回診断で探索し、8候補を抽出。上位4件（KdfNegotiator 20.0 / VisitPayload 20.0 / alarm seam 統合 10.0 / crypto codec-HMAC 統合 8.0）を PBI 化。残り3件（合成ルート 7.0 / reviewSummary 2.5 / SessionStore durability 1.9）は台帳に将来候補として記録。実行順 = 13 → 14 → 15 → 16（16 は 13 と同じ領域のため最後に置く）。
-
-- ⬜🟢🟢🔧 2026-09-15-13-refactor-kdf-negotiator.md（RICE 20.0 — KDF iteration 交渉の3箇所手書き集約。復号不能＝APIキー喪失リスクの解消）
-- ⬜🟢🟢🔧 2026-09-15-14-refactor-visit-payload.md（RICE 20.0 — 記録ペイロード wire 契約の二重所有解消。force 再送で stats 落下する drift 実在）
-- ⬜🟢🟢🔧 2026-09-15-15-refactor-alarm-registry-seam.md（RICE 10.0 — onAlarm リスナー3箇所分散の統合。SW wake correctness リスク直結・診断の最推奨）
-- ⬜🟡🟢🔧 2026-09-15-16-refactor-crypto-codec.md（RICE 8.0 — atob/btoa 直書き6箇所の全廃 + HmacSigner 統合 + hashUrl 移動。**13 と同じ領域のため最後に置く**）
-
-
-### 2026-09-15 arch-delivery-loop 0915（第3ループ）— 4件（台帳の残り4候補を全て PBI 化）
-
-第1・2ループで8件を消化し、残っていた4候補（ArchiveSessionStore 10.0 / createBackend 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）を全て PBI 化。実行順 = 09 → 10 → 11 → 12（依存関係なし・直列）。これで arch-loop 0915 の11候補が全て PBI 化される。
-
-- ⬜🟡🟡🔧 2026-09-15-09-refactor-archive-session-store.md（RICE 10.0 — archivePanel の約500行 mount から staging ライフサイクルを ArchiveSessionStore 状態機械（idle→staged→open→dirty）に抽出。illegal 遷移ガード + 6.8.11 の staging 退行回帰テスト付き。**Confidence 50% — 抽出スパイク要因**）
-- ⬜🟡🟢🔧 2026-09-15-10-refactor-backend-registry.md（RICE 7.5 — backendResolver の switch を `satisfies` 付き Map レジストリに。バックエンド追加の6箇所編集をレジストリ1行に）
-- ⬜🟡🟢🔧 2026-09-15-11-refactor-sqlite-history-presentation.md（RICE 4.0 — 削減率計算・FTS 判定の View/Model 二重所有を純粋関数 module に集約 + Model の sort 永続化を deps 注入に）
-- ⬜🟡🟡🔧 2026-09-15-12-refactor-hmac-keystore-seam.md（RICE 3.75 — KEK 候補チェーンの session/local 読みを注入可能にし、チェーン順序（session → legacy → durable → generate）をテスト可能に。同意リセット修正直後の品質強化）
-
-
-### 2026-09-15 arch-delivery-loop 0915（第2ループ）— 3件（台帳の次点候補を PBI 化）
-
-第1ループ（02〜05）の残り候補のうち、RICE 上位3件を PBI 化。残り4件は台帳に将来候補として記録（ArchiveSessionStore 10.0 / createBackend レジストリ 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）。実行順 = 06 → 07 → 08（依存関係なし・直列）。
-
-- ⬜🟢🟢🔧 2026-09-15-06-refactor-diagnostics-sections.md（RICE 16.0 — 診断 section 追加の4箇所編集を SECTIONS テーブル化で1行に + issue report entry point の `registerReportBugButton` 集約。ホットスポット（6回変更）の変更半径縮小）
-- ⬜🟡🟢🔧 2026-09-15-07-refactor-transport-timeout-seam.md（RICE 12.0 — Chrome/InPage 両 sendOnce の 25行コピーを Base の `sendOnceWithTimeout` に集約 + invalidateContainer 二重呼び出し解消 + 具象再 export 除去）
-- ⬜🟢🟢🔧 2026-09-15-08-refactor-consent-module.md（RICE 10.7 — 拒否カウンタ・本文保存フラグ・通知 fan-out を privacyConsent 深い module に集約し、`subscribe` seam で Chrome の送信者非配送仕様を隠蔽。**Strong**・直近3回の変更が同一 seam 不在に起因）
-
-
-### 2026-09-15 arch-delivery-loop 0915（第1ループ）— 4件（診断11候補から上位4件を PBI 化）
-
-`arch-delivery-loop` の Phase 0 診断（3サブエージェント探索 + HTML レポート `/tmp/architecture-review-20260915.html`）で抽出した11候補のうち、RICE 上位4件を PBI 化。残り7件は将来候補として台帳 `2026-09-15-00-backlog-archloop-0915.md` に記録（diagnostics section データ駆動 16.0 / transport timeout 重複 12.0 / consent module 深掘り 10.7 / ArchiveSessionStore 10.0 / createBackend レジストリ 7.5 / sqliteHistory presentation 4.0 / hmacKeyStore 内部 seam 3.75）。実行順 = 02 → 03 → 04 → 05（依存関係なし・直列）。
-
-- ⬜🟢🟢🔧 2026-09-15-02-refactor-sender-trust-seam.md（RICE 48.0 — 送信者検証の二重綴り解消 + InPage transport の sender 捏造を AuthorizedSqliteSender の internal seam で明示化。**Strong・セキュリティ seam**）
-- ⬜🟡🟢🔧 2026-09-15-03-refactor-query-planner-cycle.md（RICE 32.0 — queryPlanner⇄queryPlan の循環 import を一方向化し、再 clamp を AlreadyCappedQuery ブランド型で表現）
-- ⬜🟢🟢🔧 2026-09-15-04-refactor-archive-wire-derived.md（RICE 28.0 — GATEWAY_DECODERS / ARCHIVE_DISPATCH / deps ラッパーを wireTable 派生に置換し、新 op 追加を1行に）
-- ⬜🟡🟢🔧 2026-09-15-05-refactor-cleansing-preset-store.md（RICE 20.0 — CleansingPresetStore 抽出。直近バグの火元（順序制約が呼び出し側に漏洩）を interface 内部に隠す）
-
+- ⬜🟡🟢🔧 2026-09-15-16-refactor-crypto-codec.md（RICE 8.0 — atob/btoa 直書きの全廃 + HmacSigner 統合 + hashUrl 移動。対象は10ファイルに散在）
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
 Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべて完了。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。実機 QA で発見した4不具合（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）はすべて修正済み。AMO 公開は将来対応（`2026-09-15-01`・着手禁止）。台帳は `2026-09-14-00-backlog-firefox-support.md`。
-- ⬜🟡🟡🔧 2026-09-14-11-chore-firefox-release-readiness.md（RICE 30.0 — 実機 QA チェックリスト（moz-extension origin での OPFS 最終確認を含む）・FAQ/README 更新・配布方針決定（初期 = GitHub Releases 継続推奨・AMO は broad host permission 審査リスク）。**09・10 依存**）
+
+v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒否される回帰が入り、v6.9.2 で修正した（[[2026-09-16-01-fix-archive-e2e-flaky]]）。
 
 
 ### 2026-09-15 AMO 公開 — 将来対応（着手禁止）
@@ -80,6 +40,8 @@ Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべ
 ### 将来候補の統合台帳（live）
 
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
+- [2026-09-15-00-backlog-archloop-0915.md](2026-09-15-00-backlog-archloop-0915.md) — arch-delivery-loop 第1回診断の11候補のうち、PBI 化しなかった残り
+- [2026-09-15-00-backlog-archloop-0915b.md](2026-09-15-00-backlog-archloop-0915b.md) — 第2回診断の8候補のうち、PBI 化しなかった残り（合成ルート 7.0 は PBI 17 として実施済み・reviewSummary 2.5 / SessionStore durability 1.9 は未着手）
 
 ## 運用ルール
 
@@ -105,7 +67,15 @@ Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべ
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-16 archive 系 e2e の恒常的失敗 — 2件完了（01・02）
+### 2026-09-15 arch-delivery-loop 0915 / 0915b — 12件完了（02〜15）
+
+第1回・第2回診断から PBI 化した13件のうち12件が完了。残る16（crypto codec）のみ未着手。
+
+02 送信者検証 seam / 03 queryPlanner 循環解消 / 04 archive wireTable 派生化 / 05 CleansingPresetStore 抽出 / 06 診断 SECTIONS テーブル化 / 07 transport timeout 集約 / 08 consent module 深掘り / 09 ArchiveSessionStore / 10 backend レジストリ / 11 history presentation 純粋関数化 / 12 KEK チェーン注入可能化 / 13 KdfNegotiator / 14 VisitPayload / 15 alarm registry 統合
+
+いずれも v6.9.1 でリリース済み。なお 02（送信者検証 seam の一本化）は Firefox で全 SQLite 操作が拒否される回帰を生み、v6.9.2 で修正した（[[2026-09-16-01-fix-archive-e2e-flaky]] 参照）。
+
+### 2026-09-16 archive 系 e2e の恒常的失敗 — 3件完了（01・02・03）
 
 v6.9.2 のリリース確認中に発見した CI `test` ジョブの failure を解消し、**archive 系 e2e を全件グリーンに戻した**（着手時: failed 1 + flaky 5）。原因は独立した3件だった。
 
@@ -113,7 +83,11 @@ v6.9.2 のリリース確認中に発見した CI `test` ジョブの failure �
 - offscreen 喪失が `categorizeError()` の分類から漏れ、Chrome の原文がそのままユーザーに出ていた → 実際の文言2パターンを判定に追加し `retriable: true` へ（01）
 - offscreen のリスナー登録が動的 import の後だったため、生成直後のメッセージが拒否されていた → 同期登録に変更しファクトリ待機をハンドラ内へ（02）
 
-02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、**実測でその前提が誤りと判明**した（破棄されておらず、リスナー未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要だった。派生した設計課題は 2026-09-16-03 に起票済み。
+02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、**実測でその前提が誤りと判明**した（破棄されておらず、リスナー未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要だった。
+
+03 は 01 から派生した設計課題（confirm token の2段階を payload 署名の1段階へ）。セキュリティ方針を確認したうえで **置き換えは実施しないと決定**し、代わりに防御範囲をコードコメントと `SECURITY_REVIEW_GUIDE.md` に記録した。外部からの到達はトークンより手前の3層（`externally_connectable` 未宣言 / `sender.id` 照合 / `extension-only` 登録）で阻止されており、トークンが攻撃者に対して追加の障壁を持たないことが判明したため。再検討する条件も PBI に明記してある。
+
+**v6.9.2 / v6.9.3 としてリリース済み。** 実機で起動直後の操作・SW 終了後の再接続・アーカイブの一連の流れを確認済み。
 
 ### 2026-09-12 テキスト検索回帰の多層防御テスト — 3件（pbi-create-bdd・BDD分割）
 
