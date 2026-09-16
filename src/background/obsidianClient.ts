@@ -46,8 +46,10 @@ const ENDPOINTS = {
 } as const;
 
 /**
- * Mutexのインスタンス（クロージャ経由で共有）
- * 日次ノートごとではなく、全体的な書き込み操作をシリアライズ
+ * Module singleton by policy, not by accident: an in-memory write mutex holds
+ * no durable state, so one shared instance per SW lifetime is sufficient, and
+ * MV3 restart (which drops all module state) needs no migration handling.
+ * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
  */
 const globalWriteMutex = new Mutex({
     maxQueueSize: MAX_QUEUE_SIZE,

@@ -132,6 +132,12 @@ export class OfflineNetworkQueue {
   }
 }
 
+/**
+ * Shared instance predating the composition manifest; the constructor's
+ * QueuePort param is the DI seam (NoOpQueuePort in tests). New SW-only deps
+ * should resolve via the manifest instead of adding module singletons.
+ * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
+ */
 export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
 
 /**

@@ -251,5 +251,11 @@ export class SqliteClient implements SqliteRpcClient {
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> { return this.gateway.status(); }
 }
 
+/**
+ * Lazy singleton shared with the container: the manifest's sqliteClient entry
+ * delegates to getSharedSqliteClient, so both paths observe one instance.
+ * Module state is an SW-lifetime cache only; durable state lives offscreen.
+ * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
+ */
 let sharedInstance: SqliteClient | null = null;
 export function getSharedSqliteClient(): SqliteClient { if (!sharedInstance) sharedInstance = new SqliteClient(); return sharedInstance; }

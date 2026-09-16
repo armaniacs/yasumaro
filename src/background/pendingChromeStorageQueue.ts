@@ -99,10 +99,11 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
 }
 
 /**
- * Module-scoped queue instance used by the enqueuePendingWrite/flushPendingWrites
- * exports below. Built lazily (not at import time) so createBackgroundServices
- * controls when the ChromeStorageAdapter is constructed, and tests can swap in
- * an InMemoryAdapter via setPendingWriteQueue before any write happens.
+ * Module-level seam, exempted from the manifest-first policy: layer-crossing
+ * callers reach this facade without DI, and tests swap in an InMemoryAdapter
+ * via setPendingWriteQueue. The lazy default keeps standalone use working;
+ * production wiring must inject once from the composition root before first use.
+ * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
  */
 let activeQueue: ReturnType<typeof createPendingWriteQueue> | undefined;
 
