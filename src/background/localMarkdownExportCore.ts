@@ -5,6 +5,7 @@
  * decides *when* to call this and *which* days to include via `filter`.
  */
 
+import { textToBase64 } from '../utils/crypto/primitives.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -52,7 +53,7 @@ export async function flushBufferedExports(
       // date does not abort the flush for every other buffered date.
       try {
         const content = buildDailyMarkdown(date, entries, activeTemplate);
-        const dataUrl = `data:text/markdown;base64,${btoa(unescape(encodeURIComponent(content)))}`;
+        const dataUrl = `data:text/markdown;base64,${textToBase64(content)}`;
 
         // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て
         // 時に sanitize し、失敗時は既定フォルダにフォールバックする。

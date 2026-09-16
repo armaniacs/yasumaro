@@ -167,8 +167,8 @@ export async function decrypt(ciphertext: string, iv: string, key: CryptoKey): P
     try {
         const webcrypto = getWebCrypto();
         // Base64デコード
-        const ciphertextArray = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
-        const ivArray = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
+        const ciphertextArray = base64ToBytes(ciphertext);
+        const ivArray = base64ToBytes(iv);
 
         const plaintextBuffer = await webcrypto.subtle.decrypt(
             {
@@ -275,8 +275,7 @@ export async function computeHMAC(secret: string, message: string): Promise<stri
         encoder.encode(message)
     );
 
-    const signatureArray = Array.from(new Uint8Array(signature));
-    return btoa(String.fromCharCode(...signatureArray));
+    return bytesToBase64(new Uint8Array(signature));
 }
 
 /**
@@ -311,8 +310,7 @@ export async function hashPasswordWithPBKDF2(password: string, salt: Uint8Array,
         256 // 256 bits = 32 bytes
     );
 
-    const hashArray = Array.from(new Uint8Array(derivedBits));
-    return btoa(String.fromCharCode(...hashArray));
+    return bytesToBase64(new Uint8Array(derivedBits));
 }
 
 /**
@@ -384,19 +382,97 @@ export async function hashUrl(url: string): Promise<string> {
     return `[hash:${hashHex.substring(0, 16)}]`;
 }
 
+/**
+ * Chunk size for the byte→binary-string step, in bytes.
+ *
+ * `String.fromCharCode.apply` passes every byte as a separate argument, so a
+ * whole multi-megabyte array in one call overflows the argument stack. 32 KiB
+ * stays well inside every engine's limit while keeping the number of calls —
+ * and the intermediate strings that must be joined — small.
+ */
+const BASE64_CHUNK_BYTES = 0x8000;
+
+/**
+ * Encode raw bytes as base64.
+ *
+ * Chunked rather than appending one character at a time: the per-character
+ * loop this replaced spent its time growing an ever-longer string, measuring
+ * ~106ms against ~39ms for 2 MiB. Callers that serialize whole structures
+ * (the Bloom filter, DB exports) are the ones that feel it.
+ */
 export function bytesToBase64(bytes: Uint8Array): string {
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]!);
+    const chunks: string[] = [];
+    for (let i = 0; i < bytes.length; i += BASE64_CHUNK_BYTES) {
+        const chunk = bytes.subarray(i, i + BASE64_CHUNK_BYTES);
+        chunks.push(String.fromCharCode.apply(null, Array.from(chunk) as number[]));
     }
-    return btoa(binary);
+    return btoa(chunks.join(''));
 }
 
-export function base64ToBytes(b64: string): Uint8Array {
+/** Decode base64 back to the raw bytes `bytesToBase64` was given. */
+export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
     const binary = atob(b64);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) {
         bytes[i] = binary.charCodeAt(i);
     }
     return bytes;
+}
+
+/**
+ * Encode text as base64, via UTF-8.
+ *
+ * Separate from `bytesToBase64` because the inputs are not interchangeable:
+ * `btoa` rejects any code point above U+00FF, so text has to be encoded to
+ * UTF-8 bytes first. Callers that reached for `btoa` directly had to remember
+ * that themselves — usually spelled `btoa(unescape(encodeURIComponent(s)))`,
+ * which relies on the deprecated `unescape`.
+ */
+export function textToBase64(text: string): string {
+    return bytesToBase64(new TextEncoder().encode(text));
+}
+
+/** Decode base64 produced by `textToBase64` back to text. */
+export function base64ToText(b64: string): string {
+    return new TextDecoder().decode(base64ToBytes(b64));
+}
+
+/**
+ * Encode bytes as base64url (RFC 4648 §5): `-` and `_` instead of `+` and `/`,
+ * with the `=` padding stripped.
+ *
+ * Used where the value travels inside a URL — notification payloads and the
+ * HMAC signatures that authenticate them. Kept beside the standard codec so
+ * the substitution is written once; call sites used to repeat the same three
+ * `.replace()` calls and had to remember that omitting any of them produces a
+ * string that breaks when parsed back out of a URL.
+ */
+export function bytesToBase64Url(bytes: Uint8Array): string {
+    return bytesToBase64(bytes)
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+}
+
+/** Encode text as base64url, via UTF-8. */
+export function textToBase64Url(text: string): string {
+    return bytesToBase64Url(new TextEncoder().encode(text));
+}
+
+/**
+ * Decode base64url back to bytes, restoring the padding `bytesToBase64Url`
+ * stripped. Plain base64 also decodes correctly, since only the two
+ * substituted characters differ.
+ */
+export function base64UrlToBytes(b64url: string): Uint8Array<ArrayBuffer> {
+    const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+    // Base64 encodes 3 bytes per 4 characters, so a complete string is always
+    // a multiple of 4; pad whatever the stripping removed.
+    const padded = b64.padEnd(Math.ceil(b64.length / 4) * 4, '=');
+    return base64ToBytes(padded);
+}
+
+/** Decode base64url produced by `textToBase64Url` back to text. */
+export function base64UrlToText(b64url: string): string {
+    return new TextDecoder().decode(base64UrlToBytes(b64url));
 }

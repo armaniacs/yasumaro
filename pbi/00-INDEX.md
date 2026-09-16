@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 残り1件
+### 2026-09-16 crypto の HMAC 統合 — 1件（16 から分離）
 
-第1回・第2回診断で PBI 化した13件のうち12件は完了済み（アーカイブ履歴を参照）。未着手はこの1件のみ。
+2026-09-15-16 は codec と HMAC の両方を対象にしていたが、codec は入出力が閉じた変換で機械的に検証できるのに対し、HMAC は**既存の署名済みデータとの互換性**が絡むため分離した。codec 部分は完了済み。
 
-- ⬜🟡🟢🔧 2026-09-15-16-refactor-crypto-codec.md（RICE 8.0 — atob/btoa 直書きの全廃 + HmacSigner 統合 + hashUrl 移動。対象は10ファイルに散在）
+- ⬜🟡🔴🔧 2026-09-16-04-refactor-hmac-signer.md（`computeHMAC`（文字列鍵・5ファイル11箇所）と `generateHmacSignature`（CryptoKey 鍵・3ファイル5箇所）を HmacSigner に統合 + `hashUrl` を crypto から移動。**出力形式が異なる**（標準 base64 と URL-safe）ため、どの署名がどこに永続化されているかの洗い出しが先）
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
@@ -66,6 +66,16 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-16 crypto codec の統合 — 1件完了（16 の codec 部分）
+
+`atob` / `btoa` 直書きを **28箇所 → 実質2箇所**（seam 本体 + 意図的な legacy 互換）に削減。
+
+PBI は「最低6箇所・機械的置換が主作業」としていたが、実測では28箇所あり、3種類は単純置換できなかった。UTF-8 テキスト用と URL-safe base64 は seam に関数を追加して対応。bloomFilter が持っていたチャンク最適化は seam 側へ移し、全呼び出し元が恩恵を受けるようにした（2MB で 106ms → 39ms）。
+
+`kdfNegotiator` の1箇所は **置換すると既存の暗号化済み API キーが復号不能になる**ため意図的に残した（`TextEncoder().encode(atob(...))` は 0x80 以上のバイトが UTF-8 で2バイトに膨らみ、`base64ToBytes` と結果が異なる）。
+
+HMAC 統合と `hashUrl` 移動は性質が異なるため 2026-09-16-04 に分離。
 
 ### 2026-09-15 arch-delivery-loop 0915 / 0915b — 12件完了（02〜15）
 

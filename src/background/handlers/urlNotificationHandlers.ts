@@ -4,7 +4,7 @@
  * Extracted from service-worker.ts for better modularity
  */
 
-import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../../utils/crypto/index.js';
+import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature, textToBase64Url, base64UrlToText } from '../../utils/crypto/index.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
@@ -44,15 +44,7 @@ export async function encodeUrlSafeBase64(
   }
 
   try {
-    // URLをBase64エンコード（TextEncoder使用-service-worker.tsと一致）
-    const encoder = new TextEncoder();
-    const data = encoder.encode(url);
-    // スタックオーバーフロー回避のためArray.from使用
-    const binaryString = Array.from(data, b => String.fromCharCode(b)).join('');
-    const urlB64 = btoa(binaryString)
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
+    const urlB64 = textToBase64Url(url);
 
     // HMAC署名を計算
     const hmacKey = await getNotificationHmacKey();
@@ -96,16 +88,7 @@ export async function decodeUrlFromNotificationId(notificationId: string): Promi
     if (!urlB64 || !signature) {
       throw new Error('Invalid notification ID format');
     }
-    const b64 = urlB64.replace(/-/g, '+').replace(/_/g, '/');
-    const padded = b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '=');
-    const binaryString = atob(padded);
-    // TextDecoder使用（service-worker.tsと一致）
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const decoder = new TextDecoder();
-    const url = decoder.decode(bytes);
+    const url = base64UrlToText(urlB64);
 
     // 署名検証
     const hmacKey = await getNotificationHmacKey();
