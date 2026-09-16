@@ -167,5 +167,5 @@ const DEFAULT_SETTINGS: Settings = {
 
 - `src/utils/storage/types.ts` (Settings 型・StorageKeys の単一ソース)
 - `src/utils/storage/defaults.ts` (DEFAULT_SETTINGS の単一ソース)
-- `src/utils/storage/settingsStore.ts` (getSettings/saveSettings)
+- ~~`src/utils/storage/settingsStore.ts`~~ (storage モジュール分割で SettingsRepository.ts に統合済み。後継: `src/utils/storage/SettingsRepository.ts`)
 - ~~`src/utils/storageSettings.ts`~~ (v6.5.33 で廃止・削除。全利用者を上記3ファイルに移行済み)

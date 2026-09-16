@@ -92,7 +92,7 @@ registerDefaultProviders(): void {
 
 ## Implements
 
-- `src/background/aiClient.ts` - Provider factory
+- ~~`src/background/aiClient.ts`~~ - Provider factory（AIService 移行で廃止。後継: `src/background/ai/aiServiceFactory.ts` / `src/background/ai/AIService.ts`）
 - `src/background/ai/providers/ProviderStrategy.ts` - Base class
 - `src/background/ai/providers/GeminiProvider.ts` - Custom provider example
 - `src/background/ai/providers/OpenAIProvider.ts` - OpenAI-compatible example

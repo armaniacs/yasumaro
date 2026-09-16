@@ -96,8 +96,8 @@ ICU・形態素解析は現バンドル WASM に非搭載で、採用にはラ�
 
 ## Implements
 
-- `src/offscreen/sqlite.ts`
-- `src/offscreen/sqliteEngineContext.ts`
+- ~~`src/offscreen/sqlite.ts`~~（sqliteEngine.ts へ統合済み）
+- ~~`src/offscreen/sqliteEngineContext.ts`~~（sqliteEngineContext/ ディレクトリへ分割済み）
 - `src/offscreen/recordsRepo.ts`
 - `src/offscreen/dbMaintenance.ts`
 - `src/offscreen/auditLogRepo.ts`
