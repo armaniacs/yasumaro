@@ -4,8 +4,7 @@
  */
 
 import { importLogs } from './dashboardSqliteService.js';
-import { getOrCreateHmacSecret } from '../utils/storage/encryptionSession.js';
-import { computeHMAC, constantTimeCompare } from '../utils/crypto/index.js';
+import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
 
 interface ExportedRow {
   url: string;
@@ -74,9 +73,7 @@ async function verifyExportSignature(parsed: ExportedData): Promise<string | nul
     return 'This log file is unsigned and cannot be imported. Re-export it from this extension.';
   }
   const { signature, ...body } = parsed;
-  const hmacSecret = await getOrCreateHmacSecret();
-  const expected = await computeHMAC(hmacSecret, JSON.stringify(body, null, 2));
-  if (!(await constantTimeCompare(signature, expected))) {
+  if (!(await exportHmacSigner.verify(JSON.stringify(body, null, 2), signature))) {
     return 'Log file signature verification failed. The file may be corrupted or was exported from a different browser profile.';
   }
   return null;

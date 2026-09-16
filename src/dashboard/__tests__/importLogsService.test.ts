@@ -10,21 +10,22 @@ vi.mock('../dashboardSqliteService.js', () => ({
 
 // Deterministic crypto so fixtures can be signed in-test. computeHMAC is a
 // pure function of (secret, payload); constantTimeCompare is a plain equals.
+// Deterministic signer so fixtures can be signed in-test.
+const fakeSign = async (payload: string) =>
+  `hmac(test-secret):${payload.length}:${payload.slice(0, 8)}`;
 vi.mock('../../utils/storage/encryptionSession.js', () => ({
-  getOrCreateHmacSecret: vi.fn(async () => 'test-secret'),
-}));
-vi.mock('../../utils/crypto/index.js', () => ({
-  computeHMAC: vi.fn(async (secret: string, payload: string) => `hmac(${secret}):${payload.length}:${payload.slice(0, 8)}`),
-  constantTimeCompare: vi.fn(async (a: string, b: string) => a === b),
+  exportHmacSigner: {
+    sign: vi.fn(fakeSign),
+    verify: vi.fn(async (payload: string, sig: string) => sig === (await fakeSign(payload))),
+  },
 }));
 
 import { importLogs } from '../dashboardSqliteService.js';
-import { computeHMAC } from '../../utils/crypto/index.js';
 
 /** Build a signed log-export JSON string the way exportJson would. */
 async function signedExport(rows: unknown[], overrides: Record<string, unknown> = {}): Promise<string> {
   const body = { version: 2, table: 'browsing_logs', rows, ...overrides };
-  const signature = await computeHMAC('test-secret', JSON.stringify(body, null, 2));
+  const signature = await fakeSign(JSON.stringify(body, null, 2));
   return JSON.stringify({ ...body, signature });
 }
 
@@ -71,7 +72,7 @@ describe('importFromJson', () => {
   it('returns error when rows field is missing', async () => {
     const { importFromJson } = await import('../importLogsService.js');
     const body = { version: 2, table: 'browsing_logs' };
-    const signature = await computeHMAC('test-secret', JSON.stringify(body, null, 2));
+    const signature = await fakeSign(JSON.stringify(body, null, 2));
     const result = await importFromJson(JSON.stringify({ ...body, signature }));
     expect(result).toEqual({ error: 'No records found in file' });
     expect(importLogs).not.toHaveBeenCalled();
