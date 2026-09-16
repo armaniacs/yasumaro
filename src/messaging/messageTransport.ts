@@ -7,6 +7,7 @@
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
 import { VALID_MESSAGE_TYPES } from '../background/messageTypes.js';
+import { backoffDelayMs } from '../utils/backoff.js';
 
 export interface TransportPort {
   send(message: unknown): Promise<unknown>;
@@ -73,7 +74,7 @@ export class MessageTransport {
       } catch (error) {
         lastError = error;
         if (attempt < retries && isRetryableError(error)) {
-          const delayMs = Math.min(100 * Math.pow(2, attempt), 1000);
+          const delayMs = backoffDelayMs(attempt, { baseMs: 100, multiplier: 2, maxMs: 1000 });
           await clock.sleep(delayMs);
           continue;
         }

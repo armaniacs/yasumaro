@@ -35,6 +35,8 @@ src/utils/commonTypes.ts
 src/utils/types.ts
 src/utils/urlEntry.ts
 src/utils/luhn.ts
+src/utils/backoff.ts — 指数バックオフ遅延計算の SSOT（PBI 2026-09-17-09）
+src/utils/httpFailureMessages.ts — HTTP status→ユーザー文言テーブルの SSOT（PBI 2026-09-17-09）
 ```
 
 `logger/` の一部は `piiSanitizer` に依存するが、これは Layer 0 内の相互依存として許容する。

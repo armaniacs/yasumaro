@@ -38,6 +38,8 @@ const LAYER0_FILES = [
   'src/utils/types.ts',
   'src/utils/urlEntry.ts',
   'src/utils/luhn.ts',
+  'src/utils/backoff.ts',
+  'src/utils/httpFailureMessages.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md

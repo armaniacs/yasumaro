@@ -17,6 +17,7 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger.js';
 import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
+import { backoffDelayMs } from './backoff.js';
 
 export {
   normalizeIpHostname,
@@ -381,10 +382,11 @@ export async function fetchWithRetry(
       // リトライ条件チェック
       if (attempt < maxRetryCount && shouldRetry(lastError, attempt + 1, null, requestMethod)) {
         // リトライ遅延（指数バックオフ）
-        const delay = Math.min(
-          initialDelayMs * Math.pow(backoffMultiplier, attempt),
-          maxDelayMs
-        );
+        const delay = backoffDelayMs(attempt, {
+          baseMs: initialDelayMs,
+          multiplier: backoffMultiplier,
+          maxMs: maxDelayMs,
+        });
         logWarn(`Request failed, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, error: lastError.message }, undefined, 'fetchWithRetry');
         await new Promise(resolve => setTimeout(resolve, delay));
       } else {

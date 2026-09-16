@@ -13,6 +13,7 @@ import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 import { fetchWithRetry } from '../../../utils/fetch.js';
 import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
+import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -148,31 +149,11 @@ export abstract class AIProviderStrategy {
         statusCode: number,
         providerLabel: string
     ): AIProviderConnectionResult {
-        if (statusCode === 401 || statusCode === 403) {
-            return {
-                success: false,
-                message: `Authentication failed (${statusCode}). Check your ${providerLabel} API key.`,
-                debug: { statusCode },
-            };
-        } else if (statusCode === 404) {
-            return {
-                success: false,
-                message: `Endpoint not found (404). Check your Base URL.`,
-                debug: { statusCode },
-            };
-        } else if (statusCode === 429) {
-            return {
-                success: false,
-                message: `Rate limit exceeded (429). Please try again later.`,
-                debug: { statusCode },
-            };
-        } else {
-            return {
-                success: false,
-                message: `${providerLabel} API Error: ${statusCode}`,
-                debug: { statusCode },
-            };
-        }
+        return {
+            success: false,
+            message: describeHttpFailure(statusCode, providerLabel),
+            debug: { statusCode },
+        };
     }
 
     /**
