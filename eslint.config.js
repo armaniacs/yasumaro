@@ -29,6 +29,24 @@ export default [
       ],
       'local/require-sanitized-markdown': 'error',
       'local/require-response-size-limit': 'error',
+      // PBI 2026-09-17-05: enforce src/utils/ layer boundaries (Layer 0
+      // purity, Layer 1 -> Layer 2 static import ban). Layer lists are the
+      // SSOT in eslint/rules/utils-layer-boundary.mjs; see
+      // dev-docs/LAYERS.md "Mechanical enforcement". The single allow entry
+      // below is provisional (no ADR yet) — see LAYERS.md.
+      'local/utils-layer-boundary': [
+        'error',
+        {
+          allow: [
+            {
+              from: 'src/utils/storage/defaults.ts',
+              to: 'src/utils/aiSummaryCleaner/rules',
+              reason:
+                'PROVISIONAL (PBI 05): DEFAULT_SETTINGS bundles cleansing thresholds from the SSOT rule table. Duplicating the table would reintroduce drift; follow-up ADR needed (extract pure constants or reclassify).',
+            },
+          ],
+        },
+      ],
       'no-restricted-imports': [
         'warn',
         {
