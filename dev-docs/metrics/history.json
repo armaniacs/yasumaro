@@ -610,6 +610,17 @@
       "testCount": 11547,
       "functionCount": 2738,
       "dependencyCount": 30
+    },
+    {
+      "version": "6.9.2",
+      "tagVersion": "6.9.2",
+      "tag": "v6.9.2",
+      "date": "2026-09-16T15:55:34+09:00",
+      "linesOfCode": 262145,
+      "fileCount": 1261,
+      "testCount": 11580,
+      "functionCount": 2764,
+      "dependencyCount": 30
     }
   ]
 }
