@@ -66,6 +66,14 @@ function createSigner(resolveKey: KeyResolver, encoding: HmacEncoding): HmacSign
 
     return {
         sign: signOnce,
+        /**
+         * Returns false for a bad signature; THROWS if the key cannot be
+         * resolved. The `verifyHmacSignature` this replaced swallowed every
+         * exception into `false`, which conflated "not authentic" with "could
+         * not check". Callers must keep the throw fail-closed — every current
+         * one does, either by an enclosing try/catch that denies, or by
+         * letting the rejection abort the operation before it commits.
+         */
         async verify(data: string, signature: string): Promise<boolean> {
             if (!signature) return false;
             return constantTimeCompare(signature, await signOnce(data));

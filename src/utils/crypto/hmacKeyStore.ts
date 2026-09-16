@@ -428,6 +428,9 @@ export const consentHmacSigner: HmacSigner = hmacSignerForKey(getConsentHmacKey,
  * @param {string} data - Data to sign (typically URL)
  * @param {CryptoKey} key - HMAC key
  * @returns {Promise<string>} URL-safe base64 encoded full signature
+ *
+ * @deprecated 新しい呼び出しでは notificationHmacSigner / consentHmacSigner
+ * を使うこと。本番の呼び出しは PBI 2026-09-16-04 で全て移行済み。
  */
 export async function generateHmacSignature(data: string, key: CryptoKey): Promise<string> {
     const webcrypto = getWebCrypto();
@@ -442,6 +445,10 @@ export async function generateHmacSignature(data: string, key: CryptoKey): Promi
  * @param {string} signature - URL-safe base64 encoded signature
  * @param {CryptoKey} key - HMAC key
  * @returns {Promise<boolean>} True if signature is valid
+ *
+ * @deprecated 本番の呼び出しは無い（PBI 2026-09-16-04 で HmacSigner.verify へ
+ * 移行済み）。下の定数時間比較は primitives.ts の constantTimeCompare と
+ * 重複しており、長さ不一致で早期 return する分そちらより弱い。
  */
 export async function verifyHmacSignature(data: string, signature: string, key: CryptoKey): Promise<boolean> {
     try {
