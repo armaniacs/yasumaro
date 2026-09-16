@@ -28,12 +28,12 @@ Scenario: openai の接続テストが 401 で失敗したら従来どおり Ope
 ```
 
 ## 受け入れ基準
-- [ ] lm-studio 設定で接続テストが HTTP 401 失敗時、メッセージに lm-studio が含まれ OpenAI を含まない
-- [ ] openai 設定で接続テストが HTTP 401 失敗時、従来どおり OpenAI の文言が表示される
-- [ ] `mapConnectionError` の文言テーブル自体に変更がない
-- [ ] 変更差分が `testConnection()` 内の該当1行とテスト追加に留まる（テンプレ化には踏み込まない）
-- [ ] OpenAIProvider 系の既存テストが green のままである
-- [ ] `npm run type-check` が green である
+- [x] lm-studio 設定で接続テストが HTTP 401 失敗時、メッセージに lm-studio が含まれ OpenAI を含まない
+- [x] openai 設定で接続テストが HTTP 401 失敗時、従来どおり OpenAI の文言が表示される
+- [x] `mapConnectionError` の文言テーブル自体に変更がない
+- [x] 変更差分が `testConnection()` 内の該当1行とテスト追加に留まる（テンプレ化には踏み込まない）
+- [x] OpenAIProvider 系の既存テストが green のままである
+- [x] `npm run type-check` が green である
 
 ## テスト戦略
 - `src/background/ai/providers/__tests__/` 配下の既存スタイル（`fetchWithRetry` をモックし `testConnection` の 401 / 404 / 成功を検証する形式）に倣い、lm-studio 名での 401 テストと openai 名での既存挙動 pin テストを追加する
@@ -57,7 +57,7 @@ Scenario: openai の接続テストが 401 で失敗したら従来どおり Ope
 - `testConnection()` 内の catch 経路にも同様の `'OpenAI'` 渡しが存在することは読み取りで確認したが、本 PBI の変更対象外とする（テンプレ化 PBI 側の判断に委ねる）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
-- [ ] 既存の OpenAIProvider 系テストと type-check が green である
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
+- [x] 既存の OpenAIProvider 系テストと type-check が green である

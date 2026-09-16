@@ -60,13 +60,13 @@ Scenario: GistSyncTarget のバッチ同期が変わらず動く
 ```
 
 ## 受け入れ基準
-- [ ] `src/background/obsidianSyncService.ts` が削除されている
-- [ ] `src/background/__tests__/obsidianSyncService.test.ts` が削除されている
-- [ ] `markdownJoinSafety.test.ts` の `ObsidianSyncService` 用ケースが削除され、`GistSyncTarget` 用ケースが green のまま残っている
-- [ ] `SyncTarget.ts` と `SyncBatchRunner.ts` に「現時点では `GistSyncTarget` 専用。新しい sync 先を追加する際はこの抽象を再評価する」旨の doc comment がある
-- [ ] `grep -rn "ObsidianSyncService" src/` の残存がコメント言及のみである
-- [ ] 後続 PBI pbi/2026-09-17-04 との順序（本 PBI が先）が守られ、formatter テストへの吸収方針がそちらに引き継がれている
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が green
+- [x] `src/background/obsidianSyncService.ts` が削除されている
+- [x] `src/background/__tests__/obsidianSyncService.test.ts` が削除されている
+- [x] `markdownJoinSafety.test.ts` の `ObsidianSyncService` 用ケースが削除され、`GistSyncTarget` 用ケースが green のまま残っている
+- [x] `SyncTarget.ts` と `SyncBatchRunner.ts` に「現時点では `GistSyncTarget` 専用。新しい sync 先を追加する際はこの抽象を再評価する」旨の doc comment がある
+- [x] `grep -rn "ObsidianSyncService" src/` の残存がコメント言及のみである
+- [x] 後続 PBI pbi/2026-09-17-04 との順序（本 PBI が先）が守られ、formatter テストへの吸収方針がそちらに引き継がれている
+- [x] `npm run type-check` / `npm run lint` / `npm test` が green
 
 ## テスト戦略
 - 削除に伴うテストの除去（`obsidianSyncService.test.ts` 全体、`markdownJoinSafety.test.ts` の `ObsidianSyncService` 用ケース）と、残存テストの維持（`GistSyncTarget` 用ケース、`gistSyncTarget` 系テストが壊れないこと）
@@ -77,6 +77,6 @@ Scenario: GistSyncTarget のバッチ同期が変わらず動く
 0.5 pt（半日程度）。削除と doc comment 更新のみで、挙動変更を含まないため。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

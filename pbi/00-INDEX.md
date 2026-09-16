@@ -14,20 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 10件
+### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 10件（4件完了・アーカイブ済み、6件残）
 
-大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化。実行順 = 01 → 10（RICE 降順。ただし 03→04 と 01→10 は同一領域を触る順序依存で入れ替えあり）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。
+大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化。実行順 = 01 → 10（RICE 降順。ただし 03→04 と 01→10 は同一領域を触る順序依存で入れ替えあり）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。バッチ1（01/02/03/07）は並列実装済み。
 
-- 2026-09-17-01-fix-ai-provider-test-label.md（⬜ 未着手 — S. OpenAI 互換プロバイダー（lm-studio/ollama 等）の接続テストが `'OpenAI'` をハードコード表示する実害修正。10 の前提）
-- 2026-09-17-02-fix-gist-sync-settings-reader-seam.md（⬜ 未着手 — S. GistSyncTarget が注入された settingsReader を無視して `new SettingsRepository()` する3箇所の修正。06 の先行部分）
-- 2026-09-17-03-refactor-obsidian-sync-dead-code.md（⬜ 未着手 — S. 本番未参照の ObsidianSyncService を削除。04 の前処理）
-- 2026-09-17-04-refactor-markdown-entry-ssot.md（⬜ 未着手 — M. Markdown エントリ生成のサニタイズ列重複（5箇所→03後に4箇所）を `buildEntryMarkdown` に統合。byte-identical parity テスト付き）
+- 2026-09-17-04-refactor-markdown-entry-ssot.md（⬜ 未着手 — M. Markdown エントリ生成のサニタイズ列重複（03完了後に4箇所）を `buildEntryMarkdown` に統合。byte-identical parity テスト付き）
 - 2026-09-17-05-refactor-utils-layer-boundary-lint.md（⬜ 未着手 — M. `dev-docs/LAYERS.md` の層定義を import boundary lint で機械化+違反是正）
-- 2026-09-17-06-refactor-settings-repository-discipline.md（⬜ 未着手 — M. `new SettingsRepository()` 本番14箇所を排除 + ESLint ルールで再発防止）
-- 2026-09-17-07-investigate-builtin-ai-dual-adapter.md（⬜ 未着手 — S. built-in AI 二重アダプタ（LocalAIService / BuiltInAiProvider）の ADR 裁定。誤統合による local_only 破壊のリスク軽減）
+- 2026-09-17-06-refactor-settings-repository-discipline.md（⬜ 未着手 — M. `new SettingsRepository()` 本番残り11箇所を排除 + ESLint ルールで再発防止。02 完了済み分を除く）
 - 2026-09-17-08-investigate-module-singleton-policy.md（⬜ 未着手 — S. module 級 singleton と composition root 併存の方針 ADR 裁定）
 - 2026-09-17-09-refactor-backoff-http-failure-ssot.md（⬜ 未着手 — M. バックオフ計算3系統と HTTP status→ユーザー文言対応表の SSOT 化。byte-identical）
-- 2026-09-17-10-refactor-ai-test-connection-template.md（⬜ 未着手 — M. testConnection を `executeHttpTestFlow` テンプレに統合+providerCatalog を設定キー SSOT に昇格。01 の後）
+- 2026-09-17-10-refactor-ai-test-connection-template.md（⬜ 未着手 — M. testConnection を `executeHttpTestFlow` テンプレに統合+providerCatalog を設定キー SSOT に昇格。01 完了済み）
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
@@ -76,6 +72,15 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 4件完了（01・02・03・07）
+
+- 2026-09-17-01-fix-ai-provider-test-label.md（✅ 完了・アーカイブ済 — testConnection のハードコード `'OpenAI'` を `this.providerName` に修正（lm-studio/ollama の誤誘導解消）。lm-studio/openai の 401 回帰テスト 2 件追加・45 tests green）
+- 2026-09-17-02-fix-gist-sync-settings-reader-seam.md（✅ 完了・アーカイブ済 — 3箇所の `new SettingsRepository()` を注入シームに統一。`GistSettingsStore`（reader+set）へ最小拡張し、tripwire テストで実 chrome.storage 非接触を pin。4 tests 新設・既存 24 tests green）
+- 2026-09-17-03-refactor-obsidian-sync-dead-code.md（✅ 完了・アーカイブ済 — 本番未参照の ObsidianSyncService（134行+テスト）を削除。SyncTarget/SyncBatchRunner を GistSyncTarget 専用と明記。markdownJoinSafety から ObsidianSync ケース除去・20 tests green）
+- 2026-09-17-07-investigate-builtin-ai-dual-adapter.md（✅ 完了・アーカイブ済 — ADR 新設（`2026-09-17-builtin-ai-dual-adapter.md`）。二重表現は privacy-mode ルーティング軸と provider-slot 選択軸の責務分離と裁定し統合不採用。再検討トリガー3件を記録）
+
+バッチ1は4サブエージェント並列で実装（担当ファイル排他）。統合検証: type-check / lint 0 errors / test 12,109 passed / lint:adr-links PASS（既存4破損参照も同ラウンドで修復）。
 
 ### 2026-09-17 hashUrl の locality 改善 — 1件完了（05）
 
