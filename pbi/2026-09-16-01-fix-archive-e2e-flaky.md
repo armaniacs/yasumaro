@@ -67,7 +67,7 @@ Could not establish connection. Receiving end does not exist.
 
 なお、これはエラーの見せ方の問題であり、接続が切れること自体の原因ではない。
 
-### 確定した問題2: confirm token が Service Worker 終了で揮発する
+### ✅ 対処済みの問題2: confirm token が Service Worker 終了で揮発する
 
 `src/background/confirmTokenManager.ts` はトークンを `chrome.storage.session` に 60 秒 TTL で保存する。このストレージは **MV3 の Service Worker 終了時に揮発する**。
 
@@ -75,11 +75,42 @@ MV3 の SW はアイドルで終了するため、トークン発行から検証
 
 `src/background/handlers/dashboardSqlite/__tests__/confirmTokenManager-sw-termination.test.ts` で実証済み。SW 終了は `chrome.storage.session.clear()` で再現している。
 
-## 残る調査
+**対処（2026-09-16）**: 送信側が mismatch を受け取ったとき、トークンを1回だけ再発行して再送する。
 
-- `Receiving end does not exist` が**なぜ起きるのか**そのものは未解明。拡張機能側は offscreen を明示的に閉じておらず（`closeDocument` の呼び出しは存在しない）、ブラウザの自動破棄と考えられる。メッセージのタイムアウトは 10 秒（`OffscreenTransportBase.ts`）に対し、G5 は記録完了を最大 15 秒待つ構造で、その間に破棄される余地がある
-- 問題2 の対処方針の決定。トークンの保管先を SW 終了に耐えるストレージへ移すか、検証失敗時に再発行して1回だけ再試行する経路を設けるか。前者はセキュリティ設計（session-only にした意図）との整合を要確認
-- 上記がユーザー環境でも実害を生むか（並行操作時にアーカイブ作成が失敗しうるか）の確認
+採用理由となったなぜなぜ分析の要点:
+
+- トークン発行 `create_confirm_token` は `TOKEN_EXEMPT_OPS` にあり**誰でも呼べる**。したがって送信者検証を通過できる主体は元々いつでもトークンを取得でき、呼び出し元での再発行は攻撃者に新しい能力を与えない
+- 一方 **SW 側での自動再発行は採用できない**。届いた引数がそのまま正当化され、scopeHash によるパラメータ束縛（「9月1日以前をアーカイブ」のトークンで「全期間」を実行させない仕組み）が無意味になる
+- 再送が安全なのは、mismatch が**操作の実行前**に返る応答だから。データに触れていないので二重適用が起きない。他のエラーは実行済みの可能性があるため再送しない
+
+実装は2箇所:
+
+- `src/messaging/dashboardGateway.ts` — 実アプリの経路。`withConfirmToken()` を抽出し、mismatch のときだけ1回再発行して再送する
+- `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` — e2e はゲートウェイを経由せず自前でメッセージを組み立てるため（コメントに "Mirrors dashboardGateway.sendDashboard" と明記）、同じ回復処理を `dashboardMsg` に持たせた
+
+エラー文字列は `CONFIRM_TOKEN_MISMATCH_ERROR`（`src/messaging/sqliteOperationSecurity.ts`）として送受信で共有し、リテラルの重複を排した。e2e ヘルパーは src/ から import できないため、そこだけ同期コメント付きで文字列を複製している。
+
+**効果**: archive 系 e2e から `Confirmation token mismatch` が消滅。`archive-recommended-verification` の flaky 3件が解消し、`archive-required-verification` は5件すべて通過（CI で失敗していた R2 を含む）。
+
+## 残る課題
+
+### 未解決: `Receiving end does not exist`（G5 のみ）
+
+`G5: archive create runs while a recording is in flight` だけが依然 failed。エラーは offscreen への接続失敗のみで、トークン起因のものは消えている。
+
+なぜ接続が切れるのか自体は未解明。拡張機能側は offscreen を明示的に閉じておらず（`closeDocument` の呼び出しは存在しない）、ブラウザの自動破棄と考えられる。メッセージのタイムアウトは 10 秒（`OffscreenTransportBase.ts`）に対し、G5 は記録完了を最大 15 秒待つ構造で、その間に破棄される余地がある。
+
+問題1（エラー分類の漏れ）を直せば `offscreen_lost` と分類され、`msgOffscreen` のリトライ経路に乗せられる可能性がある。ただし分類を変えると `retriable` の扱いも変わるため、二重実行の危険がないか個別の確認が要る。
+
+### 未確認: ユーザー環境での実害
+
+並行操作時にアーカイブ作成が失敗しうるかは未検証。トークン揮発のほうは実アプリの経路（dashboardGateway）も修正済みなので、ユーザーが遭遇していた可能性のある mismatch は解消している。
+
+### 将来の検討課題: トークン機構そのものの再設計
+
+今回の分析で、トークンは**偽造メッセージを止められていない**ことが分かった（発行が無防備なため、送信者検証を通過できる主体は自力でトークンを取得できる）。実質的な価値は scopeHash によるパラメータ束縛にある。
+
+であれば「発行 → 検証」の2段階をやめ、送信時に payload から導出した署名を1回で送る設計に変えられる。SW 終了の影響を原理的に受けず、往復も1回減る。ただしセキュリティ設計の再レビューを伴うため、本 PBI の範囲外とする。
 
 ## 受け入れ条件
 
