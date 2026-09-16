@@ -18,7 +18,7 @@
 
 v6.9.2（PR #137）のリリース確認中に発見。`usability` の失敗は同 PR で解消したが、アーカイブ系 e2e の失敗が残った。main を worktree に切り出して同条件で実行し、変更なしの main でも同一の失敗が再現することを確認済み（PR #137 とは無関係の既存問題）。CI が赤いままだと以後の変更で回帰検知が効かないため、次バージョンで対応する。
 
-- ⬜🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（archive e2e の `Receiving end does not exist` / `Confirmation token mismatch` を解消し test ジョブを緑に戻す）
+- 🔶🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（archive e2e の `Receiving end does not exist` / `Confirmation token mismatch` を解消し test ジョブを緑に戻す。**原因2件を特定済み・未修正** — offscreen 喪失がエラー分類から漏れている / confirm token が SW 終了で揮発する。いずれも再現テスト追加済み）
 
 ### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
 
