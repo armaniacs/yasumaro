@@ -21,6 +21,7 @@ import {
     base64ToBytes,
 } from '../crypto/index.js';
 import { validatePasswordPolicy } from '../crypto/cryptoParams.js';
+import { hmacSignerForSecret, type HmacSigner } from '../crypto/hmacSigner.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 import { isLocked as authGuardIsLocked } from './authGuard.js';
@@ -466,3 +467,16 @@ export async function getOrCreateHmacSecret(): Promise<string> {
     cachedHmacSecret = secret;
     return secret;
 }
+
+/**
+ * Signer for settings and log exports.
+ *
+ * Standard base64, because these signatures are written into files the user
+ * downloads — switching the encoding would make every previously exported
+ * backup fail verification on restore.
+ *
+ * The secret is resolved per call so a rotation (or a cache cleared by a
+ * service worker restart) is picked up without rebuilding the signer.
+ */
+export const exportHmacSigner: HmacSigner = hmacSignerForSecret(getOrCreateHmacSecret, 'base64');
+

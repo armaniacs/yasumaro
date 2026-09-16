@@ -444,6 +444,12 @@ vi.mock('../../utils/crypto/index.js', async (importOriginal) => {
         }) as unknown as CryptoKey),
         generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
         verifyHmacSignature: vi.fn().mockResolvedValue(true),
+        // Signing moved behind HmacSigner (PBI 2026-09-16-04); the notification
+        // handlers now go through this seam rather than the bare functions.
+        notificationHmacSigner: {
+            sign: vi.fn().mockResolvedValue('test-signature'),
+            verify: vi.fn().mockResolvedValue(true),
+        },
     };
 });
 vi.mock('../../utils/storage/privacyConsent.js', () => ({
@@ -1324,7 +1330,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock signature verification failure
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(false);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(false);
 
             const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.badSignature';
 
@@ -1339,7 +1345,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock successful signature verification
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
 
             // Use a notification ID with valid format that passes prefix check
             // Short IDs return early, so use a longer one with proper format
@@ -1358,7 +1364,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock successful signature verification that returns a valid URL
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
 
             // Use a notification ID with valid format that will decode to "about:blank"
             // which is a blocked scheme and will cause isValidUrl to return false
@@ -1376,7 +1382,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock successful signature verification
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
             crypto.getNotificationHmacKey.mockResolvedValue({
                 type: 'hmac',
@@ -1399,7 +1405,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock successful signature verification
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
             crypto.getNotificationHmacKey.mockResolvedValue({
                 type: 'hmac',
@@ -1437,7 +1443,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock successful signature verification
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
             // @ts-expect-error - vi.fn() type narrowing
             crypto.getNotificationHmacKey.mockResolvedValue({
                 type: 'hmac',
@@ -1466,7 +1472,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock successful signature verification
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
 
             // Use a notification ID that will decode to https://example.com
             // base64url("https://example.com") = "aHR0cHM6Ly9leGFtcGxlLmNvbQ"
@@ -1486,7 +1492,7 @@ describe('service-worker handlers', () => {
             // Import crypto to mock signature verification
             const crypto = await import('../../utils/crypto/index.js');
             // @ts-expect-error - vi.fn() type narrowing
-            crypto.verifyHmacSignature.mockResolvedValue(true);
+            crypto.notificationHmacSigner.verify.mockResolvedValue(true);
 
             // Create a notification ID with an encoded part that exceeds MAX_ENCODED_LENGTH (5000)
             // This will make decodeUrlFromNotificationId return early at the length check

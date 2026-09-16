@@ -47,6 +47,8 @@ export {
     getNotificationHmacKey,
     generateHmacSignature,
     verifyHmacSignature,
+    notificationHmacSigner,
+    consentHmacSigner,
     wrapSecretString,
     unwrapSecretString,
     isWrappedSecretString,
@@ -59,3 +61,5 @@ export {
     migrateLegacyCiphertext,
 } from './envelope.js';
 export type { EncryptionEnvelope } from './envelope.js';
+
+export { hmacSignerForKey, hmacSignerForSecret, type HmacSigner, type HmacEncoding } from './hmacSigner.js';
