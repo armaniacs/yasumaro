@@ -18,10 +18,12 @@
 
 v6.9.2（PR #137）のリリース確認中に発見。`usability` の失敗は同 PR で解消したが、アーカイブ系 e2e の失敗が残った。main を worktree に切り出して同条件で実行し、変更なしの main でも同一の失敗が再現することを確認済み（PR #137 とは無関係の既存問題）。
 
-01 で原因2件（confirm token の揮発 / offscreen 喪失の分類漏れ）を修正し、**failed 1 + flaky 5 → failed 1 + flaky 0** まで回復した。残る G5 は offscreen の破棄そのものが原因で、`archive_create` の `noRetry: true`（既存の設計判断）を覆さずに解くには冪等性の導入が要るため 02 に分離した。
+01 で原因2件（confirm token の揮発 / offscreen 喪失の分類漏れ）を修正し、**failed 1 + flaky 5 → failed 1 + flaky 0** まで回復。残った G5 は 02 で解決し、archive 系 e2e は全件グリーンになった。
 
-- 🔶🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（**原因2件を修正済み** — confirm token を mismatch 時に1回再発行 / offscreen 喪失の分類漏れを解消。flaky 5件が解消し、残るは G5 のみ）
-- ⬜🔴🟡🔧 2026-09-16-02-fix-offscreen-teardown-during-archive.md（アーカイブ作成中に offscreen が破棄されても処理を失わない。冪等キー導入など設計判断を伴う。**ユーザー環境での実害は未確認** — まず再現確認から）
+02 は当初「アーカイブ中に offscreen が破棄される」問題として起票したが、実測の結果その前提が誤りと判明した（破棄されておらず、生成直後でリスナーが未登録だっただけ）。推測で立てた対処案（冪等キー / keepalive / 操作分割）はいずれも不要で、原因は send 側と offscreen 側で「準備完了」の定義が食い違っていたことにあった。
+
+- 🔶🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（**原因2件を修正済み** — confirm token を mismatch 時に1回再発行 / offscreen 喪失の分類漏れを解消。flaky 5件が解消）
+- ✅🟢🟢🔧 2026-09-16-02-fix-offscreen-teardown-during-archive.md（**完了** — offscreen のリスナーを同期登録に変更し、ファクトリ待機をハンドラ内へ移動。G5 通過・archive 系 e2e 全件グリーン）
 
 ### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
 

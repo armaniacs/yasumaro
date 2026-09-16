@@ -93,6 +93,11 @@ export function handleOffscreenMessage(
     (async () => {
         try {
             if (isSqliteMessage) {
+                // The listener is registered before the OPFS worker factory is
+                // installed (see the registration below), so a message can
+                // arrive first. Waiting here holds it until the engine can be
+                // built, instead of refusing it at the transport layer.
+                await factoryReady;
                 // Cast is safe: isSqliteMessage narrowed msg.type via isSqliteMessageType
                 // above, so msg.type is a known SqliteMessageType at this point. Payload
                 // shape itself is not runtime-validated here (same trust boundary as
@@ -139,10 +144,18 @@ const factoryReady: Promise<void> = import.meta.env.FIREFOX
         forwardError('Offscreen: OPFS worker factory setup failed', { error: errorMessage(err) }, 'offscreen');
       });
 
-if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
-    void factoryReady.then(() => {
-        if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
-            chrome.runtime.onMessage.addListener(handleOffscreenMessage);
-        }
-    });
+// Register synchronously, during module evaluation — NOT after factoryReady.
+//
+// chrome.offscreen.createDocument() resolves once the document exists, which
+// says nothing about whether the script inside it has run. Deferring the
+// listener behind factoryReady's dynamic import left a window in which the
+// document was live but had no receiver, and any message sent into it came
+// back as "Could not establish connection. Receiving end does not exist."
+// Measured at ~2ms after createDocument() resolved, with the same document
+// accepting messages normally ~50ms later (PBI 2026-09-16-02).
+//
+// The factory is instead awaited inside the handler, which was already async,
+// so a message arriving early is queued rather than refused.
+if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage?.addListener) {
+    chrome.runtime.onMessage.addListener(handleOffscreenMessage);
 }
