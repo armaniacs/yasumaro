@@ -7,8 +7,7 @@
 import { queryLogs, backupDb } from './dashboardSqliteService.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
-import { getOrCreateHmacSecret } from '../utils/storage/encryptionSession.js';
-import { computeHMAC } from '../utils/crypto/index.js';
+import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
 
 /**
  * Log JSON export format version. v2 adds an HMAC `signature` over the
@@ -122,8 +121,7 @@ export async function exportJson(): Promise<Blob> {
   const all = await queryAllData();
   const body = { version: LOG_EXPORT_VERSION, table: 'browsing_logs', rows: all };
   // Sign the signature-stripped body; import recomputes over the same bytes.
-  const hmacSecret = await getOrCreateHmacSecret();
-  const signature = await computeHMAC(hmacSecret, JSON.stringify(body, null, 2));
+  const signature = await exportHmacSigner.sign(JSON.stringify(body, null, 2));
   const json = JSON.stringify({ ...body, signature }, null, 2);
   return new Blob([json], { type: 'application/json' });
 }

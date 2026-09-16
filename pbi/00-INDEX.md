@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-16 crypto の HMAC 統合 — 1件（16 から分離）
+### 2026-09-16 hashUrl の locality 改善 — 1件（04 から分離）
 
-2026-09-15-16 は codec と HMAC の両方を対象にしていたが、codec は入出力が閉じた変換で機械的に検証できるのに対し、HMAC は**既存の署名済みデータとの互換性**が絡むため分離した。codec 部分は完了済み。
+HMAC 統合（04）の残項目。`hashUrl` はログ出力時の URL マスキング専用で暗号プリミティブとしての用途を持たないが、移動先によっては **logger → crypto の依存**が生まれ層構造に影響しうる。配置先の判断を着手条件とした。
 
-- ⬜🟡🔴🔧 2026-09-16-04-refactor-hmac-signer.md（`computeHMAC`（文字列鍵・5ファイル11箇所）と `generateHmacSignature`（CryptoKey 鍵・3ファイル5箇所）を HmacSigner に統合 + `hashUrl` を crypto から移動。**出力形式が異なる**（標準 base64 と URL-safe）ため、どの署名がどこに永続化されているかの洗い出しが先）
+- ⬜🟢🟡🔧 2026-09-16-05-refactor-hash-url-locality.md（`hashUrl` を crypto から移動し暗号モジュールの責務を絞る。呼び出しは16箇所。**配置先の判断が先** — logger 配下 / 独立モジュール / 移動しない の3案）
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
@@ -66,6 +66,16 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-16 crypto の HMAC 統合 — 1件完了（04）
+
+`computeHMAC`（文字列鍵）と `generateHmacSignature`（CryptoKey 鍵）の2系統を `HmacSigner` に統合し、呼び出し側から鍵の取得方法の知識を消した。
+
+両者はアルゴリズムが同一で差は鍵の受け取り方と出力形式だけだったが、**出力形式を揃えると必ず片方の既存署名が壊れる**（設定・ログのエクスポートは標準 base64 でユーザーのディスク上に、同意と通知IDは URL-safe で保存されている）。そこでエンコーディングを signer の属性とし、用途ごとに既存形式を維持した。既存関数とバイト単位で一致することをテストで実証済み。
+
+副産物として、`computeHMAC` 経路で呼び出し側任せだった定数時間比較が `verify` に内包され、忘れようがなくなった。
+
+`hashUrl` の移動は層構造への影響が独立した論点のため 2026-09-16-05 に分離。
 
 ### 2026-09-16 crypto codec の統合 — 1件完了（16 の codec 部分）
 

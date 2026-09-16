@@ -15,11 +15,13 @@ vi.mock('../dashboardSqliteService.js', () => ({
   queryLogs: (...args: any[]) => mockQueryLogs(...args),
 }));
 
+// Deterministic signer so fixtures are reproducible; the real one needs a
+// stored secret this suite does not set up (PBI 2026-09-16-04).
 vi.mock('../../utils/storage/encryptionSession.js', () => ({
-  getOrCreateHmacSecret: vi.fn(async () => 'test-secret'),
-}));
-vi.mock('../../utils/crypto/index.js', () => ({
-  computeHMAC: vi.fn(async (secret: string, payload: string) => `hmac(${secret}):${payload.length}`),
+  exportHmacSigner: {
+    sign: vi.fn(async (payload: string) => `hmac(test-secret):${payload.length}`),
+    verify: vi.fn(async (payload: string, sig: string) => sig === `hmac(test-secret):${payload.length}`),
+  },
 }));
 
 // ---------------------------------------------------------------------------

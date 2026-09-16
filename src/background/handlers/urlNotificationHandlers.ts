@@ -4,7 +4,7 @@
  * Extracted from service-worker.ts for better modularity
  */
 
-import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature, textToBase64Url, base64UrlToText } from '../../utils/crypto/index.js';
+import { notificationHmacSigner, textToBase64Url, base64UrlToText } from '../../utils/crypto/index.js';
 import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
@@ -47,8 +47,7 @@ export async function encodeUrlSafeBase64(
     const urlB64 = textToBase64Url(url);
 
     // HMAC署名を計算
-    const hmacKey = await getNotificationHmacKey();
-    const signature = await generateHmacSignature(url, hmacKey);
+    const signature = await notificationHmacSigner.sign(url);
 
     return `${prefix}${urlB64}.${signature}`;
   } catch (_error) {
@@ -91,8 +90,7 @@ export async function decodeUrlFromNotificationId(notificationId: string): Promi
     const url = base64UrlToText(urlB64);
 
     // 署名検証
-    const hmacKey = await getNotificationHmacKey();
-    const isValid = await verifyHmacSignature(url, signature, hmacKey);
+    const isValid = await notificationHmacSigner.verify(url, signature);
 
     if (!isValid) {
       await logWarn(

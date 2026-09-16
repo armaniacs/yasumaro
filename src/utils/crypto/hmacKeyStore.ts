@@ -16,6 +16,7 @@ import {
     bytesToBase64Url,
 } from './primitives.js';
 import { loadDurableWrappingKey, saveDurableWrappingKey } from './durableKeyStore.js';
+import { hmacSignerForKey, type HmacSigner } from './hmacSigner.js';
 
 // ============================================================================
 // Wrapping-key candidate stores — internal seam (PBI 2026-09-15-12)
@@ -402,6 +403,24 @@ export async function getConsentHmacKey(): Promise<CryptoKey> {
 export async function getNotificationHmacKey(): Promise<CryptoKey> {
     return getOrCreateWrappedHmacKey(HMAC_SIGNATURE_KEY_STORAGE, HMAC_SIGNATURE_KEY_VERSION);
 }
+
+/**
+ * Signer for notification ids.
+ *
+ * base64url because the signature is embedded in a URL-derived id. The key is
+ * resolved per call, so a service worker restart that invalidates the unwrapped
+ * key does not leave a stale signer behind.
+ */
+export const notificationHmacSigner: HmacSigner = hmacSignerForKey(getNotificationHmacKey, 'base64url');
+
+/**
+ * Signer for the stored privacy consent record.
+ *
+ * base64url to match the signatures already written to chrome.storage.local —
+ * changing the encoding would make an existing consent read as tampered and
+ * silently reset it.
+ */
+export const consentHmacSigner: HmacSigner = hmacSignerForKey(getConsentHmacKey, 'base64url');
 
 /**
  * Generate URL-safe base64 HMAC signature for notification IDs

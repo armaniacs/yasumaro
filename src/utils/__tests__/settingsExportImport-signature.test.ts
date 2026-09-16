@@ -99,9 +99,10 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         // 【実際の処理実行】settingsExportImportをインポート
         const settingsExportImport = await import('../settingsExportImport.js');
 
-        // 【モック設定】computeHMACが同じ署名を返す
-        const cryptoModule = await import('../crypto/index.js');
-        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
+        // 【モック設定】署名検証を成功させる（PBI 2026-09-16-04: computeHMAC の
+        // spy から HmacSigner.verify の spy へ。実装が signer 経由になったため）
+        const sessionModule = await import('../storage/encryptionSession.js');
+        vi.spyOn(sessionModule.exportHmacSigner, 'verify').mockResolvedValue(true);
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -134,8 +135,8 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const settingsExportImport = await import('../settingsExportImport.js');
 
         // 【モック設定】computeHMACが元の署名と異なる値を返す
-        const cryptoModule = await import('../crypto/index.js');
-        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('original-signature');
+        const sessionModule = await import('../storage/encryptionSession.js');
+        vi.spyOn(sessionModule.exportHmacSigner, 'verify').mockResolvedValue(false);
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -191,8 +192,8 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         const settingsExportImport = await import('../settingsExportImport.js');
 
         // 【モック設定】computeHMACが改ざん後のデータから異なる署名を返す
-        const cryptoModule = await import('../crypto/index.js');
-        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue('tampered-data-signature');
+        const sessionModule = await import('../storage/encryptionSession.js');
+        vi.spyOn(sessionModule.exportHmacSigner, 'verify').mockResolvedValue(false);
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -290,9 +291,10 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         // 【実際の処理実行】settingsExportImportをインポート
         const settingsExportImport = await import('../settingsExportImport.js');
 
-        // 【モック設定】computeHMACが同じ署名を返す
-        const cryptoModule = await import('../crypto/index.js');
-        vi.spyOn(cryptoModule, 'computeHMAC').mockResolvedValue(mockSignature);
+        // 【モック設定】署名検証を成功させる（PBI 2026-09-16-04: computeHMAC の
+        // spy から HmacSigner.verify の spy へ。実装が signer 経由になったため）
+        const sessionModule = await import('../storage/encryptionSession.js');
+        vi.spyOn(sessionModule.exportHmacSigner, 'verify').mockResolvedValue(true);
 
         const result = await settingsExportImport.importSettings(jsonData);
 
@@ -325,18 +327,19 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         // 【実際の処理実行】settingsExportImportをインポート
         const settingsExportImport = await import('../settingsExportImport.js');
 
-        // 【モック設定】computeHMACが一貫して同じ署名を返す
+        // 【モック設定】署名検証が呼ばれたことを数える（PBI 2026-09-16-04:
+        // 検証は HmacSigner.verify に移ったため、そちらを spy する）
         let callCount = 0;
-        const cryptoModule = await import('../crypto/index.js');
-        vi.spyOn(cryptoModule, 'computeHMAC').mockImplementation(async () => {
+        const sessionModule = await import('../storage/encryptionSession.js');
+        vi.spyOn(sessionModule.exportHmacSigner, 'verify').mockImplementation(async (_data, sig) => {
             callCount++;
-            return expectedSignature;
+            return sig === expectedSignature;
         });
 
         const result = await settingsExportImport.importSettings(jsonData);
 
-        // 【結果検証】HMAC署名の一貫性を確認
+        // 【結果検証】署名検証が実際に走ったことを確認
         expect(result).not.toBeNull(); // 【確認内容】: インポートが成功していること 🟢
-        expect(callCount).toBeGreaterThan(0); // 【確認内容】: computeHMACが呼ばれたこと 🟢
+        expect(callCount).toBeGreaterThan(0); // 【確認内容】: 署名検証が呼ばれたこと 🟢
     });
 });

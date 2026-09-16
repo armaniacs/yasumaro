@@ -55,6 +55,12 @@ const mockGetSettingsHoisted = vi.hoisted(() => vi.fn(async () => ({
       })));
 const mockSaveSettingsHoisted = vi.hoisted(() => vi.fn(async () => {}));
 const mockGetOrCreateHmacSecretHoisted = vi.hoisted(() => vi.fn(async () => 'test_hmac_secret'));
+// Deterministic export signer (PBI 2026-09-16-04). Signing moved behind
+// HmacSigner, so stubbing computeHMAC alone no longer reaches the code path.
+const mockExportHmacSignerHoisted = vi.hoisted(() => {
+  const sign = async (data: string) => 'hmac_' + Buffer.from(data).toString('base64').substring(0, 20);
+  return { sign: vi.fn(sign), verify: vi.fn(async (data: string, sig: string) => sig === (await sign(data))) };
+});
 const mockRepoGetAll = vi.hoisted(() => vi.fn(async () => ({
           ai_provider: 'gemini',
           obsidian_protocol: 'http',
@@ -135,6 +141,7 @@ vi.mock('../storage/types.js', async (importOriginal) => {
       getSettings: mockGetSettingsHoisted,
       saveSettings: mockSaveSettingsHoisted,
       getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
+      exportHmacSigner: mockExportHmacSignerHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -166,6 +173,7 @@ vi.mock('../storage/defaults.js', async (importOriginal) => {
       getSettings: mockGetSettingsHoisted,
       saveSettings: mockSaveSettingsHoisted,
       getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
+      exportHmacSigner: mockExportHmacSignerHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -197,6 +205,7 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
       getSettings: mockGetSettingsHoisted,
       saveSettings: mockSaveSettingsHoisted,
       getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
+      exportHmacSigner: mockExportHmacSignerHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -228,6 +237,7 @@ vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
       getSettings: mockGetSettingsHoisted,
       saveSettings: mockSaveSettingsHoisted,
       getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
+      exportHmacSigner: mockExportHmacSignerHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -259,6 +269,7 @@ vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
       getSettings: mockGetSettingsHoisted,
       saveSettings: mockSaveSettingsHoisted,
       getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
+      exportHmacSigner: mockExportHmacSignerHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',
@@ -290,6 +301,7 @@ vi.mock('../storage/quota.js', async (importOriginal) => {
       getSettings: mockGetSettingsHoisted,
       saveSettings: mockSaveSettingsHoisted,
       getOrCreateHmacSecret: mockGetOrCreateHmacSecretHoisted,
+      exportHmacSigner: mockExportHmacSignerHoisted,
       API_KEY_FIELDS: [
           'obsidian_api_key',
           'gemini_api_key',

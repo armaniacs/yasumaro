@@ -3,12 +3,12 @@
  * Settings export and import functionality
  */
 
-import { getOrCreateHmacSecret } from './storage/encryptionSession.js';
+import { exportHmacSigner } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings } from './storage/types.js';
-import { computeHMAC, encrypt, deriveKey, constantTimeCompare } from './crypto/index.js';
+import { encrypt, deriveKey } from './crypto/index.js';
 import { generateSalt, bytesToBase64 } from './crypto/index.js';
 import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
 import { logError, logInfo, ErrorCode } from './logger.js';
@@ -184,9 +184,8 @@ export async function exportEncryptedSettings(
     const encrypted = await encrypt(json, key);
 
     // HMAC署名を計算（ciphertext全体に対して — version:2 ciphertext-HMAC）
-    const hmacSecret = await getOrCreateHmacSecret();
     const hmacPayload = `${encrypted.ciphertext}:${encrypted.iv}:${saltB64}`;
-    const hmac = await computeHMAC(hmacSecret, hmacPayload);
+    const hmac = await exportHmacSigner.sign(hmacPayload);
 
     const encryptedExportData: EncryptedExportData = {
       encrypted: true,
@@ -249,10 +248,8 @@ export async function importEncryptedSettings(
 
     if (isV2) {
       // HMAC verification BEFORE KDF/decrypt (VULN-034): cheap auth, then amplify
-      const hmacSecret = await getOrCreateHmacSecret();
       const hmacPayload = `${encryptedData.ciphertext}:${encryptedData.iv}:${encryptedData.salt}`;
-      const computedHmac = await computeHMAC(hmacSecret, hmacPayload);
-      if (!(await constantTimeCompare(encryptedData.hmac, computedHmac))) {
+      if (!(await exportHmacSigner.verify(hmacPayload, encryptedData.hmac))) {
         await logError(
           'HMAC verification failed',
           {},
@@ -298,9 +295,7 @@ export async function importEncryptedSettings(
     // integrity for existing tests that expect wrong-HMAC rejection.
     // For v2, HMAC was already verified over ciphertext before KDF, so no plaintext check.
     if (!isV2 && encryptedData.hmac) {
-      const hmacSecret = await getOrCreateHmacSecret();
-      const computedLegacyHmac = await computeHMAC(hmacSecret, decryptedJson);
-      if (!(await constantTimeCompare(encryptedData.hmac, computedLegacyHmac))) {
+      if (!(await exportHmacSigner.verify(decryptedJson, encryptedData.hmac))) {
         await logError(
           'HMAC verification failed',
           {},
@@ -375,8 +370,7 @@ export async function exportSettings(): Promise<void> {
   const json = JSON.stringify(exportData, null, 2);
 
   // HMAC署名を計算
-  const hmacSecret = await getOrCreateHmacSecret();
-  const signature = await computeHMAC(hmacSecret, json);
+  const signature = await exportHmacSigner.sign(json);
 
   // 署名付きエクスポートデータ
   const signedExportData: ExportData = {
@@ -487,16 +481,11 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
       return null; // 旧形式の互換性を削除
     }
 
-    // 署名検証
-    const hmacSecret = await getOrCreateHmacSecret();
-
     // 署名を除いてハッシュ計算
     const { signature, ...dataForVerification } = parsed;
     const dataJson = JSON.stringify(dataForVerification, null, 2);
 
-    const computedSignature = await computeHMAC(hmacSecret, dataJson);
-
-    if (!(await constantTimeCompare(signature, computedSignature))) {
+    if (!(await exportHmacSigner.verify(dataJson, signature))) {
       await logError(
         'Signature verification failed',
         {},

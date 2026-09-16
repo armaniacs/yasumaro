@@ -16,6 +16,11 @@ vi.mock('../../../utils/crypto/index.js', async (importOriginal) => {
     getNotificationHmacKey: vi.fn().mockImplementation(async () => { console.log('>> getNotificationHmacKey called'); return 'test-key'; }),
     generateHmacSignature: vi.fn().mockImplementation(async (data: string, key: any) => { console.log('>> generateHmacSignature called with', data); return 'signature123'; }),
     verifyHmacSignature: vi.fn().mockResolvedValue(true),
+    // The handlers sign through this seam now (PBI 2026-09-16-04).
+    notificationHmacSigner: {
+      sign: vi.fn().mockResolvedValue('signature123'),
+      verify: vi.fn().mockResolvedValue(true),
+    },
   };
 });
 
@@ -57,7 +62,7 @@ describe('encodeUrlSafeBase64', () => {
 
     it('throws when encoding fails due to crypto error', async () => {
       const crypto = await import('../../../utils/crypto/index.js');
-      vi.mocked(crypto.getNotificationHmacKey).mockRejectedValueOnce(new Error('Crypto unavailable'));
+      vi.mocked(crypto.notificationHmacSigner.sign).mockRejectedValueOnce(new Error('Crypto unavailable'));
       await expect(encodeUrlSafeBase64('https://example.com')).rejects.toThrow('encodeUrlSafeBase64: Failed to encode URL');
     });
 });
@@ -93,7 +98,7 @@ describe('decodeUrlFromNotificationId', () => {
 
     it('throws Invalid signature when verification fails', async () => {
       const crypto = await import('../../../utils/crypto/index.js');
-      vi.mocked(crypto.verifyHmacSignature).mockResolvedValueOnce(false);
+      vi.mocked(crypto.notificationHmacSigner.verify).mockResolvedValueOnce(false);
       const url = 'https://example.com/test';
       const encoded = await encodeUrlSafeBase64(url);
       await expect(decodeUrlFromNotificationId(encoded)).rejects.toThrow('Invalid signature');

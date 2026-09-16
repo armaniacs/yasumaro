@@ -7,7 +7,7 @@
 import { StorageKeys } from './types.js';
 import { errorMessage } from '../errorUtils.js';
 import { logInfo, logWarn, logError, ErrorCode } from '../logger.js';
-import { getConsentHmacKey, generateHmacSignature, verifyHmacSignature } from '../crypto/index.js';
+import { consentHmacSigner } from '../crypto/index.js';
 import { pickDefined } from '../objectUtils.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
@@ -53,9 +53,8 @@ function buildSignaturePayload(record: Omit<SignedPrivacyConsentRecord, 'signatu
  * 同意状態レコードにHMAC署名を付与して保存する。
  */
 async function signAndStoreConsent(record: Omit<SignedPrivacyConsentRecord, 'signature'>): Promise<void> {
-    const key = await getConsentHmacKey();
     const payload = buildSignaturePayload(record);
-    const signature = await generateHmacSignature(payload, key);
+    const signature = await consentHmacSigner.sign(payload);
     const signedRecord: SignedPrivacyConsentRecord = { ...record, signature };
     await chrome.storage.local.set({ [StorageKeys.PRIVACY_CONSENT]: signedRecord });
 }
@@ -86,9 +85,8 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
             // 署名が付与されている場合は改ざんチェックを行う。
             // 署名がない場合（マイグレーション前の既存データ）は後方互換として読み込む。
             if (typeof data.signature === 'string') {
-                const key = await getConsentHmacKey();
                 const payload = buildSignaturePayload(data);
-                const isValid = await verifyHmacSignature(payload, data.signature, key);
+                const isValid = await consentHmacSigner.verify(payload, data.signature);
                 if (!isValid) {
                     await logWarn(
                         'Privacy consent signature verification failed — treating as unconsented',
