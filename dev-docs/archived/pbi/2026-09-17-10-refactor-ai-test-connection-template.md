@@ -30,13 +30,13 @@ Scenario: カタログの contentCharsKey 変更がプロバイダーの切り�
 ```
 
 ## 受け入れ基準
-- [ ] `ProviderStrategy` の基底クラス内に `executeHttpTestFlow(hooks)` が新設され、既存 `executeHttpSummaryFlow` と対称の Template Method になっている
-- [ ] `GeminiProvider` の `testConnection` と `GenericOpenAICompatibleProvider` の `testConnection` が新テンプレートに委譲し、重複シーケンスがプロバイダー側に残っていない
-- [ ] 各 provider の `testConnection` の返り値（success・message・elapsedMs 扱い・debug の構造）と接続テストの挙動（`fetchWithRetry` のパラメータ、文言）が現行と完全一致する
-- [ ] `providerCatalog` の `contentCharsKey` 等の宣言フィールドが実消費に昇格し、`createProviderStrategy` がカタログエントリをプロバイダーへ渡す形になっている
-- [ ] legacy provider id（openai2 等）の互換扱いがどこに住むかを判断し、その決定を PBI またはコード内の非履歴コメントとして記録した
-- [ ] プロバイダー関連の既存テストが無変更で green である
-- [ ] `npm run type-check` が green である
+- [x] `ProviderStrategy` の基底クラス内に `executeHttpTestFlow(hooks)` が新設され、既存 `executeHttpSummaryFlow` と対称の Template Method になっている
+- [x] `GeminiProvider` の `testConnection` と `GenericOpenAICompatibleProvider` の `testConnection` が新テンプレートに委譲し、重複シーケンスがプロバイダー側に残っていない
+- [x] 各 provider の `testConnection` の返り値（success・message・elapsedMs 扱い・debug の構造）と接続テストの挙動（`fetchWithRetry` のパラメータ、文言）が現行と完全一致する
+- [x] `providerCatalog` の `contentCharsKey` 等の宣言フィールドが実消費に昇格し、`createProviderStrategy` がカタログエントリをプロバイダーへ渡す形になっている
+- [x] legacy provider id（openai2 等）の互換扱いがどこに住むかを判断し、その決定を PBI またはコード内の非履歴コメントとして記録した
+- [x] プロバイダー関連の既存テストが無変更で green である
+- [x] `npm run type-check` が green である
 
 ## テスト戦略
 - 既存スイートの無変更パスを parity の証拠とする。対象は `providers` 配下の `GeminiProvider` 系テストおよび `OpenAIProvider` 系テストと、`ai` 配下の `providerCatalog` 適合テスト・`RemoteAIService` 系テスト・`aiServiceFactory` 系テストである。
@@ -62,6 +62,6 @@ Scenario: カタログの contentCharsKey 変更がプロバイダーの切り�
 - 制約の再掲: 返り値構造と接続テスト挙動の完全一致を守り、既存テスト無変更 green を目標とする。文言改善は別 PBI に切り出す。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

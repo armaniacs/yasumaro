@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 10件（9件完了・アーカイブ済み、1件残）
+### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — ✅ 全10件完了（アーカイブ済み）
 
-大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化。実行順 = 01 → 10（RICE 降順。ただし 03→04 と 01→10 は同一領域を触る順序依存で入れ替えあり）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。バッチ1（01/02/03/07）・バッチ2（04/05/08）・バッチ3（06/09）は並列実装済み。
+大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化し、4バッチ（並列サブエージェント+ファイル排他）で全件実装。実行順 = 01 → 10（03→04 と 01→10 は順序依存で入れ替え）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。
 
-- 2026-09-17-10-refactor-ai-test-connection-template.md（⬜ 未着手 — M. testConnection を `executeHttpTestFlow` テンプレに統合+providerCatalog を設定キー SSOT に昇格。01・09 完了済み）
+最終検証: type-check / lint 0 errors / test 12,165 passed (763 files) / build PASS / lint:adr-links PASS。残る起票候補は台帳の「MAX_PROVIDERS（実害なし）」「utils 物理再配置（lint 強制後に再判断）」のみ。
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
@@ -67,6 +67,10 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 1件完了（10）
+
+- 2026-09-17-10-refactor-ai-test-connection-template.md（✅ 完了・アーカイブ済 — `executeHttpTestFlow(hooks)` を新設（`executeHttpSummaryFlow` と対称）し Gemini/OpenAI 互換の testConnection 重複（約90%）を統合。providerCatalog の contentCharsKey を実消費に昇格して設定キー SSOT 化。legacy フォールバックは unknown 拒否契約維持のため直構築専用と温存。parity 13 + SSOT pin 4 tests 追加・AI 配下 233 tests green）
 
 ### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 2件完了（06・09）
 
