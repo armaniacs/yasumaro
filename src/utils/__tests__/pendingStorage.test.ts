@@ -20,7 +20,7 @@ vi.mock('../logger.js', () => ({
     },
 }));
 
-vi.mock('../crypto/index.js', () => ({
+vi.mock('../urlHash.js', () => ({
     hashUrl: vi.fn().mockResolvedValue('mocked-hash'),
 }));
 

@@ -30,7 +30,7 @@ vi.mock('../logger.js', () => ({
   },
 }));
 
-vi.mock('../crypto/index.js', () => ({ hashUrl: vi.fn(async () => 'hash') }));
+vi.mock('../urlHash.js', () => ({ hashUrl: vi.fn(async () => 'hash') }));
 vi.mock('../i18n.js', () => ({ getMessage: vi.fn(() => '') }));
 
 const DAY_MS = 24 * 60 * 60 * 1000;

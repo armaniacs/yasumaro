@@ -26,7 +26,6 @@ export {
     computeHMAC,
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
-    hashUrl,
     bytesToBase64,
     base64ToBytes,
     textToBase64,

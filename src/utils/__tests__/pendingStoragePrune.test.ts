@@ -28,7 +28,7 @@ vi.mock('../logger.js', () => ({
   },
 }));
 
-vi.mock('../crypto/index.js', () => ({ hashUrl: vi.fn(async () => 'hash') }));
+vi.mock('../urlHash.js', () => ({ hashUrl: vi.fn(async () => 'hash') }));
 vi.mock('../i18n.js', () => ({ getMessage: vi.fn(() => '') }));
 
 function makePage(i: number, expiry: number): PendingPage {
