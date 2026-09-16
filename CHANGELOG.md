@@ -38,6 +38,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **拡張機能の起動直後に実行した操作が「Database connection lost」で失敗することがあった**: SQLite 操作を受け持つ offscreen document は、リスナーの登録を OPFS ワーカーファクトリの読み込み完了後に行っていた。一方 `chrome.offscreen.createDocument()` が解決するのはドキュメントの生成までで、中のスクリプトが実行を終えたことは保証しない。このため送信側が「準備完了」と見なして送ったメッセージが、受信リスナーの未登録な一瞬に落ち、拒否されていた（実測でドキュメント生成の 2ms 後に失敗し、同じドキュメントが 50ms 後には正常に受信することを確認）。リスナーをモジュール評価時に同期登録し、ファクトリの待機をハンドラ内へ移すことで、早く届いたメッセージは拒否されず待たされるようにした
+- **confirm token が Service Worker の終了で失われ、操作が拒否されることがあった**: トークンは `chrome.storage.session` に保存されるが、このストレージは MV3 の Service Worker 終了時に揮発する。発行から検証までの間に Service Worker が終了すると、有効期限内かつ未使用の正当なトークンでも拒否されていた。送信側がトークン不一致を受け取った場合に限り、1回だけ再発行して再送するようにした（不一致は操作の実行前に返る応答のため、再送しても二重に適用されることはない）
+- **データベース接続が失われたときのエラーが、意味の取りにくいブラウザの原文のまま表示されていた**: ブラウザが返す「Could not establish connection. Receiving end does not exist.」を接続喪失として認識できておらず、専用の案内があるにもかかわらず未分類として扱われていた
 
 ## [6.9.2] - 2026-09-16
 

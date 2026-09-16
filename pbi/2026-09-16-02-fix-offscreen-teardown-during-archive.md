@@ -1,96 +1,93 @@
-# PBI: アーカイブ作成中に offscreen が破棄されても処理を失わない
+# PBI: offscreen のリスナー登録前に送られたメッセージが拒否される
 
-## ステータス: 未着手
+## ステータス: ✅ 完了（2026-09-16）
 
 ## ユーザーストーリー
 
-Yasumaro の利用者として、アーカイブ作成が「Database connection lost」で失敗しないでほしい。なぜなら記録が走っている最中にアーカイブを作ろうとすると、ブラウザ側の都合で処理が中断され、ユーザーには何が悪かったのか分からないまま失敗だけが残るから。
-
-## 優先度
-
-- 順位: PBI 2026-09-16-01 の後継（未着手）
-- 根拠: CI の `test` ジョブに残る唯一の failed であり、回帰検知の最後の穴。ただしユーザー環境での実害が未確認のため、最優先ではない
+Yasumaro の利用者として、拡張機能を起動した直後の操作が「Database connection lost」で失敗しないでほしい。なぜなら初回の保存や検索がタイミング次第で弾かれると、ユーザーには何が悪かったのか分からないまま失敗だけが残るから。
 
 ## 背景
 
-PBI 2026-09-16-01 で archive e2e の失敗を調査し、原因2件（confirm token の揮発 / offscreen 喪失の分類漏れ）を修正した。その結果 flaky 5件が解消し、残るのは 1 件だけになった。
+PBI 2026-09-16-01 の残課題として起票。当初は「アーカイブ作成中に offscreen が破棄される」問題として記述していたが、**実測の結果その前提は誤りだった**ため本 PBI は全面的に書き直されている。
+
+## 実測で判明した原因
+
+`archive_create` の失敗時に、送信側の状態を記録して確認した。
 
 ```
-G5: archive create runs while a recording is in flight — both succeed
-→ Database connection lost. Retrying may recover it. (retriable: true)
++2ms    send failed   → Could not establish connection. Receiving end does not exist.
+                        hasDocumentAfterFailure: true     ← ドキュメントは存在する
+                        aliveBeforeEnsure: false          ← フラグの陳腐化でもない
+                        msSinceDocumentCreated: 2         ← 生成直後
++140ms  probe(50ms)   → error: null   ← 同じドキュメントが正常に受信
++206ms  probe(200ms)  → error: null
++1007ms probe(1000ms) → error: null
 ```
 
-分類の修正により、エラーは正しく `offscreen_lost` として返るようになった。しかし **`archive_create` はリトライしない**ため結果は変わっていない。
+Service Worker の再起動も起きていない（transport インスタンスの生成は1回のみ）。
 
-## なぜ単純なリトライで解決してはいけないか
+**offscreen document は破棄されていなかった。生成直後でリスナーが未登録だっただけ**である。`Receiving end does not exist` はドキュメントの不在ではなく、受信リスナーの不在を指していた。
 
-`src/messaging/archiveWireTable.ts` で `archive_create` は **`noRetry: true`** と明示的に宣言されている。表のコメントは次のとおり。
+### なぜリスナーが未登録だったのか
 
-> Ops that must never be blind-retried (timeout does not mean failure).
+`src/offscreen/offscreen.ts` はリスナー登録を `factoryReady`（OPFS ワーカーファクトリの動的 import）の解決後に行っていた。
 
-タイムアウトや接続断は「失敗した」ことを意味しない。offscreen 側で処理が**完走している可能性**がある。盲目的に再試行すると、アーカイブが二重に作られ、staging ファイルが孤児として残る。
+```ts
+void factoryReady.then(() => {
+    chrome.runtime.onMessage.addListener(handleOffscreenMessage);
+});
+```
 
-したがって「e2e を緑にするために `noRetry` を外す」のは既存の設計判断を覆す誤った対処であり、本 PBI ではそれを採らない。
+一方 `chrome.offscreen.createDocument()` が解決するのは「ドキュメントが生成された」ことだけで、**中のスクリプトが実行を終えたことも、リスナーが登録されたことも保証しない**。送信側はこれを「準備完了」と見なして即座に送るため、その隙間に落ちる。
 
-## 問題の構造
+根本は、**送信側と受信側のどちらも「準備完了」を定義しておらず、暗黙の前提が食い違っていた**こと。
 
-### なぜ接続が切れるのか
+### なぜ G5 でだけ表面化したのか
 
-拡張機能側は offscreen を明示的に閉じていない（`closeDocument` の呼び出しはコードベースに存在しない）。ブラウザによる自動破棄と考えられる。
+- G5 は SW 起動直後に `archive_create` が走る唯一のテスト。他は offscreen が温まった状態で実行されるため踏まない
+- `msgOffscreen` は失敗時に1回リトライするが、`archive_create` は `noRetry: true` でそれを無効化している
 
-- メッセージのタイムアウトは 10 秒（`OffscreenTransportBase.ts` の `MESSAGE_TIMEOUT_MS_DESKTOP`）
-- G5 は記録の完了を最大 15 秒待つ構造
-- その待機中に offscreen が破棄される余地がある
+`noRetry` は「タイムアウトは失敗を意味しない（実行済みかもしれない）」という正しい設計判断であり、今回のケースには**該当しない**（リスナー未登録で弾かれた送信は offscreen に一度も到達していないため）。ただし判定を文言に依存させるのは脆いので、`noRetry` 側には手を入れていない。
 
-### なぜ再開できないのか
+## 対処
 
-staging 名は呼び出しごとに新規発行され（`archiveStaging.ts` の `prepareOutgoing()` → `issueName('outgoing')`）、その登録簿 `registry` は **offscreen のメモリ上にある**。offscreen が破棄されればレジストリごと消えるため、再接続しても「さっきの作成がどこまで進んだか」を知る手立てがない。
+リスナーをモジュール評価時に**同期登録**するよう変更し、ファクトリの待機はハンドラ内に移した。ハンドラは元々非同期なので、早く届いたメッセージは拒否されず待たされる。
 
-つまり **archive_create は中断からの再開を想定していない**。これが `noRetry: true` の実質的な理由でもある。
+```ts
+// 登録は同期
+chrome.runtime.onMessage.addListener(handleOffscreenMessage);
 
-## 対処の方向性（いずれも設計判断を伴う）
+// ハンドラ内で必要になった時点で待つ
+await factoryReady;
+```
 
-### 案A: 冪等キーを導入し、安全に再試行可能にする
+## 破棄された当初案（いずれも前提が誤っていた）
 
-呼び出し側が生成した冪等キーを `archive_create` に渡し、offscreen 側は「このキーで既に作成済みか」を永続領域（OPFS 上のレジストリなど）で判定する。完走済みなら既存の staging 名を返し、未完了なら再開または作り直す。
+参考として記録する。実測前の推測に基づくもので、**どれも今回の原因には無関係**だった。
 
-- 利点: 根本解決。`noRetry` を安全に外せる
-- 欠点: レジストリの永続化と、中断した staging の後始末（孤児ファイルの回収）が要る
+- **冪等キーの導入** — 再試行を安全にする案。しかし初回が到達していないため再試行以前の問題だった
+- **keepalive** — offscreen の生存を保証する案。破棄されていないので不要
+- **操作の分割** — 中断からの再開を可能にする案。中断していないので不要
 
-### 案B: 操作中は offscreen の生存を保証する
+「アーカイブ中は記録しない」ロックの案も検討したが、データ競合ではなく初期化順序の問題であり解決しない。なお SQLite 操作は `OffscreenTransportBase` の Mutex で既に直列化されている。
 
-`chrome.offscreen` に寿命を延ばす API は無いが、長時間操作の間だけ定期的にメッセージを送る（keepalive）ことで破棄を避ける運用は可能。
+## 検証
 
-- 利点: 変更が小さい
-- 欠点: 対症療法。keepalive が途切れれば同じ問題が再発する。MV3 の設計思想にも逆行する
-
-### 案C: 長時間操作を分割し、各段階を冪等にする
-
-`archive_create` を「staging 確保」「バッチ転送」「確定」に分け、各段階を短く冪等にする。中断しても続きから再開できる。
-
-- 利点: 最も堅牢。大量レコードでも安定する
-- 欠点: 変更が大きい。Phase A/B の既存構造との整合を要検討
-
-## 先に確認すべきこと
-
-**ユーザー環境で実害があるかは未確認。** 以下を確かめてから対処方針を決めるのが妥当。
-
-1. 実機で「記録中にアーカイブ作成」を行い、失敗が再現するか
-2. 再現する場合、レコード件数や待機時間との関係
-3. G5 のテスト自体が現実的なシナリオか（15 秒待機が実装の想定内か、テスト側の前提が厳しすぎないか）
-
-実害が無ければ優先度を下げ、テスト側の期待を実装に合わせる選択もありうる。ただし「テストが落ちているから期待を緩める」判断は、実害が無いことを確認してから行うこと。
+- `src/offscreen/__tests__/offscreen-listener-registration.test.ts` を追加。モジュール評価時点で登録済みであることを固定した。旧実装に戻すと2件が失敗することを確認済み
+- G5 が通過（修正前は failed）。`--repeat-each=3` で3回とも安定
+- `archive-recommended-verification` 7件すべて通過、flaky ゼロ
+- `npm run validate` 12,079 件グリーン
 
 ## 受け入れ条件
 
 ```gherkin
+Given offscreen document が生成された直後である
+When リスナー登録の完了前にメッセージが送られる
+Then メッセージは拒否されず、処理が完了する
+
 Given 記録処理が実行中である
 When アーカイブ作成を実行する
 Then アーカイブ作成と記録の両方が成功する
-
-Given アーカイブ作成中に offscreen document が破棄される
-When 同じ操作が再度実行される
-Then アーカイブは二重に作成されず、孤児の staging ファイルも残らない
 
 Given CI の test ジョブ
 When archive 系 e2e を実行する
@@ -101,4 +98,4 @@ Then G5 を含むすべての spec がリトライなしで通過する
 
 ローカル再現には `CI=1` が必要（spec が `CI` または `DISPLAY` の有無で skip 判定するため）。
 
-関連: [[2026-09-16-01-fix-archive-e2e-flaky]]（本 PBI の前提となる調査と修正）
+関連: [[2026-09-16-01-fix-archive-e2e-flaky]]（本 PBI の前提となる調査）
