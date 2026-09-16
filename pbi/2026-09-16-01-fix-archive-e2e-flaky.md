@@ -53,7 +53,7 @@ import failed: {"success":false,"error":"Confirmation token mismatch"}
 
 このクラスにはテストが1件も無かったため、検証の副産物として `src/background/__tests__/ChromeOffscreenTransport.test.ts` を追加済み（生成の単一化・生成失敗時に送信しないこと・送信失敗後に1回リトライして復帰すること）。
 
-### 確定した問題1: offscreen 喪失がエラー分類から漏れている
+### ✅ 対処済みの問題1: offscreen 喪失がエラー分類から漏れている
 
 `src/messaging/sqliteRpcClient.ts` の `categorizeError()` は offscreen 喪失を文字列 `offscreen` / `offscreenDocument` の有無で判定している。しかし Chrome が実際に返す文言は
 
@@ -63,9 +63,19 @@ Could not establish connection. Receiving end does not exist.
 
 であり、どちらも含まない。結果、`offscreen_lost`（「Database connection lost. Please reload the extension.」という対処可能な案内）という専用の分類が存在するにもかかわらず `unknown` に落ち、生の文言がそのままユーザーに出る。
 
-`src/messaging/__tests__/sqliteRpcClient-categorize.test.ts` で現状の挙動を固定済み。**修正時はこのテストの期待値を `offscreen_lost` に反転させること**（テスト内のコメントにも明記）。
+**対処（2026-09-16）**: Chrome の文言 2 パターン（`Receiving end does not exist` / `Could not establish connection`）を `offscreen_lost` の判定に追加した。
 
-なお、これはエラーの見せ方の問題であり、接続が切れること自体の原因ではない。
+あわせて `retriable` を `false` → `true` に変更した。旧コメントは「offscreen を失ったら再読み込みが必要」としていたが、`ChromeOffscreenTransport.invalidateContainer()` がキャッシュを破棄し**次回呼び出しで自動的に再生成する**現在の実装では、この前提は成り立たない。リトライには実際に回復の見込みがある。
+
+二重実行の危険がないことは経路を追って確認済み:
+
+- `categorizeError()` は `msgOffscreen` のリトライが**終わった後**に呼ばれるため、分類変更がトランスポート層のリトライ回数を変えることはない
+- `retriable: true` が実際にリトライを起こすのは、呼び出し側が `retryAttempts` を明示した場合のみ（`callDashboard`）。指定しているのは `queryLogs` と `searchLogs` の**読み取り専用2つだけ**
+- したがって破壊的操作が二重適用されることはない
+
+ユーザー向け文言も「Please reload the extension.」から「Retrying may recover it.」に改めた。
+
+`src/messaging/__tests__/sqliteRpcClient-categorize.test.ts` の期待値を反転済み。
 
 ### ✅ 対処済みの問題2: confirm token が Service Worker 終了で揮発する
 
@@ -94,13 +104,17 @@ MV3 の SW はアイドルで終了するため、トークン発行から検証
 
 ## 残る課題
 
-### 未解決: `Receiving end does not exist`（G5 のみ）
+### 未解決: G5 のみ（意図的にここで停止）
 
-`G5: archive create runs while a recording is in flight` だけが依然 failed。エラーは offscreen への接続失敗のみで、トークン起因のものは消えている。
+`G5: archive create runs while a recording is in flight` だけが依然 failed。分類の修正後、エラーは正しく `offscreen_lost` / `retriable: true` として返るようになったが、**`archive_create` はリトライしないため結果は変わらない**。
 
-なぜ接続が切れるのか自体は未解明。拡張機能側は offscreen を明示的に閉じておらず（`closeDocument` の呼び出しは存在しない）、ブラウザの自動破棄と考えられる。メッセージのタイムアウトは 10 秒（`OffscreenTransportBase.ts`）に対し、G5 は記録完了を最大 15 秒待つ構造で、その間に破棄される余地がある。
+リトライさせなかったのは、`src/messaging/archiveWireTable.ts` で `archive_create` が **`noRetry: true`** と明示的に宣言されているため。表のコメントは「タイムアウトは失敗を意味しない」と述べており、実行済みか判別できない操作を盲目的に再試行しないという既存の設計判断である。e2e を緑にするためにこれを覆すのは本末転倒なので、ここで停止した。
 
-問題1（エラー分類の漏れ）を直せば `offscreen_lost` と分類され、`msgOffscreen` のリトライ経路に乗せられる可能性がある。ただし分類を変えると `retriable` の扱いも変わるため、二重実行の危険がないか個別の確認が要る。
+残る論点:
+
+- **なぜ offscreen が破棄されるのか**が未解明。拡張機能側は明示的に閉じておらず（`closeDocument` の呼び出しは存在しない）、ブラウザの自動破棄と考えられる。メッセージのタイムアウトは 10 秒（`OffscreenTransportBase.ts`）に対し、G5 は記録完了を最大 15 秒待つ構造で、その間に破棄される余地がある
+- 正しい対処は「破棄されても処理が失われない」ようにすること（冪等キーを持たせて安全に再試行可能にする、あるいは offscreen の生存を操作中は保証する）であり、リトライ設定の変更ではない。設計判断を伴うため別 PBI とするのが妥当
+- G5 のテスト自体が現実的なシナリオを検証しているかの再確認（15 秒待機が実装の想定内か）
 
 ### 未確認: ユーザー環境での実害
 

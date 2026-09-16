@@ -30,7 +30,7 @@ describe('categorizeError', () => {
   it('classifies an explicit offscreen failure as offscreen_lost', () => {
     expect(categorizeError('offscreen document was closed')).toMatchObject({
       kind: 'offscreen_lost',
-      retriable: false,
+      retriable: true,
     });
   });
 
@@ -41,17 +41,25 @@ describe('categorizeError', () => {
   });
 
   /**
-   * Documents the gap rather than the desired end state: Chrome's own wording
-   * for a dead offscreen document is not recognized as one. Flip this to
-   * `offscreen_lost` together with the fix.
+   * Chrome's own wording for a dead offscreen document must be recognized as
+   * one. Before this was handled, it fell through to `unknown` and the raw
+   * browser prose reached the user with no guidance (PBI 2026-09-16-01).
    */
-  it('does NOT yet recognize Chrome\'s disconnect wording as offscreen_lost', () => {
+  it('recognizes Chrome\'s disconnect wording as offscreen_lost', () => {
     const result = categorizeError(CHROME_DISCONNECTED);
 
-    expect(result.kind).toBe('unknown');
-    expect(result.message).toContain('Unexpected error');
-    // The raw Chrome string reaches the user verbatim, with no guidance.
-    expect(result.message).toContain('Receiving end does not exist');
+    expect(result.kind).toBe('offscreen_lost');
+    expect(result.message).not.toContain('Receiving end does not exist');
+    // The transport recreates the document on the next call, so a retry has a
+    // real chance of succeeding.
+    expect(result.retriable).toBe(true);
+  });
+
+  it('recognizes a bare "Could not establish connection" as offscreen_lost', () => {
+    expect(categorizeError('Could not establish connection.')).toMatchObject({
+      kind: 'offscreen_lost',
+      retriable: true,
+    });
   });
 
   it('falls back to unknown for genuinely unrecognized failures', () => {
