@@ -93,7 +93,12 @@ export async function deriveLegacyKeyFromStoredSecret(): Promise<CryptoKey | nul
         const secretB64 = stored[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
         if (!saltB64 || !secretB64) return null;
 
-        const salt = Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0));
+        const salt = base64ToBytes(saltB64);
+        // Deliberately NOT base64ToBytes: this reproduces how the legacy key
+        // material was derived, which UTF-8-encoded atob's latin-1 output. Any
+        // byte ≥ 0x80 becomes two bytes that way, so the two spellings produce
+        // different key material — swapping them here would make existing
+        // encrypted API keys undecryptable (PBI 2026-09-15-16).
         const secretBytes = new TextEncoder().encode(atob(secretB64));
         const baseKey = await crypto.subtle.importKey('raw', secretBytes, 'PBKDF2', false, ['deriveKey']);
         return await crypto.subtle.deriveKey(

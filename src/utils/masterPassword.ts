@@ -12,7 +12,9 @@ import {
     verifyPasswordWithPBKDF2,
     encrypt,
     decryptData,
-    deriveKey
+    deriveKey,
+    bytesToBase64,
+    base64ToBytes,
 } from './crypto/index.js';
 import { validatePasswordPolicy, CRYPTO_PARAMS } from './crypto/cryptoParams.js';
 
@@ -118,7 +120,7 @@ export async function setMasterPassword(
         const hash = await hashPasswordWithPBKDF2(password, salt);
 
         // ストレージに保存
-        await setStorageFn('master_password_salt', btoa(String.fromCharCode(...salt)));
+        await setStorageFn('master_password_salt', bytesToBase64(salt));
         await setStorageFn('master_password_hash', hash);
         await setStorageFn('master_password_enabled', true);
 
@@ -148,7 +150,7 @@ export async function verifyMasterPassword(
         }
 
         // Base64デコード
-        const salt = new Uint8Array(atob(saltBase64).split('').map(c => c.charCodeAt(0)));
+        const salt = base64ToBytes(saltBase64);
 
         // パスワード検証（VULN-019: returns {isValid, needsRehash}）
         const verifyResult = await verifyPasswordWithPBKDF2(password, hash, salt);
@@ -204,7 +206,7 @@ export async function changeMasterPassword(
 
         // 古いパスワードでキーを取得（再暗号化用）— SSOT iterations
         const oldSalt = oldSaltBase64
-            ? new Uint8Array(atob(oldSaltBase64).split('').map(c => c.charCodeAt(0)))
+            ? base64ToBytes(oldSaltBase64)
             : generateSalt();
         const oldKey = await deriveKey(oldPassword, oldSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
@@ -234,7 +236,7 @@ export async function changeMasterPassword(
         }
 
         // 新しいソルトとハッシュを保存
-        await setStorageFn('master_password_salt', btoa(String.fromCharCode(...newSalt)));
+        await setStorageFn('master_password_salt', bytesToBase64(newSalt));
         await setStorageFn('master_password_hash', newHash);
         await setStorageFn('master_password_enabled', true);
 

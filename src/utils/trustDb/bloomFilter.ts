@@ -19,6 +19,7 @@
 import { BloomFilter } from './bloomfilter-vendor.mjs';
 import type { BloomFilterData } from './trustDbSchema.js';
 import { errorMessage } from '../errorUtils.js';
+import { bytesToBase64, base64ToBytes } from '../crypto/primitives.js';
 
 /**
  * Trust Bloom Filter クラス
@@ -304,31 +305,19 @@ function rightRotate(value: number, amount: number): number {
 
 /**
  * Uint32Array を Base64 に変換
- * Uses chunk-based encoding to avoid O(n²) string concatenation and stack overflow
+ *
+ * The chunking that used to live here now lives in bytesToBase64, so every
+ * caller of the shared codec gets it (PBI 2026-09-15-16).
  */
 function uint32ArrayToBase64(uint32Array: Uint32Array): string {
-  // Convert to Uint8Array for base64 encoding
-  const uint8Array = new Uint8Array(uint32Array.buffer);
-  // Use chunk-based approach to avoid O(n²) complexity
-  const chunkSize = 0x8000; // 32KB chunks (safe for apply/call stack)
-  const chunks: string[] = [];
-  for (let i = 0; i < uint8Array.byteLength; i += chunkSize) {
-    const chunk = uint8Array.subarray(i, i + chunkSize);
-    chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
-  }
-  return btoa(chunks.join(''));
+  return bytesToBase64(new Uint8Array(uint32Array.buffer));
 }
 
 /**
  * Base64 を Uint32Array に変換
  */
 function base64ToUint32Array(base64: string): Uint32Array {
-  const binaryString = atob(base64);
-  const uint8Array = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    uint8Array[i] = binaryString.charCodeAt(i);
-  }
-  return new Uint32Array(uint8Array.buffer);
+  return new Uint32Array(base64ToBytes(base64).buffer);
 }
 
 /**

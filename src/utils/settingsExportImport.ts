@@ -9,7 +9,7 @@ import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings } from './storage/types.js';
 import { computeHMAC, encrypt, deriveKey, constantTimeCompare } from './crypto/index.js';
-import { generateSalt } from './crypto/index.js';
+import { generateSalt, bytesToBase64 } from './crypto/index.js';
 import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
 import { logError, logInfo, ErrorCode } from './logger.js';
 import { errorMessage } from './errorUtils.js';
@@ -175,7 +175,7 @@ export async function exportEncryptedSettings(
 
     // ソルト生成
     const salt = generateSalt();
-    const saltB64 = btoa(String.fromCharCode(...salt));
+    const saltB64 = bytesToBase64(salt);
 
     // パスワードからキーを派生（PBKDF2）— SSOT 600k
     const key = await deriveKey(masterPassword, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);

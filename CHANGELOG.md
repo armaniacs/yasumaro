@@ -38,6 +38,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Refactored
+
+- **base64 変換を1箇所に集約**（PBI 2026-09-15-16）: `atob` / `btoa` の直書きが 28 箇所に散在し、codec の seam を迂回していた。実質 2 箇所（seam 本体と、後述の互換性のため意図的に残した 1 箇所）まで削減し、変換の仕様変更が1箇所で全呼び出しに効くようにした。あわせて seam を3点強化している — Bloom フィルタが独自に持っていたチャンク方式を取り込んで大きな入力での変換を高速化（2MB で 106ms → 39ms）、非推奨の `unescape` に依存していた UTF-8 テキスト用の変換を関数化、URL に埋め込む base64 の文字置換3連を関数化。ユーザーに見える動作の変更はない
+- なお `kdfNegotiator` の1箇所は意図的に残している。`TextEncoder().encode(atob(...))` は 0x80 以上のバイトが UTF-8 で2バイトに膨らみ共通実装と結果が異なるため、置換すると既存の暗号化済み API キーが復号できなくなる
 
 ## [6.9.3] - 2026-09-16
 

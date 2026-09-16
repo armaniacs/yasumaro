@@ -6,11 +6,18 @@ global.atob = (b64: string) => Buffer.from(b64, 'base64').toString('binary');
 console.log('Polyfill applied: btoa =', typeof global.btoa, 'atob =', typeof global.atob);
 
 // Mock dependencies before importing modules under test
-vi.mock('../../../utils/crypto/index.js', () => ({
-  getNotificationHmacKey: vi.fn().mockImplementation(async () => { console.log('>> getNotificationHmacKey called'); return 'test-key'; }),
-  generateHmacSignature: vi.fn().mockImplementation(async (data: string, key: any) => { console.log('>> generateHmacSignature called with', data); return 'signature123'; }),
-  verifyHmacSignature: vi.fn().mockResolvedValue(true),
-}));
+// Only the HMAC side is stubbed. The base64url codec is imported from the same
+// module but must stay real: these tests assert the encoded output, so a stub
+// there would verify nothing (PBI 2026-09-15-16).
+vi.mock('../../../utils/crypto/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/crypto/index.js')>();
+  return {
+    ...actual,
+    getNotificationHmacKey: vi.fn().mockImplementation(async () => { console.log('>> getNotificationHmacKey called'); return 'test-key'; }),
+    generateHmacSignature: vi.fn().mockImplementation(async (data: string, key: any) => { console.log('>> generateHmacSignature called with', data); return 'signature123'; }),
+    verifyHmacSignature: vi.fn().mockResolvedValue(true),
+  };
+});
 
 vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn().mockResolvedValue(undefined),

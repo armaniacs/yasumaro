@@ -29,6 +29,12 @@ export {
     hashUrl,
     bytesToBase64,
     base64ToBytes,
+    textToBase64,
+    base64ToText,
+    bytesToBase64Url,
+    textToBase64Url,
+    base64UrlToBytes,
+    base64UrlToText,
     CURRENT_ENVELOPE_VERSION,
     ENVELOPE_ITERATIONS,
 } from './primitives.js';

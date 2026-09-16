@@ -20,7 +20,12 @@ import {
 } from '../masterPassword.js';
 
 // crypto モック
-vi.mock('../crypto/index.js', () => ({
+// Stubs the key-derivation side only; the base64 codec stays real so the
+// salt encoding under test is the production one (PBI 2026-09-15-16).
+vi.mock('../crypto/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../crypto/index.js')>();
+  return {
+    ...actual,
     generateSalt: vi.fn(() => new Uint8Array(16).fill(1)),
     hashPasswordWithPBKDF2: vi.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
     verifyPasswordWithPBKDF2: vi.fn(async (password: string, hash: string, _salt: Uint8Array) => {
@@ -35,8 +40,9 @@ vi.mock('../crypto/index.js', () => ({
         if (data.ciphertext === 'encrypted_old_secret') return 'old_secret';
         return 'decrypted_data';
     }),
-    deriveKey: vi.fn(async (_password: string, _salt: Uint8Array) => 'mock_key' as unknown as CryptoKey)
-}));
+    deriveKey: vi.fn(async (_password: string, _salt: Uint8Array) => 'mock_key' as unknown as CryptoKey),
+  };
+});
 
 describe('masterPassword', () => {
 
