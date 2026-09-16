@@ -1,5 +1,5 @@
 import { loadActiveTabStatus, type ActiveTabStatusSnapshot } from '../statusStore.js';
-import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
@@ -406,7 +406,7 @@ export class RecordSession {
         throw new Error(getMessage('cannotRecordPage'));
       }
 
-      const settings = await new SettingsRepository().getAll();
+      const settings = await settingsRepository.getAll();
       const _usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
 
       let contentResponse: ContentResponse;

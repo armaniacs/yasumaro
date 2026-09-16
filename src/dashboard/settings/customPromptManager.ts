@@ -4,7 +4,7 @@
  * Handles the prompt editor and list in the popup UI
  */
 
-import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { Settings, StorageKeys } from '../../utils/storage/types.js';
 import {
     CustomPrompt,
@@ -314,7 +314,7 @@ async function handleSavePrompt(): Promise<void> {
 
     // Save to settings
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-    await new SettingsRepository().setAll(currentSettings);
+    await settingsRepository.setAll(currentSettings);
 
     // Reset form and re-render
     resetForm();
@@ -383,7 +383,7 @@ async function handleDeletePrompt(promptId: string): Promise<void> {
 
     // Save to settings
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-    await new SettingsRepository().setAll(currentSettings);
+    await settingsRepository.setAll(currentSettings);
 
     showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptDeleted') || 'Prompt deleted', 'success');
     renderPromptList();
@@ -448,7 +448,7 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
 
     // Save to settings
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-    await new SettingsRepository().setAll(currentSettings);
+    await settingsRepository.setAll(currentSettings);
 
     renderPromptList();
     applyI18n();

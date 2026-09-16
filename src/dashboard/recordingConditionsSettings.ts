@@ -4,7 +4,6 @@
  * Note: Recording triggers (scroll/time/snapshot) are no longer configurable.
  */
 
-import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -218,7 +217,7 @@ function wireEvents(container: HTMLElement): void {
     try {
       // Save recording conditions via SettingsRepository so values are written
       // to the 'settings' object, matching what getAll reads.
-      await new SettingsRepository().setAll({
+      await settingsRepository.setAll({
         [StorageKeys.MIN_VISIT_DURATION]: minVisitVal,
         [StorageKeys.MIN_SCROLL_DEPTH]: minScrollVal,
         [StorageKeys.MAX_TOKENS_PER_PROMPT]: maxTokensVal,

@@ -1,4 +1,4 @@
-import { SettingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
 import { getMessage } from '../../utils/i18n.js';
@@ -96,7 +96,7 @@ export class PreviewFlow {
     const { tab, content, force, byteStats, aiSummaryCleansedStats, cleansedReason, cleanseStats } = options;
     const scope = new SpinnerScope();
     try {
-      const settings = await new SettingsRepository().getAll();
+      const settings = await settingsRepository.getAll();
       const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
       const stats = { byteStats, aiSummaryCleansedStats };
 

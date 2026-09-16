@@ -17,13 +17,23 @@ vi.mock('../../sanitizePreview.js', () => ({
   initializeModalEvents: vi.fn(),
 }));
 
-vi.mock('../../../utils/storage/SettingsRepository.js', () => ({
-  SettingsRepository: class {
+vi.mock('../../../utils/storage/SettingsRepository.js', () => {
+  // previewFlow consumes the shared singleton (PBI 2026-09-17-06), so the
+  // mock must expose it alongside the class-shaped legacy mock.
+  const settingsRepository = {
     async getAll(): Promise<Record<string, unknown>> {
       return { pii_confirmation_ui: true };
-    }
-  },
-}));
+    },
+  };
+  return {
+    SettingsRepository: class {
+      async getAll(): Promise<Record<string, unknown>> {
+        return { pii_confirmation_ui: true };
+      }
+    },
+    settingsRepository,
+  };
+});
 
 vi.mock('../../../utils/logger.js', () => ({
   logError: vi.fn(),

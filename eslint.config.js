@@ -82,6 +82,40 @@ export default [
     },
   },
   {
+    // PBI 2026-09-17-06: forbid direct `new SettingsRepository()` outside the
+    // storage seam (singleton definition) and the DI composition root.
+    // Reads go through the `settingsRepository` singleton or an injected
+    // `SettingsReader`; writes go through the singleton. Direct instantiation
+    // splits the 1s TTL settings cache per instance and bypasses the InMemory
+    // port injected in tests (the new instance touches real chrome.storage).
+    // Observer parity holds either way (observe delegates to port.onChanged),
+    // so this rule only removes the split-cache / real-storage hazards.
+    // Allowed paths below are the minimal exclusion set; every other
+    // production call site must use the singleton or an injected reader.
+    files: ['src/**/*.ts'],
+    ignores: [
+      // Singleton definition itself (+ internal port/adapter uses).
+      'src/utils/storage/**/*.ts',
+      // `new SettingsRepository(InMemoryStoragePort)` is the canonical test seam.
+      'src/**/__tests__/**/*.ts',
+      // DI composition root: the factory that builds the singleton once.
+      'src/background/compositionManifest.ts',
+    ],
+    languageOptions: {
+      parser: tsParser,
+    },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "NewExpression[callee.name='SettingsRepository']",
+          message:
+            'Do not instantiate SettingsRepository directly. Use the settingsRepository singleton or an injected SettingsReader.',
+        },
+      ],
+    },
+  },
+  {
     // PBI 2026-09-05-21: background → UI 層への上向き依存を禁止。
     // 同意ロジックは src/utils/storage/privacyConsent.ts の中立層に配置済み。
     files: ['src/background/**/*.ts'],
