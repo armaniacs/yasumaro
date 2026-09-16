@@ -15,6 +15,21 @@
  * derive their decision from this one table, so the two can never drift.
  */
 
+/**
+ * The receiver's reply when a confirmToken fails verification. Shared so the
+ * sender can recognize it exactly rather than matching on a copied literal.
+ *
+ * Recognizing it matters because the token can go missing for a reason that is
+ * nobody's fault: tokens live in chrome.storage.session, which dies with the
+ * MV3 service worker, so a token issued before an idle shutdown is gone by the
+ * time it is verified — valid, unused, still inside its TTL. The sender
+ * re-issues once on this exact reply (see dashboardGateway).
+ *
+ * This reply is produced BEFORE the operation runs, which is what makes that
+ * re-issue safe: a rejected request has not touched any data.
+ */
+export const CONFIRM_TOKEN_MISMATCH_ERROR = 'Confirmation token mismatch';
+
 /** Canonical list of every DASHBOARD_SQLITE subtype. Single source of truth. */
 export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
   'create_confirm_token',

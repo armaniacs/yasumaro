@@ -64,11 +64,47 @@ export async function migrationSettled(page: Page, client: DashboardSqliteClient
   await page.evaluate(() => chrome.storage.local.set({ yasumaro_migration_status: 'completed' }));
 }
 
+/**
+ * The receiver's reply when a confirmToken fails verification. Kept in sync
+ * with CONFIRM_TOKEN_MISMATCH_ERROR (src/messaging/sqliteOperationSecurity.ts);
+ * the e2e helpers cannot import from src/, so the literal is repeated here.
+ */
+const CONFIRM_TOKEN_MISMATCH_ERROR = 'Confirmation token mismatch';
+
 export function createDashboardSqliteClient(page: Page): DashboardSqliteClient {
-  const dashboardMsg = (payload: Payload) =>
+  const sendOnce = (payload: Payload) =>
     page.evaluate(async (p) => {
       return (await chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', payload: p })) as Record<string, unknown>;
     }, payload);
+
+  /**
+   * Send, re-issuing the confirmToken once if the service worker says it does
+   * not know it.
+   *
+   * These helpers bypass dashboardGateway (they build the message themselves),
+   * so they do not inherit its re-issue. Without this, a service worker that
+   * idles out between tokenFor() and the send takes chrome.storage.session —
+   * and the token — with it, and the spec fails on a token that was valid,
+   * unused and inside its TTL. The receiver rejects before running anything,
+   * so re-sending cannot double-apply the operation.
+   */
+  const dashboardMsg = async (payload: Payload): Promise<Record<string, unknown>> => {
+    const response = await sendOnce(payload);
+    if (response?.error !== CONFIRM_TOKEN_MISMATCH_ERROR) return response;
+
+    const action = payload.subtype as string;
+    const id = payload.id as number | undefined;
+    const scopeHashValue = payload.scopeHash as string | undefined;
+    const reissued = await sendOnce({
+      subtype: 'create_confirm_token',
+      action,
+      ...(id !== undefined ? { id } : {}),
+      ...(scopeHashValue !== undefined ? { scopeHash: scopeHashValue } : {}),
+    });
+    if (!reissued?.success) return response;
+
+    return sendOnce({ ...payload, confirmToken: reissued.confirmToken as string });
+  };
 
   const scopeHash = (parts: Array<string | number | boolean | undefined | null>) =>
     page.evaluate(async (joined: string) => {
