@@ -1,7 +1,7 @@
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
-import { SettingsRepository } from '../utils/storage/SettingsRepository.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
 import { logDebug, logWarn, logError, ErrorCode } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -140,7 +140,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
 
     // 並列処理で設定とURL履歴を取得
     const [settings, savedUrls, allowed] = await Promise.all([
-      new SettingsRepository().getAll(),
+      settingsRepository.getAll(),
       getSavedUrlsWithTimestamps(),
       isDomainAllowed(url)
     ]);

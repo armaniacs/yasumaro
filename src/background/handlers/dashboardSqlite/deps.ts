@@ -1,4 +1,4 @@
-import { SettingsRepository } from '../../../utils/storage/SettingsRepository.js';
+import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
@@ -216,7 +216,7 @@ export function createSqliteClientDeps(
     archiveSave: (stagingName) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveSave.encodeRequest(stagingName)),
     archiveClose: (stagingName) => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveClose.encodeRequest(stagingName)),
     archiveStatus: () => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveStatus.encodeRequest()),
-      getSettings: () => new SettingsRepository().getAll() as Promise<Record<string, unknown>>,
+      getSettings: () => settingsRepository.getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),
     appendToDailyNote: async (markdown) => {

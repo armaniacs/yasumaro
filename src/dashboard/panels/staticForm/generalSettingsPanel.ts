@@ -22,8 +22,6 @@ import { providerIdsInOrder, renderProviderOptions, renderProviderSettings } fro
 import { resolveInitialLayout, mountLayoutToggle } from '../../aiProviderLayoutToggle.js';
 import { createBPriorityListView } from '../../aiProviderB/priorityListView.js';
 import { createBProviderAccordionView } from '../../aiProviderB/providerAccordionView.js';
-import { SettingsRepository } from '../../../utils/storage/SettingsRepository.js';
-import { ChromeStoragePort } from '../../../utils/storage/storagePort.js';
 import { collectProviderPrioritySlots } from '../../generalSettings/settingsForm.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
@@ -54,7 +52,9 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       panelContainer = container;
       const settings = await settingsRepository.getAll();
 
-      const layoutRepo = new SettingsRepository(new ChromeStoragePort());
+      // Shared singleton: reads and the layout write go through the same port
+      // and settings transaction as every other panel, so no isolated repo.
+      const layoutRepo = settingsRepository;
       let currentLayout = await resolveInitialLayout(layoutRepo) as 'a' | 'b';
 
       // Provider <option> lists are shared by both layouts.
