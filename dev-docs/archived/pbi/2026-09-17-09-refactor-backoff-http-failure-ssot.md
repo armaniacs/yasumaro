@@ -53,13 +53,13 @@ Scenario: 境界 — 各 testConnection が返す代表ステータスの文言�
 
 ## 受け入れ基準
 
-- [ ] `src/utils/backoff.ts` に `backoffDelayMs(attempt, opts)` が新設され、`baseMs` / `multiplier` / `maxMs` をオプションで指定できる
-- [ ] `fetchWithRetry`・`MessageTransport.send`・`DashboardGateway.callDashboard` の遅延計算が `backoffDelayMs` への委譲に置き換わっている
-- [ ] `describeHttpFailure(status, domainLabel)` の1テーブルが新設され、上記3箇所の status→文言解決が委譲に置き換わっている
-- [ ] 遅延値と表示文言が現行と完全一致（byte-identical）であり、parity テストで pin されている
-- [ ] `RETRYABLE_ERROR_PATTERNS` 等の domain-specific な再試行判定は各ドメインに残っている
-- [ ] PersistentRetryQueue と pipeline StepExecutor の ErrorStrategy に手を入れていない
-- [ ] `npm run type-check` / `npm test` が green
+- [x] `src/utils/backoff.ts` に `backoffDelayMs(attempt, opts)` が新設され、`baseMs` / `multiplier` / `maxMs` をオプションで指定できる
+- [x] `fetchWithRetry`・`MessageTransport.send`・`DashboardGateway.callDashboard` の遅延計算が `backoffDelayMs` への委譲に置き換わっている
+- [x] `describeHttpFailure(status, domainLabel)` の1テーブルが新設され、上記3箇所の status→文言解決が委譲に置き換わっている
+- [x] 遅延値と表示文言が現行と完全一致（byte-identical）であり、parity テストで pin されている
+- [x] `RETRYABLE_ERROR_PATTERNS` 等の domain-specific な再試行判定は各ドメインに残っている
+- [x] PersistentRetryQueue と pipeline StepExecutor の ErrorStrategy に手を入れていない
+- [x] `npm run type-check` / `npm test` が green
 
 ## テスト戦略
 
@@ -80,6 +80,6 @@ Scenario: 境界 — 各 testConnection が返す代表ステータスの文言�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

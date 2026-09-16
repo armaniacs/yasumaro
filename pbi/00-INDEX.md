@@ -14,13 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 10件（7件完了・アーカイブ済み、3件残）
+### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 10件（9件完了・アーカイブ済み、1件残）
 
-大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化。実行順 = 01 → 10（RICE 降順。ただし 03→04 と 01→10 は同一領域を触る順序依存で入れ替えあり）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。バッチ1（01/02/03/07）・バッチ2（04/05/08）は並列実装済み。
+大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化。実行順 = 01 → 10（RICE 降順。ただし 03→04 と 01→10 は同一領域を触る順序依存で入れ替えあり）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。バッチ1（01/02/03/07）・バッチ2（04/05/08）・バッチ3（06/09）は並列実装済み。
 
-- 2026-09-17-06-refactor-settings-repository-discipline.md（⬜ 未着手 — M. `new SettingsRepository()` 本番残り11箇所を排除 + ESLint ルールで再発防止。02 完了済み分を除く）
-- 2026-09-17-09-refactor-backoff-http-failure-ssot.md（⬜ 未着手 — M. バックオフ計算3系統と HTTP status→ユーザー文言対応表の SSOT 化。byte-identical）
-- 2026-09-17-10-refactor-ai-test-connection-template.md（⬜ 未着手 — M. testConnection を `executeHttpTestFlow` テンプレに統合+providerCatalog を設定キー SSOT に昇格。01 完了済み）
+- 2026-09-17-10-refactor-ai-test-connection-template.md（⬜ 未着手 — M. testConnection を `executeHttpTestFlow` テンプレに統合+providerCatalog を設定キー SSOT に昇格。01・09 完了済み）
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
@@ -69,6 +67,13 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 2件完了（06・09）
+
+- 2026-09-17-06-refactor-settings-repository-discipline.md（✅ 完了・アーカイブ済 — 本番11箇所の `new SettingsRepository()` を singleton/注入シームに統一（observer は port level 発火のため挙動不変）。generalSettingsPanel の孤立ポートも統合。no-restricted-syntax で再発防止（許可: utils/storage 配下・テスト・composition root）・111 tests green）
+- 2026-09-17-09-refactor-backoff-http-failure-ssot.md（✅ 完了・アーカイブ済 — `backoffDelayMs` と `describeHttpFailure` を Layer 0 新設し3系統/3呼び出し元を委譲。byte-identical parity テスト付き。両モジュールを Layer 0 として境界ルールに登録）
+
+バッチ3統合時に previewFlow テストの mock が singleton export を欠落（PBI 06 由来の3 failures）→ mock 修正で解消。統合検証: type-check / lint 0 errors / test 12,148 passed。
 
 ### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 3件完了（04・05・08）
 

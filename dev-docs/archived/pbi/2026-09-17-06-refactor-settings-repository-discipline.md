@@ -34,12 +34,12 @@ Scenario: dashboard の setAll 経路の observer 発火が等価である
 Scenario 2 の根拠は起票前に確認済みである。`SettingsRepository` の `observe` メソッドは `port.onChanged` に委譲し、`changes` 内の `settings` キーの有無だけを見てキャッシュ無効化とコールバック実行を行う。すなわち発火は port level で動き、どの `SettingsRepository` インスタンス経由で `setAll` を呼んでも同一の `settings` キー書き込みになるため、発火回数は不変である。着手時にこの前提を再確認し、結果を作業記録に残すこと。
 
 ## 受け入れ基準
-- [ ] 読み取り 4 箇所がシングルトンまたは注入された reader 経由に置換されている（`deps.ts` の `getSettings` 定義、`recordSession.ts` の記録実行処理、`previewFlow.ts` の `run` 冒頭、`statusChecker.ts` の並列取得処理）
-- [ ] dashboard の `setAll` 7 箇所がシングルトン経由に置換されている（`markdownTemplateManager.ts` の有効化・削除・保存処理、`customPromptManager.ts` の作成・削除・有効化処理、`recordingConditionsSettings.ts` の保存処理）
-- [ ] `gistSyncTarget.ts` の 3 箇所（`sync` 処理内の読み取りと GIST_ID 保存、`testConnection` 処理内の読み取り）は、pbi/02 未実施の場合のみ本 PBI で置換し、実施済みの場合は対象から除外している
-- [ ] ESLint で `no-restricted-syntax` の `NewExpression` selector（`callee.name === 'SettingsRepository'`）による再発防止ルールが設定され、許可パス（`utils/storage/SettingsRepository.ts` 自身と composition 系）のみが除外されている
-- [ ] `npm run type-check` / `npm run lint` / 対象テストスイートが green である
-- [ ] 挙動変更がない（キャッシュ TTL の統合による副作用の減少は許容する）
+- [x] 読み取り 4 箇所がシングルトンまたは注入された reader 経由に置換されている（`deps.ts` の `getSettings` 定義、`recordSession.ts` の記録実行処理、`previewFlow.ts` の `run` 冒頭、`statusChecker.ts` の並列取得処理）
+- [x] dashboard の `setAll` 7 箇所がシングルトン経由に置換されている（`markdownTemplateManager.ts` の有効化・削除・保存処理、`customPromptManager.ts` の作成・削除・有効化処理、`recordingConditionsSettings.ts` の保存処理）
+- [x] `gistSyncTarget.ts` の 3 箇所（`sync` 処理内の読み取りと GIST_ID 保存、`testConnection` 処理内の読み取り）は、pbi/02 未実施の場合のみ本 PBI で置換し、実施済みの場合は対象から除外している
+- [x] ESLint で `no-restricted-syntax` の `NewExpression` selector（`callee.name === 'SettingsRepository'`）による再発防止ルールが設定され、許可パス（`utils/storage/SettingsRepository.ts` 自身と composition 系）のみが除外されている
+- [x] `npm run type-check` / `npm run lint` / 対象テストスイートが green である
+- [x] 挙動変更がない（キャッシュ TTL の統合による副作用の減少は許容する）
 
 ## テスト戦略
 - 既存テストの維持: `src/utils/storage/` 配下の既存テスト（`SettingsRepository.test.ts`・`settingsRepository-migration-parity.test.ts` 等）が green のままであること。
@@ -84,6 +84,6 @@ Scenario 2 の根拠は起票前に確認済みである。`SettingsRepository` 
 - 着手時の確認ポイント: `SettingsRepository.ts` のクラス・シングルトン・`SettingsReader` 型、上記呼び出し箇所の実コード、`eslint.config.js` の構成、`src/utils/storage/` 配下の既存テスト。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
