@@ -44,13 +44,13 @@ Scenario: PAT 未設定の注入 reader では早期リターンする（境界�
 
 ## 受け入れ基準
 
-- [ ] `sync()` の設定読み込み部が `this.settingsReader` 経由になっており、`new SettingsRepository()` を直接生成していない
-- [ ] `sync()` の GIST_ID 保存部が注入シーム経由になっており、`new SettingsRepository()` を直接生成していない
-- [ ] `testConnection()` の設定読み込み部が `this.settingsReader` 経由になっており、`new SettingsRepository()` を直接生成していない
-- [ ] 注入 reader に PAT が無い場合、`sync()` / `testConnection()` が fetch なしで早期リターンする（BDD Scenario 2 のテストで証明する）
-- [ ] 注入した InMemory reader だけで `sync()` のハッピーパスが完走し、実 `chrome.storage` に触れない（BDD Scenario 1 のテストで証明する）
-- [ ] 既存の GistSync 関連テスト（`gistSyncTarget.test.ts`、`gistSyncTarget-r2.test.ts`、`markdownJoinSafety.test.ts` の Gist 経路）が green のままである
-- [ ] `npm run type-check` が green である
+- [x] `sync()` の設定読み込み部が `this.settingsReader` 経由になっており、`new SettingsRepository()` を直接生成していない
+- [x] `sync()` の GIST_ID 保存部が注入シーム経由になっており、`new SettingsRepository()` を直接生成していない
+- [x] `testConnection()` の設定読み込み部が `this.settingsReader` 経由になっており、`new SettingsRepository()` を直接生成していない
+- [x] 注入 reader に PAT が無い場合、`sync()` / `testConnection()` が fetch なしで早期リターンする（BDD Scenario 2 のテストで証明する）
+- [x] 注入した InMemory reader だけで `sync()` のハッピーパスが完走し、実 `chrome.storage` に触れない（BDD Scenario 1 のテストで証明する）
+- [x] 既存の GistSync 関連テスト（`gistSyncTarget.test.ts`、`gistSyncTarget-r2.test.ts`、`markdownJoinSafety.test.ts` の Gist 経路）が green のままである
+- [x] `npm run type-check` が green である
 
 ## テスト戦略
 
@@ -89,6 +89,6 @@ Scenario: PAT 未設定の注入 reader では早期リターンする（境界�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

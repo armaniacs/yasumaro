@@ -36,12 +36,12 @@ Scenario: local_only モードの依存を壊さない評価が記録される
 ```
 
 ## 受け入れ基準
-- [ ] 二重表現が歴史的経緯（AIClient から AIService への移行の名残）なのか意図的な設計なのかが ADR に記録されている
-- [ ] 統合する／しないの裁定と、統合する場合の寄せ先（例: local_only を built-in-ai スロットの別名に解決する案の採否）が ADR に記録されている
-- [ ] 統合しない場合の維持条件と「統合を再検討するトリガー」が ADR に記録されている
-- [ ] privacyPipeline の mode 判定ロジックが二重表現に依存していないか（依存している場合はどこが）の評価が ADR に記録されている
-- [ ] LocalAIService を削除できない理由（privacy mode `local_only` の実呼び出し経路）が ADR に明記されている
-- [ ] 実装コードの変更は本 PBI のスコープ外であり、変更が必要な場合は後続 PBI として切り出されている
+- [x] 二重表現が歴史的経緯（AIClient から AIService への移行の名残）なのか意図的な設計なのかが ADR に記録されている
+- [x] 統合する／しないの裁定と、統合する場合の寄せ先（例: local_only を built-in-ai スロットの別名に解決する案の採否）が ADR に記録されている
+- [x] 統合しない場合の維持条件と「統合を再検討するトリガー」が ADR に記録されている
+- [x] privacyPipeline の mode 判定ロジックが二重表現に依存していないか（依存している場合はどこが）の評価が ADR に記録されている
+- [x] LocalAIService を削除できない理由（privacy mode `local_only` の実呼び出し経路）が ADR に明記されている
+- [x] 実装コードの変更は本 PBI のスコープ外であり、変更が必要な場合は後続 PBI として切り出されている
 
 ## 調査手順
 1. `aiServiceFactory.ts` の `createAIService` 付近を読み、現在の組み立て（`LocalAIService` + `RemoteAIService` + `FallbackAIService`）を確認する。
@@ -60,6 +60,6 @@ Scenario: local_only モードの依存を壊さない評価が記録される
 - 誤って `LocalAIService` を削除すると privacy mode `local_only` が壊れる（`privacyPipeline.ts` の `_performLocalSummarization` 付近からの実呼び出し経路がある）。調査はこの依存を明確化したうえで裁定を書くこと。
 
 ## Definition of Done
-- [ ] 調査結果が ADR として記録される
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 調査結果が ADR として記録される
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
