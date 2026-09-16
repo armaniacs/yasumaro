@@ -409,6 +409,39 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.debug?.endpoint).toContain('POST');
     });
 
+    it('uses the configured provider name in the 401 message for lm-studio', async () => {
+      const settings = {
+        lm_studio_base_url: 'http://127.0.0.1:1234/v1',
+        lm_studio_model: 'local-model',
+      } as unknown as Settings;
+      const fetchModule = await import('../../../../utils/fetch.js');
+      vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve('unauthorized'),
+      } as Response);
+      const provider = new GenericOpenAICompatibleProvider(settings, 'lm-studio');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('lm-studio');
+      expect(result.message).not.toContain('OpenAI');
+    });
+
+    it('keeps the openai label in the 401 message for openai (existing behavior pin)', async () => {
+      const fetchModule = await import('../../../../utils/fetch.js');
+      vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        text: () => Promise.resolve('unauthorized'),
+      } as Response);
+      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(false);
+      // providerName is the lowercase registry id, so match case-insensitively.
+      expect(result.message).toMatch(/openai/i);
+      expect(result.message).toContain('Authentication failed');
+    });
+
     it('returns a 404 error when response.ok is false', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockResolvedValueOnce({

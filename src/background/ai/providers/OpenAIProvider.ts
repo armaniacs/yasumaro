@@ -193,7 +193,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
 
             if (!response.ok) {
                 // 共通HTTPステータスマッピング（エンドポイントは診断用に残す）
-                const mapped = this.mapConnectionError(response.status, 'OpenAI');
+                const mapped = this.mapConnectionError(response.status, this.providerName);
                 return {
                     ...mapped,
                     debug: {
