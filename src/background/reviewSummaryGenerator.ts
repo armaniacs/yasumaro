@@ -9,6 +9,7 @@
  * インスタンスはcomposition rootで1度だけ生成し、alarmとGENERATE_REVIEW_SUMMARYが共有する。
  */
 
+import { textToBase64 } from '../utils/crypto/primitives.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -163,7 +164,7 @@ ${entryList || 'No entries in this period.'}
  */
 async function downloadMarkdown(content: string, filename: string, exportPath: string): Promise<boolean> {
   try {
-    const base64 = btoa(unescape(encodeURIComponent(content)));
+    const base64 = textToBase64(content);
     const dataUrl = `data:text/markdown;base64,${base64}`;
 
     // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て時に

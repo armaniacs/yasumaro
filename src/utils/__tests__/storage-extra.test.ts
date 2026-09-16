@@ -19,23 +19,29 @@ vi.mock('../logger.js', () => ({
   },
 }));
 
-vi.mock('../crypto/index.js', () => ({
-  generateSalt: vi.fn(() => new Uint8Array(32).fill(1)),
-  deriveKey: vi.fn(() => Promise.resolve({} as CryptoKey)),
-  encryptApiKey: vi.fn((v: string) => Promise.resolve(`encrypted:${v}`)),
-  decryptApiKey: vi.fn(() => Promise.resolve('decrypted-key')),
-  isEncrypted: vi.fn((v: unknown) => typeof v === 'string' && v.startsWith('encrypted:')),
-  hashPasswordWithPBKDF2: vi.fn(() => Promise.resolve('hash')),
-  verifyPasswordWithPBKDF2: vi.fn(() => Promise.resolve({ isValid: true, needsRehash: false })),
-  // wrapSecretString/unwrapSecretString: a lightweight fake envelope so tests
-  // can assert the storage shape without exercising real AES-GCM (that is
-  // covered by crypto.test.ts's HMAC key encryption suite).
-  wrapSecretString: vi.fn((secret: string) => Promise.resolve({ wrapped: `wrapped:${secret}`, iv: 'fake-iv' })),
-  unwrapSecretString: vi.fn((envelope: { wrapped: string }) => Promise.resolve(envelope.wrapped.replace(/^wrapped:/, ''))),
-  isWrappedSecretString: vi.fn((data: unknown) =>
-    typeof data === 'object' && data !== null && 'wrapped' in data && 'iv' in data
-  ),
-}));
+// Stubs key derivation and encryption only; the base64 codec stays real so
+// the salt/secret encoding under test is the production one (PBI 2026-09-15-16).
+vi.mock('../crypto/index.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../crypto/index.js')>();
+  return {
+    ...actual,
+    generateSalt: vi.fn(() => new Uint8Array(32).fill(1)),
+    deriveKey: vi.fn(() => Promise.resolve({} as CryptoKey)),
+    encryptApiKey: vi.fn((v: string) => Promise.resolve(`encrypted:${v}`)),
+    decryptApiKey: vi.fn(() => Promise.resolve('decrypted-key')),
+    isEncrypted: vi.fn((v: unknown) => typeof v === 'string' && v.startsWith('encrypted:')),
+    hashPasswordWithPBKDF2: vi.fn(() => Promise.resolve('hash')),
+    verifyPasswordWithPBKDF2: vi.fn(() => Promise.resolve({ isValid: true, needsRehash: false })),
+    // wrapSecretString/unwrapSecretString: a lightweight fake envelope so tests
+    // can assert the storage shape without exercising real AES-GCM (that is
+    // covered by crypto.test.ts's HMAC key encryption suite).
+    wrapSecretString: vi.fn((secret: string) => Promise.resolve({ wrapped: `wrapped:${secret}`, iv: 'fake-iv' })),
+    unwrapSecretString: vi.fn((envelope: { wrapped: string }) => Promise.resolve(envelope.wrapped.replace(/^wrapped:/, ''))),
+    isWrappedSecretString: vi.fn((data: unknown) =>
+      typeof data === 'object' && data !== null && 'wrapped' in data && 'iv' in data
+    ),
+  };
+});
 
 vi.mock('../storage/storageTransaction.js', () => ({
   StorageTransaction: class StorageTransaction { withLock = async (_k: string, fn: (v: unknown) => unknown) => fn(undefined); withAtomic = async (_ks: unknown, fn: (vs: unknown) => unknown) => fn([]); },

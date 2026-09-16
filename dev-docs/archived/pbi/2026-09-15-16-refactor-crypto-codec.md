@@ -1,6 +1,38 @@
-# PBI: crypto codec/HMAC の統合 — atob/btoa 直書きの全廃
+# PBI: crypto codec の統合 — atob/btoa 直書きの全廃
 
-## ステータス: ⬜ 未着手（順位4 / RICE 8.0 / 台帳: 2026-09-15-00-backlog-archloop-0915b.md 候補1）
+## ステータス: ✅ 完了（2026-09-16）
+
+codec 部分（項目1・2）を完了。HMAC 統合（項目3）と `hashUrl` 移動（項目4）は性質が異なるため [[2026-09-16-04-refactor-hmac-signer]] に分離した。
+
+### 着手時に判明した前提のズレ
+
+PBI は「最低6箇所」「機械的置換が主作業」としていたが、実測では **28箇所・11ファイル**あり、うち3種類は単純置換できなかった。
+
+| 種別 | 対処 |
+|---|---|
+| UTF-8 テキスト（2箇所） | `btoa(unescape(encodeURIComponent(s)))` はバイト列用 codec と入力の型も意味も違う → `textToBase64` / `base64ToText` を追加 |
+| URL-safe base64（2箇所） | `.replace()` 3連の重複。PBI のユーザーストーリーが挙げていた「URL-safe 化」そのもの → `bytesToBase64Url` ほか4関数を追加 |
+| チャンク最適化（bloomFilter） | seam は1文字ずつ連結で 2MB に 106ms、bloomFilter は32KBチャンクで 39ms → **チャンク方式を seam 側に移し全呼び出し元が恩恵を受けるようにした** |
+
+### 置換してはいけなかった箇所
+
+`kdfNegotiator.ts` の `new TextEncoder().encode(atob(secretB64))` は `base64ToBytes` と**結果が異なる**。
+
+```
+TextEncoder経由: [0, 1, 195, 136, 195, 191, 194, 128]
+base64ToBytes  : [0, 1, 200, 255, 128]
+```
+
+0x80 以上のバイトが UTF-8 で2バイトに膨らむ。legacy 鍵の導出を再現する箇所であり、置換すると**既存の暗号化済み API キーが復号不能になる**。理由をコード内コメントに明記して残した。
+
+### テストのモック修正（4ファイル）
+
+`crypto/index.js` を丸ごと差し替えるモックが codec を含まず失敗した。`importOriginal` で実装を取り込み HMAC のみ差し替える形に変更。codec を stub にするとエンコード結果を検証するテストが何も検証しなくなるため。結果として**本物の codec で既存の期待値が通ること**が互換性の実証になっている。
+
+### 結果
+
+- atob/btoa 直書き: **28箇所 → 実質2箇所**（seam 本体 + 意図的な legacy 互換）
+- `npm run validate`: 12,089 件グリーン
 
 ## ユーザーストーリー
 
@@ -52,11 +84,11 @@ Scenario: HMAC 鍵形式の使い分けが消える
 
 ## 受け入れ基準
 
-- [ ] `src/` 内の `atob` / `btoa` 直書きが（legacy 互換 shim を除き）ゼロになっている
-- [ ] `base64ToBytesTyped` の別実装が `base64ToBytes` に統合されている
-- [ ] `HmacSigner` 統合により鍵形式の使い分けが解消されている
-- [ ] `hashUrl` が crypto から移動している
-- [ ] crypto / encryptionSession / settingsExportImport テスト全件 green
+- [x] `src/` 内の `atob` / `btoa` 直書きが（legacy 互換 shim を除き）ゼロになっている
+- [x] `base64ToBytesTyped` の別実装が `base64ToBytes` に統合されている
+- [ ] ~~`HmacSigner` 統合により鍵形式の使い分けが解消されている~~ → [[2026-09-16-04-refactor-hmac-signer]] に分離
+- [ ] ~~`hashUrl` が crypto から移動している~~ → 同上
+- [x] crypto / encryptionSession / settingsExportImport テスト全件 green
 
 ## テスト戦略
 

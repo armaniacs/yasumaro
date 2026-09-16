@@ -13,6 +13,7 @@ import {
     ENVELOPE_ITERATIONS,
     bytesToBase64,
     base64ToBytes,
+    bytesToBase64Url,
 } from './primitives.js';
 import { loadDurableWrappingKey, saveDurableWrappingKey } from './durableKeyStore.js';
 
@@ -277,12 +278,6 @@ async function importHmacKey(keyData: Uint8Array, extractable: boolean): Promise
     );
 }
 
-// Helper function for base64 -> uint8Array conversion
-function base64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
-    const binaryString = atob(base64);
-    return Uint8Array.from(binaryString, c => c.charCodeAt(0)) as Uint8Array<ArrayBuffer>;
-}
-
 /**
  * Load an HMAC key from storage, unwrapping it when stored in encrypted form.
  * Generates a new key (and stores it wrapped) when none exists or when the
@@ -318,7 +313,7 @@ async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: s
             // Legacy plaintext key (pre-PBI-03): wrap and persist the encrypted
             // form so the raw key material is no longer exposed in storage.local.
             try {
-                const keyData = base64ToUint8Array(stored);
+                const keyData = base64ToBytes(stored);
                 const wrappingKey = await getOrCreateHmacWrappingKey();
                 const extractableKey = await importHmacKey(keyData, true);
                 const wrapped = await wrapHmacKey(extractableKey, wrappingKey);
@@ -419,11 +414,7 @@ export async function generateHmacSignature(data: string, key: CryptoKey): Promi
     const webcrypto = getWebCrypto();
     const dataArray = textEncoder.encode(data);
     const signature = await webcrypto.subtle.sign('HMAC', key, dataArray) as ArrayBuffer;
-    const signatureChars = Array.from(new Uint8Array(signature), b => String.fromCharCode(b));
-    return btoa(signatureChars.join(''))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=/g, '');
+    return bytesToBase64Url(new Uint8Array(signature));
 }
 
 /**

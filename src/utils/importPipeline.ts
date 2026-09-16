@@ -89,16 +89,13 @@ export async function runImportPipeline<TRaw, TParsed, TValidated>(
 }
 
 /**
- * Decode a base64 string to bytes without `atob`'s intermediate
- * binary-string amplification. Used where a signed-but-encoded field must be
- * decoded after authentication.
+ * Decode a base64 string to bytes. Used where a signed-but-encoded field must
+ * be decoded after authentication.
+ *
+ * Re-exported from the shared codec seam rather than reimplemented here
+ * (PBI 2026-09-15-16). The local copy this replaced claimed to avoid "atob's
+ * intermediate binary-string amplification" while calling `atob` itself — the
+ * two implementations were equivalent, and keeping both meant a codec change
+ * would only reach one of them.
  */
-export function base64ToBytesTyped(base64: string): Uint8Array {
-  const binary = atob(base64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
+export { base64ToBytes as base64ToBytesTyped } from './crypto/primitives.js';

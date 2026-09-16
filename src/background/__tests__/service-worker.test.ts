@@ -430,16 +430,22 @@ vi.mock('../../utils/permissionManager.js', () => ({
     cleanupOldDeniedEntries: vi.fn().mockResolvedValue(undefined),
     cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../utils/crypto/index.js', () => ({
-    getNotificationHmacKey: vi.fn().mockResolvedValue(({
-        type: 'hmac',
-        extractable: false,
-        algorithm: { name: 'HMAC', hash: 'SHA-256' },
-        usages: ['sign', 'verify']
-    }) as unknown as CryptoKey),
-    generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
-    verifyHmacSignature: vi.fn().mockResolvedValue(true),
-}));
+// Stubs the HMAC side only; the base64url codec used to build and parse
+// notification ids stays real (PBI 2026-09-15-16).
+vi.mock('../../utils/crypto/index.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../utils/crypto/index.js')>();
+    return {
+        ...actual,
+        getNotificationHmacKey: vi.fn().mockResolvedValue(({
+            type: 'hmac',
+            extractable: false,
+            algorithm: { name: 'HMAC', hash: 'SHA-256' },
+            usages: ['sign', 'verify']
+        }) as unknown as CryptoKey),
+        generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
+        verifyHmacSignature: vi.fn().mockResolvedValue(true),
+    };
+});
 vi.mock('../../utils/storage/privacyConsent.js', () => ({
     hasPrivacyConsent: vi.fn().mockResolvedValue(true),
     migrateLegacyPrivacyConsent: vi.fn().mockResolvedValue(true),

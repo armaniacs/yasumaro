@@ -17,6 +17,8 @@ import {
     wrapSecretString,
     unwrapSecretString,
     isWrappedSecretString,
+    bytesToBase64,
+    base64ToBytes,
 } from '../crypto/index.js';
 import { validatePasswordPolicy } from '../crypto/cryptoParams.js';
 import { StorageKeys } from './types.js';
@@ -42,14 +44,11 @@ const encryptionKeyMutex = new Mutex();
 // Helpers
 // ============================================================================
 
-function base64ToUint8Array(base64: string): Uint8Array {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-}
+// Local base64 helpers were removed in favour of the shared codec seam
+// (PBI 2026-09-15-16): `base64ToBytes` / `bytesToBase64` from crypto/.
+// The encoder there chunks its input, so the `String.fromCharCode(...bytes)`
+// spread these call sites used — which overflows the argument stack on a
+// large enough array — is gone too.
 
 /**
  * パスワードから暗号化キーを導出する（PBKDF2、extensionIdなし）
@@ -104,7 +103,7 @@ async function deriveKeyFromMasterPassword(passwordSaltBase64: string | undefine
         throw new Error('CORRUPTION: Master password salt missing');
     }
 
-    const passwordSalt = base64ToUint8Array(passwordSaltBase64);
+    const passwordSalt = base64ToBytes(passwordSaltBase64);
     // PBKDF2キー導出を直接使用（マスターパスワードベース）
     // セッションタイムアウトチェックを開始（まだ開始していない場合）
     // Note: Session timeoutはchrome.alarms APIに移行済み（sessionAlarmsManager.ts）
@@ -135,10 +134,10 @@ async function restoreSecretFromSessionIfPresent(): Promise<string | undefined> 
 /** 初回: ランダムなソルトとシークレットを生成してlocalに保存する。 */
 async function generateAndPersistSecret(): Promise<{ saltBase64: string; secret: string }> {
     const salt = generateSalt();
-    const saltBase64 = btoa(String.fromCharCode(...salt));
+    const saltBase64 = bytesToBase64(salt);
     // 32バイトのランダムシークレットを生成
     const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-    const secret = btoa(String.fromCharCode(...secretBytes));
+    const secret = bytesToBase64(secretBytes);
 
     await chrome.storage.local.set({
         [StorageKeys.ENCRYPTION_SALT]: saltBase64,
@@ -187,7 +186,7 @@ async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
             ({ saltBase64, secret } = await generateAndPersistSecret());
         }
 
-        const salt = base64ToUint8Array(saltBase64);
+        const salt = base64ToBytes(saltBase64);
 
         // ランダムなsecretとsaltからPBKDF2でキー導出
         cachedEncryptionKey = await deriveKey(secret, salt);
@@ -269,7 +268,7 @@ export async function setMasterPassword(password: string): Promise<boolean> {
     const strength = calculatePasswordStrength(password);
 
     const salt = generateSalt();
-    const saltBase64 = btoa(String.fromCharCode(...salt));
+    const saltBase64 = bytesToBase64(salt);
     const hash = await hashPasswordWithPBKDF2(password, salt);
 
     // VULN-019 fix: persist the iteration count used for this hash so
@@ -330,7 +329,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
         throw new Error('Master password data corrupted');
     }
 
-    const salt = base64ToUint8Array(saltBase64);
+    const salt = base64ToBytes(saltBase64);
     // Pass stored iterations to enable constant-time verification:
     // when iterations is known, only one PBKDF2 pass is needed.
     const verifyResult = await verifyPasswordWithPBKDF2(password, storedHash, salt, storedIterations);
@@ -446,7 +445,7 @@ export async function getOrCreateHmacSecret(): Promise<string> {
             const { errorMessage } = await import('../errorUtils.js');
             await logError('Failed to unwrap HMAC secret, regenerating', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
             const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-            secret = btoa(String.fromCharCode(...secretBytes));
+            secret = bytesToBase64(secretBytes);
             const wrapped = await wrapSecretString(secret);
             await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
         }
@@ -458,7 +457,7 @@ export async function getOrCreateHmacSecret(): Promise<string> {
     } else {
         // 32バイトのランダムシークレットを生成
         const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-        secret = btoa(String.fromCharCode(...secretBytes));
+        secret = bytesToBase64(secretBytes);
 
         const wrapped = await wrapSecretString(secret);
         await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
