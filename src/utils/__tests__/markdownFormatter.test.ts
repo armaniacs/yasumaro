@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { formatEntryToMarkdown, formatEntriesToGenericMarkdown } from '../markdownFormatter.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { formatEntryToMarkdown, formatEntriesToGenericMarkdown, formatEntriesToMarkdown, buildEntryMarkdown } from '../markdownFormatter.js';
 import type { BrowsingLogEntry } from '../sqlite-types.js';
 
 const baseEntry: BrowsingLogEntry = {
@@ -97,5 +97,73 @@ describe('markdownFormatter', () => {
     const title = 'Title with ] and #';
     const md = formatEntryToMarkdown({ ...baseEntry, title });
     expect(md).toContain('# Title with \\] and #');
+  });
+});
+
+describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
+  const FIXED_NOW = new Date('2026-03-15T09:30:00.000Z').getTime();
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('obsidianList delegates to the same output as formatEntriesToMarkdown', () => {
+    const viaPublic = formatEntriesToMarkdown([baseEntry]);
+    const viaSSOT = buildEntryMarkdown(
+      { title: baseEntry.title, url: baseEntry.url, summary: baseEntry.summary, appendedAt: FIXED_NOW },
+      'obsidianList',
+    );
+    expect(viaSSOT).toBe(viaPublic);
+  });
+
+  it('heading delegates to the same output as formatEntryToMarkdown', () => {
+    const viaSSOT = buildEntryMarkdown(
+      {
+        title: baseEntry.title,
+        url: baseEntry.url,
+        summary: baseEntry.summary,
+        tags: baseEntry.tags,
+        createdAt: baseEntry.created_at,
+      },
+      'heading',
+      { urlMode: 'obsidian' },
+    );
+    expect(viaSSOT).toBe(formatEntryToMarkdown(baseEntry));
+  });
+
+  it('plainLine renders a single line and omits a missing summary', () => {
+    expect(
+      buildEntryMarkdown({ title: 'T', url: 'https://example.com', summary: 's' }, 'plainLine'),
+    ).toBe('- [T](https://example.com): s');
+    expect(
+      buildEntryMarkdown(
+        { title: 'T', url: 'https://example.com', summary: null },
+        'plainLine',
+        { normalizeSummary: false, summaryFallback: null },
+      ),
+    ).toBe('- [T](https://example.com)');
+  });
+
+  it('prefixes array tags with # in obsidianList order', () => {
+    const md = buildEntryMarkdown(
+      { title: 'T', url: 'https://example.com', summary: 's', tags: ['a', 'b'], timestamp: '09:30' },
+      'obsidianList',
+    );
+    expect(md).toBe('- 09:30 [T](https://example.com)\n    - #a #b s');
+  });
+
+  it('neutralizes link-breakout fragments in title and tags', () => {
+    const evil = 'https://evil.example';
+    const md = buildEntryMarkdown(
+      { title: `Doc](${evil})`, url: 'https://example.com', summary: 's', tags: [`x](${evil})`], timestamp: '09:30' },
+      'obsidianList',
+    );
+    expect(md).not.toContain(`](${evil})`);
+    expect(md).toContain('](https://example.com)');
   });
 });

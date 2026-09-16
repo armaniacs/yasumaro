@@ -10,7 +10,7 @@ import { addLog, LogType } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { settingsRepository, type SettingsReader, type SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../utils/markdownSanitizer.js';
+import { buildEntryMarkdown } from '../../utils/markdownFormatter.js';
 import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout } from '../../utils/fetch.js';
 import { readJsonCapped } from '../../utils/readBodyCapped.js';
 import { isCredentialConfigured } from './settingsConfiguredCheck.js';
@@ -55,12 +55,14 @@ export class GistSyncTarget implements SyncTarget {
       const settings = await this.settingsReader.getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
       const gistId = settings[StorageKeys.GIST_ID] as string | undefined;
-      const defaultEntry = () => {
-        const safeTitle = sanitizeForMarkdownLinkText(title || url || 'Untitled');
-        const safeUrl = sanitizeUrlForMarkdownTarget(url);
-        const safeSummary = summary ? sanitizeForObsidian(summary) : null;
-        return `- [${safeTitle}](${safeUrl})${safeSummary ? `: ${safeSummary}` : ''}`;
-      };
+      // Single-line entry via the entry-markdown SSOT (PBI-04). The legacy
+      // behavior is reproduced, not unified: no summary normalization and no
+      // fallback (a missing summary omits the suffix instead of pinning one).
+      const defaultEntry = () =>
+        buildEntryMarkdown({ title, url, summary }, 'plainLine', {
+          normalizeSummary: false,
+          summaryFallback: null,
+        });
       const entry = markdown || defaultEntry();
 
       if (gistId) {

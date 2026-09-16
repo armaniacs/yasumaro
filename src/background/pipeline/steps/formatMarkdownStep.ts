@@ -5,8 +5,7 @@
  */
 
 import { getUserLocale } from '../../../utils/localeUtils.js';
-import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from '../../../utils/markdownSanitizer.js';
-import { getHostname } from '../../../utils/markdownTemplateUtils.js';
+import { buildEntryMarkdown, buildTemplateEntryData } from '../../../utils/markdownFormatter.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -30,45 +29,35 @@ export const formatMarkdownStep: PipelineStepFunction = async (
     summary = sanitizedSummary || privacyResult?.summary || 'Summary not available.';
   }
 
-  // Sanitize for Obsidian (XSS protection).
-  // The title is placed inside `[title](url)`, so escape link-breakout chars
-  // (VULN-001) — sanitizeForObsidian alone does not stop a `](url)` suffix.
-  const sanitizedTitle = sanitizeForMarkdownLinkText(title);
-  // Sanitize URL for Markdown link target (VULN-001/004 fix)
-  const sanitizedUrl = sanitizeUrlForMarkdownTarget(url);
-  // Normalize newlines and extra spaces - Obsidian list format breaks with newlines
-  const normalizedSummary = summary.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
-  const finalSanitizedSummary = sanitizeForObsidian(normalizedSummary);
-
-  // Format timestamp
+  // Sanitize + assemble through the entry-markdown SSOT (PBI-04). The title
+  // is placed inside `[title](url)`, so the SSOT escapes link-breakout chars
+  // (VULN-001); AI tags are sanitized per tag before `#` interpolation
+  // (VULN-008). summaryFallback is null because the summary priority chain
+  // above already resolved the final text; titleFallback is false because
+  // RecordingData.title is required (no URL fallback legacy).
+  // WHY one preformatted timestamp: markdown and markdownEntryData must share
+  // a single instant (minute-boundary safe), so it is computed once here and
+  // passed as a literal instead of letting each builder call Date.now().
   const timestamp = new Date().toLocaleTimeString(getUserLocale(), {
     hour: '2-digit',
     minute: '2-digit'
   });
-
-  // タグプレフィックス（タグがある場合のみ）。
-  // Tags come from the AI summary (prompt-injection surface) — sanitize each one
-  // before interpolating as `#${tag}` (VULN-008) to stop link/wikilink injection.
   const tags = privacyResult?.tags;
-  const tagPrefix = tags && tags.length > 0 ? tags.map(t => `#${sanitizeForMarkdownLinkText(sanitizeForObsidian(t))}`).join(' ') + ' ' : '';
-
-  // Create markdown
-  const markdown = `- ${timestamp} [${sanitizedTitle}](${sanitizedUrl})\n    - ${tagPrefix}${finalSanitizedSummary}`;
-
-  // Extract domain for template placeholder
-  const domain = getHostname(sanitizedUrl);
+  const entryInput = {
+    title,
+    url,
+    summary,
+    tags: tags ?? null,
+    timestamp,
+  };
+  const entryOpts = { titleFallback: false, summaryFallback: null } as const;
+  const entryData = buildTemplateEntryData(entryInput, entryOpts);
+  const markdown = buildEntryMarkdown(entryInput, 'obsidianList', entryOpts);
 
   return {
     ...context,
-    sanitizedSummary: finalSanitizedSummary,
+    sanitizedSummary: entryData.summary,
     markdown,
-    markdownEntryData: {
-      timestamp,
-      title: sanitizedTitle,
-      url: sanitizedUrl,
-      summary: finalSanitizedSummary,
-      tags: tagPrefix,
-      domain,
-    },
+    markdownEntryData: entryData,
   };
 };
