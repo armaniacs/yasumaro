@@ -14,11 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-16 CI の test ジョブ回復 — 1件（v6.9.2 リリース時に別課題として切り出し）
+### 2026-09-16 CI の test ジョブ回復 — 2件（v6.9.2 リリース時に別課題として切り出し）
 
-v6.9.2（PR #137）のリリース確認中に発見。`usability` の失敗は同 PR で解消したが、アーカイブ系 e2e の失敗が残った。main を worktree に切り出して同条件で実行し、変更なしの main でも同一の失敗が再現することを確認済み（PR #137 とは無関係の既存問題）。CI が赤いままだと以後の変更で回帰検知が効かないため、次バージョンで対応する。
+v6.9.2（PR #137）のリリース確認中に発見。`usability` の失敗は同 PR で解消したが、アーカイブ系 e2e の失敗が残った。main を worktree に切り出して同条件で実行し、変更なしの main でも同一の失敗が再現することを確認済み（PR #137 とは無関係の既存問題）。
 
-- ⬜🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（archive e2e の `Receiving end does not exist` / `Confirmation token mismatch` を解消し test ジョブを緑に戻す）
+01 で原因2件（confirm token の揮発 / offscreen 喪失の分類漏れ）を修正し、**failed 1 + flaky 5 → failed 1 + flaky 0** まで回復した。残る G5 は offscreen の破棄そのものが原因で、`archive_create` の `noRetry: true`（既存の設計判断）を覆さずに解くには冪等性の導入が要るため 02 に分離した。
+
+- 🔶🟡🟢🔧 2026-09-16-01-fix-archive-e2e-flaky.md（**原因2件を修正済み** — confirm token を mismatch 時に1回再発行 / offscreen 喪失の分類漏れを解消。flaky 5件が解消し、残るは G5 のみ）
+- ⬜🔴🟡🔧 2026-09-16-02-fix-offscreen-teardown-during-archive.md（アーカイブ作成中に offscreen が破棄されても処理を失わない。冪等キー導入など設計判断を伴う。**ユーザー環境での実害は未確認** — まず再現確認から）
 
 ### 2026-09-15 arch-delivery-loop 0915b（第2回診断）— 4件（未探索領域の診断8候補から上位4件を PBI 化）
 

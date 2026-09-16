@@ -33,10 +33,16 @@ export interface SqliteError {
   /**
    * Whether retrying the same call could plausibly succeed.
    *
-   * Only timeouts qualify: the offscreen document plus WASM load can outrun
-   * the first query after the dashboard opens. Quota and SQLite errors are
-   * deterministic, and a lost offscreen document needs a reload, so retrying
-   * those just delays the error the user needs to see.
+   * Timeouts qualify: the offscreen document plus WASM load can outrun the
+   * first query after the dashboard opens. A lost offscreen document also
+   * qualifies — the transport drops its cached handle on failure and recreates
+   * the document on the next call, so the retry runs against a live one.
+   * Quota and SQLite errors are deterministic, so retrying those just delays
+   * the error the user needs to see.
+   *
+   * Retrying is opt-in per call (`retryAttempts`), and only the read-only
+   * `query`/`search` paths opt in — so this flag cannot cause a destructive
+   * operation to be applied twice.
    */
   retriable: boolean;
 }
@@ -49,11 +55,21 @@ export function categorizeError(msg: string): SqliteError {
       retriable: true,
     };
   }
-  if (msg.includes('offscreen') || msg.includes('offscreenDocument')) {
+  // "Could not establish connection. Receiving end does not exist." is how
+  // Chrome words a message sent to an offscreen document that is gone — it
+  // names neither "offscreen" nor the document, so matching only on those
+  // words let the most common form of this failure fall through to `unknown`
+  // and reach the user as raw browser prose (PBI 2026-09-16-01).
+  if (
+    msg.includes('offscreen') ||
+    msg.includes('offscreenDocument') ||
+    msg.includes('Receiving end does not exist') ||
+    msg.includes('Could not establish connection')
+  ) {
     return {
       kind: 'offscreen_lost',
-      message: 'Database connection lost. Please reload the extension.',
-      retriable: false,
+      message: 'Database connection lost. Retrying may recover it.',
+      retriable: true,
     };
   }
   if (msg.includes('quota') || msg.includes('QuotaExceededError')) {

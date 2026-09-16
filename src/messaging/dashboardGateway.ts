@@ -8,7 +8,7 @@ import { categorizeError } from './sqliteRpcClient.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
-import { tokenExempt, deriveScopeHash } from './sqliteOperationSecurity.js';
+import { tokenExempt, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from './sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
@@ -39,32 +39,65 @@ async function sendDashboardRaw<T extends DashboardSqliteRequest>(payload: T): P
   ]);
 }
 
-async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Promise<DashboardSqliteResponseFor<T['subtype']>> {
-  const requireConfirmToken = !tokenExempt.has(payload.subtype);
-  let messagePayload: T & { confirmToken?: string } = payload as T & { confirmToken?: string };
-  if (requireConfirmToken) {
-    const action = payload.subtype;
-    const id = (payload as unknown as { id?: number }).id;
-    const scopeHash = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
-    const confirmToken = await getDashboardConfirmToken(action, id, scopeHash);
-    if (!confirmToken) {
-      throw new Error('Dashboard confirm token unavailable');
-    }
-    // Send-time stability assert (PBI 2026-09-06-01): the token binds the
-    // scope derived from the payload at issuance. If the payload object is
-    // mutated between token issuance and send, fail closed instead of
-    // operating on unexpected parameters.
-    if (scopeHash !== undefined) {
-      const scopeHashAfter = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
-      if (scopeHashAfter !== scopeHash) {
-        throw new Error('Dashboard SQLite payload changed after confirm token issuance; aborting');
-      }
-    }
-    messagePayload = { ...payload, confirmToken } as T & { confirmToken: string };
+/**
+ * Attach a freshly issued confirmToken to the payload.
+ *
+ * The scope is re-derived from the payload on every call, so a token obtained
+ * here always binds the parameters actually being sent — this is what keeps a
+ * re-issue from widening the operation (a token for "archive before Sept 1"
+ * can never authorize "archive everything").
+ */
+async function withConfirmToken<T extends DashboardSqliteRequest>(payload: T): Promise<T & { confirmToken: string }> {
+  const action = payload.subtype;
+  const id = (payload as unknown as { id?: number }).id;
+  const scopeHash = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
+  const confirmToken = await getDashboardConfirmToken(action, id, scopeHash);
+  if (!confirmToken) {
+    throw new Error('Dashboard confirm token unavailable');
   }
-  // Reuse sendDashboardRaw's single race — the actual send must not build a
-  // second parallel timer/message pair (PBI 07: duplicate fetch/race removal).
-  return sendDashboardRaw(messagePayload);
+  // Send-time stability assert (PBI 2026-09-06-01): the token binds the
+  // scope derived from the payload at issuance. If the payload object is
+  // mutated between token issuance and send, fail closed instead of
+  // operating on unexpected parameters.
+  if (scopeHash !== undefined) {
+    const scopeHashAfter = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
+    if (scopeHashAfter !== scopeHash) {
+      throw new Error('Dashboard SQLite payload changed after confirm token issuance; aborting');
+    }
+  }
+  return { ...payload, confirmToken } as T & { confirmToken: string };
+}
+
+function isConfirmTokenMismatch(response: unknown): boolean {
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    (response as { success?: boolean }).success === false &&
+    (response as { error?: unknown }).error === CONFIRM_TOKEN_MISMATCH_ERROR
+  );
+}
+
+async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Promise<DashboardSqliteResponseFor<T['subtype']>> {
+  if (tokenExempt.has(payload.subtype)) {
+    // Reuse sendDashboardRaw's single race — the actual send must not build a
+    // second parallel timer/message pair (PBI 07: duplicate fetch/race removal).
+    return sendDashboardRaw(payload as T & { confirmToken?: string });
+  }
+
+  const response = await sendDashboardRaw(await withConfirmToken(payload));
+  if (!isConfirmTokenMismatch(response)) return response;
+
+  // The token went missing between issuance and verification. The common cause
+  // is not tampering but an MV3 service worker shutdown, which takes
+  // chrome.storage.session — and every token in it — with it.
+  //
+  // Retrying is safe specifically here: the receiver rejects on this path
+  // BEFORE running the operation, so nothing has been written and a second
+  // attempt cannot double-apply it. The re-issued token re-derives its scope
+  // from the same payload, so the retry cannot authorize anything the first
+  // attempt could not. One retry only — a second mismatch is a real rejection
+  // and is surfaced to the caller.
+  return sendDashboardRaw(await withConfirmToken(payload));
 }
 
 export class DashboardGateway {

@@ -1,6 +1,6 @@
 import { logError, ErrorCode } from '../../../utils/logger.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES, deriveScopeHash } from '../../../messaging/sqliteOperationSecurity.js';
+import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from '../../../messaging/sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
@@ -47,7 +47,7 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
           { subtype, hasToken: Boolean(payload.confirmToken) },
           ErrorCode.INTERNAL_ERROR,
         );
-        return { success: false, error: 'Confirmation token mismatch' };
+        return { success: false, error: CONFIRM_TOKEN_MISMATCH_ERROR };
       }
     }
 
