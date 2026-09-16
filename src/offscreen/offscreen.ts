@@ -83,9 +83,6 @@ export function handleOffscreenMessage(
         });
         return true;
       }
-      // The in-page Firefox transport dispatches with this proof directly —
-      // it was produced by the same authorization function, so the check is
-      // not bypassed (see InPageOffscreenTransport).
       void auth.proof;
     }
 

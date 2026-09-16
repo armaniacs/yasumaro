@@ -9,15 +9,36 @@
 // augmentation, so globalThis.LanguageModel (including the `monitor` create() option)
 // is typed here without redeclaring it.
 import type { BuiltInAIAvailability } from '../background/builtInAIClient.js';
-import { getBrowserName, getBuiltInAIFlagGuidance, type BuiltInAIFlagGuidance } from '../utils/browserSupport.js';
+import {
+  getBrowserName,
+  getBuiltInAIFlagGuidance,
+  getBuiltInAIDiskSpace,
+  type BuiltInAIFlagGuidance,
+  type BuiltInAIDiskSpace,
+} from '../utils/browserSupport.js';
 
 export interface BuiltInAiDiagnosticsResult {
   status: BuiltInAIAvailability;
   guidance: BuiltInAIFlagGuidance | null;
+  /** Free-space reading when it explains an 'unavailable' status; null otherwise. */
+  diskSpace: BuiltInAIDiskSpace | null;
 }
 
 function guidanceForCurrentBrowser(): BuiltInAIFlagGuidance | null {
   return getBuiltInAIFlagGuidance(getBrowserName());
+}
+
+/**
+ * Describe an 'unavailable' status. Insufficient disk space takes precedence:
+ * Chromium reports it as a bare 'unavailable', so surfacing only flag guidance
+ * sends users to re-check a flag that is already enabled.
+ */
+async function explainUnavailable(): Promise<BuiltInAiDiagnosticsResult> {
+  const diskSpace = await getBuiltInAIDiskSpace();
+  if (diskSpace && !diskSpace.sufficient) {
+    return { status: 'unavailable', guidance: null, diskSpace };
+  }
+  return { status: 'unavailable', guidance: guidanceForCurrentBrowser(), diskSpace: null };
 }
 
 /** create()に渡す出力言語指定と揃える。availability()判定とcreate()実行で異なる言語を指定すると結果が食い違うため定数化。 */
@@ -30,17 +51,17 @@ const EXPECTED_OUTPUTS: Array<{ type: 'text'; languages: string[] }> = [{ type: 
 export async function checkBuiltInAiAvailability(): Promise<BuiltInAiDiagnosticsResult> {
   const languageModel = globalThis.LanguageModel;
   if (!languageModel) {
-    return { status: 'unavailable', guidance: guidanceForCurrentBrowser() };
+    return explainUnavailable();
   }
 
   try {
     const status = await languageModel.availability({ expectedOutputs: EXPECTED_OUTPUTS });
-    return {
-      status,
-      guidance: status === 'unavailable' ? guidanceForCurrentBrowser() : null,
-    };
+    if (status === 'unavailable') {
+      return explainUnavailable();
+    }
+    return { status, guidance: null, diskSpace: null };
   } catch {
-    return { status: 'unavailable', guidance: guidanceForCurrentBrowser() };
+    return explainUnavailable();
   }
 }
 
@@ -54,7 +75,7 @@ export async function startBuiltInAiDownload(
 ): Promise<BuiltInAiDiagnosticsResult> {
   const languageModel = globalThis.LanguageModel;
   if (!languageModel) {
-    return { status: 'unavailable', guidance: guidanceForCurrentBrowser() };
+    return explainUnavailable();
   }
 
   try {
@@ -68,7 +89,7 @@ export async function startBuiltInAiDownload(
     });
     session.destroy();
   } catch {
-    return { status: 'unavailable', guidance: guidanceForCurrentBrowser() };
+    return explainUnavailable();
   }
 
   return checkBuiltInAiAvailability();

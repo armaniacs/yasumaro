@@ -1677,6 +1677,9 @@
   "diagBuiltInAiFlagGuidance": {
     "message": "Open \"{flagUrl}\" and enable \"{flagName}\"."
   },
+  "diagBuiltInAiDiskSpaceGuidance": {
+    "message": "Initializing the on-device model needs about {requiredGb} of free disk space, but only {freeGb} is available. Free up disk space."
+  },
   "diagBuiltInAiUnsupportedBrowser": {
     "message": "This browser does not support built-in AI."
   },
@@ -2278,6 +2281,9 @@
   },
   "builtInAiUnavailableWithFlag": {
     "message": "Built-in AI is currently unavailable (status: {status}). Open \"{flagUrl}\" and enable \"{flagName}\"."
+  },
+  "builtInAiUnavailableDiskSpace": {
+    "message": "Built-in AI is currently unavailable (status: {status}). Initializing the on-device model needs about {requiredGb} of free disk space, but only {freeGb} is available. Free up disk space and try again."
   },
   "modelsDevDescription": {
     "message": "Select from 70+ OpenAI-compatible providers (OpenRouter, Hugging Face, DeepSeek, etc.)"

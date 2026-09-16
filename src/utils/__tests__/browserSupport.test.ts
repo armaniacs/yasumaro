@@ -2,7 +2,9 @@
  * browserSupport.test.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { supportsSidePanel, supportsOffscreen, supportsFavicon, getBrowserName, getBuiltInAIFlagGuidance } from '../browserSupport.js';
+import { supportsSidePanel, supportsOffscreen, supportsFavicon, getBrowserName, getBuiltInAIFlagGuidance, getBuiltInAIDiskSpace, formatGigabytes } from '../browserSupport.js';
+
+const GIB = 1024 * 1024 * 1024;
 
 describe('browserSupport', () => {
   beforeEach(() => {
@@ -53,5 +55,57 @@ describe('browserSupport', () => {
   it('getBuiltInAIFlagGuidance returns null for brave and unknown', () => {
     expect(getBuiltInAIFlagGuidance('brave')).toBeNull();
     expect(getBuiltInAIFlagGuidance('unknown')).toBeNull();
+  });
+
+  describe('getBuiltInAIDiskSpace', () => {
+    it('reports insufficient space when free space is below the requirement', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 20 * GIB, usage: 10 * GIB }) }
+      });
+      const result = await getBuiltInAIDiskSpace();
+      expect(result?.freeBytes).toBe(10 * GIB);
+      expect(result?.sufficient).toBe(false);
+    });
+
+    it('reports sufficient space when free space meets the requirement', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 100 * GIB, usage: 10 * GIB }) }
+      });
+      const result = await getBuiltInAIDiskSpace();
+      expect(result?.sufficient).toBe(true);
+    });
+
+    it('treats a missing usage value as zero usage', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 30 * GIB }) }
+      });
+      const result = await getBuiltInAIDiskSpace();
+      expect(result?.freeBytes).toBe(30 * GIB);
+      expect(result?.sufficient).toBe(true);
+    });
+
+    it('returns null when the Storage API is unavailable', async () => {
+      vi.stubGlobal('navigator', { userAgent: 'Mozilla/5.0' });
+      expect(await getBuiltInAIDiskSpace()).toBeNull();
+    });
+
+    it('returns null when quota is not reported', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ usage: 1 * GIB }) }
+      });
+      expect(await getBuiltInAIDiskSpace()).toBeNull();
+    });
+
+    it('returns null when estimate() rejects', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => { throw new Error('denied'); } }
+      });
+      expect(await getBuiltInAIDiskSpace()).toBeNull();
+    });
+  });
+
+  it('formatGigabytes renders whole gigabytes', () => {
+    expect(formatGigabytes(22 * GIB)).toBe('22 GB');
+    expect(formatGigabytes(9.7 * GIB)).toBe('10 GB');
   });
 });

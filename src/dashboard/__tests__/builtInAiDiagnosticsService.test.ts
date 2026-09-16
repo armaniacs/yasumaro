@@ -16,6 +16,7 @@ vi.mock('../../utils/browserSupport.js', () => ({
     }
     return null;
   }),
+  getBuiltInAIDiskSpace: vi.fn(async () => null),
 }));
 
 import {
@@ -24,7 +25,7 @@ import {
 } from '../builtInAiDiagnosticsService.js';
 import * as browserSupportModule from '../../utils/browserSupport.js';
 
-const { getBrowserName } = vi.mocked(browserSupportModule);
+const { getBrowserName, getBuiltInAIDiskSpace } = vi.mocked(browserSupportModule);
 
 interface MockSession {
   destroy: ReturnType<typeof vi.fn>;
@@ -162,6 +163,49 @@ describe('builtInAiDiagnosticsService', () => {
       await startBuiltInAiDownload(vi.fn());
 
       expect(session.destroy).toHaveBeenCalled();
+    });
+  });
+
+  describe('unavailable の理由の切り分け', () => {
+    const GIB = 1024 * 1024 * 1024;
+
+    test('reports disk space instead of flag guidance when space is short', async () => {
+      getBuiltInAIDiskSpace.mockResolvedValue({
+        freeBytes: 10 * GIB,
+        requiredBytes: 22 * GIB,
+        sufficient: false,
+      });
+      mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+      const result = await checkBuiltInAiAvailability();
+
+      expect(result.status).toBe('unavailable');
+      expect(result.guidance).toBeNull();
+      expect(result.diskSpace?.freeBytes).toBe(10 * GIB);
+    });
+
+    test('keeps flag guidance when disk space is sufficient', async () => {
+      getBuiltInAIDiskSpace.mockResolvedValue({
+        freeBytes: 90 * GIB,
+        requiredBytes: 22 * GIB,
+        sufficient: true,
+      });
+      mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+      const result = await checkBuiltInAiAvailability();
+
+      expect(result.guidance?.url).toBe('chrome://flags/#prompt-api-for-gemini-nano');
+      expect(result.diskSpace).toBeNull();
+    });
+
+    test('keeps flag guidance when the disk reading is unavailable', async () => {
+      getBuiltInAIDiskSpace.mockResolvedValue(null);
+      mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+      const result = await checkBuiltInAiAvailability();
+
+      expect(result.guidance?.url).toBe('chrome://flags/#prompt-api-for-gemini-nano');
+      expect(result.diskSpace).toBeNull();
     });
   });
 });

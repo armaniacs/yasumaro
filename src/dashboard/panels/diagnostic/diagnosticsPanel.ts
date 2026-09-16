@@ -11,6 +11,7 @@ import { getMessage } from '../../../utils/i18n.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
+import { formatGigabytes } from '../../../utils/browserSupport.js';
 import { type PanelLifecycle } from '../types.js';
 import { diagnosticsCollector } from './DiagnosticsCollector.js';
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
@@ -43,7 +44,13 @@ export function renderBuiltInAiStatus(
     result.status === 'unavailable'
   ));
 
-  if (result.status === 'unavailable' && result.guidance) {
+  if (result.status === 'unavailable' && result.diskSpace) {
+    const diskText = getMessage('diagBuiltInAiDiskSpaceGuidance', {
+      requiredGb: formatGigabytes(result.diskSpace.requiredBytes),
+      freeGb: formatGigabytes(result.diskSpace.freeBytes),
+    }) || `The on-device model needs about ${formatGigabytes(result.diskSpace.requiredBytes)} of free disk space (currently ${formatGigabytes(result.diskSpace.freeBytes)} free).`;
+    statsEl.appendChild(makeStatRow(getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance', diskText));
+  } else if (result.status === 'unavailable' && result.guidance) {
     const guidanceText = getMessage('diagBuiltInAiFlagGuidance', { flagName: result.guidance.flagName, flagUrl: result.guidance.url })
       || `Enable "${result.guidance.flagName}" at ${result.guidance.url}`;
     statsEl.appendChild(makeStatRow(getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance', guidanceText));
