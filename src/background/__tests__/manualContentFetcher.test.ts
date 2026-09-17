@@ -121,3 +121,43 @@ describe('ManualContentFetcher', () => {
     expect(removeFn).toHaveBeenCalledWith(999);
   }, 10000);
 });
+
+describe('ManualContentFetcher timeout path (PBI 2026-09-17-16)', () => {
+  it('removes the onUpdated listener when the tab load times out', async () => {
+    vi.useFakeTimers();
+    try {
+      const addListener = vi.fn();
+      const removeListener = vi.fn();
+      const chromeMock = (globalThis as Record<string, unknown>).chrome as Record<string, unknown>;
+      const tabsMock = chromeMock.tabs as Record<string, unknown>;
+      // 既存タブなし → タブ作成 + 読み込み完了待ち（タイムアウトまで発火させない）
+      tabsMock.query = vi.fn(() => Promise.resolve([]));
+      tabsMock.onUpdated = { addListener, removeListener };
+
+      const fetcher = new ManualContentFetcher();
+      const promise = fetcher.fetchContent('https://example.com');
+      await vi.advanceTimersByTimeAsync(10000); // TAB_LOAD_TIMEOUT_MS
+      await promise;
+
+      expect(addListener).toHaveBeenCalledTimes(1);
+      expect(removeListener).toHaveBeenCalledTimes(1);
+      expect(removeListener).toHaveBeenCalledWith(addListener.mock.calls[0][0]);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps the existing listener removal on the complete path', async () => {
+    const addListener = vi.fn();
+    const removeListener = vi.fn();
+    const chromeMock = (globalThis as Record<string, unknown>).chrome as Record<string, unknown>;
+    const tabsMock = chromeMock.tabs as Record<string, unknown>;
+    tabsMock.query = vi.fn(() => Promise.resolve([]));
+    tabsMock.onUpdated = { addListener, removeListener };
+
+    const fetcher = new ManualContentFetcher();
+    await fetcher.fetchContent('https://example.com');
+
+    expect(removeListener).toHaveBeenCalledWith(addListener.mock.calls[0][0]);
+  });
+});
