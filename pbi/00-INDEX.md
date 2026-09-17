@@ -14,6 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-17 コードレビュー追指摘の PBI 化 — 4件
+
+arch-review-0917（10件・全件完了）の実装後の大局的レビューで発見した残課題（新設 SSOT の未採用経路）を PBI 化。NN は先行ラウンドの 01-10 から**継続採番**（日付内一意性と実行順の鍵を両立）。台帳は `2026-09-17-00-backlog-arch-review-0917b.md`。
+
+- 2026-09-17-11-fix-ai-provider-error-labels.md（⬜ 未着手 — S. `fetchErrorLabel: 'OpenAI'` 固定の廃止（openai 互換系ネットワーク障害の誤ラベル実害）+ `parseAndMapFetchError` 第2文言テーブルの `describeHttpFailure` 統合。byte-identical 移行）
+- 2026-09-17-12-refactor-backoff-delay-adoption.md（⬜ 未着手 — S. 指数バックオフ手書き5箇所（stepExecutor/storageTransaction×2/TrustDbKernel/trancoUpdater）を `backoffDelayMs` に委譲。byte-identical）
+- 2026-09-17-13-refactor-markdown-formatter-cleanup.md（⬜ 未着手 — S. 本番呼び出し元ゼロの `formatEntriesToGenericMarkdown` 削除 + 生存関数の形式明示改名。出力 byte-identical）
+- 2026-09-17-14-refactor-layer-list-single-source.md（⬜ 未着手 — M. 層分類リストの二重管理（ルール内リスト vs LAYERS.md 表）を解消（案A 単一マップ / 案B `lint:layers-docs` 検証スクリプト、着手時判断）+ `defaults→aiSummaryCleaner` 暫定許可の ADR 起票）
+
 ### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — ✅ 全10件完了（アーカイブ済み）
 
 大局的アーキテクチャレビュー（DRY / SoC / 拡張性 / 堅牢性）で抽出した11候補を RICE 採点し10件を PBI 化し、4バッチ（並列サブエージェント+ファイル排他）で全件実装。実行順 = 01 → 10（03→04 と 01→10 は順序依存で入れ替え）。台帳は `2026-09-17-00-backlog-arch-review-0917.md`。
@@ -42,6 +51,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
 - [2026-09-15-00-backlog-archloop-0915.md](2026-09-15-00-backlog-archloop-0915.md) — arch-delivery-loop 第1回診断の11候補のうち、PBI 化しなかった残り
 - [2026-09-15-00-backlog-archloop-0915b.md](2026-09-15-00-backlog-archloop-0915b.md) — 第2回診断の8候補のうち、PBI 化しなかった残り（合成ルート 7.0 は PBI 17 として実施済み・reviewSummary 2.5 / SessionStore durability 1.9 は未着手）
+- [2026-09-17-00-backlog-arch-review-0917b.md](2026-09-17-00-backlog-arch-review-0917b.md) — コードレビュー追指摘 0917b の台帳（4件の RICE 表・NN 11 からの継続採番の根拠・古いコピー削除の記録・自律解決済み判断）
 - [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-review-0917.md) — アーキテクチャレビュー 0917 の台帳（11候補の RICE 表・実行順の依存根拠・MAX_PROVIDERS 台帳送り・utils 物理再配置の保留判断と再検討トリガー）
 
 ## 運用ルール
