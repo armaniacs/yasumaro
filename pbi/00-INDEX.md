@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-17 コードレビュー追指摘の PBI 化 — 4件
+### 2026-09-17 コードレビュー追指摘の PBI 化 — ✅ 全4件完了（アーカイブ済み）
 
 arch-review-0917（10件・全件完了）の実装後の大局的レビューで発見した残課題（新設 SSOT の未採用経路）を PBI 化。NN は先行ラウンドの 01-10 から**継続採番**（日付内一意性と実行順の鍵を両立）。台帳は `2026-09-17-00-backlog-arch-review-0917b.md`。
 
@@ -96,6 +96,15 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 - 2026-09-17-08-investigate-module-singleton-policy.md（✅ 完了・アーカイブ済 — ADR 新設（`2026-09-17-module-singleton-policy.md`）。新規 SW 依存は manifest 原則・既存6件現状維持。実測で現 manifest の onReady は 0 件（PBI 2026-09-03-05 で撤去済み）・5箇所の singleton 宣言に ADR 参照コメント）
 
 バッチ2統合時に `require-sanitized-markdown` が SSOT の新構造で 7 errors を検出 → テンプレート補間変数をルール規約（`sanitized*` プレフィックス）に準拠させ解消（parity 不変）。統合検証: type-check / lint 0 errors / test 12,140 passed / build PASS。
+
+### 2026-09-17 コードレビュー追指摘の PBI 化 — 4件完了（11〜14）
+
+- 2026-09-17-11-fix-ai-provider-error-labels.md（✅ 完了・アーカイブ済 — `fetchErrorLabel` 廃止（openai 互換系ネットワーク障害の誤ラベル実害解消）+ `parseAndMapFetchError` 第2テーブルを `describeHttpFailure` の parse variant に統合。byte-identical parity 7 tests・AI 配下 249 tests green。全呼び出し経路を実測（executeHttpTestFlow catch のみが対象、要約フローは汎用文言で対象外））
+- 2026-09-17-12-refactor-backoff-delay-adoption.md（✅ 完了・アーカイブ済 — 手書き指数バックオフ5箇所を `backoffDelayMs` に委譲。attempt 基準差（0/1-origin）は呼び出し側で吸収、golden parity 6 tests・広域 544 tests green。`backoff.ts` の 0-origin 契約を doc 明記）
+- 2026-09-17-13-refactor-markdown-formatter-cleanup.md（✅ 完了・アーカイブ済 — 死んだ `formatEntriesToGenericMarkdown` 削除 + `formatEntryToHeadingMarkdown` / `formatEntriesToObsidianList` へ改名（旧名は @deprecated alias 残置）。出力 byte-identical・golden 無変更 green）
+- 2026-09-17-14-refactor-layer-list-single-source.md（✅ 完了・アーカイブ済 — 案B 採用: `lint:layers-docs` 双方向照合スクリプト新設（48 entries 同期・fixture で正/逆/所属誤りの3系検知を検証）+ `defaults→aiSummaryCleaner` 暫定許可の ADR 起票（49 ADRs PASS）+ LAYERS.md 形式ドリフト修正（ublockMatcher））
+
+バッチ統合時に PBI 13 改名由来の vi.mock 未追従（copyMarkdownButton.test ×4、recordOrchestrator.test ×1）を検出 → mock へ新名キー追加で解消。統合検証: type-check / lint 0 errors / test 12,183 passed (765 files) / build PASS / lint:adr-links / lint:layers-docs PASS。
 
 ### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 4件完了（01・02・03・07）
 

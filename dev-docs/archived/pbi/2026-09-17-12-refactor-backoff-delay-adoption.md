@@ -43,13 +43,13 @@ Scenario: 境界 — maxMs 超過の attempt は cap 値で頭打ちになる
 
 ## 受け入れ基準
 
-- [ ] `StepExecutor.executeWithStrategy`・`StorageTransaction.withLock` / `withAtomic`・`TrustDbKernel.doInitializeWithRetry`・`TrancoUpdater.updateTrancoList` の遅延計算が `backoffDelayMs` への委譲に置き換わっている
-- [ ] 各 attempt の遅延値が現行と完全一致（byte-identical）であり、parity テストで pin されている
-- [ ] 1-origin の呼び出し側（stepExecutor・storageTransaction・trancoUpdater）はオフセット吸収（`attempt - 1` 等）により現行値と一致している
-- [ ] cap あり（stepExecutor の 5000ms）・cap なし（他4箇所）の挙動が現行どおり再現されている
-- [ ] `ConflictError` 判定・`ErrorStrategy.RETRY` 判定等の再試行可否の述語は各ドメインに残っている
-- [ ] jitter 等の振る舞い変更を含まない
-- [ ] `npm run type-check` / `npm test` が green
+- [x] `StepExecutor.executeWithStrategy`・`StorageTransaction.withLock` / `withAtomic`・`TrustDbKernel.doInitializeWithRetry`・`TrancoUpdater.updateTrancoList` の遅延計算が `backoffDelayMs` への委譲に置き換わっている
+- [x] 各 attempt の遅延値が現行と完全一致（byte-identical）であり、parity テストで pin されている
+- [x] 1-origin の呼び出し側（stepExecutor・storageTransaction・trancoUpdater）はオフセット吸収（`attempt - 1` 等）により現行値と一致している
+- [x] cap あり（stepExecutor の 5000ms）・cap なし（他4箇所）の挙動が現行どおり再現されている
+- [x] `ConflictError` 判定・`ErrorStrategy.RETRY` 判定等の再試行可否の述語は各ドメインに残っている
+- [x] jitter 等の振る舞い変更を含まない
+- [x] `npm run type-check` / `npm test` が green
 
 ## テスト戦略
 
@@ -72,6 +72,6 @@ Scenario: 境界 — maxMs 超過の attempt は cap 値で頭打ちになる
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
