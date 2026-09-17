@@ -58,14 +58,14 @@ const queue = new PersistentRetryQueue<OfflineJob>(adapter, {
  * subclassing and overriding every method.
  */
 export interface QueuePort<T> {
-  enqueue(item: T): Promise<void>;
+  enqueue(item: T): Promise<boolean>;
   load(): Promise<T[]>;
   save(items: T[]): Promise<void>;
   flush(handler: (item: T) => Promise<boolean>): Promise<T[]>;
   getQueueSize(): Promise<number>;
   filterExpiredAndOverRetry(items: T[]): { kept: T[]; dropped: T[] };
   /** In-lock read-modify-write (VULN-056). dequeue/peek route through this. */
-  mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<void>;
+  mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<boolean>;
 }
 
 /** Builds OfflineJob values with generated id/createdAt/retryCount so callers only supply intent. */
@@ -146,8 +146,9 @@ export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
  * inheritance/override chain is needed.
  */
 export class NoOpQueuePort implements QueuePort<OfflineJob> {
-  async enqueue(): Promise<void> {
+  async enqueue(): Promise<boolean> {
     // Intentionally discarded — this port never persists anything.
+    return false;
   }
   async load(): Promise<OfflineJob[]> {
     return [];
@@ -164,8 +165,9 @@ export class NoOpQueuePort implements QueuePort<OfflineJob> {
   filterExpiredAndOverRetry(items: OfflineJob[]): { kept: OfflineJob[]; dropped: OfflineJob[] } {
     return { kept: items, dropped: [] };
   }
-  async mutate(fn: (items: OfflineJob[]) => OfflineJob[] | Promise<OfflineJob[]>): Promise<void> {
+  async mutate(fn: (items: OfflineJob[]) => OfflineJob[] | Promise<OfflineJob[]>): Promise<boolean> {
     await fn([]);
+    return true;
   }
 }
 

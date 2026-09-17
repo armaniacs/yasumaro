@@ -77,13 +77,18 @@ export class PersistentRetryQueue<T> {
   }
 
   /**
-   * Enqueue an item. Best-effort: a failure is logged but not thrown.
+   * Enqueue an item. Best-effort: a persistence failure is logged (and
+   * reported via the returned false) but never thrown, so it cannot mask
+   * the caller's original write failure.
+   *
+   * @returns true when the item is durably queued; false when it was
+   *          dropped (payload too large) or could not be persisted.
    */
-  enqueue(item: T): Promise<void> {
+  enqueue(item: T): Promise<boolean> {
     return this.withQueueLock(() => this.enqueueUnlocked(item));
   }
 
-  private async enqueueUnlocked(item: T): Promise<void> {
+  private async enqueueUnlocked(item: T): Promise<boolean> {
     try {
       // Payload size check (for retryable items with payload)
       if (this.options.maxPayloadBytes && isRetryable(item)) {
@@ -95,7 +100,7 @@ export class PersistentRetryQueue<T> {
               size,
               max: this.options.maxPayloadBytes,
             });
-            return;
+            return false;
           }
         }
       }
@@ -112,10 +117,12 @@ export class PersistentRetryQueue<T> {
       }
 
       await this.adapter.save(this.options.storageKey, queue);
+      return true;
     } catch (error) {
       addLog(LogType.ERROR, `${this.options.logLabel}: failed to enqueue`, {
         error: errorMessage(error),
       });
+      return false;
     }
   }
 
@@ -130,7 +137,17 @@ export class PersistentRetryQueue<T> {
   }
 
   private async flushUnlocked(handler: (item: T) => Promise<boolean>): Promise<T[]> {
-    const items = await this.adapter.load<T>(this.options.storageKey);
+    let items: T[];
+    try {
+      items = await this.adapter.load<T>(this.options.storageKey);
+    } catch (error) {
+      // A failed load must not be mistaken for an empty queue: the persisted
+      // snapshot is left untouched so the next flush cycle retries it.
+      addLog(LogType.ERROR, `${this.options.logLabel}: failed to load queue for flush`, {
+        error: errorMessage(error),
+      });
+      return [];
+    }
     if (items.length === 0) return [];
 
     const maxJobs = this.options.maxJobsPerCycle ?? items.length;
@@ -138,8 +155,8 @@ export class PersistentRetryQueue<T> {
     const untouched = items.slice(maxJobs);
     const remaining: T[] = [];
 
-    const persistState = async () => {
-      await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    const persistState = async (): Promise<void> => {
+      await this.saveRemaining([...remaining, ...untouched]);
     };
 
     const { kept, dropped } = this.filterExpiredAndOverRetry(toProcess);
@@ -180,7 +197,7 @@ export class PersistentRetryQueue<T> {
     }
 
     // Final save (covers both persistPerItem and non-persistPerItem cases)
-    await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    await this.saveRemaining([...remaining, ...untouched]);
     return [...remaining, ...untouched];
   }
 
@@ -202,7 +219,15 @@ export class PersistentRetryQueue<T> {
     handler: (items: T[]) => Promise<boolean[]>,
     batchSize: number
   ): Promise<T[]> {
-    const items = await this.adapter.load<T>(this.options.storageKey);
+    let items: T[];
+    try {
+      items = await this.adapter.load<T>(this.options.storageKey);
+    } catch (error) {
+      addLog(LogType.ERROR, `${this.options.logLabel}: failed to load queue for flush`, {
+        error: errorMessage(error),
+      });
+      return [];
+    }
     if (items.length === 0) return [];
 
     const maxJobs = this.options.maxJobsPerCycle ?? items.length;
@@ -210,8 +235,8 @@ export class PersistentRetryQueue<T> {
     const untouched = items.slice(maxJobs);
     const remaining: T[] = [];
 
-    const persistState = async () => {
-      await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    const persistState = async (): Promise<void> => {
+      await this.saveRemaining([...remaining, ...untouched]);
     };
 
     const chunks = chunkArray(toProcess, batchSize);
@@ -262,20 +287,46 @@ export class PersistentRetryQueue<T> {
     }
 
     // Final save
-    await this.adapter.save(this.options.storageKey, [...remaining, ...untouched]);
+    await this.saveRemaining([...remaining, ...untouched]);
     return [...remaining, ...untouched];
+  }
+
+  /**
+   * Persist the given items, logging (never throwing) on storage failure.
+   * Storage keeps the pre-save snapshot on failure, so pending items survive
+   * for the next flush cycle; in-memory progress is unaffected.
+   */
+  private async saveRemaining(items: T[]): Promise<void> {
+    try {
+      await this.adapter.save(this.options.storageKey, items);
+    } catch (error) {
+      addLog(LogType.ERROR, `${this.options.logLabel}: failed to persist remaining items`, {
+        error: errorMessage(error),
+      });
+    }
   }
 
   /**
    * In-lock read-modify-write for caller-side policies (like URL-merge) that
    * must not interleave with flush — the VULN-056 lock covers these too.
    * Prefer this over load()+save() pairs, which race flush by construction.
+   *
+   * @returns true when the mutation was persisted; false when loading or
+   *          saving failed (logged, never thrown).
    */
-  mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<void> {
+  mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<boolean> {
     return this.withQueueLock(async () => {
-      const items = await this.adapter.load<T>(this.options.storageKey);
-      const next = await fn(items);
-      await this.adapter.save(this.options.storageKey, next);
+      try {
+        const items = await this.adapter.load<T>(this.options.storageKey);
+        const next = await fn(items);
+        await this.adapter.save(this.options.storageKey, next);
+        return true;
+      } catch (error) {
+        addLog(LogType.ERROR, `${this.options.logLabel}: failed to mutate queue`, {
+          error: errorMessage(error),
+        });
+        return false;
+      }
     });
   }
 
