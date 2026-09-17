@@ -87,14 +87,33 @@ export function classifyExtractionMissing(entry: BrowsingLogEntry): DiagnosticMi
 }
 
 /**
+ * Resolved byte pair for the Content Cleansing row (PBI 2026-09-18-02).
+ *
+ * Single owner of the `??` fallback chain previously spelled in both the
+ * View and `classifyCleansingMissing`. Uses `??` (never `||`) so a
+ * legitimate 0-byte value is honored instead of falling through.
+ */
+export interface ResolvedCleansingBytes {
+    original: number | null | undefined;
+    cleansed: number | null | undefined;
+}
+
+export function resolveCleansingBytes(entry: BrowsingLogEntry): ResolvedCleansingBytes {
+    return {
+        original: entry.original_bytes ?? entry.candidate_bytes,
+        cleansed: entry.cleansed_bytes ?? entry.original_bytes ?? entry.candidate_bytes,
+    };
+}
+
+/**
  * Reason for a missing cleansing row. Null when the row shows numbers.
- * Follows the View's `??` chain without re-resolving it.
+ * Resolves bytes via `resolveCleansingBytes` — never re-spells the chain.
  */
 export function classifyCleansingMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
     if (entry.original_bytes == null && entry.cleansed_bytes == null) {
         return classifyDiagnosticMissing(entry);
     }
-    const original = entry.original_bytes ?? entry.candidate_bytes;
+    const { original } = resolveCleansingBytes(entry);
     if (original === 0) return 'empty';
     if (original == null || original <= 0) return classifyDiagnosticMissing(entry);
     return null;
