@@ -533,6 +533,38 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(result.message).toContain('Cannot connect');
     });
 
+    it('names lm-studio (not OpenAI) when fetch throws an HTTP 401 (PBI 11)', async () => {
+      const settings = {
+        lm_studio_base_url: 'http://127.0.0.1:1234/v1',
+        lm_studio_model: 'local-model',
+      } as unknown as Settings;
+      const fetchModule = await import('../../../../utils/fetch.js');
+      vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('HTTP 401: Unauthorized'));
+      const provider = new GenericOpenAICompatibleProvider(settings, 'lm-studio');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('lm-studio');
+      expect(result.message).not.toContain('OpenAI');
+    });
+
+    it('never shows OpenAI for lm-studio on Failed to fetch / timeout (PBI 11)', async () => {
+      const settings = {
+        lm_studio_base_url: 'http://127.0.0.1:1234/v1',
+        lm_studio_model: 'local-model',
+      } as unknown as Settings;
+      const fetchModule = await import('../../../../utils/fetch.js');
+      vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('Failed to fetch'));
+      const failed = await new GenericOpenAICompatibleProvider(settings, 'lm-studio').testConnection();
+      expect(failed.message).not.toContain('OpenAI');
+
+      const abortError = new Error('The operation was aborted');
+      abortError.name = 'AbortError';
+      vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(abortError);
+      const timedOut = await new GenericOpenAICompatibleProvider(settings, 'lm-studio').testConnection();
+      expect(timedOut.message).toContain('timed out');
+      expect(timedOut.message).not.toContain('OpenAI');
+    });
+
     it('treats an HTTP 5xx message as a server error', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('HTTP 503: Service Unavailable'));

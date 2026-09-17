@@ -165,12 +165,8 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
     async testConnection(): Promise<AIProviderConnectionResult> {
         // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
         // 基底テンプレートが所有。ここには OpenAI の癖だけを hooks として渡す。
-        // fetchErrorLabel の 'OpenAI' 固定は既存仕様の温存であり、PBI 01 で
-        // mapConnectionError 側だけ this.providerName 化した状態と同一に保つ。
-        // 文言の統一は別 PBI の範囲。
         return this.executeHttpTestFlow({
             providerLabel: this.providerName,
-            fetchErrorLabel: 'OpenAI',
             timeoutMs: this.timeoutMs,
             checkCredentials: () => !this.baseUrl
                 ? {
