@@ -12,6 +12,7 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { errorMessage } from './errorUtils.js';
 import { getMessage } from './i18n.js';
+import { showConfirmDialog } from './ui/confirmDialog.js';
 import {
   exportSettings,
   validateExportData,
@@ -177,10 +178,20 @@ export async function handleFileImport(
     } else {
       const warningMsg =
         getMessage('importPasswordRequired') || 'Master password is required to import encrypted settings.';
-      if (confirm(warningMsg)) {
+      // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
+      const confirmed = await showConfirmDialog({ message: warningMsg });
+      if (confirmed) {
         showPasswordAuthModal('import', handleEncryptedImport);
       }
     }
+    return;
+  }
+
+  if (!parsed.signature) {
+    // Unsigned plain exports are rejected in the UI layer so the specific
+    // i18n message renders here; importSettings() re-checks as defense in
+    // depth (PBI 2026-09-17-19 moved the alert() out of the utils layer).
+    ctx.showStatus(getMessage('importNoSignature'), 'error');
     return;
   }
 

@@ -69,6 +69,15 @@ vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
+// PBI 2026-09-17-19: validation notices go through the accessible dialog seam,
+// so the spy moved from window.alert to the module mock.
+const mockShowAlertDialog = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: vi.fn().mockResolvedValue(true),
+  showAlertDialog: mockShowAlertDialog,
+}));
+
 vi.mock('../../utils/tagUtils.js', () => ({
   DEFAULT_CATEGORIES: ['tech', 'news', 'shopping', 'social'],
 }));
@@ -154,7 +163,6 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
     });
     await initTagsPanel();
 
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     const fromInput = document.getElementById('normFromInput') as HTMLInputElement;
     const toInput = document.getElementById('normToInput') as HTMLInputElement;
     const addBtn = document.getElementById('addNormEntryBtn') as HTMLButtonElement;
@@ -162,8 +170,7 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
     fromInput.value = 'hello'; // duplicate (case-insensitive)
     toInput.value = 'Earth';
     addBtn.click();
-    expect(alertSpy).toHaveBeenCalled();
-    alertSpy.mockRestore();
+    expect(mockShowAlertDialog).toHaveBeenCalled();
   });
 
   it('does not add entry when from or to is empty', async () => {

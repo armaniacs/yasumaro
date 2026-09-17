@@ -43,6 +43,17 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
   },
 }));
 
+// PBI 2026-09-17-19: the encrypted-import warning goes through the accessible
+// dialog seam, so the stub moved from window.confirm to the module mock.
+const { mockShowConfirmDialog } = vi.hoisted(() => ({
+  mockShowConfirmDialog: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: mockShowConfirmDialog,
+  showAlertDialog: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../settings/domainFilter.js', () => ({
   loadDomainSettings: vi.fn().mockResolvedValue(undefined),
 }));
@@ -264,6 +275,7 @@ describe('initExportImport', () => {
     const testData = {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: {
         obsidian_protocol: 'https',
         obsidian_port: '27124',
@@ -351,8 +363,8 @@ describe('initExportImport', () => {
     vi.mocked(settingsRepository.getAll).mockResolvedValue({ mp_require_on_import: false });
     vi.mocked(isEncryptedExport).mockReturnValue(true);
 
-    const originalConfirm = window.confirm;
-    window.confirm = vi.fn().mockReturnValue(true);
+    // PBI 2026-09-17-19: the warning goes through the accessible dialog seam.
+    mockShowConfirmDialog.mockResolvedValueOnce(true);
     vi.mocked(showPasswordAuthModal).mockImplementation((_type, callback) => {
       callback('secret-password');
     });
@@ -378,10 +390,8 @@ describe('initExportImport', () => {
 
     await new Promise(r => setTimeout(r, 10));
 
-    expect(window.confirm).toHaveBeenCalled();
+    expect(mockShowConfirmDialog).toHaveBeenCalled();
     expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function));
-
-    window.confirm = originalConfirm;
   });
 
   it('shows error for invalid settings file', async () => {
@@ -389,7 +399,7 @@ describe('initExportImport', () => {
     vi.mocked(isEncryptedExport).mockReturnValue(false);
     vi.mocked(validateExportData).mockReturnValue(false);
 
-    const testData = { version: '1.0.0', settings: {} };
+    const testData = { version: '1.0.0', signature: 'test-signature', settings: {} };
     const file = new File([JSON.stringify(testData)], 'test.json', { type: 'application/json' });
 
     const { initExportImport } = await getFreshModule();
@@ -516,6 +526,7 @@ describe('initExportImport', () => {
     const testData = {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: {
         obsidian_protocol: 'https',
         obsidian_port: '27124',
@@ -569,6 +580,7 @@ describe('initExportImport', () => {
     const testData = {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: {
         obsidian_protocol: 'https',
         obsidian_port: '27124',
@@ -667,6 +679,7 @@ describe('initExportImport', () => {
     const testData = {
       version: '1.0.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: {
         obsidian_protocol: 'https',
         obsidian_port: '27124',

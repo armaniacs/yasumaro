@@ -74,6 +74,7 @@ Settings access goes through the `SettingsRepository` deep module (`src/utils/st
 
 - **Single source of defaults**: `DEFAULT_SETTINGS` in `src/utils/storage/defaults.ts` is the only source of fallback values.
 - **No inline fallbacks**: Callers must not use `|| 'default'` after reading settings.
+- **Delta writes**: `repo.set(key, value)` / `repo.setAll(partial)` write only the given keys; unspecified keys keep their stored values, re-read fresh under the write lock at save time. Do NOT pass a full cached snapshot — its unrelated keys would revert concurrent writers' changes (the full-payload case is the settings import).
 - **Partial reads**: use `repo.getMany([StorageKeys.X, StorageKeys.Y])`.
 - **Full reads**: use `repo.getAll()` when loading an entire form.
 - **Testability**: tests inject `InMemoryStorageAdapter` via `SettingsReader` (`Pick<SettingsRepository, 'getMany' | 'getAll'>`) so they do not depend on `chrome.storage` mocks.

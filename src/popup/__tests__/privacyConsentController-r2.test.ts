@@ -24,6 +24,15 @@ vi.mock('../../utils/storage/privacyConsent.js', () => ({
   declineConsent: mockDeclineConsent,
 }));
 
+// PBI 2026-09-17-19: the decline notice goes through the accessible dialog
+// seam, so the stub moved from window.alert to the module mock.
+const mockShowAlertDialog = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: vi.fn().mockResolvedValue(true),
+  showAlertDialog: mockShowAlertDialog,
+}));
+
 vi.mock('../../utils/logger.js', () => ({
   logError: mockLogError,
   ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
@@ -142,8 +151,6 @@ describe('privacyConsentController - r2 missed branches', () => {
       mockShouldPromptForConsent.mockResolvedValue(true);
       mockDeclineConsent.mockResolvedValue(1);
 
-      window.alert = vi.fn();
-
       setupPrivacyConsentListeners();
       await initPrivacyConsent();
 
@@ -151,15 +158,13 @@ describe('privacyConsentController - r2 missed branches', () => {
       declineBtn.click();
 
       await vi.waitFor(() => {
-        expect(window.alert).toHaveBeenCalled();
+        expect(mockShowAlertDialog).toHaveBeenCalled();
       });
     });
 
     it('should NOT show alert when the module reports count reaching 3', async () => {
       mockShouldPromptForConsent.mockResolvedValue(true);
       mockDeclineConsent.mockResolvedValue(3);
-
-      window.alert = vi.fn();
 
       setupPrivacyConsentListeners();
       await initPrivacyConsent();
@@ -170,7 +175,7 @@ describe('privacyConsentController - r2 missed branches', () => {
       await vi.waitFor(() => {
         expect(mockDeclineConsent).toHaveBeenCalledTimes(1);
       });
-      expect(window.alert).not.toHaveBeenCalled();
+      expect(mockShowAlertDialog).not.toHaveBeenCalled();
     });
   });
 

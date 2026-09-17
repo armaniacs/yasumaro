@@ -8,7 +8,7 @@
 
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
+import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProviderConnectionField, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
@@ -220,10 +220,11 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
     }
   }
 
-  const mergedSettings = { ...currentSettings, ...newSettings };
-
-  await settingsRepository.setAll(mergedSettings);
-  await updateDomainFilterCache(await settingsRepository.getAll());
+  // Delta write (PBI 2026-09-17-17): only the extracted form keys enter the
+  // payload — merging the full currentSettings snapshot here would revert
+  // unrelated keys a concurrent writer changed. setAll already merges the
+  // delta over freshly-read storage under the write lock.
+  await saveSettingsAndRefreshDomainFilterCache(newSettings);
 
   options.onSuccess?.();
 

@@ -13,6 +13,7 @@ import { settingsRepository, SettingsRepository } from '../utils/storage/Setting
 import { addLog, LogType } from '../utils/logger.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
+import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { ProviderCatalog } from '../background/ai/providerCatalog.js';
 
 /**
@@ -196,10 +197,13 @@ export class CspSettingsController {
     if (resetButton) {
       resetButton.addEventListener('click', async (e) => {
         e.preventDefault();
-        // window.confirm はユーザーの同期的な判断を要する破壊的操作の確認であり、
-        // テキスト表示のみの showMessage では代替できないため維持する
-        // （dashboard内の他の削除確認と同じパターン）。
-        if (window.confirm(getMessage('cspResetConfirm'))) {
+        // Destructive reset needs an explicit confirmation — the accessible
+        // dialog seam (PBI 2026-09-17-19) replaces the former window.confirm.
+        const confirmed = await showConfirmDialog({
+          message: getMessage('cspResetConfirm'),
+          dangerous: true,
+        });
+        if (confirmed) {
           await this.resetCSPSettings();
         }
       }, { signal });

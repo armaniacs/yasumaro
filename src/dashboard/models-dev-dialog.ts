@@ -460,17 +460,16 @@ export class ModelsDevDialog {
             return;
         }
 
-        // Save settings
+        // Save settings — delta write (PBI 2026-09-17-17): only the provider
+        // connection keys this dialog owns enter the payload.
         try {
-            const settings = await settingsRepository.getAll();
-
-            settings[StorageKeys.AI_PROVIDER] = 'openai-compatible';
-            settings[StorageKeys.PROVIDER_TYPE] = this.selectedProvider.id;
-            settings[StorageKeys.PROVIDER_BASE_URL] = this.selectedProvider.api;
-            settings[StorageKeys.PROVIDER_API_KEY] = apiKey;
-            settings[StorageKeys.PROVIDER_MODEL] = model;
-
-            await settingsRepository.setAll(settings);
+            await settingsRepository.setAll({
+                [StorageKeys.AI_PROVIDER]: 'openai-compatible',
+                [StorageKeys.PROVIDER_TYPE]: this.selectedProvider.id,
+                [StorageKeys.PROVIDER_BASE_URL]: this.selectedProvider.api,
+                [StorageKeys.PROVIDER_API_KEY]: apiKey,
+                [StorageKeys.PROVIDER_MODEL]: model,
+            });
 
             // OnSave callback
             this.options.onSave?.(

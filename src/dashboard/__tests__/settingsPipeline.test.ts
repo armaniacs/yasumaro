@@ -116,16 +116,15 @@ describe('saveDashboardSettings', () => {
     const result = await saveDashboardSettings();
 
     expect(result.success).toBe(true);
-    expect(mockSaveSettings).toHaveBeenCalledWith(
-      expect.objectContaining({
-        existing: 'value',
-        ai_provider_priority_list: ['gemini'],
-        sqlite_retention_days: 7,
-        sqlite_max_records: 1000,
-        content_retention_days: 30,
-        content_max_records: 500,
-      }),
-    );
+    // Delta contract (PBI 2026-09-17-17): only the extracted form keys enter
+    // the payload — stored keys absent from the form are not re-written.
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      ai_provider_priority_list: ['gemini'],
+      sqlite_retention_days: 7,
+      sqlite_max_records: 1000,
+      content_retention_days: 30,
+      content_max_records: 500,
+    });
   });
 
   it('does not blank a stored provider connection field with an empty extracted value', async () => {
@@ -148,10 +147,11 @@ describe('saveDashboardSettings', () => {
     await saveDashboardSettings();
 
     const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
-    // Stored non-empty values are preserved
-    expect(saved.openai_base_url).toBe('https://api.ai.sakura.ad.jp/v1');
-    expect(saved.openai_model).toBe('preview/gemma-4-31B-it');
-    expect(saved.openai_api_key).toEqual({ iv: 'x', ciphertext: 'y' });
+    // Empty extracted values for stored non-empty provider fields are SKIPPED
+    // (absent from the delta) — the storage keeps the stored values.
+    expect('openai_base_url' in saved).toBe(false);
+    expect('openai_model' in saved).toBe(false);
+    expect('openai_api_key' in saved).toBe(false);
     // A genuinely new non-empty value is still written
     expect(saved.openai_2_model).toBe('llama-3');
     // Empty over empty is harmless

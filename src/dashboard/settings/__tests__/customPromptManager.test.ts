@@ -43,17 +43,30 @@ vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) =
       getMany: mockGetMany,
       setAll: mockSetAll,
       get: vi.fn(),
-      set: vi.fn(),
+      // PBI 2026-09-17-17: production writes via the delta `set(key, value)`;
+      // assertions are call/no-call only, so both paths share this spy.
+      set: mockSetAll,
     },
     SettingsRepository: class {
       getAll = mockGetAll;
       getMany = mockGetMany;
       setAll = mockSetAll;
       get = vi.fn();
-      set = vi.fn();
+      set = mockSetAll;
     },
   };
 });
+
+// PBI 2026-09-17-19: the delete confirmation goes through the accessible
+// dialog seam, so the stub moved from global.confirm to the module mock.
+const { mockShowConfirmDialog } = vi.hoisted(() => ({
+  mockShowConfirmDialog: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: mockShowConfirmDialog,
+  showAlertDialog: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('../../../utils/customPromptUtils.js', () => ({
   createPrompt: vi.fn((data: Partial<CustomPrompt>) => ({
@@ -481,7 +494,7 @@ describe('customPromptManager', () => {
 
   describe('handleDeletePrompt', () => {
     it('should delete a prompt when confirmed', async () => {
-      (global.confirm as Mock).mockReturnValueOnce(true);
+      mockShowConfirmDialog.mockResolvedValueOnce(true);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
 
@@ -498,7 +511,7 @@ describe('customPromptManager', () => {
     });
 
     it('should NOT delete a prompt when confirmation is cancelled', async () => {
-      (global.confirm as Mock).mockReturnValueOnce(false);
+      mockShowConfirmDialog.mockResolvedValueOnce(false);
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
 

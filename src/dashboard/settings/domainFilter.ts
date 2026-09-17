@@ -5,7 +5,8 @@
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
+import type { Settings } from '../../utils/storage/types.js';
+import { saveSettingsAndRefreshDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { DomainFilter } from '../../utils/domainFilter/DomainFilter.js';
 import { parseDomainList } from '../../utils/domainUtils.js';
@@ -359,19 +360,24 @@ export async function saveDomainLists(): Promise<{ ok: boolean; message: string 
         return { ok: false, message: `${getMessage('domainListError')}\n${errors.join('\n')}` };
     }
 
-    // Prepare settings object - save both lists
+    // Prepare settings delta - save both lists
     const subdomainToggle = document.getElementById('domainSubdomainToggle') as HTMLInputElement | null;
-    const newSettings: Record<string, unknown> = {
+    const newSettings: Partial<Settings> = {
         [StorageKeys.DOMAIN_FILTER_MODE]: mode,
-        [StorageKeys.SIMPLE_FORMAT_ENABLED]: simpleFormatEnabledCheckbox?.checked,
+        // Only include the toggle when its checkbox exists — writing a
+        // fallback `false` would clobber a stored `true` on a DOM-miss.
+        ...(simpleFormatEnabledCheckbox
+            ? { [StorageKeys.SIMPLE_FORMAT_ENABLED]: simpleFormatEnabledCheckbox.checked }
+            : {}),
         [StorageKeys.DOMAIN_WHITELIST]: whitelist,
         [StorageKeys.DOMAIN_BLACKLIST]: blacklist,
         [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: subdomainToggle?.checked === true
     }
 
-    // Save settings
+    // Save settings — delta write + cache refresh via the shared seam
+    // (PBI 2026-09-17-17; replaces the copy-pasted setAll+update IIFE)
     try {
-        await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(newSettings);
+        await saveSettingsAndRefreshDomainFilterCache(newSettings);
         return { ok: true, message: getMessage('domainFilterSaved') };
     } catch (error: unknown) {
         addLog(LogType.ERROR, 'Error saving to Chrome Storage', { error: errorMessage(error) });

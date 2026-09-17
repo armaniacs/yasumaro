@@ -88,3 +88,17 @@ export async function updateDomainFilterCache(settings: Settings): Promise<void>
         [StorageKeys.DOMAIN_FILTER_MODE]: mode,
     });
 }
+
+/**
+ * Write a settings delta, then rebuild the content-script domain filter cache
+ * from the freshly stored settings. Single seam for "save domain-related
+ * settings + refresh cache" — replaces the copy-pasted
+ * `setAll(s); updateDomainFilterCache(await getAll())` IIFE.
+ * settingsRepository is imported lazily to keep this module's static
+ * dependency graph at Layer 0 only (PBI 2026-09-17-17).
+ */
+export async function saveSettingsAndRefreshDomainFilterCache(delta: Partial<Settings>): Promise<void> {
+    const { settingsRepository } = await import('./SettingsRepository.js');
+    await settingsRepository.setAll(delta);
+    await updateDomainFilterCache(await settingsRepository.getAll());
+}

@@ -31,17 +31,30 @@ vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) =
       getMany: mockGetMany,
       setAll: mockSetAll,
       get: vi.fn(),
-      set: vi.fn(),
+      // PBI 2026-09-17-17: production writes via the delta `set(key, value)`;
+      // assertions are call/no-call only, so both paths share this spy.
+      set: mockSetAll,
     },
     SettingsRepository: class {
       getAll = mockGetAll;
       getMany = mockGetMany;
       setAll = mockSetAll;
       get = vi.fn();
-      set = vi.fn();
+      set = mockSetAll;
     },
   };
 });
+
+// PBI 2026-09-17-19: the delete confirmation goes through the accessible
+// dialog seam, so the stub moved from global.confirm to the module mock.
+const { mockShowConfirmDialog } = vi.hoisted(() => ({
+  mockShowConfirmDialog: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: mockShowConfirmDialog,
+  showAlertDialog: vi.fn().mockResolvedValue(undefined),
+}));
 
 const mockCreatePrompt = vi.fn((data) => ({
   ...data,
@@ -205,7 +218,7 @@ describe('customPromptManager - r2 missed branches', () => {
         </div>
       `;
 
-      (global.confirm as any).mockReturnValueOnce(true);
+      mockShowConfirmDialog.mockResolvedValueOnce(true);
 
       const deleteBtn = document.getElementById('delete-prompt-orphan')!;
       expect(() => deleteBtn.click()).not.toThrow();

@@ -199,8 +199,16 @@ Object.defineProperty(global, 'chrome', {
     writable: true,
 });
 
-// Mock confirm
-global.confirm = vi.fn();
+// PBI 2026-09-17-19: the discard confirmation goes through the accessible
+// dialog seam, so the stub moved from global.confirm to the module mock.
+const { mockShowConfirmDialog } = vi.hoisted(() => ({
+    mockShowConfirmDialog: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+    showConfirmDialog: mockShowConfirmDialog,
+    showAlertDialog: vi.fn().mockResolvedValue(undefined),
+}));
 
 import { loadPendingPages, saveSelectedPages, setupEventListeners } from '../pendingPages.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
@@ -497,7 +505,7 @@ describe('DOM Event Listeners', () => {
                 <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
             `;
 
-            (global.confirm as ReturnType<typeof vi.fn>).mockReturnValue(true);
+            mockShowConfirmDialog.mockResolvedValueOnce(true);
             const removeSpy = vi.spyOn({ removePendingPages }, 'removePendingPages');
 
             const button = document.getElementById('btn-discard')!;
@@ -506,7 +514,7 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(global.confirm).toHaveBeenCalledWith('mock_warningConfirmSave');
+            expect(mockShowConfirmDialog).toHaveBeenCalledWith({ message: 'mock_warningConfirmSave' });
             expect(removeSpy).toHaveBeenCalledWith(['https://example.com']);
         });
 
@@ -516,7 +524,7 @@ describe('DOM Event Listeners', () => {
                 <input type="checkbox" class="pending-checkbox" value="https://example.com" checked>
             `;
 
-            (global.confirm as ReturnType<typeof vi.fn>).mockReturnValue(false);
+            mockShowConfirmDialog.mockResolvedValueOnce(false);
             const removeSpy = vi.spyOn({ removePendingPages }, 'removePendingPages');
 
             const button = document.getElementById('btn-discard')!;
@@ -525,7 +533,7 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(global.confirm).toHaveBeenCalledWith('mock_warningConfirmSave');
+            expect(mockShowConfirmDialog).toHaveBeenCalledWith({ message: 'mock_warningConfirmSave' });
             expect(removeSpy).not.toHaveBeenCalled();
         });
     });

@@ -72,6 +72,15 @@ vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
+// PBI 2026-09-17-19: validation notices go through the accessible dialog seam,
+// so the spy moved from window.alert to the module mock.
+const mockShowAlertDialog = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: vi.fn().mockResolvedValue(true),
+  showAlertDialog: mockShowAlertDialog,
+}));
+
 // Mock tagUtils
 vi.mock('../../utils/tagUtils.js', () => ({
   DEFAULT_CATEGORIES: ['tech', 'news', 'shopping', 'social'],
@@ -187,22 +196,18 @@ describe('tagsPanel DOM Integration Tests', () => {
       await initTagsPanel();
       const newCategoryInput = document.getElementById('newCategoryInput') as HTMLInputElement;
       const addCategoryBtn = document.getElementById('addCategoryBtn') as HTMLButtonElement;
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      newCategoryInput.value = 'a'.repeat(51);
+            newCategoryInput.value = 'a'.repeat(51);
       addCategoryBtn.click();
-      expect(alertSpy).toHaveBeenCalled();
-      alertSpy.mockRestore();
+      expect(mockShowAlertDialog).toHaveBeenCalled();
     });
 
     it('validates category name for invalid characters', async () => {
       await initTagsPanel();
       const newCategoryInput = document.getElementById('newCategoryInput') as HTMLInputElement;
       const addCategoryBtn = document.getElementById('addCategoryBtn') as HTMLButtonElement;
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      newCategoryInput.value = 'category|with|pipe';
+            newCategoryInput.value = 'category|with|pipe';
       addCategoryBtn.click();
-      expect(alertSpy).toHaveBeenCalled();
-      alertSpy.mockRestore();
+      expect(mockShowAlertDialog).toHaveBeenCalled();
     });
 
     it('prevents duplicate category names', async () => {
@@ -210,12 +215,10 @@ describe('tagsPanel DOM Integration Tests', () => {
       await initTagsPanel();
       const newCategoryInput = document.getElementById('newCategoryInput') as HTMLInputElement;
       const addCategoryBtn = document.getElementById('addCategoryBtn') as HTMLButtonElement;
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-      // Try to add 'tech' which is in DEFAULT_CATEGORIES
+            // Try to add 'tech' which is in DEFAULT_CATEGORIES
       newCategoryInput.value = 'tech';
       addCategoryBtn.click();
-      expect(alertSpy).toHaveBeenCalled();
-      alertSpy.mockRestore();
+      expect(mockShowAlertDialog).toHaveBeenCalled();
     });
 
     it('clicking default category dispatches navigate-to-tag event', async () => {

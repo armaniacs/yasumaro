@@ -39,6 +39,15 @@ vi.mock('../../utils/logger.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
 }));
 
+// PBI 2026-09-17-19: the decline notice goes through the accessible dialog
+// seam, so the stub moved from window.alert to the module mock.
+const mockShowAlertDialog = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: vi.fn().mockResolvedValue(true),
+  showAlertDialog: mockShowAlertDialog,
+}));
+
 vi.stubGlobal('chrome', {
   runtime: {
     getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
@@ -286,15 +295,15 @@ describe('privacyConsentController', () => {
       mockShouldPromptForConsent.mockResolvedValue(true);
       mockDeclineConsent.mockResolvedValue(1);
 
-      window.alert = vi.fn();
-
       await initPrivacyConsent();
 
       const declineBtn = getDeclineBtn();
       declineBtn!.click();
       await vi.waitFor(() => {
         expect(mockDeclineConsent).toHaveBeenCalledTimes(1);
-        expect(window.alert).toHaveBeenCalledWith('consentDeclinedMessage');
+        expect(mockShowAlertDialog).toHaveBeenCalledWith(
+          expect.objectContaining({ message: 'consentDeclinedMessage' }),
+        );
       });
 
       const modal = getModal();
@@ -410,7 +419,6 @@ describe('privacyConsentController', () => {
     it('should release the trap on decline', async () => {
       mockShouldPromptForConsent.mockResolvedValue(true);
       mockDeclineConsent.mockResolvedValue(1);
-      window.alert = vi.fn();
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
 
       await initPrivacyConsent();

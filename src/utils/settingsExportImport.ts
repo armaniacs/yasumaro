@@ -477,7 +477,8 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
         ErrorCode.SETTINGS_SIGNATURE_FAILURE,
         'settingsExportImport.ts'
       );
-      alert(chrome.i18n.getMessage('importNoSignature'));
+      // Rejection is surfaced by the UI layer (importNoSignature status);
+      // utils must not open dialogs (PBI 2026-09-17-19).
       return null; // 旧形式の互換性を削除
     }
 

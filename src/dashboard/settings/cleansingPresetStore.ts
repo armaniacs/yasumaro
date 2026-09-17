@@ -171,18 +171,22 @@ export function createCleansingPresetStore(): CleansingPresetStore {
             state = 'busy';
             try {
                 const preset = PRESETS[presetId];
-                const current = await settingsRepository.getAll();
+                // Delta write (PBI 2026-09-17-17) — only the keys this preset
+                // owns enter the payload; a full getAll() snapshot would
+                // revert unrelated keys a concurrent writer changed.
+                const delta: Record<string, unknown> = {
+                    [StorageKeys.CLEANSING_PRESET]: presetId,
+                };
                 if (presetId !== 'custom') {
                     for (const rule of CLEANSING_RULES) {
                         const optKey = `${rule.key}Enabled` as keyof CleansingConfig;
                         const val = (preset as Record<string, unknown>)[optKey as string];
                         if (typeof val === 'boolean') {
-                            (current as Record<string, unknown>)[rule.storageKey] = val;
+                            delta[rule.storageKey] = val;
                         }
                     }
                 }
-                (current as Record<string, unknown>)[StorageKeys.CLEANSING_PRESET] = presetId;
-                await settingsRepository.setAll(current);
+                await settingsRepository.setAll(delta);
                 // Dual write: the select reads the top-level key while the
                 // repository stores the blob — both must move together or the
                 // read source goes stale and reverts the UI.

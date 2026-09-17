@@ -1,6 +1,7 @@
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { getMessage } from '../utils/i18n.js';
+import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml } from './domUtils.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
@@ -128,7 +129,11 @@ export function setupEventListeners(): void {
       return;
     }
 
-    if (confirm(chrome.i18n.getMessage('warningConfirmSave'))) {
+    // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
+    const confirmed = await showConfirmDialog({
+      message: chrome.i18n.getMessage('warningConfirmSave'),
+    });
+    if (confirmed) {
       await removePendingPages(urls);
       await loadPendingPages();
     }

@@ -152,7 +152,7 @@ describe('saveSettings - 楽観的ロック', () => {
         expect(savedPorts).toContain(result[StorageKeys.OBSIDIAN_PORT]);
     });
 
-    it('updates the allowed-URL list correctly with updateAllowedUrlsFlag=true', async () => {
+    it('stores only written keys; unstored keys resolve via defaults on read', async () => {
         const settings = {
             [StorageKeys.OBSIDIAN_PORT]: '27123',
             [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1'
@@ -160,10 +160,16 @@ describe('saveSettings - 楽観的ロック', () => {
 
         await settingsRepository.setAll(settings);
 
-        // ALLOWED_URLSとALLOWED_URLS_HASHが更新されているか確認
-        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS]).toBeDefined();
-        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS_HASH]).toBeDefined();
-        expect(Array.isArray((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS])).toBe(true);
+        // Delta contract (PBI 2026-09-17-17): the blob contains only the keys
+        // the caller wrote — DEFAULT_SETTINGS keys are NOT persisted incidentally.
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
+        expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.ALLOWED_URLS]).toBeUndefined();
+
+        // Unstored keys still resolve through the read path (defaults merge),
+        // so ALLOWED_URLS consumers always see an array.
+        const read = await settingsRepository.getAll();
+        expect(Array.isArray(read[StorageKeys.ALLOWED_URLS])).toBe(true);
+        expect(read[StorageKeys.ALLOWED_URLS]).toEqual([]);
     });
 
     it('handles null and undefined values correctly', async () => {

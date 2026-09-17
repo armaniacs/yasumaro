@@ -11,6 +11,7 @@ import {
 } from '../utils/storage/privacyConsent.js';
 import { logError, ErrorCode } from '../utils/logger.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
+import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
 function getModalEl(): HTMLDialogElement | null {
@@ -163,7 +164,8 @@ async function handleDeclineConsent(): Promise<void> {
 
     const message = getMessage('consentDeclinedMessage') ||
         'Without consent, main features of the extension will not be available. You can consent later from the settings screen.';
-    alert(message);
+    // Accessible dialog seam (PBI 2026-09-17-19) replaces native alert().
+    void showAlertDialog({ message });
 }
 
 /**
