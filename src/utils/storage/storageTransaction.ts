@@ -13,6 +13,7 @@
 
 import type { StoragePort } from './storagePort.js';
 import { ChromeStoragePort } from './storagePort.js';
+import { backoffDelayMs } from '../backoff.js';
 
 // Lightweight debug helper — avoids importing logger to break the
 // storageAdapter -> transaction -> logger -> storageAdapter cycle.
@@ -138,7 +139,7 @@ export class StorageTransaction {
         }
         attemptCount++;
         if (attemptCount > maxRetries) throw new ConflictError(key, -1, -1);
-        const delay = initialDelay * Math.pow(2, attemptCount - 1);
+        const delay = backoffDelayMs(attemptCount - 1, { baseMs: initialDelay });
         await new Promise((resolve) => setTimeout(resolve, delay));
         logDebug('withOptimisticLock retrying', { key, attemptCount, maxRetries, delay }, 'storageTransaction.ts');
       }
@@ -200,7 +201,7 @@ export class StorageTransaction {
         lastError = error;
         attempt++;
         if (attempt > maxRetries) throw new ConflictError((keys as readonly string[]).join('+'), -1, -1);
-        const delay = initialDelay * Math.pow(2, attempt - 1);
+        const delay = backoffDelayMs(attempt - 1, { baseMs: initialDelay });
         await new Promise((resolve) => setTimeout(resolve, delay));
         logDebug('withAtomicKeys retrying', { keys, attempt, maxRetries, delay }, 'storageTransaction.ts');
       }

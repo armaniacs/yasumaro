@@ -3,8 +3,12 @@
  * Shared exponential-backoff delay computation.
  *
  * Concentrates the `min(base * multiplier^attempt, max)` formula previously
- * inlined in fetchWithRetry, MessageTransport.send, and DashboardGateway.
- * Retry-or-not decisions stay in each domain; only the delay arithmetic lives here.
+ * inlined across retry loops. Retry-or-not decisions stay in each domain;
+ * only the delay arithmetic lives here.
+ *
+ * `attempt` is 0-origin: the first retry waits `baseMs`, the next
+ * `baseMs * multiplier`, and so on. Callers holding a 1-origin counter pass
+ * `attempt - 1` to preserve their legacy series.
  */
 export interface BackoffOptions {
   /** First-attempt delay in ms. Defaults to 1000 (fetchWithRetry default). */

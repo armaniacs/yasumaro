@@ -8,6 +8,7 @@
 import type { TrustDatabase, TrustResult } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
+import { backoffDelayMs } from '../backoff.js';
 import { withOptimisticLock } from '../storage/storageTransaction.js';
 import { mergeTrustDatabase } from './mergeTrustDatabase.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
@@ -105,7 +106,7 @@ export class TrustDbKernel {
         lastError = error as Error;
         logWarn('TrustDb initialization failed, retrying', { attempt: attempt + 1, maxRetries, error: lastError?.message });
         if (attempt < maxRetries - 1) {
-          const delay = Math.pow(2, attempt) * 100;
+          const delay = backoffDelayMs(attempt, { baseMs: 100 });
           await new Promise((resolve) => setTimeout(resolve, delay));
         }
       }
