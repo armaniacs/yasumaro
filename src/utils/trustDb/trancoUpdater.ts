@@ -13,6 +13,7 @@ import { logInfo, logError, logWarn, ErrorCode } from '../logger.js';
 import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
 import { readBodyCapped } from '../readBodyCapped.js';
+import { backoffDelayMs } from '../backoff.js';
 
 // ===== 定数 =====
 
@@ -104,7 +105,7 @@ export class TrancoUpdater {
         }
 
         // 指数バックオフで待機（1秒 → 2秒 → 4秒）
-        const delay = baseDelay * Math.pow(2, attempt - 1);
+        const delay = backoffDelayMs(attempt - 1, { baseMs: baseDelay });
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }

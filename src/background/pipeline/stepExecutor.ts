@@ -1,4 +1,5 @@
 import { addLog, LogType } from '../../utils/logger.js';
+import { backoffDelayMs } from '../../utils/backoff.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
@@ -36,7 +37,7 @@ export class StepExecutor {
       } catch (error) {
         if (step.errorStrategy === ErrorStrategy.RETRY && retries < (step.maxRetries || 0)) {
           retries++;
-          const delayMs = Math.min(Math.pow(2, retries) * 1000, 5000);
+          const delayMs = backoffDelayMs(retries, { baseMs: 1000, maxMs: 5000 });
           addLog(LogType.INFO, `Retrying step ${step.name} (attempt ${retries}/${step.maxRetries})`, {
             delayMs,
             url: context.data.url,
