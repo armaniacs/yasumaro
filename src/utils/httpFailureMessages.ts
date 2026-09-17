@@ -8,8 +8,33 @@
  * provider-style template. Callers delegate only the statuses they currently
  * distinguish — unifying the wording itself is a separate product decision and
  * out of scope for the SSOT refactor, so these presets must stay byte-identical.
+ *
+ * The fetch-throw path (`AIProviderStrategy.parseAndMapFetchError`) historically
+ * carried its own copy of this table with different wording (e.g. 401 is
+ * `Invalid API key...` here vs `Authentication failed...` on the connection
+ * path). That copy now lives behind `variant: 'parse'` so both tables share one
+ * definition site without unifying the wording itself — the parse preset must
+ * also stay byte-identical to the pre-migration parse wording. The parse preset
+ * intentionally ignores the Obsidian/GitHub domain presets: the parse path
+ * never branched on them, so every label uses the generic template.
  */
-export function describeHttpFailure(status: number, domainLabel: string): string {
+export function describeHttpFailure(
+  status: number,
+  domainLabel: string,
+  variant: 'connection' | 'parse' = 'connection',
+): string {
+  if (variant === 'parse') {
+    if (status === 401 || status === 403) {
+      return `Invalid API key (${status}). Check your ${domainLabel} API key settings.`;
+    }
+    if (status === 404) {
+      return 'Model or endpoint not found (404). Check your Base URL.';
+    }
+    if (status === 429) {
+      return 'Rate limit exceeded (429). Please try again later.';
+    }
+    return `${domainLabel} API server error (${status}). Please try again later.`;
+  }
   if (status === 401 || status === 403) {
     if (domainLabel === 'Obsidian') {
       return `Authentication failed (${status}). Check your API key.`;

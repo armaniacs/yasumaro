@@ -60,8 +60,14 @@ const openaiSettings = {
   openai_model: 'gpt-3.5-turbo',
 } as unknown as Settings;
 
+const lmStudioSettings = {
+  lm_studio_base_url: 'http://127.0.0.1:1234/v1',
+  lm_studio_model: 'local-model',
+} as unknown as Settings;
+
 const GEMINI_ENDPOINT = 'POST https://generativelanguage.googleapis.com/v1beta/models/gemini-test:generateContent';
 const OPENAI_ENDPOINT = 'POST https://api.openai.com/v1/chat/completions';
+const LM_STUDIO_ENDPOINT = 'POST http://127.0.0.1:1234/v1/chat/completions';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -235,7 +241,7 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
     });
   });
 
-  it('keeps the fixed OpenAI label on the fetch-error path', async () => {
+  it('uses the provider id label on the fetch-error path (PBI 11: fetchErrorLabel removed)', async () => {
     const fetch = await fetchMock();
     fetch.mockRejectedValueOnce(new Error('HTTP 503: Service Unavailable'));
 
@@ -243,7 +249,7 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
 
     expect(result).toEqual({
       success: false,
-      message: 'OpenAI API server error (503). Please try again later.',
+      message: 'openai API server error (503). Please try again later.',
       debug: {
         error: 'HTTP 503: Service Unavailable',
         statusCode: 503,
@@ -260,7 +266,6 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
       status: 200,
       json: () => Promise.resolve({ choices: [{ message: { content: '   ' } }] }),
     } as Response);
-
     const result = await new GenericOpenAICompatibleProvider(openaiSettings, 'openai').testConnection();
 
     expect(result.success).toBe(false);
@@ -299,6 +304,68 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
       backoffMultiplier: 2,
       maxDelayMs: 3000,
     });
+  });
+});
+
+describe('fetch-error provider label — lm-studio regression (PBI 11)', () => {
+  it('names lm-studio (not OpenAI) when fetch throws an HTTP 401', async () => {
+    const fetch = await fetchMock();
+    fetch.mockRejectedValueOnce(new Error('HTTP 401: Unauthorized'));
+
+    const result = await new GenericOpenAICompatibleProvider(lmStudioSettings, 'lm-studio').testConnection();
+
+    expect(result).toEqual({
+      success: false,
+      message: 'Invalid API key (401). Check your lm-studio API key settings.',
+      debug: {
+        error: 'HTTP 401: Unauthorized',
+        statusCode: 401,
+        prompt: CONNECTION_TEST_PROMPT,
+        endpoint: LM_STUDIO_ENDPOINT,
+      },
+    });
+    expect(result.message).not.toContain('OpenAI');
+  });
+
+  it('names lm-studio (not OpenAI) when fetch throws an HTTP 5xx', async () => {
+    const fetch = await fetchMock();
+    fetch.mockRejectedValueOnce(new Error('HTTP 503: Service Unavailable'));
+
+    const result = await new GenericOpenAICompatibleProvider(lmStudioSettings, 'lm-studio').testConnection();
+
+    expect(result.message).toBe('lm-studio API server error (503). Please try again later.');
+    expect(result.message).not.toContain('OpenAI');
+  });
+
+  it('never shows OpenAI on Failed to fetch (unlabeled wording, byte-identical)', async () => {
+    const fetch = await fetchMock();
+    fetch.mockRejectedValueOnce(new Error('Failed to fetch'));
+
+    const result = await new GenericOpenAICompatibleProvider(lmStudioSettings, 'lm-studio').testConnection();
+
+    expect(result).toEqual({
+      success: false,
+      message: 'Cannot connect. Check your Base URL and network.',
+      debug: {
+        error: 'Failed to fetch',
+        prompt: CONNECTION_TEST_PROMPT,
+        endpoint: LM_STUDIO_ENDPOINT,
+      },
+    });
+    expect(result.message).not.toContain('OpenAI');
+  });
+
+  it('never shows OpenAI on timeout (unlabeled wording, byte-identical)', async () => {
+    const fetch = await fetchMock();
+    const abortError = new Error('The operation was aborted');
+    abortError.name = 'AbortError';
+    fetch.mockRejectedValueOnce(abortError);
+
+    const result = await new GenericOpenAICompatibleProvider(lmStudioSettings, 'lm-studio').testConnection();
+
+    expect(result.message).toBe('Connection timed out. Check your network or increase timeout.');
+    expect(result.message).not.toContain('OpenAI');
+    expect(result.message).not.toContain('lm-studio');
   });
 });
 

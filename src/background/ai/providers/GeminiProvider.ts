@@ -146,7 +146,6 @@ export class GeminiProvider extends AIProviderStrategy {
         // 基底テンプレートが所有。ここには Gemini の癖だけを hooks として渡す。
         return this.executeHttpTestFlow({
             providerLabel: 'Gemini',
-            fetchErrorLabel: 'Gemini',
             timeoutMs: this.timeoutMs,
             checkCredentials: () => !this.apiKey
                 ? {

@@ -14,6 +14,9 @@ import { fetchWithRetry } from '../../../utils/fetch.js';
 import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
+import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
+
+export { MAX_AI_HTTP_RESPONSE_BYTES };
 
 export interface AIProviderConnectionResult {
     success: boolean;
@@ -112,14 +115,8 @@ export interface HttpTestContext {
  * 所有し、ここには資格文面・リクエスト構築・parse の癖だけを置く。
  */
 export interface HttpTestHooks {
-    /** mapConnectionError に渡す表示ラベル */
+    /** Display label passed to both mapConnectionError and parseAndMapFetchError */
     providerLabel: string;
-    /**
-     * parseAndMapFetchError に渡す表示ラベル。現行挙動維持のため providerLabel
-     * とは分離している（OpenAI 系の catch 側は 'OpenAI' 固定が既存仕様）。
-     * 文言の統一は別 PBI の範囲。
-     */
-    fetchErrorLabel: string;
     timeoutMs: number;
     /** 資格不備があればその失敗結果、なければ null */
     checkCredentials(): AIProviderConnectionResult | null;
@@ -132,10 +129,8 @@ export interface HttpTestHooks {
 /**
  * Byte cap for AI provider HTTP JSON responses (summary + testConnection).
  * Single source of truth — both flows read via readJsonCapped with this value.
+ * (Re-exported from messaging/limits.js; import + re-export live at the top.)
  */
-import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
-
-export { MAX_AI_HTTP_RESPONSE_BYTES };
 
 export abstract class AIProviderStrategy {
     protected settings: Settings;
@@ -217,28 +212,14 @@ export abstract class AIProviderStrategy {
         const httpMatch = msg.match(/HTTP\s+(\d+):/);
         const statusCode = httpMatch?.[1] ? parseInt(httpMatch[1], 10) : 0;
 
-        if (statusCode === 401 || statusCode === 403) {
+        // Status wording lives in describeHttpFailure's parse preset (SSOT);
+        // the branch set below mirrors the pre-migration table exactly so the
+        // migration stays byte-identical. Unifying with the connection preset
+        // wording is a separate product decision.
+        if (statusCode === 401 || statusCode === 403 || statusCode === 404 || statusCode === 429 || statusCode >= 500) {
             return {
                 success: false,
-                message: `Invalid API key (${statusCode}). Check your ${providerLabel} API key settings.`,
-                debug: { error: msg, statusCode },
-            };
-        } else if (statusCode === 404) {
-            return {
-                success: false,
-                message: `Model or endpoint not found (404). Check your Base URL.`,
-                debug: { error: msg, statusCode },
-            };
-        } else if (statusCode === 429) {
-            return {
-                success: false,
-                message: `Rate limit exceeded (429). Please try again later.`,
-                debug: { error: msg, statusCode },
-            };
-        } else if (statusCode >= 500) {
-            return {
-                success: false,
-                message: `${providerLabel} API server error (${statusCode}). Please try again later.`,
+                message: describeHttpFailure(statusCode, providerLabel, 'parse'),
                 debug: { error: msg, statusCode },
             };
         } else if (msg.includes('Failed to fetch')) {
@@ -393,7 +374,7 @@ export abstract class AIProviderStrategy {
         } catch (e: unknown) {
             const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : undefined;
-            const mapped = this.parseAndMapFetchError(msg, hooks.fetchErrorLabel, errorName);
+            const mapped = this.parseAndMapFetchError(msg, hooks.providerLabel, errorName);
             return {
                 ...mapped,
                 debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint },
