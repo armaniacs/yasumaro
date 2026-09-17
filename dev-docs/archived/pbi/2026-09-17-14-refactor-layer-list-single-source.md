@@ -45,12 +45,12 @@ Scenario: 暫定許可は ADR で裁定される
 
 ## 受け入れ基準
 
-- [ ] ルールの層ファイルリストと `LAYERS.md` 分類表の差異を検出する仕組み（案Aの生成・検証機構または案Bの `lint:layers-docs` スクリプト）が存在する
-- [ ] 未分類・対象外の正当な差が許可リストまたは明示マーキングで区別され、検査が偽陽性にならない
-- [ ] `defaults.ts` から `aiSummaryCleaner/rules.js` への暫定許可について、純粋定数抽出か再分類かの判断を記録した ADR が `dev-docs/ADR/` 配下に存在し、`lint:adr-links` が PASS する
-- [ ] 実装方式（案A vs 案B）の選択と理由が本 PBI に記録されている
-- [ ] `package.json` への npm スクリプト追加と CI（`npm run validate` 等）への組み込み可否の判断が記録され、組み込む場合は配線済みである
-- [ ] `npm run lint` が green であり、既存の層境界ルールのテストが壊れていない
+- [x] ルールの層ファイルリストと `LAYERS.md` 分類表の差異を検出する仕組み（案Aの生成・検証機構または案Bの `lint:layers-docs` スクリプト）が存在する
+- [x] 未分類・対象外の正当な差が許可リストまたは明示マーキングで区別され、検査が偽陽性にならない
+- [x] `defaults.ts` から `aiSummaryCleaner/rules.js` への暫定許可について、純粋定数抽出か再分類かの判断を記録した ADR が `dev-docs/ADR/` 配下に存在し、`lint:adr-links` が PASS する
+- [x] 実装方式（案A vs 案B）の選択と理由が本 PBI に記録されている
+- [x] `package.json` への npm スクリプト追加と CI（`npm run validate` 等）への組み込み可否の判断が記録され、組み込む場合は配線済みである
+- [x] `npm run lint` が green であり、既存の層境界ルールのテストが壊れていない
 
 ## テスト戦略
 
@@ -93,6 +93,6 @@ Scenario: 暫定許可は ADR で裁定される
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

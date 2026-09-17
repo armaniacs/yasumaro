@@ -38,13 +38,13 @@ Scenario: 空配列は obsidianList 連結で空文字を返す（境界）
 ```
 
 ## 受け入れ基準
-- [ ] `formatEntriesToGenericMarkdown` が削除されている（または利用を復活させる意図がある場合は接続して活性化されており、どちらを選んだか判断理由が記録されている）
-- [ ] 生存関数が形式明示名へ改名されている（heading 形式・obsidianList 連結が名前から分かる）
-- [ ] 改名に伴う全呼び出し元が更新されている（着手時の grep で確定した全箇所）
-- [ ] 同一入力に対する生成 Markdown が改名前と byte-identical である（既存 parity/golden テスト無変更 green）
-- [ ] 本 PBI による挙動変更がない（rename のみ。出力差分ゼロ）
-- [ ] 既存テスト（`markdownFormatter.test.ts`／`markdownJoinSafety.test.ts`／dashboardSqlite の append 系ハンドラ）が green のままである
-- [ ] `npm run type-check`／`npm run lint`／`npm test` が green である
+- [x] `formatEntriesToGenericMarkdown` が削除されている（または利用を復活させる意図がある場合は接続して活性化されており、どちらを選んだか判断理由が記録されている）
+- [x] 生存関数が形式明示名へ改名されている（heading 形式・obsidianList 連結が名前から分かる）
+- [x] 改名に伴う全呼び出し元が更新されている（着手時の grep で確定した全箇所）
+- [x] 同一入力に対する生成 Markdown が改名前と byte-identical である（既存 parity/golden テスト無変更 green）
+- [x] 本 PBI による挙動変更がない（rename のみ。出力差分ゼロ）
+- [x] 既存テスト（`markdownFormatter.test.ts`／`markdownJoinSafety.test.ts`／dashboardSqlite の append 系ハンドラ）が green のままである
+- [x] `npm run type-check`／`npm run lint`／`npm test` が green である
 
 ## テスト戦略
 - 回帰 pin: 既存 parity/golden テスト（`markdownJoinSafety.test.ts` の parity 記述群）を無変更のまま green に保ち、改名だけでは出力が変わらないことを証明する。テスト自体の期待値は書き換えない
@@ -71,6 +71,6 @@ Scenario: 空配列は obsidianList 連結で空文字を返す（境界）
 - 確認ポイント: `src/utils/markdownFormatter.ts`、`src/utils/__tests__/markdownFormatter.test.ts`、`src/utils/copyMarkdownButton.ts`、`src/background/handlers/dashboardSqlite/` 配下の `formatEntriesToMarkdown` 注入経路、`src/background/__tests__/markdownJoinSafety.test.ts`。
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

@@ -35,13 +35,13 @@ Scenario: HTTP ステータスを運ぶ fetch スローでは設定中のプロ�
 ```
 
 ## 受け入れ基準
-- [ ] lm-studio / ollama / openai-compatible 設定で fetch スロー経路（`executeHttpTestFlow` の catch 節経由）の全分岐に OpenAI 固定表示が出ない
-- [ ] ラベルを埋め込む分岐（401 / 403 系・5xx 系）では設定中の `providerName` が表示される
-- [ ] parse プリセット委譲後の全文言が移行前と byte-identical である（401 / 403 / 404 / 429 / 5xx / Failed to fetch / フォールバック分岐を含む）
-- [ ] 第1テーブルとの文言統一の要否が判断ポイントとして記録され、合意なく文言を変更しない
-- [ ] `HttpTestHooks.fetchErrorLabel` が廃止され `providerLabel` に統一されている（`GeminiProvider` 側の hooks 渡しを含む）
-- [ ] `MAX_AI_HTTP_RESPONSE_BYTES` の import が先頭ブロックに移動し re-export が維持される
-- [ ] `OpenAIProvider-branches.test.ts` と `httpTestFlow.test.ts` を含む既存テストと `npm run type-check` が green である
+- [x] lm-studio / ollama / openai-compatible 設定で fetch スロー経路（`executeHttpTestFlow` の catch 節経由）の全分岐に OpenAI 固定表示が出ない
+- [x] ラベルを埋め込む分岐（401 / 403 系・5xx 系）では設定中の `providerName` が表示される
+- [x] parse プリセット委譲後の全文言が移行前と byte-identical である（401 / 403 / 404 / 429 / 5xx / Failed to fetch / フォールバック分岐を含む）
+- [x] 第1テーブルとの文言統一の要否が判断ポイントとして記録され、合意なく文言を変更しない
+- [x] `HttpTestHooks.fetchErrorLabel` が廃止され `providerLabel` に統一されている（`GeminiProvider` 側の hooks 渡しを含む）
+- [x] `MAX_AI_HTTP_RESPONSE_BYTES` の import が先頭ブロックに移動し re-export が維持される
+- [x] `OpenAIProvider-branches.test.ts` と `httpTestFlow.test.ts` を含む既存テストと `npm run type-check` が green である
 
 ## テスト戦略
 - 着手前に先行 parity テストを書く：`parseAndMapFetchError` の現行出力を golden pin する（401 / 403 / 404 / 429 / 5xx / Failed to fetch / フォールバック＋timeout / AbortError 分岐）。`testConnection` の fetch スロー時の現行ラベル出力も pin する
@@ -70,6 +70,6 @@ Scenario: HTTP ステータスを運ぶ fetch スローでは設定中のプロ�
 - `describeHttpFailure` の既存プリセット（Obsidian / GitHub 向け）の文言は byte-identical に保つ
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
