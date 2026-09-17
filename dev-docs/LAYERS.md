@@ -107,7 +107,7 @@ src/utils/ssrfGuard.ts
 src/utils/cspValidator.ts
 src/utils/trustDb/  — 上記循環を除き Layer 0/1 のみに依存するモジュール群
 src/utils/ublockParser/
-src/utils/ublockMatcher/
+src/utils/ublockMatcher.ts
 src/utils/domainUtils.ts — Layer 2 の ublockMatcher を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
 src/utils/logger/sanitize.ts — Layer 2 の piiSanitizer を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
 ```
@@ -158,6 +158,22 @@ grep -rn "from.*dashboard/" src/background/
 ルール内の `LAYER0_FILES`／`LAYER1_FILES`／`LAYER2_MODULES` であり、本ドキュメントの分類表と
 対応する。両者に差異を見つけたら分類表・ルールのどちらが正しいかを判断し、揃えること。
 
+分類表とルールリストの照合は `npm run lint:layers-docs`
+（`scripts/lint-layers-docs.mjs`、PBI 2026-09-17-14 の案B）が機械的に行う。
+検査は双方向である。(1) ルールの各エントリが本ドキュメントの対応する Layer 見出し配下の
+コードブロックに存在すること（所属 Layer の正しさを含む）。(2) 分類表の各エントリが
+対応するルールリストか `DOCS_ONLY_ALLOWLIST`（同スクリプト内）のいずれかに載っている
+こと。正当な差（分類済みだがルール未適用・意図的対象外）は許可リストに行として固定し、
+それ以外の文書超過・ルール超過は drift として非ゼロ終了で報告する。分類表を更新する際は
+ルールリストと許可リストのどちらを揃えるべきかも同時に判断すること。なお Layer 1-循環節は
+意図的に対象外であり、本文中の言及（注釈・経緯・未分類の後続対応箇条書き）はコードブロック
+以外にあるため検査に影響しない。
+
+CI 組み込み判断（PBI 2026-09-17-14）: `npm run validate` への配線は見送り、独立した
+`lint:layers-docs` として運用する。分類更新は Wave 単位の低頻度であり、軽量スクリプト
+（Node 標準のみ）の手動実行で足りるため。分類を変更する PBI では実行を Definition of Done
+に含めること。
+
 検査範囲（v1 — 最大の利益・最小のリスト）:
 
 - Layer 0: `chrome` グローバル参照の禁止（AST の MemberExpression 検出のため、
@@ -170,11 +186,12 @@ grep -rn "from.*dashboard/" src/background/
   本ルールの Layer 1 検査は Barrel 宛を対象外とし二重報告を避ける（Layer 0 の純粋性としての
   Barrel 禁止のみ本ルールが担う）。warn → error への引き上げは barrel 移行の進捗を見て別途判断する。
 
-既知の暫定許可（`eslint.config.js` の `allow`、ADR 未記録）:
+既知の暫定許可（`eslint.config.js` の `allow`。ADR 2026-09-17-defaults-cleansing-rules-provisional-allow で裁定済み）:
 
 - `storage/defaults.ts` → `aiSummaryCleaner/rules.js`: DEFAULT_SETTINGS が SSOT ルール表の
-  閾値を束ねるための静的 import。表の複製は drift を再発させるため現状維持。
-  後続対応として ADR 化が必要（純粋定数の抽出か分類見直しのいずれか）。
+  閾値を束ねるための静的 import。辺の実体は値の導出のみであり、表の複製は過去に drift を
+  起こしたため現状維持（暫定許可を継続）。純粋定数の抽出か再分類かは上記 ADR の再検討
+  トリガーで判断する。
 
 未分類・後続対応（本ルールの検査対象外。手を付ける際は分類→リスト追加の順で行う）:
 
