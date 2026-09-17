@@ -84,10 +84,19 @@ export const OfflineJobFactory = {
 export class OfflineNetworkQueue {
   constructor(private readonly port: QueuePort<OfflineJob> = queue) {}
 
-  async enqueue(options: EnqueueOptions): Promise<void> {
+  /**
+   * Enqueue a job. Returns true when durably queued, false when the job was
+   * dropped or could not be persisted (logged, never thrown — PBI 2026-09-17-15).
+   */
+  async enqueue(options: EnqueueOptions): Promise<boolean> {
     const job = OfflineJobFactory.create(options);
-    await this.port.enqueue(job);
-    addLog(LogType.INFO, 'OfflineNetworkQueue: enqueued job', { type: job.type, id: job.id });
+    const ok = await this.port.enqueue(job);
+    if (ok) {
+      addLog(LogType.INFO, 'OfflineNetworkQueue: enqueued job', { type: job.type, id: job.id });
+    } else {
+      addLog(LogType.ERROR, 'OfflineNetworkQueue: failed to enqueue job', { type: job.type, id: job.id });
+    }
+    return ok;
   }
 
   async dequeue(): Promise<OfflineJob | null> {
@@ -95,7 +104,7 @@ export class OfflineNetworkQueue {
     // load→filter→save raced an in-flight flush (the exact VULN-056
     // interleave the lock exists for).
     let job: OfflineJob | null = null;
-    await this.port.mutate((jobs) => {
+    const persisted = await this.port.mutate((jobs) => {
       // TTL/retry filtering lives only in PersistentRetryQueue.filterExpiredAndOverRetry
       // so flush()/flushBatch() and this facade never diverge on expiry policy.
       const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
@@ -106,6 +115,13 @@ export class OfflineNetworkQueue {
       job = kept.shift()!;
       return kept;
     });
+    // Fail-closed: when the mutation could not persist, the stored snapshot is
+    // untouched, so the in-memory take must be discarded — otherwise the same
+    // job would be processed twice (duplicate AI calls / Obsidian writes).
+    if (!persisted) {
+      addLog(LogType.WARN, 'OfflineNetworkQueue: dequeue not persisted, discarding take');
+      return null;
+    }
     return job;
   }
 
@@ -119,7 +135,7 @@ export class OfflineNetworkQueue {
 
   async peek(): Promise<OfflineJob | null> {
     let first: OfflineJob | null = null;
-    await this.port.mutate((jobs) => {
+    const persisted = await this.port.mutate((jobs) => {
       const { kept, dropped } = this.port.filterExpiredAndOverRetry(jobs);
       if (dropped.length > 0) {
         addLog(LogType.INFO, 'OfflineNetworkQueue: dropped expired jobs', { count: dropped.length });
@@ -128,6 +144,12 @@ export class OfflineNetworkQueue {
       // Pure read when expiry changed nothing — keep the stored list as-is.
       return dropped.length > 0 ? kept : jobs;
     });
+    // Peek is read-only, but a failed mutate means storage may be unusable;
+    // report null so callers do not act on an unverifiable snapshot.
+    if (!persisted) {
+      addLog(LogType.WARN, 'OfflineNetworkQueue: peek not persisted, reporting empty');
+      return null;
+    }
     return first;
   }
 }

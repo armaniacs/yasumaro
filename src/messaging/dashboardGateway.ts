@@ -116,6 +116,8 @@ export class DashboardGateway {
   async callDashboard<T extends DashboardSqliteRequest, R>(payload: T, decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R, defaultErrorMessage: string, retry?: DashboardRetryOptions): Promise<SqliteResult<R>> {
     const attempts = Math.max(1, retry?.retryAttempts ?? 1);
     const delayMs = retry?.retryDelayMs ?? 1000;
+    const waitBetweenAttempts = (attempt: number): Promise<void> =>
+      new Promise(resolve => setTimeout(resolve, backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 })));
     for (let attempt = 0; attempt < attempts; attempt++) {
       const last = attempt + 1 >= attempts;
       let response: DashboardSqliteResponseFor<T['subtype']>;
@@ -124,7 +126,7 @@ export class DashboardGateway {
       } catch (error) {
         if (!last) {
           // Constant inter-attempt delay expressed as multiplier 1.
-          await new Promise(resolve => setTimeout(resolve, backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 })));
+          await waitBetweenAttempts(attempt);
           continue;
         }
         const classified = categorizeError(errorMessage(error));
@@ -134,7 +136,7 @@ export class DashboardGateway {
       if (!response.success) {
         const retriable = (response as { retriable?: boolean }).retriable ?? false;
         if (retriable && !last) {
-          await new Promise(resolve => setTimeout(resolve, backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 })));
+          await waitBetweenAttempts(attempt);
           continue;
         }
         const msg = String((response as { error?: string }).error || defaultErrorMessage);

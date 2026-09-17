@@ -100,7 +100,10 @@ export type AdmissionOutcome = 'injected' | 'skipped';
 
 /** Shared 3-attempt retry (200ms linear backoff — on both errors and empty
  * responses; PBI 2026-09-12-20: an empty-but-resolved send used to bypass the
- * sleep and fire 3 tight attempts). */
+ * sleep and fire 3 tight attempts).
+ * NOTE: intentionally not on backoffDelayMs — the SSOT only models exponential
+ * ramps and cannot express this linear schedule; keep in sync manually if the
+ * policy changes. */
 export async function checkDomainWithRetry(
   send: () => Promise<CheckDomainResponse | undefined>,
   sleep: (ms: number) => Promise<void>,

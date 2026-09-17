@@ -131,6 +131,9 @@ export class PersistentRetryQueue<T> {
    * throws are kept in the queue (with retry count incremented if applicable).
    *
    * Returns remaining items. Saves remaining items back to storage.
+   * Note: `[]` covers three cases — empty queue, full success, and failed
+   * load (logged, snapshot untouched). Callers needing to tell a storage
+   * outage apart from an empty queue must load/getQueueSize first (those throw).
    */
   flush(handler: (item: T) => Promise<boolean>): Promise<T[]> {
     return this.withQueueLock(() => this.flushUnlocked(handler));
@@ -207,6 +210,7 @@ export class PersistentRetryQueue<T> {
    * Failed items are retained with retry count incremented.
    *
    * Always persists per-item for Service Worker resilience.
+   * Note: `[]` also covers a failed load (logged, snapshot untouched) — see flush().
    */
   flushBatch(
     handler: (items: T[]) => Promise<boolean[]>,
@@ -316,9 +320,27 @@ export class PersistentRetryQueue<T> {
    */
   mutate(fn: (items: T[]) => T[] | Promise<T[]>): Promise<boolean> {
     return this.withQueueLock(async () => {
+      let items: T[];
       try {
-        const items = await this.adapter.load<T>(this.options.storageKey);
-        const next = await fn(items);
+        items = await this.adapter.load<T>(this.options.storageKey);
+      } catch (error) {
+        addLog(LogType.ERROR, `${this.options.logLabel}: failed to mutate queue`, {
+          error: errorMessage(error),
+        });
+        return false;
+      }
+      let next: T[];
+      try {
+        next = await fn(items);
+      } catch (error) {
+        // Caller-policy failure, not a storage failure — separate message so
+        // quota/I-O triage does not misdiagnose a caller bug.
+        addLog(LogType.ERROR, `${this.options.logLabel}: failed to apply queue mutation`, {
+          error: errorMessage(error),
+        });
+        return false;
+      }
+      try {
         await this.adapter.save(this.options.storageKey, next);
         return true;
       } catch (error) {
@@ -331,21 +353,26 @@ export class PersistentRetryQueue<T> {
   }
 
   /**
-   * Load all items from storage.
+   * Load all items from storage. Rejects on storage failure (best-effort
+   * callers must catch) — unlike enqueue/mutate/flush, which log and report
+   * failure via false/[] instead of throwing.
    */
   async load(): Promise<T[]> {
     return this.adapter.load<T>(this.options.storageKey);
   }
 
   /**
-   * Save items to storage.
+   * Save items to storage. Rejects on storage failure (best-effort callers
+   * must catch) — unlike enqueue/mutate/flush, which log and report failure
+   * via false instead of throwing.
    */
   async save(items: T[]): Promise<void> {
     await this.adapter.save(this.options.storageKey, items);
   }
 
   /**
-   * Get current queue size.
+   * Get current queue size. Rejects on storage failure (never 0 for a
+   * failure) — callers must catch; do not read a throw as "empty".
    */
   async getQueueSize(): Promise<number> {
     const items = await this.adapter.load<T>(this.options.storageKey);

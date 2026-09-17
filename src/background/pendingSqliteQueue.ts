@@ -55,14 +55,16 @@ const queue = new PersistentRetryQueue<QueuedRecord>(adapter, {
  * Queue a record that failed to insert into SQLite. Best-effort: a queue
  * write failure is logged but not thrown, so it never masks the original
  * insert failure.
+ *
+ * @returns true when durably queued; false when dropped or persistence failed.
  */
-export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<void> {
+export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<boolean> {
   const queued: QueuedRecord = {
     ...record,
     createdAt: Date.now(),
     retryCount: 0,
   };
-  await queue.enqueue(queued);
+  return queue.enqueue(queued);
 }
 
 /**

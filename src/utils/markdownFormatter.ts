@@ -81,9 +81,16 @@ function sanitizeTagPrefix(input: BuildEntryMarkdownInput, opts?: BuildEntryMark
   if (!input.tags) return '';
   // WHY: comma strings are split/trimmed/filtered (dashboard/export legacy) while
   // arrays pass through verbatim (pipeline legacy) — reproduce each, not unify.
-  const list = Array.isArray(input.tags)
+  const list = (Array.isArray(input.tags)
     ? input.tags
-    : input.tags.split(',').map(t => t.trim()).filter(Boolean);
+    : input.tags.split(',').map(t => t.trim()).filter(Boolean)
+  )
+    // WHY: tags must stay single-line — an AI-supplied `a\n[evil](u)` tag would
+    // otherwise split the `#tags` line and inject Markdown rows (VULN-008面).
+    // Newlines are never legitimate tag content, so strip them (not unify).
+    .map(t => t.replace(/[\r\n]/g, ''))
+    .map(t => t.trim())
+    .filter(Boolean);
   if (list.length === 0) return '';
   const chain = opts?.tagChain ?? 'linkText';
   return (

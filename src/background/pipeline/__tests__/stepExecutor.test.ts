@@ -20,7 +20,7 @@ describe('StepExecutor', () => {
   let executor: StepExecutor;
 
   beforeEach(() => {
-    queue = { enqueue: vi.fn().mockResolvedValue(undefined) };
+    queue = { enqueue: vi.fn().mockResolvedValue(true) };
     executor = new StepExecutor(queue as unknown as OfflineNetworkQueue);
   });
 
