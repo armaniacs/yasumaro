@@ -8,10 +8,26 @@ import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
 import { describeDelta, formatBytes } from './entryByteDelta.js';
-import { computeCleansingReduction } from './historyEntryPresentation.js';
+import {
+  classifyAiSummaryMissing,
+  classifyCleansingMissing,
+  classifyExtractionMissing,
+  computeCleansingReduction,
+  type DiagnosticMissingReason,
+} from './historyEntryPresentation.js';
 
 function t(key: string, substitutions?: string | string[]): string {
   return getMessageOr(key, key, substitutions);
+}
+
+const MISSING_REASON_KEYS: Record<DiagnosticMissingReason, string> = {
+  'no-ai': 'historyMissingReasonNoAi',
+  'empty': 'historyMissingReasonEmpty',
+  'unmeasured': 'historyMissingReasonUnmeasured',
+};
+
+function missingReasonText(reason: DiagnosticMissingReason): string {
+  return t(MISSING_REASON_KEYS[reason], []);
 }
 
 export function formatDate(date: Date): string {
@@ -111,6 +127,16 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     const delta = describeDelta(entry.page_bytes, entry.candidate_bytes);
     if (delta) {
       parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${t('historyBytes', [])}: ${delta.label} (${t('historyReduction', [])} ${delta.cleansed - delta.original} / ${delta.percent}%)</div>`);
+    } else {
+      const reason = classifyExtractionMissing(entry);
+      if (reason) {
+        parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
+      }
+    }
+  } else {
+    const reason = classifyExtractionMissing(entry);
+    if (reason) {
+      parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
     }
   }
 
@@ -122,6 +148,16 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     const cleansingDelta = describeDelta(contentOriginalB, contentCleansedB);
     if (cleansingDelta) {
       parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${t('historyBytes', [])}: ${cleansingDelta.label} (${t('historyReduction', [])} ${cleansingDelta.cleansed - cleansingDelta.original} / ${cleansingDelta.percent}%)</div>`);
+    } else {
+      const reason = classifyCleansingMissing(entry);
+      if (reason) {
+        parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
+      }
+    }
+  } else {
+    const reason = classifyCleansingMissing(entry);
+    if (reason) {
+      parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
     }
   }
 
@@ -142,6 +178,16 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     const aiDelta = describeDelta(entry.ai_summary_original_bytes, entry.ai_summary_cleansed_bytes);
     if (aiDelta) {
       parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${aiDelta.label} (${t('historyReduction', [])} ${aiDelta.cleansed - aiDelta.original} / ${aiDelta.percent}%)</div>`);
+    } else {
+      const reason = classifyAiSummaryMissing(entry);
+      if (reason) {
+        parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${escapeHtml(missingReasonText(reason))}</div>`);
+      }
+    }
+  } else if (entry.ai_summary_original_bytes != null || entry.ai_summary_cleansed_bytes != null) {
+    const reason = classifyAiSummaryMissing(entry);
+    if (reason) {
+      parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${escapeHtml(missingReasonText(reason))}</div>`);
     }
   }
 
