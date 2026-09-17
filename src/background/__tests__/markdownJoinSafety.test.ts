@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GistSyncTarget } from '../syncTargets/gistSyncTarget.js';
-import { formatEntryToMarkdown, formatEntriesToMarkdown } from '../../utils/markdownFormatter.js';
+import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList } from '../../utils/markdownFormatter.js';
 import { toMarkdownTemplateEntryData } from '../../dashboard/markdownExport.js';
 import { formatMarkdownStep } from '../pipeline/steps/formatMarkdownStep.js';
 import type { RecordingContext } from '../pipeline/types.js';
@@ -37,7 +37,7 @@ describe('markdown join safety - tag fragments cannot reassemble a link', () => 
     expect(hasUnescapedEvilLink(md)).toBe(false);
   });
 
-  it('markdownFormatter legacy formatEntryToMarkdown: tag fragments do not form a link', () => {
+  it('markdownFormatter formatEntryToHeadingMarkdown: tag fragments do not form a link', () => {
     const entry = {
       url: 'https://example.com',
       title: 'Example',
@@ -45,7 +45,7 @@ describe('markdown join safety - tag fragments cannot reassemble a link', () => 
       tags: `foo [,bar](${EVIL})`,
       created_at: Date.now(),
     } as unknown as BrowsingLogEntry;
-    const md = formatEntryToMarkdown(entry);
+    const md = formatEntryToHeadingMarkdown(entry);
     expect(hasUnescapedEvilLink(md)).toBe(false);
   });
 });
@@ -53,7 +53,7 @@ describe('markdown join safety - tag fragments cannot reassemble a link', () => 
 describe('markdown join safety - title `](url)` suffix cannot break out', () => {
   const EVIL_TITLE = `Doc](${EVIL})`;
 
-  it('markdownFormatter legacy: title suffix does not break out', () => {
+  it('markdownFormatter heading: title suffix does not break out', () => {
     const entry = {
       url: 'https://example.com',
       title: EVIL_TITLE,
@@ -61,7 +61,7 @@ describe('markdown join safety - title `](url)` suffix cannot break out', () => 
       tags: '',
       created_at: Date.now(),
     } as unknown as BrowsingLogEntry;
-    const md = formatEntryToMarkdown(entry);
+    const md = formatEntryToHeadingMarkdown(entry);
     expect(hasUnescapedEvilLink(md)).toBe(false);
   });
 
@@ -112,19 +112,19 @@ describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
     vi.useRealTimers();
   });
 
-  it('formatEntriesToMarkdown: obsidianList line without tags', () => {
+  it('formatEntriesToObsidianList: obsidianList line without tags', () => {
     const entry = {
       url: 'https://example.com/article',
       title: 'Example Article',
       summary: 'Line1\n\nLine2  with   spaces',
       created_at: FIXED_CREATED,
     } as unknown as BrowsingLogEntry;
-    expect(formatEntriesToMarkdown([entry])).toBe(
+    expect(formatEntriesToObsidianList([entry])).toBe(
       `- ${tsFor(FIXED_NOW)} [Example Article](https://example.com/article)\n    - Line1 Line2 with spaces`,
     );
   });
 
-  it('formatEntryToMarkdown: heading style with tags', () => {
+  it('formatEntryToHeadingMarkdown: heading style with tags', () => {
     const entry = {
       url: 'https://example.com/article',
       title: 'Example Article',
@@ -133,7 +133,7 @@ describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
       created_at: FIXED_CREATED,
     } as unknown as BrowsingLogEntry;
     const dateStr = new Date(FIXED_CREATED).toLocaleString();
-    expect(formatEntryToMarkdown(entry)).toBe(
+    expect(formatEntryToHeadingMarkdown(entry)).toBe(
       `# Example Article\n- URL: https://example.com/article\n- Date: ${dateStr}\n- Tags: #tech #ai\n## Summary\nThis is a summary.`,
     );
   });

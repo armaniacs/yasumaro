@@ -8,7 +8,7 @@ vi.mock('../clipboard.js', () => ({
   copyTextToClipboard: mockCopyTextToClipboard,
 }));
 vi.mock('../markdownFormatter.js', () => ({
-  formatEntryToMarkdown: mockFormatEntryToMarkdown,
+  formatEntryToHeadingMarkdown: mockFormatEntryToMarkdown,
 }));
 
 import { createCopyMarkdownButton, COPY_FEEDBACK_RESET_MS } from '../copyMarkdownButton.js';

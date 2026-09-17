@@ -58,7 +58,7 @@ vi.mock('../../utils/clipboard.js', () => ({
   copyTextToClipboard: mockCopyTextToClipboard,
 }));
 vi.mock('../../utils/markdownFormatter.js', () => ({
-  formatEntryToMarkdown: mockFormatEntryToMarkdown,
+  formatEntryToHeadingMarkdown: mockFormatEntryToMarkdown,
 }));
 vi.mock('../statusPanel.js', () => ({
   updateCleansingStatus: mockUpdateCleansingStatus,

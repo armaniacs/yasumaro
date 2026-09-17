@@ -19,7 +19,7 @@ export interface BuildEntryMarkdownInput {
   tags?: string | string[] | null | undefined;
   /** Preformatted timestamp; takes precedence over appendedAt/createdAt. */
   timestamp?: string | undefined;
-  /** Batch append time (formatEntriesToMarkdown path). */
+  /** Batch append time (formatEntriesToObsidianList path). */
   appendedAt?: number;
   /** Entry creation time (markdownExport path). */
   createdAt?: number;
@@ -164,7 +164,7 @@ export function buildEntryMarkdown(
   return `- ${sanitizedData.timestamp} [${sanitizedData.title}](${sanitizedData.url})\n    - ${sanitizedData.tags}${sanitizedData.summary}`;
 }
 
-export function formatEntryToMarkdown(entry: BrowsingLogEntry): string {
+export function formatEntryToHeadingMarkdown(entry: BrowsingLogEntry): string {
   return buildEntryMarkdown(
     {
       title: entry.title,
@@ -178,16 +178,11 @@ export function formatEntryToMarkdown(entry: BrowsingLogEntry): string {
   );
 }
 
-export function formatEntriesToGenericMarkdown(entries: BrowsingLogEntry[]): string {
-  if (!entries || entries.length === 0) return '';
-  return entries.map(formatEntryToMarkdown).join('\n---\n\n');
-}
-
 /**
  * Format multiple BrowsingLogEntry records as Obsidian markdown.
  * Each entry becomes a list item, separated by newlines.
  */
-export function formatEntriesToMarkdown(entries: BrowsingLogEntry[]): string {
+export function formatEntriesToObsidianList(entries: BrowsingLogEntry[]): string {
   if (!entries || entries.length === 0) {
     return '';
   }
@@ -199,3 +194,15 @@ export function formatEntriesToMarkdown(entries: BrowsingLogEntry[]): string {
     ),
   ).join('\n');
 }
+
+/**
+ * @deprecated Use formatEntryToHeadingMarkdown instead. Migration bridge for
+ * callers outside the PBI-13 scope; scheduled for removal once they switch.
+ */
+export const formatEntryToMarkdown = formatEntryToHeadingMarkdown;
+
+/**
+ * @deprecated Use formatEntriesToObsidianList instead. Migration bridge for
+ * callers outside the PBI-13 scope; scheduled for removal once they switch.
+ */
+export const formatEntriesToMarkdown = formatEntriesToObsidianList;
