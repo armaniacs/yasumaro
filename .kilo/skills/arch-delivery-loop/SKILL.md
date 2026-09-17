@@ -1,6 +1,6 @@
 ---
 name: arch-delivery-loop
-description: Architecture-to-delivery closed loop — diagnose deepening opportunities, prioritize with RICE, create PBIs, implement them autonomously in RICE-descending order (5 Whys, no confirmation), verify with `make clean test` until green, then bump the version. Use whenever the user wants the full improve-codebase-architecture → PBI → implementation → verification pipeline in one run without stopping, or says "アーキテクチャから実装まで一気に", "architecture loop", "deepening loop", "アーキテクチャ改善を一括で", "コードベース全体を診断して実装まで", "診断から検証まで閉じて", "全部やって", "積み残しを閉じて". Also use when multiple PBIs already exist and the user wants them prioritized and implemented to green without waiting for confirmation, or when an improve-codebase-architecture HTML report was just reviewed and the user says "全部やって".
+description: Closed loop: diagnose architecture opportunities, prioritize with RICE, create PBIs, implement autonomously (RICE order, no confirmation), verify with `make clean test`, bump version. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」, or when existing PBIs should be prioritized and implemented to green.
 ---
 
 # Arch Delivery Loop — アーキテクチャ診断から検証まで一気に閉じるスキル
