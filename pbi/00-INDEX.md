@@ -16,12 +16,7 @@
 
 ### 2026-09-17 コードレビュー追指摘の PBI 化 — ✅ 全4件完了（アーカイブ済み）
 
-arch-review-0917（10件・全件完了）の実装後の大局的レビューで発見した残課題（新設 SSOT の未採用経路）を PBI 化。NN は先行ラウンドの 01-10 から**継続採番**（日付内一意性と実行順の鍵を両立）。台帳は `2026-09-17-00-backlog-arch-review-0917b.md`。
-
-- 2026-09-17-11-fix-ai-provider-error-labels.md（⬜ 未着手 — S. `fetchErrorLabel: 'OpenAI'` 固定の廃止（openai 互換系ネットワーク障害の誤ラベル実害）+ `parseAndMapFetchError` 第2文言テーブルの `describeHttpFailure` 統合。byte-identical 移行）
-- 2026-09-17-12-refactor-backoff-delay-adoption.md（⬜ 未着手 — S. 指数バックオフ手書き5箇所（stepExecutor/storageTransaction×2/TrustDbKernel/trancoUpdater）を `backoffDelayMs` に委譲。byte-identical）
-- 2026-09-17-13-refactor-markdown-formatter-cleanup.md（⬜ 未着手 — S. 本番呼び出し元ゼロの `formatEntriesToGenericMarkdown` 削除 + 生存関数の形式明示改名。出力 byte-identical）
-- 2026-09-17-14-refactor-layer-list-single-source.md（⬜ 未着手 — M. 層分類リストの二重管理（ルール内リスト vs LAYERS.md 表）を解消（案A 単一マップ / 案B `lint:layers-docs` 検証スクリプト、着手時判断）+ `defaults→aiSummaryCleaner` 暫定許可の ADR 起票）
+arch-review-0917（10件・全件完了）の実装後の大局的レビューで発見した残課題（新設 SSOT の未採用経路）を PBI 化。NN は先行ラウンドの 01-10 から**継続採番**（日付内一意性と実行順の鍵を両立）。台帳は `2026-09-17-00-backlog-arch-review-0917b.md`。全件アーカイブ済み（アーカイブ履歴参照）。
 
 ### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — ✅ 全10件完了（アーカイブ済み）
 
@@ -51,6 +46,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
 - [2026-09-15-00-backlog-archloop-0915.md](2026-09-15-00-backlog-archloop-0915.md) — arch-delivery-loop 第1回診断の11候補のうち、PBI 化しなかった残り
 - [2026-09-15-00-backlog-archloop-0915b.md](2026-09-15-00-backlog-archloop-0915b.md) — 第2回診断の8候補のうち、PBI 化しなかった残り（合成ルート 7.0 は PBI 17 として実施済み・reviewSummary 2.5 / SessionStore durability 1.9 は未着手）
+- [2026-09-17-00-backlog-arch-review-0917c.md](2026-09-17-00-backlog-arch-review-0917c.md) — コードレビュー追指摘 0917c の台帳（6候補を既存ラウンドと突合し2件を採番 NN 15-16・残4件の除外理由）
 - [2026-09-17-00-backlog-arch-review-0917b.md](2026-09-17-00-backlog-arch-review-0917b.md) — コードレビュー追指摘 0917b の台帳（4件の RICE 表・NN 11 からの継続採番の根拠・古いコピー削除の記録・自律解決済み判断）
 - [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-review-0917.md) — アーキテクチャレビュー 0917 の台帳（11候補の RICE 表・実行順の依存根拠・MAX_PROVIDERS 台帳送り・utils 物理再配置の保留判断と再検討トリガー）
 
@@ -96,6 +92,15 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 - 2026-09-17-08-investigate-module-singleton-policy.md（✅ 完了・アーカイブ済 — ADR 新設（`2026-09-17-module-singleton-policy.md`）。新規 SW 依存は manifest 原則・既存6件現状維持。実測で現 manifest の onReady は 0 件（PBI 2026-09-03-05 で撤去済み）・5箇所の singleton 宣言に ADR 参照コメント）
 
 バッチ2統合時に `require-sanitized-markdown` が SSOT の新構造で 7 errors を検出 → テンプレート補間変数をルール規約（`sanitized*` プレフィックス）に準拠させ解消（parity 不変）。統合検証: type-check / lint 0 errors / test 12,140 passed / build PASS。
+
+### 2026-09-17 コードレビュー追指摘の PBI 化（0917c）— ✅ 全2件完了（アーカイブ済み）
+
+ユーザー起票の台帳 `2026-09-17-00-backlog-arch-review-0917c.md`（6候補のうち4件は既存ラウンドで処理済み/前提誤りと判定済み、残る2件を採番 NN 15-16）に基づき実装。
+
+- 2026-09-17-15-fix-queue-storage-adapter-swallow.md（✅ 完了・アーカイブ済 — 最後の砦の退避キューの save/load 失敗が握りつぶされメタデータが黙ってロストする問題を解消。adapter は reject/throw し失敗処理をキューへ移管: enqueue は boolean を返し元の失敗をマスクしない、flush/mutate は構造化ログ+スナップショット保護、saveMetadataStep は二重障害を ERROR 報告。queueStorageFailure.test.ts 7 tests 新設）
+- 2026-09-17-16-fix-manual-fetcher-listener-leak.md（✅ 完了・アーカイブ済 — `fetchFromTab` のタイムアウト経路で `tabs.onUpdated.removeListener` が呼ばれないリスナー残留を解消（cleanup 関数に集約）。fake timers によるタイムアウト系テスト追加・11 tests green）
+
+備考: manifest に `unlimitedStorage` permission はないため quota 超過の発生条件は実在（PBI 15 の Reach 裏取り）。統合検証: type-check / lint 0 errors / test 12,193 passed (766 files) / build PASS。`QueuePort`/`NoOpQueuePort` の enqueue・mutate 戻り型を boolean 化（offlineNetworkQueue、await 専用呼び出しのため非破壊）。
 
 ### 2026-09-17 コードレビュー追指摘の PBI 化 — 4件完了（11〜14）
 
