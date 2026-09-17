@@ -145,3 +145,10 @@ export const MAX_SUMMARY_LENGTH = 100_000;
  * legitimate selection use (bulk select pages at 20/page).
  */
 export const MAX_QUERY_IDS = 200;
+
+/**
+ * archive_query rows per request (PBI 2026-09-17-18). Previously a bare
+ * `1..500` literal inside the validator; moved here so the drift guard sees it
+ * alongside the other wire caps.
+ */
+export const MAX_ARCHIVE_QUERY_LIMIT = 500;

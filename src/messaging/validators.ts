@@ -17,6 +17,7 @@ import {
   MAX_RESTORE_DB_BYTES,
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   MAX_APPEND_IDS,
+  MAX_ARCHIVE_QUERY_LIMIT,
 } from './limits.js';
 import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
 import type {
@@ -66,6 +67,8 @@ export const VALIDATOR_LIMITS = {
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */
   MAX_APPEND_IDS,
+  /** DASHBOARD_SQLITE archive_query rows per request (PBI 2026-09-17-18) */
+  MAX_ARCHIVE_QUERY_LIMIT,
 } as const;
 
 // ------------------------------------------------------------------
@@ -117,6 +120,220 @@ export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> 
 }
 
 // ------------------------------------------------------------------
+// DashboardSqlite payload schema (PBI 2026-09-17-18)
+// ------------------------------------------------------------------
+
+/** Field-level check row: `test` gates the wire type/bound, `message` renders
+ *  the exact (unchanged) rejection text, `field` names the ValidationError field. */
+interface DashboardSqliteFieldSpec {
+  field: string;
+  optional?: boolean;
+  test: (v: unknown, p: Record<string, unknown>) => boolean;
+  message: (subtype: string) => string;
+}
+
+/** Domain-mapping guard: converts third-party errors (staging decode, cutoff
+ *  pairing) or cross-field estimates into the stable layer messages. */
+type DashboardSqliteGuard = (p: Record<string, unknown>, subtype: string) => void;
+
+interface DashboardSqliteSubtypeSpec {
+  /** Runs before the field rows (e.g. staging decode proves the name before
+   *  any paging field is judged — preserves the original check order). */
+  guardFirst?: DashboardSqliteGuard;
+  fields?: readonly DashboardSqliteFieldSpec[];
+  /** Runs after the field rows (e.g. the import JSON-size estimate needs the
+   *  whole already-type-checked array). */
+  guardLast?: DashboardSqliteGuard;
+}
+
+const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+
+const finiteNumber = (field: string): DashboardSqliteFieldSpec => ({
+  field,
+  test: isFiniteNumber,
+  message: (s) => `${s}: ${field} must be finite number`,
+});
+
+const nonNegativeInteger = (field: string): DashboardSqliteFieldSpec => ({
+  field,
+  test: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0,
+  message: (s) => `${s}: ${field} must be a non-negative integer`,
+});
+
+const nonEmptyString = (field: string): DashboardSqliteFieldSpec => ({
+  field,
+  test: (v) => typeof v === 'string' && v.length > 0,
+  message: (s) => `${s}: ${field} must be non-empty string`,
+});
+
+const stringField = (field: string): DashboardSqliteFieldSpec => ({
+  field,
+  test: (v) => typeof v === 'string',
+  message: (s) => `${s}: ${field} must be string`,
+});
+
+const stringLengthCap = (field: string, cap: number): DashboardSqliteFieldSpec => ({
+  field,
+  test: (v) => typeof v === 'string' && v.length <= cap,
+  message: (s) => `${s}: ${field} exceeds ${cap} chars`,
+});
+
+const arrayField = (field: string): DashboardSqliteFieldSpec => ({
+  field,
+  test: (v) => Array.isArray(v),
+  message: (s) => `${s}: ${field} must be array`,
+});
+
+const arrayLengthCap = (field: string, cap: number): DashboardSqliteFieldSpec => ({
+  field,
+  test: (v) => Array.isArray(v) && v.length <= cap,
+  message: (s) => `${s}: ${field} exceeds ${cap}`,
+});
+
+/** Staging-name boundary decode — one implementation for all 9 staging
+ *  subtypes (previously 6 copy-pasted try/catch blocks; PBI 2026-09-17-18).
+ *  The brand proves the name crossed validation, but the wire payload stays
+ *  `string` (PBI 2026-09-07-22 touches wire shape). */
+function stagingNameGuard(p: Record<string, unknown>, subtype: string): void {
+  try {
+    decodeStagingName(p.stagingName);
+  } catch {
+    throw new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
+  }
+}
+
+/** Cutoff pairing (archive_preview / archive_create, PBI 2026-09-06-02): the
+ *  worker re-derives the cutoff from the date string, so a fabricated cutoffMs
+ *  pair is rejected before reaching the staging registry. Pair verification
+ *  itself is the `assertCutoffPair` seam (PBI 2026-09-07-21); this guard only
+ *  maps its throws to the stable layer messages. */
+function cutoffPairGuard(p: Record<string, unknown>, subtype: string): void {
+  if (typeof p.cutoffDate !== 'string') {
+    throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffDate must be string`, 'cutoffDate');
+  }
+  if (!isFiniteNumber(p.cutoffMs)) {
+    throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs must be finite number`, 'cutoffMs');
+  }
+  try {
+    assertCutoffPair(p.cutoffDate, p.cutoffMs);
+  } catch (e) {
+    if (e instanceof CutoffMismatchError) {
+      throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs does not match cutoffDate`, 'cutoffMs');
+    }
+    throw new ValidationError('DashboardSqliteValidator', `${subtype}: ${e instanceof Error ? e.message : 'invalid cutoffDate'}`, 'cutoffDate');
+  }
+  if (typeof p.includeDeleted !== 'boolean') {
+    throw new ValidationError('DashboardSqliteValidator', `${subtype}: includeDeleted must be boolean`, 'includeDeleted');
+  }
+}
+
+/** Import rows byte-estimate — needs the whole type-checked array, so it runs
+ *  after the row-count field checks (guardLast). */
+function importBytesGuard(p: Record<string, unknown>): void {
+  const approxBytes = JSON.stringify(p.rows).length;
+  if (approxBytes > VALIDATOR_LIMITS.MAX_IMPORT_BYTES) {
+    throw new ValidationError('DashboardSqliteValidator', `import: payload exceeds ${VALIDATOR_LIMITS.MAX_IMPORT_BYTES} bytes`, 'rows');
+  }
+}
+
+/**
+ * Per-subtype wire-field schema for DASHBOARD_SQLITE payloads. One entry per
+ * subtype; field rows are interpreted uniformly by DashboardSqliteValidator.
+ * `query` is intentionally absent — it accepts arbitrary extra fields.
+ */
+const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSqliteSubtypeSpec>> = {
+  toggle_star: { fields: [finiteNumber('id')] },
+  delete: { fields: [finiteNumber('id')] },
+  create_confirm_token: {
+    fields: [
+      nonEmptyString('action'),
+      { field: 'id', optional: true, test: isFiniteNumber, message: (s) => `${s}: id must be finite number` },
+    ],
+  },
+  update: {
+    fields: [
+      finiteNumber('id'),
+      { field: 'changes', test: (v) => v !== null && typeof v === 'object', message: (s) => `${s}: changes is required` },
+    ],
+  },
+  search: {
+    fields: [
+      stringField('query'),
+      stringLengthCap('query', VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH),
+    ],
+  },
+  import: {
+    fields: [
+      arrayField('rows'),
+      arrayLengthCap('rows', VALIDATOR_LIMITS.MAX_IMPORT_ROWS),
+    ],
+    guardLast: importBytesGuard,
+  },
+  restore_db: {
+    fields: [
+      stringField('data'),
+      stringLengthCap('data', VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES),
+    ],
+  },
+  append_to_obsidian: {
+    fields: [
+      arrayField('ids'),
+      arrayLengthCap('ids', VALIDATOR_LIMITS.MAX_APPEND_IDS),
+    ],
+  },
+  archive_preview: { guardFirst: cutoffPairGuard },
+  archive_create: {
+    guardFirst: cutoffPairGuard,
+    fields: [
+      { field: 'yasumaroVersion', test: (v) => typeof v === 'string' && v.length >= 1 && v.length <= 64, message: () => 'archive_create: yasumaroVersion must be 1-64 chars' },
+    ],
+  },
+  archive_export: {
+    guardFirst: stagingNameGuard,
+    fields: [
+      nonNegativeInteger('offset'),
+      {
+        field: 'length',
+        test: (v) => typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
+        message: (s) => `${s}: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`,
+      },
+    ],
+  },
+  archive_delete_by_staging: { guardFirst: stagingNameGuard },
+  archive_open: { guardFirst: stagingNameGuard },
+  archive_save: { guardFirst: stagingNameGuard },
+  archive_close: { guardFirst: stagingNameGuard },
+  archive_restore_preview: { guardFirst: stagingNameGuard },
+  archive_restore: { guardFirst: stagingNameGuard },
+  archive_query: {
+    guardFirst: stagingNameGuard,
+    fields: [
+      stringField('query'),
+      stringLengthCap('query', VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH),
+      {
+        field: 'limit',
+        test: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT,
+        message: (s) => `${s}: limit must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT}`,
+      },
+      nonNegativeInteger('offset'),
+    ],
+  },
+  archive_update: {
+    guardFirst: stagingNameGuard,
+    fields: [
+      { field: 'id', test: (v) => typeof v === 'number' && Number.isInteger(v) && v > 0, message: (s) => `${s}: id must be a positive integer` },
+      { field: 'changes', test: (v) => v !== null && typeof v === 'object' && !Array.isArray(v), message: (s) => `${s}: changes must be an object` },
+    ],
+  },
+};
+
+/** Subtypes whose payload carries a staging name — derived from the spec
+ *  table so the set and the guard can never drift apart (PBI 2026-09-17-18). */
+export const STAGING_NAME_SUBTYPES: readonly string[] = Object.entries(DASHBOARD_SQLITE_SUBTYPE_SPECS)
+  .filter(([, spec]) => spec.guardFirst === stagingNameGuard)
+  .map(([subtype]) => subtype);
+
+// ------------------------------------------------------------------
 // DashboardSqliteValidator — DASHBOARD_SQLITE payload validation
 // ------------------------------------------------------------------
 export class DashboardSqliteValidator implements MessageValidator<DashboardSqliteRequest> {
@@ -139,153 +356,22 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
     }
     const subtype = p.subtype as DashboardSqliteRequest['subtype'];
 
-    // Per-subtype required field checks (minimal, to enforce schema)
-    if (subtype === 'toggle_star' || subtype === 'delete') {
-      if (typeof p.id !== 'number' || !Number.isFinite(p.id)) {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: id must be finite number`, 'id');
-      }
-    }
-    if (subtype === 'create_confirm_token') {
-      if (typeof p.action !== 'string' || p.action.length === 0) {
-        throw new ValidationError('DashboardSqliteValidator', 'create_confirm_token: action must be non-empty string', 'action');
-      }
-      if (p.id !== undefined && (typeof p.id !== 'number' || !Number.isFinite(p.id))) {
-        throw new ValidationError('DashboardSqliteValidator', 'create_confirm_token: id must be finite number', 'id');
-      }
-    }
-    if (subtype === 'update') {
-      if (typeof p.id !== 'number' || !Number.isFinite(p.id)) {
-        throw new ValidationError('DashboardSqliteValidator', 'update: id must be finite number', 'id');
-      }
-      if (!p.changes || typeof p.changes !== 'object') {
-        throw new ValidationError('DashboardSqliteValidator', 'update: changes is required', 'changes');
-      }
-    }
-    if (subtype === 'search') {
-      if (typeof p.query !== 'string') {
-        throw new ValidationError('DashboardSqliteValidator', 'search: query must be string', 'query');
-      }
-      if (p.query.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
-        throw new ValidationError('DashboardSqliteValidator', `search: query exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'query');
-      }
-    }
-    if (subtype === 'import') {
-      if (!Array.isArray(p.rows)) {
-        throw new ValidationError('DashboardSqliteValidator', 'import: rows must be array', 'rows');
-      }
-      if (p.rows.length > VALIDATOR_LIMITS.MAX_IMPORT_ROWS) {
-        throw new ValidationError('DashboardSqliteValidator', `import: rows exceeds ${VALIDATOR_LIMITS.MAX_IMPORT_ROWS}`, 'rows');
-      }
-      const approxBytes = JSON.stringify(p.rows).length;
-      if (approxBytes > VALIDATOR_LIMITS.MAX_IMPORT_BYTES) {
-        throw new ValidationError('DashboardSqliteValidator', `import: payload exceeds ${VALIDATOR_LIMITS.MAX_IMPORT_BYTES} bytes`, 'rows');
-      }
-    }
-    if (subtype === 'restore_db') {
-      if (typeof p.data !== 'string') {
-        throw new ValidationError('DashboardSqliteValidator', 'restore_db: data must be string', 'data');
-      }
-      if (p.data.length > VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES) {
-        throw new ValidationError('DashboardSqliteValidator', `restore_db: data exceeds ${VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES} chars`, 'data');
-      }
-    }
-    if (subtype === 'append_to_obsidian') {
-      if (!Array.isArray(p.ids)) {
-        throw new ValidationError('DashboardSqliteValidator', 'append_to_obsidian: ids must be array', 'ids');
-      }
-      if (p.ids.length > VALIDATOR_LIMITS.MAX_APPEND_IDS) {
-        throw new ValidationError('DashboardSqliteValidator', `append_to_obsidian: ids exceeds ${VALIDATOR_LIMITS.MAX_APPEND_IDS}`, 'ids');
-      }
-    }
-    // Archive subtypes (PBI 2026-09-06-02): boundary validation. The worker
-    // re-derives the cutoff from the date string, so a fabricated cutoffMs
-    // pair is rejected before reaching the staging registry. Pair verification
-    // itself is the `assertCutoffPair` seam (PBI 2026-09-07-21); this block
-    // only maps its throws to the stable layer messages below.
-    if (subtype === 'archive_preview' || subtype === 'archive_create') {
-      if (typeof p.cutoffDate !== 'string') {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffDate must be string`, 'cutoffDate');
-      }
-      if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs)) {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs must be finite number`, 'cutoffMs');
-      }
-      try {
-        assertCutoffPair(p.cutoffDate, p.cutoffMs);
-      } catch (e) {
-        if (e instanceof CutoffMismatchError) {
-          throw new ValidationError('DashboardSqliteValidator', `${subtype}: cutoffMs does not match cutoffDate`, 'cutoffMs');
+    // Per-subtype wire-field enforcement (PBI 2026-09-17-18): the schema lives
+    // in DASHBOARD_SQLITE_SUBTYPE_SPECS below — one row per required field,
+    // interpreted uniformly, so adding a subtype is a table row instead of a
+    // new if-block. Domain-mapping guards (staging-name decode, cutoff pair
+    // verification, import byte estimate) stay as dedicated functions and keep
+    // their original evaluation order.
+    const spec = DASHBOARD_SQLITE_SUBTYPE_SPECS[subtype];
+    if (spec) {
+      spec.guardFirst?.(p, subtype);
+      for (const f of spec.fields ?? []) {
+        if (f.optional && p[f.field] === undefined) continue;
+        if (!f.test(p[f.field], p)) {
+          throw new ValidationError('DashboardSqliteValidator', f.message(subtype), f.field);
         }
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: ${e instanceof Error ? e.message : 'invalid cutoffDate'}`, 'cutoffDate');
       }
-      if (typeof p.includeDeleted !== 'boolean') {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: includeDeleted must be boolean`, 'includeDeleted');
-      }
-    }
-    if (subtype === 'archive_create') {
-      if (typeof p.yasumaroVersion !== 'string' || p.yasumaroVersion.length === 0 || p.yasumaroVersion.length > 64) {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_create: yasumaroVersion must be 1-64 chars', 'yasumaroVersion');
-      }
-    }
-    if (subtype === 'archive_export') {
-      // Boundary decode: the brand proves the name crossed validation, but
-      // the wire payload stays `string` (PBI 2026-09-07-22 touches wire shape).
-      try {
-        decodeStagingName(p.stagingName);
-      } catch {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_export: stagingName must be a valid staging name', 'stagingName');
-      }
-      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_export: offset must be a non-negative integer', 'offset');
-      }
-      if (typeof p.length !== 'number' || !Number.isInteger(p.length) || p.length <= 0 || p.length > VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES) {
-        throw new ValidationError('DashboardSqliteValidator', `archive_export: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`, 'length');
-      }
-    }
-    if (subtype === 'archive_delete_by_staging') {
-      try {
-        decodeStagingName(p.stagingName);
-      } catch {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_delete_by_staging: stagingName must be a valid staging name', 'stagingName');
-      }
-    }
-    if (subtype === 'archive_open' || subtype === 'archive_save' || subtype === 'archive_close' || subtype === 'archive_restore_preview' || subtype === 'archive_restore') {
-      try {
-        decodeStagingName(p.stagingName);
-      } catch {
-        throw new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
-      }
-    }
-    if (subtype === 'archive_query') {
-      try {
-        decodeStagingName(p.stagingName);
-      } catch {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_query: stagingName must be a valid staging name', 'stagingName');
-      }
-      if (typeof p.query !== 'string') {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_query: query must be string', 'query');
-      }
-      if (p.query.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
-        throw new ValidationError('DashboardSqliteValidator', `archive_query: query exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'query');
-      }
-      if (typeof p.limit !== 'number' || !Number.isInteger(p.limit) || p.limit < 1 || p.limit > 500) {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_query: limit must be 1..500', 'limit');
-      }
-      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_query: offset must be a non-negative integer', 'offset');
-      }
-    }
-    if (subtype === 'archive_update') {
-      try {
-        decodeStagingName(p.stagingName);
-      } catch {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_update: stagingName must be a valid staging name', 'stagingName');
-      }
-      if (typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id <= 0) {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_update: id must be a positive integer', 'id');
-      }
-      if (!p.changes || typeof p.changes !== 'object' || Array.isArray(p.changes)) {
-        throw new ValidationError('DashboardSqliteValidator', 'archive_update: changes must be an object', 'changes');
-      }
+      spec.guardLast?.(p, subtype);
     }
 
     return payload as DashboardSqliteRequest;
