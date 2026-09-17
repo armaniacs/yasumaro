@@ -35,6 +35,7 @@ src/utils/commonTypes.ts
 src/utils/types.ts
 src/utils/urlEntry.ts
 src/utils/luhn.ts
+src/utils/urlHash.ts — ログ用 URL ハッシュ化（ piiSanitizer.ts と同 性質のプライバシー保護。PBI 2026-09-16-05）
 src/utils/backoff.ts — 指数バックオフ遅延計算の SSOT（PBI 2026-09-17-09）
 src/utils/httpFailureMessages.ts — HTTP status→ユーザー文言テーブルの SSOT（PBI 2026-09-17-09）
 ```
