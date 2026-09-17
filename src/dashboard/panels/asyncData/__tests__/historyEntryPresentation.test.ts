@@ -4,6 +4,7 @@ import {
   classifyCleansingMissing,
   classifyDiagnosticMissing,
   classifyExtractionMissing,
+  resolveCleansingBytes,
 } from '../historyEntryPresentation.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 
@@ -101,6 +102,31 @@ describe('historyEntryPresentation', () => {
     it('returns no-ai for single-side data without AI info', () => {
       const entry = makeEntry({ ai_summary_original_bytes: 900 });
       expect(classifyAiSummaryMissing(entry)).toBe('no-ai');
+    });
+  });
+
+  describe('resolveCleansingBytes', () => {
+    it('prefers original_bytes over candidate_bytes', () => {
+      const resolved = resolveCleansingBytes(makeEntry({ original_bytes: 2000, candidate_bytes: 500, cleansed_bytes: 1800 }));
+      expect(resolved.original).toBe(2000);
+      expect(resolved.cleansed).toBe(1800);
+    });
+
+    it('falls back to candidate_bytes when original_bytes is missing', () => {
+      const resolved = resolveCleansingBytes(makeEntry({ candidate_bytes: 500, cleansed_bytes: 400 }));
+      expect(resolved.original).toBe(500);
+      expect(resolved.cleansed).toBe(400);
+    });
+
+    it('honors a legitimate zero instead of falling through', () => {
+      const resolved = resolveCleansingBytes(makeEntry({ original_bytes: 0, candidate_bytes: 500 }));
+      expect(resolved.original).toBe(0);
+    });
+
+    it('returns undefined sides when all sources are missing', () => {
+      const resolved = resolveCleansingBytes(makeEntry({}));
+      expect(resolved.original).toBeUndefined();
+      expect(resolved.cleansed).toBeUndefined();
     });
   });
 });

@@ -13,6 +13,7 @@ import {
   classifyCleansingMissing,
   classifyExtractionMissing,
   computeCleansingReduction,
+  resolveCleansingBytes,
   type DiagnosticMissingReason,
 } from './historyEntryPresentation.js';
 
@@ -28,6 +29,15 @@ const MISSING_REASON_KEYS: Record<DiagnosticMissingReason, string> = {
 
 function missingReasonText(reason: DiagnosticMissingReason): string {
   return t(MISSING_REASON_KEYS[reason], []);
+}
+
+/**
+ * Single seam for missing-reason rows (PBI 2026-09-18-02).
+ * Owns the css class, the em-dash separator, and the escape of the
+ * locale-controlled reason text, so callers cannot drift apart.
+ */
+function pushReasonRow(parts: string[], titleKey: string, reason: DiagnosticMissingReason, cssClass: string, separator = ' — '): void {
+  parts.push(`<div class="${cssClass}">${t(titleKey, [])}${separator}${escapeHtml(missingReasonText(reason))}</div>`);
 }
 
 export function formatDate(date: Date): string {
@@ -129,36 +139,26 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
       parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${t('historyBytes', [])}: ${delta.label} (${t('historyReduction', [])} ${delta.cleansed - delta.original} / ${delta.percent}%)</div>`);
     } else {
       const reason = classifyExtractionMissing(entry);
-      if (reason) {
-        parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
-      }
+      if (reason) pushReasonRow(parts, 'historyContentExtraction', reason, 'history-entry-token-reduction');
     }
   } else {
     const reason = classifyExtractionMissing(entry);
-    if (reason) {
-      parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
-    }
+    if (reason) pushReasonRow(parts, 'historyContentExtraction', reason, 'history-entry-token-reduction');
   }
 
   if (entry.original_bytes != null || entry.cleansed_bytes != null) {
-    // PBI 2026-09-12-21: `??` instead of `||` — a legitimate 0-byte value
-    // must not fall through to the next fallback.
-    const contentOriginalB = (entry.original_bytes ?? entry.candidate_bytes) as number | null | undefined;
-    const contentCleansedB = (entry.cleansed_bytes ?? entry.original_bytes ?? entry.candidate_bytes) as number | null | undefined;
+    // Byte resolution lives in resolveCleansingBytes — never re-spell the chain here.
+    const { original: contentOriginalB, cleansed: contentCleansedB } = resolveCleansingBytes(entry);
     const cleansingDelta = describeDelta(contentOriginalB, contentCleansedB);
     if (cleansingDelta) {
       parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${t('historyBytes', [])}: ${cleansingDelta.label} (${t('historyReduction', [])} ${cleansingDelta.cleansed - cleansingDelta.original} / ${cleansingDelta.percent}%)</div>`);
     } else {
       const reason = classifyCleansingMissing(entry);
-      if (reason) {
-        parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
-      }
+      if (reason) pushReasonRow(parts, 'historyContentCleansing', reason, 'history-entry-token-reduction');
     }
   } else {
     const reason = classifyCleansingMissing(entry);
-    if (reason) {
-      parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${escapeHtml(missingReasonText(reason))}</div>`);
-    }
+    if (reason) pushReasonRow(parts, 'historyContentCleansing', reason, 'history-entry-token-reduction');
   }
 
   if (entry.masked_count != null || (entry.original_tokens != null && entry.cleansed_tokens != null)) {
@@ -180,15 +180,11 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
       parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${aiDelta.label} (${t('historyReduction', [])} ${aiDelta.cleansed - aiDelta.original} / ${aiDelta.percent}%)</div>`);
     } else {
       const reason = classifyAiSummaryMissing(entry);
-      if (reason) {
-        parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${escapeHtml(missingReasonText(reason))}</div>`);
-      }
+      if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
     }
   } else if (entry.ai_summary_original_bytes != null || entry.ai_summary_cleansed_bytes != null) {
     const reason = classifyAiSummaryMissing(entry);
-    if (reason) {
-      parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${escapeHtml(missingReasonText(reason))}</div>`);
-    }
+    if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
   }
 
   const progressBarHtml = buildCleansingProgressBarHtml(entry);

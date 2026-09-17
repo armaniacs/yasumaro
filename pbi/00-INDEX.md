@@ -14,6 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-18 arch-delivery-loop 第5ループ — ✅ 全2件完了（01/02 アーカイブ済み）
+
+Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260918-r18.html`）の2候補を RICE 採点して PBI 化。実行順 = 02（依存なし）。C2（getMessage 統一、RICE 2.5）は backlog 送り。台帳は `2026-09-18-00-backlog-archloop-0918.md`（アーカイブ済み）。
+
+- 2026-09-18-02-refactor-history-reason-row-seam.md（✅ 完了・アーカイブ済 — pushReasonRow と resolveCleansingBytes を新設し理由行 push 4複製と `??` 解決の二重所有を解消。AI Summary 行の `:` 区切りを維持して表示 byte-identical。resolveCleansingBytes 4 tests 新設）
+- 2026-09-18-01-fix-history-missing-reason.md（✅ 完了・アーカイブ済 — 前日実装分の DoD を検証してクローズ。理由行3分類の表示、既存テスト green、/review APPROVE。ユーザー向け説明は 6.9.5 の CHANGELOG に集約）
+
 ### 2026-09-17 arch-delivery-loop 第4ループ — ✅ 全3件完了（17/18/19 アーカイブ済み）
 
 Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260917-r17.html`）の3候補を RICE 採点して PBI 化。実行順 = 17 → 18 → 19（依存なし・ファイル非重複）。台帳は `2026-09-17-00-backlog-archloop-0917.md`。
