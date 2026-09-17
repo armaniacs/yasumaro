@@ -6,6 +6,7 @@ import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 
 import { getMessage } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
@@ -111,24 +112,26 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     if (!categoryName) return;
 
     if (categoryName.length > MAX_CATEGORY_NAME_LENGTH) {
-      alert(
-        getMessage('categoryNameTooLong') ||
-          `カテゴリ名が長すぎます（${MAX_CATEGORY_NAME_LENGTH}文字以内）`
-      );
+      void showAlertDialog({
+        message:
+          getMessage('categoryNameTooLong') ||
+          `カテゴリ名が長すぎます（${MAX_CATEGORY_NAME_LENGTH}文字以内）`,
+      });
       return;
     }
 
     if (INVALID_CATEGORY_CHARS.test(categoryName)) {
-      alert(
-        getMessage('categoryNameInvalidChars') ||
-          'カテゴリ名に使用できない文字が含まれています（|、# は使用不可）'
-      );
+      void showAlertDialog({
+        message:
+          getMessage('categoryNameInvalidChars') ||
+          'カテゴリ名に使用できない文字が含まれています（|、# は使用不可）',
+      });
       return;
     }
 
     const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];
     if (allCategories.includes(categoryName)) {
-      alert(getMessage('duplicateCategoryError') || 'このカテゴリ名は既に存在します');
+      void showAlertDialog({ message: getMessage('duplicateCategoryError') || 'このカテゴリ名は既に存在します' });
       return;
     }
 
@@ -190,7 +193,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     // Check for duplicates (case-insensitive, matching normalizeTags behavior)
     const normalizedFrom = from.trim().normalize('NFKC').toLowerCase();
     if (normalizationEntries.some(e => e.from.trim().normalize('NFKC').toLowerCase() === normalizedFrom)) {
-      alert(getMessage('duplicateNormEntryError') || 'このFrom値は既に登録されています');
+      void showAlertDialog({ message: getMessage('duplicateNormEntryError') || 'このFrom値は既に登録されています' });
       return;
     }
 

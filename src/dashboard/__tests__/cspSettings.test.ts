@@ -9,9 +9,19 @@ import { vi } from 'vitest';
 import type { Mock, MockedFunction } from 'vitest';
 
 // Mock dependencies before importing cspSettings
+// PBI 2026-09-17-19: the reset confirmation goes through the accessible
+// dialog seam, so the stub moved from global.confirm to the module mock.
+const { mockShowConfirmDialog } = vi.hoisted(() => ({
+  mockShowConfirmDialog: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: mockShowConfirmDialog,
+  showAlertDialog: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
+  const actual = (await importOriginal()) as Record<string, unknown>;  return {
     ...actual,
     StorageKeys: {
       CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
@@ -400,7 +410,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       } as any);
       (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
-      (global.confirm as Mock).mockReturnValue(true);
+      mockShowConfirmDialog.mockResolvedValueOnce(true);
 
       await cspSettings.loadCSPSettings();
 
@@ -421,7 +431,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       } as any);
       (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockClear();
-      (global.confirm as Mock).mockReturnValue(false);
+      mockShowConfirmDialog.mockResolvedValueOnce(false);
 
       await cspSettings.loadCSPSettings();
 
@@ -439,7 +449,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       } as any);
       (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
-      (global.confirm as Mock).mockReturnValue(true);
+      mockShowConfirmDialog.mockResolvedValueOnce(true);
 
       await cspSettings.loadCSPSettings();
 
@@ -462,8 +472,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       } as any);
       (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockResolvedValue(undefined);
-      (global.confirm as Mock).mockReturnValue(true);
-      (window as unknown as { confirm: unknown }).confirm = global.confirm;
+      mockShowConfirmDialog.mockResolvedValueOnce(true);
 
       await cspSettings.loadCSPSettings();
 
@@ -492,7 +501,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       } as any);
       (CSPValidator.getAvailableProviders as Mock).mockReturnValue([]);
       mockSetAll.mockRejectedValue(new Error('Reset error'));
-      (global.confirm as Mock).mockReturnValue(true);
+      mockShowConfirmDialog.mockResolvedValueOnce(true);
       mockAddLog.mockClear();
 
       await cspSettings.loadCSPSettings();

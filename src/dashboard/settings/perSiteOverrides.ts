@@ -68,9 +68,11 @@ async function loadOverrides(): Promise<DomainCleansingOverride[]> {
 }
 
 async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
-    const cur = await settingsRepository.getAll();
-    (cur as Record<string, unknown>)[StorageKeys.DOMAIN_CLEANSING_OVERRIDES] = next;
-    await settingsRepository.setAll(cur);
+    // Delta write (PBI 2026-09-17-17) — a fresh full read here would carry
+    // its staleness window into every other stored key.
+    await settingsRepository.setAll({
+        [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next,
+    });
 }
 
 function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], onSelect: (d: string) => void): void {

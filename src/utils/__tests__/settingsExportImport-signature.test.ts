@@ -25,10 +25,12 @@ function sanitizedSettings(overrides: Record<string, unknown> = {}): Record<stri
 }
 
 /**
- * 【テスト前準備】alert モックの設定
+ * 【テスト前準備】ダイアログ seam モックの設定
+ * （PBI 2026-09-17-19: utils はダイアログを開かない — 拒否は戻り値で伝わる。
+ *  モックは「UI 層がダイアログを出していないこと」の監視用に残す）
  */
 beforeEach(() => {
-    // 【モック設定】alert
+    // 【モック設定】accessible dialog seam（production は呼ばない）
     global.alert = vi.fn(() => {});
     global.confirm = vi.fn(() => false);
     // chrome.storage.localをクリア
@@ -66,10 +68,9 @@ describe('設定ファイル署名強化: signature enforcement（Greenフェー
         // 【結果検証】実装後：署名なしファイルは即時拒否
         expect(result).toBeNull(); // 【確認内容】: インポートが拒否されnullが返されたことを確認 🟢
 
-        // 【Greenフェーズ】署名なしファイルは即時アラートで拒否
-        expect(global.alert).toHaveBeenCalledWith(
-            expect.stringContaining('does not contain a signature')
-        ); // 【確認内容】: アラート（エラー）が表示されたことを確認 🟢
+        // 【PBI 2026-09-17-19】utils はダイアログを開かない — 拒否は戻り値で伝わり、
+        // importNoSignature の表示は UI 層（settingsExportImportUiCore）が担う
+        expect(global.alert).not.toHaveBeenCalled(); // 【確認内容】: utils からアラートを出していないこと 🟢
 
         // confirmダイアログが呼ばれていないことを確認（警告ダイアログなしで即時拒否）
         expect(global.confirm).not.toHaveBeenCalled(); // 【確認内容】: 確認ダイアログが表示されていないことを確認 🟢

@@ -19,6 +19,7 @@ import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from '../popup/errorUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 
 /** ライブプレビュー用のサンプルエントリ */
 const SAMPLE_ENTRIES: MarkdownTemplateEntryData[] = [
@@ -187,8 +188,10 @@ function createTemplateListItem(template: MarkdownExportTemplate, isActive: bool
 async function handleActivateClick(id: string): Promise<void> {
   if (!currentSettings) return;
 
+  // Delta write (PBI 2026-09-17-17) — only the active-template id enters the
+  // payload so the panel snapshot cannot revert unrelated keys.
   currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = id;
-  await settingsRepository.setAll(currentSettings);
+  await settingsRepository.set(StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID, id);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateActivated') || 'Template activated', 'success');
   renderTemplateList();
@@ -201,7 +204,12 @@ async function handleActivateClick(id: string): Promise<void> {
 async function handleDeleteClick(id: string): Promise<void> {
   if (!currentSettings) return;
 
-  if (!confirm(getMessage('markdownTemplateConfirmDelete') || 'Are you sure you want to delete this template?')) {
+  // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
+  const confirmed = await showConfirmDialog({
+    message: getMessage('markdownTemplateConfirmDelete') || 'Are you sure you want to delete this template?',
+    dangerous: true,
+  });
+  if (!confirmed) {
     return;
   }
 
@@ -209,12 +217,15 @@ async function handleDeleteClick(id: string): Promise<void> {
   const updated = deleteTemplate(stored, id);
   currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] = updated;
 
+  // Delta write (PBI 2026-09-17-17) — only the keys this action owns.
+  const delta: Partial<Settings> = { [StorageKeys.MARKDOWN_EXPORT_TEMPLATES]: updated };
   // If the deleted template was active, fall back to the default template.
   if (getActiveTemplateId() === id) {
     currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = DEFAULT_MARKDOWN_TEMPLATE.id;
+    delta[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = DEFAULT_MARKDOWN_TEMPLATE.id;
   }
 
-  await settingsRepository.setAll(currentSettings);
+  await settingsRepository.setAll(delta);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateDeleted') || 'Template deleted', 'success');
   renderTemplateList();
@@ -377,8 +388,9 @@ async function handleSaveClick(): Promise<void> {
     ];
   }
 
+  // Delta write (PBI 2026-09-17-17) — only the template list enters the payload.
   currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] = updated;
-  await settingsRepository.setAll(currentSettings);
+  await settingsRepository.set(StorageKeys.MARKDOWN_EXPORT_TEMPLATES, updated);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', 
     getMessage(editingTemplateId ? 'markdownTemplateUpdated' : 'markdownTemplateCreated')

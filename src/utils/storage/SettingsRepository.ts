@@ -179,22 +179,28 @@ export class SettingsRepository {
   }
 
   async set<K extends StorageKey>(key: K, value: SettingsType[K]): Promise<void> {
-    const current = await this.getAll();
-    const next = { ...current, [key]: value } as SettingsType;
-    await this.writeSettings(next);
+    // Delta write (PBI 2026-09-17-17): only this key enters the write payload.
+    // Spreading getAll() here used to carry repo-cache staleness into storage
+    // and silently revert unrelated keys a concurrent writer had changed.
+    await this.writeSettings({ [key]: value } as Partial<SettingsType>);
   }
 
+  /**
+   * Write the given keys as a delta: unspecified keys keep their stored
+   * values, re-read fresh under the write lock at save time. Do NOT pass a
+   * full cached snapshot — its unrelated keys would overwrite concurrent
+   * writers' changes with stale values (settings import is the intended
+   * full-payload case).
+   */
   async setAll(settings: Partial<SettingsType>, opts?: SettingsWriteOptions): Promise<void> {
-    const current = await this.getAll();
-    const next = { ...current, ...settings } as SettingsType;
-    await this.writeSettings(next, opts);
+    await this.writeSettings(settings, opts);
   }
 
-  private async writeSettings(settings: SettingsType, opts?: SettingsWriteOptions): Promise<void> {
+  private async writeSettings(delta: Partial<SettingsType>, opts?: SettingsWriteOptions): Promise<void> {
     const { API_KEY_FIELDS } = await import('./settingsMigration.js');
     const { encryptApiKey } = await import('../crypto/index.js');
     const { ensureStorageQuota } = await import('./storageMaintenance.js');
-    let toSave: Record<string, unknown> = { ...(settings as Record<string, unknown>) };
+    let toSave: Record<string, unknown> = { ...(delta as Record<string, unknown>) };
     const keyProvider = await this.resolveKeyProvider();
     try {
       const key = await keyProvider();

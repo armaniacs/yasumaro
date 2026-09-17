@@ -68,20 +68,21 @@ export async function loadContentSettings(): Promise<void> {
 
 async function saveContentSettings(): Promise<void> {
     try {
-        const settings = await settingsRepository.getAll();
-
+        // Delta write (PBI 2026-09-17-17) — only the keys this form owns enter
+        // the payload instead of a full getAll() snapshot.
+        const delta: Record<string, unknown> = {};
         const hardCb = getHardEnabledCheckbox();
         const keywordCb = getKeywordEnabledCheckbox();
         const kwTextarea = getKeywordsTextarea();
 
         // Hard Strip 有効化
         if (hardCb) {
-            settings[StorageKeys.CONTENT_STRIP_HARD_ENABLED] = hardCb.checked;
+            delta[StorageKeys.CONTENT_STRIP_HARD_ENABLED] = hardCb.checked;
         }
 
         // Keyword Strip 有効化
         if (keywordCb) {
-            settings[StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED] = keywordCb.checked;
+            delta[StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED] = keywordCb.checked;
         }
 
         // キーワードリスト
@@ -92,16 +93,16 @@ async function saveContentSettings(): Promise<void> {
                 .map(k => k.trim())
                 .filter(k => k.length > 0); // 空行を除外
 
-            settings[StorageKeys.CONTENT_STRIP_KEYWORDS] = keywords.length > 0 ? keywords : [...DEFAULT_KEYWORDS];
+            delta[StorageKeys.CONTENT_STRIP_KEYWORDS] = keywords.length > 0 ? keywords : [...DEFAULT_KEYWORDS];
         }
 
         // テキスト品質設定
-        settings[StorageKeys.CONTENT_DEDUP_ENABLED] = getDedupEnabledCheckbox()?.checked ?? true;
-        settings[StorageKeys.CONTENT_DEDUP_THRESHOLD] = parseFloat(getDedupThresholdSlider()?.value ?? '0.7');
-        settings[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = getNormalizeEnabledCheckbox()?.checked ?? true;
+        delta[StorageKeys.CONTENT_DEDUP_ENABLED] = getDedupEnabledCheckbox()?.checked ?? true;
+        delta[StorageKeys.CONTENT_DEDUP_THRESHOLD] = parseFloat(getDedupThresholdSlider()?.value ?? '0.7');
+        delta[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = getNormalizeEnabledCheckbox()?.checked ?? true;
 
         // 設定を保存
-        await settingsRepository.setAll(settings);
+        await settingsRepository.setAll(delta);
 
         // 成功メッセージを表示
         showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');

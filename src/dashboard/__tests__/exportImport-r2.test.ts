@@ -317,6 +317,7 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
     const testData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: {
         obsidian_protocol: 'https',
         obsidian_port: '27124',
@@ -353,6 +354,7 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
     const testData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: { obsidian_protocol: 'https' },
     };
 
@@ -389,6 +391,7 @@ describe('exportImport-r2 — confirmImportBtn exception', () => {
     const testData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: { obsidian_protocol: 'https' },
     };
 
@@ -438,6 +441,7 @@ describe('exportImport-r2 — closeImportModal trap management', () => {
     const testData = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
+      signature: 'test-signature',
       settings: { obsidian_protocol: 'https' },
     };
 

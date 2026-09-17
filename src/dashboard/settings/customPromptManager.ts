@@ -26,6 +26,7 @@ import { tryResolveCatalogEntry } from '../../background/ai/providerCatalog.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
 import { escapeHtml } from '../../popup/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { showConfirmDialog } from '../../utils/ui/confirmDialog.js';
 
 // Prompt ID prefix constants
 const PROMPT_ID = {
@@ -312,9 +313,11 @@ async function handleSavePrompt(): Promise<void> {
         showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptCreated') || 'Prompt created', 'success');
     }
 
-    // Save to settings
+    // Save to settings — delta write: only CUSTOM_PROMPTS enters the payload,
+    // so the panel's long-lived currentSettings snapshot cannot revert
+    // unrelated keys a concurrent writer changed (PBI 2026-09-17-17).
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-    await settingsRepository.setAll(currentSettings);
+    await settingsRepository.set(StorageKeys.CUSTOM_PROMPTS, prompts);
 
     // Reset form and re-render
     resetForm();
@@ -373,17 +376,21 @@ async function handleDeletePrompt(promptId: string): Promise<void> {
 
     if (!currentSettings) return;
 
-    // Confirm deletion
-    if (!confirm(getMessage('confirmDeletePrompt') || 'Are you sure you want to delete this prompt?')) {
+    // Confirm deletion — accessible dialog seam (PBI 2026-09-17-19)
+    const confirmed = await showConfirmDialog({
+      message: getMessage('confirmDeletePrompt') || 'Are you sure you want to delete this prompt?',
+      dangerous: true,
+    });
+    if (!confirmed) {
         return;
     }
 
     let prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
     prompts = deletePrompt(prompts, promptId);
 
-    // Save to settings
+    // Save to settings — delta write (PBI 2026-09-17-17)
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-    await settingsRepository.setAll(currentSettings);
+    await settingsRepository.set(StorageKeys.CUSTOM_PROMPTS, prompts);
 
     showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptDeleted') || 'Prompt deleted', 'success');
     renderPromptList();
@@ -446,9 +453,9 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
         showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
     }
 
-    // Save to settings
+    // Save to settings — delta write (PBI 2026-09-17-17)
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-    await settingsRepository.setAll(currentSettings);
+    await settingsRepository.set(StorageKeys.CUSTOM_PROMPTS, prompts);
 
     renderPromptList();
     applyI18n();

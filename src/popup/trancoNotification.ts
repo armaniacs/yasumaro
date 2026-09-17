@@ -1,9 +1,9 @@
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 /**
  * trancoNotification.ts
  * Tranco 更新通知バナー UI と同意処理
  */
 
+import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { logError, ErrorCode } from '../utils/logger.js';
@@ -74,14 +74,13 @@ async function initTrancoUpdateNotification(): Promise<void> {
 
 async function handleTrancoGrant(version: string): Promise<void> {
     try {
-        const settings = await settingsRepository.getAll();
-
-        const updatedSettings = { ...settings };
-        updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = version;
-        updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = null;
-        updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = null;
-
-        await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
+        // Delta write + domain filter cache refresh via the shared seam
+        // (PBI 2026-09-17-17; replaces the copy-pasted setAll+update IIFE)
+        await saveSettingsAndRefreshDomainFilterCache({
+            [StorageKeys.TRANCO_CONSENT_GRANTED]: version,
+            [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: null,
+            [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null,
+        });
 
         const banner = document.getElementById('trancoUpdateBanner');
         if (banner) {
@@ -96,14 +95,13 @@ async function handleTrancoGrant(version: string): Promise<void> {
 
 async function handleTrancoDeny(): Promise<void> {
     try {
-        const settings = await settingsRepository.getAll();
-
-        const updatedSettings = { ...settings };
-        updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = null;
-        updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = 'deny';
-        updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = Date.now();
-
-        await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
+        // Delta write + domain filter cache refresh via the shared seam
+        // (PBI 2026-09-17-17; replaces the copy-pasted setAll+update IIFE)
+        await saveSettingsAndRefreshDomainFilterCache({
+            [StorageKeys.TRANCO_CONSENT_GRANTED]: null,
+            [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: 'deny',
+            [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: Date.now(),
+        });
 
         const banner = document.getElementById('trancoUpdateBanner');
         if (banner) {
