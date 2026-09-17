@@ -38,6 +38,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.5] - 2026-09-18
+
+履歴の診断行が欠測時に理由を表示するようになりました（PBI 2026-09-18-01）。コンテンツ抽出・Content Cleansing の数値が出ない場合に行自体を消さず、「計測なし（AIなし記録）」「計測なし」「計測対象なし」の3分類で理由を示します。AI なし記録と旧バージョン記録と空ページの区別がつき、正常エントリの表示は変わりません。全テスト（12,251 件）がグリーンです。
+
+### Refactored
+
+- **履歴の理由行生成を seam に集約**（PBI 2026-09-18-02）: 理由行の組み立て 4 複製を `pushReasonRow` に、Cleansing のバイト解決を `resolveCleansingBytes` に集約し、View と判定側の二重所有を解消した。表示は不変で既存テストは無修正で通る
+
 ## [6.9.4] - 2026-09-18
 
 Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全テスト（12,222 件）がグリーンです。
