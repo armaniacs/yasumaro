@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-17 arch-delivery-loop 第4ループ — ✅ 全3件完了（17/18/19 アーカイブ済み）
+
+Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260917-r17.html`）の3候補を RICE 採点して PBI 化。実行順 = 17 → 18 → 19（依存なし・ファイル非重複）。台帳は `2026-09-17-00-backlog-archloop-0917.md`。
+
+- 2026-09-17-17-fix-settings-write-delta-contract.md（✅ 完了・アーカイブ済 — SettingsRepository の書き込みを delta 契約に（`set()` は単キー delta、`setAll(partial)` は「partial = delta」契約を JSDoc 明記）。stale full スナップショットが withLock の fresh base を上書きする経路を閉じる。full-snapshot writer 9 箇所（customPromptManager / markdownTemplateManager / domainFilter / trancoNotification / perSiteOverrides / cleansingPresetStore / contentSettings / models-dev-dialog / settingsPipeline）を移行し、setAll+updateDomainFilterCache の IIFE 3 重複を `saveSettingsAndRefreshDomainFilterCache` seam に集約。交差書き込み回帰テスト 4 tests 新設（settingsWriteDelta.test.ts））
+- 2026-09-17-18-refactor-dashboard-sqlite-validator-schema.md（✅ 完了・アーカイブ済 — DashboardSqliteValidator の per-subtype if-chain（約 85 行）を宣言的 schema テーブル `DASHBOARD_SQLITE_SUBTYPE_SPECS` に寄せ、stagingName try/catch 6 重複製を `stagingNameGuard` 1 箇所に集約（`STAGING_NAME_SUBTYPES` はテーブルから派生し drift 不能）。archive_query 上限 500 を `MAX_ARCHIVE_QUERY_LIMIT` として limits.ts SSOT に収録。既存テスト無修正でパス + 網羅性テスト 3 tests 新設）
+- 2026-09-17-19-refactor-native-dialogs-accessible-seam.md（✅ 完了・アーカイブ済 — ネイティブ confirm()/alert() 実測 11 箇所（Phase 0 の 8 箇所に cspSettings の window.confirm 追補）を `showConfirmDialog`/`showAlertDialog` seam に統一。showConfirmDialog を dashboard/utils から utils/ui に昇格し showAlertDialog を追加、utils 層の alert() 直呼びを除去し importNoSignature 表示を UI 層に移設。production のネイティブダイアログ 0 件を確認、テスト 10 ファイルを新契約に追従）
+
 ### 2026-09-17 コードレビュー追指摘の PBI 化 — ✅ 全4件完了（アーカイブ済み）
 
 arch-review-0917（10件・全件完了）の実装後の大局的レビューで発見した残課題（新設 SSOT の未採用経路）を PBI 化。NN は先行ラウンドの 01-10 から**継続採番**（日付内一意性と実行順の鍵を両立）。台帳は `2026-09-17-00-backlog-arch-review-0917b.md`。全件アーカイブ済み（アーカイブ履歴参照）。
