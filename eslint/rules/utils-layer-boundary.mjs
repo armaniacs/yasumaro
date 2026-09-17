@@ -41,6 +41,7 @@ const LAYER0_FILES = [
   'src/utils/types.ts',
   'src/utils/urlEntry.ts',
   'src/utils/luhn.ts',
+  'src/utils/urlHash.ts',
   'src/utils/backoff.ts',
   'src/utils/httpFailureMessages.ts',
 ];
