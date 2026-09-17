@@ -1,7 +1,7 @@
 // @layer 1 — Copy-markdown button factory (depends on Layer 0 only, no chrome.* dependency)
 
 import { copyTextToClipboard } from './clipboard.js';
-import { formatEntryToMarkdown } from './markdownFormatter.js';
+import { formatEntryToHeadingMarkdown } from './markdownFormatter.js';
 import type { BrowsingLogEntry } from './sqlite-types.js';
 
 /**
@@ -51,7 +51,7 @@ export function createCopyMarkdownButton(
   button.addEventListener('click', async () => {
     button.disabled = true;
     try {
-      const markdown = formatEntryToMarkdown(entry);
+      const markdown = formatEntryToHeadingMarkdown(entry);
       await copyTextToClipboard(markdown);
       button.textContent = labels.successText;
       if (labels.successAriaLabel !== undefined) {

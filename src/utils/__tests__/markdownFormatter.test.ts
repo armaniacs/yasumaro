@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { formatEntryToMarkdown, formatEntriesToGenericMarkdown, formatEntriesToMarkdown, buildEntryMarkdown } from '../markdownFormatter.js';
+import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList, buildEntryMarkdown } from '../markdownFormatter.js';
 import type { BrowsingLogEntry } from '../sqlite-types.js';
 
 const baseEntry: BrowsingLogEntry = {
@@ -17,77 +17,72 @@ const baseEntry: BrowsingLogEntry = {
 
 describe('markdownFormatter', () => {
   it('formats a single entry', () => {
-    const md = formatEntryToMarkdown(baseEntry);
+    const md = formatEntryToHeadingMarkdown(baseEntry);
     expect(md).toContain('# Example Article');
     expect(md).toContain('https://example.com/article');
     expect(md).toContain('This is a summary.');
     expect(md).toContain('#tech #ai');
   });
 
-  it('formats multiple entries', () => {
-    const md = formatEntriesToGenericMarkdown([baseEntry]);
-    expect(md).toContain('# Example Article');
+  it('formats multiple entries as obsidianList items joined by newlines', () => {
+    const entry2 = { ...baseEntry, id: 2, title: 'Second Article', tags: 'news' };
+    const md = formatEntriesToObsidianList([baseEntry, entry2]);
+    expect(md).toContain('[Example Article](https://example.com/article)');
+    expect(md).toContain('[Second Article](https://example.com/article)');
+    expect(md).not.toContain('---');
   });
 
   it('handles missing title', () => {
-    const md = formatEntryToMarkdown({ ...baseEntry, title: '' });
+    const md = formatEntryToHeadingMarkdown({ ...baseEntry, title: '' });
     expect(md).toContain('# https://example.com/article');
   });
 
   it('handles empty tags', () => {
-    const md = formatEntryToMarkdown({ ...baseEntry, tags: '' });
+    const md = formatEntryToHeadingMarkdown({ ...baseEntry, tags: '' });
     expect(md).toContain('# Example Article');
     expect(md).not.toContain('- Tags:');
   });
 
   it('filters out empty tag segments', () => {
-    const md = formatEntryToMarkdown({ ...baseEntry, tags: 'tech,' });
+    const md = formatEntryToHeadingMarkdown({ ...baseEntry, tags: 'tech,' });
     expect(md).toContain('- Tags: #tech');
     expect(md).not.toContain('# #');
   });
 
   it('handles missing tags', () => {
-    const md = formatEntryToMarkdown({ ...baseEntry, tags: undefined as unknown as string });
+    const md = formatEntryToHeadingMarkdown({ ...baseEntry, tags: undefined as unknown as string });
     expect(md).not.toContain('- Tags:');
   });
 
   it('uses fallback when summary is missing', () => {
-    const md = formatEntryToMarkdown({ ...baseEntry, summary: '' });
+    const md = formatEntryToHeadingMarkdown({ ...baseEntry, summary: '' });
     expect(md).toContain('Summary not available.');
   });
 
-  it('joins multiple entries with --- separator', () => {
-    const entry2 = { ...baseEntry, id: 2, title: 'Second Article', tags: 'news' };
-    const md = formatEntriesToGenericMarkdown([baseEntry, entry2]);
-    expect(md).toContain('\n---\n\n');
-    expect(md).toContain('# Example Article');
-    expect(md).toContain('# Second Article');
-  });
-
   it('returns empty string for empty array', () => {
-    expect(formatEntriesToGenericMarkdown([])).toBe('');
+    expect(formatEntriesToObsidianList([])).toBe('');
   });
 
   it('returns empty string for undefined/null input', () => {
-    expect(formatEntriesToGenericMarkdown(undefined as unknown as BrowsingLogEntry[])).toBe('');
-    expect(formatEntriesToGenericMarkdown(null as unknown as BrowsingLogEntry[])).toBe('');
+    expect(formatEntriesToObsidianList(undefined as unknown as BrowsingLogEntry[])).toBe('');
+    expect(formatEntriesToObsidianList(null as unknown as BrowsingLogEntry[])).toBe('');
   });
 
   it('escapes markdown links in title via sanitizeForObsidian', () => {
     const entry = { ...baseEntry, title: 'Read [more](https://example.com) here' };
-    const md = formatEntryToMarkdown(entry);
+    const md = formatEntryToHeadingMarkdown(entry);
     expect(md).toContain('# Read \\[more\\]\\(https://example.com\\) here');
   });
 
   it('escapes markdown links in URL via sanitizeForObsidian', () => {
     const entry = { ...baseEntry, url: 'https://example.com/[click](https://evil.com)' };
-    const md = formatEntryToMarkdown(entry);
+    const md = formatEntryToHeadingMarkdown(entry);
     expect(md).toContain('- URL: https://example.com/\\[click\\]\\(https://evil.com\\)');
   });
 
   it('escapes markdown links in tags via link-text + obsidian sanitizers', () => {
     const entry = { ...baseEntry, tags: '[promo](https://evil.com),ai' };
-    const md = formatEntryToMarkdown(entry);
+    const md = formatEntryToHeadingMarkdown(entry);
     // sanitizeForObsidian escapes the link, sanitizeForMarkdownLinkText escapes
     // the resulting brackets/parens a second time (join-boundary safety).
     expect(md).toContain('- Tags: #\\\\[promo\\\\]\\\\(https://evil.com\\\\) #ai');
@@ -95,7 +90,7 @@ describe('markdownFormatter', () => {
 
   it('escapes standalone ] in the title (link-text boundary safety)', () => {
     const title = 'Title with ] and #';
-    const md = formatEntryToMarkdown({ ...baseEntry, title });
+    const md = formatEntryToHeadingMarkdown({ ...baseEntry, title });
     expect(md).toContain('# Title with \\] and #');
   });
 });
@@ -112,8 +107,8 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     vi.useRealTimers();
   });
 
-  it('obsidianList delegates to the same output as formatEntriesToMarkdown', () => {
-    const viaPublic = formatEntriesToMarkdown([baseEntry]);
+  it('obsidianList delegates to the same output as formatEntriesToObsidianList', () => {
+    const viaPublic = formatEntriesToObsidianList([baseEntry]);
     const viaSSOT = buildEntryMarkdown(
       { title: baseEntry.title, url: baseEntry.url, summary: baseEntry.summary, appendedAt: FIXED_NOW },
       'obsidianList',
@@ -121,7 +116,7 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     expect(viaSSOT).toBe(viaPublic);
   });
 
-  it('heading delegates to the same output as formatEntryToMarkdown', () => {
+  it('heading delegates to the same output as formatEntryToHeadingMarkdown', () => {
     const viaSSOT = buildEntryMarkdown(
       {
         title: baseEntry.title,
@@ -133,7 +128,7 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
       'heading',
       { urlMode: 'obsidian' },
     );
-    expect(viaSSOT).toBe(formatEntryToMarkdown(baseEntry));
+    expect(viaSSOT).toBe(formatEntryToHeadingMarkdown(baseEntry));
   });
 
   it('plainLine renders a single line and omits a missing summary', () => {
