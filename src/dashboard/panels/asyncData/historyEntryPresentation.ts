@@ -45,3 +45,72 @@ export function computeCleansingReduction(entry: BrowsingLogEntry): CleansingRed
 
     return { base, sentToAI, sentRatio, reductionRatePercent };
 }
+
+/**
+ * Reason why a diagnostic row cannot show numbers.
+ *
+ * - 'no-ai': recorded without AI, so no bytes or tokens were measured.
+ * - 'empty': measurement ran but there was nothing to measure (0-byte side).
+ * - 'unmeasured': bytes are missing (legacy record, disabled cleansing, or
+ *   partial pipeline output). Generic wording to avoid misattribution.
+ */
+export type DiagnosticMissingReason = 'no-ai' | 'empty' | 'unmeasured';
+
+/**
+ * Entry-level classifier shared by the three diagnostic rows.
+ * Checks emptiness first so a 0-byte page is never labeled as legacy.
+ */
+export function classifyDiagnosticMissing(entry: BrowsingLogEntry): DiagnosticMissingReason {
+    if (
+        entry.page_bytes === 0 || entry.candidate_bytes === 0 ||
+        entry.original_bytes === 0 || entry.cleansed_bytes === 0 ||
+        entry.ai_summary_original_bytes === 0 || entry.ai_summary_cleansed_bytes === 0
+    ) {
+        return 'empty';
+    }
+    if (entry.sent_tokens == null && entry.received_tokens == null && entry.ai_provider == null) {
+        return 'no-ai';
+    }
+    return 'unmeasured';
+}
+
+/**
+ * Reason for a missing extraction row. Null when the row shows numbers.
+ * Row-specific emptiness takes precedence over the entry-level classifier.
+ */
+export function classifyExtractionMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
+    if (entry.page_bytes != null && entry.candidate_bytes != null && entry.page_bytes > 0) {
+        return null;
+    }
+    if (entry.page_bytes === 0 || entry.candidate_bytes === 0) return 'empty';
+    return classifyDiagnosticMissing(entry);
+}
+
+/**
+ * Reason for a missing cleansing row. Null when the row shows numbers.
+ * Follows the View's `??` chain without re-resolving it.
+ */
+export function classifyCleansingMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
+    if (entry.original_bytes == null && entry.cleansed_bytes == null) {
+        return classifyDiagnosticMissing(entry);
+    }
+    const original = entry.original_bytes ?? entry.candidate_bytes;
+    if (original === 0) return 'empty';
+    if (original == null || original <= 0) return classifyDiagnosticMissing(entry);
+    return null;
+}
+
+/**
+ * Reason for a missing AI summary cleansing row. Null when it shows numbers.
+ */
+export function classifyAiSummaryMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
+    if (
+        entry.ai_summary_original_bytes != null &&
+        entry.ai_summary_cleansed_bytes != null &&
+        entry.ai_summary_original_bytes > 0
+    ) {
+        return null;
+    }
+    if (entry.ai_summary_original_bytes === 0 || entry.ai_summary_cleansed_bytes === 0) return 'empty';
+    return classifyDiagnosticMissing(entry);
+}

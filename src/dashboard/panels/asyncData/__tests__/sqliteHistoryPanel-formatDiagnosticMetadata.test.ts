@@ -78,3 +78,100 @@ describe('formatDiagnosticMetadataHtml — AI プロバイダー/モデルの XS
     expect(html).not.toContain('(AI:');
   });
 });
+
+describe('formatDiagnosticMetadataHtml — missing diagnostic reason display', () => {
+  // NOTE: chrome.i18n mock resolves keys to en messages, so assertions use
+  // the English wording (Content Extraction, No measurement, ...).
+  const baseEntry: BrowsingLogEntry = {
+    id: 1,
+    url: 'https://example.com',
+    title: 'Example',
+    created_at: 1700000000000,
+  };
+
+  it('shows no-ai reasons for extraction and cleansing when the entry has nothing', () => {
+    const html = formatDiagnosticMetadataHtml({ ...baseEntry });
+    expect(html).toContain('Content Extraction');
+    expect(html).toContain('Content Cleansing');
+    expect(html).toContain('recorded without AI');
+  });
+
+  it('does not add an AI summary reason row when both AI summary sides are absent', () => {
+    const html = formatDiagnosticMetadataHtml({ ...baseEntry });
+    expect(html).not.toContain('AI Summary Cleansing');
+  });
+
+  it('shows unmeasured reasons for a legacy partial entry with tokens but no bytes', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      sent_tokens: 495,
+      received_tokens: 49,
+      ai_provider: 'openai',
+    });
+    expect(html).toContain('Content Extraction');
+    expect(html).toContain('No measurement');
+    expect(html).not.toContain('recorded without AI');
+  });
+
+  it('shows empty reasons when page bytes are zero', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      page_bytes: 0,
+      candidate_bytes: 0,
+    });
+    expect(html).toContain('Nothing to measure');
+  });
+
+  it('keeps numeric display for a normal entry without reason rows', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      sent_tokens: 1483,
+      page_bytes: 2300000,
+      candidate_bytes: 9400,
+      original_bytes: 9400,
+      cleansed_bytes: 8800,
+      ai_summary_original_bytes: 900,
+      ai_summary_cleansed_bytes: 800,
+    });
+    expect(html).toContain('Bytes');
+    expect(html).not.toContain('No measurement');
+    expect(html).not.toContain('Nothing to measure');
+  });
+
+  it('keeps numeric display for small but positive fallback-like bytes', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      page_bytes: 500,
+      candidate_bytes: 400,
+      original_bytes: 400,
+      cleansed_bytes: 400,
+    });
+    expect(html).toContain('Bytes');
+    expect(html).not.toContain('No measurement');
+    expect(html).not.toContain('Nothing to measure');
+  });
+
+  it('shows an AI summary reason when only one side is present', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      sent_tokens: 100,
+      ai_provider: 'openai',
+      page_bytes: 2000,
+      candidate_bytes: 1000,
+      original_bytes: 1000,
+      cleansed_bytes: 900,
+      ai_summary_original_bytes: 900,
+    });
+    expect(html).toContain('AI Summary Cleansing');
+    expect(html).toContain('No measurement');
+  });
+
+  it('escapes a malicious provider name inside reason rows', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      ai_provider: '<svg onload=alert(1)>',
+    });
+    expect(html).not.toContain('<svg onload=alert(1)>');
+    expect(html).toContain('Content Extraction');
+  });
+});

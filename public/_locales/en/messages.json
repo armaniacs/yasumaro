@@ -3179,6 +3179,15 @@
   "historyAiSummaryCleansing": {
     "message": "AI Summary Cleansing"
   },
+  "historyMissingReasonNoAi": {
+    "message": "No measurement (recorded without AI)"
+  },
+  "historyMissingReasonUnmeasured": {
+    "message": "No measurement"
+  },
+  "historyMissingReasonEmpty": {
+    "message": "Nothing to measure"
+  },
   "trancoUpdateNotificationTitle": {
     "message": "Tranco Trusted Domains Update"
   },

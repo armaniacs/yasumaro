@@ -3094,6 +3094,15 @@
   "historyAiSummaryCleansing": {
     "message": "AI要約クレンジング"
   },
+  "historyMissingReasonNoAi": {
+    "message": "計測なし（AIなし記録）"
+  },
+  "historyMissingReasonUnmeasured": {
+    "message": "計測なし"
+  },
+  "historyMissingReasonEmpty": {
+    "message": "計測対象なし"
+  },
   "trancoUpdateNotificationTitle": {
     "message": "Tranco信頼ドメインリストの更新"
   },
