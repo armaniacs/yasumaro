@@ -5,7 +5,10 @@ import {
   ManualRecordValidator,
   ValidationError,
   VALIDATOR_LIMITS,
+  STAGING_NAME_SUBTYPES,
 } from '../validators.js';
+import { MAX_ARCHIVE_QUERY_LIMIT } from '../limits.js';
+import { ALL_DASHBOARD_SQLITE_SUBTYPES } from '../sqliteOperationSecurity.js';
 
 const manual = (payload: Record<string, unknown>, type = 'MANUAL_RECORD') => ({
   type,
@@ -108,5 +111,78 @@ describe('Message payload size limits', () => {
     const ids = Array.from({ length: VALIDATOR_LIMITS.MAX_APPEND_IDS + 1 }, (_, i) => i);
     expect(() => v.validate({ subtype: 'append_to_obsidian', ids })).toThrow(ValidationError);
     expect(() => v.validate({ subtype: 'append_to_obsidian', ids: [1, 2] })).not.toThrow();
+  });
+
+  it('archive_query limit is bounded by the limits.ts registry, not a local literal (PBI 2026-09-17-18)', () => {
+    const v = new DashboardSqliteValidator();
+    const name = 'archive_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    expect(VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT).toBe(MAX_ARCHIVE_QUERY_LIMIT);
+    expect(() =>
+      v.validate({ subtype: 'archive_query', stagingName: name, query: '', limit: MAX_ARCHIVE_QUERY_LIMIT, offset: 0 }),
+    ).not.toThrow();
+    expect(() =>
+      v.validate({ subtype: 'archive_query', stagingName: name, query: '', limit: MAX_ARCHIVE_QUERY_LIMIT + 1, offset: 0 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ subtype: 'archive_query', stagingName: name, query: '', limit: 0, offset: 0 }),
+    ).toThrow(ValidationError);
+  });
+});
+
+describe('Staging-name subtype coverage (PBI 2026-09-17-18)', () => {
+  const v = new DashboardSqliteValidator();
+  const validName = 'archive_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+
+  it('pins the staging-name subtype set — a new staging subtype must extend this list consciously', () => {
+    expect(STAGING_NAME_SUBTYPES).toEqual([
+      'archive_export',
+      'archive_delete_by_staging',
+      'archive_open',
+      'archive_save',
+      'archive_close',
+      'archive_restore_preview',
+      'archive_restore',
+      'archive_query',
+      'archive_update',
+    ]);
+  });
+
+  it('every staging subtype routes through the single decode guard', () => {
+    for (const subtype of STAGING_NAME_SUBTYPES) {
+      expect(() => v.validate({ subtype, stagingName: 'yasumaro.db' })).toThrow(/stagingName/);
+    }
+  });
+
+  it('every known subtype either enforces required fields or is a consciously field-less op', () => {
+    // The spec table is not exported; this pins its completeness observably:
+    // the subtypes that validate with an EMPTY payload are exactly this list
+    // (ops that take no wire fields). If a schema row ever stopped firing,
+    // its subtype would silently join this set and fail the pin.
+    const FIELDLESS_SUBTYPES = [
+      'query',
+      'migrate',
+      'clear_all',
+      'get_count',
+      'status',
+      'cleanup_legacy',
+      'backfill_metadata',
+      'resync_legacy',
+      'backup_db',
+      'purge_now',
+      'content_purge_now',
+      'audit_log_query',
+      'archive_cleanup',
+      'archive_prepare_incoming',
+      'archive_status',
+    ];
+    const fieldless = ALL_DASHBOARD_SQLITE_SUBTYPES.filter((subtype) => {
+      try {
+        v.validate({ subtype });
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    expect(fieldless).toEqual(FIELDLESS_SUBTYPES);
   });
 });
