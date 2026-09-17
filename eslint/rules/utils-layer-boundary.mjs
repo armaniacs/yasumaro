@@ -16,7 +16,10 @@
  *
  * The layer file lists below are the single source of truth (SSOT) for the
  * mechanical check. dev-docs/LAYERS.md documents the mapping in its
- * "Mechanical enforcement" section.
+ * "Mechanical enforcement" section. Drift between these lists and the LAYERS.md
+ * classification tables is reported by `npm run lint:layers-docs`
+ * (scripts/lint-layers-docs.mjs); legitimate docs-only entries live in that
+ * script's DOCS_ONLY_ALLOWLIST.
  */
 
 const LAYER0_FILES = [

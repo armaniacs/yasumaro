@@ -33,7 +33,8 @@ export default [
       // purity, Layer 1 -> Layer 2 static import ban). Layer lists are the
       // SSOT in eslint/rules/utils-layer-boundary.mjs; see
       // dev-docs/LAYERS.md "Mechanical enforcement". The single allow entry
-      // below is provisional (no ADR yet) — see LAYERS.md.
+      // below is provisional per ADR 2026-09-17-defaults-cleansing-rules-provisional-allow
+      // (value derivation only; re-review on its retrigger conditions) — see LAYERS.md.
       'local/utils-layer-boundary': [
         'error',
         {
