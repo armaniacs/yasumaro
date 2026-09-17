@@ -111,11 +111,19 @@ export class ManualContentFetcher {
 
         if (targetTabId) {
           await new Promise<void>((resolve) => {
-            const timeout = setTimeout(resolve, TAB_LOAD_TIMEOUT_MS);
+            const cleanup = (): void => {
+              clearTimeout(timeout);
+              chrome.tabs.onUpdated.removeListener(listener);
+            };
+            const timeout = setTimeout(() => {
+              // PBI 2026-09-17-16: the timeout path used to leave the listener
+              // registered, accumulating one listener per manual fetch.
+              cleanup();
+              resolve();
+            }, TAB_LOAD_TIMEOUT_MS);
             const listener = (tabId: number, info: { status?: string }): void => {
               if (tabId === targetTabId && info.status === 'complete') {
-                clearTimeout(timeout);
-                chrome.tabs.onUpdated.removeListener(listener);
+                cleanup();
                 resolve();
               }
             };
