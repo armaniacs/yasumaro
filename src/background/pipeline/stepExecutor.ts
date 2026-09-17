@@ -37,6 +37,7 @@ export class StepExecutor {
       } catch (error) {
         if (step.errorStrategy === ErrorStrategy.RETRY && retries < (step.maxRetries || 0)) {
           retries++;
+          // retries は 1-origin の legacy 系列再現のため -1 しない（parity テストで pin）。
           const delayMs = backoffDelayMs(retries, { baseMs: 1000, maxMs: 5000 });
           addLog(LogType.INFO, `Retrying step ${step.name} (attempt ${retries}/${step.maxRetries})`, {
             delayMs,
@@ -71,7 +72,16 @@ export class StepExecutor {
     const payload = extractOfflinePayload(context);
 
     try {
-      await this.offlineNetworkQueue!.enqueue({ type, payload });
+      // enqueue は失敗時に false を返し throw しない（PBI 2026-09-17-15）。
+      const queued = await this.offlineNetworkQueue!.enqueue({ type, payload });
+      if (!queued) {
+        addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
+          url: context.data.url,
+          type,
+          traceId: context.traceId,
+        });
+        return;
+      }
       addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${step.name}`, {
         url: context.data.url,
         type,

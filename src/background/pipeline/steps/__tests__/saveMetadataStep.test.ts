@@ -41,7 +41,7 @@ vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal
 });;
 
 vi.mock('../../../pendingChromeStorageQueue.js', () => ({
-  enqueuePendingWrite: vi.fn().mockResolvedValue(undefined),
+  enqueuePendingWrite: vi.fn().mockResolvedValue(true),
 }));
 
 import { saveMetadataStep } from '../saveMetadataStep.js';
@@ -282,6 +282,40 @@ describe('saveMetadataStep', () => {
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(warnCalls.length).toBeGreaterThan(0);
+    });
+
+    it('logs ERROR when the save fails and the queue cannot persist either (double failure)', async () => {
+      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (pendingQueue.enqueuePendingWrite as Mock).mockResolvedValueOnce(false);
+
+      const context = makeContext({
+        data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
+        privacyResult: { summary: '', maskedCount: 2 } as any,
+      });
+
+      await saveMetadataStep(context);
+
+      const errorCalls = (logger.addLog as Mock).mock.calls.filter(
+        (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to queue metadata patch for retry')
+      );
+      expect(errorCalls.length).toBe(1);
+    });
+
+    it('logs no queue ERROR when the fallback queue persists', async () => {
+      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (pendingQueue.enqueuePendingWrite as Mock).mockResolvedValueOnce(true);
+
+      const context = makeContext({
+        data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
+        privacyResult: { summary: '', maskedCount: 2 } as any,
+      });
+
+      await saveMetadataStep(context);
+
+      const errorCalls = (logger.addLog as Mock).mock.calls.filter(
+        (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to queue metadata patch for retry')
+      );
+      expect(errorCalls.length).toBe(0);
     });
 
     it('logs no WARN when all succeed', async () => {

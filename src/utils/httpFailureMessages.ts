@@ -18,9 +18,12 @@
  * intentionally ignores the Obsidian/GitHub domain presets: the parse path
  * never branched on them, so every label uses the generic template.
  */
+/** Known legacy-compat presets; any other label uses the generic template. */
+export type HttpFailureDomain = 'Obsidian' | 'GitHub' | (string & {});
+
 export function describeHttpFailure(
   status: number,
-  domainLabel: string,
+  domainLabel: HttpFailureDomain,
   variant: 'connection' | 'parse' = 'connection',
 ): string {
   if (variant === 'parse') {

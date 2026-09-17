@@ -255,9 +255,8 @@ export class ObsidianClient {
                 addLog(LogType.ERROR, `Connection test failed: ${errorMsg}`);
 
                 // 具体的なHTTPステータスコードに基づくエラーメッセージ
-                if (response.status === 401 || response.status === 403) {
-                    return { success: false, message: describeHttpFailure(response.status, 'Obsidian') };
-                } else if (response.status === 404) {
+                // 401/403/404 は同一 SSOT 文言のため一本化（分岐が必要になったら再分割する）。
+                if ([401, 403, 404].includes(response.status)) {
                     return { success: false, message: describeHttpFailure(response.status, 'Obsidian') };
                 } else {
                     return { success: false, message: `Connection failed: ${errorMsg}` };
