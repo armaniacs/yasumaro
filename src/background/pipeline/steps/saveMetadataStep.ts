@@ -36,7 +36,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
     addLog(LogType.WARN, 'Failed to save URL entry metadata', {
       error: errorMessage(error), url: common.url, traceId: context.traceId
     });
-    await enqueuePendingWrite({
+    const queued = await enqueuePendingWrite({
       type: 'metadataPatch',
       key: 'savedUrlsWithTimestamps',
       url: common.url,
@@ -47,6 +47,14 @@ export const saveMetadataStep: PipelineStepFunction = async (
       createdAt: Date.now(),
       retryCount: 0,
     });
+    if (!queued) {
+      // Double failure: the primary save failed and even the fallback queue
+      // could not persist the patch. Report it instead of pretending the
+      // metadata survived; the original WARN above stays the root cause.
+      addLog(LogType.ERROR, 'Failed to queue metadata patch for retry', {
+        url: common.url, traceId: context.traceId
+      });
+    }
   }
 
   return context;

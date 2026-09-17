@@ -7,6 +7,7 @@
  */
 
 import { addLog, LogType } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
 import {
   MAX_PATCH_PAYLOAD_BYTES,
@@ -65,15 +66,14 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
   });
 
   return {
-    async enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
+    async enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<boolean> {
       // Metadata patches coalesce by URL inside the queue lock (mutate) —
       // never as a load()/save() pair, which races flush by construction
       // (VULN-056). Plain writes keep the capped enqueue path.
       if (isMetadataPatchWrite(write)) {
-        await queue.mutate((writes) => coalesceMetadataPatch(writes, write));
-        return;
+        return queue.mutate((writes) => coalesceMetadataPatch(writes, write));
       }
-      await queue.enqueue(write);
+      return queue.enqueue(write);
     },
 
     async flushPendingWrites(
@@ -82,7 +82,17 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
       // PBI 2026-09-12-20: measure inside the flush, not from a pre-flush
       // snapshot. `flush` reloads the queue under the lock, so items enqueued
       // mid-flush made `writes.length - stillPending.length` go negative.
-      const before = await queue.load();
+      let before: QueuedChromeStorageWrite[];
+      try {
+        before = await queue.load();
+      } catch (error) {
+        // A failed load must not be mistaken for an empty queue; the persisted
+        // snapshot stays intact and the next flush cycle retries it.
+        addLog(LogType.ERROR, 'pendingChromeStorageQueue: failed to load queue for flush', {
+          error: errorMessage(error),
+        });
+        return;
+      }
       if (before.length === 0) return;
 
       const stillPending = await queue.flush(retryFn);
@@ -125,15 +135,15 @@ export function setPendingWriteQueue(queue: ReturnType<typeof createPendingWrite
 
 /**
  * Queue a chrome.storage.local write that failed. Best-effort: a queue
- * write failure is logged but not thrown, so it never masks the original
- * write failure.
+ * write failure is logged and reported via the returned false, so it never
+ * masks or replaces the original write failure.
  *
  * Metadata patches are coalesced by URL: when an existing patch for the
  * same URL is already queued, the two patches are merged (latest timestamp
  * wins, tags are combined when mergeTags is enabled) instead of appending
  * a duplicate entry.
  */
-export function enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<void> {
+export function enqueuePendingWrite(write: QueuedChromeStorageWrite): Promise<boolean> {
   return getActiveQueue().enqueuePendingWrite(write);
 }
 

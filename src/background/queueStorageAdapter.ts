@@ -6,6 +6,12 @@
 
 /**
  * Storage adapter interface for queue persistence.
+ *
+ * Both methods may REJECT on storage failure (quota exceeded, transient I/O
+ * error, ...). The adapter deliberately does not swallow errors: swallowing
+ * made the last-resort queue lose data silently (PBI 2026-09-17-15). Failure
+ * handling (structured logging, no-masking semantics for the caller's original
+ * error) is owned by PersistentRetryQueue, not by the adapter.
  */
 export interface QueueStorageAdapter {
   load<T>(key: string): Promise<T[]>;
@@ -13,28 +19,18 @@ export interface QueueStorageAdapter {
 }
 
 /**
- * Chrome storage.local adapter.
- * Best-effort: load failures return empty array, save failures are logged
- * but not thrown, so they never mask the caller's original failure.
+ * Chrome storage.local adapter. Rejects on storage failure; the queue turns
+ * rejections into structured logs and best-effort flow control.
  */
 export class ChromeStorageAdapter implements QueueStorageAdapter {
   async load<T>(key: string): Promise<T[]> {
-    try {
-      const result = await chrome.storage.local.get(key);
-      const stored = result[key];
-      return Array.isArray(stored) ? (stored as T[]) : [];
-    } catch (error) {
-      console.error(`[queue] failed to load ${key}:`, error);
-      return [];
-    }
+    const result = await chrome.storage.local.get(key);
+    const stored = result[key];
+    return Array.isArray(stored) ? (stored as T[]) : [];
   }
 
   async save<T>(key: string, items: T[]): Promise<void> {
-    try {
-      await chrome.storage.local.set({ [key]: items });
-    } catch (error) {
-      console.error(`[queue] failed to save ${key}:`, error);
-    }
+    await chrome.storage.local.set({ [key]: items });
   }
 }
 
