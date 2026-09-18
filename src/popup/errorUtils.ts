@@ -125,15 +125,12 @@ function getMsgWithCache(key: keyof MessagesCache | string, substitutions?: stri
     messagesCacheLocale = locale;
   }
 
-  // Type guard or casting to keyof MessagesCache if key is one of the cached keys
-  if (key === 'connectionError') return messagesCache.connectionError;
-  if (key === 'domainBlockedError') return messagesCache.domainBlockedError;
-  if (key === 'errorPrefix') return messagesCache.errorPrefix;
-  if (key === 'success') return messagesCache.success;
-  if (key === 'cancelled') return messagesCache.cancelled;
-  if (key === 'unknownError') return messagesCache.unknownError;
-  if (key === 'forceRecord') return messagesCache.forceRecord;
-  if (key === 'recording') return messagesCache.recording;
+  // PBI 2026-09-18-18: the 8-branch if-chain was a hand-maintained type
+  // guard over the same key set the cache literal already enumerates —
+  // one `in` lookup keeps the two in lockstep by construction.
+  if (key in messagesCache) {
+    return messagesCache[key as keyof MessagesCache];
+  }
 
   return chrome.i18n.getMessage(key, substitutions);
 }
