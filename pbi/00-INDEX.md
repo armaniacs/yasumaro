@@ -58,6 +58,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 ### 将来候補の統合台帳（live）
 
+- [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic-0918.md) — 大局的コード改善 0918 の台帳（6候補の RICE 表・実行順・依存マップ・バッチ計画・5 Whys）
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
 - [2026-09-15-00-backlog-archloop-0915.md](2026-09-15-00-backlog-archloop-0915.md) — arch-delivery-loop 第1回診断の11候補のうち、PBI 化しなかった残り
 - [2026-09-15-00-backlog-archloop-0915b.md](2026-09-15-00-backlog-archloop-0915b.md) — 第2回診断の8候補のうち、PBI 化しなかった残り（合成ルート 7.0 は PBI 17 として実施済み・reviewSummary 2.5 / SessionStore durability 1.9 は未着手）
@@ -88,6 +89,19 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-18 大局的コード改善（holistic-0918） — ✅ 全6件完了（05〜10 アーカイブ済み）
+
+大局的レビュー（DRY / SoC / 拡張性 / 堅牢性・実コード裏取り）で抽出した6候補を RICE 採点して PBI 化。実行順 = 05 → 06 → 07 → 08 → 09 → 10（06→10 は同一ファイルのため直列1コミットに集約、08→09 は同点時のリスク優先）。台帳は `2026-09-18-00-backlog-holistic-0918.md`（live）。統合検証で2件の失敗を検出・即修正（dashboardSqliteService の console 期待を新 logger seam に追従、6.9.6 bump 漏れの docs/version.json と package-lock を追従）。
+
+- 2026-09-18-05-refactor-validators-shared-checks.md（✅ 完了・アーカイブ済 — protocolVersion・http(s) URL・content上限の3検査を helper に集約。parity 3 tests 新設）
+- 2026-09-18-06-fix-confirmtoken-silent-catch.md（✅ 完了・アーカイブ済 — confirmToken 系 catch と gateway の console 直呼びを logger seam に統一。可視化 2+3 tests 新設）
+- 2026-09-18-07-refactor-visit-admission-twins.md（✅ 完了・アーカイブ済 — backoffOnce と loadExtractorBestEffort に集約。parity 2 tests 新設）
+- 2026-09-18-08-refactor-sqlite-purge-twins.md（✅ 完了・アーカイブ済 — runPlannedPurge/runById/runPlannedQuery に集約し呼び出し arity を維持。parity 3 tests 新設）
+- 2026-09-18-09-refactor-ai-extract-guards.md（✅ 完了・アーカイブ済 — failInvalidSchema と buildTestDebugBase を基底に新設し両 provider から委譲。parity 2 tests 新設）
+- 2026-09-18-10-refactor-dashboard-transport-wiring.md（✅ 完了・アーカイブ済 — TransportPort 注入点を追加し既定は現行送信を維持。注入 port 3 tests 新設）
+
+最終検証: type-check / lint 0 errors（警告134・増加なし）/ test 12,273 passed（780 files）/ build PASS / lint:adr-links・layers-docs PASS。
 
 ### 2026-09-18 archloop-0915b 残り将来候補の PBI 化 — 2件完了（03・04）
 
