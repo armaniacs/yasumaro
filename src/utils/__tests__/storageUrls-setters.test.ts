@@ -206,7 +206,7 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
 
 describe('computeUrlsHash', () => {
   it('computes the hash of URLs', async () => {
-    const { computeUrlsHash } = await import('../storageUrls.js');
+    const { computeUrlsHash } = await import('../storage/urlWhitelist.js');
 
     const urls = new Set(['https://b.com', 'https://a.com']);
     const hash = computeUrlsHash(urls);
@@ -215,7 +215,7 @@ describe('computeUrlsHash', () => {
   });
 
   it('returns an empty string for an empty set', async () => {
-    const { computeUrlsHash } = await import('../storageUrls.js');
+    const { computeUrlsHash } = await import('../storage/urlWhitelist.js');
 
     const hash = computeUrlsHash(new Set());
 

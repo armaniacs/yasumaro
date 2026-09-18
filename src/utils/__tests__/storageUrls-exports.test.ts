@@ -189,12 +189,12 @@ import {
     removeSavedUrl,
     isUrlSaved,
     getSavedUrlCount,
-    computeUrlsHash,
     updateSavedUrlEntry,
     setUrlTags,
     addUrlTag,
     removeUrlTag
 } from '../storageUrls.js';
+import { computeUrlsHash } from '../storage/urlWhitelist.js';
 
 describe('storageUrls exports', () => {
 
