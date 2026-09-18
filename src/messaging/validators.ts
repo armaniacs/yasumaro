@@ -72,6 +72,46 @@ export const VALIDATOR_LIMITS = {
 } as const;
 
 // ------------------------------------------------------------------
+// Shared wire checks (PBI 2026-09-18-05): protocolVersion, http(s) URL,
+// and content-length rejections used to be copy-pasted across the three
+// validators below. The messages and fields are pinned by
+// validators-shared-checks-parity.test.ts — keep them byte-identical.
+// ------------------------------------------------------------------
+function assertProtocolVersion(m: Record<string, unknown>, validatorName: string): void {
+  if ('protocolVersion' in m && typeof m.protocolVersion !== 'number') {
+    throw new ValidationError(validatorName, 'protocolVersion must be a number', 'protocolVersion');
+  }
+}
+
+function assertHttpUrl(raw: unknown, validatorName: string): URL {
+  if (typeof raw !== 'string' || raw.length === 0) {
+    throw new ValidationError(validatorName, 'payload.url must be non-empty string', 'url');
+  }
+  // Basic URL shape check — detailed SSRF is handled by ssrfGuard downstream.
+  // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
+  try {
+    const parsed = new URL(raw);
+    if (!isHttpScheme(parsed.protocol)) {
+      throw new ValidationError(validatorName, 'payload.url must be http or https', 'url');
+    }
+    return parsed;
+  } catch (e) {
+    if (e instanceof ValidationError) throw e;
+    throw new ValidationError(validatorName, 'payload.url must be valid URL', 'url');
+  }
+}
+
+function assertContentLength(text: string, validatorName: string): void {
+  if (text.length > VALIDATOR_LIMITS.MAX_CONTENT_LENGTH) {
+    throw new ValidationError(
+      validatorName,
+      `payload.content exceeds ${VALIDATOR_LIMITS.MAX_CONTENT_LENGTH} chars`,
+      'content',
+    );
+  }
+}
+
+// ------------------------------------------------------------------
 // ServiceWorkerRequestValidator — generic ExtensionMessage validation
 // ------------------------------------------------------------------
 export class ServiceWorkerRequestValidator implements MessageValidator<ExtensionMessage> {
@@ -105,16 +145,12 @@ export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> 
     if (payload.content.length === 0) {
       throw new ValidationError('ValidVisitValidator', 'payload.content must not be empty', 'content');
     }
-    if (payload.content.length > VALIDATOR_LIMITS.MAX_CONTENT_LENGTH) {
-      throw new ValidationError('ValidVisitValidator', `payload.content exceeds ${VALIDATOR_LIMITS.MAX_CONTENT_LENGTH} chars`, 'content');
-    }
+    assertContentLength(payload.content, 'ValidVisitValidator');
     if (payload.force !== undefined && typeof payload.force !== 'boolean') {
       throw new ValidationError('ValidVisitValidator', 'payload.force must be boolean', 'force');
     }
     // VALID_MESSAGE_TYPES check already ensures type is known, but verify protocolVersion if present
-    if ('protocolVersion' in m && typeof m.protocolVersion !== 'number') {
-      throw new ValidationError('ValidVisitValidator', 'protocolVersion must be a number', 'protocolVersion');
-    }
+    assertProtocolVersion(m, 'ValidVisitValidator');
     return msg as ValidVisitMessage;
   }
 }
@@ -394,23 +430,8 @@ export class FetchUrlValidator implements MessageValidator<FetchUrlMessage> {
       throw new ValidationError('FetchUrlValidator', 'payload is required', 'payload');
     }
     const payload = m.payload as Record<string, unknown>;
-    if (typeof payload.url !== 'string' || payload.url.length === 0) {
-      throw new ValidationError('FetchUrlValidator', 'payload.url must be non-empty string', 'url');
-    }
-    // Basic URL shape check — detailed SSRF is handled by ssrfGuard downstream
-    // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
-    try {
-      const parsed = new URL(payload.url);
-      if (!isHttpScheme(parsed.protocol)) {
-        throw new ValidationError('FetchUrlValidator', 'payload.url must be http or https', 'url');
-      }
-    } catch (e) {
-      if (e instanceof ValidationError) throw e;
-      throw new ValidationError('FetchUrlValidator', 'payload.url must be valid URL', 'url');
-    }
-    if ('protocolVersion' in m && typeof m.protocolVersion !== 'number') {
-      throw new ValidationError('FetchUrlValidator', 'protocolVersion must be a number', 'protocolVersion');
-    }
+    assertHttpUrl(payload.url, 'FetchUrlValidator');
+    assertProtocolVersion(m, 'FetchUrlValidator');
     return msg as FetchUrlMessage;
   }
 }
@@ -438,27 +459,15 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
     if (payload.title.length > VALIDATOR_LIMITS.MAX_TITLE_LENGTH) {
       throw new ValidationError('ManualRecordValidator', `payload.title exceeds ${VALIDATOR_LIMITS.MAX_TITLE_LENGTH} chars`, 'title');
     }
-    if (typeof payload.url !== 'string' || payload.url.length === 0) {
-      throw new ValidationError('ManualRecordValidator', 'payload.url must be non-empty string', 'url');
-    }
     // Same http/https restriction as FetchUrlValidator — blocks
     // javascript:/data: scheme URLs from reaching SQLite/dashboard rendering.
     // Scheme allowlist is the SSOT in utils/archiveGuards.ts (PBI 2026-09-06-01).
-    try {
-      const parsed = new URL(payload.url);
-      if (!isHttpScheme(parsed.protocol)) {
-        throw new ValidationError('ManualRecordValidator', 'payload.url must be http or https', 'url');
-      }
-    } catch (e) {
-      if (e instanceof ValidationError) throw e;
-      throw new ValidationError('ManualRecordValidator', 'payload.url must be valid URL', 'url');
-    }
+    // The non-empty check lives inside assertHttpUrl (single site).
+    assertHttpUrl(payload.url, 'ManualRecordValidator');
     if (typeof payload.content !== 'string') {
       throw new ValidationError('ManualRecordValidator', 'payload.content must be string', 'content');
     }
-    if (payload.content.length > VALIDATOR_LIMITS.MAX_CONTENT_LENGTH) {
-      throw new ValidationError('ManualRecordValidator', `payload.content exceeds ${VALIDATOR_LIMITS.MAX_CONTENT_LENGTH} chars`, 'content');
-    }
+    assertContentLength(payload.content, 'ManualRecordValidator');
     if (payload.force !== undefined && typeof payload.force !== 'boolean') {
       throw new ValidationError('ManualRecordValidator', 'payload.force must be boolean', 'force');
     }
