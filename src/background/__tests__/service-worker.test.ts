@@ -57,11 +57,6 @@ const mockReviewGenerator = vi.hoisted(() => ({
     generateMonthlySummary: vi.fn().mockResolvedValue(false),
 }));
 
-const mockReviewSummaryAlarm = vi.hoisted(() => ({
-    initializeReviewSummaryAlarms: vi.fn().mockResolvedValue(undefined),
-    setupReviewSummaryAlarmListener: vi.fn(),
-}));
-
 // Mock chrome module
 vi.mock('chrome', () => ({
     tabs: {
@@ -467,7 +462,6 @@ vi.mock('../localMarkdownIdleFlusher.js', () => ({
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
     flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../reviewSummaryAlarm.js', () => mockReviewSummaryAlarm);
 vi.mock('../reviewSummaryGenerator.js', () => ({
     createReviewSummaryGenerator: vi.fn(() => mockReviewGenerator),
 }));
@@ -1644,20 +1638,6 @@ describe('service-worker handlers', () => {
                 'yasumaro-offline-network-retry',
                 { periodInMinutes: 5 }
             );
-        });
-
-        it('shares one review summary generator between the alarm and message paths', async () => {
-            // PBI 2026-09-15-15: the review-summary alarm install moved into
-            // alarmRegistry — the generator sharing is now verified via the
-            // registry's deps injection (setReviewSummaryGeneratorRef).
-            const serviceWorker = await import('../service-worker.js');
-            serviceWorker.init();
-
-            // The review-summary generator is shared via the registry refs
-            // (setReviewSummaryGeneratorRef), so the alarm and message handler
-            // both use the same instance. The wiring is pinned by
-            // alarmRegistry.test.ts and the session-alarm install hook.
-            expect(mockReviewSummaryAlarm).toBeDefined();
         });
     });
 
