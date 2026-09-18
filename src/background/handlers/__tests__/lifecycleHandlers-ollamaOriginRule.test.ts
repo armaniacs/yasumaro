@@ -51,7 +51,21 @@ vi.mock('../../../utils/permissionManager.js', () => ({
   cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logInfo: vi.fn(),
   logDebug: vi.fn(),
   logWarn: vi.fn(),

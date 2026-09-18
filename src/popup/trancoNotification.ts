@@ -6,7 +6,8 @@
 import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError } from '../utils/logger/api.js';
 import { getMessage } from '../utils/i18n.js';
 
 async function initTrancoUpdateNotification(): Promise<void> {

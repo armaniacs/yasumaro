@@ -1,7 +1,8 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsMigration.js';
-import { logInfo, logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logInfo, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { purgeExpiredDownloadRecords } from './localMarkdownExportRetention.js';
 import { clearExpiredPages as defaultClearExpiredPages } from '../utils/pendingStorage.js';

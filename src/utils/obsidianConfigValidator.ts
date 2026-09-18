@@ -5,7 +5,8 @@
  */
 
 import { MAX_BODY_SIZE as LIMIT_MAX_BODY_SIZE } from '../messaging/limits.js';
-import { addLog, LogType } from './logger.js';
+import { LogType } from './logger/types.js';
+import { addLog } from './logger/core.js';
 import { readBodyCapped } from './readBodyCapped.js';
 
 /** Protocol type used by Obsidian Local REST API. */

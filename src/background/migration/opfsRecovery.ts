@@ -6,7 +6,8 @@
  * Jobs: needsOpfsRecoveryMigration(), migrateOpfsRecovery()
  */
 
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { errorMessage } from '../../utils/errorUtils.js';

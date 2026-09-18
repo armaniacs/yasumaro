@@ -3,7 +3,8 @@
  * Step 0: Content size limiting for performance and cost control
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { MAX_RECORD_SIZE, truncateContentSize } from '../../recordingValidator.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 

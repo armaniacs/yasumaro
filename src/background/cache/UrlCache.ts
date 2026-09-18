@@ -1,7 +1,8 @@
 // @layer 1 — UrlCache (60s TTL, part of RecordingCache deep module)
 
 import { getSavedUrlsWithTimestamps } from '../../utils/storage/savedUrlRepository.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 
 export const URL_CACHE_TTL = 60 * 1000;
 

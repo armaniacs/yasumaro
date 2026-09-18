@@ -13,7 +13,8 @@
  * this module.
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import {
     AI_TEST_PROGRESS_MESSAGE_TYPE,
     type AiTestProgressMessage,

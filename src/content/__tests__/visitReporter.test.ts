@@ -7,7 +7,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VisitReporter, buildVisitStats, type VisitReporterDeps } from '../visitReporter.js';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  logDebug: vi.fn(),
+  ErrorCode: { INTERNAL_ERROR: 'x', API_REQUEST_FAILURE: 'y' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  logDebug: vi.fn(),
+  ErrorCode: { INTERNAL_ERROR: 'x', API_REQUEST_FAILURE: 'y' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logInfo: vi.fn(),
   logWarn: vi.fn(),
   logError: vi.fn(),

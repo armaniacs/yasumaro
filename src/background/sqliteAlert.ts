@@ -7,7 +7,9 @@
  * excluded from the critical alert to avoid noisy alerts during startup.
  */
 
-import { addLog, LogType, ErrorCode, logCritical } from '../utils/logger.js';
+import { LogType, ErrorCode } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
+import { logCritical } from '../utils/logger/api.js';
 import { ChromeNotificationCriticalSink } from '../utils/logger/criticalAlertSink.js';
 
 const ALERT_THRESHOLD = 3;

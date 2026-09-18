@@ -9,7 +9,8 @@
 import { Settings } from '../../../utils/storage/types.js';
 import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
 import { BuiltInAIClient } from '../../builtInAIClient.js';
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 

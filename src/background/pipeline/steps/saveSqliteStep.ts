@@ -1,6 +1,7 @@
 import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { enqueuePendingRecord } from '../../pendingSqliteQueue.js';
 
 export interface SaveSqliteStepParams {

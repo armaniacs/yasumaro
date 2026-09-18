@@ -12,7 +12,8 @@
  * unavailable 時の案内文言（フラグURL）のみ。
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { checkPromptSafety } from '../utils/promptSafety.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getProviderMaxTokens } from '../utils/aiLimits.js';

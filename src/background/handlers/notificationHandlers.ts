@@ -1,7 +1,8 @@
 import { decodeUrlFromNotificationId } from './urlNotificationHandlers.js';
 import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
-import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logWarn, logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { buildRecordRequest } from '../recordRequestBuilder.js';
 import { SingleFlight } from '../../utils/singleFlight.js';

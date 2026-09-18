@@ -12,7 +12,13 @@ import {
     AIProviderElements,
 } from '../aiProvider.js';
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+    logWarn: vi.fn(),
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+    logWarn: vi.fn(),
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
     logWarn: vi.fn(),
 }));
 

@@ -15,7 +15,7 @@ import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
-import { logDebug, logWarn } from './logger.js';
+import { logDebug, logWarn } from './logger/api.js';
 import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
 import { backoffDelayMs } from './backoff.js';
 

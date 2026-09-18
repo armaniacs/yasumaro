@@ -9,7 +9,8 @@ type RecordMessage =
   | { type: 'MANUAL_RECORD'; payload: Record<string, unknown> }
   | { type: 'PREVIEW_RECORD'; payload: Record<string, unknown> }
   | { type: 'SAVE_RECORD'; payload: Record<string, unknown> };
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError } from '../../utils/logger/api.js';
 import type { ContentResponse, PreviewResponse } from '../mainTypes.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { SpinnerScope } from '../spinner.js';

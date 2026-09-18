@@ -62,7 +62,15 @@ vi.mock('../../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger/types.js', () => ({
+  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+  addLog: vi.fn(),
+}));
+vi.mock('../../../../utils/logger/core.js', () => ({
+  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+  addLog: vi.fn(),
+}));
+vi.mock('../../../../utils/logger/api.js', () => ({
   LogType: { ERROR: 'ERROR', INFO: 'INFO' },
   addLog: vi.fn(),
 }));
@@ -1059,7 +1067,7 @@ describe('ublockImport/index.ts', () => {
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Reload error'), 'error');
 
-      const { addLog } = await import('../../../../utils/logger.js');
+      const { addLog } = await import('../../../../utils/logger/core.js');
       expect(addLog).toHaveBeenCalledWith('ERROR', 'Reload error', { error: 'Network error' });
     });
 

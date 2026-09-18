@@ -230,7 +230,7 @@ export function getDomainFilterCacheSync() { ... }
 ## 将来の移行計画
 
 * **Wave 3**: `storage.ts` barrel — 完了（PBI 2026-08-21-04 + PBI-28）。production・テストとも直接 import 化済み（テスト参照ゼロ）。barrel 本体は `trancoConsentManager.ts` の dynamic import（循環回避の意図的設計）が残るため維持し、`storage.ts` ヘッダに残置理由を記録
-* **Wave 4**: `logger.ts` barrel の同様の分割 — 配線完了（PBI 2026-09-05-03）。`core.ts` が `LoggerWiring`（`initLogger` 注入・lazy chrome デフォルト・`resetLoggerWiring`）を受け、offscreen console フォールバックは `ChromeStorageLogAdapter` に移動。eslint は barrel 側を warn（`logger/*` 直接 import を推奨）に反転済み。残作業: 約120箇所の呼び出し側の直接 import 移行（別 PBI 化を推奨）
+* **Wave 4**: `logger.ts` barrel の同様の分割 — 完了（PBI 2026-09-05-03 で配線、PBI 2026-09-18-19 で呼び出し側133箇所の直接 import 移行と barrel 削除）。`core.ts` が `LoggerWiring`（`initLogger` 注入・lazy chrome デフォルト・`resetLoggerWiring`）を受け、offscreen console フォールバックは `ChromeStorageLogAdapter` に移動。logger への import は `logger/types.js`（ErrorCode・LogType）/ `logger/core.js`（addLog 系）/ `logger/api.js`（log* 系）の直接参照のみ
 * 循環の解消は業務ルール上不可のため、dynamic import による回避を維持し、ADR で保護する
 
 ## 参考

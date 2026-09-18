@@ -6,7 +6,8 @@
 
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import { purgeLegacyStorage } from './savedUrlRepository.js';
-import { logInfo, logError, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logInfo, logError } from '../logger/api.js';
 import type { SqliteHealthCheck } from './types.js';
 
 /**

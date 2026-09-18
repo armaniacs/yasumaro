@@ -7,7 +7,15 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
 }));

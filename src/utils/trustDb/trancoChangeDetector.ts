@@ -8,7 +8,7 @@
  * - 通知メッセージ生成（日英双语）
  */
 
-import { logDebug, logInfo } from '../logger.js';
+import { logDebug, logInfo } from '../logger/api.js';
 
 /** 変更検知結果 */
 export interface TrancoChangeResult {

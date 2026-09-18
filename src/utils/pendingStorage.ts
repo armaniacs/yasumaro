@@ -1,4 +1,5 @@
-import { logInfo, logDebug, logError, ErrorCode } from './logger.js';
+import { ErrorCode } from './logger/types.js';
+import { logInfo, logDebug, logError } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './urlHash.js';
 import { getMessage } from './i18n.js';

@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
   ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },

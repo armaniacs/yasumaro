@@ -217,7 +217,15 @@ vi.mock('../../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
 }));
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logError: mockLogError,
+  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logError: mockLogError,
+  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: mockLogError,
   ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
 }));

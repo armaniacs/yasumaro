@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractSourceFromImportMetaUrl } from '../logger.js';
+import { extractSourceFromImportMetaUrl } from '../logger/api.js';
 
 describe('extractSourceFromImportMetaUrl', () => {
     it('extracts the filename without extension from a file URL', () => {

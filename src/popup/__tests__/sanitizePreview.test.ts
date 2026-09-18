@@ -105,7 +105,7 @@ describe('sanitizePreview', () => {
   describe('showPreview', () => {
     test('resolves immediately with confirmed=true when modal is missing', async () => {
       document.body.innerHTML = '';
-      const loggerModule = await import('../../utils/logger.js');
+      const loggerModule = await import('../../utils/logger/api.js');
       const logErrorSpy = vi.spyOn(loggerModule, 'logError').mockImplementation(() => Promise.resolve());
 
       const result = await showPreview('test content');

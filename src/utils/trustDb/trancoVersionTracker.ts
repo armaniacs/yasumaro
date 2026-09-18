@@ -6,7 +6,7 @@
  * its own storage access.
  */
 
-import { logInfo } from '../logger.js';
+import { logInfo } from '../logger/api.js';
 
 export interface TrancoVersionTrackerDeps {
   getSettingsStore: () => Promise<typeof import('../storage.js')>;

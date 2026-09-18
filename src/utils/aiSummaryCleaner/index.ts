@@ -12,7 +12,7 @@
  * - index.ts          - オーケストレーター（このファイル）+ 再エクスポート
  */
 
-import { logDebug } from '../logger.js';
+import { logDebug } from '../logger/api.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult, CleansingRemovalCounts } from './types.js';
 import { markBodyElements, unmarkBodyElements, DEFAULT_CLEANSE_BODY_PROTECTION_THRESHOLD } from './bodyProtection.js';
 import { CLEANSING_RULES, isRuleEnabled, resolveThresholds } from './rules.js';

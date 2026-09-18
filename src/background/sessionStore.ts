@@ -1,4 +1,5 @@
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 export const SESSION_KEYS = {

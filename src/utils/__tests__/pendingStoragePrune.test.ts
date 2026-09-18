@@ -14,7 +14,33 @@ import {
   type PendingPage,
 } from '../pendingStorage.js';
 
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+  logInfo: vi.fn(),
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logDebug: vi.fn(),
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', ERROR: 'ERROR' },
+  ErrorCode: {
+    STORAGE_READ_FAILURE: 'x',
+    STORAGE_WRITE_FAILURE: 'x',
+    STORAGE_MIGRATION_FAILURE: 'x',
+  },
+}));
+vi.mock('../logger/core.js', () => ({
+  logInfo: vi.fn(),
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logDebug: vi.fn(),
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', ERROR: 'ERROR' },
+  ErrorCode: {
+    STORAGE_READ_FAILURE: 'x',
+    STORAGE_WRITE_FAILURE: 'x',
+    STORAGE_MIGRATION_FAILURE: 'x',
+  },
+}));
+vi.mock('../logger/api.js', () => ({
   logInfo: vi.fn(),
   logError: vi.fn(),
   logWarn: vi.fn(),

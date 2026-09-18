@@ -45,7 +45,19 @@ document.body.innerHTML = `
 
 // Mock logger - must be before importing popup
 const { logErrorMock } = vi.hoisted(() => ({ logErrorMock: vi.fn() }));
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    logError: logErrorMock,
+    ErrorCode: {
+        INTERNAL_ERROR: 'INTERNAL_ERROR',
+    },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    logError: logErrorMock,
+    ErrorCode: {
+        INTERNAL_ERROR: 'INTERNAL_ERROR',
+    },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     logError: logErrorMock,
     ErrorCode: {
         INTERNAL_ERROR: 'INTERNAL_ERROR',

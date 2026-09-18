@@ -8,7 +8,8 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError } from '../../utils/logger/api.js';
 // Single source of truth for the default keyword list — the strip logic in
 // contentCleaner already uses this full set; the dashboard's local copy had
 // drifted to a stale 17-word subset.

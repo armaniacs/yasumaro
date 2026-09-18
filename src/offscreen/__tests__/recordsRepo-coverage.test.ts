@@ -39,7 +39,19 @@ vi.mock('../sqliteEngineHost.js', () => ({
 }));
 
 // logger noise suppression
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  ErrorCode: {},
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  ErrorCode: {},
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
   logWarn: vi.fn(),

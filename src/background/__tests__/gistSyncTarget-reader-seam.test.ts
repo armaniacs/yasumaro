@@ -26,7 +26,15 @@ vi.mock('../../utils/storage/storagePort.js', async (importOriginal) => {
   return { ...actual, ChromeStoragePort: TripwirePort, ChromeStorageAdapter: TripwirePort };
 });
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
 }));

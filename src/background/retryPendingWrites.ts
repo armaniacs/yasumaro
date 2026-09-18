@@ -8,7 +8,7 @@ import { withOptimisticLock } from '../utils/storage/storageTransaction.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import type { QueuedChromeStorageWrite, PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
-import { logWarn } from '../utils/logger.js';
+import { logWarn } from '../utils/logger/api.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
 export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageWrite): Promise<boolean> {

@@ -8,7 +8,7 @@
  * - 旧Trancoリストの保持
  */
 
-import { logInfo } from '../logger.js';
+import { logInfo } from '../logger/api.js';
 import { StorageKeys } from '../storage.js';
 
 /** 同意結果 */

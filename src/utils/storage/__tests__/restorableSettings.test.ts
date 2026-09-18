@@ -4,7 +4,15 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../logger.js', () => ({
+vi.mock('../../logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+}));
+vi.mock('../../logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+}));
+vi.mock('../../logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
 }));

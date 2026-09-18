@@ -82,7 +82,19 @@ vi.mock('../privatePageDialog.js', () => ({
   setCurrentPendingSave: vi.fn(),
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: {
+    CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
+  },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: {
+    CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
+  },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   ErrorCode: {
     CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',

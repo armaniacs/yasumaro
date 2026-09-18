@@ -6,7 +6,37 @@
 
 import { vi } from 'vitest';;
 
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
+  addLog: vi.fn(),
+  ErrorCode: {
+    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
+  },
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  }
+}));
+vi.mock('../logger/core.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
+  addLog: vi.fn(),
+  ErrorCode: {
+    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
+  },
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  }
+}));
+vi.mock('../logger/api.js', () => ({
   logInfo: vi.fn(),
   logDebug: vi.fn(),
   logError: vi.fn(),

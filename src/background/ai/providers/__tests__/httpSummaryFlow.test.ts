@@ -42,7 +42,15 @@ vi.mock('../../../../utils/aiUsageTracker.js', () => ({
 vi.mock('../../../../utils/promptSanitizer.js', () => ({
   sanitizePromptContent: vi.fn((c: string) => ({ sanitized: c, warnings: [], dangerLevel: 'none' })),
 }));
-vi.mock('../../../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+}));
+vi.mock('../../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+}));
+vi.mock('../../../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
 }));

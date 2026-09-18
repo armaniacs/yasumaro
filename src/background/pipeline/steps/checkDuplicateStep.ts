@@ -3,7 +3,8 @@
  * Step 5: Check if URL was already recorded today
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { getSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../../utils/storage/savedUrlRepository.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 

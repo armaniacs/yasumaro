@@ -6,7 +6,8 @@
  * Jobs: run(), backfillDiagnosticMetadata(), cleanupLegacyStorage()
  */
 
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';

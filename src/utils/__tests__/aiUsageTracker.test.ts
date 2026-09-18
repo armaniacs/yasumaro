@@ -183,7 +183,15 @@ vi.mock('../storage/quota.js', async (importOriginal) => {
 });;
 
 // logger モック
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+    addLog: vi.fn(),
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
+}));
+vi.mock('../logger/core.js', () => ({
+    addLog: vi.fn(),
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
+}));
+vi.mock('../logger/api.js', () => ({
     addLog: vi.fn(),
     LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
 }));

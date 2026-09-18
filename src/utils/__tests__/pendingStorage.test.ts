@@ -9,7 +9,27 @@ vi.mock('../i18n.js', () => ({
     getMessage: vi.fn((key: string) => `i18n_${key}`),
 }));
 
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+    logInfo: vi.fn().mockResolvedValue(undefined),
+    logDebug: vi.fn().mockResolvedValue(undefined),
+    logError: vi.fn().mockResolvedValue(undefined),
+    ErrorCode: {
+        STORAGE_READ_FAILURE: 'STRG_RD_001',
+        STORAGE_WRITE_FAILURE: 'STRG_WR_001',
+        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+    },
+}));
+vi.mock('../logger/core.js', () => ({
+    logInfo: vi.fn().mockResolvedValue(undefined),
+    logDebug: vi.fn().mockResolvedValue(undefined),
+    logError: vi.fn().mockResolvedValue(undefined),
+    ErrorCode: {
+        STORAGE_READ_FAILURE: 'STRG_RD_001',
+        STORAGE_WRITE_FAILURE: 'STRG_WR_001',
+        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+    },
+}));
+vi.mock('../logger/api.js', () => ({
     logInfo: vi.fn().mockResolvedValue(undefined),
     logDebug: vi.fn().mockResolvedValue(undefined),
     logError: vi.fn().mockResolvedValue(undefined),
@@ -357,7 +377,7 @@ describe('pendingStorage', () => {
 
     describe('error handling', () => {
         it('addPendingPage surfaces a storage read failure via the CAS wrapper', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage read error'));
 
             const now = Date.now();
@@ -376,7 +396,7 @@ describe('pendingStorage', () => {
         });
 
         it('addPendingPage should handle outer catch when set fails', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
 
             const now = Date.now();
@@ -397,7 +417,7 @@ describe('pendingStorage', () => {
         });
 
         it('getPendingPages should return empty array when internal storage read fails', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage read error'));
 
             const result = await getPendingPages();
@@ -411,7 +431,7 @@ describe('pendingStorage', () => {
         });
 
         it('removePendingPages should handle storage set failure gracefully', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
 
             const now = Date.now();
@@ -429,7 +449,7 @@ describe('pendingStorage', () => {
         });
 
         it('clearExpiredPages should handle storage set failure gracefully', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.set.mockRejectedValueOnce(new Error('Storage write error'));
 
             const now = Date.now();
@@ -447,7 +467,7 @@ describe('pendingStorage', () => {
         });
 
         it('addPendingPage should log error with non-Error exception in outer catch', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.set.mockRejectedValueOnce('string error');
 
             const now = Date.now();
@@ -468,7 +488,7 @@ describe('pendingStorage', () => {
         });
 
         it('getPendingPages should handle non-Error exception in internal storage', async () => {
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             mockChrome.storage.local.get.mockRejectedValueOnce('string error');
 
             const result = await getPendingPages();
@@ -552,7 +572,7 @@ describe('pendingStorage', () => {
         it('handles storage get failure during migration', async () => {
             mockChrome.storage.local.get.mockRejectedValueOnce(new Error('get failed'));
             await migrateLegacyPendingPagesKey();
-            const { logError } = await import('../logger.js');
+            const { logError } = await import('../logger/api.js');
             expect(logError).toHaveBeenCalledWith(
                 'Failed to migrate legacy pending pages key',
                 expect.objectContaining({ source: 'pendingStorage' }),

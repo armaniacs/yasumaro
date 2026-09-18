@@ -5,7 +5,7 @@
  * management. Split out of storage.ts (PBI: storage.ts deepening).
  */
 
-import { logInfo, logDebug } from '../logger.js';
+import { logInfo, logDebug } from '../logger/api.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { calculatePasswordStrength } from '../masterPassword.js';
 import {
@@ -442,7 +442,8 @@ export async function getOrCreateHmacSecret(): Promise<string> {
             // extension restart, so unwrapping an already-wrapped secret can fail
             // for existing users. Self-heal instead of throwing: generate a fresh
             // secret and persist it wrapped (mirrors hmacKeyStore recovery).
-            const { logError, ErrorCode } = await import('../logger.js');
+            const { ErrorCode } = await import('../logger/types.js');
+const { logError } = await import('../logger/api.js');
             const { errorMessage } = await import('../errorUtils.js');
             await logError('Failed to unwrap HMAC secret, regenerating', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
             const secretBytes = crypto.getRandomValues(new Uint8Array(32));

@@ -62,7 +62,7 @@ describe('preview settlement (PBI 2026-09-11-03)', () => {
 
   test('rejects instead of hanging when the modal disappears before confirm', async () => {
     setupModalDOM();
-    const loggerModule = await import('../../utils/logger.js');
+    const loggerModule = await import('../../utils/logger/api.js');
     const logErrorSpy = vi.spyOn(loggerModule, 'logError').mockImplementation(() => Promise.resolve());
     const promise = sanitizePreview.showPreview('content');
     // DOM teardown between show and user action — the confirm button survives

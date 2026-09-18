@@ -5,7 +5,8 @@
  */
 
 import type { Settings } from './types.js';
-import { addLog, LogType } from '../logger.js';
+import { LogType } from '../logger/types.js';
+import { addLog } from '../logger/core.js';
 
 // ============================================================================
 // Spec table: single source for the restorable key set, its expected type,

@@ -193,7 +193,21 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    logInfo: vi.fn(),
+    logError: vi.fn(),
+    logWarn: vi.fn(),
+    logDebug: vi.fn(),
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    logInfo: vi.fn(),
+    logError: vi.fn(),
+    logWarn: vi.fn(),
+    logDebug: vi.fn(),
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     logInfo: vi.fn(),
     logError: vi.fn(),
     logWarn: vi.fn(),
@@ -208,7 +222,7 @@ vi.mock('../../utils/errorUtils.js', () => ({
 // ── import target ─────────────────────────────────────────────────────────────
 
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
-import { logInfo } from '../../utils/logger.js';
+import { logInfo } from '../../utils/logger/api.js';
 
 // ── tests ─────────────────────────────────────────────────────────────────────
 

@@ -34,7 +34,15 @@ vi.mock('../../utils/storage/privacyConsent.js', () => ({
   declineConsent: mockDeclineConsent,
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: mockLogError,
+  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: mockLogError,
+  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: mockLogError,
   ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
 }));

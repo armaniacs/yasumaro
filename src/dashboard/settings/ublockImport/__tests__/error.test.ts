@@ -7,12 +7,20 @@
 
 
 import { fetchFromUrl, isValidUrl } from '../index.js';
-import * as loggerModule from '../../../../utils/logger.js';
 
-const { addLog, LogType } = vi.mocked(loggerModule);
+import { addLog } from '../../../../utils/logger/core.js';
+import { LogType } from '../../../../utils/logger/types.js';
 
 // Mock the logger module
-vi.mock('../../../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
+}));
+vi.mock('../../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
+}));
+vi.mock('../../../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
 }));

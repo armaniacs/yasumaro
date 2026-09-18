@@ -3,7 +3,8 @@
  * Step 3: 3-step verification (Finance/Sensitive/Unverified)
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { TrustChecker } from '../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../notificationHelper.js';
 import { pickDefined } from '../../../utils/objectUtils.js';

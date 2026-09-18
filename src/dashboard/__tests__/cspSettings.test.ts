@@ -50,7 +50,15 @@ vi.mock('../../utils/cspValidator.js', () => ({
   },
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
 }));
@@ -63,7 +71,7 @@ import { cspSettings, CspSettingsController } from '../cspSettings.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { CSPValidator } from '../../utils/cspValidator.js';
-import { addLog } from '../../utils/logger.js';
+import { addLog } from '../../utils/logger/core.js';
 
 const mockGetAll = settingsRepository.getAll as MockedFunction<typeof settingsRepository.getAll>;
 const mockSetAll = settingsRepository.setAll as MockedFunction<typeof settingsRepository.setAll>;

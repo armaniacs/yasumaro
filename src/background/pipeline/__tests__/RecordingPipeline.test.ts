@@ -82,7 +82,7 @@ vi.mock('../../../utils/trustChecker.js', () => ({
 }));
 vi.mock('../../privacyPipeline.js');
 vi.mock('../../obsidianClient.js');
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
   logInfo: vi.fn(),
@@ -93,12 +93,35 @@ vi.mock('../../../utils/logger.js', () => ({
 vi.mock('../../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] }),
 }));
-
+vi.mock('../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../utils/piiSanitizer.js', () => ({
+  sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] }),
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../utils/piiSanitizer.js', () => ({
+  sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized', maskedItems: [] }),
+}));
 import * as storage from '../../../utils/storage/types.js';
 import * as storageSavedUrls from '../../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
-import * as logger from '../../../utils/logger.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
+import { logError } from '../../../utils/logger/api.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
@@ -257,7 +280,7 @@ describe('RecordingPipeline', () => {
         content: 'Some content',
       }, { settings: mockSettings });
 
-      const calls = (logger.addLog as Mock).mock.calls;
+      const calls = (addLog as Mock).mock.calls;
       const traceIds = new Set(calls.map((call: any[]) => call[2]?.traceId).filter(Boolean));
       expect(traceIds.size).toBe(1);
       const traceId = Array.from(traceIds)[0];
@@ -283,7 +306,7 @@ describe('RecordingPipeline', () => {
         content: 'Some content',
       }, { settings: mockSettings });
 
-      const calls = (logger.addLog as Mock).mock.calls;
+      const calls = (addLog as Mock).mock.calls;
       const traceIds = calls.map((call: any[]) => call[2]?.traceId).filter(Boolean);
       expect(traceIds.length).toBeGreaterThan(0);
       const firstTraceId = traceIds[0];
@@ -494,7 +517,7 @@ describe('RecordingPipeline', () => {
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const retryCalls = (logger.addLog as Mock).mock.calls.filter(
+      const retryCalls = (addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 
@@ -549,10 +572,10 @@ describe('RecordingPipeline', () => {
       const result = await recordPromise;
 
       expect(result.success).toBe(false);
-      expect(logger.logError).toHaveBeenCalledWith(
+      expect(logError).toHaveBeenCalledWith(
         expect.stringContaining('Pipeline failed at step'),
         expect.any(Object),
-        logger.ErrorCode.INTERNAL_ERROR,
+        ErrorCode.INTERNAL_ERROR,
         'RecordingPipeline'
       );
     });

@@ -8,12 +8,20 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
 
-import { addLog } from '../../utils/logger.js';
+import { addLog } from '../../utils/logger/core.js';
 import {
   OfflineNetworkQueue,
   type OfflineJob,

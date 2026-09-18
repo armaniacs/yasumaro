@@ -1,7 +1,39 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getSettings, clearSettingsCache } from '../../storage.js';
 
-vi.mock('../../logger.js', () => ({
+vi.mock('../../logger/types.js', () => ({
+  logInfo: vi.fn(() => Promise.resolve()),
+  logWarn: vi.fn(() => Promise.resolve()),
+  logError: vi.fn(() => Promise.resolve()),
+  logDebug: vi.fn(() => Promise.resolve()),
+  logSanitize: vi.fn(() => Promise.resolve()),
+  ErrorCode: {
+    INTERNAL_ERROR: 'INT_001',
+    API_REQUEST_FAILURE: 'API_REQ_001',
+    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
+    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
+    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
+    STORAGE_QUOTA_EXCEEDED: 'STO_001',
+    STORAGE_WRITE_FAILURE: 'STO_003',
+  },
+}));
+vi.mock('../../logger/core.js', () => ({
+  logInfo: vi.fn(() => Promise.resolve()),
+  logWarn: vi.fn(() => Promise.resolve()),
+  logError: vi.fn(() => Promise.resolve()),
+  logDebug: vi.fn(() => Promise.resolve()),
+  logSanitize: vi.fn(() => Promise.resolve()),
+  ErrorCode: {
+    INTERNAL_ERROR: 'INT_001',
+    API_REQUEST_FAILURE: 'API_REQ_001',
+    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
+    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
+    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
+    STORAGE_QUOTA_EXCEEDED: 'STO_001',
+    STORAGE_WRITE_FAILURE: 'STO_003',
+  },
+}));
+vi.mock('../../logger/api.js', () => ({
   logInfo: vi.fn(() => Promise.resolve()),
   logWarn: vi.fn(() => Promise.resolve()),
   logError: vi.fn(() => Promise.resolve()),
@@ -52,7 +84,7 @@ describe('storage — plaintext API key detection', () => {
   });
 
   it('warns when an API key field is stored as plaintext', async () => {
-    const { logWarn } = await import('../../logger.js');
+    const { logWarn } = await import('../../logger/api.js');
     clearSettingsCache();
 
     const settings = await getSettings();
@@ -66,7 +98,7 @@ describe('storage — plaintext API key detection', () => {
 
   it('does not warn when API key fields are absent', async () => {
     storageData.settings = {};
-    const { logWarn } = await import('../../logger.js');
+    const { logWarn } = await import('../../logger/api.js');
     clearSettingsCache();
 
     await getSettings();

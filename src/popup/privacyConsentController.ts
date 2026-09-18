@@ -9,7 +9,8 @@ import {
     acceptConsent,
     declineConsent,
 } from '../utils/storage/privacyConsent.js';
-import { logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError } from '../utils/logger/api.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 

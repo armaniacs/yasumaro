@@ -7,7 +7,8 @@
 import type { Settings } from '../../utils/storage/types.js';
 import type { SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 
 export const SETTINGS_CACHE_TTL = 30 * 1000;
 

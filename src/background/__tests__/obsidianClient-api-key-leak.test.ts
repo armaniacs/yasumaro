@@ -53,7 +53,23 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
   logError: vi.fn(),
@@ -105,7 +121,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
     expect(String((config.headers as Record<string, string>)['Authorization'])).toBe(`Bearer ${RAW_KEY}`);
     // ...but is never emitted to console/logger.
     expect(consoleErrorSpy).not.toHaveBeenCalled();
-    const addLogMock = (await import('../../utils/logger.js')).addLog;
+    const addLogMock = (await import('../../utils/logger/core.js')).addLog;
     const logCalls = (addLogMock as ReturnType<typeof vi.fn>).mock.calls;
     for (const call of logCalls) {
       const serialized = JSON.stringify(call);

@@ -9,7 +9,15 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // logger モック
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+    addLog: vi.fn(),
+    LogType: { INFO: 'info', WARN: 'warn', ERROR: 'error', DEBUG: 'debug' }
+}));
+vi.mock('../logger/core.js', () => ({
+    addLog: vi.fn(),
+    LogType: { INFO: 'info', WARN: 'warn', ERROR: 'error', DEBUG: 'debug' }
+}));
+vi.mock('../logger/api.js', () => ({
     addLog: vi.fn(),
     LogType: { INFO: 'info', WARN: 'warn', ERROR: 'error', DEBUG: 'debug' }
 }));
@@ -183,7 +191,7 @@ import {
     deletePrompt,
     setActivePrompt
 } from '../customPromptUtils.js';
-import { addLog } from '../logger.js';
+import { addLog } from '../logger/core.js';
 import { sanitizePromptContent } from '../promptSanitizer.js';
 import type { Settings } from '../storage/types.js';
 import type { CustomPrompt } from '../customPromptUtils.js';

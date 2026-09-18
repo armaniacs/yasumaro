@@ -4,7 +4,8 @@
  */
 
 import { StorageKeys } from './storage/types.js';
-import { addLog, LogType } from './logger.js';
+import { LogType } from './logger/types.js';
+import { addLog } from './logger/core.js';
 
 // レート制限設定
 const RATE_LIMIT_WINDOW_MS = 60000; // 1分

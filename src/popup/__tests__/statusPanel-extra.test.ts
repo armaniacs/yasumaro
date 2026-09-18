@@ -59,7 +59,15 @@ vi.mock('../../utils/trustChecker.js', () => ({
 
 vi.mock('../statusChecker.js', () => ({ checkPageStatus: mockCheckPageStatus }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));

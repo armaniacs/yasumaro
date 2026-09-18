@@ -10,7 +10,8 @@ import type { TrustBloomFilter } from './bloomFilter.js';
 import { DomainVerifier } from './domainVerifier.js';
 import { BloomFilterManager } from './bloomFilterManager.js';
 import { TrancoManager } from './trancoManager.js';
-import { logError, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logError } from '../logger/api.js';
 import { getTrustDbAdmin } from './TrustDbAdmin.js';
 
 export interface TrustPolicyDeps {

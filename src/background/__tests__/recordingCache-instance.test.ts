@@ -44,7 +44,15 @@ vi.mock('../../utils/storage/settingsMigration.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
 }));

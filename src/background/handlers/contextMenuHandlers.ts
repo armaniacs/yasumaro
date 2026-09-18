@@ -6,7 +6,8 @@
  */
 import { isSecureUrl } from '../../utils/urlUtils.js';
 import { getMessageOr } from '../../utils/i18n.js';
-import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logWarn, logError } from '../../utils/logger/api.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
 

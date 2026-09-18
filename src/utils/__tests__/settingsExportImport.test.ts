@@ -109,7 +109,25 @@ Object.defineProperty(global, 'URL', {
 });
 
 // logger モック
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+    logError: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logInfo: vi.fn(async () => {}),
+    ErrorCode: {
+        SETTINGS_IMPORT_FAILURE: 'SETTINGS_IMPORT_FAILURE',
+        SETTINGS_SIGNATURE_FAILURE: 'SETTINGS_SIGNATURE_FAILURE'
+    }
+}));
+vi.mock('../logger/core.js', () => ({
+    logError: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logInfo: vi.fn(async () => {}),
+    ErrorCode: {
+        SETTINGS_IMPORT_FAILURE: 'SETTINGS_IMPORT_FAILURE',
+        SETTINGS_SIGNATURE_FAILURE: 'SETTINGS_SIGNATURE_FAILURE'
+    }
+}));
+vi.mock('../logger/api.js', () => ({
     logError: vi.fn(async () => {}),
     logWarn: vi.fn(async () => {}),
     logInfo: vi.fn(async () => {}),

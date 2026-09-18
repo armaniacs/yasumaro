@@ -11,7 +11,8 @@ import { getSavedUrlsWithTimestamps, setSavedUrlsWithTimestamps } from '../../ut
 import { StorageKeys } from '../../utils/storage/types.js';
 import { PrivacyPipeline } from '../privacyPipeline.ts';
 import { NotificationHelper } from '../notificationHelper.ts';
-import { addLog, LogType } from '../../utils/logger.ts';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
 
@@ -77,12 +78,7 @@ vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
 });
 vi.mock('../privacyPipeline.ts');
 vi.mock('../notificationHelper.ts');
-vi.mock('../../utils/logger.ts', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  logDebug: vi.fn(),
+vi.mock('../../utils/logger/types.js', () => ({
   LogType: {
     DEBUG: 'DEBUG',
     INFO: 'INFO',
@@ -95,8 +91,18 @@ vi.mock('../../utils/logger.ts', () => ({
     OBSIDIAN_WRITE_FAILED: 'OBSIDIAN_WRITE_FAILED',
     NETWORK_ERROR: 'NETWORK_ERROR',
     TIMEOUT: 'TIMEOUT'
-  }
+  },
 }));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+}));
+vi.mock('../../utils/logger/api.js', () => ({
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  logDebug: vi.fn(),
+}));
+
 vi.mock('../../utils/domainUtils.ts', () => ({
   isDomainAllowed: vi.fn((url) => Promise.resolve(true)),
   isDomainInList: vi.fn(),

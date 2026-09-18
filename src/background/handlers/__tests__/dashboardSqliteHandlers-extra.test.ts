@@ -24,7 +24,17 @@ vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) =
 });
 
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
   ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
@@ -264,7 +274,7 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import { dispatchDashboardSqlite } from './dashboardSqliteTestHarness.js';
-import { logError } from '../../../utils/logger.js';
+import { logError } from '../../../utils/logger/api.js';
 
 function createMockSqliteClient() {
   const client = {

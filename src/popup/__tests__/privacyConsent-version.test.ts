@@ -10,7 +10,19 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 const storageMock: Record<string, unknown> = {};
 const sessionMock: Record<string, unknown> = {};
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    logInfo: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logError: vi.fn(async () => {}),
+    ErrorCode: { STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE', STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    logInfo: vi.fn(async () => {}),
+    logWarn: vi.fn(async () => {}),
+    logError: vi.fn(async () => {}),
+    ErrorCode: { STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE', STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     logInfo: vi.fn(async () => {}),
     logWarn: vi.fn(async () => {}),
     logError: vi.fn(async () => {}),

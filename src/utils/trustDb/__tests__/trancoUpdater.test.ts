@@ -10,7 +10,19 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // logger モック
-vi.mock('../../logger.js', () => ({
+vi.mock('../../logger/types.js', () => ({
+    logInfo: vi.fn(),
+    logError: vi.fn(),
+    logWarn: vi.fn(),
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' }
+}));
+vi.mock('../../logger/core.js', () => ({
+    logInfo: vi.fn(),
+    logError: vi.fn(),
+    logWarn: vi.fn(),
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' }
+}));
+vi.mock('../../logger/api.js', () => ({
     logInfo: vi.fn(),
     logError: vi.fn(),
     logWarn: vi.fn(),

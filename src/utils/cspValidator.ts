@@ -7,7 +7,8 @@
  * 詳細: dev-docs/ADR/0002-csp-layered-security.md
  */
 
-import { logWarn, ErrorCode } from './logger.js';
+import { ErrorCode } from './logger/types.js';
+import { logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';

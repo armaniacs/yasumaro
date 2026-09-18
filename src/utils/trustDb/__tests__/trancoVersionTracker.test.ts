@@ -7,7 +7,13 @@
 import { vi } from 'vitest';
 import { TrancoVersionTracker } from '../trancoVersionTracker.js';
 
-vi.mock('../../logger.js', () => ({
+vi.mock('../../logger/types.js', () => ({
+  logInfo: vi.fn(),
+}));
+vi.mock('../../logger/core.js', () => ({
+  logInfo: vi.fn(),
+}));
+vi.mock('../../logger/api.js', () => ({
   logInfo: vi.fn(),
 }));
 

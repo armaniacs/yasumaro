@@ -6,7 +6,8 @@
 
 import { Settings, StorageKeys } from './storage/types.js';
 import { sanitizePromptContent, DangerLevel } from './promptSanitizer.js';
-import { addLog, LogType } from './logger.js';
+import { LogType } from './logger/types.js';
+import { addLog } from './logger/core.js';
 import { CustomPrompt } from './types.js';
 import { getAllCategories } from './tagUtils.js';
 

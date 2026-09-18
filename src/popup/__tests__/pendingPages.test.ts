@@ -168,7 +168,19 @@ vi.mock('../../utils/addDomainsOrPathsToWhitelist.js', () => ({
     addDomainsOrPathsToWhitelist: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    logError: vi.fn(),
+    ErrorCode: {
+        CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
+    },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    logError: vi.fn(),
+    ErrorCode: {
+        CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
+    },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     logError: vi.fn(),
     ErrorCode: {
         CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
@@ -213,7 +225,7 @@ vi.mock('../../utils/ui/confirmDialog.js', () => ({
 import { loadPendingPages, saveSelectedPages, setupEventListeners } from '../pendingPages.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { showSuccess } from '../errorUtils.js';
-import { logError } from '../../utils/logger.js';
+import { logError } from '../../utils/logger/api.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { updateDomainFilterCache } from '../../utils/storage/domainFilterCache.js';
 

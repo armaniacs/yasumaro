@@ -393,7 +393,43 @@ vi.mock('../../utils/fetch.js', () => ({
     fetchWithTimeout: vi.fn(),
     isPrivateIpAddress: vi.fn(() => false),
 }));
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    logInfo: vi.fn(),
+    logDebug: vi.fn(),
+    logWarn: vi.fn(),
+    logError: vi.fn(),
+    addLog: vi.fn(),
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG', SANITIZE: 'SANITIZE' },
+    ErrorCode: {
+        STORAGE_READ_FAILURE: 'STRG_RD_001',
+        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+        BADGE_UPDATE_FAILED: 'UI_BADGE_001',
+        INTERNAL_ERROR: 'INT_001',
+        API_REQUEST_FAILURE: 'API_REQ_001',
+        INVALID_INPUT: 'VAL_INP_001',
+        CRYPTO_HMAC_FAILURE: 'CRPT_HMAC_001',
+        UNKNOWN_ERROR: 'UNKN_001',
+    }
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    logInfo: vi.fn(),
+    logDebug: vi.fn(),
+    logWarn: vi.fn(),
+    logError: vi.fn(),
+    addLog: vi.fn(),
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG', SANITIZE: 'SANITIZE' },
+    ErrorCode: {
+        STORAGE_READ_FAILURE: 'STRG_RD_001',
+        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
+        BADGE_UPDATE_FAILED: 'UI_BADGE_001',
+        INTERNAL_ERROR: 'INT_001',
+        API_REQUEST_FAILURE: 'API_REQ_001',
+        INVALID_INPUT: 'VAL_INP_001',
+        CRYPTO_HMAC_FAILURE: 'CRPT_HMAC_001',
+        UNKNOWN_ERROR: 'UNKN_001',
+    }
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     logInfo: vi.fn(),
     logDebug: vi.fn(),
     logWarn: vi.fn(),
@@ -530,7 +566,8 @@ import * as headerDetector from '../headerDetector.js';
 import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
 import * as savedUrlStore from '../../utils/storage/savedUrlStore.js';
 import * as permissionManager from '../../utils/permissionManager.js';
-import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError, logWarn } from '../../utils/logger/api.js';
 import { resetVisitRateLimiter } from '../handlers/recordingHandlers.js';
 import type {
     ValidVisitMessage,

@@ -7,7 +7,8 @@
  */
 
 import type { TrustDatabase } from './trustDbSchema.js';
-import { logDebug, logInfo, logError, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logDebug, logInfo, logError } from '../logger/api.js';
 import { compareVersions as _compareVersions } from './domainValidation.js';
 import { JP_ANCHOR_TLDS } from './presets.js';
 import { SENSITIVE_DOMAINS_PRESETS as PRESETS } from './presets.js';

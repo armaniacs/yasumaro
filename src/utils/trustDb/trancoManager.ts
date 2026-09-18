@@ -9,7 +9,7 @@
 
 import type { TrancoConfig, TrustDatabase } from './trustDbSchema.js';
 import type { TrustBloomFilter } from './bloomFilter.js';
-import { logInfo } from '../logger.js';
+import { logInfo } from '../logger/api.js';
 import { BloomFilterManager } from './bloomFilterManager.js';
 
 export interface TrancoManagerDeps {

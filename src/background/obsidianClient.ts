@@ -4,7 +4,8 @@ import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from '../utils/Mutex.js';
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js';
 import {

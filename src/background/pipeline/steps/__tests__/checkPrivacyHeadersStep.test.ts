@@ -9,7 +9,7 @@
 
 import { vi } from 'vitest';;
 
-vi.mock('../../../../utils/logger.js');
+vi.mock('../../../../utils/logger/types.js');;vi.mock('../../../../utils/logger/core.js');;vi.mock('../../../../utils/logger/api.js');
 vi.mock('../../../../utils/storage/types.js');
 vi.mock('../../../../utils/storage/defaults.js');
 vi.mock('../../../../utils/storage/encryptionSession.js');

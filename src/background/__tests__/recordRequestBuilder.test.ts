@@ -150,7 +150,7 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
 
   it('logs a failed full-pipeline retry instead of swallowing it', async () => {
     const { createOfflineQueueProcessor } = await import('../offlineQueueProcessor.js');
-    const logger = await import('../../utils/logger.js');
+    const logger = await import('../../utils/logger/api.js');
     const logErrorSpy = vi.spyOn(logger, 'logError').mockResolvedValue(undefined);
 
     const processor = createOfflineQueueProcessor({

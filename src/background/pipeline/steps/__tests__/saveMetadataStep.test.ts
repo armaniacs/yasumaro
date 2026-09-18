@@ -12,13 +12,24 @@
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-vi.mock('../../../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger/types.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
 }));
-
+vi.mock('../../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../../utils/logger/api.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
 vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {
@@ -47,7 +58,7 @@ vi.mock('../../../pendingChromeStorageQueue.js', () => ({
 import { saveMetadataStep } from '../saveMetadataStep.js';
 import * as savedUrlStore from '../../../../utils/storage/savedUrlStore.js';
 import * as pendingQueue from '../../../pendingChromeStorageQueue.js';
-import * as logger from '../../../../utils/logger.js';
+import { addLog } from '../../../../utils/logger/core.js';
 import { StorageKeys } from '../../../../utils/storage/types.js';
 import type { RecordingContext } from '../../types.js';
 
@@ -278,7 +289,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const warnCalls = (logger.addLog as Mock).mock.calls.filter(
+      const warnCalls = (addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(warnCalls.length).toBeGreaterThan(0);
@@ -295,7 +306,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const errorCalls = (logger.addLog as Mock).mock.calls.filter(
+      const errorCalls = (addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to queue metadata patch for retry')
       );
       expect(errorCalls.length).toBe(1);
@@ -312,7 +323,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const errorCalls = (logger.addLog as Mock).mock.calls.filter(
+      const errorCalls = (addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to queue metadata patch for retry')
       );
       expect(errorCalls.length).toBe(0);
@@ -326,7 +337,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const failCalls = (logger.addLog as Mock).mock.calls.filter(
+      const failCalls = (addLog as Mock).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Failed to save')
       );
       expect(failCalls.length).toBe(0);

@@ -9,7 +9,7 @@ import { DomainTrustLevel } from './trustDb/trustDbSchema.js';
 import { getTrustPolicy } from './trustDb/TrustPolicy.js';
 import { getTrustDbAdmin } from './trustDb/TrustDbAdmin.js';
 import { StorageKeys } from './storage/types.js';
-import { logInfo, logDebug, logWarn } from './logger.js';
+import { logInfo, logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { pickDefined } from './objectUtils.js';
 

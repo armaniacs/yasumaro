@@ -9,7 +9,8 @@ import { setBadge } from '../badgePolicy.js';
 import { resolveTabBadge } from './tabBadgeResolver.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { TabCache } from '../tabCache.js';
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 export interface TabHandlerContext {

@@ -6,7 +6,8 @@
  */
 
 import { errorMessage } from '../../utils/errorUtils.js';
-import { logError, logInfo, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError, logInfo } from '../../utils/logger/api.js';
 import { FallbackStorage } from '../storageFallback.js';
 import { INSERT_IGNORE_SQL, buildInsertParams } from '../schema.js';
 import { StorageKeys } from '../../utils/storage/types.js';

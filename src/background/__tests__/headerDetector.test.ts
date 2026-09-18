@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach } from 'vitest';
 import { HeaderDetector, sessionCacheKeysToEvict } from '../headerDetector.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { checkPrivacy } from '../../utils/privacyChecker.js';
-import { ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
 
 vi.mock('../../utils/privacyChecker.js', () => ({
   checkPrivacy: vi.fn((headers: any[]) => {
@@ -22,7 +22,31 @@ vi.mock('../../utils/urlHash.js', () => ({
   hashUrl: vi.fn((url: string) => Promise.resolve(url)),
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  logInfo: vi.fn(() => Promise.resolve()),
+  logDebug: vi.fn(() => Promise.resolve()),
+  logError: vi.fn(() => Promise.resolve()),
+  logWarn: vi.fn(() => Promise.resolve()),
+  LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
+  ErrorCode: {
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+    BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED',
+  },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logInfo: vi.fn(() => Promise.resolve()),
+  logDebug: vi.fn(() => Promise.resolve()),
+  logError: vi.fn(() => Promise.resolve()),
+  logWarn: vi.fn(() => Promise.resolve()),
+  LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
+  ErrorCode: {
+    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
+    BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED',
+  },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   logInfo: vi.fn(() => Promise.resolve()),
   logDebug: vi.fn(() => Promise.resolve()),
@@ -35,7 +59,7 @@ vi.mock('../../utils/logger.js', () => ({
   },
 }));
 
-import { logError } from '../../utils/logger.js';
+import { logError } from '../../utils/logger/api.js';
 
 describe('HeaderDetector', () => {
   let detector: HeaderDetector;

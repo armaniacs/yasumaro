@@ -6,7 +6,8 @@
 
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys, Settings } from './storage/types.js';
-import { addLog, LogType } from './logger.js';
+import { LogType } from './logger/types.js';
+import { addLog } from './logger/core.js';
 import { redactSensitiveData } from './redaction.js';
 import {
     validateObsidianProtocol,

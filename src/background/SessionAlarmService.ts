@@ -5,7 +5,8 @@
  * 自動ロック・アラーム二重登録防止を単体テスト可能にする。
  */
 
-import { logInfo, logWarn, logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logInfo, logWarn, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { CURRENT_PROTOCOL_VERSION } from './messageTypes.js';

@@ -10,7 +10,8 @@
 import { StorageKeys } from '../utils/storage/types.js';
 import { CSPValidator } from '../utils/cspValidator.js';
 import { settingsRepository, SettingsRepository } from '../utils/storage/SettingsRepository.js';
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';

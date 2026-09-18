@@ -7,7 +7,8 @@
  * のみを初期化する。
  */
 
-import { logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError } from '../utils/logger/api.js';
 import { init as initNavigation } from './navigation.js';
 import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
 import { initTrancoUpdateNotification } from './trancoNotification.js';

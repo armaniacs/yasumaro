@@ -24,14 +24,25 @@ vi.mock('../../../utils/crypto/index.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logError: vi.fn().mockResolvedValue(undefined),
+  logWarn: vi.fn().mockResolvedValue(undefined),
+  ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logError: vi.fn().mockResolvedValue(undefined),
+  logWarn: vi.fn().mockResolvedValue(undefined),
+  ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: vi.fn().mockResolvedValue(undefined),
   logWarn: vi.fn().mockResolvedValue(undefined),
   ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
 }));
 
 import { encodeUrlSafeBase64, decodeUrlFromNotificationId, createNotificationId, getUrlFromNotificationId } from '../urlNotificationHandlers.js';
-import { ErrorCode, logWarn } from '../../../utils/logger.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { logWarn } from '../../../utils/logger/api.js';
 
 
 describe('encodeUrlSafeBase64', () => {
