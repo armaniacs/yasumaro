@@ -1,4 +1,4 @@
-import { getMessageOr } from '../../../utils/i18n.js';
+import { tOrKey as t } from '../../../utils/i18n.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
@@ -19,10 +19,6 @@ import {
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 
 export { formatDiagnosticMetadataHtml };
-
-function t(key: string, substitutions?: string | string[]): string {
-  return getMessageOr(key, key, substitutions);
-}
 
 export function createSqliteHistoryPanel(): PanelLifecycle {
   let container: HTMLElement | null = null;

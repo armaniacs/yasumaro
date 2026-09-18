@@ -74,3 +74,23 @@ export function getMessageOr(
     : chrome.i18n.getMessage(key);
   return message || fallback;
 }
+
+/**
+ * Translate a key, falling back to the key itself when missing
+ * (surfaces a missing translation instead of blank UI).
+ *
+ * PBI 2026-09-18-15: the four per-panel `t()` / `localized()` wrappers in
+ * dashboard (sqliteHistoryPanelView, sqliteHistoryPanel, cleansingStatsView,
+ * archivePanel) were the same idiom four times; archivePanel's variant also
+ * needed named substitutions. This function accepts all substitution shapes:
+ * string / array (positional, passed to chrome.i18n) and record (named,
+ * handled by getMessage's `{name}` replacement).
+ */
+export function tOrKey(
+  key: string,
+  substitutions?: string | Array<string | number> | Record<string, string | number>
+): string {
+  if (substitutions === undefined) return chrome.i18n.getMessage(key) || key;
+  if (typeof substitutions === 'string') return chrome.i18n.getMessage(key, substitutions) || key;
+  return getMessage(key, substitutions) || key;
+}

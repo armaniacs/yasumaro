@@ -1,4 +1,4 @@
-import { getMessageOr } from '../../../utils/i18n.js';
+import { tOrKey as t } from '../../../utils/i18n.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
@@ -16,10 +16,6 @@ import {
   resolveCleansingBytes,
   type DiagnosticMissingReason,
 } from './historyEntryPresentation.js';
-
-function t(key: string, substitutions?: string | string[]): string {
-  return getMessageOr(key, key, substitutions);
-}
 
 const MISSING_REASON_KEYS: Record<DiagnosticMissingReason, string> = {
   'no-ai': 'historyMissingReasonNoAi',

@@ -1,10 +1,6 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
-import { getMessageOr } from '../utils/i18n.js';
-
-function t(key: string): string {
-  return getMessageOr(key, key);
-}
+import { tOrKey as t } from '../utils/i18n.js';
 
 /**
  * バイト数を4桁有効数字で KB / MB / GB に自動変換する

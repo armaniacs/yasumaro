@@ -18,15 +18,11 @@ import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { cutoffMsFromLocalDate, assertCutoffPair, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
 import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
-import { getMessage } from '../../../utils/i18n.js';
+import { tOrKey as localized } from '../../../utils/i18n.js';
 import { createArchiveSessionStore } from './archiveSessionStore.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
 const EXPORT_CHUNK_BYTES = MAX_ARCHIVE_EXPORT_CHUNK_BYTES;
-
-function localized(key: string, args?: Record<string, string | number>): string {
-  return getMessage(key, args ?? null) || key;
-}
 
 export function createArchivePanel(): PanelLifecycle {
   return {
