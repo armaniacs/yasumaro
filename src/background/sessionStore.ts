@@ -7,11 +7,25 @@ export const SESSION_KEYS = {
   RECORDING_CACHE: 'sw:recordingCache',
 } as const;
 
+/**
+ * SessionStore の依存先向け最小契約。
+ *
+ * get() は chrome.storage.session が利用不可・失敗した場合でも例外を投げず
+ * null を返す（呼び出し元は「値なし」と「読み取り失敗」を区別できない設計）。
+ * set() のデフォルトは debounce 書き込みであり、Service Worker 終了時に
+ * 消える可能性があるデータは { flushImmediately: true } を指定すること。
+ */
+export interface SessionStorePort {
+  get<T>(key: string): Promise<T | null>;
+  set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void>;
+  remove(key: string): void;
+}
+
 // When the RECORDING_CACHE value exceeds the session quota, only these
 // sub-keys are preserved so the most critical settings cache survives.
 const PRIORITY_SUBKEYS = ['settingsCache', 'cacheTimestamp', 'cacheVersion'];
 
-export class SessionStore {
+export class SessionStore implements SessionStorePort {
   private writeQueue = new Map<string, unknown>();
   private deleteQueue = new Set<string>();
   private flushPromise: Promise<void> | null = null;

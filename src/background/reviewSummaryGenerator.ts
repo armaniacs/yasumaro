@@ -187,6 +187,59 @@ async function downloadMarkdown(content: string, filename: string, exportPath: s
   }
 }
 
+interface SummaryPeriod {
+  kind: 'week' | 'month';
+  /** Markdown見出し・digestプロンプトに使う人間可読ラベル。 */
+  label: string;
+  start: number;
+  end: number;
+  storageKey: string;
+  lastGeneratedKey: typeof StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK | typeof StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH;
+  /** digestプロンプト・ログの文言に使う単位表現（例: "1週間" / "1ヶ月間"）。 */
+  digestPromptUnit: string;
+}
+
+function buildWeekPeriod(date: Date): SummaryPeriod {
+  const weekYear = getISOWeekYear(date);
+  const weekNum = getISOWeekNumber(date);
+  const weekKey = `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
+  const { start, end } = getWeekPeriod(date);
+
+  return {
+    kind: 'week',
+    label: `Week ${weekNum} (${weekYear})`,
+    start,
+    end,
+    storageKey: weekKey,
+    lastGeneratedKey: StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK,
+    digestPromptUnit: '1週間'
+  };
+}
+
+function buildMonthPeriod(date: Date): SummaryPeriod {
+  const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+  const { start, end } = getMonthPeriod(date);
+
+  return {
+    kind: 'month',
+    label: `${date.getFullYear()}年${date.getMonth() + 1}月`,
+    start,
+    end,
+    storageKey: monthKey,
+    lastGeneratedKey: StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH,
+    digestPromptUnit: '1ヶ月間'
+  };
+}
+
+function filenameForPeriod(period: SummaryPeriod, date: Date): string {
+  if (period.kind === 'week') {
+    const weekYear = getISOWeekYear(date);
+    const weekNum = getISOWeekNumber(date);
+    return `${weekYear}-week-${String(weekNum).padStart(2, '0')}.md`;
+  }
+  return `${date.getFullYear()}-month-${String(date.getMonth() + 1).padStart(2, '0')}.md`;
+}
+
 /**
  * 週次/月次レビューサマリ生成器を組み立てる。
  *
@@ -197,150 +250,92 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
   const weeklyMutex = new Mutex();
   const monthlyMutex = new Mutex();
 
-  async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
-    await weeklyMutex.acquire();
+  async function generatePeriodSummary(period: SummaryPeriod, mutex: Mutex, date: Date): Promise<boolean> {
+    const periodNoun = period.kind === 'week' ? 'weekly' : 'monthly';
+    await mutex.acquire();
     try {
       const settings = await repo.getAll();
-    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
-    if (!enabled) {
-      addLog(LogType.INFO, 'Weekly review summary is disabled');
-      return false;
-    }
-
-    const date = targetDate || new Date();
-    const weekYear = getISOWeekYear(date);
-    const weekNum = getISOWeekNumber(date);
-    const weekKey = `${weekYear}-W${String(weekNum).padStart(2, '0')}`;
-
-    // Check if already generated
-    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK];
-    if (lastGenerated === weekKey) {
-      addLog(LogType.INFO, 'Weekly summary already generated for this week', { weekKey });
-      return false;
-    }
-
-const { start, end } = getWeekPeriod(date);
-     const queryRes = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
-
-     if (!queryRes.success) {
-      addLog(LogType.ERROR, 'Failed to query entries for weekly summary', { weekKey, error: queryRes.error.message });
-      return false;
-    }
-    const result = queryRes.data;
-    if (result.rows.length === 0) {
-      addLog(LogType.INFO, 'No entries for this week, skipping', { weekKey });
-      return false;
-    }
-
-    // Generate digest using AI
-    const summaries = result.rows
-      .map((e) => e.summary)
-      .filter(Boolean)
-      .join('\n\n');
-
-    let digest = 'Weekly review digest generation requires AI provider configuration.';
-    if (summaries) {
-      const digestResult = await aiService.generateSummary(
-        `以下の1週間の閲覧ページの要約を統合して、週次振り返りダイジェストを生成してください。\n\n${summaries}`
-      );
-      if (digestResult.success) {
-        digest = digestResult.summary;
+      const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
+      if (!enabled) {
+        addLog(LogType.INFO, `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} review summary is disabled`);
+        return false;
       }
-    }
 
-    const entries = result.rows as ReviewLogEntry[];
+      // Check if already generated
+      const lastGenerated = settings[period.lastGeneratedKey];
+      if (lastGenerated === period.storageKey) {
+        addLog(
+          LogType.INFO,
+          `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} summary already generated for this ${period.kind}`,
+          { [`${period.kind}Key`]: period.storageKey }
+        );
+        return false;
+      }
 
-    const markdown = generateReviewMarkdown(`Week ${weekNum} (${weekYear})`, entries, digest);
-    const filename = `${weekYear}-week-${String(weekNum).padStart(2, '0')}.md`;
-    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]
-      ?? (DEFAULT_SETTINGS[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string);
+      const queryRes = await sqliteClient.query({ dateFrom: period.start, dateTo: period.end, limit: 10000 });
 
-    const success = await downloadMarkdown(markdown, filename, exportPath);
+      if (!queryRes.success) {
+        addLog(LogType.ERROR, `Failed to query entries for ${periodNoun} summary`, {
+          [`${period.kind}Key`]: period.storageKey,
+          error: queryRes.error.message
+        });
+        return false;
+      }
+      const result = queryRes.data;
+      if (result.rows.length === 0) {
+        addLog(LogType.INFO, `No entries for this ${period.kind}, skipping`, { [`${period.kind}Key`]: period.storageKey });
+        return false;
+      }
 
-    if (success) {
-      // Save last generated week
-      await chrome.storage.local.set({
-        [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK]: weekKey
-      });
-      addLog(LogType.INFO, 'Weekly review summary generated', { weekKey, entryCount: result.rows.length });
-    }
+      // Generate digest using AI
+      const summaries = result.rows
+        .map((e) => e.summary)
+        .filter(Boolean)
+        .join('\n\n');
+
+      let digest = `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} review digest generation requires AI provider configuration.`;
+      if (summaries) {
+        const digestResult = await aiService.generateSummary(
+          `以下の${period.digestPromptUnit}の閲覧ページの要約を統合して、${periodNoun === 'weekly' ? '週次' : '月次'}振り返りダイジェストを生成してください。\n\n${summaries}`
+        );
+        if (digestResult.success) {
+          digest = digestResult.summary;
+        }
+      }
+
+      const entries = result.rows as ReviewLogEntry[];
+
+      const markdown = generateReviewMarkdown(period.label, entries, digest);
+      const filename = filenameForPeriod(period, date);
+      const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]
+        ?? (DEFAULT_SETTINGS[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string);
+
+      const success = await downloadMarkdown(markdown, filename, exportPath);
+
+      if (success) {
+        await chrome.storage.local.set({
+          [period.lastGeneratedKey]: period.storageKey
+        });
+        addLog(LogType.INFO, `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} review summary generated`, {
+          [`${period.kind}Key`]: period.storageKey,
+          entryCount: result.rows.length
+        });
+      }
 
       return success;
     } finally {
-      weeklyMutex.release();
+      mutex.release();
     }
   }
 
-  async function generateMonthlySummary(targetDate?: Date): Promise<boolean> {
-    await monthlyMutex.acquire();
-    try {
-      const settings = await repo.getAll();
-    const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
-    if (!enabled) {
-      addLog(LogType.INFO, 'Monthly review summary is disabled');
-      return false;
-    }
-
+  async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
     const date = targetDate || new Date();
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    return generatePeriodSummary(buildWeekPeriod(date), weeklyMutex, date);
+  }
 
-    // Check if already generated
-    const lastGenerated = settings[StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH];
-    if (lastGenerated === monthKey) {
-      addLog(LogType.INFO, 'Monthly summary already generated for this month', { monthKey });
-      return false;
-    }
-
-const { start, end } = getMonthPeriod(date);
-     const queryRes = await sqliteClient.query({ dateFrom: start, dateTo: end, limit: 10000 });
-
-     if (!queryRes.success) {
-      addLog(LogType.ERROR, 'Failed to query entries for monthly summary', { monthKey, error: queryRes.error.message });
-      return false;
-    }
-    const result = queryRes.data;
-    if (result.rows.length === 0) {
-      addLog(LogType.INFO, 'No entries for this month, skipping', { monthKey });
-      return false;
-    }
-
-    // Generate digest using AI
-    const summaries = result.rows
-      .map((e) => e.summary)
-      .filter(Boolean)
-      .join('\n\n');
-
-    let digest = 'Monthly review digest generation requires AI provider configuration.';
-    if (summaries) {
-      const digestResult = await aiService.generateSummary(
-        `以下の1ヶ月間の閲覧ページの要約を統合して、月次振り返りダイジェストを生成してください。\n\n${summaries}`
-      );
-      if (digestResult.success) {
-        digest = digestResult.summary;
-      }
-    }
-
-    const entries = result.rows as ReviewLogEntry[];
-
-    const markdown = generateReviewMarkdown(`${date.getFullYear()}年${date.getMonth() + 1}月`, entries, digest);
-    const filename = `${date.getFullYear()}-month-${String(date.getMonth() + 1).padStart(2, '0')}.md`;
-    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]
-      ?? (DEFAULT_SETTINGS[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] as string);
-
-    const success = await downloadMarkdown(markdown, filename, exportPath);
-
-    if (success) {
-      // Save last generated month
-      await chrome.storage.local.set({
-        [StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_MONTH]: monthKey
-      });
-      addLog(LogType.INFO, 'Monthly review summary generated', { monthKey, entryCount: result.rows.length });
-    }
-
-      return success;
-    } finally {
-      monthlyMutex.release();
-    }
+  async function generateMonthlySummary(targetDate?: Date): Promise<boolean> {
+    const date = targetDate || new Date();
+    return generatePeriodSummary(buildMonthPeriod(date), monthlyMutex, date);
   }
 
   return { generateWeeklySummary, generateMonthlySummary };

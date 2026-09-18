@@ -38,6 +38,10 @@ type PersistedCacheState = {
 
 // --- Store abstraction ---
 
+// SessionStorePort（sessionStore.ts）とは統合しない: こちらは get/set のみで
+// remove を持たず InMemoryRecordingCacheStore（remove不要のテスト用実装）も
+// 満たせる最小契約。SessionStorePort は TabCache の remove(key) 呼び出しを
+// 表現するために remove を含む、目的の異なる別インターフェースとして並立させる。
 export interface RecordingCacheStore {
   get<T>(key: string): Promise<T | null>;
   set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void>;

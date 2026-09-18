@@ -1,4 +1,4 @@
-import { SessionStore, SESSION_KEYS } from './sessionStore.js';
+import { SessionStore, SESSION_KEYS, type SessionStorePort } from './sessionStore.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
 export interface TabData {
@@ -14,9 +14,9 @@ export class TabCache {
     private cache: Map<number, TabData>;
     private isInitialized: boolean;
     private initPromise: Promise<void> | null;
-    private sessionStore: SessionStore;
+    private sessionStore: SessionStorePort;
 
-    constructor(sessionStore?: SessionStore) {
+    constructor(sessionStore?: SessionStorePort) {
         this.cache = new Map();
         this.isInitialized = false;
         this.initPromise = null;

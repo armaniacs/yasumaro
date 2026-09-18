@@ -5,6 +5,7 @@
 
 import { TabCache } from '../tabCache.js';
 import type { TabData } from '../tabCache.js';
+import type { SessionStorePort } from '../sessionStore.js';
 
 // getAll() is declared as Iterator<TabData> (no Symbol.iterator in its type);
 // at runtime it is a Map values iterator, so wrap it as an Iterable for Array.from.
@@ -334,5 +335,40 @@ describe('TabCache', () => {
             tabCache.add(asTab(tab));
             expect(tabCache.size()).toBe(1);
         });
+    });
+});
+
+describe('TabCache with a fake SessionStorePort', () => {
+    // SessionStore具象クラスに結合していないことを示すため、
+    // 具象クラスを継承しない最小のフェイク実装を注入する。
+    class FakeSessionStore implements SessionStorePort {
+        private data = new Map<string, unknown>();
+        removedKeys: string[] = [];
+
+        async get<T>(key: string): Promise<T | null> {
+            return (this.data.get(key) as T) ?? null;
+        }
+
+        async set(key: string, value: unknown): Promise<void> {
+            this.data.set(key, value);
+        }
+
+        remove(key: string): void {
+            this.removedKeys.push(key);
+            this.data.delete(key);
+        }
+    }
+
+    it('persists and clears through the fake store without depending on the concrete class', () => {
+        const fake = new FakeSessionStore();
+        const tabCache = new TabCache(fake);
+        tabCache.add(asTab({ id: 1, title: 'Fake Page', url: 'https://example.com/fake' }));
+
+        expect(tabCache.size()).toBe(1);
+
+        tabCache.clear();
+
+        expect(fake.removedKeys).toContain('sw:tabCache');
+        expect(tabCache.size()).toBe(0);
     });
 });

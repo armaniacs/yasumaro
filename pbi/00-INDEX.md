@@ -89,6 +89,13 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-18 archloop-0915b 残り将来候補の PBI 化 — 2件完了（03・04）
+
+`2026-09-15-00-backlog-archloop-0915b.md` の将来候補のうち、reviewSummary 双子統合と SessionStore durability interface 化の2件を PBI 化・実装。合成ルート深掘り（RICE 7.0）は別途未採番。
+
+- 2026-09-18-03-refactor-review-summary-period-unify.md（✅ 完了・アーカイブ済 — reviewSummaryGenerator.ts の週次/月次生成ロジック重複を `generatePeriodSummary(period, mutex)` に統合。`buildWeekPeriod`/`buildMonthPeriod` strategy 関数を新設、weeklyMutex/monthlyMutex は別インスタンスのまま維持。既存34 tests 無修正でパス = byte-identical 動作の証明）
+- 2026-09-18-04-refactor-session-store-interface.md（✅ 完了・アーカイブ済 — `SessionStorePort` インターフェースを新設し `get`/`set`/`remove` の契約（get失敗時は例外を投げずnull）を型コメントで明示。TabCache・RateLimiter・compositionManifest.ts の依存を具象クラスからポート型経由に変更。RecordingCacheStore とは目的が異なるため統合せず理由をdoc commentに記録。フェイク実装での動作証明テストを追加、既存94 tests 無修正でパス）
+
 ### 2026-09-17 アーキテクチャレビュー指摘の PBI 化 — 1件完了（10）
 
 - 2026-09-17-10-refactor-ai-test-connection-template.md（✅ 完了・アーカイブ済 — `executeHttpTestFlow(hooks)` を新設（`executeHttpSummaryFlow` と対称）し Gemini/OpenAI 互換の testConnection 重複（約90%）を統合。providerCatalog の contentCharsKey を実消費に昇格して設定キー SSOT 化。legacy フォールバックは unknown 拒否契約維持のため直構築専用と温存。parity 13 + SSOT pin 4 tests 追加・AI 配下 233 tests green）

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { RateLimiter } from '../rateLimiter.js';
-import { SessionStore } from '../sessionStore.js';
+import { SessionStore, type SessionStorePort } from '../sessionStore.js';
 
 function makeSessionStore(): SessionStore {
   const map = new Map<string, unknown>();
@@ -196,5 +196,31 @@ describe('RateLimiter — origin-based sender key (H4)', () => {
       expect.any(Array),
       { flushImmediately: true }
     );
+  });
+});
+
+describe('RateLimiter with a fake SessionStorePort', () => {
+  // SessionStore具象クラスに結合していないことを示すため、
+  // 具象クラスを継承しない最小のフェイク実装を注入する（castなしで型が通る）。
+  class FakeSessionStore implements SessionStorePort {
+    private data = new Map<string, unknown>();
+
+    async get<T>(key: string): Promise<T | null> {
+      return (this.data.get(key) as T) ?? null;
+    }
+
+    async set(key: string, value: unknown): Promise<void> {
+      this.data.set(key, value);
+    }
+
+    remove(key: string): void {
+      this.data.delete(key);
+    }
+  }
+
+  it('allows requests through a fake store implementation', async () => {
+    const rateLimiter = new RateLimiter(new FakeSessionStore());
+    const result = await rateLimiter.check({ url: 'https://example.com/page' }, {});
+    expect(result.allowed).toBe(true);
   });
 });
