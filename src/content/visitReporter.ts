@@ -8,6 +8,7 @@ import type { PageState } from './pageState.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
 import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
@@ -121,10 +122,8 @@ export interface VisitReporterDeps {
 
 /** Default reason-label lookup (chrome.i18n with graceful fallbacks). */
 function defaultGetReasonLabel(messageKey: string, fallbackKey: string, fallback: string): string {
-    return typeof chrome !== 'undefined' && chrome.i18n?.getMessage
-        ? chrome.i18n.getMessage(messageKey) ||
-          chrome.i18n.getMessage(fallbackKey) ||
-          fallback
+    return typeof chrome !== 'undefined' && chrome.i18n
+        ? getMessageOr(messageKey, getMessageOr(fallbackKey, fallback))
         : fallback;
 }
 

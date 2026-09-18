@@ -5,7 +5,7 @@
 
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showPasswordAuthModal } from './masterPassword.js';
@@ -81,8 +81,8 @@ function showImportPreview(data: SettingsExportData): void {
   summary.domain_filter_mode = s.domain_filter_mode as string;
   summary.privacy_mode = s.privacy_mode as string;
   summary.domain_count = String((s.domain_whitelist?.length || 0) + (s.domain_blacklist?.length || 0));
-  const summaryMsg = chrome.i18n.getMessage('importPreviewSummary') || 'Summary:';
-  const noteMsg = chrome.i18n.getMessage('importPreviewNote') || 'API keys and lists are included.';
+  const summaryMsg = getMessageOr('importPreviewSummary', 'Summary:');
+  const noteMsg = getMessageOr('importPreviewNote', 'API keys and lists are included.');
   importPreview.textContent = `${summaryMsg}\n${JSON.stringify(summary, null, 2)}\n\n${noteMsg}`;
 }
 

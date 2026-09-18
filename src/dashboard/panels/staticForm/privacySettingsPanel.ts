@@ -3,6 +3,7 @@ import { getRegistry } from '../registryContext.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storage/privacyConsent.js';
+import { getMessageOr } from '../../../utils/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
 
@@ -22,16 +23,16 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
         const state = await getPrivacyConsent();
         display.textContent = state.hasConsented
           ? (state.consentDate
-              ? chrome.i18n.getMessage('consented', [state.consentDate]) || `Consented (${state.consentDate})`
-              : chrome.i18n.getMessage('consentedNoDate') || 'Consented')
-          : chrome.i18n.getMessage('notConsented') || 'Not consented';
+              ? getMessageOr('consented', `Consented (${state.consentDate})`, [state.consentDate])
+              : getMessageOr('consentedNoDate', 'Consented'))
+          : getMessageOr('notConsented', 'Not consented');
         btn.classList.toggle('hidden', !state.hasConsented);
         btn.addEventListener('click', async () => {
           const confirmed = await showConfirmDialog({
-            title: chrome.i18n.getMessage('confirmWithdrawConsentTitle') || 'Withdraw Privacy Consent',
-            message: chrome.i18n.getMessage('confirmWithdrawConsentMessage') || 'Withdrawing consent will also permanently delete all previously recorded browsing history. Continue?',
-            confirmLabel: chrome.i18n.getMessage('confirmDelete') || 'Delete',
-            cancelLabel: chrome.i18n.getMessage('cancel') || 'Cancel',
+            title: getMessageOr('confirmWithdrawConsentTitle', 'Withdraw Privacy Consent'),
+            message: getMessageOr('confirmWithdrawConsentMessage', 'Withdrawing consent will also permanently delete all previously recorded browsing history. Continue?'),
+            confirmLabel: getMessageOr('confirmDelete', 'Delete'),
+            cancelLabel: getMessageOr('cancel', 'Cancel'),
             dangerous: true,
           });
           if (!confirmed) return;
@@ -41,7 +42,7 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           const delRes = await clearAllLogs();
           if (isServiceError(delRes)) {
             if (statusEl) {
-              const base = chrome.i18n.getMessage('withdrawConsentDataDeleteFailed') || 'Failed to delete recorded data. Your consent status was not changed.';
+              const base = getMessageOr('withdrawConsentDataDeleteFailed', 'Failed to delete recorded data. Your consent status was not changed.');
               statusEl.textContent = `${base} (${delRes.error})`;
               statusEl.style.color = 'var(--color-error)';
             }
@@ -51,21 +52,21 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           const ok = await withdrawPrivacyConsent();
           if (statusEl) {
             statusEl.textContent = ok
-              ? chrome.i18n.getMessage('consentWithdrawnStopped') || 'Consent withdrawn. Recording will stop.'
-              : chrome.i18n.getMessage('consentWithdrawFailed') || 'Failed to withdraw consent.';
+              ? getMessageOr('consentWithdrawnStopped', 'Consent withdrawn. Recording will stop.')
+              : getMessageOr('consentWithdrawFailed', 'Failed to withdraw consent.');
             statusEl.style.color = ok ? 'var(--color-success-text)' : 'var(--color-error)';
           }
-          display.textContent = chrome.i18n.getMessage('notConsented') || 'Not consented';
+          display.textContent = getMessageOr('notConsented', 'Not consented');
           btn.classList.add('hidden');
         });
       }
 
       container.querySelector('#btnDeleteAllData')?.addEventListener('click', async () => {
         const confirmed = await showConfirmDialog({
-          title: chrome.i18n.getMessage('confirmClearAllTitle') || 'Delete All History',
-          message: chrome.i18n.getMessage('confirmClearAllMessage') || chrome.i18n.getMessage('deleteAllDataConfirm') || 'This will permanently delete all stored data. Continue?',
-          confirmLabel: chrome.i18n.getMessage('confirmDelete') || 'Delete',
-          cancelLabel: chrome.i18n.getMessage('cancel') || 'Cancel',
+          title: getMessageOr('confirmClearAllTitle', 'Delete All History'),
+          message: getMessageOr('confirmClearAllMessage', getMessageOr('deleteAllDataConfirm', 'This will permanently delete all stored data. Continue?')),
+          confirmLabel: getMessageOr('confirmDelete', 'Delete'),
+          cancelLabel: getMessageOr('cancel', 'Cancel'),
           dangerous: true,
         });
         if (!confirmed) return;
@@ -75,7 +76,7 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           if (isServiceError(sqliteResult)) {
             const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;
             if (statusEl2) {
-              const base = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to clear browsing logs. Please try again.';
+              const base = getMessageOr('deleteAllDataFailed', 'Failed to clear browsing logs. Please try again.');
               statusEl2.textContent = `${base} (${sqliteResult.error})`;
             }
             return;
@@ -85,7 +86,7 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           setTimeout(() => window.location.reload(), 2000);
         } catch {
           const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;
-          if (statusEl2) statusEl2.textContent = chrome.i18n.getMessage('deleteAllDataFailed') || 'Failed to delete all data.';
+          if (statusEl2) statusEl2.textContent = getMessageOr('deleteAllDataFailed', 'Failed to delete all data.');
         }
       });
 
