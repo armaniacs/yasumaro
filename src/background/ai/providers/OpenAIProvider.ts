@@ -203,12 +203,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                     success: hasContent,
                     message: hasContent ? 'Connected to AI API.' : 'Response contained no content.',
                     debug: {
-                        prompt: CONNECTION_TEST_PROMPT,
-                        endpoint: ctx.endpoint,
-                        ...pickDefined({ modelName: ctx.modelName }),
-                        statusCode: ctx.statusCode,
-                        hasContent,
-                        ...pickDefined({ response: hasContent ? text : undefined }),
+                        ...this.buildTestDebugBase(ctx, hasContent, text),
                         ...(typed.usage?.prompt_tokens !== undefined ? { sentTokens: typed.usage.prompt_tokens } : {}),
                         ...(typed.usage?.completion_tokens !== undefined ? { receivedTokens: typed.usage.completion_tokens } : {}),
                         ...(hasContent ? {} : { error: 'choices[0].message.content was empty' }),
@@ -220,20 +215,14 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
 
     private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {
         if (!data.choices || data.choices.length === 0) {
-            const error = 'OpenAI schema validation failed: choices is missing or empty';
-            addLog(LogType.ERROR, error, { traceId });
-            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+            return this.failInvalidSchema('OpenAI schema validation failed: choices is missing or empty', traceId);
         }
         if (!data.choices[0]?.message) {
-            const error = 'OpenAI schema validation failed: choices[0].message is missing';
-            addLog(LogType.ERROR, error, { traceId });
-            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+            return this.failInvalidSchema('OpenAI schema validation failed: choices[0].message is missing', traceId);
         }
         const content = data.choices[0].message.content;
         if (typeof content !== 'string') {
-            const error = 'OpenAI schema validation failed: message.content is not a string';
-            addLog(LogType.ERROR, error, { traceId });
-            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+            return this.failInvalidSchema('OpenAI schema validation failed: message.content is not a string', traceId);
         }
         const sentTokens = data.usage?.prompt_tokens;
         const receivedTokens = data.usage?.completion_tokens;

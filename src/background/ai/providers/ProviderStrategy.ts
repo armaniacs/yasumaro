@@ -14,6 +14,8 @@ import { fetchWithRetry } from '../../../utils/fetch.js';
 import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
+import { addLog } from '../../../utils/logger/core.js';
+import { LogType } from '../../../utils/logger/types.js';
 import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
 
 export { MAX_AI_HTTP_RESPONSE_BYTES };
@@ -391,6 +393,37 @@ export abstract class AIProviderStrategy {
      */
     protected async getAllowedUrlsForRequests(): Promise<Set<string>> {
         return getAllowedUrls();
+    }
+
+    /**
+     * Invalid-schema failure shared by the providers' _extractSummary twins
+     * (PBI 2026-09-18-09). Logs the technical reason and returns the stable
+     * user-facing message — pinned by aiExtract-twins-parity.test.ts.
+     */
+    protected failInvalidSchema(reason: string, traceId: string = ''): AISummaryResult {
+        addLog(LogType.ERROR, reason, { traceId });
+        return { success: false, summary: 'Error: Invalid API response format - unexpected schema.', error: reason };
+    }
+
+    /**
+     * Test-debug base shared by the providers' extractResponse twins
+     * (PBI 2026-09-18-09): prompt, endpoint, modelName, statusCode,
+     * hasContent, and the response text (present only when non-empty).
+     * Provider-specific token counts and empty-errors are spread on top.
+     */
+    protected buildTestDebugBase(
+        ctx: HttpTestContext,
+        hasContent: boolean,
+        responseText?: string,
+    ): NonNullable<AIProviderConnectionResult['debug']> {
+        return {
+            prompt: CONNECTION_TEST_PROMPT,
+            endpoint: ctx.endpoint,
+            ...pickDefined({ modelName: ctx.modelName }),
+            statusCode: ctx.statusCode,
+            hasContent,
+            ...pickDefined({ response: hasContent ? responseText : undefined }),
+        };
     }
 
     /**
