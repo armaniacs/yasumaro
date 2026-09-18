@@ -58,6 +58,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 ### 将来候補の統合台帳（live）
 
+- [2026-09-18-00-backlog-holistic-0918c.md](2026-09-18-00-backlog-holistic-0918c.md) — 大局的コード改善 0918c の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918b.md](2026-09-18-00-backlog-holistic-0918b.md) — 大局的コード改善 0918b の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic-0918.md) — 大局的コード改善 0918 の台帳（6候補の RICE 表・実行順・依存マップ・バッチ計画・5 Whys）
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
@@ -90,6 +91,16 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-18 大局的コード改善 第3ラウンド（holistic-0918c） — ✅ 全3件完了（14〜16 アーカイブ済み）
+
+popup・dashboard panel・i18n・層境界の大局的レビューで抽出した3候補を RICE 採点して PBI 化。実行順 = 14 → 15 → 16（ファイル非重複・1バッチ）。台帳は `2026-09-18-00-backlog-holistic-0918c.md`（live）。console → logger 統一（RICE 2.1）は台帳送り（再検討トリガー: 可観測性方針の明確化）。統合検証で3件のテスト mock 未追従を検出・即修正（exportImport 系2件・privacySettingsPanel の i18n mock を実セマンティクス委譲に更新）。PBI 14 の初回コミットに PBI 16 の git mv が混入したため soft reset して分割し直した（リネームは内容無変更の pure move）。
+
+- 2026-09-18-14-refactor-adopt-get-message-or-seam.md（✅ 完了・アーカイブ済 — `|| fallback` 形 約40サイト・10ファイルを getMessageOr に置換。fallback 無し素呼び出し・getMsgWithCache は対象外）
+- 2026-09-18-15-refactor-consolidate-dashboard-t-wrappers.md（✅ 完了・アーカイブ済 — tOrKey を i18n seam に新設（位置・名前付き両対応）し4ラッパを別名 import に統合。呼び出しサイト129箇所は無変更、単体テスト3件新設）
+- 2026-09-18-16-refactor-resolve-dashboard-popup-imports.md（✅ 完了・アーカイブ済 — escapeHtml 2ファイルを utils 直参照化、onboardingWizard を utils/ui へ移動。dashboard 配下の popup import 0 件）
+
+最終検証: type-check / lint 0 errors（警告133・前回比 ±0）/ test 12,271 passed（781 files、+3 tOrKey テスト）/ build PASS / lint:adr-links・layers-docs PASS。
 
 ### 2026-09-18 大局的コード改善 第2ラウンド（holistic-0918b） — ✅ 全3件完了（11〜13 アーカイブ済み）
 
