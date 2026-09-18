@@ -17,6 +17,7 @@
  */
 
 import { CONTENT_SCRIPT_ALLOWED_TYPES } from '../messageTypes.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { checkSenderTrust, type SenderTrustLevel } from './senderTrust.js';
 import {
   createValidVisitHandler,
@@ -244,13 +245,13 @@ export class MessageRouter {
       try {
         validator.validate(message);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = errorMessage(err);
         sendResponse({ success: false, error: msg });
         return false;
       }
     }
     Promise.resolve(handler(message, sender, sendResponse)).catch((err) => {
-      sendResponse({ success: false, error: err instanceof Error ? err.message : String(err) });
+      sendResponse({ success: false, error: errorMessage(err) });
     });
     return true;
   }

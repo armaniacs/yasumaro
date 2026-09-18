@@ -5,6 +5,7 @@
  */
 
 import { Mutex } from '../utils/Mutex.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
@@ -187,7 +188,7 @@ export class FallbackStorage {
         .sort((a, b) => b.created_at - a.created_at);
       return { success: true, rows };
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 

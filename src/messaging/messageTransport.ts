@@ -8,6 +8,7 @@ import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
 import { VALID_MESSAGE_TYPES } from '../background/messageTypes.js';
 import { backoffDelayMs } from '../utils/backoff.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export interface TransportPort {
   send(message: unknown): Promise<unknown>;
@@ -34,7 +35,7 @@ const RETRYABLE_ERROR_PATTERNS = [
 ];
 
 function isRetryableError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg = errorMessage(error);
   return RETRYABLE_ERROR_PATTERNS.some((p) => p.test(msg));
 }
 

@@ -9,6 +9,7 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import {
   loadExportConfig,
   exportFullHistoryInBatches,
@@ -73,7 +74,7 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
     statusEl.textContent = `${result.totalRows}件の記録を${result.totalFiles}ファイルにエクスポートしました。`;
     statusEl.className = 'success';
   } catch (e) {
-    statusEl.textContent = `エクスポートに失敗しました: ${e instanceof Error ? e.message : String(e)}`;
+    statusEl.textContent = `エクスポートに失敗しました: ${errorMessage(e)}`;
     statusEl.className = 'error';
   } finally {
     exportBtn.disabled = false;

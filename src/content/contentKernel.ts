@@ -12,6 +12,7 @@ import { PageState, type CleansingConfig, DEFAULT_CLEANSING_CONFIG } from './pag
 import { StorageKeys, type StorageKey } from '../utils/storage/types.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
 import { logInfo, logDebug } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { VisitGate } from './visitGate.js';
 import type { VisitState, VisitGateThresholds } from './visitGate.js';
 import { preparePageContent } from '../utils/pageContentPipeline.js';
@@ -154,7 +155,7 @@ export class ContentKernel {
                 .catch((e: unknown) => {
                     void logDebug(
                         'CONTENT_CLEANSING_EXECUTED send failed',
-                        { error: e instanceof Error ? e.message : String(e) },
+                        { error: errorMessage(e) },
                         'contentKernel',
                     );
                 });

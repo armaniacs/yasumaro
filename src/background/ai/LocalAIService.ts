@@ -7,6 +7,7 @@ import {
   type AiConnectionTestResult,
 } from './AIService.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 /** Provider identifier reported for history entries produced via this service. */
 const LOCAL_AI_PROVIDER_NAME = 'built-in-ai';
@@ -87,7 +88,7 @@ export class LocalAIService implements AIService {
     } catch (error) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : String(error),
+        message: errorMessage(error),
         providers: [],
       };
     }

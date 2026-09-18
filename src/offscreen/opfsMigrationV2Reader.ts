@@ -10,6 +10,7 @@
  */
 
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { LEGACY_OPFS_POOL_DIR, LEGACY_OPFS_DB_FILENAME } from '../messaging/sqliteMessages.js';
 
 // Old constants live in sqliteMessages.ts as the single source (PBI 2026-09-11-06);
@@ -135,7 +136,7 @@ export async function readOldDbRecords(): Promise<BrowsingLogRecord[]> {
     );
   } catch (err) {
     // If the table doesn't exist (fresh install or already wiped), return [].
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = errorMessage(err);
     if (msg.includes('no such table')) {
       return [];
     }

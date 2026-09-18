@@ -229,7 +229,7 @@ export class ObsidianClient {
                     baseUrl = config.baseUrl;
                     headers = config.headers;
                 } catch (e: unknown) {
-                    const msg = e instanceof Error ? e.message : String(e);
+                    const msg = errorMessage(e);
                     if (msg.includes('API key is missing')) {
                         return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
                     }

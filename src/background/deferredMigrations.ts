@@ -6,6 +6,7 @@
  */
 
 import { logInfo, logError, ErrorCode } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { migrateToSingleSettingsObject } from '../utils/storage/settingsMigration.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { SessionStore } from './sessionStore.js';
@@ -21,7 +22,7 @@ async function runMigration(): Promise<void> {
   } catch (e) {
     logError(
       'Failed to migrate settings',
-      { error: e instanceof Error ? e.message : String(e) },
+      { error: errorMessage(e) },
       ErrorCode.STORAGE_MIGRATION_FAILURE,
       'service-worker'
     );
