@@ -58,6 +58,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 ### 将来候補の統合台帳（live）
 
+- [2026-09-18-00-backlog-holistic-0918b.md](2026-09-18-00-backlog-holistic-0918b.md) — 大局的コード改善 0918b の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic-0918.md) — 大局的コード改善 0918 の台帳（6候補の RICE 表・実行順・依存マップ・バッチ計画・5 Whys）
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
 - [2026-09-15-00-backlog-archloop-0915.md](2026-09-15-00-backlog-archloop-0915.md) — arch-delivery-loop 第1回診断の11候補のうち、PBI 化しなかった残り
@@ -89,6 +90,16 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-18 大局的コード改善 第2ラウンド（holistic-0918b） — ✅ 全3件完了（11〜13 アーカイブ済み）
+
+前ラウンド未踏領域（sync・alarm・queue・backup・dashboard view）の大局的レビューで抽出した3候補を RICE 採点して PBI 化。実行順 = 11 → 12 → 13（ファイル非重複・1バッチ）。台帳は `2026-09-18-00-backlog-holistic-0918b.md`（live）。formatBytes 双子（RICE 1.6）は台帳送り（再検討トリガー: UI 出力統一の要望）。統合検証は1回で全ゲート green（失敗0）。
+
+- 2026-09-18-11-refactor-remove-dead-review-summary-alarm.md（✅ 完了・アーカイブ済 — production import ゼロを実測の上 reviewSummaryAlarm.ts と専用テスト・service-worker.test.ts の防御 mock・形骸アサーションを削除。getNextMondayAt/getNextMonthFirstDayAt は alarmRegistry の1コピーに集約）
+- 2026-09-18-12-refactor-adopt-error-message-ssot.md（✅ 完了・アーカイブ済 — errorMessage SSOT への迂回残存 約20サイト・18ファイルを置換。亜種・ラップ変形・name 抽出は対象外として grep で機械確認）
+- 2026-09-18-13-refactor-restorable-settings-spec-table.md（✅ 完了・アーカイブ済 — 4並列テーブルを key → { type?, range? } の単一 spec テーブルに統合し allowlist を派生。数値クレンジングの非数値素通しを type 省略で保持、網羅性テスト4件新設）
+
+最終検証: type-check / lint 0 errors（警告133・前回比-1）/ test 12,268 passed（780 files、内訳変動 -8 死テスト -1 形骸 +4 新設）/ build PASS / lint:adr-links・layers-docs PASS。
 
 ### 2026-09-18 大局的コード改善（holistic-0918） — ✅ 全6件完了（05〜10 アーカイブ済み）
 
