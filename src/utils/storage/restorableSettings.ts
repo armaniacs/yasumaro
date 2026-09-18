@@ -8,156 +8,177 @@ import type { Settings } from './types.js';
 import { addLog, LogType } from '../logger.js';
 
 // ============================================================================
-// Allowlist: non-sensitive settings keys that can be restored from backup
+// Spec table: single source for the restorable key set, its expected type,
+// and (for numeric cleansing thresholds) the accepted range.
+//
+// PBI 2026-09-18-13: this used to be four hand-maintained parallel tables
+// (RESTORABLE_KEYS, KEY_TYPES, CLEANSING_BOOLEAN_KEYS, CLEANSING_NUMERIC_KEYS).
+// A key added to one but not the others could silently bypass type checking.
+// The allowlist below is now DERIVED from the spec table, so that drift is
+// structurally impossible. `type` may be omitted: numeric cleansing keys
+// historically accepted any value type and range-checked numbers only —
+// keep that behavior (a type here would tighten it).
 // ============================================================================
 
-const RESTORABLE_KEYS = new Set<string>([
+export interface RestorableKeySpec {
+  /** Expected JS type tag, validated by isValidType. Absent = no type check. */
+  type?: 'string' | 'number' | 'boolean' | 'string[]' | 'array' | 'object';
+  /** Inclusive numeric range, applied only when the value is a number. */
+  range?: { min: number; max: number };
+}
+
+const RESTORABLE_KEY_SPECS: Record<string, RestorableKeySpec> = {
   // UI / Display
-  'show_sqlite_content',
-  'privacy_mode',
-  'domain_filter_mode',
+  'show_sqlite_content': { type: 'boolean' },
+  'privacy_mode': { type: 'string' },
+  'domain_filter_mode': { type: 'string' },
 
   // Feature toggles (non-sensitive)
-  'review_summary_enabled',
-  'content_storage_enabled',
-  'local_markdown_export_enabled',
-  'gist_enabled',
-  'obsidian_enabled',
-  'ublock_format_enabled',
-  'simple_format_enabled',
+  'review_summary_enabled': { type: 'boolean' },
+  'content_storage_enabled': { type: 'boolean' },
+  'local_markdown_export_enabled': { type: 'boolean' },
+  'gist_enabled': { type: 'boolean' },
+  'obsidian_enabled': { type: 'boolean' },
+  'ublock_format_enabled': { type: 'boolean' },
+  'simple_format_enabled': { type: 'boolean' },
 
   // Thresholds
-  'min_visit_duration',
-  'min_scroll_depth',
-  'max_tokens_per_prompt',
-  'ai_timeout_ms',
-  'summary_min_length',
-  'permission_notify_threshold',
+  'min_visit_duration': { type: 'number' },
+  'min_scroll_depth': { type: 'number' },
+  'max_tokens_per_prompt': { type: 'number' },
+  'ai_timeout_ms': { type: 'number' },
+  'summary_min_length': { type: 'number' },
+  'permission_notify_threshold': { type: 'number' },
 
-  // Cleansing toggles (all ai_summary_cleansing_*)
-  'ai_summary_cleansing_enabled',
-  'ai_summary_cleansing_alt',
-  'ai_summary_cleansing_metadata',
-  'ai_summary_cleansing_ads',
-  'ai_summary_cleansing_nav',
-  'ai_summary_cleansing_social',
-  'ai_summary_cleansing_deep',
-  'ai_summary_cleansing_link_density',
-  'ai_summary_cleansing_json_ld',
-  'ai_summary_cleansing_lazy_load',
-  'ai_summary_cleansing_skip_link',
-  'ai_summary_cleansing_card',
-  'ai_summary_cleansing_fixed',
-  'ai_summary_cleansing_recommend',
-  'ai_summary_cleansing_pagination',
-  'ai_summary_cleansing_sns_promo',
-  'ai_summary_cleansing_popup',
-  'ai_summary_cleansing_cookie',
-  'ai_summary_cleansing_platform',
-  'ai_summary_cleansing_text_density',
-  'ai_summary_cleansing_short_seq',
-  'ai_summary_cleansing_symbol_line',
-  'ai_summary_cleansing_link_para',
-  'ai_summary_cleansing_enhanced_hidden',
-  'ai_summary_cleansing_empty_elem',
-  'ai_summary_cleansing_jp_layout',
-  'ai_summary_cleansing_jp_navigation',
-  'ai_summary_cleansing_author',
-  'ai_summary_cleansing_affiliate',
-  'ai_summary_cleansing_speech_bubble',
-  'ai_summary_cleansing_body_protection_enabled',
-  'ai_summary_cleansing_body_protection_threshold',
-  'ai_summary_cleansing_link_ratio_threshold',
-  'ai_summary_cleansing_short_text_threshold',
-  'ai_summary_cleansing_short_seq_count',
-  'ai_summary_cleansing_link_para_threshold',
-  'ai_summary_cleansing_custom_patterns',
+  // Cleansing toggles (all ai_summary_cleansing_*) — booleans
+  'ai_summary_cleansing_enabled': { type: 'boolean' },
+  'ai_summary_cleansing_alt': { type: 'boolean' },
+  'ai_summary_cleansing_metadata': { type: 'boolean' },
+  'ai_summary_cleansing_ads': { type: 'boolean' },
+  'ai_summary_cleansing_nav': { type: 'boolean' },
+  'ai_summary_cleansing_social': { type: 'boolean' },
+  'ai_summary_cleansing_deep': { type: 'boolean' },
+  'ai_summary_cleansing_link_density': { type: 'boolean' },
+  'ai_summary_cleansing_json_ld': { type: 'boolean' },
+  'ai_summary_cleansing_lazy_load': { type: 'boolean' },
+  'ai_summary_cleansing_skip_link': { type: 'boolean' },
+  'ai_summary_cleansing_card': { type: 'boolean' },
+  'ai_summary_cleansing_fixed': { type: 'boolean' },
+  'ai_summary_cleansing_recommend': { type: 'boolean' },
+  'ai_summary_cleansing_pagination': { type: 'boolean' },
+  'ai_summary_cleansing_sns_promo': { type: 'boolean' },
+  'ai_summary_cleansing_popup': { type: 'boolean' },
+  'ai_summary_cleansing_cookie': { type: 'boolean' },
+  'ai_summary_cleansing_platform': { type: 'boolean' },
+  'ai_summary_cleansing_text_density': { type: 'boolean' },
+  'ai_summary_cleansing_short_seq': { type: 'boolean' },
+  'ai_summary_cleansing_symbol_line': { type: 'boolean' },
+  'ai_summary_cleansing_link_para': { type: 'boolean' },
+  'ai_summary_cleansing_enhanced_hidden': { type: 'boolean' },
+  'ai_summary_cleansing_empty_elem': { type: 'boolean' },
+  'ai_summary_cleansing_jp_layout': { type: 'boolean' },
+  'ai_summary_cleansing_jp_navigation': { type: 'boolean' },
+  'ai_summary_cleansing_author': { type: 'boolean' },
+  'ai_summary_cleansing_affiliate': { type: 'boolean' },
+  'ai_summary_cleansing_speech_bubble': { type: 'boolean' },
+  'ai_summary_cleansing_body_protection_enabled': { type: 'boolean' },
+
+  // Cleansing thresholds — no type check (range applies to numbers only)
+  'ai_summary_cleansing_body_protection_threshold': { range: { min: 0, max: 10000 } },
+  'ai_summary_cleansing_link_ratio_threshold': { range: { min: 0, max: 100 } },
+  'ai_summary_cleansing_short_text_threshold': { range: { min: 0, max: 10000 } },
+  'ai_summary_cleansing_short_seq_count': { range: { min: 0, max: 100 } },
+  'ai_summary_cleansing_link_para_threshold': { range: { min: 0, max: 100 } },
+  'ai_summary_cleansing_custom_patterns': { range: { min: 0, max: 10000 } },
 
   // Content settings
-  'content_strip_hard_enabled',
-  'content_strip_keywords',
-  'content_strip_keyword_enabled',
-  'content_dedup_enabled',
-  'content_dedup_threshold',
-  'summary_normalize_enabled',
+  'content_strip_hard_enabled': { type: 'boolean' },
+  'content_strip_keywords': { type: 'string[]' },
+  'content_strip_keyword_enabled': { type: 'boolean' },
+  'content_dedup_enabled': { type: 'boolean' },
+  'content_dedup_threshold': { type: 'number' },
+  'summary_normalize_enabled': { type: 'boolean' },
 
   // Tag settings
-  'tag_categories',
-  'tag_summary_mode',
-  'tag_normalization_dict',
+  'tag_categories': { type: 'array' },
+  'tag_summary_mode': { type: 'boolean' },
+  'tag_normalization_dict': { type: 'array' },
 
   // L0 extractive compression
-  'l0_extractive_enabled',
-  'l0_extractive_top_k',
-  'l0_extractive_min_length',
-  'l0_extractive_similarity_threshold',
-  'l0_extractive_performance_threshold',
+  'l0_extractive_enabled': { type: 'boolean' },
+  'l0_extractive_top_k': { type: 'number' },
+  'l0_extractive_min_length': { type: 'number' },
+  'l0_extractive_similarity_threshold': { type: 'number' },
+  'l0_extractive_performance_threshold': { type: 'number' },
 
   // Retention policy
-  'sqlite_retention_days',
-  'sqlite_max_records',
-  'content_retention_days',
-  'content_max_records',
-  'content_purge_include_starred',
+  'sqlite_retention_days': { type: 'number' },
+  'sqlite_max_records': { type: 'number' },
+  'content_retention_days': { type: 'number' },
+  'content_max_records': { type: 'number' },
+  'content_purge_include_starred': { type: 'boolean' },
 
   // Privacy (non-sensitive toggles)
-  'pii_sanitize_logs',
-  'auto_save_privacy_behavior',
-  'pii_confirmation_ui',
+  'pii_sanitize_logs': { type: 'boolean' },
+  'auto_save_privacy_behavior': { type: 'string' },
+  'pii_confirmation_ui': { type: 'boolean' },
 
   // Alert settings
-  'alert_finance',
-  'alert_sensitive',
-  'alert_unverified',
-  'save_aborted_pages',
-  'safety_mode',
-  'tranco_tier',
+  'alert_finance': { type: 'boolean' },
+  'alert_sensitive': { type: 'boolean' },
+  'alert_unverified': { type: 'boolean' },
+  'save_aborted_pages': { type: 'boolean' },
+  'safety_mode': { type: 'string' },
+  'tranco_tier': { type: 'string' },
 
   // CSP / CORS
-  'conditional_csp_enabled',
-  'conditional_csp_providers',
+  'conditional_csp_enabled': { type: 'boolean' },
+  'conditional_csp_providers': { type: 'string[]' },
 
   // Recording triggers
-  'recording_triggers',
-  'snapshot_interval_minutes',
-  'auto_content_fetch_enabled',
+  'recording_triggers': { type: 'string' },
+  'snapshot_interval_minutes': { type: 'number' },
+  'auto_content_fetch_enabled': { type: 'boolean' },
 
   // Local export path (non-sensitive)
-  'local_markdown_export_path',
-  'local_markdown_export_auto_enabled',
+  'local_markdown_export_path': { type: 'string' },
+  'local_markdown_export_auto_enabled': { type: 'boolean' },
 
   // uBlock sources (non-sensitive)
-  'ublock_rules',
-  'ublock_sources',
+  'ublock_rules': { type: 'object' },
+  'ublock_sources': { type: 'array' },
 
   // AI provider slot (non-sensitive configuration)
-  'ai_provider',
-  'ai_provider_priority_list',
+  'ai_provider': { type: 'string' },
+  'ai_provider_priority_list': { type: 'array' },
 
   // Provider models (non-sensitive)
-  'gemini_model',
-  'obsidian_daily_path',
-  'obsidian_protocol',
-  'obsidian_port',
-  'openai_base_url',
-  'openai_model',
-  'openai_2_base_url',
-  'openai_2_model',
-  'lm_studio_base_url',
-  'lm_studio_model',
-  'ollama_base_url',
-  'ollama_model',
-  'provider_type',
-  'provider_base_url',
-  'provider_model',
+  'gemini_model': { type: 'string' },
+  'obsidian_daily_path': { type: 'string' },
+  'obsidian_protocol': { type: 'string' },
+  'obsidian_port': { type: 'string' },
+  'openai_base_url': { type: 'string' },
+  'openai_model': { type: 'string' },
+  'openai_2_base_url': { type: 'string' },
+  'openai_2_model': { type: 'string' },
+  'lm_studio_base_url': { type: 'string' },
+  'lm_studio_model': { type: 'string' },
+  'ollama_base_url': { type: 'string' },
+  'ollama_model': { type: 'string' },
+  'provider_type': { type: 'string' },
+  'provider_base_url': { type: 'string' },
+  'provider_model': { type: 'string' },
 
   // Domain filter configuration (non-sensitive)
-  'domain_whitelist',
-  'domain_blacklist',
+  'domain_whitelist': { type: 'string[]' },
+  'domain_blacklist': { type: 'string[]' },
 
   // Custom prompts
-  'custom_prompts',
-]);
+  'custom_prompts': { type: 'array' },
+};
+
+/** Derived allowlist — do not add keys here; add a spec table row instead. */
+const RESTORABLE_KEYS = new Set<string>(Object.keys(RESTORABLE_KEY_SPECS));
 
 // ============================================================================
 // Simple validators
@@ -172,112 +193,6 @@ function isValidType(value: unknown, expected: string): boolean {
   if (expected === 'array' && Array.isArray(value)) return true;
   return false;
 }
-
-/** Map of key -> expected JS type for basic validation. */
-const KEY_TYPES: Record<string, string> = {
-  'show_sqlite_content': 'boolean',
-  'privacy_mode': 'string',
-  'domain_filter_mode': 'string',
-  'review_summary_enabled': 'boolean',
-  'content_storage_enabled': 'boolean',
-  'local_markdown_export_enabled': 'boolean',
-  'gist_enabled': 'boolean',
-  'obsidian_enabled': 'boolean',
-  'ublock_format_enabled': 'boolean',
-  'simple_format_enabled': 'boolean',
-  'min_visit_duration': 'number',
-  'min_scroll_depth': 'number',
-  'max_tokens_per_prompt': 'number',
-  'ai_timeout_ms': 'number',
-  'summary_min_length': 'number',
-  'permission_notify_threshold': 'number',
-  'content_strip_hard_enabled': 'boolean',
-  'content_strip_keywords': 'string[]',
-  'content_strip_keyword_enabled': 'boolean',
-  'content_dedup_enabled': 'boolean',
-  'content_dedup_threshold': 'number',
-  'summary_normalize_enabled': 'boolean',
-  'tag_summary_mode': 'boolean',
-  'tag_categories': 'array',
-  'tag_normalization_dict': 'array',
-  'l0_extractive_enabled': 'boolean',
-  'l0_extractive_top_k': 'number',
-  'l0_extractive_min_length': 'number',
-  'l0_extractive_similarity_threshold': 'number',
-  'l0_extractive_performance_threshold': 'number',
-  'sqlite_retention_days': 'number',
-  'sqlite_max_records': 'number',
-  'content_retention_days': 'number',
-  'content_max_records': 'number',
-  'content_purge_include_starred': 'boolean',
-  'pii_sanitize_logs': 'boolean',
-  'auto_save_privacy_behavior': 'string',
-  'pii_confirmation_ui': 'boolean',
-  'alert_finance': 'boolean',
-  'alert_sensitive': 'boolean',
-  'alert_unverified': 'boolean',
-  'save_aborted_pages': 'boolean',
-  'safety_mode': 'string',
-  'tranco_tier': 'string',
-  'conditional_csp_enabled': 'boolean',
-  'conditional_csp_providers': 'string[]',
-  'recording_triggers': 'string',
-  'snapshot_interval_minutes': 'number',
-  'auto_content_fetch_enabled': 'boolean',
-  'local_markdown_export_path': 'string',
-  'local_markdown_export_auto_enabled': 'boolean',
-  'ublock_rules': 'object',
-  'ublock_sources': 'array',
-  'ai_provider': 'string',
-  'ai_provider_priority_list': 'array',
-  'gemini_model': 'string',
-  'obsidian_daily_path': 'string',
-  'obsidian_protocol': 'string',
-  'obsidian_port': 'string',
-  'openai_base_url': 'string',
-  'openai_model': 'string',
-  'openai_2_base_url': 'string',
-  'openai_2_model': 'string',
-  'lm_studio_base_url': 'string',
-  'lm_studio_model': 'string',
-  'ollama_base_url': 'string',
-  'ollama_model': 'string',
-  'provider_type': 'string',
-  'provider_base_url': 'string',
-  'provider_model': 'string',
-  'domain_whitelist': 'string[]',
-  'domain_blacklist': 'string[]',
-  'custom_prompts': 'array',
-};
-
-// Boolean cleansing flags — all must be boolean
-const CLEANSING_BOOLEAN_KEYS = [
-  'ai_summary_cleansing_enabled', 'ai_summary_cleansing_alt',
-  'ai_summary_cleansing_metadata', 'ai_summary_cleansing_ads',
-  'ai_summary_cleansing_nav', 'ai_summary_cleansing_social',
-  'ai_summary_cleansing_deep', 'ai_summary_cleansing_link_density',
-  'ai_summary_cleansing_json_ld', 'ai_summary_cleansing_lazy_load',
-  'ai_summary_cleansing_skip_link', 'ai_summary_cleansing_card',
-  'ai_summary_cleansing_fixed', 'ai_summary_cleansing_recommend',
-  'ai_summary_cleansing_pagination', 'ai_summary_cleansing_sns_promo',
-  'ai_summary_cleansing_popup', 'ai_summary_cleansing_cookie', 'ai_summary_cleansing_platform',
-  'ai_summary_cleansing_text_density', 'ai_summary_cleansing_short_seq',
-  'ai_summary_cleansing_symbol_line', 'ai_summary_cleansing_link_para',
-  'ai_summary_cleansing_enhanced_hidden', 'ai_summary_cleansing_empty_elem',
-  'ai_summary_cleansing_jp_layout', 'ai_summary_cleansing_jp_navigation',
-  'ai_summary_cleansing_author', 'ai_summary_cleansing_affiliate',
-  'ai_summary_cleansing_speech_bubble', 'ai_summary_cleansing_body_protection_enabled',
-];
-
-// Numeric cleansing keys with range validation
-const CLEANSING_NUMERIC_KEYS: Record<string, { min: number; max: number }> = {
-  'ai_summary_cleansing_body_protection_threshold': { min: 0, max: 10000 },
-  'ai_summary_cleansing_link_ratio_threshold': { min: 0, max: 100 },
-  'ai_summary_cleansing_short_text_threshold': { min: 0, max: 10000 },
-  'ai_summary_cleansing_short_seq_count': { min: 0, max: 100 },
-  'ai_summary_cleansing_link_para_threshold': { min: 0, max: 100 },
-  'ai_summary_cleansing_custom_patterns': { min: 0, max: 10000 },
-};
 
 // ============================================================================
 // Main validation function
@@ -302,30 +217,28 @@ export function validateRestorableSettings(
   const skippedKeys: string[] = [];
 
   for (const [key, value] of Object.entries(payload)) {
+    const spec = RESTORABLE_KEY_SPECS[key];
+
     // Skip if not in allowlist
-    if (!RESTORABLE_KEYS.has(key)) {
+    if (!spec) {
       addLog(LogType.DEBUG, `Backup: skipping non-restorable key "${key}"`);
       skippedKeys.push(key);
       continue;
     }
 
-    // Type check
-    const expectedType = KEY_TYPES[key];
-    if (expectedType && !isValidType(value, expectedType)) {
-      addLog(LogType.WARN, `Backup: invalid type for "${key}" (expected ${expectedType})`);
+    // Type check. Cleansing flags keep their historical log wording.
+    if (spec.type && !isValidType(value, spec.type)) {
+      if (spec.type === 'boolean' && key.startsWith('ai_summary_cleansing_')) {
+        addLog(LogType.WARN, `Backup: cleansing flag "${key}" must be boolean`);
+      } else {
+        addLog(LogType.WARN, `Backup: invalid type for "${key}" (expected ${spec.type})`);
+      }
       skippedKeys.push(key);
       continue;
     }
 
-    // Boolean cleansing flag check
-    if (CLEANSING_BOOLEAN_KEYS.includes(key) && typeof value !== 'boolean') {
-      addLog(LogType.WARN, `Backup: cleansing flag "${key}" must be boolean`);
-      skippedKeys.push(key);
-      continue;
-    }
-
-    // Numeric range check
-    const range = CLEANSING_NUMERIC_KEYS[key];
+    // Numeric range check (numbers only — non-numbers pass through, as before)
+    const range = spec.range;
     if (range && typeof value === 'number') {
       if (value < range.min || value > range.max) {
         addLog(LogType.WARN, `Backup: "${key}" value ${value} out of range [${range.min}, ${range.max}]`);
@@ -339,3 +252,6 @@ export function validateRestorableSettings(
 
   return { sanitized: sanitized as Settings, skippedKeys };
 }
+
+/** Exported for the structural-invariant tests only. */
+export { RESTORABLE_KEY_SPECS, RESTORABLE_KEYS };
