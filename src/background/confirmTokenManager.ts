@@ -5,6 +5,9 @@
  */
 
 import { Mutex } from '../utils/Mutex.js';
+import { logWarn } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export const CONFIRM_TOKENS_SESSION_KEY = 'dashboardSqliteConfirmTokens';
 export const CONFIRM_TOKEN_TTL_MS = 60_000;
@@ -61,13 +64,28 @@ async function loadMap(): Promise<TokenMap> {
   try {
     const stored = await chrome.storage.session.get(CONFIRM_TOKENS_SESSION_KEY) as Record<string, TokenMap | undefined>;
     return (stored[CONFIRM_TOKENS_SESSION_KEY] as TokenMap) ?? {};
-  } catch {
+  } catch (e) {
+    // PBI 2026-09-18-06: a load failure used to be invisible (empty catch).
+    // The empty-map fallback stays (fail-open read keeps verify fail-closed),
+    // but the failure is now observable. writeStructuredLog never rejects,
+    // so awaiting here cannot change the token flow.
+    await logWarn('Confirm token map load failed', { error: errorMessage(e) }, ErrorCode.STORAGE_READ_FAILURE, 'confirmTokenManager');
     return {};
   }
 }
 
 async function saveMap(map: TokenMap): Promise<void> {
   await chrome.storage.session.set({ [CONFIRM_TOKENS_SESSION_KEY]: map });
+}
+
+/**
+ * Visibility for token-map persistence failures (PBI 2026-09-18-06).
+ * The caller's fallback behavior is unchanged — the failure is now
+ * observable instead of swallowed. writeStructuredLog never rejects,
+ * so awaiting here cannot change the token flow.
+ */
+async function logTokenPersistFailure(stage: string, error: unknown): Promise<void> {
+  await logWarn(`Confirm token map ${stage} failed`, { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'confirmTokenManager');
 }
 
 function isExpired(rec: ConfirmTokenRecord): boolean {
@@ -130,7 +148,7 @@ export async function verifyConfirmToken(
     if (!rec) return false;
     if (isExpired(rec)) {
       delete map[token];
-      try { await saveMap(map); } catch {}
+      try { await saveMap(map); } catch (e) { await logTokenPersistFailure('save after expiry-prune', e); }
       return false;
     }
     if (rec.action !== action) return false;
@@ -143,7 +161,7 @@ export async function verifyConfirmToken(
     }
     // Single-use: consume
     delete map[token];
-    try { await saveMap(map); } catch {}
+    try { await saveMap(map); } catch (e) { await logTokenPersistFailure('save after consume', e); }
     return true;
   });
 }
@@ -181,7 +199,7 @@ export async function ensureConfirmTokenLegacy(): Promise<string> {
 
 /** Test helpers */
 export async function __resetConfirmTokensForTesting(): Promise<void> {
-  try { await chrome.storage.session.remove(CONFIRM_TOKENS_SESSION_KEY); } catch {}
+  try { await chrome.storage.session.remove(CONFIRM_TOKENS_SESSION_KEY); } catch (e) { await logTokenPersistFailure('reset', e); }
 }
 export function __resetConfirmTokenForTesting(): void {
   // Synchronous wrapper for legacy tests that expect sync reset; fire-and-forget

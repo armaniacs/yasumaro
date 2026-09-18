@@ -4,15 +4,36 @@
 // developer's view (execution context), not to background/ adjacency.
 
 import { errorMessage } from '../utils/errorUtils.js';
+import { logError, logWarn } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import { categorizeError } from './sqliteRpcClient.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
 import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { ChromeTransport, type TransportPort } from './messageTransport.js';
 import { tokenExempt, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from './sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
+
+/**
+ * Send port for the dashboard → service worker hop (PBI 2026-09-18-10).
+ * Production sends via chrome.runtime.sendMessage (ChromeTransport); tests
+ * inject a fake. The 10s timeout race in sendDashboardRaw and the
+ * confirmToken/retry semantics above it are unchanged — only the raw send
+ * is swappable. Follows the setXForTesting/reset pattern used by
+ * sqliteEngine (setOpfsWorkerFactory) — reset after each test.
+ */
+let dashboardTransport: TransportPort = new ChromeTransport();
+
+export function setDashboardTransportForTesting(port: TransportPort): void {
+  dashboardTransport = port;
+}
+
+export function resetDashboardTransportForTesting(): void {
+  dashboardTransport = new ChromeTransport();
+}
 
 export interface DashboardRetryOptions {
   retryAttempts?: number;
@@ -29,13 +50,17 @@ async function getDashboardConfirmToken(action: string, id?: number, scopeHash?:
     } as DashboardSqliteRequest;
     const response = await sendDashboardRaw(requestPayload);
     if (response.success && typeof (response as { confirmToken?: string }).confirmToken === 'string') return (response as { confirmToken: string }).confirmToken;
-  } catch (error) { console.error('Failed to request dashboard SQLite confirmToken:', error); }
+    // PBI 2026-09-18-06: routed through the logger seam (was console.error).
+    // Keyword prefix kept for greppability.
+  } catch (error) { await logError('Failed to request dashboard SQLite confirmToken', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway'); }
   return null;
 }
 
 async function sendDashboardRaw<T extends DashboardSqliteRequest>(payload: T): Promise<DashboardSqliteResponseFor<T['subtype']>> {
   return Promise.race([
-    chrome.runtime.sendMessage({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload }),
+    dashboardTransport.send({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload }) as Promise<
+      DashboardSqliteResponseFor<T['subtype']>
+    >,
     new Promise<never>((_, reject) => { setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT); }),
   ]);
 }
@@ -130,7 +155,8 @@ export class DashboardGateway {
           continue;
         }
         const classified = categorizeError(errorMessage(error));
-        console.error(`${payload.subtype} failed:`, classified.message);
+        // PBI 2026-09-18-06: logger seam (was console.error).
+        await logError(`${payload.subtype} failed`, { error: classified.message }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
         return { success: false, error: classified };
       }
       if (!response.success) {
@@ -140,12 +166,14 @@ export class DashboardGateway {
           continue;
         }
         const msg = String((response as { error?: string }).error || defaultErrorMessage);
-        console.warn(`${payload.subtype} failed:`, msg);
+        // PBI 2026-09-18-06: logger seam (was console.warn).
+        await logWarn(`${payload.subtype} failed`, { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
         return { success: false, error: { kind: 'unknown', message: msg, retriable } };
       }
       try { return { success: true, data: decode(response as Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) }; } catch (error) {
         const raw = errorMessage(error);
-        console.warn(`${payload.subtype} decode failed:`, raw);
+        // PBI 2026-09-18-06: logger seam (was console.warn).
+        await logWarn(`${payload.subtype} decode failed`, { error: raw }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
         return { success: false, error: { kind: 'unknown', message: raw, retriable: false } };
       }
     }
