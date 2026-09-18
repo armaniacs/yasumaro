@@ -25,7 +25,7 @@ import { RecordingCacheInstance, SessionStoreRecordingCacheStore } from './recor
 import { TabCache } from './tabCache.js';
 import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
-import { SessionStore } from './sessionStore.js';
+import { SessionStore, type SessionStorePort } from './sessionStore.js';
 import { HeaderDetector } from './headerDetector.js';
 import { createPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
@@ -84,8 +84,8 @@ export const compositionManifest: readonly CompositionEntry[] = [
   { key: 'headerDetector', singleton: true, factory: (c) => new HeaderDetector(c.resolve<RecordingCacheInstance>('recordingCache')) },
   { key: 'obsidian', singleton: true, factory: () => new ObsidianClient() },
   { key: 'sqliteClient', singleton: true, factory: () => getSharedSqliteClient() },
-  { key: 'tabCache', singleton: true, factory: (c) => new TabCache(c.resolve<SessionStore>('sessionStore')) },
-  { key: 'rateLimiter', singleton: true, factory: (c) => new RateLimiter(c.resolve<SessionStore>('sessionStore')) },
+  { key: 'tabCache', singleton: true, factory: (c) => new TabCache(c.resolve<SessionStorePort>('sessionStore')) },
+  { key: 'rateLimiter', singleton: true, factory: (c) => new RateLimiter(c.resolve<SessionStorePort>('sessionStore')) },
   { key: 'manualContentFetcher', singleton: true, factory: () => new ManualContentFetcher() },
   { key: 'remoteAiService', singleton: true, factory: () => new RemoteAIService() },
   { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },

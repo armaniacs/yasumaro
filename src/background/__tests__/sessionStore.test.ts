@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SessionStore, SESSION_KEYS } from '../sessionStore.js';
+import { SessionStore, SESSION_KEYS, type SessionStorePort } from '../sessionStore.js';
 
 describe('SessionStore', () => {
   let store: SessionStore;
@@ -611,5 +611,27 @@ describe('SessionStore.migrateFromLocalStorageIfSessionEmpty', () => {
 
     expect(migrated).toBe(false);
     expect(localStorage['sw:rateLimiter']).toEqual({ entries: [] });
+  });
+});
+
+describe('SessionStorePort contract', () => {
+  it('SessionStore satisfies SessionStorePort structurally', () => {
+    // 実装がインターフェースからドリフトしたら型検査で検出される。
+    const port: SessionStorePort = new SessionStore();
+    expect(typeof port.get).toBe('function');
+    expect(typeof port.set).toBe('function');
+    expect(typeof port.remove).toBe('function');
+  });
+
+  it('get() returns null without throwing when the underlying read fails (documented contract)', async () => {
+    const store = new SessionStore();
+    (globalThis as any).chrome = {
+      storage: {
+        session: { get: vi.fn().mockRejectedValue(new Error('boom')) },
+      },
+    };
+
+    await expect(store.get('any-key')).resolves.toBeNull();
+    store.dispose();
   });
 });

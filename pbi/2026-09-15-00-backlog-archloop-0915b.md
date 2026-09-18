@@ -11,8 +11,8 @@
 | 3 | alarm 系3つの onAlarm seam 統合 | 3 | 2 | 0.8 | 0.6 | **10.0** | → **PBI 15** |
 | 4 | crypto codec/HMAC 統合（atob/btoa 全廃） | 6 | 1 | 0.8 | 0.6 | **8.0** | → **PBI 16** |
 | 5 | 合成ルートの二重化解消（compositionManifest 深掘り） | 7 | 2 | 0.5 | 1.0 | 7.0 | 将来候補 |
-| 6 | reviewSummary 双子統合 + recordingCache ensureReady | 2 | 1 | 0.5 | 0.4 | 2.5 | 将来候補 |
-| 7 | SessionStore durability interface 化 | 3 | 0.5 | 0.5 | 0.4 | 1.9 | 将来候補 |
+| 6 | reviewSummary 双子統合 + recordingCache ensureReady | 2 | 1 | 0.5 | 0.4 | 2.5 | → **PBI 03**（2026-09-18-03、recordingCache ensureReady 部分はスコープ外・別候補） |
+| 7 | SessionStore durability interface 化 | 3 | 0.5 | 0.5 | 0.4 | 1.9 | → **PBI 04**（2026-09-18-04） |
 
 ## 実行順
 

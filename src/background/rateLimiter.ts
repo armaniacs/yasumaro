@@ -1,4 +1,4 @@
-import { SessionStore, SESSION_KEYS } from './sessionStore.js';
+import { SessionStore, SESSION_KEYS, type SessionStorePort } from './sessionStore.js';
 import { RATE_LIMITS } from '../constants/appConstants.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { logWarn } from '../utils/logger.js';
@@ -29,9 +29,9 @@ function originFromSender(sender: MessageSenderLike | undefined): string {
 
 export class RateLimiter {
   private state = new Map<string, RateLimitEntry>();
-  private sessionStore: SessionStore;
+  private sessionStore: SessionStorePort;
 
-  constructor(sessionStore: SessionStore) {
+  constructor(sessionStore: SessionStorePort) {
     this.sessionStore = sessionStore;
   }
 
