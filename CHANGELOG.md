@@ -38,6 +38,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.6] - 2026-09-18
+
+archloop-0915b の残り将来候補を PBI 化・実装（PBI 2026-09-18-03・04）。全テスト（12,255 件）がグリーンです。
+
+### Refactored
+
+- **週次/月次レビューサマリー生成のロジック重複を解消**（PBI 2026-09-18-03）: `reviewSummaryGenerator.ts` の週次・月次生成が同一構造のロジックを2箇所に持ち、修正のたびに2箇所を同期させる必要があった。期間情報（開始・終了・ラベル・保存キー）を組み立てる `buildWeekPeriod`/`buildMonthPeriod` と、共通の `generatePeriodSummary(period, mutex)` に一本化した。生成される Markdown・ストレージキーは従来と同一（byte-identical）で、既存テストは無修正で通る
+- **SessionStore の依存先にインターフェースを導入**（PBI 2026-09-18-04）: `TabCache`・`RateLimiter` が `SessionStore` 具象クラスに直接依存していた。`get`/`set`/`remove` の契約（get 失敗時は例外を投げず null を返す）を明示する `SessionStorePort` を新設し、両クラスと `compositionManifest.ts` の DI 登録をこのインターフェース経由に変更した。既存の durability 挙動（debounce・flushImmediately）に変更はない
+
 ## [6.9.5] - 2026-09-18
 
 履歴の診断行が欠測時に理由を表示するようになりました（PBI 2026-09-18-01）。コンテンツ抽出・Content Cleansing の数値が出ない場合に行自体を消さず、「計測なし（AIなし記録）」「計測なし」「計測対象なし」の3分類で理由を示します。AI なし記録と旧バージョン記録と空ページの区別がつき、正常エントリの表示は変わりません。全テスト（12,251 件）がグリーンです。
