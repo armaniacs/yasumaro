@@ -1,4 +1,5 @@
 import { addLog, LogType } from '../../utils/logger.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { backoffDelayMs } from '../../utils/backoff.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
@@ -91,7 +92,7 @@ export class StepExecutor {
       addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
         url: context.data.url,
         type,
-        error: enqueueError instanceof Error ? enqueueError.message : String(enqueueError),
+        error: errorMessage(enqueueError),
         traceId: context.traceId,
       });
     }

@@ -19,6 +19,7 @@
  */
 
 import type { HandlerContext } from './handlers.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { sqlExec, withTransaction } from './handlers.js';
 import { createEngine, type SqliteEngine, type SqliteValue } from '../sqliteEngine.js';
 import { validateArchiveEngine } from './archiveValidation.js';
@@ -168,7 +169,7 @@ export async function handleArchiveDeleteByStaging(
       // Data is intact (DELETE already committed); only the freelist stays.
       vacuumOk = false;
       log('warn', 'Archive purge: VACUUM failed — freelist not reclaimed', {
-        error: err instanceof Error ? err.message : String(err),
+        error: errorMessage(err),
       });
     }
     const freelistAfter = await freelistCount(ctx.engine);
@@ -192,7 +193,7 @@ export async function handleArchiveDeleteByStaging(
     return { deleted, remaining, freelistBefore, freelistAfter, vacuumOk };
   } catch (error) {
     log('error', 'Archive purge failed', {
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
       stagingName: payload.stagingName,
     });
     throw error;

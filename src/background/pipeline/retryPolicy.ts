@@ -1,4 +1,5 @@
 // @layer 1 — Pipeline retry policy (deep seam for network error detection)
+import { errorMessage } from '../../utils/errorUtils.js';
 
 /**
  * RetryPolicy — owns network-error detection and offline enqueue decision.
@@ -14,7 +15,7 @@
 export class RetryPolicy {
   isNetworkError(error: unknown): boolean {
     if (!error) return false;
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = errorMessage(error);
     const lower = msg.toLowerCase();
     if (
       lower.includes('network') ||

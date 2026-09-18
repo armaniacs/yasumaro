@@ -8,6 +8,7 @@ import type { OfflineJob } from './offlineNetworkQueue.js';
 import type { RecordingData } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { logError, logWarn, ErrorCode } from '../utils/logger.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { buildOfflineRetryRequest, type OfflineJobPayload } from './recordRequestBuilder.js';
 
 interface OfflineNetworkQueueLike {
@@ -46,7 +47,7 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                 } catch (error) {
                     // Poison jobs must be distinguishable from transient
                     // failures in telemetry (PBI 2026-09-12-04).
-                    logWarn('Offline obsidian_sync retry failed', { url: payload.url, error: error instanceof Error ? error.message : String(error) }, undefined, 'service-worker');
+                    logWarn('Offline obsidian_sync retry failed', { url: payload.url, error: errorMessage(error) }, undefined, 'service-worker');
                     return false;
                 }
             }

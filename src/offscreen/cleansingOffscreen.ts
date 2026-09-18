@@ -7,6 +7,7 @@
  */
 
 import { cleanseAISummaryContent } from '../utils/aiSummaryCleaner/index.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from '../utils/aiSummaryCleaner/types.js';
 
 export const CLEANSING_OFFSCREEN_TYPE = 'CLEANSING_OFFSCREEN' as const;
@@ -95,7 +96,7 @@ export function handleCleansingOffscreenPayload(
             removed: result.removed,
         };
     } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
+        const msg = errorMessage(e);
         return { success: false, error: msg };
     }
 }

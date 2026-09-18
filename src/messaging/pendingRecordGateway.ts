@@ -16,6 +16,7 @@
  */
 
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export interface PendingRecordRequest {
   title: string;
@@ -71,7 +72,7 @@ export async function recordPendingPage(
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     };
   } finally {
     if (timer !== undefined) {

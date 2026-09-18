@@ -36,7 +36,7 @@ export const IDEMPOTENT_DDL_ERROR_PATTERNS: readonly RegExp[] = [
 ];
 
 export function isIdempotentDdlError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
+  const msg = errorMessage(err);
   return IDEMPOTENT_DDL_ERROR_PATTERNS.some((p) => p.test(msg));
 }
 

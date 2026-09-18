@@ -14,6 +14,7 @@
  */
 
 import type { HandlerContext } from './handlers.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import type {
   ArchivePreviewPayload,
   ArchiveCreatePayload,
@@ -57,7 +58,7 @@ function resolveCutoffMs(payload: { cutoffDate: string; cutoffMs: number }): num
     return assertCutoffPair(payload.cutoffDate, payload.cutoffMs);
   } catch (e) {
     throw new Error(
-      `Archive validation failed: ${e instanceof Error ? e.message : String(e)}`,
+      `Archive validation failed: ${errorMessage(e)}`,
     );
   }
 }
