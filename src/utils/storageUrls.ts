@@ -30,11 +30,3 @@ export {
     addUrlTag,
     removeUrlTag
 } from './storage/savedUrlRepository.js';
-
-// 許可URL管理機能
-export {
-    buildAllowedUrls,
-    computeUrlsHash,
-    saveSettingsWithAllowedUrls,
-    getAllowedUrls
-} from './allowedUrls.js';
