@@ -14,14 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-18 arch-delivery-loop（archloop-0918） — 進行中（17〜19）
-
-Phase 0 の HTML レポート（`$TMPDIR/architecture-review-20260918-1309.html`）で抽出した3候補を RICE 採点して PBI 化。実行順 = 17 → 18 → 19（ファイル非重複・1バッチ）。台帳は `2026-09-18-00-backlog-archloop-0918.md`。Phase 3（make clean test）→ Phase 4（版上げ）まで閉じる。
-
-- ⬜ 2026-09-18-17-refactor-delete-allowed-urls-shadow.md（allowedUrls デッドコピー削除。RICE 16.0）
-- ⬜ 2026-09-18-18-refactor-simplify-get-msg-with-cache.md（getMsgWithCache if-chain 解消。RICE 6.0）
-- ⬜ 2026-09-18-19-refactor-finish-logger-barrel-migration.md（logger barrel 移行完了・Wave 4 残作業。RICE 3.2）
-
 ### 2026-09-18 arch-delivery-loop 第5ループ — ✅ 全2件完了（01/02 アーカイブ済み）
 
 Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260918-r18.html`）の2候補を RICE 採点して PBI 化。実行順 = 02（依存なし）。C2（getMessage 統一、RICE 2.5）は backlog 送り。台帳は `2026-09-18-00-backlog-archloop-0918.md`（アーカイブ済み）。
@@ -100,6 +92,16 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-18 arch-delivery-loop（archloop-0918） — ✅ 全3件完了（17〜19 アーカイブ済み・v6.9.7）
+
+Phase 0 の HTML レポート（`$TMPDIR/architecture-review-20260918-1309.html`）で抽出した3候補を RICE 採点して PBI 化。実行順 = 17 → 18 → 19（ファイル非重複・1バッチ）。台帳は `2026-09-18-00-backlog-archloop-0918.md`（live）。Phase 3（make clean test）→ Phase 3.5（graphify update）→ Phase 4（v6.9.7 版上げ）まで閉じた。
+
+- 2026-09-18-17-refactor-delete-allowed-urls-shadow.md（✅ 完了・アーカイブ済 — allowedUrls.ts 分身と barrel の4再export・死コピー専用テスト3ブロックを削除。FILTER_LIST_SOURCES との乖離解消）
+- 2026-09-18-18-refactor-simplify-get-msg-with-cache.md（✅ 完了・アーカイブ済 — getMsgWithCache の8分岐 if-chain を `key in cache` 1ルックアップ化）
+- 2026-09-18-19-refactor-finish-logger-barrel-migration.md（✅ 完了・アーカイブ済 — 呼び出し側約133箇所を types/core/api へ直接 import 移行、storage 系 dynamic import 3箇所を静的化、barrel 削除 + eslint 特例除去 + LAYERS.md 更新）
+
+最終検証: make clean test EXIT 0（validate:json / lint 0 errors / type-check / test 12,249 passed・781 files / build / test:e2e）×2回、check-version-consistency 6.9.7 一致、graphify update 済。
 
 ### 2026-09-18 大局的コード改善 第3ラウンド（holistic-0918c） — ✅ 全3件完了（14〜16 アーカイブ済み）
 
