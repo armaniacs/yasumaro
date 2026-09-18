@@ -11,7 +11,10 @@ import { describeDelta, formatBytes } from './entryByteDelta.js';
 import {
   classifyAiSummaryMissing,
   classifyCleansingMissing,
+  classifyDiagnosticMissing,
   classifyExtractionMissing,
+  classifyMaskingMissing,
+  classifyTokensMissing,
   computeCleansingReduction,
   resolveCleansingBytes,
   type DiagnosticMissingReason,
@@ -57,13 +60,29 @@ export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
     // 削減率の定義（fallback 連鎖含む）は historyEntryPresentation.ts が単一所有 —
     // PBI 2026-09-15-11 で View から抽出。
     const reduction = computeCleansingReduction(entry);
-    if (!reduction) return '';
+    if (!reduction) return buildMissingReductionBarHtml(entry);
     const { base, sentToAI, sentRatio, reductionRatePercent } = reduction;
 
     const label = `${formatBytes(base as number)} → ${formatBytes(sentToAI as number)} (${reductionRatePercent.toFixed(1)}% ${t('cleansingReduction')})`;
 
     return `<div class="cleansing-progress-wrapper">
     <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="${Math.max(sentRatio * 100, 0.2).toFixed(1)}"></div></div>
+    <span class="cleansing-progress-label">${escapeHtml(label)}</span>
+  </div>`;
+}
+
+/**
+ * Placeholder for the reduction bar when bytes are unmeasurable
+ * (PBI 2026-09-18-20). Keeps the wrapper/track/label layout identical so
+ * entries without numbers do not collapse the region that measured
+ * entries show. Reason wording reuses the diagnostic 3-way classification.
+ */
+function buildMissingReductionBarHtml(entry: BrowsingLogEntry): string {
+    const reason = classifyDiagnosticMissing(entry);
+    const label = missingReasonText(reason);
+
+    return `<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
     <span class="cleansing-progress-label">${escapeHtml(label)}</span>
   </div>`;
 }
@@ -125,6 +144,10 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
       providerText += `, ${t('historyDuration', [])} ${(entry.ai_duration_ms / 1000).toFixed(1)}秒`;
     }
     parts.push(`<div class="history-entry-tokens">${providerText}</div>`);
+  } else {
+    // PBI 2026-09-18-21: keep the token row with a reason instead of hiding it.
+    const reason = classifyTokensMissing(entry);
+    if (reason) pushReasonRow(parts, 'historyTokens', reason, 'history-entry-tokens', ': ');
   }
 
   if (entry.page_bytes != null && entry.candidate_bytes != null) {
@@ -168,6 +191,10 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     if (maskingParts.length > 0) {
       parts.push(`<div class="history-entry-token-reduction">${t('historyPiiMasking', [])} — ${maskingParts.join(', ')}</div>`);
     }
+  } else {
+    // PBI 2026-09-18-21: keep the PII row with a reason instead of hiding it.
+    const reason = classifyMaskingMissing(entry);
+    if (reason) pushReasonRow(parts, 'historyPiiMasking', reason, 'history-entry-token-reduction');
   }
 
   if (entry.ai_summary_original_bytes != null && entry.ai_summary_cleansed_bytes != null) {
@@ -181,10 +208,16 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
   } else if (entry.ai_summary_original_bytes != null || entry.ai_summary_cleansed_bytes != null) {
     const reason = classifyAiSummaryMissing(entry);
     if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
+  } else {
+    // PBI 2026-09-18-21: keep the AI summary row with a reason instead of
+    // hiding it when both sides are absent.
+    const reason = classifyAiSummaryMissing(entry);
+    if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
   }
 
-  const progressBarHtml = buildCleansingProgressBarHtml(entry);
-  if (progressBarHtml) parts.push(progressBarHtml);
+  // buildCleansingProgressBarHtml never returns '' (PBI 2026-09-18-20):
+  // unmeasurable entries keep the bar region with a reason label.
+  parts.push(buildCleansingProgressBarHtml(entry));
 
   return parts.join('');
 }

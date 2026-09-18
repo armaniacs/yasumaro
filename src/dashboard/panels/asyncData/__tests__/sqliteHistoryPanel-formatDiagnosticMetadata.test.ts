@@ -96,9 +96,57 @@ describe('formatDiagnosticMetadataHtml — missing diagnostic reason display', (
     expect(html).toContain('recorded without AI');
   });
 
-  it('does not add an AI summary reason row when both AI summary sides are absent', () => {
+  it('keeps a token reason row when tokens and provider are absent', () => {
     const html = formatDiagnosticMetadataHtml({ ...baseEntry });
-    expect(html).not.toContain('AI Summary Cleansing');
+    expect(html).toContain('history-entry-tokens');
+    expect(html).toContain('recorded without AI');
+  });
+
+  it('keeps a PII reason row when masking data is absent', () => {
+    const html = formatDiagnosticMetadataHtml({ ...baseEntry });
+    expect(html).toContain('PII Masking');
+    expect(html).toContain('recorded without AI');
+  });
+
+  it('keeps an AI summary reason row when both AI summary sides are absent', () => {
+    const html = formatDiagnosticMetadataHtml({ ...baseEntry });
+    expect(html).toContain('AI Summary Cleansing');
+    expect(html).toContain('recorded without AI');
+  });
+
+  it('keeps the bar region with a no-ai reason when the entry has nothing', () => {
+    const html = formatDiagnosticMetadataHtml({ ...baseEntry });
+    expect(html).toContain('cleansing-progress-wrapper');
+    expect(html).toContain('cleansing-progress-bar-missing');
+    expect(html).toContain('recorded without AI');
+  });
+
+  it('keeps the bar region with an unmeasured reason for a legacy partial entry', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      sent_tokens: 495,
+      received_tokens: 49,
+      ai_provider: 'openai',
+    });
+    expect(html).toContain('cleansing-progress-wrapper');
+    expect(html).toContain('No measurement');
+    expect(html).not.toContain('recorded without AI');
+  });
+
+  it('keeps numeric bar display for a normal entry without reason rows', () => {
+    const html = formatDiagnosticMetadataHtml({
+      ...baseEntry,
+      sent_tokens: 1483,
+      page_bytes: 2300000,
+      candidate_bytes: 9400,
+      original_bytes: 9400,
+      cleansed_bytes: 8800,
+      ai_summary_original_bytes: 900,
+      ai_summary_cleansed_bytes: 800,
+    });
+    expect(html).toContain('cleansing-progress-wrapper');
+    expect(html).not.toContain('cleansing-progress-bar-missing');
+    expect(html).toContain('data-bar-width=');
   });
 
   it('shows unmeasured reasons for a legacy partial entry with tokens but no bytes', () => {
@@ -130,6 +178,9 @@ describe('formatDiagnosticMetadataHtml — missing diagnostic reason display', (
       candidate_bytes: 9400,
       original_bytes: 9400,
       cleansed_bytes: 8800,
+      masked_count: 2,
+      original_tokens: 1500,
+      cleansed_tokens: 1483,
       ai_summary_original_bytes: 900,
       ai_summary_cleansed_bytes: 800,
     });
@@ -141,10 +192,17 @@ describe('formatDiagnosticMetadataHtml — missing diagnostic reason display', (
   it('keeps numeric display for small but positive fallback-like bytes', () => {
     const html = formatDiagnosticMetadataHtml({
       ...baseEntry,
+      sent_tokens: 120,
+      received_tokens: 12,
       page_bytes: 500,
       candidate_bytes: 400,
       original_bytes: 400,
       cleansed_bytes: 400,
+      masked_count: 0,
+      original_tokens: 100,
+      cleansed_tokens: 95,
+      ai_summary_original_bytes: 400,
+      ai_summary_cleansed_bytes: 380,
     });
     expect(html).toContain('Bytes');
     expect(html).not.toContain('No measurement');

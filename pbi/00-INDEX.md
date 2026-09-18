@@ -14,6 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-18 履歴診断行一貫表示 — ⬜ 未着手（20・21）
+
+スクリーンショット報告のTech CNNエントリで削減率バーが消える問題を修正する。前回PBI 2026-09-18-01で対象外としたバー欠落の残課題。続く21でトークン・PII・AI要約行も同様に一貫表示へ拡張する（01のトークン非表示決定を覆す仕様変更）。
+
+- [2026-09-18-21-fix-history-missing-rows-consistency.md](2026-09-18-21-fix-history-missing-rows-consistency.md)（🔶 実装済・レビュー待ち・🟡中・🔧非機能追加・副作用🟢なし: トークン・PII・AI要約行を欠測時も理由付きで維持。PBI 20の上に積む。type-check PASS・全体12263 tests PASS）
+
+### 2026-09-18 履歴バー一貫表示 — ⬜ 未着手（20）
+
+スクリーンショット報告のTech CNNエントリで削減率バーが消える問題を修正する。前回PBI 2026-09-18-01で対象外としたバー欠落の残課題。
+
+- [2026-09-18-20-fix-history-progress-bar-consistency.md](2026-09-18-20-fix-history-progress-bar-consistency.md)（🔶 実装済・レビュー待ち・🟡中・🔧非機能追加・副作用🟢なし: 欠測時もバー領域を理由付きで維持し、正常エントリとの表示差を解消。type-check PASS・全体12253 tests PASS）
+
 ### 2026-09-18 arch-delivery-loop 第5ループ — ✅ 全2件完了（01/02 アーカイブ済み）
 
 Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260918-r18.html`）の2候補を RICE 採点して PBI 化。実行順 = 02（依存なし）。C2（getMessage 統一、RICE 2.5）は backlog 送り。台帳は `2026-09-18-00-backlog-archloop-0918.md`（アーカイブ済み）。

@@ -120,6 +120,28 @@ export function classifyCleansingMissing(entry: BrowsingLogEntry): DiagnosticMis
 }
 
 /**
+ * Reason for a missing token row. Null when tokens or provider show numbers.
+ * Single-side tokens still render numerically, so only the fully-absent
+ * case falls back to the entry-level classifier.
+ */
+export function classifyTokensMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
+    if (entry.sent_tokens != null || entry.received_tokens != null || entry.ai_provider != null) {
+        return null;
+    }
+    return classifyDiagnosticMissing(entry);
+}
+
+/**
+ * Reason for a missing PII masking row. Null when masking data is present.
+ */
+export function classifyMaskingMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
+    if (entry.masked_count != null || (entry.original_tokens != null && entry.cleansed_tokens != null)) {
+        return null;
+    }
+    return classifyDiagnosticMissing(entry);
+}
+
+/**
  * Reason for a missing AI summary cleansing row. Null when it shows numbers.
  */
 export function classifyAiSummaryMissing(entry: BrowsingLogEntry): DiagnosticMissingReason | null {
