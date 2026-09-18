@@ -69,10 +69,35 @@ async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) 
   sendResponse(result);
 }
 
+/**
+ * Planned-query runner shared by handleQuery/handleSearch (PBI 2026-09-18-08):
+ * plan with the per-op planner, then run the same sqliteQuery.
+ */
+async function runPlannedQuery(
+  payload: Record<string, unknown>,
+  sendResponse: (r: unknown) => void,
+  planner: (payload: Record<string, unknown>) => Parameters<typeof sqliteQuery>[0],
+): Promise<void> {
+  const result = await sqliteQuery(planner(payload));
+  sendResponse(result);
+}
+
+/**
+ * Single-id runner shared by handleDelete/handleToggleStar
+ * (PBI 2026-09-18-08): coerce the wire id once, then run the repo call.
+ */
+async function runById(
+  rawId: unknown,
+  sendResponse: (r: unknown) => void,
+  run: (id: number) => Promise<unknown>,
+): Promise<void> {
+  const result = await run(Number(rawId));
+  sendResponse(result);
+}
+
 async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
-  const result = await sqliteQuery(planQuery(payload));
-  sendResponse(result);
+  await runPlannedQuery(payload, sendResponse, planQuery);
 }
 
 async function handleAuditLogInsert(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
@@ -98,8 +123,7 @@ async function handleAuditLogQuery(msg: SqliteMessage, sendResponse: (r: unknown
 
 async function handleSearch(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const p = (msg as Extract<SqliteMessage, { type: 'SQLITE_SEARCH' }>).payload;
-  const result = await sqliteQuery(planSearch(p as unknown as Record<string, unknown>));
-  sendResponse(result);
+  await runPlannedQuery(p as unknown as Record<string, unknown>, sendResponse, planSearch);
 }
 
 async function handleUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
@@ -116,15 +140,13 @@ async function handleUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => vo
 }
 
 async function handleDelete(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const id = Number((msg as Extract<SqliteMessage, { type: 'SQLITE_DELETE' }>).payload.id);
-  const result = await sqliteHardDelete(id);
-  sendResponse(result);
+  const id = (msg as Extract<SqliteMessage, { type: 'SQLITE_DELETE' }>).payload.id;
+  await runById(id, sendResponse, sqliteHardDelete);
 }
 
 async function handleToggleStar(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const id = Number((msg as Extract<SqliteMessage, { type: 'SQLITE_TOGGLE_STAR' }>).payload.id);
-  const result = await sqliteToggleStar(id);
-  sendResponse(result);
+  const id = (msg as Extract<SqliteMessage, { type: 'SQLITE_TOGGLE_STAR' }>).payload.id;
+  await runById(id, sendResponse, sqliteToggleStar);
 }
 
 async function handleCount(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
@@ -171,28 +193,52 @@ async function handleRestore(msg: SqliteMessage, sendResponse: (r: unknown) => v
   sendResponse(result.success ? { success: true } : { success: false, error: result.error });
 }
 
+/**
+ * Planned-purge runner shared by handlePurge/handleContentPurge
+ * (PBI 2026-09-18-08). The trust boundary for destructive purges —
+ * garbage numbers fail closed instead of silently purging nothing.
+ * Pinned by sqliteHandlers-twins-parity.test.ts.
+ */
+async function runPlannedPurge(
+  payload: { retentionDays?: unknown; maxRecords?: unknown; includeStarred?: unknown } | undefined | null,
+  sendResponse: (r: unknown) => void,
+  purge: (
+    retentionDays: number | undefined,
+    maxRecords: number | undefined,
+    includeStarred?: boolean | undefined,
+  ) => Promise<unknown>,
+  includeStarred?: boolean,
+): Promise<void> {
+  const planned = planPurge(payload?.retentionDays, payload?.maxRecords, includeStarred);
+  if (!planned.ok) {
+    sendResponse({ success: false, error: planned.error });
+    return;
+  }
+  // SQLITE_PURGE passes no includeStarred (undefined); CONTENT_PURGE forwards
+  // the payload value — the narrowed planned.includeStarred carries it.
+  // The purge callback preserves the original call arity (2 args for
+  // purgeOldRecords, 3 for purgeContent) — callers wrap the repo function.
+  const result = await purge(planned.retentionDays, planned.maxRecords, planned.includeStarred);
+  sendResponse(result);
+}
+
 async function handlePurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_PURGE' }>).payload;
   // PBI 2026-09-12-19: the trust boundary for the destructive purge —
   // garbage numbers fail closed instead of silently purging nothing.
-  const planned = planPurge(payload?.retentionDays, payload?.maxRecords);
-  if (!planned.ok) {
-    sendResponse({ success: false, error: planned.error });
-    return;
-  }
-  const result = await sqlitePurgeOldRecords(planned.retentionDays, planned.maxRecords);
-  sendResponse(result);
+  // The arrow wrapper preserves the original 2-arg call arity.
+  await runPlannedPurge(payload, sendResponse, (days, max) => sqlitePurgeOldRecords(days, max));
 }
 
 async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as Extract<SqliteMessage, { type: 'CONTENT_PURGE' }>).payload;
-  const planned = planPurge(payload?.retentionDays, payload?.maxRecords, payload?.includeStarred);
-  if (!planned.ok) {
-    sendResponse({ success: false, error: planned.error });
-    return;
-  }
-  const result = await sqlitePurgeContent(planned.retentionDays, planned.maxRecords, planned.includeStarred);
-  sendResponse(result);
+  // The arrow wrapper preserves the original 3-arg call arity.
+  await runPlannedPurge(
+    payload,
+    sendResponse,
+    (days, max, starred) => sqlitePurgeContent(days, max, starred),
+    payload?.includeStarred,
+  );
 }
 
 /**
