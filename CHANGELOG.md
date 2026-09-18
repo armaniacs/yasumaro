@@ -38,6 +38,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.7] - 2026-09-18
+
+このリリースはアーキテクチャの深化（Architecture Deepening）リリースです。新機能はなく、既存挙動を byte-identical のまま保つリファクタリングです。
+
+### Refactor
+
+- **logger barrel の完全撤退**: `logger.ts` barrel を削除し、呼び出し側約133箇所を `logger/types.js`（ErrorCode・LogType）/ `logger/core.js`（addLog 系）/ `logger/api.js`（log* 系）の直接 import に移行（Wave 4 の明示的残作業を完遂）。storage 系3箇所の dynamic import も循環なしを確認の上静的化
+- **許可URLの死んだ分身を削除**: `FILTER_LIST_SOURCES` SSOT（2026-09-11-05）に乖離していた `utils/allowedUrls.ts` と `storageUrls` barrel の未使用再exportを削除。許可URLの知識は `urlWhitelist` + `listSources` の1箇所に集約
+- **popup の翻訳キャッシュを1ルックアップ化**: `getMsgWithCache` の8分岐 if-chain を `key in cache` に置換（型は `keyof MessagesCache` が担保）
+
 ## [6.9.6] - 2026-09-18
 
 archloop-0915b の残り将来候補を PBI 化・実装（PBI 2026-09-18-03・04）。全テスト（12,255 件）がグリーンです。
