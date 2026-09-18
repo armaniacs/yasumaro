@@ -98,12 +98,29 @@ export interface VisitAdmissionDeps {
 
 export type AdmissionOutcome = 'injected' | 'skipped';
 
+/** Single linear backoff step shared by the empty-response and error branches
+ *  (PBI 2026-09-18-07). The 200ms schedule is intentionally not on
+ *  backoffDelayMs — the SSOT only models exponential ramps and cannot
+ *  express this linear schedule; keep in sync manually if the policy changes.
+ *  Pinned by visitAdmission-twins-parity.test.ts. */
+export async function backoffOnce(attempt: number, sleep: (ms: number) => Promise<void>): Promise<void> {
+  await sleep(200 * (attempt + 1));
+}
+
+/** Best-effort extractor load shared by the cache-hit and background-verdict
+ *  paths (PBI 2026-09-18-07). Warn text is pinned by
+ *  visitAdmission-twins-parity.test.ts — keep it byte-identical. */
+export async function loadExtractorBestEffort(deps: VisitAdmissionDeps): Promise<void> {
+  try {
+    await deps.loadExtractor();
+  } catch (e) {
+    deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorMessage(e));
+  }
+}
+
 /** Shared 3-attempt retry (200ms linear backoff — on both errors and empty
  * responses; PBI 2026-09-12-20: an empty-but-resolved send used to bypass the
- * sleep and fire 3 tight attempts).
- * NOTE: intentionally not on backoffDelayMs — the SSOT only models exponential
- * ramps and cannot express this linear schedule; keep in sync manually if the
- * policy changes. */
+ * sleep and fire 3 tight attempts). */
 export async function checkDomainWithRetry(
   send: () => Promise<CheckDomainResponse | undefined>,
   sleep: (ms: number) => Promise<void>,
@@ -115,10 +132,10 @@ export async function checkDomainWithRetry(
       response = await send();
       if (response) break;
       // Resolved but empty — back off before the next attempt.
-      if (attempt < 2) await sleep(200 * (attempt + 1));
+      if (attempt < 2) await backoffOnce(attempt, sleep);
     } catch (e) {
       lastError = e;
-      if (attempt < 2) await sleep(200 * (attempt + 1));
+      if (attempt < 2) await backoffOnce(attempt, sleep);
     }
   }
   return { response, lastError };
@@ -139,11 +156,7 @@ export async function resolveVisitAdmission(deps: VisitAdmissionDeps): Promise<A
     if (!cacheCheck.allowed) {
       return 'skipped';
     }
-    try {
-      await deps.loadExtractor();
-    } catch (e) {
-      deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorMessage(e));
-    }
+    await loadExtractorBestEffort(deps);
     return 'injected';
   }
 
@@ -159,10 +172,6 @@ export async function resolveVisitAdmission(deps: VisitAdmissionDeps): Promise<A
     return 'skipped';
   }
 
-  try {
-    await deps.loadExtractor();
-  } catch (e) {
-    deps.warn(`[OWeave] Dynamic import blocked${deps.warnLabel}`, deps.url, errorMessage(e));
-  }
+  await loadExtractorBestEffort(deps);
   return 'injected';
 }
