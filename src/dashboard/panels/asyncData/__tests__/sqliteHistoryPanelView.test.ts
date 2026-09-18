@@ -30,12 +30,29 @@ function makeState(overrides: Partial<SqliteHistoryState> = {}): SqliteHistorySt
 }
 
 describe('buildCleansingProgressBarHtml', () => {
-  it('returns empty string when page_bytes is missing', () => {
-    expect(buildCleansingProgressBarHtml({ ...baseEntry })).toBe('');
+  it('keeps the bar region with a no-ai reason when page_bytes is missing', () => {
+    const html = buildCleansingProgressBarHtml({ ...baseEntry });
+    expect(html).toContain('cleansing-progress-wrapper');
+    expect(html).toContain('cleansing-progress-bar');
+    expect(html).toContain('recorded without AI');
   });
 
-  it('returns empty string when page_bytes is zero', () => {
-    expect(buildCleansingProgressBarHtml({ ...baseEntry, page_bytes: 0, cleansed_bytes: 10 })).toBe('');
+  it('keeps the bar region with an empty reason when page_bytes is zero', () => {
+    const html = buildCleansingProgressBarHtml({ ...baseEntry, page_bytes: 0, cleansed_bytes: 10 });
+    expect(html).toContain('cleansing-progress-wrapper');
+    expect(html).toContain('Nothing to measure');
+  });
+
+  it('keeps the bar region with an unmeasured reason for a legacy partial entry', () => {
+    const html = buildCleansingProgressBarHtml({
+      ...baseEntry,
+      sent_tokens: 495,
+      received_tokens: 49,
+      ai_provider: 'openai',
+    });
+    expect(html).toContain('cleansing-progress-wrapper');
+    expect(html).toContain('No measurement');
+    expect(html).not.toContain('recorded without AI');
   });
 
   it('renders a progress bar with reduction label when bytes are present', () => {

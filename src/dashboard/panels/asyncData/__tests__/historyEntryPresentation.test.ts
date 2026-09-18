@@ -4,6 +4,8 @@ import {
   classifyCleansingMissing,
   classifyDiagnosticMissing,
   classifyExtractionMissing,
+  classifyMaskingMissing,
+  classifyTokensMissing,
   resolveCleansingBytes,
 } from '../historyEntryPresentation.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
@@ -102,6 +104,43 @@ describe('historyEntryPresentation', () => {
     it('returns no-ai for single-side data without AI info', () => {
       const entry = makeEntry({ ai_summary_original_bytes: 900 });
       expect(classifyAiSummaryMissing(entry)).toBe('no-ai');
+    });
+  });
+
+  describe('classifyTokensMissing', () => {
+    it('returns no-ai when tokens and provider are absent', () => {
+      expect(classifyTokensMissing(makeEntry({}))).toBe('no-ai');
+    });
+
+    it('returns null when sent_tokens is present', () => {
+      expect(classifyTokensMissing(makeEntry({ sent_tokens: 100 }))).toBeNull();
+    });
+
+    it('returns null when only ai_provider is present', () => {
+      expect(classifyTokensMissing(makeEntry({ ai_provider: 'openai' }))).toBeNull();
+    });
+
+    it('returns unmeasured for a legacy partial entry with tokens but no bytes', () => {
+      const entry = makeEntry({ sent_tokens: 0, page_bytes: 2000, candidate_bytes: 1000 });
+      expect(classifyTokensMissing(entry)).toBeNull();
+    });
+  });
+
+  describe('classifyMaskingMissing', () => {
+    it('returns no-ai when masking data is absent', () => {
+      expect(classifyMaskingMissing(makeEntry({}))).toBe('no-ai');
+    });
+
+    it('returns null when masked_count is present', () => {
+      expect(classifyMaskingMissing(makeEntry({ masked_count: 0 }))).toBeNull();
+    });
+
+    it('returns null when both token sides are present', () => {
+      expect(classifyMaskingMissing(makeEntry({ original_tokens: 100, cleansed_tokens: 95 }))).toBeNull();
+    });
+
+    it('returns no-ai when only one token side is present', () => {
+      expect(classifyMaskingMissing(makeEntry({ original_tokens: 100 }))).toBe('no-ai');
     });
   });
 

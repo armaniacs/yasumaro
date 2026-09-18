@@ -3535,6 +3535,12 @@ details[open] .advanced-details-summary {
   transition: width 0.3s ease;
 }
 
+/* Unmeasurable entries (PBI 2026-09-18-20): keep the track visible with an
+   empty fill so the region does not collapse next to measured entries. */
+.cleansing-progress-bar-missing {
+  background: transparent;
+}
+
 .cleansing-progress-label {
   font-size: 11px;
   color: var(--color-success-text);
