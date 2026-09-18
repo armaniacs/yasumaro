@@ -9,7 +9,19 @@
  */
 import { vi } from 'vitest';
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },

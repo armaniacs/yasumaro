@@ -4,7 +4,8 @@
  * Extracted from settingsStore.ts (PBI-01).
  */
 
-import { logError, logWarn, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
 import { withOptimisticLock } from './storageTransaction.js';

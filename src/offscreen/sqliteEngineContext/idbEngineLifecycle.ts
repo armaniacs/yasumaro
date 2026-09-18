@@ -6,7 +6,8 @@
  */
 
 import { errorMessage } from '../../utils/errorUtils.js';
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError } from '../../utils/logger/api.js';
 import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from '../schema.js';
 import { runMigrations } from '../migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from '../sqliteEngine.js';

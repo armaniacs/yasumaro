@@ -13,7 +13,19 @@
 import { vi } from 'vitest';;
 import type { MockedFunction } from 'vitest';
 
-vi.mock('../../../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
@@ -45,7 +57,7 @@ vi.mock('../../../../utils/storage/savedUrlRepository.js', async (importOriginal
 import { checkDuplicateStep, DuplicateError } from '../checkDuplicateStep.js';
 import * as storage from '../../../../utils/storage/types.js';
 import * as storageSavedUrls from '../../../../utils/storage/savedUrlRepository.js';
-import * as logger from '../../../../utils/logger.js';
+import { addLog } from '../../../../utils/logger/core.js';
 import type { RecordingContext, StepDeps, UrlStore } from '../../types.js';
 
 const mockGetSavedUrls = storageSavedUrls.getSavedUrlsWithTimestamps as MockedFunction<typeof storageSavedUrls.getSavedUrlsWithTimestamps>;
@@ -169,7 +181,7 @@ describe('checkDuplicateStep', () => {
       });
 
       await expect(checkDuplicateStep(context)).resolves.toBe(context);
-      expect(logger.addLog).toHaveBeenCalledWith(
+      expect(addLog).toHaveBeenCalledWith(
         'WARN',
         expect.stringContaining('approaching limit'),
         expect.any(Object)

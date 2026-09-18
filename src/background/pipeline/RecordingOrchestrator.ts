@@ -10,7 +10,8 @@
  * kernel to reappear in every caller. Deleting a shallow factory only moves one line.
  */
 
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
 import { decideStepOutcome, defaultOutcomeAdapters, finalizeSuccess, type OutcomeAdapters } from './recordingOutcome.js';
 import { toExternalResult } from './piiBoundary.js';

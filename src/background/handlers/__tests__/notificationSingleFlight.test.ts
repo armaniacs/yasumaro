@@ -30,7 +30,17 @@ vi.mock('../../notificationHelper.js', () => ({
   PRIVACY_CONFIRM_NOTIFICATION_PREFIX: 'privacy-confirm-',
 }));
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logWarn: vi.fn(async () => {}),
+  logError: vi.fn(async () => {}),
+  ErrorCode: { UNKNOWN_ERROR: 'x', INVALID_INPUT: 'x', INTERNAL_ERROR: 'x' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logWarn: vi.fn(async () => {}),
+  logError: vi.fn(async () => {}),
+  ErrorCode: { UNKNOWN_ERROR: 'x', INVALID_INPUT: 'x', INTERNAL_ERROR: 'x' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logWarn: vi.fn(async () => {}),
   logError: vi.fn(async () => {}),
   ErrorCode: { UNKNOWN_ERROR: 'x', INVALID_INPUT: 'x', INTERNAL_ERROR: 'x' },

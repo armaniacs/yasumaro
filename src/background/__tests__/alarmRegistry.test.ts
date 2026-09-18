@@ -29,7 +29,15 @@ vi.mock('../pendingChromeStorageQueue.js', () => ({
 vi.mock('../offlineQueueProcessor.js', () => ({
   createOfflineQueueProcessor: () => vi.fn(async () => {}),
 }));
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: addLogMock,
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: addLogMock,
+  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: addLogMock,
   LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
 }));

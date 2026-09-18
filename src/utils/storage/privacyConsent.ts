@@ -6,7 +6,8 @@
 
 import { StorageKeys } from './types.js';
 import { errorMessage } from '../errorUtils.js';
-import { logInfo, logWarn, logError, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logInfo, logWarn, logError } from '../logger/api.js';
 import { consentHmacSigner } from '../crypto/index.js';
 import { pickDefined } from '../objectUtils.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';

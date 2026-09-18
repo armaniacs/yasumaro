@@ -1,6 +1,7 @@
 import type { Settings } from '../../utils/storage/types.js';
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
-import { logDebug, logWarn, logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logDebug, logWarn, logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { createErrorResponse } from '../../utils/errorClassification.js';
 import { readBodyCapped } from '../../utils/readBodyCapped.js';

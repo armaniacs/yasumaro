@@ -1,7 +1,8 @@
 // src/background/__tests__/privacyPipeline.test.js
 import { PrivacyPipeline } from '../privacyPipeline.js';
 import { vi } from 'vitest';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 import type { AIService } from '../ai/AIService.js';
@@ -11,7 +12,23 @@ const asAIService = (mock: Pick<AIService, 'getSupportedModes' | 'generateSummar
   mock as AIService;
 
 // Mock logger to capture addLog calls
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
   logError: vi.fn(),

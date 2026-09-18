@@ -16,7 +16,8 @@
  */
 
 import { errorMessage } from '../utils/errorUtils.js';
-import { logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError } from '../utils/logger/api.js';
 import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import type { StorageBackend, StatusResult, BackendOrError } from './StorageBackend.js';

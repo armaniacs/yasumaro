@@ -1,4 +1,5 @@
-import { logError, logInfo, ErrorCode } from '../../../utils/logger.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { logError, logInfo } from '../../../utils/logger/api.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';

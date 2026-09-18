@@ -11,7 +11,8 @@
  * file's calendar date.
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 
 // Kept as a constant rather than a settings-UI knob: local Markdown export is an
 // advanced feature with a fixed calendar-file layout, and a shorter/longer

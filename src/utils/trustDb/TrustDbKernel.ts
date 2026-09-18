@@ -7,7 +7,8 @@
 
 import type { TrustDatabase, TrustResult } from './trustDbSchema.js';
 import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
-import { logDebug, logInfo, logWarn, logError, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logDebug, logInfo, logWarn, logError } from '../logger/api.js';
 import { backoffDelayMs } from '../backoff.js';
 import { withOptimisticLock } from '../storage/storageTransaction.js';
 import { mergeTrustDatabase } from './mergeTrustDatabase.js';

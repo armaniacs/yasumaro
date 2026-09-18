@@ -211,7 +211,8 @@ export class SettingsRepository {
         }
       }
     } catch (e) {
-      const { logError, ErrorCode } = await import('../logger.js');
+      const { ErrorCode } = await import('../logger/types.js');
+const { logError } = await import('../logger/api.js');
       const { errorMessage } = await import('../errorUtils.js');
       await logError('Failed to encrypt API keys', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
       throw e;

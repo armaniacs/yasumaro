@@ -1,5 +1,6 @@
 // src/background/privacyPipeline.ts
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { Settings, StorageKeys } from '../utils/storage/types.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';

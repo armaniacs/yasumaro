@@ -14,14 +14,19 @@ vi.mock('../storage/storageTransaction.js', async (importOriginal) => {
     const actual = await importOriginal() as typeof import('../storage/storageTransaction.js');
     return actual;
 });
-vi.mock('../logger.ts', () => ({
-    addLog: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    logInfo: vi.fn(),
-    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-    ErrorCode: {},
+vi.mock('../logger/types.js', () => ({
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: {},
 }));
+vi.mock('../logger/core.js', () => ({
+  addLog: vi.fn(),
+}));
+vi.mock('../logger/api.js', () => ({
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+}));
+
 
 import { setSavedUrlsWithTimestamps } from '../storageUrls.ts';
 

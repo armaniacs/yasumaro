@@ -7,7 +7,7 @@ import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
 
 vi.mock('../../utils/fetch.js');
-vi.mock('../../utils/logger.js');
+vi.mock('../../utils/logger/types.js');;vi.mock('../../utils/logger/core.js');;vi.mock('../../utils/logger/api.js');
 vi.mock('../../utils/customPromptUtils.js', () => ({
   applyCustomPrompt: vi.fn((settings, provider, content) => ({
     userPrompt: `以下のWebページの内容を、日本語で簡潔に要約してください。1文または2文で、重要なポイントをまとめてください。改行しないこと。\n\nContent:\n${content}`,

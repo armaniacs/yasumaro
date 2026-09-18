@@ -3,7 +3,8 @@
  * Step 8: Append formatted markdown to Obsidian daily note
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { RecordingContext, StepDeps } from '../types.js';

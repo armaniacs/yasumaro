@@ -13,7 +13,19 @@
 import { vi } from 'vitest';;
 import type { Mock } from 'vitest';
 
-vi.mock('../../../../utils/logger.js', () => ({
+vi.mock('../../../../utils/logger/types.js', () => ({
+  logInfo: vi.fn().mockResolvedValue(undefined),
+  logWarn: vi.fn().mockResolvedValue(undefined),
+  logError: vi.fn().mockResolvedValue(undefined),
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../../utils/logger/core.js', () => ({
+  logInfo: vi.fn().mockResolvedValue(undefined),
+  logWarn: vi.fn().mockResolvedValue(undefined),
+  logError: vi.fn().mockResolvedValue(undefined),
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../../utils/logger/api.js', () => ({
   logInfo: vi.fn().mockResolvedValue(undefined),
   logWarn: vi.fn().mockResolvedValue(undefined),
   logError: vi.fn().mockResolvedValue(undefined),
@@ -239,7 +251,7 @@ describe('sessionAlarmsManager', () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
 
-      const logInfo = (await import('../../../../utils/logger.js')).logInfo;
+      const logInfo = (await import('../../../../utils/logger/api.js')).logInfo;
       expect(logInfo).toHaveBeenCalledWith(
         expect.stringContaining('started'),
         expect.any(Object),
@@ -285,7 +297,7 @@ describe('sessionAlarmsManager', () => {
 
       await stopTimeoutChecker();
 
-      const logWarn = (await import('../../../../utils/logger.js')).logWarn;
+      const logWarn = (await import('../../../../utils/logger/api.js')).logWarn;
       expect(logWarn).toHaveBeenCalledWith(
         expect.stringContaining('Failed to stop'),
         expect.objectContaining({ error: expect.stringContaining('Clear error') }),
@@ -317,7 +329,7 @@ describe('sessionAlarmsManager', () => {
       await initialize();
 
       // エラーは startTimeoutChecker 内でキャッチされる
-      const logError = (await import('../../../../utils/logger.js')).logError;
+      const logError = (await import('../../../../utils/logger/api.js')).logError;
       expect(logError).toHaveBeenCalledWith(
         expect.stringContaining('start session timeout checker'),
         expect.objectContaining({ error: expect.stringContaining('Init alarm error') }),
@@ -357,7 +369,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 100));
 
-      const logInfo = (await import('../../../../utils/logger.js')).logInfo;
+      const logInfo = (await import('../../../../utils/logger/api.js')).logInfo;
       expect(logInfo).toHaveBeenCalledWith(
         expect.stringContaining('locked'),
         expect.objectContaining({ timeoutMinutes: expect.any(Number) }),
@@ -377,7 +389,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 100));
 
-      const logError = (await import('../../../../utils/logger.js')).logError;
+      const logError = (await import('../../../../utils/logger/api.js')).logError;
       expect(logError).toHaveBeenCalledWith(
         expect.stringContaining('lock'),
         expect.objectContaining({ error: expect.stringContaining('Lock storage error') }),
@@ -458,7 +470,7 @@ describe('sessionAlarmsManager', () => {
 
       await new Promise((r) => setTimeout(r, 100));
 
-      const logError = (await import('../../../../utils/logger.js')).logError;
+      const logError = (await import('../../../../utils/logger/api.js')).logError;
       expect(logError).toHaveBeenCalledWith(
         expect.stringContaining('check session timeout'),
         expect.objectContaining({ error: expect.stringContaining('Get error') }),

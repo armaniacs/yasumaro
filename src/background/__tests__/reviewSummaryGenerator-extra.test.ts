@@ -182,7 +182,15 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn().mockResolvedValue(undefined),
+  LogType: { INFO: 'INFO', ERROR: 'ERROR', WARN: 'WARN' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn().mockResolvedValue(undefined),
+  LogType: { INFO: 'INFO', ERROR: 'ERROR', WARN: 'WARN' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn().mockResolvedValue(undefined),
   LogType: { INFO: 'INFO', ERROR: 'ERROR', WARN: 'WARN' },
 }));
@@ -199,7 +207,7 @@ import {
 import type { AIService } from '../ai/AIService.js';
 import type { AISummaryResult } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
-import { addLog } from '../../utils/logger.js';
+import { addLog } from '../../utils/logger/core.js';
 
 function makeEntry(overrides: Record<string, unknown> = {}) {
   return {

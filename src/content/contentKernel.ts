@@ -11,7 +11,7 @@ import type { Clock } from './domainPolicyPort.js';
 import { PageState, type CleansingConfig, DEFAULT_CLEANSING_CONFIG } from './pageState.js';
 import { StorageKeys, type StorageKey } from '../utils/storage/types.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
-import { logInfo, logDebug } from '../utils/logger.js';
+import { logInfo, logDebug } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { VisitGate } from './visitGate.js';
 import type { VisitState, VisitGateThresholds } from './visitGate.js';

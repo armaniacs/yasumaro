@@ -13,7 +13,17 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ChromeOffscreenTransport } from '../ChromeOffscreenTransport.js';
 import { Mutex } from '../../utils/Mutex.js';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },

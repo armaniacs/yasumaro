@@ -1,5 +1,6 @@
 import { initializeModalEvents } from './sanitizePreview.js';
-import { logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError } from '../utils/logger/api.js';
 import { loadCurrentTab, recordCurrentPage } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
 

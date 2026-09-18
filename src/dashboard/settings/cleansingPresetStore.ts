@@ -21,7 +21,8 @@
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError } from '../../utils/logger/api.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { PRESETS, type PresetId, type CleansingConfig } from '../../utils/aiSummaryCleaner/presets.js';
 

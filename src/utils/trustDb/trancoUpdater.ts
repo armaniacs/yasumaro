@@ -9,7 +9,8 @@ import type {
   SafetyMode
 } from './trustDbSchema.js';
 import { getTrustDbAdmin } from './TrustDbAdmin.js';
-import { logInfo, logError, logWarn, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logInfo, logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
 import { readBodyCapped } from '../readBodyCapped.js';

@@ -431,7 +431,8 @@ const LEGACY_MAX_ENTRIES = 500;
 export async function purgeLegacyStorage(
     sqliteHealthCheck?: () => Promise<boolean>
 ): Promise<number> {
-    const { logWarn, logError, ErrorCode } = await import('../logger.js');
+    const { ErrorCode } = await import('../logger/types.js');
+const { logWarn, logError } = await import('../logger/api.js');
     const { errorMessage } = await import('../errorUtils.js');
 
     if (sqliteHealthCheck) {

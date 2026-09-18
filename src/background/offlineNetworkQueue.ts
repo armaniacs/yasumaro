@@ -5,7 +5,8 @@
  * chrome.storage.local so they survive Service Worker restarts.
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { PersistentRetryQueue, ChromeStorageAdapter, RetryableItem } from './persistentRetryQueue.js';
 import type { OfflineJobKind } from './pipeline/types.js';
 

@@ -16,7 +16,9 @@
  * execution path (full / preview / retry subset).
  */
 
-import { addLog, logError, LogType, ErrorCode } from '../../utils/logger.js';
+import { LogType, ErrorCode } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
+import { logError } from '../../utils/logger/api.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import {

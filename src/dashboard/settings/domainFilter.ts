@@ -11,7 +11,8 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { DomainFilter } from '../../utils/domainFilter/DomainFilter.js';
 import { parseDomainList } from '../../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport/index.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
 

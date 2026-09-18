@@ -6,7 +6,8 @@
  */
 
 import { errorMessage } from '../../utils/errorUtils.js';
-import { logError, logInfo, logWarn, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError, logInfo, logWarn } from '../../utils/logger/api.js';
 import { getSqliteWasmUrlOverride } from '../sqliteEngine.js';
 import type { WorkerLogMessage } from '../opfsWorker.js';
 

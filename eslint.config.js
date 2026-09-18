@@ -9,7 +9,7 @@ export default [
   },
   {
     files: ['src/**/*.ts'],
-    ignores: ['src/utils/logger.ts', 'src/**/__tests__/**'],
+    ignores: ['src/**/__tests__/**'],
     languageOptions: {
       parser: tsParser,
       parserOptions: {
@@ -51,15 +51,7 @@ export default [
       'no-restricted-imports': [
         'warn',
         {
-          patterns: [
-            {
-              // Wave 4 (PBI 2026-09-05-03): logger barrel split. New code
-              // imports logger/* directly; the barrel stays as a shim for the
-              // existing call sites until they migrate.
-              group: ['**/logger.js'],
-              message: 'Use direct module imports instead (e.g., from ./logger/core.js or ./logger/api.js). See dev-docs/LAYERS.md Wave 4.',
-            },
-          ],
+          patterns: [],
           paths: [
             {
               name: '../../utils/storage.js',
@@ -134,11 +126,6 @@ export default [
         {
           patterns: [
             {
-              // Wave 4 と同様: barrel ではなく直接 import を推奨
-              group: ['**/logger.js'],
-              message: 'Use direct module imports instead (e.g., from ./logger/core.js or ./logger/api.js). See dev-docs/LAYERS.md Wave 4.',
-            },
-            {
               group: ['**/popup/*', '**/popup.js', '**/dashboard/*', '**/dashboard.js'],
               message: 'background 層から UI 層 (popup/dashboard) への import は禁止。共有ロジックは src/utils/ の中立層に配置すること。See dev-docs/LAYERS.md.',
             },
@@ -163,28 +150,6 @@ export default [
           ],
         },
       ],
-    },
-  },
-  {
-    files: ['src/utils/logger.ts'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-      local: localPlugin,
-    },
-    rules: {
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
-      ],
-      'local/require-sanitized-markdown': 'error',
-      'local/require-response-size-limit': 'error',
     },
   },
   {

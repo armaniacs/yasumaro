@@ -12,7 +12,7 @@ describe('Logger - Enhanced Coverage', () => {
         vi.resetModules();
         process.env.NODE_ENV = 'development';
         (chrome as any).runtime.onSuspend = { addListener: vi.fn() };
-        logger = await import('../logger.js');
+        logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
         await logger.clearLogs();
         logger.clearPendingLogs();
     });

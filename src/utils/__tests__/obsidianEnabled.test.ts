@@ -5,7 +5,19 @@ import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 
 const mockStorage: Record<string, unknown> = {};
 
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/types.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
+}));
+vi.mock('../logger/core.js', () => ({
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
+}));
+vi.mock('../logger/api.js', () => ({
   logInfo: vi.fn(),
   logDebug: vi.fn(),
   logError: vi.fn(),

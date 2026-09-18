@@ -3,7 +3,8 @@
  * Step 4: Check privacy headers and handle accordingly
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { addPendingPage } from '../../../utils/pendingStorage.js';
 import type { RecordingContext } from '../types.js';

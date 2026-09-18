@@ -4,7 +4,8 @@
  * リソースへの同時アクセスを防止し、順次処理を実現
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from './logger/types.js';
+import { addLog } from './logger/core.js';
 
 // addLog (and the LogType it's called with) is best-effort diagnostics
 // only. If evaluating the call throws synchronously — e.g. a test mocks

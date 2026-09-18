@@ -1,6 +1,7 @@
 // @layer 1 — PrivacyCache (5m TTL, part of RecordingCache deep module)
 
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../../utils/privacyChecker.js';
 

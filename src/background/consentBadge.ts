@@ -8,7 +8,7 @@
 
 import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { setBadge } from './badgePolicy.js';
-import { logWarn } from '../utils/logger.js';
+import { logWarn } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
 /**

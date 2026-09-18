@@ -48,7 +48,19 @@ vi.mock('../../storageFallback.js', () => ({
 }));
 
 // logger は副作用のみなので潰しておく
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  logWarn: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   logWarn: vi.fn(),
   logInfo: vi.fn(),

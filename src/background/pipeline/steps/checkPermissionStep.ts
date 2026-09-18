@@ -3,7 +3,8 @@
  * Step 2: Check host_permissions and record denied visits
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { extractDomain } from '../../../utils/domainUtils.js';
 import { getPermissionManager } from '../../../utils/permissionManager.js';
 import type { RecordingContext, PipelineStepFunction, PermissionCheckResult } from '../types.js';

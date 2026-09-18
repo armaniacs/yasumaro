@@ -10,7 +10,8 @@
  * SESSION_KEYS.RECORDING_CACHE entry so the microtask saveQueue stays atomic.
  */
 
-import { addLog, LogType } from '../utils/logger.js';
+import { LogType } from '../utils/logger/types.js';
+import { addLog } from '../utils/logger/core.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { Settings } from '../utils/storage/types.js';

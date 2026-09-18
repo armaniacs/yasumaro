@@ -1,4 +1,5 @@
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { backoffDelayMs } from '../../utils/backoff.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';

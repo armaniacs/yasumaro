@@ -18,8 +18,13 @@ vi.mock('../../../utils/fetch.js', () => ({
   fetchWithTimeout: vi.fn(),
 }));
 
-vi.mock('../../../utils/logger.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../utils/logger.js')>();
+vi.mock('../../../utils/logger/types.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual };
+});
+
+vi.mock('../../../utils/logger/api.js', async (importOriginal) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     logDebug: vi.fn().mockResolvedValue(undefined),
@@ -35,7 +40,7 @@ vi.mock('../../../utils/storage/savedUrlRepository.js', () => ({
 import { validateUrlForFilterImport, fetchWithTimeout } from '../../../utils/fetch.js';
 import { updateSavedUrlEntry } from '../../../utils/storage/savedUrlRepository.js';
 import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
-import { logError, logWarn } from '../../../utils/logger.js';
+import { logError, logWarn } from '../../../utils/logger/api.js';
 
 describe('createFetchUrlHandler', () => {
   beforeEach(() => {

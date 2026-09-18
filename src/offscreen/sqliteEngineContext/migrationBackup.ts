@@ -54,7 +54,8 @@
  */
 
 import { errorMessage } from '../../utils/errorUtils.js';
-import { logError, logInfo, logWarn, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError, logInfo, logWarn } from '../../utils/logger/api.js';
 import { INSERT_IGNORE_SQL, buildInsertParams, COLUMN_NAMES } from '../schema.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';

@@ -11,7 +11,7 @@
 import { vi } from 'vitest';
 
 // 自動モック
-vi.mock('../../../../utils/logger.js');
+vi.mock('../../../../utils/logger/types.js');;vi.mock('../../../../utils/logger/core.js');;vi.mock('../../../../utils/logger/api.js');
 vi.mock('../../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {

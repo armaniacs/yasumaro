@@ -41,7 +41,21 @@ vi.mock('../bloomFilter.js', () => ({
 }));
 
 // logger をモック
-vi.mock('../../logger.js', () => ({
+vi.mock('../../logger/types.js', () => ({
+  logDebug: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: {},
+}));
+vi.mock('../../logger/core.js', () => ({
+  logDebug: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  ErrorCode: {},
+}));
+vi.mock('../../logger/api.js', () => ({
   logDebug: vi.fn(),
   logInfo: vi.fn(),
   logWarn: vi.fn(),

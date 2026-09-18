@@ -1,7 +1,8 @@
 // @layer 1 — OffscreenGateway (background → offscreen hop)
 // Extracted from sqliteGateway.ts (390l) to give each hop its own locality (PBI 07).
 
-import { logError, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { pickStatusExtras } from '../../messaging/sqliteValidators.js';

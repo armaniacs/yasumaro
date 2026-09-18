@@ -8,7 +8,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Hoisted mock for logger
 const { logErrorMock } = vi.hoisted(() => ({ logErrorMock: vi.fn() }));
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    logError: logErrorMock,
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' }
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    logError: logErrorMock,
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' }
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     logError: logErrorMock,
     ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' }
 }));

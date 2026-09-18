@@ -6,7 +6,8 @@
 
 import type { SyncTarget } from './SyncTarget.js';
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { settingsRepository, type SettingsReader, type SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';

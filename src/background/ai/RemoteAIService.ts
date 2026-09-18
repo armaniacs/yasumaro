@@ -13,7 +13,8 @@ import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.j
 import { resolveModelKey } from '../../utils/aiModelKey.js';
 import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
 import { PROVIDER_CATALOG, createProviderStrategy } from './providerCatalog.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
 import { pickDefined } from '../../utils/objectUtils.js';

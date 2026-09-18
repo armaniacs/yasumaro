@@ -127,7 +127,19 @@ vi.mock('../../utils/domainUtils.js', () => ({
   extractDomain: vi.fn(),
 }));
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  logError: vi.fn(),
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  logError: vi.fn(),
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
@@ -239,14 +251,15 @@ import * as storage from '../../utils/storage/types.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
 import * as storageUrls from '../../utils/storageUrls.js';
-import * as loggerModule from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
+import { logError } from '../../utils/logger/api.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import { addPendingPage } from '../../utils/pendingStorage.js';
 import { getPermissionManager } from '../../utils/permissionManager.js';
 import { isPrivateIpAddress } from '../../utils/fetch.js';
 
 const MockedPrivacyPipeline = PrivacyPipeline as Mock;
-const mockLogger = vi.mocked(loggerModule);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function resetCacheState() {
@@ -619,7 +632,7 @@ describe('RecordingPipeline', () => {
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const retryCalls = mockLogger.addLog.mock.calls.filter(
+      const retryCalls = addLog.mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 
@@ -664,10 +677,10 @@ describe('RecordingPipeline', () => {
       }, { settings: mockSettings });
 
       expect(result.success).toBe(false);
-      expect(mockLogger.logError).toHaveBeenCalledWith(
+      expect(logError).toHaveBeenCalledWith(
         expect.stringContaining('Pipeline failed at step'),
         expect.any(Object),
-        mockLogger.ErrorCode.INTERNAL_ERROR,
+        ErrorCode.INTERNAL_ERROR,
         'RecordingPipeline'
       );
     });

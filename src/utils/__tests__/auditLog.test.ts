@@ -20,7 +20,7 @@ vi.mock('../../background/sqlite/offscreenGateway.js', () => {
   };
 });
 
-vi.mock('../logger.js', async (importOriginal) => {
+vi.mock('../logger/api.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...(actual as object),
@@ -57,7 +57,7 @@ describe('auditLog', () => {
 
   it('recordAuditLog logs error when mutate fails', async () => {
     mockMutate.mockResolvedValue({ success: false, error: { message: 'insert failed' } });
-    const { logError } = await import('../logger.js');
+    const { logError } = await import('../logger/api.js');
 
     await recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' });
 

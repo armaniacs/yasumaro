@@ -1,7 +1,8 @@
 import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, isLocalhostAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
 import { normalizeUrl } from '../urlUtils.js';
+import { logDebug } from '../logger/api.js';
 import * as cspValidatorModule from '../cspValidator.js';
-import * as loggerModule from '../logger.js';
+
 
 // Mock dependencies
 vi.mock('../cspValidator.js', () => ({
@@ -164,14 +165,16 @@ vi.mock('../storage/quota.js', async (importOriginal) => {
   };
 });;
 
-vi.mock('../logger.js', () => ({
+vi.mock('../logger/core.js', () => ({
+  logDebug: vi.fn(),
+}));
+vi.mock('../logger/api.js', () => ({
   logDebug: vi.fn(),
   logWarn: vi.fn(),
 }));
 
 // Access mocked modules
 const { CSPValidator, getCspErrorMessage } = vi.mocked(cspValidatorModule);
-const { logDebug } = vi.mocked(loggerModule);
 
 describe('fetchWithTimeout', () => {
   test('returns a normal response', async () => {

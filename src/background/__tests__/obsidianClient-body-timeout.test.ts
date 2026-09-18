@@ -7,7 +7,8 @@
 import type { Mock } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 
 /** Response body that resolves with the given text (as one chunk). */
 function bodyOf(text: string): { getReader: () => { read: () => Promise<{ done: boolean; value?: Uint8Array }>; cancel: () => Promise<void> } } {
@@ -71,7 +72,25 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  }
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  }
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: {
     DEBUG: 'DEBUG',

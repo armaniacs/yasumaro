@@ -1,6 +1,7 @@
 import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
 import type { RecordingCacheInstance } from './recordingCache.js';
-import { logInfo, logDebug, logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logInfo, logDebug, logError } from '../utils/logger/api.js';
 import { hashUrl } from '../utils/urlHash.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { errorMessage } from '../utils/errorUtils.js';

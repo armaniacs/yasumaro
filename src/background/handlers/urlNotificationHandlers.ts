@@ -5,7 +5,8 @@
  */
 
 import { notificationHmacSigner, textToBase64Url, base64UrlToText } from '../../utils/crypto/index.js';
-import { logError, logWarn, ErrorCode } from '../../utils/logger.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { logError, logWarn } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 // Constants for URL encoding

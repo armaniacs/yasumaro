@@ -15,7 +15,7 @@ import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js'
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
-import { logInfo } from '../utils/logger.js';
+import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { syncStatusToTop } from './statusView.js';
 

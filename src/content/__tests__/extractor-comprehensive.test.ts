@@ -42,7 +42,21 @@ const { logInfoMock, logWarnMock, logErrorMock, logDebugMock } = vi.hoisted(() =
   logErrorMock: vi.fn((..._args: unknown[]) => Promise.resolve()),
   logDebugMock: vi.fn((..._args: unknown[]) => Promise.resolve()),
 }));
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logInfo: (...args: unknown[]) => logInfoMock(...args),
+  logWarn: (...args: unknown[]) => logWarnMock(...args),
+  logError: (...args: unknown[]) => logErrorMock(...args),
+  logDebug: (...args: unknown[]) => logDebugMock(...args),
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', API_REQUEST_FAILURE: 'API_REQ_001' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logInfo: (...args: unknown[]) => logInfoMock(...args),
+  logWarn: (...args: unknown[]) => logWarnMock(...args),
+  logError: (...args: unknown[]) => logErrorMock(...args),
+  logDebug: (...args: unknown[]) => logDebugMock(...args),
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', API_REQUEST_FAILURE: 'API_REQ_001' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logInfo: (...args: unknown[]) => logInfoMock(...args),
   logWarn: (...args: unknown[]) => logWarnMock(...args),
   logError: (...args: unknown[]) => logErrorMock(...args),

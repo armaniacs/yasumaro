@@ -9,7 +9,8 @@ import { vi } from 'vitest';
 import * as storage from '../../utils/storage/types.js';
 import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from '../noteSectionEditor.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
 
@@ -57,7 +58,25 @@ vi.mock('../noteSectionEditor.js', () => ({
     insertIntoSection: vi.fn((existingContent, sectionHeader, content) => `${sectionHeader}\n${content}`)
   }
 }));
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  }
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: {
+    DEBUG: 'DEBUG',
+    INFO: 'INFO',
+    WARN: 'WARN',
+    ERROR: 'ERROR'
+  }
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: {
     DEBUG: 'DEBUG',

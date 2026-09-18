@@ -7,7 +7,7 @@
 
 import { PermissionManager } from '../../utils/permissionManager.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { logWarn } from '../../utils/logger.js';
+import { logWarn } from '../../utils/logger/api.js';
 import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
 import { providerIdsInOrder } from '../aiProviderCatalogView.js';
 import type { ProviderId } from '../../utils/storage/types.js';

@@ -1,7 +1,7 @@
 /**
  * logger-production.test.ts
  * 【セキュリティ強化】デバッグログ本番無効化機能のテスト
- * 【テスト対象】: src/utils/logger.ts の環境依存ログ出力制御
+ * 【テスト対象】: src/utils/logger/core.js の環境依存ログ出力制御
  *
  * 注: chrome storage モックは jest.setup.ts で設定済み
  */
@@ -11,7 +11,7 @@ import { describe, test, expect, vi } from 'vitest';
 /**
  * デバッグログ本番無効化機能のテストスイート
  *
- * 注: 実装前は logger.ts に環境判定ロジックが存在しないためテストが失敗します
+ * 注: 実装前は logger/core.js に環境判定ロジックが存在しないためテストが失敗します
  */
 describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）', () => {
     /**
@@ -21,16 +21,16 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
      */
     test('exposes production environment detection logic', async () => {
         // 【テスト目的】: 環境判定用の関数が存在することを確認
-        // 【テスト内容】：logger.tsに環境判定用のシンボルがエクスポートされていることを確認
+        // 【テスト内容】：logger/core.jsに環境判定用のシンボルがエクスポートされていることを確認
         // 【期待される動作】: isDevelopment または同等の関数が存在する
         // 🟡 信頼性レベル: 黄信号（環境判定方法が確定していない）
 
-        // 【実際の処理実行】logger.tsをインポートして環境判定を確認
-        // WHY: isDevelopment is now implemented in logger/core.ts:112 and re-exported via logger.ts:26
-        const logger = await import('../logger.ts');
+        // 【実際の処理実行】logger/core.jsをインポートして環境判定を確認
+        // WHY: isDevelopment is now implemented in logger/core.ts:112 and re-exported via logger/core.js:26
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【結果検証】実装前の状態では環境判定ロジックは存在しない
-        // 現在のlogger.tsにはisDevelopment関数が存在しないため、このアサーションで失敗するはず
+        // 現在のlogger/core.jsにはisDevelopment関数が存在しないため、このアサーションで失敗するはず
         expect(logger.isDevelopment).toBeDefined(); // 【確認内容】: 環境判定関数が存在することを確認 🟡
     });
 
@@ -40,7 +40,7 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
      * Greenフェーズ目的: 実装によりDEBUGが保存されないことを確認
      */
     test('does not persist DEBUG logs in production', async () => {
-        // 【テスト目的】: 実装後のlogger.tsでは本番環境でもDEBUGが保存されないことを検証
+        // 【テスト目的】: 実装後のlogger/core.jsでは本番環境でもDEBUGが保存されないことを検証
         // 【テスト内容】：本番環境設定でDEBUGログを追加し、flushしてstorageに保存されないことを確認
         // 【期待される動作】: 実装後はDEBUGが保存されない
         // 🟡 信頼性レベル: 黄信号（実装の挙動による）
@@ -48,8 +48,8 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         // 【初期条件設定】production環境を設定
         process.env.NODE_ENV = 'production';
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】DEBUGログを追加してflush
         await logger.addLog('DEBUG', 'This is a debug message', { debugData: 'value' });
@@ -75,8 +75,8 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'production';
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】ERRORログを追加してflush
         await logger.addLog('ERROR', 'This is an error message', { errorData: 'value' });
@@ -105,8 +105,8 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'development';
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】DEBUGログを追加してflush
         await logger.addLog('DEBUG', 'This is a debug message', { debugData: 'value' });
@@ -135,8 +135,8 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         const originalEnv = process.env.NODE_ENV;
         delete process.env.NODE_ENV;
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】DEBUGログを追加してflush
         await logger.addLog('DEBUG', 'This should be discarded', {});
@@ -164,8 +164,8 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'test';
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】DEBUGログを追加してflush
         await logger.addLog('DEBUG', 'This should be discarded', {});
@@ -187,14 +187,14 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         // 【テスト目的】: 全てのログタイプ（INFO, WARN, ERROR, SANITIZE, DEBUG）が正しく処理されることを確認
         // 【テスト内容】：各ログタイプを追加し、正常に保存されることを検証
         // 【期待される動作】: 全てのログタイプが正しく認識・保存される
-        // 🟢 信頼性レベル: 青信号（logger.tsのLogType定義）
+        // 🟢 信頼性レベル: 青信号（logger/core.jsのLogType定義）
 
         // 【初期条件設定】development環境（DEBUGも保存させる）
         const originalEnv = process.env.NODE_ENV;
         process.env.NODE_ENV = 'development';
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】各種ログタイプを追加してflush
         await logger.addLog('INFO', 'Info message', {});
@@ -226,8 +226,8 @@ describe('Logger 本番環境: デバッグログ無効化（Redフェーズ）'
         // 【期待される動作】: ユーザー入力ではない空メッセージも保存される
         // 🟢 信頼性レベル: 青信号（バリデーションなしは設計）
 
-        // 【実際の処理実行】logger.tsをインポート
-        const logger = await import('../logger.js');
+        // 【実際の処理実行】logger/core.jsをインポート
+        const logger = { ...(await import('../logger/types.js')), ...(await import('../logger/core.js')), ...(await import('../logger/api.js')) };
 
         // 【実際の処理実行】空メッセージのERRORログを追加してflush
         await logger.addLog('ERROR', '', { data: 'value' });

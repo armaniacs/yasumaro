@@ -63,7 +63,7 @@ vi.mock('../../../utils/trustChecker.js', () => ({
 }));
 vi.mock('../../privacyPipeline.js');
 vi.mock('../../obsidianClient.js');
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
   logInfo: vi.fn(),
@@ -74,12 +74,33 @@ vi.mock('../../../utils/logger.js', () => ({
 vi.mock('../../../utils/piiSanitizer.js', () => ({
   sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized content', maskedItems: [] }),
 }));
-
+vi.mock('../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../utils/piiSanitizer.js', () => ({
+  sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized content', maskedItems: [] }),
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
+  addLog: vi.fn(),
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logDebug: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+}));
+vi.mock('../../../utils/piiSanitizer.js', () => ({
+  sanitizeRegex: vi.fn().mockResolvedValue({ text: 'sanitized content', maskedItems: [] }),
+}));
 import * as storage from '../../../utils/storage/types.js';
 import * as storageSavedUrls from '../../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
-import * as logger from '../../../utils/logger.js';
+
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';

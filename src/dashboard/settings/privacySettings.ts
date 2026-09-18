@@ -6,7 +6,8 @@
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
 import { sanitizeRegex } from '../../utils/piiSanitizer.js';

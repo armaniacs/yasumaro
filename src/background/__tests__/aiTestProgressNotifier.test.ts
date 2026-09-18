@@ -14,9 +14,18 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { notifyAiTestProgress, AI_TEST_PROGRESS_MESSAGE_TYPE } from '../aiTestProgressNotifier.js';
-import { addLog, LogType } from '../../utils/logger.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+    addLog: vi.fn(),
+    LogType: { WARN: 'WARN', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+    addLog: vi.fn(),
+    LogType: { WARN: 'WARN', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
     addLog: vi.fn(),
     LogType: { WARN: 'WARN', DEBUG: 'DEBUG' },
 }));

@@ -7,7 +7,8 @@
 import type { OfflineJob } from './offlineNetworkQueue.js';
 import type { RecordingData } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { logError, logWarn, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError, logWarn } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { buildOfflineRetryRequest, type OfflineJobPayload } from './recordRequestBuilder.js';
 

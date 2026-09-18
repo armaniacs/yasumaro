@@ -6,7 +6,19 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
   logWarn: vi.fn(),
@@ -24,7 +36,7 @@ import {
   setOpfsWorkerFactory,
   type OpfsProxyState,
 } from '../sqliteEngineContext/opfsWorkerProxy.js';
-import { logError, logInfo, logWarn } from '../../utils/logger.js';
+import { logError, logInfo, logWarn } from '../../utils/logger/api.js';
 
 function makeState(worker: Partial<Worker> | null): OpfsProxyState {
   return {

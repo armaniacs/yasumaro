@@ -1,7 +1,8 @@
 import { settingsRepository } from '../storage/SettingsRepository.js';
 import { StorageKeys } from '../storage/types.js';
 import { focusTrapManager } from '../ui/focusTrap.js';
-import { logError, ErrorCode } from '../logger.js';
+import { ErrorCode } from '../logger/types.js';
+import { logError } from '../logger/api.js';
 import { getMessage } from '../i18n.js';
 import { applyI18n } from '../i18n-dom.js';
 

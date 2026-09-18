@@ -11,7 +11,8 @@ import { rebuildRulesFromSources, previewUblockFilter } from './rulesBuilder.js'
 import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings } from './sourceManager.js';
 import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
-import { LogType, addLog } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';

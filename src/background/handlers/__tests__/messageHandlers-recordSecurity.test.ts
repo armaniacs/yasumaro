@@ -12,7 +12,23 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logDebug: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  addLog: vi.fn(),
+  ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
+  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logDebug: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+  addLog: vi.fn(),
+  ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
+  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logDebug: vi.fn(),
   logWarn: vi.fn(),
   logError: vi.fn(),

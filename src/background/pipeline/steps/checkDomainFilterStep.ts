@@ -3,7 +3,8 @@
  * Step 1: Check if domain is allowed by filter settings
  */
 
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { isDomainAllowed } from '../../../utils/domainUtils.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 

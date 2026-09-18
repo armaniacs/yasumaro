@@ -9,7 +9,17 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 const mockGetAll = vi.hoisted(() => vi.fn());
 
 // Mock dependencies
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  logInfo: vi.fn(),
+  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   logInfo: vi.fn(),
   ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
@@ -70,7 +80,7 @@ import { MAX_IMPORT_ROWS } from '../handlers/dashboardSqlite/deps.js';
 const APPEND_TOKEN = 'test-token';
 import { ObsidianClient } from '../obsidianClient.js';
 import { formatEntriesToMarkdown } from '../../dashboard/obsidianFormatter.js';
-import { logError, logInfo } from '../../utils/logger.js';
+import { logError, logInfo } from '../../utils/logger/api.js';
 
 // Helper to create a mock SqliteClient
 function createMockSqliteClient(rows: unknown[] = []) {

@@ -5,7 +5,7 @@
  */
 
 import { getSharedSqliteClient } from '../background/sqlite/offscreenGateway.js';
-import { logError } from './logger.js';
+import { logError } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 
 export interface AuditLogEntry {

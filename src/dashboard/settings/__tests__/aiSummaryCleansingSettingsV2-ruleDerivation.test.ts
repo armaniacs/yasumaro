@@ -175,7 +175,15 @@ vi.mock('../../../utils/storage/quota.js', async (importOriginal) => {
   };
 });;
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  logError: vi.fn(),
+  ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
 }));

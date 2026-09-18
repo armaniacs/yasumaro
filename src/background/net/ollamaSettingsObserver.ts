@@ -7,7 +7,7 @@
  */
 import { StorageKeys } from '../../utils/storage/types.js';
 import type { Settings } from '../../utils/storage/types.js';
-import { logWarn } from '../../utils/logger.js';
+import { logWarn } from '../../utils/logger/api.js';
 
 export function createOllamaSettingsObserver(
   syncFn: (baseUrl: string) => Promise<void>,

@@ -1,6 +1,14 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../../utils/logger.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
@@ -16,7 +24,8 @@ vi.mock('../../../utils/errorUtils.js', () => ({
 }));
 
 import { saveToObsidianStep } from '../steps/saveToObsidianStep.js';
-import { addLog, LogType } from '../../../utils/logger.js';
+import { LogType } from '../../../utils/logger/types.js';
+import { addLog } from '../../../utils/logger/core.js';
 import type { RecordingContext, StepDeps } from '../types.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 

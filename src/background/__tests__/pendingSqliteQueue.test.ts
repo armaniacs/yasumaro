@@ -9,7 +9,15 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 
-vi.mock('../../utils/logger.js', () => ({
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
@@ -120,7 +128,8 @@ describe('pendingSqliteQueue (M14)', () => {
   });
 
   it('flushPendingRecords logs recovered/remaining counts', async () => {
-    const { addLog, LogType } = await import('../../utils/logger.js');
+    const { LogType } = await import('../../utils/logger/types.js');
+    const { addLog } = await import('../../utils/logger/core.js');
 
     for (let i = 0; i < 100; i++) {
       await enqueuePendingRecord(makeRecord(`https://example-${i}.com`));

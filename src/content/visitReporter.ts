@@ -11,7 +11,8 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
 import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
-import { logInfo, logWarn, logError, logDebug, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logInfo, logWarn, logError, logDebug } from '../utils/logger/api.js';
 import { toValidVisitPayload } from './visitPayload.js';
 
 /** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */

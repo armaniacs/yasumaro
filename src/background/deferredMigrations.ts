@@ -5,7 +5,8 @@
  * handler invocation, instead of at SW startup (which raced with E2E tests).
  */
 
-import { logInfo, logError, ErrorCode } from '../utils/logger.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logInfo, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { migrateToSingleSettingsObject } from '../utils/storage/settingsMigration.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';

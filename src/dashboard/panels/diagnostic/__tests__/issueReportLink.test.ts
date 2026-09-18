@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildIssueReportBody } from '../issueReportLink.js';
 import type { DiagnosticsSnapshot } from '../DiagnosticsCollector.js';
-import { ErrorCode } from '../../../../utils/logger.js';
+import { ErrorCode } from '../../../../utils/logger/types.js';
 import { LogType, type LogEntry } from '../../../../utils/logger/types.js';
 
 function baseSnapshot(overrides: Partial<DiagnosticsSnapshot> = {}): DiagnosticsSnapshot {

@@ -21,7 +21,7 @@
  */
 
 import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
-import { logSanitize, logDebug } from '../logger.js';
+import { logSanitize, logDebug } from '../logger/api.js';
 import { countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
 import { deriveCleansedReason, removedRecordToMap, resolveCleanseReason } from './cleansedReason.js';
