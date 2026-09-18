@@ -5,6 +5,7 @@
  * Handles manual recording context menu registration and click events.
  */
 import { isSecureUrl } from '../../utils/urlUtils.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { logWarn, logError, ErrorCode } from '../../utils/logger.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
@@ -24,7 +25,7 @@ export function registerManualRecordContextMenu(): void {
     chrome.contextMenus.create(
         {
             id: 'yasumaro-manual-record',
-            title: chrome.i18n.getMessage('contextMenuRecord') || 'Record page with Yasumaro',
+            title: getMessageOr('contextMenuRecord', 'Record page with Yasumaro'),
             contexts: ['page', 'link'],
         },
         () => {

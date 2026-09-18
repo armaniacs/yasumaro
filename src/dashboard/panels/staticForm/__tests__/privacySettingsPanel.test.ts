@@ -19,6 +19,10 @@ vi.mock('../../../masterPassword.js', () => ({
 
 vi.mock('../../../../utils/i18n.js', () => ({
   getMessage: (key: string) => key,
+  // Mirrors production semantics (message || fallback) so per-test
+  // chrome.i18n.getMessage stubs keep controlling the outcome.
+  getMessageOr: (key: string, fallback: string, subs?: unknown) =>
+    ((globalThis as any).chrome?.i18n?.getMessage?.(key, subs) ?? '') || fallback,
 }));
 
 const mockGetPrivacyConsent = vi.fn();

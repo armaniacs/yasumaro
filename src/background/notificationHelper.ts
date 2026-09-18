@@ -1,5 +1,7 @@
 // src/background/notificationHelper.ts
 
+import { getMessageOr } from '../utils/i18n.js';
+
 // Notification ID prefix for privacy confirmation notifications
 export const PRIVACY_CONFIRM_NOTIFICATION_PREFIX = 'privacy-confirm-';
 
@@ -18,7 +20,7 @@ export class NotificationHelper {
   }
 
   static notifyError(error: unknown): void {
-    const title = chrome.i18n.getMessage('obsidianSyncFailed') || 'Obsidian Sync Failed';
+    const title = getMessageOr('obsidianSyncFailed', 'Obsidian Sync Failed');
     chrome.notifications.create({
       type: 'basic',
       iconUrl: this.getIconUrl(),
@@ -32,11 +34,10 @@ export class NotificationHelper {
    * @param notificationId - unique ID (PRIVACY_CONFIRM_NOTIFICATION_PREFIX + encoded url)
    */
   static notifyPrivacyConfirm(notificationId: string, pageTitle: string, reason: string): void {
-    const saveLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSave') || '保存する';
-    const skipLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSkip') || 'スキップ';
-    const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Yasumaro';
-    const body = chrome.i18n.getMessage('notifyPrivacyConfirmBody', [pageTitle, reason])
-      || `「${pageTitle}」にプライバシー懸念があります（${reason}）。保存しますか？`;
+    const saveLabel = getMessageOr('notifyPrivacyConfirmSave', '保存する');
+    const skipLabel = getMessageOr('notifyPrivacyConfirmSkip', 'スキップ');
+    const title = getMessageOr('notifyPrivacyConfirmTitle', 'Yasumaro');
+    const body = getMessageOr('notifyPrivacyConfirmBody', `「${pageTitle}」にプライバシー懸念があります（${reason}）。保存しますか？`, [pageTitle, reason]);
 
     chrome.notifications.create(notificationId, {
       type: 'basic',

@@ -12,6 +12,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
+  // Mirrors production semantics (message || fallback) so the chrome.i18n
+  // stub below keeps controlling the outcome of translated strings.
+  getMessageOr: vi.fn((key: string, fallback: string, subs?: unknown) =>
+    ((globalThis as any).chrome?.i18n?.getMessage?.(key, subs) ?? '') || fallback),
 }));
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({

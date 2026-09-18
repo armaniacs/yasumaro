@@ -5,6 +5,7 @@ import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
 import { setBadge } from '../badgePolicy.js';
 import { logDebug, logWarn, ErrorCode } from '../../utils/logger.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { getMessage } from '../../utils/i18n.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { resolveReasonLabel } from '../../utils/reasonLabel.js';
@@ -148,7 +149,7 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       // PBI 2026-09-12-34: canonical-first resolution via the shared
       // ReasonLabel table (the legacy-only key missed for cache-control /
       // set-cookie — the locales ship canonical keys only for those).
-      const reasonLabel = resolveReasonLabel(reason, (k) => chrome.i18n.getMessage(k));
+      const reasonLabel = resolveReasonLabel(reason, getMessage);
       try {
         const notificationId = await encodeUrlSafeBase64(url);
         NotificationHelper.notifyPrivacyConfirm(notificationId, title, reasonLabel);

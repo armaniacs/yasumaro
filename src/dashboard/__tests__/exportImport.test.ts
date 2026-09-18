@@ -30,6 +30,7 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 
 vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => `i18n_${key}`),
+  getMessageOr: vi.fn((key: string, fallback: string) => `i18n_${key}` || fallback),
 }));
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({

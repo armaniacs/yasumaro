@@ -6,6 +6,7 @@
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { logError, ErrorCode } from '../../utils/logger.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
 import { type RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
@@ -440,7 +441,7 @@ export function setupAiSummaryCleansingEventListeners(): void {
                 
                 // ステータスメッセージを表示
                 if (statusElement) {
-                    statusElement.textContent = chrome.i18n.getMessage('settingsSaved') || '設定を保存しました';
+                    statusElement.textContent = getMessageOr('settingsSaved', '設定を保存しました');
                     statusElement.className = 'status-message success';
                     setTimeout(() => {
                         statusElement.textContent = '';
@@ -450,7 +451,7 @@ export function setupAiSummaryCleansingEventListeners(): void {
             } catch (error) {
                 logError('Failed to save AI summary cleansing settings', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
                 if (statusElement) {
-                    statusElement.textContent = chrome.i18n.getMessage('settingsSaveError') || '設定の保存に失敗しました';
+                    statusElement.textContent = getMessageOr('settingsSaveError', '設定の保存に失敗しました');
                     statusElement.className = 'status-message error';
                 }
             }

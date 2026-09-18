@@ -6,16 +6,17 @@
  * 知識を隠蔽する。呼び出し側は statusCode + reasonLabel だけを知ればよい。
  */
 
+import { getMessageOr } from '../utils/i18n.js';
+
 export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string): Promise<boolean> {
   return new Promise((resolve) => {
     const iconUrl = chrome.runtime.getURL('icons/icon48.png');
-    const title = chrome.i18n.getMessage('notifyPrivacyConfirmTitle') || 'Yasumaro';
+    const title = getMessageOr('notifyPrivacyConfirmTitle', 'Yasumaro');
     const bodyText =
-      chrome.i18n.getMessage('privacyDialogBody', [reasonLabel]) ||
-      `このページにはプライバシー懸念があります（${reasonLabel}）。それでも保存しますか？`;
-    const saveLabel = chrome.i18n.getMessage('notifyPrivacyConfirmSave') || '保存する';
-    const cancelLabel = chrome.i18n.getMessage('cancel') || 'キャンセル';
-    const statusLabel = chrome.i18n.getMessage('privacyDialogStatusLabel') || '検出コード';
+      getMessageOr('privacyDialogBody', `このページにはプライバシー懸念があります（${reasonLabel}）。それでも保存しますか？`, [reasonLabel]);
+    const saveLabel = getMessageOr('notifyPrivacyConfirmSave', '保存する');
+    const cancelLabel = getMessageOr('cancel', 'キャンセル');
+    const statusLabel = getMessageOr('privacyDialogStatusLabel', '検出コード');
 
     const host = document.createElement('div');
     host.id = 'osh-privacy-confirm-host';
