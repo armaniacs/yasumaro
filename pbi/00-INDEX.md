@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-18 arch-delivery-loop（archloop-0918） — 進行中（17〜19）
+
+Phase 0 の HTML レポート（`$TMPDIR/architecture-review-20260918-1309.html`）で抽出した3候補を RICE 採点して PBI 化。実行順 = 17 → 18 → 19（ファイル非重複・1バッチ）。台帳は `2026-09-18-00-backlog-archloop-0918.md`。Phase 3（make clean test）→ Phase 4（版上げ）まで閉じる。
+
+- ⬜ 2026-09-18-17-refactor-delete-allowed-urls-shadow.md（allowedUrls デッドコピー削除。RICE 16.0）
+- ⬜ 2026-09-18-18-refactor-simplify-get-msg-with-cache.md（getMsgWithCache if-chain 解消。RICE 6.0）
+- ⬜ 2026-09-18-19-refactor-finish-logger-barrel-migration.md（logger barrel 移行完了・Wave 4 残作業。RICE 3.2）
+
 ### 2026-09-18 arch-delivery-loop 第5ループ — ✅ 全2件完了（01/02 アーカイブ済み）
 
 Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260918-r18.html`）の2候補を RICE 採点して PBI 化。実行順 = 02（依存なし）。C2（getMessage 統一、RICE 2.5）は backlog 送り。台帳は `2026-09-18-00-backlog-archloop-0918.md`（アーカイブ済み）。
@@ -58,6 +66,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 ### 将来候補の統合台帳（live）
 
+- [2026-09-18-00-backlog-archloop-0918.md](2026-09-18-00-backlog-archloop-0918.md) — arch-delivery-loop 0918 の台帳（3候補の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918c.md](2026-09-18-00-backlog-holistic-0918c.md) — 大局的コード改善 0918c の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918b.md](2026-09-18-00-backlog-holistic-0918b.md) — 大局的コード改善 0918b の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic-0918.md) — 大局的コード改善 0918 の台帳（6候補の RICE 表・実行順・依存マップ・バッチ計画・5 Whys）
