@@ -24,7 +24,7 @@ import { getMessage } from '../../utils/i18n.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
 import { tryResolveCatalogEntry } from '../../background/ai/providerCatalog.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
-import { escapeHtml } from '../../popup/errorUtils.js';
+import { escapeHtml } from '../../utils/htmlEscape.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { showConfirmDialog } from '../../utils/ui/confirmDialog.js';
 

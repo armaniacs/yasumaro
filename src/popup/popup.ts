@@ -15,7 +15,7 @@ import { loadPendingPages } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog, showRecordingFailedDialog } from './privatePageDialog.js';
 import { getPrivacyConsent, subscribeConsentChanges } from '../utils/storage/privacyConsent.js';
-import { hasCompletedWizard, initOnboardingWizard } from './onboardingWizard.js';
+import { hasCompletedWizard, initOnboardingWizard } from '../utils/ui/onboardingWizard.js';
 
 // ============================================================================
 // Main Initialization Function (exported for testability)
