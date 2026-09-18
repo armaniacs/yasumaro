@@ -227,12 +227,7 @@ export class GeminiProvider extends AIProviderStrategy {
                         ? 'Connected to Gemini API.'
                         : GeminiProvider.describeEmptyResponse(candidate?.finishReason, typed.promptFeedback?.blockReason),
                     debug: {
-                        prompt: CONNECTION_TEST_PROMPT,
-                        endpoint: ctx.endpoint,
-                        ...pickDefined({ modelName: ctx.modelName }),
-                        statusCode: ctx.statusCode,
-                        hasContent,
-                        ...pickDefined({ response: hasContent ? text : undefined }),
+                        ...this.buildTestDebugBase(ctx, hasContent, text),
                         ...(usage?.promptTokenCount !== undefined ? { sentTokens: usage.promptTokenCount } : {}),
                         ...(usage?.candidatesTokenCount !== undefined ? { receivedTokens: usage.candidatesTokenCount } : {}),
                         ...(hasContent ? {} : {
@@ -296,16 +291,12 @@ export class GeminiProvider extends AIProviderStrategy {
 
     private async _extractSummary(data: GeminiApiResponse, traceId: string = ''): Promise<AISummaryResult> {
         if (!data.candidates || data.candidates.length === 0) {
-            const error = 'Gemini schema validation failed: candidates is missing or empty';
-            addLog(LogType.ERROR, error, { traceId });
-            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+            return this.failInvalidSchema('Gemini schema validation failed: candidates is missing or empty', traceId);
         }
         // length guard above guarantees [0] exists
         const candidate = data.candidates[0];
         if (!candidate?.content) {
-            const error = 'Gemini schema validation failed: candidates[0].content is missing';
-            addLog(LogType.ERROR, error, { traceId });
-            return { success: false, summary: "Error: Invalid API response format - unexpected schema.", error };
+            return this.failInvalidSchema('Gemini schema validation failed: candidates[0].content is missing', traceId);
         }
         const parts = candidate.content.parts;
         // 応答が複数 parts に分かれる場合があるため全て結合する
