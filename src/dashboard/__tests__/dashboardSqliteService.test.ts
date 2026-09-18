@@ -10,6 +10,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { givenHandshakeResponse, givenHandshakeError } from './helpers/dashboardSqliteMock.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 
+vi.mock('../../utils/logger/api.js', () => ({
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+}));
+
+import { logWarn } from '../../utils/logger/api.js';
+
 /**
  * Mock chrome.runtime.sendMessage to return a controlled Promise response.
  * After calling this, the NEXT call to sendMessage will use the given response.
@@ -173,16 +180,20 @@ describe('dashboardSqliteService', () => {
       expect(result).toEqual({ error: 'SQLite request timed out. The database may still be initializing.' });
     });
 
-    // callDashboard() logs every non-exception failure via console.warn
-    // (PBI-39), distinct from the console.error used for thrown exceptions.
+    // callDashboard() logs every non-exception failure via the logger seam
+    // (PBI 2026-09-18-06; was console.warn under PBI-39), distinct from the
+    // logError used for thrown exceptions.
     it('logs a warning (not an error) when the service worker reports failure', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       givenResponse({ success: false, error: 'Storage quota exceeded.' });
 
       await toggleStar(42);
 
-      expect(warnSpy).toHaveBeenCalledWith('toggle_star failed:', 'Storage quota exceeded.');
-      warnSpy.mockRestore();
+      expect(logWarn).toHaveBeenCalledWith(
+        'toggle_star failed',
+        expect.objectContaining({ error: 'Storage quota exceeded.' }),
+        expect.anything(),
+        'dashboardGateway',
+      );
     });
   });
 
