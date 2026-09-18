@@ -17,7 +17,7 @@ import {
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
-import { escapeHtml } from '../popup/errorUtils.js';
+import { escapeHtml } from '../utils/htmlEscape.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 

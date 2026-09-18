@@ -1,9 +1,9 @@
-import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { StorageKeys } from '../utils/storage/types.js';
-import { focusTrapManager } from '../utils/ui/focusTrap.js';
-import { logError, ErrorCode } from '../utils/logger.js';
-import { getMessage } from '../utils/i18n.js';
-import { applyI18n } from '../utils/i18n-dom.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
+import { StorageKeys } from '../storage/types.js';
+import { focusTrapManager } from '../ui/focusTrap.js';
+import { logError, ErrorCode } from '../logger.js';
+import { getMessage } from '../i18n.js';
+import { applyI18n } from '../i18n-dom.js';
 
 export type WizardType = 'obsidian' | 'sqlite' | 'minimal';
 

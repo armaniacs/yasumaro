@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { shouldShowWizard, completeWizard, initOnboardingWizard } from '../onboardingWizard.js';
-import { StorageKeys } from '../../utils/storage/types.js';
-import { focusTrapManager } from '../../utils/ui/focusTrap.js';
+import { StorageKeys } from '../../storage/types.js';
+import { focusTrapManager } from '../focusTrap.js';
 
 const mockStorage = new Map<string, unknown>();
 
-vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+vi.mock('../../storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,

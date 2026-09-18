@@ -24,7 +24,7 @@ import { createBPriorityListView } from '../../aiProviderB/priorityListView.js';
 import { createBProviderAccordionView } from '../../aiProviderB/providerAccordionView.js';
 import { collectProviderPrioritySlots } from '../../generalSettings/settingsForm.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
-import { initOnboardingWizard } from '../../../popup/onboardingWizard.js';
+import { initOnboardingWizard } from '../../../utils/ui/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
 
 /**

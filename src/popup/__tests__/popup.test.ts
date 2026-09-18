@@ -94,7 +94,7 @@ vi.mock('../../utils/storage/privacyConsent.js', () => ({
 }));
 
 // Mock onboardingWizard
-vi.mock('../onboardingWizard.js', () => ({
+vi.mock('../../utils/ui/onboardingWizard.js', () => ({
     hasCompletedWizard: vi.fn(() => Promise.resolve(false)),
     initOnboardingWizard: vi.fn(),
 }));
@@ -308,7 +308,7 @@ describe('initPopup coverage', () => {
 
     it('shows onboarding wizard when consented and not completed', async () => {
         const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
-        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../../utils/ui/onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
         await initPopup();
@@ -318,7 +318,7 @@ describe('initPopup coverage', () => {
 
     it('does not show onboarding wizard when not consented', async () => {
         const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
-        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../../utils/ui/onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
         await initPopup();
@@ -328,7 +328,7 @@ describe('initPopup coverage', () => {
 
     it('does not show onboarding wizard when already completed', async () => {
         const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
-        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../../utils/ui/onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
         vi.mocked(hasCompletedWizard).mockResolvedValue(true);
         await initPopup();
@@ -342,7 +342,7 @@ describe('initPopup coverage', () => {
         // the same popup session must still trigger the wizard via the
         // consent-change subscription, not require reopening the popup.
         const { getPrivacyConsent, subscribeConsentChanges } = await import('../../utils/storage/privacyConsent.js');
-        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../../utils/ui/onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
 
@@ -368,7 +368,7 @@ describe('initPopup coverage', () => {
         // re-check rides the consent-change subscription (both delivery
         // channels hidden inside privacyConsent.ts).
         const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
-        const { hasCompletedWizard, initOnboardingWizard } = await import('../onboardingWizard.js');
+        const { hasCompletedWizard, initOnboardingWizard } = await import('../../utils/ui/onboardingWizard.js');
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
 
