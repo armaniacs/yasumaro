@@ -1,0 +1,8 @@
+# The wasm rebuild-diff gate (ci.yml wasm-test) requires byte-identical
+# builds across machines: the committed pii_sanitizer_bg.wasm must match a
+# fresh `npm run build:wasm` from CI. Rust codegen is only reproducible for
+# the same compiler version, so the toolchain is pinned here rather than
+# left to whatever "stable" happens to be on each machine.
+[toolchain]
+channel = "1.98.1"
+profile = "minimal"
