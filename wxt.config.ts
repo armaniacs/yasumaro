@@ -143,11 +143,14 @@ export default defineConfig({
     optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS],
     host_permissions: [...buildLocalHostPermissions(), ...AI_PROVIDER_HOST_PERMISSIONS],
     content_security_policy: {
-      // wasm-unsafe-eval is required by @subframe7536/sqlite-wasm (wa-sqlite)
-      // used in the offscreen document for OPFS/IDB storage. Verified via
-      // `grep -rn "sqlite-wasm\|WebAssembly" src/offscreen` — offscreen
-      // sqliteEngine.ts + opfsWorker.ts. If WASM is removed, this token can
-      // be dropped. Keep minimal otherwise.
+      // wasm-unsafe-eval is required by:
+      //   - @subframe7536/sqlite-wasm (wa-sqlite) in the offscreen document
+      //     (OPFS/IDB storage) — offscreen sqliteEngine.ts + opfsWorker.ts
+      //   - the PII sanitizer core (src/wasm/pii-sanitizer/) in the service
+      //     worker, via src/background/pipeline/piiSanitizeHybrid.ts
+      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer" src/`.
+      // If all WASM usage is removed, this token can be dropped. Keep
+      // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,
     },
     web_accessible_resources: [
