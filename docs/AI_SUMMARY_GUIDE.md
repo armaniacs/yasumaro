@@ -18,11 +18,11 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 | **Google Gemini** | クラウドAI。デフォルトのおすすめ |
 | **OpenAI Compatible** | Groq、OpenAI、Anthropic など、OpenAI互換APIを提供する多数のサービスに対応 |
 | **OpenAI Compatible 2** | 2つ目の互換プロバイダー枠。ローカルLLMなどのサブ設定用 |
-| **LM Studio** | ローカルで動くLM Studio（`http://localhost:1234/v1`） |
+| **LM Studio** | ローカルで動くLM Studio（`http://127.0.0.1:1234/v1`） |
 | **Ollama** | ローカルで動くOllama（`http://localhost:11434/v1`） |
 | **OpenAI Compatible (Models.dev)** | Models.dev のモデル一覧から選択して接続 |
 
-接続方式は Gemini 用と OpenAI 互換用の 2 種類です。Groq・Anthropic・ローカルLLM 等は「OpenAI Compatible」の枠で Base URL を差し替えるだけで使えます。Built-in AI はブラウザの Prompt API を直接使用します。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md)、Built-in AI 固有の手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
+接続方式は 3 種類のストラテジーです（`GeminiProvider` / `GenericOpenAICompatibleProvider` / `BuiltInAiProvider`）。Groq・Anthropic・ローカルLLM 等は「OpenAI Compatible」の枠で Base URL を差し替えるだけで使えます。Built-in AI はブラウザの LanguageModel API（旧称 Prompt API）を直接使用します。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md)、Built-in AI 固有の手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
 ### 要約生成の流れ
 
@@ -54,8 +54,17 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 ### コンテンツサイズとコスト管理
 
 - **Max Tokens Per Prompt**（デフォルト: 1,000）: 1回のプロンプトに含める最大トークン数
-- **AI Timeout**（デフォルト: 自動）: AI応答を待つ最大秒数。空欄の場合は自動調整
-- ページ内容は最大64KB（65,536文字）に切り詰められた上でAIに送信されます（詳細は [PII機能ガイド](PII_FEATURE_GUIDE.md) を参照）
+- **AI Timeout**（デフォルト: 0 = 自動）: AI応答を待つ最大時間。0（自動）の場合、ローカルプロバイダーは 120,000ms、それ以外は 30,000ms として解決されます。Gemini は設定値に関わらず 30,000ms 固定です
+- AI送信時の本文文字数上限はプロバイダーごとに異なります（設定で変更可能）：
+
+| プロバイダー | 送信文字数上限（デフォルト） | 設定キー |
+|------------|--------------------------|---------|
+| OpenAI互換（クラウド） | 10,000文字 | `OPENAI_CONTENT_CHARS`（デフォルト 10000） |
+| Gemini | 30,000文字 | `GEMINI_CONTENT_CHARS`（デフォルト 30000） |
+| OpenAI互換（ローカルURL） | 4,000文字 | —（ローカル判定時は固定） |
+| Built-in AI | 16,384文字 | —（セッションのコンテキストウィンドウが狭い場合はさらに切り詰め） |
+
+なお、65,536文字（64KB）はPIIサニタイザーの入力サイズ上限であり、AI送信時の切り詰め上限ではありません（詳細は [PII機能ガイド](PII_FEATURE_GUIDE.md) を参照）
 
 ### プロンプトのカスタマイズ
 
@@ -75,7 +84,7 @@ AIに送信する前に、PIIマスキング（メールアドレス・クレジ
 
 **Q. AIプロバイダーへの接続に失敗する**
 
-ダッシュボードの「Save & Test Connection」で接続テストを行い、Base URL・APIキー・モデル名が正しいか確認してください。接続テストは実際に AI へ短いプロンプトを1往復させ、送信内容・受信内容・モデル名・所要時間・HTTP ステータスを画面に表示します。空応答は成功扱いにならないため、「テストは通ったのに本番で要約が空」という状態を切り分けられます。優先度リストを設定している場合、1位が失敗しても自動的に2位・3位が試行されるため、複数プロバイダーを登録しておくと可用性が上がります。
+ダッシュボードの「Test AI」で接続テストを行い、Base URL・APIキー・モデル名が正しいか確認してください。接続テストは実際に AI へ短いプロンプトを1往復させ、送信内容・受信内容・モデル名・所要時間・HTTP ステータスを画面に表示します。空応答は成功扱いにならないため、「テストは通ったのに本番で要約が空」という状態を切り分けられます。優先度リストを設定している場合、1位が失敗しても自動的に2位・3位が試行されるため、複数プロバイダーを登録しておくと可用性が上がります。
 
 **Q. 要約が短すぎる・空になることがある**
 
@@ -97,11 +106,11 @@ Yasumaro sends the body text of pages that meet the recording criteria to an AI 
 | **Google Gemini** | Cloud AI. Recommended default |
 | **OpenAI Compatible** | Supports many services offering OpenAI-compatible APIs, including Groq, OpenAI, and Anthropic |
 | **OpenAI Compatible 2** | A second compatible-provider slot, useful for a local LLM or secondary configuration |
-| **LM Studio** | Local LM Studio (`http://localhost:1234/v1`) |
+| **LM Studio** | Local LM Studio (`http://127.0.0.1:1234/v1`) |
 | **Ollama** | Local Ollama (`http://localhost:11434/v1`) |
 | **OpenAI Compatible (Models.dev)** | Connect by selecting a model from the Models.dev catalog |
 
-Internally there are only two implementations — one for Gemini and one for OpenAI-compatible APIs — and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. Built-in AI uses the browser's Prompt API directly. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps, and the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for Built-in AI specific steps.
+Internally there are three provider strategies (`GeminiProvider` / `GenericOpenAICompatibleProvider` / `BuiltInAiProvider`) — and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. Built-in AI uses the browser's LanguageModel API (formerly Prompt API) directly. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps, and the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for Built-in AI specific steps.
 
 ### Summarization Flow
 
@@ -133,8 +142,17 @@ If no priority list is configured, the single legacy "AI Provider" setting is us
 ### Content Size and Cost Control
 
 - **Max Tokens Per Prompt** (default: 1,000): Maximum tokens included in a single prompt
-- **AI Timeout** (default: auto): Maximum seconds to wait for an AI response; auto-adjusts if left blank
-- Page content is truncated to at most 64KB (65,536 characters) before being sent to the AI (see the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details)
+- **AI Timeout** (default: 0 = auto): Maximum time to wait for an AI response. When 0 (auto), it resolves to 120,000ms for local providers and 30,000ms otherwise. Gemini always uses a fixed 30,000ms
+- The send-character cap applied to page content differs per provider (configurable):
+
+| Provider | Send-character cap (default) | Setting key |
+|----------|------------------------------|-------------|
+| OpenAI-compatible (cloud) | 10,000 chars | `OPENAI_CONTENT_CHARS` (default 10000) |
+| Gemini | 30,000 chars | `GEMINI_CONTENT_CHARS` (default 30000) |
+| OpenAI-compatible (local URL) | 4,000 chars | — (fixed when the URL is detected as local) |
+| Built-in AI | 16,384 chars | — (truncated further when the session context window is narrower) |
+
+Note: 65,536 characters (64KB) is the PII sanitizer's input-size limit, not the AI send cap (see the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details)
 
 ### Customizing Prompts
 
@@ -154,7 +172,7 @@ When monthly usage exceeds a configured threshold, a warning is shown in the das
 
 **Q. Connecting to an AI provider fails**
 
-Use "Save & Test Connection" in the dashboard to verify the Base URL, API key, and model name are correct. The connection test sends a short prompt to the AI and waits for one round-trip, then displays what was sent, what came back, the model name, the elapsed time, and the HTTP status. An empty response does not count as success, so you can tell apart the "test passed but the real summary is empty" case. If you've configured a priority list, a failure at rank 1 automatically falls through to rank 2 and 3, so registering multiple providers improves availability.
+Use "Test AI" in the dashboard to verify the Base URL, API key, and model name are correct. The connection test sends a short prompt to the AI and waits for one round-trip, then displays what was sent, what came back, the model name, the elapsed time, and the HTTP status. An empty response does not count as success, so you can tell apart the "test passed but the real summary is empty" case. If you've configured a priority list, a failure at rank 1 automatically falls through to rank 2 and 3, so registering multiple providers improves availability.
 
 **Q. Summaries are sometimes too short or empty**
 

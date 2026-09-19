@@ -17,7 +17,7 @@ Yasumaro は、Obsidian に接続せずに閲覧履歴を Markdown ファイル�
 | モード | 説明 |
 |-------|------|
 | **手動のみ** | 自動書き出しはせず、手動エクスポート実行時のみ Markdown 化します |
-| **即時** | ページが記録されるたびに、その日の Markdown ファイルを自動ダウンロードします（最短1分間隔） |
+| **即時** | ページが記録されるたびに、当日分のバッファ（`local_export_YYYY-MM-DD`）に追記し、約1分後に発火するワンショットアラームでバッファをダウンロードします。連続記録時はアラームが差し替えられるため、ダウンロードは最短1分間隔に間引かれます |
 | **アイドル時 / 30分ごと** | ブラウザがアイドル状態になったとき、または最大30分ごとにまとめて書き出します |
 | **日付が変わったとき** | 日付が変わったタイミングで前日分をまとめて回収します |
 
@@ -33,20 +33,24 @@ Yasumaro は、Obsidian に接続せずに閲覧履歴を Markdown ファイル�
 
 ### 書き出しフォルダ
 
-デフォルトでは `~/Downloads/Yasumaro/` に保存されます。フォルダ名はダッシュボードで変更できます。
+デフォルトではブラウザのダウンロードフォルダ直下の `Yasumaro/` サブフォルダに保存されます（`chrome.downloads` のファイル名として `{サブフォルダ名}/{日付}.md` の形式で書き出されます）。変更できるのはサブフォルダ名のみであり、ダウンロードフォルダ自体はブラウザの設定に従います。
 
 ### ファイル形式
 
-日付ごとに `YYYY-MM-DD.md` ファイルが生成されます。各ファイルの内容は以下の形式です:
+日付ごとに `YYYY-MM-DD.md` ファイルが生成されます。デフォルトのテンプレートでは各ファイルの内容は以下の形式です（`{{tags}}` を含みます）:
 
 ```markdown
 # 2026-07-05
 
 - 14:30 [ページタイトル](https://example.com)
-    - AI が生成した要約テキスト
+    - #タグ AI が生成した要約テキスト
 - 15:00 [別のページ](https://example.com/page2)
     - 2番目のページの要約
 ```
+
+書き出しテンプレートはユーザーがカスタマイズできます（利用可能なプレースホルダー: `timestamp`・`title`・`url`・`summary`・`tags`・`domain`、ファイル側: `date`・`entryCount`）。
+
+なお、上記は自動書き出し（テンプレート方式）の形式です。「ログをエクスポート」パネルからの手動 Markdown エクスポートは異なる形式（YAMLフロントマター付き）で出力されます。
 
 ### 書き出しの発火条件（即時・アイドル時・日付変更時）
 
@@ -67,7 +71,9 @@ Yasumaro は、Obsidian に接続せずに閲覧履歴を Markdown ファイル�
 
 または:
 
-1. ダッシュボードの「ログをエキスポート」セクションで、日付範囲を指定してエクスポート
+1. ダッシュボードの「ログをエクスポート」セクションで、日付範囲を指定してエクスポート
+
+> 日次バッファには1日あたり最大2,000件の上限があります。上限を超えた場合、古いエントリから順に破棄されます。
 
 ### ダウンロード通知の非表示化
 
@@ -99,7 +105,7 @@ Yasumaro は、Obsidian に接続せずに閲覧履歴を Markdown ファイル�
 - Service Worker コンソールで `[LocalMD]` でログを確認
 
 **Q. 同じファイルが複数回ダウンロードされる**
-- 「即時」モードでは、記録のたびに完全な日次ファイルが再ダウンロードされる仕組みになっています
+- フラッシュのたびに完全な日次ファイルが再ダウンロード（上書き）される仕組みになっています
 - 気になる場合は「アイドル時 / 30分ごと」または「日付が変わったとき」に変更すると、まとめて1回の書き出しになります
 - Chrome のダウンロード設定で「同じファイルがある場合の動作」を「上書き」に設定してください
 
@@ -121,7 +127,7 @@ Once "Export to Local Markdown" is ON, choose one of four timing modes (default 
 | Mode | Description |
 |------|-------------|
 | **Manual only** | No automatic export; Markdown is generated only when you run a manual export |
-| **Immediate** | Each time a page is recorded, that day's Markdown file is automatically downloaded (at most once per minute) |
+| **Immediate** | Each time a page is recorded, its entry is appended to that day's buffer (`local_export_YYYY-MM-DD`) in chrome.storage, and a one-shot alarm fires in about a minute to download the buffer. Rapid recordings replace the pending alarm, so downloads are debounced to at most once per minute |
 | **Idle / every 30 min** | Batches the export when the browser becomes idle, or at least every 30 minutes |
 | **On date change** | Collects the previous day's records into one file when the date rolls over |
 
@@ -137,20 +143,24 @@ Independently of these modes, you can always run a manual export by specifying a
 
 ### Export Folder
 
-Files are saved to `~/Downloads/Yasumaro/` by default. The folder name can be changed in the dashboard.
+Files are saved to a `Yasumaro/` subfolder inside the browser's download folder by default (exported via `chrome.downloads` as `{subfolder}/{date}.md`). Only the subfolder name is configurable; the download folder itself follows the browser's settings.
 
 ### File Format
 
-A `YYYY-MM-DD.md` file is generated for each date:
+A `YYYY-MM-DD.md` file is generated for each date. With the default template the content looks like this (note `{{tags}}`):
 
 ```markdown
 # 2026-07-05
 
 - 14:30 [Page Title](https://example.com)
-    - AI-generated summary text
+    - #tags AI-generated summary text
 - 15:00 [Another Page](https://example.com/page2)
     - Summary of the second page
 ```
+
+Export templates are user-customizable (entry placeholders: `timestamp`, `title`, `url`, `summary`, `tags`, `domain`; file placeholders: `date`, `entryCount`).
+
+Note that the above is the auto-export (template-based) format. Manual Markdown export from the Export Logs panel uses a different format with YAML frontmatter.
 
 ### Export Trigger Conditions (Immediate / Idle / Date Change)
 
@@ -171,6 +181,8 @@ To convert existing history to Markdown:
 Or:
 
 1. In "Export Logs", specify a date range and export
+
+> The daily buffer is capped at 2,000 entries per day. When the cap is exceeded, the oldest entries are dropped first.
 
 ### Hiding Download Notifications
 
@@ -202,7 +214,7 @@ If the browser's download notification appears each time a file is exported, you
 - Check Service Worker console logs for `[LocalMD]`
 
 **Q. The same file is downloaded multiple times**
-- In "Immediate" mode, each recording re-downloads the complete daily file — this is how the feature is designed to work
+- Each flush re-downloads (overwrites) the complete daily file — this is how the feature is designed to work
 - Switch to "Idle / every 30 min" or "On date change" if you'd rather have a single batched export
 - Set Chrome's download setting for "When a file with the same name exists" to "Overwrite"
 

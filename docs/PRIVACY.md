@@ -250,7 +250,7 @@ Data handling for the `Dashboard → Archive` panel:
 
 ### How Data Is Used
 1. **Page content**: Sent to the AI provider API selected by the user (Google Gemini, OpenAI-compatible APIs, etc.) to generate summaries. The AI provider is the one you choose in the settings; their data usage policy applies. Please review the privacy policy of your chosen provider. **If you select browser Built-in AI (Chrome's Gemini Nano / Edge's Phi-mini), inference runs on-device and page content is not sent outside the device.**
-2. **Browsing history**: Stored in the SQLite DB on OPFS and can be viewed and managed in the extension's Dashboard (History tab). If you enable Obsidian integration (optional), data is also sent to your Obsidian vault via the Obsidian Local REST API. In that case, data handling is subject to the policies of Obsidian and the Local REST API plugin.
+2. **Browsing history**: Stored in the SQLite DB on OPFS and can be viewed and managed in the extension's Dashboard (SQLite History panel). If you enable Obsidian integration (optional), data is also sent to your Obsidian vault via the Obsidian Local REST API. In that case, data handling is subject to the policies of Obsidian and the Local REST API plugin.
 3. **Settings**: Used to connect to Obsidian and the AI provider API.
 
 ### Master Password Protection

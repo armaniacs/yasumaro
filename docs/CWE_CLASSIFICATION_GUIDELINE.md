@@ -61,7 +61,7 @@ CWE（Common Weakness Enumeration）は、ソフトウェアセキュリティ�
 
 - **CWE-916**: Use of Password Hash With Insufficient Computational Effort
   - 例: PBKDF2反復数不足
-  - 対策: 十分な反復回数
+  - 対策: PBKDF2 反復回数 600,000 回（`CRYPTO_PARAMS.PBKDF2_ITERATIONS`）。旧形式 100,000 回のハッシュは検証成功時に自動で現行回数に再ハッシュされる
 
 ## 設計時の適用プロセス
 

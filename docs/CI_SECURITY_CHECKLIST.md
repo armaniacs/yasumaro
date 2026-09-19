@@ -24,7 +24,7 @@ GitHub Actions の `${{ }}` 展開はシェルパース **前** に実行され�
       VERSION: ${{ steps.version.outputs.version }}
     run: echo "Version: ${VERSION}"
     ```
-  - **関連インシデント:** PBI 01 — release.yml コマンドインジェクション
+  - **関連インシデント:** PBI 01 — release.yml コマンドインジェクション（過去の教訓。メトリクス記録ステップの `${{ github.ref_name }}` 直接展開は `env:` 経由参照に是正済み。監査手順の grep で再発を検出できる）
 
 - [ ] 外部入力（version、branch名、タグ名等）を二重引用符で囲んでいる
   - **なぜ危険か:** 引用符なしの変数展開はシェルのワード分割とパス名展開（グロブ）の影響を受ける。
@@ -85,7 +85,7 @@ CI ログはリポジトリの read 権限を持つ全ユーザーが閲覧可�
     print(json.dumps(d, indent=2))
     "
     ```
-  - **関連インシデント:** PBI 02 — OAuth 認証失敗時の CI ログ漏洩
+  - **関連インシデント:** PBI 02 — OAuth 認証失敗時の CI ログ漏洩（過去の教訓。現在のワークフローに対応する OAuth 系 curl は存在しない）
 
 - [ ] 機密情報は `::add-mask::` でマスクしてからログ出力する（必要な場合のみ）
   - **なぜ危険か:** デバッグ目的でシークレットの一部を確認したい場合があるが、マスクなしでは漏洩する。
@@ -156,7 +156,7 @@ CI 環境からのネットワーク呼び出しはタイムアウトがない�
       sleep 2
     done
     ```
-  - **関連インシデント:** PBI 04 発見 — Chrome Web Store アップロード後の `IN_PROGRESS` ポーリング欠如
+  - **関連インシデント:** PBI 04 発見 — Chrome Web Store アップロード後の `IN_PROGRESS` ポーリング欠如（過去の教訓。現在のワークフローに CWS アップロード処理は含まれず、release.yml は zip のビルドと GitHub Release の作成のみを行う）
 
 - [ ] エラー時の詳細情報を出力している（機密情報を除く）
   - **なぜ危険か:** エラー情報が不十分だと原因特定に時間がかかる。逆に full dump は機密情報漏洩のリスク。
@@ -222,9 +222,9 @@ CI ワークフローへの入力を検証しないと、予期しない動作�
     "
     ```
 
-- [ ] ワークフローレベルで `timeout-minutes` を設定している
-  - **なぜ危険か:** 明示的なタイムアウトがないとハングしたジョブが 6 時間（デフォルト）実行され続ける。
-  - **どう修正するか:** ジョブごとに適切な `timeout-minutes` を設定する。
+- [ ] ジョブごとに `timeout-minutes` を設定している
+  - **なぜ危険か:** 明示的なタイムアウトがないとハングしたジョブが 6 時間（デフォルト）実行され続ける。GitHub Actions にワークフローレベルのタイムアウト設定は存在しないため、ジョブ単位で設定する必要がある。
+  - **どう修正するか:** 各ジョブに適切な `timeout-minutes` を設定する（現状の全ワークフローでジョブ単位に設定済み）。
 
 ---
 
@@ -245,6 +245,17 @@ grep -Pn 'curl' .github/workflows/*.yml | grep -v 'connect-timeout\|max-time'
 # 4. シークレット変数の echo をチェック
 grep -Pn 'echo\s+"?\${?\w*(SECRET|TOKEN|KEY|PASS|PRIVATE)}?' .github/workflows/*.yml
 ```
+
+---
+
+## CI ガード対応表（実装済みガードの監査マッピング）
+
+以下のガードは CI に組み込み済みであり、レビュー時は存在確認と有効性を確認する:
+
+- [ ] WASM 振る舞い等価ゲート（ci.yml の wasm-test ジョブ）が有効である
+  - コミット済みバイナリと fresh ビルドの双方が parity スイート（218 件の captured inputs + boundary corpus + hybrid 契約テスト）に合格すること、glue（piiSanitizerWasm.js）の陳腐化チェック、コミット済み src/public コピーのバイト一致を確認する。ツールチェーンは rust-toolchain.toml で 1.98.1 にピン留めされている。
+- [ ] SBOM 生成（`npm run generate-sbom`）、ライセンスチェック（`npm run check-licenses`）、innerHTML エスケープガード（`npm run check-innerhtml-escape`）、非推奨エイリアスガード（`npm run check-deprecated-aliases`）が ci.yml で実行されている
+- [ ] 既知の gap: `.gitleaks.toml` は存在するが、`.github/` に gitleaks 実行ワークフローは未配線である
 
 ---
 
