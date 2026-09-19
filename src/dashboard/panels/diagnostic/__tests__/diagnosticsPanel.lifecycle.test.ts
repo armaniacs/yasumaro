@@ -192,12 +192,12 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       regContainer.innerHTML = container.innerHTML;
 
       registry.register(diagPanel);
-      registry.navigate('panel-diagnostics');
+      await registry.navigate('panel-diagnostics');
 
-      // load is async and registry catches errors; spy should have been called
-      expect(spy).toHaveBeenCalled();
-      // Allow microtask
+      // navigate() only awaits mount()/init(); load() is fire-and-forget,
+      // so flush a microtask/timer tick before asserting it was called.
       await new Promise((r) => setTimeout(r, 0));
+      expect(spy).toHaveBeenCalled();
       document.body.removeChild(regContainer);
     });
 
@@ -210,7 +210,7 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       regContainer.innerHTML = container.innerHTML;
       document.body.appendChild(regContainer);
       registry.register(diagPanel);
-      registry.navigate('panel-diagnostics');
+      await registry.navigate('panel-diagnostics');
       expect(mountSpy).toHaveBeenCalled();
       document.body.removeChild(regContainer);
     });

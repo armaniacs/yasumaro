@@ -12,7 +12,7 @@ import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
-import { getRegistry } from '../registryContext.js';
+import { tryNavigateTyped } from '../registryContext.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -141,11 +141,10 @@ export function createTagClusterPanel(): PanelLifecycle {
 }
 
 function navigateToHistoryWithTag(tag: string): void {
-  try {
-    getRegistry().navigateTyped('panel-sqlite-history', { searchTag: tag });
-  } catch {
+  const fallback = (): void => {
     document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
-  }
+  };
+  tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
 }
 
 async function loadRowsWithRetry(): Promise<BrowsingLogEntry[]> {

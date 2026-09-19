@@ -18,8 +18,10 @@ if (sidebar) {
 }
 
 // The deep link decides the starting panel, so start() runs once rather than
-// navigating to the default and then being corrected.
-bootstrapper.start(resolveInitialPanelId());
+// navigating to the default and then being corrected. Awaited so the panel's
+// dynamically-built DOM (e.g. #geminiSettings) exists before deep-link
+// section scrolling runs.
+await bootstrapper.start(resolveInitialPanelId());
 applySectionDeepLink();
 
 void initDashboard();

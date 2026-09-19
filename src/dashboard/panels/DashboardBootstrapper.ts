@@ -73,11 +73,9 @@ export class DashboardBootstrapper {
       // Update sidebar active state and ARIA selection
       this.#updateActiveTabForPanel(panelId);
 
-      try {
-        this.registry.navigate(panelId);
-      } catch {
+      void this.registry.navigate(panelId).catch(() => {
         // Panel not yet migrated to new system; old navigation handles it
-      }
+      });
     });
 
     sidebar.addEventListener('keydown', (e: KeyboardEvent) => {
@@ -111,9 +109,9 @@ export class DashboardBootstrapper {
     });
   }
 
-  start(defaultPanelId?: string): void {
+  async start(defaultPanelId?: string): Promise<void> {
     if (defaultPanelId) {
-      this.registry.navigate(defaultPanelId);
+      await this.registry.navigate(defaultPanelId);
       this.#updateActiveTabForPanel(defaultPanelId);
     }
   }
