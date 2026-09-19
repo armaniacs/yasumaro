@@ -153,5 +153,37 @@ describe('extended pattern parity (16 locale-specific types)', () => {
         test('ipv6 starting with a hex letter (fe80: full form)', async () => {
             await expectParity('addr fe80:0000:0000:0000:0000:0000:0000:0001 end');
         });
+
+        // The non-ASCII members of JS \s (full-width space U+3000, NBSP
+        // U+00A0, ...) are separators for the TS reference too. These were
+        // the last known separator-class gap (PBI 2026-09-19-10): the
+        // scanner must consume their 2-3 UTF-8 bytes as one separator.
+        test('phoneJp separated by full-width spaces (U+3000)', async () => {
+            await expectParity('TEL 03\u{3000}1234\u{3000}5678 です');
+        });
+
+        test('myNumber separated by full-width spaces', async () => {
+            await expectParity('マイナンバー 1234\u{3000}5678\u{3000}9012 確認');
+        });
+
+        test('creditCard separated by non-breaking spaces (U+00A0)', async () => {
+            await expectParity('card 4111\u{00a0}1111\u{00a0}1111\u{00a0}1111 done');
+        });
+
+        test('phoneJp separated by mixed-width whitespace', async () => {
+            await expectParity('03\u{3000}1234\u{00a0}5678');
+        });
+
+        test('phoneUs area code separated by full-width space', async () => {
+            await expectParity('call 03\u{3000}1234\u{3000}5678 or +1\u{3000}555\u{3000}123\u{3000}4567');
+        });
+
+        test('phoneKr separated by full-width space in the +82 prefix', async () => {
+            await expectParity('+82\u{3000}10\u{3000}1234\u{3000}5678今日');
+        });
+
+        test('phoneCn separated by full-width space in the +86 prefix', async () => {
+            await expectParity('+86\u{3000}13812345678着信');
+        });
     });
 });
