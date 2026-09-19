@@ -1,31 +1,52 @@
 /**
- * Hybrid PII sanitizer: runs the WASM core first (all 21 pattern types from
- * PII_PATTERNS, see wasm/pii-sanitizer/src/patterns/{core5,extended}.rs),
- * then the TS regex path (src/utils/piiSanitizer.ts) over the WASM-masked
- * text as a second pass. Since the WASM core now covers every pattern, the
- * second TS pass should normally find nothing left to mask — it stays in
- * place as a correctness backstop (e.g. if a future WASM pattern change
- * introduces a regression, TS still catches what WASM misses) and because
- * removing it entirely would need its own dedicated verification pass.
+ * Hybrid PII sanitizer: runs the WASM core (all 21 pattern types from
+ * PII_PATTERNS, see wasm/pii-sanitizer/src/patterns/{core5,extended}.rs)
+ * and nothing else on the success path. Falls back to the TS regex path
+ * (src/utils/piiSanitizer.ts) when the WASM module fails to initialize
+ * (e.g. CSP blocked the fetch, or an unsupported runtime) or when a WASM
+ * call throws at runtime — PII protection must never silently degrade to
+ * "off".
  *
- * Two-pass safety: a `[MASKED:<type>]` placeholder contains no digits, `@`,
- * or characters any of the 21 patterns require, so it can never be
- * re-matched by the second pass — verified by
- * src/background/pipeline/__tests__/piiSanitizeHybrid.test.ts.
+ * Why there is no TS "second pass" over the WASM-masked text: an earlier
+ * revision re-ran sanitizeRegex after the WASM pass as a correctness
+ * backstop. The c8 micro benchmark (bench/micro/c8-pii-sanitize.bench.mjs)
+ * showed the second pass costs ~2/3 of total sanitize latency — hybrid ≈
+ * TS-only, i.e. the WASM migration delivered no speedup at all while both
+ * passes ran (8KB: 0.51ms hybrid vs 0.17ms WASM-only vs 0.38ms TS-only;
+ * 60KB: 3.0ms vs 1.0ms vs 3.2ms). The backstop's premise — TS catching a
+ * WASM pattern regression at runtime — is covered at build time instead,
+ * by gates that run on every CI change: the 218 captured-input parity
+ * suite, the 45-case handwritten boundary corpus, 34 Rust unit tests, and
+ * the wasm-binary rebuild-diff job. TS is the parity reference, not a
+ * runtime oracle: the Rust port itself surfaced 2 latent boundary bugs the
+ * captured corpus happened not to hit, so a passing corpus proves
+ * equivalence on its inputs, nothing more — but re-scanning every real
+ * input with the slower engine to guard against an unproven divergence
+ * class traded away the migration's entire purpose. Any future WASM
+ * pattern change must keep the parity suites green; that is the gate.
  *
- * Falls back to TS-only sanitization if the WASM module fails to
- * initialize (e.g. CSP blocked the fetch, or an unsupported runtime) —
- * PII protection must never silently degrade to "off".
+ * Size-limit contract: sanitizeRegex rejects inputs over MAX_INPUT_SIZE
+ * (or the 512KB hard cap when skipSizeLimit is set) and reports the breach
+ * via its `error` field. The WASM core has no size concept by design (see
+ * wasm/pii-sanitizer/src/lib.rs's module doc — the TS wrapper owns
+ * size/timeout handling), so this wrapper reproduces the same error
+ * semantics without re-running the TS scan. Masking still runs on
+ * oversized inputs (same observable behavior as the two-pass revision,
+ * where the WASM result reached callers with the error attached).
  *
- * Known limitation: `maskedItems[].index` from the TS pass refers to
- * offsets in the WASM-masked text, not the original input (the WASM pass
- * shifts text around before TS ever sees it). No current caller reads
- * `.index` downstream (see PrivacyPipeline.process — only `.type`/
- * `.original`/`.length` are consumed), but a future caller that needs
- * accurate original-text offsets should not use this hybrid path as-is.
+ * A `[MASKED:<type>]` placeholder produced by the WASM pass contains no
+ * digits, `@`, or characters any of the 21 patterns require — safe if a
+ * caller ever re-sanitizes already-masked text (see
+ * src/background/pipeline/__tests__/piiSanitizeHybrid.test.ts).
  */
 
-import { sanitizeRegex, type SanitizeOptions, type SanitizeResult } from '../../utils/piiSanitizer.js';
+import {
+    sanitizeRegex,
+    MAX_INPUT_SIZE,
+    MAX_SKIP_SIZE,
+    type SanitizeOptions,
+    type SanitizeResult,
+} from '../../utils/piiSanitizer.js';
 import { sanitizePiiWithWasm, initPiiSanitizerWasm } from '../../wasm/pii-sanitizer/index.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { addLog } from '../../utils/logger/core.js';
@@ -68,10 +89,29 @@ async function isWasmAvailable(): Promise<boolean> {
 }
 
 /**
- * Sanitizes `text` using the WASM core for the 5 highest-volume patterns
- * plus the TS regex path for full pattern coverage. Same signature as
- * sanitizeRegex() so it can be swapped in via PrivacyPipeline's ISanitizers
- * dependency injection without changing call sites.
+ * Reproduces sanitizeRegex's size-limit rejection message for `text`
+ * without running its scan, so the WASM path reports the same `error`
+ * field the TS path would (the pipeline surfaces maskedItems/text and
+ * leaves `error` to its callers).
+ */
+function sizeLimitError(text: string, options: SanitizeOptions): string | undefined {
+    if (options.skipSizeLimit) {
+        if (text.length > MAX_SKIP_SIZE) {
+            return `Input size exceeds maximum limit of ${MAX_SKIP_SIZE} characters even with skipSizeLimit (actual: ${text.length})`;
+        }
+        return undefined;
+    }
+    if (text.length > MAX_INPUT_SIZE) {
+        return `Input size exceeds maximum limit of ${MAX_INPUT_SIZE} characters (actual: ${text.length})`;
+    }
+    return undefined;
+}
+
+/**
+ * Sanitizes `text` with the WASM core for full 21-pattern coverage.
+ * Same signature as sanitizeRegex() so it can be swapped in via
+ * PrivacyPipeline's ISanitizers dependency injection without changing
+ * call sites.
  */
 export async function sanitizePiiHybrid(text: string, options: SanitizeOptions = {}): Promise<SanitizeResult> {
     if (!(await isWasmAvailable())) {
@@ -80,11 +120,11 @@ export async function sanitizePiiHybrid(text: string, options: SanitizeOptions =
 
     try {
         const wasmResult = await sanitizePiiWithWasm(text);
-        const tsResult = await sanitizeRegex(wasmResult.text, options);
+        const error = sizeLimitError(text, options);
         return {
-            text: tsResult.text,
-            maskedItems: [...wasmResult.maskedItems, ...tsResult.maskedItems],
-            ...(tsResult.error ? { error: tsResult.error } : {}),
+            text: wasmResult.text,
+            maskedItems: wasmResult.maskedItems,
+            ...(error ? { error } : {}),
         };
     } catch (error: unknown) {
         // A WASM call failing at runtime (not just at init) is unexpected —
