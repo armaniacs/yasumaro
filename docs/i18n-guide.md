@@ -14,8 +14,8 @@ Yasumaroは、Chrome Extensionのi18n APIを使用した多言語対応アーキ
 
 | 言語コード | ロケールファイル | ステータス |
 |-----------|----------------|----------|
-| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1324キー) |
-| `en` | `public/_locales/en/messages.json` | ✅ 100% (1324キー、日英で完全同期) |
+| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1290キー) |
+| `en` | `public/_locales/en/messages.json` | ✅ 100% (1290キー、日英で完全同期) |
 
 ### アーキテクチャ
 
@@ -28,8 +28,9 @@ public/_locales/
 └── ja/
     └── messages.json    # 日本語翻訳
 src/utils/
-├── i18n.ts              # getMessage() 等のi18nヘルパー関数
-├── i18n-dom.ts          # data-*属性へのDOM適用（applyI18n()）
+├── i18n.ts              # getMessage() / getMessageOr() / tOrKey() 等のi18nヘルパー関数
+├── i18n-dom.ts          # data-*属性へのDOM適用（applyI18n() / setHtmlLangAndDir()）
+├── i18nPlural.ts        # 複数形キー解決（getPluralKey()）
 └── localeUtils.ts       # ロケール関連ユーティリティ
 ```
 
@@ -39,8 +40,12 @@ i18n.tsは`getMessage()`等の翻訳取得関数を提供し、i18n-dom.tsが`ap
 
 主要エクスポート:
 - `getMessage(key, substitutions)` - 翻訳文字列を取得（`i18n.ts`）
+- `getMessageOr(key, fallback, substitutions)` - 翻訳が無い場合にフォールバックを返す（`i18n.ts`）
+- `tOrKey(key, substitutions)` - 翻訳が無い場合にキー自体を返す（`i18n.ts`）
+- `getPluralKey(key, count)` - 件数に応じた複数形キー（`{key}_one` / `{key}_other`）を解決（`i18nPlural.ts`）
 - `applyI18n(element)` - 指定要素以下の翻訳を適用（`i18n-dom.ts`）
 - `translatePageTitle(key)` - ページタイトルを翻訳（`i18n-dom.ts`）
+- `setHtmlLangAndDir()` - `<html>` の `lang` / `dir` を現在のロケールに合わせる（`i18n-dom.ts`）
 - `getUserLocale()` - 現在のロケールを取得（`localeUtils.ts`）
 
 ### 翻訳キーの命名規則
@@ -81,6 +86,50 @@ i18n.tsは`getMessage()`等の翻訳取得関数を提供し、i18n-dom.tsが`ap
 
 - プレースホルダーは `{variableName}` 形式
 - 変数名はcamelCase
+
+#### 複数形サフィックス（_one / _other）
+
+件数で文言が変わるメッセージは、ベースキーに `_one` / `_other` サフィックスを付けたキーを用意します（例: `ruleCount_one` / `ruleCount_other`、`exceptionCount_one` / `exceptionCount_other`、`errorCount_one` / `errorCount_other`）。英語では count が 1 のとき `_one`、それ以外は `_other` が使われます。日本語など複数形の区別が無いロケールではベースキーがそのまま使われます（`getPluralKey()` in `i18nPlural.ts`）。
+
+HTML ではベースキーを `data-i18n` に指定し、`data-i18n-args` の `count` から自動でサフィックス付きキーが解決されます（`resolvePluralKey()` in `i18n-dom.ts`）：
+
+```html
+<p data-i18n="ruleCount"
+   data-i18n-args='{"count": 3}'>
+  3 rules
+</p>
+```
+
+コードから使う場合は `getPluralKey()` でキーを解決してから `getMessage()` に渡します：
+
+```javascript
+import { getMessage } from '../utils/i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
+
+const key = getPluralKey('ruleCount', count);
+getMessage(key, { count });
+```
+
+#### Chrome形式のプレースホルダー（$1 + placeholders）
+
+Chrome i18n 固有の `$1` 形式を使うメッセージもあります。`messages.json` で `placeholders` を宣言し、`getMessage(key, array)` に配列を渡すと `chrome.i18n.getMessage` にそのまま転送されて置換されます（`i18n.ts`）：
+
+```json
+{
+  "cleansingDetailHard": {
+    "message": "ハード: $1$件",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  }
+}
+```
+
+```javascript
+getMessage('cleansingDetailHard', [count]);
+```
+
+使い分け: `{name}` は名前付き置換（オブジェクト渡し・DOM の `data-i18n-args` 対応）が必要な場合、`$1` は Chrome の `placeholders` 宣言を活かして順序付き配列置換を使う場合に使用します。
 
 ### HTMLでのi18n
 
@@ -265,8 +314,8 @@ Yasumaro uses a multi-language architecture based on Chrome Extension i18n API. 
 
 | Language Code | Locale File | Status |
 |---------------|-------------|--------|
-| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1323 keys) |
-| `en` | `public/_locales/en/messages.json` | ✅ 100% (1323 keys, fully in sync between languages) |
+| `ja` | `public/_locales/ja/messages.json` | ✅ 100% (1290 keys) |
+| `en` | `public/_locales/en/messages.json` | ✅ 100% (1290 keys, fully in sync between languages) |
 
 ### Architecture
 
@@ -279,8 +328,9 @@ public/_locales/
 └── ja/
     └── messages.json    # Japanese translations
 src/utils/
-├── i18n.ts              # i18n helper functions such as getMessage()
-├── i18n-dom.ts          # DOM application for data-* attributes (applyI18n())
+├── i18n.ts              # i18n helpers such as getMessage() / getMessageOr() / tOrKey()
+├── i18n-dom.ts          # DOM application for data-* attributes (applyI18n() / setHtmlLangAndDir())
+├── i18nPlural.ts        # plural key resolution (getPluralKey())
 └── localeUtils.ts       # Locale utilities
 ```
 
@@ -290,8 +340,12 @@ i18n.ts provides translation lookup functions such as `getMessage()`, and i18n-d
 
 Key exports:
 - `getMessage(key, substitutions)` - Get translation string (`i18n.ts`)
+- `getMessageOr(key, fallback, substitutions)` - Return a fallback when the key has no translation (`i18n.ts`)
+- `tOrKey(key, substitutions)` - Return the key itself when the key has no translation (`i18n.ts`)
+- `getPluralKey(key, count)` - Resolve the plural-variant key (`{key}_one` / `{key}_other`) for a count (`i18nPlural.ts`)
 - `applyI18n(element)` - Apply translations under specified element (`i18n-dom.ts`)
 - `translatePageTitle(key)` - Translate page title (`i18n-dom.ts`)
+- `setHtmlLangAndDir()` - Set `<html>` `lang` / `dir` from the current locale (`i18n-dom.ts`)
 - `getUserLocale()` - Get current locale (`localeUtils.ts`)
 
 ### Translation Key Naming Conventions
@@ -332,6 +386,50 @@ For translations with variables, use placeholders:
 
 - Placeholders use `{variableName}` format
 - Variable names use camelCase
+
+#### Plural Suffixes (_one / _other)
+
+Messages whose wording depends on a count use keys with `_one` / `_other` suffixes on the base key (e.g. `ruleCount_one` / `ruleCount_other`, `exceptionCount_one` / `exceptionCount_other`, `errorCount_one` / `errorCount_other`). In English, `_one` is used when count is 1 and `_other` otherwise. Locales without a plural distinction (e.g. Japanese) use the base key unchanged (`getPluralKey()` in `i18nPlural.ts`).
+
+In HTML, specify the base key in `data-i18n`; the suffixed key is resolved automatically from the `count` in `data-i18n-args` (`resolvePluralKey()` in `i18n-dom.ts`):
+
+```html
+<p data-i18n="ruleCount"
+   data-i18n-args='{"count": 3}'>
+  3 rules
+</p>
+```
+
+From code, resolve the key with `getPluralKey()` before passing it to `getMessage()`:
+
+```javascript
+import { getMessage } from '../utils/i18n.js';
+import { getPluralKey } from '../utils/i18nPlural.js';
+
+const key = getPluralKey('ruleCount', count);
+getMessage(key, { count });
+```
+
+#### Chrome-Style Placeholders ($1 + placeholders)
+
+Some messages use Chrome i18n's native `$1` format. Declare `placeholders` in `messages.json` and pass an array to `getMessage(key, array)`; it is forwarded to `chrome.i18n.getMessage` for substitution (`i18n.ts`):
+
+```json
+{
+  "cleansingDetailHard": {
+    "message": "ハード: $1$件",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  }
+}
+```
+
+```javascript
+getMessage('cleansingDetailHard', [count]);
+```
+
+When to use which: `{name}` for named substitution (object argument, compatible with DOM `data-i18n-args`); `$1` when using Chrome's `placeholders` declarations with ordered array substitution.
 
 ### i18n in HTML
 

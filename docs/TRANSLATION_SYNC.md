@@ -4,6 +4,8 @@
 
 `docs/index.html` の `TRANSLATIONS` オブジェクトは `scripts/sync-docs-translations.mjs` によって生成・更新されます。
 
+> 現状の注意: `scripts/translation-key-map.json` は現在 `{"ja": {}, "en": {}}` の空マッピングのため、同期スクリプトは実質的に何も上書きしません。docs 側の文言（`nav.features` 等の docs 固有キー）は `docs/index.html` 内で直接管理されています。同期機構はマッピングに列挙されたキーのみを上書きします。
+
 ## 使い方
 
 ```bash
@@ -48,6 +50,8 @@ npm run build:docs-i18n
 `docs/index.html` is a static page for GitHub Pages and keeps its own `TRANSLATIONS` object, separate from the Chrome extension's `public/_locales/*/messages.json`.
 
 The `TRANSLATIONS` object in `docs/index.html` is generated and updated by `scripts/sync-docs-translations.mjs`.
+
+> Current state: `scripts/translation-key-map.json` is currently an empty mapping (`{"ja": {}, "en": {}}`), so the sync script effectively overwrites nothing. Docs copy (docs-specific keys such as `nav.features`) is managed directly in the docs files. The sync mechanism only overwrites keys listed in the map.
 
 ## Usage
 
