@@ -53,6 +53,19 @@ jobs:
       - name: Run Tests
         run: npm test
 
+  gitleaks:
+    # Secret scan over the full history (CI_SECURITY_CHECKLIST: .gitleaks.toml
+    # existed without a wiring workflow — known gap closed here).
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   wasm-test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
