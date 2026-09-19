@@ -97,7 +97,7 @@ test.describe('Popup - Private Page Dialog @ui', () => {
   });
 });
 
-test.describe('Popup - Private Page Interaction @interaction', () => {
+test.describe('Popup - Private Page Interaction @interaction @extension', () => {
   // These tests require Chrome extension context with proper private page state
   // Setup chrome.storage with pending pages before each test
 
@@ -277,7 +277,7 @@ test.describe('Popup - Private Page Interaction @interaction', () => {
   });
 });
 
-test.describe('Extension - Content Script @interaction', () => {
+test.describe('Extension - Content Script @interaction @extension', () => {
   test('should inject content script on page load', async ({ popupPage: page, context }) => {
     await page.goto('https://example.com');
     await expect(page.locator('[data-smart-history-marker]')).toHaveCount(0);
@@ -295,7 +295,7 @@ test.describe('Extension - Content Script @interaction', () => {
   });
 });
 
-test.describe('Extension - Service Worker @interaction', () => {
+test.describe('Extension - Service Worker @interaction @extension', () => {
   test('should handle messages from content script', async () => {
     // Placeholder: requires service worker context
   });

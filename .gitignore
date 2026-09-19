@@ -11,6 +11,19 @@ tmp/
 *-new.json
 *-temp.json
 
+# The parity corpus (captured-inputs.ndjson) is committed on purpose: it is
+# the CI gate comparing WASM output against the TS reference, not a
+# regenerable artifact. Extend it via
+# `npx vitest run --config vitest.capture.config.ts <the 4 pii suites>`
+# (see src/wasm/pii-sanitizer/__tests__/setup-capture.ts) and commit the
+# result together with the wasm rebuild.
+
+# Rust build artifacts (cargo build output) and wasm-pack's own output dir —
+# the pkg/ contents that matter are copied into src/wasm/pii-sanitizer/ by
+# `npm run build:wasm`, so pkg/ itself is a rebuildable intermediate.
+wasm/*/target/
+wasm/*/pkg/
+
 
 
 node_modules/
