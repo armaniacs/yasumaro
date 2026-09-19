@@ -11,6 +11,17 @@ tmp/
 *-new.json
 *-temp.json
 
+# Derived test fixture: regenerated via
+# `npx vitest run --config vitest.capture.config.ts <the 4 pii suites>`
+# (see src/wasm/pii-sanitizer/__tests__/setup-capture.ts).
+src/wasm/pii-sanitizer/__tests__/captured-inputs.ndjson
+
+# Rust build artifacts (cargo build output) and wasm-pack's own output dir —
+# the pkg/ contents that matter are copied into src/wasm/pii-sanitizer/ by
+# `npm run build:wasm`, so pkg/ itself is a rebuildable intermediate.
+wasm/*/target/
+wasm/*/pkg/
+
 
 
 node_modules/
