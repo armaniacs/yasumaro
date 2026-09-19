@@ -46,12 +46,17 @@ const testExt = base.extend<DashboardFixtures>({
     await page.addInitScript(() => {
       chrome.storage.local.set({
         privacyConsent: { accepted: true, timestamp: Date.now() },
-        settings_migrated: true,
         breaking_changes_v5_shown: true,
-        // Explicit default so tests are independent of state left over by
-        // previous tests reusing the same persistent browser context.
+        // Legacy flat keys. The SW's deferred migration folds them into the
+        // versioned `settings` blob on the first message and synthesizes the
+        // provider priority list from ai_provider — the same path a real
+        // upgrading user takes. Do NOT seed `settings_migrated` or an empty
+        // `ai_provider_priority_list` here: an explicitly empty priority list
+        // suppresses that synthesis (applyMigrationsCore treats it as
+        // "user-configured") and leaves every provider settings block hidden
+        // after the first settings write creates the blob — the failure that
+        // broke the domain-filter e2e on 2026-09-19.
         ai_provider: 'gemini',
-        ai_provider_priority_list: [],
         ai_provider_layout: 'a',  // Force layout A so #aiProvider select is visible
       });
     });
