@@ -15,7 +15,7 @@
 - **ノード（円）**: 1つのタグを表します。円が大きいほど、そのタグが使われた記録の件数が多いことを示します
 - **エッジ（線）**: 2つのタグが同じ記録に同時に付いている（共起している）ことを表します。共起回数が多いほど太く表示されます
 
-出現回数の多い上位50件のタグのみが表示されます。50件を超える場合は「上位N件のみ表示中」の通知が表示されます。
+出現回数の多い上位50件のタグのみが表示されます。50件を超える場合は「上位N件のみ表示中」の通知が表示されます。共起の計算前に出現頻度上位50件のタグに絞り込みます。1件の記録からは最大50タグまで、履歴の取得は最大10,000件までが対象です。
 
 ### 操作方法
 
@@ -28,7 +28,7 @@
 | **+/− ボタン** | 中央基準でズームイン/アウト |
 | **リセットボタン** | 表示を初期状態に戻す |
 
-誤発動を防ぐため、5px以上ドラッグした場合はクリックとして扱いません。ドラッグ操作の直後にクリックしても、タグ絞り込みは発火しません。
+誤発動を防ぐため、5pxを超えてドラッグした場合はクリックとして扱いません（移動距離がちょうど5pxの場合はクリック扱いです）。ドラッグ操作の直後にクリックしても、タグ絞り込みは発火しません。
 
 ### 読み込み時の進捗表示
 
@@ -39,7 +39,7 @@
 3. レイアウト計算（ノードの配置を決定）
 4. グラフ描画
 
-各ステップが完了すると、○ から ✓（緑）に切り替わります。
+各ステップが完了すると、◯ から ✓（緑）に切り替わります。
 
 ### 初回表示時の注意
 
@@ -58,7 +58,7 @@
 - **Nodes (circles)**: Each node represents one tag. Larger circles indicate the tag was used in more records
 - **Edges (lines)**: An edge means two tags co-occur on the same record. Thicker edges indicate more frequent co-occurrence
 
-Only the top 50 tags by frequency are shown. If there are more, a "showing top N only" notice appears.
+Only the top 50 tags by frequency are shown. If there are more, a "showing top N only" notice appears. Tags are pre-filtered to the top 50 by frequency before co-occurrence is computed. At most 50 tags per record and 10,000 history rows are used.
 
 ### Controls
 
@@ -82,7 +82,7 @@ While the graph is being generated, a 4-step progress overlay is shown:
 3. Layout calculation (determining node positions)
 4. Graph rendering
 
-Each step switches from ○ to ✓ (green) as it completes.
+Each step switches from ◯ to ✓ (green) as it completes.
 
 ### Note on First Display
 

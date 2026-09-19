@@ -34,13 +34,13 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 4. テキスト抽出 → クレンジング済み本文を記録ペイロードとして送信
    ↓
 【background: 記録パイプライン】
-5. サイズ制限（切り詰められたコンテンツのみがAI APIに送信される）
+5. 切り詰め → ドメインフィルター → 権限 → 信頼ドメイン判定 → プライバシーヘッダー → 重複チェック（拒否時はここで中断）
    ↓
-6. PIIマスキング（プライバシーモード設定による）
+6. プライバシーパイプライン（PIIマスキング＋AI要約）
    ↓
-7. AI要約（プライバシーモード設定による: ローカルAI / クラウドAI）
+7. L0抽出文の生成 → Markdown整形
    ↓
-8. Obsidianのデイリーノートに要約を追記 ＋ SQLiteに記録を保存
+8. Obsidian保存 / ローカルMarkdown保存 / SQLite保存 / メタデータ保存（互いに独立したベストエフォート処理）
 ```
 
 > **注意**:
@@ -58,13 +58,14 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 **設定項目**:
 - **Hard Strip**: 特定のHTMLタグや属性を削除
-  - 削除対象タグ: `<script>`, `<style>`, `<iframe>`, `<canvas>`, `<embed>`, `<object>`, `<audio>`, `<video>`, `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>`
+  - 削除対象タグ: `<script>`, `<style>`, `<iframe>`, `<canvas>`, `<embed>`, `<object>`, `<audio>`, `<video>`, `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>`, `<noscript>`
+  - 非表示要素（`[hidden]`、`[aria-hidden="true"]`、`[style*="display:none"]` を含む要素）も削除
   - 削除対象属性: `type="password"`, `type="hidden"`, `type="file"`, `type="email"`, `type="tel"`, `autocomplete`（属性自体）, `inputmode="numeric|tel|email"`
   - これらの属性パターンに一致する要素は、属性だけを取り除くのではなく**要素ごと**削除します。`onclick` などのイベントハンドラや `class`/`id`/`href`/`src` は**削除されません**。
 
-- **Keyword Strip**: ID/クラス名に特定のキーワードを含む**要素全体**を削除
+- **Keyword Strip**: ID・クラス名・`data-*` 属性名に特定のキーワードを含む**要素全体**を削除（`data-*` は属性名の部分一致で判定）
   - デフォルトキーワードは日本語・英語の両方のパターン（`balance`, `account`, `meisai`（明細）, `login`, `card-number`, `keiyaku`（契約）, `password`, `payment`, `billing`, `mynumber`, `ssn`, `credit-card`, `seed-phrase` など、計50語超）を網羅します
-  - 設定画面の「初期設定」「リセット」で表示されるキーワード一覧は、実際のクレンジングで使う全リストと一致しています（`contentCleaner.DEFAULT_KEYWORDS` が唯一の情報源）
+  - 新規インストール時の初期値は17語のサブセットです。設定画面の「リセット」は全リスト（`contentCleaner.DEFAULT_KEYWORDS`、50語超）に復元します
   - キーワードはカスタマイズ可能です
 
 **統計情報**:
@@ -97,7 +98,9 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
   - **SNS/プロモ削除**（デフォルト: 無効）: スポンサー製品・トレンド等を削除
   - **ポップアップ削除**（デフォルト: **有効**）: モーダル・トースト通知・cookie同意バーを削除
   - **プラットフォームノイズ削除**（デフォルト: 無効）: YouTubeコメント欄・5ch/be ID等を削除
-- **日本語サイト特化オプション**（新規ユーザーはデフォルト**有効**。既存ユーザーはマイグレーションで無効維持）:
+- **日本語サイト特化オプション**（新規ユーザーのデフォルト有効は次の5件のみ。既存ユーザーはマイグレーションで無効維持。残り4件は新規ユーザーでもデフォルト無効）:
+  - デフォルト有効: JPレイアウトパターン、ニュースメディア固有パターン、EC・通販固有パターン、Q&A・知恵袋固有パターン、動画プラットフォーム固有パターン
+  - デフォルト無効: アフィリエイト要素、吹き出し要素、JPナビゲーション、執筆者・メタ情報
   - **JPレイアウトパターン**: SWELL・Cocoon・SANGO・JIN等の国産WordPressテーマ固有クラス、アフィリエイトプラグイン開示表記、日本語レコメンド広告（PopIn/Logly Lift/Uzou/Outbrain/Taboola）、日本ブログUIコンポーネント（ページトップへ戻る・ハンバーガーメニュー・目次プラグイン等）を削除
   - **アフィリエイト要素**: Rinker・カエレバ・もしも・ポチップ等の商品ボックスを、商品名・価格のみ残したプレーンテキストに変換
   - **吹き出し要素**: キャラクター名・アバターを削除し、発言テキストのみ保持
@@ -107,20 +110,20 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
   - **動画プラットフォーム固有パターン**: コメント弾幕・タグクラウド・関連動画一覧・再生数バッジ等を削除
 
 **統計情報**:
-- クレンジング前バイト数（outerHTMLベース）
-- クレンジング後バイト数（outerHTMLベース）
+- クレンジング前バイト数（テキストベース、TextEncoder計測）
+- クレンジング後バイト数（テキストベース、TextEncoder計測。outerHTMLのBlob計測は直接呼び出し時のみ）
 - 削除された要素数（各カテゴリ別）
-- クレンジング理由（`alt`, `metadata`, `ads`, `nav`, `social`, `deep`, `multiple`, `none`）
+- クレンジング理由（削除があった33ルールのキー単独、複数ルールなら `multiple`、削除なしなら `none`）
 
 ### ドメイン別ホワイトリスト抽出モード（Domain Whitelist Extraction Mode）
 
 **目的**: 周辺ノイズの比率が極端に高く、上記の削除（引き算）方式では綺麗な本文を残せないサイト向けに、あらかじめ定義した特定のクラス/IDの中身だけを狙い撃ちで抽出する専用モードです。
 
-**対象サイトの例**: Togetter、5ちゃんねるまとめブログ、ガールズちゃんねる、Yahoo!知恵袋、小説投稿サイト（なろう/カクヨム）、レシピサイト（クックパッド/クラシル）、はてなブックマーク、食べログ
+**対象サイトの例**: Togetter、5ちゃんねるまとめブログ、ガールズちゃんねる、Yahoo!知恵袋、小説投稿サイト（なろう/カクヨム）、レシピサイト（クックパッド/クラシル）、はてなブックマーク、食べログ、Wikipedia、CNN.co.jp、NHKニュース、Qiita、Zenn、はてな匿名ダイアリー
 
 **動作**:
 1. このモードは、次のいずれかを満たすと発動します
-   - アクセス中のページの `hostname` が対象ドメインと一致する
+   - アクセス中のページの `hostname` が対象ドメインと一致する（完全一致またはサブドメイン一致）
    - 対象サイト特有のクラス（例: なろうの `#novel_honbun`）が DOM 上に存在する
 2. 該当クラスの要素のテキストをDOM出現順に結合して抽出します（Togetterでは `@ユーザー名` やリツイート数などのメタデータも合わせて除去されます）
 3. 対象要素が1件も見つからなかった場合は、通常の削除方式（コンテンツ抽出 → 各種クレンジング）に自動的にフォールバックします
@@ -139,10 +142,13 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 ### プリセットと動的コンテンツ対応
 
-- **プリセット**: AI Summary Cleansing の 32 個のトグルは `minimal`（3 ON）/ `balanced`（9 ON、デフォルト）/ `aggressive`（25 ON）/ `custom` の4プリセットで一括切替できます。トグルを個別に変更すると `custom` になります
-- **Cookie 同意バナー**: `cookie` ルールとして OneTrust 系（`onetrust` / `ot-sdk` / `optanon`）のバナー定型文を除去します。テキストマッチで判定し、クラス名の部分一致による誤爆を避けます
-- **SPA / Shadow DOM / iframe**: `MutationObserver` で描画後のコンテンツ変化を検知し、`shadowRoot` や iframe の中も再帰的に走査します。Shadow / iframe ホストが存在しないページでは走査を早期にゼロ化します
+- **プリセット**: AI Summary Cleansing の 33 個のトグルは `minimal`（3 ON）/ `balanced`（9 ON、デフォルト）/ `aggressive`（25 ON）/ `custom` の4プリセットで一括切替できます。トグルを個別に変更すると `custom` になります（`aggressive` でOFFの8件: `jsonLd`、`lazyLoad`、`skipLink`、`card`、`fixed`、`pagination`、`platform`、`author`）
+- **Cookie 同意バナー**: `cookie` ルールとして OneTrust 系（`onetrust` / `ot-sdk` / `optanon`）のバナー定型文を除去します。テキスト判定が主体で、一部クラス名パターンも併用します
+- **SPA / 動的コンテンツ**: `MutationObserver`（debounce 500ms）で描画後のコンテンツ変化を検知します。現行ルールはホットパスで `shadowRoot` / iframe 内の再帰走査を行いません
 - **観測性**: どのルールが何個の要素を除去したかの内訳（`removedByReason`）と、クレンジング前後のペイロード差分をダッシュボードで確認できます
+- **本文保護**: 本文スコアが閾値（デフォルト200）以上の要素は削除対象から保護されます
+- **過剰削減フォールバック**: 結果が100文字未満、またはクレンジング前との比率が0.20未満・300バイト未満の場合は、クレンジング前のテキスト（なければページ本文）に復元されます
+- **コンテンツ重複排除**: デフォルト有効（類似度閾値0.7）
 
 プリセットとドメイン別上書きの運用は [クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md) を参照してください。
 
@@ -183,13 +189,13 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 4. Text extraction → the cleansed body is sent as the recording payload
    ↓
 [Background: recording pipeline]
-5. Size limiting (only the truncated content is sent to the AI API)
+5. Truncate → domain filter → permission → trust-domain check → privacy headers → duplicate check (a rejection stops the pipeline here)
    ↓
-6. PII masking (per privacy mode settings)
+6. Privacy pipeline (PII masking + AI summarization)
    ↓
-7. AI summarization (per privacy mode settings: local AI / cloud AI)
+7. L0 sentence extraction → Markdown formatting
    ↓
-8. Append the summary to the Obsidian daily note + save the record to SQLite
+8. Obsidian save / local Markdown save / SQLite save / metadata save (independent best-effort steps)
 ```
 
 > **Notes**:
@@ -207,13 +213,14 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 
 **Settings**:
 - **Hard Strip**: Remove specific HTML tags and attributes
-  - Removed tags: `<script>`, `<style>`, `<iframe>`, `<canvas>`, `<embed>`, `<object>`, `<audio>`, `<video>`, `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>`
+  - Removed tags: `<script>`, `<style>`, `<iframe>`, `<canvas>`, `<embed>`, `<object>`, `<audio>`, `<video>`, `<input>`, `<textarea>`, `<select>`, `<button>`, `<form>`, `<noscript>`
+  - Hidden elements (elements matching `[hidden]`, `[aria-hidden="true"]`, or `[style*="display:none"]`) are also removed
   - Attribute-based removals: `type="password"`, `type="hidden"`, `type="file"`, `type="email"`, `type="tel"`, `autocomplete` attribute, `inputmode="numeric|tel|email"`
   - Elements matching these attribute patterns are removed **along with the entire element**, not just the attribute.
 
-- **Keyword Strip**: Remove **entire elements** whose ID/class names contain specific keywords
+- **Keyword Strip**: Remove **entire elements** whose ID, class names, or `data-*` attribute names contain specific keywords (`data-*` matches attribute-name substrings)
   - The default keyword list covers both Japanese and English patterns (`balance`, `account`, `meisai` (statement), `login`, `card-number`, `keiyaku` (contract), `password`, `payment`, `billing`, `mynumber`, `ssn`, `credit-card`, `seed-phrase`, and more — 50+ words in total)
-  - The keyword list shown by "Defaults" and "Reset" in the settings UI matches the full list used by the actual cleansing logic (`contentCleaner.DEFAULT_KEYWORDS` is the single source of truth)
+  - Fresh installs start with a 17-word subset. "Reset" in the settings UI restores the full list (`contentCleaner.DEFAULT_KEYWORDS`, 50+ words)
   - Keywords are customizable
 
 **Statistics**:
@@ -246,7 +253,9 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
   - **SNS/Promo** (default: disabled): Remove sponsored products, trends
   - **Popups** (default: **enabled**): Remove modals, toast notifications, cookie consent bars
   - **Platform noise** (default: disabled): Remove YouTube comments, 5ch/be IDs
-- **Japanese Site-Specific Options** (default **enabled** for new users; existing users keep it disabled via migration):
+- **Japanese Site-Specific Options** (only the following 5 are enabled by default for new users; existing users keep them disabled via migration; the remaining 4 are disabled by default even for new users):
+  - Enabled by default: JP layout patterns, news media patterns, e-commerce patterns, Q&A site patterns, video platform patterns
+  - Disabled by default: affiliate elements, speech bubble elements, JP navigation, author/meta info
   - **JP layout patterns**: Removes theme-specific classes from popular Japanese WordPress themes (SWELL, Cocoon, SANGO, JIN), affiliate plugin disclosure notices, Japanese recommendation ad widgets (PopIn, Logly Lift, Uzou, Outbrain, Taboola), and common Japanese blog UI components (back-to-top buttons, hamburger menus, table-of-contents plugins, etc.)
   - **Affiliate elements**: Converts Rinker, Kaereba, Moshimo, and Pochipp product boxes into plain text, keeping only the product name and price
   - **Speech bubble elements**: Removes character names/avatars while keeping the spoken text
@@ -256,17 +265,17 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
   - **Video platform patterns**: Removes comment overlays, tag clouds, related-video lists, view-count badges, etc.
 
 **Statistics**:
-- Bytes before cleansing (outerHTML-based)
-- Bytes after cleansing (outerHTML-based)
+- Bytes before cleansing (text-based, measured via TextEncoder)
+- Bytes after cleansing (text-based, measured via TextEncoder; outerHTML Blob measurement applies to direct calls only)
 - Number of removed elements (by category)
-- Cleansing reason (`alt`, `metadata`, `ads`, `nav`, `social`, `deep`, `multiple`, `none`)
+- Cleansing reason (the single key of whichever of the 33 rules removed something, `multiple` when several did, `none` when nothing was removed)
 
 ### Domain Whitelist Extraction Mode
 
-**Purpose**: For sites where surrounding noise is so extreme that the removal-based approach above cannot leave a clean article body — Togetter, 5channel matome blogs, Girls Channel, Yahoo! Chiebukuro, novel-serialization sites (Syosetu/Kakuyomu), recipe sites (Cookpad/Kurashiru), Hatena Bookmark, and Tabelog — this mode extracts only the content inside pre-defined classes/IDs, rather than removing noise from the whole page.
+**Purpose**: For sites where surrounding noise is so extreme that the removal-based approach above cannot leave a clean article body — Togetter, 5channel matome blogs, Girls Channel, Yahoo! Chiebukuro, novel-serialization sites (Syosetu/Kakuyomu), recipe sites (Cookpad/Kurashiru), Hatena Bookmark, Tabelog, Wikipedia, CNN.co.jp, NHK News, Qiita, Zenn, and Anond — this mode extracts only the content inside pre-defined classes/IDs, rather than removing noise from the whole page.
 
 **How it works**:
-1. This mode activates when the current page's `hostname` matches a target domain, or when a site-specific selector (e.g., Syosetu's `#novel_honbun`) is found in the DOM
+1. This mode activates when the current page's `hostname` matches a target domain (exact or subdomain match), or when a site-specific selector (e.g., Syosetu's `#novel_honbun`) is found in the DOM
 2. Text from all matching elements is extracted in DOM order and joined together (for Togetter, metadata such as `@username` mentions and retweet counts is also stripped)
 3. If no matching elements are found, extraction automatically falls back to the standard removal-based path (content extraction followed by the various cleansing steps)
 4. Text extracted this way is not passed through Content Cleansing or AI Summary Cleansing's removal steps, since it has already been isolated from the noise source
@@ -284,10 +293,13 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 
 ### Presets and Dynamic Content Handling
 
-- **Presets**: The 32 AI Summary Cleansing toggles switch as a group via four presets — `minimal` (3 on) / `balanced` (9 on, default) / `aggressive` (25 on) / `custom`. Changing any toggle individually switches to `custom`
-- **Cookie consent banners**: The `cookie` rule removes boilerplate from OneTrust-style banners (`onetrust` / `ot-sdk` / `optanon`). Detection is by text to avoid false matches from partial class-name matches
-- **SPA / Shadow DOM / iframe**: A `MutationObserver` detects post-render content changes, and the traversal recurses into `shadowRoot` and iframes. On pages with no Shadow / iframe hosts, the traversal is short-circuited to zero
+- **Presets**: The 33 AI Summary Cleansing toggles switch as a group via four presets — `minimal` (3 on) / `balanced` (9 on, default) / `aggressive` (25 on) / `custom`. Changing any toggle individually switches to `custom` (the 8 rules off in `aggressive`: `jsonLd`, `lazyLoad`, `skipLink`, `card`, `fixed`, `pagination`, `platform`, `author`)
+- **Cookie consent banners**: The `cookie` rule removes boilerplate from OneTrust-style banners (`onetrust` / `ot-sdk` / `optanon`). Detection is primarily text-based, with some class-name patterns also in use
+- **SPA / dynamic content**: A `MutationObserver` (500ms debounce) detects post-render content changes. The current rules do not recurse into `shadowRoot` or iframes on the hot path
 - **Observability**: The dashboard shows a breakdown of which rule removed how many elements (`removedByReason`) and a payload diff before and after cleansing
+- **Body protection**: Elements with a body score at or above the threshold (default 200) are protected from removal
+- **Over-reduction fallback**: When the result is under 100 characters, below 0.20 of the pre-cleanse size, or under 300 bytes, the pre-cleanse text (or the page body) is restored
+- **Content dedup**: Enabled by default (similarity threshold 0.7)
 
 See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) for working with presets and per-site overrides.
 
