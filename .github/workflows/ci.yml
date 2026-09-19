@@ -84,11 +84,19 @@ jobs:
         # output being regenerated and committed — see npm run build:wasm.
         # A rebuild diff here means someone edited wasm/pii-sanitizer/src/
         # but forgot to run `npm run build:wasm` and commit the result.
+        # Both committed copies are checked: the parity suites and bench read
+        # the src copy, while wxt's publicAssets hook ships the public copy
+        # (wxt.config.ts) — a one-sided commit must fail this job.
         run: |
-          cp src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm /tmp/committed.wasm
+          cp src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm /tmp/committed-src.wasm
+          cp public/wasm/pii_sanitizer_bg.wasm /tmp/committed-public.wasm
           npm run build:wasm
-          if ! cmp -s /tmp/committed.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm; then
+          if ! cmp -s /tmp/committed-src.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm; then
             echo "::error::wasm binary is stale — run 'npm run build:wasm' and commit the result"
+            exit 1
+          fi
+          if ! cmp -s /tmp/committed-public.wasm public/wasm/pii_sanitizer_bg.wasm; then
+            echo "::error::public/wasm/pii_sanitizer_bg.wasm is stale or diverges from the build:wasm output — run 'npm run build:wasm' and commit the result"
             exit 1
           fi
           git diff --exit-code src/wasm/pii-sanitizer/piiSanitizerWasm.js || \
