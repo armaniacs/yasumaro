@@ -651,6 +651,9 @@
   "errorProtocol": {
     "message": "Error: Protocol must be \"http\" or \"https\"."
   },
+  "errorHttpNonLoopback": {
+    "message": "Error: Plaintext HTTP is only allowed for localhost/127.0.0.1. Use HTTPS for other hosts."
+  },
   "warningProtocolHttp": {
     "message": "Warning: HTTP sends API key and data in plaintext. Use HTTPS for encrypted communication, especially on untrusted networks."
   },

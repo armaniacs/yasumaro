@@ -69,14 +69,23 @@ export function createConnectionStatusElement(label: string, result: { success: 
 export async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
   const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
   const portInput = document.getElementById('port') as HTMLInputElement | null;
+  const hostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
+  // Forward the form values so the SW-side loopback rule evaluates the config
+  // being edited, not the last saved one (PBI 2026-09-19-22). Empty fields are
+  // omitted; an empty payload keeps the stored-settings path.
+  const protocol = protocolInput?.value?.trim();
+  const port = portInput?.value?.trim();
+  const host = hostInput?.value?.trim();
+  const hasFormValue = Boolean(apiKey || protocol || port || host);
   const testResult = await chrome.runtime.sendMessage({
     type: 'TEST_OBSIDIAN',
     protocolVersion: CURRENT_PROTOCOL_VERSION,
-    payload: apiKey
+    payload: hasFormValue
       ? {
-          protocol: protocolInput?.value?.trim(),
-          port: portInput?.value?.trim(),
-          apiKey: apiKey,
+          ...(apiKey ? { apiKey } : {}),
+          ...(protocol ? { protocol } : {}),
+          ...(port ? { port } : {}),
+          ...(host ? { host } : {}),
         }
       : {}
   }) as { obsidian?: { success: boolean; message: string } };

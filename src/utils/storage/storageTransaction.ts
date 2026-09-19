@@ -32,6 +32,8 @@ const chains: ChainMap = new Map();
 
 function runSerialized<R>(key: string, fn: () => Promise<R>): Promise<R> {
   const prev = chains.get(key);
+  // Intentional promise chain: serializes per-key writes so concurrent callers
+  // run one-at-a-time. Do not rewrite to await; the chain is the mutex.
   const run: Promise<R> = prev === undefined ? (async () => fn())() : prev.then(fn, fn);
   const settled: Promise<void> = run.then(() => undefined, () => undefined);
   chains.set(key, settled);

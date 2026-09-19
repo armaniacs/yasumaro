@@ -242,8 +242,9 @@ describe('testObsidianConnection', () => {
     const sendMessage = vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'err' } });
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     const res = await testObsidianConnection('key');
+    // PBI 2026-09-19-22: missing form values are omitted, not sent as undefined
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({
-      payload: expect.objectContaining({ protocol: undefined, port: undefined, apiKey: 'key' }),
+      payload: { apiKey: 'key' },
     }));
     expect(res.success).toBe(false);
   });
@@ -419,8 +420,9 @@ describe('handleTestObsidian', () => {
     const sendMessage = vi.fn().mockResolvedValue({ obsidian: { success: true, message: 'OK' } });
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
-    // typedApiKey || '' => '' so payload {}
-    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ payload: {} }));
+    // PBI 2026-09-19-22: non-empty form values are forwarded even when the
+    // typed apiKey trims to empty; empty fields (apiKey here) are omitted
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ payload: { protocol: 'https' } }));
   });
 
   it('shows certificate link when https + Failed to fetch', async () => {

@@ -24,6 +24,7 @@ vi.mock('../../utils/logger/core.js', () => ({
 vi.mock('../../utils/logger/api.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
+  logInfo: vi.fn(),
   ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
   LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
 }));
@@ -83,6 +84,18 @@ describe('SqliteClient — keepAlive / reconnect (M12)', () => {
 
     expect(result).toEqual({ success: true, data: { rows: [], total: 0 } });
     expect(sendMessageCallCount).toBe(2);
+  });
+
+  it('logs the selected transport name on first transport init (PBI 2026-09-19-13)', async () => {
+    setupFlakyChromeMock();
+    const { logInfo } = await import('../../utils/logger/api.js');
+
+    await client.query({ limit: 1 });
+
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('Offscreen transport selected:'),
+      expect.objectContaining({ source: 'sqlite' })
+    );
   });
 
   it('gives up and returns failure result after the retry also fails', async () => {

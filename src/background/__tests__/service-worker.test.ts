@@ -827,7 +827,7 @@ describe('service-worker handlers', () => {
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle SESSION_LOCK_REQUEST', async () => {
@@ -838,7 +838,7 @@ describe('service-worker handlers', () => {
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle PING', async () => {
@@ -849,7 +849,7 @@ describe('service-worker handlers', () => {
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle unknown message type', async () => {
@@ -861,7 +861,7 @@ describe('service-worker handlers', () => {
             handler(message, {} as any, sendResponse);
             await new Promise(resolve => setTimeout(resolve, 50));
 
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle error in process', async () => {
@@ -2748,7 +2748,7 @@ describe('service-worker handlers', () => {
             expect(result).toBe(true);
 
             await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle GENERATE_REVIEW_SUMMARY (weekly)', async () => {
@@ -2768,7 +2768,7 @@ describe('service-worker handlers', () => {
             await new Promise(resolve => setTimeout(resolve, 10));
             expect(mockReviewGenerator.generateWeeklySummary).toHaveBeenCalledTimes(1);
             expect(mockReviewGenerator.generateMonthlySummary).not.toHaveBeenCalled();
-            expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, generated: true }));
         });
 
         it('should handle GENERATE_REVIEW_SUMMARY (monthly)', async () => {
@@ -2788,7 +2788,7 @@ describe('service-worker handlers', () => {
             await new Promise(resolve => setTimeout(resolve, 10));
             expect(mockReviewGenerator.generateMonthlySummary).toHaveBeenCalledTimes(1);
             expect(mockReviewGenerator.generateWeeklySummary).not.toHaveBeenCalled();
-            expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: false });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, generated: false }));
         });
 
         it('should handle REFRESH_LOCAL_MARKDOWN_SCHEDULER', async () => {
@@ -2815,7 +2815,7 @@ describe('service-worker handlers', () => {
             expect(result).toBe(true);
             
             await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should handle SESSION_LOCK_REQUEST', async () => {
@@ -2827,7 +2827,7 @@ describe('service-worker handlers', () => {
             expect(result).toBe(true);
             
             await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith({ success: true });
+            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
         it('should reject unknown message type with INVALID_MESSAGE_ERROR', async () => {

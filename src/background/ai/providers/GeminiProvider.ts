@@ -7,6 +7,7 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNEC
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
+import { logDebug } from '../../../utils/logger/api.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -30,6 +31,10 @@ interface GeminiApiResponse {
 
 export class GeminiProvider extends AIProviderStrategy {
     private apiKey: string;
+    /**
+     * Where the API key was resolved from. Diagnostics only — never the key.
+     */
+    readonly apiKeySource: string;
     private model: string;
     private timeoutMs: number;
     /**
@@ -44,14 +49,21 @@ export class GeminiProvider extends AIProviderStrategy {
         // storage.jsのStorageKeysと対応するキー名を使用（snake_case）。
         // GEMINI_API_KEY は復号済みで string として返るが、型上 EncryptedData も
         // 許容するため、decrypt 済みであることを明示して string に絞る。
-        this.apiKey = (settings[StorageKeys.GEMINI_API_KEY] as string | undefined)
+        const storedKey = settings[StorageKeys.GEMINI_API_KEY] as string | undefined;
+        this.apiKey = storedKey
             ?? (DEFAULT_SETTINGS[StorageKeys.GEMINI_API_KEY] as string);
+        this.apiKeySource = storedKey !== undefined
+            ? StorageKeys.GEMINI_API_KEY
+            : `${StorageKeys.GEMINI_API_KEY} (default fallback)`;
         this.model = settings[StorageKeys.GEMINI_MODEL]
             ?? (DEFAULT_SETTINGS[StorageKeys.GEMINI_MODEL] as string);
         // タイムアウト設定: 設定値が0の場合はデフォルト30000ms
         const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
         this.timeoutMs = storedTimeout > 0 ? storedTimeout : 30000;
         this.contentCharsKey = contentCharsKey;
+        // Diagnostics: record where the API key came from. Key material never
+        // enters this log (only the storage-key name / fallback description).
+        void logDebug(`API key resolved from: ${this.apiKeySource}`, { provider: this.getName() });
     }
 
     getName(): string {

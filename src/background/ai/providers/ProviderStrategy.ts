@@ -547,6 +547,8 @@ export abstract class AIProviderStrategy {
 /**
  * @deprecated Use AIProviderStrategy — kept for backward compatibility (PBI 02).
  * Old custom providers importing `ProviderStrategy` continue to type-check
- * for one major version. Will be removed in next major. See CHANGELOG.
+ * for one major version. Sunset: remove in next major (re-evaluate 2026-12-31).
+ * New code must not import this alias (enforced by check-deprecated-aliases).
+ * See CHANGELOG.
  */
 export type ProviderStrategy = AIProviderStrategy;

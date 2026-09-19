@@ -44,6 +44,10 @@ jobs:
           retention-days: 90
       - name: Lint
         run: npm run lint
+      - name: innerHTML escape guard
+        run: npm run check-innerhtml-escape
+      - name: deprecated alias guard
+        run: npm run check-deprecated-aliases
       - name: Type Check
         run: npm run type-check
       - name: Run Tests

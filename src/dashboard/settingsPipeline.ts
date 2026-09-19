@@ -13,8 +13,9 @@ import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProvider
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
-import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, ErrorPair } from './settings/fieldValidation.js';
+import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, setFieldError, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage } from '../utils/i18n.js';
+import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
 import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { syncStatusToTop } from './statusView.js';
@@ -106,6 +107,15 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   // HTTP プロトコルが選択されている場合、確認ダイアログを表示
   const protocolValue = protocolInput?.value?.trim().toLowerCase();
   if (protocolValue === 'http') {
+    // Cross-check with the host field: buildFromSettings blocks plaintext
+    // HTTP to non-loopback hosts, so saving such a config would produce a
+    // setting that fails at sync time. Reject at save time with the same
+    // rule (single source of truth: isLoopbackHost).
+    const hostValue = obsidianHostInput?.value?.trim() ?? '';
+    if (obsidianHostInput && hostValue !== '' && !isLoopbackHost(hostValue)) {
+      setFieldError(obsidianHostInput, 'obsidianHostError', getMessage('errorHttpNonLoopback'));
+      return { success: false, error: 'http_non_loopback_blocked' };
+    }
     const confirmed = await showConfirmDialog({
       title: getMessage('warningTitle') || 'Warning',
       message: getMessage('confirmProtocolHttp'),

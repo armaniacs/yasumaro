@@ -13,6 +13,14 @@ import {
 } from '../envelopePolicy.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messageTypes.js';
 
+const { logInfo } = vi.hoisted(() => ({ logInfo: vi.fn() }));
+vi.mock('../../../utils/logger/api.js', () => ({
+  logInfo,
+  logDebug: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+}));
+
 function makeDeps() {
   return {
     runDeferredStartupMigrations: vi.fn(async () => {}),
@@ -175,11 +183,20 @@ describe('protocol version migration window', () => {
     }
   });
 
-  it('accepts a missing protocolVersion (legacy sender behavior)', async () => {
+  it('accepts a missing protocolVersion with a deprecation flag (legacy sender migration)', async () => {
+    const { __resetAbsentVersionCountForTesting, getAbsentVersionCount } = await import('../envelopePolicy.js');
+    __resetAbsentVersionCountForTesting();
+    logInfo.mockClear();
     const outcome = await checkEnvelope({ type: 'PING' }, sender(), makeDeps());
     expect(outcome.accepted).toBe(true);
     if (!outcome.accepted) return;
-    expect(outcome.deprecated).toBeUndefined();
+    expect(outcome.deprecated).toBeDefined();
+    expect(getAbsentVersionCount()).toBe(1);
+    // Migration-progress trace is emitted (PBI 2026-09-19-18)
+    expect(logInfo).toHaveBeenCalledWith(
+      expect.stringContaining('Protocol version absent'),
+      expect.objectContaining({ type: 'PING' })
+    );
   });
 
   it('rejects non-integer protocolVersion values', async () => {

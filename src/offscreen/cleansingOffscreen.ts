@@ -12,6 +12,21 @@ import type { AiSummaryCleanseOptions, AiSummaryCleanseResult } from '../utils/a
 
 export const CLEANSING_OFFSCREEN_TYPE = 'CLEANSING_OFFSCREEN' as const;
 
+/**
+ * Error prefix marking a size-limit rejection. Delegates (content scripts)
+ * must NOT fall back to a local parse for these failures — the whole point of
+ * the cap is to prevent the heavy parse anywhere, so returning the original
+ * HTML is safer than re-parsing on the main thread.
+ */
+export const TOO_LARGE_ERROR_PREFIX = 'TOO_LARGE:' as const;
+
+/**
+ * Maximum accepted payload size in bytes.
+ * Oversized input would block the Offscreen document's DOMParser for a long
+ * time, so reject early instead of attempting to parse.
+ */
+export const MAX_CLEANSING_HTML_BYTES = 512 * 1024;
+
 export interface CleansingOffscreenPayload {
     html: string;
     options?: AiSummaryCleanseOptions;
@@ -53,9 +68,12 @@ export function cleanseHtmlOffscreen(
         doc = parser.parseFromString(html, 'text/html');
         rootEl = doc.body as unknown as Element;
     } else if (typeof document !== 'undefined' && (document as unknown as { createElement?: (tag: string) => Element }).createElement) {
-        const container = document.createElement('div');
-        container.innerHTML = html;
-        rootEl = container;
+        // DOMParser unavailable: parse in an isolated document so scripts never
+        // execute in the live page context.
+        const isolated = document.implementation.createHTMLDocument('');
+        isolated.body.innerHTML = html;
+        rootEl = isolated.body as unknown as Element;
+        doc = isolated;
     } else {
         throw new Error('No DOM available for cleansing');
     }
@@ -85,6 +103,9 @@ export function handleCleansingOffscreenPayload(
         return { success: false, error: 'Invalid payload: html is required' };
     }
     const { html, options } = payload as { html: string; options?: AiSummaryCleanseOptions };
+    if (html.length > MAX_CLEANSING_HTML_BYTES) {
+        return { success: false, error: `${TOO_LARGE_ERROR_PREFIX} ${html.length} bytes exceeds limit of ${MAX_CLEANSING_HTML_BYTES}` };
+    }
     try {
         const { html: cleansed, result } = cleanseHtmlOffscreen(html, options);
         return {
