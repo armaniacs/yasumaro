@@ -116,4 +116,42 @@ describe('extended pattern parity (16 locale-specific types)', () => {
             );
         });
     });
+
+    describe('separator-class and ipv6-start parity (regression: is_sep/ipv6 gate)', () => {
+        // JS `\s` covers the full ASCII whitespace set. The WASM scanner's
+        // is_sep must too — PII formatted across line breaks is common in
+        // extracted page text and is masked by the TS reference.
+        test('phoneJp split across newlines', async () => {
+            await expectParity('call 03\n1234\n5678 now');
+        });
+
+        test('myNumber split across newlines', async () => {
+            await expectParity('my number is 1234\n5678\n9012 ok');
+        });
+
+        test('creditCard split across newlines', async () => {
+            await expectParity('card 4111\n1111\n1111\n1111 done');
+        });
+
+        test('phoneCn split across newlines', async () => {
+            await expectParity('phone 138\n1234\n5678 mobile');
+        });
+
+        test('phoneKr split across newlines', async () => {
+            await expectParity('call +82-10\n1234\n5678 today');
+        });
+
+        // Parity pin, not a gap: the TS ssn pattern uses literal hyphens
+        // (/\b\d{3}-\d{2}-\d{4}\b/), so newline-separated input is unmasked
+        // on both sides.
+        test('ssn with newline separators is unmasked on both sides', async () => {
+            await expectParity('ssn 123\n45\n6789 on file');
+        });
+
+        // The ipv6 char class is [0-9a-fA-F]: full-form addresses starting
+        // with a hex letter must dispatch the same way digit-leading ones do.
+        test('ipv6 starting with a hex letter (fe80: full form)', async () => {
+            await expectParity('addr fe80:0000:0000:0000:0000:0000:0000:0001 end');
+        });
+    });
 });

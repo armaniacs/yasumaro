@@ -24,7 +24,18 @@ use super::extended;
 
 const MAX_MATCH_COUNT: usize = 1000;
 
-pub fn scan(bytes: &[u8]) -> Vec<(usize, usize, &'static str)> {
+/// The scan stopped because the match-count cap was reached. Mirrors the TS
+/// reference's `Operation exceeded maximum match count` behavior — the
+/// hybrid's catch block falls back to `sanitizeRegex`, which throws the same
+/// way, so the recording fails closed instead of shipping partially-masked
+/// text as a success (the TS reference aborts the pipeline on this input).
+#[derive(Debug)]
+pub struct MatchLimitExceeded;
+
+/// Returns `Err(MatchLimitExceeded)` once more than `MAX_MATCH_COUNT` matches
+/// have been found — the same threshold at which the TS combined-regex scan
+/// throws (`matchCount > MAX_MATCH_COUNT`).
+pub fn scan(bytes: &[u8]) -> Result<Vec<(usize, usize, &'static str)>, MatchLimitExceeded> {
     let len = bytes.len();
     let mut items = Vec::new();
     let mut i = 0;
@@ -75,8 +86,14 @@ pub fn scan(bytes: &[u8]) -> Vec<(usize, usize, &'static str)> {
 
         if is_digit && boundary_before {
             try_match!(extended::try_ipv4(bytes, i));
-            try_match!(extended::try_ipv6(bytes, i));
             try_match!(extended::try_ssn(bytes, i));
+        }
+
+        // ipv6's TS char class starts with [0-9a-fA-F] — full-form addresses
+        // like fe80:0000:...:0001 begin with a hex letter, so gating on
+        // is_digit alone (as ipv4/ssn correctly can) misses them entirely.
+        if bytes[i].is_ascii_hexdigit() && boundary_before {
+            try_match!(extended::try_ipv6(bytes, i));
         }
 
         // phoneUs: no leading \b — try regardless of boundary_before, but
@@ -125,5 +142,8 @@ pub fn scan(bytes: &[u8]) -> Vec<(usize, usize, &'static str)> {
         i += 1;
     }
 
-    items
+    if items.len() > MAX_MATCH_COUNT {
+        return Err(MatchLimitExceeded);
+    }
+    Ok(items)
 }

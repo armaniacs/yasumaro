@@ -25,14 +25,20 @@
  * class traded away the migration's entire purpose. Any future WASM
  * pattern change must keep the parity suites green; that is the gate.
  *
- * Size-limit contract: sanitizeRegex rejects inputs over MAX_INPUT_SIZE
- * (or the 512KB hard cap when skipSizeLimit is set) and reports the breach
- * via its `error` field. The WASM core has no size concept by design (see
+ * Size-limit contract: this wrapper reproduces sanitizeRegex's three guard
+ * paths without running its scan — the input-size rejection (>MAX_INPUT_SIZE,
+ * or the 512KB hard cap when skipSizeLimit is set) via the same `error`
+ * message, and the output-size truncation (>MAX_OUTPUT_SIZE, reached through
+ * mask-placeholder expansion) via the same truncate-and-error result. The
+ * WASM core has no size concept by design (see
  * wasm/pii-sanitizer/src/lib.rs's module doc — the TS wrapper owns
- * size/timeout handling), so this wrapper reproduces the same error
- * semantics without re-running the TS scan. Masking still runs on
- * oversized inputs (same observable behavior as the two-pass revision,
- * where the WASM result reached callers with the error attached).
+ * size/timeout handling). Masking still runs on oversized inputs (same
+ * observable behavior as the two-pass revision, where the WASM result
+ * reached callers with the error attached).
+ *
+ * Item contract: `index` is emitted only when includeIndices is set (as in
+ * sanitizeRegex), and a WASM index is a byte offset into the UTF-8 input —
+ * sanitizeRegex's is a UTF-16 offset. No current caller reads `.index`.
  *
  * A `[MASKED:<type>]` placeholder produced by the WASM pass contains no
  * digits, `@`, or characters any of the 21 patterns require — safe if a
@@ -44,9 +50,11 @@ import {
     sanitizeRegex,
     MAX_INPUT_SIZE,
     MAX_SKIP_SIZE,
+    MAX_OUTPUT_SIZE,
     type SanitizeOptions,
     type SanitizeResult,
 } from '../../utils/piiSanitizer.js';
+import type { MaskedItem } from '../../messaging/types.js';
 import { sanitizePiiWithWasm, initPiiSanitizerWasm } from '../../wasm/pii-sanitizer/index.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { addLog } from '../../utils/logger/core.js';
@@ -108,6 +116,20 @@ function sizeLimitError(text: string, options: SanitizeOptions): string | undefi
 }
 
 /**
+ * Strips `index` unless includeIndices is set — sanitizeRegex only emits
+ * `index` when asked for it, so the WASM path must not emit it by default.
+ * When present, a WASM index is a byte offset into the UTF-8 input (see
+ * wasm/pii-sanitizer/src/lib.rs), not sanitizeRegex's UTF-16 offset.
+ */
+function shapeItems(items: Array<{ type: string; original: string; index: number }>, includeIndices: boolean): MaskedItem[] {
+    return items.map((item) =>
+        includeIndices
+            ? { type: item.type, original: item.original, index: item.index }
+            : { type: item.type, original: item.original },
+    );
+}
+
+/**
  * Sanitizes `text` with the WASM core for full 21-pattern coverage.
  * Same signature as sanitizeRegex() so it can be swapped in via
  * PrivacyPipeline's ISanitizers dependency injection without changing
@@ -120,11 +142,35 @@ export async function sanitizePiiHybrid(text: string, options: SanitizeOptions =
 
     try {
         const wasmResult = await sanitizePiiWithWasm(text);
-        const error = sizeLimitError(text, options);
+        const inputSizeError = sizeLimitError(text, options);
+        if (inputSizeError) {
+            // sanitizeRegex rejects oversized inputs before scanning; the
+            // hybrid deliberately still delivers the WASM-masked text (same
+            // observable behavior as the two-pass revision), with the
+            // input-size error attached and no output truncation — the TS
+            // truncation path only ever applies to inputs that passed the
+            // pre-scan size gate.
+            return {
+                text: wasmResult.text,
+                maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
+                error: inputSizeError,
+            };
+        }
+        // Output-size truncation (mask placeholders expand text, so masked
+        // output can exceed the cap even when the input was under it).
+        if (wasmResult.text.length > MAX_OUTPUT_SIZE) {
+            return {
+                text: wasmResult.text.substring(0, MAX_OUTPUT_SIZE),
+                maskedItems: shapeItems(
+                    wasmResult.maskedItems.filter((item) => item.index < MAX_OUTPUT_SIZE),
+                    options.includeIndices === true,
+                ),
+                error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`,
+            };
+        }
         return {
             text: wasmResult.text,
-            maskedItems: wasmResult.maskedItems,
-            ...(error ? { error } : {}),
+            maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
         };
     } catch (error: unknown) {
         // A WASM call failing at runtime (not just at init) is unexpected —

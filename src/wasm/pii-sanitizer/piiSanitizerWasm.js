@@ -4,6 +4,10 @@
  * Sanitizes `text`, returning a JS object `{ text, maskedItems }` matching
  * the shape of `SanitizeResult` in piiSanitizer.ts (minus `error`, which the
  * TS wrapper layers on for size/timeout handling before calling this).
+ *
+ * Exceeding the match-count cap rejects with the same message the TS scan
+ * throws, so the hybrid's fallback lands in `sanitizeRegex` and fails closed
+ * exactly like the pre-WASM pipeline did.
  * @param {string} text
  * @returns {any}
  */
