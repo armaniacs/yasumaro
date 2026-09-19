@@ -42,6 +42,10 @@ All notable changes to this project will be documented in this file.
 
 - **gitleaks による Secret scan を CI に追加**: `.gitleaks.toml` が存在しながら実行ワークフローが未配線だった既知の gap を解消。全履歴に対する scan を push/PR で常時実行する
 
+### Docs
+
+- **旧データベース互換コードの提供終了予告を公開**（`docs/blog-6_9/legacy-db-compat-sunset-notice.md`、予告 issue #154）: 移行コードの保持期間が 2026-12-17 に満了するにあたり、対象者の判定方法・締め切り後の挙動・報告受付口を利用者向けに整理。未移行ユーザーの報告は #154 で受け付け、削除の実施・延期判断に使用する
+
 ## [6.9.11] - 2026-09-19
 
 このリリースは v6.9.10 と同日にリリースする連続リリースです。Firefox ビルドのサイズ削減（zip 10.4MB → 2.76MB、-74%）とCI強化のラウンドです。全テスト（12,600 件）がグリーンです。
