@@ -9,7 +9,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import type { AIService } from '../../ai/AIService.js';
-import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
+import { sanitizePiiHybrid } from '../piiSanitizeHybrid.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
@@ -26,7 +26,7 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
 
   // Use injected deps.aiService, falling back to context.aiService for backward compatibility
   const aiService = (deps?.aiService ?? context.aiService) as AIService;
-  const pipeline = new PrivacyPipeline(settings, aiService, { sanitizeRegex });
+  const pipeline = new PrivacyPipeline(settings, aiService, { sanitizeRegex: sanitizePiiHybrid });
 
   const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean;
 

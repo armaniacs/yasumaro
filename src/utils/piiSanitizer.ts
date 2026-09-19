@@ -13,7 +13,9 @@ import { pickDefined } from './objectUtils.js';
 
 // 定数設定
 export const MAX_INPUT_SIZE = MAX_PII_INPUT_SIZE; // 64KB (65,536 characters)
-const MAX_SKIP_SIZE = 512 * 1024; // 512KB - maximum size even with skipSizeLimit
+// Exported so the WASM-first hybrid (piiSanitizeHybrid.ts) can reproduce
+// sanitizeRegex's skipSizeLimit error semantics without re-running the scan.
+export const MAX_SKIP_SIZE = 512 * 1024; // 512KB - maximum size even with skipSizeLimit
 export const MAX_OUTPUT_SIZE = MAX_PII_OUTPUT_SIZE; // 128KB (入力の2倍を許容)
 const DEFAULT_TIMEOUT = 5000; // 5秒
 const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）

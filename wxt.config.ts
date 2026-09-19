@@ -90,20 +90,34 @@ export default defineConfig({
       // rolldown option: single-file IIFE build with all dynamic imports inlined
       rollup.output.codeSplitting = false;
     },
-    // Firefox-only: copy the @subframe7536 async wasm to a stable public path.
-    // This is the exact binary the production OPFS/IDB engines fetch
-    // (dist asset wa-sqlite-async-ac_ajG-V.wasm). The unlisted opfs-worker
-    // entry builds in lib mode, which inlines its `new URL()` assets as
-    // data: URLs — unusable under the extension CSP (connect-src 'self'
-    // blocks data: fetches with NetworkError). The event page points the
-    // engine at this file via INIT (see setSqliteWasmUrlOverride).
-    // Glue and wasm must come from the same build family (a wa-sqlite-build
-    // binary aborts with "indirect call to null" under this glue).
     'build:publicAssets'(wxt, files) {
-      if (wxt.config.browser !== 'firefox') return;
+      // Firefox-only: copy the @subframe7536 async wasm to a stable public
+      // path. This is the exact binary the production OPFS/IDB engines
+      // fetch (dist asset wa-sqlite-async-ac_ajG-V.wasm). The unlisted
+      // opfs-worker entry builds in lib mode, which inlines its `new URL()`
+      // assets as data: URLs — unusable under the extension CSP
+      // (connect-src 'self' blocks data: fetches with NetworkError). The
+      // event page points the engine at this file via INIT (see
+      // setSqliteWasmUrlOverride). Glue and wasm must come from the same
+      // build family (a wa-sqlite-build binary aborts with "indirect call
+      // to null" under this glue).
+      if (wxt.config.browser === 'firefox') {
+        files.push({
+          absoluteSrc: resolve(wxt.config.root, 'node_modules/@subframe7536/sqlite-wasm/dist/wa-sqlite-async.wasm'),
+          relativeDest: 'wasm/wa-sqlite-async.wasm',
+        });
+      }
+      // Both browsers: copy the PII sanitizer wasm to a stable public path.
+      // The background entrypoint builds as a single-file IIFE bundle
+      // (codeSplitting: false below), which makes Vite inline `new
+      // URL(..., import.meta.url)` wasm references as `data:` URIs instead
+      // of emitting a separate fetchable asset — the extension CSP blocks
+      // `data:` fetches, so the WASM module failed to initialize in every
+      // build (not just Firefox) until this was fixed. See
+      // src/wasm/pii-sanitizer/index.ts's module doc for the full story.
       files.push({
-        absoluteSrc: resolve(wxt.config.root, 'node_modules/@subframe7536/sqlite-wasm/dist/wa-sqlite-async.wasm'),
-        relativeDest: 'wasm/wa-sqlite-async.wasm',
+        absoluteSrc: resolve(wxt.config.root, 'public/wasm/pii_sanitizer_bg.wasm'),
+        relativeDest: 'wasm/pii_sanitizer_bg.wasm',
       });
     },
   },
@@ -143,11 +157,14 @@ export default defineConfig({
     optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS],
     host_permissions: [...buildLocalHostPermissions(), ...AI_PROVIDER_HOST_PERMISSIONS],
     content_security_policy: {
-      // wasm-unsafe-eval is required by @subframe7536/sqlite-wasm (wa-sqlite)
-      // used in the offscreen document for OPFS/IDB storage. Verified via
-      // `grep -rn "sqlite-wasm\|WebAssembly" src/offscreen` — offscreen
-      // sqliteEngine.ts + opfsWorker.ts. If WASM is removed, this token can
-      // be dropped. Keep minimal otherwise.
+      // wasm-unsafe-eval is required by:
+      //   - @subframe7536/sqlite-wasm (wa-sqlite) in the offscreen document
+      //     (OPFS/IDB storage) — offscreen sqliteEngine.ts + opfsWorker.ts
+      //   - the PII sanitizer core (src/wasm/pii-sanitizer/) in the service
+      //     worker, via src/background/pipeline/piiSanitizeHybrid.ts
+      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer" src/`.
+      // If all WASM usage is removed, this token can be dropped. Keep
+      // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,
     },
     web_accessible_resources: [

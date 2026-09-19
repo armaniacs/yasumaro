@@ -12,7 +12,6 @@ import type { MockedClass, MockedFunction } from 'vitest';
 
 // PrivacyPipeline をモック化
 vi.mock('../../../privacyPipeline.js');
-vi.mock('../../../../utils/piiSanitizer.js');
 vi.mock('../../../../utils/storage/types.js');
 vi.mock('../../../../utils/storage/defaults.js');
 vi.mock('../../../../utils/storage/encryptionSession.js');
@@ -98,6 +97,19 @@ describe('processPrivacyPipelineStep', () => {
         undefined,
         expect.any(Object)
       );
+    });
+
+    it('wires sanitizePiiHybrid (WASM+TS) as the sanitizeRegex dependency, not the TS-only path', async () => {
+      // Regression guard for the Phase 2 integration: PrivacyPipeline must
+      // receive the hybrid sanitizer (see piiSanitizeHybrid.ts), not the
+      // bare TS regex function, or PII masking silently loses WASM's
+      // 5-pattern speedup without any test noticing.
+      mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
+      const context = makeContext();
+      await processPrivacyPipelineStep(context);
+
+      const [, , sanitizers] = MockedPrivacyPipeline.mock.calls[0]!;
+      expect(sanitizers.sanitizeRegex.name).toBe('sanitizePiiHybrid');
     });
   });
 
