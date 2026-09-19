@@ -7,6 +7,7 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNEC
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
+import { logDebug } from '../../../utils/logger/api.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
@@ -24,6 +25,11 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
     protected model: string;
     protected timeoutMs: number;
     protected isLocal: boolean;
+    /**
+     * Where the API key was resolved from (storage key name or fallback
+     * description). Recorded for diagnostics only — never the key itself.
+     */
+    readonly apiKeySource: string;
     /**
      * 要約切り詰め上限を参照するストレージキー。providerCatalog の
      * contentCharsKey が SSOT であり、createProviderStrategy がエントリ値を
@@ -48,8 +54,10 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             }
             if (entry.apiKeyKey) {
                 this.apiKey = s[entry.apiKeyKey] as string | undefined;
+                this.apiKeySource = entry.apiKeyKey;
             } else {
                 this.apiKey = undefined;
+                this.apiKeySource = 'none (registry entry has no apiKeyKey)';
             }
             if (entry.modelKey) {
                 this.model = str(entry.modelKey, entry.defaultModel ?? '');
@@ -67,12 +75,17 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             const normalizedName = providerName.replace('2', '_2').replace(/-/g, '_').toLowerCase();
             this.baseUrl = str(`${normalizedName}_base_url`, 'https://api.openai.com/v1');
             this.apiKey = s[`${normalizedName}_api_key`] as string | undefined;
+            this.apiKeySource = `${normalizedName}_api_key (legacy fallback)`;
             const modelKey = providerName === 'openai-compatible' ? StorageKeys.PROVIDER_MODEL : `${normalizedName}_model`;
             this.model = str(modelKey, 'gpt-3.5-turbo');
             this.isLocal = this.baseUrl ? GenericOpenAICompatibleProvider.isLocalUrl(this.baseUrl) : false;
         }
 
         this.contentCharsKey = contentCharsKey ?? entry?.contentCharsKey ?? StorageKeys.OPENAI_CONTENT_CHARS;
+
+        // Diagnostics: record where the API key came from. Key material never
+        // enters this log (only the storage-key name / fallback description).
+        void logDebug(`API key resolved from: ${this.apiKeySource}`, { provider: providerName });
 
         // BaseUrl SSRF対策 — validateUrlForAIRequests + registry allowlist (PBI04)
         if (this.baseUrl) {
@@ -237,6 +250,8 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
 
 /**
  * @deprecated Use GenericOpenAICompatibleProvider directly. Kept for backward compatibility.
+ * Sunset: remove in next major (re-evaluate 2026-12-31).
+ * New code must not reference this class (enforced by check-deprecated-aliases).
  */
 export class OpenAIProvider extends GenericOpenAICompatibleProvider {
     constructor(settings: Settings, providerName: string = 'openai', contentCharsKey?: StorageKey) {

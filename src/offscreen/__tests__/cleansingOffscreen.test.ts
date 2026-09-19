@@ -65,6 +65,24 @@ describe('handleCleansingOffscreenPayload — validation', () => {
         }
     });
 
+    it('rejects oversized html payload', async () => {
+        const { MAX_CLEANSING_HTML_BYTES, TOO_LARGE_ERROR_PREFIX } = await import('../cleansingOffscreen.js');
+        const big = 'x'.repeat(MAX_CLEANSING_HTML_BYTES + 1);
+        const res = handleCleansingOffscreenPayload({ html: big });
+        expect(res.success).toBe(false);
+        if (!res.success) {
+            expect(res.error).toMatch(/exceeds limit/);
+            expect(res.error.startsWith(TOO_LARGE_ERROR_PREFIX)).toBe(true);
+        }
+    });
+
+    it('accepts html at exactly the size limit', async () => {
+        const { MAX_CLEANSING_HTML_BYTES } = await import('../cleansingOffscreen.js');
+        const atLimit = 'x'.repeat(MAX_CLEANSING_HTML_BYTES);
+        const res = handleCleansingOffscreenPayload({ html: atLimit });
+        expect(res.success).toBe(true);
+    });
+
     it('propagates options to cleansing (deep flag)', () => {
         const html = '<div><p>text</p><div class="deep-noise">deep</div></div>';
         const without = handleCleansingOffscreenPayload({ html, options: { deepEnabled: false } });

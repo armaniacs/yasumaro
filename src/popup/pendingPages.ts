@@ -4,7 +4,7 @@ import { logError } from '../utils/logger/api.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showSuccess } from './errorUtils.js';
-import { escapeHtml } from './domUtils.js';
+import { escapeHtml, clearElement } from './domUtils.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
 import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 
@@ -26,7 +26,7 @@ export async function loadPendingPages(): Promise<void> {
     pendingEmpty?.classList.add('hidden');
 
     if (pendingList) {
-      pendingList.innerHTML = '';
+      clearElement(pendingList);
       pages.forEach((page, index) => {
         const item = document.createElement('div');
         item.className = 'pending-item';

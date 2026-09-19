@@ -28,6 +28,7 @@ vi.mock('../../../../utils/logger/core.js', () => ({
   LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
 }));
 vi.mock('../../../../utils/logger/api.js', () => ({
+  logDebug: vi.fn(),
   addLog: vi.fn(),
   LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
 }));

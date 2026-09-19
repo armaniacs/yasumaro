@@ -69,6 +69,8 @@ export class PersistentRetryQueue<T> {
   ) {}
 
   private withQueueLock<R>(fn: () => Promise<R>): Promise<R> {
+    // Intentional promise chain: the chain itself is the queue mutex.
+    // Do not rewrite to await; awaiting would release the lock between calls.
     const run = this.queueLock.then(fn, fn);
     this.queueLock = run.then(
       () => undefined,

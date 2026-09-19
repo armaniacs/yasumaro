@@ -79,6 +79,12 @@ export class RecordingOrchestrator {
     this.executor = new StepExecutor(deps.offlineNetworkQueue ?? null);
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
 
+    // Recording-allowance precedence (PBI 2026-09-19-08): earlier steps win.
+    // truncate -> domainFilter -> permission -> trust -> privacyHeaders
+    // (headerDetector-backed) -> duplicate. Any FATAL rejection stops the
+    // pipeline, so the first rejecting gate decides. Reordering changes which
+    // refusal the user sees — keep this order unless the precedence is
+    // deliberately renegotiated.
     this.steps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
       { name: 'domainFilter', errorStrategy: ErrorStrategy.FATAL, execute: checkDomainFilterStep },
