@@ -24,17 +24,26 @@ class CspError extends Error {
 
 /**
  * デフォルトAIプロバイダードメイン（常に許可）
+ *
+ * wxt.config.ts の manifest `host_permissions`（AI_PROVIDER_HOST_PERMISSIONS）
+ * と同一集合を維持する。ここに無いドメインは manifest 側で許可されていても
+ * このバリデーターがブロックする（fail-closed）ため、manifest 側を更新したら
+ * 必ずここも更新する。
  */
 const DEFAULT_ALLOWED_DOMAINS = [
   'generativelanguage.googleapis.com', // Google Gemini
   'api.openai.com', // OpenAI Official
   'api.anthropic.com', // Anthropic Claude
   'api.groq.com', // Groq
-  'mistral.ai', // Mistral
-  'deepseek.com', // DeepSeek
-  'perplexity.ai', // Perplexity
-  'jina.ai', // Jina
-  'voyageai.com' // Voyage
+  'mistral.ai', // Mistral (apex)
+  'api.mistral.ai', // Mistral (API endpoint)
+  'deepseek.com', // DeepSeek (apex)
+  'api.deepseek.com', // DeepSeek (API endpoint)
+  'voyageai.com', // Voyage
+  'volcengine.com', // Volcengine
+  'z.ai', // Z.AI
+  'wandb.ai', // Weights & Biases
+  'api.ai.sakura.ad.jp' // Sakura Internet AI API
 ];
 
 /**
@@ -43,6 +52,8 @@ const DEFAULT_ALLOWED_DOMAINS = [
 const PROVIDER_TO_DOMAIN: Record<string, string> = {
   'huggingface': 'api-inference.huggingface.co',
   'openrouter': 'api.openrouter.ai',
+  'perplexity': 'perplexity.ai',
+  'jina': 'jina.ai',
   'deepinfra': 'deepinfra.com',
   'cerebras': 'cerebras.ai',
   'venice': 'api.venice.ai',
