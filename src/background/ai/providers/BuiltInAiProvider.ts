@@ -9,6 +9,7 @@
 import { Settings } from '../../../utils/storage/types.js';
 import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
 import { BuiltInAIClient } from '../../builtInAIClient.js';
+import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -25,7 +26,7 @@ export class BuiltInAiProvider extends AIProviderStrategy {
     /**
      * コンテンツの要約を生成する
      */
-    async generateSummary(content: string, _tagSummaryMode?: boolean, _traceId?: string): Promise<AISummaryResult> {
+    async generateSummary(content: string, tagSummaryMode?: boolean, _traceId?: string): Promise<AISummaryResult> {
         try {
             // Prompt-injection guard. The model runs on-device so nothing leaves
             // the machine, but an injected instruction can still poison the
@@ -38,13 +39,31 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                 };
             }
 
+            // Custom prompts (including 'all'-scope ones) apply here exactly as
+            // they do for HTTP providers; without one the legacy raw-content
+            // prompt is preserved.
+            const { userPrompt, systemPrompt, isCustom } = applyCustomPrompt(
+                this.settings,
+                'built-in-ai',
+                sanitized,
+                tagSummaryMode ?? false
+            );
+            const customPromptOptions = isCustom
+                ? {
+                    promptOverride: userPrompt,
+                    ...(systemPrompt !== undefined ? { systemPromptOverride: systemPrompt } : {}),
+                }
+                : undefined;
+
             // checkPreFlight() is intentionally skipped: it enforces monthly
             // spend limits, usage warnings and rate limits, all of which exist
             // to protect against paid-API cost. On-device inference has no such
             // cost and no server-side rate limit.
             // getMaxTokens() is likewise skipped: BuiltInAIClient.summarize()
             // takes no token budget parameter.
-            const result = await this.builtInAiClient.summarize(sanitized);
+            const result = isCustom
+                ? await this.builtInAiClient.summarize(sanitized, customPromptOptions)
+                : await this.builtInAiClient.summarize(sanitized);
             if (!result.success) {
                 return {
                     success: false,

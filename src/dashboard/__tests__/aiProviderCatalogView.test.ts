@@ -36,9 +36,9 @@ describe('renderProviderOptions', () => {
     expect(sel.options.length).toBe(8);
   });
 
-  it('customPrompt keeps only gemini/openai/openai2/lm-studio/ollama and prepends "all"', () => {
+  it('customPrompt keeps only gemini/openai/openai2/lm-studio/ollama/built-in-ai and prepends "all"', () => {
     renderProviderOptions(sel, { customPrompt: true });
-    expect([...sel.options].map((o) => o.value)).toEqual(['all', 'gemini', 'openai', 'openai2', 'lm-studio', 'ollama']);
+    expect([...sel.options].map((o) => o.value)).toEqual(['all', 'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'built-in-ai']);
   });
 
   it('preserves the current value when the option still exists', () => {

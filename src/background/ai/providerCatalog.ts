@@ -180,7 +180,7 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       modelKey: '',
       requiresApiKey: false,
       labelI18nKey: 'builtInAi',
-      supportsCustomPrompt: false,
+      supportsCustomPrompt: true,
       settingsBlockKind: 'built-in-ai',
     },
   ],

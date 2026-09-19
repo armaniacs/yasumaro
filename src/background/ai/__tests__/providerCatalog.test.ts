@@ -120,9 +120,9 @@ describe('ProviderCatalog conformance', () => {
     }
   });
 
-  it('supportsCustomPrompt is true exactly for gemini/openai/openai2/lm-studio/ollama', () => {
+  it('supportsCustomPrompt is true exactly for gemini/openai/openai2/lm-studio/ollama/built-in-ai', () => {
     const yes = [...PROVIDER_CATALOG].filter(([, e]) => e.supportsCustomPrompt).map(([id]) => id).sort();
-    expect(yes).toEqual(['gemini', 'lm-studio', 'ollama', 'openai', 'openai2'].sort());
+    expect(yes).toEqual(['gemini', 'lm-studio', 'ollama', 'openai', 'openai2', 'built-in-ai'].sort());
   });
 
   it('dropdown order is gemini, openai, openai2, lm-studio, ollama, openai-compatible, built-in-ai', () => {
