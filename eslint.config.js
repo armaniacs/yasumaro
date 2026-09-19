@@ -180,9 +180,10 @@ export default [
       local: localPlugin,
     },
     rules: {
-      // testPiiDetection (piiSanitizer-optimization.test.ts) wraps the real
-      // expect() calls, so it must count as an assertion for this rule.
-      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect', 'testPiiDetection'] }],
+      // testPiiDetection (piiSanitizer-optimization.test.ts) and expectParity
+      // (extended-patterns-parity.test.ts) wrap the real expect() calls, so
+      // they must count as assertions for this rule.
+      'vitest/expect-expect': ['error', { assertFunctionNames: ['expect', 'testPiiDetection', 'expectParity'] }],
       'vitest/valid-expect': 'error',
       'no-self-compare': 'error',
       'local/no-tautology-expect': 'error',
