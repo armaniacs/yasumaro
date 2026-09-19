@@ -29,7 +29,7 @@ describe('CSPValidator - P1 - Module Loading', () => {
     const providers = CSPValidator.getAvailableProviders();
 
     expect(Array.isArray(providers)).toBe(true);
-    expect(providers.length).toBe(28); // 中小AIプロバイダー28
+    expect(providers.length).toBe(30); // 中小AIプロバイダー30（Perplexity/Jina含む）
     expect(providers).toContain('huggingface');
     expect(providers).toContain('openrouter');
     expect(providers).toContain('deepinfra');
@@ -45,16 +45,20 @@ describe('CSPValidator - P1 - Default Domains', () => {
   it('should allow default AI provider domains', async () => {
     const { CSPValidator } = await import('../cspValidator.js');
 
-    // デフォルト10ドメイン
+    // manifest の常時許可（AI_PROVIDER_HOST_PERMISSIONS）と同一集合
     expect(CSPValidator.isUrlAllowed('https://generativelanguage.googleapis.com/v1/models')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://api.openai.com/v1/chat/completions')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://api.anthropic.com/v1/messages')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://api.groq.com/openai/v1/chat/completions')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://mistral.ai/v1/chat/completions')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://api.mistral.ai/v1/chat/completions')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://deepseek.com/v1/chat/completions')).toBe(true);
-    expect(CSPValidator.isUrlAllowed('https://perplexity.ai/v1/chat/completions')).toBe(true);
-    expect(CSPValidator.isUrlAllowed('https://jina.ai/v1/embeddings')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://api.deepseek.com/v1/chat/completions')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://voyageai.com/v1/embeddings')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://volcengine.com/v1/chat/completions')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://z.ai/v1/chat/completions')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://wandb.ai/v1/chat/completions')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/chat/completions')).toBe(true);
     expect(CSPValidator.isUrlAllowed('https://api.openai.com/v1/models')).toBe(true);
   });
 
@@ -69,10 +73,13 @@ describe('CSPValidator - P1 - Default Domains', () => {
   it('should block non-default AI provider domains without settings', async () => {
     const { CSPValidator } = await import('../cspValidator.js');
 
-    // 中小AIプロバイダー29ドメイン（初期状態ではブロック）
+    // 中小AIプロバイダー（初期状態ではブロック）。Perplexity/Jina は manifest
+    // では optional_host_permissions のため既定許可に含まれない
     expect(CSPValidator.isUrlAllowed('https://api-inference.huggingface.co/models')).toBe(false);
     expect(CSPValidator.isUrlAllowed('https://openrouter.ai/v1/chat/completions')).toBe(false);
     expect(CSPValidator.isUrlAllowed('https://api.openrouter.ai/v1/models')).toBe(false);
+    expect(CSPValidator.isUrlAllowed('https://perplexity.ai/v1/chat/completions')).toBe(false);
+    expect(CSPValidator.isUrlAllowed('https://jina.ai/v1/embeddings')).toBe(false);
     expect(CSPValidator.isUrlAllowed('https://deepinfra.com/v1/models')).toBe(false);
     expect(CSPValidator.isUrlAllowed('https://cerebras.ai/v1/models')).toBe(false);
   });
@@ -109,6 +116,23 @@ describe('CSPValidator - P1 - User Selected Providers', () => {
 
     // 未選択はブロック
     expect(CSPValidator.isUrlAllowed('https://cerebras.ai/v1/models')).toBe(false);
+  });
+
+  it('should allow opt-in providers (perplexity/jina) when selected in CSP settings', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    // manifest では optional_host_permissions。CSP パネルでの選択（
+    // conditional_csp_providers）を経て初めてバリデーターも許可する
+    const settings = {
+      conditional_csp_providers: ['perplexity', 'jina']
+    };
+    CSPValidator.initializeFromSettings(settings);
+
+    expect(CSPValidator.isUrlAllowed('https://perplexity.ai/v1/chat/completions')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://jina.ai/v1/embeddings')).toBe(true);
+
+    // 未選択はブロック
+    expect(CSPValidator.isUrlAllowed('https://api.openrouter.ai/v1/models')).toBe(false);
   });
 
   it('should handle empty provider list', async () => {
