@@ -19,7 +19,7 @@ AI テストでこのメッセージが表示される場合、モデルがま�
 | 項目 | 要件 |
 |------|------|
 | OS | Windows 10/11、macOS 13+ (Ventura 以降)、Linux、ChromeOS (Chromebook Plus) |
-| ストレージ | 空き容量 22GB 以上 |
+| ストレージ | 空き容量 約22GB（22GiB）以上 |
 | メモリ | RAM 16GB 以上、または VRAM 4GB 以上の GPU |
 | ネットワーク | 初回ダウンロード時のみ必要（以降はオフラインで動作） |
 
@@ -29,22 +29,22 @@ AI テストでこのメッセージが表示される場合、モデルがま�
 
 #### 2.1 フラグを有効化（必要な場合）
 
-通常、Chrome 131 以降では Built-in AI はデフォルトで有効ですが、以下の手順で確認・有効化できます:
+利用可否はダッシュボードの診断パネル（`Dashboard → Diagnostics` の内蔵 AI セクション）で確認します。フラグが無効な場合は、アプリ内の案内に従って以下のフラグを有効化します:
+
+1. アドレスバーに `chrome://flags/#prompt-api-for-gemini-nano` を入力
+2. **Enabled** または **Enabled multilingual** を選択
+3. **Relaunch** をクリックして Chrome を再起動
+
+上記で解決しない場合のみ、以下も確認します:
 
 1. アドレスバーに `chrome://flags/#optimization-guide-on-device-model` を入力
 2. **Enabled** を選択
 3. **Relaunch** をクリックして Chrome を再起動
 
-Gemini Nano モデルを使用する場合:
-
-1. アドレスバーに `chrome://flags/#prompt-api-for-gemini-nano` を入力
-2. **Enabled** または **Enabled multilingual** を選択
-3. **Relaunch** をクリック
-
 #### 2.2 モデルのダウンロード
 
-1. Yasumaro の初期設定画面で「AI テスト」ボタンをクリック
-2. 「Built-in AI is currently downloadable」と表示された場合、モデルのダウンロードが開始されます
+1. Yasumaro の初期設定画面で「AI テスト」ボタンをクリックして状態を確認します（「AI テスト」は状態を報告するだけで、ダウンロードは開始しません）
+2. 「Built-in AI is currently downloadable」と表示された場合、ダッシュボードの診断パネル（`Dashboard → Diagnostics` の内蔵 AI セクション）を開き、進捗表示つきのダウンロードボタンからダウンロードを開始します
 3. ダウンロードには数分〜数十分かかります（回線速度による）
 4. ダウンロード完了後、再度「AI テスト」を実行すると「✓ Built-in AI: ok」と表示されます
 
@@ -55,7 +55,7 @@ Gemini Nano モデルを使用する場合:
 1. Chrome を再起動
 2. アドレスバーに `chrome://on-device-internals` を入力
 3. **Model Status** タブでエラーがないか確認
-4. DevTools コンソールで `await LanguageModel.availability()` を実行し、`available` が返るか確認
+4. DevTools コンソールで `await LanguageModel.availability({ expectedOutputs: [{ type: 'text', languages: ['ja'] }] })` を実行し、`available` が返るか確認
 
 ### 3. Edge の場合
 
@@ -75,8 +75,8 @@ Phi-mini モデルを使用する場合:
 
 #### 3.2 モデルのダウンロード
 
-1. Yasumaro の初期設定画面で「AI テスト」ボタンをクリック
-2. 「Built-in AI is currently downloadable」と表示された場合、モデルのダウンロードが開始されます
+1. Yasumaro の初期設定画面で「AI テスト」ボタンをクリックして状態を確認します（「AI テスト」は状態を報告するだけで、ダウンロードは開始しません）
+2. 「Built-in AI is currently downloadable」と表示された場合、ダッシュボードの診断パネル（`Dashboard → Diagnostics` の内蔵 AI セクション）を開き、進捗表示つきのダウンロードボタンからダウンロードを開始します
 3. ダウンロードには数分〜数十分かかります
 4. ダウンロード完了後、再度「AI テスト」を実行
 
@@ -85,7 +85,7 @@ Phi-mini モデルを使用する場合:
 1. Edge を再起動
 2. アドレスバーに `edge://on-device-internals` を入力
 3. **Model Status** タブでエラーがないか確認
-4. DevTools コンソールで `await LanguageModel.availability()` を実行
+4. DevTools コンソールで `await LanguageModel.availability({ expectedOutputs: [{ type: 'text', languages: ['ja'] }] })` を実行
 
 ### 4. よくある質問
 
@@ -126,7 +126,7 @@ If this message appears in the AI test, the model hasn't been downloaded yet. Fo
 | Item | Requirement |
 |------|-------------|
 | OS | Windows 10/11, macOS 13+ (Ventura or later), Linux, ChromeOS (Chromebook Plus) |
-| Storage | At least 22GB free space |
+| Storage | At least about 22GB (22GiB) free space |
 | Memory | 16GB+ RAM, or GPU with 4GB+ VRAM |
 | Network | Required only for initial download (works offline afterward) |
 
@@ -136,22 +136,22 @@ If this message appears in the AI test, the model hasn't been downloaded yet. Fo
 
 #### 2.1 Enable Flags (if needed)
 
-Built-in AI is enabled by default in Chrome 131+, but you can verify/enable it:
+Check availability in the dashboard diagnostics panel (the Built-in AI section under `Dashboard → Diagnostics`). If a flag is disabled, follow the in-app guidance to enable it:
+
+1. Enter `chrome://flags/#prompt-api-for-gemini-nano` in the address bar
+2. Select **Enabled** or **Enabled multilingual**
+3. Click **Relaunch** to restart Chrome
+
+Only if that does not resolve the issue, also check:
 
 1. Enter `chrome://flags/#optimization-guide-on-device-model` in the address bar
 2. Select **Enabled**
 3. Click **Relaunch** to restart Chrome
 
-For Gemini Nano model:
-
-1. Enter `chrome://flags/#prompt-api-for-gemini-nano` in the address bar
-2. Select **Enabled** or **Enabled multilingual**
-3. Click **Relaunch**
-
 #### 2.2 Download the Model
 
-1. Click the "AI Test" button on Yasumaro's initial settings page
-2. If "Built-in AI is currently downloadable" appears, the model download will start
+1. Click the "AI Test" button on Yasumaro's initial settings page to check the status ("AI Test" only reports the status; it never starts a download)
+2. If "Built-in AI is currently downloadable" appears, open the dashboard diagnostics panel (the Built-in AI section under `Dashboard → Diagnostics`) and start the download there with its progress indicator
 3. Download takes several minutes to tens of minutes (depending on connection speed)
 4. After download completes, run "AI Test" again — you should see "✓ Built-in AI: ok"
 
@@ -162,7 +162,7 @@ If the model doesn't work properly:
 1. Restart Chrome
 2. Enter `chrome://on-device-internals` in the address bar
 3. Check the **Model Status** tab for errors
-4. Run `await LanguageModel.availability()` in DevTools console — it should return `available`
+4. Run `await LanguageModel.availability({ expectedOutputs: [{ type: 'text', languages: ['ja'] }] })` in DevTools console — it should return `available`
 
 ### 3. For Edge
 
@@ -182,8 +182,8 @@ For Phi-mini model:
 
 #### 3.2 Download the Model
 
-1. Click the "AI Test" button on Yasumaro's initial settings page
-2. If "Built-in AI is currently downloadable" appears, the model download will start
+1. Click the "AI Test" button on Yasumaro's initial settings page to check the status ("AI Test" only reports the status; it never starts a download)
+2. If "Built-in AI is currently downloadable" appears, open the dashboard diagnostics panel (the Built-in AI section under `Dashboard → Diagnostics`) and start the download there with its progress indicator
 3. Download takes several minutes to tens of minutes
 4. After download completes, run "AI Test" again
 
@@ -192,7 +192,7 @@ For Phi-mini model:
 1. Restart Edge
 2. Enter `edge://on-device-internals` in the address bar
 3. Check the **Model Status** tab for errors
-4. Run `await LanguageModel.availability()` in DevTools console
+4. Run `await LanguageModel.availability({ expectedOutputs: [{ type: 'text', languages: ['ja'] }] })` in DevTools console
 
 ### 4. FAQ
 

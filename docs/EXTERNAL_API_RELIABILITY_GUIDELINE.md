@@ -17,11 +17,13 @@
 
 ### 推奨値
 
-| API種別 | 接続タイムアウト | 読み取りタイムアウト | 補足 |
-|---------|-----------------|---------------------|------|
-| 軽量API（認証、ステータス確認） | 10秒 | 30秒 | OAuthトークン取得、CWS status check |
-| 中量API（データ取得、要約） | 10秒 | 60秒 | OpenAI/Gemini API呼び出し |
-| 重量API（ファイルアップロード） | 10秒 | 300秒（5分） | CWS zip upload |
+実装はリクエスト単位の単一タイムアウト（`timeoutMs`）を使用する。接続タイムアウトと読み取りタイムアウトの分離は行わない。デフォルトは 30,000ms（`fetchWithTimeout` のデフォルト値）。
+
+| API種別 | 単一タイムアウト（`timeoutMs`） | 補足 |
+|---------|-------------------------------|------|
+| 軽量API（認証、ステータス確認） | 30秒 | OAuthトークン取得、CWS status check |
+| 中量API（データ取得、要約） | 30秒（ローカルLLM向けは 120秒） | OpenAI/Gemini API呼び出し。AI要約フローでは `AI_TIMEOUT_MS` 設定（0 = 自動）がローカルプロバイダー 120,000ms・その他 30,000ms に解決される |
+| 重量API（ファイルアップロード） | 最大300秒（5分）まで設定可能 | CWS zip upload。`fetchWithTimeout` の許容範囲は 100ms〜300,000ms |
 
 ### 実装例
 
@@ -56,7 +58,7 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
 }
 ```
 
-参照実装: `src/utils/fetch.ts` の `fetchWithRetry()` 関数（指数バックオフ + ジッター、最大遅延10秒、リトライ条件のカスタマイズ可能）。
+参照実装: `src/utils/fetch.ts` の `fetchWithRetry()` 関数（純粋な指数バックオフ、ジッターなし、リトライ条件のカスタマイズ可能）。遅延計算は `src/utils/backoff.ts` の `backoffDelayMs()`（`min(base * multiplier^attempt, max)`）に一元化されている。`maxDelayMs` のデフォルトは 10,000ms だが、呼び出し元で上書きされる: AI要約フローは 60,000ms（`ProviderStrategy.ts`）、接続テストフローは 3,000ms。
 
 ### リトライ可能なエラー
 
@@ -78,15 +80,18 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<Response> {
 ### デフォルトリトライ条件（プロジェクト標準）
 
 ```typescript
-function defaultShouldRetry(error: Error, attempt: number, response: Response | null): boolean {
+function defaultShouldRetry(error: Error, attempt: number, response: Response | null, method: string = 'GET'): boolean {
   // 429 Too Many Requests: リトライしない（レート制限を尊重）
   if (response && response.status === 429) return false;
 
-  // 5xxサーバーエラー: 通常リトライ
-  if (response && response.status >= 500) return true;
+  // 5xxサーバーエラー: 冪等なメソッドのみリトライ（二重生成・二重課金を防ぐため POST/PUT/PATCH/DELETE は除外）
+  if (response && response.status >= 500) {
+    const nonIdempotentMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+    return !nonIdempotentMethods.has(method.toUpperCase());
+  }
 
   // タイムアウト: 最大1回のみリトライ（合計2試行）
-  if (error.message.includes('timed out')) return attempt <= 1;
+  if (error.name === 'AbortError' || error.message.includes('timed out')) return attempt <= 1;
 
   // その他のネットワークエラー
   if (error.message.includes('NetworkError') || error.message.includes('fetch failed')) return true;
@@ -143,7 +148,8 @@ function isRetryableError(error: any): boolean {
   if (error.code === 'ETIMEDOUT') return true;
   if (error.code === 'ECONNRESET') return true;
   if (error.status >= 500) return true;
-  if (error.status === 429) return true;
+  // 429 はリトライしない（レート制限を尊重。§2 のデフォルトリトライ条件と同様）
+  if (error.status === 429) return false;
   return false;
 }
 ```
@@ -255,8 +261,8 @@ const response = await fetch(url, {
 
 外部API連携におけるセキュリティ設計は以下のドキュメントも参照すること:
 
-- **SSRF対策**: `src/utils/fetch.ts` の `validateUrlForAIRequests()` 関数（プライベートIPブロック、ポート制限）
-- **APIキー管理**: PBKDF2 + AES-GCM暗号化 (`src/utils/crypto.ts`)
+- **SSRF対策**: `src/utils/ssrfGuard.ts` で定義され `src/utils/fetch.ts` から再エクスポートされる `validateUrlForAIRequests()` 関数（プライベートIPブロック、ポート制限）
+- **APIキー管理**: PBKDF2 + AES-GCM暗号化 (`src/utils/crypto/`)
 - **CSP検証**: `src/utils/cspValidator.ts` によるAIプロバイダーURLの許可リスト検証
 - **PIIマスキング**: `src/utils/piiSanitizer.ts` による個人情報保護
 
@@ -269,7 +275,7 @@ const response = await fetch(url, {
 | タイムアウト | `src/utils/fetch.ts#fetchWithTimeout` | 実装済み（パラメータ検証付き） |
 | リトライ戦略 | `src/utils/fetch.ts#fetchWithRetry` | 実装済み（指数バックオフ + カスタム条件） |
 | ポーリング設計 | 未実装 | Task TODO: `pbi/2026-07-25-03-fix-cws-publish-reliability.md` でbash実装 |
-| エラーハンドリング | `src/utils/logger.ts` | 実装済み（構造化ログ） |
+| エラーハンドリング | `src/utils/logger/` | 実装済み（構造化ログ） |
 | サーキットブレーカー | 未実装 | 将来の課題 |
 | 冪等性 | 未対応 | 将来の課題（POSTリトライ時） |
 
