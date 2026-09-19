@@ -12,7 +12,7 @@ Yasumaro は、Obsidianの代わりに、または併用して、閲覧履歴を
 
 ### 仕組み
 
-- 履歴は1つの Secret Gist 内の `yasumaro-history.md` というMarkdownファイルに同期されます
+- 履歴は1つの Secret Gist 内の `yasumaro-history.md` というMarkdownファイルに同期されます。このファイルは履歴の蓄積ログではなく、最新の同期エントリ1件分を保持します（同期のたびにそのエントリで上書きされます）
 - 初回同期時に Gist が自動作成され、以後は同じ Gist を更新（上書き）する形で同期されます
 - 直近の未同期エントリを対象にバッチ処理で同期が行われます
 
@@ -32,7 +32,7 @@ GitHub Gist連携とObsidian連携は、それぞれ独立した同期先とし�
 
 ### トラブルシューティング
 
-**Q. 接続テストで「Invalid GitHub PAT」と表示される**
+**Q. 接続テストで「Invalid GitHub PAT (unauthorized)」と表示される**
 
 PATの有効期限が切れているか、`gist` スコープが付与されていない可能性があります。GitHub側でPATを再発行し、`gist` スコープを付与してください。
 
@@ -50,7 +50,7 @@ Yasumaro can sync your browsing history to a **GitHub Gist** (a private Secret G
 
 ### How It Works
 
-- History is synced to a single Markdown file, `yasumaro-history.md`, inside one Secret Gist
+- History is synced to a single Markdown file, `yasumaro-history.md`, inside one Secret Gist. The file holds the latest synced entry (overwritten per sync), not an accumulating log
 - On the first sync, the Gist is created automatically; subsequent syncs update (overwrite) the same Gist
 - Sync runs in batches, targeting recently unsynced entries
 
@@ -70,7 +70,7 @@ GitHub Gist sync and Obsidian sync run in parallel as independent sync targets. 
 
 ### Troubleshooting
 
-**Q. Test Connection shows "Invalid GitHub PAT"**
+**Q. Test Connection shows "Invalid GitHub PAT (unauthorized)"**
 
 Your PAT may have expired or may not have the `gist` scope. Regenerate a PAT on GitHub with the `gist` scope granted.
 
