@@ -121,7 +121,7 @@ test.describe('Privacy Consent Modal - Controls @ui', () => {
   });
 });
 
-test.describe('Privacy Consent Modal - Interaction @interaction', () => {
+test.describe('Privacy Consent Modal - Interaction @interaction @extension', () => {
   testInteraction.fixme('checking checkbox should enable accept button', async ({ popupPage: page }) => {
     const checkbox = page.locator('#consentCheckbox');
     const acceptBtn = page.locator('#acceptConsentBtn');
