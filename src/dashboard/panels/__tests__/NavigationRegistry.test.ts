@@ -270,5 +270,60 @@ describe('NavigationRegistry', () => {
       document.body.removeChild(containerA);
       document.body.removeChild(containerB);
     });
+
+    it('does not resume load() for a panel superseded during its activate await', async () => {
+      const containerA = document.createElement('div');
+      containerA.id = 'panel-a';
+      document.body.appendChild(containerA);
+      const containerB = document.createElement('div');
+      containerB.id = 'panel-b';
+      document.body.appendChild(containerB);
+
+      let resolveActivateA!: () => void;
+      const activateAPromise = new Promise<void>((resolve) => {
+        resolveActivateA = resolve;
+      });
+
+      const panelA = mockPanel({
+        id: 'panel-a',
+        category: 'async-data',
+        mount: vi.fn().mockResolvedValue(undefined),
+        activate: vi.fn().mockReturnValue(activateAPromise),
+      });
+      const panelB = mockPanel({
+        id: 'panel-b',
+        category: 'async-data',
+        mount: vi.fn().mockResolvedValue(undefined),
+        activate: vi.fn().mockResolvedValue(undefined),
+      });
+      registry.register(panelA);
+      registry.register(panelB);
+
+      const promiseA = registry.navigate('panel-a');
+      // A is suspended awaiting activate(); load() must not have run yet.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(panelA.load).not.toHaveBeenCalled();
+
+      const promiseB = registry.navigate('panel-b');
+      // B's navigate runs to completion (mount/activate/load all resolve
+      // promptly), superseding A while A is still stuck at its activate await.
+      await promiseB;
+      expect(registry.activeId).toBe('panel-b');
+      expect(panelB.load).toHaveBeenCalled();
+
+      // Now let A's activate resolve. Without the second generation guard,
+      // A's suspended #navigateInternal call would resume past the activate
+      // await and call load() on a panel that's already been superseded.
+      resolveActivateA();
+      await promiseA;
+
+      expect(panelA.load).not.toHaveBeenCalled();
+      // Final state must still point at B, unaffected by A's stale resume.
+      expect(registry.activeId).toBe('panel-b');
+
+      document.body.removeChild(containerA);
+      document.body.removeChild(containerB);
+    });
   });
 });
