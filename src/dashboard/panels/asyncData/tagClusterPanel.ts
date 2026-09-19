@@ -141,10 +141,13 @@ export function createTagClusterPanel(): PanelLifecycle {
 }
 
 function navigateToHistoryWithTag(tag: string): void {
-  try {
-    void getRegistry().navigateTyped('panel-sqlite-history', { searchTag: tag });
-  } catch {
+  const fallback = (): void => {
     document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
+  };
+  try {
+    void getRegistry().navigateTyped('panel-sqlite-history', { searchTag: tag }).catch(fallback);
+  } catch {
+    fallback();
   }
 }
 

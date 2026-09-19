@@ -94,10 +94,12 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
         // Registry 経由で遷移する (PBI 2026-09-07-25)。以前の sidebar ボタンの
         // click シミュレートは DOM 迂回であり、sidebar の active 同期は
         // Bootstrapper の navigate 購読が担う。registry 未初期化時 (単体テスト等)
-        // は何もしない。navigate() は Promise を返すようになったが、この
-        // ボタンハンドラは遷移完了を待つ必要がないため fire-and-forget にする。
+        // は何もしない。navigate() は Promise を返すため、同期 throw (getRegistry()
+        // 未初期化) と非同期 reject (navigate() 失敗) の両方を捕捉する。
         try {
-          void getRegistry().navigate('panel-export-logs');
+          void getRegistry().navigate('panel-export-logs').catch(() => {
+            // Registry not ready or navigate failed — stay on the current panel.
+          });
         } catch {
           // Registry not ready — stay on the current panel.
         }
