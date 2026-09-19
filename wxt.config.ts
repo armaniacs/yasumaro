@@ -29,6 +29,36 @@ validateCspDomains([...localConnectSrc, ...aiConnectSrc]);
 // Firefox (unknown-permission warnings; see the manifest fn below).
 const GECKO_ADDON_ID = 'yasumaro@armaniacs.github.io';
 
+// WHY: The unlisted opfs-worker entry and the Firefox background build as
+// single-file lib bundles, which makes rolldown inline every `new URL()`
+// asset fallback inside the emscripten glue as its own data: URI. The glue
+// has ~7 fallback sites per glue, so each referenced binary is embedded up
+// to 7 times (~20MB of base64 across firefox opfs-worker.js +
+// background.js — most of the firefox zip's 10MB). Every runtime path
+// passes locateFile (chromium: the bundled asset URL, firefox: the INIT
+// override to the public wasm asset), and under the extension CSP
+// (connect-src 'self') a data: wasm fetch always fails with NetworkError —
+// so the inlined payloads are unreachable dead weight. Strip them at render
+// time: a stripped fallback fails exactly like the CSP-blocked data: fetch
+// it replaces. Chromium builds emit real asset files (assetsInlineLimit: 0
+// above) and need no stripping.
+function stripInlinedWasmPlugins(browser: string) {
+  if (browser !== 'firefox') return [];
+  return [
+    {
+      name: 'yasumaro-strip-inlined-wasm-data-uri',
+      enforce: 'post' as const,
+      renderChunk(code: string) {
+        if (!code.includes('data:application/wasm;base64,')) return null;
+        return code.replace(
+          /data:application\/wasm;base64,[A-Za-z0-9+/=]{4096,}/g,
+          'data:application/wasm;base64,',
+        );
+      },
+    },
+  ];
+}
+
 export default defineConfig({
   outDir: 'dist',
   browser: 'chromium',
@@ -45,7 +75,7 @@ export default defineConfig({
   // for "cross-world" messages. Re-check on wxt/vite major bumps.
   // TODO(re-verify): remove this flag and test when wxt or vite is bumped
   // (see PBI 2026-08-23-12, RICE 6.25 — no user impact, dev-only noise).
-  vite: () => ({
+  vite: (env) => ({
     define: {
       __PROTOCOL_VERSION__: JSON.stringify(1),
       // Benchmark A/B flag for src/content/loader.ts. Only bench builds
@@ -54,6 +84,7 @@ export default defineConfig({
       // Untrusted page content must never control extension behavior.
       __OW_BENCH__: JSON.stringify(process.env.OW_BENCH === '1'),
     },
+    plugins: stripInlinedWasmPlugins(env.browser),
     build: {
       modulePreload: false,
       // Never inline assets as data: URLs. The OPFS worker (used by both the
