@@ -30,6 +30,14 @@ export interface BuiltInAISummaryResult {
     receivedTokens?: number;
 }
 
+/** Optional prompt overrides for an active custom prompt (applyCustomPrompt result). */
+export interface BuiltInAISummarizeOptions {
+    /** Full user prompt with the content placeholder already replaced. */
+    promptOverride?: string;
+    /** System prompt used for the session's initialPrompts. */
+    systemPromptOverride?: string;
+}
+
 interface LanguageModelSession {
     prompt(text: string): Promise<string>;
     destroy(): void;
@@ -174,8 +182,15 @@ export class BuiltInAIClient {
 
     /**
      * Summarize content.
+     *
+     * `options.promptOverride` / `options.systemPromptOverride` carry an
+     * active custom prompt (userPrompt with the content placeholder already
+     * replaced). Without them the legacy single-content prompt is used.
      */
-    async summarize(content: string): Promise<BuiltInAISummaryResult> {
+    async summarize(
+        content: string,
+        options: BuiltInAISummarizeOptions = {}
+    ): Promise<BuiltInAISummaryResult> {
         if (!content) {
             return { success: false, error: 'Invalid content' };
         }
@@ -209,7 +224,7 @@ export class BuiltInAIClient {
         let session: LanguageModelSession;
         try {
             session = await languageModel.create({
-                initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
+                initialPrompts: [{ role: 'system', content: options.systemPromptOverride ?? SYSTEM_PROMPT }],
                 expectedOutputs: EXPECTED_OUTPUTS
             });
         } catch (error: unknown) {
@@ -234,17 +249,17 @@ export class BuiltInAIClient {
         };
 
         const effectiveMaxChars = computeEffectiveMaxChars(staticMaxChars, session.contextWindow);
-        const truncatedContent = sanitizeResult.sanitized.substring(0, effectiveMaxChars);
+        const promptText = (options.promptOverride ?? sanitizeResult.sanitized).substring(0, effectiveMaxChars);
 
         try {
-            const summary = await session.prompt(truncatedContent);
+            const summary = await session.prompt(promptText);
             if (contextOverflowed) {
                 addLog(LogType.WARN, 'BuiltInAIClient: summary returned after a context overflow; result may be based on truncated context', {});
             }
             return {
                 success: true,
                 summary,
-                sentTokens: truncatedContent.length,
+                sentTokens: promptText.length,
                 receivedTokens: summary.length,
             };
         } catch (error: unknown) {

@@ -44,6 +44,12 @@ vi.mock('../../../../utils/promptSanitizer.js', () => ({
   sanitizePromptContent: (...args: unknown[]) => mockSanitizePromptContent(...args),
 }));
 
+const mockApplyCustomPrompt = vi.fn();
+
+vi.mock('../../../../utils/customPromptUtils.js', () => ({
+  applyCustomPrompt: (...args: unknown[]) => mockApplyCustomPrompt(...args),
+}));
+
 import { BuiltInAiProvider } from '../BuiltInAiProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ProviderStrategy.js';
 import type { Settings } from '../../../../utils/storage/types.js';
@@ -55,6 +61,10 @@ beforeEach(() => {
   // Default: content passes the injection check unchanged.
   mockSanitizePromptContent.mockReturnValue({
     sanitized: 'clean content', warnings: [], dangerLevel: 'none',
+  });
+  // Default: no custom prompt is active.
+  mockApplyCustomPrompt.mockReturnValue({
+    userPrompt: 'default prompt with content', systemPrompt: 'default system', isCustom: false,
   });
 });
 
@@ -103,6 +113,37 @@ describe('BuiltInAiProvider — generateSummary', () => {
     await new BuiltInAiProvider(settings).generateSummary('raw content');
 
     expect(mockSummarize).toHaveBeenCalledWith('sanitized version');
+  });
+
+  it('applies an active custom prompt as the prompt override', async () => {
+    mockSanitizePromptContent.mockReturnValue({
+      sanitized: 'sanitized version', warnings: [], dangerLevel: 'none',
+    });
+    mockApplyCustomPrompt.mockReturnValue({
+      userPrompt: 'custom user prompt (content embedded)', systemPrompt: 'custom system', isCustom: true,
+    });
+    mockSummarize.mockResolvedValue({ success: true, summary: 'ok' });
+
+    const result = await new BuiltInAiProvider(settings).generateSummary('content', false);
+
+    // applyCustomPrompt receives the provider id and the sanitized content
+    expect(mockApplyCustomPrompt).toHaveBeenCalledWith(
+      settings, 'built-in-ai', 'sanitized version', false,
+    );
+    expect(mockSummarize).toHaveBeenCalledWith('sanitized version', {
+      promptOverride: 'custom user prompt (content embedded)',
+      systemPromptOverride: 'custom system',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('keeps the legacy single-content call when no custom prompt is active', async () => {
+    mockSummarize.mockResolvedValue({ success: true, summary: 'ok' });
+
+    await new BuiltInAiProvider(settings).generateSummary('content');
+
+    // No extra options argument in the default path
+    expect(mockSummarize.mock.calls[0]).toHaveLength(1);
   });
 
   it('surfaces a provider-reported failure', async () => {
