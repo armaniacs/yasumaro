@@ -38,17 +38,34 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-CIゲートの緑化とPIIスキャナの等価性ギャップ解消のラウンドです。
+CIゲートの緑化とPIIスキャナの等価性ギャップ解消に加え、docs/ 30ファイルの実装乖離監査（約130件の指摘を解消）と、監査で判明した実装側課題の修正を行ったラウンドです。全テスト（12,600 件）がグリーンです。
+
+### Added
+
+- **内蔵AIでもカスタムプロンプトを適用できるように**: `BuiltInAiProvider` が `applyCustomPrompt` を呼ばずカスタムプロンプト（all スコープ含む）を黙って無視していた問題を修正。`BuiltInAIClient.summarize()` にプロンプト上書きオプションを追加し、HTTP系プロバイダーと同じ契約でカスタムプロンプトを適用する。カタログの `supportsCustomPrompt` を true にし、プロンプトUIの対象にも加えた
+
+### Changed
+
+- **docs/ 30ファイルを実装の実態に合わせて全面改訂**: 並列監査で洗い出した乖離（存在しないUIの操作手順、誤った動作仕様、上限値・既定値の不一致、PIIサニタイザWASM化への未追従、APIキーがデフォルト平文保存である旨の記述不足など約130件）を修正。日英両セクションを同時更新し、実装修正（即時モード・ホワイトリスト・内蔵AIカスタムプロンプト等）にも追従
 
 ### Fixed
 
 - **ドメインフィルタ保存フローのE2EがCI環境で恒常的に失敗していた**: ダッシュボードのドメインフィルタ保存がdelta書き込みでsettingsバージョン管理ブロブを初生成した瞬間、設定読み取りがフラットキーフォールバックからblob経路へ切り替わり、blobに存在しない`ai_provider`がデフォルト（OpenAI互換）から補完されてUIの選択状態が巻き戻り、全プロバイダ設定ブロックが非表示になっていた。テストフィクスチャが実マイグレーション後状態と矛盾するシード（空の優先リスト明示＋`settings_migrated`）をしていたため顕在化。フィクスチャを実状態に一致させ、`loadGeneralSettings`の可視性導出にセレクトと同一のフォールバック規則を適用、さらにレイアウト再構築時の重複ID生成も解消。PR #150から継続していた`test`/`usability`ジョブの赤を解消
 - **PIIスキャナの区切り判定がJS `\s` の非ASCIIメンバーに未対応だった**: 全角スペース（U+3000）やNBSP（U+00A0）で整形された電話番号・マイナンバー・クレジットカード番号がTS正規表現では検出されるのにWASMスキャナでは素通ししていた（区切り消費が1バイト前提）。区切り判定をUTF-8幅認識（`js_ws_len`/`sep_len`/`sep_dot_len`）に変更し、22箇所の呼び出しを移行。ロングラン中性化のrun境界もJS `\s` に揃え
 - **Coverageジョブがタイミング耐性テストのフレイキーで失敗していた**: `constantTimeCompare`の1回呼び出しはタイマー実効分解能より短く、カバレッジ計測のオーバーヘッド下で短い側の測定値が0に丸め込まれ長さ依存の比が発散していた。バッチ計測（1サンプル=200回）＋中央値に再設計し、検出方向・閾値を変えずに安定化
+- **release.yml がワークフロー変数を run: ブロック内で直接展開していた**: `${{ github.ref_name }}` の直接展開はタグ名のシェルメタ文字でコマンドインジェクションになりうるため、CI_SECURITY_CHECKLIST の規定に従い `env: REF_NAME` 経由の参照に変更
+- **CSP の常時許可ドメイン集合が manifest とバリデーターで乖離していた**: manifest で常時許可の volcengine / z.ai / wandb.ai / api.ai.sakura.ad.jp がバリデーターの既定許可に無く誤ブロック（fail-closed）される一方、Perplexity / Jina はバリデーターが既定許可で manifest の optional 権限と矛盾していた。バリデーターの `DEFAULT_ALLOWED_DOMAINS` を manifest 権限集合に整合させ、Perplexity / Jina は CSP パネルでのオプトイン経路（`conditional_csp_providers`）に移動。あわせて公式 API エンドポイント（`api.mistral.ai` / `api.deepseek.com`）を host_permissions に追加（apex パターンではサブドメインに展開されず実エンドポイントへ接続できなかった）
+- **記録パイプラインのプライバシーヘッダーホワイトリスト照合が完全一致のみだった**: popup から追加した `*.example.com` 形式のワイルドカード項目が黙って無効だった。ダッシュボードのドメインフィルターと同一の `isDomainInList` + `DOMAIN_SUBDOMAIN_MATCHING` 評価に統一し、ワイルドカードとサブドメイン一致設定の両方が記録判定でも効くようにした
+- **ローカルMarkdownの即時モードが実質動作していなかった**: 即時モード用アラーム `yasumaro-local-md-immediate` は alarmRegistry にハンドラ登録だけが存在し、生成するコードが無かった。記録ごとに約1分後発火のワンショットアラームを生成する（同名アラームは Chrome が差し替えるため、連続記録時はダウンロードが最短1分間隔に間引かれる）。あわせて `scheduleDailyFlush` が生成する日次アラーム名がハンドラの無い死んだ名前（`yasumaro-local-md-daily`）だったのを registry 管理下の `yasumaro-local-md-daily-flush` に統一
+
+### Refactored
+
+- **クレンジング初期キーワードを単一ソース化**: 新規インストール時の17語初期値が `defaults.ts` と `contentExtractor` に複製されていたため、`contentCleaner.INITIAL_KEYWORDS` に一元化した。設定リセットで復元される全量リスト（`DEFAULT_KEYWORDS`・55語）との関係も明示。挙動の変更はない
 
 ### Tested
 
 - マルチバイト空白セパレータの回帰テストを追加: 全角スペース・NBSP・混合幅でのphoneJp/myNumber/creditCard/phoneUs/phoneKr/phoneCnをRust単体5件＋JSパリティ7件で固定
+- 実装修正の回帰テストを追加: CSP許可集合（manifest整合・オプトイン経路）、ホワイトリストのワイルドカード／サブドメイン一致、内蔵AIのカスタムプロンプト適用とレガシー経路の引数契約、即時モードのワンショットアラーム生成
 
 ## [6.9.9] - 2026-09-19
 
