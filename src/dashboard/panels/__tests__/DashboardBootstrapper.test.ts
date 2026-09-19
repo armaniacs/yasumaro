@@ -15,6 +15,12 @@ function mockPanel(overrides?: Partial<PanelLifecycle>): PanelLifecycle {
   };
 }
 
+/** Flush the microtask queue so pending navigate()/mount() promises settle. */
+async function flush(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
+
 describe('DashboardBootstrapper', () => {
   let registry: NavigationRegistry;
   let bootstrapper: DashboardBootstrapper;
@@ -33,15 +39,15 @@ describe('DashboardBootstrapper', () => {
     expect(registry.activeId).toBeNull();
   });
 
-  it('start activates default panel', () => {
+  it('start activates default panel', async () => {
     const panel = mockPanel({ id: 'panel-default' });
     bootstrapper.registerPanels([panel]);
-    bootstrapper.start('panel-default');
+    await bootstrapper.start('panel-default');
     expect(registry.activeId).toBe('panel-default');
     expect(panel.activate).toHaveBeenCalled();
   });
 
-  it('wireSidebar navigates on button click', () => {
+  it('wireSidebar navigates on button click', async () => {
     const panel = mockPanel({ id: 'panel-settings' });
     bootstrapper.registerPanels([panel]);
 
@@ -51,18 +57,20 @@ describe('DashboardBootstrapper', () => {
     bootstrapper.wireSidebar(sidebar);
 
     btn.click();
+    await flush();
     expect(registry.activeId).toBe('panel-settings');
   });
 
-  it('wireSidebar ignores clicks on non-data-panel elements', () => {
+  it('wireSidebar ignores clicks on non-data-panel elements', async () => {
     const div = document.createElement('div');
     sidebar.appendChild(div);
     bootstrapper.wireSidebar(sidebar);
     div.click();
+    await flush();
     expect(registry.activeId).toBeNull();
   });
 
-  it('wireSidebar toggles aria-selected when switching tabs', () => {
+  it('wireSidebar toggles aria-selected when switching tabs', async () => {
     const panelA = mockPanel({ id: 'panel-a' });
     const panelB = mockPanel({ id: 'panel-b' });
     bootstrapper.registerPanels([panelA, panelB]);
@@ -81,17 +89,19 @@ describe('DashboardBootstrapper', () => {
     bootstrapper.wireSidebar(sidebar);
 
     btnB.click();
+    await flush();
     expect(btnA.getAttribute('aria-selected')).toBe('false');
     expect(btnB.getAttribute('aria-selected')).toBe('true');
     expect(btnA.classList.contains('active')).toBe(false);
     expect(btnB.classList.contains('active')).toBe(true);
 
     btnA.click();
+    await flush();
     expect(btnA.getAttribute('aria-selected')).toBe('true');
     expect(btnB.getAttribute('aria-selected')).toBe('false');
   });
 
-  it('registerCatalog registers every catalog panel in catalog order (PBI 2026-09-07-25)', () => {
+  it('registerCatalog registers every catalog panel in catalog order (PBI 2026-09-07-25)', async () => {
     const created: string[] = [];
     bootstrapper.registerCatalog((id) => {
       created.push(id);
@@ -102,12 +112,12 @@ describe('DashboardBootstrapper', () => {
 
     // Every registered panel is navigable without throwing.
     for (const id of created) {
-      registry.navigate(id);
+      await registry.navigate(id);
     }
     expect(registry.activeId).toBe(created[created.length - 1]);
   });
 
-  it('syncs sidebar aria-selected on programmatic navigate (no click)', () => {
+  it('syncs sidebar aria-selected on programmatic navigate (no click)', async () => {
     const panelA = mockPanel({ id: 'panel-a' });
     const panelB = mockPanel({ id: 'panel-b' });
     bootstrapper.registerPanels([panelA, panelB]);
@@ -126,7 +136,7 @@ describe('DashboardBootstrapper', () => {
 
     // Bypass the click handler entirely, like a panel calling
     // getRegistry().navigate() from the inside.
-    registry.navigate('panel-b');
+    await registry.navigate('panel-b');
 
     expect(btnA.getAttribute('aria-selected')).toBe('false');
     expect(btnB.getAttribute('aria-selected')).toBe('true');
