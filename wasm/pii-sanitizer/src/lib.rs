@@ -1,34 +1,37 @@
 //! PII (personally identifiable information) detection and masking core.
 //!
-//! Ports the hot-path scanning logic from `src/utils/piiSanitizer.ts` (TS/regex)
-//! to a single-pass byte scanner. Covers the five highest-volume pattern types
-//! (email, creditCard, myNumber, phoneJp, bankAccount) — the long tail of
-//! locale-specific patterns stays in TS since they are cold paths.
+//! Ports all 21 pattern types from `PII_PATTERNS` in `src/utils/piiSanitizer.ts`
+//! (TS/regex) to a single-pass byte scanner: the 5 highest-volume ones
+//! (email, creditCard, myNumber, phoneJp, bankAccount — see `patterns/core5.rs`)
+//! plus the 16 locale-specific ones (driverLicense, jpPassport, ipv4, ipv6,
+//! ssn, phoneUs, phoneCn, idCn, rrnKr, phoneKr, iban, deTaxId, frInsee,
+//! itCodiceFiscale, esDni, esNie — see `patterns/extended.rs`).
 //!
 //! Matching semantics mirror the TS original's single combined regex
 //! (`new RegExp(typeGroups.join('|'), 'g')`) exactly, not just "each pattern
 //! type independently, then resolve overlaps by longest span": at every
-//! position, JS's regex engine tries alternatives in *source order* (email,
-//! then the 3 creditCard sub-patterns, then myNumber, phoneJp, bankAccount)
-//! and commits to the first one that matches at that position — it does not
-//! try a lower-priority alternative just because a higher-priority one
-//! turned out to be Luhn-invalid (Luhn rejection happens after the regex
-//! already committed to a creditCard match). Getting this dispatch order
-//! and single-attempt-per-position behavior right is what makes this
-//! scanner produce byte-identical output to the TS regex, verified against
-//! 218 real inputs captured from piiSanitizer.ts's own test suites (see
-//! src/wasm/pii-sanitizer/__tests__/parity.test.ts in the main tree).
+//! position, JS's regex engine tries alternatives in *source order* and
+//! commits to the first one that matches at that position — it does not try
+//! a lower-priority alternative just because a higher-priority one turned
+//! out to be Luhn-invalid (Luhn rejection happens after the regex already
+//! committed to a creditCard match). Getting this dispatch order and
+//! single-attempt-per-position behavior right (see `patterns/dispatch.rs`)
+//! is what makes this scanner produce byte-identical output to the TS
+//! regex, verified against 218 real inputs captured from piiSanitizer.ts's
+//! own test suites (see src/wasm/pii-sanitizer/__tests__/parity.test.ts in
+//! the main tree).
 //!
 //! Design mirrors the TS implementation's ReDoS mitigation: any run of
 //! non-whitespace bytes longer than `TOKEN_EDGE_KEEP_LEN * 2` has its middle
 //! section sampled (window boundaries replaced with `#`) before scanning, so
 //! scan cost stays linear in input length regardless of adversarial input.
 
+mod patterns;
+
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 const TOKEN_EDGE_KEEP_LEN: usize = 100;
-const MAX_MATCH_COUNT: usize = 1000;
 
 #[derive(Serialize, Clone)]
 pub struct MaskedItem {
@@ -81,344 +84,6 @@ fn neutralize_long_runs(bytes: &[u8]) -> Vec<u8> {
     out
 }
 
-fn is_word_boundary_before(bytes: &[u8], pos: usize) -> bool {
-    pos == 0 || !is_word_byte(bytes[pos - 1])
-}
-
-fn is_word_boundary_after(bytes: &[u8], pos: usize) -> bool {
-    pos >= bytes.len() || !is_word_byte(bytes[pos])
-}
-
-fn is_word_byte(b: u8) -> bool {
-    b.is_ascii_alphanumeric() || b == b'_'
-}
-
-fn is_sep(b: u8) -> bool {
-    b == b'-' || b == b' '
-}
-
-fn take_digits(bytes: &[u8], start: usize, n: usize) -> Option<usize> {
-    if start + n > bytes.len() {
-        return None;
-    }
-    if bytes[start..start + n].iter().all(|b| b.is_ascii_digit()) {
-        Some(start + n)
-    } else {
-        None
-    }
-}
-
-fn luhn_valid(digits: &str) -> bool {
-    if digits.len() < 13 || digits.len() > 19 {
-        return false;
-    }
-    let mut sum = 0u32;
-    let mut even = false;
-    for b in digits.bytes().rev() {
-        let mut d = (b - b'0') as u32;
-        if even {
-            d *= 2;
-            if d > 9 {
-                d -= 9;
-            }
-        }
-        sum += d;
-        even = !even;
-    }
-    sum % 10 == 0
-}
-
-struct Match {
-    end: usize,
-    kind: &'static str,
-}
-
-/// email: [a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
-/// Regex semantics: greedily consume the local part forward from `start`,
-/// require '@', then a greedily-consumed domain ending in '.' + >=2 alpha.
-/// If the domain doesn't satisfy that, there's no backtracking into a
-/// shorter local part here (the local-part char class doesn't overlap with
-/// what would need to shrink) — the single failure point that matters is
-/// "local run doesn't end at '@'", so no `@` within reach means no match.
-fn try_email(bytes: &[u8], start: usize) -> Option<Match> {
-    fn is_local(b: u8) -> bool {
-        b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'%' | b'+' | b'-')
-    }
-    fn is_domain(b: u8) -> bool {
-        b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-')
-    }
-
-    if !is_local(bytes[start]) {
-        return None;
-    }
-    let len = bytes.len();
-    let mut local_end = start;
-    while local_end < len && is_local(bytes[local_end]) {
-        local_end += 1;
-    }
-    if local_end >= len || bytes[local_end] != b'@' {
-        return None;
-    }
-    let domain_start = local_end + 1;
-    let mut domain_end = domain_start;
-    while domain_end < len && is_domain(bytes[domain_end]) {
-        domain_end += 1;
-    }
-    let domain = &bytes[domain_start..domain_end];
-    let dot_rel = domain.iter().rposition(|&b| b == b'.')?;
-    let tld = &domain[dot_rel + 1..];
-    if tld.len() >= 2 && tld.iter().all(|b| b.is_ascii_alphabetic()) && dot_rel > 0 {
-        Some(Match {
-            end: domain_end,
-            kind: "email",
-        })
-    } else {
-        None
-    }
-}
-
-fn try_cc_grouped(bytes: &[u8], start: usize) -> Option<usize> {
-    // \d{4}([-\s]\d{4}){3}
-    let mut pos = take_digits(bytes, start, 4)?;
-    for _ in 0..3 {
-        if pos >= bytes.len() || !is_sep(bytes[pos]) {
-            return None;
-        }
-        pos += 1;
-        pos = take_digits(bytes, pos, 4)?;
-    }
-    Some(pos)
-}
-
-fn try_cc_16(bytes: &[u8], start: usize) -> Option<usize> {
-    take_digits(bytes, start, 16)
-}
-
-fn try_cc_15(bytes: &[u8], start: usize) -> Option<usize> {
-    // \d{4}[-\s]\d{6}[-\s]\d{5}
-    let mut pos = take_digits(bytes, start, 4)?;
-    if pos >= bytes.len() || !is_sep(bytes[pos]) {
-        return None;
-    }
-    pos += 1;
-    pos = take_digits(bytes, pos, 6)?;
-    if pos >= bytes.len() || !is_sep(bytes[pos]) {
-        return None;
-    }
-    pos += 1;
-    take_digits(bytes, pos, 5)
-}
-
-/// creditCard, tried as 3 sub-patterns in source order (grouped, then 16,
-/// then 15) — each is `\b...\b` in the TS source, so a candidate whose span
-/// isn't word-bounded is a genuine non-match for that sub-pattern (the
-/// regex engine tries the next alternative, same as any failed alternation
-/// branch), not a "matched but rejected" case.
-///
-/// Once a sub-pattern's span IS word-bounded, the regex has committed to it
-/// — `match.index`/`lastIndex` are fixed to that span — and Luhn validation
-/// runs afterward, in the caller's code, on the already-matched text. A
-/// Luhn failure does not un-commit the regex match: it does not fall
-/// through to try myNumber or another type at this position, and the next
-/// `exec()` call still resumes scanning from this match's end (`lastIndex`
-/// only ever advances to the end of whatever the regex matched).
-enum CreditCardOutcome {
-    /// A sub-pattern matched (word-bounded) and passed Luhn.
-    Masked(Match),
-    /// A sub-pattern matched (word-bounded) but failed Luhn — the position
-    /// is still consumed through `end` (scanning resumes there), just
-    /// without emitting a mask.
-    RejectedNoFallthrough { end: usize },
-    /// No sub-pattern produced a word-bounded match at this position.
-    NoMatch,
-}
-
-fn try_credit_card(bytes: &[u8], start: usize) -> CreditCardOutcome {
-    if !bytes[start].is_ascii_digit() {
-        return CreditCardOutcome::NoMatch;
-    }
-    for candidate_end in [
-        try_cc_grouped(bytes, start),
-        try_cc_16(bytes, start),
-        try_cc_15(bytes, start),
-    ] {
-        let Some(end) = candidate_end else { continue };
-        if !is_word_boundary_after(bytes, end) {
-            // This sub-pattern's `\b` failed — try the next alternative,
-            // same as the regex engine would.
-            continue;
-        }
-        let digits: String = bytes[start..end]
-            .iter()
-            .filter(|b| b.is_ascii_digit())
-            .map(|&b| b as char)
-            .collect();
-        return if luhn_valid(&digits) {
-            CreditCardOutcome::Masked(Match {
-                end,
-                kind: "creditCard",
-            })
-        } else {
-            CreditCardOutcome::RejectedNoFallthrough { end }
-        };
-    }
-    CreditCardOutcome::NoMatch
-}
-
-/// myNumber: \d{4}[-\s]\d{4}[-\s]\d{4}
-fn try_my_number(bytes: &[u8], start: usize) -> Option<Match> {
-    let len = bytes.len();
-    let mut pos = take_digits(bytes, start, 4)?;
-    if pos >= len || !is_sep(bytes[pos]) {
-        return None;
-    }
-    pos += 1;
-    pos = take_digits(bytes, pos, 4)?;
-    if pos >= len || !is_sep(bytes[pos]) {
-        return None;
-    }
-    pos += 1;
-    let end = take_digits(bytes, pos, 4)?;
-    Some(Match {
-        end,
-        kind: "myNumber",
-    })
-}
-
-/// phoneJp: 0\d{1,4}[-\s]?\d{1,4}[-\s]?\d{4}
-/// Regex greediness: each `\d{1,4}` group prefers the longest match first,
-/// backtracking to shorter only if the rest of the pattern then fails.
-fn try_phone_jp(bytes: &[u8], start: usize) -> Option<Match> {
-    let len = bytes.len();
-    if bytes[start] != b'0' {
-        return None;
-    }
-    // Backtracking order must match the regex engine's: for each `\d{1,4}`,
-    // try longest first; for each `[-\s]?`, try "consumed" before "not
-    // consumed" (a `?` quantifier is greedy by default). The first fully
-    // successful combination — including the trailing `\b` — is the one
-    // the regex engine would return, so try combinations in that exact
-    // order and return on first success rather than always consuming an
-    // optional separator when present (which forecloses the "well-formed
-    // match ignoring a run of extra digits after a separator" case, e.g.
-    // "090-1234-5678" matching as "090-1234" with sep1 consumed but sep2
-    // *not* consumed and g2 falling back to a shorter run).
-    for g1 in (1..=4).rev() {
-        let pos = match take_digits(bytes, start + 1, g1) {
-            Some(p) => p,
-            None => continue,
-        };
-        let sep1_variants: &[usize] = if pos < len && is_sep(bytes[pos]) {
-            &[1, 0]
-        } else {
-            &[0]
-        };
-        for &sep1 in sep1_variants {
-            let pos_after_sep1 = pos + sep1;
-            for g2 in (1..=4).rev() {
-                let p2 = match take_digits(bytes, pos_after_sep1, g2) {
-                    Some(p) => p,
-                    None => continue,
-                };
-                let sep2_variants: &[usize] = if p2 < len && is_sep(bytes[p2]) {
-                    &[1, 0]
-                } else {
-                    &[0]
-                };
-                for &sep2 in sep2_variants {
-                    let p2_after_sep = p2 + sep2;
-                    if let Some(end) = take_digits(bytes, p2_after_sep, 4) {
-                        if is_word_boundary_after(bytes, end) {
-                            return Some(Match {
-                                end,
-                                kind: "phoneJp",
-                            });
-                        }
-                    }
-                }
-            }
-        }
-    }
-    None
-}
-
-/// bankAccount: \d{7}
-fn try_bank_account(bytes: &[u8], start: usize) -> Option<Match> {
-    take_digits(bytes, start, 7).map(|end| Match {
-        end,
-        kind: "bankAccount",
-    })
-}
-
-/// Single-pass scan reproducing the combined-regex dispatch: at each start
-/// position, try alternatives in source order and commit to the first one
-/// that matches (word-boundary checked where the TS pattern uses `\b`).
-/// A creditCard alternative that matches but fails Luhn still consumes the
-/// position (no fallthrough to myNumber/etc — see try_credit_card's doc).
-fn scan(bytes: &[u8]) -> Vec<(usize, usize, &'static str)> {
-    let len = bytes.len();
-    let mut items = Vec::new();
-    let mut i = 0;
-
-    while i < len && items.len() <= MAX_MATCH_COUNT {
-        if let Some(m) = try_email(bytes, i) {
-            items.push((i, m.end, m.kind));
-            i = m.end;
-            continue;
-        }
-
-        if bytes[i].is_ascii_digit() && is_word_boundary_before(bytes, i) {
-            match try_credit_card(bytes, i) {
-                CreditCardOutcome::Masked(m) => {
-                    items.push((i, m.end, m.kind));
-                    i = m.end;
-                    continue;
-                }
-                CreditCardOutcome::RejectedNoFallthrough { end } => {
-                    // Regex committed to (and consumed) a creditCard
-                    // alternative — Luhn failed, so no mask is emitted, but
-                    // scanning still resumes from the match's end (matches
-                    // lastIndex semantics), not from i+1, and no other type
-                    // is tried at this position.
-                    i = end;
-                    continue;
-                }
-                CreditCardOutcome::NoMatch => {}
-            }
-
-            if let Some(m) = try_my_number(bytes, i) {
-                if is_word_boundary_after(bytes, m.end) {
-                    items.push((i, m.end, m.kind));
-                    i = m.end;
-                    continue;
-                }
-            }
-
-            if bytes[i] == b'0' {
-                if let Some(m) = try_phone_jp(bytes, i) {
-                    if is_word_boundary_after(bytes, m.end) {
-                        items.push((i, m.end, m.kind));
-                        i = m.end;
-                        continue;
-                    }
-                }
-            }
-
-            if let Some(m) = try_bank_account(bytes, i) {
-                if is_word_boundary_after(bytes, m.end) {
-                    items.push((i, m.end, m.kind));
-                    i = m.end;
-                    continue;
-                }
-            }
-        }
-
-        i += 1;
-    }
-
-    items
-}
-
 /// Runs the full scan/mask pipeline. `text` must be valid UTF-8; all patterns
 /// covered here are ASCII, so byte offsets equal char offsets for matched
 /// spans, and non-ASCII runs are simply never matched (safe to skip).
@@ -426,7 +91,7 @@ fn sanitize_core(text: &str) -> SanitizeResult {
     let bytes = text.as_bytes();
     let scan_bytes = neutralize_long_runs(bytes);
 
-    let spans = scan(&scan_bytes);
+    let spans = patterns::dispatch::scan(&scan_bytes);
 
     let mut result_text = String::with_capacity(text.len());
     let mut masked_items = Vec::with_capacity(spans.len());
@@ -475,12 +140,6 @@ mod tests {
     #[test]
     fn masks_adjacent_emails_without_local_part_bleed() {
         let r = sanitize_core("a@example.comb@example.comc@example.com");
-        // Regex `g` semantics: match at pos 0 consumes "a@example.comb"? No —
-        // the domain char class [a-zA-Z0-9.-] is greedy and includes letters,
-        // so "example.comb" is consumed as domain, then the last '.' + alpha
-        // tld check looks at the *last* dot: "example" ".comb" -> tld "comb"
-        // is all-alpha, len>=2, so it matches greedily through to "comb".
-        // This exact greedy behavior must match the TS regex engine's.
         assert!(r.masked_items[0].original.starts_with("a@example.com"));
     }
 
@@ -493,10 +152,6 @@ mod tests {
 
     #[test]
     fn luhn_invalid_credit_card_consumes_position_without_fallthrough() {
-        // Matches TS: the combined regex commits to the creditCard
-        // alternative at this position; Luhn rejection does not fall
-        // through to myNumber even though "1234-5678-9012" alone would
-        // otherwise match myNumber's pattern.
         let r = sanitize_core("card 1234-5678-9012-3456 done");
         assert!(r.masked_items.is_empty());
     }
@@ -515,11 +170,6 @@ mod tests {
 
     #[test]
     fn phone_jp_backtracks_past_a_trailing_run_of_extra_digits() {
-        // The regex backtracks to a shorter match ("090-1234") rather than
-        // failing outright, because the trailing "-5678" can't be absorbed
-        // by a fixed \d{4} once its own '-' breaks the run — this matches
-        // the TS engine exactly (verified via `node -e` against the same
-        // regex literal). See try_phone_jp's backtracking-order comment.
         let r = sanitize_core("x/090-1234-5678y");
         assert_eq!(r.masked_items.len(), 1);
         assert_eq!(r.masked_items[0].kind, "phoneJp");
@@ -551,5 +201,151 @@ mod tests {
         let r = sanitize_core("email a@b.co then account 1234567 end");
         assert_eq!(r.masked_items.len(), 2);
         assert!(r.masked_items[0].index < r.masked_items[1].index);
+    }
+
+    // --- Extended (16 locale-specific) pattern tests ---
+
+    #[test]
+    fn masks_driver_license() {
+        let r = sanitize_core("license 123456789012 ok");
+        assert_eq!(r.masked_items[0].kind, "driverLicense");
+    }
+
+    #[test]
+    fn masks_jp_passport() {
+        let r = sanitize_core("passport AB1234567 ok");
+        assert_eq!(r.masked_items[0].kind, "jpPassport");
+    }
+
+    #[test]
+    fn masks_ipv4_private_range() {
+        let r = sanitize_core("server at 192.168.1.1 today");
+        assert_eq!(r.masked_items[0].kind, "ipv4");
+        assert_eq!(r.masked_items[0].original, "192.168.1.1");
+    }
+
+    #[test]
+    fn masks_ipv4_10_range() {
+        let r = sanitize_core("internal 10.0.0.1 host");
+        assert_eq!(r.masked_items[0].kind, "ipv4");
+    }
+
+    #[test]
+    fn masks_ipv4_172_range() {
+        let r = sanitize_core("internal 172.16.0.1 host");
+        assert_eq!(r.masked_items[0].kind, "ipv4");
+    }
+
+    #[test]
+    fn does_not_mask_public_ipv4() {
+        let r = sanitize_core("public 8.8.8.8 dns");
+        assert!(r.masked_items.iter().all(|m| m.kind != "ipv4"));
+    }
+
+    #[test]
+    fn masks_ipv6() {
+        let r = sanitize_core("addr 2001:0db8:0000:0000:0000:ff00:0042:8329 end");
+        assert_eq!(r.masked_items[0].kind, "ipv6");
+    }
+
+    #[test]
+    fn masks_ssn() {
+        let r = sanitize_core("ssn 123-45-6789 on file");
+        assert_eq!(r.masked_items[0].kind, "ssn");
+    }
+
+    #[test]
+    fn masks_phone_us_with_parens() {
+        let r = sanitize_core("call (555) 123-4567 now");
+        assert_eq!(r.masked_items[0].kind, "phoneUs");
+    }
+
+    #[test]
+    fn masks_phone_us_with_country_code() {
+        let r = sanitize_core("call +1-555-123-4567 now");
+        assert_eq!(r.masked_items[0].kind, "phoneUs");
+    }
+
+    #[test]
+    fn masks_phone_cn() {
+        let r = sanitize_core("call 13812345678 now");
+        assert_eq!(r.masked_items[0].kind, "phoneCn");
+    }
+
+    #[test]
+    fn masks_phone_cn_with_country_code() {
+        let r = sanitize_core("call +86-13812345678 now");
+        assert_eq!(r.masked_items[0].kind, "phoneCn");
+    }
+
+    #[test]
+    fn masks_id_cn() {
+        let r = sanitize_core("id 110101199003076789 ok");
+        assert_eq!(r.masked_items[0].kind, "idCn");
+    }
+
+    #[test]
+    fn masks_id_cn_with_trailing_x() {
+        let r = sanitize_core("id 11010119900307678X ok");
+        assert_eq!(r.masked_items[0].kind, "idCn");
+    }
+
+    #[test]
+    fn masks_rrn_kr() {
+        let r = sanitize_core("rrn 901231-1234567 ok");
+        assert_eq!(r.masked_items[0].kind, "rrnKr");
+    }
+
+    #[test]
+    fn masks_phone_kr() {
+        // "010-1234-5678" alone matches phoneJp first (0-prefixed patterns
+        // are defined earlier in PII_PATTERNS and phoneJp's pattern matches
+        // it too — verified against TS: sanitizeRegex('call 010-1234-5678')
+        // returns type "phoneJp", not "phoneKr"). Use the +82 country-code
+        // prefix to unambiguously exercise phoneKr's own pattern.
+        let r = sanitize_core("call +82-10-1234-5678 now");
+        assert_eq!(r.masked_items[0].kind, "phoneKr");
+    }
+
+    #[test]
+    fn masks_iban_de() {
+        let r = sanitize_core("iban DE89370400440532013000 ok");
+        assert_eq!(r.masked_items[0].kind, "iban");
+    }
+
+    #[test]
+    fn masks_iban_fr() {
+        let r = sanitize_core("iban FR1420041010050500013M02606 ok");
+        assert_eq!(r.masked_items[0].kind, "iban");
+    }
+
+    #[test]
+    fn masks_de_tax_id() {
+        let r = sanitize_core("tax id 12345678901 ok");
+        assert_eq!(r.masked_items[0].kind, "deTaxId");
+    }
+
+    #[test]
+    fn masks_fr_insee() {
+        let r = sanitize_core("insee 123456789012345 ok");
+        assert_eq!(r.masked_items[0].kind, "frInsee");
+    }
+
+    #[test]
+    fn masks_it_codice_fiscale() {
+        let r = sanitize_core("cf RSSMRA85M01H501Z ok");
+        assert_eq!(r.masked_items[0].kind, "itCodiceFiscale");
+    }
+
+    #[test]
+    fn masks_es_dni() {
+        let r = sanitize_core("dni 12345678Z ok");
+        assert_eq!(r.masked_items[0].kind, "esDni");
+    }
+
+    #[test]
+    fn masks_es_nie() {
+        let r = sanitize_core("nie X1234567L ok");
+        assert_eq!(r.masked_items[0].kind, "esNie");
     }
 }
