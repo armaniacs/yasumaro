@@ -15,24 +15,61 @@ pub fn is_word_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
-/// `[-\s]` char class used by several JP/CN/KR patterns. JS `\s` covers the
-/// full ASCII whitespace set (`\t\n\v\f\r` + space), so the scanner must
-/// too: a phone number or My Number formatted across line breaks in
-/// extracted page text is masked by the TS reference and would silently
-/// leak if only space/tab were accepted here.
-///
-/// Known residual gap: the non-ASCII members of JS `\s` (U+00A0, U+3000
-/// ideographic space, U+2000-200A, ...) are multi-byte in UTF-8, and every
-/// separator call site consumes exactly one byte, so they are NOT accepted
-/// here. A width-aware separator helper across all matchers is the
-/// follow-up if full-width-separated PII turns out to matter.
-pub fn is_sep(b: u8) -> bool {
-    matches!(b, b'-' | b'\t' | b'\n' | b'\x0b' | b'\x0c' | b'\r' | b' ')
+/// Width in bytes of the JS `\s` whitespace run starting at `pos`
+/// (0 = not whitespace). Covers the FULL JS `\s` set, not just ASCII:
+/// the ASCII members (`\t\n\v\f\r` + space) are 1 byte, and the non-ASCII
+/// members are 2-3 bytes in UTF-8 — a phone number or My Number formatted
+/// with a full-width (U+3000) or non-breaking (U+00A0) space is masked by
+/// the TS reference and would silently leak if only ASCII whitespace were
+/// accepted here.
+pub fn js_ws_len(bytes: &[u8], pos: usize) -> usize {
+    if pos >= bytes.len() {
+        return 0;
+    }
+    match bytes[pos] {
+        b'\t' | b'\n' | b'\x0b' | b'\x0c' | b'\r' | b' ' => 1,
+        // U+00A0 NBSP: C2 A0
+        0xC2 if pos + 1 < bytes.len() && bytes[pos + 1] == 0xA0 => 2,
+        // U+1680 Ogham space mark: E1 9A 80
+        0xE1 if pos + 2 < bytes.len() && bytes[pos + 1] == 0x9A && bytes[pos + 2] == 0x80 => 3,
+        // U+2000..U+200A (en quad .. hair space): E2 80 80..8A
+        // U+2028 line sep / U+2029 paragraph sep: E2 80 A8 / A9
+        // U+202F narrow no-break space: E2 80 AF
+        0xE2 if pos + 2 < bytes.len() && bytes[pos + 1] == 0x80 => match bytes[pos + 2] {
+            0x80..=0x8A | 0xA8 | 0xA9 | 0xAF => 3,
+            _ => 0,
+        },
+        // U+205F medium mathematical space: E2 81 9F
+        0xE2 if pos + 2 < bytes.len() && bytes[pos + 1] == 0x81 && bytes[pos + 2] == 0x9F => 3,
+        // U+3000 ideographic space: E3 80 80
+        0xE3 if pos + 2 < bytes.len() && bytes[pos + 1] == 0x80 && bytes[pos + 2] == 0x80 => 3,
+        // U+FEFF zero-width no-break space (BOM): EF BB BF
+        0xEF if pos + 2 < bytes.len() && bytes[pos + 1] == 0xBB && bytes[pos + 2] == 0xBF => 3,
+        _ => 0,
+    }
 }
 
-/// `[-.\s]` char class (adds '.') used by rrnKr/phoneKr/phoneUs/phoneCn.
-pub fn is_sep_dot(b: u8) -> bool {
-    is_sep(b) || b == b'.'
+/// Width in bytes of the `[-\s]` char class at `pos` (0 = not a separator).
+/// The width-aware replacement for the old byte-at-a-time `is_sep`: the
+/// non-ASCII members of JS `\s` (U+00A0, U+3000 ideographic space,
+/// U+2000-200A, ...) occupy 2-3 bytes in UTF-8, and consuming only their
+/// lead byte would leave the following continuation byte to be read as a
+/// digit (which never matches), so width-aware full-width-separated PII
+/// would still be missed.
+pub fn sep_len(bytes: &[u8], pos: usize) -> usize {
+    if pos < bytes.len() && bytes[pos] == b'-' {
+        return 1;
+    }
+    js_ws_len(bytes, pos)
+}
+
+/// Width in bytes of the `[-.\s]` char class (adds '.') at `pos`
+/// (0 = not a separator).
+pub fn sep_dot_len(bytes: &[u8], pos: usize) -> usize {
+    if pos < bytes.len() && bytes[pos] == b'.' {
+        return 1;
+    }
+    sep_len(bytes, pos)
 }
 
 pub fn take_digits(bytes: &[u8], start: usize, n: usize) -> Option<usize> {

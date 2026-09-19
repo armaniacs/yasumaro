@@ -56,13 +56,18 @@ pub struct SanitizeResult {
 fn neutralize_long_runs(bytes: &[u8]) -> Vec<u8> {
     let mut out = bytes.to_vec();
     let mut i = 0;
+    // Run boundaries follow JS \s (the TS reference tokenizes with /\S+/),
+    // which includes the multi-byte whitespace members (U+3000 etc.) — a
+    // full-width space must split the run exactly where the regex engine's
+    // \S+ does, or the sampled windows would diverge from the TS scan.
     while i < out.len() {
-        if out[i].is_ascii_whitespace() {
-            i += 1;
+        let ws = patterns::common::js_ws_len(&out, i);
+        if ws > 0 {
+            i += ws;
             continue;
         }
         let run_start = i;
-        while i < out.len() && !out[i].is_ascii_whitespace() {
+        while i < out.len() && patterns::common::js_ws_len(&out, i) == 0 {
             i += 1;
         }
         let run_end = i;
@@ -376,6 +381,46 @@ mod tests {
         let r = core("call 03\n1234\n5678 now");
         assert_eq!(r.masked_items[0].kind, "phoneJp");
         assert_eq!(r.masked_items[0].original, "03\n1234\n5678");
+    }
+
+    #[test]
+    fn masks_phone_jp_separated_by_ideographic_space() {
+        // U+3000 (full-width space) is a JS \s member: the TS reference masks
+        // full-width-formatted numbers, so the scanner must consume its 3
+        // UTF-8 bytes as one separator.
+        let r = core("TEL 03\u{3000}1234\u{3000}5678 です");
+        assert_eq!(r.masked_items[0].kind, "phoneJp");
+        assert_eq!(r.masked_items[0].original, "03\u{3000}1234\u{3000}5678");
+    }
+
+    #[test]
+    fn masks_my_number_separated_by_ideographic_space() {
+        let r = core("マイナンバー 1234\u{3000}5678\u{3000}9012 確認");
+        assert_eq!(r.masked_items[0].kind, "myNumber");
+    }
+
+    #[test]
+    fn masks_credit_card_separated_by_nbsp() {
+        // U+00A0 (2-byte UTF-8) — a different width class than U+3000.
+        let r = core("card 4111\u{00a0}1111\u{00a0}1111\u{00a0}1111 done");
+        assert_eq!(r.masked_items[0].kind, "creditCard");
+    }
+
+    #[test]
+    fn masks_phone_jp_separated_by_mixed_ws_widths() {
+        // Mixed widths across the two separator slots: U+3000 then U+00A0.
+        let r = core("03\u{3000}1234\u{00a0}5678");
+        assert_eq!(r.masked_items[0].kind, "phoneJp");
+    }
+
+    #[test]
+    fn trailing_multibyte_separator_does_not_match_or_panic() {
+        // "03　1234　" ends with a complete U+3000: phoneJp needs a third
+        // digit group after it, so there is no match — the width-aware
+        // separator consumption must not over-read or panic at the end of
+        // input.
+        let r = core("03\u{3000}1234\u{3000}");
+        assert!(r.masked_items.is_empty());
     }
 
     #[test]

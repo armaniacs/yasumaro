@@ -53,10 +53,11 @@ fn try_cc_grouped(bytes: &[u8], start: usize) -> Option<usize> {
     // \d{4}([-\s]\d{4}){3}
     let mut pos = take_digits(bytes, start, 4)?;
     for _ in 0..3 {
-        if pos >= bytes.len() || !is_sep(bytes[pos]) {
+        let sl = sep_len(bytes, pos);
+        if sl == 0 {
             return None;
         }
-        pos += 1;
+        pos += sl;
         pos = take_digits(bytes, pos, 4)?;
     }
     Some(pos)
@@ -69,15 +70,17 @@ fn try_cc_16(bytes: &[u8], start: usize) -> Option<usize> {
 fn try_cc_15(bytes: &[u8], start: usize) -> Option<usize> {
     // \d{4}[-\s]\d{6}[-\s]\d{5}
     let mut pos = take_digits(bytes, start, 4)?;
-    if pos >= bytes.len() || !is_sep(bytes[pos]) {
+    let mut sl = sep_len(bytes, pos);
+    if sl == 0 {
         return None;
     }
-    pos += 1;
+    pos += sl;
     pos = take_digits(bytes, pos, 6)?;
-    if pos >= bytes.len() || !is_sep(bytes[pos]) {
+    sl = sep_len(bytes, pos);
+    if sl == 0 {
         return None;
     }
-    pos += 1;
+    pos += sl;
     take_digits(bytes, pos, 5)
 }
 
@@ -139,17 +142,18 @@ pub fn try_credit_card(bytes: &[u8], start: usize) -> CreditCardOutcome {
 
 /// myNumber: \b\d{4}[-\s]\d{4}[-\s]\d{4}\b
 pub fn try_my_number(bytes: &[u8], start: usize) -> Option<Match> {
-    let len = bytes.len();
     let mut pos = take_digits(bytes, start, 4)?;
-    if pos >= len || !is_sep(bytes[pos]) {
+    let mut sl = sep_len(bytes, pos);
+    if sl == 0 {
         return None;
     }
-    pos += 1;
+    pos += sl;
     pos = take_digits(bytes, pos, 4)?;
-    if pos >= len || !is_sep(bytes[pos]) {
+    sl = sep_len(bytes, pos);
+    if sl == 0 {
         return None;
     }
-    pos += 1;
+    pos += sl;
     let end = take_digits(bytes, pos, 4)?;
     is_word_boundary_after(bytes, end).then_some(Match {
         end,
@@ -161,7 +165,6 @@ pub fn try_my_number(bytes: &[u8], start: usize) -> Option<Match> {
 /// Regex greediness: each `\d{1,4}` group prefers the longest match first,
 /// backtracking to shorter only if the rest of the pattern then fails.
 pub fn try_phone_jp(bytes: &[u8], start: usize) -> Option<Match> {
-    let len = bytes.len();
     if bytes[start] != b'0' {
         return None;
     }
@@ -180,11 +183,8 @@ pub fn try_phone_jp(bytes: &[u8], start: usize) -> Option<Match> {
             Some(p) => p,
             None => continue,
         };
-        let sep1_variants: &[usize] = if pos < len && is_sep(bytes[pos]) {
-            &[1, 0]
-        } else {
-            &[0]
-        };
+        let s1 = sep_len(bytes, pos);
+        let sep1_variants: &[usize] = if s1 > 0 { &[s1, 0] } else { &[0] };
         for &sep1 in sep1_variants {
             let pos_after_sep1 = pos + sep1;
             for g2 in (1..=4).rev() {
@@ -192,11 +192,8 @@ pub fn try_phone_jp(bytes: &[u8], start: usize) -> Option<Match> {
                     Some(p) => p,
                     None => continue,
                 };
-                let sep2_variants: &[usize] = if p2 < len && is_sep(bytes[p2]) {
-                    &[1, 0]
-                } else {
-                    &[0]
-                };
+                let s2 = sep_len(bytes, p2);
+                let sep2_variants: &[usize] = if s2 > 0 { &[s2, 0] } else { &[0] };
                 for &sep2 in sep2_variants {
                     let p2_after_sep = p2 + sep2;
                     if let Some(end) = take_digits(bytes, p2_after_sep, 4) {
