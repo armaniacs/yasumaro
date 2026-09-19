@@ -173,13 +173,15 @@ pub fn try_phone_us(bytes: &[u8], start: usize) -> Option<Match> {
     // (?:\+?1[-.\s])?
     if let Some(after_plus) = expect_literal(bytes, pos, b"+") {
         if let Some(after_1) = expect_literal(bytes, after_plus, b"1") {
-            if after_1 < bytes.len() && is_sep_dot(bytes[after_1]) {
-                pos = after_1 + 1;
+            let sl = sep_dot_len(bytes, after_1);
+            if sl > 0 {
+                pos = after_1 + sl;
             }
         }
     } else if let Some(after_1) = expect_literal(bytes, pos, b"1") {
-        if after_1 < bytes.len() && is_sep_dot(bytes[after_1]) {
-            pos = after_1 + 1;
+        let sl = sep_dot_len(bytes, after_1);
+        if sl > 0 {
+            pos = after_1 + sl;
         }
     }
     // \(?
@@ -189,17 +191,19 @@ pub fn try_phone_us(bytes: &[u8], start: usize) -> Option<Match> {
     // \)?
     let after_close = expect_literal(bytes, after_area, b")").unwrap_or(after_area);
     // [-.\s]
-    if after_close >= bytes.len() || !is_sep_dot(bytes[after_close]) {
+    let sl = sep_dot_len(bytes, after_close);
+    if sl == 0 {
         return None;
     }
-    let after_sep1 = after_close + 1;
+    let after_sep1 = after_close + sl;
     // \d{3}
     let after_exch = take_digits(bytes, after_sep1, 3)?;
     // [-.\s]
-    if after_exch >= bytes.len() || !is_sep_dot(bytes[after_exch]) {
+    let sl = sep_dot_len(bytes, after_exch);
+    if sl == 0 {
         return None;
     }
-    let after_sep2 = after_exch + 1;
+    let after_sep2 = after_exch + sl;
     // \d{4}\b
     let end = take_digits(bytes, after_sep2, 4)?;
     is_word_boundary_after(bytes, end).then_some(Match {
@@ -214,17 +218,15 @@ pub fn try_phone_cn(bytes: &[u8], start: usize) -> Option<Match> {
     if let Some(after_plus) = expect_literal(bytes, pos, b"+") {
         pos = expect_literal(bytes, after_plus, b"86").unwrap_or(pos);
         if pos != start {
-            if pos < bytes.len() && is_sep_dot(bytes[pos]) {
-                pos += 1;
-            }
+            let sl = sep_dot_len(bytes, pos);
+            pos += sl;
         } else {
             return None; // consumed '+' but not "86" — regex requires 86 if + present
         }
     } else if let Some(after_86) = expect_literal(bytes, pos, b"86") {
         pos = after_86;
-        if pos < bytes.len() && is_sep_dot(bytes[pos]) {
-            pos += 1;
-        }
+        let sl = sep_dot_len(bytes, pos);
+        pos += sl;
     }
     if pos >= bytes.len() || bytes[pos] != b'1' {
         return None;
@@ -257,9 +259,8 @@ pub fn try_id_cn(bytes: &[u8], start: usize) -> Option<Match> {
 /// rrnKr: \b\d{6}[-.\s]?[1-4]\d{6}\b
 pub fn try_rrn_kr(bytes: &[u8], start: usize) -> Option<Match> {
     let mut pos = take_digits(bytes, start, 6)?;
-    if pos < bytes.len() && is_sep_dot(bytes[pos]) {
-        pos += 1;
-    }
+    let sl = sep_dot_len(bytes, pos);
+    pos += sl;
     if pos >= bytes.len() || !(b'1'..=b'4').contains(&bytes[pos]) {
         return None;
     }
@@ -273,15 +274,12 @@ pub fn try_rrn_kr(bytes: &[u8], start: usize) -> Option<Match> {
 /// first) mirrors the regex engine, same approach as try_phone_jp in
 /// core5.rs.
 pub fn try_phone_kr(bytes: &[u8], start: usize) -> Option<Match> {
-    let len = bytes.len();
-
     // (?:\+?82[-.\s]?)? — try "present" before "absent" (greedy optional).
     let mut prefix_starts = vec![start];
     if let Some(after_82) = expect_literal(bytes, start, b"82") {
         let mut p = after_82;
-        if p < len && is_sep_dot(bytes[p]) {
-            p += 1;
-        }
+        let sl = sep_dot_len(bytes, p);
+        p += sl;
         prefix_starts.insert(0, p);
         // separator optional within the +82 group too — also try without consuming it
         prefix_starts.insert(1, after_82);
@@ -289,9 +287,8 @@ pub fn try_phone_kr(bytes: &[u8], start: usize) -> Option<Match> {
     if let Some(after_plus) = expect_literal(bytes, start, b"+") {
         if let Some(after_82) = expect_literal(bytes, after_plus, b"82") {
             let mut p = after_82;
-            if p < len && is_sep_dot(bytes[p]) {
-                p += 1;
-            }
+            let sl = sep_dot_len(bytes, p);
+            p += sl;
             prefix_starts.insert(0, p);
             prefix_starts.insert(1, after_82);
         }
@@ -314,11 +311,8 @@ pub fn try_phone_kr(bytes: &[u8], start: usize) -> Option<Match> {
                     Some(p) => p,
                     None => continue,
                 };
-                let sep1_variants: &[usize] = if after_g1 < len && is_sep_dot(bytes[after_g1]) {
-                    &[1, 0]
-                } else {
-                    &[0]
-                };
+                let s1 = sep_dot_len(bytes, after_g1);
+                let sep1_variants: &[usize] = if s1 > 0 { &[s1, 0] } else { &[0] };
                 for &s1 in sep1_variants {
                     let after_sep1 = after_g1 + s1;
                     for g2 in (3..=4).rev() {
@@ -326,12 +320,8 @@ pub fn try_phone_kr(bytes: &[u8], start: usize) -> Option<Match> {
                             Some(p) => p,
                             None => continue,
                         };
-                        let sep2_variants: &[usize] =
-                            if after_g2 < len && is_sep_dot(bytes[after_g2]) {
-                                &[1, 0]
-                            } else {
-                                &[0]
-                            };
+                        let s2 = sep_dot_len(bytes, after_g2);
+                        let sep2_variants: &[usize] = if s2 > 0 { &[s2, 0] } else { &[0] };
                         for &s2 in sep2_variants {
                             let after_sep2 = after_g2 + s2;
                             if let Some(end) = take_digits(bytes, after_sep2, 4) {
