@@ -36,6 +36,22 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [6.9.11] - 2026-09-19
+
+このリリースは v6.9.10 と同日にリリースする連続リリースです。Firefox ビルドのサイズ削減（zip 10.4MB → 2.76MB、-74%）とCI強化のラウンドです。全テスト（12,600 件）がグリーンです。
+
+### Changed
+
+- **Firefox 版拡張機能の zip を 10.4MB から 2.76MB に削減**: lib モード単一ファイルビルドで emscripten グルー内の `new URL()` フォールバック各所に wasm バイナリが data: URI として個別インライン化されており（同一バイナリが最大7回複製、計約20MBのbase64）、opfs-worker.js と background.js が肥大化していた。ランタイムは常に locateFile（chromium: バンドルアセット、firefox: INIT オーバーライドの公開アセット）を使い、拡張機能 CSP のもとで data: fetch が常に失敗するため到達不能なデッドコードであり、Firefox ビルドのレンダリング時に剥がすことで挙動は不変。`opfs-worker.js` は 13.98MB → 0.50MB、`background.js` は 7.62MB → 0.70MB。chrome の zip はバイト単位で不変
+
+### Added
+
+- **release.yml に Firefox 版のバンドルサイズゲートを追加**: chromium にのみ存在した 15MB 上限チェックを firefox-mv3 にも適用し、ビルド肥大化の再発を CI で検知する
+
+### Docs
+
+- Firefox サポートの現況とzip削減チャレンジの技術記事を追加（`docs/blog-6_9/`）
+
 ## [6.9.10] - 2026-09-19
 
 このリリースは v6.9.9 と同日にリリースする連続リリースです。CIゲートの緑化とPIIスキャナの等価性ギャップ解消に加え、docs/ 30ファイルの実装乖離監査（約130件の指摘を解消）と、監査で判明した実装側課題の修正を行ったラウンドです。全テスト（12,600 件）がグリーンです。
