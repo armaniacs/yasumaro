@@ -253,7 +253,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('pii_sanitizer_bg.wasm', import.meta.url);
+        throw new Error('pii-sanitizer wasm: module_or_path is required (no default asset URL — see postprocess-wasm-glue.mjs)');
     }
     const imports = __wbg_get_imports();
 

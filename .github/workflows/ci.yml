@@ -53,6 +53,47 @@ jobs:
       - name: Run Tests
         run: npm test
 
+  wasm-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master (2026-09)
+        with:
+          toolchain: stable
+      - name: Cache cargo registry, build artifacts, and wasm-pack binary
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-pack
+            wasm/pii-sanitizer/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/pii-sanitizer/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Run pii-sanitizer Rust tests
+        run: npm run test:wasm
+      - name: Install wasm-pack (if not cached)
+        run: command -v wasm-pack || cargo install wasm-pack
+      - name: Rebuild wasm binary and diff against the committed one
+        # Guards against a Rust source change landing without its compiled
+        # output being regenerated and committed — see npm run build:wasm.
+        # A rebuild diff here means someone edited wasm/pii-sanitizer/src/
+        # but forgot to run `npm run build:wasm` and commit the result.
+        run: |
+          cp src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm /tmp/committed.wasm
+          npm run build:wasm
+          if ! cmp -s /tmp/committed.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm; then
+            echo "::error::wasm binary is stale — run 'npm run build:wasm' and commit the result"
+            exit 1
+          fi
+          git diff --exit-code src/wasm/pii-sanitizer/piiSanitizerWasm.js || \
+            (echo "::error::piiSanitizerWasm.js glue is stale — run 'npm run build:wasm' and commit the result" && exit 1)
+
   dod-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5

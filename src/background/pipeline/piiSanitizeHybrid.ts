@@ -1,12 +1,15 @@
 /**
- * Hybrid PII sanitizer: runs the WASM core first (email/creditCard/myNumber/
- * phoneJp/bankAccount — the 5 highest-volume patterns, see
- * wasm/pii-sanitizer/src/lib.rs), then the TS regex path
- * (src/utils/piiSanitizer.ts) over the WASM-masked text to catch the
- * remaining 19 locale-specific patterns (ssn, iban, esDni, ...).
+ * Hybrid PII sanitizer: runs the WASM core first (all 21 pattern types from
+ * PII_PATTERNS, see wasm/pii-sanitizer/src/patterns/{core5,extended}.rs),
+ * then the TS regex path (src/utils/piiSanitizer.ts) over the WASM-masked
+ * text as a second pass. Since the WASM core now covers every pattern, the
+ * second TS pass should normally find nothing left to mask — it stays in
+ * place as a correctness backstop (e.g. if a future WASM pattern change
+ * introduces a regression, TS still catches what WASM misses) and because
+ * removing it entirely would need its own dedicated verification pass.
  *
  * Two-pass safety: a `[MASKED:<type>]` placeholder contains no digits, `@`,
- * or characters any of the 24 patterns require, so it can never be
+ * or characters any of the 21 patterns require, so it can never be
  * re-matched by the second pass — verified by
  * src/background/pipeline/__tests__/piiSanitizeHybrid.test.ts.
  *
@@ -44,8 +47,21 @@ async function isWasmAvailable(): Promise<boolean> {
         wasmAvailable = true;
     } catch (error: unknown) {
         wasmAvailable = false;
+        const message = errorMessage(error);
+        // addLog() persists to chrome.storage asynchronously (see
+        // utils/logger/core.ts) and is not readable from outside the
+        // service worker without a dedicated message handler. A plain
+        // console.warn is also emitted so this failure is visible in
+        // chrome://extensions' "service worker" devtools console during
+        // manual debugging, and so e2e tests can assert on it directly via
+        // Playwright's Worker.on('console', ...) — see
+        // testDir/e2e/pii-wasm-initialization.spec.ts, the regression guard
+        // for a real bug where this path fired on every single call in
+        // every production build (WASM was silently inlined as a
+        // CSP-blocked `data:` URI — see wasm/pii-sanitizer/index.ts).
+        console.warn('PII WASM module unavailable, falling back to TS-only sanitization:', message);
         addLog(LogType.WARN, 'PII WASM module unavailable, falling back to TS-only sanitization', {
-            error: errorMessage(error),
+            error: message,
         });
     }
     return wasmAvailable;
@@ -75,8 +91,10 @@ export async function sanitizePiiHybrid(text: string, options: SanitizeOptions =
         // log it and fall back to TS-only for this call rather than
         // propagating, since PII masking failing closed (throwing) would
         // abort the whole recording pipeline for a WASM-specific fault.
+        const message = errorMessage(error);
+        console.warn('PII WASM sanitize call failed, falling back to TS regex for this input:', message);
         addLog(LogType.WARN, 'PII WASM sanitize call failed, falling back to TS regex for this input', {
-            error: errorMessage(error),
+            error: message,
         });
         return sanitizeRegex(text, options);
     }

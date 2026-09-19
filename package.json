@@ -9,7 +9,7 @@
     "build:store": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
     "build:docs-i18n": "node scripts/sync-docs-translations.mjs",
     "build:docs-pii": "esbuild docs-src/pii-sandbox.ts --bundle --outfile=docs/assets/pii-sandbox.js --format=iife --global-name=PiiSandbox",
-    "build:wasm": "cd wasm/pii-sanitizer && wasm-pack build --target web --out-dir pkg --release && cp pkg/pii_sanitizer_bg.wasm ../../src/wasm/pii-sanitizer/ && cd ../.. && node -e \"const fs=require('fs');const p='src/wasm/pii-sanitizer/piiSanitizerWasm.js';let s=fs.readFileSync('wasm/pii-sanitizer/pkg/pii_sanitizer.js','utf8');s=s.replace('./pii_sanitizer.d.ts','./piiSanitizerWasm.d.ts');fs.writeFileSync(p,s);\"",
+    "build:wasm": "cd wasm/pii-sanitizer && wasm-pack build --target web --out-dir pkg --release && cp pkg/pii_sanitizer_bg.wasm ../../src/wasm/pii-sanitizer/ && cp pkg/pii_sanitizer_bg.wasm ../../public/wasm/ && cd ../.. && node scripts/postprocess-wasm-glue.mjs",
     "test:wasm": "cd wasm/pii-sanitizer && cargo test",
     "build:edge": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build --browser edge && node scripts/build-store-zip.mjs",
     "build:brave": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
