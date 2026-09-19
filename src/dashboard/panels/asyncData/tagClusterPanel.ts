@@ -142,7 +142,7 @@ export function createTagClusterPanel(): PanelLifecycle {
 
 function navigateToHistoryWithTag(tag: string): void {
   try {
-    getRegistry().navigateTyped('panel-sqlite-history', { searchTag: tag });
+    void getRegistry().navigateTyped('panel-sqlite-history', { searchTag: tag });
   } catch {
     document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
   }
