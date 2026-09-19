@@ -327,31 +327,44 @@ describe('crypto', () => {
 
         test('timing-attack resistance: keeps execution time stable across lengths', async () => {
             // 異なる長さの文字列を比較しても、実行時間が長さに依存しないことを確認
-            const iterations = 50;
-            const timesShort: number[] = [];
-            const timesLong: number[] = [];
+            //
+            // 1回呼び出し（4文字側はループ4回）は performance.now() の実効分解能
+            // （~0.1ms）より短く、カバレッジ計測下では短い側の測定値が0に丸め込まれ
+            // 比が発散してフレイキーだった（2026-09-19 Coverage CI失敗の原因）。
+            // そのため1サンプル = callsPerBatch回のバッチ計測とし、バッチ経過時間を
+            // 呼び出し数で正規化する。両側が同じ倍率で増幅されるため長さ依存の
+            // シグナル（理論上 約9倍）は保たれ、1サンプルがタイマー分解能を
+            // 超えることで測定が安定する。中央値でGC・JITの外れ値を抑える。
+            const batches = 30;
+            const callsPerBatch = 200;
 
-            for (let i = 0; i < iterations; i++) {
-                // 短い文字列
-                const start1 = performance.now();
-                await constantTimeCompare('abcd', 'efgh');
-                timesShort.push(performance.now() - start1);
+            const batchSamples = async (a: string, b: string): Promise<number[]> => {
+                const samples: number[] = [];
+                for (let i = 0; i < batches; i++) {
+                    const start = performance.now();
+                    for (let j = 0; j < callsPerBatch; j++) {
+                        await constantTimeCompare(a, b);
+                    }
+                    samples.push((performance.now() - start) / callsPerBatch);
+                }
+                samples.sort((x, y) => x - y);
+                return samples;
+            };
+            const median = (xs: number[]): number => xs[Math.floor(xs.length / 2)] ?? 0;
 
-                // 長い文字列
-                const start2 = performance.now();
-                await constantTimeCompare('very-long-password-123456789', 'different-long-password-987654321');
-                timesLong.push(performance.now() - start2);
-            }
+            const shortSamples = await batchSamples('abcd', 'efgh');
+            const longSamples = await batchSamples('very-long-password-123456789', 'different-long-password-987654321');
 
-            const avgShort = timesShort.reduce((a, b) => a + b, 0) / timesShort.length;
-            const avgLong = timesLong.reduce((a, b) => a + b, 0) / timesLong.length;
+            const medianShort = median(shortSamples);
+            const medianLong = median(longSamples);
 
             // 早期リターンがないことを検証: 長い文字列が短い文字列より極端に速くはないはず。
             // 厳密な大小比較は CI 高負荷環境でフレイキーになるため、
             // 比率が十分小さいことで「ほぼ同オーダー」を確認する。
             // 長い文字列は最大35文字、短い文字列は4文字で、理論上は約9倍の差が
-            // 予想される。測定ノイズや JIT ウォームアップを考慮して閾値は 50 に緩和。
-            const ratio = avgLong / (avgShort || 0.001); // ゼロ除算防止
+            // 予想される。バッチ正規化後も JIT ウォームアップの分散を考慮して
+            // 閾値は 50 のまま維持（検出方向は元テストと同一）。
+            const ratio = medianLong / (medianShort || 0.001); // ゼロ除算防止
             expect(ratio).toBeLessThan(50);
         });
     });

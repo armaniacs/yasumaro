@@ -90,10 +90,16 @@ export async function loadGeneralSettings(repo: SettingsReader = settingsReposit
   // Apply provider priority slots and update multi-provider visibility
   const prioritySlots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] ?? [];
   applyProviderPrioritySlots(prioritySlots);
+  // Visibility must match what the selects actually show:
+  // applyProviderPrioritySlots fills an empty priority-1 slot with the first
+  // catalog provider, so deriving the visible set from the raw slots (which
+  // can be absent/empty) desyncs the two and hides every settings block while
+  // the select still shows a provider. Mirror applyProviderPrioritySlots's
+  // fallback rule here instead of reading the raw slots back.
   const selectedProviders = [
-    prioritySlots[0]?.provider ?? '',
+    prioritySlots[0]?.provider ?? providerIdsInOrder()[0] ?? '',
     prioritySlots[1]?.provider ?? '',
-    prioritySlots[2]?.provider ?? ''
+    prioritySlots[2]?.provider ?? '',
   ];
   updateAIProviderVisibilityMulti(getAiProviderElements(), selectedProviders);
   updateProviderSettingsLayout(selectedProviders);

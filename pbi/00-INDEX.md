@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-19 v6.9.9リリース後の残課題 — ⬜ 未着手（09・10・11）RICE順: 09 → 10 → 11
+### 2026-09-19 v6.9.9リリース後の残課題 — 🔶 実装済・レビュー待ち（09・10・11）RICE順: 09 → 10 → 11
 
 v6.9.9（PR #151）リリース時に報告した残課題3件を RICE 採点して PBI 化。実行順 = 09（CI緑化）→ 10（マルチバイト空白）→ 11（Coverage）。台帳は `2026-09-19-00-backlog-post-v699.md`。
 
-- [2026-09-19-09-fix-ci-domain-filter-task-flow.md](2026-09-19-09-fix-ci-domain-filter-task-flow.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟢なし: CI環境でのみ失敗するドメインフィルタ保存フローE2E（PR #150から継続）を解消し、test/usabilityジョブを緑化。RICE 45・順位1）
-- [2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md](2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟢なし: PIIスキャナの区切り判定を幅認識化し、JS `\s` の非ASCIIメンバー（全角空白U+3000等）もマスク対象に。既知制限の解消。RICE 32・順位2）
-- [2026-09-19-11-fix-coverage-timing-test.md](2026-09-19-11-fix-coverage-timing-test.md)（⬜ 未着手・🟢低・1pt・🔧非機能追加・副作用🟢なし: カバレッジ計測下でのみ失敗する crypto のタイミング耐性テストを再設計し、Coverageジョブを緑化。RICE 24・順位3）
+- [2026-09-19-09-fix-ci-domain-filter-task-flow.md](2026-09-19-09-fix-ci-domain-filter-task-flow.md)（🔶 実装済・レビュー待ち・🟡中・2pt・🔧非機能追加・副作用🟢なし: CI環境でのみ失敗するドメインフィルタ保存フローE2E（PR #150から継続）を解消し、test/usabilityジョブを緑化。根本原因はフィクスチャの矛盾シード＋delta書き込みによるblob初生成でのデフォルト巻き戻し。RICE 45・順位1）
+- [2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md](2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md)（🔶 実装済・レビュー待ち・🟡中・2pt・🔧非機能追加・副作用🟢なし: PIIスキャナの区切り判定を幅認識化し、JS `\s` の非ASCIIメンバー（全角空白U+3000等）もマスク対象に。既知制限の解消。RICE 32・順位2）
+- [2026-09-19-11-fix-coverage-timing-test.md](2026-09-19-11-fix-coverage-timing-test.md)（🔶 実装済・レビュー待ち・🟢低・1pt・🔧非機能追加・副作用🟢なし: カバレッジ計測下でのみ失敗する crypto のタイミング耐性テストをバッチ計測に再設計し、Coverageジョブを緑化。RICE 24・順位3）
 
 ### 2026-09-19 PIIサニタイザWASM移植 — 🔶 部分実装（08。01〜07・13〜23 アーカイブ済み）
 
