@@ -38,10 +38,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-セキュリティ堅牢化と内部改善のラウンドです（PBI 2026-09-19-01〜23）。クレンジング・Obsidian接続・メッセージプロトコルの防御を強化し、レビューゲートを2件追加しました。全テスト（12,301 件）がグリーンです。
+セキュリティ堅牢化と内部改善のラウンドです（PBI 2026-09-19-01〜23）。クレンジング・Obsidian接続・メッセージプロトコルの防御を強化し、レビューゲートを2件追加しました。あわせて、PIIサニタイザの正規表現エンジン全21パターンをRust/WASMコアへ移植し、実ビルドでの動作を実証しました。全テスト（12,301 件）がグリーンです。
+
+### Added
+
+- **PIIサニタイザ全21パターンをRust/WASMコアへ移植**: `src/utils/piiSanitizer.ts` の正規表現スキャンを `wasm/pii-sanitizer/` の単一パスバイトスキャナとして再実装し、記録パイプラインのPIIマスキングをWASM経由に切り替え。JS正規表現の選択肢コミット順（Luhn判定後のフォールスルー挙動を含む）をバイト単位で再現し、218件の実キャプチャ入力パリティテスト・45件の境界コーパス・Rust単体テスト34件で等価性を検証。移植過程でPhase 1実装の境界バグ2件（bankAccount / myNumber の末尾単語境界欠落）を発見・修正。WASM単独でTS正規表現比2.2〜3.0倍高速（60KB入力で3.2ms→1.0ms、c8マイクロベンチ計測）
+- **PIIサニタイザWASM初期化の実機検証テストを追加**: 実ビルド拡張のService Worker内でWASMが初期化されTS正規表現へ常時フォールバックしていないことを検証するChromium E2E（`pii-wasm-initialization.spec.ts`）、およびPlaywrightが拡張機能インストールをサポートしないFirefox向けに、同一のコミット済みWASMバイナリをFirefoxエンジン（SpiderMonkey）のモジュールワーカーで駆動するプローブ（`firefox-pii-wasm-probe.spec.ts`、`firefox-storage` CIジョブで実行）を追加
 
 ### Fixed
 
+- **PIIサニタイザWASMが実ビルドで常時フォールバックしていた**: background entrypointの単一ファイルIIFEビルド（codeSplitting: false）でWASMバイナリがbase64データURIとしてインライン化され、拡張機能CSP（`connect-src 'self'`）がdata:フェッチをブロックするため、WASM初期化がChromium/Firefoxとも必ずNetworkErrorで失敗し、WASMコアが一度も実行されていなかった。バイナリを安定パスの公開アセット（`public/wasm/`）へ配置し `chrome.runtime.getURL()` 経由でフェッチする方式に変更。ユニットテスト・型チェック・Nodeパリティテストが全パスしても実ビルド成果物の直接検査がないと検出できない問題だったため、実機E2Eを回帰ゲートとして追加
 - **Obsidian接続テストで保存済みAPIキーが無視される**: PBI 2026-09-19-22（テスト時にprotocol/port/hostのフォーム値を転送する変更）を実装中に、APIキー欄は未編集でもprotocol/port/hostいずれかに値があるだけでoverrideモードに入ってしまい、保存済みAPIキーへのフォールバックが効かず「API key is missing」と誤表示される回帰を作業中に発見。`buildFromOverride`（`src/utils/obsidianConfigBuilder.ts`）がoverrideにAPIキーがない場合はストレージの保存済みキーにフォールバックするよう修正。この回帰はリリース版には含まれておらず、`main`上の未コミット作業中に混入・修正した
 - **巨大なページでAI要約クレンジングが拡張機能を長時間ブロックする可能性があった**: Offscreenクレンジングに512KBのサイズ上限を設け、超過入力はパースせず拒否するようにした（PBI 01）。拒否時にコンテンツスクリプト側の同期パースへフォールバックして再発する経路を閉じ（PBI 14）、flag無効環境の同期パースにも同一の上限を適用（PBI 20）。DOMParserが使えない環境のフォールバックは実ページから隔離されたドキュメントでパースするよう変更
 - **平文HTTPでlocalhost以外のホストに履歴データを送信できる設定が保存できていた**: Obsidian接続先がlocalhost/127.0.0.1/::1以外でhttpを選択した場合、設定保存時に拒否される（PBI 06・15）。既存のlocalhost設定は影響を受けない
@@ -54,6 +60,7 @@ All notable changes to this project will be documented in this file.
 
 ### Refactored
 
+- **PIIサニタイザのTS regex常時二重パスを削除**: WASM全パターン網羅後もWASM成功時にTS regexをマスク後テキストへ再実行しており、c8マイクロベンチで二重パスがサニタイズ全体の約2/3のレイテンシを消費し（WASM化の速度向上が完全相殺）、ハイブリッドがTS-onlyと同等か遅いことが判明。WASM単一パスに簡素化し、TS regexはWASM初期化失敗時・実行時エラー時のフォールバックとして維持。等価性の保証はCI毎のパリティゲート（218件キャプチャ+45件境界コーパス+Rust単体テスト34件+バイナリ再ビルドdiff）に集約
 - **protocolVersion を持たない旧送信者メッセージの扱いを明示化**: deprecated フラグ付きで受け入れつつ、受信数をカウンタと診断ログで可視化し、移行完了の判断材料にできるようにした（PBI 05・18）
 - **HTMLエスケープの正本を1箇所に集約**: `src/utils/htmlEscape.ts` を正本とし、popup配下の互換シムは再exportに統一（PBI 03）
 - **ポップアップの要素クリアを `clearElement()` に統一**: raw `innerHTML = ''` の直書きを除去（PBI 04）
@@ -65,6 +72,8 @@ All notable changes to this project will be documented in this file.
 
 ### Tested
 
+- **E2Eオーケストレーションテストをプロトコルエンベロープに追従させCI実行漏れを解消**: `service-worker-orchestration.spec.ts` がprotocolVersion無し（レガシーセンダー扱い）で送信しており、deprecatedフラグ追加後にPING/CHECK_DOMAINが失敗していた。メッセージに現行プロトコルバージョンを付与し、レガシーセンダー路径の回帰テストを追加。あわせて`@interaction`のみのタグだった4ファイルに`@extension`を追加（CIのe2e実行はプロジェクトgrepとANDで効くため、これらのテストはCIで一度も実行されていなかった）
+- **PIIサニタイザのマイクロベンチ（c8）を追加**: TS regex / WASM / 旧二重パスハイブリッドの3バリアントを実ページ密度のフィクスチャ（8/32/60KB）で計測し、バックストップ削除の判断根拠と回帰比較基準を提供
 - **innerHTML escape ガードと deprecated alias ガードを validate / CI に追加**: popup描画のエスケープ漏れと非推奨旧名の新規利用をCIで検出する（PBI 04・10・16）
 - 保存ゲート・クレンジングサイズ境界・loopback判定・APIキー出所・dashboardSqlite委譲経路などに回帰テストを追加（PBI 21ほか）
 
