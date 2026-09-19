@@ -18,7 +18,7 @@
 - **Google Chrome** ブラウザ
 - **AIプロバイダー** (以下のいずれか、または複数。任意)
     - ブラウザ内蔵 AI（Chrome の Gemini Nano / Edge の Phi-mini）。API キー不要
-    - OpenAI互換のAPIキー (Groq, OpenAI, Anthropic, Together AIなど)
+    - OpenAI互換のAPIキー (Groq, OpenAI, Together AIなど)
     - Google アカウント (Gemini API用)
     - ローカルLLM (Ollama, LM Studioなど)
 
@@ -73,10 +73,10 @@
 - 記録されるとChrome通知とステータスメッセージで確認できます
 - ステータスメッセージには「AI要約を記録しました (6.0秒 / AI: 2.2秒)」のように処理時間が表示されます
   - 最初の秒数（例: 6.0秒）は、記録開始から完了までの合計時間です。ページ本文の取得、PIIマスキング、AI要約、Obsidian/ローカルへの保存まで、一連の処理全体にかかった時間を表します
-  - 「AI: 」に続く秒数（例: 2.2秒）は、そのうちAIプロバイダーへの要約リクエスト1回分にかかった時間です。クラウドAI（Masked Cloud / Full Pipelineモード）を使う設定の場合のみ表示され、ローカルAIのみを使う設定（Local Onlyモード）では表示されません
+  - 「AI: 」に続く秒数（例: 2.2秒）は、そのうちAIプロバイダーへの要約リクエスト1回分にかかった時間です。AI要約が実行された場合に表示され、AIが何も生成しなかった場合は表示されません（ローカルAIによる要約でも、要約が実行されれば表示されます）
 
 #### ダッシュボードへのアクセス
-右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。ダッシュボードは左サイドバーのナビゲーションで構成されており、3つのセクションに分かれています：
+右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。初回セットアップや設定を見直す場合は、ダッシュボードの「Setup Wizard」ボタンからセットアップウィザードを再表示できます。ダッシュボードは左サイドバーのナビゲーションで構成されており、3つのセクションに分かれています：
 
 **Settings セクション**
 - **初期設定**: Obsidian接続設定、AIプロバイダー設定、ローカル Markdown 書き出し設定
@@ -107,7 +107,7 @@
 *   **Daily Note Path**: デイリーノートが保存されているフォルダパスを指定します（例: `092.Daily` や `Journal`）。日付ファイル（`YYYY-MM-DD.md`）がこのフォルダ直下に作成/追記されます。年月フォルダで管理している場合は `raw/YYYY-MM` のように `YYYY`/`MM`/`DD` プレースホルダーを使うと、記録時点の年月日に自動置換されるため毎月の手動更新が不要になります。
 
 #### 2. AIプロバイダー設定
-「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。
+「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。設定画面には「OpenAI Compatible」「OpenAI Compatible 2」の2つの入力スロットがあり、Priority（Failover Order）リストはフォールバック順序を定めるものです（内部的には最大10スロットまで保持でき、画面には3行表示されます）。
 
 > **Priority (Failover Order) のモデル名表示**: 優先度リスト（B分離型レイアウト）の各行のモデル名欄は、未入力のままでも実際に使用されるモデル名が表示されます（プロバイダの設定値、未設定ならカタログのデフォルト）。表示値をそのまま使う場合は欄を空のままにしてください。空欄のまま保存すると明示的なモデル指定として記録されず、常に最新のデフォルト設定が適用されます。自分で入力した値があればそちらが優先されます。
 
@@ -117,11 +117,11 @@
 *   インターネット接続なしで動作し、データはデバイス外に送信されません
 *   詳細は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照
 
-**B. OpenAI Compatible (Groq, OpenAI, Anthropicなど・推奨)**
+**B. OpenAI Compatible (Groq, OpenAIなど・推奨)**
 *   **Base URL**: APIのエンドポイントURL。
     *   Groq: `https://api.groq.com/openai/v1`
     *   OpenAI: `https://api.openai.com/v1`
-    *   Anthropic: `https://api.anthropic.com/v1`
+*   **注意**: Anthropic のネイティブAPI（`https://api.anthropic.com/v1`）は OpenAI 互換ではないため、この設定では利用できません。Anthropic 系のモデルを使う場合は、OpenAI 互換のゲートウェイ/プロキシを経由して接続してください。
 *   **API Key**: 各サービスのAPIキー。
 *   **Model Name**: 使用するモデル名（例: `llama-3.3-70b-versatile`, `gpt-4o-mini`）。
 
@@ -145,11 +145,11 @@
 | **OpenAI (公式)** | `api.openai.com` |
 | **Anthropic (Claude)** | `api.anthropic.com` |
 | **Groq** | `api.groq.com` |
-| **Mistral AI** | `mistral.ai` |
-| **OpenRouter** | `openrouter.ai`, `api.openrouter.ai` |
-| **Hugging Face** | `api-inference.huggingface.co` |
-| **DeepSeek** | `deepseek.com` |
-| **Perplexity AI** | `perplexity.ai` |
+| **Mistral AI** | `api.mistral.ai` |
+| **OpenRouter** | `api.openrouter.ai`（オプトイン: CSPパネルでの権限許可が必要） |
+| **Hugging Face** | `api-inference.huggingface.co`（オプトイン: CSPパネルでの権限許可が必要） |
+| **DeepSeek** | `api.deepseek.com` |
+| **Perplexity AI** | `perplexity.ai`（オプトイン: CSPパネルでの権限許可が必要） |
 | **Sakuraクラウド (AI API)** | `api.ai.sakura.ad.jp` |
 | **その他 (LiteLLM対応)** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` 等 |
 | **クラウドネイティブAI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` |
@@ -158,16 +158,22 @@
 | **ローカル環境** | `localhost`, `127.0.0.1` |
 | **Built-in AI** | ブラウザ内部 API のため CSP 対象外。API キー不要・オフライン動作 |
 
+> **注意**: manifest の host_permissions はサブドメインに展開されないため、API への接続には上表の API ホスト（例: `api.mistral.ai`、`api.deepseek.com`）を使用してください。apex ドメインのみでは API エンドポイントへの接続は許可されません。
+
+#### オプトインプロバイダーの利用時の権限許可
+
+OpenRouter、Hugging Face、Perplexity AI などのオプトインプロバイダーは、インストール時には接続権限が付与されていません。初回利用時はダッシュボードの **CSP** パネルで対象プロバイダーを選択し、表示される権限リクエストを許可してください。許可するとブラウザの実行時権限として登録され、以降はそのプロバイダーへの接続が可能になります。
+
 ---
 
-設定を入力したら、**「Save & Test Connection」**をクリックして接続を確認してください。AI テスト結果には prompt / response / error / hasContent などの通信内容詳細が表示され、接続調査に利用できます。
+設定を入力したら、**「Save」**で保存し、**「Test Obsidian」**・**「Test AI」**の各ボタンで接続を確認してください。AI テスト結果には prompt / response / error / hasContent などの通信内容詳細が表示され、接続調査に利用できます。
 
 #### 💡 ローカルLLM (LM Studio / Ollama) の設定
 
 ローカルLLMを使用する場合、AIプロバイダーには「OpenAI Compatible 2」を選択してください。
 
 **LM Studio の場合:**
-*   **Base URL**: `http://localhost:1234/v1`
+*   **Base URL**: `http://127.0.0.1:1234/v1`
 *   **API Key**: 不要（空欄）
 *   **Model Name**: LM StudioのModelsタブで確認（例: `llama3.2`）
 *   サーバーを起動後、ダッシュボードの「LM Studio」プリセットボタンをクリックで自動入力可能
@@ -206,7 +212,7 @@ ollama list
 - 1行に1ドメインを入力します
 - ワイルドカードも使用できます（例: `*.example.com`）
 - 「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF・ワイルドカード指定はトグルに関係なく利用可能）
-- 「現在のページドメインを追加」ボタンで、現在開いているページのドメインを簡単に追加できます
+- 現在開いているページのドメインを追加するには、ステータスパネル内のボタンまたはタグ入力欄を使用します
 - wwwなどのサブドメインは自動的に除去されます（www.example.com → example.com）
 
 **初期設定**:
@@ -253,26 +259,25 @@ ollama list
 詳細は [クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md) と [クレンジングの順番](CLEANSING_ORDER.md) を参照してください。
 
 #### 7. ダッシュボード（履歴管理）
-`Dashboard → History` タブで、記録されたURLの履歴を確認・管理できます。履歴データはデバイス上の SQLite DB（OPFS）にローカル保存されるため、Obsidian未設定でも利用できます。
+`Dashboard → SQLite History` タブで、記録されたURLの履歴を確認・管理できます。履歴データはデバイス上の SQLite DB（OPFS）にローカル保存されるため、Obsidian未設定でも利用できます。
 
 **主な機能**:
 - **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
 - **スター**: よく参照するページにスターを付けて後から素早く探せます
 - **削除**: 個別エントリを物理削除（GDPR Art.17準拠）。「すべてのデータを削除」で全件一括削除も可能です
 
-**フィルター**:
-- **All**: 全ての記録を表示
-- **Auto**: 自動記録されたページのみ表示
-- **Manual**: 手動記録されたページのみ表示
-- **Skipped**: プライバシー検出によりスキップされたページを表示。「今すぐ記録」ボタンで手動保存が可能
-- **🔒 Masked**: PIIマスキングが行われた記録のみ表示
+**絞り込み**:
+- **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
+- **日付絞り込み**: カレンダーで記録日を指定して絞り込めます
+- **タグ絞り込み**: タグで履歴を絞り込めます。並べ替え表示にも対応しています
+- **保留セクション**: プライバシー検出によりスキップされたページは保留セクションに表示されます。各エントリに「今すぐ記録」「AI要約なしで記録」「完全に削除」の操作ボタンがあります
 
 **プライバシーモードバッジ**:
 各履歴エントリには、保存時に使用したプライバシーモードを示すバッジが表示されます。バッジの種類は Local Only / Full Pipeline / Masked Cloud / Cloud Only の4つです。設定を変更した後でも、過去のエントリがどのモードで処理されたか一覧から確認できます。
 
 **保持ポリシー**: デフォルトでは無制限に保持されます（自動削除なし）。設定画面の「閲覧履歴 保持ポリシー」から保持期間（30〜365日）と最大件数（1,000〜100,000件）を任意で設定できます。
 
-**モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では `chrome.storage.local` への自動フォールバックが有効になります（詳細: [STORAGE_MODES.md](STORAGE_MODES.md)）。
+**モバイルChrome / OPFS非対応環境**: OPFS が利用できない端末では、IndexedDB VFS を経由し、さらに `chrome.storage.local` への自動フォールバックが有効になります（詳細: [STORAGE_MODES.md](STORAGE_MODES.md)）。
 
 ---
 
@@ -290,7 +295,7 @@ ollama list
 - **Google Chrome** or another Chromium-based browser (Microsoft Edge, Brave, etc.)
 - **AI Provider** (Any of the following; optional)
     - Built-in AI (Chrome's Gemini Nano / Edge's Phi-mini). No API key required
-    - OpenAI Compatible Provider (Groq, OpenAI, Anthropic, etc.)
+    - OpenAI Compatible Provider (Groq, OpenAI, etc.)
     - Google Account (for Gemini)
     - Local LLM (Ollama, LM Studio, etc.)
 
@@ -345,10 +350,10 @@ Click the extension icon to open the main screen.
 - Chrome notifications and status messages confirm successful recording
 - The status message shows processing time, e.g. "AI summary recorded (6.0s / AI: 2.2s)"
   - The first number (e.g. 6.0s) is the total time from starting the recording to completion — covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage
-  - The number after "AI: " (e.g. 2.2s) is the time spent on a single summarization request to the AI provider. It only appears when a cloud AI mode is configured (Masked Cloud / Full Pipeline); it does not appear in Local Only mode, which uses no cloud AI
+  - The number after "AI: " (e.g. 2.2s) is the time spent on a single summarization request to the AI provider. It appears whenever an AI summary was actually produced, and is omitted when the AI produced nothing (this applies to local-AI summaries as well: if a summary ran, the time is shown)
 
 #### Accessing the Dashboard
-Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Dashboard is organized as a left sidebar with three sections:
+Click the "⚙" icon in the top right to open the Dashboard in a new tab. For the initial setup or a settings review, reopen the setup wizard anytime with the "Setup Wizard" button in the dashboard. The Dashboard is organized as a left sidebar with three sections:
 
 **Settings section**
 - **Initial Setup**: Obsidian connection settings, AI provider settings, and local Markdown export settings
@@ -378,13 +383,13 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. The Da
 *   **Daily Note Path**: Enter the folder path where your daily notes are stored (e.g., `092.Daily`). If you organize notes into monthly subfolders, you can use `YYYY`/`MM`/`DD` placeholders, e.g. `raw/YYYY-MM`, which are automatically replaced with the current date so you never need to update the path manually.
 
 #### 2. AI Provider Settings
-Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers.
+Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers. The settings screen has two input slots ("OpenAI Compatible" and "OpenAI Compatible 2"), and the Priority (Failover Order) list defines the fallback order (up to 10 slots are kept internally; the screen shows 3 rows).
 
 > **Priority (Failover Order) model display**: In the priority list (layout B), each row's model field shows the model that will actually be used even when left empty (the provider's stored setting, or the catalog default if unset). Leave the field empty to always use the latest default settings — an empty field is not saved as an explicit model. A value you type yourself takes precedence.
 
 *   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
     *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
-*   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, Anthropic, and more.
+*   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, and more. Note: Anthropic's native API is not OpenAI-compatible and cannot be used here; access Anthropic-class models via an OpenAI-compatible gateway/proxy.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`
     *   **API Key**: Your provider's key.
     *   **Model Name**: e.g., `llama-3.3-70b-versatile`, `gpt-4o-mini`.
@@ -396,7 +401,7 @@ Select your preferred provider from the dropdown. You can configure up to three 
 To use a local LLM, select "OpenAI Compatible 2" as your AI provider.
 
 **LM Studio:**
-*   **Base URL**: `http://localhost:1234/v1`
+*   **Base URL**: `http://127.0.0.1:1234/v1`
 *   **API Key**: Not required (leave empty)
 *   **Model Name**: Check in LM Studio's Models tab (e.g., `llama3.2`)
 *   After starting the server, click the "LM Studio" preset button in the dashboard for auto-fill
@@ -432,11 +437,11 @@ For security reasons, only the following domains are officially supported. Conne
 | **OpenAI (Official)** | `api.openai.com` |
 | **Anthropic (Claude)** | `api.anthropic.com` |
 | **Groq** | `api.groq.com` |
-| **Mistral AI** | `mistral.ai` |
-| **OpenRouter** | `openrouter.ai`, `api.openrouter.ai` |
-| **Hugging Face** | `api-inference.huggingface.co` |
-| **DeepSeek** | `deepseek.com` |
-| **Perplexity AI** | `perplexity.ai` |
+| **Mistral AI** | `api.mistral.ai` |
+| **OpenRouter** | `api.openrouter.ai` (opt-in: permission grant in the CSP panel required) |
+| **Hugging Face** | `api-inference.huggingface.co` (opt-in: permission grant in the CSP panel required) |
+| **DeepSeek** | `api.deepseek.com` |
+| **Perplexity AI** | `perplexity.ai` (opt-in: permission grant in the CSP panel required) |
 | **Sakura Cloud (AI API)** | `api.ai.sakura.ad.jp` |
 | **LiteLLM Providers** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` |
 | **Cloud Native AI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` |
@@ -445,9 +450,15 @@ For security reasons, only the following domains are officially supported. Conne
 | **Local Environments** | `localhost`, `127.0.0.1` |
 | **Built-in AI** | Browser-internal API, not subject to CSP. No API key required, works offline |
 
+> **Note**: Manifest host_permissions do not expand to subdomains, so use the API hosts in the table above (e.g. `api.mistral.ai`, `api.deepseek.com`) for API connections. Apex domains alone do not cover the API endpoints.
+
+#### Granting permission for opt-in providers
+
+Opt-in providers such as OpenRouter, Hugging Face, and Perplexity AI are not granted connection permission at install time. On first use, select the provider in the dashboard **CSP** panel and approve the permission request shown there. Once granted, the origin is registered as a runtime permission and connections to that provider work from then on.
+
 ---
 
-Click **"Save & Test Connection"** to verify. The AI test result displays communication details such as prompt, response, error, and hasContent, which are useful for troubleshooting connections.
+Click **"Save"** to save, then **"Test Obsidian"** and **"Test AI"** to verify each connection. The AI test result displays communication details such as prompt, response, error, and hasContent, which are useful for troubleshooting connections.
 
 #### 3. Domain Filter Settings
 In the "Domain Filter" tab, you can control which domains to record.
@@ -461,7 +472,7 @@ In the "Domain Filter" tab, you can control which domains to record.
 - Enter one domain per line
 - Wildcards are supported (e.g., `*.example.com`)
 - With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF; wildcard patterns work regardless of the toggle)
-- Use the "Add Current Domain" button to easily add the domain of the currently open page
+- To add the currently open page's domain, use the buttons in the status panel or the tag input field
 - Subdomains like www are automatically removed (www.example.com → example.com)
 
 **Initial Settings**:
@@ -508,26 +519,25 @@ In `Dashboard → AI Summary Cleansing`, configure the noise removal applied bef
 See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) and [Cleansing Order](CLEANSING_ORDER.md) for details.
 
 #### 7. Dashboard (History Management)
-In the `Dashboard → History` tab, you can view and manage your recording history. History data is stored locally in a SQLite DB (OPFS) on your device, so it works even without Obsidian configured.
+In the `Dashboard → SQLite History` tab, you can view and manage your recording history. History data is stored locally in a SQLite DB (OPFS) on your device, so it works even without Obsidian configured.
 
 **Key features**:
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
 - **Star**: Star frequently referenced pages to find them quickly later
 - **Delete**: Physically delete individual entries (GDPR Art.17 compliant). "Delete All Data" removes everything at once
 
-**Filters**:
-- **All**: Shows all records
-- **Auto**: Shows only automatically recorded pages
-- **Manual**: Shows only manually recorded pages
-- **Skipped**: Shows pages skipped by privacy detection. Use "Record Now" to manually save them
-- **🔒 Masked**: Shows only records where PII masking was applied
+**Filtering**:
+- **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
+- **Date filtering**: Narrow records down by recording date with the calendar
+- **Tag filtering**: Filter history by tag. Sorting is also supported
+- **Pending section**: Pages skipped by privacy detection appear in the pending section. Each entry offers "Record Now", "Record without AI", and "Delete Forever" actions
 
 **Privacy Mode Badges**:
 Each history entry shows a badge indicating which privacy mode was used when it was saved (Local Only / Full Pipeline / Masked Cloud / Cloud Only). Even after changing your settings, you can see at a glance which mode each past entry was processed with.
 
 **Retention Policy**: By default, records are retained indefinitely (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy".
 
-**Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).
+**Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back through IndexedDB VFS and then to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).
 
 ---
 
@@ -559,7 +569,7 @@ Each history entry shows a badge indicating which privacy mode was used when it 
 - 未保存の変更がある状態で閉じる場合は確認ダイアログが表示されます
 
 #### 関連グラフ表示
-`Dashboard → History → Related Graph` タブで、記録したページのタグ共起関係をグラフで可視化できます。
+`Dashboard → SQLite History → Related Graph` タブで、記録したページのタグ共起関係をグラフで可視化できます。
 - **タグをノード**、**共起関係をエッジ**として表示
 - ノードをクリックすると、そのタグを持つページに自動フィルタ
 - 出現回数上位50件のタグを表示（多数の場合は「上位N件のみ表示中」を明示）
@@ -574,7 +584,9 @@ Obsidian の代わりに、または併用して GitHub Gist にクラウド同�
 
 #### 複数ブラウザ対応
 Chrome、Microsoft Edge、Brave など、Chromium 系ブラウザで動作します。
-- `npm run build:edge`、`npm run build:brave` で各ブラウザ用にビルド可能
+- `npm run build:edge` で Edge 用にビルド可能
+- `npm run build:brave` は Chromium ビルドと同一内容です。Brave では Chromium ビルドをそのまま使用します
+- Firefox 版は `npm run build:firefox` でビルドできます（gecko ID は自動設定）。インストールは `about:debugging#/runtime/this-firefox` から「一時的なアドオンを読み込む」で行います
 - 同一のコード基盤で複数ブラウザをサポート
 
 ### English
@@ -603,7 +615,7 @@ The `Dashboard → Archive` panel lets you back up browsing history up to a chos
 - A confirmation dialog appears when closing with unsaved changes
 
 #### Related Graph Display
-In `Dashboard → History → Related Graph`, you can visualize the co-occurrence relationships of tags in your recorded pages as a graph.
+In `Dashboard → SQLite History → Related Graph`, you can visualize the co-occurrence relationships of tags in your recorded pages as a graph.
 - **Tags as nodes**, **co-occurrence relationships as edges**
 - Click on a node to automatically filter pages with that tag
 - Displays the top 50 tags by frequency (indicates "showing top N only" if there are more)
@@ -618,5 +630,7 @@ Sync your history to GitHub Gist instead of, or in addition to, Obsidian.
 
 #### Multi-Browser Support
 Works on Chromium-based browsers including Chrome, Microsoft Edge, and Brave.
-- Build for specific browsers using `npm run build:edge`, `npm run build:brave`, etc.
+- Build for Edge using `npm run build:edge`
+- `npm run build:brave` produces output identical to the Chromium build. On Brave, use the Chromium build as-is
+- A Firefox build is available via `npm run build:firefox` (the gecko ID is set automatically). Install it by loading it temporarily from `about:debugging#/runtime/this-firefox` ("Load Temporary Add-on")
 - Single codebase supports multiple browsers

@@ -17,7 +17,7 @@ Yasumaroは、WCAG 2.1 Level AAのアクセシビリティ標準への準拠を�
 | 原則 | 項目 | 状態 | 説明 |
 |------|------|------|------|
 | 知覚可能 | 対比最低限 | ✅ | テキストの対比比は4.5:1以上、大文字太字は3:1以上 |
-| 知覚可能 | レイアウト変更なし | ✅ | フォントサイズや拡大/縮小によりレイアウトが変わらない |
+| 知覚可能 | リフロー | ✅ | 400%ズーム時も二次元スクロールなしで読めるよう内容がリフローする（レイアウトは変わり得る） |
 | 操作可能 | キーボードアクセシビリティ | ✅ | 全機能がキーボード操作可能 |
 | 操作可能 | 十分な時間 | ✅ | 制限時間なし、重要なタイムアウトなし |
 | 理解可能 | 識別可能 | ✅ | コンポーネントはラベルで識別可能 |
@@ -32,7 +32,7 @@ Yasumaroは、WCAG 2.1 Level AAのアクセシビリティ標準への準拠を�
 **使用方法:**
 
 ```javascript
-import { focusTrapManager } from './utils/focusTrap.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 // モーダルを開くときにフォーカストラップを有効化
 const trapId = focusTrapManager.trap(modalElement, () => {
@@ -50,7 +50,7 @@ focusTrapManager.release(trapId);
 - モーダルが開いている間は、背景要素へのフォーカス移動を防止
 
 **実装箇所:**
-- `src/popup/utils/focusTrap.ts`
+- `src/utils/ui/focusTrap.ts`（`FocusTrapManager` / `focusTrapManager`）
 
 #### 2. ARIA属性
 
@@ -108,22 +108,15 @@ focusTrapManager.release(trapId);
 
 #### 3. タブナビゲーション
 
-設定画面のタブ切り替え時のフォーカス管理：
+設定画面のタブ切り替えはロービングフォーカスで操作します（`src/dashboard/panels/DashboardBootstrapper.ts`）。フォーカスはタブ上に留まり、パネル内へ自動移動しません。現在の動作に沿った模式コードは次のとおりです：
 
 ```javascript
-function showTab(tabName) {
-  // パネルの切り替え...
-
-  // 新しくアクティブになったパネルの最初のフォーカス可能要素にフォーカス
-  const activePanel = /* ... */;
-  const firstFocusable = activePanel.querySelector(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  );
-
-  if (firstFocusable) {
-    firstFocusable.focus();
-  }
-}
+sidebar.addEventListener('keydown', (e) => {
+  // ArrowRight / ArrowLeft: 次 / 前のタブへ（末尾で循環）
+  // Home / End: 最初 / 最後のタブへ
+  // 移動先のタブにフォーカスを移すのみで、パネル内の要素にはフォーカスしない
+  tabs[newIndex]?.focus();
+});
 ```
 
 **キーボードショートカット:**
@@ -135,15 +128,16 @@ function showTab(tabName) {
 
 #### 4. 色のコントラスト
 
-ダークモードでの色コントラスト改善：
+現在の配色はコード内のカラートークンとスタイルシートの CSS 変数で一元管理されており、テキストの対比比 4.5:1 以上を目標としています：
 
-| 要素 | 旧色 | 新色 | 対比比 | 結果 |
-|------|------|------|--------|------|
-| アクセント色 | `#FF9800` | `#FFB74D` | ~4.5:1 | ✅ AA準拠 |
-| セカンダリ色 | `#6c757d` | `#9E9E9E` | ~6.3:1 | ✅ AAA準拠 |
-| プライマリボタン | `#66BB6A` | `#43A047` | ~4.5:1 | ✅ AA準拠 |
+| 要素 | 色の定義 | 場所 |
+|------|----------|------|
+| アクションバッジ | `BADGE_COLORS`（ORANGE / GREEN / BLUE） | `src/constants/appConstants.ts` |
+| 状態表示の文字色 | `STATUS_COLORS`（SUCCESS / ERROR / WARNING） | `src/constants/appConstants.ts` |
+| ポップアップの配色 | CSS 変数 | `entrypoints/popup/styles.css` |
+| 設定画面の配色 | CSS 変数 | `entrypoints/options/dashboard.css` |
 
-実装箇所: `entrypoints/popup/styles.css`
+実装箇所: `src/constants/appConstants.ts`、`entrypoints/popup/styles.css`、`entrypoints/options/dashboard.css`
 
 ### テストチェックリスト
 
@@ -199,7 +193,7 @@ This extension is designed to meet the following WCAG 2.1 Level AA criteria:
 | Principle | Criterion | Status | Description |
 |-----------|----------|--------|-------------|
 | Perceivable | Contrast Minimum | ✅ | Text contrast ratio ≥4.5:1, large bold text ≥3:1 |
-| Perceivable | Reflow | ✅ | Zoom/resize doesn't change layout |
+| Perceivable | Reflow | ✅ | Content reflows (layout may change) so no two-dimensional scrolling is needed at 400% zoom |
 | Operable | Keyboard Accessibility | ✅ | All functions accessible via keyboard |
 | Operable | Enough Time | ✅ | No time limits, no important timeouts |
 | Understandable | Identifiable | ✅ | Components labeled and identifiable |
@@ -214,7 +208,7 @@ Keeps focus within modal dialogs.
 **Usage:**
 
 ```javascript
-import { focusTrapManager } from './utils/focusTrap.js';
+import { focusTrapManager } from '../utils/ui/focusTrap.js';
 
 // Enable focus trap when opening modal
 const trapId = focusTrapManager.trap(modalElement, () => {
@@ -231,7 +225,7 @@ focusTrapManager.release(trapId);
 - ESC key executes `closeCallback`
 - Prevents focus from escaping to background elements
 
-**Location:** `src/popup/utils/focusTrap.ts`
+**Location:** `src/utils/ui/focusTrap.ts` (`FocusTrapManager` / `focusTrapManager`)
 
 #### 2. ARIA Attributes
 
@@ -290,22 +284,15 @@ focusTrapManager.release(trapId);
 
 #### 3. Tab Navigation
 
-Focus management when switching settings tabs:
+Settings tab switching uses roving focus (`src/dashboard/panels/DashboardBootstrapper.ts`). Focus stays on the tabs and never moves into a panel automatically. The following sketch illustrates the current behavior:
 
 ```javascript
-function showTab(tabName) {
-  // Toggle panels...
-
-  // Focus first focusable element in newly activated panel
-  const activePanel = /* ... */;
-  const firstFocusable = activePanel.querySelector(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  );
-
-  if (firstFocusable) {
-    firstFocusable.focus();
-  }
-}
+sidebar.addEventListener('keydown', (e) => {
+  // ArrowRight / ArrowLeft: next / previous tab (wraps around)
+  // Home / End: first / last tab
+  // Only moves focus to the target tab; never into panel content
+  tabs[newIndex]?.focus();
+});
 ```
 
 **Keyboard Shortcuts:**
@@ -317,15 +304,16 @@ function showTab(tabName) {
 
 #### 4. Color Contrast
 
-Dark mode color contrast improvements:
+The current palette is managed centrally through color tokens in code and CSS variables in the stylesheets, targeting a text contrast ratio of at least 4.5:1:
 
-| Element | Old Color | New Color | Contrast Ratio | Result |
-|---------|-----------|-----------|----------------|--------|
-| Accent color | `#FF9800` | `#FFB74D` | ~4.5:1 | ✅ AA compliant |
-| Secondary color | `#6c757d` | `#9E9E9E` | ~6.3:1 | ✅ AAA compliant |
-| Primary button | `#66BB6A` | `#43A047` | ~4.5:1 | ✅ AA compliant |
+| Element | Color definition | Location |
+|---------|------------------|----------|
+| Action badges | `BADGE_COLORS` (ORANGE / GREEN / BLUE) | `src/constants/appConstants.ts` |
+| Status text colors | `STATUS_COLORS` (SUCCESS / ERROR / WARNING) | `src/constants/appConstants.ts` |
+| Popup palette | CSS variables | `entrypoints/popup/styles.css` |
+| Settings palette | CSS variables | `entrypoints/options/dashboard.css` |
 
-Location: `entrypoints/popup/styles.css`
+Location: `src/constants/appConstants.ts`, `entrypoints/popup/styles.css`, `entrypoints/options/dashboard.css`
 
 ### Testing Checklist
 

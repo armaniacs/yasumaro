@@ -35,6 +35,8 @@ Local REST API プラグインは、Obsidian とブラウザが安全に通信�
 
 ダウンロードしたファイルをダブルクリックすると「証明書のインポート」ダイアログが開きます。**次へ** を押し、**証明書ストアの場所** で **信頼できるルート証明機関** を選択して、**次へ** → **完了** の順にクリックすれば登録完了です。
 
+macOS の場合は、ダウンロードした `.cer` ファイルをダブルクリックしてキーチェーンアクセスに登録し、該当の証明書を開いて「信頼」設定で SSL 通信を「常に信頼」に変更してください。
+
 ---
 
 ### 3. API キーのコピー
@@ -55,7 +57,7 @@ Local REST API プラグインは、Obsidian とブラウザが安全に通信�
 
 ### 5. Daily Note Path の設定
 
-Yasumaro は記録を「今日のデイリーノート」に追記します。そのため、あなたの Vault 内でデイリーノートが保存されているフォルダのパスを、プラグイン設定の **Daily Note Path** フィールドに入力する必要があります。
+Yasumaro は記録を「今日のデイリーノート」に追記します。そのため、あなたの Vault 内でデイリーノートが保存されているフォルダのパスを、Yasumaro ダッシュボードの詳細設定にある **Daily Note Path** フィールド（`obsidian_daily_path`）に入力する必要があります。Local REST API プラグイン側にこの項目はありません。
 
 Obsidian 標準の Daily Notes プラグインを使用している場合は、フォルダ名を確認してください。Obsidian 設定 → **デイリーノート** → **新規作成場所** に表示されている名前が、入力すべきフォルダ名です。たとえば `DailyNotes` フォルダを使っているなら `DailyNotes` と入力します。`Journal` や `092.Daily` のように独自のフォルダ名にしている場合はそのまま入力してください。パスは Vault ルートからの相対パスで、先頭のスラッシュ `/` は不要です。
 
@@ -71,15 +73,19 @@ Obsidian 標準の Daily Notes プラグインを使用している場合は、�
 
 ### 6. Yasumaro ダッシュボードへの入力と接続テスト
 
-Chrome の Yasumaro 拡張機能アイコンを右クリックして **オプション** を選ぶと、ダッシュボードが開きます。「初期設定」パネルで **Obsidian を使う** チェックボックスをオンにすると、入力フィールドが表示されます。
+Chrome の Yasumaro 拡張機能アイコンを右クリックして **オプション** を選ぶと、ダッシュボードが開きます。「初期設定」パネルで **Obsidian を使う** チェックボックスをオンにすると、入力フィールドが表示されます。詳細設定（Protocol / Port / Daily Note Path）は折りたたみ内にあります。
 
 | フィールド | 入力値 |
 |----------|--------|
-| **Obsidian の URL** | `https://127.0.0.1:27124`（デフォルト） |
 | **Obsidian API Key** | 手順3でコピーした API キー |
+| **Protocol** | `https`（デフォルト。`http` も可） |
+| **Port** | `27124`（デフォルト。`http` の場合は `27123`） |
 | **Daily Note Path** | 手順5で確認したフォルダ名（例: `DailyNotes`） |
+| **Obsidian Host** | `127.0.0.1`（デフォルト。通常は変更不要。WSL2 等で別ホストを指定する場合に入力） |
 
-入力が終わったら **接続テスト** ボタンをクリックしてください。「✓ 接続成功」と表示されれば設定完了です。Obsidian が起動していない状態でテストすると必ず失敗するため、テスト前に Obsidian が起動していることを確認してください。
+> **注意**: 平文 HTTP はループバックホスト（`localhost` / `127.0.0.1` / `::1`）に対してのみ許可されます。ループバック以外のホストに HTTP で接続しようとすると設定が拒否されるため、その場合は HTTPS を使用してください。
+
+入力が終わったら **「Save」** で保存し、**「Test Obsidian」** ボタンをクリックしてください。「成功！Obsidianに接続しました。設定を保存しました。」と表示されれば設定完了です。Obsidian が起動していない状態でテストすると必ず失敗するため、テスト前に Obsidian が起動していることを確認してください。
 
 ---
 
@@ -177,8 +183,8 @@ The default settings work for most cases. Verify these default values:
 
 Set the location where Yasumaro saves web page records.
 
-1. Go to Obsidian Settings → **Local REST API**.
-2. In the **Daily Note Path** field, enter the path to your daily notes within your Vault.
+1. In the Yasumaro dashboard, open the advanced settings and find the **Daily Note Path** field (`obsidian_daily_path`).
+2. Enter the path to your daily notes within your Vault. The Local REST API plugin itself has no such field.
 
 Examples:
 
@@ -198,17 +204,21 @@ If your daily notes are organized into monthly or yearly subfolders, you can use
 ### 5. Configure Yasumaro Dashboard and Test Connection
 
 1. Right-click the Yasumaro extension icon in Chrome → select **Options** to open the dashboard.
-2. In the "Initial Settings" panel, check **Use Obsidian**.
+2. In the "Initial Settings" panel, check **Use Obsidian**. The advanced fields (Protocol / Port / Daily Note Path) are inside a collapsed section.
 3. Enter the following:
 
    | Field | Value |
    |-------|-------|
-   | **Obsidian URL** | `https://127.0.0.1:27124` (default) |
    | **Obsidian API Key** | The API key copied in step 2 |
-   | **Daily Note Path** | The path configured in step 4 (e.g., `DailyNotes`) |
+   | **Protocol** | `https` (default; `http` also available) |
+   | **Port** | `27124` (default; `27123` for `http`) |
+   | **Daily Note Path** | The path confirmed in step 4 (e.g., `DailyNotes`) |
+   | **Obsidian Host** | `127.0.0.1` (default; normally unchanged — set a different host for setups like WSL2) |
 
-4. Click **Test Connection**.
-5. You should see ✓ Connection successful.
+   > **Note**: Plaintext HTTP is allowed only for loopback hosts (`localhost` / `127.0.0.1` / `::1`). Configuring HTTP against a non-loopback host is rejected — use HTTPS in that case.
+
+4. Click **Save**, then click **Test Obsidian**.
+5. You should see "Success! Connected to Obsidian. Settings Saved.".
 
 ---
 
@@ -224,6 +234,8 @@ The Local REST API plugin uses a self-signed certificate by default, which may t
 2. You will see a "Your connection is not private" warning.
 3. Click **Advanced**.
 4. Click **Proceed to 127.0.0.1 (unsafe)**.
+
+On macOS, you can also double-click the downloaded `.cer` file to add it to the keychain, then open the certificate and set SSL trust to "Always Trust".
 
 This tells Chrome to trust this local certificate for future connections from Yasumaro.
 
