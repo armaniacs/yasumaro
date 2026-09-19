@@ -15,7 +15,9 @@ import { flushBufferedExports } from './localMarkdownExportCore.js';
 
 export const IDLE_FALLBACK_ALARM = 'yasumaro-local-md-flush';
 export const DAILY_FLUSH_ALARM = 'yasumaro-local-md-daily-flush';
+export const IMMEDIATE_FLUSH_ALARM = 'yasumaro-local-md-immediate';
 const IDLE_FALLBACK_INTERVAL_MIN = 30;
+const IMMEDIATE_DEBOUNCE_MIN = 1;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function getYesterdayDateString(): string {
@@ -41,6 +43,7 @@ function getNextMidnightTimestamp(): number {
 export async function initExportScheduler(): Promise<void> {
   chrome.alarms.clear(IDLE_FALLBACK_ALARM);
   chrome.alarms.clear(DAILY_FLUSH_ALARM);
+  chrome.alarms.clear(IMMEDIATE_FLUSH_ALARM);
 
   const settings = await settingsRepository.getAll();
   const timing = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING];
@@ -58,7 +61,21 @@ export async function initExportScheduler(): Promise<void> {
       periodInMinutes: 1440,
     });
   }
-  // 'manual' and 'immediate' need no standing alarm or listener.
+  // 'manual' needs no standing alarm or listener. 'immediate' uses the
+  // per-recording one-shot alarm created by scheduleImmediateFlush().
+}
+
+/**
+ * Schedule the immediate-mode one-shot flush (saveLocalMarkdownStep calls
+ * this per buffered recording). Chrome replaces an alarm with the same name,
+ * so rapid recordings collapse into a single flush — at most one download
+ * per minute, which is the documented immediate-timing behavior. The alarm
+ * body is the shared runLocalMdFlush in alarmRegistry.ts.
+ */
+export function scheduleImmediateFlush(): void {
+  chrome.alarms.create(IMMEDIATE_FLUSH_ALARM, {
+    when: Date.now() + IMMEDIATE_DEBOUNCE_MIN * 60 * 1000,
+  });
 }
 
 /**

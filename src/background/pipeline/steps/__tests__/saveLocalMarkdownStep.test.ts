@@ -357,7 +357,8 @@ describe('saveLocalMarkdownStep', () => {
   });
 
   describe('flushスケジュール', () => {
-    it('creates a daily alarm when timing=immediate', async () => {
+    it('creates a one-shot debounced alarm when timing=immediate', async () => {
+      const before = Date.now();
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -369,7 +370,17 @@ describe('saveLocalMarkdownStep', () => {
       await saveLocalMarkdownStep(context);
 
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(
-        'yasumaro-local-md-daily',
+        'yasumaro-local-md-immediate',
+        { when: expect.any(Number) }
+      );
+      const when = mockChrome.alarms.create.mock.calls
+        .find((c: unknown[]) => c[0] === 'yasumaro-local-md-immediate')?.[1] as { when: number };
+      // 約1分後（デバウンス）に発火するワンショット
+      expect(when.when).toBeGreaterThanOrEqual(before + 60_000 - 1_000);
+      expect(when.when).toBeLessThanOrEqual(Date.now() + 60_000 + 1_000);
+      // daily アラームは作らない
+      expect(mockChrome.alarms.create).not.toHaveBeenCalledWith(
+        'yasumaro-local-md-daily-flush',
         { periodInMinutes: 1440 }
       );
     });
@@ -386,7 +397,7 @@ describe('saveLocalMarkdownStep', () => {
       await saveLocalMarkdownStep(context);
 
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(
-        'yasumaro-local-md-daily',
+        'yasumaro-local-md-daily-flush',
         { periodInMinutes: 1440 }
       );
     });

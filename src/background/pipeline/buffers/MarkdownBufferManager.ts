@@ -1,5 +1,6 @@
 import type { MarkdownTemplateEntryData } from '../../../utils/types.js';
 import { withAtomicKeys } from '../../../utils/storage/storageTransaction.js';
+import { DAILY_FLUSH_ALARM } from '../../localMarkdownIdleFlusher.js';
 
 export interface MarkdownEntry {
   url: string;
@@ -9,7 +10,9 @@ export interface MarkdownEntry {
 }
 
 const DEFAULT_STORAGE_PREFIX = 'local_export_';
-const DEFAULT_DAILY_FLUSH_ALARM = 'yasumaro-local-md-daily';
+// Single source for the daily flush alarm name (alarmRegistry.ts handles it).
+// The old inline 'yasumaro-local-md-daily' had no handler — a dead alarm.
+export const DEFAULT_DAILY_FLUSH_ALARM = DAILY_FLUSH_ALARM;
 
 // VULN-004: cap the in-memory daily buffer so a high-traffic day cannot grow the
 // eventual `local_export_YYYY-MM-DD` file without limit. When exceeded, the
