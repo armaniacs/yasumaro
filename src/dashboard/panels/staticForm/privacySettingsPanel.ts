@@ -1,5 +1,5 @@
 import { type PanelLifecycle } from '../types.js';
-import { getRegistry } from '../registryContext.js';
+import { tryNavigate } from '../registryContext.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storage/privacyConsent.js';
@@ -94,12 +94,8 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
         // Registry 経由で遷移する (PBI 2026-09-07-25)。以前の sidebar ボタンの
         // click シミュレートは DOM 迂回であり、sidebar の active 同期は
         // Bootstrapper の navigate 購読が担う。registry 未初期化時 (単体テスト等)
-        // は何もしない。
-        try {
-          getRegistry().navigate('panel-export-logs');
-        } catch {
-          // Registry not ready — stay on the current panel.
-        }
+        // は何もしない — tryNavigate() が失敗時に何もしない。
+        tryNavigate('panel-export-logs');
       });
     },
     async refresh() {
