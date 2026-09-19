@@ -255,7 +255,7 @@ grep -Pn 'echo\s+"?\${?\w*(SECRET|TOKEN|KEY|PASS|PRIVATE)}?' .github/workflows/*
 - [ ] WASM 振る舞い等価ゲート（ci.yml の wasm-test ジョブ）が有効である
   - コミット済みバイナリと fresh ビルドの双方が parity スイート（218 件の captured inputs + boundary corpus + hybrid 契約テスト）に合格すること、glue（piiSanitizerWasm.js）の陳腐化チェック、コミット済み src/public コピーのバイト一致を確認する。ツールチェーンは rust-toolchain.toml で 1.98.1 にピン留めされている。
 - [ ] SBOM 生成（`npm run generate-sbom`）、ライセンスチェック（`npm run check-licenses`）、innerHTML エスケープガード（`npm run check-innerhtml-escape`）、非推奨エイリアスガード（`npm run check-deprecated-aliases`）が ci.yml で実行されている
-- [ ] 既知の gap: `.gitleaks.toml` は存在するが、`.github/` に gitleaks 実行ワークフローは未配線である
+- [ ] Secret scan（gitleaks）が ci.yml の `gitleaks` ジョブで全履歴に対して実行されている（`.gitleaks.toml` の設定を使用。以前は「既知の gap: 未配線」だった）
 
 ---
 
