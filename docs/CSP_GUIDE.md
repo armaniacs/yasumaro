@@ -56,8 +56,8 @@ CSPValidator（第二層）
 | OpenAI | `api.openai.com`、`*.openai.com` |
 | Anthropic Claude | `api.anthropic.com` |
 | Groq | `api.groq.com` |
-| Mistral | `mistral.ai` |
-| DeepSeek | `deepseek.com` |
+| Mistral | `mistral.ai`、`api.mistral.ai` |
+| DeepSeek | `deepseek.com`、`api.deepseek.com` |
 | Voyage | `voyageai.com` |
 | Volcengine | `volcengine.com` |
 | Zhipu AI | `z.ai` |
@@ -255,8 +255,8 @@ The following providers are always permitted. No conditional CSP configuration i
 | OpenAI | `api.openai.com`, `*.openai.com` |
 | Anthropic Claude | `api.anthropic.com` |
 | Groq | `api.groq.com` |
-| Mistral | `mistral.ai` |
-| DeepSeek | `deepseek.com` |
+| Mistral | `mistral.ai`、`api.mistral.ai` |
+| DeepSeek | `deepseek.com`、`api.deepseek.com` |
 | Voyage | `voyageai.com` |
 | Volcengine | `volcengine.com` |
 | Zhipu AI | `z.ai` |

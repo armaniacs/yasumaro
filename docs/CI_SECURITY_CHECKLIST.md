@@ -24,8 +24,7 @@ GitHub Actions の `${{ }}` 展開はシェルパース **前** に実行され�
       VERSION: ${{ steps.version.outputs.version }}
     run: echo "Version: ${VERSION}"
     ```
-  - **関連インシデント:** PBI 01 — release.yml コマンドインジェクション（過去の教訓）
-  - **既知の open item:** release.yml のメトリクス記録ステップに `${{ github.ref_name }}` の直接展開が残存しており、是正待ちである。下記の監査手順の grep で検出できる。
+  - **関連インシデント:** PBI 01 — release.yml コマンドインジェクション（過去の教訓。メトリクス記録ステップの `${{ github.ref_name }}` 直接展開は `env:` 経由参照に是正済み。監査手順の grep で再発を検出できる）
 
 - [ ] 外部入力（version、branch名、タグ名等）を二重引用符で囲んでいる
   - **なぜ危険か:** 引用符なしの変数展開はシェルのワード分割とパス名展開（グロブ）の影響を受ける。
