@@ -20,7 +20,7 @@
  * 🟢
  */
 
-import { cleanseContent, countCleanseTargets, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
+import { cleanseContent, countCleanseTargets, INITIAL_KEYWORDS, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
 import { logSanitize, logDebug } from '../logger/api.js';
 import { countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
@@ -116,7 +116,7 @@ function extractInternal(
     withDiagnostics: boolean
 ): ExtractResult {
     let content = '';
-    const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'] } = cleanseOptions;
+    const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = [...INITIAL_KEYWORDS] } = cleanseOptions;
     const { aiSummaryCleanseEnabled = false, fallbackRatio = 0.20, fallbackMinBytes = 300 } = aiSummaryCleanseOptions;
     // Diagnostic-only measurement seam: enabled exactly when the caller asked
     // for ExtractResult diagnostics (extractMainContentWithInfo entry).

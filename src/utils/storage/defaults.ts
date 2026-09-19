@@ -9,6 +9,7 @@ import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
 import type { DeepReadonly } from '../typeUtils.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../aiSummaryCleaner/rules.js';
+import { INITIAL_KEYWORDS } from '../contentCleaner.js';
 
 /**
  * Cleansing rule defaults, derived from CLEANSING_RULES instead of restated.
@@ -67,7 +68,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.PII_SANITIZE_LOGS]: true,
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
     [StorageKeys.CONTENT_STRIP_HARD_ENABLED]: true,
-    [StorageKeys.CONTENT_STRIP_KEYWORDS]: ['balance', 'account', 'meisai', 'login', 'card-number', 'keiyaku', 'password', 'payment', 'transaction', 'billing', 'invoice', 'receipt', 'rireki', 'torihiki', 'zandaka', 'hoken', 'address'],
+    [StorageKeys.CONTENT_STRIP_KEYWORDS]: [...INITIAL_KEYWORDS],
     [StorageKeys.CONTENT_STRIP_KEYWORD_ENABLED]: true,
     [StorageKeys.UBLOCK_RULES]: { blockDomains: [], exceptionDomains: [], metadata: { importedAt: 0, ruleCount: 0 } },
     [StorageKeys.UBLOCK_SOURCES]: [],
