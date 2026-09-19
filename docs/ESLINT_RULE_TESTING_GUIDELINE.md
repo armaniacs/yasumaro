@@ -31,8 +31,8 @@ ESLintカスタムルール開発時のテストケース生成ガイドライ�
   ```javascript
   const data = await response.json(); // Should NOT trigger
   ```
-- [ ] テストファイル（`__tests__/` 配下）
-- [ ] モックファイル（`__mocks__/` 配下）
+- [ ] テストファイル（ファイル名に `__tests__` / `.test.` を含むもの）
+- [ ] モックファイル（ファイル名に `__mocks__` / `mock` を含むもの）
 
 ### 3. 偽陰性テスト（検出されるべきケース）
 
@@ -123,7 +123,7 @@ ESLint 9+ の flat config API に対応した RuleTester を使用する。
 
 ```typescript
 import { RuleTester } from 'eslint';
-import rule from '../rules/my-rule.js';
+import rule from '../rules/my-rule.mjs';
 
 const ruleTester = new RuleTester({
   languageOptions: {
@@ -235,11 +235,15 @@ async function handler(response) {
   response.text();
 }
 
-// テストファイル（除外される）
+// テストファイル（除外される: ファイル名に __tests__ / .test. を含む）
 // filename: /path/to/__tests__/some.test.ts
 const text = await response.text();
 
-// モックファイル（除外される）
+// ファイル名に .test. を含むファイルも除外される
+// filename: /path/to/handlers.test.ts
+const text = await response.text();
+
+// モックファイル（除外される: ファイル名に __mocks__ / mock を含む）
 // filename: /path/to/__mocks__/some.ts
 const text = await response.text();
 ```
@@ -289,9 +293,17 @@ const md = `- [${title}](https://example.com)`;
 
 #### 注意点
 
-- **内部変数**: `timestamp`, `date`, `domain` 等の内部変数は常にスキップされる
-- **import 欠落**: markdown テンプレートがあるが `sanitizeForObsidian` の import がない場合、`missingImport` エラーが追加で報告される
-- **テストファイル**: テストファイル（`__tests__/` 配下）では `missingImport` エラーは報告されない
+- **サニタイズ関数**: 認識されるサニタイズ関数は `sanitizeForObsidian` / `sanitizeUrlForMarkdownTarget` / `sanitizeForMarkdownLinkText` の 3 つ（`SANITIZE_FUNCTIONS`）。いずれかでサニタイズ済みの変数は警告されない
+- **内部変数**: 内部変数は常にスキップされる。完全な一覧は `eslint/rules/require-sanitized-markdown.mjs` の `INTERNAL_VARS` を参照（例: `timestamp`、`dateStr`、`periodLabel`）
+- **import 欠落**: markdown テンプレートがあるがサニタイズ関数の import がない場合、`missingImport` エラーが追加で報告される
+- **テストファイル**: テストファイル（ファイル名に `__tests__` / `.test.` を含む）では `missingImport` エラーは報告されない
+
+### その他の登録ルール
+
+本ガイドは上記 2 ルールを中心に解説する。プラグイン（`eslint/plugin.mjs`）には他に以下の 2 ルールが登録されている。
+
+- `no-tautology-expect`: 自明に真となる expect アサーションを検出する
+- `utils-layer-boundary`: `src/utils/` のレイヤ境界違反を検出する（本番ゲートで有効）
 
 ## テストケース追加のワークフロー
 
