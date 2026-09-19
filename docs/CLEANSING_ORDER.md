@@ -12,28 +12,41 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 | 機能 | 目的 | 実行タイミング |
 |------|------|----------------|
-| **Content Cleansing** | Obsidianに保存する前に不要な情報を削除 | コンテンツ抽出後、Obsidian保存前 |
-| **AI Summary Cleansing** | AI要約前に不要な情報を削除 | AI要約前 |
+| **Content Cleansing** | 記録される本文から不要な情報を削除（本文はSQLiteの記録に保存され、AI要約の入力にもなる） | コンテンツ抽出パイプライン内（記録送信前） |
+| **AI Summary Cleansing** | AI要約に入るノイズを削除 | Content Cleansing の直後（同一クローンに対して連続実行） |
 
 ### クレンジングの実行順序
 
+クレンジングは2段階のパイプラインで動作します。Content Cleansing と AI Summary Cleansing は**コンテンツスクリプト側の抽出パイプライン**で連続実行され、その後の PII マスキング・AI要約・保存は **background 側の記録パイプライン**で行われます。
+
 ```
+【コンテンツスクリプト: 抽出パイプライン（ページ訪問時）】
 1. コンテンツ抽出（ページ本文の主要部分を選択）
    ↓
-2. Content Cleansing（有効な場合）
+2. Content Cleansing（有効な場合）— DOMクローンに対して実行
    - Hard Strip: 不要なタグ・属性を削除
    - Keyword Strip: ID/クラス名に特定キーワードを含む要素を削除
    ↓
-3. AI Summary Cleansing（有効な場合）— Content Cleansing 後のデータに対して実行
+3. AI Summary Cleansing（有効な場合）— 同一クローンに対して連続実行
    - 画像alt属性・メタデータ・広告・ナビゲーション・ソーシャルウィジェットを削除
    - 固定バナー・おすすめセクション・ページネーション・ポップアップ等（各オプションによる）
    ↓
-4. AI要約（AIプロバイダー設定が有効な場合）
+4. テキスト抽出 → クレンジング済み本文を記録ペイロードとして送信
    ↓
-5. Obsidianに保存
+【background: 記録パイプライン】
+5. サイズ制限（切り詰められたコンテンツのみがAI APIに送信される）
+   ↓
+6. PIIマスキング（プライバシーモード設定による）
+   ↓
+7. AI要約（プライバシーモード設定による: ローカルAI / クラウドAI）
+   ↓
+8. Obsidianのデイリーノートに要約を追記 ＋ SQLiteに記録を保存
 ```
 
-> **注意**: Content Cleansing と AI Summary Cleansing は同一のデータに対して順次実行されます。Content Cleansing で削除された要素は AI Summary Cleansing の対象にはなりません。どちらか一方のみを有効にすることも可能です。
+> **注意**:
+> - Content Cleansing と AI Summary Cleansing は同一クローンに対して順次実行されます。Content Cleansing で削除された要素は AI Summary Cleansing の対象にはなりません。どちらか一方のみを有効にすることも可能です
+> - Obsidianのデイリーノートには本文ではなく**要約**（L0抽出文またはAI要約）が保存されます。クレンジング済み本文はSQLiteの記録に保存され、履歴の検索・プレビューに使われます
+> - Content Cleansing は AI要約が無効でも機能します（記録本文のクレンジングとして）
 
 **記録履歴への表示**: バイト数やトークン数の変化がない場合、統計情報は表示されません。
 
@@ -41,7 +54,7 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 #### Content Cleansing（コンテンツクレンジング）
 
-**目的**: Obsidianに保存するコンテンツから不要な情報を削除し、ノートの品質を向上させます。
+**目的**: 記録される本文から不要な情報を削除します。クレンジング済み本文はSQLiteの記録に保存され（履歴の検索・プレビューに使用）、AI要約の入力にもなるため、ノート品質・要約精度・トークンコストのすべてに効きます。AI要約が無効でも、記録本文のクレンジングとして機能します。
 
 **設定項目**:
 - **Hard Strip**: 特定のHTMLタグや属性を削除
@@ -64,7 +77,7 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 **目的**: AI要約に送信するコンテンツから不要な情報を削除し、要約の精度と効率を向上させます。
 
-> **処理タイミング**: AI Summary Cleansing は Content Cleansing の**後**に同一クローンに対して実行されます。Content Cleansingで削除された要素は AI Summary Cleansing の対象にはなりません。
+> **処理タイミング**: AI Summary Cleansing は Content Cleansing の**直後**に同一クローンに対して実行されます（コンテンツ抽出パイプライン内）。Content Cleansingで削除された要素は AI Summary Cleansing の対象にはなりません。AI要約そのものはこの後、background側の記録パイプラインでPIIマスキングを経て実行されますが、要約に入る本文はここで既にクレンジング済みです。
 
 **設定項目**:
 - **画像alt属性**: 画像の `alt` 属性を削除（属性値のみ削除、要素は残る）
@@ -148,28 +161,41 @@ Yasumaro has two cleansing features. Here's an explanation of their purpose and 
 
 | Feature | Purpose | Execution Timing |
 |---------|---------|-------------------|
-| **Content Cleansing** | Remove unnecessary information before saving to Obsidian | After content extraction, before Obsidian save |
-| **AI Summary Cleansing** | Remove unnecessary information before AI summarization | Before AI summarization |
+| **Content Cleansing** | Remove unnecessary information from the recorded body (the body is stored in the SQLite record and is also the AI summary input) | Inside the content-extraction pipeline (before the recording is sent) |
+| **AI Summary Cleansing** | Remove noise before it reaches AI summarization | Immediately after Content Cleansing (sequentially, on the same clone) |
 
 ### Cleansing Execution Order
 
+Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cleansing run sequentially in the **content script's extraction pipeline**; PII masking, AI summarization, and the saves then happen in the **background recording pipeline**.
+
 ```
+[Content script: extraction pipeline (on page visit)]
 1. Content Extraction (selects the main body of the page)
    ↓
-2. Content Cleansing (if enabled)
+2. Content Cleansing (if enabled) — applied to a DOM clone
    - Hard Strip: Remove unnecessary tags and attributes
    - Keyword Strip: Remove elements whose ID/class names contain specific keywords
    ↓
-3. AI Summary Cleansing (if enabled) — applied to the output of Content Cleansing
+3. AI Summary Cleansing (if enabled) — sequentially, on the same clone
    - Remove image alt attributes, metadata, ads, navigation, social widgets
    - Fixed banners, recommendation sections, pagination, popups, etc. (per individual options)
    ↓
-4. AI Summarization (if AI provider is configured)
+4. Text extraction → the cleansed body is sent as the recording payload
    ↓
-5. Save to Obsidian
+[Background: recording pipeline]
+5. Size limiting (only the truncated content is sent to the AI API)
+   ↓
+6. PII masking (per privacy mode settings)
+   ↓
+7. AI summarization (per privacy mode settings: local AI / cloud AI)
+   ↓
+8. Append the summary to the Obsidian daily note + save the record to SQLite
 ```
 
-> **Note**: Content Cleansing and AI Summary Cleansing run sequentially on the same data. Elements removed by Content Cleansing are not targets for AI Summary Cleansing. Either feature can be enabled independently of the other.
+> **Notes**:
+> - Content Cleansing and AI Summary Cleansing run sequentially on the same clone. Elements removed by Content Cleansing are not targets for AI Summary Cleansing. Either feature can be enabled independently of the other.
+> - The Obsidian daily note receives the **summary** (L0-extracted sentences or the AI summary), not the page body. The cleansed body is stored in the SQLite record and used for history search and previews.
+> - Content Cleansing works even when AI summarization is disabled (as body cleansing for the recording).
 
 **Display in History**: Statistics (byte counts, token counts) are hidden when no reduction occurred.
 
@@ -177,7 +203,7 @@ Yasumaro has two cleansing features. Here's an explanation of their purpose and 
 
 #### Content Cleansing
 
-**Purpose**: Remove unnecessary information from content to be saved to Obsidian, improving note quality.
+**Purpose**: Remove unnecessary information from the recorded body. The cleansed body is stored in the SQLite record (used for history search and previews) and is also the AI summary input, so this improves note quality, summary accuracy, and token cost all at once. It works even when AI summarization is disabled, as body cleansing for the recording.
 
 **Settings**:
 - **Hard Strip**: Remove specific HTML tags and attributes
@@ -200,7 +226,7 @@ Yasumaro has two cleansing features. Here's an explanation of their purpose and 
 
 **Purpose**: Remove unnecessary information from content to be sent to AI summarization, improving summary accuracy and efficiency.
 
-> **Processing timing**: AI Summary Cleansing runs **after** Content Cleansing on the same clone. Elements already removed by Content Cleansing are not targets for AI Summary Cleansing.
+> **Processing timing**: AI Summary Cleansing runs **immediately after** Content Cleansing on the same clone (inside the extraction pipeline). Elements already removed by Content Cleansing are not targets for AI Summary Cleansing. AI summarization itself runs later in the background recording pipeline, after PII masking — but the body entering the summary is already cleansed here.
 
 **Settings**:
 - **Image alt attributes**: Remove `alt` attribute values from images (attribute only; element remains)
