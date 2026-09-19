@@ -9,6 +9,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { getMessage } from '../utils/i18n.js';
+import { clearElement } from './domUtils.js';
 
 async function initTrancoUpdateNotification(): Promise<void> {
     const banner = document.getElementById('trancoUpdateBanner');
@@ -52,7 +53,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
         const messageKey = 'trancoUpdateNotificationDescription';
         desc.textContent = getMessage(messageKey);
 
-        actions.innerHTML = '';
+        clearElement(actions);
 
         const acceptBtn = document.createElement('button');
         acceptBtn.className = 'btn-sm btn-banner-primary';

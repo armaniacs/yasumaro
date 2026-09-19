@@ -18,6 +18,10 @@ vi.mock('../errorUtils.js', () => ({
 
 vi.mock('../domUtils.js', () => ({
     escapeHtml: vi.fn((s: string) => s),
+    clearElement: vi.fn((el: Element | null) => {
+        if (!el) return;
+        while (el.firstChild) el.removeChild(el.firstChild);
+    }),
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {

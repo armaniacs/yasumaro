@@ -49,6 +49,14 @@ export interface MsgOffscreenOptions {
  * the Firefox branch (including its import of the in-page offscreen host) is
  * dead-code eliminated from the Chromium build, and vice versa.
  */
+/**
+ * Name of the transport selected for this build. Diagnostics only.
+ * Resolved at build time alongside the transport itself.
+ */
+export function getOffscreenTransportName(): 'in-page' | 'chrome-offscreen' {
+  return import.meta.env.FIREFOX ? 'in-page' : 'chrome-offscreen';
+}
+
 export async function createOffscreenTransport(): Promise<OffscreenTransport> {
   if (import.meta.env.FIREFOX) {
     const [

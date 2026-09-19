@@ -99,7 +99,8 @@ export class RateLimiter {
     this.persist();
   }
 
-  /** @deprecated Use removeOrigin instead. Kept for backwards compatibility. */
+  /** @deprecated Use removeOrigin instead. Kept for backwards compatibility.
+   * Sunset: remove in next major (re-evaluate 2026-12-31). */
   removeTab(_tabId: number): void {
     logWarn('RateLimiter.removeTab called but is deprecated; use removeOrigin', {}, undefined, 'service-worker');
   }

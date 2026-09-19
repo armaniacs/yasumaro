@@ -57,6 +57,7 @@ vi.mock('../settings/fieldValidation.js', () => ({
   validateAllFields: vi.fn().mockReturnValue(true),
   validateObsidianHost: vi.fn().mockReturnValue(true),
   validateGeminiApiVersion: vi.fn().mockReturnValue(true),
+  setFieldError: vi.fn(),
   ErrorPair: class {},
 }));
 
@@ -81,6 +82,7 @@ const mockExtractTiming = vi.mocked(formBinding.extractLocalMarkdownExportTiming
 const mockValidateAll = vi.mocked(fieldValidation.validateAllFields);
 const mockValidateObsidianHost = vi.mocked(fieldValidation.validateObsidianHost);
 const mockValidateGemini = vi.mocked(fieldValidation.validateGeminiApiVersion);
+const mockSetFieldError = vi.mocked(fieldValidation.setFieldError);
 const mockConfirm = vi.mocked(showConfirmDialog);
 
 function setupInputs(protocol = 'https', obsidianHost = '127.0.0.1', geminiVersion = 'v1beta') {
@@ -208,6 +210,17 @@ describe('saveDashboardSettings', () => {
     const result = await saveDashboardSettings();
     expect(result.success).toBe(false);
     expect(result.error).toBe('http_confirm_cancelled');
+  });
+
+  it('returns http_non_loopback_blocked when http targets a non-loopback host', async () => {
+    setupInputs('http', '192.168.1.10');
+    const result = await saveDashboardSettings();
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('http_non_loopback_blocked');
+    // Gate must run BEFORE the confirm dialog: no dialog on a blocked config
+    expect(mockConfirm).not.toHaveBeenCalled();
+    // Field error is surfaced on the host input
+    expect(mockSetFieldError).toHaveBeenCalledTimes(1);
   });
 
   it('proceeds when http protocol is confirmed', async () => {

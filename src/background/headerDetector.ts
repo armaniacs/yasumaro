@@ -166,13 +166,19 @@ export class HeaderDetector {
     // chrome.storage.session はブラウザセッション中は永続 (SW 再起動をまたいでも保持される)
     if (chrome.storage.session) {
       const sessionKey = 'privacyCache_' + normalizedUrl;
-      chrome.storage.session.set({ [sessionKey]: info }).then(() => {
+      try {
+        await chrome.storage.session.set({ [sessionKey]: info });
         // VULN-003: bound the total number of privacyCache_ session keys so a
         // long-lived session cannot accumulate them without limit.
-        return this.capSessionPrivacyKeys();
-      }).catch(() => {
-        // session storage エラーは握りつぶす（インメモリが主、sessionは補助）
-      });
+        await this.capSessionPrivacyKeys();
+      } catch (error: unknown) {
+        // Session storage is auxiliary (in-memory cache is primary), so fall
+        // back silently but leave a trace for diagnostics.
+        await logDebug('Session privacy cache save failed, using in-memory only', {
+          url: normalizedUrl,
+          error: errorMessage(error),
+        });
+      }
     }
 
     // バッジ更新（プライベート検出時のみ設定。非プライベートでは上書きしない）

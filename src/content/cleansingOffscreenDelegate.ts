@@ -6,7 +6,7 @@
  * 失敗・未対応環境では同期的にフォールバックする。
  */
 
-import { cleanseHtmlOffscreen } from '../offscreen/cleansingOffscreen.js';
+import { cleanseHtmlOffscreen, MAX_CLEANSING_HTML_BYTES, TOO_LARGE_ERROR_PREFIX } from '../offscreen/cleansingOffscreen.js';
 import { StorageKeys } from '../utils/storage/types.js';
 
 // PBI 2026-09-11-05 (round 7): module-level cache — the flag is read once,
@@ -48,8 +48,14 @@ async function isCleansingOffscreenEnabled(): Promise<boolean> {
 /**
  * 同期フォールバック: 現在のコンテキストで直接クレンジングを実行する。
  * Offscreen と同一の `cleanseHtmlOffscreen` 純粋関数を呼び出すので結果は一致する。
+ * サイズ上限は Offscreen 経路と同一契約（MAX_CLEANSING_HTML_BYTES）:
+ * 超過入力はパースせず元 html を返す。経路ごとに上限がズレると、
+ * flag 無効環境だけ巨大パースが素通しになる。
  */
 export function cleanseHtmlSync(html: string): string {
+    if (html.length > MAX_CLEANSING_HTML_BYTES) {
+        return html;
+    }
     try {
         const { html: cleansed } = cleanseHtmlOffscreen(html);
         return cleansed;
@@ -87,6 +93,15 @@ export async function cleanseViaOffscreen(html: string): Promise<string> {
 
         if (response && (response as { success: boolean }).success === true && typeof (response as { html: string }).html === 'string') {
             return (response as { html: string }).html;
+        }
+        // Size-limit rejections must not fall back to a local parse: the cap
+        // exists to prevent the heavy parse anywhere, so re-parsing on the
+        // main thread would defeat it. Return the original html instead.
+        const error = response && 'error' in (response as Record<string, unknown>)
+            ? String((response as { error: unknown }).error ?? '')
+            : '';
+        if (error.startsWith(TOO_LARGE_ERROR_PREFIX)) {
+            return html;
         }
         return cleanseHtmlSync(html);
     } catch {

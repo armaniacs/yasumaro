@@ -263,6 +263,7 @@ export async function decryptApiKey(encryptedApiKey: EncryptedData | string, key
  * こちらは検証時の定数時間比較を呼び出し側任せにするため、書き忘れると
  * タイミング攻撃の穴になる。本番の呼び出しは PBI 2026-09-16-04 で全て
  * 移行済みで、残っているのは互換のための公開のみ。
+ * Sunset: remove in next major (re-evaluate 2026-12-31).
  */
 export async function computeHMAC(secret: string, message: string): Promise<string> {
     const webcrypto = getWebCrypto();

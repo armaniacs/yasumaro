@@ -35,6 +35,8 @@ export interface ObsidianConfigOverride {
     protocol?: string;
     port?: string | number;
     apiKey?: string;
+    /** Host override so testConnection evaluates the same loopback rule as saved configs. */
+    host?: string;
 }
 
 /**
@@ -52,7 +54,7 @@ export interface ObsidianConfigOverride {
  */
 export async function buildObsidianConfig(override?: ObsidianConfigOverride): Promise<ObsidianConfig> {
     if (override) {
-        return buildFromOverride(override);
+        return await buildFromOverride(override);
     }
     return buildFromSettings();
 }
@@ -63,10 +65,11 @@ export async function buildObsidianConfig(override?: ObsidianConfigOverride): Pr
 async function buildFromSettings(): Promise<ObsidianConfig> {
     const settings = await settingsRepository.getAll();
 
-    const protocol = validateObsidianProtocol(settings[StorageKeys.OBSIDIAN_PROTOCOL]);
+    const rawHost = settings[StorageKeys.OBSIDIAN_HOST];
+    const protocol = validateObsidianProtocol(settings[StorageKeys.OBSIDIAN_PROTOCOL], typeof rawHost === 'string' ? rawHost : undefined);
     const rawPort = settings[StorageKeys.OBSIDIAN_PORT] ?? OBSIDIAN_DEFAULT_PORT;
     const port = validateObsidianPort(rawPort);
-    const host = validateObsidianHost(settings[StorageKeys.OBSIDIAN_HOST]);
+    const host = validateObsidianHost(rawHost);
     const apiKey = settings[StorageKeys.OBSIDIAN_API_KEY];
 
     addLog(LogType.DEBUG, 'Obsidian API Key check', {
@@ -94,20 +97,26 @@ async function buildFromSettings(): Promise<ObsidianConfig> {
 
 /**
  * Build config from override values (used by testConnection).
- * Host is always DEFAULT_HOST since testConnection doesn't read from settings.
+ * Host falls back to DEFAULT_HOST when not provided, matching the stored-config path.
+ *
+ * apiKey falls back to the stored key when the override omits it: the dashboard
+ * clears the API key input's value (masking the saved key behind a placeholder),
+ * so editing only protocol/port/host must not be treated as "no API key configured".
  */
-function buildFromOverride(override: ObsidianConfigOverride): ObsidianConfig {
-    const protocol = validateObsidianProtocol(override.protocol);
+async function buildFromOverride(override: ObsidianConfigOverride): Promise<ObsidianConfig> {
+    const protocol = validateObsidianProtocol(override.protocol, override.host);
     const port = validateObsidianPort(override.port);
-    const apiKey = override.apiKey;
+    const apiKey = override.apiKey || (await settingsRepository.get(StorageKeys.OBSIDIAN_API_KEY));
 
-    if (!apiKey) {
+    if (!apiKey || typeof apiKey !== 'string') {
         // Throw to match the original behavior in testConnection
         throw new Error('API key is missing');
     }
 
+    const host = override.host && override.host.trim() !== '' ? validateObsidianHost(override.host) : OBSIDIAN_DEFAULT_HOST;
+
     return {
-        baseUrl: `${protocol}://${OBSIDIAN_DEFAULT_HOST}:${port}`,
+        baseUrl: `${protocol}://${host}:${port}`,
         headers: {
             ...BASE_HEADERS,
             'Authorization': `Bearer ${apiKey}`

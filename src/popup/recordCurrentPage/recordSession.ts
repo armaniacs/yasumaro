@@ -4,6 +4,7 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab, isRecordable } from '../tabUtils.js';
 import { formatSuccessMessage } from '../errorUtils.js';
+import { clearElement } from '../domUtils.js';
 import { getMessage } from '../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
@@ -262,7 +263,7 @@ export class RecordSession {
   private getOrCreateResultActionsContainer(): HTMLElement | null {
     let container = document.getElementById('recordResultActions');
     if (container) {
-      container.innerHTML = '';
+      clearElement(container);
       return container;
     }
 

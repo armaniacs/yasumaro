@@ -24,12 +24,22 @@ const DEFAULT_HOST = '127.0.0.1';
 const READ_TIMEOUT_MS = 15000;
 
 /**
+ * Returns true for loopback hosts where plaintext HTTP carries no LAN risk.
+ */
+export function isLoopbackHost(host: string): boolean {
+    const h = host.trim().toLowerCase().replace(/^\[|\]$/g, '');
+    return h === 'localhost' || h === '127.0.0.1' || h === '::1';
+}
+
+/**
  * Validate and normalize the Obsidian protocol setting.
  * @param protocol - Raw protocol value from settings
+ * @param host - Raw host value (used to escalate non-loopback HTTP to an error)
  * @returns Normalized protocol ('http' or 'https')
- * @throws Error if protocol is a non-empty string that is not 'http' or 'https'
+ * @throws Error if protocol is a non-empty string that is not 'http' or 'https',
+ *   or if plaintext HTTP targets a non-loopback host
  */
-export function validateObsidianProtocol(protocol: string | undefined | null): ObsidianProtocol {
+export function validateObsidianProtocol(protocol: string | undefined | null, host?: string | undefined | null): ObsidianProtocol {
     if (protocol === undefined || protocol === null || protocol === '') {
         return 'https';
     }
@@ -44,6 +54,10 @@ export function validateObsidianProtocol(protocol: string | undefined | null): O
     }
 
     if (normalized === 'http') {
+        const hostValue = typeof host === 'string' && host.trim() !== '' ? host : DEFAULT_HOST;
+        if (!isLoopbackHost(hostValue)) {
+            throw new Error(`Plaintext HTTP to non-loopback host "${hostValue}" is blocked. Use HTTPS or a loopback address.`);
+        }
         addLog(LogType.WARN, 'HTTP protocol selected — API key and data will be sent in plaintext over the local network. Use HTTPS for encrypted communication.', {
             protocol: normalized
         });
@@ -83,8 +97,10 @@ export function validateObsidianHost(host: string | undefined | null): string {
         return `[${inner}]`;
     }
 
-    // Reject hosts containing protocol or slash characters
-    if (/[\s\/\\]/.test(trimmed)) {
+    // Reject hosts containing protocol or slash characters, plus '@' (URL
+    // userinfo: "127.0.0.1@evil.com" resolves to evil.com and would send the
+    // API key there) and '%' (percent-encoded bypasses of the same trick).
+    if (/[\s\/\\@%]/.test(trimmed)) {
         throw new Error('Obsidian host contains invalid characters.');
     }
 

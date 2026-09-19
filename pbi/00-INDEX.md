@@ -105,6 +105,20 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-19 ワークスペース全量レビューの PBI 化（前波 01〜13・第2波 14〜20・第3波 21〜23） — ✅ 20/23 完了（アーカイブ済み）
+
+ワークスペース全量レビュー（総合82/100 A、High 1＋Medium 12）の指摘を RICE 採点で PBI 化。前波 13件（01〜13）は autonomous-task-closer により全件実装、第2波 7件（14〜20）はローカルレビュー（NEEDS CHANGES）の findings 対応、第3波 3件（21〜23）は2回目のローカルレビュー findings 対応。台帳は `2026-09-19-00-backlog-review-fixes.md`（前波＋第2波）と `2026-09-19-00-backlog-review-findings-r3.md`（第3波）。
+
+DoD の「ドキュメント更新済み」は文書要件がある場合のみ適用（03: AGENTS.md 使い分け表、04: clearElement 参照、05: API_ENDPOINTS.md プロトコルバージョン規約、19: 本INDEX、他はコードコメントが正本で文書要件なし）。
+
+- 01〜07・09・10・13〜23（✅ 完了・アーカイブ済 — 20件。実装詳細は各ファイルの受け入れ基準と DoD 補足を参照。ハイライト: 01 上限＋隔離document、02 失敗経路テスト追加、05 absent 格下げ＋カウンタ、06 非loopback http ブロック、08 以外の @deprecated に sunset 日適用、14/20 クレンジング全経路のサイズ契約、16 ガード2件を validate/CI に組み込み、17/18 診断ログ＋テスト、22 Test Connection がフォーム値を評価）
+- 2026-09-19-08-refactor-recording-decision-unify.md（🔶 部分実装・pbi/ 残置 — 優先順位表の集約コメントと既存挙動固定は済。残: 各判定の純粋関数化＋組み合わせテスト網羅）
+
+最終検証（第3波後）: type-check PASS / lint 0 errors / 両ガード OK / test 12,301 passed（783 files）。userinfo バイパス修正（validateObsidianHost の @% 拒否、TDD Red/Green）を含む。
+
+- 2026-09-19-11-refactor-large-view-split.md（✅ 対応済みを確認して完了 — sqliteHistory 系は View／Model／Query／Controller／State に既に分割済み。query 組み立ては Model 側にあり、View は描画のみ。さらなる分割は過剰と判断して閉じた）
+- 2026-09-19-12-refactor-statuspanel-delegation.md（✅ 対応済みを確認して完了 — render 8関数が statusRenderers.ts に移譲済み、statusPanel.ts は調停＋DOM反映のみ。変更なしで閉じた）
+
 ### 2026-09-18 arch-delivery-loop（archloop-0918） — ✅ 全3件完了（17〜19 アーカイブ済み・v6.9.7）
 
 Phase 0 の HTML レポート（`$TMPDIR/architecture-review-20260918-1309.html`）で抽出した3候補を RICE 採点して PBI 化。実行順 = 17 → 18 → 19（ファイル非重複・1バッチ）。台帳は `2026-09-18-00-backlog-archloop-0918.md`（live）。Phase 3（make clean test）→ Phase 3.5（graphify update）→ Phase 4（v6.9.7 版上げ）まで閉じた。

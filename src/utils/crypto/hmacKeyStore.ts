@@ -431,6 +431,7 @@ export const consentHmacSigner: HmacSigner = hmacSignerForKey(getConsentHmacKey,
  *
  * @deprecated 新しい呼び出しでは notificationHmacSigner / consentHmacSigner
  * を使うこと。本番の呼び出しは PBI 2026-09-16-04 で全て移行済み。
+ * Sunset: remove in next major (re-evaluate 2026-12-31).
  */
 export async function generateHmacSignature(data: string, key: CryptoKey): Promise<string> {
     const webcrypto = getWebCrypto();
@@ -449,6 +450,7 @@ export async function generateHmacSignature(data: string, key: CryptoKey): Promi
  * @deprecated 本番の呼び出しは無い（PBI 2026-09-16-04 で HmacSigner.verify へ
  * 移行済み）。下の定数時間比較は primitives.ts の constantTimeCompare と
  * 重複しており、長さ不一致で早期 return する分そちらより弱い。
+ * Sunset: remove in next major (re-evaluate 2026-12-31).
  */
 export async function verifyHmacSignature(data: string, signature: string, key: CryptoKey): Promise<boolean> {
     try {
