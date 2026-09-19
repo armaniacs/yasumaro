@@ -313,9 +313,10 @@ describe('loadGeneralSettings', () => {
     const repo = makeRepo({});
     await loadGeneralSettings(repo as any);
     expect(loadSettingsSpy.mock.calls[0][0]).toBe(document.body);
-    // prioritySlots default to [] -> selectedProviders all ''
-    expect(visibilitySpy).toHaveBeenCalledWith(expect.any(Object), ['', '', '']);
-    expect(layoutSpy).toHaveBeenCalledWith(['', '', '']);
+    // Empty priority list -> slot 1 falls back to the first catalog provider
+    // (gemini), matching the select value applyProviderPrioritySlots writes.
+    expect(visibilitySpy).toHaveBeenCalledWith(expect.any(Object), ['gemini', '', '']);
+    expect(layoutSpy).toHaveBeenCalledWith(['gemini', '', '']);
   });
 
   it('applies prioritySlots and updates visibility/layout', async () => {
@@ -333,10 +334,15 @@ describe('loadGeneralSettings', () => {
     expect(layoutSpy).toHaveBeenCalledWith(['openai', 'ollama', '']);
   });
 
-  it('handles undefined priority list -> defaults', async () => {
+  it('handles undefined priority list -> falls back to the first catalog provider', async () => {
+    // An absent priority list must NOT hide every provider settings block:
+    // applyProviderPrioritySlots fills priority slot 1 with the first catalog
+    // provider, and the visibility set has to match that select value. The
+    // old ['','',''] derivation desynced the two (the 2026-09-19 domain
+    // filter e2e failure).
     const repo = makeRepo({});
     await loadGeneralSettings(repo as any);
-    expect(visibilitySpy.mock.calls[0][1]).toEqual(['', '', '']);
+    expect(visibilitySpy.mock.calls[0][1]).toEqual(['gemini', '', '']);
   });
 
   it('syncs obsidian details open state when both elements present', async () => {

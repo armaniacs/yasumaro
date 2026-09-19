@@ -73,6 +73,14 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       // rebuildProviderSettingsMount() is also called on an A<-B toggle.
       const rebuildProviderSettingsMount = (): void => {
         if (!providerMount) return;
+        // Remove any #<id>Settings block that a previous loadGeneralSettings
+        // call moved OUT of the mount (updateProviderSettingsLayout relocates
+        // the selected provider's block into #priority1ProviderSettings), or
+        // a rebuild would create duplicate ids and break strict-mode
+        // locators (the mount's fresh block plus the relocated one).
+        for (const id of providerIdsInOrder()) {
+          document.getElementById(`${id}Settings`)?.remove();
+        }
         providerMount.textContent = '';
         for (const id of providerIdsInOrder()) {
           const block = document.createElement('div');
