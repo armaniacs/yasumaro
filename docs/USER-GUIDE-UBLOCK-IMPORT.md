@@ -71,7 +71,7 @@ uBlock Origin や hosts 形式のフィルターリストをインポートし�
 
 #### 8. 設定の保存
 
-「保存」ボタンをクリックして、入力したフィルターを保存します。保存後、テキストエリアはクリアされ、「登録済みフィルターソース」一覧に追加されます。
+ドメインフィルターパネルの保存フローで、入力したフィルターを保存します。uBlock セクション自体に保存ボタンはなく、エクスポート/コピーのボタンのみがあります。保存後、テキストエリアはクリアされ、「登録済みフィルターソース」一覧に追加されます。
 
 #### 9. 複数ソースの管理
 
@@ -101,11 +101,9 @@ uBlock Origin や hosts 形式のフィルターリストをインポートし�
 | `@@||hostname^` | 例外ルール（ブロックを解除） | `@@||trusted.com^` |
 | `*` | ワイルドカード | `||*.ads.net^` |
 | `!` | コメント | `! Comment` |
-| `$domain=` | 特定ドメインに制限 | `||tracker.com$domain=example.com` |
-| `$~domain=` | ドメインを除外 | `||tracker.com$domain=~trusted.com` |
-| `$3p` | サードパーティのみ | `||ad.com$3p` |
-| `$1p` | ファーストパーティのみ | `||script.com$1p` |
-| `$important` | 重要マーク（他のルールより優先） | `||analytics.com$important` |
+| `$domain=` / `$~domain=` / `$3p` / `$1p` / `$important` | パーサーでは受け付けるが、保存後はホスト名部分のみ有効（制限事項を参照） | `||tracker.com$domain=example.com` |
+
+> **制限事項**: 上記の `$domain` / `$3p` / `$1p` / `$important` などのオプションはパーサーで受け付けますが、保存時にはホスト名部分のみが抽出され、オプション情報は破棄されます。また判定時には空のコンテキストで評価されるため、`$domain` や `$3p` などの条件が一致することはありません。実効的にはホスト名部分の一致のみで動作します。
 
 #### hosts形式（AdGuard DNS / Steven Black互換）
 
@@ -120,7 +118,8 @@ uBlock Origin や hosts 形式のフィルターリストをインポートし�
 
 hosts形式のフィルターは自動的にuBlock Origin形式に変換されます：
 - `0.0.0.0 ads.example.com` → `||ads.example.com^`
-- `localhost`, `local`, `broadcasthost` などの特殊ドメインは自動的にスキップされます
+- IPv4 / IPv6 のホスト行を幅広く受け付けます（`0.0.0.0` / `127.0.0.1` 以外のIPアドレス行も変換対象です）
+- `localhost`、`local`、`localhost.localdomain`、`broadcasthost`、`ip6-localhost`、`ip6-loopback`、`ip6-localnet`、`ip6-mcastprefix`、`ip6-allnodes`、`ip6-allrouters`、`ip6-allhosts` の11件の特殊ドメインは自動的にスキップされます
 
 ### 推奨フィルターリスト
 
@@ -138,7 +137,7 @@ hosts形式のフィルターは自動的にuBlock Origin形式に変換され�
 - フィルターにエラーがある場合、保存前に修正してください。
 - プレビューでエラーが表示された場合でも、有効なルールは正常に機能します。
 - 大きなフィルターリスト（20万ドメイン以上）もサポートしています。内部では Set ベースの検索を使っており、大規模リストでも高速に動作する設計です。
-- ストレージ容量を節約するため、保存されるのはドメイン情報のみです。オプション情報（`$domain` など）はインポート時のマッチング判定にのみ使われ、保存されません。
+- ストレージ容量を節約するため、保存されるのはドメイン情報のみです。オプション情報（`$domain` など）は保存時に破棄され、判定時にも条件として一致しません（uBlock 構文の制限事項を参照）。
 - ローカルファイルやdataプロトコルのURLはインポートできません。
 - v2.2.4以前を使用していたユーザーは、初回起動時にデータが自動的に軽量形式へ変換されます。既存のルールはすべて保持されます。
 
@@ -267,7 +266,7 @@ You can export existing uBlock filters:
 
 #### 8. Saving Settings
 
-Click the "Save" button to save the entered filters. After saving, the text area is cleared and added to the "Registered Filter Sources" list.
+Filters are saved through the domain filter panel's save flow — the uBlock section itself has no save button, only Export and Copy buttons. After saving, the text area is cleared and the filters are added to the "Registered Filter Sources" list.
 
 #### 9. Managing Multiple Sources
 
@@ -297,11 +296,9 @@ The following uBlock Origin syntax is supported:
 | `@@||hostname^` | Exception rule (unblocks) | `@@||trusted.com^` |
 | `*` | Wildcard | `||*.ads.net^` |
 | `!` | Comment | `! Comment` |
-| `$domain=` | Restrict to specific domain | `||tracker.com$domain=example.com` |
-| `$~domain=` | Exclude domain | `||tracker.com$domain=~trusted.com` |
-| `$3p` | Third-party only | `||ad.com$3p` |
-| `$1p` | First-party only | `||script.com$1p` |
-| `$important` | Important mark (higher priority) | `||analytics.com$important` |
+| `$domain=` / `$~domain=` / `$3p` / `$1p` / `$important` | Accepted by the parser, but only the hostname part takes effect after import (see Limitations) | `||tracker.com$domain=example.com` |
+
+> **Limitations**: Options such as `$domain` / `$3p` / `$1p` / `$important` are accepted by the parser, but only the hostname part is extracted at save time and the option data is discarded. Evaluation also runs with an empty context, so conditions like `$domain` or `$3p` never match. In effect, only the hostname match applies.
 
 #### hosts Format (AdGuard DNS / Steven Black Compatible)
 
@@ -316,7 +313,8 @@ The following hosts format is also supported:
 
 Hosts format filters are automatically converted to uBlock Origin format:
 - `0.0.0.0 ads.example.com` → `||ads.example.com^`
-- Special domains like `localhost`, `local`, and `broadcasthost` are automatically skipped
+- IPv4 / IPv6 host lines are broadly accepted (IP address lines other than `0.0.0.0` / `127.0.0.1` are also converted)
+- 11 special domains are automatically skipped: `localhost`, `local`, `localhost.localdomain`, `broadcasthost`, `ip6-localhost`, `ip6-loopback`, `ip6-localnet`, `ip6-mcastprefix`, `ip6-allnodes`, `ip6-allrouters`, `ip6-allhosts`
 
 ### Recommended Filter Lists
 
@@ -334,7 +332,7 @@ You can directly import the following public filter lists from URLs:
 - Correct any errors in filters before saving.
 - Even if errors are displayed in the preview, valid rules will function normally.
 - Large filter lists (200,000+ domains; Set-based O(1) matching ensures performance even with large lists) are also supported.
-- To save storage capacity, only domain information is stored (optional information is not retained).
+- To save storage capacity, only domain information is stored. Option data (e.g. `$domain`) is discarded at save time and never matches as a condition during evaluation (see the uBlock syntax Limitations).
 - Local files and data protocol URLs cannot be imported.
 - For users who used v2.2.4 or earlier, data is automatically converted to the lightweight format on first launch. All existing rules are preserved.
 
