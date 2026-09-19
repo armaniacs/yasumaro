@@ -42,7 +42,7 @@ test.describe('Dashboard - Built-in AI Provider Option @ui', () => {
  * ローカルの headed 実行または実機確認手順（本ファイル冒頭のコメント参照）
  * で検証すること。
  */
-test.describe('Dashboard - Built-in AI Provider Selection @interaction', () => {
+test.describe('Dashboard - Built-in AI Provider Selection @interaction @extension', () => {
   testInteraction('selecting built-in-ai hides Gemini API key input and shows built-in-ai panel', async ({ dashboardPage: page }) => {
     const aiProviderSelect = page.locator('#aiProvider');
     await aiProviderSelect.selectOption('built-in-ai');
