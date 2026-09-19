@@ -97,8 +97,8 @@ jobs:
       - name: Build extension (firefox)
         run: npm run build:firefox
 
-      - name: Firefox storage pipeline tests (VFS probe + worker smoke)
-        run: npx playwright test --config testDir/playwright.config.ts --project=firefox e2e/firefox-opfs-probe.spec.ts e2e/firefox-worker-smoke.spec.ts
+      - name: Firefox storage + PII WASM probes (VFS probe + worker smoke + wasm core)
+        run: npx playwright test --config testDir/playwright.config.ts --project=firefox e2e/firefox-opfs-probe.spec.ts e2e/firefox-worker-smoke.spec.ts e2e/firefox-pii-wasm-probe.spec.ts
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: ${{ !cancelled() }}

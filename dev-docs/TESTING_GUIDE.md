@@ -37,7 +37,7 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 - Content script tests require jsdom environment
 - Service worker tests have limitations
 - Always verify with actual Chrome browser
-- **Firefox**: the extension-level E2E (moz-extension:// origin) cannot be automated — Playwright only loads extensions in Chromium, and Playwright's Firefox build rejects unsigned sideloaded extensions (release-channel signature enforcement is locked; see PBI 2026-09-14-10 for the experiment record). Firefox coverage is: VFS probe + worker smoke in CI (`firefox-storage` job, real dist artifacts on http origin) + the manual checklist below.
+- **Firefox**: the extension-level E2E (moz-extension:// origin) cannot be automated — Playwright only loads extensions in Chromium, and Playwright's Firefox build rejects unsigned sideloaded extensions (release-channel signature enforcement is locked; see PBI 2026-09-14-10 for the experiment record). Firefox coverage is: VFS probe + worker smoke + PII sanitizer WASM core probe in CI (`firefox-storage` job, real dist artifacts on http origin) + the manual checklist below. The WASM probe (`firefox-pii-wasm-probe.spec.ts`) is the automated Firefox-engine companion to Chromium's `pii-wasm-initialization.spec.ts`: it drives the committed `pii_sanitizer_bg.wasm` through init-from-same-origin-URL + masking inside a Firefox module worker; the extension-context `chrome.runtime.getURL` path itself stays under the manual checklist.
 
 ### Firefox manual smoke procedure
 
@@ -45,6 +45,7 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 2. `about:debugging#/runtime/this-firefox` → "Load Temporary Add-on…" → `manifest.json`
 3. Verify: consent modal → record a page → dashboard search (FTS5) → preset switching (AI Summary Cleansing panel) → restart Firefox → records persist and no consent re-prompt
 4. Diagnostics panel → SQLite test (final OPFS confirmation on the moz-extension:// origin)
+5. PII sanitizer WASM init: with the browser console open, record a page whose content contains an email address → confirm no `PII WASM module unavailable` / `PII WASM sanitize call failed` warning is logged by the service worker (same assertion Chromium's `pii-wasm-initialization.spec.ts` automates)
 
 ## Test-support placement convention (PBI-14)
 
