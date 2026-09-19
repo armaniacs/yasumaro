@@ -21,6 +21,16 @@ Yasumaro は v6.5.34 以降、旧データベース（wa-sqlite 製）から新�
 
 移行は拡張機能の起動時に自動実行されます。移行完了後、旧データベースのデータは新しいデータベースにコピーされ、フラグが保存されます。
 
+### その他の移行フローと診断パネルの手動操作
+
+VFSの切り替え以外にも、以下の移行フローが存在します:
+
+- **従来の chrome.storage.local → SQLite 移行**: 旧形式で保存された記録履歴を SQLite に変換します。診断パネルの「記録履歴を SQLite へ変換」ボタンから手動でも実行できます
+- **OPFSフォールバック → SQLite 復旧**: フォールバックモードで蓄積されたデータを SQLite に復旧します
+- **診断メタデータのバックフィル (backfillDiagnosticMetadata)**: 移行済みエントリの不足している診断用メタデータを補完します
+- **手動の SQLite → 従来形式の再同期 (resync)**: SQLite の最新レコードを従来の chrome.storage 形式に書き戻します。手動トリガーのみであり、自動実行されることはありません
+- **従来ストレージのクリーンアップ (cleanupLegacyStorage)**: 移行済みの旧データを削除します。破壊的操作のため、ユーザーの確認を経て診断パネルから明示的に実行する必要があります
+
 ### 移行状態の確認方法
 
 1. ダッシュボードを開く
@@ -64,11 +74,11 @@ OPFS・IndexedDB ともに、データはブラウザのストレージサンド
 
 **Q. 移行中にデータは失われますか？**
 
-A. いいえ。移行はコピー操作であり、元のデータは移行完了後に削除されます。移行が失敗した場合でも、元のデータは保持されます。
+A. いいえ。移行はコピー操作であり、元のデータは保持されます。元のデータを削除する場合は、診断パネルのクリーンアップ操作から明示的に実行してください。移行が失敗した場合でも、元のデータは保持されます。
 
 **Q. 移行は手動でも実行できますか？**
 
-A. 移行は拡張機能の起動時に自動実行されます。手動でのトリガーはできませんが、ダッシュボードを開くことで移行処理が開始される場合があります。
+A. VFSの切り替え自体は拡張機能の起動時に自動実行され、手動でのトリガーはできません。ただし、SQLite → 従来形式の再同期（resync）と従来ストレージのクリーンアップは、診断パネルから手動で実行できます。ダッシュボードを開くことで移行処理が開始される場合があります。
 
 **Q. 移行後、設定は変わりますか？**
 
@@ -96,6 +106,16 @@ Two types of migration exist:
 | **IDB path** | wa-sqlite IDBBatchAtomicVFS | @subframe7536 IDB VFS | For IndexedDB-only environments |
 
 Migration runs automatically when the extension starts. After completion, data from the legacy database is copied to the new database and a flag is saved.
+
+### Other Migration Flows and Manual Diagnostics-Panel Operations
+
+Beyond the VFS swap, the following migration flows exist:
+
+- **Legacy chrome.storage.local → SQLite migration**: Converts history stored in the legacy format into SQLite. It can also be run manually from the diagnostics panel ("Convert recording history to SQLite") button
+- **OPFS-fallback → SQLite recovery**: Recovers data accumulated in Fallback Mode into SQLite
+- **Diagnostic metadata backfill (backfillDiagnosticMetadata)**: Fills in missing diagnostic metadata for already-migrated entries
+- **Manual SQLite → legacy resync**: Writes recent SQLite records back into the legacy chrome.storage format. Manual trigger only; it is never run automatically
+- **Legacy storage cleanup (cleanupLegacyStorage)**: Deletes migrated legacy data. As a destructive operation, it must be run explicitly from the diagnostics panel after user confirmation
 
 ### How to Check Migration Status
 
@@ -140,11 +160,11 @@ If "Saved record count" already shows data but "Checking..." persists, the dedic
 
 **Q. Will my data be lost during migration?**
 
-A. No. Migration is a copy operation; the original data is deleted only after migration completes. If migration fails, the original data is preserved.
+A. No. Migration is a copy operation; the original data is preserved. To delete the original data, run the cleanup operation explicitly from the diagnostics panel. If migration fails, the original data is preserved.
 
 **Q. Can I manually trigger migration?**
 
-A. Migration runs automatically when the extension starts. You cannot trigger it manually, but opening the dashboard may start the migration process.
+A. The VFS swap itself runs automatically when the extension starts and cannot be triggered manually. However, the SQLite → legacy resync and the legacy storage cleanup can be run manually from the diagnostics panel. Opening the dashboard may start the migration process.
 
 **Q. Will my settings change after migration?**
 

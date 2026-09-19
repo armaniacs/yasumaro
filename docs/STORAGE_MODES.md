@@ -22,7 +22,7 @@ Yasumaroはパフォーマンスの高い順に3つのバックエンドを試�
 
 **第1（OPFS）**: デスクトップChromeなど、OPFS対応ブラウザで使用します。最も高速で、保存件数に事実上の制限はありません。SQLite FTS5による高度な全文検索が利用できます。
 
-**第2（IndexedDB VFS）**: 一部のモバイルChromeなどOPFS非対応だがIndexedDBが利用可能な環境で使用します。SQLiteの機能は維持される（全文検索含む）ため、ユーザー体験への影響は軽微です。
+**第2（IndexedDB VFS）**: 一部のモバイルChromeなどOPFS非対応だがIndexedDBが利用可能な環境で使用します。SQLiteの機能は維持されますが、FTS5全文検索の利用可否は環境に依存します（FTS5が利用できない環境ではLIKE検索にフォールバックします）。そのため、ユーザー体験への影響は軽微ですが、環境によっては全文検索が制限される場合があります。
 
 **第3（FallbackStorage）**: OPFSもIndexedDBも利用できない環境（非常に古いブラウザ等）で使用します。本拡張機能は `unlimitedStorage` 権限を持つため、保存容量は実質無制限です。ただし、権限が付与されない環境では 10MB に制限され、検索速度も低下します。
 
@@ -43,7 +43,12 @@ Yasumaroはパフォーマンスの高い順に3つのバックエンドを試�
 
 **Q. フォールバックモードでもすべての機能が使えますか？**
 
-A. 基本的な記録・閲覧・検索機能は使えます。ただし、保存件数が制限されることと、全文検索の速度が通常モードより遅くなります。
+A. 基本的な記録・閲覧・検索機能は使えます。ただし、以下の制限があります。
+
+- 保存件数が制限されることと、全文検索の速度が通常モードより遅くなります
+- FTS5は常に無効であり、検索はLIKE検索のみになります
+- 監査ログの記録・参照は利用できません（監査ログ機能はフォールバックモードでは未対応です）
+- バイナリ形式の `.db` バックアップ・復元は利用できません
 
 **Q. データが失われることはありますか？**
 
@@ -71,7 +76,7 @@ Yasumaro uses a **SQLite database on OPFS (Origin Private File System)** as its 
 
 **1st (OPFS)**: Used on desktop Chrome and other OPFS-capable browsers. Offers the best performance with no practical record limit and SQLite FTS5 full-text search.
 
-**2nd (IndexedDB VFS)**: Used when OPFS is unavailable but IndexedDB is available (e.g., some mobile Chrome builds). SQLite features including full-text search are maintained, so the user experience impact is minimal.
+**2nd (IndexedDB VFS)**: Used when OPFS is unavailable but IndexedDB is available (e.g., some mobile Chrome builds). SQLite features are maintained, but FTS5 full-text search availability depends on the environment (falls back to LIKE search where FTS5 is unavailable). The user experience impact is therefore minor, though full-text search may be limited depending on the environment.
 
 **3rd (FallbackStorage)**: Used when neither OPFS nor IndexedDB is available (very old browsers, edge cases). This extension holds the `unlimitedStorage` permission, so capacity is effectively unlimited (10MB in environments where the permission isn't granted), though search is slower.
 
@@ -92,7 +97,12 @@ When a higher-priority backend becomes available (e.g., after a browser update),
 
 **Q. Can I use all features in Fallback Mode?**
 
-A. Basic recording, viewing, and search features work. However, record counts are limited and full-text search is slower than in Normal Mode.
+A. Basic recording, viewing, and search features work. However, the following limitations apply.
+
+- Record counts are limited and full-text search is slower than in Normal Mode
+- FTS5 is always disabled; search is LIKE-only
+- Audit log recording and querying are unavailable (the audit log feature is unsupported in Fallback Mode)
+- Binary `.db` backup and restore are unavailable
 
 **Q. Will my data be lost?**
 
