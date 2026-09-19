@@ -30,6 +30,17 @@ function createStatusCircle(svg: SVGSVGElement): SVGElement {
   return circle;
 }
 
+/**
+ * Remove all children of an element without raw `innerHTML = ''`.
+ * Central seam so future sanitization policy changes apply in one place.
+ */
+export function clearElement(el: Element | null): void {
+    if (!el) return;
+    while (el.firstChild) {
+        el.removeChild(el.firstChild);
+    }
+}
+
 export function updateStatusIcon(container: HTMLElement | null, type: 'success' | 'error' | 'warning' | 'muted'): void {
   if (!container) return;
 

@@ -2,7 +2,8 @@
 // Extracted from sqliteGateway.ts (390l) to give each hop its own locality (PBI 07).
 
 import { ErrorCode } from '../../utils/logger/types.js';
-import { logError } from '../../utils/logger/api.js';
+import { logError, logInfo } from '../../utils/logger/api.js';
+import { getOffscreenTransportName } from '../offscreenTransport.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { pickStatusExtras } from '../../messaging/sqliteValidators.js';
@@ -69,7 +70,11 @@ export class OffscreenGateway {
   /** Resolve the container transport once (build-time browser split inside). */
   private getTransport(): Promise<OffscreenTransport> {
     if (this.injectedTransport) return Promise.resolve(this.injectedTransport);
-    this.transportPromise ??= createOffscreenTransport();
+    this.transportPromise ??= (async () => {
+      const transport = await createOffscreenTransport();
+      await logInfo(`Offscreen transport selected: ${getOffscreenTransportName()}`, { source: 'sqlite' });
+      return transport;
+    })();
     return this.transportPromise;
   }
 

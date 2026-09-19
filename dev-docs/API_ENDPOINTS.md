@@ -2,6 +2,17 @@
 
 External API endpoints used by Yasumaro. Currently covers the Obsidian Local REST API integration in [src/background/obsidianClient.ts](../src/background/obsidianClient.ts).
 
+## Internal message protocol versioning
+
+Messages crossing the extension boundary carry a `protocolVersion` field. The policy lives in [src/background/handlers/envelopePolicy.ts](../src/background/handlers/envelopePolicy.ts):
+
+- `CURRENT_PROTOCOL_VERSION` (in `messageTypes.ts`) is the required version.
+- Version `N-1` is accepted with a `deprecated` flag on the response (graded migration window of `PROTOCOL_VERSION_WINDOW_SIZE`).
+- Messages without a `protocolVersion` (legacy senders) are still accepted but are flagged `deprecated` and counted/logged; once the count stays at zero across releases, the `absent` path can be tightened to a rejection.
+- Older versions and non-integer values are rejected with `Protocol version mismatch`.
+
+New message types must set `protocolVersion: CURRENT_PROTOCOL_VERSION` in their senders.
+
 ## Obsidian Local REST API
 
 `ObsidianClient` talks to the [Obsidian Local REST API](https://github.com/coddingtonbear/obsidian-local-rest-api) plugin running on the user's machine. The base URL is built from user settings (`OBSIDIAN_PROTOCOL`, `OBSIDIAN_HOST`, `OBSIDIAN_PORT`), defaulting to `https://127.0.0.1:27123`.

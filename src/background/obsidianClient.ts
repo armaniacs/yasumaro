@@ -220,7 +220,7 @@ export class ObsidianClient {
         return globalWriteMutex;
     }
 
-    async testConnection(override?: { protocol?: string; port?: string | number; apiKey?: string }): Promise<ObsidianConnectionResult> {
+    async testConnection(override?: { protocol?: string; port?: string | number; apiKey?: string; host?: string }): Promise<ObsidianConnectionResult> {
         try {
             let baseUrl: string;
             let headers: HeadersInit;

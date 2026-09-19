@@ -88,7 +88,12 @@ export type TestConnectionsMessage = {
 
 export type TestObsidianMessage = {
     type: 'TEST_OBSIDIAN';
-    payload?: { apiKey?: string };
+    /**
+     * Form values forwarded so Test Connection evaluates the same loopback
+     * rule as a saved config (PBI 2026-09-19-22). Empty fields are filtered
+     * by the handler; an empty payload falls back to stored settings.
+     */
+    payload?: { apiKey?: string; protocol?: string; port?: string; host?: string };
 };
 
 export type TestAiMessage = {

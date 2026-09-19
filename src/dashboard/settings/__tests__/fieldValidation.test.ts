@@ -40,7 +40,8 @@ import {
     setupMinScrollDepthValidation,
     setupMaxTokensValidation,
     setupAllFieldValidations,
-    validateAllFields
+    validateAllFields,
+    validateObsidianHost
 } from '../fieldValidation.js';
 
 import * as urlWhitelist from '../../../utils/storage/urlWhitelist.js';
@@ -883,8 +884,37 @@ describe('fieldValidation', () => {
                 scrollInput,
                 tokensInput
             );
-
             expect(result).toBe(false);
+        });
+    });
+
+    describe('validateObsidianHost', () => {
+        const makeHostInput = (value: string): HTMLInputElement => {
+            const input = document.createElement('input');
+            input.id = 'obsidianHost';
+            input.value = value;
+            const error = document.createElement('div');
+            error.id = 'obsidianHostError';
+            document.body.appendChild(input);
+            document.body.appendChild(error);
+            return input;
+        };
+
+        test('rejects URL userinfo tricks that would redirect the API key elsewhere', () => {
+            const input = makeHostInput('127.0.0.1@evil.com');
+            expect(validateObsidianHost(input)).toBe(false);
+            expect(input.getAttribute('aria-invalid')).toBe('true');
+        });
+
+        test('rejects percent-encoded host values', () => {
+            const input = makeHostInput('evil.com%2Fpath');
+            expect(validateObsidianHost(input)).toBe(false);
+        });
+
+        test('accepts plain hostnames and IPv4', () => {
+            const host = makeHostInput('192.168.1.10');
+            expect(validateObsidianHost(host)).toBe(true);
+            expect(host.getAttribute('aria-invalid')).toBe('false');
         });
     });
 });

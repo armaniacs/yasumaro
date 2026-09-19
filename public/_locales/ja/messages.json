@@ -609,6 +609,9 @@
   "errorProtocol": {
     "message": "エラー: プロトコルは\"http\"または\"https\"である必要があります。"
   },
+  "errorHttpNonLoopback": {
+    "message": "エラー: 平文HTTPはlocalhost/127.0.0.1のみ許可されます。他のホストにはHTTPSを使用してください。"
+  },
   "warningProtocolHttp": {
     "message": "注意: HTTPを使用するとAPIキーとデータが平文で送信されます。ローカルネットワークが信頼できない場合はHTTPSを推奨します。"
   },

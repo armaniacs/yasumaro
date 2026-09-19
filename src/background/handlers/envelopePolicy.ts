@@ -23,6 +23,7 @@ import {
   PROTOCOL_VERSION_WINDOW_SIZE,
   type ExtensionMessage,
 } from '../messageTypes.js';
+import { logInfo } from '../../utils/logger/api.js';
 
 export const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
 
@@ -89,6 +90,22 @@ interface VersionDetail {
   type: string;
 }
 
+/** Session-scoped count of accepted messages without a protocol version. Resets on SW restart. */
+let absentVersionCounter = 0;
+
+/**
+ * Test seam: lets tests assert the absent-version counter. Production
+ * diagnostics go through the logInfo trace in checkEnvelope instead
+ * (PBI 2026-09-19-18), so nothing outside tests should read this.
+ */
+export function getAbsentVersionCount(): number {
+  return absentVersionCounter;
+}
+/** Test seam — resets the absent-version counter. */
+export function __resetAbsentVersionCountForTesting(): void {
+  absentVersionCounter = 0;
+}
+
 /** Types that skip deferred migrations + tab-cache init (test/diagnostic paths). */
 const MIGRATION_SKIP_TYPES: ReadonlySet<string> = new Set([
   'TEST_CONNECTIONS',
@@ -147,6 +164,27 @@ export async function checkEnvelope(
   }
 
   if (versionVerdict === 'deprecated') {
+    return {
+      accepted: true,
+      message,
+      deprecated: {
+        expected: CURRENT_PROTOCOL_VERSION,
+        actual: msg.protocolVersion,
+        type: msg.type,
+      },
+    };
+  }
+
+  if (versionVerdict === 'absent') {
+    absentVersionCounter += 1;
+    // Migration-progress diagnostics: log every 10th absent message so the
+    // surviving-legacy-sender count is visible in the diagnostic logs without
+    // a dedicated query path. Resets on SW restart (session-scoped).
+    if (absentVersionCounter % 10 === 1) {
+      void logInfo(`Protocol version absent (legacy sender): count=${absentVersionCounter}`, {
+        type: msg.type,
+      });
+    }
     return {
       accepted: true,
       message,

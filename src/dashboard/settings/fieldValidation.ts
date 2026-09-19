@@ -262,7 +262,10 @@ export function setupMaxTokensValidation(input: HTMLInputElement | null): () => 
  */
 export function validateObsidianHost(input: HTMLInputElement): boolean {
     const v = input.value.trim();
-    if (/[\s/\\:]/.test(v)) {
+    // '@' (URL userinfo) and '%' (percent-encoding) would let a pasted host
+    // redirect the API key to a different server — keep the field to plain
+    // hostnames (mirrors validateObsidianHost in utils/obsidianConfigValidator).
+    if (/[\s/\\:@%]/.test(v)) {
         setFieldError(input, 'obsidianHostError', getMessage('obsidianHostError') || 'Obsidian host contains invalid characters.');
         return false;
     }

@@ -59,7 +59,7 @@ vi.mock('../../utils/logger/api.js', () => ({
   },
 }));
 
-import { logError } from '../../utils/logger/api.js';
+import { logError, logDebug } from '../../utils/logger/api.js';
 
 describe('HeaderDetector', () => {
   let detector: HeaderDetector;
@@ -278,6 +278,27 @@ describe('HeaderDetector', () => {
       }, 1);
 
       expect(logError).toHaveBeenCalled();
+    });
+
+    test('falls back to in-memory cache when the session write fails', async () => {
+      const setSpy = chrome.storage.session.set as unknown as ReturnType<typeof vi.fn>;
+      const original = setSpy.getMockImplementation();
+      setSpy.mockRejectedValueOnce(new Error('quota exceeded'));
+
+      const info = { isPrivate: true, reason: 'cache-control', timestamp: Date.now() };
+      await detector['cachePrivacyInfo']('https://sessfail.com', info, -1);
+
+      // Diagnostic trace recorded instead of silent swallowing (PBI 2026-09-19-02)
+      // normalizeUrl keeps the root trailing slash
+      expect(logDebug).toHaveBeenCalledWith(
+        'Session privacy cache save failed, using in-memory only',
+        expect.objectContaining({ url: 'https://sessfail.com/' })
+      );
+      // In-memory cache remains authoritative despite the session failure
+      const memoryCache = detector['cache'].getPrivacyCache();
+      expect(memoryCache?.has('https://sessfail.com/')).toBe(true);
+
+      if (original !== undefined) setSpy.mockImplementation(original);
     });
   });
 

@@ -139,6 +139,19 @@ describe('cleanseViaOffscreen — delegation with fallback', () => {
         expect(result).toBe(expected);
     });
 
+    it('when offscreen rejects as too large: returns original html without local parse', async () => {
+        const html = 'x'.repeat(600 * 1024);
+        const sendMessage = vi.fn(async () => ({ success: false, error: 'TOO_LARGE: 614400 bytes exceeds limit of 524288' }));
+        setChromeMock({
+            storageGet: async () => ({ cleansing_offscreen_enabled: true }),
+            sendMessage,
+        });
+
+        const result = await cleanseViaOffscreen(html);
+        expect(result).toBe(html);
+        expect(sendMessage).toHaveBeenCalledTimes(1);
+    });
+
     it('when chrome.runtime is missing: falls back to sync', async () => {
         const html = '<p>no runtime</p>';
         const expected = cleanseHtmlSync(html);
@@ -160,6 +173,15 @@ describe('cleanseViaOffscreen — delegation with fallback', () => {
         const viaDelegate = await cleanseViaOffscreen(html);
         const direct = cleanseHtmlOffscreen(html).html;
         expect(viaDelegate).toBe(direct);
+    });
+
+    it('sync fallback also enforces the size cap (flag OFF path)', async () => {
+        const big = 'x'.repeat(600 * 1024);
+        setChromeMock({ storageGet: async () => ({ cleansing_offscreen_enabled: false }) });
+        const result = await cleanseViaOffscreen(big);
+        // Same contract as the offscreen path: oversized input returns the
+        // original html without any local parse.
+        expect(result).toBe(big);
     });
 });
 

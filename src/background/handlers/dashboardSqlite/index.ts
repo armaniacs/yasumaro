@@ -14,6 +14,11 @@ import type { ArchiveDeps } from './deps.js';
 // every subtype must land in exactly one group, so a subtype added to a
 // handler but forgotten in the protocol (or vice versa) becomes a startup
 // error instead of a silent "Unknown subtype" at runtime.
+//
+// New branches must go through deps.ts: add the subtype to exactly one
+// *_SUBTYPES group and consume only that group's Deps interface. Direct
+// sqlite/offscreen imports from a handler file bypass the seam — keep them
+// in deps.ts so the partition check stays meaningful.
 const GROUPED_SUBTYPES: readonly DashboardSqliteSubtype[] = [
   ...READ_ONLY_SUBTYPES,
   ...CORE_CRUD_SUBTYPES,
