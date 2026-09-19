@@ -51,6 +51,15 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 vi.mock('../../registryContext.js', () => ({
   getRegistry: () => ({ navigate: mockNavigate }),
+  tryNavigate: (panelId: string, init?: Record<string, unknown>, onFailure?: () => void) => {
+    try {
+      Promise.resolve(init === undefined ? mockNavigate(panelId) : mockNavigate(panelId, init)).catch(() =>
+        onFailure?.(),
+      );
+    } catch {
+      onFailure?.();
+    }
+  },
 }));
 
 import { createPrivacySettingsPanel } from '../privacySettingsPanel.js';

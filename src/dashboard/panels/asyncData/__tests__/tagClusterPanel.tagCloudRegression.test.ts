@@ -27,6 +27,7 @@ vi.mock('../../../utils/retry.js', async (importOriginal) => {
 
 vi.mock('../../registryContext.js', () => ({
   getRegistry: () => ({ navigateTyped: vi.fn(), navigate: vi.fn() }),
+  tryNavigateTyped: vi.fn(),
 }));
 
 import { createTagClusterPanel } from '../tagClusterPanel.js';

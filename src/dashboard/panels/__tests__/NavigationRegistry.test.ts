@@ -223,4 +223,52 @@ describe('NavigationRegistry', () => {
       document.body.removeChild(container);
     });
   });
+
+  describe('stale navigation guard (concurrent navigate() calls)', () => {
+    it('does not resume init/activate/load for a panel superseded during its mount await', async () => {
+      const containerA = document.createElement('div');
+      containerA.id = 'panel-a';
+      document.body.appendChild(containerA);
+      const containerB = document.createElement('div');
+      containerB.id = 'panel-b';
+      document.body.appendChild(containerB);
+
+      let resolveMountA!: () => void;
+      const mountAPromise = new Promise<void>((resolve) => {
+        resolveMountA = resolve;
+      });
+
+      const panelA = mockPanel({ id: 'panel-a', mount: vi.fn().mockReturnValue(mountAPromise) });
+      const panelB = mockPanel({ id: 'panel-b', mount: vi.fn().mockResolvedValue(undefined) });
+      registry.register(panelA);
+      registry.register(panelB);
+
+      const promiseA = registry.navigate('panel-a');
+      // A is suspended awaiting mount(); activate/load must not have run yet.
+      expect(panelA.activate).not.toHaveBeenCalled();
+
+      const promiseB = registry.navigate('panel-b');
+      // B's navigate runs its synchronous prefix immediately (mount resolves
+      // right away), which deactivates A and makes B the active panel.
+      await promiseB;
+      expect(registry.activeId).toBe('panel-b');
+      expect(panelA.deactivate).toHaveBeenCalled();
+      expect(panelB.activate).toHaveBeenCalled();
+      expect(panelB.load).toHaveBeenCalled();
+
+      // Now let A's mount resolve. Without the generation guard, A's
+      // suspended #navigateInternal call would resume and call activate/load
+      // on a panel that's already been deactivated and hidden.
+      resolveMountA();
+      await promiseA;
+
+      expect(panelA.activate).not.toHaveBeenCalled();
+      expect(panelA.load).not.toHaveBeenCalled();
+      // Final state must still point at B, unaffected by A's stale resume.
+      expect(registry.activeId).toBe('panel-b');
+
+      document.body.removeChild(containerA);
+      document.body.removeChild(containerB);
+    });
+  });
 });
