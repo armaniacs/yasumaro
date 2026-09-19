@@ -101,6 +101,17 @@ jobs:
           fi
           git diff --exit-code src/wasm/pii-sanitizer/piiSanitizerWasm.js || \
             (echo "::error::piiSanitizerWasm.js glue is stale — run 'npm run build:wasm' and commit the result" && exit 1)
+      - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
+        # The byte-diff gate assumes reproducible builds across hosts. When
+        # it fails, this artifact lets the maintainer diff the CI-built
+        # binary against the local one and pin down the nondeterministic
+        # source (toolchain, binaryen, embedded paths, ...).
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rebuilt-pii-sanitizer-bg-wasm
+          path: wasm/pii-sanitizer/pkg/pii_sanitizer_bg.wasm
+          if-no-files-found: ignore
 
   dod-check:
     runs-on: ubuntu-latest
