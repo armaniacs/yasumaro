@@ -15,13 +15,19 @@ pub fn is_word_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
 }
 
-/// `[-\s]` char class used by several JP/CN/KR patterns. Note this is a
-/// stricter subset of ASCII whitespace (space only) — matches the TS
-/// patterns' literal `\s` which in practice only ever sees space or tab in
-/// real input, and `is_sep` intentionally mirrors what the JS patterns'
-/// `[-\s]` accepts rather than every ASCII whitespace byte.
+/// `[-\s]` char class used by several JP/CN/KR patterns. JS `\s` covers the
+/// full ASCII whitespace set (`\t\n\v\f\r` + space), so the scanner must
+/// too: a phone number or My Number formatted across line breaks in
+/// extracted page text is masked by the TS reference and would silently
+/// leak if only space/tab were accepted here.
+///
+/// Known residual gap: the non-ASCII members of JS `\s` (U+00A0, U+3000
+/// ideographic space, U+2000-200A, ...) are multi-byte in UTF-8, and every
+/// separator call site consumes exactly one byte, so they are NOT accepted
+/// here. A width-aware separator helper across all matchers is the
+/// follow-up if full-width-separated PII turns out to matter.
 pub fn is_sep(b: u8) -> bool {
-    b == b'-' || b == b' ' || b == b'\t'
+    matches!(b, b'-' | b'\t' | b'\n' | b'\x0b' | b'\x0c' | b'\r' | b' ')
 }
 
 /// `[-.\s]` char class (adds '.') used by rrnKr/phoneKr/phoneUs/phoneCn.

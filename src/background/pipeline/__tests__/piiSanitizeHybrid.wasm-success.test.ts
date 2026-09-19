@@ -115,4 +115,38 @@ describe('sanitizePiiHybrid (WASM available)', () => {
         expect(result.error).toContain('even with skipSizeLimit');
         expect(result.maskedItems.map((m) => m.type)).toEqual(['email']);
     });
+
+    test('match-count overflow fails closed via the TS fallback throwing', async () => {
+        // The WASM core rejects with the TS match-cap message when an input
+        // yields more than 1000 matches; the hybrid falls back to
+        // sanitizeRegex, which throws the same way — the recording aborts
+        // instead of shipping partially-masked text (pre-WASM behavior).
+        const { sanitizePiiHybrid } = await import('../piiSanitizeHybrid.js');
+        const text = 'account 1234567\n'.repeat(1001);
+
+        await expect(sanitizePiiHybrid(text)).rejects.toThrow(/maximum match count/);
+    });
+
+    test('output larger than 128KB is truncated with the sanitizeRegex error', async () => {
+        // Contract pin: sanitizeRegex truncates masked output over
+        // MAX_OUTPUT_SIZE (128KB) and reports it; the WASM path reproduces
+        // that instead of shipping unbounded text.
+        //
+        // Reachability: without skipSizeLimit the output caps out around
+        // 64KB input + 13KB max expansion (1000 matches x 13 chars for
+        // bankAccount), under 128KB — the match-count cap fires first. So
+        // the truncation path needs skipSizeLimit plus an input over ~115KB
+        // holding at most 1000 matches.
+        const { sanitizePiiHybrid } = await import('../piiSanitizeHybrid.js');
+        const dense = `${'account 1234567\n'.repeat(1000)}${'filler '.repeat(15_000)}`;
+        expect(dense.length).toBeGreaterThan(115 * 1024);
+        expect(dense.length).toBeLessThanOrEqual(512 * 1024);
+
+        const result = await sanitizePiiHybrid(dense, { skipSizeLimit: true });
+        expect(result.error).toContain('Output truncated to 131072 characters');
+        expect(result.text.length).toBe(128 * 1024);
+        // All 1000 masks sit inside the truncated prefix (their expansion
+        // starts before the cut), so they survive the item filter.
+        expect(result.maskedItems).toHaveLength(1000);
+    });
 });
