@@ -13,7 +13,7 @@ Webページを要約してAIに送る前に、個人情報（PII）を自動で
 ### 主な機能
 
 1. **4つのプライバシーモード**: ユーザーのニーズに合わせて選択可能。
-2. **PIIマスキング**: クレジットカード番号、電話番号、税番号（ドイツ）等の機密情報を正規表現で検出し、`[MASKED]` に置換。
+2. **PIIマスキング**: クレジットカード番号、電話番号、税番号（ドイツ）等の機密情報を WASM-first のハイブリッド検出（全21パターン）で検出し、`[MASKED:email]` のような型付きトークンに置換。
 3. **コンテンツクレンジング**: Webページの不要な要素（広告、ナビゲーション、SNS埋め込み等）をAI要約の前に削減。
 4. **確認・編集プレビュー**: 送信前にマスク結果を確認・編集できるモーダルUI。
 
@@ -39,7 +39,7 @@ Webページを要約してAIに送る前に、個人情報（PII）を自動で
 
 1. **「📝 今すぐ記録」** をクリック。
 2. **確認モーダル** が表示されます。
-   - 本文中の電話番号などが `[MASKED:PHONE]` のように隠されていることを確認してください。
+   - 本文中の電話番号などが `[MASKED:phoneJp]` のように隠されていることを確認してください。
    - 必要に応じてテキストを編集できます。
 3. **「送信する」** をクリックしてObsidianへ保存します。
 
@@ -75,7 +75,7 @@ E-mail1件、クレジットカード番号2件をマスクしました
 
 #### コンテンツサイズ制限
 
-大きなページの内容は64KB（65,536文字）に切り詰められ、先頭の64KBのみが処理されます。これは以下の理由で実施されています：
+大きなページの内容は、記録パイプラインの最初の段階で 64KB（65,536バイト、UTF-8）に切り詰められ、先頭部分のみが処理されます。これは以下の理由で実施されています：
 
 - パフォーマンス：大きなページが処理パイプラインをハングさせるのを防ぐ
 - APIコスト：AI APIに送信するデータ量を制限
@@ -84,44 +84,74 @@ E-mail1件、クレジットカード番号2件をマスクしました
 
 | 処理順序 | ステップ | 内容 |
 |----------|----------|------|
-| 1 | コンテンツ切り詰め | 64KB超過時、先頭64KBのみに切り詰め |
+| 1 | コンテンツ切り詰め | 64KB（65,536バイト・UTF-8）超過時、先頭に切り詰め |
 | 2 | プライバシーヘッダーチェック | `Cache-Control` などのHTTPヘッダー確認 |
 | 3 | PrivacyPipeline処理 | PIIマスキング、プロンプトインジェクション対策 |
-| 4 | AI API送信 | 切り詰められた64KBのコンテンツを送信 |
+| 4 | AI API送信 | さらにプロバイダ別の送信上限を適用して送信（OpenAI互換: 既定1万文字、Gemini: 3万文字、ローカルLLM: 4,000文字、内蔵AI: 約1.6万文字） |
 | 5 | Obsidian保存 | AI要約結果を保存 |
 
 **重要なポイント：**
-- 切り詰められた64KBのコンテンツのみがAI APIに送信されます
-- 64KB以降のコンテンツはAI APIには送信されません
+- 切り詰め後のコンテンツのうち、プロバイダ別の送信上限以内のみがAI APIに送信されます（64KBいっぱいまで送られるわけではありません）
+- 64KB（65,536バイト）以降のコンテンツはAI APIには送信されません
 
-これはPIIの観点から言えば、**「64KB以降に含まれるPIIはAI APIに送信されない」** という意味で、**安全側の挙動**です。
+これはPIIの観点から言えば、**「切り詰め以降に含まれるPIIはAI APIに送信されない」** という意味で、**安全側の挙動**です。
 
 > [!TIP]
-> AI APIに送信されるのは先頭の64KBのみであるため、ページの後半部分に含まれる機密情報はAI APIには送信されません。これはプライバシー保護の観点から安全な設計です。
+> AI APIに送信されるのは切り詰め後の先頭部分かつプロバイダ別上限以内のみであるため、ページの後半部分に含まれる機密情報はAI APIには送信されません。これはプライバシー保護の観点から安全な設計です。
 
-#### PII検出 (Regex)
+#### サニタイズのガード値
+
+64KB切り詰め以外にも、以下のガード値が適用されます：
+
+| ガード | 値 | 超過時の動作 |
+|--------|-----|--------------|
+| 入力上限 | 64KB（65,536文字） | マスク実行＋エラー付与 |
+| 入力上限（サイズ制限スキップ時） | 512KB | マスク実行＋エラー付与 |
+| 出力上限 | 128KB | 出力切り詰め＋エラー付与 |
+| タイムアウト | 5秒 | 処理中断（エラー） |
+| マッチ件数上限 | 1000件 | 処理中断（エラー） |
+| ReDoS 長トークンガード | 100文字超の非空白連続はサンプリング走査 | 検出精度を保ったまま正規表現エンジンの暴走を防止 |
+
+#### PII検出（WASM-first ハイブリッド）
 実際に試すには [PII Sandbox](pii-sandbox.html) を開いてください。
 
-以下のパターンを自動検出してマスクします：
-- クレジットカード番号
-- マイナンバー
-- 銀行口座番号
-- メールアドレス
-- 日本の電話番号
+本番経路は WASM-first のハイブリッド方式 `sanitizePiiHybrid()` です。Rust 実装（`wasm/pii-sanitizer/`）の WASM コアが全21パターンを検出・マスクします。TypeScript の `sanitizeRegex()` は、WASM 初期化失敗時または WASM 呼び出しの実行時例外時のフォールバックとしてのみ使用されます。
+
+以下の21パターン（型名 + 対象）を自動検出してマスクします。マスク形式は `[MASKED:<camelCase type>]`（例: `[MASKED:phoneJp]`、`[MASKED:creditCard]`）です。
+
+| 型名 | 対象 |
+|------|------|
+| `email` | メールアドレス |
+| `creditCard` | クレジットカード番号（Luhn 検証で偽陽性を除外） |
+| `myNumber` | マイナンバー（12桁、区切り必須） |
+| `phoneJp` | 日本の電話番号 |
+| `bankAccount` | 銀行口座番号（7桁） |
+| `driverLicense` | 日本の運転免許番号（連続12桁） |
+| `jpPassport` | 日本のパスポート番号（英字2文字＋数字7桁） |
+| `ipv4` | IPv4アドレス（プライベートレンジのみ） |
+| `ipv6` | IPv6アドレス |
+| `ssn` | 米国社会保障番号（3-2-4形式） |
+| `phoneUs` | 米国の電話番号 |
+| `phoneCn` | 中国の電話番号 |
+| `idCn` | 中国の身分証番号（18桁、末尾は X 可） |
+| `rrnKr` | 韓国の住民登録番号 |
+| `phoneKr` | 韓国の電話番号 |
+| `iban` | IBAN（DE / FR / IT / ES / NL） |
+| `deTaxId` | ドイツ納税者番号（11桁） |
+| `frInsee` | フランス INSEE番号（15桁） |
+| `itCodiceFiscale` | イタリア税務コード（16文字） |
+| `esDni` | スペイン DNI（数字8桁＋英字1文字） |
+| `esNie` | スペイン NIE（X/Y/Z＋数字7桁＋英字1文字） |
 
 #### プロンプトインジェクション対策
 AI要約時のセキュリティ保護機能：
 - **検出パターン**: `ignore above`、`SYSTEM`、`PASSWORD`、`execute()` 等の危険パターンを検出
-- **リスク評価**: HIGHリスクパターン（インジェクション指示）は `[FILTERED]` に置き換え、LOWリスクパターン（`password`、`execute` などの単語）は文脈分析で評価
-- **処理**: HIGHリスク部分は `[FILTERED]` に置き換え、残りの安全なコンテンツをAIに送信
-- **安全評価**: サニタイズ後のコンテンツを再評価し、リスクが残っている場合のみブロック
+- **リスク評価**: HIGH / MEDIUM / LOW の3段階で評価し、HIGH 部分は `[FILTERED]` に置き換え。LOW（`password`、`execute` などの一般語）は文脈分析で評価
+- **ブロック判定**: コンテキストごとのポリシーに従う。ローカル入力・プロバイダー入力・内蔵AI入力で HIGH を検出した場合のみブロックし、要約文コンテキストでは警告ログを残してサニタイズ継続する。MEDIUM はすべてのコンテキストで通過する
 - **ログ記録**: 検出されたパターンとブロック原因をログに記録
 
 #### ログ確認
-マスキングの実行ログを確認するには、拡張機能の DevTools コンソールで以下を実行します：
-```javascript
-await reviewLogs()
-```
+マスキング実行ログは、`PII_SANITIZE_LOGS` 設定が有効な場合（初期値: 有効）に `SANITIZE` ログとして記録されます（`addLog(LogType.SANITIZE, ...)`）。同設定で記録の有効・無効を切り替えできます。
 
 ### ホワイトリストドメインでの自動保存
 
@@ -145,8 +175,8 @@ await reviewLogs()
 1. 拡張機能アイコンをクリックしてポップアップを開き、右上の **「⚙」アイコン** からダッシュボードを開く
 2. ダッシュボードの **「Domain Filter」** パネルを開く
 3. **「ホワイトリスト」** セクションにドメインを追加
-   - 例: `confluence.example.com`
-   - ワイルドカード対応: `*.confluence.example.com`
+    - 例: `confluence.example.com`
+    - 記録パイプラインのホワイトリスト照合はダッシュボードのドメインフィルターと同じ評価です。`*.confluence.example.com` 形式のワイルドカードと、「サブドメインも一致させる」設定の両方が適用されます。
 
 #### 重要: PIIマスキングは引き続き実行されます
 
@@ -177,7 +207,7 @@ Local Only / Full Pipeline は、ブラウザ内蔵 AI（Chrome の Gemini Nano 
 
 #### Q. 「スキップ済み」として残ったページはどこで確認できますか？
 
-**A. ダッシュボードの History タブ**で確認できます。自動保存時の動作が `skip` に設定されている場合、プライベートページ検出が発動したページは Obsidian には保存されず、ダッシュボードの「Skipped」フィルターに一覧表示されます。「今すぐ記録」ボタンでその場から手動保存できます。スキップされたページは24時間後に自動削除されます。
+**A. ダッシュボードの SQLite History パネル**で確認できます。自動保存時の動作が `skip` に設定されている場合、プライベートページ検出が発動したページは Obsidian には保存されず、パネル下部の保留（pending）セクションに一覧表示されます。「今すぐ記録」ボタンでその場から手動保存できます。スキップされたページは24時間後に自動削除されます。
 
 #### Q. History の「PIIマスキング」欄で、電話番号やメールアドレスがマスクされているのにトークン数が変化しません。バグですか？
 
@@ -203,7 +233,7 @@ A guide to how Yasumaro automatically masks personally identifiable information 
 ### Key Features
 
 1. **Four Privacy Modes**: Choose according to your needs.
-2. **PII Masking**: Detect sensitive information such as credit card numbers, phone numbers, tax IDs (German), etc. using regex patterns and replace them with `[MASKED]`.
+2. **PII Masking**: Detect sensitive information such as credit card numbers, phone numbers, tax IDs (German), etc. using a WASM-first hybrid detector (21 patterns) and replace them with typed tokens like `[MASKED:email]`.
 3. **Content Cleansing**: Remove unwanted elements (ads, navigation, SNS embeds, etc.) from web pages before AI summarization.
 4. **Preview & Edit Modal**: Modal UI to verify and edit masking results before sending.
 
@@ -222,7 +252,7 @@ Open the extension popup and click the **"⚙" icon** in the top-right to open t
 
 1. Click **"📝 Record Now"**.
 2. **Confirmation Modal** appears.
-   - Verify that phone numbers etc. in the text are hidden like `[MASKED:PHONE]`.
+    - Verify that phone numbers etc. in the text are hidden like `[MASKED:phoneJp]`.
    - Text can be edited if necessary.
 3. Click **"Send"** to save to Obsidian.
 
@@ -258,7 +288,7 @@ The text area can be resized freely by dragging the handle at the bottom right, 
 
 #### Content Size Limit
 
-Large page content is truncated to 64KB (65,536 characters), and only the first 64KB is processed. This is implemented for the following reasons:
+Large page content is truncated to 64KB (65,536 bytes, UTF-8) at the first stage of the recording pipeline, and only the leading part is processed. This is implemented for the following reasons:
 
 - Performance: Prevents large pages from hanging the processing pipeline
 - API Cost: Limits the amount of data sent to AI APIs
@@ -267,44 +297,74 @@ Large page content is truncated to 64KB (65,536 characters), and only the first 
 
 | Processing Order | Step | Description |
 |------------------|------|-------------|
-| 1 | Content Truncation | If over 64KB, truncate to first 64KB only |
+| 1 | Content Truncation | If over 64KB (65,536 bytes, UTF-8), truncate to the leading part |
 | 2 | Privacy Header Check | Check HTTP headers like `Cache-Control` |
 | 3 | PrivacyPipeline Processing | PII masking, prompt injection protection |
-| 4 | Send to AI API | Send the truncated 64KB content |
+| 4 | Send to AI API | Apply the per-provider send cap and send (OpenAI-compatible: 10,000 chars by default, Gemini: 30,000, local LLM: 4,000, Built-in AI: ~16,384) |
 | 5 | Save to Obsidian | Save AI summary result |
 
 **Key Points:**
-- Only the truncated 64KB content is sent to the AI API
-- Content beyond 64KB is NOT sent to the AI API
+- Of the truncated content, only the portion within the per-provider send cap is sent to the AI API (the full 64KB is not necessarily sent)
+- Content beyond 64KB (65,536 bytes) is NOT sent to the AI API
 
-From a PII perspective, this means **"PII contained beyond 64KB will not be transmitted to the AI API"**, which is a **conservative/safe behavior**.
+From a PII perspective, this means **"PII contained beyond the truncation point will not be transmitted to the AI API"**, which is a **conservative/safe behavior**.
 
 > [!TIP]
-> Since only the first 64KB is sent to the AI API, sensitive information in the latter part of the page is not transmitted to the AI API. This is a safe design from a privacy protection perspective.
+> Since only the leading part of the truncated content, within the per-provider cap, is sent to the AI API, sensitive information in the latter part of the page is not transmitted to the AI API. This is a safe design from a privacy protection perspective.
 
-#### PII Detection (Regex)
+#### Sanitizer Guard Values
+
+In addition to the 64KB truncation, the following guards apply:
+
+| Guard | Value | Behavior on exceed |
+|-------|-------|--------------------|
+| Input limit | 64KB (65,536 characters) | Masking still runs, error attached |
+| Input limit (size limit skipped) | 512KB | Masking still runs, error attached |
+| Output limit | 128KB | Output truncated, error attached |
+| Timeout | 5 seconds | Processing aborted (error) |
+| Match count limit | 1000 matches | Processing aborted (error) |
+| ReDoS long-token guard | Non-whitespace runs over 100 chars are sampled for scanning | Prevents regex engine blowup while preserving detection |
+
+#### PII Detection (WASM-First Hybrid)
 Try it at [PII Sandbox](pii-sandbox.html).
 
-Automatically detects and masks the following patterns:
-- Credit card numbers
-- My Number (Japanese personal identification number)
-- Bank account numbers
-- Email addresses
-- Japanese phone numbers
+The production path is the WASM-first hybrid `sanitizePiiHybrid()`. The Rust-based (`wasm/pii-sanitizer/`) WASM core detects and masks all 21 patterns. The TypeScript `sanitizeRegex()` is used only as a fallback when WASM initialization fails or a WASM call throws at runtime.
+
+The following 21 patterns (type name + target) are detected and masked automatically. The mask format is `[MASKED:<camelCase type>]` (e.g. `[MASKED:phoneJp]`, `[MASKED:creditCard]`).
+
+| Type | Target |
+|------|--------|
+| `email` | Email addresses |
+| `creditCard` | Credit card numbers (false positives filtered by Luhn validation) |
+| `myNumber` | My Number (12 digits, separators required) |
+| `phoneJp` | Japanese phone numbers |
+| `bankAccount` | Bank account numbers (7 digits) |
+| `driverLicense` | Japanese driver's license numbers (12 consecutive digits) |
+| `jpPassport` | Japanese passport numbers (2 letters + 7 digits) |
+| `ipv4` | IPv4 addresses (private ranges only) |
+| `ipv6` | IPv6 addresses |
+| `ssn` | US Social Security Numbers (3-2-4 format) |
+| `phoneUs` | US phone numbers |
+| `phoneCn` | Chinese phone numbers |
+| `idCn` | Chinese ID numbers (18 digits, trailing X allowed) |
+| `rrnKr` | Korean Resident Registration Numbers |
+| `phoneKr` | Korean phone numbers |
+| `iban` | IBAN (DE / FR / IT / ES / NL) |
+| `deTaxId` | German tax IDs (11 digits) |
+| `frInsee` | French INSEE numbers (15 digits) |
+| `itCodiceFiscale` | Italian Codice Fiscale (16 characters) |
+| `esDni` | Spanish DNI (8 digits + 1 letter) |
+| `esNie` | Spanish NIE (X/Y/Z + 7 digits + 1 letter) |
 
 #### Prompt Injection Protection
 Security protection feature during AI summarization:
 - **Detection Patterns**: Detects dangerous patterns like `ignore above`, `SYSTEM`, `PASSWORD`, `execute()`
-- **Risk Assessment**: HIGH-risk patterns (injection instructions) are replaced with `[FILTERED]`; LOW-risk patterns (generic words like `password`, `execute`) are evaluated via context analysis
-- **Processing**: HIGH-risk parts are replaced with `[FILTERED]` and remaining safe content is sent to AI
-- **Safety Evaluation**: Re-evaluates sanitized content; only blocks if risks remain
+- **Risk Assessment**: Evaluates content as HIGH / MEDIUM / LOW and replaces HIGH-risk parts with `[FILTERED]`; LOW-risk generic words (like `password`, `execute`) are evaluated via context analysis
+- **Blocking Policy**: Follows a per-context policy. HIGH-risk content blocks only in local-input, provider-input, and built-in-AI-input contexts; summary contexts log a warning and continue with the sanitized content. MEDIUM passes through in every context
 - **Logging**: Records detected patterns and block reasons in logs
 
 #### Log Viewing
-To view masking execution logs, run the following in the extension's DevTools console:
-```javascript
-await reviewLogs()
-```
+Masking execution logs are recorded as `SANITIZE` logs when the `PII_SANITIZE_LOGS` setting is enabled (default: enabled) via `addLog(LogType.SANITIZE, ...)`. Use the same setting to toggle log recording.
 
 ### Automatic Saving for Whitelisted Domains
 
@@ -328,8 +388,8 @@ These systems are detected as "private pages" because they require authenticatio
 1. Click the extension icon to open the popup, then click the **"⚙" icon** in the top-right to open the Dashboard
 2. Open the **"Domain Filter"** panel in the Dashboard
 3. Add domains to the **"Whitelist"** section
-   - Example: `confluence.example.com`
-   - Wildcard support: `*.confluence.example.com`
+    - Example: `confluence.example.com`
+    - The recording pipeline evaluates the whitelist exactly like the dashboard's domain filter: wildcard patterns (e.g. `*.confluence.example.com`) and the "match subdomains" setting are both honored.
 
 #### Important: PII Masking Still Applies
 
@@ -360,7 +420,7 @@ Confirmation notifications appear when accessing pages where the server returns 
 
 #### Q. Where can I find pages that were skipped?
 
-**A. In the Dashboard's History tab.** When the auto-save behavior is set to `skip`, pages triggered by private page detection are not saved to Obsidian, but appear in the "Skipped" filter of the Dashboard. You can manually save them from there using the "Record Now" button. Skipped pages are automatically deleted after 24 hours.
+**A. In the Dashboard's SQLite History panel.** When the auto-save behavior is set to `skip`, pages triggered by private page detection are not saved to Obsidian, but appear in the pending section at the bottom of the panel. You can manually save them from there using the "Record Now" button. Skipped pages are automatically deleted after 24 hours.
 
 #### Q. The "PII Masking" line in History shows masked phone numbers/emails, but the token count doesn't change. Is this a bug?
 

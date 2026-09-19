@@ -14,19 +14,20 @@ Yasumaro は、AI要約の生成リクエストを送信するたびに、いつ
 
 | 項目 | 内容 |
 |------|------|
+| **ID** | ログエントリの連番 |
 | **プロバイダー** | 要約生成に使用したAIプロバイダー名（例: gemini） |
 | **URL** | 要約対象となったページの完全なURL |
 | **記録日時** | ログが記録されたタイムスタンプ |
 
-**重要**: ページの本文や生成された要約の内容そのものは記録されません。監査ログに保存されるのは「プロバイダー・URL・日時」の3項目のみで、要約が成功したか失敗したかも記録対象外です。プライバシーに配慮し、必要最小限のメタデータのみを記録する設計になっています。
+**重要**: ページの本文や生成された要約の内容そのものは記録されません。監査ログに保存されるのは「ID・プロバイダー・URL・日時」の4項目のみで、要約が成功したか失敗したかも記録対象外です。プライバシーに配慮し、必要最小限のメタデータのみを記録する設計になっています。
 
 ### 確認方法
 
-ダッシュボードの **ログをエクスポート** パネルの「監査ログ TSV ダウンロード」から、直近100,000件の記録を TSV ファイルとしてダウンロードできます。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv` で、`created_at`（ISO 8601形式）・プロバイダー名・URL の3カラムが含まれます。
+ダッシュボードの **ログをエクスポート** パネルの「TSV でダウンロード」から、直近の記録を TSV ファイルとしてダウンロードできます（上限は使用中のストレージによって異なります。OPFS使用時は最大1,000件、IndexedDB使用時は最大100,000件。OPFS使用時に上限を超えるデータがある場合、部分的なデータである旨の警告とともに最大1,000件が出力されます）。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv` で、`id`・プロバイダー名・URL・`created_at`（ISO 8601形式）の4カラムが含まれます。
 
 ### 保持期間
 
-監査ログには自動削除機能がなく、無期限に蓄積されます（保存先はローカルの SQLite データベースです）。蓄積量が気になる場合は、SQLite の定期的なメンテナンス（PURGE）と併せてご利用ください。
+監査ログには自動削除機能がなく、SQLiteバックエンド使用時は無期限に蓄積されます（保存先はローカルの SQLite データベースです）。フォールバックストレージ使用時は監査ログの記録・参照は未対応であり、イベントは破棄され、TSVダウンロードはエラーになります。蓄積量が気になる場合は、SQLite の定期的なメンテナンス（PURGE）と併せてご利用ください。
 
 ### 想定される使い方
 
@@ -47,19 +48,20 @@ Every time Yasumaro sends an AI summarization request, it records when, to which
 
 | Field | Description |
 |-------|-------------|
+| **ID** | Sequential log entry ID |
 | **Provider** | The AI provider used for summarization (e.g., gemini) |
 | **URL** | The full URL of the page that was summarized |
 | **Timestamp** | When the log entry was recorded |
 
-**Important**: The page's body text and the generated summary content are never recorded. Only "provider, URL, and timestamp" are stored — success or failure of the summarization is not tracked either. The design intentionally records the minimum metadata necessary, out of privacy consideration.
+**Important**: The page's body text and the generated summary content are never recorded. Only "ID, provider, URL, and timestamp" are stored — success or failure of the summarization is not tracked either. The design intentionally records the minimum metadata necessary, out of privacy consideration.
 
 ### Viewing the Log
 
-From the dashboard's **Export Logs** panel, use the "Audit Log TSV Download" section to download the most recent 100,000 entries as a TSV file. The filename follows the pattern `yasumaro-audit-log-YYYY-MM-DD.tsv` and contains three columns: `created_at` (ISO 8601), provider name, and URL.
+From the dashboard's **Export Logs** panel, use "TSV でダウンロード" to download recent entries as a TSV file (the cap depends on the active storage backend: up to 1,000 entries on OPFS, up to 100,000 on IndexedDB. On OPFS, when more data exists than the cap, up to 1,000 rows are exported with a partial-data warning). The filename follows the pattern `yasumaro-audit-log-YYYY-MM-DD.tsv` and contains four columns: `id`, provider name, URL, and `created_at` (ISO 8601).
 
 ### Retention
 
-Audit log entries are never automatically deleted; they accumulate indefinitely (stored in the local SQLite database). If storage size becomes a concern, periodic SQLite maintenance (PURGE) can help manage it.
+Audit log entries are never automatically deleted; on SQLite backends they accumulate indefinitely (stored in the local SQLite database). On Fallback Storage, audit log recording and querying are unsupported — events are dropped and TSV download fails with an error. If storage size becomes a concern, periodic SQLite maintenance (PURGE) can help manage it.
 
 ### Typical Use Cases
 

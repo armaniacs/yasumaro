@@ -34,7 +34,7 @@ Yasumaro は、Chrome で閲覧した Web ページを自動または手動で�
 
 **Q4. AI プロバイダーのアカウントや API キーがないと使えませんか？**
 
-AI 要約を使わないのであれば不要です。ダッシュボードで「AI Provider」を設定しなければ、要約なしでページの URL・タイトル・滞在時間だけが記録されます。また、「Record without AI」ボタンを使うと、AI 処理をスキップして Obsidian へ直接記録することもできます。
+AI 要約を使わないのであれば不要です。ダッシュボードで「AI Provider」を設定しなければ、要約なしでページの URL・タイトル・滞在時間だけが記録されます。また、ダッシュボードの SQLite History パネルにある保留セクションの「AI要約なしで記録」ボタンを使うと、AI 処理をスキップして記録することもできます。
 
 **Q5. Chrome 以外のブラウザでも使えますか？**
 
@@ -85,7 +85,7 @@ Local REST API プラグインが自己署名証明書を使用しているた�
 
 **Q13. Obsidian が起動していないと記録されませんか？**
 
-Obsidian への書き込みは Obsidian が起動している必要があります。ただし、履歴データはデバイス上の SQLite DB（ダッシュボードの History タブ）には Obsidian の起動状態に関わらず保存されます。後から Obsidian が起動しているときに手動再記録することも可能です。
+Obsidian への書き込みは Obsidian が起動している必要があります。ただし、履歴データはデバイス上の SQLite DB（ダッシュボードの SQLite History パネル）には Obsidian の起動状態に関わらず保存されます。後から Obsidian が起動しているときに手動再記録することも可能です。
 
 ---
 
@@ -117,7 +117,7 @@ Chrome の Gemini Nano、Microsoft Edge の Phi-mini を要約に使う仕組み
 
 **Q15. Groq を使うにはどう設定しますか？**
 
-ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `llama-3.3-70b-versatile` などを入力し、最後に「Save & Test Connection」をクリックしてください。
+ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `llama-3.3-70b-versatile` などを入力し、最後に「Test AI」をクリックしてください。
 
 **Q16. Gemini を使うにはどう設定しますか？**
 
@@ -125,7 +125,7 @@ Chrome の Gemini Nano、Microsoft Edge の Phi-mini を要約に使う仕組み
 
 **Q17. Ollama などのローカル LLM を使えますか？**
 
-使えます。「AI Provider」で「OpenAI Compatible 2」を選択し、Base URL に `http://localhost:11434/v1`（Ollama の場合）、API Key は空欄、Model Name に `ollama list` で確認したモデル名を入力します。ダッシュボードに「Ollama」プリセットボタンがあり、クリックすると自動入力されます。LM Studio の場合は Base URL を `http://localhost:1234/v1` にします。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
+使えます。「AI Provider」で「OpenAI Compatible 2」を選択し、Base URL に `http://localhost:11434/v1`（Ollama の場合）、API Key は空欄、Model Name に `ollama list` で確認したモデル名を入力します。ダッシュボードに「Ollama」プリセットボタンがあり、クリックすると自動入力されます。LM Studio の場合は Base URL を `http://127.0.0.1:1234/v1` にします。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
 
 **Q18. AI 要約のプロンプトをカスタマイズできますか？**
 
@@ -149,11 +149,11 @@ Groq も Ollama も独立した入力があるので、シンプルに OpenAI �
 
 **Q22. AI プロバイダーにはどんなデータが送られますか？**
 
-ページのテキスト内容（最大 64KB）が AI 要約のために選択したプロバイダーの API に送信されます。PII マスキング（Masked Cloud モード）を有効にしている場合、クレジットカード番号・電話番号・メールアドレスなどは送信前に `[MASKED]` に置換されます。URL・タイトル・滞在時間は AI には送られません。
+ページのテキスト内容が AI 要約のために選択したプロバイダーの API に送信されます。テキストはまず記録パイプラインで 64KB（65,536バイト・UTF-8）に切り詰められ、さらにプロバイダ別の送信上限（OpenAI 互換: 既定 1 万文字、Gemini: 3 万文字など）が適用されます。PII マスキング（Masked Cloud モード）を有効にしている場合、クレジットカード番号・電話番号・メールアドレスなどは送信前に `[MASKED:email]` のような型付きトークンに置換されます。URL・タイトル・滞在時間は AI には送られません。
 
 **Q23. API キーは安全に保管されますか？**
 
-はい。API キーは Chrome のローカルストレージに保存される前に、AES-GCM（PBKDF2 鍵導出）で自動的に暗号化されます。ユーザーが何か設定する必要はありません。さらに高いセキュリティを求める場合は、ダッシュボードの「プライバシー」タブで「マスターパスワード保護」を有効にしてください。有効にすると、暗号化キー自体をパスワードから導出できるようになります。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
+マスターパスワードを設定している場合は、API キーは AES-GCM（PBKDF2 鍵導出）で暗号化されて Chrome のローカルストレージに保存されます。マスターパスワードが未設定の場合、API キーは `chrome.storage.local` に平文で保存されます。安全のため、マスターパスワードの設定を推奨します。ダッシュボードの「プライバシー」タブで「マスターパスワード保護」を有効にしてください。なお、設定のエクスポートファイルの暗号化も同様にオプトインです（デフォルトでは暗号化されません）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
 **Q24. 設定をエクスポートしたファイルには API キーが含まれますか？**
 
@@ -161,7 +161,7 @@ Groq も Ollama も独立した入力があるので、シンプルに OpenAI �
 
 **Q25. PII マスキングとは何ですか？**
 
-ページのテキスト内にある個人情報（クレジットカード番号・マイナンバー・電話番号・メールアドレスなど）を正規表現で検出し、AI に送信する前に `[MASKED:CREDIT_CARD]` のように自動で置き換える機能です。ダッシュボードの「プライバシー」タブで「Masked Cloud」を選択すると有効になります。詳細は [PII 機能ガイド](PII_FEATURE_GUIDE.md) をご覧ください。
+ページのテキスト内にある個人情報（クレジットカード番号・マイナンバー・電話番号・メールアドレスなど）を WASM-first のハイブリッド検出（Rust 実装 21 パターン）で検出し、AI に送信する前に `[MASKED:creditCard]` のように自動で置き換える機能です。ダッシュボードの「プライバシー」タブで「Masked Cloud」を選択すると有効になります。詳細は [PII 機能ガイド](PII_FEATURE_GUIDE.md) をご覧ください。
 
 **Q26. プライベートページ（ネットバンキングなど）は自動記録されますか？**
 
@@ -169,7 +169,7 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 **Q27. 記録した履歴を削除できますか？**
 
-できます。ダッシュボードの History タブで個別エントリを削除できます（GDPR 第17条に準拠した物理削除）。「すべてのデータを削除」ボタンで全件一括削除も可能です。保持ポリシーを設定すれば、一定期間・件数を超えたエントリを自動的に削除することもできます。
+できます。ダッシュボードの SQLite History パネルで個別エントリを削除できます（GDPR 第17条に準拠した物理削除）。「すべてのデータを削除」ボタンで全件一括削除も可能です。保持ポリシーを設定すれば、一定期間・件数を超えたエントリを自動的に削除することもできます。
 
 ---
 
@@ -185,11 +185,11 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 **Q30. 特定のサイトを記録したくない（または記録したい）場合は？**
 
-ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。「現在のページドメインを追加」ボタンを使うと、現在開いているページのドメインをワンクリックで追加できます。「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF）。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
+ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。現在開いているページのドメインを追加するには、ステータスパネル内のボタンまたはタグ入力欄を使用します。「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF）。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
 
 **Q31. スキップされたページはどこで確認できますか？**
 
-ダッシュボードの History タブで「Skipped」フィルターを選択すると、プライバシー検出によりスキップされたページの一覧が表示されます。「今すぐ記録」ボタンからその場で手動保存することもできます。スキップされたページは 24 時間後に自動削除されます。
+ダッシュボードの SQLite History パネルにある保留セクションで、プライバシー検出によりスキップされたページの一覧が表示されます。各エントリの「今すぐ記録」「AI要約なしで記録」ボタンからその場で手動保存することも、「完全に削除」で削除することもできます。スキップされたページは 24 時間後に自動削除されます。
 
 **Q32. 同じページが何度も記録されてしまいます。**
 
@@ -217,19 +217,19 @@ Yasumaro の接続テストは、実際に AI へ短いプロンプトを1往復
 
 **Q36. Obsidian にページが記録されているのに、AI 要約がありません。**
 
-AI 要約なしで記録する設定（「Record without AI」）を使用しているか、AI プロバイダーの設定が未完了の場合に発生します。ダッシュボードで AI プロバイダーを設定し、「Save & Test Connection」で接続を確認してください。
+AI 要約なしで記録する設定（「Record without AI」）を使用しているか、AI プロバイダーの設定が未完了の場合に発生します。ダッシュボードで AI プロバイダーを設定し、「Test AI」で接続を確認してください。
 
 **Q37. HTTP への切り替え後、Obsidian への接続が失敗します。**
 
 HTTP に切り替えた場合、ポートも `27124` から `27123` に変更する必要があります。Yasumaro ダッシュボードの「Protocol」を `http`、「Port」を `27123` に設定してください。また、Obsidian の Local REST API プラグイン設定でも HTTP ポートが `27123` に設定されていることを確認してください。
 
-**Q38. ダッシュボードに「フォールバックモードで動作中」という黄色いバナーが表示されています。**
+**Q38. ダッシュボードに「簡易ストレージモードで動作中です」という黄色いバナーが表示されています。**
 
-お使いの環境で OPFS（SQLite の保存先）が使用できないため、フォールバックストレージが有効になっています。フォールバックモードでは `unlimitedStorage` 権限により実質無制限の保存が可能ですが、権限が付与されない環境では `chrome.storage.local` の上限（約10MB）に制限されます。OPFS が使えるようになると、自動的にデータが移行されます。詳細は [ストレージモードについて](STORAGE_MODES.md) をご覧ください。
+お使いの環境で OPFS（SQLite の保存先）が使用できないため、フォールバックストレージが有効になっています。表示されるメッセージは「簡易ストレージモードで動作中です。お使いの環境ではOPFSが利用できないため、chrome.storage.localを使用しています。検索機能が制限されます。」です。フォールバックモードでは `unlimitedStorage` 権限により実質無制限の保存が可能ですが、権限が付与されない環境では `chrome.storage.local` の上限（約10MB）に制限されます。OPFS が使えるようになると、自動的にデータが移行されます。詳細は [ストレージモードについて](STORAGE_MODES.md) をご覧ください。
 
 **Q39. ページを開いても自動記録が全く実行されません。**
 
-以下を確認してください。(1) ドメインフィルターでそのドメインがブラックリストに入っていないか。(2) 滞在時間やスクロール深度の閾値を満たしているか（ページをある程度スクロールして数秒待つ）。(3) プライベートページ検出でスキップされていないか（History タブの「Skipped」フィルターで確認）。
+以下を確認してください。(1) ドメインフィルターでそのドメインがブラックリストに入っていないか。(2) 滞在時間やスクロール深度の閾値を満たしているか（ページをある程度スクロールして数秒待つ）。(3) プライベートページ検出でスキップされていないか（SQLite History パネルの保留セクションで確認）。
 
 **Q40. 設定をエクスポート・インポートしたら API キーが消えました。**
 
@@ -245,7 +245,7 @@ HTTP に切り替えた場合、ポートも `27124` から `27123` に変更す
 
 **Q42. 履歴の全文検索はどう使いますか？**
 
-ダッシュボードの History タブの検索ボックスにキーワードを入力すると、URL・タイトル・AI 要約の全体を SQLite FTS5 で高速検索できます。日本語にも対応しています。
+ダッシュボードの SQLite History パネルの検索ボックスにキーワードを入力すると、URL・タイトル・AI 要約の全体を SQLite FTS5 で高速検索できます。日本語にも対応しています。
 
 **Q43. FTS5 とは何ですか？**
 
@@ -325,11 +325,19 @@ Yes. Obsidian integration is optional. If you leave the "Use Obsidian" checkbox 
 
 **Q4. Do I need an AI provider account or API key?**
 
-Not if you don't want AI summaries. If you don't configure an AI provider in the dashboard, only the URL, title, and time spent on the page are recorded. You can also use the "Record without AI" button to save directly to Obsidian without any AI processing.
+Not if you don't want AI summaries. If you don't configure an AI provider in the dashboard, only the URL, title, and time spent on the page are recorded. You can also use the "Record without AI" button in the pending section of the dashboard's SQLite History panel to record while skipping AI processing.
 
 **Q5. Does it work on browsers other than Chrome?**
 
-Yasumaro works on Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. Edge can be installed from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, load the GitHub Releases zip or build from source (Chrome Web Store distribution is currently paused; see Q7). Firefox builds are also possible, but Chromium-based browsers are the main supported platform.
+Yasumaro works on Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. Edge can be installed from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, load the GitHub Releases zip or build from source (Chrome Web Store distribution is currently paused; see Q7).
+
+A **Firefox build** is also supported. Build it with `npm run build:firefox` (or download `yasumaro-*-firefox.zip` from GitHub Releases and unzip it), then install with these steps (AMO distribution is undecided):
+
+1. Open `about:debugging#/runtime/this-firefox` in Firefox
+2. Click "Load Temporary Add-on…" and select the `manifest.json` inside the unzipped folder (temporary installs disappear when Firefox restarts)
+3. For persistent use, install it into a Firefox Developer Edition / Nightly profile with `xpinstall.signatures.required` set to `false`
+
+Known Firefox limitation: browser Built-in AI (Gemini Nano / Phi-mini) is not supported (shown as "unsupported" in settings). External AI providers (Gemini API, OpenAI-compatible, Ollama, etc.) work.
 
 **Q6. Does it work on mobile Chrome?**
 
@@ -397,7 +405,7 @@ It uses Chrome's Gemini Nano or Microsoft Edge's Phi-mini for summarization. No 
 
 **Q15. How do I set up Groq?**
 
-In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `llama-3.3-70b-versatile`, and click "Save & Test Connection".
+In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `llama-3.3-70b-versatile`, and click "Test AI".
 
 **Q16. How do I set up Gemini?**
 
@@ -405,7 +413,7 @@ Select "Google Gemini" as the AI Provider, enter the API key from [Google AI Stu
 
 **Q17. Can I use a local LLM like Ollama?**
 
-Yes. Select "OpenAI Compatible 2" as the AI Provider, set Base URL to `http://localhost:11434/v1` for Ollama (or `http://localhost:1234/v1` for LM Studio), leave API Key empty, and enter the model name shown by `ollama list`. The dashboard has preset buttons for Ollama and LM Studio that fill in the values automatically. See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
+Yes. Select "OpenAI Compatible 2" as the AI Provider, set Base URL to `http://localhost:11434/v1` for Ollama (or `http://127.0.0.1:1234/v1` for LM Studio), leave API Key empty, and enter the model name shown by `ollama list`. The dashboard has preset buttons for Ollama and LM Studio that fill in the values automatically. See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
 
 **Q18. Can I customize the AI summarization prompt?**
 
@@ -429,11 +437,11 @@ All data is stored only on your device. The developer does not operate any serve
 
 **Q22. What data is sent to the AI provider?**
 
-The text content of the page (up to 64 KB) is sent to the API of your chosen provider to generate a summary. With PII masking (Masked Cloud mode) enabled, credit card numbers, phone numbers, and email addresses are replaced with `[MASKED]` before transmission. URLs, titles, and time-on-page are not sent to the AI.
+The text content of the page is sent to the API of your chosen provider to generate a summary. It is first truncated to 64KB (65,536 bytes, UTF-8) by the recording pipeline, and then the per-provider send cap applies (OpenAI-compatible: 10,000 characters by default, Gemini: 30,000, etc.). With PII masking (Masked Cloud mode) enabled, credit card numbers, phone numbers, and email addresses are replaced with typed tokens like `[MASKED:email]` before transmission. URLs, titles, and time-on-page are not sent to the AI.
 
 **Q23. Are my API keys stored securely?**
 
-Yes. API keys are automatically encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage—no user action is required. For stronger protection, you can enable "Master Password Protection" in the Privacy tab of the dashboard, which derives the encryption key from your password. See [PRIVACY.md](PRIVACY.md) for details.
+When a master password is configured, API keys are encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage. Without a master password, API keys are stored in plaintext in `chrome.storage.local`. Setting a master password is recommended: enable "Master Password Protection" in the Privacy tab of the dashboard. Encryption of settings-export files is likewise opt-in (exports are unencrypted by default). See [PRIVACY.md](PRIVACY.md) for details.
 
 **Q24. Does the exported settings file include API keys?**
 
@@ -441,7 +449,7 @@ No. API keys are excluded from exports for security reasons. When migrating to a
 
 **Q25. What is PII masking?**
 
-PII masking detects personal information in page text—such as credit card numbers, My Number, phone numbers, and email addresses—using regex patterns, and automatically replaces them with tokens like `[MASKED:CREDIT_CARD]` before sending content to the AI. Select "Masked Cloud" in the Privacy tab of the dashboard to enable it. See the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details.
+PII masking detects personal information in page text—such as credit card numbers, My Number, phone numbers, and email addresses—using the WASM-first hybrid detector (21 patterns implemented in Rust), and automatically replaces them with tokens like `[MASKED:creditCard]` before sending content to the AI. Select "Masked Cloud" in the Privacy tab of the dashboard to enable it. See the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details.
 
 **Q26. Are private pages like online banking automatically recorded?**
 
@@ -449,7 +457,7 @@ Yasumaro analyzes HTTP response headers (`Cache-Control: private`, `Set-Cookie`,
 
 **Q27. Can I delete recorded history?**
 
-Yes. Individual entries can be deleted from the Dashboard's History tab (physical deletion compliant with GDPR Art. 17). The "Delete All Data" button removes all records at once. You can also configure a retention policy to automatically purge entries older than a set period or beyond a maximum count.
+Yes. Individual entries can be deleted from the Dashboard's SQLite History panel (physical deletion compliant with GDPR Art. 17). The "Delete All Data" button removes all records at once. You can also configure a retention policy to automatically purge entries older than a set period or beyond a maximum count.
 
 ---
 
@@ -465,11 +473,11 @@ Click the extension icon to open the popup and click the "📝 Record Now" butto
 
 **Q30. How do I stop a specific site from being recorded (or ensure it is)?**
 
-Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. The "Add Current Domain" button lets you add the current page's domain in one click. With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF). You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
+Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. To add the current page's domain, use the buttons in the status panel or the tag input field. With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF). You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
 
 **Q31. Where can I find pages that were skipped?**
 
-In the Dashboard's History tab, select the "Skipped" filter to see all pages skipped by private page detection. You can manually save any of them from there using "Record Now". Skipped pages are automatically deleted after 24 hours.
+In the pending section of the Dashboard's SQLite History panel you can see all pages skipped by private page detection. Each entry can be saved on the spot with "Record Now" or "Record without AI", or removed with "Delete Forever". Skipped pages are automatically deleted after 24 hours.
 
 **Q32. The same page keeps getting recorded repeatedly.**
 
@@ -497,19 +505,19 @@ Yasumaro's connection test sends a short prompt to the AI and waits for one roun
 
 **Q36. Pages are recorded in Obsidian but with no AI summary.**
 
-This happens when using "Record without AI" or when the AI provider is not configured. Set up an AI provider in the dashboard and confirm the connection with "Save & Test Connection".
+This happens when using "Record without AI" or when the AI provider is not configured. Set up an AI provider in the dashboard and confirm the connection with "Test AI".
 
 **Q37. After switching to HTTP, the connection to Obsidian fails.**
 
 When switching to HTTP, you must also change the port from `27124` to `27123`. Set Protocol to `http` and Port to `27123` in the Yasumaro dashboard. Also verify that the HTTP port in Obsidian's Local REST API plugin settings is set to `27123`.
 
-**Q38. A yellow banner says "Running in simplified storage mode".**
+**Q38. A yellow banner says "Running in fallback storage mode".**
 
-OPFS (the SQLite storage backend) is unavailable in your environment, so the extension has fallen back to a simplified storage mode. With the `unlimitedStorage` permission, storage is effectively unlimited; in environments where that permission is not granted, it is limited to the `chrome.storage.local` quota (about 10 MB). When OPFS becomes available, data will be migrated automatically. See [STORAGE_MODES.md](STORAGE_MODES.md) for details.
+OPFS (the SQLite storage backend) is unavailable in your environment, so the extension has fallen back to a simplified storage mode. The banner reads "Running in fallback storage mode. OPFS is not available in your environment, using chrome.storage.local. Search functionality is limited." With the `unlimitedStorage` permission, storage is effectively unlimited; in environments where that permission is not granted, it is limited to the `chrome.storage.local` quota (about 10 MB). When OPFS becomes available, data will be migrated automatically. See [STORAGE_MODES.md](STORAGE_MODES.md) for details.
 
 **Q39. Automatic recording never runs on any page.**
 
-Check: (1) Is the domain on the blacklist? (2) Are the time and scroll thresholds being met (try staying on the page and scrolling for a few seconds)? (3) Is the page being skipped by private page detection (check the "Skipped" filter in the History tab)?
+Check: (1) Is the domain on the blacklist? (2) Are the time and scroll thresholds being met (try staying on the page and scrolling for a few seconds)? (3) Is the page being skipped by private page detection (check the pending section of the SQLite History panel)?
 
 **Q40. My API keys were gone after importing settings.**
 
@@ -525,7 +533,7 @@ Skipped (pending) pages are automatically deleted after 24 hours—this is inten
 
 **Q42. How do I use the full-text search in history?**
 
-In the Dashboard's History tab, type a keyword in the search box to search across URLs, titles, and AI summaries using SQLite FTS5. Japanese text is supported.
+In the Dashboard's SQLite History panel, type a keyword in the search box to search across URLs, titles, and AI summaries using SQLite FTS5. Japanese text is supported.
 
 **Q43. What is FTS5?**
 

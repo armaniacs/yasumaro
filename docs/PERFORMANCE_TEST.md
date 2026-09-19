@@ -19,9 +19,9 @@
 | **局所ベンチ (micro)** | `npm run bench:micro` | Node + jsdom（ネットワーク不要） | wall-clock P50/P95/P99、DOM 走査数、ヒープ差分、スケーリング指数 |
 | **e2e ベンチ** | `npm run bench:e2e` | 実 Chromium + ビルド済み拡張 | 自動保存の同期コスト（extract〜送信準備）、Long Tasks/TBT、メモリ、Lighthouse、Service Worker cold start |
 | **回帰チェック (CI)** | `npm run bench:check` | Node + jsdom | ベースライン比で決定的カウンタが +15% 悪化したら exit 1 |
-| **レポート掃除** | `npm run bench:clean` | Node | `bench/reports/` をローリング 5 世代 + 週次アンカーで掃除（`-- --all` で全消去） |
+| **レポート掃除** | `npm run bench:clean` | Node | `bench/reports/` をローリング 5 世代 + 週次アンカーで掃除（`-- --all` で全消去。dotfile は保持される） |
 
-局所ベンチ `c1`〜`c7` は最適化 PBI（`pbi/2026-09-04-02`〜`08`）と 1:1 対応。`cleansing` は旧 `benchmark:cleansing` の移行先。
+局所ベンチ `c1`〜`c7` は最適化 PBI（`pbi/2026-09-04-02`〜`08`）と 1:1 対応。`cleansing` は旧 `benchmark:cleansing` の移行先。`c8-ts` / `c8-wasm` / `c8-hybrid`（PII サニタイズ: TS 正規表現 / WASM / 両者のハイブリッド）と `f3`（archive 作成バッチ INSERT）は機能領域別の追加ベンチのため、下表は厳密な 1:1 対応ではない。
 
 ### クイックスタート
 
@@ -55,6 +55,8 @@ npm run build && npm run bench:e2e
 | 1.75〜2.5 | `quadratic` | O(N²) |
 | ≥ 2.5 | `polynomial-or-worse` | それ以上 |
 
+なお、指数が非有限値の場合は `unknown`、サイズのばらつきが不足する場合（有効な計測点が 2 点未満・サイズ種別が 1 種類のみ）は `insufficient-data` が返る。
+
 レポート例:
 
 ```
@@ -81,6 +83,8 @@ warmup 5 · measure 30 · scaling exponent 1.98 (quadratic)
 | `c5` | 02 周期ポーリング廃止 | 合成 | `schedule_calls`（N 秒間の schedule 呼び出し回数） |
 | `c6` | 07 Dashboard クエリキャッシュ | fake query/storage | `query_calls`、`storage_set`（操作シーケンス中の回数） |
 | `c7` | 08 dedup O(N²) 解消 | long-text | wall p95、**スケーリング指数**（2→1 が目標） |
+| `c8-ts` / `c8-wasm` / `c8-hybrid` | PII サニタイズ（機能領域別。PBI 対応なし） | 抽出記事 HTML | wall p95（TS のみ / WASM のみ / 両者のハイブリッドの比較） |
+| `f3` | archive 作成（`pbi/2026-09-06-02` F-3） | 50k / 100k 行 SQLite | フル archive パスの wall 時間（warmup 0 / measure 1） |
 
 ### 最適化 PBI 実装時のワークフロー
 
@@ -122,7 +126,7 @@ npm run build && npm run bench:e2e
 - **ローリング保持**: 日付スタンプ（世代）の新しい順に 5 世代を保持
 - **週次アンカー**: 各 ISO 週（UTC）で最新の 1 世代を追加保持（5 世代からあふれた古い世代も週の代表として 1 件残る）
 - **削除単位は世代単位**: 同一日付の `.md` / `.html` / `.json` は必ずまとめて削除される
-- 日付スタンプを持たないファイルは自動掃除では削除されない。全消去は `npm run bench:clean -- --all`
+- 日付スタンプを持たないファイルは自動掃除では削除されない。全消去は `npm run bench:clean -- --all`（dotfile は `--all` でも保持される）
 
 実行モード（通常 / `--check` / `--update-baseline`）に関係なく、成果物は常に `.md` / `.html` / `.json` の 3 点セットで書き出される。
 
@@ -159,9 +163,9 @@ git add bench/baselines/micro.json   # PR で差分をレビューする
 
 ```
 bench/
-  harness/       stats / domEnv / bundle / runner / report / cli / trend (data) / trendReport (presentation) / htmlReport / format
-  micro/         c1-c7 + cleansing（各 definition を export）
-  e2e/           *.bench.ts + _fixtures.ts + server.mjs
+  harness/       stats / domEnv / bundle / runner / report / cli / args (parseArgs) / writeArtifacts (.md/.html/.json 出力) / openReport (shouldAutoOpen) / trend (data) / trendReport (presentation) / htmlReport / format
+  micro/         c1-c8 + cleansing + f3（各 definition を export）
+  e2e/           *.bench.ts + _fixtures.ts + server.mjs + teardown.mjs
   fixtures/      _sizes.mjs（S/M/L 合成ジェネレータ）
   baselines/     micro.json（コミット対象）
   reports/       生成物（gitignore）
@@ -179,9 +183,14 @@ bench/
 | **Micro** | `npm run bench:micro` | Node + jsdom, no network | wall-clock P50/P95/P99, DOM scan counts, heap deltas, scaling exponent |
 | **E2E** | `npm run bench:e2e` | headed Chromium + built extension | autosave sync cost (extract → send-ready), Long Tasks/TBT, memory, Lighthouse, SW cold start |
 | **Regression check (CI)** | `npm run bench:check` | Node + jsdom | exit 1 when a deterministic counter is >15% worse than baseline |
-| **Report cleanup** | `npm run bench:clean` | Node | Prunes `bench/reports/` to rolling 5 generations + weekly anchors (`-- --all` wipes everything) |
+| **Report cleanup** | `npm run bench:clean` | Node | Prunes `bench/reports/` to rolling 5 generations + weekly anchors (`-- --all` wipes everything except dotfiles) |
 
-Micro benches `c1`–`c7` map 1:1 to the optimization PBIs (`pbi/2026-09-04-02`…`08`).
+Micro benches `c1`–`c7` map 1:1 to the optimization PBIs (`pbi/2026-09-04-02`…`08`). `cleansing` is the migrated `benchmark:cleansing`. `c8-ts` / `c8-wasm` / `c8-hybrid` (PII sanitization: TS regex / WASM / hybrid of both) and `f3` (archive batch INSERT) are extra benches by feature area, so the map is no longer a strict 1:1:
+
+| id | Feature area | Fixture | Key signal |
+|----|--------------|---------|------------|
+| `c8-ts` / `c8-wasm` / `c8-hybrid` | PII sanitization (no PBI mapping) | extracted-article HTML | wall p95 (TS-only vs WASM-only vs hybrid comparison) |
+| `f3` | archive creation (`pbi/2026-09-06-02` F-3) | 50k / 100k-row SQLite | full archive-pass wall time (warmup 0 / measure 1) |
 
 ### Quick start
 
@@ -199,6 +208,9 @@ tells O(N) (`linear`, ~1.0) apart from O(N²) (`quadratic`, ~2.0). The `counters
 column shows `querySelectorAll` calls (`qsa`), TreeWalker nodes visited
 (`treeWalker`), deep `cloneNode` calls (`clone`), layout-getter reads (`reflow`),
 and per-bench counters (`encode`, `schedule_calls`, `query_calls`, `storage_set`).
+
+A non-finite exponent yields `unknown`; insufficient size variation (fewer than
+2 usable points or a single size) yields `insufficient-data`.
 
 ### Workflow when implementing an optimization PBI
 
@@ -237,7 +249,7 @@ e2e suite nightly or on demand.
 - **Generations are deleted as a group**: a date's `.md` / `.html` / `.json`
   always disappear together.
 - Files without a date stamp are never pruned. `npm run bench:clean -- --all`
-  wipes everything.
+  wipes everything except dotfiles (dotfiles are always preserved).
 
 Every run mode (default / `--check` / `--update-baseline`) writes the same
 `.md` / `.html` / `.json` artifact set. The `.html` file is self-contained
@@ -286,3 +298,12 @@ git add bench/baselines/micro.json
 | Unstable heap deltas | The npm scripts already pass `--expose-gc`; run on an idle machine. |
 | Every e2e test skips | Confirm `npm run build` ran and the environment can run headed Chromium. |
 | jsdom numbers differ from a real browser | jsdom does not lay out; judge by ratios and baseline deltas, not absolutes. Use the e2e suite for real-browser numbers. |
+
+### Harness modules
+
+Beyond stats / domEnv / bundle / runner / report / cli / trend / htmlReport /
+format, `bench/harness/` includes `args.mjs` (`parseArgs`), `writeArtifacts.mjs`
+(`.md` / `.html` / `.json` output), and `openReport.mjs` (`shouldAutoOpen`);
+`bench/e2e/` also includes `teardown.mjs`. `bench/micro/` holds `c1`–`c8`,
+`cleansing`, and `f3`, each exporting its bench definition(s); `bench:micro`
+discovers them via directory scan.
