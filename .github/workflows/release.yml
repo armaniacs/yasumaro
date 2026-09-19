@@ -73,12 +73,17 @@ jobs:
           node-version: '24'
       - name: Record and commit project metrics
         continue-on-error: true
+        env:
+          # Workflow context values must reach the shell via env, never by
+          # direct ${{ }} expansion inside run: — a crafted ref name could
+          # otherwise inject shell commands (CI_SECURITY_CHECKLIST rule).
+          REF_NAME: ${{ github.ref_name }}
         run: |
           git fetch origin main
           git checkout -B main origin/main
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          node scripts/metrics/updateHistory.mjs ${{ github.ref_name }}
+          node scripts/metrics/updateHistory.mjs "$REF_NAME"
           git add dev-docs/metrics/history.json
-          git commit -m "chore(metrics): record ${{ github.ref_name }} growth metrics" || { echo "No changes to commit"; exit 0; }
+          git commit -m "chore(metrics): record $REF_NAME growth metrics" || { echo "No changes to commit"; exit 0; }
           git push origin main
