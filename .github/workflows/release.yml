@@ -39,10 +39,10 @@ jobs:
         run: npx wxt zip -b chrome
       - name: Check bundle size (M26)
         run: npm run check-bundle-size -- chrome-mv3
-      - name: Check firefox bundle size
-        run: npm run check-bundle-size -- firefox-mv3
       - name: Build for Firefox
         run: npx wxt zip -b firefox
+      - name: Check firefox bundle size
+        run: npm run check-bundle-size -- firefox-mv3
       - name: Build for Edge
         run: npx wxt zip -b edge
       - name: List output archives
