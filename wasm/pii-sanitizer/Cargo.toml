@@ -1,0 +1,20 @@
+[package]
+name = "pii-sanitizer"
+version = "0.1.0"
+edition = "2021"
+description = "PII detection/masking core for Yasumaro, compiled to WebAssembly"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -53,6 +53,80 @@ jobs:
       - name: Run Tests
         run: npm test
 
+  wasm-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master (2026-09)
+        with:
+          toolchain: stable
+      - name: Cache cargo registry, build artifacts, and wasm-pack binary
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/wasm-pack
+            wasm/pii-sanitizer/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/pii-sanitizer/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+      - name: Run pii-sanitizer Rust tests
+        run: npm run test:wasm
+      - name: Install wasm-pack (if not cached)
+        run: command -v wasm-pack || cargo install wasm-pack
+      - name: Install node dependencies for parity suites
+        run: npm ci
+      - name: Rebuild wasm and verify behavioral equivalence with the committed one
+        # Guards against a Rust source change landing without its compiled
+        # output being regenerated and committed — see npm run build:wasm.
+        #
+        # Byte comparison across hosts is NOT achievable here: panic
+        # locations embed host-specific cargo registry paths
+        # (/home/runner/... vs /Users/<user>/... — even their lengths differ)
+        # and wasm-bindgen-cli embeds a provenance-dependent version banner
+        # into the output, so a macOS build and a CI Linux build of the same
+        # source differ by ~19 bytes (verified 2026-09-19; the failing job
+        # uploads its rebuilt binary for diffing). The gate therefore proves
+        # BEHAVIORAL equivalence: the fresh rebuild and the committed binary
+        # must each pass the full parity suite (218 captured inputs + 52
+        # boundary cases + hybrid contract pins), i.e. both are equivalent
+        # to the TS reference on the corpus. The committed public copy must
+        # additionally be byte-identical to the committed src copy
+        # (host-independent: both are committed files) — the parity suites
+        # and bench read the src copy, while wxt's publicAssets hook ships
+        # the public copy (wxt.config.ts); a one-sided commit must fail.
+        run: |
+          cp src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm /tmp/committed-src.wasm
+          cp public/wasm/pii_sanitizer_bg.wasm /tmp/committed-public.wasm
+          npm run build:wasm
+          echo "== parity suite against the FRESH rebuild =="
+          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts
+          cp /tmp/committed-src.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm
+          echo "== parity suite against the COMMITTED binary =="
+          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts
+          if ! cmp -s /tmp/committed-src.wasm /tmp/committed-public.wasm; then
+            echo "::error::public/wasm/pii_sanitizer_bg.wasm diverges from src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm — run 'npm run build:wasm' and commit the result"
+            exit 1
+          fi
+          git diff --exit-code src/wasm/pii-sanitizer/piiSanitizerWasm.js || \
+            (echo "::error::piiSanitizerWasm.js glue is stale — run 'npm run build:wasm' and commit the result" && exit 1)
+      - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
+        # The byte-diff gate assumes reproducible builds across hosts. When
+        # it fails, this artifact lets the maintainer diff the CI-built
+        # binary against the local one and pin down the nondeterministic
+        # source (toolchain, binaryen, embedded paths, ...).
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rebuilt-pii-sanitizer-bg-wasm
+          path: wasm/pii-sanitizer/pkg/pii_sanitizer_bg.wasm
+          if-no-files-found: ignore
+
   dod-check:
     runs-on: ubuntu-latest
     timeout-minutes: 5
