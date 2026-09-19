@@ -15,6 +15,7 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { MarkdownBufferManager } from '../buffers/MarkdownBufferManager.js';
 import type { MarkdownEntry } from '../buffers/MarkdownBufferManager.js';
 import { renderFileTemplate } from '../../../utils/markdownTemplateUtils.js';
+import { scheduleImmediateFlush } from '../../localMarkdownIdleFlusher.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../../../utils/types.js';
 
 /** Storage key prefix for daily entry buffers */
@@ -85,7 +86,14 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
       entryData: context.markdownEntryData,
     });
     await markdownBuffer.flush();
-    markdownBuffer.scheduleDailyFlush();
+
+    if (timing === 'immediate') {
+      // One-shot debounced alarm (Chrome replaces same-name alarms) — the
+      // buffered entries download at most once per minute.
+      scheduleImmediateFlush();
+    } else {
+      markdownBuffer.scheduleDailyFlush();
+    }
 
     addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {
       title,

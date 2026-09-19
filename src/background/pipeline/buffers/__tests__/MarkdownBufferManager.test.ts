@@ -138,7 +138,7 @@ describe('MarkdownBufferManager', () => {
 
       expect(mockChrome.alarms.create).toHaveBeenCalledTimes(1);
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(
-        'yasumaro-local-md-daily',
+        'yasumaro-local-md-daily-flush',
         { periodInMinutes: 1440 },
       );
     });
