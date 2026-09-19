@@ -2,18 +2,14 @@
  * Parity check: for every real input the existing PII test suites feed to
  * sanitizeRegex() (captured to captured-inputs.ndjson via setup-capture.ts —
  * see that file for how to regenerate), the WASM core's output must exactly
- * match the TS regex output *restricted to the 5 pattern types the WASM core
- * implements* (email, creditCard, myNumber, phoneJp, bankAccount).
+ * match the full TS regex output. The WASM core now implements all 21
+ * pattern types from PII_PATTERNS in piiSanitizer.ts (see
+ * wasm/pii-sanitizer/src/patterns/{core5,extended}.rs), so no filtering of
+ * the TS result is needed — full-fidelity comparison.
  *
- * The WASM core intentionally covers a subset of piiSanitizer.ts's 24
- * patterns (see wasm/pii-sanitizer/src/lib.rs's module doc), so a TS result
- * that also masked e.g. an `ssn` or `iban` span is expected to differ from
- * the WASM result — those are filtered out of the expected value before
- * comparing (see `filterToWasmPatterns`).
- *
- * This is the regression gate for Phase 2 (production pipeline
- * integration): a wasm/lib.rs change that breaks parity here must not be
- * merged into processPrivacyPipelineStep.ts.
+ * This is the regression gate for both Phase 2 (production pipeline
+ * integration) and Phase 3 (the 16-pattern extension): a wasm/*.rs change
+ * that breaks parity here must not ship.
  */
 
 import { readFileSync, existsSync } from 'node:fs';
@@ -21,8 +17,6 @@ import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeAll } from 'vitest';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
 import initWasmModule, { sanitizePii as sanitizePiiWasmRaw } from '../piiSanitizerWasm.js';
-
-const WASM_COVERED_TYPES = new Set(['email', 'creditCard', 'myNumber', 'phoneJp', 'bankAccount']);
 
 interface MaskedItem {
     type: string;
@@ -41,30 +35,6 @@ function sanitizePiiWasm(text: string): { text: string; maskedItems: MaskedItem[
     return sanitizePiiWasmRaw(text) as { text: string; maskedItems: MaskedItem[] };
 }
 
-/**
- * Re-derives what the *masked text* would look like if only the WASM-covered
- * pattern types had been masked, by re-running the TS scan restricted to
- * those types. piiSanitizer.ts doesn't expose a "patterns subset" option, so
- * this reconstructs it from the full result: re-mask the original text using
- * only the maskedItems whose type is WASM-covered, applied in the same
- * right-to-left order sanitizeRegex uses internally.
- */
-function filterToWasmPatterns(originalText: string, fullResult: { maskedItems: MaskedItem[] }): {
-    text: string;
-    maskedItems: MaskedItem[];
-} {
-    const covered = fullResult.maskedItems.filter((item) => WASM_COVERED_TYPES.has(item.type));
-    // Reconstruct masked text by replacing each covered original substring
-    // at its recorded index, right-to-left so indices don't shift.
-    const sorted = [...covered].sort((a, b) => (b.index ?? 0) - (a.index ?? 0));
-    let text = originalText;
-    for (const item of sorted) {
-        const idx = item.index ?? 0;
-        text = text.slice(0, idx) + `[MASKED:${item.type}]` + text.slice(idx + item.original.length);
-    }
-    return { text, maskedItems: covered.sort((a, b) => (a.index ?? 0) - (b.index ?? 0)) };
-}
-
 function loadCapturedInputs(): string[] {
     const path = fileURLToPath(new URL('./captured-inputs.ndjson', import.meta.url));
     if (!existsSync(path)) {
@@ -76,7 +46,7 @@ function loadCapturedInputs(): string[] {
         .map((line) => JSON.parse(line) as string);
 }
 
-describe('WASM vs TS regex parity (WASM-covered pattern types only)', () => {
+describe('WASM vs TS regex parity (all 21 pattern types)', () => {
     beforeAll(async () => {
         await initForNode();
     });
@@ -90,7 +60,7 @@ describe('WASM vs TS regex parity (WASM-covered pattern types only)', () => {
     });
 
     test.each(inputs.map((text, i) => [i, text] as const))(
-        'input #%i matches WASM-covered subset (len=%s)',
+        'input #%i matches TS regex output exactly (len=%s)',
         async (_i, text) => {
             // Inputs over MAX_PII_INPUT_SIZE are rejected by sanitizeRegex's
             // own size guard before any pattern matching — the WASM core has
@@ -120,12 +90,11 @@ describe('WASM vs TS regex parity (WASM-covered pattern types only)', () => {
                 return;
             }
 
-            const tsExpected = filterToWasmPatterns(text, tsFull);
             const wasmResult = sanitizePiiWasm(text);
 
-            expect(wasmResult.text).toBe(tsExpected.text);
+            expect(wasmResult.text).toBe(tsFull.text);
             expect(wasmResult.maskedItems.map((m) => ({ type: m.type, original: m.original }))).toEqual(
-                tsExpected.maskedItems.map((m) => ({ type: m.type, original: m.original }))
+                tsFull.maskedItems.map((m) => ({ type: m.type, original: m.original }))
             );
         }
     );
