@@ -36,9 +36,9 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
-## [Unreleased]
+## [6.9.10] - 2026-09-19
 
-CIゲートの緑化とPIIスキャナの等価性ギャップ解消に加え、docs/ 30ファイルの実装乖離監査（約130件の指摘を解消）と、監査で判明した実装側課題の修正を行ったラウンドです。全テスト（12,600 件）がグリーンです。
+このリリースは v6.9.9 と同日にリリースする連続リリースです。CIゲートの緑化とPIIスキャナの等価性ギャップ解消に加え、docs/ 30ファイルの実装乖離監査（約130件の指摘を解消）と、監査で判明した実装側課題の修正を行ったラウンドです。全テスト（12,600 件）がグリーンです。
 
 ### Added
 
