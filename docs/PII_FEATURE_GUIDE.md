@@ -176,7 +176,7 @@ AI要約時のセキュリティ保護機能：
 2. ダッシュボードの **「Domain Filter」** パネルを開く
 3. **「ホワイトリスト」** セクションにドメインを追加
     - 例: `confluence.example.com`
-    - 記録パイプラインのホワイトリスト照合はドメインの完全一致のみです。ワイルドカード（`*.confluence.example.com` 形式）はここでは適用されません（ワイルドカードやサブドメイン一致はポップアップ・Domain Filter 側の機能です）。
+    - 記録パイプラインのホワイトリスト照合はダッシュボードのドメインフィルターと同じ評価です。`*.confluence.example.com` 形式のワイルドカードと、「サブドメインも一致させる」設定の両方が適用されます。
 
 #### 重要: PIIマスキングは引き続き実行されます
 
@@ -389,7 +389,7 @@ These systems are detected as "private pages" because they require authenticatio
 2. Open the **"Domain Filter"** panel in the Dashboard
 3. Add domains to the **"Whitelist"** section
     - Example: `confluence.example.com`
-    - The recording pipeline matches the whitelist by exact domain only. Wildcards (e.g. `*.confluence.example.com`) are not applied here (wildcard and subdomain matching are popup / Domain Filter-side features).
+    - The recording pipeline evaluates the whitelist exactly like the dashboard's domain filter: wildcard patterns (e.g. `*.confluence.example.com`) and the "match subdomains" setting are both honored.
 
 #### Important: PII Masking Still Applies
 

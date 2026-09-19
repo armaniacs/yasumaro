@@ -17,7 +17,7 @@ Yasumaro は、Obsidian に接続せずに閲覧履歴を Markdown ファイル�
 | モード | 説明 |
 |-------|------|
 | **手動のみ** | 自動書き出しはせず、手動エクスポート実行時のみ Markdown 化します |
-| **即時** | ページが記録されるたびに、当日分のバッファ（`local_export_YYYY-MM-DD`）に追記します。ファイルのダウンロード自体は日次／アイドル時のフラッシュで行われます（記録ごとの専用の即時ダウンロード処理は現在配線されていません） |
+| **即時** | ページが記録されるたびに、当日分のバッファ（`local_export_YYYY-MM-DD`）に追記し、約1分後に発火するワンショットアラームでバッファをダウンロードします。連続記録時はアラームが差し替えられるため、ダウンロードは最短1分間隔に間引かれます |
 | **アイドル時 / 30分ごと** | ブラウザがアイドル状態になったとき、または最大30分ごとにまとめて書き出します |
 | **日付が変わったとき** | 日付が変わったタイミングで前日分をまとめて回収します |
 
@@ -127,7 +127,7 @@ Once "Export to Local Markdown" is ON, choose one of four timing modes (default 
 | Mode | Description |
 |------|-------------|
 | **Manual only** | No automatic export; Markdown is generated only when you run a manual export |
-| **Immediate** | Each time a page is recorded, its entry is appended to that day's buffer (`local_export_YYYY-MM-DD`) in chrome.storage. The file download itself happens on the daily/idle flush (no dedicated per-recording download path is currently wired up) |
+| **Immediate** | Each time a page is recorded, its entry is appended to that day's buffer (`local_export_YYYY-MM-DD`) in chrome.storage, and a one-shot alarm fires in about a minute to download the buffer. Rapid recordings replace the pending alarm, so downloads are debounced to at most once per minute |
 | **Idle / every 30 min** | Batches the export when the browser becomes idle, or at least every 30 minutes |
 | **On date change** | Collects the previous day's records into one file when the date rolls over |
 
