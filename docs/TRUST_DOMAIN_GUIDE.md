@@ -26,7 +26,7 @@ Yasumaro の**ドメイン信頼度判定**機能は、ユーザーが閲覧し�
 | **TRUSTED** | 緑 | 信頼済みドメイン。公式機関、教育機関、Tranco 上位ドメインなど。 |
 | **SENSITIVE** | 黄 | 要注意ドメイン。金融、ゲーム、SNS、またはユーザーが追加した警戒ドメイン。 |
 | **UNVERIFIED** | 灰 | 未検証ドメイン。いずれの信頼リストにも含まれていないドメイン。 |
-| **LOCKED** | グレー（暗め） | ブロック対象ドメイン。スキーマ上は存在し、TrustChecker はこのレベルを受け取ると記録をブロックしますが、現時点では通常の判定フローで返されることはありません。将来の機能拡張用に予約されています。 |
+| **LOCKED** | グレー（暗め） | ブロック対象ドメイン。スキーマ上は存在し、TrustChecker はこのレベルを受け取ると記録をブロックしますが、現時点では通常の判定フローで返されることはありません。将来の機能拡張用に予約されています（到達可能性: 現状の判定経路では到達しない予約状態）。 |
 
 ---
 
@@ -64,6 +64,11 @@ UNVERIFIED
 - `.lg.jp`（地方公共団体）
 
 ユーザーはこのリストに独自の TLD（例: `.ed.jp`）を追加できます。
+
+TLD の照合はドット境界で行われます（`domain === tld || domain.endsWith("." + tld)`）。空文字・`*` を含むワイルドカード・RFCラベルに準拠しない形式の TLD は `isValidTld` で判定から除外されます。
+
+> [!NOTE]
+> 記録パイプライン側の TrustChecker は、コアの信頼判定を TrustDecision に委譲しています（TrustDecision が trustDb・permissionManager 等の複数モジュールへの往復を1つの seam に集約）。アラート表示・ブロック判定のロジックは TrustChecker 側に残ります。
 
 #### Step 2: Sensitive List 判定
 
@@ -254,7 +259,7 @@ Domains are classified into one of four levels.
 | **TRUSTED** | Green | Trusted domains, such as official institutions, educational sites, and top Tranco-ranked sites. |
 | **SENSITIVE** | Amber | Caution-worthy domains, such as finance, gaming, SNS, or user-added warning domains. |
 | **UNVERIFIED** | Gray | Unverified domains that are not included in any trusted list. |
-| **LOCKED** | Dark gray | Blocked domains. The level exists in the schema and TrustChecker blocks recording when it receives this level, but it is not currently returned by the normal evaluation flow. Reserved for future feature expansion. |
+| **LOCKED** | Dark gray | Blocked domains. The level exists in the schema and TrustChecker blocks recording when it receives this level, but it is not currently returned by the normal evaluation flow. Reserved for future feature expansion (reachability: unreachable via current evaluation paths). |
 
 ---
 
@@ -292,6 +297,11 @@ Checks whether the domain ends with an official Japanese public TLD.
 - `.lg.jp` (local government)
 
 You can add custom TLDs, such as `.ed.jp`.
+
+TLD matching uses a dot boundary (`domain === tld || domain.endsWith("." + tld)`). Empty strings, wildcards containing `*`, and non-RFC-label-compliant TLDs are excluded from evaluation by `isValidTld`.
+
+> [!NOTE]
+> On the recording-pipeline side, TrustChecker delegates the core trust lookup to TrustDecision (which collapses the multi-module round trip across trustDb, permissionManager, and related modules into a single seam). Alert display and block-decision logic remain in TrustChecker.
 
 #### Step 2: Sensitive List Check
 
