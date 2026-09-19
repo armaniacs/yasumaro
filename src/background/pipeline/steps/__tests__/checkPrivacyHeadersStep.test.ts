@@ -179,6 +179,68 @@ describe('PrivacyHeadersChecker', () => {
 
       await expect(checker.execute(context)).resolves.toBe(context);
     });
+
+    it('matches wildcard whitelist entries added via the popup writer', async () => {
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
+        isPrivate: true,
+        reason: 'cache-control',
+      });
+      const checker = new PrivacyHeadersChecker(getPrivacyInfo);
+
+      const context = makeContext({
+        force: false,
+        data: {
+          title: 'Test',
+          url: 'https://sub.example.com/page',
+          content: '',
+        },
+        settings: {
+          [StorageKeys.DOMAIN_WHITELIST]: ['*.example.com'],
+          [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'skip',
+        } as any,
+      });
+
+      await expect(checker.execute(context)).resolves.toBe(context);
+    });
+
+    it('does not match subdomains from a plain entry unless DOMAIN_SUBDOMAIN_MATCHING is on', async () => {
+      const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
+        isPrivate: true,
+        reason: 'cache-control',
+      });
+      const checker = new PrivacyHeadersChecker(getPrivacyInfo);
+
+      const base = {
+        force: false,
+        data: {
+          title: 'Test',
+          url: 'https://sub.example.com/page',
+          content: '',
+        },
+      };
+
+      // 既定（サブドメイン一致 OFF）ではプレーンなエントリに sub.example.com は一致しない
+      const strictContext = makeContext({
+        ...base,
+        settings: {
+          [StorageKeys.DOMAIN_WHITELIST]: ['example.com'],
+          [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: false,
+          [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'skip',
+        } as any,
+      });
+      await expect(checker.execute(strictContext)).rejects.toThrow();
+
+      // DOMAIN_SUBDOMAIN_MATCHING=true なら一致する
+      const subdomainContext = makeContext({
+        ...base,
+        settings: {
+          [StorageKeys.DOMAIN_WHITELIST]: ['example.com'],
+          [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: true,
+          [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'skip',
+        } as any,
+      });
+      await expect(checker.execute(subdomainContext)).resolves.toBe(subdomainContext);
+    });
   });
 
   describe('headerValue のマスク処理', () => {

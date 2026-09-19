@@ -11,6 +11,7 @@ import type { RecordingContext } from '../types.js';
 import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { redactHeaderValue } from '../../../utils/redaction.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { isDomainInList } from '../../../utils/wildcardToRegex.js';
 
 export class PrivacyHeadersChecker {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -33,13 +34,17 @@ export class PrivacyHeadersChecker {
       return context;
     }
 
-    // Check whitelist first
+    // Check whitelist first — same evaluation as the dashboard's domain
+    // filter (wildcard patterns + DOMAIN_SUBDOMAIN_MATCHING). An exact
+    // includes() here used to silently ignore *.example.com entries added
+    // via the popup whitelist writer, which validates them as valid.
     const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
+    const matchSubdomains = settings[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
     let shouldSkipPrivacyCheck = false;
 
     if (whitelist.length > 0) {
       const domain = this.extractDomain(url);
-      if (domain && whitelist.includes(domain)) {
+      if (domain && isDomainInList(domain, whitelist, matchSubdomains)) {
         addLog(LogType.DEBUG, 'Whitelisted domain, bypassing privacy check', { url, domain, traceId: context.traceId });
         shouldSkipPrivacyCheck = true;
       }
