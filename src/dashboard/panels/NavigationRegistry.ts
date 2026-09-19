@@ -10,13 +10,19 @@ export class NavigationRegistry {
   private activePanelId: string | null = null;
   private mountedPanels = new Set<string>();
   private navigateListeners = new Set<(panelId: string) => void>();
+  // Bumped at the start of every #navigateInternal call so a navigate() that
+  // gets superseded by a newer one while suspended at an await can detect it
+  // is stale and skip its remaining (visible) side effects.
+  private navGeneration = 0;
 
   /**
-   * Fired after every successful navigate(), including programmatic ones
-   * (e.g. privacySettingsPanel's export-logs jump) that bypass the sidebar
-   * click handler. DashboardBootstrapper subscribes to keep the sidebar's
-   * active/aria-selected state in sync so a11y never depends on *how* the
-   * navigation was triggered. Returns an unsubscribe function.
+   * Fired as soon as a navigation is decided (before panel.mount()/activate()
+   * are awaited, so before the navigation has actually settled) — including
+   * programmatic ones (e.g. privacySettingsPanel's export-logs jump) that
+   * bypass the sidebar click handler. DashboardBootstrapper subscribes to
+   * keep the sidebar's active/aria-selected state in sync immediately, so
+   * a11y never depends on *how* the navigation was triggered or on the
+   * panel's mount finishing. Returns an unsubscribe function.
    */
   onDidNavigate(listener: (panelId: string) => void): () => void {
     this.navigateListeners.add(listener);
@@ -39,6 +45,8 @@ export class NavigationRegistry {
   }
 
   async #navigateInternal(panelId: string, init?: Record<string, unknown>): Promise<void> {
+    const generation = ++this.navGeneration;
+
     const panel = this.panels.get(panelId);
     if (!panel) {
       throw new Error(`Panel "${panelId}" is not registered`);
@@ -84,10 +92,22 @@ export class NavigationRegistry {
         // docs/superpowers/specs/2026-09-19-navigation-registry-mount-await-design.md
         await panel.mount(container);
       }
+      // The mount itself is real work that happened and must not be redone,
+      // even if a newer navigate() has since superseded this one — so this
+      // tracking update always runs, regardless of generation.
       this.mountedPanels.add(panelId);
     }
 
+    // A newer navigate() call may have deactivated this panel and taken over
+    // activePanelId while we were suspended at the mount await above. Calling
+    // init/activate/load on a panel that's no longer the target would be
+    // wasted work on an already-hidden panel (and could surface a load-error
+    // banner nobody can see), so bail out silently here.
+    if (generation !== this.navGeneration) return;
+
     await (panel.init ?? panel.activate)?.(init);
+
+    if (generation !== this.navGeneration) return;
 
     if ((panel.category === 'async-data' || panel.category === 'diagnostic') && panel.load) {
       panel.load().catch((err: unknown) => {
