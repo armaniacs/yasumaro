@@ -30,22 +30,22 @@ export class NavigationRegistry {
     this.panels.set(panel.id, panel);
   }
 
-  navigate(panelId: string, init?: Record<string, unknown>): void {
-    this.#navigateInternal(panelId, init);
+  navigate(panelId: string, init?: Record<string, unknown>): Promise<void> {
+    return this.#navigateInternal(panelId, init);
   }
 
-  navigateTyped<K extends keyof PanelInitMap>(panelId: K, init?: PanelInitMap[K]): void {
-    this.#navigateInternal(panelId, init);
+  navigateTyped<K extends keyof PanelInitMap>(panelId: K, init?: PanelInitMap[K]): Promise<void> {
+    return this.#navigateInternal(panelId, init);
   }
 
-  #navigateInternal(panelId: string, init?: Record<string, unknown>): void {
+  async #navigateInternal(panelId: string, init?: Record<string, unknown>): Promise<void> {
     const panel = this.panels.get(panelId);
     if (!panel) {
       throw new Error(`Panel "${panelId}" is not registered`);
     }
 
     if (this.activePanelId === panelId) {
-      (panel.init ?? panel.activate)?.(init);
+      await (panel.init ?? panel.activate)?.(init);
       return;
     }
 
@@ -78,12 +78,16 @@ export class NavigationRegistry {
     if (!this.mountedPanels.has(panelId)) {
       const container = document.getElementById(panelId);
       if (container) {
-        panel.mount(container);
+        // Awaited so callers (e.g. reload -> navigate to default panel) only
+        // see navigate() resolve once the panel's dynamically-built DOM
+        // (e.g. #geminiSettings) actually exists. See design doc
+        // docs/superpowers/specs/2026-09-19-navigation-registry-mount-await-design.md
+        await panel.mount(container);
       }
       this.mountedPanels.add(panelId);
     }
 
-    (panel.init ?? panel.activate)?.(init);
+    await (panel.init ?? panel.activate)?.(init);
 
     if ((panel.category === 'async-data' || panel.category === 'diagnostic') && panel.load) {
       panel.load().catch((err: unknown) => {
