@@ -47,12 +47,13 @@ test('PII sanitizer WASM core initializes and masks in a browser worker', async 
     platform: 'browser',
     logLevel: 'silent',
   });
-  // The committed binary is the single source of truth: CI's wasm-test job
-  // diffs a rebuild against it, and the publicAssets build hook ships these
-  // exact bytes into dist/<browser>-mv3/wasm/. Copying it here keeps the
-  // probe independent of which dist/ build (chromium vs firefox) exists.
+  // public/wasm is what the extension actually ships (wxt's publicAssets
+  // hook copies it to dist/<browser>-mv3/wasm/), so the probe validates the
+  // shipped bytes, not the src/wasm build output — the two are identical
+  // only as long as build:wasm was run and both copies were committed,
+  // which CI's wasm-test job gates.
   copyFileSync(
-    join(__dirname, '../../src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm'),
+    join(__dirname, '../../public/wasm/pii_sanitizer_bg.wasm'),
     join(outDir, 'pii-sanitizer.wasm'),
   );
 
