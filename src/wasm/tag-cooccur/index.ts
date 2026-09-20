@@ -24,13 +24,12 @@
  *
  * Loading follows the shared contract in `../initWasm.ts`: binary at the
  * stable public path `wasm/tag_cooccur_bg.wasm` (fetched via
- * `chrome.runtime.getURL()`). STAGED state: the public copy and the
- * wxt.config.ts publicAssets entry are intentionally deferred until the
- * hybrid is wired into a production call site (see wxt.config.ts
- * publicAssets), so in the current tree ONLY the committed src copy exists
- * — tests and bench read it directly from disk, and a production call to
- * initTagCooccurWasm() would 404 until integration restores the public
- * path. Do NOT switch this to
+ * `chrome.runtime.getURL()`). Shipped: the binary is committed to BOTH
+ * `src/wasm/tag-cooccur/` (parity suites + bench read it) and `public/wasm/`
+ * (wxt's publicAssets hook distributes it to `dist/wasm/`), and the
+ * production call site is
+ * src/dashboard/panels/asyncData/tagClusterPanel.ts via
+ * src/dashboard/tagCooccurrenceHybrid.ts. Do NOT switch this to
  * `new URL('./tag_cooccur_bg.wasm', import.meta.url)` — under the
  * single-file IIFE background build Vite inlines that as a CSP-blocked
  * `data:` URI and the module silently fails in every real build (see

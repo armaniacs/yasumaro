@@ -4,7 +4,11 @@
  */
 
 import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
-import { computeTagCooccurrence, limitToTopNodes, narrowEntriesToTopTags } from '../../tagCooccurrence.js';
+import { limitToTopNodes } from '../../tagCooccurrence.js';
+import {
+    computeTagCooccurrenceHybrid,
+    narrowEntriesToTopTagsHybrid,
+} from '../../tagCooccurrenceHybrid.js';
 import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
@@ -50,8 +54,10 @@ export function createTagClusterPanel(): PanelLifecycle {
 
         // Narrow to the most frequent tags BEFORE cooccurrence so the O(n^2)
         // double loop and force-directed layout stay bounded (VULN-053).
-        const narrowedRows = narrowEntriesToTopTags(rows, MAX_TAG_CLUSTER_TAGS);
-        const { nodes, edges } = computeTagCooccurrence(narrowedRows);
+        // Hybrid routes to the WASM core on large inputs and falls back to
+        // the sync TS implementations on any WASM failure.
+        const narrowedRows = await narrowEntriesToTopTagsHybrid(rows, MAX_TAG_CLUSTER_TAGS);
+        const { nodes, edges } = await computeTagCooccurrenceHybrid(narrowedRows);
         loadingManager.updateStep(1);
 
         if (nodes.length === 0) {

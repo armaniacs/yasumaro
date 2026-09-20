@@ -154,6 +154,10 @@ export default defineConfig({
         absoluteSrc: resolve(wxt.config.root, 'public/wasm/textrank_bg.wasm'),
         relativeDest: 'wasm/textrank_bg.wasm',
       });
+      files.push({
+        absoluteSrc: resolve(wxt.config.root, 'public/wasm/tag_cooccur_bg.wasm'),
+        relativeDest: 'wasm/tag_cooccur_bg.wasm',
+      });
       // NOTE: the sentence-dedup binary is intentionally NOT shipped yet —
       // contentDedupHybrid.ts has no production call site (STAGED). When the
       // hybrid is wired, re-add the files.push for public/wasm/
@@ -209,11 +213,10 @@ export default defineConfig({
       //     no call site imports it yet, and its binary is not shipped (no
       //     publicAssets entry, no public/wasm copy). Re-add both when
       //     wiring the hybrid.
-      //   - the tag cooccurrence core (src/wasm/tag-cooccur/) — STAGED,
-      //     not yet called from production: tagCooccurrenceHybrid.ts exists
-      //     but no call site imports it yet, and its binary is not shipped
-      //     (no publicAssets entry, no public/wasm copy). Re-add both when
-      //     wiring the hybrid.
+      //   - the tag cooccurrence core (src/wasm/tag-cooccur/) in the
+      //     dashboard page, via
+      //     src/dashboard/panels/asyncData/tagClusterPanel.ts →
+      //     src/dashboard/tagCooccurrenceHybrid.ts
       // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur" src/`.
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
