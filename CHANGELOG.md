@@ -38,6 +38,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+
+- **内蔵AIの local_only / auto モードでカスタムプロンプトと利用統計が無視されていた**: ローカル経路の `LocalAIService` が `AISummaryOptions`（カスタムプロンプト・タグ要約モード・traceId）を丸ごと無視し、利用統計も記録していなかった。要約生成を `BuiltInAiProvider` strategy 経由に委譲してリモートスロット経路と同一の契約に統一（PBI 2026-09-20-12）。あわせて provider 側の二重 sanitize を削除し、オフデバイスのプロンプトインジェクション検査はクライアントの `builtin-input` プロファイルに1本化
+
+### Changed
+
+- **SQLite クライアントのパススルークラスを解消**: `SqliteClient` が `OffscreenGateway` の overload 全面を1行委譲で再掲するだけの浅いラッパーだったため、alias に畳んだ。op 追加時の overload 二重所有が解消（PBI 2026-09-20-15）。挙動変更なし
+
 ## [6.9.12] - 2026-09-20
 
 このリリースは v6.9.11 に続く連続リリースです。TextRank 文抽出の Rust/WASM 移植（PII サニタイザに続く Rust 化第2弾）と CI 強化のラウンドです。全テスト（12,616 件）がグリーンです。

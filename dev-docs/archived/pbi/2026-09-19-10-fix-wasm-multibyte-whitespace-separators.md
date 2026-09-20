@@ -31,11 +31,11 @@ Scenario: 不完全なマルチバイト列でスキャナが破綻しない
   Then  パニックせず、読み飛ばし（1バイト進行）で安全に終了する
 
 ## 受け入れ基準
-- [ ] 幅認識セパレータヘルパー（例: `sep_len(bytes, pos) -> usize`、0=非セパレータ）を `common.rs` に新設し、`is_sep` / `is_sep_dot` 利用22箇所を移行
-- [ ] JS `\s` の全メンバー（ASCII 5種＋非ASCII 9種）が区切りとして受理される
-- [ ] 上記非ASCII空白を区切りに使った phoneJp / myNumber / creditCard / phoneCn / phoneKr / phoneUs / rrnKr のパリティテストを境界コーパスへ追加
-- [ ] `common.rs` の既知制限コメントを解消（削除または対応済みとして更新）
-- [ ] cargo test 全パス、JSパリティ全パス、`npm run build:wasm` で両バイナリを再生成してコミット（CIの振る舞い等価ゲートが緑）
+- [x] 幅認識セパレータヘルパー（例: `sep_len(bytes, pos) -> usize`、0=非セパレータ）を `common.rs` に新設し、`is_sep` / `is_sep_dot` 利用22箇所を移行
+- [x] JS `\s` の全メンバー（ASCII 5種＋非ASCII 9種）が区切りとして受理される
+- [x] 上記非ASCII空白を区切りに使った phoneJp / myNumber / creditCard / phoneCn / phoneKr / phoneUs / rrnKr のパリティテストを境界コーパスへ追加
+- [x] `common.rs` の既知制限コメントを解消（削除または対応済みとして更新）
+- [x] cargo test 全パス、JSパリティ全パス、`npm run build:wasm` で両バイナリを再生成してコミット（CIの振る舞い等価ゲートが緑）
 
 ## テスト戦略
 - 単体（Rust）: 各パターンのマルチバイト区切りケース＋不完全マルチバイト列の安全終了＋既存34+7件の無変更パス
@@ -46,6 +46,6 @@ Scenario: 不完全なマルチバイト列でスキャナが破綻しない
 2pt（リファクタ自体は機械的だが、optional separator のバックトラッキング分岐（phoneKr等）での幅扱いとインデックス整合の検証が本体）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] CHANGELOG更新（次回リリースのFixed/Addedへ）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] CHANGELOG更新（次回リリースのFixed/Addedへ）

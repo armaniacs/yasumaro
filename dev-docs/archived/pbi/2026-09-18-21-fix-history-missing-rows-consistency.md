@@ -114,10 +114,10 @@ grep -rn "masked_count" src/dashboard/panels/asyncData/
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする（単体8件＋統合3件、正常系の回帰含む）
 - [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて — E2Eは既存fixture流用で追加なし）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
 - [x] リファクタリング完了（グリーン後 — 判定関数は `historyEntryPresentation.ts` に集約し単一所有を維持）
 - [x] ロールバック手段の検討（表示層のみの変更のため、3行の理由分岐をrevertすれば従来表示に戻る）
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
 
 ## 実装記録
 - `src/dashboard/panels/asyncData/historyEntryPresentation.ts`: `classifyTokensMissing` と `classifyMaskingMissing` を新設。AI要約行は既存 `classifyAiSummaryMissing` を両側欠落時にも呼ぶ

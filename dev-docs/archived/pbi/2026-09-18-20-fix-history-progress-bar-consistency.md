@@ -101,10 +101,10 @@ grep -rn "計測なし" src/ public/_locales/
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする（単体3件＋統合3件、正常系の回帰含む）
 - [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて — E2Eは既存fixture流用で追加なし、統合・単体は新規6件でカバー）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
 - [x] リファクタリング完了（グリーン後 — wrapper構造の重複は意図的に維持し単一化による回帰を避けた）
 - [x] ロールバック手段の検討（表示層のみの変更のため、`buildMissingReductionBarHtml` 分岐をrevertすれば従来表示に戻る）
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
 
 ## 実装記録
 - `src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts`: `buildCleansingProgressBarHtml` の null 分岐を `buildMissingReductionBarHtml` へ委譲。`classifyDiagnosticMissing` の3分類を再利用し、既存wrapper/track/label構造のまま理由ラベルを表示。`formatDiagnosticMetadataHtml` の条件分岐を除去（常に非空のため）

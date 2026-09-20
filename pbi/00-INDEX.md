@@ -14,41 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-20 アーキテクチャレビュー — ⬜ 未着手 RICE順: 12 → 13 → 14 → 15 → 16
+### 2026-09-20 アーキテクチャレビュー — 🔶 部分実装（12・15 完了・アーカイブ済み。13・14・16 未着手）RICE順: 12 → 13 → 14 → 15 → 16
 
 `/improve-codebase-architecture` の探索で発見した6候補を RICE 採点して PBI 化(候補5は13に統合)。実行順 = 12(内蔵AI契約統一)→ 13(共有hybrid runtime)→ 14(共有Rust crate)→ 15(SqliteClient解消)→ 16(wire table拡張)。台帳は `2026-09-20-00-backlog-archreview-0920.md`。副産物: `CONTEXT.md` 新規作成、ADR-017(WASM完全移植戦略)記録。
 
-- [2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md](2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟡軽微: 内蔵AIの二重adapter(LocalAIService/BuiltInAiProvider)を統一し、local_only 経路でもカスタムプロンプト適用・usage 記録を履行。sanitize 二重化とラベル不一致も解消。ADR-015の完成。RICE 48・順位1）
+- [2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md](../dev-docs/archived/pbi/2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md)（✅ 完了・アーカイブ済 — LocalAIService の要約を BuiltInAiProvider 経由に委譲し、local_only/auto でもカスタムプロンプト適用・usage 記録を履行。provider 側の二重 sanitize を削除しオフデバイス検査を 'builtin-input' プロファイルに1本化。コミット ecb849c3・全体12648 tests green。RICE 48・順位1）
 - [2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md](2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟢なし: 3ハイブリッドの儀式(probe/guard/fallback/remap)を共有 runtime に集約。split 一致ゲートと PII サイズ上限エラー文字列の所有者を1箇所化。出力 byte 等価を gate。RICE 6.4・順位2）
 - [2026-09-20-14-refactor-shared-js-strings-rust-crate.md](2026-09-20-14-refactor-shared-js-strings-rust-crate.md)（⬜ 未着手・🔴高・3pt・🔧非機能追加・副作用🟡軽微: textrank/dedup にクローンされた jsstring/tokenize を共有 Rust crate に抽出。意図的差分2点(strip有無・bigram case源)はパラメータ化。FxHash drift の統一。ADR-017 決定8の実行。RICE 3.2・順位3）
-- [2026-09-20-15-refactor-sqliteclient-passthrough-alias.md](2026-09-20-15-refactor-sqliteclient-passthrough-alias.md)（⬜ 未着手・🟢低・1pt・🔧非機能追加・副作用🟢なし: OffscreenGateway 全面 overload の1行委譲クラス SqliteClient を alias 化し、op 追加時の overload 二重所有を解消。deletion test 完全失敗の純機械的変更。RICE 3.2・順位4）
+- [2026-09-20-15-refactor-sqliteclient-passthrough-alias.md](../dev-docs/archived/pbi/2026-09-20-15-refactor-sqliteclient-passthrough-alias.md)（✅ 完了・アーカイブ済 — OffscreenGateway 全面 overload の1行委譲クラス SqliteClient を alias 化し、op 追加時の overload 二重所有を解消。コミット caa7ae72・type-check/lint/sqlite+pipeline 1658 tests green。RICE 3.2・順位4）
 - [2026-09-20-16-refactor-sqlite-wire-table-extension.md](2026-09-20-16-refactor-sqlite-wire-table-extension.md)（⬜ 未着手・🔴高・3pt・🔧非機能追加・副作用🟡軽微: 非アーカイブ op(toggle_star=16箇所・8ファイル)を archive と同型の wire table 行から導出。query/mutate サブセットからの段階適用、compile-time sync assert 付き。RICE 1.2・順位5）
-
-### 2026-09-19 v6.9.9リリース後の残課題 — 🔶 実装済・レビュー待ち（09・10・11）RICE順: 09 → 10 → 11
-
-v6.9.9（PR #151）リリース時に報告した残課題3件を RICE 採点して PBI 化。実行順 = 09（CI緑化）→ 10（マルチバイト空白）→ 11（Coverage）。台帳は `2026-09-19-00-backlog-post-v699.md`。
-
-- [2026-09-19-09-fix-ci-domain-filter-task-flow.md](2026-09-19-09-fix-ci-domain-filter-task-flow.md)（🔶 実装済・レビュー待ち・🟡中・2pt・🔧非機能追加・副作用🟢なし: CI環境でのみ失敗するドメインフィルタ保存フローE2E（PR #150から継続）を解消し、test/usabilityジョブを緑化。根本原因はフィクスチャの矛盾シード＋delta書き込みによるblob初生成でのデフォルト巻き戻し。RICE 45・順位1）
-- [2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md](2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md)（🔶 実装済・レビュー待ち・🟡中・2pt・🔧非機能追加・副作用🟢なし: PIIスキャナの区切り判定を幅認識化し、JS `\s` の非ASCIIメンバー（全角空白U+3000等）もマスク対象に。既知制限の解消。RICE 32・順位2）
-- [2026-09-19-11-fix-coverage-timing-test.md](2026-09-19-11-fix-coverage-timing-test.md)（🔶 実装済・レビュー待ち・🟢低・1pt・🔧非機能追加・副作用🟢なし: カバレッジ計測下でのみ失敗する crypto のタイミング耐性テストをバッチ計測に再設計し、Coverageジョブを緑化。RICE 24・順位3）
 
 ### 2026-09-19 PIIサニタイザWASM移植 — 🔶 部分実装（08。01〜07・13〜23 アーカイブ済み）
 
 記録パイプラインのPIIマスキングをTS正規表現からRust/WASM単一パスバイトスキャナへ移行（v6.9.9でリリース済み）。残りは08（記録可否判定の純粋関数化）。
 
 - [2026-09-19-08-refactor-recording-decision-unify.md](2026-09-19-08-refactor-recording-decision-unify.md)（⬜ 未着手・🔧非機能追加: 記録可否判定の優先順位を1箇所に文書化した後続の純粋関数化と組み合わせテスト）
-
-### 2026-09-18 履歴診断行一貫表示 — ⬜ 未着手（20・21）
-
-スクリーンショット報告のTech CNNエントリで削減率バーが消える問題を修正する。前回PBI 2026-09-18-01で対象外としたバー欠落の残課題。続く21でトークン・PII・AI要約行も同様に一貫表示へ拡張する（01のトークン非表示決定を覆す仕様変更）。
-
-- [2026-09-18-21-fix-history-missing-rows-consistency.md](2026-09-18-21-fix-history-missing-rows-consistency.md)（🔶 実装済・レビュー待ち・🟡中・🔧非機能追加・副作用🟢なし: トークン・PII・AI要約行を欠測時も理由付きで維持。PBI 20の上に積む。type-check PASS・全体12263 tests PASS）
-
-### 2026-09-18 履歴バー一貫表示 — ⬜ 未着手（20）
-
-スクリーンショット報告のTech CNNエントリで削減率バーが消える問題を修正する。前回PBI 2026-09-18-01で対象外としたバー欠落の残課題。
-
-- [2026-09-18-20-fix-history-progress-bar-consistency.md](2026-09-18-20-fix-history-progress-bar-consistency.md)（🔶 実装済・レビュー待ち・🟡中・🔧非機能追加・副作用🟢なし: 欠測時もバー領域を理由付きで維持し、正常エントリとの表示差を解消。type-check PASS・全体12253 tests PASS）
 
 ### 2026-09-18 arch-delivery-loop 第5ループ — ✅ 全2件完了（01/02 アーカイブ済み）
 
@@ -128,6 +108,16 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-20 autonomous-task-closer による一括クローズ（12・15＋先行5件＋実行済Plan） — ✅ 8件
+
+- 2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md（✅ 完了 — LocalAIService を BuiltInAiProvider 経由に委譲し local_only/auto でも契約履行。provider 側二重 sanitize 削除で 'builtin-input' プロファイルに1本化。コミット ecb849c3）
+- 2026-09-20-15-refactor-sqliteclient-passthrough-alias.md（✅ 完了 — SqliteClient を OffscreenGateway alias に畳む。コミット caa7ae72）
+- 2026-09-19-09-fix-ci-domain-filter-task-flow.md（✅ 完了 — PR #150/#152 でマージ済み・CHANGELOG v6.9.12 記載・リリース CI green）
+- 2026-09-19-10-fix-wasm-multibyte-whitespace-separators.md（✅ 完了 — コミット 42095820・cargo test/JSパリティ green・バイナリ再コミット済み）
+- 2026-09-19-11-fix-coverage-timing-test.md（✅ 完了 — コミット d35f5715・Coverage ジョブ安定化・リリース済み）
+- 2026-09-18-20-fix-history-progress-bar-consistency.md・2026-09-18-21-fix-history-missing-rows-consistency.md（✅ 完了 — CHANGELOG v6.9.9 記載・ADR 2026-09-18-history-diagnostic-rows-always-visible 記録済み・全テスト green）
+- 実行済み実装計画 2026-09-19-navigation-registry-mount-await.md を dev-docs/archived/plans/ へ移動（コードは async navigate 化済みを確認）
 
 ### 2026-09-19 ワークスペース全量レビューの PBI 化（前波 01〜13・第2波 14〜20・第3波 21〜23） — ✅ 20/23 完了（アーカイブ済み）
 

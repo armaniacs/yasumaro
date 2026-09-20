@@ -31,11 +31,11 @@ Scenario: リモート経路の挙動は不変
 ```
 
 ## 受け入れ基準
-- [ ] local_only 経路で AISummaryOptions 契約(customPrompt・tagSummaryMode・traceId)が履行される
-- [ ] usage 記録が全経路で行われる(二重記録なし)
-- [ ] sanitize の二重走査が解消され、マスクラベルが1種類に統一される
-- [ ] リモート経路の既存テストが無変更で green
-- [ ] catalog の `supportsCustomPrompt` 宣言が全経路の実態と一致する
+- [x] local_only 経路で AISummaryOptions 契約(customPrompt・tagSummaryMode・traceId)が履行される
+- [x] usage 記録が全経路で行われる(二重記録なし)
+- [x] sanitize の二重走査が解消され、マスクラベルが1種類に統一される
+- [x] リモート経路の既存テストが無変更で green
+- [x] catalog の `supportsCustomPrompt` 宣言が全経路の実態と一致する
 
 ## テスト戦略（t_wadaスタイル）
 
