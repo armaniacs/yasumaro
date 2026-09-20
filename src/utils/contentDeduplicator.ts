@@ -25,8 +25,13 @@ export interface DeduplicateOptions {
  * NOTE: Deliberately local, not the shared text/tokenizer.ts splitSentences —
  * this variant keeps the trailing delimiter attached per sentence so the
  * original text can be reconstructed after dedup removes some sentences.
+ * Exported for contentDedupHybrid.ts, whose WASM path re-splits with the
+ * IDENTICAL function so indices from the Rust core map back to the same
+ * parts (the split-count agreement gate then verifies the two splits).
  */
-function splitSentences(text: string): { sentence: string; delimiter: string }[] {
+export function splitSentencesKeepDelimiters(
+  text: string
+): { sentence: string; delimiter: string }[] {
   const result: { sentence: string; delimiter: string }[] = [];
   const regex = /([。！？.!?])\s*/g;
   let lastIndex = 0;
@@ -47,6 +52,10 @@ function splitSentences(text: string): { sentence: string; delimiter: string }[]
   }
 
   return result;
+}
+
+function splitSentences(text: string): { sentence: string; delimiter: string }[] {
+  return splitSentencesKeepDelimiters(text);
 }
 
 export function deduplicateContent(text: string, options: DeduplicateOptions = {}): string {
