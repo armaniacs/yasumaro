@@ -154,6 +154,11 @@ export default defineConfig({
         absoluteSrc: resolve(wxt.config.root, 'public/wasm/textrank_bg.wasm'),
         relativeDest: 'wasm/textrank_bg.wasm',
       });
+      // NOTE: the sentence-dedup binary is intentionally NOT shipped yet —
+      // contentDedupHybrid.ts has no production call site (STAGED). When the
+      // hybrid is wired, re-add the files.push for public/wasm/
+      // sentence_dedup_bg.wasm here AND commit the public copy (build:wasm
+      // regenerates it; see the ci.yml wasm-test gate).
     },
   },
 
@@ -199,7 +204,12 @@ export default defineConfig({
       //     worker, via src/background/pipeline/piiSanitizeHybrid.ts
       //   - the TextRank extraction core (src/wasm/textrank/) in the
       //     service worker, via src/utils/sentenceExtractorHybrid.ts
-      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank" src/`.
+      //   - the sentence dedup core (src/wasm/sentence-dedup/) — STAGED,
+      //     not yet called from production: contentDedupHybrid.ts exists but
+      //     no call site imports it yet, and its binary is not shipped (no
+      //     publicAssets entry, no public/wasm copy). Re-add both when
+      //     wiring the hybrid.
+      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup" src/`.
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,

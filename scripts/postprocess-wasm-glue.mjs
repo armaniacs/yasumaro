@@ -46,6 +46,13 @@ const CRATES = [
         wasmName: 'textrank_bg.wasm',
         crateLabel: 'textrank',
     },
+    {
+        gluePath: 'wasm/sentence-dedup/pkg/sentence_dedup.js',
+        outPath: 'src/wasm/sentence-dedup/sentenceDedupWasm.js',
+        dtsName: 'sentenceDedupWasm.d.ts',
+        wasmName: 'sentence_dedup_bg.wasm',
+        crateLabel: 'sentence-dedup',
+    },
 ];
 
 for (const { gluePath, outPath, dtsName, wasmName, crateLabel } of CRATES) {
