@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化 — 🔶 部分実装（17 コア実装済み。18〜22 未着手）RICE順: 21 → 22 → 18 → 19 → 20
+
+`/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。
+
+- [2026-09-20-17-feat-tag-cooccurrence-wasm.md](2026-09-20-17-feat-tag-cooccurrence-wasm.md)（🔶 コア実装済み・コミット f645865a — cargo test 16・parity 37・hybrid 20・validate 12,709 green。本番経路 10k×20 で 5.53x（46.3ms/256.4ms）・100×6 でも 1.55x。RICE 8.0・順位3）
+- [2026-09-20-21-feat-tag-cooccur-panel-wiring.md](2026-09-20-21-feat-tag-cooccur-panel-wiring.md)（⬜ 未着手・🟢低・0.5週・✨機能追加・副作用🟢なし: tagClusterPanel の2呼び出しをハイブリッドへ + public/wasm 配布 + publicAssets（STAGED解除）。RICE 16.0・順位1）
+- [2026-09-20-22-chore-tag-cooccur-ci-gate.md](2026-09-20-22-chore-tag-cooccur-ci-gate.md)（⬜ 未着手・🟢低・0.2週・🔧非機能追加・副作用🟢なし: CI 同等性ゲート（parity・glue stale・src/public cmp）へ tag-cooccur 追加。cmp は 21 後に有効化。RICE 12.0・順位2）
+- [2026-09-20-18-feat-markdown-sanitize-wasm.md](2026-09-20-18-feat-markdown-sanitize-wasm.md)（⬜ 未着手・🟡中・1週・✨機能追加・副作用🟢なし: markdownサニタイズ+エクスポート集計の移植。正規表現が単純でパリティ容易。RICE 5.6・順位4）
+- [2026-09-20-19-feat-prompt-scan-wasm.md](2026-09-20-19-feat-prompt-scan-wasm.md)（⬜ 未着手・🔴高・2週・✨機能追加・副作用🟡軽微: promptSanitizer スキャン移植+非同期化分割。sub-ms だが上限化価値。正規表現21本のパリティが難所。RICE 2.4・順位5同点）
+- [2026-09-20-20-spike-export-serde-wasm.md](2026-09-20-20-spike-export-serde-wasm.md)（⬜ 未着手・🟢低・0.5週・🔬スパイク・副作用🟢なし: serde 計測スパイク。移植は約束しない。RICE 2.4・順位5同点）
+
 ### 2026-09-20 アーキテクチャレビュー — 🔶 部分実装（12・15 完了・アーカイブ済み。13・14・16 未着手）RICE順: 12 → 13 → 14 → 15 → 16
 
 `/improve-codebase-architecture` の探索で発見した6候補を RICE 採点して PBI 化(候補5は13に統合)。実行順 = 12(内蔵AI契約統一)→ 13(共有hybrid runtime)→ 14(共有Rust crate)→ 15(SqliteClient解消)→ 16(wire table拡張)。台帳は `2026-09-20-00-backlog-archreview-0920.md`。副産物: `CONTEXT.md` 新規作成、ADR-017(WASM完全移植戦略)記録。
