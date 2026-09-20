@@ -49,7 +49,7 @@ export interface ExtractOptions {
   useEmbedding?: boolean;
 }
 
-const DEFAULT_OPTIONS: Required<ExtractOptions> = {
+export const DEFAULT_OPTIONS: Required<ExtractOptions> = {
   topK: 10,
   minLength: 20,
   similarityThreshold: 0.3,

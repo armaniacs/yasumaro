@@ -8,13 +8,19 @@ import { vi } from 'vitest';;
 import type { Mock } from 'vitest';
 import type { RecordingContext } from '../types.js';
 
-// Mock the sentenceExtractor module
+// Mock the sentenceExtractor modules. The step reads compression stats from
+// sentenceExtractor.js and extraction from sentenceExtractorHybrid.js (the
+// WASM-first wrapper); both are mocked here.
 vi.mock('../../../utils/sentenceExtractor.js', () => ({
-  extractSentences: vi.fn(),
   getCompressionStats: vi.fn(),
 }));
 
-import { extractSentences, getCompressionStats } from '../../../utils/sentenceExtractor.js';
+vi.mock('../../../utils/sentenceExtractorHybrid.js', () => ({
+  extractSentencesHybrid: vi.fn(),
+}));
+
+import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
+import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
 import type { PipelineStepFunction } from '../types.js';
 
 // Try to import the step - will fail until implemented
@@ -33,7 +39,7 @@ describe('extractSentencesStep', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (extractSentences as Mock).mockReset();
+    (extractSentencesHybrid as Mock).mockReset();
     (getCompressionStats as Mock).mockReset();
   });
 
@@ -60,7 +66,7 @@ describe('extractSentencesStep', () => {
       'Third sentence.',
     ];
 
-    (extractSentences as Mock).mockReturnValue(mockSentences);
+    (extractSentencesHybrid as Mock).mockResolvedValue(mockSentences);
     (getCompressionStats as Mock).mockReturnValue({
       originalLength: 500,
       extractedLength: 150,
@@ -71,7 +77,7 @@ describe('extractSentencesStep', () => {
 
     const result = await extractSentencesStep(mockContext);
 
-    expect(extractSentences).toHaveBeenCalled();
+    expect(extractSentencesHybrid).toHaveBeenCalled();
     expect(result.extractedSentences).toEqual(mockSentences);
     expect(result.extractedSentencesBytes).toBeDefined();
   });
@@ -93,7 +99,7 @@ describe('extractSentencesStep', () => {
 
     const result = await extractSentencesStep(mockContext);
 
-    expect(extractSentences).not.toHaveBeenCalled();
+    expect(extractSentencesHybrid).not.toHaveBeenCalled();
     expect(result.extractedSentences).toBeUndefined();
   });
 
@@ -118,12 +124,12 @@ describe('extractSentencesStep', () => {
 
     const mockSentences = ['AI generated summary from privacy pipeline'];
 
-    (extractSentences as Mock).mockReturnValue(mockSentences);
+    (extractSentencesHybrid as Mock).mockResolvedValue(mockSentences);
 
     const result = await extractSentencesStep(mockContext);
 
     // Should extract from privacy pipeline output, not original content
-    expect(extractSentences).toHaveBeenCalled();
+    expect(extractSentencesHybrid).toHaveBeenCalled();
   });
 
   it('should handle empty content gracefully', async () => {
@@ -141,7 +147,7 @@ describe('extractSentencesStep', () => {
       truncatedContent: '',
     };
 
-    (extractSentences as Mock).mockReturnValue([]);
+    (extractSentencesHybrid as Mock).mockResolvedValue([]);
 
     const result = await extractSentencesStep(mockContext);
 
@@ -164,7 +170,7 @@ describe('extractSentencesStep', () => {
       truncatedContent: 'Content to extract from',
     };
 
-    (extractSentences as Mock).mockImplementation(() => {
+    (extractSentencesHybrid as Mock).mockImplementation(() => {
       throw new Error('Extraction failed');
     });
 
@@ -192,7 +198,7 @@ describe('extractSentencesStep', () => {
 
     const mockSentences = ['Extracted sentence 1', 'Extracted sentence 2'];
 
-    (extractSentences as Mock).mockReturnValue(mockSentences);
+    (extractSentencesHybrid as Mock).mockResolvedValue(mockSentences);
     (getCompressionStats as Mock).mockReturnValue({
       originalLength: 1000,
       extractedLength: 50,

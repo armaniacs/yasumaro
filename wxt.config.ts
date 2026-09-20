@@ -138,17 +138,21 @@ export default defineConfig({
           relativeDest: 'wasm/wa-sqlite-async.wasm',
         });
       }
-      // Both browsers: copy the PII sanitizer wasm to a stable public path.
-      // The background entrypoint builds as a single-file IIFE bundle
-      // (codeSplitting: false below), which makes Vite inline `new
-      // URL(..., import.meta.url)` wasm references as `data:` URIs instead
-      // of emitting a separate fetchable asset — the extension CSP blocks
-      // `data:` fetches, so the WASM module failed to initialize in every
-      // build (not just Firefox) until this was fixed. See
-      // src/wasm/pii-sanitizer/index.ts's module doc for the full story.
+      // Both browsers: copy the PII sanitizer and TextRank wasm binaries to
+      // stable public paths. The background entrypoint builds as a
+      // single-file IIFE bundle (codeSplitting: false below), which makes
+      // Vite inline `new URL(..., import.meta.url)` wasm references as
+      // `data:` URIs instead of emitting a separate fetchable asset — the
+      // extension CSP blocks `data:` fetches, so the WASM modules failed to
+      // initialize in every build (not just Firefox) until this was fixed.
+      // See src/wasm/pii-sanitizer/index.ts's module doc for the full story.
       files.push({
         absoluteSrc: resolve(wxt.config.root, 'public/wasm/pii_sanitizer_bg.wasm'),
         relativeDest: 'wasm/pii_sanitizer_bg.wasm',
+      });
+      files.push({
+        absoluteSrc: resolve(wxt.config.root, 'public/wasm/textrank_bg.wasm'),
+        relativeDest: 'wasm/textrank_bg.wasm',
       });
     },
   },
@@ -193,7 +197,9 @@ export default defineConfig({
       //     (OPFS/IDB storage) — offscreen sqliteEngine.ts + opfsWorker.ts
       //   - the PII sanitizer core (src/wasm/pii-sanitizer/) in the service
       //     worker, via src/background/pipeline/piiSanitizeHybrid.ts
-      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer" src/`.
+      //   - the TextRank extraction core (src/wasm/textrank/) in the
+      //     service worker, via src/utils/sentenceExtractorHybrid.ts
+      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank" src/`.
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,
