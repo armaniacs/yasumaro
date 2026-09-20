@@ -40,14 +40,14 @@ Scenario: 上限超過時もコンテンツを落とさない
 
 ## 受け入れ基準
 
-- [ ] TS プローブで quirks（`|` 区切り復元、二形式パース、ソート順、上限挙動）を先に固定し、期待値をプローブ結果から書く（予測で書かない）
-- [ ] 新クレート（仮称 `tag-cooccur`）が既存プロファイル（opt-level 3 / lto / panic=abort）を踏襲する
-- [ ] 契約は「タグ文字列を1回投入→整数配列（nodeIds/counts/edgePairs/weights）で返却」。O(T²) を WASM 内で完結させる
-- [ ] ハイブリッドラッパー（既存 `*Hybrid.ts` と同一構造）: 早期リターン → WASM → 例外時 TS フォールバック＋サイズ閾値ルーティング（閾値はベンチ実測で決定）
-- [ ] パリティテスト（Vitest）: TS vs WASM の等価性を quirks ケース込みで全件検証
-- [ ] ベンチ（`src/wasm/<crate>/bench.ts`）で TS vs WASM を実測し、不利な数値も含めて報告する
-- [ ] ビルド配線3箇所（`package.json` / `scripts/postprocess-wasm-glue.mjs` / `wxt.config.ts`）と CI 同等性ゲートへの追加
-- [ ] `npm run validate` が green（実機確認はユーザー側の旨を報告に明記）
+- [x] TS プローブで quirks（`|` 区切り復元、二形式パース、ソート順、上限挙動）を先に固定し、期待値をプローブ結果から書く（予測で書かない）
+ [x] 新クレート（仮称 `tag-cooccur`）が既存プロファイル（opt-level 3 / lto / panic=abort）を踏襲する
+- [x] 契約は「タグ文字列を1回投入→整数配列（nodeIds/counts/edgePairs/weights）で返却」。O(T²) を WASM 内で完結させる
+- [x] ハイブリッドラッパー（既存 `*Hybrid.ts` と同一構造）: 早期リターン → WASM → 例外時 TS フォールバック＋サイズ閾値ルーティング（閾値はベンチ実測で決定）
+- [x] パリティテスト（Vitest）: TS vs WASM の等価性を quirks ケース込みで全件検証
+- [x] ベンチ（`src/wasm/<crate>/bench.ts`）で TS vs WASM を実測し、不利な数値も含めて報告する
+- [x] ビルド配線3箇所（`package.json` / `scripts/postprocess-wasm-glue.mjs` / `wxt.config.ts`）と CI 同等性ゲートへの追加
+- [x] `npm run validate` が green（実機確認はユーザー側の旨を報告に明記）
 
 ## テスト戦略（t_wadaスタイル・Outside-In）
 

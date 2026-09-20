@@ -36,11 +36,13 @@ Scenario: 小規模履歴は TS のまま速い
 
 ## 受け入れ基準
 
-- [ ] `tagClusterPanel.ts` の `computeTagCooccurrence` / `narrowEntriesToTopTags` 呼び出しがハイブリッド版（await）に置換される
-- [ ] `public/wasm/tag_cooccur_bg.wasm` がコミットされ、wxt の `build:publicAssets` で `dist/wasm/` に配布される（STAGED解除）
-- [ ] `src/wasm/tag-cooccur/index.ts` の STAGED 注記が更新される
+- [x] `tagClusterPanel.ts` の `computeTagCooccurrence` / `narrowEntriesToTopTags` 呼び出しがハイブリッド版（await）に置換される
+- [x] `public/wasm/tag_cooccur_bg.wasm` がコミットされ、wxt の `build:publicAssets` で `dist/wasm/` に配布される（STAGED解除）
+- [x] `src/wasm/tag-cooccur/index.ts` の STAGED 注記が更新される
 - [ ] パネル表示の nodes/edges が TS 直呼び時と同一（既存パネルテスト + 目視）
-- [ ] `npm run validate` が green
+- [x] `npm run validate` が green
+
+> DoD 補足（2026-09-20）: パネルテストを含む 373 tests とハイブリッド wasm-success（45 tests）で表示等価は自動検証済み。目視確認（Chrome 手動読み込み）と GitHub PR レビューが残。
 
 ## テスト戦略（t_wadaスタイル・Outside-In）
 
