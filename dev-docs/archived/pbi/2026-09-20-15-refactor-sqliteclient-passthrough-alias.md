@@ -26,10 +26,10 @@ Scenario: op 追加時の更新箇所が減る
 ```
 
 ## 受け入れ基準
-- [ ] `SqliteClient` 具象クラスが削除され、`SqliteGateway = OffscreenGateway` と同型の alias または直接参照に置き換わる
-- [ ] 呼び出し元は `SqliteRpcClient` interface(test surface)を型として使う
-- [ ] op 追加時の overload 二重所有が解消される
-- [ ] 既存テストの期待値変更なし
+- [x] `SqliteClient` 具象クラスが削除され、`SqliteGateway = OffscreenGateway` と同型の alias または直接参照に置き換わる
+- [x] 呼び出し元は `SqliteRpcClient` interface(test surface)を型として使う
+- [x] op 追加時の overload 二重所有が解消される
+- [x] 既存テストの期待値変更なし
 
 ## テスト戦略（t_wadaスタイル）
 
