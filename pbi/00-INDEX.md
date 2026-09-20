@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-20 アーキテクチャレビュー — ⬜ 未着手 RICE順: 12 → 13 → 14 → 15 → 16
+
+`/improve-codebase-architecture` の探索で発見した6候補を RICE 採点して PBI 化(候補5は13に統合)。実行順 = 12(内蔵AI契約統一)→ 13(共有hybrid runtime)→ 14(共有Rust crate)→ 15(SqliteClient解消)→ 16(wire table拡張)。台帳は `2026-09-20-00-backlog-archreview-0920.md`。副産物: `CONTEXT.md` 新規作成、ADR-017(WASM完全移植戦略)記録。
+
+- [2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md](2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟡軽微: 内蔵AIの二重adapter(LocalAIService/BuiltInAiProvider)を統一し、local_only 経路でもカスタムプロンプト適用・usage 記録を履行。sanitize 二重化とラベル不一致も解消。ADR-015の完成。RICE 48・順位1）
+- [2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md](2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟢なし: 3ハイブリッドの儀式(probe/guard/fallback/remap)を共有 runtime に集約。split 一致ゲートと PII サイズ上限エラー文字列の所有者を1箇所化。出力 byte 等価を gate。RICE 6.4・順位2）
+- [2026-09-20-14-refactor-shared-js-strings-rust-crate.md](2026-09-20-14-refactor-shared-js-strings-rust-crate.md)（⬜ 未着手・🔴高・3pt・🔧非機能追加・副作用🟡軽微: textrank/dedup にクローンされた jsstring/tokenize を共有 Rust crate に抽出。意図的差分2点(strip有無・bigram case源)はパラメータ化。FxHash drift の統一。ADR-017 決定8の実行。RICE 3.2・順位3）
+- [2026-09-20-15-refactor-sqliteclient-passthrough-alias.md](2026-09-20-15-refactor-sqliteclient-passthrough-alias.md)（⬜ 未着手・🟢低・1pt・🔧非機能追加・副作用🟢なし: OffscreenGateway 全面 overload の1行委譲クラス SqliteClient を alias 化し、op 追加時の overload 二重所有を解消。deletion test 完全失敗の純機械的変更。RICE 3.2・順位4）
+- [2026-09-20-16-refactor-sqlite-wire-table-extension.md](2026-09-20-16-refactor-sqlite-wire-table-extension.md)（⬜ 未着手・🔴高・3pt・🔧非機能追加・副作用🟡軽微: 非アーカイブ op(toggle_star=16箇所・8ファイル)を archive と同型の wire table 行から導出。query/mutate サブセットからの段階適用、compile-time sync assert 付き。RICE 1.2・順位5）
+
 ### 2026-09-19 v6.9.9リリース後の残課題 — 🔶 実装済・レビュー待ち（09・10・11）RICE順: 09 → 10 → 11
 
 v6.9.9（PR #151）リリース時に報告した残課題3件を RICE 採点して PBI 化。実行順 = 09（CI緑化）→ 10（マルチバイト空白）→ 11（Coverage）。台帳は `2026-09-19-00-backlog-post-v699.md`。
