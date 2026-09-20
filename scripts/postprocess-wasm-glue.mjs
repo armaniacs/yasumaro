@@ -53,6 +53,13 @@ const CRATES = [
         wasmName: 'sentence_dedup_bg.wasm',
         crateLabel: 'sentence-dedup',
     },
+    {
+        gluePath: 'wasm/tag-cooccur/pkg/tag_cooccur.js',
+        outPath: 'src/wasm/tag-cooccur/tagCooccurWasm.js',
+        dtsName: 'tagCooccurWasm.d.ts',
+        wasmName: 'tag_cooccur_bg.wasm',
+        crateLabel: 'tag-cooccur',
+    },
 ];
 
 for (const { gluePath, outPath, dtsName, wasmName, crateLabel } of CRATES) {

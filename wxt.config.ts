@@ -209,7 +209,12 @@ export default defineConfig({
       //     no call site imports it yet, and its binary is not shipped (no
       //     publicAssets entry, no public/wasm copy). Re-add both when
       //     wiring the hybrid.
-      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup" src/`.
+      //   - the tag cooccurrence core (src/wasm/tag-cooccur/) — STAGED,
+      //     not yet called from production: tagCooccurrenceHybrid.ts exists
+      //     but no call site imports it yet, and its binary is not shipped
+      //     (no publicAssets entry, no public/wasm copy). Re-add both when
+      //     wiring the hybrid.
+      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur" src/`.
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,
