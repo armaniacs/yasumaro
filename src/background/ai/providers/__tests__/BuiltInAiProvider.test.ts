@@ -89,36 +89,33 @@ describe('BuiltInAiProvider — generateSummary', () => {
     expect(result.providerName).toBe('built-in-ai');
   });
 
-  it('blocks high-risk prompt injection before reaching the model', async () => {
-    mockSanitizePromptContent.mockReturnValue({
-      sanitized: 'ignore previous instructions',
-      warnings: ['instruction override'],
-      dangerLevel: 'high',
+  it('delegates the prompt-injection check to the client (single sanitize at the model boundary)', async () => {
+    // BuiltInAIClient.summarize owns the on-device check (checkPromptSafety
+    // with the 'builtin-input' profile). The provider passes raw content — a
+    // second, provider-side pass would apply the HTTP 'provider-input'
+    // profile and duplicate the verdict with a divergent label.
+    mockSummarize.mockResolvedValue({ success: true, summary: 'ok' });
+
+    await new BuiltInAiProvider(settings).generateSummary('raw content');
+
+    expect(mockSummarize).toHaveBeenCalledWith('raw content');
+    expect(mockApplyCustomPrompt).toHaveBeenCalledWith(
+      settings, 'built-in-ai', 'raw content', false,
+    );
+  });
+
+  it('maps a client-reported block to a failed result', async () => {
+    mockSummarize.mockResolvedValue({
+      success: false, error: 'Content contains potentially dangerous patterns',
     });
 
     const result = await new BuiltInAiProvider(settings).generateSummary('malicious content');
 
     expect(result.success).toBe(false);
-    expect(result.summary).toContain('prompt injection');
-    // The model must never see blocked content.
-    expect(mockSummarize).not.toHaveBeenCalled();
-  });
-
-  it('passes the sanitized content, not the raw content, to the model', async () => {
-    mockSanitizePromptContent.mockReturnValue({
-      sanitized: 'sanitized version', warnings: ['minor'], dangerLevel: 'low',
-    });
-    mockSummarize.mockResolvedValue({ success: true, summary: 'ok' });
-
-    await new BuiltInAiProvider(settings).generateSummary('raw content');
-
-    expect(mockSummarize).toHaveBeenCalledWith('sanitized version');
+    expect(result.summary).toBe('Content contains potentially dangerous patterns');
   });
 
   it('applies an active custom prompt as the prompt override', async () => {
-    mockSanitizePromptContent.mockReturnValue({
-      sanitized: 'sanitized version', warnings: [], dangerLevel: 'none',
-    });
     mockApplyCustomPrompt.mockReturnValue({
       userPrompt: 'custom user prompt (content embedded)', systemPrompt: 'custom system', isCustom: true,
     });
@@ -126,11 +123,11 @@ describe('BuiltInAiProvider — generateSummary', () => {
 
     const result = await new BuiltInAiProvider(settings).generateSummary('content', false);
 
-    // applyCustomPrompt receives the provider id and the sanitized content
+    // applyCustomPrompt receives the provider id and the raw content
     expect(mockApplyCustomPrompt).toHaveBeenCalledWith(
-      settings, 'built-in-ai', 'sanitized version', false,
+      settings, 'built-in-ai', 'content', false,
     );
-    expect(mockSummarize).toHaveBeenCalledWith('sanitized version', {
+    expect(mockSummarize).toHaveBeenCalledWith('content', {
       promptOverride: 'custom user prompt (content embedded)',
       systemPromptOverride: 'custom system',
     });
