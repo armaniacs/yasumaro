@@ -8,19 +8,29 @@
 
 import { Settings } from '../../../utils/storage/types.js';
 import { AIProviderStrategy, AISummaryResult, AIProviderConnectionResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
-import { BuiltInAIClient } from '../../builtInAIClient.js';
+import { BuiltInAIClient, type BuiltInAISummaryResult, type BuiltInAISummarizeOptions } from '../../builtInAIClient.js';
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
-export class BuiltInAiProvider extends AIProviderStrategy {
-    private builtInAiClient: BuiltInAIClient;
+/**
+ * The on-device summarize surface BuiltInAiProvider depends on. Structural so
+ * tests can substitute a fake client without constructing BuiltInAIClient.
+ */
+export interface BuiltInAiSummarizer {
+    summarize(content: string, options?: BuiltInAISummarizeOptions): Promise<BuiltInAISummaryResult>;
+    /** Availability of the on-device model, e.g. 'available' / 'unavailable'. */
+    getAvailability?(): Promise<string>;
+}
 
-    constructor(settings: Settings) {
+export class BuiltInAiProvider extends AIProviderStrategy {
+    private builtInAiClient: BuiltInAiSummarizer;
+
+    constructor(settings: Settings, builtInAiClient: BuiltInAiSummarizer = new BuiltInAIClient()) {
         super(settings);
-        this.builtInAiClient = new BuiltInAIClient();
+        this.builtInAiClient = builtInAiClient;
     }
 
     /**
@@ -28,16 +38,12 @@ export class BuiltInAiProvider extends AIProviderStrategy {
      */
     async generateSummary(content: string, tagSummaryMode?: boolean, _traceId?: string): Promise<AISummaryResult> {
         try {
-            // Prompt-injection guard. The model runs on-device so nothing leaves
-            // the machine, but an injected instruction can still poison the
-            // summary that gets written into the user's Obsidian vault.
-            const { blocked, sanitized } = this.sanitizeContent(content, 'built-in-ai', _traceId ?? '');
-            if (blocked) {
-                return {
-                    success: false,
-                    summary: 'Error: Content blocked due to potential prompt injection.',
-                };
-            }
+            // Prompt-injection sanitize is owned by BuiltInAIClient.summarize
+            // itself (checkPromptSafety with the on-device 'builtin-input'
+            // profile). Adding a provider-side pass here would apply the HTTP
+            // 'provider-input' profile to on-device content and run the check
+            // twice with divergent labels; every caller of the client gets the
+            // same single verdict at the model boundary.
 
             // Custom prompts (including 'all'-scope ones) apply here exactly as
             // they do for HTTP providers; without one the legacy raw-content
@@ -45,7 +51,7 @@ export class BuiltInAiProvider extends AIProviderStrategy {
             const { userPrompt, systemPrompt, isCustom } = applyCustomPrompt(
                 this.settings,
                 'built-in-ai',
-                sanitized,
+                content,
                 tagSummaryMode ?? false
             );
             const customPromptOptions = isCustom
@@ -62,8 +68,8 @@ export class BuiltInAiProvider extends AIProviderStrategy {
             // getMaxTokens() is likewise skipped: BuiltInAIClient.summarize()
             // takes no token budget parameter.
             const result = isCustom
-                ? await this.builtInAiClient.summarize(sanitized, customPromptOptions)
-                : await this.builtInAiClient.summarize(sanitized);
+                ? await this.builtInAiClient.summarize(content, customPromptOptions)
+                : await this.builtInAiClient.summarize(content);
             if (!result.success) {
                 return {
                     success: false,

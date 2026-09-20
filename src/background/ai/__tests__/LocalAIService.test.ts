@@ -1,102 +1,135 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { LocalAIService } from '../LocalAIService.js';
+import { BuiltInAiProvider } from '../providers/BuiltInAiProvider.js';
+import { StorageKeys, type Settings } from '../../../utils/storage/types.js';
+
+vi.mock('../../../utils/aiUsageTracker.js', () => ({
+  recordUsage: vi.fn().mockResolvedValue(undefined),
+  checkHardLimit: vi.fn().mockResolvedValue({ allowed: true }),
+  checkRateLimit: vi.fn().mockResolvedValue({ allowed: true, resetTime: '' }),
+  checkUsageWarning: vi.fn().mockResolvedValue({ allowed: true }),
+  getRateLimitMessage: vi.fn().mockReturnValue(''),
+}));
+vi.mock('../../../utils/logger/core.js', () => ({
+  addLog: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../../../utils/logger/api.js', () => ({
+  logDebug: vi.fn(),
+  logSanitize: vi.fn(),
+  logInfo: vi.fn(),
+  logWarn: vi.fn(),
+  logError: vi.fn(),
+}));
+
+import { recordUsage } from '../../../utils/aiUsageTracker.js';
+
+const baseSettings = {} as Settings;
+void baseSettings;
+
+function makeClient(overrides: Record<string, unknown> = {}) {
+  return {
+    summarize: vi.fn().mockResolvedValue({ summary: 'local summary', success: true }),
+    ...overrides,
+  };
+}
 
 describe('LocalAIService', () => {
-  it('calls localAiClient.summarize and returns summary with usedLocal flag', async () => {
-    const summarize = vi.fn().mockResolvedValue({ summary: 'local summary' });
-    const service = new LocalAIService({ localAiClient: { summarize } });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    const result = await service.generateSummary('test content');
+  describe('generateSummary — strategy delegation', () => {
+    it('routes through BuiltInAiProvider and reports usedLocal', async () => {
+      const client = makeClient();
+      const service = new LocalAIService({ localAiClient: client });
 
-    expect(summarize).toHaveBeenCalledWith('test content');
-    expect(result).toEqual({
-      summary: 'local summary',
-      usedLocal: true,
-      sentTokens: undefined,
-      receivedTokens: undefined,
-      providerName: 'built-in-ai',
-      success: true,
-      error: undefined,
+      const result = await service.generateSummary('test content');
+
+      // The strategy passes raw content to the client; sanitize is owned by
+      // the client (on-device 'builtin-input' profile).
+      expect(client.summarize).toHaveBeenCalledWith('test content');
+      expect(result).toMatchObject({
+        summary: 'local summary',
+        usedLocal: true,
+        providerName: 'built-in-ai',
+        success: true,
+      });
+    });
+
+    it('applies an active custom prompt for built-in-ai (previously dropped in local_only)', async () => {
+      const client = makeClient();
+      const settings = {
+        [StorageKeys.CUSTOM_PROMPTS]: [
+          { name: 'concise', prompt: 'Summarize this: {{content}}', provider: 'built-in-ai', isActive: true },
+        ],
+      } as Settings;
+      const repo = { getAll: vi.fn().mockResolvedValue(settings) };
+      const service = new LocalAIService({ localAiClient: client, repo });
+
+      await service.generateSummary('page body text');
+
+      expect(client.summarize).toHaveBeenCalledTimes(1);
+      const [, options] = client.summarize.mock.calls[0]!;
+      expect(options?.promptOverride).toBe('Summarize this: page body text');
+      expect(options?.systemPromptOverride).toBeDefined();
+    });
+
+    it('records token usage like the remote slot path does', async () => {
+      const client = makeClient({
+        summarize: vi.fn().mockResolvedValue({ summary: 's', success: true, sentTokens: 3817, receivedTokens: 75 }),
+      });
+      const service = new LocalAIService({ localAiClient: client });
+
+      const result = await service.generateSummary('content');
+
+      expect(result.sentTokens).toBe(3817);
+      expect(result.receivedTokens).toBe(75);
+      expect(recordUsage).toHaveBeenCalledWith(3817, 75);
+    });
+
+    it('passes tagSummaryMode and traceId through to the strategy adapter', async () => {
+      const client = makeClient();
+      const service = new LocalAIService({ localAiClient: client });
+
+      await service.generateSummary('content', { mode: 'local_only', tagSummaryMode: true, traceId: 'tr-1' });
+
+      expect(client.summarize).toHaveBeenCalledWith('content');
     });
   });
 
-  it('propagates success flag from localAiClient', async () => {
-    const summarize = vi.fn().mockResolvedValue({ summary: 'local summary', success: true });
-    const service = new LocalAIService({ localAiClient: { summarize } });
+  describe('generateSummary — failure shape', () => {
+    it('maps a strategy failure to the historical local shape (empty summary + error)', async () => {
+      const client = makeClient({
+        summarize: vi.fn().mockResolvedValue({ success: false, error: 'Built-in AI is currently unavailable' }),
+      });
+      const service = new LocalAIService({ localAiClient: client });
 
-    const result = await service.generateSummary('test content');
+      const result = await service.generateSummary('content');
 
-    expect(result.success).toBe(true);
-    expect(result.summary).toBe('local summary');
-  });
+      expect(result.success).toBe(false);
+      expect(result.summary).toBe('');
+      expect(result.error).toBe('Built-in AI is currently unavailable');
+      expect(result.usedLocal).toBe(true);
+    });
 
-  it('propagates success:false and error from localAiClient', async () => {
-    const summarize = vi.fn().mockResolvedValue({ summary: '', success: false, error: 'Built-in AI is currently downloadable' });
-    const service = new LocalAIService({ localAiClient: { summarize } });
+    it('keeps the no-content failure reason in error', async () => {
+      const client = makeClient({
+        summarize: vi.fn().mockResolvedValue({ success: false, summary: '', error: 'Built-in AI returned no content' }),
+      });
+      const service = new LocalAIService({ localAiClient: client });
 
-    const result = await service.generateSummary('test content');
+      const result = await service.generateSummary('content');
 
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('Built-in AI is currently downloadable');
-    expect(result.summary).toBe('');
-  });
-
-  it('defaults summary to empty string when missing', async () => {
-    const summarize = vi.fn().mockResolvedValue({});
-    const service = new LocalAIService({ localAiClient: { summarize } });
-
-    const result = await service.generateSummary('test content');
-
-    expect(result.summary).toBe('');
-    expect(result.usedLocal).toBe(true);
-  });
-
-  it('propagates errors from localAiClient', async () => {
-    const summarize = vi.fn().mockRejectedValue(new Error('local ai unavailable'));
-    const service = new LocalAIService({ localAiClient: { summarize } });
-
-    await expect(service.generateSummary('test content')).rejects.toThrow('local ai unavailable');
-  });
-
-  it('reports supported modes', () => {
-    const service = new LocalAIService({ localAiClient: { summarize: vi.fn() } });
-
-    expect(service.getSupportedModes()).toEqual(['local_only']);
-  });
-
-  it('propagates sentTokens/receivedTokens from localAiClient', async () => {
-    const summarize = vi.fn().mockResolvedValue({ summary: 'summary', sentTokens: 3817, receivedTokens: 75 });
-    const service = new LocalAIService({ localAiClient: { summarize } });
-
-    const result = await service.generateSummary('test content');
-
-    expect(result.sentTokens).toBe(3817);
-    expect(result.receivedTokens).toBe(75);
-  });
-
-  it('reports a fixed providerName so history entries show the AI source', async () => {
-    const summarize = vi.fn().mockResolvedValue({ summary: 'summary' });
-    const service = new LocalAIService({ localAiClient: { summarize } });
-
-    const result = await service.generateSummary('test content');
-
-    expect(result.providerName).toBe('built-in-ai');
-  });
-
-  it('omits sentTokens/receivedTokens when localAiClient does not provide them', async () => {
-    const summarize = vi.fn().mockResolvedValue({ summary: 'summary' });
-    const service = new LocalAIService({ localAiClient: { summarize } });
-
-    const result = await service.generateSummary('test content');
-
-    expect(result.sentTokens).toBeUndefined();
-    expect(result.receivedTokens).toBeUndefined();
+      expect(result.success).toBe(false);
+      expect(result.summary).toBe('');
+      expect(result.error).toBe('Built-in AI returned no content');
+    });
   });
 
   describe('testConnection', () => {
     it('succeeds when the on-device model is available', async () => {
       const getAvailability = vi.fn().mockResolvedValue('available');
-      const service = new LocalAIService({ localAiClient: { summarize: vi.fn(), getAvailability } });
+      const service = new LocalAIService({ localAiClient: makeClient({ getAvailability }) });
 
       const result = await service.testConnection();
 
@@ -106,7 +139,7 @@ describe('LocalAIService', () => {
 
     it('fails when the model is not available, reporting the status', async () => {
       const getAvailability = vi.fn().mockResolvedValue('downloadable');
-      const service = new LocalAIService({ localAiClient: { summarize: vi.fn(), getAvailability } });
+      const service = new LocalAIService({ localAiClient: makeClient({ getAvailability }) });
 
       const result = await service.testConnection();
 
@@ -115,7 +148,7 @@ describe('LocalAIService', () => {
     });
 
     it('fails gracefully when the client cannot report availability', async () => {
-      const service = new LocalAIService({ localAiClient: { summarize: vi.fn() } });
+      const service = new LocalAIService({ localAiClient: makeClient() });
 
       const result = await service.testConnection();
 
@@ -125,7 +158,7 @@ describe('LocalAIService', () => {
 
     it('turns a thrown availability error into a failed result', async () => {
       const getAvailability = vi.fn().mockRejectedValue(new Error('no LanguageModel'));
-      const service = new LocalAIService({ localAiClient: { summarize: vi.fn(), getAvailability } });
+      const service = new LocalAIService({ localAiClient: makeClient({ getAvailability }) });
 
       const result = await service.testConnection();
 
