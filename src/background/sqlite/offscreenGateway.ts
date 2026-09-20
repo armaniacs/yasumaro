@@ -8,7 +8,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { pickStatusExtras } from '../../messaging/sqliteValidators.js';
 import { recordSqliteFailure, recordSqliteSuccess } from '../sqliteAlert.js';
-import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord, SqliteRpcClient, SqliteRpcResult } from '../../messaging/sqliteRpcClient.js';
+import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord } from '../../messaging/sqliteRpcClient.js';
 import { categorizeError } from '../../messaging/sqliteRpcClient.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
 import type {
@@ -213,49 +213,17 @@ export class OffscreenGateway {
 
 function isQueryOp(op: QueryOp | StorageQuery): op is QueryOp { return typeof op === 'object' && op !== null && 'kind' in op; }
 
-// Backward compat — keep both value and type for callers that use SqliteGateway as type
+// Backward compat — keep both value and type for callers that use
+// SqliteGateway / SqliteClient as types. SqliteClient used to be a
+// pass-through class repeating the gateway's full overload surface; the
+// gateway is the single implementation (SqliteResult<T> and SqliteRpcResult<T>
+// are structurally identical, so existing type annotations keep working).
 export const SqliteGateway = OffscreenGateway;
 export type SqliteGateway = OffscreenGateway;
+export const SqliteClient = OffscreenGateway;
+export type SqliteClient = OffscreenGateway;
 
 export type { SqliteRpcResult as CallResult } from '../../messaging/sqliteRpcClient.js';
-
-export class SqliteClient implements SqliteRpcClient {
-  private readonly gateway: OffscreenGateway;
-  constructor(transport?: OffscreenTransport) { this.gateway = new OffscreenGateway(transport); }
-  async query(q?: StorageQuery): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  async query(op: Extract<QueryOp, { kind: 'search' }>): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  async query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteRpcResult<number>>;
-  async query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteRpcResult<{ rows: AuditLogRecord[]; total: number }>>;
-  async query(op: QueryOp | StorageQuery = {}): Promise<SqliteRpcResult<unknown>> { return this.gateway.query(op as QueryOp & StorageQuery) as Promise<SqliteRpcResult<unknown>>; }
-  async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteRpcResult<{ id: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteRpcResult<{ count: number; skipped: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'update' }> | Extract<MutateOp, { type: 'delete' }>): Promise<SqliteRpcResult<void>>;
-  async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteRpcResult<{ is_starred: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteRpcResult<{ id: number }>>;
-  async mutate(op: MutateOp): Promise<SqliteRpcResult<unknown>> { const mutate = this.gateway.mutate.bind(this.gateway) as (op: MutateOp) => Promise<SqliteRpcResult<unknown>>; return mutate(op); }
-  async maintain(op: { type: 'init' }): Promise<SqliteRpcResult<boolean>>;
-  async maintain(op: { type: 'backup' }): Promise<SqliteRpcResult<Uint8Array>>;
-  async maintain(op: { type: 'restore'; data: Uint8Array } | { type: 'clearAll' }): Promise<SqliteRpcResult<void>>;
-  async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }): Promise<SqliteRpcResult<{ purged: number }>>;
-  async maintain(op: { type: 'healthCheck' }): Promise<SqliteRpcResult<boolean>>;
-  async maintain(op: { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }): Promise<SqliteRpcResult<ArchivePreviewData>>;
-  async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteRpcResult<ArchiveCreateData>>;
-  async maintain(op: { type: 'archiveCleanup' }): Promise<SqliteRpcResult<{ removed: string[] }>>;
-  async maintain(op: { type: 'archiveExport'; stagingName: string; offset: number; length: number }): Promise<SqliteRpcResult<ArchiveExportData>>;
-  async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteRpcResult<string>>;
-  async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestorePreviewData>>;
-  async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteRpcResult<ArchiveRestoreData>>;
-  async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteRpcResult<ArchivePurgeData>>;
-  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteRpcResult<void>>;
-  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteRpcResult<{ rows: ArchiveSessionRow[]; total: number }>>;
-  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteRpcResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteRpcResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteRpcResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteRpcResult<ArchiveSessionStatusData>>;
-  async maintain(op: MaintainOp): Promise<SqliteRpcResult<unknown>> { const maintain = this.gateway.maintain.bind(this.gateway) as (op: MaintainOp) => Promise<SqliteRpcResult<unknown>>; return maintain(op); }
-  async getStatus(): Promise<Omit<OffscreenStatusData, 'success'> | null> { return this.gateway.getStatus(); }
-  async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> { return this.gateway.status(); }
-}
 
 /**
  * Lazy singleton shared with the container: the manifest's sqliteClient entry
