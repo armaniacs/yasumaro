@@ -36,11 +36,11 @@ Scenario: 片側コミットが検出される
 
 ## 受け入れ基準
 
-- [ ] `.github/workflows/ci.yml` の cargo キャッシュパスに `wasm/tag-cooccur/target` が追加される
-- [ ] parity suite の明示リストに `src/wasm/tag-cooccur/__tests__/` とハイブリッド wasm-success テスト（`src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts`）が追加される（fresh rebuild 対 committed の両実行）
-- [ ] glue/d.ts の stale 検査に `tagCooccurWasm.js` / `tagCooccurWasm.d.ts` が追加される
-- [ ] PBI-21 完了後は src/public バイナリ `cmp` 検査に `tag_cooccur_bg.wasm` が追加される（PBI-21 未完了の間は src コピーのみを対象とする旨をコメントで明記）
-- [ ] 意図的 stale で赤・正常で緑を確認する
+- [x] `.github/workflows/ci.yml` の cargo キャッシュパスに `wasm/tag-cooccur/target` が追加される
+- [x] parity suite の明示リストに `src/wasm/tag-cooccur/__tests__/` とハイブリッド wasm-success テスト（`src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts`）が追加される（fresh rebuild 対 committed の両実行）
+- [x] glue/d.ts の stale 検査に `tagCooccurWasm.js` / `tagCooccurWasm.d.ts` が追加される
+- [x] PBI-21 完了後は src/public バイナリ `cmp` 検査に `tag_cooccur_bg.wasm` が追加される（PBI-21 未完了の間は src コピーのみを対象とする旨をコメントで明記）
+- [x] 意図的 stale で赤・正常で緑を確認する（2026-09-20 ローカルで red/green を実測）
 
 ## テスト戦略（t_wadaスタイル・Outside-In）
 
