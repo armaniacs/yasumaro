@@ -11,7 +11,8 @@
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
-import { extractSentences, getCompressionStats } from '../../../utils/sentenceExtractor.js';
+import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
+import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { ErrorStrategy } from '../types.js';
 
@@ -54,8 +55,9 @@ export const extractSentencesStep: PipelineStepFunction = async (
   const startTime = performance.now();
 
   try {
-    // Extract sentences using TextRank
-    const extracted = extractSentences(contentToExtract, options);
+    // Extract sentences using TextRank (WASM core with TS fallback — see
+    // sentenceExtractorHybrid.ts)
+    const extracted = await extractSentencesHybrid(contentToExtract, options);
 
     // DEBUG: log content details
     addLog(LogType.DEBUG, 'L0 extraction debug', {

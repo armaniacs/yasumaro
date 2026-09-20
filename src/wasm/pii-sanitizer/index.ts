@@ -24,53 +24,26 @@
  * `sqliteEngine.ts` already uses for `wasm/wa-sqlite-async.wasm`. This
  * sidesteps Vite's asset pipeline entirely — the file is served as an
  * ordinary same-origin extension:// resource, which the CSP already
- * allows.
+ * allows. The URL resolution and singleton/retry logic live in the shared
+ * `../initWasm.ts` so every wasm wrapper follows one implementation of
+ * that CSP-safe contract.
  */
 
 import initWasmModule, { sanitizePii as sanitizePiiWasm } from './piiSanitizerWasm.js';
+import { initExtensionWasm } from '../initWasm.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-
-let initPromise: Promise<void> | null = null;
-
-/**
- * Resolves the wasm binary's URL. Extension-context only (`chrome.runtime`
- * must exist) — deliberately has NO `new URL(..., import.meta.url)`
- * fallback branch, even for tests/Node, because Vite's static asset scan
- * inlines that pattern as a `data:` URI whenever it appears anywhere in the
- * source, regardless of whether the branch is reachable (see this file's
- * module doc). Tests and bench.ts read the wasm bytes from disk directly
- * and call the underlying initWasmModule() themselves instead of going
- * through this function — see piiSanitizeHybrid.wasm-success.test.ts and
- * bench.ts's own `initForNode()`.
- */
-function resolveWasmUrl(): string {
-    if (typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
-        throw new Error(
-            'pii-sanitizer wasm: chrome.runtime.getURL is unavailable — initPiiSanitizerWasm() must run in an ' +
-                'extension context (service worker or offscreen document), not directly in Node/tests.'
-        );
-    }
-    return chrome.runtime.getURL('wasm/pii_sanitizer_bg.wasm');
-}
 
 /**
  * Initializes the wasm module. Safe to call repeatedly (idempotent) and
  * from multiple call sites — all callers share the same in-flight promise
- * so the ~47KB binary is fetched/compiled exactly once per worker lifetime.
+ * (managed by initExtensionWasm) so the ~47KB binary is fetched/compiled
+ * exactly once per worker lifetime, with reset-on-failure so a transient
+ * fetch error can be retried.
  */
 export function initPiiSanitizerWasm(): Promise<void> {
-    if (!initPromise) {
-        const wasmUrl = resolveWasmUrl();
-        initPromise = initWasmModule({ module_or_path: wasmUrl }).then(
-            () => undefined,
-            (error: unknown) => {
-                // Reset so a later call can retry (e.g. transient fetch failure).
-                initPromise = null;
-                throw error instanceof Error ? error : new Error(errorMessage(error));
-            }
-        );
-    }
-    return initPromise;
+    return initExtensionWasm('pii_sanitizer_bg.wasm', (url) =>
+        initWasmModule({ module_or_path: url })
+    );
 }
 
 export interface WasmMaskedItem {

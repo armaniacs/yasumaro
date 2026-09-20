@@ -38,13 +38,24 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.12] - 2026-09-20
+
+このリリースは v6.9.11 に続く連続リリースです。TextRank 文抽出の Rust/WASM 移植（PII サニタイザに続く Rust 化第2弾）と CI 強化のラウンドです。全テスト（12,616 件）がグリーンです。
+
 ### Added
 
+- **TextRank 文抽出をRust/WASMコアへ移植**: L0 抽出圧縮（`src/utils/sentenceExtractor.ts` の TextRank + PageRank）を `wasm/textrank/` として再実装し、記録パイプラインの文抽出を WASM 経由に切り替え。JS 文字列の UTF-16 コードユニットセマンティクス（`.length`、`charAt` バイグラム、JS `\s` の trim/split 集合、ループ変数 `lastIndex = match.index + 1`）を厳密に再現。TS 参照実装との選択結果パリティテスト（英語・日本語・絵文字混在・区切り記号の隣接／空白区切り隣接）、VULN-051 の 200 文キャップ境界でのクロス実装パリティ、Rust 単体テスト 22 件で等価性を検証。実測で TS 実装比 3.6〜13.3 倍高速（160 文コーパスで 47.4ms → 3.6ms）
+- **共有 WASM 初期化ユーティリティを追加**: `chrome.runtime.getURL()` + シングルトン + 失敗時リセットのロード規約を `src/wasm/initWasm.ts` に一元化し、PII サニタイザと TextRank の両ラッパーを同一実装に統合。単一ファイル IIFE ビルドでの data: URI インライン化（CSP で FetchError になる既知問題）の再発防止規約の所有者を 1 箇所に限定
 - **gitleaks による Secret scan を CI に追加**: `.gitleaks.toml` が存在しながら実行ワークフローが未配線だった既知の gap を解消。全履歴に対する scan を push/PR で常時実行する
+
+### Changed
+
+- **記録パイプラインの L0 文抽出を WASM 優先のハイブリッドに変更**: `extractSentencesStep` が `extractSentencesHybrid`（WASM 成功時は WASM コア、初期化失敗・実行時エラー・オプションが JS→u32 境界外の値は TS 実装にフォールバック）経由で実行される。WASM コアは選択文インデックス＋分割文数を返し、JS 側の文分割と一致することを検証してから文字列へマッピングする（不一致・範囲外インデックスはフォールバックで誤出力を防止）
+- **CI の wasm 等価性ゲートを textrank に拡張**: 新鮮リビルド対コミット済みバイナリのパリティ検証、`src/` と `public/` のバイナリ一致比較、glue / d.ts の陳腐化検知（`git diff --exit-code`）、Cargo キャッシュキーへの textrank Cargo.lock 追加。Rust ソース変更にコンパイル済み出力の再コミットが伴わないままリリースされる経路を両クレートで遮断
 
 ### Docs
 
-- **旧データベース互換コードの提供終了予告を公開**（`docs/blog-6_9/legacy-db-compat-sunset-notice.md`、予告 issue #154）: 移行コードの保持期間が 2026-12-17 に満了するにあたり、対象者の判定方法・締め切り後の挙動・報告受付口を利用者向けに整理。未移行ユーザーの報告は #154 で受け付け、削除の実施・延期判断に使用する
+- **旧データベース互換コードの提供終了予告を公開**（予告 issue #154）: 移行コードの保持期間が 2026-12-17 に満了するにあたり、対象者の判定方法・締め切り後の挙動・報告受付口を利用者向けに整理。未移行ユーザーの報告は #154 で受け付け、削除の実施・延期判断に使用する
 
 ## [6.9.11] - 2026-09-19
 

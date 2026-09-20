@@ -85,10 +85,11 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin/wasm-pack
             wasm/pii-sanitizer/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/pii-sanitizer/Cargo.lock') }}
+            wasm/textrank/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/*/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Run pii-sanitizer Rust tests
+      - name: Run wasm crate Rust tests (pii-sanitizer + textrank)
         run: npm run test:wasm
       - name: Install wasm-pack (if not cached)
         run: command -v wasm-pack || cargo install wasm-pack
@@ -116,18 +117,27 @@ jobs:
         run: |
           cp src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm /tmp/committed-src.wasm
           cp public/wasm/pii_sanitizer_bg.wasm /tmp/committed-public.wasm
+          cp src/wasm/textrank/textrank_bg.wasm /tmp/committed-textrank-src.wasm
+          cp public/wasm/textrank_bg.wasm /tmp/committed-textrank-public.wasm
           npm run build:wasm
           echo "== parity suite against the FRESH rebuild =="
-          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts
+          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts
           cp /tmp/committed-src.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm
+          cp /tmp/committed-textrank-src.wasm src/wasm/textrank/textrank_bg.wasm
           echo "== parity suite against the COMMITTED binary =="
-          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts
+          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts
           if ! cmp -s /tmp/committed-src.wasm /tmp/committed-public.wasm; then
             echo "::error::public/wasm/pii_sanitizer_bg.wasm diverges from src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm — run 'npm run build:wasm' and commit the result"
             exit 1
           fi
+          if ! cmp -s /tmp/committed-textrank-src.wasm /tmp/committed-textrank-public.wasm; then
+            echo "::error::public/wasm/textrank_bg.wasm diverges from src/wasm/textrank/textrank_bg.wasm — run 'npm run build:wasm' and commit the result"
+            exit 1
+          fi
           git diff --exit-code src/wasm/pii-sanitizer/piiSanitizerWasm.js || \
             (echo "::error::piiSanitizerWasm.js glue is stale — run 'npm run build:wasm' and commit the result" && exit 1)
+          git diff --exit-code src/wasm/textrank/textrankWasm.js src/wasm/textrank/textrankWasm.d.ts || \
+            (echo "::error::textrank glue/d.ts is stale — run 'npm run build:wasm' and commit the result" && exit 1)
       - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
         # The byte-diff gate assumes reproducible builds across hosts. When
         # it fails, this artifact lets the maintainer diff the CI-built
