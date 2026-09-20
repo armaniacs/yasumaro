@@ -1,21 +1,32 @@
 ---
 name: arch-delivery-loop
-description: Closed loop: diagnose architecture opportunities, prioritize with RICE, create PBIs, implement autonomously (RICE order, no confirmation), verify with `make clean test`, bump version. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」, or when existing PBIs should be prioritized and implemented to green.
+description: Closed-loop orchestrator for architecture deepening — diagnose opportunities, score with RICE, create PBIs, implement autonomously (RICE order, no user confirmation between PBIs), verify with `make clean test-full`, then bump the version. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」「積み残しはある？」, after an architecture review report when the user wants all recommendations acted on, when the user names `arch-delivery-loop`, or when existing PBIs should be prioritized AND implemented to green. Not for general parallel dev work (swarm-dev covers that).
 ---
 
 # Arch Delivery Loop — アーキテクチャ診断から検証まで一気に閉じるスキル
 
-直近の実践（2026-08-23）で確立した **「診断 → PBI化 → 自律実装 → make clean test → バージョン更新」** の一連の流れを、途中で止めずに閉じるところまで自律的に回すオーケストレータースキル。
+「診断 → PBI化 → 自律実装 → make clean test-full → バージョン更新」を、途中で止めずに閉じるところまで自律的に回すオーケストレータースキル。
 
-単独の `improve-codebase-architecture`（診断だけ）、`pbi-backlog-prioritizer`（PBI化だけ）、`autonomous-task-closer`（実装だけ）を個別に呼ぶのではなく、**それらを依存順に連結して、最後に `make clean test` が通るまでを1トランザクションとして扱う**。
+単独の `improve-codebase-architecture`（診断だけ）、`pbi-backlog-prioritizer`（PBI化だけ）、`autonomous-task-closer`（実装だけ）を個別に呼ぶのではなく、**それらを依存順に連結して、最後に `make clean test-full` のゲートが通るまでを1トランザクションとして扱う**。
+
+## 依存スキル
+
+環境によって skill ツールの一覧に載らないことがあるため、手順の取り込みが必要なフェーズでは SKILL.md を直接 `read` する（`~` はホームディレクトリに展開）。
+
+| スキル | フェーズ | SKILL.md の場所 |
+|------|------|------|
+| improve-codebase-architecture | Phase 0 | `~/.kilocode/skills/improve-codebase-architecture/SKILL.md` |
+| codebase-design | Phase 0 | `~/.kilocode/skills/codebase-design/SKILL.md` |
+| pbi-backlog-prioritizer | Phase 1 | `~/.agents/skills/pbi-backlog-prioritizer/SKILL.md` |
+| pbi-create-bdd | Phase 1 | `~/.agents/skills/pbi-create-bdd-workspace/skill-snapshot/SKILL.md` |
+| autonomous-task-closer | Phase 2 | `~/.agents/skills/autonomous-task-closer/SKILL.md` |
 
 ## いつ使うか
 
-- ユーザーが「アーキテクチャから実装まで一気に」「コードベース全体を診断して直して」と依頼したとき
 - `improve-codebase-architecture` の HTML レポートを見た後に「全部やって」と言われたとき
-- ユーザーが明示的に `arch-delivery-loop` / `architecture loop` / `deepening loop` と言ったとき
-- PBI が複数できていて「優先度付けから実装・検証まで自律的に」と求められたとき
-- 「積み残しはあるか？あるなら閉じて」と、未完了の洗い出しから検証までを求められたとき
+- 「積み残しはあるか？あるなら閉じて」と、未完了の洗い出しから検証・版上げまで求められたとき
+
+（トリガーフレーズの全体像は frontmatter の description を基準にする）
 
 ## 基本原則
 
@@ -29,7 +40,7 @@ description: Closed loop: diagnose architecture opportunities, prioritize with R
 Phase 0: 診断  — codebase-design 語彙で深い/浅いモジュールを判定、HTML レポート生成
 Phase 1: PBI化 — RICE スコアリングで優先度付け、pbi/YYYY-MM-DD-NN-type-slug.md を連番出力
 Phase 2: 実装  — RICE 降順（依存を尊重）で1件ずつ 5 Whys → 自律実装 → アーカイブ
-Phase 3: 検証  — make clean test を実行し、失敗が0になるまで修正を繰り返す
+Phase 3: 検証  — make test で失敗を潰し、最後に make clean test-full で全体検証
 Phase 3.5: グラフ更新 — `graphify update .` でナレッジグラフを最新化
 Phase 4: 版上げ — package.json / docs/version.json / CHANGELOG.md を更新しコミット
 ```
@@ -42,11 +53,11 @@ Phase 4: 版上げ — package.json / docs/version.json / CHANGELOG.md を更新
 
 `codebase-design` スキルの語彙（module / interface / depth / seam / adapter / leverage / locality / deletion test）を厳密に使い、アーキテクチャ上の摩擦を抽出する。
 
-> **依存の扱い**: `improve-codebase-architecture` は `disable-model-invocation: true` のため自動呼び出しされない。このスキルから明示的に `read` して手順を取り込み、その語彙と HTML レポート形式を守る。`codebase-design` も同様に明示的に読み、module/depth/seam 等の定義を借りる。
+> **依存の扱い**: 上記2スキルの SKILL.md を明示的に `read` し、その語彙と HTML レポート形式を守る。
 
 ### 手順
 
-1. `dev-docs/DESIGN_SPECIFICATIONS.md`（アーキテクチャ設計）と `dev-docs/LAYERS.md`（レイヤー構造）、`dev-docs/ADR/`（設計上の意思決定）を先に読む。`CONTEXT.md` や `docs/adr/` は存在しない前提のプロジェクトであり、ドメイン語彙と制約は上記 `dev-docs/` 配下が唯一の情報源
+1. `CONTEXT.md`（ドメイン用語集 — 診断・PBI はこの語彙で書く）、`dev-docs/DESIGN_SPECIFICATIONS.md`（アーキテクチャ設計）、`dev-docs/LAYERS.md`（レイヤー構造）、`dev-docs/ADR/`（設計上の意思決定）を先に読む。ドメイン語彙と制約は上記が唯一の情報源（`docs/adr/` は実在しない）
 2. `git log --oneline` の直近 30〜50 件からホットスポット（頻繁に変更される領域）を特定。ユーザーが方向を明示した場合はそちらを優先
 3. サブエージェントを spawn し、コードベースを探索:
    - 1つの概念理解に複数モジュールを跨ぐ箇所
@@ -86,11 +97,11 @@ Phase 0 の候補（またはユーザーが列挙した複数要求）を、1�
    - 全候補を1つの表にまとめ、**RICE 降順にソート**。この順序が Phase 2 の実行順になる
    - 依存関係はスコアより優先（BがAに依存するならAを先に）。依存のない候補は並行可能と明記しつつ、実装は直列で行う
    - 同点は「リスク軽減 → 緊急性」の順
-4. **なぜなぜ分析**: フェーズ2で「Impact が推定できない」「ビジネス価値が書けない」等の疑問が生じたら、その場で 5 Whys を実行（上限20回、根本原因が見えたら停止）
+4. **なぜなぜ分析**: 「Impact が推定できない」「ビジネス価値が書けない」等の疑問が生じたら、その場で 5 Whys を実行（上限20回、根本原因が見えたら停止）
 5. **PBI 作成**: `pbi-create-bdd` のテンプレートに準拠し、各 PBI に優先度情報（順位 / RICEスコア / 根拠）を必ず含める。BDD シナリオは最低2本（ハッピーパス + エラー/境界ケース）
 6. **ファイル出力**（命名規則は `pbi/00-INDEX.md` の運用ルールに従う）:
    - 個別 PBI: `pbi/YYYY-MM-DD-NN-type-slug.md`（NN=優先順位の2桁連番。`type` は `feat` / `fix` / `refactor` / `doc` / `test` / `investigate` のいずれか。ファイル名の種別が機能追加/非機能追加の判定基準になる）
-   - バックログまとめ: `pbi/YYYY-MM-DD-00-backlog[-<suffix>].md`（RICE スコア表 + 依存グラフ + 5 Whys サマリー。suffix はラウンド識別用で、例: `0823a`）
+   - バックログまとめ: `pbi/YYYY-MM-DD-00-backlog[-<suffix>].md`（RICE スコア表 + 依存グラフ + 5 Whys サマリー。suffix はラウンド識別子で、実績に合わせて `archloop-0918` のようにラウンド名+日付を付ける）
    - `pbi/00-INDEX.md` の「進行中」表に行を追加
    - `pbi/` がなければ作成
 
@@ -114,7 +125,8 @@ ls dev-docs/plans/*.md | grep -v "00-index" # Plan 残存
 grep -rn "TODO\|FIXME" src/ --include="*.ts" | grep -v "__tests__"
 grep -rn "^- \[ \]" pbi/ dev-docs/plans/ --include="*.md"
 npm run type-check; npm run lint; npm test; npm run build
-# package.json / wxt.config.ts / docs/version.json / package-lock.json のバージョン比較
+# package.json / wxt.config.ts / docs/version.json のバージョン比較
+# （検査対象はこの3ファイル。package-lock.json は検査対象外）
 ```
 
 ### 5 Whys（1件ずつ、一時ファイルに記録）
@@ -145,23 +157,53 @@ npm run type-check; npm run lint; npm test; npm run build
 
 ---
 
-## Phase 3: 検証 — make clean test が通るまで繰り返す
+## Phase 3: 検証 — make clean test-full が green になるまで繰り返す
 
-`make clean test` は `validate:json → lint → type-check → test → build → test:e2e` を一括で走らせる。このコマンドが **exit 0 になるまで**、失敗を1件ずつ潰すループを回す。
+`make clean test` の実態（`dev-docs/Makefile` を include）:
+
+```
+make clean → npm run clean
+make test  → npm run build（chromium + firefox をビルド。冒頭で sync-version.mjs が
+             docs/version.json を自動同期し、check-version-consistency.js が
+             package.json / wxt.config.ts / docs/version.json の一致を検証）
+           → npm run validate（validate:json → lint → check-innerhtml-escape
+              → check-deprecated-aliases → type-check → 単体テスト）
+```
+
+E2E は `make test` には含まれない。**最終ゲートの `make clean test-full`**（clean → build → validate → test:e2e）でのみ走る。毎イテレーションで clean からやり直すのは過剰なので、検証は「ループで失敗を潰す → 最後に1回だけフル検証」の2段で回す。
 
 ### ループ
 
+初回だけ `make clean` してから入る。以降のループ内では clean しない。
+
 ```
 loop:
-  make clean test 2>&1 | tail -100
-  if exit 0 → break
+  make test 2>&1 | tail -100
+  if exit 0 → goto gate
   else:
     失敗を分類:
-    - バージョン不一致 → 保持ファイルをすべて同期（下記）
+    - バージョン不一致 → package.json を修正して `make test` を再実行（build 冒頭で
+      sync-version.mjs が docs/version.json を自動同期し、check-version-consistency.js が
+      3ファイルの一致を検証する。package-lock.json が古い場合は `npm install` で同期）
     - フレイキーなタイミングテスト → 閾値緩和 + コメントで根拠明記
     - type-check / lint → 該当箇所を修正
     - その他テスト失敗 → 5 Whys で根本原因を特定し修正
     goto loop
+```
+
+type-check / lint / 単体テストを潰している間は、ループ内を `npm run validate`（ビルド不要、同じ失敗シグナル）で回し、build 由来の失敗だけ `make test` で確認すると各イテレーションが速い。
+
+### ゲート
+
+ループが green になったら、最後に1回だけフル検証をかける。clean なしで回した結果、古い成果物で擬似的に green になっていたケースをここで検出する。
+
+```
+gate:
+  make clean test-full 2>&1 | tail -100
+  if exit 0 → Phase 3.5 へ
+  else:
+    - E2E の失敗はまず1回だけ再実行して再現性を確認し、再現したものだけ潰す対象にする
+    - それ以外は失敗を分類して潰す → loop に戻る
 ```
 
 ### 一般的な失敗パターンと対処
@@ -170,13 +212,13 @@ loop:
 
 | 失敗の型 | 根本原因 | 対処 |
 |------|------|------|
-| バージョン不一致（例: `versionConsistency: expected '6.7.66' to be '6.7.67'`） | `package.json` を手で編集したが、他の保持ファイル（`package-lock.json` の `version` と `packages[""].version` の2箇所、`docs/version.json` 等）が追従していない | 保持ファイルをすべて同期。`scripts/sync-version.mjs` や `scripts/check-version-consistency.js` があれば使う。なければ sed で各所を一致させる |
-| フレイキーなタイミングテスト（例: `constantTimeCompare: expected 31 to be less than 10`） | タイミング計測が環境高負荷でノイズに沈み、理論比と実測値が乖離する | 閾値を「理論値 + ノイズマージン」に緩和し、コメントで根拠（理論比・ノイズ要因）を明記。`test.skip` は使わない |
+| バージョン不一致 | `package.json` を手で編集したが、`docs/version.json` が追従していない | `npm run build` の冒頭で `sync-version.mjs` が自動同期する。検査対象は3ファイル（package.json / wxt.config.ts / docs/version.json）のみ |
+| フレイキーなタイミングテスト | タイミング計測が環境高負荷でノイズに沈み、理論比と実測値が乖離する | 閾値を「理論値 + ノイズマージン」に緩和し、コメントで根拠（理論比・ノイズ要因）を明記。`test.skip` は使わない |
 | type-check / lint 失敗 | 実装上の欠陥 | 該当箇所を修正 |
 
 ### 禁止事項
 
-- `make clean test` の失敗を放置して Phase 4 に進まない
+- ゲート（`make clean test-full`）が green になる前に Phase 4 に進まない
 - テストを `skip` して通すのではなく、閾値や実装を正す
 
 ---
@@ -203,7 +245,7 @@ graphify update .
 
 ## Phase 4: 版上げ — バージョン同期と CHANGELOG
 
-`make clean test` が通った後に、バージョンを上げる。
+`make clean test-full`（Phase 3 のゲート）が通った後に、バージョンを上げる。
 
 ### 手順
 
@@ -211,21 +253,19 @@ graphify update .
 # 1. ナレッジグラフ更新（Phase 3.5 で未実行の場合はここで必ず実施）
 graphify update .
 
-# 2. 版上げ（例: 6.7.66 → 6.7.67）
-# package.json の version を編集
+# 2. 版上げ
+# package.json の version を編集したら:
 node scripts/sync-version.mjs          # docs/version.json を同期
+node scripts/check-version-consistency.js  # package.json / wxt.config.ts / docs/version.json の一致を確認
+npm install --package-lock-only        # package-lock.json を新バージョンに同期（検査対象外だがズレさせない）
 # wxt.config.ts は package.json から読むため自動追従
-# package-lock.json の version と packages[""].version の2箇所を同期（scripts がなければ sed）
 
 # 3. CHANGELOG.md
 # [Unreleased] の内容を [<new-version>] - YYYY-MM-DD に昇格し、新しい [Unreleased] を空で用意
 # Refactor/Fixed/Changed を Conventional Commits に沿って記載
 
-# 4. 検証
-node scripts/check-version-consistency.js  # 4ファイルの一致を確認
-
-# 5. コミット
-git add package.json docs/version.json CHANGELOG.md package-lock.json
+# 4. コミット
+git add package.json package-lock.json docs/version.json CHANGELOG.md
 git commit -m "chore: バージョンを<new-version>に更新"
 ```
 
@@ -240,17 +280,16 @@ git commit -m "chore: バージョンを<new-version>に更新"
 
 - **RICE 降順・確認不要**: Phase 1 の実行順を Phase 2 が機械的に消化。PBI 間でユーザー確認を挟まない
 - **TodoWrite 徹底**: フェーズごとに `in_progress` は1件だけ。フェーズ内の PBI 処理も1件ずつ可視化
-- **言語**: 応答・説明・コミットメッセージは日本語、コード・識別子・コード内コメントは英語。絵文字は使わない
-- **Git 運用**: `git add -A` / `git add .` は使わず、対象ファイルを個別に `git add`。移動は `git mv`。コミットメッセージは Conventional Commits（`feat`/`fix`/`docs`/`refactor`/`test`/`chore`）で日本語
 - **Read → Edit 順守**: `Edit` 前に必ず `Read`。`oldString` は行番号プレフィックス（`1: `）を除いた正確な内容
 - **なぜなぜの品質**: 機械的に20回問い詰めるのではなく、根本原因が見えたら止める。「その解で行動に移れるか」が品質基準
+- **Git 運用**: `git add -A` / `git add .` は使わず、対象ファイルを個別に `git add`。移動は `git mv`。言語・コミットメッセージ規約はユーザー共通規約（CLAUDE.md）に従う
 
 ---
 
 ## 使用例
 
-**入力**: 「コードベース全体を対象にアーキテクチャ改善を一括で。PBI化から実装・検証まで自律的に」
-**出力**: Phase 0（HTMLレポート 7件）→ Phase 1（RICE スコアリング → pbi/7件）→ Phase 2（RICE降順で7件を1件ずつ 5 Whys → 実装 → archived、確認なし）→ Phase 3（make clean test 2回、2件修正）→ Phase 4（版上げ）の全履歴とサマリー。
+**入力**: 「コードベース全体を対象にアーキテクチャ改善を一括で」
+**出力**: Phase 0（HTMLレポート）→ Phase 1（RICE スコアリング → pbi/出力）→ Phase 2（RICE降順で1件ずつ 5 Whys → 実装 → archived、確認なし）→ Phase 3（validate / make test で失敗を潰し、make clean test-full のゲートまで）→ Phase 4（版上げ）の全履歴とサマリー。
 
 **入力**: 「積み残しはあるか？あるなら arch-delivery-loop で閉じて」
-**出力**: Phase 0 の洗い出しから開始し、未完了が0になるまで全フェーズを回したサマリー。
+**出力**: Phase 2 の洗い出しから開始し、未完了が0になるまで全フェーズを回したサマリー。
