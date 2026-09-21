@@ -28,8 +28,9 @@
 //! - Beyond `MAX_SENTENCES_FOR_DEDUP`, this core deliberately diverges from
 //!   the uncapped TS reference (see `dedup_core`'s doc).
 
-use crate::jsstring::split_sentence_parts;
-use crate::tokenize::{jaccard_similarity, to_word_set};
+use js_strings::{
+    jaccard_similarity, split_sentence_parts, to_word_set, WordSet, DEDUP_TOKENIZE,
+};
 
 /// Safety cap on the O(n^2) pair scan. The TS reference is uncapped, and
 /// dedup runs BEFORE the extractor's `maxChars` truncation — a delimiter-
@@ -60,12 +61,12 @@ pub fn dedup_core(units: &[u16], threshold: f64, min_length: u32) -> (Vec<u32>, 
     }
 
     let mut kept_indices: Vec<u32> = Vec::new();
-    let mut kept_sets: Vec<crate::tokenize::WordSet> = Vec::new();
+    let mut kept_sets: Vec<WordSet> = Vec::new();
 
     let pairwise_end = count.min(MAX_SENTENCES_FOR_DEDUP);
     for (idx, part) in parts[..pairwise_end].iter().enumerate() {
         let sentence = &units[part.sentence.0..part.sentence.1];
-        let set = to_word_set(sentence);
+        let set = to_word_set(sentence, DEDUP_TOKENIZE);
 
         // TS: part.sentence.length < minLength (UTF-16 length, delimiter
         // included — the sentence slice carries the delimiter).

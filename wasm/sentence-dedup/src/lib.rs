@@ -6,15 +6,15 @@
 //! `src/utils/text/similarity.ts`'s Jaccard similarity. Note the deliberate
 //! tokenizer difference from the textrank crate: the dedup path strips one
 //! trailing sentence delimiter and takes bigrams from the ORIGINAL-case
-//! cleaned text (see tokenize.rs), and its local `splitSentences` keeps
-//! delimiters attached with the consumed `\s*` stored separately (see
-//! jsstring.rs).
+//!   cleaned text (see the `js-strings` crate's `DEDUP_TOKENIZE`), and its local `splitSentences` keeps
+//!   delimiters attached with the consumed `\s*` stored separately (see
+//!   `js-strings`'s `split_sentence_parts`).
 //!
 //! JS-semantics fidelity: the TS implementation works on JS strings (UTF-16
 //! code units — `.length`, `charAt` bigrams, `\s`-based split). To stay
 //! behavior-identical, the core operates on UTF-16 code units end to end
-//! (see `jsstring.rs`); lone surrogates cannot survive the &str boundary
-//! and become U+FFFD (see jsstring.rs's caveat). The WASM-visible function
+//! (see the `js-strings` crate); lone surrogates cannot survive the &str
+//! boundary and become U+FFFD (see `js-strings`'s caveat). The WASM-visible function
 //! returns `Result<_, JsValue>` so the TS wrapper can distinguish parameter
 //! errors from results and fall back to the TS path.
 //!
@@ -32,8 +32,6 @@
 //! pages — see dedup.rs.
 
 mod dedup;
-mod jsstring;
-mod tokenize;
 
 use wasm_bindgen::prelude::*;
 

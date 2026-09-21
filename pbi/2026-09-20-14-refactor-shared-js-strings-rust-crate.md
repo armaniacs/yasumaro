@@ -31,12 +31,12 @@ Scenario: 再現ビルドゲートが機能し続ける
 ```
 
 ## 受け入れ基準
-- [ ] 共有 crate(仮称 js-strings)が新設され、textrank・sentence-dedup が依存する
-- [ ] 2つの意図的差分(strip の有無・bigram case 源)のみが seam 上のパラメータになる
-- [ ] クレート毎の tokenizer 単体テストが共有 suite に統約される
-- [ ] ハッシャ方針(FxHash)が共有 crate で統一され、判断が1箇所に記録される
-- [ ] 全 cargo test・TS パリティスイート・ci.yml wasm ゲートが green
-- [ ] pii-sanitizer の js_ws_len(3つ目の whitespace 実装)の取り込み可否を判断し記録する
+- [x] 共有 crate(仮称 js-strings)が新設され、textrank・sentence-dedup が依存する
+- [x] 2つの意図的差分(strip の有無・bigram case 源)のみが seam 上のパラメータになる
+- [x] クレート毎の tokenizer 単体テストが共有 suite に統約される
+- [x] ハッシャ方針(FxHash)が共有 crate で統一され、判断が1箇所に記録される
+- [x] 全 cargo test・TS パリティスイート・ci.yml wasm ゲートが green
+- [x] pii-sanitizer の js_ws_len(3つ目の whitespace 実装)の取り込み可否を判断し記録する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -68,3 +68,33 @@ Scenario: 再現ビルドゲートが機能し続ける
 - トークナイザ: 両 `tokenize.rs` — ~60行の同一ループ内に2行の意図的差分(strip 有無・bigram case 源)。`jaccard_similarity` はロジック完全重複
 - drift 実績: dedup のみ FxHash(`wasm/sentence-dedup/Cargo.toml` コメント)。textrank は std hasher
 - 第3の whitespace 実装: `wasm/pii-sanitizer/src/patterns/common.rs` の `js_ws_len`
+
+## 検証記録 (2026-09-21, worktree yasumaro-wt-pbi14, branch closer/pbi14-js-strings)
+
+- 共有 crate: `wasm/js-strings` (package `js-strings`, sibling と同レイアウト:
+  per-crate Cargo.toml + src/ + Cargo.lock)。`jsstring` (空白表・lowercase・
+  2 split 変種・Jaccard 前提) と `tokenize` (TokenizeOptions + WordSet +
+  jaccard_similarity) を所有。両クレートは path 依存し、自前の
+  jsstring.rs/tokenize.rs を削除。
+- パラメータ: `TEXTRANK_TOKENIZE` (strip なし・bigram=Lowered)、
+  `DEDUP_TOKENIZE` (strip あり・bigram=Original)。seam 上はこの2差分のみ。
+- tokenizer 単体テストは共有 suite に統約 (js-strings 27 tests)。
+  textrank 22→7、dedup 27→10 (残りは core ロジックのテストで各クレートに残留)。
+- ハッシャ方針: FxHash に統一、判断は `wasm/js-strings/src/tokenize.rs` の
+  モジュール doc に記録。textrank の std hasher からの切替は出力を変えない
+  (jaccard は len/contains/count のみ使用し、両 core は集合の反復順序に
+  依存しない)。裏付け: 下記 parity が無変更で green。
+- バイナリ再コミット: `src/wasm/textrank/textrank_bg.wasm` +
+  `public/wasm/textrank_bg.wasm` (出荷経路: wxt.config.ts publicAssets)、
+  `src/wasm/sentence-dedup/sentence_dedup_bg.wasm` (public コピーなし =
+  hybrid 未配線 STAGED のため、従来通り)。glue .js/.d.ts は再生成の結果
+  byte-identical (binding 変更なし)。
+- pii-sanitizer `js_ws_len` 判断: 取り込まない。UTF-8 バイト列上の幅指向
+  実装であり、UTF-16 単位上の `is_js_ws` とはドメイン (入力型・返値) が
+  異なる。共通化すると変換層が PII hot path に混入するため、空白表の
+  一致は目視確認に留め実装は各ドメインに残す。
+- ゲート結果: `npm run test:wasm` (js-strings 27 / pii 46 / textrank 7 /
+  dedup 10 / tag-cooccur 16) green。TS parity 3 files / 41 tests が抽出前後
+  で無変更 green (byte 等価)。ci.yml は cache path に
+  `wasm/js-strings/target` を追加し、test step 名を更新 (lock の glob は
+  自動追従)。
