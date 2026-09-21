@@ -1,11 +1,11 @@
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
-import { pickDefined } from '../../../utils/objectUtils.js';
 import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
 import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../../messaging/sqliteMessages.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor } from '../../../messaging/archiveWireTable.js';
+import { SQLITE_WIRE_DESCRIPTORS, type SqliteWireDescriptor } from '../../../messaging/sqliteWireTable.js';
 
 /**
  * Intentionally narrower than the offscreen UPDATABLE_FIELDS (31 fields):
@@ -125,6 +125,15 @@ export type DashboardArchiveHandlerDeps = ArchiveDeps;
 export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps & ArchiveDeps;
 
 /**
+ * Every query/mutate descriptor's deps method must name a real handler deps
+ * member: a typo'd row fails here instead of throwing at request time.
+ * (insertAuditLog carries depsMethod null — its only caller drives
+ * SqliteClient directly — so only non-null rows are checked.)
+ */
+type _SqliteWireDepsMethodsLive = NonNullable<SqliteWireDescriptor['depsMethod']> extends keyof DashboardSqliteHandlerDeps ? true : never;
+const _checkSqliteWireDepsMethods: _SqliteWireDepsMethodsLive = true;
+
+/**
  * The operations this handler needs that a SqliteClient can supply.
  *
  * Everything outside this set (migration, confirm tokens, backfill, cleanup)
@@ -168,17 +177,23 @@ export function createSqliteClientDeps(
     // Every delegate keeps the failure reason attached to the call that
     // produced it, rather than routing it through shared client state.
     query: (params) => sqliteClient.query(params),
+    // Query/mutate delegates (PBI 2026-09-20-16): each op encodes through
+    // its wire-table descriptor, so the SqliteClient overloads resolve
+    // without casts and op construction lives in exactly one place. `query`
+    // keeps its direct passthrough: no precise records-op overload exists
+    // (the first overload takes the StorageQuery itself), and the gateway
+    // uses the records row's encodeOp for the plain-query path instead.
     search: (text, limit, offset, options) =>
-      sqliteClient.query({ kind: 'search', text, limit, offset, ...pickDefined({ orderBy: options?.orderBy, orderDir: options?.orderDir }) }),
-    toggleStar: (id) => sqliteClient.mutate({ type: 'toggleStar', id }),
-    delete: (id) => sqliteClient.mutate({ type: 'delete', id }),
-    update: (id, changes) => sqliteClient.mutate({ type: 'update', id, changes }),
-    getCount: () => sqliteClient.query({ kind: 'count' }),
+      sqliteClient.query(SQLITE_WIRE_DESCRIPTORS.search.encodeOp(text, limit, offset, options)),
+    toggleStar: (id) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.toggleStar.encodeOp(id)),
+    delete: (id) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.delete.encodeOp(id)),
+    update: (id, changes) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.update.encodeOp(id, changes)),
+    getCount: () => sqliteClient.query(SQLITE_WIRE_DESCRIPTORS.count.encodeOp()),
     clearAll: () => sqliteClient.maintain({ type: 'clearAll' }),
     // WHY: `Record<string, unknown>` is not structurally compatible with `BrowsingLogRecord` (missing required fields)
-    insert: (record) => sqliteClient.mutate({ type: 'insert', record: record as unknown as BrowsingLogRecord }),
+    insert: (record) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.insert.encodeOp(record as unknown as BrowsingLogRecord)),
     // PBI 2026-09-11-07: batched import — one offscreen round trip per import.
-    insertBatch: (records) => sqliteClient.mutate({ type: 'insertBatch', records: records as unknown as BrowsingLogRecord[] }),
+    insertBatch: (records) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.insertBatch.encodeOp(records as unknown as BrowsingLogRecord[])),
     restoreDb: (data) => sqliteClient.maintain({ type: 'restore', data }),
     // Deliberately not a result union: getStatus() reports initialization failure
     // inside its success value so the diagnostics panel can display it.
@@ -218,7 +233,7 @@ export function createSqliteClientDeps(
     archiveStatus: () => sqliteClient.maintain(ARCHIVE_DESCRIPTORS.archiveStatus.encodeRequest()),
       getSettings: () => settingsRepository.getAll() as Promise<Record<string, unknown>>,
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
-     queryAuditLog: (options) => sqliteClient.query({ kind: 'auditLog', limit: options?.limit, offset: options?.offset } as { kind: 'auditLog', limit?: number, offset?: number }),
+     queryAuditLog: (options) => sqliteClient.query(SQLITE_WIRE_DESCRIPTORS.auditLog.encodeOp(options)),
     appendToDailyNote: async (markdown) => {
       const obsidianClient = new ObsidianClient();
       await obsidianClient.appendToDailyNote(markdown);
