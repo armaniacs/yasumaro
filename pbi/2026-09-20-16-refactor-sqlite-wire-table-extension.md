@@ -31,10 +31,13 @@ Scenario: 既存 op の挙動は不変
 ```
 
 ## 受け入れ基準
-- [ ] query/mutate サブセットが wire table 化され、当該 op の16箇所パターンが解体される
-- [ ] archive と同型の compile-time sync assert(table↔message union↔deps 署名)が置かれる
-- [ ] maintain ops・archive の扱い(既存 table 維持)を明記し、全量 table 化するかの判断を記録する
-- [ ] 既存テストの期待値変更なし
+- [x] query/mutate サブセットが wire table 化され、当該 op の16箇所パターンが解体される
+- [x] archive と同型の compile-time sync assert(table↔message union↔deps 署名)が置かれる
+- [x] maintain ops・archive の扱い(既存 table 維持)を明記し、全量 table 化するかの判断を記録する
+- [x] 既存テストの期待値変更なし
+
+## 技術的考慮事項（追記 2026-09-21: 全量 table 化の判断）
+- 全量 table 化は不採用。maintain 非archive（init/backup/restore/purge/status系）は hop 形状が異質（Uint8Array・boolean 特殊変換・degraded status）のため既存 path 維持。SQLITE_SEARCH は gateway 経路がなく（kind:search は SQLITE_QUERY に fold）handler を維持。readOnlyHandler/import の dashboard-hop 政策（cap・row-mapping・oversized guard）は層所有のまま残し、行側は subtype＋service codec＋sync assert で drift を検出する。以降の新 query/mutate op は wire table 1行＋（repo 形状が新規の場合のみ）runner 1行で追加可能。
 
 ## テスト戦略（t_wadaスタイル）
 
