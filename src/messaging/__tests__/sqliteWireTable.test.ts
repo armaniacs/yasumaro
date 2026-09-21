@@ -98,11 +98,14 @@ describe('messaging/sqliteWireTable: gateway codec pins the frozen wire shapes',
     expect('changes' in payload).toBe(false);
   });
 
-  it('search folds the QueryOp into a StorageQuery payload', () => {
+  it('search folds the QueryOp into a StorageQuery payload with the kind marker', () => {
     const op = SQLITE_WIRE_DESCRIPTORS.search.encodeOp('hello', 50, 0, { orderBy: 'rank', orderDir: 'ASC' });
     expect(op).toEqual({ kind: 'search', text: 'hello', limit: 50, offset: 0, orderBy: 'rank', orderDir: 'ASC' });
+    // PBI 2026-09-21-20 fix (Checking Team 2026-09-22: Legacy Bridge Medium):
+    // the `kind: 'search'` marker rides the payload so the offscreen 'records'
+    // runner routes the gateway search to planSearch (default 50).
     expect(SQLITE_WIRE_DESCRIPTORS.search.encodePayload(op)).toEqual({
-      text: 'hello', limit: 50, offset: 0, orderBy: 'rank', orderDir: 'ASC',
+      kind: 'search', text: 'hello', limit: 50, offset: 0, orderBy: 'rank', orderDir: 'ASC',
     });
   });
 
@@ -147,5 +150,30 @@ describe('messaging/sqliteWireTable: dashboard codec pins the frozen service sha
   it('update depsArgs defaults missing changes to {}', () => {
     expect(SQLITE_WIRE_DESCRIPTORS.update.dashboard?.depsArgs?.({ id: 3 })).toEqual([3, {}]);
     expect(SQLITE_WIRE_DESCRIPTORS.toggleStar.dashboard?.depsArgs?.({ id: 3 })).toEqual([3]);
+  });
+});
+
+describe('messaging/sqliteWireTable: update-row validation pins (fail-closed — Phase 5 landed)', () => {
+  // code-quality Data Integrity Medium + red-team Low: the update row's
+  // `validate: () => null` accepted any payload, and `encodePayload` spread
+  // `...o.changes` AFTER `id`, so a `changes.id` key silently rerouted the
+  // write to a different row. Phase 5 implemented fail-closed validate and
+  // id-stripping — the `.fails` wrappers were removed and these pins are
+  // now GREEN regression guards.
+  const validate = SQLITE_WIRE_DESCRIPTORS.update.dashboard?.validate;
+
+  it('update validate rejects a non-integer id', () => {
+    expect(validate?.({ id: 'x', changes: { title: 'n' } })).not.toBeNull();
+  });
+
+  it('update validate rejects empty/missing changes (no silent zero-column write)', () => {
+    expect(validate?.({ id: 3, changes: {} })).not.toBeNull();
+    expect(validate?.({ id: 3 })).not.toBeNull();
+  });
+
+  it('update encodePayload never lets changes.id reroute the row', () => {
+    const op = SQLITE_WIRE_DESCRIPTORS.update.encodeOp(7, { id: 99, title: 'n' } as never);
+    const payload = SQLITE_WIRE_DESCRIPTORS.update.encodePayload(op);
+    expect(payload.id).toBe(7);
   });
 });

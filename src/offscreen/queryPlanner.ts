@@ -71,6 +71,20 @@ export function planSearch(payload: Record<string, unknown>): AlreadyCappedQuery
 }
 
 /**
+ * Dispatch entry for the wire `query` runner. The gateway folds the search op
+ * into SQLITE_QUERY with a `kind: 'search'` payload marker (search row's
+ * encodePayload), so this single entry owns the route decision: marker →
+ * planSearch (search default 50), otherwise planQuery (listing default 100).
+ * Pure — safe to unit-test without a handler.
+ */
+export function planQueryOrSearch(payload: Record<string, unknown>): AlreadyCappedQuery {
+  if ((payload as { kind?: unknown }).kind === 'search') {
+    return planSearch(payload);
+  }
+  return planQuery(payload);
+}
+
+/**
  * Clamp a search limit through the planner-owned cap (PBI 2026-09-12-16).
  *
  * OPFS `handleSearch` used to pick the fts/plain cap inline; it now asks
