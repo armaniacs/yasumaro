@@ -25,8 +25,14 @@ export interface GetContentSender {
 }
 
 export interface GetContentHandlerDeps {
-    extractPageContent: (config?: CleansingConfig) => ExtractResult;
-    applyExtractResultToPageState: (result: ExtractResult) => void;
+    /**
+     * PBI 2026-09-21-25: deep single call (preferred). When present the
+     * handler delegates extract+commit atomically. The pair below remains
+     * as a compatibility fallback (e.g. extractor.ts wiring, pair-based tests).
+     */
+    extractAndCommit?: (config?: CleansingConfig) => ExtractResult;
+    extractPageContent?: (config?: CleansingConfig) => ExtractResult;
+    applyExtractResultToPageState?: (result: ExtractResult) => void;
     pageState: PageState;
     runtimeId: string | undefined;
 }
@@ -41,8 +47,14 @@ export function handleGetContentMessage(
     const msg = message as GetContentMessage;
     if (msg.type !== 'GET_CONTENT') return;
     if (sender.id !== deps.runtimeId) return;
-    const extractResult = deps.extractPageContent();
-    deps.applyExtractResultToPageState(extractResult);
+    // PBI 2026-09-21-25: prefer the deep call; the pair is a fallback.
+    const extractResult =
+        deps.extractAndCommit !== undefined
+            ? deps.extractAndCommit()
+            : deps.extractPageContent!();
+    if (deps.extractAndCommit === undefined) {
+        deps.applyExtractResultToPageState!(extractResult);
+    }
     // PBI 2026-09-15-14: field selection shared with the VALID_VISIT payload
     // via the single visitPayload module — one builder, no per-path drift.
     sendResponse(toGetContentReply(deps.pageState, extractResult.content));

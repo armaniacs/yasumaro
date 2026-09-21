@@ -154,6 +154,9 @@ export async function init(): Promise<void> {
  */
 export function buildGetContentDeps(): GetContentHandlerDeps {
     return {
+        // Deep call preferred (PBI 2026-09-21-25); the pair fields below stay
+        // for fallback consumers that only own the extract/apply split.
+        extractAndCommit: (config) => kernel.extractAndCommit(config),
         extractPageContent: (config) => kernel.extractPageContent(config),
         applyExtractResultToPageState: (result) => kernel.applyExtractResultToPageState(result),
         pageState,
