@@ -38,13 +38,30 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- **内蔵AIの local_only / auto モードでカスタムプロンプトと利用統計が無視されていた**: ローカル経路の `LocalAIService` が `AISummaryOptions`（カスタムプロンプト・タグ要約モード・traceId）を丸ごと無視し、利用統計も記録していなかった。要約生成を `BuiltInAiProvider` strategy 経由に委譲してリモートスロット経路と同一の契約に統一（PBI 2026-09-20-12）。あわせて provider 側の二重 sanitize を削除し、オフデバイスのプロンプトインジェクション検査はクライアントの `builtin-input` プロファイルに1本化
+- **タグクラスタパネルの共起集計をRust/WASMコアへ移植**: ダッシュボードのタグクラスタパネルの共起集計（タグごとの`Set<string>`生成×1万回+O(T²)ペア走査+文字列キー`Map`集計）を `wasm/tag-cooccur/` のRustコアとして再実装し、`tagCooccurrenceHybrid`（WASM成功時はWASMコア、32件未満の入力・split不一致・実行時エラーはTS実装にフォールバック）経由に切り替え。文字列は1回だけ投入しJS側にはインデックス配列のみを返す契約で、JSヒープ上のタグごとSet・エッジMap構築を排除。TS参照実装とのパリティテスト37件（`|`を含むタグ名のエッジ衝突マージ・エッジ配列の範囲チェック・u32境界などの境界ケース込み）、ハイブリッドテスト20件、Rust単体テスト16件で等価性を検証。1万件×20タグの入力で 256ms → 46.3ms（**5.53x**）、100件でも1.55x。1呼び出しのJSヒープフットプリントも 7.17MB → 4.58MB に削減
 
 ### Changed
 
 - **SQLite クライアントのパススルークラスを解消**: `SqliteClient` が `OffscreenGateway` の overload 全面を1行委譲で再掲するだけの浅いラッパーだったため、alias に畳んだ。op 追加時の overload 二重所有が解消（PBI 2026-09-20-15）。挙動変更なし
+- **CI の wasm 等価性ゲートを tag-cooccur に拡張**: 新鮮リビルド対コミット済みバイナリのパリティ検証、`src/` と `public/` のバイナリ一致比較、glue / d.ts の陳腐化検知（`git diff --exit-code`）、Cargo キャッシュキーへの tag-cooccur Cargo.lock 追加。Rust ソース変更にコンパイル済み出力の再コミットが伴わないままリリースされる経路を遮断
+
+### Fixed
+
+- **内蔵AIの local_only / auto モードでカスタムプロンプトと利用統計が無視されていた**: ローカル経路の `LocalAIService` が `AISummaryOptions`（カスタムプロンプト・タグ要約モード・traceId）を丸ごと無視し、利用統計も記録していなかった。要約生成を `BuiltInAiProvider` strategy 経由に委譲してリモートスロット経路と同一の契約に統一（PBI 2026-09-20-12）。あわせて provider 側の二重 sanitize を削除し、オフデバイスのプロンプトインジェクション検査はクライアントの `builtin-input` プロファイルに1本化
+- **プロンプトインジェクション検出が、置換後の文字列変異により後続の注入フレーズを取りこぼすことがあった**: `sanitizePromptContent` の高リスクパターンループ（21パターン）が `replaceAll` で文字列を再代入しながら旧 `lastIndex` で次のマッチを走める実装のため、`[FILTERED]`（10文字）より長いマッチの直後に続く注入フレーズが検出・除去されないことがあった。スキャンと置換を分離（マッチ範囲の収集→1パス適用）し、同一パターンの連続マッチを確実に除去
+- **promptSanitizer の正規表現再構築で multiline フラグが脱落していた**: `new RegExp(pattern.source, 'gi')` の再構築でパターン定義の `m`（multiline）フラグが落ち、複数行テキストでの行頭アンカー（`^`）が2行目以降まったく効かず検出漏れ。`pattern.flags` を保持するよう修正。既存テスト「同一インジェクションの全件フィルタリング」は `replaceAll` の副作用（同一文字列の一括置換）で偶然パスしていたことが判明
+- **promptSanitizer にマッチ件数の fail-open 上限を導入**: 1,000件を超えるマッチで検出を打ち切り、超過分は保持（内容は落とさない）。マッチ数に比例した全文字列コピーによる最悪ケースのレイテンシ不安定を解消
+
+### Refactored
+
+- **promptSanitizer の制御文字除去を1文字ずつのループから regex 1パスに置換**: 出力・警告は旧実装と bit 等価（`DANGEROUS_CHARS` テーブル12種と同一集合）
+
+### Tested
+
+- **WASM メモリプローブを追加**: `bench/wasm-memory-probe.ts` — 各クレートの TS vs WASM について、GC後フットプリント/GC前ピーク/RSS増分を3ラウンド中央値で計測。textrank と sentence-dedup は1呼び出しのJSヒープフットプリントが計測不能レベルに削減、tag-cooccur は 7.17MB → 4.58MB、pii-sanitizer は差なし（利得は速度のみ）
+- **WASM 移植候補6件の採用判定を記録**: prompt-scan は転送シェア1〜2%と計算律速だが絶対値がsub-ms+パリティリスク最大のため不採用（上限化はTSハードニングとして実施）、エクスポートJSON の serde 化はスパイク実測で serde 往復が V8 ネイティブ JSON の4〜5倍のため不採用、sentence-dedup の本番配線は唯一の呼び出し元がコンテンツスクリプト専用経路（page CSP で WASM 初期化を保証できない）ため保留。判断根拠は PBI 台帳（`pbi/00-INDEX.md`）に記録
 
 ## [6.9.12] - 2026-09-20
 
