@@ -32,6 +32,16 @@ PBI-19（プロンプトスキャンのWASM移植）を STEP 0 プローブで�
 
 - 2026-09-21-01-fix-prompt-sanitizer-hardening.md（✅ 実装完了・コミット c999b8ed — ①置換中イテレーションのマッチ取りこぼし（RED実証→範囲収集1パス適用で修正）②マッチ件数 fail-open 上限1,000件 ③制御文字ループの regex 化（bit等価）④**追加発見**: `new RegExp(source, 'gi')` 再構築で `m` フラグが脱落し複数行の `^` アンカーが無効だったバグを修正（pattern.flags 保持）。promptSanitizer 系 139 tests・validate 12,712 green。GitHub PR レビューが残）
 
+### 2026-09-21 arch-delivery-loop 0921b（差分） — ⬜ 未着手 5件 RICE順: 26 → 27 → 28 → 29 → 30
+
+ラウンド2完了直後の差分診断（前ラウンド新コード + PBI-18 宣言済み follow-up + R4 トリガー再評価）。5候補を RICE 採点して PBI 化。全5件がファイル非重複のため1バッチ並列実装。台帳送りは新規ゼロ（P3/P4 トリガー不発・R4 は 28 でクローズ）。台帳は [2026-09-21-00-backlog-archloop-0921b.md](2026-09-21-00-backlog-archloop-0921b.md)。HTML レポート: `$TMPDIR/architecture-review-0921b.html`。
+
+- [2026-09-21-26-refactor-manifest-adoption-completion.md](2026-09-21-26-refactor-manifest-adoption-completion.md)（⬜ 未着手・🟡中・2pt・🔧refactor・副作用🟢なし: manifest 採用完了 — test:wasm chain・ci cache/step/parity 2行・CSP prose・CONTEXT.md を crates.json 宇宙へ。RICE 32・順位1）
+- [2026-09-21-27-refactor-wasm-success-mock-migration.md](2026-09-21-27-refactor-wasm-success-mock-migration.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: wasm-success mock 残り2箇所を createNodeWasmInit へ+陳腐 doc 2行。RICE 16・順位2）
+- [2026-09-21-28-refactor-privacy-predecision-pending-builder.md](2026-09-21-28-refactor-privacy-predecision-pending-builder.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: privacy bypass を pre-decision 化（fetch スキップ byte 等価保持）+ pending builder を pendingStorage へ抽出（R4 クロージャ）。RICE 10・順位3）
+- [2026-09-21-29-refactor-opfs-search-input-union.md](2026-09-21-29-refactor-opfs-search-input-union.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: RunOpfsSearchArgs.searchInput を判別共用体に。RICE 6・順位4）
+- [2026-09-21-30-refactor-extract-apply-pair-retirement.md](2026-09-21-30-refactor-extract-apply-pair-retirement.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: extract/apply ペア残余の解消 — interface narrow+config 既定の1解決点化。RICE 4.8・順位5）
+
 ### 2026-09-21 arch-delivery-loop 0921 — ✅ 9件完了（17-25 アーカイブ済み）RICE順: 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25
 
 holistic-0921 + closer 完了後の第2回 arch-delivery-loop。3クラスタ診断（WASM / 永続化 / 録画パイプライン+コンテンツ抽出）→ 12候補 → RICE 採点で9 PBI 化 + 台帳送り3件（P3/P4/R4）。バッチA（17/18/19/20 並列）→ バッチB（21/22/23/25 並列）→ バッチC（24・wasm-pack 再構築で直列）。20 は実装中に fts 既定 50 が background 専有と判明し planner seam 側へ移植（DEFAULT_SEARCH_LIMIT）。台帳は [2026-09-21-00-backlog-archloop-0921.md](2026-09-21-00-backlog-archloop-0921.md)。HTML レポート: `$TMPDIR/architecture-review-1789987425.html`。
@@ -122,6 +132,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 ### 将来候補の統合台帳（live）
 
+- [2026-09-21-00-backlog-archloop-0921b.md](2026-09-21-00-backlog-archloop-0921b.md) — arch-delivery-loop 0921b（差分）の台帳（5候補の RICE 表・R4 再評価・なぜなぜ要約）
 - [2026-09-21-00-backlog-archloop-0921.md](2026-09-21-00-backlog-archloop-0921.md) — arch-delivery-loop 0921 の台帳（12候補の RICE 表・バッチ計画・台帳送り3件・なぜなぜ要約）
 - [2026-09-21-00-backlog-holistic-0921.md](2026-09-21-00-backlog-holistic-0921.md) — 大局的コード改善 0921 の台帳（15候補の RICE 表・実行順の逸脱理由・バッチ計画・台帳送り2件・なぜなぜ要約）
 - [2026-09-18-00-backlog-archloop-0918.md](2026-09-18-00-backlog-archloop-0918.md) — arch-delivery-loop 0918 の台帳（3候補の RICE 表・実行順・バッチ計画・5 Whys）
