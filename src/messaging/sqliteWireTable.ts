@@ -330,9 +330,6 @@ export type SqliteWireDescriptor = (typeof SQLITE_WIRE_TABLE)[number];
 export type SqliteWireOp = SqliteWireDescriptor['op'];
 export type SqliteWireMessageType = SqliteWireDescriptor['messageType'];
 
-/** Gateway client value a descriptor decodes to. */
-export type DescriptorGateway<D> = D extends { decodeGateway: (...args: never[]) => infer G } ? G : never;
-
 /** Dashboard public value a descriptor decodes to. */
 export type DescriptorService<D> = D extends {
   dashboard: { serviceDecode: (...args: never[]) => infer S } | null;
