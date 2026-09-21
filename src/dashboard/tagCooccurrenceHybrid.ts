@@ -42,49 +42,15 @@ import {
 import { errorMessage } from '../utils/errorUtils.js';
 import { addLog } from '../utils/logger/core.js';
 import { LogType } from '../utils/logger/types.js';
+import { createHybridProbe } from '../utils/wasmHybridRuntime.js';
 
-let wasmAvailable: boolean | null = null;
-
-/**
- * Burst guard for the probe-failure warning: while the probe keeps failing,
- * the warn + addLog pair is emitted once per burst (first failure only). A
- * success clears it so a later, separate burst logs again.
- */
-let probeFailureLogged = false;
-
-/**
- * Probes WASM availability. Success is cached permanently per context
- * lifetime (mirrors initTagCooccurWasm's own singleton-promise caching).
- * Failure is NOT cached: the flag stays `null` so the next call re-probes
- * (the lower initExtensionWasm layer already does reset-on-failure and
- * dedupes concurrent inits, so a transient fetch/CSP/startup failure
- * recovers instead of pinning every later call to the TS path).
- *
- * Probe contract for the future shared runtime (PBI 2026-09-20-13): when
- * this probe is absorbed into the shared hybrid runtime, preserve these
- * semantics — success cached, failure re-probed on the next call, probe
- * log at most once per failure burst.
- */
-async function isWasmAvailable(): Promise<boolean> {
-    if (wasmAvailable !== null) {
-        return wasmAvailable;
-    }
-    try {
-        await initTagCooccurWasm();
-        wasmAvailable = true;
-        probeFailureLogged = false;
-    } catch (error: unknown) {
-        if (!probeFailureLogged) {
-            probeFailureLogged = true;
-            const message = errorMessage(error);
-            console.warn('Tag-cooccur WASM module unavailable, falling back to TS:', message);
-            addLog(LogType.WARN, 'Tag-cooccur WASM module unavailable, falling back to TS', {
-                error: message,
-            });
-        }
-    }
-    return wasmAvailable === true;
-}
+// Probe contract (success cached permanently, failure re-probed on the next
+// call, probe log at most once per failure burst) lives in the shared
+// runtime — this is the 4th hybrid adopting it.
+const wasmProbe = createHybridProbe(
+    initTagCooccurWasm,
+    'Tag-cooccur WASM module unavailable, falling back to TS'
+);
 
 /**
  * Below this record count the TS path is competitive or faster on the
@@ -110,7 +76,7 @@ export async function computeTagCooccurrenceHybrid(
     if (entries.length === 0) {
         return { nodes: [], edges: [] };
     }
-    if (entries.length < MIN_WASM_ENTRIES || !(await isWasmAvailable())) {
+    if (entries.length < MIN_WASM_ENTRIES || !(await wasmProbe.isAvailable())) {
         return computeTagCooccurrence(entries);
     }
     try {
@@ -138,7 +104,7 @@ export async function narrowEntriesToTopTagsHybrid<T extends { tags?: string | n
     if (!Number.isInteger(limit) || limit < 0) {
         return narrowEntriesToTopTags(entries, limit);
     }
-    if (entries.length < MIN_WASM_ENTRIES || !(await isWasmAvailable())) {
+    if (entries.length < MIN_WASM_ENTRIES || !(await wasmProbe.isAvailable())) {
         return narrowEntriesToTopTags(entries, limit);
     }
     try {

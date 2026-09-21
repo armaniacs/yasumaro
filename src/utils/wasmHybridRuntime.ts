@@ -6,10 +6,9 @@
  * so a 4th core only wires its call plus its per-core policy.
  *
  * Probe contract (adopted from src/dashboard/tagCooccurrenceHybrid.ts, the
- * 4th hybrid and first implementation of this contract — it keeps its own
- * copy until it is migrated): success is cached permanently per probe
- * instance; failure is NOT cached, so the next call re-probes (the lower
- * initExtensionWasm layer already dedupes concurrent inits and resets on
+ * 4th hybrid — now migrated onto this runtime): success is cached permanently
+ * per probe instance; failure is NOT cached, so the next call re-probes (the
+ * lower initExtensionWasm layer already dedupes concurrent inits and resets on
  * failure, so a transient fetch/CSP/startup failure recovers instead of
  * pinning every later call to the TS path); the probe-failure warn + addLog
  * pair is emitted at most once per failure burst, and a success clears the
