@@ -3,6 +3,7 @@ import type { RecordingCacheInstance } from './recordingCache.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logDebug, logError } from '../utils/logger/api.js';
 import { hashUrl } from '../utils/urlHash.js';
+import { normalizeUrlSafe } from '../utils/urlUtils.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
@@ -51,23 +52,10 @@ export class HeaderDetector {
 
   /**
    * URL正規化（キャッシュキーの一貫性のため）
-   * - 末尾のスラッシュを削除
-   * - フラグメント（#...）を削除
-   *
-   * 状態を持たない純粋関数のため static のまま維持。
+   * SSOT の normalizeUrlSafe への委譲。状態を持たない純粋関数のため static のまま維持。
    */
   static normalizeUrl(url: string): string {
-    try {
-      const parsed = new URL(url);
-      parsed.hash = '';
-      let normalized = parsed.toString();
-      if (normalized.endsWith('/') && parsed.pathname !== '/') {
-        normalized = normalized.slice(0, -1);
-      }
-      return normalized;
-    } catch {
-      return url;
-    }
+    return normalizeUrlSafe(url);
   }
 
   /**
