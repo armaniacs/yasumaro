@@ -40,6 +40,75 @@ export function sanitizeBatchAndJoin(inputs, separator) {
 }
 
 /**
+ * (b) Serde-bytes batch: JS pre-encodes entries to `Uint8Array`s and the
+ * array crosses via `serde_wasm_bindgen` (`Vec<Vec<u8>>` both directions).
+ * Keeps the serde reflection protocol but drops the per-string glue
+ * encode/decode, isolating how much of the baseline cost is reflection vs
+ * UTF-8 transcoding.
+ * @param {any} inputs
+ * @returns {any}
+ */
+export function sanitizeBatchBytes(inputs) {
+    const ret = wasm.sanitizeBatchBytes(inputs);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * (a) Framed-bytes batch: ONE bulk `Uint8Array` in (`&[u8]` → single
+ * malloc+memcpy, no externref, no serde reflection) and one out. Replaces
+ * 2N per-element wasm mallocs + N externref allocs + the serde iterator
+ * protocol with 2 bulk copies; per-record UTF-8 encode/decode necessarily
+ * remains (it is inherent to crossing into WASM at all).
+ * @param {Uint8Array} data
+ * @returns {Uint8Array}
+ */
+export function sanitizeBatchFramed(data) {
+    const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.sanitizeBatchFramed(ptr0, len0);
+    if (ret[3]) {
+        throw takeFromExternrefTable0(ret[2]);
+    }
+    var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v2;
+}
+
+/**
+ * (a2) Framed-bytes batch+join: framed input like (a), single `String` out.
+ * Mirrors `entries.map(sanitizeForObsidian).join(separator)` with one bulk
+ * copy in and one string decode out.
+ * @param {Uint8Array} data
+ * @param {string} separator
+ * @returns {string}
+ */
+export function sanitizeBatchFramedAndJoin(data, separator) {
+    let deferred4_0;
+    let deferred4_1;
+    try {
+        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(separator, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.sanitizeBatchFramedAndJoin(ptr0, len0, ptr1, len1);
+        var ptr3 = ret[0];
+        var len3 = ret[1];
+        if (ret[3]) {
+            ptr3 = 0; len3 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        deferred4_0 = ptr3;
+        deferred4_1 = len3;
+        return getStringFromWasm0(ptr3, len3);
+    } finally {
+        wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    }
+}
+
+/**
  * Sanitizes one string exactly like `sanitizeForObsidian`.
  * @param {string} input
  * @returns {string}
@@ -63,6 +132,10 @@ function __wbg_get_imports() {
         __proto__: null,
         __wbg_Error_67e7344beaa85059: function(arg0, arg1) {
             const ret = Error(getStringFromWasm0(arg0, arg1));
+            return ret;
+        },
+        __wbg_Number_c54e7112a3fa7e3e: function(arg0) {
+            const ret = Number(arg0);
             return ret;
         },
         __wbg_String_8564e559799eccda: function(arg0, arg1) {
@@ -154,6 +227,10 @@ function __wbg_get_imports() {
             const ret = Array.isArray(arg0);
             return ret;
         },
+        __wbg_isSafeInteger_8f51c743827d1ec5: function(arg0) {
+            const ret = Number.isSafeInteger(arg0);
+            return ret;
+        },
         __wbg_iterator_22ddeb808cf55a6f: function() {
             const ret = Symbol.iterator;
             return ret;
@@ -192,7 +269,12 @@ function __wbg_get_imports() {
             const ret = arg0.value;
             return ret;
         },
-        __wbindgen_generic_0000000000000001: function(arg0, arg1) {
+        __wbindgen_generic_0000000000000001: function(arg0) {
+            // Cast intrinsic for `F64 -> Externref`.
+            const ret = arg0;
+            return ret;
+        },
+        __wbindgen_generic_0000000000000002: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
             return ret;
@@ -320,6 +402,13 @@ function handleError(f, args) {
 
 function isLikeNone(x) {
     return x === undefined || x === null;
+}
+
+function passArray8ToWasm0(arg, malloc) {
+    const ptr = malloc(arg.length * 1, 1) >>> 0;
+    getUint8ArrayMemory0().set(arg, ptr / 1);
+    WASM_VECTOR_LEN = arg.length;
+    return ptr;
 }
 
 function passStringToWasm0(arg, malloc, realloc) {
