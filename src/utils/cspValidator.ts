@@ -10,6 +10,7 @@
 import { ErrorCode } from './logger/types.js';
 import { logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
+import { ALL_LIST_SOURCES } from './listSources.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
 import {
@@ -49,11 +50,18 @@ const PROVIDER_TO_DOMAIN: Record<string, string> = Object.fromEntries(
 
 /**
  * 除外ドメイン（CSPから削除したが、optionalで許可できる）
+ *
+ * Derived from the LIST_SOURCES SSOT (PBI: Checking Team 2026-09-22 —
+ * Maintainability Medium). The two GitHub/GitLab hosts used to be
+ * hand-duplicated here; deriving keeps the optional set in sync when a
+ * list source is added/removed (the 4 remaining hosts below were already
+ * hand-written and are folded into the same derivation via
+ * FILTER_LIST_SOURCES + TRANCO_METADATA_SOURCE).
  */
-const OPTIONAL_DOMAINS = [
-  'raw.githubusercontent.com', // GitHub Raw Content (uBlock Import)
-  'gitlab.com' // GitLab (uBlock Import)
-];
+const LIST_SOURCE_HOSTS: ReadonlySet<string> = new Set(ALL_LIST_SOURCES.map((source) => source.host));
+const OPTIONAL_DOMAINS = ALL_LIST_SOURCES
+  .filter((source) => source.host === 'raw.githubusercontent.com' || source.host === 'gitlab.com')
+  .map((source) => source.host);
 
 /**
  * キュー内のリクエスト情報
@@ -221,11 +229,9 @@ export class CSPValidator {
         return true;
       }
 
-      // 非AIドメイン（Tranco, uBlock）
-      if (domain === 'tranco-list.eu' ||
-          domain === 'easylist.to' ||
-          domain === 'pgl.yoyo.org' ||
-          domain === 'nsfw.oisd.nl') {
+      // 非AIドメイン（Tranco, uBlock）— LIST_SOURCES SSOT から派生
+      // （Checking Team 2026-09-22: Maintainability Medium — 旧4ドメイン直書きを廃止）
+      if (LIST_SOURCE_HOSTS.has(domain)) {
         return true;
       }
 
