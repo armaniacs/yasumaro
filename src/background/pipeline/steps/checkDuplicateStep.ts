@@ -6,6 +6,7 @@
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { getSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../../utils/storage/savedUrlRepository.js';
+import { decideDuplicate } from '../recordingDecision.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
 const defaultUrlStore = { getSavedUrlsWithTimestamps };
@@ -25,30 +26,24 @@ export const checkDuplicateStep: PipelineStepFunction = async (
   const urlMap = await urlStore.getSavedUrlsWithTimestamps();
 
   // Skip check if flag is set
-  if (!skipDuplicateCheck) {
-    const savedTimestamp = urlMap.get(url);
-    if (savedTimestamp) {
-      const savedDate = new Date(savedTimestamp);
-      const today = new Date();
-
-      // UTC-based same day check
-      if (
-        savedDate.getUTCFullYear() === today.getUTCFullYear() &&
-        savedDate.getUTCMonth() === today.getUTCMonth() &&
-        savedDate.getUTCDate() === today.getUTCDate()
-      ) {
-        addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', {
-          url,
-          savedDate: savedDate.toUTCString(),
-          traceId: context.traceId
-        });
-        throw new DuplicateError('same_day');
-      }
+  // PBI 2026-09-19-08: verdict は recordingDecision.decideDuplicate に委譲
+  const verdict = decideDuplicate({
+    skipCheck: skipDuplicateCheck ?? false,
+    savedTimestamp: urlMap.get(url),
+    now: Date.now(),
+    urlMapSize: urlMap.size,
+    maxSize: MAX_URL_SET_SIZE,
+  });
+  if (!verdict.allow) {
+    if (verdict.error === 'same_day') {
+      const savedDate = new Date(urlMap.get(url)!);
+      addLog(LogType.DEBUG, 'Duplicate URL skipped (same day)', {
+        url,
+        savedDate: savedDate.toUTCString(),
+        traceId: context.traceId
+      });
+      throw new DuplicateError('same_day');
     }
-  }
-
-  // Check URL set size limit
-  if (urlMap.size >= MAX_URL_SET_SIZE) {
     addLog(LogType.ERROR, 'URL set size limit exceeded', {
       current: urlMap.size,
       max: MAX_URL_SET_SIZE,
