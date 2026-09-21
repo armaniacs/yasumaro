@@ -1,6 +1,13 @@
 // @layer 1 — ProviderCatalog deep module (single seam for provider wiring)
 // All per-provider data, strategy creation, and SSRF guard live here.
 // Adding a provider = one row in PROVIDER_CATALOG + i18n keys.
+//
+// View-specific fields (cssClass / defaultOpen / extraFields[].a11y) are
+// INTENTIONALLY part of this catalog (PBI 2026-09-21-14): they key off the
+// provider id, which is this table's domain, and a separate view-policy map
+// would re-create a parallel id list. Consequence agreed with checking-team
+// (2026-09-22, System Architect Medium): view-only changes will show up as
+// catalog diffs — revisit only if the catalog grows non-provider concerns.
 
 import { StorageKeys } from '../../utils/storage/types.js';
 import type { ProviderId, StorageKey } from '../../utils/storage/types.js';
