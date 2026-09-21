@@ -176,63 +176,26 @@ describe('extractAndCommit: deep call equals the pair (field-equivalence)', () =
         expect(sent.payload.content).toBeDefined();
     });
 
-    it('visitReporter pair fallback still commits when no deep call is injected', async () => {
+    it('getContentHandler commits via extractAndCommit alone', () => {
         document.body.innerHTML = DOM;
         const kernel = makeKernel();
-        const sender = { sendMessageWithRetry: async () => ({ success: true }) };
-        let applied = 0;
-        const reporter = new VisitReporter({
-            pageState: kernel.pageState,
-            extractor: () => kernel.extractPageContent(),
-            applyResult: (r) => { applied += 1; kernel.applyExtractResultToPageState(r); },
-            sender,
-        });
-        await reporter.report();
-        expect(applied).toBe(1);
-        expect(kernel.pageState.lastByteStats.pageBytes).toBeGreaterThan(0);
-    });
-
-    it('getContentHandler prefers extractAndCommit and skips the pair', () => {
-        document.body.innerHTML = DOM;
-        const kernel = makeKernel();
-        let pairCalls = 0;
         const sendResponse = (_r?: unknown): void => undefined;
         const calls: unknown[] = [];
+        const extractAndCommit = vi.fn((c?: Parameters<typeof kernel.extractAndCommit>[0]) => kernel.extractAndCommit(c));
         handleGetContentMessage(
             { type: 'GET_CONTENT' },
             { id: 'test-extension-id' },
             (r?: unknown) => { calls.push(r); },
             {
-                extractAndCommit: (c) => kernel.extractAndCommit(c),
-                extractPageContent: () => { pairCalls += 1; throw new Error('pair must not be used'); },
-                applyExtractResultToPageState: () => { pairCalls += 1; },
+                extractAndCommit,
                 pageState: kernel.pageState,
                 runtimeId: 'test-extension-id',
             },
         );
-        expect(pairCalls).toBe(0);
+        expect(extractAndCommit).toHaveBeenCalledTimes(1);
         expect(calls).toHaveLength(1);
         expect(kernel.pageState.lastByteStats.pageBytes).toBeGreaterThan(0);
         expect(sendResponse).toBeDefined();
-    });
-
-    it('getContentHandler pair fallback still works without the deep call', () => {
-        document.body.innerHTML = DOM;
-        const kernel = makeKernel();
-        const calls: unknown[] = [];
-        handleGetContentMessage(
-            { type: 'GET_CONTENT' },
-            { id: 'test-extension-id' },
-            (r?: unknown) => { calls.push(r); },
-            {
-                extractPageContent: (c) => kernel.extractPageContent(c),
-                applyExtractResultToPageState: (r) => kernel.applyExtractResultToPageState(r),
-                pageState: kernel.pageState,
-                runtimeId: 'test-extension-id',
-            },
-        );
-        expect(calls).toHaveLength(1);
-        expect(kernel.pageState.lastByteStats.pageBytes).toBeGreaterThan(0);
     });
 });
 

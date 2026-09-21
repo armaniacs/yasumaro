@@ -111,14 +111,12 @@ export interface MessageSender {
 export interface VisitReporterDeps {
     pageState: PageState;
     /**
-     * PBI 2026-09-21-25: deep single call (preferred). When present the
-     * reporter delegates extract+commit atomically and holds no sequencing
-     * knowledge. The pair below remains as a compatibility fallback for
-     * callers/tests that still inject it.
+     * PBI 2026-09-21-30: the ONLY extraction route. The reporter delegates
+     * extract+commit atomically and holds no sequencing knowledge — the
+     * extract/apply pair fallback was retired, so there is no second path
+     * to choose and no commit to forget.
      */
-    extractAndCommit?: (config?: CleansingConfig) => ExtractResult;
-    extractor?: () => ExtractResult;
-    applyResult?: (r: ExtractResult) => void;
+    extractAndCommit: (config?: CleansingConfig) => ExtractResult;
     sender: MessageSender;
     /** Injected for tests; defaults to real privacyDialog */
     confirmDialog?: (statusCode: string, reasonLabel: string) => Promise<boolean>;
@@ -170,15 +168,9 @@ export class VisitReporter {
         // reads via performance.getEntriesByName. No-op when Performance is
         // unavailable (some test doubles).
         benchMark('ow-extract-start');
-        // PBI 2026-09-21-25: prefer the deep call; the pair is a fallback.
-        const extractAndCommit = this.deps.extractAndCommit;
-        const extractResult =
-            extractAndCommit !== undefined
-                ? extractAndCommit()
-                : this.deps.extractor!();
-        if (extractAndCommit === undefined) {
-            this.deps.applyResult!(extractResult);
-        }
+        // PBI 2026-09-21-30: single route — extract+commit is atomic inside
+        // the kernel, so no fallback branch and no sequencing knowledge here.
+        const extractResult = this.deps.extractAndCommit();
         const content = extractResult.content;
         benchMark('ow-send-ready');
 

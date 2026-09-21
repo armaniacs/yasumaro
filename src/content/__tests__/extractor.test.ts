@@ -102,6 +102,7 @@ import {
     startPeriodicCheck,
     stopPeriodicCheck,
     init,
+    kernel,
 } from '../extractor.js';
 import { getPageStateForTesting } from './helpers/contentTestkit.js';
 import { showPrivacyConfirmDialog } from '../privacyDialog.js';
@@ -772,8 +773,7 @@ describe('message handler - chrome.runtime.onMessage registration', () => {
             {},
             sendResponse,
             {
-                extractPageContent,
-                applyExtractResultToPageState,
+                extractAndCommit: (config) => kernel.extractAndCommit(config),
                 pageState: getPageStateForTesting(),
                 runtimeId: undefined,
             },
@@ -790,8 +790,7 @@ describe('message handler - chrome.runtime.onMessage registration', () => {
             {},
             sendResponse,
             {
-                extractPageContent,
-                applyExtractResultToPageState,
+                extractAndCommit: (config) => kernel.extractAndCommit(config),
                 pageState: getPageStateForTesting(),
                 runtimeId: undefined,
             },
@@ -1636,8 +1635,7 @@ describe('message handler - GET_CONTENT message type', () => {
             {},
             sendResponse,
             {
-                extractPageContent,
-                applyExtractResultToPageState,
+                extractAndCommit: (config) => kernel.extractAndCommit(config),
                 pageState: getPageStateForTesting(),
                 runtimeId: undefined,
             },
@@ -1654,8 +1652,7 @@ describe('message handler - GET_CONTENT message type', () => {
             {},
             sendResponse,
             {
-                extractPageContent,
-                applyExtractResultToPageState,
+                extractAndCommit: (config) => kernel.extractAndCommit(config),
                 pageState: getPageStateForTesting(),
                 runtimeId: undefined,
             },
@@ -2169,8 +2166,7 @@ describe('message handler - GET_CONTENT sender validation', () => {
 
     function depsWith(runtimeId: string | undefined): GetContentHandlerDeps {
         return {
-            extractPageContent,
-            applyExtractResultToPageState,
+            extractAndCommit: (config) => kernel.extractAndCommit(config),
             pageState: getPageStateForTesting(),
             runtimeId,
         };

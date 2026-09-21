@@ -59,8 +59,10 @@ const kernel = new ContentKernel(storagePort, domainPolicyPort, () => Date.now()
 /**
  * コンテンツを抽出する共通関数（純粋関数）
  * PageStateを変更しない（PBI-28）。呼び出し元が戻り値を使って統計を更新する。
+ * PBI 2026-09-21-30: 既定引数なし — 省略時 config は kernel 内の単一解決点
+ * (ContentKernel.extractPageContent) で pageState から解決される。
  */
-export function extractPageContent(config: CleansingConfig = pageState.cleansingConfig): ExtractResult {
+export function extractPageContent(config?: CleansingConfig): ExtractResult {
     return kernel.extractPageContent(config);
 }
 
@@ -154,11 +156,8 @@ export async function init(): Promise<void> {
  */
 export function buildGetContentDeps(): GetContentHandlerDeps {
     return {
-        // Deep call preferred (PBI 2026-09-21-25); the pair fields below stay
-        // for fallback consumers that only own the extract/apply split.
+        // PBI 2026-09-21-30: deep call only — the pair fallback was retired.
         extractAndCommit: (config) => kernel.extractAndCommit(config),
-        extractPageContent: (config) => kernel.extractPageContent(config),
-        applyExtractResultToPageState: (result) => kernel.applyExtractResultToPageState(result),
         pageState,
         runtimeId: typeof globalThis.chrome !== 'undefined' ? chrome.runtime?.id : undefined,
     };
