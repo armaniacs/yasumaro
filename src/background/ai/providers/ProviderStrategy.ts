@@ -15,6 +15,7 @@ import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
 import { addLog } from '../../../utils/logger/core.js';
+import { logDebug } from '../../../utils/logger/api.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
 
@@ -393,6 +394,22 @@ export abstract class AIProviderStrategy {
      */
     protected async getAllowedUrlsForRequests(): Promise<Set<string>> {
         return getAllowedUrls();
+    }
+
+    /**
+     * Constructor ritual SSOT (PBI 2026-09-21-10): stored>0 wins,
+     * otherwise local=120000 / cloud=30000.
+     */
+    protected resolveTimeoutMs(storedTimeoutMs: number, isLocal: boolean): number {
+        return storedTimeoutMs > 0 ? storedTimeoutMs : isLocal ? 120000 : 30000;
+    }
+
+    /**
+     * Constructor ritual SSOT (PBI 2026-09-21-10): diagnostics only —
+     * the source name is logged, never key material.
+     */
+    protected logApiKeySource(source: string, providerName: string): void {
+        void logDebug(`API key resolved from: ${source}`, { provider: providerName });
     }
 
     /**
