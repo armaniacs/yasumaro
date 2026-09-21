@@ -35,12 +35,12 @@ Scenario: エンティティ化の順序が保存される
 
 ## 受け入れ基準
 
-- [ ] TS プローブで `g`/`i` フラグ正規表現の `lastIndex` 系挙動と適用順を先に固定する（予測で書かない）
-- [ ] 新クレート（仮称 `md-sanitize`）。エントリ配列の一括投入→WASM 内で全件変換→`---` 結合まで行う集計エントリポイントと、単発変換エントリポイントの2口設計
-- [ ] ハイブリッドラッパー: 例外時 TS フォールバック＋サイズ閾値ルーティング（閾値はベンチ実測）
-- [ ] パリティテスト（Vitest）: TS vs WASM 等価性を攻撃パターン込みで検証
-- [ ] ベンチで TS vs WASM を実測し正直に報告する
-- [ ] ビルド配線3箇所と CI 同等性ゲートへの追加、`npm run validate` green
+- [x] TS プローブで `g`/`i` フラグ正規表現の `lastIndex` 系挙動と適用順を先に固定する（予測で書かない）
+- [x] 新クレート（仮称 `md-sanitize`）。エントリ配列の一括投入→WASM 内で全件変換→`---` 結合まで行う集計エントリポイントと、単発変換エントリポイントの2口設計
+- [x] ハイブリッドラッパー: 例外時 TS フォールバック＋サイズ閾値ルーティング（閾値はベンチ実測）
+- [x] パリティテスト（Vitest）: TS vs WASM 等価性を攻撃パターン込みで検証
+- [x] ベンチで TS vs WASM を実測し正直に報告する
+- [x] ビルド配線3箇所と CI 同等性ゲートへの追加、`npm run validate` green
 
 ## テスト戦略（t_wadaスタイル・Outside-In）
 
@@ -71,3 +71,5 @@ Scenario: エンティティ化の順序が保存される
 
 - 依存関係: なし。実行場所はダッシュボード拡張ページ（CSP 済み）
 - 遵守すべき事項: `sanitizeForObsidian` の適用順（Markdown リンク→wikilink→HTML エンティティ）は意味論であり変更不可
+
+> DoD 補足（2026-09-20）: 受け入れ基準 6/6 チェック（プローブ→クレート2口→ハイブリッド→パリティ→ベンチ→配線+CI+validate 12,761 green）。ただし BDD の「集計時間が短縮する」シナリオは**未達**: 実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x、batch 0.57x〜0.64x — メモリ帯域律速、wasm-bindgen の UTF-8 コピーが支配的）のため、**dark-launch**（MIN_WASM_CHARS=1MB / MIN_WASM_TOTAL_CHARS=2MB で全本入力を TS 経路にルーティング、WASM は CI 同等性ゲートで保守）とした。高速化の再挑戦は [2026-09-20-23-perf-md-sanitize-transfer-optimization.md](2026-09-20-23-perf-md-sanitize-transfer-optimization.md) へ送り。同期呼び出し元（reviewSummaryGenerator・markdownFormatter）の配線は閾値解除後の別ステップ。
