@@ -14,14 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize 撤去・19 不採用・sentence-dedup 配線不採用）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。20 未着手）RICE順: 20
+### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize 撤去・19 不採用・sentence-dedup 配線不採用・20 不採用クローズ）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち）RICE順: 完了
 
 `/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。P2 候補の md-sanitize は実装・実測の結果不採用 → 撤去（アーカイブ履歴参照）。
 
 - [2026-09-20-17-feat-tag-cooccurrence-wasm.md](2026-09-20-17-feat-tag-cooccurrence-wasm.md)（🔶 実装完了・コミット f645865a / 395d0896 / 05e65cb5 — cargo test 16・parity 37・hybrid 20・validate 12,709 green。本番経路 10k×20 で 5.53x（46.3ms/256.4ms）・100×6 でも 1.55x。受け入れ基準 8/8 チェック。実機確認と PR レビューが残でアーカイブ保留。RICE 8.0・順位3）
 - [2026-09-20-21-feat-tag-cooccur-panel-wiring.md](2026-09-20-21-feat-tag-cooccur-panel-wiring.md)（🔶 実装完了・コミット 395d0896 — tagClusterPanel の2呼び出しをハイブリッドへ + public/wasm 配布 + publicAssets（STAGED解除）。パネル・ハイブリッド・パリティ 373 tests green。目視確認と PR レビューが残。RICE 16.0・順位1）
 - [2026-09-20-22-chore-tag-cooccur-ci-gate.md](2026-09-20-22-chore-tag-cooccur-ci-gate.md)（🔶 実装完了・コミット 05e65cb5 — CI 同等性ゲート（parity fresh/committed・src/public cmp・glue stale）に tag-cooccur 追加。red/green をローカル実測。PR レビューが残。RICE 12.0・順位2）
-- [2026-09-20-20-spike-export-serde-wasm.md](2026-09-20-20-spike-export-serde-wasm.md)（⬜ 未着手・🟢低・0.5週・🔬スパイク・副作用🟢なし: serde 計測スパイク。移植は約束しない。RICE 2.4・順位4同点）
+
+**WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x・未リリース）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。
 
 **sentence-dedup（2026-09-20 実装・0ed11095）の配線は不採用で確定（2026-09-21）**: 唯一の呼び出し元 `src/utils/contentExtractor/index.ts` がコンテンツスクリプト（`src/content/contentKernel.ts`）専用経路で実行されるため、ページ側 CSP で WASM 初期化を保証できず、配線しても実運用ではほぼ常に TS フォールバックになる。速度利得も 1.13〜1.28x と小さく、メモリ利得（フットプリント 0.22→0.00MB/call・実測）は dedup ステージの offscreen 移設（処理順の意味論が変わるアーキテクチャ変更）と引き換えになるため、現時点では採用しない。クレート・ハイブリッド・CI ゲート（src コピー）は STAGED のまま資産保持し、将来のパイプライン移設時に再評価する。
 
@@ -125,6 +126,12 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-21 PBI-20 serde スパイクの非反転クローズ — ✅ 1件クローズ（20 アーカイブ済み）
+
+スパイク試作（使い捨てクレート serde-spike、リポジトリ外隔離）で serde 往復コストを実測した結果、**WASM 経路は V8 ネイティブ JSON の4〜5倍遅い**（untyped 0.21x・typed compact 0.27x・bincode 0.32x・JsValue 経由 0.20x、round-trip 等価性は OK）。serde-wasm-bindgen の往復コスト（JsValue↔serde リフレクション+UTF-8 コピー）が支配的で、JSON.parse/stringify は V8 の最適化済みネイティブ経路のため勝ち目なし。**移植しないで確定クローズ**。エクスポート経路の改善は署名対象の設計変更（eval-2 で特定の HMAC pretty 再シリアライズ排除）へ委ねる。試作クレートは破棄、判定記録・実測表はアーカイブ済み PBI-20 内に保持。
+
+- 2026-09-20-20-spike-export-serde-wasm.md（✅ 完了（クローズ）— 判定型スパイクとして「移植しない」を確定記録）
 
 ### 2026-09-21 PBI-19 プロンプトスキャンWASM移植の不採用 — ✅ 1件クローズ（19 アーカイブ済み）
 
