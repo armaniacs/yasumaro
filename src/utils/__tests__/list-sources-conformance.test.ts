@@ -67,4 +67,17 @@ describe('filter-list sources conformance (PBI 2026-09-11-05)', () => {
     }
     void cspHosts;
   });
+
+  it('every ALL_LIST_SOURCES host passes CSPValidator.isUrlAllowed (SSOT drift pin)', () => {
+    // maintainability-guardian Medium: OPTIONAL_DOMAINS (2 hosts) + the 4
+    // hardcoded list-source hosts inside isUrlAllowed are hand-written
+    // copies of ALL_LIST_SOURCES (6 hosts). cspDomains/urlWhitelist derive
+    // from the SSOT, but this validator does not — a 7th source would stay
+    // green here while blocked at runtime. This pin fails the moment the
+    // two sets diverge.
+    CSPValidator.reset();
+    for (const source of ALL_LIST_SOURCES) {
+      expect(CSPValidator.isUrlAllowed(`https://${source.host}/list.txt`)).toBe(true);
+    }
+  });
 });
