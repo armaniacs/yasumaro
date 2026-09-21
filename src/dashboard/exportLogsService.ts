@@ -5,7 +5,7 @@
  */
 
 import { queryLogs, backupDb } from './dashboardSqliteService.js';
-import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
+import { sanitizeBatchHybrid } from '../utils/markdownSanitizerHybrid.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
 import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
 
@@ -56,7 +56,12 @@ export async function exportMarkdown(ids?: number[]): Promise<string> {
   const all = await queryAllData();
   const entries = ids ? all.filter(e => ids.includes(e.id)) : all;
 
-  return entries.map(entry => {
+  // Batch-sanitize all summaries in one hybrid call (single WASM crossing
+  // when the input routes there; TS map otherwise — output is identical
+  // either way, see markdownSanitizerHybrid.ts for the routing rationale).
+  const sanitizedSummaries = await sanitizeBatchHybrid(entries.map(e => e.summary || ''));
+
+  return entries.map((entry, idx) => {
     const date = new Date(entry.created_at).toLocaleDateString('en-CA', {
       year: 'numeric',
       month: '2-digit',
@@ -75,7 +80,7 @@ date: ${yamlQuote(date)}
 tags: ${yamlQuoteList(tags)}
 ---
 
-${sanitizeForObsidian(entry.summary || '')}
+${sanitizedSummaries[idx]}
 `;
   }).join('\n---\n');
 }

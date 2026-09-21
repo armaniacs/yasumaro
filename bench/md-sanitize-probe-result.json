@@ -1,0 +1,195 @@
+{
+  "node": "v26.7.0",
+  "date": "2026-09-20T23:41:50.405Z",
+  "quirks": [
+    {
+      "name": "plain-text-passthrough",
+      "input": "hello world",
+      "expected": "hello world",
+      "actual": "hello world",
+      "match": true
+    },
+    {
+      "name": "md-link-https",
+      "input": "[evil](https://malicious.com)",
+      "expected": "\\[evil\\]\\(https://malicious.com\\)",
+      "actual": "\\[evil\\]\\(https://malicious.com\\)",
+      "match": true
+    },
+    {
+      "name": "md-link-uppercase-scheme",
+      "input": "[A](HTTPS://example.com)",
+      "expected": "\\[A\\]\\(HTTPS://example.com\\)",
+      "actual": "\\[A\\]\\(HTTPS://example.com\\)",
+      "match": true
+    },
+    {
+      "name": "md-link-javascript-scheme",
+      "input": "[t](javascript:alert(1))",
+      "expected": "\\[t\\]\\(javascript:alert(1)\\)",
+      "actual": "\\[t\\]\\(javascript:alert(1\\))",
+      "match": false
+    },
+    {
+      "name": "md-link-image",
+      "input": "![alt](https://x/y.png)",
+      "expected": "!\\[alt\\]\\(https://x/y.png\\)",
+      "actual": "!\\[alt\\]\\(https://x/y.png\\)",
+      "match": true
+    },
+    {
+      "name": "md-link-no-url-parens",
+      "input": "[just brackets]",
+      "expected": "[just brackets]",
+      "actual": "[just brackets]",
+      "match": true
+    },
+    {
+      "name": "md-link-empty-text",
+      "input": "[](https://x.com)",
+      "expected": "\\[\\]\\(https://x.com\\)",
+      "actual": "\\[\\]\\(https://x.com\\)",
+      "match": true
+    },
+    {
+      "name": "wikilink",
+      "input": "[[page]]",
+      "expected": "\\[\\[page\\]\\]",
+      "actual": "\\[\\[page\\]\\]",
+      "match": true
+    },
+    {
+      "name": "wikilink-embed",
+      "input": "![[embed]]",
+      "expected": "!\\[\\[embed\\]\\]",
+      "actual": "!\\[\\[embed\\]\\]",
+      "match": true
+    },
+    {
+      "name": "entity-order",
+      "input": "&<>",
+      "expected": "&amp;&lt;&gt;",
+      "actual": "&amp;&lt;&gt;",
+      "match": true
+    },
+    {
+      "name": "entity-double-encode",
+      "input": "&lt;",
+      "expected": "&amp;lt;",
+      "actual": "&amp;lt;",
+      "match": true
+    },
+    {
+      "name": "entity-amp-in-link-url",
+      "input": "[a](https://x/?a=1&b=2)",
+      "expected": "\\[a\\]\\(https://x/?a=1&amp;b=2\\)",
+      "actual": "\\[a\\]\\(https://x/?a=1&amp;b=2\\)",
+      "match": true
+    },
+    {
+      "name": "link-inside-wikilink-order",
+      "input": "[[[a](https://x)]]",
+      "expected": null,
+      "actual": "\\[[[a\\]\\(https://x\\)]]",
+      "match": null
+    },
+    {
+      "name": "multiline-preserved",
+      "input": "line1 [a](https://x)\nline2 [[w]]\nline3 <b>&</b>",
+      "expected": null,
+      "actual": "line1 \\[a\\]\\(https://x\\)\nline2 \\[\\[w\\]\\]\nline3 &lt;b&gt;&amp;&lt;/b&gt;",
+      "match": null
+    },
+    {
+      "name": "stops-at-first-close-paren",
+      "input": "[a](b)c(d)",
+      "expected": "\\[a\\](b)c(d)",
+      "actual": "\\[a\\]\\(b\\)c(d)",
+      "match": false
+    },
+    {
+      "name": "nested-bracket",
+      "input": "[a[b](https://x)",
+      "expected": null,
+      "actual": "\\[a[b\\]\\(https://x\\)",
+      "match": null
+    },
+    {
+      "name": "empty-inner-wikilink",
+      "input": "[[]]",
+      "expected": "\\[\\[\\]\\]",
+      "actual": "\\[\\[\\]\\]",
+      "match": true
+    },
+    {
+      "name": "lone-surrogate",
+      "input": "a\ud800b",
+      "expected": null,
+      "actual": "a\ud800b",
+      "match": null
+    },
+    {
+      "name": "repeat-call-stable",
+      "input": "[a](https://x.com) [[w]] &",
+      "expected": "\\[a\\]\\(https://x.com\\) \\[\\[w\\]\\] &amp;",
+      "actual": "\\[a\\]\\(https://x.com\\) \\[\\[w\\]\\] &amp;",
+      "match": true
+    },
+    {
+      "name": "double-apply-not-idempotent",
+      "input": "[a](https://x.com) [[w]] &",
+      "expected": null,
+      "actual": "\\[a\\]\\(https://x.com\\) [[w]] &",
+      "match": null
+    }
+  ],
+  "quirkMismatches": [
+    {
+      "name": "md-link-javascript-scheme",
+      "input": "[t](javascript:alert(1))",
+      "expected": "\\[t\\]\\(javascript:alert(1)\\)",
+      "actual": "\\[t\\]\\(javascript:alert(1\\))",
+      "match": false
+    },
+    {
+      "name": "stops-at-first-close-paren",
+      "input": "[a](b)c(d)",
+      "expected": "\\[a\\](b)c(d)",
+      "actual": "\\[a\\]\\(b\\)c(d)",
+      "match": false
+    }
+  ],
+  "guards": [
+    {
+      "name": "empty-string",
+      "input": "",
+      "actual": ""
+    },
+    {
+      "name": "null",
+      "input": null,
+      "actual": null
+    },
+    {
+      "name": "undefined"
+    },
+    {
+      "name": "number",
+      "input": 123,
+      "actual": 123
+    }
+  ],
+  "wikilinkOnlyNoEntityEncode": "\\[\\[a\\]\\] & <b>",
+  "perf": {
+    "batch2000x512B_ms": {
+      "min": 4.957250000000016,
+      "p50": 5.0534999999999854,
+      "max": 5.1280419999999935
+    },
+    "single128KB_ms": {
+      "min": 0.5562500000000057,
+      "p50": 0.5971250000000055,
+      "max": 0.7402919999999824
+    }
+  }
+}
