@@ -312,4 +312,35 @@ describe('extractSentencesStep', () => {
       expect(result.extractedSentences).toBeUndefined();
     });
   });
+
+  describe('rerun self-reference guard (code-quality Domain Medium — fixed in Phase 5)', () => {
+    // The stage-split selector (selectExtractionInput) structurally excludes
+    // extractedSentences at extract time — that field is "the output about to
+    // be produced", so a rerun/retry with a previous output still on the
+    // context must NOT feed it back in (the old unified selector did).
+    // The retry input now comes from the remaining sources only.
+    it('rerun does not feed the previous output back as extraction input', async () => {
+      (getCompressionStats as Mock).mockReturnValue({
+        originalLength: 100,
+        extractedLength: 50,
+        compressionRatio: 2,
+        sentenceCount: 5,
+        extractedCount: 2,
+      });
+      (extractSentencesHybrid as Mock).mockResolvedValue(['SENT-NEW']);
+      const ctx: RecordingContext = {
+        data: { url: 'https://example.com', title: 'Test Page', content: 'C' },
+        settings: {},
+        force: false,
+        errors: [],
+        extractedSentences: ['PREV-ONE', 'PREV-TWO'],
+        truncatedContent: 'PIN-TRUNCATED',
+      } as RecordingContext;
+
+      await extractSentencesStep(ctx);
+
+      expect(extractSentencesHybrid).toHaveBeenCalledTimes(1);
+      expect((extractSentencesHybrid as Mock).mock.calls[0][0]).toBe('PIN-TRUNCATED');
+    });
+  });
 });

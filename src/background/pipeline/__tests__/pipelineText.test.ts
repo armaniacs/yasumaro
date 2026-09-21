@@ -1,8 +1,9 @@
 /**
- * pipelineText.test.ts (PBI-17)
- * Unit tests for the single-owner selectPipelineText priority plus
- * cross-step parity: the same context fed to extractSentencesStep and
- * formatMarkdownStep must resolve to the same text.
+ * pipelineText.test.ts (PBI-17 + Checking Team 2026-09-22 stage split)
+ * Unit tests for the stage-split selectors (selectExtractionInput /
+ * selectDisplayText) plus cross-step parity: the same context fed to
+ * extractSentencesStep and formatMarkdownStep must resolve consistently —
+ * extraction cannot see extractedSentences (its own output), display can.
  */
 
 import { vi } from 'vitest';;
@@ -20,7 +21,11 @@ vi.mock('../../../utils/localeUtils.js', () => ({
 
 import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
 import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
-import { selectPipelineText, PIPELINE_TEXT_EMPTY_FALLBACK } from '../pipelineText.js';
+import {
+  selectExtractionInput,
+  selectDisplayText,
+  PIPELINE_TEXT_EMPTY_FALLBACK,
+} from '../pipelineText.js';
 import { extractSentencesStep } from '../steps/extractSentencesStep.js';
 import { formatMarkdownStep } from '../steps/formatMarkdownStep.js';
 import type { RecordingContext } from '../types.js';
@@ -45,9 +50,46 @@ function fullContext(overrides: Partial<RecordingContext>): RecordingContext {
   } as RecordingContext;
 }
 
-describe('selectPipelineText priority table', () => {
+describe('selectExtractionInput priority table (extraction stage — no extractedSentences)', () => {
+  it('prefers sanitizedSummary over privacyResult.summary and truncatedContent', () => {
+    const text = selectExtractionInput(
+      source({
+        sanitizedSummary: 'sanitized',
+        privacyResult: { summary: 'privacy' },
+        truncatedContent: 'truncated',
+      }),
+    );
+
+    expect(text).toBe('sanitized');
+  });
+
+  it('falls back to privacyResult.summary when sanitizedSummary is empty string', () => {
+    const text = selectExtractionInput(
+      source({
+        sanitizedSummary: '',
+        privacyResult: { summary: 'privacy' },
+        truncatedContent: 'truncated',
+      }),
+    );
+
+    expect(text).toBe('privacy');
+  });
+
+  it('falls back to truncatedContent when upper sources are missing', () => {
+    const text = selectExtractionInput(source({ truncatedContent: 'truncated' }));
+
+    expect(text).toBe('truncated');
+  });
+
+  it('returns empty string when all sources are empty', () => {
+    expect(selectExtractionInput(source({}))).toBe('');
+    expect(selectExtractionInput(source({ sanitizedSummary: '', truncatedContent: '' }))).toBe('');
+  });
+});
+
+describe('selectDisplayText priority table (display stage — extractedSentences wins)', () => {
   it('prefers extractedSentences joined with \\n\\n when all sources present', () => {
-    const text = selectPipelineText(
+    const text = selectDisplayText(
       source({
         extractedSentences: ['L0-A', 'L0-B'],
         sanitizedSummary: 'sanitized',
@@ -60,7 +102,7 @@ describe('selectPipelineText priority table', () => {
   });
 
   it('falls back to sanitizedSummary when extractedSentences is empty', () => {
-    const text = selectPipelineText(
+    const text = selectDisplayText(
       source({
         extractedSentences: [],
         sanitizedSummary: 'sanitized',
@@ -71,41 +113,22 @@ describe('selectPipelineText priority table', () => {
     expect(text).toBe('sanitized');
   });
 
-  it('falls back to privacyResult.summary when sanitizedSummary is empty string', () => {
-    const text = selectPipelineText(
-      source({
-        sanitizedSummary: '',
-        privacyResult: { summary: 'privacy' },
-        truncatedContent: 'truncated',
-      }),
-    );
-
-    expect(text).toBe('privacy');
-  });
-
   it('falls back to truncatedContent when upper sources are missing', () => {
-    const text = selectPipelineText(
-      source({ truncatedContent: 'truncated' }),
-    );
+    const text = selectDisplayText(source({ truncatedContent: 'truncated' }));
 
     expect(text).toBe('truncated');
-  });
-
-  it('returns empty string when all sources are empty', () => {
-    expect(selectPipelineText(source({}))).toBe('');
-    expect(selectPipelineText(source({ sanitizedSummary: '', truncatedContent: '' }))).toBe('');
   });
 
   it('keeps the display fallback literal byte-equal', () => {
     expect(PIPELINE_TEXT_EMPTY_FALLBACK).toBe('Summary not available.');
     expect(PIPELINE_TEXT_EMPTY_FALLBACK.length).toBe(22);
-    expect(selectPipelineText(source({})) || PIPELINE_TEXT_EMPTY_FALLBACK).toBe(
+    expect(selectDisplayText(source({})) || PIPELINE_TEXT_EMPTY_FALLBACK).toBe(
       'Summary not available.',
     );
   });
 });
 
-describe('step parity via selectPipelineText', () => {
+describe('step parity via the stage-split selectors', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (getCompressionStats as Mock).mockReturnValue({
