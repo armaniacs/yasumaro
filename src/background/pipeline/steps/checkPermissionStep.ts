@@ -7,6 +7,7 @@ import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { extractDomain } from '../../../utils/domainUtils.js';
 import { getPermissionManager } from '../../../utils/permissionManager.js';
+import { decidePermission } from '../recordingDecision.js';
 import type { RecordingContext, PipelineStepFunction, PermissionCheckResult } from '../types.js';
 
 /**
@@ -24,7 +25,7 @@ export const checkPermissionStep: PipelineStepFunction = async (
 
   if (!permitted) {
     // Permission denied - extract domain and record
-    let domain: string;
+    let domain: string | null;
     try {
       domain = extractDomain(url) || new URL(url).hostname;
     } catch {
@@ -32,9 +33,17 @@ export const checkPermissionStep: PipelineStepFunction = async (
       throw new Error('INVALID_URL');
     }
 
-    await permissionManager.recordDeniedVisit(domain);
-    addLog(LogType.WARN, 'Permission required for recording', { url, domain, traceId: context.traceId });
-    throw new Error('PERMISSION_REQUIRED');
+    // PBI 2026-09-19-08: verdict は recordingDecision.decidePermission に委譲
+    const verdict = decidePermission(permitted, domain);
+    if (!verdict.allow) {
+      if (verdict.error === 'INVALID_URL') {
+        addLog(LogType.ERROR, 'Failed to extract domain from URL', { url, traceId: context.traceId });
+        throw new Error('INVALID_URL');
+      }
+      await permissionManager.recordDeniedVisit(domain);
+      addLog(LogType.WARN, 'Permission required for recording', { url, domain, traceId: context.traceId });
+      throw new Error('PERMISSION_REQUIRED');
+    }
   }
 
   const result: PermissionCheckResult = {

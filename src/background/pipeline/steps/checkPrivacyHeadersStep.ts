@@ -12,6 +12,7 @@ import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { redactHeaderValue } from '../../../utils/redaction.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { isDomainInList } from '../../../utils/wildcardToRegex.js';
+import { decidePrivacy, type PrivacyAutoBehavior } from '../recordingDecision.js';
 
 export class PrivacyHeadersChecker {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -57,7 +58,23 @@ export class PrivacyHeadersChecker {
     // Check privacy headers
     const privacyInfo = await this.getPrivacyInfoWithCache(url);
 
-    if (!privacyInfo?.isPrivate) {
+    // PBI 2026-09-19-08: verdict は recordingDecision.decidePrivacy に委譲。
+    // I/O（privacyInfo 取得・pending 保存・log）はこの step に残す。
+    const rawBehavior = settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save';
+    const behavior: PrivacyAutoBehavior =
+      rawBehavior === 'skip' || rawBehavior === 'confirm' ? rawBehavior : 'save';
+    const decision = decidePrivacy({
+      force,
+      whitelisted: shouldSkipPrivacyCheck,
+      isPrivate: privacyInfo?.isPrivate ?? false,
+      autoSaveBehavior: behavior,
+      requireConfirmation: requireConfirmation ?? false,
+    });
+
+    if (decision.allow) {
+      if (privacyInfo?.isPrivate) {
+        addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url, traceId: context.traceId });
+      }
       return context;
     }
 
