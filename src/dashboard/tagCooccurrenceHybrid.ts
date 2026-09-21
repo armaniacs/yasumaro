@@ -46,9 +46,24 @@ import { LogType } from '../utils/logger/types.js';
 let wasmAvailable: boolean | null = null;
 
 /**
- * Probes WASM availability once per context lifetime (mirrors
- * initTagCooccurWasm's own singleton-promise caching) so a permanently
- * broken environment doesn't retry-and-fail on every call.
+ * Burst guard for the probe-failure warning: while the probe keeps failing,
+ * the warn + addLog pair is emitted once per burst (first failure only). A
+ * success clears it so a later, separate burst logs again.
+ */
+let probeFailureLogged = false;
+
+/**
+ * Probes WASM availability. Success is cached permanently per context
+ * lifetime (mirrors initTagCooccurWasm's own singleton-promise caching).
+ * Failure is NOT cached: the flag stays `null` so the next call re-probes
+ * (the lower initExtensionWasm layer already does reset-on-failure and
+ * dedupes concurrent inits, so a transient fetch/CSP/startup failure
+ * recovers instead of pinning every later call to the TS path).
+ *
+ * Probe contract for the future shared runtime (PBI 2026-09-20-13): when
+ * this probe is absorbed into the shared hybrid runtime, preserve these
+ * semantics — success cached, failure re-probed on the next call, probe
+ * log at most once per failure burst.
  */
 async function isWasmAvailable(): Promise<boolean> {
     if (wasmAvailable !== null) {
@@ -57,15 +72,18 @@ async function isWasmAvailable(): Promise<boolean> {
     try {
         await initTagCooccurWasm();
         wasmAvailable = true;
+        probeFailureLogged = false;
     } catch (error: unknown) {
-        wasmAvailable = false;
-        const message = errorMessage(error);
-        console.warn('Tag-cooccur WASM module unavailable, falling back to TS:', message);
-        addLog(LogType.WARN, 'Tag-cooccur WASM module unavailable, falling back to TS', {
-            error: message,
-        });
+        if (!probeFailureLogged) {
+            probeFailureLogged = true;
+            const message = errorMessage(error);
+            console.warn('Tag-cooccur WASM module unavailable, falling back to TS:', message);
+            addLog(LogType.WARN, 'Tag-cooccur WASM module unavailable, falling back to TS', {
+                error: message,
+            });
+        }
     }
-    return wasmAvailable;
+    return wasmAvailable === true;
 }
 
 /**
