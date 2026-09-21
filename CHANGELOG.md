@@ -36,7 +36,9 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
-## [Unreleased]
+## [6.9.13] - 2026-09-21
+
+このリリースは v6.9.12 に続く連続リリースです。タグクラスタパネルの共起集計の Rust/WASM 移植（Rust 化第3弾）と promptSanitizer の堅牢化ラウンドです。全テスト（12,712 件）がグリーンです。
 
 ### Added
 
