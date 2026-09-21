@@ -13,23 +13,97 @@
 
 import { StorageKeys, type StorageKey } from './types.js';
 
+/** Always-granted (manifest host_permissions) vs opt-in (optional_host_permissions). */
+export type ProviderPermissionTier = 'required' | 'optional';
+
 /** Allow-relevant subset of a catalog row. No construction or UI data. */
 export interface ProviderAllowlistRow {
   readonly id: string;
   readonly baseUrlKey?: StorageKey | undefined;
   readonly isLocal: boolean;
   readonly label: string;
+  /** Bare hostname of a fixed-endpoint provider (absent for configurable/local rows). */
+  readonly domain?: string | undefined;
+  readonly permissionTier?: ProviderPermissionTier | undefined;
+  /** Listed in the conditional-CSP opt-in table (cspValidator PROVIDER_TO_DOMAIN). */
+  readonly conditionalCsp?: boolean | undefined;
+  /** Legacy alias hostnames that only the urlWhitelist gate recognizes. */
+  readonly extraWhitelistDomains?: readonly string[] | undefined;
+  /** Legacy exclusion from the urlWhitelist gate (preserved byte-identical, not fixed here). */
+  readonly excludeFromWhitelist?: boolean | undefined;
 }
 
 /**
  * Neutral rows, mirroring background/ai/providerCatalog (which spreads them).
- * Insertion order matches the catalog dropdown order.
+ * The 7 catalog rows keep their relative order; fixed-endpoint domain rows
+ * (required block in DEFAULT_ALLOWED_DOMAINS order, then the optional block
+ * in OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS order) carry the hostname + tier
+ * so the 4 hand-listed domain arrays derive from here instead of drifting.
  */
 export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
   // gemini has no baseUrlKey (fixed endpoint) — readers skip it, as before.
-  { id: 'gemini', isLocal: false, label: 'Google Gemini' },
-  { id: 'openai', baseUrlKey: StorageKeys.OPENAI_BASE_URL, isLocal: false, label: 'OpenAI Compatible' },
-  { id: 'openai2', baseUrlKey: StorageKeys.OPENAI_2_BASE_URL, isLocal: false, label: 'OpenAI Compatible 2' },
+  {
+    id: 'gemini',
+    isLocal: false,
+    label: 'Google Gemini',
+    domain: 'generativelanguage.googleapis.com',
+    permissionTier: 'required',
+  },
+  {
+    id: 'openai',
+    baseUrlKey: StorageKeys.OPENAI_BASE_URL,
+    isLocal: false,
+    label: 'OpenAI Compatible',
+    domain: 'api.openai.com',
+    permissionTier: 'required',
+  },
+  {
+    id: 'openai2',
+    baseUrlKey: StorageKeys.OPENAI_2_BASE_URL,
+    isLocal: false,
+    label: 'OpenAI Compatible 2',
+    domain: 'api.openai.com',
+    permissionTier: 'required',
+  },
+  { id: 'anthropic', isLocal: false, label: 'Anthropic Claude', domain: 'api.anthropic.com', permissionTier: 'required' },
+  { id: 'groq', isLocal: false, label: 'Groq', domain: 'api.groq.com', permissionTier: 'required' },
+  { id: 'mistral', isLocal: false, label: 'Mistral', domain: 'mistral.ai', permissionTier: 'required' },
+  {
+    id: 'mistral-api',
+    isLocal: false,
+    label: 'Mistral API',
+    domain: 'api.mistral.ai',
+    permissionTier: 'required',
+    excludeFromWhitelist: true,
+  },
+  { id: 'deepseek', isLocal: false, label: 'DeepSeek', domain: 'deepseek.com', permissionTier: 'required' },
+  {
+    id: 'deepseek-api',
+    isLocal: false,
+    label: 'DeepSeek API',
+    domain: 'api.deepseek.com',
+    permissionTier: 'required',
+    excludeFromWhitelist: true,
+  },
+  { id: 'voyage', isLocal: false, label: 'Voyage', domain: 'voyageai.com', permissionTier: 'required' },
+  {
+    id: 'volcengine',
+    isLocal: false,
+    label: 'Volcengine',
+    domain: 'volcengine.com',
+    permissionTier: 'required',
+    conditionalCsp: true,
+  },
+  { id: 'z-ai', isLocal: false, label: 'Z.AI', domain: 'z.ai', permissionTier: 'required', conditionalCsp: true },
+  { id: 'wandb', isLocal: false, label: 'Weights & Biases', domain: 'wandb.ai', permissionTier: 'required', conditionalCsp: true },
+  {
+    id: 'sakura',
+    isLocal: false,
+    label: 'Sakura Internet AI',
+    domain: 'api.ai.sakura.ad.jp',
+    permissionTier: 'required',
+    conditionalCsp: true,
+  },
   {
     id: 'lm-studio',
     baseUrlKey: StorageKeys.LM_STUDIO_BASE_URL,
@@ -50,7 +124,82 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
   },
   // built-in-ai has no baseUrlKey (on-device) — readers skip it, as before.
   { id: 'built-in-ai', isLocal: true, label: 'Built-in AI' },
+  { id: 'huggingface', isLocal: false, label: 'Hugging Face', domain: 'api-inference.huggingface.co', permissionTier: 'optional', conditionalCsp: true },
+  {
+    id: 'openrouter',
+    isLocal: false,
+    label: 'OpenRouter',
+    domain: 'api.openrouter.ai',
+    permissionTier: 'optional',
+    conditionalCsp: true,
+    extraWhitelistDomains: ['openrouter.ai'],
+  },
+  { id: 'deepinfra', isLocal: false, label: 'DeepInfra', domain: 'deepinfra.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'cerebras', isLocal: false, label: 'Cerebras', domain: 'cerebras.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'helicone', isLocal: false, label: 'Helicone', domain: 'ai-gateway.helicone.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'publicai', isLocal: false, label: 'Public AI', domain: 'api.publicai.co', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'venice', isLocal: false, label: 'Venice', domain: 'api.venice.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'scaleway', isLocal: false, label: 'Scaleway', domain: 'api.scaleway.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'synthetic', isLocal: false, label: 'Synthetic', domain: 'api.synthetic.new', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'stima', isLocal: false, label: 'Stima', domain: 'api.stima.tech', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'nano-gpt', isLocal: false, label: 'Nano GPT', domain: 'nano-gpt.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'poe', isLocal: false, label: 'Poe', domain: 'api.poe.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'chutes', isLocal: false, label: 'Chutes', domain: 'llm.chutes.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'abliteration', isLocal: false, label: 'Abliteration', domain: 'api.abliteration.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'llamagate', isLocal: false, label: 'LlamaGate', domain: 'api.llamagate.dev', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'gmi', isLocal: false, label: 'GMI', domain: 'api.gmi-serving.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'sarvam', isLocal: false, label: 'Sarvam', domain: 'api.sarvam.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'xiaomimimo', isLocal: false, label: 'Xiaomi MiMo', domain: 'xiaomimimo.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'nebius', isLocal: false, label: 'Nebius', domain: 'nebius.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'sambanova', isLocal: false, label: 'SambaNova', domain: 'sambanova.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'nscale', isLocal: false, label: 'Nscale', domain: 'nscale.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'featherless', isLocal: false, label: 'Featherless', domain: 'featherless.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'galadriel', isLocal: false, label: 'Galadriel', domain: 'galadriel.com', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'recraft', isLocal: false, label: 'Recraft', domain: 'recraft.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'perplexity', isLocal: false, label: 'Perplexity', domain: 'perplexity.ai', permissionTier: 'optional', conditionalCsp: true },
+  { id: 'jina', isLocal: false, label: 'Jina', domain: 'jina.ai', permissionTier: 'optional', conditionalCsp: true },
 ];
+
+/** First-occurrence dedupe preserving row order (openai/openai2 share a domain). */
+function dedupeDomains(domains: string[]): string[] {
+  return [...new Set(domains)];
+}
+
+/**
+ * Pure row → domain derivations (rows param exists so tests can simulate a
+ * single-row addition). Consumers derive their arrays from these; adding a
+ * provider is one row here.
+ */
+export function deriveRequiredDomains(rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS): string[] {
+  return dedupeDomains(
+    rows.filter((row) => row.permissionTier === 'required' && row.domain).map((row) => row.domain as string),
+  );
+}
+
+export function deriveOptionalDomains(rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS): string[] {
+  return dedupeDomains(
+    rows.filter((row) => row.permissionTier === 'optional' && row.domain).map((row) => row.domain as string),
+  );
+}
+
+export function deriveConditionalCspEntries(
+  rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS,
+): Array<{ id: string; domain: string }> {
+  return rows
+    .filter((row) => row.conditionalCsp === true && row.domain)
+    .map((row) => ({ id: row.id, domain: row.domain as string }));
+}
+
+export function deriveWhitelistedDomains(
+  rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS,
+): string[] {
+  return dedupeDomains(
+    rows.flatMap((row) => {
+      if (!row.domain || row.excludeFromWhitelist === true) return [];
+      return [row.domain, ...(row.extraWhitelistDomains ?? [])];
+    }),
+  );
+}
 
 /**
  * Validate a provider baseUrl against SSRF allowlist.
