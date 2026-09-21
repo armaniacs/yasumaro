@@ -47,7 +47,7 @@ export async function handleSearchFts(
   // orderDir normalizes to DESC instead of failing (IdbVfsBackend fails
   // closed instead — intentional divergence, see queryPlan.ts).
   return runOpfsSearch(ctx, {
-    path: 'fts', searchInput: sanitizedQuery, limit, offset,
+    input: { path: 'fts', ftsQuery: sanitizedQuery }, limit, offset,
     orderBy, orderDir, payload, fts5Available, onInvalid: 'coerce',
   });
 }
@@ -59,7 +59,7 @@ export async function handleSearchLike(
   payload: SearchPayload = {}, fts5Available = false
 ): Promise<{ rows: SearchResult[]; total: number }> {
   return runOpfsSearch(ctx, {
-    path: 'like', searchInput: rawQuery, limit, offset,
+    input: { path: 'like', rawTerm: rawQuery }, limit, offset,
     orderBy, orderDir, payload, fts5Available, onInvalid: 'coerce',
   });
 }
