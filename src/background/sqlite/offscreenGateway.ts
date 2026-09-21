@@ -5,17 +5,12 @@ import { ErrorCode } from '../../utils/logger/types.js';
 import { logError, logInfo } from '../../utils/logger/api.js';
 import { getOffscreenTransportName } from '../offscreenTransport.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import { pickDefined } from '../../utils/objectUtils.js';
 import { pickStatusExtras } from '../../messaging/sqliteValidators.js';
 import { recordSqliteFailure, recordSqliteSuccess } from '../sqliteAlert.js';
 import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord } from '../../messaging/sqliteRpcClient.js';
 import { categorizeError } from '../../messaging/sqliteRpcClient.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
 import type {
-  OffscreenInsertResponse,
-  OffscreenCountResponse,
-  OffscreenQueryResponse,
-  OffscreenToggleStarResponse,
   OffscreenBinaryResponse,
   OffscreenStatusResponse,
   OffscreenStatusData,
@@ -36,6 +31,7 @@ import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
 import { archiveWireFor, archiveNoRetry, isArchiveOpType, ARCHIVE_DESCRIPTORS, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
+import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor } from '../../messaging/sqliteWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
@@ -103,20 +99,28 @@ export class OffscreenGateway {
   async query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteResult<number>>;
   async query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteResult<{ rows: AuditLogRecord[]; total: number }>>;
   async query(op: QueryOp | StorageQuery = {}): Promise<SqliteResult<unknown>> {
+    // Query ops (PBI 2026-09-20-16): routed through SQLITE_WIRE_TABLE. The
+    // row supplies the message type, the wire payload, and the response
+    // decoder — the per-kind switch (including the search -> StorageQuery
+    // fold, now the search row's encodePayload) is dissolved. A plain
+    // StorageQuery still enters as the records op. Adding a QueryOp kind
+    // without a row fails the table's compile-time sync assert; a drifted
+    // lookup fails closed here.
     if (isQueryOp(op)) {
-      switch (op.kind) {
-        case 'count': return this.callInternal<number, OffscreenCountResponse>('SQLITE_COUNT', {}, (res) => { if (!Number.isFinite(res.count)) throw new Error('SQLite count response was missing a numeric count'); return res.count; });
-        case 'auditLog': return this.callInternal<{ rows: AuditLogRecord[]; total: number }, OffscreenQueryResponse>('SQLITE_AUDIT_LOG_QUERY', { limit: op.limit, offset: op.offset }, (res) => ({ rows: (res.rows || []) as AuditLogRecord[], total: res.total }));
-        case 'search': { const q: StorageQuery = { text: op.text, ...pickDefined({ limit: op.limit, offset: op.offset, orderBy: op.orderBy, orderDir: op.orderDir }) }; return this.queryRecords(q); }
-        case 'records': return this.queryRecords(op.q ?? {});
-        default: { const exhaustive: never = op; void exhaustive; throw new Error('Unhandled query op'); }
-      }
+      const row = sqliteWireFor(op.kind);
+      if (!row || row.family !== 'query') throw new Error('Unhandled query op');
+      return this.callInternal<unknown>(
+        row.messageType,
+        row.encodePayload(op),
+        (res) => row.decodeGateway(res),
+      );
     }
-    return this.queryRecords(op);
-  }
-
-  private async queryRecords(q: StorageQuery): Promise<SqliteResult<{ rows: BrowsingLogRecord[]; total: number }>> {
-    return this.callInternal<{ rows: BrowsingLogRecord[]; total: number }, OffscreenQueryResponse>('SQLITE_QUERY', q as Record<string, unknown>, (res) => ({ rows: (res.rows || []) as BrowsingLogRecord[], total: res.total }));
+    const recordsRow = SQLITE_WIRE_DESCRIPTORS.records;
+    return this.callInternal<unknown>(
+      recordsRow.messageType,
+      recordsRow.encodePayload(recordsRow.encodeOp(op)),
+      (res) => recordsRow.decodeGateway(res),
+    );
   }
 
   async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteResult<{ id: number }>>;
@@ -125,21 +129,17 @@ export class OffscreenGateway {
   async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteResult<{ is_starred: number }>>;
   async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteResult<{ id: number }>>;
   async mutate(op: MutateOp): Promise<SqliteResult<unknown>> {
-    switch (op.type) {
-      case 'insert': return this.callInternal<{ id: number }, OffscreenInsertResponse>('SQLITE_INSERT', op.record as unknown as Record<string, unknown>, (res) => ({ id: res.id }), op.traceId);
-      case 'insertBatch': return this.callInternal<{ count: number; inserted?: number; skipped?: number }, OffscreenCountResponse>('SQLITE_INSERT_BATCH', { records: op.records as unknown as Record<string, unknown>[] }, (res) => ({ count: res.inserted ?? res.count, skipped: res.skipped ?? 0 }));
-      /**
-       * Flattened wire contract: changes travel as `{ id, ...changes }`,
-       * not nested under a `changes` key. The offscreen update handler
-       * reads flat keys via `key in payload`, so a nested shape would
-       * silently apply zero columns instead of failing.
-       */
-      case 'update': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_UPDATE', { id: op.id, ...op.changes }, () => undefined, op.traceId);
-      case 'delete': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_DELETE', { id: op.id }, () => undefined);
-      case 'toggleStar': return this.callInternal<{ is_starred: number }, OffscreenToggleStarResponse>('SQLITE_TOGGLE_STAR', { id: op.id }, (res) => ({ is_starred: res.is_starred }));
-      case 'insertAuditLog': return this.callInternal<{ id: number }, OffscreenInsertResponse>('SQLITE_AUDIT_LOG_INSERT', op.record as unknown as Record<string, unknown>, (res) => ({ id: res.id }));
-      default: { const exhaustive: never = op; void exhaustive; throw new Error('Unhandled mutate op'); }
-    }
+    // Mutate ops (PBI 2026-09-20-16): routed through SQLITE_WIRE_TABLE, same
+    // shape as query() above. The flattened update contract lives in the
+    // update row's encodePayload now (see its comment).
+    const row = sqliteWireFor(op.type);
+    if (!row || row.family !== 'mutate') throw new Error('Unhandled mutate op');
+    return this.callInternal<unknown>(
+      row.messageType,
+      row.encodePayload(op),
+      (res) => row.decodeGateway(res),
+      (op as { traceId?: string }).traceId,
+    );
   }
 
   async maintain(op: { type: 'init' }): Promise<SqliteResult<boolean>>;
