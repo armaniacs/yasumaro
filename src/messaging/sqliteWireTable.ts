@@ -248,14 +248,16 @@ export const SQLITE_WIRE_TABLE = [
     depsMethod: 'search',
     encodeOp: (
       text: string,
-      limit: number,
-      offset: number,
+      // Undefined rides the wire and the offscreen planner owns the search
+      // default (planSearch → DEFAULT_SEARCH_LIMIT = 50) since PBI 2026-09-21-20.
+      limit?: number,
+      offset?: number,
       options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' },
     ): Extract<QueryOp, { kind: 'search' }> => ({
       kind: 'search',
       text,
-      limit,
-      offset,
+      ...(limit !== undefined && { limit }),
+      ...(offset !== undefined && { offset }),
       ...pickDefined({ orderBy: options?.orderBy, orderDir: options?.orderDir }),
     }),
     encodePayload: (op) => {
