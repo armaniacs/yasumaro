@@ -1,29 +1,10 @@
 import type { MaskedItem } from '../messaging/types.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
-import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 
-export interface ContentResponse {
-  content: string;
-  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none';
-  cleanseStats?: {
-    hardStripRemoved: number;
-    keywordStripRemoved: number;
-    totalRemoved: number;
-  };
-  byteStats?: {
-    pageBytes: number;
-    candidateBytes: number;
-    originalBytes: number;
-    cleansedBytes: number;
-  };
-  aiSummaryCleansedStats?: {
-    aiSummaryOriginalBytes: number;
-    aiSummaryCleansedBytes: number;
-    aiSummaryCleansedElements: number;
-    aiSummaryCleansedReason: AiSummaryCleansedReason;
-    aiSummaryCleansedReasons?: string[];
-  };
-}
+// 本体は messaging 層（`../messaging/types.js`）が所有する。ここは既存の
+// popup 経由 import を壊さないための type-only 再エクスポートのみ
+// （PBI 2026-09-21-11: popup と messaging の型循環を解消）。
+export type { ContentResponse } from '../messaging/types.js';
 
 export interface PreviewResponse {
   success: boolean;
