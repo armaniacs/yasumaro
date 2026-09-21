@@ -7,7 +7,7 @@
  * params-order / tag+text / deleted-filter fix had to be applied twice.
  * This module owns the whole skeleton — extraWhere build, tag-filter select,
  * order-clause apply, statement build, count exec, rows exec, row mapping —
- * and callers pass only the path plus the invalid-order policy.
+ * and callers pass only the discriminated input plus the invalid-order policy.
  *
  * SQL text assembly stays in queryPlan.ts (PBI-34 builders, read-only here).
  * IdbVfsBackend is intentionally NOT migrated: it reads positionally
@@ -35,14 +35,22 @@ import type { SearchPayload } from './opfsWorker/types.js';
 /** The two search paths — selects the statement builder + tag-filter path. */
 export type SearchPath = 'fts' | 'like';
 
+/**
+ * Discriminated search input (PBI 2026-09-21-29). The old `path` +
+ * `searchInput: string` pair carried two meanings in one field (built MATCH
+ * query for fts, raw term for like) distinguished only by prose — a raw term
+ * passed with path 'fts' typechecked and misqueried silently. Folding `path`
+ * into the union makes the wrong combination unrepresentable: fts accepts
+ * only `buildFtsMatchQuery` output, like accepts only the raw term
+ * (`buildLikePattern` is applied at the single union-consumption point).
+ */
+export type OpfsSearchInput =
+  | { path: 'fts'; ftsQuery: string }
+  | { path: 'like'; rawTerm: string };
+
 export interface RunOpfsSearchArgs {
-  /** 'fts' -> buildFtsSearchStatements, 'like' -> buildLikeSearchStatements. */
-  path: SearchPath;
-  /**
-   * FTS path: the already-built MATCH query (buildFtsMatchQuery output);
-   * LIKE path: the raw term (buildLikePattern is applied inside).
-   */
-  searchInput: string;
+  /** Discriminant: 'fts' -> buildFtsSearchStatements, 'like' -> buildLikeSearchStatements. */
+  input: OpfsSearchInput;
   limit: number;
   offset: number;
   // Callers hold these as `T | undefined` (handler optional params) — the
@@ -68,8 +76,9 @@ export async function runOpfsSearch(
   ctx: HandlerContext,
   args: RunOpfsSearchArgs,
 ): Promise<{ rows: SearchResult[]; total: number }> {
-  const { path, searchInput, limit, offset, orderBy, orderDir } = args;
+  const { input, limit, offset, orderBy, orderDir } = args;
   const payload = args.payload ?? {};
+  const path = input.path;
   const fts5Available = args.fts5Available ?? (path === 'fts');
   const onInvalid = args.onInvalid ?? 'coerce';
 
@@ -79,12 +88,14 @@ export async function runOpfsSearch(
   const tagFilter = payload.tag
     ? selectTagFilter(payload.tag, path, fts5Available)
     : null;
-  const isFts = path === 'fts';
+  const isFts = input.path === 'fts';
   const { orderClause } = buildSearchOrderClause({ orderBy, orderDir }, { fts: isFts, onInvalid });
-  const stmts = isFts
-    ? buildFtsSearchStatements(extra, { ftsQuery: searchInput, orderClause, limit, offset, tagFilter })
+  // Single union-consumption point: buildLikePattern applies in the like
+  // branch only — never on fts input, never twice.
+  const stmts = input.path === 'fts'
+    ? buildFtsSearchStatements(extra, { ftsQuery: input.ftsQuery, orderClause, limit, offset, tagFilter })
     : buildLikeSearchStatements(extra, {
-        likePattern: buildLikePattern(searchInput),
+        likePattern: buildLikePattern(input.rawTerm),
         orderClause,
         limit,
         offset,
