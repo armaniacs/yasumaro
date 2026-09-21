@@ -219,3 +219,29 @@ export function evaluateAdmissionPrecedence(
   }
   return null;
 }
+
+// ============================================================================
+// Save skip: obsidianEnabled flag + client presence -> skip verdict.
+// Step keeps the I/O (settings read, deps.obsidian presence, logging).
+// Disabled takes precedence over absent client, matching step order.
+// ============================================================================
+
+export interface SaveSkipVerdict {
+  skip: boolean;
+  reason?: string;
+}
+
+export function decideSaveSkip(obsidianEnabled: boolean, clientPresent: boolean): SaveSkipVerdict {
+  if (!obsidianEnabled) return { skip: true, reason: 'obsidian-disabled' };
+  if (!clientPresent) return { skip: true, reason: 'no-client' };
+  return { skip: false };
+}
+
+// ============================================================================
+// L0 skip: enabled flag -> skip verdict. Step keeps settings read + logging.
+// ============================================================================
+
+export function decideL0(enabled: boolean): SaveSkipVerdict {
+  if (!enabled) return { skip: true, reason: 'l0-disabled' };
+  return { skip: false };
+}

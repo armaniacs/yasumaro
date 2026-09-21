@@ -7,6 +7,7 @@ import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import { decideSaveSkip } from '../recordingDecision.js';
 import type { RecordingContext, StepDeps } from '../types.js';
 
 /**
@@ -31,24 +32,24 @@ export const saveToObsidianStep = async (
     return context;
   }
 
-  // Skip if user explicitly disabled Obsidian
+  // Skip if user explicitly disabled Obsidian or no client is available.
+  // I/O (settings read, client presence) stays here; verdict is delegated.
   const settings = context.settings as Record<string, unknown>;
   const obsidianEnabled = settings[StorageKeys.OBSIDIAN_ENABLED];
-  if (obsidianEnabled === false) {
-    addLog(LogType.INFO, 'Obsidian disabled by user, skipping save', { url, traceId: context.traceId });
-    return context;
-  }
-
-  // Require an injected Obsidian client; production always injects via createSaveToObsidianStep
   const obsidianClient = deps?.obsidian;
-  if (!obsidianClient) {
+  const saveVerdict = decideSaveSkip(obsidianEnabled !== false, Boolean(obsidianClient));
+  if (saveVerdict.skip) {
+    if (saveVerdict.reason === 'obsidian-disabled') {
+      addLog(LogType.INFO, 'Obsidian disabled by user, skipping save', { url, traceId: context.traceId });
+      return context;
+    }
     addLog(LogType.INFO, 'No Obsidian client available, skipping save', { url, traceId: context.traceId });
     return context;
   }
 
   const obsidianStart = Date.now();
   try {
-    await obsidianClient.appendToDailyNote(markdown, context.traceId);
+    await obsidianClient!.appendToDailyNote(markdown, context.traceId);
     const obsidianDuration = Date.now() - obsidianStart;
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url, traceId: context.traceId });
 

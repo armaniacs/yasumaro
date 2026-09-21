@@ -16,6 +16,8 @@ import {
   decideRecordingTrigger,
   shouldProcessHeadersResponse,
   evaluateAdmissionPrecedence,
+  decideSaveSkip,
+  decideL0,
 } from '../recordingDecision.js';
 
 describe('RECORDING_DECISION_ORDER', () => {
@@ -223,8 +225,7 @@ describe('shouldProcessHeadersResponse', () => {
   });
 });
 
-describe('evaluateAdmissionPrecedence', () => {
-  const none = { domainFilter: false, permission: false, trust: false, privacyHeaders: false, duplicate: false };
+describe('evaluateAdmissionPrecedence', () => {  const none = { domainFilter: false, permission: false, trust: false, privacyHeaders: false, duplicate: false };
   it('returns null when nothing fails', () => {
     expect(evaluateAdmissionPrecedence(none)).toBeNull();
   });
@@ -247,5 +248,29 @@ describe('evaluateAdmissionPrecedence', () => {
         duplicate: true,
       })
     ).toBe('domainFilter');
+  });
+});
+
+describe('decideSaveSkip', () => {
+  it('skips when obsidian is disabled even with a client present', () => {
+    expect(decideSaveSkip(false, true)).toMatchObject({ skip: true });
+  });
+  it('skips when the client is absent even when obsidian is enabled', () => {
+    expect(decideSaveSkip(true, false)).toMatchObject({ skip: true });
+  });
+  it('skips when both disabled and absent (disabled takes precedence)', () => {
+    expect(decideSaveSkip(false, false)).toMatchObject({ skip: true });
+  });
+  it('proceeds when enabled with a client present', () => {
+    expect(decideSaveSkip(true, true)).toEqual({ skip: false });
+  });
+});
+
+describe('decideL0', () => {
+  it('skips when L0 extraction is disabled', () => {
+    expect(decideL0(false)).toMatchObject({ skip: true });
+  });
+  it('proceeds when L0 extraction is enabled', () => {
+    expect(decideL0(true)).toEqual({ skip: false });
   });
 });
