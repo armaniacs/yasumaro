@@ -285,24 +285,6 @@ function isMaliciousUsage(word: string, fullContent: string, index: number): boo
 }
 
 /**
- * 危険な特殊文字と制御文字
- */
-const DANGEROUS_CHARS: Record<string, boolean> = {
-  '\x00': true,  // Null byte
-  '\x1b': true,  // Escape
-  '\x1c': true,  // File Separator
-  '\x1d': true,  // Group Separator
-  '\x1e': true,  // Record Separator
-  '\x1f': true,  // Unit Separator
-  '\x7f': true,  // Delete
-  '\x80': true,  // Euro
-  '\x81': true,  // Control
-  '\x82': true,  // Control
-  '\x83': true,  // Control
-  '\x84': true,  // Control
-};
-
-/**
  * プロンプトインジェクションの危険度レベル
  */
 export const DangerLevel = {
@@ -358,31 +340,58 @@ export function sanitizePromptContent(content: string): SanitizeResult {
   }
 
   // 1. 高リスクパターン検出（精緻化）
+  // 置換はスキャン完了後に1パスで適用する。exec ループ中に文字列を再代入すると
+  // lastIndex（旧座標）と置換後の座標がずれ、直後のマッチを取りこぼすため（PBI-24）。
+  const MAX_PATTERN_MATCHES = 1000;
+  let matchCount = 0;
+  let matchLimitReached = false;
   for (const pattern of REFINED_INJECTION_PATTERNS) {
-    // グローバルマッチ処理
+    if (matchLimitReached) break;
+    // 元パターンのフラグ（gim）を保持する。'gi' と再構築すると m フラグが
+    // 落ちて複数行の ^ アンカーが効かなくなる（PBI-24 で発見・修正）。
+    const regex = new RegExp(pattern.source, pattern.flags);
+    const ranges: Array<{ index: number; length: number }> = [];
     let match;
-    const regex = new RegExp(pattern.source, 'gi');
-    let _lastIndex = 0;
-
     while ((match = regex.exec(sanitized)) !== null) {
-      const [fullMatch] = match;
+      const fullMatch = match[0];
       const index = match.index;
-
+      // ゼロ長マッチの無限ループ防止
+      if (fullMatch.length === 0) {
+        regex.lastIndex++;
+        continue;
+      }
       // 安全な文脈かチェック
       if (!isInSafeContext(sanitized, fullMatch, index)) {
         warnings.push(`Detected high-risk pattern: "${fullMatch}"`);
         dangerLevel = DangerLevel.HIGH;
-        sanitized = sanitized.replaceAll(fullMatch, '[FILTERED]');
+        ranges.push({ index, length: fullMatch.length });
+        matchCount++;
+        if (matchCount >= MAX_PATTERN_MATCHES) {
+          // fail-open: 上限超過分は保持し、検出を打ち切る
+          matchLimitReached = true;
+          break;
+        }
       }
-
-      _lastIndex = index + fullMatch.length;
     }
+    // マッチした範囲だけを1パスで置換する（検出範囲のみ。範囲は昇順・非重複なので
+    // 座標ずれは発生しない。安全コンテキスト内の同一文字列は置換対象外のまま）
+    const parts: string[] = [];
+    let last = 0;
+    for (const range of ranges) {
+      parts.push(sanitized.slice(last, range.index), '[FILTERED]');
+      last = range.index + range.length;
+    }
+    parts.push(sanitized.slice(last));
+    sanitized = parts.join('');
+  }
+  if (matchLimitReached) {
+    warnings.push('Match limit exceeded; remaining matches left unfiltered');
   }
 
   // 2. 単一用語の悪意ある用法チェック
   for (const genericPattern of GENERIC_TERM_PATTERNS) {
     let match;
-    const regex = new RegExp(genericPattern.source, 'gi');
+    const regex = new RegExp(genericPattern.source, genericPattern.flags);
 
     while ((match = regex.exec(sanitized)) !== null) {
       const [fullMatch] = match;
@@ -405,18 +414,18 @@ export function sanitizePromptContent(content: string): SanitizeResult {
   }
 
   // 2. 危険な特殊文字・制御文字の除去
-  let sanitizedWithChars = '';
-  for (const char of sanitized) {
-    if (DANGEROUS_CHARS[char]) {
+  // 1文字ずつのループを regex 1パスに置換（出力・警告は旧実装と bit 等価。
+  // 文字クラスは DANGEROUS_CHARS テーブルの12キーと同一集合）。
+  sanitized = sanitized.replace(
+    /[\x00\x1b-\x1f\x7f-\x84]/g,
+    (char) => {
       warnings.push(`Removed dangerous control character: U+${char.charCodeAt(0).toString(16).padStart(4, '0')}`);
       if (dangerLevel === DangerLevel.SAFE) {
         dangerLevel = DangerLevel.LOW;
       }
-    } else {
-      sanitizedWithChars += char;
+      return '';
     }
-  }
-  sanitized = sanitizedWithChars;
+  );
 
   // 3. HTMLエンティティ・タグのエスケープ（XSS一環）
   sanitized = sanitized.replace(/</g, '&lt;').replace(/>/g, '&gt;');
