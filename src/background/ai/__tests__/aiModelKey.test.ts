@@ -1,8 +1,8 @@
 /**
- * aiModelKey.test.ts
- * Verifies the shared provider → model-settings-key mapping used by both
- * AIClient (write/display) and OpenAIProvider (request), so the "write key"
- * and "display key" can never drift apart for a provider.
+ * aiModelKey.test.ts (background/ai)
+ * Verifies the shared provider → model-settings-key mapping at its canonical
+ * location (relocated from src/utils/aiModelKey.ts by PBI 2026-09-21-06 so
+ * the utils layer no longer statically depends on the background catalog).
  *
  * PBI 06 (2026-09-03b): the string-derivation fallback was removed — the
  * provider catalog is the single source of truth and unknown providers
