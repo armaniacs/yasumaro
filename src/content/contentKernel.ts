@@ -161,8 +161,16 @@ export class ContentKernel {
     // Content extraction (pure delegation to pipeline, SSOT via PageState)
     // -----------------------------------------------------------------------
 
-    extractPageContent(config: CleansingConfig = this.pageState.cleansingConfig): ExtractResult {
-        const result = preparePageContent(config);
+    /**
+     * PBI 2026-09-21-30: the SINGLE config-default resolution point in the
+     * kernel (`config ?? this.pageState.cleansingConfig`). The signature
+     * stays optional for kernel-internal and existing no-arg callers, but
+     * carries no default-parameter — the `??` in the body is the only
+     * default. The extractor.ts facade forwards with no default of its own.
+     */
+    extractPageContent(config?: CleansingConfig): ExtractResult {
+        const resolved: CleansingConfig = config ?? this.pageState.cleansingConfig;
+        const result = preparePageContent(resolved);
         if (result.cleansingExecuted === true) {
             // Badge 通知は fire-and-forget（PBI-22 MessageSender seam 経由）。
             // 送信失敗は抽出フローを壊さない — ログのみ。
@@ -187,18 +195,15 @@ export class ContentKernel {
     }
 
     /**
-     * PBI 2026-09-21-25: deep single call folding extract + commit.
+     * PBI 2026-09-21-30: deep single call folding extract + commit — the
+     * ONLY extraction route offered to VisitReporter/GetContentHandler.
      * The commit order is guaranteed inside the kernel — callers hold no
-     * sequencing knowledge. The config default is resolved with ONE explicit
-     * read of pageState at entry (same value extractPageContent would use),
-     * so the resolution point is visible instead of hidden in a default
-     * parameter. Design (a) chosen over required-config (b): the extractor.ts
-     * facade and existing pair-based tests keep calling the pair signatures,
-     * which stay public and unchanged for compatibility.
+     * sequencing knowledge. Config flows through to extractPageContent,
+     * which holds the kernel's single default-resolution point, so an
+     * omitted config resolves exactly once however this method is entered.
      */
     extractAndCommit(config?: CleansingConfig): ExtractResult {
-        const resolved: CleansingConfig = config ?? this.pageState.cleansingConfig;
-        const result = this.extractPageContent(resolved);
+        const result = this.extractPageContent(config);
         this.applyExtractResultToPageState(result);
         return result;
     }

@@ -142,8 +142,7 @@ describe('VisitReporter — single VALID_VISIT send', () => {
         const sender = { sendMessageWithRetry: vi.fn((_msg?: unknown) => Promise.resolve({ success: true })) };
         const reporter = new VisitReporter({
             pageState,
-            extractor: () => ({ content: 'test content', pageBytes: 100, candidateBytes: 80 } as unknown as ReturnType<typeof import('../../utils/pageContentPipeline.js').preparePageContent>),
-            applyResult: () => {},
+            extractAndCommit: () => ({ content: 'test content', pageBytes: 100, candidateBytes: 80 } as unknown as ReturnType<typeof import('../../utils/pageContentPipeline.js').preparePageContent>),
             sender,
         });
         await reporter.report();
