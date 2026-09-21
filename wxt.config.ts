@@ -204,16 +204,19 @@ export default defineConfig({
       //     worker, via src/background/pipeline/piiSanitizeHybrid.ts
       //   - the TextRank extraction core (src/wasm/textrank/) in the
       //     service worker, via src/utils/sentenceExtractorHybrid.ts
-      //   - the sentence dedup core (src/wasm/sentence-dedup/) — STAGED,
-      //     not yet called from production: contentDedupHybrid.ts exists but
-      //     no call site imports it yet, and its binary is not shipped (no
-      //     publicAssets entry, no public/wasm copy). Re-add both when
-      //     wiring the hybrid.
+      //   - the sentence dedup core (src/wasm/sentence-dedup/) — STAGED per
+      //     wasm/crates.json publicShip=false (the manifest-driven
+      //     publicAssets loop above is the authority: not shipped, no
+      //     public/wasm copy; contentDedupHybrid.ts exists but no call site
+      //     imports it yet). Re-ship by flipping publicShip when wiring the
+      //     hybrid — no prose allowlist to maintain here.
       //   - the tag cooccurrence core (src/wasm/tag-cooccur/) in the
       //     dashboard page, via
       //     src/dashboard/panels/asyncData/tagClusterPanel.ts →
       //     src/dashboard/tagCooccurrenceHybrid.ts
       // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur" src/`.
+      // That grep pattern is a verification aid, not a crate enumeration
+      // (PBI 2026-09-21-26: benign, out of scope for the manifest invariant).
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,

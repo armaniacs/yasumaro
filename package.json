@@ -10,7 +10,7 @@
     "build:docs-i18n": "node scripts/sync-docs-translations.mjs",
     "build:docs-pii": "esbuild docs-src/pii-sandbox.ts --bundle --outfile=docs/assets/pii-sandbox.js --format=iife --global-name=PiiSandbox",
     "build:wasm": "node scripts/build-wasm.mjs",
-    "test:wasm": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cd wasm/js-strings && cargo test && cd ../pii-sanitizer && cargo test && cd ../textrank && cargo test && cd ../sentence-dedup && cargo test && cd ../tag-cooccur && cargo test",
+    "test:wasm": "node scripts/wasm-crates.mjs test",
     "build:edge": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build --browser edge && node scripts/build-store-zip.mjs",
     "build:brave": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build && node scripts/build-store-zip.mjs",
     "build:watch": "wxt build --watch",
