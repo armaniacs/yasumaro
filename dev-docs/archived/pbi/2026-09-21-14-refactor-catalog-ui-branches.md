@@ -32,12 +32,12 @@ Scenario: 新規 provider 追加で条件分岐を足さない
 ```
 
 ## 受け入れ基準
-- [ ] `renderProviderSettings` の `providerId !== 'gemini'` による css クラス分岐が catalog フィールド駆動になる
-- [ ] apiKey ラベルの `geminiApiKey` / `aiApiKey` 切替が catalog フィールド駆動になる
-- [ ] `gemini_api_version` の aria/note/error 特別ブロックが extra-field の a11y meta 駆動になる
-- [ ] B レイアウトの `details.open` 初期値が catalog の defaultOpen 相当フィールド駆動になる
-- [ ] 既存 provider の描画・a11y 属性・初期開閉状態が変更前と同一である
-- [ ] 新規 provider 追加時に view 側の if 分岐追加が不要であることがテストで示される
+- [x] `renderProviderSettings` の `providerId !== 'gemini'` による css クラス分岐が catalog フィールド駆動になる
+- [x] apiKey ラベルの `geminiApiKey` / `aiApiKey` 切替が catalog フィールド駆動になる
+- [x] `gemini_api_version` の aria/note/error 特別ブロックが extra-field の a11y meta 駆動になる
+- [x] B レイアウトの `details.open` 初期値が catalog の defaultOpen 相当フィールド駆動になる
+- [x] 既存 provider の描画・a11y 属性・初期開閉状態が変更前と同一である
+- [x] 新規 provider 追加時に view 側の if 分岐追加が不要であることがテストで示される
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -76,6 +76,6 @@ Scenario: 新規 provider 追加で条件分岐を足さない
 - catalog 本体: `src/background/ai/providerCatalog.ts` — `ProviderCatalogEntry` に追加すべきフィールドの置き場所。B レイアウトは `src/dashboard/aiProviderB/providerAccordionView.ts:19-35` の accordion 生成部が対象
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

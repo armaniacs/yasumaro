@@ -32,25 +32,25 @@ PBI-19（プロンプトスキャンのWASM移植）を STEP 0 プローブで�
 
 - 2026-09-21-01-fix-prompt-sanitizer-hardening.md（✅ 実装完了・コミット c999b8ed — ①置換中イテレーションのマッチ取りこぼし（RED実証→範囲収集1パス適用で修正）②マッチ件数 fail-open 上限1,000件 ③制御文字ループの regex 化（bit等価）④**追加発見**: `new RegExp(source, 'gi')` 再構築で `m` フラグが脱落し複数行の `^` アンカーが無効だったバグを修正（pattern.flags 保持）。promptSanitizer 系 139 tests・validate 12,712 green。GitHub PR レビューが残）
 
-### 2026-09-21 大局的コード改善（holistic-0921） — ⬜ 未着手 15件 RICE順: 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09 → 10 → 11 → 12 → 13 → 14 → 15 → 16
+### 2026-09-21 大局的コード改善（holistic-0921） — ✅ 15件完了（02-16 アーカイブ済み）
 
-4観点（DRY / SoC / 拡張性 / 堅牢性）の並列サブエージェント調査 + 統合側全指摘の実コード裏取りで抽出した15候補を RICE 採点して PBI 化。バッチ1（02/03/04/05/08 5並列）→ バッチ2（06/07/09/10/12 5並列）→ バッチ3（13→14→15 直列チェーン・providerCatalog.ts 共有）→ バッチ4（11/16 2並列）。台帳は `2026-09-21-00-backlog-holistic-0921.md`。既存進行中 PBI（13/14/16/2026-09-19-08）はユーザー裁定で後日 autonomous-task-closer に委ねる。
+4観点（DRY / SoC / 拡張性 / 堅牢性）の並列サブエージェント調査 + 統合側全指摘の実コード裏取りで抽出した15候補を RICE 採点して実装。バッチ1（02/03/04/05/08 5並列）→ バッチ2（06/07/09/10/12 5並列・07 は統合側が引き取り）→ バッチ3（13→14→15 直列チェーン）→ バッチ4（11/16 2並列）。統合検証: type-check PASS / lint 0 errors / test 12,839 passed / build PASS。台帳は [2026-09-21-00-backlog-holistic-0921.md](2026-09-21-00-backlog-holistic-0921.md)。既存進行中 PBI（13/14/16/2026-09-19-08）はユーザー裁定で後日 autonomous-task-closer に委ねる。
 
-- [2026-09-21-02-fix-persite-overrides-lock.md](2026-09-21-02-fix-persite-overrides-lock.md)（⬜ 未着手・🟢低・1pt・🔧fix・副作用🟢なし: perSiteOverrides の raw chrome.storage.local.set + `catch {}` 握り潰しを解消しロック経由の単一 writer に統一。RICE 19.2・順位1）
-- [2026-09-21-03-refactor-url-guards-ssot.md](2026-09-21-03-refactor-url-guards-ssot.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: isSecureUrl を isHttpUrl SSOT へ委譲、HeaderDetector.normalizeUrl を normalizeUrlSafe 委譲に。RICE 16.0・順位2）
-- [2026-09-21-04-fix-port-validation-delegate.md](2026-09-21-04-fix-port-validation-delegate.md)（⬜ 未着手・🟢低・1pt・🔧fix・副作用🟢なし: dashboard validatePort を validateObsidianPort に委譲し parseInt 系挙動不一致を解消。RICE 12.0・順位3）
-- [2026-09-21-05-refactor-cleansing-key-derivation.md](2026-09-21-05-refactor-cleansing-key-derivation.md)（⬜ 未着手・🟡中・2pt・🔧refactor・副作用🟢なし: presets 3×32 手書きと restorable spec を CLEANSING_RULES から派生化し復元欠落4鍵の実害を解消。RICE 10.0・順位4）
-- [2026-09-21-06-refactor-utils-background-edges.md](2026-09-21-06-refactor-utils-background-edges.md)（⬜ 未着手・🟡中・2pt・🔧refactor・副作用🟢なし: auditLog を遅延 import 流儀に、aiModelKey を background/ai へ移動。RICE 8.0・順位5）
-- [2026-09-21-07-fix-issue-report-reentrancy.md](2026-09-21-07-fix-issue-report-reentrancy.md)（⬜ 未着手・🟢低・1pt・🔧fix・副作用🟢なし: issueReportLink に in-flight guard と try/catch を追加。RICE 8.0・順位6）
-- [2026-09-21-08-fix-idle-scheduler-prune.md](2026-09-21-08-fix-idle-scheduler-prune.md)（⬜ 未着手・🟢低・1pt・🔧fix・副作用🟢なし: IdleScheduler の発火後 id を Set から除去。RICE 8.0・順位7）
-- [2026-09-21-09-fix-hybrid-probe-retry.md](2026-09-21-09-fix-hybrid-probe-retry.md)（⬜ 未着手・🟢低・1pt・🔧fix・副作用🟢なし: tagCooccurrenceHybrid の sticky-false プローブを bounded negative cache に。PBI 13 と連携注記あり。RICE 6.0・順位8）
-- [2026-09-21-10-refactor-provider-constructor-ritual.md](2026-09-21-10-refactor-provider-constructor-ritual.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: OpenAI/Gemini の timeout 導出と apiKeySource ログを基底に集約。RICE 6.0・順位9）
-- [2026-09-21-11-fix-messaging-typed-senders.md](2026-09-21-11-fix-messaging-typed-senders.md)（⬜ 未着手・🟢低・1pt・🔧fix・副作用🟢なし: 手書き sendMessage 2箇所を型付きセンダーへ、ContentResponse を messaging へ移動。RICE 6.0・順位10）
-- [2026-09-21-12-refactor-export-date-ssot.md](2026-09-21-12-refactor-export-date-ssot.md)（⬜ 未着手・🟡中・2pt・🔧refactor・副作用🟢なし: エクスポート3経路の日付分解を getLocalDateString に統一。golden pin あり。RICE 4.8・順位11）
-- [2026-09-21-13-refactor-provider-domain-ssot.md](2026-09-21-13-refactor-provider-domain-ssot.md)（⬜ 未着手・🔴高・3pt・🔧refactor・副作用🟢なし: プロバイダドメイン5重リストを providerAllowlist 中立行から派生。RICE 4.0・順位12）
-- [2026-09-21-14-refactor-catalog-ui-branches.md](2026-09-21-14-refactor-catalog-ui-branches.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: catalog UI の gemini 分岐4箇所を catalog フィールド化。RICE 4.0・順位13）
-- [2026-09-21-15-refactor-provider-factory-registry.md](2026-09-21-15-refactor-provider-factory-registry.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: createProviderStrategy の if-chain を factory registry 化。RICE 3.2・順位14）
-- [2026-09-21-16-refactor-page-content-pipeline-decouple.md](2026-09-21-16-refactor-page-content-pipeline-decouple.md)（⬜ 未着手・🟡中・2pt・🔧refactor・副作用🟢なし: pageContentPipeline の PageState 値 import（utils↔content 循環）を解消。RICE 2.4・順位15）
+- [2026-09-21-02-fix-persite-overrides-lock.md](../dev-docs/archived/pbi/2026-09-21-02-fix-persite-overrides-lock.md)（✅ RICE 19.2・raw set 握り潰しを単一 writer 化+失敗可視化。contentKernel 読み取りが settings 経由と実証し raw set は冗長として削除）
+- [2026-09-21-03-refactor-url-guards-ssot.md](../dev-docs/archived/pbi/2026-09-21-03-refactor-url-guards-ssot.md)（✅ RICE 16.0・isSecureUrl→isHttpUrl・HeaderDetector.normalizeUrl→normalizeUrlSafe へ委譲+parity テスト）
+- [2026-09-21-04-fix-port-validation-delegate.md](../dev-docs/archived/pbi/2026-09-21-04-fix-port-validation-delegate.md)（✅ RICE 12.0・validatePort を validateObsidianPort 委譲。'80.5'/'80abc' 拒否へ反転・'' は既定ポート扱い）
+- [2026-09-21-05-refactor-cleansing-key-derivation.md](../dev-docs/archived/pbi/2026-09-21-05-refactor-cleansing-key-derivation.md)（✅ RICE 10.0・presets/restorable を CLEANSING_RULES 派生に。復元欠落4鍵の実害解消・実際は33鍵）
+- [2026-09-21-06-refactor-utils-background-edges.md](../dev-docs/archived/pbi/2026-09-21-06-refactor-utils-background-edges.md)（✅ RICE 8.0・auditLog 遅延 import 化・aiModelKey を background/ai へ移動（shim は統合側で削除））
+- [2026-09-21-07-fix-issue-report-reentrancy.md](../dev-docs/archived/pbi/2026-09-21-07-fix-issue-report-reentrancy.md)（✅ RICE 8.0・in-flight guard+open チェック+catch+i18n 鍵流用の可視エラー。統合側が引き取り実装）
+- [2026-09-21-08-fix-idle-scheduler-prune.md](../dev-docs/archived/pbi/2026-09-21-08-fix-idle-scheduler-prune.md)（✅ RICE 8.0・発火後 id を try/finally で除去・cancel 意味論不変）
+- [2026-09-21-09-fix-hybrid-probe-retry.md](../dev-docs/archived/pbi/2026-09-21-09-fix-hybrid-probe-retry.md)（✅ RICE 6.0・失敗非キャッシュ+バースト単位ログ制御・共有 runtime 向け契約を記録）
+- [2026-09-21-10-refactor-provider-constructor-ritual.md](../dev-docs/archived/pbi/2026-09-21-10-refactor-provider-constructor-ritual.md)（✅ RICE 6.0・resolveTimeoutMs/logApiKeySource を基底に集約・Gemini isLocal=false 明示）
+- [2026-09-21-11-fix-messaging-typed-senders.md](../dev-docs/archived/pbi/2026-09-21-11-fix-messaging-typed-senders.md)（✅ RICE 6.0・sendFromPopup 統一（wire 無改変）・ContentResponse を messaging へ移動）
+- [2026-09-21-12-refactor-export-date-ssot.md](../dev-docs/archived/pbi/2026-09-21-12-refactor-export-date-ssot.md)（✅ RICE 4.8・getLocalDateString/parseJsonTagsArray へ委譲・テストエクスポートのみ UTC→local 意図的変更）
+- [2026-09-21-13-refactor-provider-domain-ssot.md](../dev-docs/archived/pbi/2026-09-21-13-refactor-provider-domain-ssot.md)（✅ RICE 4.0・37固定行+4派生 helper で4リスト統合・PROVIDER_TO_DOMAIN を同一テーブルへ折りたたみ）
+- [2026-09-21-14-refactor-catalog-ui-branches.md](../dev-docs/archived/pbi/2026-09-21-14-refactor-catalog-ui-branches.md)（✅ RICE 4.0・gemini 特例を catalog フィールド化・outerHTML スナップショットで byte 等価）
+- [2026-09-21-15-refactor-provider-factory-registry.md](../dev-docs/archived/pbi/2026-09-21-15-refactor-provider-factory-registry.md)（✅ RICE 3.2・PROVIDER_STRATEGY_FACTORIES map 化+fallback。14 と同一ファイルのため1コミット統合）
+- [2026-09-21-16-refactor-page-content-pipeline-decouple.md](../dev-docs/archived/pbi/2026-09-21-16-refactor-page-content-pipeline-decouple.md)（✅ RICE 2.4・CleansingConfig を utils/cleansingConfig.ts へ移動し循環解消）
 
 ### 2026-09-20 アーキテクチャレビュー — 🔶 部分実装（12・15 完了・アーカイブ済み。13・14・16 未着手）RICE順: 12 → 13 → 14 → 15 → 16
 

@@ -54,3 +54,12 @@
 - 「20ラウンド改善済みなのに為什麼残るか」→ (a) 新規コードパス（tag-cooccur・issue-report・per-site overrides は直近ラウンドの産物）が既存規律の適用外で生まれる (b) lint の LAYER1_FILES 未分類クラスが盲点 (c) derivation ルールが SSOT 直上の1層で再手書きされる（rules.ts 表化の成果が presets/restorable に伝播しなかった）
 - 「なぜ復元欠落が実害化したか」→ Category-B 4ルール追加時に restorable spec の追記漏れ。表が2箇所（presets・restorable）に手写しされていたため網羅性テストが不在
 - 「なぜ C1 が5リストに育ったか」→ CSP validator・manifest・urlWhitelist が別時期・別目的（fail-close・権限・録画判定）に個別成長し、中立行モデル（providerAllowlist）発明後に取り込み機会がなかった
+
+## 実行結果（2026-09-21 完了）
+
+- **全15件 実装・検証・コミット完了。** 統合検証: type-check PASS / lint 0 errors（既存 warning 21 増減なし）/ test 12,839 passed + 21 skipped（811 ファイル）/ build PASS
+- バッチ実績: バッチ1（02/03/04/05/08 5並列）→ バッチ2（06/07/09/10/12 5並列。07 は停滞サブエージェントを統合側が引き取り実装）→ バッチ3（13→14→15 直列チェーン）→ バッチ4（11/16 2並列）
+- コミット: 02 aec50dc / 03 e77dcd0 / 04 2fc5cd6 / 05 68ff4344 / 08 7fd06c17 / 06 9b9cbeb / 07 990978d / 09 e6057d7 / 10 162a613 / 11 3b8c9f9 / 12 94d554f / 13 33b555e / 14+15 03f1fc3（providerCatalog.ts 共有のため統合）/ 16 78d282f8
+- 実装中の発見: (a) PBI 05 の「32鍵」は実数33鍵（台帳表記は執筆時の誤記・実装は実テーブルから派生し問題なし）(b) PBI 02 の raw set は contentKernel 読み取り経路から冗長と実証 (c) PBI 13 の WHITELIST 旧順序は単一行順では再現不能（Set/includes/sorted UI のため実害なし・golden を set-equality に緩和）(d) lint の vitest/valid-expect エラー13件（expect 第2引数）を統合側で修正
+- 残務の統合側処理: aiModelKey shim 削除、未使用 import 削除（PBI 11 の sender 化副産物）、optionBuilder 型 import の新 SSOT 向け直（PBI 16）
+- 進行中 PBI（13/14/16/2026-09-19-08）の autonomous-task-closer 委託は未実施 — 次ラウンドで実施すること

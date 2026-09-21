@@ -31,12 +31,12 @@ Scenario: 明示 config 供給時は従来通り動作する
 ```
 
 ## 受け入れ基準
-- [ ] `pageContentPipeline` から `content/pageState` への値 import が存在しない
-- [ ] `CleansingConfig` 型の公開 import パスが安定し、既存の呼び出し元が壊れない
-- [ ] 引数なし呼び出しのデフォルト解決が `PageState` インスタンス生成に依存しない
-- [ ] `pageState` は後方互換のため re-export のみ残すか、不要になれば値参照を断つ
-- [ ] 既存の content 側呼び出し(`extractPageContent` 経路)の出力が等価である
-- [ ] 既存テストが green である
+- [x] `pageContentPipeline` から `content/pageState` への値 import が存在しない
+- [x] `CleansingConfig` 型の公開 import パスが安定し、既存の呼び出し元が壊れない
+- [x] 引数なし呼び出しのデフォルト解決が `PageState` インスタンス生成に依存しない
+- [x] `pageState` は後方互換のため re-export のみ残すか、不要になれば値参照を断つ
+- [x] 既存の content 側呼び出し(`extractPageContent` 経路)の出力が等価である
+- [x] 既存テストが green である
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -75,6 +75,6 @@ Scenario: 明示 config 供給時は従来通り動作する
 - production 呼び出し元は content 側のみ: `src/content/contentKernel.ts:18` の `preparePageContent` import と `src/content/contentKernel.ts:141-142` の `extractPageContent` からの委譲付近
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

@@ -36,12 +36,12 @@ Scenario: 既存バックアップとの互換性が保たれる
 ```
 
 ## 受け入れ基準
-- [ ] presets の minimal / balanced / aggressive が CLEANSING_RULE_KEYS 上の allow / deny リストから派生する
-- [ ] restorable のクレンジング boolean セクションが CLEANSING_RULES の storageKeys から派生する
-- [ ] 派生鍵集合 == CLEANSING_RULES 鍵集合の網羅性テストが新設され green である
-- [ ] 既存 preset 値は byte 等価であり、復元挙動は4鍵が復元対象に加わる以外の差分がない
-- [ ] 既存バックアップ互換(migration pin: 旧 payload の欠落鍵はデフォルト解決)が保たれる
-- [ ] Category B 4鍵のバックアップ復元が skippedKeys 経路に落ちず sanitized に残る
+- [x] presets の minimal / balanced / aggressive が CLEANSING_RULE_KEYS 上の allow / deny リストから派生する
+- [x] restorable のクレンジング boolean セクションが CLEANSING_RULES の storageKeys から派生する
+- [x] 派生鍵集合 == CLEANSING_RULES 鍵集合の網羅性テストが新設され green である
+- [x] 既存 preset 値は byte 等価であり、復元挙動は4鍵が復元対象に加わる以外の差分がない
+- [x] 既存バックアップ互換(migration pin: 旧 payload の欠落鍵はデフォルト解決)が保たれる
+- [x] Category B 4鍵のバックアップ復元が skippedKeys 経路に落ちず sanitized に残る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -79,6 +79,6 @@ Scenario: 既存バックアップとの互換性が保たれる
 - 設計上の注意: presets は camelCase の config 鍵(`altEnabled` 等)、restorable は storage 鍵(`ai_summary_cleansing_alt` 等) — 同一テーブルからの2つの派生になる設計。`CleansingRule` の `key` と `storageKey` をそれぞれ変換元にする
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

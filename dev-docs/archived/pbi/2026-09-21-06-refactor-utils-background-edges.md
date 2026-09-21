@@ -32,12 +32,12 @@ Scenario: 公開挙動が不変である
 ```
 
 ## 受け入れ基準
-- [ ] `auditLog` が `offscreenGateway` への静的 import を持たず、storageMaintenance 流儀の遅延 import で解決する
-- [ ] `aiModelKey` が `src/background/ai/` 配下に移動し、utils 層から providerCatalog への静的辺が消える
-- [ ] `RemoteAIService` と関連テストの import 先が新配置に更新され、型チェックと単体テストが green である
-- [ ] `providerAllowlist.ts` に変更がない（PBI 13 の担当範囲と重ならない）
-- [ ] 監査ログ記録とモデルキー解決の公開挙動が不変である
-- [ ] utils→background の静的辺が残存しないことを grep で確認できる
+- [x] `auditLog` が `offscreenGateway` への静的 import を持たず、storageMaintenance 流儀の遅延 import で解決する
+- [x] `aiModelKey` が `src/background/ai/` 配下に移動し、utils 層から providerCatalog への静的辺が消える
+- [x] `RemoteAIService` と関連テストの import 先が新配置に更新され、型チェックと単体テストが green である
+- [x] `providerAllowlist.ts` に変更がない（PBI 13 の担当範囲と重ならない）
+- [x] 監査ログ記録とモデルキー解決の公開挙動が不変である
+- [x] utils→background の静的辺が残存しないことを grep で確認できる
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -78,6 +78,6 @@ Scenario: 公開挙動が不変である
 - lint の検出限界: `utils-layer-boundary` は未分類ファイルのため当該2辺を検出できない。grep による目視確認が必要
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

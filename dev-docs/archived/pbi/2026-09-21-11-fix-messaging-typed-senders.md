@@ -32,12 +32,12 @@ Scenario: GET_CONTENT の応答型が messaging 層で解決される
 ```
 
 ## 受け入れ基準
-- [ ] `privacyConsent.ts` の手書き送信が型付きセンダー経由に置き換わる
-- [ ] `encryptionSession.ts` の手書き送信が型付きセンダー経由に置き換わる
-- [ ] `privacyConsent.ts` の protocol 定数 import が `messaging/protocol.js` 直参照になる
-- [ ] `ContentResponse` が messaging 層に移動し popup 側は再エクスポートのみになる
-- [ ] popup と messaging の型循環が解消される
-- [ ] 実行時挙動が不変で既存テストが green になる
+- [x] `privacyConsent.ts` の手書き送信が型付きセンダー経由に置き換わる
+- [x] `encryptionSession.ts` の手書き送信が型付きセンダー経由に置き換わる
+- [x] `privacyConsent.ts` の protocol 定数 import が `messaging/protocol.js` 直参照になる
+- [x] `ContentResponse` が messaging 層に移動し popup 側は再エクスポートのみになる
+- [x] popup と messaging の型循環が解消される
+- [x] 実行時挙動が不変で既存テストが green になる
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -78,6 +78,6 @@ Scenario: GET_CONTENT の応答型が messaging 層で解決される
 - wire 応答型の所有: `src/messaging/types.ts:297` 付近の `T extends 'GET_CONTENT' ? ContentResponse` が popup 所有型で解決される
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

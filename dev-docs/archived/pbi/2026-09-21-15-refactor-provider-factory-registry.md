@@ -31,12 +31,12 @@ Scenario: 新プロトコル追加が registry 登録のみで完了する
 ```
 
 ## 受け入れ基準
-- [ ] `createProviderStrategy` 内の `if (providerId === 'gemini')` / `if (providerId === 'built-in-ai')` 分岐が解体される
-- [ ] `PROVIDER_CATALOG` と同じ場所に `providerId → factory` の registry が置かれる
-- [ ] generic fallback が既定挙動として registry に組み込まれる
-- [ ] 全7 id が同一インスタンス型を生成することがテストで pin される
-- [ ] 未知 providerId は `UnknownProviderError` となり誤生成しない
-- [ ] 既存の catalog 解決と RemoteAIService の登録経路が green のままである
+- [x] `createProviderStrategy` 内の `if (providerId === 'gemini')` / `if (providerId === 'built-in-ai')` 分岐が解体される
+- [x] `PROVIDER_CATALOG` と同じ場所に `providerId → factory` の registry が置かれる
+- [x] generic fallback が既定挙動として registry に組み込まれる
+- [x] 全7 id が同一インスタンス型を生成することがテストで pin される
+- [x] 未知 providerId は `UnknownProviderError` となり誤生成しない
+- [x] 既存の catalog 解決と RemoteAIService の登録経路が green のままである
 
 ## テスト戦略（t_wadaスタイル）
 
