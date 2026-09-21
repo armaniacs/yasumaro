@@ -39,18 +39,42 @@ export class IdleScheduler implements Scheduler {
     }
     schedule(callback: () => void, delayMs?: number): number {
         if (delayMs !== undefined) {
-            const id = globalThis.setTimeout(callback, delayMs) as unknown as number;
+            let id!: number;
+            const wrapped = () => {
+                try {
+                    callback();
+                } finally {
+                    this.timeoutIds.delete(id);
+                }
+            };
+            id = globalThis.setTimeout(wrapped, delayMs) as unknown as number;
             this.timeoutIds.add(id);
             return id;
         }
         const w = this.win as unknown as { requestIdleCallback?: (cb: () => void, opts: { timeout: number }) => number } | undefined;
         if (w?.requestIdleCallback) {
-            const id = w.requestIdleCallback(callback, { timeout: 2000 });
+            let id!: number;
+            const wrapped = () => {
+                try {
+                    callback();
+                } finally {
+                    this.idleIds.delete(id);
+                }
+            };
+            id = w.requestIdleCallback(wrapped, { timeout: 2000 });
             this.idleIds.add(id);
             return id;
         }
         // Fallback: global setTimeout works in Node/jsdom and browsers
-        const id = globalThis.setTimeout(callback, 1000) as unknown as number;
+        let id!: number;
+        const wrapped = () => {
+            try {
+                callback();
+            } finally {
+                this.timeoutIds.delete(id);
+            }
+        };
+        id = globalThis.setTimeout(wrapped, 1000) as unknown as number;
         this.timeoutIds.add(id);
         return id;
     }
