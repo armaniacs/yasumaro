@@ -60,13 +60,6 @@ const CRATES = [
         wasmName: 'tag_cooccur_bg.wasm',
         crateLabel: 'tag-cooccur',
     },
-    {
-        gluePath: 'wasm/md-sanitize/pkg/md_sanitize.js',
-        outPath: 'src/wasm/md-sanitize/mdSanitizeWasm.js',
-        dtsName: 'mdSanitizeWasm.d.ts',
-        wasmName: 'md_sanitize_bg.wasm',
-        crateLabel: 'md-sanitize',
-    },
 ];
 
 for (const { gluePath, outPath, dtsName, wasmName, crateLabel } of CRATES) {
