@@ -7,7 +7,7 @@
 import { getUserLocale } from '../../../utils/localeUtils.js';
 import { buildEntryMarkdown, buildTemplateEntryData } from '../../../utils/markdownFormatter.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
-import { PIPELINE_TEXT_EMPTY_FALLBACK, selectPipelineText } from '../pipelineText.js';
+import { PIPELINE_TEXT_EMPTY_FALLBACK, selectDisplayText } from '../pipelineText.js';
 
 /**
  * Format content as markdown for Obsidian
@@ -19,11 +19,11 @@ export const formatMarkdownStep: PipelineStepFunction = async (
   const { data, privacyResult } = context;
   const { url, title } = data;
 
-  // Text selection is single-owned by selectPipelineText (pipelineText.ts):
+  // Display text is single-owned by selectDisplayText (pipelineText.ts):
   // extractedSentences (joined with '\n\n') > sanitizedSummary >
   // privacyResult.summary > truncatedContent > ''. The display fallback below
   // is this step's presentation transform and stays here byte-equal.
-  const summary = selectPipelineText(context) || PIPELINE_TEXT_EMPTY_FALLBACK;
+  const summary = selectDisplayText(context) || PIPELINE_TEXT_EMPTY_FALLBACK;
 
   // Sanitize + assemble through the entry-markdown SSOT (PBI-04). The title
   // is placed inside `[title](url)`, so the SSOT escapes link-breakout chars

@@ -15,7 +15,7 @@ import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
 import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { ErrorStrategy } from '../types.js';
-import { selectPipelineText } from '../pipelineText.js';
+import { selectExtractionInput } from '../pipelineText.js';
 import { decideL0 } from '../recordingDecision.js';
 
 /**
@@ -37,11 +37,12 @@ export const extractSentencesStep: PipelineStepFunction = async (
     return context;
   }
 
-  // Text selection is single-owned by selectPipelineText (pipelineText.ts).
-  // At this stage extractedSentences is not yet produced, so the selector
-  // resolves the sanitizedSummary > privacyResult.summary > truncatedContent
-  // chain with a '' default — identical to the previous inline chain.
-  const contentToExtract = selectPipelineText(context);
+  // Extraction input is single-owned by selectExtractionInput
+  // (pipelineText.ts). The stage-split selector structurally cannot see
+  // extractedSentences — the output this step is about to produce — so a
+  // retry can never re-consume its own output (Checking Team 2026-09-22:
+  // Domain Logic Medium).
+  const contentToExtract = selectExtractionInput(context);
 
   if (!contentToExtract || !contentToExtract.trim()) {
     addLog(LogType.WARN, 'No content available for L0 extraction', { url, traceId: context.traceId });
