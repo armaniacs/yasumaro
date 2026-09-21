@@ -42,6 +42,9 @@ function checkSbom() {
 }
 checkJsonParse('docs/version.json');
 checkJsonParse('dev-docs/metrics/history.json');
+// PBI 2026-09-21-26: the crate manifest is the SSOT for the WASM build/gate
+// pipeline — a malformed manifest must fail validation, not silently skip.
+checkJsonParse('wasm/crates.json');
 checkJsonParse('sbom.json');
 checkSemver('docs/version.json');
 checkSemver('package.json');
