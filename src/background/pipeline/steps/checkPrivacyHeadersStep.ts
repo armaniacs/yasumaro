@@ -77,6 +77,11 @@ export class PrivacyHeadersChecker {
       }
       return context;
     }
+    // decidePrivacy denies only when isPrivate was true, so privacyInfo is
+    // non-null here; the guard keeps that contract explicit for the compiler.
+    if (!privacyInfo) {
+      return context;
+    }
 
     // Private page detected
     addLog(LogType.WARN, 'Private page detected', {

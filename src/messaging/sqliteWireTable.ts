@@ -221,7 +221,8 @@ export const SQLITE_WIRE_TABLE = [
     messageType: 'SQLITE_QUERY',
     repoMethod: 'query',
     depsMethod: 'query',
-    encodeOp: (q?: StorageQuery): Extract<QueryOp, { kind: 'records' }> => ({ kind: 'records', q }),
+    encodeOp: (q?: StorageQuery): Extract<QueryOp, { kind: 'records' }> =>
+      q === undefined ? { kind: 'records' } : { kind: 'records', q },
     encodePayload: (op) => ((op as Extract<QueryOp, { kind: 'records' }>).q ?? {}) as Record<string, unknown>,
     decodeGateway: (response) => ({
       rows: ((response.rows as unknown[] | undefined) || []) as BrowsingLogRecord[],
@@ -300,8 +301,10 @@ export const SQLITE_WIRE_TABLE = [
     depsMethod: 'queryAuditLog',
     encodeOp: (options?: { limit?: number; offset?: number }): Extract<QueryOp, { kind: 'auditLog' }> => ({
       kind: 'auditLog',
-      limit: options?.limit,
-      offset: options?.offset,
+      // exactOptionalPropertyTypes: absent stays absent (handler applies the
+      // same ?? defaults either way, so the wire outcome is identical).
+      ...(options?.limit !== undefined && { limit: options.limit }),
+      ...(options?.offset !== undefined && { offset: options.offset }),
     }),
     encodePayload: (op) => {
       const o = op as Extract<QueryOp, { kind: 'auditLog' }>;
