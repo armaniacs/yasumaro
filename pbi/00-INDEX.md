@@ -32,15 +32,15 @@ PBI-19（プロンプトスキャンのWASM移植）を STEP 0 プローブで�
 
 - 2026-09-21-01-fix-prompt-sanitizer-hardening.md（✅ 実装完了・コミット c999b8ed — ①置換中イテレーションのマッチ取りこぼし（RED実証→範囲収集1パス適用で修正）②マッチ件数 fail-open 上限1,000件 ③制御文字ループの regex 化（bit等価）④**追加発見**: `new RegExp(source, 'gi')` 再構築で `m` フラグが脱落し複数行の `^` アンカーが無効だったバグを修正（pattern.flags 保持）。promptSanitizer 系 139 tests・validate 12,712 green。GitHub PR レビューが残）
 
-### 2026-09-21 arch-delivery-loop 0921b（差分） — ⬜ 未着手 5件 RICE順: 26 → 27 → 28 → 29 → 30
+### 2026-09-21 arch-delivery-loop 0921b（差分） — ✅ 5件完了（26-30 アーカイブ済み）RICE順: 26 → 27 → 28 → 29 → 30
 
-ラウンド2完了直後の差分診断（前ラウンド新コード + PBI-18 宣言済み follow-up + R4 トリガー再評価）。5候補を RICE 採点して PBI 化。全5件がファイル非重複のため1バッチ並列実装。台帳送りは新規ゼロ（P3/P4 トリガー不発・R4 は 28 でクローズ）。台帳は [2026-09-21-00-backlog-archloop-0921b.md](2026-09-21-00-backlog-archloop-0921b.md)。HTML レポート: `$TMPDIR/architecture-review-0921b.html`。
+ラウンド2完了直後の差分診断（前ラウンド新コード + PBI-18 宣言済み follow-up + R4 トリガー再評価）。5候補を RICE 採点して実装。全5件がファイル非重複のため1バッチ並列実装。台帳送りは新規ゼロ（P3/P4 トリガー不発のまま据え置き・R4 は 28 でクローズ）。台帳は [2026-09-21-00-backlog-archloop-0921b.md](2026-09-21-00-backlog-archloop-0921b.md)。HTML レポート: `$TMPDIR/architecture-review-0921b.html`。
 
-- [2026-09-21-26-refactor-manifest-adoption-completion.md](2026-09-21-26-refactor-manifest-adoption-completion.md)（⬜ 未着手・🟡中・2pt・🔧refactor・副作用🟢なし: manifest 採用完了 — test:wasm chain・ci cache/step/parity 2行・CSP prose・CONTEXT.md を crates.json 宇宙へ。RICE 32・順位1）
-- [2026-09-21-27-refactor-wasm-success-mock-migration.md](2026-09-21-27-refactor-wasm-success-mock-migration.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: wasm-success mock 残り2箇所を createNodeWasmInit へ+陳腐 doc 2行。RICE 16・順位2）
-- [2026-09-21-28-refactor-privacy-predecision-pending-builder.md](2026-09-21-28-refactor-privacy-predecision-pending-builder.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: privacy bypass を pre-decision 化（fetch スキップ byte 等価保持）+ pending builder を pendingStorage へ抽出（R4 クロージャ）。RICE 10・順位3）
-- [2026-09-21-29-refactor-opfs-search-input-union.md](2026-09-21-29-refactor-opfs-search-input-union.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: RunOpfsSearchArgs.searchInput を判別共用体に。RICE 6・順位4）
-- [2026-09-21-30-refactor-extract-apply-pair-retirement.md](2026-09-21-30-refactor-extract-apply-pair-retirement.md)（⬜ 未着手・🟢低・1pt・🔧refactor・副作用🟢なし: extract/apply ペア残余の解消 — interface narrow+config 既定の1解決点化。RICE 4.8・順位5）
+- [2026-09-21-26-refactor-manifest-adoption-completion.md](../dev-docs/archived/pbi/2026-09-21-26-refactor-manifest-adoption-completion.md)（✅ 完了 — libCrates+paritySuites を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で test:wasm・ci cache/step/parity を駆動。3列挙とも旧リストと byte 同一を実証。CSP prose・CONTEXT.md 更新。コミット 2601154。RICE 32・順位1）
+- [2026-09-21-27-refactor-wasm-success-mock-migration.md](../dev-docs/archived/pbi/2026-09-21-27-refactor-wasm-success-mock-migration.md)（✅ 完了 — pii/tag-cooccur の wasm-success mock を createNodeWasmInit へ移行（module_or_path 残存ゼロを実証）+陳腐 doc 2行。コミット 271c405・14 green。RICE 16・順位2）
+- [2026-09-21-28-refactor-privacy-predecision-pending-builder.md](../dev-docs/archived/pbi/2026-09-21-28-refactor-privacy-predecision-pending-builder.md)（✅ 完了 — pre-decision で bypass subset（force||whitelisted）のみ fetch スキップ（素の pre-allow では isPrivate 未確定のため不可と判定し記録）+ buildPendingPage(input, now) 純粋関数抽出（clock 注入・旧 timestamp/expiry 1ms 差異解消）。コミット b6a7e0f・72 green。RICE 10・順位3）
+- [2026-09-21-29-refactor-opfs-search-input-union.md](../dev-docs/archived/pbi/2026-09-21-29-refactor-opfs-search-input-union.md)（✅ 完了 — input を判別共用体化し誤用をコンパイルエラー化・スナップショット byte 等価。コミット e8eb2cc・14 green。RICE 6・順位4）
+- [2026-09-21-30-refactor-extract-apply-pair-retirement.md](../dev-docs/archived/pbi/2026-09-21-30-refactor-extract-apply-pair-retirement.md)（✅ 完了 — 両 deps interface を extractAndCommit のみに narrow・fallback 分岐と非null assertion 削除・facade 既定引数廃止。config 既定は kernel 内1解決点（裁定記録）。コミット a778856・477 green。RICE 4.8・順位5）
 
 ### 2026-09-21 arch-delivery-loop 0921 — ✅ 9件完了（17-25 アーカイブ済み）RICE順: 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25
 

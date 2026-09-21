@@ -26,3 +26,9 @@
 - 「前ラウンド完了直後に follow-up が出るのはなぜか」→ PBI-18 の実装者が所有権外の4箇所（ci cache・test:wasm・CSP prose・docs）を意図的に保留した。大口 SSOT 化では所有権バンドルを厳密に守る方が安全で、保留は台帳に宣言されていた — 差分ラウンドがそれを拾う構造は正常
 - 「R4 が今ラウンドで実残になったか」→ deniedBy 修正で deny 側は seam 単一所有になったが、allow 側の bypass（force/whitelist）と pending 組み立ては未処理のままだった。トリガー（privacy step 改修）が発火したことで再評価し、実残と判定
 - 「A4 が移行期のまま残ったか」→ PBI-25 が pair 互換を意図的に保持した（extractor.ts が禁止ファイルだったため）。今ラウンドで所有障壁が消えたので narrow 化が可能に
+
+## 実行結果（2026-09-21 完了）
+
+- **全5件 実装・検証・コミット・アーカイブ完了。** コミット: 26 2601154 / 27 271c405 / 28 b6a7e0f / 29 e8eb2cc / 30 a778856 / 残務 6b75d69（validate:json へ crates.json 追加）
+- 実装中の発見: (a) PBI-28 — 素の pre-allow では isPrivate 未確定のため fetch スキップ不可と判定し、bypass subset（force||whitelisted）限定のスキップを実装（完全単一所有は decidePrivacy の allowedBy 公開が前提→follow-up として記録）(b) PBI-26 — 検証時点で cooccur.rs/jsstring.rs の doc nits は並走した PBI-27 が解消済み (c) PBI-28 — 旧実装の timestamp/expiry が別々の Date.now() 呼び出しで最大1ms 差異を持つ副作用も解消
+- 統合検証（Phase 3）と版上げ（Phase 4）は台帳の各セクションに追記
