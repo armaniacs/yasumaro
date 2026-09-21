@@ -144,8 +144,7 @@ export class ContentKernel {
             (() => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ow-e2e-test'));
         this.visitReporter = new VisitReporter({
             pageState: this.pageState,
-            extractor: () => this.extractPageContent(),
-            applyResult: (r) => this.applyExtractResultToPageState(r),
+            extractAndCommit: (c) => this.extractAndCommit(c),
             sender: this.sender,
             stopPeriodicCheck: () => this.stopPeriodicCheck(),
         });
@@ -184,6 +183,23 @@ export class ContentKernel {
                     );
                 });
         }
+        return result;
+    }
+
+    /**
+     * PBI 2026-09-21-25: deep single call folding extract + commit.
+     * The commit order is guaranteed inside the kernel — callers hold no
+     * sequencing knowledge. The config default is resolved with ONE explicit
+     * read of pageState at entry (same value extractPageContent would use),
+     * so the resolution point is visible instead of hidden in a default
+     * parameter. Design (a) chosen over required-config (b): the extractor.ts
+     * facade and existing pair-based tests keep calling the pair signatures,
+     * which stay public and unchanged for compatibility.
+     */
+    extractAndCommit(config?: CleansingConfig): ExtractResult {
+        const resolved: CleansingConfig = config ?? this.pageState.cleansingConfig;
+        const result = this.extractPageContent(resolved);
+        this.applyExtractResultToPageState(result);
         return result;
     }
 

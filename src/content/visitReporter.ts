@@ -4,7 +4,7 @@
  * ContentKernel owns one instance; tests inject a fake sender and extractor.
  */
 
-import type { PageState } from './pageState.js';
+import type { PageState, CleansingConfig } from './pageState.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -110,8 +110,15 @@ export interface MessageSender {
 
 export interface VisitReporterDeps {
     pageState: PageState;
-    extractor: () => ExtractResult;
-    applyResult: (r: ExtractResult) => void;
+    /**
+     * PBI 2026-09-21-25: deep single call (preferred). When present the
+     * reporter delegates extract+commit atomically and holds no sequencing
+     * knowledge. The pair below remains as a compatibility fallback for
+     * callers/tests that still inject it.
+     */
+    extractAndCommit?: (config?: CleansingConfig) => ExtractResult;
+    extractor?: () => ExtractResult;
+    applyResult?: (r: ExtractResult) => void;
     sender: MessageSender;
     /** Injected for tests; defaults to real privacyDialog */
     confirmDialog?: (statusCode: string, reasonLabel: string) => Promise<boolean>;
@@ -154,7 +161,7 @@ export class VisitReporter {
     }
 
     private async attempt(retryLeft = 1): Promise<void> {
-        const { pageState, extractor, applyResult, sender } = this.deps;
+        const { pageState, sender } = this.deps;
         void logInfo('Sending VALID_VISIT', {}, 'visitReporter');
         console.info('[OWeave] VALID_VISIT 送信開始');
 
@@ -163,8 +170,15 @@ export class VisitReporter {
         // reads via performance.getEntriesByName. No-op when Performance is
         // unavailable (some test doubles).
         benchMark('ow-extract-start');
-        const extractResult = extractor();
-        applyResult(extractResult);
+        // PBI 2026-09-21-25: prefer the deep call; the pair is a fallback.
+        const extractAndCommit = this.deps.extractAndCommit;
+        const extractResult =
+            extractAndCommit !== undefined
+                ? extractAndCommit()
+                : this.deps.extractor!();
+        if (extractAndCommit === undefined) {
+            this.deps.applyResult!(extractResult);
+        }
         const content = extractResult.content;
         benchMark('ow-send-ready');
 
