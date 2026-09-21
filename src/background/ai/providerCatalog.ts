@@ -36,6 +36,15 @@ export interface ProviderCatalogEntry {
   };
   readonly supportsCustomPrompt: boolean;
   readonly settingsBlockKind?: 'generic' | 'models-dev' | 'built-in-ai';
+  /** apiKey label i18n key; the view falls back to 'aiApiKey' when absent. */
+  readonly apiKeyLabelI18nKey?: string;
+  /**
+   * Extra container CSS class; the view falls back to 'openai-settings'.
+   * Empty string opts out (gemini renders without it).
+   */
+  readonly cssClass?: string;
+  /** B-layout accordion initial open state; defaults to closed. */
+  readonly defaultOpen?: boolean;
   /** Extra fields beyond baseUrl/apiKey/model (e.g. geminiApiVersion). */
   readonly extraFields?: ReadonlyArray<{
     readonly storageKey: string;
@@ -43,6 +52,13 @@ export interface ProviderCatalogEntry {
     readonly type: 'text' | 'password';
     readonly labelI18nKey: string;
     readonly placeholder?: string;
+    /** Present when the field needs the note/error a11y companion block. */
+    readonly a11y?: {
+      readonly describedBy: string;
+      readonly noteId: string;
+      readonly noteI18nKey: string;
+      readonly errorId: string;
+    };
   }>;
 }
 
@@ -74,6 +90,9 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       fieldPlaceholders: { apiKey: 'geminiApiKeyPlaceholder', model: 'geminiModelPlaceholder' },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
+      apiKeyLabelI18nKey: 'geminiApiKey',
+      cssClass: '',
+      defaultOpen: true,
       extraFields: [
         {
           storageKey: 'gemini_api_version',
@@ -81,6 +100,12 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
           type: 'text',
           labelI18nKey: 'label_gemini_api_version',
           placeholder: 'v1beta',
+          a11y: {
+            describedBy: 'geminiApiVersionNote geminiApiVersionError',
+            noteId: 'geminiApiVersionNote',
+            noteI18nKey: 'note_gemini_api_version',
+            errorId: 'geminiApiVersionError',
+          },
         },
       ],
     },
@@ -212,24 +237,53 @@ export const ProviderCatalog = {
 // SSRF guard lives in providerSecurityPolicy.ts — re-exported for backward compat.
 export { isAllowedProviderBaseUrl } from './providerSecurityPolicy.js';
 
+export type ProviderStrategyFactory = (
+  settings: Settings,
+  providerId: string,
+  entry: ProviderCatalogEntry,
+) => AIProviderStrategy;
+
 /**
- * Single seam for strategy creation — hides the if (gemini) / if (built-in-ai) switch.
+ * providerId → factory registry next to PROVIDER_CATALOG. Only protocols
+ * with dedicated construction register here; the generic OpenAI-compatible
+ * ids share defaultProviderFactory below instead of re-listing it per row.
+ */
+export const PROVIDER_STRATEGY_FACTORIES = new Map<string, ProviderStrategyFactory>([
+  [
+    'gemini',
+    (settings, _providerId, entry) =>
+      new GeminiProvider(settings, entry.contentCharsKey ?? StorageKeys.GEMINI_CONTENT_CHARS),
+  ],
+  ['built-in-ai', (settings) => new BuiltInAiProvider(settings)],
+]);
+
+function defaultProviderFactory(settings: Settings, providerId: string, entry: ProviderCatalogEntry): AIProviderStrategy {
+  return new GenericOpenAICompatibleProvider(settings, providerId, entry.contentCharsKey);
+}
+
+/** Register (or override) a protocol factory without touching creation code. */
+export function registerProviderFactory(providerId: string, factory: ProviderStrategyFactory): void {
+  PROVIDER_STRATEGY_FACTORIES.set(providerId, factory);
+}
+
+/** Remove a previously registered factory (restores default resolution). */
+export function unregisterProviderFactory(providerId: string): void {
+  PROVIDER_STRATEGY_FACTORIES.delete(providerId);
+}
+
+/**
+ * Single seam for strategy creation — registry lookup, no providerId switch.
  * RemoteAIService and tests should use this instead of branching on providerId.
  *
  * Resolved catalog entry's contentCharsKey is handed to the provider so the
  * catalog is the SSOT for the truncation-limit key (PBI 2026-09-17-10).
  * Entries without the key (lm-studio/ollama) fall back inside the provider to
- * the legacy key, preserving current behavior.
+ * the legacy key, preserving current behavior. Unknown ids throw before the
+ * registry is consulted, so they never mis-construct a generic provider.
  */
 export function createProviderStrategy(providerId: string, settings: Settings): AIProviderStrategy {
   const entry = resolveCatalogEntry(providerId);
-  // Use entry to determine strategy; no caller needs to know the branching.
-  if (providerId === 'gemini') {
-    return new GeminiProvider(settings, entry.contentCharsKey ?? StorageKeys.GEMINI_CONTENT_CHARS);
-  }
-  if (providerId === 'built-in-ai') {
-    return new BuiltInAiProvider(settings);
-  }
-  return new GenericOpenAICompatibleProvider(settings, providerId, entry.contentCharsKey);
+  const factory = PROVIDER_STRATEGY_FACTORIES.get(providerId) ?? defaultProviderFactory;
+  return factory(settings, providerId, entry);
 }
 
