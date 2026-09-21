@@ -234,4 +234,82 @@ describe('extractSentencesStep', () => {
 
     expect(result).toBeDefined();
   });
+
+  describe('contentToExtract priority pin (PBI-17 pre-refactor golden)', () => {
+    const stats = {
+      originalLength: 100,
+      extractedLength: 50,
+      compressionRatio: 2,
+      sentenceCount: 5,
+      extractedCount: 2,
+    };
+
+    function statsMock() {
+      (getCompressionStats as Mock).mockReturnValue(stats);
+      (extractSentencesHybrid as Mock).mockResolvedValue(['SENT-X', 'SENT-Y']);
+    }
+
+    function extractContext(overrides: Partial<RecordingContext>): RecordingContext {
+      return {
+        data: { url: 'https://example.com', title: 'Test Page', content: 'C' },
+        settings: {},
+        force: false,
+        errors: [],
+        ...overrides,
+      } as RecordingContext;
+    }
+
+    it('pins priority: sanitizedSummary > privacyResult.summary > truncatedContent', async () => {
+      statsMock();
+      const ctx = extractContext({
+        sanitizedSummary: 'PIN-SANITIZED',
+        privacyResult: { summary: 'PIN-PRIVACY', success: true } as any,
+        truncatedContent: 'PIN-TRUNCATED',
+      });
+
+      await extractSentencesStep(ctx);
+
+      expect(extractSentencesHybrid).toHaveBeenCalledTimes(1);
+      expect((extractSentencesHybrid as Mock).mock.calls[0][0]).toBe('PIN-SANITIZED');
+    });
+
+    it('pins fallback to privacyResult.summary when sanitizedSummary is empty', async () => {
+      statsMock();
+      const ctx = extractContext({
+        sanitizedSummary: '',
+        privacyResult: { summary: 'PIN-PRIVACY', success: true } as any,
+        truncatedContent: 'PIN-TRUNCATED',
+      });
+
+      await extractSentencesStep(ctx);
+
+      expect((extractSentencesHybrid as Mock).mock.calls[0][0]).toBe('PIN-PRIVACY');
+    });
+
+    it('pins fallback to truncatedContent when upper sources are missing', async () => {
+      statsMock();
+      const ctx = extractContext({
+        sanitizedSummary: undefined,
+        privacyResult: undefined,
+        truncatedContent: 'PIN-TRUNCATED',
+      });
+
+      await extractSentencesStep(ctx);
+
+      expect((extractSentencesHybrid as Mock).mock.calls[0][0]).toBe('PIN-TRUNCATED');
+    });
+
+    it('pins empty default: extraction skipped when all sources empty', async () => {
+      const ctx = extractContext({
+        sanitizedSummary: '',
+        privacyResult: undefined,
+        truncatedContent: '',
+      });
+
+      const result = await extractSentencesStep(ctx);
+
+      expect(extractSentencesHybrid).not.toHaveBeenCalled();
+      expect(result.extractedSentences).toBeUndefined();
+    });
+  });
 });

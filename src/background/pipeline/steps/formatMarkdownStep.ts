@@ -7,6 +7,7 @@
 import { getUserLocale } from '../../../utils/localeUtils.js';
 import { buildEntryMarkdown, buildTemplateEntryData } from '../../../utils/markdownFormatter.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
+import { PIPELINE_TEXT_EMPTY_FALLBACK, selectPipelineText } from '../pipelineText.js';
 
 /**
  * Format content as markdown for Obsidian
@@ -15,19 +16,14 @@ import type { RecordingContext, PipelineStepFunction } from '../types.js';
 export const formatMarkdownStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
-  const { data, privacyResult, sanitizedSummary, extractedSentences } = context;
+  const { data, privacyResult } = context;
   const { url, title } = data;
 
-  // Priority for summary content:
-  // 1. L0 extracted sentences (if available and L0 extraction succeeded)
-  // 2. sanitizedSummary (PII-cleaned AI summary)
-  // 3. privacyResult.summary (AI summary)
-  let summary: string;
-  if (extractedSentences && extractedSentences.length > 0) {
-    summary = extractedSentences.join('\n\n');
-  } else {
-    summary = sanitizedSummary || privacyResult?.summary || 'Summary not available.';
-  }
+  // Text selection is single-owned by selectPipelineText (pipelineText.ts):
+  // extractedSentences (joined with '\n\n') > sanitizedSummary >
+  // privacyResult.summary > truncatedContent > ''. The display fallback below
+  // is this step's presentation transform and stays here byte-equal.
+  const summary = selectPipelineText(context) || PIPELINE_TEXT_EMPTY_FALLBACK;
 
   // Sanitize + assemble through the entry-markdown SSOT (PBI-04). The title
   // is placed inside `[title](url)`, so the SSOT escapes link-breakout chars
