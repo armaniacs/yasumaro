@@ -118,6 +118,7 @@ export function initPerSiteOverrides(): void {
         if (!statusEl) return;
         statusEl.textContent = msg;
         statusEl.className = isError ? 'status-message error' : 'status-message success';
+        if (isError) return; // errors must not vanish: auto-clear hides the failure (Checking Team 2026-09-22, UI Medium)
         if (msg) setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'status-message'; }, 3000);
     };
 
@@ -155,29 +156,10 @@ export function initPerSiteOverrides(): void {
             setStatus('Invalid domain', true); return;
         }
         const patch = readToggles(togglesContainer);
-        // Only store toggles that are checked (true) ? But spec says partial — store only checked = true overrides?
-        // To keep minimal, store all checked true; unchecked means no override (use global). If user wants to force OFF, they need checked=false entry.
-        // For minimal UI we store only true values to avoid bloating; but if user explicitly wants false, we store false.
-        // Here we store every toggle that differs from unchecked? For simplicity store only truthy overrides, because unchecked = no override.
-        // However to support "disable on this site" we need to store false as well when user wants to turn OFF a globally ON rule.
-        // So we store all 32 values where checkbox state is explicitly set? Minimal: store only checked ones as true.
-        // Better: store only checked=true as true, but that can't represent "force off". To support both, we store checked state verbatim only if user has interacted.
-        // Simplest: store all toggles as booleans (full diff), but spec says overrides are diff only — we store whatever checked state the user left.
-        // We'll store all 32 keys as checked boolean, then prune later if needed? For minimal keep full 32.
-        // Let's store only the checked=true entries to keep minimal, plus allow false via future enhancement.
-        // For now store full checked map filtered to true to reduce noise, but also include false if domain already had false?
-        // Simpler: store all checked values (both true/false) but prune to diff against global? That's complex.
-        // Minimal approach: store every checkbox value (so user can set false overrides).
-        const filteredPatch: Record<string, unknown> = {};
-        for (const [k, v] of Object.entries(patch)) {
-            // Store the boolean as-is so domain can force true or false.
-            filteredPatch[k] = v;
-        }
-        // If no checkbox is checked and none was previously, remove override
-        // We'll keep all values, but if all are false and user wants to clear, they can press Delete.
-        // So save as-is.
+        // Store the full checked map so a domain can force a rule OFF as well
+        // as ON (unchecked = no override for that rule).
         const overrides = await loadOverrides();
-        const next = upsertDomainOverride(overrides, domain, filteredPatch);
+        const next = upsertDomainOverride(overrides, domain, patch);
         // Single writer: the repository delta write lands inside the 'settings'
         // object under lock, which is exactly where contentKernel reads it from —
         // no out-of-lock raw top-level write is needed for immediate reads.

@@ -38,6 +38,16 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.15] - 2026-09-21
 
+このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。
+
+### Changed
+
+- **WASM crate manifest の採用を完了**: `test:wasm` の硬直 chain・CI の cache path/step 名/parity 2行・CSP prose・CONTEXT.md の crate リストが `wasm/crates.json` の外に残り、manifest 自身の「他ファイルは列挙しない」invariant が偽になっていた。`libCrates` + `paritySuites` を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で全消費者を駆動。旧列挙と byte 同一であることを実証（PBI 2026-09-21-26）
+- **privacy bypass 判定を pre-decision 化し pending 組み立てを抽出**: force/whitelist の bypass 規則が step の手書き early-return と `decidePrivacy` の到達不能な再エンコードに二重所有され、pending ペイロード組み立てが型・許可リスト・TTL の所有者と別の場所で `Date.now()` 直呼びされていた。fetch 前の pre-decision で bypass subset（force/whitelisted）のみ fetch をスキップ（I/O 最適化を保持）、組み立ては `buildPendingPage(input, now)` 純粋関数に抽出し clock を注入可能に（PBI 2026-09-21-28）
+- **contentKernel の extract/apply ペアを引退**: PBI 2026-09-21-25 が意図的に保持した移行期のペア互換（fallback 分岐×2・非null assertion×2・config 既定の3綴り）を解消し、`extractAndCommit` を唯一の経路に（PBI 2026-09-21-30）
+- **FTS/LIKE 検索の入力を判別共用体に**: `RunOpfsSearchArgs.searchInput` が path 依存の2意味を prose で持っていたため、生 term を FTS path に渡る誤用が静かに誤クエリになった。`{path:'fts',ftsQuery}|{path:'like',rawTerm}` に型で契約を強制（PBI 2026-09-21-29）
+- **Node 側 WASM ロード儀式の残り2箇所を共有 helper に移行**: PBI 2026-09-21-22 が所有権外として保留した pii/tag-cooccur の wasm-success mock を `createNodeWasmInit` に移行し、ローダの deletion test を完了（PBI 2026-09-21-27）
+
 ## [6.9.14] - 2026-09-21
 
 このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。
