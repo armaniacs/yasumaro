@@ -3,7 +3,7 @@
  * pendingStorage モジュールのテスト
  */
 
-import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey, isPrivacyPendingReason, renderPendingReason } from '../pendingStorage.js';
+import { addPendingPage, getPendingPages, removePendingPages, clearExpiredPages, migrateLegacyPendingPagesKey, isPrivacyPendingReason, renderPendingReason, buildPendingPage, PENDING_MAX_TTL_MS } from '../pendingStorage.js';
 
 vi.mock('../i18n.js', () => ({
     getMessage: vi.fn((key: string) => `i18n_${key}`),
@@ -502,8 +502,7 @@ describe('pendingStorage', () => {
         });
     });
 
-    describe('migrateLegacyPendingPagesKey', () => {
-        it('migrates data from the legacy osh_pending_pages key to pending_pages', async () => {
+    describe('migrateLegacyPendingPagesKey', () => {        it('migrates data from the legacy osh_pending_pages key to pending_pages', async () => {
             const now = Date.now();
             const legacyPage = {
                 url: 'https://legacy.example.com',
@@ -579,5 +578,81 @@ describe('pendingStorage', () => {
                 expect.any(String)
             );
         });
+    });
+});
+
+describe('buildPendingPage (PBI 2026-09-21-28 pure builder)', () => {
+    const NOW = 1726876800000;
+
+    it('derives timestamp and expiry from the injected clock', () => {
+        expect(buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason: 'cache-control', headerValue: 'private' },
+            NOW
+        )).toEqual({
+            url: 'https://example.com/a',
+            title: 'A',
+            timestamp: NOW,
+            reason: 'cache-control',
+            headerValue: 'private',
+            expiry: NOW + PENDING_MAX_TTL_MS,
+        });
+        expect(PENDING_MAX_TTL_MS).toBe(24 * 60 * 60 * 1000);
+    });
+
+    it.each([
+        'cache-control',
+        'set-cookie',
+        'authorization',
+    ])('passes the allowlisted reason %s through', (reason) => {
+        const page = buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason, headerValue: 'v' },
+            NOW
+        );
+        expect(page.reason).toBe(reason);
+    });
+
+    it.each([
+        'weird-reason',
+        '',
+        'CACHE-CONTROL',
+        'pipeline-error',
+    ])('falls through to cache-control for non-allowlisted reason %p (not rejected)', (reason) => {
+        const page = buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason, headerValue: 'v' },
+            NOW
+        );
+        expect(page.reason).toBe('cache-control');
+    });
+
+    it('redacts the header value for the authorization reason', () => {
+        const page = buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason: 'authorization', headerValue: 'Bearer secret' },
+            NOW
+        );
+        expect(page.headerValue).toBe('[REDACTED]');
+    });
+
+    it('keeps the header value as-is for the cache-control reason', () => {
+        const page = buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason: 'cache-control', headerValue: 'private, no-store' },
+            NOW
+        );
+        expect(page.headerValue).toBe('private, no-store');
+    });
+
+    it('truncates the header value to 1024 chars', () => {
+        const page = buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason: 'set-cookie', headerValue: 'x'.repeat(2000) },
+            NOW
+        );
+        expect(page.headerValue).toBe('x'.repeat(1024));
+    });
+
+    it('normalizes an empty header value to an empty string', () => {
+        const page = buildPendingPage(
+            { url: 'https://example.com/a', title: 'A', reason: 'cache-control', headerValue: '' },
+            NOW
+        );
+        expect(page.headerValue).toBe('');
     });
 });
