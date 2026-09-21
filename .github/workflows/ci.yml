@@ -88,10 +88,11 @@ wasm/pii-sanitizer/target
 wasm/textrank/target
 wasm/sentence-dedup/target
 wasm/tag-cooccur/target
+wasm/md-sanitize/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/*/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Run wasm crate Rust tests (pii-sanitizer + textrank + sentence-dedup + tag-cooccur)
+      - name: Run wasm crate Rust tests (pii-sanitizer + textrank + sentence-dedup + tag-cooccur + md-sanitize)
         run: npm run test:wasm
       - name: Install wasm-pack (if not cached)
         run: command -v wasm-pack || cargo install wasm-pack
@@ -127,15 +128,18 @@ wasm/tag-cooccur/target
           cp src/wasm/sentence-dedup/sentence_dedup_bg.wasm /tmp/committed-dedup-src.wasm
           cp src/wasm/tag-cooccur/tag_cooccur_bg.wasm /tmp/committed-tagcooccur-src.wasm
           cp public/wasm/tag_cooccur_bg.wasm /tmp/committed-tagcooccur-public.wasm
+          cp src/wasm/md-sanitize/md_sanitize_bg.wasm /tmp/committed-mdsanitize-src.wasm
+          cp public/wasm/md_sanitize_bg.wasm /tmp/committed-mdsanitize-public.wasm
           npm run build:wasm
           echo "== parity suite against the FRESH rebuild =="
-          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts src/wasm/sentence-dedup/__tests__/ src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts src/wasm/tag-cooccur/__tests__/ src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts
+          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts src/wasm/sentence-dedup/__tests__/ src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts src/wasm/tag-cooccur/__tests__/ src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts src/wasm/md-sanitize/__tests__/ src/utils/__tests__/markdownSanitizerHybrid.wasm-success.test.ts
           cp /tmp/committed-src.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm
           cp /tmp/committed-textrank-src.wasm src/wasm/textrank/textrank_bg.wasm
           cp /tmp/committed-dedup-src.wasm src/wasm/sentence-dedup/sentence_dedup_bg.wasm
           cp /tmp/committed-tagcooccur-src.wasm src/wasm/tag-cooccur/tag_cooccur_bg.wasm
+          cp /tmp/committed-mdsanitize-src.wasm src/wasm/md-sanitize/md_sanitize_bg.wasm
           echo "== parity suite against the COMMITTED binary =="
-          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts src/wasm/sentence-dedup/__tests__/ src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts src/wasm/tag-cooccur/__tests__/ src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts
+          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts src/wasm/sentence-dedup/__tests__/ src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts src/wasm/tag-cooccur/__tests__/ src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts src/wasm/md-sanitize/__tests__/ src/utils/__tests__/markdownSanitizerHybrid.wasm-success.test.ts
           if ! cmp -s /tmp/committed-src.wasm /tmp/committed-public.wasm; then
             echo "::error::public/wasm/pii_sanitizer_bg.wasm diverges from src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm — run 'npm run build:wasm' and commit the result"
             exit 1
@@ -148,6 +152,10 @@ wasm/tag-cooccur/target
             echo "::error::public/wasm/tag_cooccur_bg.wasm diverges from src/wasm/tag-cooccur/tag_cooccur_bg.wasm — run 'npm run build:wasm' and commit the result"
             exit 1
           fi
+          if ! cmp -s /tmp/committed-mdsanitize-src.wasm /tmp/committed-mdsanitize-public.wasm; then
+            echo "::error::public/wasm/md_sanitize_bg.wasm diverges from src/wasm/md-sanitize/md_sanitize_bg.wasm — run 'npm run build:wasm' and commit the result"
+            exit 1
+          fi
           git diff --exit-code src/wasm/pii-sanitizer/piiSanitizerWasm.js || \
             (echo "::error::piiSanitizerWasm.js glue is stale — run 'npm run build:wasm' and commit the result" && exit 1)
           git diff --exit-code src/wasm/textrank/textrankWasm.js src/wasm/textrank/textrankWasm.d.ts || \
@@ -156,6 +164,8 @@ wasm/tag-cooccur/target
             (echo "::error::sentence-dedup glue/d.ts is stale — run 'npm run build:wasm' and commit the result" && exit 1)
           git diff --exit-code src/wasm/tag-cooccur/tagCooccurWasm.js src/wasm/tag-cooccur/tagCooccurWasm.d.ts || \
             (echo "::error::tag-cooccur glue/d.ts is stale — run 'npm run build:wasm' and commit the result" && exit 1)
+          git diff --exit-code src/wasm/md-sanitize/mdSanitizeWasm.js src/wasm/md-sanitize/mdSanitizeWasm.d.ts || \
+            (echo "::error::md-sanitize glue/d.ts is stale — run 'npm run build:wasm' and commit the result" && exit 1)
       - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
         # The byte-diff gate assumes reproducible builds across hosts. When
         # it fails, this artifact lets the maintainer diff the CI-built
