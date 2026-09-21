@@ -84,9 +84,12 @@ describe('handleOffscreenMessage - SQLITE_SEARCH forwards to unified query()', (
 
     // PBI 2026-09-11-05: the handoff now carries the planner default limit
     // (backend behavior unchanged — recordsRepo used to default it later).
+    // PBI 2026-09-21-20: the search route default is 50 — planSearch owns
+    // DEFAULT_SEARCH_LIMIT so every search route (dashboard hop + direct
+    // SQLITE_SEARCH) shares one page-size default.
     expect(queryMock).toHaveBeenCalledWith({
       text: 'test query',
-      limit: 100,
+      limit: 50,
       offset: undefined,
       orderBy: undefined,
       orderDir: undefined,
