@@ -78,6 +78,13 @@ export interface PrivacyDecision extends GateVerdict {
   /** true の場合、呼び出し側は pending 保存の副作用を行う */
   savePending: boolean;
   confirmationRequired?: boolean;
+  /**
+   * どの条件で deny したか。step が throw ペイロードを組み立てる際に
+   * マトリクスを再導出しなくて済むように判定側が単一所有する
+   * （requireConfirmation と behavior=confirm は confirmationRequired が
+   * 同値でも headerValue 有無のペイロード差があるため区別する）。
+   */
+  deniedBy?: 'requireConfirmation' | 'skip' | 'confirm';
 }
 
 export function decidePrivacy(input: PrivacyDecisionInput): PrivacyDecision {
@@ -86,13 +93,25 @@ export function decidePrivacy(input: PrivacyDecisionInput): PrivacyDecision {
   if (!input.isPrivate) return { allow: true, savePending: false };
 
   if (input.requireConfirmation) {
-    return { allow: false, error: 'PRIVATE_PAGE_DETECTED', savePending: true, confirmationRequired: true };
+    return {
+      allow: false,
+      error: 'PRIVATE_PAGE_DETECTED',
+      savePending: true,
+      confirmationRequired: true,
+      deniedBy: 'requireConfirmation',
+    };
   }
   if (input.autoSaveBehavior === 'skip') {
-    return { allow: false, error: 'PRIVATE_PAGE_DETECTED', savePending: true };
+    return { allow: false, error: 'PRIVATE_PAGE_DETECTED', savePending: true, deniedBy: 'skip' };
   }
   if (input.autoSaveBehavior === 'confirm') {
-    return { allow: false, error: 'PRIVATE_PAGE_DETECTED', savePending: true, confirmationRequired: true };
+    return {
+      allow: false,
+      error: 'PRIVATE_PAGE_DETECTED',
+      savePending: true,
+      confirmationRequired: true,
+      deniedBy: 'confirm',
+    };
   }
   return { allow: true, savePending: false };
 }

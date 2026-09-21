@@ -91,36 +91,22 @@ export class PrivacyHeadersChecker {
       traceId: context.traceId
     });
 
-    // Handle based on requireConfirmation flag
-    if (requireConfirmation) {
-      const reason = privacyInfo.reason || 'cache-control';
-      const actualHeaderValue = headerValue ||
-        (reason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
+    // deny 3分岐の payload 形状は deniedBy が単一所有する
+    // （requireConfirmation と behavior=confirm は headerValue 有無が異なる）。
+    const reason = privacyInfo.reason || 'cache-control';
+    const actualHeaderValue = headerValue ||
+      (reason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
 
-      await this.savePendingPage(url, title, reason, actualHeaderValue);
-      throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
-        confirmationRequired: true,
-        ...pickDefined({ reason: privacyInfo.reason }),
-      });
-    }
+    await this.savePendingPage(url, title, reason, actualHeaderValue);
 
-    // Auto-save behavior
-    const autoSaveBehavior = settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save';
-    const autoReason = privacyInfo.reason || 'cache-control';
-    const autoHeaderValue = headerValue ||
-      (autoReason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
-
-    if (autoSaveBehavior === 'skip') {
-      await this.savePendingPage(url, title, autoReason, autoHeaderValue);
+    if (decision.deniedBy === 'skip') {
       throw new PrivatePageError('PRIVATE_PAGE_DETECTED', pickDefined({ reason: privacyInfo.reason }));
-    } else if (autoSaveBehavior === 'confirm') {
-      await this.savePendingPage(url, title, autoReason, autoHeaderValue);
-      throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
-        confirmationRequired: true,
-        headerValue: autoHeaderValue,
-        ...pickDefined({ reason: privacyInfo.reason }),
-      });
     }
+    throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
+      confirmationRequired: true,
+      ...(decision.deniedBy === 'confirm' ? { headerValue: actualHeaderValue } : {}),
+      ...pickDefined({ reason: privacyInfo.reason }),
+    });
 
     // 'save' - continue
     addLog(LogType.INFO, 'Auto-saving private page (behavior=save)', { url, traceId: context.traceId });
