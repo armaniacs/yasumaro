@@ -9,25 +9,15 @@
  * piiSanitizeHybrid.ts のモジュールドキュメント参照)
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, test, expect, vi, beforeAll } from 'vitest';
 import initWasmModule from '../../../wasm/pii-sanitizer/piiSanitizerWasm.js';
 
 vi.mock('../../../wasm/pii-sanitizer/index.js', async () => {
-    const wasmPath = fileURLToPath(
+    const { createNodeWasmInit } = await import('../../../wasm/testing/initWasmForNode.js');
+    const initPiiSanitizerWasm = createNodeWasmInit(
+        initWasmModule,
         new URL('../../../wasm/pii-sanitizer/pii_sanitizer_bg.wasm', import.meta.url)
     );
-    let initPromise: Promise<void> | null = null;
-
-    async function initPiiSanitizerWasm(): Promise<void> {
-        if (!initPromise) {
-            initPromise = readFile(wasmPath).then(async (bytes) => {
-                await initWasmModule({ module_or_path: bytes });
-            });
-        }
-        return initPromise;
-    }
 
     const { sanitizePii } = await import('../../../wasm/pii-sanitizer/piiSanitizerWasm.js');
 

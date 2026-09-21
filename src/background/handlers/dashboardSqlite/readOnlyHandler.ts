@@ -2,7 +2,6 @@ import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboar
 import type { ReadOnlyDeps } from './deps.js';
 import { toFailure } from './deps.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
-import { clampLimit, QUERY_CAPS } from '../../../offscreen/queryPlan.js';
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set,
@@ -15,16 +14,20 @@ export const READ_ONLY_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
 /**
  * buildListParams / buildSearchParams — the projection seam of the read route
  * (PBI 2026-09-11-07 spike slice). The dashboard-hop param shape (alias names,
- * per-surface caps, order defaults) previously lived inline in the handler
- * closure; extracted as pure builders so the projection is unit-testable and
- * reviewed in one place. Behavior is unchanged — the builders return exactly
- * the objects the inline code constructed.
+ * order defaults) previously lived inline in the handler closure; extracted as
+ * pure builders so the projection is unit-testable and reviewed in one place.
+ *
+ * PBI 2026-09-21-20: cap/default policy no longer lives here — limits pass
+ * through raw (undefined included) and the offscreen planner seam owns them
+ * (planQuery default 100 / planSearch default 50). The background previously
+ * re-imported offscreen/queryPlan.js for clampLimit/QUERY_CAPS, which violated
+ * the background→offscreen import ban and triple-clamped one limit.
  */
 export function buildListParams(
   payload: Extract<DashboardSqliteRequest, { subtype: 'query' }>,
 ): Record<string, unknown> {
   return {
-    limit: clampLimit(payload.limit, QUERY_CAPS.plain, 100),
+    limit: payload.limit,
     offset: payload.offset ?? 0,
     domain: payload.domain,
     isStarred: payload.isStarred,
@@ -40,13 +43,13 @@ export function buildSearchParams(
   payload: Extract<DashboardSqliteRequest, { subtype: 'search' }>,
 ): {
   text: string;
-  limit: number;
+  limit: number | undefined;
   offset: number;
   options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' };
 } {
   return {
     text: payload.query || '',
-    limit: clampLimit(payload.limit, QUERY_CAPS.fts, 50),
+    limit: payload.limit,
     offset: payload.offset ?? 0,
     options: pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
   };

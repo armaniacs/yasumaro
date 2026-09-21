@@ -8,27 +8,17 @@
  * .test.ts と同じパターン)。
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, test, expect, vi, beforeAll } from 'vitest';
 import initWasmModule from '../../wasm/textrank/textrankWasm.js';
 import { extractSentences, type ExtractOptions } from '../sentenceExtractor.js';
 import { splitSentences } from '../text/tokenizer.js';
 
 vi.mock('../../wasm/textrank/index.js', async () => {
-    const wasmPath = fileURLToPath(
+    const { createNodeWasmInit } = await import('../../wasm/testing/initWasmForNode.js');
+    const initTextrankWasm = createNodeWasmInit(
+        initWasmModule,
         new URL('../../wasm/textrank/textrank_bg.wasm', import.meta.url)
     );
-    let initPromise: Promise<void> | null = null;
-
-    async function initTextrankWasm(): Promise<void> {
-        if (!initPromise) {
-            initPromise = readFile(wasmPath).then(async (bytes) => {
-                await initWasmModule({ module_or_path: bytes });
-            });
-        }
-        return initPromise;
-    }
 
     const { extractTopIndices } = await import('../../wasm/textrank/textrankWasm.js');
 

@@ -10,7 +10,7 @@ import { ErrorCode } from '../logger/types.js';
 import { logInfo, logWarn, logError } from '../logger/api.js';
 import { consentHmacSigner } from '../crypto/index.js';
 import { pickDefined } from '../objectUtils.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { sendFromPopup } from '../../messaging/types.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
 export const PRIVACY_POLICY_VERSION = '2026-07-31';
@@ -328,7 +328,14 @@ function notifyConsentChanged(): void {
         if (typeof document !== 'undefined') {
             document.dispatchEvent(new CustomEvent(CONSENT_STATE_CHANGED_EVENT));
         }
-        chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION });
+        sendFromPopup('CONSENT_STATE_CHANGED').catch((error) => {
+            logWarn(
+                'Failed to notify consent state change',
+                { error: errorMessage(error) },
+                undefined,
+                'privacyConsent.ts'
+            );
+        });
     } catch (error) {
         logWarn(
             'Failed to notify consent state change',

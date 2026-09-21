@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeAll } from 'vitest';
 import { sanitizeRegex } from '../../../utils/piiSanitizer.js';
 import initWasmModule, { sanitizePii as sanitizePiiWasmRaw } from '../piiSanitizerWasm.js';
+import { initWasmForNode } from '../../testing/initWasmForNode.js';
 
 interface MaskedItem {
     type: string;
@@ -25,10 +26,7 @@ interface MaskedItem {
 }
 
 async function initForNode(): Promise<void> {
-    const { readFile } = await import('node:fs/promises');
-    const wasmPath = fileURLToPath(new URL('../pii_sanitizer_bg.wasm', import.meta.url));
-    const bytes = await readFile(wasmPath);
-    await initWasmModule({ module_or_path: bytes });
+    await initWasmForNode(initWasmModule, new URL('../pii_sanitizer_bg.wasm', import.meta.url));
 }
 
 function sanitizePiiWasm(text: string): { text: string; maskedItems: MaskedItem[] } {

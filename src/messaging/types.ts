@@ -27,6 +27,36 @@ export interface MaskedItem {
 export type StrippedMaskedItem = Omit<MaskedItem, 'original'>;
 
 /**
+ * GET_CONTENT の wire 応答型。
+ *
+ * 所有は messaging 層。旧所在地 `popup/mainTypes.ts` は後方互換の
+ * type-only 再エクスポートのみを残す（PBI 2026-09-21-11: popup と
+ * messaging の型循環を解消するため本体をこちらへ移動）。
+ */
+export interface ContentResponse {
+  content: string;
+  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none';
+  cleanseStats?: {
+    hardStripRemoved: number;
+    keywordStripRemoved: number;
+    totalRemoved: number;
+  };
+  byteStats?: {
+    pageBytes: number;
+    candidateBytes: number;
+    originalBytes: number;
+    cleansedBytes: number;
+  };
+  aiSummaryCleansedStats?: {
+    aiSummaryOriginalBytes: number;
+    aiSummaryCleansedBytes: number;
+    aiSummaryCleansedElements: number;
+    aiSummaryCleansedReason: AiSummaryCleansedReason;
+    aiSummaryCleansedReasons?: string[];
+  };
+}
+
+/**
  * MaskedItem 型ガード関数
  * unknown 型から MaskedItem 型かどうかを判定する
  * @param item - 判定対象のアイテム
@@ -105,9 +135,10 @@ export interface RecordingResult {
 }
 
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
-import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
+// protocolVersion stamping lives in MessageTransport.send (Checking Team
+// 2026-09-22: System Architect Medium — single owner for version stamping).
+import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
-import type { ContentResponse } from '../popup/mainTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
@@ -344,19 +375,16 @@ export async function sendFromContentScript<T extends ExtensionMessage['type']>(
 
 /**
  * Popup/Dashboard から Service Worker へのメッセージ送信 — alias
+ *
+ * PBI-11 SSOT completion (Checking Team 2026-09-22: System Architect
+ * Medium): popup traffic goes through MessageTransport too, so protocol
+ * version stamping, type validation, retry, and error mapping stay
+ * single-owned. The former inline protocolVersion stamp is redundant —
+ * transport.send enriches every message with the same value.
  */
 export async function sendFromPopup<T extends ExtensionMessage['type']>(
   type: T,
   payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
-  const message = payload !== undefined
-    ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION }
-    : { type, protocolVersion: CURRENT_PROTOCOL_VERSION };
-  const response = await chrome.runtime.sendMessage(message as unknown);
-
-  if (isErrorResponse(response)) {
-    throw new Error(response.error);
-  }
-
-  return response as ResponseForType<T>;
+  return sendServiceWorkerMessage(type, payload);
 }

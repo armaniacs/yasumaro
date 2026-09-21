@@ -32,21 +32,61 @@ PBI-19（プロンプトスキャンのWASM移植）を STEP 0 プローブで�
 
 - 2026-09-21-01-fix-prompt-sanitizer-hardening.md（✅ 実装完了・コミット c999b8ed — ①置換中イテレーションのマッチ取りこぼし（RED実証→範囲収集1パス適用で修正）②マッチ件数 fail-open 上限1,000件 ③制御文字ループの regex 化（bit等価）④**追加発見**: `new RegExp(source, 'gi')` 再構築で `m` フラグが脱落し複数行の `^` アンカーが無効だったバグを修正（pattern.flags 保持）。promptSanitizer 系 139 tests・validate 12,712 green。GitHub PR レビューが残）
 
-### 2026-09-20 アーキテクチャレビュー — 🔶 部分実装（12・15 完了・アーカイブ済み。13・14・16 未着手）RICE順: 12 → 13 → 14 → 15 → 16
+### 2026-09-21 arch-delivery-loop 0921b（差分） — ✅ 5件完了（26-30 アーカイブ済み）RICE順: 26 → 27 → 28 → 29 → 30
 
-`/improve-codebase-architecture` の探索で発見した6候補を RICE 採点して PBI 化(候補5は13に統合)。実行順 = 12(内蔵AI契約統一)→ 13(共有hybrid runtime)→ 14(共有Rust crate)→ 15(SqliteClient解消)→ 16(wire table拡張)。台帳は `2026-09-20-00-backlog-archreview-0920.md`。副産物: `CONTEXT.md` 新規作成、ADR-017(WASM完全移植戦略)記録。
+ラウンド2完了直後の差分診断（前ラウンド新コード + PBI-18 宣言済み follow-up + R4 トリガー再評価）。5候補を RICE 採点して実装。全5件がファイル非重複のため1バッチ並列実装。台帳送りは新規ゼロ（P3/P4 トリガー不発のまま据え置き・R4 は 28 でクローズ）。台帳は [2026-09-21-00-backlog-archloop-0921b.md](2026-09-21-00-backlog-archloop-0921b.md)。HTML レポート: `$TMPDIR/architecture-review-0921b.html`。
+
+- [2026-09-21-26-refactor-manifest-adoption-completion.md](../dev-docs/archived/pbi/2026-09-21-26-refactor-manifest-adoption-completion.md)（✅ 完了 — libCrates+paritySuites を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で test:wasm・ci cache/step/parity を駆動。3列挙とも旧リストと byte 同一を実証。CSP prose・CONTEXT.md 更新。コミット 2601154。RICE 32・順位1）
+- [2026-09-21-27-refactor-wasm-success-mock-migration.md](../dev-docs/archived/pbi/2026-09-21-27-refactor-wasm-success-mock-migration.md)（✅ 完了 — pii/tag-cooccur の wasm-success mock を createNodeWasmInit へ移行（module_or_path 残存ゼロを実証）+陳腐 doc 2行。コミット 271c405・14 green。RICE 16・順位2）
+- [2026-09-21-28-refactor-privacy-predecision-pending-builder.md](../dev-docs/archived/pbi/2026-09-21-28-refactor-privacy-predecision-pending-builder.md)（✅ 完了 — pre-decision で bypass subset（force||whitelisted）のみ fetch スキップ（素の pre-allow では isPrivate 未確定のため不可と判定し記録）+ buildPendingPage(input, now) 純粋関数抽出（clock 注入・旧 timestamp/expiry 1ms 差異解消）。コミット b6a7e0f・72 green。RICE 10・順位3）
+- [2026-09-21-29-refactor-opfs-search-input-union.md](../dev-docs/archived/pbi/2026-09-21-29-refactor-opfs-search-input-union.md)（✅ 完了 — input を判別共用体化し誤用をコンパイルエラー化・スナップショット byte 等価。コミット e8eb2cc・14 green。RICE 6・順位4）
+- [2026-09-21-30-refactor-extract-apply-pair-retirement.md](../dev-docs/archived/pbi/2026-09-21-30-refactor-extract-apply-pair-retirement.md)（✅ 完了 — 両 deps interface を extractAndCommit のみに narrow・fallback 分岐と非null assertion 削除・facade 既定引数廃止。config 既定は kernel 内1解決点（裁定記録）。コミット a778856・477 green。RICE 4.8・順位5）
+
+### 2026-09-21 arch-delivery-loop 0921 — ✅ 9件完了（17-25 アーカイブ済み）RICE順: 17 → 18 → 19 → 20 → 21 → 22 → 23 → 24 → 25
+
+holistic-0921 + closer 完了後の第2回 arch-delivery-loop。3クラスタ診断（WASM / 永続化 / 録画パイプライン+コンテンツ抽出）→ 12候補 → RICE 採点で9 PBI 化 + 台帳送り3件（P3/P4/R4）。バッチA（17/18/19/20 並列）→ バッチB（21/22/23/25 並列）→ バッチC（24・wasm-pack 再構築で直列）。20 は実装中に fts 既定 50 が background 専有と判明し planner seam 側へ移植（DEFAULT_SEARCH_LIMIT）。台帳は [2026-09-21-00-backlog-archloop-0921.md](2026-09-21-00-backlog-archloop-0921.md)。HTML レポート: `$TMPDIR/architecture-review-1789987425.html`。
+
+- [2026-09-21-17-refactor-pipeline-text-selector.md](../dev-docs/archived/pbi/2026-09-21-17-refactor-pipeline-text-selector.md)（✅ 完了 — pipelineText.ts 純粋 selector・format step が truncatedContent 脚を獲得（BDD要件）以外 byte 等価。配置は background/pipeline（utils→background 逆辺の回避を実証）。コミット 9e3bf74・41 green。RICE 32・順位1）
+- [2026-09-21-18-refactor-wasm-crate-manifest.md](../dev-docs/archived/pbi/2026-09-21-18-refactor-wasm-crate-manifest.md)（✅ 完了 — wasm/crates.json SSOT + build-wasm.mjs/wasm-crates.mjs/stash|restore|check gate。解決済みビルドプラン15 op が旧 chain と byte 同一を実証。STAGED は publicShip field に。コミット bb37635。RICE 32・順位2）
+- [2026-09-21-19-refactor-tagcooccur-fallback-runtime.md](../dev-docs/archived/pbi/2026-09-21-19-refactor-tagcooccur-fallback-runtime.md)（✅ 完了 — withWasmFallback 統一+u32 上限を hybrid policy へ移動。console colon は他3 hybrid 標準に統一（golden pin）。コミット 706eeb6・72 green。RICE 24・順位3）
+- [2026-09-21-20-refactor-dashboard-read-policy-seam.md](../dev-docs/archived/pbi/2026-09-21-20-refactor-dashboard-read-policy-seam.md)（✅ 完了 — readOnlyHandler を projection 専用化+background→offscreen import 解消。fts 既定 50 は background 専有と判明したため planSearch に DEFAULT_SEARCH_LIMIT=50 を移植（SQLITE_SEARCH 直送路も同一既定に統一）。コミット d7d4c4c。RICE 24・順位4）
+- [2026-09-21-21-refactor-recording-skip-decisions.md](../dev-docs/archived/pbi/2026-09-21-21-refactor-recording-skip-decisions.md)（✅ 完了 — decideSaveSkip/decideL0 を seam に追加。ログ文言 byte 等価。コミット fd868b0・62 green。RICE 20・順位5）
+- [2026-09-21-22-refactor-node-wasm-test-loader.md](../dev-docs/archived/pbi/2026-09-21-22-refactor-node-wasm-test-loader.md)（✅ 完了 — src/wasm/testing/initWasmForNode.ts + createNodeWasmInit（vi.mock 用）に10サイト移行（実数は診断の ~8 を修正）。コミット 5a2c4a1。RICE 16・順位6）
+- [2026-09-21-23-refactor-opfs-search-skeleton.md](../dev-docs/archived/pbi/2026-09-21-23-refactor-opfs-search-skeleton.md)（✅ 完了 — searchExecution.ts runOpfsSearch 新設・SQL/params スナップショット byte 安定。IDB は3注入が call site を悪化させるため S 着地と判断（記録済み）。コミット cc61e97。RICE 10・順位7）
+- [2026-09-21-24-refactor-js-whitespace-set-ssot.md](../dev-docs/archived/pbi/2026-09-21-24-refactor-js-whitespace-set-ssot.md)（✅ 完了 — is_js_ws_code(u32) を js-strings に SSOT 化、tag-cooccur は委譲・pii-sanitizer は全スカラー exhaustive 一致テスト。cargo test 5クレート + TS パリティ 341 green・バイナリ再コミット。コミット 8aef932。RICE 9.6・順位8）
+- [2026-09-21-25-refactor-contentkernel-extract-commit.md](../dev-docs/archived/pbi/2026-09-21-25-refactor-contentkernel-extract-commit.md)（✅ 完了 — extractAndCommit 深い呼び出し追加・extractor.ts facade も deep call 優先配線。コミット 2e30490 + 1df8994（extractor 配線）・86+155 green。RICE 6.4・順位9）
+
+### 2026-09-21 大局的コード改善（holistic-0921） — ✅ 15件完了（02-16 アーカイブ済み）
+
+4観点（DRY / SoC / 拡張性 / 堅牢性）の並列サブエージェント調査 + 統合側全指摘の実コード裏取りで抽出した15候補を RICE 採点して実装。バッチ1（02/03/04/05/08 5並列）→ バッチ2（06/07/09/10/12 5並列・07 は統合側が引き取り）→ バッチ3（13→14→15 直列チェーン）→ バッチ4（11/16 2並列）。統合検証: type-check PASS / lint 0 errors / test 12,839 passed / build PASS。台帳は [2026-09-21-00-backlog-holistic-0921.md](2026-09-21-00-backlog-holistic-0921.md)。既存進行中 PBI（13/14/16/2026-09-19-08）はユーザー裁定で後日 autonomous-task-closer に委ねる。
+
+- [2026-09-21-02-fix-persite-overrides-lock.md](../dev-docs/archived/pbi/2026-09-21-02-fix-persite-overrides-lock.md)（✅ RICE 19.2・raw set 握り潰しを単一 writer 化+失敗可視化。contentKernel 読み取りが settings 経由と実証し raw set は冗長として削除）
+- [2026-09-21-03-refactor-url-guards-ssot.md](../dev-docs/archived/pbi/2026-09-21-03-refactor-url-guards-ssot.md)（✅ RICE 16.0・isSecureUrl→isHttpUrl・HeaderDetector.normalizeUrl→normalizeUrlSafe へ委譲+parity テスト）
+- [2026-09-21-04-fix-port-validation-delegate.md](../dev-docs/archived/pbi/2026-09-21-04-fix-port-validation-delegate.md)（✅ RICE 12.0・validatePort を validateObsidianPort 委譲。'80.5'/'80abc' 拒否へ反転・'' は既定ポート扱い）
+- [2026-09-21-05-refactor-cleansing-key-derivation.md](../dev-docs/archived/pbi/2026-09-21-05-refactor-cleansing-key-derivation.md)（✅ RICE 10.0・presets/restorable を CLEANSING_RULES 派生に。復元欠落4鍵の実害解消・実際は33鍵）
+- [2026-09-21-06-refactor-utils-background-edges.md](../dev-docs/archived/pbi/2026-09-21-06-refactor-utils-background-edges.md)（✅ RICE 8.0・auditLog 遅延 import 化・aiModelKey を background/ai へ移動（shim は統合側で削除））
+- [2026-09-21-07-fix-issue-report-reentrancy.md](../dev-docs/archived/pbi/2026-09-21-07-fix-issue-report-reentrancy.md)（✅ RICE 8.0・in-flight guard+open チェック+catch+i18n 鍵流用の可視エラー。統合側が引き取り実装）
+- [2026-09-21-08-fix-idle-scheduler-prune.md](../dev-docs/archived/pbi/2026-09-21-08-fix-idle-scheduler-prune.md)（✅ RICE 8.0・発火後 id を try/finally で除去・cancel 意味論不変）
+- [2026-09-21-09-fix-hybrid-probe-retry.md](../dev-docs/archived/pbi/2026-09-21-09-fix-hybrid-probe-retry.md)（✅ RICE 6.0・失敗非キャッシュ+バースト単位ログ制御・共有 runtime 向け契約を記録）
+- [2026-09-21-10-refactor-provider-constructor-ritual.md](../dev-docs/archived/pbi/2026-09-21-10-refactor-provider-constructor-ritual.md)（✅ RICE 6.0・resolveTimeoutMs/logApiKeySource を基底に集約・Gemini isLocal=false 明示）
+- [2026-09-21-11-fix-messaging-typed-senders.md](../dev-docs/archived/pbi/2026-09-21-11-fix-messaging-typed-senders.md)（✅ RICE 6.0・sendFromPopup 統一（wire 無改変）・ContentResponse を messaging へ移動）
+- [2026-09-21-12-refactor-export-date-ssot.md](../dev-docs/archived/pbi/2026-09-21-12-refactor-export-date-ssot.md)（✅ RICE 4.8・getLocalDateString/parseJsonTagsArray へ委譲・テストエクスポートのみ UTC→local 意図的変更）
+- [2026-09-21-13-refactor-provider-domain-ssot.md](../dev-docs/archived/pbi/2026-09-21-13-refactor-provider-domain-ssot.md)（✅ RICE 4.0・37固定行+4派生 helper で4リスト統合・PROVIDER_TO_DOMAIN を同一テーブルへ折りたたみ）
+- [2026-09-21-14-refactor-catalog-ui-branches.md](../dev-docs/archived/pbi/2026-09-21-14-refactor-catalog-ui-branches.md)（✅ RICE 4.0・gemini 特例を catalog フィールド化・outerHTML スナップショットで byte 等価）
+- [2026-09-21-15-refactor-provider-factory-registry.md](../dev-docs/archived/pbi/2026-09-21-15-refactor-provider-factory-registry.md)（✅ RICE 3.2・PROVIDER_STRATEGY_FACTORIES map 化+fallback。14 と同一ファイルのため1コミット統合）
+- [2026-09-21-16-refactor-page-content-pipeline-decouple.md](../dev-docs/archived/pbi/2026-09-21-16-refactor-page-content-pipeline-decouple.md)（✅ RICE 2.4・CleansingConfig を utils/cleansingConfig.ts へ移動し循環解消）
+
+### 2026-09-20 アーキテクチャレビュー — ✅ 全5件完了（12〜16 アーカイブ済み）RICE順: 12 → 13 → 14 → 15 → 16
+
+`/improve-codebase-architecture` の探索で発見した6候補を RICE 採点して PBI 化(候補5は13に統合)。実行順 = 12(内蔵AI契約統一)→ 13(共有hybrid runtime)→ 14(共有Rust crate)→ 15(SqliteClient解消)→ 16(wire table拡張)。台帳は `2026-09-20-00-backlog-archreview-0920.md`。副産物: `CONTEXT.md` 新規作成、ADR-017(WASM完全移植戦略)記録。13/14/16 は 2026-09-21 の autonomous-task-closer ラウンドで完了。
 
 - [2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md](../dev-docs/archived/pbi/2026-09-20-12-fix-builtin-ai-adapter-contract-unify.md)（✅ 完了・アーカイブ済 — LocalAIService の要約を BuiltInAiProvider 経由に委譲し、local_only/auto でもカスタムプロンプト適用・usage 記録を履行。provider 側の二重 sanitize を削除しオフデバイス検査を 'builtin-input' プロファイルに1本化。コミット ecb849c3・全体12648 tests green。RICE 48・順位1）
-- [2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md](2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md)（⬜ 未着手・🟡中・2pt・🔧非機能追加・副作用🟢なし: 3ハイブリッドの儀式(probe/guard/fallback/remap)を共有 runtime に集約。split 一致ゲートと PII サイズ上限エラー文字列の所有者を1箇所化。出力 byte 等価を gate。RICE 6.4・順位2）
-- [2026-09-20-14-refactor-shared-js-strings-rust-crate.md](2026-09-20-14-refactor-shared-js-strings-rust-crate.md)（⬜ 未着手・🔴高・3pt・🔧非機能追加・副作用🟡軽微: textrank/dedup にクローンされた jsstring/tokenize を共有 Rust crate に抽出。意図的差分2点(strip有無・bigram case源)はパラメータ化。FxHash drift の統一。ADR-017 決定8の実行。RICE 3.2・順位3）
+- [2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md](../dev-docs/archived/pbi/2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md)（✅ 完了・アーカイブ済 — wasmHybridRuntime.ts 新設で3 hybrid の儀式 ~190行を解体。probe 契約（成功のみキャッシュ・失敗再プローブ・バースト単位ログ）を tagCooccur と統一。契約スイート 355 green。closer コミット 7b474ec。RICE 6.4・順位2）
+- [2026-09-20-14-refactor-shared-js-strings-rust-crate.md](../dev-docs/archived/pbi/2026-09-20-14-refactor-shared-js-strings-rust-crate.md)（✅ 完了・アーカイブ済 — wasm/js-strings 共有 crate 新設、意図的差分2点を TokenizeOptions パラメータ化、FxHash 統一は出力不変を実証、バイナリ再コミット+ci.yml 対応。TS パリティ 41/41 無変更。closer コミット dfc72734 マージ d1804d1。RICE 3.2・順位3）
 - [2026-09-20-15-refactor-sqliteclient-passthrough-alias.md](../dev-docs/archived/pbi/2026-09-20-15-refactor-sqliteclient-passthrough-alias.md)（✅ 完了・アーカイブ済 — OffscreenGateway 全面 overload の1行委譲クラス SqliteClient を alias 化し、op 追加時の overload 二重所有を解消。コミット caa7ae72・type-check/lint/sqlite+pipeline 1658 tests green。RICE 3.2・順位4）
-- [2026-09-20-16-refactor-sqlite-wire-table-extension.md](2026-09-20-16-refactor-sqlite-wire-table-extension.md)（⬜ 未着手・🔴高・3pt・🔧非機能追加・副作用🟡軽微: 非アーカイブ op(toggle_star=16箇所・8ファイル)を archive と同型の wire table 行から導出。query/mutate サブセットからの段階適用、compile-time sync assert 付き。RICE 1.2・順位5）
+- [2026-09-20-16-refactor-sqlite-wire-table-extension.md](../dev-docs/archived/pbi/2026-09-20-16-refactor-sqlite-wire-table-extension.md)（✅ 完了・アーカイブ済 — sqliteWireTable.ts 新設で query/mutate 10 op を1行導出化。compile-time sync assert 付き。maintain 系は hop 形状が異質のため既存 path 維持（判断記録済み）。402 green。closer コミット f63602d。RICE 1.2・順位5）
 
-### 2026-09-19 PIIサニタイザWASM移植 — 🔶 部分実装（08。01〜07・13〜23 アーカイブ済み）
-
-記録パイプラインのPIIマスキングをTS正規表現からRust/WASM単一パスバイトスキャナへ移行（v6.9.9でリリース済み）。残りは08（記録可否判定の純粋関数化）。
-
-- [2026-09-19-08-refactor-recording-decision-unify.md](2026-09-19-08-refactor-recording-decision-unify.md)（⬜ 未着手・🔧非機能追加: 記録可否判定の優先順位を1箇所に文書化した後続の純粋関数化と組み合わせテスト）
+### 2026-09-19 PIIサニタイザWASM移植 — ✅ 全件完了（08 含めアーカイブ済み）
 
 ### 2026-09-18 arch-delivery-loop 第5ループ — ✅ 全2件完了（01/02 アーカイブ済み）
 
@@ -92,6 +132,9 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 ### 将来候補の統合台帳（live）
 
+- [2026-09-21-00-backlog-archloop-0921b.md](2026-09-21-00-backlog-archloop-0921b.md) — arch-delivery-loop 0921b（差分）の台帳（5候補の RICE 表・R4 再評価・なぜなぜ要約）
+- [2026-09-21-00-backlog-archloop-0921.md](2026-09-21-00-backlog-archloop-0921.md) — arch-delivery-loop 0921 の台帳（12候補の RICE 表・バッチ計画・台帳送り3件・なぜなぜ要約）
+- [2026-09-21-00-backlog-holistic-0921.md](2026-09-21-00-backlog-holistic-0921.md) — 大局的コード改善 0921 の台帳（15候補の RICE 表・実行順の逸脱理由・バッチ計画・台帳送り2件・なぜなぜ要約）
 - [2026-09-18-00-backlog-archloop-0918.md](2026-09-18-00-backlog-archloop-0918.md) — arch-delivery-loop 0918 の台帳（3候補の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918c.md](2026-09-18-00-backlog-holistic-0918c.md) — 大局的コード改善 0918c の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
 - [2026-09-18-00-backlog-holistic-0918b.md](2026-09-18-00-backlog-holistic-0918b.md) — 大局的コード改善 0918b の台帳（3候補 + 台帳送り1件の RICE 表・実行順・バッチ計画・5 Whys）
@@ -126,6 +169,17 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-21 autonomous-task-closer — ✅ 4件完了（08/13/14/16 アーカイブ済み）
+
+前ラウンド（holistic-0921）でユーザー裁定により closer に委託されていた4件を閉じた。バッチ1 = 4件並列（08/13/16 は同一ディレクトリ+ファイル排他、14 は wasm-pack バイナリ再構築のため worktree 隔離 → closer/pbi14-js-strings ブランチをマージ d1804d1）。バッチ統合で型エラー4件（exactOptionalPropertyTypes×3・privacyInfo null 経路×1）を検出し統合側で修正。最終検証: type-check PASS / lint 0 errors / test 12,914 passed / build PASS。5 Whys 記録は /tmp/whywhy/（recording-decision-pure / hybrid-runtime-scaffold / js-strings-crate / sqlite-wire-table）。
+
+- [2026-09-19-08-refactor-recording-decision-unify.md](../dev-docs/archived/pbi/2026-09-19-08-refactor-recording-decision-unify.md)（✅ 完了 — recordingDecision.ts 純粋関数 seam・競合マトリクス byte 等価。9c182ed）
+- [2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md](../dev-docs/archived/pbi/2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md)（✅ 完了 — wasmHybridRuntime.ts 共有 runtime。7b474ec）
+- [2026-09-20-14-refactor-shared-js-strings-rust-crate.md](../dev-docs/archived/pbi/2026-09-20-14-refactor-shared-js-strings-rust-crate.md)（✅ 完了 — wasm/js-strings crate・FxHash 統一出力不変・バイナリ再コミット。dfc72734）
+- [2026-09-20-16-refactor-sqlite-wire-table-extension.md](../dev-docs/archived/pbi/2026-09-20-16-refactor-sqlite-wire-table-extension.md)（✅ 完了 — sqliteWireTable.ts query/mutate 10 op・段階適用の判断記録。f63602d）
+
+保留（ユーザーゲートで closer 対象外）: wasqlite sunset（ゲート 2026-12-17）・AMO 公開・tag-cooccur 17/21/22（実機確認 + GitHub PR approve 待ち）
 
 ### 2026-09-21 PBI-20 serde スパイクの非反転クローズ — ✅ 1件クローズ（20 アーカイブ済み）
 
@@ -163,7 +217,7 @@ md-sanitize WASM（PBI-18）は実測で全サイズ TS 負け（single 0.31x〜
 DoD の「ドキュメント更新済み」は文書要件がある場合のみ適用（03: AGENTS.md 使い分け表、04: clearElement 参照、05: API_ENDPOINTS.md プロトコルバージョン規約、19: 本INDEX、他はコードコメントが正本で文書要件なし）。
 
 - 01〜07・09・10・13〜23（✅ 完了・アーカイブ済 — 20件。実装詳細は各ファイルの受け入れ基準と DoD 補足を参照。ハイライト: 01 上限＋隔離document、02 失敗経路テスト追加、05 absent 格下げ＋カウンタ、06 非loopback http ブロック、08 以外の @deprecated に sunset 日適用、14/20 クレンジング全経路のサイズ契約、16 ガード2件を validate/CI に組み込み、17/18 診断ログ＋テスト、22 Test Connection がフォーム値を評価）
-- 2026-09-19-08-refactor-recording-decision-unify.md（🔶 部分実装・pbi/ 残置 — 優先順位表の集約コメントと既存挙動固定は済。残: 各判定の純粋関数化＋組み合わせテスト網羅）
+- 2026-09-19-08-refactor-recording-decision-unify.md（✅ 完了・アーカイブ済 — 残りの純粋関数化＋組み合わせテスト網羅を closer ラウンドで完了。verdict を recordingDecision.ts 純粋関数に委譲し競合マトリクス8件を抽出前 pin → 無変更 green。closer コミット 9c182ed）
 
 最終検証（第3波後）: type-check PASS / lint 0 errors / 両ガード OK / test 12,301 passed（783 files）。userinfo バイパス修正（validateObsidianHost の @% 拒否、TDD Red/Green）を含む。
 

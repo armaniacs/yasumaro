@@ -39,6 +39,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "js-strings"
+version = "0.1.0"
+dependencies = [
+ "rustc-hash",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -153,6 +160,7 @@ dependencies = [
 name = "tag-cooccur"
 version = "0.1.0"
 dependencies = [
+ "js-strings",
  "rustc-hash",
  "serde",
  "serde-wasm-bindgen",

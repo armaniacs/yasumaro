@@ -25,19 +25,16 @@
  */
 
 import { writeFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { computeTagCooccurrence } from '../../dashboard/tagCooccurrence.js';
 import initWasmModule, { computeCooccurrence } from './tagCooccurWasm.js';
 import { decodeCooccurResult, joinRawTags } from './index.js';
+import { initWasmForNode } from '../testing/initWasmForNode.js';
 
 // Node has no extension-page fetch(file://) support, unlike the dashboard
 // page this module targets in production — read the binary directly instead
 // of going through initTagCooccurWasm().
 async function initForNode(): Promise<void> {
-    const wasmPath = fileURLToPath(new URL('./tag_cooccur_bg.wasm', import.meta.url));
-    const bytes = await readFile(wasmPath);
-    await initWasmModule({ module_or_path: bytes });
+    await initWasmForNode(initWasmModule, new URL('./tag_cooccur_bg.wasm', import.meta.url));
 }
 
 function mulberry32(seed: number): () => number {

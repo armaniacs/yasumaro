@@ -9,7 +9,7 @@ import { errorMessage } from '../errorUtils.js';
 import { StorageKeys } from './types.js';
 import { ALL_LIST_SOURCES, FILTER_LIST_SOURCES } from '../listSources.js';
 import type { Settings } from './types.js';
-import { PROVIDER_ALLOWLIST_ROWS } from './providerAllowlist.js';
+import { deriveWhitelistedDomains, PROVIDER_ALLOWLIST_ROWS } from './providerAllowlist.js';
 
 /**
  * Add each configured remote-provider Base URL to `allowedUrls`, gated on the
@@ -41,44 +41,10 @@ export function addProviderBaseUrls(
 }
 
 export const ALLOWED_AI_PROVIDER_DOMAINS = [
-    'generativelanguage.googleapis.com',
-    'api.groq.com',
-    'api.openai.com',
-    'api.anthropic.com',
-    'api-inference.huggingface.co',
-    'openrouter.ai',
-    'api.openrouter.ai',
-    'mistral.ai',
-    'deepinfra.com',
-    'cerebras.ai',
-    'ai-gateway.helicone.ai',
-    'api.publicai.co',
-    'api.venice.ai',
-    'api.scaleway.ai',
-    'api.synthetic.new',
-    'api.stima.tech',
-    'nano-gpt.com',
-    'api.poe.com',
-    'llm.chutes.ai',
-    'api.abliteration.ai',
-    'api.llamagate.dev',
-    'api.gmi-serving.com',
-    'api.sarvam.ai',
-    'deepseek.com',
-    'xiaomimimo.com',
-    'nebius.com',
-    'sambanova.ai',
-    'nscale.com',
-    'featherless.ai',
-    'galadriel.com',
-    'perplexity.ai',
-    'recraft.ai',
-    'jina.ai',
-    'voyageai.com',
-    'volcengine.com',
-    'z.ai',
-    'wandb.ai',
-    'api.ai.sakura.ad.jp',
+    // Provider hostnames derive from the neutral PROVIDER_ALLOWLIST_ROWS so a
+    // new row flows here without a hand edit (set-identical to the legacy
+    // list; the legacy interleaved order is documented in the golden test).
+    ...deriveWhitelistedDomains(),
     // Filter-list + metadata sources derive from the LIST_SOURCES SSOT
     // (PBI 2026-09-11-05): the gate previously omitted nsfw.oisd.nl while
     // buildAllowedUrls granted its origin — the gate/grant mismatch that

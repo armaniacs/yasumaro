@@ -287,9 +287,15 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             try {
                 await acceptConsent({ contentStorageEnabled: false });
 
-                expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
-                    expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
-                );
+                // notify is fire-and-forget and the send now routes through the
+                // MessageTransport (dynamic import), so await the eventual send
+                // before asserting (Checking Team 2026-09-22, System Architect
+                // Medium follow-up).
+                await vi.waitFor(() => {
+                    expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
+                        expect.objectContaining({ type: 'CONSENT_STATE_CHANGED' })
+                    );
+                }, { timeout: 1000 });
                 expect(events.length).toBeGreaterThanOrEqual(1);
             } finally {
                 document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, listener);
@@ -301,12 +307,18 @@ describe('PBI-23: Privacy Consent Version Migration', () => {
             sendMessage.mockClear();
 
             await acceptConsent({ contentStorageEnabled: false });
+            await vi.waitFor(() => {
+                expect(sendMessage.mock.calls.some((call) => (call[0] as Record<string, unknown>)?.type === 'CONSENT_STATE_CHANGED')).toBe(true);
+            }, { timeout: 1000 });
             const acceptEnvelope = sendMessage.mock.calls
                 .map((call) => call[0] as Record<string, unknown>)
                 .find((arg) => arg?.type === 'CONSENT_STATE_CHANGED');
 
             document.addEventListener(CONSENT_STATE_CHANGED_EVENT, () => {});
             await declineConsent();
+            await vi.waitFor(() => {
+                expect(sendMessage.mock.calls.filter((call) => (call[0] as Record<string, unknown>)?.type === 'CONSENT_STATE_CHANGED').length).toBeGreaterThanOrEqual(2);
+            }, { timeout: 1000 });
             document.removeEventListener(CONSENT_STATE_CHANGED_EVENT, () => {});
 
             const declineEnvelope = sendMessage.mock.calls

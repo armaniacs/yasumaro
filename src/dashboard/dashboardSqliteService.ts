@@ -7,6 +7,7 @@
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorPublic } from '../messaging/archiveWireTable.js';
+import { SQLITE_WIRE_DESCRIPTORS, type SqliteWireDescriptor, type SqliteDashboardHop, type DescriptorService } from '../messaging/sqliteWireTable.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
@@ -18,9 +19,6 @@ import {
   requiredNonNegativeNumber,
   requiredBoolean,
   requiredString,
-  requiredRows,
-  isBrowsingLogEntry,
-  isAuditLogEntry,
   decodeStatusExtras,
 } from '../messaging/sqliteValidators.js';
 import type { SqliteStatusResult } from '../messaging/sqliteMessages.js';
@@ -75,6 +73,34 @@ async function callDashboard<T extends DashboardSqliteRequest, R>(
 }
 
 // ============================================================================
+// Query/mutate wire-table caller (PBI 2026-09-20-16)
+//
+// Same seam as callArchive below: the public functions keep their names and
+// signatures; only the internals share a runner. The row owns the decode
+// and the fallback message, so the per-op shape knowledge lives in exactly
+// one place. Retry stays at the call site (only the read paths opt in).
+// ============================================================================
+
+function callSqliteWire<D extends SqliteWireDescriptor & { dashboard: SqliteDashboardHop<unknown> }>(
+  descriptor: D,
+  payload: Extract<DashboardSqliteRequest, { subtype: D['dashboard']['subtype'] }>,
+  retry?: { retryAttempts?: number; retryDelayMs?: number },
+): Promise<ServiceResult<DescriptorService<D>>>;
+function callSqliteWire(
+  descriptor: SqliteWireDescriptor & { dashboard: SqliteDashboardHop<unknown> },
+  payload: DashboardSqliteRequest,
+  retry?: { retryAttempts?: number; retryDelayMs?: number },
+): Promise<ServiceResult<unknown>> {
+  const dashboard = descriptor.dashboard;
+  return callDashboard(
+    payload,
+    (response) => dashboard.serviceDecode(response),
+    dashboard.defaultError,
+    retry,
+  );
+}
+
+// ============================================================================
 // Public API
 // ============================================================================
 
@@ -102,13 +128,9 @@ export async function queryLogs(options: {
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return callDashboard(
+  return callSqliteWire(
+    SQLITE_WIRE_DESCRIPTORS.records,
     { subtype: 'query', ...options },
-    (res) => ({
-      rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
-      total: requiredNonNegativeNumber(res.total, 'total'),
-    }),
-    'Query failed',
     { retryAttempts: 2, retryDelayMs: 1000 },
   );
 }
@@ -124,7 +146,8 @@ export async function searchLogs(
   offset = 0,
   options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return callDashboard(
+  return callSqliteWire(
+    SQLITE_WIRE_DESCRIPTORS.search,
     {
       subtype: 'search',
       query,
@@ -132,11 +155,6 @@ export async function searchLogs(
       offset,
       ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
     },
-    (res) => ({
-      rows: requiredRows(res.rows, 'rows', isBrowsingLogEntry),
-      total: requiredNonNegativeNumber(res.total, 'total'),
-    }),
-    'Query failed',
     { retryAttempts: 2, retryDelayMs: 1000 },
   );
 }
@@ -149,11 +167,7 @@ export async function searchLogs(
  * the database was unavailable (PBI-21).
  */
 export function toggleStar(id: number): Promise<ServiceResult<{ is_starred: number }>> {
-  return callDashboard(
-    { subtype: 'toggle_star', id },
-    (response) => ({ is_starred: requiredNonNegativeNumber(response.is_starred, 'is_starred') }),
-    'Toggle star failed',
-  );
+  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.toggleStar, { subtype: 'toggle_star', id });
 }
 
 /**
@@ -163,14 +177,14 @@ export function toggleStar(id: number): Promise<ServiceResult<{ is_starred: numb
  * show it instead of appearing to ignore the click.
  */
 export function deleteLog(id: number): Promise<ServiceResult<void>> {
-  return callDashboard({ subtype: 'delete', id }, () => undefined, 'Delete failed');
+  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.delete, { subtype: 'delete', id });
 }
 
 /**
  * Update a log entry's fields.
  */
 export function updateLog(id: number, changes: Record<string, unknown>): Promise<ServiceResult<void>> {
-  return callDashboard({ subtype: 'update', id, changes }, () => undefined, 'Update failed');
+  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.update, { subtype: 'update', id, changes });
 }
 
 /**
@@ -198,11 +212,7 @@ export function clearAllLogs(): Promise<ServiceResult<void>> {
  * Returns a ServiceResult so a failure is distinguishable from a count of 0.
  */
 export function getLogCount(): Promise<ServiceResult<number>> {
-  return callDashboard(
-    { subtype: 'get_count' },
-    (response) => requiredNonNegativeNumber(response.count, 'count'),
-    'Get count failed',
-  );
+  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.count, { subtype: 'get_count' });
 }
 
 /**
@@ -496,12 +506,5 @@ export function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: n
 export function queryAuditLogs(
   options: { limit?: number; offset?: number } = {}
 ): Promise<ServiceResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
-  return callDashboard(
-    { subtype: 'audit_log_query', ...options },
-    (response) => ({
-      rows: requiredRows(response.rows, 'rows', isAuditLogEntry),
-      total: requiredNonNegativeNumber(response.total, 'total'),
-    }),
-    'Audit log query failed',
-  );
+  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.auditLog, { subtype: 'audit_log_query', ...options });
 }

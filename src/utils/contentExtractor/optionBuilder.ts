@@ -9,7 +9,7 @@
 import type { CleanseOptions } from '../contentCleaner.js';
 import type { AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
-import type { CleansingConfig } from '../../content/pageState.js';
+import type { CleansingConfig } from '../cleansingConfig.js';
 
 interface ExtractionOptions {
     cleanseOptions: CleanseOptions & { cleanseEnabled: boolean; whitelistExtractionEnabled: boolean };

@@ -20,6 +20,7 @@ import { syncStatusToTop } from '../statusView.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../aiTestResultView.js';
 import { subscribeAiTestProgress, generateAiTestRunId } from '../aiTestProgressClient.js';
 import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
+import { getLocalDateString } from '../markdownExport.js';
 import {
   buildAiTestProgressView,
   renderAiTestProgressLabel,
@@ -350,7 +351,9 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
 
     // Create test content
     const now = new Date();
-    const date = now.toISOString().split('T')[0];
+    // PBI 2026-09-21-12: local date (was UTC via toISOString), matching the
+    // production export paths. Near midnight JST the stamped day shifts.
+    const date = getLocalDateString(now.getTime());
     const time = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
     // Test content with hardcoded markdown patterns (not user input)
     const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
