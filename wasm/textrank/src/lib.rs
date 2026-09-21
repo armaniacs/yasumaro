@@ -11,8 +11,8 @@
 //! JS-semantics fidelity: the TS implementation works on JS strings (UTF-16
 //! code units — `.length`, `charAt` bigrams, `\s`-based trim/split). To stay
 //! behavior-identical, the core operates on UTF-16 code units end to end
-//! (see `jsstring.rs`); lone surrogates cannot survive the &str boundary and
-//! become U+FFFD (see jsstring.rs's caveat). All WASM-visible functions
+//! (see the `js-strings` crate); lone surrogates cannot survive the &str boundary and
+//! become U+FFFD (see `js-strings`'s caveat). All WASM-visible functions
 //! return `Result<_, JsValue>` so the TS wrapper can distinguish parameter
 //! errors from extraction results and fall back to the TS path.
 //!
@@ -24,9 +24,7 @@
 //! pass) to map indices back to strings, and uses the count to detect any
 //! split disagreement between the two implementations before mapping.
 
-mod jsstring;
 mod textrank;
-mod tokenize;
 
 use wasm_bindgen::prelude::*;
 

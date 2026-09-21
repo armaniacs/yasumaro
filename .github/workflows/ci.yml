@@ -84,6 +84,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/wasm-pack
+            wasm/js-strings/target
             wasm/pii-sanitizer/target
             wasm/textrank/target
             wasm/sentence-dedup/target
@@ -91,7 +92,7 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/*/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Run wasm crate Rust tests (pii-sanitizer + textrank + sentence-dedup + tag-cooccur)
+      - name: Run wasm crate Rust tests (js-strings + pii-sanitizer + textrank + sentence-dedup + tag-cooccur)
         run: npm run test:wasm
       - name: Install wasm-pack (if not cached)
         run: command -v wasm-pack || cargo install wasm-pack
