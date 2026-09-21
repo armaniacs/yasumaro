@@ -32,12 +32,12 @@ Scenario: テストエクスポートのファイル名日付がローカル日�
 ```
 
 ## 受け入れ基準
-- [ ] exportLogsService の exportMarkdown の日付分解が getLocalDateString に委譲される
-- [ ] exportMarkdown のタグ解析が可能な範囲で buildTemplateEntryData 系 SSOT に寄せられる
-- [ ] connectionTests のテストエクスポートのファイル名日付が同一 helper に統一される
-- [ ] YAML frontmatter の出力形状は現行維持される(形状統合はスコープ外)
-- [ ] golden テストで現行出力を pin してから差し替えが行われる
-- [ ] UTC から local への意図的変更が変更履歴またはコードコメントに記録される
+- [x] exportLogsService の exportMarkdown の日付分解が getLocalDateString に委譲される
+- [x] exportMarkdown のタグ解析が可能な範囲で buildTemplateEntryData 系 SSOT に寄せられる
+- [x] connectionTests のテストエクスポートのファイル名日付が同一 helper に統一される
+- [x] YAML frontmatter の出力形状は現行維持される(形状統合はスコープ外)
+- [x] golden テストで現行出力を pin してから差し替えが行われる
+- [x] UTC から local への意図的変更が変更履歴またはコードコメントに記録される
 
 ## テスト戦略（t_wadaスタイル）
 

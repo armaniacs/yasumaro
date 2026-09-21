@@ -31,12 +31,12 @@ Scenario: cancel 済み id への二重 delete は安全である
 ```
 
 ## 受け入れ基準
-- [ ] 発火時に自身の id が対応する Set から delete される
-- [ ] cancel の意味論が維持される（cancel 済み id の二重 delete が安全）
-- [ ] delayMs 経路と requestIdleCallback 経路と fallback 経路の全てが対象になる
-- [ ] fire-then-prune と cancel 後挙動のテストが新設され green である
-- [ ] 既存の周期チェック・遅延 untrusted-scroll チェックの振る舞いが変わらない
-- [ ] 長命 SPA タブで発火済み id が Set に残留しない
+- [x] 発火時に自身の id が対応する Set から delete される
+- [x] cancel の意味論が維持される（cancel 済み id の二重 delete が安全）
+- [x] delayMs 経路と requestIdleCallback 経路と fallback 経路の全てが対象になる
+- [x] fire-then-prune と cancel 後挙動のテストが新設され green である
+- [x] 既存の周期チェック・遅延 untrusted-scroll チェックの振る舞いが変わらない
+- [x] 長命 SPA タブで発火済み id が Set に残留しない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -72,6 +72,6 @@ Scenario: cancel 済み id への二重 delete は安全である
 - `src/content/contentKernel.ts:426-429` — 発火済み one-shot の一例（遅延 untrusted-scroll チェック）。周期チェックと同様に発火後も id が残留する
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

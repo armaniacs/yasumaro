@@ -35,12 +35,12 @@ Scenario: 失敗バースト中のログは1回に抑える
 ```
 
 ## 受け入れ基準
-- [ ] プローブ失敗が永続キャッシュされず、bounded TTL の negative cache か次回呼び出しでの再プローブのいずれかで回復する
-- [ ] プローブ成功は従来どおりキャッシュ維持し、毎回初期化を繰り返さない
-- [ ] 失敗バースト中の warn ログと addLog は1回に制限される
-- [ ] narrowEntriesToTopTagsHybrid と computeTagCooccurrenceHybrid の双方が同一プローブ方針を使う
-- [ ] 全出力が byte 等価（既存 hybrid・parity テスト green）
-- [ ] 進行中 PBI 2026-09-20-13 が吸収予定の probe 契約として、失敗時再プローブを doc comment に記録する
+- [x] プローブ失敗が永続キャッシュされず、bounded TTL の negative cache か次回呼び出しでの再プローブのいずれかで回復する
+- [x] プローブ成功は従来どおりキャッシュ維持し、毎回初期化を繰り返さない
+- [x] 失敗バースト中の warn ログと addLog は1回に制限される
+- [x] narrowEntriesToTopTagsHybrid と computeTagCooccurrenceHybrid の双方が同一プローブ方針を使う
+- [x] 全出力が byte 等価（既存 hybrid・parity テスト green）
+- [x] 進行中 PBI 2026-09-20-13 が吸収予定の probe 契約として、失敗時再プローブを doc comment に記録する
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -78,6 +78,6 @@ Scenario: 失敗バースト中のログは1回に抑える
 - 連携: PBI `pbi/2026-09-20-13-refactor-hybrid-runtime-shared-scaffold.md` が probe 契約の吸収先。本 PBI で定める失敗時再プローブ契約を runtime の doc comment に引き継ぐこと
 
 ## Definition of Done
-- [ ] 全BDDシナリオが実装されパスする
-- [ ] コードレビューが完了する
-- [ ] 統合検証が green（既存 hybrid・parity テストを含む）
+- [x] 全BDDシナリオが実装されパスする
+- [x] コードレビューが完了する
+- [x] 統合検証が green（既存 hybrid・parity テストを含む）

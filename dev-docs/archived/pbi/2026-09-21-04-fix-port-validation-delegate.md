@@ -31,12 +31,12 @@ Scenario: Service Worker とダッシュボードの判定が一致する
 ```
 
 ## 受け入れ基準
-- [ ] validatePort が validateObsidianPort への委譲で実装される
-- [ ] validateObsidianPort の throw がポートエラー表示に変換される
-- [ ] '80.5' と '80abc' がダッシュボードで拒否される
-- [ ] 境界値 '' / 0 / 65535 / 65536 の判定が単一実装と一致する
-- [ ] 有効なポートで既存の保存フローが変わらず成功する
-- [ ] 新設の境界テストが追加され green である
+- [x] validatePort が validateObsidianPort への委譲で実装される
+- [x] validateObsidianPort の throw がポートエラー表示に変換される
+- [x] '80.5' と '80abc' がダッシュボードで拒否される
+- [x] 境界値 '' / 0 / 65535 / 65536 の判定が単一実装と一致する
+- [x] 有効なポートで既存の保存フローが変わらず成功する
+- [x] 新設の境界テストが追加され green である
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -72,6 +72,6 @@ Scenario: Service Worker とダッシュボードの判定が一致する
 - 修正方向: `validatePort` を `validateObsidianPort` の try/catch 委譲にし、throw を `setFieldError(getMessage('errorPort'))` に変換する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが実装されパスしている
-- [ ] コードレビューが完了している
-- [ ] 統合検証が green である
+- [x] 全BDDシナリオが実装されパスしている
+- [x] コードレビューが完了している
+- [x] 統合検証が green である

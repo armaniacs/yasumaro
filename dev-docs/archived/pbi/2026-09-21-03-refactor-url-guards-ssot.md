@@ -32,12 +32,12 @@ Scenario: 層を跨ぐ呼び出し側が委譲後の実装で動く
 ```
 
 ## 受け入れ基準
-- [ ] `isSecureUrl` が `isHttpUrl` への1行委譲になり、名前と署名が維持される
-- [ ] `HeaderDetector.normalizeUrl` が `normalizeUrlSafe` への委譲になり、static 純粋関数の性質が維持される
-- [ ] scheme・slash・hash・invalid URL の parity テストが新設され、両ペアの等価を保証する
-- [ ] 既存 `urlUtils.test.ts` が期待値変更なしで green である
-- [ ] `headerDetector.test.ts` と `tabEventHandlers.test.ts` が期待値変更なしで green である
-- [ ] 新規 import が utils→utils の層内依存に収まり、background→utils 以外の逆方向依存を作らない
+- [x] `isSecureUrl` が `isHttpUrl` への1行委譲になり、名前と署名が維持される
+- [x] `HeaderDetector.normalizeUrl` が `normalizeUrlSafe` への委譲になり、static 純粋関数の性質が維持される
+- [x] scheme・slash・hash・invalid URL の parity テストが新設され、両ペアの等価を保証する
+- [x] 既存 `urlUtils.test.ts` が期待値変更なしで green である
+- [x] `headerDetector.test.ts` と `tabEventHandlers.test.ts` が期待値変更なしで green である
+- [x] 新規 import が utils→utils の層内依存に収まり、background→utils 以外の逆方向依存を作らない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -75,6 +75,6 @@ Scenario: 層を跨ぐ呼び出し側が委譲後の実装で動く
 - 既存テスト網: `src/utils/__tests__/urlUtils.test.ts:8-33`(isSecureUrl の scheme 境界) / `src/background/__tests__/headerDetector.test.ts:216-228`(slash/hash/invalid の正規化境界) — 委譲後に期待値変更なしで green であることが回帰条件
 
 ## Definition of Done
-- [ ] 全BDDシナリオが実装されパスする
-- [ ] コードレビューが完了する
-- [ ] 統合検証が green である
+- [x] 全BDDシナリオが実装されパスする
+- [x] コードレビューが完了する
+- [x] 統合検証が green である

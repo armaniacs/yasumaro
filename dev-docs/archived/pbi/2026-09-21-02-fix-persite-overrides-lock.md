@@ -32,12 +32,12 @@ Scenario: 削除書き込みが単一 writer 経由で行われ、失敗が可�
 ```
 
 ## 受け入れ基準
-- [ ] upsert 経路と delete 経路のどちらも `chrome.storage.local.set` の直接呼び出しを行わない
-- [ ] per-site overrides の書き込みは SettingsRepository の lock 経由の単一 writer に統一される
-- [ ] 空の `catch {}` が存在せず、書き込み失敗は `setStatus` のエラー表示で利用者に伝わる
-- [ ] 書き込み失敗は構造化ログに出力され、沈黙によるロストが起きない
-- [ ] contentKernel の即時読み取りが `DOMAIN_CLEANSING_OVERRIDES` キーを直接読む経路は維持される
-- [ ] 既存の保存・削除・一覧表示の正常系動作が変わらない
+- [x] upsert 経路と delete 経路のどちらも `chrome.storage.local.set` の直接呼び出しを行わない
+- [x] per-site overrides の書き込みは SettingsRepository の lock 経由の単一 writer に統一される
+- [x] 空の `catch {}` が存在せず、書き込み失敗は `setStatus` のエラー表示で利用者に伝わる
+- [x] 書き込み失敗は構造化ログに出力され、沈黙によるロストが起きない
+- [x] contentKernel の即時読み取りが `DOMAIN_CLEANSING_OVERRIDES` キーを直接読む経路は維持される
+- [x] 既存の保存・削除・一覧表示の正常系動作が変わらない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -78,6 +78,6 @@ Scenario: 削除書き込みが単一 writer 経由で行われ、失敗が可�
 - 失敗像: dashboard 複数タブや別フローとの並行書き込みで、raw set が lock 経由の delta 書き込みと相互に上書きする(last-writer-wins)。quota 等で raw set が throw しても利用者には既に `Saved` が表示済みで黙ってロストする
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green(type-check・lint・test・build)
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green(type-check・lint・test・build)

@@ -31,12 +31,12 @@ Scenario: fail-close 意味論が維持される
 ```
 
 ## 受け入れ基準
-- [ ] `providerAllowlist` の中立行が domain と permission tier を保持する
-- [ ] `DEFAULT_ALLOWED_DOMAINS` / `AI_PROVIDER_HOST_PERMISSIONS` / `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` / `ALLOWED_AI_PROVIDER_DOMAINS` 相当が中立行からの派生になる
-- [ ] `PROVIDER_TO_DOMAIN` の扱い（同一テーブル統合か分離維持か）が design-it-twice で裁定され記録される
-- [ ] 派生配列と現行配列の byte 等価が sync assert / テストで保証される
-- [ ] `wxt.config.ts` の manifest bytes に変更がない
-- [ ] fail-close 意味論が維持される（未登録ドメインはブロック）
+- [x] `providerAllowlist` の中立行が domain と permission tier を保持する
+- [x] `DEFAULT_ALLOWED_DOMAINS` / `AI_PROVIDER_HOST_PERMISSIONS` / `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` / `ALLOWED_AI_PROVIDER_DOMAINS` 相当が中立行からの派生になる
+- [x] `PROVIDER_TO_DOMAIN` の扱い（同一テーブル統合か分離維持か）が design-it-twice で裁定され記録される
+- [x] 派生配列と現行配列の byte 等価が sync assert / テストで保証される
+- [x] `wxt.config.ts` の manifest bytes に変更がない
+- [x] fail-close 意味論が維持される（未登録ドメインはブロック）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -72,6 +72,6 @@ Scenario: fail-close 意味論が維持される
 - 障害シナリオ: 新ドメイン追加が5ファイル手動同期。drift は runtime validator の fail-close（ユーザー可視ブロック）か manifest / CSP の過剰許可になる
 
 ## Definition of Done
-- [ ] 全BDDシナリオ実装+パス
-- [ ] コードレビュー完了
-- [ ] 統合検証 green
+- [x] 全BDDシナリオ実装+パス
+- [x] コードレビュー完了
+- [x] 統合検証 green

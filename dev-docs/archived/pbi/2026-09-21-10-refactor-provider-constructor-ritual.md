@@ -37,12 +37,12 @@ Scenario: 格納値が正の場合はその値が優先される
 ```
 
 ## 受け入れ基準
-- [ ] ProviderStrategy または共通基底に protected の `resolveTimeoutMs(stored, isLocal)` が新設される
-- [ ] apiKeySource のログ helper が基底に新設され、両プロバイダから委譲される
-- [ ] OpenAI 系の timeout 導出（local は 120000、非 local は 30000）が byte-identical に保たれる
-- [ ] Gemini の timeout 既定値 30000 が byte-identical に保たれ、isLocal 分岐を持たない理由が記録される
-- [ ] ログ文言 `API key resolved from:` が byte-identical に保たれる（golden pin）
-- [ ] 既存のプロバイダ構築テスト・統合検証が green である
+- [x] ProviderStrategy または共通基底に protected の `resolveTimeoutMs(stored, isLocal)` が新設される
+- [x] apiKeySource のログ helper が基底に新設され、両プロバイダから委譲される
+- [x] OpenAI 系の timeout 導出（local は 120000、非 local は 30000）が byte-identical に保たれる
+- [x] Gemini の timeout 既定値 30000 が byte-identical に保たれ、isLocal 分岐を持たない理由が記録される
+- [x] ログ文言 `API key resolved from:` が byte-identical に保たれる（golden pin）
+- [x] 既存のプロバイダ構築テスト・統合検証が green である
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -79,6 +79,6 @@ Scenario: 格納値が正の場合はその値が優先される
 - 故障形態: timeout 既定値の変更が2箇所編集になる。Gemini の意図的分岐欠落が無記録で、将来の local-Gemini 系 variant が静かに誤既定値になる
 
 ## Definition of Done
-- [ ] 全BDDシナリオが実装されパスする
-- [ ] コードレビューが完了する
-- [ ] 統合検証が green である
+- [x] 全BDDシナリオが実装されパスする
+- [x] コードレビューが完了する
+- [x] 統合検証が green である
