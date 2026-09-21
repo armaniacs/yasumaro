@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize は実測不採用で撤去済み）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。19〜20 未着手）RICE順: 21 → 22 → 19 → 20
+### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize 撤去・19 不採用）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。20 未着手）RICE順: 24（新バッチ）→ 20
 
 `/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。P2 候補の md-sanitize は実装・実測の結果不採用 → 撤去（アーカイブ履歴参照）。
 
@@ -23,6 +23,12 @@
 - [2026-09-20-22-chore-tag-cooccur-ci-gate.md](2026-09-20-22-chore-tag-cooccur-ci-gate.md)（🔶 実装完了・コミット 05e65cb5 — CI 同等性ゲート（parity fresh/committed・src/public cmp・glue stale）に tag-cooccur 追加。red/green をローカル実測。PR レビューが残。RICE 12.0・順位2）
 - [2026-09-20-19-feat-prompt-scan-wasm.md](2026-09-20-19-feat-prompt-scan-wasm.md)（⬜ 未着手・🔴高・2週・✨機能追加・副作用🟡軽微: promptSanitizer スキャン移植+非同期化分割。sub-ms だが上限化価値。正規表現21本のパリティが難所。RICE 2.4・順位4同点）
 - [2026-09-20-20-spike-export-serde-wasm.md](2026-09-20-20-spike-export-serde-wasm.md)（⬜ 未着手・🟢低・0.5週・🔬スパイク・副作用🟢なし: serde 計測スパイク。移植は約束しない。RICE 2.4・順位4同点）
+
+### 2026-09-21 promptSanitizer ハードニング（PBI-19 不採用の引き継ぎ） — ⬜ 1件未着手
+
+PBI-19（プロンプトスキャンのWASM移植）を STEP 0 プローブで判定 → **不採用**（転送シェア1〜2%で計算律速だが絶対値 sub-ms・パリティリスク最大・上限化は TS で可能。プローブ記録はアーカイブ済み PBI-19 内）。WASM 移植が担う予定だった DoS 耐性と堅牢化の価値を TS ハードニングとして引き継ぐ。
+
+- [2026-09-21-01-fix-prompt-sanitizer-hardening.md](2026-09-21-01-fix-prompt-sanitizer-hardening.md)（⬜ 未着手・🟢低・0.5週・🔒セキュリティ強化・副作用🟢なし: 置換中イテレーションのマッチ取りこぼし検証+修正、マッチ件数 fail-open 上限、制御文字ループの regex 化。RICE 6.0）
 
 ### 2026-09-20 アーキテクチャレビュー — 🔶 部分実装（12・15 完了・アーカイブ済み。13・14・16 未着手）RICE順: 12 → 13 → 14 → 15 → 16
 
@@ -118,6 +124,12 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-21 PBI-19 プロンプトスキャンWASM移植の不採用 — ✅ 1件クローズ（19 アーカイブ済み）
+
+STEP 0 プローブ（`bench/prompt-sanitize-transfer-probe.ts`）で転送シェア 1〜2%（計算律速）と構造判定しつつ、絶対値が sub-ms（60KB で TS 2.4ms）で速度リターンが小さく、パリティリスク（exec ループ中の replaceAll による変異中イテレーション+文脈依存判定）が全候補中最大と判定。移植を不採用とし、主価値（上限化・DoS 耐性）は後継 PBI-24（TS ハードニング）に引き継いだ。あわせて置換中イテレーションのマッチ取りこぼし懸念を PBI-24 で検証する方針を記録。プローブ記録は `bench/prompt-sanitize-transfer-probe-result.json`。
+
+- 2026-09-20-19-feat-prompt-scan-wasm.md（✅ 完了（クローズ）— 移植不採用の判定記録つき）
 
 ### 2026-09-21 md-sanitize 実測不採用による撤去 — ✅ 2件クローズ（18・23 アーカイブ済み）
 

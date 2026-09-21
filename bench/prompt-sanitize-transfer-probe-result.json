@@ -1,0 +1,56 @@
+{
+  "node": "v26.7.0",
+  "date": "2026-09-21T02:02:36.716Z",
+  "rows": [
+    {
+      "label": "8KB clean",
+      "chars": 8294,
+      "tsMs": 0.3236,
+      "floorMs": 0.0055,
+      "transferShare": 0.017,
+      "filteredCount": 0,
+      "warningCount": 0,
+      "dangerLevel": "safe"
+    },
+    {
+      "label": "32KB clean",
+      "chars": 32168,
+      "tsMs": 1.2105,
+      "floorMs": 0.0194,
+      "transferShare": 0.016,
+      "filteredCount": 0,
+      "warningCount": 0,
+      "dangerLevel": "safe"
+    },
+    {
+      "label": "60KB clean",
+      "chars": 60268,
+      "tsMs": 2.3948,
+      "floorMs": 0.0318,
+      "transferShare": 0.013,
+      "filteredCount": 0,
+      "warningCount": 0,
+      "dangerLevel": "safe"
+    },
+    {
+      "label": "32KB injection-dense",
+      "chars": 32242,
+      "tsMs": 1.6052,
+      "floorMs": 0.0159,
+      "transferShare": 0.01,
+      "filteredCount": 6,
+      "warningCount": 2,
+      "dangerLevel": "high"
+    },
+    {
+      "label": "60KB injection-dense",
+      "chars": 60321,
+      "tsMs": 2.5727,
+      "floorMs": 0.0268,
+      "transferShare": 0.01,
+      "filteredCount": 10,
+      "warningCount": 2,
+      "dangerLevel": "high"
+    }
+  ]
+}

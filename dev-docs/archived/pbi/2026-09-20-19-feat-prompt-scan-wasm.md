@@ -78,3 +78,24 @@ Scenario: 呼び出し側は非同期で動く
 - 依存関係: 同期→非同期化の波及（`src/utils/promptSafety.ts`、`src/background/privacyPipeline.ts`、`builtInAIClient.ts`、`ProviderStrategy.ts`）
 - 遵守すべき事項: lessons-learned の「同期関数の波及は別ステップ」、`extractInternal` 同期問題の前例
 - 非機能要件: 上限超過時は無条件保持（コンテンツを1文字も落とさない）
+
+## 判断記録（2026-09-21 実施・結論: WASM移植は不採用、TS側ハードニングに方針転換）
+
+STEP 0 プローブ（`bench/prompt-sanitize-transfer-probe.ts`、Node v26.7.0）の実測:
+
+| シナリオ | TS | 転送floor（encode/decode） | 転送シェア |
+|---|---|---|---|
+| 8KB clean | 0.324ms | 0.005ms | 2% |
+| 32KB clean | 1.210ms | 0.019ms | 2% |
+| 60KB clean | 2.395ms | 0.032ms | 1% |
+| 32KB injection-dense | 1.605ms | 0.016ms | 1% |
+| 60KB injection-dense | 2.573ms | 0.027ms | 1% |
+
+判定の理由:
+
+1. **転送シェア 1〜2%** — 構造的には計算律速で、md-sanitize 型の転送律速除外には該当しない
+2. しかし**絶対値が小さい**: 60KB 最悪ケースでも TS 2.4ms。移植で3.9x（pii 実績）が出ても削減は ~1.8ms/リクエスト。RICE の Impact=1 の見立てより成果は小さい
+3. **パリティリスクが全候補中最大**: `sanitizePromptContent` は exec ループ内で `sanitized` を `replaceAll` により再代入しながら旧 `lastIndex` で次の exec を走める変異中イテレーション、`isInSafeContext` / `isMaliciousUsage` の文脈依存判定（JS 文字列操作に強く結合）が絡む。bit 等価移植の難所は PBI 立案時の見立てどおり
+4. **本 PBI の主価値（上限化・DoS 耐性）は TS だけで実現可能**: マッチ件数上限・replaceAll の一括化（範囲集計→1パス適用）・制御文字ループの regex 化は、WASM 不要で実装できる
+
+結論: **WASM 移植は不採用**。残す価値（上限化+ハードニング+潜在バグ検証）は PBI-24 に引き継ぐ。
