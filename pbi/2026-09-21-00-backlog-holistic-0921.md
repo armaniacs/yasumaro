@@ -63,3 +63,13 @@
 - 実装中の発見: (a) PBI 05 の「32鍵」は実数33鍵（台帳表記は執筆時の誤記・実装は実テーブルから派生し問題なし）(b) PBI 02 の raw set は contentKernel 読み取り経路から冗長と実証 (c) PBI 13 の WHITELIST 旧順序は単一行順では再現不能（Set/includes/sorted UI のため実害なし・golden を set-equality に緩和）(d) lint の vitest/valid-expect エラー13件（expect 第2引数）を統合側で修正
 - 残務の統合側処理: aiModelKey shim 削除、未使用 import 削除（PBI 11 の sender 化副産物）、optionBuilder 型 import の新 SSOT 向け直（PBI 16）
 - 進行中 PBI（13/14/16/2026-09-19-08）の autonomous-task-closer 委託は未実施 — 次ラウンドで実施すること
+
+## 再検討結果（2026-09-22・差分スコープ再レビュー）
+
+新規候補ゼロのため新台帳は作らずここに追記する。
+
+- 差分スコープ: holistic-0921 完了コミット 78d282f8 以降（src/entrypoints の非テスト変更約 50 ファイル）。utils から上位層への逆依存は 0 件。
+- 堅牢性の疑いは実コードで棄却: `storageFallback.allocateIds` の read-modify-write は `insert`/`insertBatch` が同一 `this.mutex` 配下で呼ぶため直列化済み。`recordingTriggerManager` の raw set は単一キーの全置換で RMW ではない。
+- 空 `catch {}` 6 箇所（PrivacyCache.clearSession・settingsMigration・aiSummaryCleaner/helpers・settingsPipeline・sqliteHistoryModel listener notify・aiSummaryCleansingPanel）は best-effort 経路で実害が確認できず、台帳送り。再検討トリガー: 同経路で握りつぶした失敗が原因の不具合報告が出た時。
+- 台帳送りのトリガー再評価: tagCooccurrence の dashboard 配置（compute の offscreen 移設なし）・Ollama Origin-strip 汎用化（LM Studio は ALLOWED_LOCALHOST_PORTS に 1234 を持つが CORS 対策の必要性は未確認）とも未発火。据え置き。
+- 進行中 PBI: 2026-09-20-17/21/22（実機確認と PR レビュー待ち）、2026-09-05-32（ADR-014 ゲート 2026-12-17 まで着手禁止）はいずれもユーザー側の確認・時期待ちで、自律実装で閉じられるものはない。
