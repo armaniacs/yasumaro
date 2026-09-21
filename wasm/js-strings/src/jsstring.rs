@@ -1,8 +1,10 @@
-//! JavaScript string semantics over UTF-16 code units.
+//! JavaScript string semantics over UTF-16 code units, shared by the
+//! textrank and sentence-dedup WASM cores.
 //!
 //! The TS reference implementations (`splitSentences`, `toWordSet` in
-//! `src/utils/text/tokenizer.ts` and the local `toWordSet` in
-//! `src/utils/sentenceExtractor.ts`) operate on JS strings, whose length
+//! `src/utils/text/tokenizer.ts`, the local `toWordSet` in
+//! `src/utils/sentenceExtractor.ts`, and the local `splitSentences` in
+//! `src/utils/contentDeduplicator.ts`) operate on JS strings, whose length
 //! and indexing are UTF-16 code unit based. Rust `char`s are Unicode scalar
 //! values, so a direct port would diverge wherever astral-plane characters
 //! (emoji, rare kanji) appear: JS `.length` counts a surrogate pair as 2,
@@ -13,9 +15,22 @@
 //! Lone-surrogate caveat: wasm-bindgen converts JS strings to Rust `&str`
 //! via UTF-8, which replaces lone surrogates with U+FFFD. Inputs containing
 //! lone surrogates (essentially never produced by real page text) can
-//! therefore diverge from the JS path; the hybrid wrapper falls back to the
+//! therefore diverge from the JS path; the hybrid wrappers fall back to the
 //! TS implementation on any WASM error, so divergence only matters for
 //! silent wrong output, not for crashes.
+//!
+//! Split-variant note: two sentence-split views share the scan core below
+//! because their TS references differ on purpose —
+//! - `split_sentence_ranges` (textrank): trimmed text from the loop's
+//!   `lastIndex` up to and including the delimiter
+//!   (sentenceExtractor.ts:31);
+//! - `split_sentence_parts` (sentence-dedup): the raw (untrimmed) slice
+//!   INCLUDING its trailing delimiter, with the consumed `\s*` stored as a
+//!   separate `delimiter`, so the original text stays reconstructable after
+//!   dedup removes sentences
+//!   (`kept.map(k => k.sentence + k.delimiter).join('')`).
+//! Both preserve the TS loop's `lastIndex = match.index + 1` quirk (right
+//! after the delimiter, NOT past the consumed `\s*`).
 
 /// JS `\s` (WhiteSpace ∪ LineTerminator) as used by regex engines and
 /// `String.prototype.trim()`: U+0009–U+000D, U+0020, U+00A0, U+1680,
@@ -59,7 +74,7 @@ pub fn is_word_separator(u: u16) -> bool {
 }
 
 /// Sentence delimiters from the TS reference regex `/([。！？.!?])\s*/g`.
-fn is_sentence_delimiter(u: u16) -> bool {
+pub fn is_sentence_delimiter(u: u16) -> bool {
     matches!(u, 0x3002 | 0xFF01 | 0xFF1F | 0x002E | 0x0021 | 0x003F)
 }
 
@@ -123,6 +138,74 @@ pub fn split_sentence_ranges(units: &[u16]) -> Vec<(usize, usize)> {
     ranges
 }
 
+/// One segment produced by the dedup-variant split: `sentence` is the raw
+/// (untrimmed) slice INCLUDING its trailing delimiter character, `delimiter`
+/// is the `\s*` the regex consumed right after that delimiter (possibly
+/// empty). Ranges are half-open indices into the full input unit slice.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SentencePart {
+    pub sentence: (usize, usize),
+    pub delimiter: (usize, usize),
+}
+
+/// Ranges of sentence parts, mirroring the local `splitSentences` in
+/// `src/utils/contentDeduplicator.ts` exactly:
+///
+/// ```js
+/// const regex = /([。！？.!?])\s*/g;
+/// let lastIndex = 0;
+/// while ((match = regex.exec(text)) !== null) {
+///   if (match.index > lastIndex) {
+///     result.push({ sentence: text.slice(lastIndex, match.index + match[1].length),
+///                   delimiter: match[0].slice(match[1].length) });
+///   }
+///   lastIndex = match.index + match[1].length;
+/// }
+/// if (lastIndex < text.length) result.push({ sentence: text.slice(lastIndex), delimiter: '' });
+/// ```
+///
+/// Two distinct JS positions must not be conflated: the regex object's scan
+/// position advances past the consumed `\s*`, but the loop's `lastIndex` is
+/// `match.index + 1` — right after the delimiter. The whitespace a match
+/// consumed therefore appears BOTH as the current part's `delimiter` AND at
+/// the start of the next sentence (or the tail) — a deliberate quirk of the
+/// TS reference that this port reproduces so reconstruction stays
+/// byte-identical.
+pub fn split_sentence_parts(units: &[u16]) -> Vec<SentencePart> {
+    let mut parts = Vec::new();
+    let mut last = 0usize; // loop's lastIndex: right after the previous delimiter
+    let mut i = 0usize; // regex scan position: past the consumed \s*
+    while i < units.len() {
+        if !is_sentence_delimiter(units[i]) {
+            i += 1;
+            continue;
+        }
+        if i > last {
+            let mut j = i + 1;
+            while j < units.len() && is_js_ws(units[j]) {
+                j += 1;
+            }
+            parts.push(SentencePart {
+                sentence: (last, i + 1),
+                delimiter: (i + 1, j),
+            });
+        }
+        let mut j = i + 1;
+        while j < units.len() && is_js_ws(units[j]) {
+            j += 1;
+        }
+        last = i + 1;
+        i = j;
+    }
+    if last < units.len() {
+        parts.push(SentencePart {
+            sentence: (last, units.len()),
+            delimiter: (units.len(), units.len()),
+        });
+    }
+    parts
+}
+
 /// Whether `cleaned` (a lowercased string) contains Japanese characters —
 /// mirrors `/[぀-ゟ゠-ヿ一-鿿]/` (U+3040–U+309F, U+30A0–U+30FF, U+4E00–U+9FFF).
 pub fn contains_japanese(units: &[u16]) -> bool {
@@ -175,21 +258,33 @@ mod tests {
             .collect()
     }
 
-    #[test]
-    fn trim_matches_js() {
-        assert_eq!(js_trim(&u16_of("\u{3000}x y\u{00A0}")), u16_of("x y"));
-        assert!(js_trim(&u16_of("  \u{FEFF}")).is_empty());
+    fn parts_of(s: &str) -> Vec<String> {
+        let units = u16_of(s);
+        split_sentence_parts(&units)
+            .iter()
+            .map(|p| {
+                let mut t = String::from_utf16_lossy(&units[p.sentence.0..p.sentence.1]);
+                t.push_str(&String::from_utf16_lossy(&units[p.delimiter.0..p.delimiter.1]));
+                t
+            })
+            .collect()
     }
 
     #[test]
-    fn split_sentences_basic() {
+    fn trim_matches_js() {
+        assert_eq!(js_trim(&u16_of("　x y ")), u16_of("x y"));
+        assert!(js_trim(&u16_of("  ﻿")).is_empty());
+    }
+
+    #[test]
+    fn split_ranges_basic() {
         let units = u16_of("First. Second! Third?");
         let ranges = split_sentence_ranges(&units);
         assert_eq!(text_of(&ranges, &units), vec!["First.", "Second!", "Third?"]);
     }
 
     #[test]
-    fn split_sentences_japanese() {
+    fn split_ranges_japanese() {
         let units = u16_of("これは一文です。これは二文です！三文目？");
         let ranges = split_sentence_ranges(&units);
         assert_eq!(
@@ -199,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn split_sentences_adjacent_delimiters_skip_empty_segment() {
+    fn split_ranges_adjacent_delimiters_skip_empty_segment() {
         // "a..b": the second "." starts at lastIndex, so no empty sentence
         // is emitted for it — matches the `match.index > lastIndex` guard.
         let units = u16_of("a..b");
@@ -208,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    fn split_sentences_leading_delimiter() {
+    fn split_ranges_leading_delimiter() {
         // The leading "." matches at index 0 which is not > lastIndex(0),
         // so no empty sentence is emitted; "hi." comes from the 2nd match.
         let units = u16_of(".hi.");
@@ -217,7 +312,7 @@ mod tests {
     }
 
     #[test]
-    fn split_sentences_trailing_whitespace_consumed() {
+    fn split_ranges_trailing_whitespace_consumed() {
         // The \s* after the delimiter is consumed and NOT re-emitted.
         let units = u16_of("One.   \nTwo.");
         let ranges = split_sentence_ranges(&units);
@@ -225,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    fn split_sentences_whitespace_separated_delimiters_match_ts() {
+    fn split_ranges_whitespace_separated_delimiters_match_ts() {
         // Regression for the lastIndex divergence: the TS loop variable is
         // match.index + 1 (NOT past the consumed \s*), so a lone "."
         // delimited only by whitespace still becomes its own sentence.
@@ -242,14 +337,86 @@ mod tests {
     }
 
     #[test]
+    fn split_parts_keeps_delimiters_attached_and_untrimmed() {
+        // The whitespace a match consumed is stored as the current part's
+        // delimiter AND stays at the start of the next sentence (the loop's
+        // lastIndex is right after the previous delimiter) — the TS
+        // reference's exact quirk, verified against deduplicateContent:
+        // "First. Second! Third? tail" reconstructs to
+        // "First.  Second!  Third?  tail" (doubled spaces).
+        let units = u16_of("First. Second! Third? tail");
+        let parts = split_sentence_parts(&units);
+        let texts: Vec<String> = parts
+            .iter()
+            .map(|p| String::from_utf16_lossy(&units[p.sentence.0..p.sentence.1]))
+            .collect();
+        assert_eq!(texts, vec!["First.", " Second!", " Third?", " tail"]);
+        let delims: Vec<String> = parts
+            .iter()
+            .map(|p| String::from_utf16_lossy(&units[p.delimiter.0..p.delimiter.1]))
+            .collect();
+        assert_eq!(delims, vec![" ", " ", " ", ""]);
+    }
+
+    #[test]
+    fn split_parts_japanese() {
+        assert_eq!(parts_of("これは一文です。これは二文です！三文目？"), vec![
+            "これは一文です。", "これは二文です！", "三文目？"
+        ]);
+    }
+
+    #[test]
+    fn split_parts_adjacent_delimiters_skip_empty_segment() {
+        // "a..b": the second "." starts at lastIndex, so no empty sentence is
+        // emitted for it — matches the `match.index > lastIndex` guard.
+        assert_eq!(parts_of("a..b"), vec!["a.", "b"]);
+    }
+
+    #[test]
+    fn split_parts_whitespace_separated_delimiters() {
+        // Verified against the TS reference via deduplicateContent outputs:
+        // the loop's lastIndex is match.index + 1 (NOT past the consumed
+        // \s*), so whitespace consumed by one match reappears at the start
+        // of the following sentence.
+        assert_eq!(parts_of(". ."), vec![" ."]);
+        assert_eq!(parts_of("a. .b"), vec!["a. ", " .", "b"]);
+        assert_eq!(parts_of("! ?"), vec![" ?"]);
+        assert_eq!(parts_of("x! ?y"), vec!["x! ", " ?", "y"]);
+    }
+
+    #[test]
+    fn split_parts_tail_whitespace_duplicated_like_ts() {
+        // The \s* after the last delimiter is consumed by the regex (and
+        // stored as this part's delimiter), but the loop's lastIndex stays
+        // before it — so the tail sentence repeats that whitespace. The TS
+        // reference does exactly this; reconstruction must not "fix" it.
+        assert_eq!(parts_of("a. "), vec!["a. ", " "]);
+        assert_eq!(parts_of("a.   x"), vec!["a.   ", "   x"]);
+    }
+
+    #[test]
+    fn split_parts_leading_delimiter() {
+        // The leading "." matches at index 0 which is not > lastIndex(0).
+        assert_eq!(parts_of(".hi."), vec!["hi."]);
+    }
+
+    #[test]
+    fn split_parts_empty_and_no_delimiters() {
+        let units = u16_of("");
+        assert!(split_sentence_parts(&units).is_empty());
+        // No delimiter anywhere: the whole text is one tail part.
+        assert_eq!(parts_of("hello world"), vec!["hello world"]);
+    }
+
+    #[test]
     fn lowercase_handles_astral_pairs() {
         // U+1F600 (emoji, surrogate pair) survives lowercasing unchanged;
         // its UTF-16 length stays 2.
-        let emoji = "\u{1F600}";
+        let emoji = "😀";
         let lowered = to_lowercase_utf16(&u16_of(emoji));
         assert_eq!(lowered.len(), 2);
         assert_eq!(String::from_utf16_lossy(&lowered), emoji);
-        assert_eq!(to_lowercase_utf16(&u16_of("ABCİ")), u16_of("abc\u{0069}\u{0307}"));
+        assert_eq!(to_lowercase_utf16(&u16_of("ABCİ")), u16_of("abci̇"));
     }
 
     #[test]

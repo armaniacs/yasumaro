@@ -13,8 +13,7 @@
 //! - the `useAllSentencesFallback` output minLength filter with the
 //!   `sorted.slice(0, topK)` re-fallback.
 
-use crate::jsstring::{js_trim, split_sentence_ranges};
-use crate::tokenize::{jaccard_similarity, to_word_set, WordSet};
+use js_strings::{jaccard_similarity, js_trim, split_sentence_ranges, to_word_set, WordSet, TEXTRANK_TOKENIZE};
 
 const MAX_SENTENCES_FOR_TEXTRANK: usize = 200;
 const DAMPING_FACTOR: f64 = 0.85;
@@ -71,7 +70,7 @@ pub fn extract_core(
     let m = selection.len();
     let word_sets: Vec<WordSet> = selection
         .iter()
-        .map(|&i| to_word_set(&units[ranges[i].0..ranges[i].1]))
+        .map(|&i| to_word_set(&units[ranges[i].0..ranges[i].1], TEXTRANK_TOKENIZE))
         .collect();
 
     // Adjacency lists; the i<j double loop pushes in ascending order on both
