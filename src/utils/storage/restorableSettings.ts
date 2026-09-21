@@ -7,6 +7,7 @@
 import type { Settings } from './types.js';
 import { LogType } from '../logger/types.js';
 import { addLog } from '../logger/core.js';
+import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
 
 // ============================================================================
 // Spec table: single source for the restorable key set, its expected type,
@@ -27,6 +28,15 @@ export interface RestorableKeySpec {
   /** Inclusive numeric range, applied only when the value is a number. */
   range?: { min: number; max: number };
 }
+
+// Cleansing rule flags, derived from the SSOT table so a new rule is
+// restorable without touching this file. Previously hand-enumerated here,
+// which is how news_media / ec_site / qa_site / video_site were dropped
+// from backup restore. Non-rule cleansing keys (enabled, body protection)
+// stay hand-written below because they are parameters, not rules.
+const CLEANSING_RULE_BOOLEAN_SPECS: Record<string, RestorableKeySpec> = Object.fromEntries(
+  CLEANSING_RULES.map((rule) => [rule.storageKey, { type: 'boolean' as const }]),
+);
 
 const RESTORABLE_KEY_SPECS: Record<string, RestorableKeySpec> = {
   // UI / Display
@@ -53,35 +63,7 @@ const RESTORABLE_KEY_SPECS: Record<string, RestorableKeySpec> = {
 
   // Cleansing toggles (all ai_summary_cleansing_*) — booleans
   'ai_summary_cleansing_enabled': { type: 'boolean' },
-  'ai_summary_cleansing_alt': { type: 'boolean' },
-  'ai_summary_cleansing_metadata': { type: 'boolean' },
-  'ai_summary_cleansing_ads': { type: 'boolean' },
-  'ai_summary_cleansing_nav': { type: 'boolean' },
-  'ai_summary_cleansing_social': { type: 'boolean' },
-  'ai_summary_cleansing_deep': { type: 'boolean' },
-  'ai_summary_cleansing_link_density': { type: 'boolean' },
-  'ai_summary_cleansing_json_ld': { type: 'boolean' },
-  'ai_summary_cleansing_lazy_load': { type: 'boolean' },
-  'ai_summary_cleansing_skip_link': { type: 'boolean' },
-  'ai_summary_cleansing_card': { type: 'boolean' },
-  'ai_summary_cleansing_fixed': { type: 'boolean' },
-  'ai_summary_cleansing_recommend': { type: 'boolean' },
-  'ai_summary_cleansing_pagination': { type: 'boolean' },
-  'ai_summary_cleansing_sns_promo': { type: 'boolean' },
-  'ai_summary_cleansing_popup': { type: 'boolean' },
-  'ai_summary_cleansing_cookie': { type: 'boolean' },
-  'ai_summary_cleansing_platform': { type: 'boolean' },
-  'ai_summary_cleansing_text_density': { type: 'boolean' },
-  'ai_summary_cleansing_short_seq': { type: 'boolean' },
-  'ai_summary_cleansing_symbol_line': { type: 'boolean' },
-  'ai_summary_cleansing_link_para': { type: 'boolean' },
-  'ai_summary_cleansing_enhanced_hidden': { type: 'boolean' },
-  'ai_summary_cleansing_empty_elem': { type: 'boolean' },
-  'ai_summary_cleansing_jp_layout': { type: 'boolean' },
-  'ai_summary_cleansing_jp_navigation': { type: 'boolean' },
-  'ai_summary_cleansing_author': { type: 'boolean' },
-  'ai_summary_cleansing_affiliate': { type: 'boolean' },
-  'ai_summary_cleansing_speech_bubble': { type: 'boolean' },
+  ...CLEANSING_RULE_BOOLEAN_SPECS,
   'ai_summary_cleansing_body_protection_enabled': { type: 'boolean' },
 
   // Cleansing thresholds — no type check (range applies to numbers only)
