@@ -12,5 +12,5 @@
 ## ロードマップ対応
 
 - P1 tag-cooccur 本体: 実装済み（本 run）。残りは上表の2件
-- P2 markdown-sanitize / P3 prompt-scan / P4 serde スパイク: iteration-1 PBI（`2026-09-20-18/19/20`）に対応。本 run では未着手・PBI再作成なし
+- P3 prompt-scan / P4 serde スパイク: `pbi/2026-09-20-19/20` が有効（P2 markdown-sanitize は実測不採用で撤去・アーカイブ済み）。本 run では未着手・PBI再作成なし
 - 移植しないと判断した領域（暗号化・DOM走査・HMAC署名等）は PBI にしない。根拠（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物の除外理由）は `pbi/00-INDEX.md` の本バッチセクションに要約記録

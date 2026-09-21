@@ -14,17 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur / md-sanitize WASM 化 — 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。18 は dark-launch 完了・23 は非反転クローズ。19〜20 未着手）RICE順: 21 → 22 → 18 → 23 → 19 → 20
+### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize は実測不採用で撤去済み）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。19〜20 未着手）RICE順: 21 → 22 → 19 → 20
 
-`/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。
+`/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。P2 候補の md-sanitize は実装・実測の結果不採用 → 撤去（アーカイブ履歴参照）。
 
 - [2026-09-20-17-feat-tag-cooccurrence-wasm.md](2026-09-20-17-feat-tag-cooccurrence-wasm.md)（🔶 実装完了・コミット f645865a / 395d0896 / 05e65cb5 — cargo test 16・parity 37・hybrid 20・validate 12,709 green。本番経路 10k×20 で 5.53x（46.3ms/256.4ms）・100×6 でも 1.55x。受け入れ基準 8/8 チェック。実機確認と PR レビューが残でアーカイブ保留。RICE 8.0・順位3）
 - [2026-09-20-21-feat-tag-cooccur-panel-wiring.md](2026-09-20-21-feat-tag-cooccur-panel-wiring.md)（🔶 実装完了・コミット 395d0896 — tagClusterPanel の2呼び出しをハイブリッドへ + public/wasm 配布 + publicAssets（STAGED解除）。パネル・ハイブリッド・パリティ 373 tests green。目視確認と PR レビューが残。RICE 16.0・順位1）
 - [2026-09-20-22-chore-tag-cooccur-ci-gate.md](2026-09-20-22-chore-tag-cooccur-ci-gate.md)（🔶 実装完了・コミット 05e65cb5 — CI 同等性ゲート（parity fresh/committed・src/public cmp・glue stale）に tag-cooccur 追加。red/green をローカル実測。PR レビューが残。RICE 12.0・順位2）
-- [2026-09-20-18-feat-markdown-sanitize-wasm.md](2026-09-20-18-feat-markdown-sanitize-wasm.md)（🔶 実装完了（dark-launch）・✨機能追加 — クレート2口・ハイブリッド（serde 配列転送で改行安全）・パリティ・CI ゲートまで完了、validate 12,761 green。ただし実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x・batch 0.57x〜0.64x、メモリ帯域律速）のため**全本入力を TS ルーティングの dark-launch**。高速化は 23 へ送り。RICE 5.6・順位4）
-- [2026-09-20-23-perf-md-sanitize-transfer-optimization.md](2026-09-20-23-perf-md-sanitize-transfer-optimization.md)（✅ 完了（クローズ）・🔧非機能追加 — 転送候補5アームを実測（framed bytes / serde bytes / 共有メモリ staging）、最良でも本番サイズ 0.86x で**非反転**。floor 計測により転送ゼロ化後もコア計算自体が V8 ビルトインとの約1:1メモリ帯域勝負と構造特定。dark-launch 維持を確定判断として記録、プローブ+計測用エクスポートは再検証用に残置（本番経路は呼ばない）。RICE 4.0・順位5）
-- [2026-09-20-19-feat-prompt-scan-wasm.md](2026-09-20-19-feat-prompt-scan-wasm.md)（⬜ 未着手・🔴高・2週・✨機能追加・副作用🟡軽微: promptSanitizer スキャン移植+非同期化分割。sub-ms だが上限化価値。正規表現21本のパリティが難所。RICE 2.4・順位5同点）
-- [2026-09-20-20-spike-export-serde-wasm.md](2026-09-20-20-spike-export-serde-wasm.md)（⬜ 未着手・🟢低・0.5週・🔬スパイク・副作用🟢なし: serde 計測スパイク。移植は約束しない。RICE 2.4・順位5同点）
+- [2026-09-20-19-feat-prompt-scan-wasm.md](2026-09-20-19-feat-prompt-scan-wasm.md)（⬜ 未着手・🔴高・2週・✨機能追加・副作用🟡軽微: promptSanitizer スキャン移植+非同期化分割。sub-ms だが上限化価値。正規表現21本のパリティが難所。RICE 2.4・順位4同点）
+- [2026-09-20-20-spike-export-serde-wasm.md](2026-09-20-20-spike-export-serde-wasm.md)（⬜ 未着手・🟢低・0.5週・🔬スパイク・副作用🟢なし: serde 計測スパイク。移植は約束しない。RICE 2.4・順位4同点）
 
 ### 2026-09-20 アーキテクチャレビュー — 🔶 部分実装（12・15 完了・アーカイブ済み。13・14・16 未着手）RICE順: 12 → 13 → 14 → 15 → 16
 
@@ -120,6 +118,13 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-21 md-sanitize 実測不採用による撤去 — ✅ 2件クローズ（18・23 アーカイブ済み）
+
+md-sanitize WASM（PBI-18）は実測で全サイズ TS 負け（single 0.31x〜0.77x・batch 0.57x〜0.64x、メモリ帯域律速 — V8 文字列ビルトインがネイティブで勝つ領域）のため dark-launch 配線としていたが、転送最適化の全候補（PBI-23: framed bytes / serde bytes / 共有メモリ staging、最良 0.86x）も非反転と確定。さらに dark-launch 閾値（合計 2MB）を超える大規模エクスポート（EXPORT_ROW_LIMIT 10000×0.5KB ≈ 5MB）が遅い WASM 経路に流れる潜在リグレッションを確認したため、クレート・ラッパー・配布バイナリ・ハイブリッド・配線・CI ゲート一式を撤去し exportLogsService を TS 直呼びに復帰した（validate 12,709 green = 追加前と同一）。判断根拠・実測表はアーカイブ済み PBI 18/23 に記録、撤去済みコードは git 履歴参照。タグクラスタパネル（tag-cooccur・5.53x）は対象外で影響なし。学習: **文字列入出力が支配的な処理（転送/帯域律速）は移植不適 — 計算律速のみが対象**。
+
+- 2026-09-20-18-feat-markdown-sanitize-wasm.md（✅ 完了（クローズ）— 移植・パリティ・dark-launch 配線まで実施後、実測不採用で撤去。受け入れ基準 6/6 は履行、BDD の高速化シナリオは不達を記録）
+- 2026-09-20-23-perf-md-sanitize-transfer-optimization.md（✅ 完了（クローズ）— 転送候補5アーム実測で非反転。floor 計測による構造特定を記録）
 
 ### 2026-09-20 autonomous-task-closer による一括クローズ（12・15＋先行5件＋実行済Plan） — ✅ 8件
 

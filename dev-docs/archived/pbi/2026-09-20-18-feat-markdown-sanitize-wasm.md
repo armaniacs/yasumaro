@@ -72,4 +72,4 @@ Scenario: エンティティ化の順序が保存される
 - 依存関係: なし。実行場所はダッシュボード拡張ページ（CSP 済み）
 - 遵守すべき事項: `sanitizeForObsidian` の適用順（Markdown リンク→wikilink→HTML エンティティ）は意味論であり変更不可
 
-> DoD 補足（2026-09-20）: 受け入れ基準 6/6 チェック（プローブ→クレート2口→ハイブリッド→パリティ→ベンチ→配線+CI+validate 12,761 green）。ただし BDD の「集計時間が短縮する」シナリオは**未達**: 実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x、batch 0.57x〜0.64x — メモリ帯域律速、wasm-bindgen の UTF-8 コピーが支配的）のため、**dark-launch**（MIN_WASM_CHARS=1MB / MIN_WASM_TOTAL_CHARS=2MB で全本入力を TS 経路にルーティング、WASM は CI 同等性ゲートで保守）とした。高速化の再挑戦は [2026-09-20-23-perf-md-sanitize-transfer-optimization.md](2026-09-20-23-perf-md-sanitize-transfer-optimization.md) へ送り。同期呼び出し元（reviewSummaryGenerator・markdownFormatter）の配線は閾値解除後の別ステップ。
+> DoD 補足（2026-09-20）: 受け入れ基準 6/6 チェック（プローブ→クレート2口→ハイブリッド→パリティ→ベンチ→配線+CI+validate 12,761 green）。ただし BDD の「集計時間が短縮する」シナリオは**未達**: 実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x、batch 0.57x〜0.64x — メモリ帯域律速、wasm-bindgen の UTF-8 コピーが支配的）のため、**dark-launch**（MIN_WASM_CHARS=1MB / MIN_WASM_TOTAL_CHARS=2MB で全本入力を TS 経路にルーティング、WASM は CI 同等性ゲートで保守）とした。高速化の再挑戦（PBI-23）も非反転で終了したため、**2026-09-21 に dark-launch 配線ごと撤去**（exportLogsService は TS 直呼びに復帰。クレート・ラッパー・バイナリ・CI ゲート一式は git 履歴参照）。同期呼び出し元は元の直参照のまま。
