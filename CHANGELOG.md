@@ -36,7 +36,25 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
-## [6.9.13] - 2026-09-21
+## [6.9.14] - 2026-09-21
+
+このリリースは v6.9.13 に続く連続リリースです。アーキテクチャ深化ラウンド（holistic-0921 / closer / arch-delivery-loop 0921 の計 28 PBI）です。全テスト（12,986 件）がグリーンです。
+
+### Fixed
+
+- **クレンジング per-site overrides の保存が二重書き込みで競合し、失敗が握り潰されていた**: ロック規律を迂回する raw `chrome.storage.local.set` と空 `catch {}` を削除し、`SettingsRepository` 経由の単一 writer に統一。書き込み失敗は UI にエラー表示（PBI 2026-09-21-02）
+- **Obsidian ポートの検証が dashboard と SW 側で挙動不一致**: dashboard の `parseInt` ベース検証を `validateObsidianPort` に委譲し、`80.5` 等が保存できて接続テストで拒否される save-then-fail を解消。空欄は既定ポート扱いで SW 側と一貫（PBI 2026-09-21-04）
+- **バックアップ復元でクレンジング Category-B の 4 フラグ（news_media / ec_site / qa_site / video_site）が黙って落ちていた**: presets 3×33 手書き列挙と復元 spec を `CLEANSING_RULES` からの派生に置き換え、網羅性テストで双方向の欠落を構造的に防止（PBI 2026-09-21-05）
+- **「不具合を報告」ボタンの二重クリックで unhandled rejection**: スナップショット収集をまたぐ async リスナーに in-flight guard とエラー表示を追加（PBI 2026-09-21-07）
+- **IdleScheduler の発火済みタイマー id が長命タブで蓄積**: 発火時に追跡 Set から除去（PBI 2026-09-21-08）
+- **WASM 初期化の一時的失敗でセッション全体が TS フォールバックに固定**: tag-cooccur ハイブリッドのプローブが失敗を恒久キャッシュしていたのを修正し、失敗時は次呼び出しで再プローブ（PBI 2026-09-21-09）
+- **CONSENT_STATE_CHANGED / ACTIVITY_UPDATE が型検査されない手書き sendMessage だった**: 型付きセンダーに統一し、`ContentResponse` を messaging に移動して popup↔messaging の型循環も解消（PBI 2026-09-21-11）
+- **エクスポート経路ごとに日付分解が異なり、深夜境界の行が別の日次ファイルに分類**: 日付を `getLocalDateString` に統一。テストエクスポートのファイル名のみ UTC→local に意図的変更（PBI 2026-09-21-12）
+
+### Changed
+
+- **アーキテクチャ深化ラウンド（holistic-0921 / closer / archloop-0921、計 21 refactor）**: URL 判定・正規化とプロバイダ構築儀式の SSOT 委譲化（03/10）、utils 層の utils→background 逆依存と pageContentPipeline の utils↔content 循環を解消（06/16）、記録可否判定を `recordingDecision.ts` 純粋関数 seam に集約し obsidian/L0 skip 判定も合流（08/21）、要約ソース優先順位を `selectPipelineText` に単一所有（17）、WASM crate 台帳を `wasm/crates.json` manifest SSOT に集約して build/glue/出荷/CI を駆動（18）、tag-cooccur の fallback+u32 上限を `wasmHybridRuntime` 契約へ統一（19）、dashboard 読み取りの cap policy を planner seam に単一所有し fts 既定 50 を `planSearch` に移植（20）、FTS/LIKE 検索の実行スケルトンを `runOpfsSearch` に統一（23）、JS `\s` 集合定義を js-strings crate に SSOT 化して 3 コアの一致を exhaustive テストで保証（24、バイナリ再コミット）、contentKernel に `extractAndCommit` 深い呼び出しを追加（25）、Node 側 WASM ロード儀式 10 箇所を共有 helper に集約（22）
+
 
 このリリースは v6.9.12 に続く連続リリースです。タグクラスタパネルの共起集計の Rust/WASM 移植（Rust 化第3弾）と promptSanitizer の堅牢化ラウンドです。全テスト（12,712 件）がグリーンです。
 
