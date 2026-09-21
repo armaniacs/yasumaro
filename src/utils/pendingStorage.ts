@@ -104,6 +104,12 @@ export interface BuildPendingPageInput {
 }
 
 const MAX_PENDING_HEADER_VALUE_LENGTH = 1024;
+// url/title come from visited pages (attacker-controllable: a page can set an
+// arbitrarily large document.title or URL). Cap them like headerValue so a
+// rotating-page attack cannot exhaust the chrome.storage.local quota
+// (Checking Team 2026-09-22: Red/Blue Medium finding).
+const MAX_PENDING_URL_LENGTH = 2048;
+const MAX_PENDING_TITLE_LENGTH = 512;
 
 /**
  * Pure assembly of a privacy PendingPage (PBI 2026-09-21-28).
@@ -129,8 +135,8 @@ export function buildPendingPage(input: BuildPendingPageInput, now: number): Pen
   const validatedHeaderValue = (valueToStore || '').substring(0, MAX_PENDING_HEADER_VALUE_LENGTH);
 
   return {
-    url: input.url,
-    title: input.title,
+    url: input.url.substring(0, MAX_PENDING_URL_LENGTH),
+    title: input.title.substring(0, MAX_PENDING_TITLE_LENGTH),
     timestamp: now,
     reason: validReason,
     headerValue: validatedHeaderValue,

@@ -656,3 +656,39 @@ describe('buildPendingPage (PBI 2026-09-21-28 pure builder)', () => {
         expect(page.headerValue).toBe('');
     });
 });
+
+describe('buildPendingPage url/title length caps (implemented in Phase 5 — Checking Team Red/Blue Medium)', () => {
+    // red-team-leader + blue-team-leader Medium: buildPendingPage truncates
+    // headerValue to 1024 chars but stored url/title unbounded. Both fields
+    // are attacker-controlled (huge <title>, long query URLs), so 200
+    // unexpired entries can exhaust the ~10MB chrome.storage.local quota.
+    // Phase 5 added MAX_PENDING_URL_LENGTH / MAX_PENDING_TITLE_LENGTH —
+    // these pins are now GREEN (the it.fails wrappers were removed).
+    const NOW = 1726876800000;
+
+    it('caps an attacker-controlled url at 2048 chars', () => {
+        const page = buildPendingPage(
+            {
+                url: 'https://example.com/' + 'x'.repeat(5000),
+                title: 'A',
+                reason: 'cache-control',
+                headerValue: 'private',
+            },
+            NOW
+        );
+        expect(page.url.length).toBeLessThanOrEqual(2048);
+    });
+
+    it('caps an attacker-controlled title at 512 chars', () => {
+        const page = buildPendingPage(
+            {
+                url: 'https://example.com/a',
+                title: 'T'.repeat(2000),
+                reason: 'cache-control',
+                headerValue: 'private',
+            },
+            NOW
+        );
+        expect(page.title.length).toBeLessThanOrEqual(512);
+    });
+});
