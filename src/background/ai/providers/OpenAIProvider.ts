@@ -7,7 +7,6 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNEC
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
-import { logDebug } from '../../../utils/logger/api.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
@@ -83,9 +82,8 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
 
         this.contentCharsKey = contentCharsKey ?? entry?.contentCharsKey ?? StorageKeys.OPENAI_CONTENT_CHARS;
 
-        // Diagnostics: record where the API key came from. Key material never
-        // enters this log (only the storage-key name / fallback description).
-        void logDebug(`API key resolved from: ${this.apiKeySource}`, { provider: providerName });
+        // Diagnostics: record where the API key came from (SSOT on the base).
+        this.logApiKeySource(this.apiKeySource, providerName);
 
         // BaseUrl SSRF対策 — validateUrlForAIRequests + registry allowlist (PBI04)
         if (this.baseUrl) {
@@ -100,13 +98,9 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             }
         }
 
-        // タイムアウト設定: 0=自動（isLocal から導出）
+        // タイムアウト設定: 0=自動（isLocal から導出 — SSOT on the base）
         const storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        if (storedTimeout > 0) {
-            this.timeoutMs = storedTimeout;
-        } else {
-            this.timeoutMs = this.isLocal ? 120000 : 30000;
-        }
+        this.timeoutMs = this.resolveTimeoutMs(storedTimeout, this.isLocal);
     }
 
     static isLocalUrl(url: string): boolean {

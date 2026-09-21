@@ -7,7 +7,6 @@ import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNEC
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
-import { logDebug } from '../../../utils/logger/api.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -57,13 +56,14 @@ export class GeminiProvider extends AIProviderStrategy {
             : `${StorageKeys.GEMINI_API_KEY} (default fallback)`;
         this.model = settings[StorageKeys.GEMINI_MODEL]
             ?? (DEFAULT_SETTINGS[StorageKeys.GEMINI_MODEL] as string);
-        // タイムアウト設定: 設定値が0の場合はデフォルト30000ms
+        // WHY: Gemini has no local deployment today, so isLocal=false is
+        // passed explicitly — the fixed 30000 default is intentional, not a
+        // missing branch. A future local-Gemini variant can flip this flag.
         const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        this.timeoutMs = storedTimeout > 0 ? storedTimeout : 30000;
+        this.timeoutMs = this.resolveTimeoutMs(storedTimeout, false);
         this.contentCharsKey = contentCharsKey;
-        // Diagnostics: record where the API key came from. Key material never
-        // enters this log (only the storage-key name / fallback description).
-        void logDebug(`API key resolved from: ${this.apiKeySource}`, { provider: this.getName() });
+        // Diagnostics: record where the API key came from (SSOT on the base).
+        this.logApiKeySource(this.apiKeySource, this.getName());
     }
 
     getName(): string {
