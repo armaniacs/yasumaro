@@ -35,35 +35,11 @@ use rustc_hash::{FxHashMap, FxHashSet};
 pub const MAX_TAGS_PER_RECORD: usize = 50;
 
 /// JS `\s` without the `/u` flag: the exact set `String.split(/\s+/)` and
-/// `String.trim()` in `parseTagsForDisplay` split/trim on.
+/// `String.trim()` in `parseTagsForDisplay` split/trim on. The member set is
+/// single-sourced from the shared js-strings crate (PBI 2026-09-21-24), so a
+/// `\s` membership correction cannot drift between cores.
 fn is_js_space(c: char) -> bool {
-    matches!(
-        c,
-        '\u{0009}' | '\u{000A}'
-            | '\u{000B}'
-            | '\u{000C}'
-            | '\u{000D}'
-            | '\u{0020}'
-            | '\u{00A0}'
-            | '\u{1680}'
-            | '\u{2000}'
-            | '\u{2001}'
-            | '\u{2002}'
-            | '\u{2003}'
-            | '\u{2004}'
-            | '\u{2005}'
-            | '\u{2006}'
-            | '\u{2007}'
-            | '\u{2008}'
-            | '\u{2009}'
-            | '\u{200A}'
-            | '\u{2028}'
-            | '\u{2029}'
-            | '\u{202F}'
-            | '\u{205F}'
-            | '\u{3000}'
-            | '\u{FEFF}'
-    )
+    js_strings::is_js_ws_scalar(c)
 }
 
 fn trim_js(s: &str) -> &str {
