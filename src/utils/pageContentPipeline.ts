@@ -16,8 +16,12 @@
 import { extractMainContentWithInfo } from './contentExtractor/index.js';
 import { buildExtractionOptions } from './contentExtractor/optionBuilder.js';
 import type { ExtractResult } from './contentExtractor/types.js';
-import type { CleansingConfig } from '../content/pageState.js';
-import { PageState } from '../content/pageState.js';
+// PBI 2026-09-21-16 (Option A): CleansingConfig type + default live in utils
+// (./cleansingConfig.js, pure data). No import from src/content/ here — neither
+// value nor type-only — so the pipeline stays reusable without a content-script
+// context and the utils↔content runtime cycle is gone.
+import type { CleansingConfig } from './cleansingConfig.js';
+import { createDefaultCleansingConfig } from './cleansingConfig.js';
 
 // Re-export the domain type so callers don't need to import from the internal
 // contentExtractor/types seam. One import, one module.
@@ -38,19 +42,19 @@ export type { ExtractResult } from './contentExtractor/types.js';
  * same ExtractResult. No global pageState mutation — the caller decides what
  * to do with the result (locality).
  *
- * @param config - CleansingConfig, defaults to a fresh PageState's config when omitted
+ * @param config - CleansingConfig, defaults to a fresh utils-owned default when omitted
  * @param maxChars - maximum characters, defaults to 10000 (same as extractMainContentWithInfo)
  */
 export function preparePageContent(
   config?: CleansingConfig,
   maxChars: number = 10000,
 ): ExtractResult {
-  // When no config is supplied, use a fresh PageState default. This keeps the
-  // module free of global pageState coupling — the content script's
+  // When no config is supplied, use a fresh utils-owned default. This keeps the
+  // module free of content-layer coupling — the content script's
   // extractPageContent() wrapper still owns pageState, but direct callers
   // (tests, future pipeline steps) can supply an explicit config and stay pure.
   const effectiveConfig: CleansingConfig =
-    config ?? new PageState().cleansingConfig;
+    config ?? createDefaultCleansingConfig();
 
   const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } =
     buildExtractionOptions(effectiveConfig);

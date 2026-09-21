@@ -168,19 +168,21 @@ export function decodeCooccurResult(raw: RawCooccurResult): WasmCooccurResult {
 /**
  * Runs the WASM top-tags narrowing. Returns the input array by reference
  * when the core reports `unchanged` (mirroring the TS early return).
- * Rejects non-integer/negative limits and values above the u32 range at
- * the boundary — the JS→WASM u32 conversion would silently wrap them via
- * ToUint32, so callers must route those to the TS path before calling
- * this.
+ * Rejects non-integer/negative limits at the boundary as defense in depth
+ * (the JS→WASM u32 conversion would silently wrap them via ToUint32).
+ * The full u32-range policy (`isWasmSafeU32`, including the 2^32 upper
+ * bound) is owned by the hybrid bypass in
+ * src/dashboard/tagCooccurrenceHybrid.ts, which routes out-of-range
+ * limits to the TS path before calling this.
  */
 export async function narrowEntriesToTopTagsWithWasm<
     T extends { tags?: string | null },
 >(entries: T[], limit: number): Promise<T[]> {
     await initTagCooccurWasm();
     try {
-        if (!Number.isInteger(limit) || limit < 0 || limit > 0xffffffff) {
+        if (!Number.isInteger(limit) || limit < 0) {
             throw new Error(
-                `tag-cooccur wasm: limit must be a non-negative integer below 2^32 (got ${limit})`
+                `tag-cooccur wasm: limit must be a non-negative integer (got ${limit})`
             );
         }
         const raw = narrowToTopTagsWasm(

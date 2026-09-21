@@ -7,76 +7,26 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
-import type { RuleKey } from '../utils/aiSummaryCleaner/types.js';
-import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
-import type { ThresholdProp } from '../utils/aiSummaryCleaner/rules.js';
-import { DEFAULT_KEYWORDS } from '../utils/contentCleaner.js';
+import { createDefaultCleansingConfig } from '../utils/cleansingConfig.js';
+// PBI 2026-09-21-16 (Option A): CleansingConfig type + defaults are owned by
+// src/utils/cleansingConfig.js (pure data, no DOM/chrome deps). This module
+// re-exports them so existing `content/pageState.js` import paths keep working.
+export type { CleansingConfig } from '../utils/cleansingConfig.js';
+export {
+    THRESHOLD_CONFIG_DEFAULTS,
+    DEFAULT_CLEANSING_CONFIG,
+    createDefaultCleansingConfig,
+} from '../utils/cleansingConfig.js';
+import type { CleansingConfig } from '../utils/cleansingConfig.js';
 
 // 【設定定数】: デフォルト値の定義
 const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
 const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
 
 // ---------------------------------------------------------------------------
-// Rule-derived flags: aiSummaryCleansing${Capitalize<RuleKey>}
+// CleansingConfig type + defaults: owned by src/utils/cleansingConfig.js,
+// re-exported above for backward compatibility.
 // ---------------------------------------------------------------------------
-
-type CleansingConfigRuleFlags = {
-    [K in RuleKey as `aiSummaryCleansing${Capitalize<K>}`]: boolean;
-};
-
-// 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-// ThresholdProp (7 numeric thresholds) is intersected so that cfg[t.prop] is type-safe
-// without unsafe casts in extractor.ts. Fixed fields exclude the 7 threshold
-// props to avoid duplicate-key declarations.
-export interface CleansingConfig extends CleansingConfigRuleFlags, Record<ThresholdProp, number> {
-    contentStripHardEnabled: boolean;
-    contentStripKeywordEnabled: boolean;
-    contentStripKeywords: string[];
-    aiSummaryCleansingEnabled: boolean;
-    whitelistExtractionEnabled: boolean;
-    aiSummaryCleansingCustomPatterns: string[];
-    contentDedupEnabled: boolean;
-}
-
-/**
- * Rule-flag defaults for the placeholder config used before loadSettings()
- * resolves. init() always awaits loadSettings() before anything can read
- * cleansingConfig for a real extraction, so this only needs to match
- * `defaultEnabled` (the "no value specified yet" fallback), not the
- * new-user storage default — see pbi/2026-08-09-20.
- * Derives directly from CLEANSING_RULES (the single source of truth).
- */
-const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fromEntries(
-    CLEANSING_RULES.map(rule => [
-        `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`,
-        rule.defaultEnabled,
-    ]),
-) as CleansingConfigRuleFlags;
-
-// Derived from the shared THRESHOLD_RULES source of truth.
-export const THRESHOLD_CONFIG_DEFAULTS: Record<ThresholdProp, number> = Object.fromEntries(
-    THRESHOLD_RULES.map(r => [r.prop, r.default]),
-) as Record<ThresholdProp, number>;
-
-// THRESHOLD fields derive from THRESHOLD_CONFIG_DEFAULTS, which derives from
-// THRESHOLD_RULES (the single source of truth).
-export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
-    contentStripHardEnabled: true,
-    contentStripKeywordEnabled: true,
-    contentStripKeywords: [...DEFAULT_KEYWORDS],
-    aiSummaryCleansingEnabled: true,
-    whitelistExtractionEnabled: true,
-    aiSummaryCleansingLinkRatioThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkRatioThreshold,
-    aiSummaryCleansingShortTextThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingShortTextThreshold,
-    aiSummaryCleansingShortSeqCount: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingShortSeqCount,
-    aiSummaryCleansingLinkParaThreshold: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingLinkParaThreshold,
-    aiSummaryCleansingCustomPatterns: [],
-    aiSummaryCleansingFallbackRatio: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackRatio,
-    aiSummaryCleansingFallbackMinBytes: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackMinBytes,
-    contentDedupEnabled: true,
-    contentDedupThreshold: THRESHOLD_CONFIG_DEFAULTS.contentDedupThreshold,
-    ...CLEANSING_RULE_PLACEHOLDER_DEFAULTS,
-};
 
 export class PageState {
     // 【訪問状態】: スクロール深度や訪問時間の監視に使用
@@ -107,11 +57,7 @@ export class PageState {
     }
 
     // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
-    cleansingConfig: CleansingConfig = {
-        ...DEFAULT_CLEANSING_CONFIG,
-        contentStripKeywords: [...DEFAULT_CLEANSING_CONFIG.contentStripKeywords],
-        aiSummaryCleansingCustomPatterns: [...DEFAULT_CLEANSING_CONFIG.aiSummaryCleansingCustomPatterns],
-    };
+    cleansingConfig: CleansingConfig = createDefaultCleansingConfig();
 
     // 【クレンジング情報】: 直近の抽出で適用されたクレンジング情報を保持
     lastCleansedReason: 'hard' | 'keyword' | 'both' | 'none' = 'none';

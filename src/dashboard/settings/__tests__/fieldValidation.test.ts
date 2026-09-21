@@ -254,16 +254,29 @@ describe('fieldValidation', () => {
             expect(validatePort(input)).toBe(false);
         });
 
-        test('returns false for an empty string', () => {
+        test('allows an empty string (default port)', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '';
-            expect(validatePort(input)).toBe(false);
+            expect(validatePort(input)).toBe(true); // validateObsidianPort treats '' as default
         });
 
-        test('returns true for decimals truncated via parseInt', () => {
+        test('rejects decimals (delegated to validateObsidianPort)', () => {
             const input = document.getElementById('port') as HTMLInputElement;
             input.value = '80.5';
-            expect(validatePort(input)).toBe(true); // parseInt('80.5') = 80, which is valid
+            expect(validatePort(input)).toBe(false); // Number.isInteger rejects; UI now matches connection test
+        });
+
+        test('rejects trailing garbage (delegated to validateObsidianPort)', () => {
+            const input = document.getElementById('port') as HTMLInputElement;
+            input.value = '80abc';
+            expect(validatePort(input)).toBe(false); // Number('80abc') is NaN; UI now matches connection test
+        });
+
+        test('sets the port error display when delegation throws', () => {
+            const input = document.getElementById('port') as HTMLInputElement;
+            input.value = '80abc';
+            expect(validatePort(input)).toBe(false);
+            expect(input.getAttribute('aria-invalid')).toBe('true');
         });
     });
 

@@ -14,6 +14,7 @@
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
 import type { LogEntry } from '../../../utils/logger/types.js';
 import { getLogs } from '../../../utils/logger/core.js';
+import { getMessageOr } from '../../../utils/i18n.js';
 
 const GITHUB_ISSUE_URL = 'https://github.com/armaniacs/yasumaro/issues/new';
 const MAX_ERROR_CODES_LISTED = 10;
@@ -109,6 +110,10 @@ export function createIssueReportModalController(
   const { previewModal, previewContent, cancelBtn, closeBtn, openBtn } = modalEls;
 
   let pendingUrl: string | null = null;
+  // Re-entrancy: collectSnapshot spans awaits, so a rapid second click would
+  // re-enter the handler and showModal() on the already-open dialog throws
+  // InvalidStateError as an unhandled rejection.
+  let inFlight = false;
   // Skip duplicate wiring for the same button. WeakSet so entries for
   // removed DOM elements are collectable without manual cleanup.
   const wiredTriggers = new WeakSet<HTMLButtonElement>();
@@ -136,12 +141,32 @@ export function createIssueReportModalController(
       if (wiredTriggers.has(reportBtn)) return;
       wiredTriggers.add(reportBtn);
 
-      reportBtn.addEventListener('click', async () => {
-        const snapshot = await collectSnapshot();
-        const recentLogs = await getLogs();
-        previewContent.value = buildIssueReportBody(snapshot, recentLogs);
-        pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
-        previewModal.showModal();
+      reportBtn.addEventListener('click', () => {
+        // Skip while a collection is in flight and while the modal is already
+        // open — both cases previously ended in showModal() on an open dialog.
+        if (inFlight || previewModal.open) return;
+        inFlight = true;
+        reportBtn.disabled = true;
+        void (async () => {
+          try {
+            const snapshot = await collectSnapshot();
+            const recentLogs = await getLogs();
+            previewContent.value = buildIssueReportBody(snapshot, recentLogs);
+            pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
+          } catch {
+            // Snapshot failures must stay user-visible but never leak error
+            // internals into outbound text (see module doc comment).
+            previewContent.value = getMessageOr(
+              'reportCleansingFeedbackError',
+              'Failed to report',
+            );
+            pendingUrl = null;
+          } finally {
+            if (!previewModal.open) previewModal.showModal();
+            inFlight = false;
+            reportBtn.disabled = false;
+          }
+        })();
       });
     },
   };

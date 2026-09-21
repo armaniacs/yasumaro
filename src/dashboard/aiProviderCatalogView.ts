@@ -70,7 +70,8 @@ export function renderProviderSettings(container: HTMLElement, providerId: Provi
 
   container.textContent = '';
   container.id = `${providerId}Settings`;
-  if (providerId !== 'gemini') container.classList.add('openai-settings');
+  const cssClass = entry.cssClass ?? 'openai-settings';
+  if (cssClass !== '') container.classList.add(cssClass);
 
   switch (entry.settingsBlockKind) {
     case 'built-in-ai':
@@ -80,7 +81,7 @@ export function renderProviderSettings(container: HTMLElement, providerId: Provi
       buildModelsDevBlock(container, entry);
       break;
     default:
-      buildGenericBlock(container, entry, providerId);
+      buildGenericBlock(container, entry);
   }
 
   applyI18n(container);
@@ -130,7 +131,7 @@ function helpText(i18nKey: string): HTMLParagraphElement {
   return p;
 }
 
-function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry, providerId: ProviderId): void {
+function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry): void {
   if (entry.baseUrlKey) {
     const id = storageKeyToInputId(entry.baseUrlKey);
     container.appendChild(formGroup(
@@ -140,9 +141,8 @@ function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry, 
   }
   if (entry.apiKeyKey && entry.requiresApiKey) {
     const id = storageKeyToInputId(entry.apiKeyKey);
-    const labelKey = providerId === 'gemini' ? 'geminiApiKey' : 'aiApiKey';
     container.appendChild(formGroup(
-      label(id, labelKey),
+      label(id, entry.apiKeyLabelI18nKey ?? 'aiApiKey'),
       input({ id, type: 'password', storageKey: entry.apiKeyKey, placeholderKey: entry.fieldPlaceholders?.apiKey }),
     ));
   }
@@ -154,19 +154,18 @@ function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry, 
     ));
   }
 
-  // Extra fields driven by catalog (e.g. geminiApiVersion), no if (gemini) branch
+  // Extra fields driven by catalog (e.g. geminiApiVersion), no providerId branch
   if (entry.extraFields) {
     for (const field of entry.extraFields) {
       const extraInput = input({ id: field.inputId, type: field.type, storageKey: field.storageKey });
       if (field.placeholder) extraInput.placeholder = field.placeholder;
-      // Preserve aria attributes for geminiApiVersion for a11y
-      if (field.storageKey === 'gemini_api_version') {
+      if (field.a11y) {
         extraInput.setAttribute('aria-invalid', 'false');
-        extraInput.setAttribute('aria-describedby', 'geminiApiVersionNote geminiApiVersionError');
-        const note = helpText('note_gemini_api_version');
-        note.id = 'geminiApiVersionNote';
+        extraInput.setAttribute('aria-describedby', field.a11y.describedBy);
+        const note = helpText(field.a11y.noteI18nKey);
+        note.id = field.a11y.noteId;
         const err = document.createElement('div');
-        err.id = 'geminiApiVersionError';
+        err.id = field.a11y.errorId;
         err.className = 'field-error';
         err.setAttribute('role', 'alert');
         container.appendChild(formGroup(label(field.inputId, field.labelI18nKey), extraInput, note, err));

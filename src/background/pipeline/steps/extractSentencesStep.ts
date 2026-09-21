@@ -15,6 +15,8 @@ import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
 import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { ErrorStrategy } from '../types.js';
+import { selectExtractionInput } from '../pipelineText.js';
+import { decideL0 } from '../recordingDecision.js';
 
 /**
  * Extract important sentences from content using TextRank
@@ -24,20 +26,23 @@ import { ErrorStrategy } from '../types.js';
 export const extractSentencesStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
-  const { data, settings, truncatedContent, sanitizedSummary, privacyResult } = context;
+  const { data, settings } = context;
   const { url } = data;
 
-  // Check if L0 extraction is enabled
+  // Check if L0 extraction is enabled (I/O stays here; verdict is delegated)
   const l0Enabled = settings[StorageKeys.L0_EXTRACTIVE_ENABLED] ?? true;
 
-  if (!l0Enabled) {
+  if (decideL0(Boolean(l0Enabled)).skip) {
     addLog(LogType.INFO, 'L0 extractive compression disabled by settings', { url, traceId: context.traceId });
     return context;
   }
 
-  // Determine content to extract from
-  // Priority: sanitizedSummary (PII-cleaned) > privacyResult.summary > truncatedContent
-  const contentToExtract = sanitizedSummary || privacyResult?.summary || truncatedContent || '';
+  // Extraction input is single-owned by selectExtractionInput
+  // (pipelineText.ts). The stage-split selector structurally cannot see
+  // extractedSentences — the output this step is about to produce — so a
+  // retry can never re-consume its own output (Checking Team 2026-09-22:
+  // Domain Logic Medium).
+  const contentToExtract = selectExtractionInput(context);
 
   if (!contentToExtract || !contentToExtract.trim()) {
     addLog(LogType.WARN, 'No content available for L0 extraction', { url, traceId: context.traceId });

@@ -5,6 +5,7 @@
  */
 
 import { queryLogs, backupDb } from './dashboardSqliteService.js';
+import { getLocalDateString, parseJsonTagsArray } from './markdownExport.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
 import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
@@ -57,16 +58,8 @@ export async function exportMarkdown(ids?: number[]): Promise<string> {
   const entries = ids ? all.filter(e => ids.includes(e.id)) : all;
 
   return entries.map(entry => {
-    const date = new Date(entry.created_at).toLocaleDateString('en-CA', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    });
-    let tags: string[] = [];
-    if (entry.tags) {
-      try { tags = JSON.parse(entry.tags); } catch { tags = []; }
-    }
+    const date = getLocalDateString(new Date(entry.created_at).getTime());
+    const tags: string[] = parseJsonTagsArray(entry.tags);
 
     return `---
 title: ${yamlQuote(entry.title || entry.url)}

@@ -3,6 +3,7 @@ import { logInfo, logDebug, logError } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './urlHash.js';
 import { getMessage } from './i18n.js';
+import { redactHeaderValue } from './redaction.js';
 import { withOptimisticLock } from './storage/storageTransaction.js';
 
 /**
@@ -90,6 +91,58 @@ export const MAX_PENDING_PAGES = 200;
  */
 export const PENDING_MAX_TTL_MS = 24 * 60 * 60 * 1000;
 const LEGACY_PENDING_PAGES_KEY = 'osh_pending_pages';
+
+/**
+ * Input for the pure pending-page builder. `reason` is intentionally a plain
+ * string: normalization against the allowlist happens inside buildPendingPage.
+ */
+export interface BuildPendingPageInput {
+  url: string;
+  title: string;
+  reason: string;
+  headerValue: string;
+}
+
+const MAX_PENDING_HEADER_VALUE_LENGTH = 1024;
+// url/title come from visited pages (attacker-controllable: a page can set an
+// arbitrarily large document.title or URL). Cap them like headerValue so a
+// rotating-page attack cannot exhaust the chrome.storage.local quota
+// (Checking Team 2026-09-22: Red/Blue Medium finding).
+const MAX_PENDING_URL_LENGTH = 2048;
+const MAX_PENDING_TITLE_LENGTH = 512;
+
+/**
+ * Pure assembly of a privacy PendingPage (PBI 2026-09-21-28).
+ *
+ * Owns the reason allowlist (via the PRIVACY_PENDING_REASONS SSOT),
+ * header redaction, the 1024-char truncation, and timestamp/expiry derived
+ * from the injected `now`. No clock reads, no storage I/O — callers pass
+ * Date.now() in and persist the result with addPendingPage.
+ *
+ * Allowlist semantics (preserved from the former inline assembly): an
+ * unknown reason is not rejected or dropped — it falls through to
+ * 'cache-control'.
+ */
+export function buildPendingPage(input: BuildPendingPageInput, now: number): PendingPage {
+  const validReason: PrivacyPendingReason = isPrivacyPendingReason(input.reason)
+    ? input.reason
+    : 'cache-control';
+
+  // Mask sensitive header values (e.g., Authorization tokens)
+  const valueToStore = redactHeaderValue(input.headerValue, validReason);
+
+  // Truncate headerValue to prevent storage abuse
+  const validatedHeaderValue = (valueToStore || '').substring(0, MAX_PENDING_HEADER_VALUE_LENGTH);
+
+  return {
+    url: input.url.substring(0, MAX_PENDING_URL_LENGTH),
+    title: input.title.substring(0, MAX_PENDING_TITLE_LENGTH),
+    timestamp: now,
+    reason: validReason,
+    headerValue: validatedHeaderValue,
+    expiry: now + PENDING_MAX_TTL_MS,
+  };
+}
 
 /**
  * Migrates pending pages data from the legacy 'osh_pending_pages' key

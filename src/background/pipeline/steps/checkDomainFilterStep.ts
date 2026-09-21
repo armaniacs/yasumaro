@@ -6,6 +6,7 @@
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { isDomainAllowed } from '../../../utils/domainUtils.js';
+import { decideDomainFilter } from '../recordingDecision.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -19,18 +20,20 @@ export const checkDomainFilterStep: PipelineStepFunction = async (
   const { url } = data;
 
   const isAllowed = await isDomainAllowed(url);
+  // PBI 2026-09-19-08: verdict は recordingDecision.decideDomainFilter に委譲
+  const verdict = decideDomainFilter(isAllowed, force);
+
+  if (!verdict.allow) {
+    // Domain is blocked and no force flag - this is a fatal error
+    throw new Error(verdict.error ?? 'DOMAIN_BLOCKED');
+  }
 
   if (!isAllowed) {
-    if (force) {
-      addLog(LogType.WARN, 'Force recording blocked domain', { url, traceId: context.traceId });
-      return {
-        ...context,
-        isDomainAllowed: false
-      };
-    }
-
-    // Domain is blocked and no force flag - this is a fatal error
-    throw new Error('DOMAIN_BLOCKED');
+    addLog(LogType.WARN, 'Force recording blocked domain', { url, traceId: context.traceId });
+    return {
+      ...context,
+      isDomainAllowed: false
+    };
   }
 
   return {

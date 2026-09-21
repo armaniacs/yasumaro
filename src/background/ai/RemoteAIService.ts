@@ -10,7 +10,7 @@ import {
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
-import { resolveModelKey } from '../../utils/aiModelKey.js';
+import { resolveModelKey } from './aiModelKey.js';
 import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
 import { PROVIDER_CATALOG, createProviderStrategy } from './providerCatalog.js';
 import { LogType } from '../../utils/logger/types.js';

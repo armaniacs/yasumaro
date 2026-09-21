@@ -31,7 +31,7 @@ export function createBProviderAccordionView(container: HTMLElement): BProviderA
     body.style.display = 'block';
 
     details.append(summary, body);
-    if (id === 'gemini') details.open = true;
+    if (entry?.defaultOpen === true) details.open = true;
     container.appendChild(details);
     created.push(details);
   }

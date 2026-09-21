@@ -30,50 +30,37 @@
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { ROOT, loadManifest } from './wasm-crates.mjs';
 
-const CRATES = [
-    {
-        gluePath: 'wasm/pii-sanitizer/pkg/pii_sanitizer.js',
-        outPath: 'src/wasm/pii-sanitizer/piiSanitizerWasm.js',
-        dtsName: 'piiSanitizerWasm.d.ts',
-        wasmName: 'pii_sanitizer_bg.wasm',
-        crateLabel: 'pii-sanitizer',
-    },
-    {
-        gluePath: 'wasm/textrank/pkg/textrank.js',
-        outPath: 'src/wasm/textrank/textrankWasm.js',
-        dtsName: 'textrankWasm.d.ts',
-        wasmName: 'textrank_bg.wasm',
-        crateLabel: 'textrank',
-    },
-    {
-        gluePath: 'wasm/sentence-dedup/pkg/sentence_dedup.js',
-        outPath: 'src/wasm/sentence-dedup/sentenceDedupWasm.js',
-        dtsName: 'sentenceDedupWasm.d.ts',
-        wasmName: 'sentence_dedup_bg.wasm',
-        crateLabel: 'sentence-dedup',
-    },
-    {
-        gluePath: 'wasm/tag-cooccur/pkg/tag_cooccur.js',
-        outPath: 'src/wasm/tag-cooccur/tagCooccurWasm.js',
-        dtsName: 'tagCooccurWasm.d.ts',
-        wasmName: 'tag_cooccur_bg.wasm',
-        crateLabel: 'tag-cooccur',
-    },
-];
+// PBI 2026-09-21-18: the crate table is owned by wasm/crates.json; this file
+// only derives the postprocess view (glue in -> processed glue out).
+const CRATES = loadManifest({ root: ROOT }).crates.map(
+    ({ gluePath, outPath, dtsName, wasmName, crateLabel }) => ({
+        gluePath,
+        outPath,
+        dtsName,
+        wasmName,
+        crateLabel,
+    })
+);
 
-for (const { gluePath, outPath, dtsName, wasmName, crateLabel } of CRATES) {
-    let source = readFileSync(gluePath, 'utf-8');
-
+/**
+ * Pure glue transform (unit-testable): rewrites the d.ts self-reference to
+ * the renamed file and replaces the unreachable `new URL(..., import.meta.url)`
+ * default branch with a loud throw. Throws when the expected branch is absent
+ * (wasm-bindgen format change) or `import.meta.url` survives.
+ */
+export function transformGlue(source, { dtsName, wasmName, crateLabel }) {
     // Both the legacy `./<crate>.d.ts` import-style reference and the modern
     // `@ts-self-types` pragma are rewritten; only whichever is present changes.
-    source = source.replaceAll(`./${wasmName.replace('_bg.wasm', '.d.ts')}`, `./${dtsName}`);
+    let result = source.replaceAll(`./${wasmName.replace('_bg.wasm', '.d.ts')}`, `./${dtsName}`);
 
     const defaultUrlBranch =
         "if (module_or_path === undefined) {\n        module_or_path = new URL('" +
         wasmName +
         "', import.meta.url);\n    }";
-    if (!source.includes(defaultUrlBranch)) {
+    if (!result.includes(defaultUrlBranch)) {
         throw new Error(
             `postprocess-wasm-glue (${wasmName}): expected default-URL branch not found — wasm-bindgen ` +
                 'output format may have changed. Update this script\'s replacement string to match, then ' +
@@ -81,21 +68,46 @@ for (const { gluePath, outPath, dtsName, wasmName, crateLabel } of CRATES) {
                 'output file).'
         );
     }
-    source = source.replace(
+    result = result.replace(
         defaultUrlBranch,
         "if (module_or_path === undefined) {\n        throw new Error('" +
             crateLabel +
             " wasm: module_or_path is required (no default asset URL — see postprocess-wasm-glue.mjs)');\n    }"
     );
 
-    if (source.includes('import.meta.url')) {
+    if (result.includes('import.meta.url')) {
         throw new Error(
             `postprocess-wasm-glue (${wasmName}): \`import.meta.url\` still present after processing — ` +
                 'Vite will inline the wasm as a data: URI again. Find and remove/guard the remaining ' +
                 'reference.'
         );
     }
+    return result;
+}
 
-    writeFileSync(outPath, source);
+export function processCrate({ gluePath, outPath, dtsName, wasmName, crateLabel }, { check = false } = {}) {
+    const source = readFileSync(gluePath, 'utf-8');
+    const processed = transformGlue(source, { dtsName, wasmName, crateLabel });
+    if (check) {
+        const committed = readFileSync(outPath, 'utf-8');
+        const stale = committed !== processed;
+        console.log(`${stale ? 'STALE' : 'OK'} ${outPath}`);
+        return !stale;
+    }
+    writeFileSync(outPath, processed);
     console.log(`wrote ${outPath} (CSP-unsafe new URL(...) fallback removed)`);
+    return true;
+}
+
+const invokedAsScript =
+    process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1];
+if (invokedAsScript) {
+    // --check: report per-crate OK/STALE against the committed output without
+    // writing (dry-run for the CI staleness gates).
+    const check = process.argv.includes('--check');
+    let fresh = true;
+    for (const crate of CRATES) {
+        if (!processCrate(crate, { check })) fresh = false;
+    }
+    if (!fresh) process.exit(1);
 }
