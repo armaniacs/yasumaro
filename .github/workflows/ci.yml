@@ -77,6 +77,18 @@ jobs:
       - uses: dtolnay/rust-toolchain@02cb101ec7c40f2c49e1d9714d64511d8e1b74de # master (2026-09)
         with:
           toolchain: stable
+      - name: Resolve wasm cache paths from manifest
+        id: wasm-cache-paths
+        # PBI 2026-09-21-26: per-crate target dirs are owned by
+        # wasm/crates.json (build + lib crates via `cache-paths`); the
+        # registry/git/binary paths below stay static, and the key
+        # (hashFiles('wasm/*/Cargo.lock')) and restore-keys are unchanged.
+        run: |
+          {
+            echo "targets<<EOF"
+            node scripts/wasm-crates.mjs cache-paths
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
       - name: Cache cargo registry, build artifacts, and wasm-pack binary
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -84,15 +96,11 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/wasm-pack
-            wasm/js-strings/target
-            wasm/pii-sanitizer/target
-            wasm/textrank/target
-            wasm/sentence-dedup/target
-            wasm/tag-cooccur/target
+            ${{ steps.wasm-cache-paths.outputs.targets }}
           key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/*/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-      - name: Run wasm crate Rust tests (js-strings + pii-sanitizer + textrank + sentence-dedup + tag-cooccur)
+      - name: Run wasm crate Rust tests (crate list from wasm/crates.json)
         run: npm run test:wasm
       - name: Install wasm-pack (if not cached)
         run: command -v wasm-pack || cargo install wasm-pack
@@ -126,10 +134,13 @@ jobs:
           node scripts/wasm-crates.mjs stash /tmp/wasm-gate
           npm run build:wasm
           echo "== parity suite against the FRESH rebuild =="
-          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts src/wasm/sentence-dedup/__tests__/ src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts src/wasm/tag-cooccur/__tests__/ src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts
+          # PBI 2026-09-21-26: the 7-path arg list is owned by the manifest's
+          # paritySuites (one `parity-args` call per run — fresh and committed
+          # executions are unchanged, only the list source is unified).
+          npx vitest run $(node scripts/wasm-crates.mjs parity-args)
           node scripts/wasm-crates.mjs restore /tmp/wasm-gate
           echo "== parity suite against the COMMITTED binary =="
-          npx vitest run src/wasm/pii-sanitizer/__tests__/ src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts src/wasm/sentence-dedup/__tests__/ src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts src/wasm/tag-cooccur/__tests__/ src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts
+          npx vitest run $(node scripts/wasm-crates.mjs parity-args)
           node scripts/wasm-crates.mjs check /tmp/wasm-gate
       - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
         # The byte-diff gate assumes reproducible builds across hosts. When

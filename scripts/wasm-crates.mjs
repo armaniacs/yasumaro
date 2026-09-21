@@ -16,10 +16,19 @@
  *   node scripts/wasm-crates.mjs stash <dir>    # stash committed src (+public iff publicShip) binaries
  *   node scripts/wasm-crates.mjs restore <dir>  # restore committed src binaries (public untouched)
  *   node scripts/wasm-crates.mjs check <dir>    # cmp public-vs-src + git diff glue/d.ts gates
+ *
+ * PBI 2026-09-21-26: the crate universe (build crates + lib-only crates) is
+ * also resolved here so test:wasm, the CI cargo cache, and the CI parity
+ * arg list derive from the manifest:
+ *   node scripts/wasm-crates.mjs test          # cargo test in every universe dir (replaces the package.json chain)
+ *   node scripts/wasm-crates.mjs test-dirs     # print universe dirs, one per line (dry-run / diffing)
+ *   node scripts/wasm-crates.mjs cache-paths   # print wasm/<name>/target lines for the CI cache step
+ *   node scripts/wasm-crates.mjs parity-args   # print the vitest parity arg list on one line
  */
 
 import { readFileSync, copyFileSync, mkdirSync, existsSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { homedir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -99,6 +108,58 @@ export function validateManifest(data, { root = ROOT } = {}) {
             throw new Error(`${where}: "srcCopy" must end with wasmName "${crate.wasmName}"`);
         }
     });
+    // PBI 2026-09-21-26 design A (second array, additive): both keys are
+    // optional so pre-extension manifests still validate; accessors fail
+    // explicitly when a mapping they need is missing.
+    if ('libCrates' in data) {
+        if (!Array.isArray(data.libCrates)) {
+            throw new Error('wasm-crates: manifest "libCrates" must be an array of {name}');
+        }
+        data.libCrates.forEach((lib, index) => {
+            const where = `wasm-crates: libCrates[${index}]`;
+            if (lib === null || typeof lib !== 'object' || Array.isArray(lib)) {
+                throw new Error(`${where} must be an object`);
+            }
+            if (!('name' in lib)) {
+                throw new Error(`${where}: missing required field "name"`);
+            }
+            for (const key of Object.keys(lib)) {
+                if (key !== 'name') {
+                    throw new Error(`${where}: unknown field "${key}"`);
+                }
+            }
+            if (typeof lib.name !== 'string' || lib.name.length === 0) {
+                throw new Error(`${where}: "name" must be a non-empty string`);
+            }
+            if (seen.has(lib.name)) {
+                throw new Error(`${where}: duplicate crate name "${lib.name}"`);
+            }
+            seen.add(lib.name);
+            if (!existsSync(join(root, 'wasm', lib.name))) {
+                throw new Error(`${where}: crate dir "wasm/${lib.name}" does not exist under ${root}`);
+            }
+        });
+    }
+    if ('paritySuites' in data) {
+        const mapping = data.paritySuites;
+        if (mapping === null || typeof mapping !== 'object' || Array.isArray(mapping)) {
+            throw new Error('wasm-crates: manifest "paritySuites" must be an object of crate name to dir array');
+        }
+        const buildNames = new Set(data.crates.map((crate) => crate.name));
+        for (const [key, dirs] of Object.entries(mapping)) {
+            if (!buildNames.has(key)) {
+                throw new Error(`wasm-crates: paritySuites["${key}"] is not a build crate in "crates"`);
+            }
+            if (!Array.isArray(dirs) || dirs.length === 0) {
+                throw new Error(`wasm-crates: paritySuites["${key}"] must be a non-empty array of suite dirs`);
+            }
+            dirs.forEach((dir, index) => {
+                if (typeof dir !== 'string' || dir.length === 0) {
+                    throw new Error(`wasm-crates: paritySuites["${key}"][${index}] must be a non-empty string`);
+                }
+            });
+        }
+    }
     return data;
 }
 
@@ -127,6 +188,67 @@ export function publicCopyOf(crate) {
 /** Crates shipped to the extension bundle (data-driven STAGED skip). */
 export function publicShipCrates(manifest) {
     return manifest.crates.filter((crate) => crate.publicShip);
+}
+
+/**
+ * PBI 2026-09-21-26: the crate universe is build crates + lib-only crates.
+ * Build/stash/restore/check/publicShip keep iterating `crates` only; the
+ * functions below are the single owner of the test/cache/parity answers.
+ */
+export function crateUniverse(manifest) {
+    const libs = Array.isArray(manifest.libCrates) ? manifest.libCrates.map((lib) => lib.name) : [];
+    return [...manifest.crates.map((crate) => crate.name), ...libs];
+}
+
+/** `cargo test` roots, one per universe crate (mirrors the old shell chain order). */
+export function testCrateDirs(manifest) {
+    return crateUniverse(manifest).map((name) => `wasm/${name}`);
+}
+
+/** Per-crate cargo target dirs for the CI cache step (registry/git/binary paths stay static in YAML). */
+export function cacheTargetPaths(manifest) {
+    return crateUniverse(manifest).map((name) => `wasm/${name}/target`);
+}
+
+/**
+ * The single vitest arg list for the CI parity gate, in manifest.crates
+ * order. Fresh-rebuild and committed-binary runs consume the same list, so
+ * the two call sites can no longer drift apart. Throws explicitly when a
+ * build crate has no mapping (lib crates must not have one).
+ */
+export function parityArgs(manifest) {
+    const mapping = manifest.paritySuites ?? {};
+    const args = [];
+    for (const crate of manifest.crates) {
+        const dirs = mapping[crate.name];
+        if (dirs === undefined) {
+            throw new Error(
+                `wasm-crates: missing parity suite mapping for build crate "${crate.name}" (add paritySuites["${crate.name}"])`
+            );
+        }
+        args.push(...dirs);
+    }
+    return args;
+}
+
+/**
+ * `npm run test:wasm` implementation: `cargo test` in each universe dir,
+ * stopping at the first failure. Prepends $HOME/.cargo/bin to PATH like the
+ * old shell chain's `export PATH=...` prefix did.
+ */
+export function runCargoTests(manifest, { root = ROOT } = {}) {
+    const path = `${join(homedir(), '.cargo', 'bin')}:${process.env.PATH ?? ''}`;
+    for (const dir of testCrateDirs(manifest)) {
+        const result = spawnSync('cargo', ['test'], {
+            cwd: join(root, dir),
+            stdio: 'inherit',
+            env: { ...process.env, PATH: path },
+        });
+        if (result.status !== 0) {
+            console.error(`::error::cargo test failed in ${dir} — see output above`);
+            process.exit(1);
+        }
+    }
 }
 
 /**
@@ -231,8 +353,18 @@ if (invokedAsScript) {
         restoreCommitted(manifest, dir);
     } else if (command === 'check' && dir) {
         checkGate(manifest, dir);
+    } else if (command === 'test') {
+        runCargoTests(manifest);
+    } else if (command === 'test-dirs') {
+        console.log(testCrateDirs(manifest).join('\n'));
+    } else if (command === 'cache-paths') {
+        console.log(cacheTargetPaths(manifest).join('\n'));
+    } else if (command === 'parity-args') {
+        console.log(parityArgs(manifest).join(' '));
     } else {
-        console.error('usage: node scripts/wasm-crates.mjs (stash|restore|check) <dir>');
+        console.error(
+            'usage: node scripts/wasm-crates.mjs (stash|restore|check) <dir> | test | (test-dirs|cache-paths|parity-args)'
+        );
         process.exit(1);
     }
 }
