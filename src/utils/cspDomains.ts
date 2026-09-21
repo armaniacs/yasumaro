@@ -7,57 +7,32 @@
  */
 
 import { ALL_LIST_SOURCES } from './listSources.js';
+import { deriveOptionalDomains, deriveRequiredDomains } from './storage/providerAllowlist.js';
+
+// Permission pattern, not a provider domain, so it stays a constant instead
+// of a neutral-table row; anchored by value after the api.openai.com entry to
+// preserve the legacy manifest order byte-identically.
+const OPENAI_WILDCARD_PERMISSION = 'https://*.openai.com/*';
+
+function withOpenaiWildcard(perms: string[]): string[] {
+  const out = [...perms];
+  const anchor = out.indexOf('https://api.openai.com/*');
+  out.splice(anchor === -1 ? out.length : anchor + 1, 0, OPENAI_WILDCARD_PERMISSION);
+  return out;
+}
 
 /** Always-granted AI provider host permissions (manifest `host_permissions`). */
-export const AI_PROVIDER_HOST_PERMISSIONS = [
-  'https://generativelanguage.googleapis.com/*',
-  'https://api.openai.com/*',
-  'https://*.openai.com/*',
-  'https://api.anthropic.com/*',
-  'https://api.groq.com/*',
-  'https://mistral.ai/*',
-  'https://api.mistral.ai/*',
-  'https://deepseek.com/*',
-  'https://api.deepseek.com/*',
-  'https://voyageai.com/*',
-  'https://volcengine.com/*',
-  'https://z.ai/*',
-  'https://wandb.ai/*',
-  'https://api.ai.sakura.ad.jp/*',
-] as const;
+export const AI_PROVIDER_HOST_PERMISSIONS: readonly string[] = withOpenaiWildcard(
+  deriveRequiredDomains().map((domain) => `https://${domain}/*`),
+);
 
 /** Opt-in AI provider / list-source host permissions (manifest `optional_host_permissions`). */
-export const OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS = [
-  'https://api-inference.huggingface.co/*',
-  'https://api.openrouter.ai/*',
-  'https://deepinfra.com/*',
-  'https://cerebras.ai/*',
-  'https://ai-gateway.helicone.ai/*',
-  'https://api.publicai.co/*',
-  'https://api.venice.ai/*',
-  'https://api.scaleway.ai/*',
-  'https://api.synthetic.new/*',
-  'https://api.stima.tech/*',
-  'https://nano-gpt.com/*',
-  'https://api.poe.com/*',
-  'https://llm.chutes.ai/*',
-  'https://api.abliteration.ai/*',
-  'https://api.llamagate.dev/*',
-  'https://api.gmi-serving.com/*',
-  'https://api.sarvam.ai/*',
-  'https://xiaomimimo.com/*',
-  'https://nebius.com/*',
-  'https://sambanova.ai/*',
-  'https://nscale.com/*',
-  'https://featherless.ai/*',
-  'https://galadriel.com/*',
-  'https://recraft.ai/*',
-  'https://perplexity.ai/*',
-  'https://jina.ai/*',
+export const OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS: readonly string[] = [
+  ...deriveOptionalDomains().map((domain) => `https://${domain}/*`),
   // Filter-list + metadata sources derive from the LIST_SOURCES SSOT
   // (PBI 2026-09-11-05) — was 6 hardcoded patterns.
   ...ALL_LIST_SOURCES.map((source) => `${source.origin}/*`),
-] as const;
+];
 
 /** Local service ports that host_permissions and CSP connect-src must allow. */
 export const LOCAL_PORTS = [27123, 27124, 11434, 1234] as const;

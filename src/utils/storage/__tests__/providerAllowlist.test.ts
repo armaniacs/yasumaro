@@ -9,19 +9,26 @@ import { PROVIDER_ALLOWLIST_ROWS, isAllowedProviderBaseUrl } from '../providerAl
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
 
 describe('PROVIDER_ALLOWLIST_ROWS', () => {
-  it('covers exactly the catalog rows (no drift either way)', () => {
+  it('covers every catalog row (table is a superset: catalog + fixed-endpoint domain rows)', () => {
     const tableIds = new Set(PROVIDER_ALLOWLIST_ROWS.map((r) => r.id));
-    const catalogIds = new Set(PROVIDER_CATALOG.keys());
-    expect(tableIds).toEqual(catalogIds);
+    for (const catalogId of PROVIDER_CATALOG.keys()) {
+      expect(tableIds.has(catalogId)).toBe(true);
+    }
   });
 
-  it('matches baseUrlKey/isLocal/label per row', () => {
+  it('matches baseUrlKey/isLocal/label per catalog row', () => {
     for (const row of PROVIDER_ALLOWLIST_ROWS) {
       const entry = PROVIDER_CATALOG.get(row.id as never);
-      expect(entry).toBeDefined();
+      if (!entry) continue;
       expect(entry?.baseUrlKey ?? undefined).toBe(row.baseUrlKey ?? undefined);
       expect(entry?.isLocal).toBe(row.isLocal);
       expect(entry?.label).toBe(row.label);
+    }
+  });
+
+  it('every domain row carries a permission tier', () => {
+    for (const row of PROVIDER_ALLOWLIST_ROWS) {
+      if (row.domain) expect(row.permissionTier).toMatch(/^(required|optional)$/);
     }
   });
 });
