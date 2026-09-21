@@ -158,10 +158,6 @@ export default defineConfig({
         absoluteSrc: resolve(wxt.config.root, 'public/wasm/tag_cooccur_bg.wasm'),
         relativeDest: 'wasm/tag_cooccur_bg.wasm',
       });
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/md_sanitize_bg.wasm'),
-        relativeDest: 'wasm/md_sanitize_bg.wasm',
-      });
       // NOTE: the sentence-dedup binary is intentionally NOT shipped yet —
       // contentDedupHybrid.ts has no production call site (STAGED). When the
       // hybrid is wired, re-add the files.push for public/wasm/
@@ -221,10 +217,7 @@ export default defineConfig({
       //     dashboard page, via
       //     src/dashboard/panels/asyncData/tagClusterPanel.ts →
       //     src/dashboard/tagCooccurrenceHybrid.ts
-      //   - the Markdown sanitize core (src/wasm/md-sanitize/) in the
-      //     dashboard export path, via src/dashboard/exportLogsService.ts →
-      //     src/utils/markdownSanitizerHybrid.ts
-      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur\|md-sanitize" src/`.
+      // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur" src/`.
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,
