@@ -146,23 +146,19 @@ export default defineConfig({
       // extension CSP blocks `data:` fetches, so the WASM modules failed to
       // initialize in every build (not just Firefox) until this was fixed.
       // See src/wasm/pii-sanitizer/index.ts's module doc for the full story.
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/pii_sanitizer_bg.wasm'),
-        relativeDest: 'wasm/pii_sanitizer_bg.wasm',
-      });
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/textrank_bg.wasm'),
-        relativeDest: 'wasm/textrank_bg.wasm',
-      });
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/tag_cooccur_bg.wasm'),
-        relativeDest: 'wasm/tag_cooccur_bg.wasm',
-      });
-      // NOTE: the sentence-dedup binary is intentionally NOT shipped yet —
-      // contentDedupHybrid.ts has no production call site (STAGED). When the
-      // hybrid is wired, re-add the files.push for public/wasm/
-      // sentence_dedup_bg.wasm here AND commit the public copy (build:wasm
-      // regenerates it; see the ci.yml wasm-test gate).
+      // PBI 2026-09-21-18: the shipped set is owned by wasm/crates.json —
+      // only publicShip crates are copied. sentence-dedup stays STAGED via
+      // publicShip=false (data-driven skip, no prose allowlist to maintain).
+      const wasmCrates = JSON.parse(
+        readFileSync(new URL('./wasm/crates.json', import.meta.url), 'utf-8'),
+      ) as { crates: { wasmName: string; publicShip: boolean }[] };
+      for (const crate of wasmCrates.crates) {
+        if (!crate.publicShip) continue;
+        files.push({
+          absoluteSrc: resolve(wxt.config.root, `public/wasm/${crate.wasmName}`),
+          relativeDest: `wasm/${crate.wasmName}`,
+        });
+      }
     },
   },
 
