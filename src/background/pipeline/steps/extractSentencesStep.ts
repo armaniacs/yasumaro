@@ -16,6 +16,7 @@ import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.j
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { ErrorStrategy } from '../types.js';
 import { selectPipelineText } from '../pipelineText.js';
+import { decideL0 } from '../recordingDecision.js';
 
 /**
  * Extract important sentences from content using TextRank
@@ -28,10 +29,10 @@ export const extractSentencesStep: PipelineStepFunction = async (
   const { data, settings } = context;
   const { url } = data;
 
-  // Check if L0 extraction is enabled
+  // Check if L0 extraction is enabled (I/O stays here; verdict is delegated)
   const l0Enabled = settings[StorageKeys.L0_EXTRACTIVE_ENABLED] ?? true;
 
-  if (!l0Enabled) {
+  if (decideL0(Boolean(l0Enabled)).skip) {
     addLog(LogType.INFO, 'L0 extractive compression disabled by settings', { url, traceId: context.traceId });
     return context;
   }
