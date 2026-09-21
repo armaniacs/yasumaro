@@ -8,6 +8,9 @@ import { getMessage } from '../../utils/i18n.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { normalizeDomain, upsertDomainOverride } from '../../utils/aiSummaryCleaner/perSiteOverride.js';
+import { logError } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 function ruleCheckboxId(key: string): string {
     return `per-site-override-${key}`;
@@ -175,13 +178,18 @@ export function initPerSiteOverrides(): void {
         // So save as-is.
         const overrides = await loadOverrides();
         const next = upsertDomainOverride(overrides, domain, filteredPatch);
-        await saveOverrides(next);
+        // Single writer: the repository delta write lands inside the 'settings'
+        // object under lock, which is exactly where contentKernel reads it from —
+        // no out-of-lock raw top-level write is needed for immediate reads.
+        try {
+            await saveOverrides(next);
+        } catch (error) {
+            setStatus(getMessage('settingsSaveError') || 'Failed to save override', true);
+            await logError('Failed to save per-site override', { cause: errorMessage(error), domain }, ErrorCode.STORAGE_WRITE_FAILURE, 'perSiteOverrides');
+            return;
+        }
         await refresh(domain);
         setStatus('Saved');
-        // Also persist via chrome.storage.local directly for immediate contentKernel read (SettingsRepository writes to 'settings')
-        try {
-            await chrome.storage.local.set({ [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next });
-        } catch {}
     });
 
     deleteBtn.addEventListener('click', async () => {
@@ -190,12 +198,15 @@ export function initPerSiteOverrides(): void {
         const overrides = await loadOverrides();
         const next = upsertDomainOverride(overrides, domain, null);
         if (next.length === overrides.length) { setStatus('No override for domain', true); return; }
-        await saveOverrides(next);
+        try {
+            await saveOverrides(next);
+        } catch (error) {
+            setStatus(getMessage('settingsSaveError') || 'Failed to delete override', true);
+            await logError('Failed to delete per-site override', { cause: errorMessage(error), domain }, ErrorCode.STORAGE_WRITE_FAILURE, 'perSiteOverrides');
+            return;
+        }
         clearToggles(togglesContainer);
         await refresh();
         setStatus('Deleted');
-        try {
-            await chrome.storage.local.set({ [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next });
-        } catch {}
     });
 }
