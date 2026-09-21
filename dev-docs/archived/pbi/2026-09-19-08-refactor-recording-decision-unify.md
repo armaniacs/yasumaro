@@ -71,5 +71,5 @@ grep -rn "shouldRecord" src/background/recordingTriggerManager.ts src/background
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] コードレビュー完了（closer 統合側: diff レビュー + 全ゲート green — type-check / lint 0 errors / test 12,914 passed / build PASS）
+- [x] ドキュメント更新済み（判定順序の正本は Orchestrator steps コメント + recordingDecision.ts の JSDoc。docs/ 更新要件なしと裁定）
