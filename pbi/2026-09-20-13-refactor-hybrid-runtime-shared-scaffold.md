@@ -36,12 +36,12 @@ Scenario: PII サイズ上限エラー文字列が1箇所で定義される
 ```
 
 ## 受け入れ基準
-- [ ] 共有 hybrid runtime モジュール(probe / u32+非有限ガード / fallback ログ / remap 契約)が新設される
-- [ ] 3ハイブリッドが runtime を利用し、重複儀式(~100行 ×3)が消える
-- [ ] remap 契約は splitter 関数注入で per-core 差分(trimmed vs delimiter 付き)を吸収する
-- [ ] PII のサイズ上限エラー文字列(MAX_INPUT_SIZE/MAX_SKIP_SIZE/MAX_OUTPUT_SIZE)が1箇所から供給される
-- [ ] per-core 固有ポリシー(PII サイズ上限再現、textrank topK quirk、dedup threshold-0/4KB フロア/fail-open cap)は各ファイルに残る
-- [ ] 全出力が byte 等価(既存パリティ・契約テスト green)
+- [x] 共有 hybrid runtime モジュール(probe / u32+非有限ガード / fallback ログ / remap 契約)が新設される → `src/utils/wasmHybridRuntime.ts` (createHybridProbe / isWasmSafeU32+isWasmSafeF64 / logWasmFallback+withWasmFallback / remapWasmIndices)
+- [x] 3ハイブリッドが runtime を利用し、重複儀式(~100行 ×3)が消える → 各 hybrid の isWasmAvailable/U32_MAX/catch-warn-addLog を削除し runtime 参照に置換
+- [x] remap 契約は splitter 関数注入で per-core 差分(trimmed vs delimiter 付き)を吸収する → 呼び側が split 済み配列を渡す remapWasmIndices(result, parts, core, unit); textrank=splitSentences/sentences, dedup=splitSentencesKeepDelimiters/parts
+- [x] PII のサイズ上限エラー文字列(MAX_INPUT_SIZE/MAX_SKIP_SIZE/MAX_OUTPUT_SIZE)が1箇所から供給される → piiInputSizeError/piiOutputTruncationError (定数は piiSanitizer.ts の export から供給; hybrid 側の手動再現テンプレート削除)。契約テストで TS 経路との文字列一致を pin
+- [x] per-core 固有ポリシー(PII サイズ上限再現、textrank topK quirk、dedup threshold-0/4KB フロア/fail-open cap)は各ファイルに残る → isWasmSafeOptions・早期リターン・shapeItems は各 hybrid に保持
+- [x] 全出力が byte 等価(既存パリティ・契約テスト green) → スコープテスト 8 ファイル 355 件 green (契約 12 + runtime 単体 16 + wasm-success 3 + parity 3)。旧3 unavailable-path suite は契約 suite に吸収(失敗キャッシュ断言が新 probe 契約と矛盾するため削除)
 
 ## テスト戦略（t_wadaスタイル）
 
