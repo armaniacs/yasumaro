@@ -11,8 +11,9 @@ pub mod jsstring;
 pub mod tokenize;
 
 pub use jsstring::{
-    contains_japanese, is_js_ws, is_sentence_delimiter, is_word_separator, js_trim,
-    split_sentence_parts, split_sentence_ranges, to_lowercase_utf16, SentencePart,
+    contains_japanese, is_js_ws, is_js_ws_code, is_js_ws_scalar, is_sentence_delimiter,
+    is_word_separator, js_trim, split_sentence_parts, split_sentence_ranges, to_lowercase_utf16,
+    SentencePart,
 };
 pub use tokenize::{
     jaccard_similarity, strip_trailing_delimiter, to_word_set, BigramSource, TokenizeOptions,

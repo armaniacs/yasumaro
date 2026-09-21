@@ -35,8 +35,14 @@
 /// JS `\s` (WhiteSpace ∪ LineTerminator) as used by regex engines and
 /// `String.prototype.trim()`: U+0009–U+000D, U+0020, U+00A0, U+1680,
 /// U+2000–U+200A, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF.
-pub fn is_js_ws(u: u16) -> bool {
-    matches!(u,
+///
+/// SSOT for the member set across all WASM cores (PBI 2026-09-21-24): the
+/// textrank/dedup u16 matcher, tag-cooccur's scalar matcher, and
+/// pii-sanitizer's byte-width matcher all derive from — or are exhaustively
+/// tested against — this one spelling. Every member is BMP, so the u16 and
+/// scalar adapters below are exact.
+pub fn is_js_ws_code(cp: u32) -> bool {
+    matches!(cp,
         0x0009..=0x000D
         | 0x0020
         | 0x00A0
@@ -49,6 +55,18 @@ pub fn is_js_ws(u: u16) -> bool {
         | 0x3000
         | 0xFEFF
     )
+}
+
+/// UTF-16 code-unit adapter over the canonical `is_js_ws_code`.
+pub fn is_js_ws(u: u16) -> bool {
+    is_js_ws_code(u as u32)
+}
+
+/// Unicode scalar adapter over the canonical `is_js_ws_code`. Every JS `\s`
+/// member is BMP, so a scalar outside the BMP is never whitespace and the
+/// `u32` cast is exact for every member.
+pub fn is_js_ws_scalar(c: char) -> bool {
+    is_js_ws_code(c as u32)
 }
 
 /// The word-separator class from the TS reference:

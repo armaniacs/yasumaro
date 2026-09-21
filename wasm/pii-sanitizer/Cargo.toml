@@ -13,6 +13,11 @@ wasm-bindgen = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"
 
+[dev-dependencies]
+# The js_ws_len byte-width matcher is exhaustively tested against the
+# canonical JS `\s` set owned by the shared crate (PBI 2026-09-21-24).
+js-strings = { path = "../js-strings" }
+
 [profile.release]
 opt-level = "z"
 lto = true
