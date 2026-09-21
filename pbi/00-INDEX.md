@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur / md-sanitize WASM 化 — 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。18 は dark-launch 完了。19〜20 未着手）RICE順: 21 → 22 → 18 → 23 → 19 → 20
+### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur / md-sanitize WASM 化 — 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち。18 は dark-launch 完了・23 は非反転クローズ。19〜20 未着手）RICE順: 21 → 22 → 18 → 23 → 19 → 20
 
 `/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。
 
@@ -22,7 +22,7 @@
 - [2026-09-20-21-feat-tag-cooccur-panel-wiring.md](2026-09-20-21-feat-tag-cooccur-panel-wiring.md)（🔶 実装完了・コミット 395d0896 — tagClusterPanel の2呼び出しをハイブリッドへ + public/wasm 配布 + publicAssets（STAGED解除）。パネル・ハイブリッド・パリティ 373 tests green。目視確認と PR レビューが残。RICE 16.0・順位1）
 - [2026-09-20-22-chore-tag-cooccur-ci-gate.md](2026-09-20-22-chore-tag-cooccur-ci-gate.md)（🔶 実装完了・コミット 05e65cb5 — CI 同等性ゲート（parity fresh/committed・src/public cmp・glue stale）に tag-cooccur 追加。red/green をローカル実測。PR レビューが残。RICE 12.0・順位2）
 - [2026-09-20-18-feat-markdown-sanitize-wasm.md](2026-09-20-18-feat-markdown-sanitize-wasm.md)（🔶 実装完了（dark-launch）・✨機能追加 — クレート2口・ハイブリッド（serde 配列転送で改行安全）・パリティ・CI ゲートまで完了、validate 12,761 green。ただし実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x・batch 0.57x〜0.64x、メモリ帯域律速）のため**全本入力を TS ルーティングの dark-launch**。高速化は 23 へ送り。RICE 5.6・順位4）
-- [2026-09-20-23-perf-md-sanitize-transfer-optimization.md](2026-09-20-23-perf-md-sanitize-transfer-optimization.md)（⬜ 未着手・🟡中・1週・🔧非機能追加・副作用🟢なし: md-sanitize の転送最適化（ゼロコピ incoming）でベンチを反転させ dark-launch を解除する。反転しなければ誠実にクローズ。RICE 4.0・順位5）
+- [2026-09-20-23-perf-md-sanitize-transfer-optimization.md](2026-09-20-23-perf-md-sanitize-transfer-optimization.md)（✅ 完了（クローズ）・🔧非機能追加 — 転送候補5アームを実測（framed bytes / serde bytes / 共有メモリ staging）、最良でも本番サイズ 0.86x で**非反転**。floor 計測により転送ゼロ化後もコア計算自体が V8 ビルトインとの約1:1メモリ帯域勝負と構造特定。dark-launch 維持を確定判断として記録、プローブ+計測用エクスポートは再検証用に残置（本番経路は呼ばない）。RICE 4.0・順位5）
 - [2026-09-20-19-feat-prompt-scan-wasm.md](2026-09-20-19-feat-prompt-scan-wasm.md)（⬜ 未着手・🔴高・2週・✨機能追加・副作用🟡軽微: promptSanitizer スキャン移植+非同期化分割。sub-ms だが上限化価値。正規表現21本のパリティが難所。RICE 2.4・順位5同点）
 - [2026-09-20-20-spike-export-serde-wasm.md](2026-09-20-20-spike-export-serde-wasm.md)（⬜ 未着手・🟢低・0.5週・🔬スパイク・副作用🟢なし: serde 計測スパイク。移植は約束しない。RICE 2.4・順位5同点）
 
