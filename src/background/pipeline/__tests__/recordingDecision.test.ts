@@ -95,6 +95,7 @@ describe('decidePrivacy', () => {
       error: 'PRIVATE_PAGE_DETECTED',
       savePending: true,
       confirmationRequired: true,
+      deniedBy: 'requireConfirmation',
     });
   });
   it('blocks with pending-save when behavior=skip', () => {
@@ -110,6 +111,7 @@ describe('decidePrivacy', () => {
       error: 'PRIVATE_PAGE_DETECTED',
       savePending: true,
       confirmationRequired: true,
+      deniedBy: 'confirm',
     });
   });
   it('allows private pages when behavior=save', () => {
