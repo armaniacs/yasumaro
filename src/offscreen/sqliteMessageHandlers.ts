@@ -33,7 +33,7 @@ import {
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { planQuery, planSearch, planPurge } from './queryPlanner.js';
+import { planPurge, planQueryOrSearch, planSearch } from './queryPlanner.js';
 import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
 import { supportsArchive, type ArchiveStaging } from './archiveStaging.js';
 import { UPDATABLE_FIELDS } from './schema.js';
@@ -83,7 +83,12 @@ const SQLITE_REPO_RUNNERS: Record<SqliteRepoMethod, (payload: Record<string, unk
   insertBatch: (payload) => sqliteInsertBatch(
     (((payload.records as Record<string, unknown>[] | undefined) || []) as Record<string, unknown>[]).map((r) => buildRecordFromPayload(r)),
   ),
-  query: (payload) => sqliteQuery(planQuery(payload)),
+  query: (payload) => {
+    // Route decision lives in queryPlanner.planQueryOrSearch (Checking Team
+    // 2026-09-22: Legacy Bridge Medium) — the gateway folds search into
+    // SQLITE_QUERY with a kind marker and planSearch owns the search default.
+    return sqliteQuery(planQueryOrSearch(payload));
+  },
   search: (payload) => sqliteQuery(planSearch(payload)),
   count: () => sqliteGetCount(),
   update: (payload) => {

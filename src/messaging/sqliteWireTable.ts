@@ -148,17 +148,38 @@ export const SQLITE_WIRE_TABLE = [
     // Flattened wire contract: changes travel as `{ id, ...changes }`, not
     // nested under a `changes` key. The offscreen update runner reads flat
     // keys via `key in payload`, so a nested shape would silently apply zero
-    // columns instead of failing.
+    // columns instead of failing. A `changes.id` key would override the
+    // routing id here (spread order), so it is stripped — a wrong-row write
+    // must be impossible even for callers that spread a whole row object
+    // (Checking Team 2026-09-22: Red Team Low).
     encodePayload: (op) => {
       const o = op as Extract<MutateOp, { type: 'update' }>;
-      return { id: o.id, ...o.changes };
+      const { id: _dropRoutingOverride, ...rest } = o.changes;
+      return { id: o.id, ...rest };
     },
     decodeGateway: () => undefined,
     dashboard: {
       subtype: 'update',
       defaultError: 'Update failed',
       serviceDecode: () => undefined,
-      validate: () => null,
+      // Fail-closed on malformed payloads (Checking Team 2026-09-22: Data
+      // Integrity Medium) — an empty changes object would otherwise succeed
+      // as a zero-column update, looking successful while writing nothing.
+      validate: (p) => {
+        const id = (p as { id?: unknown }).id;
+        if (!Number.isInteger(id) || (id as number) <= 0) {
+          return 'update requires a positive integer id';
+        }
+        const changes = (p as { changes?: unknown }).changes;
+        if (
+          changes === null ||
+          typeof changes !== 'object' ||
+          Object.keys(changes as Record<string, unknown>).length === 0
+        ) {
+          return 'update requires a non-empty changes object';
+        }
+        return null;
+      },
       depsArgs: (p) => [p.id as number, (p.changes as Record<string, unknown> | undefined) ?? {}],
       projectDeps: () => ({}),
     },
@@ -262,7 +283,13 @@ export const SQLITE_WIRE_TABLE = [
     }),
     encodePayload: (op) => {
       const o = op as Extract<QueryOp, { kind: 'search' }>;
-      return { text: o.text, ...pickDefined({ limit: o.limit, offset: o.offset, orderBy: o.orderBy, orderDir: o.orderDir }) } as Record<string, unknown>;
+      // `kind: 'search'` marker: the gateway folds search into SQLITE_QUERY
+      // and the offscreen 'records' runner routes on this marker so the
+      // search route keeps its planner-owned default (planSearch → 50)
+      // instead of falling into planQuery's listing default (100).
+      // (Checking Team 2026-09-22: Legacy Bridge Medium.) Additive on the
+      // wire — normalizeStorageQuery drops unknown keys.
+      return { kind: 'search', text: o.text, ...pickDefined({ limit: o.limit, offset: o.offset, orderBy: o.orderBy, orderDir: o.orderDir }) } as Record<string, unknown>;
     },
     decodeGateway: (response) => ({
       rows: ((response.rows as unknown[] | undefined) || []) as BrowsingLogRecord[],
