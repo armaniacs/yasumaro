@@ -25,13 +25,15 @@
  * class traded away the migration's entire purpose. Any future WASM
  * pattern change must keep the parity suites green; that is the gate.
  *
- * Size-limit contract: this wrapper reproduces sanitizeRegex's three guard
- * paths without running its scan — the input-size rejection (>MAX_INPUT_SIZE,
- * or the 512KB hard cap when skipSizeLimit is set) via the same `error`
- * message, and the output-size truncation (>MAX_OUTPUT_SIZE, reached through
- * mask-placeholder expansion) via the same truncate-and-error result. The
- * WASM core has no size concept by design (see
- * wasm/pii-sanitizer/src/lib.rs's module doc — the TS wrapper owns
+ * Size-limit contract: the shared runtime (piiInputSizeError /
+ * piiOutputTruncationError in src/utils/wasmHybridRuntime.ts, single-sourced
+ * from piiSanitizer.ts's exported MAX_* constants) reproduces sanitizeRegex's
+ * three guard paths without running its scan — the input-size rejection
+ * (>MAX_INPUT_SIZE, or the 512KB hard cap when skipSizeLimit is set) via the
+ * same `error` message, and the output-size truncation (>MAX_OUTPUT_SIZE,
+ * reached through mask-placeholder expansion) via the same
+ * truncate-and-error result. The WASM core has no size concept by design
+ * (see wasm/pii-sanitizer/src/lib.rs's module doc — the TS wrapper owns
  * size/timeout handling). Masking still runs on oversized inputs (same
  * observable behavior as the two-pass revision, where the WASM result
  * reached callers with the error attached).
@@ -48,72 +50,29 @@
 
 import {
     sanitizeRegex,
-    MAX_INPUT_SIZE,
-    MAX_SKIP_SIZE,
     MAX_OUTPUT_SIZE,
     type SanitizeOptions,
     type SanitizeResult,
 } from '../../utils/piiSanitizer.js';
 import type { MaskedItem } from '../../messaging/types.js';
 import { sanitizePiiWithWasm, initPiiSanitizerWasm } from '../../wasm/pii-sanitizer/index.js';
-import { errorMessage } from '../../utils/errorUtils.js';
-import { addLog } from '../../utils/logger/core.js';
-import { LogType } from '../../utils/logger/types.js';
+import {
+    createHybridProbe,
+    piiInputSizeError,
+    piiOutputTruncationError,
+    withWasmFallback,
+} from '../../utils/wasmHybridRuntime.js';
 
-let wasmAvailable: boolean | null = null;
-
-/**
- * Probes WASM availability once per service worker lifetime (mirrors
- * initPiiSanitizerWasm's own singleton-promise caching) so a permanently
- * broken environment doesn't retry-and-fail on every single sanitize call.
- */
-async function isWasmAvailable(): Promise<boolean> {
-    if (wasmAvailable !== null) {
-        return wasmAvailable;
-    }
-    try {
-        await initPiiSanitizerWasm();
-        wasmAvailable = true;
-    } catch (error: unknown) {
-        wasmAvailable = false;
-        const message = errorMessage(error);
-        // addLog() persists to chrome.storage asynchronously (see
-        // utils/logger/core.ts) and is not readable from outside the
-        // service worker without a dedicated message handler. A plain
-        // console.warn is also emitted so this failure is visible in
-        // chrome://extensions' "service worker" devtools console during
-        // manual debugging, and so e2e tests can assert on it directly via
-        // Playwright's Worker.on('console', ...) — see
-        // testDir/e2e/pii-wasm-initialization.spec.ts, the regression guard
-        // for a real bug where this path fired on every single call in
-        // every production build (WASM was silently inlined as a
-        // CSP-blocked `data:` URI — see wasm/pii-sanitizer/index.ts).
-        console.warn('PII WASM module unavailable, falling back to TS-only sanitization:', message);
-        addLog(LogType.WARN, 'PII WASM module unavailable, falling back to TS-only sanitization', {
-            error: message,
-        });
-    }
-    return wasmAvailable;
-}
-
-/**
- * Reproduces sanitizeRegex's size-limit rejection message for `text`
- * without running its scan, so the WASM path reports the same `error`
- * field the TS path would (the pipeline surfaces maskedItems/text and
- * leaves `error` to its callers).
- */
-function sizeLimitError(text: string, options: SanitizeOptions): string | undefined {
-    if (options.skipSizeLimit) {
-        if (text.length > MAX_SKIP_SIZE) {
-            return `Input size exceeds maximum limit of ${MAX_SKIP_SIZE} characters even with skipSizeLimit (actual: ${text.length})`;
-        }
-        return undefined;
-    }
-    if (text.length > MAX_INPUT_SIZE) {
-        return `Input size exceeds maximum limit of ${MAX_INPUT_SIZE} characters (actual: ${text.length})`;
-    }
-    return undefined;
-}
+const probe = createHybridProbe(
+    initPiiSanitizerWasm,
+    // e2e tests assert on this console.warn directly via Playwright's
+    // Worker.on('console', ...) — see
+    // testDir/e2e/pii-wasm-initialization.spec.ts, the regression guard for
+    // a real bug where this path fired on every single call in every
+    // production build (WASM was silently inlined as a CSP-blocked `data:`
+    // URI — see wasm/pii-sanitizer/index.ts).
+    'PII WASM module unavailable, falling back to TS-only sanitization'
+);
 
 /**
  * Strips `index` unless includeIndices is set — sanitizeRegex only emits
@@ -136,52 +95,51 @@ function shapeItems(items: Array<{ type: string; original: string; index: number
  * call sites.
  */
 export async function sanitizePiiHybrid(text: string, options: SanitizeOptions = {}): Promise<SanitizeResult> {
-    if (!(await isWasmAvailable())) {
+    if (!(await probe.isAvailable())) {
         return sanitizeRegex(text, options);
     }
 
-    try {
-        const wasmResult = await sanitizePiiWithWasm(text);
-        const inputSizeError = sizeLimitError(text, options);
-        if (inputSizeError) {
-            // sanitizeRegex rejects oversized inputs before scanning; the
-            // hybrid deliberately still delivers the WASM-masked text (same
-            // observable behavior as the two-pass revision), with the
-            // input-size error attached and no output truncation — the TS
-            // truncation path only ever applies to inputs that passed the
-            // pre-scan size gate.
+    // A WASM call failing at runtime (not just at init) is unexpected —
+    // fall back to TS-only for this call rather than propagating, since PII
+    // masking failing closed (throwing) would abort the whole recording
+    // pipeline for a WASM-specific fault. (A throwing TS fallback still
+    // propagates — e.g. match-count overflow fails closed.)
+    return withWasmFallback(
+        'PII WASM sanitize call failed, falling back to TS regex for this input',
+        async () => {
+            const wasmResult = await sanitizePiiWithWasm(text);
+            // Per-core policy: reproduce sanitizeRegex's size-limit
+            // rejection message (single-sourced from the shared runtime, see
+            // piiInputSizeError) without running its scan. Masking still
+            // runs on oversized inputs (same observable behavior as the
+            // two-pass revision), with the input-size error attached and no
+            // output truncation — the TS truncation path only ever applies
+            // to inputs that passed the pre-scan size gate.
+            const inputSizeError = piiInputSizeError(text, options);
+            if (inputSizeError) {
+                return {
+                    text: wasmResult.text,
+                    maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
+                    error: inputSizeError,
+                };
+            }
+            // Output-size truncation (mask placeholders expand text, so masked
+            // output can exceed the cap even when the input was under it).
+            if (wasmResult.text.length > MAX_OUTPUT_SIZE) {
+                return {
+                    text: wasmResult.text.substring(0, MAX_OUTPUT_SIZE),
+                    maskedItems: shapeItems(
+                        wasmResult.maskedItems.filter((item) => item.index < MAX_OUTPUT_SIZE),
+                        options.includeIndices === true,
+                    ),
+                    error: piiOutputTruncationError(),
+                };
+            }
             return {
                 text: wasmResult.text,
                 maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
-                error: inputSizeError,
             };
-        }
-        // Output-size truncation (mask placeholders expand text, so masked
-        // output can exceed the cap even when the input was under it).
-        if (wasmResult.text.length > MAX_OUTPUT_SIZE) {
-            return {
-                text: wasmResult.text.substring(0, MAX_OUTPUT_SIZE),
-                maskedItems: shapeItems(
-                    wasmResult.maskedItems.filter((item) => item.index < MAX_OUTPUT_SIZE),
-                    options.includeIndices === true,
-                ),
-                error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`,
-            };
-        }
-        return {
-            text: wasmResult.text,
-            maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
-        };
-    } catch (error: unknown) {
-        // A WASM call failing at runtime (not just at init) is unexpected —
-        // log it and fall back to TS-only for this call rather than
-        // propagating, since PII masking failing closed (throwing) would
-        // abort the whole recording pipeline for a WASM-specific fault.
-        const message = errorMessage(error);
-        console.warn('PII WASM sanitize call failed, falling back to TS regex for this input:', message);
-        addLog(LogType.WARN, 'PII WASM sanitize call failed, falling back to TS regex for this input', {
-            error: message,
-        });
-        return sanitizeRegex(text, options);
-    }
+        },
+        () => sanitizeRegex(text, options)
+    );
 }
