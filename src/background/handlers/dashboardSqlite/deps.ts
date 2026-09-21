@@ -39,7 +39,7 @@ export function toFailure(result: { success: false; error: SqliteError }): { suc
 /** Deps consumed by the read-only subtype group (never mutates, never needs a confirmToken). */
 export interface ReadOnlyDeps {
   query: (params: Record<string, unknown>) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
-  search: (query: string, limit: number, offset: number, options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
+  search: (query: string, limit: number | undefined, offset: number, options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
   getCount: () => Promise<DepsResult<number>>;
   /**
    * Deliberately not a DepsResult: getStatus() reports initialization
