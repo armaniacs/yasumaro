@@ -19,12 +19,6 @@
  * floor/fail-open cap) — this module owns mechanism only, never policy.
  */
 
-import {
-    MAX_INPUT_SIZE,
-    MAX_OUTPUT_SIZE,
-    MAX_SKIP_SIZE,
-    type SanitizeOptions,
-} from './piiSanitizer.js';
 import { errorMessage } from './errorUtils.js';
 import { addLog } from './logger/core.js';
 import { LogType } from './logger/types.js';
@@ -181,32 +175,3 @@ export function remapWasmIndices<TPart>(
     return [...result.indices];
 }
 
-/**
- * Reproduces sanitizeRegex's input-size rejection message for `text`
- * without running its scan, so the PII WASM path reports the same `error`
- * field the TS path would. Single-sourced from piiSanitizer.ts's exported
- * MAX_INPUT_SIZE / MAX_SKIP_SIZE constants (the template lives here alone —
- * piiSanitizeHybrid.ts no longer owns a copy). The WASM core itself has no
- * size concept by design (see wasm/pii-sanitizer/src/lib.rs); the TS
- * wrapper owns size handling.
- */
-export function piiInputSizeError(text: string, options: SanitizeOptions): string | undefined {
-    if (options.skipSizeLimit) {
-        if (text.length > MAX_SKIP_SIZE) {
-            return `Input size exceeds maximum limit of ${MAX_SKIP_SIZE} characters even with skipSizeLimit (actual: ${text.length})`;
-        }
-        return undefined;
-    }
-    if (text.length > MAX_INPUT_SIZE) {
-        return `Input size exceeds maximum limit of ${MAX_INPUT_SIZE} characters (actual: ${text.length})`;
-    }
-    return undefined;
-}
-
-/**
- * The `Output truncated to …` error string, single-sourced from
- * piiSanitizer.ts's exported MAX_OUTPUT_SIZE constant.
- */
-export function piiOutputTruncationError(): string {
-    return `Output truncated to ${MAX_OUTPUT_SIZE} characters`;
-}

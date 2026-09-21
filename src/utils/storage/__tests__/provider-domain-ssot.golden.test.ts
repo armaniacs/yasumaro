@@ -3,6 +3,13 @@
  * Golden pins of the CURRENT hand-listed domain arrays, copied verbatim from
  * source before derivation. These stay green before AND after the refactor:
  * any drift in membership or order fails here.
+ *
+ * Common-mode notice (Checking Team 2026-09-22, Blue Team Medium): manifest
+ * host_permissions AND the CSP default set both derive from
+ * PROVIDER_ALLOWLIST_ROWS, so one bad row can open two egress layers at
+ * once. Editing any `permissionTier` / `domain` value therefore REQUIRES
+ * regenerating these goldens in the same PR, and new provider rows belong
+ * in the security-review checklist (egress surface = host_permissions).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CSPValidator } from '../../cspValidator.js';

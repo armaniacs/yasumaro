@@ -25,9 +25,9 @@
  * class traded away the migration's entire purpose. Any future WASM
  * pattern change must keep the parity suites green; that is the gate.
  *
- * Size-limit contract: the shared runtime (piiInputSizeError /
- * piiOutputTruncationError in src/utils/wasmHybridRuntime.ts, single-sourced
- * from piiSanitizer.ts's exported MAX_* constants) reproduces sanitizeRegex's
+ * Size-limit contract: the pure helpers below (piiInputSizeError /
+ * piiOutputTruncationError, single-sourced from piiSanitizer.ts's exported
+ * MAX_* constants) reproduce sanitizeRegex's
  * three guard paths without running its scan — the input-size rejection
  * (>MAX_INPUT_SIZE, or the 512KB hard cap when skipSizeLimit is set) via the
  * same `error` message, and the output-size truncation (>MAX_OUTPUT_SIZE,
@@ -50,7 +50,9 @@
 
 import {
     sanitizeRegex,
+    MAX_INPUT_SIZE,
     MAX_OUTPUT_SIZE,
+    MAX_SKIP_SIZE,
     type SanitizeOptions,
     type SanitizeResult,
 } from '../../utils/piiSanitizer.js';
@@ -58,10 +60,39 @@ import type { MaskedItem } from '../../messaging/types.js';
 import { sanitizePiiWithWasm, initPiiSanitizerWasm } from '../../wasm/pii-sanitizer/index.js';
 import {
     createHybridProbe,
-    piiInputSizeError,
-    piiOutputTruncationError,
     withWasmFallback,
 } from '../../utils/wasmHybridRuntime.js';
+
+/**
+ * Reproduces sanitizeRegex's input-size rejection message for `text`
+ * without running its scan, so the PII WASM path reports the same `error`
+ * field the TS path would. Lives here (Checking Team 2026-09-22:
+ * Maintainability Medium — the shared runtime owns mechanism only; PII
+ * size policy belongs to the hybrid that uses it), single-sourced from
+ * piiSanitizer.ts's exported MAX_INPUT_SIZE / MAX_SKIP_SIZE constants.
+ * The WASM core itself has no size concept by design (see
+ * wasm/pii-sanitizer/src/lib.rs); the TS wrapper owns size handling.
+ */
+export function piiInputSizeError(text: string, options: SanitizeOptions): string | undefined {
+    if (options.skipSizeLimit) {
+        if (text.length > MAX_SKIP_SIZE) {
+            return `Input size exceeds maximum limit of ${MAX_SKIP_SIZE} characters even with skipSizeLimit (actual: ${text.length})`;
+        }
+        return undefined;
+    }
+    if (text.length > MAX_INPUT_SIZE) {
+        return `Input size exceeds maximum limit of ${MAX_INPUT_SIZE} characters (actual: ${text.length})`;
+    }
+    return undefined;
+}
+
+/**
+ * The `Output truncated to …` error string, single-sourced from
+ * piiSanitizer.ts's exported MAX_OUTPUT_SIZE constant.
+ */
+export function piiOutputTruncationError(): string {
+    return `Output truncated to ${MAX_OUTPUT_SIZE} characters`;
+}
 
 const probe = createHybridProbe(
     initPiiSanitizerWasm,

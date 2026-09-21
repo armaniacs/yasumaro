@@ -12,17 +12,9 @@ import {
     isWasmSafeF64,
     isWasmSafeU32,
     logWasmFallback,
-    piiInputSizeError,
-    piiOutputTruncationError,
     remapWasmIndices,
     withWasmFallback,
 } from '../wasmHybridRuntime.js';
-import {
-    sanitizeRegex,
-    MAX_INPUT_SIZE,
-    MAX_OUTPUT_SIZE,
-    MAX_SKIP_SIZE,
-} from '../piiSanitizer.js';
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 
@@ -145,28 +137,11 @@ describe('remapWasmIndices', () => {
     });
 });
 
-describe('PII error single-sourcing', () => {
-    test('piiInputSizeError matches sanitizeRegex on both size gates', async () => {
-        const over = 'x'.repeat(MAX_INPUT_SIZE + 1);
-        expect(piiInputSizeError(over, {})).toBe((await sanitizeRegex(over)).error);
-
-        const under = 'x'.repeat(100);
-        expect(piiInputSizeError(under, {})).toBeUndefined();
-        expect((await sanitizeRegex(under)).error).toBeUndefined();
-
-        const skipOk = 'x'.repeat(MAX_INPUT_SIZE + 1);
-        expect(piiInputSizeError(skipOk, { skipSizeLimit: true })).toBeUndefined();
-
-        const skipOver = 'x'.repeat(MAX_SKIP_SIZE + 1);
-        expect(piiInputSizeError(skipOver, { skipSizeLimit: true })).toBe(
-            (await sanitizeRegex(skipOver, { skipSizeLimit: true })).error
-        );
-    });
-
-    test('piiOutputTruncationError comes from the shared constant', () => {
-        expect(piiOutputTruncationError()).toBe(`Output truncated to ${MAX_OUTPUT_SIZE} characters`);
-    });
-});
+// Checking Team 2026-09-22 (Maintainability Medium): the PII size-policy
+// helpers moved to piiSanitizeHybrid.ts — the shared runtime owns mechanism
+// only. The single-sourcing pins (against sanitizeRegex's live gates) moved
+// with them (piiSanitizeHybrid.wasm-success.test.ts covers the three guard
+// paths end-to-end); nothing here may import piiSanitizer policy constants.
 
 describe('withWasmFallback / logWasmFallback', () => {
     test('returns the WASM value without logging on success', async () => {
