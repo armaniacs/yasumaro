@@ -15,6 +15,7 @@ import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
 import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 import { ErrorStrategy } from '../types.js';
+import { selectPipelineText } from '../pipelineText.js';
 
 /**
  * Extract important sentences from content using TextRank
@@ -24,7 +25,7 @@ import { ErrorStrategy } from '../types.js';
 export const extractSentencesStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
-  const { data, settings, truncatedContent, sanitizedSummary, privacyResult } = context;
+  const { data, settings } = context;
   const { url } = data;
 
   // Check if L0 extraction is enabled
@@ -35,9 +36,11 @@ export const extractSentencesStep: PipelineStepFunction = async (
     return context;
   }
 
-  // Determine content to extract from
-  // Priority: sanitizedSummary (PII-cleaned) > privacyResult.summary > truncatedContent
-  const contentToExtract = sanitizedSummary || privacyResult?.summary || truncatedContent || '';
+  // Text selection is single-owned by selectPipelineText (pipelineText.ts).
+  // At this stage extractedSentences is not yet produced, so the selector
+  // resolves the sanitizedSummary > privacyResult.summary > truncatedContent
+  // chain with a '' default — identical to the previous inline chain.
+  const contentToExtract = selectPipelineText(context);
 
   if (!contentToExtract || !contentToExtract.trim()) {
     addLog(LogType.WARN, 'No content available for L0 extraction', { url, traceId: context.traceId });
