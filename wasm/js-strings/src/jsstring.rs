@@ -1,5 +1,5 @@
 //! JavaScript string semantics over UTF-16 code units, shared by the
-//! textrank and sentence-dedup WASM cores.
+//! textrank, sentence-dedup, tag-cooccur, and pii-sanitizer WASM cores.
 //!
 //! The TS reference implementations (`splitSentences`, `toWordSet` in
 //! `src/utils/text/tokenizer.ts`, the local `toWordSet` in

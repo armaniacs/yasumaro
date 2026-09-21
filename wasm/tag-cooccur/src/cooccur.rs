@@ -15,8 +15,8 @@
 //!   string that yields zero valid tags (e.g. `"# , tech, ai"`) falls back
 //!   to comma parsing, which can produce `"#"` itself as a tag.
 //! - Whitespace is the JS `\s` class (no `/u` flag), which is NOT identical
-//!   to Rust's `White_Space` property (`\u0085` differs). The predicate
-//!   below spells out the JS set so splits/trims agree exactly.
+//!   to Rust's `White_Space` property (`\u0085` differs). Whitespace handling
+//!   delegates to the shared js-strings crate so splits/trims agree exactly.
 //! - Pair ordering and the narrow tie-break use JS `sort()` / `<`, i.e.
 //!   UTF-16 code-unit order — NOT Unicode scalar order. `cmp_utf16`
 //!   compares `encode_utf16` sequences so astral vs private-use tags sort
