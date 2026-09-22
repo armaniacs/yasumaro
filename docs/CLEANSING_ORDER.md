@@ -169,6 +169,18 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 - **診断**: `fallback_reason` カラム（`short_content` | `over_cleansed` | `content_overcut` | `candidate_too_small`）は履歴エントリに「フォールバック理由」行として表示されます。
 - **単位の境界**: `fallbackMinChars`（文字数・ホットパス — エンコードしない）は `fallbackMinBytes`（バイト — ③と診断専用）と分離しています。
 
+### 再生成時のクレンジング緩和
+
+履歴エントリの「AI要約を作り直す」では、1回限りの緩和モードを選べます（設定は保存されません）:
+
+| モード | 適用されるクレンジング |
+|---|---|
+| 現在の設定 | グローバル設定そのまま |
+| やや緩い | ③ AI要約クレンジングを1プリセット段下げ（`aggressive` → `balanced` → `minimal`、`balanced`/`custom`/`minimal` は `minimal` が下限）。② Content Cleansing は変更なし |
+| 最も緩い | ② Content Cleansing と ③ AI要約クレンジングの両方を無効化 |
+
+①候補選択は v1 で緩和 knob を持たず、過剰削減ガード（ホワイトリストフラグ含む）は緩和中も発火します。
+
 ---
 
 ## English
@@ -331,3 +343,15 @@ Layered on top of the single fallback policy (`applyFallback` in `extractPipelin
 - **Settings**: Dashboard → AI Summary Cleansing tab → **Over-cut Guards** section — two default-ON toggles (① candidate / ② Content Cleansing) plus the shared character floor. Rollback = toggle off; limits are shared with the existing fallback thresholds.
 - **Diagnostics**: the `fallback_reason` column (`short_content` | `over_cleansed` | `content_overcut` | `candidate_too_small`) renders as a "Fallback reason" row in history entries.
 - **Unit boundaries**: `fallbackMinChars` (chars, hot path — never encodes) is separate from `fallbackMinBytes` (bytes — ③ and diagnostics only).
+
+### Cleansing Loosening During Regeneration
+
+The history entry's "Regenerate AI summary" action accepts a one-shot loosening mode (never saved to settings):
+
+| Mode | Cleansing applied |
+|---|---|
+| Current settings | Global settings unchanged |
+| Looser | Step ③ AI Summary Cleansing down one preset (`aggressive` → `balanced` → `minimal`; `balanced`/`custom`/`minimal` floor at `minimal`). ② Content Cleansing untouched |
+| Loosest | Disable both ② Content Cleansing and ③ AI Summary Cleansing |
+
+① candidate selection has no loosening knob in v1, and the over-cut guards (including whitelist flags) keep firing during a loosened run.

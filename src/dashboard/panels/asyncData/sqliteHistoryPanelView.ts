@@ -439,6 +439,13 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       <button type="button" id="${SQLITE_HISTORY_IDS.clearSelection}" class="secondary-btn" data-i18n="historyClearSelection">${t('historyClearSelection')}</button>
       <span id="${SQLITE_HISTORY_IDS.selectionCount}" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(s.selectedIds.size)])}</span>
       <button type="button" id="${SQLITE_HISTORY_IDS.appendObsidian}" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
+      <button type="button" id="${SQLITE_HISTORY_IDS.regenerateSelected}" class="btn-primary" data-i18n="historyRegenerateSelected">${t('historyRegenerateSelected')}</button>
+      <button type="button" id="${SQLITE_HISTORY_IDS.deleteSelected}" class="danger-btn" data-i18n="historyDeleteSelected">${t('historyDeleteSelected')}</button>
+      <span id="${SQLITE_HISTORY_IDS.deleteConfirm}" class="sqlite-delete-confirm hidden" role="group" aria-live="polite">
+        <span class="sqlite-delete-confirm-text">${t('historyDeleteSelectedConfirm', [String(s.selectedIds.size)])}</span>
+        <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmYes}" class="danger-btn" data-i18n="historyDeleteConfirmYes">${t('historyDeleteConfirmYes')}</button>
+        <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmNo}" class="secondary-btn" data-i18n="cancel">${t('cancel')}</button>
+      </span>
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
@@ -478,6 +485,11 @@ export const SQLITE_HISTORY_IDS = {
   clearSelection: 'sqlite-clear-selection',
   selectionCount: 'sqlite-selection-count',
   appendObsidian: 'sqlite-append-obsidian',
+  regenerateSelected: 'sqlite-regenerate-selected',
+  deleteSelected: 'sqlite-delete-selected',
+  deleteConfirm: 'sqlite-delete-confirm',
+  deleteConfirmYes: 'sqlite-delete-confirm-yes',
+  deleteConfirmNo: 'sqlite-delete-confirm-no',
   tagFilterBar: 'sqlite-tag-filter-bar',
   tagFilterClear: 'sqlite-tag-filter-clear',
 } as const;
@@ -498,6 +510,11 @@ export interface SqliteHistoryViewCallbacks {
   onSelectAll: (checked: boolean) => void;
   onClearSelection: () => void;
   onAppend: () => void;
+  /** Bulk actions on the checked rows (delete = inline confirm then purge; regenerate = sequential AI re-runs, current settings). */
+  onDeleteSelected: () => void;
+  /** Second step of the bulk delete: the inline "really delete" button in the bulk bar. */
+  onDeleteSelectedConfirm: () => void;
+  onRegenerateSelected: () => void;
   onTagFilterClear: () => void;
   /** PBI 04: regenerate AI summary for one entry (force = explicit gate bypass). */
   onRegenerate: (id: number, mode: RegenerateCleanseMode, force: boolean) => void;
@@ -658,6 +675,31 @@ export function toggleContentArea(root: ParentNode, controlsId: string): void {
   }
 }
 
+/**
+ * Inline two-step delete confirm living inside the bulk bar, next to the
+ * eye line — the shared modal dialog renders at the document end
+ * (bottom-left, easy to miss), so bulk delete confirms here instead.
+ */
+export function showDeleteConfirm(container: HTMLElement): void {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.deleteConfirm);
+  if (!confirm) return;
+  confirm.classList.remove('hidden');
+  confirm.style.display = '';
+  queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmYes)?.focus();
+}
+
+export function hideDeleteConfirm(container: HTMLElement): void {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.deleteConfirm);
+  if (!confirm) return;
+  confirm.classList.add('hidden');
+  confirm.style.display = 'none';
+}
+
+export function isDeleteConfirmVisible(container: HTMLElement): boolean {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.deleteConfirm);
+  return !!confirm && !confirm.classList.contains('hidden');
+}
+
 function updateBulkBar(
   container: HTMLElement,
   selectedIds: Set<number>,
@@ -666,7 +708,10 @@ function updateBulkBar(
   const bar = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.bulkBar);
   const selectAll = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.selectAll);
   const countEl = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.selectionCount);
+  const confirmText = container.querySelector('.sqlite-delete-confirm-text');
   const appendBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.appendObsidian);
+  const regenerateBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.regenerateSelected);
+  const deleteBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteSelected);
 
   if (bar) {
     // .hidden uses `!important` (dashboard.css), so an inline display
@@ -674,6 +719,10 @@ function updateBulkBar(
     bar.classList.toggle('hidden', selectedIds.size === 0);
     bar.style.display = selectedIds.size > 0 ? '' : 'none';
   }
+
+  // A stale confirm must never survive: selection changes or a fresh
+  // result-reload re-arms the two-step from the delete button.
+  hideDeleteConfirm(container);
 
   if (selectAll) {
     selectAll.checked = entries.length > 0 && selectedIds.size === entries.length;
@@ -683,8 +732,18 @@ function updateBulkBar(
     countEl.textContent = t('historySelectionCount', [String(selectedIds.size)]);
   }
 
+  if (confirmText) {
+    confirmText.textContent = t('historyDeleteSelectedConfirm', [String(selectedIds.size)]);
+  }
+
   if (appendBtn) {
     appendBtn.disabled = selectedIds.size === 0;
+  }
+  if (regenerateBtn) {
+    regenerateBtn.disabled = selectedIds.size === 0;
+  }
+  if (deleteBtn) {
+    deleteBtn.disabled = selectedIds.size === 0;
   }
 }
 
@@ -907,7 +966,7 @@ export function wireCalendarNav(
 export function wirePanelShell(
   container: HTMLElement,
   state: SqliteHistoryState,
-  callbacks: Pick<SqliteHistoryViewCallbacks, 'onSearchInput' | 'onSelectAll' | 'onClearSelection' | 'onAppend'>,
+  callbacks: Pick<SqliteHistoryViewCallbacks, 'onSearchInput' | 'onSelectAll' | 'onClearSelection' | 'onAppend' | 'onDeleteSelected' | 'onDeleteSelectedConfirm' | 'onRegenerateSelected'>,
   options: { focusSearch?: boolean } = {},
 ): void {
   const searchInput = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.searchInput);
@@ -921,6 +980,10 @@ export function wirePanelShell(
   const selectAllCheckbox = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.selectAll);
   const clearSelectionBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.clearSelection);
   const appendBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.appendObsidian);
+  const regenerateBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.regenerateSelected);
+  const deleteBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteSelected);
+  const deleteConfirmYes = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmYes);
+  const deleteConfirmNo = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmNo);
 
   if (selectAllCheckbox) {
     selectAllCheckbox.checked = state.selectedIds.size > 0 && state.selectedIds.size === state.entries.length;
@@ -937,6 +1000,18 @@ export function wirePanelShell(
 
   if (appendBtn) {
     appendBtn.addEventListener('click', () => callbacks.onAppend());
+  }
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', () => callbacks.onRegenerateSelected());
+  }
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => callbacks.onDeleteSelected());
+  }
+  if (deleteConfirmYes) {
+    deleteConfirmYes.addEventListener('click', () => callbacks.onDeleteSelectedConfirm());
+  }
+  if (deleteConfirmNo) {
+    deleteConfirmNo.addEventListener('click', () => hideDeleteConfirm(container));
   }
 }
 

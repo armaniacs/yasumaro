@@ -7,7 +7,7 @@
  */
 
 const MIN_SCALE = 0.3;
-const MAX_SCALE = 3;
+const MAX_SCALE = 12;
 const DRAG_THRESHOLD_PX = 5;
 const WHEEL_ZOOM_FACTOR = 1.1;
 const BUTTON_ZOOM_FACTOR = 1.3;

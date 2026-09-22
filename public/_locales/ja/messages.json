@@ -3322,6 +3322,80 @@
   "historyAppendToObsidian": {
     "message": "選択した記事を Obsidian に追記"
   },
+  "historyRegenerateSelected": {
+    "message": "AI要約を作り直し"
+  },
+  "historyDeleteSelected": {
+    "message": "選択した記事を削除"
+  },
+  "historyDeleteConfirmYes": {
+    "message": "本当に削除する"
+  },
+  "historyDeleteSelectedConfirm": {
+    "message": "選択した $1 件の記事を削除しますか？この操作は元に戻せません。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyDeleteSelectedSuccess": {
+    "message": "$1 件の記事を削除しました",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyDeleteSelectedPartial": {
+    "message": "$1 件削除しましたが、残り $2 件で中断しました: $3",
+    "placeholders": {
+      "deleted": {
+        "content": "$1",
+        "example": "2"
+      },
+      "remaining": {
+        "content": "$2",
+        "example": "1"
+      },
+      "reason": {
+        "content": "$3",
+        "example": "Storage quota exceeded."
+      }
+    }
+  },
+  "historyRegenerateSelectedResult": {
+    "message": "$1 件成功・$2 件失敗",
+    "placeholders": {
+      "success": {
+        "content": "$1",
+        "example": "3"
+      },
+      "failed": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyRegenerateSelectedResultSkipped": {
+    "message": "$1 件成功・$2 件失敗（$3 件スキップ: 実行中）",
+    "placeholders": {
+      "success": {
+        "content": "$1",
+        "example": "3"
+      },
+      "failed": {
+        "content": "$2",
+        "example": "1"
+      },
+      "skipped": {
+        "content": "$3",
+        "example": "1"
+      }
+    }
+  },
   "historyAppendSuccess": {
     "message": "$1件を Obsidian に追記しました",
     "placeholders": {

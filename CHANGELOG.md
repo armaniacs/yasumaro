@@ -36,6 +36,31 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [6.9.17] - 2026-09-23
+
+このリリースは v6.9.16 に続く連続リリースです。SQLite History の選択一括操作（複数選択の一括削除・一括再生成）、削除確認 UI の視認性修正（選択バー内の2段階確認＋共有モーダルの中央表示化）、タグクラスタの最大ズーム拡大（3倍→12倍）を追加しました。全テスト（13,201 件）がグリーンです。
+
+### Added
+
+- **選択バーに一括操作ボタンを追加**: SQLite History のチェックボックスで複数選択すると、選択バーに「AI要約を作り直し」と「選択した記事を削除」が表示される。一括削除はモデル `deleteSelectedEntries`（最初の失敗で中断・削除済み件数とエラーを返却・成功時のみキャッシュ無効化）、一括再生成は現在の設定で逐次実行し成功・失敗件数をトーストして一覧を更新（緩和3択・force は個別ヘッダーのみ）
+- **共有確認ダイアログに中央表示スタイルを追加**: `showConfirmDialog` / `showAlertDialog`（`src/utils/ui/confirmDialog.ts`）に CSS 定義が一切なく、文書末尾の素のブロック（左下）として描画されていた。新規共有 `src/styles/confirmDialog.css`（全画面 dim＋中央カード＋右寄せボタン）を dashboard・popup の両スタイルから import し、単発削除を含む全使用箇所の確認ダイアログが目の前に表示されるようにした
+- **タグクラスタの最大ズームを拡大**: `TagClusterPanZoomController` の `MAX_SCALE` を 3→12 に引き上げ（+ボタン・ホイール・ピンチズーム共通）。SVG は viewBox 方式のため深くズームしてもノード・ラベルはベクターのまま鮮明に拡大される
+
+### Fixed
+
+- **一括削除の確認が画面左下に埋もれていた**: 一括削除は共有モーダルを使わず、選択バー内の2段階インライン確認に変更（1クリック目で削除ボタンの右に件数付き「本当に削除する」／キャンセルが出現、2クリック目で実行）。選択変更・再描画で stale な確認は消去し、確認ボタンにフォーカスを移動
+- **部分削除の失敗がトーストに現れなかった**: 途中失敗時は成功件数のみの表示だったのを、削除済み・残件数・理由を表示する `historyDeleteSelectedPartial` トーストに変更（全件失敗時は従来どおりモデル側 `operationError`＋通知）
+- **一括再生成のトーストで実行中の行が消えていた**: `in_flight` の行を `skipped` として計数し、`succeeded + failed + skipped === 選択件数` を保証。スキップありの場合のみ「（N件スキップ: 実行中）」を付記
+
+### Changed
+
+- **docs**: `SETUP_GUIDE.md`・`AI_SUMMARY_GUIDE.md`（日英）に一括操作・2段階確認・スキップ表示を追記、`FAQ.md` に Q52（再生成）・Q53（一括削除）を追加、`CLEANSING_ORDER.md`・`CLEANSING_CUSTOMIZATION_GUIDE.md` に再生成の緩和仕様を追記
+
+### Tested
+
+- 単体: インライン削除確認の表示・実行・キャンセル・再描画消去、部分削除トーストのテンプレート分岐、全件成功トーストの維持、`in_flight` スキップ表示、上限クランプ（baseSize / 12）を追加
+- 全体: `npm run validate` green（13,201 passed / 21 skipped）
+
 ## [6.9.16] - 2026-09-22
 
 このリリースは v6.9.15 に続く連続リリースです。過剰クレンジングで本文が空近くまで削られ要約が一文に潰れたレコードへの対処として、AI要約の手動再生成（PBI 2026-09-22-04）と抽出段の過剰削減ガード（PBI 2026-09-22-05）を追加しました。全テスト（13,193 件）がグリーンです。

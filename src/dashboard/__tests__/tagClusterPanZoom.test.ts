@@ -104,17 +104,17 @@ describe('TagClusterPanZoomController', () => {
       expect(vb.height).toBeGreaterThan(600);
     });
 
-    it('does not zoom in past MAX_SCALE (viewBox never shrinks below baseSize / 3)', () => {
+    it('does not zoom in past MAX_SCALE (viewBox never shrinks below baseSize / 12)', () => {
       const controller = new TagClusterPanZoomController(svg, { width: 800, height: 600 });
       controller.attach();
 
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 100; i++) {
         wheel(svg, -100);
       }
 
       const vb = getViewBox(svg);
-      expect(vb.width).toBeGreaterThanOrEqual(800 / 3 - 0.001);
-      expect(vb.height).toBeGreaterThanOrEqual(600 / 3 - 0.001);
+      expect(vb.width).toBeGreaterThanOrEqual(800 / 12 - 0.001);
+      expect(vb.height).toBeGreaterThanOrEqual(600 / 12 - 0.001);
     });
 
     it('does not zoom out past MIN_SCALE (viewBox never grows beyond baseSize / 0.3)', () => {
