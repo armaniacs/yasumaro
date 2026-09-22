@@ -36,21 +36,21 @@ import type { SqliteValue } from '../sqliteEngine.js';
 import type { BrowsingLogRecord, SearchResult } from '../../utils/sqlite-types.js';
 
 describe('rowCodec column lists', () => {
-  it('BROWSING_LOG_COLUMNS is the legacy 13-column plain-list set', () => {
+  it('BROWSING_LOG_COLUMNS is the legacy plain-list set plus fallback_reason (PBI 05)', () => {
     expect([...BROWSING_LOG_COLUMNS]).toEqual([
       'id', 'url', 'title', 'summary', 'tags', 'created_at', 'domain',
-      'visit_duration', 'scroll_ratio', 'is_starred',
+      'visit_duration', 'scroll_ratio', 'is_starred', 'fallback_reason',
       'is_deleted', 'obsidian_synced', 'gist_synced',
     ]);
     expect(BROWSING_LOG_COLUMNS_SQL).toBe(
-      'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced',
+      'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason, is_deleted, obsidian_synced, gist_synced',
     );
     expect(PLAIN_LIST_COLUMNS).toBe(BROWSING_LOG_COLUMNS_SQL);
   });
 
   it('full projection is id plus the schema insert order', () => {
     expect([...BROWSING_LOG_FULL_COLUMNS]).toEqual(['id', ...COLUMN_NAMES]);
-    expect(BROWSING_LOG_FULL_COLUMNS).toHaveLength(33);
+    expect(BROWSING_LOG_FULL_COLUMNS).toHaveLength(34);
     expect(BROWSING_LOG_FULL_COLUMNS_SQL.startsWith('id, url, title')).toBe(true);
   });
 });
@@ -67,6 +67,7 @@ describe('mapNamed truth table', () => {
     visit_duration: null,
     scroll_ratio: 0.5,
     is_starred: 1,
+    fallback_reason: null,
   };
 
   it('maps the search projection with rank from the row', () => {
@@ -93,10 +94,10 @@ describe('mapPositional truth table', () => {
     const named: NamedRow = {
       id: 3, url: 'https://y.test/', title: 'T', summary: null, tags: '#a',
       created_at: 456, domain: 'y.test', visit_duration: 12, scroll_ratio: null,
-      is_starred: 0, rank: -0.5,
+      is_starred: 0, fallback_reason: 'content_overcut', rank: -0.5,
     };
     const positional: SqliteValue[] = [
-      3, 'https://y.test/', 'T', null, '#a', 456, 'y.test', 12, null, 0, -0.5,
+      3, 'https://y.test/', 'T', null, '#a', 456, 'y.test', 12, null, 0, 'content_overcut', -0.5,
     ];
     expect(mapPositional<SearchResult>(positional, SEARCH_COLUMNS_WITH_RANK)).toEqual(
       mapNamed<SearchResult>(named, SEARCH_COLUMNS_WITH_RANK),
@@ -105,11 +106,12 @@ describe('mapPositional truth table', () => {
 
   it('survives a column reorder (mapping follows the list, not schema order)', () => {
     const columns = ['url', 'id', ...SEARCH_COLUMNS.filter((c) => c !== 'id' && c !== 'url'), 'rank'];
-    const cells: SqliteValue[] = ['https://z.test/', 9, 'T', null, '#t', 1, 'z.test', null, null, 1, -2];
+    const cells: SqliteValue[] = ['https://z.test/', 9, 'T', null, '#t', 1, 'z.test', null, null, 1, 'candidate_too_small', -2];
     const mapped = mapPositional<SearchResult>(cells, columns);
     expect(mapped.id).toBe(9);
     expect(mapped.url).toBe('https://z.test/');
     expect(mapped.created_at).toBe(1);
+    expect(mapped.fallback_reason).toBe('candidate_too_small');
     expect(mapped.rank).toBe(-2);
   });
 

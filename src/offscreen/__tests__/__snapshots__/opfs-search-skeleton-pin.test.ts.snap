@@ -18,7 +18,7 @@ exports[`skeleton pin: IdbVfsBackend search (same input, same rows/counts; error
     20,
     0,
   ],
-  "sql": "SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?) ORDER BY rank LIMIT ? OFFSET ?",
+  "sql": "SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?) ORDER BY rank LIMIT ? OFFSET ?",
 }
 `;
 
@@ -46,7 +46,7 @@ exports[`skeleton pin: IdbVfsBackend search (same input, same rows/counts; error
     20,
     0,
   ],
-  "sql": "SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  "sql": "SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
 }
 `;
 
@@ -68,7 +68,7 @@ exports[`skeleton pin: opfsWorker FTS path (text+tag) > emits byte-stable count/
     20,
     0,
   ],
-  "sql": "SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?) ORDER BY b.created_at DESC, b.id DESC LIMIT ? OFFSET ?",
+  "sql": "SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?) ORDER BY b.created_at DESC, b.id DESC LIMIT ? OFFSET ?",
 }
 `;
 
@@ -96,6 +96,6 @@ exports[`skeleton pin: opfsWorker LIKE path (text+tag) > emits byte-stable count
     20,
     0,
   ],
-  "sql": "SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+  "sql": "SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
 }
 `;

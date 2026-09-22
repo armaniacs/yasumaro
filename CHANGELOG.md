@@ -36,6 +36,35 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [6.9.16] - 2026-09-22
+
+このリリースは v6.9.15 に続く連続リリースです。過剰クレンジングで本文が空近くまで削られ要約が一文に潰れたレコードへの対処として、AI要約の手動再生成（PBI 2026-09-22-04）と抽出段の過剰削減ガード（PBI 2026-09-22-05）を追加しました。全テスト（13,193 件）がグリーンです。
+
+### Added
+
+- **履歴エントリから AI要約を手動再生成できる**: 履歴ヘッダーに「AI要約を作り直す」ボタンとクレンジング緩和3択（現在の設定 / やや緩い / 最も緩い）を追加。`REGENERATE_SUMMARY` メッセージが GET_CONTENT + cleanseMode オーバーライドで本文を再取得し、通常記録と同じパイプラインを流した後、既存行を UPDATE-in-place で上書きする（新規 INSERT 禁止・重複チェック skip・Obsidian/ローカル MD 自動出力 skip・タグは新値上書き）。クレンジング緩和は③ルール段下げのみ（custom=minimal 相当・最緩=②③無効）で設定には永続化しない。force は既定なし、ゲート拒否時のみ「設定を無視して強制再生成」を明示オプトイン（Ask Q1C）。レート制限は `regenerate` 専用バケットに分離し、ダッシュボード側の消費が通常記録を圧迫しない（Ask N3-B）。一括再生成と Obsidian 自動同期は v1 対象外（SQLite 更新のみ、送信は既存の手動「追記」ボタン）（PBI 2026-09-22-04）
+- **抽出・Content Cleansing 段の過剰削減ガード**: 実測で 99.4%（30.6 KB→193 B）削減していた主因は Content Cleansing ではなく①候補選択だった。単一ポリシー点 `applyFallback` に **②content_overcut**（クレンジング後の削減率・文字数フロア未満なら pre-クレンジング候補へ復元）と **③**（従来の AI要約クレンジング FB）を優先順 **② > ③ > 短文本文** で配置し、**①候補フロア**（スコア順走査で文字数フロアを満たす最初の候補を take 分割前に採用、新キーノブ `fallbackMinChars` 既定 100）を追加。ガード①②はデフォルトONで Dashboard → AI Summary Cleansing →「過剰削減ガード」セクションで切替可能。ホワイトリスト抽出は v1 で意図的にガード対象外（Ask Q2A）。発火理由は `fallback_reason` カラム（`candidate_too_small` / `content_overcut` / `over_cleansed` / `short_content`）として pageState から履歴表示まで貫通（PBI 2026-09-22-05）
+
+### Fixed
+
+- **AIプロバイダ失敗時にエラー文言が要約として保存されていた**: `buildResult` が無条件 `success:true` を返すため、失敗時のエラーテキストが SQLite の summary として書かれていた。`PrivacyPipelineResult.aiSucceeded` → `RecordingResult` まで伝播し、`saveSqliteStep` が `aiSucceeded === false` の UPDATE をスキップして既存行を保持、ハンドラは `ai_failed` を返却（PBI 2026-09-22-04 レビュー修正）
+- **プロバイダ失敗理由が最後のスロットしか見えなかった**: `fetchWithRetry` が non-ok で throw するため `handleErrorResponse` に到達せず、ループが `lastResult` のみ保持していた。`AISlotFailure[]`（`slotFailures`）で全スロットの失敗を収集し `RemoteAIService` が WARN、再生成応答に同梱（PBI 2026-09-22-04 レビュー修正）
+- **月次トークン上限が保存済み設定から読めなかった**: writer は `settings` blob、reader は誰も書いていないトップレベルキーだけを見ており、カスタム値（上限なし=0 含む）が常に既定 1,000,000 に落とされていた。blob → レガシー top-level → `SettingsRepository` の3段フォールバックで解決（PBI 2026-09-22-04 レビュー修正）
+- **再生成 UPDATE の失敗が成功として報告されていた**: SQLite mutate 失敗が `RegenerateUpdateError` になり `decideStepOutcome` が端末エラーとして扱う経路に修正。pending リカバリ登録はしない（pending キューは MANUAL を INSERT で再生するため、復元が対象行の重複INSERTになる）（PBI 2026-09-22-04 レビュー修正）
+- **再生成ハンドラの二重実行**: in-flight Set の `add` が await の後ろにあり check-then-act レースで AI を2回呼べていた。スロット主張を await 前の同期処理へ移動（PBI 2026-09-22-04 レビュー修正）
+- **再生成UIのコントラスト不足**: mode select を `--color-bg` から `--color-bg-white` + `--color-text` へ、強制ボタンを `--color-danger-bg` へ変更し、履歴の星アイコンの既定スタイル（背景・枠線・padding）を打ち消し（PBI 2026-09-22-04 レビュー修正）
+- **記録条件パネルで保存済み表示が入力後も残っていた**: 任何の入力で成功・エラーメッセージの両方を消去（stale-message 報告 2026-09-22）
+
+### Changed
+
+- **docs**: `CLEANSING_ORDER.md` に過剰削減ガードの3層ポリシー（優先順・発火条件・設定場所・単位境界）を日英で追記、`AI_SUMMARY_GUIDE.md` に「送信前に何が起きるか」と再生成フローへの誘導を日英で追記（PBI 2026-09-22-04/05）
+- **pbi**: VulnHunt 監査（confirmed 7件）の修正方針を6 PBI に PBI 化し台帳へ登録（2026-09-22-06〜11、最優先は obsidian host × 保存済みキーのペアリング禁止）（PBI 2026-09-22-00）
+
+### Tested
+
+- 単体: 再生成ハンドラ / ゲートウェイ / バリデータ / UPDATE ワイトリスト / cleanseMode ladder / rate-limit regenerate バケット / `aiSucceeded` ゲート / `slotFailures` / 過剰削減フィクスチャ（byte-identical pin 付き）を追加
+- E2E: `regenerate-summary.spec.ts`（記録→再生成のフルロー。エントリ URL は host_permissions が必要なため `https://api.openai.com/e2e/...` + host-resolver ルート）、`overcut-guard-recording.spec.ts`（`fallback_reason=candidate_too_small` の発火確認）
+
 ## [6.9.15] - 2026-09-21
 
 このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。

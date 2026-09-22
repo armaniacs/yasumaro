@@ -90,6 +90,12 @@ AIに送信する前に、PIIマスキング（メールアドレス・クレジ
 
 `Summary Min Length` の設定値を確認してください。生成された要約がこの文字数を下回ると、そのプロバイダーの結果は採用されず次の優先度へフォールバックします。
 
+### 過剰削減ガード（送信前に何が起きるか）
+
+本文がAIに届く前に、3つのガードが「空の断片」での送信を防ぎます: **候補フロア**（スコア1位の候補が文字数フロア未満なら次点候補またはページ本文へフォールバック）、**コンテンツクレンジング過剰削減からの復元**（削除後が削減率・フロア未満ならクレンジング前の候補テキストへ復元）、既存の**AI要約クレンジング過剰削減フォールバック**（pre-AIテキスト／本文へ復元）。3つは優先順 ② > ③ > 短文本文 の単一ポリシーで共有され、発動したガードの理由は履歴エントリの「フォールバック理由」行（`candidate_too_small` / `content_overcut` / `over_cleansed` / `short_content`）に残ります。
+
+2つの新ガードと共有の文字数フロアは **Dashboard → AI Summary Cleansing → 過剰削減ガード** で切り替えられます（どちらも既定ON）。ホワイトリスト抽出サイトは v1 ではガード対象外です。記録後も要約が薄すぎる場合は、再生成フロー（履歴エントリ → 「AI要約を作り直す」）を使ってください。
+
 ---
 
 ## English
@@ -177,3 +183,9 @@ Use "Test AI" in the dashboard to verify the Base URL, API key, and model name a
 **Q. Summaries are sometimes too short or empty**
 
 Check the `Summary Min Length` setting. If a generated summary falls below this length, that provider's result is discarded and the next priority rank is tried instead.
+
+### Over-cut Guards (what gets sent when cleansing cuts too deep)
+
+Before content reaches the AI, three guards keep the send from being a starved fragment: a **candidate floor** (extraction falls back to the next candidate or the page body when the top candidate is under the character floor), a **Content Cleansing over-cut restore** (restores the pre-cleansing candidate text when stripping leaves it below the reduction ratio or floor), and the existing **AI summary cleansing over-reduction fallback** (restores the pre-AI text / body). All three share one policy with priority ② > ③ > short-body, and each fired guard leaves its reason in the history entry ("Fallback reason" row: `candidate_too_small`, `content_overcut`, `over_cleansed`, `short_content`).
+
+Toggle the two new guards and the shared character floor under **Dashboard → AI Summary Cleansing → Over-cut Guards** (both default on). Whitelist-extracted sites are intentionally excluded from the guards (v1). If summaries are still too thin after a record, use the regenerate flow (history entry → "Regenerate AI summary").

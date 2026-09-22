@@ -247,3 +247,58 @@ describe('recordingConditionsSettings', () => {
     });
   });
 });
+
+describe('stale message reset on edit (fix 2026-09-22)', () => {
+  beforeEach(() => {
+    setupDOM();
+    vi.clearAllMocks();
+  });
+
+  it('clears both success and error messages when any field is edited', async () => {
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
+    await initRecordingConditionsSettings();
+
+    // Establish the stale state: a completed save leaves success visible.
+    const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;
+    saveBtn.click();
+    await vi.waitFor(() => {
+      const successMsg = document.getElementById('conditions-save-success') as HTMLElement;
+      expect(successMsg.style.display).toBe('');
+    });
+
+    // Editing a field must reset it (saved-but-edited must not read as saved).
+    const input = document.getElementById('minVisitDuration') as HTMLInputElement;
+    input.value = '7';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const successMsg = document.getElementById('conditions-save-success') as HTMLElement;
+    expect(successMsg.style.display).toBe('none');
+    expect(successMsg.classList.contains('hidden')).toBe(true);
+
+    const errorMsg = document.getElementById('conditions-validation-error') as HTMLElement;
+    expect(errorMsg.style.display).toBe('none');
+    expect(errorMsg.classList.contains('hidden')).toBe(true);
+  });
+
+  it('reset does not fire on unrelated events (click only edits reset)', async () => {
+    mockGetMany.mockResolvedValue({});
+    mockGetAll.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
+    await initRecordingConditionsSettings();
+
+    const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;
+    saveBtn.click();
+    await vi.waitFor(() => {
+      const successMsg = document.getElementById('conditions-save-success') as HTMLElement;
+      expect(successMsg.style.display).toBe('');
+    });
+
+    saveBtn.dispatchEvent(new Event('click', { bubbles: true })); // second save keeps success showing after await
+    await vi.waitFor(() => {
+      const successMsg = document.getElementById('conditions-save-success') as HTMLElement;
+      expect(successMsg.style.display).toBe('');
+    });
+  });
+});

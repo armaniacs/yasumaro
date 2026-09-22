@@ -330,18 +330,38 @@ describe('extractMainContent - aiSummaryCleanseEnabled', () => {
 // フォールバック動作
 // ─────────────────────────────────────────────
 describe('extractMainContent - fallback', () => {
-    it('triggers fallback when extracted content is too short', () => {
-        // article要素があるが本文が非常に短い → fallback
+    it('triggers candidate_too_small guard when the only candidate is below the floor', () => {
+        // PBI 05 ①: article「Hi」(2 chars) < fallbackMinChars(100) → all-miss →
+        // candidate-zero body join, annotated candidate_too_small.
+        // cleanseEnabled so the body join uses the textContent path (jsdom has
+        // no innerText) and the combined body text clears the 100-char floor.
+        document.body.innerHTML = `
+            <article><p>Hi</p></article>
+            <div>${'Some other body content that will be used as fallback text here. '.repeat(3)}</div>
+        `;
+        const result = extractMainContentWithInfo(
+            10000,
+            { cleanseEnabled: true },
+        ) as unknown as Record<string, unknown>;
+        expect(result.fallbackTriggered).toBe(true);
+        expect(result.fallbackReason).toBe('candidate_too_small');
+        expect(String(result.content)).toContain('Some other body content');
+    });
+
+    it('keeps the legacy short_content path when the candidate guard is disabled', () => {
+        // Same fixture with candidateGuardEnabled:false → article adopted →
+        // extracted text <100 chars → applyFallback short_content → body innerText.
         document.body.innerHTML = `
             <article><p>Hi</p></article>
             <div>Some other body content that will be used as fallback text here.</div>
         `;
-        const result = extractMainContentWithInfo(10000, {}) as unknown as Record<string, unknown>;
-        // fallbackTriggeredがtrueになるかどうかはコンテンツ長次第
-        expect(typeof result.fallbackTriggered).toBe('boolean');
-        if (result.fallbackTriggered) {
-            expect(result.fallbackReason).toBe('short_content');
-        }
+        const result = extractMainContentWithInfo(
+            10000,
+            {},
+            { candidateGuardEnabled: false },
+        ) as unknown as Record<string, unknown>;
+        expect(result.fallbackTriggered).toBe(true);
+        expect(result.fallbackReason).toBe('short_content');
     });
 
     it('does not trigger fallback when content is sufficient', () => {

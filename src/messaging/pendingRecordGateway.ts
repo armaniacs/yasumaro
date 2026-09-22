@@ -17,6 +17,7 @@
 
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { withRuntimeTimeout } from './withRuntimeTimeout.js';
 
 export interface PendingRecordRequest {
   title: string;
@@ -52,18 +53,17 @@ export async function recordPendingPage(
     payload.skipAi = request.skipAi;
   }
 
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let response: { success?: boolean; error?: string } | undefined;
   try {
-    const response = (await Promise.race([
+    response = (await withRuntimeTimeout(
       chrome.runtime.sendMessage({
         type: 'MANUAL_RECORD',
         protocolVersion: CURRENT_PROTOCOL_VERSION,
         payload,
       }),
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(() => reject(new Error(PENDING_RECORD_TIMEOUT_ERROR)), timeoutMs);
-      }),
-    ])) as { success?: boolean; error?: string } | undefined;
+      timeoutMs,
+      new Error(PENDING_RECORD_TIMEOUT_ERROR),
+    )) as { success?: boolean; error?: string } | undefined;
 
     if (response?.success) {
       return { success: true };
@@ -74,9 +74,5 @@ export async function recordPendingPage(
       success: false,
       error: errorMessage(error),
     };
-  } finally {
-    if (timer !== undefined) {
-      clearTimeout(timer);
-    }
   }
 }

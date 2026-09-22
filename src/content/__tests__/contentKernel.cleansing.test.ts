@@ -97,11 +97,39 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         expect(sendMessageWithRetry).not.toHaveBeenCalled();
     });
 
-    it('does not notify when fallback takes effect after cleansing because the result is discarded', async () => {
+    it('does not notify when short_content fallback discards the cleansing result (guard off)', async () => {
         // クレンジングで script が除去（totalRemoved > 0）されるが、残りテキストが
         // 短すぎて short_content フォールバックが発効 → settleFallback がカウンタを
         // ゼロ化するため、最終コンテンツにクレンジングは反映されない。
         // → cleansingExecuted は立たず、通知も送らない（C0 誤表示の防止）。
+        // PBI 05: candidateGuardEnabled:false でレガシー経路を維持して検証。
+        const { kernel, sendMessageWithRetry } = makeKernel(async () => ({ success: true }));
+        document.body.innerHTML = `
+            <article>
+                <p>Short.</p>
+                <script>alert('remove me')</script>
+            </article>
+            ${'Body fallback filler text. '.repeat(30)}
+        `;
+
+        const result = kernel.extractPageContent({
+            ...hardStripOnly(kernel),
+            candidateGuardEnabled: false,
+        });
+        await flushSends();
+
+        expect(result.fallbackTriggered).toBe(true);
+        expect(result.fallbackReason).toBe('short_content');
+        // 診断 recount は totalRemoved を再填充する（既存セマンティクス）が、
+        // 識別子は settleFallback で撤去済みのため通知は飛ばない。
+        expect(result.cleansingExecuted).toBeUndefined();
+        expect(sendMessageWithRetry).not.toHaveBeenCalled();
+    });
+
+    it('notifies when the ① guard joins the body path and cleansing affects the shipped text', async () => {
+        // PBI 05: article「Short.」(+script text) < floor(100) → candidate_too_small
+        // body join. The body-branch cleanse IS reflected in the shipped content,
+        // so cleansingExecuted stands and the notification legitimately fires.
         const { kernel, sendMessageWithRetry } = makeKernel(async () => ({ success: true }));
         document.body.innerHTML = `
             <article>
@@ -115,10 +143,12 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
         await flushSends();
 
         expect(result.fallbackTriggered).toBe(true);
-        // 診断 recount は totalRemoved を再填充する（既存セマンティクス）が、
-        // 識別子は settleFallback で撤去済みのため通知は飛ばない。
-        expect(result.cleansingExecuted).toBeUndefined();
-        expect(sendMessageWithRetry).not.toHaveBeenCalled();
+        expect(result.fallbackReason).toBe('candidate_too_small');
+        expect(result.cleansingExecuted).toBe(true);
+        expect(sendMessageWithRetry).toHaveBeenCalledTimes(1);
+        expect(sendMessageWithRetry).toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'CONTENT_CLEANSING_EXECUTED' }),
+        );
     });
 
     it('does not fail the extraction flow even when the sender throws', async () => {

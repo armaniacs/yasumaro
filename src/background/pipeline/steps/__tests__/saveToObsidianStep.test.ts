@@ -158,3 +158,26 @@ describe('saveToObsidianStep', () => {
     });
   });
 });
+
+// --- PBI 2026-09-22-04: regenerate side-effect skip ---
+describe('saveToObsidianStep — skipObsidianAppend (regenerate, CRITICAL)', () => {
+  it('returns the context untouched without appending when skipObsidianAppend is set', async () => {
+    const obsidian = { appendToDailyNote: vi.fn() };
+    const deps = makeDeps({ obsidian: obsidian as never });
+    const context = makeContext({
+      data: { title: 'Test Page', url: 'https://example.com', skipObsidianAppend: true },
+      markdown: '## Test Page\n\nSome content',
+    });
+    const out = await saveToObsidianStep(context, deps);
+    expect(out).toBe(context);
+    expect(obsidian.appendToDailyNote).not.toHaveBeenCalled();
+  });
+
+  it('still appends when the flag is absent (normal records unchanged)', async () => {
+    const obsidian = { appendToDailyNote: vi.fn() };
+    const deps = makeDeps({ obsidian: obsidian as never });
+    const context = makeContext(); // markdown present, settings.api_key valid
+    await saveToObsidianStep(context, deps);
+    expect(obsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
+  });
+});

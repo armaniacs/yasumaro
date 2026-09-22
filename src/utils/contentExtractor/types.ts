@@ -14,8 +14,11 @@ export type CleanseCallback = (result: CleanseResult | null) => void;
 
 /**
  * フォールバック発動理由
+ *
+ * PBI 05: `content_overcut`（②Content Cleansing 過剰削減）と
+ * `candidate_too_small`（①候補選択フロア全滅）を追加。既存2値は不変。
  */
-export type FallbackReason = 'short_content' | 'over_cleansed';
+export type FallbackReason = 'short_content' | 'over_cleansed' | 'content_overcut' | 'candidate_too_small';
 
 /**
  * AI要約クレンジング実行結果

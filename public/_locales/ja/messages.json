@@ -2497,6 +2497,90 @@
   "aiSummaryCleansingFallbackMinBytesDesc": {
     "message": "クレンジング後のコンテンツが何バイト未満の場合にフォールバックするか。デフォルト: 300バイト"
   },
+  "overcutGuardSection": {
+    "message": "過剰削減ガード"
+  },
+  "overcutGuardSectionDesc": {
+    "message": "抽出やコンテンツクレンジングが過剰に削ったときに、自動でテキストを復元します。"
+  },
+  "extractionGuardCandidateEnabled": {
+    "message": "候補フロアガード（コンテンツ抽出）"
+  },
+  "extractionGuardCandidateEnabledDesc": {
+    "message": "スコア1位の候補が文字数フロア未満のとき、次点候補または本文全体へフォールバックして、切り取られた断片を送信しません。"
+  },
+  "extractionGuardContentCleanseEnabled": {
+    "message": "過剰削減ガード（コンテンツクレンジング）"
+  },
+  "extractionGuardContentCleanseEnabledDesc": {
+    "message": "コンテンツクレンジングが候補テキストを削減率・文字数フロア未満まで削ったとき、クレンジング前のテキストに復元します。"
+  },
+  "aiSummaryCleansingFallbackMinCharsLabel": {
+    "message": "文字数フロア"
+  },
+  "aiSummaryCleansingFallbackMinCharsDesc": {
+    "message": "ガードが使う絶対量閾値（文字数。上のバイト単位とは別）デフォルト: 100文字"
+  },
+  "fallbackReasonCandidateTooSmall": {
+    "message": "候補が文字数フロア未満のため本文へフォールバック"
+  },
+  "fallbackReasonContentOvercut": {
+    "message": "コンテンツクレンジングの過剰削減から復元"
+  },
+  "fallbackReasonOverCleansed": {
+    "message": "AI要約クレンジングの過剰削減から復元"
+  },
+  "fallbackReasonShortContent": {
+    "message": "抽出結果が短すぎるため本文へフォールバック"
+  },
+  "historyFallbackReason": {
+    "message": "フォールバック理由"
+  },
+  "historyRegenerateSummary": {
+    "message": "AI要約を作り直す"
+  },
+  "historyRegenerateModeCurrent": {
+    "message": "現在の設定"
+  },
+  "historyRegenerateModeLooser": {
+    "message": "やや緩い"
+  },
+  "historyRegenerateModeLoosest": {
+    "message": "最も緩い"
+  },
+  "historyRegenerateError": {
+    "message": "AI要約の再生成に失敗しました。"
+  },
+  "historyRegenerateErrorUrl": {
+    "message": "このURLは再生成できません。"
+  },
+  "historyRegenerateErrorRateLimit": {
+    "message": "再生成回数の上限に達しました。しばらく待ってから再度お試しください。"
+  },
+  "historyRegenerateErrorFetch": {
+    "message": "ページの再取得に失敗しました。"
+  },
+  "historyRegenerateErrorConsent": {
+    "message": "記録のプライバシーコンセントが必要です。"
+  },
+  "historyRegenerateGateBlocked": {
+    "message": "このページは記録設定でブロックされています。設定を無視して強制再生成することもできます。"
+  },
+  "historyRegenerateForceAction": {
+    "message": "設定を無視して強制再生成"
+  },
+  "historyRegenerateErrorTimeout": {
+    "message": "AI要約の再生成がタイムアウトしました。時間をおいて再度お試しください。"
+  },
+  "historyRegenerateErrorAi": {
+    "message": "AI要約の生成に失敗しました。AI設定で別のプロバイダーを試すか、しばらく待ってから再度お試しください。"
+  },
+  "historyRegenerateProvidersTried": {
+    "message": "試行したプロバイダー"
+  },
+  "historyRegenerateErrorMonthlyLimit": {
+    "message": "月間トークン上限に達しています。設定 → 記録条件 → AI使用量制限で上限を引き上げるか、翌月1日（カレンダー月の自動リセット）までお待ちください。すべてのHTTPプロバイダーがこの上限を共有するため、別のプロバイダーへの切り替えは効きません。"
+  },
   "aiSummaryCleansingSave": {
     "message": "保存"
   },

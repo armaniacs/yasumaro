@@ -33,6 +33,17 @@ async function tryLaunchExtensionContext(): Promise<BrowserContext | null> {
         `--load-extension=${EXTENSION_PATH}`,
         '--no-first-run',
         '--no-default-browser-check',
+        // PBI 2026-09-22-04 (regenerate e2e): extension-created tabs lose the
+        // Playwright interception attach race on their MAIN document request
+        // (context.route/page.route never see it → chrome-error page → no
+        // content script → GET_CONTENT "receiving end"). Map the fixture host
+        // to the spec's local TLS server instead, so tabs.create navigation
+        // resolves locally without interception. Only api.openai.com:443 is
+        // remapped (no other spec uses that origin); --ignore-certificate-
+        // errors only matters for TLS and every other spec talks plain
+        // http://localhost.
+        '--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443',
+        '--ignore-certificate-errors',
       ],
       // MV3 extension service workers must be allowed to run — without this
       // the DASHBOARD_SQLITE handler in the SW never wakes and messages time

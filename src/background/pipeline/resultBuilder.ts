@@ -72,6 +72,16 @@ export function buildResult(context: RecordingContext): RecordingResult {
     success: true,
     title: data.title,
     url: data.url,
+    // PBI 2026-09-22-04 follow-up: explicit AI-success signal for the
+    // regenerate gate. Defaults to true so legacy paths that never ran the
+    // privacy AI step keep their historical success semantics.
+    aiSucceeded: context.privacyResult?.aiSucceeded ?? true,
+    ...(context.privacyResult?.attemptedProviders !== undefined
+      ? { attemptedProviders: context.privacyResult.attemptedProviders }
+      : {}),
+    ...(context.privacyResult?.slotFailures !== undefined
+      ? { slotFailures: context.privacyResult.slotFailures }
+      : {}),
     ...pickDefined({
       summary: privacyResult?.summary,
       maskedCount: privacyResult?.maskedCount,

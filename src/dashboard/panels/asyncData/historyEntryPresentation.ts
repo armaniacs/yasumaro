@@ -57,6 +57,22 @@ export function computeCleansingReduction(entry: BrowsingLogEntry): CleansingRed
 export type DiagnosticMissingReason = 'no-ai' | 'empty' | 'unmeasured';
 
 /**
+ * PBI 05: fallback_reason column → i18n key. Unknown/absent reasons return
+ * null (the row is simply omitted — never a broken key in the UI).
+ */
+const FALLBACK_REASON_KEYS: Record<string, string> = {
+    short_content: 'fallbackReasonShortContent',
+    over_cleansed: 'fallbackReasonOverCleansed',
+    content_overcut: 'fallbackReasonContentOvercut',
+    candidate_too_small: 'fallbackReasonCandidateTooSmall',
+};
+
+export function describeFallbackReasonKey(reason: string | null | undefined): string | null {
+    if (!reason) return null;
+    return FALLBACK_REASON_KEYS[reason] ?? null;
+}
+
+/**
  * Entry-level classifier shared by the three diagnostic rows.
  * Checks emptiness first so a 0-byte page is never labeled as legacy.
  */

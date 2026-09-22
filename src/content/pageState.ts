@@ -91,4 +91,6 @@ export class PageState {
 
     // 【フォールバック情報】: 直近の抽出でフォールバックが発動したかを保持
     lastFallbackTriggered: boolean = false;
+    /** PBI 05: 発動理由（triggered 時のみ。'short_content' | 'over_cleansed' | 'content_overcut' | 'candidate_too_small'） */
+    lastFallbackReason: string | undefined = undefined;
 }

@@ -108,3 +108,55 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
         expect(response['cleanseStats']).toEqual({ hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3 });
     });
 });
+
+describe('handleGetContentMessage - regenerate cleanseMode (PBI 2026-09-22-04)', () => {
+    it("CRITICAL: 'current'/absent calls extractAndCommit with undefined (no override)", () => {
+        for (const message of [
+            { type: 'GET_CONTENT' },
+            { type: 'GET_CONTENT', payload: { cleanseMode: 'current' } },
+        ]) {
+            const { deps, extractAndCommit } = makeDeps();
+            const sendResponse = vi.fn();
+            handleGetContentMessage(message, { id: 'test-extension-id' }, sendResponse, deps);
+            expect(extractAndCommit).toHaveBeenCalledWith(undefined);
+            expect(sendResponse).toHaveBeenCalledTimes(1);
+        }
+    });
+
+    it("CRITICAL: 'looser'/'loosest' resolve against live pageState config (propagation)", () => {
+        for (const cleanseMode of ['looser', 'loosest'] as const) {
+            const { deps, extractAndCommit } = makeDeps();
+            const sendResponse = vi.fn();
+            handleGetContentMessage(
+                { type: 'GET_CONTENT', payload: { cleanseMode } },
+                { id: 'test-extension-id' },
+                sendResponse,
+                deps,
+            );
+            expect(extractAndCommit).toHaveBeenCalledTimes(1);
+            const resolved = extractAndCommit.mock.calls[0]![0] as Record<string, unknown> | undefined;
+            expect(resolved).toBeDefined();
+            expect(resolved).not.toBe(deps.pageState.cleansingConfig);
+            if (cleanseMode === 'loosest') {
+                expect(resolved).toMatchObject({
+                    contentStripHardEnabled: false,
+                    contentStripKeywordEnabled: false,
+                    aiSummaryCleansingEnabled: false,
+                });
+            }
+        }
+    });
+
+    it('wrong sender id performs NO extraction even with a cleanseMode', () => {
+        const { deps } = makeDeps('test-extension-id');
+        const sendResponse = vi.fn();
+        handleGetContentMessage(
+            { type: 'GET_CONTENT', payload: { cleanseMode: 'loosest' } },
+            { id: 'external-id' },
+            sendResponse,
+            deps,
+        );
+        expect(deps.extractAndCommit).not.toHaveBeenCalled();
+        expect(sendResponse).not.toHaveBeenCalled();
+    });
+});

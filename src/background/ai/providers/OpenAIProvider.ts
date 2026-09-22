@@ -165,7 +165,13 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 }
                 return { url, headers, body: JSON.stringify(payload) };
             },
-            handleErrorResponse: async () => ({ success: false, summary: "Error: Failed to generate summary. Please check your API settings." }),
+            handleErrorResponse: async (response) => ({
+                success: false,
+                summary: "Error: Failed to generate summary. Please check your API settings.",
+                // Bare status only — the summary deliberately omits it (security
+                // pins); `error` is the diagnostic channel surfaced per-slot.
+                error: `HTTP ${response.status}`,
+            }),
             extractSummary: (data, tid) => this._extractSummary(data as OpenAIApiResponse, tid),
         });
     }

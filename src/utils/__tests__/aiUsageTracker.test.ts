@@ -610,3 +610,60 @@ describe('VULN-002: provider-reported token counts must be validated', () => {
     expect(usage.tokensReceived).toBe(7_678);
   });
 });
+
+// Writer/reader mismatch fix (2026-09-22): the settings UI writes the limit
+// into the 'settings' blob; the checker previously read only a top-level key
+// nothing writes, so 0 = unlimited and every custom value were ignored.
+describe('checkHardLimit — settings blob limit (writer/reader fix)', () => {
+  beforeEach(() => {
+    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+  });
+
+  const currentMonth = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  test('honors 0 = unlimited stored in the settings blob', async () => {
+    mockStorage['settings'] = { max_monthly_tokens: 0 };
+    mockStorage['ai_usage_month'] = currentMonth();
+    mockStorage['ai_usage_tokens_sent'] = 2_000_000;
+    mockStorage['ai_usage_tokens_received'] = 2_000_000;
+
+    const result = await checkHardLimit(1000);
+    expect(result.blocked).toBe(false);
+  });
+
+  test('reads a custom blob limit instead of the 1,000,000 default', async () => {
+    mockStorage['settings'] = { max_monthly_tokens: 1_500_000 };
+    mockStorage['ai_usage_month'] = currentMonth();
+    mockStorage['ai_usage_tokens_sent'] = 1_499_000;
+    mockStorage['ai_usage_tokens_received'] = 0;
+
+    const result = await checkHardLimit(2000); // 1,501,000 total
+    expect(result.blocked).toBe(true);
+    // Proves the blob value was used (the default would print 1,000,000).
+    expect(result.message).toContain('1,500,000');
+  });
+
+  test('blob value wins over a stale top-level key', async () => {
+    mockStorage['settings'] = { max_monthly_tokens: 0 };
+    mockStorage['max_monthly_tokens'] = 500_000; // stale legacy write
+    mockStorage['ai_usage_month'] = currentMonth();
+    mockStorage['ai_usage_tokens_sent'] = 800_000;
+    mockStorage['ai_usage_tokens_received'] = 0;
+
+    const result = await checkHardLimit(0);
+    expect(result.blocked).toBe(false); // blob's 0 (unlimited) must win
+  });
+
+  test('coerces a digit-string blob value (defensive legacy shape)', async () => {
+    mockStorage['settings'] = { max_monthly_tokens: '2000000' };
+    mockStorage['ai_usage_month'] = currentMonth();
+    mockStorage['ai_usage_tokens_sent'] = 1_500_000;
+    mockStorage['ai_usage_tokens_received'] = 0;
+
+    const result = await checkHardLimit(0);
+    expect(result.blocked).toBe(false); // 1.5M < 2M
+  });
+});

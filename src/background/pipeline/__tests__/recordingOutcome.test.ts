@@ -29,6 +29,7 @@ import { decideStepOutcome, finalizeSuccess, type OutcomeAdapters } from '../rec
 import { ErrorStrategy, type RecordingContext } from '../types.js';
 import { PrivatePageError } from '../steps/checkPrivacyHeadersStep.js';
 import { DuplicateError } from '../steps/checkDuplicateStep.js';
+import { RegenerateUpdateError } from '../steps/saveSqliteStep.js';
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
   return {
@@ -198,5 +199,70 @@ describe('finalizeSuccess', () => {
     const fakes2 = makeFakes();
     finalizeSuccess(makeContext(), fakes2);
     expect(fakes2.notifiedSaves).toHaveLength(0);
+  });
+});
+
+describe('decideStepOutcome — RegenerateUpdateError (PBI 2026-09-22-04)', () => {
+  // Regenerate is UPDATE-only: a terminal error with a notice, but NEVER a
+  // pending-recovery entry (pending replays MANUAL records as INSERTs — that
+  // would duplicate the row the update was replacing).
+  it('is terminal (done) with an error result, notifies, and registers NO pending', () => {
+    const fakes = makeFakes();
+    const outcome = decideStepOutcome(
+      new RegenerateUpdateError('SQLite regenerate update failed for id=7'),
+      { name: 'saveSqlite', errorStrategy: ErrorStrategy.BEST_EFFORT },
+      makeContext(),
+      fakes,
+    );
+    expect(outcome.done).toBe(true);
+    if (!outcome.done) throw new Error('expected terminal outcome');
+    expect(outcome.result.success).toBe(false);
+    expect(outcome.result.error).toContain('SQLite regenerate update failed for id=7');
+    expect(fakes.pendings).toHaveLength(0);
+    expect(fakes.notifiedErrors).toHaveLength(1);
+  });
+
+  it('a plain saveSqlite error keeps the legacy BEST_EFFORT continue path', () => {
+    const fakes = makeFakes();
+    const outcome = decideStepOutcome(
+      new Error('SQLite insert failed for url=https://example.com'),
+      { name: 'saveSqlite', errorStrategy: ErrorStrategy.BEST_EFFORT },
+      makeContext(),
+      fakes,
+    );
+    expect(outcome.done).toBe(false);
+    expect(fakes.pendings).toHaveLength(0);
+  });
+});
+
+describe('decideStepOutcome — regenerate AI failure (PBI 2026-09-22-04 review fix)', () => {
+  it('RETRY-terminal failure with targetEntryId: error result + notice, NO pending page', () => {
+    const fakes = makeFakes();
+    const outcome = decideStepOutcome(
+      new Error('AI provider unreachable'),
+      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
+      makeContext({
+        data: { title: 'T', url: 'https://example.com', content: 'c', targetEntryId: 7 } as never,
+      }),
+      fakes,
+    );
+    expect(outcome.done).toBe(true);
+    if (!outcome.done) throw new Error('expected terminal outcome');
+    expect(outcome.result.success).toBe(false);
+    expect(outcome.result.error).toBe('AI provider unreachable');
+    expect(fakes.pendings).toHaveLength(0);
+    expect(fakes.notifiedErrors).toHaveLength(1);
+  });
+
+  it('normal (non-regenerate) RETRY failure still registers the pending page', () => {
+    const fakes = makeFakes();
+    const outcome = decideStepOutcome(
+      new Error('AI provider unreachable'),
+      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
+      makeContext(),
+      fakes,
+    );
+    expect(outcome.done).toBe(true);
+    expect(fakes.pendings).toHaveLength(1);
   });
 });

@@ -38,6 +38,9 @@ export interface CleansingConfig extends CleansingConfigRuleFlags, Record<Thresh
     whitelistExtractionEnabled: boolean;
     aiSummaryCleansingCustomPatterns: string[];
     contentDedupEnabled: boolean;
+    // PBI 05 overcut guards (default ON — deep-dig 2026-09-22)
+    candidateGuardEnabled: boolean;
+    cleanseGuardEnabled: boolean;
 }
 
 /**
@@ -75,8 +78,11 @@ export const DEFAULT_CLEANSING_CONFIG: CleansingConfig = {
     aiSummaryCleansingCustomPatterns: [],
     aiSummaryCleansingFallbackRatio: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackRatio,
     aiSummaryCleansingFallbackMinBytes: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackMinBytes,
+    aiSummaryCleansingFallbackMinChars: THRESHOLD_CONFIG_DEFAULTS.aiSummaryCleansingFallbackMinChars,
     contentDedupEnabled: true,
     contentDedupThreshold: THRESHOLD_CONFIG_DEFAULTS.contentDedupThreshold,
+    candidateGuardEnabled: true,
+    cleanseGuardEnabled: true,
     ...CLEANSING_RULE_PLACEHOLDER_DEFAULTS,
 };
 

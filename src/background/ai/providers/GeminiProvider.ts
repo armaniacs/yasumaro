@@ -296,10 +296,12 @@ export class GeminiProvider extends AIProviderStrategy {
 
     private async _handleError(response: Response): Promise<AISummaryResult> {
         // const errorText = await response.text();
+        // Bare status only in `error` — summary omits it (security pins),
+        // `error` is the per-slot diagnostic channel.
         if (response.status === 404) {
-            return { success: false, summary: "Error: Model not found. Please check your AI model settings." };
+            return { success: false, summary: "Error: Model not found. Please check your AI model settings.", error: `HTTP ${response.status}` };
         }
-        return { success: false, summary: "Error: Failed to generate summary. Please check your API settings." };
+        return { success: false, summary: "Error: Failed to generate summary. Please check your API settings.", error: `HTTP ${response.status}` };
     }
 
     private async _extractSummary(data: GeminiApiResponse, traceId: string = ''): Promise<AISummaryResult> {

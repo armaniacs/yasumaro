@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja" data-ow-e2e-test>
+<head>
+  <meta charset="utf-8">
+  <title>【Olive】ランク(一般、ゴールド、プラチナプリファード、Olive Infinite)の切替方法 | よくあるご質問 — PBI 05 再現fixture</title>
+</head>
+<body>
+  <header id="global-header">
+    <nav>
+      <a href="/">ログイン</a>
+      <a href="/faq">よくあるご質問</a>
+      <a href="/business">法人向け</a>
+    </nav>
+  </header>
+
+  <!-- div コンテナ(main タグは使わない — main が article+faq を含むと
+       スコア1位候補としてフロアを満たしてしまい、SMBC型の「tiny top candidate」
+       構造にならない。class名は既定キーワードの部分文字列衝突を避ける:
+       DEFAULT_KEYWORDS の 'age' は [class*="age"] で 'page-body' を全削除する
+       (substring match — 現行仕様の既知の足元)。 -->
+  <div class="content-column">
+    <!--
+      PBI 05 qa.smbc 再現: スコア1位候補(article)が文字数フロア未満、
+      実質の本文はスコアリングから漏れた隣接要素に存在する構造。
+      レガシー挙動では article が採用され 193B 相当の断片が送出された。
+    -->
+    <article id="rank-switch">
+      <h1>【Olive】ランク切替方法</h1>
+      <p>個人 法人</p>
+    </article>
+
+    <div class="faq-answer-body" id="faq-answer">
+      <p>
+        Oliveのランク切替方法についてご案内します。一般、ゴールド、プラチナプリファード、
+        Olive Infiniteの各ランクは、ご利用状況に応じて自動的に決定されます。
+        ランクの切り替えをご希望の場合は、店舗窓口またはインターネットバンクからお手続きいただけます。
+        切替の適用時期、必要書件、手数料につきましては、よくあるご質問の回答一覧から
+        該当する項目をご確認ください。ランクdowngradeの場合も同様の手順で手続きできます。
+        なお、ランク判定基準は毎月末日時点の利用残高と取引回数に基づいて算出され、
+        翌月の10営業日後に反映されます。
+      </p>
+      <p>
+        お手続き前に、ランク切替の対象外となる商品やサービスがないことをご確認ください。
+        詳細は口座振替サービス約款および当行ウェブサイトの重要事項をご覧ください。
+      </p>
+    </div>
+  </div>
+
+  <footer id="site-footer">
+    <p>Copyright (c) fixture. PBI 2026-09-22-05 test page.</p>
+  </footer>
+
+  <!-- e2e scroll gate (≥50% scroll) needs a page taller than the viewport.
+       Empty spacer: no text → candidate scoring/floor semantics unchanged. -->
+  <div class="e2e-scroll-spacer" aria-hidden="true" style="height: 3000px;"></div>
+</body>
+</html>

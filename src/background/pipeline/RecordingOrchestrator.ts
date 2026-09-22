@@ -24,6 +24,7 @@ import {
 } from './steps/index.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage/types.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
@@ -133,6 +134,13 @@ export class RecordingOrchestrator {
         sqliteClient: client,
         obsidianSynced: context.obsidianDuration !== undefined ? true : undefined,
         traceId: context.traceId,
+        // PBI 04: regenerate updates its own row instead of inserting.
+        targetEntryId: context.data.targetEntryId,
+        // Follow-up: skip the UPDATE when the AI produced no real summary.
+        aiSucceeded: context.privacyResult?.aiSucceeded,
+        // Same gate as mapToBrowsingLogRecord: when content storage is off the
+        // UPDATE must leave the existing content column untouched, not null it.
+        contentEnabled: context.settings[StorageKeys.CONTENT_STORAGE_ENABLED] === true,
       });
       await saveSqliteStep(params);
       addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title, traceId: context.traceId });

@@ -481,3 +481,23 @@ describe('buildDailyMarkdown', () => {
     expect(result).not.toContain('Old format summary');
   });
 });
+
+// --- PBI 2026-09-22-04: regenerate side-effect skip ---
+describe('saveLocalMarkdownStep — skipLocalMarkdownExport (regenerate, CRITICAL)', () => {
+  it('returns the context untouched without buffering when the skip flag is set', async () => {
+    const { saveLocalMarkdownStep } = await import('../saveLocalMarkdownStep.js');
+    const chromeStore = ((globalThis as Record<string, unknown>)['chrome'] as { storage: { local: { set: ReturnType<typeof vi.fn> } } } | undefined);
+    if (chromeStore) vi.clearAllMocks();
+    const context = {
+      data: { title: 'T', url: 'https://example.com', skipLocalMarkdownExport: true },
+      settings: {},
+      errors: [],
+      markdownEntryData: { title: 'T', markdown: '# T' },
+    } as never;
+    const before = chromeStore?.storage.local.set.mock.calls.length ?? 0;
+    const out = await saveLocalMarkdownStep(context, undefined);
+    expect(out).toBeDefined();
+    const after = chromeStore?.storage.local.set.mock.calls.length ?? 0;
+    expect(after).toBe(before); // no buffer write
+  });
+});

@@ -54,6 +54,9 @@ export interface ContentResponse {
     aiSummaryCleansedReason: AiSummaryCleansedReason;
     aiSummaryCleansedReasons?: string[];
   };
+  /** PBI 05: extraction fallback outcome (REGENERATE_SUMMARY forwards it). */
+  fallbackTriggered?: boolean;
+  fallbackReason?: string;
 }
 
 /**
@@ -99,11 +102,20 @@ export function isMaskedItem(item: unknown): item is MaskedItem {
   return true;
 }
 
+/** PBI 04 の wire 応答。gate 拒否時のみ needsForce=true（強制再生成の提示用）。 */
+export type RegenerateSummaryResponse = RecordingResult & {
+  needsForce?: boolean;
+  /** 試行したプロバイダーID（AI全滅時のみ。PBI 2026-09-22-04 follow-up）。 */
+  providersTried?: string[];
+};
+
 /**
  * 記録処理の結果型
  */
 export interface RecordingResult {
   success: boolean;
+  /** True only when a real AI model produced the summary (PBI 2026-09-22-04 follow-up). */
+  aiSucceeded?: boolean;
   error?: string;
   skipped?: boolean;
   reason?: string;
@@ -119,6 +131,10 @@ export interface RecordingResult {
   aiDuration?: number;
   /** AI要約に使用したプロバイダー識別子 (例: "openai", "gemini") — undefined の場合は不明 */
   aiProvider?: string;
+  /** 試行したプロバイダーID（全滅時のみ。PBI 2026-09-22-04 follow-up） */
+  attemptedProviders?: string[];
+  /** スロット別の失敗詳細（per-provider error trail。同 follow-up） */
+  slotFailures?: Array<{ provider: string; model?: string; error: string }>;
   /** Obsidian保存時間 (ミリ秒) — undefined の場合は Obsidian 未保存 */
   obsidianDuration?: number;
   /** Local Markdown保存時間 (ミリ秒) — undefined の場合はローカル書き出し未実行 */
@@ -169,8 +185,15 @@ export interface RecordingData {
   aiSummaryCleansedReason?: AiSummaryCleansedReason;
   aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
   fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
+  /** PBI 05: フォールバック発動理由（triggered 時のみ） */
+  fallbackReason?: string;
   cleansedReason?: string;              // コンテンツクレンジング実行理由 (hard/keyword/both/none)
   precomputedMaskedCount?: number;      // 事前計算済みPIIマスク件数（privacy pipeline経由不要時）
+  /** PBI 04: UPDATE-in-place target (regenerate) — save step replaces this row. */
+  targetEntryId?: number;
+  /** PBI 04: policy-owned side-effect skips (regenerate = SQLite only). */
+  skipObsidianAppend?: boolean;
+  skipLocalMarkdownExport?: boolean;
 }
 
 // ============================================================================
@@ -324,6 +347,7 @@ export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
  */
 export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
+  T extends 'REGENERATE_SUMMARY' ? RegenerateSummaryResponse :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
   T extends 'GET_CONTENT' ? ContentResponse :
   T extends 'FETCH_URL' ? { success: true; data: string; contentType: string | null } :

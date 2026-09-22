@@ -46,6 +46,11 @@ interface ISanitizers {
 export interface PrivacyPipelineResult {
   summary?: string;
   success?: boolean;
+  /** True only when a real AI model produced the summary (PBI 2026-09-22-04
+   *  follow-up: regenerate gates its UPDATE on this instead of trusting a
+   *  non-empty summary, because failed providers return their error text
+   *  inside `summary`). Absent on paths that never ran AI (legacy default). */
+  aiSucceeded?: boolean;
   preview?: boolean;
   processedContent?: string;
   mode?: string;
@@ -58,6 +63,10 @@ export interface PrivacyPipelineResult {
   receivedTokens?: number;
   providerName?: string;
   modelName?: string;
+  /** 試行したプロバイダーID（全滅時のみ設定。PBI 2026-09-22-04 follow-up） */
+  attemptedProviders?: string[];
+  /** スロット別の失敗詳細（成功スロット以降の失敗も保持。同 follow-up） */
+  slotFailures?: { provider: string; model?: string; error: string }[];
   /** クラウドAI要約(L3)の実呼び出し時間 (ミリ秒) — クラウドAIが呼ばれた場合のみセットされる */
   aiCallDurationMs?: number;
 }
@@ -89,7 +98,7 @@ export class PrivacyPipeline {
     const traceId = options.traceId || '';
 
     if (!content) {
-      return { summary: 'Summary not available.' };
+      return { summary: 'Summary not available.', aiSucceeded: false };
     }
 
     const sanitizedSettings = this._buildSanitizedSettings(alreadyProcessed);
@@ -156,7 +165,7 @@ export class PrivacyPipeline {
       };
     }
 
-    return { summary: 'Summary not available.', originalTokens, cleansedTokens, mode: this.mode };
+    return { summary: 'Summary not available.', originalTokens, cleansedTokens, mode: this.mode, aiSucceeded: false };
   }
 
   private _buildSanitizedSettings(alreadyProcessed: boolean) {
@@ -188,7 +197,7 @@ export class PrivacyPipeline {
 
     const localSafety = checkPromptSafety(content, 'local-input', { traceId });
     if (localSafety.blocked) {
-      return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens } };
+      return { returnEarly: true, result: { summary: 'Error: Content blocked due to potential security risk.', originalTokens, aiSucceeded: false } };
     }
 
     const localCallStart = performance.now();
@@ -219,6 +228,8 @@ export class PrivacyPipeline {
           summary: processedText,
           originalTokens,
           aiCallDurationMs: localCallDurationMs,
+          // The local model genuinely produced this summary.
+          aiSucceeded: localResult.success === true,
           ...pickDefined({
             sentTokens: localResult.sentTokens,
             receivedTokens: localResult.receivedTokens,
@@ -270,6 +281,9 @@ export class PrivacyPipeline {
 
     return {
       summary: sanitizedSummary,
+      // The chain caller (RemoteAIService loop) may return a failure whose
+      // error text sits in `summary` — only a real success counts (PBI 04).
+      aiSucceeded: aiResult.success === true,
       maskedCount,
       originalTokens,
       cleansedTokens,
@@ -280,6 +294,8 @@ export class PrivacyPipeline {
         receivedTokens: aiResult.receivedTokens,
         providerName: aiResult.providerName,
         modelName: aiResult.modelName,
+        attemptedProviders: aiResult.attemptedProviders,
+        slotFailures: aiResult.slotFailures,
       }),
     };
   }

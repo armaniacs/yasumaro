@@ -250,12 +250,50 @@ export function getRateLimitMessage(resetTime: number): string {
 }
 
 async function getMaxMonthlyTokens(): Promise<number> {
-  const result = await chrome.storage.local.get(StorageKeys.MAX_MONTHLY_TOKENS);
-  const value = result[StorageKeys.MAX_MONTHLY_TOKENS];
-  if (typeof value === 'number' && value >= 0) {
-    return value;
+  const DEFAULT_MAX = 1000000;
+  const isValid = (v: unknown): v is number =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0;
+
+  // 1) Canonical 'settings' blob (writer/reader mismatch fix 2026-09-22): the
+  //    recording-conditions UI writes via SettingsRepository.setAll into the
+  //    'settings' object, while this function only read a top-level key that
+  //    nothing writes — every custom value (including 0 = unlimited) silently
+  //    fell back to the 1,000,000 default and blocked real sessions.
+  try {
+    const result = await chrome.storage.local.get('settings');
+    const blob = result['settings'];
+    if (blob && typeof blob === 'object' && !Array.isArray(blob)) {
+      const value = (blob as Record<string, unknown>)[StorageKeys.MAX_MONTHLY_TOKENS];
+      if (isValid(value)) return value;
+      if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
+    }
+  } catch {
+    // fall through
   }
-  return 1000000;
+
+  // 2) Legacy top-level key: writes from before the UI moved into the blob,
+  //    plus test fixtures.
+  try {
+    const result = await chrome.storage.local.get(StorageKeys.MAX_MONTHLY_TOKENS);
+    const legacy = result[StorageKeys.MAX_MONTHLY_TOKENS];
+    if (isValid(legacy)) return legacy;
+  } catch {
+    // fall through
+  }
+
+  // 3) Encrypted-at-rest installs: the repository decrypts the blob for us.
+  //    Dynamic import keeps SettingsRepository's module-load side effects out
+  //    of test setups that stub chrome.storage before importing this module.
+  try {
+    const { settingsRepository } = await import('./storage/SettingsRepository.js');
+    const settings = await settingsRepository.getAll();
+    const value = settings[StorageKeys.MAX_MONTHLY_TOKENS];
+    if (isValid(value)) return value;
+  } catch {
+    // fall through
+  }
+
+  return DEFAULT_MAX;
 }
 
 export interface HardLimitResult {
