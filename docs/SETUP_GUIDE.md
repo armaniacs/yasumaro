@@ -264,6 +264,8 @@ ollama list
 **主な機能**:
 - **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
 - **スター**: よく参照するページにスターを付けて後から素早く探せます
+- **AI要約の作り直し**: エントリヘッダーの「AI要約を作り直す」ボタンで、クレンジング緩和3択（現在の設定 / やや緩い / 最も緩い）を選んで既存行の要約を再生成できます（新規行は増えません）。詳細は [AIによる自動要約ガイド](AI_SUMMARY_GUIDE.md) を参照
+- **選択一括操作**: 各エントリのチェックボックスで複数選択すると、選択バーに **「AI要約を作り直し」** と **「選択した記事を削除」** が表示されます。削除はその場の件数付き2段階確認（「本当に削除する」／キャンセル）付きで、最初の失敗で中断します。一括再生成は現在の設定で逐次実行し、成功・失敗件数（実行中の行はスキップ件数として区別）をトースト表示します（再生成の緩和3択・force は一括では使えません。個別ヘッダーから実行してください）
 - **削除**: 個別エントリを物理削除（GDPR Art.17準拠）。「すべてのデータを削除」で全件一括削除も可能です
 
 **絞り込み**:
@@ -524,6 +526,8 @@ In the `Dashboard → SQLite History` tab, you can view and manage your recordin
 **Key features**:
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
 - **Star**: Star frequently referenced pages to find them quickly later
+- **Regenerate AI summary**: The "Regenerate AI summary" button in each entry header rebuilds the summary in place (no new row) with a cleansing-loosening choice of three (Current settings / Looser / Loosest). See the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details
+- **Bulk selection actions**: Check the box on multiple entries to reveal **"Regenerate AI summaries"** and **"Delete selected articles"** in the selection bar. Bulk delete confirms inline in the bar with the count ("Delete now" / Cancel) and stops at the first failure. Bulk regenerate runs sequentially with current settings and toasts succeeded/failed counts (rows already running are reported as skipped; the loosening choices and force option are header-only — use the per-entry header for those)
 - **Delete**: Physically delete individual entries (GDPR Art.17 compliant). "Delete All Data" removes everything at once
 
 **Filtering**:

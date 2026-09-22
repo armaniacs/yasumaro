@@ -20,6 +20,8 @@ import {
   setEntryRegenerateBusy,
   clearEntryRegenerateError,
   showEntryRegenerateError,
+  showDeleteConfirm,
+  hideDeleteConfirm,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 
@@ -229,6 +231,93 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     }
   }
 
+  // --- Bulk actions on the checked rows -------------------------------------
+  // Bulk delete is a two-step inline confirm in the bulk bar (right where
+  // the eye is): first click reveals "really delete" + cancel, second click
+  // executes. The shared modal dialog is intentionally not used here — it
+  // renders at the document end (bottom-left, easy to miss).
+  function handleDeleteSelected(): void {
+    if (!container) return;
+    if (state().selectedIds.size === 0) return;
+    showDeleteConfirm(container);
+  }
+
+  async function handleDeleteSelectedConfirm(): Promise<void> {
+    if (!container) return;
+    const total = state().selectedIds.size;
+    if (total === 0) {
+      hideDeleteConfirm(container);
+      return;
+    }
+    hideDeleteConfirm(container);
+    const result = await model.deleteSelectedEntries();
+    // The model already dispatched operationError + notify on a total failure;
+    // only toast the partial/full success here. A partial run must name the
+    // interruption — otherwise the leftover rows look silently kept.
+    if (result.deletedCount > 0) {
+      const body = result.error
+        ? t('historyDeleteSelectedPartial', [
+          String(result.deletedCount),
+          String(total - result.deletedCount),
+          translateHistoryError(result.error),
+        ])
+        : t(getPluralKey('historyDeleteSelectedSuccess', result.deletedCount), [String(result.deletedCount)]);
+      notify(t('historyDeleteSelected'), body);
+    }
+  }
+
+  /** Handler-local in-flight guard: repeat clicks while the bulk run is executing are ignored. */
+  let bulkRegenerateInFlight = false;
+
+  async function handleRegenerateSelected(): Promise<void> {
+    if (bulkRegenerateInFlight) return;
+    const targets = state().entries.filter(
+      (e) => state().selectedIds.has(e.id) && !!e.url,
+    );
+    if (targets.length === 0) return;
+
+    bulkRegenerateInFlight = true;
+    try {
+      let succeeded = 0;
+      let failed = 0;
+      let skipped = 0;
+      for (const entry of targets) {
+        const result = await regenerateSummary({
+          id: entry.id,
+          url: entry.url!,
+          title: entry.title || entry.url!,
+          cleanseMode: 'current',
+        });
+        if (result.success) {
+          succeeded += 1;
+        } else if (result.error !== 'in_flight') {
+          // needsForce gate rejections and provider failures both land here —
+          // bulk v1 has no per-item force UI, so they are counted as failed.
+          failed += 1;
+        } else {
+          // A single-entry regenerate is already running for this row —
+          // report it as skipped so succeeded + failed + skipped === targets.
+          skipped += 1;
+        }
+      }
+      notify(
+        t('historyRegenerateSelected'),
+        skipped > 0
+          ? t('historyRegenerateSelectedResultSkipped', [String(succeeded), String(failed), String(skipped)])
+          : t('historyRegenerateSelectedResult', [String(succeeded), String(failed)]),
+      );
+      // Re-query so every updated row shows the new summary/stats in one pass.
+      await model.reloadCurrent();
+    } catch (e: unknown) {
+      notify(
+        t('historyRegenerateSelected'),
+        mapRegenerateError(e instanceof Error ? e.message : String(e), false),
+      );
+    } finally {
+      bulkRegenerateInFlight = false;
+    }
+  }
+
   // The single callback bundle handed to view.render(). Every entry-list /
   // calendar / sort / pagination / bulk-bar / tag-filter interaction runs
   // through this one construction site — adding a callback means editing
@@ -249,6 +338,9 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       onSelectAll: (checked) => model.selectAllEntries(checked),
       onClearSelection: () => model.clearEntrySelection(),
       onAppend: () => void handleAppendToObsidian(),
+      onDeleteSelected: () => handleDeleteSelected(),
+      onDeleteSelectedConfirm: () => void handleDeleteSelectedConfirm(),
+      onRegenerateSelected: () => void handleRegenerateSelected(),
       onTagFilterClear: () => model.clearTagFilter(),
       onRegenerate: (id, mode, force) => void handleRegenerate(id, mode, force),
       translateError: translateHistoryError,

@@ -3425,6 +3425,98 @@
   "historyAppendToObsidian": {
     "message": "Append selected to Obsidian"
   },
+  "historyRegenerateSelected": {
+    "message": "Regenerate AI summaries"
+  },
+  "historyDeleteSelected": {
+    "message": "Delete selected articles"
+  },
+  "historyDeleteConfirmYes": {
+    "message": "Delete now"
+  },
+  "historyDeleteSelectedConfirm": {
+    "message": "Delete $1 selected articles? This cannot be undone.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyDeleteSelectedSuccess": {
+    "message": "$1 articles deleted",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyDeleteSelectedSuccess_one": {
+    "message": "$1 article deleted",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "historyDeleteSelectedSuccess_other": {
+    "message": "$1 articles deleted",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyDeleteSelectedPartial": {
+    "message": "Deleted $1, stopped with $2 remaining: $3",
+    "placeholders": {
+      "deleted": {
+        "content": "$1",
+        "example": "2"
+      },
+      "remaining": {
+        "content": "$2",
+        "example": "1"
+      },
+      "reason": {
+        "content": "$3",
+        "example": "Storage quota exceeded."
+      }
+    }
+  },
+  "historyRegenerateSelectedResult": {
+    "message": "$1 succeeded, $2 failed",
+    "placeholders": {
+      "success": {
+        "content": "$1",
+        "example": "3"
+      },
+      "failed": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyRegenerateSelectedResultSkipped": {
+    "message": "$1 succeeded, $2 failed ($3 skipped: already running)",
+    "placeholders": {
+      "success": {
+        "content": "$1",
+        "example": "3"
+      },
+      "failed": {
+        "content": "$2",
+        "example": "1"
+      },
+      "skipped": {
+        "content": "$3",
+        "example": "1"
+      }
+    }
+  },
   "historyAppendSuccess": {
     "message": "$1 records appended to Obsidian",
     "placeholders": {

@@ -18,7 +18,7 @@ beforeEach(() => {
 });
 
 describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
-  it('exposes onNavigateIn/onNavigateOut and hides the 8 plumbing methods (27 -> 21)', () => {
+  it('exposes onNavigateIn/onNavigateOut and hides the 8 plumbing methods (28 -> 22)', () => {
     const model = createSqliteHistoryModel({ queryHistory: vi.fn().mockResolvedValue(okEmpty()) });
     expect(typeof model.onNavigateIn).toBe('function');
     expect(typeof model.onNavigateOut).toBe('function');
@@ -34,7 +34,7 @@ describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
     ]) {
       expect(model).not.toHaveProperty(hidden);
     }
-    expect(Object.keys(model)).toHaveLength(21);
+    expect(Object.keys(model)).toHaveLength(22);
   });
 });
 

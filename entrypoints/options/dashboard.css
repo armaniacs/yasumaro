@@ -1,6 +1,7 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
 @import url("../../src/styles/wizard.css");
+@import url("../../src/styles/confirmDialog.css");
 
 /**
  * dashboard.css
@@ -1700,6 +1701,28 @@ button#changeMasterPassword:hover {
 .danger-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Bulk-bar inline delete confirm: sits next to the eye line, right after
+ * the delete button, instead of the shared modal at the document end. */
+.sqlite-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-danger-border, #f5c6c6);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg, #fff5f5);
+}
+
+.sqlite-delete-confirm.hidden {
+  display: none;
+}
+
+.sqlite-delete-confirm-text {
+  font-size: 13px;
+  color: var(--color-danger-text, #991b1b);
 }
 
 .pending-pagination {

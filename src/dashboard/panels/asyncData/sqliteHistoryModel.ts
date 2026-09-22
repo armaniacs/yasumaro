@@ -351,8 +351,13 @@ export interface SqliteHistoryModelDeps {
 }
 
 export type AppendResult =
-  | { success: true; appendedCount: number }
+  { success: true; appendedCount: number }
   | { success: false; error: string };
+
+export type BulkDeleteResult = {
+  deletedCount: number;
+  error: string | null;
+};
 
 export interface NavigateInParams {
   searchTag?: string;
@@ -378,6 +383,7 @@ export interface SqliteHistoryModel {
   toggleStar(id: number): Promise<void>;
   deleteEntry(id: number): Promise<void>;
   appendSelectedToObsidian(): Promise<AppendResult | null>;
+  deleteSelectedEntries(): Promise<BulkDeleteResult>;
   search(query: string): void;
   selectDate(dateStr: string): Promise<void>;
   changeSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void>;
@@ -684,6 +690,44 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     notify();
   }
 
+  /** Bulk delete of the checked rows — stops at the first failure, reports both counts. */
+  async function deleteSelectedEntries(): Promise<BulkDeleteResult> {
+    if (state.selectedIds.size === 0) return { deletedCount: 0, error: null };
+    // Snapshot: deleteSuccess mutates selectedIds as we go.
+    const ids = Array.from(state.selectedIds);
+    const urls = new Map<number, string>();
+    for (const entry of state.entries) {
+      if (state.selectedIds.has(entry.id) && entry.url) urls.set(entry.id, entry.url);
+    }
+    let deletedCount = 0;
+    let error: string | null = null;
+    for (const id of ids) {
+      const result = await deleteLog(id);
+      if ('error' in result) {
+        error = result.error;
+        break;
+      }
+      dispatch({ type: 'deleteSuccess', id });
+      deletedCount += 1;
+      const url = urls.get(id);
+      if (url) {
+        try {
+          await removeSavedUrl(url);
+        } catch (e) {
+          console.error('Failed to remove legacy history entry:', e);
+        }
+      }
+    }
+    if (deletedCount > 0) {
+      invalidateCache('mutation');
+      notify();
+    } else if (error) {
+      dispatch({ type: 'operationError', error });
+      notify();
+    }
+    return { deletedCount, error };
+  }
+
   async function appendSelectedToObsidian(): Promise<AppendResult | null> {
     if (state.selectedIds.size === 0) return null;
     const ids = Array.from(state.selectedIds);
@@ -782,6 +826,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     toggleStar: toggleStarImpl,
     deleteEntry,
     appendSelectedToObsidian,
+    deleteSelectedEntries,
     search,
     selectDate,
     changeSort,

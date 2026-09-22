@@ -14,6 +14,9 @@ AI 要約から重要な情報が誤って削除される（誤削除）場合�
 2. **誤削除を報告** — popup からワンクリックで報告
 3. **ドメイン別クレンジング上書き** — 特定ドメインだけ設定を変更
 4. **動的コンテンツと観測性** — SPA / Shadow DOM への対応と、除去内容の可視化
+5. **再生成時のクレンジング緩和** — 履歴エントリから1回だけ緩めて作り直し
+
+設定を変える前に対象レコードだけ作り直したい場合は、**Dashboard → SQLite History** のエントリヘッダーから「AI要約を作り直す」を選び、緩和3択（現在の設定 / やや緩い / 最も緩い）を指定します。設定の永続化は行いません（詳細: [AIによる自動要約ガイド](AI_SUMMARY_GUIDE.md)）。
 
 ### クレンジングプリセット
 
@@ -78,6 +81,9 @@ When important information is accidentally removed by the AI summary cleansing (
 2. **Report Cleansing Feedback** — one-click reporting from the popup
 3. **Per-site cleansing overrides** — change settings for specific domains only
 4. **Dynamic content and observability** — SPA / Shadow DOM handling and visibility into what was removed
+5. **Cleansing loosening on regenerate** — rebuild a single record with a one-shot looser setting
+
+If you want to rebuild just one record before changing global settings, open the entry header under **Dashboard → SQLite History**, choose "Regenerate AI summary", and pick one of the three loosening modes (Current settings / Looser / Loosest). Nothing is persisted to settings (see the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details).
 
 ### Cleansing Presets
 
