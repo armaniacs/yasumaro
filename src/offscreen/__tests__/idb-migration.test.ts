@@ -183,12 +183,12 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
     );
   });
 
-  it('backs up all 32 columns from the old wa-sqlite IDB database', async () => {
+  it('backs up all 33 columns from the old wa-sqlite IDB database', async () => {
     vi.stubGlobal('indexedDB', {
       databases: vi.fn().mockResolvedValue([{ name: 'idb-batch-atomic', version: 5 }]),
     });
 
-    // Build a full 32-column row in COLUMN_NAMES order.
+    // Build a full 33-column row in COLUMN_NAMES order.
     const fullRow: unknown[] = [
       'https://example.com/full', // url
       'Full Title',               // title
@@ -219,9 +219,10 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
       4000,                       // cleansed_bytes
       2000,                       // ai_summary_original_bytes
       1500,                       // ai_summary_cleansed_bytes
-      6000,                       // extracted_sentences_bytes
-      10000,                      // extracted_sentences_original_bytes
-      1,                          // fallback_triggered
+      6000,                      // extracted_sentences_bytes
+      10000,                     // extracted_sentences_original_bytes
+      1,                         // fallback_triggered
+      'candidate_too_small',      // fallback_reason
     ];
     expect(fullRow).toHaveLength(COLUMN_NAMES.length);
 

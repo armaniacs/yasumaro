@@ -44,6 +44,10 @@ export interface AiSummaryCleanseOptions extends AiSummaryCleanseRuleFlags {
     // Over-cleansed fallback thresholds
     fallbackRatio?: number;           // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
     fallbackMinBytes?: number;        // 過剰削減フォールバック絶対量閾値（デフォルト: 300）
+    // PBI 05 overcut guards (hot path compares CHARS, never encodes — Ask Q3B)
+    fallbackMinChars?: number;        // ①② 絶対量閾値（文字数・デフォルト: 100）
+    cleanseGuardEnabled?: boolean;    // ② Content Cleansing 過剰削減ガード（デフォルト: true）
+    candidateGuardEnabled?: boolean;  // ① 候補選択フロアガード（デフォルト: true）
     // Byte measurement
     /**
      * Measure outerHTML bytes via Blob. Default true (legacy behavior for

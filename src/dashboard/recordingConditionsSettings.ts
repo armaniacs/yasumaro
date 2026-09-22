@@ -245,4 +245,14 @@ function wireEvents(container: HTMLElement): void {
       validationError.style.display = '';
     }
   });
+
+  // Any field edit invalidates both messages: a leftover「設定を保存しました」
+  // after editing reads as saved-when-it-isn't, and a stale error mislabels
+  // the current state (stale-message / doubled-text report 2026-09-22).
+  container.addEventListener('input', () => {
+    validationError.classList.add('hidden');
+    validationError.style.display = 'none';
+    successMsg.classList.add('hidden');
+    successMsg.style.display = 'none';
+  });
 }

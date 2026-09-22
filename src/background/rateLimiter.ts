@@ -62,9 +62,15 @@ export class RateLimiter {
 
   async check(
     sender: MessageSenderLike | undefined,
-    settings: Record<string, unknown>
+    settings: Record<string, unknown>,
+    // PBI 04: optional counter bucket — regenerate keeps its own bucket so
+    // dashboard bursts never starve popup manual records (Ask N3-B). The
+    // default path (no bucket) keeps the legacy `origin:…` key byte-exact.
+    opts?: { bucket?: string },
   ): Promise<RateLimitResult> {
-    const senderKey = `origin:${originFromSender(sender)}`;
+    const senderKey = opts?.bucket
+      ? `${opts.bucket}:origin:${originFromSender(sender)}`
+      : `origin:${originFromSender(sender)}`;
     const now = Date.now();
     const limiterState = this.state.get(senderKey);
     const rateLimitMax = (settings[StorageKeys.SKIP_AI_RATE_LIMIT_MAX] as number) ?? RATE_LIMITS.SKIP_AI_MAX;

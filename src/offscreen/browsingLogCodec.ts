@@ -65,5 +65,6 @@ export function buildRecordFromPayload(payload: Record<string, unknown>): Browsi
     extracted_sentences_bytes: payload.extracted_sentences_bytes != null ? toFiniteNumber(payload.extracted_sentences_bytes) : null,
     extracted_sentences_original_bytes: payload.extracted_sentences_original_bytes != null ? toFiniteNumber(payload.extracted_sentences_original_bytes) : null,
     fallback_triggered: payload.fallback_triggered != null ? (toFiniteNumber(payload.fallback_triggered) ?? 0) : 0,
+    fallback_reason: payload.fallback_reason != null ? String(payload.fallback_reason) : null,
   };
 }

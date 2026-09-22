@@ -6,6 +6,7 @@ import {
   classifyExtractionMissing,
   classifyMaskingMissing,
   classifyTokensMissing,
+  describeFallbackReasonKey,
   resolveCleansingBytes,
 } from '../historyEntryPresentation.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
@@ -167,5 +168,21 @@ describe('historyEntryPresentation', () => {
       expect(resolved.original).toBeUndefined();
       expect(resolved.cleansed).toBeUndefined();
     });
+  });
+});
+
+describe('describeFallbackReasonKey (PBI 05)', () => {
+  it('maps all four known reasons to i18n keys', () => {
+    expect(describeFallbackReasonKey('short_content')).toBe('fallbackReasonShortContent');
+    expect(describeFallbackReasonKey('over_cleansed')).toBe('fallbackReasonOverCleansed');
+    expect(describeFallbackReasonKey('content_overcut')).toBe('fallbackReasonContentOvercut');
+    expect(describeFallbackReasonKey('candidate_too_small')).toBe('fallbackReasonCandidateTooSmall');
+  });
+
+  it('returns null for absent or unknown reasons (row is omitted, never a broken key)', () => {
+    expect(describeFallbackReasonKey(null)).toBeNull();
+    expect(describeFallbackReasonKey(undefined)).toBeNull();
+    expect(describeFallbackReasonKey('')).toBeNull();
+    expect(describeFallbackReasonKey('mystery_reason')).toBeNull();
   });
 });

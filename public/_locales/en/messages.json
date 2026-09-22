@@ -2576,6 +2576,90 @@
   "aiSummaryCleansingFallbackMinBytesDesc": {
     "message": "Fallback triggers when cleansed content drops below this byte size. Default: 300 bytes"
   },
+  "overcutGuardSection": {
+    "message": "Over-cut Guards"
+  },
+  "overcutGuardSectionDesc": {
+    "message": "Automatically restore the text when extraction or Content Cleansing cuts too deeply."
+  },
+  "extractionGuardCandidateEnabled": {
+    "message": "Candidate floor guard (extraction)"
+  },
+  "extractionGuardCandidateEnabledDesc": {
+    "message": "When the top-ranked content candidate is below the character floor, fall back to the next candidate or the full body instead of shipping a starved excerpt."
+  },
+  "extractionGuardContentCleanseEnabled": {
+    "message": "Over-cut guard (Content Cleansing)"
+  },
+  "extractionGuardContentCleanseEnabledDesc": {
+    "message": "When Content Cleansing removes too much of the candidate text (below the reduction ratio or character floor), restore the pre-cleansing text."
+  },
+  "aiSummaryCleansingFallbackMinCharsLabel": {
+    "message": "Character Floor"
+  },
+  "aiSummaryCleansingFallbackMinCharsDesc": {
+    "message": "Absolute floor for the guards in characters (separate from the byte floor above). Default: 100."
+  },
+  "fallbackReasonCandidateTooSmall": {
+    "message": "Candidate below the character floor — fell back to body"
+  },
+  "fallbackReasonContentOvercut": {
+    "message": "Restored from Content Cleansing over-cut"
+  },
+  "fallbackReasonOverCleansed": {
+    "message": "Restored from AI summary cleansing over-cut"
+  },
+  "fallbackReasonShortContent": {
+    "message": "Extracted text too short — fell back to body"
+  },
+  "historyFallbackReason": {
+    "message": "Fallback reason"
+  },
+  "historyRegenerateSummary": {
+    "message": "Regenerate AI summary"
+  },
+  "historyRegenerateModeCurrent": {
+    "message": "Current settings"
+  },
+  "historyRegenerateModeLooser": {
+    "message": "Looser"
+  },
+  "historyRegenerateModeLoosest": {
+    "message": "Loosest"
+  },
+  "historyRegenerateError": {
+    "message": "Failed to regenerate the AI summary."
+  },
+  "historyRegenerateErrorUrl": {
+    "message": "This URL cannot be regenerated."
+  },
+  "historyRegenerateErrorRateLimit": {
+    "message": "Regenerate rate limit reached. Please wait a moment and try again."
+  },
+  "historyRegenerateErrorFetch": {
+    "message": "Failed to re-fetch the page."
+  },
+  "historyRegenerateErrorConsent": {
+    "message": "Recording privacy consent is required."
+  },
+  "historyRegenerateGateBlocked": {
+    "message": "This page is blocked by your recording settings. You can force regeneration to bypass them."
+  },
+  "historyRegenerateForceAction": {
+    "message": "Force regenerate anyway"
+  },
+  "historyRegenerateErrorTimeout": {
+    "message": "Regenerating the AI summary timed out. Please wait a moment and try again."
+  },
+  "historyRegenerateErrorAi": {
+    "message": "AI summary generation failed. Try another provider in AI settings, or wait a moment and try again."
+  },
+  "historyRegenerateProvidersTried": {
+    "message": "Providers tried"
+  },
+  "historyRegenerateErrorMonthlyLimit": {
+    "message": "Monthly token limit reached. Raise it under Settings → Recording conditions → AI usage limits, or wait for the calendar-month reset. Every HTTP provider shares this quota, so switching providers will not help."
+  },
   "aiSummaryCleansingSave": {
     "message": "Save"
   },

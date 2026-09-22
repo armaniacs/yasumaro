@@ -37,6 +37,8 @@ export interface VisitStats {
   byteStats: VisitByteStats;
   aiStats: VisitAiStats;
   fallbackTriggered: boolean;
+  /** PBI 05: 発動理由（未発動時は undefined） */
+  fallbackReason: string | undefined;
 }
 
 /**
@@ -61,6 +63,7 @@ export function buildVisitStats(pageState: PageState): VisitStats {
       aiSummaryCleansedReasons: ai.aiSummaryCleansedReasons,
     },
     fallbackTriggered: pageState.lastFallbackTriggered,
+    fallbackReason: pageState.lastFallbackReason,
   };
 }
 

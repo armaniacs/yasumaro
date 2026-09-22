@@ -57,6 +57,10 @@ export function buildExtractionOptions(config: CleansingConfig): ExtractionOptio
         // Over-cleansed fallback thresholds
         fallbackRatio: config.aiSummaryCleansingFallbackRatio,
         fallbackMinBytes: config.aiSummaryCleansingFallbackMinBytes,
+        // PBI 05 overcut guards
+        fallbackMinChars: config.aiSummaryCleansingFallbackMinChars,
+        candidateGuardEnabled: config.candidateGuardEnabled,
+        cleanseGuardEnabled: config.cleanseGuardEnabled,
     };
 
     const dedupOptions = {

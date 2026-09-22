@@ -27,6 +27,13 @@ export const saveToObsidianStep = async (
   const { data, markdown } = context;
   const { url, title } = data;
 
+  // PBI 04: regenerate is SQLite-only — the user re-appends manually via the
+  // existing "append to Obsidian" button (binding: 副作用skipは両方).
+  if (data.skipObsidianAppend) {
+    addLog(LogType.INFO, 'Skipping Obsidian append (source policy)', { url, traceId: context.traceId });
+    return context;
+  }
+
   if (!markdown) {
     addLog(LogType.WARN, 'No markdown to save to Obsidian', { url, traceId: context.traceId });
     return context;

@@ -21,7 +21,8 @@ import { buildVisitStats, type VisitStats } from './visitReporter.js';
 export type VisitWirePayload = { content: string } & {
     [K in 'force' | 'pageBytes' | 'candidateBytes' | 'originalBytes' | 'cleansedBytes' |
     'aiSummaryOriginalBytes' | 'aiSummaryCleansedBytes' | 'aiSummaryCleansedElements' |
-    'aiSummaryCleansedReason' | 'aiSummaryCleansedReasons' | 'fallbackTriggered']?: RecordingData[K] | undefined;
+    'aiSummaryCleansedReason' | 'aiSummaryCleansedReasons' | 'fallbackTriggered' |
+    'fallbackReason']?: RecordingData[K] | undefined;
 };
 
 /**
@@ -40,6 +41,7 @@ export function toValidVisitPayload(
         ...stats.byteStats,
         ...stats.aiStats,
         fallbackTriggered: stats.fallbackTriggered,
+        ...(stats.fallbackReason !== undefined ? { fallbackReason: stats.fallbackReason } : {}),
         ...(opts?.force ? { force: true } : {}),
     };
 }
@@ -58,6 +60,8 @@ export function toGetContentReply(
     byteStats: VisitStats['byteStats'];
     aiSummaryCleansedStats: VisitStats['aiStats'];
     fallbackTriggered: boolean;
+    /** PBI 05: 発動理由（未発動時は undefined） */
+    fallbackReason: string | undefined;
 } {
     const stats = buildVisitStats(state);
     return {
@@ -67,5 +71,6 @@ export function toGetContentReply(
         byteStats: stats.byteStats,
         aiSummaryCleansedStats: stats.aiStats,
         fallbackTriggered: stats.fallbackTriggered,
+        fallbackReason: stats.fallbackReason,
     };
 }

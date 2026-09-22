@@ -167,6 +167,9 @@ describe('executeHttpSummaryFlow', () => {
     expect(result).toEqual({
       success: false,
       summary: 'Error: AI request timed out. Please check your connection.',
+      // PBI 2026-09-22-04 follow-up: the catch path now carries the detail in
+      // the diagnostic error field (the per-slot regenerate trail renders it).
+      error: 'timed out',
     });
   });
 });

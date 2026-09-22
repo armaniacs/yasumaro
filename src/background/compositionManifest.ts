@@ -44,7 +44,8 @@ import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { updateActivity } from './sessionAlarmsManager.js';
 import { createMessageRouter, type MessageRouterDeps } from './handlers/MessageRouter.js';
 import type { MessageHandler } from './handlers/MessageRouter.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps, RegenerateSummaryHandlerDeps } from './handlers/recordingHandlers.js';
+import { RegenerateContentFetcher } from './regenerateContentFetcher.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
 import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
@@ -87,6 +88,21 @@ export const compositionManifest: readonly CompositionEntry[] = [
   { key: 'tabCache', singleton: true, factory: (c) => new TabCache(c.resolve<SessionStorePort>('sessionStore')) },
   { key: 'rateLimiter', singleton: true, factory: (c) => new RateLimiter(c.resolve<SessionStorePort>('sessionStore')) },
   { key: 'manualContentFetcher', singleton: true, factory: () => new ManualContentFetcher() },
+  {
+    key: 'regenerateContentFetcher',
+    singleton: true,
+    factory: () =>
+      new RegenerateContentFetcher({
+        createTab: (props) => chrome.tabs.create(props),
+        removeTab: (tabId) => chrome.tabs.remove(tabId),
+        sendMessage: (tabId, message) => chrome.tabs.sendMessage(tabId, message),
+        getTab: (tabId) => chrome.tabs.get(tabId),
+        onUpdated: {
+          addListener: (cb) => chrome.tabs.onUpdated.addListener(cb),
+          removeListener: (cb) => chrome.tabs.onUpdated.removeListener(cb),
+        },
+      }),
+  },
   { key: 'remoteAiService', singleton: true, factory: () => new RemoteAIService() },
   { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
   { key: 'settingsRepository', singleton: true, factory: () => new SettingsRepository(new SettingsChromeStorageAdapter()) },
@@ -202,6 +218,19 @@ export const compositionManifest: readonly CompositionEntry[] = [
     } as SaveRecordHandlerDeps),
   },
   {
+    key: 'regenerateDeps',
+    singleton: true,
+    factory: (c) => ({
+      isRecordingAllowed: () => hasPrivacyConsent(),
+      checkRateLimit: (sender, settings, opts) =>
+        c.resolve<RateLimiter>('rateLimiter').check(sender as never, settings as never, opts),
+      fetchExtracted: (url, cleanseMode) =>
+        c.resolve<RegenerateContentFetcher>('regenerateContentFetcher').fetchExtracted(url, cleanseMode),
+      recordingPipeline: c.resolve('recordingPipeline'),
+      getSettings: () => settingsRepository.getAll(),
+    } as RegenerateSummaryHandlerDeps),
+  },
+  {
     key: 'messageRouter',
     singleton: true,
     factory: (c) => {
@@ -216,6 +245,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
         aiService: c.resolve<AIService>('aiService'),
         manualRecordDeps: c.resolve<ManualRecordHandlerDeps>('manualRecordDeps'),
         saveRecordDeps: c.resolve<SaveRecordHandlerDeps>('saveRecordDeps'),
+        regenerateDeps: c.resolve<RegenerateSummaryHandlerDeps>('regenerateDeps'),
         hasPrivacyConsent: () => hasPrivacyConsent(),
         buildAllowedUrls: (settings) => buildAllowedUrls(settings),
         getSettings: () => settingsRepository.getAll(),

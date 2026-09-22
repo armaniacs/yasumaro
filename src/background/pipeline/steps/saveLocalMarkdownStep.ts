@@ -52,6 +52,13 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
   const { data } = context;
   const { url, title } = data;
 
+  // PBI 04: regenerate must not rewrite the local daily export either
+  // (binding: 副作用skipは両方).
+  if (data.skipLocalMarkdownExport) {
+    addLog(LogType.INFO, 'Skipping local Markdown export (source policy)', { url, traceId: context.traceId });
+    return context;
+  }
+
   console.log('[LocalMD] Step reached:', { url, hasMarkdownEntryData: !!context.markdownEntryData });
 
   if (!context.markdownEntryData) {

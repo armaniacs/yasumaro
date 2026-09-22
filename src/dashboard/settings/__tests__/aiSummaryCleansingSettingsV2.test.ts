@@ -65,6 +65,10 @@ function makeFullSettings(overrides: Partial<AiSummaryCleansingSettings> = {}): 
     bodyProtectionThreshold: 200,
     fallbackRatio: 0.2,
     fallbackMinBytes: 300,
+    // PBI 05 overcut guard fields
+    fallbackMinChars: 100,
+    candidateGuardEnabled: true,
+    cleanseGuardEnabled: true,
     ...overrides,
   } as unknown as AiSummaryCleansingSettings;
 }
@@ -79,6 +83,10 @@ function createFullDom(includeSubGroup = true): void {
     <input type="checkbox" id="ai-summary-cleansing-enabled">
     ${ruleCheckboxes}
     <input type="checkbox" id="whitelist-extraction-enabled">
+    <input type="checkbox" id="extraction-guard-candidate-enabled">
+    <input type="checkbox" id="extraction-guard-content-cleanse-enabled">
+    <input type="range" id="ai-summary-cleansing-fallback-min-chars" min="0" max="1000">
+    <span id="ai-summary-cleansing-fallback-min-chars-value"></span>
     <input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">
     <input type="range" id="ai-summary-cleansing-body-protection-threshold" min="0" max="500">
     <span id="ai-summary-cleansing-body-protection-threshold-value"></span>
@@ -733,5 +741,66 @@ describe('setupAiSummaryCleansingEventListeners', () => {
     createFullDom();
     document.getElementById('saveAiSummaryCleansingSettings')!.remove();
     expect(() => setupAiSummaryCleansingEventListeners()).not.toThrow();
+  });
+});
+
+// ── PBI 05 overcut guard fields ──
+describe('PBI 05 overcut guard fields', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    mockGetSettings.mockReset();
+    mockSaveSettings.mockReset();
+    mockSaveSettings.mockResolvedValue(undefined);
+  });
+
+  it('getAiSummaryCleansingSettings maps the three keys with ON/100 defaults', async () => {
+    mockGetSettings.mockResolvedValue({});
+    const s = await getAiSummaryCleansingSettings() as unknown as Record<string, unknown>;
+    expect(s.fallbackMinChars).toBe(100);
+    expect(s.candidateGuardEnabled).toBe(true);
+    expect(s.cleanseGuardEnabled).toBe(true);
+  });
+
+  it('saveAiSummaryCleansingSettings persists the three keys', async () => {
+    mockGetSettings.mockResolvedValue({});
+    const settings = makeFullSettings({
+      fallbackMinChars: 250,
+      candidateGuardEnabled: false,
+      cleanseGuardEnabled: true,
+    });
+    await saveAiSummaryCleansingSettings(settings);
+    const written = mockSaveSettings.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(written[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS]).toBe(250);
+    expect(written[StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED]).toBe(false);
+    expect(written[StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED]).toBe(true);
+  });
+
+  it('getFromUI reads the three controls and applyToUI reflects them back', () => {
+    document.body.innerHTML = `
+      <input type="checkbox" id="ai-summary-cleansing-enabled" checked>
+      <input type="checkbox" id="extraction-guard-candidate-enabled">
+      <input type="checkbox" id="extraction-guard-content-cleanse-enabled" checked>
+      <input type="range" id="ai-summary-cleansing-fallback-min-chars" min="0" max="1000" value="400">
+      <span id="ai-summary-cleansing-fallback-min-chars-value"></span>
+      <fieldset id="aiSummaryCleansingFieldset"></fieldset>
+      <div id="aiSummaryCleansingSubGroup"></div>
+    `;
+    const fromUi = getAiSummaryCleansingSettingsFromUI() as unknown as Record<string, unknown>;
+    expect(fromUi.fallbackMinChars).toBe(400);
+    expect(fromUi.candidateGuardEnabled).toBe(false);
+    expect(fromUi.cleanseGuardEnabled).toBe(true);
+
+    applyAiSummaryCleansingSettingsToUI(makeFullSettings({
+      fallbackMinChars: 150,
+      candidateGuardEnabled: true,
+      cleanseGuardEnabled: false,
+    }));
+    const slider = document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement;
+    const candidateCb = document.getElementById('extraction-guard-candidate-enabled') as HTMLInputElement;
+    const cleanseCb = document.getElementById('extraction-guard-content-cleanse-enabled') as HTMLInputElement;
+    expect(slider.value).toBe('150');
+    expect(document.getElementById('ai-summary-cleansing-fallback-min-chars-value')?.textContent).toBe('150');
+    expect(candidateCb.checked).toBe(true);
+    expect(cleanseCb.checked).toBe(false);
   });
 });

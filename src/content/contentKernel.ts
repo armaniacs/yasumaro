@@ -229,6 +229,7 @@ export class ContentKernel {
             ...pickDefined({ aiSummaryCleansedReasons: result.aiSummaryCleansedReasons }),
         };
         this.pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
+        this.pageState.lastFallbackReason = result.fallbackReason;
     }
 
     // -----------------------------------------------------------------------
@@ -267,6 +268,9 @@ export class ContentKernel {
             ...cleansingRuleKeys,
             [StorageKeys.WHITELIST_EXTRACTION_ENABLED, 'whitelistExtractionEnabled'],
             [StorageKeys.CONTENT_DEDUP_ENABLED, 'contentDedupEnabled'],
+            // PBI 05 overcut guards
+            [StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED, 'candidateGuardEnabled'],
+            [StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED, 'cleanseGuardEnabled'],
         ];
         for (const [key, prop] of booleanKeys) {
             if (s[key] !== undefined) {

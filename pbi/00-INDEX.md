@@ -14,6 +14,24 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-22 VulnHunt 監査修正 — ⬜ 未着手 6件 🔧非機能追加 RICE順: 06→07→08→09→10→11
+
+VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。
+
+- [2026-09-22-06-fix-obsidian-host-credential-pairing.md](2026-09-22-06-fix-obsidian-host-credential-pairing.md)（⬜ 未着手 — RICE 48・3 SP・副作用🔴。**最優先**。上書き host × 保存済みキーのペアリング禁止（リモート vault の一致ペアは壊さない）、https にもループバック規則、obsidianClient の `skipCspValidation` 除去、TEST_OBSIDIAN バリデータ行追加・UI/SW バリデータ共有化）
+- [2026-09-22-07-fix-provider-baseurl-authorization.md](2026-09-22-07-fix-provider-baseurl-authorization.md)（⬜ 未着手 — RICE 24・5 SP・副作用🔴。プロバイダ種別ごとの origin 拘束 + Gemini/BuiltInAi ゲート追加 + `addBaseUrlDomain` 非自己認可 + `ALLOWED_URLS` 永続化・fail-closed 化。**fail-closed 前にシード必須**。ローカル loopback プロバイダは例外的許可）
+- [2026-09-22-08-fix-archive-restore-resource-caps.md](2026-09-22-08-fix-archive-restore-resource-caps.md)（⬜ 未着手 — RICE 12・2 SP・副作用🟡。ワーカ側総行数/総バイトシーリング + `ARC_*` エラー、クライアント cap 200MiB を信頼しない再検証）
+- [2026-09-22-09-fix-message-field-validation.md](2026-09-22-09-fix-message-field-validation.md)（⬜ 未着手 — RICE 7.0・3 SP・副作用🟡。ByteStats 9フィールドに範囲検証 + `aiSummaryCleansedReasons[]` 要素数上限 + SAVE `maskedCount` の呼び出し元値廃止（パイプライン値を唯一の真実に）。`commonStorageFields.ts` は 05 と並行変更中、rebase 注意）
+- [2026-09-22-10-fix-rate-limiter-domain-key.md](2026-09-22-10-fix-rate-limiter-domain-key.md)（⬜ 未着手 — RICE 7.0・2 SP・副作用🟡。`getRateLimitKey` を eTLD+1 化（heuristic + 最小マルチラベル TLD リスト・PSL バンドルなし）。localhost はポート込み origin のまま）
+- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（⬜ 未着手 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
+
+### 2026-09-22 AI要約再生成 + 抽出過剰削減ガード — 🔶 実装完了（自動テスト緑・6.9.16 へコミット）✨機能追加 🔴副作用あり
+
+過剰クレンジングで送信コンテンツが実質空（実例 30.6 KB → 193 B）になり要約が「個人および法人に関する内容です。」のような一文に潰れたレコードへの対処を2方向で PBI 化。**診断行の照合（2026-09-22）で 99.4% 削減の主因は①候補選択（コンテンツ抽出行）と判明**（Content Cleansing 行は 193→193 の 0%、AI要約クレンジングは計測なし = 既存過剰削減FBが非発火）。04=治療（手動再生成・クレンジング緩和）、05=予防（記録時のガード横展開）で独立成立。再取得経路は ManualContentFetcher（抽出パイプライン非通過）ではなく GET_CONTENT + config override を推奨。
+
+- [2026-09-22-04-feat-ai-summary-regenerate.md](2026-09-22-04-feat-ai-summary-regenerate.md)（🔶 実装完了 — validate 13,193 緑 + build 緑 + フルローe2e 2/2 緑・6.9.16 へコミット。RICE 0.96・8 SP 目安。履歴ヘッダーから手動再生成 + 緩和3択select、同一行 UPDATE（新規INSERT禁止・通常記録は byte-identical pin）。**緩和＝③ルール段下げのみ（custom=minimal相当・最緩=②③無効）・①はv1対象外・tags新値上書き・Obsidian+ローカルMD両skip・force既定なし+gate弾き時のみ強制選択（Ask/Why 2026-09-22）**。Obsidian は SQLite 更新 + 既存「追記」ボタンで手動送信（削除しない・重複section許容）。一括はv1対象外。残 DoD: ユーザーレビュー）
+- [2026-09-22-05-feat-extraction-overcut-guards.md](2026-09-22-05-feat-extraction-overcut-guards.md)（🔶 実装完了 — validate 13,193 緑 + build 緑 + fixture/jsdom 検証 + e2e 緑・6.9.16 へコミット。RICE 1.75・6 SP 目安・副作用🔴。AI要約クレンジングの本文保護/過剰削減FBを①候補選択・②Content Cleansing へ横展開、発火条件の AI要約クレンジング依存を解除、**デフォルトON・flag=①②の2個（AI要約クレンジングパネル「過剰削減ガード」）・②③判定=applyFallback 1箇所優先順・hot path=文字数knob `fallbackMinChars`（min1）・whitelistはv1対象外（Ask/Why 2026-09-22）**。残 DoD: qa.smbc 実サイト手動チェックリスト + ユーザーレビュー）
+
 ### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize 撤去・19 不採用・sentence-dedup 配線不採用・20 不採用クローズ）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち）RICE順: 完了
 
 `/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）は台帳に理由付きで記録。P2 候補の md-sanitize は実装・実測の結果不採用 → 撤去（アーカイブ履歴参照）。

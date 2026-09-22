@@ -1,6 +1,6 @@
-// @layer 2 — Deep module hiding 19 handler registrations + trust/validator tables
+// @layer 2 — Deep module hiding 20 handler registrations + trust/validator tables
 /**
- * MessageRouter — deep module hiding the 19 handler shallow registry
+ * MessageRouter — deep module hiding the 20 handler shallow registry
  *
  * The legacy shallow registry exposed register(type, handler, trust, validator) with
  * 19 types × trust × validator combinations. Callers must know which trust level
@@ -23,6 +23,7 @@ import {
   createValidVisitHandler,
   createManualRecordHandler,
   createSaveRecordHandler,
+  createRegenerateSummaryHandler,
 } from './recordingHandlers.js';
 import {
   createTestConnectionsHandler,
@@ -49,13 +50,14 @@ import {
   manualRecordValidator,
   checkDomainValidator,
   contentCleansingExecutedValidator,
+  regenerateSummaryValidator,
 } from '../../messaging/validators.js';
 import type { TabCache } from '../tabCache.js';
 import type { AIService, AiTestProgress } from '../ai/AIService.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { Settings } from '../../utils/storage/types.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps, RecordingRunner } from './recordingHandlers.js';
+import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps, RegenerateSummaryHandlerDeps, RecordingRunner } from './recordingHandlers.js';
 import type { MessageValidator } from '../../messaging/validators.js';
 
 /**
@@ -90,6 +92,7 @@ export interface RecordingHandlerDeps {
   };
   manualRecordDeps: ManualRecordHandlerDeps;
   saveRecordDeps: SaveRecordHandlerDeps;
+  regenerateDeps: RegenerateSummaryHandlerDeps;
 }
 
 export interface TestingHandlerDeps {
@@ -135,7 +138,7 @@ export class MessageRouter {
   constructor(deps: MessageRouterDeps) {
     this.runtimeId = deps.runtimeId ?? (typeof chrome !== 'undefined' ? chrome.runtime?.id : undefined);
 
-    // — Deep implementation: 19 handlers + trust table + 8 validators are all hidden behind the seam —
+    // — Deep implementation: 20 handlers + trust table + 9 validators are all hidden behind the seam —
     const validVisitPick = {
       hasPrivacyConsent: deps.hasPrivacyConsent,
       tabCache: deps.tabCache,
@@ -163,6 +166,8 @@ export class MessageRouter {
       MANUAL_RECORD: createManualRecordHandler(deps.manualRecordDeps),
       PREVIEW_RECORD: createManualRecordHandler(deps.manualRecordDeps),
       SAVE_RECORD: createSaveRecordHandler(deps.saveRecordDeps),
+      // PBI 04: extension-only trust (default branch below — not in either allowlist).
+      REGENERATE_SUMMARY: createRegenerateSummaryHandler(deps.regenerateDeps),
       CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({}),
       CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
       TEST_CONNECTIONS: createTestConnectionsHandler({
@@ -211,10 +216,11 @@ export class MessageRouter {
     this.validators.set('SAVE_RECORD', manualRecordValidator as unknown as MessageValidator<unknown>);
     this.validators.set('CHECK_DOMAIN', checkDomainValidator as unknown as MessageValidator<unknown>);
     this.validators.set('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator as unknown as MessageValidator<unknown>);
+    this.validators.set('REGENERATE_SUMMARY', regenerateSummaryValidator as unknown as MessageValidator<unknown>);
   }
 
   /**
-   * Deep seam: one method hides 19 handlers + trust table + 8 validators
+   * Deep seam: one method hides 20 handlers + trust table + 9 validators
    * Returns true if the message was handled (async response), false otherwise.
    */
   dispatch(
@@ -280,7 +286,7 @@ export class MessageRouter {
 }
 
 /**
- * Factory for the deep module — hides the 19 handler wiring.
+ * Factory for the deep module — hides the 20 handler wiring.
  * Two adapters justify the seam: prod deps vs InMemory test deps.
  */
 export function createMessageRouter(deps: MessageRouterDeps): MessageRouter {

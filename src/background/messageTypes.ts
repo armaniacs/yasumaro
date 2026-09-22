@@ -6,6 +6,7 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 // Imported from ai/AIService.js rather than aiClient.js: this module is pulled
 // in by every layer (popup, dashboard, content, offscreen), and reaching
 // through aiClient.js would drag the whole provider Strategy graph along with
@@ -43,6 +44,9 @@ interface ByteStatsPayload {
     aiSummaryCleansedElements?: number;
     aiSummaryCleansedReason?: AiSummaryCleansedReason;
     aiSummaryCleansedReasons?: string[];
+    /** PBI 05: extraction fallback outcome (VALID_VISIT carries it end-to-end). */
+    fallbackTriggered?: boolean;
+    fallbackReason?: string;
 }
 
 // ============================================================================
@@ -60,6 +64,21 @@ export type CheckDomainMessage = {
 
 type GetContentMessage = {
     type: 'GET_CONTENT';
+    /** PBI 04: optional one-shot cleanse override (tabs.sendMessage path only). */
+    payload?: { cleanseMode?: RegenerateCleanseMode };
+};
+
+/** PBI 04: manual AI-summary regeneration against an existing row. */
+export type RegenerateSummaryMessage = {
+    type: 'REGENERATE_SUMMARY';
+    payload: {
+        id: number;
+        /** The entry's current URL — carried by the dashboard (rows are visible there; the SW has no by-id read). */
+        url: string;
+        title: string;
+        cleanseMode: RegenerateCleanseMode;
+        force?: boolean;
+    };
 };
 
 export type FetchUrlMessage = {
@@ -198,6 +217,7 @@ export type ExtensionMessage = (
     | RefreshLocalMarkdownSchedulerMessage
     | ConsentStateChangedMessage
     | GenerateReviewSummaryMessage
+    | RegenerateSummaryMessage
     | DashboardSqliteMessage
     | LogForwardMessage
 ) & { protocolVersion: number };
@@ -236,6 +256,7 @@ export const VALID_MESSAGE_TYPES = [
     'MANUAL_RECORD',
     'PREVIEW_RECORD',
     'SAVE_RECORD',
+    'REGENERATE_SUMMARY',
     'TEST_CONNECTIONS',
     'TEST_OBSIDIAN',
     'TEST_AI',

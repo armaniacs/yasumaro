@@ -28,10 +28,19 @@ export const saveMetadataStep: PipelineStepFunction = async (
 
   const common = extractCommonStorageFields(context);
   const patch = common.toMetadataPatch();
+  // Regenerate overwrites tags in SQLite — the legacy mirror must replace
+  // (not union) to stay consistent; normal records keep the accumulate merge.
+  const mergeTags = context.data.targetEntryId === undefined;
+  // PBI 2026-09-22-04: toMetadataPatch omits empty tag lists, but a regenerate
+  // with zero tags must CLEAR the mirror too (the SQLite UPDATE just nulled
+  // them) — emit an explicit empty list so the replace branch deletes them.
+  if (context.data.targetEntryId !== undefined && !patch.tags) {
+    patch.tags = [];
+  }
 
   const timestamp = Date.now();
   try {
-    await saveSavedUrlEntryMetadata(common.url, patch, { mergeTags: true, timestamp });
+    await saveSavedUrlEntryMetadata(common.url, patch, { mergeTags, timestamp });
     addLog(LogType.INFO, 'Saved URL entry metadata', { url: common.url, traceId: context.traceId });
   } catch (error: unknown) {
     addLog(LogType.WARN, 'Failed to save URL entry metadata', {
@@ -44,7 +53,7 @@ export const saveMetadataStep: PipelineStepFunction = async (
       patch,
       refreshTimestamp: false,
       timestamp,
-      mergeTags: true,
+      mergeTags,
       createdAt: Date.now(),
       retryCount: 0,
     });

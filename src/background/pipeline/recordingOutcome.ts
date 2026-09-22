@@ -28,7 +28,7 @@ import {
   notifyRecordingError,
   notifyObsidianSaveSuccess,
 } from './resultBuilder.js';
-import { PrivatePageError, DuplicateError } from './steps/index.js';
+import { PrivatePageError, DuplicateError, RegenerateUpdateError } from './steps/index.js';
 import { ErrorStrategy, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
 
@@ -120,6 +120,21 @@ export function decideStepOutcome(
     };
   }
   const error = thrown as Error;
+  if (thrown instanceof RegenerateUpdateError) {
+    // Regenerate is UPDATE-only: the pending-recovery queue replays MANUAL
+    // records as INSERTs by URL — recovering this failure that way would
+    // duplicate the very row the update was replacing. Terminal error,
+    // notice, NO pending (row stays unchanged → non-destructive).
+    logError(
+      `Pipeline failed at step ${step.name}`,
+      { error: error.message, url: context.data.url, tabId: undefined },
+      ErrorCode.INTERNAL_ERROR,
+      'RecordingPipeline',
+    );
+    const result = buildErrorResult(context, error);
+    adapters.notifier.notifyError(context.data.title, error.message);
+    return { done: true, result };
+  }
   if (step.errorStrategy === ErrorStrategy.FATAL || step.errorStrategy === ErrorStrategy.RETRY) {
     logError(
       `Pipeline failed at step ${step.name}`,
@@ -131,7 +146,12 @@ export function decideStepOutcome(
       ErrorCode.INTERNAL_ERROR,
       'RecordingPipeline',
     );
-    adapters.pending.addPending(pendingEntry(context, 'pipeline-error', error.message));
+    // PBI 2026-09-22-04: regenerate is UPDATE-only — pending-page recovery
+    // replays a MANUAL_RECORD INSERT that would duplicate the row being
+    // replaced. The failure still surfaces as an error result + notice.
+    if (context.data.targetEntryId === undefined) {
+      adapters.pending.addPending(pendingEntry(context, 'pipeline-error', error.message));
+    }
     const result = buildErrorResult(context, error);
     adapters.notifier.notifyError(context.data.title, error.message);
     return { done: true, result };

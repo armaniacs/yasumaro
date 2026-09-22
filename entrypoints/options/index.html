@@ -1168,6 +1168,33 @@
           </div>
         </div>
 
+        <!-- 過剰削減ガード -->
+        <div class="settings-section" id="overcut-guard-section">
+          <h3 class="settings-section-title" data-i18n="overcutGuardSection">Over-cut Guards</h3>
+          <p class="settings-section-description" data-i18n="overcutGuardSectionDesc">Automatically restore the text when extraction or Content Cleansing cuts too deeply.</p>
+
+          <div class="mb-8">
+            <input type="checkbox" id="extraction-guard-candidate-enabled" checked aria-describedby="extractionGuardCandidateEnabledDesc">
+            <label for="extraction-guard-candidate-enabled" class="inline-label" data-i18n="extractionGuardCandidateEnabled">Candidate floor guard (extraction)</label>
+            <div class="help-text" id="extractionGuardCandidateEnabledDesc" data-i18n="extractionGuardCandidateEnabledDesc">When the top-ranked content candidate is below the character floor, fall back to the next candidate or the full body instead of shipping a starved excerpt.</div>
+          </div>
+
+          <div class="mb-8">
+            <input type="checkbox" id="extraction-guard-content-cleanse-enabled" checked aria-describedby="extractionGuardContentCleanseEnabledDesc">
+            <label for="extraction-guard-content-cleanse-enabled" class="inline-label" data-i18n="extractionGuardContentCleanseEnabled">Over-cut guard (Content Cleansing)</label>
+            <div class="help-text" id="extractionGuardContentCleanseEnabledDesc" data-i18n="extractionGuardContentCleanseEnabledDesc">When Content Cleansing removes too much of the candidate text (below the reduction ratio or character floor), restore the pre-cleansing text.</div>
+          </div>
+
+          <div class="threshold-slider">
+            <label for="ai-summary-cleansing-fallback-min-chars">
+              <span data-i18n="aiSummaryCleansingFallbackMinCharsLabel">Character floor</span>:
+              <span id="ai-summary-cleansing-fallback-min-chars-value">100</span>
+            </label>
+            <input type="range" id="ai-summary-cleansing-fallback-min-chars" min="1" max="1000" step="10" value="100" class="slider" aria-describedby="aiSummaryCleansingFallbackMinCharsDesc">
+            <div class="help-text" id="aiSummaryCleansingFallbackMinCharsDesc" data-i18n="aiSummaryCleansingFallbackMinCharsDesc">Absolute floor for the guards in characters (separate from the byte floor above). Default: 100.</div>
+          </div>
+        </div>
+
         <div class="form-group">
           <button id="saveAiSummaryCleansingSettings" class="btn-primary" data-i18n="aiSummaryCleansingSave">Save</button>
           <div id="aiSummaryCleansingSettingsStatus" class="status-message" aria-live="polite"></div>
