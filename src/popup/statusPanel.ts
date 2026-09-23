@@ -11,6 +11,7 @@ import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
 import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
 
@@ -107,7 +108,7 @@ export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStat
   const cleansingContent = document.getElementById('statusCleansingContent');
   if (!cleansingContent) return;
   // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
-  cleansingContent.innerHTML = renderCleansingHtml(cleanseStats, cleansedReason, { t: getMessage, esc: escapeHtml });
+  setElementHtml(cleansingContent, renderCleansingHtml(cleanseStats, cleansedReason, { t: getMessage, esc: escapeHtml }));
 }
 
 export async function updateTrustStatus(url: string): Promise<void> {
@@ -126,7 +127,7 @@ export async function updateTrustStatus(url: string): Promise<void> {
       // RecordSession (sole-writer contract, PBI 2026-09-07-24) — disabling
       // it here raced resetRecordButton and blocked the designed
       // "Record Anyway" (force) escape hatch.
-      trustContent.innerHTML = renderLockedHtml({ t: getMessage, esc: escapeHtml });
+      setElementHtml(trustContent, renderLockedHtml({ t: getMessage, esc: escapeHtml }));
       if (permArea) {
         permArea.classList.remove('hidden');
         // Wire the request button once per element — updateTrustStatus runs on
@@ -179,9 +180,9 @@ export async function updateTrustStatus(url: string): Promise<void> {
     ]);
 
     // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
-    trustContent.innerHTML = renderTrustHtml(display, checkResult, { t: getMessage, esc: escapeHtml });
+    setElementHtml(trustContent, renderTrustHtml(display, checkResult, { t: getMessage, esc: escapeHtml }));
   } catch {
-    trustContent.innerHTML = renderTrustFallbackHtml({ t: getMessage, esc: escapeHtml });
+    setElementHtml(trustContent, renderTrustFallbackHtml({ t: getMessage, esc: escapeHtml }));
   }
 }
 
@@ -244,18 +245,18 @@ function renderStatusPanel(status: StatusInfo): void {
 
   if (domainState) {
     // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
-    domainState.innerHTML = renderDomainStateHtml(status, { t: getMessage, esc: escapeHtml });
+    setElementHtml(domainState, renderDomainStateHtml(status, { t: getMessage, esc: escapeHtml }));
   }
 
   if (domainMode) {
     const modeKey = `statusFilterMode${status.domainFilter.mode.charAt(0).toUpperCase()}${status.domainFilter.mode.slice(1)}`;
-    domainMode.innerHTML = `<span class="status-value status-muted">${getMessage(modeKey)}</span>`;
+    setElementHtml(domainMode, `<span class="status-value status-muted">${getMessage(modeKey)}</span>`);
   }
 
   const privacyContent = document.getElementById('statusPrivacyContent');
   if (privacyContent) {
     // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
-    privacyContent.innerHTML = renderPrivacyHtml(status, { t: getMessage, esc: escapeHtml });
+    setElementHtml(privacyContent, renderPrivacyHtml(status, { t: getMessage, esc: escapeHtml }));
     if (status.privacy.isPrivate) {
       attachPrivacyActionListeners();
     }
@@ -264,23 +265,23 @@ function renderStatusPanel(status: StatusInfo): void {
   const cacheContent = document.getElementById('statusCacheContent');
   if (cacheContent) {
     // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
-    cacheContent.innerHTML = renderCacheHtml(status, { t: getMessage, esc: escapeHtml });
+    setElementHtml(cacheContent, renderCacheHtml(status, { t: getMessage, esc: escapeHtml }));
   }
 
   const lastSavedContent = document.getElementById('statusLastSavedContent');
   if (lastSavedContent) {
     // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
-    lastSavedContent.innerHTML = renderLastSavedHtml(status, { t: getMessage, esc: escapeHtml });
+    setElementHtml(lastSavedContent, renderLastSavedHtml(status, { t: getMessage, esc: escapeHtml }));
   }
 
   const cleansingContent = document.getElementById('statusCleansingContent');
   if (cleansingContent) {
-    cleansingContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+    setElementHtml(cleansingContent, `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`);
   }
 
   const trustContent = document.getElementById('statusTrustContent');
   if (trustContent) {
-    trustContent.innerHTML = `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`;
+    setElementHtml(trustContent, `<span class="status-value status-muted">${getMessage('statusNoInfo')}</span>`);
   }
 
   // NOTE (PBI 2026-09-05-06): the status render used to rewrite
@@ -293,11 +294,11 @@ function renderStatusPanel(status: StatusInfo): void {
 export function renderSpecialUrlStatus(): void {
   const panel = document.getElementById('statusPanel');
   if (panel) {
-    panel.innerHTML = `
+    setElementHtml(panel, `
       <div class="status-summary">
         <span class="status-value status-error">${getMessage('statusPageNotRecordable')}</span>
       </div>
-    `;
+    `);
   }
 }
 

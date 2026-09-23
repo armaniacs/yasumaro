@@ -1,3 +1,4 @@
+import { setElementHtml } from '../utils/htmlFragment.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
@@ -33,13 +34,13 @@ export async function loadPendingPages(): Promise<void> {
         item.dataset.url = page.url;
         item.dataset.index = String(index);
 
-        item.innerHTML = `
+        setElementHtml(item, `
           <input type="checkbox" value="${escapeHtml(page.url)}" class="pending-checkbox">
           <div class="pending-item-content">
             <div class="pending-item-title pending-item-title--link">${escapeHtml(page.title)}</div>
             <div class="pending-item-reason">${escapeHtml(page.headerValue || page.reason)}</div>
           </div>
-        `;
+        `);
 
         const titleEl = item.querySelector('.pending-item-title');
         if (titleEl) {

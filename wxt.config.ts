@@ -200,6 +200,10 @@ export default defineConfig({
     // AMO validation flag the key as unsupported. All features this build
     // needs (MV3 event page background, declarativeNetRequest, module
     // workers) are available well before 140.
+    // gecko_android 142: Android gained data_collection_permissions in 142.
+    // The extension does not run on Android anyway (MV3 event page background
+    // is unsupported there), so the pin only exists to keep AMO validation
+    // clean; store submissions must select desktop Firefox only.
     // data_collection_permissions: all user data stays on-device; AI provider
     // calls go to user-configured endpoints, never to the developer
     // (public/PRIVACY.md).
@@ -211,6 +215,7 @@ export default defineConfig({
               strict_min_version: '140.0',
               data_collection_permissions: { required: ['none'] },
             },
+            gecko_android: { strict_min_version: '142.0' },
           },
         }
       : {}),

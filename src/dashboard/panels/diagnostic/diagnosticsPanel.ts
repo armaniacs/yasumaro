@@ -12,6 +12,7 @@ import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
 import { formatGigabytes } from '../../../utils/browserSupport.js';
+import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { type PanelLifecycle } from '../types.js';
 import { diagnosticsCollector } from './DiagnosticsCollector.js';
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
@@ -591,12 +592,12 @@ function renderCompileOptions(el: HTMLElement | null, snap: DiagnosticsSnapshot)
 
   const allOptionsDetails = document.createElement('details');
   allOptionsDetails.className = 'advanced-details';
-  allOptionsDetails.innerHTML = `
+  setElementHtml(allOptionsDetails, `
     <summary class="advanced-details-summary">All ${options.length} options</summary>
     <div class="advanced-details-content">
       <pre class="diag-compile-options-list">${options.join('\n')}</pre>
     </div>
-  `;
+  `);
   el.appendChild(allOptionsDetails);
 }
 

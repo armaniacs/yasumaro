@@ -3,6 +3,8 @@
  * 設定画面のステータス表示（上下2箇所）の同期
  */
 
+import { setElementHtml } from '../utils/htmlFragment.js';
+
 /**
  * Mirrors the bottom status element into the sticky top bar.
  *
@@ -19,7 +21,7 @@ export function syncStatusToTop(): void {
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
   if (statusTopDiv && statusDiv) {
-    statusTopDiv.innerHTML = statusDiv.innerHTML;
+    setElementHtml(statusTopDiv, statusDiv.innerHTML);
     statusTopDiv.className = statusDiv.className;
   }
 }

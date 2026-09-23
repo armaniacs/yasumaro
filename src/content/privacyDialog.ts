@@ -6,6 +6,7 @@
  * 知識を隠蔽する。呼び出し側は statusCode + reasonLabel だけを知ればよい。
  */
 
+import { setElementHtml } from '../utils/htmlFragment.js';
 import { getMessageOr } from '../utils/i18n.js';
 
 export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string): Promise<boolean> {
@@ -74,7 +75,7 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
         `);
     shadow.adoptedStyleSheets = [sheet];
 
-    shadow.innerHTML = `
+    setElementHtml(shadow, `
             <div class="overlay">
                 <div class="dialog" role="dialog" aria-modal="true">
                     <div class="header">
@@ -93,7 +94,7 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
                     </div>
                 </div>
             </div>
-        `;
+        `);
 
     const setText = (id: string, text: string) => {
       const el = shadow.getElementById(id);
