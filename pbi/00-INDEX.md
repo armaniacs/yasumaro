@@ -14,12 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 6件 ✨機能追加 RICE順: 03 → 04 → 05 → 06 → 07 → 08（01-02 は完了・アーカイブ済み）
+### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 4件 ✨機能追加 RICE順: 05 → 06 → 07 → 08（01-04 は完了・アーカイブ済み）
 
-分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存、03-08 は 02 で新設済みの共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`）を再利用。
+分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
 
-- [2026-09-24-03-feat-domain-analysis.md](2026-09-24-03-feat-domain-analysis.md)（⬜ 未着手 — RICE 3.00・2 SP・副作用🟢。タグ×期間でドメイン別・URL別 top N を表表示）
-- [2026-09-24-04-feat-period-tag-cluster.md](2026-09-24-04-feat-period-tag-cluster.md)（⬜ 未着手 — RICE 2.40（調整後・素 1.20）・1 SP・副作用🟢。タグクラスタに期間フィルタ追加。08 の計算基盤）
 - [2026-09-24-05-feat-tag-frequency-timeline.md](2026-09-24-05-feat-tag-frequency-timeline.md)（⬜ 未着手 — RICE 2.40・1.5 SP・副作用🟢。上位タグの週次/月次頻度推移グラフ）
 - [2026-09-24-06-feat-tag-cooccurrence-table.md](2026-09-24-06-feat-tag-cooccurrence-table.md)（⬜ 未着手 — RICE 2.40・1 SP・副作用🟢。共起タグペア top 20 を表形式で表示）
 - [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（⬜ 未着手 — RICE 1.33・3 SP・副作用🟢。summary+title から Intl.Segmenter でキーワード抽出し共起クラスタ表示。STEP 0 品質プローブ込み）
@@ -81,6 +79,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 分析機能強化ラウンド バッチ2 — ✅ 2件完了（03-04 アーカイブ済み）RICE順: 03 → 04
+
+autonomous-task-closer による実装。バッチ2 = 03（ドメイン分析）→ 04（期間指定タグクラスタ・PBI 08 の計算基盤）の直列実装。なぜなぜ分析は /tmp/whywhy/（pbi-03-domain-analysis・pbi-04-period-tag-cluster）。統合検証: type-check PASS / lint 0 errors / test 13,637 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-03-feat-domain-analysis.md（✅ 完了 — `b39209af`。ドメイン/URL別 top N・batched pagination（50k cap+truncation 通知）・(unknown) バケット・ドメイン行は searchDomain 遷移。52 tests 新規。RICE 3.00）
+- 2026-09-24-04-feat-period-tag-cluster.md（✅ 完了 — `b39209af`。tagClusterPanel に共有 periodFilter 埋め込み・デフォルト全期間で後方互換・loadSeq 世代ガード。既存テスト無変更で green。51 tests 対象 green。RICE 2.40。PBI 08 前提が整備済み）
 
 ### 2026-09-24 分析機能強化ラウンド バッチ1 — ✅ 2件完了（01-02 アーカイブ済み）RICE順: 01 → 02
 
