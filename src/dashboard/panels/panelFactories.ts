@@ -13,6 +13,8 @@ import { createExportLogsPanel } from './diagnostic/exportLogsPanel.js';
 import { createArchivePanel } from './diagnostic/archivePanel.js';
 import { createDomainSearchPanel } from './asyncData/domainSearchPanel.js';
 import { createTagClusterPanel } from './asyncData/tagClusterPanel.js';
+import { createTimeHeatmapPanel } from './asyncData/timeHeatmapPanel.js';
+import { createVisitDurationPanel } from './asyncData/visitDurationPanel.js';
 import { createSqliteHistoryPanel } from './asyncData/sqliteHistoryPanel.js';
 import { createGeneralSettingsPanel } from './staticForm/generalSettingsPanel.js';
 import { createPrivacySettingsPanel } from './staticForm/privacySettingsPanel.js';
@@ -25,6 +27,8 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
   'panel-archive': createArchivePanel,
   'panel-domain-search': createDomainSearchPanel,
   'panel-tag-cluster': createTagClusterPanel,
+  'panel-time-heatmap': createTimeHeatmapPanel,
+  'panel-visit-duration': createVisitDurationPanel,
   'panel-sqlite-history': createSqliteHistoryPanel,
   'panel-general': createGeneralSettingsPanel,
   'panel-privacy': createPrivacySettingsPanel,

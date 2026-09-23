@@ -55,6 +55,8 @@ export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
   { id: 'panel-sqlite-history', sidebarSection: 'data', sidebarI18nKey: 'sqliteHistoryTab', deepLinkSections: [], tabParam: 'history' },
   { id: 'panel-archive', sidebarSection: 'data', sidebarI18nKey: 'archiveTab', deepLinkSections: [] },
   { id: 'panel-domain-search', sidebarSection: 'data', sidebarI18nKey: 'domainSearchTab', deepLinkSections: [] },
+  { id: 'panel-time-heatmap', sidebarSection: 'data', sidebarI18nKey: 'timeHeatmapTab', deepLinkSections: [] },
+  { id: 'panel-visit-duration', sidebarSection: 'data', sidebarI18nKey: 'visitDurationTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
 ] as const;

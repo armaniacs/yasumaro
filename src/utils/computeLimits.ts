@@ -31,3 +31,17 @@ export const MAX_SENTENCES_FOR_TEXTRANK = 200;
  * downstream MAX_NODES render cap so no work is done on nodes that would be dropped.
  */
 export const MAX_TAG_CLUSTER_TAGS = 50;
+
+/**
+ * Max rows fetched for the time-heatmap panel (12-month rolling window).
+ * Aggregation is client-side over created_at; the cap bounds the transfer
+ * and the O(n) bucket pass. The panel shows a limit notice when reached.
+ */
+export const MAX_TIME_HEATMAP_ROWS = 10000;
+
+/**
+ * Max rows fetched for the visit-duration panel (user-selected period).
+ * Aggregation is client-side over visit_duration; the cap bounds the transfer
+ * and the O(n) group pass. The panel shows a truncation notice when reached.
+ */
+export const MAX_VISIT_DURATION_ROWS = 10000;
