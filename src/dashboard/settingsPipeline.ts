@@ -11,6 +11,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProviderConnectionField, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
+import { GENERAL_SETTINGS_FIELDS } from './settings/fieldDescriptor.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, setFieldError, ErrorPair } from './settings/fieldValidation.js';
@@ -22,19 +23,17 @@ import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { syncStatusToTop } from './statusView.js';
 
 /**
- * General settings validation schema — single source of truth for the
- * 7 element IDs that were previously hardcoded. Each entry maps a StorageKey
- * to its DOM element ID and error element ID.
+ * General settings validation schema — derived from the descriptor table
+ * (settings/fieldDescriptor.ts), which is the single source of truth for the
+ * 7 element IDs that were previously hardcoded here. Order is positional:
+ * saveDashboardSettings indexes pairs[0..6] below.
  */
-export const GENERAL_SETTINGS_VALIDATION_FIELDS: ValidationSchema = [
-  { storageKey: StorageKeys.OBSIDIAN_PROTOCOL, elementId: 'protocol', errorId: 'protocolError' },
-  { storageKey: StorageKeys.OBSIDIAN_PORT, elementId: 'port', errorId: 'portError' },
-  { storageKey: StorageKeys.OBSIDIAN_HOST, elementId: 'obsidianHost', errorId: 'obsidianHostError' },
-  { storageKey: StorageKeys.GEMINI_API_VERSION, elementId: 'geminiApiVersion', errorId: 'geminiApiVersionError' },
-  { storageKey: StorageKeys.MIN_VISIT_DURATION, elementId: 'minVisitDuration', errorId: 'minVisitDurationError' },
-  { storageKey: StorageKeys.MIN_SCROLL_DEPTH, elementId: 'minScrollDepth', errorId: 'minScrollDepthError' },
-  { storageKey: StorageKeys.MAX_TOKENS_PER_PROMPT, elementId: 'maxTokensPerPrompt', errorId: 'maxTokensErrors' },
-];
+export const GENERAL_SETTINGS_VALIDATION_FIELDS: ValidationSchema =
+  GENERAL_SETTINGS_FIELDS.map(({ storageKey, elementId, errorId }) => ({
+    storageKey,
+    elementId,
+    errorId,
+  }));
 
 /**
  * Resolve a ValidationSchema into ErrorPair[] (element, errorId) by looking

@@ -17,34 +17,69 @@ import { getTrustChecker } from '../../utils/trustChecker.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // ============================================================================
-// DOM Elements
+// DOM Elements (lazy init — same convention as customPromptManager.ts: module
+// scope must not touch `document` so this module imports without a DOM)
 // ============================================================================
 
-const safetyModeSelect = document.getElementById('safetyMode') as HTMLSelectElement;
-const trancoTierSelect = document.getElementById('trancoTier') as HTMLSelectElement;
-const trancoStatusDiv = document.getElementById('trancoStatus') as HTMLElement;
-const updateTrancoBtn = document.getElementById('updateTrancoBtn') as HTMLButtonElement;
-const jpAnchorListDiv = document.getElementById('jpAnchorList') as HTMLElement;
-const jpAnchorAddInput = document.getElementById('jpAnchorAdd') as HTMLInputElement;
-const jpAnchorAddBtn = document.getElementById('jpAnchorAddBtn') as HTMLButtonElement;
-const sensitiveListDiv = document.getElementById('sensitiveList') as HTMLElement;
-const sensitiveCategorySelect = document.getElementById('sensitiveCategory') as HTMLSelectElement;
-const sensitiveAddInput = document.getElementById('sensitiveAdd') as HTMLInputElement;
-const sensitiveAddBtn = document.getElementById('sensitiveAddBtn') as HTMLButtonElement;
-const whitelistDiv = document.getElementById('whitelist') as HTMLElement;
-const whitelistAddInput = document.getElementById('whitelistAdd') as HTMLInputElement;
-const whitelistAddBtn = document.getElementById('whitelistAddBtn') as HTMLButtonElement;
-const alertFinanceCheckbox = document.getElementById('alertFinance') as HTMLInputElement;
-const alertSensitiveCheckbox = document.getElementById('alertSensitive') as HTMLInputElement;
-const alertUnverifiedCheckbox = document.getElementById('alertUnverified') as HTMLInputElement;
-const saveTrustSettingsBtn = document.getElementById('saveTrustSettings') as HTMLButtonElement;
-const trustSettingsStatusDiv = document.getElementById('trustSettingsStatus') as HTMLElement;
+let safetyModeSelect: HTMLSelectElement | null = null;
+let trancoTierSelect: HTMLSelectElement | null = null;
+let trancoStatusDiv: HTMLElement | null = null;
+let updateTrancoBtn: HTMLButtonElement | null = null;
+let jpAnchorListDiv: HTMLElement | null = null;
+let jpAnchorAddInput: HTMLInputElement | null = null;
+let jpAnchorAddBtn: HTMLButtonElement | null = null;
+let sensitiveListDiv: HTMLElement | null = null;
+let sensitiveCategorySelect: HTMLSelectElement | null = null;
+let sensitiveAddInput: HTMLInputElement | null = null;
+let sensitiveAddBtn: HTMLButtonElement | null = null;
+let whitelistDiv: HTMLElement | null = null;
+let whitelistAddInput: HTMLInputElement | null = null;
+let whitelistAddBtn: HTMLButtonElement | null = null;
+let alertFinanceCheckbox: HTMLInputElement | null = null;
+let alertSensitiveCheckbox: HTMLInputElement | null = null;
+let alertUnverifiedCheckbox: HTMLInputElement | null = null;
+let saveTrustSettingsBtn: HTMLButtonElement | null = null;
+let trustSettingsStatusDiv: HTMLElement | null = null;
 // P0: 許可検討セクション
-const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
+let thresholdInput: HTMLInputElement | null = null;
 
 // Category tabs
-const categoryTabs = document.querySelectorAll<HTMLButtonElement>('.category-tab');
+let categoryTabs: NodeListOf<HTMLButtonElement> | null = null;
 let currentCategory: 'finance' | 'gaming' | 'sns' = 'finance';
+
+/**
+ * Resolve all DOM references. Called at the top of init() and
+ * loadTrustSettings() so importing this module never touches `document`.
+ */
+function resolveTrustDomElements(): void {
+  safetyModeSelect = document.getElementById('safetyMode') as HTMLSelectElement | null;
+  trancoTierSelect = document.getElementById('trancoTier') as HTMLSelectElement | null;
+  trancoStatusDiv = document.getElementById('trancoStatus') as HTMLElement | null;
+  updateTrancoBtn = document.getElementById('updateTrancoBtn') as HTMLButtonElement | null;
+  jpAnchorListDiv = document.getElementById('jpAnchorList') as HTMLElement | null;
+  jpAnchorAddInput = document.getElementById('jpAnchorAdd') as HTMLInputElement | null;
+  jpAnchorAddBtn = document.getElementById('jpAnchorAddBtn') as HTMLButtonElement | null;
+  sensitiveListDiv = document.getElementById('sensitiveList') as HTMLElement | null;
+  sensitiveCategorySelect = document.getElementById('sensitiveCategory') as HTMLSelectElement | null;
+  sensitiveAddInput = document.getElementById('sensitiveAdd') as HTMLInputElement | null;
+  sensitiveAddBtn = document.getElementById('sensitiveAddBtn') as HTMLButtonElement | null;
+  whitelistDiv = document.getElementById('whitelist') as HTMLElement | null;
+  whitelistAddInput = document.getElementById('whitelistAdd') as HTMLInputElement | null;
+  whitelistAddBtn = document.getElementById('whitelistAddBtn') as HTMLButtonElement | null;
+  alertFinanceCheckbox = document.getElementById('alertFinance') as HTMLInputElement | null;
+  alertSensitiveCheckbox = document.getElementById('alertSensitive') as HTMLInputElement | null;
+  alertUnverifiedCheckbox = document.getElementById('alertUnverified') as HTMLInputElement | null;
+  saveTrustSettingsBtn = document.getElementById('saveTrustSettings') as HTMLButtonElement | null;
+  trustSettingsStatusDiv = document.getElementById('trustSettingsStatus') as HTMLElement | null;
+  thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement | null;
+  categoryTabs = document.querySelectorAll<HTMLButtonElement>('.category-tab');
+}
+
+/** Status helper that tolerates a missing status element (pre-init calls). */
+function trustStatus(message: string, type: 'success' | 'error'): void {
+  if (!trustSettingsStatusDiv) return;
+  showStatus(trustSettingsStatusDiv, message, type);
+}
 
 // Safety Mode to Tranco Tier mapping
 const SAFETY_MODE_TO_TIER: Record<SafetyMode, TrancoTier> = {
@@ -105,8 +140,13 @@ function updateTrancoStatus(status: {
 // ============================================================================
 
 function renderJpAnchorList(tlds: string[]): void {
-  if (!jpAnchorListDiv) return;
-  jpAnchorListDiv.textContent = '';
+  // Resolve on first use so direct calls work without init(); the import
+  // itself still never touches `document`.
+  if (!jpAnchorListDiv) resolveTrustDomElements();
+  // Local capture: module-level `let` narrowing does not persist into closures.
+  const listDiv = jpAnchorListDiv;
+  if (!listDiv) return;
+  listDiv.textContent = '';
 
   tlds.forEach(tld => {
     const div = document.createElement('div');
@@ -124,7 +164,7 @@ function renderJpAnchorList(tlds: string[]): void {
     removeBtn.setAttribute('aria-label', `Remove ${tld}`);
     div.appendChild(removeBtn);
 
-    jpAnchorListDiv.appendChild(div);
+    listDiv.appendChild(div);
 
     removeBtn.addEventListener('click', () => {
       removeJpAnchorTld(tld);
@@ -139,13 +179,13 @@ async function addJpAnchorTld(tld: string): Promise<void> {
   const result = await db.addJpAnchorTld(tld);
 
   if (!result.success) {
-    showStatus(trustSettingsStatusDiv, (getMessage(result.error ?? '') || result.error || 'Error'), 'error');
+    trustStatus(getMessage(result.error ?? '') || result.error || 'Error', 'error');
     return;
   }
 
   renderJpAnchorList(db.getJpAnchorTlds());
-  jpAnchorAddInput.value = '';
-  showStatus(trustSettingsStatusDiv, (getMessage('jpAnchorAdded') || 'TLD added'), 'success');
+  if (jpAnchorAddInput) jpAnchorAddInput.value = '';
+  trustStatus(getMessage('jpAnchorAdded') || 'TLD added', 'success');
 }
 
 async function removeJpAnchorTld(tld: string): Promise<void> {
@@ -161,6 +201,9 @@ async function removeJpAnchorTld(tld: string): Promise<void> {
 // ============================================================================
 
 function renderSensitiveList(domains: string[], isWhitelist = false): void {
+  // Resolve on first use so direct calls work without init(); the import
+  // itself still never touches `document`.
+  if (!sensitiveListDiv || !whitelistDiv) resolveTrustDomElements();
   const container = isWhitelist ? whitelistDiv : sensitiveListDiv;
   if (!container) return;
   container.textContent = '';
@@ -203,15 +246,15 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
   const result = await db.addSensitiveDomain(domain, category);
 
   if (!result.success) {
-    showStatus(trustSettingsStatusDiv, (getMessage(result.error ?? '') || result.error || 'Error'), 'error');
+    trustStatus(getMessage(result.error ?? '') || result.error || 'Error', 'error');
     return;
   }
 
   if (category === currentCategory) {
     renderSensitiveList(db.getSensitiveDomains(category));
   }
-  sensitiveAddInput.value = '';
-  showStatus(trustSettingsStatusDiv, (getMessage('sensitiveAdded') || 'Domain added'), 'success');
+  if (sensitiveAddInput) sensitiveAddInput.value = '';
+  trustStatus(getMessage('sensitiveAdded') || 'Domain added', 'success');
 }
 
 async function removeSensitiveDomain(domain: string, category: 'finance' | 'gaming' | 'sns'): Promise<void> {
@@ -233,13 +276,13 @@ async function addWhitelistDomain(domain: string): Promise<void> {
   const result = await db.addToWhitelist(domain);
 
   if (!result.success) {
-    showStatus(trustSettingsStatusDiv, (getMessage(result.error ?? '') || result.error || 'Error'), 'error');
+    trustStatus(getMessage(result.error ?? '') || result.error || 'Error', 'error');
     return;
   }
 
   renderWhitelistList(db.getWhitelist());
-  whitelistAddInput.value = '';
-  showStatus(trustSettingsStatusDiv, (getMessage('whitelistAdded') || 'Domain added'), 'success');
+  if (whitelistAddInput) whitelistAddInput.value = '';
+  trustStatus(getMessage('whitelistAdded') || 'Domain added', 'success');
 }
 
 function renderWhitelistList(domains: string[]): void {
@@ -265,7 +308,7 @@ async function updateTrancoList(): Promise<void> {
   const updater = getTrancoUpdater();
 
   if (updater.isUpdateInProgress()) {
-    showStatus(trustSettingsStatusDiv, (getMessage('trancoUpdateInProgress') || 'Update already in progress'), 'error');
+    trustStatus(getMessage('trancoUpdateInProgress') || 'Update already in progress', 'error');
     return;
   }
 
@@ -276,7 +319,7 @@ async function updateTrancoList(): Promise<void> {
 
     if (result.success) {
       await loadTrustSettings(); // Reload settings to reflect changes
-      showStatus(trustSettingsStatusDiv, getMessage('trancoUpdateSuccess') || 'Tranco list updated successfully', 'success');
+      trustStatus(getMessage('trancoUpdateSuccess') || 'Tranco list updated successfully', 'success');
       logInfo('TrustSettings', { tier, count: result.domainsCount }, `Tranco update completed`);
     } else {
       logError('TrustSettings', { error: result.error }, ErrorCode.TRANCO_FETCH_FAILED);
@@ -299,7 +342,7 @@ function onSafetyModeChange(): void {
   const targetTier = SAFETY_MODE_TO_TIER[mode];
 
   trancoTierSelect.value = targetTier;
-  showStatus(trustSettingsStatusDiv, (getMessage('safetyModeChanged') || 'Safety mode changed'), 'success');
+  trustStatus(getMessage('safetyModeChanged') || 'Safety mode changed', 'success');
 }
 
 function onTrancoTierChange(): void {
@@ -319,7 +362,7 @@ function onTrancoTierChange(): void {
 function switchCategory(category: 'finance' | 'gaming' | 'sns'): void {
   currentCategory = category;
 
-  categoryTabs.forEach(tab => {
+  categoryTabs?.forEach(tab => {
     if (tab.dataset.category === category) {
       tab.classList.add('active');
     } else {
@@ -346,7 +389,7 @@ async function saveTrustSettings(): Promise<void> {
   });
 
   // Note: Trust Database changes are already saved immediately when modified
-  showStatus(trustSettingsStatusDiv, (getMessage('settingsSaved') || 'Settings saved'), 'success');
+  trustStatus(getMessage('settingsSaved') || 'Settings saved', 'success');
   const alertConfig = await checker.getAlertConfig();
   logInfo('TrustSettings', { alertConfig }, 'Trust settings saved');
 }
@@ -356,6 +399,7 @@ async function saveTrustSettings(): Promise<void> {
 // ============================================================================
 
 export async function loadTrustSettings(): Promise<void> {
+  resolveTrustDomElements();
   const db = getTrustDbAdmin();
   await db.initialize();
 
@@ -415,6 +459,7 @@ export async function loadTrustSettings(): Promise<void> {
 // ============================================================================
 
 export function init(): void {
+  resolveTrustDomElements();
   // Safety Mode change
   if (safetyModeSelect) {
     safetyModeSelect.addEventListener('change', onSafetyModeChange);
@@ -440,17 +485,20 @@ export function init(): void {
   }
 
   // JP-Anchor Enter key
-  if (jpAnchorAddInput) {
-    jpAnchorAddInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        addJpAnchorTld(jpAnchorAddInput.value.trim());
-      }
-    });
+  {
+    const jpAnchorInput = jpAnchorAddInput;
+    if (jpAnchorInput) {
+      jpAnchorInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addJpAnchorTld(jpAnchorInput.value.trim());
+        }
+      });
+    }
   }
 
   // Category tabs
-  categoryTabs.forEach(tab => {
+  categoryTabs?.forEach(tab => {
     tab.addEventListener('click', () => {
       const category = tab.dataset.category as 'finance' | 'gaming' | 'sns';
       if (category) {
@@ -469,15 +517,19 @@ export function init(): void {
   }
 
   // Sensitive Domain Enter key
-  if (sensitiveAddInput) {
-    sensitiveAddInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        if (sensitiveCategorySelect) {
-          addSensitiveDomain(sensitiveAddInput.value.trim(), sensitiveCategorySelect.value as 'finance' | 'gaming' | 'sns');
+  {
+    const sensitiveInput = sensitiveAddInput;
+    const categorySelect = sensitiveCategorySelect;
+    if (sensitiveInput) {
+      sensitiveInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (categorySelect) {
+            addSensitiveDomain(sensitiveInput.value.trim(), categorySelect.value as 'finance' | 'gaming' | 'sns');
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   // Whitelist Add button
@@ -490,13 +542,16 @@ export function init(): void {
   }
 
   // Whitelist Enter key
-  if (whitelistAddInput) {
-    whitelistAddInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        addWhitelistDomain(whitelistAddInput.value.trim());
-      }
-    });
+  {
+    const whitelistInput = whitelistAddInput;
+    if (whitelistInput) {
+      whitelistInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          addWhitelistDomain(whitelistInput.value.trim());
+        }
+      });
+    }
   }
 
   // Save Settings button
