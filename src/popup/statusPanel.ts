@@ -6,7 +6,7 @@ import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 import { getMessage } from '../utils/i18n.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
-import { getCurrentTab } from './tabUtils.js';
+import { getActiveTabUrl, getCurrentTab, getDomainForUrl } from './tabUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
@@ -380,9 +380,9 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
       const granted = await requestAllUrls();
       if (granted) {
         banner.classList.add('hidden');
-        const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tabs[0]?.url) {
-          void updateTrustStatus(tabs[0].url);
+        const url = await getActiveTabUrl();
+        if (url) {
+          void updateTrustStatus(url);
         }
       }
     });
@@ -400,10 +400,9 @@ function initCleansingFeedbackButton(): void {
     el.addEventListener('click', async () => {
     const statusEl = document.getElementById('reportCleansingFeedbackStatus');
     try {
-      const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-      const tab = tabs[0];
+      const tab = await getCurrentTab();
       const url = tab?.url ?? '';
-      const domain = url ? new URL(url).hostname : '';
+      const domain = getDomainForUrl(url) ?? '';
       let htmlSnippet = '';
       let removedByReason: Record<string, number> = {};
       if (tab?.id !== undefined) {

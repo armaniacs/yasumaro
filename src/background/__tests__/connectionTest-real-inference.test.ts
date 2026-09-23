@@ -256,6 +256,8 @@ const openAiSettings = {
   provider_base_url: 'https://api.example.com/v1',
   provider_api_key: 'test-key',
   provider_model: 'test-model',
+  // Non-local custom origins require the confirmation record (VULN-002).
+  confirmed_provider_origins: { provider_base_url: ['https://api.example.com'] },
 } as unknown as Settings;
 
 const geminiSettings = {

@@ -35,6 +35,67 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+## [6.9.21] - 2026-09-23
+
+このリリースは v6.9.20 に続く連続リリースです。アーキテクチャ深層化第3ラウンド（archloop-0923c: 診断→RICE→実装の 5 PBI）で通信・録画・UI・設定の残存手配線を刈り込みました。全テスト（13,562 件）がグリーンです。
+
+### Changed
+
+- **非推奨 HMAC 双子を削除し `HmacSigner` に一本化**: 生産呼び出し 0 を確認し、`generateHmacSignature` / `verifyHmacSignature` と barrel を削除。弱い手書き比較と全エラー潰しの verify 経路が消え、`constantTimeCompare` 1 本に
+- **診断転送を builder Adapter に集約**: `pickRecordDiagnostics(payload)` を builder に所有させ、4 handler の手列挙を spread 1 行に縮退。SAVE の maskedCount 除外は構造的に維持し、新 field の追加は builder 1 行で全経路に反映
+- **maintain 系を wire-table の行に移行**: 7 分岐 switch を表駆動 dispatch に縮退。両方向同期 assert と decode 必須化で query/mutate と同水準のコンパイル強制に。wire 形状は不変
+- **popup active-tab 読取を単一 Seam に統合**: tabUtils に狭い Adapter を追加し、素クエリ 2 箇所と独自 hostname パース 1 箇所を寄せる。生産クエリは 1 箇所のみ、null 時の panel-hide 振る舞いはテストで pin
+- **preset dual-write を repository 移行**: `CLEANSING_PRESET` の素 storage 接触 7 箇所を adapter＋単一 locked-delta に置換し、perSiteOverrides の load を targeted read に切替。busy 窓・epoch・migration は保持
+
+### Tested
+
+- 単体: `npm run validate` green（13,562 passed / 21 skipped、865 ファイル）。新規テスト: maintain wire-table・dispatch parity・recordDiagnosticsConvergence・tabSeamNullPin・presetSettingsAdapter・cleansingPresetStore・perSiteOverrides-seam ほか
+- E2E: chromium green。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
+
+## [6.9.20] - 2026-09-23
+
+このリリースは v6.9.19 に続く連続リリースです。アーキテクチャ深層化第2ラウンド（archloop-0923b: 診断→RICE→実装の 5 PBI）で録画 path の 5 領域を深いモジュールに畳み込みました。全テスト（13,495 件）がグリーンです。
+
+### Changed
+
+- **互換 shim `tabUtils.isRecordable` を削除**: gate 表駆動化で生産呼び出しが 0 になった shim を確定削除。記録可否の振る舞いは gate-table テストが pin 済みのため網羅性は不変
+- **保存 fan-out を SavePhase の唯一 Seam に統合**: `save(context, deps) → SaveReceipt` を公開し、4-sink fan-out 順序・BEST_EFFORT 継続・retry 投影を所有。手書き retry 配列と `this.*` closure 注入を廃し、全 sink を `StepDeps` から均一解決。sqlite 欠如 skip は明示エラー様式に。保存順序・継続・preview 短絡の語義は不変
+- **gate 寿命を VisitGating の唯一 Seam に統合**: `evaluate(state, now)` で閾値 cache 所有・gate 寿命を一元化。kernel は 533→370 行に縮退し、`IdleScheduler` は `content/scheduler.ts` に分離。pre-init nullable fallback と E2E 状態形状は不変
+- **抽出診断を ExtractionReport 背後に集約**: 公開 interface を `extract(config) → { content, report }` にし、ByteMeter・dual 保持・funnel・recount を Module 背後に移動。hot path のバイト出力は同一
+- **信頼 lookup を TrustLookup の単一 async Seam に統合**: `lookup(url)` と `decideAlert` の 2 関数に集約し、sync 双子は生産呼び出し 0 のため廃止。legacy コンストラクタ分岐は test-only factory に押し出す。senderTrust・TrustPolicy 語義は不変
+
+### Tested
+
+- 単体: `npm run validate` green（13,495 passed / 21 skipped、858 ファイル）。新規テスト: savePhase（12）・visitGating（19）・scheduler・extractionReport（12）・TrustLookup（24）・admissionGateSteps ほか
+- E2E: chromium 242 passed。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
+
+## [6.9.19] - 2026-09-23
+
+このリリースは v6.9.18 に続く連続リリースです。VulnHunt 監査で確定した 7 件の脆弱性修正（VULN-001/002/003/004/005/007/006）を実装し、アーキテクチャ深層化ラウンド（archloop-0923: 診断→RICE→実装の 5 PBI）で履歴表示・SQLite RPC・設定フォーム・WASM ハイブリッド・記録可否判定の 5 領域を深いモジュールに畳み込みました。全テスト（13,432 件）がグリーンです。
+
+### Fixed
+
+- **保存済み Obsidian API キーが上書きホストに流れる問題を修正（VULN-001）**: `buildFromOverride` のキーフォールバックを「上書き host == 保存 host」のときのみ許可し、上書きホスト×保存済みキーの fetch を構造的に不可能化。host 検証を RFC-1123/IP リテラルの実質検証へ強化し、`obsidianClient` から `skipCspValidation` を撤去。CSP ゲートは保存済み Obsidian origin を共有バリデータ由来で認可し、リモート vault・カスタムポートの loopback vault を維持。TEST_OBSIDIAN バリデータ行の追加と UI ミラーの単一実装化も実施
+- **プロバイダ Base URL の origin 認可と FETCH_URL の fail-closed 化（VULN-002/003）**: pinned row domain・既知プロバイダドメイン・ユーザー確認済み origin・loopback 例外の 4 層認可を導入し、Gemini・Built-in AI にも同型のコンストラクタゲートを追加。`addBaseUrlDomain` の自己認可を廃し、確認済み origin のみ CSP に追加。`ALLOWED_URLS` は SW 起動シード＋設定変更再同期で常時最新化し、空集合では fail-closed に。確認済み origin はデバイスローカルのセキュリティ状態として export/import から除外し、保存時に確認ダイアログで明示許可する
+- **アーカイブ復元にワーカ側の行数・バイト上限を追加（VULN-004）**: 復元経路に 20 万行・200MiB のシーリングを導入し、検証段と復元ループの両方で効かせる。超過時は `ARC_CAP_001`/`ARC_CAP_002` で中断し、ステージングを破棄する。ファイルサイズはワーカー自身が再計測しクライアント値を信頼しない
+- **ByteStats の範囲検証と SAVE maskedCount の呼び出し元値廃止（VULN-005/007）**: VALID_VISIT の 9 フィールドに範囲検証（wire=拒否・mapper=clamp の 2 層）を追加し、`aiSummaryCleansedReasons[]` に要素数・要素型上限を実装。SAVE 経路は呼び出し元の maskedCount を破棄し、パイプライン計算値を唯一の真実にする
+- **レート制限キーを eTLD+1 スコープに変更（VULN-006）**: 兄弟サブドメイン輪番による 5 秒スロットル回避を閉じる。localhost・IP リテラルはポート込み origin のまま別キー
+
+### Changed
+
+- **履歴エントリ診断表示を深いモジュールに統合**: `historyEntryPresentation` に `renderEntryDiagnostics` / `renderCleansingBar` を公開し、View の約 300 行の診断分岐を背後に移動（View 1169→1012 行）。15 フィクスチャの characterization snapshot で全ブランチの HTML バイト等価を確認
+- **SQLite RPC を wire-table 真の Seam に統合**: `callDashboard` / `callSqliteWire` / `callArchive` の三重 runner を表駆動の単一 runner にまとめ、`sqliteClient.call(op, payload)` の 1 本化。既存 30 op は互換エイリアス、export/import の 2 呼び出し側を移行。decode 所有を wire-table 側に寄せる
+- **設定フォーム検証を記述子表 SSOT に統合**: `fieldDescriptor.ts` を新設し、token 範囲を `validateMaxTokens` に一本化（gemini 8192 等の provider 別上限が UI にも反映）。`trustSettings` の module-scope DOM 取得を lazy init に移し、DOM なし import をテストで pin
+- **ハイブリッド骨格を `runHybrid` 汎用 interface に統合**: 4 ハイブリッドの同型骨格を runtime の 1 箇所に集約。各コアは政策データ＋`callWasm`/`callTs` の Adapter に縮退。parity 戦略・フォールバック語義・しきい値・warn 文言は不変
+- **記録可否判定を gate 表の唯一 Seam に統合**: 中立層 `recordingGateTable.ts` に precedence を 1 表で所有し、`evaluateGates` を公開。5 step は表の Adapter に、popup は中立表に統一。content は domain 行・scheme 述語を共有（engagement 閾値との合流は follow-up）
+
+### Tested
+
+- 単体: `npm run validate` green（13,432 passed / 21 skipped、853 ファイル）。新規テスト: 診断表示 characterization（31）・wire-table seam・fieldDescriptor（14）・trustSettingsNoDom・runHybrid（9）・gate 表（20）・origin 認可・confirmation flow・allowedUrlsSync ほか
+- E2E: chromium 242 passed。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（素の `firefox.launch()` でも再現する環境障害。CI の Linux/xvfb 実行には影響なし）
+
 
 ## [6.9.18] - 2026-09-23
 

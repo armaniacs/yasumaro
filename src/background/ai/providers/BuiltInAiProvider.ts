@@ -14,6 +14,7 @@ import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { PROVIDER_ALLOWLIST_ROWS } from '../../../utils/storage/providerAllowlist.js';
 
 /**
  * The on-device summarize surface BuiltInAiProvider depends on. Structural so
@@ -30,6 +31,15 @@ export class BuiltInAiProvider extends AIProviderStrategy {
 
     constructor(settings: Settings, builtInAiClient: BuiltInAiSummarizer = new BuiltInAIClient()) {
         super(settings);
+        // Structural baseUrl gate (same tier as the HTTP providers'): this
+        // provider must never grow a settings-derived endpoint silently. The
+        // allowlist row must stay baseUrlKey-less; adding one means the row
+        // now carries a remote credential target and needs the full
+        // origin-authorization gate wired before construction may proceed.
+        const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === 'built-in-ai');
+        if (row?.baseUrlKey !== undefined) {
+            throw new Error('built-in-ai must not declare a baseUrlKey (on-device contract)');
+        }
         this.builtInAiClient = builtInAiClient;
     }
 

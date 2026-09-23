@@ -14,6 +14,7 @@ export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { syncOllamaOriginRule } from './net/ollamaOriginRule.js';
 import { createOllamaSettingsObserver } from './net/ollamaSettingsObserver.js';
+import { initAllowedUrlsSync } from './allowedUrlsSync.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -25,6 +26,11 @@ import { createOllamaSettingsObserver } from './net/ollamaSettingsObserver.js';
  * module-level side effects.
  */
 export function init(): void {
+    // Seed + live-sync the persisted FETCH_URL/provider allowlist from
+    // settings. Runs before any request can read the key, so existing users
+    // are migrated ahead of the fail-closed reader.
+    void initAllowedUrlsSync();
+
     // Session alarm initialization for master password timeout
     // (PBI 2026-09-15-15: the alarm creation + listener live in the registry)
     void sessionAlarmService.initialize();

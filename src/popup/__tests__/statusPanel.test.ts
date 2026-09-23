@@ -50,9 +50,24 @@ const {
 }));
 
 // Mock modules
-vi.mock('../tabUtils.js', () => ({
-  getCurrentTab: mockGetCurrentTab,
-}));
+// PBI 2026-09-23-14: the mock targets the tabUtils seam — only the query root
+// (getCurrentTab) is faked; the narrow adapters stay wired to it so every
+// active-tab read in production flows through the single mocked root.
+vi.mock('../tabUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../tabUtils.js')>();
+  return {
+    ...actual,
+    getCurrentTab: mockGetCurrentTab,
+    getActiveTabUrl: async () => (await mockGetCurrentTab())?.url ?? null,
+    getActiveTabDomain: async () =>
+      actual.getDomainForUrl((await mockGetCurrentTab())?.url ?? null),
+    requireActiveTabUrl: async () => {
+      const url = (await mockGetCurrentTab())?.url ?? null;
+      if (!url) throw new Error('No active tab URL');
+      return url;
+    },
+  };
+});
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -713,13 +728,16 @@ describe('initStatusPanel - extended', () => {
      mockGetCurrentTab.mockResolvedValue({ url: undefined });
      await initStatusPanel();
      const panel = document.getElementById('statusPanel')!;
-     expect(panel.style.display).toBe('');
+     // PBI 2026-09-23-14: null-time panel-hide pin — the seam mock is now
+     // honored (previously the real chrome.tabs.query bypassed it).
+     expect(panel.style.display).toBe('none');
    });
 
    it('hides panel on error', async () => {
      mockGetCurrentTab.mockRejectedValue(new Error('Test error'));
      await initStatusPanel();
      const panel = document.getElementById('statusPanel')!;
-     expect(panel.style.display).toBe('');
+     // PBI 2026-09-23-14: error-time panel-hide pin — see above.
+     expect(panel.style.display).toBe('none');
    });
 });

@@ -47,6 +47,8 @@ interface ByteStatsPayload {
     /** PBI 05: extraction fallback outcome (VALID_VISIT carries it end-to-end). */
     fallbackTriggered?: boolean;
     fallbackReason?: string;
+    /** Cleansing reason travels with diagnostics (PBI 2026-09-23-12 convergence). */
+    cleansedReason?: string;
 }
 
 // ============================================================================

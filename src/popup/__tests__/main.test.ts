@@ -32,9 +32,16 @@ vi.mock('../autoClose.js', () => ({
 }));
 
 vi.mock('../tabUtils.js', () => ({
-  getCurrentTab: vi.fn(() => Promise.resolve(null)),
-  isRecordable: vi.fn(() => true)
+  getCurrentTab: vi.fn(() => Promise.resolve(null))
 }));
+
+// PBI 2026-09-23-05: RecordSession reads recordability from the shared gate
+// table; the local `isRecordable` view below binds to that seam so the
+// existing per-test overrides keep driving the record flow.
+vi.mock('../../utils/recordingGateTable.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/recordingGateTable.js')>();
+  return { ...actual, isRecordableTab: vi.fn(() => true) };
+});
 
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockSetAll = vi.hoisted(() => vi.fn());
@@ -153,7 +160,8 @@ vi.mock('../../utils/trustChecker.js', () => ({
 import { showPreview, initializeModalEvents } from '../sanitizePreview.js';
 const sendMessageWithRetry = sendMock;
 import { startAutoCloseTimer } from '../autoClose.js';
-import { getCurrentTab, isRecordable as isRecordableModule } from '../tabUtils.js';
+import { getCurrentTab } from '../tabUtils.js';
+import { isRecordableTab as isRecordableModule } from '../../utils/recordingGateTable.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { checkPageStatus as checkPageStatusModule } from '../statusChecker.js';
 import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus } from '../main.js';

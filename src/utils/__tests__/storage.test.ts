@@ -7,6 +7,7 @@ import {
   updateDomainFilterCache
 } from '../storage/domainFilterCache.js';
 import { buildAllowedUrls, getAllowedUrls, computeUrlsHash } from '../storage/urlWhitelist.js';
+import { deriveRequiredDomains } from '../storage/providerAllowlist.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
 
@@ -304,7 +305,7 @@ describe('buildAllowedUrls - edge cases', () => {
     const allowedUrls = await buildAllowedUrls(settings);
 
     // Only fixed URLs are added (Obsidian localhost 2 + Gemini 1 + uBlock fixed 5 = 8)
-    expect(allowedUrls.size).toBe(8);
+    expect(allowedUrls.size).toBe(7 + deriveRequiredDomains().length);
     expect(allowedUrls.has('https://raw.githubusercontent.com')).toBe(true);
   });
 
@@ -317,7 +318,7 @@ describe('buildAllowedUrls - edge cases', () => {
     const allowedUrls = await buildAllowedUrls(settings);
 
     // Non-whitelisted URL is not added; only fixed URLs remain (8)
-    expect(allowedUrls.size).toBe(8);
+    expect(allowedUrls.size).toBe(7 + deriveRequiredDomains().length);
   });
 
   it('handles invalid Provider Base URL gracefully', async () => {
@@ -329,7 +330,7 @@ describe('buildAllowedUrls - edge cases', () => {
     const allowedUrls = await buildAllowedUrls(settings);
 
     // Only fixed URLs (8)
-    expect(allowedUrls.size).toBe(8);
+    expect(allowedUrls.size).toBe(7 + deriveRequiredDomains().length);
   });
 
   it('handles non-whitelisted Provider Base URL', async () => {
@@ -340,7 +341,7 @@ describe('buildAllowedUrls - edge cases', () => {
 
     const allowedUrls = await buildAllowedUrls(settings);
 
-    expect(allowedUrls.size).toBe(8);
+    expect(allowedUrls.size).toBe(7 + deriveRequiredDomains().length);
   });
 
   it('handles uBlock sources with invalid URLs', async () => {
@@ -356,7 +357,7 @@ describe('buildAllowedUrls - edge cases', () => {
 
     // The whitelisted origin is already in the fixed set, so the size is
     // unchanged; the non-whitelisted / invalid entries add nothing.
-    expect(allowedUrls.size).toBe(8);
+    expect(allowedUrls.size).toBe(7 + deriveRequiredDomains().length);
     expect(allowedUrls.has('https://raw.githubusercontent.com')).toBe(true);
   });
 

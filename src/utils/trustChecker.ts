@@ -5,13 +5,13 @@
  */
 
 import type { TrustResult, SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
-import { DomainTrustLevel } from './trustDb/trustDbSchema.js';
-import { getTrustPolicy } from './trustDb/TrustPolicy.js';
-import { getTrustDbAdmin } from './trustDb/TrustDbAdmin.js';
 import { StorageKeys } from './storage/types.js';
 import { logInfo, logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { pickDefined } from './objectUtils.js';
+import { lookup, decideAlert } from './trustDb/TrustLookup.js';
+import type { AlertFlags } from './trustDb/TrustLookup.js';
+import { SAFETY_MODE_TO_TRANCO_TIER } from './trustDb/trancoUpdater.js';
 
 // ============================================================================
 // Alert Settings
@@ -137,166 +137,42 @@ export class TrustChecker {
   }
 
   /**
-   * 現在のAlert Settingsを取得（同期的、初期化済みの場合のみ）
-   * 【非推奨】このメソッドは後方互換性のため残されています。
-   * 新規コードでは `getAlertConfig()` （非同期版）を使用してください。
-   * @returns {AlertConfig & { _initialized: boolean }} アラート設定と初期化状態
-   */
-  getAlertConfigSync(): AlertConfig & { _initialized: boolean } {
-    if (!this.alertConfigInitialized) {
-      console.warn(
-        '[TrustChecker] getAlertConfigSync called before initialization - using default values. ' +
-        'Consider using async getAlertConfig() instead.'
-      );
-    }
-    return {
-      ...this.alertConfig,
-      _initialized: this.alertConfigInitialized
-    };
-  }
-
-  /**
-   * ドメインのTrustチェックを実行
+   * ドメインのTrustチェックを実行（TrustLookup.lookup + decideAlert への adapter）
    */
   async checkDomain(url: string): Promise<TrustCheckResult> {
     await this.ensureInitialized();
 
-    // Deep module delegation: TrustDecision hides the 4-module往復 (trustDb → permissionManager → ManagedStringList → domainUtils)
-    // TrustChecker keeps alertConfig logic, but delegates the core trust lookup to TrustDecision when available.
-    // This makes the 4-module往復局所化 while preserving existing alert/block semantics.
-    let trustResult: import('./trustDb/trustDbSchema.js').TrustResult;
-    try {
-      const { TrustDecision } = await import('./trustDb/TrustDecision.js');
-      const decision = await new TrustDecision().isTrusted(url);
-      if (decision.trustResult) {
-        trustResult = decision.trustResult;
-      } else {
-        const admin = getTrustDbAdmin();
-        await admin.initialize();
-        trustResult = await getTrustPolicy().isDomainTrusted(url);
-      }
-    } catch {
-      try {
-        const admin = getTrustDbAdmin();
-        await admin.initialize();
-        trustResult = getTrustPolicy().isDomainTrusted(url);
-      } catch {
-        trustResult = { level: DomainTrustLevel.UNVERIFIED, source: 'unknown', reason: 'trust_check_failed' } as import('./trustDb/trustDbSchema.js').TrustResult;
-      }
-    }
-
-    // ★ 修正: trustResult が trustResult プロパティを持っているか確認
-    // Trust Dbクラスの戻り値は TrustResult （level, source, reason, category を持つ）
-    const trustResultRaw = trustResult; // as TrustResult
-
-    // 警告を表示すべきか判定
-    const showAlert = this.shouldShowAlert(trustResultRaw);
-
-    // 記録を続行してよいか判定
-    // ★ 注: 警告モーダル式の場合、showAlert=true の場合は「ユーザーの確認待ち」扱い
-    // 今回の「バッジ表示のみ」仕様では、バッジでTrustレベルを表示するだけで、
-    // 実際に記録を阻止するのは「saveAbortedPages」オプションに関わる動作
-    const canProceed = !this.shouldBlockRecording(trustResultRaw, showAlert);
+    // Single-seam adapter: lookup() owns the TrustDecision + fallback resolution,
+    // decideAlert() owns the alert/block matrix. Both display and check paths share it.
+    const found = await lookup(url);
+    const flags: AlertFlags = {
+      alertFinance: this.alertConfig.alertFinance,
+      alertSensitive: this.alertConfig.alertSensitive,
+      alertUnverified: this.alertConfig.alertUnverified,
+    };
+    const decision = decideAlert(found, flags);
 
     return {
-      canProceed,
-      trustResult: trustResultRaw,
-      showAlert,
-      ...pickDefined({ reason: !canProceed ? this.getBlockReason(trustResultRaw, showAlert) : undefined })
+      canProceed: decision.canProceed,
+      trustResult: found.trustResult,
+      showAlert: decision.showAlert,
+      ...pickDefined({ reason: decision.reason })
     };
   }
 
   /**
-   * 警告を表示すべきか判定
-   */
-  private shouldShowAlert(trustResult: TrustResult): boolean {
-    const { level, category } = trustResult;
-
-    // TRUSTED は警告なし
-    if (level === 'trusted') {
-      return false;
-    }
-
-    // SENSITIVE - カテゴリごとにAlert Settingsで判定
-    if (level === 'sensitive' && category) {
-      if (category === 'finance') {
-        return this.alertConfig.alertFinance;
-      }
-      // gaming, sns など
-      return this.alertConfig.alertSensitive;
-    }
-
-    // UNVERIFIED
-    if (level === 'unverified') {
-      return this.alertConfig.alertUnverified;
-    }
-
-    return false;
-  }
-
-  /**
-   * 記録をブロックすべきか判定
-   * 注: バッジ表示仕様ではブロックは行わないが、将来の機能拡張のため実装
-   */
-  private shouldBlockRecording(trustResult: TrustResult, _showAlert: boolean): boolean {
-    // 現在の仕様では、バッジ表示のみでブロックは行わない
-    // ただし、LOCKEDレベルのドメインは常にブロックする
-    if (trustResult.level === 'locked') {
-      return true;
-    }
-
-    // 将来的に「厳格モード」等の実装のため、Alert Settingsと連動するロジックを実装
-    // ここでは簡易的な実装として、アラートが表示されるべきでかつセキュリティレベルが高い場合はブロックする
-    // 実際の実装では、Safety Modeなどの設定に応じて判定する
-
-    return false;
-  }
-
-  /**
-   * ブロック理由を取得
-   */
-  private getBlockReason(trustResult: TrustResult, _showAlert: boolean): string {
-    const { level, category } = trustResult;
-
-    if (level === 'unverified') {
-      return 'Unverified domain - recording blocked';
-    }
-
-    if (level === 'sensitive' && category === 'finance') {
-      return 'Financial site - recording blocked';
-    }
-
-    if (level === 'sensitive') {
-      return `Sensitive site (${category}) - recording blocked`;
-    }
-
-    return 'Trust check failed - recording blocked';
-  }
-
-  /**
-   * ドメインのTrustレベルを文字列で取得（UI用）
+   * ドメインのTrustレベルを文字列で取得（UI用、TrustLookup.lookup への adapter）
    */
   async getTrustLevelDisplay(url: string): Promise<{
     level: string;
     color: string;
     icon: string;
   }> {
-    const admin = getTrustDbAdmin();
-    await admin.initialize();
-    const result = await getTrustPolicy().isDomainTrusted(url);
-
-    const mapping: Record<string, { color: string; icon: string }> = {
-      'trusted': { color: '#10b981', icon: '🟢' },      // Green - Trusted
-      'sensitive': { color: '#f59e0b', icon: '🟡' },  // Amber - Sensitive
-      'unverified': { color: '#94a3b8', icon: '⚪' },  // Gray - Unverified
-      'locked': { color: '#6b7280', icon: '🔒' }       // Gray - Locked (P0)
-    };
-
-    const display = mapping[result.level] ?? { color: '#94a3b8', icon: '⚪' };
-
+    const found = await lookup(url);
     return {
-      level: result.level.toUpperCase(),
-      ...display
+      level: found.display.label,
+      color: found.display.color,
+      icon: found.display.icon
     };
   }
 
@@ -316,14 +192,8 @@ export class TrustChecker {
   async setSafetyMode(mode: SafetyMode): Promise<void> {
     await chrome.storage.local.set({ [StorageKeys.SAFETY_MODE]: mode });
 
-    // Safety Mode に応じて Tranco Tier も同期
-    const tierMap: Record<SafetyMode, TrancoTier> = {
-      strict: 'top1k',
-      balanced: 'top10k',
-      relaxed: 'top100k'
-    };
-
-    const tier = tierMap[mode];
+    // SafetyMode→tier coupling is owned by the tranco settings table; reuse it here.
+    const tier = SAFETY_MODE_TO_TRANCO_TIER[mode];
     if (tier) {
       await chrome.storage.local.set({ [StorageKeys.TRANCO_TIER]: tier });
     }
@@ -346,16 +216,6 @@ export class TrustChecker {
    */
   async shouldSaveAbortedPages(): Promise<boolean> {
     await this.ensureInitialized();
-    return this.alertConfig.saveAbortedPages;
-  }
-
-  /**
-   * 保存された中断ページを履歴に残すか（同期的、初期化済みの場合のみ）
-   */
-  shouldSaveAbortedPagesSync(): boolean {
-    if (!this.alertConfigInitialized) {
-      console.warn('TrustChecker', {}, undefined, 'shouldSaveAbortedPagesSync called before initialization - using default value');
-    }
     return this.alertConfig.saveAbortedPages;
   }
 }

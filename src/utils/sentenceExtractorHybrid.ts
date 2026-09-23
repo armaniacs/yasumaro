@@ -35,7 +35,7 @@ import {
     isWasmSafeF64,
     isWasmSafeU32,
     remapWasmIndices,
-    withWasmFallback,
+    runHybrid,
 } from './wasmHybridRuntime.js';
 
 const probe = createHybridProbe(
@@ -72,20 +72,15 @@ export async function extractSentencesHybrid(
     text: string,
     options: ExtractOptions = {}
 ): Promise<string[]> {
-    if (!text || !text.trim()) {
-        return [];
-    }
-    // One shared defaults merge: the same DEFAULT_OPTIONS the TS reference
-    // applies, so the WASM call never sees different defaults than the
-    // fallback path would.
-    const opts: Required<ExtractOptions> = { ...DEFAULT_OPTIONS, ...options };
-    if (!isWasmSafeOptions(opts) || !(await probe.isAvailable())) {
-        return extractSentences(text, options);
-    }
-
-    return withWasmFallback(
-        'TextRank WASM extraction failed, falling back to TS for this input',
-        async () => {
+    return runHybrid({
+        probe,
+        fallbackMessage: 'TextRank WASM extraction failed, falling back to TS for this input',
+        // Same DEFAULT_OPTIONS merge the TS reference applies, so the WASM
+        // call never sees different defaults than the fallback path would.
+        mergeDefaults: () => ({ ...DEFAULT_OPTIONS, ...options }),
+        earlyReturn: () => (!text || !text.trim() ? [] : undefined),
+        isSafe: (opts) => isWasmSafeOptions(opts),
+        callWasm: async (opts) => {
             const result = await extractTopIndicesWithWasm(text, opts);
             // Per-core splitter injection: the trimmed `splitSentences`
             // split, verified against the core's own split by the shared
@@ -94,6 +89,6 @@ export async function extractSentencesHybrid(
             const indices = remapWasmIndices(result, sentences, 'textrank', 'sentences');
             return indices.map((i) => sentences[i]!);
         },
-        () => extractSentences(text, options)
-    );
+        callTs: () => extractSentences(text, options),
+    });
 }

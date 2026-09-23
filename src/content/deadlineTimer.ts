@@ -1,15 +1,18 @@
 /**
  * deadlineTimer.ts
- * Single one-shot deadline timer + threshold/gate/startTime cache ownership.
- * Extracted from ContentKernel (PBI 15 pure-extraction refactor) so scheduling
- * policy changes no longer touch visit-state evaluation.
+ * Single one-shot deadline timer. Threshold/gate/startTime cache ownership
+ * lives in VisitGating (PBI 2026-09-23-08) — the timer borrows the cached
+ * gate via its gating reference and never rebuilds it. A drift rebuild
+ * observed through refreshCachesIfStale drops the deadline computed from
+ * the old thresholds so the next schedule recomputes it.
  */
 
-import type { Scheduler } from './contentKernel.js';
+import type { Scheduler } from './scheduler.js';
 import type { Clock } from './domainPolicyPort.js';
 import type { PageState } from './pageState.js';
-import { VisitGate } from './visitGate.js';
+import type { VisitGate } from './visitGate.js';
 import type { VisitGateThresholds } from './visitGate.js';
+import type { VisitGating } from './visitGating.js';
 
 export interface DeadlineTimerDeps {
     scheduler: Scheduler;
@@ -17,48 +20,34 @@ export interface DeadlineTimerDeps {
     getPageState: () => PageState;
     isE2ETest: () => boolean;
     onDeadlineEvaluate: () => void;
+    gating: VisitGating;
 }
 
 export class DeadlineTimer {
-    private cachedThresholds: VisitGateThresholds | null = null;
-    private cachedGate: VisitGate | null = null;
-    private isE2ECached: boolean | null = null;
     private deadlineMs: number | null = null;
-    private cachedStartTime: number | null = null;
 
     constructor(private readonly deps: DeadlineTimerDeps) {}
 
     /** Build caches fresh — called once from kernel init. */
     initialize(): void {
+        this.deps.gating.initialize();
         const pageState = this.deps.getPageState();
-        this.cachedThresholds = pageState.toVisitGateThresholds();
-        this.cachedGate = new VisitGate(this.cachedThresholds, this.deps.clock);
-        this.isE2ECached = this.deps.isE2ETest();
-        this.deadlineMs = pageState.startTime + this.cachedThresholds.minDuration * 1000;
-        this.cachedStartTime = pageState.startTime;
+        const thresholds = this.deps.gating.thresholds;
+        if (thresholds === null) {
+            throw new Error('DeadlineTimer: thresholds unavailable after refresh');
+        }
+        this.deadlineMs = pageState.startTime + thresholds.minDuration * 1000;
     }
 
     /**
-     * Rebuild the cached gate/thresholds/deadline when pageState values drift
-     * (settings reload or startTime reset after init). Cached snapshots frozen
-     * at init would otherwise silently evaluate against dead values.
+     * Drop the deadline when the borrowed caches drifted (settings reload
+     * or startTime reset after init). The gate/threshold rebuild itself is
+     * owned by VisitGating.
      */
     refreshCachesIfStale(): void {
-        const pageState = this.deps.getPageState();
-        // Compare the source primitives directly — building the thresholds
-        // object on every call would defeat the PBI 02 single-construction goal.
-        const stale =
-            !this.cachedThresholds ||
-            this.cachedThresholds.minDuration !== pageState.minVisitDuration ||
-            this.cachedThresholds.minScroll !== pageState.minScrollDepth ||
-            this.cachedStartTime !== pageState.startTime;
-        if (stale) {
-            this.cachedThresholds = pageState.toVisitGateThresholds();
-            this.cachedGate = new VisitGate(this.cachedThresholds, this.deps.clock);
+        if (this.deps.gating.refreshCachesIfStale()) {
             this.deadlineMs = null;
-            this.cachedStartTime = pageState.startTime;
         }
-        if (this.isE2ECached === null) this.isE2ECached = this.deps.isE2ETest();
     }
 
     scheduleNextCheck(): void {
@@ -70,10 +59,11 @@ export class DeadlineTimer {
             // PBI 2026-09-11-01 (round 6): refreshCachesIfStale above guarantees
             // cachedThresholds is built (a null forces stale = true). The old
             // non-null assertion hid that contract; this throw states it.
-            if (this.cachedThresholds === null) {
+            const thresholds = this.deps.gating.thresholds;
+            if (thresholds === null) {
                 throw new Error('DeadlineTimer: thresholds unavailable after refresh');
             }
-            this.deadlineMs = pageState.startTime + this.cachedThresholds.minDuration * 1000;
+            this.deadlineMs = pageState.startTime + thresholds.minDuration * 1000;
         }
         const remaining = Math.max(0, this.deadlineMs - this.deps.clock());
         pageState.checkIntervalId = this.deps.scheduler.schedule(() => {
@@ -102,16 +92,16 @@ export class DeadlineTimer {
     get thresholds(): VisitGateThresholds | null {
         // PBI 2026-09-11-01 (round 6): mirrors `gate` — pre-init readers get
         // null instead of a crash from the non-null assertion.
-        return this.cachedThresholds;
+        return this.deps.gating.thresholds;
     }
 
     get gate(): VisitGate | null {
-        return this.cachedGate;
+        return this.deps.gating.gate;
     }
 
     get isE2E(): boolean {
         // PBI 2026-09-11-01 (round 6): non-null contract — until initialize()
         // runs (or refresh caches) the safe default is "not an e2e test".
-        return this.isE2ECached ?? false;
+        return this.deps.gating.isE2E;
     }
 }

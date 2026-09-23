@@ -618,6 +618,18 @@
   "confirmProtocolHttp": {
     "message": "プロトコルに「http」が設定されています。APIキーとデータが平文で送信されることを理解した上で保存しますか？"
   },
+  "providerOriginConfirmTitle": {
+    "message": "プロバイダ接続先の確認"
+  },
+  "providerOriginConfirmMessage": {
+    "message": "以下の origin に API キーとページ内容が送信されます。許可しますか？"
+  },
+  "providerOriginConfirmAllow": {
+    "message": "許可する"
+  },
+  "providerOriginSaveBlocked": {
+    "message": "接続先が許可されなかったため、設定は保存されていません。"
+  },
   "errorPort": {
     "message": "エラー: ポートは1から65535の間の数値である必要があります。"
   },

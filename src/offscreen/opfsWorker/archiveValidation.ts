@@ -13,6 +13,10 @@
 
 import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import { COLUMN_NAMES, SCHEMA_SQL } from '../schema.js';
+import {
+  assertByteTotalWithinCap,
+  assertRowTotalWithinCap,
+} from './archiveGuards.js';
 
 /** Tables an archive-format database may contain. `sqlite_sequence` is
  * auto-created by AUTOINCREMENT and is harmless (managed by SQLite). */
@@ -163,6 +167,36 @@ async function validateColumns(engine: SqliteEngine): Promise<void> {
   }
 }
 
+/**
+ * Read the staged file's on-disk size worker-side via page_count × page_size.
+ * Returns null when the engine cannot answer (unknown in unit mocks) so
+ * callers skip the byte gate instead of rejecting blindly; the row gate
+ * still applies. The worker never trusts the client's size cap.
+ */
+async function readStagedByteSize(engine: SqliteEngine): Promise<number | null> {
+  try {
+    const pages = await engine.query('PRAGMA page_count');
+    const sizes = await engine.query('PRAGMA page_size');
+    const pageCount = firstNumber(pages);
+    const pageSize = firstNumber(sizes);
+    if (pageCount === null || pageSize === null || pageCount <= 0 || pageSize <= 0) {
+      return null;
+    }
+    return pageCount * pageSize;
+  } catch {
+    return null;
+  }
+}
+
+function firstNumber(rows: SqliteRow[]): number | null {
+  const first = rows[0];
+  if (!first) return null;
+  const key = Object.keys(first)[0];
+  if (key === undefined) return null;
+  const value = first[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 function parseMetaRow(row: SqliteRow | undefined): ArchiveMeta | null {
   if (!row) return null;
   const meta: ArchiveMeta = {
@@ -185,6 +219,11 @@ function parseMetaRow(row: SqliteRow | undefined): ArchiveMeta | null {
  * Validate an opened archive engine. The engine is closed by this function
  * ONLY when validation rejects (so callers never operate on a hostile
  * file); on success the caller owns the lifecycle.
+ *
+ * Besides structure and meta consistency, this enforces the worker-side
+ * restore ceilings (ARC_CAP_001/ARC_CAP_002) on declared totals, observed
+ * row counts, and staged file bytes — in both reject and warn modes, so a
+ * hostile file cannot enter any downstream loop.
  */
 export async function validateArchiveEngine(
   engine: SqliteEngine,
@@ -205,6 +244,14 @@ export async function validateArchiveEngine(
       throw new Error(
         'Archive validation failed: yasumaro_archive_meta is empty or unreadable',
       );
+    }
+    // Resource ceilings precede the consistency check: a crafted archive
+    // lying about its totals is rejected here, before the restore loop.
+    assertRowTotalWithinCap(meta.recordCount, false);
+    assertRowTotalWithinCap(recordCount, true);
+    const stagedBytes = await readStagedByteSize(engine);
+    if (stagedBytes !== null) {
+      assertByteTotalWithinCap(stagedBytes);
     }
     if (recordCountMismatch === 'reject' && meta.recordCount !== recordCount) {
       throw new Error(

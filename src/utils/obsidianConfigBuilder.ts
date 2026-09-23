@@ -99,21 +99,29 @@ async function buildFromSettings(): Promise<ObsidianConfig> {
  * Build config from override values (used by testConnection).
  * Host falls back to DEFAULT_HOST when not provided, matching the stored-config path.
  *
- * apiKey falls back to the stored key when the override omits it: the dashboard
- * clears the API key input's value (masking the saved key behind a placeholder),
- * so editing only protocol/port/host must not be treated as "no API key configured".
+ * A typed apiKey is always honored (test-before-save carries no stored
+ * credential). The stored-key fallback below is the sensitive path: the
+ * dashboard masks the saved key behind a placeholder and sends an empty
+ * value when only protocol/port/host were edited, so the fallback exists —
+ * but only when the override targets the saved host. Pairing the stored key
+ * with any other host would send the vault bearer token to that origin.
  */
 async function buildFromOverride(override: ObsidianConfigOverride): Promise<ObsidianConfig> {
     const protocol = validateObsidianProtocol(override.protocol, override.host);
     const port = validateObsidianPort(override.port);
-    const apiKey = override.apiKey || (await settingsRepository.get(StorageKeys.OBSIDIAN_API_KEY));
+    const host = override.host && override.host.trim() !== '' ? validateObsidianHost(override.host) : OBSIDIAN_DEFAULT_HOST;
+
+    let apiKey: unknown;
+    if (override.apiKey) {
+        apiKey = override.apiKey;
+    } else {
+        apiKey = await resolveStoredKeyForHost(host);
+    }
 
     if (!apiKey || typeof apiKey !== 'string') {
         // Throw to match the original behavior in testConnection
         throw new Error('API key is missing');
     }
-
-    const host = override.host && override.host.trim() !== '' ? validateObsidianHost(override.host) : OBSIDIAN_DEFAULT_HOST;
 
     return {
         baseUrl: `${protocol}://${host}:${port}`,
@@ -123,4 +131,25 @@ async function buildFromOverride(override: ObsidianConfigOverride): Promise<Obsi
         },
         settings: {} as Settings
     };
+}
+
+/**
+ * Return the stored API key only when the override host equals the saved
+ * host (both normalized through validateObsidianHost). Any mismatch — or an
+ * unreadable/invalid saved host — yields undefined so the caller rejects
+ * with 'API key is missing' instead of pairing the stored credential with a
+ * foreign origin. No fetch happens on that path.
+ */
+async function resolveStoredKeyForHost(host: string): Promise<unknown> {
+    const savedHostRaw = await settingsRepository.get(StorageKeys.OBSIDIAN_HOST);
+    let savedHost: string | null = null;
+    try {
+        savedHost = validateObsidianHost(typeof savedHostRaw === 'string' ? savedHostRaw : undefined);
+    } catch {
+        savedHost = null;
+    }
+    if (savedHost === null || savedHost !== host) {
+        return undefined;
+    }
+    return settingsRepository.get(StorageKeys.OBSIDIAN_API_KEY);
 }

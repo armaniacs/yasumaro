@@ -8,41 +8,19 @@ import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
-import { describeDelta, formatBytes } from './entryByteDelta.js';
-import {
-  classifyAiSummaryMissing,
-  classifyCleansingMissing,
-  classifyDiagnosticMissing,
-  classifyExtractionMissing,
-  classifyMaskingMissing,
-  classifyTokensMissing,
-  computeCleansingReduction,
-  describeFallbackReasonKey,
-  resolveCleansingBytes,
-  type DiagnosticMissingReason,
-} from './historyEntryPresentation.js';
+import { renderCleansingBar, renderEntryDiagnostics } from './historyEntryPresentation.js';
 import {
   REGENERATE_CLEANSE_MODES,
   type RegenerateCleanseMode,
 } from '../../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 
-const MISSING_REASON_KEYS: Record<DiagnosticMissingReason, string> = {
-  'no-ai': 'historyMissingReasonNoAi',
-  'empty': 'historyMissingReasonEmpty',
-  'unmeasured': 'historyMissingReasonUnmeasured',
-};
-
-function missingReasonText(reason: DiagnosticMissingReason): string {
-  return t(MISSING_REASON_KEYS[reason], []);
-}
-
 /**
- * Single seam for missing-reason rows (PBI 2026-09-18-02).
- * Owns the css class, the em-dash separator, and the escape of the
- * locale-controlled reason text, so callers cannot drift apart.
+ * Adapter (PBI 2026-09-23-01): the bar definition lives behind
+ * `renderCleansingBar` in historyEntryPresentation.ts. Kept exported so
+ * existing callers/tests keep working.
  */
-function pushReasonRow(parts: string[], titleKey: string, reason: DiagnosticMissingReason, cssClass: string, separator = ' — '): void {
-  parts.push(`<div class="${cssClass}">${t(titleKey, [])}${separator}${escapeHtml(missingReasonText(reason))}</div>`);
+export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
+  return renderCleansingBar(entry);
 }
 
 export function formatDate(date: Date): string {
@@ -60,37 +38,6 @@ export function formatTimestamp(ts: number): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
-    // 削減率の定義（fallback 連鎖含む）は historyEntryPresentation.ts が単一所有 —
-    // PBI 2026-09-15-11 で View から抽出。
-    const reduction = computeCleansingReduction(entry);
-    if (!reduction) return buildMissingReductionBarHtml(entry);
-    const { base, sentToAI, sentRatio, reductionRatePercent } = reduction;
-
-    const label = `${formatBytes(base as number)} → ${formatBytes(sentToAI as number)} (${reductionRatePercent.toFixed(1)}% ${t('cleansingReduction')})`;
-
-    return `<div class="cleansing-progress-wrapper">
-    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="${Math.max(sentRatio * 100, 0.2).toFixed(1)}"></div></div>
-    <span class="cleansing-progress-label">${escapeHtml(label)}</span>
-  </div>`;
-}
-
-/**
- * Placeholder for the reduction bar when bytes are unmeasurable
- * (PBI 2026-09-18-20). Keeps the wrapper/track/label layout identical so
- * entries without numbers do not collapse the region that measured
- * entries show. Reason wording reuses the diagnostic 3-way classification.
- */
-function buildMissingReductionBarHtml(entry: BrowsingLogEntry): string {
-    const reason = classifyDiagnosticMissing(entry);
-    const label = missingReasonText(reason);
-
-    return `<div class="cleansing-progress-wrapper">
-    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
-    <span class="cleansing-progress-label">${escapeHtml(label)}</span>
-  </div>`;
 }
 
 export function sortSelectValue(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): string {
@@ -121,117 +68,13 @@ export function isFullTextSearchActive(state: SqliteHistoryState): boolean {
   return state.pendingTagFallback !== null;
 }
 
+/**
+ * Adapter (PBI 2026-09-23-01): the diagnostics markup lives behind
+ * `renderEntryDiagnostics` in historyEntryPresentation.ts. Kept exported so
+ * existing callers/tests keep working.
+ */
 export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
-  const parts: string[] = [];
-
-  if (entry.summary && entry.summary.trim().length > 0) {
-    parts.push(`<div class="history-entry-ai-summary">${escapeHtml(entry.summary)}</div>`);
-  }
-
-  if (entry.sent_tokens != null || entry.received_tokens != null) {
-    const tokenParts: string[] = [];
-    if (entry.sent_tokens != null) tokenParts.push(`<span class="token-label">${t('historySentTokens', [''])}:</span> <span class="token-value">${entry.sent_tokens}</span>`);
-    if (entry.received_tokens != null) tokenParts.push(`<span class="token-label">${t('historyReceivedTokens', [''])}:</span> <span class="token-value">${entry.received_tokens}</span>`);
-    let tokensText = `${t('historyTokens', [])}: ${tokenParts.join(', ')}`;
-    if (entry.ai_duration_ms != null && entry.ai_duration_ms > 0) {
-      tokensText += `, ${t('historyDuration', [])} ${(entry.ai_duration_ms / 1000).toFixed(1)}秒`;
-    }
-    if (entry.ai_provider) {
-      const aiParts = [escapeHtml(entry.ai_provider)];
-      if (entry.ai_model) aiParts.push(escapeHtml(entry.ai_model));
-      tokensText += ` (AI: ${aiParts.join(' / ')})`;
-    }
-    parts.push(`<div class="history-entry-tokens">${tokensText}</div>`);
-  } else if (entry.ai_provider) {
-    const aiParts = [escapeHtml(entry.ai_provider)];
-    if (entry.ai_model) aiParts.push(escapeHtml(entry.ai_model));
-    let providerText = `AI: ${aiParts.join(' / ')}`;
-    if (entry.ai_duration_ms != null && entry.ai_duration_ms > 0) {
-      providerText += `, ${t('historyDuration', [])} ${(entry.ai_duration_ms / 1000).toFixed(1)}秒`;
-    }
-    parts.push(`<div class="history-entry-tokens">${providerText}</div>`);
-  } else {
-    // PBI 2026-09-18-21: keep the token row with a reason instead of hiding it.
-    const reason = classifyTokensMissing(entry);
-    if (reason) pushReasonRow(parts, 'historyTokens', reason, 'history-entry-tokens', ': ');
-  }
-
-  if (entry.page_bytes != null && entry.candidate_bytes != null) {
-    // PBI 2026-09-12-21: describeDelta guards the zero-original branch that
-    // used to render Infinity%/NaN% here.
-    const delta = describeDelta(entry.page_bytes, entry.candidate_bytes);
-    if (delta) {
-      parts.push(`<div class="history-entry-token-reduction">${t('historyContentExtraction', [])} — ${t('historyBytes', [])}: ${delta.label} (${t('historyReduction', [])} ${delta.cleansed - delta.original} / ${delta.percent}%)</div>`);
-    } else {
-      const reason = classifyExtractionMissing(entry);
-      if (reason) pushReasonRow(parts, 'historyContentExtraction', reason, 'history-entry-token-reduction');
-    }
-  } else {
-    const reason = classifyExtractionMissing(entry);
-    if (reason) pushReasonRow(parts, 'historyContentExtraction', reason, 'history-entry-token-reduction');
-  }
-
-  if (entry.original_bytes != null || entry.cleansed_bytes != null) {
-    // Byte resolution lives in resolveCleansingBytes — never re-spell the chain here.
-    const { original: contentOriginalB, cleansed: contentCleansedB } = resolveCleansingBytes(entry);
-    const cleansingDelta = describeDelta(contentOriginalB, contentCleansedB);
-    if (cleansingDelta) {
-      parts.push(`<div class="history-entry-token-reduction">${t('historyContentCleansing', [])} — ${t('historyBytes', [])}: ${cleansingDelta.label} (${t('historyReduction', [])} ${cleansingDelta.cleansed - cleansingDelta.original} / ${cleansingDelta.percent}%)</div>`);
-    } else {
-      const reason = classifyCleansingMissing(entry);
-      if (reason) pushReasonRow(parts, 'historyContentCleansing', reason, 'history-entry-token-reduction');
-    }
-  } else {
-    const reason = classifyCleansingMissing(entry);
-    if (reason) pushReasonRow(parts, 'historyContentCleansing', reason, 'history-entry-token-reduction');
-  }
-
-  if (entry.masked_count != null || (entry.original_tokens != null && entry.cleansed_tokens != null)) {
-    const maskingParts: string[] = [];
-    if (entry.masked_count != null) {
-      maskingParts.push(`${t('historyMaskedCount', [])}: ${entry.masked_count}`);
-    }
-    if (entry.original_tokens != null && entry.cleansed_tokens != null) {
-      maskingParts.push(`${t('historyTokens', [])}: ${entry.original_tokens} → ${entry.cleansed_tokens}`);
-    }
-    if (maskingParts.length > 0) {
-      parts.push(`<div class="history-entry-token-reduction">${t('historyPiiMasking', [])} — ${maskingParts.join(', ')}</div>`);
-    }
-  } else {
-    // PBI 2026-09-18-21: keep the PII row with a reason instead of hiding it.
-    const reason = classifyMaskingMissing(entry);
-    if (reason) pushReasonRow(parts, 'historyPiiMasking', reason, 'history-entry-token-reduction');
-  }
-
-  if (entry.ai_summary_original_bytes != null && entry.ai_summary_cleansed_bytes != null) {
-    const aiDelta = describeDelta(entry.ai_summary_original_bytes, entry.ai_summary_cleansed_bytes);
-    if (aiDelta) {
-      parts.push(`<div class="history-entry-ai-summary-cleansing">${t('historyAiSummaryCleansing', [])}: ${aiDelta.label} (${t('historyReduction', [])} ${aiDelta.cleansed - aiDelta.original} / ${aiDelta.percent}%)</div>`);
-    } else {
-      const reason = classifyAiSummaryMissing(entry);
-      if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
-    }
-  } else if (entry.ai_summary_original_bytes != null || entry.ai_summary_cleansed_bytes != null) {
-    const reason = classifyAiSummaryMissing(entry);
-    if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
-  } else {
-    // PBI 2026-09-18-21: keep the AI summary row with a reason instead of
-    // hiding it when both sides are absent.
-    const reason = classifyAiSummaryMissing(entry);
-    if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
-  }
-
-  // PBI 05: フォールバック発動理由（triggered 時のみ1行追加。未知の理由は非表示）
-  const fallbackReasonKey = describeFallbackReasonKey(entry.fallback_reason);
-  if (fallbackReasonKey) {
-    parts.push(`<div class="history-entry-token-reduction">${t('historyFallbackReason', [])}: ${t(fallbackReasonKey, [])}</div>`);
-  }
-
-  // buildCleansingProgressBarHtml never returns '' (PBI 2026-09-18-20):
-  // unmeasurable entries keep the bar region with a reason label.
-  parts.push(buildCleansingProgressBarHtml(entry));
-
-  return parts.join('');
+  return renderEntryDiagnostics(entry);
 }
 
 /** Builds the HTML markup for the entry list. Does not attach listeners. */

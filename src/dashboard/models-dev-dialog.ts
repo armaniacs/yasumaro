@@ -11,8 +11,8 @@ import {
     isHttpsUrl,
 } from '../utils/modelsDevApi.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-
-import { StorageKeys } from '../utils/storage/types.js';
+import { StorageKeys, type Settings } from '../utils/storage/types.js';
+import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
@@ -464,13 +464,22 @@ export class ModelsDevDialog {
         // Save settings — delta write (PBI 2026-09-17-17): only the provider
         // connection keys this dialog owns enter the payload.
         try {
-            await settingsRepository.setAll({
+            // The catalog endpoint is fetched content, so the selected origin
+            // must pass the same explicit-confirmation policy as a hand-typed
+            // base URL before any credential is bound to it.
+            const delta: Partial<Settings> = {
                 [StorageKeys.AI_PROVIDER]: 'openai-compatible',
                 [StorageKeys.PROVIDER_TYPE]: this.selectedProvider.id,
                 [StorageKeys.PROVIDER_BASE_URL]: this.selectedProvider.api,
                 [StorageKeys.PROVIDER_API_KEY]: apiKey,
                 [StorageKeys.PROVIDER_MODEL]: model,
-            });
+            };
+            const originConfirmation = await confirmNewProviderBaseUrls(delta);
+            if (originConfirmation === 'cancelled') {
+                this.showError(getMessage('providerOriginSaveBlocked') || 'Endpoint not allowed — settings were not saved');
+                return;
+            }
+            await settingsRepository.setAll(delta);
 
             // OnSave callback
             this.options.onSave?.(

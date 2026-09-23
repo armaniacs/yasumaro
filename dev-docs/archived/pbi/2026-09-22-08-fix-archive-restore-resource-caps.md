@@ -43,10 +43,10 @@ Scenario: 総バイトが上限を超える入力も検証段階で拒否され�
   Then  検証段階で拒否され、復元ループに入らない
 
 ## 受け入れ基準
-- [ ] ワーカ側に総行数・総バイトのシーリング定数があり、検証と復元ループの両方で効く
-- [ ] 超過時にユーザーに分かるエラーコード（`ARC_*`）が返る
-- [ ] クライアント側 cap のバイパス（ワーカ直叩き経路）でも上限が効く
-- [ ] 正常系の復元回帰テストが緑
+- [x] ワーカ側に総行数・総バイトのシーリング定数があり、検証と復元ループの両方で効く
+- [x] 超過時にユーザーに分かるエラーコード（`ARC_*`）が返る
+- [x] クライアント側 cap のバイパス（ワーカ直叩き経路）でも上限が効く
+- [x] 正常系の復元回帰テストが緑
 
 ## テスト戦略
 - 単体: シーリング境界（上限-1 / 上限 / 上限+1）
@@ -57,6 +57,11 @@ Scenario: 総バイトが上限を超える入力も検証段階で拒否され�
 2 SP（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] type-check / lint / test / build が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] type-check / lint / test / build が通る
+
+## 実装記録（2026-09-23）
+- コミット 31b1b988。ワーカ側 SSOT（opfsWorker/archiveGuards.ts）に総行数 20万行・総バイト 200MiB（クライアント cap と同一定数）のシーリングを新設。validateArchiveEngine（宣言値・実測 COUNT・PRAGMA page_count×page_size によるバイト再計測）と復元ループの両方で効かせ、超過時は ARC_CAP_001/002 で中断してステージングを破棄。dev-docs/ERROR_CODES.md に登録。
+- なぜなぜ分析: /tmp/whywhy/vuln-004-archive-restore-resource-caps.md
+- 検証: type-check / lint 0 errors / test 13,358 green / build green。残: GitHub PR レビュー

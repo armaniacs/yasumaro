@@ -11,6 +11,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProviderConnectionField, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
+import { GENERAL_SETTINGS_FIELDS } from './settings/fieldDescriptor.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, setFieldError, ErrorPair } from './settings/fieldValidation.js';
@@ -18,22 +19,21 @@ import { getMessage } from '../utils/i18n.js';
 import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
 import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { syncStatusToTop } from './statusView.js';
 
 /**
- * General settings validation schema — single source of truth for the
- * 7 element IDs that were previously hardcoded. Each entry maps a StorageKey
- * to its DOM element ID and error element ID.
+ * General settings validation schema — derived from the descriptor table
+ * (settings/fieldDescriptor.ts), which is the single source of truth for the
+ * 7 element IDs that were previously hardcoded here. Order is positional:
+ * saveDashboardSettings indexes pairs[0..6] below.
  */
-export const GENERAL_SETTINGS_VALIDATION_FIELDS: ValidationSchema = [
-  { storageKey: StorageKeys.OBSIDIAN_PROTOCOL, elementId: 'protocol', errorId: 'protocolError' },
-  { storageKey: StorageKeys.OBSIDIAN_PORT, elementId: 'port', errorId: 'portError' },
-  { storageKey: StorageKeys.OBSIDIAN_HOST, elementId: 'obsidianHost', errorId: 'obsidianHostError' },
-  { storageKey: StorageKeys.GEMINI_API_VERSION, elementId: 'geminiApiVersion', errorId: 'geminiApiVersionError' },
-  { storageKey: StorageKeys.MIN_VISIT_DURATION, elementId: 'minVisitDuration', errorId: 'minVisitDurationError' },
-  { storageKey: StorageKeys.MIN_SCROLL_DEPTH, elementId: 'minScrollDepth', errorId: 'minScrollDepthError' },
-  { storageKey: StorageKeys.MAX_TOKENS_PER_PROMPT, elementId: 'maxTokensPerPrompt', errorId: 'maxTokensErrors' },
-];
+export const GENERAL_SETTINGS_VALIDATION_FIELDS: ValidationSchema =
+  GENERAL_SETTINGS_FIELDS.map(({ storageKey, elementId, errorId }) => ({
+    storageKey,
+    elementId,
+    errorId,
+  }));
 
 /**
  * Resolve a ValidationSchema into ErrorPair[] (element, errorId) by looking
@@ -228,6 +228,15 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
         'Skipped overwriting a stored provider connection field with an empty value',
       );
     }
+  }
+
+  // Provider origin authorization (VULN-002 fix): a base URL whose origin is
+  // new (not pinned, not loopback, not yet confirmed) requires the explicit
+  // user acknowledgement recorded in confirmed_provider_origins before the
+  // write may proceed.
+  const originConfirmation = await confirmNewProviderBaseUrls(newSettings);
+  if (originConfirmation === 'cancelled') {
+    return { success: false, error: 'provider_origin_confirmation_cancelled' };
   }
 
   // Delta write (PBI 2026-09-17-17): only the extracted form keys enter the

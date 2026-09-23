@@ -13,11 +13,18 @@ import { errorMessage } from './errorUtils.js';
 import { ALL_LIST_SOURCES } from './listSources.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
+import { StorageKeys } from './storage/types.js';
+import {
+  validateObsidianHost,
+  validateObsidianPort,
+  validateObsidianProtocol,
+} from './obsidianConfigValidator.js';
 import {
   deriveConditionalCspEntries,
   deriveRequiredDomains,
-  isAllowedProviderBaseUrl,
+  isProviderOriginAuthorized,
   PROVIDER_ALLOWLIST_ROWS,
+  type ProviderAllowlistRow,
 } from './storage/providerAllowlist.js';
 
 class CspError extends Error {
@@ -81,6 +88,13 @@ export class CSPValidator {
   private static allowedDomains: Set<string> = new Set(DEFAULT_ALLOWED_DOMAINS);
   private static optionalDomains: Set<string> = new Set(OPTIONAL_DOMAINS);
   private static initialized = false;
+  /**
+   * Exact origins derived from the saved Obsidian settings (host/port/
+   * protocol via the shared validators). Saved vault traffic — remote https
+   * vaults and loopback vaults on custom ports — passes the fetch gate on
+   * origin equality while unsaved origins stay blocked.
+   */
+  private static savedObsidianOrigins: Set<string> = new Set();
 
   // 初期化Promiseとリクエストキュー（レースコンディション修正用）
   private static initPromise: Promise<void> | null = null;
@@ -127,11 +141,16 @@ export class CSPValidator {
     }
 
     // 設定由来の Base URL は「信頼できる定数」ではないため、暗黙に許可リストへ
-    // 入れる前に isAllowedProviderBaseUrl で締め直す（private IP・metadata
-    // endpoint・非 localhost の http を拒否）。汚染設定でも条件付き CSP の
-    // 意味を保つ。挙動は暗黙追加のまま（明示オプトイン化はしない）。
-    const addBaseUrlDomain = (rawUrl: string, isLocal: boolean): void => {
-      if (!isAllowedProviderBaseUrl(rawUrl, isLocal)) return;
+    // 入れる前に origin 認可で締め直す（pinned row domain / ユーザー確認済み
+    // origin / loopback のみ）。設定値そのものを根拠にした自己認可は許さない
+    // — 汚染された provider_base_url が条件付き CSP を寛解させない。
+    const confirmedOrigins = new Set(
+      Object.values(
+        (settings[StorageKeys.CONFIRMED_PROVIDER_ORIGINS] as Record<string, string[]> | undefined) ?? {},
+      ).flat(),
+    );
+    const addBaseUrlDomain = (rawUrl: string, row: ProviderAllowlistRow): void => {
+      if (!isProviderOriginAuthorized(rawUrl, row, confirmedOrigins).authorized) return;
       try {
         const domain = new URL(rawUrl).hostname;
         if (domain) {
@@ -148,8 +167,24 @@ export class CSPValidator {
       if (!entry.baseUrlKey) continue;
       const rawUrl = settings[entry.baseUrlKey] as string | undefined;
       if (rawUrl) {
-        addBaseUrlDomain(rawUrl, entry.isLocal);
+        addBaseUrlDomain(rawUrl, entry);
       }
+    }
+
+    // Saved Obsidian vault origin (SSOT-derived). An invalid saved config
+    // contributes nothing rather than widening the gate.
+    try {
+      const rawHost = settings[StorageKeys.OBSIDIAN_HOST] as string | undefined | null;
+      const rawPort = settings[StorageKeys.OBSIDIAN_PORT] as string | number | undefined | null;
+      const rawProtocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] as string | undefined | null;
+      const savedProtocol = validateObsidianProtocol(rawProtocol, typeof rawHost === 'string' ? rawHost : undefined);
+      const savedHost = validateObsidianHost(rawHost);
+      const savedPort = validateObsidianPort(rawPort);
+      CSPValidator.savedObsidianOrigins = new Set(
+        [new URL(`${savedProtocol}://${savedHost}:${savedPort}`).origin],
+      );
+    } catch {
+      CSPValidator.savedObsidianOrigins = new Set();
     }
 
     CSPValidator.initialized = true; // 初回ロードフラグ（fetch.ts内での重複初期化抑制用）
@@ -232,6 +267,13 @@ export class CSPValidator {
       // 非AIドメイン（Tranco, uBlock）— LIST_SOURCES SSOT から派生
       // （Checking Team 2026-09-22: Maintainability Medium — 旧4ドメイン直書きを廃止）
       if (LIST_SOURCE_HOSTS.has(domain)) {
+        return true;
+      }
+
+      // Saved Obsidian vault origin (exact match). Checked before the
+      // generic localhost rules so a saved loopback vault on a custom port
+      // (outside ALLOWED_LOCALHOST_PORTS) still passes.
+      if (CSPValidator.savedObsidianOrigins.has(parsed.origin)) {
         return true;
       }
 
@@ -338,6 +380,7 @@ export class CSPValidator {
    */
   static reset(): void {
     CSPValidator.allowedDomains = new Set(DEFAULT_ALLOWED_DOMAINS);
+    CSPValidator.savedObsidianOrigins = new Set();
     CSPValidator.initialized = false;
     CSPValidator.initializing = false;
     CSPValidator.initPromise = null;

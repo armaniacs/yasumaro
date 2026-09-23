@@ -4,7 +4,8 @@
  * not race and generate two.
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import { getNotificationHmacKey, generateHmacSignature, verifyHmacSignature } from '../hmacKeyStore.js';
+import { getNotificationHmacKey } from '../hmacKeyStore.js';
+import { hmacSignerForKey } from '../hmacSigner.js';
 
 describe('hmacKeyStore get-or-create serialisation', () => {
   beforeEach(async () => {
@@ -17,8 +18,8 @@ describe('hmacKeyStore get-or-create serialisation', () => {
 
     // If the two calls raced and persisted different key material, a signature
     // produced under one would not verify under the other.
-    const sig = await generateHmacSignature('payload', keyA);
-    expect(await verifyHmacSignature('payload', sig, keyB)).toBe(true);
+    const sig = await hmacSignerForKey(async () => keyA, 'base64url').sign('payload');
+    expect(await hmacSignerForKey(async () => keyB, 'base64url').verify('payload', sig)).toBe(true);
   });
 
   it('exactly one wrapped key is persisted after a parallel burst', async () => {
@@ -33,8 +34,8 @@ describe('hmacKeyStore get-or-create serialisation', () => {
     expect(stored['notification-signature-key']).toBeDefined();
     // A later single call must resolve to the same key.
     const key = await getNotificationHmacKey();
-    const sig = await generateHmacSignature('x', key);
+    const sig = await hmacSignerForKey(async () => key, 'base64url').sign('x');
     const again = await getNotificationHmacKey();
-    expect(await verifyHmacSignature('x', sig, again)).toBe(true);
+    expect(await hmacSignerForKey(async () => again, 'base64url').verify('x', sig)).toBe(true);
   });
 });

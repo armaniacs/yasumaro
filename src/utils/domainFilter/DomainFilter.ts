@@ -102,8 +102,9 @@ export class DomainFilter {
 
   /**
    * Build cache payload for a given settings snapshot.
-   * Handles whitelist / blacklist / disabled — blacklist now caches blocked
-   * domains instead of an empty array (fixes TODO).
+   * Handles whitelist / blacklist / disabled — blacklist caches blocked
+   * domains rather than an empty array, so disabled-mode staleness cannot
+   * leak through the cache.
    */
   buildCacheDomains(settings: Settings): string[] {
     const mode = settings[StorageKeys.DOMAIN_FILTER_MODE];

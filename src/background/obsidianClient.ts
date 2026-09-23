@@ -159,9 +159,7 @@ export class ObsidianClient {
     async _fetchExistingContent(url: string, headers: HeadersInit, traceId: string = ''): Promise<string> {
         const response = await fetchWithTimeout(url, {
             method: 'GET',
-            headers,
-            skipCspValidation: true,
-            allowedUrls: null
+            headers
         }, FETCH_TIMEOUT_MS);
 
         if (response.ok) {
@@ -189,9 +187,7 @@ export class ObsidianClient {
         const response = await fetchWithTimeout(url, {
             method: 'PUT',
             headers,
-            body: content,
-            skipCspValidation: true,
-            allowedUrls: null
+            body: content
         }, FETCH_TIMEOUT_MS);
 
         if (!response.ok) {
@@ -244,8 +240,6 @@ export class ObsidianClient {
             const response = await fetchWithTimeout(ENDPOINTS.root(baseUrl), {
                 method: 'GET',
                 headers,
-                skipCspValidation: true,
-                allowedUrls: null,
                 cache: CONNECTION_TEST_CACHE_MODE
             }, FETCH_TIMEOUT_MS);
 

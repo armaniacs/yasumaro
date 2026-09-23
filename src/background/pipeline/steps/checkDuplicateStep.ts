@@ -6,7 +6,7 @@
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { getSavedUrlsWithTimestamps, MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD } from '../../../utils/storage/savedUrlRepository.js';
-import { decideDuplicate } from '../recordingDecision.js';
+import { decideGate } from '../../../utils/recordingGateTable.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
 const defaultUrlStore = { getSavedUrlsWithTimestamps };
@@ -27,7 +27,8 @@ export const checkDuplicateStep: PipelineStepFunction = async (
 
   // Skip check if flag is set
   // PBI 2026-09-19-08: verdict は recordingDecision.decideDuplicate に委譲
-  const verdict = decideDuplicate({
+  // PBI 2026-09-23-05: shared gate table row への adapter（I/O はこの step に残す）
+  const verdict = decideGate('duplicate', {
     skipCheck: skipDuplicateCheck ?? false,
     savedTimestamp: urlMap.get(url),
     now: Date.now(),

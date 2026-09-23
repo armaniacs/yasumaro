@@ -335,3 +335,90 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
     return false;
   }
 }
+
+/**
+ * Why a provider baseUrl origin is (or is not) authorized to carry credentials.
+ * Layered on top of isAllowedProviderBaseUrl's deny-only SSRF rules:
+ * - 'local': loopback origin (localhost / 127.x / ::1) — the local-provider
+ *   exception, checked before the deny layer so a loopback endpoint stays
+ *   usable in any provider slot (consistent with ssrfGuard's port gate).
+ * - 'pinned': the row declares a fixed endpoint domain and the URL points at
+ *   it (or a subdomain of it).
+ * - 'provider-domain': the host is itself a known AI-provider endpoint from
+ *   the neutral table (e.g. api.groq.com in an OpenAI-compatible slot).
+ * - 'confirmed': the user explicitly confirmed this exact origin for this
+ *   slot's baseUrlKey (device-local store; never imported/exported).
+ * - 'denied': everything else. A poisoned setting can no longer self-authorize.
+ */
+export type ProviderOriginAuthorizationReason = 'pinned' | 'confirmed' | 'local' | 'provider-domain' | 'denied';
+
+export interface ProviderOriginAuthorization {
+  readonly authorized: boolean;
+  readonly reason: ProviderOriginAuthorizationReason;
+}
+
+function isLoopbackOriginHostname(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[(.*)\]$/, '$1');
+  return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h);
+}
+
+/** Every known provider endpoint domain from the neutral table (one set). */
+function knownProviderDomains(): Set<string> {
+  return new Set(
+    PROVIDER_ALLOWLIST_ROWS.flatMap((row) => [
+      ...(row.domain ? [row.domain.toLowerCase()] : []),
+      ...(row.extraWhitelistDomains ?? []).map((d) => d.toLowerCase()),
+    ]),
+  );
+}
+
+/**
+ * Origin-scoped authorization for a provider baseUrl. The loopback exception
+ * runs before the deny-only SSRF predicate (loopback endpoints are explicitly
+ * permitted in any provider slot); the SSRF layer still rejects private /
+ * metadata / encoded-IP hosts for everything else.
+ */
+export function isProviderOriginAuthorized(
+  url: string,
+  row: ProviderAllowlistRow | undefined,
+  confirmedOrigins: ReadonlySet<string>,
+): ProviderOriginAuthorization {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { authorized: false, reason: 'denied' };
+  }
+  const hostname = parsed.hostname.toLowerCase().replace(/\.+$/, '');
+  if (isLoopbackOriginHostname(hostname)) {
+    return { authorized: true, reason: 'local' };
+  }
+  if (!isAllowedProviderBaseUrl(url, row?.isLocal ?? false)) {
+    return { authorized: false, reason: 'denied' };
+  }
+  if (row?.domain) {
+    const domain = row.domain.toLowerCase();
+    if (hostname === domain || hostname.endsWith('.' + domain)) {
+      return { authorized: true, reason: 'pinned' };
+    }
+  }
+  if (knownProviderDomains().has(hostname)) {
+    return { authorized: true, reason: 'provider-domain' };
+  }
+  if (confirmedOrigins.has(parsed.origin)) {
+    return { authorized: true, reason: 'confirmed' };
+  }
+  return { authorized: false, reason: 'denied' };
+}
+
+/**
+ * Confirmed origins for one baseUrlKey, from the settings blob (sync-readable
+ * at provider construction time). Returns an empty set when the key is absent.
+ */
+export function collectConfirmedOrigins(
+  settings: Record<string, unknown>,
+  baseUrlKey: string,
+): Set<string> {
+  const all = settings[StorageKeys.CONFIRMED_PROVIDER_ORIGINS] as Record<string, string[]> | undefined;
+  return new Set(all?.[baseUrlKey] ?? []);
+}

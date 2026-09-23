@@ -6,8 +6,14 @@ type MutableLastError = { lastError: chrome.runtime.LastError | null };
 
 vi.mock('../tabUtils.js', () => ({
   getCurrentTab: vi.fn(),
-  isRecordable: vi.fn().mockReturnValue(true),
 }));
+
+// PBI 2026-09-23-05: RecordSession reads recordability from the shared gate
+// table; tests drive the same seam (default allow, per-test override).
+vi.mock('../../utils/recordingGateTable.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/recordingGateTable.js')>();
+  return { ...actual, isRecordableTab: vi.fn().mockReturnValue(true) };
+});
 
 vi.mock('../../utils/i18n.js', () => ({
   getMessage: vi.fn((key: string) => key),
@@ -106,7 +112,8 @@ import {
   loadCurrentTab,
   recordCurrentPage,
 } from '../recordCurrentPage.js';
-import { getCurrentTab, isRecordable } from '../tabUtils.js';
+import { getCurrentTab } from '../tabUtils.js';
+import { isRecordableTab as isRecordable } from '../../utils/recordingGateTable.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 const sendMessageWithRetry = sendMock;
 import { showError } from '../errorUtils.js';

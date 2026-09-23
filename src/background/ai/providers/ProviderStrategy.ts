@@ -11,7 +11,7 @@ import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 import { fetchWithRetry } from '../../../utils/fetch.js';
-import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
+import { buildAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
 import { addLog } from '../../../utils/logger/core.js';
@@ -300,7 +300,7 @@ export abstract class AIProviderStrategy {
             // Static transport imports again: the utils -> background back-edge
             // is gone (PBI 2026-09-05-01 moved the allowlist table + predicate
             // to the low tier), so no cycle remains to dodge.
-            const allowedUrls = await getAllowedUrls();
+            const allowedUrls = buildAllowedUrls(this.settings);
 
             const response = await fetchWithRetry(prepared.url, {
                 method: 'POST',
@@ -405,13 +405,13 @@ export abstract class AIProviderStrategy {
 
     /**
      * 接続テスト用の許可 URL 取得。testConnection 経路の共有断片。
-     * urlWhitelist の getAllowedUrls への薄い委譲であり、provider 側にあった
-     * 同名 private ラッパーの逐語同一 2 コピー（旧 PBI 2026-08-07-01 指摘）を
-     * 解消するために base へ引き上げた。summary flow 側の providerAllowlist
-     * 中立テーブルとは別仕組みのため混同しないこと。
+     * 旧実装は ALLOWED_URLS ストアキーを読んでいたが、設定書き込み直後の
+     * 再同期を待つ窓で新 origin が fail-closed 拒否される競合があるため、
+     * 構築時に受け取った settings から毎回新鮮に導出する。キー自体は
+     * allowedUrlsSync が永続化し続ける（監査修正の writer 契約）。
      */
     protected async getAllowedUrlsForRequests(): Promise<Set<string>> {
-        return getAllowedUrls();
+        return buildAllowedUrls(this.settings);
     }
 
     /**

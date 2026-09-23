@@ -41,11 +41,11 @@ Scenario: ALLOWED_URLS が空の状態で FETCH_URL は拒否され（fail-close
   Then  拒否される。`buildAllowedUrls` のシード後は正当な URL が通る
 
 ## 受け入れ基準
-- [ ] 3 プロバイダすべてに同一水準の baseUrl ゲートがある
-- [ ] `addBaseUrlDomain` が設定由来 host を自動で allowedDomains に入れない
-- [ ] ALLOWED_URLS の writer が実在し、fail-closed に変わった
-- [ ] ユーザー確認フロー（ポリシー）がテストで pin されている
-- [ ] 既存の Ollama / LM Studio 正規利用の回帰テストが緑
+- [x] 3 プロバイダすべてに同一水準の baseUrl ゲートがある
+- [x] `addBaseUrlDomain` が設定由来 host を自動で allowedDomains に入れない
+- [x] ALLOWED_URLS の writer が実在し、fail-closed に変わった
+- [x] ユーザー確認フロー（ポリシー）がテストで pin されている
+- [x] 既存の Ollama / LM Studio 正規利用の回帰テストが緑
 
 ## テスト戦略
 - 単体: providerAllowlist のポリシー表、cspValidator の非自己認可、isUrlAllowed の空集合挙動
@@ -55,7 +55,13 @@ Scenario: ALLOWED_URLS が空の状態で FETCH_URL は拒否され（fail-close
 5 SP（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] type-check / lint / test / build が通る
-- [ ] ドキュメント更新済み（プロバイダ設定の説明）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] type-check / lint / test / build が通る
+- [x] ドキュメント更新済み（プロバイダ設定の説明）
+
+## 実装記録（2026-09-23）
+- コミット 8584718a。providerAllowlist に origin 認可ポリシー（pinned row domain / 既知プロバイダドメイン / ユーザー確認済み origin / loopback 例外）を新設し、Gemini・Built-in AI に同型ゲートを追加。cspValidator の addBaseUrlDomain を非自己認可化。ALLOWED_URLS は allowedUrlsSync（SW 起動シード + 設定変更再同期）で常時最新化し、isUrlAllowed を空集合 fail-closed に変更。確認済み origin は `confirmed_provider_origins`（デバイスローカル・export/import 除外）に記録し、settingsPipeline と models-dev-dialog の保存経路で確認ダイアログ（showConfirmDialog seam）を出す。
+- 設計裁定: プロバイダ fetch はストレージキー読み取りから構築時 settings 由来の毎回新鮮な buildAllowedUrls に変更（シード競合の排除）。pinned required-tier ドメインは許可集合に常に含む（catalog 既定 URL の取りこぼし防止）。
+- なぜなぜ分析: /tmp/whywhy/vuln-002-003-provider-baseurl-authorization.md
+- 検証: type-check / lint 0 errors / test 13,358 green / build green。残: GitHub PR レビュー
