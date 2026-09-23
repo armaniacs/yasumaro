@@ -11,8 +11,11 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 // ---------------------------------------------------------------------------
 const mockQueryLogs = vi.fn();
 
+// PBI 2026-09-23-02: exportLogsService calls the generic seam
+// (sqliteClient.call('records', ...)); the mock routes the records op to the
+// same rows/total stub so the export assertions below are unchanged.
 vi.mock('../dashboardSqliteService.js', () => ({
-  queryLogs: (...args: any[]) => mockQueryLogs(...args),
+  sqliteClient: { call: (...args: any[]) => mockQueryLogs(args[1]) },
 }));
 
 // Deterministic signer so fixtures are reproducible; the real one needs a
