@@ -45,3 +45,14 @@ export const MAX_TIME_HEATMAP_ROWS = 10000;
  * and the O(n) group pass. The panel shows a truncation notice when reached.
  */
 export const MAX_VISIT_DURATION_ROWS = 10000;
+
+/**
+ * Max rows fetched for the domain-analysis panel (user-selected period+tag).
+ * queryLogs caps a single page at 10000 rows, so the panel paginates with
+ * offset until this total cap; the panel shows a cap notice when the last
+ * page comes back full (more rows likely exist beyond it).
+ */
+export const MAX_DOMAIN_ANALYSIS_ROWS = 50000;
+
+/** Rows per queryLogs page for the domain-analysis panel (MAX / 5 pages). */
+export const DOMAIN_ANALYSIS_PAGE_SIZE = 10000;

@@ -15,6 +15,7 @@ import { createDomainSearchPanel } from './asyncData/domainSearchPanel.js';
 import { createTagClusterPanel } from './asyncData/tagClusterPanel.js';
 import { createTimeHeatmapPanel } from './asyncData/timeHeatmapPanel.js';
 import { createVisitDurationPanel } from './asyncData/visitDurationPanel.js';
+import { createDomainAnalysisPanel } from './asyncData/domainAnalysisPanel.js';
 import { createSqliteHistoryPanel } from './asyncData/sqliteHistoryPanel.js';
 import { createGeneralSettingsPanel } from './staticForm/generalSettingsPanel.js';
 import { createPrivacySettingsPanel } from './staticForm/privacySettingsPanel.js';
@@ -29,6 +30,7 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
   'panel-tag-cluster': createTagClusterPanel,
   'panel-time-heatmap': createTimeHeatmapPanel,
   'panel-visit-duration': createVisitDurationPanel,
+  'panel-domain-analysis': createDomainAnalysisPanel,
   'panel-sqlite-history': createSqliteHistoryPanel,
   'panel-general': createGeneralSettingsPanel,
   'panel-privacy': createPrivacySettingsPanel,

@@ -167,6 +167,14 @@
           </svg>
           <span data-i18n="visitDurationTab">Visit Duration</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-domain-analysis" aria-selected="false" data-panel="panel-domain-analysis">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="4" y="12" width="4" height="8"/>
+            <rect x="10" y="5" width="4" height="15"/>
+            <rect x="16" y="9" width="4" height="11"/>
+          </svg>
+          <span data-i18n="domainAnalysisTab">Domain Analysis</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -1704,6 +1712,7 @@
       <section id="panel-tag-cluster" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="tagClusterTab">Tag Cluster</h2>
         <p class="panel-description" data-i18n="tagClusterDescription">Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag.</p>
+        <div id="tagClusterFilter"></div>
         <div id="tagClusterEmptyState" data-i18n="tagClusterEmptyState" hidden>No tagged history yet.</div>
         <div id="tagClusterTruncatedNotice" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
         <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
@@ -1915,6 +1924,39 @@
           <tbody id="visitDurationTagBody"></tbody>
         </table>
         <div id="visitDurationTagTruncated" class="visit-duration-truncated" hidden></div>
+      </section>
+
+      <!-- Domain Analysis Panel -->
+      <section id="panel-domain-analysis" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="domainAnalysis_title">Domain Analysis</h2>
+        <div id="domainAnalysisFilter"></div>
+        <div class="form-group">
+          <label for="domainAnalysisTagInput" data-i18n="domainAnalysis_tagLabel">Tag (optional)</label>
+          <input type="text" id="domainAnalysisTagInput"
+            data-i18n-input-placeholder="domainAnalysis_tagAll">
+          <button type="button" id="domainAnalysisRunBtn" data-i18n="domainAnalysis_run">Run</button>
+        </div>
+        <div id="domainAnalysisEmptyState" data-i18n="domainAnalysis_empty" hidden>No browsing records match the selected period and tag.</div>
+        <p id="domainAnalysisUnknownNotice" aria-live="polite" hidden></p>
+        <div id="domainAnalysisRowCap" class="visit-duration-truncated" hidden></div>
+        <h3 class="visit-duration-heading" data-i18n="domainAnalysis_byDomainTitle">By domain</h3>
+        <table id="domainAnalysisDomainTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="domainAnalysis_domainColumn">Domain</th>
+            <th scope="col" data-i18n="domainAnalysis_countColumn">Count</th>
+          </tr></thead>
+          <tbody id="domainAnalysisDomainBody"></tbody>
+        </table>
+        <div id="domainAnalysisDomainTruncated" class="visit-duration-truncated" hidden></div>
+        <h3 class="visit-duration-heading" data-i18n="domainAnalysis_byUrlTitle">By URL</h3>
+        <table id="domainAnalysisUrlTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="domainAnalysis_urlColumn">URL</th>
+            <th scope="col" data-i18n="domainAnalysis_countColumn">Count</th>
+          </tr></thead>
+          <tbody id="domainAnalysisUrlBody"></tbody>
+        </table>
+        <div id="domainAnalysisUrlTruncated" class="visit-duration-truncated" hidden></div>
       </section>
 
       <!-- CSP Settings Panel (P1) -->
