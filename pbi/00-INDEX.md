@@ -14,12 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 8件 ✨機能追加 RICE順: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08
+### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 6件 ✨機能追加 RICE順: 03 → 04 → 05 → 06 → 07 → 08（01-02 は完了・アーカイブ済み）
 
-分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存、03-08 は 02 が新設する共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`）に依存。
+分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存、03-08 は 02 で新設済みの共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`）を再利用。
 
-- [2026-09-24-01-feat-time-heatmap.md](2026-09-24-01-feat-time-heatmap.md)（⬜ 未着手 — RICE 4.00・1 SP・副作用🟢。曜日7×時間帯24の記録数ヒートマップ。created_at のみで実現・依存なし）
-- [2026-09-24-02-feat-visit-duration-analysis.md](2026-09-24-02-feat-visit-duration-analysis.md)（⬜ 未着手 — RICE 3.20・1.5 SP・副作用🟢。ドメイン/タグ別滞在時間ランキング。共有期間フィルタ部品を本 PBI で新設）
 - [2026-09-24-03-feat-domain-analysis.md](2026-09-24-03-feat-domain-analysis.md)（⬜ 未着手 — RICE 3.00・2 SP・副作用🟢。タグ×期間でドメイン別・URL別 top N を表表示）
 - [2026-09-24-04-feat-period-tag-cluster.md](2026-09-24-04-feat-period-tag-cluster.md)（⬜ 未着手 — RICE 2.40（調整後・素 1.20）・1 SP・副作用🟢。タグクラスタに期間フィルタ追加。08 の計算基盤）
 - [2026-09-24-05-feat-tag-frequency-timeline.md](2026-09-24-05-feat-tag-frequency-timeline.md)（⬜ 未着手 — RICE 2.40・1.5 SP・副作用🟢。上位タグの週次/月次頻度推移グラフ）
@@ -83,6 +81,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 分析機能強化ラウンド バッチ1 — ✅ 2件完了（01-02 アーカイブ済み）RICE順: 01 → 02
+
+autonomous-task-closer による実装。バッチ1 = 01（ヒートマップ）→ 02（閲覧時間分析＋共有期間フィルタ部品新設）の直列実装（パネル配線ファイル重複のため並列化は見送り）。なぜなぜ分析は /tmp/whywhy/（pbi-01-heatmap・pbi-02-visit-duration）。統合検証: type-check PASS / lint 0 errors / test 13,610 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-01-feat-time-heatmap.md（✅ 完了 — `1455e34a`。曜日7×時間帯24ヒートマップ・直近12ヶ月固定・数値テーブル併記。29 tests 新規。RICE 4.00）
+- 2026-09-24-02-feat-visit-duration-analysis.md（✅ 完了 — `1455e34a`。ドメイン/タグ別滞在時間ランキング・未計測率表示。共有部品 `src/dashboard/components/periodFilter.ts` 新設（03-08 が再利用）。56 tests 新規。RICE 3.20。実データの `visit_duration` は現行記録経路で常に null のため未計測率100%表示が既定挙動）
 
 ### 2026-09-24 arch-delivery-loop 台帳消化 — ✅ 4件完了（DoD反映漏れをアーカイブ）
 
