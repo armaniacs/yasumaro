@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-23 arch-delivery-loop ラウンド（archloop-0923）— ⬜ 未着手 5件 🔧非機能追加 RICE順: 01 → 02 → 03 → 04 → 05
+
+Phase 0 診断（サブエージェント探索・ホットスポット: 履歴パネル群 / SQLite ゲートウェイ / 設定フォーム群 / Hybrid 足場 / 録画 gate / AI プロバイダ / クエリ計画）→ Phase 1 RICE スコアリング。コードベース深層化ラウンド。依存なし（並行可・実装は直列）。採点の詳細と未採用候補は [2026-09-23-00-backlog-archloop-0923.md](2026-09-23-00-backlog-archloop-0923.md)。
+
+- [2026-09-23-01-refactor-history-diagnostics-deep-module.md](2026-09-23-01-refactor-history-diagnostics-deep-module.md)（⬜ 未着手 — RICE 24.0・0.5 週・副作用🟢。履歴エントリ診断表示を `renderEntryDiagnostics(entry): string` の深い Module に畳む。HTML バイト等価の移行）
+- [2026-09-23-02-refactor-sqlite-client-deep-seam.md](2026-09-23-02-refactor-sqlite-client-deep-seam.md)（⬜ 未着手 — RICE 17.1・0.75 週・副作用🟡。wire-table を真の Seam に昇格し `sqliteClient.call(op, payload)` に統合。named ラッパー 30 は互換エイリアス化）
+- [2026-09-23-03-refactor-settings-form-descriptor-table.md](2026-09-23-03-refactor-settings-form-descriptor-table.md)（⬜ 未着手 — RICE 11.2・1.0 週・副作用🟡。設定フォームを記述子表 SSOT 化し、token 範囲を `aiLimits.validateMaxTokens` に一本化。trustSettings の module-scope DOM 取得を lazy init に）
+- [2026-09-23-04-refactor-wasm-hybrid-policy-adapters.md](2026-09-23-04-refactor-wasm-hybrid-policy-adapters.md)（⬜ 未着手 — RICE 8.0・0.5 週・副作用🟢。`runHybrid` 汎用 interface で 4 ハイブリッドの同型骨格を政策 Adapter 行に畳む。parity 戦略・フォールバック語義は不変）
+- [2026-09-23-05-refactor-recording-gate-table.md](2026-09-23-05-refactor-recording-gate-table.md)（⬜ 未着手 — RICE 7.5・0.75 週・副作用🟡。記録可否判定を `evaluateGates(context)` 唯一 Seam + gate 表に。precedence 複製（content/popup）を中立層の 1 表に統合）
+
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
 VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
