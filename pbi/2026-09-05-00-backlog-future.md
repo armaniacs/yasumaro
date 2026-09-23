@@ -157,6 +157,8 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | console → logger seam 統一（dashboard/popup 約30サイト。init tracing は意図的 console の可能性があり設計判断が残る） | 2.1 | 可観測性方針の明確化（console 残置の許容範囲を LAYERS.md 等に規定する時）/ ダッシュボードのエラーログ収集を強化する時 | [0918c](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918c.md) |
 | P3: 2 wire table の dashboard-hop codec 形状統合（interface 抽出のみで deletion test passes） | — | 2 wire table を同時に改修する時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
 | P4: ensureBackend/getBackend の resolver 入力 literal（trivial サイズ） | — | backend 状態 field の追加時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
+| ProviderSlotRunner 化（要約 7 フック + 接続テスト 3 フックのスロット走査を `runSlots(slots, task)` に統合。slotFailures 組立の 2 経路 drift を構造的に防止） | 4.0 | 直近の VULN-001/002 修正（origin 認可・ペアリング禁止）の運用が落ち着いた後の AI プロバイダ改修時 | [0923](2026-09-23-00-backlog-archloop-0923.md) |
+| queryPlan Interface 圧縮（`planStorageQuery(q): QuerySpec` 唯一 Seam 化 + `qualifyCondition` regex の列ホワイトリスト駆動置換） | 1.5 | OPFS/IDB/fallback 以外の backend 追加時 / 新列追加で qualifyCondition 誤爆が顕在化する時 | [0923](2026-09-23-00-backlog-archloop-0923.md) |
 
 （0915 は全11候補が PBI 02-12 として消化済み、holistic-0921 の台帳送り3件は 2026-09-22 の保留候補 PBI 01/02/03 として採番済みのため、両台帳は候補ゼロでアーカイブ。0915b の PBI 03 でスコープ外とした recordingCache ensureReady の別候補は RecordingCache→RecordingCacheInstance 移行（2026-08-17）後の実在確認が前提のため、次回 recording cache 系改修時に要否を再評価する。）
 
