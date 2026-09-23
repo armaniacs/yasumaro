@@ -6,7 +6,7 @@
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { isDomainAllowed } from '../../../utils/domainUtils.js';
-import { decideDomainFilter } from '../recordingDecision.js';
+import { decideGate } from '../../../utils/recordingGateTable.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
@@ -21,7 +21,8 @@ export const checkDomainFilterStep: PipelineStepFunction = async (
 
   const isAllowed = await isDomainAllowed(url);
   // PBI 2026-09-19-08: verdict は recordingDecision.decideDomainFilter に委譲
-  const verdict = decideDomainFilter(isAllowed, force);
+  // PBI 2026-09-23-05: shared gate table row への adapter（I/O はこの step に残す）
+  const verdict = decideGate('domainFilter', { isAllowed, force });
 
   if (!verdict.allow) {
     // Domain is blocked and no force flag - this is a fatal error
