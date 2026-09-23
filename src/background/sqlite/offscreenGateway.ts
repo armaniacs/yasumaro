@@ -11,13 +11,8 @@ import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord } from 
 import { categorizeError } from '../../messaging/sqliteRpcClient.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
 import type {
-  OffscreenBinaryResponse,
   OffscreenStatusResponse,
   OffscreenStatusData,
-  OffscreenPurgeResponse,
-  OffscreenContentPurgeResponse,
-  OffscreenWriteResponse,
-  OffscreenHealthResponse,
   ArchiveSessionRow,
   ArchiveSessionStatusData,
   ArchivePurgeData,
@@ -31,7 +26,7 @@ import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
 import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
-import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor } from '../../messaging/sqliteWireTable.js';
+import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor, sqliteMaintainWireFor } from '../../messaging/sqliteWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
@@ -166,19 +161,21 @@ export class OffscreenGateway {
         archiveNoRetry(op.type) ? { noRetry: true } : undefined,
       );
     }
-    // Archive ops return above, so the switch below only sees the
-    // non-archive remainder; the cast makes that explicit to the checker.
+    // Non-archive maintain ops (PBI 2026-09-23-13): routed through
+    // SQLITE_MAINTAIN_WIRE_TABLE, same seam as query()/mutate() above. The
+    // row supplies the message type, the wire payload, and the response
+    // decoder (including the backup-bytes decode and the SQLITE_PURGE vs
+    // CONTENT_PURGE split); callInternal stays the single transport and
+    // error-mapping seam. Exhaustiveness moved to the table's compile-time
+    // two-way sync assert; a drifted lookup fails closed here.
     const rest = op as Exclude<MaintainOp, { type: ArchiveOpType }>;
-    switch (rest.type) {
-      case 'init': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT'); return result.success ? { success: true, data: true } : result; }
-      case 'backup': return this.callInternal<Uint8Array, OffscreenBinaryResponse>('SQLITE_BACKUP', {}, (res) => new Uint8Array(res.data));
-      case 'restore': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(rest.data) }, () => undefined);
-      case 'clearAll': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
-      case 'purgeOldRecords': return this.callInternal<{ purged: number }, OffscreenPurgeResponse>('SQLITE_PURGE', { retentionDays: rest.retentionDays, maxRecords: rest.maxRecords }, (res) => ({ purged: res.purged }));
-      case 'purgeContent': return this.callInternal<{ purged: number }, OffscreenContentPurgeResponse>('CONTENT_PURGE', { retentionDays: rest.retentionDays, maxRecords: rest.maxRecords, includeStarred: rest.includeStarred }, (res) => ({ purged: res.purged }));
-      case 'healthCheck': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_HEALTH_CHECK', {}); return result.success ? { success: true, data: true } : result; }
-      default: { const exhaustive: never = rest; void exhaustive; throw new Error('Unhandled maintain op'); }
-    }
+    const row = sqliteMaintainWireFor(rest.type);
+    if (!row) throw new Error('Unhandled maintain op');
+    return this.callInternal<unknown>(
+      row.messageType,
+      row.encodePayload(rest),
+      (res) => row.decodeGateway(res),
+    );
   }
 
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> {

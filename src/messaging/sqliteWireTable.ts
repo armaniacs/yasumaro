@@ -41,7 +41,7 @@
  *   offscreen-search-orderby tests.
  */
 
-import type { MutateOp, QueryOp, AuditLogRecord } from './sqliteRpcClient.js';
+import type { MaintainOp, MutateOp, QueryOp, AuditLogRecord } from './sqliteRpcClient.js';
 import type { SqliteMessageType } from './sqliteMessages.js';
 import type { SqliteStatusResult } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
@@ -656,4 +656,156 @@ const SERVICE_BY_OP: ReadonlyMap<string, DashboardServiceDescriptor> = new Map(
 
 export function dashboardServiceWireFor(op: string): DashboardServiceDescriptor | undefined {
   return SERVICE_BY_OP.get(op);
+}
+
+// ============================================================================
+// Maintain wire table (PBI 2026-09-23-13)
+//
+// The 7 non-archive maintain ops (init/backup/restore/clearAll/
+// purgeOldRecords/purgeContent/healthCheck) were the last hand-wired hop in
+// the offscreen gateway: each switch branch re-spelled messageType + payload
+// shape + decoder, so a shape change broke in the gateway instead of in one
+// codec. Each row here owns that same triple — messageType, encodePayload,
+// decodeGateway — and the gateway dissolves into the same table.for(op.type)
+// + callInternal seam query/mutate already use. Archive ops stay in
+// ARCHIVE_WIRE_TABLE; this table covers exactly the non-archive remainder.
+//
+// Definition-site move only: wire shapes are frozen byte-identical to the
+// former inline lambdas. Two edges pin that deliberately:
+// - backup decodes to bytes (new Uint8Array over the wire number[]), not text.
+// - purgeOldRecords vs purgeContent keep distinct message types (SQLITE_PURGE
+//   vs CONTENT_PURGE), and both payloads carry their keys literally —
+//   retentionDays/maxRecords/includeStarred stay present even when undefined
+//   (no pickDefined), matching the former object literals.
+// - init/healthCheck map a bare success to true (the gateway used to project
+//   success to true after a decoder-less call); the row returns true so the
+//   uniform dispatch needs no branch.
+// ============================================================================
+
+/**
+ * Codec carried by one maintain wire-table row. O is the MaintainOp
+ * discriminator, G the gateway client value produced by decodeGateway.
+ * Params stay wide on purpose (same archive-table discipline as the
+ * query/mutate rows): rows narrow inside with a documented cast.
+ */
+export interface SqliteMaintainWireOpDescriptor<O extends string = string, G = unknown> {
+  /** MaintainOp discriminator (source of truth is the MaintainOp union). */
+  op: O;
+  /** Client-surface marker; always 'maintain' in this table. */
+  family: 'maintain';
+  /** background -> offscreen message type. */
+  messageType: SqliteMessageType;
+  /** Builds the wire payload the gateway sends offscreen. */
+  encodePayload: (op: MaintainOp) => Record<string, unknown>;
+  /** Decodes the wire success shape into the gateway client value. */
+  decodeGateway: (response: { success: true } & Record<string, unknown>) => G;
+}
+
+/** Single constructor for maintain rows; preserves literal types per row. */
+export function defineSqliteMaintainWireOp<const R extends SqliteMaintainWireOpDescriptor<string, unknown>>(row: R): R {
+  return row;
+}
+
+export const SQLITE_MAINTAIN_WIRE_TABLE = [
+  defineSqliteMaintainWireOp({
+    op: 'init',
+    family: 'maintain',
+    messageType: 'SQLITE_INIT',
+    encodePayload: () => ({}),
+    decodeGateway: () => true,
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'backup',
+    family: 'maintain',
+    messageType: 'SQLITE_BACKUP',
+    encodePayload: () => ({}),
+    decodeGateway: (response) => new Uint8Array(response.data as number[]),
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'restore',
+    family: 'maintain',
+    messageType: 'SQLITE_RESTORE',
+    encodePayload: (op) => ({ data: Array.from((op as Extract<MaintainOp, { type: 'restore' }>).data) }),
+    decodeGateway: () => undefined,
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'clearAll',
+    family: 'maintain',
+    messageType: 'SQLITE_CLEAR_ALL',
+    encodePayload: () => ({}),
+    decodeGateway: () => undefined,
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'purgeOldRecords',
+    family: 'maintain',
+    messageType: 'SQLITE_PURGE',
+    // Literal keys (undefined rides along): matches the former
+    // `{ retentionDays: rest.retentionDays, maxRecords: rest.maxRecords }`.
+    encodePayload: (op) => {
+      const o = op as Extract<MaintainOp, { type: 'purgeOldRecords' }>;
+      return { retentionDays: o.retentionDays, maxRecords: o.maxRecords };
+    },
+    decodeGateway: (response) => ({ purged: response.purged as number }),
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'purgeContent',
+    family: 'maintain',
+    messageType: 'CONTENT_PURGE',
+    encodePayload: (op) => {
+      const o = op as Extract<MaintainOp, { type: 'purgeContent' }>;
+      return { retentionDays: o.retentionDays, maxRecords: o.maxRecords, includeStarred: o.includeStarred };
+    },
+    decodeGateway: (response) => ({ purged: response.purged as number }),
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'healthCheck',
+    family: 'maintain',
+    messageType: 'SQLITE_HEALTH_CHECK',
+    encodePayload: () => ({}),
+    decodeGateway: () => true,
+  }),
+];
+
+export type SqliteMaintainWireDescriptor = (typeof SQLITE_MAINTAIN_WIRE_TABLE)[number];
+
+export type SqliteMaintainWireOp = SqliteMaintainWireDescriptor['op'];
+export type SqliteMaintainWireMessageType = SqliteMaintainWireDescriptor['messageType'];
+
+/** Precise per-op view over the maintain table; indexing never yields undefined. */
+export type SqliteMaintainWireDescriptorMap = {
+  readonly [O in SqliteMaintainWireOp]: Extract<SqliteMaintainWireDescriptor, { op: O }>;
+};
+
+export const SQLITE_MAINTAIN_WIRE_DESCRIPTORS: SqliteMaintainWireDescriptorMap = Object.fromEntries(
+  SQLITE_MAINTAIN_WIRE_TABLE.map((entry) => [entry.op, entry]),
+) as SqliteMaintainWireDescriptorMap;
+
+// Compile-time two-way sync with the non-archive MaintainOp remainder:
+// adding a maintain op without a table row (or vice versa) is a type error,
+// which is also what forces decoder coverage — decodeGateway is a required
+// row field, so a row cannot exist without its decoder (query/mutate parity).
+type NonArchiveMaintainOpType = Exclude<MaintainOp['type'], ArchiveOpType>;
+type MissingMaintainFromTable = Exclude<NonArchiveMaintainOpType, SqliteMaintainWireOp>;
+type StaleMaintainInTable = Exclude<SqliteMaintainWireOp, NonArchiveMaintainOpType>;
+const _maintainCovered: MissingMaintainFromTable extends never ? true : never = true;
+const _maintainLive: StaleMaintainInTable extends never ? true : never = true;
+void _maintainCovered;
+void _maintainLive;
+
+// Maintain messages must collide with neither the query/mutate table nor the
+// archive group (the purge split is the load-bearing half of this assert:
+// SQLITE_PURGE and CONTENT_PURGE must stay distinct rows here).
+type MaintainWireCollision = Extract<SqliteMaintainWireMessageType, SqliteWireMessageType>;
+type MaintainArchiveLeak = Extract<SqliteMaintainWireMessageType, `SQLITE_ARCHIVE_${string}`>;
+const _maintainWireDisjoint: MaintainWireCollision extends never ? true : never = true;
+const _maintainNoArchiveLeak: MaintainArchiveLeak extends never ? true : never = true;
+void _maintainWireDisjoint;
+void _maintainNoArchiveLeak;
+
+const MAINTAIN_BY_OP: ReadonlyMap<string, SqliteMaintainWireDescriptor> = new Map(
+  SQLITE_MAINTAIN_WIRE_TABLE.map((entry) => [entry.op, entry]),
+);
+
+export function sqliteMaintainWireFor(op: string): SqliteMaintainWireDescriptor | undefined {
+  return MAINTAIN_BY_OP.get(op);
 }
