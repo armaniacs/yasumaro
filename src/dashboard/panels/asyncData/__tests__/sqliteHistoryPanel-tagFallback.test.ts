@@ -31,6 +31,15 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
   showConfirmDialog: vi.fn(),
 }));
 
+// Keep the backoff instant so the retries do not slow the suite down.
+vi.mock('../../../utils/retry.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/retry.js')>();
+  return {
+    retryWithExponentialBackoff: (fn: () => Promise<unknown>, options: Record<string, unknown> = {}) =>
+      actual.retryWithExponentialBackoff(fn as never, { ...options, baseDelayMs: 0, maxDelayMs: 0 }),
+  };
+});
+
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
 import type { PanelLifecycle } from '../../types.js';
