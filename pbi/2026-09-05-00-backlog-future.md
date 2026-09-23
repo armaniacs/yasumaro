@@ -1,6 +1,6 @@
 # Backlog — 将来候補の統合台帳（2026-09-05 整理）
 
-旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）の全 PBI は実装・アーカイブ済み。本文書は各 backlog に散在していた**見送り・トリガー付き・製品判断待ち**の候補を 1 箇所に統合したもので、`pbi/` 配下の唯一の live 台帳である（ゲート付き PBI 32 を除く）。
+旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）の全 PBI は実装・アーカイブ済み。本文書は各 backlog に散在していた**見送り・トリガー付き・製品判断待ち**の候補を 1 箇所に統合したもので、`pbi/` 配下の唯一の live 台帳である（ゲート付き PBI 32 を除く）。2026-09-23 整理で 0915〜0921 ラウンド台帳の未採番候補も本書へ統合した（各ラウンド台帳はアーカイブ済み）。
 
 着手条件はトリガー別に管理する。トリガー未発生の項目に着手しないこと。
 
@@ -145,6 +145,20 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | single-flight 統合（generateSummary 3  spellings・TTL/Mode/Trace 欠落。Worth） | — | 4 つ目の consumer 出現時 |
 | notification codec + reason ラベル（4 inline 型 + ラベル 2 重定義。Worth） | — | 次回 notification 改修時 |
 | VisitRateLimiter clock + TabCache twin（直注入 Date.now・SessionStore twin・autoSavedBadgeTabs 2 系統。Speculative） | — | 次回該当改修時 |
+
+**2026-09-23 整理（0915〜0921 ラウンド台帳の未採番候補を統合・7 項目）:**
+
+| 項目 | RICE | 再評価条件 | 出典 |
+|------|------|-----------|------|
+| 合成ルートの二重化解消（compositionManifest 深掘り・サービス配線の複数経路統合） | 7.0 | 次回 composition root（createBackgroundServices 周辺）の大改修時 | [0915b](../dev-docs/archived/pbi/2026-09-15-00-backlog-archloop-0915b.md) |
+| MAX_PROVIDERS 超過の明示化（`slice(0, 10)` は通常操作で到達不能の防御的上限。対応時は超過分のログ出力+設定 UI 警告をセットで） | — | provider スロットを UI 側で5個以上に拡張する時 / UI を経由しないスロット生成経路（settings import 等）を追加する時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
+| utils/ の物理再階層化（約120モジュール移動。層定義は PBI 2026-09-17-05 で import boundary lint として機械化済み） | — | PBI 05 完了後に violation 率・循環 dynamic import の残数が基準を超える時 / `utils/` の新規追加が分類作業の継続コスト化した時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
+| formatBytes 双子統合（cleansingStatsView の4桁有効数字 GB/MB/KB 版と entryByteDelta の toFixed(1) MB/KB/B 版。出力差の統一は意図的 UI 変更になる） | 1.6 | UI 出力統一の要望 / いずれかの形式変更が必要になった時 | [0918b](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918b.md) |
+| console → logger seam 統一（dashboard/popup 約30サイト。init tracing は意図的 console の可能性があり設計判断が残る） | 2.1 | 可観測性方針の明確化（console 残置の許容範囲を LAYERS.md 等に規定する時）/ ダッシュボードのエラーログ収集を強化する時 | [0918c](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918c.md) |
+| P3: 2 wire table の dashboard-hop codec 形状統合（interface 抽出のみで deletion test passes） | — | 2 wire table を同時に改修する時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
+| P4: ensureBackend/getBackend の resolver 入力 literal（trivial サイズ） | — | backend 状態 field の追加時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
+
+（0915 は全11候補が PBI 02-12 として消化済み、holistic-0921 の台帳送り3件は 2026-09-22 の保留候補 PBI 01/02/03 として採番済みのため、両台帳は候補ゼロでアーカイブ。0915b の PBI 03 でスコープ外とした recordingCache ensureReady の別候補は RecordingCache→RecordingCacheInstance 移行（2026-08-17）後の実在確認が前提のため、次回 recording cache 系改修時に要否を再評価する。）
 
 ## 運用
 
