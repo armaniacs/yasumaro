@@ -14,12 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 分析機能強化ラウンド — 🔶 部分実装 1件・⬜ 未着手 1件 ✨機能追加 RICE順: 07 → 08（01-06 は完了・アーカイブ済み）
+### 2026-09-24 分析機能強化ラウンド — 🔶 部分実装 1件（ユーザー検証待ち）✨機能追加（01-06・08 は完了・アーカイブ済み）
 
 分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
 
 - [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（🔶 部分実装 — 実装・自動テスト完了 `d80a5f8b`。残: STEP 0 の実データ手動プローブ（ストップワード/閾値チューニング・ユーザー作業・実 DB アクセスが必要）。合成コーパスの自動 sanity テストは実装済み。RICE 1.33・3 SP）
-- [2026-09-24-08-feat-tag-cluster-time-slider.md](2026-09-24-08-feat-tag-cluster-time-slider.md)（⬜ 未着手 — RICE 0.20・5 SP・副作用🟢。2時点のクラスタを side-by-side＋diff 一覧で比較。アニメーション対象外。04 完了済み）
 
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
@@ -77,6 +76,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 分析機能強化ラウンド バッチ5 — ✅ 1件完了（08 アーカイブ済み）RICE順: 08
+
+autonomous-task-closer による実装。バッチ5 = 08（タグクラスタ時間変化比較・最複雑候補）単独。なぜなぜ分析は /tmp/whywhy/（pbi-08-tag-cluster-time-slider）。統合検証: type-check PASS / lint 0 errors / test 13,784 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-08-feat-tag-cluster-time-slider.md（✅ 完了 — `c6bf8e00`。2時点指定（date input×2+明示 Compare）で前半/後半を side-by-side 2×SVG 表示＋diff 4 区画。FNV-1a 安定配色（両テーマ 4.5:1 超をテスト担保）・union ソート順安定配置・loadSeq 世代ガード・行 cap 通知×2・aria-live 完了サマリー（PBI 04 延期分を本 PBI で実装）。アニメーションはユーザー確定どおりスコープ外。71 tests 対象 green。RICE 0.20）
+
+### 2026-09-24 分析機能強化ラウンド バッチ4 — 🔶 PBI 07 実装完了（ユーザー検証 1 項目で live 維持）
+
+autonomous-task-closer による実装。バッチ4 = 07（ワードクラスタ）単独。実装・自動テストは完了（`d80a5f8b`・69 tests 対象 green・統合側で行 cap 通知の BDD ギャップを検出修正）。STEP 0 の実データ手動プローブ（ストップワード/閾値チューニング）はユーザーの実 DB が必要なため未達 — PBI 07 は 🔶 部分実装として pbi/ に live 維持。なぜなぜ分析は /tmp/whywhy/（pbi-07-word-cluster）。統合検証: type-check PASS / lint 0 errors / test 13,747 green / build PASS。
 
 ### 2026-09-24 分析機能強化ラウンド バッチ3 — ✅ 2件完了（05-06 アーカイブ済み）RICE順: 05 → 06
 
