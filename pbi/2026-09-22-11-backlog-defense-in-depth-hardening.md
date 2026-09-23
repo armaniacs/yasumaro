@@ -45,7 +45,7 @@ Scenario: 発火条件が観測された項目は個別 PBI に分割される
   Then  本 PBI は索引として機能し、分割先からリンクされる
 
 ## 受け入れ基準
-- [ ] 4項目の発火条件が明記され、監視対象として機能する
+- [x] 4項目の発火条件が明記され、監視対象として機能する
 - [ ] 発火した項目は分割 PBI 化され、本 PBI からリンクされる
 - [ ] 全項目の発火条件が未発火のまま保守期間を過ぎた場合も、本 PBI の記録だけで済む
 
@@ -58,6 +58,6 @@ Scenario: 発火条件が観測された項目は個別 PBI に分割される
 監視は 0 SP、発火時は分割 PBI で見積もる
 
 ## Definition of Done
-- [ ] 本 PBI 自体はコードを変更しない（索引と監視契約）
+- [x] 本 PBI 自体はコードを変更しない（索引と監視契約）
 - [ ] 分割時は個別 PBI の DoD に従う
-- [ ] 監査エビデンス（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/README.md` の Code Quality セクション）への参照を維持する
+- [x] 監査エビデンス（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/README.md` の Code Quality セクション）への参照を維持する
