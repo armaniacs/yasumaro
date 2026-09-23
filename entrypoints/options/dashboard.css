@@ -5026,3 +5026,20 @@ details[open] > .priority-details-summary {
 .tag-timeline-numeric th[scope="row"] {
   text-align: left;
 }
+
+/* =============================================================================
+   Word Cluster SVG (PBI 2026-09-24-07) — mirrors #tagClusterSvg; node/edge/text
+   styling is shared via the .tag-cluster-* classes.
+   ============================================================================= */
+
+#wordClusterSvg {
+  width: 100%;
+  height: auto;
+  max-width: 800px;
+  touch-action: none;
+  cursor: grab;
+}
+
+#wordClusterSvg:active {
+  cursor: grabbing;
+}

@@ -193,6 +193,16 @@
           </svg>
           <span data-i18n="tagCooccurrenceTableTab">Tag Pairs</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-word-cluster" aria-selected="false" data-panel="panel-word-cluster">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="6" cy="7" r="2"/>
+            <circle cx="18" cy="7" r="2"/>
+            <circle cx="12" cy="17" r="2"/>
+            <line x1="7.4" y1="8.4" x2="10.6" y2="15.6"/>
+            <line x1="16.6" y1="8.4" x2="13.4" y2="15.6"/>
+          </svg>
+          <span data-i18n="wordClusterTab">Word Cluster</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -2014,6 +2024,28 @@
         <div id="coocTableTagsTruncated" class="visit-duration-truncated" hidden></div>
         <div id="coocTableTop20Truncated" class="visit-duration-truncated" hidden></div>
         <div id="coocTableTableWrap"></div>
+      </section>
+
+      <!-- Word Cluster Panel (PBI 2026-09-24-07) -->
+      <section id="panel-word-cluster" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="wordClusterTitle">Word Cluster</h2>
+        <p class="panel-description" data-i18n="wordClusterDescription">Extracts keywords from AI summaries and page titles and shows their co-occurrence as a graph. Click a node to search history for that keyword.</p>
+        <div id="wordClusterFilter"></div>
+        <div class="form-group cooc-table-controls">
+          <span data-i18n="wordClusterPeriodLabel">Period</span>
+          <button type="button" id="wordClusterRunBtn" data-i18n="wordClusterRun">Run</button>
+        </div>
+        <div id="wordClusterExcludedNotice" class="visit-duration-truncated" hidden></div>
+        <div id="wordClusterEmptyState" data-i18n="wordClusterEmpty" hidden>No records with usable text in the selected period. Try a wider range.</div>
+        <div id="wordClusterTruncatedNotice" data-i18n="wordClusterTruncatedNotice" hidden>Too many keywords — showing only the top 50.</div>
+        <div id="wordClusterRowCapNotice" class="visit-duration-truncated" hidden></div>
+        <div id="wordClusterLoadingStatus" class="status-message" aria-live="polite" data-i18n="wordClusterLoading" hidden>Loading word cluster…</div>
+        <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+          <button type="button" id="wordClusterZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+          <button type="button" id="wordClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+          <button type="button" id="wordClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
+        </div>
+        <svg id="wordClusterSvg" width="800" height="600" role="img" data-i18n-aria-label="wordClusterTitle" aria-label="Word Cluster"></svg>
       </section>
 
       <!-- CSP Settings Panel (P1) -->
