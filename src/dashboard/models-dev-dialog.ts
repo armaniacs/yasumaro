@@ -17,6 +17,7 @@ import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;
@@ -100,7 +101,7 @@ export class ModelsDevDialog {
         overlay.setAttribute('aria-labelledby', 'dialog-title');
 
         // HTML content
-        overlay.innerHTML = `
+        setElementHtml(overlay, `
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 id="dialog-title" data-i18n="modelsDevDialogTitle">OpenAI-Compatible Provider</h2>
@@ -174,7 +175,7 @@ export class ModelsDevDialog {
                     <button type="button" id="dialog-save" class="btn btn-primary" data-i18n="save">Save</button>
                 </div>
             </div>
-        `;
+        `);
 
         document.body.appendChild(overlay);
         this.dialog = overlay;
@@ -369,14 +370,14 @@ export class ModelsDevDialog {
                 ? `$${firstPricedModel.inputPrice}/M input` // Simplified pricing
                 : 'Free tier available';
 
-            item.innerHTML = `
+            setElementHtml(item, `
                 <div class="provider-item-name">${escapeHtml(provider.name)}</div>
                 <div class="provider-item-meta">
                     <span>${provider.models.length} models</span>
                     <span>${escapeHtml(priceDisplay)}</span>
                     ${provider.isAggregator ? '<span class="provider-badge badge-aggregator">Aggregator</span>' : ''}
                 </div>
-            `;
+            `);
 
             item.addEventListener('click', () => {
                 this.selectProvider(provider);

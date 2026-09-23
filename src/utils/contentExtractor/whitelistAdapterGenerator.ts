@@ -3,6 +3,7 @@
  * content selectors from HTML. Used by `scripts/generate-whitelist-adapter.mjs`
  * and unit-tested independently.
  */
+import { setElementHtml } from '../htmlFragment.js';
 
 export const CANDIDATE_SELECTORS: readonly string[] = [
     'article',
@@ -96,18 +97,11 @@ function getDocument(html: string): Document | null {
         }
         // Fallback: if global document exists, create element
         if (gDoc && typeof gDoc.createElement === 'function') {
-            // Use JSDOM via dynamic check — caller may have set up jsdom globals
-            // Create temporary container
-            const template = gDoc.createElement('template') as HTMLTemplateElement;
-            template.innerHTML = html;
-            // Not a full document, but we can use template.content as root — approximate
-            // Instead, return gDoc after injecting html into a div
-            // Simpler: create new div and use querySelectorAll on it
-            // But to keep interface, we just try to use gDoc
-            // If we reach here, we likely have jsdom globals set; create doc via innerHTML
-            // Create a standalone document using createElement approach
+            // jsdom globals without a global DOMParser: parse into a detached
+            // div (div-context parse — same semantics the innerHTML assignment
+            // had) and hand back a document-like wrapper.
             const container = gDoc.createElement('div');
-            container.innerHTML = html;
+            setElementHtml(container, html);
             // Wrap in a fake document-like object with querySelectorAll
             // We return container as document-like if it supports querySelectorAll
             return container as unknown as Document;

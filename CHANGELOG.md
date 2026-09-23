@@ -36,6 +36,20 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [6.9.18] - 2026-09-23
+
+このリリースは v6.9.17 に続く連続リリースです。Firefox AMO（addons.mozilla.org）への申請に向けた提出前修正（ソース提出用 zip の縮小・データ開示マニフェスト対応・動的 innerHTML の排除）を行いました。addons-linter は 0 errors / 0 warnings / 0 notices、全テスト（13,209 件）がグリーンです。
+
+### Fixed
+
+- **Firefox AMO（addons.mozilla.org）への提出に失敗する問題を修正**: ソース提出用 zip に Rust ビルド成果物（`target/`）やローカルのカバレッジ・キャッシュ・旧成果物が約 600MB 分取り込まれていたため、`wxt.config.ts` の `zip.excludeSources` で除外し 23.6MB に縮小。また AMO のデータ開示ポリシー対応として Firefox マニフェストに `data_collection_permissions`（収集なし）と `strict_min_version: 140.0`（Android は 142.0）を追加
+- **動的 innerHTML 代入を排除し addons-linter の警告 38 件を 0 に**: AMO のチェッカー（no-unsanitized ルール・全エスケープ関数無効化設定）は動的 innerHTML 代入をすべて警告するため、`createContextualFragment` を使った代替も含め排除。新設の `src/utils/htmlFragment.ts` `setElementHtml()`（DOMParser + テーブル文脈 wrap + `replaceChildren`、パース済み script は除去）で UI 描画 39 箇所を書き換え。クレンジングの DOM パースも DOMParser 単一経路に統一。addons-linter は 0 errors / 0 warnings / 0 notices
+
+### Tested
+
+- 単体: `src/utils/__tests__/htmlFragment.test.ts`（テーブル文脈保持・スクリプト不活性化・ShadowRoot・td/tr/thead wrap）を追加
+- 全体: `npm run validate` green（13,209 passed / 21 skipped）、addons-linter 0/0/0、Chrome ビルド正常
+
 ## [6.9.17] - 2026-09-23
 
 このリリースは v6.9.16 に続く連続リリースです。SQLite History の選択一括操作（複数選択の一括削除・一括再生成）、削除確認 UI の視認性修正（選択バー内の2段階確認＋共有モーダルの中央表示化）、タグクラスタの最大ズーム拡大（3倍→12倍）を追加しました。全テスト（13,201 件）がグリーンです。

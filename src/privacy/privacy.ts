@@ -7,6 +7,7 @@ import { getMessage } from '../utils/i18n.js';
 import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../utils/i18n-dom.js';
 
 import { escapeHtml } from '../utils/htmlEscape.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
 
 export { escapeHtml };
 
@@ -184,9 +185,9 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
             throw new Error('Privacy policy file exceeds size limit');
         }
         const md = await res.text();
-        content.innerHTML = renderMarkdown(md);
+        setElementHtml(content, renderMarkdown(md));
     } catch (_e) {
-        content.innerHTML = `<p class="error">${getMessage('privacyPolicyLoadError') || 'Failed to load the privacy policy.'}</p>`;
+        setElementHtml(content, `<p class="error">${getMessage('privacyPolicyLoadError') || 'Failed to load the privacy policy.'}</p>`);
     }
 }
 

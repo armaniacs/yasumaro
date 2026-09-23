@@ -25,6 +25,7 @@ import { renderProviderOptions } from '../aiProviderCatalogView.js';
 import { tryResolveCatalogEntry } from '../../background/ai/providerCatalog.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
 import { escapeHtml } from '../../utils/htmlEscape.js';
+import { setElementHtml } from '../../utils/htmlFragment.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { showConfirmDialog } from '../../utils/ui/confirmDialog.js';
 
@@ -115,7 +116,7 @@ function renderPromptList(): void {
     const customItemsHtml = prompts
         .filter(p => !p.id.startsWith(PROMPT_ID.PRESET_PREFIX))
         .map(prompt => createPromptListItem(prompt)).join('');
-    promptList.innerHTML = presetItemsHtml + defaultItemHtml + customItemsHtml;
+    setElementHtml(promptList, presetItemsHtml + defaultItemHtml + customItemsHtml);
 
     // Attach event listeners for preset prompts
     PRESET_PROMPTS.filter(p => p.id !== 'default').forEach(preset => {
