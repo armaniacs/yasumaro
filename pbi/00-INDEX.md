@@ -14,12 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 4件 ✨機能追加 RICE順: 05 → 06 → 07 → 08（01-04 は完了・アーカイブ済み）
+### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 2件 ✨機能追加 RICE順: 07 → 08（01-06 は完了・アーカイブ済み）
 
 分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
 
-- [2026-09-24-05-feat-tag-frequency-timeline.md](2026-09-24-05-feat-tag-frequency-timeline.md)（⬜ 未着手 — RICE 2.40・1.5 SP・副作用🟢。上位タグの週次/月次頻度推移グラフ）
-- [2026-09-24-06-feat-tag-cooccurrence-table.md](2026-09-24-06-feat-tag-cooccurrence-table.md)（⬜ 未着手 — RICE 2.40・1 SP・副作用🟢。共起タグペア top 20 を表形式で表示）
 - [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（⬜ 未着手 — RICE 1.33・3 SP・副作用🟢。summary+title から Intl.Segmenter でキーワード抽出し共起クラスタ表示。STEP 0 品質プローブ込み）
 - [2026-09-24-08-feat-tag-cluster-time-slider.md](2026-09-24-08-feat-tag-cluster-time-slider.md)（⬜ 未着手 — RICE 0.20・5 SP・副作用🟢。2時点のクラスタを side-by-side＋diff 一覧で比較。アニメーション対象外。04 完了が前提）
 
@@ -79,6 +77,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 分析機能強化ラウンド バッチ3 — ✅ 2件完了（05-06 アーカイブ済み）RICE順: 05 → 06
+
+autonomous-task-closer による実装。バッチ3 = 05（タグ頻度の期間推移）→ 06（タグ共起ペア表）の直列実装。なぜなぜ分析は /tmp/whywhy/（pbi-05-tag-frequency-timeline・pbi-06-tag-cooccurrence-table）。統合検証: type-check PASS / lint 0 errors / test 13,694 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-05-feat-tag-frequency-timeline.md（✅ 完了 — `5ae1773e`。手描き SVG 積み上げ推移・日曜開始週（暦日演算で DST ズレ回避）・端数週1バケット・other 分離・数値テーブル。62 tests 対象 green。RICE 2.40）
+- 2026-09-24-06-feat-tag-cooccurrence-table.md（✅ 完了 — `5ae1773e`。既存 edges 再利用の top 20 表・ノード select 方式のタグフィルタ・空状態3区分。78 tests 対象 green。RICE 2.40）
 
 ### 2026-09-24 分析機能強化ラウンド バッチ2 — ✅ 2件完了（03-04 アーカイブ済み）RICE順: 03 → 04
 
