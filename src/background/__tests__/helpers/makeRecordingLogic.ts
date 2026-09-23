@@ -3,9 +3,17 @@
  *
  * Tests that exercise real pipeline steps build an equivalent orchestrator here
  * rather than stubbing it, so step behaviour stays under test.
+ *
+ * Retry backoff is skipped (`stepDelay` resolves immediately): the real series
+ * (2s + 4s + 5s) would otherwise make every retry-exhaustion test wait ~11s of
+ * wall-clock time. The backoff values themselves are pinned in
+ * pipeline/__tests__/stepExecutor.test.ts.
  */
 import { createRecordingOrchestrator, type RecordingOrchestrator, type RecordingOrchestratorDeps } from '../../pipeline/RecordingOrchestrator.js';
+import type { StepDelayFn } from '../../pipeline/stepExecutor.js';
 import { RecordingCache } from './recordingCache.js';
+
+export const noStepDelay: StepDelayFn = async () => {};
 
 export function makeRecordingLogic(
   obsidian: unknown,
@@ -18,6 +26,7 @@ export function makeRecordingLogic(
     obsidian: obsidian as never,
     aiService: aiService as never,
     sqliteClient: (sqliteClient ?? null) as never,
+    stepDelay: noStepDelay,
   });
 }
 
@@ -42,5 +51,6 @@ export function makeOrchestrator(
     sqliteClient: sqliteClient as never,
     offlineNetworkQueue: offlineNetworkQueue as never,
     ...(urlStore ? { urlStore } : {}),
+    stepDelay: noStepDelay,
   });
 }

@@ -12,6 +12,15 @@ import { createSqliteHistoryController } from '../sqliteHistoryPanelController.j
 import type { UnifiedHistoryQueryResult } from '../sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from '../sqliteHistoryQuery.js';
 
+// Keep the backoff instant so the retries do not slow the suite down.
+vi.mock('../../../utils/retry.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/retry.js')>();
+  return {
+    retryWithExponentialBackoff: (fn: () => Promise<unknown>, options: Record<string, unknown> = {}) =>
+      actual.retryWithExponentialBackoff(fn as never, { ...options, baseDelayMs: 0, maxDelayMs: 0 }),
+  };
+});
+
 function makeRow(id: number, overrides: Partial<BrowsingLogEntry> = {}): BrowsingLogEntry {
   return {
     id,

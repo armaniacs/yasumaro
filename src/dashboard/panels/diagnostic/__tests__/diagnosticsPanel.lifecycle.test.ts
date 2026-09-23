@@ -9,6 +9,15 @@ import { createDiagnosticsPanel } from '../diagnosticsPanel.js';
 import type { PanelLifecycle } from '../../types.js';
 import { NavigationRegistry } from '../../NavigationRegistry.js';
 
+// Keep the backoff instant so the retries do not slow the suite down.
+vi.mock('../../../utils/retry.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/retry.js')>();
+  return {
+    retryWithExponentialBackoff: (fn: () => Promise<unknown>, options: Record<string, unknown> = {}) =>
+      actual.retryWithExponentialBackoff(fn as never, { ...options, baseDelayMs: 0, maxDelayMs: 0 }),
+  };
+});
+
 describe('diagnosticsPanel — PanelLifecycle implementation', () => {
   let panel: PanelLifecycle;
   let container: HTMLDivElement;
@@ -198,6 +207,9 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       // so flush a microtask/timer tick before asserting it was called.
       await new Promise((r) => setTimeout(r, 0));
       expect(spy).toHaveBeenCalled();
+      // Let the fire-and-forget load finish inside this test; otherwise its
+      // retry warnings land while the worker is tearing down.
+      await spy.mock.results[0]?.value;
       document.body.removeChild(regContainer);
     });
 
@@ -205,6 +217,7 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       const registry = new NavigationRegistry();
       const diagPanel = createDiagnosticsPanel();
       const mountSpy = vi.spyOn(diagPanel, 'mount');
+      const loadSpy = vi.spyOn(diagPanel, 'load');
       const regContainer = document.createElement('div');
       regContainer.id = 'panel-diagnostics';
       regContainer.innerHTML = container.innerHTML;
@@ -212,6 +225,8 @@ describe('diagnosticsPanel — PanelLifecycle implementation', () => {
       registry.register(diagPanel);
       await registry.navigate('panel-diagnostics');
       expect(mountSpy).toHaveBeenCalled();
+      await new Promise((r) => setTimeout(r, 0));
+      await loadSpy.mock.results[0]?.value;
       document.body.removeChild(regContainer);
     });
   });

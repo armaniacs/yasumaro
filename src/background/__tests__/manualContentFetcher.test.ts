@@ -148,7 +148,9 @@ describe('ManualContentFetcher timeout path (PBI 2026-09-17-16)', () => {
   });
 
   it('keeps the existing listener removal on the complete path', async () => {
-    const addListener = vi.fn();
+    const addListener = vi.fn((cb: (tabId: number, info: { status?: string }) => void) => {
+      cb(999, { status: 'complete' });
+    });
     const removeListener = vi.fn();
     const chromeMock = (globalThis as Record<string, unknown>).chrome as Record<string, unknown>;
     const tabsMock = chromeMock.tabs as Record<string, unknown>;
