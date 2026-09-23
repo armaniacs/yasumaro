@@ -262,7 +262,9 @@ describe('OpenAIProvider', () => {
                 ...baseSettings,
                 openai_2_api_key: 'key2',
                 openai_2_base_url: 'https://api2.openai.com/v1',
-                openai_2_model: 'gpt-4-turbo'
+                openai_2_model: 'gpt-4-turbo',
+                // Non-pinned custom origins require the confirmation record (VULN-002).
+                confirmed_provider_origins: { openai_2_base_url: ['https://api2.openai.com'] },
             }, 'openai2');
             expect(p.getName()).toBe('openai2');
         });
@@ -272,7 +274,8 @@ describe('OpenAIProvider', () => {
                 ...baseSettings,
                 provider_base_url: 'https://custom.api.com/v1',
                 provider_api_key: 'custom-key',
-                provider_model: 'custom-model'
+                provider_model: 'custom-model',
+                confirmed_provider_origins: { provider_base_url: ['https://custom.api.com'] },
             }, 'openai-compatible');
             expect(p.getName()).toBe('openai-compatible');
         });

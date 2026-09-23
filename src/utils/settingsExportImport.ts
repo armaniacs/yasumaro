@@ -7,7 +7,7 @@ import { exportHmacSigner } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
-import { Settings } from './storage/types.js';
+import { Settings, StorageKeys } from './storage/types.js';
 import { encrypt, deriveKey } from './crypto/index.js';
 import { generateSalt, bytesToBase64 } from './crypto/index.js';
 import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
@@ -60,8 +60,20 @@ interface ExportData extends SettingsExportData { }
  * @param {Settings} settings - 元の設定
  * @returns {Settings} APIキーが除外された設定
  */
+/**
+ * Strip device-local security state from a settings blob. Confirmations
+ * travel with neither exports nor imports: a grant recorded on one device
+ * must not silently authorize origins elsewhere, and an import payload must
+ * not be able to smuggle authorizations back in.
+ */
+export function stripDeviceLocalSecurityState(settings: Settings): Settings {
+  const stripped = { ...settings };
+  delete (stripped as Record<string, unknown>)[StorageKeys.CONFIRMED_PROVIDER_ORIGINS];
+  return stripped;
+}
+
 function sanitizeSettingsForExport(settings: Settings): Settings {
-  const sanitized = { ...settings };
+  const sanitized = stripDeviceLocalSecurityState(settings);
 
   for (const field of API_KEY_FIELDS) {
     delete sanitized[field];
@@ -323,11 +335,11 @@ export async function importEncryptedSettings(
         'settingsExportImport.ts'
       );
       const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await settingsRepository.setAll(merged);
+      await settingsRepository.setAll(stripDeviceLocalSecurityState(merged));
       return merged;
     }
 
-    await settingsRepository.setAll(parsed.settings);
+    await settingsRepository.setAll(stripDeviceLocalSecurityState(parsed.settings));
     return parsed.settings;
   } catch (error) {
     await logError(
@@ -512,11 +524,11 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
         'settingsExportImport.ts'
       );
       const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await settingsRepository.setAll(merged);
+      await settingsRepository.setAll(stripDeviceLocalSecurityState(merged));
       return merged;
     }
 
-    await settingsRepository.setAll(parsed.settings);
+    await settingsRepository.setAll(stripDeviceLocalSecurityState(parsed.settings));
     return parsed.settings;
   } catch (error) {
     await logError(

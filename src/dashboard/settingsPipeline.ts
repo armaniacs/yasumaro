@@ -18,6 +18,7 @@ import { getMessage } from '../utils/i18n.js';
 import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
 import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
+import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { syncStatusToTop } from './statusView.js';
 
 /**
@@ -228,6 +229,15 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
         'Skipped overwriting a stored provider connection field with an empty value',
       );
     }
+  }
+
+  // Provider origin authorization (VULN-002 fix): a base URL whose origin is
+  // new (not pinned, not loopback, not yet confirmed) requires the explicit
+  // user acknowledgement recorded in confirmed_provider_origins before the
+  // write may proceed.
+  const originConfirmation = await confirmNewProviderBaseUrls(newSettings);
+  if (originConfirmation === 'cancelled') {
+    return { success: false, error: 'provider_origin_confirmation_cancelled' };
   }
 
   // Delta write (PBI 2026-09-17-17): only the extracted form keys enter the

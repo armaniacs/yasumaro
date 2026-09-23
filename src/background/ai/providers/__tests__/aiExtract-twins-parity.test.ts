@@ -37,7 +37,7 @@ vi.mock('../../../../utils/fetch.js', () => ({
   validateUrlForAIRequests: vi.fn(),
 }));
 vi.mock('../../../../utils/storage/urlWhitelist.js', () => ({
-  getAllowedUrls: vi.fn(async () => new Set<string>()),
+  buildAllowedUrls: vi.fn((): Set<string> => new Set<string>()),
 }));
 vi.mock('../../../../utils/readBodyCapped.js', () => ({
   readJsonCapped: vi.fn(),

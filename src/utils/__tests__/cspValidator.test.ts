@@ -357,22 +357,32 @@ describe('CSPValidator - Provider Base URL Domains', () => {
     CSPValidator.reset();
   });
 
-  it('should add provider_base_url domain to allowed list', async () => {
+  it('should NOT self-authorize provider_base_url domain without confirmation, but allow it after confirmation (VULN-002)', async () => {
     const { CSPValidator } = await import('../cspValidator.js');
 
+    // attacker.example is not a pinned row domain — the poisoned-settings
+    // vector from VULN-002 must not reach the CSP allow list unconfirmed.
     const settings = {
       conditional_csp_providers: [],
-      provider_base_url: 'https://api.ai.sakura.ad.jp/v1'
+      provider_base_url: 'https://attacker.example/v1'
     };
     CSPValidator.initializeFromSettings(settings);
 
-    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/models')).toBe(true);
-    expect(CSPValidator.isUrlAllowed('https://api.ai.sakura.ad.jp/v1/chat/completions')).toBe(true);
+    // Unconfirmed non-local origin: denied (was silently self-authorized before).
+    expect(CSPValidator.isUrlAllowed('https://attacker.example/v1/models')).toBe(false);
+
+    // After the user confirms the origin, the conditional-CSP entry appears.
+    CSPValidator.initializeFromSettings({
+      ...settings,
+      confirmed_provider_origins: { provider_base_url: ['https://attacker.example'] }
+    });
+    expect(CSPValidator.isUrlAllowed('https://attacker.example/v1/models')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://attacker.example/v1/chat/completions')).toBe(true);
     // 異なるドメインはブロック
     expect(CSPValidator.isUrlAllowed('https://other-domain.com/v1/models')).toBe(false);
   });
 
-  it('should add openai_base_url domain to allowed list', async () => {
+  it('should NOT self-authorize openai_base_url domain from settings alone (VULN-002)', async () => {
     const { CSPValidator } = await import('../cspValidator.js');
 
     const settings = {
@@ -381,11 +391,20 @@ describe('CSPValidator - Provider Base URL Domains', () => {
     };
     CSPValidator.initializeFromSettings(settings);
 
+    // A settings-derived host is no longer authorized into the CSP allow
+    // list on its own — only pinned domains, loopback, and user-confirmed
+    // origins reach it.
+    expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/models')).toBe(false);
+
+    // After the user explicitly confirms the origin, it joins the allow list.
+    CSPValidator.initializeFromSettings({
+      ...settings,
+      confirmed_provider_origins: { openai_base_url: ['https://custom-openai.example.com'] }
+    });
     expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/models')).toBe(true);
-    expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/chat/completions')).toBe(true);
   });
 
-  it('should add openai2_base_url domain to allowed list', async () => {
+  it('should NOT self-authorize openai2_base_url domain from settings alone (VULN-002)', async () => {
     const { CSPValidator } = await import('../cspValidator.js');
 
     const settings = {
@@ -394,6 +413,12 @@ describe('CSPValidator - Provider Base URL Domains', () => {
     };
     CSPValidator.initializeFromSettings(settings);
 
+    expect(CSPValidator.isUrlAllowed('https://secondary-openai.example.com/v1/models')).toBe(false);
+
+    CSPValidator.initializeFromSettings({
+      ...settings,
+      confirmed_provider_origins: { openai_2_base_url: ['https://secondary-openai.example.com'] }
+    });
     expect(CSPValidator.isUrlAllowed('https://secondary-openai.example.com/v1/models')).toBe(true);
   });
 
@@ -428,7 +453,11 @@ describe('CSPValidator - Provider Base URL Domains', () => {
       conditional_csp_providers: [],
       provider_base_url: 'https://api.ai.sakura.ad.jp/v1',
       openai_base_url: 'https://custom-openai.example.com/v1',
-      ollama_base_url: 'http://localhost:11434/v1'
+      ollama_base_url: 'http://localhost:11434/v1',
+      confirmed_provider_origins: {
+        provider_base_url: ['https://api.ai.sakura.ad.jp'],
+        openai_base_url: ['https://custom-openai.example.com'],
+      }
     };
     CSPValidator.initializeFromSettings(settings);
 

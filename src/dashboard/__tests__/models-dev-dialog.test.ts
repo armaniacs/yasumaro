@@ -228,6 +228,12 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
 vi.mock('../../utils/i18n.js', () => ({
   applyI18n: vi.fn(),
   getMessage: vi.fn((key) => key),
+  getMessageOr: vi.fn((_key: string, fallback?: string) => fallback ?? ''),
+}));
+// The save path routes new non-local endpoints through the explicit
+// confirmation dialog (VULN-002 policy); tests simulate the user allowing.
+vi.mock('../../utils/ui/confirmDialog.js', () => ({
+  showConfirmDialog: vi.fn(async () => true),
 }));
 
 describe('models-dev-dialog exports', () => {

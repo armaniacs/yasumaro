@@ -9,33 +9,40 @@ import { errorMessage } from '../errorUtils.js';
 import { StorageKeys } from './types.js';
 import { ALL_LIST_SOURCES, FILTER_LIST_SOURCES } from '../listSources.js';
 import type { Settings } from './types.js';
-import { deriveWhitelistedDomains, PROVIDER_ALLOWLIST_ROWS } from './providerAllowlist.js';
+import {
+  collectConfirmedOrigins,
+  deriveRequiredDomains,
+  deriveWhitelistedDomains,
+  isProviderOriginAuthorized,
+  PROVIDER_ALLOWLIST_ROWS,
+} from './providerAllowlist.js';
 
 /**
- * Add each configured remote-provider Base URL to `allowedUrls`, gated on the
- * whitelist. Derived from the neutral PROVIDER_ALLOWLIST_ROWS so a new
- * provider's base URL is covered by its table row alone (was 3× copy-pasted
- * per file). Local providers (lm-studio/ollama) are skipped — their localhost
- * origins are covered by the Obsidian localhost block that always runs before
- * this.
+ * Add each configured provider Base URL to `allowedUrls`, gated on the
+ * origin-authorization policy (pinned row domain / user-confirmed origin /
+ * loopback). Derived from the neutral PROVIDER_ALLOWLIST_ROWS so a new
+ * provider's base URL is covered by its table row alone. Local rows are
+ * included: their loopback origins (any port) must survive the fail-closed
+ * allowlist, and a non-loopback baseUrl in a local slot is denied by the
+ * same policy as everywhere else.
  */
 export function addProviderBaseUrls(
     allowedUrls: Set<string>,
     settings: Record<string, unknown>,
-    isInWhitelist: (url: string) => boolean,
 ): void {
     for (const entry of PROVIDER_ALLOWLIST_ROWS) {
-        if (!entry.baseUrlKey || entry.isLocal) continue;
+        if (!entry.baseUrlKey) continue;
         const rawUrl = settings[entry.baseUrlKey] as string | undefined;
         if (!rawUrl) continue;
-        if (isInWhitelist(rawUrl)) {
+        const confirmed = collectConfirmedOrigins(settings, entry.baseUrlKey);
+        if (isProviderOriginAuthorized(rawUrl, entry, confirmed).authorized) {
             try {
                 allowedUrls.add(normalizeUrl(rawUrl));
             } catch (e) {
                 console.warn(`Invalid ${entry.label} Base URL, skipping: ${rawUrl}, error: ${errorMessage(e)}`);
             }
         } else {
-            console.warn(`${entry.label} Base URL not in whitelist, skipped: ${rawUrl}`);
+            console.warn(`${entry.label} Base URL not authorized, skipped: ${rawUrl}`);
         }
     }
 }
@@ -90,8 +97,15 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     } catch (e) {
         console.warn(`Invalid Obsidian URL (localhost), skipping: ${errorMessage(e)}`);
     }
-    allowedUrls.add('https://generativelanguage.googleapis.com');
-    addProviderBaseUrls(allowedUrls, settings as Record<string, unknown>, isDomainInWhitelist);
+    // Pinned fixed-endpoint provider domains are always legitimate targets —
+    // they mirror the manifest host_permissions (required tier, gemini's
+    // googleapis included). Without these, a provider running on its
+    // catalog-default base URL (settings key absent) would be rejected by
+    // the fail-closed allowlist reader.
+    for (const domain of deriveRequiredDomains()) {
+        allowedUrls.add(`https://${domain}`);
+    }
+    addProviderBaseUrls(allowedUrls, settings as Record<string, unknown>);
     const ublockSources = (settings[StorageKeys.UBLOCK_SOURCES] as Array<{ url?: string }>) || [];
     for (const source of ublockSources) {
         if (source.url && source.url !== 'manual') {

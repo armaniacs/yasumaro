@@ -112,6 +112,8 @@ describe('OpenAIProvider: branch coverage', () => {
         provider_base_url: 'https://example.com/v1',
         provider_api_key: 'k',
         provider_model: 'compat-model',
+        // Non-local custom origins require the confirmation record (VULN-002).
+        confirmed_provider_origins: { provider_base_url: ['https://example.com'] },
       } as unknown as Settings;
       const provider = new GenericOpenAICompatibleProvider(settings, 'openai-compatible');
       expect(provider.getName()).toBe('openai-compatible');
