@@ -336,7 +336,10 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
       url: message.payload.url,
       content: message.payload.content,
       force: message.payload.force,
-      maskedCount: message.payload.maskedCount,
+      // The caller-supplied maskedCount is an unverified claim, not a
+      // measurement: the privacy pipeline's computed value is the single
+      // source of truth, so the SAVE message field is never forwarded.
+      maskedCount: undefined,
       pageBytes: message.payload.pageBytes,
       candidateBytes: message.payload.candidateBytes,
       originalBytes: message.payload.originalBytes,
