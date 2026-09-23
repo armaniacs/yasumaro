@@ -4427,5 +4427,133 @@
   },
   "tagCluster_empty_period": {
     "message": "選択した期間にレコードがありません。範囲を広げて試してください。"
+  },
+  "tagFrequencyTab": {
+    "message": "タグ推移",
+    "description": "タグ頻度の期間推移パネルのサイドバータブ"
+  },
+  "dashboardTagTimelineTitle": {
+    "message": "タグ頻度の期間推移",
+    "description": "タグ頻度の期間推移パネルのタイトル"
+  },
+  "dashboardTagTimelineDescription": {
+    "message": "選択した期間内の出現数上位タグの週別・月別記録数を表示します。",
+    "description": "タグ頻度の期間推移パネルの説明"
+  },
+  "dashboardTagTimelineGranularityLabel": {
+    "message": "粒度",
+    "description": "タグ頻度の期間推移の粒度切替ラベル"
+  },
+  "dashboardTagTimelineGranularityWeek": {
+    "message": "週次",
+    "description": "タグ頻度の期間推移の週次粒度"
+  },
+  "dashboardTagTimelineGranularityMonth": {
+    "message": "月次",
+    "description": "タグ頻度の期間推移の月次粒度"
+  },
+  "dashboardTagTimelineTopNLabel": {
+    "message": "表示タグ数",
+    "description": "タグ頻度の期間推移の上位タグ表示数ラベル"
+  },
+  "dashboardTagTimelineRun": {
+    "message": "実行",
+    "description": "タグ頻度の期間推移の適用ボタン"
+  },
+  "dashboardTagTimelineWeekStartNote": {
+    "message": "週は日曜開始（ローカル時刻）です。端数の先頭・末尾週は実際の開始日をラベルで示します。",
+    "description": "タグ頻度の期間推移の週開始注記"
+  },
+  "dashboardTagTimelineSeriesOther": {
+    "message": "その他",
+    "description": "タグ頻度の期間推移の上位N外合算系列の凡例"
+  },
+  "dashboardTagTimelineEmpty": {
+    "message": "この期間にタグ付きの記録はありません。",
+    "description": "タグ頻度の期間推移の空状態"
+  },
+  "dashboardTagTimelineCapNote": {
+    "message": "取得上限{max}件に達しました — 一部の記録のみで集計しています。",
+    "description": "タグ頻度の期間推移の取得上限注記"
+  },
+  "dashboardTagTimelineTableCaption": {
+    "message": "バケット・タグ別の記録数",
+    "description": "タグ頻度の期間推移の数値テーブルのキャプション"
+  },
+  "dashboardTagTimelineChartTitle": {
+    "message": "タグ別記録数の推移（積み上げ）",
+    "description": "タグ頻度の期間推移のSVGタイトル"
+  },
+  "dashboardTagTimelineChartDesc": {
+    "message": "上位タグごとの積み上げ系列。同じ数値は下の表でも確認できます。",
+    "description": "タグ頻度の期間推移のSVG説明"
+  },
+  "dashboardTagTimelineCellLabel": {
+    "message": "{date} {tag}: {count}件",
+    "description": "タグ頻度の期間推移のデータ点ラベル（バケット日付・タグ・件数）"
+  },
+  "tagCooccurrenceTableTab": {
+    "message": "タグ共起ペア",
+    "description": "タグ共起ペアランキングパネルのサイドバータブ"
+  },
+  "cooccurrenceTableTitle": {
+    "message": "タグ共起ペアランキング",
+    "description": "タグ共起ペアランキングパネルのタイトル"
+  },
+  "cooccurrenceTableDescription": {
+    "message": "共起数上位のタグペアを表形式で表示します。行クリックでペアの最初のタグにより履歴へ遷移します。",
+    "description": "タグ共起ペアランキングパネルの説明"
+  },
+  "cooccurrenceTableColPair": {
+    "message": "ペア",
+    "description": "タグ共起ペアランキングのペア列ヘッダー"
+  },
+  "cooccurrenceTableColCooccurCount": {
+    "message": "共起数",
+    "description": "タグ共起ペアランキングの共起数列ヘッダー"
+  },
+  "cooccurrenceTableColCountA": {
+    "message": "Aの個別出現数",
+    "description": "タグ共起ペアランキングのペア先頭タグ個別出現数列ヘッダー"
+  },
+  "cooccurrenceTableColCountB": {
+    "message": "Bの個別出現数",
+    "description": "タグ共起ペアランキングのペア第2タグ個別出現数列ヘッダー"
+  },
+  "cooccurrenceTableNoRecords": {
+    "message": "選択した期間にレコードがありません。範囲を広げて試してください。",
+    "description": "タグ共起ペアランキングのレコード0件時の空状態"
+  },
+  "cooccurrenceTableEmpty": {
+    "message": "共起ペアがありません。すべてのレコードが単一タグのみです。",
+    "description": "タグ共起ペアランキングの共起ペア0件時の空状態"
+  },
+  "cooccurrenceTableEmptyForTag": {
+    "message": "選択したタグとの共起相手がありません。",
+    "description": "タグ共起ペアランキングの選択タグに共起相手がいない場合の空状態"
+  },
+  "cooccurrenceTableTruncatedTop20": {
+    "message": "共起ペア{total}件のうち上位20件を表示しています。",
+    "description": "タグ共起ペアランキングのtop 20切り捨て通知"
+  },
+  "cooccurrenceTableTruncatedTags": {
+    "message": "ユニークタグが{max}件を超えているため、上位{max}タグのみを対象にしています。",
+    "description": "タグ共起ペアランキングのタグ数上限による事前絞り込み通知"
+  },
+  "cooccurrenceTableTagFilterLabel": {
+    "message": "タグ",
+    "description": "タグ共起ペアランキングのタグフィルタラベル"
+  },
+  "cooccurrenceTableTagFilterAll": {
+    "message": "すべてのタグ",
+    "description": "タグ共起ペアランキングのタグ未選択時の選択肢"
+  },
+  "cooccurrenceTableRun": {
+    "message": "実行",
+    "description": "タグ共起ペアランキングの適用ボタン"
+  },
+  "cooccurrenceTableCaption": {
+    "message": "共起数上位のタグペア",
+    "description": "タグ共起ペアランキングのテーブルキャプション"
   }
 }

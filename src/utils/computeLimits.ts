@@ -56,3 +56,10 @@ export const MAX_DOMAIN_ANALYSIS_ROWS = 50000;
 
 /** Rows per queryLogs page for the domain-analysis panel (MAX / 5 pages). */
 export const DOMAIN_ANALYSIS_PAGE_SIZE = 10000;
+
+/**
+ * Max rows fetched for the tag-frequency-timeline panel (user-selected period).
+ * A single queryLogs page; the cap bounds the transfer and the O(n) bucket
+ * pass. The panel shows a cap notice when reached (more rows likely exist).
+ */
+export const MAX_TAG_TIMELINE_ROWS = 10000;
