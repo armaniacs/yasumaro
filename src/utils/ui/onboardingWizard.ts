@@ -3,6 +3,7 @@ import { StorageKeys } from '../storage/types.js';
 import { focusTrapManager } from '../ui/focusTrap.js';
 import { ErrorCode } from '../logger/types.js';
 import { logError } from '../logger/api.js';
+import { setElementHtml } from '../htmlFragment.js';
 import { getMessage } from '../i18n.js';
 import { applyI18n } from '../i18n-dom.js';
 
@@ -55,7 +56,7 @@ function ensureWizardDOM(): HTMLElement {
   wizard.setAttribute('aria-modal', 'true');
   wizard.setAttribute('aria-labelledby', 'wizardTitle');
 
-  wizard.innerHTML = `
+  setElementHtml(wizard, `
     <h2 id="wizardTitle" class="wizard-title" data-i18n="wizardTitle">Welcome to Yasumaro</h2>
     <div class="wizard-step" data-step="type">
       <p data-i18n="wizardTypePrompt">How do you plan to use Yasumaro?</p>
@@ -80,7 +81,7 @@ function ensureWizardDOM(): HTMLElement {
       <p data-i18n="wizardMinimalDescription">You can customize settings anytime from the dashboard.</p>
       <button class="wizard-finish" data-i18n="wizardFinish">Get started</button>
     </div>
-  `;
+  `);
 
   document.body.appendChild(wizard);
   return wizard;
