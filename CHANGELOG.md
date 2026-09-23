@@ -36,6 +36,12 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [Unreleased]
+
+### Fixed
+
+- **Firefox AMO（addons.mozilla.org）への提出に失敗する問題を修正**: ソース提出用 zip に Rust ビルド成果物（`target/`）やローカルのカバレッジ・キャッシュ・旧成果物が約 600MB 分取り込まれていたため、`wxt.config.ts` の `zip.excludeSources` で除外し 23.6MB に縮小。また AMO のデータ開示ポリシー対応として Firefox マニフェストに `data_collection_permissions`（収集なし）と `strict_min_version: 140.0` を追加。addons-linter（AMO と同一チェッカー）でエラー 0
+
 ## [6.9.17] - 2026-09-23
 
 このリリースは v6.9.16 に続く連続リリースです。SQLite History の選択一括操作（複数選択の一括削除・一括再生成）、削除確認 UI の視認性修正（選択バー内の2段階確認＋共有モーダルの中央表示化）、タグクラスタの最大ズーム拡大（3倍→12倍）を追加しました。全テスト（13,201 件）がグリーンです。
