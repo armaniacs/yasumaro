@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `renderEntryDiagnostics` / `renderCleansingBar` が historyEntryPresentation.ts の公開 interface になり、View から内部関数への import が 0 になる
-- [ ] characterization test（バイト等価 pin）が追加され、緑
-- [ ] View 1169 行のうち診断分岐相当（約 250–350 行）が Module 背後に移動し、View の行数が実質減少する
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `renderEntryDiagnostics` / `renderCleansingBar` が historyEntryPresentation.ts の公開 interface になり、View から内部関数への import が 0 になる
+- [x] characterization test（バイト等価 pin）が追加され、緑
+- [x] View 1169 行のうち診断分岐相当（約 250–350 行）が Module 背後に移動し、View の行数が実質減少する
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- コミット 5d7159e9。`renderEntryDiagnostics` / `renderCleansingBar` を historyEntryPresentation の公開 interface 化し、View の診断分岐を verbatim 移設（1169→1012 行）。15 fixture × 2 関数の characterization snapshot（31 テスト）で全 30 ブランチの HTML バイト等価を確認。Panel 側に reason-key 複製表は実在しなかったため、module 側 `MISSING_REASON_KEYS` の export による単一所有のみ実施（シナリオ3の空虚充足を記録）。
+- 検証: type-check / asyncData 28 ファイル 352 テスト緑。

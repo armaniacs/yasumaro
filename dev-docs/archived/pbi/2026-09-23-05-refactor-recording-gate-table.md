@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `evaluateGates` が唯一の Seam になり、step 群が表駆動になる
-- [ ] precedence 複製（content/popup 側）が消え、中立層の 1 表に統合される
-- [ ] 既存の録画判定テストが無修正で緑（語義不変の証明）
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `evaluateGates` が唯一の Seam になり、step 群が表駆動になる
+- [x] precedence 複製（content/popup 側）が消え、中立層の 1 表に統合される
+- [x] 既存の録画判定テストが無修正で緑（語義不変の証明）
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- コミット 0533fc21。中立層 `recordingGateTable.ts` を新設し precedence を 1 表に所有。`evaluateGates`/`decideGate`/`ADMISSION_GATE_ORDER`/`createAdmissionGateSteps` を公開し、5 step は表 Adapter に縮退、recordingDecision.ts は互換 shim に。popup recordSession は中立 `isRecordableTab` に統一（tabUtils.isRecordable の生産呼び出し 0 を確認、recordOrchestrator テストの mock を新 seam に付け替え）。content は domainFilter 行・scheme 述語を共有し、engagement 閾値との合流は follow-up として分離（visitGate.ts に境界を記録）。
+- 検証: type-check / pipeline+content+popup 81 ファイル緑。既存の recording-decision テストは無修正で緑。
