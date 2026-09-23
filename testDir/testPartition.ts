@@ -33,6 +33,13 @@ const NEEDS_ISOLATION = new RegExp(
     // A real sqlite-wasm module keeps named in-memory databases alive across
     // files that share its instance.
     String.raw`sqlite-wasm|wa-sqlite`,
+    // chrome.storage mutations persist across non-isolated files sharing a
+    // worker: one file's seeded storage changed another file's domain-filter
+    // verdict (CI: MessageRouter.validators "record" never called). Also
+    // route production-wiring tests (real validator registry + storage reads)
+    // through isolation — their verdicts depend on the worker's storage state.
+    String.raw`chrome\.storage\.(local|sync|session)\.(set|remove|clear)\(`,
+    String.raw`createMessageRouter\(`,
   ].join('|'),
 );
 
