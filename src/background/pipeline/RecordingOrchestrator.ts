@@ -15,20 +15,23 @@ import { addLog } from '../../utils/logger/core.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
 import { decideStepOutcome, defaultOutcomeAdapters, finalizeSuccess, type OutcomeAdapters } from './recordingOutcome.js';
 import { toExternalResult } from './piiBoundary.js';
-import { createRetryContext, createSaveSqliteParams, createStepDeps } from './contextBuilder.js';
+import { createRetryContext, createStepDeps } from './contextBuilder.js';
 import {
   truncateContentStep, checkDomainFilterStep, checkPermissionStep, checkTrustDomainStep,
   PrivacyHeadersChecker, checkDuplicateStep,
-  processPrivacyPipelineStep, extractSentencesStep, formatMarkdownStep,
-  saveToObsidianStep, saveLocalMarkdownStep, saveMetadataStep, saveSqliteStep
+  extractSentencesStep, formatMarkdownStep
 } from './steps/index.js';
+import {
+  createProcessPrivacyPipelineStep,
+  defaultPrivacyPipelineFactory,
+  type PrivacyPipelineFactory,
+} from './steps/processPrivacyPipelineStep.js';
+import { createSavePhase, type SavePhase } from './savePhase.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 import type { Settings } from '../../utils/storage/types.js';
-import { StorageKeys } from '../../utils/storage/types.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { AIService } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
-import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
@@ -44,6 +47,7 @@ export interface RecordingOrchestratorDeps {
   urlStore?: UrlStore;
   perUrlMutexMap?: PerUrlMutexMap;
   outcomeAdapters?: OutcomeAdapters;
+  privacyPipelineFactory?: PrivacyPipelineFactory;
 }
 
 export interface RecordOptions {
@@ -58,6 +62,7 @@ export interface RecordOptions {
 
 export class RecordingOrchestrator {
   private steps: PipelineStep[];
+  private preSaveSteps: PipelineStep[];
   private retrySteps: PipelineStep[];
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private getSettingsWithCache: () => Promise<Settings>;
@@ -68,6 +73,7 @@ export class RecordingOrchestrator {
   private mutexMap: PerUrlMutexMap;
   private executor: StepExecutor;
   private outcomeAdapters: OutcomeAdapters;
+  private savePhase: SavePhase;
 
   constructor(deps: RecordingOrchestratorDeps) {
     this.getPrivacyInfoWithCache = deps.getPrivacyInfoWithCache;
@@ -79,6 +85,7 @@ export class RecordingOrchestrator {
     this.mutexMap = deps.perUrlMutexMap ?? new PerUrlMutexMap();
     this.executor = new StepExecutor(deps.offlineNetworkQueue ?? null);
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
+    this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 
     // Recording-allowance precedence (PBI 2026-09-19-08): earlier steps win.
     // truncate -> domainFilter -> permission -> trust -> privacyHeaders
@@ -86,66 +93,28 @@ export class RecordingOrchestrator {
     // pipeline, so the first rejecting gate decides. Reordering changes which
     // refusal the user sees — keep this order unless the precedence is
     // deliberately renegotiated.
-    this.steps = [
+    this.preSaveSteps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
       { name: 'domainFilter', errorStrategy: ErrorStrategy.FATAL, execute: checkDomainFilterStep },
       { name: 'permission', errorStrategy: ErrorStrategy.FATAL, execute: checkPermissionStep },
       { name: 'trust', errorStrategy: ErrorStrategy.FATAL, execute: checkTrustDomainStep },
       { name: 'privacyHeaders', errorStrategy: ErrorStrategy.FATAL, execute: this.createPrivacyHeadersStep() },
       { name: 'duplicate', errorStrategy: ErrorStrategy.FATAL, execute: checkDuplicateStep },
-      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, previewBreakpoint: true, execute: processPrivacyPipelineStep },
+      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, previewBreakpoint: true, execute: createProcessPrivacyPipelineStep(deps.privacyPipelineFactory ?? defaultPrivacyPipelineFactory) },
       { name: 'extractSentences', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, execute: extractSentencesStep },
       { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
-      { name: 'saveObsidian', errorStrategy: ErrorStrategy.BEST_EFFORT, offlineRetry: { jobKind: 'obsidian_sync' }, execute: this.createSaveToObsidianStep() },
-      { name: 'saveLocalMarkdown', errorStrategy: ErrorStrategy.BEST_EFFORT, execute: saveLocalMarkdownStep },
-      { name: 'saveSqlite', errorStrategy: ErrorStrategy.BEST_EFFORT, execute: this.createSaveSqliteStep() },
-      { name: 'saveMetadata', errorStrategy: ErrorStrategy.BEST_EFFORT, execute: saveMetadataStep }
     ];
 
-    // Retry pipeline is a distinct 2-step subset compiled at construction — not inline in record()
-    this.retrySteps = [
-      { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
-      { name: 'saveObsidian', errorStrategy: ErrorStrategy.BEST_EFFORT, offlineRetry: { jobKind: 'obsidian_sync' }, execute: this.createSaveToObsidianStep() },
-    ];
+    // Full 13-step introspection surface (SavePhase owns the tail rows).
+    this.steps = [...this.preSaveSteps, ...this.savePhase.steps()];
+
+    // Retry subset is a projection of the fan-out table, not a hand-written array.
+    this.retrySteps = this.savePhase.retryProjection();
   }
 
   private createPrivacyHeadersStep() {
     const checker = new PrivacyHeadersChecker(this.getPrivacyInfoWithCache);
     return (context: RecordingContext, _deps?: StepDeps) => checker.execute(context);
-  }
-
-  private createSaveToObsidianStep() {
-    const deps: StepDeps = { obsidian: this.obsidian, aiService: this.aiService! };
-    return (context: RecordingContext) => saveToObsidianStep(context, deps);
-  }
-
-  private createSaveSqliteStep() {
-    // Deps are construction-time fixed; no fallback to `this.sqliteClient` — caller must provide via StepDeps
-    return async (context: RecordingContext, deps?: StepDeps): Promise<RecordingContext> => {
-      const client = deps?.sqliteClient as SqliteClient | null | undefined;
-      if (!client) {
-        addLog(LogType.WARN, 'No SqliteClient available, skipping SQLite save', { url: context.data.url, traceId: context.traceId });
-        return context;
-      }
-      const record = mapToBrowsingLogRecord(context);
-      const params = createSaveSqliteParams({
-        recordId: 0,
-        record,
-        sqliteClient: client,
-        obsidianSynced: context.obsidianDuration !== undefined ? true : undefined,
-        traceId: context.traceId,
-        // PBI 04: regenerate updates its own row instead of inserting.
-        targetEntryId: context.data.targetEntryId,
-        // Follow-up: skip the UPDATE when the AI produced no real summary.
-        aiSucceeded: context.privacyResult?.aiSucceeded,
-        // Same gate as mapToBrowsingLogRecord: when content storage is off the
-        // UPDATE must leave the existing content column untouched, not null it.
-        contentEnabled: context.settings[StorageKeys.CONTENT_STORAGE_ENABLED] === true,
-      });
-      await saveSqliteStep(params);
-      addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title: context.data.title, traceId: context.traceId });
-      return context;
-    };
   }
 
   private generateTraceId(): string {
@@ -224,7 +193,7 @@ export class RecordingOrchestrator {
     });
     let context: RecordingContext = { data, settings, force: data.force || false, aiService: deps.aiService as never, traceId, errors: [] };
 
-    for (const step of this.steps) {
+    for (const step of this.preSaveSteps) {
       try {
         context = await this.executor.executeWithStrategy(step, context, deps);
         if (data.previewOnly && context.result && step.previewBreakpoint) return toExternalResult(context.result);
@@ -238,7 +207,13 @@ export class RecordingOrchestrator {
       }
     }
 
-    return finalizeSuccess(context, this.outcomeAdapters);
+    // Save tail runs through the SavePhase seam (ordering + BEST_EFFORT
+    // continuation owned there). Preview never reaches it: the breakpoint
+    // above returns before the first save sink.
+    const receipt = await this.savePhase.save(context, deps);
+    if (receipt.terminated) return receipt.result;
+
+    return finalizeSuccess(receipt.context, this.outcomeAdapters);
   }
 }
 

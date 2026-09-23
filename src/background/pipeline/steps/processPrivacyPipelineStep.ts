@@ -7,26 +7,33 @@ import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import type { Settings } from '../../../utils/storage/types.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import type { AIService } from '../../ai/AIService.js';
 import { sanitizePiiHybrid } from '../piiSanitizeHybrid.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
+/** Construction seam for the privacy pipeline. Tests inject a fake; production uses the default. */
+export type PrivacyPipelineFactory = (settings: Settings, aiService: AIService) => PrivacyPipeline;
+
+export const defaultPrivacyPipelineFactory: PrivacyPipelineFactory = (settings, aiService) =>
+  new PrivacyPipeline(settings, aiService, { sanitizeRegex: sanitizePiiHybrid });
+
 /**
  * Process content through privacy pipeline (AI summarization)
  * This step is retryable on failure
  */
-export const processPrivacyPipelineStep: PipelineStepFunction = async (
-  context: RecordingContext,
-  deps?: StepDeps
-): Promise<RecordingContext> => {
+export function createProcessPrivacyPipelineStep(
+  factory: PrivacyPipelineFactory = defaultPrivacyPipelineFactory
+): PipelineStepFunction {
+  return async (context: RecordingContext, deps?: StepDeps): Promise<RecordingContext> => {
   const { data, settings } = context;
   const { content, previewOnly, alreadyProcessed } = data;
 
   // Use injected deps.aiService, falling back to context.aiService for backward compatibility
   const aiService = (deps?.aiService ?? context.aiService) as AIService;
-  const pipeline = new PrivacyPipeline(settings, aiService, { sanitizeRegex: sanitizePiiHybrid });
+  const pipeline = factory(settings, aiService);
 
   const tagSummaryMode = settings[StorageKeys.TAG_SUMMARY_MODE] as boolean;
 
@@ -85,4 +92,8 @@ export const processPrivacyPipelineStep: PipelineStepFunction = async (
 
     throw error instanceof Error ? error : new Error(errorMessage(error));
   }
-};
+  };
+}
+
+/** Default step, wired with the production factory. */
+export const processPrivacyPipelineStep: PipelineStepFunction = createProcessPrivacyPipelineStep();
