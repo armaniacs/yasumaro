@@ -4555,6 +4555,81 @@ details[open] > .priority-details-summary {
   }
 }
 
+/* =============================================================================
+   Time Heatmap (weekday x hour density)
+   Intensity ramp uses --ym-color-primary tokens only (operational purple).
+   ============================================================================= */
+
+.time-heatmap-grid,
+.time-heatmap-numeric {
+  border-collapse: collapse;
+  margin-top: var(--ym-space-3, 12px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.time-heatmap-grid th,
+.time-heatmap-grid td,
+.time-heatmap-numeric th,
+.time-heatmap-numeric td {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-1, 4px);
+  text-align: center;
+}
+
+.time-heatmap-grid th,
+.time-heatmap-numeric th {
+  color: var(--ym-color-sumi-muted, #7a7060);
+  font-weight: 600;
+}
+
+.time-heatmap-cell {
+  min-width: 20px;
+  height: 20px;
+}
+
+.time-heatmap-cell:focus-visible {
+  box-shadow: var(--ym-focus-ring);
+  outline: none;
+}
+
+.time-heatmap-cell[data-intensity="0"] {
+  background: var(--ym-color-bg-subtle, #f8fafc);
+}
+
+.time-heatmap-cell[data-intensity="1"] {
+  background: var(--ym-color-primary-bg, #f5f3ff);
+}
+
+.time-heatmap-cell[data-intensity="2"] {
+  background: var(--ym-color-primary-border, #ddd6fe);
+}
+
+.time-heatmap-cell[data-intensity="3"] {
+  background: var(--ym-color-primary, #7c3aed);
+}
+
+.time-heatmap-cell[data-intensity="4"] {
+  background: var(--ym-color-primary-hover, #6d28d9);
+}
+
+#timeHeatmapEmptyState,
+#timeHeatmapLimitNotice {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+#timeHeatmapEmptyState {
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+#timeHeatmapLimitNotice {
+  color: var(--ym-color-warning-text, #92400e);
+  background: var(--ym-color-warning-bg, #fef3c7);
+  border: 1px solid var(--ym-color-warning-border, #fde68a);
+  border-radius: var(--ym-radius-sm, 6px);
+  padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+}
+
 /* ============================================================================
    Audit Log Panel
    ============================================================================ */
@@ -4735,4 +4810,91 @@ details[open] > .priority-details-summary {
 /* CSP fix: per-site override suffix (was inline style margin-left:6px) */
 .per-site-override-suffix {
   margin-left: 6px;
+}
+
+/* =============================================================================
+   Visit Duration panel + shared period filter
+   ============================================================================= */
+
+.period-filter {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  border-radius: var(--ym-radius-sm, 6px);
+  padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+  margin-top: var(--ym-space-3, 12px);
+}
+
+.period-filter-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-1, 4px);
+}
+
+.period-filter-preset[aria-pressed="true"] {
+  font-weight: 700;
+}
+
+.period-filter-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ym-space-1, 4px);
+  margin-top: var(--ym-space-2, 8px);
+}
+
+.visit-duration-table {
+  border-collapse: collapse;
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.visit-duration-table th,
+.visit-duration-table td {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-1, 4px) var(--ym-space-2, 8px);
+  text-align: left;
+}
+
+.visit-duration-table th[scope="col"] {
+  color: var(--ym-color-sumi-muted, #7a7060);
+  font-weight: 600;
+}
+
+.visit-duration-heading {
+  margin-top: var(--ym-space-3, 12px);
+}
+
+.visit-duration-tag-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ym-color-primary, #7c3aed);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.visit-duration-tag-btn:focus-visible {
+  box-shadow: var(--ym-focus-ring);
+  outline: none;
+}
+
+#visitDurationUnmeasuredRatio,
+#visitDurationEmptyState,
+#visitDurationAllUnmeasured,
+.visit-duration-truncated {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+#visitDurationEmptyState,
+#visitDurationAllUnmeasured {
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+.visit-duration-truncated {
+  color: var(--ym-color-warning-text, #92400e);
+  background: var(--ym-color-warning-bg, #fef3c7);
+  border: 1px solid var(--ym-color-warning-border, #fde68a);
+  border-radius: var(--ym-radius-sm, 6px);
+  padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
 }

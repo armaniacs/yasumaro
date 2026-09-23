@@ -476,6 +476,10 @@
   "textFileOnly": {
     "message": "テキストファイルのみ対応しています"
   },
+  "timeHeatmapTab": {
+    "message": "時間帯ヒートマップ",
+    "description": "時間帯ヒートマップのサイドバータブ"
+  },
   "timeDaysAgo": {
     "message": "{count}日前",
     "description": "Relative time: X days ago"
@@ -2123,6 +2127,98 @@
   },
   "viewFullPolicy": {
     "message": "プライバシーポリシー全文を表示"
+  },
+  "visitDurationAllUnmeasured": {
+    "message": "この期間の記録はすべて未計測です。滞在時間は新しく記録された訪問から保存されます。",
+    "description": "Visit duration all-null state"
+  },
+  "visitDurationAverageTime": {
+    "message": "平均",
+    "description": "Visit duration average-time column header"
+  },
+  "visitDurationDescription": {
+    "message": "選択期間のドメイン別・タグ別の合計滞在時間と平均滞在時間を表示します。",
+    "description": "Visit duration panel description"
+  },
+  "visitDurationDomainColumn": {
+    "message": "ドメイン",
+    "description": "Visit duration domain column header"
+  },
+  "visitDurationDomainRanking": {
+    "message": "ドメイン別滞在時間",
+    "description": "Visit duration by-domain ranking heading"
+  },
+  "visitDurationEmpty": {
+    "message": "この期間の閲覧記録がありません。",
+    "description": "Visit duration empty state"
+  },
+  "visitDurationPanelTitle": {
+    "message": "滞在時間分析",
+    "description": "Visit duration panel title"
+  },
+  "visitDurationPeriodAll": {
+    "message": "全期間",
+    "description": "Period filter preset: all time"
+  },
+  "visitDurationPeriodCustom": {
+    "message": "カスタム",
+    "description": "Period filter custom-range label"
+  },
+  "visitDurationPeriodEnd": {
+    "message": "終了日",
+    "description": "Period filter custom end-date label"
+  },
+  "visitDurationPeriodLabel": {
+    "message": "期間",
+    "description": "Period filter group label"
+  },
+  "visitDurationPeriodLast30Days": {
+    "message": "過去30日間",
+    "description": "Period filter preset: last 30 days"
+  },
+  "visitDurationPeriodLast7Days": {
+    "message": "過去7日間",
+    "description": "Period filter preset: last 7 days"
+  },
+  "visitDurationPeriodLast90Days": {
+    "message": "過去90日間",
+    "description": "Period filter preset: last 90 days"
+  },
+  "visitDurationPeriodStart": {
+    "message": "開始日",
+    "description": "Period filter custom start-date label"
+  },
+  "visitDurationPeriodToday": {
+    "message": "今日",
+    "description": "Period filter preset: today"
+  },
+  "visitDurationRecordCount": {
+    "message": "件数",
+    "description": "Visit duration record-count column header"
+  },
+  "visitDurationTab": {
+    "message": "滞在時間分析",
+    "description": "Sidebar tab for visit duration"
+  },
+  "visitDurationTagColumn": {
+    "message": "タグ",
+    "description": "Visit duration tag column header"
+  },
+  "visitDurationTagRanking": {
+    "message": "タグ別滞在時間",
+    "description": "Visit duration by-tag ranking heading"
+  },
+  "visitDurationTotalTime": {
+    "message": "合計",
+    "description": "Visit duration total-time column header"
+  },
+  "visitDurationTruncated": {
+    "message": "上位{shown}件を表示（全{total}件）。",
+    "description": "Visit duration truncation notice"
+  },
+  "visitDurationUnmeasuredRatio": {
+    "message": "未計測: {percent}%（{total}件中{unmeasured}件）",
+    "description": "Visit duration unmeasured ratio"
   },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
@@ -3924,6 +4020,62 @@
   "contentPurgeNowSuccess_other": {
     "message": "$1件のコンテンツを削除しました",
     "description": "Content purge success plural"
+  },
+  "dashboardTimeHeatmapCellLabel": {
+    "message": "{weekday}{hour}時 — {count}件",
+    "description": "ヒートマップセル表示: 曜日・時間帯・件数"
+  },
+  "dashboardTimeHeatmapDescription": {
+    "message": "直近12ヶ月の曜日・時間帯ごとの記録件数です。",
+    "description": "時間帯ヒートマップの説明"
+  },
+  "dashboardTimeHeatmapEmpty": {
+    "message": "直近12ヶ月に記録がありません。",
+    "description": "時間帯ヒートマップの空状態"
+  },
+  "dashboardTimeHeatmapFri": {
+    "message": "金",
+    "description": "金曜の短縮名"
+  },
+  "dashboardTimeHeatmapLimitNotice": {
+    "message": "取得上限10000件に達したため、一部の記録のみ集計しています。",
+    "description": "時間帯ヒートマップの上限注意"
+  },
+  "dashboardTimeHeatmapMon": {
+    "message": "月",
+    "description": "月曜の短縮名"
+  },
+  "dashboardTimeHeatmapNumericCaption": {
+    "message": "曜日・時間帯ごとの記録件数（数値表）",
+    "description": "数値テーブルのキャプション"
+  },
+  "dashboardTimeHeatmapSat": {
+    "message": "土",
+    "description": "土曜の短縮名"
+  },
+  "dashboardTimeHeatmapSun": {
+    "message": "日",
+    "description": "日曜の短縮名"
+  },
+  "dashboardTimeHeatmapTableCaption": {
+    "message": "曜日・時間帯ごとの記録件数",
+    "description": "ヒートマップテーブルのキャプション"
+  },
+  "dashboardTimeHeatmapThu": {
+    "message": "木",
+    "description": "木曜の短縮名"
+  },
+  "dashboardTimeHeatmapTitle": {
+    "message": "時間帯ヒートマップ",
+    "description": "時間帯ヒートマップの見出し"
+  },
+  "dashboardTimeHeatmapTue": {
+    "message": "火",
+    "description": "火曜の短縮名"
+  },
+  "dashboardTimeHeatmapWed": {
+    "message": "水",
+    "description": "水曜の短縮名"
   },
   "dashboardTitle": {
     "message": "Yasumaro ダッシュボード",

@@ -494,6 +494,10 @@
   "textFileOnly": {
     "message": "Only text files are supported"
   },
+  "timeHeatmapTab": {
+    "message": "Time Heatmap",
+    "description": "Sidebar tab for time heatmap"
+  },
   "timeDaysAgo": {
     "message": "{count} days ago",
     "description": "Relative time: X days ago"
@@ -2205,6 +2209,98 @@
   },
   "viewFullPolicy": {
     "message": "View Full Privacy Policy"
+  },
+  "visitDurationAllUnmeasured": {
+    "message": "All records in this period are unmeasured — durations are recorded for newly tracked visits.",
+    "description": "Visit duration all-null state"
+  },
+  "visitDurationAverageTime": {
+    "message": "Average",
+    "description": "Visit duration average-time column header"
+  },
+  "visitDurationDescription": {
+    "message": "Total and average time spent per domain and tag for the selected period.",
+    "description": "Visit duration panel description"
+  },
+  "visitDurationDomainColumn": {
+    "message": "Domain",
+    "description": "Visit duration domain column header"
+  },
+  "visitDurationDomainRanking": {
+    "message": "Time by domain",
+    "description": "Visit duration by-domain ranking heading"
+  },
+  "visitDurationEmpty": {
+    "message": "No browsing records in this period.",
+    "description": "Visit duration empty state"
+  },
+  "visitDurationPanelTitle": {
+    "message": "Visit Duration",
+    "description": "Visit duration panel title"
+  },
+  "visitDurationPeriodAll": {
+    "message": "All time",
+    "description": "Period filter preset: all time"
+  },
+  "visitDurationPeriodCustom": {
+    "message": "Custom",
+    "description": "Period filter custom-range label"
+  },
+  "visitDurationPeriodEnd": {
+    "message": "To",
+    "description": "Period filter custom end-date label"
+  },
+  "visitDurationPeriodLabel": {
+    "message": "Period",
+    "description": "Period filter group label"
+  },
+  "visitDurationPeriodLast30Days": {
+    "message": "Last 30 days",
+    "description": "Period filter preset: last 30 days"
+  },
+  "visitDurationPeriodLast7Days": {
+    "message": "Last 7 days",
+    "description": "Period filter preset: last 7 days"
+  },
+  "visitDurationPeriodLast90Days": {
+    "message": "Last 90 days",
+    "description": "Period filter preset: last 90 days"
+  },
+  "visitDurationPeriodStart": {
+    "message": "From",
+    "description": "Period filter custom start-date label"
+  },
+  "visitDurationPeriodToday": {
+    "message": "Today",
+    "description": "Period filter preset: today"
+  },
+  "visitDurationRecordCount": {
+    "message": "Records",
+    "description": "Visit duration record-count column header"
+  },
+  "visitDurationTab": {
+    "message": "Visit Duration",
+    "description": "Sidebar tab for visit duration"
+  },
+  "visitDurationTagColumn": {
+    "message": "Tag",
+    "description": "Visit duration tag column header"
+  },
+  "visitDurationTagRanking": {
+    "message": "Time by tag",
+    "description": "Visit duration by-tag ranking heading"
+  },
+  "visitDurationTotalTime": {
+    "message": "Total",
+    "description": "Visit duration total-time column header"
+  },
+  "visitDurationTruncated": {
+    "message": "Showing top {shown} of {total}.",
+    "description": "Visit duration truncation notice"
+  },
+  "visitDurationUnmeasuredRatio": {
+    "message": "Unmeasured: {percent}% ({unmeasured} of {total} records)",
+    "description": "Visit duration unmeasured ratio"
   },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
@@ -3962,6 +4058,62 @@
   "clearAllFilters": {
     "message": "Clear filters",
     "description": "Button label to clear all active filters (search, date, tag)"
+  },
+  "dashboardTimeHeatmapCellLabel": {
+    "message": "{weekday} {hour}:00 — {count} records",
+    "description": "Heatmap cell label: weekday, hour and record count"
+  },
+  "dashboardTimeHeatmapDescription": {
+    "message": "Browsing record density by weekday and hour over the last 12 months.",
+    "description": "Time heatmap panel description"
+  },
+  "dashboardTimeHeatmapEmpty": {
+    "message": "No browsing records in the last 12 months.",
+    "description": "Time heatmap empty state"
+  },
+  "dashboardTimeHeatmapFri": {
+    "message": "Fri",
+    "description": "Friday short name for heatmap"
+  },
+  "dashboardTimeHeatmapLimitNotice": {
+    "message": "Reached the 10,000-record limit — aggregating a partial set.",
+    "description": "Time heatmap limit notice"
+  },
+  "dashboardTimeHeatmapMon": {
+    "message": "Mon",
+    "description": "Monday short name for heatmap"
+  },
+  "dashboardTimeHeatmapNumericCaption": {
+    "message": "Browsing record counts by weekday and hour",
+    "description": "Numeric table caption for heatmap"
+  },
+  "dashboardTimeHeatmapSat": {
+    "message": "Sat",
+    "description": "Saturday short name for heatmap"
+  },
+  "dashboardTimeHeatmapSun": {
+    "message": "Sun",
+    "description": "Sunday short name for heatmap"
+  },
+  "dashboardTimeHeatmapTableCaption": {
+    "message": "Browsing records by weekday and hour",
+    "description": "Heatmap table caption"
+  },
+  "dashboardTimeHeatmapThu": {
+    "message": "Thu",
+    "description": "Thursday short name for heatmap"
+  },
+  "dashboardTimeHeatmapTitle": {
+    "message": "Time Heatmap",
+    "description": "Time heatmap panel title"
+  },
+  "dashboardTimeHeatmapTue": {
+    "message": "Tue",
+    "description": "Tuesday short name for heatmap"
+  },
+  "dashboardTimeHeatmapWed": {
+    "message": "Wed",
+    "description": "Wednesday short name for heatmap"
   },
   "dashboardTitle": {
     "message": "Yasumaro Dashboard",

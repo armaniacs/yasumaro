@@ -151,6 +151,22 @@
           </svg>
           <span data-i18n="domainSearchTab">Domain Search</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-time-heatmap" aria-selected="false" data-panel="panel-time-heatmap">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          <span data-i18n="timeHeatmapTab">Time Heatmap</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-visit-duration" aria-selected="false" data-panel="panel-visit-duration">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <polyline points="12 7 12 12 15 14"/>
+          </svg>
+          <span data-i18n="visitDurationTab">Visit Duration</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -1857,6 +1873,48 @@
             data-i18n-input-placeholder="domainCheckPlaceholder">
         </div>
         <div id="domainSearchResult" class="domain-search-result" aria-live="polite"></div>
+      </section>
+
+      <!-- Time Heatmap Panel -->
+      <section id="panel-time-heatmap" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="dashboardTimeHeatmapTitle">Time Heatmap</h2>
+        <p class="panel-description" data-i18n="dashboardTimeHeatmapDescription">Browsing record density by weekday and hour over the last 12 months.</p>
+        <div id="timeHeatmapEmptyState" data-i18n="dashboardTimeHeatmapEmpty" hidden>No browsing records in the last 12 months.</div>
+        <div id="timeHeatmapLimitNotice" data-i18n="dashboardTimeHeatmapLimitNotice" hidden>Reached the 10,000-record limit — aggregating a partial set.</div>
+        <div id="timeHeatmapGrid"></div>
+        <div id="timeHeatmapTableWrap"></div>
+      </section>
+
+      <!-- Visit Duration Panel -->
+      <section id="panel-visit-duration" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="visitDurationPanelTitle">Visit Duration</h2>
+        <p class="panel-description" data-i18n="visitDurationDescription">Total and average time spent per domain and tag for the selected period.</p>
+        <div id="visitDurationFilter"></div>
+        <p id="visitDurationUnmeasuredRatio" aria-live="polite" hidden></p>
+        <div id="visitDurationEmptyState" data-i18n="visitDurationEmpty" hidden>No browsing records in this period.</div>
+        <div id="visitDurationAllUnmeasured" data-i18n="visitDurationAllUnmeasured" hidden>All records in this period are unmeasured — durations are recorded for newly tracked visits.</div>
+        <h3 class="visit-duration-heading" data-i18n="visitDurationDomainRanking">Time by domain</h3>
+        <table id="visitDurationDomainTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="visitDurationDomainColumn">Domain</th>
+            <th scope="col" data-i18n="visitDurationTotalTime">Total</th>
+            <th scope="col" data-i18n="visitDurationAverageTime">Average</th>
+            <th scope="col" data-i18n="visitDurationRecordCount">Records</th>
+          </tr></thead>
+          <tbody id="visitDurationDomainBody"></tbody>
+        </table>
+        <div id="visitDurationDomainTruncated" class="visit-duration-truncated" hidden></div>
+        <h3 class="visit-duration-heading" data-i18n="visitDurationTagRanking">Time by tag</h3>
+        <table id="visitDurationTagTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="visitDurationTagColumn">Tag</th>
+            <th scope="col" data-i18n="visitDurationTotalTime">Total</th>
+            <th scope="col" data-i18n="visitDurationAverageTime">Average</th>
+            <th scope="col" data-i18n="visitDurationRecordCount">Records</th>
+          </tr></thead>
+          <tbody id="visitDurationTagBody"></tbody>
+        </table>
+        <div id="visitDurationTagTruncated" class="visit-duration-truncated" hidden></div>
       </section>
 
       <!-- CSP Settings Panel (P1) -->
