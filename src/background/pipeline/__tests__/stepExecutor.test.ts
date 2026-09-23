@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { StepExecutor } from '../stepExecutor.js';
+import { StepExecutor, type StepDelayFn } from '../stepExecutor.js';
 import { ErrorStrategy } from '../types.js';
 import type { PipelineStep, RecordingContext, StepDeps } from '../types.js';
 import type { OfflineNetworkQueue } from '../../offlineNetworkQueue.js';
@@ -18,10 +18,12 @@ function makeContext(overrides?: Partial<RecordingContext>): RecordingContext {
 describe('StepExecutor', () => {
   let queue: { enqueue: ReturnType<typeof vi.fn> };
   let executor: StepExecutor;
+  let delay: ReturnType<typeof vi.fn<StepDelayFn>>;
 
   beforeEach(() => {
     queue = { enqueue: vi.fn().mockResolvedValue(true) };
-    executor = new StepExecutor(queue as unknown as OfflineNetworkQueue);
+    delay = vi.fn<StepDelayFn>(async () => {});
+    executor = new StepExecutor(queue as unknown as OfflineNetworkQueue, undefined, delay);
   });
 
   describe('executeWithStrategy', () => {
@@ -48,10 +50,25 @@ describe('StepExecutor', () => {
       const result = await executor.executeWithStrategy(step, makeContext(), undefined as unknown as StepDeps);
       expect(step.execute).toHaveBeenCalledTimes(2);
       expect(result).toBeDefined();
+      // 1-origin retry counter: the first retry waits base * 2^1, not base.
+      expect(delay).toHaveBeenCalledExactlyOnceWith(2000);
+    });
+
+    it('caps the backoff delay at maxMs', async () => {
+      const step: PipelineStep = {
+        name: 'retry-cap',
+        errorStrategy: ErrorStrategy.RETRY,
+        maxRetries: 3,
+        execute: vi.fn().mockRejectedValue(new Error('persistent')),
+      };
+      await expect(
+        executor.executeWithStrategy(step, makeContext(), undefined as unknown as StepDeps),
+      ).rejects.toThrow('persistent');
+      expect(delay.mock.calls.map(([ms]) => ms)).toEqual([2000, 4000, 5000]);
     });
 
     it('exhausts retries and throws when no offline queue configured', async () => {
-      const localExecutor = new StepExecutor(null);
+      const localExecutor = new StepExecutor(null, undefined, delay);
       const step: PipelineStep = {
         name: 'retry-fail',
         errorStrategy: ErrorStrategy.RETRY,

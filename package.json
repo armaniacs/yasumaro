@@ -33,7 +33,7 @@
     "type-check:watch": "tsc --noEmit --watch",
     "type-check:test": "tsc --project testDir/tsconfig.json --noEmit",
     "test:type-safe": "npm run type-check:test && npm test",
-    "lint": "eslint .",
+    "lint": "eslint . --cache --cache-strategy content --cache-location node_modules/.cache/eslint/",
     "lint:adr-links": "node scripts/lint-adr-links.mjs",
     "lint:layers-docs": "node scripts/lint-layers-docs.mjs",
     "metrics:collect": "node scripts/metrics/updateHistory.mjs",

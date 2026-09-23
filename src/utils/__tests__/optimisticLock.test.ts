@@ -406,7 +406,6 @@ describe('withOptimisticLock', () => {
         });
 
         it('retries with the default maxRetries', async () => {
-            // Note: Using vi.useFakeTimers to control async timing if needed
             await chrome.storage.local.set({ testKey: ['initial'] });
 
             const setupOriginalGet = originalGet;
@@ -419,8 +418,11 @@ describe('withOptimisticLock', () => {
             });
 
             await expect(
-                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'])
+                // initialDelay 0 skips the real 100ms..1600ms backoff; maxRetries stays default.
+                withOptimisticLock<unknown[]>('testKey', (current) => [...current, 'item'], { initialDelay: 0 })
             ).rejects.toThrow(ConflictError);
+            // 1 initial attempt + 5 default retries, each doing a read and a CAS verify read.
+            expect(callCount).toBe((1 + 5) * 2);
 
             // Reset storage for other tests
             await chrome.storage.local.set({ testKey: ['initial'] });

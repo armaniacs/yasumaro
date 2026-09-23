@@ -27,6 +27,15 @@ vi.mock('../../../../utils/pendingStorage.js', () => ({
   renderPendingReason: vi.fn((r: string) => r),
 }));
 
+// Keep the backoff instant so the retries do not slow the suite down.
+vi.mock('../../../utils/retry.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/retry.js')>();
+  return {
+    retryWithExponentialBackoff: (fn: () => Promise<unknown>, options: Record<string, unknown> = {}) =>
+      actual.retryWithExponentialBackoff(fn as never, { ...options, baseDelayMs: 0, maxDelayMs: 0 }),
+  };
+});
+
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import * as db from '../../../dashboardSqliteService.js';
 import * as pending from '../../../../utils/pendingStorage.js';

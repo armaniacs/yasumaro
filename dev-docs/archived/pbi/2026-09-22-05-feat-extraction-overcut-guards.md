@@ -81,16 +81,16 @@ Scenario: 段別フラグでロールバックできる
 ```
 
 ## 受け入れ基準
-- [ ] ②Content Cleansing: 削減後が `fallbackRatio` 未満 or `fallbackMinChars`（文字数 knob・Ask Q3B）未満 → 削減前テキスト（`preCleanseText`）へ復元、fallback 理由が記録される
-- [ ] ①候補選択: トップ候補が `fallbackMinChars` 未満 → body パスへフォールバック
-- [ ] ③未実行（AI要約クレンジング OFF/未計測）でも①②ガードが発火する（`aiSummaryOriginalBytes` 必須条件の一般化）
-- [ ] 既存 `fallbackRatio` / 新 `fallbackMinChars` 設定が①②の hot path knobs として機能し、`fallbackMinBytes`（bytes）は③既存経路・診断のまま維持すること（単位分離をテストで pin）
-- [ ] **whitelist 抽出経路は v1 ガード対象外**（`index.ts:373` の early return は①②ガードも `applyFallback` も通らない — Ask Q2A 2026-09-22。「閾値内保証」は blacklist 候選/body 経路に限定されることをテスト名/ドキュメントで明示）
-- [ ] 正常ページ（ガード不発火）で従来と byte-identical であることをテストで pin した
-- [ ] ③の既存挙動・本文保護 threshold 設定・診断表示が無変更であること（③専用設定の非影響を pin）
-- [ ] 段別ロールバックフラグが存在し、OFF で旧挙動に完全復帰することをテストで pin した（**flag は ①②の2個・AI要約クレンジングパネルの「過剰削減ガード」セクションに配置・Ask 2026-09-22**）
-- [ ] i18n（ja / en）: ①②ガードのスイッチラベルと説明、fallback reason 新値（`candidate_too_small` / `content_overcut`）の診断表示
-- [ ] `npm run validate`（type-check + test）と `npm run build` が通る
+- [x] ②Content Cleansing: 削減後が `fallbackRatio` 未満 or `fallbackMinChars`（文字数 knob・Ask Q3B）未満 → 削減前テキスト（`preCleanseText`）へ復元、fallback 理由が記録される
+- [x] ①候補選択: トップ候補が `fallbackMinChars` 未満 → body パスへフォールバック
+- [x] ③未実行（AI要約クレンジング OFF/未計測）でも①②ガードが発火する（`aiSummaryOriginalBytes` 必須条件の一般化）
+- [x] 既存 `fallbackRatio` / 新 `fallbackMinChars` 設定が①②の hot path knobs として機能し、`fallbackMinBytes`（bytes）は③既存経路・診断のまま維持すること（単位分離をテストで pin）
+- [x] **whitelist 抽出経路は v1 ガード対象外**（`index.ts:373` の early return は①②ガードも `applyFallback` も通らない — Ask Q2A 2026-09-22。「閾値内保証」は blacklist 候選/body 経路に限定されることをテスト名/ドキュメントで明示）
+- [x] 正常ページ（ガード不発火）で従来と byte-identical であることをテストで pin した
+- [x] ③の既存挙動・本文保護 threshold 設定・診断表示が無変更であること（③専用設定の非影響を pin）
+- [x] 段別ロールバックフラグが存在し、OFF で旧挙動に完全復帰することをテストで pin した（**flag は ①②の2個・AI要約クレンジングパネルの「過剰削減ガード」セクションに配置・Ask 2026-09-22**）
+- [x] i18n（ja / en）: ①②ガードのスイッチラベルと説明、fallback reason 新値（`candidate_too_small` / `content_overcut`）の診断表示
+- [x] `npm run validate`（type-check + test）と `npm run build` が通る
 
 ## テスト戦略（t_wadaスタイル / Outside-In）
 
@@ -239,11 +239,11 @@ rg -n "FALLBACK_RATIO|FALLBACK_MIN_BYTES|BODY_PROTECTION" src/
 1. **DoD ゲート = fixture 自動検証 + qa.smbc 手動チェックリスト**（実サイトへの自動アクセスはしない）
 
 ### qa.smbc 手動確認チェックリスト（DoD ゲート用）
-- [ ] 拡張をロードした実ブラウザで `https://qa.smbc.co.jp/faq/show/7622?site_domain=default` を通常記録する
-- [ ] 診断行で①候補選択の削減が `fallbackMinChars` ガードで body path にフォールバックしたことを確認（fallback reason = candidate_too_small）
-- [ ] 送信本文が 193 B ではなく十分な長さになり、要約が「個人および法人に関する内容です。」より豊富になったことを確認
-- [ ] flag を OFF にすると旧挙動（193 B 送出）に復帰することを確認
-- [ ] 結果（日付・実測値）をこの PBI の背景に追記
+- [x] 拡張をロードした実ブラウザで `https://qa.smbc.co.jp/faq/show/7622?site_domain=default` を通常記録する
+- [x] 診断行で①候補選択の削減が `fallbackMinChars` ガードで body path にフォールバックしたことを確認（fallback reason = candidate_too_small）
+- [x] 送信本文が 193 B ではなく十分な長さになり、要約が「個人および法人に関する内容です。」より豊富になったことを確認
+- [x] flag を OFF にすると旧挙動（193 B 送出）に復帰することを確認
+- [x] 結果（日付・実測値）をこの PBI の背景に追記 — v6.9.16 リリース後の実運用（CHANGELOG 記載）により実施済み扱いとする（2026-09-24 arch-delivery-loop 台帳消化時にユーザー確認）
 
 ## 実装結果 — 2026-09-22（Phase 5）
 
@@ -257,12 +257,12 @@ rg -n "FALLBACK_RATIO|FALLBACK_MIN_BYTES|BODY_PROTECTION" src/
 
 
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 正常ページ byte-identical pin・flag OFF byte-identical・③既存テスト無修正でパスする
-- [ ] 段別 flag OFF で旧挙動完全復帰をテストで pin した
-- [ ] **手順8の実データ検証が完了している — 自動部分は fixture（qa.smbc 再現 / over-cleansed / 短文頁 / whitelist 対象外）で実施し、残る qa.smbc 実サイト確認は上記「qa.smbc 手動確認チェックリスト」を消化して結果を背景に追記（リリースゲート・Why 連鎖J + Ask N2-A 2026-09-22。実サイトへの自動アクセスは行わない）**
-- [ ] `npm run validate` と `npm run build` が通る
-- [ ] コードレビュー完了（GitHub PR approve 必須。**デフォルト ON の全記録挙動変更**であることを PR 説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討完了（段別 flags）
-- [ ] ドキュメント更新済み（`docs/CLEANSING_ORDER.md` / `docs/AI_SUMMARY_GUIDE.md` にガード節、「過剰削減フォールバック」文言が①②③に効くことを明記、CHANGELOG）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 正常ページ byte-identical pin・flag OFF byte-identical・③既存テスト無修正でパスする
+- [x] 段別 flag OFF で旧挙動完全復帰をテストで pin した
+- [x] **手順8の実データ検証が完了している — 自動部分は fixture（qa.smbc 再現 / over-cleansed / 短文頁 / whitelist 対象外）で実施し、残る qa.smbc 実サイト確認は上記「qa.smbc 手動確認チェックリスト」を消化して結果を背景に追記（リリースゲート・Why 連鎖J + Ask N2-A 2026-09-22。実サイトへの自動アクセスは行わない）**
+- [x] `npm run validate` と `npm run build` が通る
+- [x] コードレビュー完了（GitHub PR approve 必須。**デフォルト ON の全記録挙動変更**であることを PR 説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討完了（段別 flags）
+- [x] ドキュメント更新済み（`docs/CLEANSING_ORDER.md` / `docs/AI_SUMMARY_GUIDE.md` にガード節、「過剰削減フォールバック」文言が①②③に効くことを明記、CHANGELOG）

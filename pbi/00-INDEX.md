@@ -28,22 +28,7 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 - [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（⬜ 未着手 — RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了。トリガー: compute の offscreen/パイプライン移設）
 - [2026-09-22-03-backlog-local-provider-origin-rule.md](2026-09-22-03-backlog-local-provider-origin-rule.md)（⬜ 未着手 — RICE 1.0・調査1 SP / 実装3 SP・副作用🟢。ローカルプロバイダ向け Origin-strip の汎用化（investigate 込み）。トリガー: 2つ目のローカルプロバイダで CORS 対策が必要になった時）
 
-### 2026-09-22 AI要約再生成 + 抽出過剰削減ガード — 🔶 実装完了（自動テスト緑・6.9.16 へコミット）✨機能追加 🔴副作用あり
-
-過剰クレンジングで送信コンテンツが実質空（実例 30.6 KB → 193 B）になり要約が「個人および法人に関する内容です。」のような一文に潰れたレコードへの対処を2方向で PBI 化。**診断行の照合（2026-09-22）で 99.4% 削減の主因は①候補選択（コンテンツ抽出行）と判明**（Content Cleansing 行は 193→193 の 0%、AI要約クレンジングは計測なし = 既存過剰削減FBが非発火）。04=治療（手動再生成・クレンジング緩和）、05=予防（記録時のガード横展開）で独立成立。再取得経路は ManualContentFetcher（抽出パイプライン非通過）ではなく GET_CONTENT + config override を推奨。
-
-- [2026-09-22-04-feat-ai-summary-regenerate.md](2026-09-22-04-feat-ai-summary-regenerate.md)（🔶 実装完了 — validate 13,193 緑 + build 緑 + フルローe2e 2/2 緑・6.9.16 へコミット。RICE 0.96・8 SP 目安。履歴ヘッダーから手動再生成 + 緩和3択select、同一行 UPDATE（新規INSERT禁止・通常記録は byte-identical pin）。**緩和＝③ルール段下げのみ（custom=minimal相当・最緩=②③無効）・①はv1対象外・tags新値上書き・Obsidian+ローカルMD両skip・force既定なし+gate弾き時のみ強制選択（Ask/Why 2026-09-22）**。Obsidian は SQLite 更新 + 既存「追記」ボタンで手動送信（削除しない・重複section許容）。一括はv1対象外。残 DoD: ユーザーレビュー）
-- [2026-09-22-05-feat-extraction-overcut-guards.md](2026-09-22-05-feat-extraction-overcut-guards.md)（🔶 実装完了 — validate 13,193 緑 + build 緑 + fixture/jsdom 検証 + e2e 緑・6.9.16 へコミット。RICE 1.75・6 SP 目安・副作用🔴。AI要約クレンジングの本文保護/過剰削減FBを①候補選択・②Content Cleansing へ横展開、発火条件の AI要約クレンジング依存を解除、**デフォルトON・flag=①②の2個（AI要約クレンジングパネル「過剰削減ガード」）・②③判定=applyFallback 1箇所優先順・hot path=文字数knob `fallbackMinChars`（min1）・whitelistはv1対象外（Ask/Why 2026-09-22）**。残 DoD: qa.smbc 実サイト手動チェックリスト + ユーザーレビュー）
-
-### 2026-09-20 rust-wasm-migration スキル初回実行 — tag-cooccur WASM 化（md-sanitize 撤去・19 不採用・sentence-dedup 配線不採用・20 不採用クローズ）— 🔶 実装済み（17・21・22。実機確認と PR レビュー待ち）RICE順: 完了
-
-`/rust-wasm-migration` スキルの検証（plan+PBI モード 3 eval × with/without + 実装検証 1 eval）を兼ねた初回実行。STEP 0 自律発見で tag-cooccur を P1 に特定（10k×20 ≈ 267ms 実測）→ クレート実装・パリティ・ハイブリッド・ビルド配線まで完了（STAGED: 配線は 21）。ローカルレビュー findings（`|` 衝突パリティ・edgeB 検査・bench 本番経路化・limit 境界・Rust 最適化 2 件）は全件修正済み。コミット f645865a。移植しない領域（暗号化・DOM走査・HMAC署名・ublock 0.01ms級・小物）。P2 候補の md-sanitize は実装・実測の結果不採用 → 撤去（アーカイブ履歴参照）。
-
-- [2026-09-20-17-feat-tag-cooccurrence-wasm.md](2026-09-20-17-feat-tag-cooccurrence-wasm.md)（🔶 実装完了・コミット f645865a / 395d0896 / 05e65cb5 — cargo test 16・parity 37・hybrid 20・validate 12,709 green。本番経路 10k×20 で 5.53x（46.3ms/256.4ms）・100×6 でも 1.55x。受け入れ基準 8/8 チェック。実機確認と PR レビューが残でアーカイブ保留。RICE 8.0・順位3）
-- [2026-09-20-21-feat-tag-cooccur-panel-wiring.md](2026-09-20-21-feat-tag-cooccur-panel-wiring.md)（🔶 実装完了・コミット 395d0896 — tagClusterPanel の2呼び出しをハイブリッドへ + public/wasm 配布 + publicAssets（STAGED解除）。パネル・ハイブリッド・パリティ 373 tests green。目視確認と PR レビューが残。RICE 16.0・順位1）
-- [2026-09-20-22-chore-tag-cooccur-ci-gate.md](2026-09-20-22-chore-tag-cooccur-ci-gate.md)（🔶 実装完了・コミット 05e65cb5 — CI 同等性ゲート（parity fresh/committed・src/public cmp・glue stale）に tag-cooccur 追加。red/green をローカル実測。PR レビューが残。RICE 12.0・順位2）
-
-**WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x・未リリース）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。
+**WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。tag-cooccur（17/21/22）は 2026-09-24 にアーカイブ済み（アーカイブ履歴参照）。
 
 **sentence-dedup（2026-09-20 実装・0ed11095）の配線は不採用で確定（2026-09-21）**: 唯一の呼び出し元 `src/utils/contentExtractor/index.ts` がコンテンツスクリプト（`src/content/contentKernel.ts`）専用経路で実行されるため、ページ側 CSP で WASM 初期化を保証できず、配線しても実運用ではほぼ常に TS フォールバックになる。速度利得も 1.13〜1.28x と小さく、メモリ利得（フットプリント 0.22→0.00MB/call・実測）は dedup ステージの offscreen 移設（処理順の意味論が変わるアーキテクチャ変更）と引き換えになるため、現時点では採用しない。クレート・ハイブリッド・CI ゲート（src コピー）は STAGED のまま資産保持し、将来のパイプライン移設時に再評価する。
 
@@ -85,6 +70,15 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 arch-delivery-loop 台帳消化 — ✅ 4件完了（DoD反映漏れをアーカイブ）
+
+実装・コミット済みだが DoD チェックボックス反映とアーカイブが漏れていた4件（2026-09-20-17 は `ddfa6d4f` で既にアーカイブ済みと判明、`pbi/` 側の重複コピーを削除）。再検証してから DoD を `[x]` 化。
+
+- 2026-09-22-04-feat-ai-summary-regenerate.md（✅ 完了 — `5580e994`/v6.9.16。履歴ヘッダーから手動再生成 + 緩和3択select、同一行 UPDATE。`npm run validate` 13,563 テスト緑 + regenerate 関連36テストで再検証。RICE 0.96）
+- 2026-09-22-05-feat-extraction-overcut-guards.md（✅ 完了 — `5580e994`/v6.9.16。過剰削減ガードを①候補選択・②Content Cleansing へ横展開。qa.smbc 実サイト手動確認は v6.9.16 実運用実績により実施済み扱い（ユーザー確認 2026-09-24）。RICE 1.75）
+- 2026-09-20-21-feat-tag-cooccur-panel-wiring.md（✅ 完了 — コミット 395d0896。tagClusterPanel をハイブリッド配線、STAGED解除。目視確認・PRレビューは本番利用実績により実施済み扱い（ユーザー確認 2026-09-24）。RICE 16.0）
+- 2026-09-20-22-chore-tag-cooccur-ci-gate.md（✅ 完了 — コミット 05e65cb5、後続の crates.json SSOT化（26011549 等）で tag-cooccur が cache-paths/parity-args/cmp check に完全統合されていることをテスト26件で確認（ユーザー確認 2026-09-24）。RICE 12.0）
 
 ### 2026-09-23 arch-delivery-loop 第3ラウンド（archloop-0923c）— ✅ 5件完了（11-15 アーカイブ済み）RICE順: 11 → 12 → 13 → 14 → 15
 

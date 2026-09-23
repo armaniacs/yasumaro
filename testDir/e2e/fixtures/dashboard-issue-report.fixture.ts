@@ -51,14 +51,22 @@ export const test = base.extend<Fixtures>({
     await page.addInitScript((apiKey: string) => {
       (window as any).__createdTabUrls = [];
 
-      chrome.storage.local.set({
-        privacyConsent: { accepted: true, timestamp: Date.now() },
-        settings_migrated: true,
-        breaking_changes_v5_shown: true,
+      // Seed through the supported modern path (the `settings` blob), not
+      // only through legacy scattered keys: a partial blob created by key
+      // re-encryption would otherwise shadow the flat seeds depending on
+      // read timing, making the provider under test nondeterministic.
+      const seedSettings = {
         ai_provider: 'gemini',
         ai_provider_priority_list: [],
         ai_provider_layout: 'a',
         gemini_api_key: apiKey,
+      };
+      chrome.storage.local.set({
+        privacyConsent: { accepted: true, timestamp: Date.now() },
+        settings_migrated: true,
+        breaking_changes_v5_shown: true,
+        ...seedSettings,
+        settings: seedSettings,
       });
 
       chrome.tabs.create = ((createProperties: chrome.tabs.CreateProperties, callback?: (tab: chrome.tabs.Tab) => void) => {

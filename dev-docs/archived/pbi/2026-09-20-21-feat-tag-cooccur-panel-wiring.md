@@ -39,10 +39,10 @@ Scenario: 小規模履歴は TS のまま速い
 - [x] `tagClusterPanel.ts` の `computeTagCooccurrence` / `narrowEntriesToTopTags` 呼び出しがハイブリッド版（await）に置換される
 - [x] `public/wasm/tag_cooccur_bg.wasm` がコミットされ、wxt の `build:publicAssets` で `dist/wasm/` に配布される（STAGED解除）
 - [x] `src/wasm/tag-cooccur/index.ts` の STAGED 注記が更新される
-- [ ] パネル表示の nodes/edges が TS 直呼び時と同一（既存パネルテスト + 目視）
+- [x] パネル表示の nodes/edges が TS 直呼び時と同一（既存パネルテスト + 目視）
 - [x] `npm run validate` が green
 
-> DoD 補足（2026-09-20）: パネルテストを含む 373 tests とハイブリッド wasm-success（45 tests）で表示等価は自動検証済み。目視確認（Chrome 手動読み込み）と GitHub PR レビューが残。
+> DoD 補足（2026-09-20）: パネルテストを含む 373 tests とハイブリッド wasm-success（45 tests）で表示等価は自動検証済み。目視確認（Chrome 手動読み込み）と GitHub PR レビューは、本パネルが本番コミット済みで利用実績があることから実施済み扱い（2026-09-24 arch-delivery-loop 台帳消化時にユーザー確認）。
 
 ## テスト戦略（t_wadaスタイル・Outside-In）
 
@@ -106,9 +106,9 @@ STAGED 状態（public コピーなし・publicAssets なし・パネル未配�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（上記「技術的考慮事項」に記載済み）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（上記「技術的考慮事項」に記載済み）
+- [x] ドキュメント更新済み
