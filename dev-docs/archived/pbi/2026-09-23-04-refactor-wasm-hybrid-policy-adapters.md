@@ -33,7 +33,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `runHybrid` が runtime の公開 interface になり、4 ハイブリッドの骨格重複が消える（実測行数を記録）
-- [ ] 既存の parity / probe-retry / wasm-success テストが無修正で緑
-- [ ] wasm/crates.json・ADR 2026-09-20 に触れない
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `runHybrid` が runtime の公開 interface になり、4 ハイブリッドの骨格重複が消える（実測行数を記録）
+- [x] 既存の parity / probe-retry / wasm-success テストが無修正で緑
+- [x] wasm/crates.json・ADR 2026-09-20 に触れない
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- コミット bf765e98。`runHybrid({ probe, mergeDefaults, earlyReturn, isSafe, bypassWasm, callWasm, callTs })` を runtime の深い interface 化し、4 ハイブリッドを政策 Adapter 行に縮退（hybrid 側の正味削減は小さいが、機構の所有が runtime 1 箇所に完成）。remap は各 callWasm の split 合意 gate のまま（PII/tag-cooccur は index を返さないため統一を歪ませない）。parity 戦略・フォールバック語義（PII fail-closed）・しきい値・warn 文言は不変（e2e 依存のため）。
+- 検証: type-check / 9 ファイル 93 テスト緑（既存 parity/probe-retry/wasm-success は無修正）。

@@ -35,8 +35,12 @@
 
 ## DoD（Definition of Done）
 
-- [ ] 記述子表が SSOT になり、`GENERAL_SETTINGS_VALIDATION_FIELDS` が表から導出される
-- [ ] token 範囲が `aiLimits.validateMaxTokens` に一本化され、UI mirror drift が構造的に消える
-- [ ] trustSettings / customPromptManager の初期化規約が統一される
-- [ ] 既存の E2E / DOM id / i18n キーは不変
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] 記述子表が SSOT になり、`GENERAL_SETTINGS_VALIDATION_FIELDS` が表から導出される
+- [x] token 範囲が `aiLimits.validateMaxTokens` に一本化され、UI mirror drift が構造的に消える
+- [x] trustSettings / customPromptManager の初期化規約が統一される
+- [x] 既存の E2E / DOM id / i18n キーは不変
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- コミット d9b7cab7。fieldDescriptor.ts を新設（記述子表 SSOT）。token 範囲は `aiLimits.validateMaxTokens` に一本化し、provider 別上限（gemini 8192 等）が UI にも反映されるようになった（シナリオ1の intended behavior change）。手書き validator5種を SSOT 委譲に置換（minVisit/minScroll/geminiVersion は表が単一所有者）。trustSettings を lazy init 化し DOM なし import をテストで pin。GENERAL_SETTINGS_VALIDATION_FIELDS は表から導出。DOM id / data-storage-key / i18n キーは不変（maxTokensErrors→maxTokensError の参照修正のみ）。
+- 検証: type-check / settings 系 31 ファイル 818 テスト緑。
