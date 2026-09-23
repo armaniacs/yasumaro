@@ -1,6 +1,7 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
 @import url("../../src/styles/wizard.css");
+@import url("../../src/styles/confirmDialog.css");
 
 /**
  * dashboard.css
@@ -1700,6 +1701,28 @@ button#changeMasterPassword:hover {
 .danger-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Bulk-bar inline delete confirm: sits next to the eye line, right after
+ * the delete button, instead of the shared modal at the document end. */
+.sqlite-delete-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-danger-border, #f5c6c6);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg, #fff5f5);
+}
+
+.sqlite-delete-confirm.hidden {
+  display: none;
+}
+
+.sqlite-delete-confirm-text {
+  font-size: 13px;
+  color: var(--color-danger-text, #991b1b);
 }
 
 .pending-pagination {
@@ -3618,6 +3641,12 @@ details[open] .advanced-details-summary {
 .sqlite-entry-star {
   cursor: pointer;
   font-size: 18px;
+  /* background/border reset (same as .sqlite-entry-delete): without it the
+     UA paints a light button face in dark mode, burying the glyph (~1.5:1).
+     Transparent keeps --color-text-secondary at 7.0:1 on the page bg. */
+  background: none;
+  border: none;
+  padding: 0;
   color: var(--color-text-secondary);
   user-select: none;
   flex-shrink: 0;
@@ -3652,6 +3681,72 @@ details[open] .advanced-details-summary {
   border-radius: 3px;
   font-size: 14px;
   flex-shrink: 0;
+}
+
+/* PBI 04: regenerate controls (header select + button) */
+.regenerate-mode-select {
+  max-width: 108px;
+  font-size: 11px;
+  padding: 2px 4px;
+  border: 1px solid var(--color-border, #d1d5db);
+  border-radius: 3px;
+  /* --color-bg does not exist: it fell back to #fff in BOTH modes, leaving
+     light-gray text on white in dark mode (~1.6:1). Use the same surface
+     token as the base select rule (#0d1117 dark → 7.0:1+ with the text). */
+  background: var(--color-bg-white);
+  color: var(--color-text);
+  flex-shrink: 0;
+}
+
+.regenerate-mode-select:disabled,
+.sqlite-entry-regenerate:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sqlite-entry-regenerate {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.sqlite-entry-regenerate:hover:not(:disabled) {
+  color: var(--color-primary, #7c3aed);
+  background: var(--color-primary-bg, #f3e8ff);
+}
+
+.regenerate-error-row {
+  margin-bottom: 8px;
+}
+
+.regenerate-force-btn {
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid var(--color-danger-border, #fecaca);
+  border-radius: 3px;
+  /* Same nonexistent --color-bg token as the select had: danger surface
+     token carries both modes (#fef2f2 light / #1c0a0a dark). */
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text, #b91c1c);
+  cursor: pointer;
+}
+
+.regenerate-force-btn:hover {
+  background: var(--color-danger-bg, #fef2f2);
+}
+
+.regenerate-error-detail {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  /* One line per tried provider + one line per slot failure. */
+  white-space: pre-line;
 }
 
 .sqlite-entry-delete:hover {

@@ -73,29 +73,51 @@ import SQLiteAsyncFactory from 'wa-sqlite/dist/wa-sqlite-async.mjs';
 import { Factory as waSqliteFactory, SQLITE_OPEN_READWRITE } from 'wa-sqlite';
 import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
 
-/** Columns selected by the pre-migration backup / post-migration restore, in order. */
-const MIGRATION_BACKUP_COLUMNS = [...COLUMN_NAMES];
+/**
+ * Columns selected by the pre-migration backup / post-migration restore, in order.
+ *
+ * PBI 05: `fallback_reason` exists only on the NEW schema — the legacy
+ * wa-sqlite database predates it, so selecting it would fail the whole
+ * backup (silently swallowed by runMigrationBackup's catch). Any column
+ * added to COLUMN_NAMES after the wa-sqlite era must be listed here and
+ * mapped to null in mapMigrationBackupRow.
+ */
+const LEGACY_MISSING_COLUMNS = new Set<string>(['fallback_reason']);
+const MIGRATION_BACKUP_COLUMNS = COLUMN_NAMES.filter((c) => !LEGACY_MISSING_COLUMNS.has(c));
+/** Positions WITHIN the selected backup columns (NOT COLUMN_NAMES) — see header. */
+const BACKUP_IDX = new Map(MIGRATION_BACKUP_COLUMNS.map((c, i) => [c, i] as const));
 
 function mapMigrationBackupRow(row: SqliteValue[]): BrowsingLogRecord {
-  const idx = (name: typeof COLUMN_NAMES[number]) => COLUMN_NAMES.indexOf(name);
+  // Index against MIGRATION_BACKUP_COLUMNS: the SELECT never asked for
+  // LEGACY_MISSING columns, so COLUMN_NAMES positions would silently
+  // misalign the moment another column is appended after them.
+  const idx = (name: typeof COLUMN_NAMES[number]): number | undefined => BACKUP_IDX.get(name);
   const getString = (name: typeof COLUMN_NAMES[number]): string | null => {
-    const v = row[idx(name)];
+    const i = idx(name);
+    const v = i === undefined ? undefined : row[i];
     return v != null ? String(v) : null;
   };
   const getNumber = (name: typeof COLUMN_NAMES[number]): number | null => {
-    const v = row[idx(name)];
+    const i = idx(name);
+    const v = i === undefined ? undefined : row[i];
     return v != null ? Number(v) : null;
   };
   const getInt = (name: typeof COLUMN_NAMES[number]): number => {
-    const v = row[idx(name)];
+    const i = idx(name);
+    const v = i === undefined ? undefined : row[i];
     return v != null ? Number(v) : 0;
   };
+  const urlIdx = BACKUP_IDX.get('url');
+  if (urlIdx === undefined) {
+    // Unreachable while 'url' is in COLUMN_NAMES (it is the identity column).
+    throw new Error('migration backup row is missing the url column index');
+  }
   return {
-    url: String(row[idx('url')]),
+    url: String(row[urlIdx]),
     title: getString('title'),
     summary: getString('summary'),
     tags: getString('tags'),
-    created_at: Number(row[idx('created_at')]),
+    created_at: getNumber('created_at') ?? 0,
     domain: getString('domain'),
     visit_duration: getNumber('visit_duration'),
     scroll_ratio: getNumber('scroll_ratio'),
@@ -123,6 +145,10 @@ function mapMigrationBackupRow(row: SqliteValue[]): BrowsingLogRecord {
     extracted_sentences_bytes: getNumber('extracted_sentences_bytes'),
     extracted_sentences_original_bytes: getNumber('extracted_sentences_original_bytes'),
     fallback_triggered: getInt('fallback_triggered'),
+    // PBI 05: not selected from the legacy DB (LEGACY_MISSING_COLUMNS) — null.
+    // LEGACY_MISSING_COLUMNS: the legacy SELECT never contained this column —
+    // explicit null (not an out-of-range index read).
+    fallback_reason: null,
   };
 }
 

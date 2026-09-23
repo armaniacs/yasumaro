@@ -10,15 +10,80 @@ import { notify } from '../../notificationService.js';
 import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
 import { recordPendingPage, PENDING_RECORD_TIMEOUT_ERROR } from '../../../messaging/pendingRecordGateway.js';
+import { regenerateSummary, REGENERATE_TIMEOUT_ERROR } from '../../../messaging/regenerateSummaryGateway.js';
+import type { RegenerateCleanseMode } from '../../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import {
   formatDiagnosticMetadataHtml,
   render as renderHistoryView,
   renderPendingRegion,
   toggleContentArea,
+  setEntryRegenerateBusy,
+  clearEntryRegenerateError,
+  showEntryRegenerateError,
+  showDeleteConfirm,
+  hideDeleteConfirm,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 
 export { formatDiagnosticMetadataHtml };
+
+/**
+ * Build the multi-line error-row detail: providers tried in order, then each
+ * slot's own failure text (PBI 2026-09-22-04 follow-up — the old single-error
+ * display could only ever show the LAST slot's message, e.g. built-in-ai's
+ * kErrorUnknown, masking why openai/gemini failed). Pure for unit tests.
+ */
+export function formatRegenerateErrorDetail(
+  providersTried: string[],
+  slotFailures: ReadonlyArray<{ provider: string; error: string }> | undefined,
+  triedLabel: string,
+): string | undefined {
+  const lines: string[] = [];
+  if (providersTried.length > 0) {
+    lines.push(`${triedLabel}: ${providersTried.join(' → ')}`);
+  }
+  for (const f of slotFailures ?? []) {
+    lines.push(`${f.provider}: ${f.error}`);
+  }
+  return lines.length > 0 ? lines.join('\n') : undefined;
+}
+
+/**
+ * Sentinel → i18n key mapping for REGENERATE_SUMMARY failures (PBI
+ * 2026-09-22-04). Exported as a pure module-level function so unit tests can
+ * pin the matrix directly; raw handler strings are never rendered — unknown
+ * sentinels collapse to the generic key and Error-prefixed strings pass
+ * through unchanged (same contract as translateHistoryError).
+ */
+export function mapRegenerateError(
+  error: string | undefined,
+  needsForce: boolean,
+  reason?: string,
+  slotFailures?: ReadonlyArray<{ provider: string; error: string }>,
+): string {
+  if (needsForce) return t('historyRegenerateGateBlocked');
+  // The handler threads reason:'rate_limited'; match it first so the raw
+  // RateLimiter message (capital 'Rate limit…') never needs case gymnastics.
+  if (reason === 'rate_limited') return t('historyRegenerateErrorRateLimit');
+  if (!error) return t('historyRegenerateError');
+  if (error === 'invalid_url') return t('historyRegenerateErrorUrl');
+  if (error === 'rate_limited' || /rate limit/i.test(error)) return t('historyRegenerateErrorRateLimit');
+  if (error.startsWith('fetch_failed')) return t('historyRegenerateErrorFetch');
+  if (error === REGENERATE_TIMEOUT_ERROR || error === PENDING_RECORD_TIMEOUT_ERROR) return t('historyRegenerateErrorTimeout');
+  if (error === 'privacy_consent_required') return t('historyRegenerateErrorConsent');
+  if (error === 'ai_failed' || error.startsWith('ai_failed:')) {
+    // The monthly token quota is SHARED by every HTTP provider (one counter
+    // in aiUsageTracker) — when it tripped, "try another provider" advice is
+    // wrong: the next HTTP slot hits the same wall. Show the actionable
+    // message instead; the per-slot detail rows still explain each failure.
+    if (slotFailures?.some((f) => f.error.includes('Monthly token limit'))) {
+      return t('historyRegenerateErrorMonthlyLimit');
+    }
+    return t('historyRegenerateErrorAi');
+  }
+  if (error.startsWith('Error:')) return error;
+  return t('historyRegenerateError');
+}
 
 export function createSqliteHistoryPanel(): PanelLifecycle {
   let container: HTMLElement | null = null;
@@ -98,6 +163,161 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
     );
   }
 
+  // --- Regenerate AI summary (PBI 2026-09-22-04) ---------------------------
+  /** Handler-local in-flight guard: repeat clicks while running are ignored. */
+  const regenerateInFlight = new Set<number>();
+
+  async function handleRegenerate(id: number, mode: RegenerateCleanseMode, force: boolean): Promise<void> {
+    if (!container) return;
+    if (regenerateInFlight.has(id)) return; // binding: 2件目以降は無視（AI呼び出しは1回だけ）
+
+    const entry = state().entries.find((e) => e.id === id);
+    if (!entry?.url) return;
+
+    clearEntryRegenerateError(container, id);
+    setEntryRegenerateBusy(container, id, true);
+    regenerateInFlight.add(id);
+    try {
+      const result = await regenerateSummary({
+        id,
+        url: entry.url,
+        title: entry.title || entry.url,
+        cleanseMode: mode,
+        ...(force ? { force: true } : {}),
+      });
+
+      if (result.success) {
+        // Same-row UPDATE done — re-query so the row shows the new summary/
+        // stats. The re-render also clears busy state.
+        model.reloadCurrent();
+        return;
+      }
+
+      // Cross-reload duplicate while the SW still owns the id: the panel-side
+      // guard normally prevents this — stay silent instead of showing a
+      // misleading failure row for what is actually "still running".
+      if (result.error === 'in_flight') return;
+
+      const needsForce = result.needsForce === true;
+      const providersTried = Array.isArray(result.providersTried)
+        ? result.providersTried.filter((p): p is string => typeof p === 'string')
+        : [];
+      const detail = formatRegenerateErrorDetail(
+        providersTried,
+        result.slotFailures,
+        t('historyRegenerateProvidersTried'),
+      );
+      showEntryRegenerateError(
+        container,
+        id,
+        mapRegenerateError(result.error, needsForce, result.reason, result.slotFailures),
+        {
+          ...(needsForce
+            ? {
+                forceLabel: t('historyRegenerateForceAction'),
+                onForce: () => { void handleRegenerate(id, mode, true); },
+              }
+            : {}),
+          ...(detail !== undefined ? { detail } : {}),
+        },
+      );
+    } catch (e: unknown) {
+      if (container) {
+        showEntryRegenerateError(container, id, mapRegenerateError(e instanceof Error ? e.message : String(e), false));
+      }
+    } finally {
+      regenerateInFlight.delete(id);
+      if (container) setEntryRegenerateBusy(container, id, false);
+    }
+  }
+
+  // --- Bulk actions on the checked rows -------------------------------------
+  // Bulk delete is a two-step inline confirm in the bulk bar (right where
+  // the eye is): first click reveals "really delete" + cancel, second click
+  // executes. The shared modal dialog is intentionally not used here — it
+  // renders at the document end (bottom-left, easy to miss).
+  function handleDeleteSelected(): void {
+    if (!container) return;
+    if (state().selectedIds.size === 0) return;
+    showDeleteConfirm(container);
+  }
+
+  async function handleDeleteSelectedConfirm(): Promise<void> {
+    if (!container) return;
+    const total = state().selectedIds.size;
+    if (total === 0) {
+      hideDeleteConfirm(container);
+      return;
+    }
+    hideDeleteConfirm(container);
+    const result = await model.deleteSelectedEntries();
+    // The model already dispatched operationError + notify on a total failure;
+    // only toast the partial/full success here. A partial run must name the
+    // interruption — otherwise the leftover rows look silently kept.
+    if (result.deletedCount > 0) {
+      const body = result.error
+        ? t('historyDeleteSelectedPartial', [
+          String(result.deletedCount),
+          String(total - result.deletedCount),
+          translateHistoryError(result.error),
+        ])
+        : t(getPluralKey('historyDeleteSelectedSuccess', result.deletedCount), [String(result.deletedCount)]);
+      notify(t('historyDeleteSelected'), body);
+    }
+  }
+
+  /** Handler-local in-flight guard: repeat clicks while the bulk run is executing are ignored. */
+  let bulkRegenerateInFlight = false;
+
+  async function handleRegenerateSelected(): Promise<void> {
+    if (bulkRegenerateInFlight) return;
+    const targets = state().entries.filter(
+      (e) => state().selectedIds.has(e.id) && !!e.url,
+    );
+    if (targets.length === 0) return;
+
+    bulkRegenerateInFlight = true;
+    try {
+      let succeeded = 0;
+      let failed = 0;
+      let skipped = 0;
+      for (const entry of targets) {
+        const result = await regenerateSummary({
+          id: entry.id,
+          url: entry.url!,
+          title: entry.title || entry.url!,
+          cleanseMode: 'current',
+        });
+        if (result.success) {
+          succeeded += 1;
+        } else if (result.error !== 'in_flight') {
+          // needsForce gate rejections and provider failures both land here —
+          // bulk v1 has no per-item force UI, so they are counted as failed.
+          failed += 1;
+        } else {
+          // A single-entry regenerate is already running for this row —
+          // report it as skipped so succeeded + failed + skipped === targets.
+          skipped += 1;
+        }
+      }
+      notify(
+        t('historyRegenerateSelected'),
+        skipped > 0
+          ? t('historyRegenerateSelectedResultSkipped', [String(succeeded), String(failed), String(skipped)])
+          : t('historyRegenerateSelectedResult', [String(succeeded), String(failed)]),
+      );
+      // Re-query so every updated row shows the new summary/stats in one pass.
+      await model.reloadCurrent();
+    } catch (e: unknown) {
+      notify(
+        t('historyRegenerateSelected'),
+        mapRegenerateError(e instanceof Error ? e.message : String(e), false),
+      );
+    } finally {
+      bulkRegenerateInFlight = false;
+    }
+  }
+
   // The single callback bundle handed to view.render(). Every entry-list /
   // calendar / sort / pagination / bulk-bar / tag-filter interaction runs
   // through this one construction site — adding a callback means editing
@@ -118,7 +338,11 @@ export function createSqliteHistoryPanel(): PanelLifecycle {
       onSelectAll: (checked) => model.selectAllEntries(checked),
       onClearSelection: () => model.clearEntrySelection(),
       onAppend: () => void handleAppendToObsidian(),
+      onDeleteSelected: () => handleDeleteSelected(),
+      onDeleteSelectedConfirm: () => void handleDeleteSelectedConfirm(),
+      onRegenerateSelected: () => void handleRegenerateSelected(),
       onTagFilterClear: () => model.clearTagFilter(),
+      onRegenerate: (id, mode, force) => void handleRegenerate(id, mode, force),
       translateError: translateHistoryError,
       createCopyButton,
     };

@@ -38,6 +38,11 @@ describe('queryPlanner — read policy composition', () => {
     expect(planned).toMatchObject({ text: 'hello world', tag: 'news', limit: 5 });
   });
 
+  it('planSearch owns the search page-size default 50 (PBI 2026-09-21-20)', () => {
+    const planned = planSearch({ query: 'hello' });
+    expect(planned.limit).toBe(50);
+  });
+
   it('planSearch truncates overlong free text to the FTS cap', () => {
     const planned = planSearch({ query: 'q'.repeat(FTS_QUERY_MAX_LENGTH + 10) });
     expect(planned.text).toHaveLength(FTS_QUERY_MAX_LENGTH);

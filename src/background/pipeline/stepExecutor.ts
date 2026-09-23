@@ -67,6 +67,19 @@ export class StepExecutor {
       return;
     }
 
+    // PBI 2026-09-22-04: regenerate is UPDATE-only — the offline replay
+    // rebuilds via 'offline-retry' (an INSERT by URL without the side-effect
+    // skips), which would duplicate the very row the update was replacing.
+    // The failure surfaces through the normal error path instead.
+    if (context.data.targetEntryId !== undefined) {
+      addLog(LogType.INFO, 'Skipping offline job for regenerate (update-only)', {
+        url: context.data.url,
+        step: step.name,
+        traceId: context.traceId
+      });
+      return;
+    }
+
     const type: OfflineJobKind = step.offlineRetry.jobKind;
 
     // PBI 2026-09-12-11: pack through the shared field table so enqueue and

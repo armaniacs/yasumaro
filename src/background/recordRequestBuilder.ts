@@ -26,7 +26,8 @@ export type RecordRequestSource =
   | 'save'
   | 'offline-retry'
   | 'notification-confirm'
-  | 'valid-visit';
+  | 'valid-visit'
+  | 'regenerate';
 
 /**
  * Diagnostic fields every surface may carry; unset ones are dropped.
@@ -49,6 +50,10 @@ export interface RecordDiagnosticFields {
   aiSummaryCleansedReasons?: string[] | undefined;
   cleansedReason?: string | undefined;
   fallbackTriggered?: boolean | undefined;
+  /** PBI 05: fallback reason carried through regenerate re-extraction. */
+  fallbackReason?: string | undefined;
+  /** PBI 04: UPDATE-in-place target — the existing row this request replaces. */
+  targetEntryId?: number | undefined;
 }
 
 /** Per-surface fixed policy. */
@@ -57,6 +62,9 @@ interface SourcePolicy {
   force?: boolean;
   skipDuplicateCheck?: boolean;
   alreadyProcessed?: boolean;
+  /** PBI 04: side-effect skips owned by the policy (regenerate = SQLite only). */
+  skipObsidianAppend?: boolean;
+  skipLocalMarkdownExport?: boolean;
   recordType: 'manual' | 'auto';
 }
 
@@ -68,6 +76,15 @@ const SOURCE_POLICY: Record<RecordRequestSource, SourcePolicy> = {
   'offline-retry': { force: false, skipDuplicateCheck: true, recordType: 'manual' },
   'notification-confirm': { force: true, skipDuplicateCheck: true, recordType: 'auto' },
   'valid-visit': { skipDuplicateCheck: false, recordType: 'auto' },
+  // PBI 04: in-place regenerate — same-row UPDATE, side effects skipped, and
+  // force stays OFF by default (gate rejections surface a force opt-in instead;
+  // the handler passes fields.force explicitly only when the user picks it).
+  'regenerate': {
+    skipDuplicateCheck: true,
+    skipObsidianAppend: true,
+    skipLocalMarkdownExport: true,
+    recordType: 'manual',
+  },
 };
 
 /**
@@ -158,6 +175,10 @@ export function buildRecordRequest(
       aiSummaryCleansedReasons: fields.aiSummaryCleansedReasons,
       cleansedReason: fields.cleansedReason,
       fallbackTriggered: fields.fallbackTriggered,
+      fallbackReason: fields.fallbackReason,
+      targetEntryId: fields.targetEntryId,
+      skipObsidianAppend: policy.skipObsidianAppend,
+      skipLocalMarkdownExport: policy.skipLocalMarkdownExport,
     }),
   };
 }

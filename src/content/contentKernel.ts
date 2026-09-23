@@ -39,18 +39,42 @@ export class IdleScheduler implements Scheduler {
     }
     schedule(callback: () => void, delayMs?: number): number {
         if (delayMs !== undefined) {
-            const id = globalThis.setTimeout(callback, delayMs) as unknown as number;
+            let id!: number;
+            const wrapped = () => {
+                try {
+                    callback();
+                } finally {
+                    this.timeoutIds.delete(id);
+                }
+            };
+            id = globalThis.setTimeout(wrapped, delayMs) as unknown as number;
             this.timeoutIds.add(id);
             return id;
         }
         const w = this.win as unknown as { requestIdleCallback?: (cb: () => void, opts: { timeout: number }) => number } | undefined;
         if (w?.requestIdleCallback) {
-            const id = w.requestIdleCallback(callback, { timeout: 2000 });
+            let id!: number;
+            const wrapped = () => {
+                try {
+                    callback();
+                } finally {
+                    this.idleIds.delete(id);
+                }
+            };
+            id = w.requestIdleCallback(wrapped, { timeout: 2000 });
             this.idleIds.add(id);
             return id;
         }
         // Fallback: global setTimeout works in Node/jsdom and browsers
-        const id = globalThis.setTimeout(callback, 1000) as unknown as number;
+        let id!: number;
+        const wrapped = () => {
+            try {
+                callback();
+            } finally {
+                this.timeoutIds.delete(id);
+            }
+        };
+        id = globalThis.setTimeout(wrapped, 1000) as unknown as number;
         this.timeoutIds.add(id);
         return id;
     }
@@ -120,8 +144,7 @@ export class ContentKernel {
             (() => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ow-e2e-test'));
         this.visitReporter = new VisitReporter({
             pageState: this.pageState,
-            extractor: () => this.extractPageContent(),
-            applyResult: (r) => this.applyExtractResultToPageState(r),
+            extractAndCommit: (c) => this.extractAndCommit(c),
             sender: this.sender,
             stopPeriodicCheck: () => this.stopPeriodicCheck(),
         });
@@ -138,8 +161,16 @@ export class ContentKernel {
     // Content extraction (pure delegation to pipeline, SSOT via PageState)
     // -----------------------------------------------------------------------
 
-    extractPageContent(config: CleansingConfig = this.pageState.cleansingConfig): ExtractResult {
-        const result = preparePageContent(config);
+    /**
+     * PBI 2026-09-21-30: the SINGLE config-default resolution point in the
+     * kernel (`config ?? this.pageState.cleansingConfig`). The signature
+     * stays optional for kernel-internal and existing no-arg callers, but
+     * carries no default-parameter — the `??` in the body is the only
+     * default. The extractor.ts facade forwards with no default of its own.
+     */
+    extractPageContent(config?: CleansingConfig): ExtractResult {
+        const resolved: CleansingConfig = config ?? this.pageState.cleansingConfig;
+        const result = preparePageContent(resolved);
         if (result.cleansingExecuted === true) {
             // Badge 通知は fire-and-forget（PBI-22 MessageSender seam 経由）。
             // 送信失敗は抽出フローを壊さない — ログのみ。
@@ -160,6 +191,20 @@ export class ContentKernel {
                     );
                 });
         }
+        return result;
+    }
+
+    /**
+     * PBI 2026-09-21-30: deep single call folding extract + commit — the
+     * ONLY extraction route offered to VisitReporter/GetContentHandler.
+     * The commit order is guaranteed inside the kernel — callers hold no
+     * sequencing knowledge. Config flows through to extractPageContent,
+     * which holds the kernel's single default-resolution point, so an
+     * omitted config resolves exactly once however this method is entered.
+     */
+    extractAndCommit(config?: CleansingConfig): ExtractResult {
+        const result = this.extractPageContent(config);
+        this.applyExtractResultToPageState(result);
         return result;
     }
 
@@ -184,6 +229,7 @@ export class ContentKernel {
             ...pickDefined({ aiSummaryCleansedReasons: result.aiSummaryCleansedReasons }),
         };
         this.pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
+        this.pageState.lastFallbackReason = result.fallbackReason;
     }
 
     // -----------------------------------------------------------------------
@@ -222,6 +268,9 @@ export class ContentKernel {
             ...cleansingRuleKeys,
             [StorageKeys.WHITELIST_EXTRACTION_ENABLED, 'whitelistExtractionEnabled'],
             [StorageKeys.CONTENT_DEDUP_ENABLED, 'contentDedupEnabled'],
+            // PBI 05 overcut guards
+            [StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED, 'candidateGuardEnabled'],
+            [StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED, 'cleanseGuardEnabled'],
         ];
         for (const [key, prop] of booleanKeys) {
             if (s[key] !== undefined) {

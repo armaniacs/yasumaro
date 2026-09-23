@@ -23,9 +23,10 @@
  * Guard rails mirrored from the TS original (defense in depth, the WASM
  * core enforces the same ones internally):
  * - `MAX_TAGS_PER_RECORD` (50) caps the per-record pair scan on both paths.
- * - narrow `limit` must be a non-negative integer: the JS→WASM u32 boundary
- *   silently wraps anything else via ToUint32 (e.g. -1 becomes 2^32-1),
- *   so out-of-domain limits bypass WASM and take the TS path.
+ * - narrow `limit` must satisfy `isWasmSafeU32` (integer in [0, 2^32-1]):
+ *   the JS→WASM u32 boundary silently wraps anything else via ToUint32
+ *   (e.g. -1 becomes 2^32-1), so out-of-domain limits bypass WASM and
+ *   take the TS path.
  * - a raw tags string containing `\n` trips the core's split-agreement gate
  *   (the `\n`-joined transfer cannot carry it) and falls back to TS.
  */
@@ -39,34 +40,19 @@ import {
     narrowEntriesToTopTagsWithWasm,
     initTagCooccurWasm,
 } from '../wasm/tag-cooccur/index.js';
-import { errorMessage } from '../utils/errorUtils.js';
-import { addLog } from '../utils/logger/core.js';
-import { LogType } from '../utils/logger/types.js';
+import {
+    createHybridProbe,
+    isWasmSafeU32,
+    withWasmFallback,
+} from '../utils/wasmHybridRuntime.js';
 
-let wasmAvailable: boolean | null = null;
-
-/**
- * Probes WASM availability once per context lifetime (mirrors
- * initTagCooccurWasm's own singleton-promise caching) so a permanently
- * broken environment doesn't retry-and-fail on every call.
- */
-async function isWasmAvailable(): Promise<boolean> {
-    if (wasmAvailable !== null) {
-        return wasmAvailable;
-    }
-    try {
-        await initTagCooccurWasm();
-        wasmAvailable = true;
-    } catch (error: unknown) {
-        wasmAvailable = false;
-        const message = errorMessage(error);
-        console.warn('Tag-cooccur WASM module unavailable, falling back to TS:', message);
-        addLog(LogType.WARN, 'Tag-cooccur WASM module unavailable, falling back to TS', {
-            error: message,
-        });
-    }
-    return wasmAvailable;
-}
+// Probe contract (success cached permanently, failure re-probed on the next
+// call, probe log at most once per failure burst) lives in the shared
+// runtime — this is the 4th hybrid adopting it.
+const wasmProbe = createHybridProbe(
+    initTagCooccurWasm,
+    'Tag-cooccur WASM module unavailable, falling back to TS'
+);
 
 /**
  * Below this record count the TS path is competitive or faster on the
@@ -92,45 +78,35 @@ export async function computeTagCooccurrenceHybrid(
     if (entries.length === 0) {
         return { nodes: [], edges: [] };
     }
-    if (entries.length < MIN_WASM_ENTRIES || !(await isWasmAvailable())) {
+    if (entries.length < MIN_WASM_ENTRIES || !(await wasmProbe.isAvailable())) {
         return computeTagCooccurrence(entries);
     }
-    try {
-        return await computeCooccurrenceWithWasm(entries);
-    } catch (error: unknown) {
-        const message = errorMessage(error);
-        console.warn('Tag-cooccur WASM call failed, falling back to TS for this input:', message);
-        addLog(LogType.WARN, 'Tag-cooccur WASM call failed, falling back to TS for this input', {
-            error: message,
-        });
-        return computeTagCooccurrence(entries);
-    }
+    return withWasmFallback(
+        'Tag-cooccur WASM call failed, falling back to TS for this input',
+        () => computeCooccurrenceWithWasm(entries),
+        () => computeTagCooccurrence(entries)
+    );
 }
 
 /**
  * Narrows entries to the top-`limit` tags with the WASM core, falling back
  * to the sync TS narrowEntriesToTopTags() on the same conditions plus
- * out-of-domain limits (non-integer or negative — the u32 boundary would
- * wrap them).
+ * out-of-domain limits (anything `isWasmSafeU32` rejects — the u32
+ * boundary would wrap them).
  */
 export async function narrowEntriesToTopTagsHybrid<T extends { tags?: string | null }>(
     entries: T[],
     limit: number
 ): Promise<T[]> {
-    if (!Number.isInteger(limit) || limit < 0) {
+    if (!isWasmSafeU32(limit)) {
         return narrowEntriesToTopTags(entries, limit);
     }
-    if (entries.length < MIN_WASM_ENTRIES || !(await isWasmAvailable())) {
+    if (entries.length < MIN_WASM_ENTRIES || !(await wasmProbe.isAvailable())) {
         return narrowEntriesToTopTags(entries, limit);
     }
-    try {
-        return await narrowEntriesToTopTagsWithWasm(entries, limit);
-    } catch (error: unknown) {
-        const message = errorMessage(error);
-        console.warn('Tag-cooccur narrow WASM call failed, falling back to TS for this input:', message);
-        addLog(LogType.WARN, 'Tag-cooccur narrow WASM call failed, falling back to TS for this input', {
-            error: message,
-        });
-        return narrowEntriesToTopTags(entries, limit);
-    }
+    return withWasmFallback(
+        'Tag-cooccur narrow WASM call failed, falling back to TS for this input',
+        () => narrowEntriesToTopTagsWithWasm(entries, limit),
+        () => narrowEntriesToTopTags(entries, limit)
+    );
 }

@@ -39,6 +39,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "js-strings"
+version = "0.1.0"
+dependencies = [
+ "rustc-hash",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -59,6 +66,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 name = "pii-sanitizer"
 version = "0.1.0"
 dependencies = [
+ "js-strings",
  "serde",
  "serde-wasm-bindgen",
  "wasm-bindgen",
@@ -87,6 +95,12 @@ checksum = "1fbf4db142a473a8d80c26bbf18454ed458bf8d26c8219c331daecfdbd079001"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "rustc-hash"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
 
 [[package]]
 name = "rustversion"

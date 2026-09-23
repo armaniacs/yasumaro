@@ -20,7 +20,7 @@ import type { SqliteValue } from './sqliteEngine.js';
 export type NamedRow = Record<string, SqliteValue | null | undefined>;
 export type PositionalRow = readonly (SqliteValue | null | undefined)[];
 
-/** Shared search projection (FTS and LIKE select the same 10 columns). */
+/** Shared search projection (FTS and LIKE select the same 11 columns). */
 export const SEARCH_COLUMNS = [
   'id',
   'url',
@@ -32,6 +32,10 @@ export const SEARCH_COLUMNS = [
   'visit_duration',
   'scroll_ratio',
   'is_starred',
+  // PBI 05: the diagnosis "Fallback reason" row renders from list/search
+  // projections too — without this the column only ever reaches the UI via
+  // the IDB full-listing path (backend-dependent display).
+  'fallback_reason',
 ] as const;
 
 /** Search projection plus the relevance pseudo-column (see coerceCell). */
@@ -75,6 +79,7 @@ function coerceCell(column: string, value: SqliteValue | null | undefined): Sqli
     case 'cleansed_reason':
     case 'ai_provider':
     case 'ai_model':
+    case 'fallback_reason':
       return value != null ? String(value) : null;
     default:
       return value != null ? Number(value) : null;

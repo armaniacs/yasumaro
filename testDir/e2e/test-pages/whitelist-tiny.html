@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>whitelist抽出はガード対象外 — PBI 05 scope fixture</title>
+</head>
+<body>
+  <!--
+    PBI 05 (Ask Q2A): whitelist 抽出経路は early return のため①②ガードも
+    applyFallback も通らない。5ch-matome アダプタ(ドメイン不専用・DOM構造検知)
+    が .t_b を捉えて、フロア未満の断片をそのまま返す — それでも
+    fallback は発火しない(v1 の文書化されたスコープ外)。
+  -->
+  <article id="thread">
+    <h1>薄いレスのスレ</h1>
+    <div class="t_b">薄いレス本文</div>
+  </article>
+  <div class="faq-answer-body" id="unreachable-body">
+    <p>
+      whitelist 経路に入った瞬間にこの本文は抽出対象から外れる。ガードが効かないことを
+      証明するための長いダミーテキストです。通常のブラックリスト経路ならこちらが
+      採用されてフロアを満たしますが、whitelist は early return のため到達しません。
+    </p>
+  </div>
+</body>
+</html>

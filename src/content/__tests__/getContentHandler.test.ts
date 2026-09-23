@@ -12,23 +12,20 @@ import type { ExtractResult } from '../../utils/contentExtractor/types.js';
 
 function makeDeps(runtimeId: string | undefined = 'test-extension-id'): {
     deps: GetContentHandlerDeps;
-    extractPageContent: ReturnType<typeof vi.fn>;
-    applyExtractResultToPageState: ReturnType<typeof vi.fn>;
+    extractAndCommit: ReturnType<typeof vi.fn>;
     pageState: PageState;
 } {
     const pageState = new PageState();
-    const extractPageContent = vi.fn(
+    const extractAndCommit = vi.fn(
         () =>
             ({
                 content: '<p>hello</p>',
                 cleansedReason: 'none',
             }) as ExtractResult,
     );
-    const applyExtractResultToPageState = vi.fn();
     return {
-        deps: { extractPageContent, applyExtractResultToPageState, pageState, runtimeId },
-        extractPageContent,
-        applyExtractResultToPageState,
+        deps: { extractAndCommit, pageState, runtimeId },
+        extractAndCommit,
         pageState,
     };
 }
@@ -56,7 +53,7 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
             expect(sendResponse).not.toHaveBeenCalled();
             expect(result).toBeUndefined();
         }
-        expect(deps.extractPageContent).not.toHaveBeenCalled();
+        expect(deps.extractAndCommit).not.toHaveBeenCalled();
     });
 
     it('ignores non-GET_CONTENT broadcasts', () => {
@@ -70,7 +67,7 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
         );
         expect(sendResponse).not.toHaveBeenCalled();
         expect(result).toBeUndefined();
-        expect(deps.extractPageContent).not.toHaveBeenCalled();
+        expect(deps.extractAndCommit).not.toHaveBeenCalled();
     });
 
     it('rejects senders whose id differs from runtimeId', () => {
@@ -78,17 +75,16 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
         const sendResponse = vi.fn();
         handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'external-id' }, sendResponse, deps);
         expect(sendResponse).not.toHaveBeenCalled();
-        expect(deps.extractPageContent).not.toHaveBeenCalled();
+        expect(deps.extractAndCommit).not.toHaveBeenCalled();
     });
 
     it('answers same-extension GET_CONTENT with the full response shape', () => {
-        const { deps, extractPageContent, applyExtractResultToPageState, pageState } = makeDeps('test-extension-id');
+        const { deps, extractAndCommit, pageState } = makeDeps('test-extension-id');
         const sendResponse = vi.fn();
 
         handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
 
-        expect(extractPageContent).toHaveBeenCalledTimes(1);
-        expect(applyExtractResultToPageState).toHaveBeenCalledTimes(1);
+        expect(extractAndCommit).toHaveBeenCalledTimes(1);
         expect(sendResponse).toHaveBeenCalledTimes(1);
         const response = sendResponse.mock.calls[0]![0] as Record<string, unknown>;
         expect(response).toHaveProperty('content', '<p>hello</p>');
@@ -110,5 +106,57 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
         const response = sendResponse.mock.calls[0]![0] as Record<string, unknown>;
         expect(response['cleansedReason']).toBe('keyword');
         expect(response['cleanseStats']).toEqual({ hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3 });
+    });
+});
+
+describe('handleGetContentMessage - regenerate cleanseMode (PBI 2026-09-22-04)', () => {
+    it("CRITICAL: 'current'/absent calls extractAndCommit with undefined (no override)", () => {
+        for (const message of [
+            { type: 'GET_CONTENT' },
+            { type: 'GET_CONTENT', payload: { cleanseMode: 'current' } },
+        ]) {
+            const { deps, extractAndCommit } = makeDeps();
+            const sendResponse = vi.fn();
+            handleGetContentMessage(message, { id: 'test-extension-id' }, sendResponse, deps);
+            expect(extractAndCommit).toHaveBeenCalledWith(undefined);
+            expect(sendResponse).toHaveBeenCalledTimes(1);
+        }
+    });
+
+    it("CRITICAL: 'looser'/'loosest' resolve against live pageState config (propagation)", () => {
+        for (const cleanseMode of ['looser', 'loosest'] as const) {
+            const { deps, extractAndCommit } = makeDeps();
+            const sendResponse = vi.fn();
+            handleGetContentMessage(
+                { type: 'GET_CONTENT', payload: { cleanseMode } },
+                { id: 'test-extension-id' },
+                sendResponse,
+                deps,
+            );
+            expect(extractAndCommit).toHaveBeenCalledTimes(1);
+            const resolved = extractAndCommit.mock.calls[0]![0] as Record<string, unknown> | undefined;
+            expect(resolved).toBeDefined();
+            expect(resolved).not.toBe(deps.pageState.cleansingConfig);
+            if (cleanseMode === 'loosest') {
+                expect(resolved).toMatchObject({
+                    contentStripHardEnabled: false,
+                    contentStripKeywordEnabled: false,
+                    aiSummaryCleansingEnabled: false,
+                });
+            }
+        }
+    });
+
+    it('wrong sender id performs NO extraction even with a cleanseMode', () => {
+        const { deps } = makeDeps('test-extension-id');
+        const sendResponse = vi.fn();
+        handleGetContentMessage(
+            { type: 'GET_CONTENT', payload: { cleanseMode: 'loosest' } },
+            { id: 'external-id' },
+            sendResponse,
+            deps,
+        );
+        expect(deps.extractAndCommit).not.toHaveBeenCalled();
+        expect(sendResponse).not.toHaveBeenCalled();
     });
 });

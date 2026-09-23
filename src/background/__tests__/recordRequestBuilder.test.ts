@@ -177,3 +177,34 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
     logErrorSpy.mockRestore();
   });
 });
+
+describe('buildRecordRequest regenerate source policy (PBI 2026-09-22-04)', () => {
+  it('is SQLite-only, manual-typed, and force-default-off (CRITICAL)', () => {
+    const req = buildRecordRequest('regenerate', {
+      title: 'T', url: 'https://example.com', content: 'c', targetEntryId: 7,
+    });
+    expect(req).toMatchObject({
+      recordType: 'manual',
+      skipDuplicateCheck: true,
+      skipObsidianAppend: true,
+      skipLocalMarkdownExport: true,
+      targetEntryId: 7,
+    });
+    expect(req).not.toHaveProperty('force');
+  });
+
+  it('carries caller-explicit force and regenerate diagnostics', () => {
+    const req = buildRecordRequest('regenerate', {
+      title: 'T', url: 'https://example.com', content: 'c',
+      force: true, targetEntryId: 7, fallbackReason: 'over_cleansed',
+      pageBytes: 100, candidateBytes: 90,
+    });
+    expect(req.force).toBe(true);
+    expect(req).toMatchObject({
+      targetEntryId: 7,
+      fallbackReason: 'over_cleansed',
+      pageBytes: 100,
+      candidateBytes: 90,
+    });
+  });
+});

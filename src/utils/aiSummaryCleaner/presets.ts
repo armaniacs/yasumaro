@@ -13,7 +13,8 @@
  *   6. preset "Minimal" を選択 → 3 ON のみに変わることを確認
  */
 
-import type { AiSummaryCleanseOptions } from './types.js';
+import type { AiSummaryCleanseOptions, RuleKey } from './types.js';
+import { CLEANSING_RULE_KEYS } from './rules.js';
 
 export type PresetId = 'minimal' | 'balanced' | 'aggressive' | 'custom';
 
@@ -27,118 +28,52 @@ export type CleansingConfig = AiSummaryCleanseOptions;
  * 各プリセットのフラグマップ。
  * - minimal: 3 ON (ads, alt, nav)
  * - balanced: 9 ON (minimal + metadata, social, recommend, popup, cookie, newsMedia)
- * - aggressive: 25 ON (ほぼ全 ON、7つだけ OFF)
+ * - aggressive: 25 ON (ほぼ全 ON、8つだけ OFF)
  * - custom: 空（個別調整）
  *
- * すべての PresetId が含まれることを型で保証するため Partial ではなく
- * Partial<CleansingConfig> を使うが、minimal/balanced/aggressive は 32キー全てを明示。
+ * 値は CLEANSING_RULE_KEYS 上の allow / deny リストから派生する。
+ * 新ルールは deny に載らない限り aggressive で ON、載せない限り
+ * minimal / balanced で OFF になるため、ルール追加時の追従が不要。
+ * 出力オブジェクトは従来の手書き列挙と byte 等価（golden pin で保護）。
  */
+type PresetFlags = Partial<CleansingConfig> & Record<string, boolean | undefined>;
+
+/** minimal / balanced: ON にする鍵だけ列挙し、残りは OFF になる。 */
+const MINIMAL_ON: readonly RuleKey[] = ['alt', 'ads', 'nav'];
+const BALANCED_ON: readonly RuleKey[] = [
+    ...MINIMAL_ON,
+    'metadata',
+    'social',
+    'recommend',
+    'popup',
+    'cookie',
+    'newsMedia',
+];
+
+/** aggressive: OFF にする鍵だけ列挙し、残りは ON になる。 */
+const AGGRESSIVE_OFF: readonly RuleKey[] = [
+    'jsonLd',
+    'lazyLoad',
+    'skipLink',
+    'card',
+    'fixed',
+    'pagination',
+    'platform',
+    'author',
+];
+
+function buildPreset(on: ReadonlySet<RuleKey>): PresetFlags {
+    return Object.fromEntries(
+        CLEANSING_RULE_KEYS.map((key) => [`${key}Enabled`, on.has(key)]),
+    ) as PresetFlags;
+}
+
 export const PRESETS: Record<PresetId, Partial<CleansingConfig>> = {
-    minimal: {
-        altEnabled: true,
-        metadataEnabled: false,
-        adsEnabled: true,
-        navEnabled: true,
-        socialEnabled: false,
-        deepEnabled: false,
-        jsonLdEnabled: false,
-        lazyLoadEnabled: false,
-        skipLinkEnabled: false,
-        cardEnabled: false,
-        linkDensityEnabled: false,
-        fixedEnabled: false,
-        recommendEnabled: false,
-        paginationEnabled: false,
-        snsPromoEnabled: false,
-        popupEnabled: false,
-        cookieEnabled: false,
-        platformEnabled: false,
-        textDensityEnabled: false,
-        shortSeqEnabled: false,
-        symbolLineEnabled: false,
-        linkParaEnabled: false,
-        enhancedHiddenEnabled: false,
-        emptyElemEnabled: false,
-        jpLayoutEnabled: false,
-        jpNavigationEnabled: false,
-        authorEnabled: false,
-        affiliateEnabled: false,
-        speechBubbleEnabled: false,
-        newsMediaEnabled: false,
-        ecSiteEnabled: false,
-        qaSiteEnabled: false,
-        videoSiteEnabled: false,
-    },
-    balanced: {
-        altEnabled: true,
-        metadataEnabled: true,
-        adsEnabled: true,
-        navEnabled: true,
-        socialEnabled: true,
-        deepEnabled: false,
-        jsonLdEnabled: false,
-        lazyLoadEnabled: false,
-        skipLinkEnabled: false,
-        cardEnabled: false,
-        linkDensityEnabled: false,
-        fixedEnabled: false,
-        recommendEnabled: true,
-        paginationEnabled: false,
-        snsPromoEnabled: false,
-        popupEnabled: true,
-        cookieEnabled: true,
-        platformEnabled: false,
-        textDensityEnabled: false,
-        shortSeqEnabled: false,
-        symbolLineEnabled: false,
-        linkParaEnabled: false,
-        enhancedHiddenEnabled: false,
-        emptyElemEnabled: false,
-        jpLayoutEnabled: false,
-        jpNavigationEnabled: false,
-        authorEnabled: false,
-        affiliateEnabled: false,
-        speechBubbleEnabled: false,
-        newsMediaEnabled: true,
-        ecSiteEnabled: false,
-        qaSiteEnabled: false,
-        videoSiteEnabled: false,
-    },
-    aggressive: {
-        altEnabled: true,
-        metadataEnabled: true,
-        adsEnabled: true,
-        navEnabled: true,
-        socialEnabled: true,
-        deepEnabled: true,
-        jsonLdEnabled: false,
-        lazyLoadEnabled: false,
-        skipLinkEnabled: false,
-        cardEnabled: false,
-        linkDensityEnabled: true,
-        fixedEnabled: false,
-        recommendEnabled: true,
-        paginationEnabled: false,
-        snsPromoEnabled: true,
-        popupEnabled: true,
-        cookieEnabled: true,
-        platformEnabled: false,
-        textDensityEnabled: true,
-        shortSeqEnabled: true,
-        symbolLineEnabled: true,
-        linkParaEnabled: true,
-        enhancedHiddenEnabled: true,
-        emptyElemEnabled: true,
-        jpLayoutEnabled: true,
-        jpNavigationEnabled: true,
-        authorEnabled: false,
-        affiliateEnabled: true,
-        speechBubbleEnabled: true,
-        newsMediaEnabled: true,
-        ecSiteEnabled: true,
-        qaSiteEnabled: true,
-        videoSiteEnabled: true,
-    },
+    minimal: buildPreset(new Set(MINIMAL_ON)),
+    balanced: buildPreset(new Set(BALANCED_ON)),
+    aggressive: buildPreset(
+        new Set(CLEANSING_RULE_KEYS.filter((key) => !AGGRESSIVE_OFF.includes(key))),
+    ),
     custom: {},
 };
 
@@ -151,13 +86,16 @@ export function countPresetEnabled(presetId: PresetId): number {
 }
 
 /**
- * config が preset と完全一致するか判定
+ * config が preset と完全一致するか判定。
+ * 走査対象は CLEANSING_RULES の鍵集合であり、preset エントリの列挙に
+ * 依存しない。新ルール追加時に判定から漏れることが構造的にない。
  */
 export function isPresetMatch(config: Partial<CleansingConfig>, presetId: PresetId): boolean {
-    const preset = PRESETS[presetId];
+    const preset = PRESETS[presetId] as Record<string, unknown>;
     if (presetId === 'custom') return Object.keys(preset).length === 0;
-    for (const [key, expected] of Object.entries(preset)) {
-        if ((config as Record<string, unknown>)[key] !== expected) return false;
+    for (const key of CLEANSING_RULE_KEYS) {
+        const flag = `${key}Enabled`;
+        if ((config as Record<string, unknown>)[flag] !== preset[flag]) return false;
     }
     return true;
 }

@@ -28,7 +28,7 @@ import { deriveCleansedReason, removedRecordToMap, resolveCleanseReason } from '
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult } from './types.js';
 import { applyAiCleanseStep, applyFallback, getByteSize, makeByteMeter, resolvePreAiBytes, type FallbackDecision } from './extractPipeline.js';
-import { findMainContentCandidates } from './scoring.js';
+import { scanMainContentCandidates } from './scoring.js';
 import { extractTextFromElement } from './textExtraction.js';
 import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAdapters.js';
 import { pickDefined } from '../objectUtils.js';
@@ -117,7 +117,7 @@ function extractInternal(
 ): ExtractResult {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = [...INITIAL_KEYWORDS] } = cleanseOptions;
-    const { aiSummaryCleanseEnabled = false, fallbackRatio = 0.20, fallbackMinBytes = 300 } = aiSummaryCleanseOptions;
+    const { aiSummaryCleanseEnabled = false, fallbackRatio = 0.20, fallbackMinBytes = 300, fallbackMinChars = 100, cleanseGuardEnabled = true, candidateGuardEnabled = true } = aiSummaryCleanseOptions;
     // Diagnostic-only measurement seam: enabled exactly when the caller asked
     // for ExtractResult diagnostics (extractMainContentWithInfo entry).
     const meter = makeByteMeter(withDiagnostics);
@@ -146,6 +146,7 @@ function extractInternal(
     let totalRemoved = 0;
     let pageBytes = 0;         // findMainContentCandidates() 前（body全体）のバイト数
     let candidateBytes = 0;    // findMainContentCandidates() 後（候補要素）のバイト数
+    let candidateFloorMissed = false; // PBI 05 ①: guard rejected every candidate → body join
     let originalBytes = 0;     // Content Cleansing前のバイト数
     let cleansedBytes = 0;     // Content Cleansing後のバイト数
     let aiSummaryOriginalBytes: number | undefined = undefined;  // AI要約クレンジング前のバイト数
@@ -155,6 +156,7 @@ function extractInternal(
      let aiSummaryCleansedReasons: string[] | undefined;  // 複数理由の詳細リスト
      let fallbackTriggered = false;
      let preAiCleanseText: string | undefined;            // AI要約クレンジング前のテキスト（フォールバック用）
+    let postCleanseChars: number | undefined;            // PBI 05 ② pair: clone text length after Content Cleansing (chars only — hot path never encodes)
      let fallbackReason: ExtractResult['fallbackReason'] = undefined; // フォールバック理由（triggered時のみ設定）
     let removedByReason: Map<string, number> | undefined; // 30-14: ルール別削除件数
     let funnel: { pageBytes: number; candidateBytes: number; cleansedBytes: number } | undefined; // 30-14: ファネル
@@ -223,6 +225,8 @@ function extractInternal(
         cleanse: boolean;
         dualPayloadFirst: boolean;
         emitSanitizeLog: boolean;
+        /** PBI 05: candidate-source only — gates the ② restore (body restore would ship raw textContent). */
+        candidateSource?: boolean;
     }): void => {
         // 30-11: 二重ペイロード — candidate path はクレンジング前に原文を保持
         if (source.dualPayloadFirst && !originalContent) {
@@ -256,6 +260,7 @@ function extractInternal(
             // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
             // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
             const cloneText = clone.textContent || '';
+            postCleanseChars = cloneText.length;
             const resolvedPreAi = resolvePreAiBytes(meter, cloneText, { text: source.preCleanseText, bytes: originalBytes }, aiSummaryCleanseEnabled);
             if (meter.enabled) {
                 cleansedBytes = resolvedPreAi.cleansedBytes;
@@ -354,6 +359,12 @@ function extractInternal(
 
         // フォールバック判定: 短すぎるコンテンツまたは過剰削減
         // (single policy via applyFallback — shared by both paths)
+        // PBI 05 ② pair is supplied only when Content Cleansing ran on a
+        // candidate source AND the ② guard flag is on — omitted otherwise,
+        // which reproduces the legacy decision byte-for-byte.
+        const supplyCleansePair = cleanseGuardEnabled
+            && source.candidateSource === true
+            && postCleanseChars !== undefined;
         const fallbackDecision = applyFallback({
             content,
             contentBytes: getByteSize(content),
@@ -362,6 +373,15 @@ function extractInternal(
             fallbackRatio,
             fallbackMinBytes,
             readBodyText,
+            ...(supplyCleansePair
+                ? {
+                    preCleanseText: source.preCleanseText,
+                    preCleanseChars: source.preCleanseText.length,
+                    postCleanseChars,
+                    preCleanseBytes: source.preBytes,
+                    fallbackMinChars,
+                }
+                : {}),
         });
         if (fallbackDecision.fallbackTriggered) {
             settleFallback(fallbackDecision);
@@ -398,12 +418,19 @@ function extractInternal(
             pageBytes = meter.measure(document.body.textContent || '');
         }
 
-        const candidates = findMainContentCandidates();
+        const scan = scanMainContentCandidates(candidateGuardEnabled ? fallbackMinChars : undefined);
+        const candidates = scan.candidates;
+        // PBI 05 ① all-miss: body join below; rejectedTop stays measurable so
+        // diagnostics show what was discarded (transparent discard, why-G).
+        candidateFloorMissed = candidates.length === 0 && scan.rejectedTop !== undefined;
 
         // findMainContentCandidates() 後の候補要素のバイト数を計測（textContentベース、全バイト数と単位統一）
-        // 診断専用: meter無効では計測しない
-        if (meter.enabled && candidates.length > 0) {
-            candidateBytes = meter.measure(candidates[0]!.textContent || '');
+        // 診断専用: meter無効では計測しない。①棄却時は棄却トップを対象にする。
+        if (meter.enabled) {
+            const measureTarget = candidates.length > 0 ? candidates[0]! : scan.rejectedTop;
+            if (measureTarget) {
+                candidateBytes = meter.measure(measureTarget.textContent || '');
+            }
         }
 
         if (candidates.length > 0) {
@@ -419,6 +446,7 @@ function extractInternal(
                 cleanse: cleanseEnabled,
                 dualPayloadFirst: true,
                 emitSanitizeLog: true,
+                candidateSource: true,
             });
         } else {
             // 候補がない場合、body全体をクレンジング対象としてフォールバック
@@ -463,6 +491,14 @@ function extractInternal(
     // 最大文字数で切り詰め
     if (content.length > maxChars) {
         content = content.substring(0, maxChars);
+    }
+
+    // PBI 05 ① candidate-floor guard: the body branch already produced the
+    // content — annotate only. A real applyFallback decision keeps its own
+    // reason (restore sources win over the annotation).
+    if (candidateFloorMissed && !fallbackTriggered) {
+        fallbackTriggered = true;
+        fallbackReason = 'candidate_too_small';
     }
 
     // 30-14: ファネル集計 — 3段階バイトをまとめる（診断専用）

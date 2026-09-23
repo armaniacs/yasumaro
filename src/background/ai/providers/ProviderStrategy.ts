@@ -15,6 +15,7 @@ import { getAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
 import { addLog } from '../../../utils/logger/core.js';
+import { logDebug } from '../../../utils/logger/api.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
 
@@ -55,6 +56,14 @@ export interface AIProviderConnectionResult {
  */
 export const CONNECTION_TEST_PROMPT = 'Reply with the single word: OK';
 
+/** One failed provider slot's diagnostic detail (PBI 2026-09-22-04 follow-up). */
+export interface AISlotFailure {
+    provider: string;
+    model?: string;
+    /** Bare diagnostics only (e.g. "HTTP 401" / "Prompt failed: ...") — never raw response bodies. */
+    error: string;
+}
+
 export interface AISummaryResult {
     success: boolean;
     summary: string;
@@ -64,6 +73,10 @@ export interface AISummaryResult {
     receivedTokens?: number;
     providerName?: string;  // 使用したAIプロバイダー名
     modelName?: string;     // 使用したAIモデル名
+    /** Tried provider ids in attempt order, present only on total failure (PBI 2026-09-22-04 follow-up). */
+    attemptedProviders?: string[];
+    /** Per-slot failure details — captured even when a later slot succeeds. */
+    slotFailures?: AISlotFailure[];
     error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
 }
 
@@ -313,10 +326,16 @@ export abstract class AIProviderStrategy {
         } catch (error: unknown) {
             const msg = errorMessage(error);
             const isTimeout = error instanceof Error && error.name === 'AbortError';
+            // fetchWithRetry THROWS on non-ok after retries ("HTTP 404: ..."),
+            // so this catch — not handleErrorResponse — is where production
+            // HTTP failures actually land. Keep the user-facing summary
+            // generic (security pins) but carry the detail in `error`, the
+            // per-slot diagnostic channel the regenerate trail renders.
+            const detail = msg.substring(0, 300);
             if (isTimeout || msg.includes('timed out')) {
-                return { success: false, summary: 'Error: AI request timed out. Please check your connection.' };
+                return { success: false, summary: 'Error: AI request timed out. Please check your connection.', error: detail };
             }
-            return { success: false, summary: 'Error: Failed to generate summary. Please try again or check your settings.' };
+            return { success: false, summary: 'Error: Failed to generate summary. Please try again or check your settings.', error: detail };
         }
     }
 
@@ -393,6 +412,22 @@ export abstract class AIProviderStrategy {
      */
     protected async getAllowedUrlsForRequests(): Promise<Set<string>> {
         return getAllowedUrls();
+    }
+
+    /**
+     * Constructor ritual SSOT (PBI 2026-09-21-10): stored>0 wins,
+     * otherwise local=120000 / cloud=30000.
+     */
+    protected resolveTimeoutMs(storedTimeoutMs: number, isLocal: boolean): number {
+        return storedTimeoutMs > 0 ? storedTimeoutMs : isLocal ? 120000 : 30000;
+    }
+
+    /**
+     * Constructor ritual SSOT (PBI 2026-09-21-10): diagnostics only —
+     * the source name is logged, never key material.
+     */
+    protected logApiKeySource(source: string, providerName: string): void {
+        void logDebug(`API key resolved from: ${source}`, { provider: providerName });
     }
 
     /**

@@ -233,3 +233,38 @@ describe('StepExecutor', () => {
     });
   });
 });
+
+describe('enqueueOfflineJob — regenerate (PBI 2026-09-22-04)', () => {
+  let queue: { enqueue: ReturnType<typeof vi.fn> };
+  let executor: StepExecutor;
+
+  beforeEach(() => {
+    queue = { enqueue: vi.fn().mockResolvedValue(true) };
+    executor = new StepExecutor(queue as unknown as OfflineNetworkQueue);
+  });
+
+  it('skips the offline job when the context targets an existing row (update-only)', async () => {
+    const step: PipelineStep = {
+      name: 'privacyPipeline',
+      errorStrategy: ErrorStrategy.RETRY,
+      offlineRetry: { jobKind: 'ai_summary' },
+      execute: vi.fn().mockResolvedValue(makeContext()),
+    };
+    const context = makeContext({
+      data: { url: 'https://example.com', title: 'T', content: 'c', targetEntryId: 7 } as never,
+    });
+    await (executor as any).enqueueOfflineJob(step, context);
+    expect(queue.enqueue).not.toHaveBeenCalled();
+  });
+
+  it('still enqueues for normal (non-regenerate) records', async () => {
+    const step: PipelineStep = {
+      name: 'privacyPipeline',
+      errorStrategy: ErrorStrategy.RETRY,
+      offlineRetry: { jobKind: 'ai_summary' },
+      execute: vi.fn().mockResolvedValue(makeContext()),
+    };
+    await (executor as any).enqueueOfflineJob(step, makeContext());
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+  });
+});

@@ -42,6 +42,8 @@ export interface BrowsingLogRecord {
   extracted_sentences_bytes?: number | null;
   extracted_sentences_original_bytes?: number | null;
   fallback_triggered?: number | null;
+  /** PBI 05: フォールバック発動理由（'short_content' | 'over_cleansed' | 'content_overcut' | 'candidate_too_small'） */
+  fallback_reason?: string | null;
 }
 
 // Dashboard row type derived from BrowsingLogRecord (id is required)

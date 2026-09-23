@@ -13,11 +13,10 @@
  * negative thresholds, and astral-plane characters.
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeAll } from 'vitest';
 import { deduplicateContent, splitSentencesKeepDelimiters } from '../../../utils/contentDeduplicator.js';
 import initWasmModule, { deduplicateIndices } from '../sentenceDedupWasm.js';
+import { initWasmForNode } from '../../testing/initWasmForNode.js';
 
 const CORPUS: Array<{ text: string; threshold?: number; minLength?: number }> = [
     { text: 'alpha beta gamma. alpha beta gamma. delta epsilon zeta.' },
@@ -46,9 +45,7 @@ const CORPUS: Array<{ text: string; threshold?: number; minLength?: number }> = 
 ];
 
 async function initForNode(): Promise<void> {
-    const wasmPath = fileURLToPath(new URL('../sentence_dedup_bg.wasm', import.meta.url));
-    const bytes = await readFile(wasmPath);
-    await initWasmModule({ module_or_path: bytes });
+    await initWasmForNode(initWasmModule, new URL('../sentence_dedup_bg.wasm', import.meta.url));
 }
 
 /**

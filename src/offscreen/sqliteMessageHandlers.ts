@@ -27,12 +27,13 @@ import {
 } from './dbMaintenance.js';
 import type { ArchiveDescriptor, ArchiveOpType } from '../messaging/archiveWireTable.js';
 import { ARCHIVE_DESCRIPTORS, pickProjectedFields } from '../messaging/archiveWireTable.js';
+import { sqliteWireFor, type SqliteWireDescriptor, type SqliteWireOp } from '../messaging/sqliteWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { planQuery, planSearch, planPurge } from './queryPlanner.js';
+import { planPurge, planQueryOrSearch, planSearch } from './queryPlanner.js';
 import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
 import { supportsArchive, type ArchiveStaging } from './archiveStaging.js';
 import { UPDATABLE_FIELDS } from './schema.js';
@@ -55,102 +56,80 @@ async function handleInit(_msg: SqliteMessage, sendResponse: (r: unknown) => voi
   sendResponse({ success: ok, initialized: ok });
 }
 
-async function handleInsert(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_INSERT' }>).payload as Record<string, unknown>;
-  const record = buildRecordFromPayload(payload);
-  const result = await sqliteInsert(record);
-  sendResponse(result);
-}
-
-async function handleInsertBatch(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const rawRecords = (msg as Extract<SqliteMessage, { type: 'SQLITE_INSERT_BATCH' }>).payload.records || [];
-  const records = (rawRecords as Record<string, unknown>[]).map(r => buildRecordFromPayload(r as Record<string, unknown>));
-  const result = await sqliteInsertBatch(records);
-  sendResponse(result);
-}
-
 /**
- * Planned-query runner shared by handleQuery/handleSearch (PBI 2026-09-18-08):
- * plan with the per-op planner, then run the same sqliteQuery.
+ * Table-driven query/mutate dispatch (PBI 2026-09-20-16).
+ *
+ * The 10 query/mutate handlers used to be hand-written 1:1 copies that
+ * differed only in repo call, payload coercion, and planner. Each entry here
+ * is now a pure view over its wire-table descriptor — the row names the
+ * runner, and the runner owns the layer-specific preprocessing (record
+ * codec, planners, UPDATABLE_FIELDS filter, id coercion) that the neutral
+ * table must not import. Adding an op is one table row, plus one runner only
+ * when it needs a new repo call shape.
+ *
+ * SQLITE_SEARCH is intentionally NOT tabled: no QueryOp reaches it through
+ * the gateway (kind:'search' folds into SQLITE_QUERY), so it keeps its
+ * hand-written handler below.
  */
-async function runPlannedQuery(
-  payload: Record<string, unknown>,
-  sendResponse: (r: unknown) => void,
-  planner: (payload: Record<string, unknown>) => Parameters<typeof sqliteQuery>[0],
-): Promise<void> {
-  const result = await sqliteQuery(planner(payload));
-  sendResponse(result);
-}
+export type SqliteRepoMethod =
+  | 'insert' | 'insertBatch' | 'query' | 'search' | 'count'
+  | 'update' | 'delete' | 'toggleStar' | 'insertAuditLog' | 'auditLogQuery';
 
-/**
- * Single-id runner shared by handleDelete/handleToggleStar
- * (PBI 2026-09-18-08): coerce the wire id once, then run the repo call.
- */
-async function runById(
-  rawId: unknown,
-  sendResponse: (r: unknown) => void,
-  run: (id: number) => Promise<unknown>,
-): Promise<void> {
-  const result = await run(Number(rawId));
-  sendResponse(result);
-}
+type _TableRepoMethodsLive = SqliteWireDescriptor['repoMethod'] extends SqliteRepoMethod ? true : never;
+const _checkTableRepoMethods: _TableRepoMethodsLive = true;
 
-async function handleQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_QUERY' }>).payload as Record<string, unknown>;
-  await runPlannedQuery(payload, sendResponse, planQuery);
-}
-
-async function handleAuditLogInsert(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_AUDIT_LOG_INSERT' }>).payload as Record<string, unknown>;
-  const result = await sqliteInsertAuditLog({
+const SQLITE_REPO_RUNNERS: Record<SqliteRepoMethod, (payload: Record<string, unknown>) => Promise<unknown>> = {
+  insert: (payload) => sqliteInsert(buildRecordFromPayload(payload)),
+  insertBatch: (payload) => sqliteInsertBatch(
+    (((payload.records as Record<string, unknown>[] | undefined) || []) as Record<string, unknown>[]).map((r) => buildRecordFromPayload(r)),
+  ),
+  query: (payload) => {
+    // Route decision lives in queryPlanner.planQueryOrSearch (Checking Team
+    // 2026-09-22: Legacy Bridge Medium) — the gateway folds search into
+    // SQLITE_QUERY with a kind marker and planSearch owns the search default.
+    return sqliteQuery(planQueryOrSearch(payload));
+  },
+  search: (payload) => sqliteQuery(planSearch(payload)),
+  count: () => sqliteGetCount(),
+  update: (payload) => {
+    const id = Number(payload.id);
+    const changes: Record<string, unknown> = {};
+    for (const key of UPDATABLE_FIELDS) {
+      if (key in payload) {
+        changes[key] = payload[key];
+      }
+    }
+    return sqliteUpdate(id, changes);
+  },
+  delete: (payload) => sqliteHardDelete(Number(payload.id)),
+  toggleStar: (payload) => sqliteToggleStar(Number(payload.id)),
+  insertAuditLog: (payload) => sqliteInsertAuditLog({
     provider: String(payload.provider || ''),
     url: String(payload.url || ''),
     created_at: Number(payload.created_at || Date.now()),
-  });
-  sendResponse(result);
-}
-
-async function handleAuditLogQuery(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_AUDIT_LOG_QUERY' }>).payload;
-  const result = await sqliteQueryAuditLog(
+  }),
+  auditLogQuery: (payload) => sqliteQueryAuditLog(
     pickDefined({
       limit: payload?.limit != null ? Number(payload.limit) : undefined,
       offset: payload?.offset != null ? Number(payload.offset) : undefined,
     }),
-  );
-  sendResponse(result);
+  ),
+};
+
+async function handleSqliteWire(op: SqliteWireOp, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const row = sqliteWireFor(op);
+  if (!row) {
+    sendResponse({ success: false, error: `Unknown sqlite op: ${op}` });
+    return;
+  }
+  const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
+  const run = SQLITE_REPO_RUNNERS[row.repoMethod as SqliteRepoMethod];
+  sendResponse(await run(payload));
 }
 
 async function handleSearch(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const p = (msg as Extract<SqliteMessage, { type: 'SQLITE_SEARCH' }>).payload;
-  await runPlannedQuery(p as unknown as Record<string, unknown>, sendResponse, planSearch);
-}
-
-async function handleUpdate(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_UPDATE' }>).payload as Record<string, unknown>;
-  const id = Number(payload.id);
-  const changes: Record<string, unknown> = {};
-  for (const key of UPDATABLE_FIELDS) {
-    if (key in payload) {
-      changes[key] = payload[key];
-    }
-  }
-  const result = await sqliteUpdate(id, changes);
-  sendResponse(result);
-}
-
-async function handleDelete(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const id = (msg as Extract<SqliteMessage, { type: 'SQLITE_DELETE' }>).payload.id;
-  await runById(id, sendResponse, sqliteHardDelete);
-}
-
-async function handleToggleStar(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const id = (msg as Extract<SqliteMessage, { type: 'SQLITE_TOGGLE_STAR' }>).payload.id;
-  await runById(id, sendResponse, sqliteToggleStar);
-}
-
-async function handleCount(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const result = await sqliteGetCount();
+  const result = await sqliteQuery(planSearch(p as unknown as Record<string, unknown>));
   sendResponse(result);
 }
 
@@ -328,16 +307,16 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
 const handlerRecord = {
   SQLITE_HEALTH_CHECK: handleHealthCheck,
   SQLITE_INIT: handleInit,
-  SQLITE_INSERT: handleInsert,
-  SQLITE_INSERT_BATCH: handleInsertBatch,
-  SQLITE_QUERY: handleQuery,
-  SQLITE_AUDIT_LOG_INSERT: handleAuditLogInsert,
-  SQLITE_AUDIT_LOG_QUERY: handleAuditLogQuery,
+  SQLITE_INSERT: (msg, sendResponse) => handleSqliteWire('insert', msg, sendResponse),
+  SQLITE_INSERT_BATCH: (msg, sendResponse) => handleSqliteWire('insertBatch', msg, sendResponse),
+  SQLITE_QUERY: (msg, sendResponse) => handleSqliteWire('records', msg, sendResponse),
+  SQLITE_AUDIT_LOG_INSERT: (msg, sendResponse) => handleSqliteWire('insertAuditLog', msg, sendResponse),
+  SQLITE_AUDIT_LOG_QUERY: (msg, sendResponse) => handleSqliteWire('auditLog', msg, sendResponse),
   SQLITE_SEARCH: handleSearch,
-  SQLITE_UPDATE: handleUpdate,
-  SQLITE_DELETE: handleDelete,
-  SQLITE_TOGGLE_STAR: handleToggleStar,
-  SQLITE_COUNT: handleCount,
+  SQLITE_UPDATE: (msg, sendResponse) => handleSqliteWire('update', msg, sendResponse),
+  SQLITE_DELETE: (msg, sendResponse) => handleSqliteWire('delete', msg, sendResponse),
+  SQLITE_TOGGLE_STAR: (msg, sendResponse) => handleSqliteWire('toggleStar', msg, sendResponse),
+  SQLITE_COUNT: (msg, sendResponse) => handleSqliteWire('count', msg, sendResponse),
   SQLITE_STATUS: handleStatus,
   SQLITE_CLEAR_ALL: handleClearAll,
   SQLITE_EXPORT: handleExport,

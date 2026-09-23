@@ -55,6 +55,22 @@ export function getLocalDateString(timestamp: number): string {
 }
 
 /**
+ * Parse a tags column holding a JSON array string into a string array.
+ * Shared with exportLogsService so both Markdown exporters interpret stored
+ * tags identically. buildTemplateEntryData is deliberately NOT reused here:
+ * it splits string input on commas, which would shred a JSON array string
+ * into fragments and change the emitted YAML.
+ */
+export function parseJsonTagsArray(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Convert a single browsing log entry into template entry data.
  * VULN-020: sanitize title and URL to prevent Markdown injection.
  * Delegates to the entry-markdown SSOT (PBI-04); the tag chain here is

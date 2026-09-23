@@ -95,6 +95,10 @@ export type AiSummaryCleansingSettings = {
     // Over-cleansed fallback settings
     fallbackRatio: number;           // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
     fallbackMinBytes: number;        // 過剰削減フォールバック絶対量閾値（デフォルト: 300）
+    // PBI 05 overcut guards
+    fallbackMinChars: number;        // ①②絶対量閾値（文字数・デフォルト: 100）
+    candidateGuardEnabled: boolean;  // ①候補選択フロアガード（デフォルト: true）
+    cleanseGuardEnabled: boolean;    // ②Content Cleansing過剰削減ガード（デフォルト: true）
 };
 
 /**
@@ -131,7 +135,11 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
         bodyProtectionThreshold: settings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] ?? 200,
         // Over-cleansed fallback
         fallbackRatio: settings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] ?? 0.20,
-        fallbackMinBytes: settings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] ?? 300
+        fallbackMinBytes: settings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] ?? 300,
+        // PBI 05 overcut guards
+        fallbackMinChars: settings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS] ?? 100,
+        candidateGuardEnabled: settings[StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED] ?? true,
+        cleanseGuardEnabled: settings[StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED] ?? true
     } as AiSummaryCleansingSettings;
 }
 
@@ -156,6 +164,10 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] = settings.fallbackRatio;
     currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] = settings.fallbackMinBytes;
+    // PBI 05 overcut guards
+    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS] = settings.fallbackMinChars;
+    currentSettings[StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED] = settings.candidateGuardEnabled;
+    currentSettings[StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED] = settings.cleanseGuardEnabled;
     await settingsRepository.setAll(currentSettings);
 }
 
@@ -178,6 +190,11 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const fallbackRatioValue = document.getElementById('ai-summary-cleansing-fallback-ratio-value') as HTMLSpanElement;
     const fallbackMinBytesSlider = document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement;
     const fallbackMinBytesValue = document.getElementById('ai-summary-cleansing-fallback-min-bytes-value') as HTMLSpanElement;
+    // PBI 05 overcut guard UI elements
+    const fallbackMinCharsSlider = document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement;
+    const fallbackMinCharsValue = document.getElementById('ai-summary-cleansing-fallback-min-chars-value') as HTMLSpanElement;
+    const guardCandidateCheckbox = document.getElementById('extraction-guard-candidate-enabled') as HTMLInputElement;
+    const guardCleanseCheckbox = document.getElementById('extraction-guard-content-cleanse-enabled') as HTMLInputElement;
 
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     // The 32 rule checkboxes are looked up and set from CLEANSING_RULES via
@@ -240,6 +257,13 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
         fallbackMinBytesSlider.value = settings.fallbackMinBytes.toString();
         if (fallbackMinBytesValue) fallbackMinBytesValue.textContent = settings.fallbackMinBytes.toString();
     }
+    // PBI 05 overcut guards
+    if (fallbackMinCharsSlider) {
+        fallbackMinCharsSlider.value = settings.fallbackMinChars.toString();
+        if (fallbackMinCharsValue) fallbackMinCharsValue.textContent = settings.fallbackMinChars.toString();
+    }
+    if (guardCandidateCheckbox) guardCandidateCheckbox.checked = settings.candidateGuardEnabled;
+    if (guardCleanseCheckbox) guardCleanseCheckbox.checked = settings.cleanseGuardEnabled;
 
     // 有効/無効に応じて子チェックボックスの状態を更新
     updateAiSummaryCleansingCheckboxStates(settings.enabled);
@@ -284,7 +308,11 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
         bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10),
         fallbackRatio: parseInt((document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement)?.value || '20', 10) / 100,
-        fallbackMinBytes: parseInt((document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement)?.value || '300', 10)
+        fallbackMinBytes: parseInt((document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement)?.value || '300', 10),
+        // PBI 05 overcut guards
+        fallbackMinChars: parseInt((document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement)?.value || '100', 10),
+        candidateGuardEnabled: (document.getElementById('extraction-guard-candidate-enabled') as HTMLInputElement)?.checked ?? true,
+        cleanseGuardEnabled: (document.getElementById('extraction-guard-content-cleanse-enabled') as HTMLInputElement)?.checked ?? true
     } as AiSummaryCleansingSettings;
 }
 
@@ -402,13 +430,31 @@ export function setupAiSummaryCleansingEventListeners(): void {
         }
     }
 
+    // PBI 05 overcut guard checkboxes (live-save like body protection;
+    // NOT preset-rule edits → no switchToCustomIfNeeded)
+    const guardIds = [
+        'extraction-guard-candidate-enabled',
+        'extraction-guard-content-cleanse-enabled'
+    ];
+    for (const id of guardIds) {
+        const checkbox = document.getElementById(id) as HTMLInputElement;
+        if (checkbox) {
+            checkbox.addEventListener('change', async () => {
+                const settings = getAiSummaryCleansingSettingsFromUI();
+                await saveAiSummaryCleansingSettings(settings);
+            });
+        }
+    }
+
     const rangeConfigs = [
         { id: 'ai-summary-cleansing-link-ratio-threshold', valId: 'link-ratio-threshold-value' },
         { id: 'ai-summary-cleansing-short-text-threshold', valId: 'short-text-threshold-value' },
         { id: 'ai-summary-cleansing-short-seq-count', valId: 'short-seq-count-value' },
         { id: 'ai-summary-cleansing-link-para-threshold', valId: 'link-para-threshold-value' },
         { id: 'ai-summary-cleansing-body-protection-threshold', valId: 'ai-summary-cleansing-body-protection-threshold-value' },
-        { id: 'popup-body-protection-threshold', valId: 'popup-body-protection-threshold-value' }
+        { id: 'popup-body-protection-threshold', valId: 'popup-body-protection-threshold-value' },
+        // PBI 05 char floor
+        { id: 'ai-summary-cleansing-fallback-min-chars', valId: 'ai-summary-cleansing-fallback-min-chars-value' }
     ];
 
     for (const conf of rangeConfigs) {

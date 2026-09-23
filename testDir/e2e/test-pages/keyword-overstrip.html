@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>キーワード過剰削除の再現fixture — PBI 05</title>
+</head>
+<body>
+  <main>
+    <!--
+      PBI 05 ② 再現: 候補(article)のテキスト大半がキーワード一致要素
+      (class/id に 'login' を含む) に宿り、Content Cleansing がそれを丸ごと
+      削ると post/pre 比が fallbackRatio を割る。ガードはクレンジング前の
+      テキストへ復元する。
+    -->
+    <article id="answer">
+      <p>Oliveランク切替の手順について、短い導入をここに記載します。</p>
+      <div class="login-history" id="login-history">
+        <p>
+          login履歴とランク判定の関係について説明します。過去12か月間のlogin回数、
+          取引残高、および入出金の頻度がランク算出に反映されます。特にオンラインバンク
+          からのloginは通常取引と同等に加点され、年間を通じて安定した利用実績がある場合、
+          上位ランクへの切替対象となります。逆に、長期間loginがない場合はランク再判定の
+          対象になることがありますのでご注意ください。
+        </p>
+        <p>
+          login時に利用する認証情報の変更手続きもランク判定に影響しませんが、
+          定期的なパスワード更新はご利用状況の継続とみなされます。
+        </p>
+      </div>
+      <p>ご不明な点は当行までお問い合わせください。</p>
+    </article>
+  </main>
+</body>
+</html>

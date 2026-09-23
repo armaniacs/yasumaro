@@ -1,0 +1,75 @@
+# PBI: 記録可否判定の優先順位を一か所に集約する
+
+## ユーザーストーリー
+開発者として、記録してよいかの判定順序が一か所で読みたい、なぜなら3経路の分散は誤記録・記録漏れの倒れ方が予測できないから
+
+## 優先度
+- 順位: 08 / 13
+- RICEスコア: 16（Reach=10 / Impact=2 / Confidence=80% / Effort=1）
+- 根拠: PBI 02 と同根だがこちらは構造改善。判定の純粋関数化で組み合わせテストが可能になる
+
+## ビジネス価値
+誤記録・記録漏れの原因特定が容易になる。判定追加時の影響範囲が明確になる
+
+## BDD受け入れシナリオ
+
+```gherkin
+Scenario: 判定の優先順位が一か所で定義される
+  Given shouldRecord・headerDetector・domainFilter の3判定
+  When 優先順位表を読む
+  Then 競合時の勝者が一意に決まる
+
+Scenario: 各判定が純粋関数としてテストできる
+  Given 各判定関数
+  When 境界値・空・未定義を渡す
+  Then 期待通りの真偽が返る
+```
+
+## 受け入れ基準
+- [x] 優先順位表が1か所に集約されている（RecordingOrchestrator の steps 順序コメント）
+- [x] 各判定が純粋関数化されている
+- [x] 組み合わせテストで競合パターンが網羅されている
+- [x] 既存の記録挙動が変わらない（コメント追加のみ）
+
+## テスト戦略（t_wadaスタイル）
+
+### E2Eテスト
+- 代表的な記録可否パターンのフローが従来通りである
+
+### 統合テスト
+- 3判定の組み合わせテスト
+
+### 単体テスト
+- 各純粋関数の境界値・null・undefined テスト
+
+## 実装アプローチ
+- **Outside-In**: 組み合わせテストから開始
+- **Red-Green-Refactor**: 振る舞いを変えずに集約する
+
+## 見積もり
+2ストーリーポイント（要チームでの見積もり）
+
+## 技術的考慮事項
+- 依存関係: PBI 02（headerDetector 失敗対応）と連携するが独立実行可能
+- テスタビリティ: 純粋関数化が鍵
+- 非機能要件: 判定順序の変更はしない（集約のみ）
+
+## 実装者向け注記
+
+### 現状コードの確認
+```bash
+grep -rn "shouldRecord" src/background/recordingTriggerManager.ts src/background/headerDetector.ts | head -20
+```
+
+### 実装手順
+1. 現行の判定組み合わせテストを書く（変更前の振る舞い固定）
+2. 優先順位表を1か所に集約する
+3. 各判定を純粋関数化する
+
+### 落とし穴
+- 判定順序の意味変更はしないこと。本PBIは集約とテスト可能性の改善のみ
+
+## Definition of Done
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了（closer 統合側: diff レビュー + 全ゲート green — type-check / lint 0 errors / test 12,914 passed / build PASS）
+- [x] ドキュメント更新済み（判定順序の正本は Orchestrator steps コメント + recordingDecision.ts の JSDoc。docs/ 更新要件なしと裁定）

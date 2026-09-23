@@ -77,5 +77,7 @@ describe('OpenAIProvider: エラーハンドリング', () => {
     expect(result.summary).not.toContain('401');
     expect(result.summary).not.toContain('Detailed error message');
     expect(result.summary).not.toContain('OpenAI');
+    // Diagnostic channel carries the bare status (per-slot trail); summary stays clean.
+    expect(result.error).toBe('HTTP 401');
   });
 });

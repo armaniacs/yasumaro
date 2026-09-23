@@ -8,6 +8,7 @@ import { addLog } from '../../../utils/logger/core.js';
 import { TrustChecker } from '../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../notificationHelper.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { decideTrust } from '../recordingDecision.js';
 import type { RecordingContext, PipelineStepFunction, TrustCheckResult } from '../types.js';
 
 /**
@@ -22,7 +23,9 @@ export const checkTrustDomainStep: PipelineStepFunction = async (
   const trustChecker = new TrustChecker();
   const trustCheck = await trustChecker.checkDomain(url);
 
-  if (!trustCheck.canProceed && !force) {
+  // PBI 2026-09-19-08: verdict は recordingDecision.decideTrust に委譲
+  const verdict = decideTrust(trustCheck.canProceed, force);
+  if (!verdict.allow) {
     // Domain not trusted and no force flag
     addLog(LogType.WARN, 'Domain not trusted, recording blocked', {
       url,

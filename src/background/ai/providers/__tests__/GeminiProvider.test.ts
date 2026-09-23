@@ -49,6 +49,9 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(result.summary).toContain('Error:');
     expect(result.summary).not.toContain('404');
     expect(result.summary).not.toContain('Not found');
+    // Production path: fetchWithRetry throws "HTTP 404: Not Found" → the
+    // summary-flow catch carries it in the diagnostic error field.
+    expect(result.error).toContain('404');
   });
 
   it('omits raw response data on a generic error', async () => {
@@ -65,6 +68,7 @@ describe('GeminiProvider: エラーハンドリング', () => {
     expect(result.summary).not.toContain('400');
     expect(result.summary).not.toContain('Detailed error message');
     expect(result.summary).not.toContain('Invalid request');
+    expect(result.error).toContain('400');
   });
 
   it('returns an error without allowing path traversal when the model name contains /', async () => {

@@ -74,7 +74,9 @@ describe('hop 2 — gateway kind:search carries text into SQLITE_QUERY (PBI 2026
 
 // ── Hop 3: planQuery preserves text (offscreen → backend) ─────────────────
 
-import { planQuery } from '../../offscreen/queryPlanner.js';
+import { planQuery, planQueryOrSearch, planSearch, DEFAULT_SEARCH_LIMIT } from '../../offscreen/queryPlanner.js';
+import { DEFAULT_QUERY_LIMIT } from '../../offscreen/queryPlan.js';
+import { SQLITE_WIRE_DESCRIPTORS } from '../../messaging/sqliteWireTable.js';
 
 describe('hop 3 — planQuery preserves text (PBI 2026-09-12-43)', () => {
   it('text survives normalization + read policy', () => {
@@ -94,5 +96,31 @@ describe('hop 3 — planQuery preserves text (PBI 2026-09-12-43)', () => {
     expect(planned.text).toBe('研究所');
     expect(planned.domain).toBe('example.com');
     expect(planned.orderBy).toBe('rank');
+  });
+});
+
+describe('hop 4 — gateway search default limit pin (legacy-bridge Medium — FIXED in Phase 5)', () => {
+  // PBI 2026-09-21-20 intended "fts default 50 unified", but a limit-less
+  // search through the gateway (deps.search → SqliteClient → SQLITE_QUERY →
+  // handleSqliteWire('records') → planQuery) resolved to the LISTING default
+  // 100 — the search row's repoMethod ('search') was unreachable via the
+  // gateway. Phase 5 (Checking Team 2026-09-22): the search row's
+  // encodePayload now carries a `kind: 'search'` marker and the offscreen
+  // 'records' runner routes on it, so the gateway route lands on planSearch
+  // (50) — matching the wire-table comment and the direct SQLITE_SEARCH path.
+  it('gateway search resolves to the planner-owned search default 50', () => {
+    const op = SQLITE_WIRE_DESCRIPTORS.search.encodeOp('研究所');
+    const payload = SQLITE_WIRE_DESCRIPTORS.search.encodePayload(op);
+    expect(payload).not.toHaveProperty('limit');
+    expect(payload).toHaveProperty('kind', 'search');
+    // Offscreen SQLITE_QUERY routes the marker to planSearch (50).
+    expect(planQueryOrSearch(payload).limit).toBe(50);
+    expect(planQueryOrSearch(payload).limit).toBe(DEFAULT_SEARCH_LIMIT);
+  });
+
+  it('contrasts with the direct-search default 50 (planSearch)', () => {
+    expect(DEFAULT_SEARCH_LIMIT).toBe(50);
+    expect(DEFAULT_QUERY_LIMIT).toBe(100);
+    expect(planSearch({ query: '研究所' }).limit).toBe(50);
   });
 });

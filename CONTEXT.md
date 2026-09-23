@@ -26,7 +26,7 @@ Yasumaro のドメイン言語。コード・ドキュメント・PBI はこの�
 
 | 用語 | 説明 | 主な所在 |
 |------|------|---------|
-| **WASM コア** | `wasm/` 配下の Rust クレート。PII サニタイザ・TextRank・文冗長除去の計算主体 | `wasm/pii-sanitizer/` `wasm/textrank/` `wasm/sentence-dedup/` |
+| **WASM コア** | `wasm/` 配下の Rust クレート。PII サニタイザ・TextRank・文冗長除去・タグ共起の計算主体 + `js-strings` 共有 lib。一覧の所有者は `wasm/crates.json` (`crates` + `libCrates`) | `wasm/pii-sanitizer/` `wasm/textrank/` `wasm/sentence-dedup/` `wasm/tag-cooccur/` `wasm/js-strings/` |
 | **TS リファレンス** | WASM コアの移植元となる TypeScript 実装。フォールバックとパリティ検証の基準として残す | `src/utils/piiSanitizer.ts` ほか |
 | **ハイブリッド** | WASM コア成功経路 + TS リファレンス フォールバックのラッパー。初期化不可・引数域外・実行時エラーで TS へ落ちる | `*Hybrid.ts` |
 | **TextRank** | 文類似グラフ + PageRank で重要文を選ぶ L0 抽出圧縮 | `src/utils/sentenceExtractor.ts` |

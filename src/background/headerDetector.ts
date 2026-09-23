@@ -3,8 +3,10 @@ import type { RecordingCacheInstance } from './recordingCache.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logDebug, logError } from '../utils/logger/api.js';
 import { hashUrl } from '../utils/urlHash.js';
+import { normalizeUrlSafe } from '../utils/urlUtils.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { shouldProcessHeadersResponse } from './pipeline/recordingDecision.js';
 
 const MAX_CACHE_SIZE = 100;
 // VULN-003: cap the number of `privacyCache_<url>` keys persisted to session
@@ -51,23 +53,10 @@ export class HeaderDetector {
 
   /**
    * URL正規化（キャッシュキーの一貫性のため）
-   * - 末尾のスラッシュを削除
-   * - フラグメント（#...）を削除
-   *
-   * 状態を持たない純粋関数のため static のまま維持。
+   * SSOT の normalizeUrlSafe への委譲。状態を持たない純粋関数のため static のまま維持。
    */
   static normalizeUrl(url: string): string {
-    try {
-      const parsed = new URL(url);
-      parsed.hash = '';
-      let normalized = parsed.toString();
-      if (normalized.endsWith('/') && parsed.pathname !== '/') {
-        normalized = normalized.slice(0, -1);
-      }
-      return normalized;
-    } catch {
-      return url;
-    }
+    return normalizeUrlSafe(url);
   }
 
   /**
@@ -82,19 +71,19 @@ export class HeaderDetector {
     })();
 
     try {
-      // メインフレームのHTMLのみ処理
-      if (details.type !== 'main_frame') {
-        (async () => await logDebug('Skipping non-main_frame', { type: details.type, source: 'headerDetector' }))();
-        return;
-      }
-
-      // Content-Typeチェック（HTMLのみ）
+      // PBI 2026-09-19-08: main_frame + text/html の gate 判定は
+      // recordingDecision.shouldProcessHeadersResponse に委譲
       const contentType = details.responseHeaders?.find(
         (h: chrome.webRequest.HttpHeader) => h.name?.toLowerCase() === 'content-type'
       );
+      const gate = shouldProcessHeadersResponse(details.type, contentType?.value);
       (async () => await logDebug('Content-Type check', { contentType: contentType?.value || 'unknown', source: 'headerDetector' }))();
 
-      if (!contentType?.value?.includes('text/html')) {
+      if (!gate.process) {
+        if (gate.reason === 'non-main_frame') {
+          (async () => await logDebug('Skipping non-main_frame', { type: details.type, source: 'headerDetector' }))();
+          return;
+        }
         (async () => {
           const urlHash = await hashUrl(details.url);
           await logDebug('Skipping non-HTML response', {

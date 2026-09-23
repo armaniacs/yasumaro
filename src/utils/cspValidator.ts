@@ -10,9 +10,15 @@
 import { ErrorCode } from './logger/types.js';
 import { logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
+import { ALL_LIST_SOURCES } from './listSources.js';
 import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
-import { isAllowedProviderBaseUrl, PROVIDER_ALLOWLIST_ROWS } from './storage/providerAllowlist.js';
+import {
+  deriveConditionalCspEntries,
+  deriveRequiredDomains,
+  isAllowedProviderBaseUrl,
+  PROVIDER_ALLOWLIST_ROWS,
+} from './storage/providerAllowlist.js';
 
 class CspError extends Error {
     code: string;
@@ -25,70 +31,37 @@ class CspError extends Error {
 /**
  * デフォルトAIプロバイダードメイン（常に許可）
  *
- * wxt.config.ts の manifest `host_permissions`（AI_PROVIDER_HOST_PERMISSIONS）
- * と同一集合を維持する。ここに無いドメインは manifest 側で許可されていても
- * このバリデーターがブロックする（fail-closed）ため、manifest 側を更新したら
- * 必ずここも更新する。
+ * Derived from the neutral PROVIDER_ALLOWLIST_ROWS (required tier), which
+ * shares the set with wxt.config.ts manifest `host_permissions`
+ * (AI_PROVIDER_HOST_PERMISSIONS). Domains missing here are fail-closed
+ * blocked by this validator even when the manifest allows them.
  */
-const DEFAULT_ALLOWED_DOMAINS = [
-  'generativelanguage.googleapis.com', // Google Gemini
-  'api.openai.com', // OpenAI Official
-  'api.anthropic.com', // Anthropic Claude
-  'api.groq.com', // Groq
-  'mistral.ai', // Mistral (apex)
-  'api.mistral.ai', // Mistral (API endpoint)
-  'deepseek.com', // DeepSeek (apex)
-  'api.deepseek.com', // DeepSeek (API endpoint)
-  'voyageai.com', // Voyage
-  'volcengine.com', // Volcengine
-  'z.ai', // Z.AI
-  'wandb.ai', // Weights & Biases
-  'api.ai.sakura.ad.jp' // Sakura Internet AI API
-];
+const DEFAULT_ALLOWED_DOMAINS: string[] = deriveRequiredDomains();
 
 /**
  * AIプロバイダーID -> ドメインマッピング
+ *
+ * Derived from the neutral PROVIDER_ALLOWLIST_ROWS (conditionalCsp rows);
+ * the id set no longer needs hand-syncing with the domain table.
  */
-const PROVIDER_TO_DOMAIN: Record<string, string> = {
-  'huggingface': 'api-inference.huggingface.co',
-  'openrouter': 'api.openrouter.ai',
-  'perplexity': 'perplexity.ai',
-  'jina': 'jina.ai',
-  'deepinfra': 'deepinfra.com',
-  'cerebras': 'cerebras.ai',
-  'venice': 'api.venice.ai',
-  'scaleway': 'api.scaleway.ai',
-  'nano-gpt': 'nano-gpt.com',
-  'poe': 'api.poe.com',
-  'chutes': 'llm.chutes.ai',
-  'sarvam': 'api.sarvam.ai',
-  'nebius': 'nebius.com',
-  'sambanova': 'sambanova.ai',
-  'nscale': 'nscale.com',
-  'featherless': 'featherless.ai',
-  'galadriel': 'galadriel.com',
-  'recraft': 'recraft.ai',
-  'volcengine': 'volcengine.com',
-  'z-ai': 'z.ai',
-  'wandb': 'wandb.ai',
-  'helicone': 'ai-gateway.helicone.ai',
-  'publicai': 'api.publicai.co',
-  'synthetic': 'api.synthetic.new',
-  'stima': 'api.stima.tech',
-  'abliteration': 'api.abliteration.ai',
-  'llamagate': 'api.llamagate.dev',
-  'gmi': 'api.gmi-serving.com',
-  'xiaomimimo': 'xiaomimimo.com',
-  'sakura': 'api.ai.sakura.ad.jp'
-};
+const PROVIDER_TO_DOMAIN: Record<string, string> = Object.fromEntries(
+  deriveConditionalCspEntries().map((entry) => [entry.id, entry.domain]),
+);
 
 /**
  * 除外ドメイン（CSPから削除したが、optionalで許可できる）
+ *
+ * Derived from the LIST_SOURCES SSOT (PBI: Checking Team 2026-09-22 —
+ * Maintainability Medium). The two GitHub/GitLab hosts used to be
+ * hand-duplicated here; deriving keeps the optional set in sync when a
+ * list source is added/removed (the 4 remaining hosts below were already
+ * hand-written and are folded into the same derivation via
+ * FILTER_LIST_SOURCES + TRANCO_METADATA_SOURCE).
  */
-const OPTIONAL_DOMAINS = [
-  'raw.githubusercontent.com', // GitHub Raw Content (uBlock Import)
-  'gitlab.com' // GitLab (uBlock Import)
-];
+const LIST_SOURCE_HOSTS: ReadonlySet<string> = new Set(ALL_LIST_SOURCES.map((source) => source.host));
+const OPTIONAL_DOMAINS = ALL_LIST_SOURCES
+  .filter((source) => source.host === 'raw.githubusercontent.com' || source.host === 'gitlab.com')
+  .map((source) => source.host);
 
 /**
  * キュー内のリクエスト情報
@@ -256,11 +229,9 @@ export class CSPValidator {
         return true;
       }
 
-      // 非AIドメイン（Tranco, uBlock）
-      if (domain === 'tranco-list.eu' ||
-          domain === 'easylist.to' ||
-          domain === 'pgl.yoyo.org' ||
-          domain === 'nsfw.oisd.nl') {
+      // 非AIドメイン（Tranco, uBlock）— LIST_SOURCES SSOT から派生
+      // （Checking Team 2026-09-22: Maintainability Medium — 旧4ドメイン直書きを廃止）
+      if (LIST_SOURCE_HOSTS.has(domain)) {
         return true;
       }
 

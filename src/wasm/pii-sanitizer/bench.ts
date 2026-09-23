@@ -10,18 +10,15 @@
  * bench harness's node environment doesn't yet initialize.
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { sanitizeRegex } from '../../utils/piiSanitizer.js';
 import initWasmModule, { sanitizePii as sanitizePiiWasm } from './piiSanitizerWasm.js';
+import { initWasmForNode } from '../testing/initWasmForNode.js';
 
 // Node has no extension-page fetch(file://) support, unlike the Chrome
 // service worker / offscreen doc this module targets in production — read
 // the binary directly instead of going through initPiiSanitizerWasm().
 async function initForNode(): Promise<void> {
-    const wasmPath = fileURLToPath(new URL('./pii_sanitizer_bg.wasm', import.meta.url));
-    const bytes = await readFile(wasmPath);
-    await initWasmModule({ module_or_path: bytes });
+    await initWasmForNode(initWasmModule, new URL('./pii_sanitizer_bg.wasm', import.meta.url));
 }
 
 function sanitizePiiWithWasm(text: string): { text: string; maskedItems: unknown[] } {

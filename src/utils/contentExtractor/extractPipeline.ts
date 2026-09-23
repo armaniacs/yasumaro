@@ -159,6 +159,18 @@ export interface FallbackInput {
     aiSummaryOriginalBytes?: number | undefined;
     fallbackRatio: number;
     fallbackMinBytes: number;
+    /**
+     * PBI 05 ② pair — supplied ONLY when Content Cleansing ran on a
+     * candidate source (the caller gates on cleanseGuardEnabled too).
+     * Chars, never bytes: the hot path must not encode (Ask Q3B).
+     */
+    preCleanseText?: string | undefined;
+    preCleanseChars?: number | undefined;
+    postCleanseChars?: number | undefined;
+    /** Measured pre-② size — reused for diagnostics when ② restores. */
+    preCleanseBytes?: number | undefined;
+    /** Absolute floor in CHARS for the ② arm (Ask Q3B; default 100 mirrors isTooShort). */
+    fallbackMinChars?: number | undefined;
     /** Reads the live body text lazily — invoked only when body fallback wins. */
     readBodyText: () => string;
 }
@@ -180,9 +192,19 @@ export interface FallbackDecision {
 
 /**
  * THE single copy of the fallback policy shared by all extraction paths.
- * Short content (<100 non-blank chars) or over-cleansed content (below the
- * fallback ratio or absolute floor) falls back to the pre-AI text when
- * available, else to the live body text.
+ * Winner priority (PBI 05): ② content_overcut > ③ over_cleansed > 短文 body.
+ * Each arm only fires when its inputs are present, so omitting the new ②
+ * fields reproduces the legacy decision exactly (byte-identical pins).
+ *
+ * ② arm notes:
+ * - Gated by the caller to candidate sources only — a body-source restore
+ *   would ship raw `document.body.textContent` (script pollution), and the
+ *   live-body safety net already exists via the short_content arm.
+ * - The restore must itself reach the floor (`preCleanseChars >= minChars`),
+ *   otherwise restoring helps nothing and the body fallback is strictly better.
+ * - `usePreAiText: false` on the ② winner deliberately discards BOTH the ②
+ *   and ③ diagnostics (settleFallback's reset branch) — the restore undoes
+ *   everything after the pre-② text (binding: ② winner invalidates the ③ pair).
  */
 export function applyFallback(input: FallbackInput): FallbackDecision {
     const isTooShort = input.content.trim().length < 100;
@@ -193,8 +215,32 @@ export function applyFallback(input: FallbackInput): FallbackDecision {
             || input.contentBytes < input.fallbackMinBytes
         );
 
-    if (!isTooShort && !overCleansed) {
+    const minChars = input.fallbackMinChars ?? 100;
+    const preChars = input.preCleanseChars;
+    const postChars = input.postCleanseChars;
+    const overcut = input.preCleanseText !== undefined
+        && input.preCleanseText.length > 0
+        && preChars !== undefined
+        && postChars !== undefined
+        && preChars >= minChars
+        && (
+            postChars / preChars < input.fallbackRatio
+            || postChars < minChars
+        );
+
+    if (!isTooShort && !overCleansed && !overcut) {
         return { content: input.content, fallbackTriggered: false, usePreAiText: false };
+    }
+    if (overcut) {
+        // `overcut` implies preCleanseText is a non-empty string (checked above).
+        const restore = input.preCleanseText!;
+        return {
+            content: restore,
+            fallbackTriggered: true,
+            fallbackReason: 'content_overcut',
+            usePreAiText: false,
+            fallbackBytes: input.preCleanseBytes,
+        };
     }
     if (overCleansed && input.preAiCleanseText) {
         return {

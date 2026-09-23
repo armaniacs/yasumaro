@@ -9,25 +9,15 @@
  * piiSanitizeHybrid.wasm-success.test.ts と同じ二分パターン）。
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, test, expect, vi, beforeAll } from 'vitest';
 import initWasmModule from '../../wasm/sentence-dedup/sentenceDedupWasm.js';
 
 vi.mock('../../wasm/sentence-dedup/index.js', async () => {
-    const wasmPath = fileURLToPath(
+    const { createNodeWasmInit } = await import('../../wasm/testing/initWasmForNode.js');
+    const initSentenceDedupWasm = createNodeWasmInit(
+        initWasmModule,
         new URL('../../wasm/sentence-dedup/sentence_dedup_bg.wasm', import.meta.url)
     );
-    let initPromise: Promise<void> | null = null;
-
-    async function initSentenceDedupWasm(): Promise<void> {
-        if (!initPromise) {
-            initPromise = readFile(wasmPath).then(async (bytes) => {
-                await initWasmModule({ module_or_path: bytes });
-            });
-        }
-        return initPromise;
-    }
 
     const { deduplicateIndices } = await import(
         '../../wasm/sentence-dedup/sentenceDedupWasm.js'

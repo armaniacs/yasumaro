@@ -311,21 +311,24 @@ describe('handleDashboardSqlite — query', () => {
   });
 
   it.each([
-    ['negative', -1, 100],
-    ['zero', 0, 100],
-    ['non-integer', 0.5, 100],
-    ['huge', 1e9, 10000],
+    // PBI 2026-09-21-20: the dashboard hop is projection-only — limits pass
+    // through raw and the offscreen planner seam (planQuery + buildQuerySpec)
+    // owns clamping, mirroring the audit_log_query precedent below.
+    ['negative', -1, -1],
+    ['zero', 0, 0],
+    ['non-integer', 0.5, 0.5],
+    ['huge', 1e9, 1e9],
     ['normal', 50, 50],
-  ])('clamps limit=%s at the trust boundary (query)', async (_label, raw, expected) => {
+  ])('passes limit=%s through at the dashboard hop (planner clamps offscreen)', async (_label, raw, expected) => {
     const mock = createMockSqliteClient();
     await dispatchDashboardSqlite({ subtype: 'query', limit: raw as number }, mock as any);
     expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ limit: expected }));
   });
 
-  it('clamps a negative search limit to the search default (50)', async () => {
+  it('passes a negative search limit through — the planner owns the search default 50 (PBI 2026-09-21-20)', async () => {
     const mock = createMockSqliteClient();
     await dispatchDashboardSqlite({ subtype: 'search', query: 'x', limit: -1 }, mock as any);
-    expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ kind: 'search', limit: 50 }));
+    expect(mock.query).toHaveBeenCalledWith(expect.objectContaining({ kind: 'search', limit: -1 }));
   });
 
   it('passes the audit_log_query limit through — clamping moved to the offscreen planner seam (PBI 2026-09-12-17)', async () => {

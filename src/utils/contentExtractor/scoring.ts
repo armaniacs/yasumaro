@@ -85,52 +85,109 @@ export function scoreAndSort(
 }
 
 /**
+ * Result of a guarded candidate scan (PBI 05 ①).
+ *
+ * `rejectedTop` is the highest-scored candidate the floor rejected — carried
+ * only for diagnostics (transparent discard: candidate_bytes still measures
+ * what was thrown away), never fed to extraction.
+ */
+export interface CandidateScanResult {
+    candidates: Element[];
+    rejectedTop?: Element | undefined;
+}
+
+/**
+ * Adopt the first score-ordered candidate at or above the char floor.
+ * All-miss → empty list (caller joins the candidate-zero body branch).
+ * Off (`guardMinChars` undefined/<=0) → input order preserved untouched.
+ */
+function guardAdopt(sorted: Element[], guardMinChars: number | undefined): CandidateScanResult {
+    if (guardMinChars === undefined || guardMinChars <= 0 || sorted.length === 0) {
+        return { candidates: sorted };
+    }
+    const idx = sorted.findIndex((el) => (el.textContent || '').length >= guardMinChars);
+    if (idx === -1) {
+        return { candidates: [], rejectedTop: sorted[0] };
+    }
+    if (idx === 0) {
+        return { candidates: sorted };
+    }
+    const head = sorted[idx]!;
+    return { candidates: [head, ...sorted.filter((_, i) => i !== idx)] };
+}
+
+/**
+ * Score, apply the floor guard, slice to `take`, and propagate rejectedTop —
+ * the three scan branches differ only in `take`, so they share this step.
+ */
+function scanAndAdopt(candidates: Element[], guardMinChars: number | undefined, take: number): CandidateScanResult {
+  const sorted = scoreAndSort(candidates, candidates.length);
+  const res = guardAdopt(sorted, guardMinChars);
+  const adopted = res.candidates.slice(0, take);
+  return res.rejectedTop !== undefined
+    ? { candidates: adopted, rejectedTop: res.rejectedTop }
+    : { candidates: adopted };
+}
+
+/**
  * メインコンテンツの候補要素を抽出
+ *
+ * PBI 05: the optional floor is applied to the FULL score-ordered list BEFORE
+ * the take-slice — the article/main branch returns take=1, so scanning the
+ * returned list would never see rank 2+. `findMainContentCandidates()` keeps
+ * the legacy no-guard contract as a thin wrapper.
+ */
+export function scanMainContentCandidates(guardMinChars?: number): CandidateScanResult {
+  const candidates: Element[] = [];
+
+  // 優先ターゲット: article, main
+  const mainTags = document.querySelectorAll('article, main');
+  for (const tag of mainTags) {
+    if (!isExcludedElement(tag)) {
+      candidates.push(tag);
+    }
+  }
+
+  // 候補がある場合、最もスコアの高い要素を選択
+  if (candidates.length > 0) {
+    return scanAndAdopt(candidates, guardMinChars, 1);
+  }
+
+  // アジア圏のコンテンツ構造を検索
+  const allElements = document.querySelectorAll('div, section');
+  for (const elem of allElements) {
+    if (isAsianContentElement(elem) && !isExcludedElement(elem)) {
+      candidates.push(elem);
+    }
+  }
+
+  // アジアコンテンツが見つかった場合、スコア順にソートして返す
+  if (candidates.length > 0) {
+    return scanAndAdopt(candidates, guardMinChars, 3);
+  }
+
+  // 候補がない場合、階層的に探索
+  const body = document.body;
+  if (!body) {
+    return { candidates: [] };
+  }
+
+  // body直下の子要素を候補にする
+  const directChildren = Array.from(body.children).filter(
+    child => !isExcludedElement(child)
+  );
+
+  for (const child of directChildren) {
+    candidates.push(child);
+  }
+
+  // スコア順にソートし、上位3候補を返す
+  return scanAndAdopt(candidates, guardMinChars, 3);
+}
+
+/**
+ * レガシー契約: ガードなし候補抽出（take 後のスコア順リスト）。
  */
 export function findMainContentCandidates(): Element[] {
-    const candidates: Element[] = [];
-
-    // 優先ターゲット: article, main
-    const mainTags = document.querySelectorAll('article, main');
-    for (const tag of mainTags) {
-        if (!isExcludedElement(tag)) {
-            candidates.push(tag);
-        }
-    }
-
-    // 候補がある場合、最もスコアの高い要素を選択
-    if (candidates.length > 0) {
-        return scoreAndSort(candidates, 1);
-    }
-
-    // アジア圏のコンテンツ構造を検索
-    const allElements = document.querySelectorAll('div, section');
-    for (const elem of allElements) {
-        if (isAsianContentElement(elem) && !isExcludedElement(elem)) {
-            candidates.push(elem);
-        }
-    }
-
-    // アジアコンテンツが見つかった場合、スコア順にソートして返す
-    if (candidates.length > 0) {
-        return scoreAndSort(candidates, 3);
-    }
-
-    // 候補がない場合、階層的に探索
-    const body = document.body;
-    if (!body) {
-        return [];
-    }
-
-    // body直下の子要素を候補にする
-    const directChildren = Array.from(body.children).filter(
-        child => !isExcludedElement(child)
-    );
-
-    for (const child of directChildren) {
-        candidates.push(child);
-    }
-
-    // スコア順にソートし、上位3候補を返す
-    return scoreAndSort(candidates, 3);
+    return scanMainContentCandidates().candidates;
 }

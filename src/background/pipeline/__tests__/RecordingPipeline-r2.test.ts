@@ -44,9 +44,12 @@ vi.mock('../../../utils/storage/quota.js');
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
 }));
-vi.mock('../../../utils/pendingStorage.js', () => ({
-  addPendingPage: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../../utils/pendingStorage.js', async (importOriginal) => {
+  // PBI 2026-09-21-28: keep the real buildPendingPage (pure assembly) and
+  // mock only the storage I/O — the step now delegates assembly to it.
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, addPendingPage: vi.fn().mockResolvedValue(undefined) };
+});
 vi.mock('../../../utils/urlHash.js', () => ({ hashUrl: vi.fn().mockResolvedValue('mocked-hash') }));
 vi.mock('../../../utils/storageUrls.js');
 vi.mock('../../../utils/domainUtils.js');

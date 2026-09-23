@@ -40,6 +40,7 @@ export const SCHEMA_SQL = `
     extracted_sentences_bytes INTEGER,
     extracted_sentences_original_bytes INTEGER,
     fallback_triggered INTEGER DEFAULT 0,
+    fallback_reason TEXT,
     UNIQUE(url, created_at)
   );
 
@@ -99,6 +100,7 @@ export const COLUMN_NAMES = [
   'extracted_sentences_bytes',
   'extracted_sentences_original_bytes',
   'fallback_triggered',
+  'fallback_reason',
 ] as const;
 
 const INSERT_COLS = COLUMN_NAMES.join(', ');
@@ -127,6 +129,7 @@ export const UPDATABLE_FIELDS = [
   'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
   'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
   'fallback_triggered',
+  'fallback_reason',
 ];
 
 /** INSERT OR IGNORE (for insertBatch() and migration). */
@@ -235,6 +238,8 @@ export interface InsertableRecord {
   extracted_sentences_bytes?: number | null;
   extracted_sentences_original_bytes?: number | null;
   fallback_triggered?: number | null;
+  /** PBI 05: フォールバック発動理由 */
+  fallback_reason?: string | null;
 }
 
 /**
@@ -281,6 +286,7 @@ export function buildInsertParams(
     record.extracted_sentences_bytes ?? null,
     record.extracted_sentences_original_bytes ?? null,
     record.fallback_triggered ?? 0,
+    record.fallback_reason ?? null,
   ];
 }
 
@@ -322,6 +328,7 @@ export interface InsertRecordFields {
   extracted_sentences_bytes: number | null;
   extracted_sentences_original_bytes: number | null;
   fallback_triggered: number;
+  fallback_reason: string | null;
 }
 
 /**
@@ -366,6 +373,7 @@ export function buildInsertRecordFields(
     extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
     extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
     fallback_triggered: record.fallback_triggered ?? 0,
+    fallback_reason: record.fallback_reason ?? null,
   };
 }
 
@@ -433,6 +441,8 @@ export const MIGRATION_COLUMNS = [
   'extracted_sentences_bytes INTEGER',
   'extracted_sentences_original_bytes INTEGER',
   'fallback_triggered INTEGER DEFAULT 0',
+  // PBI 05: フォールバック発動理由
+  'fallback_reason TEXT',
 ] as const;
 
 /** Ordered sequence of one-off migrations. */

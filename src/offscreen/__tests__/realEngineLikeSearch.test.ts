@@ -22,7 +22,8 @@ const CREATE_TABLE =
      created_at INTEGER, domain TEXT,
      visit_duration INTEGER, scroll_ratio REAL,
      is_starred INTEGER DEFAULT 0, is_deleted INTEGER DEFAULT 0,
-     obsidian_synced INTEGER DEFAULT 0, gist_synced INTEGER DEFAULT 0
+     obsidian_synced INTEGER DEFAULT 0, gist_synced INTEGER DEFAULT 0,
+     fallback_reason TEXT
    )`;
 
 function makeDb(): Database.Database {

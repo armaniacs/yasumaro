@@ -44,6 +44,8 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   GENERATE_REVIEW_SUMMARY: 'extension-only',
   LOG_FORWARD: 'extension-only',
   DASHBOARD_SQLITE: 'extension-only',
+  // PBI 2026-09-22-04: dashboard-only regenerate (explicit force opt-in path).
+  REGENERATE_SUMMARY: 'extension-only',
 };
 
 function makeDeps(): MessageRouterDeps {
@@ -55,6 +57,7 @@ function makeDeps(): MessageRouterDeps {
     aiService: { testConnection: async () => ({ success: true, message: 'ok', providers: [] }) },
     manualRecordDeps: {} as never,
     saveRecordDeps: {} as never,
+    regenerateDeps: {} as never,
     hasPrivacyConsent: async () => true,
     buildAllowedUrls: () => new Set(),
     getSettings: async () => ({}),

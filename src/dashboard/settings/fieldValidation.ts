@@ -5,6 +5,7 @@
  */
 
 import { getMessage } from '../../utils/i18n.js';
+import { validateObsidianPort } from '../../utils/obsidianConfigValidator.js';
 
 export type ErrorPair = [HTMLInputElement | null, string];
 
@@ -98,8 +99,11 @@ export function validateProtocol(input: HTMLInputElement): boolean {
  * @returns {boolean} 有効な場合はtrue
  */
 export function validatePort(input: HTMLInputElement): boolean {
-    const v = parseInt(input.value.trim(), 10);
-    if (isNaN(v) || v < 1 || v > 65535) {
+    // Single ownership: dashboard defers to validateObsidianPort so UI and
+    // connection test can never disagree on what a valid port is.
+    try {
+        validateObsidianPort(input.value.trim());
+    } catch {
         setFieldError(input, 'portError', getMessage('errorPort'));
         return false;
     }

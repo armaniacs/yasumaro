@@ -30,6 +30,8 @@ export const ServiceTokens = {
   autoSavedBadgeTabs: 'autoSavedBadgeTabs',
   manualRecordDeps: 'manualRecordDeps',
   saveRecordDeps: 'saveRecordDeps',
+  regenerateContentFetcher: 'regenerateContentFetcher',
+  regenerateDeps: 'regenerateDeps',
   messageRouter: 'messageRouter',
   perUrlMutexMap: 'perUrlMutexMap',
 } as const;

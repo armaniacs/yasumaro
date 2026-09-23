@@ -22,6 +22,11 @@ pub fn is_word_byte(b: u8) -> bool {
 /// with a full-width (U+3000) or non-breaking (U+00A0) space is masked by
 /// the TS reference and would silently leak if only ASCII whitespace were
 /// accepted here.
+///
+/// The member set is single-sourced from the shared js-strings crate
+/// (`is_js_ws_code`, PBI 2026-09-21-24); the byte-width table below is the
+/// UTF-8 machinery, pinned to that set by the exhaustive test at the bottom
+/// of this file.
 pub fn js_ws_len(bytes: &[u8], pos: usize) -> usize {
     if pos >= bytes.len() {
         return 0;
@@ -106,4 +111,32 @@ pub fn luhn_valid(digits: &str) -> bool {
 pub struct Match {
     pub end: usize,
     pub kind: &'static str,
+}
+
+#[cfg(test)]
+mod js_ws_ssot_tests {
+    use super::js_ws_len;
+    use js_strings::is_js_ws_code;
+
+    /// PBI 2026-09-21-24: the byte-width matcher must accept EXACTLY the
+    /// canonical JS `\s` set owned by the shared js-strings crate. The
+    /// exhaustive sweep over all scalars means a `\s` membership edit in
+    /// either crate turns this red instead of leaking silently.
+    #[test]
+    fn js_ws_len_accepts_exactly_the_canonical_js_ws_set() {
+        for cp in 0u32..=0x10FFFF {
+            let Some(c) = char::from_u32(cp) else { continue }; // surrogates cannot appear in &str
+            let mut buf = [0u8; 4];
+            let encoded = c.encode_utf8(&mut buf).as_bytes();
+            let accepted = js_ws_len(encoded, 0);
+            assert_eq!(
+                accepted > 0,
+                is_js_ws_code(cp),
+                "js_ws_len vs canonical set disagree at U+{cp:04X}"
+            );
+            if accepted > 0 {
+                assert_eq!(accepted, encoded.len(), "byte width mismatch at U+{cp:04X}");
+            }
+        }
+    }
 }

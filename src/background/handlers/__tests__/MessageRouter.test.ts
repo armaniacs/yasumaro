@@ -25,6 +25,13 @@ function makeDeps() {
       getSettings: vi.fn().mockResolvedValue({}),
       setUrlContent: vi.fn(),
     },
+    regenerateDeps: {
+      isRecordingAllowed: vi.fn().mockResolvedValue(true),
+      checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+      fetchExtracted: vi.fn().mockResolvedValue({ content: 'extracted' }),
+      recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) },
+      getSettings: vi.fn().mockResolvedValue({}),
+    },
     hasPrivacyConsent: vi.fn().mockResolvedValue(true),
     buildAllowedUrls: vi.fn().mockReturnValue(new Set()),
     getSettings: vi.fn().mockResolvedValue({}),
@@ -55,8 +62,8 @@ describe('MessageRouter — deep module single seam dispatch(msg)', () => {
     router = createMessageRouter(makeDeps());
   });
 
-  it('dispatch hides 19 handlers behind one method', () => {
-    expect(router.getHandlerCount()).toBe(19);
+  it('dispatch hides 20 handlers behind one method', () => {
+    expect(router.getHandlerCount()).toBe(20);
     // Caller only knows dispatch, not register/trust/validator
     expect(typeof router.dispatch).toBe('function');
   });
@@ -90,5 +97,63 @@ describe('MessageRouter — deep module single seam dispatch(msg)', () => {
     const prodRouter = createMessageRouter(makeDeps());
     const testRouter = createMessageRouter(makeDeps());
     expect(prodRouter.getHandlerCount()).toBe(testRouter.getHandlerCount());
+  });
+});
+
+describe('MessageRouter — REGENERATE_SUMMARY seam (PBI 2026-09-22-04)', () => {
+  it('dispatches a valid message via the seam (handled=true, handler runs)', async () => {
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const handled = router.dispatch(
+      {
+        type: 'REGENERATE_SUMMARY',
+        payload: { id: 7, url: 'https://example.com', title: 'T', cleanseMode: 'looser' },
+        protocolVersion: 1,
+      },
+      { id: 'test-id' } as chrome.runtime.MessageSender,
+      sendResponse,
+    );
+    expect(handled).toBe(true);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(deps.regenerateDeps.fetchExtracted).toHaveBeenCalledWith('https://example.com', 'looser');
+    expect(deps.regenerateDeps.recordingPipeline.record).toHaveBeenCalledTimes(1);
+    expect(sendResponse).toHaveBeenCalledWith({ success: true });
+    expect(router.getTrustLevel('REGENERATE_SUMMARY')).toBe('extension-only');
+  });
+
+  it('rejects an invalid cleanseMode behind the seam (handled=false)', () => {
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const handled = router.dispatch(
+      {
+        type: 'REGENERATE_SUMMARY',
+        payload: { id: 7, url: 'https://example.com', title: 'T', cleanseMode: 'bogus' },
+        protocolVersion: 1,
+      },
+      { id: 'test-id' } as chrome.runtime.MessageSender,
+      sendResponse,
+    );
+    expect(handled).toBe(false);
+    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+    expect(deps.regenerateDeps.fetchExtracted).not.toHaveBeenCalled();
+  });
+
+  it('blocks an external extension sender (extension-only trust)', () => {
+    const deps = makeDeps();
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const handled = router.dispatch(
+      {
+        type: 'REGENERATE_SUMMARY',
+        payload: { id: 7, url: 'https://example.com', title: 'T', cleanseMode: 'current' },
+        protocolVersion: 1,
+      },
+      { id: 'other-extension' } as chrome.runtime.MessageSender,
+      sendResponse,
+    );
+    expect(handled).toBe(false);
+    expect(deps.regenerateDeps.fetchExtracted).not.toHaveBeenCalled();
   });
 });

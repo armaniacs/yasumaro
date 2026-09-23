@@ -4,7 +4,7 @@
  * ContentKernel owns one instance; tests inject a fake sender and extractor.
  */
 
-import type { PageState } from './pageState.js';
+import type { PageState, CleansingConfig } from './pageState.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -37,6 +37,8 @@ export interface VisitStats {
   byteStats: VisitByteStats;
   aiStats: VisitAiStats;
   fallbackTriggered: boolean;
+  /** PBI 05: 発動理由（未発動時は undefined） */
+  fallbackReason: string | undefined;
 }
 
 /**
@@ -61,6 +63,7 @@ export function buildVisitStats(pageState: PageState): VisitStats {
       aiSummaryCleansedReasons: ai.aiSummaryCleansedReasons,
     },
     fallbackTriggered: pageState.lastFallbackTriggered,
+    fallbackReason: pageState.lastFallbackReason,
   };
 }
 
@@ -110,8 +113,13 @@ export interface MessageSender {
 
 export interface VisitReporterDeps {
     pageState: PageState;
-    extractor: () => ExtractResult;
-    applyResult: (r: ExtractResult) => void;
+    /**
+     * PBI 2026-09-21-30: the ONLY extraction route. The reporter delegates
+     * extract+commit atomically and holds no sequencing knowledge — the
+     * extract/apply pair fallback was retired, so there is no second path
+     * to choose and no commit to forget.
+     */
+    extractAndCommit: (config?: CleansingConfig) => ExtractResult;
     sender: MessageSender;
     /** Injected for tests; defaults to real privacyDialog */
     confirmDialog?: (statusCode: string, reasonLabel: string) => Promise<boolean>;
@@ -154,7 +162,7 @@ export class VisitReporter {
     }
 
     private async attempt(retryLeft = 1): Promise<void> {
-        const { pageState, extractor, applyResult, sender } = this.deps;
+        const { pageState, sender } = this.deps;
         void logInfo('Sending VALID_VISIT', {}, 'visitReporter');
         console.info('[OWeave] VALID_VISIT 送信開始');
 
@@ -163,8 +171,9 @@ export class VisitReporter {
         // reads via performance.getEntriesByName. No-op when Performance is
         // unavailable (some test doubles).
         benchMark('ow-extract-start');
-        const extractResult = extractor();
-        applyResult(extractResult);
+        // PBI 2026-09-21-30: single route — extract+commit is atomic inside
+        // the kernel, so no fallback branch and no sequencing knowledge here.
+        const extractResult = this.deps.extractAndCommit();
         const content = extractResult.content;
         benchMark('ow-send-ready');
 

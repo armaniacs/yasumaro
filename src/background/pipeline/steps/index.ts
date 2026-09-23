@@ -15,4 +15,4 @@ export { formatMarkdownStep } from './formatMarkdownStep.js';
 export { saveToObsidianStep } from './saveToObsidianStep.js';
 export { saveLocalMarkdownStep } from './saveLocalMarkdownStep.js';
 export { saveMetadataStep } from './saveMetadataStep.js';
-export { saveSqliteStep } from './saveSqliteStep.js';
+export { saveSqliteStep, RegenerateUpdateError } from './saveSqliteStep.js';

@@ -1,0 +1,101 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`skeleton pin: IdbVfsBackend search (same input, same rows/counts; error policy stays) > FTS path returns same rows/counts as opfs for same input 1`] = `
+{
+  "params": [
+    ""hello query text"",
+    ""news"",
+  ],
+  "sql": "SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)",
+}
+`;
+
+exports[`skeleton pin: IdbVfsBackend search (same input, same rows/counts; error policy stays) > FTS path returns same rows/counts as opfs for same input 2`] = `
+{
+  "params": [
+    ""hello query text"",
+    ""news"",
+    20,
+    0,
+  ],
+  "sql": "SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?) ORDER BY rank LIMIT ? OFFSET ?",
+}
+`;
+
+exports[`skeleton pin: IdbVfsBackend search (same input, same rows/counts; error policy stays) > LIKE path returns same rows/counts as opfs for same input 1`] = `
+{
+  "params": [
+    "%ai%",
+    "%ai%",
+    "%ai%",
+    "%ai%",
+    "%news%",
+  ],
+  "sql": "SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ?",
+}
+`;
+
+exports[`skeleton pin: IdbVfsBackend search (same input, same rows/counts; error policy stays) > LIKE path returns same rows/counts as opfs for same input 2`] = `
+{
+  "params": [
+    "%ai%",
+    "%ai%",
+    "%ai%",
+    "%ai%",
+    "%news%",
+    20,
+    0,
+  ],
+  "sql": "SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+}
+`;
+
+exports[`skeleton pin: opfsWorker FTS path (text+tag) > emits byte-stable count/rows SQL+params and maps rows via mapNamed 1`] = `
+{
+  "params": [
+    ""hello"",
+    ""news"",
+  ],
+  "sql": "SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?)",
+}
+`;
+
+exports[`skeleton pin: opfsWorker FTS path (text+tag) > emits byte-stable count/rows SQL+params and maps rows via mapNamed 2`] = `
+{
+  "params": [
+    ""hello"",
+    ""news"",
+    20,
+    0,
+  ],
+  "sql": "SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND is_deleted = 0 AND b.id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH ?) ORDER BY b.created_at DESC, b.id DESC LIMIT ? OFFSET ?",
+}
+`;
+
+exports[`skeleton pin: opfsWorker LIKE path (text+tag) > emits byte-stable count/rows SQL+params and maps rows via mapNamed 1`] = `
+{
+  "params": [
+    "%hel%",
+    "%hel%",
+    "%hel%",
+    "%hel%",
+    "%news%",
+  ],
+  "sql": "SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ?",
+}
+`;
+
+exports[`skeleton pin: opfsWorker LIKE path (text+tag) > emits byte-stable count/rows SQL+params and maps rows via mapNamed 2`] = `
+{
+  "params": [
+    "%hel%",
+    "%hel%",
+    "%hel%",
+    "%hel%",
+    "%news%",
+    20,
+    0,
+  ],
+  "sql": "SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason FROM browsing_logs WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) AND is_deleted = 0 AND tags LIKE ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+}
+`;
