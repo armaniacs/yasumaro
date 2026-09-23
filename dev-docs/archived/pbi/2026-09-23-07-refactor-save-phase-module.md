@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `save(context, deps)` が唯一 Seam になり、手書き retry 配列と closure 注入が消える
-- [ ] 既存の保存系テストが無修正で緑（語義不変の証明）
-- [ ] 保存行列（4 sink×有無×retry）の単体テストが Seam に対して追加される
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `save(context, deps)` が唯一 Seam になり、手書き retry 配列と closure 注入が消える
+- [x] 既存の保存系テストが無修正で緑（語義不変の証明）
+- [x] 保存行列（4 sink×有無×retry）の単体テストが Seam に対して追加される
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- `savePhase.ts` を新設（SAVE_FAN_OUT 表 4 行・`save(context, deps) → SaveReceipt`）。retryProjection は手書き部分集合と名前・strategy・offlineRetry メタデータが完全一致。closure 注入を廃し、sqlite 欠如 skip を明示エラー様式（SqliteClientAbsentError）に。
+- 検証: type-check / pipeline 40 ファイル 447 テスト緑（既存 18 ファイルは無修正）。

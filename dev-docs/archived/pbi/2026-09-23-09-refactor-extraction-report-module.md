@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `extract(config) → { content, report }` が公開 interface になり、`withDiagnostics` と非対称 flag が消える
-- [ ] kernel の手コピーが `applyReport(report)` 1 呼び出しになる
-- [ ] 診断政策が約 8 report レベルテストに pin される
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `extract(config) → { content, report }` が公開 interface になり、`withDiagnostics` と非対称 flag が消える
+- [x] kernel の手コピーが `applyReport(report)` 1 呼び出しになる
+- [x] 診断政策が約 8 report レベルテストに pin される
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- `extractionReport.ts` を新設（opaque report＋Builder）。kernel の 22 行手コピーは `applyReport(report)` 1 呼び出しに。`pageContentPipeline.ts` はスコープ外のため report→legacy 境界変換のまま（次 PBI の自然な対象として記録）。
+- 検証: type-check / extractor+content 44 ファイル 846 テスト緑（既存は無修正）。
