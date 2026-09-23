@@ -2,12 +2,12 @@
  * tagClusterPanel.ts (PanelLifecycle)
  * Renders a tag cooccurrence graph (nodes + edges) as SVG in the dashboard.
  *
- * The shared period filter (PBI 2026-09-24-02) is embedded with the 'all'
- * preset as default, which passes no since/until — the default queryLogs call
- * stays byte-identical to the pre-filter behavior. Unlike the domain-analysis
- * panel (explicit Run button in front of a paged 50k-row fetch), a selection
- * here refetches immediately: each load is a single capped 10000-row query,
- * the same cost as this panel's routine load.
+ * The shared period filter (PBI 2026-09-24-02) is embedded with the 'last7'
+ * preset as default (user decision 2026-09-24: all-time graphs are too noisy
+ * as a landing view). Unlike the domain-analysis panel (explicit Run button
+ * in front of a paged 50k-row fetch), a selection here refetches immediately:
+ * each load is a single capped 10000-row query, the same cost as this
+ * panel's routine load.
  */
 
 import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
@@ -40,7 +40,7 @@ export function createTagClusterPanel(): PanelLifecycle {
   let truncatedNotice: HTMLElement | null = null;
   let panZoomController: TagClusterPanZoomController | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  // 'all' = no bounds: the pre-filter default behavior.
+  // Fallback when no filter host exists: unbounded, like the pre-filter panel.
   let currentRange: PeriodRange = {};
   let loadSeq = 0;
   let filterReady = false;
@@ -187,7 +187,7 @@ export function createTagClusterPanel(): PanelLifecycle {
       const filterHost = container.querySelector('#tagClusterFilter');
       if (filterHost) {
         filterHandle = createPeriodFilter({
-          initialPreset: 'all',
+          initialPreset: 'last7',
           onChange: (range) => {
             currentRange = range;
             // WHY: auto-apply on selection — the PBI acceptance criteria

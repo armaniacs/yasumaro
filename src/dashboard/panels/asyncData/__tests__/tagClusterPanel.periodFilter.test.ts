@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 /**
- * tagClusterPanel period-filter wiring (PBI 2026-09-24-04):
- * (a) the default 'all' preset passes no since/until — the queryLogs call is
- *     byte-identical to the pre-filter { limit: 10000 };
+ * tagClusterPanel period-filter wiring (PBI 2026-09-24-04; default preset
+ * changed to 'last7' by user decision 2026-09-24):
+ * (a) the default 'last7' preset queries with ~7-day epoch-ms bounds;
  * (b) selecting a preset refetches immediately with the preset's epoch-ms
- *     bounds and re-renders the cluster;
+ *     bounds and re-renders the cluster; selecting 'all' restores the
+ *     unbounded query (byte-identical to the pre-filter { limit: 10000 });
  * (c) 0 rows under bounds shows the period-aware empty state, and returning
- *     to 'all' restores the generic message and the unbounded query.
+ *     to 'all' restores the generic message.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -101,12 +102,36 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     mockGetSqliteStatus.mockResolvedValue({ initialized: true });
   });
 
-  it("default 'all' queries without since/until and renders as before", async () => {
+  it("default 'last7' queries with ~7-day bounds and renders", async () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: makeEntries(20), total: 20 } });
+    const before = Date.now();
     const { panel, svg } = mountPanel();
     await panel.load?.();
+    const after = Date.now();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+    const args = lastQueryArgs();
+    expect(args.limit).toBe(10000);
+    expect(typeof args.since).toBe('number');
+    expect(typeof args.until).toBe('number');
+    expect(args.until as number).toBeGreaterThanOrEqual(before);
+    expect(args.until as number).toBeLessThanOrEqual(after);
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(7 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(7 * DAY_MS + 60_000);
+    expect(svg.querySelectorAll('circle.tag-cluster-node').length).toBeGreaterThan(0);
+  });
+
+  it("selecting 'all' restores the unbounded pre-filter query", async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: makeEntries(20), total: 20 } });
+    const { panel, container, svg } = mountPanel();
+    await panel.load?.();
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+
+    presetButton(container, 'all').click();
+    await flush();
+
+    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
     // Byte-identical to the pre-filter call: no since/until keys at all.
     expect(lastQueryArgs()).toEqual({ limit: 10000 });
     expect(svg.querySelectorAll('circle.tag-cluster-node').length).toBeGreaterThan(0);
@@ -118,7 +143,7 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     await panel.load?.();
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
 
-    presetButton(container, 'last7').click();
+    presetButton(container, 'last30').click();
     await flush();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(2);
@@ -127,9 +152,9 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     expect(typeof args.since).toBe('number');
     expect(typeof args.until).toBe('number');
     const span = (args.until as number) - (args.since as number);
-    const sevenDays = 7 * DAY_MS;
-    expect(span).toBeGreaterThanOrEqual(sevenDays - 60_000);
-    expect(span).toBeLessThanOrEqual(sevenDays + 60_000);
+    const thirtyDays = 30 * DAY_MS;
+    expect(span).toBeGreaterThanOrEqual(thirtyDays - 60_000);
+    expect(span).toBeLessThanOrEqual(thirtyDays + 60_000);
     // The reload ran to completion: loading overlay cleaned up, nodes rendered.
     expect(svg.querySelector('.tag-cluster-loading-overlay')).toBeNull();
     expect(svg.querySelectorAll('circle.tag-cluster-node').length).toBeGreaterThan(0);
@@ -139,10 +164,11 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
     const { panel, container, svg, emptyState } = mountPanel();
     await panel.load?.();
-    // 0 rows under 'all' already shows the generic empty state (existing behavior).
+    // 0 rows under the default 'last7' bounds already shows the
+    // period-aware empty state.
     expect(emptyState.hidden).toBe(false);
-    expect(emptyState.textContent).toBe('No tagged history yet.');
-    expect(emptyState.getAttribute('data-i18n')).toBe('tagClusterEmptyState');
+    expect(emptyState.getAttribute('data-i18n')).toBe('tagCluster_empty_period');
+    expect(emptyState.textContent).toBe('No records in the selected period. Try a wider range.');
 
     presetButton(container, 'last30').click();
     await flush();
@@ -151,7 +177,6 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     expect(lastQueryArgs().limit).toBe(10000);
     expect(emptyState.hidden).toBe(false);
     expect(emptyState.getAttribute('data-i18n')).toBe('tagCluster_empty_period');
-    expect(emptyState.textContent).toBe('No records in the selected period. Try a wider range.');
     expect(svg.querySelectorAll('circle.tag-cluster-node').length).toBe(0);
   });
 

@@ -4090,11 +4090,11 @@
     "description": "ヒートマップセル表示: 曜日・時間帯・件数"
   },
   "dashboardTimeHeatmapDescription": {
-    "message": "直近12ヶ月の曜日・時間帯ごとの記録件数です。",
+    "message": "選択した期間の曜日・時間帯ごとの記録件数です。",
     "description": "時間帯ヒートマップの説明"
   },
   "dashboardTimeHeatmapEmpty": {
-    "message": "直近12ヶ月に記録がありません。",
+    "message": "選択した期間に記録がありません。",
     "description": "時間帯ヒートマップの空状態"
   },
   "dashboardTimeHeatmapFri": {

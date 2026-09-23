@@ -144,15 +144,25 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     await expect(panel.load?.()).resolves.toBeUndefined();
   });
 
-  it("Run with the default 'all' preset queries without since/until and renders keyword nodes", async () => {
+  it("Run with the default 'last7' preset queries with ~7-day bounds and renders keyword nodes", async () => {
     mockQueryLogs.mockResolvedValue({
       data: { rows: makeRows([['Rust ownership', 'Data races prevented at compile time'], ['TypeScript tips', 'Conditional types explained']]), total: 2 },
     });
+    const before = Date.now();
     const { panel, runBtn, svg, excluded } = mountPanel();
     await panel.load?.();
+    const after = Date.now();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
-    expect(lastQueryArgs()).toEqual({ limit: 10000 });
+    const args = lastQueryArgs();
+    expect(args.limit).toBe(10000);
+    expect(typeof args.since).toBe('number');
+    expect(typeof args.until).toBe('number');
+    expect(args.until as number).toBeGreaterThanOrEqual(before);
+    expect(args.until as number).toBeLessThanOrEqual(after);
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(7 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(7 * DAY_MS + 60_000);
     const circles = svg.querySelectorAll('circle.tag-cluster-node');
     expect(circles.length).toBeGreaterThan(0);
     const texts = Array.from(svg.querySelectorAll('text.tag-cluster-text')).map((t) => t.textContent);
@@ -163,6 +173,26 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     expect(svg.getAttribute('aria-label')).toContain('rust');
   });
 
+  it("selecting 'all' then Run queries without since/until", async () => {
+    mockQueryLogs.mockResolvedValue({
+      data: { rows: makeRows([['Rust ownership', 'Borrow checker notes']]), total: 1 },
+    });
+    const { panel, container, runBtn } = mountPanel();
+    await panel.load?.();
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+
+    presetButton(container, 'all').click();
+    await flush();
+    // Explicit-apply: the preset click alone does not refetch.
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+
+    runBtn.click();
+    await flush();
+    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+    // Byte-identical to the pre-filter call: no since/until keys at all.
+    expect(lastQueryArgs()).toEqual({ limit: 10000 });
+  });
+
   it('changing the preset does NOT refetch; only Run applies the range', async () => {
     mockQueryLogs.mockResolvedValue({
       data: { rows: makeRows([['Rust ownership', 'Borrow checker notes']]), total: 1 },
@@ -171,7 +201,7 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     await panel.load?.();
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
 
-    presetButton(container, 'last7').click();
+    presetButton(container, 'last30').click();
     await flush();
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
 
@@ -183,8 +213,8 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     expect(typeof args.since).toBe('number');
     expect(typeof args.until).toBe('number');
     const span = (args.until as number) - (args.since as number);
-    expect(span).toBeGreaterThanOrEqual(7 * DAY_MS - 60_000);
-    expect(span).toBeLessThanOrEqual(7 * DAY_MS + 60_000);
+    expect(span).toBeGreaterThanOrEqual(30 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(30 * DAY_MS + 60_000);
   });
 
   it('shows the excluded-summary count notice for null and fallback-literal summaries', async () => {

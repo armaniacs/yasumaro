@@ -72,8 +72,7 @@ export function createWordClusterPanel(): PanelLifecycle {
   let runButton: HTMLButtonElement | null = null;
   let panZoomController: TagClusterPanZoomController | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  // 'all' = no bounds: the tag-cluster panel default, matching the
-  // pre-filter query shape ({ limit: 10000 }).
+  // Fallback when no filter host exists: unbounded, like the pre-filter panel.
   let currentRange: PeriodRange = {};
   let loadSeq = 0;
 
@@ -288,7 +287,10 @@ export function createWordClusterPanel(): PanelLifecycle {
 
       if (filterHost) {
         filterHandle = createPeriodFilter({
-          initialPreset: 'all',
+          // WHY: 'last7' as the landing view (user decision 2026-09-24) —
+          // an all-time keyword graph is too noisy to be useful at first
+          // sight; 'all' stays one click away.
+          initialPreset: 'last7',
           onChange: (range) => {
             // WHY: explicit apply (domain-analysis precedent) — keyword
             // extraction reruns client-side over the whole fetch, so a full
