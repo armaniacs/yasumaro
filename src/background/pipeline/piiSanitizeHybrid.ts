@@ -60,7 +60,7 @@ import type { MaskedItem } from '../../messaging/types.js';
 import { sanitizePiiWithWasm, initPiiSanitizerWasm } from '../../wasm/pii-sanitizer/index.js';
 import {
     createHybridProbe,
-    withWasmFallback,
+    runHybrid,
 } from '../../utils/wasmHybridRuntime.js';
 
 /**
@@ -126,18 +126,16 @@ function shapeItems(items: Array<{ type: string; original: string; index: number
  * call sites.
  */
 export async function sanitizePiiHybrid(text: string, options: SanitizeOptions = {}): Promise<SanitizeResult> {
-    if (!(await probe.isAvailable())) {
-        return sanitizeRegex(text, options);
-    }
-
-    // A WASM call failing at runtime (not just at init) is unexpected —
-    // fall back to TS-only for this call rather than propagating, since PII
-    // masking failing closed (throwing) would abort the whole recording
-    // pipeline for a WASM-specific fault. (A throwing TS fallback still
-    // propagates — e.g. match-count overflow fails closed.)
-    return withWasmFallback(
-        'PII WASM sanitize call failed, falling back to TS regex for this input',
-        async () => {
+    // A WASM call failing at runtime (not just at init) falls back to
+    // TS-only for this call rather than propagating, since PII masking
+    // failing closed (throwing) would abort the whole recording pipeline
+    // for a WASM-specific fault. (A throwing TS fallback still propagates
+    // — e.g. match-count overflow fails closed.)
+    return runHybrid({
+        probe,
+        fallbackMessage: 'PII WASM sanitize call failed, falling back to TS regex for this input',
+        mergeDefaults: () => options,
+        callWasm: async (opts) => {
             const wasmResult = await sanitizePiiWithWasm(text);
             // Per-core policy: reproduce sanitizeRegex's size-limit
             // rejection message (single-sourced from the shared runtime, see
@@ -146,11 +144,11 @@ export async function sanitizePiiHybrid(text: string, options: SanitizeOptions =
             // two-pass revision), with the input-size error attached and no
             // output truncation — the TS truncation path only ever applies
             // to inputs that passed the pre-scan size gate.
-            const inputSizeError = piiInputSizeError(text, options);
+            const inputSizeError = piiInputSizeError(text, opts);
             if (inputSizeError) {
                 return {
                     text: wasmResult.text,
-                    maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
+                    maskedItems: shapeItems(wasmResult.maskedItems, opts.includeIndices === true),
                     error: inputSizeError,
                 };
             }
@@ -161,16 +159,16 @@ export async function sanitizePiiHybrid(text: string, options: SanitizeOptions =
                     text: wasmResult.text.substring(0, MAX_OUTPUT_SIZE),
                     maskedItems: shapeItems(
                         wasmResult.maskedItems.filter((item) => item.index < MAX_OUTPUT_SIZE),
-                        options.includeIndices === true,
+                        opts.includeIndices === true,
                     ),
                     error: piiOutputTruncationError(),
                 };
             }
             return {
                 text: wasmResult.text,
-                maskedItems: shapeItems(wasmResult.maskedItems, options.includeIndices === true),
+                maskedItems: shapeItems(wasmResult.maskedItems, opts.includeIndices === true),
             };
         },
-        () => sanitizeRegex(text, options)
-    );
+        callTs: (opts) => sanitizeRegex(text, opts),
+    });
 }

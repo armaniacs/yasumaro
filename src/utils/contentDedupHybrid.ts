@@ -54,7 +54,7 @@ import {
     isWasmSafeF64,
     isWasmSafeU32,
     remapWasmIndices,
-    withWasmFallback,
+    runHybrid,
 } from './wasmHybridRuntime.js';
 
 const probe = createHybridProbe(
@@ -97,26 +97,24 @@ export async function deduplicateContentHybrid(
     text: string,
     options: DeduplicateOptions = {}
 ): Promise<string> {
-    if (!text || !text.trim()) {
-        return text;
-    }
-    // One shared defaults merge: the same defaults the TS reference applies,
-    // so the WASM call never sees different options than the fallback path.
-    const opts: Required<DeduplicateOptions> = { ...DEFAULT_OPTIONS, ...options };
-    if (opts.threshold === 0) {
-        return text;
-    }
-    if (
-        text.length < MIN_WASM_INPUT_CHARS ||
-        !isWasmSafeOptions(opts) ||
-        !(await probe.isAvailable())
-    ) {
-        return deduplicateContent(text, options);
-    }
-
-    return withWasmFallback(
-        'Sentence-dedup WASM call failed, falling back to TS for this input',
-        async () => {
+    return runHybrid({
+        probe,
+        fallbackMessage: 'Sentence-dedup WASM call failed, falling back to TS for this input',
+        // Same defaults the TS reference applies, so the WASM call never
+        // sees different options than the fallback path.
+        mergeDefaults: () => ({ ...DEFAULT_OPTIONS, ...options }),
+        earlyReturn: (opts) => {
+            if (!text || !text.trim()) {
+                return text;
+            }
+            if (opts.threshold === 0) {
+                return text;
+            }
+            return undefined;
+        },
+        isSafe: (opts) => isWasmSafeOptions(opts),
+        bypassWasm: () => text.length < MIN_WASM_INPUT_CHARS,
+        callWasm: async (opts) => {
             const result = await deduplicateIndicesWithWasm(text, opts);
             // Per-core splitter injection: the delimiter-bearing
             // `splitSentencesKeepDelimiters` split, verified against the
@@ -131,6 +129,6 @@ export async function deduplicateContentHybrid(
             }
             return indices.map((i) => parts[i]!.sentence + parts[i]!.delimiter).join('');
         },
-        () => deduplicateContent(text, options)
-    );
+        callTs: () => deduplicateContent(text, options),
+    });
 }
