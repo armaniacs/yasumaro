@@ -10,11 +10,8 @@
  * material as bytes (M3/VULN-010 posture preserved).
  */
 import { describe, it, expect, beforeEach } from 'vitest';
-import {
-    getConsentHmacKey,
-    generateHmacSignature,
-    verifyHmacSignature,
-} from '../hmacKeyStore.js';
+import { getConsentHmacKey } from '../hmacKeyStore.js';
+import { hmacSignerForKey } from '../hmacSigner.js';
 import { setDurableKeyStorageOverride } from '../durableKeyStore.js';
 
 // In-memory durable store shared across "restarts" — stands in for IndexedDB.
@@ -34,18 +31,18 @@ describe('hmacKeyStore restart persistence (durable KEK)', () => {
   it('consent signature survives a simulated browser restart', async () => {
     // Session 1: user consents — the record is signed with the session KEK.
     const key1 = await getConsentHmacKey();
-    const signature = await generateHmacSignature('consent-payload', key1);
+    const signature = await hmacSignerForKey(async () => key1, 'base64url').sign('consent-payload');
 
     // Simulated browser restart: the session store is wiped; chrome.storage.local
     // (the wrapped envelope) and the durable IndexedDB key store survive.
     await chrome.storage.session.clear();
     const key2 = await getConsentHmacKey();
-    expect(await verifyHmacSignature('consent-payload', signature, key2)).toBe(true);
+    expect(await hmacSignerForKey(async () => key2, 'base64url').verify('consent-payload', signature)).toBe(true);
   });
 
   it('falls back to a fresh key when the durable store is unavailable', async () => {
     const key1 = await getConsentHmacKey();
-    const signature = await generateHmacSignature('consent-payload', key1);
+    const signature = await hmacSignerForKey(async () => key1, 'base64url').sign('consent-payload');
 
     // Restart with a wiped session AND a lost durable store (e.g. profile
     // corruption): the old envelope cannot be unwrapped — the fail-open path
@@ -54,9 +51,9 @@ describe('hmacKeyStore restart persistence (durable KEK)', () => {
     durableStore.clear();
 
     const key2 = await getConsentHmacKey();
-    expect(await verifyHmacSignature('consent-payload', signature, key2)).toBe(false);
+    expect(await hmacSignerForKey(async () => key2, 'base64url').verify('consent-payload', signature)).toBe(false);
     // The new key still works for signing (self-healed).
-    const sig2 = await generateHmacSignature('consent-payload', key2);
-    expect(await verifyHmacSignature('consent-payload', sig2, key2)).toBe(true);
+    const sig2 = await hmacSignerForKey(async () => key2, 'base64url').sign('consent-payload');
+    expect(await hmacSignerForKey(async () => key2, 'base64url').verify('consent-payload', sig2)).toBe(true);
   });
 });

@@ -44,8 +44,6 @@ export {
     deriveHmacWrappingKey,
     getConsentHmacKey,
     getNotificationHmacKey,
-    generateHmacSignature,
-    verifyHmacSignature,
     notificationHmacSigner,
     consentHmacSigner,
     wrapSecretString,
