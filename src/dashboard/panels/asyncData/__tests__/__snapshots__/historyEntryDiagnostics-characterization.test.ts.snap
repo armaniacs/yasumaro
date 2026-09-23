@@ -1,0 +1,211 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — ai-summary-single-side 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="45.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 900 B (55.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — ai-summary-zero 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">Nothing to measure</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — blank-summary 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — cleansing-candidate-fallback 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="19.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 380 B (81.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — empty-no-ai 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement (recorded without AI)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — fallback-known 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="15.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 300 B (85.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — fallback-unknown 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="45.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 900 B (55.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — legacy-partial-unmeasured 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — masking-count-zero 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="76.0"></div></div>
+    <span class="cleansing-progress-label">500 B → 380 B (24.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — masking-tokens-only 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="76.0"></div></div>
+    <span class="cleansing-progress-label">500 B → 380 B (24.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — normal-full 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="0.2"></div></div>
+    <span class="cleansing-progress-label">2.2 MB → 800 B (99.9% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — tokens-provider-only 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — tokens-sent-only 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — xss-provider 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > buildCleansingProgressBarHtml — zero-bytes 1`] = `
+"<div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">Nothing to measure</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — ai-summary-single-side 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">100</span> (AI: openai)</div><div class="history-entry-token-reduction">Content Extraction — Bytes: 2.0 KB → 1000 B (Reduced -1000 / 50.0%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 1000 B → 900 B (Reduced -100 / 10.0%)</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="45.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 900 B (55.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — ai-summary-zero 1`] = `
+"<div class="history-entry-tokens">Tokens: Nothing to measure</div><div class="history-entry-token-reduction">Content Extraction — Nothing to measure</div><div class="history-entry-token-reduction">Content Cleansing — Nothing to measure</div><div class="history-entry-token-reduction">PII Masking — Nothing to measure</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: Nothing to measure</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">Nothing to measure</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — blank-summary 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">10</span> (AI: openai)</div><div class="history-entry-token-reduction">Content Extraction — No measurement</div><div class="history-entry-token-reduction">Content Cleansing — No measurement</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — cleansing-candidate-fallback 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">100</span> (AI: openai)</div><div class="history-entry-token-reduction">Content Extraction — Bytes: 2.0 KB → 500 B (Reduced -1500 / 75.0%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 500 B → 400 B (Reduced -100 / 20.0%)</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: 400 B → 380 B (Reduced -20 / 5.0%)</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="19.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 380 B (81.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — empty-no-ai 1`] = `
+"<div class="history-entry-tokens">Tokens: No measurement (recorded without AI)</div><div class="history-entry-token-reduction">Content Extraction — No measurement (recorded without AI)</div><div class="history-entry-token-reduction">Content Cleansing — No measurement (recorded without AI)</div><div class="history-entry-token-reduction">PII Masking — No measurement (recorded without AI)</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement (recorded without AI)</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement (recorded without AI)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — fallback-known 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">100</span> (AI: openai)</div><div class="history-entry-token-reduction">Content Extraction — Bytes: 2.0 KB → 1000 B (Reduced -1000 / 50.0%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 1000 B → 300 B (Reduced -700 / 70.0%)</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: 900 B → 800 B (Reduced -100 / 11.1%)</div><div class="history-entry-token-reduction">Fallback reason: Extracted text too short — fell back to body</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="15.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 300 B (85.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — fallback-unknown 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">100</span> (AI: openai)</div><div class="history-entry-token-reduction">Content Extraction — Bytes: 2.0 KB → 1000 B (Reduced -1000 / 50.0%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 1000 B → 900 B (Reduced -100 / 10.0%)</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: 900 B → 800 B (Reduced -100 / 11.1%)</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="45.0"></div></div>
+    <span class="cleansing-progress-label">2.0 KB → 900 B (55.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — legacy-partial-unmeasured 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">495</span>, <span class="token-label">Received:</span> <span class="token-value">49</span> (AI: openai)</div><div class="history-entry-token-reduction">Content Extraction — No measurement</div><div class="history-entry-token-reduction">Content Cleansing — No measurement</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — masking-count-zero 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">120</span>, <span class="token-label">Received:</span> <span class="token-value">12</span></div><div class="history-entry-token-reduction">Content Extraction — Bytes: 500 B → 400 B (Reduced -100 / 20.0%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 400 B → 400 B (Reduced 0 / 0.0%)</div><div class="history-entry-token-reduction">PII Masking — Detected: 0</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: 400 B → 380 B (Reduced -20 / 5.0%)</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="76.0"></div></div>
+    <span class="cleansing-progress-label">500 B → 380 B (24.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — masking-tokens-only 1`] = `
+"<div class="history-entry-tokens">Tokens: No measurement (recorded without AI)</div><div class="history-entry-token-reduction">Content Extraction — Bytes: 500 B → 400 B (Reduced -100 / 20.0%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 400 B → 400 B (Reduced 0 / 0.0%)</div><div class="history-entry-token-reduction">PII Masking — Tokens: 100 → 95</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: 400 B → 380 B (Reduced -20 / 5.0%)</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="76.0"></div></div>
+    <span class="cleansing-progress-label">500 B → 380 B (24.0% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — normal-full 1`] = `
+"<div class="history-entry-ai-summary">AI summary text</div><div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">1483</span>, <span class="token-label">Received:</span> <span class="token-value">49</span>, Processing time 1.2秒 (AI: openai / gpt-4o-mini)</div><div class="history-entry-token-reduction">Content Extraction — Bytes: 2.2 MB → 9.2 KB (Reduced -2290600 / 99.6%)</div><div class="history-entry-token-reduction">Content Cleansing — Bytes: 9.2 KB → 8.6 KB (Reduced -600 / 6.4%)</div><div class="history-entry-token-reduction">PII Masking — Detected: 2, Tokens: 1500 → 1483</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: 900 B → 800 B (Reduced -100 / 11.1%)</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar" data-bar-width="0.2"></div></div>
+    <span class="cleansing-progress-label">2.2 MB → 800 B (99.9% reduction)</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — tokens-provider-only 1`] = `
+"<div class="history-entry-tokens">AI: gemini / gemini-1.5-flash, Processing time 2.5秒</div><div class="history-entry-token-reduction">Content Extraction — No measurement</div><div class="history-entry-token-reduction">Content Cleansing — No measurement</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — tokens-sent-only 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">100</span></div><div class="history-entry-token-reduction">Content Extraction — No measurement</div><div class="history-entry-token-reduction">Content Cleansing — No measurement</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — xss-provider 1`] = `
+"<div class="history-entry-tokens">Tokens: <span class="token-label">Sent:</span> <span class="token-value">10</span>, <span class="token-label">Received:</span> <span class="token-value">5</span> (AI: &lt;svg onload=alert(1)&gt; / gpt-4)</div><div class="history-entry-token-reduction">Content Extraction — No measurement</div><div class="history-entry-token-reduction">Content Cleansing — No measurement</div><div class="history-entry-token-reduction">PII Masking — No measurement</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: No measurement</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">No measurement</span>
+  </div>"
+`;
+
+exports[`historyEntryDiagnostics characterization (pre-move pin) > formatDiagnosticMetadataHtml — zero-bytes 1`] = `
+"<div class="history-entry-tokens">Tokens: Nothing to measure</div><div class="history-entry-token-reduction">Content Extraction — Nothing to measure</div><div class="history-entry-token-reduction">Content Cleansing — Nothing to measure</div><div class="history-entry-token-reduction">PII Masking — Nothing to measure</div><div class="history-entry-ai-summary-cleansing">AI Summary Cleansing: Nothing to measure</div><div class="cleansing-progress-wrapper">
+    <div class="cleansing-progress"><div class="cleansing-progress-bar cleansing-progress-bar-missing" data-bar-width="0.0"></div></div>
+    <span class="cleansing-progress-label">Nothing to measure</span>
+  </div>"
+`;
