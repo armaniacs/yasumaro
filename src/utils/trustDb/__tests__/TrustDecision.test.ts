@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { TrustDecision } from '../TrustDecision.js';
+import { createLegacyTrustDecision } from './legacyTrustDecisionAdapter.js';
 import { getTrustPolicy, _resetTrustPolicyForTest } from '../TrustPolicy.js';
 import { _resetTrustDbAdminForTest } from '../TrustDbAdmin.js';
 
@@ -24,27 +25,27 @@ describe('TrustDecision — deep module via single seam isTrusted(url)', () => {
   });
 
   it('returns trusted true for trusted domain', async () => {
-    const td = new TrustDecision(makeTrustDbMock('trusted', 'tranco'), makePermissionMock(true));
+    const td = createLegacyTrustDecision(makeTrustDbMock('trusted', 'tranco'), makePermissionMock(true));
     const r = await td.isTrusted('https://example.com/path');
     expect(r.trusted).toBe(true);
     expect(r.level).toBe('trusted');
   });
 
   it('returns trusted false for permission denied (locality)', async () => {
-    const td = new TrustDecision(makeTrustDbMock('trusted'), makePermissionMock(false));
+    const td = createLegacyTrustDecision(makeTrustDbMock('trusted'), makePermissionMock(false));
     const r = await td.isTrusted('https://blocked.example.com');
     expect(r.trusted).toBe(false);
     expect(r.reason).toBe('permission_denied');
   });
 
   it('returns trusted false for unverified', async () => {
-    const td = new TrustDecision(makeTrustDbMock('unverified'), makePermissionMock(true));
+    const td = createLegacyTrustDecision(makeTrustDbMock('unverified'), makePermissionMock(true));
     const r = await td.isTrusted('https://unknown.example');
     expect(r.trusted).toBe(false);
   });
 
   it('returns invalid_domain for malformed url', async () => {
-    const td = new TrustDecision(makeTrustDbMock(), makePermissionMock(true));
+    const td = createLegacyTrustDecision(makeTrustDbMock(), makePermissionMock(true));
     const r = await td.isTrusted('not-a-url');
     expect(r.trusted).toBe(false);
     expect(r.reason).toBe('invalid_domain');
@@ -52,7 +53,7 @@ describe('TrustDecision — deep module via single seam isTrusted(url)', () => {
 
   it('addToAllowlist delegates to TrustDb via seam', async () => {
     const mockDb = makeTrustDbMock();
-    const td = new TrustDecision(mockDb, makePermissionMock(true));
+    const td = createLegacyTrustDecision(mockDb, makePermissionMock(true));
     const res = await td.addToAllowlist('example.com');
     expect(res.success).toBe(true);
     expect(mockDb.addToWhitelist).toHaveBeenCalledWith('example.com');
@@ -61,7 +62,7 @@ describe('TrustDecision — deep module via single seam isTrusted(url)', () => {
   it('hides 4-module round trip - caller only knows isTrusted', async () => {
     // Caller does not need to know about ManagedStringList, domainUtils, PermissionManager, TrustDb
     // Only TrustDecision is imported
-    const td = new TrustDecision(makeTrustDbMock('trusted'), makePermissionMock(true));
+    const td = createLegacyTrustDecision(makeTrustDbMock('trusted'), makePermissionMock(true));
     // Single seam call hides all internal modules
     const result = await td.isTrusted('https://example.com');
     expect(result).toHaveProperty('trusted');
@@ -110,7 +111,7 @@ describe('PBI-02 trust-policy orphan singleton fix', () => {
       isDomainTrusted: vi.fn(),
     } as unknown as import('../TrustDbAdmin.js').TrustDbAdmin;
 
-    const td = new TrustDecision(undefined, mockAdmin, makePermissionMock(true));
+    const td = new TrustDecision(mockAdmin, makePermissionMock(true));
 
     // Constructor must not have called getPolicy eagerly — lazy lookup only on isTrusted
     expect(mockAdmin.getPolicy).not.toHaveBeenCalled();
@@ -143,7 +144,7 @@ describe('PBI-02 trust-policy orphan singleton fix', () => {
       isDomainTrusted: vi.fn(),
     } as unknown as import('../TrustDbAdmin.js').TrustDbAdmin;
 
-    const td = new TrustDecision(undefined, mockAdmin, makePermissionMock(true));
+    const td = new TrustDecision(mockAdmin, makePermissionMock(true));
 
     const r1 = await td.isTrusted('https://example.com');
     expect(r1.trusted).toBe(true);
@@ -161,21 +162,21 @@ describe('PBI-02 trust-policy orphan singleton fix', () => {
   });
 
   it('Legacy 2-arg constructor still works (backward compat)', async () => {
-    const td = new TrustDecision(makeTrustDbMock('trusted', 'preset'), makePermissionMock(true));
+    const td = createLegacyTrustDecision(makeTrustDbMock('trusted', 'preset'), makePermissionMock(true));
     const r = await td.isTrusted('https://legacy.example.com');
     expect(r.trusted).toBe(true);
     expect(r.level).toBe('trusted');
   });
 
   it('Legacy 2-arg constructor with unverified still returns not trusted', async () => {
-    const td = new TrustDecision(makeTrustDbMock('unverified', 'unknown'), makePermissionMock(true));
+    const td = createLegacyTrustDecision(makeTrustDbMock('unverified', 'unknown'), makePermissionMock(true));
     const r = await td.isTrusted('https://unknown.example');
     expect(r.trusted).toBe(false);
   });
 
   it('Legacy 2-arg constructor delegates addToAllowlist via seam', async () => {
     const mockDb = makeTrustDbMock('trusted');
-    const td = new TrustDecision(mockDb, makePermissionMock(true));
+    const td = createLegacyTrustDecision(mockDb, makePermissionMock(true));
     const res = await td.addToAllowlist('legacy.example.com');
     expect(res.success).toBe(true);
     expect(mockDb.addToWhitelist).toHaveBeenCalledWith('legacy.example.com');
