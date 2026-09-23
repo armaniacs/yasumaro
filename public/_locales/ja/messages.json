@@ -2220,6 +2220,70 @@
     "message": "未計測: {percent}%（{total}件中{unmeasured}件）",
     "description": "Visit duration unmeasured ratio"
   },
+  "domainAnalysisTab": {
+    "message": "ドメイン分析",
+    "description": "Sidebar tab for domain analysis"
+  },
+  "domainAnalysis_title": {
+    "message": "ドメイン分析",
+    "description": "Domain analysis panel title"
+  },
+  "domainAnalysis_tagLabel": {
+    "message": "タグ（任意）",
+    "description": "Domain analysis tag filter label"
+  },
+  "domainAnalysis_tagAll": {
+    "message": "すべてのタグ（絞り込む場合はタグ名を入力）",
+    "description": "Domain analysis tag input placeholder"
+  },
+  "domainAnalysis_periodLabel": {
+    "message": "期間",
+    "description": "Domain analysis period filter label"
+  },
+  "domainAnalysis_run": {
+    "message": "集計",
+    "description": "Domain analysis run button"
+  },
+  "domainAnalysis_byDomainTitle": {
+    "message": "ドメイン別",
+    "description": "Domain analysis by-domain ranking heading"
+  },
+  "domainAnalysis_byUrlTitle": {
+    "message": "URL別",
+    "description": "Domain analysis by-URL ranking heading"
+  },
+  "domainAnalysis_domainColumn": {
+    "message": "ドメイン",
+    "description": "Domain analysis domain column header"
+  },
+  "domainAnalysis_urlColumn": {
+    "message": "URL",
+    "description": "Domain analysis URL column header"
+  },
+  "domainAnalysis_countColumn": {
+    "message": "件数",
+    "description": "Domain analysis count column header"
+  },
+  "domainAnalysis_empty": {
+    "message": "指定した期間・タグに一致する閲覧ログはありません。",
+    "description": "Domain analysis empty state"
+  },
+  "domainAnalysis_unknownDomain": {
+    "message": "（ドメイン不明）",
+    "description": "Domain analysis label for records without a domain"
+  },
+  "domainAnalysis_excludedNullDomainCount": {
+    "message": "ドメインが記録されていないレコードが{count}件あります（（ドメイン不明）として集計）。",
+    "description": "Domain analysis notice for records without a domain"
+  },
+  "domainAnalysis_truncated": {
+    "message": "上位{shown}件を表示（全{total}件）。",
+    "description": "Domain analysis top-N truncation notice"
+  },
+  "domainAnalysis_rowCap": {
+    "message": "集計上限の{max}件に達したため、一部のみを集計しています。",
+    "description": "Domain analysis pagination cap notice"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },
@@ -4360,5 +4424,8 @@
   },
   "warningTitle": {
     "message": "警告"
+  },
+  "tagCluster_empty_period": {
+    "message": "選択した期間にレコードがありません。範囲を広げて試してください。"
   }
 }

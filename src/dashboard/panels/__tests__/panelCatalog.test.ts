@@ -78,8 +78,8 @@ const SECTION_LABEL_TO_CATALOG: Record<string, string> = {
 };
 
 describe('panelCatalog — 単一ソース', () => {
-  it('declares 20 panels with no duplicate ids', () => {
-    expect(PANEL_CATALOG).toHaveLength(20);
+  it('declares 21 panels with no duplicate ids', () => {
+    expect(PANEL_CATALOG).toHaveLength(21);
     const ids = PANEL_CATALOG.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -104,6 +104,7 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-domain-search',
       'panel-time-heatmap',
       'panel-visit-duration',
+      'panel-domain-analysis',
       'panel-export-logs',
       'panel-export-import',
     ]);
@@ -125,7 +126,7 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
   const buttons = parseSidebarButtons();
 
   it('has one sidebar button per catalog sidebar panel, in catalog order', () => {
-    expect(SIDEBAR_PANELS).toHaveLength(20);
+    expect(SIDEBAR_PANELS).toHaveLength(21);
     expect(buttons.map((b) => b.panelId)).toEqual(SIDEBAR_PANELS.map((e) => e.id));
   });
 

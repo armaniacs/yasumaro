@@ -2302,6 +2302,70 @@
     "message": "Unmeasured: {percent}% ({unmeasured} of {total} records)",
     "description": "Visit duration unmeasured ratio"
   },
+  "domainAnalysisTab": {
+    "message": "Domain Analysis",
+    "description": "Sidebar tab for domain analysis"
+  },
+  "domainAnalysis_title": {
+    "message": "Domain Analysis",
+    "description": "Domain analysis panel title"
+  },
+  "domainAnalysis_tagLabel": {
+    "message": "Tag (optional)",
+    "description": "Domain analysis tag filter label"
+  },
+  "domainAnalysis_tagAll": {
+    "message": "All tags — enter a tag name to filter",
+    "description": "Domain analysis tag input placeholder"
+  },
+  "domainAnalysis_periodLabel": {
+    "message": "Period",
+    "description": "Domain analysis period filter label"
+  },
+  "domainAnalysis_run": {
+    "message": "Run",
+    "description": "Domain analysis run button"
+  },
+  "domainAnalysis_byDomainTitle": {
+    "message": "By domain",
+    "description": "Domain analysis by-domain ranking heading"
+  },
+  "domainAnalysis_byUrlTitle": {
+    "message": "By URL",
+    "description": "Domain analysis by-URL ranking heading"
+  },
+  "domainAnalysis_domainColumn": {
+    "message": "Domain",
+    "description": "Domain analysis domain column header"
+  },
+  "domainAnalysis_urlColumn": {
+    "message": "URL",
+    "description": "Domain analysis URL column header"
+  },
+  "domainAnalysis_countColumn": {
+    "message": "Count",
+    "description": "Domain analysis count column header"
+  },
+  "domainAnalysis_empty": {
+    "message": "No browsing records match the selected period and tag.",
+    "description": "Domain analysis empty state"
+  },
+  "domainAnalysis_unknownDomain": {
+    "message": "(unknown)",
+    "description": "Domain analysis label for records without a domain"
+  },
+  "domainAnalysis_excludedNullDomainCount": {
+    "message": "{count} records have no domain and are grouped as (unknown).",
+    "description": "Domain analysis notice for records without a domain"
+  },
+  "domainAnalysis_truncated": {
+    "message": "Showing top {shown} of {total}.",
+    "description": "Domain analysis top-N truncation notice"
+  },
+  "domainAnalysis_rowCap": {
+    "message": "Reached the {max}-record analysis limit — showing a partial aggregation.",
+    "description": "Domain analysis pagination cap notice"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },
@@ -4398,5 +4462,8 @@
   },
   "warningTitle": {
     "message": "Warning"
+  },
+  "tagCluster_empty_period": {
+    "message": "No records in the selected period. Try a wider range."
   }
 }

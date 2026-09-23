@@ -57,6 +57,7 @@ export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
   { id: 'panel-domain-search', sidebarSection: 'data', sidebarI18nKey: 'domainSearchTab', deepLinkSections: [] },
   { id: 'panel-time-heatmap', sidebarSection: 'data', sidebarI18nKey: 'timeHeatmapTab', deepLinkSections: [] },
   { id: 'panel-visit-duration', sidebarSection: 'data', sidebarI18nKey: 'visitDurationTab', deepLinkSections: [] },
+  { id: 'panel-domain-analysis', sidebarSection: 'data', sidebarI18nKey: 'domainAnalysisTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
 ] as const;
