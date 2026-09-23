@@ -13,7 +13,6 @@ import {
     ENVELOPE_ITERATIONS,
     bytesToBase64,
     base64ToBytes,
-    bytesToBase64Url,
 } from './primitives.js';
 import { loadDurableWrappingKey, saveDurableWrappingKey } from './durableKeyStore.js';
 import { hmacSignerForKey, type HmacSigner } from './hmacSigner.js';
@@ -421,59 +420,3 @@ export const notificationHmacSigner: HmacSigner = hmacSignerForKey(getNotificati
  * silently reset it.
  */
 export const consentHmacSigner: HmacSigner = hmacSignerForKey(getConsentHmacKey, 'base64url');
-
-/**
- * Generate URL-safe base64 HMAC signature for notification IDs
- * Uses full signature (no truncation) for cryptographic guarantee
- * @param {string} data - Data to sign (typically URL)
- * @param {CryptoKey} key - HMAC key
- * @returns {Promise<string>} URL-safe base64 encoded full signature
- *
- * @deprecated 新しい呼び出しでは notificationHmacSigner / consentHmacSigner
- * を使うこと。本番の呼び出しは PBI 2026-09-16-04 で全て移行済み。
- * Sunset: remove in next major (re-evaluate 2026-12-31).
- */
-export async function generateHmacSignature(data: string, key: CryptoKey): Promise<string> {
-    const webcrypto = getWebCrypto();
-    const dataArray = textEncoder.encode(data);
-    const signature = await webcrypto.subtle.sign('HMAC', key, dataArray) as ArrayBuffer;
-    return bytesToBase64Url(new Uint8Array(signature));
-}
-
-/**
- * Verify HMAC signature using constant-time comparison
- * @param {string} data - Original data
- * @param {string} signature - URL-safe base64 encoded signature
- * @param {CryptoKey} key - HMAC key
- * @returns {Promise<boolean>} True if signature is valid
- *
- * @deprecated 本番の呼び出しは無い（PBI 2026-09-16-04 で HmacSigner.verify へ
- * 移行済み）。下の定数時間比較は primitives.ts の constantTimeCompare と
- * 重複しており、長さ不一致で早期 return する分そちらより弱い。
- * Sunset: remove in next major (re-evaluate 2026-12-31).
- */
-export async function verifyHmacSignature(data: string, signature: string, key: CryptoKey): Promise<boolean> {
-    try {
-        const computedSignature = await generateHmacSignature(data, key);
-
-        const encoder = textEncoder;
-        const sigBuf = encoder.encode(signature);
-        const compBuf = encoder.encode(computedSignature);
-
-        // Check length mismatch first (timing-safe via length comparison)
-        if (sigBuf.byteLength !== compBuf.byteLength) {
-            return false;
-        }
-
-        // Manual constant-time comparison
-        let result = 0;
-        const sig8 = new Uint8Array(sigBuf);
-        const comp8 = new Uint8Array(compBuf);
-        for (let i = 0; i < sigBuf.byteLength; i++) {
-            result |= (sig8[i] ?? 0) ^ (comp8[i] ?? 0);
-        }
-        return result === 0;
-    } catch (_error: unknown) {
-        return false;
-    }
-}

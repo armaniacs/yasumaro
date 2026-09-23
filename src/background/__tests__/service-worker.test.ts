@@ -473,8 +473,6 @@ vi.mock('../../utils/crypto/index.js', async (importOriginal) => {
             algorithm: { name: 'HMAC', hash: 'SHA-256' },
             usages: ['sign', 'verify']
         }) as unknown as CryptoKey),
-        generateHmacSignature: vi.fn().mockResolvedValue('test-signature'),
-        verifyHmacSignature: vi.fn().mockResolvedValue(true),
         // Signing moved behind HmacSigner (PBI 2026-09-16-04); the notification
         // handlers now go through this seam rather than the bare functions.
         notificationHmacSigner: {
@@ -1578,7 +1576,7 @@ describe('service-worker handlers', () => {
                 algorithm: { name: 'HMAC', hash: 'SHA-256' },
                 usages: ['sign', 'verify']
             } as unknown as CryptoKey);
-            vi.mocked(crypto.verifyHmacSignature).mockResolvedValueOnce(true);
+            vi.mocked(crypto.notificationHmacSigner.verify).mockResolvedValueOnce(true);
 
             const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
 

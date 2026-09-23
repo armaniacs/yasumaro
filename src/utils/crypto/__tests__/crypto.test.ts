@@ -21,8 +21,6 @@ import {
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
     constantTimeCompare,
-    generateHmacSignature,
-    verifyHmacSignature,
     getNotificationHmacKey,
     getConsentHmacKey,
     wrapSecretString,
@@ -35,6 +33,7 @@ import {
     CURRENT_ENVELOPE_VERSION,
 } from '../index.js';
 import type { EncryptionEnvelope } from '../index.js';
+import { hmacSignerForKey } from '../hmacSigner.js';
 
 // Web Crypto APIのセットアップ
 beforeEach(() => {
@@ -566,7 +565,7 @@ describe('crypto', () => {
     });
 });
 
-describe('generateHmacSignature', () => {
+describe('hmacSignerForKey sign (base64url)', () => {
     test('generates a URL-safe base64 HMAC signature', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
@@ -575,7 +574,7 @@ describe('generateHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const signature = await generateHmacSignature('test-data', key);
+        const signature = await hmacSignerForKey(async () => key, 'base64url').sign('test-data');
         expect(typeof signature).toBe('string');
         expect(signature.length).toBeGreaterThan(0);
         // URL-safe base64 は + / = を含まない
@@ -592,8 +591,9 @@ describe('generateHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const sig1 = await generateHmacSignature('same-data', key);
-        const sig2 = await generateHmacSignature('same-data', key);
+        const signer = hmacSignerForKey(async () => key, 'base64url');
+        const sig1 = await signer.sign('same-data');
+        const sig2 = await signer.sign('same-data');
         expect(sig1).toBe(sig2);
     });
 
@@ -605,13 +605,14 @@ describe('generateHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const sig1 = await generateHmacSignature('data-a', key);
-        const sig2 = await generateHmacSignature('data-b', key);
+        const signer = hmacSignerForKey(async () => key, 'base64url');
+        const sig1 = await signer.sign('data-a');
+        const sig2 = await signer.sign('data-b');
         expect(sig1).not.toBe(sig2);
     });
 });
 
-describe('verifyHmacSignature', () => {
+describe('hmacSignerForKey verify (base64url)', () => {
     test('verifies a valid signature', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
@@ -620,8 +621,9 @@ describe('verifyHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const signature = await generateHmacSignature('test-data', key);
-        const isValid = await verifyHmacSignature('test-data', signature, key);
+        const signer = hmacSignerForKey(async () => key, 'base64url');
+        const signature = await signer.sign('test-data');
+        const isValid = await signer.verify('test-data', signature);
         expect(isValid).toBe(true);
     });
 
@@ -633,7 +635,7 @@ describe('verifyHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const isValid = await verifyHmacSignature('test-data', 'invalid-signature', key);
+        const isValid = await hmacSignerForKey(async () => key, 'base64url').verify('test-data', 'invalid-signature');
         expect(isValid).toBe(false);
     });
 
@@ -645,8 +647,9 @@ describe('verifyHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const signature = await generateHmacSignature('data-a', key);
-        const isValid = await verifyHmacSignature('data-b', signature, key);
+        const signer = hmacSignerForKey(async () => key, 'base64url');
+        const signature = await signer.sign('data-a');
+        const isValid = await signer.verify('data-b', signature);
         expect(isValid).toBe(false);
     });
 
@@ -658,7 +661,7 @@ describe('verifyHmacSignature', () => {
             ['sign', 'verify']
         );
 
-        const isValid = await verifyHmacSignature('test', 'short', key);
+        const isValid = await hmacSignerForKey(async () => key, 'base64url').verify('test', 'short');
         expect(isValid).toBe(false);
     });
 });
@@ -723,7 +726,7 @@ describe('HMAC key encryption (PBI-03)', () => {
         expect(value).toHaveProperty('iv');
 
         // The returned key still signs correctly
-        const signature = await generateHmacSignature('test-data', key);
+        const signature = await hmacSignerForKey(async () => key, 'base64url').sign('test-data');
         expect(signature.length).toBeGreaterThan(0);
     });
 
@@ -732,8 +735,8 @@ describe('HMAC key encryption (PBI-03)', () => {
         const key2 = await getNotificationHmacKey();
 
         // Both keys must produce the identical signature, i.e. same key material
-        const sig1 = await generateHmacSignature('same-data', key1);
-        const sig2 = await generateHmacSignature('same-data', key2);
+        const sig1 = await hmacSignerForKey(async () => key1, 'base64url').sign('same-data');
+        const sig2 = await hmacSignerForKey(async () => key2, 'base64url').sign('same-data');
         expect(sig1).toBe(sig2);
     });
 
@@ -761,8 +764,8 @@ describe('HMAC key encryption (PBI-03)', () => {
             false,
             ['sign', 'verify']
         );
-        const expectedSig = await generateHmacSignature('migration-check', originalKey);
-        const actualSig = await generateHmacSignature('migration-check', key);
+        const expectedSig = await hmacSignerForKey(async () => originalKey, 'base64url').sign('migration-check');
+        const actualSig = await hmacSignerForKey(async () => key, 'base64url').sign('migration-check');
         expect(actualSig).toBe(expectedSig);
     });
 
@@ -816,7 +819,7 @@ describe('wrapSecretString / unwrapSecretString (hmac_secret encryption)', () =>
     });
 });
 
-describe('verifyHmacSignature edge cases', () => {
+describe('hmacSignerForKey verify edge cases', () => {
     test('returns false for empty data', async () => {
         const webcrypto = new Crypto();
         const key = await webcrypto.subtle.generateKey(
@@ -826,7 +829,7 @@ describe('verifyHmacSignature edge cases', () => {
         );
 
         // Empty signature should fail
-        const isValid = await verifyHmacSignature('test', '', key);
+        const isValid = await hmacSignerForKey(async () => key, 'base64url').verify('test', '');
         expect(isValid).toBe(false);
     });
 
@@ -843,8 +846,8 @@ describe('verifyHmacSignature edge cases', () => {
             ['sign', 'verify']
         );
 
-        const signature = await generateHmacSignature('test-data', key1);
-        const isValid = await verifyHmacSignature('test-data', signature, key2);
+        const signature = await hmacSignerForKey(async () => key1, 'base64url').sign('test-data');
+        const isValid = await hmacSignerForKey(async () => key2, 'base64url').verify('test-data', signature);
         expect(isValid).toBe(false);
     });
 });
