@@ -1,8 +1,8 @@
 # PBI: Firefox AMO 公開 — アドオンストアへの申請と署名配布
 
-## ステータス: 🔒 将来対応 — 着手しないこと
+## ステータス: 🟪 着手（2026-09-23）
 
-この PBI は将来の候補として記録するものであり、**現時点では着手しない**。着手条件（下記「前提条件」）が満たされ、PBI 11 の配布方針で AMO 採用が決定されたら、その時点で RICE を再採点して着手順を決める。
+ユーザー指示により AMO 採用が決定したため着手（前提条件の AMO 採用決定トリガーが発火）。技術的な提出前修正は完了（下記「着手記録」）。AMO アカウント操作（アップロード・リスティング・権限正当化文の提出）はユーザー作業として残置。
 
 ## ユーザーストーリー
 
@@ -15,9 +15,26 @@ Firefox ユーザーとして、addons.mozilla.org（AMO）から通常インス
 
 ## 前提条件（すべて満たすまで着手禁止）
 
-- [ ] PBI 09・10・11 が完了していること
-- [ ] PBI 11 の配布方針で AMO 採用が決定していること
-- [ ] v6.9.0 の Firefox 対応が安定稼働していること（実機 QA 済み）
+- [x] PBI 09・10・11 が完了していること
+- [x] PBI 11 の配布方針で AMO 採用が決定していること（2026-09-23 ユーザー指示）
+- [x] v6.9.0 の Firefox 対応が安定稼働していること（実機 QA 済み — 4 不具合修正済み）
+
+## 着手記録（2026-09-23 — 提出前修正）
+
+addons-linter（AMO アップロード検証と同一チェッカー）とビルド検証の結果:
+
+- **sources.zip が 597MB / 19,581 ファイルで AMO アップロード上限超過**: wxt の既定除外は node_modules / tests / dist のみで、Rust `target/`・coverage・graphify-out・ルートの旧 zip/鍵が全部取り込まれていた。`wxt.config.ts` の `zip.excludeSources`（target・coverage・graphify-out・reports・`video-*` 生成物・`yasumaro-*.zip`・`yasumaro-public.pem`）で **23.6MB / 2,407 ファイル** に縮小。`.env` は wxt の dotfile 既定除外により混入なし（確認済み）
+- **`MISSING_DATA_COLLECTION_PERMISSIONS` 警告**: AMO データ開示ポリシー対応として `browser_specific_settings.gecko.data_collection_permissions: { required: ['none'] }` を追加（PRIVACY.md の「開発者への送信なし・ローカル完結、AI 送信はユーザー設定先のみ」主張と整合）
+- **`strict_min_version: '140.0'`**: `data_collection_permissions` は Firefox 140 導入キーで、128 など低い最小バージョンを宣言すると AMO 検証が「未対応キー」として警告するため 140 に設定。本ビルドが必要とする機能（MV3 event page・declarativeNetRequest・module workers）はすべて 140 未満で利用可能
+- **Firefox for Android は対象外**: Android は MV3 event page background が非対応で本拡張機能は動作しない。AMO 提出時の互換対象は**デスクトップ Firefox のみ**を選択すること（Android 向けの linter 警告 1 件は想定内）
+- **検証結果**: addons-linter errors 0 / notices 0。警告は既存 innerHTML 使用（`UNSAFE_VAR_ASSIGNMENT` 37 件・escapeHtml 前提の既存パターン、提出ブロック要因ではない）のみ。`npm run validate` green（13,201 passed）
+- **dist/ の古い署名成果物**（`yasumaro-6.7.81.zip`・`yasumaro-public.pem` がプロジェクトルートに残留）は sources zip 除外済み。AMO への旧バージョン（6.7.x 系）申請履歴の有無はユーザー側で要確認
+
+### 残置（ユーザー作業）
+
+1. AMO アカウントで `dist/yasumaro-6.9.17-firefox.zip` をアップロード（互換対象: デスクトップのみ）
+2. リスティング準備（説明文・スクリーンショット・プライバシーポリシー URL）と `<all_urls>` の正当化文提出
+3. レビュー指摘が来た場合の対応記録を本 PBI に追記
 
 ## 背景
 

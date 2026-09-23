@@ -52,9 +52,9 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 **sentence-dedup（2026-09-20 実装・0ed11095）の配線は不採用で確定（2026-09-21）**: 唯一の呼び出し元 `src/utils/contentExtractor/index.ts` がコンテンツスクリプト（`src/content/contentKernel.ts`）専用経路で実行されるため、ページ側 CSP で WASM 初期化を保証できず、配線しても実運用ではほぼ常に TS フォールバックになる。速度利得も 1.13〜1.28x と小さく、メモリ利得（フットプリント 0.22→0.00MB/call・実測）は dedup ステージの offscreen 移設（処理順の意味論が変わるアーキテクチャ変更）と引き換えになるため、現時点では採用しない。クレート・ハイブリッド・CI ゲート（src コピー）は STAGED のまま資産保持し、将来のパイプライン移設時に再評価する。
 
-### 2026-09-15 AMO 公開 — 将来対応（着手禁止）
+### 2026-09-15 AMO 公開 — 🟪 着手（2026-09-23・提出前修正済み、AMO アップロードはユーザー作業）
 
-- 🔒 2026-09-15-01-backlog-firefox-amo-publish.md（**将来対応・着手禁止**: PBI 09/10/11 完了 + PBI 11 での AMO 採用決定が着手条件。AMO 署名・リスティング・権限正当化文の準備。RICE 12.0 は参考値で着手時に再採点）
+- 🟪 [2026-09-15-01-backlog-firefox-amo-publish.md](2026-09-15-01-backlog-firefox-amo-publish.md)（**着手**: 2026-09-23 ユーザー指示で AMO 採用決定。sources zip 肥大修正・data_collection_permissions 追加・strict_min_version 140 で addons-linter errors 0。残置は AMO アップロード・リスティング・正当化文のユーザー作業。詳細は PBI の着手記録参照）
 
 
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
