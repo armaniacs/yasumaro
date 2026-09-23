@@ -51,6 +51,7 @@ import {
   checkDomainValidator,
   contentCleansingExecutedValidator,
   regenerateSummaryValidator,
+  testObsidianValidator,
 } from '../../messaging/validators.js';
 import type { TabCache } from '../tabCache.js';
 import type { AIService, AiTestProgress } from '../ai/AIService.js';
@@ -217,6 +218,7 @@ export class MessageRouter {
     this.validators.set('CHECK_DOMAIN', checkDomainValidator as unknown as MessageValidator<unknown>);
     this.validators.set('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator as unknown as MessageValidator<unknown>);
     this.validators.set('REGENERATE_SUMMARY', regenerateSummaryValidator as unknown as MessageValidator<unknown>);
+    this.validators.set('TEST_OBSIDIAN', testObsidianValidator as unknown as MessageValidator<unknown>);
   }
 
   /**

@@ -393,6 +393,70 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
       vi.mocked(global.fetch).mockRestore();
     });
 
+    it('does not pair the stored key with an overridden host (VULN-001)', async () => {
+      mockGetSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'stored-key',
+        OBSIDIAN_PROTOCOL: 'https',
+        OBSIDIAN_PORT: '27124',
+        OBSIDIAN_HOST: '127.0.0.1',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      const result = await obsidianClient.testConnection({
+        protocol: 'https',
+        host: 'attacker.example',
+        port: '443'
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('API key is missing');
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
+    it('passes the CSP gate for the saved remote vault origin', async () => {
+      mockGetSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'test_key',
+        OBSIDIAN_PROTOCOL: 'https',
+        OBSIDIAN_PORT: '443',
+        OBSIDIAN_HOST: 'vault.example.com',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      fetchMock().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK'
+      });
+
+      const result = await obsidianClient.testConnection();
+
+      expect(result.success).toBe(true);
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://vault.example.com:443/',
+        expect.any(Object)
+      );
+    });
+
+    it('blocks an unsaved remote origin at the fetch gate even with a typed key', async () => {
+      mockGetSettings.mockResolvedValue({
+        OBSIDIAN_API_KEY: 'stored-key',
+        OBSIDIAN_PROTOCOL: 'https',
+        OBSIDIAN_PORT: '27124',
+        OBSIDIAN_HOST: '127.0.0.1',
+        OBSIDIAN_DAILY_PATH: ''
+      });
+
+      const result = await obsidianClient.testConnection({
+        protocol: 'https',
+        host: 'attacker.example',
+        port: '443',
+        apiKey: 'typed-key'
+      });
+
+      expect(result.success).toBe(false);
+      expect(global.fetch).not.toHaveBeenCalled();
+    });
+
     it('returns an error when override has no API key', async () => {
       const result = await obsidianClient.testConnection({ apiKey: '' });
       expect(result.success).toBe(false);

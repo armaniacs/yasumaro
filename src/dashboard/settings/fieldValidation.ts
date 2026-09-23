@@ -5,7 +5,7 @@
  */
 
 import { getMessage } from '../../utils/i18n.js';
-import { validateObsidianPort } from '../../utils/obsidianConfigValidator.js';
+import { validateObsidianPort, validateObsidianHost as validateObsidianHostValue } from '../../utils/obsidianConfigValidator.js';
 
 export type ErrorPair = [HTMLInputElement | null, string];
 
@@ -265,11 +265,11 @@ export function setupMaxTokensValidation(input: HTMLInputElement | null): () => 
  * @returns {boolean} 有効な場合はtrue
  */
 export function validateObsidianHost(input: HTMLInputElement): boolean {
-    const v = input.value.trim();
-    // '@' (URL userinfo) and '%' (percent-encoding) would let a pasted host
-    // redirect the API key to a different server — keep the field to plain
-    // hostnames (mirrors validateObsidianHost in utils/obsidianConfigValidator).
-    if (/[\s/\\:@%]/.test(v)) {
+    // Single ownership: dashboard defers to the SW-side validator so UI and
+    // connection test can never disagree on what a valid host is.
+    try {
+        validateObsidianHostValue(input.value);
+    } catch {
         setFieldError(input, 'obsidianHostError', getMessage('obsidianHostError') || 'Obsidian host contains invalid characters.');
         return false;
     }
