@@ -1,22 +1,28 @@
 /**
- * cleansingPresetStore.ts (PBI 2026-09-15-05)
+ * cleansingPresetStore.ts (PBI 2026-09-15-05, seam migration 2026-09-23-15)
  *
- * 深い module: クレンジングプリセットの適用・マイグレーション・custom 遷移の
- * 順序制約（apply epoch・二重書き込み・反映ガード）をすべて内部に隠す。
+ * Deep module: preset apply / migration / custom-transition ordering
+ * (apply epoch, repository-locked writes, reflect guards) all hidden inside.
  *
- * 不変条件:
- * - busy 窓（applyPreset の反映・マイグレーション・初期描画窓）の間、
- *   markCustomOnManualEdit は何もしない。手動トグルの change は UI 反映中の
- *   checkbox.checked 代入では発火しないが、ユーザー操作が busy 窓に重なった
- *   場合の退行をここで防ぐ（dashboard-cleansing-preset.spec.ts で pin 済み）。
- * - プリセット書き込みは settings blob（32値）とトップレベルキーの**両方**に
- *   反映する。select はトップレベルキーを読むため、片方だけの書き込みは
- *   UI を古い値へ戻す（これがプリセット競合バグの正体）。
- * - マイグレーションの detect 読み取りが applyPreset と重なった場合、
- *   apply epoch の増分を検知して書き込みを諦める（stale 値の上書き防止）。
+ * Invariants:
+ * - During the busy window (applyPreset reflect, migration, initial render),
+ *   markCustomOnManualEdit does nothing. Manual-toggle change events do not
+ *   fire on programmatic checkbox.checked assignment, but this guard covers
+ *   user input landing inside the window (pinned by dashboard-cleansing-preset
+ *   e2e).
+ * - Preset persistence goes only through the SettingsRepository seam
+ *   (presetSettingsAdapter): the single setAll delta carries both the
+ *   32 rule values and the preset key inside the repository lock, so no
+ *   out-of-lock top-level dual write can revert the UI to a stale value.
+ * - A migration detect read racing applyPreset abandons its write when the
+ *   apply epoch advanced (no stale overwrite).
+ * - Legacy installs may hold the preset only as a scattered top-level key.
+ *   Reads check the repository blob first and fall back to that key; the
+ *   first migration write converges it into the blob. The fallback is
+ *   read-only — writes never touch the top level directly.
  *
- * この module は DOM を知らない。View 配線（select.value の同期・32 checkbox
- * の反映）は subscribe() の購読と runReflecting() で行う。
+ * This module does not know the DOM. View wiring (select.value sync, 32
+ * checkbox reflect) goes through subscribe() plus runReflecting().
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
@@ -25,6 +31,7 @@ import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { PRESETS, type PresetId, type CleansingConfig } from '../../utils/aiSummaryCleaner/presets.js';
+import { observePreset, readStoredPreset, writePreset } from './presetSettingsAdapter.js';
 
 /** 既存の 32値から preset を推定（マイグレーション用ヒューリスティック）。
  *  - deepEnabled→aggressive, news/ec→balanced, else minimal
@@ -52,11 +59,11 @@ export function detectPreset(config: Partial<CleansingConfig> | Record<string, u
 export type PresetStoreState = 'idle' | 'busy';
 
 export interface CleansingPresetStore {
-    /** トップレベルキーから現在の preset を読む。未設定なら migrate して返す。 */
+    /** Current preset through the repository seam; migrates first when unset. */
     getPreset(): Promise<PresetId>;
-    /** マイグレーションが未実施なら実行する（冪等）。 */
+    /** Run migration when nothing is stored yet (idempotent). */
     ensureMigrated(): Promise<void>;
-    /** プリセット適用: 32値の blob 書き込み + トップレベルキー + 購読者通知。 */
+    /** Apply a preset: 32-value blob write + preset key in one locked delta + notify. */
     applyPreset(presetId: PresetId): Promise<void>;
     /** 手動トグル後の custom 遷移。busy 窓中は何もしない（ガードは内部）。 */
     markCustomOnManualEdit(): Promise<void>;
@@ -78,13 +85,23 @@ export function createCleansingPresetStore(): CleansingPresetStore {
     let held = false; // long window (module load → setup + 300ms) — runReflecting must not clear it
     let migrationPromise: Promise<void> | null = null;
     let applyEpoch = 0;
+    let lastNotified: PresetId | null = null;
     const listeners = new Set<(presetId: PresetId) => void>();
 
     const notify = (presetId: PresetId): void => {
+        lastNotified = presetId;
         for (const listener of listeners) {
             try { listener(presetId); } catch { /* listener errors must not break the store */ }
         }
     };
+
+    // External preset changes (another dashboard context writing through the
+    // repository) reach subscribers via the seam. The echo of our own writes
+    // matches lastNotified and is dropped, so subscribers see one event per
+    // transition. No-op on seams without an observe API.
+    observePreset((presetId) => {
+        if (presetId !== lastNotified) notify(presetId);
+    });
 
     const scheduleIdle = (): void => {
         // Same timing as the removed setTimeout guards: the busy window must
@@ -131,16 +148,14 @@ export function createCleansingPresetStore(): CleansingPresetStore {
 
         async getPreset(): Promise<PresetId> {
             await store.ensureMigrated();
-            const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-            return (stored[StorageKeys.CLEANSING_PRESET] as PresetId | undefined) ?? 'custom';
+            return (await readStoredPreset()) ?? 'custom';
         },
 
         async ensureMigrated(): Promise<void> {
             if (migrationPromise) return migrationPromise;
             migrationPromise = (async () => {
                 try {
-                    const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-                    if (stored[StorageKeys.CLEANSING_PRESET]) return;
+                    if (await readStoredPreset()) return;
                     const myEpoch = applyEpoch;
                     state = 'busy';
                     const all = await settingsRepository.getAll();
@@ -150,13 +165,13 @@ export function createCleansingPresetStore(): CleansingPresetStore {
                     if (myEpoch !== applyEpoch) return;
                     // Re-check before writing: a concurrent applyPreset may have
                     // written meanwhile.
-                    const recheck = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-                    if (recheck[StorageKeys.CLEANSING_PRESET]) return;
-                    // 既存ユーザーのカスタム設定を尊重: 完全一致しない場合は custom として
-                    // 保存し 32値の消失を防ぐ（ヒューリスティック上書きはしない）。
+                    if (await readStoredPreset()) return;
+                    // Respect existing users' custom settings: without an exact
+                    // preset match persist custom so no 32-value is lost (the
+                    // heuristic never overwrites).
                     const exact = detectPreset(all);
                     const preset: PresetId = exact !== 'custom' ? exact : 'custom';
-                    await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: preset });
+                    await writePreset(preset);
                     notify(preset);
                 } catch (e) {
                     logError('Failed to migrate cleansing preset', { cause: e }, ErrorCode.STORAGE_WRITE_FAILURE);
@@ -188,10 +203,10 @@ export function createCleansingPresetStore(): CleansingPresetStore {
                     }
                 }
                 await settingsRepository.setAll(delta);
-                // Dual write: the select reads the top-level key while the
-                // repository stores the blob — both must move together or the
-                // read source goes stale and reverts the UI.
-                await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: presetId });
+                // Single writer: the delta above already carries the preset key
+                // inside the repository lock, which is exactly where every
+                // reader (select via getPreset, contentKernel via the blob)
+                // looks — no out-of-lock top-level write remains.
                 notify(presetId);
             } catch (e) {
                 logError('Failed to apply cleansing preset', { cause: e }, ErrorCode.STORAGE_WRITE_FAILURE);
@@ -204,10 +219,9 @@ export function createCleansingPresetStore(): CleansingPresetStore {
         async markCustomOnManualEdit(): Promise<void> {
             if (state !== 'idle') return; // applying / migrating / initial-render window
             try {
-                const stored = await chrome.storage.local.get(StorageKeys.CLEANSING_PRESET);
-                const cur = stored[StorageKeys.CLEANSING_PRESET] as string | undefined;
+                const cur = await readStoredPreset();
                 if (cur && cur !== 'custom') {
-                    await chrome.storage.local.set({ [StorageKeys.CLEANSING_PRESET]: 'custom' });
+                    await writePreset('custom');
                     notify('custom');
                 }
             } catch { // storage read failure must not break the checkbox handler

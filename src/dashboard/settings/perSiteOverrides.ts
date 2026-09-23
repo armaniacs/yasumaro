@@ -4,6 +4,7 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { readOverrides } from './presetSettingsAdapter.js';
 import { getMessage } from '../../utils/i18n.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
@@ -64,10 +65,9 @@ function clearToggles(container: HTMLElement): void {
 }
 
 async function loadOverrides(): Promise<DomainCleansingOverride[]> {
-    const s = await settingsRepository.getAll();
-    const raw = (s as Record<string, unknown>)[StorageKeys.DOMAIN_CLEANSING_OVERRIDES];
-    if (Array.isArray(raw)) return raw as DomainCleansingOverride[];
-    return [];
+    // Targeted read (PBI 2026-09-23-15): the single-key API instead of a
+    // full getAll() on every toggle/change/refresh.
+    return readOverrides();
 }
 
 async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
