@@ -14,7 +14,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import type { VisitGate } from './visitGate.js';
 import { preparePageContent } from '../utils/pageContentPipeline.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
-import { pickDefined } from '../utils/objectUtils.js';
+import { ExtractionReport } from '../utils/contentExtractor/extractionReport.js';
 import { ScrollMonitor } from './scrollMonitor.js';
 import { VisitReporter, type MessageSender } from './visitReporter.js';
 import { createContentMessageSender } from './contentMessageSender.js';
@@ -134,28 +134,20 @@ export class ContentKernel {
         return result;
     }
 
+    /**
+     * Single-call commit of an extraction report into page state. Field
+     * selection lives in the report module; the kernel holds no copy logic.
+     */
+    applyReport(report: ExtractionReport): void {
+        report.applyTo(this.pageState);
+    }
+
+    /**
+     * Legacy compat: identical mapping via the report intake, so the pinned
+     * pair behavior (undefined defaults, unset reasons retention) holds.
+     */
     applyExtractResultToPageState(result: ExtractResult): void {
-        this.pageState.lastCleansedReason = result.cleansedReason || 'none';
-        this.pageState.lastCleanseStats = {
-            hardStripRemoved: result.hardStripRemoved ?? 0,
-            keywordStripRemoved: result.keywordStripRemoved ?? 0,
-            totalRemoved: result.totalRemoved ?? 0,
-        };
-        this.pageState.lastByteStats = {
-            pageBytes: result.pageBytes ?? 0,
-            candidateBytes: result.candidateBytes ?? 0,
-            originalBytes: result.originalBytes ?? 0,
-            cleansedBytes: result.cleansedBytes ?? 0,
-        };
-        this.pageState.lastAiSummaryCleansedStats = {
-            aiSummaryOriginalBytes: result.aiSummaryOriginalBytes ?? 0,
-            aiSummaryCleansedBytes: result.aiSummaryCleansedBytes ?? 0,
-            aiSummaryCleansedElements: result.aiSummaryCleansedElements ?? 0,
-            aiSummaryCleansedReason: result.aiSummaryCleansedReason ?? 'none',
-            ...pickDefined({ aiSummaryCleansedReasons: result.aiSummaryCleansedReasons }),
-        };
-        this.pageState.lastFallbackTriggered = result.fallbackTriggered ?? false;
-        this.pageState.lastFallbackReason = result.fallbackReason;
+        this.applyReport(ExtractionReport.fromLegacy(result));
     }
 
     // -----------------------------------------------------------------------
