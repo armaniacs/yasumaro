@@ -8,6 +8,8 @@
  * global reset hooks.
  */
 
+import { getRegistrableDomain } from '../utils/registrableDomain.js';
+
 export interface VisitRateLimiterStore {
   get(key: string): number | undefined;
   set(key: string, timestamp: number): void;
@@ -86,10 +88,17 @@ export class VisitRateLimiter {
    * cannot bypass the throttle by rotating the path/fragment/query (pushState
    * only changes same-origin path/fragment). Different registrable hosts still
    * get distinct keys.
+   *
+   * Sibling subdomains share one eTLD+1 window so rotating a.example.com →
+   * b.example.com cannot multiply the quota. Hosts without a registrable
+   * domain (localhost, IP literals) keep the port-suffixed origin key.
    */
   private getRateLimitKey(url: string): string {
     try {
-      return new URL(url).origin;
+      const parsed = new URL(url);
+      const registrable = getRegistrableDomain(parsed.hostname);
+      if (registrable !== null) return `etld1:${registrable}`;
+      return parsed.origin;
     } catch {
       // Invalid URL: fall back to the raw string so it is still throttled.
       return url;

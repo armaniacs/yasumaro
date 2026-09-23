@@ -18,6 +18,14 @@ export interface MessageSenderLike {
   tab?: { id?: number };
 }
 
+/**
+ * Per-origin keying here is safe only because every sender.url observed on
+ * this path is the extension's own fixed `chrome-extension://<id>` origin —
+ * no page-origin throttle window is ever multiplexed through one key. If a
+ * caller with page-origin senders appears, scope the key by registrable
+ * domain (see `src/utils/registrableDomain.ts`) instead of the raw origin,
+ * or sibling subdomains regain independent windows.
+ */
 function originFromSender(sender: MessageSenderLike | undefined): string {
   if (!sender?.url) return 'unknown';
   try {
