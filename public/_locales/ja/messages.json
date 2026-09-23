@@ -4603,5 +4603,81 @@
   "wordClusterError": {
     "message": "ワードクラスタの読み込みに失敗しました。再試行してください。",
     "description": "ワードクラスタのエラー状態"
+  },
+  "tagClusterTimeSliderTab": {
+    "message": "タグクラスタ比較",
+    "description": "タグクラスタ時間変化パネルのサイドバーラベル"
+  },
+  "tagClusterTimeSliderTitle": {
+    "message": "タグクラスタ時間変化",
+    "description": "タグクラスタ時間変化パネルのタイトル"
+  },
+  "tagClusterTimeSliderDescription": {
+    "message": "開始日と終了日を指定すると、期間を前半と後半に分けてタグクラスタを並べて比較します。ノードまたは diff 項目をクリックすると、そのタグで履歴を検索します。",
+    "description": "タグクラスタ時間変化パネルの説明"
+  },
+  "tagClusterCompareStartLabel": {
+    "message": "開始時点",
+    "description": "比較期間の開始日入力のラベル"
+  },
+  "tagClusterCompareEndLabel": {
+    "message": "終了時点",
+    "description": "比較期間の終了日入力のラベル"
+  },
+  "tagClusterCompareRun": {
+    "message": "比較する",
+    "description": "タグクラスタ時間比較の適用ボタン"
+  },
+  "tagClusterCompareFirstHalf": {
+    "message": "前半",
+    "description": "時間比較の前半スナップショットの見出し"
+  },
+  "tagClusterCompareSecondHalf": {
+    "message": "後半",
+    "description": "時間比較の後半スナップショットの見出し"
+  },
+  "tagClusterCompareInvalidRange": {
+    "message": "比較するには開始時点と終了時点の両方を指定してください。",
+    "description": "比較の日付が未指定のときの入力検証メッセージ"
+  },
+  "tagClusterCompareInvalidRangeCorrected": {
+    "message": "開始時点が終了時点より後だったため、前後関係を自動補正しました。",
+    "description": "前後逆転の比較期間を自動補正したときの通知"
+  },
+  "tagClusterCompareEmptyPeriod": {
+    "message": "この半分期間にはレコードがありません。",
+    "description": "比較の片側にレコードがなかったときの空状態"
+  },
+  "tagClusterCompareCapNotice": {
+    "message": "クエリが {max} 行の上限に達したため、この半分期間では {total} 件のうち新しい {shown} 件のみを集計しています。",
+    "description": "取得行上限で比較の片側が打ち切られたときの通知"
+  },
+  "tagClusterDiffAppeared": {
+    "message": "出現したタグ",
+    "description": "後半にのみ存在するタグの diff 見出し"
+  },
+  "tagClusterDiffDisappeared": {
+    "message": "消失したタグ",
+    "description": "前半にのみ存在したタグの diff 見出し"
+  },
+  "tagClusterDiffIncreased": {
+    "message": "増加したタグ",
+    "description": "件数が増加したタグ（件数差付き）の diff 見出し"
+  },
+  "tagClusterDiffDecreased": {
+    "message": "減少したタグ",
+    "description": "件数が減少したタグ（件数差付き）の diff 見出し"
+  },
+  "tagClusterTimeSliderLoading": {
+    "message": "タグクラスタを比較中…",
+    "description": "タグクラスタ時間比較の読み込み状態"
+  },
+  "tagClusterTimeSliderStatusDone": {
+    "message": "比較が完了しました: 前半 {first} タグ、後半 {second} タグ、出現 {appeared}、消失 {disappeared}。",
+    "description": "比較完了時にライブリージョンで読み上げる要約"
+  },
+  "tagClusterTimeSliderError": {
+    "message": "比較のこの半分の読み込みに失敗しました。再試行してください。",
+    "description": "タグクラスタ時間比較の片側が失敗したときのエラー状態"
   }
 }
