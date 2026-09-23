@@ -14,12 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 2件 ✨機能追加 RICE順: 07 → 08（01-06 は完了・アーカイブ済み）
+### 2026-09-24 分析機能強化ラウンド — 🔶 部分実装 1件・⬜ 未着手 1件 ✨機能追加 RICE順: 07 → 08（01-06 は完了・アーカイブ済み）
 
 分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
 
-- [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（⬜ 未着手 — RICE 1.33・3 SP・副作用🟢。summary+title から Intl.Segmenter でキーワード抽出し共起クラスタ表示。STEP 0 品質プローブ込み）
-- [2026-09-24-08-feat-tag-cluster-time-slider.md](2026-09-24-08-feat-tag-cluster-time-slider.md)（⬜ 未着手 — RICE 0.20・5 SP・副作用🟢。2時点のクラスタを side-by-side＋diff 一覧で比較。アニメーション対象外。04 完了が前提）
+- [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（🔶 部分実装 — 実装・自動テスト完了 `d80a5f8b`。残: STEP 0 の実データ手動プローブ（ストップワード/閾値チューニング・ユーザー作業・実 DB アクセスが必要）。合成コーパスの自動 sanity テストは実装済み。RICE 1.33・3 SP）
+- [2026-09-24-08-feat-tag-cluster-time-slider.md](2026-09-24-08-feat-tag-cluster-time-slider.md)（⬜ 未着手 — RICE 0.20・5 SP・副作用🟢。2時点のクラスタを side-by-side＋diff 一覧で比較。アニメーション対象外。04 完了済み）
 
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
