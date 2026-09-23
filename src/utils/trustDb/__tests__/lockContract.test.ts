@@ -55,17 +55,31 @@ describe('lock contract: finally-coverage (trancoUpdater)', () => {
     const { TrancoUpdater } = await import('../trancoUpdater.js');
     const updater = new TrancoUpdater();
 
-    const result = await updater.updateTrancoList('top1k');
-    expect(result.success).toBe(false);
-    // The bug (post-loop reset only) leaves this true after the retry loop
-    // returns on the exception path.
-    expect(updater.isUpdateInProgress()).toBe(false);
+    // Each retry schedules its backoff only after real async work (logging,
+    // dynamic imports), so a single runAllTimersAsync can return before the
+    // next timer exists; keep advancing until the call settles.
+    const settle = async <T>(pending: Promise<T>): Promise<T> => {
+      let done = false;
+      void pending.finally(() => { done = true; }).catch(() => {});
+      while (!done) await vi.advanceTimersByTimeAsync(1000);
+      return pending;
+    };
 
-    // A subsequent update must not be rejected as "already in progress".
-    const second = await updater.updateTrancoList('top1k');
-    expect(second.error).not.toBe('Update already in progress');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const result = await settle(updater.updateTrancoList('top1k'));
+      expect(result.success).toBe(false);
+      // The bug (post-loop reset only) leaves this true after the retry loop
+      // returns on the exception path.
+      expect(updater.isUpdateInProgress()).toBe(false);
 
-    vi.unstubAllGlobals();
+      // A subsequent update must not be rejected as "already in progress".
+      const second = await settle(updater.updateTrancoList('top1k'));
+      expect(second.error).not.toBe('Update already in progress');
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
   });
 });
 

@@ -139,6 +139,9 @@ jobs:
       - name: Build extension
         run: npm run build
 
+      - name: Generate dev-server TLS certificate (gitignored fixture)
+        run: openssl req -x509 -newkey rsa:2048 -keyout testDir/e2e/fixtures/dev-server-key.pem -out testDir/e2e/fixtures/dev-server-cert.pem -days 3650 -nodes -subj "/CN=localhost"
+
       - name: Extension E2E tests
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx playwright test --config testDir/playwright.config.ts --grep @extension
 

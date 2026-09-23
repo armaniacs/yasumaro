@@ -35,7 +35,7 @@ import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
-import { StepExecutor } from './stepExecutor.js';
+import { StepExecutor, type StepDelayFn } from './stepExecutor.js';
 
 export interface RecordingOrchestratorDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -48,6 +48,8 @@ export interface RecordingOrchestratorDeps {
   perUrlMutexMap?: PerUrlMutexMap;
   outcomeAdapters?: OutcomeAdapters;
   privacyPipelineFactory?: PrivacyPipelineFactory;
+  /** Retry backoff clock; defaults to the real timer. */
+  stepDelay?: StepDelayFn;
 }
 
 export interface RecordOptions {
@@ -83,7 +85,7 @@ export class RecordingOrchestrator {
     this.sqliteClient = deps.sqliteClient;
     this.urlStore = deps.urlStore;
     this.mutexMap = deps.perUrlMutexMap ?? new PerUrlMutexMap();
-    this.executor = new StepExecutor(deps.offlineNetworkQueue ?? null);
+    this.executor = new StepExecutor(deps.offlineNetworkQueue ?? null, undefined, deps.stepDelay);
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 

@@ -102,9 +102,9 @@ sentence-dedup 用の行が tag-cooccur 追加の雛形。各箇所（キャッ�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（ワークフロー変更の revert で旧ゲートに戻る）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] リファクタリング完了（グリーン後） — 後続の crates.json SSOT化リファクタリング（PBI 2026-09-21-18/26、コミット `26011549` 等）で個別ハードコードを統合、tag-cooccur は `wasm/crates.json` に完全登録済み（cache-paths / parity-args / cmp check すべて manifest 駆動で自動対象化。`scripts/__tests__/wasm-crates.test.ts` 26 tests green で確認）
+- [x] ロールバック手段の検討（ワークフロー変更の revert で旧ゲートに戻る）
+- [x] ドキュメント更新済み

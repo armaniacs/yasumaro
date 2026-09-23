@@ -119,23 +119,23 @@ Scenario: 緩和なし（現在の設定）でも再生成できる
 ```
 
 ## 受け入れ基準
-- [ ] 履歴エントリヘッダーに「AI要約を作り直す」ボタンと緩和段階選択（現在の設定 / やや緩い / 最も緩い）が表示される（i18n: ja / en 両方）
-- [ ] 再生成後も同一 URL のレコードは1件のまま（update-in-place）。新規 INSERT が発生しないことをテストで pin した
-- [ ] 再生成の緩和段階選択はグローバルのクレンジング設定・プリセットを永続化しない
-- [ ] 緩和は既存③ルール選択（AI要約クレンジング32ルール/プリセット）の段下げとして実装され、①候補選択に新しい緩和オプションを追加しない（v1スコープ・Ask 2026-09-22）
-- [ ] custom 設定時: 「やや緩い」= minimal 相当、「最も緩い」= ②③無効 の ladder が Pure function として実装・テストされている（Ask 2026-09-22）
-- [ ] 再生成成功時に新 tags で上書きされること（BDD: 誤tagsレコードが新summaryと整合する tags になる）
-- [ ] `'regenerate'` は Obsidian 自動 append を skip し、ローカルMD自動エクスポートも skip すること（副作用skip両方をテストで pin）
-- [ ] contentEnabled=false のエントリ再生成後も content 列が NULL であることをテストで pin
-- [ ] localhost URL の再生成が blockLocalhost でエラーになり、既存データが不変であることをテストで pin
-- [ ] source policy `'regenerate'` の force は既定なし。gate で弾かれた場合のみ「設定を無視して強制再生成」を提示し、選択時のみ force=true であること（Ask Q1C・force 既定 ON をテストで pin しない）
-- [ ] 取得失敗・AI失敗・タイムアウト時に元の summary / content / 統計が不変で、エラーがエントリ行内に表示される
-- [ ] 通常の記録経路（VALID_VISIT / MANUAL_RECORD / SAVE_RECORD）の保存結果が従来と byte-identical であることをテストで pin した
-- [ ] 再生成による AI 送信が監査ログに記録される
-- [ ] 再生成結果が既存の「Obsidianに追記」ボタンで送信できる（`obsidian_synced` を問わず追記できることを確認。新規 Obsidian API を増やしていない）
-- [ ] 一括再生成は v1 スコープ外（multi-select ボルク操作は将来候補。個別ボタンのみ）
-- [ ] 二重押下防止（in-flight 中はボタン disabled）とレート制限（manual record と同じ `checkRateLimit`）が効く
-- [ ] `npm run validate`（type-check + test）と `npm run build` が通る
+- [x] 履歴エントリヘッダーに「AI要約を作り直す」ボタンと緩和段階選択（現在の設定 / やや緩い / 最も緩い）が表示される（i18n: ja / en 両方）
+- [x] 再生成後も同一 URL のレコードは1件のまま（update-in-place）。新規 INSERT が発生しないことをテストで pin した
+- [x] 再生成の緩和段階選択はグローバルのクレンジング設定・プリセットを永続化しない
+- [x] 緩和は既存③ルール選択（AI要約クレンジング32ルール/プリセット）の段下げとして実装され、①候補選択に新しい緩和オプションを追加しない（v1スコープ・Ask 2026-09-22）
+- [x] custom 設定時: 「やや緩い」= minimal 相当、「最も緩い」= ②③無効 の ladder が Pure function として実装・テストされている（Ask 2026-09-22）
+- [x] 再生成成功時に新 tags で上書きされること（BDD: 誤tagsレコードが新summaryと整合する tags になる）
+- [x] `'regenerate'` は Obsidian 自動 append を skip し、ローカルMD自動エクスポートも skip すること（副作用skip両方をテストで pin）
+- [x] contentEnabled=false のエントリ再生成後も content 列が NULL であることをテストで pin
+- [x] localhost URL の再生成が blockLocalhost でエラーになり、既存データが不変であることをテストで pin
+- [x] source policy `'regenerate'` の force は既定なし。gate で弾かれた場合のみ「設定を無視して強制再生成」を提示し、選択時のみ force=true であること（Ask Q1C・force 既定 ON をテストで pin しない）
+- [x] 取得失敗・AI失敗・タイムアウト時に元の summary / content / 統計が不変で、エラーがエントリ行内に表示される
+- [x] 通常の記録経路（VALID_VISIT / MANUAL_RECORD / SAVE_RECORD）の保存結果が従来と byte-identical であることをテストで pin した
+- [x] 再生成による AI 送信が監査ログに記録される
+- [x] 再生成結果が既存の「Obsidianに追記」ボタンで送信できる（`obsidian_synced` を問わず追記できることを確認。新規 Obsidian API を増やしていない）
+- [x] 一括再生成は v1 スコープ外（multi-select ボルク操作は将来候補。個別ボタンのみ）
+- [x] 二重押下防止（in-flight 中はボタン disabled）とレート制限（manual record と同じ `checkRateLimit`）が効く
+- [x] `npm run validate`（type-check + test）と `npm run build` が通る
 
 ## テスト戦略（t_wadaスタイル / Outside-In）
 
@@ -340,11 +340,11 @@ rg -n "PRESETS|cleanseMode" src/utils/aiSummaryCleaner/
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体）
-- [ ] 通常記録経路の byte-identical pin が存在し通る
-- [ ] `npm run validate` と `npm run build` が通る
-- [ ] コードレビュー完了（GitHub PR approve 必須。セキュリティ観点 — 新規メッセージの trust level・URL 検証・レート制限・監査ログ — を PR 説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討完了（additive 設計で旧挙動完全復帰を確認）
-- [ ] ドキュメント更新済み（`docs/AI_SUMMARY_GUIDE.md` に再生成の節、CHANGELOG、Obsidian 非更新の v1 制約を明記）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体）
+- [x] 通常記録経路の byte-identical pin が存在し通る
+- [x] `npm run validate` と `npm run build` が通る
+- [x] コードレビュー完了（GitHub PR approve 必須。セキュリティ観点 — 新規メッセージの trust level・URL 検証・レート制限・監査ログ — を PR 説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討完了（additive 設計で旧挙動完全復帰を確認）
+- [x] ドキュメント更新済み（`docs/AI_SUMMARY_GUIDE.md` に再生成の節、CHANGELOG、Obsidian 非更新の v1 制約を明記）

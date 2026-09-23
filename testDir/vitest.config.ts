@@ -6,8 +6,22 @@
 
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { partitionTestFiles } from './testPartition';
 
 const projectRoot = path.resolve(__dirname, '..');
+
+const include = ['**/__tests__/**/*.test.ts', 'tests/**/*.test.ts'];
+const exclude = [
+  '**/node_modules/**',
+  '**/dist/**',
+  '**/testDir/e2e/**',
+  '**/.kilo/**',
+  '**/.claude/**',
+  '**/video-*/**',
+  '**/.vulnhunter-fix/**',
+  '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
+];
+const { shared } = partitionTestFiles(projectRoot, include, exclude);
 
 export default defineConfig({
   test: {
@@ -15,16 +29,18 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./testDir/vitest.setup'],
     globals: true,
-    include: ['**/__tests__/**/*.test.ts', 'tests/**/*.test.ts'],
-    exclude: [
-      '**/node_modules/**',
-      '**/dist/**',
-      '**/testDir/e2e/**',
-      '**/.kilo/**',
-      '**/.claude/**',
-      '**/video-*/**',
-      '**/.vulnhunter-fix/**',
-      '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
+    // include/exclude live only on the projects: `extends: true` concatenates
+    // arrays, so a root-level include would leak every file into `shared`.
+    projects: [
+      {
+        extends: true,
+        test: { name: 'isolated', include, exclude: [...exclude, ...shared] },
+      },
+      {
+        extends: true,
+        // See testPartition.ts for which files qualify and why.
+        test: { name: 'shared', include: shared, exclude, isolate: false },
+      },
     ],
     // PBI 2026-09-06-05 spike F-2: real sqlite-wasm (memory storage) needs the
     // .wasm asset served as a file, not via Vite's URL transform.
@@ -69,17 +85,11 @@ export default defineConfig({
     // out at 30s (PBI 2026-09-15 arch-loop Phase 3, 7 timeout flakes under
     // `make clean test` with all 7 green in isolation).
     testTimeout: 30000,
+    // forks, not threads: threads measured ~7% faster once, but another run
+    // stalled for 30+ min on a thread worker that would not terminate; a
+    // stuck fork can be killed. maxWorkers stays at Vitest's default
+    // (cores - 1): measured faster than both cores and cores - 3.
     pool: 'forks',
-    // PBI 18 + rounds 12-14: maxForks 4 with per-file isolation is the
-    // stable configuration (round 12-14 all green). `isolate: false` breaks
-    // module-mock tests; higher forks causes worker spawn contention.
-    // The 30s testTimeout above absorbs suite-level load spikes on top of
-    // this (see that comment).
-    poolOptions: {
-      forks: {
-        maxForks: 4,
-      },
-    },
   },
   resolve: {
     alias: {
