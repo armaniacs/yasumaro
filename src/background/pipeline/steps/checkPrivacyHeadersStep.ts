@@ -11,7 +11,7 @@ import type { RecordingContext } from '../types.js';
 import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { isDomainInList } from '../../../utils/wildcardToRegex.js';
-import { decidePrivacy, type PrivacyAutoBehavior } from '../recordingDecision.js';
+import { decideGate, type PrivacyAutoBehavior } from '../../../utils/recordingGateTable.js';
 
 export class PrivacyHeadersChecker {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -48,20 +48,21 @@ export class PrivacyHeadersChecker {
     }
 
     // PBI 2026-09-21-28: bypass 判定を fetch 前の pre-decision に一本化する。
-    // force と whitelisted は fetch 前に確定済みのため、decidePrivacy に
+    // force と whitelisted は fetch 前に確定済みのため、表の privacyHeaders 行に
     // isPrivate: false（未確定のプレースホルダ）を渡して判定する。
     // settings の読み取りは副作用が無いため fetch 前倒ししても等価。
     const rawBehavior = settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save';
     const behavior: PrivacyAutoBehavior =
       rawBehavior === 'skip' || rawBehavior === 'confirm' ? rawBehavior : 'save';
-    const preDecision = decidePrivacy({
+    // PBI 2026-09-23-05: shared gate table row への adapter（pre-decision 構造は不変）。
+    const preDecision = decideGate('privacyHeaders', {
       force,
       whitelisted: shouldSkipPrivacyCheck,
       isPrivate: false,
       autoSaveBehavior: behavior,
       requireConfirmation: requireConfirmation ?? false,
     });
-    // 注意: decidePrivacy は !isPrivate でも allow を返すが、fetch 前は
+    // 注意: 表の privacyHeaders 行は !isPrivate でも allow を返すが、fetch 前は
     // isPrivate が未確定のためその分岐だけでは fetch を省けない。fetch を
     // スキップするのは bypass（force/whitelisted）に裏打ちされた allow のみ。
     // ログ文言と return 形状は従来の二つの早期 return と byte 等価。
@@ -80,9 +81,10 @@ export class PrivacyHeadersChecker {
     const privacyInfo = await this.getPrivacyInfoWithCache(url);
 
     // PBI 2026-09-19-08: verdict は recordingDecision.decidePrivacy に委譲。
+    // PBI 2026-09-23-05: shared gate table row への adapter。
     // I/O（privacyInfo 取得・pending 保存・log）はこの step に残す。
     // fetch 後の呼び出しは isPrivate マトリクスのみを担う（deniedBy 不変）。
-    const decision = decidePrivacy({
+    const decision = decideGate('privacyHeaders', {
       force,
       whitelisted: shouldSkipPrivacyCheck,
       isPrivate: privacyInfo?.isPrivate ?? false,

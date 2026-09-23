@@ -69,9 +69,13 @@ export function validateObsidianProtocol(protocol: string | undefined | null, ho
 /**
  * Validate and normalize the Obsidian host setting.
  * IPv6 addresses are wrapped in brackets for correct URL assembly.
+ *
+ * Accepts loopback names, IPv4 literals, IPv6 literals, and valid RFC-1123
+ * DNS hostnames. Remote (non-loopback) https vaults are legitimate, so the
+ * check is syntactic rather than a loopback allowlist.
  * @param host - Raw host value from settings
  * @returns Normalized host string
- * @throws Error if host contains invalid characters
+ * @throws Error if host contains invalid characters or is malformed
  */
 export function validateObsidianHost(host: string | undefined | null): string {
     if (host === undefined || host === null || host === '') {
@@ -104,7 +108,50 @@ export function validateObsidianHost(host: string | undefined | null): string {
         throw new Error('Obsidian host contains invalid characters.');
     }
 
+    // A dot-or-digit-only value is an IPv4 attempt, so it must parse as one.
+    // Otherwise "999.999.999.999" would slip through as a "hostname".
+    if (/^[0-9.]+$/.test(trimmed)) {
+        if (!isValidIpv4Address(trimmed)) {
+            throw new Error('Obsidian host contains invalid characters.');
+        }
+        return trimmed;
+    }
+
+    if (!isValidDnsHostname(trimmed)) {
+        throw new Error('Obsidian host contains invalid characters.');
+    }
+
     return trimmed;
+}
+
+/**
+ * Determine whether a string is a valid IPv4 literal (four 0-255 octets).
+ */
+function isValidIpv4Address(host: string): boolean {
+    const octets = host.split('.');
+    if (octets.length !== 4) {
+        return false;
+    }
+    return octets.every((octet) => {
+        if (!/^\d{1,3}$/.test(octet)) {
+            return false;
+        }
+        return Number(octet) <= 255;
+    });
+}
+
+/**
+ * Determine whether a string is a valid RFC-1123 DNS hostname: dot-separated
+ * labels of alphanumerics and hyphens, no empty labels, no leading/trailing
+ * hyphen per label, max 63 chars per label and 253 overall.
+ */
+function isValidDnsHostname(host: string): boolean {
+    const name = host.endsWith('.') ? host.slice(0, -1) : host;
+    if (name.length === 0 || name.length > 253) {
+        return false;
+    }
+    const labelPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
+    return name.split('.').every((label) => labelPattern.test(label));
 }
 
 /**

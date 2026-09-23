@@ -5,8 +5,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// PBI 2026-09-23-02: importLogsService calls the generic seam.
+const mockSqliteCall = vi.fn();
 vi.mock('../dashboardSqliteService.js', () => ({
-  importLogs: vi.fn(),
+  sqliteClient: { call: (...args: unknown[]) => mockSqliteCall(...args) },
 }));
 
 // Deterministic signer so fixtures can be signed in-test.
@@ -18,8 +20,6 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
     verify: vi.fn(async (payload: string, sig: string) => sig === (await fakeSign(payload))),
   },
 }));
-
-import { importLogs } from '../dashboardSqliteService.js';
 
 const NOW = 1_700_000_000_000;
 
@@ -33,7 +33,7 @@ async function importRows(rows: unknown[]) {
 describe('validateRow (via importFromJson)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(importLogs).mockResolvedValue({ data: { inserted: 1, skipped: 0, total: 1 } });
+    mockSqliteCall.mockResolvedValue({ data: { inserted: 1, skipped: 0, total: 1 } });
   });
 
   it('accepts a minimal old-format row (url + created_at only)', async () => {

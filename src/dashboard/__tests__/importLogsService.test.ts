@@ -4,8 +4,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// PBI 2026-09-23-02: importLogsService calls the generic seam
+// (sqliteClient.call('import', ...)); assertions below pin the (op, payload)
+// shape instead of the old single-arg rows shape.
+const mockSqliteCall = vi.fn();
 vi.mock('../dashboardSqliteService.js', () => ({
-  importLogs: vi.fn(),
+  sqliteClient: { call: (...args: unknown[]) => mockSqliteCall(...args) },
 }));
 
 // Deterministic crypto so fixtures can be signed in-test. computeHMAC is a
@@ -19,8 +23,6 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
     verify: vi.fn(async (payload: string, sig: string) => sig === (await fakeSign(payload))),
   },
 }));
-
-import { importLogs } from '../dashboardSqliteService.js';
 
 /** Build a signed log-export JSON string the way exportJson would. */
 async function signedExport(rows: unknown[], overrides: Record<string, unknown> = {}): Promise<string> {
@@ -38,7 +40,7 @@ describe('importFromJson', () => {
     const { importFromJson } = await import('../importLogsService.js');
     const result = await importFromJson('not json');
     expect(result).toEqual({ error: 'Invalid JSON format' });
-    expect(importLogs).not.toHaveBeenCalled();
+    expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
   it('rejects an unsigned file', async () => {
@@ -47,7 +49,7 @@ describe('importFromJson', () => {
     expect(result).toEqual({
       error: 'This log file is unsigned and cannot be imported. Re-export it from this extension.',
     });
-    expect(importLogs).not.toHaveBeenCalled();
+    expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
   it('rejects a tampered file (signature mismatch)', async () => {
@@ -59,14 +61,14 @@ describe('importFromJson', () => {
     expect(result).toEqual({
       error: 'Log file signature verification failed. The file may be corrupted or was exported from a different browser profile.',
     });
-    expect(importLogs).not.toHaveBeenCalled();
+    expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
   it('returns error when rows array is empty', async () => {
     const { importFromJson } = await import('../importLogsService.js');
     const result = await importFromJson(await signedExport([]));
     expect(result).toEqual({ error: 'No records found in file' });
-    expect(importLogs).not.toHaveBeenCalled();
+    expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
   it('returns error when rows field is missing', async () => {
@@ -75,7 +77,7 @@ describe('importFromJson', () => {
     const signature = await fakeSign(JSON.stringify(body, null, 2));
     const result = await importFromJson(JSON.stringify({ ...body, signature }));
     expect(result).toEqual({ error: 'No records found in file' });
-    expect(importLogs).not.toHaveBeenCalled();
+    expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
   it('returns error when all rows are invalid', async () => {
@@ -83,11 +85,11 @@ describe('importFromJson', () => {
     const json = await signedExport([{ title: 'no url' }, { url: '', created_at: 100 }]);
     const result = await importFromJson(json);
     expect(result).toEqual({ error: 'No valid records found (url and created_at required)' });
-    expect(importLogs).not.toHaveBeenCalled();
+    expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
   it('imports valid rows and filters out invalid ones', async () => {
-    vi.mocked(importLogs).mockResolvedValue({ data: { inserted: 2, skipped: 0, total: 2 } });
+    mockSqliteCall.mockResolvedValue({ data: { inserted: 2, skipped: 0, total: 2 } });
     const { importFromJson } = await import('../importLogsService.js');
     const json = await signedExport([
       { url: 'https://example.com', created_at: 1000 },
@@ -96,14 +98,17 @@ describe('importFromJson', () => {
     ]);
     const result = await importFromJson(json);
     expect(result).toEqual({ inserted: 2, skipped: 0, total: 2 });
-    expect(importLogs).toHaveBeenCalledWith([
-      { url: 'https://example.com', created_at: 1000 },
-      { url: 'https://test.com', created_at: 2000, title: 'Test' },
-    ]);
+    expect(mockSqliteCall).toHaveBeenCalledWith('import', {
+      subtype: 'import',
+      rows: [
+        { url: 'https://example.com', created_at: 1000 },
+        { url: 'https://test.com', created_at: 2000, title: 'Test' },
+      ],
+    });
   });
 
   it('calls onProgress callback with current and total', async () => {
-    vi.mocked(importLogs).mockResolvedValue({ data: { inserted: 10, skipped: 0, total: 10 } });
+    mockSqliteCall.mockResolvedValue({ data: { inserted: 10, skipped: 0, total: 10 } });
     const { importFromJson } = await import('../importLogsService.js');
     const onProgress = vi.fn();
     const rows = Array.from({ length: 250 }, (_, i) => ({
@@ -118,7 +123,7 @@ describe('importFromJson', () => {
   });
 
   it('handle batch where importLogs fails and counts skipped', async () => {
-    vi.mocked(importLogs)
+    mockSqliteCall
       .mockResolvedValueOnce({ data: { inserted: 2, skipped: 0, total: 2 } })
       .mockResolvedValueOnce({ error: 'Batch too large' });
     const { importFromJson } = await import('../importLogsService.js');
@@ -131,7 +136,7 @@ describe('importFromJson', () => {
   });
 
   it('surfaces the reason when every batch fails', async () => {
-    vi.mocked(importLogs).mockResolvedValue({ error: 'Database is locked' });
+    mockSqliteCall.mockResolvedValue({ error: 'Database is locked' });
     const { importFromJson } = await import('../importLogsService.js');
     const json = await signedExport([{ url: 'https://example.com', created_at: 1000 }]);
     const result = await importFromJson(json);
@@ -139,7 +144,7 @@ describe('importFromJson', () => {
   });
 
   it('joins distinct reasons across multiple failed batches', async () => {
-    vi.mocked(importLogs)
+    mockSqliteCall
       .mockResolvedValueOnce({ error: 'Database is locked' })
       .mockResolvedValueOnce({ error: 'Batch too large' });
     const { importFromJson } = await import('../importLogsService.js');

@@ -11,13 +11,8 @@ import type { SqliteError, QueryOp, MutateOp, MaintainOp, AuditLogRecord } from 
 import { categorizeError } from '../../messaging/sqliteRpcClient.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
 import type {
-  OffscreenBinaryResponse,
   OffscreenStatusResponse,
   OffscreenStatusData,
-  OffscreenPurgeResponse,
-  OffscreenContentPurgeResponse,
-  OffscreenWriteResponse,
-  OffscreenHealthResponse,
   ArchiveSessionRow,
   ArchiveSessionStatusData,
   ArchivePurgeData,
@@ -30,33 +25,14 @@ import type {
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
-import { archiveWireFor, archiveNoRetry, isArchiveOpType, ARCHIVE_DESCRIPTORS, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
-import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor } from '../../messaging/sqliteWireTable.js';
+import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
+import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor, sqliteMaintainWireFor } from '../../messaging/sqliteWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
 export { categorizeError };
 
 type GatewaySuccessResponse = { success: true } & Record<string, unknown>;
-
-/**
- * Per-op success-response decoders for the table-driven archive path.
- * Each entry mirrors the transform the hand-written switch case used to
- * pass to callInternal; field access is checked against the wire response
- * type so a shape change fails compilation here instead of silently
- * returning undefined.
- */
-// Derived from the wire table's decodeResponse (PBI 2026-09-15-04): the
-// per-op hand-written projections used to duplicate these shapes field-for-
-// field, and a missing field (e.g. preview) silently decoded to undefined.
-// Reusing decodeResponse closes that class — its throws surface as
-// SqliteResult errors instead of silent undefined.
-const ARCHIVE_GATEWAY_DECODERS = Object.fromEntries(
-  (Object.keys(ARCHIVE_DESCRIPTORS) as ArchiveOpType[]).map((op) => [
-    op,
-    (res: GatewaySuccessResponse) => ARCHIVE_DESCRIPTORS[op].decodeResponse(res),
-  ]),
-) as Record<ArchiveOpType, (res: GatewaySuccessResponse) => unknown>;
 
 export class OffscreenGateway {
   private readonly injectedTransport: OffscreenTransport | null;
@@ -171,7 +147,12 @@ export class OffscreenGateway {
       const entry = archiveWireFor(op.type);
       if (!entry) throw new Error(`Unhandled maintain op: ${op.type}`);
       const { type: _discriminator, ...payload } = op as unknown as Record<string, unknown>;
-      const decode = ARCHIVE_GATEWAY_DECODERS[op.type];
+      // Decode ownership lives in the wire-table row (PBI 2026-09-23-02):
+      // the gateway references entry.decodeResponse instead of a local
+      // decoder copy, so a shape change fails in the row's codec, not here.
+      // (PBI 2026-09-15-04: decode throws still surface as SqliteResult
+      // errors instead of silent undefined.)
+      const decode = (res: GatewaySuccessResponse) => entry.decodeResponse(res);
       return this.callInternal<unknown>(
         entry.messageType,
         payload,
@@ -180,19 +161,21 @@ export class OffscreenGateway {
         archiveNoRetry(op.type) ? { noRetry: true } : undefined,
       );
     }
-    // Archive ops return above, so the switch below only sees the
-    // non-archive remainder; the cast makes that explicit to the checker.
+    // Non-archive maintain ops (PBI 2026-09-23-13): routed through
+    // SQLITE_MAINTAIN_WIRE_TABLE, same seam as query()/mutate() above. The
+    // row supplies the message type, the wire payload, and the response
+    // decoder (including the backup-bytes decode and the SQLITE_PURGE vs
+    // CONTENT_PURGE split); callInternal stays the single transport and
+    // error-mapping seam. Exhaustiveness moved to the table's compile-time
+    // two-way sync assert; a drifted lookup fails closed here.
     const rest = op as Exclude<MaintainOp, { type: ArchiveOpType }>;
-    switch (rest.type) {
-      case 'init': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_INIT'); return result.success ? { success: true, data: true } : result; }
-      case 'backup': return this.callInternal<Uint8Array, OffscreenBinaryResponse>('SQLITE_BACKUP', {}, (res) => new Uint8Array(res.data));
-      case 'restore': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_RESTORE', { data: Array.from(rest.data) }, () => undefined);
-      case 'clearAll': return this.callInternal<void, OffscreenWriteResponse>('SQLITE_CLEAR_ALL', {}, () => undefined);
-      case 'purgeOldRecords': return this.callInternal<{ purged: number }, OffscreenPurgeResponse>('SQLITE_PURGE', { retentionDays: rest.retentionDays, maxRecords: rest.maxRecords }, (res) => ({ purged: res.purged }));
-      case 'purgeContent': return this.callInternal<{ purged: number }, OffscreenContentPurgeResponse>('CONTENT_PURGE', { retentionDays: rest.retentionDays, maxRecords: rest.maxRecords, includeStarred: rest.includeStarred }, (res) => ({ purged: res.purged }));
-      case 'healthCheck': { const result = await this.callInternal<boolean, OffscreenHealthResponse>('SQLITE_HEALTH_CHECK', {}); return result.success ? { success: true, data: true } : result; }
-      default: { const exhaustive: never = rest; void exhaustive; throw new Error('Unhandled maintain op'); }
-    }
+    const row = sqliteMaintainWireFor(rest.type);
+    if (!row) throw new Error('Unhandled maintain op');
+    return this.callInternal<unknown>(
+      row.messageType,
+      row.encodePayload(rest),
+      (res) => row.decodeGateway(res),
+    );
   }
 
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> {

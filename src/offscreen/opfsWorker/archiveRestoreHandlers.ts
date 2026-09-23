@@ -6,6 +6,10 @@
  * Safety invariants:
  * - The staging name must have been issued by the registry (fail-closed).
  * - `validateArchiveEngine` runs in reject mode before a single row moves.
+ * - Worker-side resource ceilings (MAX_ARCHIVE_RESTORE_ROWS/_BYTES) gate both
+ *   validation and every restore batch; a ceiling breach aborts with
+ *   ARC_CAP_001/ARC_CAP_002 and discards the staging so no partial restore
+ *   remains behind.
  * - Rows are re-numbered (archive `id` is NOT carried over) and deduplicated
  *   by the main DB's UNIQUE(url, created_at) via INSERT OR IGNORE.
  * - Per-row error handling: a CHECK/type violation never aborts the restore;
@@ -25,6 +29,14 @@ import { createEngine, type SqliteValue } from '../sqliteEngine.js';
 import { COLUMN_NAMES, INSERT_IGNORE_SQL, buildInsertParams } from '../schema.js';
 import { validateArchiveEngine } from './archiveValidation.js';
 import {
+  ARC_CAP_BYTES,
+  ARC_CAP_ROWS,
+  MAX_ARCHIVE_RESTORE_BYTES,
+  MAX_ARCHIVE_RESTORE_ROWS,
+  assertRowTotalWithinCap,
+  estimateBatchBytes,
+} from './archiveGuards.js';
+import {
   prepareIncoming,
   releaseStaging,
   assertRegisteredStagingName,
@@ -35,6 +47,22 @@ const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href
 const RESTORE_BATCH = 5000;
 
 let archiveRestoreInFlight = false;
+
+/**
+ * Abort a restore that exceeded a resource ceiling. Unlike transient
+ * failures (which keep the staging for retry), an oversized file is
+ * permanently rejected, so the staging is discarded best-effort and the
+ * ARC_CAP_* error propagates. Engine close and the in-flight reset stay
+ * with the caller's finally blocks, as on every other error path.
+ */
+async function abortRestoreOverCap(stagingName: string, message: string): Promise<never> {
+  try {
+    await releaseStaging(stagingName);
+  } catch {
+    // Release failure must not mask the ceiling violation.
+  }
+  throw new Error(message);
+}
 
 /** Issue a registered incoming staging name for the dashboard to fill. */
 export async function handleArchivePrepareIncoming(
@@ -97,17 +125,51 @@ export async function handleArchiveRestore(
     assertRegisteredStagingName(payload.stagingName);
     const archiveEngine = await createEngine(payload.stagingName, WASM_URL);
     try {
-      await validateArchiveEngine(archiveEngine, { recordCountMismatch: 'reject' });
+      const validation = await validateArchiveEngine(archiveEngine, {
+        recordCountMismatch: 'reject',
+      });
+      // Re-check the observed total here: validation already enforces the
+      // ceilings, but the handler must not trust that step blindly.
+      try {
+        assertRowTotalWithinCap(validation.recordCount, true);
+      } catch (error) {
+        await abortRestoreOverCap(payload.stagingName, String((error as Error).message ?? error));
+      }
 
       const restored = { restored: 0, restoredDeleted: 0, skipped: 0, skippedInvalid: 0 };
       const selectColumns = ['id', ...COLUMN_NAMES].join(', ');
       let cursor = 0;
+      let seenRows = 0;
+      let seenBytes = 0;
       for (;;) {
         const rows = await archiveEngine.query(
           `SELECT ${selectColumns} FROM browsing_logs WHERE id > ? ORDER BY id LIMIT ${RESTORE_BATCH}`,
           [cursor],
         );
         if (rows.length === 0) break;
+
+        // Mid-loop backstop: validation counts can go stale (or be bypassed),
+        // so each batch is gated BEFORE any of its rows reach the main DB.
+        // A lying archive is stopped here even if it slipped past validation.
+        if (seenRows + rows.length > MAX_ARCHIVE_RESTORE_ROWS) {
+          await abortRestoreOverCap(
+            payload.stagingName,
+            `Archive restore aborted: archive exceeds the restore limit of ` +
+              `${MAX_ARCHIVE_RESTORE_ROWS} rows ` +
+              `— split the archive by date and retry (${ARC_CAP_ROWS})`,
+          );
+        }
+        const batchBytes = estimateBatchBytes(rows);
+        if (seenBytes + batchBytes > MAX_ARCHIVE_RESTORE_BYTES) {
+          await abortRestoreOverCap(
+            payload.stagingName,
+            `Archive restore aborted: archive exceeds the restore limit of ` +
+              `${MAX_ARCHIVE_RESTORE_BYTES} bytes ` +
+              `— split the archive by date and retry (${ARC_CAP_BYTES})`,
+          );
+        }
+        seenRows += rows.length;
+        seenBytes += batchBytes;
 
         await withTransaction(ctx, async () => {
           for (const row of rows) {

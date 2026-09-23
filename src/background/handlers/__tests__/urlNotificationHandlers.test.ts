@@ -14,8 +14,6 @@ vi.mock('../../../utils/crypto/index.js', async (importOriginal) => {
   return {
     ...actual,
     getNotificationHmacKey: vi.fn().mockImplementation(async () => { console.log('>> getNotificationHmacKey called'); return 'test-key'; }),
-    generateHmacSignature: vi.fn().mockImplementation(async (data: string, key: any) => { console.log('>> generateHmacSignature called with', data); return 'signature123'; }),
-    verifyHmacSignature: vi.fn().mockResolvedValue(true),
     // The handlers sign through this seam now (PBI 2026-09-16-04).
     notificationHmacSigner: {
       sign: vi.fn().mockResolvedValue('signature123'),

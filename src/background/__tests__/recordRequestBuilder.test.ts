@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildRecordRequest, extractOfflinePayload, buildOfflineRetryRequest } from '../recordRequestBuilder.js';
+import { buildRecordRequest, extractOfflinePayload, buildOfflineRetryRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
+import type { RecordDiagnosticsSource } from '../recordRequestBuilder.js';
+import type { ContentResponse } from '../../messaging/types.js';
+import type { ManualRecordMessage } from '../messageTypes.js';
+import type { AiSummaryCleansedReason } from '../../utils/commonTypes.js';
 import type { RecordingContext } from '../pipeline/types.js';
 
 describe('buildRecordRequest (PBI 2026-09-12-04)', () => {
@@ -175,6 +179,114 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
     expect(result).toBeUndefined();
     expect(logErrorSpy).toHaveBeenCalled();
     logErrorSpy.mockRestore();
+  });
+});
+
+describe('pickRecordDiagnostics (PBI 2026-09-23-12)', () => {
+  const FLAT_DIAG: {
+    pageBytes: number;
+    candidateBytes: number;
+    originalBytes: number;
+    cleansedBytes: number;
+    aiSummaryOriginalBytes: number;
+    aiSummaryCleansedBytes: number;
+    aiSummaryCleansedElements: number;
+    aiSummaryCleansedReason: AiSummaryCleansedReason;
+    aiSummaryCleansedReasons: string[];
+    cleansedReason: string;
+    fallbackTriggered: boolean;
+    fallbackReason: string;
+  } = {
+    pageBytes: 1000,
+    candidateBytes: 800,
+    originalBytes: 700,
+    cleansedBytes: 500,
+    aiSummaryOriginalBytes: 400,
+    aiSummaryCleansedBytes: 300,
+    aiSummaryCleansedElements: 2,
+    aiSummaryCleansedReason: 'keyword',
+    aiSummaryCleansedReasons: ['keyword'],
+    cleansedReason: 'keyword',
+    fallbackTriggered: true,
+    fallbackReason: 'content_overcut',
+  };
+
+  it('pins the owned field table: exactly these 12 keys travel together', () => {
+    expect(Object.keys(pickRecordDiagnostics({ ...FLAT_DIAG })).sort()).toEqual(
+      [
+        'aiSummaryCleansedBytes',
+        'aiSummaryCleansedElements',
+        'aiSummaryCleansedReason',
+        'aiSummaryCleansedReasons',
+        'aiSummaryOriginalBytes',
+        'candidateBytes',
+        'cleansedBytes',
+        'cleansedReason',
+        'fallbackReason',
+        'fallbackTriggered',
+        'originalBytes',
+        'pageBytes',
+      ].sort(),
+    );
+  });
+
+  it('drops unset fields (pickDefined semantics: keys absent, not undefined)', () => {
+    const out = pickRecordDiagnostics({ pageBytes: 10 });
+    expect(out).toEqual({ pageBytes: 10 });
+    expect('candidateBytes' in out).toBe(false);
+    expect('fallbackReason' in out).toBe(false);
+  });
+
+  it('never forwards maskedCount even when the payload carries one (VULN-007)', () => {
+    const out = pickRecordDiagnostics({ ...FLAT_DIAG, maskedCount: 999 });
+    expect('maskedCount' in out).toBe(false);
+    const req = buildRecordRequest('save', {
+      title: 'T', url: 'https://example.com', content: 'c', ...out,
+    });
+    expect('maskedCount' in req).toBe(false);
+  });
+
+  it('flattens the nested ContentResponse spelling (regenerate)', () => {
+    const extracted: ContentResponse = {
+      content: 're-extracted body',
+      byteStats: {
+        pageBytes: 1000, candidateBytes: 800, originalBytes: 700, cleansedBytes: 500,
+      },
+      aiSummaryCleansedStats: {
+        aiSummaryOriginalBytes: 400,
+        aiSummaryCleansedBytes: 300,
+        aiSummaryCleansedElements: 2,
+        aiSummaryCleansedReason: 'keyword',
+        aiSummaryCleansedReasons: ['keyword'],
+      },
+      fallbackTriggered: true,
+      fallbackReason: 'content_overcut',
+      cleansedReason: 'keyword',
+    };
+    expect(pickRecordDiagnostics(extracted)).toEqual(FLAT_DIAG);
+  });
+
+  it('prefers flat fields over nested ones and returns {} for nullish payloads', () => {
+    const mixed: RecordDiagnosticsSource = {
+      pageBytes: 1,
+      byteStats: { pageBytes: 2, candidateBytes: 3, originalBytes: 4, cleansedBytes: 5 },
+    };
+    expect(pickRecordDiagnostics(mixed)).toMatchObject({ pageBytes: 1, candidateBytes: 3 });
+    expect(pickRecordDiagnostics(undefined)).toEqual({});
+    expect(pickRecordDiagnostics(null)).toEqual({});
+  });
+
+  it('does not leak caller-explicit keys present on real message payloads', () => {
+    const payload: ManualRecordMessage['payload'] = {
+      title: 'T', url: 'https://example.com', content: 'c',
+      force: true, skipAi: true, ...FLAT_DIAG,
+    };
+    const out = pickRecordDiagnostics(payload);
+    expect('force' in out).toBe(false);
+    expect('skipAi' in out).toBe(false);
+    expect('previewOnly' in out).toBe(false);
+    expect('targetEntryId' in out).toBe(false);
+    expect(out).toMatchObject(FLAT_DIAG);
   });
 });
 

@@ -2,7 +2,8 @@ import { loadActiveTabStatus, type ActiveTabStatusSnapshot } from '../statusStor
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
-import { getCurrentTab, isRecordable } from '../tabUtils.js';
+import { getCurrentTab } from '../tabUtils.js';
+import { isRecordableTab } from '../../utils/recordingGateTable.js';
 import { formatSuccessMessage } from '../errorUtils.js';
 import { clearElement } from '../domUtils.js';
 import { getMessage } from '../../utils/i18n.js';
@@ -90,7 +91,7 @@ export class RecordSession {
 
     const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
     if (recordBtn) {
-      if (!isRecordable(tab)) {
+      if (!isRecordableTab(tab)) {
         recordBtn.disabled = true;
         recordBtn.textContent = getMessage('cannotRecordPage');
       } else {
@@ -194,7 +195,7 @@ export class RecordSession {
     this.sessionState = 'idle';
     const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
     const currentTab = await getCurrentTab();
-    if (btn && currentTab && isRecordable(currentTab)) {
+    if (btn && currentTab && isRecordableTab(currentTab)) {
       await this.resetRecordButton(btn);
     }
     return true;
@@ -206,7 +207,7 @@ export class RecordSession {
     this.sessionState = 'idle';
     const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
     const currentTab = await getCurrentTab();
-    if (btn && currentTab && isRecordable(currentTab)) {
+    if (btn && currentTab && isRecordableTab(currentTab)) {
       await this.resetRecordButton(btn);
     }
   }
@@ -403,7 +404,7 @@ export class RecordSession {
       const tab = await getCurrentTab();
       if (!tab || !tab.id) throw new Error('No active tab found');
 
-      if (!isRecordable(tab)) {
+      if (!isRecordableTab(tab)) {
         throw new Error(getMessage('cannotRecordPage'));
       }
 

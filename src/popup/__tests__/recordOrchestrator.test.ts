@@ -40,6 +40,11 @@ vi.mock('../tabUtils.js', () => ({
   getCurrentTab: mockGetCurrentTab,
   isRecordable: mockIsRecordable,
 }));
+// recordSession reads recordability from the neutral gate table (PBI
+// 2026-09-23-05); the tabUtils shim keeps the mock for the legacy export.
+vi.mock('../../utils/recordingGateTable.js', () => ({
+  isRecordableTab: mockIsRecordable,
+}));
 vi.mock('../errorUtils.js', () => ({
   formatSuccessMessage: mockFormatSuccessMessage,
   showError: mockShowError,

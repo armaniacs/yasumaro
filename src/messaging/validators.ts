@@ -48,6 +48,19 @@ export interface MessageValidator<T> {
 }
 
 /**
+ * ByteStats bounds for VALID_VISIT payloads. Page content is capped at
+ * MAX_CONTENT_LENGTH chars (≈4MiB worst-case UTF-8) and AI responses at
+ * 10MiB, so 16MiB accepts every legitimate measurement with headroom while
+ * rejecting absurd self-reported values. Element/reason caps likewise sit
+ * orders of magnitude above real cleanser output (hundreds of elements,
+ * reason keys under 20 chars).
+ */
+export const MAX_BYTE_STAT_BYTES = 16 * 1024 * 1024;
+export const MAX_CLEANSED_ELEMENTS = 1_000_000;
+export const MAX_CLEANSED_REASON_CHARS = 128;
+export const MAX_CLEANSED_REASONS = 64;
+
+/**
  * Payload size caps. Oversized payloads are rejected (not truncated) so a
  * compromised or buggy sender cannot exhaust SW memory or chrome.storage
  * quota via the recording pipeline.
@@ -71,6 +84,14 @@ export const VALIDATOR_LIMITS = {
   MAX_APPEND_IDS,
   /** DASHBOARD_SQLITE archive_query rows per request (PBI 2026-09-17-18) */
   MAX_ARCHIVE_QUERY_LIMIT,
+  /** VALID_VISIT ByteStats byte fields (page/candidate/original/cleansed/AI-summary bytes) */
+  MAX_BYTE_STAT_BYTES,
+  /** VALID_VISIT aiSummaryCleansedElements */
+  MAX_CLEANSED_ELEMENTS,
+  /** VALID_VISIT aiSummaryCleansedReason / aiSummaryCleansedReasons[] element length */
+  MAX_CLEANSED_REASON_CHARS,
+  /** VALID_VISIT aiSummaryCleansedReasons[] element count */
+  MAX_CLEANSED_REASONS,
 } as const;
 
 // ------------------------------------------------------------------
@@ -128,6 +149,61 @@ export class ServiceWorkerRequestValidator implements MessageValidator<Extension
 // ------------------------------------------------------------------
 // ValidVisitValidator — VALID_VISIT payload validation
 // ------------------------------------------------------------------
+
+/** Byte-valued ByteStats fields share one bound; all are rejected (never
+ *  clamped) when clearly invalid so a compromised sender cannot shift
+ *  storage metadata by degrees. */
+const BYTE_STAT_FIELDS = [
+  'pageBytes',
+  'candidateBytes',
+  'originalBytes',
+  'cleansedBytes',
+  'aiSummaryOriginalBytes',
+  'aiSummaryCleansedBytes',
+] as const;
+
+function assertByteStatField(
+  payload: Record<string, unknown>,
+  field: string,
+  max: number,
+  validatorName: string,
+): void {
+  const v = payload[field];
+  if (v === undefined) return;
+  // Number.isInteger rejects NaN/Infinity/fractions as well as non-numbers.
+  if (typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > max) {
+    throw new ValidationError(
+      validatorName,
+      `payload.${field} must be an integer 0..${max}`,
+      field,
+    );
+  }
+}
+
+function assertCleansedReasons(
+  payload: Record<string, unknown>,
+  validatorName: string,
+): void {
+  const v = payload.aiSummaryCleansedReasons;
+  if (v === undefined) return;
+  if (!Array.isArray(v) || v.length > MAX_CLEANSED_REASONS) {
+    throw new ValidationError(
+      validatorName,
+      `payload.aiSummaryCleansedReasons must be an array of at most ${MAX_CLEANSED_REASONS}`,
+      'aiSummaryCleansedReasons',
+    );
+  }
+  for (const el of v) {
+    if (typeof el !== 'string' || el.length > MAX_CLEANSED_REASON_CHARS) {
+      throw new ValidationError(
+        validatorName,
+        `payload.aiSummaryCleansedReasons elements must be strings of at most ${MAX_CLEANSED_REASON_CHARS} chars`,
+        'aiSummaryCleansedReasons',
+      );
+    }
+  }
+}
+
 export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> {
   validate(msg: unknown): ValidVisitMessage {
     if (!msg || typeof msg !== 'object') {
@@ -158,6 +234,22 @@ export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> 
     if (payload.fallbackReason !== undefined && typeof payload.fallbackReason !== 'string') {
       throw new ValidationError('ValidVisitValidator', 'payload.fallbackReason must be a string', 'fallbackReason');
     }
+    for (const field of BYTE_STAT_FIELDS) {
+      assertByteStatField(payload, field, MAX_BYTE_STAT_BYTES, 'ValidVisitValidator');
+    }
+    assertByteStatField(payload, 'aiSummaryCleansedElements', MAX_CLEANSED_ELEMENTS, 'ValidVisitValidator');
+    if (
+      payload.aiSummaryCleansedReason !== undefined &&
+      (typeof payload.aiSummaryCleansedReason !== 'string' ||
+        payload.aiSummaryCleansedReason.length > MAX_CLEANSED_REASON_CHARS)
+    ) {
+      throw new ValidationError(
+        'ValidVisitValidator',
+        `payload.aiSummaryCleansedReason must be a string of at most ${MAX_CLEANSED_REASON_CHARS} chars`,
+        'aiSummaryCleansedReason',
+      );
+    }
+    assertCleansedReasons(payload, 'ValidVisitValidator');
     // VALID_MESSAGE_TYPES check already ensures type is known, but verify protocolVersion if present
     assertProtocolVersion(m, 'ValidVisitValidator');
     return msg as ValidVisitMessage;
@@ -573,6 +665,60 @@ export class ContentCleansingExecutedValidator implements MessageValidator<Conte
   }
 }
 
+// ------------------------------------------------------------------
+// TestObsidianValidator — TEST_OBSIDIAN (connection-test form values)
+// ------------------------------------------------------------------
+/**
+ * Wire-shape gate for TEST_OBSIDIAN. The dashboard sends optional form values
+ * (empty fields are dropped upstream), so every field is optional; what the
+ * validator enforces is type + bound, matching the sibling validators' style.
+ * Substantive host/loopback rules stay in obsidianConfigValidator downstream —
+ * this row exists so TEST_OBSIDIAN reaches its handler through the same
+ * validated path as every other message with a payload.
+ */
+const TEST_OBSIDIAN_FIELD_CAPS = {
+  /** Obsidian Local REST API tokens are short UUID-ish strings. */
+  apiKey: 512,
+  /** Longest legitimate hostname is a fully-qualified DNS name (253 octets). */
+  host: 253,
+} as const;
+
+export class TestObsidianValidator implements MessageValidator<ExtensionMessage> {
+  validate(msg: unknown): ExtensionMessage {
+    if (!msg || typeof msg !== 'object') {
+      throw new ValidationError('TestObsidianValidator', 'Message must be an object');
+    }
+    const m = msg as Record<string, unknown>;
+    if (m.type !== 'TEST_OBSIDIAN') {
+      throw new ValidationError('TestObsidianValidator', 'type must be TEST_OBSIDIAN', 'type');
+    }
+    if (m.payload === undefined) {
+      return msg as ExtensionMessage;
+    }
+    if (!m.payload || typeof m.payload !== 'object' || Array.isArray(m.payload)) {
+      throw new ValidationError('TestObsidianValidator', 'payload must be an object', 'payload');
+    }
+    const p = m.payload as Record<string, unknown>;
+    for (const field of ['apiKey', 'host'] as const) {
+      const value = p[field];
+      if (value === undefined) continue;
+      if (typeof value !== 'string' || value.length > TEST_OBSIDIAN_FIELD_CAPS[field]) {
+        throw new ValidationError('TestObsidianValidator', `payload.${field} must be a string of at most ${TEST_OBSIDIAN_FIELD_CAPS[field]} chars`, field);
+      }
+    }
+    if (p.protocol !== undefined && p.protocol !== 'http' && p.protocol !== 'https') {
+      throw new ValidationError('TestObsidianValidator', 'payload.protocol must be "http" or "https"', 'protocol');
+    }
+    if (p.port !== undefined) {
+      const portNum = typeof p.port === 'number' ? p.port : typeof p.port === 'string' ? Number(p.port) : NaN;
+      if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
+        throw new ValidationError('TestObsidianValidator', 'payload.port must be an integer 1-65535', 'port');
+      }
+    }
+    return msg as ExtensionMessage;
+  }
+}
+
 // Convenience singletons for registry wiring
 export const serviceWorkerRequestValidator = new ServiceWorkerRequestValidator();
 export const validVisitValidator = new ValidVisitValidator();
@@ -582,3 +728,4 @@ export const manualRecordValidator = new ManualRecordValidator();
 export const regenerateSummaryValidator = new RegenerateSummaryValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();
+export const testObsidianValidator = new TestObsidianValidator();

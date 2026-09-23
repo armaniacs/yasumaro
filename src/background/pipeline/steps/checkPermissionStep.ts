@@ -7,7 +7,7 @@ import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { extractDomain } from '../../../utils/domainUtils.js';
 import { getPermissionManager } from '../../../utils/permissionManager.js';
-import { decidePermission } from '../recordingDecision.js';
+import { decideGate } from '../../../utils/recordingGateTable.js';
 import type { RecordingContext, PipelineStepFunction, PermissionCheckResult } from '../types.js';
 
 /**
@@ -34,7 +34,8 @@ export const checkPermissionStep: PipelineStepFunction = async (
     }
 
     // PBI 2026-09-19-08: verdict は recordingDecision.decidePermission に委譲
-    const verdict = decidePermission(permitted, domain);
+    // PBI 2026-09-23-05: shared gate table row への adapter（I/O はこの step に残す）
+    const verdict = decideGate('permission', { permitted, domain });
     if (!verdict.allow) {
       if (verdict.error === 'INVALID_URL') {
         addLog(LogType.ERROR, 'Failed to extract domain from URL', { url, traceId: context.traceId });

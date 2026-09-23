@@ -35,6 +35,12 @@ export interface AiSummaryCleanseRunResult {
 
 /**
  * 抽出結果の型（コンテンツのみ、またはコンテンツとクレンジング情報）
+ *
+ * Legacy compat: new code consumes extract() → { content, report } and
+ * crosses only the ExtractionReport seam. This flat shape is still produced
+ * by extractMainContentWithInfo / preparePageContent (via
+ * report.toLegacyResult) for the kernel badge check and the background
+ * wire payload, which are out of this PBI's file scope.
  */
 export interface ExtractResult {
     content: string;

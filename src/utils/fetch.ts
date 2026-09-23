@@ -236,8 +236,11 @@ export async function fetchWithRedirectGuard(
  */
 export function isUrlAllowed(url: string, allowedUrls: Set<string> | null): boolean {
   if (!allowedUrls || allowedUrls.size === 0) {
-    // 許可されたURLのリストがない場合は検証をスキップ（後方互換性）
-    return true;
+    // Fail-closed: an empty set means the persisted allowlist was never
+    // seeded (or was wiped), not "allow everything". Callers seed
+    // ALLOWED_URLS from buildAllowedUrls on settings writes and at SW
+    // startup, so a legitimate request never reaches this branch.
+    return false;
   }
 
   // URLの正規化（無効なURLの場合はfalseを返す）

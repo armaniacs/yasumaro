@@ -266,6 +266,9 @@ const openAiSettings = {
   provider_base_url: 'https://api.example.com/v1',
   provider_api_key: 'test-key',
   provider_model: 'test-model',
+  // Non-local custom origins require the explicit user confirmation record
+  // (VULN-002 origin authorization).
+  confirmed_provider_origins: { provider_base_url: ['https://api.example.com'] },
 } as unknown as Settings;
 
 /** Retry options object passed to fetchWithRetry by generateSummary. */

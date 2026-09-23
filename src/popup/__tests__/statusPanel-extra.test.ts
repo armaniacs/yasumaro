@@ -31,7 +31,24 @@ const mockExtractDomain = vi.hoisted(() => vi.fn((url: string) => {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
 }));
 
-vi.mock('../tabUtils.js', () => ({ getCurrentTab: mockGetCurrentTab }));
+// PBI 2026-09-23-14: the mock targets the tabUtils seam — only the query root
+// (getCurrentTab) is faked; the narrow adapters stay wired to it so every
+// active-tab read in production flows through the single mocked root.
+vi.mock('../tabUtils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../tabUtils.js')>();
+  return {
+    ...actual,
+    getCurrentTab: mockGetCurrentTab,
+    getActiveTabUrl: async () => (await mockGetCurrentTab())?.url ?? null,
+    getActiveTabDomain: async () =>
+      actual.getDomainForUrl((await mockGetCurrentTab())?.url ?? null),
+    requireActiveTabUrl: async () => {
+      const url = (await mockGetCurrentTab())?.url ?? null;
+      if (!url) throw new Error('No active tab URL');
+      return url;
+    },
+  };
+});
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -142,6 +159,11 @@ const defaultMessages: Record<string, string> = {
 };
 
 function setDefaultChromeTabsQuery(): void {
+  // PBI 2026-09-23-14: active-tab setup goes through the tabUtils seam —
+  // production no longer reads chrome.tabs.query directly, so the mock root
+  // (getCurrentTab) carries the default tab. The chrome stub below only
+  // preserves tabs.sendMessage for the content-gateway path.
+  mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com', id: 1 });
   vi.stubGlobal('chrome', {
     ...chrome,
     tabs: {
@@ -680,13 +702,8 @@ describe('initStatusPanel — no tab URL', () => {
   beforeEach(setupDefaultDom);
 
   it('hides panel when tab has no url', async () => {
-    vi.stubGlobal('chrome', {
-      ...chrome,
-      tabs: {
-        ...chrome.tabs,
-        query: vi.fn().mockResolvedValue([{ url: undefined, id: 1 }]),
-      },
-    });
+    // PBI 2026-09-23-14: driven through the tabUtils seam (null-url contract).
+    mockGetCurrentTab.mockResolvedValue({ url: undefined, id: 1 } as any);
     await initStatusPanel();
     const panel = document.getElementById('statusPanel')!;
     expect(panel.style.display).toBe('none');
@@ -878,15 +895,8 @@ describe('initStatusPanel — additional branches', () => {
 
   it('hides panel when tab url undefined but panel missing', async () => {
     document.body.innerHTML = '';
-    vi.stubGlobal('chrome', {
-      // @ts-ignore
-      ...global.chrome,
-      tabs: {
-        ...global.chrome.tabs,
-        query: vi.fn().mockResolvedValue([{ url: undefined, id: 1 }]),
-        sendMessage: vi.fn(),
-      },
-    });
+    // PBI 2026-09-23-14: driven through the tabUtils seam (null-url contract).
+    mockGetCurrentTab.mockResolvedValue({ url: undefined, id: 1 } as any);
     await expect(initStatusPanel()).resolves.not.toThrow();
   });
 
@@ -898,6 +908,9 @@ describe('initStatusPanel — additional branches', () => {
       lastSaved: { exists: false },
     });
     const fakeTab = { url: 'https://example.com', id: 42 };
+    // PBI 2026-09-23-14: the active tab comes from the tabUtils seam; the
+    // chrome stub below only preserves tabs.sendMessage for the gateway path.
+    mockGetCurrentTab.mockResolvedValue(fakeTab as any);
     vi.stubGlobal('chrome', {
       // @ts-ignore
       ...global.chrome,
@@ -927,6 +940,9 @@ describe('initStatusPanel — additional branches', () => {
       lastSaved: { exists: false },
     });
     const fakeTab = { url: 'https://example.com', id: 99 };
+    // PBI 2026-09-23-14: the active tab comes from the tabUtils seam; the
+    // chrome stub below only preserves tabs.sendMessage for the gateway path.
+    mockGetCurrentTab.mockResolvedValue(fakeTab as any);
     vi.stubGlobal('chrome', {
       // @ts-ignore
       ...global.chrome,
@@ -966,14 +982,8 @@ describe('initStatusPanel — additional branches', () => {
 
   it('skips trust status update when tab url is missing', async () => {
     // ensure updateTrustStatus not called when url undefined — panel hidden
-    vi.stubGlobal('chrome', {
-      // @ts-ignore
-      ...global.chrome,
-      tabs: {
-        query: vi.fn().mockResolvedValue([{ url: undefined, id: 1 }]),
-        sendMessage: vi.fn(),
-      },
-    });
+    // PBI 2026-09-23-14: driven through the tabUtils seam (null-url contract).
+    mockGetCurrentTab.mockResolvedValue({ url: undefined, id: 1 } as any);
     await initStatusPanel();
     expect(document.getElementById('statusPanel')?.style.display).toBe('none');
   });
@@ -1038,14 +1048,8 @@ describe('initStatusPanel — missing DOM branches', () => {
 
   it('covers error path in outer catch', async () => {
     document.body.innerHTML = '<div id="statusPanel"></div>';
-    vi.stubGlobal('chrome', {
-      // @ts-ignore
-      ...global.chrome,
-      tabs: {
-        query: vi.fn().mockRejectedValue(new Error('boom')),
-        sendMessage: vi.fn(),
-      },
-    });
+    // PBI 2026-09-23-14: the throw surfaces through the tabUtils seam.
+    mockGetCurrentTab.mockRejectedValue(new Error('boom'));
     await initStatusPanel();
     const panel = document.getElementById('statusPanel')!;
     expect(panel.style.display).toBe('none');
@@ -1053,14 +1057,8 @@ describe('initStatusPanel — missing DOM branches', () => {
 
   it('covers error path when panel missing in catch', async () => {
     document.body.innerHTML = '';
-    vi.stubGlobal('chrome', {
-      // @ts-ignore
-      ...global.chrome,
-      tabs: {
-        query: vi.fn().mockRejectedValue(new Error('boom')),
-        sendMessage: vi.fn(),
-      },
-    });
+    // PBI 2026-09-23-14: the throw surfaces through the tabUtils seam.
+    mockGetCurrentTab.mockRejectedValue(new Error('boom'));
     await expect(initStatusPanel()).resolves.not.toThrow();
   });
 });
@@ -1105,6 +1103,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetAll.mockResolvedValue({ domain_whitelist: [] });
     mockExtractDomain.mockReturnValue('example.com');
     await initPrivatePanel();
+    // Click-time tab (init render above used the default seam tab).
+    mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 } as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     expect(btn).toBeTruthy();
     btn.click();
@@ -1129,8 +1129,9 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
   });
 
   it('addDomain: tab.url undefined — early return', async () => {
-    mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     await initPrivatePanel();
+    // Click-time seam setup (init render above used the default seam tab).
+    mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
@@ -1138,8 +1139,9 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
   });
 
   it('addDomain: getCurrentTab returns null — early return', async () => {
-    mockGetCurrentTab.mockResolvedValue(null as any);
     await initPrivatePanel();
+    // Click-time seam setup (init render above used the default seam tab).
+    mockGetCurrentTab.mockResolvedValue(null as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
@@ -1227,8 +1229,9 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
   });
 
   it('addPath: tab.url undefined — early return', async () => {
-    mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     await initPrivatePanel();
+    // Click-time seam setup (init render above used the default seam tab).
+    mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
@@ -1236,8 +1239,9 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
   });
 
   it('addPath: tab is null — early return', async () => {
-    mockGetCurrentTab.mockResolvedValue(null as any);
     await initPrivatePanel();
+    // Click-time seam setup (init render above used the default seam tab).
+    mockGetCurrentTab.mockResolvedValue(null as any);
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await new Promise((r) => setTimeout(r, 20));
@@ -1424,6 +1428,8 @@ describe('additional branch coverage — trust and record fallback', () => {
     const { isAllUrlsPermitted, requestAllUrls } = await import('../../utils/permissionManager.js');
     // Need to mock requestAllUrls to grant
     mockRequestAllUrls.mockResolvedValue(true);
+    // PBI 2026-09-23-14: the post-grant refresh reads via the tabUtils seam.
+    mockGetCurrentTab.mockResolvedValue({ url: undefined, id: 1 } as any);
     vi.stubGlobal('chrome', {
       // @ts-ignore
       ...global.chrome,

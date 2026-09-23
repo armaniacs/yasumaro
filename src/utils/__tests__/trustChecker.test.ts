@@ -202,15 +202,15 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     expect(await checker.shouldSaveAbortedPages()).toBe(true);
   });
 
-  it('shouldSaveAbortedPagesSync should return current config value', async () => {
+  it('shouldSaveAbortedPages (async) should return current config value', async () => {
     const { TrustChecker } = await import('../trustChecker.js');
     const checker = new TrustChecker();
     await checker.loadAlertSettings();
 
-    expect(checker.shouldSaveAbortedPagesSync()).toBe(false);
+    expect(await checker.shouldSaveAbortedPages()).toBe(false);
 
     await checker.saveAlertSettings({ saveAbortedPages: true });
-    expect(checker.shouldSaveAbortedPagesSync()).toBe(true);
+    expect(await checker.shouldSaveAbortedPages()).toBe(true);
   });
 
   it('should save alertSensitive setting', async () => {
@@ -331,49 +331,42 @@ describe('TrustChecker - Phase 2 - Singleton', () => {
   });
 });
 
-describe('TrustChecker - Phase 2 - getAlertConfigSync', () => {
+describe('TrustChecker - Phase 2 - getAlertConfig (async-only)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
   });
 
-  it('should warn when called before initialization', async () => {
-    const { TrustChecker } = await import('../trustChecker.js');
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('should return default config after loadAlertSettings', async () => {
+    const { TrustChecker, DEFAULT_ALERT_CONFIG } = await import('../trustChecker.js');
 
     const checker = new TrustChecker();
-    (checker as any).alertConfigInitialized = false;
-    const result = checker.getAlertConfigSync();
+    await checker.loadAlertSettings();
+    const result = await checker.getAlertConfig();
 
-    expect(result._initialized).toBe(false);
-    expect(typeof result.alertFinance).toBe('boolean');
-    expect(warnSpy).toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(result).toEqual(DEFAULT_ALERT_CONFIG);
   });
 
-  it('should return initialized=true after loadAlertSettings completes', async () => {
+  it('should reflect saved config via async getter', async () => {
     const { TrustChecker } = await import('../trustChecker.js');
     const checker = new TrustChecker();
     await checker.loadAlertSettings();
 
-    const result = checker.getAlertConfigSync();
-    expect(result._initialized).toBe(true);
+    await checker.saveAlertSettings({ alertUnverified: true });
+    const result = await checker.getAlertConfig();
+    expect(result.alertUnverified).toBe(true);
   });
 
-  it('shouldSaveAbortedPagesSync should warn before initialization', async () => {
+  it('shouldSaveAbortedPages (async) should reflect saved value', async () => {
     const { TrustChecker } = await import('../trustChecker.js');
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     const checker = new TrustChecker();
-    (checker as any).alertConfigInitialized = false;
-    const result = checker.shouldSaveAbortedPagesSync();
+    await checker.loadAlertSettings();
+    expect(await checker.shouldSaveAbortedPages()).toBe(false);
 
-    expect(typeof result).toBe('boolean');
-    expect(warnSpy).toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    await checker.saveAlertSettings({ saveAbortedPages: true });
+    expect(await checker.shouldSaveAbortedPages()).toBe(true);
   });
 });
 

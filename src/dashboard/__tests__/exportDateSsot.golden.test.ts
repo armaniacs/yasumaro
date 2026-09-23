@@ -15,6 +15,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockQueryLogs = vi.fn();
 vi.mock('../dashboardSqliteService.js', () => ({
   queryLogs: (...args: unknown[]) => mockQueryLogs(...args),
+  // exportMarkdown reaches the shared row through the generic seam
+  // (PBI 2026-09-23-02); route 'records' queries to the same mock.
+  sqliteClient: {
+    call: (op: string, payload: unknown) => (op === 'records' ? mockQueryLogs(payload) : Promise.resolve({ data: null })),
+  },
 }));
 
 vi.mock('../../utils/storage/encryptionSession.js', () => ({

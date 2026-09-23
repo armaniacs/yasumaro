@@ -23,75 +23,18 @@ export interface TrustDecisionResult {
 
 export class TrustDecision {
   // policy is not cached — always looked up via admin.getPolicy() to avoid stale orphan
-  private _legacyPolicy: TrustPolicy | null = null;
   private admin: TrustDbAdmin;
   private permissionManager: PermissionManager;
 
   private get policy(): TrustPolicy {
-    if (this._legacyPolicy) return this._legacyPolicy;
     return this.admin.getPolicy();
   }
 
   constructor(
-    policy?: TrustPolicy,
     admin: TrustDbAdmin = getTrustDbAdmin(),
     permissionManager: PermissionManager = getPermissionManager()
   ) {
-    const maybeLegacy = policy as unknown as {
-      getPolicy?: () => TrustPolicy;
-      getAdmin?: () => TrustDbAdmin;
-      isDomainTrusted?: (d: string) => TrustResult;
-      addToWhitelist?: (d: string) => Promise<{ success: boolean; error?: string }>;
-      initialize?: () => Promise<void>;
-    };
-    // Legacy 2-arg signature: new TrustDecision(mockDb, mockPermission)
-    if (
-      maybeLegacy &&
-      typeof maybeLegacy.isDomainTrusted === 'function' &&
-      typeof maybeLegacy.addToWhitelist === 'function'
-    ) {
-      const legacy = maybeLegacy as unknown as {
-        isDomainTrusted: (d: string) => TrustResult;
-        isTrancoDomain?: (d: string) => boolean;
-        initialize: () => Promise<void>;
-        addToWhitelist: (d: string) => Promise<{ success: boolean; error?: string }>;
-        addSensitiveDomain: (d: string) => Promise<{ success: boolean; error?: string }>;
-      };
-      this._legacyPolicy = {
-        isDomainTrusted: legacy.isDomainTrusted.bind(legacy),
-        isTrancoDomain: (legacy.isTrancoDomain?.bind(legacy) ?? (() => false)) as TrustPolicy['isTrancoDomain'],
-      } as unknown as TrustPolicy;
-      this.admin = {
-        initialize: legacy.initialize.bind(legacy),
-        addToWhitelist: legacy.addToWhitelist.bind(legacy),
-        addSensitiveDomain: legacy.addSensitiveDomain.bind(legacy),
-        isDomainTrusted: legacy.isDomainTrusted.bind(legacy),
-      } as unknown as TrustDbAdmin;
-      // second arg is actually PermissionManager in legacy call
-      if (admin && typeof (admin as unknown as PermissionManager).isHostPermitted === 'function') {
-        this.permissionManager = admin as unknown as PermissionManager;
-      } else {
-        this.permissionManager = permissionManager;
-      }
-      return;
-    }
-    // Legacy god object with getPolicy/getAdmin
-    if (maybeLegacy && typeof maybeLegacy.getPolicy === 'function' && typeof maybeLegacy.getAdmin === 'function') {
-      this._legacyPolicy = maybeLegacy.getPolicy();
-      this.admin = maybeLegacy.getAdmin();
-      this.permissionManager = permissionManager;
-      return;
-    }
-    // Normal path: do not cache policy, look up via admin on each call
-    // Keep _legacyPolicy null so getter delegates to admin.getPolicy()
-    this._legacyPolicy = null;
-    // second arg may be PermissionManager when called with old 2-arg signature and first arg is real Policy
-    if (admin && typeof (admin as unknown as PermissionManager).isHostPermitted === 'function') {
-      this.admin = getTrustDbAdmin();
-      this.permissionManager = admin as unknown as PermissionManager;
-      return;
-    }
-    this.admin = admin as TrustDbAdmin;
+    this.admin = admin;
     this.permissionManager = permissionManager;
   }
 

@@ -9,6 +9,12 @@ import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { SavedUrlEntryMetadataPatch } from '../../../utils/storage/savedUrlRepository.js';
 import type { AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
 import { extractDomain } from '../../../utils/domainUtils.js';
+import {
+  MAX_BYTE_STAT_BYTES,
+  MAX_CLEANSED_ELEMENTS,
+  MAX_CLEANSED_REASON_CHARS,
+  MAX_CLEANSED_REASONS,
+} from '../../../messaging/validators.js';
 
 export interface CommonStorageFields {
   url: string;
@@ -61,6 +67,33 @@ export interface CommonStorageFields {
   toMetadataPatch(): SavedUrlEntryMetadataPatch;
 }
 
+/**
+ * Second-layer guard for ByteStats: the message validator rejects malformed
+ * wire values, but internal-only paths (re-extraction, offline retry) never
+ * cross it, so the mapper clamps instead of trusting bare casts. Bounds are
+ * shared with the validator so the two layers cannot drift apart.
+ */
+function clampByteStat(value: unknown, max: number): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.min(Math.max(Math.trunc(value), 0), max);
+}
+
+function clampCleansedReason(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  return value.length > MAX_CLEANSED_REASON_CHARS ? value.slice(0, MAX_CLEANSED_REASON_CHARS) : value;
+}
+
+function clampCleansedReasons(value: unknown): string[] | null {
+  if (!Array.isArray(value)) return null;
+  const kept: string[] = [];
+  for (const el of value) {
+    if (kept.length >= MAX_CLEANSED_REASONS) break;
+    if (typeof el !== 'string') continue;
+    kept.push(el.length > MAX_CLEANSED_REASON_CHARS ? el.slice(0, MAX_CLEANSED_REASON_CHARS) : el);
+  }
+  return kept.length > 0 ? kept : null;
+}
+
 export function extractCommonStorageFields(context: RecordingContext): CommonStorageFields {
   const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
   const privacy = privacyResult as unknown as Record<string, unknown> | undefined;
@@ -86,15 +119,15 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     receivedTokens: (privacy?.receivedTokens as number) ?? null,
     originalTokens: (privacy?.originalTokens as number) ?? null,
     cleansedTokens: (privacy?.cleansedTokens as number) ?? null,
-    pageBytes: (d.pageBytes as number) ?? null,
-    candidateBytes: (d.candidateBytes as number) ?? null,
-    originalBytes: (d.originalBytes as number) ?? null,
-    cleansedBytes: (d.cleansedBytes as number) ?? null,
-    aiSummaryOriginalBytes: (d.aiSummaryOriginalBytes as number) ?? null,
-    aiSummaryCleansedBytes: (d.aiSummaryCleansedBytes as number) ?? null,
-    aiSummaryCleansedElements: (d.aiSummaryCleansedElements as number) ?? null,
-    aiSummaryCleansedReason: (d.aiSummaryCleansedReason as string) ?? null,
-    aiSummaryCleansedReasons: (d.aiSummaryCleansedReasons as string[] | undefined) && (d.aiSummaryCleansedReasons as string[]).length > 0 ? (d.aiSummaryCleansedReasons as string[]) : null,
+    pageBytes: clampByteStat(d.pageBytes, MAX_BYTE_STAT_BYTES),
+    candidateBytes: clampByteStat(d.candidateBytes, MAX_BYTE_STAT_BYTES),
+    originalBytes: clampByteStat(d.originalBytes, MAX_BYTE_STAT_BYTES),
+    cleansedBytes: clampByteStat(d.cleansedBytes, MAX_BYTE_STAT_BYTES),
+    aiSummaryOriginalBytes: clampByteStat(d.aiSummaryOriginalBytes, MAX_BYTE_STAT_BYTES),
+    aiSummaryCleansedBytes: clampByteStat(d.aiSummaryCleansedBytes, MAX_BYTE_STAT_BYTES),
+    aiSummaryCleansedElements: clampByteStat(d.aiSummaryCleansedElements, MAX_CLEANSED_ELEMENTS),
+    aiSummaryCleansedReason: clampCleansedReason(d.aiSummaryCleansedReason),
+    aiSummaryCleansedReasons: clampCleansedReasons(d.aiSummaryCleansedReasons),
     fallbackTriggered: !!d.fallbackTriggered,
     fallbackTriggeredInt: d.fallbackTriggered ? 1 : 0 as 0 | 1,
     fallbackReason: (d.fallbackReason as string | undefined) ?? null,

@@ -8,7 +8,7 @@ import { addLog } from '../../../utils/logger/core.js';
 import { TrustChecker } from '../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../notificationHelper.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
-import { decideTrust } from '../recordingDecision.js';
+import { decideGate } from '../../../utils/recordingGateTable.js';
 import type { RecordingContext, PipelineStepFunction, TrustCheckResult } from '../types.js';
 
 /**
@@ -24,7 +24,8 @@ export const checkTrustDomainStep: PipelineStepFunction = async (
   const trustCheck = await trustChecker.checkDomain(url);
 
   // PBI 2026-09-19-08: verdict は recordingDecision.decideTrust に委譲
-  const verdict = decideTrust(trustCheck.canProceed, force);
+  // PBI 2026-09-23-05: shared gate table row への adapter（I/O はこの step に残す）
+  const verdict = decideGate('trust', { canProceed: trustCheck.canProceed, force });
   if (!verdict.allow) {
     // Domain not trusted and no force flag
     addLog(LogType.WARN, 'Domain not trusted, recording blocked', {

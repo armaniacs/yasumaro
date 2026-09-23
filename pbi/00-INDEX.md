@@ -14,16 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-22 VulnHunt 監査修正 — ⬜ 未着手 6件 🔧非機能追加 RICE順: 06→07→08→09→10→11
+### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
-VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。
+VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
 
-- [2026-09-22-06-fix-obsidian-host-credential-pairing.md](2026-09-22-06-fix-obsidian-host-credential-pairing.md)（⬜ 未着手 — RICE 48・3 SP・副作用🔴。**最優先**。上書き host × 保存済みキーのペアリング禁止（リモート vault の一致ペアは壊さない）、https にもループバック規則、obsidianClient の `skipCspValidation` 除去、TEST_OBSIDIAN バリデータ行追加・UI/SW バリデータ共有化）
-- [2026-09-22-07-fix-provider-baseurl-authorization.md](2026-09-22-07-fix-provider-baseurl-authorization.md)（⬜ 未着手 — RICE 24・5 SP・副作用🔴。プロバイダ種別ごとの origin 拘束 + Gemini/BuiltInAi ゲート追加 + `addBaseUrlDomain` 非自己認可 + `ALLOWED_URLS` 永続化・fail-closed 化。**fail-closed 前にシード必須**。ローカル loopback プロバイダは例外的許可）
-- [2026-09-22-08-fix-archive-restore-resource-caps.md](2026-09-22-08-fix-archive-restore-resource-caps.md)（⬜ 未着手 — RICE 12・2 SP・副作用🟡。ワーカ側総行数/総バイトシーリング + `ARC_*` エラー、クライアント cap 200MiB を信頼しない再検証）
-- [2026-09-22-09-fix-message-field-validation.md](2026-09-22-09-fix-message-field-validation.md)（⬜ 未着手 — RICE 7.0・3 SP・副作用🟡。ByteStats 9フィールドに範囲検証 + `aiSummaryCleansedReasons[]` 要素数上限 + SAVE `maskedCount` の呼び出し元値廃止（パイプライン値を唯一の真実に）。`commonStorageFields.ts` は 05 と並行変更中、rebase 注意）
-- [2026-09-22-10-fix-rate-limiter-domain-key.md](2026-09-22-10-fix-rate-limiter-domain-key.md)（⬜ 未着手 — RICE 7.0・2 SP・副作用🟡。`getRateLimitKey` を eTLD+1 化（heuristic + 最小マルチラベル TLD リスト・PSL バンドルなし）。localhost はポート込み origin のまま）
-- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（⬜ 未着手 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
+- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
 
 ### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 3件 🔧非機能追加 RICE順: 01 → 02 → 03
 
@@ -90,6 +85,46 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-23 arch-delivery-loop 第3ラウンド（archloop-0923c）— ✅ 5件完了（11-15 アーカイブ済み）RICE順: 11 → 12 → 13 → 14 → 15
+
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.html`、6候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの残存手配線刈りラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（Retry-policy は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923c.md](2026-09-23-00-backlog-archloop-0923c.md)。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-23-11-refactor-remove-deprecated-hmac-twins.md（✅ 完了 — 生産 importer 0 を確認して双子削除。4 テストは HmacSigner へ 1:1 移行。3c11b96a・RICE 25.0）
+- 2026-09-23-12-refactor-bytestats-forwarding-adapter.md（✅ 完了 — `pickRecordDiagnostics` を builder に所有、4 箇所を spread 1 行に。SAVE maskedCount 除外は構造的に維持、`ByteStatsPayload` に `cleansedReason?` を追加。9a81b798・RICE 16.0）
+- 2026-09-23-13-refactor-maintain-wire-table.md（✅ 完了 — maintain 7 行を表に移し switch を約 10 行 dispatch に。両方向同期 assert＋decode 必須化で query/mutate と同水準。f42e32b4・RICE 12.8）
+- 2026-09-23-14-refactor-popup-tab-seam.md（✅ 完了 — tabUtils に 4 Adapter、素クエリ 2 箇所・独自パース 1 箇所・store 重複読みを寄せる。生産クエリは 1 箇所のみ、null 振る舞いは pin。e415c52d・RICE 6.4）
+- 2026-09-23-15-refactor-preset-repository-migration.md（✅ 完了 — presetSettingsAdapter 新設、素接触 0 を grep 確認、read は blob→旧キー fallback。ef3a1068・RICE 4.0）
+
+### 2026-09-23 arch-delivery-loop 第2ラウンド（archloop-0923b）— ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
+
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.html`、7候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの録画 path 深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（CleansingRuleView・KeyDerivation は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923b.md](2026-09-23-00-backlog-archloop-0923b.md)。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-23-06-refactor-remove-tabutils-isrecordable-shim.md（✅ 完了 — 生産 importer 0 を確認して shim 削除。gate-table テストが 5 ケースを全カバー。7bd047f8・RICE 15.0）
+- 2026-09-23-07-refactor-save-phase-module.md（✅ 完了 — `savePhase.save()` 唯一 Seam、retry 投影は手書き集合と完全一致、closure 注入廃止・sqlite 欠如 skip を明示化。5dbceddc・RICE 12.8）
+- 2026-09-23-08-refactor-visit-gating-module.md（✅ 完了 — `evaluate(state, now)` 寿命一元化、kernel 533→370 行、scheduler 分離。pre-init・E2E 形状・scroll 分割は不変。9fe5a9ae・RICE 10.7）
+- 2026-09-23-09-refactor-extraction-report-module.md（✅ 完了 — `extract(config) → { content, report }`、hot path バイト同一、whitelist path も report 統一。pageContentPipeline の移行は次回対象。8cbcc739・RICE 8.0）
+- 2026-09-23-10-refactor-trust-lookup-module.md（✅ 完了 — `lookup`/`decideAlert` 単一 async Seam、sync 双子は生産呼び出し 0 のため廃止、legacy 分岐は test-only 化。88f45e92・RICE 6.0）
+
+### 2026-09-23 arch-delivery-loop ラウンド（archloop-0923）— ✅ 5件完了（01-05 アーカイブ済み）RICE順: 01 → 02 → 03 → 04 → 05
+
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0405.html`、7候補）→ Phase 1 RICE スコアリングのコードベース深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（06 ProviderSlotRunner・07 queryPlan 圧縮は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923.md](2026-09-23-00-backlog-archloop-0923.md)。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-23-01-refactor-history-diagnostics-deep-module.md（✅ 完了 — 診断表示を `renderEntryDiagnostics` / `renderCleansingBar` の深い Module に統合、View 1169→1012 行、15 fixture characterization で全 30 ブランチバイト等価。Panel 側に複製表は実在せず単一所有のみ。5d7159e9・RICE 24.0）
+- 2026-09-23-02-refactor-sqlite-client-deep-seam.md（✅ 完了 — 三重 runner を表駆動単一 runner に統合、`sqliteClient.call(op, payload)` 1 本化、30 named op は互換エイリアス、export/import 2 呼び出し側を移行、decode 所有を wire-table 側へ。駆動行の retry 明示あり。69f7d2c5・RICE 17.1）
+- 2026-09-23-03-refactor-settings-form-descriptor-table.md（✅ 完了 — fieldDescriptor.ts SSOT、token 範囲を `validateMaxTokens` に一本化（gemini 8192 等の provider 別上限が UI にも反映）、trustSettings を lazy init 化して DOM なし import を pin。d9b7cab7・RICE 11.2）
+- 2026-09-23-04-refactor-wasm-hybrid-policy-adapters.md（✅ 完了 — `runHybrid` 汎用 interface、4 ハイブリッドを政策 Adapter 行に。parity 戦略・フォールバック語義・しきい値・warn 文言は不変。bf765e98・RICE 8.0）
+- 2026-09-23-05-refactor-recording-gate-table.md（✅ 完了 — 中立層 recordingGateTable.ts に precedence 1 表、`evaluateGates` 唯一 Seam、5 step は Adapter、popup を中立表に統一、content は row・述語を共有（合流は follow-up）。0533fc21・RICE 7.5）
+
+### 2026-09-23 autonomous-task-closer — VulnHunt 監査修正 — ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
+
+2026-09-22 に採点済みだった VulnHunt 監査修正 6 PBI のうち着手可能な 5 件（06-10）を実装。バッチ1 = 06/08/09/10 の4件をファイル非重複で並列実装 → バッチ2 = 07 を直列実装（06 と 07 が `cspValidator.ts` を共有するため）。11 は監視契約として live 残置。なぜなぜ分析は /tmp/whywhy/（vuln-001〜006）。各バッチ統合後の検証: type-check PASS / lint 0 errors / test 13,358 passed（+149）/ build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-22-06-fix-obsidian-host-credential-pairing.md（✅ 完了 — 上書き host × 保存済みキーのペアリング禁止・host 検証の実質化・skipCspValidation 撤去 + CSP 保存済み origin 認可・TEST_OBSIDIAN バリデータ行・UI ミラー単一実装化。新規リモート host のテスト接続は「保存してからテスト」へ（設計裁定記録済み）。ac23f5d4。RICE 48・順位1）
+- 2026-09-22-07-fix-provider-baseurl-authorization.md（✅ 完了 — origin 認可4層（pinned/既知/確認済み/loopback）・Gemini/BuiltInAi ゲート・addBaseUrlDomain 非自己認可化・ALLOWED_URLS シード+fail-closed・確認ダイアログ（デバイスローカル記録・export/import 除外）。8584718a。RICE 24・順位2）
+- 2026-09-22-08-fix-archive-restore-resource-caps.md（✅ 完了 — ワーカ側シーリング（20万行/200MiB）を検証・復元両経路で適用、ARC_CAP_001/002・ファイルサイズ再計測。31b1b988。RICE 12・順位3）
+- 2026-09-22-09-fix-message-field-validation.md（✅ 完了 — ByteStats 9フィールド範囲検証（wire=拒否・mapper=clamp の2層）・reasons[] 上限・SAVE maskedCount 呼び出し元値破棄。12be74b3。RICE 7.0・順位4）
+- 2026-09-22-10-fix-rate-limiter-domain-key.md（✅ 完了 — eTLD+1 独立モジュール（最小マルチラベル TLD 9件）+ キー eTLD+1 化・localhost/IP はポート込み・固定 origin 前提 pin・副共有窓テスト。a6b37c60。RICE 7.0・順位5）
 
 ### 2026-09-21 promptSanitizer ハードニング（PBI-19 不採用の引き継ぎ） — ✅ 1件完了（24 アーカイブ済み）
 

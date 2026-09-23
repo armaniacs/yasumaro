@@ -24,6 +24,8 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 
 接続方式は 3 種類のストラテジーです（`GeminiProvider` / `GenericOpenAICompatibleProvider` / `BuiltInAiProvider`）。Groq・Anthropic・ローカルLLM 等は「OpenAI Compatible」の枠で Base URL を差し替えるだけで使えます。Built-in AI はブラウザの LanguageModel API（旧称 Prompt API）を直接使用します。詳しいセットアップ手順は [セットアップガイド](SETUP_GUIDE.md)、Built-in AI 固有の手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
+プロバイダーの Base URL は origin 単位で認可されます。既知の AI プロバイダーのエンドポイントとローカル（loopback）アドレスは追加設定なしで利用でき、それ以外の origin は保存時に確認ダイアログで明示的に許可した場合のみ使えます。許可の記録はデバイスローカルであり、設定のエクスポート/インポートには含まれません（インポートした設定で新しい origin を使う場合は再度許可が必要です）。
+
 ### 要約生成の流れ
 
 ```
@@ -135,6 +137,8 @@ Yasumaro sends the body text of pages that meet the recording criteria to an AI 
 | **OpenAI Compatible (Models.dev)** | Connect by selecting a model from the Models.dev catalog |
 
 Internally there are three provider strategies (`GeminiProvider` / `GenericOpenAICompatibleProvider` / `BuiltInAiProvider`) — and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. Built-in AI uses the browser's LanguageModel API (formerly Prompt API) directly. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps, and the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for Built-in AI specific steps.
+
+Provider base URLs are authorized per origin. Known AI-provider endpoints and local (loopback) addresses work without extra setup; any other origin is only usable after you explicitly allow it in the confirmation dialog shown at save time. The grant is device-local and is never included in settings exports or imports (re-allow the origin after importing settings on another device).
 
 ### Summarization Flow
 
