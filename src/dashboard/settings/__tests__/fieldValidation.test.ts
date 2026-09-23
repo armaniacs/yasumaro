@@ -929,5 +929,40 @@ describe('fieldValidation', () => {
             expect(validateObsidianHost(host)).toBe(true);
             expect(host.getAttribute('aria-invalid')).toBe('false');
         });
+
+        test('accepts IPv6 hosts (shared SW semantics, no UI drift)', () => {
+            const host = makeHostInput('::1');
+            expect(validateObsidianHost(host)).toBe(true);
+            expect(host.getAttribute('aria-invalid')).toBe('false');
+        });
+
+        test('rejects malformed hostnames the SW validator rejects', () => {
+            for (const value of ['-leading.com', 'trailing-.com', 'empty..label.com', '999.999.999.999', 'under_score.com']) {
+                document.body.innerHTML = '';
+                const input = makeHostInput(value);
+                expect(validateObsidianHost(input)).toBe(false);
+            }
+        });
+
+        test('mirror agrees with the SW-side validator on accept/reject (parity)', async () => {
+            const { validateObsidianHost: validateValue } = await import('../../../utils/obsidianConfigValidator.js');
+            const values = [
+                'localhost', '127.0.0.1', '192.168.1.10', 'example.com', 'vault.example.com',
+                '::1', '[::1]', '2001:db8::1',
+                '127.0.0.1@evil.com', 'evil.com%2Fpath', 'has space.com', 'http://x.com',
+                '-bad.com', 'bad-.com', 'a..b', '999.999.999.999', 'a_b.com',
+            ];
+            for (const value of values) {
+                document.body.innerHTML = '';
+                const input = makeHostInput(value);
+                let expected = true;
+                try {
+                    validateValue(value);
+                } catch {
+                    expected = false;
+                }
+                expect(validateObsidianHost(input)).toBe(expected);
+            }
+        });
     });
 });
