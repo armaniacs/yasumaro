@@ -37,6 +37,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.21] - 2026-09-23
+
+このリリースは v6.9.20 に続く連続リリースです。アーキテクチャ深層化第3ラウンド（archloop-0923c: 診断→RICE→実装の 5 PBI）で通信・録画・UI・設定の残存手配線を刈り込みました。全テスト（13,562 件）がグリーンです。
+
+### Changed
+
+- **非推奨 HMAC 双子を削除し `HmacSigner` に一本化**: 生産呼び出し 0 を確認し、`generateHmacSignature` / `verifyHmacSignature` と barrel を削除。弱い手書き比較と全エラー潰しの verify 経路が消え、`constantTimeCompare` 1 本に
+- **診断転送を builder Adapter に集約**: `pickRecordDiagnostics(payload)` を builder に所有させ、4 handler の手列挙を spread 1 行に縮退。SAVE の maskedCount 除外は構造的に維持し、新 field の追加は builder 1 行で全経路に反映
+- **maintain 系を wire-table の行に移行**: 7 分岐 switch を表駆動 dispatch に縮退。両方向同期 assert と decode 必須化で query/mutate と同水準のコンパイル強制に。wire 形状は不変
+- **popup active-tab 読取を単一 Seam に統合**: tabUtils に狭い Adapter を追加し、素クエリ 2 箇所と独自 hostname パース 1 箇所を寄せる。生産クエリは 1 箇所のみ、null 時の panel-hide 振る舞いはテストで pin
+- **preset dual-write を repository 移行**: `CLEANSING_PRESET` の素 storage 接触 7 箇所を adapter＋単一 locked-delta に置換し、perSiteOverrides の load を targeted read に切替。busy 窓・epoch・migration は保持
+
+### Tested
+
+- 単体: `npm run validate` green（13,562 passed / 21 skipped、865 ファイル）。新規テスト: maintain wire-table・dispatch parity・recordDiagnosticsConvergence・tabSeamNullPin・presetSettingsAdapter・cleansingPresetStore・perSiteOverrides-seam ほか
+- E2E: chromium green。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
+
 ## [6.9.20] - 2026-09-23
 
 このリリースは v6.9.19 に続く連続リリースです。アーキテクチャ深層化第2ラウンド（archloop-0923b: 診断→RICE→実装の 5 PBI）で録画 path の 5 領域を深いモジュールに畳み込みました。全テスト（13,495 件）がグリーンです。
