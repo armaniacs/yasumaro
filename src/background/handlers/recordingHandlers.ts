@@ -14,7 +14,7 @@ import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
 import { pickDefined } from '../../utils/objectUtils.js';
-import { buildRecordRequest } from '../recordRequestBuilder.js';
+import { buildRecordRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
 import { visitRateLimiter } from '../visitRateLimiter.js';
 import { validateUrl } from '../../utils/ssrfGuard.js';
 import type { RegenerateCleanseMode } from '../../utils/aiSummaryCleaner/cleanseModeLadder.js';
@@ -146,21 +146,7 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       title: sender.tab.title || '',
       url: sender.tab.url || '',
       content: message.payload?.content || '',
-      ...pickDefined({
-        pageBytes: message.payload?.pageBytes,
-        candidateBytes: message.payload?.candidateBytes,
-        originalBytes: message.payload?.originalBytes,
-        cleansedBytes: message.payload?.cleansedBytes,
-        aiSummaryOriginalBytes: message.payload?.aiSummaryOriginalBytes,
-        aiSummaryCleansedBytes: message.payload?.aiSummaryCleansedBytes,
-        aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
-        aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
-        aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons,
-        // PBI 05: forward the fallback outcome so the reason column can persist
-        // for auto-records (the payload already carries both fields).
-        fallbackTriggered: message.payload?.fallbackTriggered,
-        fallbackReason: message.payload?.fallbackReason,
-      }),
+      ...pickRecordDiagnostics(message.payload),
     }));
 
     if (sender.tab.id) {
@@ -280,18 +266,10 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
       title: message.payload.title,
       url: message.payload.url,
       content,
+      ...pickRecordDiagnostics(message.payload),
       skipAi,
       previewOnly: message.type === 'PREVIEW_RECORD',
       force: message.payload.force,
-      pageBytes: message.payload.pageBytes,
-      candidateBytes: message.payload.candidateBytes,
-      originalBytes: message.payload.originalBytes,
-      cleansedBytes: message.payload.cleansedBytes,
-      aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-      aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-      aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-      aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-      aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
     }), { settings });
 
     if (result.success) {
@@ -336,19 +314,8 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
       url: message.payload.url,
       content: message.payload.content,
       force: message.payload.force,
-      // The caller-supplied maskedCount is an unverified claim, not a
-      // measurement: the privacy pipeline's computed value is the single
-      // source of truth, so the SAVE message field is never forwarded.
-      maskedCount: undefined,
-      pageBytes: message.payload.pageBytes,
-      candidateBytes: message.payload.candidateBytes,
-      originalBytes: message.payload.originalBytes,
-      cleansedBytes: message.payload.cleansedBytes,
-      aiSummaryOriginalBytes: message.payload.aiSummaryOriginalBytes,
-      aiSummaryCleansedBytes: message.payload.aiSummaryCleansedBytes,
-      aiSummaryCleansedElements: message.payload.aiSummaryCleansedElements,
-      aiSummaryCleansedReason: message.payload.aiSummaryCleansedReason,
-      aiSummaryCleansedReasons: message.payload.aiSummaryCleansedReasons,
+      // maskedCount is never forwarded: owned by pickRecordDiagnostics (VULN-007).
+      ...pickRecordDiagnostics(message.payload),
     }), { settings });
 
     if (result.success && message.payload.content) {
@@ -426,20 +393,7 @@ export function createRegenerateSummaryHandler(deps: RegenerateSummaryHandlerDep
           // Ask Q1C: force is caller-explicit only (policy default is off).
           ...(force === true ? { force: true } : {}),
           targetEntryId: id,
-          ...pickDefined({
-            pageBytes: extracted.byteStats?.pageBytes,
-            candidateBytes: extracted.byteStats?.candidateBytes,
-            originalBytes: extracted.byteStats?.originalBytes,
-            cleansedBytes: extracted.byteStats?.cleansedBytes,
-            aiSummaryOriginalBytes: extracted.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
-            aiSummaryCleansedBytes: extracted.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
-            aiSummaryCleansedElements: extracted.aiSummaryCleansedStats?.aiSummaryCleansedElements,
-            aiSummaryCleansedReason: extracted.aiSummaryCleansedStats?.aiSummaryCleansedReason,
-            aiSummaryCleansedReasons: extracted.aiSummaryCleansedStats?.aiSummaryCleansedReasons,
-            fallbackTriggered: extracted.fallbackTriggered,
-            fallbackReason: extracted.fallbackReason,
-            cleansedReason: extracted.cleansedReason,
-          }),
+          ...pickRecordDiagnostics(extracted),
         });
 
         const result = await deps.recordingPipeline.record(data, { settings });

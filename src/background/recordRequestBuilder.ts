@@ -15,7 +15,7 @@
  * policy so callers keep control where they had it.
  */
 
-import type { RecordingData } from '../messaging/types.js';
+import type { RecordingData, ContentResponse } from '../messaging/types.js';
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { RecordingContext } from './pipeline/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -143,8 +143,77 @@ export function buildOfflineRetryRequest(payload: OfflineJobPayload): RecordingD
   });
 }
 
-export function buildRecordRequest(
-  source: RecordRequestSource,
+/**
+ * Carrier of the shared byte/diagnostic subset every record surface forwards
+ * (PBI 2026-09-23-12).
+ *
+ * Handler payloads arrive in two spellings: flat message payloads
+ * (VALID_VISIT / MANUAL / SAVE) and the nested extraction reply
+ * (REGENERATE_SUMMARY's ContentResponse with byteStats +
+ * aiSummaryCleansedStats). Both are accepted so each call site collapses to
+ * a one-line `...pickRecordDiagnostics(payload)` spread.
+ *
+ * `maskedCount` is accepted and deliberately dropped: the caller-supplied
+ * value is an unverified claim, never a measurement (VULN-007, PBI
+ * 2026-09-22-09). `force` / `skipAi` / `previewOnly` / `targetEntryId`
+ * stay caller-explicit and are not part of this table.
+ */
+export type RecordDiagnosticsSource = Partial<
+  Pick<
+    RecordDiagnosticFields,
+    | 'pageBytes'
+    | 'candidateBytes'
+    | 'originalBytes'
+    | 'cleansedBytes'
+    | 'aiSummaryOriginalBytes'
+    | 'aiSummaryCleansedBytes'
+    | 'aiSummaryCleansedElements'
+    | 'aiSummaryCleansedReason'
+    | 'aiSummaryCleansedReasons'
+    | 'cleansedReason'
+    | 'fallbackTriggered'
+    | 'fallbackReason'
+  >
+> & {
+  maskedCount?: unknown;
+  byteStats?: ContentResponse['byteStats'];
+  aiSummaryCleansedStats?: ContentResponse['aiSummaryCleansedStats'];
+};
+
+/**
+ * Extract the shared byte/diagnostic subset from any handler payload.
+ * Single owner of which fields travel together: a new diagnostic field is
+ * one row here instead of four synchronized edits in recordingHandlers.ts,
+ * and a surface that forgets the spread fails noisily (missing keys) rather
+ * than silently degrading analytics. Undefined-dropping matches pickDefined,
+ * so unset fields stay absent and downstream `in` checks keep working.
+ */
+export function pickRecordDiagnostics(
+  payload: RecordDiagnosticsSource | null | undefined,
+): RecordDiagnosticFields {
+  if (payload === null || payload === undefined) return {};
+  return pickDefined({
+    pageBytes: payload.pageBytes ?? payload.byteStats?.pageBytes,
+    candidateBytes: payload.candidateBytes ?? payload.byteStats?.candidateBytes,
+    originalBytes: payload.originalBytes ?? payload.byteStats?.originalBytes,
+    cleansedBytes: payload.cleansedBytes ?? payload.byteStats?.cleansedBytes,
+    aiSummaryOriginalBytes:
+      payload.aiSummaryOriginalBytes ?? payload.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+    aiSummaryCleansedBytes:
+      payload.aiSummaryCleansedBytes ?? payload.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+    aiSummaryCleansedElements:
+      payload.aiSummaryCleansedElements ?? payload.aiSummaryCleansedStats?.aiSummaryCleansedElements,
+    aiSummaryCleansedReason:
+      payload.aiSummaryCleansedReason ?? payload.aiSummaryCleansedStats?.aiSummaryCleansedReason,
+    aiSummaryCleansedReasons:
+      payload.aiSummaryCleansedReasons ?? payload.aiSummaryCleansedStats?.aiSummaryCleansedReasons,
+    cleansedReason: payload.cleansedReason,
+    fallbackTriggered: payload.fallbackTriggered,
+    fallbackReason: payload.fallbackReason,
+  });
+}
+
+export function buildRecordRequest(  source: RecordRequestSource,
   fields: {
     title: string;
     url: string;
