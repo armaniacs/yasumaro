@@ -53,6 +53,8 @@ Yasumaroで使用するエラーコードの定義と使用ガイドラインで
 | `ARC_INV_001` | ARCHIVE_INVALID | アーカイブ.dbとして無効（構造検証失敗・フォーマット不一致） | High |
 | `ARC_EXP_001` | ARCHIVE_STAGING_EXPIRED | ステージングがレジストリに存在せず再プレビューが必要 | Medium |
 | `ARC_QUOTA_001` | ARCHIVE_QUOTA_EXCEEDED | アーカイブ作成・削除に必要なストレージ空きが不足 | Medium |
+| `ARC_CAP_001` | ARCHIVE_RESTORE_ROW_CAP_EXCEEDED | アーカイブ復元の総行数がワーカ側上限を超過（分割して再試行） | Medium |
+| `ARC_CAP_002` | ARCHIVE_RESTORE_BYTE_CAP_EXCEEDED | アーカイブ復元の総バイトがワーカ側上限を超過（分割して再試行） | Medium |
 | `ARC_TOK_001` | ARCHIVE_TOKEN_SCOPE_MISMATCH | 確認トークンのscope（cutoff/stagingName）が実行時パラメータと不一致 | High |
 
 ### Obsidian通信関連 (OBS_)
