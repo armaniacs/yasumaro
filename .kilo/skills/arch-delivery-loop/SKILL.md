@@ -1,6 +1,6 @@
 ---
 name: arch-delivery-loop
-description: Closed-loop orchestrator for architecture deepening — diagnose opportunities, score with RICE, create PBIs, implement autonomously (RICE order, no user confirmation between PBIs), verify with `make clean test-full`, then bump the version. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」「積み残しはある？」, after an architecture review report when the user wants all recommendations acted on, when the user names `arch-delivery-loop`, or when existing PBIs should be prioritized AND implemented to green. Not for general parallel dev work (swarm-dev covers that).
+description: Closed-loop orchestrator for architecture deepening — diagnose opportunities, score with RICE, create PBIs, implement autonomously (RICE order, dependency-free PBIs batch-parallelized up to 4 at a time, no user confirmation between PBIs), verify with `make clean test-full`, then bump the version. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」「積み残しはある？」, after an architecture review report when the user wants all recommendations acted on, when the user names `arch-delivery-loop`, or when existing PBIs should be prioritized AND implemented to green. Not for general parallel dev work (swarm-dev covers that).
 ---
 
 # Arch Delivery Loop — アーキテクチャ診断から検証まで一気に閉じるスキル
@@ -31,7 +31,7 @@ description: Closed-loop orchestrator for architecture deepening — diagnose op
 ## 基本原則
 
 - **RICE 降順で実装する。** Phase 1 で RICE スコア降順にソートした順序が、そのまま Phase 2 の実行順になる。
-- **依存はスコアより優先。** B が A の完了を前提とするなら、B の RICE が高くても A を先に実装する（例: `ServiceContainer 移行` は `extractor 分割` の完了後に着手）。依存のない候補は並行可能だが、実装は1件ずつ直列で進める。
+- **依存はスコアより優先。** B が A の完了を前提とするなら、B の RICE が高くても A を先に実装する（例: `ServiceContainer 移行` は `extractor 分割` の完了後に着手）。依存のない候補は RICE 順位を保ったまま最大4件ずつバッチ並列実装する（詳細は Phase 2）。
 - **確認不要。** フェーズ間・PBI 間でユーザー確認を挟まず、5 Whys が行動可能な解に達したら即実装する。
 
 ## 全体フロー
@@ -39,7 +39,7 @@ description: Closed-loop orchestrator for architecture deepening — diagnose op
 ```
 Phase 0: 診断  — codebase-design 語彙で深い/浅いモジュールを判定、HTML レポート生成
 Phase 1: PBI化 — RICE スコアリングで優先度付け、pbi/YYYY-MM-DD-NN-type-slug.md を連番出力
-Phase 2: 実装  — RICE 降順（依存を尊重）で1件ずつ 5 Whys → 自律実装 → アーカイブ
+Phase 2: 実装  — RICE 降順（依存を尊重）で 5 Whys → 自律実装 → アーカイブ。依存なし PBI は最大4件ずつバッチ並列実装
 Phase 3: 検証  — make test で失敗を潰し、最後に make clean test-full で全体検証
 Phase 3.5: グラフ更新 — `graphify update .` でナレッジグラフを最新化
 Phase 4: 版上げ — package.json / docs/version.json / CHANGELOG.md を更新しコミット
@@ -95,7 +95,7 @@ Phase 0 の候補（またはユーザーが列挙した複数要求）を、1�
    Effort: 人週
    ```
    - 全候補を1つの表にまとめ、**RICE 降順にソート**。この順序が Phase 2 の実行順になる
-   - 依存関係はスコアより優先（BがAに依存するならAを先に）。依存のない候補は並行可能と明記しつつ、実装は直列で行う
+   - 依存関係はスコアより優先（BがAに依存するならAを先に）。依存のない候補は並行可能と明記する — Phase 2 でバッチ並列実装の対象になるため、この依存グラフの精度がそのまま並列化の安全性に直結する
    - 同点は「リスク軽減 → 緊急性」の順
 4. **なぜなぜ分析**: 「Impact が推定できない」「ビジネス価値が書けない」等の疑問が生じたら、その場で 5 Whys を実行（上限20回、根本原因が見えたら停止）
 5. **PBI 作成**: `pbi-create-bdd` のテンプレートに準拠し、各 PBI に優先度情報（順位 / RICEスコア / 根拠）を必ず含める。BDD シナリオは最低2本（ハッピーパス + エラー/境界ケース）
@@ -113,9 +113,22 @@ Phase 0 の候補（またはユーザーが列挙した複数要求）を、1�
 
 ## Phase 2: 実装 — autonomous-task-closer
 
-`pbi/*.md` / `dev-docs/plans/*.md` / `TODO` / `チェックボックス` / `検証失敗` / `バージョン不一致` を機械的に洗い出し、**Phase 1 で決めた RICE 降順（依存を尊重）に1件ずつ 5 Whys → 自律実装 → 検証** を、未完了が0になるまで繰り返す。
+`pbi/*.md` / `dev-docs/plans/*.md` / `TODO` / `チェックボックス` / `検証失敗` / `バージョン不一致` を機械的に洗い出し、**Phase 1 で決めた RICE 降順（依存を尊重）で 5 Whys → 自律実装 → 検証** を、未完了が0になるまで繰り返す。依存のない PBI は下記のバッチ並列化で消化する。
 
-> **確認不要**: 各 PBI の着手前にユーザーへ確認しない。5 Whys が「その解で行動に移れる」状態に達したら即実装し、次の PBI へ進む。立ち止まるのは「推測不能な根本原因で、かつ分析でも解けない」場合のみ。
+> **確認不要**: 各 PBI の着手前にユーザーへ確認しない。5 Whys が「その解で行動に移れる」状態に達したら即実装し、次のバッチへ進む。立ち止まるのは「推測不能な根本原因で、かつ分析でも解けない」場合のみ。
+
+### バッチ並列化（依存なし PBI の自動並列実装）
+
+Phase 1 の依存グラフで「すべて独立」と判定された PBI 群は、RICE 順位を保ったまま**同時に複数サブエージェントへ委譲**する。直列より速く消化できるが、同時書き込みによる衝突は避ける必要があるため、バッチ編成は機械的な手順で行う。
+
+1. **バッチ編成**: 依存グラフ上で互いに依存しない PBI を1バッチとする。バッチ内の各 PBI について、対象ファイル（実装対象 + 変更が及ぶテストファイル）を PBI 本文またはコード探索から事前に列挙する
+2. **競合チェック**: バッチ内の PBI 同士で対象ファイルが重複する場合、その PBI 群はさらに小さいバッチに分割するか、重複する PBI だけ直列に回す。`00-INDEX.md` / `CHANGELOG.md` のようなバッチ全体が触る集約ファイルは各 PBI の実装からは除外し、バッチ完了後にまとめて1回で更新する
+3. **バッチサイズの上限**: 1バッチ最大4 PBI（サブエージェントの同時実行数が増えるほど個別の失敗診断コストが上がるため）。RICE 降順で先頭から4件ずつ切り出す
+4. **並列実装**: バッチ内の PBI ごとに1つサブエージェントを spawn し、各エージェントには「5 Whys → 実装 → 対象範囲のテストのみ実行」までを担わせる。全体の `make test` はバッチ完了後にまとめて1回走らせる（Phase 3 が担当）
+5. **バッチ完了処理**: 全サブエージェントの完了を待ち、成功した PBI から順にアーカイブ（`git mv pbi/<file> dev-docs/archived/pbi/`）と `00-INDEX.md` 更新を直列で行う。失敗した PBI は次バッチに繰り越さず、その場で 5 Whys をやり直して単独で解決してから次に進む
+6. 次のバッチへ進む前に `npm run validate`（ビルド不要の軽量ゲート）を一度通し、バッチ内の型崩れ・lint エラーを早期検出する。ここで失敗したら Phase 3 のループに委ねず、その場で修正してから次バッチに進む（後段の失敗切り分けコストを避けるため）
+
+依存が絡む PBI（B が A の完了を前提とする等）は、これまで通り直列で1件ずつ処理する。バッチ並列化はあくまで「依存グラフが独立と示した範囲」に限定し、依存の見落としで衝突するリスクを増やさない。
 
 ### 洗い出し（推測ではなく実行結果で判定）
 
@@ -278,7 +291,7 @@ git commit -m "chore: バージョンを<new-version>に更新"
 
 ## 横断ルール
 
-- **RICE 降順・確認不要**: Phase 1 の実行順を Phase 2 が機械的に消化。PBI 間でユーザー確認を挟まない
+- **RICE 降順・確認不要**: Phase 1 の実行順を Phase 2 が機械的に消化。依存なし PBI はバッチ並列、依存ありは直列。PBI 間・バッチ間でユーザー確認を挟まない
 - **TodoWrite 徹底**: フェーズごとに `in_progress` は1件だけ。フェーズ内の PBI 処理も1件ずつ可視化
 - **Read → Edit 順守**: `Edit` 前に必ず `Read`。`oldString` は行番号プレフィックス（`1: `）を除いた正確な内容
 - **なぜなぜの品質**: 機械的に20回問い詰めるのではなく、根本原因が見えたら止める。「その解で行動に移れるか」が品質基準
@@ -289,7 +302,7 @@ git commit -m "chore: バージョンを<new-version>に更新"
 ## 使用例
 
 **入力**: 「コードベース全体を対象にアーキテクチャ改善を一括で」
-**出力**: Phase 0（HTMLレポート）→ Phase 1（RICE スコアリング → pbi/出力）→ Phase 2（RICE降順で1件ずつ 5 Whys → 実装 → archived、確認なし）→ Phase 3（validate / make test で失敗を潰し、make clean test-full のゲートまで）→ Phase 4（版上げ）の全履歴とサマリー。
+**出力**: Phase 0（HTMLレポート）→ Phase 1（RICE スコアリング → pbi/出力）→ Phase 2（RICE降順で 5 Whys → 実装 → archived。依存なし PBI は最大4件ずつバッチ並列、確認なし）→ Phase 3（validate / make test で失敗を潰し、make clean test-full のゲートまで）→ Phase 4（版上げ）の全履歴とサマリー。
 
 **入力**: 「積み残しはあるか？あるなら arch-delivery-loop で閉じて」
 **出力**: Phase 2 の洗い出しから開始し、未完了が0になるまで全フェーズを回したサマリー。
