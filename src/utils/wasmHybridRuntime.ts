@@ -17,6 +17,9 @@
  * Per-core policies STAY in each hybrid (PII MAX_INPUT_SIZE/MAX_SKIP_SIZE/
  * MAX_OUTPUT_SIZE handling, textrank topK>=1 quirk, dedup threshold-0/4KB
  * floor/fail-open cap) — this module owns mechanism only, never policy.
+ * runHybrid() is the deep interface that fixes the skeleton order
+ * (merge → early-return → isSafe → bypass → probe → fallback) so hybrids
+ * declare policy data plus callWasm/callTs adapter rows.
  */
 
 import { errorMessage } from './errorUtils.js';
@@ -129,6 +132,81 @@ export async function withWasmFallback<T>(
         logWasmFallback(fallbackMessage, error);
         return await runTs();
     }
+}
+
+export interface RunHybridPolicy<Merged, Result> {
+    /** Availability probe owned by the calling hybrid (module scope). */
+    probe: HybridProbe;
+    /** console.warn + addLog message when the WASM call throws (TS fallback). */
+    fallbackMessage: string;
+    /**
+     * Merges caller options with the TS reference defaults. Pure: must not
+     * probe or log, since earlyReturn may discard the result. The merged
+     * value threads through every later step; adapters capture the raw
+     * inputs in closures and pass the ORIGINAL options object to callTs so
+     * the fallback sees byte-identical arguments to the pre-refactor path.
+     */
+    mergeDefaults: () => Merged;
+    /**
+     * Reference-parity short-circuit on merged options (empty input,
+     * threshold-0, zero entries). Returning non-undefined skips everything
+     * else, including the probe — mirroring the TS reference, which returns
+     * before any WASM contact on these inputs.
+     */
+    earlyReturn?: (merged: Merged) => Result | undefined;
+    /**
+     * Numeric-domain gate (isWasmSafeU32/isWasmSafeF64 plus per-core quirks
+     * like textrank topK>=1). False routes to TS WITHOUT probing, so
+     * out-of-domain options never initialize WASM.
+     */
+    isSafe?: (merged: Merged) => boolean;
+    /**
+     * Size/perf routing (bench-backed MIN_* floors). True routes to TS
+     * WITHOUT probing: small inputs are faster on TS and cannot reach the
+     * WASM caps, so skipping the probe is a pure win.
+     */
+    bypassWasm?: (merged: Merged) => boolean;
+    /**
+     * WASM path including per-core split/join shaping via remapWasmIndices.
+     * Any throw — including the remap gate — falls back to callTs.
+     */
+    callWasm: (merged: Merged) => Promise<Result>;
+    /** TS reference fallback. A throw propagates (PII fail-closed). */
+    callTs: (merged: Merged) => Promise<Result> | Result;
+}
+
+/**
+ * Deep interface for the WASM-first hybrids: defaults merge → early-return
+ * → numeric gate → size bypass → probe → WASM with TS fallback, in that
+ * order. Mechanism (probe contract, burst logging, remap gate, fallback
+ * order) is fixed here; policies (defaults, early-return conditions, MIN_*
+ * thresholds, split/join shaping) are declared per adapter in the policy
+ * argument. Callers keep their existing signatures.
+ */
+export async function runHybrid<Merged, Result>(
+    policy: RunHybridPolicy<Merged, Result>
+): Promise<Result> {
+    const merged = policy.mergeDefaults();
+    if (policy.earlyReturn) {
+        const early = policy.earlyReturn(merged);
+        if (early !== undefined) {
+            return early;
+        }
+    }
+    if (policy.isSafe && !policy.isSafe(merged)) {
+        return await policy.callTs(merged);
+    }
+    if (policy.bypassWasm && policy.bypassWasm(merged)) {
+        return await policy.callTs(merged);
+    }
+    if (!(await policy.probe.isAvailable())) {
+        return await policy.callTs(merged);
+    }
+    return withWasmFallback(
+        policy.fallbackMessage,
+        () => policy.callWasm(merged),
+        () => policy.callTs(merged)
+    );
 }
 
 export interface WasmIndexResult {

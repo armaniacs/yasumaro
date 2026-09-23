@@ -43,7 +43,7 @@ import {
 import {
     createHybridProbe,
     isWasmSafeU32,
-    withWasmFallback,
+    runHybrid,
 } from '../utils/wasmHybridRuntime.js';
 
 // Probe contract (success cached permanently, failure re-probed on the next
@@ -75,17 +75,15 @@ const MIN_WASM_ENTRIES = 32;
 export async function computeTagCooccurrenceHybrid(
     entries: Array<{ tags?: string | null }>
 ): Promise<ReturnType<typeof computeTagCooccurrence>> {
-    if (entries.length === 0) {
-        return { nodes: [], edges: [] };
-    }
-    if (entries.length < MIN_WASM_ENTRIES || !(await wasmProbe.isAvailable())) {
-        return computeTagCooccurrence(entries);
-    }
-    return withWasmFallback(
-        'Tag-cooccur WASM call failed, falling back to TS for this input',
-        () => computeCooccurrenceWithWasm(entries),
-        () => computeTagCooccurrence(entries)
-    );
+    return runHybrid({
+        probe: wasmProbe,
+        fallbackMessage: 'Tag-cooccur WASM call failed, falling back to TS for this input',
+        mergeDefaults: () => entries,
+        earlyReturn: (rows) => (rows.length === 0 ? { nodes: [], edges: [] } : undefined),
+        bypassWasm: (rows) => rows.length < MIN_WASM_ENTRIES,
+        callWasm: (rows) => computeCooccurrenceWithWasm(rows),
+        callTs: (rows) => computeTagCooccurrence(rows),
+    });
 }
 
 /**
@@ -98,15 +96,13 @@ export async function narrowEntriesToTopTagsHybrid<T extends { tags?: string | n
     entries: T[],
     limit: number
 ): Promise<T[]> {
-    if (!isWasmSafeU32(limit)) {
-        return narrowEntriesToTopTags(entries, limit);
-    }
-    if (entries.length < MIN_WASM_ENTRIES || !(await wasmProbe.isAvailable())) {
-        return narrowEntriesToTopTags(entries, limit);
-    }
-    return withWasmFallback(
-        'Tag-cooccur narrow WASM call failed, falling back to TS for this input',
-        () => narrowEntriesToTopTagsWithWasm(entries, limit),
-        () => narrowEntriesToTopTags(entries, limit)
-    );
+    return runHybrid({
+        probe: wasmProbe,
+        fallbackMessage: 'Tag-cooccur narrow WASM call failed, falling back to TS for this input',
+        mergeDefaults: () => ({ entries, limit }),
+        isSafe: (merged) => isWasmSafeU32(merged.limit),
+        bypassWasm: (merged) => merged.entries.length < MIN_WASM_ENTRIES,
+        callWasm: (merged) => narrowEntriesToTopTagsWithWasm(merged.entries, merged.limit),
+        callTs: (merged) => narrowEntriesToTopTags(merged.entries, merged.limit),
+    });
 }
