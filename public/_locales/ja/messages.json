@@ -4555,5 +4555,53 @@
   "cooccurrenceTableCaption": {
     "message": "共起数上位のタグペア",
     "description": "タグ共起ペアランキングのテーブルキャプション"
+  },
+  "wordClusterTab": {
+    "message": "ワードクラスタ",
+    "description": "ワードクラスタパネルのサイドバーラベル"
+  },
+  "wordClusterTitle": {
+    "message": "ワードクラスタ",
+    "description": "ワードクラスタパネルのタイトル"
+  },
+  "wordClusterDescription": {
+    "message": "AI 要約とページタイトルからキーワードを抽出し、共起関係をグラフで表示します。ノードをクリックするとそのキーワードで履歴を検索します。",
+    "description": "ワードクラスタパネルの説明"
+  },
+  "wordClusterPeriodLabel": {
+    "message": "期間",
+    "description": "ワードクラスタの期間フィルタと適用ボタンの行ラベル"
+  },
+  "wordClusterRun": {
+    "message": "実行",
+    "description": "ワードクラスタの期間フィルタ適用ボタン"
+  },
+  "wordClusterEmpty": {
+    "message": "選択した期間に利用可能なテキストのレコードがありません。期間を広げてください。",
+    "description": "利用可能なレコードが 0 件のときの空状態"
+  },
+  "wordClusterEmptyNoKeywords": {
+    "message": "レコードはありますが、フィルタ後に残ったキーワードがありません。",
+    "description": "抽出結果が 0 件のときの空状態"
+  },
+  "wordClusterExcludedCount": {
+    "message": "要約が利用できない行を {count} 件除外しました（AI 失敗またはフォールバック文言）。タイトルは使用しています。",
+    "description": "要約抽出から除外された行数の通知"
+  },
+  "wordClusterTruncatedNotice": {
+    "message": "キーワードが多すぎるため上位 50 件のみ表示しています。",
+    "description": "ワードクラスタの表示上限通知"
+  },
+  "wordClusterRowCapNotice": {
+    "message": "クエリが {max} 行の上限に達したため、{total} 件のうち新しい {shown} 件のみを集計しています。",
+    "description": "取得行上限で対象期間が打ち切られたときの通知"
+  },
+  "wordClusterLoading": {
+    "message": "ワードクラスタを読み込み中…",
+    "description": "ワードクラスタの読み込み状態"
+  },
+  "wordClusterError": {
+    "message": "ワードクラスタの読み込みに失敗しました。再試行してください。",
+    "description": "ワードクラスタのエラー状態"
   }
 }

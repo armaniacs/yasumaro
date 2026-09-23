@@ -4593,5 +4593,53 @@
   "cooccurrenceTableCaption": {
     "message": "Top co-occurring tag pairs",
     "description": "Tag co-occurrence table caption"
+  },
+  "wordClusterTab": {
+    "message": "Word Cluster",
+    "description": "Sidebar label for the word-cluster panel"
+  },
+  "wordClusterTitle": {
+    "message": "Word Cluster",
+    "description": "Title of the word-cluster panel"
+  },
+  "wordClusterDescription": {
+    "message": "Extracts keywords from AI summaries and page titles and shows their co-occurrence as a graph. Click a node to search history for that keyword.",
+    "description": "Description of the word-cluster panel"
+  },
+  "wordClusterPeriodLabel": {
+    "message": "Period",
+    "description": "Label for the word-cluster period filter and apply row"
+  },
+  "wordClusterRun": {
+    "message": "Run",
+    "description": "Apply button for the word-cluster period filter"
+  },
+  "wordClusterEmpty": {
+    "message": "No records with usable text in the selected period. Try a wider range.",
+    "description": "Word-cluster empty state when no usable records exist"
+  },
+  "wordClusterEmptyNoKeywords": {
+    "message": "Records were found, but no keywords remained after filtering.",
+    "description": "Word-cluster empty state when extraction yielded no keywords"
+  },
+  "wordClusterExcludedCount": {
+    "message": "Excluded {count} rows without a usable summary (AI failure or fallback text); titles were still used.",
+    "description": "Word-cluster notice counting rows excluded from summary extraction"
+  },
+  "wordClusterTruncatedNotice": {
+    "message": "Too many keywords — showing only the top 50.",
+    "description": "Word-cluster truncation notice for the node cap"
+  },
+  "wordClusterRowCapNotice": {
+    "message": "The query hit the {max}-row limit — aggregating the most recent {shown} of {total} records.",
+    "description": "Word-cluster notice when the fetched row cap truncates the analyzed period"
+  },
+  "wordClusterLoading": {
+    "message": "Loading word cluster…",
+    "description": "Accessible loading status for the word-cluster panel"
+  },
+  "wordClusterError": {
+    "message": "Failed to load the word cluster. Try again.",
+    "description": "Word-cluster error state"
   }
 }
