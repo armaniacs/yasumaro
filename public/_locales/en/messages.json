@@ -4465,5 +4465,133 @@
   },
   "tagCluster_empty_period": {
     "message": "No records in the selected period. Try a wider range."
+  },
+  "tagFrequencyTab": {
+    "message": "Tag Timeline",
+    "description": "Sidebar tab for the tag frequency timeline"
+  },
+  "dashboardTagTimelineTitle": {
+    "message": "Tag Frequency Timeline",
+    "description": "Tag frequency timeline panel title"
+  },
+  "dashboardTagTimelineDescription": {
+    "message": "Weekly and monthly record counts for the top tags in the selected period.",
+    "description": "Tag frequency timeline panel description"
+  },
+  "dashboardTagTimelineGranularityLabel": {
+    "message": "Granularity",
+    "description": "Tag frequency timeline granularity toggle label"
+  },
+  "dashboardTagTimelineGranularityWeek": {
+    "message": "Weekly",
+    "description": "Tag frequency timeline weekly granularity"
+  },
+  "dashboardTagTimelineGranularityMonth": {
+    "message": "Monthly",
+    "description": "Tag frequency timeline monthly granularity"
+  },
+  "dashboardTagTimelineTopNLabel": {
+    "message": "Top tags",
+    "description": "Tag frequency timeline top-N tag count label"
+  },
+  "dashboardTagTimelineRun": {
+    "message": "Run",
+    "description": "Tag frequency timeline apply button"
+  },
+  "dashboardTagTimelineWeekStartNote": {
+    "message": "Weeks start on Sunday (local time). Partial first and last weeks keep their actual start date as the label.",
+    "description": "Tag frequency timeline week-start note"
+  },
+  "dashboardTagTimelineSeriesOther": {
+    "message": "Other",
+    "description": "Tag frequency timeline legend label for tags outside the top N"
+  },
+  "dashboardTagTimelineEmpty": {
+    "message": "No tagged records in this period.",
+    "description": "Tag frequency timeline empty state"
+  },
+  "dashboardTagTimelineCapNote": {
+    "message": "Reached the {max}-record query limit — showing a partial aggregation.",
+    "description": "Tag frequency timeline query cap notice"
+  },
+  "dashboardTagTimelineTableCaption": {
+    "message": "Record counts by bucket and tag",
+    "description": "Tag frequency timeline numeric table caption"
+  },
+  "dashboardTagTimelineChartTitle": {
+    "message": "Stacked tag record counts over time",
+    "description": "Tag frequency timeline SVG title"
+  },
+  "dashboardTagTimelineChartDesc": {
+    "message": "One stacked series per top tag; the same numbers are available in the table below.",
+    "description": "Tag frequency timeline SVG description"
+  },
+  "dashboardTagTimelineCellLabel": {
+    "message": "{date} {tag}: {count} records",
+    "description": "Tag frequency timeline data point label (bucket date, tag, count)"
+  },
+  "tagCooccurrenceTableTab": {
+    "message": "Tag Pairs",
+    "description": "Sidebar tab for the tag co-occurrence table"
+  },
+  "cooccurrenceTableTitle": {
+    "message": "Tag Co-occurrence Pairs",
+    "description": "Tag co-occurrence table panel title"
+  },
+  "cooccurrenceTableDescription": {
+    "message": "Top co-occurring tag pairs as a ranked table. Click a row to filter history by the pair's first tag.",
+    "description": "Tag co-occurrence table panel description"
+  },
+  "cooccurrenceTableColPair": {
+    "message": "Pair",
+    "description": "Tag co-occurrence table pair column header"
+  },
+  "cooccurrenceTableColCooccurCount": {
+    "message": "Co-occurrence",
+    "description": "Tag co-occurrence table co-occurrence count column header"
+  },
+  "cooccurrenceTableColCountA": {
+    "message": "#A count",
+    "description": "Tag co-occurrence table individual count column for the pair's first tag"
+  },
+  "cooccurrenceTableColCountB": {
+    "message": "#B count",
+    "description": "Tag co-occurrence table individual count column for the pair's second tag"
+  },
+  "cooccurrenceTableNoRecords": {
+    "message": "No records in the selected period. Try a wider range.",
+    "description": "Tag co-occurrence table empty state when no records were fetched"
+  },
+  "cooccurrenceTableEmpty": {
+    "message": "No co-occurring tag pairs — every record has a single tag.",
+    "description": "Tag co-occurrence table empty state when the graph has no edges"
+  },
+  "cooccurrenceTableEmptyForTag": {
+    "message": "No other tag co-occurs with the selected tag.",
+    "description": "Tag co-occurrence table empty state when the selected tag has no partners"
+  },
+  "cooccurrenceTableTruncatedTop20": {
+    "message": "Showing the top 20 of {total} co-occurring pairs.",
+    "description": "Tag co-occurrence table top-20 truncation notice"
+  },
+  "cooccurrenceTableTruncatedTags": {
+    "message": "More than {max} unique tags — ranking covers the top {max} tags only.",
+    "description": "Tag co-occurrence table pre-narrowing notice for the tag count cap"
+  },
+  "cooccurrenceTableTagFilterLabel": {
+    "message": "Tag",
+    "description": "Tag co-occurrence table tag filter label"
+  },
+  "cooccurrenceTableTagFilterAll": {
+    "message": "All tags",
+    "description": "Tag co-occurrence table tag filter option for no tag selected"
+  },
+  "cooccurrenceTableRun": {
+    "message": "Run",
+    "description": "Tag co-occurrence table apply button"
+  },
+  "cooccurrenceTableCaption": {
+    "message": "Top co-occurring tag pairs",
+    "description": "Tag co-occurrence table caption"
   }
 }

@@ -4898,3 +4898,131 @@ details[open] > .priority-details-summary {
   border-radius: var(--ym-radius-sm, 6px);
   padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
 }
+
+/* =============================================================================
+   Tag Frequency Timeline (stacked SVG, PBI 2026-09-24-05)
+   Series colors cycle through design tokens (light/dark aware via var()).
+   ============================================================================= */
+
+.tag-timeline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ym-space-2, 8px);
+}
+
+.tag-timeline-controls-label {
+  font-weight: 600;
+}
+
+.tag-timeline-controls input[type="number"] {
+  width: 5em;
+}
+
+#tagTimelineWeekStartNote {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+#tagTimelineEmptyState {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+.tag-timeline-svg {
+  width: 100%;
+  height: auto;
+  max-width: 800px;
+  margin-top: var(--ym-space-3, 12px);
+}
+
+.tag-timeline-grid {
+  stroke: var(--ym-color-border, #e2e8f0);
+  stroke-width: 1;
+}
+
+.tag-timeline-axis {
+  stroke: var(--ym-color-border, #e2e8f0);
+  stroke-width: 1;
+}
+
+.tag-timeline-tick {
+  fill: var(--ym-color-sumi-muted, #7a7060);
+  font-size: 11px;
+}
+
+.tag-timeline-line {
+  fill: none;
+  stroke-width: 2;
+}
+
+.tag-timeline-point {
+  stroke: var(--ym-color-bg-white, #ffffff);
+  stroke-width: 1;
+  cursor: default;
+}
+
+.tag-timeline-point:focus-visible {
+  outline: none;
+  stroke: var(--ym-color-primary, #7c3aed);
+  stroke-width: 2.5;
+}
+
+.tag-timeline-series-0 { fill: var(--ym-color-primary, #7c3aed); stroke: var(--ym-color-primary, #7c3aed); }
+.tag-timeline-series-1 { fill: var(--ym-color-info, #3b82f6); stroke: var(--ym-color-info, #3b82f6); }
+.tag-timeline-series-2 { fill: var(--ym-color-success, #10b981); stroke: var(--ym-color-success, #10b981); }
+.tag-timeline-series-3 { fill: var(--ym-color-warning, #f59e0b); stroke: var(--ym-color-warning, #f59e0b); }
+.tag-timeline-series-4 { fill: var(--ym-color-danger, #ef4444); stroke: var(--ym-color-danger, #ef4444); }
+.tag-timeline-series-5 { fill: var(--ym-color-gold, #c9a84c); stroke: var(--ym-color-gold, #c9a84c); }
+.tag-timeline-series-6 { fill: var(--ym-color-info-accent, #0ea5e9); stroke: var(--ym-color-info-accent, #0ea5e9); }
+.tag-timeline-series-7 { fill: var(--ym-color-text-secondary, #64748b); stroke: var(--ym-color-text-secondary, #64748b); }
+
+.tag-timeline-series-other {
+  fill: var(--ym-color-sumi-muted, #7a7060);
+  stroke: var(--ym-color-sumi-muted, #7a7060);
+}
+
+.tag-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+  margin-top: var(--ym-space-3, 12px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.tag-timeline-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ym-space-1, 4px);
+}
+
+.tag-timeline-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--ym-radius-sm, 3px);
+}
+
+.tag-timeline-numeric {
+  border-collapse: collapse;
+  margin-top: var(--ym-space-3, 12px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.tag-timeline-numeric th,
+.tag-timeline-numeric td {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-1, 4px) var(--ym-space-2, 8px);
+  text-align: right;
+}
+
+.tag-timeline-numeric th {
+  color: var(--ym-color-sumi-muted, #7a7060);
+  font-weight: 600;
+}
+
+.tag-timeline-numeric th[scope="row"] {
+  text-align: left;
+}

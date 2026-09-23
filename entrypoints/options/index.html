@@ -175,6 +175,24 @@
           </svg>
           <span data-i18n="domainAnalysisTab">Domain Analysis</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-frequency-timeline" aria-selected="false" data-panel="panel-tag-frequency-timeline">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="3 17 9 11 13 15 21 7"/>
+            <polyline points="15 7 21 7 21 13"/>
+          </svg>
+          <span data-i18n="tagFrequencyTab">Tag Timeline</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-cooccurrence-table" aria-selected="false" data-panel="panel-tag-cooccurrence-table">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="4" y1="6" x2="20" y2="6"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="18" x2="20" y2="18"/>
+            <circle cx="9" cy="6" r="1.5"/>
+            <circle cx="15" cy="12" r="1.5"/>
+            <circle cx="11" cy="18" r="1.5"/>
+          </svg>
+          <span data-i18n="tagCooccurrenceTableTab">Tag Pairs</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -1957,6 +1975,45 @@
           <tbody id="domainAnalysisUrlBody"></tbody>
         </table>
         <div id="domainAnalysisUrlTruncated" class="visit-duration-truncated" hidden></div>
+      </section>
+
+      <!-- Tag Frequency Timeline Panel (PBI 2026-09-24-05) -->
+      <section id="panel-tag-frequency-timeline" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="dashboardTagTimelineTitle">Tag Frequency Timeline</h2>
+        <p class="panel-description" data-i18n="dashboardTagTimelineDescription">Weekly and monthly record counts for the top tags in the selected period.</p>
+        <div id="tagTimelineFilter"></div>
+        <div class="form-group tag-timeline-controls">
+          <span class="tag-timeline-controls-label" data-i18n="dashboardTagTimelineGranularityLabel">Granularity</span>
+          <button type="button" id="tagTimelineWeekBtn" data-i18n="dashboardTagTimelineGranularityWeek" aria-pressed="true">Weekly</button>
+          <button type="button" id="tagTimelineMonthBtn" data-i18n="dashboardTagTimelineGranularityMonth" aria-pressed="false">Monthly</button>
+          <label for="tagTimelineTopN" data-i18n="dashboardTagTimelineTopNLabel">Top tags</label>
+          <input type="number" id="tagTimelineTopN" min="1" max="50" value="10">
+          <button type="button" id="tagTimelineRunBtn" data-i18n="dashboardTagTimelineRun">Run</button>
+        </div>
+        <p id="tagTimelineWeekStartNote" class="help-text" data-i18n="dashboardTagTimelineWeekStartNote">Weeks start on Sunday (local time). Partial first and last weeks keep their actual start date as the label.</p>
+        <div id="tagTimelineLegend" class="tag-timeline-legend" aria-hidden="false"></div>
+        <div id="tagTimelineEmptyState" data-i18n="dashboardTagTimelineEmpty" hidden>No tagged records in this period.</div>
+        <div id="tagTimelineCapNotice" class="visit-duration-truncated" hidden></div>
+        <div id="tagTimelineChartWrap"></div>
+        <div id="tagTimelineTableWrap"></div>
+      </section>
+
+      <!-- Tag Cooccurrence Table Panel (PBI 2026-09-24-06) -->
+      <section id="panel-tag-cooccurrence-table" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="cooccurrenceTableTitle">Tag Co-occurrence Pairs</h2>
+        <p class="panel-description" data-i18n="cooccurrenceTableDescription">Top co-occurring tag pairs as a ranked table. Click a row to filter history by the pair's first tag.</p>
+        <div id="coocTableFilter"></div>
+        <div class="form-group cooc-table-controls">
+          <label for="coocTableTagSelect" data-i18n="cooccurrenceTableTagFilterLabel">Tag</label>
+          <select id="coocTableTagSelect">
+            <option value="" data-i18n="cooccurrenceTableTagFilterAll">All tags</option>
+          </select>
+          <button type="button" id="coocTableRunBtn" data-i18n="cooccurrenceTableRun">Run</button>
+        </div>
+        <div id="coocTableEmptyState" data-i18n="cooccurrenceTableNoRecords" hidden>No records in the selected period. Try a wider range.</div>
+        <div id="coocTableTagsTruncated" class="visit-duration-truncated" hidden></div>
+        <div id="coocTableTop20Truncated" class="visit-duration-truncated" hidden></div>
+        <div id="coocTableTableWrap"></div>
       </section>
 
       <!-- CSP Settings Panel (P1) -->
