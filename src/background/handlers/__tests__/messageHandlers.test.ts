@@ -128,15 +128,15 @@ describe('createValidVisitHandler', () => {
     expect(deps.recordVisit).toHaveBeenCalledTimes(1);
   });
 
-  it('does not rate limit different URLs against each other', async () => {
+  it('does not rate limit different registrable domains against each other', async () => {
     const deps = makeDeps();
     const handler = createValidVisitHandler(deps);
 
     const senderA = {
-      tab: { id: 1, url: 'https://a.example.com', title: 'A' },
+      tab: { id: 1, url: 'https://a.example-a.com', title: 'A' },
     } as chrome.runtime.MessageSender;
     const senderB = {
-      tab: { id: 2, url: 'https://b.example.com', title: 'B' },
+      tab: { id: 2, url: 'https://b.example-b.com', title: 'B' },
     } as chrome.runtime.MessageSender;
 
     await handler(makeVisitMessage(), senderA, vi.fn());
