@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] 両ファイルの素 storage 接触が 0 件になる
-- [ ] perSiteOverrides の load が targeted read になる
-- [ ] 既存テストが無修正で緑
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] 両ファイルの素 storage 接触が 0 件になる
+- [x] perSiteOverrides の load が targeted read になる
+- [x] 既存テストが無修正で緑
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- presetSettingsAdapter を新設（read は blob→旧キー fallback、write は seam ロック下 delta のみ）。両ファイルの素 storage 接触 0 を grep で確認。stale 判定は seam 公開の getPort 経由。
+- 検証: type-check / settings 32 ファイル 796 テスト緑（既存は無修正）。

@@ -14,16 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-23 arch-delivery-loop 第3ラウンド（archloop-0923c）— ⬜ 未着手 5件 🔧非機能追加 RICE順: 11 → 12 → 13 → 14 → 15
-
-Phase 0 診断（サブエージェント探索・前 2 ラウンドと VulnHunt と ADR 保護と live 台帳を除外）→ Phase 1 RICE スコアリング。通信・録画・UI・設定の残存手配線刈りラウンド。依存なし（並行可・実装は直列）。採点の詳細と未採用候補は [2026-09-23-00-backlog-archloop-0923c.md](2026-09-23-00-backlog-archloop-0923c.md)。
-
-- [2026-09-23-11-refactor-remove-deprecated-hmac-twins.md](2026-09-23-11-refactor-remove-deprecated-hmac-twins.md)（⬜ 未着手 — RICE 25.0・0.1 週・副作用🟢。生産呼び出し 0 の非推奨 HMAC 双子の確定削除。`HmacSigner` を唯一 Seam に）
-- [2026-09-23-12-refactor-bytestats-forwarding-adapter.md](2026-09-23-12-refactor-bytestats-forwarding-adapter.md)（⬜ 未着手 — RICE 16.0・0.5 週・副作用🟡。`pickRecordDiagnostics(payload)` を builder に所有させ、4 handler の手列挙を spread 1 行に。SAVE の maskedCount 除外は維持）
-- [2026-09-23-13-refactor-maintain-wire-table.md](2026-09-23-13-refactor-maintain-wire-table.md)（⬜ 未着手 — RICE 12.8・0.5 週・副作用🟡。maintain 7 分岐を既存表の行に移し、gateway を表駆動 dispatch に。wire 形状不変）
-- [2026-09-23-14-refactor-popup-tab-seam.md](2026-09-23-14-refactor-popup-tab-seam.md)（⬜ 未着手 — RICE 6.4・0.5 週・副作用🟡。tabUtils に狭い Adapter を追加し、素クエリ 2 箇所と独自パース 1 箇所を寄せる。null 振る舞い不変）
-- [2026-09-23-15-refactor-preset-repository-migration.md](2026-09-23-15-refactor-preset-repository-migration.md)（⬜ 未着手 — RICE 4.0・1.0 週・副作用🟡。`CLEANSING_PRESET` を repository 背後に移し、素接触 0 に。preset の Depth は保持）
-
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
 VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
@@ -95,6 +85,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-23 arch-delivery-loop 第3ラウンド（archloop-0923c）— ✅ 5件完了（11-15 アーカイブ済み）RICE順: 11 → 12 → 13 → 14 → 15
+
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.html`、6候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの残存手配線刈りラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（Retry-policy は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923c.md](2026-09-23-00-backlog-archloop-0923c.md)。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-23-11-refactor-remove-deprecated-hmac-twins.md（✅ 完了 — 生産 importer 0 を確認して双子削除。4 テストは HmacSigner へ 1:1 移行。3c11b96a・RICE 25.0）
+- 2026-09-23-12-refactor-bytestats-forwarding-adapter.md（✅ 完了 — `pickRecordDiagnostics` を builder に所有、4 箇所を spread 1 行に。SAVE maskedCount 除外は構造的に維持、`ByteStatsPayload` に `cleansedReason?` を追加。9a81b798・RICE 16.0）
+- 2026-09-23-13-refactor-maintain-wire-table.md（✅ 完了 — maintain 7 行を表に移し switch を約 10 行 dispatch に。両方向同期 assert＋decode 必須化で query/mutate と同水準。f42e32b4・RICE 12.8）
+- 2026-09-23-14-refactor-popup-tab-seam.md（✅ 完了 — tabUtils に 4 Adapter、素クエリ 2 箇所・独自パース 1 箇所・store 重複読みを寄せる。生産クエリは 1 箇所のみ、null 振る舞いは pin。e415c52d・RICE 6.4）
+- 2026-09-23-15-refactor-preset-repository-migration.md（✅ 完了 — presetSettingsAdapter 新設、素接触 0 を grep 確認、read は blob→旧キー fallback。ef3a1068・RICE 4.0）
 
 ### 2026-09-23 arch-delivery-loop 第2ラウンド（archloop-0923b）— ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
 

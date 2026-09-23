@@ -29,6 +29,10 @@
 
 ## DoD（Definition of Done）
 
-- [ ] 双子 2 関数と barrel 2 行が存在しない
-- [ ] 比較実装が `constantTimeCompare` 1 本になる
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] 双子 2 関数と barrel 2 行が存在しない
+- [x] 比較実装が `constantTimeCompare` 1 本になる
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- 生産 importer 0 を再確認して削除。4 テストファイルは HmacSigner へ 1:1 移行（ケース数維持）。KEK 鎖・durableKeyStore・envelope 版語義は不変。
+- 検証: type-check / crypto 系 11 ファイル 334 テスト緑。

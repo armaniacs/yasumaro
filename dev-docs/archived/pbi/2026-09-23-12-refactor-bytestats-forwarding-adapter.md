@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `pickRecordDiagnostics` が builder の公開 interface になり、4 箇所の手列挙が消える
-- [ ] 新 field 追加が 1 行で済むことがテストで pin される
-- [ ] 既存の録画ハンドラテストが無修正で緑
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `pickRecordDiagnostics` が builder の公開 interface になり、4 箇所の手列挙が消える
+- [x] 新 field 追加が 1 行で済むことがテストで pin される
+- [x] 既存の録画ハンドラテストが無修正で緑
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- `pickRecordDiagnostics` を builder に所有させ、4 箇所を spread 1 行に。SAVE の maskedCount 除外は builder 表で構造的に維持（saveRecordMaskedCount は無修正で緑）。`ByteStatsPayload` に `cleansedReason?` を追加し型レベルでも収束。
+- 検証: type-check / 対象 7 ファイル 76 テスト緑。

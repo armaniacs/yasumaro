@@ -34,6 +34,10 @@ popup の active-tab identity＋URL に 3 つの綴りがある: `tabUtils.ts:10
 
 ## DoD（Definition of Done）
 
-- [ ] 素クエリ 2 箇所と独自パース 1 箇所が新 Seam 経由になる
-- [ ] null 時の振る舞いがテストで pin される
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] 素クエリ 2 箇所と独自パース 1 箇所が新 Seam 経由になる
+- [x] null 時の振る舞いがテストで pin される
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- tabUtils に 4 Adapter を追加し、statusPanel の素クエリ 2 箇所・独自パース 1 箇所と statusStore の重複読みを寄せた。生産クエリは tabUtils の1箇所のみ。null 振る舞いは tabSeamNullPin で pin（不変）。main.ts の callback 形クエリと pendingPages.ts の独自パースは対象外として記録。
+- 検証: type-check / popup 40 ファイル 860 テスト緑。
