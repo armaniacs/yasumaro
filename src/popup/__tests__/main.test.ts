@@ -32,8 +32,7 @@ vi.mock('../autoClose.js', () => ({
 }));
 
 vi.mock('../tabUtils.js', () => ({
-  getCurrentTab: vi.fn(() => Promise.resolve(null)),
-  isRecordable: vi.fn(() => true)
+  getCurrentTab: vi.fn(() => Promise.resolve(null))
 }));
 
 // PBI 2026-09-23-05: RecordSession reads recordability from the shared gate
