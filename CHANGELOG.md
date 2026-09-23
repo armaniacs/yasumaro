@@ -35,6 +35,33 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+## [6.9.19] - 2026-09-23
+
+このリリースは v6.9.18 に続く連続リリースです。VulnHunt 監査で確定した 7 件の脆弱性修正（VULN-001/002/003/004/005/007/006）を実装し、アーキテクチャ深層化ラウンド（archloop-0923: 診断→RICE→実装の 5 PBI）で履歴表示・SQLite RPC・設定フォーム・WASM ハイブリッド・記録可否判定の 5 領域を深いモジュールに畳み込みました。全テスト（13,432 件）がグリーンです。
+
+### Fixed
+
+- **保存済み Obsidian API キーが上書きホストに流れる問題を修正（VULN-001）**: `buildFromOverride` のキーフォールバックを「上書き host == 保存 host」のときのみ許可し、上書きホスト×保存済みキーの fetch を構造的に不可能化。host 検証を RFC-1123/IP リテラルの実質検証へ強化し、`obsidianClient` から `skipCspValidation` を撤去。CSP ゲートは保存済み Obsidian origin を共有バリデータ由来で認可し、リモート vault・カスタムポートの loopback vault を維持。TEST_OBSIDIAN バリデータ行の追加と UI ミラーの単一実装化も実施
+- **プロバイダ Base URL の origin 認可と FETCH_URL の fail-closed 化（VULN-002/003）**: pinned row domain・既知プロバイダドメイン・ユーザー確認済み origin・loopback 例外の 4 層認可を導入し、Gemini・Built-in AI にも同型のコンストラクタゲートを追加。`addBaseUrlDomain` の自己認可を廃し、確認済み origin のみ CSP に追加。`ALLOWED_URLS` は SW 起動シード＋設定変更再同期で常時最新化し、空集合では fail-closed に。確認済み origin はデバイスローカルのセキュリティ状態として export/import から除外し、保存時に確認ダイアログで明示許可する
+- **アーカイブ復元にワーカ側の行数・バイト上限を追加（VULN-004）**: 復元経路に 20 万行・200MiB のシーリングを導入し、検証段と復元ループの両方で効かせる。超過時は `ARC_CAP_001`/`ARC_CAP_002` で中断し、ステージングを破棄する。ファイルサイズはワーカー自身が再計測しクライアント値を信頼しない
+- **ByteStats の範囲検証と SAVE maskedCount の呼び出し元値廃止（VULN-005/007）**: VALID_VISIT の 9 フィールドに範囲検証（wire=拒否・mapper=clamp の 2 層）を追加し、`aiSummaryCleansedReasons[]` に要素数・要素型上限を実装。SAVE 経路は呼び出し元の maskedCount を破棄し、パイプライン計算値を唯一の真実にする
+- **レート制限キーを eTLD+1 スコープに変更（VULN-006）**: 兄弟サブドメイン輪番による 5 秒スロットル回避を閉じる。localhost・IP リテラルはポート込み origin のまま別キー
+
+### Changed
+
+- **履歴エントリ診断表示を深いモジュールに統合**: `historyEntryPresentation` に `renderEntryDiagnostics` / `renderCleansingBar` を公開し、View の約 300 行の診断分岐を背後に移動（View 1169→1012 行）。15 フィクスチャの characterization snapshot で全ブランチの HTML バイト等価を確認
+- **SQLite RPC を wire-table 真の Seam に統合**: `callDashboard` / `callSqliteWire` / `callArchive` の三重 runner を表駆動の単一 runner にまとめ、`sqliteClient.call(op, payload)` の 1 本化。既存 30 op は互換エイリアス、export/import の 2 呼び出し側を移行。decode 所有を wire-table 側に寄せる
+- **設定フォーム検証を記述子表 SSOT に統合**: `fieldDescriptor.ts` を新設し、token 範囲を `validateMaxTokens` に一本化（gemini 8192 等の provider 別上限が UI にも反映）。`trustSettings` の module-scope DOM 取得を lazy init に移し、DOM なし import をテストで pin
+- **ハイブリッド骨格を `runHybrid` 汎用 interface に統合**: 4 ハイブリッドの同型骨格を runtime の 1 箇所に集約。各コアは政策データ＋`callWasm`/`callTs` の Adapter に縮退。parity 戦略・フォールバック語義・しきい値・warn 文言は不変
+- **記録可否判定を gate 表の唯一 Seam に統合**: 中立層 `recordingGateTable.ts` に precedence を 1 表で所有し、`evaluateGates` を公開。5 step は表の Adapter に、popup は中立表に統一。content は domain 行・scheme 述語を共有（engagement 閾値との合流は follow-up）
+
+### Tested
+
+- 単体: `npm run validate` green（13,432 passed / 21 skipped、853 ファイル）。新規テスト: 診断表示 characterization（31）・wire-table seam・fieldDescriptor（14）・trustSettingsNoDom・runHybrid（9）・gate 表（20）・origin 認可・confirmation flow・allowedUrlsSync ほか
+- E2E: chromium 242 passed。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（素の `firefox.launch()` でも再現する環境障害。CI の Linux/xvfb 実行には影響なし）
+
 
 ## [6.9.18] - 2026-09-23
 
