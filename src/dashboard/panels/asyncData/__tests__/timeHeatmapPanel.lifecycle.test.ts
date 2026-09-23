@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 /**
  * timeHeatmapPanel lifecycle tests: grid rendering, empty state,
- * limit notice, and the 12-month query window.
+ * limit notice, and the shared period-filter wiring (default 'last90',
+ * auto-apply on preset change, 'all' = unbounded query).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -24,6 +25,7 @@ vi.mock('../../../utils/retry.js', async (importOriginal) => {
 
 import { createTimeHeatmapPanel } from '../timeHeatmapPanel.js';
 import { MAX_TIME_HEATMAP_ROWS } from '../../../../utils/computeLimits.js';
+import { DAY_MS } from '../../../components/periodFilter.js';
 
 function localTs(year: number, month1: number, day: number, hour: number): number {
   return new Date(year, month1 - 1, day, hour).getTime();
@@ -32,6 +34,7 @@ function localTs(year: number, month1: number, day: number, hour: number): numbe
 function mountPanel() {
   const container = document.createElement('div');
   container.innerHTML = `
+    <div id="timeHeatmapFilter"></div>
     <div id="timeHeatmapEmptyState" hidden></div>
     <div id="timeHeatmapLimitNotice" hidden></div>
     <div id="timeHeatmapGrid"></div>
@@ -113,7 +116,7 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     expect(container.querySelector('#timeHeatmapEmptyState')!.hidden).toBe(true);
   });
 
-  it('queries with a 12-month since/until window and the row cap', async () => {
+  it("queries with the default 'last90' bounds and the row cap", async () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
     const before = Date.now();
     const { panel } = mountPanel();
@@ -123,11 +126,55 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
     const args = mockQueryLogs.mock.calls[0]![0] as { since: number; until: number; limit: number };
     expect(args.limit).toBe(MAX_TIME_HEATMAP_ROWS);
-    expect(args.until).toBeGreaterThanOrEqual(before);
-    expect(args.until).toBeLessThanOrEqual(after);
-    const twelveMonthsMs = 366 * 24 * 60 * 60 * 1000;
-    const elevenMonthsMs = 364 * 24 * 60 * 60 * 1000;
-    expect(args.until - args.since).toBeLessThanOrEqual(twelveMonthsMs);
-    expect(args.until - args.since).toBeGreaterThanOrEqual(elevenMonthsMs);
+    expect(typeof args.since).toBe('number');
+    expect(args.until as number).toBeGreaterThanOrEqual(before);
+    expect(args.until as number).toBeLessThanOrEqual(after);
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(90 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(90 * DAY_MS + 60_000);
+  });
+
+  it('auto-applies a preset change with a refetch and new bounds', async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    const { panel, container } = mountPanel();
+    await panel.load?.();
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+
+    const preset = container.querySelector<HTMLButtonElement>('button[data-preset="last7"]');
+    expect(preset).not.toBeNull();
+    preset!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Auto-apply: no explicit Run button — the selection refetches.
+    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+    const args = mockQueryLogs.mock.calls[1]![0] as { since: number; until: number; limit: number };
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(7 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(7 * DAY_MS + 60_000);
+  });
+
+  it("queries without since/until when 'all' is selected", async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    const { panel, container } = mountPanel();
+    await panel.load?.();
+
+    const preset = container.querySelector<HTMLButtonElement>('button[data-preset="all"]');
+    expect(preset).not.toBeNull();
+    preset!.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+    // Byte-identical to the pre-filter call: no since/until keys at all.
+    expect(mockQueryLogs.mock.calls[1]![0]).toEqual({ limit: MAX_TIME_HEATMAP_ROWS });
+  });
+
+  it('destroy cleans up the filter and stays safe when called twice', async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    const { panel, container } = mountPanel();
+    await panel.load?.();
+    expect(container.querySelector('.period-filter')).not.toBeNull();
+    expect(() => panel.destroy?.()).not.toThrow();
+    expect(() => panel.destroy?.()).not.toThrow();
+    expect(container.querySelector('.period-filter')).toBeNull();
   });
 });

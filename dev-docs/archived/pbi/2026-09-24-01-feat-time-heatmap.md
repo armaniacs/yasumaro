@@ -68,3 +68,6 @@ Scenario: 取得上限に達した場合は注意表示が出る
 - 実装: `src/dashboard/timeHeatmapAggregate.ts`（純粋集計・ローカル時刻・強度4分位）、`src/dashboard/panels/asyncData/timeHeatmapPanel.ts`、`panelCatalog.ts`/`panelFactories.ts`/`entrypoints/options/index.html` 配線、`dashboard.css` に token ベース強度クラス、i18n 15キー ×2 locales、`MAX_TIME_HEATMAP_ROWS` を `computeLimits.ts` に追加
 - 検証: type-check PASS / 対象 29 tests green（aggregate 7・lifecycle 6・catalog 16）/ lint 0 errors / 全体 13,610 tests green / build PASS
 - 備考: GitHub PR レビューはユーザー作業として残置。ドキュメント要件なし（パネルは panelCatalog SSOT で管理）
+
+## 追補（2026-09-24 ユーザー指示）
+- 「直近12ヶ月固定・期間ピッカーなし」の受け入れ基準はユーザー指示により変更: 他の分析パネルと同じ共有期間フィルタ（今日/7日/30日/90日/全期間+カスタム）を埋め込み、既定プリセットは 90日。集計は選択期間に追従し、全期間は無上限クエリ。12ヶ月固定ロジック（`computeHeatmapWindow`）は削除

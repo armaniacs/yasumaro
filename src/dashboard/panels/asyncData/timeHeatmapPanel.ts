@@ -2,13 +2,21 @@
  * timeHeatmapPanel.ts (PanelLifecycle)
  * Renders weekday(7) x hour(24) browsing-record density as a heatmap table
  * plus a numeric text-alternative table (WCAG 2.1 AA: color is never the
- * only channel). Aggregation window is a fixed 12-month rolling window.
+ * only channel). The aggregation window is chosen with the shared period
+ * filter (presets + custom range); the default preset is 'last90' — rich
+ * enough for a density view while staying under the row cap for most
+ * users, with 'all' one click away.
  */
 
 import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getMessage } from '../../../utils/i18n.js';
+import {
+  createPeriodFilter,
+  type PeriodFilterHandle,
+  type PeriodRange,
+} from '../../components/periodFilter.js';
 import {
   aggregateTimeHeatmap,
   gridMax,
@@ -32,12 +40,6 @@ const WEEKDAY_KEYS = [
 
 const WEEKDAY_FALLBACK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
-export function computeHeatmapWindow(now: number): { since: number; until: number } {
-  const sinceDate = new Date(now);
-  sinceDate.setFullYear(sinceDate.getFullYear() - 1);
-  return { since: sinceDate.getTime(), until: now };
-}
-
 function weekdayLabel(weekday: number): string {
   const key = WEEKDAY_KEYS[weekday];
   return (key !== undefined && getMessage(key)) || WEEKDAY_FALLBACK[weekday] || String(weekday);
@@ -57,6 +59,46 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
   let tableWrapEl: HTMLElement | null = null;
   let emptyState: HTMLElement | null = null;
   let limitNotice: HTMLElement | null = null;
+  let filterHost: HTMLElement | null = null;
+  let filterHandle: PeriodFilterHandle | null = null;
+  let currentRange: PeriodRange = {};
+  let loadSeq = 0;
+  let filterReady = false;
+
+  async function reload(): Promise<void> {
+    if (!gridEl || !tableWrapEl) return;
+    const seq = ++loadSeq;
+
+    gridEl.innerHTML = '';
+    tableWrapEl.innerHTML = '';
+    if (emptyState) emptyState.hidden = true;
+    if (limitNotice) limitNotice.hidden = true;
+
+    try {
+      // WHY: snapshot the range so retries reuse one consistent window even
+      // if the user changes the filter mid-flight (stale loads bail via seq).
+      const bounds = currentRange;
+      const rows = await loadRowsWithRetry(bounds);
+      if (seq !== loadSeq) return;
+
+      if (rows.length === 0) {
+        if (emptyState) emptyState.hidden = false;
+        return;
+      }
+
+      if (rows.length >= MAX_TIME_HEATMAP_ROWS && limitNotice) {
+        limitNotice.hidden = false;
+      }
+
+      const grid = aggregateTimeHeatmap(rows.map((r) => r.created_at));
+      const max = gridMax(grid);
+      gridEl.appendChild(buildHeatmapTable(grid, max));
+      tableWrapEl.appendChild(buildNumericTable(grid));
+    } catch (error) {
+      console.error('[timeHeatmapPanel] error:', error);
+      if (emptyState) emptyState.hidden = false;
+    }
+  }
 
   return {
     id: 'panel-time-heatmap',
@@ -66,36 +108,38 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       tableWrapEl = container.querySelector('#timeHeatmapTableWrap');
       emptyState = container.querySelector('#timeHeatmapEmptyState');
       limitNotice = container.querySelector('#timeHeatmapLimitNotice');
+      filterHost = container.querySelector('#timeHeatmapFilter');
+      if (filterHost) {
+        filterHandle = createPeriodFilter({
+          initialPreset: 'last90',
+          onChange: (range) => {
+            currentRange = range;
+            // WHY: auto-apply on selection — each load is a single capped
+            // query (no paging), so the explicit Run-button pattern of the
+            // domain-analysis panel is not warranted here.
+            if (filterReady) void reload();
+          },
+        });
+        filterHost.appendChild(filterHandle.element);
+        currentRange = filterHandle.getRange();
+        // WHY: the filter emits once during construction; arming the reload
+        // trigger only after that initial emission prevents a duplicate load
+        // when mount finishes.
+        filterReady = true;
+      }
     },
     async load() {
-      if (!gridEl || !tableWrapEl) return;
-
-      gridEl.innerHTML = '';
-      tableWrapEl.innerHTML = '';
-      if (emptyState) emptyState.hidden = true;
-      if (limitNotice) limitNotice.hidden = true;
-
-      try {
-        const { since, until } = computeHeatmapWindow(Date.now());
-        const rows = await loadRowsWithRetry(since, until);
-
-        if (rows.length === 0) {
-          if (emptyState) emptyState.hidden = false;
-          return;
-        }
-
-        if (rows.length >= MAX_TIME_HEATMAP_ROWS && limitNotice) {
-          limitNotice.hidden = false;
-        }
-
-        const grid = aggregateTimeHeatmap(rows.map((r) => r.created_at));
-        const max = gridMax(grid);
-        gridEl.appendChild(buildHeatmapTable(grid, max));
-        tableWrapEl.appendChild(buildNumericTable(grid));
-      } catch (error) {
-        console.error('[timeHeatmapPanel] error:', error);
-        if (emptyState) emptyState.hidden = false;
-      }
+      await reload();
+    },
+    destroy() {
+      loadSeq += 1;
+      filterHandle?.destroy();
+      filterHandle = null;
+      filterHost = null;
+      gridEl = null;
+      tableWrapEl = null;
+      emptyState = null;
+      limitNotice = null;
     },
   };
 }
@@ -180,14 +224,21 @@ function buildNumericTable(grid: TimeHeatmapGrid): HTMLTableElement {
   return table;
 }
 
-async function loadRowsWithRetry(since: number, until: number): Promise<BrowsingLogEntry[]> {
+async function loadRowsWithRetry(bounds: PeriodRange): Promise<BrowsingLogEntry[]> {
   const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
     async () => {
       const status = await getSqliteStatus();
       if (!status?.initialized) {
         return null;
       }
-      const qRes = await queryLogs({ since, until, limit: MAX_TIME_HEATMAP_ROWS });
+      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
+      // bounds pass no since/until key, so the all-time query stays a plain
+      // { limit } call (tagClusterPanel convention).
+      const qRes = await queryLogs({
+        ...(bounds.since !== undefined ? { since: bounds.since } : {}),
+        ...(bounds.until !== undefined ? { until: bounds.until } : {}),
+        limit: MAX_TIME_HEATMAP_ROWS,
+      });
       if (isServiceError(qRes)) {
         return null;
       }

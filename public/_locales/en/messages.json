@@ -4128,11 +4128,11 @@
     "description": "Heatmap cell label: weekday, hour and record count"
   },
   "dashboardTimeHeatmapDescription": {
-    "message": "Browsing record density by weekday and hour over the last 12 months.",
+    "message": "Browsing record density by weekday and hour over the selected period.",
     "description": "Time heatmap panel description"
   },
   "dashboardTimeHeatmapEmpty": {
-    "message": "No browsing records in the last 12 months.",
+    "message": "No browsing records in the selected period.",
     "description": "Time heatmap empty state"
   },
   "dashboardTimeHeatmapFri": {

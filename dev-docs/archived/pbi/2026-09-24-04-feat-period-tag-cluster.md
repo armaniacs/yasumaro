@@ -89,3 +89,6 @@ Scenario: WASM 失敗時に TS フォールバックでも期間フィルタが�
 - 逸脱（記録済み）: ①PBI キー一覧の `tagCluster_period_*` は共有 periodFilter が既存 `visitDurationPeriod*` キーから自己解決するため重複デッドキーとして未追加（文言は日英とも提供済みで基準は充足）。②実装メモの aria-live 再計算通知は受け入れ基準外のため PBI 08（同一パネルの拡張・aria-live を基準に持つ）での実装に引き継ぎ
 - 検証: type-check PASS / 対象 51 tests green（既存 tagClusterPanel 3 ファイルはアサーション無変更で green）/ lint 0 errors / 全体 13,637 tests green / build PASS
 - 備考: GitHub PR レビューはユーザー作業として残置。PBI 08 の計算基盤が整備済み
+
+## 追補（2026-09-24 ユーザー指示）
+- 既定プリセットを 'all'（全期間）から 'last7'（直近7日間）へ変更 — 全期間グラフは初期表示として長過ぎるため。'all' 選択時の無上限クエリ（現行挙動との同一性）は維持。ワードクラスタパネルも同時に 'last7' 既定へ変更
