@@ -30,7 +30,7 @@ import type {
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
-import { archiveWireFor, archiveNoRetry, isArchiveOpType, ARCHIVE_DESCRIPTORS, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
+import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
 import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor } from '../../messaging/sqliteWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
@@ -38,25 +38,6 @@ export type { SqliteError };
 export { categorizeError };
 
 type GatewaySuccessResponse = { success: true } & Record<string, unknown>;
-
-/**
- * Per-op success-response decoders for the table-driven archive path.
- * Each entry mirrors the transform the hand-written switch case used to
- * pass to callInternal; field access is checked against the wire response
- * type so a shape change fails compilation here instead of silently
- * returning undefined.
- */
-// Derived from the wire table's decodeResponse (PBI 2026-09-15-04): the
-// per-op hand-written projections used to duplicate these shapes field-for-
-// field, and a missing field (e.g. preview) silently decoded to undefined.
-// Reusing decodeResponse closes that class — its throws surface as
-// SqliteResult errors instead of silent undefined.
-const ARCHIVE_GATEWAY_DECODERS = Object.fromEntries(
-  (Object.keys(ARCHIVE_DESCRIPTORS) as ArchiveOpType[]).map((op) => [
-    op,
-    (res: GatewaySuccessResponse) => ARCHIVE_DESCRIPTORS[op].decodeResponse(res),
-  ]),
-) as Record<ArchiveOpType, (res: GatewaySuccessResponse) => unknown>;
 
 export class OffscreenGateway {
   private readonly injectedTransport: OffscreenTransport | null;
@@ -171,7 +152,12 @@ export class OffscreenGateway {
       const entry = archiveWireFor(op.type);
       if (!entry) throw new Error(`Unhandled maintain op: ${op.type}`);
       const { type: _discriminator, ...payload } = op as unknown as Record<string, unknown>;
-      const decode = ARCHIVE_GATEWAY_DECODERS[op.type];
+      // Decode ownership lives in the wire-table row (PBI 2026-09-23-02):
+      // the gateway references entry.decodeResponse instead of a local
+      // decoder copy, so a shape change fails in the row's codec, not here.
+      // (PBI 2026-09-15-04: decode throws still surface as SqliteResult
+      // errors instead of silent undefined.)
+      const decode = (res: GatewaySuccessResponse) => entry.decodeResponse(res);
       return this.callInternal<unknown>(
         entry.messageType,
         payload,

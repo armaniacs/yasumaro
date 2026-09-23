@@ -4,23 +4,27 @@
  * The service worker's DASHBOARD_SQLITE handler proxies requests to SqliteClient.
  */
 
-import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../background/handlers/dashboardSqliteProtocol.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
-import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorPublic } from '../messaging/archiveWireTable.js';
-import { SQLITE_WIRE_DESCRIPTORS, type SqliteWireDescriptor, type SqliteDashboardHop, type DescriptorService } from '../messaging/sqliteWireTable.js';
+import { archiveWireFor, isArchiveOpType, type ArchiveDescriptor, type DescriptorPublic } from '../messaging/archiveWireTable.js';
+import {
+  sqliteWireFor,
+  dashboardServiceWireFor,
+  type SqliteWireDescriptor,
+  type SqliteDashboardHop,
+  type DescriptorService,
+  type DashboardRetryPolicy,
+  type DashboardServiceDescriptor,
+  type DashboardServiceResult,
+} from '../messaging/sqliteWireTable.js';
 // PBI-05: unified SqliteResult vocabulary — both hops now share the same
 // error classification and result shape via SqliteGateway.
 // PBI 11: the DASHBOARD_SQLITE send policy (token gate, timeout, retry) lives
 // in src/messaging/dashboardGateway.ts; this service owns only conversion.
 import { dashboardGateway, type SqliteResult } from '../messaging/dashboardGateway.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import {
-  requiredNonNegativeNumber,
-  requiredBoolean,
-  requiredString,
-  decodeStatusExtras,
-} from '../messaging/sqliteValidators.js';
 import type { SqliteStatusResult } from '../messaging/sqliteMessages.js';
 
 /**
@@ -53,51 +57,102 @@ export function isServiceError<T>(result: ServiceResult<T>): result is { error: 
 }
 
 /**
- * Generic wrapper for the common "send → on success decode+validate the
- * response, on failure/exception surface the reason" pattern shared by most
- * DASHBOARD_SQLITE API functions.
+ * Unified table-driven runner (PBI 2026-09-23-02).
  *
- * PBI-05: delegates to DashboardSqliteGateway so the two RPC stacks share
- * the same SqliteResult vocabulary and error classification.
- * PBI 11: the retrying functions (queryLogs, searchLogs) pass the opt-in
- * retry option through; every other caller stays single-attempt.
+ * The previous `callDashboard` / `callSqliteWire` / `callArchive` triple is
+ * dissolved into one path: every op resolves to a row (query/mutate wire
+ * row, archive row, or dashboard-service row) that owns the decode, the
+ * fallback message, and the retry policy. Callers pass op + payload only —
+ * retry/noRetry semantics live in the rows, never in caller flags.
+ *
+ * Layer note: the precise per-op payload/result types below are dashboard-
+ * tier derivations over the loose row codecs in messaging/ (which must stay
+ * free of background/dashboard imports). The runtime resolution needs no
+ * precise types — only subtype, decode, defaultError, retry.
  */
-async function callDashboard<T extends DashboardSqliteRequest, R>(
-  payload: T,
-  decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R,
-  defaultErrorMessage: string,
-  retry?: { retryAttempts?: number; retryDelayMs?: number },
-): Promise<ServiceResult<R>> {
-  const result = await dashboardGateway.callDashboard(payload, decode, defaultErrorMessage, retry);
-  return toServiceResult(result);
+
+// Dashboard-capable wire rows (the 7 with a dashboard hop; insert/insertBatch/
+// insertAuditLog have no dashboard subtype and are unreachable here).
+type WireDashboardDescriptor = Extract<SqliteWireDescriptor, { dashboard: SqliteDashboardHop<unknown> }>;
+
+type WireClientMap = {
+  [D in WireDashboardDescriptor as D['op']]: {
+    payload: Extract<DashboardSqliteRequest, { subtype: NonNullable<D['dashboard']>['subtype'] }>;
+    result: DescriptorService<D>;
+  };
+};
+
+type ArchiveClientMap = {
+  [D in ArchiveDescriptor as D['op']]: {
+    payload: Extract<DashboardSqliteRequest, { subtype: D['subtype'] }>;
+    result: DescriptorPublic<D>;
+  };
+};
+
+type ServiceClientMap = {
+  [D in DashboardServiceDescriptor as D['op']]: {
+    payload: Extract<DashboardSqliteRequest, { subtype: D['subtype'] }>;
+    result: DashboardServiceResult<D>;
+  };
+};
+
+export interface SqliteClientMap extends WireClientMap, ArchiveClientMap, ServiceClientMap {}
+export type SqliteClientOp = keyof SqliteClientMap;
+export type SqliteClientPayload<O extends SqliteClientOp> = SqliteClientMap[O]['payload'];
+export type SqliteClientResult<O extends SqliteClientOp> = SqliteClientMap[O]['result'];
+
+// Compile-time coverage: every DASHBOARD_SQLITE subtype except the token
+// handshake must be reachable through the generic call — a new subtype
+// without a row is a type error here, not a runtime drift.
+type CoveredSubtype = SqliteClientMap[SqliteClientOp]['payload']['subtype'];
+type MissingClientSubtype = Exclude<DashboardSqliteRequest['subtype'], CoveredSubtype | 'create_confirm_token'>;
+const _clientCoversSubtypes: MissingClientSubtype extends never ? true : never = true;
+void _clientCoversSubtypes;
+
+/** Loose runtime view over the three row kinds (all carry the same triple). */
+interface ClientRow {
+  defaultError: string;
+  retry?: DashboardRetryPolicy;
+  serviceDecode: (response: { success: true } & Record<string, unknown>) => unknown;
 }
 
-// ============================================================================
-// Query/mutate wire-table caller (PBI 2026-09-20-16)
-//
-// Same seam as callArchive below: the public functions keep their names and
-// signatures; only the internals share a runner. The row owns the decode
-// and the fallback message, so the per-op shape knowledge lives in exactly
-// one place. Retry stays at the call site (only the read paths opt in).
-// ============================================================================
+function resolveClientRow(op: string): ClientRow | undefined {
+  const wireDashboard = sqliteWireFor(op)?.dashboard;
+  if (wireDashboard) return wireDashboard;
+  if (isArchiveOpType(op)) {
+    const entry = archiveWireFor(op);
+    // Row owns the decode (offscreenGateway references the same row — the
+    // former ARCHIVE_GATEWAY_DECODERS copy is gone). Archive ops never
+    // retry from the dashboard: no retry field, single attempt.
+    if (entry) return { defaultError: entry.defaultError, serviceDecode: (response) => entry.decodeResponse(response) };
+    return undefined;
+  }
+  return dashboardServiceWireFor(op) ?? undefined;
+}
 
-function callSqliteWire<D extends SqliteWireDescriptor & { dashboard: SqliteDashboardHop<unknown> }>(
-  descriptor: D,
-  payload: Extract<DashboardSqliteRequest, { subtype: D['dashboard']['subtype'] }>,
-  retry?: { retryAttempts?: number; retryDelayMs?: number },
-): Promise<ServiceResult<DescriptorService<D>>>;
-function callSqliteWire(
-  descriptor: SqliteWireDescriptor & { dashboard: SqliteDashboardHop<unknown> },
+/**
+ * The single deep entry point: `sqliteClient.call(op, payload)`.
+ * Fail-closed on unknown ops (throws — never a silent default).
+ */
+export const sqliteClient = {
+  call<O extends SqliteClientOp>(op: O, payload: SqliteClientPayload<O>): Promise<ServiceResult<SqliteClientResult<O>>> {
+    const row = resolveClientRow(op);
+    if (!row) throw new Error(`Unhandled dashboard SQLite op: ${op}`);
+    return callClientRow<SqliteClientResult<O>>(row, payload);
+  },
+};
+
+async function callClientRow<R>(
+  row: ClientRow,
   payload: DashboardSqliteRequest,
-  retry?: { retryAttempts?: number; retryDelayMs?: number },
-): Promise<ServiceResult<unknown>> {
-  const dashboard = descriptor.dashboard;
-  return callDashboard(
+): Promise<ServiceResult<R>> {
+  const result = await dashboardGateway.callDashboard(
     payload,
-    (response) => dashboard.serviceDecode(response),
-    dashboard.defaultError,
-    retry,
+    (response) => row.serviceDecode(response) as R,
+    row.defaultError,
+    row.retry,
   );
+  return toServiceResult(result);
 }
 
 // ============================================================================
@@ -114,8 +169,7 @@ export interface DateCount {
 
 /**
  * Query browsing logs with date range and filters.
- * Retries once on first failure to handle SQLite initialization timing
- * (PBI 11: the retry loop lives in DashboardGateway.callDashboard now).
+ * Retry lives in the records row (SQLite init timing); this stays a delegate.
  */
 export async function queryLogs(options: {
   limit?: number;
@@ -128,17 +182,12 @@ export async function queryLogs(options: {
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return callSqliteWire(
-    SQLITE_WIRE_DESCRIPTORS.records,
-    { subtype: 'query', ...options },
-    { retryAttempts: 2, retryDelayMs: 1000 },
-  );
+  return sqliteClient.call('records', { subtype: 'query', ...options });
 }
 
 /**
  * FTS5 full-text search.
- * Retries once on first failure to handle SQLite initialization timing
- * (PBI 11: same gateway retry shape as queryLogs).
+ * Retry lives in the search row (same init-timing shape as queryLogs).
  */
 export async function searchLogs(
   query: string,
@@ -146,17 +195,13 @@ export async function searchLogs(
   offset = 0,
   options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return callSqliteWire(
-    SQLITE_WIRE_DESCRIPTORS.search,
-    {
-      subtype: 'search',
-      query,
-      limit,
-      offset,
-      ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
-    },
-    { retryAttempts: 2, retryDelayMs: 1000 },
-  );
+  return sqliteClient.call('search', {
+    subtype: 'search',
+    query,
+    limit,
+    offset,
+    ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
+  });
 }
 
 /**
@@ -167,7 +212,7 @@ export async function searchLogs(
  * the database was unavailable (PBI-21).
  */
 export function toggleStar(id: number): Promise<ServiceResult<{ is_starred: number }>> {
-  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.toggleStar, { subtype: 'toggle_star', id });
+  return sqliteClient.call('toggleStar', { subtype: 'toggle_star', id });
 }
 
 /**
@@ -177,14 +222,14 @@ export function toggleStar(id: number): Promise<ServiceResult<{ is_starred: numb
  * show it instead of appearing to ignore the click.
  */
 export function deleteLog(id: number): Promise<ServiceResult<void>> {
-  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.delete, { subtype: 'delete', id });
+  return sqliteClient.call('delete', { subtype: 'delete', id });
 }
 
 /**
  * Update a log entry's fields.
  */
 export function updateLog(id: number, changes: Record<string, unknown>): Promise<ServiceResult<void>> {
-  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.update, { subtype: 'update', id, changes });
+  return sqliteClient.call('update', { subtype: 'update', id, changes });
 }
 
 /**
@@ -192,19 +237,11 @@ export function updateLog(id: number, changes: Record<string, unknown>): Promise
  * Returns the SQLite record count after migration, or null on failure.
  */
 export function migrateLogs(): Promise<ServiceResult<{ count: number; read: number; inserted: number }>> {
-  return callDashboard(
-    { subtype: 'migrate' },
-    (response) => ({
-      count: requiredNonNegativeNumber(response.count, 'count'),
-      read: requiredNonNegativeNumber(response.read, 'read'),
-      inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
-    }),
-    'Migration failed',
-  );
+  return sqliteClient.call('migrate', { subtype: 'migrate' });
 }
 
 export function clearAllLogs(): Promise<ServiceResult<void>> {
-  return callDashboard({ subtype: 'clear_all' }, () => undefined, 'Clear all failed');
+  return sqliteClient.call('clearAll', { subtype: 'clear_all' });
 }
 
 /**
@@ -212,7 +249,7 @@ export function clearAllLogs(): Promise<ServiceResult<void>> {
  * Returns a ServiceResult so a failure is distinguishable from a count of 0.
  */
 export function getLogCount(): Promise<ServiceResult<number>> {
-  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.count, { subtype: 'get_count' });
+  return sqliteClient.call('count', { subtype: 'get_count' });
 }
 
 /**
@@ -225,33 +262,20 @@ export function getLogCount(): Promise<ServiceResult<number>> {
  * unconditionally, with initError set on failure.
  */
 export async function getSqliteStatus(): Promise<SqliteStatusResult> {
-  // PBI 11: transport goes through DashboardGateway.callDashboard; the
-  // SqliteResult → status-shape conversion stays here so the diagnostics UI
-  // keeps receiving a status object (with initError) on every failure mode.
-  // PBI 2026-09-11-03 (round 5): the return type derives from the shared
-  // SqliteStatusExtras contract — no hand-maintained field list here anymore.
-  const result = await dashboardGateway.callDashboard(
-    { subtype: 'status' },
-    (response) => ({
-      initialized: requiredBoolean(response.initialized, 'initialized'),
-      path: requiredString(response.path, 'path'),
-      fallback: requiredBoolean(response.fallback, 'fallback'),
-      fts5: requiredBoolean(response.fts5, 'fts5'),
-      ...pickDefined({
-        initError: response.initError ? String(response.initError) : undefined,
-        ...decodeStatusExtras(response as unknown as Record<string, unknown>),
-      }),
-    }),
-    'Failed to get SQLite status',
-  );
-  if (result.success) return result.data;
-  return {
-    initialized: false,
-    path: '',
-    fallback: false,
-    fts5: false,
-    initError: result.error.message,
-  };
+  // The row owns the success decode; only the degraded-status fallback lives
+  // here because this function never returns ServiceResult — it returns a
+  // status object unconditionally, with initError set on failure.
+  const result = await sqliteClient.call('status', { subtype: 'status' });
+  if ('error' in result) {
+    return {
+      initialized: false,
+      path: '',
+      fallback: false,
+      fts5: false,
+      initError: result.error,
+    };
+  }
+  return result.data;
 }
 
 
@@ -260,14 +284,7 @@ export async function getSqliteStatus(): Promise<SqliteStatusResult> {
  * This is a destructive operation - only call after user confirmation.
  */
 export function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: string[]; totalBytes: number }>> {
-  return callDashboard(
-    { subtype: 'cleanup_legacy' },
-    (response) => ({
-      removed: Array.isArray(response.removed) ? response.removed : [],
-      totalBytes: requiredNonNegativeNumber(response.totalBytes, 'totalBytes'),
-    }),
-    'Cleanup failed',
-  );
+  return sqliteClient.call('cleanupLegacy', { subtype: 'cleanup_legacy' });
 }
 
 /**
@@ -275,14 +292,7 @@ export function cleanupLegacyStorage(): Promise<ServiceResult<{ removed: string[
  * that are missing metric fields (sent_tokens, page_bytes, etc.).
  */
 export function backfillMetadata(): Promise<ServiceResult<{ updated: number; total: number }>> {
-  return callDashboard(
-    { subtype: 'backfill_metadata' },
-    (response) => ({
-      updated: requiredNonNegativeNumber(response.updated, 'updated'),
-      total: requiredNonNegativeNumber(response.total, 'total'),
-    }),
-    'Backfill failed',
-  );
+  return sqliteClient.call('backfill', { subtype: 'backfill_metadata' });
 }
 
 /**
@@ -292,30 +302,25 @@ export function backfillMetadata(): Promise<ServiceResult<{ updated: number; tot
  * and cap apply when omitted or invalid).
  */
 export function resyncLegacyStorage(maxRecords?: number): Promise<ServiceResult<{ examined: number; written: number; skipped: number; total: number }>> {
-  return callDashboard(
-    { subtype: 'resync_legacy', ...(maxRecords === undefined ? {} : { maxRecords }) },
-    (response) => ({
-      examined: requiredNonNegativeNumber(response.examined, 'examined'),
-      written: requiredNonNegativeNumber(response.written, 'written'),
-      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
-      total: requiredNonNegativeNumber(response.total, 'total'),
-    }),
-    'Resync failed',
-  );
+  return sqliteClient.call('resync', { subtype: 'resync_legacy', ...(maxRecords === undefined ? {} : { maxRecords }) });
 }
 
 /**
  * バイナリ .db バックアップを取得
+ *
+ * The row decodes to the base64 string; bytes conversion stays in this alias
+ * (the bytes/base64 codec is utils/crypto territory, not the wire table's).
+ * A conversion failure surfaces as an error result, matching the old
+ * decode-throw path that the gateway classified the same way.
  */
-export function backupDb(): Promise<ServiceResult<Uint8Array>> {
-  return callDashboard(
-    { subtype: 'backup_db' },
-    (response) => {
-      if (!response.data) throw new Error('Backup returned no data');
-      return base64ToBytes(requiredString(response.data, 'data'));
-    },
-    'Backup failed',
-  );
+export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
+  const result = await sqliteClient.call('backupDb', { subtype: 'backup_db' });
+  if ('error' in result) return result;
+  try {
+    return { data: base64ToBytes(result.data) };
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
 }
 
 /**
@@ -323,7 +328,7 @@ export function backupDb(): Promise<ServiceResult<Uint8Array>> {
  * Requires a confirmation token (destructive operation).
  */
 export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
-  return callDashboard({ subtype: 'restore_db', data: bytesToBase64(data) }, () => undefined, 'Restore failed');
+  return sqliteClient.call('restoreDb', { subtype: 'restore_db', data: bytesToBase64(data) });
 }
 
 // ============================================================================
@@ -332,35 +337,18 @@ export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
 // PBI 2026-09-07-22: the 14 public functions below keep their names and
 // signatures (callers such as archivePanel break otherwise); only the
 // internals share a seam.
-// PBI 2026-09-09-05: the seam is now the wire-table descriptor — callArchive
-// takes the row, which owns the decode and the fallback message, so the
+// PBI 2026-09-09-05: the seam is now the wire-table descriptor — sqliteClient
+// resolves the row, which owns the decode and the fallback message, so the
 // per-op shape knowledge lives in exactly one place.
+// PBI 2026-09-23-02: callArchive dissolved into sqliteClient.call.
 // ============================================================================
-
-function callArchive<D extends ArchiveDescriptor>(
-  descriptor: D,
-  payload: Extract<DashboardSqliteRequest, { subtype: D['subtype'] }>,
-): Promise<ServiceResult<DescriptorPublic<D>>>;
-function callArchive(
-  descriptor: ArchiveDescriptor,
-  payload: DashboardSqliteRequest,
-): Promise<ServiceResult<unknown>> {
-  return callDashboard(
-    payload,
-    (response) => descriptor.decodeResponse(response),
-    descriptor.defaultError,
-  );
-}
 
 /**
  * Preview how many records archive_create would collect for the boundary.
  * Read-only (token-exempt).
  */
 export function archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<ServiceResult<ArchivePreviewData>> {
-  return callArchive(
-    ARCHIVE_DESCRIPTORS.archivePreview,
-    { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted },
-  );
+  return sqliteClient.call('archivePreview', { subtype: 'archive_preview', cutoffDate, cutoffMs, includeDeleted });
 }
 
 /**
@@ -374,17 +362,17 @@ export function archiveCreate(params: {
   includeDeleted: boolean;
   yasumaroVersion: string;
 }): Promise<ServiceResult<ArchiveCreateData>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveCreate, { subtype: 'archive_create', ...params });
+  return sqliteClient.call('archiveCreate', { subtype: 'archive_create', ...params });
 }
 
 /** Sweep orphan staging files. */
 export function archiveCleanup(): Promise<ServiceResult<{ removed: string[] }>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveCleanup, { subtype: 'archive_cleanup' });
+  return sqliteClient.call('archiveCleanup', { subtype: 'archive_cleanup' });
 }
 
 /** Read one chunk of a staging file (loop until `done`, then assemble). */
 export function archiveExportChunk(stagingName: string, offset: number, length: number): Promise<ServiceResult<ArchiveExportData>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveExport, { subtype: 'archive_export', stagingName, offset, length });
+  return sqliteClient.call('archiveExport', { subtype: 'archive_export', stagingName, offset, length });
 }
 
 /**
@@ -392,12 +380,12 @@ export function archiveExportChunk(stagingName: string, offset: number, length: 
  * dashboard then writes the picked file's bytes into that OPFS file.
  */
 export function archivePrepareIncoming(): Promise<ServiceResult<string>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archivePrepareIncoming, { subtype: 'archive_prepare_incoming' });
+  return sqliteClient.call('archivePrepareIncoming', { subtype: 'archive_prepare_incoming' });
 }
 
 /** Read-only preview of a validated staging archive (confirm-dialog data). */
 export function archiveRestorePreview(stagingName: string): Promise<ServiceResult<ArchiveRestorePreviewData>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveRestorePreview, { subtype: 'archive_restore_preview', stagingName });
+  return sqliteClient.call('archiveRestorePreview', { subtype: 'archive_restore_preview', stagingName });
 }
 
 /**
@@ -406,42 +394,42 @@ export function archiveRestorePreview(stagingName: string): Promise<ServiceResul
  * bound to the staging name.
  */
 export function archiveDeleteByStaging(stagingName: string): Promise<ServiceResult<ArchivePurgeData>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging, { subtype: 'archive_delete_by_staging', stagingName });
+  return sqliteClient.call('archiveDeleteByStaging', { subtype: 'archive_delete_by_staging', stagingName });
 }
 
 /** Merge-restore the staging archive into the main DB (destructive-op gate). */
 export function archiveRestore(stagingName: string): Promise<ServiceResult<ArchiveRestoreData>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveRestore, { subtype: 'archive_restore', stagingName });
+  return sqliteClient.call('archiveRestore', { subtype: 'archive_restore', stagingName });
 }
 
 /** Open a staged archive as a temp session (PBI 2026-09-06-05). */
 export function archiveOpen(stagingName: string): Promise<ServiceResult<void>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveOpen, { subtype: 'archive_open', stagingName });
+  return sqliteClient.call('archiveOpen', { subtype: 'archive_open', stagingName });
 }
 
 /** Query the open archive session (LIKE search on url/title/summary). */
 export function archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<ServiceResult<{ rows: ArchiveSessionRow[]; total: number }>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveQuery, { subtype: 'archive_query', stagingName, query, limit, offset });
+  return sqliteClient.call('archiveQuery', { subtype: 'archive_query', stagingName, query, limit, offset });
 }
 
 /** Update a whitelisted field of an archive row (marks session dirty). */
 export function archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<ServiceResult<{ dirty: boolean }>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveUpdate, { subtype: 'archive_update', stagingName, id, changes });
+  return sqliteClient.call('archiveUpdate', { subtype: 'archive_update', stagingName, id, changes });
 }
 
 /** Flush the session WAL into the staging file (save checkpoint). */
 export function archiveSave(stagingName: string): Promise<ServiceResult<{ dirty: boolean }>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveSave, { subtype: 'archive_save', stagingName });
+  return sqliteClient.call('archiveSave', { subtype: 'archive_save', stagingName });
 }
 
 /** Close the temp session (rejects when dirty — two-defense with the UI). */
 export function archiveClose(stagingName: string): Promise<ServiceResult<{ dirty: boolean }>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveClose, { subtype: 'archive_close', stagingName });
+  return sqliteClient.call('archiveClose', { subtype: 'archive_close', stagingName });
 }
 
 /** Reconnect/status probe for the temp session. */
 export function archiveStatus(): Promise<ServiceResult<ArchiveSessionStatusData>> {
-  return callArchive(ARCHIVE_DESCRIPTORS.archiveStatus, { subtype: 'archive_status' });
+  return sqliteClient.call('archiveStatus', { subtype: 'archive_status' });
 }
 
 /**
@@ -452,15 +440,7 @@ export function importLogs(rows: Array<{
   created_at: number; domain?: string; visit_duration?: number;
   scroll_ratio?: number; is_starred?: number; is_deleted?: number;
 }>): Promise<ServiceResult<{ inserted: number; skipped: number; total: number }>> {
-  return callDashboard(
-    { subtype: 'import', rows },
-    (response) => ({
-      inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
-      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
-      total: requiredNonNegativeNumber(response.total, 'total'),
-    }),
-    'Import failed',
-  );
+  return sqliteClient.call('import', { subtype: 'import', rows });
 }
 
 /**
@@ -468,11 +448,7 @@ export function importLogs(rows: Array<{
  * Destructive — the confirmToken is attached by the sender's fail-safe default.
  */
 export function purgeOldRecordsNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
-  return callDashboard(
-    { subtype: 'purge_now' },
-    (response) => ({ purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') }),
-    'Purge failed',
-  );
+  return sqliteClient.call('purgeNow', { subtype: 'purge_now' });
 }
 
 /**
@@ -480,11 +456,7 @@ export function purgeOldRecordsNow(): Promise<ServiceResult<{ purged: number; sk
  * Destructive — the confirmToken is attached by the sender's fail-safe default.
  */
 export function purgeContentNow(): Promise<ServiceResult<{ purged: number; skipped: boolean }>> {
-  return callDashboard(
-    { subtype: 'content_purge_now' },
-    (response) => ({ purged: requiredNonNegativeNumber(response.purged, 'purged'), skipped: requiredBoolean(response.skipped, 'skipped') }),
-    'Content purge failed',
-  );
+  return sqliteClient.call('contentPurgeNow', { subtype: 'content_purge_now' });
 }
 
 /**
@@ -492,11 +464,7 @@ export function purgeContentNow(): Promise<ServiceResult<{ purged: number; skipp
  * Writes to Obsidian — the confirmToken is attached by the sender's fail-safe default.
  */
 export function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: number }>> {
-  return callDashboard(
-    { subtype: 'append_to_obsidian', ids },
-    (response) => ({ appended: requiredNonNegativeNumber(response.appended, 'appended') }),
-    'Append failed',
-  );
+  return sqliteClient.call('appendToLogs', { subtype: 'append_to_obsidian', ids });
 }
 
 /**
@@ -506,5 +474,5 @@ export function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: n
 export function queryAuditLogs(
   options: { limit?: number; offset?: number } = {}
 ): Promise<ServiceResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
-  return callSqliteWire(SQLITE_WIRE_DESCRIPTORS.auditLog, { subtype: 'audit_log_query', ...options });
+  return sqliteClient.call('auditLog', { subtype: 'audit_log_query', ...options });
 }

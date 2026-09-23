@@ -3,7 +3,7 @@
  * Import browsing logs from JSON export files into SQLite.
  */
 
-import { importLogs } from './dashboardSqliteService.js';
+import { sqliteClient } from './dashboardSqliteService.js';
 import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
 
 interface ExportedRow {
@@ -154,7 +154,8 @@ export async function importFromJson(
 
   for (let i = 0; i < validRows.length; i += BATCH_SIZE) {
     const batch = validRows.slice(i, i + BATCH_SIZE);
-    const result = await importLogs(batch);
+    // PBI 2026-09-23-02: generic seam call — decode/defaultError live in the import row.
+    const result = await sqliteClient.call('import', { subtype: 'import', rows: batch });
     if ('data' in result) {
       inserted += result.data.inserted;
       skipped += result.data.skipped;

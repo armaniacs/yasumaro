@@ -27,8 +27,12 @@
  *   asserts so drift fails at compile time.
  *
  * Deliberately NOT tabled here (PBI AC: existing paths kept):
- * - maintain ops (init/backup/restore/clearAll/purge/status/healthCheck):
- *   Uint8Array / boolean / degraded-status transforms are heterogeneous.
+ * - heterogeneous maintain transports (init/backup-bytes/restore-bytes/
+ *   clearAll/purge/status/healthCheck) where the wire shapes need
+ *   layer-owned transforms — PBI 2026-09-23-02 tabled the homogeneous
+ *   dashboard subset (migrate/clearAll/status/cleanup/backfill/resync/
+ *   backup-string/restore/import/purges/append) in DASHBOARD_SERVICE_TABLE
+ *   below; the byte and degraded-status edges stay with the dashboard tier.
  * - archive ops: owned by ARCHIVE_WIRE_TABLE (asserted below — no
  *   SQLITE_ARCHIVE_* message may appear in this table).
  * - SQLITE_SEARCH offscreen handler: no QueryOp reaches it through the
@@ -39,15 +43,33 @@
 
 import type { MutateOp, QueryOp, AuditLogRecord } from './sqliteRpcClient.js';
 import type { SqliteMessageType } from './sqliteMessages.js';
+import type { SqliteStatusResult } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
+import type { ArchiveOpType } from './archiveWireTable.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
   requiredNonNegativeNumber,
+  requiredBoolean,
+  requiredString,
   requiredRows,
+  decodeStatusExtras,
   isBrowsingLogEntry,
   isAuditLogEntry,
 } from './sqliteValidators.js';
+
+/**
+ * Retry policy owned by one dashboard-hop row (PBI 2026-09-23-02).
+ *
+ * Previously the read paths (records/search) passed `{ retryAttempts: 2 }`
+ * from the service call site while every other op stayed single-attempt by
+ * omission — the policy lived with callers. Rows now carry it, so the
+ * runner applies it without caller flags.
+ */
+export interface DashboardRetryPolicy {
+  retryAttempts?: number;
+  retryDelayMs?: number;
+}
 
 /**
  * Dashboard-hop codecs for one row. subtype + serviceDecode (+ defaultError)
@@ -63,6 +85,12 @@ export interface SqliteDashboardHop<S = unknown> {
   defaultError: string;
   /** Decodes the dashboard wire success shape into the service public value. */
   serviceDecode: (response: { success: true } & Record<string, unknown>) => S;
+  /**
+   * Row-owned retry (PBI 2026-09-23-02): present only on the read paths that
+   * tolerate a retry (records/search); absent means single attempt. Callers
+   * never pass retry flags — the runner reads this field.
+   */
+  retry?: DashboardRetryPolicy;
   /** Background payload shape check; null means the payload is acceptable. */
   validate?: (payload: Record<string, unknown>) => string | null;
   /** Deps args the background handler spreads. */
@@ -162,6 +190,12 @@ export const SQLITE_WIRE_TABLE = [
       subtype: 'update',
       defaultError: 'Update failed',
       serviceDecode: () => undefined,
+      // Explicit single attempt: the background coreCrud handler pins driven
+      // rows with Required<> (validate/depsArgs/projectDeps must be present),
+      // which also pins this field — absent and { retryAttempts: 1 } both
+      // mean one gateway attempt, so the explicit form keeps that assert
+      // passing without changing runtime behavior.
+      retry: { retryAttempts: 1 },
       // Fail-closed on malformed payloads (Checking Team 2026-09-22: Data
       // Integrity Medium) — an empty changes object would otherwise succeed
       // as a zero-column update, looking successful while writing nothing.
@@ -197,6 +231,8 @@ export const SQLITE_WIRE_TABLE = [
       subtype: 'delete',
       defaultError: 'Delete failed',
       serviceDecode: () => undefined,
+      // Single attempt, explicit for the Required<> driven-row pin (see update).
+      retry: { retryAttempts: 1 },
       validate: () => null,
       depsArgs: (p) => [p.id as number],
       projectDeps: () => ({}),
@@ -215,6 +251,8 @@ export const SQLITE_WIRE_TABLE = [
       subtype: 'toggle_star',
       defaultError: 'Toggle star failed',
       serviceDecode: (response) => ({ is_starred: requiredNonNegativeNumber(response.is_starred, 'is_starred') }),
+      // Single attempt, explicit for the Required<> driven-row pin (see update).
+      retry: { retryAttempts: 1 },
       validate: () => null,
       depsArgs: (p) => [p.id as number],
       projectDeps: (data) => ({ is_starred: (data as { is_starred: number }).is_starred }),
@@ -252,6 +290,9 @@ export const SQLITE_WIRE_TABLE = [
     dashboard: {
       subtype: 'query',
       defaultError: 'Query failed',
+      // Read path tolerates one retry (SQLite init timing) — owned here so
+      // callers cannot forget or misconfigure it.
+      retry: { retryAttempts: 2, retryDelayMs: 1000 },
       serviceDecode: (response) => ({
         rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
         total: requiredNonNegativeNumber(response.total, 'total'),
@@ -298,6 +339,8 @@ export const SQLITE_WIRE_TABLE = [
     dashboard: {
       subtype: 'search',
       defaultError: 'Query failed',
+      // Same init-timing retry as the records read path (row-owned).
+      retry: { retryAttempts: 2, retryDelayMs: 1000 },
       serviceDecode: (response) => ({
         rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
         total: requiredNonNegativeNumber(response.total, 'total'),
@@ -416,4 +459,201 @@ export function sqliteWireFor(op: string): SqliteWireDescriptor | undefined {
 
 export function isSqliteWireOp(op: string): op is SqliteWireOp {
   return BY_OP.has(op);
+}
+
+// ============================================================================
+// Dashboard service table (PBI 2026-09-23-02)
+//
+// The 12 DASHBOARD_SQLITE subtypes with no query/mutate row and no archive
+// row used to be decoded inline in dashboardSqliteService (one decode lambda
+// + one fallback string per public function). Each row here owns the same
+// triple the wire rows own — subtype (routing/encode discriminator),
+// serviceDecode, defaultError — plus the row-owned retry (absent everywhere
+// here: none of these ops retries). The dashboard-tier runner derives all
+// three from the row, so a new op is one table row plus a one-line alias.
+//
+// Layer note: this file stays neutral — decodes operate on the loose wire
+// field set both sides already agree on and never import background/dashboard
+// types. The precise per-op payload/result types live with the runner in the
+// dashboard tier (dashboardSqliteService.ts), which may import both sides.
+//
+// Deliberately tabled here and nowhere else:
+// - backupDb decodes to the base64 string, not bytes: the bytes/base64 codec
+//   lives in utils/crypto and stays with the dashboard-tier alias (one line).
+// - restoreDb encodes from bytes the same way (alias converts, row validates).
+// ============================================================================
+
+/** Codec carried by one dashboard-service row (dashboard hop only). */
+export interface DashboardServiceOpDescriptor<S = unknown> {
+  /** Short op key used by sqliteClient.call (distinct from wire/archive ops). */
+  op: string;
+  /** DASHBOARD_SQLITE subtype. */
+  subtype: DashboardSqliteSubtype;
+  /** Dashboard fallback message when the failure carries no reason. */
+  defaultError: string;
+  /** Row-owned retry; absent means single attempt (all rows here). */
+  retry?: DashboardRetryPolicy;
+  /** Decodes the dashboard wire success shape into the service public value. */
+  serviceDecode: (response: { success: true } & Record<string, unknown>) => S;
+}
+
+/** Single constructor for service-table rows; preserves literal types per row. */
+export function defineDashboardServiceOp<const R extends DashboardServiceOpDescriptor<unknown>>(row: R): R {
+  return row;
+}
+
+export const DASHBOARD_SERVICE_TABLE = [
+  defineDashboardServiceOp({
+    op: 'migrate',
+    subtype: 'migrate',
+    defaultError: 'Migration failed',
+    serviceDecode: (response) => ({
+      count: requiredNonNegativeNumber(response.count, 'count'),
+      read: requiredNonNegativeNumber(response.read, 'read'),
+      inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'clearAll',
+    subtype: 'clear_all',
+    defaultError: 'Clear all failed',
+    serviceDecode: () => undefined,
+  }),
+  defineDashboardServiceOp({
+    op: 'status',
+    subtype: 'status',
+    defaultError: 'Failed to get SQLite status',
+    serviceDecode: (response): SqliteStatusResult => ({
+      initialized: requiredBoolean(response.initialized, 'initialized'),
+      path: requiredString(response.path, 'path'),
+      fallback: requiredBoolean(response.fallback, 'fallback'),
+      fts5: requiredBoolean(response.fts5, 'fts5'),
+      ...pickDefined({
+        initError: response.initError ? String(response.initError) : undefined,
+        ...decodeStatusExtras(response as unknown as Record<string, unknown>),
+      }),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'cleanupLegacy',
+    subtype: 'cleanup_legacy',
+    defaultError: 'Cleanup failed',
+    serviceDecode: (response) => ({
+      removed: Array.isArray(response.removed) ? (response.removed as string[]) : [],
+      totalBytes: requiredNonNegativeNumber(response.totalBytes, 'totalBytes'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'backfill',
+    subtype: 'backfill_metadata',
+    defaultError: 'Backfill failed',
+    serviceDecode: (response) => ({
+      updated: requiredNonNegativeNumber(response.updated, 'updated'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'resync',
+    subtype: 'resync_legacy',
+    defaultError: 'Resync failed',
+    serviceDecode: (response) => ({
+      examined: requiredNonNegativeNumber(response.examined, 'examined'),
+      written: requiredNonNegativeNumber(response.written, 'written'),
+      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'backupDb',
+    subtype: 'backup_db',
+    defaultError: 'Backup failed',
+    serviceDecode: (response) => {
+      if (!response.data) throw new Error('Backup returned no data');
+      return requiredString(response.data, 'data');
+    },
+  }),
+  defineDashboardServiceOp({
+    op: 'restoreDb',
+    subtype: 'restore_db',
+    defaultError: 'Restore failed',
+    serviceDecode: () => undefined,
+  }),
+  defineDashboardServiceOp({
+    op: 'import',
+    subtype: 'import',
+    defaultError: 'Import failed',
+    serviceDecode: (response) => ({
+      inserted: requiredNonNegativeNumber(response.inserted, 'inserted'),
+      skipped: requiredNonNegativeNumber(response.skipped, 'skipped'),
+      total: requiredNonNegativeNumber(response.total, 'total'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'purgeNow',
+    subtype: 'purge_now',
+    defaultError: 'Purge failed',
+    serviceDecode: (response) => ({
+      purged: requiredNonNegativeNumber(response.purged, 'purged'),
+      skipped: requiredBoolean(response.skipped, 'skipped'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'contentPurgeNow',
+    subtype: 'content_purge_now',
+    defaultError: 'Content purge failed',
+    serviceDecode: (response) => ({
+      purged: requiredNonNegativeNumber(response.purged, 'purged'),
+      skipped: requiredBoolean(response.skipped, 'skipped'),
+    }),
+  }),
+  defineDashboardServiceOp({
+    op: 'appendToLogs',
+    subtype: 'append_to_obsidian',
+    defaultError: 'Append failed',
+    serviceDecode: (response) => ({
+      appended: requiredNonNegativeNumber(response.appended, 'appended'),
+    }),
+  }),
+];
+
+export type DashboardServiceDescriptor = (typeof DASHBOARD_SERVICE_TABLE)[number];
+
+export type DashboardServiceOp = DashboardServiceDescriptor['op'];
+
+/** Dashboard public value a service row decodes to. */
+export type DashboardServiceResult<D> = D extends {
+  serviceDecode: (...args: never[]) => infer S;
+} ? S : never;
+
+/** Precise per-op view over the service table; indexing never yields undefined. */
+export type DashboardServiceDescriptorMap = {
+  readonly [O in DashboardServiceOp]: Extract<DashboardServiceDescriptor, { op: O }>;
+};
+
+export const DASHBOARD_SERVICE_DESCRIPTORS: DashboardServiceDescriptorMap = Object.fromEntries(
+  DASHBOARD_SERVICE_TABLE.map((entry) => [entry.op, entry]),
+) as DashboardServiceDescriptorMap;
+
+// Compile-time sync with the dashboard subtypes: every service row must name
+// a real subtype.
+type ServiceTableSubtype = DashboardServiceDescriptor['subtype'];
+type StaleServiceSubtype = Exclude<ServiceTableSubtype, DashboardSqliteSubtype>;
+const _serviceSubtypesLive: StaleServiceSubtype extends never ? true : never = true;
+void _serviceSubtypesLive;
+
+// Service op keys must collide with neither the wire ops nor the archive ops
+// (type-only import above, so no runtime cycle with archiveWireTable).
+type ServiceWireCollision = Extract<DashboardServiceOp, SqliteWireOp>;
+type ServiceArchiveCollision = Extract<DashboardServiceOp, ArchiveOpType>;
+const _serviceWireDisjoint: ServiceWireCollision extends never ? true : never = true;
+const _serviceArchiveDisjoint: ServiceArchiveCollision extends never ? true : never = true;
+void _serviceWireDisjoint;
+void _serviceArchiveDisjoint;
+
+const SERVICE_BY_OP: ReadonlyMap<string, DashboardServiceDescriptor> = new Map(
+  DASHBOARD_SERVICE_TABLE.map((entry) => [entry.op, entry]),
+);
+
+export function dashboardServiceWireFor(op: string): DashboardServiceDescriptor | undefined {
+  return SERVICE_BY_OP.get(op);
 }

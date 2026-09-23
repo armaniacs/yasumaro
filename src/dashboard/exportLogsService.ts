@@ -4,7 +4,7 @@
  * Uses the DASHBOARD_SQLITE service worker messaging for data access.
  */
 
-import { queryLogs, backupDb } from './dashboardSqliteService.js';
+import { sqliteClient, backupDb } from './dashboardSqliteService.js';
 import { getLocalDateString, parseJsonTagsArray } from './markdownExport.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
@@ -38,7 +38,8 @@ const EXPORT_ROW_LIMIT = 10000;
  * reachable.
  */
 async function queryAllData() {
-  const result = await queryLogs({ limit: EXPORT_ROW_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
+  // PBI 2026-09-23-02: generic seam call — retry lives in the records row.
+  const result = await sqliteClient.call('records', { subtype: 'query', limit: EXPORT_ROW_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
 
   if ('error' in result) {
     throw new Error(result.error);
