@@ -20,7 +20,7 @@
 
 2. `src/background/handlers/senderTrust.ts:68` の `runtimeId !== undefined` ガード形状
    - 現状: 本番 service worker では `chrome.runtime.id` は常に定義され到達不能。`externally_connectable` も未使用。
-   - 発火条件: 本モジュールが Firefox in-page transport 等の runtime.id が未定義になりうる文脈で再利用される時（`pbi/2026-09-14-00-backlog-firefox-support.md` の進行時）
+   - 発火条件: 本モジュールが Firefox in-page transport 等の runtime.id が未定義になりうる文脈で再利用される時（`dev-docs/archived/pbi/2026-09-14-00-backlog-firefox-support.md` の進行時）
    - 対策: fail-closed 形状（正検証されない限り false）への再構成
 
 3. `src/messaging/archiveWireTable.ts` の `archive_update.validate` が 31 エンジンフィールドを許し、ダッシュボード live-update の 10 フィールド `DASHBOARD_MUTABLE_SUBSET`（`coreCrudHandler.ts:66` 関連）と不一致
