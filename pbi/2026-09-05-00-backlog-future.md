@@ -161,6 +161,7 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | queryPlan Interface 圧縮（`planStorageQuery(q): QuerySpec` 唯一 Seam 化 + `qualifyCondition` regex の列ホワイトリスト駆動置換） | 1.5 | OPFS/IDB/fallback 以外の backend 追加時 / 新列追加で qualifyCondition 誤爆が顕在化する時 | [0923](2026-09-23-00-backlog-archloop-0923.md) |
 | CleansingRuleView（32 ルールの view 3 重列挙: V2 × per-site × content デフォルトを `ruleBindings/reflect/read/resolveForDomain` の単一 Seam に） | 4.8 | ルール追加・改名時 / V2・per-site・content の同時改修時（preset-store busy-window との干渉に注意） | [0923b](2026-09-23-00-backlog-archloop-0923b.md) |
 | KeyDerivation（PBKDF2 知識 3 箇所＋key cache 3 系統を `deriveKey({password, salt, purpose})` に統一。legacy iteration の sunset は不可 — 2026-09-22-11 の parked 境界） | 2.5 | KDF パラメータ変更時 | [0923b](2026-09-23-00-backlog-archloop-0923b.md) |
+| Retry-policy Module（gateway / transport / storage CAS / visitAdmission / fetch / stepExecutor / tranco の 7 retry 綴りを `shouldRetry＋delayMs` の単一 Seam に。retriable 述語自体は統一対象外） | 2.7 | いずれかの retry 系改修時 | [0923c](2026-09-23-00-backlog-archloop-0923c.md) |
 
 （0915 は全11候補が PBI 02-12 として消化済み、holistic-0921 の台帳送り3件は 2026-09-22 の保留候補 PBI 01/02/03 として採番済みのため、両台帳は候補ゼロでアーカイブ。0915b の PBI 03 でスコープ外とした recordingCache ensureReady の別候補は RecordingCache→RecordingCacheInstance 移行（2026-08-17）後の実在確認が前提のため、次回 recording cache 系改修時に要否を再評価する。）
 
