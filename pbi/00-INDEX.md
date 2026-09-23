@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-24 分析機能強化ラウンド — ⬜ 未着手 8件 ✨機能追加 RICE順: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08
+
+分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存、03-08 は 02 が新設する共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`）に依存。
+
+- [2026-09-24-01-feat-time-heatmap.md](2026-09-24-01-feat-time-heatmap.md)（⬜ 未着手 — RICE 4.00・1 SP・副作用🟢。曜日7×時間帯24の記録数ヒートマップ。created_at のみで実現・依存なし）
+- [2026-09-24-02-feat-visit-duration-analysis.md](2026-09-24-02-feat-visit-duration-analysis.md)（⬜ 未着手 — RICE 3.20・1.5 SP・副作用🟢。ドメイン/タグ別滞在時間ランキング。共有期間フィルタ部品を本 PBI で新設）
+- [2026-09-24-03-feat-domain-analysis.md](2026-09-24-03-feat-domain-analysis.md)（⬜ 未着手 — RICE 3.00・2 SP・副作用🟢。タグ×期間でドメイン別・URL別 top N を表表示）
+- [2026-09-24-04-feat-period-tag-cluster.md](2026-09-24-04-feat-period-tag-cluster.md)（⬜ 未着手 — RICE 2.40（調整後・素 1.20）・1 SP・副作用🟢。タグクラスタに期間フィルタ追加。08 の計算基盤）
+- [2026-09-24-05-feat-tag-frequency-timeline.md](2026-09-24-05-feat-tag-frequency-timeline.md)（⬜ 未着手 — RICE 2.40・1.5 SP・副作用🟢。上位タグの週次/月次頻度推移グラフ）
+- [2026-09-24-06-feat-tag-cooccurrence-table.md](2026-09-24-06-feat-tag-cooccurrence-table.md)（⬜ 未着手 — RICE 2.40・1 SP・副作用🟢。共起タグペア top 20 を表形式で表示）
+- [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（⬜ 未着手 — RICE 1.33・3 SP・副作用🟢。summary+title から Intl.Segmenter でキーワード抽出し共起クラスタ表示。STEP 0 品質プローブ込み）
+- [2026-09-24-08-feat-tag-cluster-time-slider.md](2026-09-24-08-feat-tag-cluster-time-slider.md)（⬜ 未着手 — RICE 0.20・5 SP・副作用🟢。2時点のクラスタを side-by-side＋diff 一覧で比較。アニメーション対象外。04 完了が前提）
+
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
 VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
