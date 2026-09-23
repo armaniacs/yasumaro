@@ -203,6 +203,14 @@
           </svg>
           <span data-i18n="wordClusterTab">Word Cluster</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-cluster-time-slider" aria-selected="false" data-panel="panel-tag-cluster-time-slider">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <polyline points="12 7 12 12 15 14"/>
+            <line x1="8" y1="19" x2="16" y2="19"/>
+          </svg>
+          <span data-i18n="tagClusterTimeSliderTab">Tag Cluster Compare</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -2046,6 +2054,49 @@
           <button type="button" id="wordClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
         </div>
         <svg id="wordClusterSvg" width="800" height="600" role="img" data-i18n-aria-label="wordClusterTitle" aria-label="Word Cluster"></svg>
+      </section>
+
+      <!-- Tag Cluster Time Slider Panel (PBI 2026-09-24-08) -->
+      <section id="panel-tag-cluster-time-slider" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="tagClusterTimeSliderTitle">Tag Cluster Over Time</h2>
+        <p class="panel-description" data-i18n="tagClusterTimeSliderDescription">Pick a start and end date to split the window into two halves and compare the tag clusters side by side. Click a node or a diff entry to search history for that tag.</p>
+        <div class="form-group cooc-table-controls">
+          <label for="tagCompareStartDate" data-i18n="tagClusterCompareStartLabel">Start date</label>
+          <input type="date" id="tagCompareStartDate">
+          <label for="tagCompareEndDate" data-i18n="tagClusterCompareEndLabel">End date</label>
+          <input type="date" id="tagCompareEndDate">
+          <button type="button" id="tagCompareRunBtn" data-i18n="tagClusterCompareRun">Compare</button>
+        </div>
+        <div id="tagCompareValidation" class="visit-duration-truncated" hidden></div>
+        <div id="tagCompareCorrectedNotice" class="visit-duration-truncated" hidden></div>
+        <p id="tagCompareStatus" class="status-message" aria-live="polite"></p>
+        <div class="tag-cluster-compare-grid">
+          <div class="tag-cluster-compare-side">
+            <h3 class="tag-cluster-compare-heading" data-i18n="tagClusterCompareFirstHalf">First half</h3>
+            <div id="tagCompareFirstCapNotice" class="visit-duration-truncated" hidden></div>
+            <div id="tagCompareFirstEmpty" class="tag-cluster-compare-empty" data-i18n="tagClusterCompareEmptyPeriod" hidden>No records in this half of the window.</div>
+            <div id="tagCompareFirstTruncated" class="visit-duration-truncated" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
+            <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+              <button type="button" id="tagCompareFirstZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+              <button type="button" id="tagCompareFirstZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+              <button type="button" id="tagCompareFirstZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
+            </div>
+            <svg id="tagCompareFirstSvg" width="480" height="420"></svg>
+          </div>
+          <div class="tag-cluster-compare-side">
+            <h3 class="tag-cluster-compare-heading" data-i18n="tagClusterCompareSecondHalf">Second half</h3>
+            <div id="tagCompareSecondCapNotice" class="visit-duration-truncated" hidden></div>
+            <div id="tagCompareSecondEmpty" class="tag-cluster-compare-empty" data-i18n="tagClusterCompareEmptyPeriod" hidden>No records in this half of the window.</div>
+            <div id="tagCompareSecondTruncated" class="visit-duration-truncated" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
+            <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+              <button type="button" id="tagCompareSecondZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+              <button type="button" id="tagCompareSecondZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+              <button type="button" id="tagCompareSecondZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
+            </div>
+            <svg id="tagCompareSecondSvg" width="480" height="420"></svg>
+          </div>
+        </div>
+        <div id="tagCompareDiffList" class="tag-cluster-diff"></div>
       </section>
 
       <!-- CSP Settings Panel (P1) -->

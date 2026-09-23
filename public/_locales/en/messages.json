@@ -4641,5 +4641,81 @@
   "wordClusterError": {
     "message": "Failed to load the word cluster. Try again.",
     "description": "Word-cluster error state"
+  },
+  "tagClusterTimeSliderTab": {
+    "message": "Tag Cluster Compare",
+    "description": "Sidebar label for the tag-cluster time-compare panel"
+  },
+  "tagClusterTimeSliderTitle": {
+    "message": "Tag Cluster Over Time",
+    "description": "Title of the tag-cluster time-compare panel"
+  },
+  "tagClusterTimeSliderDescription": {
+    "message": "Pick a start and end date to split the window into two halves and compare the tag clusters side by side. Click a node or a diff entry to search history for that tag.",
+    "description": "Description of the tag-cluster time-compare panel"
+  },
+  "tagClusterCompareStartLabel": {
+    "message": "Start date",
+    "description": "Label for the comparison window start date input"
+  },
+  "tagClusterCompareEndLabel": {
+    "message": "End date",
+    "description": "Label for the comparison window end date input"
+  },
+  "tagClusterCompareRun": {
+    "message": "Compare",
+    "description": "Apply button for the tag-cluster time comparison"
+  },
+  "tagClusterCompareFirstHalf": {
+    "message": "First half",
+    "description": "Heading of the first-half snapshot in the time comparison"
+  },
+  "tagClusterCompareSecondHalf": {
+    "message": "Second half",
+    "description": "Heading of the second-half snapshot in the time comparison"
+  },
+  "tagClusterCompareInvalidRange": {
+    "message": "Select both a start and an end date to compare.",
+    "description": "Validation message when a comparison date is missing"
+  },
+  "tagClusterCompareInvalidRangeCorrected": {
+    "message": "The start was after the end — the order was corrected automatically.",
+    "description": "Notice when the inverted comparison window was auto-corrected"
+  },
+  "tagClusterCompareEmptyPeriod": {
+    "message": "No records in this half of the window.",
+    "description": "Empty state shown on the half of the comparison without records"
+  },
+  "tagClusterCompareCapNotice": {
+    "message": "The query hit the {max}-row limit — aggregating the most recent {shown} of {total} records in this half.",
+    "description": "Notice when the fetched row cap truncates one half of the comparison"
+  },
+  "tagClusterDiffAppeared": {
+    "message": "Appeared tags",
+    "description": "Diff list heading for tags present only in the second half"
+  },
+  "tagClusterDiffDisappeared": {
+    "message": "Disappeared tags",
+    "description": "Diff list heading for tags present only in the first half"
+  },
+  "tagClusterDiffIncreased": {
+    "message": "Increased tags",
+    "description": "Diff list heading for tags whose count increased, with deltas"
+  },
+  "tagClusterDiffDecreased": {
+    "message": "Decreased tags",
+    "description": "Diff list heading for tags whose count decreased, with deltas"
+  },
+  "tagClusterTimeSliderLoading": {
+    "message": "Comparing tag clusters…",
+    "description": "Accessible loading status for the tag-cluster time comparison"
+  },
+  "tagClusterTimeSliderStatusDone": {
+    "message": "Comparison complete: first half {first} tags, second half {second} tags, {appeared} appeared, {disappeared} disappeared.",
+    "description": "Live-region summary announced when the comparison finishes"
+  },
+  "tagClusterTimeSliderError": {
+    "message": "Failed to load this half of the comparison. Try again.",
+    "description": "Error state for a failed half of the tag-cluster time comparison"
   }
 }

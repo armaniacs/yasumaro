@@ -5043,3 +5043,128 @@ details[open] > .priority-details-summary {
 #wordClusterSvg:active {
   cursor: grabbing;
 }
+
+/* =============================================================================
+   Tag Cluster Time Slider (PBI 2026-09-24-08) — side-by-side compare + diff list
+   ============================================================================= */
+
+.tag-cluster-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ym-space-4, 16px);
+}
+
+@media (max-width: 900px) {
+  .tag-cluster-compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tag-cluster-compare-side {
+  min-width: 0;
+}
+
+.tag-cluster-compare-heading {
+  margin: var(--ym-space-2, 8px) 0;
+  font-size: var(--ym-text-base, 14px);
+  font-weight: 600;
+}
+
+.tag-cluster-compare-empty {
+  margin: var(--ym-space-2, 8px) 0;
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+#tagCompareFirstSvg,
+#tagCompareSecondSvg {
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+#tagCompareFirstSvg:active,
+#tagCompareSecondSvg:active {
+  cursor: grabbing;
+}
+
+/* WHY hue via custom property: the same tag must keep the same hue across
+   both snapshots; the per-scheme fixed saturation/lightness (28% light on the
+   white panel background, 72% on the dark one) lives here so it stays
+   testable and auditable in one place (contrast >= 4.5:1, see
+   src/dashboard/tagClusterColor.ts). */
+.tag-cluster-compare-node {
+  fill: hsl(var(--tag-hue, 210), 65%, 28%);
+}
+
+.tag-cluster-compare-node:hover {
+  fill: hsl(var(--tag-hue, 210), 65%, 20%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-compare-node {
+    fill: hsl(var(--tag-hue, 210), 55%, 72%);
+  }
+
+  .tag-cluster-compare-node:hover {
+    fill: hsl(var(--tag-hue, 210), 55%, 80%);
+  }
+}
+
+.tag-cluster-diff {
+  margin-top: var(--ym-space-4, 16px);
+}
+
+.tag-cluster-diff-heading {
+  margin: var(--ym-space-3, 12px) 0 var(--ym-space-1, 4px);
+  font-size: var(--ym-text-sm, 13px);
+  font-weight: 600;
+}
+
+.tag-cluster-diff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-cluster-diff-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--ym-space-2, 8px);
+  padding: 2px 0;
+}
+
+.tag-cluster-diff-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: hsl(var(--tag-hue, 210), 65%, 28%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-diff-swatch {
+    background: hsl(var(--tag-hue, 210), 55%, 72%);
+  }
+}
+
+.tag-cluster-diff-tag {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tag-cluster-diff-tag:hover,
+.tag-cluster-diff-tag:focus-visible {
+  color: var(--ym-color-primary, #2563eb);
+}
+
+.tag-cluster-diff-delta {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
