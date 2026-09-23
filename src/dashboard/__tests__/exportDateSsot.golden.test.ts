@@ -8,7 +8,10 @@
  * an explicit +09:00 offset, so the equivalence assertions
  * (exportMarkdown date === getLocalDateString(ts) === en-CA local string)
  * hold in ANY timezone; only the hardcoded '2026-09-21' literals are JST-bound.
+ * The TZ pin below makes that assumption explicit so the file passes on UTC
+ * CI runners as well (main was red on UTC for the same reason).
  */
+process.env.TZ = 'Asia/Tokyo';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
