@@ -485,7 +485,7 @@ export function buildFtsSearchStatements(
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
     `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql}`;
   const rowsSql =
-    'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, rank AS rank ' +
+    'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank ' +
     'FROM browsing_logs_fts ' +
     'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
     `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql} ` +
@@ -523,7 +523,7 @@ export function buildLikeSearchStatements(
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
     rowsSql:
-      'SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred ' +
+      'SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason ' +
       `FROM browsing_logs WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
     countParams: [...likeParams, ...extra.extraParams, ...tagParams],
     rowsParams: [...likeParams, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],

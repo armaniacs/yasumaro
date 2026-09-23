@@ -197,6 +197,10 @@ export const StorageKeys = {
     // Over-cleansed fallback settings
     AI_SUMMARY_CLEANSING_FALLBACK_RATIO: 'ai_summary_cleansing_fallback_ratio', // 過剰削減フォールバック比率閾値（デフォルト: 0.20）
     AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES: 'ai_summary_cleansing_fallback_min_bytes', // 過剰削減フォールバック絶対量閾値（デフォルト: 300バイト）
+    // PBI 05 overcut guards (hot path compares CHARS — Ask Q3B)
+    AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS: 'ai_summary_cleansing_fallback_min_chars', // ①②絶対量閾値（文字数・デフォルト: 100）
+    EXTRACTION_GUARD_CANDIDATE_ENABLED: 'extraction_guard_candidate_enabled', // ①候補選択フロアガード（デフォルト: true）
+    EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED: 'extraction_guard_content_cleanse_enabled', // ②Content Cleansing過剰削減ガード（デフォルト: true）
     // Custom pattern settings
     AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS: 'ai_summary_cleansing_custom_patterns', // カスタムパターン列表
     // Cleansing preset (minimal | balanced | aggressive | custom)
@@ -422,6 +426,9 @@ export interface StorageKeyValues {
     [StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: number;
     [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: number;
+    [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS]: number;
+    [StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED]: boolean;
+    [StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED]: boolean;
     [StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: string[];
     [StorageKeys.CLEANSING_PRESET]: string;
     [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: DomainCleansingOverride[];

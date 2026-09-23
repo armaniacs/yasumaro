@@ -2,6 +2,7 @@
  * urlUtils.ts
  * URL操作に関する共通ユーティリティ関数
  */
+import { isHttpUrl } from './archiveGuards.js';
 
 /**
  * URLの正規化
@@ -48,16 +49,12 @@ export function normalizeUrlSafe(url: string): string {
 
 /**
  * 安全なURLか判定（http/httpsのみ許可）
+ * SSOT の isHttpUrl への委譲。名前と署名は呼び出し側互換のため維持する。
  * @param {string} url - 検証するURL
  * @returns {boolean} 安全なURLかどうか
  */
 export function isSecureUrl(url: string): boolean {
-    try {
-        const parsed = new URL(url);
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    } catch {
-        return false;
-    }
+    return isHttpUrl(url);
 }
 
 /**

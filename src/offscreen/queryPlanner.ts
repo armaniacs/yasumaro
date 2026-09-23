@@ -29,14 +29,21 @@ import type { StorageQuery } from '../utils/sqlite-types.js';
 /** Retention defaults for the purge seam (mirror dbMaintenance's values). */
 export const DEFAULT_RETENTION_DAYS = 90;
 export const DEFAULT_MAX_RECORDS = 1000;
+/**
+ * Dashboard search page-size default. Owned by this planner seam since
+ * PBI 2026-09-21-20 (the background pre-clamp that used to supply it was
+ * removed as a policy copy + LAYERS violation). The listing default stays
+ * DEFAULT_QUERY_LIMIT (100).
+ */
+export const DEFAULT_SEARCH_LIMIT = 50;
 
 /**
  * Apply the read policy to an already-normalized query: clamp the limit and
  * truncate tag/text so extremely long input cannot become an expensive FTS5
  * query. Pure — safe to unit-test without a backend.
  */
-export function applyReadPolicy(q: StorageQuery): AlreadyCappedQuery {
-  const cappedLimit = clampLimit(q.limit, MAX_QUERY_LIMIT, DEFAULT_QUERY_LIMIT);
+export function applyReadPolicy(q: StorageQuery, defaultLimit: number = DEFAULT_QUERY_LIMIT): AlreadyCappedQuery {
+  const cappedLimit = clampLimit(q.limit, MAX_QUERY_LIMIT, defaultLimit);
   const tag = q.tag ? q.tag.slice(0, FTS_QUERY_MAX_LENGTH) : q.tag;
   const text = q.text ? q.text.slice(0, FTS_QUERY_MAX_LENGTH) : q.text;
   return { ...q, limit: cappedLimit, ...pickDefined({ tag, text }) } as AlreadyCappedQuery;
@@ -53,11 +60,28 @@ export function planQuery(payload: Record<string, unknown>): AlreadyCappedQuery 
 
 /**
  * Plan a text search from a wire payload: the free-text `query` field rides
- * alongside the normalized filters, then the read policy applies.
+ * alongside the normalized filters, then the read policy applies. The search
+ * route owns the smaller page-size default (50) — only this planner passes it,
+ * so a search sent without a limit lands here rather than inheriting the
+ * listing default.
  */
 export function planSearch(payload: Record<string, unknown>): AlreadyCappedQuery {
   const text = String((payload as { query?: unknown }).query ?? '');
-  return applyReadPolicy({ text, ...normalizeStorageQuery(payload) });
+  return applyReadPolicy({ text, ...normalizeStorageQuery(payload) }, DEFAULT_SEARCH_LIMIT);
+}
+
+/**
+ * Dispatch entry for the wire `query` runner. The gateway folds the search op
+ * into SQLITE_QUERY with a `kind: 'search'` payload marker (search row's
+ * encodePayload), so this single entry owns the route decision: marker →
+ * planSearch (search default 50), otherwise planQuery (listing default 100).
+ * Pure — safe to unit-test without a handler.
+ */
+export function planQueryOrSearch(payload: Record<string, unknown>): AlreadyCappedQuery {
+  if ((payload as { kind?: unknown }).kind === 'search') {
+    return planSearch(payload);
+  }
+  return planQuery(payload);
 }
 
 /**

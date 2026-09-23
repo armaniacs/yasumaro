@@ -90,6 +90,30 @@ AIに送信する前に、PIIマスキング（メールアドレス・クレジ
 
 `Summary Min Length` の設定値を確認してください。生成された要約がこの文字数を下回ると、そのプロバイダーの結果は採用されず次の優先度へフォールバックします。
 
+### 過剰削減ガード（送信前に何が起きるか）
+
+本文がAIに届く前に、3つのガードが「空の断片」での送信を防ぎます: **候補フロア**（スコア1位の候補が文字数フロア未満なら次点候補またはページ本文へフォールバック）、**コンテンツクレンジング過剰削減からの復元**（削除後が削減率・フロア未満ならクレンジング前の候補テキストへ復元）、既存の**AI要約クレンジング過剰削減フォールバック**（pre-AIテキスト／本文へ復元）。3つは優先順 ② > ③ > 短文本文 の単一ポリシーで共有され、発動したガードの理由は履歴エントリの「フォールバック理由」行（`candidate_too_small` / `content_overcut` / `over_cleansed` / `short_content`）に残ります。
+
+2つの新ガードと共有の文字数フロアは **Dashboard → AI Summary Cleansing → 過剰削減ガード** で切り替えられます（どちらも既定ON）。ホワイトリスト抽出サイトは v1 ではガード対象外です。記録後も要約が薄すぎる場合は、下記の再生成フローを使ってください。
+
+### AI要約の手動再生成
+
+**Dashboard → SQLite History** の各エントリヘッダーにある **「AI要約を作り直す」** ボタンで、既存レコードの要約を作り直せます。ページ本文を再取得し、記録時と同じパイプラインを通した結果で**同じ行を上書き**します（新規行は増えません）。
+
+再生成時にクレンジングの緩和度を選べます:
+
+| 選択肢 | 動作 |
+|---|---|
+| **現在の設定** | グローバル設定のまま再生成（既定） |
+| **やや緩い** | AI要約クレンジング（③）のルールを1段階下げる（`aggressive` → `balanced` → `minimal`。`balanced` / `custom` / `minimal` は `minimal` が下限）。Content Cleansing（②）は変更なし |
+| **最も緩い** | Content Cleansing（②）と AI要約クレンジング（③）の両方を無効化 |
+
+この緩和は**1回の再生成にのみ適用**され、設定は保存されません（次回の自動記録にはグローバル設定が使われます）。①候補選択の緩和 knob は v1 では無く、過剰削減ガードは緩和中も発火します。
+
+再生成は同一行の UPDATE です。Obsidian・ローカル Markdown への自動出力は行わないため、送信し直したい場合は既存の「追記」ボタンを使ってください。レート制限は再生成専用のバケットで、通常の記録と別に計上されます。
+
+**選択一括再生成**: エントリ一覧でチェックボックスを複数選択し、選択バーの「AI要約を作り直し」を押すと、**現在の設定**で順次再生成します。完了時に成功・失敗件数（実行中の行はスキップ件数として区別）をトースト表示し、一覧を更新します（緩和3択と force は一括では選べません。緩和が必要な場合は個別ヘッダーから実行してください）。同じレート制限バケットを使うため、再生成専用レート制限の影響を受けます。
+
 ---
 
 ## English
@@ -177,3 +201,27 @@ Use "Test AI" in the dashboard to verify the Base URL, API key, and model name a
 **Q. Summaries are sometimes too short or empty**
 
 Check the `Summary Min Length` setting. If a generated summary falls below this length, that provider's result is discarded and the next priority rank is tried instead.
+
+### Over-cut Guards (what gets sent when cleansing cuts too deep)
+
+Before content reaches the AI, three guards keep the send from being a starved fragment: a **candidate floor** (extraction falls back to the next candidate or the page body when the top candidate is under the character floor), a **Content Cleansing over-cut restore** (restores the pre-cleansing candidate text when stripping leaves it below the reduction ratio or floor), and the existing **AI summary cleansing over-reduction fallback** (restores the pre-AI text / body). All three share one policy with priority ② > ③ > short-body, and each fired guard leaves its reason in the history entry ("Fallback reason" row: `candidate_too_small`, `content_overcut`, `over_cleansed`, `short_content`).
+
+Toggle the two new guards and the shared character floor under **Dashboard → AI Summary Cleansing → Over-cut Guards** (both default on). Whitelist-extracted sites are intentionally excluded from the guards (v1). If summaries are still too thin after a record, use the manual regeneration flow described below.
+
+### Manual Regeneration of AI Summaries
+
+Use the **"Regenerate AI summary"** button in each entry header under **Dashboard → SQLite History** to rebuild an existing record's summary. The page body is re-fetched, run through the same pipeline as the original recording, and the result **overwrites the same row** (no new row is created).
+
+You can choose how much to loosen cleansing for that one regeneration:
+
+| Choice | Behavior |
+|---|---|
+| **Current settings** | Regenerate with the global settings unchanged (default) |
+| **Looser** | Step the AI Summary Cleansing (③) rules down one preset (`aggressive` → `balanced` → `minimal`; `balanced` / `custom` / `minimal` floor at `minimal`). Content Cleansing (②) is untouched |
+| **Loosest** | Disable both Content Cleansing (②) and AI Summary Cleansing (③) |
+
+The loosening applies **only to that single regeneration** and is never saved to settings (the next automatic recording still uses the global settings). There is no loosening knob for ① candidate selection in v1, and the over-cut guards keep firing during a loosened run.
+
+Regeneration updates the same row in place. It does not auto-append to Obsidian or local Markdown — use the existing "append" button if you want to send it again. Rate limiting uses a regenerate-only bucket, counted separately from normal recording.
+
+**Bulk regeneration of a selection**: Check multiple entries in the list and press "Regenerate AI summaries" in the selection bar to re-run them sequentially with **current settings**. A toast reports succeeded/failed counts when the run finishes (rows already running are reported as skipped), then the list refreshes (the loosening choices and force option are header-only — use the per-entry header when you need them). The same regenerate-only rate-limit bucket applies.

@@ -15,8 +15,6 @@
  * (TS-only, documented as out of scope for the core).
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, test, expect, beforeAll } from 'vitest';
 import {
     computeTagCooccurrence,
@@ -30,6 +28,7 @@ import initWasmModule, {
     computeCooccurrence,
     narrowToTopTags,
 } from '../tagCooccurWasm.js';
+import { initWasmForNode } from '../../testing/initWasmForNode.js';
 
 type Entry = { tags?: string | null };
 
@@ -94,9 +93,7 @@ const NARROW_CORPUS: Array<{ entries: Entry[]; limit: number }> = [
 ];
 
 async function initForNode(): Promise<void> {
-    const wasmPath = fileURLToPath(new URL('../tag_cooccur_bg.wasm', import.meta.url));
-    const bytes = await readFile(wasmPath);
-    await initWasmModule({ module_or_path: bytes });
+    await initWasmForNode(initWasmModule, new URL('../tag_cooccur_bg.wasm', import.meta.url));
 }
 
 function mulberry32(seed: number): () => number {
@@ -182,13 +179,12 @@ describe('WASM vs TS tag-cooccurrence parity', () => {
         expect(() => narrowToTopTags('a\nb', 1, 10)).toThrow();
     });
 
-    test('non-integer/negative/oversized narrow limits bypass to TS (no u32 wrap)', async () => {
+    test('non-integer/negative narrow limits are rejected at the wrapper boundary', async () => {
         await expect(narrowEntriesToTopTagsWithWasm([{ tags: '#a' }], -1)).rejects.toThrow();
         await expect(narrowEntriesToTopTagsWithWasm([{ tags: '#a' }], 2.5)).rejects.toThrow();
-        // 2^32 wraps to 0 via ToUint32 (WASM would keep top-0 tags and
-        // rebuild every record empty) — must be rejected, not wrapped.
-        await expect(
-            narrowEntriesToTopTagsWithWasm([{ tags: '#a' }, { tags: '#b' }], 4294967296)
-        ).rejects.toThrow();
+        // The 2^32 upper bound is owned by the hybrid bypass (`isWasmSafeU32`
+        // in tagCooccurrenceHybrid.ts), which routes it to TS before the
+        // wrapper is reached — pinned in tagCooccurrenceHybrid.test.ts, not
+        // here.
     });
 });

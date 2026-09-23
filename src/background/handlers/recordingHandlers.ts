@@ -1,4 +1,4 @@
-import type { RecordingData, RecordingResult } from '../../messaging/types.js';
+import type { RecordingData, RecordingResult, ContentResponse } from '../../messaging/types.js';
 import type { TabData } from '../tabCache.js';
 import type { Settings } from '../../utils/storage/types.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
@@ -16,12 +16,15 @@ import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { buildRecordRequest } from '../recordRequestBuilder.js';
 import { visitRateLimiter } from '../visitRateLimiter.js';
+import { validateUrl } from '../../utils/ssrfGuard.js';
+import type { RegenerateCleanseMode } from '../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 
 import type {
   ValidVisitMessage,
   ManualRecordMessage,
   PreviewRecordMessage,
   SaveRecordMessage,
+  RegenerateSummaryMessage,
 } from '../messageTypes.js';
 
 /** The recording surface the handlers need: one method, explicit settings. */
@@ -64,6 +67,35 @@ export interface ManualRecordHandlerDeps extends RecordingHandlerBaseDeps {
 }
 
 export interface SaveRecordHandlerDeps extends RecordingHandlerBaseDeps {}
+
+/**
+ * PBI 04: REGENERATE_SUMMARY deps — deliberately standalone (not the manual
+ * base): the handler needs a rate-limit bucket and the re-extraction seam,
+ * and never uses setUrlContent (no pending-queue insert on its path).
+ */
+export interface RegenerateSummaryHandlerDeps {
+  isRecordingAllowed: () => Promise<boolean>;
+  recordingPipeline: RecordingRunner;
+  getSettings: () => Promise<Settings>;
+  checkRateLimit: (
+    sender: MessageSenderLike | undefined,
+    settings: Record<string, unknown>,
+    opts?: { bucket?: string },
+  ) => Promise<{ allowed: boolean; error?: string }>;
+  fetchExtracted: (url: string, cleanseMode: RegenerateCleanseMode) => Promise<ContentResponse>;
+}
+
+/**
+ * Gate rejections the handler may re-offer as an explicit force retry
+ * (Ask Q1C: force stays off by default; only these are force-bypassable —
+ * PERMISSION_REQUIRED/INVALID_URL are not, because force does not bypass
+ * decidePermission/validateUrl).
+ */
+const FORCE_OFFERABLE_ERRORS: ReadonlySet<string> = new Set([
+  'DOMAIN_BLOCKED',
+  'DOMAIN_NOT_TRUSTED',
+  'PRIVATE_PAGE_DETECTED',
+]);
 
 // ============================================================================
 // Factory functions
@@ -124,6 +156,10 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
         aiSummaryCleansedElements: message.payload?.aiSummaryCleansedElements,
         aiSummaryCleansedReason: message.payload?.aiSummaryCleansedReason,
         aiSummaryCleansedReasons: message.payload?.aiSummaryCleansedReasons,
+        // PBI 05: forward the fallback outcome so the reason column can persist
+        // for auto-records (the payload already carries both fields).
+        fallbackTriggered: message.payload?.fallbackTriggered,
+        fallbackReason: message.payload?.fallbackReason,
       }),
     }));
 
@@ -317,5 +353,132 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
     }
 
     sendResponse(result);
+  };
+}
+
+// ============================================================================
+// REGENERATE_SUMMARY (PBI 2026-09-22-04)
+// ============================================================================
+
+export function createRegenerateSummaryHandler(deps: RegenerateSummaryHandlerDeps) {
+  // Handler-local in-flight guard (binding: SW の handler-local Set・永続化しない).
+  const inFlight = new Set<number>();
+
+  return async (
+    message: RegenerateSummaryMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void,
+  ): Promise<void> => {
+    const { id, url, title, cleanseMode, force } = message.payload;
+
+    try {
+      // CRITICAL: claim the slot SYNCHRONOUSLY, before any await. Two rapid
+      // dispatches would otherwise both pass a has()-check that sits across
+      // await boundaries (check-then-act race) and double-call the AI —
+      // binding: 2件目以降は無視（AI呼び出しは1回だけ）.
+      if (inFlight.has(id)) {
+        sendResponse({ success: false, error: 'in_flight' });
+        return;
+      }
+      inFlight.add(id);
+
+      try {
+        if (!(await deps.isRecordingAllowed())) {
+          sendResponse({ success: false, error: 'privacy_consent_required' });
+          return;
+        }
+
+        const settings = await deps.getSettings();
+        const senderLike: MessageSenderLike = {
+          ...pickDefined({
+            url: sender.url,
+            tab: sender.tab ? pickDefined({ id: sender.tab.id }) : undefined,
+          }),
+        };
+        const rate = await deps.checkRateLimit(senderLike, settings, { bucket: 'regenerate' });
+        if (!rate.allowed) {
+          sendResponse({ success: false, error: rate.error ?? 'rate_limited', reason: 'rate_limited' });
+          return;
+        }
+
+        try {
+          validateUrl(url, { requireValidProtocol: true, blockLocalhost: true });
+        } catch {
+          sendResponse({ success: false, error: 'invalid_url' });
+          return;
+        }
+
+        let extracted: ContentResponse;
+        try {
+          extracted = await deps.fetchExtracted(url, cleanseMode);
+        } catch (e: unknown) {
+          sendResponse({ success: false, error: `fetch_failed: ${errorMessage(e)}` });
+          return;
+        }
+
+        const data = buildRecordRequest('regenerate', {
+          title,
+          url,
+          content: extracted.content,
+          // Ask Q1C: force is caller-explicit only (policy default is off).
+          ...(force === true ? { force: true } : {}),
+          targetEntryId: id,
+          ...pickDefined({
+            pageBytes: extracted.byteStats?.pageBytes,
+            candidateBytes: extracted.byteStats?.candidateBytes,
+            originalBytes: extracted.byteStats?.originalBytes,
+            cleansedBytes: extracted.byteStats?.cleansedBytes,
+            aiSummaryOriginalBytes: extracted.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
+            aiSummaryCleansedBytes: extracted.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
+            aiSummaryCleansedElements: extracted.aiSummaryCleansedStats?.aiSummaryCleansedElements,
+            aiSummaryCleansedReason: extracted.aiSummaryCleansedStats?.aiSummaryCleansedReason,
+            aiSummaryCleansedReasons: extracted.aiSummaryCleansedStats?.aiSummaryCleansedReasons,
+            fallbackTriggered: extracted.fallbackTriggered,
+            fallbackReason: extracted.fallbackReason,
+            cleansedReason: extracted.cleansedReason,
+          }),
+        });
+
+        const result = await deps.recordingPipeline.record(data, { settings });
+
+        // Gate rejection on the non-force path → offer the explicit force retry
+        // (Ask Q1C). PERMISSION_REQUIRED / INVALID_URL are intentionally absent:
+        // force does not bypass decidePermission / validateUrl. When the caller
+        // ALREADY forced and the gate still rejected, re-offering force is
+        // noise — the pipeline result passes through unchanged.
+        if (
+          !result.success &&
+          !result.skipped &&
+          force !== true &&
+          result.error !== undefined &&
+          FORCE_OFFERABLE_ERRORS.has(result.error)
+        ) {
+          sendResponse({ ...result, needsForce: true });
+          return;
+        }
+        // PBI 2026-09-22-04 follow-up: the pipeline reports success even when
+        // the AI produced only an error string (buildResult is unconditional).
+        // Never persist that as a regenerated summary — surface the AI
+        // failure and leave the existing row untouched.
+        if (result.aiSucceeded === false) {
+          sendResponse({
+            success: false,
+            error: 'ai_failed',
+            ...(result.attemptedProviders !== undefined
+              ? { providersTried: result.attemptedProviders }
+              : {}),
+            ...(result.slotFailures !== undefined
+              ? { slotFailures: result.slotFailures }
+              : {}),
+          });
+          return;
+        }
+        sendResponse(result);
+      } finally {
+        inFlight.delete(id);
+      }
+    } catch (e: unknown) {
+      sendResponse({ success: false, error: errorMessage(e) });
+    }
   };
 }

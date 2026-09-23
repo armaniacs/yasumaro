@@ -1,0 +1,102 @@
+/**
+ * confirmDialog.css
+ * Shared centered-modal styles for the accessible dialog seam
+ * (src/utils/ui/confirmDialog.ts) — the single replacement for native
+ * `confirm()` / `alert()`.
+ *
+ * Both consumers must @import tokens.css before this file.
+ * Without these rules the dialog renders as an unstyled block at the
+ * document end (bottom-left, easy to miss).
+ */
+
+/* Full-viewport dimmed layer; the dialog is centered in the eye line. */
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--color-overlay, var(--ym-color-overlay, rgba(15, 23, 42, 0.6)));
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.confirm-dialog {
+  background: var(--color-bg-white, var(--ym-color-bg, #ffffff));
+  color: var(--color-text, var(--ym-color-text, #1e293b));
+  width: 90%;
+  min-width: 320px;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: var(--radius-lg, var(--ym-radius-lg, 12px));
+  padding: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.confirm-dialog > h2 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.confirm-dialog-danger > h2 {
+  color: var(--color-danger-text, var(--ym-color-danger-text, #991b1b));
+}
+
+#confirm-dialog-message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.confirm-dialog-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm, var(--ym-radius-sm, 6px));
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background var(--transition-fast, var(--ym-transition-fast, 150ms ease)), border-color var(--transition-fast, var(--ym-transition-fast, 150ms ease));
+}
+
+.confirm-dialog-btn-cancel {
+  background: var(--color-bg-subtle, var(--ym-color-bg-subtle, #f8fafc));
+  color: var(--color-text-secondary, var(--ym-color-text-secondary, #475569));
+  border: 1px solid var(--color-border, var(--ym-color-border, #e2e8f0));
+}
+
+.confirm-dialog-btn-cancel:hover {
+  background: var(--color-bg-code, var(--ym-color-bg-code, #f1f5f9));
+  border-color: var(--color-border-hover, var(--ym-color-border-hover, #cbd5e1));
+}
+
+.confirm-dialog-btn-primary {
+  background: var(--color-primary, var(--ym-color-primary, #7c3aed));
+  color: #ffffff;
+  border: 1px solid transparent;
+}
+
+.confirm-dialog-btn-primary:hover {
+  background: var(--color-primary-hover, var(--ym-color-primary-hover, #6d28d9));
+}
+
+.confirm-dialog-btn-danger {
+  background: var(--color-danger-bg, var(--ym-color-danger-bg, #fef2f2));
+  color: var(--color-danger, var(--ym-color-danger, #ef4444));
+  border: 1px solid var(--color-danger-border, var(--ym-color-danger-border, #fecaca));
+}
+
+.confirm-dialog-btn-danger:hover {
+  background: var(--color-danger-border, var(--ym-color-danger-border, #fecaca));
+  border-color: var(--color-danger, var(--ym-color-danger, #ef4444));
+}

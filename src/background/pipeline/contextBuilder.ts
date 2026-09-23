@@ -115,6 +115,12 @@ export interface SaveSqliteBuilderInput {
   sqliteClient: SqliteClient;
   obsidianSynced?: boolean | undefined;
   traceId?: string | undefined;
+  /** PBI 04: UPDATE-in-place target for regenerate. */
+  targetEntryId?: number | undefined;
+  /** PBI 2026-09-22-04 follow-up: mirrors context.privacyResult.aiSucceeded. */
+  aiSucceeded?: boolean | undefined;
+  /** PBI 04: content-storage gate — false omits the content key from the UPDATE. */
+  contentEnabled?: boolean | undefined;
 }
 
 export function createSaveSqliteParams(input: SaveSqliteBuilderInput): SaveSqliteStepParams {
@@ -130,6 +136,18 @@ export function createSaveSqliteParams(input: SaveSqliteBuilderInput): SaveSqlit
 
   if (input.traceId !== undefined) {
     params.traceId = input.traceId;
+  }
+
+  if (input.targetEntryId !== undefined) {
+    params.targetEntryId = input.targetEntryId;
+  }
+
+  if (input.aiSucceeded !== undefined) {
+    params.aiSucceeded = input.aiSucceeded;
+  }
+
+  if (input.contentEnabled !== undefined) {
+    params.contentEnabled = input.contentEnabled;
   }
 
   return params;

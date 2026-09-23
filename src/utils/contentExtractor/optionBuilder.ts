@@ -9,7 +9,7 @@
 import type { CleanseOptions } from '../contentCleaner.js';
 import type { AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
-import type { CleansingConfig } from '../../content/pageState.js';
+import type { CleansingConfig } from '../cleansingConfig.js';
 
 interface ExtractionOptions {
     cleanseOptions: CleanseOptions & { cleanseEnabled: boolean; whitelistExtractionEnabled: boolean };
@@ -57,6 +57,10 @@ export function buildExtractionOptions(config: CleansingConfig): ExtractionOptio
         // Over-cleansed fallback thresholds
         fallbackRatio: config.aiSummaryCleansingFallbackRatio,
         fallbackMinBytes: config.aiSummaryCleansingFallbackMinBytes,
+        // PBI 05 overcut guards
+        fallbackMinChars: config.aiSummaryCleansingFallbackMinChars,
+        candidateGuardEnabled: config.candidateGuardEnabled,
+        cleanseGuardEnabled: config.cleanseGuardEnabled,
     };
 
     const dedupOptions = {

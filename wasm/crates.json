@@ -1,0 +1,76 @@
+{
+  "$schema": "https://example.invalid/yasumaro/wasm-crates.schema.json",
+  "comment": "SSOT for the WASM crate list (PBI 2026-09-21-18). Consumers: scripts/build-wasm.mjs (npm run build:wasm), scripts/postprocess-wasm-glue.mjs, wxt.config.ts build:publicAssets, .github/workflows/ci.yml wasm gate (via scripts/wasm-crates.mjs). Adding a crate = append one entry here; no other enumeration file may list crates. publicShip=false means STAGED: built + postprocessed + src-committed, but never copied to public/wasm, never shipped via publicAssets, never cmp-gated (sentence-dedup). PBI 2026-09-21-26: the crate universe is crates + libCrates (design A: second array, not a kind field — build/stash/restore/check/publicShip iterate crates only, so lib-only entries cannot leak into gates). libCrates holds build-exempt libs (js-strings: cargo test only, never wasm-pack). paritySuites maps each build crate to its TS parity suite dirs (single owner of the CI fresh/committed vitest arg list); every build crate must have an entry, lib crates must not. pkgDts/dtsCopy are null for pii-sanitizer because its src d.ts (piiSanitizerWasm.d.ts) is hand-maintained, not copied from pkg.",
+  "crates": [
+    {
+      "name": "pii-sanitizer",
+      "crateLabel": "pii-sanitizer",
+      "gluePath": "wasm/pii-sanitizer/pkg/pii_sanitizer.js",
+      "outPath": "src/wasm/pii-sanitizer/piiSanitizerWasm.js",
+      "dtsName": "piiSanitizerWasm.d.ts",
+      "wasmName": "pii_sanitizer_bg.wasm",
+      "srcCopy": "src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm",
+      "pkgDts": null,
+      "dtsCopy": null,
+      "publicShip": true
+    },
+    {
+      "name": "textrank",
+      "crateLabel": "textrank",
+      "gluePath": "wasm/textrank/pkg/textrank.js",
+      "outPath": "src/wasm/textrank/textrankWasm.js",
+      "dtsName": "textrankWasm.d.ts",
+      "wasmName": "textrank_bg.wasm",
+      "srcCopy": "src/wasm/textrank/textrank_bg.wasm",
+      "pkgDts": "textrank.d.ts",
+      "dtsCopy": "src/wasm/textrank/textrankWasm.d.ts",
+      "publicShip": true
+    },
+    {
+      "name": "sentence-dedup",
+      "crateLabel": "sentence-dedup",
+      "gluePath": "wasm/sentence-dedup/pkg/sentence_dedup.js",
+      "outPath": "src/wasm/sentence-dedup/sentenceDedupWasm.js",
+      "dtsName": "sentenceDedupWasm.d.ts",
+      "wasmName": "sentence_dedup_bg.wasm",
+      "srcCopy": "src/wasm/sentence-dedup/sentence_dedup_bg.wasm",
+      "pkgDts": "sentence_dedup.d.ts",
+      "dtsCopy": "src/wasm/sentence-dedup/sentenceDedupWasm.d.ts",
+      "publicShip": false
+    },
+    {
+      "name": "tag-cooccur",
+      "crateLabel": "tag-cooccur",
+      "gluePath": "wasm/tag-cooccur/pkg/tag_cooccur.js",
+      "outPath": "src/wasm/tag-cooccur/tagCooccurWasm.js",
+      "dtsName": "tagCooccurWasm.d.ts",
+      "wasmName": "tag_cooccur_bg.wasm",
+      "srcCopy": "src/wasm/tag-cooccur/tag_cooccur_bg.wasm",
+      "pkgDts": "tag_cooccur.d.ts",
+      "dtsCopy": "src/wasm/tag-cooccur/tagCooccurWasm.d.ts",
+      "publicShip": true
+    }
+  ],
+  "libCrates": [
+    {
+      "name": "js-strings"
+    }
+  ],
+  "paritySuites": {
+    "pii-sanitizer": [
+      "src/wasm/pii-sanitizer/__tests__/",
+      "src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts"
+    ],
+    "textrank": [
+      "src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts"
+    ],
+    "sentence-dedup": [
+      "src/wasm/sentence-dedup/__tests__/",
+      "src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts"
+    ],
+    "tag-cooccur": [
+      "src/wasm/tag-cooccur/__tests__/",
+      "src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts"
+    ]
+  }
+}

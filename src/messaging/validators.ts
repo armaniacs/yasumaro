@@ -26,7 +26,9 @@ import type {
   FetchUrlMessage,
   ManualRecordMessage,
   ContentCleansingExecutedMessage,
+  RegenerateSummaryMessage,
 } from '../background/messageTypes.js';
+import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { DashboardSqliteRequest } from '../background/handlers/dashboardSqliteProtocol.js';
 import { ALL_DASHBOARD_SQLITE_SUBTYPES } from './sqliteOperationSecurity.js';
 
@@ -148,6 +150,13 @@ export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> 
     assertContentLength(payload.content, 'ValidVisitValidator');
     if (payload.force !== undefined && typeof payload.force !== 'boolean') {
       throw new ValidationError('ValidVisitValidator', 'payload.force must be boolean', 'force');
+    }
+    // PBI 05: fallback outcome fields travel with VALID_VISIT payloads.
+    if (payload.fallbackTriggered !== undefined && typeof payload.fallbackTriggered !== 'boolean') {
+      throw new ValidationError('ValidVisitValidator', 'payload.fallbackTriggered must be boolean', 'fallbackTriggered');
+    }
+    if (payload.fallbackReason !== undefined && typeof payload.fallbackReason !== 'string') {
+      throw new ValidationError('ValidVisitValidator', 'payload.fallbackReason must be a string', 'fallbackReason');
     }
     // VALID_MESSAGE_TYPES check already ensures type is known, but verify protocolVersion if present
     assertProtocolVersion(m, 'ValidVisitValidator');
@@ -476,6 +485,50 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
 }
 
 // ------------------------------------------------------------------
+// RegenerateSummaryValidator — REGENERATE_SUMMARY (PBI 2026-09-22-04)
+// ------------------------------------------------------------------
+export class RegenerateSummaryValidator implements MessageValidator<RegenerateSummaryMessage> {
+  validate(msg: unknown): RegenerateSummaryMessage {
+    if (!msg || typeof msg !== 'object') {
+      throw new ValidationError('RegenerateSummaryValidator', 'Message must be an object');
+    }
+    const m = msg as Record<string, unknown>;
+    if (m.type !== 'REGENERATE_SUMMARY') {
+      throw new ValidationError('RegenerateSummaryValidator', 'type must be REGENERATE_SUMMARY', 'type');
+    }
+    if (!m.payload || typeof m.payload !== 'object') {
+      throw new ValidationError('RegenerateSummaryValidator', 'payload is required', 'payload');
+    }
+    const payload = m.payload as Record<string, unknown>;
+    if (typeof payload.id !== 'number' || !Number.isInteger(payload.id) || payload.id <= 0) {
+      throw new ValidationError('RegenerateSummaryValidator', 'payload.id must be a positive integer', 'id');
+    }
+    assertHttpUrl(payload.url, 'RegenerateSummaryValidator');
+    if (typeof payload.title !== 'string') {
+      throw new ValidationError('RegenerateSummaryValidator', 'payload.title must be string', 'title');
+    }
+    if (payload.title.length > VALIDATOR_LIMITS.MAX_TITLE_LENGTH) {
+      throw new ValidationError('RegenerateSummaryValidator', `payload.title exceeds ${VALIDATOR_LIMITS.MAX_TITLE_LENGTH} chars`, 'title');
+    }
+    if (
+      typeof payload.cleanseMode !== 'string' ||
+      !(REGENERATE_CLEANSE_MODES as readonly string[]).includes(payload.cleanseMode)
+    ) {
+      throw new ValidationError(
+        'RegenerateSummaryValidator',
+        `payload.cleanseMode must be one of ${REGENERATE_CLEANSE_MODES.join(', ')}`,
+        'cleanseMode',
+      );
+    }
+    if (payload.force !== undefined && typeof payload.force !== 'boolean') {
+      throw new ValidationError('RegenerateSummaryValidator', 'payload.force must be boolean', 'force');
+    }
+    assertProtocolVersion(m, 'RegenerateSummaryValidator');
+    return msg as RegenerateSummaryMessage;
+  }
+}
+
+// ------------------------------------------------------------------
 // CheckDomainValidator — CHECK_DOMAIN (no payload, content-script allowed)
 // ------------------------------------------------------------------
 export class CheckDomainValidator implements MessageValidator<ExtensionMessage> {
@@ -526,5 +579,6 @@ export const validVisitValidator = new ValidVisitValidator();
 export const dashboardSqliteValidator = new DashboardSqliteValidator();
 export const fetchUrlValidator = new FetchUrlValidator();
 export const manualRecordValidator = new ManualRecordValidator();
+export const regenerateSummaryValidator = new RegenerateSummaryValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();

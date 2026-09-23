@@ -20,18 +20,15 @@
  * single runs because wasm-bindgen string marshalling has a warmup cost.
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { deduplicateContent, splitSentencesKeepDelimiters } from '../../utils/contentDeduplicator.js';
 import initWasmModule, { deduplicateIndices } from './sentenceDedupWasm.js';
+import { initWasmForNode } from '../testing/initWasmForNode.js';
 
 // Node has no extension-page fetch(file://) support, unlike the Chrome
 // service worker this module targets in production — read the binary
 // directly instead of going through initSentenceDedupWasm().
 async function initForNode(): Promise<void> {
-    const wasmPath = fileURLToPath(new URL('./sentence_dedup_bg.wasm', import.meta.url));
-    const bytes = await readFile(wasmPath);
-    await initWasmModule({ module_or_path: bytes });
+    await initWasmForNode(initWasmModule, new URL('./sentence_dedup_bg.wasm', import.meta.url));
 }
 
 function dedupWithWasm(text: string, threshold: number, minLength: number): string {

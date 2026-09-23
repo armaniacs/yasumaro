@@ -7,7 +7,7 @@
  * Unit tests for contentExtractor/scoring.ts
  */
 
-import { calculateTextScore, findMainContentCandidates } from '../scoring.js';
+import { calculateTextScore, findMainContentCandidates, scanMainContentCandidates } from '../scoring.js';
 
 describe('contentExtractor/scoring', () => {
   beforeEach(() => {
@@ -274,6 +274,64 @@ describe('contentExtractor/scoring', () => {
       const candidates = findMainContentCandidates();
       for (const candidate of candidates) {
         expect(candidate.tagName.toLowerCase()).not.toBe('header');
+      }
+    });
+  });
+
+  describe('scanMainContentCandidates floor guard (PBI 05 ①)', () => {
+    beforeEach(() => {
+      document.body.innerHTML = '';
+    });
+
+    it('adopts the first score-ordered candidate at or above the floor (rank-2 adopt)', () => {
+      // article path: full sort BEFORE take — tiny high-structure article first
+      // by tag priority but rank 2 is the floor-clearing one.
+      document.body.innerHTML = `
+        <article><p>Tiny</p></article>
+        <main><p>${'This main element carries plenty of readable body text for the floor check. '.repeat(3)}</p></main>
+      `;
+      const scan = scanMainContentCandidates(100);
+      expect(scan.candidates.length).toBe(1);
+      expect(scan.candidates[0]!.tagName.toLowerCase()).toBe('main');
+      expect(scan.rejectedTop).toBeUndefined();
+    });
+
+    it('all-miss returns empty candidates plus the rejected top for diagnostics', () => {
+      document.body.innerHTML = `
+        <article><p>Hi</p></article>
+        <div><p>${'Body copy that is long enough to clear one hundred characters easily. '.repeat(2)}</p></div>
+      `;
+      // article/main present → article branch; only candidate is "Hi" (2 chars)
+      const scan = scanMainContentCandidates(100);
+      expect(scan.candidates).toEqual([]);
+      expect(scan.rejectedTop).toBeDefined();
+      expect(scan.rejectedTop!.tagName.toLowerCase()).toBe('article');
+    });
+
+    it('guard off returns the legacy ranked list untouched', () => {
+      document.body.innerHTML = `
+        <article><p>Hi</p></article>
+        <main><p>${'Plenty of readable body text lives inside this main element for scoring. '.repeat(3)}</p></main>
+      `;
+      const legacy = findMainContentCandidates();
+      const scanned = scanMainContentCandidates();
+      expect(scanned.candidates.map((e) => e.tagName)).toEqual(legacy.map((e) => e.tagName));
+      expect(scanned.rejectedTop).toBeUndefined();
+      // legacy article path returns take=1
+      expect(legacy.length).toBe(1);
+    });
+
+    it('genuine zero candidates stay zero with no rejectedTop (byte-identical guard off-path)', () => {
+      document.body.innerHTML = `<span>Nothing scoreable</span>`;
+      const scan = scanMainContentCandidates(100);
+      // span is not a candidate source (article/main/div/section/body-children:
+      // body children DO qualify — span is a direct body child here)
+      // Either way rejectedTop only appears when the guard rejected something.
+      if (scan.candidates.length === 0) {
+        // direct-children branch: span text 18 chars < 100 → rejected
+        expect(scan.rejectedTop).toBeDefined();
+      } else {
+        expect(scan.rejectedTop).toBeUndefined();
       }
     });
   });

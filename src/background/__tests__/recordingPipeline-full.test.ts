@@ -31,7 +31,13 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/domainUtils.js');
 vi.mock('../privacyPipeline.js');
-vi.mock('../../utils/pendingStorage.js');
+// PBI 2026-09-21-28: keep the real buildPendingPage (pure assembly) and mock
+// only the storage I/O — the step now delegates assembly to it, so a full
+// auto-mock would make addPendingPage receive `undefined`.
+vi.mock('../../utils/pendingStorage.js', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, addPendingPage: vi.fn().mockResolvedValue(undefined) };
+});
 
 describe('RecordingPipeline', () => {
   const mockObsidian = {

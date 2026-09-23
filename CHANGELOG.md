@@ -36,7 +36,104 @@ All notable changes to this project will be documented in this file.
 > For releases with normal spacing, no additional prefix is required.
 
 
+## [6.9.17] - 2026-09-23
+
+このリリースは v6.9.16 に続く連続リリースです。SQLite History の選択一括操作（複数選択の一括削除・一括再生成）、削除確認 UI の視認性修正（選択バー内の2段階確認＋共有モーダルの中央表示化）、タグクラスタの最大ズーム拡大（3倍→12倍）を追加しました。全テスト（13,201 件）がグリーンです。
+
+### Added
+
+- **選択バーに一括操作ボタンを追加**: SQLite History のチェックボックスで複数選択すると、選択バーに「AI要約を作り直し」と「選択した記事を削除」が表示される。一括削除はモデル `deleteSelectedEntries`（最初の失敗で中断・削除済み件数とエラーを返却・成功時のみキャッシュ無効化）、一括再生成は現在の設定で逐次実行し成功・失敗件数をトーストして一覧を更新（緩和3択・force は個別ヘッダーのみ）
+- **共有確認ダイアログに中央表示スタイルを追加**: `showConfirmDialog` / `showAlertDialog`（`src/utils/ui/confirmDialog.ts`）に CSS 定義が一切なく、文書末尾の素のブロック（左下）として描画されていた。新規共有 `src/styles/confirmDialog.css`（全画面 dim＋中央カード＋右寄せボタン）を dashboard・popup の両スタイルから import し、単発削除を含む全使用箇所の確認ダイアログが目の前に表示されるようにした
+- **タグクラスタの最大ズームを拡大**: `TagClusterPanZoomController` の `MAX_SCALE` を 3→12 に引き上げ（+ボタン・ホイール・ピンチズーム共通）。SVG は viewBox 方式のため深くズームしてもノード・ラベルはベクターのまま鮮明に拡大される
+
+### Fixed
+
+- **一括削除の確認が画面左下に埋もれていた**: 一括削除は共有モーダルを使わず、選択バー内の2段階インライン確認に変更（1クリック目で削除ボタンの右に件数付き「本当に削除する」／キャンセルが出現、2クリック目で実行）。選択変更・再描画で stale な確認は消去し、確認ボタンにフォーカスを移動
+- **部分削除の失敗がトーストに現れなかった**: 途中失敗時は成功件数のみの表示だったのを、削除済み・残件数・理由を表示する `historyDeleteSelectedPartial` トーストに変更（全件失敗時は従来どおりモデル側 `operationError`＋通知）
+- **一括再生成のトーストで実行中の行が消えていた**: `in_flight` の行を `skipped` として計数し、`succeeded + failed + skipped === 選択件数` を保証。スキップありの場合のみ「（N件スキップ: 実行中）」を付記
+
+### Changed
+
+- **docs**: `SETUP_GUIDE.md`・`AI_SUMMARY_GUIDE.md`（日英）に一括操作・2段階確認・スキップ表示を追記、`FAQ.md` に Q52（再生成）・Q53（一括削除）を追加、`CLEANSING_ORDER.md`・`CLEANSING_CUSTOMIZATION_GUIDE.md` に再生成の緩和仕様を追記
+
+### Tested
+
+- 単体: インライン削除確認の表示・実行・キャンセル・再描画消去、部分削除トーストのテンプレート分岐、全件成功トーストの維持、`in_flight` スキップ表示、上限クランプ（baseSize / 12）を追加
+- 全体: `npm run validate` green（13,201 passed / 21 skipped）
+
+## [6.9.16] - 2026-09-22
+
+このリリースは v6.9.15 に続く連続リリースです。過剰クレンジングで本文が空近くまで削られ要約が一文に潰れたレコードへの対処として、AI要約の手動再生成（PBI 2026-09-22-04）と抽出段の過剰削減ガード（PBI 2026-09-22-05）を追加しました。全テスト（13,193 件）がグリーンです。
+
+### Added
+
+- **履歴エントリから AI要約を手動再生成できる**: 履歴ヘッダーに「AI要約を作り直す」ボタンとクレンジング緩和3択（現在の設定 / やや緩い / 最も緩い）を追加。`REGENERATE_SUMMARY` メッセージが GET_CONTENT + cleanseMode オーバーライドで本文を再取得し、通常記録と同じパイプラインを流した後、既存行を UPDATE-in-place で上書きする（新規 INSERT 禁止・重複チェック skip・Obsidian/ローカル MD 自動出力 skip・タグは新値上書き）。クレンジング緩和は③ルール段下げのみ（custom=minimal 相当・最緩=②③無効）で設定には永続化しない。force は既定なし、ゲート拒否時のみ「設定を無視して強制再生成」を明示オプトイン（Ask Q1C）。レート制限は `regenerate` 専用バケットに分離し、ダッシュボード側の消費が通常記録を圧迫しない（Ask N3-B）。一括再生成と Obsidian 自動同期は v1 対象外（SQLite 更新のみ、送信は既存の手動「追記」ボタン）（PBI 2026-09-22-04）
+- **抽出・Content Cleansing 段の過剰削減ガード**: 実測で 99.4%（30.6 KB→193 B）削減していた主因は Content Cleansing ではなく①候補選択だった。単一ポリシー点 `applyFallback` に **②content_overcut**（クレンジング後の削減率・文字数フロア未満なら pre-クレンジング候補へ復元）と **③**（従来の AI要約クレンジング FB）を優先順 **② > ③ > 短文本文** で配置し、**①候補フロア**（スコア順走査で文字数フロアを満たす最初の候補を take 分割前に採用、新キーノブ `fallbackMinChars` 既定 100）を追加。ガード①②はデフォルトONで Dashboard → AI Summary Cleansing →「過剰削減ガード」セクションで切替可能。ホワイトリスト抽出は v1 で意図的にガード対象外（Ask Q2A）。発火理由は `fallback_reason` カラム（`candidate_too_small` / `content_overcut` / `over_cleansed` / `short_content`）として pageState から履歴表示まで貫通（PBI 2026-09-22-05）
+
+### Fixed
+
+- **AIプロバイダ失敗時にエラー文言が要約として保存されていた**: `buildResult` が無条件 `success:true` を返すため、失敗時のエラーテキストが SQLite の summary として書かれていた。`PrivacyPipelineResult.aiSucceeded` → `RecordingResult` まで伝播し、`saveSqliteStep` が `aiSucceeded === false` の UPDATE をスキップして既存行を保持、ハンドラは `ai_failed` を返却（PBI 2026-09-22-04 レビュー修正）
+- **プロバイダ失敗理由が最後のスロットしか見えなかった**: `fetchWithRetry` が non-ok で throw するため `handleErrorResponse` に到達せず、ループが `lastResult` のみ保持していた。`AISlotFailure[]`（`slotFailures`）で全スロットの失敗を収集し `RemoteAIService` が WARN、再生成応答に同梱（PBI 2026-09-22-04 レビュー修正）
+- **月次トークン上限が保存済み設定から読めなかった**: writer は `settings` blob、reader は誰も書いていないトップレベルキーだけを見ており、カスタム値（上限なし=0 含む）が常に既定 1,000,000 に落とされていた。blob → レガシー top-level → `SettingsRepository` の3段フォールバックで解決（PBI 2026-09-22-04 レビュー修正）
+- **再生成 UPDATE の失敗が成功として報告されていた**: SQLite mutate 失敗が `RegenerateUpdateError` になり `decideStepOutcome` が端末エラーとして扱う経路に修正。pending リカバリ登録はしない（pending キューは MANUAL を INSERT で再生するため、復元が対象行の重複INSERTになる）（PBI 2026-09-22-04 レビュー修正）
+- **再生成ハンドラの二重実行**: in-flight Set の `add` が await の後ろにあり check-then-act レースで AI を2回呼べていた。スロット主張を await 前の同期処理へ移動（PBI 2026-09-22-04 レビュー修正）
+- **再生成UIのコントラスト不足**: mode select を `--color-bg` から `--color-bg-white` + `--color-text` へ、強制ボタンを `--color-danger-bg` へ変更し、履歴の星アイコンの既定スタイル（背景・枠線・padding）を打ち消し（PBI 2026-09-22-04 レビュー修正）
+- **記録条件パネルで保存済み表示が入力後も残っていた**: 任何の入力で成功・エラーメッセージの両方を消去（stale-message 報告 2026-09-22）
+
+### Changed
+
+- **docs**: `CLEANSING_ORDER.md` に過剰削減ガードの3層ポリシー（優先順・発火条件・設定場所・単位境界）を日英で追記、`AI_SUMMARY_GUIDE.md` に「送信前に何が起きるか」と再生成フローへの誘導を日英で追記（PBI 2026-09-22-04/05）
+- **pbi**: VulnHunt 監査（confirmed 7件）の修正方針を6 PBI に PBI 化し台帳へ登録（2026-09-22-06〜11、最優先は obsidian host × 保存済みキーのペアリング禁止）（PBI 2026-09-22-00）
+
+### Tested
+
+- 単体: 再生成ハンドラ / ゲートウェイ / バリデータ / UPDATE ワイトリスト / cleanseMode ladder / rate-limit regenerate バケット / `aiSucceeded` ゲート / `slotFailures` / 過剰削減フィクスチャ（byte-identical pin 付き）を追加
+- E2E: `regenerate-summary.spec.ts`（記録→再生成のフルロー。エントリ URL は host_permissions が必要なため `https://api.openai.com/e2e/...` + host-resolver ルート）、`overcut-guard-recording.spec.ts`（`fallback_reason=candidate_too_small` の発火確認）
+
+## [6.9.15] - 2026-09-21
+
+このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。
+
+### Changed
+
+- **WASM crate manifest の採用を完了**: `test:wasm` の硬直 chain・CI の cache path/step 名/parity 2行・CSP prose・CONTEXT.md の crate リストが `wasm/crates.json` の外に残り、manifest 自身の「他ファイルは列挙しない」invariant が偽になっていた。`libCrates` + `paritySuites` を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で全消費者を駆動。旧列挙と byte 同一であることを実証（PBI 2026-09-21-26）
+- **privacy bypass 判定を pre-decision 化し pending 組み立てを抽出**: force/whitelist の bypass 規則が step の手書き early-return と `decidePrivacy` の到達不能な再エンコードに二重所有され、pending ペイロード組み立てが型・許可リスト・TTL の所有者と別の場所で `Date.now()` 直呼びされていた。fetch 前の pre-decision で bypass subset（force/whitelisted）のみ fetch をスキップ（I/O 最適化を保持）、組み立ては `buildPendingPage(input, now)` 純粋関数に抽出し clock を注入可能に（PBI 2026-09-21-28）
+- **contentKernel の extract/apply ペアを引退**: PBI 2026-09-21-25 が意図的に保持した移行期のペア互換（fallback 分岐×2・非null assertion×2・config 既定の3綴り）を解消し、`extractAndCommit` を唯一の経路に（PBI 2026-09-21-30）
+- **FTS/LIKE 検索の入力を判別共用体に**: `RunOpfsSearchArgs.searchInput` が path 依存の2意味を prose で持っていたため、生 term を FTS path に渡る誤用が静かに誤クエリになった。`{path:'fts',ftsQuery}|{path:'like',rawTerm}` に型で契約を強制（PBI 2026-09-21-29）
+- **Node 側 WASM ロード儀式の残り2箇所を共有 helper に移行**: PBI 2026-09-21-22 が所有権外として保留した pii/tag-cooccur の wasm-success mock を `createNodeWasmInit` に移行し、ローダの deletion test を完了（PBI 2026-09-21-27）
+
+## [6.9.14] - 2026-09-21
+
+このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。
+
+### Changed
+
+- **WASM crate manifest の採用を完了**: `test:wasm` の硬直 chain・CI の cache path/step 名/parity 2行・CSP prose・CONTEXT.md の crate リストが `wasm/crates.json` の外に残り、manifest 自身の「他ファイルは列挙しない」invariant が偽になっていた。`libCrates` + `paritySuites` を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で全消費者を駆動。旧列挙と byte 同一であることを実証（PBI 2026-09-21-26）
+- **privacy bypass 判定を pre-decision 化し pending 組み立てを抽出**: force/whitelist の bypass 規則が step の手書き early-return と `decidePrivacy` の到達不能な再エンコードに二重所有され、pending ペイロード組み立てが型・許可リスト・TTL の所有者と別の場所で `Date.now()` 直呼びされていた。fetch 前の pre-decision で bypass subset（force/whitelisted）のみ fetch をスキップ（I/O 最適化を保持）、組み立ては `buildPendingPage(input, now)` 純粋関数に抽出し clock を注入可能に（PBI 2026-09-21-28）
+- **contentKernel の extract/apply ペアを引退**: PBI 2026-09-21-25 が意図的に保持した移行期のペア互換（fallback 分岐×2・非null assertion×2・config 既定の3綴り）を解消し、`extractAndCommit` を唯一の経路に（PBI 2026-09-21-30）
+- **FTS/LIKE 検索の入力を判別共用体に**: `RunOpfsSearchArgs.searchInput` が path 依存の2意味を prose で持っていたため、生 term を FTS path に渡る誤用が静かに誤クエリになった。`{path:'fts',ftsQuery}|{path:'like',rawTerm}` に型で契約を強制（PBI 2026-09-21-29）
+- **Node 側 WASM ロード儀式の残り2箇所を共有 helper に移行**: PBI 2026-09-21-22 が所有権外として保留した pii/tag-cooccur の wasm-success mock を `createNodeWasmInit` に移行し、ローダの deletion test を完了（PBI 2026-09-21-27）
+
+
 ## [6.9.13] - 2026-09-21
+
+このリリースは v6.9.13 に続く連続リリースです。アーキテクチャ深化ラウンド（holistic-0921 / closer / arch-delivery-loop 0921 の計 28 PBI）です。全テスト（12,986 件）がグリーンです。
+
+### Fixed
+
+- **クレンジング per-site overrides の保存が二重書き込みで競合し、失敗が握り潰されていた**: ロック規律を迂回する raw `chrome.storage.local.set` と空 `catch {}` を削除し、`SettingsRepository` 経由の単一 writer に統一。書き込み失敗は UI にエラー表示（PBI 2026-09-21-02）
+- **Obsidian ポートの検証が dashboard と SW 側で挙動不一致**: dashboard の `parseInt` ベース検証を `validateObsidianPort` に委譲し、`80.5` 等が保存できて接続テストで拒否される save-then-fail を解消。空欄は既定ポート扱いで SW 側と一貫（PBI 2026-09-21-04）
+- **バックアップ復元でクレンジング Category-B の 4 フラグ（news_media / ec_site / qa_site / video_site）が黙って落ちていた**: presets 3×33 手書き列挙と復元 spec を `CLEANSING_RULES` からの派生に置き換え、網羅性テストで双方向の欠落を構造的に防止（PBI 2026-09-21-05）
+- **「不具合を報告」ボタンの二重クリックで unhandled rejection**: スナップショット収集をまたぐ async リスナーに in-flight guard とエラー表示を追加（PBI 2026-09-21-07）
+- **IdleScheduler の発火済みタイマー id が長命タブで蓄積**: 発火時に追跡 Set から除去（PBI 2026-09-21-08）
+- **WASM 初期化の一時的失敗でセッション全体が TS フォールバックに固定**: tag-cooccur ハイブリッドのプローブが失敗を恒久キャッシュしていたのを修正し、失敗時は次呼び出しで再プローブ（PBI 2026-09-21-09）
+- **CONSENT_STATE_CHANGED / ACTIVITY_UPDATE が型検査されない手書き sendMessage だった**: 型付きセンダーに統一し、`ContentResponse` を messaging に移動して popup↔messaging の型循環も解消（PBI 2026-09-21-11）
+- **エクスポート経路ごとに日付分解が異なり、深夜境界の行が別の日次ファイルに分類**: 日付を `getLocalDateString` に統一。テストエクスポートのファイル名のみ UTC→local に意図的変更（PBI 2026-09-21-12）
+
+### Changed
+
+- **アーキテクチャ深化ラウンド（holistic-0921 / closer / archloop-0921、計 21 refactor）**: URL 判定・正規化とプロバイダ構築儀式の SSOT 委譲化（03/10）、utils 層の utils→background 逆依存と pageContentPipeline の utils↔content 循環を解消（06/16）、記録可否判定を `recordingDecision.ts` 純粋関数 seam に集約し obsidian/L0 skip 判定も合流（08/21）、要約ソース優先順位を `selectPipelineText` に単一所有（17）、WASM crate 台帳を `wasm/crates.json` manifest SSOT に集約して build/glue/出荷/CI を駆動（18）、tag-cooccur の fallback+u32 上限を `wasmHybridRuntime` 契約へ統一（19）、dashboard 読み取りの cap policy を planner seam に単一所有し fts 既定 50 を `planSearch` に移植（20）、FTS/LIKE 検索の実行スケルトンを `runOpfsSearch` に統一（23）、JS `\s` 集合定義を js-strings crate に SSOT 化して 3 コアの一致を exhaustive テストで保証（24、バイナリ再コミット）、contentKernel に `extractAndCommit` 深い呼び出しを追加（25）、Node 側 WASM ロード儀式 10 箇所を共有 helper に集約（22）
+
 
 このリリースは v6.9.12 に続く連続リリースです。タグクラスタパネルの共起集計の Rust/WASM 移植（Rust 化第3弾）と promptSanitizer の堅牢化ラウンドです。全テスト（12,712 件）がグリーンです。
 

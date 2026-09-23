@@ -1,0 +1,14 @@
+[package]
+name = "js-strings"
+version = "0.1.0"
+edition = "2021"
+description = "Shared JavaScript string semantics (UTF-16 whitespace, lowercase, bigrams, Jaccard) for Yasumaro WASM cores"
+license = "MIT"
+
+[dependencies]
+# FxHash is the unified hasher policy for every consumer (see tokenize.rs):
+# the default SipHash RandomState re-seeds every per-sentence set and hashes
+# Vec<u16> keys byte-wise, which dominates the O(n^2) pair scans. Only the
+# hasher differs from a default HashSet — membership semantics (and thus
+# Jaccard values) are identical to the TS `Set<string>` reference either way.
+rustc-hash = "2"

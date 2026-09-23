@@ -43,6 +43,8 @@ export interface SavedUrlEntry {
     aiSummaryCleansedReason?: AiSummaryCleansedReason;  // AI要約クレンジング実行理由（オプション）
     aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時、オプション）
     fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
+    /** PBI 05: フォールバック発動理由（未発動時は null でクリアされる） */
+    fallbackReason?: string | null;
     // 30-14: 観測性ファネル
     removedByReason?: Record<string, number> | Map<string, number>;
     funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number };

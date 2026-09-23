@@ -329,4 +329,55 @@ describe('formatMarkdownStep', () => {
       expect(result.markdownEntryData?.domain).toBe('');
     });
   });
+
+  describe('pipeline text priority pin (PBI-17 pre-refactor golden)', () => {
+    it('pins join shape: extractedSentences joined with \\n\\n byte-equal', async () => {
+      const context = makeContext({
+        extractedSentences: ['SENT-A', 'SENT-B'],
+        sanitizedSummary: 'sanitized',
+        privacyResult: { summary: 'privacy', maskedCount: 0 } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      // The step joins with '\n\n' but the entry-markdown SSOT normalizes
+      // newlines to spaces (markdownFormatter.ts), so the observable step
+      // output carries the normalized form. The exact join shape is pinned
+      // at the selector level (pipelineText.test.ts); delegation keeps the
+      // pre-SSOT value byte-equal so these outputs cannot change.
+      expect(result.markdownEntryData?.summary).toBe('SENT-A SENT-B');
+      expect(result.markdown).toContain('SENT-A');
+      expect(result.markdown).toContain('SENT-B');
+    });
+
+    it('pins priority: extractedSentences > sanitizedSummary > privacyResult.summary', async () => {
+      const context = makeContext({
+        extractedSentences: ['L0-SENT'],
+        sanitizedSummary: 'sanitized',
+        privacyResult: { summary: 'privacy', maskedCount: 0 } as any,
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdownEntryData?.summary).toBe('L0-SENT');
+    });
+
+    it('pins golden literal byte-equal when all sources empty', async () => {
+      const context = makeContext({
+        extractedSentences: undefined,
+        sanitizedSummary: undefined,
+        privacyResult: undefined,
+      });
+
+      const result = await formatMarkdownStep(context);
+      const summary = result.markdownEntryData?.summary;
+
+      expect(summary).toBe('Summary not available.');
+      expect(summary?.length).toBe(22);
+      expect([...(summary ?? '')].map((c) => c.charCodeAt(0))).toEqual(
+        [...'Summary not available.'].map((c) => c.charCodeAt(0)),
+      );
+      expect(result.markdown).toContain('Summary not available.');
+    });
+  });
 });

@@ -36,6 +36,8 @@ export interface CommonStorageFields {
   aiSummaryCleansedReasons: string[] | null;
   fallbackTriggered: boolean;
   fallbackTriggeredInt: 0 | 1;
+  /** PBI 05: フォールバック発動理由（未発動時は null） */
+  fallbackReason: string | null;
   aiDuration: number | null;
   obsidianDuration: number | null;
   extractedSentencesBytes: number | null;
@@ -95,6 +97,7 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     aiSummaryCleansedReasons: (d.aiSummaryCleansedReasons as string[] | undefined) && (d.aiSummaryCleansedReasons as string[]).length > 0 ? (d.aiSummaryCleansedReasons as string[]) : null,
     fallbackTriggered: !!d.fallbackTriggered,
     fallbackTriggeredInt: d.fallbackTriggered ? 1 : 0 as 0 | 1,
+    fallbackReason: (d.fallbackReason as string | undefined) ?? null,
     aiDuration: (aiDuration as number) ?? null,
     obsidianDuration: (obsidianDuration as number) ?? null,
     extractedSentencesBytes: (extractedSentencesBytes as number) ?? null,
@@ -138,6 +141,7 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
         extracted_sentences_bytes: fields.extractedSentencesBytes,
         extracted_sentences_original_bytes: fields.extractedSentencesOriginalBytes,
         fallback_triggered: fields.fallbackTriggeredInt,
+        fallback_reason: fields.fallbackReason,
       };
     },
 
@@ -165,6 +169,10 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
       if (fields.aiSummaryCleansedReasons) patch.aiSummaryCleansedReasons = fields.aiSummaryCleansedReasons;
 
       patch.fallbackTriggered = fields.fallbackTriggered;
+      // PBI 05: unconditional like fallbackTriggered — null clears a stale
+      // reason when a later regenerate has no fallback (applyMetadataPatch
+      // only skips undefined).
+      patch.fallbackReason = fields.fallbackReason;
 
       if (fields.providerName) patch.aiProvider = fields.providerName;
       if (fields.modelName) patch.aiModel = fields.modelName;

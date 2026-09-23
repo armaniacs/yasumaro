@@ -49,42 +49,18 @@
 
 import { deduplicateContent, splitSentencesKeepDelimiters, type DeduplicateOptions } from './contentDeduplicator.js';
 import { deduplicateIndicesWithWasm, initSentenceDedupWasm } from '../wasm/sentence-dedup/index.js';
-import { errorMessage } from './errorUtils.js';
-import { addLog } from './logger/core.js';
-import { LogType } from './logger/types.js';
+import {
+    createHybridProbe,
+    isWasmSafeF64,
+    isWasmSafeU32,
+    remapWasmIndices,
+    withWasmFallback,
+} from './wasmHybridRuntime.js';
 
-let wasmAvailable: boolean | null = null;
-
-/**
- * Probes WASM availability once per context lifetime (mirrors
- * initSentenceDedupWasm's own singleton-promise caching) so a permanently
- * broken environment doesn't retry-and-fail on every call.
- */
-async function isWasmAvailable(): Promise<boolean> {
-    if (wasmAvailable !== null) {
-        return wasmAvailable;
-    }
-    try {
-        await initSentenceDedupWasm();
-        wasmAvailable = true;
-    } catch (error: unknown) {
-        wasmAvailable = false;
-        const message = errorMessage(error);
-        console.warn('Sentence-dedup WASM module unavailable, falling back to TS dedup:', message);
-        addLog(LogType.WARN, 'Sentence-dedup WASM module unavailable, falling back to TS dedup', {
-            error: message,
-        });
-    }
-    return wasmAvailable;
-}
-
-/**
- * Max u32 value. Integers in [0, U32_MAX] pass through the JS->wasm u32
- * boundary unchanged (ToUint32 is the identity on that range); anything
- * outside — negatives, fractions, values >= 2^32 — wraps and would make the
- * WASM core see a different option than the TS reference, so it bypasses.
- */
-const U32_MAX = 0xffffffff;
+const probe = createHybridProbe(
+    initSentenceDedupWasm,
+    'Sentence-dedup WASM module unavailable, falling back to TS dedup'
+);
 
 /**
  * Defaults mirroring deduplicateContent's parameter defaults.
@@ -108,12 +84,7 @@ const MIN_WASM_INPUT_CHARS = 4096;
  */
 function isWasmSafeOptions(options: Required<DeduplicateOptions>): boolean {
     const { threshold, minLength } = options;
-    return (
-        Number.isFinite(threshold) &&
-        Number.isInteger(minLength) &&
-        minLength >= 0 &&
-        minLength <= U32_MAX
-    );
+    return isWasmSafeF64(threshold) && isWasmSafeU32(minLength);
 }
 
 /**
@@ -138,41 +109,28 @@ export async function deduplicateContentHybrid(
     if (
         text.length < MIN_WASM_INPUT_CHARS ||
         !isWasmSafeOptions(opts) ||
-        !(await isWasmAvailable())
+        !(await probe.isAvailable())
     ) {
         return deduplicateContent(text, options);
     }
 
-    try {
-        const result = await deduplicateIndicesWithWasm(text, opts);
-        const parts = splitSentencesKeepDelimiters(text);
-        // Split agreement gate: an in-range index from a disagreeing split
-        // would silently map to the wrong part, so the counts must match
-        // before mapping (out-of-range kept as belt-and-braces).
-        if (result.sentenceCount !== parts.length) {
-            throw new Error(
-                `sentence-dedup wasm split mismatch (wasm ${result.sentenceCount} vs ` +
-                    `js ${parts.length} parts)`
-            );
-        }
-        if (result.indices.some((i) => i < 0 || i >= parts.length)) {
-            throw new Error(
-                `sentence-dedup wasm returned out-of-range indices (got ${result.indices.length} ` +
-                    `indices, ${parts.length} parts)`
-            );
-        }
-        // TS early return: a single-part split returns the text unchanged
-        // (deduplicateContent returns before its kept/join loop).
-        if (parts.length <= 1) {
-            return text;
-        }
-        return result.indices.map((i) => parts[i]!.sentence + parts[i]!.delimiter).join('');
-    } catch (error: unknown) {
-        const message = errorMessage(error);
-        console.warn('Sentence-dedup WASM call failed, falling back to TS for this input:', message);
-        addLog(LogType.WARN, 'Sentence-dedup WASM call failed, falling back to TS for this input', {
-            error: message,
-        });
-        return deduplicateContent(text, options);
-    }
+    return withWasmFallback(
+        'Sentence-dedup WASM call failed, falling back to TS for this input',
+        async () => {
+            const result = await deduplicateIndicesWithWasm(text, opts);
+            // Per-core splitter injection: the delimiter-bearing
+            // `splitSentencesKeepDelimiters` split, verified against the
+            // core's own split by the shared remap gate before kept parts
+            // are joined as `sentence + delimiter`.
+            const parts = splitSentencesKeepDelimiters(text);
+            const indices = remapWasmIndices(result, parts, 'sentence-dedup', 'parts');
+            // TS early return: a single-part split returns the text unchanged
+            // (deduplicateContent returns before its kept/join loop).
+            if (parts.length <= 1) {
+                return text;
+            }
+            return indices.map((i) => parts[i]!.sentence + parts[i]!.delimiter).join('');
+        },
+        () => deduplicateContent(text, options)
+    );
 }

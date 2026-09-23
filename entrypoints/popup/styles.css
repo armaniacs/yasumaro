@@ -1,6 +1,7 @@
 /** @import tokens.css */
 @import url("../../src/styles/tokens.css");
 @import url("../../src/styles/wizard.css");
+@import url("../../src/styles/confirmDialog.css");
 
 /**
  * styles.css

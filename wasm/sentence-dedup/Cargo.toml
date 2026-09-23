@@ -10,13 +10,11 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 wasm-bindgen = "0.2"
-# FxHash for the word sets: the default SipHash RandomState re-seeds every
-# per-sentence set and hashes Vec<u16> keys byte-wise, which dominates the
-# O(n^2) Jaccard pair scan. FxHash is deterministic and collision behavior
-# is irrelevant here — only the hasher changes, never the keys, so the
-# computed Jaccard values (and therefore the output) are bit-identical to
-# the TS reference either way.
-rustc-hash = "2"
+# Shared JS string semantics (whitespace, lowercase, bigrams, Jaccard) with
+# the FxHash word-set policy; the dedup parameterization (strip one trailing
+# delimiter, bigrams from the original-case text) is selected at the call
+# site via DEDUP_TOKENIZE.
+js-strings = { path = "../js-strings" }
 
 [profile.release]
 # Compute-heavy crate (O(n^2) Jaccard pair scan over word sets), unlike the

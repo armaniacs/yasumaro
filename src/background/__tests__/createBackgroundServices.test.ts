@@ -161,7 +161,7 @@ describe('createBackgroundServices', () => {
     expect(services).toHaveProperty('manualRecordDeps');
     expect(services).toHaveProperty('saveRecordDeps');
     expect(services).toHaveProperty('messageRouter');
-    expect(services.messageRouter.getHandlerCount()).toBe(19);
+    expect(services.messageRouter.getHandlerCount()).toBe(20); // + REGENERATE_SUMMARY (PBI 2026-09-22-04)
     // dashboardSqliteHandler is internal wiring — reached via the router, not
     // exposed on the composition (PBI 04).
     expect(services).not.toHaveProperty('dashboardSqliteHandler');

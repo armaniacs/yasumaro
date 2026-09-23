@@ -10,7 +10,7 @@ import {
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
-import { resolveModelKey } from '../../utils/aiModelKey.js';
+import { resolveModelKey } from './aiModelKey.js';
 import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
 import { PROVIDER_CATALOG, createProviderStrategy } from './providerCatalog.js';
 import { LogType } from '../../utils/logger/types.js';
@@ -53,6 +53,20 @@ export class RemoteAIService implements AIService {
 
   /** Maximum number of provider slots to process. */
   private static readonly MAX_PROVIDERS = 10;
+
+  /**
+   * Per-slot failure text (PBI 2026-09-22-04 follow-up). Providers stuff
+   * their error into `summary`; a success-but-short summary gets an explicit
+   * marker so "why was this slot skipped" is never ambiguous. Truncated —
+   * this string is rendered in the history entry's error row.
+   */
+  private static describeSlotFailure(result: AISummaryResult, minLength: number): string {
+    if (result.success === false) {
+      const text = (result.error ?? result.summary ?? 'unknown error').trim();
+      return text.substring(0, 300);
+    }
+    return `summary too short (${result.summary.length} < minLength ${minLength})`;
+  }
 
   private resolveProviderSlots(settings: Settings): ProviderSlot[] {
     const slots = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] ?? [];
@@ -132,8 +146,12 @@ export class RemoteAIService implements AIService {
         success: false,
         summary: "Error: AI provider configuration is missing. Please check your settings."
       };
+      const attemptedProviders: string[] = [];
+      const slotFailures: { provider: string; model?: string; error: string }[] = [];
 
-      for (const slot of slots) {
+      for (let index = 0; index < slots.length; index++) {
+        const slot = slots[index]!;
+        attemptedProviders.push(slot.provider);
         const result = await this.processSummarySlot(
           slot,
           settings,
@@ -143,12 +161,31 @@ export class RemoteAIService implements AIService {
           url,
         );
         if (result.success && result.summary.length >= minLength) {
-          return result;
+          // A later slot recovered — keep the earlier failures for diagnostics.
+          return slotFailures.length > 0 ? { ...result, slotFailures } : result;
         }
+        // PBI 2026-09-22-04 follow-up: the fallback chain is only debuggable
+        // if EACH failed slot says who failed and why — the previous loop kept
+        // only the last error, so every multi-provider failure looked like one
+        // provider's message. Capture + log per-slot detail, then continue.
+        const error = RemoteAIService.describeSlotFailure(result, minLength);
+        slotFailures.push({
+          provider: slot.provider,
+          ...(slot.model ? { model: slot.model } : {}),
+          error,
+        });
+        addLog(LogType.WARN, 'AI provider slot failed, trying next provider', {
+          provider: slot.provider,
+          ...(slot.model ? { model: slot.model } : {}),
+          index,
+          total: slots.length,
+          error,
+          traceId: options?.traceId ?? '',
+        });
         lastResult = result;
       }
 
-      return lastResult;
+      return { ...lastResult, attemptedProviders, slotFailures };
     })();
 
     if (dedupeKey) {

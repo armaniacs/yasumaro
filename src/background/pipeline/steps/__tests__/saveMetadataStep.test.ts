@@ -344,3 +344,50 @@ describe('saveMetadataStep', () => {
     });
   });
 });
+
+// --- PBI 2026-09-22-04 review fix: empty-tags regenerate clears the mirror ---
+describe('saveMetadataStep — regenerate with zero tags', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('emits an explicit empty tags patch and replaces (mergeTags=false)', async () => {
+    const context = makeContext({
+      data: {
+        title: 'Test Page',
+        url: 'https://example.com/page',
+        content: 'Page content here',
+        targetEntryId: 7,
+      },
+      privacyResult: {
+        summary: 'AI summary',
+        maskedCount: 2,
+        tags: [],
+      } as never,
+    });
+    await saveMetadataStep(context);
+
+    const saveMock = savedUrlStore.saveSavedUrlEntryMetadata as unknown as Mock;
+    expect(saveMock).toHaveBeenCalledTimes(1);
+    const [, patch, options] = saveMock.mock.calls[0] as unknown as [
+      string,
+      Record<string, unknown>,
+      { mergeTags: boolean },
+    ];
+    expect(patch.tags).toEqual([]);
+    expect(options.mergeTags).toBe(false);
+  });
+
+  it('normal records keep the accumulate merge (no targetEntryId)', async () => {
+    const context = makeContext();
+    await saveMetadataStep(context);
+
+    const saveMock = savedUrlStore.saveSavedUrlEntryMetadata as unknown as Mock;
+    const [, , options] = saveMock.mock.calls[0] as unknown as [
+      string,
+      Record<string, unknown>,
+      { mergeTags: boolean },
+    ];
+    expect(options.mergeTags).toBe(true);
+  });
+});

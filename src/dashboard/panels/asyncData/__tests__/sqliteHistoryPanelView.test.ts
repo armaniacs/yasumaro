@@ -12,6 +12,9 @@ import {
   SQLITE_HISTORY_IDS,
   isViewMounted,
   render,
+  showDeleteConfirm,
+  hideDeleteConfirm,
+  isDeleteConfirmVisible,
 } from '../sqliteHistoryPanelView.js';
 import type { SqliteHistoryViewCallbacks } from '../sqliteHistoryPanelView.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
@@ -277,7 +280,11 @@ describe('render — single entry with diff/full decided inside', () => {
       onSelectAll: () => undefined,
       onClearSelection: () => undefined,
       onAppend: () => undefined,
+      onDeleteSelected: () => undefined,
+      onDeleteSelectedConfirm: () => undefined,
+      onRegenerateSelected: () => undefined,
       onTagFilterClear: () => undefined,
+      onRegenerate: () => undefined,
       translateError: (error) => error ?? '',
       createCopyButton: () => document.createElement('button'),
       ...overrides,
@@ -368,5 +375,101 @@ describe('render — single entry with diff/full decided inside', () => {
     expect(select?.getAttribute('aria-label')).toBeTruthy();
     const pressed = container.querySelector('.sqlite-entry-star')?.getAttribute('aria-pressed');
     expect(['true', 'false']).toContain(pressed);
+  });
+});
+
+describe('bulk-bar inline delete confirm', () => {
+  function confirmCallbacks(overrides: Partial<SqliteHistoryViewCallbacks> = {}): SqliteHistoryViewCallbacks {
+    return {
+      onDateSelect: () => undefined,
+      onRangeSelect: () => undefined,
+      onClearFilters: () => undefined,
+      onSearchInput: () => undefined,
+      onSortChange: () => undefined,
+      onPageChange: () => undefined,
+      onToggleStar: () => undefined,
+      onDelete: () => undefined,
+      onSelectionChange: () => undefined,
+      onTagFilterClick: () => undefined,
+      onContentToggle: () => undefined,
+      onSelectAll: () => undefined,
+      onClearSelection: () => undefined,
+      onAppend: () => undefined,
+      onDeleteSelected: () => undefined,
+      onDeleteSelectedConfirm: () => undefined,
+      onRegenerateSelected: () => undefined,
+      onTagFilterClear: () => undefined,
+      onRegenerate: () => undefined,
+      translateError: (error) => error ?? '',
+      createCopyButton: () => document.createElement('button'),
+      ...overrides,
+    };
+  }
+
+  function selectedState(): SqliteHistoryState {
+    return makeState({
+      entries: [
+        { ...baseEntry, id: 1, title: 'First', created_at: 1700000000000 },
+        { ...baseEntry, id: 2, title: 'Second', created_at: 1700000001000 },
+      ],
+      total: 2,
+      selectedIds: new Set([1, 2]),
+    });
+  }
+
+  it('renders the confirm UI hidden inside the bulk bar', () => {
+    const container = document.createElement('div');
+    render(container, selectedState(), confirmCallbacks());
+    const confirm = container.querySelector(`#${SQLITE_HISTORY_IDS.deleteConfirm}`);
+    expect(confirm).not.toBeNull();
+    expect(confirm?.classList.contains('hidden')).toBe(true);
+    // The confirm lives in the bulk bar, right after the delete button.
+    const bar = container.querySelector(`#${SQLITE_HISTORY_IDS.bulkBar}`);
+    expect(bar?.contains(confirm)).toBe(true);
+    expect(container.querySelector(`#${SQLITE_HISTORY_IDS.deleteConfirmYes}`)).not.toBeNull();
+    expect(container.querySelector(`#${SQLITE_HISTORY_IDS.deleteConfirmNo}`)).not.toBeNull();
+  });
+
+  it('first click shows the inline confirm, second click executes', () => {
+    const container = document.createElement('div');
+    let requested = 0;
+    let confirmed = 0;
+    render(container, selectedState(), confirmCallbacks({
+      onDeleteSelected: () => { requested += 1; showDeleteConfirm(container); },
+      onDeleteSelectedConfirm: () => { confirmed += 1; },
+    }));
+    (container.querySelector(`#${SQLITE_HISTORY_IDS.deleteSelected}`) as HTMLButtonElement).click();
+    expect(requested).toBe(1);
+    expect(confirmed).toBe(0);
+    expect(isDeleteConfirmVisible(container)).toBe(true);
+    (container.querySelector(`#${SQLITE_HISTORY_IDS.deleteConfirmYes}`) as HTMLButtonElement).click();
+    expect(confirmed).toBe(1);
+  });
+
+  it('cancel hides the confirm without executing', () => {
+    const container = document.createElement('div');
+    let confirmed = 0;
+    render(container, selectedState(), confirmCallbacks({
+      onDeleteSelectedConfirm: () => { confirmed += 1; },
+    }));
+    showDeleteConfirm(container);
+    expect(isDeleteConfirmVisible(container)).toBe(true);
+    (container.querySelector(`#${SQLITE_HISTORY_IDS.deleteConfirmNo}`) as HTMLButtonElement).click();
+    expect(isDeleteConfirmVisible(container)).toBe(false);
+    expect(confirmed).toBe(0);
+  });
+
+  it('a re-render hides a stale confirm', () => {
+    const container = document.createElement('div');
+    const callbacks = confirmCallbacks();
+    render(container, selectedState(), callbacks);
+    showDeleteConfirm(container);
+    expect(isDeleteConfirmVisible(container)).toBe(true);
+    render(container, selectedState(), callbacks); // diff path
+    expect(isDeleteConfirmVisible(container)).toBe(false);
+  });
+
+  it('hideDeleteConfirm is a no-op on an unmounted container', () => {
+    expect(() => hideDeleteConfirm(document.createElement('div'))).not.toThrow();
   });
 });

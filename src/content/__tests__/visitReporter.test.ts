@@ -51,8 +51,7 @@ function makeDeps(overrides: Partial<VisitReporterDeps> = {}): VisitReporterDeps
   const sender = { sendMessageWithRetry: vi.fn(async () => ({ success: true })) };
   return {
     pageState: makePageState(),
-    extractor: () => ({ content: 'hello' }) as never,
-    applyResult: vi.fn(),
+    extractAndCommit: vi.fn(() => ({ content: 'hello' }) as never),
     sender,
     confirmDialog: vi.fn(async () => true),
     getReasonLabel: vi.fn((_k: string, _f: string, fallback: string) => fallback),
@@ -106,6 +105,7 @@ describe('VisitReporter policy matrix', () => {
       type: 'VALID_VISIT',
       payload: expect.objectContaining({ content: 'hello', pageBytes: 100, fallbackTriggered: true }),
     });
+    expect(deps.extractAndCommit).toHaveBeenCalledTimes(1);
     expect(deps.confirmDialog).not.toHaveBeenCalled();
   });
 

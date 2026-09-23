@@ -8,6 +8,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { decideRecordingTrigger } from './pipeline/recordingDecision.js';
 
 // ============================================================================
 // Types
@@ -113,31 +114,21 @@ export class RecordingTriggerManager {
 
   /**
    * Evaluate whether an event should trigger recording.
+   * Verdict は pipeline/recordingDecision.decideRecordingTrigger に委譲
+   * （storage 読みの I/O はここに残す）。
    */
   async shouldRecord(event: RecordingEvent): Promise<boolean> {
     const triggers = await this.loadTriggers();
 
-    switch (event.type) {
-      case 'scroll_idle': {
-        if (!triggers.scrollAndTime) return false;
-        // Read user-configured thresholds from storage, fall back to defaults
-        const settings = await chrome.storage.local.get([StorageKeys.MIN_SCROLL_DEPTH, StorageKeys.MIN_VISIT_DURATION]);
-        const minScrollDepth = (settings[StorageKeys.MIN_SCROLL_DEPTH] as number) ?? 50;
-        const minVisitDuration = (settings[StorageKeys.MIN_VISIT_DURATION] as number) ?? 5;
-        if ((event.scrollPercent ?? 0) < minScrollDepth) return false;
-        if ((event.visitDuration ?? 0) < minVisitDuration * 1000) return false;
-        return true;
-      }
-
-      case 'manual_save':
-        return triggers.manualSave;
-
-      case 'snapshot':
-        return triggers.periodicSnapshot;
-
-      default:
-        return false;
+    if (event.type === 'scroll_idle') {
+      // Read user-configured thresholds from storage, fall back to defaults
+      const settings = await chrome.storage.local.get([StorageKeys.MIN_SCROLL_DEPTH, StorageKeys.MIN_VISIT_DURATION]);
+      const minScrollDepth = (settings[StorageKeys.MIN_SCROLL_DEPTH] as number) ?? 50;
+      const minVisitDuration = (settings[StorageKeys.MIN_VISIT_DURATION] as number) ?? 5;
+      return decideRecordingTrigger(event, triggers, minScrollDepth, minVisitDuration * 1000);
     }
+
+    return decideRecordingTrigger(event, triggers, 50, 5000);
   }
 
   /**

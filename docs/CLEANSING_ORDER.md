@@ -157,6 +157,30 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 - **Content Cleansing**: Dashboard → Content Cleansing タブ
 - **AI Summary Cleansing**: Dashboard → AI Summary Cleansing タブ
 
+### 過剰削減ガード（抽出段）
+
+単一のフォールバックポリシー（`extractPipeline.ts` の `applyFallback`）の上に3つのガードが乗ります。勝者の優先順は **② > ③ > 短文本文** です。
+
+- **① 候補フロアガード（コンテンツ抽出）** — スコア順付け後、take 分割の**前**に、文字数フロア（`ai_summary_cleansing_fallback_min_chars`、デフォルト **100**）を満たす最初の候補を採用します。全候補がフロア未満なら抽出は「候補ゼロ」の本文パスへフォールバックし、エントリには `fallback_reason = candidate_too_small` が記録されます（棄却したトップ候補は `candidate_bytes` に残る — 透明な棄却）。
+- **② コンテンツクレンジング過剰削減ガード** — クレンジング後が削減率（`fallback_ratio`）または文字数フロアを下回ったとき、**クレンジング前の候補テキスト**へ復元し `fallback_reason = content_overcut` を記録します（③の診断も破棄されます — 復元は②前テキストへの巻き戻し）。候補ソースのみ: 本文ソースの復元は生の `textContent` を送ることになるため対象外。
+- **③ AI要約クレンジング過剰削減フォールバック** — 変更なし: pre-AI サイズの0.20倍未満または300バイト未満で pre-AI テキスト（`over_cleansed`）、100文字未満でライブ本文（`short_content`）へ復元。
+- **ホワイトリスト抽出は v1 では意図的にガード対象外** — whitelist アダプタは `applyFallback` より前に return するため、この経路にはどのガードもかかりません。
+- **設定**: Dashboard → AI Summary Cleansing タブ → **過剰削減ガード** セクション — 既定ONのトグル2つ（①候補 / ②コンテンツクレンジング）と共有の文字数フロア。ロールバックはトグルOFF。閾値は既存のフォールバック設定と共有。
+- **診断**: `fallback_reason` カラム（`short_content` | `over_cleansed` | `content_overcut` | `candidate_too_small`）は履歴エントリに「フォールバック理由」行として表示されます。
+- **単位の境界**: `fallbackMinChars`（文字数・ホットパス — エンコードしない）は `fallbackMinBytes`（バイト — ③と診断専用）と分離しています。
+
+### 再生成時のクレンジング緩和
+
+履歴エントリの「AI要約を作り直す」では、1回限りの緩和モードを選べます（設定は保存されません）:
+
+| モード | 適用されるクレンジング |
+|---|---|
+| 現在の設定 | グローバル設定そのまま |
+| やや緩い | ③ AI要約クレンジングを1プリセット段下げ（`aggressive` → `balanced` → `minimal`、`balanced`/`custom`/`minimal` は `minimal` が下限）。② Content Cleansing は変更なし |
+| 最も緩い | ② Content Cleansing と ③ AI要約クレンジングの両方を無効化 |
+
+①候補選択は v1 で緩和 knob を持たず、過剰削減ガード（ホワイトリストフラグ含む）は緩和中も発火します。
+
 ---
 
 ## English
@@ -307,3 +331,27 @@ See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) for wo
 
 - **Content Cleansing**: Dashboard → Content Cleansing tab
 - **AI Summary Cleansing**: Dashboard → AI Summary Cleansing tab
+
+### Over-cut Guards (extraction stage)
+
+Layered on top of the single fallback policy (`applyFallback` in `extractPipeline.ts`), with winner priority **② > ③ > short body**:
+
+- **① candidate floor guard** — after score-ordering, the first candidate at or above the character floor (`ai_summary_cleansing_fallback_min_chars`, default **100**) is adopted *before* the take-slice. If every candidate misses the floor, extraction joins the candidate-zero body path and the entry records `fallback_reason = candidate_too_small` (the rejected top candidate stays measurable in `candidate_bytes` — transparent discard).
+- **② Content Cleansing over-cut guard** — when Content Cleansing leaves the candidate below the reduction ratio (`fallback_ratio`) or the character floor, the **pre-cleansing candidate text** is restored with `fallback_reason = content_overcut` (this also discards the ③ diagnostics — the restore undoes everything after the pre-② text). Candidate sources only: a body-source restore would ship raw `textContent`.
+- **③ AI Summary Cleansing over-reduction fallback** — unchanged: below 0.20 of the pre-AI size or under 300 bytes restores the pre-AI text (`over_cleansed`); under 100 characters restores the live body (`short_content`).
+- **Whitelist extraction is intentionally unguarded (v1)** — whitelist adapters return before `applyFallback`, so none of the guards run on that path.
+- **Settings**: Dashboard → AI Summary Cleansing tab → **Over-cut Guards** section — two default-ON toggles (① candidate / ② Content Cleansing) plus the shared character floor. Rollback = toggle off; limits are shared with the existing fallback thresholds.
+- **Diagnostics**: the `fallback_reason` column (`short_content` | `over_cleansed` | `content_overcut` | `candidate_too_small`) renders as a "Fallback reason" row in history entries.
+- **Unit boundaries**: `fallbackMinChars` (chars, hot path — never encodes) is separate from `fallbackMinBytes` (bytes — ③ and diagnostics only).
+
+### Cleansing Loosening During Regeneration
+
+The history entry's "Regenerate AI summary" action accepts a one-shot loosening mode (never saved to settings):
+
+| Mode | Cleansing applied |
+|---|---|
+| Current settings | Global settings unchanged |
+| Looser | Step ③ AI Summary Cleansing down one preset (`aggressive` → `balanced` → `minimal`; `balanced`/`custom`/`minimal` floor at `minimal`). ② Content Cleansing untouched |
+| Loosest | Disable both ② Content Cleansing and ③ AI Summary Cleansing |
+
+① candidate selection has no loosening knob in v1, and the over-cut guards (including whitelist flags) keep firing during a loosened run.

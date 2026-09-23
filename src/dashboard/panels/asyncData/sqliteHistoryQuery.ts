@@ -92,6 +92,13 @@ export function enrichEntryWithChromeStorage(
     ai_summary_original_bytes: entry.ai_summary_original_bytes ?? storageEntry.aiSummaryOriginalBytes ?? null,
     ai_summary_cleansed_bytes: entry.ai_summary_cleansed_bytes ?? storageEntry.aiSummaryCleansedBytes ?? null,
     fallback_triggered: entry.fallback_triggered ?? (storageEntry.fallbackTriggered ? 1 : 0),
+    // PBI 05: prefer the SQLite column when the projection carried it —
+    // `null` there means "no fallback" and must NOT resurrect a stale legacy
+    // reason (nullish-fallback would). Only fill from legacy when the column
+    // was absent from the projection entirely (undefined).
+    fallback_reason: entry.fallback_reason !== undefined
+      ? entry.fallback_reason
+      : storageEntry.fallbackReason ?? null,
   };
 }
 

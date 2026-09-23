@@ -146,23 +146,19 @@ export default defineConfig({
       // extension CSP blocks `data:` fetches, so the WASM modules failed to
       // initialize in every build (not just Firefox) until this was fixed.
       // See src/wasm/pii-sanitizer/index.ts's module doc for the full story.
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/pii_sanitizer_bg.wasm'),
-        relativeDest: 'wasm/pii_sanitizer_bg.wasm',
-      });
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/textrank_bg.wasm'),
-        relativeDest: 'wasm/textrank_bg.wasm',
-      });
-      files.push({
-        absoluteSrc: resolve(wxt.config.root, 'public/wasm/tag_cooccur_bg.wasm'),
-        relativeDest: 'wasm/tag_cooccur_bg.wasm',
-      });
-      // NOTE: the sentence-dedup binary is intentionally NOT shipped yet —
-      // contentDedupHybrid.ts has no production call site (STAGED). When the
-      // hybrid is wired, re-add the files.push for public/wasm/
-      // sentence_dedup_bg.wasm here AND commit the public copy (build:wasm
-      // regenerates it; see the ci.yml wasm-test gate).
+      // PBI 2026-09-21-18: the shipped set is owned by wasm/crates.json —
+      // only publicShip crates are copied. sentence-dedup stays STAGED via
+      // publicShip=false (data-driven skip, no prose allowlist to maintain).
+      const wasmCrates = JSON.parse(
+        readFileSync(new URL('./wasm/crates.json', import.meta.url), 'utf-8'),
+      ) as { crates: { wasmName: string; publicShip: boolean }[] };
+      for (const crate of wasmCrates.crates) {
+        if (!crate.publicShip) continue;
+        files.push({
+          absoluteSrc: resolve(wxt.config.root, `public/wasm/${crate.wasmName}`),
+          relativeDest: `wasm/${crate.wasmName}`,
+        });
+      }
     },
   },
 
@@ -208,16 +204,19 @@ export default defineConfig({
       //     worker, via src/background/pipeline/piiSanitizeHybrid.ts
       //   - the TextRank extraction core (src/wasm/textrank/) in the
       //     service worker, via src/utils/sentenceExtractorHybrid.ts
-      //   - the sentence dedup core (src/wasm/sentence-dedup/) — STAGED,
-      //     not yet called from production: contentDedupHybrid.ts exists but
-      //     no call site imports it yet, and its binary is not shipped (no
-      //     publicAssets entry, no public/wasm copy). Re-add both when
-      //     wiring the hybrid.
+      //   - the sentence dedup core (src/wasm/sentence-dedup/) — STAGED per
+      //     wasm/crates.json publicShip=false (the manifest-driven
+      //     publicAssets loop above is the authority: not shipped, no
+      //     public/wasm copy; contentDedupHybrid.ts exists but no call site
+      //     imports it yet). Re-ship by flipping publicShip when wiring the
+      //     hybrid — no prose allowlist to maintain here.
       //   - the tag cooccurrence core (src/wasm/tag-cooccur/) in the
       //     dashboard page, via
       //     src/dashboard/panels/asyncData/tagClusterPanel.ts →
       //     src/dashboard/tagCooccurrenceHybrid.ts
       // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur" src/`.
+      // That grep pattern is a verification aid, not a crate enumeration
+      // (PBI 2026-09-21-26: benign, out of scope for the manifest invariant).
       // If all WASM usage is removed, this token can be dropped. Keep
       // minimal otherwise.
       extension_pages: `script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' ${localConnectSrc.join(' ')} ${aiConnectSrc.join(' ')}; style-src 'self'; img-src 'self' chrome-extension: data:; default-src 'none';`,

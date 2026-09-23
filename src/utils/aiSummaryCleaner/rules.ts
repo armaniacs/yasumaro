@@ -60,6 +60,7 @@ export type ThresholdProp =
     | 'aiSummaryCleansingLinkParaThreshold'
     | 'aiSummaryCleansingFallbackRatio'
     | 'aiSummaryCleansingFallbackMinBytes'
+    | 'aiSummaryCleansingFallbackMinChars'
     | 'contentDedupThreshold';
 
 export interface ThresholdRule {
@@ -83,6 +84,10 @@ export const THRESHOLD_RULES: readonly ThresholdRule[] = [
     { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD, prop: 'aiSummaryCleansingLinkParaThreshold', min: 10, max: 200, default: 50 },
     { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO, prop: 'aiSummaryCleansingFallbackRatio', min: 0, max: 1, default: 0.20 },
     { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES, prop: 'aiSummaryCleansingFallbackMinBytes', min: 0, max: 5000, default: 300 },
+    // PBI 05: ①② hot-path absolute floor in CHARS (Ask Q3B — unit-separate from FALLBACK_MIN_BYTES).
+    // min:1 — a floor of 0 would mean "① off / ② ratio-only", which the guard
+    // toggles already express; a zero floor is incoherent with the knob.
+    { storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS, prop: 'aiSummaryCleansingFallbackMinChars', min: 1, max: 2000, default: 100 },
     { storageKey: StorageKeys.CONTENT_DEDUP_THRESHOLD, prop: 'contentDedupThreshold', min: 0, max: 1, default: 0.7 },
 ] as const;
 

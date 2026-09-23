@@ -27,6 +27,39 @@ export interface MaskedItem {
 export type StrippedMaskedItem = Omit<MaskedItem, 'original'>;
 
 /**
+ * GET_CONTENT の wire 応答型。
+ *
+ * 所有は messaging 層。旧所在地 `popup/mainTypes.ts` は後方互換の
+ * type-only 再エクスポートのみを残す（PBI 2026-09-21-11: popup と
+ * messaging の型循環を解消するため本体をこちらへ移動）。
+ */
+export interface ContentResponse {
+  content: string;
+  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none';
+  cleanseStats?: {
+    hardStripRemoved: number;
+    keywordStripRemoved: number;
+    totalRemoved: number;
+  };
+  byteStats?: {
+    pageBytes: number;
+    candidateBytes: number;
+    originalBytes: number;
+    cleansedBytes: number;
+  };
+  aiSummaryCleansedStats?: {
+    aiSummaryOriginalBytes: number;
+    aiSummaryCleansedBytes: number;
+    aiSummaryCleansedElements: number;
+    aiSummaryCleansedReason: AiSummaryCleansedReason;
+    aiSummaryCleansedReasons?: string[];
+  };
+  /** PBI 05: extraction fallback outcome (REGENERATE_SUMMARY forwards it). */
+  fallbackTriggered?: boolean;
+  fallbackReason?: string;
+}
+
+/**
  * MaskedItem 型ガード関数
  * unknown 型から MaskedItem 型かどうかを判定する
  * @param item - 判定対象のアイテム
@@ -69,11 +102,20 @@ export function isMaskedItem(item: unknown): item is MaskedItem {
   return true;
 }
 
+/** PBI 04 の wire 応答。gate 拒否時のみ needsForce=true（強制再生成の提示用）。 */
+export type RegenerateSummaryResponse = RecordingResult & {
+  needsForce?: boolean;
+  /** 試行したプロバイダーID（AI全滅時のみ。PBI 2026-09-22-04 follow-up）。 */
+  providersTried?: string[];
+};
+
 /**
  * 記録処理の結果型
  */
 export interface RecordingResult {
   success: boolean;
+  /** True only when a real AI model produced the summary (PBI 2026-09-22-04 follow-up). */
+  aiSucceeded?: boolean;
   error?: string;
   skipped?: boolean;
   reason?: string;
@@ -89,6 +131,10 @@ export interface RecordingResult {
   aiDuration?: number;
   /** AI要約に使用したプロバイダー識別子 (例: "openai", "gemini") — undefined の場合は不明 */
   aiProvider?: string;
+  /** 試行したプロバイダーID（全滅時のみ。PBI 2026-09-22-04 follow-up） */
+  attemptedProviders?: string[];
+  /** スロット別の失敗詳細（per-provider error trail。同 follow-up） */
+  slotFailures?: Array<{ provider: string; model?: string; error: string }>;
   /** Obsidian保存時間 (ミリ秒) — undefined の場合は Obsidian 未保存 */
   obsidianDuration?: number;
   /** Local Markdown保存時間 (ミリ秒) — undefined の場合はローカル書き出し未実行 */
@@ -105,9 +151,10 @@ export interface RecordingResult {
 }
 
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
-import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
+// protocolVersion stamping lives in MessageTransport.send (Checking Team
+// 2026-09-22: System Architect Medium — single owner for version stamping).
+import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
-import type { ContentResponse } from '../popup/mainTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
@@ -138,8 +185,15 @@ export interface RecordingData {
   aiSummaryCleansedReason?: AiSummaryCleansedReason;
   aiSummaryCleansedReasons?: string[];  // 複数理由の詳細リスト（multiple時）
   fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
+  /** PBI 05: フォールバック発動理由（triggered 時のみ） */
+  fallbackReason?: string;
   cleansedReason?: string;              // コンテンツクレンジング実行理由 (hard/keyword/both/none)
   precomputedMaskedCount?: number;      // 事前計算済みPIIマスク件数（privacy pipeline経由不要時）
+  /** PBI 04: UPDATE-in-place target (regenerate) — save step replaces this row. */
+  targetEntryId?: number;
+  /** PBI 04: policy-owned side-effect skips (regenerate = SQLite only). */
+  skipObsidianAppend?: boolean;
+  skipLocalMarkdownExport?: boolean;
 }
 
 // ============================================================================
@@ -293,6 +347,7 @@ export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
  */
 export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
+  T extends 'REGENERATE_SUMMARY' ? RegenerateSummaryResponse :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
   T extends 'GET_CONTENT' ? ContentResponse :
   T extends 'FETCH_URL' ? { success: true; data: string; contentType: string | null } :
@@ -344,19 +399,16 @@ export async function sendFromContentScript<T extends ExtensionMessage['type']>(
 
 /**
  * Popup/Dashboard から Service Worker へのメッセージ送信 — alias
+ *
+ * PBI-11 SSOT completion (Checking Team 2026-09-22: System Architect
+ * Medium): popup traffic goes through MessageTransport too, so protocol
+ * version stamping, type validation, retry, and error mapping stay
+ * single-owned. The former inline protocolVersion stamp is redundant —
+ * transport.send enriches every message with the same value.
  */
 export async function sendFromPopup<T extends ExtensionMessage['type']>(
   type: T,
   payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
-  const message = payload !== undefined
-    ? { type, payload, protocolVersion: CURRENT_PROTOCOL_VERSION }
-    : { type, protocolVersion: CURRENT_PROTOCOL_VERSION };
-  const response = await chrome.runtime.sendMessage(message as unknown);
-
-  if (isErrorResponse(response)) {
-    throw new Error(response.error);
-  }
-
-  return response as ResponseForType<T>;
+  return sendServiceWorkerMessage(type, payload);
 }

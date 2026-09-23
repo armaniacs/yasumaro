@@ -50,28 +50,28 @@ describe('verifyRequestToken — validation branches', () => {
 describe('buildListParams / buildSearchParams — read projection', () => {
   type ListPayload = Extract<DashboardSqliteRequest, { subtype: 'query' }>;
   type SearchPayload = Extract<DashboardSqliteRequest, { subtype: 'search' }>;
-  it('builds the dashboard-hop list shape with per-surface caps and defaults', () => {
+  it('builds the dashboard-hop list shape with order defaults (limit passes through — planner owns defaults since 2026-09-21-20)', () => {
     const params = buildListParams({ subtype: 'query' } as ListPayload);
     expect(params).toMatchObject({
-      limit: 100,
+      limit: undefined,
       offset: 0,
       orderBy: 'created_at',
       orderDir: 'DESC',
     });
   });
 
-  it('clamps list limits to the plain cap', () => {
+  it('passes raw list limits through untouched (planner clamps)', () => {
     const params = buildListParams({ subtype: 'query', limit: 999999 } as ListPayload);
-    expect(params.limit).toBeLessThanOrEqual(100000);
+    expect(params.limit).toBe(999999);
   });
 
-  it('builds the search shape with the fts cap', () => {
+  it('builds the search shape with text mapping (limit passes through — planner default 50)', () => {
     const { text, limit, offset, options } = buildSearchParams({
       subtype: 'search',
       query: 'hello',
     } as SearchPayload);
     expect(text).toBe('hello');
-    expect(limit).toBe(50);
+    expect(limit).toBeUndefined();
     expect(offset).toBe(0);
     expect(options).toEqual({});
   });

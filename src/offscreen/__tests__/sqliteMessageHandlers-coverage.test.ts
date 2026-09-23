@@ -494,7 +494,10 @@ describe('sqliteMessageHandlers — handleSearch branching', () => {
   it('defaults limit via queryPlanner, omits offset when null', async () => {
     await callHandler('SQLITE_SEARCH', { query: 'x' });
     const arg = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
-    expect(arg.limit).toBe(100);
+    // PBI 2026-09-21-20: the search route default is 50 — planSearch owns
+    // DEFAULT_SEARCH_LIMIT so every search route shares one page-size
+    // default (the listing route stays on DEFAULT_QUERY_LIMIT 100).
+    expect(arg.limit).toBe(50);
     expect(arg).not.toHaveProperty('offset');
   });
 

@@ -12,25 +12,15 @@
  * 検証が無意味化する (lessons-learned)。
  */
 
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, test, expect, vi, beforeAll } from 'vitest';
 import initWasmModule from '../../wasm/tag-cooccur/tagCooccurWasm.js';
 
 vi.mock('../../wasm/tag-cooccur/index.js', async () => {
-    const wasmPath = fileURLToPath(
+    const { createNodeWasmInit } = await import('../../wasm/testing/initWasmForNode.js');
+    const initTagCooccurWasm = createNodeWasmInit(
+        initWasmModule,
         new URL('../../wasm/tag-cooccur/tag_cooccur_bg.wasm', import.meta.url)
     );
-    let initPromise: Promise<void> | null = null;
-
-    async function initTagCooccurWasm(): Promise<void> {
-        if (!initPromise) {
-            initPromise = readFile(wasmPath).then(async (bytes) => {
-                await initWasmModule({ module_or_path: bytes });
-            });
-        }
-        return initPromise;
-    }
 
     const actual = await vi.importActual('../../wasm/tag-cooccur/index.js') as typeof import(
         '../../wasm/tag-cooccur/index.js'

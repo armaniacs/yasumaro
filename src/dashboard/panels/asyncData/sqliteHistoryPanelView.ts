@@ -16,9 +16,14 @@ import {
   classifyMaskingMissing,
   classifyTokensMissing,
   computeCleansingReduction,
+  describeFallbackReasonKey,
   resolveCleansingBytes,
   type DiagnosticMissingReason,
 } from './historyEntryPresentation.js';
+import {
+  REGENERATE_CLEANSE_MODES,
+  type RegenerateCleanseMode,
+} from '../../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 
 const MISSING_REASON_KEYS: Record<DiagnosticMissingReason, string> = {
   'no-ai': 'historyMissingReasonNoAi',
@@ -215,6 +220,12 @@ export function formatDiagnosticMetadataHtml(entry: BrowsingLogEntry): string {
     if (reason) pushReasonRow(parts, 'historyAiSummaryCleansing', reason, 'history-entry-ai-summary-cleansing', ': ');
   }
 
+  // PBI 05: フォールバック発動理由（triggered 時のみ1行追加。未知の理由は非表示）
+  const fallbackReasonKey = describeFallbackReasonKey(entry.fallback_reason);
+  if (fallbackReasonKey) {
+    parts.push(`<div class="history-entry-token-reduction">${t('historyFallbackReason', [])}: ${t(fallbackReasonKey, [])}</div>`);
+  }
+
   // buildCleansingProgressBarHtml never returns '' (PBI 2026-09-18-20):
   // unmeasurable entries keep the bar region with a reason label.
   parts.push(buildCleansingProgressBarHtml(entry));
@@ -258,6 +269,15 @@ export function buildEntryListHtml(
         <a href="${isSecureUrl(entry.url) ? escapeHtml(entry.url) : '#'}" target="_blank" rel="noopener noreferrer" class="sqlite-entry-title">
           ${escapeHtml(entry.title || entry.url)}
         </a>
+        <select class="regenerate-mode-select" data-id="${entry.id}"
+                aria-label="${t('historyRegenerateSummary')}">
+          <option value="current">${t('historyRegenerateModeCurrent')}</option>
+          <option value="looser">${t('historyRegenerateModeLooser')}</option>
+          <option value="loosest">${t('historyRegenerateModeLoosest')}</option>
+        </select>
+        <button type="button" class="sqlite-entry-regenerate" data-action="regenerate"
+                data-id="${entry.id}" title="${t('historyRegenerateSummary')}"
+                aria-label="${t('historyRegenerateSummary')}">↻</button>
         <button type="button" class="sqlite-entry-delete" data-action="delete" title="${t('historyDeleteRecord')}" aria-label="${t('historyDeleteRecordAria')}">✕</button>
       </div>
       <div class="sqlite-entry-meta">
@@ -419,6 +439,13 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       <button type="button" id="${SQLITE_HISTORY_IDS.clearSelection}" class="secondary-btn" data-i18n="historyClearSelection">${t('historyClearSelection')}</button>
       <span id="${SQLITE_HISTORY_IDS.selectionCount}" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(s.selectedIds.size)])}</span>
       <button type="button" id="${SQLITE_HISTORY_IDS.appendObsidian}" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
+      <button type="button" id="${SQLITE_HISTORY_IDS.regenerateSelected}" class="btn-primary" data-i18n="historyRegenerateSelected">${t('historyRegenerateSelected')}</button>
+      <button type="button" id="${SQLITE_HISTORY_IDS.deleteSelected}" class="danger-btn" data-i18n="historyDeleteSelected">${t('historyDeleteSelected')}</button>
+      <span id="${SQLITE_HISTORY_IDS.deleteConfirm}" class="sqlite-delete-confirm hidden" role="group" aria-live="polite">
+        <span class="sqlite-delete-confirm-text">${t('historyDeleteSelectedConfirm', [String(s.selectedIds.size)])}</span>
+        <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmYes}" class="danger-btn" data-i18n="historyDeleteConfirmYes">${t('historyDeleteConfirmYes')}</button>
+        <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmNo}" class="secondary-btn" data-i18n="cancel">${t('cancel')}</button>
+      </span>
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
@@ -458,6 +485,11 @@ export const SQLITE_HISTORY_IDS = {
   clearSelection: 'sqlite-clear-selection',
   selectionCount: 'sqlite-selection-count',
   appendObsidian: 'sqlite-append-obsidian',
+  regenerateSelected: 'sqlite-regenerate-selected',
+  deleteSelected: 'sqlite-delete-selected',
+  deleteConfirm: 'sqlite-delete-confirm',
+  deleteConfirmYes: 'sqlite-delete-confirm-yes',
+  deleteConfirmNo: 'sqlite-delete-confirm-no',
   tagFilterBar: 'sqlite-tag-filter-bar',
   tagFilterClear: 'sqlite-tag-filter-clear',
 } as const;
@@ -478,7 +510,14 @@ export interface SqliteHistoryViewCallbacks {
   onSelectAll: (checked: boolean) => void;
   onClearSelection: () => void;
   onAppend: () => void;
+  /** Bulk actions on the checked rows (delete = inline confirm then purge; regenerate = sequential AI re-runs, current settings). */
+  onDeleteSelected: () => void;
+  /** Second step of the bulk delete: the inline "really delete" button in the bulk bar. */
+  onDeleteSelectedConfirm: () => void;
+  onRegenerateSelected: () => void;
   onTagFilterClear: () => void;
+  /** PBI 04: regenerate AI summary for one entry (force = explicit gate bypass). */
+  onRegenerate: (id: number, mode: RegenerateCleanseMode, force: boolean) => void;
   /** Pure deps owned by the Panel side: error translation + copy-button factory. */
   translateError: (error: string | null) => string;
   createCopyButton: (entry: BrowsingLogEntry) => HTMLButtonElement;
@@ -636,6 +675,31 @@ export function toggleContentArea(root: ParentNode, controlsId: string): void {
   }
 }
 
+/**
+ * Inline two-step delete confirm living inside the bulk bar, next to the
+ * eye line — the shared modal dialog renders at the document end
+ * (bottom-left, easy to miss), so bulk delete confirms here instead.
+ */
+export function showDeleteConfirm(container: HTMLElement): void {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.deleteConfirm);
+  if (!confirm) return;
+  confirm.classList.remove('hidden');
+  confirm.style.display = '';
+  queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmYes)?.focus();
+}
+
+export function hideDeleteConfirm(container: HTMLElement): void {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.deleteConfirm);
+  if (!confirm) return;
+  confirm.classList.add('hidden');
+  confirm.style.display = 'none';
+}
+
+export function isDeleteConfirmVisible(container: HTMLElement): boolean {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.deleteConfirm);
+  return !!confirm && !confirm.classList.contains('hidden');
+}
+
 function updateBulkBar(
   container: HTMLElement,
   selectedIds: Set<number>,
@@ -644,7 +708,10 @@ function updateBulkBar(
   const bar = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.bulkBar);
   const selectAll = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.selectAll);
   const countEl = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.selectionCount);
+  const confirmText = container.querySelector('.sqlite-delete-confirm-text');
   const appendBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.appendObsidian);
+  const regenerateBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.regenerateSelected);
+  const deleteBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteSelected);
 
   if (bar) {
     // .hidden uses `!important` (dashboard.css), so an inline display
@@ -652,6 +719,10 @@ function updateBulkBar(
     bar.classList.toggle('hidden', selectedIds.size === 0);
     bar.style.display = selectedIds.size > 0 ? '' : 'none';
   }
+
+  // A stale confirm must never survive: selection changes or a fresh
+  // result-reload re-arms the two-step from the delete button.
+  hideDeleteConfirm(container);
 
   if (selectAll) {
     selectAll.checked = entries.length > 0 && selectedIds.size === entries.length;
@@ -661,8 +732,18 @@ function updateBulkBar(
     countEl.textContent = t('historySelectionCount', [String(selectedIds.size)]);
   }
 
+  if (confirmText) {
+    confirmText.textContent = t('historyDeleteSelectedConfirm', [String(selectedIds.size)]);
+  }
+
   if (appendBtn) {
     appendBtn.disabled = selectedIds.size === 0;
+  }
+  if (regenerateBtn) {
+    regenerateBtn.disabled = selectedIds.size === 0;
+  }
+  if (deleteBtn) {
+    deleteBtn.disabled = selectedIds.size === 0;
   }
 }
 
@@ -724,7 +805,7 @@ export function wireEntryList(
   selectedIds: Set<number>,
   activeTagFilter: string | null,
   callbacks: Pick<SqliteHistoryViewCallbacks,
-    'onToggleStar' | 'onDelete' | 'onSelectionChange' | 'onTagFilterClick' | 'onContentToggle' | 'createCopyButton'>,
+    'onToggleStar' | 'onDelete' | 'onSelectionChange' | 'onTagFilterClick' | 'onContentToggle' | 'onRegenerate' | 'createCopyButton'>,
 ): void {
   const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.entryList);
   if (!region) return;
@@ -751,6 +832,21 @@ export function wireEntryList(
   region.querySelectorAll('[data-action="delete"]').forEach((el) => {
     const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
     if (entryId) el.addEventListener('click', () => callbacks.onDelete(entryId));
+  });
+  region.querySelectorAll('[data-action="regenerate"]').forEach((el) => {
+    const entryEl = (el as HTMLElement).closest('.sqlite-entry');
+    const entryId = Number(entryEl?.getAttribute('data-id'));
+    if (!entryId) return;
+    el.addEventListener('click', () => {
+      const select = entryEl?.querySelector('.regenerate-mode-select') as HTMLSelectElement | null;
+      const raw = select?.value ?? 'current';
+      // Single source of truth for the mode vocabulary (same list the
+      // validator checks) — a future fourth mode cannot be dropped here only.
+      const mode: RegenerateCleanseMode = (REGENERATE_CLEANSE_MODES as readonly string[]).includes(raw)
+        ? (raw as RegenerateCleanseMode)
+        : 'current';
+      callbacks.onRegenerate(entryId, mode, false);
+    });
   });
 
   entries.forEach(entry => {
@@ -870,7 +966,7 @@ export function wireCalendarNav(
 export function wirePanelShell(
   container: HTMLElement,
   state: SqliteHistoryState,
-  callbacks: Pick<SqliteHistoryViewCallbacks, 'onSearchInput' | 'onSelectAll' | 'onClearSelection' | 'onAppend'>,
+  callbacks: Pick<SqliteHistoryViewCallbacks, 'onSearchInput' | 'onSelectAll' | 'onClearSelection' | 'onAppend' | 'onDeleteSelected' | 'onDeleteSelectedConfirm' | 'onRegenerateSelected'>,
   options: { focusSearch?: boolean } = {},
 ): void {
   const searchInput = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.searchInput);
@@ -884,6 +980,10 @@ export function wirePanelShell(
   const selectAllCheckbox = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.selectAll);
   const clearSelectionBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.clearSelection);
   const appendBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.appendObsidian);
+  const regenerateBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.regenerateSelected);
+  const deleteBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteSelected);
+  const deleteConfirmYes = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmYes);
+  const deleteConfirmNo = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmNo);
 
   if (selectAllCheckbox) {
     selectAllCheckbox.checked = state.selectedIds.size > 0 && state.selectedIds.size === state.entries.length;
@@ -900,6 +1000,18 @@ export function wirePanelShell(
 
   if (appendBtn) {
     appendBtn.addEventListener('click', () => callbacks.onAppend());
+  }
+  if (regenerateBtn) {
+    regenerateBtn.addEventListener('click', () => callbacks.onRegenerateSelected());
+  }
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => callbacks.onDeleteSelected());
+  }
+  if (deleteConfirmYes) {
+    deleteConfirmYes.addEventListener('click', () => callbacks.onDeleteSelectedConfirm());
+  }
+  if (deleteConfirmNo) {
+    deleteConfirmNo.addEventListener('click', () => hideDeleteConfirm(container));
   }
 }
 
@@ -990,4 +1102,67 @@ function updateDynamicRegions(
   }
 
   updateBulkBar(container, state.selectedIds, state.entries);
+}
+
+// ---------------------------------------------------------------------------
+// Regenerate feedback (PBI 2026-09-22-04) — container-anchored helpers like
+// the rest of the View. The Panel owns the async flow; these only paint
+// busy/error state onto the entry DOM. Messages arrive i18n-mapped from the
+// Panel (raw handler strings are never rendered).
+// ---------------------------------------------------------------------------
+
+/** Toggle busy state on an entry's regenerate controls (no-op when re-rendered away). */
+export function setEntryRegenerateBusy(container: HTMLElement, entryId: number, busy: boolean): void {
+  const entryEl = container.querySelector(`.sqlite-entry[data-id="${entryId}"]`);
+  if (!entryEl) return;
+  entryEl.querySelectorAll<HTMLButtonElement | HTMLSelectElement>('.sqlite-entry-regenerate, .regenerate-mode-select')
+    .forEach((el) => { el.disabled = busy; });
+}
+
+/** Remove a previously shown regenerate error row for this entry. */
+export function clearEntryRegenerateError(container: HTMLElement, entryId: number): void {
+  container
+    .querySelector(`.sqlite-entry[data-id="${entryId}"] .regenerate-error-row`)
+    ?.remove();
+}
+
+/**
+ * Show an in-row regenerate error. When `onForce` is provided the row gets a
+ * 「設定を無視して強制再生成」action button (Ask Q1C: force is opt-in only,
+ * offered solely when the handler answered needsForce).
+ */
+export function showEntryRegenerateError(
+  container: HTMLElement,
+  entryId: number,
+  message: string,
+  opts?: { forceLabel?: string; onForce?: (() => void) | undefined; detail?: string },
+): void {
+  const entryEl = container.querySelector(`.sqlite-entry[data-id="${entryId}"]`);
+  if (!entryEl) return;
+  clearEntryRegenerateError(container, entryId);
+
+  const row = document.createElement('div');
+  row.className = 'record-error-message regenerate-error-row';
+  row.setAttribute('role', 'alert');
+  row.textContent = message;
+
+  // PBI 2026-09-22-04 follow-up: which providers were tried (textContent —
+  // provider ids are internal config strings, never user HTML).
+  if (opts?.detail) {
+    const detail = document.createElement('div');
+    detail.className = 'regenerate-error-detail';
+    detail.textContent = opts.detail;
+    row.append(detail);
+  }
+
+  if (opts?.onForce && opts.forceLabel) {
+    const forceBtn = document.createElement('button');
+    forceBtn.type = 'button';
+    forceBtn.className = 'regenerate-force-btn';
+    forceBtn.textContent = opts.forceLabel;
+    forceBtn.addEventListener('click', opts.onForce);
+    row.append(' ', forceBtn);
+  }
+
+  entryEl.append(row);
 }

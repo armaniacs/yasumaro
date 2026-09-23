@@ -27,11 +27,12 @@ describe('restorableSettings spec table invariants (PBI 13)', () => {
   });
 
   it('keeps every cleansing flag typed as boolean', () => {
-    // The 31 ai_summary_cleansing_* boolean flags from the former
-    // CLEANSING_BOOLEAN_KEYS — count pinned so a new flag cannot skip typing.
+    // 1 ai_summary_cleansing_enabled + 33 CLEANSING_RULES-derived flags +
+    // 1 body_protection_enabled. Derived from the SSOT table since
+    // PBI 2026-09-21-05, so a new rule cannot skip typing.
     const cleansingBooleans = Object.entries(RESTORABLE_KEY_SPECS)
       .filter(([key, spec]) => key.startsWith('ai_summary_cleansing_') && spec.type === 'boolean');
-    expect(cleansingBooleans.length).toBe(31);
+    expect(cleansingBooleans.length).toBe(35);
   });
 
   it('keeps numeric cleansing keys type-less (non-numbers pass through as today)', () => {

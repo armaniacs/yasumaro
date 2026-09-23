@@ -293,6 +293,14 @@ popup の「Cleansing」セクションにある「誤削除を報告」ボタ�
 
 実際のクレンジングで使う全キーワード（50語超、日本語・英語両方のパターン）が入ります。`balance`・`login`・`password`・`mynumber`・`credit-card`・`seed-phrase` などが含まれます。設定画面の表示と実際の動作は常に一致します。詳細は [クレンジングの順番](CLEANSING_ORDER.md) をご覧ください。
 
+**Q52. 記録済みのAI要約が薄すぎる・一文に潰れていたら、作り直せますか？**
+
+できます。`Dashboard → SQLite History` で対象エントリを開き、ヘッダーのクレンジング選択で「やや緩い」または「最も緩い」を選んで「AI要約を作り直す」を押してください。同じ行が上書きされ、新規行は増えません。緩和はその1回のみで設定は保存されません。複数件をまとめて作り直したい場合は、チェックボックスで選択して選択バーの「AI要約を作り直し」を押してください（この一括操作は現在の設定で実行され、緩和3択はありません）。詳細は [AIによる自動要約ガイド](AI_SUMMARY_GUIDE.md) をご覧ください。
+
+**Q53. 複数の履歴をまとめて削除できますか？**
+
+できます。`Dashboard → SQLite History` で各エントリのチェックボックスを複数選択し、選択バーの「選択した記事を削除」を押すと、その場に件数付きの確認（「本当に削除する」／キャンセル）が表示されます。「本当に削除する」で物理削除されます（GDPR Art.17準拠）。途中で失敗した場合はそこで中断し、削除済み件数・残件数・理由をトースト表示します。全件削除は従来どおり設定画面の「すべてのデータを削除」も利用できます。
+
 ---
 
 ## English
@@ -580,3 +588,11 @@ Use the "Report Cleansing Feedback" button in the popup's Cleansing section to r
 **Q51. Which keywords are restored when I reset the cleansing keyword settings?**
 
 The full keyword list used by the actual cleansing logic (50+ words, covering both Japanese and English patterns) — including `balance`, `login`, `password`, `mynumber`, `credit-card`, `seed-phrase`, and more. The settings UI always matches the actual behavior. See [Cleansing Order](CLEANSING_ORDER.md) for details.
+
+**Q52. The recorded AI summary is too thin / collapsed to one sentence. Can I rebuild it?**
+
+Yes. Open the entry in `Dashboard → SQLite History`, select "Looser" or "Loosest" in the header's cleansing selector, and press "Regenerate AI summary". The same row is overwritten (no new row is created). The loosening applies only to that one regeneration and is never saved to settings. To rebuild several records at once, check multiple entries and press "Regenerate AI summaries" in the selection bar (that bulk run uses current settings and has no loosening choices). See the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details.
+
+**Q53. Can I delete several history entries at once?**
+
+Yes. In `Dashboard → SQLite History`, check the boxes on multiple entries and press "Delete selected articles" in the selection bar. An inline confirmation with the count ("Delete now" / Cancel) appears right there in the bar, and "Delete now" physically deletes the entries (GDPR Art.17 compliant). If a delete fails mid-run it stops there and toasts how many were removed, how many remain, and why. For wiping everything at once, "Delete All Data" in settings still works as before.
