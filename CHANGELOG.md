@@ -37,6 +37,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.20] - 2026-09-23
+
+このリリースは v6.9.19 に続く連続リリースです。アーキテクチャ深層化第2ラウンド（archloop-0923b: 診断→RICE→実装の 5 PBI）で録画 path の 5 領域を深いモジュールに畳み込みました。全テスト（13,495 件）がグリーンです。
+
+### Changed
+
+- **互換 shim `tabUtils.isRecordable` を削除**: gate 表駆動化で生産呼び出しが 0 になった shim を確定削除。記録可否の振る舞いは gate-table テストが pin 済みのため網羅性は不変
+- **保存 fan-out を SavePhase の唯一 Seam に統合**: `save(context, deps) → SaveReceipt` を公開し、4-sink fan-out 順序・BEST_EFFORT 継続・retry 投影を所有。手書き retry 配列と `this.*` closure 注入を廃し、全 sink を `StepDeps` から均一解決。sqlite 欠如 skip は明示エラー様式に。保存順序・継続・preview 短絡の語義は不変
+- **gate 寿命を VisitGating の唯一 Seam に統合**: `evaluate(state, now)` で閾値 cache 所有・gate 寿命を一元化。kernel は 533→370 行に縮退し、`IdleScheduler` は `content/scheduler.ts` に分離。pre-init nullable fallback と E2E 状態形状は不変
+- **抽出診断を ExtractionReport 背後に集約**: 公開 interface を `extract(config) → { content, report }` にし、ByteMeter・dual 保持・funnel・recount を Module 背後に移動。hot path のバイト出力は同一
+- **信頼 lookup を TrustLookup の単一 async Seam に統合**: `lookup(url)` と `decideAlert` の 2 関数に集約し、sync 双子は生産呼び出し 0 のため廃止。legacy コンストラクタ分岐は test-only factory に押し出す。senderTrust・TrustPolicy 語義は不変
+
+### Tested
+
+- 単体: `npm run validate` green（13,495 passed / 21 skipped、858 ファイル）。新規テスト: savePhase（12）・visitGating（19）・scheduler・extractionReport（12）・TrustLookup（24）・admissionGateSteps ほか
+- E2E: chromium 242 passed。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
+
 ## [6.9.19] - 2026-09-23
 
 このリリースは v6.9.18 に続く連続リリースです。VulnHunt 監査で確定した 7 件の脆弱性修正（VULN-001/002/003/004/005/007/006）を実装し、アーキテクチャ深層化ラウンド（archloop-0923: 診断→RICE→実装の 5 PBI）で履歴表示・SQLite RPC・設定フォーム・WASM ハイブリッド・記録可否判定の 5 領域を深いモジュールに畳み込みました。全テスト（13,432 件）がグリーンです。
