@@ -511,7 +511,9 @@ describe('recordCurrentPage', () => {
         (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
             domainFilter: { allowed: false },
         });
-        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        // Persistent (not once): the reset path re-reads the tab through the
+        // shared statusStore seam after the timeout (PBI 2026-09-23-14).
+        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValue({
             id: 1,
             url: 'https://blocked.com',
             title: 'Blocked',
