@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] 7 分岐 switch が表駆動 dispatch（約 10 行）に縮退する
-- [ ] 各行に parity test が追加される
-- [ ] 既存の gateway / wire-table テストが無修正で緑
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] 7 分岐 switch が表駆動 dispatch（約 10 行）に縮退する
+- [x] 各行に parity test が追加される
+- [x] 既存の gateway / wire-table テストが無修正で緑
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- maintain 7 行を表に移し、switch を約 10 行の dispatch に縮退。両方向同期 assert＋decode 必須化で query/mutate と同水準のコンパイル強制。各行に parity test を追加。
+- 検証: type-check / 対象 6 ファイル 99 テスト緑（既存は無修正）。
