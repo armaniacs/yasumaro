@@ -27,7 +27,7 @@ addons-linter（AMO アップロード検証と同一チェッカー）とビル
 - **`MISSING_DATA_COLLECTION_PERMISSIONS` 警告**: AMO データ開示ポリシー対応として `browser_specific_settings.gecko.data_collection_permissions: { required: ['none'] }` を追加（PRIVACY.md の「開発者への送信なし・ローカル完結、AI 送信はユーザー設定先のみ」主張と整合）
 - **`strict_min_version: '140.0'`**: `data_collection_permissions` は Firefox 140 導入キーで、128 など低い最小バージョンを宣言すると AMO 検証が「未対応キー」として警告するため 140 に設定。本ビルドが必要とする機能（MV3 event page・declarativeNetRequest・module workers）はすべて 140 未満で利用可能
 - **Firefox for Android は対象外**: Android は MV3 event page background が非対応で本拡張機能は動作しない。AMO 提出時の互換対象は**デスクトップ Firefox のみ**を選択すること（Android 向けの linter 警告 1 件は想定内）
-- **検証結果**: addons-linter errors 0 / notices 0。警告は既存 innerHTML 使用（`UNSAFE_VAR_ASSIGNMENT` 37 件・escapeHtml 前提の既存パターン、提出ブロック要因ではない）のみ。`npm run validate` green（13,201 passed）
+- **検証結果（2026-09-23 2 回目）**: addons-linter **0 errors / 0 warnings / 0 notices**。初回 lint で残った 38 警告を解消 — `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION` は `gecko_android.strict_min_version: '142.0'`（Android は 142 で data_collection_permissions 対応。デスクトップは 140 維持）、`UNSAFE_VAR_ASSIGNMENT` 37 件は動的 innerHTML 代入の排除（新設 `src/utils/htmlFragment.ts` `setElementHtml()` — DOMParser + テーブル文脈 wrap + replaceChildren、script 除去。no-unsanitized ルールは全エスケープ関数を無効化しているため DOM API 化が唯一の解消路）。`npm run validate` green（13,209 passed）
 - **dist/ の古い署名成果物**（`yasumaro-6.7.81.zip`・`yasumaro-public.pem` がプロジェクトルートに残留）は sources zip 除外済み。AMO への旧バージョン（6.7.x 系）申請履歴の有無はユーザー側で要確認
 
 ### 残置（ユーザー作業）

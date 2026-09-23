@@ -51,45 +51,35 @@ export type CleansingOffscreenResponse = CleansingOffscreenSuccess | CleansingOf
 /**
  * html 文字列をパースしてクレンジングを実行し、結果と cleansed HTML を返す。
  *
- * Offscreen Document は document を直接持つが、メッセージ経由の文字列を
- * 扱うため DOMParser で隔離された Document を使う。
- * jsdom / node 環境でも動作するようフォールバックを用意。
+ * メッセージ経由の文字列を扱うため、DOMParser で隔離された Document を
+ * 使う（パース先はスクリプト実行・リソース読み込みが起きない不活性な
+ * Document）。jsdom では global の DOMParser が無いケースがあるため、
+ * document.defaultView からの取得も行う。
  */
 export function cleanseHtmlOffscreen(
     html: string,
     options?: AiSummaryCleanseOptions,
 ): { html: string; result: AiSummaryCleanseResult } {
-    const Parser = (globalThis as unknown as { DOMParser?: typeof DOMParser }).DOMParser;
-    let rootEl: Element;
-    let doc: Document | null = null;
-
-    if (Parser) {
-        const parser = new Parser();
-        doc = parser.parseFromString(html, 'text/html');
-        rootEl = doc.body as unknown as Element;
-    } else if (typeof document !== 'undefined' && (document as unknown as { createElement?: (tag: string) => Element }).createElement) {
-        // DOMParser unavailable: parse in an isolated document so scripts never
-        // execute in the live page context.
-        const isolated = document.implementation.createHTMLDocument('');
-        isolated.body.innerHTML = html;
-        rootEl = isolated.body as unknown as Element;
-        doc = isolated;
-    } else {
+    // DOMParser acquisition: global first, then the live document's view.
+    // Parsed documents are inert (scripts never execute, subresources never
+    // load), so the parse is isolated from the live page in every case.
+    const Parser =
+        (globalThis as unknown as { DOMParser?: typeof DOMParser }).DOMParser ??
+        (typeof document !== 'undefined'
+            ? (document.defaultView as unknown as { DOMParser?: typeof DOMParser } | null)?.DOMParser
+            : undefined);
+    if (!Parser) {
         throw new Error('No DOM available for cleansing');
     }
+    const parser = new Parser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const rootEl = doc.body as unknown as Element;
 
     // rootEl is a throwaway parsed tree; cleanseAISummaryContent mutates it
     // in place so the cleansed HTML can be serialized back below.
     const result = cleanseAISummaryContent(rootEl, options ?? {});
 
-    let cleansedHtml: string;
-    if (doc) {
-        cleansedHtml = (doc.body as unknown as Element).innerHTML;
-    } else {
-        cleansedHtml = (rootEl as HTMLElement).innerHTML;
-    }
-
-    return { html: cleansedHtml, result };
+    return { html: (doc.body as unknown as Element).innerHTML, result };
 }
 
 /**

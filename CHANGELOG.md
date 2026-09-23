@@ -40,7 +40,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
-- **Firefox AMO（addons.mozilla.org）への提出に失敗する問題を修正**: ソース提出用 zip に Rust ビルド成果物（`target/`）やローカルのカバレッジ・キャッシュ・旧成果物が約 600MB 分取り込まれていたため、`wxt.config.ts` の `zip.excludeSources` で除外し 23.6MB に縮小。また AMO のデータ開示ポリシー対応として Firefox マニフェストに `data_collection_permissions`（収集なし）と `strict_min_version: 140.0` を追加。addons-linter（AMO と同一チェッカー）でエラー 0
+- **Firefox AMO（addons.mozilla.org）への提出に失敗する問題を修正**: ソース提出用 zip に Rust ビルド成果物（`target/`）やローカルのカバレッジ・キャッシュ・旧成果物が約 600MB 分取り込まれていたため、`wxt.config.ts` の `zip.excludeSources` で除外し 23.6MB に縮小。また AMO のデータ開示ポリシー対応として Firefox マニフェストに `data_collection_permissions`（収集なし）と `strict_min_version: 140.0`（Android は 142.0）を追加
+- **動的 innerHTML 代入を排除し addons-linter の警告 38 件を 0 に**: AMO のチェッカー（no-unsanitized ルール・全エスケープ関数無効化設定）は動的 innerHTML 代入をすべて警告するため、`createContextualFragment` を使った代替も含め排除。新設の `src/utils/htmlFragment.ts` `setElementHtml()`（DOMParser + テーブル文脈 wrap + `replaceChildren`、パース済み script は除去）で UI 描画 39 箇所を書き換え。クレンジングの DOM パースも DOMParser 単一経路に統一。addons-linter は 0 errors / 0 warnings / 0 notices
 
 ## [6.9.17] - 2026-09-23
 

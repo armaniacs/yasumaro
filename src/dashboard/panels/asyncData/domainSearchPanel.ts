@@ -5,6 +5,7 @@ import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
 import type { Settings } from '../../../utils/storage/types.js';
 import { type PanelLifecycle } from '../types.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import { setElementHtml } from '../../../utils/htmlFragment.js';
 
 export function createDomainSearchPanel(): PanelLifecycle {
   let searchInput: HTMLInputElement | null = null;
@@ -83,10 +84,10 @@ async function runFilterSearch(searchInput: HTMLInputElement | null, matchesEl: 
       row.className = `domain-match-row domain-match-${listType}`;
       const idx = domain.toLowerCase().indexOf(query);
       if (idx >= 0) {
-        row.innerHTML =
+        setElementHtml(row,
           escapeHtml(domain.slice(0, idx)) +
           `<mark class="domain-match-highlight">${escapeHtml(domain.slice(idx, idx + query.length))}</mark>` +
-          escapeHtml(domain.slice(idx + query.length));
+          escapeHtml(domain.slice(idx + query.length)));
       } else {
         row.textContent = domain;
       }
