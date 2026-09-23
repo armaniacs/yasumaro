@@ -64,6 +64,26 @@ export default defineConfig({
   browser: 'chromium',
   manifestVersion: 3,
 
+  // Firefox sources zip (AMO reviewer submission). WXT's default excludes are
+  // only node_modules/tests/dist, so gitignored local artifacts get swept in:
+  // Rust target/ dirs, coverage/, graphify-out/ and leftover root zips/key
+  // pushed the zip to ~600MB / 19k files — past AMO upload limits and
+  // unusable for review. Keep the zip to what a reviewer needs to rebuild
+  // (dotfiles like .env stay excluded by default).
+  zip: {
+    excludeSources: [
+      'wasm/**/target',
+      'wasm/**/target/**',
+      'coverage',
+      'graphify-out',
+      'reports',
+      'video-*/**',
+      '**/video-*/**',
+      'yasumaro-*.zip',
+      'yasumaro-public.pem',
+    ],
+  },
+
   // Chrome MV3 extension pages report modulepreload <link> tags as
   // "cross-world extension resource mismatch" warnings in the errors
   // console. The scripts still load fine via the entry's own <script
@@ -175,8 +195,29 @@ export default defineConfig({
       '128': 'icons/icon128.png',
     },
     // Firefox: gecko id + drop the Chromium-only permissions.
+    // strict_min_version 140: data_collection_permissions (AMO data-disclosure
+    // policy) landed in Firefox 140 — declaring it with a lower minimum makes
+    // AMO validation flag the key as unsupported. All features this build
+    // needs (MV3 event page background, declarativeNetRequest, module
+    // workers) are available well before 140.
+    // gecko_android 142: Android gained data_collection_permissions in 142.
+    // The extension does not run on Android anyway (MV3 event page background
+    // is unsupported there), so the pin only exists to keep AMO validation
+    // clean; store submissions must select desktop Firefox only.
+    // data_collection_permissions: all user data stays on-device; AI provider
+    // calls go to user-configured endpoints, never to the developer
+    // (public/PRIVACY.md).
     ...(env.browser === 'firefox'
-      ? { browser_specific_settings: { gecko: { id: GECKO_ADDON_ID } } }
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: GECKO_ADDON_ID,
+              strict_min_version: '140.0',
+              data_collection_permissions: { required: ['none'] },
+            },
+            gecko_android: { strict_min_version: '142.0' },
+          },
+        }
       : {}),
     permissions: [
       'storage',

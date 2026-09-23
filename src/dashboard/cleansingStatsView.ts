@@ -1,5 +1,6 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
 import { tOrKey as t } from '../utils/i18n.js';
 
 /**
@@ -100,12 +101,12 @@ export function renderStatsSummary(container: HTMLElement, stats: CleansingStats
     { value: `${stats.count}${t('cleansingStatsCountSuffix')}`, label: t('cleansingStatsCount') },
   ];
 
-  container.innerHTML = cards.map(c => `
+  setElementHtml(container, cards.map(c => `
     <div class="stats-card">
       <div class="stats-card-value">${c.value}</div>
       <div class="stats-card-label">${c.label}</div>
     </div>
-  `).join('');
+  `).join(''));
 }
 
 function getFunnelLabels(): string[] {
@@ -306,7 +307,7 @@ export function renderRemovedByReason(
   const table = document.createElement('table');
   table.className = 'removed-by-reason-table';
   const thead = document.createElement('thead');
-  thead.innerHTML = `<tr><th>${t('cleansingRule') || 'ルール'}</th><th>${t('cleansingCount') || '件数'}</th></tr>`;
+  setElementHtml(thead, `<tr><th>${t('cleansingRule') || 'ルール'}</th><th>${t('cleansingCount') || '件数'}</th></tr>`);
   table.appendChild(thead);
   const tbody = document.createElement('tbody');
   for (const [rule, count] of filtered) {

@@ -3,6 +3,7 @@ import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
@@ -594,7 +595,7 @@ export function renderPendingRegion(
     return;
   }
 
-  region.innerHTML = buildPendingRegionInnerHtml(pages);
+  setElementHtml(region, buildPendingRegionInnerHtml(pages));
 
   for (const btn of Array.from(region.querySelectorAll<HTMLButtonElement>('[data-pending-action]'))) {
     const url = btn.dataset.pendingUrl ?? '';
@@ -760,10 +761,10 @@ function updateTagFilterBar(
       bar.id = SQLITE_HISTORY_IDS.tagFilterBar;
       bar.className = 'sqlite-tag-filter-bar';
       bar.setAttribute('role', 'status');
-      bar.innerHTML = `
+      setElementHtml(bar, `
         <span data-i18n="tagFilterLabel">フィルター:</span>
          <span class="tag-filter-badge">#${escapeHtml(activeTagFilter || pendingTagFallback?.tag || '')}</span>
-        <button type="button" id="${SQLITE_HISTORY_IDS.tagFilterClear}" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">✕</button>`;
+        <button type="button" id="${SQLITE_HISTORY_IDS.tagFilterClear}" class="tag-filter-clear" aria-label="${t('clearTagFilter') || 'Clear tag filter'}">✕</button>`);
       containerEl.appendChild(bar);
       const clearBtn = queryById<HTMLButtonElement>(bar, SQLITE_HISTORY_IDS.tagFilterClear);
       if (clearBtn) {
@@ -809,7 +810,7 @@ export function wireEntryList(
 ): void {
   const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.entryList);
   if (!region) return;
-  region.innerHTML = buildEntryListHtml(entries, selectedIds, activeTagFilter);
+  setElementHtml(region, buildEntryListHtml(entries, selectedIds, activeTagFilter));
 
   if (entries.length === 0) return;
 
@@ -883,7 +884,7 @@ export function wirePagination(
 ): void {
   const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.pagination);
   if (!region) return;
-  region.innerHTML = buildPaginationHtml(currentPage, total, pageSize);
+  setElementHtml(region, buildPaginationHtml(currentPage, total, pageSize));
   if (!region.innerHTML) return;
 
   region.querySelector('[data-page="prev"]')?.addEventListener('click', () => callbacks.onPageChange(currentPage - 1));
@@ -900,7 +901,7 @@ export function wireSortControl(
 ): void {
   const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.sortControl);
   if (!region) return;
-  region.innerHTML = buildSortControlHtml(sortBy, sortDir, hasActiveSearch);
+  setElementHtml(region, buildSortControlHtml(sortBy, sortDir, hasActiveSearch));
 
   const select = queryById<HTMLSelectElement>(region, SQLITE_HISTORY_IDS.sortSelect);
   select?.addEventListener('change', () => {
@@ -919,7 +920,7 @@ export function wireCalendarNav(
   const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.calendarNav);
   if (!region) return;
   const { html, year, month } = buildCalendarNavHtml(selectedDate, options);
-  region.innerHTML = html;
+  setElementHtml(region, html);
 
   region.querySelectorAll('[data-date]').forEach(el => {
     el.addEventListener('click', () => {
@@ -953,7 +954,7 @@ export function wireCalendarNav(
   const daysEl = queryById<HTMLElement>(region, SQLITE_HISTORY_IDS.calendarDays);
   if (!daysEl) return;
 
-  daysEl.innerHTML = buildCalendarDaysHtml(year, month, selectedDate);
+  setElementHtml(daysEl, buildCalendarDaysHtml(year, month, selectedDate));
 
   daysEl.querySelectorAll('.day:not(.empty)').forEach(el => {
     el.addEventListener('click', () => {
@@ -1021,7 +1022,7 @@ function renderFull(
   state: SqliteHistoryState,
   callbacks: SqliteHistoryViewCallbacks,
 ): void {
-  container.innerHTML = buildPanelShellHtml(state, callbacks.translateError);
+  setElementHtml(container, buildPanelShellHtml(state, callbacks.translateError));
 
   if (!state.loading) {
     wireCalendarNav(container, state.selectedDate,
@@ -1091,7 +1092,7 @@ function updateDynamicRegions(
   const listRegion = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.entryList);
   if (listRegion) {
     if (state.loading) {
-      listRegion.innerHTML = `<div class="loading">${t('historyLoading')}</div>`;
+      setElementHtml(listRegion, `<div class="loading">${t('historyLoading')}</div>`);
     } else {
       wireEntryList(container, state.entries, state.selectedIds, state.activeTagFilter, callbacks);
     }

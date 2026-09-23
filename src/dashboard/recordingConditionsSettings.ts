@@ -7,6 +7,7 @@
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 
@@ -67,7 +68,7 @@ async function loadConditionsSettings(repo: SettingsReader = settingsRepository)
 }
 
 function renderSettings(container: HTMLElement): void {
-  container.innerHTML = `
+  setElementHtml(container, `
     <div class="settings-section">
       <h3 class="settings-section-title">${getMessage('recordingSection') || '記録条件'}</h3>
 
@@ -132,7 +133,7 @@ function renderSettings(container: HTMLElement): void {
       <span id="conditions-validation-error" class="validation-error hidden" role="alert"></span>
       <span id="conditions-save-success" class="save-success hidden" aria-live="polite">${getMessage('settingsSaved') || 'Settings saved.'}</span>
     </div>
-  `;
+  `);
 }
 
 function wireEvents(container: HTMLElement): void {

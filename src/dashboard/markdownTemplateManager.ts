@@ -18,6 +18,7 @@ import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils
 import { getMessage } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 
@@ -129,7 +130,7 @@ function renderTemplateList(): void {
   const templates = getTemplates();
   const activeId = getActiveTemplateId();
 
-  listEl.innerHTML = templates.map(t => createTemplateListItem(t, t.id === activeId)).join('');
+  setElementHtml(listEl, templates.map(t => createTemplateListItem(t, t.id === activeId)).join(''));
 
   templates.forEach(template => {
     const activateBtn = document.getElementById(`markdown-template-activate-${template.id}`);
