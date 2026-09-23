@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `evaluate(state, now)` が唯一 Seam になり、3 構築箇所・2 fallback が消える
-- [ ] IdleScheduler が別モジュールに分離される
-- [ ] 既存の content gate テストが無修正で緑（語義不変の証明）
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `evaluate(state, now)` が唯一 Seam になり、3 構築箇所・2 fallback が消える
+- [x] IdleScheduler が別モジュールに分離される
+- [x] 既存の content gate テストが無修正で緑（語義不変の証明）
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- `visitGating.ts` を新設（`evaluate(state, now)` 唯一 Seam・寿命一元化・applySettingsTable）。kernel 533→370 行、IdleScheduler を `scheduler.ts` に分離、deadlineTimer は借用のみ（再構築なし）。pre-init nullable fallback・E2E 形状・scroll 分割は不変（テストで pin）。
+- 検証: type-check / content 29 ファイル 507 テスト緑（既存 15 ファイルは無修正）。

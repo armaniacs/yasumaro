@@ -29,6 +29,10 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `tabUtils.isRecordable` が存在せず、生産 importer が 0 件
-- [ ] 削除されたテスト節の振る舞いが gate-table テストで pin されている
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `tabUtils.isRecordable` が存在せず、生産 importer が 0 件
+- [x] 削除されたテスト節の振る舞いが gate-table テストで pin されている
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- 生産 importer 0 を grep で再確認して削除。gate-table テストが 5 ケースの振る舞いを全カバー（追加不要）。
+- 検証: type-check / popup 39 ファイル 845 テスト緑。

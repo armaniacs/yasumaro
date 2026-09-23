@@ -34,7 +34,11 @@
 
 ## DoD（Definition of Done）
 
-- [ ] `lookup` / `decideAlert` が唯一 Seam になり、2 経路・display リテラル・sync 双子が消える
-- [ ] legacy コンストラクタ分岐が test-only factory に移動する
-- [ ] 既存の trust テストが無修正で緑（語義不変の証明）
-- [ ] `npm run type-check` / `npm run lint` / `npm test` が緑
+- [x] `lookup` / `decideAlert` が唯一 Seam になり、2 経路・display リテラル・sync 双子が消える
+- [x] legacy コンストラクタ分岐が test-only factory に移動する
+- [x] 既存の trust テストが無修正で緑（語義不変の証明）
+- [x] `npm run type-check` / `npm run lint` / `npm test` が緑
+
+## 実装記録（2026-09-23）
+- `TrustLookup.ts` を新設（await-import 規律を維持しつつ TrustDecision→admin+policy→UNVERIFIED の解決順序を所有）。display は TRUST_DISPLAY_TABLE に。sync 双子の生産呼び出しは 0 件のため async のみに畳んだ。SafetyMode→tier 結合は trancoUpdater.ts の正規表に委譲（trustSettings.ts 側の鏡写しは次回対象として記録）。
+- 検証: type-check / trust 系 20 ファイル 320 テスト緑（判定系は無修正）。

@@ -14,16 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-23 arch-delivery-loop 第2ラウンド（archloop-0923b）— ⬜ 未着手 5件 🔧非機能追加 RICE順: 06 → 07 → 08 → 09 → 10
-
-Phase 0 診断（サブエージェント探索・前回ラウンドの 01-05 と VulnHunt 修正と ADR 保護と live 台帳を除外）→ Phase 1 RICE スコアリング。録画 path 深層化ラウンド。依存なし（並行可・実装は直列）。採点の詳細と未採用候補は [2026-09-23-00-backlog-archloop-0923b.md](2026-09-23-00-backlog-archloop-0923b.md)。
-
-- [2026-09-23-06-refactor-remove-tabutils-isrecordable-shim.md](2026-09-23-06-refactor-remove-tabutils-isrecordable-shim.md)（⬜ 未着手 — RICE 15.0・0.1 週・副作用🟢。生産呼び出し 0 の互換 shim `tabUtils.isRecordable` の確定削除。gate-table テストが振る舞いを pin）
-- [2026-09-23-07-refactor-save-phase-module.md](2026-09-23-07-refactor-save-phase-module.md)（⬜ 未着手 — RICE 12.8・0.75 週・副作用🟡。`save(context, deps) → SaveReceipt` を唯一 Seam とし、4-sink fan-out・BEST_EFFORT・retry 投影を所有。保存語義不変）
-- [2026-09-23-08-refactor-visit-gating-module.md](2026-09-23-08-refactor-visit-gating-module.md)（⬜ 未着手 — RICE 10.7・0.75 週・副作用🟡。`evaluate(state, now)` の寿命一元化、IdleScheduler を `content/scheduler.ts` に分離。pre-init fallback・E2E 形状は不変）
-- [2026-09-23-09-refactor-extraction-report-module.md](2026-09-23-09-refactor-extraction-report-module.md)（⬜ 未着手 — RICE 8.0・1.0 週・副作用🟡。`extract(config) → { content, report }` に圧縮、hot path バイト同一。whitelist path も report 統一）
-- [2026-09-23-10-refactor-trust-lookup-module.md](2026-09-23-10-refactor-trust-lookup-module.md)（⬜ 未着手 — RICE 6.0・1.0 週・副作用🟡。`lookup(url)` 単一 async interface、sync 双子の廃止、legacy 分岐の test-only 化。senderTrust・TrustPolicy 語義は不変）
-
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
 VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
@@ -95,6 +85,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-23 arch-delivery-loop 第2ラウンド（archloop-0923b）— ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
+
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.html`、7候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの録画 path 深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（CleansingRuleView・KeyDerivation は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923b.md](2026-09-23-00-backlog-archloop-0923b.md)。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-23-06-refactor-remove-tabutils-isrecordable-shim.md（✅ 完了 — 生産 importer 0 を確認して shim 削除。gate-table テストが 5 ケースを全カバー。7bd047f8・RICE 15.0）
+- 2026-09-23-07-refactor-save-phase-module.md（✅ 完了 — `savePhase.save()` 唯一 Seam、retry 投影は手書き集合と完全一致、closure 注入廃止・sqlite 欠如 skip を明示化。5dbceddc・RICE 12.8）
+- 2026-09-23-08-refactor-visit-gating-module.md（✅ 完了 — `evaluate(state, now)` 寿命一元化、kernel 533→370 行、scheduler 分離。pre-init・E2E 形状・scroll 分割は不変。9fe5a9ae・RICE 10.7）
+- 2026-09-23-09-refactor-extraction-report-module.md（✅ 完了 — `extract(config) → { content, report }`、hot path バイト同一、whitelist path も report 統一。pageContentPipeline の移行は次回対象。8cbcc739・RICE 8.0）
+- 2026-09-23-10-refactor-trust-lookup-module.md（✅ 完了 — `lookup`/`decideAlert` 単一 async Seam、sync 双子は生産呼び出し 0 のため廃止、legacy 分岐は test-only 化。88f45e92・RICE 6.0）
 
 ### 2026-09-23 arch-delivery-loop ラウンド（archloop-0923）— ✅ 5件完了（01-05 アーカイブ済み）RICE順: 01 → 02 → 03 → 04 → 05
 
