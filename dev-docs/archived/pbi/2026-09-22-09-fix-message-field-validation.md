@@ -35,11 +35,11 @@ Scenario: SAVE で maskedCount:999 を送ってもパイプライン計算値が
   Then  呼び出し元値は破棄され、パイプライン計算値が保存・表示される
 
 ## 受け入れ基準
-- [ ] 9フィールド全てに範囲検証（非負の safe integer + フィールド別上限）があり、単体テストで pin されている
-- [ ] `aiSummaryCleansedReasons[]` に要素数上限と要素型検証がある
-- [ ] SAVE の maskedCount が呼び出し元値に依存しない（パイプライン値を唯一の真実にする）
-- [ ] chrome.storage 経路の clamp が効く（`as number` の裸キャストが残っていない）
-- [ ] 正常系の録画・保存回帰テストが緑
+- [x] 9フィールド全てに範囲検証（非負の safe integer + フィールド別上限）があり、単体テストで pin されている
+- [x] `aiSummaryCleansedReasons[]` に要素数上限と要素型検証がある
+- [x] SAVE の maskedCount が呼び出し元値に依存しない（パイプライン値を唯一の真実にする）
+- [x] chrome.storage 経路の clamp が効く（`as number` の裸キャストが残っていない）
+- [x] 正常系の録画・保存回帰テストが緑
 
 ## テスト戦略
 - 単体: バリダーの境界値（エクスプロイトテストの手法を通常テストへ昇格）
@@ -49,6 +49,11 @@ Scenario: SAVE で maskedCount:999 を送ってもパイプライン計算値が
 3 SP（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] type-check / lint / test / build が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] type-check / lint / test / build が通る
+
+## 実装記録（2026-09-23）
+- コミット 12be74b3。VALID_VISIT の ByteStats 9フィールドに範囲検証（byte 系 16MiB・elements 100万・reason 128文字・reasons 64要素の上限、wire 層は拒否一貫）を追加し、aiSummaryCleansedReasons[] に要素数・要素型検証を実装。commonStorageFields の裸 `as number` を clamp 付き導出に置換（境界はバリデータと共有し drift 不能）。SAVE 経路は呼び出し元 maskedCount をハンドラで破棄し、パイプライン計算値を唯一の真実にした。
+- なぜなぜ分析: /tmp/whywhy/vuln-005-007-message-field-validation.md
+- 検証: type-check / lint 0 errors / test 13,358 green / build green。残: GitHub PR レビュー

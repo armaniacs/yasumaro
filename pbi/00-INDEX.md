@@ -14,16 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-22 VulnHunt 監査修正 — ⬜ 未着手 6件 🔧非機能追加 RICE順: 06→07→08→09→10→11
+### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
-VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。
+VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
 
-- [2026-09-22-06-fix-obsidian-host-credential-pairing.md](2026-09-22-06-fix-obsidian-host-credential-pairing.md)（⬜ 未着手 — RICE 48・3 SP・副作用🔴。**最優先**。上書き host × 保存済みキーのペアリング禁止（リモート vault の一致ペアは壊さない）、https にもループバック規則、obsidianClient の `skipCspValidation` 除去、TEST_OBSIDIAN バリデータ行追加・UI/SW バリデータ共有化）
-- [2026-09-22-07-fix-provider-baseurl-authorization.md](2026-09-22-07-fix-provider-baseurl-authorization.md)（⬜ 未着手 — RICE 24・5 SP・副作用🔴。プロバイダ種別ごとの origin 拘束 + Gemini/BuiltInAi ゲート追加 + `addBaseUrlDomain` 非自己認可 + `ALLOWED_URLS` 永続化・fail-closed 化。**fail-closed 前にシード必須**。ローカル loopback プロバイダは例外的許可）
-- [2026-09-22-08-fix-archive-restore-resource-caps.md](2026-09-22-08-fix-archive-restore-resource-caps.md)（⬜ 未着手 — RICE 12・2 SP・副作用🟡。ワーカ側総行数/総バイトシーリング + `ARC_*` エラー、クライアント cap 200MiB を信頼しない再検証）
-- [2026-09-22-09-fix-message-field-validation.md](2026-09-22-09-fix-message-field-validation.md)（⬜ 未着手 — RICE 7.0・3 SP・副作用🟡。ByteStats 9フィールドに範囲検証 + `aiSummaryCleansedReasons[]` 要素数上限 + SAVE `maskedCount` の呼び出し元値廃止（パイプライン値を唯一の真実に）。`commonStorageFields.ts` は 05 と並行変更中、rebase 注意）
-- [2026-09-22-10-fix-rate-limiter-domain-key.md](2026-09-22-10-fix-rate-limiter-domain-key.md)（⬜ 未着手 — RICE 7.0・2 SP・副作用🟡。`getRateLimitKey` を eTLD+1 化（heuristic + 最小マルチラベル TLD リスト・PSL バンドルなし）。localhost はポート込み origin のまま）
-- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（⬜ 未着手 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
+- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
 
 ### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 3件 🔧非機能追加 RICE順: 01 → 02 → 03
 
@@ -90,6 +85,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-23 autonomous-task-closer — VulnHunt 監査修正 — ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
+
+2026-09-22 に採点済みだった VulnHunt 監査修正 6 PBI のうち着手可能な 5 件（06-10）を実装。バッチ1 = 06/08/09/10 の4件をファイル非重複で並列実装 → バッチ2 = 07 を直列実装（06 と 07 が `cspValidator.ts` を共有するため）。11 は監視契約として live 残置。なぜなぜ分析は /tmp/whywhy/（vuln-001〜006）。各バッチ統合後の検証: type-check PASS / lint 0 errors / test 13,358 passed（+149）/ build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-22-06-fix-obsidian-host-credential-pairing.md（✅ 完了 — 上書き host × 保存済みキーのペアリング禁止・host 検証の実質化・skipCspValidation 撤去 + CSP 保存済み origin 認可・TEST_OBSIDIAN バリデータ行・UI ミラー単一実装化。新規リモート host のテスト接続は「保存してからテスト」へ（設計裁定記録済み）。ac23f5d4。RICE 48・順位1）
+- 2026-09-22-07-fix-provider-baseurl-authorization.md（✅ 完了 — origin 認可4層（pinned/既知/確認済み/loopback）・Gemini/BuiltInAi ゲート・addBaseUrlDomain 非自己認可化・ALLOWED_URLS シード+fail-closed・確認ダイアログ（デバイスローカル記録・export/import 除外）。8584718a。RICE 24・順位2）
+- 2026-09-22-08-fix-archive-restore-resource-caps.md（✅ 完了 — ワーカ側シーリング（20万行/200MiB）を検証・復元両経路で適用、ARC_CAP_001/002・ファイルサイズ再計測。31b1b988。RICE 12・順位3）
+- 2026-09-22-09-fix-message-field-validation.md（✅ 完了 — ByteStats 9フィールド範囲検証（wire=拒否・mapper=clamp の2層）・reasons[] 上限・SAVE maskedCount 呼び出し元値破棄。12be74b3。RICE 7.0・順位4）
+- 2026-09-22-10-fix-rate-limiter-domain-key.md（✅ 完了 — eTLD+1 独立モジュール（最小マルチラベル TLD 9件）+ キー eTLD+1 化・localhost/IP はポート込み・固定 origin 前提 pin・副共有窓テスト。a6b37c60。RICE 7.0・順位5）
 
 ### 2026-09-21 promptSanitizer ハードニング（PBI-19 不採用の引き継ぎ） — ✅ 1件完了（24 アーカイブ済み）
 

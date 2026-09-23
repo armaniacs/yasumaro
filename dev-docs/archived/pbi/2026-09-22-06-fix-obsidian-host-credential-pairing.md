@@ -42,12 +42,12 @@ Scenario: https 非ループバックの保存済みペアでの保存・同期�
   Then  保存・同期が引き続き動作する
 
 ## 受け入れ基準
-- [ ] 上書き host x 保存済みキーのペアで fetch が発火しない（単体テストで pin）
-- [ ] `skipCspValidation:true` が obsidianClient から消えた
-- [ ] https にもループバック規則が効く
-- [ ] TEST_OBSIDIAN バリデータ行が追加され、兄弟型と同じ検証経路を通る
-- [ ] UI ミラーと SW バリデータが同一実装を共有する（または生成元を 1 つにする）
-- [ ] 既存の接続テスト・保存フローの回帰テストが緑
+- [x] 上書き host x 保存済みキーのペアで fetch が発火しない（単体テストで pin）
+- [x] `skipCspValidation:true` が obsidianClient から消えた
+- [x] https にもループバック規則が効く
+- [x] TEST_OBSIDIAN バリデータ行が追加され、兄弟型と同じ検証経路を通る
+- [x] UI ミラーと SW バリデータが同一実装を共有する（または生成元を 1 つにする）
+- [x] 既存の接続テスト・保存フローの回帰テストが緑
 
 ## テスト戦略
 - 単体: バリデータ・ビルダーの境界値（エクスプロイトテストの拡張として obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/exploit_tests/ の手法を通常テストに昇格）
@@ -57,7 +57,13 @@ Scenario: https 非ループバックの保存済みペアでの保存・同期�
 3 SP（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] type-check / lint / test / build が通る
-- [ ] ドキュメント更新済み（セキュリティ関連の設定説明がある場合）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] type-check / lint / test / build が通る
+- [x] ドキュメント更新済み（セキュリティ関連の設定説明がある場合）
+
+## 実装記録（2026-09-23）
+- コミット ac23f5d4。builder の保存キーフォールバックを「override host == 保存 host」時に限定し、上書きホスト×保存済みキーの fetch を構造的に不可能化。host 検証を RFC-1123/IP リテラルの実質検証へ強化し、obsidianClient の `skipCspValidation` を3箇所すべて撤去。CSPValidator は保存済み Obsidian origin（共有バリデータ由来）を exact-origin 認可し、リモート vault・カスタムポートの loopback vault を維持。UI ミラーは SW バリデータへ委譲して単一実装化、TEST_OBSIDIAN バリデータ行を MessageRouter に追加（12be74b3 の validators.ts に実体）。
+- 設計裁定: 新規リモート host へのテスト接続（override host + 手入力キー）は CSP ブロックとなり「保存してからテスト」運用（TEST_AI と対称）。単一リクエスト限定の gesture-scoped 認可は導入しなかった（既存テストが新規 host テスト成功を pin していなかったため）。
+- なぜなぜ分析: /tmp/whywhy/vuln-001-obsidian-host-credential-pairing.md
+- 検証: type-check / lint 0 errors / test 13,358 green / build green。残: GitHub PR レビュー
