@@ -22,8 +22,9 @@ import {
 import {
   deriveConditionalCspEntries,
   deriveRequiredDomains,
-  isAllowedProviderBaseUrl,
+  isProviderOriginAuthorized,
   PROVIDER_ALLOWLIST_ROWS,
+  type ProviderAllowlistRow,
 } from './storage/providerAllowlist.js';
 
 class CspError extends Error {
@@ -140,11 +141,16 @@ export class CSPValidator {
     }
 
     // 設定由来の Base URL は「信頼できる定数」ではないため、暗黙に許可リストへ
-    // 入れる前に isAllowedProviderBaseUrl で締め直す（private IP・metadata
-    // endpoint・非 localhost の http を拒否）。汚染設定でも条件付き CSP の
-    // 意味を保つ。挙動は暗黙追加のまま（明示オプトイン化はしない）。
-    const addBaseUrlDomain = (rawUrl: string, isLocal: boolean): void => {
-      if (!isAllowedProviderBaseUrl(rawUrl, isLocal)) return;
+    // 入れる前に origin 認可で締め直す（pinned row domain / ユーザー確認済み
+    // origin / loopback のみ）。設定値そのものを根拠にした自己認可は許さない
+    // — 汚染された provider_base_url が条件付き CSP を寛解させない。
+    const confirmedOrigins = new Set(
+      Object.values(
+        (settings[StorageKeys.CONFIRMED_PROVIDER_ORIGINS] as Record<string, string[]> | undefined) ?? {},
+      ).flat(),
+    );
+    const addBaseUrlDomain = (rawUrl: string, row: ProviderAllowlistRow): void => {
+      if (!isProviderOriginAuthorized(rawUrl, row, confirmedOrigins).authorized) return;
       try {
         const domain = new URL(rawUrl).hostname;
         if (domain) {
@@ -161,7 +167,7 @@ export class CSPValidator {
       if (!entry.baseUrlKey) continue;
       const rawUrl = settings[entry.baseUrlKey] as string | undefined;
       if (rawUrl) {
-        addBaseUrlDomain(rawUrl, entry.isLocal);
+        addBaseUrlDomain(rawUrl, entry);
       }
     }
 

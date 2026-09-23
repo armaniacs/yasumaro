@@ -43,6 +43,8 @@ describe('getSettings key refinement', () => {
       StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID,
       StorageKeys.HISTORY_SORT_PREFERENCE,
       StorageKeys.TRUST_DB,
+      // Device-local security state: absent until the first confirmation.
+      StorageKeys.CONFIRMED_PROVIDER_ORIGINS,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as (typeof StorageKeys)[keyof typeof StorageKeys])) {

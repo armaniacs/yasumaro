@@ -71,10 +71,13 @@ describe('CSPValidator - self-allow hardening (PBI 29-19)', () => {
   });
 
   describe('正当な設定は引き続き許可される (回帰防止)', () => {
-    it('adds a legitimate https custom endpoint', () => {
+    it('adds a legitimate https custom endpoint after explicit confirmation (VULN-002 policy)', () => {
       CSPValidator.initializeFromSettings({
         conditional_csp_providers: [],
         provider_base_url: 'https://custom-openai.example.com/v1',
+        // Without the confirmation record the origin is no longer
+        // self-authorized from settings alone.
+        confirmed_provider_origins: { provider_base_url: ['https://custom-openai.example.com'] },
       });
       expect(CSPValidator.isUrlAllowed('https://custom-openai.example.com/v1/chat/completions')).toBe(true);
     });

@@ -79,6 +79,11 @@ export const StorageKeys = {
     // Dynamic URL validation settings (CSP tightening)
     ALLOWED_URLS: 'allowed_urls',           // 許可されたURLのリスト（配列）
     ALLOWED_URLS_HASH: 'allowed_urls_hash', // URLリストのハッシュ（変更検出用）
+    // Device-local security state: origins the user explicitly confirmed for
+    // user-configurable provider base URLs (per baseUrlKey). Deliberately
+    // absent from DEFAULT_SETTINGS so exports never carry it and imports
+    // cannot smuggle authorizations in (settingsExportImport strips it).
+    CONFIRMED_PROVIDER_ORIGINS: 'confirmed_provider_origins',
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
     ENCRYPTION_SECRET: 'encryption_secret', // マスターパスワード未設定時の自動暗号化鍵導出に使う自動生成シークレット（Base64）。現役で読み書きされる — 新鍵管理スキームへのマイグレーションなしに削除すると、既存の暗号化データ（APIキー等）が復号不能になる
@@ -333,6 +338,8 @@ export interface StorageKeyValues {
     [StorageKeys.SIMPLE_FORMAT_ENABLED]: boolean;
     [StorageKeys.ALLOWED_URLS]: string[];
     [StorageKeys.ALLOWED_URLS_HASH]: string;
+    /** Per-baseUrlKey list of user-confirmed origins. Absent until the first confirmation. */
+    [StorageKeys.CONFIRMED_PROVIDER_ORIGINS]: Record<string, string[]>;
     [StorageKeys.ENCRYPTION_SALT]: string;
     [StorageKeys.ENCRYPTION_SECRET]: string;
     [StorageKeys.HMAC_SECRET]: string;

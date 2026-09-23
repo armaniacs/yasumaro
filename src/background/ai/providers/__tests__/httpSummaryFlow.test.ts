@@ -5,7 +5,7 @@
  */
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-const { fetchWithRetryMock, applyCustomPromptMock, readJsonCappedMock, getAllowedUrlsMock } = vi.hoisted(() => ({
+const { fetchWithRetryMock, applyCustomPromptMock, readJsonCappedMock, buildAllowedUrlsMock } = vi.hoisted(() => ({
   fetchWithRetryMock: vi.fn(),
   applyCustomPromptMock: vi.fn(
     (_settings: unknown, _provider: string, content: string) => ({
@@ -14,7 +14,7 @@ const { fetchWithRetryMock, applyCustomPromptMock, readJsonCappedMock, getAllowe
     }),
   ),
   readJsonCappedMock: vi.fn(),
-  getAllowedUrlsMock: vi.fn(async () => new Set<string>()),
+  buildAllowedUrlsMock: vi.fn((): Set<string> => new Set<string>()),
 }));
 
 vi.mock('../../../../utils/fetch.js', () => ({
@@ -30,7 +30,7 @@ vi.mock('../../../../utils/readBodyCapped.js', () => ({
   readJsonCapped: readJsonCappedMock,
 }));
 vi.mock('../../../../utils/storage/urlWhitelist.js', () => ({
-  getAllowedUrls: getAllowedUrlsMock,
+  buildAllowedUrls: buildAllowedUrlsMock,
 }));
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
   checkHardLimit: vi.fn(async () => ({ blocked: false })),

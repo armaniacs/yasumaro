@@ -12,6 +12,10 @@ import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/t
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { PROVIDER_ALLOWLIST_ROWS, isAllowedProviderBaseUrl, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
+
+/** The only origin Gemini traffic may ever target (fixed-endpoint provider). */
+const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
 
 interface GeminiApiResponse {
     candidates?: Array<{
@@ -45,6 +49,25 @@ export class GeminiProvider extends AIProviderStrategy {
 
     constructor(settings: Settings, contentCharsKey: StorageKey = StorageKeys.GEMINI_CONTENT_CHARS) {
         super(settings);
+        // Same-shape baseUrl gate as the HTTP providers: the pinned origin
+        // must pass the deny-only SSRF layer AND the origin-authorization
+        // policy against the allowlist row. Gemini reads no settings-derived
+        // baseUrl today, so this is a structural invariant — but if a
+        // settings-derived baseUrl is ever wired into this row, the gate is
+        // already in the path that would have let a poisoned setting through.
+        const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === 'gemini');
+        const ssrfOk = (() => {
+            try {
+                validateUrlForAIRequests(GEMINI_PINNED_ORIGIN);
+                return true;
+            } catch {
+                return false;
+            }
+        })();
+        if (!ssrfOk || !isAllowedProviderBaseUrl(GEMINI_PINNED_ORIGIN, false)
+            || !isProviderOriginAuthorized(GEMINI_PINNED_ORIGIN, row, new Set()).authorized) {
+            throw new Error(`Gemini pinned origin failed authorization: ${GEMINI_PINNED_ORIGIN}`);
+        }
         // storage.jsのStorageKeysと対応するキー名を使用（snake_case）。
         // GEMINI_API_KEY は復号済みで string として返るが、型上 EncryptedData も
         // 許容するため、decrypt 済みであることを明示して string に絞る。

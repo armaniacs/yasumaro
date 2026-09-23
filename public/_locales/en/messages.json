@@ -660,6 +660,18 @@
   "confirmProtocolHttp": {
     "message": "Protocol is set to \"http\". Your API key and data will be sent in plaintext. Save anyway?"
   },
+  "providerOriginConfirmTitle": {
+    "message": "Confirm provider endpoints"
+  },
+  "providerOriginConfirmMessage": {
+    "message": "API keys and page content will be sent to these origins. Allow them?"
+  },
+  "providerOriginConfirmAllow": {
+    "message": "Allow"
+  },
+  "providerOriginSaveBlocked": {
+    "message": "Endpoint not allowed — settings were not saved."
+  },
   "errorPort": {
     "message": "Error: Port must be a number between 1 and 65535."
   },

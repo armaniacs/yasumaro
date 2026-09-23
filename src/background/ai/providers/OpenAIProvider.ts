@@ -10,11 +10,18 @@ import { addLog } from '../../../utils/logger/core.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
+import { PROVIDER_ALLOWLIST_ROWS, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string } }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
+/** Confirmed origins for one baseUrl slot, read from the settings blob. */
+function collectConfirmed(baseUrlKey: string, settings: Record<string, unknown>): Set<string> {
+    const all = settings[StorageKeys.CONFIRMED_PROVIDER_ORIGINS] as Record<string, string[]> | undefined;
+    return new Set(all?.[baseUrlKey] ?? []);
 }
 
 export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
@@ -92,6 +99,26 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 if (!isAllowedProviderBaseUrl(this.baseUrl, this.isLocal)) {
                     throw new Error(`Base URL not allowed for ${providerName}: ${this.baseUrl}`);
                 }
+                // Origin authorization on top of the deny-only SSRF layer: a
+                // baseUrl must be a pinned row domain, a user-confirmed
+                // origin, or a loopback. A poisoned setting can no longer
+                // point the provider credential at an arbitrary origin.
+                const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === providerName);
+                if (row && row.baseUrlKey) {
+                    const confirmed = isProviderOriginAuthorized(
+                        this.baseUrl,
+                        row,
+                        collectConfirmed(row.baseUrlKey, s),
+                    );
+                    if (!confirmed.authorized) {
+                        throw new Error(
+                            `Base URL not authorized for ${providerName}: ${this.baseUrl} (${confirmed.reason})`,
+                        );
+                    }
+                }
+                // No allowlist row (direct construction with an unknown id):
+                // the factory rejects unknown ids first, so this branch stays
+                // on the deny-only SSRF gate alone.
             } catch (error: unknown) {
                 addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage(error)}`);
                 throw new Error(`Invalid baseUrl: ${errorMessage(error)}`);

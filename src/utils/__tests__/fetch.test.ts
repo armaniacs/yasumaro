@@ -289,9 +289,9 @@ describe('isUrlAllowed', () => {
     expect(isUrlAllowed('https://example.org', allowedUrls)).toBe(false);
   });
 
-  test('skips validation when no allowed URL list exists', () => {
-    expect(isUrlAllowed('https://example.com', null)).toBe(true);
-    expect(isUrlAllowed('https://example.com', new Set())).toBe(true);
+  test('fails closed when no allowed URL list exists (VULN-003)', () => {
+    expect(isUrlAllowed('https://example.com', null)).toBe(false);
+    expect(isUrlAllowed('https://example.com', new Set())).toBe(false);
   });
 
   test('judges with URL normalization applied', () => {
