@@ -37,6 +37,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.22] - 2026-09-24
+
+アーキテクチャ深層化第4ラウンド（archloop-0924: 診断→RICE→実装の 8 PBI）でダッシュボード分析パネル基盤を深いモジュールに畳み込み、分析機能8面板を追加しました。全テスト（13,838 件）がグリーンです。
+
+### Added
+
+- **分析パネル 8 面を追加**（RICE 順）: 曜日×時間帯ヒートマップ・閲覧時間ランキング（共有期間フィルタ部品 `periodFilter` を新設）・ドメイン分析（タグ×期間でドメイン/URL top N）・期間指定タグクラスタ・タグ頻度の期間推移・タグ共起ペア表・ワードクラスタ（Intl.Segmenter キーワード抽出＋既存 tag-cooccur パイプライン再利用）・タグクラスタ時間変化比較（side-by-side＋diff 一覧・FNV-1a 安定配色）。ワードクラスタ・タグクラスタの既定期間は直近7日間
+- **台帳に分析手法の後続候補を記載**: 再訪分析・スター分析・記録量ストリーク・AI 利用統計・プライバシー統計（既存カラムのみで実装可能、トリガー付き）
+
+### Fixed
+
+- **ブランチレビューの指摘 16 件を解消**: visitDuration のマウント時二重フェッチ、時間変化比較のオーバーレイ凍結、ドメイン分析の offset ページングによる二重計上リスク、cap 通知の誤検知（ちょうど上限で部分集計と表示）、リトライ失敗のサイレント空表示、除外件数通知の語義不一致、未使用定数・i18n 孤児キー
+- **E2E を現行仕様に追従**: サイドバータブ検索の厳密一致化（Tag Cluster Compare 追加による strict mode violation 解消）、期間既定変更に伴うタグクラスタ E2E の全期間プリセット選択
+
+### Changed
+
+- **パネルデータ読み込みを `fetchPeriodRows` に集約**: 8 パネルの loadRowsWithRetry（失敗ポリシー 5 種にドリフト）を 1 本化。throw-on-failure 統一・capped 判定（total 突合）の一元化・since/until 省略規約を単一所有。タグクラスタにエラー状態を追加
+- **periodFilter 契約を深化**: 構築中の同期 emit を廃止し `getRange()` を初期値の単一ソースに。filterReady 回避策×3・デッド読み戻し×7 を削除、ラベルキーを注入可能に
+- **PanelNotices を新設**: 空状態/エラー/通知の名前付き管理（empty=error 面の 2 モード統一・fetchScoped・resetForReaggregate）。失敗ポリシーをエラー文言表示に一本化し false-empty / stale-notice バグクラスを構造的に排除
+- **小さな重複を SSOT 化**: フォールバックリテラル（utils/summaryFallback.ts・Layer 0）・navigateToHistoryWithTag・i18n msg ヘルパー・MAX_QUERY_ROWS（QUERY_CAPS.plain と一致を pin）の 4 領域
+- **i18n ゲートを強化**: 実 locale ファイルの parity テストを validate 経路に追加し、サイドバー i18n キー存在 assert を導入。実 drift（historyDeleteSelectedSuccess_one/_other の ja 欠落）を検出・修正
+
+### Tested
+
+- 単体: `npm run validate` green（13,838 passed / 21 skipped、889 ファイル）。新規テスト: fetchPeriodRows・PanelNotices・periodFilter 新契約・localeParity・summaryFallback pin・navigateToHistory ほか
+- E2E: chromium/extension/usability/interaction/a11y green（241 tests）。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
+
 ## [6.9.21] - 2026-09-23
 
 このリリースは v6.9.20 に続く連続リリースです。アーキテクチャ深層化第3ラウンド（archloop-0923c: 診断→RICE→実装の 5 PBI）で通信・録画・UI・設定の残存手配線を刈り込みました。全テスト（13,562 件）がグリーンです。
