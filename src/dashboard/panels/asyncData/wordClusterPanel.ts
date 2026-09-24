@@ -40,6 +40,7 @@ import {
 } from '../../components/periodFilter.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
+import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -193,9 +194,14 @@ export function createWordClusterPanel(): PanelLifecycle {
         // WHY: keyword nodes reuse the tag search navigation — keywords are
         // not stored tags, so the history search may be empty, accepted for
         // v1 (PBI: click-through unified on search navigation).
+        // Keyboard/AT access (WCAG 2.1.1/1.1.1) via the shared helper.
+        const activate = (): void => {
+          navigateToHistoryWithTag(node.tag);
+        };
+        makeGraphNodeAccessible(circle, `${node.tag} (${node.count})`, activate);
         circle.addEventListener('click', () => {
           if (panZoomController?.wasDragSuppressingClick()) return;
-          navigateToHistoryWithTag(node.tag);
+          activate();
         });
 
         const title = document.createElementNS(SVG_NS, 'title');

@@ -3,7 +3,7 @@
  * PRIVACY.md をフェッチしてブラウザ内でレンダリングする
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../utils/i18n-dom.js';
 
 import { escapeHtml } from '../utils/htmlEscape.js';
@@ -187,7 +187,7 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
         const md = await res.text();
         setElementHtml(content, renderMarkdown(md));
     } catch (_e) {
-        setElementHtml(content, `<p class="error">${getMessage('privacyPolicyLoadError') || 'Failed to load the privacy policy.'}</p>`);
+        setElementHtml(content, `<p class="error">${getMessageOr('privacyPolicyLoadError', 'Failed to load the privacy policy.')}</p>`);
     }
 }
 

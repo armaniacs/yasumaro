@@ -13,7 +13,7 @@ import { pickDefined } from '../objectUtils.js';
 import { sendFromPopup } from '../../messaging/types.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
-export const PRIVACY_POLICY_VERSION = '2026-07-31';
+export const PRIVACY_POLICY_VERSION = '2026-09-08';
 
 /** プライバシーポリシー同意状態 */
 export interface PrivacyConsentState {

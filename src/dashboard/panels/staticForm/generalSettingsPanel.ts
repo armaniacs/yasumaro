@@ -4,7 +4,7 @@ import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessageOr } from '../../../utils/i18n.js';
 import {
   loadGeneralSettings,
   handlePurgeNow, handleContentPurgeNow,
@@ -26,6 +26,7 @@ import { collectProviderPrioritySlots } from '../../generalSettings/settingsForm
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../utils/ui/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
+import { PROVIDER_DEFAULT_BASE_URLS } from '../../../utils/storage/providerDefaultBaseUrls.js';
 
 /**
  * Review summary buttons live only on this panel, so their handlers do too.
@@ -298,9 +299,10 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       container.querySelector('#lmStudioPresetBtn')?.addEventListener('click', () => {
         const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement | null;
         const statusDiv = document.getElementById('status') as HTMLElement | null;
-        if (providerBaseUrlInput) providerBaseUrlInput.value = 'http://localhost:1234/v1';
+        const presetUrl = PROVIDER_DEFAULT_BASE_URLS['lm-studio'];
+        if (providerBaseUrlInput) providerBaseUrlInput.value = presetUrl;
         if (statusDiv) {
-          statusDiv.textContent = getMessage('lmStudioPresetApplied') || 'LM Studio preset applied (http://localhost:1234/v1)';
+          statusDiv.textContent = getMessageOr('lmStudioPresetApplied', `LM Studio preset applied (${presetUrl})`);
           statusDiv.className = 'status-success';
           syncStatusToTop();
         }
@@ -309,9 +311,10 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       container.querySelector('#ollamaPresetBtn')?.addEventListener('click', () => {
         const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement | null;
         const statusDiv = document.getElementById('status') as HTMLElement | null;
-        if (providerBaseUrlInput) providerBaseUrlInput.value = 'http://localhost:11434/v1';
+        const presetUrl = PROVIDER_DEFAULT_BASE_URLS['ollama'];
+        if (providerBaseUrlInput) providerBaseUrlInput.value = presetUrl;
         if (statusDiv) {
-          statusDiv.textContent = getMessage('ollamaPresetApplied') || 'Ollama preset applied (http://localhost:11434/v1)';
+          statusDiv.textContent = getMessageOr('ollamaPresetApplied', `Ollama preset applied (${presetUrl})`);
           statusDiv.className = 'status-success';
           syncStatusToTop();
         }

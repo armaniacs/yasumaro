@@ -4,7 +4,7 @@ import { focusTrapManager } from '../ui/focusTrap.js';
 import { ErrorCode } from '../logger/types.js';
 import { logError } from '../logger/api.js';
 import { setElementHtml } from '../htmlFragment.js';
-import { getMessage } from '../i18n.js';
+import { getMessageOr } from '../i18n.js';
 import { applyI18n } from '../i18n-dom.js';
 
 export type WizardType = 'obsidian' | 'sqlite' | 'minimal';
@@ -143,10 +143,10 @@ async function showStep(wizard: HTMLElement, stepName: string): Promise<void> {
   const titleEl = document.getElementById('wizardTitle');
   if (titleEl) {
     const titleMap: Record<string, string> = {
-      type: getMessage('wizardTitle') || 'Welcome to Yasumaro',
-      obsidian: getMessage('wizardObsidianTitle') || 'Connect Obsidian',
-      sqlite: getMessage('wizardSqliteTitle') || 'Set up AI Provider',
-      minimal: getMessage('wizardMinimalTitle') || "You're ready",
+      type: getMessageOr('wizardTitle', 'Welcome to Yasumaro'),
+      obsidian: getMessageOr('wizardObsidianTitle', 'Connect Obsidian'),
+      sqlite: getMessageOr('wizardSqliteTitle', 'Set up AI Provider'),
+      minimal: getMessageOr('wizardMinimalTitle', "You're ready"),
     };
     titleEl.textContent = titleMap[stepName] ?? titleMap['type'] ?? null;
   }

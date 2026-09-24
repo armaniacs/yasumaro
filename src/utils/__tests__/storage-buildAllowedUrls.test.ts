@@ -99,15 +99,32 @@ describe('storage - buildAllowedUrls', () => {
             expect(allowedUrls.has('https://api.groq.com/openai/v1')).toBe(true);
         });
 
-        it('should add whitelist domain for openai2 (Ollama)', () => {
+        it('should skip unconfirmed loopback in a non-local slot (openai2)', () => {
             const settings = {
                 [StorageKeys.OPENAI_2_BASE_URL]: 'http://127.0.0.1:11434/v1'
             };
-            
+
             const allowedUrls = buildAllowedUrls(settings);
-            
-            // localhost is in the whitelist
-            expect(allowedUrls.has('http://127.0.0.1:11434/v1')).toBe(true);
+
+            // Loopback self-authorizes in local-provider slots only — a
+            // non-local slot needs the dashboard origin confirmation first.
+            expect(allowedUrls.has('http://127.0.0.1:11434/v1')).toBe(false);
+        });
+
+        it('should add localhost http in a non-local slot once its origin is confirmed', () => {
+            // The SSRF layer lets http://localhost through for any slot, so
+            // the confirmed-origin check is the gate that must open here.
+            // (Numeric 127.0.0.1 stays hard-denied by the SSRF layer itself.)
+            const settings = {
+                [StorageKeys.OPENAI_2_BASE_URL]: 'http://localhost:11434/v1',
+                [StorageKeys.CONFIRMED_PROVIDER_ORIGINS]: {
+                    [StorageKeys.OPENAI_2_BASE_URL]: ['http://localhost:11434'],
+                },
+            };
+
+            const allowedUrls = buildAllowedUrls(settings);
+
+            expect(allowedUrls.has('http://localhost:11434/v1')).toBe(true);
         });
 
         it('should not add non-whitelisted domains', () => {

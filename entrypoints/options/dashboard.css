@@ -2577,6 +2577,69 @@ details[open] .advanced-details-summary {
   transform: none;
 }
 
+/* Generic button base + variants used with Bootstrap-like `btn` naming
+   (Archive / Gist sections, Privacy danger actions, feedback views).
+   `.btn` alone carries no visual weight; variants mirror `.btn-primary` /
+   `.secondary-btn` metrics so the two naming systems render consistently. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  min-width: 120px;
+}
+
+.btn-secondary {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-code);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: var(--color-danger-hover);
+  box-shadow: 0 4px 8px var(--color-shadow);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Dark mode overrides */
 @media (prefers-color-scheme: dark) {
   .settings-section {
@@ -5078,6 +5141,7 @@ details[open] > .priority-details-summary {
 #tagCompareFirstSvg,
 #tagCompareSecondSvg {
   width: 100%;
+  max-width: 480px;
   height: auto;
   touch-action: none;
   cursor: grab;

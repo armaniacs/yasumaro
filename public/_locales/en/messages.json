@@ -2842,6 +2842,33 @@
   "aiSummaryCleansingSave": {
     "message": "Save"
   },
+  "aiSummaryCleansingPerSiteSection": {
+    "message": "Per-site Overrides"
+  },
+  "aiSummaryCleansingPerSiteDesc": {
+    "message": "Domain exact match. Overrides are merged onto the global config (only differences are stored)."
+  },
+  "aiSummaryCleansingPerSiteDomainLabel": {
+    "message": "Domain"
+  },
+  "aiSummaryCleansingPerSiteDomainHelp": {
+    "message": "Exact match (subdomains are separate). Example: example.com"
+  },
+  "aiSummaryCleansingPerSiteSave": {
+    "message": "Save override"
+  },
+  "aiSummaryCleansingPerSiteDelete": {
+    "message": "Delete override"
+  },
+  "aiSummaryCleansingFeedbackSection": {
+    "message": "Cleansing Feedback"
+  },
+  "aiSummaryCleansingFeedbackDesc": {
+    "message": "List of false-removal reports. Developers use them to improve patterns."
+  },
+  "domainTagRemoveAriaLabel": {
+    "message": "Remove {domain}"
+  },
   "cspTab": {
     "message": "CSP"
   },

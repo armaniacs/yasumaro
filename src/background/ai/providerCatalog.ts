@@ -13,6 +13,7 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import type { ProviderId, StorageKey } from '../../utils/storage/types.js';
 import type { Settings } from '../../utils/storage/types.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../utils/storage/providerAllowlist.js';
+import { PROVIDER_DEFAULT_BASE_URLS } from '../../utils/storage/providerDefaultBaseUrls.js';
 import type { AIProviderStrategy } from './providers/index.js';
 import { GeminiProvider, BuiltInAiProvider } from './providers/index.js';
 import { GenericOpenAICompatibleProvider } from './providers/OpenAIProvider.js';
@@ -164,7 +165,7 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
     {
       ...allowRow('lm-studio'),
       modelKey: StorageKeys.LM_STUDIO_MODEL,
-      defaultBaseUrl: 'http://127.0.0.1:1234/v1',
+      defaultBaseUrl: PROVIDER_DEFAULT_BASE_URLS['lm-studio'],
       requiresApiKey: false,
       cspDomain: 'http://127.0.0.1:1234',
       labelI18nKey: 'lmStudio',
@@ -178,7 +179,7 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
     {
       ...allowRow('ollama'),
       modelKey: StorageKeys.OLLAMA_MODEL,
-      defaultBaseUrl: 'http://localhost:11434/v1',
+      defaultBaseUrl: PROVIDER_DEFAULT_BASE_URLS['ollama'],
       requiresApiKey: false,
       cspDomain: 'http://localhost:11434',
       labelI18nKey: 'ollama',

@@ -89,12 +89,7 @@ export class RecordingOrchestrator {
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 
-    // Recording-allowance precedence (PBI 2026-09-19-08): earlier steps win.
-    // truncate -> domainFilter -> permission -> trust -> privacyHeaders
-    // (headerDetector-backed) -> duplicate. Any FATAL rejection stops the
-    // pipeline, so the first rejecting gate decides. Reordering changes which
-    // refusal the user sees — keep this order unless the precedence is
-    // deliberately renegotiated.
+    // Recording-allowance precedence: order SSOT is src/utils/recordingGateTable.ts.
     this.preSaveSteps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
       { name: 'domainFilter', errorStrategy: ErrorStrategy.FATAL, execute: checkDomainFilterStep },

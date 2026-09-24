@@ -7,7 +7,7 @@
  * chrome.storage directly.
  */
 
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
@@ -33,33 +33,31 @@ export function renderBuiltInAiStatus(
   statsEl.innerHTML = '';
 
   const statusLabels: Record<BuiltInAIAvailability, string> = {
-    available: getMessage('diagBuiltInAiAvailable') || 'Available',
-    downloadable: getMessage('diagBuiltInAiDownloadable') || 'Model download required',
-    downloading: getMessage('diagBuiltInAiDownloading') || 'Downloading...',
-    unavailable: getMessage('diagBuiltInAiUnavailable') || 'Unavailable',
+    available: getMessageOr('diagBuiltInAiAvailable', 'Available'),
+    downloadable: getMessageOr('diagBuiltInAiDownloadable', 'Model download required'),
+    downloading: getMessageOr('diagBuiltInAiDownloading', 'Downloading...'),
+    unavailable: getMessageOr('diagBuiltInAiUnavailable', 'Unavailable'),
   };
 
   statsEl.appendChild(makeStatRow(
-    getMessage('diagBuiltInAiStatus') || 'Status',
+    getMessageOr('diagBuiltInAiStatus', 'Status'),
     statusLabels[result.status],
     result.status === 'unavailable'
   ));
 
   if (result.status === 'unavailable' && result.diskSpace) {
-    const diskText = getMessage('diagBuiltInAiDiskSpaceGuidance', {
+    const diskText = getMessageWithSubstitutions('diagBuiltInAiDiskSpaceGuidance', {
       requiredGb: formatGigabytes(result.diskSpace.requiredBytes),
       freeGb: formatGigabytes(result.diskSpace.freeBytes),
-    }) || `The on-device model needs about ${formatGigabytes(result.diskSpace.requiredBytes)} of free disk space (currently ${formatGigabytes(result.diskSpace.freeBytes)} free).`;
-    statsEl.appendChild(makeStatRow(getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance', diskText));
+    }, `The on-device model needs about ${formatGigabytes(result.diskSpace.requiredBytes)} of free disk space (currently ${formatGigabytes(result.diskSpace.freeBytes)} free).`);
+    statsEl.appendChild(makeStatRow(getMessageOr('diagBuiltInAiGuidanceLabel', 'Guidance'), diskText));
   } else if (result.status === 'unavailable' && result.guidance) {
-    const guidanceText = getMessage('diagBuiltInAiFlagGuidance', { flagName: result.guidance.flagName, flagUrl: result.guidance.url })
-      || `Enable "${result.guidance.flagName}" at ${result.guidance.url}`;
-    statsEl.appendChild(makeStatRow(getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance', guidanceText));
+    const guidanceText = getMessageWithSubstitutions('diagBuiltInAiFlagGuidance', { flagName: result.guidance.flagName, flagUrl: result.guidance.url }, `Enable "${result.guidance.flagName}" at ${result.guidance.url}`);
+    statsEl.appendChild(makeStatRow(getMessageOr('diagBuiltInAiGuidanceLabel', 'Guidance'), guidanceText));
   } else if (result.status === 'unavailable') {
     statsEl.appendChild(makeStatRow(
-      getMessage('diagBuiltInAiGuidanceLabel') || 'Guidance',
-      getMessage('diagBuiltInAiUnsupportedBrowser') || 'This browser does not support built-in AI.'
-    ));
+      getMessageOr('diagBuiltInAiGuidanceLabel', 'Guidance'),
+      getMessageOr('diagBuiltInAiUnsupportedBrowser', 'This browser does not support built-in AI.')));
   }
 
   if (downloadBtn) {
@@ -89,8 +87,8 @@ const SECTIONS: DiagSection[] = [
     clear: clearChildren,
     render(el, snap) {
       if (!el) return;
-      el.appendChild(makeStatRow(getMessage('diagStorageUsed') || 'Storage Used', `${snap.storage.bytesUsedKb} KB`));
-      el.appendChild(makeStatRow(getMessage('diagSavedUrls') || 'Saved URLs', snap.storage.savedUrls));
+      el.appendChild(makeStatRow(getMessageOr('diagStorageUsed', 'Storage Used'), `${snap.storage.bytesUsedKb} KB`));
+      el.appendChild(makeStatRow(getMessageOr('diagSavedUrls', 'Saved URLs'), snap.storage.savedUrls));
     },
   },
   {
@@ -98,8 +96,8 @@ const SECTIONS: DiagSection[] = [
     clear: clearChildren,
     render(el, snap) {
       if (!el) return;
-      el.appendChild(makeStatRow(getMessage('diagVersion') || 'Version', snap.extInfo.version));
-      el.appendChild(makeStatRow(getMessage('diagExtName') || 'Extension', snap.extInfo.name));
+      el.appendChild(makeStatRow(getMessageOr('diagVersion', 'Version'), snap.extInfo.version));
+      el.appendChild(makeStatRow(getMessageOr('diagExtName', 'Extension'), snap.extInfo.name));
     },
   },
   {
@@ -116,7 +114,7 @@ const SECTIONS: DiagSection[] = [
     selector: '#diagConnectionResult',
     clear: () => undefined,
     render(el) {
-      if (el) el.dataset['placeholder'] = getMessage('diagConnectionPlaceholder') || 'Click "Test Connection" to check the Obsidian API connection.';
+      if (el) el.dataset['placeholder'] = getMessageOr('diagConnectionPlaceholder', 'Click "Test Connection" to check the Obsidian API connection.');
     },
   },
   {
@@ -125,7 +123,7 @@ const SECTIONS: DiagSection[] = [
     // collect()'s retrying status fetch (legacy UX), not just after it.
     clear(el) {
       clearChildren(el);
-      if (el) el.textContent = getMessage('diagSqliteChecking') || 'Checking SQLite status...';
+      if (el) el.textContent = getMessageOr('diagSqliteChecking', 'Checking SQLite status...');
     },
     render: (el, snap) => renderSqliteSection(el, snap),
   },
@@ -136,13 +134,13 @@ const SECTIONS: DiagSection[] = [
       if (!el || !snap.sqlite) return;
       const deficiencies = snap.deficiencies;
       if (deficiencies.length === 0) {
-        el.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.', '✓'));
+        el.appendChild(makeStatRow(getMessageOr('diagDeficiencyNone', 'No deficiencies — all features are enabled.'), '✓'));
         return;
       }
       for (const item of deficiencies) {
         const severityLabel = getSeverityLabel(item.severity);
-        const summaryText = getMessage(item.summaryKey) || item.id;
-        el.appendChild(makeStatRow(`${summaryText} [${severityLabel}]`, getMessage(item.recommendedActionKey) || ''));
+        const summaryText = getMessageOr(item.summaryKey, item.id);
+        el.appendChild(makeStatRow(`${summaryText} [${severityLabel}]`, getMessageOr(item.recommendedActionKey, '')));
       }
     },
   },
@@ -191,19 +189,19 @@ function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot
   if (!el) return;
 
   if (snap.settingsLoadFailed) {
-    el.textContent = getMessage('diagLoadError') || '設定の読み込みに失敗しました。';
+    el.textContent = getMessageOr('diagLoadError', '設定の読み込みに失敗しました。');
     return;
   }
 
-  const configuredLabel = getMessage('configured') || '(configured)';
-  const notSetLabel = getMessage('notSet') || '(not set)';
+  const configuredLabel = getMessageOr('configured', '(configured)');
+  const notSetLabel = getMessageOr('notSet', '(not set)');
   const o = snap.obsidian;
 
-  el.appendChild(makeStatRow(getMessage('diagProtocol') || 'Protocol', o.protocol));
-  el.appendChild(makeStatRow(getMessage('diagPort') || 'Port', o.port));
-  el.appendChild(makeStatRow(getMessage('diagRestUrl') || 'REST API URL', `${o.protocol}://127.0.0.1:${o.port}`));
-  el.appendChild(makeStatRow(getMessage('diagDailyPath') || 'Daily Note Path', o.dailyPath || (getMessage('defaultValue') || '(default)')));
-  el.appendChild(makeStatRow(getMessage('diagApiKey') || 'API Key', o.apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !o.apiKey));
+  el.appendChild(makeStatRow(getMessageOr('diagProtocol', 'Protocol'), o.protocol));
+  el.appendChild(makeStatRow(getMessageOr('diagPort', 'Port'), o.port));
+  el.appendChild(makeStatRow(getMessageOr('diagRestUrl', 'REST API URL'), `${o.protocol}://127.0.0.1:${o.port}`));
+  el.appendChild(makeStatRow(getMessageOr('diagDailyPath', 'Daily Note Path'), o.dailyPath || (getMessageOr('defaultValue', '(default)'))));
+  el.appendChild(makeStatRow(getMessageOr('diagApiKey', 'API Key'), o.apiKey ? `${'•'.repeat(8)} ${configuredLabel}` : notSetLabel, !o.apiKey));
 }
 
 /**
@@ -220,13 +218,13 @@ const KNOWN_DETAIL_PROVIDERS = new Set<string>(
 function renderAiSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el || snap.settingsLoadFailed) return;
 
-  const configuredLabel = getMessage('configured') || '(configured)';
-  const notSetLabel = getMessage('notSet') || '(not set)';
+  const configuredLabel = getMessageOr('configured', '(configured)');
+  const notSetLabel = getMessageOr('notSet', '(not set)');
   const details = snap.aiProviderDetails;
 
   if (details.length > 1) {
     el.appendChild(makeStatRow(
-      getMessage('diagProvider') || 'Provider',
+      getMessageOr('diagProvider', 'Provider'),
       `${details.length} providers (priority order)`
     ));
   }
@@ -274,23 +272,23 @@ function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot):
 
   const st = snap.sqlite;
   if (!st) {
-    el.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check SQLite status.';
+    el.textContent = getMessageOr('diagSqliteCheckFailed', 'Failed to check SQLite status.');
     return;
   }
 
   const initializedText = st.initialized
-    ? (getMessage('diagSqliteAvailable') || 'Available')
-    : (getMessage('diagSqliteUnavailable') || 'Unavailable');
-  el.appendChild(makeStatRow(getMessage('diagSqliteStatus') || 'Status', initializedText));
-  el.appendChild(makeStatRow(getMessage('diagSqlitePath') || 'Path', st.path || '(none)'));
+    ? (getMessageOr('diagSqliteAvailable', 'Available'))
+    : (getMessageOr('diagSqliteUnavailable', 'Unavailable'));
+  el.appendChild(makeStatRow(getMessageOr('diagSqliteStatus', 'Status'), initializedText));
+  el.appendChild(makeStatRow(getMessageOr('diagSqlitePath', 'Path'), st.path || '(none)'));
   const fallbackText = st.fallback
-    ? (getMessage('diagSqliteFallbackYes') || 'Yes (using fallback storage)')
-    : (getMessage('diagSqliteFallbackNo') || 'No (native SQLite)');
-  el.appendChild(makeStatRow(getMessage('diagSqliteFallback') || 'Fallback Mode', fallbackText));
-  el.appendChild(makeStatRow(getMessage('diagSqliteFts5') || 'FTS5 Search', st.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'));
+    ? (getMessageOr('diagSqliteFallbackYes', 'Yes (using fallback storage)'))
+    : (getMessageOr('diagSqliteFallbackNo', 'No (native SQLite)'));
+  el.appendChild(makeStatRow(getMessageOr('diagSqliteFallback', 'Fallback Mode'), fallbackText));
+  el.appendChild(makeStatRow(getMessageOr('diagSqliteFts5', 'FTS5 Search'), st.fts5 ? '✓ Available' : '✗ Not available (LIKE fallback)'));
 
   if (st.compileOptionsSource) {
-    el.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', st.compileOptionsSource));
+    el.appendChild(makeStatRow(getMessageOr('diagCompileOptionsSource', 'Source'), st.compileOptionsSource));
   }
   if (st.initError) {
     el.appendChild(makeStatRow('Init Error', st.initError));
@@ -307,12 +305,12 @@ const FALLBACK_STORAGE_NAME = 'chrome.storage.local';
 
 function getCurrentEngineLabel(snap: DiagnosticsSnapshot): string {
   const st = snap.sqlite;
-  if (!st) return getMessage('diagMigrationEngineUnknown') || 'Unknown';
-  if (st.fallback) return `${getMessage('diagMigrationEngineFallback') || 'Fallback (chrome.storage)'} — ${FALLBACK_STORAGE_NAME}`;
+  if (!st) return getMessageOr('diagMigrationEngineUnknown', 'Unknown');
+  if (st.fallback) return `${getMessageOr('diagMigrationEngineFallback', 'Fallback (chrome.storage)')} — ${FALLBACK_STORAGE_NAME}`;
   const isOpfs = st.compileOptionsSource === 'opfs-worker' || st.path.startsWith('OPFS:');
-  if (isOpfs) return `${getMessage('diagMigrationEngineOpfs') || 'OPFS'} (${getMessage('diagMigrationRecommended') || 'recommended'}) — ${OPFS_DB_FILE}`;
-  if (st.compileOptionsSource === 'idb') return `${getMessage('diagMigrationEngineIdb') || 'IndexedDB'} — ${IDB_DB_NAME}`;
-  return getMessage('diagMigrationEngineUnknown') || 'Unknown';
+  if (isOpfs) return `${getMessageOr('diagMigrationEngineOpfs', 'OPFS')} (${getMessageOr('diagMigrationRecommended', 'recommended')}) — ${OPFS_DB_FILE}`;
+  if (st.compileOptionsSource === 'idb') return `${getMessageOr('diagMigrationEngineIdb', 'IndexedDB')} — ${IDB_DB_NAME}`;
+  return getMessageOr('diagMigrationEngineUnknown', 'Unknown');
 }
 
 /** Hints are keyed so the renderer can map each to its own DOM element without re-deriving conditions. */
@@ -465,32 +463,32 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
   if (!el) return;
 
   if (!snap.sqlite) {
-    el.textContent = getMessage('diagSqliteCheckFailed') || 'Failed to check migration status.';
+    el.textContent = getMessageOr('diagSqliteCheckFailed', 'Failed to check migration status.');
     return;
   }
 
-  el.appendChild(makeStatRow(getMessage('diagMigrationCurrentEngine') || 'Current engine', getCurrentEngineLabel(snap)));
-  el.appendChild(makeStatRow(getMessage('diagMigrationRecordCount') || 'Saved record count', snap.storage.savedUrls));
-  el.appendChild(makeStatRow(getMessage('diagMigrationStorageUsed') || 'Storage used (whole extension)', `${snap.storage.bytesUsedKb} KB`));
+  el.appendChild(makeStatRow(getMessageOr('diagMigrationCurrentEngine', 'Current engine'), getCurrentEngineLabel(snap)));
+  el.appendChild(makeStatRow(getMessageOr('diagMigrationRecordCount', 'Saved record count'), snap.storage.savedUrls));
+  el.appendChild(makeStatRow(getMessageOr('diagMigrationStorageUsed', 'Storage used (whole extension)'), `${snap.storage.bytesUsedKb} KB`));
 
   const status = deriveMigrationStatus(snap.sqlite);
   const { overall, opfs, idb } = status;
 
-  const doneSuffix = getMessage('diagMigrationDoneSuffix') || 'Done';
-  const pendingSuffix = getMessage('diagMigrationPendingSuffix') || 'Pending';
-  const checkingSuffix = getMessage('diagMigrationCheckingSuffix') || 'Checking...';
-  const notApplicableSuffix = getMessage('diagMigrationNotApplicableSuffix') || 'Not applicable (no legacy data)';
+  const doneSuffix = getMessageOr('diagMigrationDoneSuffix', 'Done');
+  const pendingSuffix = getMessageOr('diagMigrationPendingSuffix', 'Pending');
+  const checkingSuffix = getMessageOr('diagMigrationCheckingSuffix', 'Checking...');
+  const notApplicableSuffix = getMessageOr('diagMigrationNotApplicableSuffix', 'Not applicable (no legacy data)');
 
-  const overallLabel = getMessage('diagMigrationOverall') || 'Legacy DB Migration';
+  const overallLabel = getMessageOr('diagMigrationOverall', 'Legacy DB Migration');
   const overallValue = overall.allDone
-    ? (getMessage('diagMigrationCompleted') || 'Completed')
+    ? (getMessageOr('diagMigrationCompleted', 'Completed'))
     : overall.checking
       ? checkingSuffix
-      : (getMessage('diagMigrationNotCompleted') || 'Not completed (includes fresh installs)');
+      : (getMessageOr('diagMigrationNotCompleted', 'Not completed (includes fresh installs)'));
   el.appendChild(makeStatRow(overallLabel, overallValue, overall.warn));
 
-  const opfsLabel = `${getMessage('diagMigrationOpfsPath') || 'OPFS path'} (${LEGACY_OPFS_POOL_DIR}/${LEGACY_OPFS_DB_FILENAME})`;
-  const idbLabel = `${getMessage('diagMigrationIdbPath') || 'IDB path'} (${LEGACY_IDB_NAME})`;
+  const opfsLabel = `${getMessageOr('diagMigrationOpfsPath', 'OPFS path')} (${LEGACY_OPFS_POOL_DIR}/${LEGACY_OPFS_DB_FILENAME})`;
+  const idbLabel = `${getMessageOr('diagMigrationIdbPath', 'IDB path')} (${LEGACY_IDB_NAME})`;
   const suffixByState: Record<MigrationDisplayState, string> = {
     done: doneSuffix,
     notApplicable: notApplicableSuffix,
@@ -505,31 +503,29 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
   // Live existence check of the pre-migration source, not just the done flags —
   // this is what actually answers "where is the old database and is it still there?"
   el.appendChild(makeStatRow(
-    getMessage('diagMigrationOpfsLegacyFound') || 'OPFS legacy DB detected',
+    getMessageOr('diagMigrationOpfsLegacyFound', 'OPFS legacy DB detected'),
     opfs.legacyPath
-      ? `${getMessage('diagMigrationYes') || 'Yes'} — origin-private:/${opfs.legacyPath}`
-      : (getMessage('diagMigrationNo') || 'No (nothing to migrate)')
+      ? `${getMessageOr('diagMigrationYes', 'Yes')} — origin-private:/${opfs.legacyPath}`
+      : (getMessageOr('diagMigrationNo', 'No (nothing to migrate)'))
   ));
   el.appendChild(makeStatRow(
-    getMessage('diagMigrationIdbLegacyFound') || 'IDB legacy DB detected',
+    getMessageOr('diagMigrationIdbLegacyFound', 'IDB legacy DB detected'),
     idb.legacyName
-      ? `${getMessage('diagMigrationYes') || 'Yes'} — indexeddb://${location.origin}/${idb.legacyName}`
-      : (getMessage('diagMigrationNo') || 'No (nothing to migrate)')
+      ? `${getMessageOr('diagMigrationYes', 'Yes')} — indexeddb://${location.origin}/${idb.legacyName}`
+      : (getMessageOr('diagMigrationNo', 'No (nothing to migrate)'))
   ));
 
   if (status.hints.includes('noAbsolutePath')) {
     const noAbsolutePathNote = document.createElement('p');
     noAbsolutePathNote.className = 'help-text';
-    noAbsolutePathNote.textContent = getMessage('diagMigrationNoAbsolutePath')
-      || 'Neither OPFS nor IndexedDB exposes an OS-level absolute file path via any Web API — this is a browser sandbox restriction, not a limitation of this extension.';
+    noAbsolutePathNote.textContent = getMessageOr('diagMigrationNoAbsolutePath', 'Neither OPFS nor IndexedDB exposes an OS-level absolute file path via any Web API — this is a browser sandbox restriction, not a limitation of this extension.');
     el.appendChild(noAbsolutePathNote);
   }
 
   if (status.hints.includes('idbExplanation')) {
     const idbExplanation = document.createElement('p');
     idbExplanation.className = 'help-text';
-    idbExplanation.textContent = getMessage('diagMigrationIdbExplanation')
-      || 'The IndexedDB path is a fallback used when OPFS is unavailable.';
+    idbExplanation.textContent = getMessageOr('diagMigrationIdbExplanation', 'The IndexedDB path is a fallback used when OPFS is unavailable.');
     el.appendChild(idbExplanation);
   }
 
@@ -538,19 +534,19 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
   // attempt ran and how many records it actually migrated.
   if (opfs.lastAttemptedAt) {
     el.appendChild(makeStatRow(
-      getMessage('diagMigrationOpfsLastAttempted') || 'OPFS last attempted',
+      getMessageOr('diagMigrationOpfsLastAttempted', 'OPFS last attempted'),
       opfs.lastAttemptedAt
     ));
   }
   if (opfs.completedAt) {
     el.appendChild(makeStatRow(
-      getMessage('diagMigrationOpfsCompletedAt') || 'OPFS completed at',
+      getMessageOr('diagMigrationOpfsCompletedAt', 'OPFS completed at'),
       opfs.completedAt
     ));
   }
   if (opfs.recordCount != null) {
     el.appendChild(makeStatRow(
-      getMessage('diagMigrationOpfsRecordCount') || 'OPFS records migrated',
+      getMessageOr('diagMigrationOpfsRecordCount', 'OPFS records migrated'),
       String(opfs.recordCount)
     ));
   }
@@ -562,16 +558,14 @@ function renderMigrationSection(el: HTMLElement | null, snap: DiagnosticsSnapsho
   if (status.hints.includes('opfsCheckingStale') && Number(snap.storage.savedUrls) > 0) {
     const staleChecking = document.createElement('p');
     staleChecking.className = 'help-text';
-    staleChecking.textContent = getMessage('diagMigrationCheckingStaleHint')
-      || 'If this stays "Checking..." even though data is already saved, the migration routine inside the OPFS Worker may not be able to write its status flag (chrome.storage.local can be inaccessible from a dedicated Worker context). This does not affect your saved data — reloading the extension may help; otherwise it can be treated as informational.';
+    staleChecking.textContent = getMessageOr('diagMigrationCheckingStaleHint', 'If this stays "Checking..." even though data is already saved, the migration routine inside the OPFS Worker may not be able to write its status flag (chrome.storage.local can be inaccessible from a dedicated Worker context). This does not affect your saved data — reloading the extension may help; otherwise it can be treated as informational.');
     el.appendChild(staleChecking);
   }
 
   if (status.hints.includes('legacyStillPresent')) {
     const note = document.createElement('p');
     note.className = 'help-text';
-    note.textContent = getMessage('diagMigrationLegacyStillPresent')
-      || 'Migration is marked complete, but the legacy database file is still present. It is safe to keep, but it consumes storage — reloading the extension may trigger cleanup.';
+    note.textContent = getMessageOr('diagMigrationLegacyStillPresent', 'Migration is marked complete, but the legacy database file is still present. It is safe to keep, but it consumes storage — reloading the extension may trigger cleanup.');
     el.appendChild(note);
   }
 }
@@ -582,12 +576,12 @@ function renderCompileOptions(el: HTMLElement | null, snap: DiagnosticsSnapshot)
   if (!options || !snap.debugMode) return;
 
   const source = snap.sqlite?.compileOptionsSource || 'unknown';
-  el.appendChild(makeStatRow(getMessage('diagCompileOptionsSource') || 'Source', source));
+  el.appendChild(makeStatRow(getMessageOr('diagCompileOptionsSource', 'Source'), source));
   el.appendChild(makeStatRow('Total', String(options.length)));
 
   const ftsVfsOptions = options.filter(o => o.includes('FTS') || o.includes('VFS'));
   if (ftsVfsOptions.length > 0) {
-    el.appendChild(makeStatRow(getMessage('diagCompileOptionsHighlight') || 'FTS/VFS related', ftsVfsOptions.join(', ')));
+    el.appendChild(makeStatRow(getMessageOr('diagCompileOptionsHighlight', 'FTS/VFS related'), ftsVfsOptions.join(', ')));
   }
 
   const allOptionsDetails = document.createElement('details');

@@ -25,6 +25,12 @@ jobs:
 
       - run: npm ci
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
@@ -52,6 +58,12 @@ jobs:
         with: { node-version: '24', cache: 'npm' }
 
       - run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -125,14 +137,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Type check
-        id: type-check
-        run: npm run type-check
-
-      - name: Run tests
-        id: run-tests
-        run: npm test
-
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
@@ -143,14 +147,14 @@ jobs:
         run: openssl req -x509 -newkey rsa:2048 -keyout testDir/e2e/fixtures/dev-server-key.pem -out testDir/e2e/fixtures/dev-server-cert.pem -days 3650 -nodes -subj "/CN=localhost"
 
       - name: Extension E2E tests
+        id: e2e
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx playwright test --config testDir/playwright.config.ts --grep @extension
 
       - name: Comment PR with results
         if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
-          TYPE_CHECK_OUTCOME: ${{ steps.type-check.outcome }}
-          TESTS_OUTCOME: ${{ steps.run-tests.outcome }}
+          E2E_OUTCOME: ${{ steps.e2e.outcome }}
         with:
           script: |
             const { data: comments } = await github.rest.issues.listComments({
@@ -164,9 +168,8 @@ jobs:
               comment.body.startsWith('### Validation Results')
             );
 
-            const typeCheckOk = process.env.TYPE_CHECK_OUTCOME === 'success';
-            const testsOk = process.env.TESTS_OUTCOME === 'success';
-            const result = typeCheckOk && testsOk ? '✅ All checks passed!' : '❌ Some checks failed.';
+            const e2eOk = process.env.E2E_OUTCOME === 'success';
+            const result = e2eOk ? '✅ All checks passed!' : '❌ Some checks failed.';
 
             const body = [
               '### Validation Results',
@@ -175,8 +178,9 @@ jobs:
               '',
               '| Check | Status |',
               '|-------|--------|',
-              '| Type Check | ' + process.env.TYPE_CHECK_OUTCOME + ' |',
-              '| Tests | ' + process.env.TESTS_OUTCOME + ' |',
+              '| Extension E2E | ' + process.env.E2E_OUTCOME + ' |',
+              '',
+              '(Lint / type-check / unit tests run in the CI workflow; see checks list.)',
               '',
               '[View details in the logs](https://github.com/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId + ')',
             ].join('\n');

@@ -84,8 +84,8 @@ vi.mock('../../messaging/messageTransport.js', () => ({
   messageTransport: { send: (message: unknown) => sendMock(message) },
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string, substitutions?: any) => {
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string, substitutions?: any) => {
     const messages: Record<string, string> = {
       cannotRecordPage: 'Cannot record this page',
       noTitle: 'No title',
@@ -114,8 +114,19 @@ vi.mock('../../utils/i18n.js', () => ({
       });
     }
     return msg;
-  })
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
 
 vi.mock('../../utils/pendingStorage.js', () => ({
   getPendingPages: vi.fn(() => Promise.resolve([])),

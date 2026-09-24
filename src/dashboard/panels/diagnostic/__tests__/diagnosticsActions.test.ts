@@ -3,9 +3,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDiagnosticActions } from '../diagnosticsActions.js';
 import type { DiagnosticActionElements } from '../diagnosticsActions.js';
 
-vi.mock('../../../../utils/i18n.js', () => ({
-  getMessage: vi.fn((_key: string, fallback?: string) => fallback ?? ''),
-}));
+vi.mock('../../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((_key: string, fallback?: string) => fallback ?? '');
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 vi.mock('../../../dashboardSqliteService.js', () => ({
   migrateLogs: vi.fn(),

@@ -5,7 +5,7 @@
  */
 
 import { validatePasswordRequirements, validatePasswordMatch } from './masterPassword.js';
-import { getMessage } from './i18n.js';
+import { getMessageOr } from './i18n.js';
 
 /**
  * パスワード要件バリデーションを実行し、エラー要素にメッセージを設定する
@@ -17,7 +17,7 @@ export function validateAndSetPasswordErrors(
 ): boolean {
     const requirementError = validatePasswordRequirements(password);
     if (requirementError && errorEl) {
-        errorEl.textContent = getMessage('passwordTooShort') || requirementError;
+        errorEl.textContent = getMessageOr('passwordTooShort', requirementError);
         errorEl.classList.add('visible');
         return true;
     }
@@ -35,7 +35,7 @@ export function validateAndSetMatchErrors(
 ): boolean {
     const matchError = validatePasswordMatch(password, confirmPassword);
     if (matchError && errorEl) {
-        errorEl.textContent = getMessage('passwordMismatch') || matchError;
+        errorEl.textContent = getMessageOr('passwordMismatch', matchError);
         errorEl.classList.add('visible');
         return true;
     }
@@ -74,12 +74,12 @@ export function updatePasswordStrengthDisplay(
     if (!password) {
         strengthBar.style.width = '0%';
         strengthBar.className = 'strength-fill';
-        strengthText.textContent = getMessage('passwordStrengthWeak') || 'Weak';
+        strengthText.textContent = getMessageOr('passwordStrengthWeak', 'Weak');
         return;
     }
 
     const result = calculatePasswordStrength(password);
     strengthBar.style.width = `${result.score}%`;
     strengthBar.className = `strength-fill ${result.level}`;
-    strengthText.textContent = getMessage(`passwordStrength${result.level.charAt(0).toUpperCase() + result.level.slice(1)}`) || result.text;
+    strengthText.textContent = getMessageOr(`passwordStrength${result.level.charAt(0).toUpperCase() + result.level.slice(1)}`, result.text);
 }

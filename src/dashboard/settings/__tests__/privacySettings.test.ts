@@ -219,6 +219,16 @@ vi.mock('../../../utils/ui/settingsUiHelper.js', () => ({
 
 vi.mock('../../../utils/i18n.js', () => ({
   getMessage: (...args: [string]) => mockGetMessage(...args),
+  getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
+      ((subs === undefined ? (mockGetMessage as (...a: any[]) => unknown)(key) : (mockGetMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string,
+  getMessageWithSubstitutions: (
+        key: string,
+        subs: Record<string, string | number>,
+        fallback: string,
+      ): string =>
+      ((mockGetMessage as (...a: any[]) => unknown)(key, subs) ||
+        fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+          subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string,
 }));
 
 const mockSanitizeRegex = vi.fn();

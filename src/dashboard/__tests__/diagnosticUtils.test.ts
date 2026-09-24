@@ -5,16 +5,28 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => {
     const map: Record<string, string> = {
       diagSeverityHigh: 'High',
       diagSeverityMedium: 'Medium',
       diagSeverityLow: 'Low',
     };
     return map[key] || key;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 import { makeStatRow, getSeverityLabel } from '../diagnosticUtils.js';
 

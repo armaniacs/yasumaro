@@ -20,6 +20,7 @@ import {
 import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
 import { describeHttpFailure } from '../utils/httpFailureMessages.js';
 import { readBodyCapped } from '../utils/readBodyCapped.js';
+import { truncateForLog } from '../utils/logTruncate.js';
 
 /**
  * Problem #1: Fetchタイムアウト設定
@@ -168,7 +169,7 @@ export class ObsidianClient {
             return '';
         } else {
             const errorText = await this._readBodyWithTimeout(response);
-            addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${errorText}`, { traceId });
+            addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${truncateForLog(errorText)}`, { traceId });
             throw new Error('Error: Failed to read daily note. Please check your Obsidian connection.');
         }
     }
@@ -200,7 +201,7 @@ export class ObsidianClient {
                 addLog(LogType.ERROR, `Obsidian API Error: ${response.status} (response body too large or unreadable)`, { traceId });
                 throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
             }
-            addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${errorText}`, { traceId });
+            addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${truncateForLog(errorText)}`, { traceId });
             throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
         }
     }

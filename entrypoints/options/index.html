@@ -246,8 +246,8 @@
     <main id="contentArea" class="content-area">
 
       <!-- General Settings Panel -->
-      <section id="panel-general" class="panel active" role="tabpanel">
-        <h2 class="panel-title" data-i18n="mainTabDashboard">Initial Setup</h2>
+      <section id="panel-general" class="panel active" role="tabpanel" aria-labelledby="panel-general-title">
+        <h2 id="panel-general-title" class="panel-title" data-i18n="mainTabDashboard">Initial Setup</h2>
         <p class="panel-description" data-i18n="initialSetupDescription">Configure your Obsidian connection and AI settings.</p>
 
         <!-- ボタンエリア（上部） -->
@@ -581,8 +581,8 @@
       </section>
 
       <!-- Domain Filter Panel -->
-      <section id="panel-domain" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="domainTab">Domain Filter</h2>
+      <section id="panel-domain" class="panel" role="tabpanel" aria-labelledby="panel-domain-title">
+        <h2 id="panel-domain-title" class="panel-title" data-i18n="domainTab">Domain Filter</h2>
         <p class="panel-description" data-i18n="domainFilterDescription">
           Control which sites are recorded by domain. Add sites you don't want recorded (e.g. banking, social media) to the blacklist, or use the whitelist to record only specific sites.
         </p>
@@ -714,8 +714,8 @@
       </section>
 
       <!-- Custom Prompt Panel -->
-      <section id="panel-prompt" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="promptTab">Prompt</h2>
+      <section id="panel-prompt" class="panel" role="tabpanel" aria-labelledby="panel-prompt-title">
+        <h2 id="panel-prompt-title" class="panel-title" data-i18n="promptTab">Prompt</h2>
 
         <div class="form-group">
           <label data-i18n="promptDescription">Customize the AI summary prompt. Use {{content}} as a placeholder for the page content.</label>
@@ -777,8 +777,8 @@
       </section>
 
       <!-- Markdown Export Template Panel -->
-      <section id="panel-markdown-template" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="markdownTemplatePanelHeading">Local Markdown Export Template</h2>
+      <section id="panel-markdown-template" class="panel" role="tabpanel" aria-labelledby="panel-markdown-template-title">
+        <h2 id="panel-markdown-template-title" class="panel-title" data-i18n="markdownTemplatePanelHeading">Local Markdown Export Template</h2>
         <p class="panel-description" data-i18n="markdownTemplatePanelDescription">Customize the format of local Markdown export files.</p>
 
         <hr class="settings-hr">
@@ -835,8 +835,8 @@
       </section>
 
       <!-- Content Cleansing Settings Panel -->
-      <section id="panel-content" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="contentTabPanelTitle">Content Cleansing</h2>
+      <section id="panel-content" class="panel" role="tabpanel" aria-labelledby="panel-content-title">
+        <h2 id="panel-content-title" class="panel-title" data-i18n="contentTabPanelTitle">Content Cleansing</h2>
         <p class="panel-description" data-i18n="contentTabPanelDescription">Automatically remove elements that may contain sensitive information from web pages.</p>
         <div class="help-text">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PII_FEATURE_GUIDE.md"
@@ -918,8 +918,8 @@
       </section>
 
       <!-- AI Summary Cleansing Settings Panel -->
-      <section id="panel-ai-summary-cleansing" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="aiSummaryCleansingTabPanelTitle">AI Summary Cleansing</h2>
+      <section id="panel-ai-summary-cleansing" class="panel" role="tabpanel" aria-labelledby="panel-ai-summary-cleansing-title">
+        <h2 id="panel-ai-summary-cleansing-title" class="panel-title" data-i18n="aiSummaryCleansingTabPanelTitle">AI Summary Cleansing</h2>
 
         <!-- 削減率統計サマリー（案A） -->
         <div id="cleansingStatsSummary" class="cleansing-stats-summary" aria-live="polite">
@@ -1262,19 +1262,19 @@
 
         <!-- Per-site Cleansing Overrides (minimal UI) -->
         <div class="settings-section" id="perSiteCleansingOverridesSection">
-          <h3 class="settings-section-title">Per-site Overrides</h3>
-          <p class="help-text">Domain exact match. Overrides are merged onto the global config (only differences are stored).</p>
+          <h3 class="settings-section-title" data-i18n="aiSummaryCleansingPerSiteSection">Per-site Overrides</h3>
+          <p class="help-text" data-i18n="aiSummaryCleansingPerSiteDesc">Domain exact match. Overrides are merged onto the global config (only differences are stored).</p>
           <div class="form-group">
-            <label for="perSiteOverrideDomain">Domain</label>
+            <label for="perSiteOverrideDomain" data-i18n="aiSummaryCleansingPerSiteDomainLabel">Domain</label>
             <input type="text" id="perSiteOverrideDomain" placeholder="example.com" autocomplete="off" spellcheck="false">
-            <div class="help-text">Exact match (subdomains are separate). Example: example.com</div>
+            <div class="help-text" data-i18n="aiSummaryCleansingPerSiteDomainHelp">Exact match (subdomains are separate). Example: example.com</div>
           </div>
           <div class="form-group" id="perSiteOverrideToggles">
             <!-- checkboxes generated via JS from CLEANSING_RULES -->
           </div>
           <div class="form-group">
-            <button id="perSiteOverrideSaveBtn" class="secondary-btn">Save override</button>
-            <button id="perSiteOverrideDeleteBtn" class="secondary-btn">Delete override</button>
+            <button id="perSiteOverrideSaveBtn" class="secondary-btn" data-i18n="aiSummaryCleansingPerSiteSave">Save override</button>
+            <button id="perSiteOverrideDeleteBtn" class="secondary-btn" data-i18n="aiSummaryCleansingPerSiteDelete">Delete override</button>
             <span id="perSiteOverrideStatus" class="status-message" aria-live="polite"></span>
           </div>
           <div id="perSiteOverrideList" class="help-text"></div>
@@ -1282,15 +1282,15 @@
 
         <!-- Cleansing Feedback Queue -->
         <div class="settings-section" id="cleansingFeedbackSection">
-          <h3 class="settings-section-title">Cleansing Feedback</h3>
-          <p class="help-text">誤削除報告の一覧。開発者がパターン改善に利用します。</p>
+          <h3 class="settings-section-title" data-i18n="aiSummaryCleansingFeedbackSection">Cleansing Feedback</h3>
+          <p class="help-text" data-i18n="aiSummaryCleansingFeedbackDesc">List of false-removal reports. Developers use them to improve patterns.</p>
           <div id="cleansingFeedbackContainer"></div>
         </div>
       </section>
 
       <!-- Trust Database Settings Panel -->
-      <section id="panel-trust" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="trustTabPanelTitle">Domain Trust Evaluation</h2>
+      <section id="panel-trust" class="panel" role="tabpanel" aria-labelledby="panel-trust-title">
+        <h2 id="panel-trust-title" class="panel-title" data-i18n="trustTabPanelTitle">Domain Trust Evaluation</h2>
         <p class="panel-description" data-i18n="trustTabPanelDescription">Determine the trustworthiness of websites you visit and choose appropriate responses.</p>
         <div class="help-text">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/TRUST_DOMAIN_GUIDE.md"
@@ -1475,8 +1475,8 @@
       </section>
 
       <!-- Privacy Settings Panel -->
-      <section id="panel-privacy" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="privacyTab">Privacy</h2>
+      <section id="panel-privacy" class="panel" role="tabpanel" aria-labelledby="panel-privacy-title">
+        <h2 id="panel-privacy-title" class="panel-title" data-i18n="privacyTab">Privacy</h2>
         <div class="help-text">
           <a href="https://github.com/armaniacs/yasumaro/blob/main/docs/PRIVACY.md"
              target="_blank"
@@ -1658,8 +1658,8 @@
       </section>
 
       <!-- Tags Settings Panel -->
-      <section id="panel-tags" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="tagsTab">Tags</h2>
+      <section id="panel-tags" class="panel" role="tabpanel" aria-labelledby="panel-tags-title">
+        <h2 id="panel-tags-title" class="panel-title" data-i18n="tagsTab">Tags</h2>
 
         <p class="panel-description" data-i18n="tagsDescription">
           Configure tag categories and enable/disable automatic tag extraction during AI summarization.
@@ -1745,8 +1745,8 @@
       </section>
 
       <!-- Tag Cluster Panel -->
-      <section id="panel-tag-cluster" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="tagClusterTab">Tag Cluster</h2>
+      <section id="panel-tag-cluster" class="panel" role="tabpanel" aria-labelledby="panel-tag-cluster-title">
+        <h2 id="panel-tag-cluster-title" class="panel-title" data-i18n="tagClusterTab">Tag Cluster</h2>
         <p class="panel-description" data-i18n="tagClusterDescription">Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag.</p>
         <div id="tagClusterFilter"></div>
         <div id="tagClusterEmptyState" data-i18n="tagClusterEmptyState" hidden>No tagged history yet.</div>
@@ -1756,13 +1756,13 @@
           <button type="button" id="tagClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
           <button type="button" id="tagClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
         </div>
-        <svg id="tagClusterSvg" width="800" height="600"></svg>
+        <svg id="tagClusterSvg" width="800" height="600" viewBox="0 0 800 600"></svg>
       </section>
 
 
       <!-- Recording Conditions Panel -->
-      <section id="panel-recording-conditions" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="recordingConditionsTab">Recording Conditions</h2>
+      <section id="panel-recording-conditions" class="panel" role="tabpanel" aria-labelledby="panel-recording-conditions-title">
+        <h2 id="panel-recording-conditions-title" class="panel-title" data-i18n="recordingConditionsTab">Recording Conditions</h2>
         <p class="panel-description" data-i18n="recordingConditionsDesc">
           Set thresholds for automatic recording and AI processing.
         </p>
@@ -1770,8 +1770,8 @@
       </section>
 
       <!-- Export Logs Panel -->
-      <section id="panel-export-logs" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="exportLogsTab">Export Logs</h2>
+      <section id="panel-export-logs" class="panel" role="tabpanel" aria-labelledby="panel-export-logs-title">
+        <h2 id="panel-export-logs-title" class="panel-title" data-i18n="exportLogsTab">Export Logs</h2>
         <p class="panel-description" data-i18n="exportLogsDesc">
           Export your browsing history as JSON, Markdown, CSV, or a raw SQLite database file.
         </p>
@@ -1830,8 +1830,8 @@
       </section>
 
       <!-- SQLite History Panel -->
-      <section id="panel-sqlite-history" class="panel data-panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="sqliteHistoryTab">SQLite History</h2>
+      <section id="panel-sqlite-history" class="panel data-panel" role="tabpanel" aria-labelledby="panel-sqlite-history-title">
+        <h2 id="panel-sqlite-history-title" class="panel-title" data-i18n="sqliteHistoryTab">SQLite History</h2>
         <p class="panel-description" data-i18n="sqliteHistoryDescription">
           Browsing history stored in local SQLite database. Search using FTS5 full-text search, filter by date, and manage entries.
         </p>
@@ -1843,8 +1843,8 @@
       </section>
 
       <!-- Archive Panel (PBI 2026-09-06-02) -->
-      <section id="panel-archive" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="archiveTab">Archive</h2>
+      <section id="panel-archive" class="panel" role="tabpanel" aria-labelledby="panel-archive-title">
+        <h2 id="panel-archive-title" class="panel-title" data-i18n="archiveTab">Archive</h2>
         <p class="panel-description" data-i18n="archivePanelDescription">
           Export browsing history up to a chosen date as a standard SQLite file, then remove it from the local database (phase 2) once you have the file. The exported file can be opened with any SQLite tool.
         </p>
@@ -1898,8 +1898,8 @@
       </section>
 
       <!-- Domain Search Panel (New) -->
-      <section id="panel-domain-search" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="domainSearchTab">Domain Search</h2>
+      <section id="panel-domain-search" class="panel" role="tabpanel" aria-labelledby="panel-domain-search-title">
+        <h2 id="panel-domain-search-title" class="panel-title" data-i18n="domainSearchTab">Domain Search</h2>
 
         <!-- Part 1: Filter list search -->
         <div class="form-group">
@@ -1921,8 +1921,8 @@
       </section>
 
       <!-- Time Heatmap Panel -->
-      <section id="panel-time-heatmap" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="dashboardTimeHeatmapTitle">Time Heatmap</h2>
+      <section id="panel-time-heatmap" class="panel" role="tabpanel" aria-labelledby="panel-time-heatmap-title">
+        <h2 id="panel-time-heatmap-title" class="panel-title" data-i18n="dashboardTimeHeatmapTitle">Time Heatmap</h2>
         <p class="panel-description" data-i18n="dashboardTimeHeatmapDescription">Browsing record density by weekday and hour over the selected period.</p>
         <div id="timeHeatmapFilter"></div>
         <div id="timeHeatmapEmptyState" data-i18n="dashboardTimeHeatmapEmpty" hidden>No browsing records in the selected period.</div>
@@ -1932,8 +1932,8 @@
       </section>
 
       <!-- Visit Duration Panel -->
-      <section id="panel-visit-duration" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="visitDurationPanelTitle">Visit Duration</h2>
+      <section id="panel-visit-duration" class="panel" role="tabpanel" aria-labelledby="panel-visit-duration-title">
+        <h2 id="panel-visit-duration-title" class="panel-title" data-i18n="visitDurationPanelTitle">Visit Duration</h2>
         <p class="panel-description" data-i18n="visitDurationDescription">Total and average time spent per domain and tag for the selected period.</p>
         <div id="visitDurationFilter"></div>
         <p id="visitDurationUnmeasuredRatio" aria-live="polite" hidden></p>
@@ -1964,8 +1964,8 @@
       </section>
 
       <!-- Domain Analysis Panel -->
-      <section id="panel-domain-analysis" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="domainAnalysis_title">Domain Analysis</h2>
+      <section id="panel-domain-analysis" class="panel" role="tabpanel" aria-labelledby="panel-domain-analysis-title">
+        <h2 id="panel-domain-analysis-title" class="panel-title" data-i18n="domainAnalysis_title">Domain Analysis</h2>
         <div id="domainAnalysisFilter"></div>
         <div class="form-group">
           <label for="domainAnalysisTagInput" data-i18n="domainAnalysis_tagLabel">Tag (optional)</label>
@@ -1997,8 +1997,8 @@
       </section>
 
       <!-- Tag Frequency Timeline Panel (PBI 2026-09-24-05) -->
-      <section id="panel-tag-frequency-timeline" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="dashboardTagTimelineTitle">Tag Frequency Timeline</h2>
+      <section id="panel-tag-frequency-timeline" class="panel" role="tabpanel" aria-labelledby="panel-tag-frequency-timeline-title">
+        <h2 id="panel-tag-frequency-timeline-title" class="panel-title" data-i18n="dashboardTagTimelineTitle">Tag Frequency Timeline</h2>
         <p class="panel-description" data-i18n="dashboardTagTimelineDescription">Weekly and monthly record counts for the top tags in the selected period.</p>
         <div id="tagTimelineFilter"></div>
         <div class="form-group tag-timeline-controls">
@@ -2018,8 +2018,8 @@
       </section>
 
       <!-- Tag Cooccurrence Table Panel (PBI 2026-09-24-06) -->
-      <section id="panel-tag-cooccurrence-table" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="cooccurrenceTableTitle">Tag Co-occurrence Pairs</h2>
+      <section id="panel-tag-cooccurrence-table" class="panel" role="tabpanel" aria-labelledby="panel-tag-cooccurrence-table-title">
+        <h2 id="panel-tag-cooccurrence-table-title" class="panel-title" data-i18n="cooccurrenceTableTitle">Tag Co-occurrence Pairs</h2>
         <p class="panel-description" data-i18n="cooccurrenceTableDescription">Top co-occurring tag pairs as a ranked table. Click a row to filter history by the pair's first tag.</p>
         <div id="coocTableFilter"></div>
         <div class="form-group cooc-table-controls">
@@ -2036,8 +2036,8 @@
       </section>
 
       <!-- Word Cluster Panel (PBI 2026-09-24-07) -->
-      <section id="panel-word-cluster" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="wordClusterTitle">Word Cluster</h2>
+      <section id="panel-word-cluster" class="panel" role="tabpanel" aria-labelledby="panel-word-cluster-title">
+        <h2 id="panel-word-cluster-title" class="panel-title" data-i18n="wordClusterTitle">Word Cluster</h2>
         <p class="panel-description" data-i18n="wordClusterDescription">Extracts keywords from AI summaries and page titles and shows their co-occurrence as a graph. Click a node to search history for that keyword.</p>
         <div id="wordClusterFilter"></div>
         <div class="form-group cooc-table-controls">
@@ -2054,12 +2054,12 @@
           <button type="button" id="wordClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
           <button type="button" id="wordClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
         </div>
-        <svg id="wordClusterSvg" width="800" height="600" role="img" data-i18n-aria-label="wordClusterTitle" aria-label="Word Cluster"></svg>
+        <svg id="wordClusterSvg" width="800" height="600" viewBox="0 0 800 600" role="img" data-i18n-aria-label="wordClusterTitle" aria-label="Word Cluster"></svg>
       </section>
 
       <!-- Tag Cluster Time Slider Panel (PBI 2026-09-24-08) -->
-      <section id="panel-tag-cluster-time-slider" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="tagClusterTimeSliderTitle">Tag Cluster Over Time</h2>
+      <section id="panel-tag-cluster-time-slider" class="panel" role="tabpanel" aria-labelledby="panel-tag-cluster-time-slider-title">
+        <h2 id="panel-tag-cluster-time-slider-title" class="panel-title" data-i18n="tagClusterTimeSliderTitle">Tag Cluster Over Time</h2>
         <p class="panel-description" data-i18n="tagClusterTimeSliderDescription">Pick a start and end date to split the window into two halves and compare the tag clusters side by side. Click a node or a diff entry to search history for that tag.</p>
         <div class="form-group cooc-table-controls">
           <label for="tagCompareStartDate" data-i18n="tagClusterCompareStartLabel">Start date</label>
@@ -2082,7 +2082,7 @@
               <button type="button" id="tagCompareFirstZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
               <button type="button" id="tagCompareFirstZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
             </div>
-            <svg id="tagCompareFirstSvg" width="480" height="420"></svg>
+            <svg id="tagCompareFirstSvg" width="480" height="420" viewBox="0 0 480 420"></svg>
           </div>
           <div class="tag-cluster-compare-side">
             <h3 class="tag-cluster-compare-heading" data-i18n="tagClusterCompareSecondHalf">Second half</h3>
@@ -2094,15 +2094,15 @@
               <button type="button" id="tagCompareSecondZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
               <button type="button" id="tagCompareSecondZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
             </div>
-            <svg id="tagCompareSecondSvg" width="480" height="420"></svg>
+            <svg id="tagCompareSecondSvg" width="480" height="420" viewBox="0 0 480 420"></svg>
           </div>
         </div>
         <div id="tagCompareDiffList" class="tag-cluster-diff"></div>
       </section>
 
       <!-- CSP Settings Panel (P1) -->
-      <section id="panel-csp" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="cspSettingsTitle">Conditional CSP Settings</h2>
+      <section id="panel-csp" class="panel" role="tabpanel" aria-labelledby="panel-csp-title">
+        <h2 id="panel-csp-title" class="panel-title" data-i18n="cspSettingsTitle">Conditional CSP Settings</h2>
 
         <p class="panel-description" data-i18n="cspDescription">
           Enable conditional CSP to restrict the AI providers that can connect. Only configured providers will be permitted by the CSP policy.
@@ -2148,8 +2148,8 @@
       </section>
 
       <!-- Diagnostics Panel (New) -->
-      <section id="panel-diagnostics" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="diagnosticsTab">Diagnostics</h2>
+      <section id="panel-diagnostics" class="panel" role="tabpanel" aria-labelledby="panel-diagnostics-title">
+        <h2 id="panel-diagnostics-title" class="panel-title" data-i18n="diagnosticsTab">Diagnostics</h2>
 
         <p class="panel-description" data-i18n="diagDescription">
           Check storage usage, verify the Obsidian REST API connection, and view extension information.
@@ -2257,8 +2257,8 @@
       </section>
 
       <!-- Export / Import Panel (New) -->
-      <section id="panel-export-import" class="panel" role="tabpanel">
-        <h2 class="panel-title" data-i18n="exportImportTab">Export / Import</h2>
+      <section id="panel-export-import" class="panel" role="tabpanel" aria-labelledby="panel-export-import-title">
+        <h2 id="panel-export-import-title" class="panel-title" data-i18n="exportImportTab">Export / Import</h2>
 
         <div class="export-import-section">
           <h3 class="diag-section-title" data-i18n="exportTitle">Export Settings</h3>

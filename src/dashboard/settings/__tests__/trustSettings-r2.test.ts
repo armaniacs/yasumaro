@@ -193,8 +193,8 @@ vi.mock('../../../utils/logger/api.js', () => ({
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));
 
-vi.mock('../../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       trancoUpdating: 'Updating...',
       trancoNotUpdated: 'Not updated',
@@ -216,8 +216,20 @@ vi.mock('../../../utils/i18n.js', () => ({
       permissionSuggestDismiss: 'Dismiss',
     };
     return msgs[key] || key;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 const mockGetAlertConfig = vi.fn(() => Promise.resolve({
   alertFinance: false,
