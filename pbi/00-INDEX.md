@@ -18,11 +18,9 @@
 
 分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md) を参照。
 
-### 2026-09-24 分析機能強化ラウンド — 🔶 部分実装 1件（ユーザー検証待ち）✨機能追加（01-06・08 は完了・アーカイブ済み）
+### 2026-09-24 分析機能強化ラウンド — ✅ 全8件完了・アーカイブ済み ✨機能追加
 
-分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
-
-- [2026-09-24-07-feat-word-cluster.md](2026-09-24-07-feat-word-cluster.md)（🔶 部分実装 — 実装・自動テスト完了 `d80a5f8b`。残: STEP 0 の実データ手動プローブ（ストップワード/閾値チューニング・ユーザー作業・実 DB アクセスが必要）。合成コーパスの自動 sanity テストは実装済み。RICE 1.33・3 SP）
+分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)（台帳送り5案を保持して live 維持）。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
 
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
@@ -42,9 +40,9 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 **sentence-dedup（2026-09-20 実装・0ed11095）の配線は不採用で確定（2026-09-21）**: 唯一の呼び出し元 `src/utils/contentExtractor/index.ts` がコンテンツスクリプト（`src/content/contentKernel.ts`）専用経路で実行されるため、ページ側 CSP で WASM 初期化を保証できず、配線しても実運用ではほぼ常に TS フォールバックになる。速度利得も 1.13〜1.28x と小さく、メモリ利得（フットプリント 0.22→0.00MB/call・実測）は dedup ステージの offscreen 移設（処理順の意味論が変わるアーキテクチャ変更）と引き換えになるため、現時点では採用しない。クレート・ハイブリッド・CI ゲート（src コピー）は STAGED のまま資産保持し、将来のパイプライン移設時に再評価する。
 
-### 2026-09-15 AMO 公開 — 🟪 着手（2026-09-23・提出前修正済み、AMO アップロードはユーザー作業）
+### 2026-09-15 AMO 公開 — 🟪 審査待ち（2026-09-24 提出・審査中、審査結果対応はユーザー作業）
 
-- 🟪 [2026-09-15-01-backlog-firefox-amo-publish.md](2026-09-15-01-backlog-firefox-amo-publish.md)（**着手**: 2026-09-23 ユーザー指示で AMO 採用決定。sources zip 肥大修正・data_collection_permissions 追加・strict_min_version 140 で addons-linter errors 0。残置は AMO アップロード・リスティング・正当化文のユーザー作業。詳細は PBI の着手記録参照）
+- 🟪 [2026-09-15-01-backlog-firefox-amo-publish.md](2026-09-15-01-backlog-firefox-amo-publish.md)（**審査待ち**: 2026-09-23 ユーザー指示で AMO 採用決定。sources zip 肥大修正・data_collection_permissions 追加・strict_min_version 140 で addons-linter errors 0。2026-09-24 に AMO 提出済み・審査中。残置は審査結果対応 — 通過後の署名版インストール確認・FAQ (ja/en) 記載、指摘時は対応記録。詳細は PBI の着手記録参照）
 
 
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
@@ -108,6 +106,12 @@ arch-delivery-loop による実装。バッチ1 = 09（リテラル SSOT）+ 12�
 
 - 2026-09-24-09-refactor-summary-fallback-ssot.md（✅ 完了 — `6521cdb9`。utils/summaryFallback.ts（Layer 0）に SSOT 化・背景4箇所+dashboard の import 化・LAYERS.md 規約追記・lint:layers-docs green。174 tests 対象 green。RICE 20.0）
 - 2026-09-24-12-test-i18n-panel-catalog-gates.md（✅ 完了 — `6521cdb9`。実 locale の parity テストを新設、サイドバー i18n キー assert、PANEL_CATALOG 側カウント literal 削除。実 drift（historyDeleteSelectedSuccess_one/_other の ja 欠落）を検出修正。tagClusterTab は既存のため追加不要と検証。RICE 8.0）
+
+### 2026-09-24 分析機能強化ラウンド バッチ6 — ✅ PBI 07 ユーザー確認完了・アーカイブ（ラウンド完遂）
+
+STEP 0 の実データ手動プローブをユーザー確認（実データで抽出品質に問題なし・ストップワード/最小長閾値の調整不要）で完了し、07 をアーカイブ。これで分析機能強化ラウンド全8件が完遂。台帳（analysis-features）は台帳送り5案を保持して live 維持。
+
+- 2026-09-24-07-feat-word-cluster.md（✅ 完了 — `d80a5f8b`・69 tests 対象 green。ユーザー検証 1 項目は 2026-09-24 に解消。RICE 1.33・3 SP）
 
 ### 2026-09-24 分析機能強化ラウンド バッチ5 — ✅ 1件完了（08 アーカイブ済み）RICE順: 08
 
@@ -1609,11 +1613,10 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 4（保留候補 01-03 = トリガー待ち 3 / wasqlite sunset = ADR-014 ゲート待ち 1） |
-| 🔶 実装完了（ユーザーゲート待ち） | 1（07 word-cluster = 実データ手動プローブのユーザー検証） |
-| 🟪 着手（ユーザー作業待ち） | 1（AMO 公開 01 = アップロード・リスティング・正当化文） |
+| 🟪 審査待ち | 1（AMO 公開 01 = 提出・審査中。通過後の署名版インストール確認・FAQ 記載はユーザー作業） |
 | 🔵 監視 | 1（VulnHunt 11 defense-in-depth = 発火条件監視・発火時に分割 PBI 化） |
-| **`pbi/` 残存 PBI 合計** | **7（＋ live 台帳 4 件: future / vuln-remediation / archloop-0924 / analysis-features）** |
-| アーカイブ済みPBI | 946（`00-backlog` 台帳 76 件を除く） |
+| **`pbi/` 残存 PBI 合計** | **6（＋ live 台帳 4 件: future / vuln-remediation / archloop-0924 / analysis-features）** |
+| アーカイブ済みPBI | 947（`00-backlog` 台帳 76 件を除く） |
 | アーカイブ済み実装計画 | 138 |
 
 ※ 2026-09-24 整理: 完遂ラウンドの台帳 3 件（archloop-0923 / archloop-0923b / archloop-0923c）を `dev-docs/archived/pbi/` へアーカイブ。各ラウンドの未採用候補（ProviderSlotRunner・queryPlan・CleansingRuleView・KeyDerivation・Retry-policy）は 2026-09-23 時点で future.md 統合台帳へマージ済みのため、台帳に live な追跡項目はない。INDEX 集計表を現状に再同期し、future.md・アーカイブ履歴の台帳リンクをアーカイブ先へ張替え。
