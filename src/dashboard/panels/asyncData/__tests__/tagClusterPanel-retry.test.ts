@@ -81,6 +81,39 @@ describe('tag cluster panel — query retry', () => {
     expect(mockQueryLogs.mock.calls.length).toBeGreaterThan(1);
   });
 
+  it('shows the distinct tagClusterError state when the query keeps failing', async () => {
+    mockQueryLogs.mockResolvedValue({ error: 'Database connection lost.' });
+
+    const panel = mountPanel();
+    await panel.load?.();
+
+    // The empty-state element carries the error message instead of silently
+    // rendering an empty graph (timeHeatmapPanel error-state convention).
+    const emptyState = document.getElementById('tagClusterEmptyState')!;
+    expect(emptyState.hidden).toBe(false);
+    expect(emptyState.getAttribute('data-i18n')).toBe('tagClusterError');
+    expect(emptyState.textContent).toContain('Failed to load');
+  });
+
+  it('restores the normal empty-state binding after a failed load succeeds', async () => {
+    mockQueryLogs.mockResolvedValue({ error: 'down' });
+    const panel = mountPanel();
+    await panel.load?.();
+    expect(document.getElementById('tagClusterEmptyState')!.getAttribute('data-i18n')).toBe(
+      'tagClusterError',
+    );
+
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    await panel.load?.();
+    // Reload start resets the empty-state message before the result renders,
+    // so a recovered load cannot keep the error binding. This panel mounts
+    // without a filter host, so the restored message is the generic one.
+    expect(document.getElementById('tagClusterEmptyState')!.getAttribute('data-i18n')).toBe(
+      'tagClusterEmptyState',
+    );
+    expect(document.getElementById('tagClusterEmptyState')!.hidden).toBe(false);
+  });
+
   it('retries when the database is not initialized', async () => {
     mockGetSqliteStatus.mockResolvedValue({ initialized: false });
 

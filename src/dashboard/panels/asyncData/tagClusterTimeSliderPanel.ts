@@ -17,7 +17,6 @@
  * stays static, so prefers-reduced-motion needs no handling here.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { limitToTopNodes, type TagNode, type TagEdge } from '../../tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
@@ -27,7 +26,7 @@ import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   DAY_MS,
@@ -38,7 +37,6 @@ import {
 import { splitPeriodInHalves } from '../../periodSplit.js';
 import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
 import { tryNavigateTyped } from '../registryContext.js';
 
@@ -145,29 +143,6 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     side.emptyState.textContent = getMessageOr(key, fallback);
   }
 
-  async function loadRowsWithRetry(bounds: HalfBounds, label: string): Promise<{ rows: BrowsingLogEntry[]; total: number }> {
-    const result = await retryWithExponentialBackoff<{ rows: BrowsingLogEntry[]; total: number }>(
-      async () => {
-        const status = await getSqliteStatus();
-        if (!status?.initialized) {
-          return null;
-        }
-        const qRes = await queryLogs({ since: bounds.since, until: bounds.until, limit: MAX_QUERY_ROWS });
-        // Return null (not []) on failure: retryWithExponentialBackoff only
-        // retries when the thunk yields null or throws (wordClusterPanel convention).
-        if (isServiceError(qRes)) {
-          return null;
-        }
-        return qRes.data;
-      },
-      { label, maxAttempts: 4 }
-    );
-    if (result === null) {
-      throw new Error(`${label}: query failed after retries`);
-    }
-    return result;
-  }
-
   /**
    * Fetch + narrow + cooccurrence + node-cap for one half. Renders nothing:
    * drawing waits until both halves are loaded so the stable-placement rule
@@ -183,7 +158,14 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     if (!side.svg) return null;
     loadingManager.show();
     try {
-      const fetched = await loadRowsWithRetry(bounds, label);
+      // WHY: both halves always carry explicit bounds (HalfBounds), so no
+      // key-omission decision happens here — fetchPeriodRows owns it anyway.
+      const fetched = await fetchPeriodRows({
+        since: bounds.since,
+        until: bounds.until,
+        limit: MAX_QUERY_ROWS,
+        label,
+      });
       if (seq !== loadSeq) {
         loadingManager.cleanup();
         return null;
@@ -193,7 +175,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       // WHY: queryLogs caps the fetch at MAX_QUERY_ROWS; when the half holds
       // more rows the analyzed set is a prefix — the PBI requires the
       // truncation to be visible per half.
-      if (fetched.total > fetched.rows.length && side.rowCapNotice) {
+      if (fetched.capped && side.rowCapNotice) {
         side.rowCapNotice.textContent = msg(
           'tagClusterCompareCapNotice',
           { max: MAX_QUERY_ROWS, shown: fetched.rows.length, total: fetched.total },

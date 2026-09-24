@@ -22,21 +22,22 @@
  * WHY: the Run button (or Enter in the tag input) applies both filters
  * instead of reloading on every period change — a full fetch can page
  * through up to 50k rows, so an auto-query per preset click would be
- * disproportionate.
+ * disproportionate. This is the explicit-apply shape of the period-filter
+ * contract (PBI 2026-09-24-11): the panel passes no onChange handler and
+ * reads getRange() at apply time — strictly less state than recording the
+ * range per change.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import {
   MAX_DOMAIN_ANALYSIS_ROWS,
   DOMAIN_ANALYSIS_PAGE_SIZE,
 } from '../../../utils/computeLimits.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
   type PeriodFilterHandle,
-  type PeriodRange,
 } from '../../components/periodFilter.js';
 import {
   aggregateDomainAnalysis,
@@ -79,7 +80,6 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   let domainTruncated: HTMLElement | null = null;
   let urlTruncated: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  let currentRange: PeriodRange = presetToRange('last30', Date.now());
   let loadSeq = 0;
 
   function renderDomainRows(rows: DomainAnalysisRankRow[]): void {
@@ -136,7 +136,13 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   async function reload(): Promise<void> {
     if (!domainBody || !urlBody) return;
     const seq = ++loadSeq;
-    const { since, until } = currentRange;
+    // WHY: getRange() is the single source of truth (PBI 2026-09-24-11) —
+    // the explicit-apply host reads the selection at Run time instead of
+    // recording it per change. The presetToRange fallback preserves the
+    // pre-filter last30 default when the panel mounts without a filter host.
+    const { since, until } = filterHandle
+      ? filterHandle.getRange()
+      : presetToRange('last30', Date.now());
     const tagFilter = tagInput ? toTagFilter(tagInput.value) : undefined;
 
     domainBody.innerHTML = '';
@@ -210,14 +216,11 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       domainTruncated = container.querySelector('#domainAnalysisDomainTruncated');
       urlTruncated = container.querySelector('#domainAnalysisUrlTruncated');
       if (filterHost) {
-        filterHandle = createPeriodFilter({
-          initialPreset: 'last30',
-          onChange: (range) => {
-            currentRange = range;
-          },
-        });
+        // WHY: no onChange handler — the panel is explicit-apply (Run button
+        // or Enter), so it reads getRange() in reload() instead of recording
+        // every change (PBI 2026-09-24-11).
+        filterHandle = createPeriodFilter({ initialPreset: 'last30' });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
       }
       runButton?.addEventListener('click', () => {
         void reload();
@@ -245,41 +248,6 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   };
 }
 
-async function fetchPage(
-  since: number | undefined,
-  until: number,
-  tagFilter: string | undefined,
-): Promise<BrowsingLogEntry[]> {
-  const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
-      // bounds/tag pass no key rather than an undefined-valued one.
-      const qRes = await queryLogs({
-        ...(since !== undefined ? { since } : {}),
-        until,
-        ...(tagFilter !== undefined ? { tagFilter } : {}),
-        limit: DOMAIN_ANALYSIS_PAGE_SIZE,
-      });
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data.rows;
-    },
-    { label: 'domainAnalysis', maxAttempts: 4 },
-  );
-  // WHY: a failed batch must not look like "reached the end" (markdownExport
-  // precedent) — a mid-pagination failure would silently aggregate a partial
-  // set, so it throws and the panel falls back to the empty state instead.
-  if (result === null) {
-    throw new Error('domainAnalysis: query failed after retries');
-  }
-  return result;
-}
-
 async function fetchAllRows(
   since: number | undefined,
   until: number | undefined,
@@ -296,7 +264,14 @@ async function fetchAllRows(
   const byId = new Map<number, BrowsingLogEntry>();
   let cursor = snapshotUntil;
   while (byId.size < MAX_DOMAIN_ANALYSIS_ROWS) {
-    const batch = await fetchPage(since, cursor, tagFilter);
+    const page = await fetchPeriodRows({
+      since,
+      until: cursor,
+      limit: DOMAIN_ANALYSIS_PAGE_SIZE,
+      tagFilter,
+      label: 'domainAnalysis',
+    });
+    const batch = page.rows;
     if (batch.length === 0) {
       return { rows: Array.from(byId.values()), capped: false };
     }

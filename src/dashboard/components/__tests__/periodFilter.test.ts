@@ -111,14 +111,16 @@ describe('createPeriodFilter', () => {
     handle.destroy();
   });
 
-  it('emits the initial preset range once on creation', () => {
-    const { calls } = mount('last7');
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.preset).toBe('last7');
-    expect(calls[0]!.range).toEqual({ since: NOW - 7 * DAY_MS, until: NOW });
+  it('emits nothing during construction; getRange() is the initial source of truth', () => {
+    const { handle, calls } = mount('last7');
+    // PBI 2026-09-24-11: construction never calls onChange.
+    expect(calls).toHaveLength(0);
+    expect(handle.getActivePreset()).toBe('last7');
+    expect(handle.getRange()).toEqual({ since: NOW - 7 * DAY_MS, until: NOW });
+    handle.destroy();
   });
 
-  it('preset click updates aria-pressed and emits since/until', () => {
+  it('preset click updates aria-pressed and emits since/until exactly once', () => {
     const { handle, calls } = mount('last30');
     const todayBtn = handle.element.querySelector(
       'button[data-preset="today"]',
@@ -131,6 +133,8 @@ describe('createPeriodFilter', () => {
         .querySelector('button[data-preset="last30"]')!
         .getAttribute('aria-pressed'),
     ).toBe('false');
+    // First and only emission: the user interaction itself.
+    expect(calls).toHaveLength(1);
     const last = calls[calls.length - 1]!;
     expect(last.preset).toBe('today');
     expect(last.range).toEqual({ since: localMidnight(NOW), until: NOW });
@@ -140,6 +144,7 @@ describe('createPeriodFilter', () => {
   it('all preset emits unbounded range', () => {
     const { handle, calls } = mount();
     (handle.element.querySelector('button[data-preset="all"]') as HTMLButtonElement).click();
+    expect(calls).toHaveLength(1);
     const last = calls[calls.length - 1]!;
     expect(last.preset).toBe('all');
     expect(last.range).toEqual({});
@@ -156,6 +161,8 @@ describe('createPeriodFilter', () => {
     to.value = '2026-09-10';
     to.dispatchEvent(new Event('change', { bubbles: true }));
     expect(handle.getActivePreset()).toBe('custom');
+    // One emission per user change (from, then to).
+    expect(calls).toHaveLength(2);
     const last = calls[calls.length - 1]!;
     expect(last.range.since).toBe(new Date('2026-09-01T00:00:00').getTime());
     expect(last.range.until).toBe(endOfLocalDay(new Date('2026-09-10T00:00:00').getTime()));
@@ -170,8 +177,45 @@ describe('createPeriodFilter', () => {
     handle.setPreset('last90');
     expect(handle.getActivePreset()).toBe('last90');
     expect(handle.getRange()).toEqual({ since: NOW - 90 * DAY_MS, until: NOW });
+    expect(calls).toHaveLength(1);
     expect(calls[calls.length - 1]!.preset).toBe('last90');
     handle.destroy();
+  });
+
+  it('injects custom label keys; omitting labelKeys keeps the visitDurationPeriod* defaults', () => {
+    const injected = createPeriodFilter({
+      initialPreset: 'last7',
+      now: () => NOW,
+      // Unknown keys surface as the key itself (missing-translation convention),
+      // proving the injected namespace is consulted instead of the default one.
+      labelKeys: {
+        today: 'panelXPeriodToday',
+        last7: 'panelXPeriodLast7',
+        last30: 'panelXPeriodLast30',
+        last90: 'panelXPeriodLast90',
+        all: 'panelXPeriodAll',
+      },
+      onChange: () => {},
+    });
+    document.body.appendChild(injected.element);
+    const injectedLabel = (
+      injected.element.querySelector('button[data-preset="last7"]') as HTMLButtonElement
+    ).textContent;
+    expect(injectedLabel).toBe('panelXPeriodLast7');
+    injected.destroy();
+
+    const defaulted = createPeriodFilter({
+      initialPreset: 'last7',
+      now: () => NOW,
+      onChange: () => {},
+    });
+    document.body.appendChild(defaulted.element);
+    const defaultLabel = (
+      defaulted.element.querySelector('button[data-preset="last7"]') as HTMLButtonElement
+    ).textContent;
+    // The en mock resolves the unchanged visitDurationPeriodLast7Days key.
+    expect(defaultLabel).toBe('Last 7 days');
+    defaulted.destroy();
   });
 
   it('uses no inline handlers', () => {

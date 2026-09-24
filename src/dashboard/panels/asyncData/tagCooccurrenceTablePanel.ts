@@ -7,8 +7,9 @@
  * computeTagCooccurrenceHybrid. The edges are the pairs; no graph layout.
  *
  * Fetch strategy follows the domain-analysis panel (explicit-apply): the
- * shared period filter ('all' default) only records the selection and the
- * Run button triggers the single capped query. The tag select, in contrast,
+ * panel passes no onChange handler and the Run button applies the filter
+ * selection read via getRange() ('all' default = no bounds) as the single
+ * capped query (PBI 2026-09-24-11 contract). The tag select, in contrast,
  * is fed by the fetched node list and only re-ranks the cached graph —
  * re-ranking is an O(E) filter pass, far cheaper than a refetch, and partner
  * counts must come from the unfiltered graph anyway (個別出現数 = the tag's
@@ -18,7 +19,6 @@
  * the AND-filtered navigation is explicitly out of scope for v1.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
@@ -30,14 +30,12 @@ import {
 } from '../../tagCooccurrenceTable.js';
 import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
-  type PeriodRange,
 } from '../../components/periodFilter.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
 import { tryNavigateTyped } from '../registryContext.js';
 
@@ -78,9 +76,6 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
   let topTruncatedNotice: HTMLElement | null = null;
   let tableWrap: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  // 'all' = no bounds: the tag-cluster panel default, matching the
-  // pre-filter query shape ({ limit: 10000 }).
-  let currentRange: PeriodRange = {};
   let cachedGraph: CooccurrenceGraph | null = null;
   let loadSeq = 0;
 
@@ -242,10 +237,19 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
     hideNotices();
 
     try {
-      // WHY: snapshot the range so retries reuse one consistent window even
-      // if the user changes the filter mid-flight (stale loads bail via seq).
-      const bounds = currentRange;
-      const rows = await loadRowsWithRetry(bounds);
+      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
+      // the snapshot lets retries reuse one consistent window even if the
+      // user changes the filter mid-flight (stale loads bail via seq). No
+      // filter host → unbounded ('all'): the tag-cluster panel default,
+      // matching the pre-filter query shape ({ limit: 10000 }).
+      const bounds = filterHandle ? filterHandle.getRange() : {};
+      const fetched = await fetchPeriodRows({
+        since: bounds.since,
+        until: bounds.until,
+        limit: MAX_QUERY_ROWS,
+        label: 'tagCooccurrenceTable',
+      });
+      const rows = fetched.rows;
       if (seq !== loadSeq) return;
 
       if (rows.length === 0) {
@@ -304,17 +308,11 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       tableWrap = container.querySelector('#coocTableTableWrap');
 
       if (filterHost) {
-        filterHandle = createPeriodFilter({
-          initialPreset: 'all',
-          onChange: (range) => {
-            // WHY: explicit apply — a full fetch is disproportionate per
-            // preset click (domain-analysis precedent); only the Run button
-            // applies the range.
-            currentRange = range;
-          },
-        });
+        // WHY: no onChange handler — explicit-apply host (domain-analysis
+        // precedent): Run reads getRange() instead of recording every
+        // change (PBI 2026-09-24-11 contract).
+        filterHandle = createPeriodFilter({ initialPreset: 'all' });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
       }
 
       tagSelect?.addEventListener('change', () => {
@@ -341,35 +339,4 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       tableWrap = null;
     },
   };
-}
-
-async function loadRowsWithRetry(bounds: PeriodRange): Promise<BrowsingLogEntry[]> {
-  const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
-      // bounds pass no since/until key (tagClusterPanel convention), so the
-      // all-time query stays byte-identical to the pre-filter { limit } call.
-      const qRes = await queryLogs({
-        ...(bounds.since !== undefined ? { since: bounds.since } : {}),
-        ...(bounds.until !== undefined ? { until: bounds.until } : {}),
-        limit: MAX_QUERY_ROWS,
-      });
-      // Return null (not []) on failure: retryWithExponentialBackoff only
-      // retries when the thunk yields null or throws, so coercing an error to
-      // an empty array would surface a silent "no data" render.
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data.rows;
-    },
-    { label: 'tagCooccurrenceTable', maxAttempts: 4 }
-  );
-  if (result === null) {
-    throw new Error('tagCooccurrenceTable: query failed after retries');
-  }
-  return result;
 }

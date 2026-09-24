@@ -7,9 +7,10 @@
  * limitToTopNodes → computeLayout → SVG with pan/zoom.
  *
  * Fetch strategy follows the domain-analysis panel (explicit-apply): the
- * shared period filter only records the selection and the Run button triggers
- * the single capped query — keyword extraction reruns client-side over the
- * whole fetch, so a reload per preset click is disproportionate.
+ * panel passes no onChange handler and the Run button reads the current
+ * filter selection via getRange() to trigger the single capped query
+ * (PBI 2026-09-24-11 contract) — keyword extraction reruns client-side over
+ * the whole fetch, so a reload per preset click is disproportionate.
  *
  * Click-through on keyword nodes reuses the tag navigate-to-history pattern;
  * keywords are not stored tags, so the history search may be empty —
@@ -17,7 +18,6 @@
  * search navigation).
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { limitToTopNodes, type TagNode } from '../../tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
@@ -28,14 +28,12 @@ import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { buildWordClusterRows } from '../../wordClusterAdapter.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
-  type PeriodRange,
 } from '../../components/periodFilter.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
 import { tryNavigateTyped } from '../registryContext.js';
 
@@ -72,8 +70,6 @@ export function createWordClusterPanel(): PanelLifecycle {
   let runButton: HTMLButtonElement | null = null;
   let panZoomController: TagClusterPanZoomController | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  // Fallback when no filter host exists: unbounded, like the pre-filter panel.
-  let currentRange: PeriodRange = {};
   let loadSeq = 0;
 
   function setEmptyMessage(key: string, fallback: string): void {
@@ -109,10 +105,17 @@ export function createWordClusterPanel(): PanelLifecycle {
     loadingManager.show();
 
     try {
-      // WHY: snapshot the range so retries reuse one consistent window even
-      // if the user changes the filter mid-flight (stale loads bail via seq).
-      const bounds = currentRange;
-      const fetched = await loadRowsWithRetry(bounds);
+      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
+      // the snapshot lets retries reuse one consistent window even if the
+      // user changes the filter mid-flight (stale loads bail via seq). No
+      // filter host → unbounded, like the pre-filter panel.
+      const bounds = filterHandle ? filterHandle.getRange() : {};
+      const fetched = await fetchPeriodRows({
+        since: bounds.since,
+        until: bounds.until,
+        limit: MAX_QUERY_ROWS,
+        label: 'wordCluster',
+      });
       const rows = fetched.rows;
       if (seq !== loadSeq) {
         loadingManager.cleanup();
@@ -123,7 +126,7 @@ export function createWordClusterPanel(): PanelLifecycle {
       // WHY: queryLogs caps the fetch at MAX_QUERY_ROWS, so when the period
       // holds more rows the analyzed set is a prefix — the PBI requires the
       // truncation to be visible (BDD "上限 10000 行での期間フィルタ").
-      if (fetched.total > rows.length && rowCapNotice) {
+      if (fetched.capped && rowCapNotice) {
         rowCapNotice.textContent = msg(
           'wordClusterRowCapNotice',
           { max: MAX_QUERY_ROWS, shown: rows.length, total: fetched.total },
@@ -289,18 +292,12 @@ export function createWordClusterPanel(): PanelLifecycle {
         filterHandle = createPeriodFilter({
           // WHY: 'last7' as the landing view (user decision 2026-09-24) —
           // an all-time keyword graph is too noisy to be useful at first
-          // sight; 'all' stays one click away.
+          // sight; 'all' stays one click away. No onChange handler: the
+          // explicit-apply host reads getRange() in reload() (Run button
+          // applies the range; PBI 2026-09-24-11 contract).
           initialPreset: 'last7',
-          onChange: (range) => {
-            // WHY: explicit apply (domain-analysis precedent) — keyword
-            // extraction reruns client-side over the whole fetch, so a full
-            // reload per preset click is disproportionate; the Run button
-            // applies the range.
-            currentRange = range;
-          },
         });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
       }
 
       runButton?.addEventListener('click', () => {
@@ -326,35 +323,4 @@ export function createWordClusterPanel(): PanelLifecycle {
       svg = null;
     },
   };
-}
-
-async function loadRowsWithRetry(bounds: PeriodRange): Promise<{ rows: BrowsingLogEntry[]; total: number }> {
-  const result = await retryWithExponentialBackoff<{ rows: BrowsingLogEntry[]; total: number }>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
-      // bounds pass no since/until key (tagClusterPanel convention), so the
-      // all-time query stays byte-identical to the pre-filter { limit } call.
-      const qRes = await queryLogs({
-        ...(bounds.since !== undefined ? { since: bounds.since } : {}),
-        ...(bounds.until !== undefined ? { until: bounds.until } : {}),
-        limit: MAX_QUERY_ROWS,
-      });
-      // Return null (not []) on failure: retryWithExponentialBackoff only
-      // retries when the thunk yields null or throws, so coercing an error to
-      // an empty array would surface a silent "no data" render.
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data;
-    },
-    { label: 'wordCluster', maxAttempts: 4 }
-  );
-  if (result === null) {
-    throw new Error('wordCluster: query failed after retries');
-  }
-  return result;
 }

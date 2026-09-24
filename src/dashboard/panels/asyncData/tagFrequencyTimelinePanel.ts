@@ -4,28 +4,27 @@
  * (PBI 2026-09-24-05), rendered as hand-drawn SVG plus an equal-value
  * numeric table (WCAG 2.1 AA alternative, timeHeatmapPanel precedent).
  *
- * Fetch strategy follows the domain-analysis panel: the shared period filter
- * only records the selection and the Run button applies it with a single
- * capped queryLogs({since, until, limit: 10000}) — no auto-query per preset
- * click. Enter in the top-N input re-aggregates from cache only (top-N does
- * not change the query). Granularity and top-N changes, in contrast,
- * re-aggregate the already-fetched rows client-side: recomputing buckets is
- * an O(n) pass over cached rows, far cheaper than a refetch, while still
- * satisfying "切替のたびに再集計される".
+ * Fetch strategy follows the domain-analysis panel: the panel passes no
+ * onChange handler and the Run button applies the filter selection read via
+ * getRange() with a single capped queryLogs({since, until, limit: 10000}) —
+ * no auto-query per preset click (explicit-apply contract,
+ * PBI 2026-09-24-11). Enter in the top-N input re-aggregates from cache only
+ * (top-N does not change the query). Granularity and top-N changes, in
+ * contrast, re-aggregate the already-fetched rows client-side: recomputing
+ * buckets is an O(n) pass over cached rows, far cheaper than a refetch,
+ * while still satisfying "切替のたびに再集計される".
  *
  * Aggregation lives in tagFrequencyTimeline.ts (pure); this file owns DOM,
  * SVG geometry, legend navigation, and notices only.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
   type PeriodFilterHandle,
-  type PeriodRange,
 } from '../../components/periodFilter.js';
 import {
   computeTagFrequencyTimeline,
@@ -106,7 +105,6 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   let tableWrap: HTMLElement | null = null;
   let legendWrap: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  let currentRange: PeriodRange = presetToRange('last30', Date.now());
   let granularity: TimelineGranularity = 'week';
   let cachedRows: BrowsingLogEntry[] | null = null;
   // WHY: the cap notice describes the FETCH, not the current re-aggregation —
@@ -399,10 +397,20 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     hideNotices();
 
     try {
-      // WHY: snapshot the range so retries reuse one consistent window even
-      // if the user changes the filter mid-flight (stale loads bail via seq).
-      const bounds = currentRange;
-      const fetched = await loadRowsWithRetry(bounds.since, bounds.until);
+      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
+      // the snapshot lets retries reuse one consistent window even if the
+      // user changes the filter mid-flight (stale loads bail via seq). The
+      // presetToRange fallback preserves the pre-filter last30 default when
+      // the panel mounts without a filter host.
+      const bounds = filterHandle
+        ? filterHandle.getRange()
+        : presetToRange('last30', Date.now());
+      const fetched = await fetchPeriodRows({
+        since: bounds.since,
+        until: bounds.until,
+        limit: MAX_TAG_TIMELINE_ROWS,
+        label: 'tagFrequencyTimeline',
+      });
       const rows = fetched.rows;
       if (seq !== loadSeq) return;
 
@@ -413,10 +421,7 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
         return;
       }
 
-      // WHY: queryLogs caps the fetch, so only a total beyond the fetched
-      // row count proves truncation — a period holding exactly the cap is
-      // complete and must not claim a partial set.
-      lastFetchCapped = fetched.total > rows.length;
+      lastFetchCapped = fetched.capped;
       if (lastFetchCapped && capNotice) {
         capNotice.textContent = msg(
           'dashboardTagTimelineCapNote',
@@ -455,14 +460,11 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       setGranularityButtons();
 
       if (filterHost) {
-        filterHandle = createPeriodFilter({
-          initialPreset: 'last30',
-          onChange: (range) => {
-            currentRange = range;
-          },
-        });
+        // WHY: no onChange handler — explicit-apply host (domain-analysis
+        // precedent): Run reads getRange() instead of recording every
+        // change (PBI 2026-09-24-11 contract).
+        filterHandle = createPeriodFilter({ initialPreset: 'last30' });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
       }
 
       // WHY: explicit apply — a full fetch is disproportionate per preset
@@ -515,36 +517,4 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       legendWrap = null;
     },
   };
-}
-
-async function loadRowsWithRetry(
-  since: number | undefined,
-  until: number | undefined,
-): Promise<{ rows: BrowsingLogEntry[]; total: number }> {
-  const result = await retryWithExponentialBackoff<{ rows: BrowsingLogEntry[]; total: number }>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
-      // bounds pass no since/until key (tagClusterPanel convention).
-      const qRes = await queryLogs({
-        ...(since !== undefined ? { since } : {}),
-        ...(until !== undefined ? { until } : {}),
-        limit: MAX_TAG_TIMELINE_ROWS,
-      });
-      // Return null (not []) on failure so exhausted retries surface as an
-      // error (empty-state fallback) instead of a silent "no data" render.
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data;
-    },
-    { label: 'tagFrequencyTimeline', maxAttempts: 4 },
-  );
-  if (result === null) {
-    throw new Error('tagFrequencyTimeline: query failed after retries');
-  }
-  return result;
 }
