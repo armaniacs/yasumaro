@@ -18,13 +18,16 @@
  */
 
 import type { RecordingContext } from './types.js';
+import { SUMMARY_EMPTY_FALLBACK } from '../../utils/summaryFallback.js';
 
 /**
  * Display fallback for when every text source is empty.
- * Applied by formatMarkdownStep as its presentation transform; kept here so
- * the literal has one home. Must stay byte-equal to 'Summary not available.'.
+ * Applied by formatMarkdownStep as its presentation transform; re-exported
+ * from the Layer 0 SSOT (src/utils/summaryFallback.ts) so the literal has one
+ * home and cannot drift between producers and detectors. Must stay byte-equal
+ * to 'Summary not available.'.
  */
-export const PIPELINE_TEXT_EMPTY_FALLBACK = 'Summary not available.';
+export { SUMMARY_EMPTY_FALLBACK as PIPELINE_TEXT_EMPTY_FALLBACK };
 
 /**
  * Narrow read surface for display selection. formatMarkdownStep passes its

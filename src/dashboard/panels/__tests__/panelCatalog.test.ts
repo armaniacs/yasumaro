@@ -4,10 +4,12 @@
  * カタログがパネル存在の単一の真実の源であることを固定する:
  * sidebar HTML (静的維持) との同期は実行時生成ではなくこのテストで担保する。
  *
- * NOTE: sidebar span の data-i18n キーが messages.json に存在することは
- * assert しない。applyI18n は欠落時に HTML フォールバック文言を残す仕様で、
- * tagClusterTab は既存時点で両ロケールに未定義のため。ここでは
- * カタログ宣言キー == HTML 宣言キーの一致だけを固定する。
+ * sidebar span の data-i18n キーは「カタログ宣言キー == HTML 宣言キー」の一致に
+ * 加え、両 locale の messages.json に実在することまで assert する
+ * (PBI 2026-09-24-12)。tagClusterTab が両ロケールで未定義だった時点では
+ * 欠落 assert を意図的に skip していたが、キー補完と locale parity ゲート
+ * (scripts/__tests__/localeParity.test.ts) の新設で解消した。applyI18n は
+ * 欠落時に HTML フォールバック文言を残す仕様だが、欠落自体はここで検出する。
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -27,6 +29,13 @@ const html = readFileSync(
   'utf-8',
 );
 const sidebarNav = html.slice(html.indexOf('<nav id="sidebar"'), html.indexOf('</nav>'));
+
+const enMessages = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'public/_locales/en/messages.json'), 'utf-8'),
+) as Record<string, unknown>;
+const jaMessages = JSON.parse(
+  readFileSync(resolve(process.cwd(), 'public/_locales/ja/messages.json'), 'utf-8'),
+) as Record<string, unknown>;
 
 interface SidebarButton {
   panelId: string;
@@ -78,8 +87,7 @@ const SECTION_LABEL_TO_CATALOG: Record<string, string> = {
 };
 
 describe('panelCatalog — 単一ソース', () => {
-  it('declares 25 panels with no duplicate ids', () => {
-    expect(PANEL_CATALOG).toHaveLength(25);
+  it('declares panels with no duplicate ids (count is pinned by the golden list)', () => {
     const ids = PANEL_CATALOG.map((e) => e.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -145,6 +153,15 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
     for (const b of buttons) {
       const entry = SIDEBAR_PANELS.find((e) => e.id === b.panelId);
       expect(b.i18nKey).toBe(entry?.sidebarI18nKey);
+    }
+  });
+
+  it('resolves every catalog sidebarI18nKey in both locales (PBI 2026-09-24-12)', () => {
+    for (const entry of PANEL_CATALOG) {
+      if (!entry.sidebarI18nKey) continue;
+      const key = entry.sidebarI18nKey;
+      expect(enMessages, `${key} (${entry.id}) missing from en`).toHaveProperty(key);
+      expect(jaMessages, `${key} (${entry.id}) missing from ja`).toHaveProperty(key);
     }
   });
 
