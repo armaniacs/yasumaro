@@ -12,6 +12,7 @@ import { PrivacyPipeline } from '../../privacyPipeline.js';
 import type { AIService } from '../../ai/AIService.js';
 import { sanitizePiiHybrid } from '../piiSanitizeHybrid.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { SUMMARY_EMPTY_FALLBACK } from '../../../utils/summaryFallback.js';
 import type { RecordingContext, PipelineStepFunction, StepDeps } from '../types.js';
 
 /** Construction seam for the privacy pipeline. Tests inject a fake; production uses the default. */
@@ -67,7 +68,7 @@ export function createProcessPrivacyPipelineStep(
     return {
       ...context,
       privacyResult: pipelineResult,
-      sanitizedSummary: pipelineResult.summary || 'Summary not available.',
+      sanitizedSummary: pipelineResult.summary || SUMMARY_EMPTY_FALLBACK,
       ...pickDefined({ aiDuration }),
     };
   } catch (error: unknown) {

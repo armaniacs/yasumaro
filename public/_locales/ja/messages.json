@@ -3521,6 +3521,26 @@
       }
     }
   },
+  "historyDeleteSelectedSuccess_one": {
+    "message": "$1 件の記事を削除しました",
+    "description": "en との parity ゲート用。ja 実行時は基底キーにフォールバックする (i18nPlural.ts)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "historyDeleteSelectedSuccess_other": {
+    "message": "$1 件の記事を削除しました",
+    "description": "en との parity ゲート用。ja 実行時は基底キーにフォールバックする (i18nPlural.ts)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
   "historyDeleteSelectedPartial": {
     "message": "$1 件削除しましたが、残り $2 件で中断しました: $3",
     "placeholders": {

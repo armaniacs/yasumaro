@@ -22,14 +22,14 @@
 
 import { extractKeywords } from './keywordExtractor.js';
 import { MAX_TAGS_PER_RECORD } from '../utils/computeLimits.js';
-// WHY: import the pipeline-owned literal instead of re-declaring it —
+// WHY: import the SSOT constant instead of re-declaring the literal —
 // isUsableSummary depends on matching it byte-for-byte, so a re-declared
 // copy could silently drift apart and let AI-failure summaries leak into
 // the word-cluster graph.
-import { PIPELINE_TEXT_EMPTY_FALLBACK } from '../background/pipeline/pipelineText.js';
+import { SUMMARY_EMPTY_FALLBACK } from '../utils/summaryFallback.js';
 
-/** Literal stored when AI summary generation failed (single owner: pipelineText). */
-export const SUMMARY_FALLBACK_LITERAL = PIPELINE_TEXT_EMPTY_FALLBACK;
+/** Literal stored when AI summary generation failed (single owner: summaryFallback). */
+export const SUMMARY_FALLBACK_LITERAL = SUMMARY_EMPTY_FALLBACK;
 
 export interface WordClusterSourceRow {
   title?: string | null;
