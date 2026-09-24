@@ -11,7 +11,7 @@
 import { MAX_VISIT_DURATION_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
@@ -25,15 +25,6 @@ import {
   } from '../../visitDurationAggregate.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 import { type PanelLifecycle } from '../types.js';
-
-/** getMessage with {name} substitutions and an English fallback template. */
-function msg(key: string, subs: Record<string, string | number>, fallback: string): string {
-  const translated = getMessage(key, subs);
-  if (translated) return translated;
-  return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
-    subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
-  );
-}
 
 export function createVisitDurationPanel(): PanelLifecycle {
   let filterHost: HTMLElement | null = null;

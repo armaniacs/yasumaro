@@ -6,7 +6,7 @@
  */
 
 import { vi } from 'vitest';
-import { getMessage, getMessageOr, getUserLocale, isRTL } from '../i18n.js';
+import { getMessage, getMessageOr, getMessageWithSubstitutions, getUserLocale, isRTL } from '../i18n.js';
 import { applyI18n, translatePageTitle, setHtmlLangAndDir } from '../i18n-dom.js';
 
 describe('i18n', () => {
@@ -402,6 +402,32 @@ describe('i18n', () => {
     it('does not pass substitutions when none are given', () => {
       getMessageOr('testKey', 'fallback');
       expect(chrome.i18n.getMessage).toHaveBeenCalledWith('testKey');
+    });
+  });
+
+  describe('getMessageWithSubstitutions', () => {
+    it('returns the translated string with named substitutions when the key exists', () => {
+      expect(getMessageWithSubstitutions('testWithArgs', { name: 'World' }, 'Fallback {name}')).toBe('Hello World');
+    });
+
+    it('returns the fallback with substitutions applied when the key is missing', () => {
+      expect(getMessageWithSubstitutions('missingKey', { count: 3 }, '{count} records')).toBe('3 records');
+    });
+
+    it('leaves unknown placeholders as-is in the fallback', () => {
+      expect(getMessageWithSubstitutions('missingKey', { count: 3 }, '{count} of {total}')).toBe('3 of {total}');
+    });
+
+    it('leaves unknown placeholders as-is in the translation', () => {
+      vi.mocked(global.chrome.i18n.getMessage).mockImplementation((key: string) => {
+        const messages: Record<string, string> = { 'greeting': 'Hello {name} ({missing})' };
+        return messages[key] || '';
+      });
+      expect(getMessageWithSubstitutions('greeting', { name: 'Yasu' }, 'fallback')).toBe('Hello Yasu ({missing})');
+    });
+
+    it('replaces every occurrence of a known placeholder', () => {
+      expect(getMessageWithSubstitutions('missingKey', { n: 5 }, '{n} + {n} = {total}')).toBe('5 + 5 = {total}');
     });
   });
 });

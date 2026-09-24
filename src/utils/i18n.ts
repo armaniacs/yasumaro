@@ -52,6 +52,31 @@ export function getMessage(
 }
 
 /**
+ * Get the translated message for a key with named `{name}` substitutions,
+ * falling back to `fallback` (with the same substitutions applied) when the
+ * key has no translation.
+ *
+ * Unknown placeholders are left as-is in both the translation and the
+ * fallback, and every occurrence of a known placeholder is replaced. This was
+ * previously duplicated as a local `msg()` helper in six asyncData panels.
+ *
+ * @param key - Translation key
+ * @param subs - Named substitution parameters (e.g. `{ count: 5 }`)
+ * @param fallback - Template used when the key is missing
+ */
+export function getMessageWithSubstitutions(
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string
+): string {
+  const translated = getMessage(key, subs);
+  if (translated) return translated;
+  return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
+    subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
+  );
+}
+
+/**
  * Get a translated message, falling back to `fallback` when the key has no
  * translation.
  *
