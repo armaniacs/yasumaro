@@ -119,8 +119,10 @@ describe('STEP 0 probe fixture — synthetic mixed JA/EN corpus sanity', () => {
   it('reports the expected exclusion counts for the failure rows', () => {
     // Unusable summaries: SQLite (null), 議事録 (fallback), and the last two
     // rows (fallback / null) — 4 of 11. Fully skipped rows (no usable title
-    // either): the last two — 2 of 11.
-    expect(adapterResult.summaryExcludedCount).toBe(4);
+    // either): the last two — 2 of 11, counted as skipped only (the
+    // exclusion notice's "titles were still used" claim would be false for
+    // them).
+    expect(adapterResult.summaryExcludedCount).toBe(2);
     expect(adapterResult.skippedRows).toBe(2);
     expect(adapterResult.rows.length).toBe(PROBE_CORPUS.length - adapterResult.skippedRows);
   });

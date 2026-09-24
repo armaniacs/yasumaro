@@ -242,48 +242,48 @@ describe('tagClusterTimeSliderPanel — lifecycle (PBI 2026-09-24-08)', () => {
     }
   });
 
-  it('rapid applies render only the latest window (stale first half bails before its second query)', async () => {
+  it('rapid applies render only the latest window (stale halves bail via the generation guard)', async () => {
     const pending = deferQueryLogs();
     const { panel, runBtn, startInput, endInput, firstSvg, secondSvg } = mountPanel();
 
-    // Apply 1: the default-window load is in flight (call 0 = first half).
+    // Apply 1 (default window): both independent halves fire in parallel.
     void panel.load?.();
     await flush();
-    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
 
     // Apply 2: inputs change and Compare fires while apply 1 is still pending.
     startInput.value = '2026-09-05';
     endInput.value = '2026-09-25';
     runBtn.click();
     await flush();
+    expect(mockQueryLogs).toHaveBeenCalledTimes(4);
 
-    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
-
-    // Resolving the STALE first half must bail: no render, no second query.
+    // Resolving the STALE halves must bail: no render into the SVGs.
     pending[0]!.resolve({ data: { rows: makeRows('#stale-tag'), total: 2 } });
     await flush();
-    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
-    const { mid: mid1 } = expectedBounds('2026-09-01', '2026-09-30');
-    // No query ever carried the stale window's second-half since.
-    expect(mockQueryLogs.mock.calls.map((c) => (c[0] as QueryArgs).since)).not.toContain(mid1);
-    expect(svgTagTexts(firstSvg)).not.toContain('#stale-tag');
-
-    // The latest first half proceeds and fires the second-half query.
-    pending[1]!.resolve({ data: { rows: makeRows('#fresh-half'), total: 2 } });
+    pending[1]!.resolve({ data: { rows: makeRows('#stale-second'), total: 2 } });
     await flush();
-    expect(mockQueryLogs).toHaveBeenCalledTimes(3);
-    const { mid: mid2, until: until2 } = expectedBounds('2026-09-05', '2026-09-25');
-    expect(queryArgs(2)).toEqual({ since: mid2, until: until2, limit: 10000 });
+    expect(svgTagTexts(firstSvg)).not.toContain('#stale-tag');
+    expect(svgTagTexts(secondSvg)).not.toContain('#stale-second');
 
-    pending[2]!.resolve({ data: { rows: makeRows('#fresh-second'), total: 2 } });
+    // The latest halves proceed: rendering waits for BOTH fresh halves.
+    pending[2]!.resolve({ data: { rows: makeRows('#fresh-half'), total: 2 } });
+    await flush();
+    expect(svgTagTexts(firstSvg)).not.toContain('#fresh-half');
+
+    pending[3]!.resolve({ data: { rows: makeRows('#fresh-second'), total: 2 } });
     await flush();
 
     expect(svgTagTexts(firstSvg)).toContain('#fresh-half');
     expect(svgTagTexts(secondSvg)).toContain('#fresh-second');
     expect(svgTagTexts(firstSvg)).not.toContain('#stale-tag');
-    expect(svgTagTexts(secondSvg)).not.toContain('#stale-tag');
+    expect(svgTagTexts(secondSvg)).not.toContain('#stale-second');
     expect(firstSvg.querySelectorAll('circle.tag-cluster-compare-node').length).toBeGreaterThan(0);
     expect(secondSvg.querySelectorAll('circle.tag-cluster-compare-node').length).toBeGreaterThan(0);
+    // No query after apply 2 ever carried the stale window's mid boundary.
+    const { mid: mid1 } = expectedBounds('2026-09-01', '2026-09-30');
+    const laterSinces = mockQueryLogs.mock.calls.slice(2).map((c) => (c[0] as QueryArgs).since);
+    expect(laterSinces).not.toContain(mid1);
   });
 
   it('one-side-empty shows the empty state on that side and classifies the diff against it', async () => {
@@ -435,12 +435,14 @@ describe('tagClusterTimeSliderPanel — lifecycle (PBI 2026-09-24-08)', () => {
   it('clears the diff list when a half fails instead of fabricating appeared entries', async () => {
     mockQueryLogs.mockResolvedValueOnce({ data: { rows: makeRows('#rust'), total: 2 } });
     mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
-    const { panel, diffList, secondEmpty, status } = mountPanel();
+    const { panel, diffList, secondEmpty, status, firstSvg } = mountPanel();
     await panel.load?.();
 
     expect(secondEmpty.hidden).toBe(false);
     expect(diffList.querySelectorAll('ul').length).toBe(0);
     expect(status.textContent).toContain('Failed');
+    // The healthy side's loading overlay must not stay frozen on screen.
+    expect(firstSvg.querySelector('.tag-cluster-loading-overlay')).toBeNull();
   });
 
   it('destroy is safe to call twice and stops further renders', async () => {

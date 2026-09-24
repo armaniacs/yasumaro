@@ -55,10 +55,6 @@ function row(id: number, domain: string | null, url: string): object {
   return { id, url, title: 't', created_at: Date.now(), domain, tags: null, visit_duration: null };
 }
 
-function fullPage(domain: string): object[] {
-  return Array.from({ length: 10000 }, (_, i) => row(i, domain, `https://${domain}/${i}`));
-}
-
 async function flush(): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
@@ -151,11 +147,11 @@ describe('domainAnalysisPanel — PanelLifecycle', () => {
       until: number;
       tagFilter: string;
       limit: number;
-      offset: number;
+      offset?: number;
     };
     expect(args.tagFilter).toBe('travel');
     expect(args.limit).toBe(10000);
-    expect(args.offset).toBe(0);
+    expect('offset' in args).toBe(false);
     const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
     expect(args.until - args.since).toBeGreaterThanOrEqual(sevenDaysMs - 60_000);
     expect(args.until - args.since).toBeLessThanOrEqual(sevenDaysMs + 60_000);
@@ -170,29 +166,62 @@ describe('domainAnalysisPanel — PanelLifecycle', () => {
     expect('tagFilter' in args).toBe(false);
   });
 
-  it('pages queryLogs with offsets until a short batch ends the loop', async () => {
+  it('pages queryLogs with a keyset cursor until a short batch ends the loop', async () => {
+    const base = Date.now();
+    // Page 1: 10000 rows, newest first (ids 1..10000, created_at descending).
+    const page1 = Array.from({ length: 10000 }, (_, i) => ({
+      id: i + 1,
+      url: `https://a.com/${i}`,
+      title: 't',
+      created_at: base - i,
+      domain: 'a.com',
+      tags: null,
+      visit_duration: null,
+    }));
+    // Page 2: the keyset cursor (page 1's oldest created_at) re-reads the
+    // boundary row (id 10000) plus one genuinely older row — the merged set
+    // must count the boundary row once.
+    const page2 = [
+      { id: 10000, url: 'https://a.com/9999', title: 't', created_at: base - 9999, domain: 'a.com', tags: null, visit_duration: null },
+      { id: 90001, url: 'https://b.com/x', title: 't', created_at: base - 12000, domain: 'b.com', tags: null, visit_duration: null },
+    ];
     mockQueryLogs
-      .mockResolvedValueOnce({ data: { rows: fullPage('a.com'), total: 10003 } })
-      .mockResolvedValueOnce({ data: { rows: fullPage('a.com').slice(0, 3), total: 10003 } });
+      .mockResolvedValueOnce({ data: { rows: page1, total: 10001 } })
+      .mockResolvedValueOnce({ data: { rows: page2, total: 10001 } });
     const { panel, container } = mountPanel();
     await panel.load?.();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(2);
-    const second = mockQueryLogs.mock.calls[1]![0] as { offset: number };
-    expect(second.offset).toBe(10000);
+    // No offset key — page 2's cursor is the previous page's oldest
+    // created_at (inclusive re-read, merged by unique id).
+    const second = mockQueryLogs.mock.calls[1]![0] as { until: number; offset?: number };
+    expect('offset' in second).toBe(false);
+    expect(second.until).toBe(base - 9999);
+    // a.com stays at 10000: the re-read boundary row is deduped by id.
+    const domainBody = container.querySelector('#domainAnalysisDomainBody')!;
+    expect(domainBody.textContent).toContain('a.com10000');
+    expect(domainBody.textContent).not.toContain('10001');
     expect(container.querySelector('#domainAnalysisRowCap')!.hidden).toBe(true);
   });
 
   it('shows the cap notice and stops after 5 full pages', async () => {
-    mockQueryLogs.mockImplementation(() =>
-      Promise.resolve({ data: { rows: fullPage('a.com'), total: 99999 } }),
-    );
+    const base = Date.now();
+    let call = 0;
+    mockQueryLogs.mockImplementation(() => {
+      call += 1;
+      const rows = Array.from({ length: 10000 }, (_, i) =>
+        row(call * 10000 + i, 'a.com', `https://a.com/${call}-${i}`),
+      ).map((r, i) => ({ ...r, created_at: base - (call - 1) * 10000 - i }));
+      return Promise.resolve({ data: { rows, total: 99999 } });
+    });
     const { panel, container } = mountPanel();
     await panel.load?.();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(5);
-    const last = mockQueryLogs.mock.calls[4]![0] as { offset: number };
-    expect(last.offset).toBe(40000);
+    // Each page's cursor is the previous page's oldest created_at.
+    const cursors = mockQueryLogs.mock.calls.map((c) => (c[0] as { until: number }).until);
+    expect(cursors[1]).toBe(base - 10000 + 1);
+    expect(cursors[4]).toBe(base - 40000 + 1);
     const cap = container.querySelector('#domainAnalysisRowCap')!;
     expect(cap.hidden).toBe(false);
     expect(cap.textContent).toContain('50000');

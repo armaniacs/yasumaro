@@ -5,9 +5,10 @@
  * numeric table (WCAG 2.1 AA alternative, timeHeatmapPanel precedent).
  *
  * Fetch strategy follows the domain-analysis panel: the shared period filter
- * only records the selection and the Run button (or Enter in the top-N input)
- * applies it with a single capped queryLogs({since, until, limit: 10000}) —
- * no auto-query per preset click. Granularity and top-N changes, in contrast,
+ * only records the selection and the Run button applies it with a single
+ * capped queryLogs({since, until, limit: 10000}) — no auto-query per preset
+ * click. Enter in the top-N input re-aggregates from cache only (top-N does
+ * not change the query). Granularity and top-N changes, in contrast,
  * re-aggregate the already-fetched rows client-side: recomputing buckets is
  * an O(n) pass over cached rows, far cheaper than a refetch, while still
  * satisfying "切替のたびに再集計される".
@@ -108,6 +109,10 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   let currentRange: PeriodRange = presetToRange('last30', Date.now());
   let granularity: TimelineGranularity = 'week';
   let cachedRows: BrowsingLogEntry[] | null = null;
+  // WHY: the cap notice describes the FETCH, not the current re-aggregation —
+  // granularity/top-N switches keep the capped prefix as-is, so the notice
+  // must survive re-aggregation while the cached fetch was capped.
+  let lastFetchCapped = false;
   let loadSeq = 0;
 
   function parseTopN(): number {
@@ -135,7 +140,11 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   /** Re-aggregates cached rows (granularity/top-N switch) without a refetch. */
   function reaggregateFromCache(): void {
     if (!cachedRows || !chartWrap) return;
-    hideNotices();
+    // WHY: hide only the empty state — the fetch-scoped cap notice must
+    // survive re-aggregation while the cached rows remain a capped prefix
+    // (tagCooccurrenceTablePanel keeps fetch-scoped notices the same way).
+    if (emptyState) emptyState.hidden = true;
+    if (capNotice) capNotice.hidden = !lastFetchCapped;
     clearOutput();
     if (cachedRows.length === 0) {
       if (emptyState) emptyState.hidden = false;
@@ -393,16 +402,22 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       // WHY: snapshot the range so retries reuse one consistent window even
       // if the user changes the filter mid-flight (stale loads bail via seq).
       const bounds = currentRange;
-      const rows = await loadRowsWithRetry(bounds.since, bounds.until);
+      const fetched = await loadRowsWithRetry(bounds.since, bounds.until);
+      const rows = fetched.rows;
       if (seq !== loadSeq) return;
 
       cachedRows = rows;
       if (rows.length === 0) {
+        lastFetchCapped = false;
         if (emptyState) emptyState.hidden = false;
         return;
       }
 
-      if (rows.length >= MAX_TAG_TIMELINE_ROWS && capNotice) {
+      // WHY: queryLogs caps the fetch, so only a total beyond the fetched
+      // row count proves truncation — a period holding exactly the cap is
+      // complete and must not claim a partial set.
+      lastFetchCapped = fetched.total > rows.length;
+      if (lastFetchCapped && capNotice) {
         capNotice.textContent = msg(
           'dashboardTagTimelineCapNote',
           { max: MAX_TAG_TIMELINE_ROWS },
@@ -459,7 +474,11 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       topNInput?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          void reload();
+          // WHY: re-aggregate from cache only — top-N does not change the
+          // query, and a refetch here would overlap the browser-fired
+          // change event (keydown + change both firing on Enter), double-
+          // rendering with a stale-data flash. Run refetches explicitly.
+          reaggregateFromCache();
         }
       });
       topNInput?.addEventListener('change', () => {
@@ -501,8 +520,8 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
 async function loadRowsWithRetry(
   since: number | undefined,
   until: number | undefined,
-): Promise<BrowsingLogEntry[]> {
-  const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
+): Promise<{ rows: BrowsingLogEntry[]; total: number }> {
+  const result = await retryWithExponentialBackoff<{ rows: BrowsingLogEntry[]; total: number }>(
     async () => {
       const status = await getSqliteStatus();
       if (!status?.initialized) {
@@ -520,7 +539,7 @@ async function loadRowsWithRetry(
       if (isServiceError(qRes)) {
         return null;
       }
-      return qRes.data.rows;
+      return qRes.data;
     },
     { label: 'tagFrequencyTimeline', maxAttempts: 4 },
   );

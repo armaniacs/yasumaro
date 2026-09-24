@@ -4,7 +4,6 @@ import {
   aggregateTimeHeatmap,
   createEmptyGrid,
   gridMax,
-  gridTotal,
   intensityLevel,
   TIME_HEATMAP_HOURS,
   TIME_HEATMAP_WEEKDAYS,
@@ -36,7 +35,6 @@ describe('timeHeatmapAggregate', () => {
     const tuesday = new Date(2026, 8, 22).getDay();
     expect(grid[monday]?.[9]).toBe(2);
     expect(grid[tuesday]?.[23]).toBe(1);
-    expect(gridTotal(grid)).toBe(3);
   });
 
   it('buckets records across local midnight without date drift', () => {
@@ -51,7 +49,6 @@ describe('timeHeatmapAggregate', () => {
 
   it('returns an empty grid for empty input', () => {
     const grid = aggregateTimeHeatmap([]);
-    expect(gridTotal(grid)).toBe(0);
     expect(gridMax(grid)).toBe(0);
   });
 
@@ -63,7 +60,6 @@ describe('timeHeatmapAggregate', () => {
   it('aggregates large inputs without loss', () => {
     const ts = localTs(2026, 9, 21, 12);
     const grid = aggregateTimeHeatmap(Array.from({ length: 10000 }, () => ts));
-    expect(gridTotal(grid)).toBe(10000);
     expect(gridMax(grid)).toBe(10000);
   });
 

@@ -31,9 +31,6 @@ export interface TimelineInput {
   created_at: number;
 }
 
-/** Bucket key for tags outside the top-N; reported via `hasOther`. */
-export const OTHER_SERIES_KEY = '__other__';
-
 /**
  * Default number of individual tag series rendered before the "other"
  * aggregation (PBI 既定10).

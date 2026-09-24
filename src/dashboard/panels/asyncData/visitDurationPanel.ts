@@ -11,7 +11,7 @@
 import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { MAX_VISIT_DURATION_ROWS } from '../../../utils/computeLimits.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
@@ -56,6 +56,18 @@ export function createVisitDurationPanel(): PanelLifecycle {
   let filterHandle: PeriodFilterHandle | null = null;
   let currentRange: PeriodRange = presetToRange('last30', Date.now());
   let loadSeq = 0;
+  let filterReady = false;
+
+  /**
+   * Swaps the empty-state element between its normal message and the load
+   * failure message so a persistent query failure is not rendered as
+   * "no records" (wordClusterPanel error-state convention).
+   */
+  function setEmptyStateMessage(key: string, fallback: string): void {
+    if (!emptyState) return;
+    emptyState.setAttribute('data-i18n', key);
+    emptyState.textContent = getMessageOr(key, fallback);
+  }
 
   function renderRows(tbody: HTMLElement, rows: VisitDurationRankRow[], isTag: boolean): void {
     tbody.innerHTML = '';
@@ -95,6 +107,9 @@ export function createVisitDurationPanel(): PanelLifecycle {
     domainBody.innerHTML = '';
     tagBody.innerHTML = '';
     if (emptyState) emptyState.hidden = true;
+    // WHY: restore the normal empty-state binding in case a previous load
+    // failed and swapped in the error message.
+    setEmptyStateMessage('visitDurationEmpty', 'No browsing records in this period.');
     if (allUnmeasured) allUnmeasured.hidden = true;
     if (ratioEl) ratioEl.hidden = true;
     if (domainTruncated) domainTruncated.hidden = true;
@@ -148,6 +163,10 @@ export function createVisitDurationPanel(): PanelLifecycle {
     } catch (error) {
       console.error('[visitDurationPanel] error:', error);
       if (seq !== loadSeq) return;
+      setEmptyStateMessage(
+        'visitDurationError',
+        'Failed to load the visit duration analysis. Try again.',
+      );
       if (emptyState) emptyState.hidden = false;
     }
   }
@@ -169,11 +188,15 @@ export function createVisitDurationPanel(): PanelLifecycle {
           initialPreset: 'last30',
           onChange: (range) => {
             currentRange = range;
-            void reload();
+            // WHY: the filter emits once during construction; arming the
+            // reload trigger only after that initial emission prevents a
+            // duplicate load when mount finishes (tagClusterPanel pattern).
+            if (filterReady) void reload();
           },
         });
         filterHost.appendChild(filterHandle.element);
         currentRange = filterHandle.getRange();
+        filterReady = true;
       }
     },
     async load() {
@@ -211,5 +234,10 @@ async function loadRowsWithRetry(since: number | undefined, until: number | unde
     },
     { label: 'visitDuration', maxAttempts: 4 },
   );
-  return result ?? [];
+  // WHY: a failed query must not render as "no records" — throw so the
+  // panel's catch shows a distinct error state (wordClusterPanel convention).
+  if (result === null) {
+    throw new Error('visitDuration: query failed after retries');
+  }
+  return result;
 }

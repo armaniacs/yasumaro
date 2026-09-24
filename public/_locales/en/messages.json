@@ -2139,7 +2139,7 @@
     "description": "ARIA label for new category name input"
   },
   "tagClusterDescription": {
-    "message": "Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag."
+    "message": "Displays tag co-occurrence relationships as a graph. Defaults to the last 7 days — use the period filter to widen the range. Click a node to filter history by that tag."
   },
   "tagClusterEmptyState": {
     "message": "No tagged history yet."
@@ -2234,6 +2234,10 @@
     "message": "No browsing records in this period.",
     "description": "Visit duration empty state"
   },
+  "visitDurationError": {
+    "message": "Failed to load the visit duration analysis. Try again.",
+    "description": "Visit duration load-failure state"
+  },
   "visitDurationPanelTitle": {
     "message": "Visit Duration",
     "description": "Visit duration panel title"
@@ -2317,10 +2321,6 @@
   "domainAnalysis_tagAll": {
     "message": "All tags — enter a tag name to filter",
     "description": "Domain analysis tag input placeholder"
-  },
-  "domainAnalysis_periodLabel": {
-    "message": "Period",
-    "description": "Domain analysis period filter label"
   },
   "domainAnalysis_run": {
     "message": "Run",
@@ -4134,6 +4134,10 @@
   "dashboardTimeHeatmapEmpty": {
     "message": "No browsing records in the selected period.",
     "description": "Time heatmap empty state"
+  },
+  "dashboardTimeHeatmapError": {
+    "message": "Failed to load the time heatmap. Try again.",
+    "description": "Time heatmap load-failure state"
   },
   "dashboardTimeHeatmapFri": {
     "message": "Fri",
