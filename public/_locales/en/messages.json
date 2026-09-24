@@ -2369,6 +2369,10 @@
     "message": "Reached the {max}-record analysis limit — showing a partial aggregation.",
     "description": "Domain analysis pagination cap notice"
   },
+  "domainAnalysisError": {
+    "message": "Failed to load the domain analysis. Try again.",
+    "description": "Domain analysis load failure state"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },
@@ -4521,6 +4525,10 @@
     "message": "Reached the {max}-record query limit — showing a partial aggregation.",
     "description": "Tag frequency timeline query cap notice"
   },
+  "dashboardTagTimelineError": {
+    "message": "Failed to load the tag frequency timeline. Try again.",
+    "description": "Tag frequency timeline load failure state"
+  },
   "dashboardTagTimelineTableCaption": {
     "message": "Record counts by bucket and tag",
     "description": "Tag frequency timeline numeric table caption"
@@ -4576,6 +4584,10 @@
   "cooccurrenceTableEmptyForTag": {
     "message": "No other tag co-occurs with the selected tag.",
     "description": "Tag co-occurrence table empty state when the selected tag has no partners"
+  },
+  "cooccurrenceTableError": {
+    "message": "Failed to load the tag co-occurrence pairs. Try again.",
+    "description": "Tag co-occurrence table load failure state"
   },
   "cooccurrenceTableTruncatedTop20": {
     "message": "Showing the top 20 of {total} co-occurring pairs.",

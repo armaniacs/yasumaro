@@ -317,7 +317,7 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     expect(rowCap.hidden).toBe(true);
   });
 
-  it('shows the error empty state when the query keeps failing', async () => {
+  it('shows the error empty state when the query keeps failing, and resets on recovery', async () => {
     mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
     const { panel, emptyState, svg } = mountPanel();
     await panel.load?.();
@@ -325,6 +325,16 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     expect(emptyState.hidden).toBe(false);
     expect(emptyState.getAttribute('data-i18n')).toBe('wordClusterError');
     expect(svg.querySelectorAll('circle.tag-cluster-node').length).toBe(0);
+
+    // A subsequent successful load resets the empty-state binding and hides
+    // the empty element while the cluster renders.
+    mockQueryLogs.mockResolvedValue({
+      data: { rows: makeRows([['Rust ownership', 'Borrow checker notes']]), total: 1 },
+    });
+    await panel.load?.();
+
+    expect(emptyState.getAttribute('data-i18n')).toBe('wordClusterEmpty');
+    expect(emptyState.hidden).toBe(true);
   });
 
   it('shows the error empty state when sqlite is not initialized', async () => {

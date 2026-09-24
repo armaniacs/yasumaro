@@ -220,21 +220,36 @@ describe('tagFrequencyTimelinePanel — PanelLifecycle', () => {
     expect(container.querySelectorAll('#tagTimelineChartWrap svg')).toHaveLength(0);
   });
 
-  it('shows the empty state when the backend is unavailable', async () => {
+  it('shows the error state when the backend is unavailable', async () => {
     mockGetSqliteStatus.mockResolvedValue({ initialized: false });
     const { panel, container } = mountPanel();
     await panel.load?.();
 
     expect(mockQueryLogs).not.toHaveBeenCalled();
-    expect(container.querySelector('#tagTimelineEmptyState')!.hidden).toBe(false);
+    const empty = container.querySelector('#tagTimelineEmptyState')!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.getAttribute('data-i18n')).toBe('dashboardTagTimelineError');
   });
 
-  it('shows the empty state when queries keep failing', async () => {
+  it('shows the error state when queries keep failing, and resets on recovery', async () => {
     mockQueryLogs.mockRejectedValue(new Error('boom'));
     const { panel, container } = mountPanel();
     await panel.load?.();
 
-    expect(container.querySelector('#tagTimelineEmptyState')!.hidden).toBe(false);
+    // Unified failure policy: a persistent failure shows the distinct error
+    // wording, never the "no tagged records" empty message.
+    const empty = container.querySelector('#tagTimelineEmptyState')!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.getAttribute('data-i18n')).toBe('dashboardTagTimelineError');
+
+    // A subsequent successful load resets to the normal empty binding.
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    await panel.load?.();
+
+    const recovered = container.querySelector('#tagTimelineEmptyState')!;
+    expect(recovered.getAttribute('data-i18n')).toBe('dashboardTagTimelineEmpty');
+    expect(recovered.textContent).toBe('No tagged records in this period.');
+    expect(recovered.hidden).toBe(false);
   });
 
   it('shows the cap notice only when total exceeds the fetched rows', async () => {

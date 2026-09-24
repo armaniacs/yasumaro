@@ -439,6 +439,9 @@ describe('tagClusterTimeSliderPanel — lifecycle (PBI 2026-09-24-08)', () => {
     await panel.load?.();
 
     expect(secondEmpty.hidden).toBe(false);
+    // Unified failure policy: the failed half's empty element carries the
+    // distinct error wording.
+    expect(secondEmpty.getAttribute('data-i18n')).toBe('tagClusterTimeSliderError');
     expect(diffList.querySelectorAll('ul').length).toBe(0);
     expect(status.textContent).toContain('Failed');
     // The healthy side's loading overlay must not stay frozen on screen.

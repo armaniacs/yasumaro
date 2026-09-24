@@ -25,12 +25,12 @@ Scenario: 次回 load 開始時のリセット
   Then notices.reset() で通常の data-i18n 結合に戻り全通知が隠れる
 
 ## 受け入れ基準
-- [ ] PanelNotices モジュール新設: 要素の名前付き登録、show/hide/setMessage、data-i18n 属性同期の所有
-- [ ] empty と error を同一要素の2モードとして統一（リセットで通常文言に復帰）
-- [ ] 8パネルの hideNotices / リセットダンス / setEmptyStateMessage を PanelNotices 経由に置換
-- [ ] 失敗ポリシーの統一: 永続失敗時はエラー文言、0行時は空文言（fetchPeriodRows の throw/capped と組み合わせ）
-- [ ] 特殊通知（未計測率・除外数・truncation）は per-panel 表示のまま PanelNotices の hide 管理に登録できる
-- [ ] 全パネル lifecycle テスト green（文言アサーションは現行どおり）
+- [x] PanelNotices モジュール新設: 要素の名前付き登録、show/hide/setMessage、data-i18n 属性同期の所有
+- [x] empty と error を同一要素の2モードとして統一（リセットで通常文言に復帰）
+- [x] 8パネルの hideNotices / リセットダンス / setEmptyStateMessage を PanelNotices 経由に置換
+- [x] 失敗ポリシーの統一: 永続失敗時はエラー文言、0行時は空文言（fetchPeriodRows の throw/capped と組み合わせ）
+- [x] 特殊通知（未計測率・除外数・truncation）は per-panel 表示のまま PanelNotices の hide 管理に登録できる
+- [x] 全パネル lifecycle テスト green（文言アサーションは現行どおり）
 
 ## テスト戦略
 - 単体: PanelNotices の新規テスト（show/hide/setMessage/reset・冪等性）
@@ -45,6 +45,12 @@ Scenario: 次回 load 開始時のリセット
 1.5 SP（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（文書要件がある場合のみ適用）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（文書要件がある場合のみ適用）
+
+## 実装記録（2026-09-24 arch-delivery-loop）
+- 実装: src/dashboard/panels/PanelNotices.ts 新設（register/show/hide/hideAll/setEmptyMessage/showEmpty/showError/reset/resetForReaggregate/clear・textContent+setAttribute のみ）・8パネルの hideNotices/リセットダンス/setEmptyStateMessage 群を置換・失敗ポリシー統一（cooccurrenceTable/timeline/domainAnalysis の false-empty をエラー文言に変更、新 i18n キー3種×2 locale）・reset()=フルリセット / resetForReaggregate()=fetchScoped 生存の2モード契約を docstring に明文化
+- 逸脱（記録済み）: tagCluster の truncatedNotice が reload 開始で隠れていなかった stale ドリフトを reset() 統一により修正・wordCluster の reset 後到達不能な冗長 hidden 操作を削除
+- 検証: type-check PASS / 対象 14 ファイル 158 tests green（PanelNotices 11 含む）
+- 備考: GitHub PR レビューはユーザー作業として残置

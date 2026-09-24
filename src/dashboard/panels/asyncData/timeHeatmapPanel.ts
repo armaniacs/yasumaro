@@ -10,7 +10,8 @@
 
 import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
-import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { PanelNotices } from '../PanelNotices.js';
+import { getMessage } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
@@ -54,22 +55,13 @@ function cellLabel(weekday: number, hour: number, count: number): string {
 export function createTimeHeatmapPanel(): PanelLifecycle {
   let gridEl: HTMLElement | null = null;
   let tableWrapEl: HTMLElement | null = null;
-  let emptyState: HTMLElement | null = null;
-  let limitNotice: HTMLElement | null = null;
   let filterHost: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
+  // WHY: the empty-state element doubles as the error surface (one element,
+  // two modes) and the limit notice is fetch-scoped, so resetForReaggregate
+  // semantics stay available if this panel ever gains a re-aggregation path.
+  const notices = new PanelNotices();
   let loadSeq = 0;
-
-  /**
-   * Swaps the empty-state element between its normal message and the load
-   * failure message so a persistent query failure is not rendered as
-   * "no records" (wordClusterPanel error-state convention).
-   */
-  function setEmptyStateMessage(key: string, fallback: string): void {
-    if (!emptyState) return;
-    emptyState.setAttribute('data-i18n', key);
-    emptyState.textContent = getMessageOr(key, fallback);
-  }
 
   async function reload(): Promise<void> {
     if (!gridEl || !tableWrapEl) return;
@@ -77,11 +69,10 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
 
     gridEl.innerHTML = '';
     tableWrapEl.innerHTML = '';
-    if (emptyState) emptyState.hidden = true;
-    // WHY: restore the normal empty-state binding in case a previous load
-    // failed and swapped in the error message.
-    setEmptyStateMessage('dashboardTimeHeatmapEmpty', 'No browsing records in the selected period.');
-    if (limitNotice) limitNotice.hidden = true;
+    // Fresh-fetch reset: restores the normal empty binding in case a previous
+    // load failed and swapped in the error message, and hides the limit
+    // notice until this fetch's own results decide visibility.
+    notices.reset();
 
     try {
       // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
@@ -98,12 +89,12 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       if (seq !== loadSeq) return;
 
       if (rows.length === 0) {
-        if (emptyState) emptyState.hidden = false;
+        notices.showEmpty();
         return;
       }
 
-      if (fetched.capped && limitNotice) {
-        limitNotice.hidden = false;
+      if (fetched.capped) {
+        notices.show('limit');
       }
 
       const grid = aggregateTimeHeatmap(rows.map((r) => r.created_at));
@@ -113,11 +104,10 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
     } catch (error) {
       console.error('[timeHeatmapPanel] error:', error);
       if (seq !== loadSeq) return;
-      setEmptyStateMessage(
+      notices.showError(
         'dashboardTimeHeatmapError',
         'Failed to load the time heatmap. Try again.',
       );
-      if (emptyState) emptyState.hidden = false;
     }
   }
 
@@ -127,9 +117,18 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
     mount(container) {
       gridEl = container.querySelector('#timeHeatmapGrid');
       tableWrapEl = container.querySelector('#timeHeatmapTableWrap');
-      emptyState = container.querySelector('#timeHeatmapEmptyState');
-      limitNotice = container.querySelector('#timeHeatmapLimitNotice');
       filterHost = container.querySelector('#timeHeatmapFilter');
+      notices.register(
+        'empty',
+        container.querySelector('#timeHeatmapEmptyState'),
+        {
+          i18nKey: 'dashboardTimeHeatmapEmpty',
+          fallbackText: 'No browsing records in the selected period.',
+        },
+      );
+      notices.register('limit', container.querySelector('#timeHeatmapLimitNotice'), {
+        fetchScoped: true,
+      });
       if (filterHost) {
         filterHandle = createPeriodFilter({
           initialPreset: 'last90',
@@ -155,8 +154,7 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       filterHost = null;
       gridEl = null;
       tableWrapEl = null;
-      emptyState = null;
-      limitNotice = null;
+      notices.clear();
     },
   };
 }

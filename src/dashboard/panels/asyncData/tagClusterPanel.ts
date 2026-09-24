@@ -20,6 +20,7 @@ import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import {
     createPeriodFilter,
@@ -27,45 +28,31 @@ import {
     type PeriodRange,
     } from '../../components/periodFilter.js';
 import { type PanelLifecycle } from '../types.js';
-import { tryNavigateTyped } from '../registryContext.js';
+import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export function createTagClusterPanel(): PanelLifecycle {
   let svg: SVGSVGElement | null = null;
-  let emptyState: HTMLElement | null = null;
-  let truncatedNotice: HTMLElement | null = null;
   let panZoomController: TagClusterPanZoomController | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
+  // WHY: the empty-state element doubles as the error surface (one element,
+  // two modes) with a period-aware empty wording swapped via setEmptyMessage.
+  const notices = new PanelNotices();
   let loadSeq = 0;
 
-  /**
-   * Swaps the empty-state element between its normal message and the load
-   * failure message so a persistent query failure is not rendered as
-   * "no records" (timeHeatmapPanel error-state convention).
-   */
-  function setEmptyStateMessage(key: string, fallback: string): void {
-    if (!emptyState) return;
-    emptyState.setAttribute('data-i18n', key);
-    emptyState.textContent = getMessageOr(key, fallback);
+  /** The period-aware empty message when a filter bounds the query. */
+  function periodEmptyKey(bounds: PeriodRange): string {
+    const hasBounds = bounds.since !== undefined || bounds.until !== undefined;
+    return hasBounds ? 'tagCluster_empty_period' : 'tagClusterEmptyState';
   }
 
-  /**
-   * Swaps the empty-state text between the generic and the period-aware
-   * message so a 0-row result under a period filter explains the filtering.
-   */
-  function applyEmptyStateMessage(bounds: PeriodRange): void {
-    if (!emptyState) return;
+  function periodEmptyFallback(bounds: PeriodRange): string {
     const hasBounds = bounds.since !== undefined || bounds.until !== undefined;
-    const key = hasBounds ? 'tagCluster_empty_period' : 'tagClusterEmptyState';
-    const fallback = hasBounds
+    return hasBounds
       ? 'No records in the selected period. Try a wider range.'
       : 'No tagged history yet.';
-    // WHY: keep the data-i18n binding in sync so a later language switch
-    // re-applies the same period-aware message instead of the generic one.
-    emptyState.setAttribute('data-i18n', key);
-    emptyState.textContent = getMessageOr(key, fallback);
   }
 
   async function reload(): Promise<void> {
@@ -83,10 +70,15 @@ export function createTagClusterPanel(): PanelLifecycle {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     svg.removeAttribute('viewBox');
 
-    // WHY: restore the period-aware empty-state binding in case a previous
-    // load failed and swapped in the error message (timeHeatmapPanel pattern).
-    applyEmptyStateMessage(bounds);
-    if (emptyState) emptyState.hidden = true;
+    // Fresh-fetch reset: restores the normal empty binding in case a previous
+    // load failed and swapped in the error message, and hides the truncation
+    // notice so a stale one cannot outlive its fetch.
+    notices.reset();
+    if (bounds.since !== undefined || bounds.until !== undefined) {
+      // WHY: sync the period-aware binding while hidden so a later language
+      // switch re-applies the period-aware message instead of the generic one.
+      notices.setEmptyMessage(periodEmptyKey(bounds), periodEmptyFallback(bounds));
+    }
 
     const loadingManager = new TagClusterLoadingManager(svg);
     loadingManager.show();
@@ -114,16 +106,17 @@ export function createTagClusterPanel(): PanelLifecycle {
 
       if (nodes.length === 0) {
         loadingManager.cleanup();
-        applyEmptyStateMessage(bounds);
-        if (emptyState) emptyState.hidden = false;
-        if (truncatedNotice) truncatedNotice.hidden = true;
+        notices.showEmpty(periodEmptyKey(bounds), periodEmptyFallback(bounds));
+        notices.hide('truncated');
         return;
       }
 
-      if (emptyState) emptyState.hidden = true;
-
       const limited = limitToTopNodes(nodes, edges, MAX_NODES);
-      if (truncatedNotice) truncatedNotice.hidden = !limited.truncated;
+      if (limited.truncated) {
+        notices.show('truncated');
+      } else {
+        notices.hide('truncated');
+      }
 
       const canvasSize = computeCanvasSize(limited.nodes.length);
       const positions = computeLayout(limited.nodes, limited.edges, canvasSize.width, canvasSize.height);
@@ -190,8 +183,7 @@ export function createTagClusterPanel(): PanelLifecycle {
       // WHY: a persistent query failure must not render as an empty graph —
       // show a distinct error state (timeHeatmapPanel convention).
       if (seq !== loadSeq) return;
-      setEmptyStateMessage('tagClusterError', 'Failed to load the tag cluster. Try again.');
-      if (emptyState) emptyState.hidden = false;
+      notices.showError('tagClusterError', 'Failed to load the tag cluster. Try again.');
     }
   }
 
@@ -201,8 +193,11 @@ export function createTagClusterPanel(): PanelLifecycle {
     mount(container) {
       // WHY: `querySelector` returns `Element | null`; cast needed for SVG-specific API access
       svg = container.querySelector('#tagClusterSvg') as unknown as SVGSVGElement | null;
-      emptyState = container.querySelector('#tagClusterEmptyState');
-      truncatedNotice = container.querySelector('#tagClusterTruncatedNotice');
+      notices.register('empty', container.querySelector('#tagClusterEmptyState'), {
+        i18nKey: 'tagClusterEmptyState',
+        fallbackText: 'No tagged history yet.',
+      });
+      notices.register('truncated', container.querySelector('#tagClusterTruncatedNotice'));
       const filterHost = container.querySelector('#tagClusterFilter');
       if (filterHost) {
         filterHandle = createPeriodFilter({
@@ -229,6 +224,7 @@ export function createTagClusterPanel(): PanelLifecycle {
       panZoomController = null;
       filterHandle?.destroy();
       filterHandle = null;
+      notices.clear();
     },
     init(init?: Record<string, unknown>) {
       if (init?.focusTag) {
@@ -236,11 +232,4 @@ export function createTagClusterPanel(): PanelLifecycle {
       }
     },
   };
-}
-
-function navigateToHistoryWithTag(tag: string): void {
-  const fallback = (): void => {
-    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
-  };
-  tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
 }

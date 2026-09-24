@@ -20,6 +20,7 @@
 
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { PanelNotices } from '../PanelNotices.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
@@ -35,7 +36,7 @@ import {
 } from '../../tagFrequencyTimeline.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
-import { tryNavigateTyped } from '../registryContext.js';
+import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -58,13 +59,6 @@ function msg(key: string, subs: Record<string, string | number>, fallback: strin
 
 function otherLabel(): string {
   return getMessageOr('dashboardTagTimelineSeriesOther', 'Other');
-}
-
-function navigateToHistoryWithTag(tag: string): void {
-  const fallback = (): void => {
-    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
-  };
-  tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
 }
 
 /** Smallest 2/4/6/8/10 × 10^k value ≥ v, so the midpoint tick stays integral. */
@@ -99,7 +93,6 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   let monthButton: HTMLButtonElement | null = null;
   let topNInput: HTMLInputElement | null = null;
   let runButton: HTMLButtonElement | null = null;
-  let emptyState: HTMLElement | null = null;
   let capNotice: HTMLElement | null = null;
   let chartWrap: HTMLElement | null = null;
   let tableWrap: HTMLElement | null = null;
@@ -109,8 +102,12 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   let cachedRows: BrowsingLogEntry[] | null = null;
   // WHY: the cap notice describes the FETCH, not the current re-aggregation —
   // granularity/top-N switches keep the capped prefix as-is, so the notice
-  // must survive re-aggregation while the cached fetch was capped.
+  // must survive re-aggregation while the cached fetch was capped (the
+  // fetchScoped registration below + resetForReaggregate express this).
   let lastFetchCapped = false;
+  // WHY: the empty-state element doubles as the error surface (one element,
+  // two modes) — the unified failure policy swaps in the error wording.
+  const notices = new PanelNotices();
   let loadSeq = 0;
 
   function parseTopN(): number {
@@ -124,11 +121,6 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     monthButton?.setAttribute('aria-pressed', String(granularity === 'month'));
   }
 
-  function hideNotices(): void {
-    if (emptyState) emptyState.hidden = true;
-    if (capNotice) capNotice.hidden = true;
-  }
-
   function clearOutput(): void {
     if (chartWrap) chartWrap.innerHTML = '';
     if (tableWrap) tableWrap.innerHTML = '';
@@ -138,14 +130,13 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   /** Re-aggregates cached rows (granularity/top-N switch) without a refetch. */
   function reaggregateFromCache(): void {
     if (!cachedRows || !chartWrap) return;
-    // WHY: hide only the empty state — the fetch-scoped cap notice must
-    // survive re-aggregation while the cached rows remain a capped prefix
-    // (tagCooccurrenceTablePanel keeps fetch-scoped notices the same way).
-    if (emptyState) emptyState.hidden = true;
-    if (capNotice) capNotice.hidden = !lastFetchCapped;
+    // WHY: re-aggregation reset — the fetch-scoped cap notice survives while
+    // the cached rows remain a capped prefix (tagCooccurrenceTablePanel keeps
+    // fetch-scoped notices the same way); only the empty state is hidden.
+    notices.resetForReaggregate();
     clearOutput();
     if (cachedRows.length === 0) {
-      if (emptyState) emptyState.hidden = false;
+      notices.showEmpty();
       return;
     }
     const timeline = computeTagFrequencyTimeline(cachedRows, {
@@ -394,7 +385,10 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     const seq = ++loadSeq;
 
     clearOutput();
-    hideNotices();
+    // Fresh-fetch reset: restores the normal empty binding in case a previous
+    // load failed and swapped in the error message, and hides the cap notice
+    // until this fetch's own results decide visibility.
+    notices.reset();
 
     try {
       // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
@@ -417,18 +411,18 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       cachedRows = rows;
       if (rows.length === 0) {
         lastFetchCapped = false;
-        if (emptyState) emptyState.hidden = false;
+        notices.showEmpty();
         return;
       }
 
       lastFetchCapped = fetched.capped;
-      if (lastFetchCapped && capNotice) {
+      if (fetched.capped && capNotice) {
         capNotice.textContent = msg(
           'dashboardTagTimelineCapNote',
           { max: MAX_TAG_TIMELINE_ROWS },
           'Reached the {max}-record query limit — showing a partial aggregation.',
         );
-        capNotice.hidden = false;
+        notices.show('cap');
       }
 
       const timeline = computeTagFrequencyTimeline(rows, {
@@ -439,7 +433,10 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     } catch (error) {
       console.error('[tagFrequencyTimelinePanel] error:', error);
       if (seq !== loadSeq) return;
-      if (emptyState) emptyState.hidden = false;
+      notices.showError(
+        'dashboardTagTimelineError',
+        'Failed to load the tag frequency timeline. Try again.',
+      );
     }
   }
 
@@ -452,11 +449,15 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       monthButton = container.querySelector('#tagTimelineMonthBtn');
       topNInput = container.querySelector('#tagTimelineTopN');
       runButton = container.querySelector('#tagTimelineRunBtn');
-      emptyState = container.querySelector('#tagTimelineEmptyState');
       capNotice = container.querySelector('#tagTimelineCapNotice');
       chartWrap = container.querySelector('#tagTimelineChartWrap');
       tableWrap = container.querySelector('#tagTimelineTableWrap');
       legendWrap = container.querySelector('#tagTimelineLegend');
+      notices.register('empty', container.querySelector('#tagTimelineEmptyState'), {
+        i18nKey: 'dashboardTagTimelineEmpty',
+        fallbackText: 'No tagged records in this period.',
+      });
+      notices.register('cap', capNotice, { fetchScoped: true });
       setGranularityButtons();
 
       if (filterHost) {
@@ -510,11 +511,11 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       monthButton = null;
       topNInput = null;
       runButton = null;
-      emptyState = null;
       capNotice = null;
       chartWrap = null;
       tableWrap = null;
       legendWrap = null;
+      notices.clear();
     },
   };
 }

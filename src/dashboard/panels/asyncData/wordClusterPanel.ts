@@ -29,13 +29,14 @@ import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { buildWordClusterRows } from '../../wordClusterAdapter.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { PanelNotices } from '../PanelNotices.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
 } from '../../components/periodFilter.js';
 import { type PanelLifecycle } from '../types.js';
-import { tryNavigateTyped } from '../registryContext.js';
+import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const MAX_NODES = 50;
 const MAX_QUERY_ROWS = 10000;
@@ -52,42 +53,21 @@ function msg(key: string, subs: Record<string, string | number>, fallback: strin
   );
 }
 
-function navigateToHistoryWithTag(keyword: string): void {
-  const fallback = (): void => {
-    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: keyword }));
-  };
-  tryNavigateTyped('panel-sqlite-history', { searchTag: keyword }, fallback);
-}
-
 export function createWordClusterPanel(): PanelLifecycle {
   let svg: SVGSVGElement | null = null;
-  let emptyState: HTMLElement | null = null;
   let truncatedNotice: HTMLElement | null = null;
   let rowCapNotice: HTMLElement | null = null;
   let excludedNotice: HTMLElement | null = null;
-  let loadingStatus: HTMLElement | null = null;
   let filterHost: HTMLElement | null = null;
   let runButton: HTMLButtonElement | null = null;
   let panZoomController: TagClusterPanZoomController | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
+  // WHY: the empty-state element doubles as the error surface (one element,
+  // two modes, two empty wordings swapped via setEmptyMessage). The row-cap
+  // notice describes the FETCH, so it is fetch-scoped; loading status and
+  // the aggregation notices are re-decided per fetch.
+  const notices = new PanelNotices();
   let loadSeq = 0;
-
-  function setEmptyMessage(key: string, fallback: string): void {
-    if (!emptyState) return;
-    // WHY: keep the data-i18n binding in sync so a later language switch
-    // re-applies the same message instead of a stale generic one
-    // (tagClusterPanel convention).
-    emptyState.setAttribute('data-i18n', key);
-    emptyState.textContent = getMessageOr(key, fallback);
-  }
-
-  function hideNotices(): void {
-    if (emptyState) emptyState.hidden = true;
-    if (truncatedNotice) truncatedNotice.hidden = true;
-    if (rowCapNotice) rowCapNotice.hidden = true;
-    if (excludedNotice) excludedNotice.hidden = true;
-    if (loadingStatus) loadingStatus.hidden = true;
-  }
 
   async function reload(): Promise<void> {
     if (!svg) return;
@@ -98,8 +78,8 @@ export function createWordClusterPanel(): PanelLifecycle {
 
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     svg.removeAttribute('viewBox');
-    hideNotices();
-    if (loadingStatus) loadingStatus.hidden = false;
+    notices.reset();
+    notices.show('loading');
 
     const loadingManager = new TagClusterLoadingManager(svg);
     loadingManager.show();
@@ -132,7 +112,7 @@ export function createWordClusterPanel(): PanelLifecycle {
           { max: MAX_QUERY_ROWS, shown: rows.length, total: fetched.total },
           `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${rows.length} of ${fetched.total} records.`,
         );
-        rowCapNotice.hidden = false;
+        notices.show('rowCap');
       }
 
       const adapter = buildWordClusterRows(rows);
@@ -142,23 +122,23 @@ export function createWordClusterPanel(): PanelLifecycle {
           { count: adapter.summaryExcludedCount },
           'Excluded {count} rows without a usable summary (AI failure or fallback text); titles were still used.',
         );
-        excludedNotice.hidden = false;
+        notices.show('excluded');
       }
 
       if (adapter.rows.length === 0) {
         loadingManager.cleanup();
-        if (loadingStatus) loadingStatus.hidden = true;
+        notices.hide('loading');
         // Every fetched row was skipped (no usable text) → the no-usable-rows
         // empty state; rows existed but zero keywords survived filtering →
         // the no-keywords empty state (PBI empty-state distinction).
         const noUsableRows = adapter.skippedRows === rows.length;
-        setEmptyMessage(
+        notices.setEmptyMessage(
           noUsableRows ? 'wordClusterEmpty' : 'wordClusterEmptyNoKeywords',
           noUsableRows
             ? 'No records with usable text in the selected period. Try a wider range.'
             : 'Records were found, but no keywords remained after filtering.',
         );
-        if (emptyState) emptyState.hidden = false;
+        notices.show('empty');
         return;
       }
 
@@ -175,19 +155,21 @@ export function createWordClusterPanel(): PanelLifecycle {
 
       if (nodes.length === 0) {
         loadingManager.cleanup();
-        if (loadingStatus) loadingStatus.hidden = true;
-        setEmptyMessage(
+        notices.hide('loading');
+        notices.setEmptyMessage(
           'wordClusterEmptyNoKeywords',
           'Records were found, but no keywords remained after filtering.',
         );
-        if (emptyState) emptyState.hidden = false;
+        notices.show('empty');
         return;
       }
 
-      if (emptyState) emptyState.hidden = true;
-
       const limited = limitToTopNodes(nodes, edges, MAX_NODES);
-      if (truncatedNotice) truncatedNotice.hidden = !limited.truncated;
+      if (limited.truncated) {
+        notices.show('truncated');
+      } else {
+        notices.hide('truncated');
+      }
 
       const canvasSize = computeCanvasSize(limited.nodes.length);
       const positions = computeLayout(limited.nodes, limited.edges, canvasSize.width, canvasSize.height);
@@ -248,7 +230,7 @@ export function createWordClusterPanel(): PanelLifecycle {
 
       loadingManager.updateStep(3);
       loadingManager.cleanup();
-      if (loadingStatus) loadingStatus.hidden = true;
+      notices.hide('loading');
 
       panZoomController = new TagClusterPanZoomController(svg, canvasSize, {
         zoomInBtn: document.getElementById('wordClusterZoomIn'),
@@ -258,11 +240,10 @@ export function createWordClusterPanel(): PanelLifecycle {
       panZoomController.attach();
     } catch (error) {
       loadingManager.cleanup();
-      if (loadingStatus) loadingStatus.hidden = true;
+      notices.hide('loading');
       console.error('[wordClusterPanel] error:', error);
       if (seq !== loadSeq) return;
-      setEmptyMessage('wordClusterError', 'Failed to load the word cluster. Try again.');
-      if (emptyState) emptyState.hidden = false;
+      notices.showError('wordClusterError', 'Failed to load the word cluster. Try again.');
     }
   }
 
@@ -280,13 +261,20 @@ export function createWordClusterPanel(): PanelLifecycle {
     mount(container) {
       // WHY: `querySelector` returns `Element | null`; cast needed for SVG-specific API access
       svg = container.querySelector('#wordClusterSvg') as unknown as SVGSVGElement | null;
-      emptyState = container.querySelector('#wordClusterEmptyState');
       truncatedNotice = container.querySelector('#wordClusterTruncatedNotice');
       rowCapNotice = container.querySelector('#wordClusterRowCapNotice');
       excludedNotice = container.querySelector('#wordClusterExcludedNotice');
-      loadingStatus = container.querySelector('#wordClusterLoadingStatus');
       filterHost = container.querySelector('#wordClusterFilter');
       runButton = container.querySelector('#wordClusterRunBtn');
+
+      notices.register('empty', container.querySelector('#wordClusterEmptyState'), {
+        i18nKey: 'wordClusterEmpty',
+        fallbackText: 'No records with usable text in the selected period. Try a wider range.',
+      });
+      notices.register('truncated', truncatedNotice);
+      notices.register('rowCap', rowCapNotice, { fetchScoped: true });
+      notices.register('excluded', excludedNotice);
+      notices.register('loading', container.querySelector('#wordClusterLoadingStatus'));
 
       if (filterHost) {
         filterHandle = createPeriodFilter({
@@ -315,12 +303,11 @@ export function createWordClusterPanel(): PanelLifecycle {
       filterHandle = null;
       filterHost = null;
       runButton = null;
-      emptyState = null;
       truncatedNotice = null;
       rowCapNotice = null;
       excludedNotice = null;
-      loadingStatus = null;
       svg = null;
+      notices.clear();
     },
   };
 }
