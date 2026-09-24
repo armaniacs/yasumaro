@@ -93,7 +93,7 @@ flowchart LR
 - 🚫 **uBlock Origin形式フィルター**: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。
 - 🧹 **AI要約クレンジング**: AIに本文を送る前に広告・ナビゲーション・SNSボタン・Cookie同意バナーなどのノイズを除去。`minimal` / `balanced` / `aggressive` / `custom` の4プリセットと、サイト単位の上書き設定に対応。SPA・Shadow DOM・iframe も走査。何がどの理由で除去されたかをダッシュボードで確認できます。詳細は [クレンジングのカスタマイズガイド](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) を参照。
 - ✏️ **AIプロンプトカスタマイズ**: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。
-- 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
+- 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（デフォルト・タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
 - 🔔 **ツールバーバッジ通知**: プライバシーヘッダー検出時はオレンジ `!`、自動保存完了時は青 `◎` がツールバーアイコンに表示されます。ポップアップを開かなくても状態を確認できます。
 - 🔒 **プライバシー保護**: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能。プライベートページ（銀行・メール等）を自動検出し、誤った記録を防止。
 - ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
@@ -318,13 +318,13 @@ Free and open source, with all of the following built in.
 The following features were added exclusively in Yasumaro from version 2 onwards:
 
 - 🖱️ **Manual Recording**: Record any page instantly with the "Record Now" button. No duplicate URL restrictions - record the same page multiple times.
-- 📱 **Improved UI**: Separated main screen and settings with easy hamburger menu access.
+- 📱 **Improved UI**: Separated main screen and settings with easy access to the dedicated dashboard via the ⚙ icon.
 - 🌐 **Domain Filtering**: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported, with optional automatic subdomain matching.
 - 🗄️ **History Archive**: Back up history up to a chosen date as a standard SQLite file (openable in any SQLite tool), then optionally delete it from the local database. Merge it back (restore) or open it for browsing/editing without touching the main database.
 - 🚫 **uBlock Origin Format Filters**: Import and use existing uBlock filter lists like EasyList directly.
 - 🧹 **AI Summary Cleansing**: Strips noise (ads, navigation, social buttons, cookie consent banners) before sending page text to the AI. Four presets (`minimal` / `balanced` / `aggressive` / `custom`) plus per-site overrides. Also scans SPA content, Shadow DOM, and iframes. The dashboard shows what was removed and why. See [Cleansing Customization Guide](docs/CLEANSING_CUSTOMIZATION_GUIDE.md).
 - ✏️ **AI Prompt Customization**: Edit and save custom AI summarization prompts. Configure different prompts per provider.
-- 📋 **AI Prompt Presets**: Choose from 5 built-in presets (With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
+- 📋 **AI Prompt Presets**: Choose from 5 built-in presets (Default, With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
 - 🔔 **Toolbar Badge Notifications**: An orange `!` badge appears when privacy headers are detected; a blue `◎` badge appears when auto-recording completes. Check status without opening the popup.
 - 🔒 **Privacy Protection**: Select from 4 privacy modes and mask PII before sending to AI. Automatically detects private pages (banking, email, etc.) to prevent accidental recording.
 - ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
