@@ -6,7 +6,7 @@
  * インスタンスプロパティに集約する。テスト容易性を向上させる。
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import {
   setMasterPassword,
@@ -167,7 +167,7 @@ export class MasterPasswordController {
     const result = await setMasterPassword(password, buildSetStorageFn());
 
     if (result.success) {
-      showStatus('status', getMessage('passwordSaved') || 'Master password saved successfully.', 'success');
+      showStatus('status', getMessageOr('passwordSaved', 'Master password saved successfully.'), 'success');
       this.closePasswordModal();
       if (this.dom.masterPasswordEnabled) this.dom.masterPasswordEnabled.checked = true;
       if (this.dom.masterPasswordOptions) this.dom.masterPasswordOptions.classList.remove('hidden');
@@ -206,7 +206,7 @@ export class MasterPasswordController {
     const password = this.dom.masterPasswordAuthInput.value;
     if (!password) {
       if (this.dom.passwordAuthError) {
-        this.dom.passwordAuthError.textContent = getMessage('passwordRequired') || 'Please enter your master password.';
+        this.dom.passwordAuthError.textContent = getMessageOr('passwordRequired', 'Please enter your master password.');
         this.dom.passwordAuthError.classList.add('visible');
       }
       return;
@@ -230,7 +230,7 @@ export class MasterPasswordController {
     } else {
       await recordFailedAttempt();
       if (this.dom.passwordAuthError) {
-        this.dom.passwordAuthError.textContent = getMessage('passwordIncorrect') || result.error || 'Incorrect password.';
+        this.dom.passwordAuthError.textContent = getMessageOr('passwordIncorrect', result.error || 'Incorrect password.');
         this.dom.passwordAuthError.classList.add('visible');
       }
     }
@@ -252,7 +252,7 @@ export class MasterPasswordController {
             await chrome.storage.local.remove(['master_password_enabled', 'master_password_salt', 'master_password_hash']);
             dom.masterPasswordOptions!.classList.add('hidden');
             this.updateMasterPasswordWarningVisibility(false);
-            showStatus('status', getMessage('passwordRemoved') || 'Master password removed.', 'success');
+            showStatus('status', getMessageOr('passwordRemoved', 'Master password removed.'), 'success');
           });
         }
       });

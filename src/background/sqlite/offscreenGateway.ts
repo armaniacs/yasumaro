@@ -110,11 +110,18 @@ export class OffscreenGateway {
     // update row's encodePayload now (see its comment).
     const row = sqliteWireFor(op.type);
     if (!row || row.family !== 'mutate') throw new Error('Unhandled mutate op');
+    // Toggle ops re-execute the state flip, so a timeout-then-retry would
+    // invert the value twice ("result unknown" must surface instead). The
+    // remaining mutates are set-semantics (insert/insertBatch/update/delete/
+    // insertAuditLog) and keep the transport's single retry. The wire table
+    // itself is untouched — this is a gateway-side opt-out only.
+    const noRetry = op.type === 'toggleStar' ? { noRetry: true } : undefined;
     return this.callInternal<unknown>(
       row.messageType,
       row.encodePayload(op),
       (res) => row.decodeGateway(res),
       (op as { traceId?: string }).traceId,
+      noRetry,
     );
   }
 

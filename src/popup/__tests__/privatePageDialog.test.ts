@@ -183,15 +183,27 @@ vi.mock('../autoClose.js', () => ({
   startAutoCloseTimer: vi.fn(),
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => {
     const messages: Record<string, string> = {
       saveSuccess: 'Saved to Obsidian',
       saveError: 'Save error',
     };
     return messages[key] || key;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 /**
  * Helper: set up the DOM needed by privatePageDialog before importing.

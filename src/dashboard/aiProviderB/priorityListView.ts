@@ -1,5 +1,5 @@
 import type { ProviderSlot } from '../../utils/storage/types.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { getRegistryEntry } from '../../background/ai/providerCatalog.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
 
@@ -118,7 +118,7 @@ function createRow(index: number, slot: ProviderSlot | undefined, settings?: Mod
   const modelInput = document.createElement('input');
   modelInput.type = 'text';
   modelInput.className = 'b-priority-model-input';
-  modelInput.placeholder = getMessage('providerPriorityModelPlaceholder') || 'Model Name (optional)';
+  modelInput.placeholder = getMessageOr('providerPriorityModelPlaceholder', 'Model Name (optional)');
   const resolved = resolveModelDisplayName(slot?.provider ?? '', slot?.model, settings);
   if (slot?.model) {
     modelInput.value = slot.model;
@@ -244,7 +244,7 @@ export function createBPriorityListView(
         warn.setAttribute('role', 'alert');
         container.appendChild(warn);
       }
-      warn.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+      warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
     } else {
       warn?.remove();
     }
@@ -259,7 +259,7 @@ export function createBPriorityListView(
         reqWarn.setAttribute('role', 'alert');
         container.appendChild(reqWarn);
       }
-      reqWarn.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+      reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
     } else {
       reqWarn?.remove();
     }

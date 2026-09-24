@@ -17,10 +17,10 @@ import { updateConsentBadge } from '../consentBadge.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+import { PROVIDER_DEFAULT_BASE_URLS } from '../../utils/storage/providerDefaultBaseUrls.js';
 import { syncOllamaOriginRule } from '../net/ollamaOriginRule.js';
-import { getRegistryEntry } from '../ai/providerCatalog.js';
 
-const OLLAMA_DEFAULT_BASE_URL = getRegistryEntry('ollama')?.defaultBaseUrl ?? 'http://localhost:11434/v1';
+const OLLAMA_DEFAULT_BASE_URL = PROVIDER_DEFAULT_BASE_URLS['ollama'];
 
 /**
  * 現在のOllama baseUrl設定に合わせてOriginヘッダー削除ルールを同期する。

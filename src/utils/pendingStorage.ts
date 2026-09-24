@@ -2,7 +2,7 @@ import { ErrorCode } from './logger/types.js';
 import { logInfo, logDebug, logError } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './urlHash.js';
-import { getMessage } from './i18n.js';
+import { getMessageOr } from './i18n.js';
 import { redactHeaderValue } from './redaction.js';
 import { withOptimisticLock } from './storage/storageTransaction.js';
 
@@ -52,7 +52,7 @@ const PENDING_REASON_MESSAGE_KEYS: Readonly<Record<PendingReason, string>> = {
 export function renderPendingReason(reason: string): string {
   const key = PENDING_REASON_MESSAGE_KEYS[reason as PendingReason];
   if (!key) return reason;
-  return getMessage(key) || reason;
+  return getMessageOr(key, reason);
 }
 
 export interface PendingPage {

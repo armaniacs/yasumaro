@@ -15,7 +15,7 @@
 
 import { PROVIDER_CATALOG, type ProviderCatalogEntry } from '../background/ai/providerCatalog.js';
 import type { ProviderId } from '../utils/storage/types.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 
 /**
@@ -47,14 +47,14 @@ export function renderProviderOptions(sel: HTMLSelectElement, cfg: RenderOptions
   sel.textContent = '';
 
   if (cfg.customPrompt) {
-    sel.appendChild(makeOption('all', getMessage('promptProviderAll') || 'All Providers'));
+    sel.appendChild(makeOption('all', getMessageOr('promptProviderAll', 'All Providers')));
   } else if (cfg.includeNone) {
-    sel.appendChild(makeOption('', getMessage('providerPriorityNone') || 'Not set'));
+    sel.appendChild(makeOption('', getMessageOr('providerPriorityNone', 'Not set')));
   }
 
   for (const [id, entry] of PROVIDER_CATALOG) {
     if (cfg.customPrompt && !entry.supportsCustomPrompt) continue;
-    sel.appendChild(makeOption(id, getMessage(entry.labelI18nKey) || entry.label));
+    sel.appendChild(makeOption(id, getMessageOr(entry.labelI18nKey, entry.label)));
   }
 
   if ([...sel.options].some((o) => o.value === prev)) sel.value = prev;

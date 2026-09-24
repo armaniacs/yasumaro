@@ -2763,6 +2763,33 @@
   "aiSummaryCleansingSave": {
     "message": "保存"
   },
+  "aiSummaryCleansingPerSiteSection": {
+    "message": "サイト別オーバーライド"
+  },
+  "aiSummaryCleansingPerSiteDesc": {
+    "message": "ドメインの完全一致で指定します。グローバル設定に上書きマージされます（差分のみ保存されます）。"
+  },
+  "aiSummaryCleansingPerSiteDomainLabel": {
+    "message": "ドメイン"
+  },
+  "aiSummaryCleansingPerSiteDomainHelp": {
+    "message": "完全一致（サブドメインは別扱い）。例: example.com"
+  },
+  "aiSummaryCleansingPerSiteSave": {
+    "message": "オーバーライドを保存"
+  },
+  "aiSummaryCleansingPerSiteDelete": {
+    "message": "オーバーライドを削除"
+  },
+  "aiSummaryCleansingFeedbackSection": {
+    "message": "クレンジングのフィードバック"
+  },
+  "aiSummaryCleansingFeedbackDesc": {
+    "message": "誤削除報告の一覧。開発者がパターン改善に利用します。"
+  },
+  "domainTagRemoveAriaLabel": {
+    "message": "{domain} を削除"
+  },
   "cspTab": {
     "message": "CSP"
   },

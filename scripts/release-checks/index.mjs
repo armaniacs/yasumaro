@@ -17,6 +17,7 @@
  *   metadata    — Version consistency, git tag, git clean
  *   manifest    — Manifest V3 compliance, permissions, CSP
  *   i18n        — Translation completeness
+ *   privacy     — PRIVACY.md sync + policy version match
  *   all         — All checks (default)
  */
 
@@ -37,6 +38,7 @@ const CHECK_SCRIPTS = {
   metadata: 'scripts/release-checks/check-release-metadata.mjs',
   manifest: 'scripts/release-checks/check-manifest.mjs',
   i18n: 'scripts/release-checks/check-i18n.mjs',
+  privacy: 'scripts/release-checks/check-privacy.mjs',
 };
 
 function parseArgs() {

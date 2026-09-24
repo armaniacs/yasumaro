@@ -13,7 +13,13 @@ describe('protocol version single source', () => {
   it('wxt.config.ts define matches protocol.ts', () => {
     const wxtPath = resolve(dirname(fileURLToPath(import.meta.url)), '../../../wxt.config.ts');
     const wxtContent = readFileSync(wxtPath, 'utf-8');
-    // wxt.config.ts should define __PROTOCOL_VERSION__ with the same value
+    // Preferred: wxt.config.ts derives the value from protocol.ts (no drift).
+    // Legacy: a numeric literal that must equal CURRENT_PROTOCOL_VERSION.
+    const derived = /__PROTOCOL_VERSION__.*?JSON\.stringify\(CURRENT_PROTOCOL_VERSION\)/.test(wxtContent);
+    if (derived) {
+      expect(wxtContent).toContain('CURRENT_PROTOCOL_VERSION');
+      return;
+    }
     const match = wxtContent.match(/__PROTOCOL_VERSION__.*?JSON\.stringify\((\d+)\)/);
     expect(match).not.toBeNull();
     if (match) {

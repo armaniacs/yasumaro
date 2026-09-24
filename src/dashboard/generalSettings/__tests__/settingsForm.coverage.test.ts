@@ -16,23 +16,38 @@ vi.mock('../../dashboardSqliteService.js', async (importOriginal) => {
 
 vi.mock('../../../utils/i18n.js', async (importOriginal) => {
   const orig = (await importOriginal()) as any;
+  const getMessage = vi.fn((key: string) => {
+    // default: return key for non-empty, to allow fallback testing we override per test
+    // but for coverage we return a non-empty string for known keys
+    const map: Record<string, string> = {
+      purgeNowSkipped: 'skipped-msg',
+      contentPurgeNowSkipped: 'content-skipped-msg',
+      purgeNowSuccess_one: 'purged-one $COUNT$',
+      purgeNowSuccess_other: 'purged-other $COUNT$',
+      contentPurgeNowSuccess_one: 'content-one $COUNT$',
+      contentPurgeNowSuccess_other: 'content-other $COUNT$',
+      purgeNowSuccess: 'fallback-purge',
+      contentPurgeNowSuccess: 'fallback-content',
+    };
+    return map[key] ?? `msg:${key}`;
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+    ((subs === undefined
+      ? (getMessage as (...a: any[]) => unknown)(key)
+      : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+    key: string,
+    subs: Record<string, string | number>,
+    fallback: string,
+  ): string =>
+    ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+      fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+        subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
   return {
     ...orig,
-    getMessage: vi.fn((key: string) => {
-      // default: return key for non-empty, to allow fallback testing we override per test
-      // but for coverage we return a non-empty string for known keys
-      const map: Record<string, string> = {
-        purgeNowSkipped: 'skipped-msg',
-        contentPurgeNowSkipped: 'content-skipped-msg',
-        purgeNowSuccess_one: 'purged-one $COUNT$',
-        purgeNowSuccess_other: 'purged-other $COUNT$',
-        contentPurgeNowSuccess_one: 'content-one $COUNT$',
-        contentPurgeNowSuccess_other: 'content-other $COUNT$',
-        purgeNowSuccess: 'fallback-purge',
-        contentPurgeNowSuccess: 'fallback-content',
-      };
-      return map[key] ?? `msg:${key}`;
-    }),
+    getMessage,
+    getMessageOr,
+    getMessageWithSubstitutions,
   };
 });
 

@@ -10,7 +10,7 @@ import { test, expect } from './fixtures/extension.fixture.js';
 
 // Must match PRIVACY_POLICY_VERSION in src/utils/storage/privacyConsent.ts.
 // If this test starts failing with "privacy_consent_required", check this constant first.
-const PRIVACY_POLICY_VERSION = '2026-07-31';
+const PRIVACY_POLICY_VERSION = '2026-09-08';
 
 test.describe('Recording traceId correlation @extension', () => {
   // NOTE: This test relies on service worker logger buffer flush, which is timing-dependent.

@@ -1,4 +1,4 @@
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { loadDomainSettings, saveDomainLists } from './settings/domainFilter.js';
 import { normalizeDomainInput, validateDomainInput } from './domainInputPolicy.js';
@@ -61,11 +61,9 @@ export async function initDomainFilterTagUI(): Promise<void> {
   function updateModeDesc(mode: 'blacklist' | 'whitelist'): void {
     if (!modeDesc) return;
     if (mode === 'blacklist') {
-      modeDesc.textContent = getMessage('domainBlacklistDesc') ||
-        'ブラックリストのドメインは記録されません。それ以外はすべて記録されます。';
+      modeDesc.textContent = getMessageOr('domainBlacklistDesc', 'ブラックリストのドメインは記録されません。それ以外はすべて記録されます。');
     } else {
-      modeDesc.textContent = getMessage('domainWhitelistDesc') ||
-        'ホワイトリストのドメインのみ記録されます。それ以外は記録されません。';
+      modeDesc.textContent = getMessageOr('domainWhitelistDesc', 'ホワイトリストのドメインのみ記録されます。それ以外は記録されません。');
     }
   }
 
@@ -73,7 +71,7 @@ export async function initDomainFilterTagUI(): Promise<void> {
     if (!tagList || !tagCount) return;
     const domains = getDomains(mode);
     tagCount.textContent = domains.length > 0
-      ? (getMessage(getPluralKey('domainTagCount', domains.length), { count: domains.length }) || '{count} 件')
+      ? (getMessageWithSubstitutions(getPluralKey('domainTagCount', domains.length), { count: domains.length }, '{count} 件'))
       : '';
 
     tagList.innerHTML = '';
@@ -88,7 +86,7 @@ export async function initDomainFilterTagUI(): Promise<void> {
 
       const removeBtn = document.createElement('button');
       removeBtn.className = 'domain-tag-remove';
-      removeBtn.setAttribute('aria-label', `${domain} を削除`);
+      removeBtn.setAttribute('aria-label', getMessageWithSubstitutions('domainTagRemoveAriaLabel', { domain }, `${domain} を削除`));
       removeBtn.textContent = '×';
       removeBtn.addEventListener('click', () => removeDomain(domain, mode));
 
@@ -107,12 +105,12 @@ export async function initDomainFilterTagUI(): Promise<void> {
     if (!domain) return;
 
     if (!validateDomainInput(domain)) {
-      tagError.textContent = getMessage('domainTagInvalidError') || '無効なドメイン形式です。';
+      tagError.textContent = getMessageOr('domainTagInvalidError', '無効なドメイン形式です。');
       return;
     }
     const existing = getDomains(mode);
     if (existing.includes(domain)) {
-      tagError.textContent = getMessage('domainTagDuplicateError') || 'すでに登録されています。';
+      tagError.textContent = getMessageOr('domainTagDuplicateError', 'すでに登録されています。');
       return;
     }
     setDomains(mode, [...existing, domain]);

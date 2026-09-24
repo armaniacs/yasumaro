@@ -11,7 +11,7 @@
 import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { errorMessage } from './errorUtils.js';
-import { getMessage } from './i18n.js';
+import { getMessage, getMessageOr } from './i18n.js';
 import { showConfirmDialog } from './ui/confirmDialog.js';
 import {
   exportSettings,
@@ -177,7 +177,7 @@ export async function handleFileImport(
       showPasswordAuthModal('import', handleEncryptedImport);
     } else {
       const warningMsg =
-        getMessage('importPasswordRequired') || 'Master password is required to import encrypted settings.';
+        getMessageOr('importPasswordRequired', 'Master password is required to import encrypted settings.');
       // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
       const confirmed = await showConfirmDialog({ message: warningMsg });
       if (confirmed) {

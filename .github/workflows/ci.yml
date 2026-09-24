@@ -20,14 +20,6 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-      - name: Cache node_modules
-        id: cache-npm
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
       - name: Install dependencies
         run: npm ci
       - name: Check licenses
@@ -177,14 +169,6 @@ jobs:
         with:
           node-version: '24'
           cache: 'npm'
-      - name: Cache node_modules
-        id: cache-npm
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
       - name: Install dependencies
         run: npm ci
       - name: Build extension
@@ -195,3 +179,36 @@ jobs:
           name: dist-chromium
           path: dist/
           retention-days: 7
+
+  bench-check:
+    # PERFORMANCE_GUIDE / bench/README が約束する regression ゲート
+    # (bench:check は決定論的カウンタのみを見るため共有ランナーでも安定)。
+    # コードに無関係な変更 (docs のみ等) では paths-filter が false を返し、
+    # 後続ステップはスキップされて即成功する。
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            code:
+              - 'bench/**'
+              - 'src/**'
+              - 'entrypoints/**'
+              - 'wasm/**/*.rs'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'wxt.config.ts'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        if: steps.changes.outputs.code == 'true'
+        with:
+          node-version: '24'
+          cache: 'npm'
+      - name: Install dependencies
+        if: steps.changes.outputs.code == 'true'
+        run: npm ci
+      - name: Micro benchmark regression check
+        if: steps.changes.outputs.code == 'true'
+        run: npm run bench:check

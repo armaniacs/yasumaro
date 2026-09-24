@@ -43,6 +43,7 @@ import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
+import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -249,9 +250,13 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       // WHY: the hue travels as a CSS custom property so dashboard.css can
       // resolve the scheme-appropriate fixed saturation/lightness per node.
       circle.style.setProperty('--tag-hue', String(tagHue(node.tag)));
+      const activate = (): void => {
+        navigateToHistoryWithTag(node.tag);
+      };
+      makeGraphNodeAccessible(circle, `#${node.tag} (${node.count})`, activate);
       circle.addEventListener('click', () => {
         if (side.panZoom?.wasDragSuppressingClick()) return;
-        navigateToHistoryWithTag(node.tag);
+        activate();
       });
 
       const title = document.createElementNS(SVG_NS, 'title');

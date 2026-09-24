@@ -1,4 +1,4 @@
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessageOr } from '../../../utils/i18n.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
@@ -64,7 +64,7 @@ async function runFilterSearch(searchInput: HTMLInputElement | null, matchesEl: 
   if (blackMatches.length === 0 && whiteMatches.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'domain-match-empty';
-    empty.textContent = getMessage('domainNoMatches') || 'No matching rules found.';
+    empty.textContent = getMessageOr('domainNoMatches', 'No matching rules found.');
     matchesEl.appendChild(empty);
     return;
   }
@@ -72,8 +72,8 @@ async function runFilterSearch(searchInput: HTMLInputElement | null, matchesEl: 
   function renderGroup(items: string[], listType: 'blacklist' | 'whitelist'): void {
     if (items.length === 0) return;
     const label = listType === 'blacklist'
-      ? (getMessage('blacklistLabel') || 'Blacklist')
-      : (getMessage('whitelistLabel') || 'Whitelist');
+      ? (getMessageOr('blacklistLabel', 'Blacklist'))
+      : (getMessageOr('whitelistLabel', 'Whitelist'));
     const header = document.createElement('div');
     header.className = `domain-match-group-header domain-match-group-${listType}`;
     header.textContent = `${label} (${items.length})`;
@@ -109,7 +109,7 @@ async function runCheck(checkInput: HTMLInputElement | null, resultEl: HTMLEleme
   }
 
   resultEl.className = 'domain-search-result visible info';
-  resultEl.textContent = getMessage('checking') || 'Checking...';
+  resultEl.textContent = getMessageOr('checking', 'Checking...');
 
   try {
     const url = value.startsWith('http') ? value : `https://${value}`;
@@ -118,13 +118,13 @@ async function runCheck(checkInput: HTMLInputElement | null, resultEl: HTMLEleme
 
     if (allowed) {
       resultEl.className = 'domain-search-result visible allowed';
-      resultEl.textContent = `✓ ${domain} — ${getMessage('domainAllowed') || 'Allowed (will be recorded)'}`;
+      resultEl.textContent = `✓ ${domain} — ${getMessageOr('domainAllowed', 'Allowed (will be recorded)')}`;
     } else {
       resultEl.className = 'domain-search-result visible blocked';
-      resultEl.textContent = `✗ ${domain} — ${getMessage('domainBlocked') || 'Blocked (will not be recorded)'}`;
+      resultEl.textContent = `✗ ${domain} — ${getMessageOr('domainBlocked', 'Blocked (will not be recorded)')}`;
     }
   } catch {
     resultEl.className = 'domain-search-result visible info';
-    resultEl.textContent = getMessage('checkError') || 'Error checking domain.';
+    resultEl.textContent = getMessageOr('checkError', 'Error checking domain.');
   }
 }

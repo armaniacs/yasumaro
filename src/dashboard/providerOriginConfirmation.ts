@@ -7,7 +7,7 @@
  * state — they are never exported and imports cannot smuggle them in.
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys, type Settings } from '../utils/storage/types.js';
@@ -56,10 +56,10 @@ export async function confirmNewProviderBaseUrls(delta: Partial<Settings>): Prom
 
     const originList = pending.map((p) => `- ${p.label}: ${p.origin}`).join('\n');
     const confirmed = await showConfirmDialog({
-        title: getMessage('providerOriginConfirmTitle') || 'Confirm provider endpoints',
-        message: (getMessage('providerOriginConfirmMessage') || 'API keys and page content will be sent to these origins. Allow them?') + '\n' + originList,
-        confirmLabel: getMessage('providerOriginConfirmAllow') || 'Allow',
-        cancelLabel: getMessage('cancel') || 'Cancel',
+        title: getMessageOr('providerOriginConfirmTitle', 'Confirm provider endpoints'),
+        message: (getMessageOr('providerOriginConfirmMessage', 'API keys and page content will be sent to these origins. Allow them?')) + '\n' + originList,
+        confirmLabel: getMessageOr('providerOriginConfirmAllow', 'Allow'),
+        cancelLabel: getMessageOr('cancel', 'Cancel'),
     });
     if (!confirmed) return 'cancelled';
 

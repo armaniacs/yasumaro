@@ -4,7 +4,7 @@ import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
  * Tag settings panel: categories + normalization dictionary management.
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -114,8 +114,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     if (categoryName.length > MAX_CATEGORY_NAME_LENGTH) {
       void showAlertDialog({
         message:
-          getMessage('categoryNameTooLong') ||
-          `カテゴリ名が長すぎます（${MAX_CATEGORY_NAME_LENGTH}文字以内）`,
+          getMessageOr('categoryNameTooLong', `カテゴリ名が長すぎます（${MAX_CATEGORY_NAME_LENGTH}文字以内）`),
       });
       return;
     }
@@ -123,15 +122,14 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     if (INVALID_CATEGORY_CHARS.test(categoryName)) {
       void showAlertDialog({
         message:
-          getMessage('categoryNameInvalidChars') ||
-          'カテゴリ名に使用できない文字が含まれています（|、# は使用不可）',
+          getMessageOr('categoryNameInvalidChars', 'カテゴリ名に使用できない文字が含まれています（|、# は使用不可）'),
       });
       return;
     }
 
     const allCategories = [...DEFAULT_CATEGORIES, ...userCategories];
     if (allCategories.includes(categoryName)) {
-      void showAlertDialog({ message: getMessage('duplicateCategoryError') || 'このカテゴリ名は既に存在します' });
+      void showAlertDialog({ message: getMessageOr('duplicateCategoryError', 'このカテゴリ名は既に存在します')});
       return;
     }
 
@@ -193,7 +191,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     // Check for duplicates (case-insensitive, matching normalizeTags behavior)
     const normalizedFrom = from.trim().normalize('NFKC').toLowerCase();
     if (normalizationEntries.some(e => e.from.trim().normalize('NFKC').toLowerCase() === normalizedFrom)) {
-      void showAlertDialog({ message: getMessage('duplicateNormEntryError') || 'このFrom値は既に登録されています' });
+      void showAlertDialog({ message: getMessageOr('duplicateNormEntryError', 'このFrom値は既に登録されています')});
       return;
     }
 
@@ -230,12 +228,12 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
       await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(settings);
       showStatus(
         'exportImportStatus',
-        getMessage('tagSettingsSaved') || 'タグ設定を保存しました',
+        getMessageOr('tagSettingsSaved', 'タグ設定を保存しました'),
         'success'
       );
     } catch (error) {
       console.error('[TagsPanel] Failed to save tag settings:', error);
-      showStatus('exportImportStatus', getMessage('saveError') || '保存エラー', 'error');
+      showStatus('exportImportStatus', getMessageOr('saveError', '保存エラー'), 'error');
     }
   }
 

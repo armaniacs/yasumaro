@@ -2,7 +2,7 @@ import { setElementHtml } from '../utils/htmlFragment.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showSuccess } from './errorUtils.js';
 import { escapeHtml, clearElement } from './domUtils.js';
@@ -126,7 +126,7 @@ export function setupEventListeners(): void {
     if (urls.length === 0) {
       const statusDiv = document.getElementById('mainStatus');
       if (statusDiv) {
-        showSuccess(statusDiv, getMessage('pendingPagesEmpty') || 'No items selected.');
+        showSuccess(statusDiv, getMessageOr('pendingPagesEmpty', 'No items selected.'));
       }
       return;
     }

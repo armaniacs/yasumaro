@@ -339,9 +339,12 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
 /**
  * Why a provider baseUrl origin is (or is not) authorized to carry credentials.
  * Layered on top of isAllowedProviderBaseUrl's deny-only SSRF rules:
- * - 'local': loopback origin (localhost / 127.x / ::1) — the local-provider
- *   exception, checked before the deny layer so a loopback endpoint stays
- *   usable in any provider slot (consistent with ssrfGuard's port gate).
+ * - 'local': loopback origin (localhost / 127.x / ::1) in a local-provider
+ *   slot (lm-studio / ollama / built-in-ai) only. A loopback URL in a
+ *   non-local slot falls through to the confirmed check below, so plaintext
+ *   credentials to http://localhost can no longer self-authorize outside the
+ *   local rows — the dashboard confirmation dialog must explicitly confirm
+ *   the origin first.
  * - 'pinned': the row declares a fixed endpoint domain and the URL points at
  *   it (or a subdomain of it).
  * - 'provider-domain': the host is itself a known AI-provider endpoint from
@@ -374,9 +377,10 @@ function knownProviderDomains(): Set<string> {
 
 /**
  * Origin-scoped authorization for a provider baseUrl. The loopback exception
- * runs before the deny-only SSRF predicate (loopback endpoints are explicitly
- * permitted in any provider slot); the SSRF layer still rejects private /
- * metadata / encoded-IP hosts for everything else.
+ * applies to local-provider slots (lm-studio / ollama / built-in-ai) only and
+ * runs after the deny-only SSRF predicate; loopback in a non-local slot must
+ * be user-confirmed. The SSRF layer still rejects private / metadata /
+ * encoded-IP hosts for everything else.
  */
 export function isProviderOriginAuthorized(
   url: string,
@@ -390,11 +394,12 @@ export function isProviderOriginAuthorized(
     return { authorized: false, reason: 'denied' };
   }
   const hostname = parsed.hostname.toLowerCase().replace(/\.+$/, '');
-  if (isLoopbackOriginHostname(hostname)) {
-    return { authorized: true, reason: 'local' };
-  }
+  const loopback = isLoopbackOriginHostname(hostname);
   if (!isAllowedProviderBaseUrl(url, row?.isLocal ?? false)) {
     return { authorized: false, reason: 'denied' };
+  }
+  if (loopback && (row?.isLocal ?? false)) {
+    return { authorized: true, reason: 'local' };
   }
   if (row?.domain) {
     const domain = row.domain.toLowerCase();

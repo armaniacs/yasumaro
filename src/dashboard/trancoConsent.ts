@@ -3,7 +3,7 @@ import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 // Tranco Consent Panel
 // ============================================================================
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
@@ -52,7 +52,7 @@ export async function initTrancoConsentPanel(repo: SettingsReader = settingsRepo
     updateConsentUI(repo, consentState);
   } catch (e) {
     console.error('[Dashboard] Error loading Tranco consent state:', e);
-    showStatus('trancoUpdateStatus', getMessage('errorLoadTrancoData') || 'Trancoデータの読み込みに失敗しました', 'error');
+    showStatus('trancoUpdateStatus', getMessageOr('errorLoadTrancoData', 'Trancoデータの読み込みに失敗しました'), 'error');
   }
 }
 
@@ -102,7 +102,7 @@ function updateConsentUI(repo: SettingsReader, state: TrancoConsentState): void 
   if (!consentStatusEl) return;
 
   // Update status badge
-  consentStatusEl.textContent = getMessage(`trancoConsentStatus${state.needsConsent}`) || state.needsConsent;
+  consentStatusEl.textContent = getMessageOr(`trancoConsentStatus${state.needsConsent}`, state.needsConsent);
   consentStatusEl.className = `status-badge status-${state.needsConsent.toLowerCase()}`;
 
   // Update retry info
@@ -118,12 +118,12 @@ function updateConsentUI(repo: SettingsReader, state: TrancoConsentState): void 
   if (state.needsConsent === 'PENDING' || state.needsConsent === 'RETRY_NEEDED') {
     const grantBtn = document.createElement('button');
     grantBtn.className = 'btn-primary';
-    grantBtn.textContent = getMessage('trancoUpdateModalConfirmLabel') || '同意する';
+    grantBtn.textContent = getMessageOr('trancoUpdateModalConfirmLabel', '同意する');
     grantBtn.addEventListener('click', () => handleTrancoGrant(repo, state.latestVersion));
 
     const denyBtn = document.createElement('button');
     denyBtn.className = 'btn-secondary';
-    denyBtn.textContent = getMessage('trancoUpdateModalDenyLabel') || '拒否する';
+    denyBtn.textContent = getMessageOr('trancoUpdateModalDenyLabel', '拒否する');
     denyBtn.addEventListener('click', () => handleTrancoDeny(repo));
 
     consentActionsEl!.innerHTML = '';
@@ -148,7 +148,7 @@ async function handleTrancoGrant(repo: SettingsReader, version: string): Promise
 
     showStatus(
       'trancoStatus',
-      getMessage('trancoConsentGranted') || '同意を保存しました',
+      getMessageOr('trancoConsentGranted', '同意を保存しました'),
       'success'
     );
 
@@ -157,7 +157,7 @@ async function handleTrancoGrant(repo: SettingsReader, version: string): Promise
     console.error('[Dashboard] Error granting Tranco consent:', e);
     showStatus(
       'trancoStatus',
-      getMessage('errorConsentData') || '同意の保存中にエラーが発生しました',
+      getMessageOr('errorConsentData', '同意の保存中にエラーが発生しました'),
       'error'
     );
   }
@@ -176,7 +176,7 @@ async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
 
     showStatus(
       'trancoStatus',
-      getMessage('trancoConsentDenied') || '拒否を保存しました',
+      getMessageOr('trancoConsentDenied', '拒否を保存しました'),
       'error'
     );
 
@@ -185,7 +185,7 @@ async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
     console.error('[Dashboard] Error denying Tranco consent:', e);
     showStatus(
       'trancoStatus',
-      getMessage('errorConsentData') || '拒否の保存中にエラーが発生しました',
+      getMessageOr('errorConsentData', '拒否の保存中にエラーが発生しました'),
       'error'
     );
   }

@@ -15,7 +15,7 @@ import {
   validateTemplate,
 } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
@@ -154,7 +154,7 @@ function renderTemplateList(): void {
  */
 function createTemplateListItem(template: MarkdownExportTemplate, isActive: boolean): string {
   const displayName = template.isDefault
-    ? (getMessage('markdownTemplateDefaultName') || template.name)
+    ? (getMessageOr('markdownTemplateDefaultName', template.name))
     : template.name;
   const activeBadge = isActive
     ? `<span class="badge badge-active" data-i18n="markdownTemplateActiveLabel">Active</span>`
@@ -194,7 +194,7 @@ async function handleActivateClick(id: string): Promise<void> {
   currentSettings[StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID] = id;
   await settingsRepository.set(StorageKeys.ACTIVE_MARKDOWN_EXPORT_TEMPLATE_ID, id);
 
-  showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateActivated') || 'Template activated', 'success');
+  showStatus(statusEl ?? 'markdownTemplateStatus', getMessageOr('markdownTemplateActivated', 'Template activated'), 'success');
   renderTemplateList();
 }
 
@@ -207,7 +207,7 @@ async function handleDeleteClick(id: string): Promise<void> {
 
   // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
   const confirmed = await showConfirmDialog({
-    message: getMessage('markdownTemplateConfirmDelete') || 'Are you sure you want to delete this template?',
+    message: getMessageOr('markdownTemplateConfirmDelete', 'Are you sure you want to delete this template?'),
     dangerous: true,
   });
   if (!confirmed) {
@@ -228,7 +228,7 @@ async function handleDeleteClick(id: string): Promise<void> {
 
   await settingsRepository.setAll(delta);
 
-  showStatus(statusEl ?? 'markdownTemplateStatus', getMessage('markdownTemplateDeleted') || 'Template deleted', 'success');
+  showStatus(statusEl ?? 'markdownTemplateStatus', getMessageOr('markdownTemplateDeleted', 'Template deleted'), 'success');
   renderTemplateList();
 }
 
@@ -238,7 +238,7 @@ async function handleDeleteClick(id: string): Promise<void> {
  * @param template Template to duplicate
  */
 function handleDuplicateClick(template: MarkdownExportTemplate): void {
-  const copySuffix = getMessage('markdownTemplateCopySuffix') || 'Copy';
+  const copySuffix = getMessageOr('markdownTemplateCopySuffix', 'Copy');
   openEditor(null, {
     name: `${template.name} ${copySuffix}`,
     fileTemplate: template.fileTemplate,
@@ -264,7 +264,7 @@ function handleEditClick(template: MarkdownExportTemplate): void {
  */
 function handleCreateClick(): void {
   openEditor(null, {
-    name: getMessage('markdownTemplateNewName') || 'New Template',
+    name: getMessageOr('markdownTemplateNewName', 'New Template'),
     fileTemplate: DEFAULT_MARKDOWN_TEMPLATE.fileTemplate,
     entryTemplate: DEFAULT_MARKDOWN_TEMPLATE.entryTemplate,
   });
@@ -340,7 +340,7 @@ function updatePreview(): void {
 
   const validation = validateTemplate(draft);
   if (!validation.valid) {
-    const prefix = getMessage('markdownTemplateInvalidPrefix') || 'Invalid template:';
+    const prefix = getMessageOr('markdownTemplateInvalidPrefix', 'Invalid template:');
     previewEl.textContent = `${prefix} ${validation.errors.join(', ')}`;
     return;
   }
@@ -356,7 +356,7 @@ async function handleSaveClick(): Promise<void> {
 
   const name = nameInput.value.trim();
   if (!name) {
-    showFieldError(getMessage('markdownTemplateNameRequired') || 'Template name is required');
+    showFieldError(getMessageOr('markdownTemplateNameRequired', 'Template name is required'));
     return;
   }
 
@@ -364,7 +364,7 @@ async function handleSaveClick(): Promise<void> {
 
   const validation = validateTemplate(draft);
   if (!validation.valid) {
-    const prefix = getMessage('markdownTemplateInvalidPrefix') || 'Invalid template:';
+    const prefix = getMessageOr('markdownTemplateInvalidPrefix', 'Invalid template:');
     showFieldError(`${prefix} ${validation.errors.join(', ')}`);
     return;
   }
@@ -394,8 +394,7 @@ async function handleSaveClick(): Promise<void> {
   await settingsRepository.set(StorageKeys.MARKDOWN_EXPORT_TEMPLATES, updated);
 
   showStatus(statusEl ?? 'markdownTemplateStatus', 
-    getMessage(editingTemplateId ? 'markdownTemplateUpdated' : 'markdownTemplateCreated')
-      || (editingTemplateId ? 'Template updated' : 'Template created'),
+    getMessageOr(editingTemplateId ? 'markdownTemplateUpdated' : 'markdownTemplateCreated', (editingTemplateId ? 'Template updated' : 'Template created')),
     'success'
   );
 

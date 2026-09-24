@@ -36,7 +36,7 @@ vi.mock('../sqliteAlert.js', () => ({
 
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { recordSqliteSuccess, recordSqliteFailure } from '../sqliteAlert.js';
-import type { OffscreenTransport } from '../offscreenTransport.js';
+import type { OffscreenTransport, MsgOffscreenOptions } from '../offscreenTransport.js';
 import type { OffscreenResponse } from '../../messaging/sqliteMessages.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
 
@@ -257,6 +257,47 @@ describe('SqliteClient — unit tests', () => {
       const result = await client.query({ kind: 'count' });
 
       expect(result).toEqual({ success: false, error: expect.anything() });
+    });
+  });
+
+  describe('mutate noRetry wiring (toggle flip safety)', () => {
+    function createOptsCapturingTransport(response: unknown): {
+      transport: OffscreenTransport;
+      seenOpts: MsgOffscreenOptions[];
+    } {
+      const seenOpts: MsgOffscreenOptions[] = [];
+      const transport: OffscreenTransport = {
+        async msgOffscreen(
+          _type: SqliteMessageType,
+          _payload: Record<string, unknown> = {},
+          _traceId = '',
+          opts: MsgOffscreenOptions = {},
+        ): Promise<OffscreenResponse> {
+          seenOpts.push(opts);
+          return response as OffscreenResponse;
+        },
+      };
+      return { transport, seenOpts };
+    }
+
+    it('passes noRetry for toggleStar (re-execution would flip the star twice)', async () => {
+      const { transport, seenOpts } = createOptsCapturingTransport({ success: true, is_starred: 1 });
+      client = new SqliteClient(transport);
+
+      const result = await client.mutate({ type: 'toggleStar', id: 1 });
+
+      expect(result).toEqual({ success: true, data: { is_starred: 1 } });
+      expect(seenOpts).toEqual([{ noRetry: true }]);
+    });
+
+    it('keeps the transport single retry for set-semantics mutates', async () => {
+      const { transport, seenOpts } = createOptsCapturingTransport({ success: true });
+      client = new SqliteClient(transport);
+
+      await client.mutate({ type: 'update', id: 1, changes: { title: 'Updated' } });
+      await client.mutate({ type: 'delete', id: 2 });
+
+      expect(seenOpts).toEqual([{}, {}]);
     });
   });
 

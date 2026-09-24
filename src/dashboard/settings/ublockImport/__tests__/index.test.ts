@@ -226,8 +226,8 @@ vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
   };
 });;
 
-vi.mock('../../../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string, subs?: Record<string, string>) => {
+vi.mock('../../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string, subs?: Record<string, string>) => {
     const msgs: Record<string, string> = {
       fileLoaded: 'Loaded "{filename}"',
       fileReadError: 'File read error',
@@ -253,8 +253,20 @@ vi.mock('../../../../utils/i18n.js', () => ({
       }
     }
     return msg;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 function setupUblockDOM() {
   document.body.innerHTML = `

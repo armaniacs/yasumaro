@@ -164,7 +164,7 @@ export function initExportImport(): void {
 
     if (importLogsProgress) {
       importLogsProgress.classList.remove('hidden');
-      importLogsProgress.textContent = getMessage('importLogsProcessing') || 'Importing...';
+      importLogsProgress.textContent = getMessageOr('importLogsProcessing', 'Importing...');
       importLogsProgress.className = 'diag-result';
     }
 
@@ -172,17 +172,17 @@ export function initExportImport(): void {
       const text = await file.text();
       const result = await importFromJson(text, (current, total) => {
         if (importLogsProgress) {
-          importLogsProgress.textContent = `${getMessage('importLogsProcessing') || 'Importing...'} ${current}/${total}`;
+          importLogsProgress.textContent = `${getMessageOr('importLogsProcessing', 'Importing...')} ${current}/${total}`;
         }
       });
 
       if ('error' in result) {
         if (importLogsProgress) {
-          importLogsProgress.textContent = `${getMessage('importLogsError') || 'Import error'}: ${result.error}`;
+          importLogsProgress.textContent = `${getMessageOr('importLogsError', 'Import error')}: ${result.error}`;
           importLogsProgress.className = 'diag-result error';
         }
       } else {
-        const msg = (getMessage('importLogsComplete') || 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)')
+        const msg = (getMessageOr('importLogsComplete', 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)'))
           .replace('%{inserted}', String(result.inserted))
           .replace('%{skipped}', String(result.skipped))
           .replace('%{total}', String(result.total));
@@ -193,7 +193,7 @@ export function initExportImport(): void {
       }
     } catch (error: unknown) {
       if (importLogsProgress) {
-        importLogsProgress.textContent = `${getMessage('importLogsError') || 'Import error'}: ${errorMessage(error)}`;
+        importLogsProgress.textContent = `${getMessageOr('importLogsError', 'Import error')}: ${errorMessage(error)}`;
         importLogsProgress.className = 'diag-result error';
       }
     }

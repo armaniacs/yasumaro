@@ -28,6 +28,7 @@ import {
     } from '../../components/periodFilter.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
+import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 
 const MAX_NODES = 50;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -145,9 +146,14 @@ export function createTagClusterPanel(): PanelLifecycle {
         circle.setAttribute('class', 'tag-cluster-node');
         // WHY: click-through stays tag-only — carrying the period into the
         // history panel is explicitly out of scope for v1 (PBI 2026-09-24-04).
+        // Keyboard/AT access (WCAG 2.1.1/1.1.1) via the shared helper.
+        const activate = (): void => {
+          navigateToHistoryWithTag(node.tag);
+        };
+        makeGraphNodeAccessible(circle, `#${node.tag} (${node.count})`, activate);
         circle.addEventListener('click', () => {
           if (panZoomController?.wasDragSuppressingClick()) return;
-          navigateToHistoryWithTag(node.tag);
+          activate();
         });
 
         const title = document.createElementNS(SVG_NS, 'title');
@@ -166,6 +172,16 @@ export function createTagClusterPanel(): PanelLifecycle {
         svg.appendChild(circle);
         svg.appendChild(text);
       }
+
+      // Text alternative for the graph (wordClusterPanel precedent).
+      svg.setAttribute('role', 'img');
+      svg.setAttribute(
+        'aria-label',
+        `Tag cluster: ${limited.nodes
+          .slice(0, 10)
+          .map((node) => `#${node.tag}`)
+          .join(', ')}`,
+      );
 
       loadingManager.updateStep(3);
       loadingManager.cleanup();

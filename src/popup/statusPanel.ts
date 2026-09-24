@@ -3,7 +3,7 @@ import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { getActiveTabUrl, getCurrentTab, getDomainForUrl } from './tabUtils.js';
@@ -28,7 +28,7 @@ export async function initStatusPanel(): Promise<void> {
         const modeBadge = document.getElementById('statusModeBadge');
         if (modeBadge) {
           const modeKey = mode === 'local_only' ? 'privacyModeLocalOnlyShort' : mode === 'full_pipeline' ? 'privacyModeFullPipelineShort' : mode === 'masked_cloud' ? 'privacyModeMaskedCloudShort' : 'privacyModeCloudOnlyShort';
-          modeBadge.textContent = getMessage(modeKey) || mode;
+          modeBadge.textContent = getMessageOr(modeKey, mode);
           modeBadge.className = `status-badge status-mode-badge mode-${mode}`;
         }
       }
@@ -315,7 +315,7 @@ function attachPrivacyActionListeners(): void {
         if (result.ok && result.added) {
           const statusDiv = document.getElementById('mainStatus');
           if (statusDiv) {
-            statusDiv.textContent = getMessage('domainAddedToWhitelist') || `Added ${domain} to whitelist`;
+            statusDiv.textContent = getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`);
             statusDiv.className = 'success';
           }
           await initStatusPanel();
@@ -340,7 +340,7 @@ function attachPrivacyActionListeners(): void {
       if (result.ok && result.added) {
         const statusDiv = document.getElementById('mainStatus');
         if (statusDiv) {
-          statusDiv.textContent = getMessage('pathAddedToWhitelist') || `Added path to whitelist`;
+          statusDiv.textContent = getMessageOr('pathAddedToWhitelist', `Added path to whitelist`);
           statusDiv.className = 'success';
         }
         await initStatusPanel();
@@ -418,9 +418,9 @@ function initCleansingFeedbackButton(): void {
       }
       const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
       await enqueueFeedback({ url, domain, htmlSnippet, removedByReason });
-      if (statusEl) statusEl.textContent = getMessage('reportCleansingFeedbackSuccess') || '報告しました';
+      if (statusEl) statusEl.textContent = getMessageOr('reportCleansingFeedbackSuccess', '報告しました');
     } catch (e) {
-      if (statusEl) statusEl.textContent = getMessage('reportCleansingFeedbackError') || '報告に失敗しました';
+      if (statusEl) statusEl.textContent = getMessageOr('reportCleansingFeedbackError', '報告に失敗しました');
       logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
     }
     setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);

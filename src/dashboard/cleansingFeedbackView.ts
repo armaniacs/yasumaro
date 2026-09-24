@@ -1,5 +1,5 @@
 import { getFeedbackQueue, clearFeedbackQueue, removeFeedbackEntry } from '../utils/aiSummaryCleaner/feedbackQueue.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
   const entries = await getFeedbackQueue();
@@ -44,7 +44,7 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
   ];
   for (const [key, fallback] of headers) {
     const th = document.createElement('th');
-    th.textContent = getMessage(key) || fallback;
+    th.textContent = getMessageOr(key, fallback);
     headerRow.appendChild(th);
   }
   thead.appendChild(headerRow);

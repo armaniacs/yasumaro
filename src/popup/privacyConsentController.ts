@@ -3,7 +3,7 @@
  * プライバシーポリシー同意モーダルUIコントローラー
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import {
     shouldPromptForConsent,
     acceptConsent,
@@ -88,13 +88,12 @@ function showPrivacyConsentModal(): void {
         policyBtn.href = chrome.runtime.getURL('permissions.html');
         policyBtn.setAttribute(
             'aria-label',
-            getMessage('viewFullPolicy') || 'View Full Privacy Policy'
-        );
+            getMessageOr('viewFullPolicy', 'View Full Privacy Policy'));
     }
 
     // 翻訳
     if (title) {
-        title.textContent = getMessage('privacyConsentTitle') || 'Privacy Policy Consent';
+        title.textContent = getMessageOr('privacyConsentTitle', 'Privacy Policy Consent');
     }
 
     // モーダル表示（ESCで閉じない: 'cancel'イベントをpreventDefaultする）
@@ -143,7 +142,7 @@ async function handleAcceptConsent(): Promise<void> {
         const acceptBtn = getAcceptConsentBtnEl();
         if (acceptBtn) {
             const originalText = acceptBtn.textContent;
-            acceptBtn.textContent = getMessage('saveFailed') || 'Failed to save consent';
+            acceptBtn.textContent = getMessageOr('saveFailed', 'Failed to save consent');
             setTimeout(() => {
                 acceptBtn.textContent = originalText;
             }, 2000);
@@ -163,8 +162,7 @@ async function handleDeclineConsent(): Promise<void> {
         return;
     }
 
-    const message = getMessage('consentDeclinedMessage') ||
-        'Without consent, main features of the extension will not be available. You can consent later from the settings screen.';
+    const message = getMessageOr('consentDeclinedMessage', 'Without consent, main features of the extension will not be available. You can consent later from the settings screen.');
     // Accessible dialog seam (PBI 2026-09-17-19) replaces native alert().
     void showAlertDialog({ message });
 }

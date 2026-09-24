@@ -103,9 +103,8 @@ vi.mock('../../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
-vi.mock('../../../utils/i18n.js', () => ({
-  applyI18n: vi.fn(),
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => {
     const messages: Record<string, string> = {
       locale: 'en',
       promptProviderAll: 'All Providers',
@@ -124,8 +123,20 @@ vi.mock('../../../utils/i18n.js', () => ({
       confirmDeletePrompt: 'Are you sure you want to delete this prompt?',
     };
     return key in messages ? messages[key] : key;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  applyI18n: vi.fn(),
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
 
 vi.mock('../../../popup/errorUtils.js', () => ({
   escapeHtml: vi.fn((s: string) => String(s)),
