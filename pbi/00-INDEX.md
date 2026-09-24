@@ -14,12 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ⬜ 未着手 2件 🔧リファクタ中心 RICE順: 15 → 16（09-14 は完了・アーカイブ済み）
+### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ✅ 全8件完了・アーカイブ済み
 
-分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点依存関係: 09-14 完了、15/16 は直列。台帳（スコア・依存グラフ・5 Whys・台帳送り2件）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md)。
-
-- [2026-09-24-15-refactor-max-query-rows-ssot.md](2026-09-24-15-refactor-max-query-rows-ssot.md)（⬜ 未着手 — RICE 6.0・0.25 SP・副作用🟢。MAX_QUERY_ROWS ローカル再宣言×3 の SSOT 化）
-- [2026-09-24-16-refactor-i18n-msg-helper.md](2026-09-24-16-refactor-i18n-msg-helper.md)（⬜ 未着手 — RICE 6.0・0.5 SP・副作用🟢。msg() フォールバックヘルパー ×6 の集約）
+分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md) を参照。
 
 ### 2026-09-24 分析機能強化ラウンド — 🔶 部分実装 1件（ユーザー検証待ち）✨機能追加（01-06・08 は完了・アーカイブ済み）
 
@@ -83,6 +80,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 arch-delivery-loop ラウンド バッチ6-7 — ✅ 2件完了（15・16 アーカイブ済み）RICE順: 15 → 16（直列）
+
+arch-delivery-loop による実装。直列チェーン完結（09-16 全8件）。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-15-refactor-max-query-rows-ssot.md（✅ 完了 — `b9a1e8ef`。computeLimits に MAX_QUERY_ROWS = QUERY_CAPS.plain（参照派生）・limits-drift pin 追加・3パネルのローカル宣言削除。77 tests 対象 green。RICE 6.0）
+- 2026-09-24-16-refactor-i18n-msg-helper.md（✅ 完了 — `b9a1e8ef`。getMessageWithSubstitutions を utils/i18n に新設・6パネルのローカル msg 削除・PBI 14 由来の lastFetchCapped デッドフラグを削除。全パネル 707 tests green。RICE 6.0）
 
 ### 2026-09-24 arch-delivery-loop ラウンド バッチ4-5 — ✅ 2件完了（13・14 アーカイブ済み）RICE順: 13 → 14（直列）
 
