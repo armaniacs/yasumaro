@@ -44,6 +44,7 @@ const LAYER0_FILES = [
   'src/utils/urlHash.ts',
   'src/utils/backoff.ts',
   'src/utils/httpFailureMessages.ts',
+  'src/utils/summaryFallback.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md

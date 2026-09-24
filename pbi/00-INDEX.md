@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ✅ 全8件完了・アーカイブ済み
+
+分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md) を参照。
+
+### 2026-09-24 分析機能強化ラウンド — ✅ 全8件完了・アーカイブ済み ✨機能追加
+
+分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)（台帳送り5案を保持して live 維持）。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
+
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
 VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
@@ -25,16 +33,16 @@ VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`�
 holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台帳送りにした空 catch を PBI 化。いずれも再検討トリガーが未発火のため、トリガーが発火するまで着手しない。
 
 - [2026-09-22-01-backlog-empty-catch-audit.md](2026-09-22-01-backlog-empty-catch-audit.md)（⬜ 未着手 — RICE 2.0・1 SP・副作用🟢。非テストの空 catch 6箇所の監査と best-effort 経路の可観測化。トリガー: 握りつぶした失敗が原因の不具合報告）
-- [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（⬜ 未着手 — RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了。トリガー: compute の offscreen/パイプライン移設）
+- [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（⬜ 未着手 — RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了（2026-09-24 アーカイブ済み — 前提は消化済みで着手可能）。トリガー: compute の offscreen/パイプライン移設）
 - [2026-09-22-03-backlog-local-provider-origin-rule.md](2026-09-22-03-backlog-local-provider-origin-rule.md)（⬜ 未着手 — RICE 1.0・調査1 SP / 実装3 SP・副作用🟢。ローカルプロバイダ向け Origin-strip の汎用化（investigate 込み）。トリガー: 2つ目のローカルプロバイダで CORS 対策が必要になった時）
 
 **WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。tag-cooccur（17/21/22）は 2026-09-24 にアーカイブ済み（アーカイブ履歴参照）。
 
 **sentence-dedup（2026-09-20 実装・0ed11095）の配線は不採用で確定（2026-09-21）**: 唯一の呼び出し元 `src/utils/contentExtractor/index.ts` がコンテンツスクリプト（`src/content/contentKernel.ts`）専用経路で実行されるため、ページ側 CSP で WASM 初期化を保証できず、配線しても実運用ではほぼ常に TS フォールバックになる。速度利得も 1.13〜1.28x と小さく、メモリ利得（フットプリント 0.22→0.00MB/call・実測）は dedup ステージの offscreen 移設（処理順の意味論が変わるアーキテクチャ変更）と引き換えになるため、現時点では採用しない。クレート・ハイブリッド・CI ゲート（src コピー）は STAGED のまま資産保持し、将来のパイプライン移設時に再評価する。
 
-### 2026-09-15 AMO 公開 — 🟪 着手（2026-09-23・提出前修正済み、AMO アップロードはユーザー作業）
+### 2026-09-15 AMO 公開 — 🟪 審査待ち（2026-09-24 提出・審査中、審査結果対応はユーザー作業）
 
-- 🟪 [2026-09-15-01-backlog-firefox-amo-publish.md](2026-09-15-01-backlog-firefox-amo-publish.md)（**着手**: 2026-09-23 ユーザー指示で AMO 採用決定。sources zip 肥大修正・data_collection_permissions 追加・strict_min_version 140 で addons-linter errors 0。残置は AMO アップロード・リスティング・正当化文のユーザー作業。詳細は PBI の着手記録参照）
+- 🟪 [2026-09-15-01-backlog-firefox-amo-publish.md](2026-09-15-01-backlog-firefox-amo-publish.md)（**審査待ち**: 2026-09-23 ユーザー指示で AMO 採用決定。sources zip 肥大修正・data_collection_permissions 追加・strict_min_version 140 で addons-linter errors 0。2026-09-24 に AMO 提出済み・審査中。残置は審査結果対応 — 通過後の署名版インストール確認・FAQ (ja/en) 記載、指摘時は対応記録。詳細は PBI の着手記録参照）
 
 
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
@@ -71,6 +79,71 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-24 arch-delivery-loop ラウンド バッチ6-7 — ✅ 2件完了（15・16 アーカイブ済み）RICE順: 15 → 16（直列）
+
+arch-delivery-loop による実装。直列チェーン完結（09-16 全8件）。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-15-refactor-max-query-rows-ssot.md（✅ 完了 — `b9a1e8ef`。computeLimits に MAX_QUERY_ROWS = QUERY_CAPS.plain（参照派生）・limits-drift pin 追加・3パネルのローカル宣言削除。77 tests 対象 green。RICE 6.0）
+- 2026-09-24-16-refactor-i18n-msg-helper.md（✅ 完了 — `b9a1e8ef`。getMessageWithSubstitutions を utils/i18n に新設・6パネルのローカル msg 削除・PBI 14 由来の lastFetchCapped デッドフラグを削除。全パネル 707 tests green。RICE 6.0）
+
+### 2026-09-24 arch-delivery-loop ラウンド バッチ4-5 — ✅ 2件完了（13・14 アーカイブ済み）RICE順: 13 → 14（直列）
+
+arch-delivery-loop による実装。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-13-refactor-navigate-to-history-helper.md（✅ 完了 — `8d365e68`。navigateToHistory ヘルパー新設（4ケーステスト付き）・6パネル置換。tagsPanel は挙動保存のため現状維持（記録済み逸脱）。130 tests 対象 green。RICE 7.0）
+- 2026-09-24-14-refactor-panel-notices.md（✅ 完了 — `8d365e68`。PanelNotices 新設（empty/error 統一・fetchScoped・resetForReaggregate）・8パネル移行・失敗ポリシー一本化（新 i18n キー3種）。158 tests 対象 green。RICE 6.4）
+
+### 2026-09-24 arch-delivery-loop ラウンド バッチ2-3 — ✅ 2件完了（10・11 アーカイブ済み）RICE順: 10 → 11（直列）
+
+arch-delivery-loop による実装。直列チェーン先頭の2件（同一パネルファイル群のため直列）。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-10-refactor-fetch-period-rows.md（✅ 完了 — `06b5a597`。fetchPeriodRows 新設（{rows,total,capped}・throw 統一・pickDefined でキー省略を一元化）・8ラッパー削除（参照ゼロ）・tagCluster にエラー状態。146 tests 対象 green。RICE 10.7）
+- 2026-09-24-11-refactor-period-filter-contract.md（✅ 完了 — `06b5a597`。構築中 emit 廃止・getRange() 単一ソース化・filterReady×3 削除・二重同期×7 解消・labelKeys 注入。141 tests 対象 green。RICE 9.3）
+
+### 2026-09-24 arch-delivery-loop ラウンド バッチ1 — ✅ 2件完了（09・12 アーカイブ済み）RICE順: 09, 12（並列）
+
+arch-delivery-loop による実装。バッチ1 = 09（リテラル SSOT）+ 12（i18n ゲート）の依存なし並列。validate ゲート PASS（13,799 tests）。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-09-refactor-summary-fallback-ssot.md（✅ 完了 — `6521cdb9`。utils/summaryFallback.ts（Layer 0）に SSOT 化・背景4箇所+dashboard の import 化・LAYERS.md 規約追記・lint:layers-docs green。174 tests 対象 green。RICE 20.0）
+- 2026-09-24-12-test-i18n-panel-catalog-gates.md（✅ 完了 — `6521cdb9`。実 locale の parity テストを新設、サイドバー i18n キー assert、PANEL_CATALOG 側カウント literal 削除。実 drift（historyDeleteSelectedSuccess_one/_other の ja 欠落）を検出修正。tagClusterTab は既存のため追加不要と検証。RICE 8.0）
+
+### 2026-09-24 分析機能強化ラウンド バッチ6 — ✅ PBI 07 ユーザー確認完了・アーカイブ（ラウンド完遂）
+
+STEP 0 の実データ手動プローブをユーザー確認（実データで抽出品質に問題なし・ストップワード/最小長閾値の調整不要）で完了し、07 をアーカイブ。これで分析機能強化ラウンド全8件が完遂。台帳（analysis-features）は台帳送り5案を保持して live 維持。
+
+- 2026-09-24-07-feat-word-cluster.md（✅ 完了 — `d80a5f8b`・69 tests 対象 green。ユーザー検証 1 項目は 2026-09-24 に解消。RICE 1.33・3 SP）
+
+### 2026-09-24 分析機能強化ラウンド バッチ5 — ✅ 1件完了（08 アーカイブ済み）RICE順: 08
+
+autonomous-task-closer による実装。バッチ5 = 08（タグクラスタ時間変化比較・最複雑候補）単独。なぜなぜ分析は /tmp/whywhy/（pbi-08-tag-cluster-time-slider）。統合検証: type-check PASS / lint 0 errors / test 13,784 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-08-feat-tag-cluster-time-slider.md（✅ 完了 — `c6bf8e00`。2時点指定（date input×2+明示 Compare）で前半/後半を side-by-side 2×SVG 表示＋diff 4 区画。FNV-1a 安定配色（両テーマ 4.5:1 超をテスト担保）・union ソート順安定配置・loadSeq 世代ガード・行 cap 通知×2・aria-live 完了サマリー（PBI 04 延期分を本 PBI で実装）。アニメーションはユーザー確定どおりスコープ外。71 tests 対象 green。RICE 0.20）
+
+### 2026-09-24 分析機能強化ラウンド バッチ4 — 🔶 PBI 07 実装完了（ユーザー検証 1 項目で live 維持）
+
+autonomous-task-closer による実装。バッチ4 = 07（ワードクラスタ）単独。実装・自動テストは完了（`d80a5f8b`・69 tests 対象 green・統合側で行 cap 通知の BDD ギャップを検出修正）。STEP 0 の実データ手動プローブ（ストップワード/閾値チューニング）はユーザーの実 DB が必要なため未達 — PBI 07 は 🔶 部分実装として pbi/ に live 維持。なぜなぜ分析は /tmp/whywhy/（pbi-07-word-cluster）。統合検証: type-check PASS / lint 0 errors / test 13,747 green / build PASS。
+
+### 2026-09-24 分析機能強化ラウンド バッチ3 — ✅ 2件完了（05-06 アーカイブ済み）RICE順: 05 → 06
+
+autonomous-task-closer による実装。バッチ3 = 05（タグ頻度の期間推移）→ 06（タグ共起ペア表）の直列実装。なぜなぜ分析は /tmp/whywhy/（pbi-05-tag-frequency-timeline・pbi-06-tag-cooccurrence-table）。統合検証: type-check PASS / lint 0 errors / test 13,694 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-05-feat-tag-frequency-timeline.md（✅ 完了 — `5ae1773e`。手描き SVG 積み上げ推移・日曜開始週（暦日演算で DST ズレ回避）・端数週1バケット・other 分離・数値テーブル。62 tests 対象 green。RICE 2.40）
+- 2026-09-24-06-feat-tag-cooccurrence-table.md（✅ 完了 — `5ae1773e`。既存 edges 再利用の top 20 表・ノード select 方式のタグフィルタ・空状態3区分。78 tests 対象 green。RICE 2.40）
+
+### 2026-09-24 分析機能強化ラウンド バッチ2 — ✅ 2件完了（03-04 アーカイブ済み）RICE順: 03 → 04
+
+autonomous-task-closer による実装。バッチ2 = 03（ドメイン分析）→ 04（期間指定タグクラスタ・PBI 08 の計算基盤）の直列実装。なぜなぜ分析は /tmp/whywhy/（pbi-03-domain-analysis・pbi-04-period-tag-cluster）。統合検証: type-check PASS / lint 0 errors / test 13,637 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-03-feat-domain-analysis.md（✅ 完了 — `b39209af`。ドメイン/URL別 top N・batched pagination（50k cap+truncation 通知）・(unknown) バケット・ドメイン行は searchDomain 遷移。52 tests 新規。RICE 3.00）
+- 2026-09-24-04-feat-period-tag-cluster.md（✅ 完了 — `b39209af`。tagClusterPanel に共有 periodFilter 埋め込み・デフォルト全期間で後方互換・loadSeq 世代ガード。既存テスト無変更で green。51 tests 対象 green。RICE 2.40。PBI 08 前提が整備済み）
+
+### 2026-09-24 分析機能強化ラウンド バッチ1 — ✅ 2件完了（01-02 アーカイブ済み）RICE順: 01 → 02
+
+autonomous-task-closer による実装。バッチ1 = 01（ヒートマップ）→ 02（閲覧時間分析＋共有期間フィルタ部品新設）の直列実装（パネル配線ファイル重複のため並列化は見送り）。なぜなぜ分析は /tmp/whywhy/（pbi-01-heatmap・pbi-02-visit-duration）。統合検証: type-check PASS / lint 0 errors / test 13,610 green / build PASS。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-01-feat-time-heatmap.md（✅ 完了 — `1455e34a`。曜日7×時間帯24ヒートマップ・直近12ヶ月固定・数値テーブル併記。29 tests 新規。RICE 4.00）
+- 2026-09-24-02-feat-visit-duration-analysis.md（✅ 完了 — `1455e34a`。ドメイン/タグ別滞在時間ランキング・未計測率表示。共有部品 `src/dashboard/components/periodFilter.ts` 新設（03-08 が再利用）。56 tests 新規。RICE 3.20。実データの `visit_duration` は現行記録経路で常に null のため未計測率100%表示が既定挙動）
+
 ### 2026-09-24 arch-delivery-loop 台帳消化 — ✅ 4件完了（DoD反映漏れをアーカイブ）
 
 実装・コミット済みだが DoD チェックボックス反映とアーカイブが漏れていた4件（2026-09-20-17 は `ddfa6d4f` で既にアーカイブ済みと判明、`pbi/` 側の重複コピーを削除）。再検証してから DoD を `[x]` 化。
@@ -82,7 +155,7 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 ### 2026-09-23 arch-delivery-loop 第3ラウンド（archloop-0923c）— ✅ 5件完了（11-15 アーカイブ済み）RICE順: 11 → 12 → 13 → 14 → 15
 
-Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.html`、6候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの残存手配線刈りラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（Retry-policy は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923c.md](2026-09-23-00-backlog-archloop-0923c.md)。GitHub PR レビューが残（ユーザー作業）。
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.html`、6候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの残存手配線刈りラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（Retry-policy は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923c.md](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923c.md)。GitHub PR レビューが残（ユーザー作業）。
 
 - 2026-09-23-11-refactor-remove-deprecated-hmac-twins.md（✅ 完了 — 生産 importer 0 を確認して双子削除。4 テストは HmacSigner へ 1:1 移行。3c11b96a・RICE 25.0）
 - 2026-09-23-12-refactor-bytestats-forwarding-adapter.md（✅ 完了 — `pickRecordDiagnostics` を builder に所有、4 箇所を spread 1 行に。SAVE maskedCount 除外は構造的に維持、`ByteStatsPayload` に `cleansedReason?` を追加。9a81b798・RICE 16.0）
@@ -92,7 +165,7 @@ Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.h
 
 ### 2026-09-23 arch-delivery-loop 第2ラウンド（archloop-0923b）— ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
 
-Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.html`、7候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの録画 path 深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（CleansingRuleView・KeyDerivation は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923b.md](2026-09-23-00-backlog-archloop-0923b.md)。GitHub PR レビューが残（ユーザー作業）。
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.html`、7候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの録画 path 深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（CleansingRuleView・KeyDerivation は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923b.md](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923b.md)。GitHub PR レビューが残（ユーザー作業）。
 
 - 2026-09-23-06-refactor-remove-tabutils-isrecordable-shim.md（✅ 完了 — 生産 importer 0 を確認して shim 削除。gate-table テストが 5 ケースを全カバー。7bd047f8・RICE 15.0）
 - 2026-09-23-07-refactor-save-phase-module.md（✅ 完了 — `savePhase.save()` 唯一 Seam、retry 投影は手書き集合と完全一致、closure 注入廃止・sqlite 欠如 skip を明示化。5dbceddc・RICE 12.8）
@@ -102,7 +175,7 @@ Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.h
 
 ### 2026-09-23 arch-delivery-loop ラウンド（archloop-0923）— ✅ 5件完了（01-05 アーカイブ済み）RICE順: 01 → 02 → 03 → 04 → 05
 
-Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0405.html`、7候補）→ Phase 1 RICE スコアリングのコードベース深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（06 ProviderSlotRunner・07 queryPlan 圧縮は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923.md](2026-09-23-00-backlog-archloop-0923.md)。GitHub PR レビューが残（ユーザー作業）。
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0405.html`、7候補）→ Phase 1 RICE スコアリングのコードベース深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（06 ProviderSlotRunner・07 queryPlan 圧縮は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923.md](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923.md)。GitHub PR レビューが残（ユーザー作業）。
 
 - 2026-09-23-01-refactor-history-diagnostics-deep-module.md（✅ 完了 — 診断表示を `renderEntryDiagnostics` / `renderCleansingBar` の深い Module に統合、View 1169→1012 行、15 fixture characterization で全 30 ブランチバイト等価。Panel 側に複製表は実在せず単一所有のみ。5d7159e9・RICE 24.0）
 - 2026-09-23-02-refactor-sqlite-client-deep-seam.md（✅ 完了 — 三重 runner を表駆動単一 runner に統合、`sqliteClient.call(op, payload)` 1 本化、30 named op は互換エイリアス、export/import 2 呼び出し側を移行、decode 所有を wire-table 側へ。駆動行の retry 明示あり。69f7d2c5・RICE 17.1）
@@ -1539,11 +1612,14 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 10（VulnHunt 06-11 = 6 / 保留候補 01-03 = 3 / wasqlite sunset = 1。AMO 公開 1 件は着手禁止で別枠） |
-| 🔶 実装完了（ユーザーゲート待ち） | 5（04/05 = ユーザーレビュー / 17/21/22 = 実機確認 + PR レビュー） |
-| **`pbi/` 残存 PBI 合計** | **16** |
-| アーカイブ済みPBI | 292 |
-| アーカイブ済み実装計画 | 112 |
+| ⬜ 未着手 | 4（保留候補 01-03 = トリガー待ち 3 / wasqlite sunset = ADR-014 ゲート待ち 1） |
+| 🟪 審査待ち | 1（AMO 公開 01 = 提出・審査中。通過後の署名版インストール確認・FAQ 記載はユーザー作業） |
+| 🔵 監視 | 1（VulnHunt 11 defense-in-depth = 発火条件監視・発火時に分割 PBI 化） |
+| **`pbi/` 残存 PBI 合計** | **6（＋ live 台帳 4 件: future / vuln-remediation / archloop-0924 / analysis-features）** |
+| アーカイブ済みPBI | 947（`00-backlog` 台帳 76 件を除く） |
+| アーカイブ済み実装計画 | 138 |
+
+※ 2026-09-24 整理: 完遂ラウンドの台帳 3 件（archloop-0923 / archloop-0923b / archloop-0923c）を `dev-docs/archived/pbi/` へアーカイブ。各ラウンドの未採用候補（ProviderSlotRunner・queryPlan・CleansingRuleView・KeyDerivation・Retry-policy）は 2026-09-23 時点で future.md 統合台帳へマージ済みのため、台帳に live な追跡項目はない。INDEX 集計表を現状に再同期し、future.md・アーカイブ履歴の台帳リンクをアーカイブ先へ張替え。
 
 ※ 2026-09-22 整理: 完遂ラウンドの台帳 10 件（post-v699 / review-fixes / review-findings-r3 / arch-review-0917b / arch-review-0917c / archloop-0917 / holistic-0918 / archloop-0918-17to19 / archloop-0921b / archreview-0920）を `dev-docs/archived/pbi/` へ移動（archloop-0918 は同日第5ループ台帳と同名のため `-17to19` 接尾辞）。完了ラウンドの節を「進行中」から「アーカイブ履歴」へ移動し、2026-09-22 保留候補 3件を INDEX に追加。
 

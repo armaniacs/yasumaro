@@ -476,6 +476,10 @@
   "textFileOnly": {
     "message": "テキストファイルのみ対応しています"
   },
+  "timeHeatmapTab": {
+    "message": "時間帯ヒートマップ",
+    "description": "時間帯ヒートマップのサイドバータブ"
+  },
   "timeDaysAgo": {
     "message": "{count}日前",
     "description": "Relative time: X days ago"
@@ -2053,10 +2057,13 @@
     "description": "ARIA label for new category name input"
   },
   "tagClusterDescription": {
-    "message": "タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。"
+    "message": "タグの共起関係をグラフで表示します。既定では直近7日間を表示し、期間フィルタで範囲を広げられます。ノードをクリックすると該当タグの履歴に絞り込まれます。"
   },
   "tagClusterEmptyState": {
     "message": "タグ付き履歴がまだありません。"
+  },
+  "tagClusterError": {
+    "message": "タグクラスタの読み込みに失敗しました。再試行してください。"
   },
   "tagClusterTruncatedNotice": {
     "message": "タグ数が多いため、上位50件のみ表示しています。"
@@ -2123,6 +2130,166 @@
   },
   "viewFullPolicy": {
     "message": "プライバシーポリシー全文を表示"
+  },
+  "visitDurationAllUnmeasured": {
+    "message": "この期間の記録はすべて未計測です。滞在時間は新しく記録された訪問から保存されます。",
+    "description": "Visit duration all-null state"
+  },
+  "visitDurationAverageTime": {
+    "message": "平均",
+    "description": "Visit duration average-time column header"
+  },
+  "visitDurationDescription": {
+    "message": "選択期間のドメイン別・タグ別の合計滞在時間と平均滞在時間を表示します。",
+    "description": "Visit duration panel description"
+  },
+  "visitDurationDomainColumn": {
+    "message": "ドメイン",
+    "description": "Visit duration domain column header"
+  },
+  "visitDurationDomainRanking": {
+    "message": "ドメイン別滞在時間",
+    "description": "Visit duration by-domain ranking heading"
+  },
+  "visitDurationEmpty": {
+    "message": "この期間の閲覧記録がありません。",
+    "description": "Visit duration empty state"
+  },
+  "visitDurationError": {
+    "message": "閲覧時間分析の読み込みに失敗しました。再試行してください。",
+    "description": "Visit duration load-failure state"
+  },
+  "visitDurationPanelTitle": {
+    "message": "滞在時間分析",
+    "description": "Visit duration panel title"
+  },
+  "visitDurationPeriodAll": {
+    "message": "全期間",
+    "description": "Period filter preset: all time"
+  },
+  "visitDurationPeriodCustom": {
+    "message": "カスタム",
+    "description": "Period filter custom-range label"
+  },
+  "visitDurationPeriodEnd": {
+    "message": "終了日",
+    "description": "Period filter custom end-date label"
+  },
+  "visitDurationPeriodLabel": {
+    "message": "期間",
+    "description": "Period filter group label"
+  },
+  "visitDurationPeriodLast30Days": {
+    "message": "過去30日間",
+    "description": "Period filter preset: last 30 days"
+  },
+  "visitDurationPeriodLast7Days": {
+    "message": "過去7日間",
+    "description": "Period filter preset: last 7 days"
+  },
+  "visitDurationPeriodLast90Days": {
+    "message": "過去90日間",
+    "description": "Period filter preset: last 90 days"
+  },
+  "visitDurationPeriodStart": {
+    "message": "開始日",
+    "description": "Period filter custom start-date label"
+  },
+  "visitDurationPeriodToday": {
+    "message": "今日",
+    "description": "Period filter preset: today"
+  },
+  "visitDurationRecordCount": {
+    "message": "件数",
+    "description": "Visit duration record-count column header"
+  },
+  "visitDurationTab": {
+    "message": "滞在時間分析",
+    "description": "Sidebar tab for visit duration"
+  },
+  "visitDurationTagColumn": {
+    "message": "タグ",
+    "description": "Visit duration tag column header"
+  },
+  "visitDurationTagRanking": {
+    "message": "タグ別滞在時間",
+    "description": "Visit duration by-tag ranking heading"
+  },
+  "visitDurationTotalTime": {
+    "message": "合計",
+    "description": "Visit duration total-time column header"
+  },
+  "visitDurationTruncated": {
+    "message": "上位{shown}件を表示（全{total}件）。",
+    "description": "Visit duration truncation notice"
+  },
+  "visitDurationUnmeasuredRatio": {
+    "message": "未計測: {percent}%（{total}件中{unmeasured}件）",
+    "description": "Visit duration unmeasured ratio"
+  },
+  "domainAnalysisTab": {
+    "message": "ドメイン分析",
+    "description": "Sidebar tab for domain analysis"
+  },
+  "domainAnalysis_title": {
+    "message": "ドメイン分析",
+    "description": "Domain analysis panel title"
+  },
+  "domainAnalysis_tagLabel": {
+    "message": "タグ（任意）",
+    "description": "Domain analysis tag filter label"
+  },
+  "domainAnalysis_tagAll": {
+    "message": "すべてのタグ（絞り込む場合はタグ名を入力）",
+    "description": "Domain analysis tag input placeholder"
+  },
+  "domainAnalysis_run": {
+    "message": "集計",
+    "description": "Domain analysis run button"
+  },
+  "domainAnalysis_byDomainTitle": {
+    "message": "ドメイン別",
+    "description": "Domain analysis by-domain ranking heading"
+  },
+  "domainAnalysis_byUrlTitle": {
+    "message": "URL別",
+    "description": "Domain analysis by-URL ranking heading"
+  },
+  "domainAnalysis_domainColumn": {
+    "message": "ドメイン",
+    "description": "Domain analysis domain column header"
+  },
+  "domainAnalysis_urlColumn": {
+    "message": "URL",
+    "description": "Domain analysis URL column header"
+  },
+  "domainAnalysis_countColumn": {
+    "message": "件数",
+    "description": "Domain analysis count column header"
+  },
+  "domainAnalysis_empty": {
+    "message": "指定した期間・タグに一致する閲覧ログはありません。",
+    "description": "Domain analysis empty state"
+  },
+  "domainAnalysis_unknownDomain": {
+    "message": "（ドメイン不明）",
+    "description": "Domain analysis label for records without a domain"
+  },
+  "domainAnalysis_excludedNullDomainCount": {
+    "message": "ドメインが記録されていないレコードが{count}件あります（（ドメイン不明）として集計）。",
+    "description": "Domain analysis notice for records without a domain"
+  },
+  "domainAnalysis_truncated": {
+    "message": "上位{shown}件を表示（全{total}件）。",
+    "description": "Domain analysis top-N truncation notice"
+  },
+  "domainAnalysis_rowCap": {
+    "message": "集計上限の{max}件に達したため、一部のみを集計しています。",
+    "description": "Domain analysis pagination cap notice"
+  },
+  "domainAnalysisError": {
+    "message": "ドメイン分析の読み込みに失敗しました。再試行してください。",
+    "description": "ドメイン分析の読み込み失敗状態"
   },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
@@ -3361,6 +3528,26 @@
       }
     }
   },
+  "historyDeleteSelectedSuccess_one": {
+    "message": "$1 件の記事を削除しました",
+    "description": "en との parity ゲート用。ja 実行時は基底キーにフォールバックする (i18nPlural.ts)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "1"
+      }
+    }
+  },
+  "historyDeleteSelectedSuccess_other": {
+    "message": "$1 件の記事を削除しました",
+    "description": "en との parity ゲート用。ja 実行時は基底キーにフォールバックする (i18nPlural.ts)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
   "historyDeleteSelectedPartial": {
     "message": "$1 件削除しましたが、残り $2 件で中断しました: $3",
     "placeholders": {
@@ -3925,6 +4112,66 @@
     "message": "$1件のコンテンツを削除しました",
     "description": "Content purge success plural"
   },
+  "dashboardTimeHeatmapCellLabel": {
+    "message": "{weekday}{hour}時 — {count}件",
+    "description": "ヒートマップセル表示: 曜日・時間帯・件数"
+  },
+  "dashboardTimeHeatmapDescription": {
+    "message": "選択した期間の曜日・時間帯ごとの記録件数です。",
+    "description": "時間帯ヒートマップの説明"
+  },
+  "dashboardTimeHeatmapEmpty": {
+    "message": "選択した期間に記録がありません。",
+    "description": "時間帯ヒートマップの空状態"
+  },
+  "dashboardTimeHeatmapError": {
+    "message": "時間帯ヒートマップの読み込みに失敗しました。再試行してください。",
+    "description": "時間帯ヒートマップの読み込み失敗状態"
+  },
+  "dashboardTimeHeatmapFri": {
+    "message": "金",
+    "description": "金曜の短縮名"
+  },
+  "dashboardTimeHeatmapLimitNotice": {
+    "message": "取得上限10000件に達したため、一部の記録のみ集計しています。",
+    "description": "時間帯ヒートマップの上限注意"
+  },
+  "dashboardTimeHeatmapMon": {
+    "message": "月",
+    "description": "月曜の短縮名"
+  },
+  "dashboardTimeHeatmapNumericCaption": {
+    "message": "曜日・時間帯ごとの記録件数（数値表）",
+    "description": "数値テーブルのキャプション"
+  },
+  "dashboardTimeHeatmapSat": {
+    "message": "土",
+    "description": "土曜の短縮名"
+  },
+  "dashboardTimeHeatmapSun": {
+    "message": "日",
+    "description": "日曜の短縮名"
+  },
+  "dashboardTimeHeatmapTableCaption": {
+    "message": "曜日・時間帯ごとの記録件数",
+    "description": "ヒートマップテーブルのキャプション"
+  },
+  "dashboardTimeHeatmapThu": {
+    "message": "木",
+    "description": "木曜の短縮名"
+  },
+  "dashboardTimeHeatmapTitle": {
+    "message": "時間帯ヒートマップ",
+    "description": "時間帯ヒートマップの見出し"
+  },
+  "dashboardTimeHeatmapTue": {
+    "message": "火",
+    "description": "火曜の短縮名"
+  },
+  "dashboardTimeHeatmapWed": {
+    "message": "水",
+    "description": "水曜の短縮名"
+  },
   "dashboardTitle": {
     "message": "Yasumaro ダッシュボード",
     "description": "Dashboard page title"
@@ -4208,5 +4455,268 @@
   },
   "warningTitle": {
     "message": "警告"
+  },
+  "tagCluster_empty_period": {
+    "message": "選択した期間にレコードがありません。範囲を広げて試してください。"
+  },
+  "tagFrequencyTab": {
+    "message": "タグ推移",
+    "description": "タグ頻度の期間推移パネルのサイドバータブ"
+  },
+  "dashboardTagTimelineTitle": {
+    "message": "タグ頻度の期間推移",
+    "description": "タグ頻度の期間推移パネルのタイトル"
+  },
+  "dashboardTagTimelineDescription": {
+    "message": "選択した期間内の出現数上位タグの週別・月別記録数を表示します。",
+    "description": "タグ頻度の期間推移パネルの説明"
+  },
+  "dashboardTagTimelineGranularityLabel": {
+    "message": "粒度",
+    "description": "タグ頻度の期間推移の粒度切替ラベル"
+  },
+  "dashboardTagTimelineGranularityWeek": {
+    "message": "週次",
+    "description": "タグ頻度の期間推移の週次粒度"
+  },
+  "dashboardTagTimelineGranularityMonth": {
+    "message": "月次",
+    "description": "タグ頻度の期間推移の月次粒度"
+  },
+  "dashboardTagTimelineTopNLabel": {
+    "message": "表示タグ数",
+    "description": "タグ頻度の期間推移の上位タグ表示数ラベル"
+  },
+  "dashboardTagTimelineRun": {
+    "message": "実行",
+    "description": "タグ頻度の期間推移の適用ボタン"
+  },
+  "dashboardTagTimelineWeekStartNote": {
+    "message": "週は日曜開始（ローカル時刻）です。端数の先頭・末尾週は実際の開始日をラベルで示します。",
+    "description": "タグ頻度の期間推移の週開始注記"
+  },
+  "dashboardTagTimelineSeriesOther": {
+    "message": "その他",
+    "description": "タグ頻度の期間推移の上位N外合算系列の凡例"
+  },
+  "dashboardTagTimelineEmpty": {
+    "message": "この期間にタグ付きの記録はありません。",
+    "description": "タグ頻度の期間推移の空状態"
+  },
+  "dashboardTagTimelineCapNote": {
+    "message": "取得上限{max}件に達しました — 一部の記録のみで集計しています。",
+    "description": "タグ頻度の期間推移の取得上限注記"
+  },
+  "dashboardTagTimelineError": {
+    "message": "タグ頻度の推移の読み込みに失敗しました。再試行してください。",
+    "description": "タグ頻度の期間推移の読み込み失敗状態"
+  },
+  "dashboardTagTimelineTableCaption": {
+    "message": "バケット・タグ別の記録数",
+    "description": "タグ頻度の期間推移の数値テーブルのキャプション"
+  },
+  "dashboardTagTimelineChartTitle": {
+    "message": "タグ別記録数の推移（積み上げ）",
+    "description": "タグ頻度の期間推移のSVGタイトル"
+  },
+  "dashboardTagTimelineChartDesc": {
+    "message": "上位タグごとの積み上げ系列。同じ数値は下の表でも確認できます。",
+    "description": "タグ頻度の期間推移のSVG説明"
+  },
+  "dashboardTagTimelineCellLabel": {
+    "message": "{date} {tag}: {count}件",
+    "description": "タグ頻度の期間推移のデータ点ラベル（バケット日付・タグ・件数）"
+  },
+  "tagCooccurrenceTableTab": {
+    "message": "タグ共起ペア",
+    "description": "タグ共起ペアランキングパネルのサイドバータブ"
+  },
+  "cooccurrenceTableTitle": {
+    "message": "タグ共起ペアランキング",
+    "description": "タグ共起ペアランキングパネルのタイトル"
+  },
+  "cooccurrenceTableDescription": {
+    "message": "共起数上位のタグペアを表形式で表示します。行クリックでペアの最初のタグにより履歴へ遷移します。",
+    "description": "タグ共起ペアランキングパネルの説明"
+  },
+  "cooccurrenceTableColPair": {
+    "message": "ペア",
+    "description": "タグ共起ペアランキングのペア列ヘッダー"
+  },
+  "cooccurrenceTableColCooccurCount": {
+    "message": "共起数",
+    "description": "タグ共起ペアランキングの共起数列ヘッダー"
+  },
+  "cooccurrenceTableColCountA": {
+    "message": "Aの個別出現数",
+    "description": "タグ共起ペアランキングのペア先頭タグ個別出現数列ヘッダー"
+  },
+  "cooccurrenceTableColCountB": {
+    "message": "Bの個別出現数",
+    "description": "タグ共起ペアランキングのペア第2タグ個別出現数列ヘッダー"
+  },
+  "cooccurrenceTableNoRecords": {
+    "message": "選択した期間にレコードがありません。範囲を広げて試してください。",
+    "description": "タグ共起ペアランキングのレコード0件時の空状態"
+  },
+  "cooccurrenceTableEmpty": {
+    "message": "共起ペアがありません。すべてのレコードが単一タグのみです。",
+    "description": "タグ共起ペアランキングの共起ペア0件時の空状態"
+  },
+  "cooccurrenceTableEmptyForTag": {
+    "message": "選択したタグとの共起相手がありません。",
+    "description": "タグ共起ペアランキングの選択タグに共起相手がいない場合の空状態"
+  },
+  "cooccurrenceTableError": {
+    "message": "タグ共起ペアの読み込みに失敗しました。再試行してください。",
+    "description": "タグ共起ペアランキングの読み込み失敗状態"
+  },
+  "cooccurrenceTableTruncatedTop20": {
+    "message": "共起ペア{total}件のうち上位20件を表示しています。",
+    "description": "タグ共起ペアランキングのtop 20切り捨て通知"
+  },
+  "cooccurrenceTableTruncatedTags": {
+    "message": "ユニークタグが{max}件を超えているため、上位{max}タグのみを対象にしています。",
+    "description": "タグ共起ペアランキングのタグ数上限による事前絞り込み通知"
+  },
+  "cooccurrenceTableTagFilterLabel": {
+    "message": "タグ",
+    "description": "タグ共起ペアランキングのタグフィルタラベル"
+  },
+  "cooccurrenceTableTagFilterAll": {
+    "message": "すべてのタグ",
+    "description": "タグ共起ペアランキングのタグ未選択時の選択肢"
+  },
+  "cooccurrenceTableRun": {
+    "message": "実行",
+    "description": "タグ共起ペアランキングの適用ボタン"
+  },
+  "cooccurrenceTableCaption": {
+    "message": "共起数上位のタグペア",
+    "description": "タグ共起ペアランキングのテーブルキャプション"
+  },
+  "wordClusterTab": {
+    "message": "ワードクラスタ",
+    "description": "ワードクラスタパネルのサイドバーラベル"
+  },
+  "wordClusterTitle": {
+    "message": "ワードクラスタ",
+    "description": "ワードクラスタパネルのタイトル"
+  },
+  "wordClusterDescription": {
+    "message": "AI 要約とページタイトルからキーワードを抽出し、共起関係をグラフで表示します。ノードをクリックするとそのキーワードで履歴を検索します。",
+    "description": "ワードクラスタパネルの説明"
+  },
+  "wordClusterPeriodLabel": {
+    "message": "期間",
+    "description": "ワードクラスタの期間フィルタと適用ボタンの行ラベル"
+  },
+  "wordClusterRun": {
+    "message": "実行",
+    "description": "ワードクラスタの期間フィルタ適用ボタン"
+  },
+  "wordClusterEmpty": {
+    "message": "選択した期間に利用可能なテキストのレコードがありません。期間を広げてください。",
+    "description": "利用可能なレコードが 0 件のときの空状態"
+  },
+  "wordClusterEmptyNoKeywords": {
+    "message": "レコードはありますが、フィルタ後に残ったキーワードがありません。",
+    "description": "抽出結果が 0 件のときの空状態"
+  },
+  "wordClusterExcludedCount": {
+    "message": "要約が利用できない行を {count} 件除外しました（AI 失敗またはフォールバック文言）。タイトルは使用しています。",
+    "description": "要約抽出から除外された行数の通知"
+  },
+  "wordClusterTruncatedNotice": {
+    "message": "キーワードが多すぎるため上位 50 件のみ表示しています。",
+    "description": "ワードクラスタの表示上限通知"
+  },
+  "wordClusterRowCapNotice": {
+    "message": "クエリが {max} 行の上限に達したため、{total} 件のうち新しい {shown} 件のみを集計しています。",
+    "description": "取得行上限で対象期間が打ち切られたときの通知"
+  },
+  "wordClusterLoading": {
+    "message": "ワードクラスタを読み込み中…",
+    "description": "ワードクラスタの読み込み状態"
+  },
+  "wordClusterError": {
+    "message": "ワードクラスタの読み込みに失敗しました。再試行してください。",
+    "description": "ワードクラスタのエラー状態"
+  },
+  "tagClusterTimeSliderTab": {
+    "message": "タグクラスタ比較",
+    "description": "タグクラスタ時間変化パネルのサイドバーラベル"
+  },
+  "tagClusterTimeSliderTitle": {
+    "message": "タグクラスタ時間変化",
+    "description": "タグクラスタ時間変化パネルのタイトル"
+  },
+  "tagClusterTimeSliderDescription": {
+    "message": "開始日と終了日を指定すると、期間を前半と後半に分けてタグクラスタを並べて比較します。ノードまたは diff 項目をクリックすると、そのタグで履歴を検索します。",
+    "description": "タグクラスタ時間変化パネルの説明"
+  },
+  "tagClusterCompareStartLabel": {
+    "message": "開始時点",
+    "description": "比較期間の開始日入力のラベル"
+  },
+  "tagClusterCompareEndLabel": {
+    "message": "終了時点",
+    "description": "比較期間の終了日入力のラベル"
+  },
+  "tagClusterCompareRun": {
+    "message": "比較する",
+    "description": "タグクラスタ時間比較の適用ボタン"
+  },
+  "tagClusterCompareFirstHalf": {
+    "message": "前半",
+    "description": "時間比較の前半スナップショットの見出し"
+  },
+  "tagClusterCompareSecondHalf": {
+    "message": "後半",
+    "description": "時間比較の後半スナップショットの見出し"
+  },
+  "tagClusterCompareInvalidRange": {
+    "message": "比較するには開始時点と終了時点の両方を指定してください。",
+    "description": "比較の日付が未指定のときの入力検証メッセージ"
+  },
+  "tagClusterCompareInvalidRangeCorrected": {
+    "message": "開始時点が終了時点より後だったため、前後関係を自動補正しました。",
+    "description": "前後逆転の比較期間を自動補正したときの通知"
+  },
+  "tagClusterCompareEmptyPeriod": {
+    "message": "この半分期間にはレコードがありません。",
+    "description": "比較の片側にレコードがなかったときの空状態"
+  },
+  "tagClusterCompareCapNotice": {
+    "message": "クエリが {max} 行の上限に達したため、この半分期間では {total} 件のうち新しい {shown} 件のみを集計しています。",
+    "description": "取得行上限で比較の片側が打ち切られたときの通知"
+  },
+  "tagClusterDiffAppeared": {
+    "message": "出現したタグ",
+    "description": "後半にのみ存在するタグの diff 見出し"
+  },
+  "tagClusterDiffDisappeared": {
+    "message": "消失したタグ",
+    "description": "前半にのみ存在したタグの diff 見出し"
+  },
+  "tagClusterDiffIncreased": {
+    "message": "増加したタグ",
+    "description": "件数が増加したタグ（件数差付き）の diff 見出し"
+  },
+  "tagClusterDiffDecreased": {
+    "message": "減少したタグ",
+    "description": "件数が減少したタグ（件数差付き）の diff 見出し"
+  },
+  "tagClusterTimeSliderLoading": {
+    "message": "タグクラスタを比較中…",
+    "description": "タグクラスタ時間比較の読み込み状態"
+  },
+  "tagClusterTimeSliderStatusDone": {
+    "message": "比較が完了しました: 前半 {first} タグ、後半 {second} タグ、出現 {appeared}、消失 {disappeared}。",
+    "description": "比較完了時にライブリージョンで読み上げる要約"
+  },
+  "tagClusterTimeSliderError": {
+    "message": "比較のこの半分の読み込みに失敗しました。再試行してください。",
+    "description": "タグクラスタ時間比較の片側が失敗したときのエラー状態"
   }
 }

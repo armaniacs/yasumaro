@@ -151,6 +151,66 @@
           </svg>
           <span data-i18n="domainSearchTab">Domain Search</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-time-heatmap" aria-selected="false" data-panel="panel-time-heatmap">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" rx="1"/>
+            <rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/>
+            <rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+          <span data-i18n="timeHeatmapTab">Time Heatmap</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-visit-duration" aria-selected="false" data-panel="panel-visit-duration">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <polyline points="12 7 12 12 15 14"/>
+          </svg>
+          <span data-i18n="visitDurationTab">Visit Duration</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-domain-analysis" aria-selected="false" data-panel="panel-domain-analysis">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="4" y="12" width="4" height="8"/>
+            <rect x="10" y="5" width="4" height="15"/>
+            <rect x="16" y="9" width="4" height="11"/>
+          </svg>
+          <span data-i18n="domainAnalysisTab">Domain Analysis</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-frequency-timeline" aria-selected="false" data-panel="panel-tag-frequency-timeline">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <polyline points="3 17 9 11 13 15 21 7"/>
+            <polyline points="15 7 21 7 21 13"/>
+          </svg>
+          <span data-i18n="tagFrequencyTab">Tag Timeline</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-cooccurrence-table" aria-selected="false" data-panel="panel-tag-cooccurrence-table">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="4" y1="6" x2="20" y2="6"/>
+            <line x1="4" y1="12" x2="20" y2="12"/>
+            <line x1="4" y1="18" x2="20" y2="18"/>
+            <circle cx="9" cy="6" r="1.5"/>
+            <circle cx="15" cy="12" r="1.5"/>
+            <circle cx="11" cy="18" r="1.5"/>
+          </svg>
+          <span data-i18n="tagCooccurrenceTableTab">Tag Pairs</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-word-cluster" aria-selected="false" data-panel="panel-word-cluster">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="6" cy="7" r="2"/>
+            <circle cx="18" cy="7" r="2"/>
+            <circle cx="12" cy="17" r="2"/>
+            <line x1="7.4" y1="8.4" x2="10.6" y2="15.6"/>
+            <line x1="16.6" y1="8.4" x2="13.4" y2="15.6"/>
+          </svg>
+          <span data-i18n="wordClusterTab">Word Cluster</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-cluster-time-slider" aria-selected="false" data-panel="panel-tag-cluster-time-slider">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"/>
+            <polyline points="12 7 12 12 15 14"/>
+            <line x1="8" y1="19" x2="16" y2="19"/>
+          </svg>
+          <span data-i18n="tagClusterTimeSliderTab">Tag Cluster Compare</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -1688,6 +1748,7 @@
       <section id="panel-tag-cluster" class="panel" role="tabpanel">
         <h2 class="panel-title" data-i18n="tagClusterTab">Tag Cluster</h2>
         <p class="panel-description" data-i18n="tagClusterDescription">Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag.</p>
+        <div id="tagClusterFilter"></div>
         <div id="tagClusterEmptyState" data-i18n="tagClusterEmptyState" hidden>No tagged history yet.</div>
         <div id="tagClusterTruncatedNotice" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
         <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
@@ -1857,6 +1918,186 @@
             data-i18n-input-placeholder="domainCheckPlaceholder">
         </div>
         <div id="domainSearchResult" class="domain-search-result" aria-live="polite"></div>
+      </section>
+
+      <!-- Time Heatmap Panel -->
+      <section id="panel-time-heatmap" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="dashboardTimeHeatmapTitle">Time Heatmap</h2>
+        <p class="panel-description" data-i18n="dashboardTimeHeatmapDescription">Browsing record density by weekday and hour over the selected period.</p>
+        <div id="timeHeatmapFilter"></div>
+        <div id="timeHeatmapEmptyState" data-i18n="dashboardTimeHeatmapEmpty" hidden>No browsing records in the selected period.</div>
+        <div id="timeHeatmapLimitNotice" data-i18n="dashboardTimeHeatmapLimitNotice" hidden>Reached the 10,000-record limit — aggregating a partial set.</div>
+        <div id="timeHeatmapGrid"></div>
+        <div id="timeHeatmapTableWrap"></div>
+      </section>
+
+      <!-- Visit Duration Panel -->
+      <section id="panel-visit-duration" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="visitDurationPanelTitle">Visit Duration</h2>
+        <p class="panel-description" data-i18n="visitDurationDescription">Total and average time spent per domain and tag for the selected period.</p>
+        <div id="visitDurationFilter"></div>
+        <p id="visitDurationUnmeasuredRatio" aria-live="polite" hidden></p>
+        <div id="visitDurationEmptyState" data-i18n="visitDurationEmpty" hidden>No browsing records in this period.</div>
+        <div id="visitDurationAllUnmeasured" data-i18n="visitDurationAllUnmeasured" hidden>All records in this period are unmeasured — durations are recorded for newly tracked visits.</div>
+        <h3 class="visit-duration-heading" data-i18n="visitDurationDomainRanking">Time by domain</h3>
+        <table id="visitDurationDomainTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="visitDurationDomainColumn">Domain</th>
+            <th scope="col" data-i18n="visitDurationTotalTime">Total</th>
+            <th scope="col" data-i18n="visitDurationAverageTime">Average</th>
+            <th scope="col" data-i18n="visitDurationRecordCount">Records</th>
+          </tr></thead>
+          <tbody id="visitDurationDomainBody"></tbody>
+        </table>
+        <div id="visitDurationDomainTruncated" class="visit-duration-truncated" hidden></div>
+        <h3 class="visit-duration-heading" data-i18n="visitDurationTagRanking">Time by tag</h3>
+        <table id="visitDurationTagTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="visitDurationTagColumn">Tag</th>
+            <th scope="col" data-i18n="visitDurationTotalTime">Total</th>
+            <th scope="col" data-i18n="visitDurationAverageTime">Average</th>
+            <th scope="col" data-i18n="visitDurationRecordCount">Records</th>
+          </tr></thead>
+          <tbody id="visitDurationTagBody"></tbody>
+        </table>
+        <div id="visitDurationTagTruncated" class="visit-duration-truncated" hidden></div>
+      </section>
+
+      <!-- Domain Analysis Panel -->
+      <section id="panel-domain-analysis" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="domainAnalysis_title">Domain Analysis</h2>
+        <div id="domainAnalysisFilter"></div>
+        <div class="form-group">
+          <label for="domainAnalysisTagInput" data-i18n="domainAnalysis_tagLabel">Tag (optional)</label>
+          <input type="text" id="domainAnalysisTagInput"
+            data-i18n-input-placeholder="domainAnalysis_tagAll">
+          <button type="button" id="domainAnalysisRunBtn" data-i18n="domainAnalysis_run">Run</button>
+        </div>
+        <div id="domainAnalysisEmptyState" data-i18n="domainAnalysis_empty" hidden>No browsing records match the selected period and tag.</div>
+        <p id="domainAnalysisUnknownNotice" aria-live="polite" hidden></p>
+        <div id="domainAnalysisRowCap" class="visit-duration-truncated" hidden></div>
+        <h3 class="visit-duration-heading" data-i18n="domainAnalysis_byDomainTitle">By domain</h3>
+        <table id="domainAnalysisDomainTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="domainAnalysis_domainColumn">Domain</th>
+            <th scope="col" data-i18n="domainAnalysis_countColumn">Count</th>
+          </tr></thead>
+          <tbody id="domainAnalysisDomainBody"></tbody>
+        </table>
+        <div id="domainAnalysisDomainTruncated" class="visit-duration-truncated" hidden></div>
+        <h3 class="visit-duration-heading" data-i18n="domainAnalysis_byUrlTitle">By URL</h3>
+        <table id="domainAnalysisUrlTable" class="visit-duration-table">
+          <thead><tr>
+            <th scope="col" data-i18n="domainAnalysis_urlColumn">URL</th>
+            <th scope="col" data-i18n="domainAnalysis_countColumn">Count</th>
+          </tr></thead>
+          <tbody id="domainAnalysisUrlBody"></tbody>
+        </table>
+        <div id="domainAnalysisUrlTruncated" class="visit-duration-truncated" hidden></div>
+      </section>
+
+      <!-- Tag Frequency Timeline Panel (PBI 2026-09-24-05) -->
+      <section id="panel-tag-frequency-timeline" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="dashboardTagTimelineTitle">Tag Frequency Timeline</h2>
+        <p class="panel-description" data-i18n="dashboardTagTimelineDescription">Weekly and monthly record counts for the top tags in the selected period.</p>
+        <div id="tagTimelineFilter"></div>
+        <div class="form-group tag-timeline-controls">
+          <span class="tag-timeline-controls-label" data-i18n="dashboardTagTimelineGranularityLabel">Granularity</span>
+          <button type="button" id="tagTimelineWeekBtn" data-i18n="dashboardTagTimelineGranularityWeek" aria-pressed="true">Weekly</button>
+          <button type="button" id="tagTimelineMonthBtn" data-i18n="dashboardTagTimelineGranularityMonth" aria-pressed="false">Monthly</button>
+          <label for="tagTimelineTopN" data-i18n="dashboardTagTimelineTopNLabel">Top tags</label>
+          <input type="number" id="tagTimelineTopN" min="1" max="50" value="10">
+          <button type="button" id="tagTimelineRunBtn" data-i18n="dashboardTagTimelineRun">Run</button>
+        </div>
+        <p id="tagTimelineWeekStartNote" class="help-text" data-i18n="dashboardTagTimelineWeekStartNote">Weeks start on Sunday (local time). Partial first and last weeks keep their actual start date as the label.</p>
+        <div id="tagTimelineLegend" class="tag-timeline-legend" aria-hidden="false"></div>
+        <div id="tagTimelineEmptyState" data-i18n="dashboardTagTimelineEmpty" hidden>No tagged records in this period.</div>
+        <div id="tagTimelineCapNotice" class="visit-duration-truncated" hidden></div>
+        <div id="tagTimelineChartWrap"></div>
+        <div id="tagTimelineTableWrap"></div>
+      </section>
+
+      <!-- Tag Cooccurrence Table Panel (PBI 2026-09-24-06) -->
+      <section id="panel-tag-cooccurrence-table" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="cooccurrenceTableTitle">Tag Co-occurrence Pairs</h2>
+        <p class="panel-description" data-i18n="cooccurrenceTableDescription">Top co-occurring tag pairs as a ranked table. Click a row to filter history by the pair's first tag.</p>
+        <div id="coocTableFilter"></div>
+        <div class="form-group cooc-table-controls">
+          <label for="coocTableTagSelect" data-i18n="cooccurrenceTableTagFilterLabel">Tag</label>
+          <select id="coocTableTagSelect">
+            <option value="" data-i18n="cooccurrenceTableTagFilterAll">All tags</option>
+          </select>
+          <button type="button" id="coocTableRunBtn" data-i18n="cooccurrenceTableRun">Run</button>
+        </div>
+        <div id="coocTableEmptyState" data-i18n="cooccurrenceTableNoRecords" hidden>No records in the selected period. Try a wider range.</div>
+        <div id="coocTableTagsTruncated" class="visit-duration-truncated" hidden></div>
+        <div id="coocTableTop20Truncated" class="visit-duration-truncated" hidden></div>
+        <div id="coocTableTableWrap"></div>
+      </section>
+
+      <!-- Word Cluster Panel (PBI 2026-09-24-07) -->
+      <section id="panel-word-cluster" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="wordClusterTitle">Word Cluster</h2>
+        <p class="panel-description" data-i18n="wordClusterDescription">Extracts keywords from AI summaries and page titles and shows their co-occurrence as a graph. Click a node to search history for that keyword.</p>
+        <div id="wordClusterFilter"></div>
+        <div class="form-group cooc-table-controls">
+          <span data-i18n="wordClusterPeriodLabel">Period</span>
+          <button type="button" id="wordClusterRunBtn" data-i18n="wordClusterRun">Run</button>
+        </div>
+        <div id="wordClusterExcludedNotice" class="visit-duration-truncated" hidden></div>
+        <div id="wordClusterEmptyState" data-i18n="wordClusterEmpty" hidden>No records with usable text in the selected period. Try a wider range.</div>
+        <div id="wordClusterTruncatedNotice" data-i18n="wordClusterTruncatedNotice" hidden>Too many keywords — showing only the top 50.</div>
+        <div id="wordClusterRowCapNotice" class="visit-duration-truncated" hidden></div>
+        <div id="wordClusterLoadingStatus" class="status-message" aria-live="polite" data-i18n="wordClusterLoading" hidden>Loading word cluster…</div>
+        <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+          <button type="button" id="wordClusterZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+          <button type="button" id="wordClusterZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+          <button type="button" id="wordClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
+        </div>
+        <svg id="wordClusterSvg" width="800" height="600" role="img" data-i18n-aria-label="wordClusterTitle" aria-label="Word Cluster"></svg>
+      </section>
+
+      <!-- Tag Cluster Time Slider Panel (PBI 2026-09-24-08) -->
+      <section id="panel-tag-cluster-time-slider" class="panel" role="tabpanel">
+        <h2 class="panel-title" data-i18n="tagClusterTimeSliderTitle">Tag Cluster Over Time</h2>
+        <p class="panel-description" data-i18n="tagClusterTimeSliderDescription">Pick a start and end date to split the window into two halves and compare the tag clusters side by side. Click a node or a diff entry to search history for that tag.</p>
+        <div class="form-group cooc-table-controls">
+          <label for="tagCompareStartDate" data-i18n="tagClusterCompareStartLabel">Start date</label>
+          <input type="date" id="tagCompareStartDate">
+          <label for="tagCompareEndDate" data-i18n="tagClusterCompareEndLabel">End date</label>
+          <input type="date" id="tagCompareEndDate">
+          <button type="button" id="tagCompareRunBtn" data-i18n="tagClusterCompareRun">Compare</button>
+        </div>
+        <div id="tagCompareValidation" class="visit-duration-truncated" hidden></div>
+        <div id="tagCompareCorrectedNotice" class="visit-duration-truncated" hidden></div>
+        <p id="tagCompareStatus" class="status-message" aria-live="polite"></p>
+        <div class="tag-cluster-compare-grid">
+          <div class="tag-cluster-compare-side">
+            <h3 class="tag-cluster-compare-heading" data-i18n="tagClusterCompareFirstHalf">First half</h3>
+            <div id="tagCompareFirstCapNotice" class="visit-duration-truncated" hidden></div>
+            <div id="tagCompareFirstEmpty" class="tag-cluster-compare-empty" data-i18n="tagClusterCompareEmptyPeriod" hidden>No records in this half of the window.</div>
+            <div id="tagCompareFirstTruncated" class="visit-duration-truncated" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
+            <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+              <button type="button" id="tagCompareFirstZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+              <button type="button" id="tagCompareFirstZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+              <button type="button" id="tagCompareFirstZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
+            </div>
+            <svg id="tagCompareFirstSvg" width="480" height="420"></svg>
+          </div>
+          <div class="tag-cluster-compare-side">
+            <h3 class="tag-cluster-compare-heading" data-i18n="tagClusterCompareSecondHalf">Second half</h3>
+            <div id="tagCompareSecondCapNotice" class="visit-duration-truncated" hidden></div>
+            <div id="tagCompareSecondEmpty" class="tag-cluster-compare-empty" data-i18n="tagClusterCompareEmptyPeriod" hidden>No records in this half of the window.</div>
+            <div id="tagCompareSecondTruncated" class="visit-duration-truncated" data-i18n="tagClusterTruncatedNotice" hidden>Too many tags — showing only the top 50.</div>
+            <div class="tag-cluster-controls" role="group" data-i18n-aria-label="tagClusterControlsGroup">
+              <button type="button" id="tagCompareSecondZoomIn" data-i18n-aria-label="tagClusterZoomIn" aria-label="Zoom in">+</button>
+              <button type="button" id="tagCompareSecondZoomOut" data-i18n-aria-label="tagClusterZoomOut" aria-label="Zoom out">−</button>
+              <button type="button" id="tagCompareSecondZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
+            </div>
+            <svg id="tagCompareSecondSvg" width="480" height="420"></svg>
+          </div>
+        </div>
+        <div id="tagCompareDiffList" class="tag-cluster-diff"></div>
       </section>
 
       <!-- CSP Settings Panel (P1) -->

@@ -4555,6 +4555,81 @@ details[open] > .priority-details-summary {
   }
 }
 
+/* =============================================================================
+   Time Heatmap (weekday x hour density)
+   Intensity ramp uses --ym-color-primary tokens only (operational purple).
+   ============================================================================= */
+
+.time-heatmap-grid,
+.time-heatmap-numeric {
+  border-collapse: collapse;
+  margin-top: var(--ym-space-3, 12px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.time-heatmap-grid th,
+.time-heatmap-grid td,
+.time-heatmap-numeric th,
+.time-heatmap-numeric td {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-1, 4px);
+  text-align: center;
+}
+
+.time-heatmap-grid th,
+.time-heatmap-numeric th {
+  color: var(--ym-color-sumi-muted, #7a7060);
+  font-weight: 600;
+}
+
+.time-heatmap-cell {
+  min-width: 20px;
+  height: 20px;
+}
+
+.time-heatmap-cell:focus-visible {
+  box-shadow: var(--ym-focus-ring);
+  outline: none;
+}
+
+.time-heatmap-cell[data-intensity="0"] {
+  background: var(--ym-color-bg-subtle, #f8fafc);
+}
+
+.time-heatmap-cell[data-intensity="1"] {
+  background: var(--ym-color-primary-bg, #f5f3ff);
+}
+
+.time-heatmap-cell[data-intensity="2"] {
+  background: var(--ym-color-primary-border, #ddd6fe);
+}
+
+.time-heatmap-cell[data-intensity="3"] {
+  background: var(--ym-color-primary, #7c3aed);
+}
+
+.time-heatmap-cell[data-intensity="4"] {
+  background: var(--ym-color-primary-hover, #6d28d9);
+}
+
+#timeHeatmapEmptyState,
+#timeHeatmapLimitNotice {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+#timeHeatmapEmptyState {
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+#timeHeatmapLimitNotice {
+  color: var(--ym-color-warning-text, #92400e);
+  background: var(--ym-color-warning-bg, #fef3c7);
+  border: 1px solid var(--ym-color-warning-border, #fde68a);
+  border-radius: var(--ym-radius-sm, 6px);
+  padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+}
+
 /* ============================================================================
    Audit Log Panel
    ============================================================================ */
@@ -4735,4 +4810,361 @@ details[open] > .priority-details-summary {
 /* CSP fix: per-site override suffix (was inline style margin-left:6px) */
 .per-site-override-suffix {
   margin-left: 6px;
+}
+
+/* =============================================================================
+   Visit Duration panel + shared period filter
+   ============================================================================= */
+
+.period-filter {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  border-radius: var(--ym-radius-sm, 6px);
+  padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+  margin-top: var(--ym-space-3, 12px);
+}
+
+.period-filter-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-1, 4px);
+}
+
+.period-filter-preset[aria-pressed="true"] {
+  font-weight: 700;
+}
+
+.period-filter-custom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ym-space-1, 4px);
+  margin-top: var(--ym-space-2, 8px);
+}
+
+.visit-duration-table {
+  border-collapse: collapse;
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.visit-duration-table th,
+.visit-duration-table td {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-1, 4px) var(--ym-space-2, 8px);
+  text-align: left;
+}
+
+.visit-duration-table th[scope="col"] {
+  color: var(--ym-color-sumi-muted, #7a7060);
+  font-weight: 600;
+}
+
+.visit-duration-heading {
+  margin-top: var(--ym-space-3, 12px);
+}
+
+.visit-duration-tag-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ym-color-primary, #7c3aed);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.visit-duration-tag-btn:focus-visible {
+  box-shadow: var(--ym-focus-ring);
+  outline: none;
+}
+
+#visitDurationUnmeasuredRatio,
+#visitDurationEmptyState,
+#visitDurationAllUnmeasured,
+.visit-duration-truncated {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+#visitDurationEmptyState,
+#visitDurationAllUnmeasured {
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+.visit-duration-truncated {
+  color: var(--ym-color-warning-text, #92400e);
+  background: var(--ym-color-warning-bg, #fef3c7);
+  border: 1px solid var(--ym-color-warning-border, #fde68a);
+  border-radius: var(--ym-radius-sm, 6px);
+  padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+}
+
+/* =============================================================================
+   Tag Frequency Timeline (stacked SVG, PBI 2026-09-24-05)
+   Series colors cycle through design tokens (light/dark aware via var()).
+   ============================================================================= */
+
+.tag-timeline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ym-space-2, 8px);
+}
+
+.tag-timeline-controls-label {
+  font-weight: 600;
+}
+
+.tag-timeline-controls input[type="number"] {
+  width: 5em;
+}
+
+#tagTimelineWeekStartNote {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+#tagTimelineEmptyState {
+  margin-top: var(--ym-space-2, 8px);
+  font-size: var(--ym-text-sm, 13px);
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+.tag-timeline-svg {
+  width: 100%;
+  height: auto;
+  max-width: 800px;
+  margin-top: var(--ym-space-3, 12px);
+}
+
+.tag-timeline-grid {
+  stroke: var(--ym-color-border, #e2e8f0);
+  stroke-width: 1;
+}
+
+.tag-timeline-axis {
+  stroke: var(--ym-color-border, #e2e8f0);
+  stroke-width: 1;
+}
+
+.tag-timeline-tick {
+  fill: var(--ym-color-sumi-muted, #7a7060);
+  font-size: 11px;
+}
+
+.tag-timeline-line {
+  fill: none;
+  stroke-width: 2;
+}
+
+.tag-timeline-point {
+  stroke: var(--ym-color-bg-white, #ffffff);
+  stroke-width: 1;
+  cursor: default;
+}
+
+.tag-timeline-point:focus-visible {
+  outline: none;
+  stroke: var(--ym-color-primary, #7c3aed);
+  stroke-width: 2.5;
+}
+
+.tag-timeline-series-0 { fill: var(--ym-color-primary, #7c3aed); stroke: var(--ym-color-primary, #7c3aed); }
+.tag-timeline-series-1 { fill: var(--ym-color-info, #3b82f6); stroke: var(--ym-color-info, #3b82f6); }
+.tag-timeline-series-2 { fill: var(--ym-color-success, #10b981); stroke: var(--ym-color-success, #10b981); }
+.tag-timeline-series-3 { fill: var(--ym-color-warning, #f59e0b); stroke: var(--ym-color-warning, #f59e0b); }
+.tag-timeline-series-4 { fill: var(--ym-color-danger, #ef4444); stroke: var(--ym-color-danger, #ef4444); }
+.tag-timeline-series-5 { fill: var(--ym-color-gold, #c9a84c); stroke: var(--ym-color-gold, #c9a84c); }
+.tag-timeline-series-6 { fill: var(--ym-color-info-accent, #0ea5e9); stroke: var(--ym-color-info-accent, #0ea5e9); }
+.tag-timeline-series-7 { fill: var(--ym-color-text-secondary, #64748b); stroke: var(--ym-color-text-secondary, #64748b); }
+
+.tag-timeline-series-other {
+  fill: var(--ym-color-sumi-muted, #7a7060);
+  stroke: var(--ym-color-sumi-muted, #7a7060);
+}
+
+.tag-timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
+  margin-top: var(--ym-space-3, 12px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.tag-timeline-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ym-space-1, 4px);
+}
+
+.tag-timeline-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--ym-radius-sm, 3px);
+}
+
+.tag-timeline-numeric {
+  border-collapse: collapse;
+  margin-top: var(--ym-space-3, 12px);
+  font-size: var(--ym-text-sm, 13px);
+}
+
+.tag-timeline-numeric th,
+.tag-timeline-numeric td {
+  border: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-1, 4px) var(--ym-space-2, 8px);
+  text-align: right;
+}
+
+.tag-timeline-numeric th {
+  color: var(--ym-color-sumi-muted, #7a7060);
+  font-weight: 600;
+}
+
+.tag-timeline-numeric th[scope="row"] {
+  text-align: left;
+}
+
+/* =============================================================================
+   Word Cluster SVG (PBI 2026-09-24-07) — mirrors #tagClusterSvg; node/edge/text
+   styling is shared via the .tag-cluster-* classes.
+   ============================================================================= */
+
+#wordClusterSvg {
+  width: 100%;
+  height: auto;
+  max-width: 800px;
+  touch-action: none;
+  cursor: grab;
+}
+
+#wordClusterSvg:active {
+  cursor: grabbing;
+}
+
+/* =============================================================================
+   Tag Cluster Time Slider (PBI 2026-09-24-08) — side-by-side compare + diff list
+   ============================================================================= */
+
+.tag-cluster-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ym-space-4, 16px);
+}
+
+@media (max-width: 900px) {
+  .tag-cluster-compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tag-cluster-compare-side {
+  min-width: 0;
+}
+
+.tag-cluster-compare-heading {
+  margin: var(--ym-space-2, 8px) 0;
+  font-size: var(--ym-text-base, 14px);
+  font-weight: 600;
+}
+
+.tag-cluster-compare-empty {
+  margin: var(--ym-space-2, 8px) 0;
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+#tagCompareFirstSvg,
+#tagCompareSecondSvg {
+  width: 100%;
+  height: auto;
+  touch-action: none;
+  cursor: grab;
+}
+
+#tagCompareFirstSvg:active,
+#tagCompareSecondSvg:active {
+  cursor: grabbing;
+}
+
+/* WHY hue via custom property: the same tag must keep the same hue across
+   both snapshots; the per-scheme fixed saturation/lightness (28% light on the
+   white panel background, 72% on the dark one) lives here so it stays
+   testable and auditable in one place (contrast >= 4.5:1, see
+   src/dashboard/tagClusterColor.ts). */
+.tag-cluster-compare-node {
+  fill: hsl(var(--tag-hue, 210), 65%, 28%);
+}
+
+.tag-cluster-compare-node:hover {
+  fill: hsl(var(--tag-hue, 210), 65%, 20%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-compare-node {
+    fill: hsl(var(--tag-hue, 210), 55%, 72%);
+  }
+
+  .tag-cluster-compare-node:hover {
+    fill: hsl(var(--tag-hue, 210), 55%, 80%);
+  }
+}
+
+.tag-cluster-diff {
+  margin-top: var(--ym-space-4, 16px);
+}
+
+.tag-cluster-diff-heading {
+  margin: var(--ym-space-3, 12px) 0 var(--ym-space-1, 4px);
+  font-size: var(--ym-text-sm, 13px);
+  font-weight: 600;
+}
+
+.tag-cluster-diff-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tag-cluster-diff-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--ym-space-2, 8px);
+  padding: 2px 0;
+}
+
+.tag-cluster-diff-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+  background: hsl(var(--tag-hue, 210), 65%, 28%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tag-cluster-diff-swatch {
+    background: hsl(var(--tag-hue, 210), 55%, 72%);
+  }
+}
+
+.tag-cluster-diff-tag {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tag-cluster-diff-tag:hover,
+.tag-cluster-diff-tag:focus-visible {
+  color: var(--ym-color-primary, #2563eb);
+}
+
+.tag-cluster-diff-delta {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
 }

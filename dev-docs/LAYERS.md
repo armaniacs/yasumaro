@@ -38,6 +38,7 @@ src/utils/luhn.ts
 src/utils/urlHash.ts — ログ用 URL ハッシュ化（ piiSanitizer.ts と同 性質のプライバシー保護。PBI 2026-09-16-05）
 src/utils/backoff.ts — 指数バックオフ遅延計算の SSOT（PBI 2026-09-17-09）
 src/utils/httpFailureMessages.ts — HTTP status→ユーザー文言テーブルの SSOT（PBI 2026-09-17-09）
+src/utils/summaryFallback.ts — AI要約空欄フォールバック文言の SSOT（PBI 2026-09-24-09）
 ```
 
 `logger/` の一部は `piiSanitizer` に依存するが、これは Layer 0 内の相互依存として許容する。
@@ -133,6 +134,7 @@ Layer 2 → Layer 0/1 import 可
 Barrel → Layer 0/1/2 を再エクスポートのみ
 逆方向依存 (utils → background) は禁止（PBI 2026-09-05-01 で cspValidator/urlWhitelist の providerCatalog 逆辺を解消し、`src/utils/storage/providerAllowlist.ts` の中立テーブルに反転済み）。
 対称形の逆転（background → popup 等の UI 層への上向き依存）も禁止。同意状態ロジックは `src/popup/privacyConsent.ts` から `src/utils/storage/privacyConsent.ts` に移動し、background 4箇所・popup 2箇所・dashboard 1箇所が中立層を直接 import する形に解消済み（2026-08-20-utils-layer-circular-dependency の循環とは別件）。
+dashboard → background の静的 import は、純粋定数・型・カタログ表に限り許容する（既存前例: providerCatalog、CURRENT_PROTOCOL_VERSION。PBI 2026-09-24-09 の dashboard → utils/summaryFallback.ts 直接 import もこれに該当）。
 ```
 
 違反検出:

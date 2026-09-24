@@ -122,11 +122,14 @@ Checking Team レビューから起票した非機能PBI（PBI-13 / 15 / 24 / 26
 
 ## 現在の実装計画
 
-`dev-docs/plans/` に残っているのは**恒常的な運用ドキュメント**のみ。
+`dev-docs/plans/` には未実行の実装計画は存在しない（00-index.md のみ）。
 
-| ファイル | 対象 | 状態 |
+かつて恒常ドキュメントとしてここに置かれていた 2 ファイルは
+`dev-docs/archived/plans/` へ移動済み:
+
+| ファイル（アーカイブ先） | 対象 | 状態 |
 |---------|------|------|
-| [2026-06-29-maintenance-plan.md](2026-06-29-maintenance-plan.md) | 定期メンテナンス | 📌 恒常ドキュメント |
-| [verified-crx-upload.md](verified-crx-upload.md) | CWS検証済みCRXアップロード | 📌 恒常ドキュメント |
+| [2026-06-29-maintenance-plan.md](../archived/plans/2026-06-29-maintenance-plan.md) | 定期メンテナンス | 📌 恒常ドキュメント（アーカイブ保管） |
+| [verified-crx-upload.md](../archived/plans/verified-crx-upload.md) | CWS検証済みCRXアップロード | 📌 恒常ドキュメント（アーカイブ保管） |
 
 未完了PBIの一覧は [pbi/00-INDEX.md](../../pbi/00-INDEX.md) が正。

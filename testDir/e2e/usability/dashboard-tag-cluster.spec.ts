@@ -32,6 +32,10 @@ test.describe('Dashboard tag cluster node count @extension', () => {
     await page.locator('button[data-panel="panel-tag-cluster"]').click();
     const svg = page.locator('#tagClusterSvg');
     await expect(svg).toBeVisible();
+
+    // The panel defaults to the last-7-days view (user decision
+    // 2026-09-24): switch to 全期間 so the January-seeded rows render.
+    await page.locator('#tagClusterFilter button[data-preset="all"]').click();
     await expect(page.locator('.tag-cluster-loading-overlay')).toBeHidden({ timeout: 15000 });
     await expect(page.locator('#tagClusterEmptyState')).toBeHidden();
 
