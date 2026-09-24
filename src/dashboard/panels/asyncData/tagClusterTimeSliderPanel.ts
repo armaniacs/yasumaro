@@ -22,13 +22,16 @@ import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
 } from '../../tagCooccurrenceHybrid.js';
-import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
+import {
+  MAX_QUERY_ROWS,
+  MAX_TAG_CLUSTER_TAGS,
+} from '../../../utils/computeLimits.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   DAY_MS,
   endOfLocalDay,
@@ -42,7 +45,6 @@ import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const MAX_NODES = 50;
-const MAX_QUERY_ROWS = 10000;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_WINDOW_DAYS = 30;
 
@@ -64,15 +66,6 @@ interface SideData {
   edges: TagEdge[];
   ok: boolean;
   empty: boolean;
-}
-
-/** getMessage with {name} substitutions and an English fallback template. */
-function msg(key: string, subs: Record<string, string | number>, fallback: string): string {
-  const translated = getMessage(key, subs);
-  if (translated) return translated;
-  return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
-    subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
-  );
 }
 
 /** Local-date YYYY-MM-DD for a date input's value attribute. */

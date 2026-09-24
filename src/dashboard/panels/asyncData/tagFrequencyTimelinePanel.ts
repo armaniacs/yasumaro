@@ -21,7 +21,7 @@
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { getMessage, getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
@@ -47,15 +47,6 @@ const CHART_WIDTH = 800;
 const CHART_HEIGHT = 340;
 const MARGIN = { top: 24, right: 16, bottom: 44, left: 48 };
 const MAX_X_LABELS = 8;
-
-/** getMessage with {name} substitutions and an English fallback template. */
-function msg(key: string, subs: Record<string, string | number>, fallback: string): string {
-  const translated = getMessage(key, subs);
-  if (translated) return translated;
-  return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
-    subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
-  );
-}
 
 function otherLabel(): string {
   return getMessageOr('dashboardTagTimelineSeriesOther', 'Other');
@@ -102,14 +93,12 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   let cachedRows: BrowsingLogEntry[] | null = null;
   // WHY: the cap notice describes the FETCH, not the current re-aggregation —
   // granularity/top-N switches keep the capped prefix as-is, so the notice
-  // must survive re-aggregation while the cached fetch was capped (the
-  // fetchScoped registration below + resetForReaggregate express this).
-  let lastFetchCapped = false;
+  // must survive re-aggregation (the fetchScoped registration below +
+  // resetForReaggregate express this without a panel-side flag).
   // WHY: the empty-state element doubles as the error surface (one element,
   // two modes) — the unified failure policy swaps in the error wording.
   const notices = new PanelNotices();
   let loadSeq = 0;
-
   function parseTopN(): number {
     if (!topNInput) return TIMELINE_DEFAULT_TOP_N;
     const n = Number.parseInt(topNInput.value, 10);
@@ -410,12 +399,10 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
 
       cachedRows = rows;
       if (rows.length === 0) {
-        lastFetchCapped = false;
         notices.showEmpty();
         return;
       }
 
-      lastFetchCapped = fetched.capped;
       if (fetched.capped && capNotice) {
         capNotice.textContent = msg(
           'dashboardTagTimelineCapNote',

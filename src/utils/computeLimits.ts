@@ -11,6 +11,8 @@
  * pendingChromeStorageQueue.ts, MAX_NODES = 50 in tagClusterPanel.ts).
  */
 
+import { QUERY_CAPS } from '../messaging/limits.js';
+
 /**
  * Max unique tags considered per record in tag-cooccurrence.
  * Bounds the per-record double loop to C(50, 2) = 1225 iterations.
@@ -63,3 +65,19 @@ export const DOMAIN_ANALYSIS_PAGE_SIZE = 10000;
  * pass. The panel shows a cap notice when reached (more rows likely exist).
  */
 export const MAX_TAG_TIMELINE_ROWS = 10000;
+
+/**
+ * WHY: this must equal QUERY_CAPS.plain (the wire clamp owned by
+ * src/messaging/limits.ts) because the panels interpolate it into their
+ * truncation notices — if the dashboard ask and the wire clamp drifted, the
+ * notice text would quietly lie about the effective limit. It is derived by
+ * reference (not re-declared) so drift is structurally impossible.
+ *
+ * Layer direction: importing it from utils is safe — messaging/limits.ts is a
+ * pure foundation module (@layer 0, zero imports, no chrome API), so this edge
+ * points downward into foundation, matching the queryPlan.ts precedent and the
+ * LAYERS.md rule allowing pure-constant imports across seams (PBI
+ * 2026-09-24-09). Equality with QUERY_CAPS.plain is additionally pinned by
+ * src/messaging/__tests__/limits-drift.test.ts.
+ */
+export const MAX_QUERY_ROWS = QUERY_CAPS.plain;

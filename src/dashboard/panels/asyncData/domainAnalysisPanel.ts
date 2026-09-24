@@ -34,7 +34,7 @@ import {
 } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
@@ -49,15 +49,6 @@ import {
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { tryNavigateTyped } from '../registryContext.js';
 import { type PanelLifecycle } from '../types.js';
-
-/** getMessage with {name} substitutions and an English fallback template. */
-function msg(key: string, subs: Record<string, string | number>, fallback: string): string {
-  const translated = getMessage(key, subs);
-  if (translated) return translated;
-  return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
-    subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
-  );
-}
 
 function navigateToHistoryWithDomain(domain: string): void {
   tryNavigateTyped('panel-sqlite-history', { searchDomain: domain });

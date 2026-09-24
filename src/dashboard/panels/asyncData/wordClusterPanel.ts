@@ -23,14 +23,17 @@ import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
 } from '../../tagCooccurrenceHybrid.js';
-import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
+import {
+  MAX_QUERY_ROWS,
+  MAX_TAG_CLUSTER_TAGS,
+} from '../../../utils/computeLimits.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { buildWordClusterRows } from '../../wordClusterAdapter.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
@@ -39,19 +42,9 @@ import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const MAX_NODES = 50;
-const MAX_QUERY_ROWS = 10000;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 // Keywords are longer than tags; the aria-label stays a compact summary.
 const ARIA_LABEL_MAX_KEYWORDS = 8;
-
-/** getMessage with {name} substitutions and an English fallback template. */
-function msg(key: string, subs: Record<string, string | number>, fallback: string): string {
-  const translated = getMessage(key, subs);
-  if (translated) return translated;
-  return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
-    subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
-  );
-}
 
 export function createWordClusterPanel(): PanelLifecycle {
   let svg: SVGSVGElement | null = null;
