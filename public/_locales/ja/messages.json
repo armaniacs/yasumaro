@@ -2287,6 +2287,10 @@
     "message": "集計上限の{max}件に達したため、一部のみを集計しています。",
     "description": "Domain analysis pagination cap notice"
   },
+  "domainAnalysisError": {
+    "message": "ドメイン分析の読み込みに失敗しました。再試行してください。",
+    "description": "ドメイン分析の読み込み失敗状態"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },
@@ -4503,6 +4507,10 @@
     "message": "取得上限{max}件に達しました — 一部の記録のみで集計しています。",
     "description": "タグ頻度の期間推移の取得上限注記"
   },
+  "dashboardTagTimelineError": {
+    "message": "タグ頻度の推移の読み込みに失敗しました。再試行してください。",
+    "description": "タグ頻度の期間推移の読み込み失敗状態"
+  },
   "dashboardTagTimelineTableCaption": {
     "message": "バケット・タグ別の記録数",
     "description": "タグ頻度の期間推移の数値テーブルのキャプション"
@@ -4558,6 +4566,10 @@
   "cooccurrenceTableEmptyForTag": {
     "message": "選択したタグとの共起相手がありません。",
     "description": "タグ共起ペアランキングの選択タグに共起相手がいない場合の空状態"
+  },
+  "cooccurrenceTableError": {
+    "message": "タグ共起ペアの読み込みに失敗しました。再試行してください。",
+    "description": "タグ共起ペアランキングの読み込み失敗状態"
   },
   "cooccurrenceTableTruncatedTop20": {
     "message": "共起ペア{total}件のうち上位20件を表示しています。",

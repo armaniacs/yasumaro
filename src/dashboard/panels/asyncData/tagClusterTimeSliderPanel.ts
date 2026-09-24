@@ -27,6 +27,7 @@ import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { PanelNotices } from '../PanelNotices.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   DAY_MS,
@@ -38,7 +39,7 @@ import { splitPeriodInHalves } from '../../periodSplit.js';
 import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
 import { type PanelLifecycle } from '../types.js';
-import { tryNavigateTyped } from '../registryContext.js';
+import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const MAX_NODES = 50;
 const MAX_QUERY_ROWS = 10000;
@@ -52,9 +53,6 @@ interface HalfBounds {
 
 interface SideRefs {
   svg: SVGSVGElement | null;
-  emptyState: HTMLElement | null;
-  truncatedNotice: HTMLElement | null;
-  rowCapNotice: HTMLElement | null;
   zoomInBtn: HTMLElement | null;
   zoomOutBtn: HTMLElement | null;
   zoomResetBtn: HTMLElement | null;
@@ -75,13 +73,6 @@ function msg(key: string, subs: Record<string, string | number>, fallback: strin
   return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
     subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
   );
-}
-
-function navigateToHistoryWithTag(tag: string): void {
-  const fallback = (): void => {
-    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
-  };
-  tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
 }
 
 /** Local-date YYYY-MM-DD for a date input's value attribute. */
@@ -106,25 +97,21 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
   let diffListHost: HTMLElement | null = null;
   let first: SideRefs = createEmptySideRefs();
   let second: SideRefs = createEmptySideRefs();
+  // WHY: each half is its own notice scope — its empty-state element doubles
+  // as the error surface (one element, two modes). The per-half row-cap
+  // notice describes the FETCH, so it is fetch-scoped.
+  const firstNotices = new PanelNotices();
+  const secondNotices = new PanelNotices();
   let loadSeq = 0;
 
   function createEmptySideRefs(): SideRefs {
     return {
       svg: null,
-      emptyState: null,
-      truncatedNotice: null,
-      rowCapNotice: null,
       zoomInBtn: null,
       zoomOutBtn: null,
       zoomResetBtn: null,
       panZoom: null,
     };
-  }
-
-  function hideSideNotices(side: SideRefs): void {
-    if (side.emptyState) side.emptyState.hidden = true;
-    if (side.truncatedNotice) side.truncatedNotice.hidden = true;
-    if (side.rowCapNotice) side.rowCapNotice.hidden = true;
   }
 
   function clearSideSvg(side: SideRefs): void {
@@ -135,14 +122,6 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     side.svg.removeAttribute('viewBox');
   }
 
-  function setSideMessage(side: SideRefs, key: string, fallback: string): void {
-    if (!side.emptyState) return;
-    // WHY: keep the data-i18n binding in sync so a later language switch
-    // re-applies the same message (wordClusterPanel convention).
-    side.emptyState.setAttribute('data-i18n', key);
-    side.emptyState.textContent = getMessageOr(key, fallback);
-  }
-
   /**
    * Fetch + narrow + cooccurrence + node-cap for one half. Renders nothing:
    * drawing waits until both halves are loaded so the stable-placement rule
@@ -150,6 +129,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
    */
   async function fetchSide(
     side: SideRefs,
+    sideNotices: PanelNotices,
     bounds: HalfBounds,
     seq: number,
     label: string,
@@ -175,13 +155,16 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       // WHY: queryLogs caps the fetch at MAX_QUERY_ROWS; when the half holds
       // more rows the analyzed set is a prefix — the PBI requires the
       // truncation to be visible per half.
-      if (fetched.capped && side.rowCapNotice) {
-        side.rowCapNotice.textContent = msg(
-          'tagClusterCompareCapNotice',
-          { max: MAX_QUERY_ROWS, shown: fetched.rows.length, total: fetched.total },
-          `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${fetched.rows.length} of ${fetched.total} records in this half.`,
+      if (fetched.capped) {
+        sideNotices.setMessage(
+          'rowCap',
+          msg(
+            'tagClusterCompareCapNotice',
+            { max: MAX_QUERY_ROWS, shown: fetched.rows.length, total: fetched.total },
+            `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${fetched.rows.length} of ${fetched.total} records in this half.`,
+          ),
         );
-        side.rowCapNotice.hidden = false;
+        sideNotices.show('rowCap');
       }
 
       // Narrow to the most frequent tags BEFORE cooccurrence — same O(n^2)
@@ -196,20 +179,25 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
 
       if (nodes.length === 0) {
         loadingManager.cleanup();
-        setSideMessage(side, 'tagClusterCompareEmptyPeriod', 'No records in this half of the window.');
-        if (side.emptyState) side.emptyState.hidden = false;
+        sideNotices.showEmpty('tagClusterCompareEmptyPeriod', 'No records in this half of the window.');
         return { nodes: [], edges: [], ok: true, empty: true };
       }
 
       const limited = limitToTopNodes(nodes, edges, MAX_NODES);
-      if (side.truncatedNotice) side.truncatedNotice.hidden = !limited.truncated;
+      if (limited.truncated) {
+        sideNotices.show('truncated');
+      } else {
+        sideNotices.hide('truncated');
+      }
       return { nodes: limited.nodes, edges: limited.edges, ok: true, empty: false };
     } catch (error) {
       loadingManager.cleanup();
       console.error(`[${label}] error:`, error);
       if (seq !== loadSeq) return null;
-      setSideMessage(side, 'tagClusterTimeSliderError', 'Failed to load this half of the comparison. Try again.');
-      if (side.emptyState) side.emptyState.hidden = false;
+      sideNotices.showError(
+        'tagClusterTimeSliderError',
+        'Failed to load this half of the comparison. Try again.',
+      );
       return { nodes: [], edges: [], ok: false, empty: true };
     }
   }
@@ -376,8 +364,11 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     if (!startInput || !endInput) return;
     if (validationNotice) validationNotice.hidden = true;
     if (correctedNotice) correctedNotice.hidden = true;
-    hideSideNotices(first);
-    hideSideNotices(second);
+    // Fresh-apply reset per half: restores the normal empty binding in case
+    // a previous apply failed and swapped in the error message, and hides
+    // the truncation/row-cap notices until the new halves decide visibility.
+    firstNotices.reset();
+    secondNotices.reset();
     if (diffListHost) clearChildren(diffListHost);
 
     const startValue = startInput.value;
@@ -429,8 +420,10 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     setStatus('tagClusterTimeSliderLoading', 'Comparing tag clusters…');
     clearSideSvg(first);
     clearSideSvg(second);
-    hideSideNotices(first);
-    hideSideNotices(second);
+    // Idempotent second reset — validation early-returns above may have
+    // already run it, and reset() is safe to call twice.
+    firstNotices.reset();
+    secondNotices.reset();
 
     if (!first.svg || !second.svg) return;
     const firstLoading = new TagClusterLoadingManager(first.svg);
@@ -440,8 +433,8 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     // (Promise.all) instead of serially, or every Compare click waits twice
     // the wall-clock for capped queries plus two co-occurrence pipelines.
     const [firstData, secondData] = await Promise.all([
-      fetchSide(first, halves.first, seq, 'tagClusterTimeSliderFirst', firstLoading),
-      fetchSide(second, halves.second, seq, 'tagClusterTimeSliderSecond', secondLoading),
+      fetchSide(first, firstNotices, halves.first, seq, 'tagClusterTimeSliderFirst', firstLoading),
+      fetchSide(second, secondNotices, halves.second, seq, 'tagClusterTimeSliderSecond', secondLoading),
     ]);
     if (seq !== loadSeq) return;
 
@@ -493,9 +486,6 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       first = {
         ...createEmptySideRefs(),
         svg: container.querySelector('#tagCompareFirstSvg') as unknown as SVGSVGElement | null,
-        emptyState: container.querySelector('#tagCompareFirstEmpty'),
-        truncatedNotice: container.querySelector('#tagCompareFirstTruncated'),
-        rowCapNotice: container.querySelector('#tagCompareFirstCapNotice'),
         zoomInBtn: container.querySelector('#tagCompareFirstZoomIn'),
         zoomOutBtn: container.querySelector('#tagCompareFirstZoomOut'),
         zoomResetBtn: container.querySelector('#tagCompareFirstZoomReset'),
@@ -503,13 +493,27 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       second = {
         ...createEmptySideRefs(),
         svg: container.querySelector('#tagCompareSecondSvg') as unknown as SVGSVGElement | null,
-        emptyState: container.querySelector('#tagCompareSecondEmpty'),
-        truncatedNotice: container.querySelector('#tagCompareSecondTruncated'),
-        rowCapNotice: container.querySelector('#tagCompareSecondCapNotice'),
         zoomInBtn: container.querySelector('#tagCompareSecondZoomIn'),
         zoomOutBtn: container.querySelector('#tagCompareSecondZoomOut'),
         zoomResetBtn: container.querySelector('#tagCompareSecondZoomReset'),
       };
+
+      firstNotices.register('empty', container.querySelector('#tagCompareFirstEmpty'), {
+        i18nKey: 'tagClusterCompareEmptyPeriod',
+        fallbackText: 'No records in this half of the window.',
+      });
+      firstNotices.register('truncated', container.querySelector('#tagCompareFirstTruncated'));
+      firstNotices.register('rowCap', container.querySelector('#tagCompareFirstCapNotice'), {
+        fetchScoped: true,
+      });
+      secondNotices.register('empty', container.querySelector('#tagCompareSecondEmpty'), {
+        i18nKey: 'tagClusterCompareEmptyPeriod',
+        fallbackText: 'No records in this half of the window.',
+      });
+      secondNotices.register('truncated', container.querySelector('#tagCompareSecondTruncated'));
+      secondNotices.register('rowCap', container.querySelector('#tagCompareSecondCapNotice'), {
+        fetchScoped: true,
+      });
 
       // Sensible default window so the first Compare works without typing:
       // [today - 30 days, today].
@@ -540,6 +544,8 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       correctedNotice = null;
       statusLive = null;
       diffListHost = null;
+      firstNotices.clear();
+      secondNotices.clear();
     },
   };
 }

@@ -3,14 +3,15 @@
  * Renders per-domain and per-tag total/average visit-time rankings for the
  * period selected in the shared periodFilter component (PBI 2026-09-24-02).
  * Rows with null visit_duration are excluded from sums and reported as an
- * unmeasured ratio. Tag rows navigate to history with the tag (same
- * tryNavigateTyped + navigate-to-tag fallback as tagClusterPanel);
+ * unmeasured ratio. Tag rows navigate to history with the tag via the
+ * shared navigateToHistoryWithTag helper;
  * domain rows have no navigation in v1.
  */
 
 import { MAX_VISIT_DURATION_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
-import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { PanelNotices } from '../PanelNotices.js';
+import { getMessage } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
@@ -22,7 +23,7 @@ import {
   VISIT_DURATION_TOP_N,
   type VisitDurationRankRow,
   } from '../../visitDurationAggregate.js';
-import { tryNavigateTyped } from '../registryContext.js';
+import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 import { type PanelLifecycle } from '../types.js';
 
 /** getMessage with {name} substitutions and an English fallback template. */
@@ -34,35 +35,19 @@ function msg(key: string, subs: Record<string, string | number>, fallback: strin
   );
 }
 
-function navigateToHistoryWithTag(tag: string): void {
-  const fallback = (): void => {
-    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
-  };
-  tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
-}
-
 export function createVisitDurationPanel(): PanelLifecycle {
   let filterHost: HTMLElement | null = null;
   let domainBody: HTMLElement | null = null;
   let tagBody: HTMLElement | null = null;
-  let emptyState: HTMLElement | null = null;
-  let allUnmeasured: HTMLElement | null = null;
   let ratioEl: HTMLElement | null = null;
   let domainTruncated: HTMLElement | null = null;
   let tagTruncated: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
+  // WHY: the empty-state element doubles as the error surface (one element,
+  // two modes); the unmeasured ratio and truncation notices are re-decided
+  // from each fetch's own aggregation, so plain (non-fetch-scoped) entries.
+  const notices = new PanelNotices();
   let loadSeq = 0;
-
-  /**
-   * Swaps the empty-state element between its normal message and the load
-   * failure message so a persistent query failure is not rendered as
-   * "no records" (wordClusterPanel error-state convention).
-   */
-  function setEmptyStateMessage(key: string, fallback: string): void {
-    if (!emptyState) return;
-    emptyState.setAttribute('data-i18n', key);
-    emptyState.textContent = getMessageOr(key, fallback);
-  }
 
   function renderRows(tbody: HTMLElement, rows: VisitDurationRankRow[], isTag: boolean): void {
     tbody.innerHTML = '';
@@ -106,14 +91,10 @@ export function createVisitDurationPanel(): PanelLifecycle {
 
     domainBody.innerHTML = '';
     tagBody.innerHTML = '';
-    if (emptyState) emptyState.hidden = true;
-    // WHY: restore the normal empty-state binding in case a previous load
-    // failed and swapped in the error message.
-    setEmptyStateMessage('visitDurationEmpty', 'No browsing records in this period.');
-    if (allUnmeasured) allUnmeasured.hidden = true;
-    if (ratioEl) ratioEl.hidden = true;
-    if (domainTruncated) domainTruncated.hidden = true;
-    if (tagTruncated) tagTruncated.hidden = true;
+    // Fresh-fetch reset: restores the normal empty binding in case a previous
+    // load failed and swapped in the error message, and hides the ratio /
+    // all-unmeasured / truncation notices until this fetch's results decide.
+    notices.reset();
 
     try {
       const fetched = await fetchPeriodRows({
@@ -126,7 +107,7 @@ export function createVisitDurationPanel(): PanelLifecycle {
       if (seq !== loadSeq) return;
 
       if (rows.length === 0) {
-        if (emptyState) emptyState.hidden = false;
+        notices.showEmpty();
         return;
       }
 
@@ -139,11 +120,11 @@ export function createVisitDurationPanel(): PanelLifecycle {
           { percent, unmeasured: agg.unmeasuredCount, total: agg.totalCount },
           'Unmeasured: {percent}% ({unmeasured} of {total} records)',
         );
-        ratioEl.hidden = false;
+        notices.show('ratio');
       }
 
       if (agg.measuredCount === 0) {
-        if (allUnmeasured) allUnmeasured.hidden = false;
+        notices.show('allUnmeasured');
         return;
       }
 
@@ -156,7 +137,7 @@ export function createVisitDurationPanel(): PanelLifecycle {
           { shown: VISIT_DURATION_TOP_N, total: agg.domainTotal },
           'Showing top {shown} of {total}.',
         );
-        domainTruncated.hidden = false;
+        notices.show('domainTruncated');
       }
       if (agg.tagsTruncated && tagTruncated) {
         tagTruncated.textContent = msg(
@@ -164,16 +145,15 @@ export function createVisitDurationPanel(): PanelLifecycle {
           { shown: VISIT_DURATION_TOP_N, total: agg.tagTotal },
           'Showing top {shown} of {total}.',
         );
-        tagTruncated.hidden = false;
+        notices.show('tagTruncated');
       }
     } catch (error) {
       console.error('[visitDurationPanel] error:', error);
       if (seq !== loadSeq) return;
-      setEmptyStateMessage(
+      notices.showError(
         'visitDurationError',
         'Failed to load the visit duration analysis. Try again.',
       );
-      if (emptyState) emptyState.hidden = false;
     }
   }
 
@@ -184,11 +164,17 @@ export function createVisitDurationPanel(): PanelLifecycle {
       filterHost = container.querySelector('#visitDurationFilter');
       domainBody = container.querySelector('#visitDurationDomainBody');
       tagBody = container.querySelector('#visitDurationTagBody');
-      emptyState = container.querySelector('#visitDurationEmptyState');
-      allUnmeasured = container.querySelector('#visitDurationAllUnmeasured');
       ratioEl = container.querySelector('#visitDurationUnmeasuredRatio');
       domainTruncated = container.querySelector('#visitDurationDomainTruncated');
       tagTruncated = container.querySelector('#visitDurationTagTruncated');
+      notices.register('empty', container.querySelector('#visitDurationEmptyState'), {
+        i18nKey: 'visitDurationEmpty',
+        fallbackText: 'No browsing records in this period.',
+      });
+      notices.register('allUnmeasured', container.querySelector('#visitDurationAllUnmeasured'));
+      notices.register('ratio', ratioEl);
+      notices.register('domainTruncated', domainTruncated);
+      notices.register('tagTruncated', tagTruncated);
       if (filterHost) {
         filterHandle = createPeriodFilter({
           initialPreset: 'last30',
@@ -213,6 +199,10 @@ export function createVisitDurationPanel(): PanelLifecycle {
       filterHost = null;
       domainBody = null;
       tagBody = null;
+      ratioEl = null;
+      domainTruncated = null;
+      tagTruncated = null;
+      notices.clear();
     },
   };
 }

@@ -112,7 +112,7 @@ describe('visitDurationPanel — PanelLifecycle', () => {
     expect(container.querySelector('#visitDurationUnmeasuredRatio')!.hidden).toBe(true);
   });
 
-  it('shows a distinct error message when the query keeps failing', async () => {
+  it('shows a distinct error message when the query keeps failing, and resets on recovery', async () => {
     mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
     const { panel, container } = mountPanel();
     await panel.load?.();
@@ -121,6 +121,15 @@ describe('visitDurationPanel — PanelLifecycle', () => {
     expect(emptyState.hidden).toBe(false);
     expect(emptyState.getAttribute('data-i18n')).toBe('visitDurationError');
     expect(emptyState.textContent).toContain('Failed to load');
+
+    // A subsequent successful load resets to the normal empty binding.
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    await panel.load?.();
+
+    const recovered = container.querySelector('#visitDurationEmptyState')!;
+    expect(recovered.getAttribute('data-i18n')).toBe('visitDurationEmpty');
+    expect(recovered.textContent).toBe('No browsing records in this period.');
+    expect(recovered.hidden).toBe(false);
   });
 
   it('issues a single query on first open (no duplicate mount fetch)', async () => {

@@ -299,22 +299,38 @@ describe('tagCooccurrenceTablePanel — PanelLifecycle', () => {
     expect(tableRows(container).length).toBeLessThanOrEqual(20);
   });
 
-  it('shows the no-records empty state when queries keep failing', async () => {
+  it('shows the error state when queries keep failing, and resets on recovery', async () => {
     mockQueryLogs.mockRejectedValue(new Error('boom'));
     const { panel, container } = mountPanel();
     await panel.load?.();
 
-    expect(container.querySelector('#coocTableEmptyState')!.hidden).toBe(false);
+    // Unified failure policy: a persistent failure shows the distinct error
+    // wording, never the "no records" empty message.
+    const empty = container.querySelector('#coocTableEmptyState')!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.getAttribute('data-i18n')).toBe('cooccurrenceTableError');
+    expect(empty.textContent).toBe('Failed to load the tag co-occurrence pairs. Try again.');
     expect(container.querySelectorAll('#coocTableTableWrap table')).toHaveLength(0);
+
+    // A subsequent successful load resets to the normal empty binding.
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    await panel.load?.();
+
+    const recovered = container.querySelector('#coocTableEmptyState')!;
+    expect(recovered.getAttribute('data-i18n')).toBe('cooccurrenceTableNoRecords');
+    expect(recovered.textContent).toBe('No records in the selected period. Try a wider range.');
+    expect(recovered.hidden).toBe(false);
   });
 
-  it('shows the no-records empty state when the backend is unavailable', async () => {
+  it('shows the error state when the backend is unavailable', async () => {
     mockGetSqliteStatus.mockResolvedValue({ initialized: false });
     const { panel, container } = mountPanel();
     await panel.load?.();
 
     expect(mockQueryLogs).not.toHaveBeenCalled();
-    expect(container.querySelector('#coocTableEmptyState')!.hidden).toBe(false);
+    const empty = container.querySelector('#coocTableEmptyState')!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.getAttribute('data-i18n')).toBe('cooccurrenceTableError');
   });
 
   it('destroy stops further loads and detaches the period filter', async () => {

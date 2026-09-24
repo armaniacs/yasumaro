@@ -122,7 +122,7 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     expect(second.container.querySelector('#timeHeatmapEmptyState')!.hidden).toBe(true);
   });
 
-  it('shows a distinct error message when the query keeps failing', async () => {
+  it('shows a distinct error message when the query keeps failing, and resets on recovery', async () => {
     mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
     const { panel, container } = mountPanel();
     await panel.load?.();
@@ -131,6 +131,16 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     expect(emptyState.hidden).toBe(false);
     expect(emptyState.getAttribute('data-i18n')).toBe('dashboardTimeHeatmapError');
     expect(emptyState.textContent).toContain('Failed to load');
+
+    // A subsequent successful load restores the normal (empty) binding and
+    // wording — the error swap is scoped to the failed fetch.
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    await panel.load?.();
+
+    const recovered = container.querySelector('#timeHeatmapEmptyState')!;
+    expect(recovered.getAttribute('data-i18n')).toBe('dashboardTimeHeatmapEmpty');
+    expect(recovered.textContent).toBe('No browsing records in the selected period.');
+    expect(recovered.hidden).toBe(false);
   });
 
   it("queries with the default 'last90' bounds and the row cap", async () => {

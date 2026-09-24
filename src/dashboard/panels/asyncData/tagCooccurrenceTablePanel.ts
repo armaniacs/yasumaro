@@ -31,13 +31,14 @@ import {
 import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { PanelNotices } from '../PanelNotices.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
 } from '../../components/periodFilter.js';
 import { type PanelLifecycle } from '../types.js';
-import { tryNavigateTyped } from '../registryContext.js';
+import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 const MAX_QUERY_ROWS = 10000;
 
@@ -48,13 +49,6 @@ function msg(key: string, subs: Record<string, string | number>, fallback: strin
   return fallback.replace(/\{(\w+)\}/g, (_, name: string) =>
     subs[name] !== undefined ? String(subs[name]) : `{${name}}`,
   );
-}
-
-function navigateToHistoryWithTag(tag: string): void {
-  const fallback = (): void => {
-    document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
-  };
-  tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
 }
 
 function countUniqueTags(rows: Array<{ tags?: string | null }>): number {
@@ -71,28 +65,17 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
   let filterHost: HTMLElement | null = null;
   let tagSelect: HTMLSelectElement | null = null;
   let runButton: HTMLButtonElement | null = null;
-  let emptyState: HTMLElement | null = null;
   let tagsTruncatedNotice: HTMLElement | null = null;
   let topTruncatedNotice: HTMLElement | null = null;
   let tableWrap: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
   let cachedGraph: CooccurrenceGraph | null = null;
+  // WHY: the empty-state element doubles as the error surface (one element,
+  // two modes) with per-render empty wordings swapped via setEmptyMessage.
+  // The pre-narrowing notice describes the FETCHED tag universe, so it is
+  // fetch-scoped: tag-select re-ranking keeps it while it applies.
+  const notices = new PanelNotices();
   let loadSeq = 0;
-
-  function setEmptyMessage(key: string, fallback: string): void {
-    if (!emptyState) return;
-    // WHY: keep the data-i18n binding in sync so a later language switch
-    // re-applies the same message instead of a stale generic one
-    // (tagClusterPanel convention).
-    emptyState.setAttribute('data-i18n', key);
-    emptyState.textContent = getMessageOr(key, fallback);
-  }
-
-  function hideNotices(): void {
-    if (emptyState) emptyState.hidden = true;
-    if (tagsTruncatedNotice) tagsTruncatedNotice.hidden = true;
-    if (topTruncatedNotice) topTruncatedNotice.hidden = true;
-  }
 
   function clearOutput(): void {
     if (tableWrap) tableWrap.innerHTML = '';
@@ -130,18 +113,13 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
     });
 
     if (ranking.totalPairs === 0) {
-      if (selectedTag) {
-        setEmptyMessage(
-          'cooccurrenceTableEmptyForTag',
-          'No other tag co-occurs with the selected tag in this data.',
-        );
-      } else {
-        setEmptyMessage(
-          'cooccurrenceTableEmpty',
-          'No co-occurring tag pairs — every record has a single tag.',
-        );
-      }
-      if (emptyState) emptyState.hidden = false;
+      notices.setEmptyMessage(
+        selectedTag ? 'cooccurrenceTableEmptyForTag' : 'cooccurrenceTableEmpty',
+        selectedTag
+          ? 'No other tag co-occurs with the selected tag in this data.'
+          : 'No co-occurring tag pairs — every record has a single tag.',
+      );
+      notices.show('empty');
       return;
     }
 
@@ -213,7 +191,7 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
         { total: ranking.totalPairs, max: COOCCURRENCE_TABLE_TOP_N },
         'Showing the top 20 of {total} co-occurring pairs.',
       );
-      topTruncatedNotice.hidden = false;
+      notices.show('topTruncated');
     }
   }
 
@@ -224,8 +202,7 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
    */
   function renderFromCache(): void {
     if (!cachedGraph) return;
-    if (emptyState) emptyState.hidden = true;
-    if (topTruncatedNotice) topTruncatedNotice.hidden = true;
+    notices.resetForReaggregate();
     renderTable(cachedGraph, tagSelect?.value ?? '');
   }
 
@@ -234,7 +211,10 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
     const seq = ++loadSeq;
 
     clearOutput();
-    hideNotices();
+    // Fresh-fetch reset: restores the normal empty binding in case a previous
+    // load failed and swapped in the error message, and hides the truncation
+    // notices until this fetch's own results decide visibility.
+    notices.reset();
 
     try {
       // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
@@ -254,11 +234,7 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
 
       if (rows.length === 0) {
         cachedGraph = null;
-        setEmptyMessage(
-          'cooccurrenceTableNoRecords',
-          'No records in the selected period. Try a wider range.',
-        );
-        if (emptyState) emptyState.hidden = false;
+        notices.showEmpty();
         return;
       }
 
@@ -278,7 +254,7 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
           { max: MAX_TAG_CLUSTER_TAGS },
           'More than {max} unique tags — ranking covers the top {max} tags only.',
         );
-        tagsTruncatedNotice.hidden = false;
+        notices.show('tagsTruncated');
       }
 
       renderFromCache();
@@ -287,11 +263,10 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       if (seq !== loadSeq) return;
       cachedGraph = null;
       clearOutput();
-      setEmptyMessage(
-        'cooccurrenceTableNoRecords',
-        'No records in the selected period. Try a wider range.',
+      notices.showError(
+        'cooccurrenceTableError',
+        'Failed to load the tag co-occurrence pairs. Try again.',
       );
-      if (emptyState) emptyState.hidden = false;
     }
   }
 
@@ -302,10 +277,16 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       filterHost = container.querySelector('#coocTableFilter');
       tagSelect = container.querySelector('#coocTableTagSelect');
       runButton = container.querySelector('#coocTableRunBtn');
-      emptyState = container.querySelector('#coocTableEmptyState');
       tagsTruncatedNotice = container.querySelector('#coocTableTagsTruncated');
       topTruncatedNotice = container.querySelector('#coocTableTop20Truncated');
       tableWrap = container.querySelector('#coocTableTableWrap');
+
+      notices.register('empty', container.querySelector('#coocTableEmptyState'), {
+        i18nKey: 'cooccurrenceTableNoRecords',
+        fallbackText: 'No records in the selected period. Try a wider range.',
+      });
+      notices.register('tagsTruncated', tagsTruncatedNotice, { fetchScoped: true });
+      notices.register('topTruncated', topTruncatedNotice);
 
       if (filterHost) {
         // WHY: no onChange handler — explicit-apply host (domain-analysis
@@ -333,10 +314,10 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       filterHost = null;
       tagSelect = null;
       runButton = null;
-      emptyState = null;
       tagsTruncatedNotice = null;
       topTruncatedNotice = null;
       tableWrap = null;
+      notices.clear();
     },
   };
 }

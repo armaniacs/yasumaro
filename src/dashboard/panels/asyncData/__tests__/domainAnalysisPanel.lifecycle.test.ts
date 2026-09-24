@@ -121,13 +121,28 @@ describe('domainAnalysisPanel — PanelLifecycle', () => {
     expect(container.querySelectorAll('#domainAnalysisUrlBody tr')).toHaveLength(0);
   });
 
-  it('shows the empty state when the backend is unavailable', async () => {
+  it('shows the error state when the backend is unavailable, and resets on recovery', async () => {
     mockGetSqliteStatus.mockResolvedValue({ initialized: false });
     const { panel, container } = mountPanel();
     await panel.load?.();
 
     expect(mockQueryLogs).not.toHaveBeenCalled();
-    expect(container.querySelector('#domainAnalysisEmptyState')!.hidden).toBe(false);
+    // Unified failure policy: a persistent failure shows the distinct error
+    // wording, never the "no records" empty message.
+    const empty = container.querySelector('#domainAnalysisEmptyState')!;
+    expect(empty.hidden).toBe(false);
+    expect(empty.getAttribute('data-i18n')).toBe('domainAnalysisError');
+    expect(empty.textContent).toBe('Failed to load the domain analysis. Try again.');
+
+    // A subsequent successful load resets to the normal empty binding.
+    mockGetSqliteStatus.mockResolvedValue({ initialized: true });
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    await panel.load?.();
+
+    const recovered = container.querySelector('#domainAnalysisEmptyState')!;
+    expect(recovered.getAttribute('data-i18n')).toBe('domainAnalysis_empty');
+    expect(recovered.textContent).toBe('No browsing records match the selected period and tag.');
+    expect(recovered.hidden).toBe(false);
   });
 
   it('passes preset since/until plus the parsed tagFilter to queryLogs on Run', async () => {
