@@ -40,7 +40,10 @@ test.describe('tag cluster @extension', () => {
     const svg = page.locator('#tagClusterSvg');
     await expect(svg).toBeVisible();
 
-    // Wait for the panel's load to finish (loading overlay removed).
+    // The panel defaults to the last-7-days view (user decision
+    // 2026-09-24): switch to 全期間 so the 2025-dated regression seed is
+    // visible, then wait for the widened load to finish.
+    await page.locator('#tagClusterFilter button[data-preset="all"]').click();
     await expect(page.locator('.tag-cluster-loading-overlay')).toBeHidden({ timeout: 15000 });
 
     // Empty state must be hidden and SVG must contain the hot tag.

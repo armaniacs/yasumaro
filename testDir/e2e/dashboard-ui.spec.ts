@@ -107,8 +107,9 @@ test.describe('Dashboard - Sidebar Navigation @ui', () => {
 
   for (const { tab, panel } of panelTests) {
     test(`has ${tab} tab and ${panel}`, async ({ page }) => {
-      // タブがDOMに存在すること
-      await expect(page.getByRole('tab', { name: tab })).toBeAttached();
+      // タブがDOMに存在すること（exact: 'Tag Cluster Compare' 等の前方一致タブと
+      // 区別するため厳密一致を使う）
+      await expect(page.getByRole('tab', { name: tab, exact: true })).toBeAttached();
       // パネルがDOMに存在すること
       await expect(page.locator(`#${panel}`)).toBeAttached();
     });
