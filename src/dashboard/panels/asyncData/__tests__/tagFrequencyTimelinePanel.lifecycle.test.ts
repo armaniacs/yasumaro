@@ -237,21 +237,46 @@ describe('tagFrequencyTimelinePanel — PanelLifecycle', () => {
     expect(container.querySelector('#tagTimelineEmptyState')!.hidden).toBe(false);
   });
 
-  it('shows the cap notice when the 10000-row limit is reached', async () => {
+  it('shows the cap notice only when total exceeds the fetched rows', async () => {
     const rows = Array.from({ length: 10000 }, (_, i) => ({
       id: i + 1,
       url: `https://cap${i}/`,
       tags: '#hot',
       created_at: at(2026, 9, 21),
     }));
-    mockQueryLogs.mockResolvedValue({ data: { rows, total: 10000 } });
-    const { panel, container } = mountPanel();
-    await panel.load?.();
+    // Exactly the cap: the fetch is complete, so claiming a partial set
+    // would be false.
+    mockQueryLogs.mockResolvedValueOnce({ data: { rows, total: 10000 } });
+    const first = mountPanel();
+    await first.panel.load?.();
+    expect(first.container.querySelector('#tagTimelineCapNotice')!.hidden).toBe(true);
 
-    const cap = container.querySelector('#tagTimelineCapNotice')!;
+    // Total beyond the fetched rows proves truncation.
+    mockQueryLogs.mockResolvedValue({ data: { rows, total: 15000 } });
+    const second = mountPanel();
+    await second.panel.load?.();
+    const cap = second.container.querySelector('#tagTimelineCapNotice')!;
     expect(cap.hidden).toBe(false);
     expect(cap.textContent).toContain('10000');
-    expect(container.querySelector('#tagTimelineEmptyState')!.hidden).toBe(true);
+    expect(second.container.querySelector('#tagTimelineEmptyState')!.hidden).toBe(true);
+  });
+
+  it('keeps the cap notice across granularity/top-N re-aggregation of capped rows', async () => {
+    const rows = Array.from({ length: 10000 }, (_, i) => ({
+      id: i + 1,
+      url: `https://cap${i}/`,
+      tags: '#hot',
+      created_at: at(2026, 9, 21),
+    }));
+    mockQueryLogs.mockResolvedValue({ data: { rows, total: 12000 } });
+    const { panel, container } = mountPanel();
+    await panel.load?.();
+    expect(container.querySelector('#tagTimelineCapNotice')!.hidden).toBe(false);
+
+    // Re-aggregating the cached capped prefix must not hide the disclosure.
+    (container.querySelector('#tagTimelineMonthBtn') as HTMLButtonElement).click();
+    await flush();
+    expect(container.querySelector('#tagTimelineCapNotice')!.hidden).toBe(false);
   });
 
   it('focusable chart points carry bucket, tag, and count in their label', async () => {

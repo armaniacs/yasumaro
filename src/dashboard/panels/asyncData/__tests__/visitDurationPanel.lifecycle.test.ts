@@ -112,6 +112,25 @@ describe('visitDurationPanel — PanelLifecycle', () => {
     expect(container.querySelector('#visitDurationUnmeasuredRatio')!.hidden).toBe(true);
   });
 
+  it('shows a distinct error message when the query keeps failing', async () => {
+    mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
+    const { panel, container } = mountPanel();
+    await panel.load?.();
+
+    const emptyState = container.querySelector('#visitDurationEmptyState')!;
+    expect(emptyState.hidden).toBe(false);
+    expect(emptyState.getAttribute('data-i18n')).toBe('visitDurationError');
+    expect(emptyState.textContent).toContain('Failed to load');
+  });
+
+  it('issues a single query on first open (no duplicate mount fetch)', async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    const { panel } = mountPanel();
+    await panel.load?.();
+
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+  });
+
   it('shows the all-null state when every duration is unmeasured', async () => {
     mockQueryLogs.mockResolvedValue({
       data: { rows: [row(1, 'a.com', '#x', null), row(2, 'b.com', null, null)], total: 2 },

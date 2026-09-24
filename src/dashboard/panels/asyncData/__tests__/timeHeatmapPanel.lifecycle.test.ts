@@ -105,15 +105,32 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     expect(container.querySelector('#timeHeatmapLimitNotice')!.hidden).toBe(true);
   });
 
-  it('shows the limit notice when the row cap is reached', async () => {
+  it('shows the limit notice only when total exceeds the fetched rows', async () => {
     const rows = Array.from({ length: MAX_TIME_HEATMAP_ROWS }, (_, i) => row(localTs(2026, 1, 2, i % 24)));
+    // Exactly the cap: the fetch is complete, so claiming a partial set
+    // would be false.
+    mockQueryLogs.mockResolvedValueOnce({ data: { rows, total: MAX_TIME_HEATMAP_ROWS } });
+    const first = mountPanel();
+    await first.panel.load?.();
+    expect(first.container.querySelector('#timeHeatmapLimitNotice')!.hidden).toBe(true);
+
+    // Total beyond the fetched rows proves truncation.
     mockQueryLogs.mockResolvedValue({ data: { rows, total: 15000 } });
+    const second = mountPanel();
+    await second.panel.load?.();
+    expect(second.container.querySelector('#timeHeatmapLimitNotice')!.hidden).toBe(false);
+    expect(second.container.querySelector('#timeHeatmapEmptyState')!.hidden).toBe(true);
+  });
+
+  it('shows a distinct error message when the query keeps failing', async () => {
+    mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
     const { panel, container } = mountPanel();
     await panel.load?.();
 
-    expect(container.querySelector('#timeHeatmapLimitNotice')!.hidden).toBe(false);
-    expect(container.querySelector('#timeHeatmapGrid table')).not.toBeNull();
-    expect(container.querySelector('#timeHeatmapEmptyState')!.hidden).toBe(true);
+    const emptyState = container.querySelector('#timeHeatmapEmptyState')!;
+    expect(emptyState.hidden).toBe(false);
+    expect(emptyState.getAttribute('data-i18n')).toBe('dashboardTimeHeatmapError');
+    expect(emptyState.textContent).toContain('Failed to load');
   });
 
   it("queries with the default 'last90' bounds and the row cap", async () => {

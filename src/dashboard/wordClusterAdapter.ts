@@ -9,9 +9,11 @@
  * Exclusion rules (PBI acceptance criteria):
  * - summary === 'Summary not available.' (the AI-failure fallback literal,
  *   compared on the trimmed value) and null/empty/whitespace summaries are
- *   excluded from summary extraction but counted; the title is still used.
+ *   excluded from summary extraction and counted in summaryExcludedCount
+ *   when the title is still usable — matching the panel's notice wording.
  * - rows with neither a usable summary nor a usable title are skipped
- *   entirely and counted as skipped.
+ *   entirely and counted as skipped (NOT as summary-excluded: the notice's
+ *   "titles were still used" claim would be false for them).
  * - rows whose text yields no keywords emit no pseudo-tag row (they add no
  *   nodes or edges) and are not counted as skipped — the "records exist but
  *   zero keywords survived filtering" case surfaces as the panel's distinct
@@ -20,9 +22,14 @@
 
 import { extractKeywords } from './keywordExtractor.js';
 import { MAX_TAGS_PER_RECORD } from '../utils/computeLimits.js';
+// WHY: import the pipeline-owned literal instead of re-declaring it —
+// isUsableSummary depends on matching it byte-for-byte, so a re-declared
+// copy could silently drift apart and let AI-failure summaries leak into
+// the word-cluster graph.
+import { PIPELINE_TEXT_EMPTY_FALLBACK } from '../background/pipeline/pipelineText.js';
 
-/** Literal stored when AI summary generation failed (see sqlite-types summary). */
-export const SUMMARY_FALLBACK_LITERAL = 'Summary not available.';
+/** Literal stored when AI summary generation failed (single owner: pipelineText). */
+export const SUMMARY_FALLBACK_LITERAL = PIPELINE_TEXT_EMPTY_FALLBACK;
 
 export interface WordClusterSourceRow {
   title?: string | null;
@@ -32,7 +39,12 @@ export interface WordClusterSourceRow {
 export interface WordClusterAdapterResult {
   /** Pseudo-tag rows compatible with Array<{ tags?: string | null }> pipelines. */
   rows: Array<{ tags: string }>;
-  /** Rows whose summary was unusable (null, empty, whitespace, or the fallback literal). Title still used. */
+  /**
+   * Rows whose summary was unusable (null, empty, whitespace, or the fallback
+   * literal) while the title WAS used — the rows the panel's "titles were
+   * still used" notice describes. Fully skipped rows are counted in
+   * skippedRows instead.
+   */
   summaryExcludedCount: number;
   /** Rows skipped entirely — neither summary nor title usable. */
   skippedRows: number;
@@ -61,7 +73,9 @@ export function buildWordClusterRows(rows: Array<WordClusterSourceRow>): WordClu
     // of use, so the alias form would need a cast.
     const summaryUsable = isUsableSummary(row.summary);
     const titleUsable = isUsableTitle(row.title);
-    if (!summaryUsable) summaryExcludedCount += 1;
+    // WHY: count "summary excluded, title used" only — the panel notice
+    // claims the title was used, which is false for fully skipped rows.
+    if (!summaryUsable && titleUsable) summaryExcludedCount += 1;
     if (!summaryUsable && !titleUsable) {
       skippedRows += 1;
       continue;

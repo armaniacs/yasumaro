@@ -47,14 +47,6 @@ export function gridMax(grid: TimeHeatmapGrid): number {
   return max;
 }
 
-export function gridTotal(grid: TimeHeatmapGrid): number {
-  let total = 0;
-  for (const row of grid) {
-    for (const count of row) total += count;
-  }
-  return total;
-}
-
 /**
  * Maps a cell count to an intensity bucket relative to the grid maximum.
  * Quartile thresholds keep the scale stable as data grows.

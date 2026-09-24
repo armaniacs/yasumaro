@@ -11,7 +11,7 @@
 import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
@@ -65,6 +65,17 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
   let loadSeq = 0;
   let filterReady = false;
 
+  /**
+   * Swaps the empty-state element between its normal message and the load
+   * failure message so a persistent query failure is not rendered as
+   * "no records" (wordClusterPanel error-state convention).
+   */
+  function setEmptyStateMessage(key: string, fallback: string): void {
+    if (!emptyState) return;
+    emptyState.setAttribute('data-i18n', key);
+    emptyState.textContent = getMessageOr(key, fallback);
+  }
+
   async function reload(): Promise<void> {
     if (!gridEl || !tableWrapEl) return;
     const seq = ++loadSeq;
@@ -72,13 +83,17 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
     gridEl.innerHTML = '';
     tableWrapEl.innerHTML = '';
     if (emptyState) emptyState.hidden = true;
+    // WHY: restore the normal empty-state binding in case a previous load
+    // failed and swapped in the error message.
+    setEmptyStateMessage('dashboardTimeHeatmapEmpty', 'No browsing records in the selected period.');
     if (limitNotice) limitNotice.hidden = true;
 
     try {
       // WHY: snapshot the range so retries reuse one consistent window even
       // if the user changes the filter mid-flight (stale loads bail via seq).
       const bounds = currentRange;
-      const rows = await loadRowsWithRetry(bounds);
+      const fetched = await loadRowsWithRetry(bounds);
+      const rows = fetched.rows;
       if (seq !== loadSeq) return;
 
       if (rows.length === 0) {
@@ -86,7 +101,10 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
         return;
       }
 
-      if (rows.length >= MAX_TIME_HEATMAP_ROWS && limitNotice) {
+      // WHY: queryLogs caps the fetch, so only a total beyond the fetched
+      // row count proves truncation — a period holding exactly the cap is
+      // complete and must not claim a partial set.
+      if (fetched.total > rows.length && limitNotice) {
         limitNotice.hidden = false;
       }
 
@@ -96,6 +114,11 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       tableWrapEl.appendChild(buildNumericTable(grid));
     } catch (error) {
       console.error('[timeHeatmapPanel] error:', error);
+      if (seq !== loadSeq) return;
+      setEmptyStateMessage(
+        'dashboardTimeHeatmapError',
+        'Failed to load the time heatmap. Try again.',
+      );
       if (emptyState) emptyState.hidden = false;
     }
   }
@@ -224,8 +247,8 @@ function buildNumericTable(grid: TimeHeatmapGrid): HTMLTableElement {
   return table;
 }
 
-async function loadRowsWithRetry(bounds: PeriodRange): Promise<BrowsingLogEntry[]> {
-  const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
+async function loadRowsWithRetry(bounds: PeriodRange): Promise<{ rows: BrowsingLogEntry[]; total: number }> {
+  const result = await retryWithExponentialBackoff<{ rows: BrowsingLogEntry[]; total: number }>(
     async () => {
       const status = await getSqliteStatus();
       if (!status?.initialized) {
@@ -242,9 +265,14 @@ async function loadRowsWithRetry(bounds: PeriodRange): Promise<BrowsingLogEntry[
       if (isServiceError(qRes)) {
         return null;
       }
-      return qRes.data.rows;
+      return qRes.data;
     },
     { label: 'timeHeatmap', maxAttempts: 4 },
   );
-  return result ?? [];
+  // WHY: a failed query must not render as "no records" — throw so the
+  // panel's catch shows a distinct error state (wordClusterPanel convention).
+  if (result === null) {
+    throw new Error('timeHeatmap: query failed after retries');
+  }
+  return result;
 }

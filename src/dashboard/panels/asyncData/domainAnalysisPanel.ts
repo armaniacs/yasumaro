@@ -4,7 +4,12 @@
  * optional tag (PBI 2026-09-24-03). Tag+period narrowing happens at query
  * time (tagFilter + since/until); ranking of the fetched subset is
  * client-side. queryLogs caps a single page at 10000 rows, so the fetch
- * loops with offset up to MAX_DOMAIN_ANALYSIS_ROWS and shows a cap notice
+ * pages with a keyset cursor (inclusive `until` = the oldest created_at of
+ * the previous page) instead of offset: the recorder keeps inserting rows
+ * while this aggregation runs, and an offset window over a live table
+ * double-counts or skips rows. Boundary rows sharing the cursor timestamp
+ * are re-read and merged by unique id, and the upper bound is frozen at
+ * fetch start, so every row is counted exactly once. A cap notice shows
  * when the last page comes back full.
  *
  * Null/blank-domain rows stay in the ranking as an (unknown) bucket
@@ -242,9 +247,8 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
 
 async function fetchPage(
   since: number | undefined,
-  until: number | undefined,
+  until: number,
   tagFilter: string | undefined,
-  offset: number,
 ): Promise<BrowsingLogEntry[]> {
   const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
     async () => {
@@ -256,10 +260,9 @@ async function fetchPage(
       // bounds/tag pass no key rather than an undefined-valued one.
       const qRes = await queryLogs({
         ...(since !== undefined ? { since } : {}),
-        ...(until !== undefined ? { until } : {}),
+        until,
         ...(tagFilter !== undefined ? { tagFilter } : {}),
         limit: DOMAIN_ANALYSIS_PAGE_SIZE,
-        offset,
       });
       if (isServiceError(qRes)) {
         return null;
@@ -282,15 +285,40 @@ async function fetchAllRows(
   until: number | undefined,
   tagFilter: string | undefined,
 ): Promise<{ rows: BrowsingLogEntry[]; capped: boolean }> {
-  const rows: BrowsingLogEntry[] = [];
-  for (let offset = 0; offset < MAX_DOMAIN_ANALYSIS_ROWS; offset += DOMAIN_ANALYSIS_PAGE_SIZE) {
-    const batch = await fetchPage(since, until, tagFilter, offset);
-    rows.push(...batch);
+  // WHY: freeze the upper bound at fetch start — rows recorded while this
+  // aggregation pages have newer created_at values and would otherwise
+  // shift a live DESC window between pages (offset-pagination hazard).
+  const snapshotUntil = until ?? Date.now();
+  // WHY: keyset cursor instead of offset — each page re-reads the previous
+  // page's boundary timestamp (queryLogs `until` is inclusive) and the
+  // merged set dedupes by unique id, so created_at ties and live inserts
+  // can double-read but never double-count or skip a record.
+  const byId = new Map<number, BrowsingLogEntry>();
+  let cursor = snapshotUntil;
+  while (byId.size < MAX_DOMAIN_ANALYSIS_ROWS) {
+    const batch = await fetchPage(since, cursor, tagFilter);
+    if (batch.length === 0) {
+      return { rows: Array.from(byId.values()), capped: false };
+    }
+    const sizeBefore = byId.size;
+    for (const row of batch) {
+      byId.set(row.id, row);
+    }
     if (batch.length < DOMAIN_ANALYSIS_PAGE_SIZE) {
-      return { rows, capped: false };
+      return { rows: Array.from(byId.values()), capped: false };
+    }
+    const oldest = batch[batch.length - 1]!.created_at;
+    if (byId.size === sizeBefore) {
+      // WHY: the entire page was boundary-tie rows already merged — more
+      // than a page shares one created_at. Step back 1ms so the loop cannot
+      // stall; rows beyond a full page sharing that exact millisecond are
+      // not fetched (pathological: >10k records with identical created_at).
+      cursor = oldest - 1;
+    } else {
+      cursor = oldest;
     }
   }
   // WHY: a full final batch at the cap means more rows likely exist beyond
   // it — report the cap instead of implying completeness.
-  return { rows, capped: true };
+  return { rows: Array.from(byId.values()), capped: true };
 }

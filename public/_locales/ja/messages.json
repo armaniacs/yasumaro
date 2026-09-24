@@ -2057,7 +2057,7 @@
     "description": "ARIA label for new category name input"
   },
   "tagClusterDescription": {
-    "message": "タグの共起関係をグラフで表示します。ノードをクリックすると該当タグの履歴に絞り込まれます。"
+    "message": "タグの共起関係をグラフで表示します。既定では直近7日間を表示し、期間フィルタで範囲を広げられます。ノードをクリックすると該当タグの履歴に絞り込まれます。"
   },
   "tagClusterEmptyState": {
     "message": "タグ付き履歴がまだありません。"
@@ -2152,6 +2152,10 @@
     "message": "この期間の閲覧記録がありません。",
     "description": "Visit duration empty state"
   },
+  "visitDurationError": {
+    "message": "閲覧時間分析の読み込みに失敗しました。再試行してください。",
+    "description": "Visit duration load-failure state"
+  },
   "visitDurationPanelTitle": {
     "message": "滞在時間分析",
     "description": "Visit duration panel title"
@@ -2235,10 +2239,6 @@
   "domainAnalysis_tagAll": {
     "message": "すべてのタグ（絞り込む場合はタグ名を入力）",
     "description": "Domain analysis tag input placeholder"
-  },
-  "domainAnalysis_periodLabel": {
-    "message": "期間",
-    "description": "Domain analysis period filter label"
   },
   "domainAnalysis_run": {
     "message": "集計",
@@ -4096,6 +4096,10 @@
   "dashboardTimeHeatmapEmpty": {
     "message": "選択した期間に記録がありません。",
     "description": "時間帯ヒートマップの空状態"
+  },
+  "dashboardTimeHeatmapError": {
+    "message": "時間帯ヒートマップの読み込みに失敗しました。再試行してください。",
+    "description": "時間帯ヒートマップの読み込み失敗状態"
   },
   "dashboardTimeHeatmapFri": {
     "message": "金",

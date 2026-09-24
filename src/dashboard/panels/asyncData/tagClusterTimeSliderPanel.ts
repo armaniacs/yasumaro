@@ -454,9 +454,13 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     const firstLoading = new TagClusterLoadingManager(first.svg);
     const secondLoading = new TagClusterLoadingManager(second.svg);
 
-    const firstData = await fetchSide(first, halves.first, seq, 'tagClusterTimeSliderFirst', firstLoading);
-    if (seq !== loadSeq) return;
-    const secondData = await fetchSide(second, halves.second, seq, 'tagClusterTimeSliderSecond', secondLoading);
+    // WHY: the two halves are independent queries — run them in parallel
+    // (Promise.all) instead of serially, or every Compare click waits twice
+    // the wall-clock for capped queries plus two co-occurrence pipelines.
+    const [firstData, secondData] = await Promise.all([
+      fetchSide(first, halves.first, seq, 'tagClusterTimeSliderFirst', firstLoading),
+      fetchSide(second, halves.second, seq, 'tagClusterTimeSliderSecond', secondLoading),
+    ]);
     if (seq !== loadSeq) return;
 
     const bothOk = firstData !== null && firstData.ok && secondData !== null && secondData.ok;
@@ -483,6 +487,11 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       // every tag of the healthy side — the diff stays empty until both
       // halves load successfully.
       setStatus('tagClusterTimeSliderError', 'Failed to load this half of the comparison. Try again.');
+      // WHY: fetchSide defers overlay cleanup to renderSide, which only runs
+      // when BOTH halves succeed — clean up the surviving side's frozen
+      // overlay here so a failure does not leave it on screen.
+      firstLoading.cleanup();
+      secondLoading.cleanup();
     }
   }
 

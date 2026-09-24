@@ -250,8 +250,9 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     expect(emptyState.hidden).toBe(false);
     expect(emptyState.getAttribute('data-i18n')).toBe('wordClusterEmpty');
     expect(svg.querySelectorAll('circle.tag-cluster-node').length).toBe(0);
-    // All 3 rows had unusable summaries → the exclusion notice is shown too.
-    expect(excluded.hidden).toBe(false);
+    // Fully skipped rows are NOT summary-excluded: the notice claims
+    // "titles were still used", which would be false for them.
+    expect(excluded.hidden).toBe(true);
   });
 
   it('shows the no-keywords empty state when rows exist but every keyword is filtered', async () => {

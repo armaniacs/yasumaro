@@ -84,7 +84,9 @@ describe('wordClusterAdapter — skipped rows', () => {
       row({ title: '   ', summary: undefined }),
     ]);
     expect(result.skippedRows).toBe(3);
-    expect(result.summaryExcludedCount).toBe(3);
+    // Fully skipped rows are NOT summary-excluded: the panel notice claims
+    // "titles were still used", which would be false for them.
+    expect(result.summaryExcludedCount).toBe(0);
     expect(result.rows).toHaveLength(0);
   });
 
