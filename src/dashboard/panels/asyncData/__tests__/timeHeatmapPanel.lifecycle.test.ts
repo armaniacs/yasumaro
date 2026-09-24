@@ -140,6 +140,8 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     await panel.load?.();
     const after = Date.now();
 
+    // PBI 2026-09-24-11: fresh mount + single load() issues exactly ONE
+    // query — construction emits nothing, so no duplicate fetch is possible.
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
     const args = mockQueryLogs.mock.calls[0]![0] as { since: number; until: number; limit: number };
     expect(args.limit).toBe(MAX_TIME_HEATMAP_ROWS);

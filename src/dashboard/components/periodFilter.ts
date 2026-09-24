@@ -8,6 +8,17 @@
  * renders preset buttons + two optional custom date inputs and emits
  * `{since, until}` (epoch ms, inclusive) via onChange.
  *
+ * Contract (PBI 2026-09-24-11):
+ * - Construction emits nothing: createPeriodFilter never calls onChange.
+ * - getRange() is the single source of truth for the initial range:
+ *   before any interaction it returns the window derived from the
+ *   initialPreset (or initial custom values), so hosts render the initial
+ *   state with one read instead of an emit round-trip.
+ * - onChange fires only on user interaction (preset click, custom date
+ *   change) or an explicit setPreset() call — never during construction.
+ * - Auto-apply hosts pass onChange and reload from it; explicit-apply hosts
+ *   (Run button) may omit onChange entirely and read getRange() at apply time.
+ *
  * Local-time boundaries follow the markdownExport.dateRangeToTimestamps
  * precedent: custom dates cover the whole local day (00:00:00–23:59:59.999).
  */
@@ -89,13 +100,27 @@ export function customRangeToBounds(fromDate: string, toDate: string, now: numbe
   return range;
 }
 
+/** i18n message keys for the five preset button labels, injectable per host. */
+export type PeriodFilterLabelKeys = Record<PeriodButtonPreset, string>;
+
 export interface PeriodFilterOptions {
   /** Initial active preset (default 'last30'). */
   initialPreset?: PeriodButtonPreset;
   /** Clock seam for tests (default Date.now). */
   now?: () => number;
-  /** Fired on every preset or custom-date change, including the initial render. */
-  onChange: (range: PeriodRange, preset: PeriodPreset) => void;
+  /**
+   * Preset button label keys. Panels may inject their own namespace (e.g.
+   * panel-local `myPanelPeriod*` keys) to decouple the labels from the
+   * visitDuration* namespace; when omitted the original visitDurationPeriod*
+   * keys apply (backward compatible).
+   */
+  labelKeys?: PeriodFilterLabelKeys;
+  /**
+   * Fired on user interaction only (preset click, custom-date change,
+   * setPreset) — never during construction. Optional: hosts that apply the
+   * range explicitly (Run button) omit it and read getRange() at apply time.
+   */
+  onChange?: (range: PeriodRange, preset: PeriodPreset) => void;
 }
 
 export interface PeriodFilterHandle {
@@ -106,23 +131,36 @@ export interface PeriodFilterHandle {
   destroy(): void;
 }
 
-const PRESET_LABEL_KEYS: Record<PeriodButtonPreset, { key: string; fallback: string }> = {
-  today: { key: 'visitDurationPeriodToday', fallback: 'Today' },
-  last7: { key: 'visitDurationPeriodLast7Days', fallback: 'Last 7 days' },
-  last30: { key: 'visitDurationPeriodLast30Days', fallback: 'Last 30 days' },
-  last90: { key: 'visitDurationPeriodLast90Days', fallback: 'Last 90 days' },
-  all: { key: 'visitDurationPeriodAll', fallback: 'All time' },
+/** Default label namespace (backward compatible with the visitDuration panel). */
+const DEFAULT_LABEL_KEYS: PeriodFilterLabelKeys = {
+  today: 'visitDurationPeriodToday',
+  last7: 'visitDurationPeriodLast7Days',
+  last30: 'visitDurationPeriodLast30Days',
+  last90: 'visitDurationPeriodLast90Days',
+  all: 'visitDurationPeriodAll',
+};
+
+const PRESET_LABEL_FALLBACKS: PeriodFilterLabelKeys = {
+  today: 'Today',
+  last7: 'Last 7 days',
+  last30: 'Last 30 days',
+  last90: 'Last 90 days',
+  all: 'All time',
 };
 
 /**
  * Renders the filter into a fresh <fieldset> (caller appends `handle.element`).
  * Buttons carry aria-pressed; date inputs are label-bound; all wiring uses
  * addEventListener (MV3 CSP: no inline handlers).
+ *
+ * Emits nothing during construction: hosts read getRange() for the initial
+ * window and pass onChange only when they reload on user changes.
  */
 export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHandle {
   const clock = options.now ?? Date.now;
   let activePreset: PeriodPreset = options.initialPreset ?? 'last30';
   let currentRange: PeriodRange = presetToRange(activePreset, clock());
+  const labelKeys = options.labelKeys ?? DEFAULT_LABEL_KEYS;
 
   const fieldset = document.createElement('fieldset');
   fieldset.className = 'period-filter';
@@ -141,12 +179,11 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
 
   const buttons = new Map<PeriodButtonPreset, HTMLButtonElement>();
   for (const preset of PERIOD_BUTTON_PRESETS) {
-    const def = PRESET_LABEL_KEYS[preset];
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'period-filter-preset';
     button.dataset.preset = preset;
-    button.textContent = getMessageOr(def.key, def.fallback);
+    button.textContent = getMessageOr(labelKeys[preset], PRESET_LABEL_FALLBACKS[preset]);
     button.setAttribute('aria-pressed', String(preset === activePreset));
     button.addEventListener('click', () => {
       setActive(preset, presetToRange(preset, clock()));
@@ -200,11 +237,8 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
     for (const [key, button] of buttons) {
       button.setAttribute('aria-pressed', String(key === preset));
     }
-    options.onChange(range, preset);
+    options.onChange?.(range, preset);
   }
-
-  // WHY: emit once so hosts render the initial window without a second call path.
-  options.onChange(currentRange, activePreset);
 
   return {
     element: fieldset,

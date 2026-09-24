@@ -126,6 +126,9 @@ describe('visitDurationPanel — PanelLifecycle', () => {
   it('issues a single query on first open (no duplicate mount fetch)', async () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
     const { panel } = mountPanel();
+    // PBI 2026-09-24-11: construction emits nothing, so mounting alone
+    // cannot fetch; load() fetches exactly once.
+    expect(mockQueryLogs).not.toHaveBeenCalled();
     await panel.load?.();
 
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);

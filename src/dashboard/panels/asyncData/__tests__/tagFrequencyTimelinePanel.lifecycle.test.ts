@@ -126,7 +126,7 @@ describe('tagFrequencyTimelinePanel — PanelLifecycle', () => {
     await panel.load?.();
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
 
-    // Selecting a preset only records the range (explicit-apply style).
+    // Selecting a preset does not refetch; Run reads getRange() (explicit-apply).
     (container.querySelector('button[data-preset="last7"]') as HTMLButtonElement).click();
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
 

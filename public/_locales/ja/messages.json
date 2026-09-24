@@ -2062,6 +2062,9 @@
   "tagClusterEmptyState": {
     "message": "タグ付き履歴がまだありません。"
   },
+  "tagClusterError": {
+    "message": "タグクラスタの読み込みに失敗しました。再試行してください。"
+  },
   "tagClusterTruncatedNotice": {
     "message": "タグ数が多いため、上位50件のみ表示しています。"
   },

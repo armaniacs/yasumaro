@@ -10,7 +10,6 @@
  * panel's routine load.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { limitToTopNodes } from '../../tagCooccurrence.js';
 import {
     computeTagCooccurrenceHybrid,
@@ -20,14 +19,13 @@ import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
 import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import {
     createPeriodFilter,
     type PeriodFilterHandle,
     type PeriodRange,
-} from '../../components/periodFilter.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
+    } from '../../components/periodFilter.js';
 import { type PanelLifecycle } from '../types.js';
 import { tryNavigateTyped } from '../registryContext.js';
 
@@ -40,10 +38,18 @@ export function createTagClusterPanel(): PanelLifecycle {
   let truncatedNotice: HTMLElement | null = null;
   let panZoomController: TagClusterPanZoomController | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  // Fallback when no filter host exists: unbounded, like the pre-filter panel.
-  let currentRange: PeriodRange = {};
   let loadSeq = 0;
-  let filterReady = false;
+
+  /**
+   * Swaps the empty-state element between its normal message and the load
+   * failure message so a persistent query failure is not rendered as
+   * "no records" (timeHeatmapPanel error-state convention).
+   */
+  function setEmptyStateMessage(key: string, fallback: string): void {
+    if (!emptyState) return;
+    emptyState.setAttribute('data-i18n', key);
+    emptyState.textContent = getMessageOr(key, fallback);
+  }
 
   /**
    * Swaps the empty-state text between the generic and the period-aware
@@ -65,6 +71,11 @@ export function createTagClusterPanel(): PanelLifecycle {
   async function reload(): Promise<void> {
     if (!svg) return;
     const seq = ++loadSeq;
+    // WHY: getRange() is the single source of truth (PBI 2026-09-24-11); the
+    // snapshot lets retries reuse one consistent window even if the user
+    // changes the filter mid-flight (stale loads bail via seq). No filter
+    // host → unbounded, like the pre-filter panel.
+    const bounds = filterHandle ? filterHandle.getRange() : {};
 
     panZoomController?.cleanup();
     panZoomController = null;
@@ -72,14 +83,17 @@ export function createTagClusterPanel(): PanelLifecycle {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     svg.removeAttribute('viewBox');
 
+    // WHY: restore the period-aware empty-state binding in case a previous
+    // load failed and swapped in the error message (timeHeatmapPanel pattern).
+    applyEmptyStateMessage(bounds);
+    if (emptyState) emptyState.hidden = true;
+
     const loadingManager = new TagClusterLoadingManager(svg);
     loadingManager.show();
 
     try {
-      // WHY: snapshot the range so retries reuse one consistent window even
-      // if the user changes the filter mid-flight (stale loads bail via seq).
-      const bounds = currentRange;
-      const rows = await loadRowsWithRetry(bounds);
+      const fetched = await fetchPeriodRows({ ...bounds, limit: 10000, label: 'tagCluster' });
+      const rows = fetched.rows;
       if (seq !== loadSeq) {
         loadingManager.cleanup();
         return;
@@ -173,6 +187,11 @@ export function createTagClusterPanel(): PanelLifecycle {
     } catch (error) {
       loadingManager.cleanup();
       console.error('[tagClusterPanel] error:', error);
+      // WHY: a persistent query failure must not render as an empty graph —
+      // show a distinct error state (timeHeatmapPanel convention).
+      if (seq !== loadSeq) return;
+      setEmptyStateMessage('tagClusterError', 'Failed to load the tag cluster. Try again.');
+      if (emptyState) emptyState.hidden = false;
     }
   }
 
@@ -188,22 +207,17 @@ export function createTagClusterPanel(): PanelLifecycle {
       if (filterHost) {
         filterHandle = createPeriodFilter({
           initialPreset: 'last7',
-          onChange: (range) => {
-            currentRange = range;
+          onChange: () => {
             // WHY: auto-apply on selection — the PBI acceptance criteria
             // require queryLogs({since, until, limit}) at selection time, and
             // each load is a single capped query (no 50k paging), so the
             // explicit Run-button pattern of the domain-analysis panel is not
-            // warranted here.
-            if (filterReady) void reload();
+            // warranted here. Construction emits nothing (PBI 2026-09-24-11),
+            // so firing reload directly is duplicate-safe.
+            void reload();
           },
         });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
-        // WHY: the filter emits once during construction; arming the reload
-        // trigger only after that initial emission prevents a duplicate load
-        // when mount finishes.
-        filterReady = true;
       }
     },
     async load() {
@@ -229,33 +243,4 @@ function navigateToHistoryWithTag(tag: string): void {
     document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: tag }));
   };
   tryNavigateTyped('panel-sqlite-history', { searchTag: tag }, fallback);
-}
-
-async function loadRowsWithRetry(bounds: PeriodRange): Promise<BrowsingLogEntry[]> {
-  const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
-      // bounds pass no since/until key, so the all-time query stays
-      // byte-identical to the pre-filter { limit: 10000 } call.
-      const qRes = await queryLogs({
-        ...(bounds.since !== undefined ? { since: bounds.since } : {}),
-        ...(bounds.until !== undefined ? { until: bounds.until } : {}),
-        limit: 10000,
-      });
-      // Return null (not []) on failure: retryWithExponentialBackoff only
-      // retries when the thunk yields null or throws, so coercing an error to
-      // an empty array made it return "successfully" on the first attempt and
-      // skip all remaining attempts.
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data.rows;
-    },
-    { label: 'tagCluster', maxAttempts: 4 }
-  );
-  return result ?? [];
 }

@@ -25,13 +25,13 @@ Scenario: cap 到達の検出
   Then capped: true が返り、呼び出し側は打ち切り通知を出せる（行数ヒューリスティクスを使わない）
 
 ## 受け入れ基準
-- [ ] src/dashboard/panels/asyncData/fetchPeriodRows.ts（または panels/ 直下）に新設: `fetchPeriodRows(options: { since?: number; until?: number; limit: number; tagFilter?: string }) → Promise<{ rows: BrowsingLogEntry[]; total: number; capped: boolean }>`
-- [ ] 失敗は throw（リトライは retryWithExponentialBackoff・maxAttempts 4・label は options で上書き可）
-- [ ] since/until の省略規約（exactOptionalPropertyTypes 対応のキー省略）をモジュール内に一元化
-- [ ] capped は `total > rows.length` で判定し、行数ヒューリスティクスを廃止
-- [ ] 8パネルのローカル loadRowsWithRetry を削除し fetchPeriodRows に置換（domainAnalysis の keyset ページングは fetchPeriodRows を1ページ取得ユニットとして利用）
-- [ ] tagClusterPanel のサイレント `?? []` も throw+エラー状態に統一（dashboardTimeHeatmapError と同型のエラー状態を tagCluster に追加）
-- [ ] 全パネルの既存 lifecycle テストがモック形状の更新のみで green
+- [x] src/dashboard/panels/asyncData/fetchPeriodRows.ts（または panels/ 直下）に新設: `fetchPeriodRows(options: { since?: number; until?: number; limit: number; tagFilter?: string }) → Promise<{ rows: BrowsingLogEntry[]; total: number; capped: boolean }>`
+- [x] 失敗は throw（リトライは retryWithExponentialBackoff・maxAttempts 4・label は options で上書き可）
+- [x] since/until の省略規約（exactOptionalPropertyTypes 対応のキー省略）をモジュール内に一元化
+- [x] capped は `total > rows.length` で判定し、行数ヒューリスティクスを廃止
+- [x] 8パネルのローカル loadRowsWithRetry を削除し fetchPeriodRows に置換（domainAnalysis の keyset ページングは fetchPeriodRows を1ページ取得ユニットとして利用）
+- [x] tagClusterPanel のサイレント `?? []` も throw+エラー状態に統一（dashboardTimeHeatmapError と同型のエラー状態を tagCluster に追加）
+- [x] 全パネルの既存 lifecycle テストがモック形状の更新のみで green
 
 ## テスト戦略
 - 単体: fetchPeriodRows の新規テスト（正常/throw/capped/省略キー/etagFilter 透過）
@@ -47,6 +47,12 @@ Scenario: cap 到達の検出
 1.5 SP（要チームでの見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（文書要件がある場合のみ適用）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（文書要件がある場合のみ適用）
+
+## 実装記録（2026-09-24 arch-delivery-loop）
+- 実装: src/dashboard/panels/fetchPeriodRows.ts 新設（{rows,total,capped}・throw-on-failure・pickDefined によるキー省略の一元化・label/maxAttempts 注入可）・8パネルのプライベートラッパー削除（loadRowsWithRetry 参照ゼロ）・domainAnalysis は keyset ループを維持し1ページ=1 fetchPeriodRows 呼び出しに・tagClusterPanel は tagClusterError キー（EN/JA）付きエラー状態を追加
+- 逸脱（記録済み）: options の optional フィールドは `since?: number | undefined` 形（exactOptionalPropertyTypes 下でリテラル呼び出し形状を保つため）。キー省略規約はモジュール内 pickDefined が単独所有。tagClusterPanel の catch に seq チェック追加（stale load が新描画を上書きしない）
+- 検証: type-check PASS / 対象 13 ファイル 146 tests green + 追加保険 17 ファイル 166 tests
+- 備考: GitHub PR レビューはユーザー作業として残置

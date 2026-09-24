@@ -2144,6 +2144,9 @@
   "tagClusterEmptyState": {
     "message": "No tagged history yet."
   },
+  "tagClusterError": {
+    "message": "Failed to load the tag cluster. Try again."
+  },
   "tagClusterTruncatedNotice": {
     "message": "Too many tags — showing only the top 50."
   },

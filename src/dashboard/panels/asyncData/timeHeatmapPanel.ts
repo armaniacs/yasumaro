@@ -8,14 +8,12 @@
  * users, with 'all' one click away.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
-  type PeriodRange,
 } from '../../components/periodFilter.js';
 import {
   aggregateTimeHeatmap,
@@ -24,8 +22,7 @@ import {
   TIME_HEATMAP_HOURS,
   TIME_HEATMAP_WEEKDAYS,
   type TimeHeatmapGrid,
-} from '../../timeHeatmapAggregate.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
+  } from '../../timeHeatmapAggregate.js';
 import { type PanelLifecycle } from '../types.js';
 
 const WEEKDAY_KEYS = [
@@ -61,9 +58,7 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
   let limitNotice: HTMLElement | null = null;
   let filterHost: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  let currentRange: PeriodRange = {};
   let loadSeq = 0;
-  let filterReady = false;
 
   /**
    * Swaps the empty-state element between its normal message and the load
@@ -89,10 +84,16 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
     if (limitNotice) limitNotice.hidden = true;
 
     try {
-      // WHY: snapshot the range so retries reuse one consistent window even
-      // if the user changes the filter mid-flight (stale loads bail via seq).
-      const bounds = currentRange;
-      const fetched = await loadRowsWithRetry(bounds);
+      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
+      // the snapshot lets retries reuse one consistent window even if the
+      // user changes the filter mid-flight (stale loads bail via seq). No
+      // filter host → unbounded, like the pre-filter panel.
+      const bounds = filterHandle ? filterHandle.getRange() : {};
+      const fetched = await fetchPeriodRows({
+        ...bounds,
+        limit: MAX_TIME_HEATMAP_ROWS,
+        label: 'timeHeatmap',
+      });
       const rows = fetched.rows;
       if (seq !== loadSeq) return;
 
@@ -101,10 +102,7 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
         return;
       }
 
-      // WHY: queryLogs caps the fetch, so only a total beyond the fetched
-      // row count proves truncation — a period holding exactly the cap is
-      // complete and must not claim a partial set.
-      if (fetched.total > rows.length && limitNotice) {
+      if (fetched.capped && limitNotice) {
         limitNotice.hidden = false;
       }
 
@@ -135,20 +133,16 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       if (filterHost) {
         filterHandle = createPeriodFilter({
           initialPreset: 'last90',
-          onChange: (range) => {
-            currentRange = range;
+          onChange: () => {
             // WHY: auto-apply on selection — each load is a single capped
             // query (no paging), so the explicit Run-button pattern of the
-            // domain-analysis panel is not warranted here.
-            if (filterReady) void reload();
+            // domain-analysis panel is not warranted here. Construction
+            // emits nothing (PBI 2026-09-24-11), so firing reload directly
+            // is duplicate-safe.
+            void reload();
           },
         });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
-        // WHY: the filter emits once during construction; arming the reload
-        // trigger only after that initial emission prevents a duplicate load
-        // when mount finishes.
-        filterReady = true;
       }
     },
     async load() {
@@ -245,34 +239,4 @@ function buildNumericTable(grid: TimeHeatmapGrid): HTMLTableElement {
   }
   table.appendChild(tbody);
   return table;
-}
-
-async function loadRowsWithRetry(bounds: PeriodRange): Promise<{ rows: BrowsingLogEntry[]; total: number }> {
-  const result = await retryWithExponentialBackoff<{ rows: BrowsingLogEntry[]; total: number }>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — unset
-      // bounds pass no since/until key, so the all-time query stays a plain
-      // { limit } call (tagClusterPanel convention).
-      const qRes = await queryLogs({
-        ...(bounds.since !== undefined ? { since: bounds.since } : {}),
-        ...(bounds.until !== undefined ? { until: bounds.until } : {}),
-        limit: MAX_TIME_HEATMAP_ROWS,
-      });
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data;
-    },
-    { label: 'timeHeatmap', maxAttempts: 4 },
-  );
-  // WHY: a failed query must not render as "no records" — throw so the
-  // panel's catch shows a distinct error state (wordClusterPanel convention).
-  if (result === null) {
-    throw new Error('timeHeatmap: query failed after retries');
-  }
-  return result;
 }

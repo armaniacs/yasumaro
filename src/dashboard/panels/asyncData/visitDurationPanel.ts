@@ -8,23 +8,20 @@
  * domain rows have no navigation in v1.
  */
 
-import { queryLogs, getSqliteStatus, isServiceError } from '../../dashboardSqliteService.js';
 import { MAX_VISIT_DURATION_ROWS } from '../../../utils/computeLimits.js';
-import { retryWithExponentialBackoff } from '../../utils/retry.js';
+import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
   type PeriodFilterHandle,
-  type PeriodRange,
 } from '../../components/periodFilter.js';
 import {
   aggregateVisitDurations,
   formatVisitDuration,
   VISIT_DURATION_TOP_N,
   type VisitDurationRankRow,
-} from '../../visitDurationAggregate.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
+  } from '../../visitDurationAggregate.js';
 import { tryNavigateTyped } from '../registryContext.js';
 import { type PanelLifecycle } from '../types.js';
 
@@ -54,9 +51,7 @@ export function createVisitDurationPanel(): PanelLifecycle {
   let domainTruncated: HTMLElement | null = null;
   let tagTruncated: HTMLElement | null = null;
   let filterHandle: PeriodFilterHandle | null = null;
-  let currentRange: PeriodRange = presetToRange('last30', Date.now());
   let loadSeq = 0;
-  let filterReady = false;
 
   /**
    * Swaps the empty-state element between its normal message and the load
@@ -102,7 +97,12 @@ export function createVisitDurationPanel(): PanelLifecycle {
   async function reload(): Promise<void> {
     if (!domainBody || !tagBody) return;
     const seq = ++loadSeq;
-    const { since, until } = currentRange;
+    // WHY: getRange() is the single source of truth (PBI 2026-09-24-11). The
+    // presetToRange fallback preserves the pre-filter last30 default when the
+    // panel mounts without a filter host.
+    const { since, until } = filterHandle
+      ? filterHandle.getRange()
+      : presetToRange('last30', Date.now());
 
     domainBody.innerHTML = '';
     tagBody.innerHTML = '';
@@ -116,7 +116,13 @@ export function createVisitDurationPanel(): PanelLifecycle {
     if (tagTruncated) tagTruncated.hidden = true;
 
     try {
-      const rows = await loadRowsWithRetry(since, until);
+      const fetched = await fetchPeriodRows({
+        since,
+        until,
+        limit: MAX_VISIT_DURATION_ROWS,
+        label: 'visitDuration',
+      });
+      const rows = fetched.rows;
       if (seq !== loadSeq) return;
 
       if (rows.length === 0) {
@@ -186,17 +192,15 @@ export function createVisitDurationPanel(): PanelLifecycle {
       if (filterHost) {
         filterHandle = createPeriodFilter({
           initialPreset: 'last30',
-          onChange: (range) => {
-            currentRange = range;
-            // WHY: the filter emits once during construction; arming the
-            // reload trigger only after that initial emission prevents a
-            // duplicate load when mount finishes (tagClusterPanel pattern).
-            if (filterReady) void reload();
+          onChange: () => {
+            // WHY: auto-apply on selection (tagClusterPanel pattern) — each
+            // load is a single capped query. Construction emits nothing
+            // (PBI 2026-09-24-11), so firing reload directly is
+            // duplicate-safe.
+            void reload();
           },
         });
         filterHost.appendChild(filterHandle.element);
-        currentRange = filterHandle.getRange();
-        filterReady = true;
       }
     },
     async load() {
@@ -211,33 +215,4 @@ export function createVisitDurationPanel(): PanelLifecycle {
       tagBody = null;
     },
   };
-}
-
-async function loadRowsWithRetry(since: number | undefined, until: number | undefined): Promise<BrowsingLogEntry[]> {
-  const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
-    async () => {
-      const status = await getSqliteStatus();
-      if (!status?.initialized) {
-        return null;
-      }
-      // WHY: exactOptionalPropertyTypes forbids explicit undefined — 'all'
-      // passes no bounds rather than undefined-valued keys.
-      const qRes = await queryLogs({
-        ...(since !== undefined ? { since } : {}),
-        ...(until !== undefined ? { until } : {}),
-        limit: MAX_VISIT_DURATION_ROWS,
-      });
-      if (isServiceError(qRes)) {
-        return null;
-      }
-      return qRes.data.rows;
-    },
-    { label: 'visitDuration', maxAttempts: 4 },
-  );
-  // WHY: a failed query must not render as "no records" — throw so the
-  // panel's catch shows a distinct error state (wordClusterPanel convention).
-  if (result === null) {
-    throw new Error('visitDuration: query failed after retries');
-  }
-  return result;
 }
