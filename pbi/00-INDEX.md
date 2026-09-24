@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ⬜ 未着手 8件 🔧リファクタ中心 RICE順: 09 → 10 → 11 → 12 → 13 → 14 → 15 → 16
+
+分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点依存関係: 09/12 は独立でバッチ1並列、10/11/13/14/15/16 は同一パネルファイル群を触るため直列。台帳（スコア・依存グラフ・5 Whys・台帳送り2件）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md)。
+
+- [2026-09-24-09-refactor-summary-fallback-ssot.md](2026-09-24-09-refactor-summary-fallback-ssot.md)（⬜ 未着手 — RICE 20.0・0.25 SP・副作用🟢。フォールバックリテラルを中立 Layer 0 に SSOT 化・背景4箇所の再宣言解消）
+- [2026-09-24-10-refactor-fetch-period-rows.md](2026-09-24-10-refactor-fetch-period-rows.md)（⬜ 未着手 — RICE 10.7・1.5 SP・副作用🟢。8パネルの loadRowsWithRetry を fetchPeriodRows に集約・失敗ポリシー統一）
+- [2026-09-24-11-refactor-period-filter-contract.md](2026-09-24-11-refactor-period-filter-contract.md)（⬜ 未着手 — RICE 9.3・1.5 SP・副作用🟢。同期 emit 廃止・filterReady 回避策×3 とデッド読み戻し×7 の削除・ラベルキー注入化）
+- [2026-09-24-12-test-i18n-panel-catalog-gates.md](2026-09-24-12-test-i18n-panel-catalog-gates.md)（⬜ 未着手 — RICE 8.0・0.25 SP・副作用🟢。実 locale の parity テスト・サイドバー i18n キー assert・カウント literal 削除）
+- [2026-09-24-13-refactor-navigate-to-history-helper.md](2026-09-24-13-refactor-navigate-to-history-helper.md)（⬜ 未着手 — RICE 7.0・0.5 SP・副作用🟢。navigateToHistoryWithTag ×7 の集約）
+- [2026-09-24-14-refactor-panel-notices.md](2026-09-24-14-refactor-panel-notices.md)（⬜ 未着手 — RICE 6.4・1.5 SP・副作用🟢。PanelNotices モジュール新設・失敗ポリシー統一）
+- [2026-09-24-15-refactor-max-query-rows-ssot.md](2026-09-24-15-refactor-max-query-rows-ssot.md)（⬜ 未着手 — RICE 6.0・0.25 SP・副作用🟢。MAX_QUERY_ROWS ローカル再宣言×3 の SSOT 化）
+- [2026-09-24-16-refactor-i18n-msg-helper.md](2026-09-24-16-refactor-i18n-msg-helper.md)（⬜ 未着手 — RICE 6.0・0.5 SP・副作用🟢。msg() フォールバックヘルパー ×6 の集約）
+
 ### 2026-09-24 分析機能強化ラウンド — 🔶 部分実装 1件（ユーザー検証待ち）✨機能追加（01-06・08 は完了・アーカイブ済み）
 
 分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）＋提案した新規分析9案の計13候補を RICE 採点し、上位6件＋ユーザー明示要求2件（07・08 は台帳順位から昇格）を PBI 化。台帳送り5案＋不採用1案の採点詳細は [2026-09-24-00-backlog-analysis-features.md](2026-09-24-00-backlog-analysis-features.md)。依存: 08 は 04 に依存（完了済み）、05-08 は共有期間フィルタ部品（`src/dashboard/components/periodFilter.ts`・02 で新設済み）を再利用。
