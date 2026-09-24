@@ -17,6 +17,10 @@
 
 出現回数の多い上位50件のタグのみが表示されます。50件を超える場合は「上位N件のみ表示中」の通知が表示されます。共起の計算前に出現頻度上位50件のタグに絞り込みます。1件の記録からは最大50タグまで、履歴の取得は最大10,000件までが対象です。
 
+### 期間フィルタ
+
+パネル上部の期間フィルタで、集計対象の期間を指定できます。既定は「直近7日」です。「今日 / 直近7日 / 直近30日 / 直近90日 / 全期間」のプリセットから選ぶか、カスタムで日付を直接指定します。期間を変更するとグラフが再計算されます。
+
 ### 操作方法
 
 | 操作 | 動作 |
@@ -59,6 +63,10 @@
 - **Edges (lines)**: An edge means two tags co-occur on the same record. Thicker edges indicate more frequent co-occurrence
 
 Only the top 50 tags by frequency are shown. If there are more, a "showing top N only" notice appears. Tags are pre-filtered to the top 50 by frequency before co-occurrence is computed. At most 50 tags per record and 10,000 history rows are used.
+
+### Period Filter
+
+The period filter at the top of the panel limits which records are aggregated. It defaults to the "Last 7 days" preset; you can pick "Today / Last 7 days / Last 30 days / Last 90 days / All time" or set custom dates. Changing the period recomputes the graph.
 
 ### Controls
 

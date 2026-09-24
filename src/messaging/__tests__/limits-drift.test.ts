@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { QUERY_CAPS } from '../limits.js';
+import { MAX_QUERY_ROWS } from '../../utils/computeLimits.js';
 
 /**
  * Cap-registry drift guard (PBI 2026-09-11-08).
@@ -83,5 +85,13 @@ describe('cap registry drift guard (PBI 2026-09-11-08)', () => {
     ]) {
       expect(limits).toContain(`export const ${name}`);
     }
+  });
+
+  // PBI 2026-09-24-15: the dashboard-side fetch cap (computeLimits) feeds both
+  // the queryLogs `limit` and the truncation-notice text in three panels — it
+  // must stay the wire clamp or the notices lie about the effective limit.
+  it('MAX_QUERY_ROWS (dashboard SSOT) equals the wire clamp QUERY_CAPS.plain', () => {
+    expect(MAX_QUERY_ROWS).toBe(QUERY_CAPS.plain);
+    expect(MAX_QUERY_ROWS).toBe(10000);
   });
 });

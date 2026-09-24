@@ -494,6 +494,10 @@
   "textFileOnly": {
     "message": "Only text files are supported"
   },
+  "timeHeatmapTab": {
+    "message": "Time Heatmap",
+    "description": "Sidebar tab for time heatmap"
+  },
   "timeDaysAgo": {
     "message": "{count} days ago",
     "description": "Relative time: X days ago"
@@ -2135,10 +2139,13 @@
     "description": "ARIA label for new category name input"
   },
   "tagClusterDescription": {
-    "message": "Displays tag co-occurrence relationships as a graph. Click a node to filter history by that tag."
+    "message": "Displays tag co-occurrence relationships as a graph. Defaults to the last 7 days — use the period filter to widen the range. Click a node to filter history by that tag."
   },
   "tagClusterEmptyState": {
     "message": "No tagged history yet."
+  },
+  "tagClusterError": {
+    "message": "Failed to load the tag cluster. Try again."
   },
   "tagClusterTruncatedNotice": {
     "message": "Too many tags — showing only the top 50."
@@ -2205,6 +2212,166 @@
   },
   "viewFullPolicy": {
     "message": "View Full Privacy Policy"
+  },
+  "visitDurationAllUnmeasured": {
+    "message": "All records in this period are unmeasured — durations are recorded for newly tracked visits.",
+    "description": "Visit duration all-null state"
+  },
+  "visitDurationAverageTime": {
+    "message": "Average",
+    "description": "Visit duration average-time column header"
+  },
+  "visitDurationDescription": {
+    "message": "Total and average time spent per domain and tag for the selected period.",
+    "description": "Visit duration panel description"
+  },
+  "visitDurationDomainColumn": {
+    "message": "Domain",
+    "description": "Visit duration domain column header"
+  },
+  "visitDurationDomainRanking": {
+    "message": "Time by domain",
+    "description": "Visit duration by-domain ranking heading"
+  },
+  "visitDurationEmpty": {
+    "message": "No browsing records in this period.",
+    "description": "Visit duration empty state"
+  },
+  "visitDurationError": {
+    "message": "Failed to load the visit duration analysis. Try again.",
+    "description": "Visit duration load-failure state"
+  },
+  "visitDurationPanelTitle": {
+    "message": "Visit Duration",
+    "description": "Visit duration panel title"
+  },
+  "visitDurationPeriodAll": {
+    "message": "All time",
+    "description": "Period filter preset: all time"
+  },
+  "visitDurationPeriodCustom": {
+    "message": "Custom",
+    "description": "Period filter custom-range label"
+  },
+  "visitDurationPeriodEnd": {
+    "message": "To",
+    "description": "Period filter custom end-date label"
+  },
+  "visitDurationPeriodLabel": {
+    "message": "Period",
+    "description": "Period filter group label"
+  },
+  "visitDurationPeriodLast30Days": {
+    "message": "Last 30 days",
+    "description": "Period filter preset: last 30 days"
+  },
+  "visitDurationPeriodLast7Days": {
+    "message": "Last 7 days",
+    "description": "Period filter preset: last 7 days"
+  },
+  "visitDurationPeriodLast90Days": {
+    "message": "Last 90 days",
+    "description": "Period filter preset: last 90 days"
+  },
+  "visitDurationPeriodStart": {
+    "message": "From",
+    "description": "Period filter custom start-date label"
+  },
+  "visitDurationPeriodToday": {
+    "message": "Today",
+    "description": "Period filter preset: today"
+  },
+  "visitDurationRecordCount": {
+    "message": "Records",
+    "description": "Visit duration record-count column header"
+  },
+  "visitDurationTab": {
+    "message": "Visit Duration",
+    "description": "Sidebar tab for visit duration"
+  },
+  "visitDurationTagColumn": {
+    "message": "Tag",
+    "description": "Visit duration tag column header"
+  },
+  "visitDurationTagRanking": {
+    "message": "Time by tag",
+    "description": "Visit duration by-tag ranking heading"
+  },
+  "visitDurationTotalTime": {
+    "message": "Total",
+    "description": "Visit duration total-time column header"
+  },
+  "visitDurationTruncated": {
+    "message": "Showing top {shown} of {total}.",
+    "description": "Visit duration truncation notice"
+  },
+  "visitDurationUnmeasuredRatio": {
+    "message": "Unmeasured: {percent}% ({unmeasured} of {total} records)",
+    "description": "Visit duration unmeasured ratio"
+  },
+  "domainAnalysisTab": {
+    "message": "Domain Analysis",
+    "description": "Sidebar tab for domain analysis"
+  },
+  "domainAnalysis_title": {
+    "message": "Domain Analysis",
+    "description": "Domain analysis panel title"
+  },
+  "domainAnalysis_tagLabel": {
+    "message": "Tag (optional)",
+    "description": "Domain analysis tag filter label"
+  },
+  "domainAnalysis_tagAll": {
+    "message": "All tags — enter a tag name to filter",
+    "description": "Domain analysis tag input placeholder"
+  },
+  "domainAnalysis_run": {
+    "message": "Run",
+    "description": "Domain analysis run button"
+  },
+  "domainAnalysis_byDomainTitle": {
+    "message": "By domain",
+    "description": "Domain analysis by-domain ranking heading"
+  },
+  "domainAnalysis_byUrlTitle": {
+    "message": "By URL",
+    "description": "Domain analysis by-URL ranking heading"
+  },
+  "domainAnalysis_domainColumn": {
+    "message": "Domain",
+    "description": "Domain analysis domain column header"
+  },
+  "domainAnalysis_urlColumn": {
+    "message": "URL",
+    "description": "Domain analysis URL column header"
+  },
+  "domainAnalysis_countColumn": {
+    "message": "Count",
+    "description": "Domain analysis count column header"
+  },
+  "domainAnalysis_empty": {
+    "message": "No browsing records match the selected period and tag.",
+    "description": "Domain analysis empty state"
+  },
+  "domainAnalysis_unknownDomain": {
+    "message": "(unknown)",
+    "description": "Domain analysis label for records without a domain"
+  },
+  "domainAnalysis_excludedNullDomainCount": {
+    "message": "{count} records have no domain and are grouped as (unknown).",
+    "description": "Domain analysis notice for records without a domain"
+  },
+  "domainAnalysis_truncated": {
+    "message": "Showing top {shown} of {total}.",
+    "description": "Domain analysis top-N truncation notice"
+  },
+  "domainAnalysis_rowCap": {
+    "message": "Reached the {max}-record analysis limit — showing a partial aggregation.",
+    "description": "Domain analysis pagination cap notice"
+  },
+  "domainAnalysisError": {
+    "message": "Failed to load the domain analysis. Try again.",
+    "description": "Domain analysis load failure state"
   },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
@@ -3963,6 +4130,66 @@
     "message": "Clear filters",
     "description": "Button label to clear all active filters (search, date, tag)"
   },
+  "dashboardTimeHeatmapCellLabel": {
+    "message": "{weekday} {hour}:00 — {count} records",
+    "description": "Heatmap cell label: weekday, hour and record count"
+  },
+  "dashboardTimeHeatmapDescription": {
+    "message": "Browsing record density by weekday and hour over the selected period.",
+    "description": "Time heatmap panel description"
+  },
+  "dashboardTimeHeatmapEmpty": {
+    "message": "No browsing records in the selected period.",
+    "description": "Time heatmap empty state"
+  },
+  "dashboardTimeHeatmapError": {
+    "message": "Failed to load the time heatmap. Try again.",
+    "description": "Time heatmap load-failure state"
+  },
+  "dashboardTimeHeatmapFri": {
+    "message": "Fri",
+    "description": "Friday short name for heatmap"
+  },
+  "dashboardTimeHeatmapLimitNotice": {
+    "message": "Reached the 10,000-record limit — aggregating a partial set.",
+    "description": "Time heatmap limit notice"
+  },
+  "dashboardTimeHeatmapMon": {
+    "message": "Mon",
+    "description": "Monday short name for heatmap"
+  },
+  "dashboardTimeHeatmapNumericCaption": {
+    "message": "Browsing record counts by weekday and hour",
+    "description": "Numeric table caption for heatmap"
+  },
+  "dashboardTimeHeatmapSat": {
+    "message": "Sat",
+    "description": "Saturday short name for heatmap"
+  },
+  "dashboardTimeHeatmapSun": {
+    "message": "Sun",
+    "description": "Sunday short name for heatmap"
+  },
+  "dashboardTimeHeatmapTableCaption": {
+    "message": "Browsing records by weekday and hour",
+    "description": "Heatmap table caption"
+  },
+  "dashboardTimeHeatmapThu": {
+    "message": "Thu",
+    "description": "Thursday short name for heatmap"
+  },
+  "dashboardTimeHeatmapTitle": {
+    "message": "Time Heatmap",
+    "description": "Time heatmap panel title"
+  },
+  "dashboardTimeHeatmapTue": {
+    "message": "Tue",
+    "description": "Tuesday short name for heatmap"
+  },
+  "dashboardTimeHeatmapWed": {
+    "message": "Wed",
+    "description": "Wednesday short name for heatmap"
+  },
   "dashboardTitle": {
     "message": "Yasumaro Dashboard",
     "description": "Dashboard page title"
@@ -4246,5 +4473,268 @@
   },
   "warningTitle": {
     "message": "Warning"
+  },
+  "tagCluster_empty_period": {
+    "message": "No records in the selected period. Try a wider range."
+  },
+  "tagFrequencyTab": {
+    "message": "Tag Timeline",
+    "description": "Sidebar tab for the tag frequency timeline"
+  },
+  "dashboardTagTimelineTitle": {
+    "message": "Tag Frequency Timeline",
+    "description": "Tag frequency timeline panel title"
+  },
+  "dashboardTagTimelineDescription": {
+    "message": "Weekly and monthly record counts for the top tags in the selected period.",
+    "description": "Tag frequency timeline panel description"
+  },
+  "dashboardTagTimelineGranularityLabel": {
+    "message": "Granularity",
+    "description": "Tag frequency timeline granularity toggle label"
+  },
+  "dashboardTagTimelineGranularityWeek": {
+    "message": "Weekly",
+    "description": "Tag frequency timeline weekly granularity"
+  },
+  "dashboardTagTimelineGranularityMonth": {
+    "message": "Monthly",
+    "description": "Tag frequency timeline monthly granularity"
+  },
+  "dashboardTagTimelineTopNLabel": {
+    "message": "Top tags",
+    "description": "Tag frequency timeline top-N tag count label"
+  },
+  "dashboardTagTimelineRun": {
+    "message": "Run",
+    "description": "Tag frequency timeline apply button"
+  },
+  "dashboardTagTimelineWeekStartNote": {
+    "message": "Weeks start on Sunday (local time). Partial first and last weeks keep their actual start date as the label.",
+    "description": "Tag frequency timeline week-start note"
+  },
+  "dashboardTagTimelineSeriesOther": {
+    "message": "Other",
+    "description": "Tag frequency timeline legend label for tags outside the top N"
+  },
+  "dashboardTagTimelineEmpty": {
+    "message": "No tagged records in this period.",
+    "description": "Tag frequency timeline empty state"
+  },
+  "dashboardTagTimelineCapNote": {
+    "message": "Reached the {max}-record query limit — showing a partial aggregation.",
+    "description": "Tag frequency timeline query cap notice"
+  },
+  "dashboardTagTimelineError": {
+    "message": "Failed to load the tag frequency timeline. Try again.",
+    "description": "Tag frequency timeline load failure state"
+  },
+  "dashboardTagTimelineTableCaption": {
+    "message": "Record counts by bucket and tag",
+    "description": "Tag frequency timeline numeric table caption"
+  },
+  "dashboardTagTimelineChartTitle": {
+    "message": "Stacked tag record counts over time",
+    "description": "Tag frequency timeline SVG title"
+  },
+  "dashboardTagTimelineChartDesc": {
+    "message": "One stacked series per top tag; the same numbers are available in the table below.",
+    "description": "Tag frequency timeline SVG description"
+  },
+  "dashboardTagTimelineCellLabel": {
+    "message": "{date} {tag}: {count} records",
+    "description": "Tag frequency timeline data point label (bucket date, tag, count)"
+  },
+  "tagCooccurrenceTableTab": {
+    "message": "Tag Pairs",
+    "description": "Sidebar tab for the tag co-occurrence table"
+  },
+  "cooccurrenceTableTitle": {
+    "message": "Tag Co-occurrence Pairs",
+    "description": "Tag co-occurrence table panel title"
+  },
+  "cooccurrenceTableDescription": {
+    "message": "Top co-occurring tag pairs as a ranked table. Click a row to filter history by the pair's first tag.",
+    "description": "Tag co-occurrence table panel description"
+  },
+  "cooccurrenceTableColPair": {
+    "message": "Pair",
+    "description": "Tag co-occurrence table pair column header"
+  },
+  "cooccurrenceTableColCooccurCount": {
+    "message": "Co-occurrence",
+    "description": "Tag co-occurrence table co-occurrence count column header"
+  },
+  "cooccurrenceTableColCountA": {
+    "message": "#A count",
+    "description": "Tag co-occurrence table individual count column for the pair's first tag"
+  },
+  "cooccurrenceTableColCountB": {
+    "message": "#B count",
+    "description": "Tag co-occurrence table individual count column for the pair's second tag"
+  },
+  "cooccurrenceTableNoRecords": {
+    "message": "No records in the selected period. Try a wider range.",
+    "description": "Tag co-occurrence table empty state when no records were fetched"
+  },
+  "cooccurrenceTableEmpty": {
+    "message": "No co-occurring tag pairs — every record has a single tag.",
+    "description": "Tag co-occurrence table empty state when the graph has no edges"
+  },
+  "cooccurrenceTableEmptyForTag": {
+    "message": "No other tag co-occurs with the selected tag.",
+    "description": "Tag co-occurrence table empty state when the selected tag has no partners"
+  },
+  "cooccurrenceTableError": {
+    "message": "Failed to load the tag co-occurrence pairs. Try again.",
+    "description": "Tag co-occurrence table load failure state"
+  },
+  "cooccurrenceTableTruncatedTop20": {
+    "message": "Showing the top 20 of {total} co-occurring pairs.",
+    "description": "Tag co-occurrence table top-20 truncation notice"
+  },
+  "cooccurrenceTableTruncatedTags": {
+    "message": "More than {max} unique tags — ranking covers the top {max} tags only.",
+    "description": "Tag co-occurrence table pre-narrowing notice for the tag count cap"
+  },
+  "cooccurrenceTableTagFilterLabel": {
+    "message": "Tag",
+    "description": "Tag co-occurrence table tag filter label"
+  },
+  "cooccurrenceTableTagFilterAll": {
+    "message": "All tags",
+    "description": "Tag co-occurrence table tag filter option for no tag selected"
+  },
+  "cooccurrenceTableRun": {
+    "message": "Run",
+    "description": "Tag co-occurrence table apply button"
+  },
+  "cooccurrenceTableCaption": {
+    "message": "Top co-occurring tag pairs",
+    "description": "Tag co-occurrence table caption"
+  },
+  "wordClusterTab": {
+    "message": "Word Cluster",
+    "description": "Sidebar label for the word-cluster panel"
+  },
+  "wordClusterTitle": {
+    "message": "Word Cluster",
+    "description": "Title of the word-cluster panel"
+  },
+  "wordClusterDescription": {
+    "message": "Extracts keywords from AI summaries and page titles and shows their co-occurrence as a graph. Click a node to search history for that keyword.",
+    "description": "Description of the word-cluster panel"
+  },
+  "wordClusterPeriodLabel": {
+    "message": "Period",
+    "description": "Label for the word-cluster period filter and apply row"
+  },
+  "wordClusterRun": {
+    "message": "Run",
+    "description": "Apply button for the word-cluster period filter"
+  },
+  "wordClusterEmpty": {
+    "message": "No records with usable text in the selected period. Try a wider range.",
+    "description": "Word-cluster empty state when no usable records exist"
+  },
+  "wordClusterEmptyNoKeywords": {
+    "message": "Records were found, but no keywords remained after filtering.",
+    "description": "Word-cluster empty state when extraction yielded no keywords"
+  },
+  "wordClusterExcludedCount": {
+    "message": "Excluded {count} rows without a usable summary (AI failure or fallback text); titles were still used.",
+    "description": "Word-cluster notice counting rows excluded from summary extraction"
+  },
+  "wordClusterTruncatedNotice": {
+    "message": "Too many keywords — showing only the top 50.",
+    "description": "Word-cluster truncation notice for the node cap"
+  },
+  "wordClusterRowCapNotice": {
+    "message": "The query hit the {max}-row limit — aggregating the most recent {shown} of {total} records.",
+    "description": "Word-cluster notice when the fetched row cap truncates the analyzed period"
+  },
+  "wordClusterLoading": {
+    "message": "Loading word cluster…",
+    "description": "Accessible loading status for the word-cluster panel"
+  },
+  "wordClusterError": {
+    "message": "Failed to load the word cluster. Try again.",
+    "description": "Word-cluster error state"
+  },
+  "tagClusterTimeSliderTab": {
+    "message": "Tag Cluster Compare",
+    "description": "Sidebar label for the tag-cluster time-compare panel"
+  },
+  "tagClusterTimeSliderTitle": {
+    "message": "Tag Cluster Over Time",
+    "description": "Title of the tag-cluster time-compare panel"
+  },
+  "tagClusterTimeSliderDescription": {
+    "message": "Pick a start and end date to split the window into two halves and compare the tag clusters side by side. Click a node or a diff entry to search history for that tag.",
+    "description": "Description of the tag-cluster time-compare panel"
+  },
+  "tagClusterCompareStartLabel": {
+    "message": "Start date",
+    "description": "Label for the comparison window start date input"
+  },
+  "tagClusterCompareEndLabel": {
+    "message": "End date",
+    "description": "Label for the comparison window end date input"
+  },
+  "tagClusterCompareRun": {
+    "message": "Compare",
+    "description": "Apply button for the tag-cluster time comparison"
+  },
+  "tagClusterCompareFirstHalf": {
+    "message": "First half",
+    "description": "Heading of the first-half snapshot in the time comparison"
+  },
+  "tagClusterCompareSecondHalf": {
+    "message": "Second half",
+    "description": "Heading of the second-half snapshot in the time comparison"
+  },
+  "tagClusterCompareInvalidRange": {
+    "message": "Select both a start and an end date to compare.",
+    "description": "Validation message when a comparison date is missing"
+  },
+  "tagClusterCompareInvalidRangeCorrected": {
+    "message": "The start was after the end — the order was corrected automatically.",
+    "description": "Notice when the inverted comparison window was auto-corrected"
+  },
+  "tagClusterCompareEmptyPeriod": {
+    "message": "No records in this half of the window.",
+    "description": "Empty state shown on the half of the comparison without records"
+  },
+  "tagClusterCompareCapNotice": {
+    "message": "The query hit the {max}-row limit — aggregating the most recent {shown} of {total} records in this half.",
+    "description": "Notice when the fetched row cap truncates one half of the comparison"
+  },
+  "tagClusterDiffAppeared": {
+    "message": "Appeared tags",
+    "description": "Diff list heading for tags present only in the second half"
+  },
+  "tagClusterDiffDisappeared": {
+    "message": "Disappeared tags",
+    "description": "Diff list heading for tags present only in the first half"
+  },
+  "tagClusterDiffIncreased": {
+    "message": "Increased tags",
+    "description": "Diff list heading for tags whose count increased, with deltas"
+  },
+  "tagClusterDiffDecreased": {
+    "message": "Decreased tags",
+    "description": "Diff list heading for tags whose count decreased, with deltas"
+  },
+  "tagClusterTimeSliderLoading": {
+    "message": "Comparing tag clusters…",
+    "description": "Accessible loading status for the tag-cluster time comparison"
+  },
+  "tagClusterTimeSliderStatusDone": {
+    "message": "Comparison complete: first half {first} tags, second half {second} tags, {appeared} appeared, {disappeared} disappeared.",
+    "description": "Live-region summary announced when the comparison finishes"
+  },
+  "tagClusterTimeSliderError": {
+    "message": "Failed to load this half of the comparison. Try again.",
+    "description": "Error state for a failed half of the tag-cluster time comparison"
   }
 }

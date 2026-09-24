@@ -1,0 +1,186 @@
+# データ分析ガイド / Data Analytics Guide
+
+[日本語](#日本語) | [English](#english)
+
+---
+
+## 日本語
+
+### 概要
+
+ダッシュボードの「データ」セクションには、記録した閲覧履歴をダッシュボード上で分析するパネルが揃っています。曜日×時間帯のヒートマップ、滞在時間ランキング、ドメイン/URL の件数集計、タグの期間推移、タグ共起ペア表、キーワードクラスタなど、履歴データを複数の視点から振り返れます。
+
+すべての計算はブラウザ内のローカル SQLite（OPFS + FTS5）に対して行われ、履歴データが外部に送信されることはありません。分析に使えるのは、記録済みの履歴（タグ・滞在時間・作成日時を含む）だけです。v6.9.22 で追加された 8 パネルの詳細は [CHANGELOG.md](../CHANGELOG.md) の [6.9.22] を参照してください。
+
+### 共通の操作（期間フィルタ）
+
+ほとんどの分析パネルには期間フィルタが付いています。
+
+| プリセット | 対象期間 |
+|------|------|
+| **今日** | 本日 0 時以降 |
+| **直近7日** | 過去 7 日間 |
+| **直近30日** | 過去 30 日間 |
+| **直近90日** | 過去 90 日間 |
+| **全期間** | 記録されている全件 |
+| **カスタム** | 日付を手動指定 |
+
+期間を変更すると選択中のパネルが再集計されます。ワードクラスタとタグクラスタの既定期間は「直近7日」です。
+
+### 時間帯ヒートマップ / Time Heatmap
+
+曜日（7）×時間帯（24）のマスに記録数を色の濃さで表示します。自分の閲覧習慣（どの曜日・どの時間帯に記録が集中しているか）を一目で把握できます。
+
+- 表示は最大 10,000 件の履歴を対象に集計します
+
+### 滞在時間分析 / Visit Duration
+
+ドメイン別・タグ別の滞在時間ランキングを表示します。
+
+| 表示 | 内容 |
+|------|------|
+| **合計時間** | 期間内の滞在時間の合計 |
+| **平均時間** | 1 レコードあたりの平均滞在時間 |
+| **件数** | 記録数 |
+
+ドメイン別とタグ別を切り替えられ、それぞれ上位 20 件を表示します（対象は最大 10,000 件）。「今月はどのドメインに何時間使ったか」を直接確認できます。
+
+### ドメイン分析 / Domain Analysis
+
+タグ（任意）と期間を指定して、ドメイン別の集計 top 20 と URL 別の集計 top 20 を件数順の表で表示します。「#トラベル タグの記録はどのサイトで見ているか」のような質問に直接答えます。
+
+- 対象は最大 50,000 件の履歴です
+
+### タグクラスタ / Tag Cluster
+
+タグ同士の共起関係をグラフで可視化します。詳細は [タグの関連グラフ表示ガイド](TAG_CLUSTER_GUIDE.md) を参照してください。
+
+- 出現回数の多い上位 50 タグが対象（1 レコード最大 50 タグ、履歴は最大 10,000 件）
+- 既定の期間は「直近7日」です
+
+### タグ推移 / Tag Timeline
+
+期間内で出現数の多い上位タグ（既定 10 件）について、週次/月次の記録数推移を積み上げ折れ線グラフで表示します。タグごとの興味の変遷を数字で追えます。
+
+- 表示単位は週次/月次を切り替えられます（対象は最大 10,000 件）
+
+### タグ共起ペア / Tag Pairs
+
+タグ共起ペアの上位 20 件を表形式で表示します。「タグクラスタ」グラフと同じ共起計算の別表現で、グラフが苦手な場合でも数字でタグ間のつながりを確認できます。
+
+- 表の各行はペア（2 タグ）と共起回数です。クリックで履歴を絞り込めます
+
+### ワードクラスタ / Word Cluster
+
+タグを付けていないユーザー向けのパネルです。記録したページの要約文とタイトルから `Intl.Segmenter` でキーワードを抽出し、キーワード同士の共起クラスタをグラフで表示します。
+
+- 既定の期間は「直近7日」です
+- キーワードは英数字のみで構成され、既存のタグ共起パイプラインを流用するため「#キーワード」のような擬似タグとして動作します
+- タグクラスタと同じ操作（クリックで履歴絞り込み、ズーム、パン）が使えます
+
+### タグクラスタ比較 / Tag Cluster Compare
+
+指定した期間の前半と後半のタグクラスタを左右に並べて比較します。
+
+- 前半と後半で出現したタグの差分一覧も表示されます（新しく出現したタグ・消えたタグ）
+- タグごとの配色は FNV-1a ハッシュで安定しているため、左右で同じタグは同じ色になります
+- 関心の移り変わりと継続しているテーマを把握できます
+
+### 履歴 / History
+
+SQLite データベースを直接検索・閲覧するパネルです。FTS5 による日本語全文検索（3 文字未満のクエリは LIKE 検索にフォールバック）に対応しています。
+
+### データとプライバシー
+
+分析対象はすべて端末内のローカル SQLite データベースです。分析のために履歴・タグ・滞在時間が外部サービスに送信されることはありません。プライバシー設計の詳細は [PRIVACY.md](PRIVACY.md) を参照してください。
+
+---
+
+## English
+
+### Overview
+
+The "Data" section of the dashboard contains panels for analyzing your recorded browsing history in place: a day-of-week × time-of-day heatmap, visit-duration rankings, domain/URL count tables, tag timelines, a tag co-occurrence pair table, keyword clusters, and more.
+
+All computations run against the local SQLite database (OPFS + FTS5) inside your browser; no history data is ever sent anywhere. Analytics only use what you have already recorded (tags, visit durations, timestamps). See [CHANGELOG.md](../CHANGELOG.md) → [6.9.22] for the panel set added in v6.9.22.
+
+### Common Controls (Period Filter)
+
+Most analytics panels include a period filter.
+
+| Preset | Range |
+|------|------|
+| **Today** | Since midnight today |
+| **Last 7 days** | Past 7 days |
+| **Last 30 days** | Past 30 days |
+| **Last 90 days** | Past 90 days |
+| **All time** | Every record |
+| **Custom** | Manually specified dates |
+
+Changing the period re-aggregates the current panel. Word Cluster and Tag Cluster default to "Last 7 days".
+
+### Time Heatmap
+
+Shows the number of records in a 7-day-of-week × 24-hour grid, colored by density. It gives you an at-a-glance view of when you tend to browse.
+
+- Aggregated over up to 10,000 history rows
+
+### Visit Duration
+
+Domain-wise and tag-wise visit-duration rankings.
+
+| Column | Meaning |
+|------|------|
+| **Total time** | Sum of visit durations in the period |
+| **Average time** | Mean duration per record |
+| **Count** | Number of records |
+
+Switch between domain and tag views; the top 20 entries are shown per view (up to 10,000 rows analyzed).
+
+### Domain Analysis
+
+Specify an optional tag and a period to see top-20 domain counts and top-20 URL counts as tables — a direct answer to questions like "which sites do my #travel reads come from?"
+
+- Analyzes up to 50,000 history rows
+
+### Tag Cluster
+
+Visualizes tag co-occurrence as a graph. See the [Tag Cluster Guide](TAG_CLUSTER_GUIDE.md) for details.
+
+- Uses the top 50 tags by frequency (up to 50 tags per record, 10,000 history rows)
+- Defaults to the "Last 7 days" period
+
+### Tag Timeline
+
+For the top tags in a period (default 10), shows stacked weekly/monthly record counts as a line chart. Useful for tracking how your interests shift over time.
+
+- Weekly/monthly granularity is switchable (up to 10,000 rows analyzed)
+
+### Tag Pairs
+
+Shows the top 20 tag co-occurrence pairs as a table — the same computation as the Tag Cluster graph, presented numerically for people who prefer tables over graphs.
+
+- Each row is a tag pair with its co-occurrence count. Clicking a row filters history
+
+### Word Cluster
+
+A panel for users who do not tag their records. Keywords are extracted from page summaries and titles with `Intl.Segmenter`, then their co-occurrence clusters are rendered as a graph.
+
+- Defaults to the "Last 7 days" period
+- Keywords are letters/digits only and flow through the tag co-occurrence pipeline as "#keyword" pseudo-tags
+- The same controls as Tag Cluster work here (click-to-filter, zoom, pan)
+
+### Tag Cluster Compare
+
+Compares the tag clusters of the first and second half of a selected period, side by side.
+
+- A diff list shows tags that appeared or disappeared between halves
+- Tag colors are derived from an FNV-1a hash, so the same tag keeps the same color on both sides
+
+### History
+
+A panel for searching and browsing the SQLite database directly, including FTS5 full-text search for Japanese (queries shorter than 3 characters fall back to LIKE search).
+
+### Data and Privacy
+
+Everything is computed from the on-device SQLite database. No history, tags, or visit durations are sent to any service for analysis. See [PRIVACY.md](PRIVACY.md) for the privacy design.

@@ -11,6 +11,7 @@ import { addPendingPage } from '../utils/pendingStorage.js';
 import type { AIService, AISummaryResult } from './ai/AIService.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { SUMMARY_EMPTY_FALLBACK } from '../utils/summaryFallback.js';
 
 /**
  * Calculate token count approximation from text length.
@@ -98,7 +99,7 @@ export class PrivacyPipeline {
     const traceId = options.traceId || '';
 
     if (!content) {
-      return { summary: 'Summary not available.', aiSucceeded: false };
+      return { summary: SUMMARY_EMPTY_FALLBACK, aiSucceeded: false };
     }
 
     const sanitizedSettings = this._buildSanitizedSettings(alreadyProcessed);
@@ -165,7 +166,7 @@ export class PrivacyPipeline {
       };
     }
 
-    return { summary: 'Summary not available.', originalTokens, cleansedTokens, mode: this.mode, aiSucceeded: false };
+    return { summary: SUMMARY_EMPTY_FALLBACK, originalTokens, cleansedTokens, mode: this.mode, aiSucceeded: false };
   }
 
   private _buildSanitizedSettings(alreadyProcessed: boolean) {

@@ -1,5 +1,6 @@
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from './markdownSanitizer.js';
 import { getHostname } from './markdownTemplateUtils.js';
+import { SUMMARY_EMPTY_FALLBACK } from './summaryFallback.js';
 import type { BrowsingLogEntry } from './sqlite-types.js';
 import type { MarkdownTemplateEntryData } from './types.js';
 
@@ -45,7 +46,9 @@ export interface BuildEntryMarkdownOptions {
 }
 
 const DEFAULT_TITLE_FALLBACK = 'Untitled';
-const DEFAULT_SUMMARY_FALLBACK = 'Summary not available.';
+// SSOT alias, kept as a named default alongside DEFAULT_TITLE_FALLBACK —
+// do not re-declare the literal here (see summaryFallback.ts).
+const DEFAULT_SUMMARY_FALLBACK = SUMMARY_EMPTY_FALLBACK;
 
 /** Sanitized fragments shared by every style. This is the single owner of the chain order. */
 interface SanitizedEntryParts {
