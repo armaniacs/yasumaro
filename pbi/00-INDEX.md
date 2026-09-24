@@ -14,12 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ⬜ 未着手 4件 🔧リファクタ中心 RICE順: 13 → 14 → 15 → 16（09-12 は完了・アーカイブ済み）
+### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ⬜ 未着手 2件 🔧リファクタ中心 RICE順: 15 → 16（09-14 は完了・アーカイブ済み）
 
-分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点依存関係: 09-12 完了、13/14/15/16 は同一パネルファイル群を触るため直列。台帳（スコア・依存グラフ・5 Whys・台帳送り2件）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md)。
+分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点依存関係: 09-14 完了、15/16 は直列。台帳（スコア・依存グラフ・5 Whys・台帳送り2件）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md)。
 
-- [2026-09-24-13-refactor-navigate-to-history-helper.md](2026-09-24-13-refactor-navigate-to-history-helper.md)（⬜ 未着手 — RICE 7.0・0.5 SP・副作用🟢。navigateToHistoryWithTag ×7 の集約）
-- [2026-09-24-14-refactor-panel-notices.md](2026-09-24-14-refactor-panel-notices.md)（⬜ 未着手 — RICE 6.4・1.5 SP・副作用🟢。PanelNotices モジュール新設・失敗ポリシー統一）
 - [2026-09-24-15-refactor-max-query-rows-ssot.md](2026-09-24-15-refactor-max-query-rows-ssot.md)（⬜ 未着手 — RICE 6.0・0.25 SP・副作用🟢。MAX_QUERY_ROWS ローカル再宣言×3 の SSOT 化）
 - [2026-09-24-16-refactor-i18n-msg-helper.md](2026-09-24-16-refactor-i18n-msg-helper.md)（⬜ 未着手 — RICE 6.0・0.5 SP・副作用🟢。msg() フォールバックヘルパー ×6 の集約）
 
@@ -85,6 +83,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 arch-delivery-loop ラウンド バッチ4-5 — ✅ 2件完了（13・14 アーカイブ済み）RICE順: 13 → 14（直列）
+
+arch-delivery-loop による実装。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-13-refactor-navigate-to-history-helper.md（✅ 完了 — `8d365e68`。navigateToHistory ヘルパー新設（4ケーステスト付き）・6パネル置換。tagsPanel は挙動保存のため現状維持（記録済み逸脱）。130 tests 対象 green。RICE 7.0）
+- 2026-09-24-14-refactor-panel-notices.md（✅ 完了 — `8d365e68`。PanelNotices 新設（empty/error 統一・fetchScoped・resetForReaggregate）・8パネル移行・失敗ポリシー一本化（新 i18n キー3種）。158 tests 対象 green。RICE 6.4）
 
 ### 2026-09-24 arch-delivery-loop ラウンド バッチ2-3 — ✅ 2件完了（10・11 アーカイブ済み）RICE順: 10 → 11（直列）
 
