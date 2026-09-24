@@ -16,7 +16,7 @@
 
 ### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ⬜ 未着手 30件 🔧非機能追加
 
-ワークスペース全量レビュー（2026-09-24、報告書は `plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
+ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
@@ -1127,7 +1127,7 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 - 2026-08-25-01-fix-storage-inmemory-migration-divergence.md（RICE 57.6 — `InMemoryStorageAdapter.getSettings()` の `rawEncrypted:false` 意図を明記しマイグレーションは依然走る旨をコメント化。両アダプタのマイグレーション一致を検証する `settingsRepository-migration-parity.test.ts` を2件追加。`grep as unknown` 0件と `type-check / 8396 tests PASS`（+2））
 - 2026-08-25-08-refactor-message-types-ssot-cleanup.md（RICE 20.0 — `CONTENT_SCRIPT_ONLY_TYPES` を削除し `CONTENT_SCRIPT_ALLOWED_TYPES` に一本化。`MessageRouter.ts`/`messageHandler.ts` の参照とコメントを更新し `message-types-consistency.test.ts` を ALLOWED_TYPES 基準に置換。`grep -rn CONTENT_SCRIPT_ONLY_TYPES src/` 0件を確認。`type-check / 8396 tests PASS`）
-- 2026-08-25-00-backlog.md（checking-teamレビュー16件を9 PBIに統合しRICEで優先度付け。`plans/2026-08-25-0530-review-0824a.md` 89/A の High3/Medium18 を網羅。Wave1で01/02/03/04並列、Wave2で05単独、Wave3で06/08並列、Wave4で07/09）
+- 2026-08-25-00-backlog.md（checking-teamレビュー16件を9 PBIに統合しRICEで優先度付け。`dev-docs/archived/plans/2026-08-25-0530-review-0824a.md` 89/A の High3/Medium18 を網羅。Wave1で01/02/03/04並列、Wave2で05単独、Wave3で06/08並列、Wave4で07/09）
 
 ### 2026-08-25 Checking-Team Review 0825c — 3件完了（Wave1 RICE 40.0/34.3/32.7）
 
