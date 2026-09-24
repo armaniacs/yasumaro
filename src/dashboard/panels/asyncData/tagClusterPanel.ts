@@ -21,7 +21,6 @@ import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessageOr } from '../../../utils/i18n.js';
 import {
     createPeriodFilter,
     type PeriodFilterHandle,
