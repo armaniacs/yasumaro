@@ -151,7 +151,7 @@ autonomous-task-closer による実装。バッチ1 = 01（ヒートマップ）
 
 ### 2026-09-23 arch-delivery-loop 第3ラウンド（archloop-0923c）— ✅ 5件完了（11-15 アーカイブ済み）RICE順: 11 → 12 → 13 → 14 → 15
 
-Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.html`、6候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの残存手配線刈りラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（Retry-policy は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923c.md](2026-09-23-00-backlog-archloop-0923c.md)。GitHub PR レビューが残（ユーザー作業）。
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.html`、6候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの残存手配線刈りラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（Retry-policy は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923c.md](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923c.md)。GitHub PR レビューが残（ユーザー作業）。
 
 - 2026-09-23-11-refactor-remove-deprecated-hmac-twins.md（✅ 完了 — 生産 importer 0 を確認して双子削除。4 テストは HmacSigner へ 1:1 移行。3c11b96a・RICE 25.0）
 - 2026-09-23-12-refactor-bytestats-forwarding-adapter.md（✅ 完了 — `pickRecordDiagnostics` を builder に所有、4 箇所を spread 1 行に。SAVE maskedCount 除外は構造的に維持、`ByteStatsPayload` に `cleansedReason?` を追加。9a81b798・RICE 16.0）
@@ -161,7 +161,7 @@ Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0907.h
 
 ### 2026-09-23 arch-delivery-loop 第2ラウンド（archloop-0923b）— ✅ 5件完了（06-10 アーカイブ済み）RICE順: 06 → 07 → 08 → 09 → 10
 
-Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.html`、7候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの録画 path 深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（CleansingRuleView・KeyDerivation は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923b.md](2026-09-23-00-backlog-archloop-0923b.md)。GitHub PR レビューが残（ユーザー作業）。
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.html`、7候補・前回除外済み項目は再掲なし）→ Phase 1 RICE スコアリングの録画 path 深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（CleansingRuleView・KeyDerivation は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923b.md](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923b.md)。GitHub PR レビューが残（ユーザー作業）。
 
 - 2026-09-23-06-refactor-remove-tabutils-isrecordable-shim.md（✅ 完了 — 生産 importer 0 を確認して shim 削除。gate-table テストが 5 ケースを全カバー。7bd047f8・RICE 15.0）
 - 2026-09-23-07-refactor-save-phase-module.md（✅ 完了 — `savePhase.save()` 唯一 Seam、retry 投影は手書き集合と完全一致、closure 注入廃止・sqlite 欠如 skip を明示化。5dbceddc・RICE 12.8）
@@ -171,7 +171,7 @@ Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0710.h
 
 ### 2026-09-23 arch-delivery-loop ラウンド（archloop-0923）— ✅ 5件完了（01-05 アーカイブ済み）RICE順: 01 → 02 → 03 → 04 → 05
 
-Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0405.html`、7候補）→ Phase 1 RICE スコアリングのコードベース深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（06 ProviderSlotRunner・07 queryPlan 圧縮は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923.md](2026-09-23-00-backlog-archloop-0923.md)。GitHub PR レビューが残（ユーザー作業）。
+Phase 0 診断（HTML レポート: `$TMPDIR/architecture-review-20260923-0405.html`、7候補）→ Phase 1 RICE スコアリングのコードベース深層化ラウンド。RICE 降順・依存なしで1件ずつ直列実装。採点の詳細と未採用候補（06 ProviderSlotRunner・07 queryPlan 圧縮は live 台帳へ）は [2026-09-23-00-backlog-archloop-0923.md](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923.md)。GitHub PR レビューが残（ユーザー作業）。
 
 - 2026-09-23-01-refactor-history-diagnostics-deep-module.md（✅ 完了 — 診断表示を `renderEntryDiagnostics` / `renderCleansingBar` の深い Module に統合、View 1169→1012 行、15 fixture characterization で全 30 ブランチバイト等価。Panel 側に複製表は実在せず単一所有のみ。5d7159e9・RICE 24.0）
 - 2026-09-23-02-refactor-sqlite-client-deep-seam.md（✅ 完了 — 三重 runner を表駆動単一 runner に統合、`sqliteClient.call(op, payload)` 1 本化、30 named op は互換エイリアス、export/import 2 呼び出し側を移行、decode 所有を wire-table 側へ。駆動行の retry 明示あり。69f7d2c5・RICE 17.1）
@@ -1608,11 +1608,15 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 10（VulnHunt 06-11 = 6 / 保留候補 01-03 = 3 / wasqlite sunset = 1。AMO 公開 1 件は着手禁止で別枠） |
-| 🔶 実装完了（ユーザーゲート待ち） | 5（04/05 = ユーザーレビュー / 17/21/22 = 実機確認 + PR レビュー） |
-| **`pbi/` 残存 PBI 合計** | **16** |
-| アーカイブ済みPBI | 292 |
-| アーカイブ済み実装計画 | 112 |
+| ⬜ 未着手 | 4（保留候補 01-03 = トリガー待ち 3 / wasqlite sunset = ADR-014 ゲート待ち 1） |
+| 🔶 実装完了（ユーザーゲート待ち） | 1（07 word-cluster = 実データ手動プローブのユーザー検証） |
+| 🟪 着手（ユーザー作業待ち） | 1（AMO 公開 01 = アップロード・リスティング・正当化文） |
+| 🔵 監視 | 1（VulnHunt 11 defense-in-depth = 発火条件監視・発火時に分割 PBI 化） |
+| **`pbi/` 残存 PBI 合計** | **7（＋ live 台帳 4 件: future / vuln-remediation / archloop-0924 / analysis-features）** |
+| アーカイブ済みPBI | 946（`00-backlog` 台帳 76 件を除く） |
+| アーカイブ済み実装計画 | 138 |
+
+※ 2026-09-24 整理: 完遂ラウンドの台帳 3 件（archloop-0923 / archloop-0923b / archloop-0923c）を `dev-docs/archived/pbi/` へアーカイブ。各ラウンドの未採用候補（ProviderSlotRunner・queryPlan・CleansingRuleView・KeyDerivation・Retry-policy）は 2026-09-23 時点で future.md 統合台帳へマージ済みのため、台帳に live な追跡項目はない。INDEX 集計表を現状に再同期し、future.md・アーカイブ履歴の台帳リンクをアーカイブ先へ張替え。
 
 ※ 2026-09-22 整理: 完遂ラウンドの台帳 10 件（post-v699 / review-fixes / review-findings-r3 / arch-review-0917b / arch-review-0917c / archloop-0917 / holistic-0918 / archloop-0918-17to19 / archloop-0921b / archreview-0920）を `dev-docs/archived/pbi/` へ移動（archloop-0918 は同日第5ループ台帳と同名のため `-17to19` 接尾辞）。完了ラウンドの節を「進行中」から「アーカイブ履歴」へ移動し、2026-09-22 保留候補 3件を INDEX に追加。
 
