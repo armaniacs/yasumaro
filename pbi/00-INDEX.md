@@ -14,6 +14,45 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ⬜ 未着手 30件 🔧非機能追加
+
+ワークスペース全量レビュー（2026-09-24、報告書は `plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
+
+| NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
+|---|---|---|---:|---:|---|
+| 01 | [fix-transport-replay-safety](2026-09-25-01-fix-transport-replay-safety.md) | fix | 20.0 | 2 | 本ラウンドの起点。29 に先行 |
+| 02 | [investigate-withlock-cas-deep-equal](2026-09-25-02-investigate-withlock-cas-deep-equal.md) | investigate | 8.4 | 2 | 裁定が 18 の前提 |
+| 03 | [refactor-previewonly-flag-cleanup](2026-09-25-03-refactor-previewonly-flag-cleanup.md) | refactor | 8.0 | 0.5 | 30 より先に片付ける |
+| 04 | [fix-obsidian-get-retry](2026-09-25-04-fix-obsidian-get-retry.md) | fix | 4.0 | 0.5 | 11・12・13 と独立（先行可） |
+| 05 | [fix-trustchecker-legacy-dead-code](2026-09-25-05-fix-trustchecker-legacy-dead-code.md) | fix | 3.0 | 0.5 | 30 より先に片付ける |
+| 06 | [refactor-ui-provider-label-ssot](2026-09-25-06-refactor-ui-provider-label-ssot.md) | refactor | 3.0 | 0.5 | 30 と import 競合 |
+| 07 | [refactor-format-bytes-ssot](2026-09-25-07-refactor-format-bytes-ssot.md) | refactor | 3.0 | 1 | 30 と同一ファイル競合 |
+| 08 | [doc-trust-record-policy-correction](2026-09-25-08-doc-trust-record-policy-correction.md) | doc | 2.0 | 0.25 | 05 と用語を揃える |
+| 09 | [fix-popup-untranslated-title-token](2026-09-25-09-fix-popup-untranslated-title-token.md) | fix | 2.0 | 0.5 | 既存キー再利用で `_locales` 変更なし |
+| 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
+| 11 | [refactor-structured-failure-taxonomy](2026-09-25-11-refactor-structured-failure-taxonomy.md) | refactor | 1.6 | 3 | 12・13・15 の前提（起点） |
+| 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 の後。13 の前提 |
+| 13 | [investigate-obsidian-write-replay-idempotency](2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | 11 → 12 の後（依存で降格） |
+| 14 | [refactor-ci-paths-filter](2026-09-25-14-refactor-ci-paths-filter.md) | refactor | 1.5 | 2 | 26 と CI 設定を共用 |
+| 15 | [investigate-ai-provider-circuit-breaker](2026-09-25-15-investigate-ai-provider-circuit-breaker.md) | investigate | 1.5 | 3 | 11 の failure taxonomy が前提 |
+| 16 | [investigate-dashboard-sqlite-ipc-roundtrip](2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md) | investigate | 1.33 | 1.5 | 実害未計測。計測結果待ち |
+| 17 | [fix-settings-migration-completion-state](2026-09-25-17-fix-settings-migration-completion-state.md) | fix | 1.2 | 2 | 18 の前提。データ損失のため優先実施 |
+| 18 | [investigate-settings-key-single-writer](2026-09-25-18-investigate-settings-key-single-writer.md) | investigate | 1.5 | 2 | 02 と 17 の後（依存で降格） |
+| 19 | [doc-docs-catalog-accessibility-i18n](2026-09-25-19-doc-docs-catalog-accessibility-i18n.md) | doc | 1.0 | 0.5 | 14 の受益 case |
+| 20 | [doc-messaging-layer-decision-record](2026-09-25-20-doc-messaging-layer-decision-record.md) | doc | 1.0 | 0.25 | ADR 未作成。再検討トリガー 3 件を記載 |
+| 21 | [doc-ssrf-threat-model-residual-risk](2026-09-25-21-doc-ssrf-threat-model-residual-risk.md) | doc | 0.8 | 0.5 | security を弱めない記述に限定 |
+| 22 | [investigate-pending-queue-poison-record](2026-09-25-22-investigate-pending-queue-poison-record.md) | investigate | 0.75 | 2 | 01 の retry 判定と共有。実データ待ち |
+| 23 | [investigate-deprecated-alias-sunset](2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | 14 の path 対象要与 |
+| 24 | [investigate-privacy-reconsent-ux](2026-09-25-24-investigate-privacy-reconsent-ux.md) | investigate | 0.5 | 2 | UX 裁定が未決。counter reset は先行可 |
+| 25 | [fix-encryption-secret-wrapped-storage](2026-09-25-25-fix-encryption-secret-wrapped-storage.md) | fix | 0.5 | 3 | 27 の前提。IDB 障害方針が未決 |
+| 26 | [backlog-wasm-binary-reproducibility-watch](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) | backlog | 0.4 | 0.5 | トリガー: toolchain / wasm-pack / manifest 変更時 |
+| 27 | [investigate-master-password-removal-reencrypt](2026-09-25-27-investigate-master-password-removal-reencrypt.md) | investigate | 0.33 | 3 | 25 の後。ADR supersede が未決 |
+| 28 | [investigate-content-hot-path-yield](2026-09-25-28-investigate-content-hot-path-yield.md) | investigate | 0.25 | 2 | 30 と `contentExtractor` で競合 |
+| 29 | [backlog-offscreen-gateway-archive-split](2026-09-25-29-backlog-offscreen-gateway-archive-split.md) | backlog | 0.25 | 2 | 01 の後。archive subtype 追加時に発火 |
+| 30 | [refactor-utils-namespace-reorg](2026-09-25-30-refactor-utils-namespace-reorg.md) | refactor | 0.08 | 3+ | 専用ブランチ必須。03・05・06・07 の後 |
+
+**PBI 化不要と判定した 1 件**: `setElementHtml` の `<script>` 削除層の縮小は、production 呼び出し 37 箇所 15 ファイルに及ぶ二段防御（`DOMParser` の inert 特性 + 生成 script の除去）で、レビューでも「セキュリティを弱めない」方針が確定済み。コード変更を入れると共通描画基盤の安全性が下がるため PBI を作らず、判定根拠を採点台帳の不採用欄に記録した。
+
 ### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ✅ 全8件完了・アーカイブ済み
 
 分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md) を参照。
