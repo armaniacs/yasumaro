@@ -14,12 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ⬜ 未着手 6件 🔧リファクタ中心 RICE順: 10 → 11 → 13 → 14 → 15 → 16（09・12 は完了・アーカイブ済み）
+### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ⬜ 未着手 4件 🔧リファクタ中心 RICE順: 13 → 14 → 15 → 16（09-12 は完了・アーカイブ済み）
 
-分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点依存関係: 09/12 は完了、10/11/13/14/15/16 は同一パネルファイル群を触るため直列。台帳（スコア・依存グラフ・5 Whys・台帳送り2件）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md)。
+分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点依存関係: 09-12 完了、13/14/15/16 は同一パネルファイル群を触るため直列。台帳（スコア・依存グラフ・5 Whys・台帳送り2件）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md)。
 
-- [2026-09-24-10-refactor-fetch-period-rows.md](2026-09-24-10-refactor-fetch-period-rows.md)（⬜ 未着手 — RICE 10.7・1.5 SP・副作用🟢。8パネルの loadRowsWithRetry を fetchPeriodRows に集約・失敗ポリシー統一）
-- [2026-09-24-11-refactor-period-filter-contract.md](2026-09-24-11-refactor-period-filter-contract.md)（⬜ 未着手 — RICE 9.3・1.5 SP・副作用🟢。同期 emit 廃止・filterReady 回避策×3 とデッド読み戻し×7 の削除・ラベルキー注入化）
 - [2026-09-24-13-refactor-navigate-to-history-helper.md](2026-09-24-13-refactor-navigate-to-history-helper.md)（⬜ 未着手 — RICE 7.0・0.5 SP・副作用🟢。navigateToHistoryWithTag ×7 の集約）
 - [2026-09-24-14-refactor-panel-notices.md](2026-09-24-14-refactor-panel-notices.md)（⬜ 未着手 — RICE 6.4・1.5 SP・副作用🟢。PanelNotices モジュール新設・失敗ポリシー統一）
 - [2026-09-24-15-refactor-max-query-rows-ssot.md](2026-09-24-15-refactor-max-query-rows-ssot.md)（⬜ 未着手 — RICE 6.0・0.25 SP・副作用🟢。MAX_QUERY_ROWS ローカル再宣言×3 の SSOT 化）
@@ -87,6 +85,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-24 arch-delivery-loop ラウンド バッチ2-3 — ✅ 2件完了（10・11 アーカイブ済み）RICE順: 10 → 11（直列）
+
+arch-delivery-loop による実装。直列チェーン先頭の2件（同一パネルファイル群のため直列）。GitHub PR レビューが残（ユーザー作業）。
+
+- 2026-09-24-10-refactor-fetch-period-rows.md（✅ 完了 — `06b5a597`。fetchPeriodRows 新設（{rows,total,capped}・throw 統一・pickDefined でキー省略を一元化）・8ラッパー削除（参照ゼロ）・tagCluster にエラー状態。146 tests 対象 green。RICE 10.7）
+- 2026-09-24-11-refactor-period-filter-contract.md（✅ 完了 — `06b5a597`。構築中 emit 廃止・getRange() 単一ソース化・filterReady×3 削除・二重同期×7 解消・labelKeys 注入。141 tests 対象 green。RICE 9.3）
 
 ### 2026-09-24 arch-delivery-loop ラウンド バッチ1 — ✅ 2件完了（09・12 アーカイブ済み）RICE順: 09, 12（並列）
 
