@@ -68,6 +68,31 @@ function renderRecord(record: SessionInput): HTMLLIElement {
   domain.textContent = record.domain ?? '';
   li.appendChild(domain);
 
+  // PBI 03: the opt-in navigation trail. Only present when the user enabled
+  // it, so these two are additive and absent for everyone else.
+  if (record.search_query) {
+    const query = document.createElement('span');
+    query.className = 'research-sessions-query';
+    query.textContent = msg('researchSessions_searchQuery', { q: record.search_query }, 'Search: {q}');
+    li.appendChild(query);
+  }
+  if (record.nav_source_url) {
+    // A referrer the UI cannot parse is skipped rather than shown raw — the
+    // column is data, and a bare string could read as a path.
+    let host: string | null = null;
+    try {
+      host = new URL(record.nav_source_url).hostname;
+    } catch {
+      host = null;
+    }
+    if (host !== null) {
+      const source = document.createElement('span');
+      source.className = 'research-sessions-source';
+      source.textContent = msg('researchSessions_source', { host }, 'From: {host}');
+      li.appendChild(source);
+    }
+  }
+
   if (record.is_starred === 1) {
     const starred = document.createElement('span');
     starred.className = 'research-sessions-starred';

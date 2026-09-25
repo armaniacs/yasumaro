@@ -8,6 +8,7 @@
 import type { EncryptedData } from '../crypto/types.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
+import type { NavTrailConsent } from './navTrailConsent.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
@@ -84,6 +85,11 @@ export const StorageKeys = {
     // absent from DEFAULT_SETTINGS so exports never carry it and imports
     // cannot smuggle authorizations in (settingsExportImport strips it).
     CONFIRMED_PROVIDER_ORIGINS: 'confirmed_provider_origins',
+    // Navigation-trail opt-in. Device-local consent, so it is absent from
+    // DEFAULT_SETTINGS and from the restore allowlist: a backup restored on
+    // another device must not inherit an authorization the user never gave
+    // there (PBI 2026-09-26-03).
+    NAV_TRAIL_CONSENT: 'nav_trail_consent',
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
     ENCRYPTION_SECRET: 'encryption_secret', // マスターパスワード未設定時の自動暗号化鍵導出に使う自動生成シークレット（Base64）。現役で読み書きされる — 新鍵管理スキームへのマイグレーションなしに削除すると、既存の暗号化データ（APIキー等）が復号不能になる
@@ -338,6 +344,12 @@ export interface StorageKeyValues {
     [StorageKeys.ALLOWED_URLS_HASH]: string;
     /** Per-baseUrlKey list of user-confirmed origins. Absent until the first confirmation. */
     [StorageKeys.CONFIRMED_PROVIDER_ORIGINS]: Record<string, string[]>;
+    /**
+     * Navigation-trail opt-in. Type-only import: this edge is erased at
+     * compile time, so navTrailConsent.ts can keep importing StorageKeys as a
+     * value without a runtime cycle.
+     */
+    [StorageKeys.NAV_TRAIL_CONSENT]: NavTrailConsent;
     [StorageKeys.ENCRYPTION_SALT]: string;
     [StorageKeys.ENCRYPTION_SECRET]: string;
     [StorageKeys.HMAC_SECRET]: string;

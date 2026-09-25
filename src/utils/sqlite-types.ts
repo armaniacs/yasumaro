@@ -44,6 +44,10 @@ export interface BrowsingLogRecord {
   fallback_triggered?: number | null;
   /** PBI 05: フォールバック発動理由（'short_content' | 'over_cleansed' | 'content_overcut' | 'candidate_too_small'） */
   fallback_reason?: string | null;
+  /** PBI 03: 同じタブで直前に開いていたページ（フラグメント除去・除外ドメインはオリジン）。オプトイン時のみ値が入る */
+  nav_source_url?: string | null;
+  /** PBI 03: 流入元が検索エンジンだった場合の検索語（PII マスク済み）。オプトイン時のみ値が入る */
+  search_query?: string | null;
 }
 
 // Dashboard row type derived from BrowsingLogRecord (id is required)

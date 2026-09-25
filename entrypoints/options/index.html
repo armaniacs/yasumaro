@@ -1601,6 +1601,20 @@
 
         <hr class="settings-hr">
 
+        <!-- PBI 03: opt-in navigation trail. No data-storage-key on purpose —
+             the generic schema binding would save the checkbox without ever
+             showing the consent dialog. -->
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="navTrailEnabled">
+            <span data-i18n="navTrailLabel">Record navigation trail (source page and search terms)</span>
+          </label>
+          <p class="help-text" data-i18n="navTrailDescription">Stores, on this device only, the page you came from and the search terms you used. Used by Research Sessions. Off by default.</p>
+          <div id="navTrailStatus" class="status-message" aria-live="polite"></div>
+        </div>
+
+        <hr class="settings-hr">
+
         <div class="form-group">
           <label data-i18n="dataManagementSection">Data Management</label>
           <p class="help-text" data-i18n="dataManagementDesc">

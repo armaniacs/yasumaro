@@ -184,4 +184,67 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       panel.destroy();
     }).not.toThrow();
   });
+
+  describe('navigation trail display (PBI 03)', () => {
+    const base = Date.now() - 60 * MINUTE_MS;
+
+    function trailRows(over: { nav_source_url?: string | null; search_query?: string | null }) {
+      return [
+        {
+          id: 1, url: 'https://a.dev/1', title: 'A1', domain: 'a.dev', tags: null, is_starred: null,
+          created_at: base, ...over,
+        },
+        {
+          id: 2, url: 'https://a.dev/2', title: 'A2', domain: 'a.dev', tags: null, is_starred: null,
+          created_at: base + 10 * MINUTE_MS,
+        },
+      ];
+    }
+
+    it('shows the search term and the referrer host', async () => {
+      mockQueryLogs.mockResolvedValue({
+        data: {
+          rows: trailRows({ nav_source_url: 'https://www.google.com/search?q=x', search_query: 'wasm sqlite' }),
+          total: 2,
+        },
+      });
+      const { panel } = mountPanel();
+
+      await panel.load();
+      await flush();
+
+      const list = document.querySelector('#researchSessionsList')!;
+      const query = list.querySelector('.research-sessions-query');
+      const source = list.querySelector('.research-sessions-source');
+      expect(query?.textContent).toBe('Search: wasm sqlite');
+      // Host only — the full referrer path stays in storage, not on screen.
+      expect(source?.textContent).toBe('From: www.google.com');
+    });
+
+    it('omits both spans when the feature was off', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: trailRows({}), total: 2 } });
+      const { panel } = mountPanel();
+
+      await panel.load();
+      await flush();
+
+      const list = document.querySelector('#researchSessionsList')!;
+      expect(list.querySelector('.research-sessions-query')).toBeNull();
+      expect(list.querySelector('.research-sessions-source')).toBeNull();
+    });
+
+    it('skips a referrer it cannot parse rather than printing it raw', async () => {
+      mockQueryLogs.mockResolvedValue({
+        data: { rows: trailRows({ nav_source_url: 'not a url' }), total: 2 },
+      });
+      const { panel } = mountPanel();
+
+      await panel.load();
+      await flush();
+
+      const list = document.querySelector('#researchSessionsList')!;
+      expect(list.querySelector('.research-sessions-source')).toBeNull();
+      expect(list.textContent).not.toContain('not a url');
+    });
+  });
 });

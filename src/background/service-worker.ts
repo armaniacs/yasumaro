@@ -15,6 +15,11 @@ import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { syncOllamaOriginRule } from './net/ollamaOriginRule.js';
 import { createOllamaSettingsObserver } from './net/ollamaSettingsObserver.js';
 import { initAllowedUrlsSync } from './allowedUrlsSync.js';
+import {
+  onTabRemoved,
+  onTabUrlChanged,
+  registerNavTrailConsentWatcher,
+} from './navTrail/navTrailTracker.js';
 
 // ============================================================================
 // Service Worker Initialization
@@ -213,6 +218,20 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) =>
       handleTabUpdated(tabId, changeInfo, tab.url !== undefined ? { url: tab.url } : {}),
     );
+    // PBI 03: navigation-trail tracking. Registered at top level, beside the
+    // other tab listeners, because MV3 discards listeners when the worker
+    // stops and only a top-level registration is re-attached on wake.
+    // Incognito tabs are skipped outright — the referrer map would otherwise
+    // keep private-window URLs around after the window closed.
+    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+      if (changeInfo.url && !tab.incognito) {
+        void onTabUrlChanged(tabId, changeInfo.url);
+      }
+    });
+    chrome.tabs.onRemoved.addListener((tabId) => {
+      void onTabRemoved(tabId);
+    });
+    registerNavTrailConsentWatcher();
 
     chrome.runtime.onInstalled.addListener(handleInstalled);
     chrome.runtime.onStartup.addListener(handleStartup);

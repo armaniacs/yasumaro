@@ -74,6 +74,16 @@
 - 既定の期間は「過去7日間」で、期間ボタンを押すとすぐ取り直します
 - 対象は最大 10,000 件、表示は最大 100 セッションです。上限に達すると通知が表示されます
 
+#### 遷移記録（セッションの「検索」「流入元」）
+
+リサーチ・セッションの各行に「検索: …」「流入元: …」を出すために使う、任意の機能です。記録経路そのものは変更しません。ダッシュボードの Privacy タブで確認ダイアログに同意したときだけ有効になり、既定は無効です。
+
+- 同じタブで直前に開いていたページのURLを、フラグメント（`#` 以降）を除いて記録します
+- 流入元が検索エンジン（Google・Bing・DuckDuckGo・Yahoo! Japan・Yahoo!・Brave・Ecosia）なら、検索語も記録します（PII マスク済み・最大200文字）
+- 流入元がドメイン除外リストに一致する場合は、URL全体ではなくオリジンのみ記録します
+- AI への送信内容・Obsidian の Markdown・エクスポートには含まれません
+- プライバシー同意そのものを撤回すると、本機能は自動的に無効になります
+
 ### タグクラスタ / Tag Cluster
 
 タグ同士の共起関係をグラフで可視化します。詳細は [タグの関連グラフ表示ガイド](TAG_CLUSTER_GUIDE.md) を参照してください。
@@ -188,6 +198,16 @@ Groups records that fall within a chosen time gap of each other into one "resear
 - Each section shows the start time, page count, minutes and the top tags (or top domains when tagging is off). The minutes are the span from the first to the last record, not actual reading time
 - The default period is "Last 7 days"; picking a period refetches immediately
 - Analyzes up to 10,000 records and displays at most 100 sessions, with a notice at either cap
+
+#### Navigation Trail (the "Search" and "From" fields in a session)
+
+What fills the "Search: …" and "From: …" fields on each research-session row. It is opt-in and does not change the recording path itself: turn it on from the dashboard Privacy tab by confirming the dialog, and it is off by default.
+
+- Records the URL of the page previously open in the same tab, with the fragment (everything from `#`) removed
+- Also records the search term when the referrer is a search engine (Google, Bing, DuckDuckGo, Yahoo! Japan, Yahoo!, Brave, Ecosia), PII-masked and capped at 200 characters
+- When the referrer matches the domain exclusion list, stores only the origin instead of the full URL
+- Never included in what is sent to AI providers, in the Markdown written to Obsidian, or in exports
+- Turning it off, or withdrawing privacy consent itself, stops collection and clears the tracked tab state
 
 ### Tag Cluster
 

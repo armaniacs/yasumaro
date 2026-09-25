@@ -36,6 +36,10 @@ export const SEARCH_COLUMNS = [
   // projections too — without this the column only ever reaches the UI via
   // the IDB full-listing path (backend-dependent display).
   'fallback_reason',
+  // PBI 03: the navigation trail renders in the dashboard from the list
+  // projection, so both columns must survive the OPFS path too.
+  'nav_source_url',
+  'search_query',
 ] as const;
 
 /** Search projection plus the relevance pseudo-column (see coerceCell). */
@@ -80,6 +84,10 @@ function coerceCell(column: string, value: SqliteValue | null | undefined): Sqli
     case 'ai_provider':
     case 'ai_model':
     case 'fallback_reason':
+    // WHY listed explicitly: the default branch runs Number(), which would turn
+    // these TEXT columns into NaN and blank them out in the UI.
+    case 'nav_source_url':
+    case 'search_query':
       return value != null ? String(value) : null;
     default:
       return value != null ? Number(value) : null;

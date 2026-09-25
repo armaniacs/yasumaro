@@ -223,6 +223,8 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
       10000,                     // extracted_sentences_original_bytes
       1,                         // fallback_triggered
       'candidate_too_small',      // fallback_reason
+      'https://a.dev/prev',       // nav_source_url (PBI 03)
+      'wasm sqlite',              // search_query (PBI 03)
     ];
     expect(fullRow).toHaveLength(COLUMN_NAMES.length);
 

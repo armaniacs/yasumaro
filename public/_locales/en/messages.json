@@ -2485,6 +2485,38 @@
     "message": "Failed to load sessions.",
     "description": "Load error"
   },
+  "navTrailLabel": {
+    "message": "Record navigation trail (source page and search terms)",
+    "description": "Navigation trail opt-in checkbox label"
+  },
+  "navTrailDescription": {
+    "message": "Stores, on this device only, the page you came from and the search terms you used. Used by Research Sessions. Off by default.",
+    "description": "Navigation trail opt-in description"
+  },
+  "navTrailConsentTitle": {
+    "message": "Enable navigation trail?",
+    "description": "Navigation trail consent dialog title"
+  },
+  "navTrailConsentMessage": {
+    "message": "When enabled, each record also stores the URL of the previous page in the same tab (only the domain for excluded sites) and the search terms from search engines (with personal information masked). The data stays on this device and is never sent to AI providers or Obsidian. Turning it off stops further collection.",
+    "description": "Navigation trail consent dialog body"
+  },
+  "navTrailConsentAccept": {
+    "message": "Enable",
+    "description": "Navigation trail consent dialog confirm label"
+  },
+  "navTrailSaveFailed": {
+    "message": "Could not save the setting.",
+    "description": "Navigation trail save failure"
+  },
+  "researchSessions_searchQuery": {
+    "message": "Search: {q}",
+    "description": "Search term shown on a session record"
+  },
+  "researchSessions_source": {
+    "message": "From: {host}",
+    "description": "Referrer shown on a session record"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },
