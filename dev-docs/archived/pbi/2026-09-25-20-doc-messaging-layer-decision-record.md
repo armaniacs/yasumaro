@@ -39,18 +39,18 @@ Scenario: 再検討が必要になった条件を判断できる
 
 ## 受け入れ基準
 
-- [ ] `dev-docs/ADR/2026-09-25-messaging-background-reverse-dependency.md` を、既存の日付付き kebab-case 命名と書式に合わせて作成する。
-- [ ] ADRに「この依存を許容し、現状を維持する」という決定と理由を記載する。
-- [ ] ADRに、以下を再検討トリガーとして記載する。
+- [x] `dev-docs/ADR/2026-09-25-messaging-background-reverse-dependency.md` を、既存の日付付き kebab-case 命名と書式に合わせて作成する。
+- [x] ADRに「この依存を許容し、現状を維持する」という決定と理由を記載する。
+- [x] ADRに、以下を再検討トリガーとして記載する。
   - 実際の循環が発生した場合
   - 実行時 import graph が増えた場合
   - 新しい層を追加した際に同じ逆依存が再できた場合
-- [ ] ADRに、循環が存在せず、`src/background/messageTypes.ts` が Chrome API の副作用を発生させない module であることを記載する。
-- [ ] ADRに、`CURRENT_PROTOCOL_VERSION` の正本は `src/messaging/protocol.ts`、`src/background/messageTypes.ts` は re-export 専用であることを記載する。
-- [ ] ADRは決定と理由のスナップショットとし、経緯ログ、移行履歴、issue 番号を記録しない。
-- [ ] 実コード、型、import 経路、定数は変更しない。
-- [ ] `ExtensionMessage`、`VALID_MESSAGE_TYPES`、`NO_PAYLOAD_TYPES` の二重定義を発生させない。
-- [ ] 今後の中立化を行う場合も、content script や offscreen から provider strategy を持ち込まないという制約を明記する。
+- [x] ADRに、循環が存在せず、`src/background/messageTypes.ts` が Chrome API の副作用を発生させない module であることを記載する。
+- [x] ADRに、`CURRENT_PROTOCOL_VERSION` の正本は `src/messaging/protocol.ts`、`src/background/messageTypes.ts` は re-export 専用であることを記載する。
+- [x] ADRは決定と理由のスナップショットとし、経緯ログ、移行履歴、issue 番号を記録しない。
+- [x] 実コード、型、import 経路、定数は変更しない。
+- [x] `ExtensionMessage`、`VALID_MESSAGE_TYPES`、`NO_PAYLOAD_TYPES` の二重定義を発生させない。
+- [x] 今後の中立化を行う場合も、content script や offscreen から provider strategy を持ち込まないという制約を明記する。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -162,13 +162,13 @@ Scenario: 再検討が必要になった条件を判断できる
 
 ## Definition of Done
 
-- [ ] 指定の命名と既存書式に従う ADR を作成した。
-- [ ] ADRに依存を許容する決定、理由、結果、影響範囲を記載した。
-- [ ] ADRに3項目の再検討トリガーを記載した。
-- [ ] ADRに単一の情報源、ESM import 規約、strategy 境界を記載した。
-- [ ] ADRの一覧を更新した。
-- [ ] 実コード、型、import 経路、定数を変更していない。
-- [ ] 配列と union の二重定義を発生させていない。
-- [ ] 経緯ログ、移行履歴、issue 番号を ADRへ追加していない。
-- [ ] 既存テスト3件と文書参照の一致性を確認した。
-- [ ] ドキュメントレビューで、依存を実害のある未修正課題と誤認しないことを確認した。
+- [x] 指定の命名と既存書式に従う ADR を作成した。
+- [x] ADRに依存を許容する決定、理由、結果、影響範囲を記載した。
+- [x] ADRに3項目の再検討トリガーを記載した。
+- [x] ADRに単一の情報源、ESM import 規約、strategy 境界を記載した。
+- [x] ADRの一覧を更新した。
+- [x] 実コード、型、import 経路、定数を変更していない。
+- [x] 配列と union の二重定義を発生させていない。
+- [x] 経緯ログ、移行履歴、issue 番号を ADRへ追加していない。
+- [x] 既存テスト3件と文書参照の一致性を確認した。
+- [x] ドキュメントレビューで、依存を実害のある未修正課題と誤認しないことを確認した。
