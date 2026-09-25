@@ -2231,6 +2231,126 @@
     "message": "ドメイン分析の読み込みに失敗しました。再試行してください。",
     "description": "ドメイン分析の読み込み失敗状態"
   },
+  "revisitInsightsTab": {
+    "message": "再訪とタイムカプセル",
+    "description": "Sidebar tab for the revisit insights panel"
+  },
+  "revisitInsights_title": {
+    "message": "再訪とタイムカプセル",
+    "description": "Revisit insights panel title"
+  },
+  "revisitInsights_description": {
+    "message": "直近30日と90日以上前の記録を比べ、何度も調べ直しているテーマと、しばらく触れていないテーマを示します。",
+    "description": "Revisit insights panel description"
+  },
+  "revisitInsights_utcNote": {
+    "message": "同じページの同日再訪は記録されません（日付の区切りはUTC）。",
+    "description": "Note about UTC same-day dedup"
+  },
+  "revisitInsights_empty": {
+    "message": "記録がありません。",
+    "description": "Empty state"
+  },
+  "revisitInsights_rowCap": {
+    "message": "記録が多いため新しい {shown} 件だけで集計しました。古い記録の件数は実際より少なく出ます。",
+    "description": "Row cap notice"
+  },
+  "revisitInsights_sectionEmpty": {
+    "message": "該当なし",
+    "description": "Empty section row"
+  },
+  "revisitInsights_loopsTitle": {
+    "message": "何度も調べているテーマ",
+    "description": "Loop section heading"
+  },
+  "revisitInsights_loopsHint": {
+    "message": "まとめてノートにしておくと、次に調べる手間を省けます。",
+    "description": "Loop section hint"
+  },
+  "revisitInsights_kindColumn": {
+    "message": "種別",
+    "description": "Column header"
+  },
+  "revisitInsights_targetColumn": {
+    "message": "対象",
+    "description": "Column header"
+  },
+  "revisitInsights_recentDaysColumn": {
+    "message": "直近30日の日数",
+    "description": "Column header"
+  },
+  "revisitInsights_pastCountColumn": {
+    "message": "90日以上前の件数",
+    "description": "Column header"
+  },
+  "revisitInsights_actionsColumn": {
+    "message": "操作",
+    "description": "Column header"
+  },
+  "revisitInsights_countColumn": {
+    "message": "件数",
+    "description": "Column header"
+  },
+  "revisitInsights_daysColumn": {
+    "message": "訪問日数",
+    "description": "Column header"
+  },
+  "revisitInsights_lastVisitColumn": {
+    "message": "最終訪問",
+    "description": "Column header"
+  },
+  "revisitInsights_kindUrl": {
+    "message": "ページ",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindDomain": {
+    "message": "ドメイン",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindTag": {
+    "message": "タグ",
+    "description": "Kind label"
+  },
+  "revisitInsights_copyMarkdown": {
+    "message": "Markdownでコピー",
+    "description": "Copy button"
+  },
+  "revisitInsights_copied": {
+    "message": "コピーしました",
+    "description": "Copy success feedback"
+  },
+  "revisitInsights_copyFailed": {
+    "message": "コピーに失敗しました",
+    "description": "Copy failure feedback"
+  },
+  "revisitInsights_openHistory": {
+    "message": "履歴で見る",
+    "description": "Navigate to history button"
+  },
+  "revisitInsights_rankingTitle": {
+    "message": "よく再訪するページ",
+    "description": "Ranking heading"
+  },
+  "revisitInsights_dormantTitle": {
+    "message": "最近触れていないテーマ",
+    "description": "Dormant heading"
+  },
+  "revisitInsights_dormantHint": {
+    "message": "2〜4か月前によく見ていたが、直近30日は記録がありません。",
+    "description": "Dormant hint"
+  },
+  "revisitInsights_capsuleTitle": {
+    "message": "1年前の今週",
+    "description": "Capsule heading"
+  },
+  "revisitInsights_capsuleRange": {
+    "message": "{start} 〜 {end}",
+    "description": "Capsule date range"
+  },
+  "revisitInsightsError": {
+    "message": "再訪データの読み込みに失敗しました。",
+    "description": "Load error"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },

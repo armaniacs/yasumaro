@@ -2313,6 +2313,126 @@
     "message": "Failed to load the domain analysis. Try again.",
     "description": "Domain analysis load failure state"
   },
+  "revisitInsightsTab": {
+    "message": "Revisits & Time Capsule",
+    "description": "Sidebar tab for the revisit insights panel"
+  },
+  "revisitInsights_title": {
+    "message": "Revisits & Time Capsule",
+    "description": "Revisit insights panel title"
+  },
+  "revisitInsights_description": {
+    "message": "Compares the last 30 days with records older than 90 days to show topics you keep re-researching and topics you have not revisited lately.",
+    "description": "Revisit insights panel description"
+  },
+  "revisitInsights_utcNote": {
+    "message": "Same-day revisits are not recorded (days are split in UTC).",
+    "description": "Note about UTC same-day dedup"
+  },
+  "revisitInsights_empty": {
+    "message": "No records.",
+    "description": "Empty state"
+  },
+  "revisitInsights_rowCap": {
+    "message": "Aggregated only the newest {shown} records; older counts may be understated.",
+    "description": "Row cap notice"
+  },
+  "revisitInsights_sectionEmpty": {
+    "message": "None",
+    "description": "Empty section row"
+  },
+  "revisitInsights_loopsTitle": {
+    "message": "Topics you keep re-researching",
+    "description": "Loop section heading"
+  },
+  "revisitInsights_loopsHint": {
+    "message": "Collecting these into one note saves you the next search.",
+    "description": "Loop section hint"
+  },
+  "revisitInsights_kindColumn": {
+    "message": "Kind",
+    "description": "Column header"
+  },
+  "revisitInsights_targetColumn": {
+    "message": "Target",
+    "description": "Column header"
+  },
+  "revisitInsights_recentDaysColumn": {
+    "message": "Days in last 30",
+    "description": "Column header"
+  },
+  "revisitInsights_pastCountColumn": {
+    "message": "Records 90+ days ago",
+    "description": "Column header"
+  },
+  "revisitInsights_actionsColumn": {
+    "message": "Actions",
+    "description": "Column header"
+  },
+  "revisitInsights_countColumn": {
+    "message": "Count",
+    "description": "Column header"
+  },
+  "revisitInsights_daysColumn": {
+    "message": "Days visited",
+    "description": "Column header"
+  },
+  "revisitInsights_lastVisitColumn": {
+    "message": "Last visit",
+    "description": "Column header"
+  },
+  "revisitInsights_kindUrl": {
+    "message": "Page",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindDomain": {
+    "message": "Domain",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindTag": {
+    "message": "Tag",
+    "description": "Kind label"
+  },
+  "revisitInsights_copyMarkdown": {
+    "message": "Copy as Markdown",
+    "description": "Copy button"
+  },
+  "revisitInsights_copied": {
+    "message": "Copied",
+    "description": "Copy success feedback"
+  },
+  "revisitInsights_copyFailed": {
+    "message": "Copy failed",
+    "description": "Copy failure feedback"
+  },
+  "revisitInsights_openHistory": {
+    "message": "View in history",
+    "description": "Navigate to history button"
+  },
+  "revisitInsights_rankingTitle": {
+    "message": "Frequently revisited pages",
+    "description": "Ranking heading"
+  },
+  "revisitInsights_dormantTitle": {
+    "message": "Topics you have not revisited",
+    "description": "Dormant heading"
+  },
+  "revisitInsights_dormantHint": {
+    "message": "Frequent 2–4 months ago, but no records in the last 30 days.",
+    "description": "Dormant hint"
+  },
+  "revisitInsights_capsuleTitle": {
+    "message": "This week, one year ago",
+    "description": "Capsule heading"
+  },
+  "revisitInsights_capsuleRange": {
+    "message": "{start} – {end}",
+    "description": "Capsule date range"
+  },
+  "revisitInsightsError": {
+    "message": "Failed to load revisit data.",
+    "description": "Load error"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },

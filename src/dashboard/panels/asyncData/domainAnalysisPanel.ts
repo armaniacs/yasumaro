@@ -32,7 +32,7 @@ import {
   MAX_DOMAIN_ANALYSIS_ROWS,
   DOMAIN_ANALYSIS_PAGE_SIZE,
 } from '../../../utils/computeLimits.js';
-import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
@@ -46,7 +46,6 @@ import {
   DOMAIN_ANALYSIS_TOP_N,
   type DomainAnalysisRankRow,
 } from '../../domainAnalysisAggregate.js';
-import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { tryNavigateTyped } from '../registryContext.js';
 import { type PanelLifecycle } from '../types.js';
 
@@ -141,7 +140,14 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
     notices.reset();
 
     try {
-      const { rows, capped } = await fetchAllRows(since, until, tagFilter);
+      const { rows, capped } = await fetchAllPeriodRows({
+        since,
+        until,
+        tagFilter,
+        pageSize: DOMAIN_ANALYSIS_PAGE_SIZE,
+        maxRows: MAX_DOMAIN_ANALYSIS_ROWS,
+        label: 'domainAnalysis',
+      });
       if (seq !== loadSeq) return;
 
       if (rows.length === 0) {
@@ -252,54 +258,4 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       notices.clear();
     },
   };
-}
-
-async function fetchAllRows(
-  since: number | undefined,
-  until: number | undefined,
-  tagFilter: string | undefined,
-): Promise<{ rows: BrowsingLogEntry[]; capped: boolean }> {
-  // WHY: freeze the upper bound at fetch start — rows recorded while this
-  // aggregation pages have newer created_at values and would otherwise
-  // shift a live DESC window between pages (offset-pagination hazard).
-  const snapshotUntil = until ?? Date.now();
-  // WHY: keyset cursor instead of offset — each page re-reads the previous
-  // page's boundary timestamp (queryLogs `until` is inclusive) and the
-  // merged set dedupes by unique id, so created_at ties and live inserts
-  // can double-read but never double-count or skip a record.
-  const byId = new Map<number, BrowsingLogEntry>();
-  let cursor = snapshotUntil;
-  while (byId.size < MAX_DOMAIN_ANALYSIS_ROWS) {
-    const page = await fetchPeriodRows({
-      since,
-      until: cursor,
-      limit: DOMAIN_ANALYSIS_PAGE_SIZE,
-      tagFilter,
-      label: 'domainAnalysis',
-    });
-    const batch = page.rows;
-    if (batch.length === 0) {
-      return { rows: Array.from(byId.values()), capped: false };
-    }
-    const sizeBefore = byId.size;
-    for (const row of batch) {
-      byId.set(row.id, row);
-    }
-    if (batch.length < DOMAIN_ANALYSIS_PAGE_SIZE) {
-      return { rows: Array.from(byId.values()), capped: false };
-    }
-    const oldest = batch[batch.length - 1]!.created_at;
-    if (byId.size === sizeBefore) {
-      // WHY: the entire page was boundary-tie rows already merged — more
-      // than a page shares one created_at. Step back 1ms so the loop cannot
-      // stall; rows beyond a full page sharing that exact millisecond are
-      // not fetched (pathological: >10k records with identical created_at).
-      cursor = oldest - 1;
-    } else {
-      cursor = oldest;
-    }
-  }
-  // WHY: a full final batch at the cap means more rows likely exist beyond
-  // it — report the cap instead of implying completeness.
-  return { rows: Array.from(byId.values()), capped: true };
 }

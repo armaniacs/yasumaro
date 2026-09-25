@@ -5002,6 +5002,13 @@ details[open] > .priority-details-summary {
   color: var(--ym-color-sumi-muted, #7a7060);
 }
 
+/* Revisit insights: the copy / open-history pair inside one table cell. */
+.revisit-insights-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-2, 8px);
+}
+
 .data-table-notice.is-warning {
   color: var(--ym-color-warning-text, #92400e);
   background: var(--ym-color-warning-bg, #fef3c7);

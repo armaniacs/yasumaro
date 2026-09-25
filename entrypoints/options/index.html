@@ -168,6 +168,14 @@
           </svg>
           <span data-i18n="domainAnalysisTab">Domain Analysis</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-revisit-insights" aria-selected="false" data-panel="panel-revisit-insights">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7"/>
+            <polyline points="3 3 3 9 9 9"/>
+            <polyline points="12 7 12 12 15 14"/>
+          </svg>
+          <span data-i18n="revisitInsightsTab">Revisits &amp; Time Capsule</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-frequency-timeline" aria-selected="false" data-panel="panel-tag-frequency-timeline">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="3 17 9 11 13 15 21 7"/>
@@ -1955,6 +1963,54 @@
           <tbody id="domainAnalysisUrlBody"></tbody>
         </table>
         <div id="domainAnalysisUrlTruncated" class="data-table-notice is-warning" hidden></div>
+      </section>
+
+      <!-- Revisit Insights Panel -->
+      <section id="panel-revisit-insights" class="panel" role="tabpanel" aria-labelledby="panel-revisit-insights-title">
+        <h2 id="panel-revisit-insights-title" class="panel-title" data-i18n="revisitInsights_title">Revisits &amp; Time Capsule</h2>
+        <p class="panel-description" data-i18n="revisitInsights_description">Compares the last 30 days with records older than 90 days to show topics you keep re-researching and topics you have not revisited lately.</p>
+        <p class="data-table-notice is-muted" data-i18n="revisitInsights_utcNote">Same-day revisits are not recorded (days are split in UTC).</p>
+        <div id="revisitInsightsEmptyState" data-i18n="revisitInsights_empty" hidden>No records.</div>
+        <div id="revisitInsightsRowCap" class="data-table-notice is-warning" hidden></div>
+
+        <h3 class="data-table-heading" data-i18n="revisitInsights_loopsTitle">Topics you keep re-researching</h3>
+        <p class="data-table-notice is-muted" data-i18n="revisitInsights_loopsHint">Collecting these into one note saves you the next search.</p>
+        <table id="revisitInsightsLoopsTable" class="data-table">
+          <thead><tr>
+            <th scope="col" data-i18n="revisitInsights_kindColumn">Kind</th>
+            <th scope="col" data-i18n="revisitInsights_targetColumn">Target</th>
+            <th scope="col" data-i18n="revisitInsights_recentDaysColumn">Days in last 30</th>
+            <th scope="col" data-i18n="revisitInsights_pastCountColumn">Records 90+ days ago</th>
+            <th scope="col" data-i18n="revisitInsights_actionsColumn">Actions</th>
+          </tr></thead>
+          <tbody id="revisitInsightsLoopsBody"></tbody>
+        </table>
+
+        <h3 class="data-table-heading" data-i18n="revisitInsights_rankingTitle">Frequently revisited pages</h3>
+        <table id="revisitInsightsRankingTable" class="data-table">
+          <thead><tr>
+            <th scope="col" data-i18n="revisitInsights_targetColumn">Target</th>
+            <th scope="col" data-i18n="revisitInsights_daysColumn">Days visited</th>
+            <th scope="col" data-i18n="revisitInsights_lastVisitColumn">Last visit</th>
+          </tr></thead>
+          <tbody id="revisitInsightsRankingBody"></tbody>
+        </table>
+
+        <h3 class="data-table-heading" data-i18n="revisitInsights_dormantTitle">Topics you have not revisited</h3>
+        <p class="data-table-notice is-muted" data-i18n="revisitInsights_dormantHint">Frequent 2–4 months ago, but no records in the last 30 days.</p>
+        <table id="revisitInsightsDormantTable" class="data-table">
+          <thead><tr>
+            <th scope="col" data-i18n="revisitInsights_kindColumn">Kind</th>
+            <th scope="col" data-i18n="revisitInsights_targetColumn">Target</th>
+            <th scope="col" data-i18n="revisitInsights_countColumn">Count</th>
+            <th scope="col" data-i18n="revisitInsights_lastVisitColumn">Last visit</th>
+            <th scope="col" data-i18n="revisitInsights_actionsColumn">Actions</th>
+          </tr></thead>
+          <tbody id="revisitInsightsDormantBody"></tbody>
+        </table>
+
+        <h3 class="data-table-heading" data-i18n="revisitInsights_capsuleTitle">This week, one year ago</h3>
+        <div id="revisitInsightsCapsule"></div>
       </section>
 
       <!-- Tag Frequency Timeline Panel (PBI 2026-09-24-05) -->

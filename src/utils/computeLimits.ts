@@ -53,6 +53,25 @@ export const MAX_DOMAIN_ANALYSIS_ROWS = 50000;
 export const DOMAIN_ANALYSIS_PAGE_SIZE = 10000;
 
 /**
+ * Max rows fetched for the revisit-insights panel (fixed 400-day window, no
+ * period filter). The panel pages with a keyset cursor to this total cap and
+ * shows a cap notice when the last page comes back full — older counts in the
+ * dormant/loop buckets are then understated rather than silently wrong.
+ */
+export const MAX_REVISIT_INSIGHTS_ROWS = 50000;
+
+/**
+ * Rows per queryLogs page for the revisit-insights panel.
+ *
+ * WHY: derived by reference from QUERY_CAPS.plain (the wire clamp) rather than
+ * re-declared, so a dashboard page size larger than the clamp cannot drift
+ * silently — a page asking for more than the wire allows would come back
+ * short and end the keyset loop early (MAX_QUERY_ROWS precedent, PBI
+ * 2026-09-24-15).
+ */
+export const REVISIT_INSIGHTS_PAGE_SIZE = QUERY_CAPS.plain;
+
+/**
  * Max rows fetched for the tag-frequency-timeline panel (user-selected period).
  * A single queryLogs page; the cap bounds the transfer and the O(n) bucket
  * pass. The panel shows a cap notice when reached (more rows likely exist).
