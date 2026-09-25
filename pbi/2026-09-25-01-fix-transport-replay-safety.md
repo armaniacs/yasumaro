@@ -30,16 +30,16 @@ Scenario: 再実行禁止として明示された変更処理が再送されな�
 ```
 
 ## 受け入れ基準
-- [ ] 既存 32 経路すべてに retry policy の判定結果があり、テーブル化されていない `getStatus()` を含む。
-- [ ] retry policy が未設定または新規追加された経路は、一切の自動再試行を行わない fail-closed な動作になる。
-- [ ] 再実行安全と分類された変更処理は、既存の single retry として最大 2 回送信できる。
-- [ ] `toggleStar` と archive の 6 経路を含む既存 7 経路は、再実行禁止の 1 回送信を維持する。
-- [ ] 既存テストが要求する set 意味論の mutate は、single retry を維持する。
-- [ ] `insert`、`insertBatch`、`insertAuditLog` の分類は、指定された 5 Whys の検討に基づいて明示される。
-- [ ] retry policy の定義と判定は中立な messaging 層にあり、background と offscreen の片側だけに重複実装されない。
-- [ ] retry 判断は Worker 内の DB 状態に依存しない。
-- [ ] 既存 payload と message type は変更されない。
-- [ ] 既存テストと本 PBI で追加するテストが、3 項目の BDD シナリオと受け入れ基準を満たす。
+- [x] 既存 32 経路すべてに retry policy の判定結果があり、テーブル化されていない `getStatus()` を含む。
+- [x] retry policy が未設定または新規追加された経路は、一切の自動再試行を行わない fail-closed な動作になる。
+- [x] 再実行安全と分類された変更処理は、既存の single retry として最大 2 回送信できる。
+- [x] `toggleStar` と archive の 6 経路を含む既存 7 経路は、再実行禁止の 1 回送信を維持する。
+- [x] 既存テストが要求する set 意味論の mutate は、single retry を維持する。
+- [x] `insert`、`insertBatch`、`insertAuditLog` の分類は、指定された 5 Whys の検討に基づいて明示される。
+- [x] retry policy の定義と判定は中立な messaging 層にあり、background と offscreen の片側だけに重複実装されない。
+- [x] retry 判断は Worker 内の DB 状態に依存しない。
+- [x] 既存 payload と message type は変更されない。
+- [x] 既存テストと本 PBI で追加するテストが、3 項目の BDD シナリオと受け入れ基準を満たす。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -121,11 +121,22 @@ Scenario: 再実行禁止として明示された変更処理が再送されな�
 - 5 Whys を通じて、`withAtomicKeys` を含む maintain 系 7 operation にも同じ retry policy を適用するかを決める。
 
 ## Definition of Done
-- [ ] 32 経路すべての retry policy が中立 messaging 層で明示され、未設定経路は retry しない。
-- [ ] 3 本の BDD シナリオを自動テストとして実装し、すべて Green になる。
-- [ ] 既存 7 経路の noRetry と set 意味論 mutate の single retry を維持する。
-- [ ] `insert`、`insertBatch`、`insertAuditLog`、maintain 系の分類を 5 Whys の結論に従って実装する。
-- [ ] payload、message type、既存 service 再起動契約に変更がない。
-- [ ] retry 判断が Worker 内の DB 状態に依存しない。
-- [ ] 既存テスト、型検査、lint が成功する。
-- [ ] コードレビューで中立 messaging 層の責務と fail-closed 動作が確認される。
+- [x] 32 経路すべての retry policy が中立 messaging 層で明示され、未設定経路は retry しない。
+- [x] 3 本の BDD シナリオを自動テストとして実装し、すべて Green になる。
+- [x] 既存 7 経路の noRetry と set 意味論 mutate の single retry を維持する。
+- [x] `insert`、`insertBatch`、`insertAuditLog`、maintain 系の分類を 5 Whys の結論に従って実装する。
+- [x] payload、message type、既存 service 再起動契約に変更がない。
+- [x] retry 判断が Worker 内の DB 状態に依存しない。
+- [x] 既存テスト、型検査、lint が成功する。
+- [x] コードレビューで中立 messaging 層の責務と fail-closed 動作が確認される。
+
+## 実施記録（コードレビュー後の裁定改訂）
+
+レビューで `insert` 系を retry-safe とした初版裁定が撤回され、最終分類は **retry-safe 18 経路 / retry-unsafe 14 経路**になった。撤回根拠と最終判断は次のとおり。
+
+- `SQLITE_INSERT`: OPFS / IDB は通常の INSERT のため、1 回目が反映済みで応答だけ失われると 2 回目は UNIQUE 制約違反で `success: false` を返す。fallback は重複時に `id: -1` を返し後続 UPDATE の対象行を失う。`created_at` が欠落していると codec が再生成し UNIQUE キー自体が変わりうる。backend 間で最終状態が一致しないため retry-unsafe。
+- `SQLITE_INSERT_BATCH`: retry すると 2 回目は全件 duplicate 扱いで `inserted` / `count` が 0 になり、`legacyMigration` が `count < batch.length` を部分失敗と判定して `failed_permanently` になりうる。retry-unsafe。
+- 回復は外側の `pendingSqliteQueue` と migration retry に委ねる。transport 層で「安全に再送できないものを再送する」재를 만들さない。
+- 3 backend の response contract 統一（重複時に既存行 ID を返す、inserted と processed を分離）は本 PBI のスコープ外であり、別 PBI を起こす候補。
+
+また retry policy を唯一の判定源にするため、archive descriptor の冗長な `noRetry` フラグと gateway の toggleStar hardcode を撤去した。`opts.noRetry` は低レベル transport の明示 override として残す（production の gateway からは渡されない）。
