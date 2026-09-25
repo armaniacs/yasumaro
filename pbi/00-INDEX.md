@@ -14,19 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-26 メタ認知分析ラウンド — ⬜ 未着手 4件 ✨機能追加
+### 2026-09-26 メタ認知分析ラウンド — ✅ 1件完了・アーカイブ済み / ⬜ 未着手 3件 ✨機能追加
 
 開発提案「情報探索のメタ認知化」の3案を、記録データの実態と照らし合わせて RICE で採点した。
 
 - 提案1（熟読度フィルター）: 不採用。滞在時間を記録していないため。
 - 提案2（セッション＆パス分析）: 既存データで作れる部分（02）、遷移記録の基盤（03）、探索パスと指標（04）の3つに分けた。
-- 提案3（ループ課題・タイムカプセル）: 09-24 台帳の「再訪分析」を統合した（01）。
+- 提案3（ループ課題・タイムカプセル）: 09-24 台帳の「再訪分析」を統合した（01）。✅ 完了・アーカイブ済み（アーカイブ履歴参照）。
 
 各 PBI は、低価格モデルでも実装できる詳細設計（ファイル・型・アルゴリズム・i18n 文言・テストケース）を含む。採点・前提の差異・ユーザー裁定・不採用理由の詳細は [2026-09-26-00-backlog-metacognition-analytics.md](2026-09-26-00-backlog-metacognition-analytics.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 01 | [feat-revisit-loop-time-capsule](2026-09-26-01-feat-revisit-loop-time-capsule.md) | feat | 1.60 | 3 | なし。`fetchAllPeriodRows` と `NameCount` を 02 が再利用する |
 | 02 | [feat-research-session-grouping](2026-09-26-02-feat-research-session-grouping.md) | feat | 0.75 | 2 | 01 の `NameCount` |
 | 03 | [feat-navigation-trail-recording](2026-09-26-03-feat-navigation-trail-recording.md) | feat | 0.32 | 5 | 02 の後。2026-09-25-24（再同意 UX）と `privacyConsent.ts` が競合するので同時着手しない |
 | 04 | [feat-session-path-tree-search-to-goal](2026-09-26-04-feat-session-path-tree-search-to-goal.md) | feat | 0.67 | 3 | 02・03 の後（依存を優先し、RICE では上位だが 03 の後に着手する） |
@@ -128,6 +127,14 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-26 メタ認知分析ラウンド バッチ1 — ✅ PBI 01 完了（アーカイブ済み）
+
+提案3（ループ課題・タイムカプセル）と 09-24 台帳の「再訪分析」を統合した PBI。
+`fetchAllPeriodRows` と `NameCount` をここに新設し、02 が再利用します。RICE 1.60・3 SP。
+
+- [2026-09-26-01-feat-revisit-loop-time-capsule.md](../dev-docs/archived/pbi/2026-09-26-01-feat-revisit-loop-time-capsule.md)（✅ 完了 — コミット `da98b1c9`。4区分（ループ / 再訪ランキング / 休眠テーマ / 52週前の週）を1パネルで提示し、`## key` + `- YYYY-MM-DD [title](url)` 形式への Markdown コピーを提供。`domainAnalysisPanel` のローカル `fetchAllRows` を `fetchPeriodRows.ts` の `fetchAllPeriodRows` へ移設して keyset ページングを共通化（ページサイズは `QUERY_CAPS.plain` 参照で drift 不能）。集計は純関数 `revisitInsightsAggregate.ts`、閾値は `REVISIT_CONFIG` に集約。i18n 30 キー（ja/en）。新規テスト 33 件（集計 17・lifecycle 9・ページング 7）で validate 13,908 green / build PASS。コードレビューは未実施）
+
+### 2026-09-26 メタ認知分析ラウンド — ⬜ 未着手 3件 ✨機能追加
 ### 2026-09-25 Checking Team 残債ラウンド — ✅ 7件完了（01・03・04・05・08・09・20 アーカイブ済み）
 
 autonomous-task-closer による回収。01/03/04/05/08/09 は実装コミット・DoD チェックボックス・`npm run validate`（13,875 tests green）を実測確認した上でアーカイブした新規実装不要の DoD 反映漏れ。20 は未着手だったため ADR を作成して実装した。

@@ -61,16 +61,16 @@ Scenario: 読み込みに失敗したとき
 
 ## 受け入れ基準
 
-- [ ] サイドバーの「データ」区分で、「ドメイン分析」の直後に「再訪とタイムカプセル」が並ぶ
-- [ ] 4つの区分（何度も調べているテーマ / よく再訪するページ / 最近触れていないテーマ / 1年前の今週）が、下の「詳細設計」の判定どおりに表示される
-- [ ] 区分ごとに、該当がなければ「該当なし」が表示される
-- [ ] ループ行ごとに「Markdownでコピー」と「履歴で見る」がある
-- [ ] Markdown では、リンク文字列の `[]()` がエスケープされ、http(s) 以外の URL は `about:blank` になる
-- [ ] 取得行数が上限（50000）に達したときは、上限通知が表示される
-- [ ] UTC 日の注記がパネル上部に表示される
-- [ ] ja / en の全文言が i18n 経由で表示され、ハードコードされた文言がない
-- [ ] 既存の `domainAnalysisPanel.lifecycle.test.ts` が無変更で通る（`fetchAllPeriodRows` への移設が退行しない）
-- [ ] `npm run validate` と `npm run build` が通る
+- [x] サイドバーの「データ」区分で、「ドメイン分析」の直後に「再訪とタイムカプセル」が並ぶ
+- [x] 4つの区分（何度も調べているテーマ / よく再訪するページ / 最近触れていないテーマ / 1年前の今週）が、下の「詳細設計」の判定どおりに表示される
+- [x] 区分ごとに、該当がなければ「該当なし」が表示される
+- [x] ループ行ごとに「Markdownでコピー」と「履歴で見る」がある
+- [x] Markdown では、リンク文字列の `[]()` がエスケープされ、http(s) 以外の URL は `about:blank` になる
+- [x] 取得行数が上限（50000）に達したときは、上限通知が表示される
+- [x] UTC 日の注記がパネル上部に表示される
+- [x] ja / en の全文言が i18n 経由で表示され、ハードコードされた文言がない
+- [x] 既存の `domainAnalysisPanel.lifecycle.test.ts` が無変更で通る（`fetchAllPeriodRows` への移設が退行しない）
+- [x] `npm run validate` と `npm run build` が通る
 
 ## 詳細設計
 
@@ -574,8 +574,8 @@ section は、`<section id="panel-domain-analysis" ...>` の閉じタグの直�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate` と `npm run build` が通る
-- [ ] コードレビュー完了
-- [ ] `docs/DATA_ANALYTICS_GUIDE.md`（ja / en）・README・guides.html・CHANGELOG を更新済み
-- [ ] `pbi/00-INDEX.md` を更新し、この PBI を `dev-docs/archived/pbi/` へ移動済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate` と `npm run build` が通る
+- [ ] コードレビュー完了（未実施 — ユーザー作業）
+- [x] `docs/DATA_ANALYTICS_GUIDE.md`（ja / en）・README・guides.html・CHANGELOG を更新済み
+- [x] `pbi/00-INDEX.md` を更新し、この PBI を `dev-docs/archived/pbi/` へ移動済み
