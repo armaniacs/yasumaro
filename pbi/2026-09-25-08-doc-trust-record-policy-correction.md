@@ -44,16 +44,16 @@ Scenario: SENSITIVE でも記録する
 
 ## 受け入れ基準
 
-- [ ] `docs/TRUST_DOMAIN_GUIDE.md` に、`LOCKED` のみが `canProceed=false` になり、`SENSITIVE` と `UNVERIFIED` では記録される仕様が明記されている。
-- [ ] 警告と信頼マークは録画可否とは別の契約として明記し、これらを記録可否を示す識別子として説明していない。
-- [ ] `dev-docs/blogs/blog-5_0/03-trust-database.md:124-144` から、Tranco リストへ追加すること自体を一般の記録許可条件とする誤った記述を解消している。
-- [ ] blog の trust 判定説明は、`LOCKED` のみが記録ブロック条件となる現行仕様と一致しているか、`docs/TRUST_DOMAIN_GUIDE.md` への参照で現行仕様を確認できる。
-- [ ] `src/background/pipeline/steps/__tests__/checkTrustDomainStep.test.ts:5-9,101-180` から、実運用で生成されない `UNVERIFIED / SENSITIVE + canProceed=false` fixture を削除している。
-- [ ] fixture の説明とテスト名は、`LOCKED` のみが記録ブロック条件であることを表している。
-- [ ] `src/utils/trustDb/__tests__/TrustLookup.test.ts:159-194` の全 trust level の `canProceed` matrix は、`LOCKED` だけが `false`、`TRUSTED / SENSITIVE / UNVERIFIED` が `true` を表す。
-- [ ] `src/background/pipeline/steps/checkTrustDomainStep.ts` の production 挙動と、ホスト許可の明示 deny、force 録画の契約を変更していない。
-- [ ] `PRIVACY.md` と `docs/PRIVACY.md` は変更していない。
-- [ ] `UNVERIFIED` の警告を既定 ON にする仕様や mark 名変更など、新しい警告・信頼表示の仕様を追加していない。
+- [x] `docs/TRUST_DOMAIN_GUIDE.md` に、`LOCKED` のみが `canProceed=false` になり、`SENSITIVE` と `UNVERIFIED` では記録される仕様が明記されている。
+- [x] 警告と信頼マークは録画可否とは別の契約として明記し、これらを記録可否を示す識別子として説明していない。
+- [x] `dev-docs/blogs/blog-5_0/03-trust-database.md:124-144` から、Tranco リストへ追加すること自体を一般の記録許可条件とする誤った記述を解消している。
+- [x] blog の trust 判定説明は、`LOCKED` のみが記録ブロック条件となる現行仕様と一致しているか、`docs/TRUST_DOMAIN_GUIDE.md` への参照で現行仕様を確認できる。
+- [x] `src/background/pipeline/steps/__tests__/checkTrustDomainStep.test.ts:5-9,101-180` から、実運用で生成されない `UNVERIFIED / SENSITIVE + canProceed=false` fixture を削除している。
+- [x] fixture の説明とテスト名は、`LOCKED` のみが記録ブロック条件であることを表している。
+- [x] `src/utils/trustDb/__tests__/TrustLookup.test.ts:159-194` の全 trust level の `canProceed` matrix は、`LOCKED` だけが `false`、`TRUSTED / SENSITIVE / UNVERIFIED` が `true` を表す。
+- [x] `src/background/pipeline/steps/checkTrustDomainStep.ts` の production 挙動と、ホスト許可の明示 deny、force 録画の契約を変更していない。
+- [x] `PRIVACY.md` と `docs/PRIVACY.md` は変更していない。
+- [x] `UNVERIFIED` の警告を既定 ON にする仕様や mark 名変更など、新しい警告・信頼表示の仕様を追加していない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -139,12 +139,12 @@ Scenario: SENSITIVE でも記録する
 
 ## Definition of Done
 
-- [ ] `docs/TRUST_DOMAIN_GUIDE.md` に、4 trust level と `LOCKED` のみの記録ブロック条件が明記されている。
-- [ ] guide に、`SENSITIVE / UNVERIFIED` でも記録されること、Tranco リスト外では既定の警告なし・灰色マークとなること、警告と信頼マークが記録可否と別であることが明記されている。
-- [ ] `dev-docs/blogs/blog-5_0/03-trust-database.md:124-144` に、Tranco リストへの追加自体を一般の記録許可条件とする記述が残っていない。
-- [ ] blog の扱い方針を裁定し、guide と矛盾する trust 判定の説明を解消している。
-- [ ] `checkTrustDomainStep.test.ts` から、実運用で生成されない `UNVERIFIED / SENSITIVE + canProceed=false` fixture を削除し、関連する説明とテスト名を現行仕様にそろえている。
-- [ ] `TrustLookup.test.ts` の全 trust level matrix と、関連する pipeline step のテストがパスしている。
-- [ ] production の trust 判定、ホスト許可の明示 deny、force 録画の契約を変更していない。
-- [ ] `PRIVACY.md` と `docs/PRIVACY.md` は変更していない。
-- [ ] ドキュメントは現行仕様のスナップショットのみを記載している。
+- [x] `docs/TRUST_DOMAIN_GUIDE.md` に、4 trust level と `LOCKED` のみの記録ブロック条件が明記されている。
+- [x] guide に、`SENSITIVE / UNVERIFIED` でも記録されること、Tranco リスト外では既定の警告なし・灰色マークとなること、警告と信頼マークが記録可否と別であることが明記されている。
+- [x] `dev-docs/blogs/blog-5_0/03-trust-database.md:124-144` に、Tranco リストへの追加自体を一般の記録許可条件とする記述が残っていない。
+- [x] blog の扱い方針を裁定し、guide と矛盾する trust 判定の説明を解消している。
+- [x] `checkTrustDomainStep.test.ts` から、実運用で生成されない `UNVERIFIED / SENSITIVE + canProceed=false` fixture を削除し、関連する説明とテスト名を現行仕様にそろえている。
+- [x] `TrustLookup.test.ts` の全 trust level matrix と、関連する pipeline step のテストがパスしている。
+- [x] production の trust 判定、ホスト許可の明示 deny、force 録画の契約を変更していない。
+- [x] `PRIVACY.md` と `docs/PRIVACY.md` は変更していない。
+- [x] ドキュメントは現行仕様のスナップショットのみを記載している。

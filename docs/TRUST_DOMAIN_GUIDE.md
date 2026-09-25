@@ -21,12 +21,14 @@ Yasumaro の**ドメイン信頼度判定**機能は、ユーザーが閲覧し�
 
 ドメインは以下の 4 つのレベルに分類されます。
 
-| レベル | 表示色 | 意味 |
-|--------|--------|------|
-| **TRUSTED** | 緑 | 信頼済みドメイン。公式機関、教育機関、Tranco 上位ドメインなど。 |
-| **SENSITIVE** | 黄 | 要注意ドメイン。金融、ゲーム、SNS、またはユーザーが追加した警戒ドメイン。 |
-| **UNVERIFIED** | 灰 | 未検証ドメイン。いずれの信頼リストにも含まれていないドメイン。 |
-| **LOCKED** | グレー（暗め） | ブロック対象ドメイン。スキーマ上は存在し、TrustChecker はこのレベルを受け取ると記録をブロックしますが、現時点では通常の判定フローで返されることはありません。将来の機能拡張用に予約されています（到達可能性: 現状の判定経路では到達しない予約状態）。 |
+| レベル | 表示色 | 記録 | 意味 |
+|--------|--------|------|------|
+| **TRUSTED** | 緑 | される | 信頼済みドメイン。公式機関、教育機関、Tranco 上位ドメインなど。 |
+| **SENSITIVE** | 黄 | される | 要注意ドメイン。金融、ゲーム、SNS、またはユーザーが追加した警戒ドメイン。 |
+| **UNVERIFIED** | 灰 | される | 未検証ドメイン。いずれの信頼リストにも含まれていないドメイン。 |
+| **LOCKED** | グレー（暗め） | ブロック | スキーマ上は存在するが、TrustChecker がこのレベルを受け取ると記録をブロックする。現在の判定フローでは返されない予約状態（到達可能性: 現状の判定経路では到達しない）。 |
+
+記録の可否は信頼レベルだけで決まり、警告表示と信頼マークは独立した契約です。`SENSITIVE` や `UNVERIFIED` でも、警告設定が有効なら記録はそのまま行われます。
 
 ---
 
@@ -254,12 +256,14 @@ All data used for evaluation is stored inside the extension, and the evaluation 
 
 Domains are classified into one of four levels.
 
-| Level | Color | Meaning |
-|-------|-------|---------|
-| **TRUSTED** | Green | Trusted domains, such as official institutions, educational sites, and top Tranco-ranked sites. |
-| **SENSITIVE** | Amber | Caution-worthy domains, such as finance, gaming, SNS, or user-added warning domains. |
-| **UNVERIFIED** | Gray | Unverified domains that are not included in any trusted list. |
-| **LOCKED** | Dark gray | Blocked domains. The level exists in the schema and TrustChecker blocks recording when it receives this level, but it is not currently returned by the normal evaluation flow. Reserved for future feature expansion (reachability: unreachable via current evaluation paths). |
+| Level | Color | Recording | Meaning |
+|-------|-------|-----------|---------|
+| **TRUSTED** | Green | Recorded | Trusted domains, such as official institutions, educational sites, and top Tranco-ranked sites. |
+| **SENSITIVE** | Amber | Recorded | Caution-worthy domains, such as finance, gaming, SNS, or user-added warning domains. |
+| **UNVERIFIED** | Gray | Recorded | Unverified domains that are not included in any trusted list. |
+| **LOCKED** | Dark gray | Blocked | The level exists in the schema and TrustChecker blocks recording when it receives it, but it is not currently returned by the normal evaluation flow. Reserved for future feature expansion (reachability: unreachable via current evaluation paths). |
+
+Whether a page is recorded depends on the trust level alone. Warnings and the trust badge are a separate contract: `SENSITIVE` and `UNVERIFIED` pages are still recorded even when the matching warning setting is enabled.
 
 ---
 
