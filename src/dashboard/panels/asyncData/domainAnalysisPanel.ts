@@ -12,8 +12,8 @@
  * fetch start, so every row is counted exactly once. A cap notice shows
  * when the last page comes back full.
  *
- * Null/blank-domain rows stay in the ranking as an (unknown) bucket
- * (visitDurationAggregate convention) with a count notice. Domain rows
+ * Null/blank-domain rows stay in the ranking as an (unknown) bucket with a
+ * count notice. Domain rows
  * navigate to the history panel via tryNavigateTyped({ searchDomain }) —
  * the hand-off the history panel already accepts. URL rows have no
  * navigation in v1: the history panel has no URL-targeted init param, and
@@ -92,7 +92,7 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       } else {
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'visit-duration-tag-btn';
+        button.className = 'data-table-link-btn';
         button.textContent = row.name;
         button.addEventListener('click', () => navigateToHistoryWithDomain(row.name));
         nameCell.appendChild(button);

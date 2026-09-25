@@ -39,11 +39,11 @@ function mountPanel() {
     <button type="button" id="domainAnalysisRunBtn">Run</button>
     <div id="domainAnalysisEmptyState" hidden></div>
     <p id="domainAnalysisUnknownNotice" aria-live="polite" hidden></p>
-    <div id="domainAnalysisRowCap" class="visit-duration-truncated" hidden></div>
+    <div id="domainAnalysisRowCap" class="data-table-notice is-warning" hidden></div>
     <table><tbody id="domainAnalysisDomainBody"></tbody></table>
-    <div id="domainAnalysisDomainTruncated" class="visit-duration-truncated" hidden></div>
+    <div id="domainAnalysisDomainTruncated" class="data-table-notice is-warning" hidden></div>
     <table><tbody id="domainAnalysisUrlBody"></tbody></table>
-    <div id="domainAnalysisUrlTruncated" class="visit-duration-truncated" hidden></div>
+    <div id="domainAnalysisUrlTruncated" class="data-table-notice is-warning" hidden></div>
   `;
   document.body.appendChild(container);
   const panel = createDomainAnalysisPanel();

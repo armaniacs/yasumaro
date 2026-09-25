@@ -18,6 +18,10 @@
  *   change) or an explicit setPreset() call — never during construction.
  * - Auto-apply hosts pass onChange and reload from it; explicit-apply hosts
  *   (Run button) may omit onChange entirely and read getRange() at apply time.
+ * - The active preset is mirrored into the DOM the stylesheet keys off:
+ *   aria-pressed per button plus data-active-preset on the fieldset. The
+ *   latter exists because 'custom' owns no button, so its active state is
+ *   otherwise unstyleable.
  *
  * Local-time boundaries follow the markdownExport.dateRangeToTimestamps
  * precedent: custom dates cover the whole local day (00:00:00–23:59:59.999).
@@ -110,9 +114,8 @@ export interface PeriodFilterOptions {
   now?: () => number;
   /**
    * Preset button label keys. Panels may inject their own namespace (e.g.
-   * panel-local `myPanelPeriod*` keys) to decouple the labels from the
-   * visitDuration* namespace; when omitted the original visitDurationPeriod*
-   * keys apply (backward compatible).
+   * panel-local `myPanelPeriod*` keys); when omitted the component's own
+   * `periodFilter*` keys apply.
    */
   labelKeys?: PeriodFilterLabelKeys;
   /**
@@ -131,13 +134,14 @@ export interface PeriodFilterHandle {
   destroy(): void;
 }
 
-/** Default label namespace (backward compatible with the visitDuration panel). */
+/** Default label namespace, owned by the shared component. Hosts that need
+ *  different wording override the whole map via `labelKeys`. */
 const DEFAULT_LABEL_KEYS: PeriodFilterLabelKeys = {
-  today: 'visitDurationPeriodToday',
-  last7: 'visitDurationPeriodLast7Days',
-  last30: 'visitDurationPeriodLast30Days',
-  last90: 'visitDurationPeriodLast90Days',
-  all: 'visitDurationPeriodAll',
+  today: 'periodFilterToday',
+  last7: 'periodFilterLast7Days',
+  last30: 'periodFilterLast30Days',
+  last90: 'periodFilterLast90Days',
+  all: 'periodFilterAll',
 };
 
 const PRESET_LABEL_FALLBACKS: PeriodFilterLabelKeys = {
@@ -165,7 +169,7 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
   const fieldset = document.createElement('fieldset');
   fieldset.className = 'period-filter';
   const legend = document.createElement('legend');
-  legend.textContent = getMessageOr('visitDurationPeriodLabel', 'Period');
+  legend.textContent = getMessageOr('periodFilterLabel', 'Period');
   fieldset.appendChild(legend);
 
   const buttonWrap = document.createElement('div');
@@ -173,7 +177,7 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
   buttonWrap.setAttribute('role', 'group');
   buttonWrap.setAttribute(
     'aria-label',
-    getMessageOr('visitDurationPeriodLabel', 'Period'),
+    getMessageOr('periodFilterLabel', 'Period'),
   );
   fieldset.appendChild(buttonWrap);
 
@@ -184,13 +188,13 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
     button.className = 'period-filter-preset';
     button.dataset.preset = preset;
     button.textContent = getMessageOr(labelKeys[preset], PRESET_LABEL_FALLBACKS[preset]);
-    button.setAttribute('aria-pressed', String(preset === activePreset));
     button.addEventListener('click', () => {
       setActive(preset, presetToRange(preset, clock()));
     });
     buttons.set(preset, button);
     buttonWrap.appendChild(button);
   }
+  applyActivePreset(activePreset);
 
   const customWrap = document.createElement('div');
   customWrap.className = 'period-filter-custom';
@@ -198,7 +202,7 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
 
   const customLabel = document.createElement('span');
   customLabel.className = 'period-filter-custom-label';
-  customLabel.textContent = getMessageOr('visitDurationPeriodCustom', 'Custom');
+  customLabel.textContent = getMessageOr('periodFilterCustom', 'Custom');
   customWrap.appendChild(customLabel);
 
   const fromId = 'periodFilterFrom-' + Math.random().toString(36).slice(2);
@@ -206,7 +210,7 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
 
   const fromLabel = document.createElement('label');
   fromLabel.htmlFor = fromId;
-  fromLabel.textContent = getMessageOr('visitDurationPeriodStart', 'From');
+  fromLabel.textContent = getMessageOr('periodFilterStart', 'From');
   const fromInput = document.createElement('input');
   fromInput.type = 'date';
   fromInput.id = fromId;
@@ -214,7 +218,7 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
 
   const toLabel = document.createElement('label');
   toLabel.htmlFor = toId;
-  toLabel.textContent = getMessageOr('visitDurationPeriodEnd', 'To');
+  toLabel.textContent = getMessageOr('periodFilterEnd', 'To');
   const toInput = document.createElement('input');
   toInput.type = 'date';
   toInput.id = toId;
@@ -231,12 +235,23 @@ export function createPeriodFilter(options: PeriodFilterOptions): PeriodFilterHa
   customWrap.appendChild(toLabel);
   customWrap.appendChild(toInput);
 
-  function setActive(preset: PeriodPreset, range: PeriodRange): void {
+  /**
+   * Mirrors the active preset into the DOM state the stylesheet keys off:
+   * aria-pressed per button plus `data-active-preset` on the fieldset. The
+   * latter exists because 'custom' owns no button, so its active state is
+   * otherwise unstyleable.
+   */
+  function applyActivePreset(preset: PeriodPreset): void {
     activePreset = preset;
-    currentRange = range;
+    fieldset.dataset.activePreset = preset;
     for (const [key, button] of buttons) {
       button.setAttribute('aria-pressed', String(key === preset));
     }
+  }
+
+  function setActive(preset: PeriodPreset, range: PeriodRange): void {
+    currentRange = range;
+    applyActivePreset(preset);
     options.onChange?.(range, preset);
   }
 

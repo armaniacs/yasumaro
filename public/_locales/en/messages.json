@@ -2213,101 +2213,41 @@
   "viewFullPolicy": {
     "message": "View Full Privacy Policy"
   },
-  "visitDurationAllUnmeasured": {
-    "message": "All records in this period are unmeasured — durations are recorded for newly tracked visits.",
-    "description": "Visit duration all-null state"
-  },
-  "visitDurationAverageTime": {
-    "message": "Average",
-    "description": "Visit duration average-time column header"
-  },
-  "visitDurationDescription": {
-    "message": "Total and average time spent per domain and tag for the selected period.",
-    "description": "Visit duration panel description"
-  },
-  "visitDurationDomainColumn": {
-    "message": "Domain",
-    "description": "Visit duration domain column header"
-  },
-  "visitDurationDomainRanking": {
-    "message": "Time by domain",
-    "description": "Visit duration by-domain ranking heading"
-  },
-  "visitDurationEmpty": {
-    "message": "No browsing records in this period.",
-    "description": "Visit duration empty state"
-  },
-  "visitDurationError": {
-    "message": "Failed to load the visit duration analysis. Try again.",
-    "description": "Visit duration load-failure state"
-  },
-  "visitDurationPanelTitle": {
-    "message": "Visit Duration",
-    "description": "Visit duration panel title"
-  },
-  "visitDurationPeriodAll": {
-    "message": "All time",
-    "description": "Period filter preset: all time"
-  },
-  "visitDurationPeriodCustom": {
-    "message": "Custom",
-    "description": "Period filter custom-range label"
-  },
-  "visitDurationPeriodEnd": {
-    "message": "To",
-    "description": "Period filter custom end-date label"
-  },
-  "visitDurationPeriodLabel": {
+  "periodFilterLabel": {
     "message": "Period",
     "description": "Period filter group label"
   },
-  "visitDurationPeriodLast30Days": {
-    "message": "Last 30 days",
-    "description": "Period filter preset: last 30 days"
-  },
-  "visitDurationPeriodLast7Days": {
-    "message": "Last 7 days",
-    "description": "Period filter preset: last 7 days"
-  },
-  "visitDurationPeriodLast90Days": {
-    "message": "Last 90 days",
-    "description": "Period filter preset: last 90 days"
-  },
-  "visitDurationPeriodStart": {
-    "message": "From",
-    "description": "Period filter custom start-date label"
-  },
-  "visitDurationPeriodToday": {
+  "periodFilterToday": {
     "message": "Today",
     "description": "Period filter preset: today"
   },
-  "visitDurationRecordCount": {
-    "message": "Records",
-    "description": "Visit duration record-count column header"
+  "periodFilterLast7Days": {
+    "message": "Last 7 days",
+    "description": "Period filter preset: last 7 days"
   },
-  "visitDurationTab": {
-    "message": "Visit Duration",
-    "description": "Sidebar tab for visit duration"
+  "periodFilterLast30Days": {
+    "message": "Last 30 days",
+    "description": "Period filter preset: last 30 days"
   },
-  "visitDurationTagColumn": {
-    "message": "Tag",
-    "description": "Visit duration tag column header"
+  "periodFilterLast90Days": {
+    "message": "Last 90 days",
+    "description": "Period filter preset: last 90 days"
   },
-  "visitDurationTagRanking": {
-    "message": "Time by tag",
-    "description": "Visit duration by-tag ranking heading"
+  "periodFilterAll": {
+    "message": "All time",
+    "description": "Period filter preset: all time"
   },
-  "visitDurationTotalTime": {
-    "message": "Total",
-    "description": "Visit duration total-time column header"
+  "periodFilterCustom": {
+    "message": "Custom",
+    "description": "Period filter custom-range label"
   },
-  "visitDurationTruncated": {
-    "message": "Showing top {shown} of {total}.",
-    "description": "Visit duration truncation notice"
+  "periodFilterStart": {
+    "message": "From",
+    "description": "Period filter custom start-date label"
   },
-  "visitDurationUnmeasuredRatio": {
-    "message": "Unmeasured: {percent}% ({unmeasured} of {total} records)",
-    "description": "Visit duration unmeasured ratio"
+  "periodFilterEnd": {
+    "message": "To",
+    "description": "Period filter custom end-date label"
   },
   "domainAnalysisTab": {
     "message": "Domain Analysis",

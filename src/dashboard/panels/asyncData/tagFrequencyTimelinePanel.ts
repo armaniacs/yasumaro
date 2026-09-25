@@ -148,7 +148,7 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       // convention); "other" is an aggregate, so it stays plain text.
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'visit-duration-tag-btn';
+      button.className = 'data-table-link-btn';
       button.textContent = `#${tag}`;
       button.addEventListener('click', () => navigateToHistoryWithTag(tag));
       item.appendChild(button);

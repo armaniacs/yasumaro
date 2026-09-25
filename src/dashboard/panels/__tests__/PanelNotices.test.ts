@@ -122,13 +122,13 @@ describe('PanelNotices', () => {
   it('reset() is idempotent (safe to call twice)', () => {
     const empty = el('n-empty', 'seed');
     const notices = new PanelNotices();
-    notices.register('empty', empty, { i18nKey: 'visitDurationEmpty', fallbackText: 'empty fallback' });
+    notices.register('empty', empty, { i18nKey: 'domainAnalysis_empty', fallbackText: 'empty fallback' });
 
     notices.reset();
     notices.reset();
 
-    expect(empty.getAttribute('data-i18n')).toBe('visitDurationEmpty');
-    expect(empty.textContent).toBe('No browsing records in this period.');
+    expect(empty.getAttribute('data-i18n')).toBe('domainAnalysis_empty');
+    expect(empty.textContent).toBe('No browsing records match the selected period and tag.');
     expect(empty.hidden).toBe(true);
   });
 
