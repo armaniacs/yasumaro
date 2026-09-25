@@ -5,8 +5,7 @@
 
 import type {
   TrancoTier,
-  TrancoUpdateResult,
-  SafetyMode
+  TrancoUpdateResult
 } from './trustDbSchema.js';
 import { getTrustDbAdmin } from './TrustDbAdmin.js';
 import { ErrorCode } from '../logger/types.js';
@@ -27,20 +26,6 @@ const TRANCO_TIER_COUNT: Record<TrancoTier, number> = {
 };
 
 const TRANCO_FETCH_TIMEOUT = 60000; // 60秒
-const TRANCO_UPDATE_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24時間
-
-// Safety Mode と Tranco Tier のマッピング
-export const SAFETY_MODE_TO_TRANCO_TIER: Record<SafetyMode, TrancoTier> = {
-  strict: 'top1k',
-  balanced: 'top10k',
-  relaxed: 'top100k'
-};
-
-export const TRANCO_TIER_TO_SAFETY_MODE: Record<TrancoTier, SafetyMode> = {
-  top1k: 'strict',
-  top10k: 'balanced',
-  top100k: 'relaxed'
-};
 
 // ===== Tranco Updater クラス =====
 
@@ -196,46 +181,11 @@ export class TrancoUpdater {
 
     return domains;
   }
-
   /**
    * 更新中か確認
    */
   isUpdateInProgress(): boolean {
     return this.updateInProgress;
-  }
-
-  /**
-   * Safety Mode から Tranco Tier を取得
-   */
-  safetyModeToTier(mode: SafetyMode): TrancoTier {
-    return SAFETY_MODE_TO_TRANCO_TIER[mode];
-  }
-
-  /**
-   * Tranco Tier から Safety Mode を取得
-   */
-  tierToSafetyMode(tier: TrancoTier): SafetyMode {
-    return TRANCO_TIER_TO_SAFETY_MODE[tier];
-  }
-
-  /**
-   * Tranco 更新が必要か確認
-   */
-  async isUpdateNeeded(_tier: TrancoTier): Promise<boolean> {
-    const db = getTrustDbAdmin();
-    await db.initialize();
-
-    const status = db.getStatus();
-
-    if (!status.initialized || !status.lastUpdated) {
-      return true; // 初回は必ず更新
-    }
-
-    const lastUpdated = new Date(status.lastUpdated);
-    const now = new Date();
-    const elapsed = now.getTime() - lastUpdated.getTime();
-
-    return elapsed > TRANCO_UPDATE_INTERVAL_MS;
   }
 }
 

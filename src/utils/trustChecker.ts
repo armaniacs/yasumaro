@@ -4,14 +4,13 @@
  * 記録フローでのドメイン信頼度判定と警告判定
  */
 
-import type { TrustResult, SafetyMode, TrancoTier } from './trustDb/trustDbSchema.js';
+import type { TrustResult } from './trustDb/trustDbSchema.js';
 import { StorageKeys } from './storage/types.js';
-import { logInfo, logDebug, logWarn } from './logger/api.js';
+import { logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { pickDefined } from './objectUtils.js';
 import { lookup, decideAlert } from './trustDb/TrustLookup.js';
 import type { AlertFlags } from './trustDb/TrustLookup.js';
-import { SAFETY_MODE_TO_TRANCO_TIER } from './trustDb/trancoUpdater.js';
 
 // ============================================================================
 // Alert Settings
@@ -174,41 +173,6 @@ export class TrustChecker {
       color: found.display.color,
       icon: found.display.icon
     };
-  }
-
-  /**
-   * Safety Modeを取得
-   */
-  async getSafetyMode(): Promise<SafetyMode> {
-    const settings = await chrome.storage.local.get({
-      [StorageKeys.SAFETY_MODE]: 'balanced'
-    });
-    return settings[StorageKeys.SAFETY_MODE] as SafetyMode || 'balanced';
-  }
-
-  /**
-   * Safety Modeを設定
-   */
-  async setSafetyMode(mode: SafetyMode): Promise<void> {
-    await chrome.storage.local.set({ [StorageKeys.SAFETY_MODE]: mode });
-
-    // SafetyMode→tier coupling is owned by the tranco settings table; reuse it here.
-    const tier = SAFETY_MODE_TO_TRANCO_TIER[mode];
-    if (tier) {
-      await chrome.storage.local.set({ [StorageKeys.TRANCO_TIER]: tier });
-    }
-
-    logInfo('TrustChecker', { mode, tier }, `Safety mode set to ${mode} (Tranco tier: ${tier})`);
-  }
-
-  /**
-   * Tranco Tierを取得
-   */
-  async getTrancoTier(): Promise<TrancoTier> {
-    const settings = await chrome.storage.local.get({
-      [StorageKeys.TRANCO_TIER]: 'top10k'
-    });
-    return settings[StorageKeys.TRANCO_TIER] as TrancoTier || 'top10k';
   }
 
   /**
