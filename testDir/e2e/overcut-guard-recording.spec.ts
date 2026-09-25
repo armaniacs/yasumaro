@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/extension.fixture.js';
+import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
 import {
   openOptionsPage,
   createDashboardSqliteClient,
@@ -34,10 +35,6 @@ import { pickLoopbackPort, listenHttp } from './fixtures/localServers.js';
 let FIXTURE_PORT: number;
 let FIXTURE_URL: string;
 const PAGES_DIR = join(process.cwd(), 'testDir/e2e/test-pages');
-// Must match PRIVACY_POLICY_VERSION in src/utils/storage/privacyConsent.ts —
-// a mismatch keeps PRIVACY_CONSENT false and VALID_VISIT is rejected with
-// 'privacy_consent_required' (same trap as recording-traceId.spec.ts).
-const PRIVACY_POLICY_VERSION = '2026-07-31';
 
 let fixtureServer: Server | undefined;
 
@@ -101,15 +98,7 @@ test.describe('Over-cut Guard Recording @extension', () => {
     const consoleLogs: string[] = [];
 
     await test.step('Grant privacy consent so the SW processes the recording', async () => {
-      const sw = context.serviceWorkers()[0];
-      expect(sw, 'service worker must be running').toBeTruthy();
-      await sw.evaluate(async (version: string) => {
-        await chrome.storage.local.set({
-          privacy_consent: { hasConsented: true, consentVersion: version, consentDate: Date.now() },
-          privacy_consent_version: version,
-          settings_migrated: true,
-        });
-      }, PRIVACY_POLICY_VERSION);
+      await seedPrivacyConsent(context);
     });
 
     const page = await context.newPage();
