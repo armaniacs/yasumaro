@@ -99,6 +99,15 @@
 - 集計対象は画面に表示しているセッション（最大100件）と同じ範囲です。切り詰められている場合は上部の通知と同じ範囲になります
 - 最後のページを「到達点」とみなすのは推測です。セッションという一連続した活動の終点、という意味であり、利用者が理解したかを測ったものではありません
 
+**この指標が持たないもの**：
+
+- 同日の再訪は記録されない（記録側は UTC 日で弾く）ため、その日の2回目の訪問は残りません
+- シークレットタブは追跡しないため、非公開の閲覧は経路を持ちません
+- 自動記録の条件を満たさなかった閲覧はそもそも記録されないため、経路を持ちません
+- 記録されていない閲覧について、経路は復元できません
+
+**有効にする手順**: ダッシュボード → Privacy タブ → 「遷移記録（流入元ページと検索語）を記録する」にチェックを入れ、確認ダイアログで「有効にする」を選びます。オフにすると以後の記録には経路が入りません。プライバシー同意そのものを撤回した場合も自動的にオフになります。
+
 ### タグクラスタ / Tag Cluster
 
 タグ同士の共起関係をグラフで可視化します。詳細は [タグの関連グラフ表示ガイド](TAG_CLUSTER_GUIDE.md) を参照してください。
@@ -238,6 +247,16 @@ A "Topics that take the longest to resolve" table is shown as well. It groups se
 - A last page with no tag still gets a row, labelled "(untagged)" — it is not dropped
 - The table covers exactly the sessions on screen (at most 100), the same window as the truncation notice
 - Treating the last page as the resolution is a heuristic: it is where one burst of activity ended, not a measurement of whether the user understood it
+
+
+**What this metric does not have**:
+
+- Same-day revisits are not recorded (the recorder skips them by UTC day), so a second visit on the same day never appears
+- Incognito tabs are not tracked, so private browsing has no path
+- A visit that never met the recording gate has no record and therefore no path
+- Nothing is recovered from outside the device; every path comes from records stored locally
+
+**To turn it on**: Dashboard → Privacy tab → check "Record navigation trail (source page and search terms)", then choose "Enable" in the confirmation dialog. Turning it off means later records carry no path. Withdrawing privacy consent itself turns it off as well.
 
 ### Tag Cluster
 
