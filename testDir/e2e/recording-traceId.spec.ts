@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/extension.fixture.js';
+import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
 
 /**
  * PBI-21: Recording pipeline traceId correlation E2E test
@@ -7,10 +8,6 @@ import { test, expect } from './fixtures/extension.fixture.js';
  * then verifies that the Service Worker's `sanitization_logs` contain entries
  * sharing a single traceId for the recording.
  */
-
-// Must match PRIVACY_POLICY_VERSION in src/utils/storage/privacyConsent.ts.
-// If this test starts failing with "privacy_consent_required", check this constant first.
-const PRIVACY_POLICY_VERSION = '2026-09-08';
 
 test.describe('Recording traceId correlation @extension', () => {
   // NOTE: This test relies on service worker logger buffer flush, which is timing-dependent.
@@ -24,25 +21,17 @@ test.describe('Recording traceId correlation @extension', () => {
     // entries haven't been persisted to storage yet. This is a flush timing issue.
     const sw = context.serviceWorkers()[0];
 
-    // Pre-seed privacy consent and basic settings so the service worker processes recordings.
-    // The consent version MUST match PRIVACY_POLICY_VERSION or hasPrivacyConsent() returns false,
-    // causing VALID_VISIT to be rejected with 'privacy_consent_required'.
-    await sw.evaluate(async (version: string) => {
-      await chrome.storage.local.set({
-        privacy_consent: { hasConsented: true, consentVersion: version, consentDate: Date.now() },
-        privacy_consent_version: version,
-        settings_migrated: true,
-        settings: {
-          obsidian_protocol: 'http',
-          obsidian_host: '127.0.0.1',
-          obsidian_port: 27123,
-          obsidian_daily_path: '',
-          ai_provider: 'gemini',
-          min_visit_duration: 5,
-          min_scroll_depth: 50,
-        },
-      });
-    }, PRIVACY_POLICY_VERSION);
+    await seedPrivacyConsent(context, {
+      settings: {
+        obsidian_protocol: 'http',
+        obsidian_host: '127.0.0.1',
+        obsidian_port: 27123,
+        obsidian_daily_path: '',
+        ai_provider: 'gemini',
+        min_visit_duration: 5,
+        min_scroll_depth: 50,
+      },
+    });
 
     const page = await context.newPage();
 
