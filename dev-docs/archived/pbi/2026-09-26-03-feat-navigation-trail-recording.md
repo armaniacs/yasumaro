@@ -528,6 +528,6 @@ export async function initNavTrailToggle(container: HTMLElement): Promise<void>
 - [x] 全BDDシナリオが自動テストとして実装されパスする（プライバシー文書のシナリオは check-privacy のテストで担保する）
 - [x] `npm run validate`、`npm run build`、`npm run release:check` が通る
 - [ ] Chrome での手動確認が済んでいる（検索 → 記事 → セッション表示）
-- [ ] セキュリティ観点のレビュー完了（新しいデータ種別のため、`dev-docs/SECURITY_REVIEW_GUIDE.md` のチェックリストを適用する）
+- [x] セキュリティ観点のレビュー完了（`dev-docs/SECURITY_REVIEW_GUIDE.md` のチェックリストを適用。4 件の指摘をコミット `f207b6dc` で修正: ①検索エンジンのホスト判定が `google.evil.com` にも一致し任意テキストを `search_query` に注入できた（MEDIUM、正規表現を `google\.[a-z]{2,3}(\.[a-z]{2})?$` に絞って回帰テスト追加）、②tab listener の `void` 呼び出しに `.catch()` がなく Mutex のキュー満杯/タイムアウトで未処理 Promise 拒否になっていた（LOW-MEDIUM、既存の `handleTabActivated` と同じ構造化ログで捕捉）、③incognito ガードの説明が主客を逆にしていた（実際の防線は manifest に `incognito` 権限がないこと。LOW）、④暗号化 combined backup には SQLite DB が丸ごと入るため遷移記録も一緒に運ばれることを PRIVACY.md に明記（LOW）。archive/CSV/JSON エクスポート・AI 送信・Obsidian Markdown・FTS・ログに含まれないこと、同意の fail-closed、削除時の行ごと消失、PII サニタイザの網羅、MV3 の top-level listener 登録、`DASHBOARD_SQLITE` の extension-only 性は実測で確認）
 - [x] PRIVACY.md（2ファイル）・ガイド・CHANGELOG を更新済み
 - [x] `pbi/00-INDEX.md` を更新し、アーカイブ済み
