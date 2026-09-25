@@ -8,42 +8,37 @@
 
 ### 概要
 
-ダッシュボードの「データ」セクションには、記録した閲覧履歴をダッシュボード上で分析するパネルが揃っています。曜日×時間帯のヒートマップ、滞在時間ランキング、ドメイン/URL の件数集計、タグの期間推移、タグ共起ペア表、キーワードクラスタなど、履歴データを複数の視点から振り返れます。
+ダッシュボードの「データ」セクションには、記録した閲覧履歴をダッシュボード上で分析するパネルが揃っています。曜日×時間帯のヒートマップ、ドメイン/URL の件数集計、タグの期間推移、タグ共起ペア表、キーワードクラスタ、前後半のタグクラスタ比較、SQLite の直接検索など、履歴データを複数の視点から振り返れます。
 
-すべての計算はブラウザ内のローカル SQLite（OPFS + FTS5）に対して行われ、履歴データが外部に送信されることはありません。分析に使えるのは、記録済みの履歴（タグ・滞在時間・作成日時を含む）だけです。v6.9.22 で追加された 8 パネルの詳細は [CHANGELOG.md](../CHANGELOG.md) の [6.9.22] を参照してください。
+すべての計算はブラウザ内のローカル SQLite（OPFS + FTS5）に対して行われ、履歴データが外部に送信されることはありません。分析に使えるのは、記録済みの履歴（タグ・ドメイン・作成日時を含む）だけです。分析パネル群の初版の詳細は [CHANGELOG.md](../CHANGELOG.md) の [6.9.22] を参照してください。
 
 ### 共通の操作（期間フィルタ）
 
-ほとんどの分析パネルには期間フィルタが付いています。
+多くの分析パネルには、共有の期間フィルタが付いています。ボタンには下表の文言がそのまま表示されます。
 
 | プリセット | 対象期間 |
 |------|------|
 | **今日** | 本日 0 時以降 |
-| **直近7日** | 過去 7 日間 |
-| **直近30日** | 過去 30 日間 |
-| **直近90日** | 過去 90 日間 |
+| **過去7日間** | 過去 7 日間 |
+| **過去30日間** | 過去 30 日間 |
+| **過去90日間** | 過去 90 日間 |
 | **全期間** | 記録されている全件 |
 | **カスタム** | 日付を手動指定 |
 
-期間を変更すると選択中のパネルが再集計されます。ワードクラスタとタグクラスタの既定期間は「直近7日」です。
+期間を変更すると選択中のパネルが再集計されます。初期値はパネルごとに異なります。
+
+| パネル | 既定の期間 |
+|------|------|
+| タグクラスタ / ワードクラスタ | 過去7日間 |
+| 曜日×時間帯ヒートマップ | 過去90日間 |
+| ドメイン分析 / タグ推移 | 過去30日間 |
+| タグ共起ペア | 全期間 |
 
 ### 時間帯ヒートマップ / Time Heatmap
 
 曜日（7）×時間帯（24）のマスに記録数を色の濃さで表示します。自分の閲覧習慣（どの曜日・どの時間帯に記録が集中しているか）を一目で把握できます。
 
 - 表示は最大 10,000 件の履歴を対象に集計します
-
-### 滞在時間分析 / Visit Duration
-
-ドメイン別・タグ別の滞在時間ランキングを表示します。
-
-| 表示 | 内容 |
-|------|------|
-| **合計時間** | 期間内の滞在時間の合計 |
-| **平均時間** | 1 レコードあたりの平均滞在時間 |
-| **件数** | 記録数 |
-
-ドメイン別とタグ別を切り替えられ、それぞれ上位 20 件を表示します（対象は最大 10,000 件）。「今月はどのドメインに何時間使ったか」を直接確認できます。
 
 ### ドメイン分析 / Domain Analysis
 
@@ -56,7 +51,7 @@
 タグ同士の共起関係をグラフで可視化します。詳細は [タグの関連グラフ表示ガイド](TAG_CLUSTER_GUIDE.md) を参照してください。
 
 - 出現回数の多い上位 50 タグが対象（1 レコード最大 50 タグ、履歴は最大 10,000 件）
-- 既定の期間は「直近7日」です
+- 既定の期間は「過去7日間」です
 
 ### タグ推移 / Tag Timeline
 
@@ -74,7 +69,7 @@
 
 タグを付けていないユーザー向けのパネルです。記録したページの要約文とタイトルから `Intl.Segmenter` でキーワードを抽出し、キーワード同士の共起クラスタをグラフで表示します。
 
-- 既定の期間は「直近7日」です
+- 既定の期間は「過去7日間」です
 - キーワードは英数字のみで構成され、既存のタグ共起パイプラインを流用するため「#キーワード」のような擬似タグとして動作します
 - タグクラスタと同じ操作（クリックで履歴絞り込み、ズーム、パン）が使えます
 
@@ -92,7 +87,7 @@ SQLite データベースを直接検索・閲覧するパネルです。FTS5 �
 
 ### データとプライバシー
 
-分析対象はすべて端末内のローカル SQLite データベースです。分析のために履歴・タグ・滞在時間が外部サービスに送信されることはありません。プライバシー設計の詳細は [PRIVACY.md](PRIVACY.md) を参照してください。
+分析対象はすべて端末内のローカル SQLite データベースです。分析のために履歴・タグが外部サービスに送信されることはありません。プライバシー設計の詳細は [PRIVACY.md](PRIVACY.md) を参照してください。
 
 ---
 
@@ -100,9 +95,9 @@ SQLite データベースを直接検索・閲覧するパネルです。FTS5 �
 
 ### Overview
 
-The "Data" section of the dashboard contains panels for analyzing your recorded browsing history in place: a day-of-week × time-of-day heatmap, visit-duration rankings, domain/URL count tables, tag timelines, a tag co-occurrence pair table, keyword clusters, and more.
+The "Data" section of the dashboard contains panels for analyzing your recorded browsing history in place: a day-of-week × time-of-day heatmap, domain/URL count tables, tag timelines, a tag co-occurrence pair table, keyword clusters, side-by-side tag-cluster comparison, and direct SQLite search.
 
-All computations run against the local SQLite database (OPFS + FTS5) inside your browser; no history data is ever sent anywhere. Analytics only use what you have already recorded (tags, visit durations, timestamps). See [CHANGELOG.md](../CHANGELOG.md) → [6.9.22] for the panel set added in v6.9.22.
+All computations run against the local SQLite database (OPFS + FTS5) inside your browser; no history data is ever sent anywhere. Analytics only use what you have already recorded (tags, timestamps, domains). See [CHANGELOG.md](../CHANGELOG.md) → [6.9.22] for the first version of the panel set.
 
 ### Common Controls (Period Filter)
 
@@ -117,25 +112,20 @@ Most analytics panels include a period filter.
 | **All time** | Every record |
 | **Custom** | Manually specified dates |
 
-Changing the period re-aggregates the current panel. Word Cluster and Tag Cluster default to "Last 7 days".
+Changing the period re-aggregates the current panel. Each panel starts on a different period:
+
+| Panel | Default period |
+|------|------|
+| Tag Cluster / Word Cluster | Last 7 days |
+| Time Heatmap | Last 90 days |
+| Domain Analysis / Tag Timeline | Last 30 days |
+| Tag Pairs | All time |
 
 ### Time Heatmap
 
 Shows the number of records in a 7-day-of-week × 24-hour grid, colored by density. It gives you an at-a-glance view of when you tend to browse.
 
 - Aggregated over up to 10,000 history rows
-
-### Visit Duration
-
-Domain-wise and tag-wise visit-duration rankings.
-
-| Column | Meaning |
-|------|------|
-| **Total time** | Sum of visit durations in the period |
-| **Average time** | Mean duration per record |
-| **Count** | Number of records |
-
-Switch between domain and tag views; the top 20 entries are shown per view (up to 10,000 rows analyzed).
 
 ### Domain Analysis
 
@@ -183,4 +173,4 @@ A panel for searching and browsing the SQLite database directly, including FTS5 
 
 ### Data and Privacy
 
-Everything is computed from the on-device SQLite database. No history, tags, or visit durations are sent to any service for analysis. See [PRIVACY.md](PRIVACY.md) for the privacy design.
+Everything is computed from the on-device SQLite database. No history or tags are sent to any service for analysis. See [PRIVACY.md](PRIVACY.md) for the privacy design.

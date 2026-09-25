@@ -17,7 +17,7 @@
 
 ```gherkin
 Scenario: 初期描画の IPC 往復を計測する
-  Given fetchPeriodRows を使う 8 パネルがあり、domainAnalysisPanel は最大 5 ページを送る
+  Given fetchPeriodRows を使う 7 パネルがあり、domainAnalysisPanel は最大 5 ページを送る
   When ダッシュボードを開き、initialized と uninitialized の状態でページ送りを含む取得を実行する
   Then 現状の status と query の messaging 回数を個別に記録できる
   And 最大 5 ページでは status 5 回と query 5 回が、最大 10 往復になることを再現できる
@@ -46,7 +46,7 @@ Scenario: query response への status 同梱を採用した場合
 
 ## 受け入れ基準
 
-- [ ] `fetchPeriodRows` を使う 8 パネルの production call site と 8 consumer の lifecycle test が対象範囲として確認されている。
+- [ ] `fetchPeriodRows` を使う 7 パネルの production call site と 7 consumer の lifecycle test が対象範囲として確認されている。
 - [ ] ページ数 1 と最大 5 の条件で、現行の status と query の messaging 回数および経過時間を記録できる。
 - [ ] 最大 5 ページで status 5 回と query 5 回、最大 10 往復になることを再現できる。
 - [ ] initialized と uninitialized の両方で、現行の messaging 回数と経過時間を比較できる。
@@ -119,11 +119,10 @@ Scenario: query response への status 同梱を採用した場合
 - `src/dashboard/panels/fetchPeriodRows.ts:46-60` は、成功時と retry のたびに `getSqliteStatus()` を実行してから `queryLogs()` を実行する。
 - status と query は別 dashboard→Service Worker message であり、`src/dashboard/dashboardSqliteService.ts:161-170` と `src/dashboard/dashboardSqliteService.ts:264-283` に各 request が定義されている。
 - `src/messaging/dashboardGateway.ts:27-36` は document 単位に message を直列化する。
-- `fetchPeriodRows` を使うパネルは 8 で、production call site も 8 である。
+- `fetchPeriodRows` を使うパネルは 7 で、production call site も 7 である。
   - `wordClusterPanel.ts:87`
   - `tagClusterPanel.ts:87`
   - `tagClusterTimeSliderPanel.ts:137`
-  - `visitDurationPanel.ts:91`
   - `tagCooccurrenceTablePanel.ts:218`
   - `domainAnalysisPanel.ts:273`
   - `timeHeatmapPanel.ts:84`
@@ -165,7 +164,7 @@ Scenario: query response への status 同梱を採用した場合
 2. **preflight の価値は何か。** uninitialized 時の query を避け、外側 retry で初期化を待つ意図を持つ。preflight 廃止、TTL キャッシュ、status 同梱のいずれを採用しても、この意図をどう満たすかを比較する。
 3. **なぜ status が共有されないのか。** status は dashboard service の state であり、`fetchPeriodRows` の取得境界にある cache ではない。TTL を採用する場合も、readiness-only の責務を明示する必要がある。
 4. **なぜ response が統合されないのか。** query と status は別 subtype、別 response contract として設計されている。統合には query success response への initialized 追加と、dashboard、Service Worker、開いている options page の再起動を伴う互換性コストがある。
-5. **なぜ測定と選定が残ったのか。** 8 パネルの fetch 共通化は対象だが、IPC 総数は対象外だった。ダッシュボード初期描画、最大 5 ページ送り、initialized/uninitialized の条件で messaging 回数と経過時間を計測し、その結果で方式を決める。
+5. **なぜ測定と選定が残ったのか。** 7 パネルの fetch 共通化は対象だが、IPC 総数は対象外だった。ダッシュボード初期描画、最大 5 ページ送り、initialized/uninitialized の条件で messaging 回数と経過時間を計測し、その結果で方式を決める。
 6. **最終方式と `refactor` の要否。** 本 PBI 作成時点では方式を固定しない。計測結果に基づいて 1 つだけ採用方式と `refactor` の要否を決定する。
 
 ## Definition of Done
