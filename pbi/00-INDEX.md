@@ -14,19 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-26 メタ認知分析ラウンド — ✅ 2件完了・アーカイブ済み / ⬜ 未着手 2件 ✨機能追加
+### 2026-09-26 メタ認知分析ラウンド — ✅ 3件完了・アーカイブ済み / ⬜ 未着手 1件 ✨機能追加
 
 開発提案「情報探索のメタ認知化」の3案を、記録データの実態と照らし合わせて RICE で採点した。
 
 - 提案1（熟読度フィルター）: 不採用。滞在時間を記録していないため。
-- 提案2（セッション＆パス分析）: 既存データで作れる部分（02。✅ 完了・アーカイブ済み）、遷移記録の基盤（03）、探索パスと指標（04）の3つに分けた。
+- 提案2（セッション＆パス分析）: 既存データで作れる部分（02。✅ 完了）、遷移記録の基盤（03。✅ 実装完了・一部 DoD 未実施）、探索パスと指標（04）の3つに分けた。
 - 提案3（ループ課題・タイムカプセル）: 09-24 台帳の「再訪分析」を統合した（01）。✅ 完了・アーカイブ済み（アーカイブ履歴参照）。
 
 各 PBI は、低価格モデルでも実装できる詳細設計（ファイル・型・アルゴリズム・i18n 文言・テストケース）を含む。採点・前提の差異・ユーザー裁定・不採用理由の詳細は [2026-09-26-00-backlog-metacognition-analytics.md](2026-09-26-00-backlog-metacognition-analytics.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 03 | [feat-navigation-trail-recording](2026-09-26-03-feat-navigation-trail-recording.md) | feat | 0.32 | 5 | 02 の後。2026-09-25-24（再同意 UX）と `privacyConsent.ts` が競合するので同時着手しない |
 | 04 | [feat-session-path-tree-search-to-goal](2026-09-26-04-feat-session-path-tree-search-to-goal.md) | feat | 0.67 | 3 | 02・03 の後（依存を優先し、RICE では上位だが 03 の後に着手する） |
 
 ### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 8件完了・アーカイブ済み / ⬜ 未着手 22件 🔧非機能追加
@@ -131,6 +130,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 裁定の内訳と後続 PBI 分割（S-1 dashboard re-consent 入口 / S-2 denial counter reset / S-3 外部備份境界の説明）はアーカイブ済み PBI の裁定結果節を参照。
 
 - [2026-09-25-24-investigate-privacy-reconsent-ux.md](../dev-docs/archived/pbi/2026-09-25-24-investigate-privacy-reconsent-ux.md)（✅ 完了 — 裁定記録のみ（production code 無変更）。裁定4件: ①再同意入口は dashboard の Privacy 画面（decline 後の案内が指す「設定画面」と一致し実在の導線になる。popup の常時バナーは 30 日抑制と衝突するため不採用）②明示操作は 30 日抑制を bypass するが、自動表示の抑制状態は書き換えない ③withdraw 後も履歴保持を許し、同意撤回と履歴削除を分離する ④バックアップからの履歴復元は促さない。`privacy_consent` は restore allowlist に無く、復元は同意済み状態にしない。`reconsentConsent()` は新設せず既存 API を組み合わせる。denial counter reset は `acceptConsent()` 冒頭の1行で、`resetConsentDeniedCount()` は既に存在するため後続 `fix` S-2（0.5 SP）へ切り出し。裁定により **PBI 2026-09-26-03 の `privacyConsent.ts` 競合が解消**（03 は `withdrawPrivacyConsent()` 直後、S-1 は dashboard panel、S-2 は `acceptConsent()` 冒頭で同一行を触らない））
+
+### 2026-09-26 メタ認知分析ラウンド バッチ3 — ✅ PBI 03 実装完了（アーカイブ済み・一部 DoD 未実施）
+
+提案2のうち「遷移記録の基盤」。記録するデータ自体が増える変更（新規データ種別2列）のため、
+DoD の手動確認とセキュリティレビューは未実施のまま残す。RICE 0.32・5 SP。
+
+- [2026-09-26-03-feat-navigation-trail-recording.md](../dev-docs/archived/pbi/2026-09-26-03-feat-navigation-trail-recording.md)（✅ 実装完了 — コミット `4d2c60c7`。`nav_source_url` / `search_query` の 2 列を SQLite に追加（SCHEMA_SQL・COLUMN_NAMES・MIGRATION_COLUMNS・rowCodec の coerceCell・browsingLogCodec・migrationBackup の LEGACY_MISSING_COLUMNS・opfsRecovery）。機能別同意 `nav_trail_consent`（端末固有・DEFAULT_SETTINGS と restore allowlist の外側）。`navTrailTracker` は `chrome.storage.session` + Mutex でタブ単位の流入元を追跡し、シークレットタブは追跡しない。同意 OFF・撤回時は追跡状態を破棄し、撤回時は nav_trail も自動で無効化。2 列は UPDATE 不可・再生成対象外。`check-privacy.mjs` は「同意バージョン」と照合（`PRIVACY_POLICY_VERSION` は `2026-09-08` のまま据え置き）。`public/PRIVACY.md` と `docs/PRIVACY.md` はバイト一致。i18n 8 キー（ja/en）。新規テスト 53 件で validate 13,984 green / build PASS / release:check privacy・e2e PASS。**未実施**: Chrome 実機での手動確認（検索 → 記事 → セッション表示）、`SECURITY_REVIEW_GUIDE` によるセキュリティレビュー）
 
 ### 2026-09-26 メタ認知分析ラウンド バッチ2 — ✅ PBI 02 完了（アーカイブ済み）
 
