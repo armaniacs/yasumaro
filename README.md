@@ -336,7 +336,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🤖 **Built-in AI Support**: Browser-integrated AI summarization using Chrome's Gemini Nano or Edge's Phi-mini. No API key required, works offline (requires supported browser, enabled flags, and downloaded model). See [Built-in AI Setup Guide](docs/BUILT_IN_AI_SETUP_GUIDE.md).
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
-- 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard — a day×hour heatmap, visit-duration rankings, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), and side-by-side tag cluster comparison. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
+- 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard — a day×hour heatmap, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), and side-by-side tag cluster comparison. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api) (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for setup instructions)
@@ -518,7 +518,7 @@ MIT License
 - [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP 設定ガイド
 - [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - ドメイン信頼度ガイド
 - [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - タグクラスターガイド
-- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - データ分析ガイド（ヒートマップ・滞在時間・タグ推移・共起ペア表）
+- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - データ分析ガイド（ヒートマップ・ドメイン分析・タグ推移・共起ペア表）
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - ツールバーバッジガイド
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - 記録条件ガイド
 - [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - 旧データベースからの移行ガイド
@@ -548,7 +548,7 @@ MIT License
 - [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP Guide
 - [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - Trust Domain Guide
 - [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - Tag Cluster Guide
-- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - Data Analytics Guide (heatmap, visit duration, tag timeline, pair table)
+- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - Data Analytics Guide (heatmap, domain analysis, tag timeline, pair table)
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - Toolbar Badge Guide
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - Recording Conditions Guide
 - [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Legacy Database Migration Guide
