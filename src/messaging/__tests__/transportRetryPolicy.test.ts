@@ -5,7 +5,9 @@ import {
   RETRY_UNCONFIGURED,
   RETRY_UNSAFE,
   shouldRetryTransport,
+  TRANSPORT_RETRY_POLICIES,
 } from '../transportRetryPolicy.js';
+import { SQLITE_MESSAGE_TYPES } from '../sqliteMessages.js';
 import { SQLITE_WIRE_TABLE, SQLITE_MAINTAIN_WIRE_TABLE } from '../sqliteWireTable.js';
 import { ARCHIVE_WIRE_TABLE } from '../archiveWireTable.js';
 
@@ -75,6 +77,18 @@ describe('messaging transport retry policy', () => {
     for (const type of EXPECTED_RETRY_UNSAFE) {
       expect(getTransportRetryPolicy(type)).toBe(RETRY_UNSAFE);
     }
+  });
+
+  it('gives every message type in the union an explicit policy entry', () => {
+    const unionTypes = SQLITE_MESSAGE_TYPES as readonly string[];
+    for (const type of unionTypes) {
+      expect(TRANSPORT_RETRY_POLICIES.has(type)).toBe(true);
+    }
+    expect(TRANSPORT_RETRY_POLICIES.size).toBe(unionTypes.length);
+    // The two handler-backed types without a wire route carry an explicit
+    // unconfigured decision instead of relying on the lookup fallback.
+    expect(getTransportRetryPolicy('SQLITE_SEARCH')).toBe(RETRY_UNCONFIGURED);
+    expect(getTransportRetryPolicy('SQLITE_EXPORT')).toBe(RETRY_UNCONFIGURED);
   });
 
   it('keeps insert and insertBatch retry-unsafe', () => {
