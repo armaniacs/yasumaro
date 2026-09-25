@@ -2050,6 +2050,19 @@
         <p id="researchSessionsSummary" aria-live="polite"></p>
         <div id="researchSessionsTruncated" class="data-table-notice is-warning" hidden></div>
         <ol id="researchSessionsList" class="research-sessions-list"></ol>
+
+        <h3 class="data-table-heading" data-i18n="researchSessions_searchToGoalTitle">Topics that take the longest to resolve</h3>
+        <p class="data-table-notice is-muted" data-i18n="researchSessions_searchToGoalHint">Sessions that started from a search, grouped by the tags of their last page.</p>
+        <p id="researchSessionsSearchToGoalOff" class="data-table-notice is-muted" data-i18n="researchSessions_navTrailOff" hidden>Turn on "Record navigation trail" in Privacy settings to see paths from search to resolution.</p>
+        <table id="researchSessionsSearchToGoalTable" class="data-table" hidden>
+          <thead><tr>
+            <th scope="col" data-i18n="researchSessions_tagColumn">Tag</th>
+            <th scope="col" data-i18n="researchSessions_sessionsColumn">Sessions</th>
+            <th scope="col" data-i18n="researchSessions_avgPagesColumn">Avg. pages</th>
+            <th scope="col" data-i18n="researchSessions_avgMinutesColumn">Avg. minutes</th>
+          </tr></thead>
+          <tbody id="researchSessionsSearchToGoalBody"></tbody>
+        </table>
       </section>
 
       <!-- Tag Frequency Timeline Panel (PBI 2026-09-24-05) -->

@@ -84,6 +84,21 @@
 - AI への送信内容・Obsidian の Markdown・エクスポートには含まれません
 - プライバシー同意そのものを撤回すると、本機能は自動的に無効になります
 
+#### 探索パスと「迷いやすいトピック」
+
+遷移記録が有効なとき、セッションの展開部は平坦な一覧ではなく**経路**として表示されます。どのページからどのページへ移ったかを復元し、冒頭の検索語をその上に1行だけ出します。
+
+- 親の判定は「同じセッション内で自分より前にあり、流入元が自分の URL と一致する記録のうち最も新しいもの」。同じ URL を再訪した場合は最初の訪問ではなく直近の訪問が親になります
+- 記録は必ず前の記録より後にしか親になれないため、循環は起きません
+- 遷移記録がオフのセッションは、従来と同じ平坦な一覧で表示されます
+
+さらに「迷子になりやすいトピック」の表を出す。検索エンジンから始まったセッションを、**最後に見たページのタグ**ごとに集計し、セッション数・平均ページ数・平均分を示します。
+
+- 1セッションだけのタグは「偶然の足取り」にすぎないので、2セッション以上のタグだけを表示します
+- 最後のページにタグがない場合は「(タグなし)」として集計します。表から消さない
+- 集計対象は画面に表示しているセッション（最大100件）と同じ範囲です。切り詰められている場合は上部の通知と同じ範囲になります
+- 最後のページを「到達点」とみなすのは推測です。セッションという一連続した活動の終点、という意味であり、利用者が理解したかを測ったものではありません
+
 ### タグクラスタ / Tag Cluster
 
 タグ同士の共起関係をグラフで可視化します。詳細は [タグの関連グラフ表示ガイド](TAG_CLUSTER_GUIDE.md) を参照してください。
@@ -208,6 +223,21 @@ What fills the "Search: …" and "From: …" fields on each research-session row
 - When the referrer matches the domain exclusion list, stores only the origin instead of the full URL
 - Never included in what is sent to AI providers, in the Markdown written to Obsidian, or in exports
 - Turning it off, or withdrawing privacy consent itself, stops collection and clears the tracked tab state
+
+#### Path and "topics that take the longest to resolve"
+
+With the navigation trail on, a session's expanded body is no longer a flat list — it is the **path** that was taken, recovered from the referrer column, with the leading search term printed once above it.
+
+- A record's parent is "the most recent earlier record in the same session whose URL matches this record's referrer". When a URL is revisited, the most recent visit becomes the parent rather than the first
+- A parent is always an earlier record, so a cycle cannot form
+- Sessions recorded while the trail is off keep the flat list
+
+A "Topics that take the longest to resolve" table is shown as well. It groups search-started sessions by the tags of their **last page** and reports the session count, average pages and average minutes.
+
+- A tag seen in only one session is an anecdote, so only tags with 2 or more sessions appear
+- A last page with no tag still gets a row, labelled "(untagged)" — it is not dropped
+- The table covers exactly the sessions on screen (at most 100), the same window as the truncation notice
+- Treating the last page as the resolution is a heuristic: it is where one burst of activity ended, not a measurement of whether the user understood it
 
 ### Tag Cluster
 

@@ -2435,6 +2435,42 @@
     "message": "流入元: {host}",
     "description": "Referrer shown on a session record"
   },
+  "researchSessions_searchToGoalTitle": {
+    "message": "迷子になりやすいトピック",
+    "description": "Search-to-goal metric heading"
+  },
+  "researchSessions_searchToGoalHint": {
+    "message": "検索から始まったセッションを、最後に見たページのタグごとにまとめています。",
+    "description": "Search-to-goal metric hint"
+  },
+  "researchSessions_navTrailOff": {
+    "message": "設定で「遷移記録」を有効にすると、検索から解決までの経路を表示できます。",
+    "description": "Shown when the navigation trail is off"
+  },
+  "researchSessions_tagColumn": {
+    "message": "タグ",
+    "description": "Column header"
+  },
+  "researchSessions_sessionsColumn": {
+    "message": "セッション数",
+    "description": "Column header"
+  },
+  "researchSessions_avgPagesColumn": {
+    "message": "平均ページ数",
+    "description": "Column header"
+  },
+  "researchSessions_avgMinutesColumn": {
+    "message": "平均分",
+    "description": "Column header"
+  },
+  "researchSessions_untagged": {
+    "message": "(タグなし)",
+    "description": "Label for a resolution page with no tag"
+  },
+  "researchSessions_searchToGoalEmpty": {
+    "message": "検索から始まったセッションがまだありません。",
+    "description": "Empty state for the search-to-goal table"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },
