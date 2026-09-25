@@ -2433,6 +2433,58 @@
     "message": "Failed to load revisit data.",
     "description": "Load error"
   },
+  "researchSessionsTab": {
+    "message": "Research Sessions",
+    "description": "Sidebar tab for the research sessions panel"
+  },
+  "researchSessions_title": {
+    "message": "Research Sessions",
+    "description": "Research sessions panel title"
+  },
+  "researchSessions_description": {
+    "message": "Groups pages recorded within the selected gap of each other into one research session. The duration is the time between the first and last record, not actual reading time.",
+    "description": "Research sessions panel description"
+  },
+  "researchSessions_gapLabel": {
+    "message": "Session gap",
+    "description": "Session gap select label"
+  },
+  "researchSessions_gapOption": {
+    "message": "{n} min",
+    "description": "Session gap option"
+  },
+  "researchSessions_summary": {
+    "message": "{sessions} sessions · {singles} single pages",
+    "description": "Session counts summary"
+  },
+  "researchSessions_pages": {
+    "message": "{n} pages",
+    "description": "Pages per session"
+  },
+  "researchSessions_minutes": {
+    "message": "{n} min",
+    "description": "Session duration in minutes"
+  },
+  "researchSessions_starred": {
+    "message": "Starred",
+    "description": "Starred record marker"
+  },
+  "researchSessions_truncated": {
+    "message": "Showing the newest {shown} sessions.",
+    "description": "Session list truncation notice"
+  },
+  "researchSessions_rowCap": {
+    "message": "Grouped only the newest {shown} records. Shorten the period to include all records.",
+    "description": "Row cap notice"
+  },
+  "researchSessions_empty": {
+    "message": "No records in this period.",
+    "description": "Empty state"
+  },
+  "researchSessionsError": {
+    "message": "Failed to load sessions.",
+    "description": "Load error"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },

@@ -34,6 +34,7 @@
 | ドメイン分析 / タグ推移 | 過去30日間 |
 | タグ共起ペア | 全期間 |
 | 再訪とタイムカプセル | 期間フィルタなし（固定窓） |
+| リサーチ・セッション | 過去7日間 |
 
 ### 時間帯ヒートマップ / Time Heatmap
 
@@ -61,6 +62,17 @@
 - 対象は固定 400 日間で、期間フィルタはありません
 - 記録側は UTC 日で同日再訪を弾くため、表示側のローカル日集計とずれることがあります。パネル上部の注記を参照してください
 - 集計は最大 50,000 件で打ち切られます。上限に達すると通知が表示され、古い件数が実際より少なく出ます
+
+### リサーチ・セッション / Research Sessions
+
+記録どうしの間隔が一定時間以内のものを、ひとつの「調べもの」としてまとめます。ページ単位の集計では見えない「この日、何をどの順で調べていたか」を、時刻の近い記録の連なりとして示します。
+
+- セッションの区切りは 5 / 15 / 30 / 60 分から選べます（既定は 30 分）。区切りを変えても再取得はせず、手元の記録をまとめ直します
+- 間隔がちょうど設定値と同じ場合は同じセッションです。1ms でも超えると分かれます
+- 記録が 2 件以上のセッションだけを新しい順に表示し、1 件だけのものは件数として「単独ページ」に数えます
+- 節には開始日時・ページ数・分数・上位タグ（タグがなければ上位ドメイン）が並びます。時間は最初と最後の記録の間隔であり、実際の閲覧時間ではありません
+- 既定の期間は「過去7日間」で、期間ボタンを押すとすぐ取り直します
+- 対象は最大 10,000 件、表示は最大 100 セッションです。上限に達すると通知が表示されます
 
 ### タグクラスタ / Tag Cluster
 
@@ -137,6 +149,7 @@ Changing the period re-aggregates the current panel. Each panel starts on a diff
 | Domain Analysis / Tag Timeline | Last 30 days |
 | Tag Pairs | All time |
 | Revisits & Time Capsule | No period filter (fixed window) |
+| Research Sessions | Last 7 days |
 
 ### Time Heatmap
 
@@ -164,6 +177,17 @@ Automatic recording already streams every visit into a daily note, so one topic 
 - Covers a fixed 400-day window; there is no period filter
 - The recorder skips same-day revisits in UTC, so the local-day counts shown here can drift from it. See the note at the top of the panel
 - Aggregation stops at 50,000 rows. When the cap is reached a notice appears and older counts are understated
+
+### Research Sessions
+
+Groups records that fall within a chosen time gap of each other into one "research session". The point aggregates answer "how many"; this panel answers "what did I look at, in what order, on that day" by showing the run of records as a timeline.
+
+- The gap is 5, 15, 30 or 60 minutes (default 30). Changing it re-groups the rows already fetched — no refetch
+- A gap of exactly the threshold stays in one session; one millisecond more splits it
+- Only sessions of 2 or more records are listed, newest first. Single records are counted separately as "single pages"
+- Each section shows the start time, page count, minutes and the top tags (or top domains when tagging is off). The minutes are the span from the first to the last record, not actual reading time
+- The default period is "Last 7 days"; picking a period refetches immediately
+- Analyzes up to 10,000 records and displays at most 100 sessions, with a notice at either cap
 
 ### Tag Cluster
 

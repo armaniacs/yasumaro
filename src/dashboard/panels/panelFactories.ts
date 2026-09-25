@@ -16,6 +16,7 @@ import { createTagClusterPanel } from './asyncData/tagClusterPanel.js';
 import { createTimeHeatmapPanel } from './asyncData/timeHeatmapPanel.js';
 import { createDomainAnalysisPanel } from './asyncData/domainAnalysisPanel.js';
 import { createRevisitInsightsPanel } from './asyncData/revisitInsightsPanel.js';
+import { createResearchSessionsPanel } from './asyncData/researchSessionsPanel.js';
 import { createTagFrequencyTimelinePanel } from './asyncData/tagFrequencyTimelinePanel.js';
 import { createTagCooccurrenceTablePanel } from './asyncData/tagCooccurrenceTablePanel.js';
 import { createWordClusterPanel } from './asyncData/wordClusterPanel.js';
@@ -35,6 +36,7 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
   'panel-time-heatmap': createTimeHeatmapPanel,
   'panel-domain-analysis': createDomainAnalysisPanel,
   'panel-revisit-insights': createRevisitInsightsPanel,
+  'panel-research-sessions': createResearchSessionsPanel,
   'panel-tag-frequency-timeline': createTagFrequencyTimelinePanel,
   'panel-tag-cooccurrence-table': createTagCooccurrenceTablePanel,
   'panel-word-cluster': createWordClusterPanel,

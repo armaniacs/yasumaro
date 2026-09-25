@@ -42,6 +42,13 @@ export const MAX_TAG_CLUSTER_TAGS = 50;
 export const MAX_TIME_HEATMAP_ROWS = 10000;
 
 /**
+ * Max rows fetched for the research-sessions panel (user-selected period).
+ * One `fetchPeriodRows` page is enough: sessions are grouped in time order
+ * client-side, and the panel shows a cap notice when the page came back full.
+ */
+export const MAX_RESEARCH_SESSION_ROWS = QUERY_CAPS.plain;
+
+/**
  * Max rows fetched for the domain-analysis panel (user-selected period+tag).
  * queryLogs caps a single page at 10000 rows, so the panel paginates with
  * offset until this total cap; the panel shows a cap notice when the last

@@ -176,6 +176,15 @@
           </svg>
           <span data-i18n="revisitInsightsTab">Revisits &amp; Time Capsule</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-research-sessions" aria-selected="false" data-panel="panel-research-sessions">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="5" cy="6" r="2"/>
+            <circle cx="12" cy="12" r="2"/>
+            <circle cx="19" cy="18" r="2"/>
+            <path d="M6.5 7.5l4 3M13.5 13.5l4 3"/>
+          </svg>
+          <span data-i18n="researchSessionsTab">Research Sessions</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-frequency-timeline" aria-selected="false" data-panel="panel-tag-frequency-timeline">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <polyline points="3 17 9 11 13 15 21 7"/>
@@ -2011,6 +2020,22 @@
 
         <h3 class="data-table-heading" data-i18n="revisitInsights_capsuleTitle">This week, one year ago</h3>
         <div id="revisitInsightsCapsule"></div>
+      </section>
+
+      <!-- Research Sessions Panel -->
+      <section id="panel-research-sessions" class="panel" role="tabpanel" aria-labelledby="panel-research-sessions-title">
+        <h2 id="panel-research-sessions-title" class="panel-title" data-i18n="researchSessions_title">Research Sessions</h2>
+        <p class="panel-description" data-i18n="researchSessions_description">Groups pages recorded within the selected gap of each other into one research session. The duration is the time between the first and last record, not actual reading time.</p>
+        <div id="researchSessionsFilter"></div>
+        <div class="form-group">
+          <label for="researchSessionsGap" data-i18n="researchSessions_gapLabel">Session gap</label>
+          <select id="researchSessionsGap"></select>
+        </div>
+        <div id="researchSessionsEmptyState" data-i18n="researchSessions_empty" hidden>No records in this period.</div>
+        <div id="researchSessionsRowCap" class="data-table-notice is-warning" hidden></div>
+        <p id="researchSessionsSummary" aria-live="polite"></p>
+        <div id="researchSessionsTruncated" class="data-table-notice is-warning" hidden></div>
+        <ol id="researchSessionsList" class="research-sessions-list"></ol>
       </section>
 
       <!-- Tag Frequency Timeline Panel (PBI 2026-09-24-05) -->
