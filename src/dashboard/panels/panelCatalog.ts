@@ -57,6 +57,7 @@ export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
   { id: 'panel-domain-search', sidebarSection: 'data', sidebarI18nKey: 'domainSearchTab', deepLinkSections: [] },
   { id: 'panel-time-heatmap', sidebarSection: 'data', sidebarI18nKey: 'timeHeatmapTab', deepLinkSections: [] },
   { id: 'panel-domain-analysis', sidebarSection: 'data', sidebarI18nKey: 'domainAnalysisTab', deepLinkSections: [] },
+  { id: 'panel-revisit-insights', sidebarSection: 'data', sidebarI18nKey: 'revisitInsightsTab', deepLinkSections: [] },
   { id: 'panel-tag-frequency-timeline', sidebarSection: 'data', sidebarI18nKey: 'tagFrequencyTab', deepLinkSections: [] },
   { id: 'panel-tag-cooccurrence-table', sidebarSection: 'data', sidebarI18nKey: 'tagCooccurrenceTableTab', deepLinkSections: [] },
   { id: 'panel-word-cluster', sidebarSection: 'data', sidebarI18nKey: 'wordClusterTab', deepLinkSections: [] },

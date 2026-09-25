@@ -33,6 +33,7 @@
 | 曜日×時間帯ヒートマップ | 過去90日間 |
 | ドメイン分析 / タグ推移 | 過去30日間 |
 | タグ共起ペア | 全期間 |
+| 再訪とタイムカプセル | 期間フィルタなし（固定窓） |
 
 ### 時間帯ヒートマップ / Time Heatmap
 
@@ -45,6 +46,21 @@
 タグ（任意）と期間を指定して、ドメイン別の集計 top 20 と URL 別の集計 top 20 を件数順の表で表示します。「#トラベル タグの記録はどのサイトで見ているか」のような質問に直接答えます。
 
 - 対象は最大 50,000 件の履歴です
+
+### 再訪とタイムカプセル / Revisits & Time Capsule
+
+自動記録はデイリーノートへ日ごとに分かれて書き出されるため、同じテーマの訪問が複数日に散らばります。このパネルは「また調べ直しているもの」を 4 つの区分で示し、散らばった訪問を 1 枚のノートにまとめる手掛かりを作ります。
+
+- **何度も調べているテーマ**: 31〜89 日のあいだ記録がなく、直近 30 日に戻ってきたドメイン・タグ・ページ。同じテーマを「しばらく空いてから調べ直す」形だけを拾うので、毎日使っているサイトは対象になりません
+- **よく再訪するページ**: 訪れた日付が 2 日以上ある URL の上位
+- **最近触れていないテーマ**: 60〜120 日前は複数回記録されているが、直近 30 日の記録がないドメイン・タグ
+- **1 年前の今週**: 52 週前の同じ週（曜日をそろえた範囲）に記録されていた内容
+
+「Markdownでコピー」を押すと、そのテーマの訪問一覧が `## ドメイン名` と `- YYYY-MM-DD [タイトル](URL)` の形でクリップボードに入ります。日付はローカル日基準です。
+
+- 対象は固定 400 日間で、期間フィルタはありません
+- 記録側は UTC 日で同日再訪を弾くため、表示側のローカル日集計とずれることがあります。パネル上部の注記を参照してください
+- 集計は最大 50,000 件で打ち切られます。上限に達すると通知が表示され、古い件数が実際より少なく出ます
 
 ### タグクラスタ / Tag Cluster
 
@@ -120,6 +136,7 @@ Changing the period re-aggregates the current panel. Each panel starts on a diff
 | Time Heatmap | Last 90 days |
 | Domain Analysis / Tag Timeline | Last 30 days |
 | Tag Pairs | All time |
+| Revisits & Time Capsule | No period filter (fixed window) |
 
 ### Time Heatmap
 
@@ -132,6 +149,21 @@ Shows the number of records in a 7-day-of-week × 24-hour grid, colored by densi
 Specify an optional tag and a period to see top-20 domain counts and top-20 URL counts as tables — a direct answer to questions like "which sites do my #travel reads come from?"
 
 - Analyzes up to 50,000 history rows
+
+### Revisits & Time Capsule
+
+Automatic recording already streams every visit into a daily note, so one topic ends up scattered across many days. This panel surfaces what you keep re-researching in four sections, and gives you a way to gather the scattered visits into a single note.
+
+- **Topics you keep re-researching**: domains, tags and pages with no record for 31–89 days that came back in the last 30 days. Only the "quiet, then back" shape counts, so a site you use every day never shows up
+- **Frequently revisited pages**: URLs visited on 2 or more distinct days
+- **Topics you have not revisited**: domains and tags that were frequent 60–120 days ago with no record in the last 30 days
+- **This week, one year ago**: what you recorded during the same local week 52 weeks ago
+
+"Copy as Markdown" puts that topic's visits on the clipboard as `## domain` plus `- YYYY-MM-DD [title](URL)` lines, dated by local day.
+
+- Covers a fixed 400-day window; there is no period filter
+- The recorder skips same-day revisits in UTC, so the local-day counts shown here can drift from it. See the note at the top of the panel
+- Aggregation stops at 50,000 rows. When the cap is reached a notice appears and older counts are understated
 
 ### Tag Cluster
 
