@@ -9,6 +9,12 @@ import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js';
 import {
+    isRetryableNetworkError,
+    isRetryableStatus,
+    retryDelayMs,
+    waitForRetry
+} from '../utils/retryPredicate.js';
+import {
     validateObsidianProtocol,
     validateObsidianHost,
     isIpv6Address,
@@ -26,6 +32,13 @@ import { truncateForLog } from '../utils/logTruncate.js';
  * Problem #1: Fetchタイムアウト設定
  */
 const FETCH_TIMEOUT_MS = 15000; // 15秒
+
+export const OBSIDIAN_CONNECTION_RETRY_POLICY = {
+    initialDelayMs: 500,
+    maxAttempts: 3,
+    backoffMultiplier: 2,
+    retryableStatusCodes: [500, 502, 503, 504]
+} as const;
 
 /**
  * Problem #6: Mutexキューサイズ制限とタイムアウト設定
@@ -217,6 +230,45 @@ export class ObsidianClient {
         return globalWriteMutex;
     }
 
+    private async _fetchConnectionResponse(baseUrl: string, headers: HeadersInit): Promise<Response> {
+        const {
+            initialDelayMs,
+            maxAttempts,
+            backoffMultiplier,
+            retryableStatusCodes
+        } = OBSIDIAN_CONNECTION_RETRY_POLICY;
+        const requestOptions: RequestInit = {
+            method: 'GET',
+            headers,
+            cache: CONNECTION_TEST_CACHE_MODE
+        };
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const response = await fetchWithTimeout(
+                    ENDPOINTS.root(baseUrl),
+                    requestOptions,
+                    FETCH_TIMEOUT_MS
+                );
+                if (
+                    response.ok ||
+                    !isRetryableStatus(response.status, retryableStatusCodes) ||
+                    attempt === maxAttempts - 1
+                ) {
+                    return response;
+                }
+            } catch (error: unknown) {
+                if (!isRetryableNetworkError(error) || attempt === maxAttempts - 1) {
+                    throw error;
+                }
+            }
+
+            await waitForRetry(retryDelayMs(attempt, initialDelayMs, backoffMultiplier));
+        }
+
+        throw new Error('Connection test retry attempts exhausted');
+    }
+
     async testConnection(override?: { protocol?: string; port?: string | number; apiKey?: string; host?: string }): Promise<ObsidianConnectionResult> {
         try {
             let baseUrl: string;
@@ -238,11 +290,7 @@ export class ObsidianClient {
             }
             addLog(LogType.DEBUG, `Testing Obsidian connection to: ${baseUrl}`);
 
-            const response = await fetchWithTimeout(ENDPOINTS.root(baseUrl), {
-                method: 'GET',
-                headers,
-                cache: CONNECTION_TEST_CACHE_MODE
-            }, FETCH_TIMEOUT_MS);
+            const response = await this._fetchConnectionResponse(baseUrl, headers);
 
             if (response.ok) {
                 return { success: true, message: 'Success! Connected to Obsidian. Settings Saved.' };
