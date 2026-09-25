@@ -79,24 +79,24 @@ Scenario: ポリシーの最終更新日を変えても全体の再同意は発�
 
 ## 受け入れ基準
 
-- [ ] プライバシーパネルに「遷移記録」のチェックボックスがあり、既定は OFF
-- [ ] ON にするときは確認ダイアログを出し、同意したときだけ有効にする
-- [ ] 有効なときだけ、自動記録（`valid-visit`）の行に `nav_source_url` と `search_query` が入る。無効なら両方 NULL
-- [ ] `nav_source_url`
+- [x] プライバシーパネルに「遷移記録」のチェックボックスがあり、既定は OFF
+- [x] ON にするときは確認ダイアログを出し、同意したときだけ有効にする
+- [x] 有効なときだけ、自動記録（`valid-visit`）の行に `nav_source_url` と `search_query` が入る。無効なら両方 NULL
+- [x] `nav_source_url`
   - 同じタブで直前に開いていた http(s) の URL を、フラグメントを除いて入れる
   - 流入元が除外ドメインならオリジンだけを入れる
-- [ ] `search_query`
+- [x] `search_query`
   - 流入元が検索エンジンのルールに当てはまるときだけ入れる
   - PII マスクをかけ、最大 200 文字にする
-- [ ] シークレットタブのタブ遷移は追跡しない
-- [ ] OFF にしたとき、およびプライバシー同意を撤回したときは、セッションストレージのタブ追跡状態を全て消す
-- [ ] 既存の DB では migration で 2 列が追加される。旧バックアップ・アーカイブを復元したときも NULL で補われる
-- [ ] オフライン再送でも 2 列が落ちない
-- [ ] 2 列は AI への送信内容・Obsidian の Markdown・エクスポートのどこにも含まれない
-- [ ] PRIVACY.md（public / docs は同じ内容）に遷移記録の節と「同意バージョン」の行がある。`check-privacy.mjs` は同意バージョンと照合する
-- [ ] `PRIVACY_POLICY_VERSION` は `'2026-09-08'` のまま変えない
-- [ ] `manifest` の権限は変えない
-- [ ] `npm run validate`、`npm run build`、`npm run release:check` の privacy 項目が通る
+- [x] シークレットタブのタブ遷移は追跡しない
+- [x] OFF にしたとき、およびプライバシー同意を撤回したときは、セッションストレージのタブ追跡状態を全て消す
+- [x] 既存の DB では migration で 2 列が追加される。旧バックアップ・アーカイブを復元したときも NULL で補われる
+- [x] オフライン再送でも 2 列が落ちない
+- [x] 2 列は AI への送信内容・Obsidian の Markdown・エクスポートのどこにも含まれない
+- [x] PRIVACY.md（public / docs は同じ内容）に遷移記録の節と「同意バージョン」の行がある。`check-privacy.mjs` は同意バージョンと照合する
+- [x] `PRIVACY_POLICY_VERSION` は `'2026-09-08'` のまま変えない
+- [x] `manifest` の権限は変えない
+- [x] `npm run validate`、`npm run build`、`npm run release:check` の privacy 項目が通る
 
 ## 詳細設計
 
@@ -525,9 +525,9 @@ export async function initNavTrailToggle(container: HTMLElement): Promise<void>
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（プライバシー文書のシナリオは check-privacy のテストで担保する）
-- [ ] `npm run validate`、`npm run build`、`npm run release:check` が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする（プライバシー文書のシナリオは check-privacy のテストで担保する）
+- [x] `npm run validate`、`npm run build`、`npm run release:check` が通る
 - [ ] Chrome での手動確認が済んでいる（検索 → 記事 → セッション表示）
 - [ ] セキュリティ観点のレビュー完了（新しいデータ種別のため、`dev-docs/SECURITY_REVIEW_GUIDE.md` のチェックリストを適用する）
-- [ ] PRIVACY.md（2ファイル）・ガイド・CHANGELOG を更新済み
-- [ ] `pbi/00-INDEX.md` を更新し、アーカイブ済み
+- [x] PRIVACY.md（2ファイル）・ガイド・CHANGELOG を更新済み
+- [x] `pbi/00-INDEX.md` を更新し、アーカイブ済み
