@@ -73,18 +73,18 @@ Feature: Obsidian 接続確認の一時的な障害への耐性
 
 ## 受け入れ基準
 
-- [ ] 接続確認の最初の GET が成功した場合は、追加要求を送らずに成功を返す。
-- [ ] connection reset、timeout、再試行可能な 5xx は、明示した上限まで指数バックオフで再試行できる。
-- [ ] 各試行の間には単調増加する指数バックオフの待機時間を設ける。
-- [ ] 再試行上限に達した場合は、認証失敗と区別できるネットワーク失敗として扱う。
-- [ ] 401、403、404 は再試行せず、既存の認証または応答失敗として扱う。
-- [ ] API key 欠落、非 loopback host の平文 HTTP、設定不備、CSP block は再試行しない。
-- [ ] retry は `testConnection()` の安全な root GET に限定する。
-- [ ] 読み取り GET 以外、全体書き込み PUT、`appendToDailyNote()` の GET、section insert、full-note PUT には retry を追加しない。
-- [ ] API key は Authorization header 以外へ送出せず、log、例外、通知へ含めない。
-- [ ] 既存の timeout 処理と CSP fetch path を維持する。
-- [ ] すべての ESM import は `.js` 拡張子を使う。
-- [ ] `MessageRouter.ts` の production adapter call site から追加設定なしで同じ接続確認動作を利用できる。
+- [x] 接続確認の最初の GET が成功した場合は、追加要求を送らずに成功を返す。
+- [x] connection reset、timeout、再試行可能な 5xx は、明示した上限まで指数バックオフで再試行できる。
+- [x] 各試行の間には単調増加する指数バックオフの待機時間を設ける。
+- [x] 再試行上限に達した場合は、認証失敗と区別できるネットワーク失敗として扱う。
+- [x] 401、403、404 は再試行せず、既存の認証または応答失敗として扱う。
+- [x] API key 欠落、非 loopback host の平文 HTTP、設定不備、CSP block は再試行しない。
+- [x] retry は `testConnection()` の安全な root GET に限定する。
+- [x] 読み取り GET 以外、全体書き込み PUT、`appendToDailyNote()` の GET、section insert、full-note PUT には retry を追加しない。
+- [x] API key は Authorization header 以外へ送出せず、log、例外、通知へ含めない。
+- [x] 既存の timeout 処理と CSP fetch path を維持する。
+- [x] すべての ESM import は `.js` 拡張子を使う。
+- [x] `MessageRouter.ts` の production adapter call site から追加設定なしで同じ接続確認動作を利用できる。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -179,14 +179,14 @@ Feature: Obsidian 接続確認の一時的な障害への耐性
 
 ## Definition of Done
 
-- [ ] BDD の全シナリオが Outside-In の自動テストとして実装され、green である。
-- [ ] connection reset、timeout、対象 5xx だけが有限回数の指数バックオフ再試行対象である。
-- [ ] 401、403、404、API key 欠落、CSP block、設定不備は再試行されない。
-- [ ] retry 上限到達時は認証失敗と区別できるネットワーク失敗として扱われる。
-- [ ] `testConnection()` 以外の HTTP surface と `appendToDailyNote()` の read-modify-write は変更されない。
-- [ ] API key が Authorization header 以外、log、例外、通知へ漏れない。
-- [ ] 既存 timeout、CSP fetch path、URL error redaction のテストが green である。
-- [ ] すべての追加 import が ESM 規約に従い `.js` 拡張子を持つ。
-- [ ] retry 回数を利用者向け通知、log、UI イベントに追加していない。
-- [ ] failure taxonomy と書込 replay の PBI を dependency として追加していない。
-- [ ] 関連する型チェック、lint、test の検証が完了している。
+- [x] BDD の全シナリオが Outside-In の自動テストとして実装され、green である。
+- [x] connection reset、timeout、対象 5xx だけが有限回数の指数バックオフ再試行対象である。
+- [x] 401、403、404、API key 欠落、CSP block、設定不備は再試行されない。
+- [x] retry 上限到達時は認証失敗と区別できるネットワーク失敗として扱われる。
+- [x] `testConnection()` 以外の HTTP surface と `appendToDailyNote()` の read-modify-write は変更されない。
+- [x] API key が Authorization header 以外、log、例外、通知へ漏れない。
+- [x] 既存 timeout、CSP fetch path、URL error redaction のテストが green である。
+- [x] すべての追加 import が ESM 規約に従い `.js` 拡張子を持つ。
+- [x] retry 回数を利用者向け通知、log、UI イベントに追加していない。
+- [x] failure taxonomy と書込 replay の PBI を dependency として追加していない。
+- [x] 関連する型チェック、lint、test の検証が完了している。

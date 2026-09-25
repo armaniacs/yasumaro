@@ -571,8 +571,163 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        const result = await obsidianClient.testConnection();
        expect(result.success).toBe(false);
        expect(result.message).toContain('API key is missing');
-     });
-   });
+  });
+});
+
+describe('ObsidianClient: connection check retry policy', () => {
+  const originalFetch = global.fetch;
+  const connectionOverride = {
+    protocol: 'http',
+    host: '127.0.0.1',
+    port: 27123,
+    apiKey: 'retry-test-key'
+  };
+
+  beforeEach(() => {
+    global.fetch = vi.fn();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    global.fetch = originalFetch;
+  });
+
+  it('retries a network error and waits for the initial backoff delay', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = fetchMock;
+
+    const promise = new ObsidianClient().testConnection(connectionOverride);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(499);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(promise).resolves.toMatchObject({ success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('uses increasing delays for consecutive retryable failures', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new Error('connection reset'))
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = fetchMock;
+
+    const promise = new ObsidianClient().testConnection(connectionOverride);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(499);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(promise).resolves.toMatchObject({ success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  it('retries a timeout and uses an increasing delay before the next attempt', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' }))
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = fetchMock;
+
+    const promise = new ObsidianClient().testConnection(connectionOverride);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(500);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(promise).resolves.toMatchObject({ success: true });
+  });
+
+  it.each([500, 502, 503, 504])('retries HTTP %s and succeeds on the next attempt', async (status) => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status, statusText: 'Transient response' })
+      .mockResolvedValueOnce({ ok: true, status: 200 });
+    global.fetch = fetchMock;
+
+    const promise = new ObsidianClient().testConnection(connectionOverride);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(500);
+
+    await expect(promise).resolves.toMatchObject({ success: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([401, 403, 404, 501])('does not retry HTTP %s', async (status) => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status,
+      statusText: 'Terminal response'
+    });
+    global.fetch = fetchMock;
+
+    const result = await new ObsidianClient().testConnection(connectionOverride);
+
+    expect(result.success).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not retry a CSP block', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('URL blocked by CSP policy'));
+    global.fetch = fetchMock;
+
+    const result = await new ObsidianClient().testConnection(connectionOverride);
+
+    expect(result.success).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not apply the connection retry loop to daily-note writes', async () => {
+    mockGetSettings.mockResolvedValue({
+      OBSIDIAN_API_KEY: 'retry-test-key',
+      OBSIDIAN_PROTOCOL: 'http',
+      OBSIDIAN_PORT: '27123',
+      OBSIDIAN_DAILY_PATH: ''
+    });
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'));
+    global.fetch = fetchMock;
+
+    await expect(new ObsidianClient().appendToDailyNote('content')).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops after the configured maximum number of attempts', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
+    global.fetch = fetchMock;
+
+    const promise = new ObsidianClient().testConnection(connectionOverride);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(500);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1000);
+
+    await expect(promise).resolves.toMatchObject({ success: false });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
 
    describe('_fetchWithTimeout abort handling', () => {
      beforeEach(() => {
@@ -601,7 +756,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
         const client = new ObsidianClient();
         const promise = client.testConnection();
 
-        // Advance timers past FETCH_TIMEOUT_MS (15000ms)
+        await vi.advanceTimersByTimeAsync(15001);
+        await vi.advanceTimersByTimeAsync(500);
+        await vi.advanceTimersByTimeAsync(15001);
+        await vi.advanceTimersByTimeAsync(1000);
         await vi.advanceTimersByTimeAsync(15001);
 
         const result = await promise;
