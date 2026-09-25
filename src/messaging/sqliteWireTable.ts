@@ -46,6 +46,7 @@ import type { SqliteMessageType } from './sqliteMessages.js';
 import type { SqliteStatusResult } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 import type { ArchiveOpType } from './archiveWireTable.js';
+import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportRetryPolicy.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
@@ -116,6 +117,7 @@ export interface SqliteWireOpDescriptor<O extends string = string, G = unknown, 
   family: 'mutate' | 'query';
   /** background -> offscreen message type. */
   messageType: SqliteMessageType;
+  retryPolicy: TransportRetryPolicy;
   /** Offscreen repo runner key (SQLITE_REPO_RUNNERS in sqliteMessageHandlers.ts). */
   repoMethod: string;
   /** DashboardSqliteHandlerDeps method, or null when no deps path exists. */
@@ -130,9 +132,10 @@ export interface SqliteWireOpDescriptor<O extends string = string, G = unknown, 
   dashboard: SqliteDashboardHop<S> | null;
 }
 
-/** Single constructor for table rows; preserves literal types per row. */
-export function defineSqliteWireOp<const R extends SqliteWireOpDescriptor<string, unknown, unknown>>(row: R): R {
-  return row;
+type SqliteWireOpRow = Omit<SqliteWireOpDescriptor<string, unknown, unknown>, 'retryPolicy'>;
+
+export function defineSqliteWireOp<const R extends SqliteWireOpRow>(row: R): R & { retryPolicy: TransportRetryPolicy } {
+  return { ...row, retryPolicy: getTransportRetryPolicy(row.messageType) };
 }
 
 export const SQLITE_WIRE_TABLE = [
@@ -695,15 +698,17 @@ export interface SqliteMaintainWireOpDescriptor<O extends string = string, G = u
   family: 'maintain';
   /** background -> offscreen message type. */
   messageType: SqliteMessageType;
+  retryPolicy: TransportRetryPolicy;
   /** Builds the wire payload the gateway sends offscreen. */
   encodePayload: (op: MaintainOp) => Record<string, unknown>;
   /** Decodes the wire success shape into the gateway client value. */
   decodeGateway: (response: { success: true } & Record<string, unknown>) => G;
 }
 
-/** Single constructor for maintain rows; preserves literal types per row. */
-export function defineSqliteMaintainWireOp<const R extends SqliteMaintainWireOpDescriptor<string, unknown>>(row: R): R {
-  return row;
+type SqliteMaintainWireOpRow = Omit<SqliteMaintainWireOpDescriptor<string, unknown>, 'retryPolicy'>;
+
+export function defineSqliteMaintainWireOp<const R extends SqliteMaintainWireOpRow>(row: R): R & { retryPolicy: TransportRetryPolicy } {
+  return { ...row, retryPolicy: getTransportRetryPolicy(row.messageType) };
 }
 
 export const SQLITE_MAINTAIN_WIRE_TABLE = [
