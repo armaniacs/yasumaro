@@ -31,7 +31,7 @@
 | 03 | [feat-navigation-trail-recording](2026-09-26-03-feat-navigation-trail-recording.md) | feat | 0.32 | 5 | 02 の後。2026-09-25-24（再同意 UX）と `privacyConsent.ts` が競合するので同時着手しない |
 | 04 | [feat-session-path-tree-search-to-goal](2026-09-26-04-feat-session-path-tree-search-to-goal.md) | feat | 0.67 | 3 | 02・03 の後（依存を優先し、RICE では上位だが 03 の後に着手する） |
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 6件完了・アーカイブ済み / ⬜ 未着手 24件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 7件完了・アーカイブ済み / ⬜ 未着手 23件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
@@ -50,7 +50,6 @@
 | 17 | [fix-settings-migration-completion-state](2026-09-25-17-fix-settings-migration-completion-state.md) | fix | 1.2 | 2 | 18 の前提。データ損失のため優先実施 |
 | 18 | [investigate-settings-key-single-writer](2026-09-25-18-investigate-settings-key-single-writer.md) | investigate | 1.5 | 2 | 02 と 17 の後（依存で降格） |
 | 19 | [doc-docs-catalog-accessibility-i18n](2026-09-25-19-doc-docs-catalog-accessibility-i18n.md) | doc | 1.0 | 0.5 | 14 の受益 case |
-| 20 | [doc-messaging-layer-decision-record](2026-09-25-20-doc-messaging-layer-decision-record.md) | doc | 1.0 | 0.25 | ADR 未作成。再検討トリガー 3 件を記載 |
 | 21 | [doc-ssrf-threat-model-residual-risk](2026-09-25-21-doc-ssrf-threat-model-residual-risk.md) | doc | 0.8 | 0.5 | security を弱めない記述に限定 |
 | 22 | [investigate-pending-queue-poison-record](2026-09-25-22-investigate-pending-queue-poison-record.md) | investigate | 0.75 | 2 | 01 の retry 判定と共有。実データ待ち |
 | 23 | [investigate-deprecated-alias-sunset](2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | 14 の path 対象要与 |
@@ -129,9 +128,9 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-25 Checking Team 残債ラウンド — ✅ 6件完了（01・03・04・05・08・09 アーカイブ済み）
+### 2026-09-25 Checking Team 残債ラウンド — ✅ 7件完了（01・03・04・05・08・09・20 アーカイブ済み）
 
-autonomous-task-closer による DoD 反映漏れの回収。実装コミット・DoD チェックボックス・`npm run validate`（13,875 tests green）を実測確認した上でアーカイブした。新規実装は行っていない。DoD 反映漏れのため 5 Whys は実施していない。
+autonomous-task-closer による回収。01/03/04/05/08/09 は実装コミット・DoD チェックボックス・`npm run validate`（13,875 tests green）を実測確認した上でアーカイブした新規実装不要の DoD 反映漏れ。20 は未着手だったため ADR を作成して実装した。
 
 - [2026-09-25-01-fix-transport-replay-safety.md](../dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md)（✅ 完了 — `c12cacde` + レビュー対応 `4b6d75ab`。retry-safe 18 / retry-unsafe 14 の最終裁定、insert 系は fail-closed へ撤回、判定源も一本化。DoD 18/18 `[x]` 確認済み。RICE 20.0）
 - [2026-09-25-03-refactor-previewonly-flag-cleanup.md](../dev-docs/archived/pbi/2026-09-25-03-refactor-previewonly-flag-cleanup.md)（✅ 完了 — `6044e984`。`RecordOptions` から `previewOnly` を削除し `RecordingOrchestrator` の `data.previewOnly` 単一判定へ。DoD 18/18 `[x]` 確認済み。RICE 8.0）
@@ -139,6 +138,7 @@ autonomous-task-closer による DoD 反映漏れの回収。実装コミット�
 - [2026-09-25-05-fix-trustchecker-legacy-dead-code.md](../dev-docs/archived/pbi/2026-09-25-05-fix-trustchecker-legacy-dead-code.md)（✅ 完了 — `b9ee19cc`。trust 設定のレガシー storage 経路を Trust DB に一本化。`src/` 内のレガシー trustchecker 参照 0 件を確認。DoD 21/21 `[x]` 確認済み。RICE 3.0）
 - [2026-09-25-08-doc-trust-record-policy-correction.md](../dev-docs/archived/pbi/2026-09-25-08-doc-trust-record-policy-correction.md)（✅ 完了 — `1a121c74`。ガイド（日英）に記録可否の列を追加し、blog の誤記述と production が生成しない fixture を是正。DoD 19/19 `[x]` 確認済み。RICE 2.0）
 - [2026-09-25-09-fix-popup-untranslated-title-token.md](../dev-docs/archived/pbi/2026-09-25-09-fix-popup-untranslated-title-token.md)（✅ 完了 — `13721302`。`title="Browse History"` と `stroke="#2E7D32"` の raw 属性が 0 件であることを grep 確認、`aria-label` は維持。DoD 17/17 `[x]` 確認済み。RICE 2.0）
+- [2026-09-25-20-doc-messaging-layer-decision-record.md](../dev-docs/archived/pbi/2026-09-25-20-doc-messaging-layer-decision-record.md)（✅ 完了 — ADR `2026-09-25-messaging-background-reverse-dependency.md` を新設し「逆依存を許容・現状維持」の判断と再検討トリガー3項目を記録。実コード無変更。ADR README の一覧が 2026-08-12 で止まっていたドリフトも併せて回復（未掲載7件を追記）。整合3テスト 97 green。RICE 1.0）
 
 ### 2026-09-24 arch-delivery-loop ラウンド バッチ6-7 — ✅ 2件完了（15・16 アーカイブ済み）RICE順: 15 → 16（直列）
 

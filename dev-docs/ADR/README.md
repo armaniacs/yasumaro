@@ -41,6 +41,14 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | - | [Markdown出力経路へのサニタイズ適用ルール](./2026-07-22-markdown-output-sanitization-guardrail.md) | 2026-07-22 | 承認済み |
 | - | [Response Size Limit Guardrail](./2026-07-22-response-size-limit-guardrail.md) | 2026-07-22 | 承認済み |
 | - | [暗号化秘密値（ENCRYPTION_SECRET）は chrome.storage.local に保存する](./2026-08-12-encryption-secret-storage-area-must-be-local.md) | 2026-08-12 | 採用済み |
+| - | [Pipeline Offline Guard — isNetworkError](./2026-08-27-pipeline-offline-guard.md) | 2026-08-27 | 採用 |
+| - | [FETCH_URL Redirect Policy — redirect: 'error'](./2026-08-29-fetch-redirect-policy.md) | 2026-08-29 | 採用 |
+| - | [built-in AI 二重アダプタの裁定 — LocalAIService と BuiltInAiProvider の併存](./2026-09-17-builtin-ai-dual-adapter.md) | 2026-09-17 | 採用 |
+| - | [storage/defaults.ts → aiSummaryCleaner/rules.ts の暫定許可の裁定](./2026-09-17-defaults-cleansing-rules-provisional-allow.md) | 2026-09-17 | 採用 |
+| - | [module 級 singleton と composition root の併存方針](./2026-09-17-module-singleton-policy.md) | 2026-09-17 | 採用 |
+| - | [履歴の診断行は欠測時も理由付きで常に表示する](./2026-09-18-history-diagnostic-rows-always-visible.md) | 2026-09-18 | 採用 |
+| 017 | [WASM コアの「完全移植 + TS パリティ参照 + ハイブリッドフォールバック」戦略](./2026-09-20-wasm-exact-port-parity-strategy.md) | 2026-09-20 | Accepted |
+| - | [messaging から background への逆依存を許容する](./2026-09-25-messaging-background-reverse-dependency.md) | 2026-09-25 | 採用済み |
 
 ---
 
