@@ -38,16 +38,16 @@ Scenario: public preview の表面契約を維持する
 
 ## 受け入れ基準
 
-- [ ] `RecordOptions.previewOnly` を削除するか互換で残すかを裁定し、裁定結果を `src/background/pipeline/RecordingOrchestrator.ts` の入口判定へ反映している
-- [ ] `src/background/pipeline/RecordingOrchestrator.ts:131` の `opts.previewOnly || data.previewOnly` を廃止し、入口では `data.previewOnly` を判定している
-- [ ] `src/background/pipeline/RecordingOrchestrator.ts:131` の `(data as { previewOnly?: boolean }).previewOnly` を削除している
-- [ ] `src/background/pipeline/RecordingOrchestrator.ts:139` の `{ ...data, previewOnly: true } as RecordingData` を、型キャストなしの形へ整理している
-- [ ] `src/messaging/types.ts:172` の `RecordingData.previewOnly?: boolean` を維持している
-- [ ] `src/background/pipeline/RecordingOrchestrator.ts:196` の `data.previewOnly` 判定を維持している
-- [ ] public `preview()` を維持している
-- [ ] `src/background/recordRequestBuilder.ts:229-233` と `src/background/handlers/recordingHandlers.ts:265-273` による data 側の正規化を前提とした既存動作を維持している
-- [ ] production の `record()` 呼び出し8箇所の契約を維持している
-- [ ] ESM import の `.js` 拡張子と async/await のみという制約を守っている
+- [x] `RecordOptions.previewOnly` を削除するか互換で残すかを裁定し、裁定結果を `src/background/pipeline/RecordingOrchestrator.ts` の入口判定へ反映している
+- [x] `src/background/pipeline/RecordingOrchestrator.ts:131` の `opts.previewOnly || data.previewOnly` を廃止し、入口では `data.previewOnly` を判定している
+- [x] `src/background/pipeline/RecordingOrchestrator.ts:131` の `(data as { previewOnly?: boolean }).previewOnly` を削除している
+- [x] `src/background/pipeline/RecordingOrchestrator.ts:139` の `{ ...data, previewOnly: true } as RecordingData` を、型キャストなしの形へ整理している
+- [x] `src/messaging/types.ts:172` の `RecordingData.previewOnly?: boolean` を維持している
+- [x] `src/background/pipeline/RecordingOrchestrator.ts:196` の `data.previewOnly` 判定を維持している
+- [x] public `preview()` を維持している
+- [x] `src/background/recordRequestBuilder.ts:229-233` と `src/background/handlers/recordingHandlers.ts:265-273` による data 側の正規化を前提とした既存動作を維持している
+- [x] production の `record()` 呼び出し8箇所の契約を維持している
+- [x] ESM import の `.js` 拡張子と async/await のみという制約を守っている
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -133,11 +133,11 @@ Scenario: public preview の表面契約を維持する
 
 ## Definition of Done
 
-- [ ] `RecordOptions.previewOnly` の扱いを裁定し、型定義と実装を一致させている
-- [ ] 入口の二重判定と2箇所の不要な型キャストを削除している
-- [ ] `RecordingData.previewOnly` と `src/background/pipeline/RecordingOrchestrator.ts:196` の実行時判定を維持している
-- [ ] public `preview()` の surface 契約を維持している
-- [ ] `RecordingPipeline.flags.test.ts`、`RecordingPipeline.test.ts:317-373`、`orchestrator-surface.test.ts`、`RecordingPipeline-r2.test.ts` と必要な追加テストがパスする
-- [ ] type-check、lint、test、build がパスする
-- [ ] 依存PBIとの型所有者と import の変更が競合なく反映されている
-- [ ] コードレビューが完了している
+- [x] `RecordOptions.previewOnly` の扱いを裁定し、型定義と実装を一致させている
+- [x] 入口の二重判定と2箇所の不要な型キャストを削除している
+- [x] `RecordingData.previewOnly` と `src/background/pipeline/RecordingOrchestrator.ts:196` の実行時判定を維持している
+- [x] public `preview()` の surface 契約を維持している
+- [x] `RecordingPipeline.flags.test.ts`、`RecordingPipeline.test.ts:317-373`、`orchestrator-surface.test.ts`、`RecordingPipeline-r2.test.ts` と必要な追加テストがパスする
+- [x] type-check、lint、test、build がパスする
+- [x] 依存PBIとの型所有者と import の変更が競合なく反映されている
+- [x] コードレビューが完了している

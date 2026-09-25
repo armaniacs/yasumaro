@@ -53,7 +53,6 @@ export interface RecordingOrchestratorDeps {
 }
 
 export interface RecordOptions {
-  previewOnly?: boolean;
   /**
    * Explicit settings, bypassing getSettingsWithCache. Used by the
    * manual/preview record handlers which have already resolved settings and
@@ -128,7 +127,7 @@ export class RecordingOrchestrator {
    * the `previewOnly` data flag short-circuits at the previewBreakpoint step.
    */
   async record(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
-    if (opts.previewOnly || (data as { previewOnly?: boolean }).previewOnly) return this.preview(data, opts);
+    if (data.previewOnly) return this.preview(data, opts);
     const settings = opts.settings ?? await this.getSettingsWithCache();
     return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
   }
@@ -136,7 +135,7 @@ export class RecordingOrchestrator {
   /** Preview path: short-circuit after privacyPipeline (previewBreakpoint) */
   async preview(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
     const settings = opts.settings ?? await this.getSettingsWithCache();
-    const effectiveData = { ...data, previewOnly: true } as RecordingData;
+    const effectiveData = { ...data, previewOnly: true };
     return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
   }
 
