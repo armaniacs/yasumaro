@@ -1,3 +1,16 @@
+/**
+ * retryPredicate.ts
+ * Retry classification for the Obsidian connection check (obsidianClient).
+ *
+ * Deliberately separate from fetch.ts's defaultShouldRetry (fetchWithRetry):
+ * that classifier is TransportError/Response-shape aware and method-aware,
+ * while this one classifies opaque thrown errors from a raw fetch() by
+ * string markers. If you change which network errors count as retryable,
+ * check both tables — they intentionally disagree on details (e.g. this
+ * one lowercases before matching 'failed to fetch') and must be updated
+ * together when the intent is shared.
+ */
+
 const RETRYABLE_NETWORK_MARKERS = [
   'failed to fetch',
   'fetch failed',
@@ -62,10 +75,6 @@ export function isRetryableNetworkError(error: unknown): boolean {
 
 export function isRetryableStatus(status: number, retryableStatusCodes: readonly number[]): boolean {
   return retryableStatusCodes.includes(status);
-}
-
-export function retryDelayMs(retryIndex: number, initialDelayMs: number, multiplier: number): number {
-  return initialDelayMs * Math.pow(multiplier, retryIndex);
 }
 
 export async function waitForRetry(delayMs: number): Promise<void> {

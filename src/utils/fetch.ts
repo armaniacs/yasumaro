@@ -292,6 +292,11 @@ export interface RetryOptions {
  * - HTTP 5xx サーバーエラー: 冪等なメソッド（GET等）のみ maxRetryCount まで通常リトライ。
  *   POST/PUT/PATCH/DELETE は二重生成・二重課金を防ぐためリトライしない
  * @param {string} method - HTTPメソッド（デフォルト 'GET'）
+ *
+ * Note: retryPredicate.isRetryableNetworkError (obsidianClient connection
+ * check) is a separate thrown-error classifier with its own marker table.
+ * The two intentionally differ (method/429 awareness here, lowercase marker
+ * matching there) — change both together when retryability intent is shared.
  */
 function defaultShouldRetry(error: Error, attempt: number, response: Response | null, method: string = 'GET'): boolean {
   // 429 Too Many Requests: リトライしない

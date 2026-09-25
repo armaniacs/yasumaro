@@ -11,9 +11,9 @@ import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js'
 import {
     isRetryableNetworkError,
     isRetryableStatus,
-    retryDelayMs,
     waitForRetry
 } from '../utils/retryPredicate.js';
+import { backoffDelayMs } from '../utils/backoff.js';
 import {
     validateObsidianProtocol,
     validateObsidianHost,
@@ -263,7 +263,7 @@ export class ObsidianClient {
                 }
             }
 
-            await waitForRetry(retryDelayMs(attempt, initialDelayMs, backoffMultiplier));
+            await waitForRetry(backoffDelayMs(attempt, { baseMs: initialDelayMs, multiplier: backoffMultiplier }));
         }
 
         throw new Error('Connection test retry attempts exhausted');
