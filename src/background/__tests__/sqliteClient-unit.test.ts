@@ -260,7 +260,7 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
-  describe('mutate noRetry wiring (toggle flip safety)', () => {
+  describe('mutate retry policy wiring', () => {
     function createOptsCapturingTransport(response: unknown): {
       transport: OffscreenTransport;
       seenOpts: MsgOffscreenOptions[];
@@ -280,14 +280,14 @@ describe('SqliteClient — unit tests', () => {
       return { transport, seenOpts };
     }
 
-    it('passes noRetry for toggleStar (re-execution would flip the star twice)', async () => {
+    it('leaves toggleStar retry policy to the transport', async () => {
       const { transport, seenOpts } = createOptsCapturingTransport({ success: true, is_starred: 1 });
       client = new SqliteClient(transport);
 
       const result = await client.mutate({ type: 'toggleStar', id: 1 });
 
       expect(result).toEqual({ success: true, data: { is_starred: 1 } });
-      expect(seenOpts).toEqual([{ noRetry: true }]);
+      expect(seenOpts).toEqual([{}]);
     });
 
     it('keeps the transport single retry for set-semantics mutates', async () => {

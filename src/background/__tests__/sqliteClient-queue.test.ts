@@ -123,7 +123,7 @@ describe('ChromeOffscreenTransport — noRetry option (PBI 2026-09-06-01)', () =
     expect(sendMessageMock).toHaveBeenCalledTimes(2);
   });
 
-  it('does not retry when noRetry is set (bulk archive operations)', async () => {
+  it('does not retry when noRetry is explicitly set', async () => {
     await expect(
       transport.msgOffscreen('SQLITE_QUERY', {}, '', { noRetry: true }),
     ).rejects.toThrow('offscreen suspended');

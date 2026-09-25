@@ -1,7 +1,7 @@
 /**
  * archiveWireTable.test.ts (PBI 2026-09-07-22)
  *
- * The table is the single source of op -> wire-type -> noRetry routing.
+ * The table is the single source of op -> wire-type -> retry policy routing.
  * These tests fail closed in both directions: a new MaintainOp / message /
  * worker type without a table row fails here, and a stale table row fails
  * here too. Compile-time asserts in archiveWireTable.ts cover the
@@ -10,11 +10,11 @@
 import { describe, it, expect } from 'vitest';
 import {
   ARCHIVE_WIRE_TABLE,
-  ARCHIVE_NO_RETRY_OPS,
   archiveWireFor,
   archiveWireForMessage,
   isArchiveOpType,
 } from '../archiveWireTable.js';
+import { RETRY_UNSAFE } from '../transportRetryPolicy.js';
 import { SQLITE_MESSAGE_TYPES } from '../sqliteMessages.js';
 import { WORKER_MESSAGE_TYPES } from '../../offscreen/opfsWorker/types.js';
 
@@ -35,10 +35,21 @@ describe('messaging/archiveWireTable: shape', () => {
     expect(new Set(workers).size).toBe(14);
   });
 
-  it('declares the noRetry ops (bulk/state-changing: timeout != failure)', () => {
-    expect([...ARCHIVE_NO_RETRY_OPS].sort()).toEqual(
-      ['archiveClose', 'archiveCreate', 'archiveDeleteByStaging', 'archiveOpen', 'archiveRestore', 'archiveSave'].sort(),
-    );
+  it('keeps the existing six no-retry archive operations unsafe', () => {
+    for (const op of [
+      'archiveClose',
+      'archiveCreate',
+      'archiveDeleteByStaging',
+      'archiveOpen',
+      'archiveRestore',
+      'archiveSave',
+    ] as const) {
+      expect(archiveWireFor(op)?.retryPolicy).toBe(RETRY_UNSAFE);
+    }
+  });
+
+  it('keeps archivePrepareIncoming retry-unsafe', () => {
+    expect(archiveWireFor('archivePrepareIncoming')?.retryPolicy).toBe(RETRY_UNSAFE);
   });
 
   it('lookups resolve in both directions', () => {
