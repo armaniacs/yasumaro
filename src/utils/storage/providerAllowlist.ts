@@ -360,7 +360,7 @@ export interface ProviderOriginAuthorization {
   readonly reason: ProviderOriginAuthorizationReason;
 }
 
-function isLoopbackOriginHostname(hostname: string): boolean {
+export function isLoopbackOriginHostname(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/^\[(.*)\]$/, '$1');
   return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h);
 }
