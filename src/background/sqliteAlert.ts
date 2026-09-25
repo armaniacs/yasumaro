@@ -38,6 +38,10 @@ let consecutiveFailures = 0;
 let lastAlertTime = 0;
 let firstFailureTime = 0;
 
+/** True once this SW lifetime has mutated the counters; a late-arriving
+ *  rehydration must not clobber newer in-memory state with a stale snapshot. */
+let stateMutated = false;
+
 /** In-flight (or completed) rehydration; shared so concurrent callers join it. */
 let restorePromise: Promise<void> | null = null;
 
@@ -73,7 +77,8 @@ export function restoreSqliteAlertState(): Promise<void> {
                 state &&
                 typeof state.consecutiveFailures === 'number' &&
                 typeof state.lastAlertTime === 'number' &&
-                typeof state.firstFailureTime === 'number'
+                typeof state.firstFailureTime === 'number' &&
+                !stateMutated
             ) {
                 applySnapshot(state);
             }
@@ -91,9 +96,9 @@ void restoreSqliteAlertState();
 const criticalSink = new ChromeNotificationCriticalSink();
 
 export function recordSqliteFailure(component: string, error: string): void {
+    stateMutated = true;
     consecutiveFailures++;
     if (firstFailureTime === 0) firstFailureTime = Date.now();
-    void persistSqliteAlertState();
 
     addLog(LogType.ERROR, `SqliteAlert: ${component} failure`, {
         consecutiveFailures,
@@ -121,17 +126,30 @@ export function recordSqliteFailure(component: string, error: string): void {
             criticalSink
         );
     }
+
+    // Persist after the alert block: a SW restart must see the post-alert
+    // state (count reset, lastAlertTime stamped), or rehydration resurrects
+    // an already-alerted failure count and the next failure re-fires the
+    // notification, bypassing the cooldown.
+    void persistSqliteAlertState();
 }
 
 export function recordSqliteSuccess(): void {
-    consecutiveFailures = 0;
-    firstFailureTime = 0;
-    void persistSqliteAlertState();
+    // Skip the session write in the steady success state — every gateway call
+    // lands here and the snapshot is already the all-zero default.
+    if (consecutiveFailures !== 0 || firstFailureTime !== 0) {
+        stateMutated = true;
+        consecutiveFailures = 0;
+        firstFailureTime = 0;
+        void persistSqliteAlertState();
+    }
 }
 
 function _resetForTesting(): void {
     consecutiveFailures = 0;
     lastAlertTime = 0;
+    firstFailureTime = 0;
+    stateMutated = false;
     restorePromise = null;
     try {
         void chrome.storage.session.remove(SQLITE_ALERT_SESSION_KEY);
