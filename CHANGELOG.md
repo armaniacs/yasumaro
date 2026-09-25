@@ -37,6 +37,67 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.25] - 2026-09-25
+
+v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間の計測実装を取り下げ、滞在時間分析パネルを撤去しました。あわせて、共有部品がパネル名に依存していた i18n キーと CSS クラスを中性名へ付け替え、他 6 パネルの表示が崩れないようにしています。
+
+### Removed
+
+- **滞在時間分析パネルを削除** — 記録の自動発火条件（スクロール深度 + 最小滞在時間）を崩さずに正確な滞在時間を計測するには、記録経路 4 ホップに計測値を配線し可視区間の累積計時を組み込むという大きな変更が必要で、得られる精度も「タブを開いただけ」の除外とゼロからの相対比較に留まります。コストに見合わないとして、パネル（`visitDurationPanel` / `visitDurationAggregate`）と sidebar 登録・HTML section・i18n 23 キー×2・専用 CSS・`MAX_VISIT_DURATION_ROWS` を撤去
+  - `visit_duration` / `scroll_ratio` カラム、記録の自動発火条件（`min_visit_duration` / `min_scroll_depth`）、エクスポート/アーカイブの往復は**変更なし**
+
+### Changed
+
+- **共有部品からパネル名への依存を解放** — 撤去したパネル由来の識別子を他パネルが共有していたため、両方を中性名へ付け替えた。i18n は既定ラベルが `visitDurationPeriod*` を参照していて 6 パネルすべてが `labelKeys` を渡さずに既定値へ依存しており、キーを消したままだと期間フィルタが日本語表示を落としていた。CSS は `.visit-duration-*` をドメイン分析・タグ推移・共起ペア表・ワードクラスタ・タグクラスタ時間変化比較が表・見出し・警告通知に使用しており、パネル名付きのままでは他パネルの表示が崩れていた。文言と見た目は変えず、識別子のみ差し替え（`periodFilter*` / `.data-table*`）
+- **期間フィルタの選択状態を色付けで明示** — 共有部品 `periodFilter`（期間指定タグクラスタ・ワードクラスタ・曜日×時間帯ヒートマップ・ドメイン分析・タグ頻度の期間推移・タグ共起ペア表の 6 パネル共通）は、選択中のプリセットが太字になるだけで一目で判別しにくかった。未選択を淡い背景＋罫線に、選択中をプライマリ色の塗り＋白文字（ダークモードは `--color-primary` が明るい紫のため前景を暗色へ差し替え）にして対比を明確化。`custom` 期間はプリセットボタンを持たないため選択状態が表現不可能だったが、fieldset に `data-active-preset` を出力し、カスタム行全体をプライマリ tint ＋ inset 罫線、ラベルをプライマリ太字で表示するようにした
+
+### Tested
+
+- 単体: `periodFilter` に `data-active-preset` の追従（構築時・プリセットクリック・カスタム日付入力の 3 経路）と、既定 i18n の 9 キーが「要求されていること」「実ロケールに存在すること」を満たす assert を追加。誤キー注入とロケールからのキー欠落で双方とも失敗することを実測済み（本番 Chrome は欠落キーで空文字を返し英語フォールバックに落ちるため、表示文言ではなくキー名で assert している）
+- 全体: `npm run validate` green（13,875 passed / 21 skipped、897 ファイル）。`.data-table*` の表・見出し・警告通知は実 CSS で目視確認済み
+
+## [6.9.24] - 2026-09-25
+
+ワークスペース全量レビューの残債から RICE 採点した PBI のうち 6 件（messaging 再試行の fail-closed 規定・ループバック provider origin の承認締め付け・Obsidian 接続確認の有限再試行・Trust DB 一本化・SQLite アラートの永続化・popup tooltip の i18n）を実装し、コードレビューで判明した 23 指摘を修正しました。全テスト（単体 13,894 件、E2E 323 件）がグリーンです。
+
+### Added
+
+- **Obsidian 接続確認の有限再試行** — 接続テストが一時的なネットワーク障害や 5xx で失敗しても最大 3 回・指数バックオフで自動回復。API キー不備・CSP・不正 URL 等の終端エラーは分類して即失敗（新設 `src/utils/retryPredicate.ts`）
+- **CI にマイクロベンチ回帰ゲートを新設** — `bench-check` job がコード系変更時のみ `npm run bench:check` を実行（paths-filter で docs のみの変更は即成功）。`tests.yml` に Playwright ブラウザキャッシュを追加
+- **リリースチェックに `check-privacy` を新設** — `public/PRIVACY.md` と `docs/PRIVACY.md` の一致と、`PRIVACY_POLICY_VERSION` と PRIVACY.md 最終更新日の突合を検証
+- **ダッシュボードのアクセシビリティ強化** — 全パネルに `aria-labelledby` を付与し、タグラフノード用 a11y ヘルパーと `.btn` 基底クラス（secondary / danger バリアント）を追加
+
+### Changed
+
+- **Offscreen transport の再試行を実行安全性で規定** — 呼び出し側 `noRetry` フラグを廃止し、メッセージタイプ別の再試行ポリシー表（新設 `src/messaging/transportRetryPolicy.ts`）に一本化。INSERT 系など応答喪失時に二重書き込みになりうる操作は fail-closed とし、網羅的な `Record` 型で新タイプ追加時のポリシー未定義をコンパイルエラーで検出
+- **信頼設定のストレージを Trust DB に一本化** — レガシー `chrome.storage.local` 経路（SAFETY_MODE / TRANCO_TIER キーと双方向マッピング）を削除し、判定を Trust DB 単一経路に
+- **プライバシーポリシー同意バージョンを更新** — `PRIVACY_POLICY_VERSION` を 2026-09-08 に更新し、`docs/PRIVACY.md` と `public/PRIVACY.md` の暗号化キー保管の記述を実態どおり是正。既存ユーザーには再同意フローが表示される
+- **ローカルプロバイダ既定 URL を SSOT 化** — LM Studio / Ollama の既定 URL を新設 `providerDefaultBaseUrls.ts` に集約し、4 箇所の重複と LM Studio ホストの localhost / 127.0.0.1 ドリフトを解消
+- **プロトコルバージョン定数を SSOT 参照に** — `wxt.config.ts` の `__PROTOCOL_VERSION__` をハードコードから `CURRENT_PROTOCOL_VERSION` 参照に変更（drift ガードテスト追加）
+- **CI ワークフローの整理** — paths-filter アクションをコミット SHA でピン留め、E2E job から型検査・単体テストの重複実行を削除して CI workflow に集約
+- **ログへのレスポンスボディ記録を 500 文字で打ち切り** — Obsidian API エラー時にサーバー応答本文が診断ログ・TSV エクスポートへ無制限に流れ込むのを防止（新設 `src/utils/logTruncate.ts`）
+
+### Fixed
+
+- **SQLite アラート状態がサービスワーカー再起動で消えていた** — 連続失敗カウンタとクールダウン時刻を `chrome.storage.session` に永続化して起動時に復元。再起動後にアラート済みの失敗が再通知され 1 時間クールダウンをバイパスする問題を修正し、定常成功時の冗長な書き込みも削減
+- **popup の履歴ボタン tooltip が未翻訳の英語固定** — ハードコードを既存 i18n キーに置換（spinner SVG のハードコード色も削除）
+- **コードレビューで判明した 23 指摘を修正** — dashboard 全般の i18n フォールバック統一、サイト別オーバーライド UI とクレンジングフィードバック UI の未翻訳箇所（ja/en 計 18 キー新設）、ドメインタグ削除ボタンの aria label ほか
+- **E2E テスト基盤の修正** — macOS のアプリデータ保護で Playwright Firefox が起動できない問題を一時プロファイル退避で回避、privacy consent seed を共有 fixture 化して版数 drift を構造的に排除
+
+### Security
+
+- **ループバック provider origin の承認を締め付け** — `http://localhost` / `127.x` / `::1` への自動承認をローカルプロバイダスロット（LM Studio / Ollama / built-in AI）限定に変更し、非ローカルスロットではダッシュボード確認ダイアログの明示承認を必須化。締め付け前に保存済みだった loopback URL は 1 回限りの移行で確認済み origins に自動登録し、既存設定を保護。以後に設定・変更した URL は承認必須
+
+### Documentation
+
+- **ワークスペース全量レビューの残債を PBI 化** — 過去のレビュー報告書 8 件をアーカイブへ移管し、残債 31 候補を RICE 採点して PBI 30 件を起票（うち 6 件を本リリースで実装）
+- **ガイドを実装に同期** — trust 判定の記録可否仕様を `docs/TRUST_DOMAIN_GUIDE.md` の正本に揃え、README と `docs/i18n-guide.md` を修正
+
+### Tested
+
+- 単体: `npm test` green（13,894 passed / 21 skipped）。新規テスト: 再試行ポリシー・loopback 移行・sqliteAlert 永続化・localeParity ほか
+- E2E: `make test-all` green — 323 passed / 30 skipped（chromium 80 / firefox 81 / extension 101 / interaction 17 / a11y 4 / usability 40）。前ラウンドまで起動できなかった firefox プロジェクトを復旧済み
+
 ## [6.9.23] - 2026-09-24
 
 このリリースは v6.9.22 に続く同日リリースで、ドキュメント整備のみを含みます。拡張機能のコード変更はありません。
