@@ -4,6 +4,7 @@
  * inclusivity, DOM behavior (aria-pressed, labels, onChange payloads).
  */
 import { describe, it, expect, vi } from 'vitest';
+import enMessages from '../../../../public/_locales/en/messages.json' with { type: 'json' };
 import {
   presetToRange,
   customRangeToBounds,
@@ -172,6 +173,21 @@ describe('createPeriodFilter', () => {
     handle.destroy();
   });
 
+  it('mirrors the active preset into data-active-preset for the stylesheet', () => {
+    const { handle } = mount('last30');
+    // The selection is styled via this hook, so it must be set on construction
+    // and follow both preset clicks and custom date edits.
+    expect(handle.element.dataset.activePreset).toBe('last30');
+    (handle.element.querySelector('button[data-preset="today"]') as HTMLButtonElement).click();
+    expect(handle.element.dataset.activePreset).toBe('today');
+    const from = handle.element.querySelectorAll('input[type="date"]')[0] as HTMLInputElement;
+    from.value = '2026-09-01';
+    from.dispatchEvent(new Event('change', { bubbles: true }));
+    // 'custom' owns no button, so the fieldset hook is the only styling target.
+    expect(handle.element.dataset.activePreset).toBe('custom');
+    handle.destroy();
+  });
+
   it('setPreset drives the same path as a click', () => {
     const { handle, calls } = mount('all');
     handle.setPreset('last90');
@@ -182,7 +198,7 @@ describe('createPeriodFilter', () => {
     handle.destroy();
   });
 
-  it('injects custom label keys; omitting labelKeys keeps the visitDurationPeriod* defaults', () => {
+  it('injects custom label keys; omitting labelKeys keeps the periodFilter* defaults', () => {
     const injected = createPeriodFilter({
       initialPreset: 'last7',
       now: () => NOW,
@@ -213,9 +229,41 @@ describe('createPeriodFilter', () => {
     const defaultLabel = (
       defaulted.element.querySelector('button[data-preset="last7"]') as HTMLButtonElement
     ).textContent;
-    // The en mock resolves the unchanged visitDurationPeriodLast7Days key.
+    // The en mock resolves the unchanged periodFilterLast7Days key.
     expect(defaultLabel).toBe('Last 7 days');
     defaulted.destroy();
+  });
+
+  it('resolves its own periodFilter* i18n keys, all present in the real locale', () => {
+    // WHY assert the requested KEY, not the rendered text: the two failure
+    // modes are not equally loud. Under the vitest mock a missing key resolves
+    // to the key string (so a wrong key fails a text assertion), but in
+    // production Chrome getMessage returns '' and getMessageOr returns the
+    // English literal — a stale key would render untranslated, silently, in
+    // every panel. This test fails on the state production cannot report.
+    //
+    // periodFilter is the only host-wide label source, so one dangling key
+    // costs all 6 panels their translation, not one.
+    const requested = vi.spyOn(chrome.i18n, 'getMessage');
+    const { handle } = mount('last7');
+    const keys = requested.mock.calls.map((c) => c[0]);
+
+    for (const key of [
+      'periodFilterLabel',
+      'periodFilterToday',
+      'periodFilterLast7Days',
+      'periodFilterLast30Days',
+      'periodFilterLast90Days',
+      'periodFilterAll',
+      'periodFilterCustom',
+      'periodFilterStart',
+      'periodFilterEnd',
+    ]) {
+      expect(keys, `component never requested ${key}`).toContain(key);
+      expect(key in enMessages, `${key} missing from en locale`).toBe(true);
+    }
+    requested.mockRestore();
+    handle.destroy();
   });
 
   it('uses no inline handlers', () => {

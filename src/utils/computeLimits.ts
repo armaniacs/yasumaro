@@ -42,13 +42,6 @@ export const MAX_TAG_CLUSTER_TAGS = 50;
 export const MAX_TIME_HEATMAP_ROWS = 10000;
 
 /**
- * Max rows fetched for the visit-duration panel (user-selected period).
- * Aggregation is client-side over visit_duration; the cap bounds the transfer
- * and the O(n) group pass. The panel shows a truncation notice when reached.
- */
-export const MAX_VISIT_DURATION_ROWS = 10000;
-
-/**
  * Max rows fetched for the domain-analysis panel (user-selected period+tag).
  * queryLogs caps a single page at 10000 rows, so the panel paginates with
  * offset until this total cap; the panel shows a cap notice when the last
