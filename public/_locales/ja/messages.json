@@ -2351,6 +2351,58 @@
     "message": "再訪データの読み込みに失敗しました。",
     "description": "Load error"
   },
+  "researchSessionsTab": {
+    "message": "リサーチ・セッション",
+    "description": "Sidebar tab for the research sessions panel"
+  },
+  "researchSessions_title": {
+    "message": "リサーチ・セッション",
+    "description": "Research sessions panel title"
+  },
+  "researchSessions_description": {
+    "message": "記録どうしの間隔が選択した時間以内のページを、ひとつの調べものとしてまとめます。時間は最初と最後の記録の間隔で、実際の閲覧時間とは異なります。",
+    "description": "Research sessions panel description"
+  },
+  "researchSessions_gapLabel": {
+    "message": "セッションの区切り",
+    "description": "Session gap select label"
+  },
+  "researchSessions_gapOption": {
+    "message": "{n}分",
+    "description": "Session gap option"
+  },
+  "researchSessions_summary": {
+    "message": "{sessions} 件のセッション・単独ページ {singles} 件",
+    "description": "Session counts summary"
+  },
+  "researchSessions_pages": {
+    "message": "{n}ページ",
+    "description": "Pages per session"
+  },
+  "researchSessions_minutes": {
+    "message": "{n}分",
+    "description": "Session duration in minutes"
+  },
+  "researchSessions_starred": {
+    "message": "スター付き",
+    "description": "Starred record marker"
+  },
+  "researchSessions_truncated": {
+    "message": "新しい {shown} 件のセッションを表示しています。",
+    "description": "Session list truncation notice"
+  },
+  "researchSessions_rowCap": {
+    "message": "記録が多いため新しい {shown} 件だけでまとめました。期間を短くすると全件を対象にできます。",
+    "description": "Row cap notice"
+  },
+  "researchSessions_empty": {
+    "message": "この期間の記録がありません。",
+    "description": "Empty state"
+  },
+  "researchSessionsError": {
+    "message": "セッションの読み込みに失敗しました。",
+    "description": "Load error"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },

@@ -5009,6 +5009,35 @@ details[open] > .priority-details-summary {
   gap: var(--ym-space-2, 8px);
 }
 
+/* Research sessions: a collapsible list, so the markers would double up. */
+.research-sessions-list,
+.research-sessions-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.research-sessions-item {
+  border-bottom: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-2, 8px) 0;
+}
+
+.research-sessions-item summary {
+  cursor: pointer;
+}
+
+.research-sessions-records li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-2, 8px);
+  padding: var(--ym-space-1, 4px) 0 var(--ym-space-1, 4px) var(--ym-space-3, 12px);
+}
+
+.research-sessions-domain,
+.research-sessions-starred {
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
 .data-table-notice.is-warning {
   color: var(--ym-color-warning-text, #92400e);
   background: var(--ym-color-warning-bg, #fef3c7);
