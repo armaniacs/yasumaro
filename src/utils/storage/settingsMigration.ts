@@ -13,11 +13,23 @@ import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
 import { asStorageKeys } from './apiKeyFields.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
+import {
+    PROVIDER_ALLOWLIST_ROWS,
+    isAllowedProviderBaseUrl,
+    isLoopbackOriginHostname,
+} from './providerAllowlist.js';
 import type { StorageKey, StorageKeyValues, Settings } from './types.js';
 
 export const LEGACY_SETTINGS_BACKUP_KEY = 'legacy_settings_backup';
 const BACKUP_RETENTION_DAYS = 30;
 export const SETTINGS_MIGRATED_KEY = 'settings_migrated';
+
+/**
+ * One-time gate for migrateLoopbackProviderOriginConfirmations (raw
+ * chrome.storage.local key, outside the settings blob — same pattern as
+ * SETTINGS_MIGRATED_KEY).
+ */
+const PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY = 'provider_loopback_origin_grandfather_done';
 
 function isEncryptionKey(key: string): boolean {
     return key === StorageKeys.ENCRYPTION_SALT ||
@@ -258,4 +270,61 @@ export async function cleanupExpiredSettingsBackups(): Promise<void> {
     if (expiredKeys.length > 0) {
         await chrome.storage.local.remove(expiredKeys);
     }
+}
+
+/**
+ * One-time grandfathering for the loopback tightening in
+ * isProviderOriginAuthorized (loopback now auto-authorizes local-provider
+ * slots only). Loopback URLs already stored in non-local slots — the
+ * openai-compatible slot pointed at an Ollama/LM Studio endpoint was the
+ * documented case — were authorized before the tightening and now fail
+ * provider construction with "Base URL not authorized"; the confirmation
+ * dialog cannot recover them because it skips unchanged URLs. This seeds
+ * their origins into CONFIRMED_PROVIDER_ORIGINS exactly once, restoring
+ * only the pre-tightening state. URLs set or changed afterwards still
+ * require the dashboard confirmation, and settings imports keep stripping
+ * confirmations. 127.x numeric loopback in non-local slots stays denied:
+ * the deny layer blocked it before this change too, so there is nothing to
+ * grandfather.
+ */
+export async function migrateLoopbackProviderOriginConfirmations(): Promise<boolean> {
+    const done = await chrome.storage.local.get(PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY);
+    if (done[PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY]) {
+        return false;
+    }
+
+    let seeded = 0;
+    await withOptimisticLock<Settings>('settings', (current) => {
+        const confirmedMap: Record<string, string[]> = {
+            ...((current[StorageKeys.CONFIRMED_PROVIDER_ORIGINS] as Record<string, string[]> | undefined) ?? {}),
+        };
+        for (const row of PROVIDER_ALLOWLIST_ROWS) {
+            if (row.isLocal || !row.baseUrlKey) continue;
+            const stored = (current[row.baseUrlKey] as string | undefined)
+                ?? ((DEFAULT_SETTINGS as Record<string, unknown>)[row.baseUrlKey] as string | undefined);
+            if (typeof stored !== 'string' || stored === '') continue;
+            let parsed: URL;
+            try {
+                parsed = new URL(stored);
+            } catch {
+                continue;
+            }
+            if (!isLoopbackOriginHostname(parsed.hostname.toLowerCase().replace(/\.+$/, ''))) continue;
+            // Origins the deny layer rejects stay rejected with or without a
+            // confirmation — seeding them would be a no-op entry at best.
+            if (!isAllowedProviderBaseUrl(stored, row.isLocal)) continue;
+            const existing = confirmedMap[row.baseUrlKey] ?? [];
+            if (existing.includes(parsed.origin)) continue;
+            confirmedMap[row.baseUrlKey] = [...existing, parsed.origin];
+            seeded++;
+        }
+        if (seeded === 0) return current;
+        return {
+            ...current,
+            [StorageKeys.CONFIRMED_PROVIDER_ORIGINS]: confirmedMap,
+        };
+    });
+
+    await chrome.storage.local.set({ [PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY]: true });
+    return seeded > 0;
 }
