@@ -104,8 +104,6 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.ALERT_SENSITIVE]: true,
     [StorageKeys.ALERT_UNVERIFIED]: false,
     [StorageKeys.SAVE_ABORTED_PAGES]: false,
-    [StorageKeys.SAFETY_MODE]: 'balanced',
-    [StorageKeys.TRANCO_TIER]: 'top10k',
     [StorageKeys.DENIED_DOMAINS]: {},
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3,
     [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,

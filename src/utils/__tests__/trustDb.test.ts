@@ -34,8 +34,6 @@ describe('TrustDatabase - Phase 1 - Module Loading', () => {
     const updaterModule = await import('../trustDb/trancoUpdater.js');
     expect(updaterModule).toBeDefined();
     expect(typeof updaterModule.getTrancoUpdater).toBe('function');
-    expect(updaterModule.SAFETY_MODE_TO_TRANCO_TIER).toBeDefined();
-    expect(updaterModule.SAFETY_MODE_TO_TRANCO_TIER['strict']).toBe('top1k');
   });
 });
 

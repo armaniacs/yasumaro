@@ -44,17 +44,17 @@ Feature: trust 設定の source of truth を Trust DB に一本化する
 
 ## 受け入れ基準
 
-- [ ] `src/utils/trustChecker.ts` から `getSafetyMode()`、`setSafetyMode()`、`getTrancoTier()` を削除する。
-- [ ] `src/utils/__tests__/trustChecker.test.ts:259-322` のレガシー API 専用テストを削除する。
-- [ ] `checkDomain` と alert 設定に関する active なテストは削除しない。
-- [ ] `StorageKeys.SAFETY_MODE` と `StorageKeys.TRANCO_TIER` を storage 型定義から削除する。
-- [ ] `SAFETY_MODE` と `TRANCO_TIER` の既定値を storage defaults から削除する。
-- [ ] production 呼び出しが 0 の `trancoUpdater` のレガシー mapping と methods を削除し、専用テストの参照も除去する。
-- [ ] 旧 settings バックアップのレガシー値は読み飛ばし、互換用の読み書き経路を残さない。
-- [ ] `src/dashboard/settings/trustSettings.ts` は変更せず、`dbData.tranco.tier` を正本とする現在の経路を維持する。
-- [ ] `src/background/pipeline/steps/checkTrustDomainStep.ts`、`src/dashboard/settings/trustSettings.ts`、`src/popup/statusPanel.ts` の active な production import を維持する。
-- [ ] 変更後に ESM import を追加する場合は `.js` 拡張子を使う。
-- [ ] レガシー API 名と storage key 名が、削除対象として残った production コードに存在しないことを静的確認する。
+- [x] `src/utils/trustChecker.ts` から `getSafetyMode()`、`setSafetyMode()`、`getTrancoTier()` を削除する。
+- [x] `src/utils/__tests__/trustChecker.test.ts:259-322` のレガシー API 専用テストを削除する。
+- [x] `checkDomain` と alert 設定に関する active なテストは削除しない。
+- [x] `StorageKeys.SAFETY_MODE` と `StorageKeys.TRANCO_TIER` を storage 型定義から削除する。
+- [x] `SAFETY_MODE` と `TRANCO_TIER` の既定値を storage defaults から削除する。
+- [x] production 呼び出しが 0 の `trancoUpdater` のレガシー mapping と methods を削除し、専用テストの参照も除去する。
+- [x] 旧 settings バックアップのレガシー値は読み飛ばし、互換用の読み書き経路を残さない。
+- [x] `src/dashboard/settings/trustSettings.ts` は変更せず、`dbData.tranco.tier` を正本とする現在の経路を維持する。
+- [x] `src/background/pipeline/steps/checkTrustDomainStep.ts`、`src/dashboard/settings/trustSettings.ts`、`src/popup/statusPanel.ts` の active な production import を維持する。
+- [x] 変更後に ESM import を追加する場合は `.js` 拡張子を使う。
+- [x] レガシー API 名と storage key 名が、削除対象として残った production コードに存在しないことを静的確認する。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -146,13 +146,13 @@ Feature: trust 設定の source of truth を Trust DB に一本化する
 
 ## Definition of Done
 
-- [ ] `getSafetyMode()`、`setSafetyMode()`、`getTrancoTier()` と専用テストが削除されている。
-- [ ] `StorageKeys.SAFETY_MODE`、`StorageKeys.TRANCO_TIER` と対応する defaults が削除されている。
-- [ ] 未使用の `trancoUpdater` mapping と methods、およびテスト参照が削除されている。
-- [ ] `trustChecker` の active な `checkDomain` と alert 設定テストが維持され、回帰がない。
-- [ ] 現在の UI が Trust DB の `dbData.tranco.tier` を正本として利用する経路に変更がない。
-- [ ] 3 つの active な production import と ESM import 規約を維持している。
-- [ ] 旧 settings バックアップのレガシー値を読み書きする経路が残っていない。
-- [ ] BDD 受け入れシナリオを満たす統合・単体テストと型チェックが通る。
-- [ ] `pbi/2026-09-25-08-doc-trust-record-policy-correction.md` と trust 設定の正本に関する記述が整合している。
-- [ ] 本 PBI と無関係な変更が含まれていない。
+- [x] `getSafetyMode()`、`setSafetyMode()`、`getTrancoTier()` と専用テストが削除されている。
+- [x] `StorageKeys.SAFETY_MODE`、`StorageKeys.TRANCO_TIER` と対応する defaults が削除されている。
+- [x] 未使用の `trancoUpdater` mapping と methods、およびテスト参照が削除されている。
+- [x] `trustChecker` の active な `checkDomain` と alert 設定テストが維持され、回帰がない。
+- [x] 現在の UI が Trust DB の `dbData.tranco.tier` を正本として利用する経路に変更がない。
+- [x] 3 つの active な production import と ESM import 規約を維持している。
+- [x] 旧 settings バックアップのレガシー値を読み書きする経路が残っていない。
+- [x] BDD 受け入れシナリオを満たす統合・単体テストと型チェックが通る。
+- [x] `pbi/2026-09-25-08-doc-trust-record-policy-correction.md` と trust 設定の正本に関する記述が整合している。
+- [x] 本 PBI と無関係な変更が含まれていない。

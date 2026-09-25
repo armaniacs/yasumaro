@@ -46,8 +46,6 @@ vi.mock('../TrustDbAdmin.js', () => ({
 
 import {
     TrancoUpdater,
-    SAFETY_MODE_TO_TRANCO_TIER,
-    TRANCO_TIER_TO_SAFETY_MODE,
     getTrancoUpdater
 } from '../trancoUpdater.js';
 import { fetchWithTimeout } from '../../fetch.js';
@@ -63,26 +61,6 @@ describe('trancoUpdater', () => {
         vi.useRealTimers();
     });
 
-    describe('定数マッピング', () => {
-        test('SAFETY_MODE_TO_TRANCO_TIER is correct', () => {
-            expect(SAFETY_MODE_TO_TRANCO_TIER.strict).toBe('top1k');
-            expect(SAFETY_MODE_TO_TRANCO_TIER.balanced).toBe('top10k');
-            expect(SAFETY_MODE_TO_TRANCO_TIER.relaxed).toBe('top100k');
-        });
-
-        test('TRANCO_TIER_TO_SAFETY_MODE is correct', () => {
-            expect(TRANCO_TIER_TO_SAFETY_MODE.top1k).toBe('strict');
-            expect(TRANCO_TIER_TO_SAFETY_MODE.top10k).toBe('balanced');
-            expect(TRANCO_TIER_TO_SAFETY_MODE.top100k).toBe('relaxed');
-        });
-
-        test('mappings agree bidirectionally', () => {
-            for (const [mode, tier] of Object.entries(SAFETY_MODE_TO_TRANCO_TIER)) {
-                expect(TRANCO_TIER_TO_SAFETY_MODE[tier]).toBe(mode);
-            }
-        });
-    });
-
     describe('TrancoUpdater クラス', () => {
         let updater: TrancoUpdater;
 
@@ -92,18 +70,6 @@ describe('trancoUpdater', () => {
 
         test('updateInProgress is false in initial state', () => {
             expect(updater.isUpdateInProgress()).toBe(false);
-        });
-
-        test('safetyModeToTier converts correctly', () => {
-            expect(updater.safetyModeToTier('strict')).toBe('top1k');
-            expect(updater.safetyModeToTier('balanced')).toBe('top10k');
-            expect(updater.safetyModeToTier('relaxed')).toBe('top100k');
-        });
-
-        test('tierToSafetyMode converts correctly', () => {
-            expect(updater.tierToSafetyMode('top1k')).toBe('strict');
-            expect(updater.tierToSafetyMode('top10k')).toBe('balanced');
-            expect(updater.tierToSafetyMode('top100k')).toBe('relaxed');
         });
 
         describe('updateTrancoList', () => {
@@ -204,43 +170,6 @@ describe('trancoUpdater', () => {
 
                 expect(result.success).toBe(false);
                 expect(result.error).toContain('missing list_id');
-            });
-        });
-
-        describe('isUpdateNeeded', () => {
-            test('requires an update on first run', async () => {
-                mockDb.getStatus.mockReturnValueOnce({ initialized: false });
-
-                const result = await updater.isUpdateNeeded('top1k');
-                expect(result).toBe(true);
-            });
-
-            test('requires an update when lastUpdated is missing', async () => {
-                mockDb.getStatus.mockReturnValueOnce({ initialized: true });
-
-                const result = await updater.isUpdateNeeded('top1k');
-                expect(result).toBe(true);
-            });
-
-            test('does not require an update when recently updated', async () => {
-                mockDb.getStatus.mockReturnValueOnce({
-                    initialized: true,
-                    lastUpdated: new Date().toISOString()
-                });
-
-                const result = await updater.isUpdateNeeded('top1k');
-                expect(result).toBe(false);
-            });
-
-            test('requires an update when 24 hours have elapsed', async () => {
-                const oldDate = new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString();
-                mockDb.getStatus.mockReturnValueOnce({
-                    initialized: true,
-                    lastUpdated: oldDate
-                });
-
-                const result = await updater.isUpdateNeeded('top1k');
-                expect(result).toBe(true);
             });
         });
     });
