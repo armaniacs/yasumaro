@@ -20,7 +20,14 @@ export interface SearchEngineRule {
 }
 
 export const SEARCH_ENGINE_RULES: readonly SearchEngineRule[] = [
-  { host: /(^|\.)google\.[a-z.]+$/, param: 'q' },
+  // WHY the Google pattern is shaped and not `google\.[a-z.]+`: a loose tail
+  // also matches hostnames that merely START with "google." — verified
+  // `google.evil.com` and `google.evil.co.jp` both matched it, which let any
+  // such host inject arbitrary text into `search_query` as if it were a real
+  // search term. Requiring a 2–3 letter label plus an optional 2-letter country
+  // code keeps every regional domain (google.co.jp, google.com.br) and rejects
+  // the lookalikes.
+  { host: /(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/, param: 'q' },
   { host: /(^|\.)bing\.com$/, param: 'q' },
   { host: /(^|\.)duckduckgo\.com$/, param: 'q' },
   { host: /^search\.yahoo\.com$/, param: 'p' },
