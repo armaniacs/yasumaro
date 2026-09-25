@@ -14,6 +14,23 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-26 メタ認知分析ラウンド — ⬜ 未着手 4件 ✨機能追加
+
+開発提案「情報探索のメタ認知化」の3案を、記録データの実態と照らし合わせて RICE で採点した。
+
+- 提案1（熟読度フィルター）: 不採用。滞在時間を記録していないため。
+- 提案2（セッション＆パス分析）: 既存データで作れる部分（02）、遷移記録の基盤（03）、探索パスと指標（04）の3つに分けた。
+- 提案3（ループ課題・タイムカプセル）: 09-24 台帳の「再訪分析」を統合した（01）。
+
+各 PBI は、低価格モデルでも実装できる詳細設計（ファイル・型・アルゴリズム・i18n 文言・テストケース）を含む。採点・前提の差異・ユーザー裁定・不採用理由の詳細は [2026-09-26-00-backlog-metacognition-analytics.md](2026-09-26-00-backlog-metacognition-analytics.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
+|---|---|---|---:|---:|---|
+| 01 | [feat-revisit-loop-time-capsule](2026-09-26-01-feat-revisit-loop-time-capsule.md) | feat | 1.60 | 3 | なし。`fetchAllPeriodRows` と `NameCount` を 02 が再利用する |
+| 02 | [feat-research-session-grouping](2026-09-26-02-feat-research-session-grouping.md) | feat | 0.75 | 2 | 01 の `NameCount` |
+| 03 | [feat-navigation-trail-recording](2026-09-26-03-feat-navigation-trail-recording.md) | feat | 0.32 | 5 | 02 の後。2026-09-25-24（再同意 UX）と `privacyConsent.ts` が競合するので同時着手しない |
+| 04 | [feat-session-path-tree-search-to-goal](2026-09-26-04-feat-session-path-tree-search-to-goal.md) | feat | 0.67 | 3 | 02・03 の後（依存を優先し、RICE では上位だが 03 の後に着手する） |
+
 ### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 6件完了・コードレビュー対応済み / ⬜ 未着手 24件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
