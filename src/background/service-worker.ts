@@ -3,6 +3,7 @@ import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
 import { ErrorCode } from '../utils/logger/types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { logError } from '../utils/logger/api.js';
 import { setReviewSummaryGeneratorRef, setSessionTimeoutRefs } from './alarmRegistryRefs.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
@@ -221,15 +222,32 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // PBI 03: navigation-trail tracking. Registered at top level, beside the
     // other tab listeners, because MV3 discards listeners when the worker
     // stops and only a top-level registration is re-attached on wake.
-    // Incognito tabs are skipped outright — the referrer map would otherwise
-    // keep private-window URLs around after the window closed.
+    // WHY the incognito guard is defence in depth, not the protection: the
+    // manifest declares no "incognito" permission, so Chrome never lets this
+    // extension run in an incognito window and no incognito tab event reaches
+    // us at all. If that permission is ever added, this guard becomes the thing
+    // that keeps private-window URLs out of the referrer map.
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (changeInfo.url && !tab.incognito) {
-        void onTabUrlChanged(tabId, changeInfo.url);
+        // WHY the catch: Mutex.acquire() rejects when its queue fills or its
+        // timeout elapses, and a rejected promise from a `void` call is an
+        // unhandled rejection that also silently drops the referrer. Same
+        // structured-log pattern as handleTabActivated.
+        void onTabUrlChanged(tabId, changeInfo.url).catch(async (error: unknown) => {
+          await logError('Failed to record nav trail for tab', {
+            tabId,
+            error: errorMessage(error),
+          }, ErrorCode.STORAGE_WRITE_FAILURE, 'service-worker.ts');
+        });
       }
     });
     chrome.tabs.onRemoved.addListener((tabId) => {
-      void onTabRemoved(tabId);
+      void onTabRemoved(tabId).catch(async (error: unknown) => {
+        await logError('Failed to clear nav trail for closed tab', {
+          tabId,
+          error: errorMessage(error),
+        }, ErrorCode.STORAGE_WRITE_FAILURE, 'service-worker.ts');
+      });
     });
     registerNavTrailConsentWatcher();
 

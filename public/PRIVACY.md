@@ -165,7 +165,7 @@ v4.2.1以降、以下の機能が追加されました：
 
 2. **除外ドメインの扱い**: 流入元がドメイン除外リスト（`isDomainAllowed` が偽）に一致する場合、URL全体ではなく**オリジンのみ**を保存します。除外したサイトの閲覧歴を、遷移記録経由で持ち出さないためです。
 
-3. **保存先と配布先**: 値はブラウザ内の SQLite DB にのみ保存されます。**AIプロバイダーへの送信内容にも、Obsidian への Markdown にも、CSV / JSON エクスポートにも含まれません。**
+3. **保存先と配布先**: 値はブラウザ内の SQLite DB にのみ保存されます。**AIプロバイダーへの送信内容にも、Obsidian への Markdown にも、CSV / JSON エクスポートにも含まれません。**ただし、あなた自身が**暗号化されたcombined backup**をエクスポートした場合、そのバックアップは SQLite DB を丸ごと含むため、これらの値も一緒にバックアップファイルへ入ります。バックアップは通常の設定エクスポートとは別物で、`privacy_consent`（同意状態）は復元対象の許可リストに含まれないため、別端末で復元しても遷移記録は自動的に有効になりません。
 
 4. **同意の管理**:
    - 有効化時: 設定画面の Privacy タブで確認ダイアログを出し、同意したときだけ有効になります
@@ -325,7 +325,7 @@ An optional feature behind the "Research Sessions" panel, which shows which page
 
 2. **Excluded domains**: when the referrer matches the domain exclusion list (`isDomainAllowed` returns false), only the **origin** is stored, not the full URL. Otherwise the trail would carry out the very history the exclusion removed.
 
-3. **Where it lives**: the values are stored only in the on-device SQLite database. They are **never included in what is sent to AI providers, in the Markdown written to Obsidian, or in CSV / JSON exports.**
+3. **Where it lives**: the values are stored only in the on-device SQLite database. They are **never included in what is sent to AI providers, in the Markdown written to Obsidian, or in CSV / JSON exports.** One boundary does carry them: the **encrypted combined backup** you export yourself contains the whole SQLite database, so the values travel inside that backup file. A backup is separate from the normal settings export, and the consent state (`privacy_consent`) is not in the restore allowlist — so restoring onto another device does not turn the trail on there.
 
 4. **Managing consent**:
    - To enable: a confirmation dialog appears in the settings Privacy tab; the feature turns on only if you agree

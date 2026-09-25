@@ -55,6 +55,19 @@ describe('extractSearchQuery', () => {
   it('matches regional Google domains and subdomains', () => {
     expect(extractSearchQuery('https://www.google.co.jp/search?q=fts5')).toBe('fts5');
     expect(extractSearchQuery('https://google.de/search?q=fts5')).toBe('fts5');
+    expect(extractSearchQuery('https://google.com.br/search?q=fts5')).toBe('fts5');
+    expect(extractSearchQuery('https://www.google.co.uk/search?q=fts5')).toBe('fts5');
+  });
+
+  // Security regression: a host that merely starts with "google." must not be
+  // able to inject its own `q` value into the user's search-term history.
+  it.each([
+    'https://google.evil.com/search?q=injected',
+    'https://google.evil.co.jp/search?q=injected',
+    'https://google.attacker.net/search?q=injected',
+    'https://notgoogle.com/search?q=injected',
+  ])('rejects the lookalike host %s', (url) => {
+    expect(extractSearchQuery(url)).toBeNull();
   });
 
   it('returns null for a host that is not an engine', () => {
