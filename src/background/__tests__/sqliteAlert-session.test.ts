@@ -91,4 +91,26 @@ describe('sqliteAlert — SW restart durability', () => {
     second.recordSqliteFailure('sqlite', 'disk I/O error');
     expect(logCritical).not.toHaveBeenCalled();
   });
+
+  it('persists the post-alert state so a restart does not bypass the cooldown', async () => {
+    const first = await freshAlertModule();
+    await first.restoreSqliteAlertState();
+    first.recordSqliteFailure('sqlite', 'disk I/O error');
+    first.recordSqliteFailure('sqlite', 'disk I/O error');
+    first.recordSqliteFailure('sqlite', 'disk I/O error');
+    expect(logCritical).toHaveBeenCalledTimes(1);
+    await flushSessionWrites();
+
+    // The alert block reset the counter and stamped lastAlertTime; the
+    // persisted snapshot must reflect that, not the pre-alert count of 3.
+    const second = await freshAlertModule();
+    await second.restoreSqliteAlertState();
+
+    // Three more failures reach the threshold again, but the restored
+    // lastAlertTime keeps the 1-hour cooldown: no second notification.
+    second.recordSqliteFailure('sqlite', 'disk I/O error');
+    second.recordSqliteFailure('sqlite', 'disk I/O error');
+    second.recordSqliteFailure('sqlite', 'disk I/O error');
+    expect(logCritical).toHaveBeenCalledTimes(1);
+  });
 });
