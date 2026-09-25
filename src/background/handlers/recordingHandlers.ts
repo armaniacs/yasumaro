@@ -10,6 +10,7 @@ import { getMessage } from '../../utils/i18n.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { resolveReasonLabel } from '../../utils/reasonLabel.js';
+import { resolveNavTrailFields } from '../navTrail/navTrailTracker.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
@@ -142,11 +143,20 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
 
     deps.cacheTab(sender.tab);
 
+    // PBI 03: the opt-in navigation trail. Resolved here, at the only surface
+    // that knows which tab the record came from, and passed through the normal
+    // request builder. With the feature off this resolves to {} and nothing is
+    // stored, so no other surface has to remember the gate.
+    const navFields = sender.tab?.id !== undefined && sender.tab.url
+      ? await resolveNavTrailFields(sender.tab.id, sender.tab.url)
+      : {};
+
     const result = await deps.recordVisit(buildRecordRequest('valid-visit', {
       title: sender.tab.title || '',
       url: sender.tab.url || '',
       content: message.payload?.content || '',
       ...pickRecordDiagnostics(message.payload),
+      ...navFields,
     }));
 
     if (sender.tab.id) {

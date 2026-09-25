@@ -2403,6 +2403,38 @@
     "message": "セッションの読み込みに失敗しました。",
     "description": "Load error"
   },
+  "navTrailLabel": {
+    "message": "遷移記録（流入元ページと検索語）を記録する",
+    "description": "Navigation trail opt-in checkbox label"
+  },
+  "navTrailDescription": {
+    "message": "直前に開いていたページと、検索エンジンで使った検索語を、この端末の中だけに保存します。リサーチ・セッションで使います。既定はオフです。",
+    "description": "Navigation trail opt-in description"
+  },
+  "navTrailConsentTitle": {
+    "message": "遷移記録を有効にしますか？",
+    "description": "Navigation trail consent dialog title"
+  },
+  "navTrailConsentMessage": {
+    "message": "有効にすると、同じタブで直前に開いていたページのURL（除外ドメインはドメインのみ）と、検索エンジンの検索語（個人情報はマスク）を記録に加えます。データはこの端末の中だけに保存され、AIやObsidianには送られません。オフにすると以後は記録しません。",
+    "description": "Navigation trail consent dialog body"
+  },
+  "navTrailConsentAccept": {
+    "message": "有効にする",
+    "description": "Navigation trail consent dialog confirm label"
+  },
+  "navTrailSaveFailed": {
+    "message": "設定を保存できませんでした。",
+    "description": "Navigation trail save failure"
+  },
+  "researchSessions_searchQuery": {
+    "message": "検索: {q}",
+    "description": "Search term shown on a session record"
+  },
+  "researchSessions_source": {
+    "message": "流入元: {host}",
+    "description": "Referrer shown on a session record"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },

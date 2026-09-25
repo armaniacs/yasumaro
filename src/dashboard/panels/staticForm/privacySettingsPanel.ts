@@ -2,6 +2,7 @@ import { type PanelLifecycle } from '../types.js';
 import { tryNavigate } from '../registryContext.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
+import { initNavTrailToggle } from '../../settings/navTrailToggle.js';
 import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storage/privacyConsent.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
@@ -15,6 +16,9 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
       initPrivacySettings();
       initMasterPasswordSettings();
       await loadMasterPasswordSettings();
+      // PBI 03: the opt-in navigation-trail switch lives on the privacy panel
+      // because it is a consent decision, not a recording preference.
+      await initNavTrailToggle(container);
 
       const display = container.querySelector('#consentStatusDisplay') as HTMLElement | null;
       const btn = container.querySelector('#btnWithdrawConsent') as HTMLButtonElement | null;
@@ -58,6 +62,10 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           }
           display.textContent = getMessageOr('notConsented', 'Not consented');
           btn.classList.add('hidden');
+          // PBI 03: withdrawPrivacyConsent() already switched the feature off
+          // in storage; this only keeps the rendered checkbox in step.
+          const navTrail = container.querySelector('#navTrailEnabled') as HTMLInputElement | null;
+          if (navTrail) navTrail.checked = false;
         });
       }
 

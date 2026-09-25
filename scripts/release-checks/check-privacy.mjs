@@ -7,7 +7,10 @@
  * 1. public/PRIVACY.md and docs/PRIVACY.md are byte-identical
  *    (project critical rule: whichever is edited must be copied to the other).
  * 2. PRIVACY_POLICY_VERSION in src/utils/storage/privacyConsent.ts matches
- *    the "Last Updated" date in PRIVACY.md (format YYYY-MM-DD).
+ *    the "Consent Version" line in PRIVACY.md (format YYYY-MM-DD) — the
+ *    date users actually agreed to. "Last Updated" is the document's
+ *    revision date and may change without forcing re-consent; opt-in
+ *    features carry their own consent (see navTrailConsent.ts).
  */
 
 import { readFileSync } from 'node:fs';
@@ -38,7 +41,7 @@ function checkPrivacyFilesIdentical() {
   return false;
 }
 
-function readPolicyVersionConstant() {
+export function readPolicyVersionConstant() {
   const src = readFileSync(
     join(ROOT_DIR, 'src', 'utils', 'storage', 'privacyConsent.ts'),
     'utf-8'
@@ -47,33 +50,33 @@ function readPolicyVersionConstant() {
   return match ? match[1] : null;
 }
 
-function readPrivacyLastUpdated() {
+export function readPrivacyConsentVersion() {
   const md = readFileSync(join(ROOT_DIR, 'public', 'PRIVACY.md'), 'utf-8');
-  const match = md.match(/Last Updated:\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})/);
+  const match = md.match(/Consent Version:\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})/);
   if (!match) return null;
   const month = MONTHS[match[1]];
   if (!month) return null;
   return `${match[3]}-${month}-${match[2].padStart(2, '0')}`;
 }
 
-function checkPolicyVersionMatch() {
+export function checkPolicyVersionMatch() {
   sectionBreak();
-  info('Checking PRIVACY_POLICY_VERSION against PRIVACY.md Last Updated...');
+  info('Checking PRIVACY_POLICY_VERSION against PRIVACY.md Consent Version...');
   const constant = readPolicyVersionConstant();
-  const lastUpdated = readPrivacyLastUpdated();
+  const consentVersion = readPrivacyConsentVersion();
   if (!constant) {
     fail('Could not extract PRIVACY_POLICY_VERSION from privacyConsent.ts');
     return false;
   }
-  if (!lastUpdated) {
-    fail('Could not extract Last Updated date from public/PRIVACY.md');
+  if (!consentVersion) {
+    fail('Could not extract Consent Version date from public/PRIVACY.md');
     return false;
   }
-  if (constant === lastUpdated) {
-    pass(`PRIVACY_POLICY_VERSION matches PRIVACY.md Last Updated: ${constant}`);
+  if (constant === consentVersion) {
+    pass(`PRIVACY_POLICY_VERSION matches PRIVACY.md Consent Version: ${constant}`);
     return true;
   }
-  fail(`Version mismatch: PRIVACY_POLICY_VERSION=${constant}, PRIVACY.md Last Updated=${lastUpdated}`);
+  fail(`Version mismatch: PRIVACY_POLICY_VERSION=${constant}, PRIVACY.md Consent Version=${consentVersion}`);
   return false;
 }
 

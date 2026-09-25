@@ -59,6 +59,10 @@ function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
     extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
     extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
     fallback_triggered: record.fallback_triggered ?? 0,
+    // PBI 03: records written before the opt-in existed carry no trail; null
+    // keeps the recovery insert aligned with the new columns.
+    nav_source_url: record.nav_source_url ?? null,
+    search_query: record.search_query ?? null,
   };
 }
 

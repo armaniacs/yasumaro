@@ -41,6 +41,8 @@ export const SCHEMA_SQL = `
     extracted_sentences_original_bytes INTEGER,
     fallback_triggered INTEGER DEFAULT 0,
     fallback_reason TEXT,
+    nav_source_url TEXT,
+    search_query TEXT,
     UNIQUE(url, created_at)
   );
 
@@ -101,6 +103,8 @@ export const COLUMN_NAMES = [
   'extracted_sentences_original_bytes',
   'fallback_triggered',
   'fallback_reason',
+  'nav_source_url',
+  'search_query',
 ] as const;
 
 const INSERT_COLS = COLUMN_NAMES.join(', ');
@@ -130,6 +134,11 @@ export const UPDATABLE_FIELDS = [
   'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
   'fallback_triggered',
   'fallback_reason',
+  // WHY nav_source_url / search_query are absent despite the sync rule above:
+  // they are captured once when the record is made and describe how that
+  // visit happened. Letting an UPDATE rewrite them would let a later edit
+  // rewrite history, and a re-run regeneration would overwrite the original
+  // referrer (PBI 2026-09-26-03).
 ];
 
 /** INSERT OR IGNORE (for insertBatch() and migration). */
@@ -240,6 +249,10 @@ export interface InsertableRecord {
   fallback_triggered?: number | null;
   /** PBI 05: フォールバック発動理由 */
   fallback_reason?: string | null;
+  /** PBI 03: 同じタブで直前に開いていたページ（フラグメント除去・除外ドメインはオリジン） */
+  nav_source_url?: string | null;
+  /** PBI 03: 流入元が検索エンジンだった場合の検索語（PII マスク済み） */
+  search_query?: string | null;
 }
 
 /**
@@ -287,6 +300,8 @@ export function buildInsertParams(
     record.extracted_sentences_original_bytes ?? null,
     record.fallback_triggered ?? 0,
     record.fallback_reason ?? null,
+    record.nav_source_url ?? null,
+    record.search_query ?? null,
   ];
 }
 
@@ -329,6 +344,8 @@ export interface InsertRecordFields {
   extracted_sentences_original_bytes: number | null;
   fallback_triggered: number;
   fallback_reason: string | null;
+  nav_source_url: string | null;
+  search_query: string | null;
 }
 
 /**
@@ -374,6 +391,8 @@ export function buildInsertRecordFields(
     extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
     fallback_triggered: record.fallback_triggered ?? 0,
     fallback_reason: record.fallback_reason ?? null,
+    nav_source_url: record.nav_source_url ?? null,
+    search_query: record.search_query ?? null,
   };
 }
 
@@ -443,6 +462,9 @@ export const MIGRATION_COLUMNS = [
   'fallback_triggered INTEGER DEFAULT 0',
   // PBI 05: フォールバック発動理由
   'fallback_reason TEXT',
+  // PBI 03: 遷移記録（オプトイン）
+  'nav_source_url TEXT',
+  'search_query TEXT',
 ] as const;
 
 /** Ordered sequence of one-off migrations. */

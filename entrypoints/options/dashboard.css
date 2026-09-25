@@ -5034,6 +5034,8 @@ details[open] > .priority-details-summary {
 }
 
 .research-sessions-domain,
+.research-sessions-query,
+.research-sessions-source,
 .research-sessions-starred {
   color: var(--ym-color-sumi-muted, #7a7060);
 }
