@@ -5040,6 +5040,19 @@ details[open] > .priority-details-summary {
   color: var(--ym-color-sumi-muted, #7a7060);
 }
 
+/* Navigation path tree (PBI 04): a left rule reads as "came from here". */
+.research-sessions-tree {
+  list-style: none;
+  margin: 0;
+  padding-left: var(--ym-space-3, 12px);
+  border-left: 1px solid var(--ym-color-border, #e2e8f0);
+}
+
+.research-sessions-query-root {
+  margin: var(--ym-space-1, 4px) 0;
+  font-weight: 600;
+}
+
 .data-table-notice.is-warning {
   color: var(--ym-color-warning-text, #92400e);
   background: var(--ym-color-warning-bg, #fef3c7);

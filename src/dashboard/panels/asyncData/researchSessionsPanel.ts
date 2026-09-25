@@ -36,11 +36,22 @@ import {
   type ResearchSession,
   type SessionInput,
 } from '../../researchSessionAggregate.js';
+import { getNavTrailConsent, isNavTrailActive } from '../../../utils/storage/navTrailConsent.js';
+import {
+  buildSessionTree,
+  computeSearchToGoal,
+  hasNavTrail,
+  UNTAGGED_KEY,
+  type SessionTreeNode,
+} from '../../sessionPathAggregate.js';
 import { type PanelLifecycle } from '../types.js';
 
-/** One record line: time, title link, domain, starred marker. */
-function renderRecord(record: SessionInput): HTMLLIElement {
-  const li = document.createElement('li');
+/** Fill a caller-owned <li> with one record line. */
+function populateRecord(
+  li: HTMLLIElement,
+  record: SessionInput,
+  options: { readonly showSearch: boolean },
+): void {
 
   const time = document.createElement('time');
   time.textContent = new Date(record.created_at).toLocaleTimeString(undefined, {
@@ -70,7 +81,7 @@ function renderRecord(record: SessionInput): HTMLLIElement {
 
   // PBI 03: the opt-in navigation trail. Only present when the user enabled
   // it, so these two are additive and absent for everyone else.
-  if (record.search_query) {
+  if (record.search_query && options.showSearch) {
     const query = document.createElement('span');
     query.className = 'research-sessions-query';
     query.textContent = msg('researchSessions_searchQuery', { q: record.search_query }, 'Search: {q}');
@@ -99,8 +110,22 @@ function renderRecord(record: SessionInput): HTMLLIElement {
     starred.textContent = msg('researchSessions_starred', {}, 'Starred');
     li.appendChild(starred);
   }
+}
 
-  return li;
+function renderTree(nodes: SessionTreeNode[]): HTMLUListElement {
+  const list = document.createElement('ul');
+  list.className = 'research-sessions-tree';
+  for (const node of nodes) {
+    const li = document.createElement('li');
+    // PBI 04: the leading record's search term is shown once, above the tree,
+    // so it is suppressed here to avoid printing it twice.
+    populateRecord(li, node.record, { showSearch: node !== nodes[0] });
+    if (node.children.length > 0) {
+      li.appendChild(renderTree(node.children));
+    }
+    list.appendChild(li);
+  }
+  return list;
 }
 
 function renderSession(session: ResearchSession): HTMLLIElement {
@@ -129,10 +154,27 @@ function renderSession(session: ResearchSession): HTMLLIElement {
   summary.textContent = parts.join(' · ');
   details.appendChild(summary);
 
-  const records = document.createElement('ol');
-  records.className = 'research-sessions-records';
-  for (const record of session.records) records.appendChild(renderRecord(record));
-  details.appendChild(records);
+  if (hasNavTrail(session)) {
+    // PBI 04: a session with a referrer renders as the path that was taken,
+    // so a revisit hangs under the page it actually came from.
+    const rootQuery = session.records[0]?.search_query;
+    if (rootQuery) {
+      const query = document.createElement('p');
+      query.className = 'research-sessions-query-root';
+      query.textContent = msg('researchSessions_searchQuery', { q: rootQuery }, 'Search: {q}');
+      details.appendChild(query);
+    }
+    details.appendChild(renderTree(buildSessionTree(session)));
+  } else {
+    const records = document.createElement('ol');
+    records.className = 'research-sessions-records';
+    for (const record of session.records) {
+      const li = document.createElement('li');
+      populateRecord(li, record, { showSearch: true });
+      records.appendChild(li);
+    }
+    details.appendChild(records);
+  }
 
   item.appendChild(details);
   return item;
@@ -150,6 +192,12 @@ export function createResearchSessionsPanel(): PanelLifecycle {
   let lastRows: SessionInput[] | null = null;
   let gapMinutes: number = DEFAULT_SESSION_GAP_MIN;
   const notices = new PanelNotices();
+  let searchToGoalBody: HTMLElement | null = null;
+  let searchToGoalTable: HTMLElement | null = null;
+  let searchToGoalOff: HTMLElement | null = null;
+  // PBI 04: the trail is opt-in, so the path tree and the metric table are
+  // only meaningful — and only rendered — when consent is on.
+  let navTrailActive = false;
   let loadSeq = 0;
 
   /** Re-groups the cached rows. Never refetches — the gap is a different cut
@@ -181,6 +229,57 @@ export function createResearchSessionsPanel(): PanelLifecycle {
 
     listEl.innerHTML = '';
     for (const session of agg.sessions) listEl.appendChild(renderSession(session));
+
+    renderSearchToGoal(agg.sessions);
+  }
+
+  /**
+   * The search→resolution table. Fed the already-truncated session list, so it
+   * covers the same window the truncation notice describes.
+   */
+  function renderSearchToGoal(sessions: readonly ResearchSession[]): void {
+    if (!searchToGoalBody || !searchToGoalTable || !searchToGoalOff) return;
+    searchToGoalBody.innerHTML = '';
+
+    if (!navTrailActive) {
+      searchToGoalTable.hidden = true;
+      searchToGoalOff.hidden = false;
+      return;
+    }
+    searchToGoalOff.hidden = true;
+    searchToGoalTable.hidden = false;
+
+    const rows = computeSearchToGoal(sessions);
+    if (rows.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 4;
+      td.textContent = msg('researchSessions_searchToGoalEmpty', {}, 'No search-started sessions yet.');
+      tr.appendChild(td);
+      searchToGoalBody.appendChild(tr);
+      return;
+    }
+
+    for (const row of rows) {
+      const tr = document.createElement('tr');
+
+      const tagCell = document.createElement('th');
+      tagCell.scope = 'row';
+      // An untagged resolution page still deserves a row, just not an empty
+      // first cell.
+      tagCell.textContent =
+        row.tag === UNTAGGED_KEY
+          ? msg('researchSessions_untagged', {}, '(untagged)')
+          : row.tag;
+      tr.appendChild(tagCell);
+
+      for (const value of [String(row.sessions), row.avgPages.toFixed(1), String(row.avgMinutes)]) {
+        const td = document.createElement('td');
+        td.textContent = value;
+        tr.appendChild(td);
+      }
+      searchToGoalBody.appendChild(tr);
+    }
   }
 
   async function reload(): Promise<void> {
@@ -192,11 +291,19 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     notices.reset();
 
     try {
-      const res = await fetchPeriodRows({
+      // PBI 04: read the opt-in alongside the rows so the panel can choose a
+      // renderer. A consent read failure must not fail the panel load.
+      const [res] = await Promise.all([
+        fetchPeriodRows({
         ...range,
-        limit: MAX_RESEARCH_SESSION_ROWS,
-        label: 'researchSessions',
-      });
+          limit: MAX_RESEARCH_SESSION_ROWS,
+          label: 'researchSessions',
+        }),
+        getNavTrailConsent().then(
+          (consent) => { navTrailActive = isNavTrailActive(consent); },
+          () => { navTrailActive = false; },
+        ),
+      ]);
       if (seq !== loadSeq) return;
       lastRows = res.rows;
 
@@ -237,6 +344,9 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       summaryEl = container.querySelector('#researchSessionsSummary');
       truncatedEl = container.querySelector('#researchSessionsTruncated');
       listEl = container.querySelector('#researchSessionsList');
+      searchToGoalTable = container.querySelector('#researchSessionsSearchToGoalTable');
+      searchToGoalBody = container.querySelector('#researchSessionsSearchToGoalBody');
+      searchToGoalOff = container.querySelector('#researchSessionsSearchToGoalOff');
 
       notices.register('empty', emptyEl, {
         i18nKey: 'researchSessions_empty',
@@ -287,6 +397,10 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       summaryEl = null;
       truncatedEl = null;
       listEl = null;
+      searchToGoalTable = null;
+      searchToGoalBody = null;
+      searchToGoalOff = null;
+      navTrailActive = false;
       lastRows = null;
       notices.clear();
     },

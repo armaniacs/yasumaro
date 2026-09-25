@@ -2517,6 +2517,42 @@
     "message": "From: {host}",
     "description": "Referrer shown on a session record"
   },
+  "researchSessions_searchToGoalTitle": {
+    "message": "Topics that take the longest to resolve",
+    "description": "Search-to-goal metric heading"
+  },
+  "researchSessions_searchToGoalHint": {
+    "message": "Sessions that started from a search, grouped by the tags of their last page.",
+    "description": "Search-to-goal metric hint"
+  },
+  "researchSessions_navTrailOff": {
+    "message": "Turn on \"Record navigation trail\" in Privacy settings to see paths from search to resolution.",
+    "description": "Shown when the navigation trail is off"
+  },
+  "researchSessions_tagColumn": {
+    "message": "Tag",
+    "description": "Column header"
+  },
+  "researchSessions_sessionsColumn": {
+    "message": "Sessions",
+    "description": "Column header"
+  },
+  "researchSessions_avgPagesColumn": {
+    "message": "Avg. pages",
+    "description": "Column header"
+  },
+  "researchSessions_avgMinutesColumn": {
+    "message": "Avg. minutes",
+    "description": "Column header"
+  },
+  "researchSessions_untagged": {
+    "message": "(untagged)",
+    "description": "Label for a resolution page with no tag"
+  },
+  "researchSessions_searchToGoalEmpty": {
+    "message": "No search-started sessions yet.",
+    "description": "Empty state for the search-to-goal table"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },
