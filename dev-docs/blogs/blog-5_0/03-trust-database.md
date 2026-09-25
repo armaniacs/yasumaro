@@ -123,7 +123,7 @@ Safety Mode（strict / balanced / relaxed）はこのTierと連動していま�
 
 Q. `.go.jp` はTRUSTEDになるのに、有名な民間企業のサイトはUNVERIFIEDになることがあるのはなぜですか？
 
-A. JP-Anchor はTLDで機械的に判定するため、`.go.jp` ならすべてTRUSTEDになります。Tranco は取得・更新が必要なため、更新前は空のままです。「Tranco を更新していないから UNVERIFIED になる」ケースは多いです。一度更新してしまえば以降は記録されます。
+A. JP-Anchor はTLDで機械的に判定するため、`.go.jp` ならすべてTRUSTEDになります。Tranco は取得・更新が必要なため、更新前は空のままです。「Tranco を更新していないから記録されない」ことはなく、Tranco に含まれなくても `UNVERIFIED` になるだけで記録は続きます。記録がブロックされるのは `LOCKED` の場合だけで、Tranco への追加は信頼マークの有無にのみ影響します。
 
 ---
 

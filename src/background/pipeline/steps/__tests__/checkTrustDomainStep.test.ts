@@ -2,11 +2,15 @@
  * checkTrustDomainStep のテスト
  *
  * 検証対象:
- * - 信頼ドメイン通過（trustCheck.result 設定）
- * - 未信頼ドメイン + force=false → DOMAIN_NOT_TRUSTED エラー
- * - 未信頼ドメイン + force=true → 通過
+ * - TRUSTED / SENSITIVE / UNVERIFIED（canProceed=true）での通過
+ * - LOCKED（canProceed=false）+ force=false → DOMAIN_NOT_TRUSTED エラー
+ * - LOCKED（canProceed=false）+ force=true → 通過
  * - showAlert=true 時の NotificationHelper.notifyError 呼び出し
  * - showAlert=false 時は通知しない
+ *
+ * canProceed=false を返す trust level は LOCKED だけである
+ * （TrustLookup は他の 3 レベルを canProceed=true で返す）。
+ * ブロック系の fixture は全て LOCKED を使う。
  */
 
 import { vi } from 'vitest';;
@@ -98,13 +102,52 @@ describe('checkTrustDomainStep', () => {
     });
   });
 
-  describe('未信頼ドメイン + force=false', () => {
+  describe('UNVERIFIED / SENSITIVE（記録される）', () => {
+    it('records an UNVERIFIED domain because only LOCKED blocks recording', async () => {
+      setupTrustChecker({
+        canProceed: true,
+        showAlert: false,
+        trustResult: { level: 'unverified', source: 'none' },
+      });
+
+      const result = await checkTrustDomainStep(makeContext({ force: false }));
+
+      expect(result.trustCheck).toEqual({
+        canProceed: true,
+        showAlert: false,
+        reason: undefined,
+        trustLevel: 'unverified',
+      });
+    });
+
+    it('records a SENSITIVE domain and carries the alert flag without a block notification', async () => {
+      setupTrustChecker({
+        canProceed: true,
+        showAlert: true,
+        reason: 'Financial site',
+        trustResult: { level: 'sensitive', source: 'tranco' },
+      });
+
+      const result = await checkTrustDomainStep(makeContext({ force: false }));
+
+      expect(result.trustCheck).toEqual({
+        canProceed: true,
+        showAlert: true,
+        reason: 'Financial site',
+        trustLevel: 'sensitive',
+      });
+      // この step の通知は記録ブロック時だけ。警告は Trust バッジ側で描画される
+      expect(NotificationHelper.notifyError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('LOCKED ドメイン + force=false', () => {
     it('throws DOMAIN_NOT_TRUSTED when canProceed=false and force=false', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: false,
-        reason: 'Unverified domain',
-        trustResult: { level: 'unverified', source: 'none' },
+        reason: 'Blocked domain',
+        trustResult: { level: 'locked', source: 'manual' },
       });
 
       const context = makeContext({ force: false });
@@ -115,8 +158,8 @@ describe('checkTrustDomainStep', () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
-        reason: 'Financial site',
-        trustResult: { level: 'sensitive', source: 'tranco' },
+        reason: 'Blocked domain',
+        trustResult: { level: 'locked', source: 'manual' },
       });
 
       const context = makeContext({ force: false });
@@ -127,7 +170,7 @@ describe('checkTrustDomainStep', () => {
       }
 
       expect(NotificationHelper.notifyError).toHaveBeenCalledWith(
-        expect.stringContaining('Financial site')
+        expect.stringContaining('Blocked domain')
       );
     });
 
@@ -135,8 +178,8 @@ describe('checkTrustDomainStep', () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: false,
-        reason: 'Unverified domain',
-        trustResult: { level: 'unverified', source: 'none' },
+        reason: 'Blocked domain',
+        trustResult: { level: 'locked', source: 'manual' },
       });
 
       const context = makeContext({ force: false });
@@ -150,13 +193,13 @@ describe('checkTrustDomainStep', () => {
     });
   });
 
-  describe('未信頼ドメイン + force=true', () => {
+  describe('LOCKED ドメイン + force=true', () => {
     it('passes when force=true even if canProceed=false', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
-        reason: 'Financial site',
-        trustResult: { level: 'sensitive', source: 'tranco' },
+        reason: 'Blocked domain',
+        trustResult: { level: 'locked', source: 'manual' },
       });
 
       const context = makeContext({ force: true });
@@ -170,8 +213,8 @@ describe('checkTrustDomainStep', () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
-        reason: 'Financial site',
-        trustResult: { level: 'sensitive', source: 'tranco' },
+        reason: 'Blocked domain',
+        trustResult: { level: 'locked', source: 'manual' },
       });
 
       const context = makeContext({ force: true });
