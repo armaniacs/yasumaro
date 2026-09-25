@@ -41,15 +41,15 @@ Scenario: spinner の色を design token に一本化する
 
 ## 受け入れ基準
 
-- [ ] 履歴ボタンの `title` が、現在のロケールで解決した既存 `openHistory` メッセージと一致する。
-- [ ] 履歴ボタンの icon-only 設計を維持し、`aria-label="Open history"` に相当する accessible name を維持する。
-- [ ] `data-i18n` だけでは `title` を翻訳できないため、tooltip の文言は DOM i18n の追加対応または既存の `getMessage()` による `.title` 代入で設定する。
-- [ ] 新しい専用 locale キーを追加せず、en/ja の parity を維持する。
-- [ ] spinner circle の `stroke="#2E7D32"` を撤去する。
-- [ ] `entrypoints/popup/styles.css:1263-1271` の `.spinner-path` が design token を使う既存定義を維持する。
-- [ ] 新しい design token は追加せず、既存の design token 規約に従う。
-- [ ] i18n parity / check-i18n の検査範囲外にある固定 `title` を、テストで明示的に検証する。
-- [ ] `PRIVACY.md` は変更しない。
+- [x] 履歴ボタンの `title` が、現在のロケールで解決した既存 `openHistory` メッセージと一致する。
+- [x] 履歴ボタンの icon-only 設計を維持し、`aria-label="Open history"` に相当する accessible name を維持する。
+- [x] `data-i18n` だけでは `title` を翻訳できないため、tooltip の文言は DOM i18n の追加対応または既存の `getMessage()` による `.title` 代入で設定する。
+- [x] 新しい専用 locale キーを追加せず、en/ja の parity を維持する。
+- [x] spinner circle の `stroke="#2E7D32"` を撤去する。
+- [x] `entrypoints/popup/styles.css:1263-1271` の `.spinner-path` が design token を使う既存定義を維持する。
+- [x] 新しい design token は追加せず、既存の design token 規約に従う。
+- [x] i18n parity / check-i18n の検査範囲外にある固定 `title` を、テストで明示的に検証する。
+- [x] `PRIVACY.md` は変更しない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -137,11 +137,11 @@ Scenario: spinner の色を design token に一本化する
 
 ## Definition of Done
 
-- [ ] 履歴ボタンの `title` が en/ja の既存 `openHistory` メッセージで更新される。
-- [ ] 履歴ボタンの `aria-label` が維持される。
-- [ ] `title="Browse History"` と `stroke="#2E7D32"` の raw 属性が残っていない。
-- [ ] spinner の色が既存 `.spinner-path` design token 定義だけで決まる。
-- [ ] en/ja parity と既存の i18n 検査に影響されないしない。
-- [ ] BDD シナリオに対応する自動テストが存在し、成功する。
-- [ ] 専用 locale キーおよび `PRIVACY.md` を変更していない。
-- [ ] 採用した tooltip 方式と 0.5 SP のスコープが整合している。
+- [x] 履歴ボタンの `title` が en/ja の既存 `openHistory` メッセージで更新される。
+- [x] 履歴ボタンの `aria-label` が維持される。
+- [x] `title="Browse History"` と `stroke="#2E7D32"` の raw 属性が残っていない。
+- [x] spinner の色が既存 `.spinner-path` design token 定義だけで決まる。
+- [x] en/ja parity と既存の i18n 検査に影響されないしない。
+- [x] BDD シナリオに対応する自動テストが存在し、成功する。
+- [x] 専用 locale キーおよび `PRIVACY.md` を変更していない。
+- [x] 採用した tooltip 方式と 0.5 SP のスコープが整合している。

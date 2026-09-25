@@ -5,6 +5,7 @@
 
 import './styles.css';
 import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../../src/utils/i18n-dom.js';
+import { getMessage } from '../../src/utils/i18n.js';
 import { initPopup } from '../../src/popup/popup.js';
 import '../../src/popup/navigation';
 import '../../src/popup/main';
@@ -15,6 +16,10 @@ import '../../src/popup/main';
 async function bootstrap(): Promise<void> {
   setHtmlLangAndDir();
   applyI18n();
+  const historyButton = document.getElementById('historyBtn');
+  if (historyButton) {
+    historyButton.title = getMessage('openHistory');
+  }
   translatePageTitle('popupTitle');
   await initPopup();
 }
