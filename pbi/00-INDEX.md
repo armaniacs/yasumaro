@@ -31,21 +31,15 @@
 | 03 | [feat-navigation-trail-recording](2026-09-26-03-feat-navigation-trail-recording.md) | feat | 0.32 | 5 | 02 の後。2026-09-25-24（再同意 UX）と `privacyConsent.ts` が競合するので同時着手しない |
 | 04 | [feat-session-path-tree-search-to-goal](2026-09-26-04-feat-session-path-tree-search-to-goal.md) | feat | 0.67 | 3 | 02・03 の後（依存を優先し、RICE では上位だが 03 の後に着手する） |
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 6件完了・コードレビュー対応済み / ⬜ 未着手 24件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 6件完了・アーカイブ済み / ⬜ 未着手 24件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 01 | [fix-transport-replay-safety](2026-09-25-01-fix-transport-replay-safety.md) | fix | 20.0 | 2 | ✅ 完了（`c12cacde` + レビュー対応 `4b6d75ab`）retry-safe 18 / retry-unsafe 14。insert 系はレビューで fail-closed へ撤回、判定源も一本化。29 に先行 |
 | 02 | [investigate-withlock-cas-deep-equal](2026-09-25-02-investigate-withlock-cas-deep-equal.md) | investigate | 8.4 | 2 | 裁定が 18 の前提 |
-| 03 | [refactor-previewonly-flag-cleanup](2026-09-25-03-refactor-previewonly-flag-cleanup.md) | refactor | 8.0 | 0.5 | ✅ 完了（`6044e984`）RecordOptions.previewOnly と cast 2 箇所を削除。レビュー指摘により 8 通りテストを実挙動検証へ強化（同一コミットに含む） |
-| 04 | [fix-obsidian-get-retry](2026-09-25-04-fix-obsidian-get-retry.md) | fix | 4.0 | 0.5 | ✅ 完了（`b0c3d570`）接続確認 GET のみ最大 3 回の指数バックオフ。書き込み経路は対象外 |
-| 05 | [fix-trustchecker-legacy-dead-code](2026-09-25-05-fix-trustchecker-legacy-dead-code.md) | fix | 3.0 | 0.5 | ✅ 完了（`b9ee19cc`）レガシー storage キーと未使用マッピングを削除。PBI 08 の記述整合も完了 |
 | 06 | [refactor-ui-provider-label-ssot](2026-09-25-06-refactor-ui-provider-label-ssot.md) | refactor | 3.0 | 0.5 | 30 と import 競合 |
 | 07 | [refactor-format-bytes-ssot](2026-09-25-07-refactor-format-bytes-ssot.md) | refactor | 3.0 | 1 | 30 と同一ファイル競合 |
-| 08 | [doc-trust-record-policy-correction](2026-09-25-08-doc-trust-record-policy-correction.md) | doc | 2.0 | 0.25 | ✅ 完了（`1a121c74`）ガイドに記録可否の列を追加し、blog の誤記述と不可能な fixture を是正 |
-| 09 | [fix-popup-untranslated-title-token](2026-09-25-09-fix-popup-untranslated-title-token.md) | fix | 2.0 | 0.5 | ✅ 完了（`13721302`）既存 openHistory キーで tooltip を設定。spinner の色ハードコード削除 |
 | 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
 | 11 | [refactor-structured-failure-taxonomy](2026-09-25-11-refactor-structured-failure-taxonomy.md) | refactor | 1.6 | 3 | 12・13・15 の前提（起点） |
 | 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 の後。13 の前提 |
@@ -134,6 +128,17 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-25 Checking Team 残債ラウンド — ✅ 6件完了（01・03・04・05・08・09 アーカイブ済み）
+
+autonomous-task-closer による DoD 反映漏れの回収。実装コミット・DoD チェックボックス・`npm run validate`（13,875 tests green）を実測確認した上でアーカイブした。新規実装は行っていない。DoD 反映漏れのため 5 Whys は実施していない。
+
+- [2026-09-25-01-fix-transport-replay-safety.md](../dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md)（✅ 完了 — `c12cacde` + レビュー対応 `4b6d75ab`。retry-safe 18 / retry-unsafe 14 の最終裁定、insert 系は fail-closed へ撤回、判定源も一本化。DoD 18/18 `[x]` 確認済み。RICE 20.0）
+- [2026-09-25-03-refactor-previewonly-flag-cleanup.md](../dev-docs/archived/pbi/2026-09-25-03-refactor-previewonly-flag-cleanup.md)（✅ 完了 — `6044e984`。`RecordOptions` から `previewOnly` を削除し `RecordingOrchestrator` の `data.previewOnly` 単一判定へ。DoD 18/18 `[x]` 確認済み。RICE 8.0）
+- [2026-09-25-04-fix-obsidian-get-retry.md](../dev-docs/archived/pbi/2026-09-25-04-fix-obsidian-get-retry.md)（✅ 完了 — `b0c3d570`。接続確認 GET のみ 500/502/503/504 ＋ network/timeout を対象に最大 3 回の指数バックオフ（`obsidianClient.ts` の retryableStatusCodes）。書き込み経路は対象外。DoD 23/23 `[x]` 確認済み。RICE 4.0）
+- [2026-09-25-05-fix-trustchecker-legacy-dead-code.md](../dev-docs/archived/pbi/2026-09-25-05-fix-trustchecker-legacy-dead-code.md)（✅ 完了 — `b9ee19cc`。trust 設定のレガシー storage 経路を Trust DB に一本化。`src/` 内のレガシー trustchecker 参照 0 件を確認。DoD 21/21 `[x]` 確認済み。RICE 3.0）
+- [2026-09-25-08-doc-trust-record-policy-correction.md](../dev-docs/archived/pbi/2026-09-25-08-doc-trust-record-policy-correction.md)（✅ 完了 — `1a121c74`。ガイド（日英）に記録可否の列を追加し、blog の誤記述と production が生成しない fixture を是正。DoD 19/19 `[x]` 確認済み。RICE 2.0）
+- [2026-09-25-09-fix-popup-untranslated-title-token.md](../dev-docs/archived/pbi/2026-09-25-09-fix-popup-untranslated-title-token.md)（✅ 完了 — `13721302`。`title="Browse History"` と `stroke="#2E7D32"` の raw 属性が 0 件であることを grep 確認、`aria-label` は維持。DoD 17/17 `[x]` 確認済み。RICE 2.0）
 
 ### 2026-09-24 arch-delivery-loop ラウンド バッチ6-7 — ✅ 2件完了（15・16 アーカイブ済み）RICE順: 15 → 16（直列）
 
