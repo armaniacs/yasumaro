@@ -13,12 +13,3 @@ export const PROVIDER_DEFAULT_BASE_URLS = {
   'lm-studio': 'http://127.0.0.1:1234/v1',
   'ollama': 'http://localhost:11434/v1',
 } as const;
-
-export type LocalProviderDefaultId = keyof typeof PROVIDER_DEFAULT_BASE_URLS;
-
-/** Look up a local provider's default base URL; throws on unknown ids. */
-export function getProviderDefaultBaseUrl(id: LocalProviderDefaultId): string {
-  const url = PROVIDER_DEFAULT_BASE_URLS[id];
-  if (url === undefined) throw new Error(`Unknown local provider: ${id}`);
-  return url;
-}
