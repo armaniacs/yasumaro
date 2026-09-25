@@ -14,21 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ⬜ 未着手 30件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 6件完了・コードレビュー対応済み / ⬜ 未着手 24件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 01 | [fix-transport-replay-safety](2026-09-25-01-fix-transport-replay-safety.md) | fix | 20.0 | 2 | 本ラウンドの起点。29 に先行 |
+| 01 | [fix-transport-replay-safety](2026-09-25-01-fix-transport-replay-safety.md) | fix | 20.0 | 2 | ✅ 完了（`c12cacde` + レビュー対応 `4b6d75ab`）retry-safe 18 / retry-unsafe 14。insert 系はレビューで fail-closed へ撤回、判定源も一本化。29 に先行 |
 | 02 | [investigate-withlock-cas-deep-equal](2026-09-25-02-investigate-withlock-cas-deep-equal.md) | investigate | 8.4 | 2 | 裁定が 18 の前提 |
-| 03 | [refactor-previewonly-flag-cleanup](2026-09-25-03-refactor-previewonly-flag-cleanup.md) | refactor | 8.0 | 0.5 | 30 より先に片付ける |
-| 04 | [fix-obsidian-get-retry](2026-09-25-04-fix-obsidian-get-retry.md) | fix | 4.0 | 0.5 | 11・12・13 と独立（先行可） |
-| 05 | [fix-trustchecker-legacy-dead-code](2026-09-25-05-fix-trustchecker-legacy-dead-code.md) | fix | 3.0 | 0.5 | 30 より先に片付ける |
+| 03 | [refactor-previewonly-flag-cleanup](2026-09-25-03-refactor-previewonly-flag-cleanup.md) | refactor | 8.0 | 0.5 | ✅ 完了（`6044e984`）RecordOptions.previewOnly と cast 2 箇所を削除。レビュー指摘により 8 通りテストを実挙動検証へ強化（同一コミットに含む） |
+| 04 | [fix-obsidian-get-retry](2026-09-25-04-fix-obsidian-get-retry.md) | fix | 4.0 | 0.5 | ✅ 完了（`b0c3d570`）接続確認 GET のみ最大 3 回の指数バックオフ。書き込み経路は対象外 |
+| 05 | [fix-trustchecker-legacy-dead-code](2026-09-25-05-fix-trustchecker-legacy-dead-code.md) | fix | 3.0 | 0.5 | ✅ 完了（`b9ee19cc`）レガシー storage キーと未使用マッピングを削除。PBI 08 の記述整合も完了 |
 | 06 | [refactor-ui-provider-label-ssot](2026-09-25-06-refactor-ui-provider-label-ssot.md) | refactor | 3.0 | 0.5 | 30 と import 競合 |
 | 07 | [refactor-format-bytes-ssot](2026-09-25-07-refactor-format-bytes-ssot.md) | refactor | 3.0 | 1 | 30 と同一ファイル競合 |
-| 08 | [doc-trust-record-policy-correction](2026-09-25-08-doc-trust-record-policy-correction.md) | doc | 2.0 | 0.25 | 05 と用語を揃える |
-| 09 | [fix-popup-untranslated-title-token](2026-09-25-09-fix-popup-untranslated-title-token.md) | fix | 2.0 | 0.5 | 既存キー再利用で `_locales` 変更なし |
+| 08 | [doc-trust-record-policy-correction](2026-09-25-08-doc-trust-record-policy-correction.md) | doc | 2.0 | 0.25 | ✅ 完了（`1a121c74`）ガイドに記録可否の列を追加し、blog の誤記述と不可能な fixture を是正 |
+| 09 | [fix-popup-untranslated-title-token](2026-09-25-09-fix-popup-untranslated-title-token.md) | fix | 2.0 | 0.5 | ✅ 完了（`13721302`）既存 openHistory キーで tooltip を設定。spinner の色ハードコード削除 |
 | 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
 | 11 | [refactor-structured-failure-taxonomy](2026-09-25-11-refactor-structured-failure-taxonomy.md) | refactor | 1.6 | 3 | 12・13・15 の前提（起点） |
 | 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 の後。13 の前提 |
