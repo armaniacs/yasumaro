@@ -40,12 +40,18 @@ AI 要約を使わないのであれば不要です。ダッシュボードで�
 
 Yasumaro は Microsoft Edge や Brave など Chromium 系ブラウザで動作し、実際に作者自身も日常的に Microsoft Edge で使用しています。Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) からインストールできます。Chrome / Brave では、GitHub Releases の zip を読み込むか、ソースからビルドしてください（Chrome Web Store での配布は現在停止しています。Q7 参照）。
 
-**Firefox 版**も `make build` でビルドでき、2026-09 から記録・保存・検索（FTS5 含む）が動作します。インストールは次の手順で行います（AMO からの配布は未定です。将来対応として記録されています）:
+**Firefox 版**は [addons.mozilla.org](https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/) で公開済みです。審査を通過しており、通常の Firefox から署名済みとしてそのままインストールできます（Developer Edition や署名の無効化は不要）。
+
+1. [addons.mozilla.org の Yasumaro ページ](https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/) を開く
+2.「Firefox をダウンロードして拡張機能を入手する」をクリックして追加
+3. 追加後、同意画面から記録を開始してください
+
+GitHub Releases の zip や手動ビルドも従来どおり利用できます。最新のソースからビルドする場合は `make build` または `npm run build:firefox` を実行します:
 
 1. GitHub Releases から `yasumaro-*-firefox.zip` をダウンロードして展開するか、`npm run build:firefox` でビルドする
 2. Firefox で `about:debugging#/runtime/this-firefox` を開く
 3. 「一時的なアドオンを読み込む…」→ 展開したフォルダ内の `manifest.json` を選択（一時読み込みは Firefox 再起動で消えます）
-4. 永続的に使う場合は Firefox Developer Edition / Nightly で `xpinstall.signatures.required` を `false` にしたプロファイルにインストールしてください
+4. 開発用のプロファイルで恒久的に使う場合は、Firefox Developer Edition / Nightly で `xpinstall.signatures.required` を `false` にしたプロファイルにインストールしてください
 
 Firefox 版の既知の制限: ブラウザ内蔵 AI（Gemini Nano / Phi-mini）は非対応です（設定画面では「非対応」と表示されます）。外部 AI プロバイダー（Gemini API、OpenAI 互換、Ollama など）は利用できます。
 
@@ -55,7 +61,7 @@ Firefox 版の既知の制限: ブラウザ内蔵 AI（Gemini Nano / Phi-mini）
 
 **Q7. 拡張機能はどこからインストールできますか？**
 
-Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) から直接インストールできます。Chrome / Brave では、[最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) の `yasumaro-<version>-chrome.zip` を展開し、`chrome://extensions` の「デベロッパーモード」→「パッケージ化されていない拡張機能を読み込む」から展開したフォルダを選択してください。ソースからビルドする場合は [GitHub リポジトリ](https://github.com/armaniacs/yasumaro) をクローンして `npm run build` 後の `dist/chromium-mv3` フォルダを選択します。Chrome Web Store での配布は、署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため現在停止しています（将来的に別 ID で再開する可能性があります）。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
+Firefox は [addons.mozilla.org](https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/) から直接インストールできます（審査通過済み・署名済み）。Edge は [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) から直接インストールできます。Chrome / Brave では、[最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) の `yasumaro-<version>-chrome.zip` を展開し、`chrome://extensions` の「デベロッパーモード」→「パッケージ化されていない拡張機能を読み込む」から展開したフォルダを選択してください。ソースからビルドする場合は [GitHub リポジトリ](https://github.com/armaniacs/yasumaro) をクローンして `npm run build` 後の `dist/chromium-mv3` フォルダを選択します。Chrome Web Store での配布は、署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため現在停止しています（将来的に別 ID で再開する可能性があります）。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
 
 ---
 
@@ -339,11 +345,17 @@ Not if you don't want AI summaries. If you don't configure an AI provider in the
 
 Yasumaro works on Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. Edge can be installed from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, load the GitHub Releases zip or build from source (Chrome Web Store distribution is currently paused; see Q7).
 
-A **Firefox build** is also supported. Build it with `npm run build:firefox` (or download `yasumaro-*-firefox.zip` from GitHub Releases and unzip it), then install with these steps (AMO distribution is undecided):
+A **Firefox build** is published on [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/). It passed review, so it installs signed into regular Firefox — no Developer Edition and no signature bypass needed:
+
+1. Open the [Yasumaro page on addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/)
+2. Click "Get the extension for Firefox" to add it
+3. Grant consent in the popup to start recording
+
+The GitHub Releases zip and manual builds still work as before. To build from the latest source, run `npm run build:firefox`:
 
 1. Open `about:debugging#/runtime/this-firefox` in Firefox
 2. Click "Load Temporary Add-on…" and select the `manifest.json` inside the unzipped folder (temporary installs disappear when Firefox restarts)
-3. For persistent use, install it into a Firefox Developer Edition / Nightly profile with `xpinstall.signatures.required` set to `false`
+3. For persistent use in a development profile, install it into a Firefox Developer Edition / Nightly profile with `xpinstall.signatures.required` set to `false`
 
 Known Firefox limitation: browser Built-in AI (Gemini Nano / Phi-mini) is not supported (shown as "unsupported" in settings). External AI providers (Gemini API, OpenAI-compatible, Ollama, etc.) work.
 
@@ -353,7 +365,7 @@ Chrome extensions are not supported on mobile Chrome, so normal use is not avail
 
 **Q7. Where can I install the extension?**
 
-Edge users can install directly from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest), unzip it, and load the folder via `chrome://extensions` → "Developer mode" → "Load unpacked". To build from source, clone the [GitHub repository](https://github.com/armaniacs/yasumaro), run `npm run build`, then load the resulting `dist/chromium-mv3` folder. Chrome Web Store distribution is currently paused because a signing-key mismatch made the existing extension ID impossible to update (it may resume later under a different ID). See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
+Firefox users can install directly from [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/) (reviewed and signed). Edge users can install directly from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). On Chrome / Brave, download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest), unzip it, and load the folder via `chrome://extensions` → "Developer mode" → "Load unpacked". To build from source, clone the [GitHub repository](https://github.com/armaniacs/yasumaro), run `npm run build`, then load the resulting `dist/chromium-mv3` folder. Chrome Web Store distribution is currently paused because a signing-key mismatch made the existing extension ID impossible to update (it may resume later under a different ID). See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
 
 ---
 
