@@ -20,6 +20,9 @@
   "cancel": {
     "message": "キャンセル"
   },
+  "ok": {
+    "message": "OK"
+  },
   "close": {
     "message": "閉じる"
   },
