@@ -20,9 +20,9 @@ import {
     getPromptDisplayName
 } from '../../utils/customPromptUtils.js';
 import { pickDefined } from '../../utils/objectUtils.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
-import { tryResolveCatalogEntry } from '../../background/ai/providerCatalog.js';
+import { tryResolveProviderDisplayMetadata } from '../../utils/storage/providerAllowlist.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
 import { escapeHtml } from '../../utils/htmlEscape.js';
 import { setElementHtml } from '../../utils/htmlFragment.js';
@@ -186,7 +186,7 @@ function createPresetPromptItem(
         <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="${presetId}">
             <div class="prompt-item-header">
                 <span class="prompt-name">${escapeHtml(displayName)}</span>
-                <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
+                <span class="prompt-provider">(${getMessageOr('promptProviderAll', 'All Providers')})</span>
                 ${activeBadge}
             </div>
             <div class="prompt-item-actions">
@@ -208,13 +208,13 @@ function createDefaultPromptItem(): string {
         : '';
     const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
     const defaultPreset = getPresetPrompt('default');
-    const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
+    const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessageOr('defaultPrompt', 'Default'));
 
     return `
         <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="${PROMPT_ID.DEFAULT}">
             <div class="prompt-item-header">
                 <span class="prompt-name">${escapeHtml(displayName)}</span>
-                <span class="prompt-provider">(${getMessage('promptProviderAll') || 'All Providers'})</span>
+                <span class="prompt-provider">(${getMessageOr('promptProviderAll', 'All Providers')})</span>
                 ${activeBadge}
             </div>
             <div class="prompt-item-actions">
@@ -259,10 +259,10 @@ function createPromptListItem(prompt: CustomPrompt): string {
  * @returns {string} Display label
  */
 function getProviderLabel(provider: string): string {
-    if (provider === 'all') return getMessage('promptProviderAll') || 'All Providers';
-    const entry = tryResolveCatalogEntry(provider);
+    if (provider === 'all') return getMessageOr('promptProviderAll', 'All Providers');
+    const entry = tryResolveProviderDisplayMetadata(provider);
     if (!entry) return provider;
-    return getMessage(entry.labelI18nKey) || entry.label || provider;
+    return getMessageOr(entry.labelI18nKey, entry.label || provider);
 }
 
 /**
@@ -279,7 +279,7 @@ async function handleSavePrompt(): Promise<void> {
 
     // Validate
     if (!name) {
-        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptNameRequired') || 'Prompt name is required', 'error');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptNameRequired', 'Prompt name is required'), 'error');
         return;
     }
 
@@ -300,7 +300,7 @@ async function handleSavePrompt(): Promise<void> {
             prompt: promptText,
             ...pickDefined({ systemPrompt })
         });
-        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptUpdated') || 'Prompt updated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptUpdated', 'Prompt updated'), 'success');
     } else {
         // Create new prompt
         const newPrompt = createPrompt({
@@ -311,7 +311,7 @@ async function handleSavePrompt(): Promise<void> {
             ...pickDefined({ systemPrompt })
         });
         prompts.push(newPrompt);
-        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptCreated') || 'Prompt created', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptCreated', 'Prompt created'), 'success');
     }
 
     // Save to settings — delta write: only CUSTOM_PROMPTS enters the payload,
@@ -357,7 +357,7 @@ function handleEditPrompt(promptId: string): void {
 
     // Update button text
     if (savePromptBtn) {
-        savePromptBtn.textContent = getMessage('updatePrompt') || 'Update Prompt';
+        savePromptBtn.textContent = getMessageOr('updatePrompt', 'Update Prompt');
     }
     if (cancelPromptBtn) {
         cancelPromptBtn.style.display = 'inline-block';
@@ -379,7 +379,7 @@ async function handleDeletePrompt(promptId: string): Promise<void> {
 
     // Confirm deletion — accessible dialog seam (PBI 2026-09-17-19)
     const confirmed = await showConfirmDialog({
-      message: getMessage('confirmDeletePrompt') || 'Are you sure you want to delete this prompt?',
+      message: getMessageOr('confirmDeletePrompt', 'Are you sure you want to delete this prompt?'),
       dangerous: true,
     });
     if (!confirmed) {
@@ -393,7 +393,7 @@ async function handleDeletePrompt(promptId: string): Promise<void> {
     currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
     await settingsRepository.set(StorageKeys.CUSTOM_PROMPTS, prompts);
 
-    showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptDeleted') || 'Prompt deleted', 'success');
+    showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptDeleted', 'Prompt deleted'), 'success');
     renderPromptList();
 }
 
@@ -415,7 +415,7 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
             updatedAt: Date.now()
         }));
 
-        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptActivated', 'Prompt activated'), 'success');
     } else if (promptId.startsWith(PROMPT_ID.PRESET_PREFIX)) {
         // Activate preset: upsert it into CUSTOM_PROMPTS with isActive=true
         const presetRawId = promptId.slice(PROMPT_ID.PRESET_PREFIX.length);
@@ -447,11 +447,11 @@ async function handleActivatePrompt(promptId: string, provider: string): Promise
             prompts = [...prompts, newEntry];
         }
 
-        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptActivated', 'Prompt activated'), 'success');
     } else {
         // Activate custom prompt
         prompts = setActivePrompt(prompts, promptId, provider);
-        showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptActivated') || 'Prompt activated', 'success');
+        showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptActivated', 'Prompt activated'), 'success');
     }
 
     // Save to settings — delta write (PBI 2026-09-17-17)
@@ -479,7 +479,7 @@ function handleDuplicatePrompt(promptId: string): void {
     if (promptId === PROMPT_ID.DEFAULT) {
         // Duplicate default prompt
         const defaultPreset = getPresetPrompt('default');
-        name = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessage('defaultPrompt') || 'Default');
+        name = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessageOr('defaultPrompt', 'Default'));
         provider = 'all';
         systemPrompt = DEFAULT_SYSTEM_PROMPT;
         promptText = DEFAULT_USER_PROMPT;
@@ -524,14 +524,14 @@ function handleDuplicatePrompt(promptId: string): void {
 
     // Update button text
     if (savePromptBtn) {
-        savePromptBtn.textContent = getMessage('savePrompt') || 'Save Prompt';
+        savePromptBtn.textContent = getMessageOr('savePrompt', 'Save Prompt');
     }
     if (cancelPromptBtn) {
         cancelPromptBtn.style.display = 'inline-block';
     }
 
     // Show status message
-    showStatus(promptStatusDiv ?? 'promptStatus', getMessage('promptDuplicated') || 'Prompt copied to editor', 'success');
+    showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptDuplicated', 'Prompt copied to editor'), 'success');
 
     // Scroll to editor
     promptNameInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -556,7 +556,7 @@ function resetForm(): void {
 
     // Reset button text
     if (savePromptBtn) {
-        savePromptBtn.textContent = getMessage('savePrompt') || 'Save Prompt';
+        savePromptBtn.textContent = getMessageOr('savePrompt', 'Save Prompt');
     }
     if (cancelPromptBtn) {
         cancelPromptBtn.style.display = 'none';

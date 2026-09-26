@@ -44,6 +44,10 @@ export const REGENERATE_UPDATE_FIELDS = [
   'cleansed_tokens',
   'fallback_triggered',
   'fallback_reason',
+  // WHY nav_source_url / search_query are NOT here: a regeneration re-runs the
+  // AI and cleansing over the stored page, and it must not rewrite how the
+  // visit was reached. The trail is captured once, at record time (PBI
+  // 2026-09-26-03).
 ] as const satisfies ReadonlyArray<keyof BrowsingLogRecord>;
 
 export type RegenerateUpdateFields = (typeof REGENERATE_UPDATE_FIELDS)[number];

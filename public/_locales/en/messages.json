@@ -20,6 +20,9 @@
   "cancel": {
     "message": "Cancel"
   },
+  "ok": {
+    "message": "OK"
+  },
   "close": {
     "message": "Close"
   },
@@ -2213,101 +2216,41 @@
   "viewFullPolicy": {
     "message": "View Full Privacy Policy"
   },
-  "visitDurationAllUnmeasured": {
-    "message": "All records in this period are unmeasured — durations are recorded for newly tracked visits.",
-    "description": "Visit duration all-null state"
-  },
-  "visitDurationAverageTime": {
-    "message": "Average",
-    "description": "Visit duration average-time column header"
-  },
-  "visitDurationDescription": {
-    "message": "Total and average time spent per domain and tag for the selected period.",
-    "description": "Visit duration panel description"
-  },
-  "visitDurationDomainColumn": {
-    "message": "Domain",
-    "description": "Visit duration domain column header"
-  },
-  "visitDurationDomainRanking": {
-    "message": "Time by domain",
-    "description": "Visit duration by-domain ranking heading"
-  },
-  "visitDurationEmpty": {
-    "message": "No browsing records in this period.",
-    "description": "Visit duration empty state"
-  },
-  "visitDurationError": {
-    "message": "Failed to load the visit duration analysis. Try again.",
-    "description": "Visit duration load-failure state"
-  },
-  "visitDurationPanelTitle": {
-    "message": "Visit Duration",
-    "description": "Visit duration panel title"
-  },
-  "visitDurationPeriodAll": {
-    "message": "All time",
-    "description": "Period filter preset: all time"
-  },
-  "visitDurationPeriodCustom": {
-    "message": "Custom",
-    "description": "Period filter custom-range label"
-  },
-  "visitDurationPeriodEnd": {
-    "message": "To",
-    "description": "Period filter custom end-date label"
-  },
-  "visitDurationPeriodLabel": {
+  "periodFilterLabel": {
     "message": "Period",
     "description": "Period filter group label"
   },
-  "visitDurationPeriodLast30Days": {
-    "message": "Last 30 days",
-    "description": "Period filter preset: last 30 days"
-  },
-  "visitDurationPeriodLast7Days": {
-    "message": "Last 7 days",
-    "description": "Period filter preset: last 7 days"
-  },
-  "visitDurationPeriodLast90Days": {
-    "message": "Last 90 days",
-    "description": "Period filter preset: last 90 days"
-  },
-  "visitDurationPeriodStart": {
-    "message": "From",
-    "description": "Period filter custom start-date label"
-  },
-  "visitDurationPeriodToday": {
+  "periodFilterToday": {
     "message": "Today",
     "description": "Period filter preset: today"
   },
-  "visitDurationRecordCount": {
-    "message": "Records",
-    "description": "Visit duration record-count column header"
+  "periodFilterLast7Days": {
+    "message": "Last 7 days",
+    "description": "Period filter preset: last 7 days"
   },
-  "visitDurationTab": {
-    "message": "Visit Duration",
-    "description": "Sidebar tab for visit duration"
+  "periodFilterLast30Days": {
+    "message": "Last 30 days",
+    "description": "Period filter preset: last 30 days"
   },
-  "visitDurationTagColumn": {
-    "message": "Tag",
-    "description": "Visit duration tag column header"
+  "periodFilterLast90Days": {
+    "message": "Last 90 days",
+    "description": "Period filter preset: last 90 days"
   },
-  "visitDurationTagRanking": {
-    "message": "Time by tag",
-    "description": "Visit duration by-tag ranking heading"
+  "periodFilterAll": {
+    "message": "All time",
+    "description": "Period filter preset: all time"
   },
-  "visitDurationTotalTime": {
-    "message": "Total",
-    "description": "Visit duration total-time column header"
+  "periodFilterCustom": {
+    "message": "Custom",
+    "description": "Period filter custom-range label"
   },
-  "visitDurationTruncated": {
-    "message": "Showing top {shown} of {total}.",
-    "description": "Visit duration truncation notice"
+  "periodFilterStart": {
+    "message": "From",
+    "description": "Period filter custom start-date label"
   },
-  "visitDurationUnmeasuredRatio": {
-    "message": "Unmeasured: {percent}% ({unmeasured} of {total} records)",
-    "description": "Visit duration unmeasured ratio"
+  "periodFilterEnd": {
+    "message": "To",
+    "description": "Period filter custom end-date label"
   },
   "domainAnalysisTab": {
     "message": "Domain Analysis",
@@ -2372,6 +2315,246 @@
   "domainAnalysisError": {
     "message": "Failed to load the domain analysis. Try again.",
     "description": "Domain analysis load failure state"
+  },
+  "revisitInsightsTab": {
+    "message": "Revisits & Time Capsule",
+    "description": "Sidebar tab for the revisit insights panel"
+  },
+  "revisitInsights_title": {
+    "message": "Revisits & Time Capsule",
+    "description": "Revisit insights panel title"
+  },
+  "revisitInsights_description": {
+    "message": "Compares the last 30 days with records older than 90 days to show topics you keep re-researching and topics you have not revisited lately.",
+    "description": "Revisit insights panel description"
+  },
+  "revisitInsights_utcNote": {
+    "message": "Same-day revisits are not recorded (days are split in UTC).",
+    "description": "Note about UTC same-day dedup"
+  },
+  "revisitInsights_empty": {
+    "message": "No records.",
+    "description": "Empty state"
+  },
+  "revisitInsights_rowCap": {
+    "message": "Aggregated only the newest {shown} records; older counts may be understated.",
+    "description": "Row cap notice"
+  },
+  "revisitInsights_sectionEmpty": {
+    "message": "None",
+    "description": "Empty section row"
+  },
+  "revisitInsights_loopsTitle": {
+    "message": "Topics you keep re-researching",
+    "description": "Loop section heading"
+  },
+  "revisitInsights_loopsHint": {
+    "message": "Collecting these into one note saves you the next search.",
+    "description": "Loop section hint"
+  },
+  "revisitInsights_kindColumn": {
+    "message": "Kind",
+    "description": "Column header"
+  },
+  "revisitInsights_targetColumn": {
+    "message": "Target",
+    "description": "Column header"
+  },
+  "revisitInsights_recentDaysColumn": {
+    "message": "Days in last 30",
+    "description": "Column header"
+  },
+  "revisitInsights_pastCountColumn": {
+    "message": "Records 90+ days ago",
+    "description": "Column header"
+  },
+  "revisitInsights_actionsColumn": {
+    "message": "Actions",
+    "description": "Column header"
+  },
+  "revisitInsights_countColumn": {
+    "message": "Count",
+    "description": "Column header"
+  },
+  "revisitInsights_daysColumn": {
+    "message": "Days visited",
+    "description": "Column header"
+  },
+  "revisitInsights_lastVisitColumn": {
+    "message": "Last visit",
+    "description": "Column header"
+  },
+  "revisitInsights_kindUrl": {
+    "message": "Page",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindDomain": {
+    "message": "Domain",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindTag": {
+    "message": "Tag",
+    "description": "Kind label"
+  },
+  "revisitInsights_copyMarkdown": {
+    "message": "Copy as Markdown",
+    "description": "Copy button"
+  },
+  "revisitInsights_copied": {
+    "message": "Copied",
+    "description": "Copy success feedback"
+  },
+  "revisitInsights_copyFailed": {
+    "message": "Copy failed",
+    "description": "Copy failure feedback"
+  },
+  "revisitInsights_openHistory": {
+    "message": "View in history",
+    "description": "Navigate to history button"
+  },
+  "revisitInsights_rankingTitle": {
+    "message": "Frequently revisited pages",
+    "description": "Ranking heading"
+  },
+  "revisitInsights_dormantTitle": {
+    "message": "Topics you have not revisited",
+    "description": "Dormant heading"
+  },
+  "revisitInsights_dormantHint": {
+    "message": "Frequent 2–4 months ago, but no records in the last 30 days.",
+    "description": "Dormant hint"
+  },
+  "revisitInsights_capsuleTitle": {
+    "message": "This week, one year ago",
+    "description": "Capsule heading"
+  },
+  "revisitInsights_capsuleRange": {
+    "message": "{start} – {end}",
+    "description": "Capsule date range"
+  },
+  "revisitInsightsError": {
+    "message": "Failed to load revisit data.",
+    "description": "Load error"
+  },
+  "researchSessionsTab": {
+    "message": "Research Sessions",
+    "description": "Sidebar tab for the research sessions panel"
+  },
+  "researchSessions_title": {
+    "message": "Research Sessions",
+    "description": "Research sessions panel title"
+  },
+  "researchSessions_description": {
+    "message": "Groups pages recorded within the selected gap of each other into one research session. The duration is the time between the first and last record, not actual reading time.",
+    "description": "Research sessions panel description"
+  },
+  "researchSessions_gapLabel": {
+    "message": "Session gap",
+    "description": "Session gap select label"
+  },
+  "researchSessions_gapOption": {
+    "message": "{n} min",
+    "description": "Session gap option"
+  },
+  "researchSessions_summary": {
+    "message": "{sessions} sessions · {singles} single pages",
+    "description": "Session counts summary"
+  },
+  "researchSessions_pages": {
+    "message": "{n} pages",
+    "description": "Pages per session"
+  },
+  "researchSessions_minutes": {
+    "message": "{n} min",
+    "description": "Session duration in minutes"
+  },
+  "researchSessions_starred": {
+    "message": "Starred",
+    "description": "Starred record marker"
+  },
+  "researchSessions_truncated": {
+    "message": "Showing the newest {shown} sessions.",
+    "description": "Session list truncation notice"
+  },
+  "researchSessions_rowCap": {
+    "message": "Grouped only the newest {shown} records. Shorten the period to include all records.",
+    "description": "Row cap notice"
+  },
+  "researchSessions_empty": {
+    "message": "No records in this period.",
+    "description": "Empty state"
+  },
+  "researchSessionsError": {
+    "message": "Failed to load sessions.",
+    "description": "Load error"
+  },
+  "navTrailLabel": {
+    "message": "Record navigation trail (source page and search terms)",
+    "description": "Navigation trail opt-in checkbox label"
+  },
+  "navTrailDescription": {
+    "message": "Stores, on this device only, the page you came from and the search terms you used. Used by Research Sessions. Off by default.",
+    "description": "Navigation trail opt-in description"
+  },
+  "navTrailConsentTitle": {
+    "message": "Enable navigation trail?",
+    "description": "Navigation trail consent dialog title"
+  },
+  "navTrailConsentMessage": {
+    "message": "When enabled, each record also stores the URL of the previous page in the same tab (only the domain for excluded sites) and the search terms from search engines (with personal information masked). The data stays on this device and is never sent to AI providers or Obsidian. Turning it off stops further collection.",
+    "description": "Navigation trail consent dialog body"
+  },
+  "navTrailConsentAccept": {
+    "message": "Enable",
+    "description": "Navigation trail consent dialog confirm label"
+  },
+  "navTrailSaveFailed": {
+    "message": "Could not save the setting.",
+    "description": "Navigation trail save failure"
+  },
+  "researchSessions_searchQuery": {
+    "message": "Search: {q}",
+    "description": "Search term shown on a session record"
+  },
+  "researchSessions_source": {
+    "message": "From: {host}",
+    "description": "Referrer shown on a session record"
+  },
+  "researchSessions_searchToGoalTitle": {
+    "message": "Topics that take the longest to resolve",
+    "description": "Search-to-goal metric heading"
+  },
+  "researchSessions_searchToGoalHint": {
+    "message": "Sessions that started from a search, grouped by the tags of their last page.",
+    "description": "Search-to-goal metric hint"
+  },
+  "researchSessions_navTrailOff": {
+    "message": "Turn on \"Record navigation trail\" in Privacy settings to see paths from search to resolution.",
+    "description": "Shown when the navigation trail is off"
+  },
+  "researchSessions_tagColumn": {
+    "message": "Tag",
+    "description": "Column header"
+  },
+  "researchSessions_sessionsColumn": {
+    "message": "Sessions",
+    "description": "Column header"
+  },
+  "researchSessions_avgPagesColumn": {
+    "message": "Avg. pages",
+    "description": "Column header"
+  },
+  "researchSessions_avgMinutesColumn": {
+    "message": "Avg. minutes",
+    "description": "Column header"
+  },
+  "researchSessions_untagged": {
+    "message": "(untagged)",
+    "description": "Label for a resolution page with no tag"
+  },
+  "researchSessions_searchToGoalEmpty": {
+    "message": "No search-started sessions yet.",
+    "description": "Empty state for the search-to-goal table"
   },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
@@ -2841,6 +3024,33 @@
   },
   "aiSummaryCleansingSave": {
     "message": "Save"
+  },
+  "aiSummaryCleansingPerSiteSection": {
+    "message": "Per-site Overrides"
+  },
+  "aiSummaryCleansingPerSiteDesc": {
+    "message": "Domain exact match. Overrides are merged onto the global config (only differences are stored)."
+  },
+  "aiSummaryCleansingPerSiteDomainLabel": {
+    "message": "Domain"
+  },
+  "aiSummaryCleansingPerSiteDomainHelp": {
+    "message": "Exact match (subdomains are separate). Example: example.com"
+  },
+  "aiSummaryCleansingPerSiteSave": {
+    "message": "Save override"
+  },
+  "aiSummaryCleansingPerSiteDelete": {
+    "message": "Delete override"
+  },
+  "aiSummaryCleansingFeedbackSection": {
+    "message": "Cleansing Feedback"
+  },
+  "aiSummaryCleansingFeedbackDesc": {
+    "message": "List of false-removal reports. Developers use them to improve patterns."
+  },
+  "domainTagRemoveAriaLabel": {
+    "message": "Remove {domain}"
   },
   "cspTab": {
     "message": "CSP"

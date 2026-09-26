@@ -7,7 +7,8 @@
 
 import type { EncryptedData } from '../crypto/types.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
-import type { SafetyMode, TrancoTier, TrustDatabase } from '../trustDb/trustDbSchema.js';
+import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
+import type { NavTrailConsent } from './navTrailConsent.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
@@ -84,6 +85,11 @@ export const StorageKeys = {
     // absent from DEFAULT_SETTINGS so exports never carry it and imports
     // cannot smuggle authorizations in (settingsExportImport strips it).
     CONFIRMED_PROVIDER_ORIGINS: 'confirmed_provider_origins',
+    // Navigation-trail opt-in. Device-local consent, so it is absent from
+    // DEFAULT_SETTINGS and from the restore allowlist: a backup restored on
+    // another device must not inherit an authorization the user never gave
+    // there (PBI 2026-09-26-03).
+    NAV_TRAIL_CONSENT: 'nav_trail_consent',
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
     ENCRYPTION_SECRET: 'encryption_secret', // マスターパスワード未設定時の自動暗号化鍵導出に使う自動生成シークレット（Base64）。現役で読み書きされる — 新鍵管理スキームへのマイグレーションなしに削除すると、既存の暗号化データ（APIキー等）が復号不能になる
@@ -134,8 +140,6 @@ export const StorageKeys = {
     SAVE_ABORTED_PAGES: 'save_aborted_pages', // 警告で中断したページを履歴に残す（デフォルト: false）
     // Trust Database Settings (Phase 1)
     TRUST_DB: 'trust_db:json', // Trust database persistence key — owned by storage layer, used via StoragePort/Admin seam
-    SAFETY_MODE: 'safety_mode', // Safety Mode (strict/balanced/relaxed, デフォルト: balanced)
-    TRANCO_TIER: 'tranco_tier', // Tranco Tier (top1k/top10k/top100k, デフォルト: top10k)
     // Permission Manager Settings (P0)
     DENIED_DOMAINS: 'denied_domains', // 拒否ドメイン情報: { [domain: string]: { count: number; lastDenied: string; lastDismissed?: string } }
     PERMISSION_NOTIFY_THRESHOLD: 'permission_notify_threshold', // 通知する訪問回数の閾値（デフォルト: 3、範囲: 1〜50）
@@ -340,6 +344,12 @@ export interface StorageKeyValues {
     [StorageKeys.ALLOWED_URLS_HASH]: string;
     /** Per-baseUrlKey list of user-confirmed origins. Absent until the first confirmation. */
     [StorageKeys.CONFIRMED_PROVIDER_ORIGINS]: Record<string, string[]>;
+    /**
+     * Navigation-trail opt-in. Type-only import: this edge is erased at
+     * compile time, so navTrailConsent.ts can keep importing StorageKeys as a
+     * value without a runtime cycle.
+     */
+    [StorageKeys.NAV_TRAIL_CONSENT]: NavTrailConsent;
     [StorageKeys.ENCRYPTION_SALT]: string;
     [StorageKeys.ENCRYPTION_SECRET]: string;
     [StorageKeys.HMAC_SECRET]: string;
@@ -377,8 +387,6 @@ export interface StorageKeyValues {
     [StorageKeys.ALERT_UNVERIFIED]: boolean;
     [StorageKeys.SAVE_ABORTED_PAGES]: boolean;
     [StorageKeys.TRUST_DB]: TrustDatabase;
-    [StorageKeys.SAFETY_MODE]: SafetyMode;
-    [StorageKeys.TRANCO_TIER]: TrancoTier;
     [StorageKeys.DENIED_DOMAINS]: Record<string, { count: number; lastDenied: string; lastDismissed?: string }>;
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: number;
     [StorageKeys.CONDITIONAL_CSP_ENABLED]: boolean;

@@ -8,7 +8,7 @@
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { migrateToSingleSettingsObject } from '../utils/storage/settingsMigration.js';
+import { migrateToSingleSettingsObject, migrateLoopbackProviderOriginConfirmations } from '../utils/storage/settingsMigration.js';
 import { migrateLegacyPendingPagesKey } from '../utils/pendingStorage.js';
 import { SessionStore } from './sessionStore.js';
 import { MigrationService } from './migrationService.js';
@@ -30,6 +30,20 @@ async function runMigration(): Promise<void> {
   }
 
   await migrateLegacyPendingPagesKey();
+
+  try {
+    const seeded = await migrateLoopbackProviderOriginConfirmations();
+    if (seeded) {
+      logInfo('Loopback provider origins grandfathered', { seeded: true }, 'service-worker');
+    }
+  } catch (e) {
+    logError(
+      'Failed to migrate loopback provider origins',
+      { error: errorMessage(e) },
+      ErrorCode.STORAGE_MIGRATION_FAILURE,
+      'service-worker'
+    );
+  }
 }
 
 export function createDeferredMigrationRunner(sqliteClient: SqliteClient): () => Promise<void> {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import type { OffscreenResponse } from '../../messaging/sqliteMessages.js';
@@ -345,13 +346,25 @@ describe('SqliteClient', () => {
 
   describe('concurrent failures keep their own reason', () => {
     it('gives each concurrent call the error from its own operation', async () => {
-      // Create a transport that returns different errors based on message type
+      // The two calls must settle in a KNOWN order for this assertion to mean
+      // anything: the non-DELETE branch rejects first, SQLITE_DELETE second.
+      // The `waitForMock(() => {})` this replaced resolved on its first
+      // synchronous evaluation — vi.waitFor runs the callback before it
+      // installs any timer, and an empty callback never throws — so the 20ms
+      // stagger it stood in for was never actually applied. A deferred makes
+      // the ordering explicit; if the sibling ever stops reaching this branch,
+      // the test now times out instead of passing for the wrong reason.
+      const siblingRejected = Promise.withResolvers<void>();
+      const settled: string[] = [];
       mockTransport = {
         async msgOffscreen(type: SqliteMessageType): Promise<OffscreenResponse> {
           if (type === 'SQLITE_DELETE') {
-            await new Promise(resolve => setTimeout(resolve, 20));
+            await siblingRejected.promise;
+            settled.push('delete');
             throw new Error('quota exceeded');
           }
+          settled.push('clearAll');
+          siblingRejected.resolve();
           throw new Error('request timed out');
         },
       };
@@ -362,6 +375,10 @@ describe('SqliteClient', () => {
         client.maintain({ type: 'clearAll' }),
       ]);
 
+      // The precondition the error-isolation claim rests on: the two calls
+      // really did settle in the order above. Asserted so the test cannot pass
+      // with the ordering silently absent.
+      expect(settled).toEqual(['clearAll', 'delete']);
       expect(deleteResult.success).toBe(false);
       expect(clearResult.success).toBe(false);
       if (!deleteResult.success && !clearResult.success) {

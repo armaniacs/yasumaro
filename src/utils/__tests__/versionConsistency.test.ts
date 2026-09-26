@@ -47,14 +47,14 @@ describe('version consistency', () => {
     expect(sourceMatch, 'PRIVACY_POLICY_VERSION not found in src/utils/storage/privacyConsent.ts').not.toBeNull();
     const sourceVersion = sourceMatch![1];
 
-    const e2eContent = readFileSync(join(ROOT, 'testDir/e2e/recording-traceId.spec.ts'), 'utf-8');
+    const e2eContent = readFileSync(join(ROOT, 'testDir/e2e/fixtures/privacyConsentSeed.ts'), 'utf-8');
     const e2eMatch = e2eContent.match(/const PRIVACY_POLICY_VERSION\s*=\s*'([^']+)'/);
-    expect(e2eMatch, 'PRIVACY_POLICY_VERSION not found in testDir/e2e/recording-traceId.spec.ts').not.toBeNull();
+    expect(e2eMatch, 'PRIVACY_POLICY_VERSION not found in testDir/e2e/fixtures/privacyConsentSeed.ts').not.toBeNull();
     const e2eVersion = e2eMatch![1];
 
     expect(
       e2eVersion,
-      `E2E test PRIVACY_POLICY_VERSION ('${e2eVersion}') does not match source ('${sourceVersion}'). Update the E2E test constant.`
+      `E2E test PRIVACY_POLICY_VERSION ('${e2eVersion}') does not match source ('${sourceVersion}'). Update the E2E helper constant.`
     ).toBe(sourceVersion);
   });
 

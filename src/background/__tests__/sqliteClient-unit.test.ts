@@ -5,6 +5,7 @@
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 vi.mock('../../utils/logger/types.js', () => ({
   addLog: vi.fn(),
@@ -36,7 +37,7 @@ vi.mock('../sqliteAlert.js', () => ({
 
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { recordSqliteSuccess, recordSqliteFailure } from '../sqliteAlert.js';
-import type { OffscreenTransport } from '../offscreenTransport.js';
+import type { OffscreenTransport, MsgOffscreenOptions } from '../offscreenTransport.js';
 import type { OffscreenResponse } from '../../messaging/sqliteMessages.js';
 import type { SqliteMessageType } from '../../messaging/sqliteMessages.js';
 
@@ -260,6 +261,47 @@ describe('SqliteClient — unit tests', () => {
     });
   });
 
+  describe('mutate retry policy wiring', () => {
+    function createOptsCapturingTransport(response: unknown): {
+      transport: OffscreenTransport;
+      seenOpts: MsgOffscreenOptions[];
+    } {
+      const seenOpts: MsgOffscreenOptions[] = [];
+      const transport: OffscreenTransport = {
+        async msgOffscreen(
+          _type: SqliteMessageType,
+          _payload: Record<string, unknown> = {},
+          _traceId = '',
+          opts: MsgOffscreenOptions = {},
+        ): Promise<OffscreenResponse> {
+          seenOpts.push(opts);
+          return response as OffscreenResponse;
+        },
+      };
+      return { transport, seenOpts };
+    }
+
+    it('leaves toggleStar retry policy to the transport', async () => {
+      const { transport, seenOpts } = createOptsCapturingTransport({ success: true, is_starred: 1 });
+      client = new SqliteClient(transport);
+
+      const result = await client.mutate({ type: 'toggleStar', id: 1 });
+
+      expect(result).toEqual({ success: true, data: { is_starred: 1 } });
+      expect(seenOpts).toEqual([{}]);
+    });
+
+    it('keeps the transport single retry for set-semantics mutates', async () => {
+      const { transport, seenOpts } = createOptsCapturingTransport({ success: true });
+      client = new SqliteClient(transport);
+
+      await client.mutate({ type: 'update', id: 1, changes: { title: 'Updated' } });
+      await client.mutate({ type: 'delete', id: 2 });
+
+      expect(seenOpts).toEqual([{}, {}]);
+    });
+  });
+
   describe('mutate toggleStar', () => {
     it('returns is_starred on success', async () => {
       mockTransport = createMockTransport({
@@ -351,15 +393,21 @@ describe('SqliteClient — unit tests', () => {
 
   describe('concurrent failures keep their own reason', () => {
     it('gives each concurrent call the error from its own operation', async () => {
-      // Create a transport that returns different errors based on message type
+      // The two calls must settle in a KNOWN order for this assertion to mean
+      // anything: the non-DELETE branch rejects first, SQLITE_DELETE second.
+      // The `waitForMock(() => {})` this replaced resolved on its first
+      // synchronous evaluation, so the 20ms stagger it stood in for was never
+      // actually applied. A deferred makes the ordering explicit.
+      const siblingRejected = Promise.withResolvers<void>();
       let callCount = 0;
       mockTransport = {
         lastPayload: null,
         async msgOffscreen(type: SqliteMessageType): Promise<OffscreenResponse> {
           if (type === 'SQLITE_DELETE') {
-            await new Promise(resolve => setTimeout(resolve, 20));
+            await siblingRejected.promise;
             throw new Error('quota exceeded');
           }
+          siblingRejected.resolve();
           throw new Error('request timed out');
         },
       };

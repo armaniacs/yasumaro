@@ -5,14 +5,9 @@
  * unrelated type errors in test files that already relied on the untyped import.
  */
 declare module 'jsdom' {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export type JSDOM = any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const JSDOM: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const VirtualConsole: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const CookieJar: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   export const ResourceLoader: any;
 }

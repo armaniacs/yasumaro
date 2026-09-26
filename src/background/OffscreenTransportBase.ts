@@ -12,6 +12,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { getPlatformOs } from '../utils/deviceUtils.js';
 import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
+import { shouldRetryTransport } from '../messaging/transportRetryPolicy.js';
 import type { MsgOffscreenOptions, OffscreenTransport } from './offscreenTransport.js';
 
 const MESSAGE_TIMEOUT_MS_DESKTOP = 10000; // 10 seconds
@@ -40,11 +41,8 @@ export abstract class BaseOffscreenTransport implements OffscreenTransport {
   /**
    * Send a message to the storage container and await the response.
    *
-   * Retries once on failure (M12): a suspended container (mobile Chrome
-   * offscreen document, Firefox idle event page) can make the first attempt
-   * after idle fail with a connection error. Resetting the container state
-   * and retrying lets the second attempt succeed instead of surfacing a
-   * transient error.
+   * A message is retried once only when the neutral messaging policy marks
+   * its operation as replay-safe. Unsafe and unknown operations fail closed.
    */
   async msgOffscreen(
     type: SqliteMessageType,
@@ -57,10 +55,7 @@ export abstract class BaseOffscreenTransport implements OffscreenTransport {
       try {
         return await this.sendOnce(type, payload, traceId);
       } catch (firstError) {
-        if (opts.noRetry) {
-          // Bulk operations: the container side may still be running. Surface
-          // the failure immediately ("result unknown" for the caller) instead
-          // of executing the operation a second time.
+        if (!shouldRetryTransport(type, opts)) {
           throw firstError;
         }
         this.invalidateContainer();
@@ -71,8 +66,9 @@ export abstract class BaseOffscreenTransport implements OffscreenTransport {
         return await this.sendOnce(type, payload, traceId);
       }
     } catch (error) {
-      // Reset the container state so the next call re-initializes it —
-      // exactly once per failure (the inner noRetry path rethrows here).
+      // Invalidate cached container state after any failed send so the next
+      // call reinitializes it. The neutral policy table controls whether a
+      // second send is safe, so this cleanup must not depend on a caller flag.
       this.invalidateContainer();
       throw error;
     } finally {

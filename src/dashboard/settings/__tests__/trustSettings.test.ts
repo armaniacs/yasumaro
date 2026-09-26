@@ -7,6 +7,7 @@
  */
 
 import { vi } from 'vitest';;
+import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
 
 // Mock dependencies - all at top level
 vi.mock('../../../utils/trustDb/trustDbSchema.js', () => ({}));
@@ -215,8 +216,8 @@ vi.mock('../../../utils/logger/api.js', () => ({
   ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
 }));
 
-vi.mock('../../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => {
     const msgs: Record<string, string> = {
       trancoUpdating: 'Updating...',
       trancoNotUpdated: 'Not updated',
@@ -238,8 +239,20 @@ vi.mock('../../../utils/i18n.js', () => ({
       permissionSuggestDismiss: 'Dismiss',
     };
     return msgs[key] || key;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 const mockGetAlertConfig = vi.fn(() => Promise.resolve({
   alertFinance: false,
@@ -354,9 +367,10 @@ describe('trustSettings.ts', () => {
       init();
 
       document.getElementById('updateTrancoBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(mockUpdateTrancoList).toHaveBeenCalledWith(expect.stringMatching(/top\d+k/));
+      await vi.waitFor(
+          () => expect(mockUpdateTrancoList).toHaveBeenCalledWith(expect.stringMatching(/top\d+k/)),
+          { interval: 1 }
+      );
     });
 
     test('should handle jp anchor add button click', async () => {
@@ -368,8 +382,10 @@ describe('trustSettings.ts', () => {
       input.value = '.org';
       document.getElementById('jpAnchorAddBtn')!.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockAddJpAnchorTld).toHaveBeenCalledWith('.org');
+      await vi.waitFor(
+          () => expect(mockAddJpAnchorTld).toHaveBeenCalledWith('.org'),
+          { interval: 1 }
+      );
     });
 
     test('should handle jp anchor Enter key', async () => {
@@ -381,8 +397,10 @@ describe('trustSettings.ts', () => {
       input.value = '.net';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockAddJpAnchorTld).toHaveBeenCalledWith('.net');
+      await vi.waitFor(
+          () => expect(mockAddJpAnchorTld).toHaveBeenCalledWith('.net'),
+          { interval: 1 }
+      );
     });
 
     test('should not trigger add on non-Enter key', async () => {
@@ -394,7 +412,7 @@ describe('trustSettings.ts', () => {
       input.value = '.org';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Tab', bubbles: true }));
 
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockAddJpAnchorTld).not.toHaveBeenCalled();
     });
 
@@ -404,9 +422,10 @@ describe('trustSettings.ts', () => {
       init();
 
       document.getElementById('saveTrustSettings')!.click();
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(mockSaveAlertSettings).toHaveBeenCalled();
+      await vi.waitFor(
+          () => expect(mockSaveAlertSettings).toHaveBeenCalled(),
+          { interval: 1 }
+      );
     });
 
     test('should save threshold on valid change', async () => {
@@ -418,9 +437,11 @@ describe('trustSettings.ts', () => {
       thresholdInput.value = '5';
       thresholdInput.dispatchEvent(new Event('change'));
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+      await vi.waitFor(
+          () => expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({ permission_notify_threshold: 5 })
+      ),
+          { interval: 1 }
       );
     });
 
@@ -433,7 +454,7 @@ describe('trustSettings.ts', () => {
       thresholdInput.value = '0';
       thresholdInput.dispatchEvent(new Event('change'));
 
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(chrome.storage.local.set).not.toHaveBeenCalled();
     });
 
@@ -446,7 +467,7 @@ describe('trustSettings.ts', () => {
       thresholdInput.value = '51';
       thresholdInput.dispatchEvent(new Event('change'));
 
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(chrome.storage.local.set).not.toHaveBeenCalled();
     });
 
@@ -458,8 +479,10 @@ describe('trustSettings.ts', () => {
       const gamingTab = document.querySelector('[data-category="gaming"]') as HTMLButtonElement;
       gamingTab.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(gamingTab.classList.contains('active')).toBe(true);
+      await vi.waitFor(
+          () => expect(gamingTab.classList.contains('active')).toBe(true),
+          { interval: 1 }
+      );
       expect(
         (document.querySelector('[data-category="finance"]') as HTMLButtonElement).classList.contains('active')
       ).toBe(false);
@@ -673,10 +696,11 @@ describe('trustSettings.ts', () => {
       init();
 
       document.getElementById('updateTrancoBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
-
       const statusDiv = document.getElementById('trustSettingsStatus')!;
-      expect(statusDiv.textContent).toContain('already in progress');
+      await vi.waitFor(
+          () => expect(statusDiv.textContent).toContain('already in progress'),
+          { interval: 1 }
+      );
     });
 
     test('should handle tranco update failure', async () => {
@@ -687,9 +711,10 @@ describe('trustSettings.ts', () => {
       init();
 
       document.getElementById('updateTrancoBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(mockLogError).toHaveBeenCalled();
+      await vi.waitFor(
+          () => expect(mockLogError).toHaveBeenCalled(),
+          { interval: 1 }
+      );
     });
 
     test('should handle tranco update exception', async () => {
@@ -700,9 +725,10 @@ describe('trustSettings.ts', () => {
       init();
 
       document.getElementById('updateTrancoBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(mockLogError).toHaveBeenCalled();
+      await vi.waitFor(
+          () => expect(mockLogError).toHaveBeenCalled(),
+          { interval: 1 }
+      );
     });
   });
 
@@ -721,10 +747,11 @@ describe('trustSettings.ts', () => {
       input.value = '.jp';
       document.getElementById('jpAnchorAddBtn')!.click();
 
-      await new Promise(r => setTimeout(r, 10));
-
       const statusDiv = document.getElementById('trustSettingsStatus')!;
-      expect(statusDiv.textContent).toBe('Already exists');
+      await vi.waitFor(
+          () => expect(statusDiv.textContent).toBe('Already exists'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -740,8 +767,10 @@ describe('trustSettings.ts', () => {
       const removeBtn = document.querySelector('.domain-tag-remove') as HTMLButtonElement;
       removeBtn.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockRemoveJpAnchorTld).toHaveBeenCalledWith('.jp');
+      await vi.waitFor(
+          () => expect(mockRemoveJpAnchorTld).toHaveBeenCalledWith('.jp'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -758,8 +787,10 @@ describe('trustSettings.ts', () => {
       input.value = 'bank.com';
       document.getElementById('sensitiveAddBtn')!.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockAddSensitiveDomain).toHaveBeenCalledWith('bank.com', 'finance');
+      await vi.waitFor(
+          () => expect(mockAddSensitiveDomain).toHaveBeenCalledWith('bank.com', 'finance'),
+          { interval: 1 }
+      );
     });
 
     test('should add sensitive domain on Enter key', async () => {
@@ -771,8 +802,10 @@ describe('trustSettings.ts', () => {
       input.value = 'invest.com';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockAddSensitiveDomain).toHaveBeenCalledWith('invest.com', 'finance');
+      await vi.waitFor(
+          () => expect(mockAddSensitiveDomain).toHaveBeenCalledWith('invest.com', 'finance'),
+          { interval: 1 }
+      );
     });
 
     test('should not add sensitive domain on non-Enter key', async () => {
@@ -784,7 +817,7 @@ describe('trustSettings.ts', () => {
       input.value = 'test.com';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Tab', bubbles: true }));
 
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockAddSensitiveDomain).not.toHaveBeenCalled();
     });
 
@@ -799,9 +832,11 @@ describe('trustSettings.ts', () => {
       input.value = 'bad';
       document.getElementById('sensitiveAddBtn')!.click();
 
-      await new Promise(r => setTimeout(r, 10));
       const statusDiv = document.getElementById('trustSettingsStatus')!;
-      expect(statusDiv.textContent).toBe('Invalid domain');
+      await vi.waitFor(
+          () => expect(statusDiv.textContent).toBe('Invalid domain'),
+          { interval: 1 }
+      );
     });
 
     test('should remove sensitive domain when remove button is clicked', async () => {
@@ -812,8 +847,10 @@ describe('trustSettings.ts', () => {
       const removeBtn = document.querySelector('.domain-tag-remove') as HTMLButtonElement;
       removeBtn.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockRemoveSensitiveDomain).toHaveBeenCalledWith('bank.com');
+      await vi.waitFor(
+          () => expect(mockRemoveSensitiveDomain).toHaveBeenCalledWith('bank.com'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -830,8 +867,10 @@ describe('trustSettings.ts', () => {
       input.value = 'safe.com';
       document.getElementById('whitelistAddBtn')!.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockAddToWhitelist).toHaveBeenCalledWith('safe.com');
+      await vi.waitFor(
+          () => expect(mockAddToWhitelist).toHaveBeenCalledWith('safe.com'),
+          { interval: 1 }
+      );
     });
 
     test('should add whitelist domain on Enter key', async () => {
@@ -843,8 +882,10 @@ describe('trustSettings.ts', () => {
       input.value = 'trusted.org';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockAddToWhitelist).toHaveBeenCalledWith('trusted.org');
+      await vi.waitFor(
+          () => expect(mockAddToWhitelist).toHaveBeenCalledWith('trusted.org'),
+          { interval: 1 }
+      );
     });
 
     test('should not add whitelist domain on non-Enter key', async () => {
@@ -856,7 +897,7 @@ describe('trustSettings.ts', () => {
       input.value = 'test.com';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Space', bubbles: true }));
 
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockAddToWhitelist).not.toHaveBeenCalled();
     });
 
@@ -871,9 +912,11 @@ describe('trustSettings.ts', () => {
       input.value = 'dup.com';
       document.getElementById('whitelistAddBtn')!.click();
 
-      await new Promise(r => setTimeout(r, 10));
       const statusDiv = document.getElementById('trustSettingsStatus')!;
-      expect(statusDiv.textContent).toBe('Duplicate');
+      await vi.waitFor(
+          () => expect(statusDiv.textContent).toBe('Duplicate'),
+          { interval: 1 }
+      );
     });
 
     test('should remove whitelist domain when remove button is clicked', async () => {
@@ -884,8 +927,10 @@ describe('trustSettings.ts', () => {
       const removeBtn = document.querySelector('#whitelist .domain-tag-remove') as HTMLButtonElement;
       removeBtn.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockRemoveFromWhitelist).toHaveBeenCalledWith('safe.com');
+      await vi.waitFor(
+          () => expect(mockRemoveFromWhitelist).toHaveBeenCalledWith('safe.com'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -907,9 +952,10 @@ describe('trustSettings.ts', () => {
       init();
 
       dismissBtn.click();
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(mockRecordDomainDismissal).toHaveBeenCalledWith('a.com');
+      await vi.waitFor(
+          () => expect(mockRecordDomainDismissal).toHaveBeenCalledWith('a.com'),
+          { interval: 1 }
+      );
     });
 
     test('should handle permission allow button click', async () => {
@@ -926,8 +972,10 @@ describe('trustSettings.ts', () => {
       expect(allowBtn).toBeTruthy();
       allowBtn.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockRequestPermission).toHaveBeenCalledWith('https://blocked.com');
+      await vi.waitFor(
+          () => expect(mockRequestPermission).toHaveBeenCalledWith('https://blocked.com'),
+          { interval: 1 }
+      );
     });
 
     test('should handle permission dismiss button click', async () => {
@@ -944,8 +992,10 @@ describe('trustSettings.ts', () => {
       expect(dismissBtn).toBeTruthy();
       dismissBtn.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockRecordDomainDismissal).toHaveBeenCalledWith('ignore.com');
+      await vi.waitFor(
+          () => expect(mockRecordDomainDismissal).toHaveBeenCalledWith('ignore.com'),
+          { interval: 1 }
+      );
     });
 
     test('should not re-render when permission grant fails', async () => {
@@ -961,7 +1011,7 @@ describe('trustSettings.ts', () => {
       const allowBtn = document.querySelector('.permission-suggest-allow') as HTMLButtonElement;
       allowBtn.click();
 
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockRemoveDeniedDomain).not.toHaveBeenCalled();
     });
   });

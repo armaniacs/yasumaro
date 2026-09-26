@@ -44,6 +44,10 @@ export interface CommonStorageFields {
   fallbackTriggeredInt: 0 | 1;
   /** PBI 05: フォールバック発動理由（未発動時は null） */
   fallbackReason: string | null;
+  // PBI 03: opt-in navigation trail. Kept out of toMetadataPatch on purpose —
+  // the legacy chrome.storage side has no column for it and never held one.
+  navSourceUrl: string | null;
+  searchQuery: string | null;
   aiDuration: number | null;
   obsidianDuration: number | null;
   extractedSentencesBytes: number | null;
@@ -131,6 +135,10 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     fallbackTriggered: !!d.fallbackTriggered,
     fallbackTriggeredInt: d.fallbackTriggered ? 1 : 0 as 0 | 1,
     fallbackReason: (d.fallbackReason as string | undefined) ?? null,
+    // `?? null` not `|| ''`: an empty referrer is a real 'none' and must not
+    // become a string that the row codec would render.
+    navSourceUrl: typeof d.navSourceUrl === 'string' ? d.navSourceUrl : null,
+    searchQuery: typeof d.searchQuery === 'string' ? d.searchQuery : null,
     aiDuration: (aiDuration as number) ?? null,
     obsidianDuration: (obsidianDuration as number) ?? null,
     extractedSentencesBytes: (extractedSentencesBytes as number) ?? null,
@@ -175,6 +183,8 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
         extracted_sentences_original_bytes: fields.extractedSentencesOriginalBytes,
         fallback_triggered: fields.fallbackTriggeredInt,
         fallback_reason: fields.fallbackReason,
+        nav_source_url: fields.navSourceUrl,
+        search_query: fields.searchQuery,
       };
     },
 

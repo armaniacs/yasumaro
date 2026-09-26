@@ -5,7 +5,7 @@
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { readOverrides } from './presetSettingsAdapter.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 import { normalizeDomain, upsertDomainOverride } from '../../utils/aiSummaryCleaner/perSiteOverride.js';
@@ -81,7 +81,7 @@ async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
 function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], onSelect: (d: string) => void): void {
     listEl.innerHTML = '';
     if (overrides.length === 0) {
-        listEl.textContent = getMessage('noPerSiteOverrides') || 'No per-site overrides.';
+        listEl.textContent = getMessageOr('noPerSiteOverrides', 'No per-site overrides.');
         return;
     }
     const ul = document.createElement('ul');
@@ -166,7 +166,7 @@ export function initPerSiteOverrides(): void {
         try {
             await saveOverrides(next);
         } catch (error) {
-            setStatus(getMessage('settingsSaveError') || 'Failed to save override', true);
+            setStatus(getMessageOr('settingsSaveError', 'Failed to save override'), true);
             await logError('Failed to save per-site override', { cause: errorMessage(error), domain }, ErrorCode.STORAGE_WRITE_FAILURE, 'perSiteOverrides');
             return;
         }
@@ -183,7 +183,7 @@ export function initPerSiteOverrides(): void {
         try {
             await saveOverrides(next);
         } catch (error) {
-            setStatus(getMessage('settingsSaveError') || 'Failed to delete override', true);
+            setStatus(getMessageOr('settingsSaveError', 'Failed to delete override'), true);
             await logError('Failed to delete per-site override', { cause: errorMessage(error), domain }, ErrorCode.STORAGE_WRITE_FAILURE, 'perSiteOverrides');
             return;
         }

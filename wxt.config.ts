@@ -9,6 +9,7 @@ import {
   buildLocalConnectSrc,
   validateCspDomains,
 } from './src/utils/cspDomains.js';
+import { CURRENT_PROTOCOL_VERSION } from './src/messaging/protocol.js';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8')) as { version: string };
 
@@ -97,7 +98,7 @@ export default defineConfig({
   // (see PBI 2026-08-23-12, RICE 6.25 — no user impact, dev-only noise).
   vite: (env) => ({
     define: {
-      __PROTOCOL_VERSION__: JSON.stringify(1),
+      __PROTOCOL_VERSION__: JSON.stringify(CURRENT_PROTOCOL_VERSION),
       // Benchmark A/B flag for src/content/loader.ts. Only bench builds
       // (OW_BENCH=1) contain the page-controllable localStorage kill-switch;
       // production builds get `false` so the check is dead-code eliminated.

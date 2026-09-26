@@ -109,9 +109,8 @@ vi.mock('../../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
-vi.mock('../../../utils/i18n.js', () => ({
-  applyI18n: vi.fn(),
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => {
     const messages: Record<string, string | undefined> = {
       locale: undefined,
       promptProviderAll: 'All Providers',
@@ -130,8 +129,20 @@ vi.mock('../../../utils/i18n.js', () => ({
       confirmDeletePrompt: 'Are you sure you want to delete this prompt?',
     };
     return key in messages ? messages[key] : key;
-  }),
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  applyI18n: vi.fn(),
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
 
 vi.mock('../../../popup/errorUtils.js', () => ({
   escapeHtml: vi.fn((s: unknown) => String(s)),
@@ -303,6 +314,45 @@ describe('customPromptManager', () => {
 
       const html = el('promptList').innerHTML;
       expect(html).toContain('All Providers');
+    });
+
+    it('resolves a known provider label through its i18n key first', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager(asSettings({
+        custom_prompts: [createTestPrompt({ provider: 'gemini' })],
+      }));
+
+      // The i18n mock echoes unlisted keys, so seeing the key (not the neutral
+      // row label) proves the i18n message wins over the fallback.
+      expect(el('promptList').innerHTML).toContain('(googleGemini)');
+    });
+
+    it('falls back to the neutral row label when the i18n message is missing', async () => {
+      const { getMessage } = await import('../../../utils/i18n.js');
+      const spy = vi.mocked(getMessage).mockReturnValue('');
+      try {
+        const { initCustomPromptManager } = await import('../customPromptManager.js');
+        initCustomPromptManager(asSettings({
+          custom_prompts: [createTestPrompt({ provider: 'gemini' })],
+        }));
+
+        expect(el('promptList').innerHTML).toContain('(Google Gemini)');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('renders an unknown provider id as-is', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager(asSettings({
+        // Persisted settings outlive the provider list, so a stored id can be
+        // outside the current union. The raw fallback is the contract for it.
+        custom_prompts: [
+          createTestPrompt({ provider: 'not-a-provider' as CustomPrompt['provider'] }),
+        ],
+      }));
+
+      expect(el('promptList').innerHTML).toContain('(not-a-provider)');
     });
   });
 

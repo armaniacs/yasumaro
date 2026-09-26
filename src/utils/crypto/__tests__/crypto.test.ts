@@ -5,7 +5,7 @@
  */
 
 import { vi } from 'vitest';;
-import { Crypto } from '@peculiar/webcrypto';
+import { Crypto, CryptoKey } from '@peculiar/webcrypto';
 import type { EncryptedData } from '../types.js';
 import {
     generateSalt,
@@ -33,7 +33,33 @@ import {
     CURRENT_ENVELOPE_VERSION,
 } from '../index.js';
 import type { EncryptionEnvelope } from '../index.js';
+import { CRYPTO_PARAMS } from '../cryptoParams.js';
 import { hmacSignerForKey } from '../hmacSigner.js';
+
+// PBKDF2 at the production 600,000 iterations is ~70ms per derivation, and this
+// file derives more than 80 keys — by far the most expensive suite in the run.
+// The production values themselves are asserted in cryptoParamsSSOT.test.ts;
+// here the KDF only has to behave, and the current/legacy distinction the tests
+// care about is preserved.
+//
+// This mock is file-wide, so it also governs `uses constant-time comparison`.
+// That test's subject is elapsed time: at 1,000 iterations a derivation takes
+// ~0.13ms instead of ~73ms, a 560x shrink of the window it averages over, which
+// measured a 0.10% spurious failure rate of its 3-sample ratio on an idle
+// machine (worst observed 17.4 against a threshold of 5) and leaves a real
+// timing side channel indistinguishable from scheduler jitter. That single test
+// re-imports the real module for the ~87 sibling tests, which stay cheap.
+vi.mock('../cryptoParams.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../cryptoParams.js')>();
+  return {
+    ...actual,
+    CRYPTO_PARAMS: {
+      ...actual.CRYPTO_PARAMS,
+      PBKDF2_ITERATIONS: 1_000,
+      LEGACY_PBKDF2_ITERATIONS: 100,
+    },
+  };
+});
 
 // Web Crypto APIのセットアップ
 beforeEach(() => {
@@ -471,39 +497,64 @@ describe('crypto', () => {
         });
 
         test('uses constant-time comparison', { timeout: 60000 }, async () => {
-            const password = 'test-password';
-            const salt = generateSalt();
-            const storedHash = await hashPasswordWithPBKDF2(password, salt);
+            // Re-import against the real CRYPTO_PARAMS. primitives.ts caches
+            // PBKDF2_ITERATIONS at module load, so this needs both an unmock and
+            // a module-registry reset to take effect. The file-wide mock exists
+            // to make the other ~87 tests cheap; this one measures elapsed time,
+            // so it must pay production cost or the ratio it asserts is noise.
+            vi.doUnmock('../cryptoParams.js');
+            vi.resetModules();
+            const production = await import('../index.js');
+            try {
+                const password = 'test-password';
+                const salt = production.generateSalt();
+                const storedHash = await production.hashPasswordWithPBKDF2(password, salt);
+                expect(production.CRYPTO_PARAMS.PBKDF2_ITERATIONS).toBe(600_000);
 
-            // 一致する場合と不一致する場合の実行時間を比較
-            // CI環境（QEMU エミュレーション）でのメモリ節約のため少数回に抑える
-            const iterations = 3;
-            const timesMatch: number[] = [];
-            const timesMismatch: number[] = [];
+                // 一致する場合と不一致する場合の実行時間を比較
+                // CI環境（QEMU エミュレーション）でのメモリ節約のため少数回に抑える
+                const iterations = 3;
+                const timesMatch: number[] = [];
+                const timesMismatch: number[] = [];
 
-            for (let i = 0; i < iterations; i++) {
-                const start1 = performance.now();
-                await verifyPasswordWithPBKDF2(password, storedHash, salt);
-                timesMatch.push(performance.now() - start1);
+                for (let i = 0; i < iterations; i++) {
+                    const start1 = performance.now();
+                    await production.verifyPasswordWithPBKDF2(password, storedHash, salt);
+                    timesMatch.push(performance.now() - start1);
 
-                const start2 = performance.now();
-                await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
-                timesMismatch.push(performance.now() - start2);
+                    const start2 = performance.now();
+                    await production.verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
+                    timesMismatch.push(performance.now() - start2);
+                }
+
+                const avgMatch = timesMatch.reduce((a, b) => a + b, 0) / timesMatch.length;
+                const avgMismatch = timesMismatch.reduce((a, b) => a + b, 0) / timesMismatch.length;
+
+                // 一致・不一致の平均時間が大きく異ならないことを確認（許容範囲5倍以内）
+                const ratio = avgMatch > avgMismatch ? avgMatch / avgMismatch : avgMismatch / avgMatch;
+                expect(ratio).toBeLessThan(5);
+            } finally {
+                // Put the cheap params back for every test that follows.
+                vi.doMock('../cryptoParams.js', async (importOriginal) => {
+                    const actual = await importOriginal<typeof import('../cryptoParams.js')>();
+                    return {
+                        ...actual,
+                        CRYPTO_PARAMS: {
+                            ...actual.CRYPTO_PARAMS,
+                            PBKDF2_ITERATIONS: 1_000,
+                            LEGACY_PBKDF2_ITERATIONS: 100,
+                        },
+                    };
+                });
+                vi.resetModules();
             }
-
-            const avgMatch = timesMatch.reduce((a, b) => a + b, 0) / timesMatch.length;
-            const avgMismatch = timesMismatch.reduce((a, b) => a + b, 0) / timesMismatch.length;
-
-            // 一致・不一致の平均時間が大きく異ならないことを確認（許容範囲5倍以内）
-            const ratio = avgMatch > avgMismatch ? avgMatch / avgMismatch : avgMismatch / avgMatch;
-            expect(ratio).toBeLessThan(5);
         });
 
         describe('レガシーパス（iterations未指定）', () => {
             test('matches a hash from the new iteration count and reports no rehash needed', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
-                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
                 const result = await verifyPasswordWithPBKDF2(password, storedHash, salt);
                 expect(result.isValid).toBe(true);
@@ -513,7 +564,7 @@ describe('crypto', () => {
             test('matches a hash from the old iteration count and reports rehash needed', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
-                const storedHash = await hashPasswordWithPBKDF2(password, salt, 100000);
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS);
 
                 const result = await verifyPasswordWithPBKDF2(password, storedHash, salt);
                 expect(result.isValid).toBe(true);
@@ -523,7 +574,7 @@ describe('crypto', () => {
             test('reports invalid when matching neither old nor new iteration hash', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
-                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
                 const result = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt);
                 expect(result.isValid).toBe(false);
@@ -535,9 +586,9 @@ describe('crypto', () => {
             test('reports no rehash needed when the stored iteration matches the current default', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
-                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
-                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt, 600000);
+                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
                 expect(result.isValid).toBe(true);
                 expect(result.needsRehash).toBe(false);
             });
@@ -545,9 +596,9 @@ describe('crypto', () => {
             test('reports rehash needed when the stored iteration differs from the current default', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
-                const storedHash = await hashPasswordWithPBKDF2(password, salt, 100000);
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS);
 
-                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt, 100000);
+                const result = await verifyPasswordWithPBKDF2(password, storedHash, salt, CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS);
                 expect(result.isValid).toBe(true);
                 expect(result.needsRehash).toBe(true);
             });
@@ -555,9 +606,9 @@ describe('crypto', () => {
             test('returns invalid with rehash flag for a wrong password', async () => {
                 const password = 'test-password';
                 const salt = generateSalt();
-                const storedHash = await hashPasswordWithPBKDF2(password, salt, 600000);
+                const storedHash = await hashPasswordWithPBKDF2(password, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
 
-                const result = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt, 600000);
+                const result = await verifyPasswordWithPBKDF2('wrong-password', storedHash, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
                 expect(result.isValid).toBe(false);
                 expect(result.needsRehash).toBe(false);
             });

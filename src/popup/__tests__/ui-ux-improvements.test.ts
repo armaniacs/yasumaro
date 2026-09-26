@@ -15,6 +15,28 @@
 import JSDOM from 'jsdom';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { vi } from 'vitest';
+
+vi.mock('../../../src/popup/popup.js', () => ({
+  initPopup: vi.fn(async () => {})
+}));
+vi.mock('../../../src/popup/navigation.js', () => ({}));
+vi.mock('../../../src/popup/main.js', () => ({}));
+
+type PopupLocale = 'en' | 'ja';
+
+const readOpenHistoryMessage = (locale: PopupLocale): string => {
+  const messagesPath = join(__dirname, `../../../public/_locales/${locale}/messages.json`);
+  const messages = JSON.parse(readFileSync(messagesPath, 'utf-8')) as {
+    openHistory: { message: string };
+  };
+  return messages.openHistory.message;
+};
+
+const openHistoryMessages: Record<PopupLocale, string> = {
+  en: readOpenHistoryMessage('en'),
+  ja: readOpenHistoryMessage('ja')
+};
 
 // popup.htmlを読み込む
 const getPopupHTML = () => {
@@ -194,6 +216,51 @@ describe('UI/UX Improvements Test Suite', () => {
         const padding = parseInt(secondaryBtnMatch[1] ?? '');
         expect(padding).toBeGreaterThanOrEqual(10);
       }
+    });
+  });
+
+  describe('7. Popup localization and tokenized spinner', () => {
+    const localeCases: Array<{ locale: PopupLocale; uiLanguage: string }> = [
+      { locale: 'en', uiLanguage: 'en-US' },
+      { locale: 'ja', uiLanguage: 'ja-JP' }
+    ];
+
+    localeCases.forEach(({ locale, uiLanguage }) => {
+      it(`sets the history tooltip from openHistory for ${locale}`, async () => {
+        const popupDocument = parseHTML(getPopupHTML());
+        document.documentElement.innerHTML = popupDocument.documentElement.innerHTML;
+        const expectedTitle = openHistoryMessages[locale];
+
+        global.chrome = {
+          i18n: {
+            getMessage: vi.fn((key: string) => key === 'openHistory' ? expectedTitle : key),
+            getUILanguage: vi.fn(() => uiLanguage)
+          },
+          runtime: { lastError: undefined }
+        } as unknown as typeof chrome;
+
+        vi.resetModules();
+        await import('../../../entrypoints/popup/main.js');
+
+        const historyButton = document.getElementById('historyBtn');
+        expect(historyButton).not.toBeNull();
+        expect(historyButton?.title).toBe(expectedTitle);
+        expect(historyButton?.getAttribute('aria-label')).toBe(expectedTitle);
+        expect(global.chrome.i18n.getMessage).toHaveBeenCalledWith('openHistory');
+      });
+    });
+
+    it('removes the obsolete raw history tooltip', () => {
+      expect(getPopupHTML()).not.toContain('title="Browse History"');
+    });
+
+    it('removes the hard-coded spinner stroke attribute', () => {
+      const spinnerPath = parseHTML(getPopupHTML()).querySelector('.spinner-path');
+      expect(spinnerPath?.hasAttribute('stroke')).toBe(false);
+    });
+
+    it('keeps the spinner stroke bound to the existing design token', () => {
+      expect(getStylesCSS()).toMatch(/\.spinner-path\s*\{\s*stroke:\s*var\(--color-primary\);/);
     });
   });
 

@@ -5,6 +5,7 @@
  * confirm/cancel exception handling, and modal close/focus-trap paths.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 // ------------------------------------------------------------------
 // Mocks (must be before any imports)
@@ -151,10 +152,11 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['{"logs":[]}'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
     const progress = document.getElementById('importLogsProgress')!;
-    expect(progress.textContent).toContain('importLogsComplete');
+    await vi.waitFor(
+        () => expect(progress.textContent).toContain('importLogsComplete'),
+        { interval: 1 }
+    );
     expect(progress.className).toContain('success');
   });
 
@@ -169,10 +171,11 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['bad'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
     const progress = document.getElementById('importLogsProgress')!;
-    expect(progress.textContent).toContain('Invalid format');
+    await vi.waitFor(
+        () => expect(progress.textContent).toContain('Invalid format'),
+        { interval: 1 }
+    );
     expect(progress.className).toContain('error');
   });
 
@@ -187,10 +190,11 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['bad'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
     const progress = document.getElementById('importLogsProgress')!;
-    expect(progress.textContent).toContain('parse error');
+    await vi.waitFor(
+        () => expect(progress.textContent).toContain('parse error'),
+        { interval: 1 }
+    );
     expect(progress.className).toContain('error');
   });
 
@@ -201,8 +205,7 @@ describe('exportImport-r2 — Import logs', () => {
 
     const fileInput = document.getElementById('importLogsFileInput') as HTMLInputElement;
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
+    await drainMacrotask();
     expect(mockImportFromJson).not.toHaveBeenCalled();
   });
 
@@ -244,10 +247,10 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['{"logs":[]}'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
-    // Missing progress element: the import still runs and the input is reset.
-    expect(mockImportFromJson).toHaveBeenCalledTimes(1);
+    await vi.waitFor(
+        () => expect(mockImportFromJson).toHaveBeenCalledTimes(1),
+        { interval: 1 }
+    );
     expect(mockImportFromJson).toHaveBeenCalledWith('{"logs":[]}', expect.any(Function));
     expect(document.getElementById('importLogsProgress')).toBeNull();
     expect(fileInput.value).toBe('');
@@ -267,10 +270,10 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['bad'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
-    // Missing progress element: the failing import is still attempted, without surfacing a throw.
-    expect(mockImportFromJson).toHaveBeenCalledTimes(1);
+    await vi.waitFor(
+        () => expect(mockImportFromJson).toHaveBeenCalledTimes(1),
+        { interval: 1 }
+    );
     expect(mockImportFromJson).toHaveBeenCalledWith('bad', expect.any(Function));
     expect(document.getElementById('importLogsProgress')).toBeNull();
     expect(fileInput.value).toBe('');
@@ -287,10 +290,11 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['{}'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
     const progress = document.getElementById('importLogsProgress')!;
-    expect(progress.textContent).toContain('importLogsComplete');
+    await vi.waitFor(
+        () => expect(progress.textContent).toContain('importLogsComplete'),
+        { interval: 1 }
+    );
   });
 });
 
@@ -334,10 +338,11 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
     const fileInput = document.getElementById('importFileInput') as HTMLInputElement;
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
     const preview = document.getElementById('importPreview')!;
-    expect(preview.textContent).toContain('chrome_i18n_importPreviewSummary');
+    await vi.waitFor(
+        () => expect(preview.textContent).toContain('chrome_i18n_importPreviewSummary'),
+        { interval: 1 }
+    );
   });
 
   it('showImportPreview returns early when importPreview element is missing', async () => {
@@ -366,10 +371,10 @@ describe('exportImport-r2 — showImportPreview edge cases', () => {
     const fileInput = document.getElementById('importFileInput') as HTMLInputElement;
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
-
-    // Preview target missing: the file still validates and the confirm modal opens.
-    expect(mockValidateExportData).toHaveBeenCalled();
+    await vi.waitFor(
+        () => expect(mockValidateExportData).toHaveBeenCalled(),
+        { interval: 1 }
+    );
     const modal = document.getElementById('importConfirmModal')!;
     expect(modal.classList.contains('show')).toBe(true);
     expect(modal.style.display).toBe('flex');
@@ -409,12 +414,13 @@ describe('exportImport-r2 — confirmImportBtn exception', () => {
     await new Promise(r => setTimeout(r, 10));
 
     document.getElementById('confirmImportBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith(
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith(
       'exportImportStatus',
       expect.stringContaining('corrupt data'),
       'error',
+    ),
+        { interval: 1 }
     );
   });
 });

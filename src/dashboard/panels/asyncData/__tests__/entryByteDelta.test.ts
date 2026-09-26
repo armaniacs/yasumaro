@@ -1,15 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describeDelta, formatBytes } from '../entryByteDelta.js';
-
-describe('formatBytes (PBI 2026-09-12-21)', () => {
-  it('uses the MB/KB/B unit table', () => {
-    expect(formatBytes(0)).toBe('0 B');
-    expect(formatBytes(1023)).toBe('1023 B');
-    expect(formatBytes(1024)).toBe('1.0 KB');
-    expect(formatBytes(1536)).toBe('1.5 KB');
-    expect(formatBytes(2 * 1024 * 1024)).toBe('2.0 MB');
-  });
-});
+import { describeDelta } from '../entryByteDelta.js';
 
 describe('describeDelta (PBI 2026-09-12-21)', () => {
   it('computes label, percent and ratio for a normal delta', () => {

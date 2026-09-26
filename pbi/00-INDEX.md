@@ -14,6 +14,70 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 3件完了・⬜ 未着手 2件 🔧非機能追加
+
+**統合 PBI**: [2026-09-26-00-timing-failure-elimination-suite.md](2026-09-26-00-timing-failure-elimination-suite.md)
+- Vision: 全テスト層（Unit/Integration/E2E）から固定待機を完全除去
+- 構成: PBI 05・08・01 (完了) + PBI 06/07 (未着手)
+- Timeline: Phase 2a・2b は並行可能、Phase 3 で統合
+- Total: 5.5 SP across 2 sprints
+
+**個別 PBI**:
+
+| PBI | 状態 | RICE | SP | 内容 |
+|---|---|---:|---:|---|
+| [05](2026-09-26-05-test-remove-fixed-sleeps.md) | ✅ 完了 | 3.0 | 1 | Unit/Integration sleep 40 件 → condition-based |
+| [08](2026-09-26-08-lint-e2e-tests.md) | ✅ 完了 | 1.0 | 1 | testDir ESLint 対象化（`waitForTimeout` 12 件） |
+| [01](2026-09-26-01-test-eslint-rule-tester-repeats.md) | ✅ 完了 | — | 1 | ESLint ルールテスト 7 ファイルを `--repeats` ゲートに乗せる |
+| [06](2026-09-26-06-investigate-e2e-retry-flakiness.md) | ⬜ 未着手 | 2.0 | 2 | E2E retry 隠蔽調査・修正（flaky 1 件の実測証拠を採取済み） |
+| [07](2026-09-26-07-lower-eslint-sleep-threshold.md) | ⬜ 未着手 | 1.5 | 1.5 | ESLint 閾値下げ（実測 163 件、PBI 記載の 70 件から大幅増） |
+
+
+
+### 2026-09-26 メタ認知分析ラウンド — ✅ 4件完了・アーカイブ済み ✨機能追加
+
+開発提案「情報探索のメタ認知化」の3案を、記録データの実態と照らし合わせて RICE で採点した。
+
+- 提案1（熟読度フィルター）: 不採用。滞在時間を記録していないため。
+- 提案2（セッション＆パス分析）: 既存データで作れる部分（02。✅ 完了）、遷移記録の基盤（03。✅ 実装完了・一部 DoD 未実施）、探索パスと指標（04）の3つに分けた。✅ すべて完了・アーカイブ済み。
+- 提案3（ループ課題・タイムカプセル）: 09-24 台帳の「再訪分析」を統合した（01）。✅ 完了・アーカイブ済み（アーカイブ履歴参照）。
+
+各 PBI は、低価格モデルでも実装できる詳細設計（ファイル・型・アルゴリズム・i18n 文言・テストケース）を含む。採点・前提の差異・ユーザー裁定・不採用理由の詳細は [2026-09-26-00-backlog-metacognition-analytics.md](2026-09-26-00-backlog-metacognition-analytics.md) を参照。
+
+このラウンドの 4 PBI はすべて実装済み・アーカイブ済みです（内訳はアーカイブ履歴を参照）。未実施の DoD は各 PBI の「未実施 — ユーザー作業」表記に残しています。
+
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 15件完了・アーカイブ済み / ⬜ 未着手 17件 🔧非機能追加
+
+ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
+
+| NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
+|---|---|---|---:|---:|---|
+| 32 | [fix-obsidian-auth-error-wording](2026-09-25-32-fix-obsidian-auth-error-wording.md) | fix | — | 0.5 | 11 の裁定から起票。Obsidian 401/403 の表示を auth に訂正（ユーザー表示が変わるため単独） |
+| 31 | [fix-withlock-object-conflict-policy](2026-09-25-31-fix-withlock-object-conflict-policy.md) | fix | — | — | 02 の裁定で起票。`withLock` の object 競合検知を version 単一 signal に固定し、lock 迂回 2 箇所を撤去 |
+| 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
+| 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 完了済み・着手可能 |
+| 13 | [investigate-obsidian-write-replay-idempotency](2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | 11・12 の後（依存で降格） |
+| 14 | [refactor-ci-paths-filter](2026-09-25-14-refactor-ci-paths-filter.md) | refactor | 1.5 | 2 | **閉塞**: DoD 4 項目が実 PR 観測と branch protection 設定アクセスを要求 |
+| 15 | [investigate-ai-provider-circuit-breaker](2026-09-25-15-investigate-ai-provider-circuit-breaker.md) | investigate | 1.5 | 3 | 11 の failure taxonomy 完了済み・着手可能 |
+| 16 | [investigate-dashboard-sqlite-ipc-roundtrip](2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md) | investigate | 1.33 | 1.5 | 実害未計測。計測結果待ち |
+| 18 | [investigate-settings-key-single-writer](2026-09-25-18-investigate-settings-key-single-writer.md) | investigate | 1.5 | 2 | 02・17 完了済み・着手可能 |
+| 22 | [investigate-pending-queue-poison-record](2026-09-25-22-investigate-pending-queue-poison-record.md) | investigate | 0.75 | 2 | 01 の retry 判定と共有。実データ待ち |
+| 23 | [investigate-deprecated-alias-sunset](2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | 14 の path 対象要与（14 は閉塞中） |
+| 25 | [fix-encryption-secret-wrapped-storage](2026-09-25-25-fix-encryption-secret-wrapped-storage.md) | fix | 0.5 | 3 | 27 の前提。IDB 障害方針が未決 |
+| 26 | [backlog-wasm-binary-reproducibility-watch](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) | backlog | 0.4 | 0.5 | トリガー: toolchain / wasm-pack / manifest 変更時 |
+| 27 | [investigate-master-password-removal-reencrypt](2026-09-25-27-investigate-master-password-removal-reencrypt.md) | investigate | 0.33 | 3 | 25 の後。ADR supersede が未決 |
+| 28 | [investigate-content-hot-path-yield](2026-09-25-28-investigate-content-hot-path-yield.md) | investigate | 0.25 | 2 | 30 と `contentExtractor` で競合 |
+| 29 | [backlog-offscreen-gateway-archive-split](2026-09-25-29-backlog-offscreen-gateway-archive-split.md) | backlog | 0.25 | 2 | 01 の後。archive subtype 追加時に発火 |
+| 30 | [refactor-utils-namespace-reorg](2026-09-25-30-refactor-utils-namespace-reorg.md) | refactor | 0.08 | 3+ | 専用ブランチ必須。03・05・06・07 の後 |
+
+**PBI 化不要と判定した 1 件**: `setElementHtml` の `<script>` 削除層の縮小は、production 呼び出し 37 箇所 15 ファイルに及ぶ二段防御（`DOMParser` の inert 特性 + 生成 script の除去）で、レビューでも「セキュリティを弱めない」方針が確定済み。コード変更を入れると共通描画基盤の安全性が下がるため PBI を作らず、判定根拠を採点台帳の不採用欄に記録した。
+
+### 2026-09-26 テストの固定待機の解消 — ✅ 1件完了・アーカイブ済み 🔧非機能追加
+
+- [2026-09-26-05-test-remove-fixed-sleeps.md](2026-09-26-05-test-remove-fixed-sleeps.md)（✅ 完了・アーカイブ済み — RICE 3.0・1 SP・副作用🟢。`local/no-test-sleep` の警告 40 件（16 ファイル）をすべて条件待ちに置き換え、ルールを error に昇格。`npm run validate` 通過、`--repeats=20` で安定）
+  - 現代化の追加分: ルールの `const` 束縛遅延解決（追加 3 件検出）、`local/no-greedy-fake-timers`（`warn`、既存 124 箇所の移行待ち）、`local/no-vacuous-negative-wait`（`error`、20 件検出して 19 件修正）
+  - 関連 PBI: [06](2026-09-26-06-investigate-e2e-retry-flakiness.md)（E2E retry で隠れる失敗）、[07](2026-09-26-07-lower-eslint-sleep-threshold.md)（閾値 20ms→0）、[08](2026-09-26-08-lint-e2e-tests.md)（`testDir/` を ESLint 対象に）
+
 ### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ✅ 全8件完了・アーカイブ済み
 
 分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md) を参照。
@@ -78,6 +142,76 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-26 autonomous-task-closer wave 1 — ✅ 4件完了（02・06・07・08 アーカイブ済み）4件をファイル非重複で並列実装
+
+RICE 順・依存グラフ・ファイル非重複で判定し、触るファイル集合が互いに交わらない 4 件を 1 つの並列ウェーブで処理した（`pbi/`+`dev-docs/ADR/` / `eslint/`+`testDir/`+`bench/` / popup+dashboard+background / `cleansingStatsView`+`panels/asyncData`）。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test **915 files / 14100 passed**（HEAD 比 +4 files / +44 tests）/ build PASS。`type-check:test` は 255 errors で HEAD baseline と同一（増減ゼロ）。DoD 反映漏れは 0 件（02・06・07・08 いずれも実装コミット不在の新規実装だった）。**未実施**: GitHub PR レビュー、E2E 実走（`test:e2e` は build と Chrome 起動を要する）。
+
+- [2026-09-25-02-investigate-withlock-cas-deep-equal.md](../dev-docs/archived/pbi/2026-09-25-02-investigate-withlock-cas-deep-equal.md)（✅ 完了 — production code 無変更の裁定記録のみ。**Contracts 強化を採用し `canonical deep-equal + value-level CAS` は不採用**。version が見逃す実在の競合は lock 迂回 2 箇所（`pendingStorage.ts` / `savedUrlRepository.ts`）だけであり、値比較を足すのではなくその 2 箇所を `withLock` へ移せば原因が消える。canonicalization コストは高頻度 write に恒久課され、`structuredClone` 非対応値で新たな失敗モードも増えるため却下。裁定を ADR `2026-09-26-withlock-object-conflict-policy.md` に記録し、後続 `fix` PBI 31 を起票。実測 call site は **15 経路**（`withOptimisticLock` 12 + 直接 `tx.withLock` 3）で PBI 本文の「14 経路」は誤りと判明し訂正。`withAtomicKeys` は version のみの別契約のため対象外。`lint:adr-links` 54 ADR PASS。RICE 8.4）
+- [2026-09-25-06-refactor-ui-provider-label-ssot.md](../dev-docs/archived/pbi/2026-09-25-06-refactor-ui-provider-label-ssot.md)（✅ 完了 — 中立テーブル `providerAllowlist` に read-only projection（`ProviderDisplayMetadata` / `deriveProviderDisplayMetadata` / `tryResolveProviderDisplayMetadata`）を新設し、UI 3 ファイル（`errorUtils` / `aiTestResultView` / `customPromptManager`）から `providerCatalog` import を除去。`providerCatalog` 側に重複していた 6 provider の `labelI18nKey` リテラルも削除し中立 row からの合成に統一（二重 SSOT を解消）。**popup バンドルが 214,191 → 193,401 bytes（−20,790 / −9.7%）に縮小し、provider strategy を含む chunk が 2 → 1 に減少**。対象 6 ファイル 170 tests green。RICE 3.0）
+- [2026-09-25-07-refactor-format-bytes-ssot.md](../dev-docs/archived/pbi/2026-09-25-07-refactor-format-bytes-ssot.md)（✅ 完了 — `formatBytes` 定義 3 つ（うち同一ファイル内の local shadow 1 つ）を撤去し、dashboard-local の SSOT `src/dashboard/byteFormat.ts` へ 6 active 経路を統合。policy は**小数 1 桁 + B/KB/MB/GB 自動切替**を正とし、4 桁有効数字版を却下（`renderFunnelChart` のラベル幅が可変になる／0 byte が `0 KB` 表記になる／GB tier が欠けていた）。unit 表は `1 MiB` リテラルを書かず 1024 派生にしたのは、cap-registry drift guard がそのリテラルを `MAX_ERROR_BODY_SIZE` と誤読し message-size allowlist を借りる必要が生じるため。SSOT ガード（重複定義 0・純モジュール）を `byteFormat-ssot.test.ts` で pin。対象 6 ファイル 79 tests green。**裁定**: PBI 本文の「依存 PBI 30 が完了している」は INDEX（30 は 06・07 の後）と反転していたため、INDEX を SSOT として採用せず 30 の後続を妨げない形で完了。RICE 3.0）
+- [2026-09-26-08-lint-e2e-tests.md](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md)（✅ 完了 — `testDir/` を `ignores` から除外して lint 対象に。新規ルール `local/no-fixed-wait`（`eslint/rules/no-fixed-wait.mjs`、`no-test-sleep` の E2E 版、閾値なし・既定 error）で `waitForTimeout` を検出。`waitForTimeout` 12 件を**条件待ち 9 件 + 理由明示の opt-out 3 件**に裁定（opt-out は ①陰性判定で待つべき条件が存在しない pii-wasm spec ②long task 計測窓そのもの ③「idle」が観測不能な反復間クールダウン。いずれも `AGENTS.md` の実時間待ち例外に該当する）。`testDir`/`bench` は型非依存設定（`testDir/tsconfig.json` が `.spec.ts` を include しないため `project` 指定は全 spec の型解決を壊す）。ルールテスト 21 件 green。RICE 1.0）
+
+### 2026-09-26 autonomous-task-closer wave 2 — ✅ 6件完了（11・17・19・21・26-01・26-08 のうち 5 件をアーカイブ、PBI 14 は閉塞記録）
+
+wave 1 に続き、RICE 順・依存グラフ・ファイル非重複で 3 件を並列実装し、docs 2 件は直接完了させた。**Playwright を実走** して初めて低成本で検出できる回帰を 1 件摘出した。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline）/ **920 files・14245 tests passed**（21 skipped）/ build PASS / `type-check:test` 255 = HEAD baseline / `lint:adr-links` 55 ADR / `lint:layers-docs` 同期 / version 6.9.26 一致。
+
+- [2026-09-26-08-lint-e2e-tests.md](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md)（✅ 完了・**実走で回帰を 1 件検出**。`local/no-fixed-wait` を新設し `testDir/` を ignores から除外。`waitForTimeout` 12 件は条件待ち 9 件＋理由明示 opt-out 3 件。ただし lint と型検査だけでは置換の正しさは証明されず、Playwright 実走の結果 `content-script-recording.spec.ts:148` が失敗した。陰性判定「stay < 5s」の窓を 2.0s から 2.5s へ押す変更は閾値の境へ近づけるだけで意味を持たず、直前のステップですでに条件が成立しているため、そこを待った直後に判定する形へ戻した（`24e3e28f`）。`--repeat-each=5 --retries=0` で 25 件全通過。`bench:e2e` 3 passed で `autosave-latency` の mark 到位を実測。**残存**: pii-wasm spec の opt-out 1 件は `test.skip` により実走未検証。RICE 1.0）
+- [2026-09-25-11-refactor-structured-failure-taxonomy.md](../dev-docs/archived/pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md)（✅ 完了・**表示文言の 4 変化を統合で阻止**。retry 判断が `errorMessage(error).toLowerCase()` の 9 語一致で、Obsidian の 401/403 が「connection」を含む文言のために auth と誤認され offline queue に入っていた。`src/utils/failureTaxonomy.ts`（Layer 0）に 7 kind の SSOT を新設。実装当初から `classifyError()` を kind 起点に配線の影響を検査し、**Obsidian の 401/403・404・429・5xx の 4 つの表示が変わる**ことを確認。導入前の表示キーはメッセージ文面に依存していたため静态な kind→ErrorType 表で parity を再現できず、表示経路を kind から切り離した（`classifyError(with kind) === classifyError(without kind)` を 7 kind × 7 メッセージで固定）。文言修正は PBI 32 として分離。秘密情報非混入は実 API キー入り Error で固定。RICE 1.6）
+- [2026-09-25-17-fix-settings-migration-completion-state.md](../dev-docs/archived/pbi/2026-09-25-17-fix-settings-migration-completion-state.md)（✅ 完了・データ損失唯一の優先項目。完了フラグが truthy だけ、**かつバックアップ作成と legacy key 削除より先に書かれていた**ため、中断時に完了だけ立ち移行が永久に再実行されなかった。`SETTINGS_MIGRATION_SCHEMA_VERSION = 2` と `pending → backed_up → legacy_removed → completed` の単調増加 stage を導入し、完了記録を最後の 1 回-only に移した。legacy key 分類を `!key.includes('_version')` 文字列マッチから `StorageKeys` 実値判定へ変更（`gemini_api_version` が誤って legacy 扱いされていた）。削除直前に値と CAS generation を取り直し、動いていれば追従してやり直す。新規 31 tests で順序逆転・各中断段階・boolean true の非破壊修復を固定。**PBI 18 へ引き継ぎ**: `privacy_consent*` と `recording_triggers` 系は raw 直読みなのに nested へ移され raw が削除される同種のベクタが残る。RICE 1.2）
+- [2026-09-25-21-doc-ssrf-threat-model-residual-risk.md](../dev-docs/archived/pbi/2026-09-25-21-doc-ssrf-threat-model-residual-risk.md)（✅ 完了・docs only。Security Review Guide に SSRF ガードの検査範囲・4 入口・緩和策・DNS rebinding の残存リスク・MV3 の制約・受容者を記載。**着手時に PBI 本文と実装の食い違いを 1 件発見**: 本文は「4 入口すべてが redirect 先を再検証」と読めるが、`FETCH_URL` は `redirect: 'error'` を使い per-hop 再検証の `fetchWithRedirectGuard` はこの経路で未使用。入口ごとの差を表に明記。RICE 0.8）
+- [2026-09-25-19-doc-docs-catalog-accessibility-i18n.md](../dev-docs/archived/pbi/2026-09-25-19-doc-docs-catalog-accessibility-i18n.md)（✅ 完了・docs only。guides と i18n guide を README 日英 2 リスト（4 links）と Pages カタログ（2 cards、25→27）へ掲載。**PBI の 2 条件が実コードで両立せず裁定**: 「description も日英併記」vs「既存構造に合わせる」。既存 25 card の description は全件日本語のみで、CSS に `.card .d small` が無く `<small>` を入れても block にならず崩れるため既存形を優先し、**逸脱を DoD に未充足として明記**（推測で `[x]` にしていない）。RICE 1.0）
+- [2026-09-26-01-test-eslint-rule-tester-repeats.md](../dev-docs/archived/pbi/2026-09-26-01-test-eslint-rule-tester-repeats.md)（✅ 完了。`eslint/__tests__` の 7 ファイルが `--repeats` で全滅していた。原因は既存 PBI の「Mock リセット不足」ではなく、**RuleTester が重複ケース用 `Set` を describe 本体で生成する**こと（`rule-tester.js:1907-1909`）。共有ラッパー `createRepeatSafeRuleTester` で describe 本体をキャッシュし `beforeEach` で呼び直す方式を採用（起票時の「解けない見込み高い」という前提は PoC で棄却）。却下 2 方式の理由と実測は ADR に記録。ルールのケースは 107 で増減なし（+5 が回帰固定）。`--repeats=20` が 4 回連続で全通過。`testPartition.ts` の `NEEDS_ISOLATION` に追加。RICE —）
+- [2026-09-25-14-refactor-ci-paths-filter.md](2026-09-25-14-refactor-ci-paths-filter.md)（⛔ **閉塞・コード変更なし**。DoD 12 項目のうち 4 項目（実 PR での BDD シナリオ確認、required check が pending にならないことの実 PR 確認、branch protection の必須 job 名の確認）が実 PR 観測とリポジトリ設定アクセスを要求する。paths mapping を誤っても CI は緑のままなので誤りは PR 観測まで検出されず、その時点で既に検証されるべき変更が検証されていない状態になる。「static test だけ先に実装する」も採用せず、推奨着手手順とユーザー作業範囲を PBI に記録した）
+
+### 2026-09-25 残債ラウンド — ✅ PBI 24 完了（アーカイブ済み）UX 裁定のみ・production code 無変更
+
+裁定により PBI 2026-09-26-03（遷移記録基盤）の `privacyConsent.ts` 競合が解消した。
+裁定の内訳と後続 PBI 分割（S-1 dashboard re-consent 入口 / S-2 denial counter reset / S-3 外部備份境界の説明）はアーカイブ済み PBI の裁定結果節を参照。
+
+- [2026-09-25-24-investigate-privacy-reconsent-ux.md](../dev-docs/archived/pbi/2026-09-25-24-investigate-privacy-reconsent-ux.md)（✅ 完了 — 裁定記録のみ（production code 無変更）。裁定4件: ①再同意入口は dashboard の Privacy 画面（decline 後の案内が指す「設定画面」と一致し実在の導線になる。popup の常時バナーは 30 日抑制と衝突するため不採用）②明示操作は 30 日抑制を bypass するが、自動表示の抑制状態は書き換えない ③withdraw 後も履歴保持を許し、同意撤回と履歴削除を分離する ④バックアップからの履歴復元は促さない。`privacy_consent` は restore allowlist に無く、復元は同意済み状態にしない。`reconsentConsent()` は新設せず既存 API を組み合わせる。denial counter reset は `acceptConsent()` 冒頭の1行で、`resetConsentDeniedCount()` は既に存在するため後続 `fix` S-2（0.5 SP）へ切り出し。裁定により **PBI 2026-09-26-03 の `privacyConsent.ts` 競合が解消**（03 は `withdrawPrivacyConsent()` 直後、S-1 は dashboard panel、S-2 は `acceptConsent()` 冒頭で同一行を触らない））
+
+### 2026-09-26 メタ認知分析ラウンド バッチ4 — ✅ PBI 04 完了（提案2 全体・アーカイブ済み）
+
+提案2の最後の部分。記録経路は変えず、02 のセッションと 03 の遷移記録の
+2 列から「線」を復元します。これで 2026-09-26 メタ認知分析ラウンドは
+4 PBI すべて実装済みです（提案1 は採点時に不採用）。RICE 0.67・3 SP。
+
+- [2026-09-26-04-feat-session-path-tree-search-to-goal.md](../dev-docs/archived/pbi/2026-09-26-04-feat-session-path-tree-search-to-goal.md)（✅ 完了 — コミット `e8b9649e`。`sessionPathAggregate.ts` の純関数 3 つ: `hasNavTrail`（遷移記録の有無で描画を選ぶ）、`buildSessionTree`（親の判定は「同じセッション内で自分より前にあり流入元が自分の URL と一致する記録のうち最も新しいもの」。両側を `normalizeNavUrl` で正規化し、親は必ず前の記録なので循環しない）、`computeSearchToGoal`（検索エンジン始まりのセッションを最終ページのタグで集計、2 セッション未満は除外、タグなしは `(untagged)` として集計から落とさない、平均ページ数は小数1桁・平均分は整数）。遷移記録が有効なら展開部は入れ子の `<ul>`、冒頭の検索語は木の上に1行だけ（先頭ノードの行側は抑制して二重表示を回避）。オフなら従来どおり平坦な一覧。同意の読み込みは `Promise.all` で並列化し、読み込み失敗は false 扱いにしてパネル全体を落とさない。集計対象は表示中のセッション（最大100件）。ガイド（ja/en）に解決ページの定義・指標の限界・有効化手順を記載。新規テスト 28 件で validate 14,012 green / build PASS。**未実施**: Chrome 実機での手動確認、コードレビュー）
+
+### 2026-09-26 メタ認知分析ラウンド バッチ3 — ✅ PBI 03 実装完了（アーカイブ済み・一部 DoD 未実施）
+
+提案2のうち「遷移記録の基盤」。記録するデータ自体が増える変更（新規データ種別2列）のため、
+DoD の手動確認とセキュリティレビューは未実施のまま残す。RICE 0.32・5 SP。
+
+- [2026-09-26-03-feat-navigation-trail-recording.md](../dev-docs/archived/pbi/2026-09-26-03-feat-navigation-trail-recording.md)（✅ 実装完了 — コミット `4d2c60c7`。`nav_source_url` / `search_query` の 2 列を SQLite に追加（SCHEMA_SQL・COLUMN_NAMES・MIGRATION_COLUMNS・rowCodec の coerceCell・browsingLogCodec・migrationBackup の LEGACY_MISSING_COLUMNS・opfsRecovery）。機能別同意 `nav_trail_consent`（端末固有・DEFAULT_SETTINGS と restore allowlist の外側）。`navTrailTracker` は `chrome.storage.session` + Mutex でタブ単位の流入元を追跡し、シークレットタブは追跡しない。同意 OFF・撤回時は追跡状態を破棄し、撤回時は nav_trail も自動で無効化。2 列は UPDATE 不可・再生成対象外。`check-privacy.mjs` は「同意バージョン」と照合（`PRIVACY_POLICY_VERSION` は `2026-09-08` のまま据え置き）。`public/PRIVACY.md` と `docs/PRIVACY.md` はバイト一致。i18n 8 キー（ja/en）。新規テスト 53 件で validate 13,984 green / build PASS / release:check privacy・e2e PASS。**未実施**: Chrome 実機での手動確認（検索 → 記事 → セッション表示）、`SECURITY_REVIEW_GUIDE` によるセキュリティレビュー）
+
+### 2026-09-26 メタ認知分析ラウンド バッチ2 — ✅ PBI 02 完了（アーカイブ済み）
+
+提案2のうち「既存データで作れる部分」。01 の `NameCount` を再利用し、記録を
+時刻の近いまとまり（セッション）へ分解します。03・04 の表示先になります。RICE 0.75・2 SP。
+
+- [2026-09-26-02-feat-research-session-grouping.md](../dev-docs/archived/pbi/2026-09-26-02-feat-research-session-grouping.md)（✅ 完了 — コミット `0ce3819a`。区切り 5/15/30/60 分（既定 30）で記録をまとめ、`<details>` で開始日時・ページ数・分数・上位タグ（タグ OFF なら上位ドメイン）を提示。区切り変更は手元データの再集計のみで再取得なし、期間変更のみ取り直す。分割は「設定値より大きいとき」で等しい場合は同一セッション。単独ページは件数として分離。集計は純関数 `researchSessionAggregate.ts`。上限 10000 行・表示 100 セッション。i18n 13 キー（ja/en）。新規テスト 23 件で validate 13,931 green / build PASS。コードレビューは未実施）
+
+### 2026-09-26 メタ認知分析ラウンド バッチ1 — ✅ PBI 01 完了（アーカイブ済み）
+
+提案3（ループ課題・タイムカプセル）と 09-24 台帳の「再訪分析」を統合した PBI。
+`fetchAllPeriodRows` と `NameCount` をここに新設し、02 が再利用します。RICE 1.60・3 SP。
+
+- [2026-09-26-01-feat-revisit-loop-time-capsule.md](../dev-docs/archived/pbi/2026-09-26-01-feat-revisit-loop-time-capsule.md)（✅ 完了 — コミット `da98b1c9`。4区分（ループ / 再訪ランキング / 休眠テーマ / 52週前の週）を1パネルで提示し、`## key` + `- YYYY-MM-DD [title](url)` 形式への Markdown コピーを提供。`domainAnalysisPanel` のローカル `fetchAllRows` を `fetchPeriodRows.ts` の `fetchAllPeriodRows` へ移設して keyset ページングを共通化（ページサイズは `QUERY_CAPS.plain` 参照で drift 不能）。集計は純関数 `revisitInsightsAggregate.ts`、閾値は `REVISIT_CONFIG` に集約。i18n 30 キー（ja/en）。新規テスト 33 件（集計 17・lifecycle 9・ページング 7）で validate 13,908 green / build PASS。コードレビューは未実施）
+
+### 2026-09-26 メタ認知分析ラウンド — ⬜ 未着手 3件 ✨機能追加
+### 2026-09-25 Checking Team 残債ラウンド — ✅ 7件完了（01・03・04・05・08・09・20 アーカイブ済み）
+
+autonomous-task-closer による回収。01/03/04/05/08/09 は実装コミット・DoD チェックボックス・`npm run validate`（13,875 tests green）を実測確認した上でアーカイブした新規実装不要の DoD 反映漏れ。20 は未着手だったため ADR を作成して実装した。
+
+- [2026-09-25-01-fix-transport-replay-safety.md](../dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md)（✅ 完了 — `c12cacde` + レビュー対応 `4b6d75ab`。retry-safe 18 / retry-unsafe 14 の最終裁定、insert 系は fail-closed へ撤回、判定源も一本化。DoD 18/18 `[x]` 確認済み。RICE 20.0）
+- [2026-09-25-03-refactor-previewonly-flag-cleanup.md](../dev-docs/archived/pbi/2026-09-25-03-refactor-previewonly-flag-cleanup.md)（✅ 完了 — `6044e984`。`RecordOptions` から `previewOnly` を削除し `RecordingOrchestrator` の `data.previewOnly` 単一判定へ。DoD 18/18 `[x]` 確認済み。RICE 8.0）
+- [2026-09-25-04-fix-obsidian-get-retry.md](../dev-docs/archived/pbi/2026-09-25-04-fix-obsidian-get-retry.md)（✅ 完了 — `b0c3d570`。接続確認 GET のみ 500/502/503/504 ＋ network/timeout を対象に最大 3 回の指数バックオフ（`obsidianClient.ts` の retryableStatusCodes）。書き込み経路は対象外。DoD 23/23 `[x]` 確認済み。RICE 4.0）
+- [2026-09-25-05-fix-trustchecker-legacy-dead-code.md](../dev-docs/archived/pbi/2026-09-25-05-fix-trustchecker-legacy-dead-code.md)（✅ 完了 — `b9ee19cc`。trust 設定のレガシー storage 経路を Trust DB に一本化。`src/` 内のレガシー trustchecker 参照 0 件を確認。DoD 21/21 `[x]` 確認済み。RICE 3.0）
+- [2026-09-25-08-doc-trust-record-policy-correction.md](../dev-docs/archived/pbi/2026-09-25-08-doc-trust-record-policy-correction.md)（✅ 完了 — `1a121c74`。ガイド（日英）に記録可否の列を追加し、blog の誤記述と production が生成しない fixture を是正。DoD 19/19 `[x]` 確認済み。RICE 2.0）
+- [2026-09-25-09-fix-popup-untranslated-title-token.md](../dev-docs/archived/pbi/2026-09-25-09-fix-popup-untranslated-title-token.md)（✅ 完了 — `13721302`。`title="Browse History"` と `stroke="#2E7D32"` の raw 属性が 0 件であることを grep 確認、`aria-label` は維持。DoD 17/17 `[x]` 確認済み。RICE 2.0）
+- [2026-09-25-20-doc-messaging-layer-decision-record.md](../dev-docs/archived/pbi/2026-09-25-20-doc-messaging-layer-decision-record.md)（✅ 完了 — ADR `2026-09-25-messaging-background-reverse-dependency.md` を新設し「逆依存を許容・現状維持」の判断と再検討トリガー3項目を記録。実コード無変更。ADR README の一覧が 2026-08-12 で止まっていたドリフトも併せて回復（未掲載7件を追記）。整合3テスト 97 green。RICE 1.0）
 
 ### 2026-09-24 arch-delivery-loop ラウンド バッチ6-7 — ✅ 2件完了（15・16 アーカイブ済み）RICE順: 15 → 16（直列）
 
@@ -1088,7 +1222,7 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 - 2026-08-25-01-fix-storage-inmemory-migration-divergence.md（RICE 57.6 — `InMemoryStorageAdapter.getSettings()` の `rawEncrypted:false` 意図を明記しマイグレーションは依然走る旨をコメント化。両アダプタのマイグレーション一致を検証する `settingsRepository-migration-parity.test.ts` を2件追加。`grep as unknown` 0件と `type-check / 8396 tests PASS`（+2））
 - 2026-08-25-08-refactor-message-types-ssot-cleanup.md（RICE 20.0 — `CONTENT_SCRIPT_ONLY_TYPES` を削除し `CONTENT_SCRIPT_ALLOWED_TYPES` に一本化。`MessageRouter.ts`/`messageHandler.ts` の参照とコメントを更新し `message-types-consistency.test.ts` を ALLOWED_TYPES 基準に置換。`grep -rn CONTENT_SCRIPT_ONLY_TYPES src/` 0件を確認。`type-check / 8396 tests PASS`）
-- 2026-08-25-00-backlog.md（checking-teamレビュー16件を9 PBIに統合しRICEで優先度付け。`plans/2026-08-25-0530-review-0824a.md` 89/A の High3/Medium18 を網羅。Wave1で01/02/03/04並列、Wave2で05単独、Wave3で06/08並列、Wave4で07/09）
+- 2026-08-25-00-backlog.md（checking-teamレビュー16件を9 PBIに統合しRICEで優先度付け。`dev-docs/archived/plans/2026-08-25-0530-review-0824a.md` 89/A の High3/Medium18 を網羅。Wave1で01/02/03/04並列、Wave2で05単独、Wave3で06/08並列、Wave4で07/09）
 
 ### 2026-08-25 Checking-Team Review 0825c — 3件完了（Wave1 RICE 40.0/34.3/32.7）
 

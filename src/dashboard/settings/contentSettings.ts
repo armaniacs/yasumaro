@@ -7,7 +7,7 @@ import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
 // Single source of truth for the default keyword list — the strip logic in
@@ -106,10 +106,10 @@ async function saveContentSettings(): Promise<void> {
         await settingsRepository.setAll(delta);
 
         // 成功メッセージを表示
-        showStatus('contentSettingsStatus', getMessage('settingsSaved') || '設定を保存しました', 'success');
+        showStatus('contentSettingsStatus', getMessageOr('settingsSaved', '設定を保存しました'), 'success');
     } catch (error: unknown) {
         logError('[ContentSettings] Save error', { cause: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE);
-        showStatus('contentSettingsStatus', getMessage('settingsSaveError') || '設定の保存に失敗しました', 'error');
+        showStatus('contentSettingsStatus', getMessageOr('settingsSaveError', '設定の保存に失敗しました'), 'error');
     }
 }
 
@@ -139,7 +139,7 @@ export function init(): void {
             if (kwTextarea) {
                 kwTextarea.value = DEFAULT_KEYWORDS.join('\n');
             }
-            showStatus('contentSettingsStatus', getMessage('contentStripResetKeywords') || 'デフォルトに戻しました', 'success');
+            showStatus('contentSettingsStatus', getMessageOr('contentStripResetKeywords', 'デフォルトに戻しました'), 'success');
         });
     }
 

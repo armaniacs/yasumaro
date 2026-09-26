@@ -25,7 +25,7 @@ import type {
 import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
-import { archiveWireFor, archiveNoRetry, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
+import { archiveWireFor, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
 import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor, sqliteMaintainWireFor } from '../../messaging/sqliteWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
@@ -50,10 +50,10 @@ export class OffscreenGateway {
     return this.transportPromise;
   }
 
-  private async callInternal<T, R = unknown>(type: SqliteMessageType, payload: Record<string, unknown> = {}, transform?: (res: Extract<R, { success: true }>) => T, traceId?: string, transportOpts?: { noRetry?: boolean }): Promise<SqliteResult<T>> {
+  private async callInternal<T, R = unknown>(type: SqliteMessageType, payload: Record<string, unknown> = {}, transform?: (res: Extract<R, { success: true }>) => T, traceId?: string): Promise<SqliteResult<T>> {
     try {
       const transport = await this.getTransport();
-      const res = await transport.msgOffscreen(type, payload, traceId, transportOpts);
+      const res = await transport.msgOffscreen(type, payload, traceId);
       if (!res?.success) {
         const msg = res && 'error' in res ? String(res.error) : `${type} failed`;
         recordSqliteFailure(type, msg);
@@ -110,6 +110,9 @@ export class OffscreenGateway {
     // update row's encodePayload now (see its comment).
     const row = sqliteWireFor(op.type);
     if (!row || row.family !== 'mutate') throw new Error('Unhandled mutate op');
+    // Retry safety is owned by the neutral policy table. A lost response can
+    // follow a committed write, so this hop must not infer replay safety from
+    // the operation name or add a caller-side retry override.
     return this.callInternal<unknown>(
       row.messageType,
       row.encodePayload(op),
@@ -140,9 +143,8 @@ export class OffscreenGateway {
   async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
     // Archive ops (PBI 2026-09-07-22): routed through ARCHIVE_WIRE_TABLE.
     // The op object minus its discriminator is the wire payload; the table
-    // supplies the message type, the response decoder, and the noRetry flag
-    // (bulk/state-changing ops where a timeout does not mean failure, so a
-    // blind retry would double-execute).
+    // supplies the message type, response decoder, and retry policy. The
+    // transport applies that policy at the messaging boundary.
     if (isArchiveOpType(op.type)) {
       const entry = archiveWireFor(op.type);
       if (!entry) throw new Error(`Unhandled maintain op: ${op.type}`);
@@ -157,8 +159,6 @@ export class OffscreenGateway {
         entry.messageType,
         payload,
         decode,
-        undefined,
-        archiveNoRetry(op.type) ? { noRetry: true } : undefined,
       );
     }
     // Non-archive maintain ops (PBI 2026-09-23-13): routed through

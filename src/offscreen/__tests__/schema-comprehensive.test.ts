@@ -81,13 +81,13 @@ describe('AUDIT_LOG_SCHEMA_SQL', () => {
 // ── COLUMN_NAMES ───────────────────────────────────────────────────────
 
 describe('COLUMN_NAMES', () => {
-  it('has exactly 33 columns (matching schema — PBI 05 added fallback_reason)', () => {
-    expect(COLUMN_NAMES).toHaveLength(33);
+  it('has exactly 35 columns (matching schema — PBI 03 added the two trail columns)', () => {
+    expect(COLUMN_NAMES).toHaveLength(35);
   });
 
-  it('starts with url and ends with fallback_reason', () => {
+  it('starts with url and ends with search_query', () => {
     expect(COLUMN_NAMES[0]).toBe('url');
-    expect(COLUMN_NAMES[COLUMN_NAMES.length - 1]).toBe('fallback_reason');
+    expect(COLUMN_NAMES[COLUMN_NAMES.length - 1]).toBe('search_query');
   });
 
   it('places created_at at index 4', () => {

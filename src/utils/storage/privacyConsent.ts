@@ -5,6 +5,7 @@
  */
 
 import { StorageKeys } from './types.js';
+import { disableNavTrail } from './navTrailConsent.js';
 import { errorMessage } from '../errorUtils.js';
 import { ErrorCode } from '../logger/types.js';
 import { logInfo, logWarn, logError } from '../logger/api.js';
@@ -13,7 +14,10 @@ import { pickDefined } from '../objectUtils.js';
 import { sendFromPopup } from '../../messaging/types.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
-export const PRIVACY_POLICY_VERSION = '2026-07-31';
+// Bump only when consent scope changes for every user; opt-in features carry
+// their own consent instead (see navTrailConsent.ts and the PBI 2026-09-25-24
+// ruling, which keeps PRIVACY_POLICY_VERSION at the date users actually agreed to).
+export const PRIVACY_POLICY_VERSION = '2026-09-08';
 
 /** プライバシーポリシー同意状態 */
 export interface PrivacyConsentState {
@@ -250,6 +254,17 @@ export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal
         };
 
         await signAndStoreConsent(withdrawnState);
+
+        // PBI 03: withdrawing global consent must also switch off the
+        // opt-in navigation trail, or the record would keep capturing a
+        // referrer the user has just said no to. Best-effort: the withdrawal
+        // itself already succeeded, so a failure here is reported, not thrown.
+        try {
+            await disableNavTrail();
+        } catch (error) {
+            await logWarn('Failed to disable navigation trail after consent withdrawal', { error: errorMessage(error) }, undefined, 'privacyConsent.ts');
+        }
+
         await logInfo('Privacy consent withdrawn', { withdrawalDate: withdrawal.withdrawalDate }, 'privacyConsent.ts');
         return withdrawal;
     } catch (error) {

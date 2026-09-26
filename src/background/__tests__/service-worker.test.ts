@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 const mockSettingsGetAll = vi.hoisted(() => vi.fn().mockResolvedValue({}));
 
@@ -704,10 +705,11 @@ describe('service-worker handlers', () => {
             handler(null as any, {} as any, sendResponse);
 
             // Wait for async process to complete
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false, error: 'Invalid message' })
+            ),
+                { interval: 1 }
             );
         });
 
@@ -717,10 +719,11 @@ describe('service-worker handlers', () => {
 
             handler({} as any, {} as any, sendResponse);
 
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false, error: 'Invalid message' })
+            ),
+                { interval: 1 }
             );
         });
 
@@ -730,10 +733,11 @@ describe('service-worker handlers', () => {
 
             handler({ type: 'INVALID_TYPE' } as any, {} as any, sendResponse);
 
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: false, error: 'Invalid message' })
+            ),
+                { interval: 1 }
             );
         });
 
@@ -746,9 +750,8 @@ describe('service-worker handlers', () => {
             };
 
             handler(message as any, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(logWarn).toHaveBeenCalledWith(
+            await vi.waitFor(
+                () => expect(logWarn).toHaveBeenCalledWith(
                 'Protocol version mismatch - message rejected',
                 expect.objectContaining({
                     expected: CURRENT_PROTOCOL_VERSION,
@@ -757,6 +760,8 @@ describe('service-worker handlers', () => {
                 }),
                 ErrorCode.INTERNAL_ERROR,
                 'service-worker'
+            ),
+                { interval: 1 }
             );
             expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Protocol version mismatch' });
         });
@@ -771,10 +776,10 @@ describe('service-worker handlers', () => {
             const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
 
             handler(message, sender, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // Badge update is async, just verify sendResponse is called
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle CHECK_DOMAIN message', async () => {
@@ -784,9 +789,10 @@ describe('service-worker handlers', () => {
             const sender = { url: 'https://example.com', tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
 
             handler(message, sender, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, allowed: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, allowed: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle GET_PRIVACY_CACHE with cache', async () => {
@@ -798,9 +804,10 @@ describe('service-worker handlers', () => {
             RecordingCache.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: false }]]);
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: expect.any(Array) }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: expect.any(Array) })),
+                { interval: 1 }
+            );
         });
 
         it('should handle GET_PRIVACY_CACHE without cache', async () => {
@@ -812,9 +819,10 @@ describe('service-worker handlers', () => {
             RecordingCache.cacheState.privacyCache = null;
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: [] }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: [] })),
+                { interval: 1 }
+            );
         });
 
         it('should handle ACTIVITY_UPDATE', async () => {
@@ -823,9 +831,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'ACTIVITY_UPDATE' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle SESSION_LOCK_REQUEST', async () => {
@@ -834,9 +843,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'SESSION_LOCK_REQUEST' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle PING', async () => {
@@ -845,9 +855,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'PING' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle unknown message type', async () => {
@@ -857,9 +868,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'PING' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle error in process', async () => {
@@ -869,9 +881,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'PING', payload: null };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
 
         it('should handle TEST_OBSIDIAN message', async () => {
@@ -880,9 +893,10 @@ describe('service-worker handlers', () => {
             const message: TestObsidianMessage = { type: 'TEST_OBSIDIAN', payload: {} };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle TEST_AI message', async () => {
@@ -891,9 +905,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'TEST_AI', payload: {} };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
 
         it('should handle TEST_OBSIDIAN message', async () => {
@@ -902,9 +917,10 @@ describe('service-worker handlers', () => {
             const message: TestObsidianMessage = { type: 'TEST_OBSIDIAN', payload: {} };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, obsidian: { success: true } }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, obsidian: { success: true } })),
+                { interval: 1 }
+            );
         });
 
         it('should handle TEST_AI message', async () => {
@@ -913,9 +929,10 @@ describe('service-worker handlers', () => {
             const message: TestAiMessage = { type: 'TEST_AI' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
 
         it('should handle GET_PRIVACY_CACHE message with cache', async () => {
@@ -925,9 +942,10 @@ describe('service-worker handlers', () => {
             RecordingCache.cacheState.privacyCache = new Map([['https://example.com', { isPrivate: true }]]);
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: [['https://example.com', { isPrivate: true }]] }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: [['https://example.com', { isPrivate: true }]] })),
+                { interval: 1 }
+            );
         });
 
         it('should handle GET_PRIVACY_CACHE message without cache', async () => {
@@ -937,9 +955,10 @@ describe('service-worker handlers', () => {
             RecordingCache.cacheState.privacyCache = null;
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: [] }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, cache: [] })),
+                { interval: 1 }
+            );
         });
 
         it('should handle ACTIVITY_UPDATE message', async () => {
@@ -948,9 +967,10 @@ describe('service-worker handlers', () => {
             const message: ActivityUpdateMessage = { type: 'ACTIVITY_UPDATE' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sessionAlarmsManager.updateActivity).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sessionAlarmsManager.updateActivity).toHaveBeenCalled(),
+                { interval: 1 }
+            );
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
@@ -960,9 +980,10 @@ describe('service-worker handlers', () => {
             const message: SessionLockRequestMessage = { type: 'SESSION_LOCK_REQUEST' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(storageEncryption.lockSession).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(storageEncryption.lockSession).toHaveBeenCalled(),
+                { interval: 1 }
+            );
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
@@ -992,9 +1013,10 @@ describe('service-worker handlers', () => {
             const message: PingMessage = { type: 'PING' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle errors in process()', async () => {
@@ -1007,9 +1029,10 @@ describe('service-worker handlers', () => {
             fetchUtils.fetchWithTimeout.mockRejectedValue(new Error('Forced error'));
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false })),
+                { interval: 1 }
+            );
         });
 
         it('should handle CONTENT_CLEANSING_EXECUTED without sender.tab by skipping badge', async () => {
@@ -1021,11 +1044,10 @@ describe('service-worker handlers', () => {
             };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // Without sender.tab, the handler skips badge update and falls through
-            // The response may be null or success depending on fall-through behavior
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
 
         it('should reject CHECK_DOMAIN without sender.tab', async () => {
@@ -1034,9 +1056,10 @@ describe('service-worker handlers', () => {
             const message: CheckDomainMessage = { type: 'CHECK_DOMAIN' };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' })),
+                { interval: 1 }
+            );
         });
 
         it('should call sendResponse with INVALID_SENDER_ERROR for VALID_VISIT without sender.tab', async () => {
@@ -1045,9 +1068,10 @@ describe('service-worker handlers', () => {
             const message: ValidVisitMessage = { type: 'VALID_VISIT', payload: { content: 'test' } };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' })),
+                { interval: 1 }
+            );
         });
 
         it('should call sendResponse with INVALID_SENDER_ERROR for VALID_VISIT with sender.tab but missing sender.url', async () => {
@@ -1057,9 +1081,10 @@ describe('service-worker handlers', () => {
             const sender = { tab: { id: 1, url: 'https://example.com' } } as chrome.runtime.MessageSender;
 
             handler(message, sender, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' })),
+                { interval: 1 }
+            );
         });
 
         it('should call sendResponse with INVALID_SENDER_ERROR for VALID_VISIT with non-http sender.url scheme', async () => {
@@ -1072,9 +1097,10 @@ describe('service-worker handlers', () => {
             } as chrome.runtime.MessageSender;
 
             handler(message, sender, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid sender' })),
+                { interval: 1 }
+            );
         });
 
         it('should accept VALID_VISIT with a valid http sender.url', async () => {
@@ -1087,9 +1113,10 @@ describe('service-worker handlers', () => {
             } as chrome.runtime.MessageSender;
 
             handler(message, sender, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle TEST_CONNECTIONS message', async () => {
@@ -1098,10 +1125,11 @@ describe('service-worker handlers', () => {
             const message = { type: 'TEST_CONNECTIONS', payload: {} };
 
             handler(message, {} as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            expect(sendResponse).toHaveBeenCalledWith(
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(
                 expect.objectContaining({ success: true, obsidian: expect.any(Object), ai: expect.any(Object) })
+            ),
+                { interval: 1 }
             );
         });
 
@@ -1114,10 +1142,10 @@ describe('service-worker handlers', () => {
             const message = { type: 'SAVE_RECORD' } as any;
 
             handler(message, { tab: { id: 1, url: 'https://example.com' } } as any, sendResponse);
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // SAVE_RECORD is handled, so this shouldn't send null
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
     });
 
@@ -1714,9 +1742,10 @@ describe('service-worker handlers', () => {
             // Dispatch is fire-and-forget (`void (async () => {...})()`), so flush
             // the event loop before asserting the dynamically-imported handler
             // was invoked.
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            expect(targetMock).toHaveBeenCalledTimes(1);
+            await vi.waitFor(
+                () => expect(targetMock).toHaveBeenCalledTimes(1),
+                { interval: 1 }
+            );
         });
 
         it('does not trigger local-markdown handlers for the daily-purge alarm', async () => {
@@ -1729,8 +1758,7 @@ describe('service-worker handlers', () => {
 
             onAlarmListener({ name: 'yasumaro-daily-purge' } as chrome.alarms.Alarm);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-
+            await drainMacrotask();
             expect(flushBufferedExports).not.toHaveBeenCalled();
             expect(flushYesterdaysExport).not.toHaveBeenCalled();
         });
@@ -1743,9 +1771,10 @@ describe('service-worker handlers', () => {
 
             onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            expect(flushPendingRecords).toHaveBeenCalledTimes(1);
+            await vi.waitFor(
+                () => expect(flushPendingRecords).toHaveBeenCalledTimes(1),
+                { interval: 1 }
+            );
         });
 
         it('flushes queued chrome-storage metadata writes on the offline-network-retry alarm', async () => {
@@ -1766,14 +1795,13 @@ describe('service-worker handlers', () => {
 
             onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-
-            // The alarm's allSettled runs flushPendingWrites(retryPendingChromeStorageWrite),
-            // which replays the queued patch through the store (PBI-13 loop).
-            expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
+            await vi.waitFor(
+                () => expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
                 'https://queued.com',
                 { recordType: 'auto' },
                 { refreshTimestamp: true, mergeTags: true },
+            ),
+                { interval: 1 }
             );
 
             // Leave no seeded queue behind for other tests.
@@ -2207,8 +2235,10 @@ describe('service-worker handlers', () => {
                 })
             );
 
-            await new Promise(resolve => setTimeout(resolve, 50));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle tab content fetch error gracefully', async () => {
@@ -2225,8 +2255,10 @@ describe('service-worker handlers', () => {
 
             expect(logWarn).toHaveBeenCalled();
 
-            await new Promise(resolve => setTimeout(resolve, 50));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
     });
@@ -2720,8 +2752,10 @@ describe('service-worker handlers', () => {
             expect(result).toBe(true);
             
             // Wait for async
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, allowed: expect.any(Boolean) }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, allowed: expect.any(Boolean) })),
+                { interval: 1 }
+            );
         });
 
         it('should handle TEST_CONNECTIONS', async () => {
@@ -2732,9 +2766,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'TEST_CONNECTIONS' }, {}, sendResponse);
             expect(result).toBe(true);
             
-            await new Promise(resolve => setTimeout(resolve, 10));
-            // Response includes obsidian and ai test results
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
 
         it('should handle PING', async () => {
@@ -2745,8 +2780,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'PING' }, {}, sendResponse);
             expect(result).toBe(true);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle GENERATE_REVIEW_SUMMARY (weekly)', async () => {
@@ -2763,8 +2800,10 @@ describe('service-worker handlers', () => {
             );
             expect(result).toBe(true);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(mockReviewGenerator.generateWeeklySummary).toHaveBeenCalledTimes(1);
+            await vi.waitFor(
+                () => expect(mockReviewGenerator.generateWeeklySummary).toHaveBeenCalledTimes(1),
+                { interval: 1 }
+            );
             expect(mockReviewGenerator.generateMonthlySummary).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, generated: true }));
         });
@@ -2783,8 +2822,10 @@ describe('service-worker handlers', () => {
             );
             expect(result).toBe(true);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(mockReviewGenerator.generateMonthlySummary).toHaveBeenCalledTimes(1);
+            await vi.waitFor(
+                () => expect(mockReviewGenerator.generateMonthlySummary).toHaveBeenCalledTimes(1),
+                { interval: 1 }
+            );
             expect(mockReviewGenerator.generateWeeklySummary).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true, generated: false }));
         });
@@ -2799,8 +2840,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' }, {}, sendResponse);
             expect(result).toBe(true);
 
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(initExportScheduler).toHaveBeenCalledTimes(1);
+            await vi.waitFor(
+                () => expect(initExportScheduler).toHaveBeenCalledTimes(1),
+                { interval: 1 }
+            );
             expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
         });
 
@@ -2812,8 +2855,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'ACTIVITY_UPDATE' }, {}, sendResponse);
             expect(result).toBe(true);
             
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should handle SESSION_LOCK_REQUEST', async () => {
@@ -2824,8 +2869,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'SESSION_LOCK_REQUEST' }, {}, sendResponse);
             expect(result).toBe(true);
             
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })),
+                { interval: 1 }
+            );
         });
 
         it('should reject unknown message type with INVALID_MESSAGE_ERROR', async () => {
@@ -2836,8 +2883,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'UNKNOWN_TYPE' }, {}, sendResponse);
             expect(result).toBe(true);
             
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid message' }));
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false, error: 'Invalid message' })),
+                { interval: 1 }
+            );
         });
 
         it('should handle error in process', async () => {
@@ -2849,8 +2898,10 @@ describe('service-worker handlers', () => {
             const result = handler({ type: 'PING', payload: null }, {}, sendResponse);
             expect(result).toBe(true);
             
-            await new Promise(resolve => setTimeout(resolve, 10));
-            expect(sendResponse).toHaveBeenCalled();
+            await vi.waitFor(
+                () => expect(sendResponse).toHaveBeenCalled(),
+                { interval: 1 }
+            );
         });
     });
 });

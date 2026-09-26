@@ -117,8 +117,10 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
       });
     });
     await page.reload();
-    await page.waitForTimeout(500); // Wait for UI to render
 
+    // No settle delay: `toBeVisible()` retries until the storage read and
+    // render complete, so a fixed wait here would only hide a slow render
+    // behind a lucky constant.
     const dialog = page.locator('#private-page-dialog');
     await expect(dialog).toBeVisible();
     await page.locator('#dialog-cancel').click();
@@ -140,7 +142,6 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
       });
     });
     await page.reload();
-    await page.waitForTimeout(500);
 
     const dialog = page.locator('#private-page-dialog');
     await expect(dialog).toBeVisible();
@@ -163,7 +164,6 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
       });
     });
     await page.reload();
-    await page.waitForTimeout(500);
 
     const dialog = page.locator('#private-page-dialog');
     await expect(dialog).toBeVisible();
@@ -186,7 +186,6 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
       });
     });
     await page.reload();
-    await page.waitForTimeout(500);
 
     const dialog = page.locator('#private-page-dialog');
     await expect(dialog).toBeVisible();
@@ -219,8 +218,9 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
       });
     });
     await page.reload();
-    await page.waitForTimeout(500);
 
+    // Both assertions below retry on their own, so the pending section is
+    // observed as soon as the storage read resolves.
     await expect(page.locator('#pending-section')).not.toHaveClass(/hidden/);
     await expect(page.locator('.pending-item').first()).toBeVisible();
   });
@@ -278,7 +278,7 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
 });
 
 test.describe('Extension - Content Script @interaction @extension', () => {
-  test('should inject content script on page load', async ({ popupPage: page, context }) => {
+  test('should inject content script on page load', async ({ popupPage: page }) => {
     await page.goto('https://example.com');
     await expect(page.locator('[data-smart-history-marker]')).toHaveCount(0);
   });

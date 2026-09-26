@@ -8,7 +8,7 @@
  * forced the panel layer to import from it (PBI 2026-08-09-24).
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import {
   loadExportConfig,
@@ -49,7 +49,7 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
   try {
     const config = await loadExportConfig();
 
-    statusEl.textContent = getMessage('searching') || 'Searching...';
+    statusEl.textContent = getMessageOr('searching', 'Searching...');
 
     let result: ExportResult;
     if (!options.dateRange) {

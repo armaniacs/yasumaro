@@ -39,6 +39,7 @@ src/utils/urlHash.ts — ログ用 URL ハッシュ化（ piiSanitizer.ts と同
 src/utils/backoff.ts — 指数バックオフ遅延計算の SSOT（PBI 2026-09-17-09）
 src/utils/httpFailureMessages.ts — HTTP status→ユーザー文言テーブルの SSOT（PBI 2026-09-17-09）
 src/utils/summaryFallback.ts — AI要約空欄フォールバック文言の SSOT（PBI 2026-09-24-09）
+src/utils/failureTaxonomy.ts — 構造化 failure kind（7種）と kind 単位 retry 資格、正規化関数の SSOT（PBI 2026-09-25-11）
 ```
 
 `logger/` の一部は `piiSanitizer` に依存するが、これは Layer 0 内の相互依存として許容する。

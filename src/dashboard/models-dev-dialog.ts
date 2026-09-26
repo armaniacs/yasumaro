@@ -13,7 +13,7 @@ import {
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys, type Settings } from '../utils/storage/types.js';
 import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
@@ -289,7 +289,7 @@ export class ModelsDevDialog {
         } catch (error) {
             console.error('Failed to load providers:', error);
             this.loadingEl.classList.add('hidden');
-            this.showError(getMessage('modelsDevLoadProvidersError') || 'Failed to load providers. Please try again.');
+            this.showError(getMessageOr('modelsDevLoadProvidersError', 'Failed to load providers. Please try again.'));
         }
     }
 
@@ -427,7 +427,7 @@ export class ModelsDevDialog {
             link.rel = 'noopener noreferrer';
             link.className = 'api-key-create-link';
             link.dataset.i18n = 'apiKeyCreateLink';
-            link.textContent = getMessage('apiKeyCreateLink') || 'API Key →';
+            link.textContent = getMessageOr('apiKeyCreateLink', 'API Key →');
             apiKeyInput?.insertAdjacentElement('afterend', link);
             applyI18n(link);
         }
@@ -438,7 +438,7 @@ export class ModelsDevDialog {
      */
     private async save(): Promise<void> {
         if (!this.selectedProvider) {
-            this.showError(getMessage('modelsDevSelectProviderError') || 'Please select a provider');
+            this.showError(getMessageOr('modelsDevSelectProviderError', 'Please select a provider'));
             return;
         }
 
@@ -450,14 +450,14 @@ export class ModelsDevDialog {
 
         // Validation
         if (!apiKey) {
-            this.showError(getMessage('modelsDevApiKeyRequiredError') || 'Please enter your API key');
+            this.showError(getMessageOr('modelsDevApiKeyRequiredError', 'Please enter your API key'));
             return;
         }
 
         // The provider base URL is written to settings and later used to build
         // request URLs — reject anything that is not an absolute https: URL.
         if (!isHttpsUrl(this.selectedProvider.api)) {
-            this.showError(getMessage('modelsDevInvalidEndpointError') || 'Selected provider has an invalid API endpoint');
+            this.showError(getMessageOr('modelsDevInvalidEndpointError', 'Selected provider has an invalid API endpoint'));
             return;
         }
 
@@ -476,7 +476,7 @@ export class ModelsDevDialog {
             };
             const originConfirmation = await confirmNewProviderBaseUrls(delta);
             if (originConfirmation === 'cancelled') {
-                this.showError(getMessage('providerOriginSaveBlocked') || 'Endpoint not allowed — settings were not saved');
+                this.showError(getMessageOr('providerOriginSaveBlocked', 'Endpoint not allowed — settings were not saved'));
                 return;
             }
             await settingsRepository.setAll(delta);
@@ -492,7 +492,7 @@ export class ModelsDevDialog {
             this.hide();
         } catch (error) {
             console.error('Failed to save settings:', error);
-            this.showError(getMessage('modelsDevSaveSettingsError') || 'Failed to save settings');
+            this.showError(getMessageOr('modelsDevSaveSettingsError', 'Failed to save settings'));
         }
     }
 

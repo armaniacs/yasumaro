@@ -6,7 +6,7 @@ import { getCurrentTab } from '../tabUtils.js';
 import { isRecordableTab } from '../../utils/recordingGateTable.js';
 import { formatSuccessMessage } from '../errorUtils.js';
 import { clearElement } from '../domUtils.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
@@ -25,7 +25,8 @@ import { PreviewFlow, type PreviewSaveResult, type SaveRecordResult } from './pr
  */
 export type RecordSessionState = 'idle' | 'running' | 'awaiting-force' | 'showing-result';
 
-const RESULT_STATE_MS = 2000;
+/** How long the result state stays on the button before it resets. */
+export const RESULT_STATE_MS = 2000;
 
 /**
  * Settlement outcome. private-page / cancelled are fully settled inside
@@ -118,10 +119,10 @@ export class RecordSession {
     // can be called repeatedly as domain-filter status changes, and property assignment
     // replaces the previous handler atomically instead of stacking listeners.
     if (status && !status.domainFilter.allowed) {
-      recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
+      recordBtn.textContent = getMessageOr('forceRecordAnyway', 'Record Anyway');
       recordBtn.onclick = () => this.handleRecordNowClick(true);
     } else {
-      recordBtn.textContent = getMessage('recordNow') || '📝 Record Now';
+      recordBtn.textContent = getMessageOr('recordNow', '📝 Record Now');
       recordBtn.onclick = () => this.handleRecordNowClick(false);
     }
   }
@@ -133,7 +134,7 @@ export class RecordSession {
   ): void {
     this.sessionState = 'awaiting-force';
     recordBtn.disabled = false;
-    recordBtn.textContent = getMessage('forceRecordAnyway') || 'Record Anyway';
+    recordBtn.textContent = getMessageOr('forceRecordAnyway', 'Record Anyway');
     // .onclick property assignment intentional here too — see resetRecordButton() above.
     recordBtn.onclick = () => {
       void this.start(true, tab, content);
@@ -215,8 +216,7 @@ export class RecordSession {
   private showButtonResultState(recordBtn: HTMLButtonElement, state: 'done' | 'error'): void {
     this.sessionState = 'showing-result';
     recordBtn.disabled = true;
-    recordBtn.textContent = getMessage(state === 'done' ? 'recordNowDone' : 'recordNowError')
-      || (state === 'done' ? 'Saved!' : 'Failed');
+    recordBtn.textContent = getMessageOr(state === 'done' ? 'recordNowDone' : 'recordNowError', (state === 'done' ? 'Saved!' : 'Failed'));
     if (this.resultTimer) clearTimeout(this.resultTimer);
     this.resultTimer = setTimeout(() => {
       this.resultTimer = null;
@@ -305,9 +305,9 @@ export class RecordSession {
       const button = createCopyMarkdownButton(entry, {
         className: 'copy-markdown-btn secondary-btn',
         labels: {
-          initialText: getMessage('copyMarkdown') || 'Copy Markdown',
-          successText: getMessage('copyMarkdownSuccess') || 'Copied!',
-          failureText: getMessage('copyMarkdownError') || 'Copy failed',
+          initialText: getMessageOr('copyMarkdown', 'Copy Markdown'),
+          successText: getMessageOr('copyMarkdownSuccess', 'Copied!'),
+          failureText: getMessageOr('copyMarkdownError', 'Copy failed'),
         },
       });
 
@@ -381,7 +381,7 @@ export class RecordSession {
 
     if (recordBtn) {
       recordBtn.disabled = true;
-      recordBtn.textContent = getMessage('recordNowProgress') || 'Recording...';
+      recordBtn.textContent = getMessageOr('recordNowProgress', 'Recording...');
     }
 
     statusDiv.textContent = '';

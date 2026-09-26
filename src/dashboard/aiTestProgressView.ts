@@ -6,7 +6,7 @@
  * DOM構築とレンダリングを純関数として切り出した。
  */
 
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { type AiTestProgress } from '../background/ai/AIService.js';
 import { providerLabel } from './aiTestResultView.js';
 
@@ -45,19 +45,19 @@ export function buildAiTestProgressView(container: HTMLElement): AiTestProgressV
 export function renderAiTestProgressLabel(view: AiTestProgressView, progress: AiTestProgress | undefined): void {
   if (progress) {
     const providerDisplay = progress.model ? `${providerLabel(progress.provider)} (${progress.model})` : providerLabel(progress.provider);
-    view.label.textContent = getMessage('aiTestingProvider', {
+    view.label.textContent = getMessageWithSubstitutions('aiTestingProvider', {
       provider: providerDisplay,
       current: String(progress.index + 1),
       total: String(progress.total),
-    }) || `テスト中... (${progress.index + 1}/${progress.total})`;
+    }, `テスト中... (${progress.index + 1}/${progress.total})`);
   } else {
-    view.label.textContent = getMessage('testingConnection') || '接続テスト中...';
+    view.label.textContent = getMessageOr('testingConnection', '接続テスト中...');
   }
 }
 
 export function renderAiTestProgressElapsed(view: AiTestProgressView, startTime: number, syncEl?: HTMLElement | null): void {
   const elapsedSeconds = ((performance.now() - startTime) / 1000).toFixed(1);
-  const text = getMessage('aiTestElapsedTime', { seconds: elapsedSeconds }) || `経過時間: ${elapsedSeconds}秒`;
+  const text = getMessageWithSubstitutions('aiTestElapsedTime', { seconds: elapsedSeconds }, `経過時間: ${elapsedSeconds}秒`);
   view.elapsedEl.textContent = text;
   if (syncEl) {
     const topElapsedEl = syncEl.querySelector('.ai-test-elapsed');

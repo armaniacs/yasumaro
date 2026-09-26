@@ -37,6 +37,7 @@ import type {
   ArchiveSessionStatusData,
 } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
+import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportRetryPolicy.js';
 
 /** Dashboard subtypes owned by the archive group. */
 export type DashboardArchiveSubtype = Extract<DashboardSqliteSubtype, `archive_${string}`>;
@@ -57,10 +58,9 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
   subtype: DashboardArchiveSubtype;
   /** background -> offscreen message type. */
   messageType: SqliteMessageType;
+  retryPolicy: TransportRetryPolicy;
   /** offscreen -> OPFS worker type. */
   workerType: string;
-  /** Bulk or state-changing ops where a blind retry would double-execute. */
-  noRetry: boolean;
   /** StorageBackend method the offscreen dispatch calls. */
   backendMethod: string;
   /** ArchiveDeps method the background handler calls. */
@@ -87,9 +87,10 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
   projectDeps?: (data: unknown) => Record<string, unknown>;
 }
 
-/** Single constructor for table rows; preserves literal types per row. */
-export function defineArchiveOp<const R extends ArchiveOpDescriptor<string, unknown>>(row: R): R {
-  return row;
+type ArchiveOpRow = Omit<ArchiveOpDescriptor<string, unknown>, 'retryPolicy'>;
+
+export function defineArchiveOp<const R extends ArchiveOpRow>(row: R): R & { retryPolicy: TransportRetryPolicy } {
+  return { ...row, retryPolicy: getTransportRetryPolicy(row.messageType) };
 }
 
 export const ARCHIVE_WIRE_TABLE = [
@@ -98,7 +99,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_preview',
     messageType: 'SQLITE_ARCHIVE_PREVIEW',
     workerType: 'ARCHIVE_PREVIEW',
-    noRetry: false,
     backendMethod: 'archivePreview',
     depsMethod: 'archivePreview',
     projectFields: ['preview'],
@@ -132,7 +132,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_create',
     messageType: 'SQLITE_ARCHIVE_CREATE',
     workerType: 'ARCHIVE_CREATE',
-    noRetry: true,
     backendMethod: 'archiveCreate',
     depsMethod: 'archiveCreate',
     projectFields: ['stagingName', 'recordCount'],
@@ -175,7 +174,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_cleanup',
     messageType: 'SQLITE_ARCHIVE_CLEANUP',
     workerType: 'ARCHIVE_CLEANUP',
-    noRetry: false,
     backendMethod: 'archiveCleanup',
     depsMethod: 'archiveCleanup',
     projectFields: ['removed'],
@@ -193,7 +191,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_export',
     messageType: 'SQLITE_ARCHIVE_EXPORT',
     workerType: 'ARCHIVE_EXPORT',
-    noRetry: false,
     backendMethod: 'archiveExportChunk',
     depsMethod: 'archiveExportChunk',
     projectFields: ['chunk', 'nextOffset', 'total', 'done'],
@@ -231,7 +228,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_prepare_incoming',
     messageType: 'SQLITE_ARCHIVE_PREPARE_INCOMING',
     workerType: 'ARCHIVE_PREPARE_INCOMING',
-    noRetry: false,
     backendMethod: 'archivePrepareIncoming',
     depsMethod: 'archivePrepareIncoming',
     projectFields: ['stagingName'],
@@ -254,7 +250,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_restore_preview',
     messageType: 'SQLITE_ARCHIVE_RESTORE_PREVIEW',
     workerType: 'ARCHIVE_RESTORE_PREVIEW',
-    noRetry: false,
     backendMethod: 'archiveRestorePreview',
     depsMethod: 'archiveRestorePreview',
     projectFields: ['preview'],
@@ -279,7 +274,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_restore',
     messageType: 'SQLITE_ARCHIVE_RESTORE',
     workerType: 'ARCHIVE_RESTORE',
-    noRetry: true,
     backendMethod: 'archiveRestore',
     depsMethod: 'archiveRestore',
     projectFields: ['restored', 'restoredDeleted', 'skipped', 'skippedInvalid'],
@@ -308,7 +302,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_delete_by_staging',
     messageType: 'SQLITE_ARCHIVE_DELETE_BY_STAGING',
     workerType: 'ARCHIVE_DELETE_BY_STAGING',
-    noRetry: true,
     backendMethod: 'archiveDeleteByStaging',
     depsMethod: 'archiveDeleteByStaging',
     projectFields: ['deleted', 'remaining', 'freelistBefore', 'freelistAfter', 'vacuumOk'],
@@ -344,7 +337,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_open',
     messageType: 'SQLITE_ARCHIVE_OPEN',
     workerType: 'ARCHIVE_OPEN',
-    noRetry: true,
     backendMethod: 'archiveOpen',
     depsMethod: 'archiveOpen',
     projectFields: [],
@@ -365,7 +357,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_query',
     messageType: 'SQLITE_ARCHIVE_QUERY',
     workerType: 'ARCHIVE_QUERY',
-    noRetry: false,
     backendMethod: 'archiveQuery',
     depsMethod: 'archiveQuery',
     projectFields: ['rows', 'total'],
@@ -403,7 +394,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_update',
     messageType: 'SQLITE_ARCHIVE_UPDATE',
     workerType: 'ARCHIVE_UPDATE',
-    noRetry: false,
     backendMethod: 'archiveUpdate',
     depsMethod: 'archiveUpdate',
     projectFields: ['dirty'],
@@ -433,7 +423,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_save',
     messageType: 'SQLITE_ARCHIVE_SAVE',
     workerType: 'ARCHIVE_SAVE',
-    noRetry: true,
     backendMethod: 'archiveSave',
     depsMethod: 'archiveSave',
     projectFields: ['dirty'],
@@ -454,7 +443,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_close',
     messageType: 'SQLITE_ARCHIVE_CLOSE',
     workerType: 'ARCHIVE_CLOSE',
-    noRetry: true,
     backendMethod: 'archiveClose',
     depsMethod: 'archiveClose',
     projectFields: ['dirty'],
@@ -475,7 +463,6 @@ export const ARCHIVE_WIRE_TABLE = [
     subtype: 'archive_status',
     messageType: 'SQLITE_ARCHIVE_STATUS',
     workerType: 'ARCHIVE_STATUS',
-    noRetry: false,
     backendMethod: 'archiveStatus',
     depsMethod: 'archiveStatus',
     projectFields: ['status'],
@@ -563,16 +550,6 @@ export function archiveWireForMessage(messageType: string): ArchiveDescriptor | 
 export function isArchiveOpType(op: string): op is ArchiveOpType {
   return BY_OP.has(op);
 }
-
-/** Whether the op must never be blind-retried (timeout does not mean failure). */
-export function archiveNoRetry(op: ArchiveOpType): boolean {
-  return BY_OP.get(op)?.noRetry === true;
-}
-
-/** Ops that must never be blind-retried (timeout does not mean failure). */
-export const ARCHIVE_NO_RETRY_OPS: ReadonlySet<ArchiveOpType> = new Set(
-  ARCHIVE_WIRE_TABLE.filter((entry) => entry.noRetry === true).map((entry) => entry.op),
-);
 
 /**
  * Shared success-field projection for the background/offscreen hops.

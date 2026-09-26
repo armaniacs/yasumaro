@@ -21,7 +21,7 @@
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage, getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   presetToRange,
@@ -148,7 +148,7 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       // convention); "other" is an aggregate, so it stays plain text.
       const button = document.createElement('button');
       button.type = 'button';
-      button.className = 'visit-duration-tag-btn';
+      button.className = 'data-table-link-btn';
       button.textContent = `#${tag}`;
       button.addEventListener('click', () => navigateToHistoryWithTag(tag));
       item.appendChild(button);
@@ -174,7 +174,7 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     table.className = 'tag-timeline-numeric';
     const caption = document.createElement('caption');
     caption.textContent =
-      getMessage('dashboardTagTimelineTableCaption') || 'Record counts by bucket and tag';
+      getMessageOr('dashboardTagTimelineTableCaption', 'Record counts by bucket and tag');
     table.appendChild(caption);
 
     const thead = document.createElement('thead');

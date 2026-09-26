@@ -1,7 +1,8 @@
 // @layer 1 — Provider allowlist: neutral descriptor table + pure predicate
 /**
  * providerAllowlist.ts — the single source of truth for provider allowlist
- * data (which base-URL setting key belongs to which provider, local or not).
+ * data (which base-URL setting key belongs to which provider, local or not),
+ * and for the display name the UI shows for a provider.
  *
  * This module lives at the low tier on purpose: cspValidator and urlWhitelist
  * both need these rows, and importing them from background/ai/providerCatalog
@@ -9,6 +10,12 @@
  * flow in ProviderStrategy into lazy dynamic imports. background/ai keeps its
  * full catalog (construction + UI data) but spreads these rows so the data
  * cannot drift.
+ *
+ * UI code must not reach for background/ai/providerCatalog to name a provider:
+ * that module statically imports the provider strategies, so a display-only
+ * dependency would pull background wiring into the UI bundle. It reads the same
+ * rows through PROVIDER_DISPLAY_METADATA / tryResolveProviderDisplayMetadata
+ * below, which expose display metadata and nothing else.
  */
 
 import { StorageKeys, type StorageKey } from './types.js';
@@ -16,12 +23,19 @@ import { StorageKeys, type StorageKey } from './types.js';
 /** Always-granted (manifest host_permissions) vs opt-in (optional_host_permissions). */
 export type ProviderPermissionTier = 'required' | 'optional';
 
-/** Allow-relevant subset of a catalog row. No construction or UI data. */
+/** Neutral row: allow-relevant data plus the display name the UI projects. */
 export interface ProviderAllowlistRow {
   readonly id: string;
   readonly baseUrlKey?: StorageKey | undefined;
   readonly isLocal: boolean;
   readonly label: string;
+  /**
+   * i18n key localizing `label`. Declaring it is what makes a row displayable:
+   * PROVIDER_DISPLAY_METADATA is derived from the rows that carry one, and
+   * providerCatalog spreads the same field into its catalog entry, so the key
+   * has exactly one declaration site.
+   */
+  readonly labelI18nKey?: string | undefined;
   /** Bare hostname of a fixed-endpoint provider (absent for configurable/local rows). */
   readonly domain?: string | undefined;
   readonly permissionTier?: ProviderPermissionTier | undefined;
@@ -39,6 +53,8 @@ export interface ProviderAllowlistRow {
  * (required block in DEFAULT_ALLOWED_DOMAINS order, then the optional block
  * in OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS order) carry the hostname + tier
  * so the 4 hand-listed domain arrays derive from here instead of drifting.
+ * The 7 catalog rows additionally carry labelI18nKey, which is what marks them
+ * as displayable providers for PROVIDER_DISPLAY_METADATA.
  */
 export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
   // gemini has no baseUrlKey (fixed endpoint) — readers skip it, as before.
@@ -46,6 +62,7 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     id: 'gemini',
     isLocal: false,
     label: 'Google Gemini',
+    labelI18nKey: 'googleGemini',
     domain: 'generativelanguage.googleapis.com',
     permissionTier: 'required',
   },
@@ -54,6 +71,7 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     baseUrlKey: StorageKeys.OPENAI_BASE_URL,
     isLocal: false,
     label: 'OpenAI Compatible',
+    labelI18nKey: 'openaiCompatible',
     domain: 'api.openai.com',
     permissionTier: 'required',
   },
@@ -62,6 +80,7 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     baseUrlKey: StorageKeys.OPENAI_2_BASE_URL,
     isLocal: false,
     label: 'OpenAI Compatible 2',
+    labelI18nKey: 'openaiCompatible2',
     domain: 'api.openai.com',
     permissionTier: 'required',
   },
@@ -109,21 +128,24 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     baseUrlKey: StorageKeys.LM_STUDIO_BASE_URL,
     isLocal: true,
     label: 'LM Studio',
+    labelI18nKey: 'lmStudio',
   },
   {
     id: 'ollama',
     baseUrlKey: StorageKeys.OLLAMA_BASE_URL,
     isLocal: true,
     label: 'Ollama',
+    labelI18nKey: 'ollama',
   },
   {
     id: 'openai-compatible',
     baseUrlKey: StorageKeys.PROVIDER_BASE_URL,
     isLocal: false,
     label: 'OpenAI Compatible',
+    labelI18nKey: 'openaiCompatibleModelsDev',
   },
   // built-in-ai has no baseUrlKey (on-device) — readers skip it, as before.
-  { id: 'built-in-ai', isLocal: true, label: 'Built-in AI' },
+  { id: 'built-in-ai', isLocal: true, label: 'Built-in AI', labelI18nKey: 'builtInAi' },
   { id: 'huggingface', isLocal: false, label: 'Hugging Face', domain: 'api-inference.huggingface.co', permissionTier: 'optional', conditionalCsp: true },
   {
     id: 'openrouter',
@@ -199,6 +221,50 @@ export function deriveWhitelistedDomains(
       return [row.domain, ...(row.extraWhitelistDomains ?? [])];
     }),
   );
+}
+
+/**
+ * Display data a UI surface needs to name a provider: the neutral label plus
+ * the i18n key localizing it. Deliberately narrower than a catalog row — no
+ * strategy, no storage key, no endpoint — so a view can import it without
+ * dragging background wiring into its bundle.
+ */
+export interface ProviderDisplayMetadata {
+  readonly id: string;
+  readonly label: string;
+  readonly labelI18nKey: string;
+}
+
+/**
+ * Project the rows that are user-selectable providers (the ones declaring a
+ * labelI18nKey). Fixed-endpoint domain rows stay out: they exist for
+ * host_permissions / CSP, and admitting them would turn ids the UI never
+ * offers into "known" and swallow the unknown-id raw fallback.
+ */
+export function deriveProviderDisplayMetadata(
+  rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS,
+): ReadonlyMap<string, ProviderDisplayMetadata> {
+  return new Map(
+    rows.flatMap((row): Array<readonly [string, ProviderDisplayMetadata]> =>
+      row.labelI18nKey === undefined
+        ? []
+        : [[row.id, { id: row.id, label: row.label, labelI18nKey: row.labelI18nKey }]],
+    ),
+  );
+}
+
+/** Read-only display projection shared by popup, dashboard and the catalog. */
+export const PROVIDER_DISPLAY_METADATA: ReadonlyMap<string, ProviderDisplayMetadata> =
+  deriveProviderDisplayMetadata();
+
+/**
+ * Resolve a provider's display metadata, or undefined when the id is not a
+ * known provider. Map-backed, so a provider id naming an Object.prototype
+ * member ('constructor', 'toString', …) resolves to undefined and callers keep
+ * their raw-id fallback instead of rendering a function source.
+ */
+export function tryResolveProviderDisplayMetadata(providerId: string): ProviderDisplayMetadata | undefined {
+  return PROVIDER_DISPLAY_METADATA.get(providerId);
 }
 
 /**
@@ -339,9 +405,12 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
 /**
  * Why a provider baseUrl origin is (or is not) authorized to carry credentials.
  * Layered on top of isAllowedProviderBaseUrl's deny-only SSRF rules:
- * - 'local': loopback origin (localhost / 127.x / ::1) — the local-provider
- *   exception, checked before the deny layer so a loopback endpoint stays
- *   usable in any provider slot (consistent with ssrfGuard's port gate).
+ * - 'local': loopback origin (localhost / 127.x / ::1) in a local-provider
+ *   slot (lm-studio / ollama / built-in-ai) only. A loopback URL in a
+ *   non-local slot falls through to the confirmed check below, so plaintext
+ *   credentials to http://localhost can no longer self-authorize outside the
+ *   local rows — the dashboard confirmation dialog must explicitly confirm
+ *   the origin first.
  * - 'pinned': the row declares a fixed endpoint domain and the URL points at
  *   it (or a subdomain of it).
  * - 'provider-domain': the host is itself a known AI-provider endpoint from
@@ -357,7 +426,7 @@ export interface ProviderOriginAuthorization {
   readonly reason: ProviderOriginAuthorizationReason;
 }
 
-function isLoopbackOriginHostname(hostname: string): boolean {
+export function isLoopbackOriginHostname(hostname: string): boolean {
   const h = hostname.toLowerCase().replace(/^\[(.*)\]$/, '$1');
   return h === 'localhost' || h.endsWith('.localhost') || h === '::1' || /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(h);
 }
@@ -374,9 +443,10 @@ function knownProviderDomains(): Set<string> {
 
 /**
  * Origin-scoped authorization for a provider baseUrl. The loopback exception
- * runs before the deny-only SSRF predicate (loopback endpoints are explicitly
- * permitted in any provider slot); the SSRF layer still rejects private /
- * metadata / encoded-IP hosts for everything else.
+ * applies to local-provider slots (lm-studio / ollama / built-in-ai) only and
+ * runs after the deny-only SSRF predicate; loopback in a non-local slot must
+ * be user-confirmed. The SSRF layer still rejects private / metadata /
+ * encoded-IP hosts for everything else.
  */
 export function isProviderOriginAuthorized(
   url: string,
@@ -390,11 +460,12 @@ export function isProviderOriginAuthorized(
     return { authorized: false, reason: 'denied' };
   }
   const hostname = parsed.hostname.toLowerCase().replace(/\.+$/, '');
-  if (isLoopbackOriginHostname(hostname)) {
-    return { authorized: true, reason: 'local' };
-  }
+  const loopback = isLoopbackOriginHostname(hostname);
   if (!isAllowedProviderBaseUrl(url, row?.isLocal ?? false)) {
     return { authorized: false, reason: 'denied' };
+  }
+  if (loopback && (row?.isLocal ?? false)) {
+    return { authorized: true, reason: 'local' };
   }
   if (row?.domain) {
     const domain = row.domain.toLowerCase();

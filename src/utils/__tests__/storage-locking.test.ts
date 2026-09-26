@@ -209,7 +209,8 @@ describe('migrateToSingleSettingsObject', () => {
         const migrated = await migrateToSingleSettingsObject();
 
         expect(migrated).toBe(true);
-        expect(mockStorage['settings_migrated']).toBe(true);
+        // 完了は truthy フラグではなく versioned な段階として記録される
+        expect(mockStorage['settings_migrated']).toEqual({ schemaVersion: 2, stage: 'completed' });
         expect(mockStorage['settings']).toBeDefined();
         expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
         expect((mockStorage['settings'] as Record<string, unknown>)[StorageKeys.MIN_VISIT_DURATION]).toBeGreaterThan(0);
@@ -220,7 +221,7 @@ describe('migrateToSingleSettingsObject', () => {
     });
 
     it('skips migration when already migrated', async () => {
-        mockStorage['settings_migrated'] = true;
+        mockStorage['settings_migrated'] = { schemaVersion: 2, stage: 'completed' };
         mockStorage['settings'] = {
             [StorageKeys.OBSIDIAN_PORT]: '27123'
         };

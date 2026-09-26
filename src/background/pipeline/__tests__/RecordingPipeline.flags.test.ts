@@ -75,7 +75,6 @@ vi.mock('../../../utils/trustChecker.js', () => ({
   }),
 }));
 vi.mock('../../privacyPipeline.js');
-vi.mock('../../obsidianClient.js');
 vi.mock('../../../utils/logger/types.js', () => ({
   addLog: vi.fn(),
   logError: vi.fn(),
@@ -109,11 +108,11 @@ import * as storageSavedUrls from '../../../utils/storage/savedUrlRepository.js'
 import * as domainUtils from '../../../utils/domainUtils.js';
 import * as permissionManager from '../../../utils/permissionManager.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
-import { ObsidianClient } from '../../obsidianClient.js';
 import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js';
 import { NoOpOfflineNetworkQueue } from '../../offlineNetworkQueue.js';
+import type { RecordingData } from '../../../messaging/types.js';
+import type { RecordOptions } from '../RecordingOrchestrator.js';
 
-const MockedObsidianClient = ObsidianClient as MockedClass<typeof ObsidianClient>;
 const MockedPrivacyPipeline = PrivacyPipeline as MockedClass<typeof PrivacyPipeline>;
 
 function makeAiService() {
@@ -159,19 +158,19 @@ describe('RecordingPipeline — deep interface: flag combinations', () => {
     MockedPrivacyPipeline.mockImplementation(function (this: any) {
       this.process = mockProcess;
     } as any);
-    MockedObsidianClient.mockImplementation(function (this: any) {
-      this.appendToDailyNote = vi.fn().mockResolvedValue(undefined);
-    } as any);
   });
 
-  function makePipeline() {
+  function makePipeline(
+    obsidian = makeObsidian(),
+    urlStore?: { getSavedUrlsWithTimestamps: () => Promise<Map<string, number>> },
+  ) {
     return makeOrchestrator(
       makeGetPrivacyInfo(),
-      makeObsidian() as any,
+      obsidian as any,
       makeAiService() as any,
       null,
       new NoOpOfflineNetworkQueue(),
-      undefined,
+      urlStore,
       async () => mockSettings as any,
     );
   }
@@ -195,9 +194,22 @@ describe('RecordingPipeline — deep interface: flag combinations', () => {
 
   for (const c of cases) {
     it(`Scenario: flag combination — ${c.name} — single seam record() remains the test surface`, async () => {
-      const pipeline = makePipeline();
+      const obsidian = makeObsidian();
+      const getSavedUrlsWithTimestamps = vi.fn().mockResolvedValue(new Map<string, number>());
+      const pipeline = makePipeline(obsidian, { getSavedUrlsWithTimestamps });
+      const data: any = {
+        title: 'Flag Test',
+        url: `https://example.com/flag-${c.name.replace(/\s+/g, '-')}`,
+        content: 'Content for flag test. This is long enough to avoid fallback and ensure the pipeline proceeds through all steps.',
+        ...c.data,
+      };
+      const domainFilter = vi.mocked(domainUtils.isDomainAllowed);
+      domainFilter.mockResolvedValue(c.expectBlockedBypassed === true ? false : true);
 
-      // For preview cases, mock privacy to return preview result
+      if (c.expectDuplicateSkipped) {
+        getSavedUrlsWithTimestamps.mockResolvedValue(new Map([[data.url, Date.now()]]));
+      }
+
       if (c.expectPreviewEarlyReturn) {
         mockProcess.mockResolvedValue({
           summary: 'preview summary',
@@ -208,36 +220,89 @@ describe('RecordingPipeline — deep interface: flag combinations', () => {
         });
       }
 
-      const data: any = {
-        title: 'Flag Test',
-        url: `https://example.com/flag-${c.name.replace(/\s+/g, '-')}`,
-        content: 'Content for flag test. This is long enough to avoid fallback and ensure the pipeline proceeds through all steps.',
-        ...c.data,
-      };
-
-      // The pipeline should not throw; it returns a RecordingResult via the public seam
       const result = await pipeline.record(data);
 
-      // Interface assertion: result is observable through the seam, no PipelineStep knowledge needed
       expect(result).toBeDefined();
-      expect(typeof result.success).toBe('boolean');
+      expect(result.success).toBe(true);
       expect(result.title).toBe('Flag Test');
       expect(result.url).toBe(data.url);
 
-      // Preview early return: when previewOnly, write steps are skipped
       if (c.expectPreviewEarlyReturn) {
-        // Preview should return a result via the breakpoint without throwing
-        expect(result).toBeDefined();
-        expect(result.title).toBe('Flag Test');
-        // Success may be true or false depending on privacy mock, but it should not throw
-        expect(typeof result.success).toBe('boolean');
+        expect(result.preview).toBe(true);
+        expect(obsidian.appendToDailyNote).not.toHaveBeenCalled();
+      } else {
+        expect(obsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
       }
 
-      // Caller never needed to know about PipelineStep / ErrorStrategy / RecordingContext
-      // — the test only imported RecordingPipeline and called record()
+      if (c.expectBlockedBypassed) {
+        expect(domainFilter).toHaveBeenCalledWith(data.url);
+        expect(result.error).toBeUndefined();
+        expect(mockProcess).toHaveBeenCalledTimes(1);
+      }
+
+      if (c.expectDuplicateSkipped) {
+        expect(getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
+        expect(result.skipped).not.toBe(true);
+        expect(mockProcess).toHaveBeenCalledTimes(1);
+      }
     });
   }
 
+  it('keeps RecordOptions.previewOnly out of the public type', () => {
+    // @ts-expect-error - RecordOptions.previewOnly is intentionally removed.
+    const options: RecordOptions = { previewOnly: true };
+    expect(options).toEqual({ previewOnly: true });
+  });
+
+  it('uses RecordingData.previewOnly as the only preview decision source', async () => {
+    const obsidian = makeObsidian();
+    const getSavedUrlsWithTimestamps = vi.fn().mockResolvedValue(new Map<string, number>());
+    const pipeline = makePipeline(obsidian, { getSavedUrlsWithTimestamps });
+    mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
+
+    const legacyOptions = { previewOnly: true };
+    const result = await pipeline.record(
+      {
+        title: 'Normal record',
+        url: 'https://example.com/normal-record',
+        content: 'Content for the normal record path.',
+      },
+      // @ts-expect-error - The legacy runtime payload is intentionally outside RecordOptions.
+      legacyOptions,
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.preview).not.toBe(true);
+    expect(obsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
+    expect(mockProcess.mock.calls[0]?.[1]).not.toHaveProperty('previewOnly', true);
+    expect(getSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
+  });
+
+  const normalPreviewFlagCases = [
+    { name: 'omitted', data: {} },
+    { name: 'false', data: { previewOnly: false } },
+  ] as const;
+
+  for (const previewCase of normalPreviewFlagCases) {
+    it(`uses the normal recording path when previewOnly is ${previewCase.name}`, async () => {
+      const obsidian = makeObsidian();
+      const getSavedUrlsWithTimestamps = vi.fn().mockResolvedValue(new Map<string, number>());
+      const pipeline = makePipeline(obsidian, { getSavedUrlsWithTimestamps });
+      mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });
+      const data: RecordingData = {
+        title: 'Normal path',
+        url: `https://example.com/normal-${previewCase.name}`,
+        content: 'Content for the normal recording path. This is long enough to avoid fallback and ensure the pipeline proceeds through all steps.',
+        ...previewCase.data,
+      };
+
+      const result = await pipeline.record(data);
+
+      expect(result.success).toBe(true);
+      expect(result.preview).not.toBe(true);
+      expect(obsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
+    });
+  }
   it('Scenario: per-URL Mutex — concurrent record() for same URL is serialized', async () => {
     const pipeline = makePipeline();
     mockProcess.mockResolvedValue({ summary: 'AI summary', maskedCount: 0 });

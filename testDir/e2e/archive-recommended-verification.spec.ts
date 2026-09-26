@@ -13,6 +13,7 @@
  * page (same origin, mirrors archivePanel.ts) → archive_open → query/update.
  */
 import { test, expect } from './fixtures/extension.fixture.js';
+import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
 import {
   createDashboardSqliteClient,
   isoDateOffset,
@@ -290,22 +291,16 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
   test('G5: archive create runs while a recording is in flight — both succeed', async ({ context, extensionId }) => {
     // Seed privacy consent + settings so the service worker processes the
     // VALID_VISIT (same pre-seed as recording-traceId.spec.ts).
-    const sw = context.serviceWorkers()[0];
-    await sw.evaluate(async () => {
-      await chrome.storage.local.set({
-        privacy_consent: { hasConsented: true, consentVersion: '2026-07-31', consentDate: Date.now() },
-        privacy_consent_version: '2026-07-31',
-        settings_migrated: true,
-        settings: {
-          obsidian_protocol: 'http',
-          obsidian_host: '127.0.0.1',
-          obsidian_port: 27123,
-          obsidian_daily_path: '',
-          ai_provider: 'gemini',
-          min_visit_duration: 5,
-          min_scroll_depth: 50,
-        },
-      });
+    await seedPrivacyConsent(context, {
+      settings: {
+        obsidian_protocol: 'http',
+        obsidian_host: '127.0.0.1',
+        obsidian_port: 27123,
+        obsidian_daily_path: '',
+        ai_provider: 'gemini',
+        min_visit_duration: 5,
+        min_scroll_depth: 50,
+      },
     });
 
     const page = await openOptionsPage(context, extensionId);

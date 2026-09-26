@@ -9,6 +9,13 @@ import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js';
 import {
+    isRetryableNetworkError,
+    isRetryableStatus,
+    waitForRetry,
+    type SleepFn
+} from '../utils/retryPredicate.js';
+import { backoffDelayMs } from '../utils/backoff.js';
+import {
     validateObsidianProtocol,
     validateObsidianHost,
     isIpv6Address,
@@ -19,12 +26,21 @@ import {
 } from '../utils/obsidianConfigValidator.js';
 import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
 import { describeHttpFailure } from '../utils/httpFailureMessages.js';
+import { failureFromHttpStatus, tagFailure } from '../utils/failureTaxonomy.js';
 import { readBodyCapped } from '../utils/readBodyCapped.js';
+import { truncateForLog } from '../utils/logTruncate.js';
 
 /**
  * Problem #1: Fetchタイムアウト設定
  */
 const FETCH_TIMEOUT_MS = 15000; // 15秒
+
+export const OBSIDIAN_CONNECTION_RETRY_POLICY = {
+    initialDelayMs: 500,
+    maxAttempts: 3,
+    backoffMultiplier: 2,
+    retryableStatusCodes: [500, 502, 503, 504]
+} as const;
 
 /**
  * Problem #6: Mutexキューサイズ制限とタイムアウト設定
@@ -65,18 +81,22 @@ export interface ObsidianConnectionResult {
 
 export interface ObsidianClientOptions {
     mutex?: Mutex;
+    sleep?: SleepFn;
 }
 
 export class ObsidianClient {
     private mutex: Mutex;
+    private sleep: SleepFn;
 
     /**
      * コンストラクタ
      * @param {Object} options - オプション設定
      * @param {Mutex} options.mutex - カスタムMutexインスタンス（テスト用途）
+     * @param {SleepFn} options.sleep - リトライ待機を差し替える関数（テスト用途）
      */
     constructor(options: ObsidianClientOptions = {}) {
         this.mutex = options.mutex || globalWriteMutex;
+        this.sleep = options.sleep ?? ((ms) => waitForRetry(ms));
     }
 
     /**
@@ -168,8 +188,12 @@ export class ObsidianClient {
             return '';
         } else {
             const errorText = await this._readBodyWithTimeout(response);
-            addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${errorText}`, { traceId });
-            throw new Error('Error: Failed to read daily note. Please check your Obsidian connection.');
+            addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${truncateForLog(errorText)}`, { traceId });
+            // 表示文言は status を出さない。kind / status / method だけを構造化する。
+            throw tagFailure(
+                new Error('Error: Failed to read daily note. Please check your Obsidian connection.'),
+                failureFromHttpStatus(response.status, 'GET')
+            );
         }
     }
 
@@ -193,15 +217,18 @@ export class ObsidianClient {
         if (!response.ok) {
             // Cap the error body on actual bytes; Content-Length is not trusted.
             const MAX_ERROR_BODY_SIZE = MAX_ERROR_BODY_LIMIT; // 1MB (PBI 2026-09-11-08: value lives in limits.ts)
+            // 401/403 -> auth, 429 -> rate_limit, 5xx -> http。
+            // 5xx の PUT は同一 request 内で再送しない（canResendSameRequest）。
+            const failure = failureFromHttpStatus(response.status, 'PUT');
             let errorText: string;
             try {
                 errorText = await readBodyCapped(response, MAX_ERROR_BODY_SIZE);
             } catch {
                 addLog(LogType.ERROR, `Obsidian API Error: ${response.status} (response body too large or unreadable)`, { traceId });
-                throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
+                throw tagFailure(new Error('Error: Failed to write to daily note. Please check your Obsidian connection.'), failure);
             }
-            addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${errorText}`, { traceId });
-            throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
+            addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${truncateForLog(errorText)}`, { traceId });
+            throw tagFailure(new Error('Error: Failed to write to daily note. Please check your Obsidian connection.'), failure);
         }
     }
 
@@ -214,6 +241,45 @@ export class ObsidianClient {
      */
     get _globalWriteMutex(): Mutex {
         return globalWriteMutex;
+    }
+
+    private async _fetchConnectionResponse(baseUrl: string, headers: HeadersInit): Promise<Response> {
+        const {
+            initialDelayMs,
+            maxAttempts,
+            backoffMultiplier,
+            retryableStatusCodes
+        } = OBSIDIAN_CONNECTION_RETRY_POLICY;
+        const requestOptions: RequestInit = {
+            method: 'GET',
+            headers,
+            cache: CONNECTION_TEST_CACHE_MODE
+        };
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                const response = await fetchWithTimeout(
+                    ENDPOINTS.root(baseUrl),
+                    requestOptions,
+                    FETCH_TIMEOUT_MS
+                );
+                if (
+                    response.ok ||
+                    !isRetryableStatus(response.status, retryableStatusCodes) ||
+                    attempt === maxAttempts - 1
+                ) {
+                    return response;
+                }
+            } catch (error: unknown) {
+                if (!isRetryableNetworkError(error) || attempt === maxAttempts - 1) {
+                    throw error;
+                }
+            }
+
+            await this.sleep(backoffDelayMs(attempt, { baseMs: initialDelayMs, multiplier: backoffMultiplier }));
+        }
+
+        throw new Error('Connection test retry attempts exhausted');
     }
 
     async testConnection(override?: { protocol?: string; port?: string | number; apiKey?: string; host?: string }): Promise<ObsidianConnectionResult> {
@@ -237,11 +303,7 @@ export class ObsidianClient {
             }
             addLog(LogType.DEBUG, `Testing Obsidian connection to: ${baseUrl}`);
 
-            const response = await fetchWithTimeout(ENDPOINTS.root(baseUrl), {
-                method: 'GET',
-                headers,
-                cache: CONNECTION_TEST_CACHE_MODE
-            }, FETCH_TIMEOUT_MS);
+            const response = await this._fetchConnectionResponse(baseUrl, headers);
 
             if (response.ok) {
                 return { success: true, message: 'Success! Connected to Obsidian. Settings Saved.' };

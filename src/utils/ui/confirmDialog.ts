@@ -36,17 +36,6 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
-function t(key: string, fallback: string, substitutions?: string | string[]): string {
-  let subs: string | undefined;
-  if (Array.isArray(substitutions)) {
-    subs = substitutions.join(' ');
-  } else if (typeof substitutions === 'string') {
-    subs = substitutions;
-  }
-
-  return getMessageOr(key, fallback, subs);
-}
-
 function trapFocus(event: KeyboardEvent, dialog: HTMLElement): void {
   if (event.key !== 'Tab') return;
 
@@ -159,9 +148,9 @@ export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolea
       role: 'dialog',
       ...(options.dangerous !== undefined ? { dangerous: options.dangerous } : {}),
       buttons: [
-        { label: t('cancel', 'Cancel', options.cancelLabel), className: 'confirm-dialog-btn confirm-dialog-btn-cancel', resolves: false },
+        { label: getMessageOr('cancel', 'Cancel', options.cancelLabel), className: 'confirm-dialog-btn confirm-dialog-btn-cancel', resolves: false },
         {
-          label: options.confirmLabel || t('confirmDelete', 'Delete'),
+          label: options.confirmLabel || getMessageOr('confirmDelete', 'Delete'),
           className: options.dangerous
             ? 'confirm-dialog-btn confirm-dialog-btn-danger'
             : 'confirm-dialog-btn confirm-dialog-btn-primary',
@@ -182,7 +171,7 @@ export function showAlertDialog(options: AlertDialogOptions): Promise<void> {
       message: options.message,
       role: 'alertdialog',
       buttons: [
-        { label: t('ok', 'OK', options.okLabel), className: 'confirm-dialog-btn confirm-dialog-btn-primary', resolves: true },
+        { label: getMessageOr('ok', 'OK', options.okLabel), className: 'confirm-dialog-btn confirm-dialog-btn-primary', resolves: true },
       ],
       onResolve: () => resolve(),
     });

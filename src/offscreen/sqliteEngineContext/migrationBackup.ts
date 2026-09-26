@@ -82,7 +82,7 @@ import { IDBBatchAtomicVFS } from 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js';
  * added to COLUMN_NAMES after the wa-sqlite era must be listed here and
  * mapped to null in mapMigrationBackupRow.
  */
-const LEGACY_MISSING_COLUMNS = new Set<string>(['fallback_reason']);
+const LEGACY_MISSING_COLUMNS = new Set<string>(['fallback_reason', 'nav_source_url', 'search_query']);
 const MIGRATION_BACKUP_COLUMNS = COLUMN_NAMES.filter((c) => !LEGACY_MISSING_COLUMNS.has(c));
 /** Positions WITHIN the selected backup columns (NOT COLUMN_NAMES) — see header. */
 const BACKUP_IDX = new Map(MIGRATION_BACKUP_COLUMNS.map((c, i) => [c, i] as const));
@@ -149,6 +149,9 @@ function mapMigrationBackupRow(row: SqliteValue[]): BrowsingLogRecord {
     // LEGACY_MISSING_COLUMNS: the legacy SELECT never contained this column —
     // explicit null (not an out-of-range index read).
     fallback_reason: null,
+    // PBI 03: same reason — the legacy SELECT never contained these columns.
+    nav_source_url: null,
+    search_query: null,
   };
 }
 

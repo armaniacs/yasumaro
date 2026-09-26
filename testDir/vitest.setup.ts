@@ -32,9 +32,8 @@ console.error = (...args: unknown[]) => {
   _originalConsoleError.apply(console, args);
 };
 
-import { Crypto, CryptoKey } from '@peculiar/webcrypto';
+import { createRequire } from 'node:module';
 import { vi } from 'vitest';
-import enMessages from '../public/_locales/en/messages.json' with { type: 'json' };
 
 // ============================================================================
 // chrome.i18n.getMessage mock backed by the real en messages.json
@@ -50,8 +49,23 @@ type MessagesJson = Record<
   { message: string; placeholders?: Record<string, { content: string }> }
 >;
 
-function buildGetMessageMock(messages: MessagesJson) {
+const requireJson = createRequire(import.meta.url);
+let enMessages: MessagesJson | null = null;
+
+/**
+ * The locale bundle is 140KB / 1500 keys and this setup file runs for all ~900
+ * test files, but only the handful of suites that call getMessage (directly or
+ * through the i18n helper) ever read it. Requiring on first use keeps
+ * getMessage synchronous while removing the per-file module edge.
+ */
+function localeMessages(): MessagesJson {
+  enMessages ??= requireJson('../public/_locales/en/messages.json') as MessagesJson;
+  return enMessages;
+}
+
+function buildGetMessageMock() {
   return vi.fn((key: string, substitutions?: string | Array<string | number>): string => {
+    const messages = localeMessages();
     const entry = messages[key];
     if (!entry) return key;
 
@@ -100,20 +114,32 @@ if (typeof global.atob === 'undefined') {
   global.atob = (b64: string) => Buffer.from(b64, 'base64').toString('binary');
 }
 
-// Web Crypto API polyfill for Vitest testing environment
-const webcrypto = new Crypto();
-Object.defineProperty(global, 'crypto', {
-  value: webcrypto,
-  writable: true,
-  configurable: true,
-});
-
-// CryptoKey global for test environment
-Object.defineProperty(global, 'CryptoKey', {
-  value: CryptoKey,
-  writable: true,
-  configurable: true,
-});
+// Web Crypto API polyfill. Node >= 20 already exposes a complete
+// globalThis.crypto (including subtle), so the polyfill is only loaded where it
+// is actually missing — jsdom's Crypto has getRandomValues but no subtle.
+// Suites that need the polyfill under `node` import it themselves and assert
+// against that import.
+if (typeof globalThis.crypto?.subtle === 'undefined') {
+  const { Crypto, CryptoKey } = await import('@peculiar/webcrypto');
+  Object.defineProperty(global, 'crypto', {
+    value: new Crypto(),
+    writable: true,
+    configurable: true,
+  });
+  Object.defineProperty(global, 'CryptoKey', {
+    value: CryptoKey,
+    writable: true,
+    configurable: true,
+  });
+} else {
+  // Node's own `crypto` global is getter-only, and suites swap in their own
+  // implementation by plain assignment, so re-declare it as writable data.
+  Object.defineProperty(global, 'crypto', {
+    value: globalThis.crypto,
+    writable: true,
+    configurable: true,
+  });
+}
 
 // CSS.escape polyfill for tests
 Object.defineProperty(global, 'CSS', {
@@ -436,7 +462,7 @@ const chromeRuntimeMock = {
     }),
   },
   i18n: {
-    getMessage: buildGetMessageMock(enMessages as MessagesJson),
+    getMessage: buildGetMessageMock(),
     getUILanguage: vi.fn(() => 'en'),
   },
 };

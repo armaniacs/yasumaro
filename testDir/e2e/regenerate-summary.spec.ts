@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures/extension.fixture.js';
+import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
 import {
   openOptionsPage,
   createDashboardSqliteClient,
@@ -46,7 +47,6 @@ import { pickLoopbackPort, listenHttp } from './fixtures/localServers.js';
  * asserted via the legacy dual-write (savedUrlsWithTimestamps) instead.
  */
 
-const PRIVACY_POLICY_VERSION = '2026-07-31'; // must match privacyConsent.ts
 // AI mock port — must be in ssrfGuard ALLOWED_LOCALHOST_PORTS
 // {11434,27123,27124,1234}. NEVER a fixed 1234: the catalog default for
 // lm-studio AND the real LM Studio desktop app's port (observed owning
@@ -170,15 +170,7 @@ test.afterAll(() => {
 });
 
 async function seedConsent(context: import('@playwright/test').BrowserContext) {
-  const sw = context.serviceWorkers()[0];
-  expect(sw, 'service worker must be running').toBeTruthy();
-  await sw.evaluate(async (version: string) => {
-    await chrome.storage.local.set({
-      privacy_consent: { hasConsented: true, consentVersion: version, consentDate: Date.now() },
-      privacy_consent_version: version,
-      settings_migrated: true,
-    });
-  }, PRIVACY_POLICY_VERSION);
+  await seedPrivacyConsent(context);
 }
 
 /** Merge the lm-studio mock provider into the single 'settings' blob. */

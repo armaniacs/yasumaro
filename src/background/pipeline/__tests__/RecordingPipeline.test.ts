@@ -346,9 +346,7 @@ describe('RecordingPipeline', () => {
 
     it('does not save to Obsidian in previewOnly mode', async () => {
       const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(function(this: any) {
-        this.appendToDailyNote = mockAppend;
-      });
+      const obsidian = { appendToDailyNote: mockAppend };
       mockProcess.mockResolvedValue({
         success: true,
         preview: true,
@@ -359,7 +357,7 @@ describe('RecordingPipeline', () => {
 
       const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
-        makeObsidian() as any,
+        obsidian as any,
         makeAiClient() as any
       );
 

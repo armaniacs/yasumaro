@@ -6,6 +6,7 @@
  */
 
 import { StorageKeys } from './types.js';
+import { PROVIDER_DEFAULT_BASE_URLS } from './providerDefaultBaseUrls.js';
 import type { Settings } from './types.js';
 import type { DeepReadonly } from '../typeUtils.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../aiSummaryCleaner/rules.js';
@@ -47,9 +48,9 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OPENAI_2_BASE_URL]: 'http://127.0.0.1:11434/v1',
     [StorageKeys.OPENAI_2_API_KEY]: '',
     [StorageKeys.OPENAI_2_MODEL]: 'llama3',
-    [StorageKeys.LM_STUDIO_BASE_URL]: 'http://127.0.0.1:1234/v1',
+    [StorageKeys.LM_STUDIO_BASE_URL]: PROVIDER_DEFAULT_BASE_URLS['lm-studio'],
     [StorageKeys.LM_STUDIO_MODEL]: '',
-    [StorageKeys.OLLAMA_BASE_URL]: 'http://localhost:11434/v1',
+    [StorageKeys.OLLAMA_BASE_URL]: PROVIDER_DEFAULT_BASE_URLS['ollama'],
     [StorageKeys.OLLAMA_MODEL]: '',
     [StorageKeys.PROVIDER_TYPE]: '',
     [StorageKeys.PROVIDER_BASE_URL]: '',
@@ -103,8 +104,6 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.ALERT_SENSITIVE]: true,
     [StorageKeys.ALERT_UNVERIFIED]: false,
     [StorageKeys.SAVE_ABORTED_PAGES]: false,
-    [StorageKeys.SAFETY_MODE]: 'balanced',
-    [StorageKeys.TRANCO_TIER]: 'top10k',
     [StorageKeys.DENIED_DOMAINS]: {},
     [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3,
     [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,

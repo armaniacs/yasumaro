@@ -8,11 +8,7 @@
  * compatibility and keeps the background-tier verdicts that are outside the
  * admission precedence (trigger / header-detector / save-skip / L0).
  *
- * 優先順位表（判定順序の意味変更はしない — 集約のみ）:
- *   domainFilter -> permission -> trust -> privacyHeaders -> duplicate
- * いずれも FATAL 短絡のため、最初に拒否した gate が競合時の勝者となる。
- * Reordering changes which refusal the user sees — keep this order unless
- * the precedence is deliberately renegotiated.
+ * 判定順序の SSOT は src/utils/recordingGateTable.ts を参照。
  */
 
 export {

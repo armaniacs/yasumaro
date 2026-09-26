@@ -16,6 +16,7 @@ import { PROVIDER_CATALOG, createProviderStrategy } from './providerCatalog.js';
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { FailureKind, createFailure, resolveFailure, type FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 
@@ -106,7 +107,11 @@ export class RemoteAIService implements AIService {
     const factory = this.providers.get(slot.provider);
     if (!factory) {
       addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
-      return { success: false, summary: "Error: AI provider configuration is missing. Please check your settings." };
+      return {
+        success: false,
+        summary: "Error: AI provider configuration is missing. Please check your settings.",
+        failure: createFailure(FailureKind.CONFIGURATION),
+      };
     }
 
     const effectiveSettings = this.applySlotModel(settings, slot);
@@ -118,7 +123,14 @@ export class RemoteAIService implements AIService {
       return result;
     } catch (error: unknown) {
       addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
-      return { success: false, summary: "Error: Failed to generate summary. Please try again." };
+      const result: AISummaryResult = {
+        success: false,
+        summary: "Error: Failed to generate summary. Please try again.",
+      };
+      // A provider that threw instead of returning a result must not lose its
+      // classification on the way out.
+      const failure = resolveFailure(error);
+      return failure ? { ...result, failure } : result;
     }
   }
 
@@ -144,10 +156,15 @@ export class RemoteAIService implements AIService {
     const requestPromise = (async (): Promise<AISummaryResult> => {
       let lastResult: AISummaryResult = {
         success: false,
-        summary: "Error: AI provider configuration is missing. Please check your settings."
+        summary: "Error: AI provider configuration is missing. Please check your settings.",
+        failure: createFailure(FailureKind.CONFIGURATION),
       };
       const attemptedProviders: string[] = [];
-      const slotFailures: { provider: string; model?: string; error: string }[] = [];
+      const slotFailures: { provider: string; model?: string; error: string; failure?: FailureMetadata }[] = [];
+      // Aggregate carrier: the FIRST slot that classified its failure. A total
+      // failure stays a result (never a throw) so privacyPipeline's branch and
+      // the result contract are unchanged; the kind simply rides along.
+      let aggregateFailure: FailureMetadata | undefined;
 
       for (let index = 0; index < slots.length; index++) {
         const slot = slots[index]!;
@@ -173,7 +190,11 @@ export class RemoteAIService implements AIService {
           provider: slot.provider,
           ...(slot.model ? { model: slot.model } : {}),
           error,
+          ...(result.failure ? { failure: result.failure } : {}),
         });
+        if (aggregateFailure === undefined && result.failure !== undefined) {
+          aggregateFailure = result.failure;
+        }
         addLog(LogType.WARN, 'AI provider slot failed, trying next provider', {
           provider: slot.provider,
           ...(slot.model ? { model: slot.model } : {}),
@@ -185,7 +206,12 @@ export class RemoteAIService implements AIService {
         lastResult = result;
       }
 
-      return { ...lastResult, attemptedProviders, slotFailures };
+      return {
+        ...lastResult,
+        attemptedProviders,
+        slotFailures,
+        ...(aggregateFailure !== undefined ? { failure: aggregateFailure } : {}),
+      };
     })();
 
     if (dedupeKey) {

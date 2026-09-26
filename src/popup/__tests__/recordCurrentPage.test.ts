@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
 type MutableLastError = { lastError: chrome.runtime.LastError | null };
@@ -15,9 +16,21 @@ vi.mock('../../utils/recordingGateTable.js', async (importOriginal) => {
     return { ...actual, isRecordableTab: vi.fn().mockReturnValue(true) };
 });
 
-vi.mock('../../utils/i18n.js', () => ({
-    getMessage: vi.fn((key: string) => key),
-}));
+vi.mock('../../utils/i18n.js', () => {
+    const getMessage = vi.fn((key: string) => key);
+    const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+    ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+    const getMessageWithSubstitutions = (
+    key: string,
+    subs: Record<string, string | number>,
+    fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+    fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+      subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+    return {
+    getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -251,6 +264,7 @@ import { showError } from '../errorUtils.js';
 import { showSpinner } from '../spinner.js';
 import { checkPageStatus } from '../statusChecker.js';
 import { showPreview } from '../sanitizePreview.js';
+import { RESULT_STATE_MS } from '../recordCurrentPage/recordSession.js';
 
 // getURL must return a valid URL for new URL() in loadCurrentTab
 vi.spyOn(chrome.runtime, 'getURL').mockImplementation((path: string) =>
@@ -508,25 +522,30 @@ describe('recordCurrentPage', () => {
     });
 
     it('preserves Record Anyway state after result-state reset when domain is blocked', async () => {
-        (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
-            domainFilter: { allowed: false },
-        });
-        // Persistent (not once): the reset path re-reads the tab through the
-        // shared statusStore seam after the timeout (PBI 2026-09-23-14).
-        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValue({
-            id: 1,
-            url: 'https://blocked.com',
-            title: 'Blocked',
-        });
-        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
+        // The reset is a 2s timer; driving the clock keeps this off the wall clock.
+        useTimerClock();
+        try {
+            (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+                domainFilter: { allowed: false },
+            });
+            // Persistent (not once): the reset path re-reads the tab through the
+            // shared statusStore seam after the timeout (PBI 2026-09-23-14).
+            (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValue({
+                id: 1,
+                url: 'https://blocked.com',
+                title: 'Blocked',
+            });
+            const btn = document.getElementById('recordBtn') as HTMLButtonElement;
 
-        await recordCurrentPage();
-        expect(btn.textContent).toBe('recordNowDone');
+            await recordCurrentPage();
+            expect(btn.textContent).toBe('recordNowDone');
 
-        // Wait for the result-state timeout to expire and reset the button
-        await new Promise(resolve => setTimeout(resolve, 2100));
+            await vi.advanceTimersByTimeAsync(RESULT_STATE_MS);
 
-        expect(btn.textContent).toBe('forceRecordAnyway');
-        expect(btn.disabled).toBe(false);
+            expect(btn.textContent).toBe('forceRecordAnyway');
+            expect(btn.disabled).toBe(false);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

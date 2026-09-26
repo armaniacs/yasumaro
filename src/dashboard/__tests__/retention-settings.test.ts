@@ -12,7 +12,19 @@ vi.stubGlobal('chrome', {
     storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn().mockResolvedValue(undefined) } },
 });
 
-vi.mock('../../utils/i18n.js', () => ({ getMessage: vi.fn((k: string) => k) }));
+vi.mock('../../utils/i18n.js', () => {
+const getMessage = vi.fn((k: string) => k);
+const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+const getMessageWithSubstitutions = (
+key: string,
+subs: Record<string, string | number>,
+fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+  subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+return { getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
 vi.mock('../settings/domainFilter.js', () => ({ init: vi.fn() }));
 vi.mock('../settings/privacySettings.js', () => ({ init: vi.fn() }));
 vi.mock('../settings/contentSettings.js', () => ({ init: vi.fn() }));

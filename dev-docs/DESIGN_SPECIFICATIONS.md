@@ -87,6 +87,42 @@ Key groups:
 - **Privacy**: `PRIVACY_MODE`, `PII_CONFIRMATION_UI`, `PII_SANITIZE_LOGS`
 - **uBlock Format**: `UBLOCK_RULES`, `UBLOCK_SOURCES`, `UBLOCK_FORMAT_ENABLED`, `SIMPLE_FORMAT_ENABLED`
 
+### 5.1.1 Key placement: nested settings vs. top level
+
+`migrateToSingleSettingsObject()` folds raw top-level keys into the `settings` blob and then deletes them, so a key's placement decides whether its owner can still see it. Classification is by **stored value**, never by name pattern — `isMigratableStorageKey()` accepts a key only when it is a `StorageKeys` value *and* is absent from the explicit `TOP_LEVEL_ONLY_KEYS` allowlist in `settingsMigration.ts`.
+
+Do not reintroduce substring tests such as `key.includes('_version')`. They classify by appearance, which both misclassifies settings whose name merely ends in `_version` (`gemini_api_version`, a dashboard-editable value) and says nothing about the CAS records (`settings_version`) they were meant to exclude — those are already rejected because they are not `StorageKeys` values.
+
+A key belongs on the allowlist when its owning module reads or writes it directly through `chrome.storage.local`, because migrating it deletes the only copy that owner can see. Current members:
+
+| Key | Owner |
+|-----|-------|
+| `encryption_salt`, `encryption_secret`, `hmac_secret`, `master_password_salt`, `master_password_hash` | keyring in `storage/encryptionSession.ts` — relocating strands the ciphertext |
+| `privacy_consent_version` | `storage/privacyConsent.ts` |
+| `tranco_version` | `trustDb/trancoConsentManager.ts` |
+| `trust_db:json` | `trustDb/TrustDbKernel.ts` (persists it with its own `withOptimisticLock` on the raw key) |
+
+Adding a raw-owned key to `StorageKeys` without classifying it here deletes user state on the next migration. That audit is open work; this table is the contract for what is classified so far.
+
+### 5.1.2 Settings migration state machine
+
+`settings_migrated` holds `{ schemaVersion, stage }` (current `SETTINGS_MIGRATION_SCHEMA_VERSION = 2`) with `stage` in `pending` → `backed_up` → `legacy_removed` → `completed`. The migration is a **resumable sequence of storage writes, not one atomic operation**: a Service Worker can be torn down between any two of them, so completion is recorded last and only once no migratable raw key remains.
+
+```
+nested settings delta  →  verified backup  →  legacy key removal  →  completed
+        (pending)              (backed_up)          (legacy_removed)
+```
+
+Invariants:
+
+- **Backup before deletion.** `legacy_settings_backup_*` is written *and read back* before any raw key is removed, so `tryRestoreFromBackup()` never loses its restore source.
+- **Resume reuses the verified backup.** A run that finds a backup already covering the remaining keys reuses it instead of stacking a duplicate; a run interrupted after a partial removal finishes the rest.
+- **The blob wins on fill.** The merge only fills keys the blob lacks — the blob is the only writer once migration has started. The one exception is the pre-removal race, where a raw key observed changing after the backup is the newest copy and overwrites.
+- **Pre-removal race check.** Values (and the blob's CAS generation) are re-read immediately before the destructive step. On drift the run follows the latest values, refreshes the backup and retries, bounded by `MAX_REMOVE_ATTEMPTS`; exhausting the retries leaves the state short of `completed` so the next start retries.
+- **Completion is version-compared, never truthiness.** `isSettingsMigrationComplete()` accepts only `stage === 'completed'` at the current schema version or newer. A partial stage is truthy, which is the defect the versioned record replaces.
+- **The legacy boolean is unverified, not complete.** `true` predates the backup, so it proves nothing: the migration repairs it (blob first, gaps backfilled from raw or a valid backup) and rewrites it as a versioned record. `SettingsRepository` uses `isSettingsBlobAuthoritative()` instead, which accepts the boolean so existing installs keep reading their blob while the repair runs.
+- **State lives in `chrome.storage.local` via `StoragePort`,** never in module state — a Service Worker restart must not lose the stage.
+
 ### 5.2 URL History Limits
 - **Maximum URLs**: `MAX_URL_SET_SIZE = 10,000`
 - **Warning Threshold**: `URL_WARNING_THRESHOLD = 8,000`

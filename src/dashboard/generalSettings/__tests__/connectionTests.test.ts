@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 
@@ -10,9 +11,21 @@ vi.mock('../../settingsPipeline.js', () => ({
   saveDashboardSettings: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-vi.mock('../../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => key),
-}));
+vi.mock('../../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => key);
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 vi.mock('../../statusView.js', () => ({
   syncStatusToTop: vi.fn(),
@@ -770,22 +783,23 @@ describe('handleTestAi', () => {
   });
 
   it('calls syncStatusToTop on provider change and verifies elapsed timer ticks', async () => {
+    useTimerClock();
     buildDomWithTop();
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
     // keep real setInterval tracking
     const setIntervalSpy = vi.spyOn(globalThis, 'setInterval');
     let capturedCb: any;
     mockedSubscribe.mockImplementation((_id: string, cb: any) => { capturedCb = cb; return vi.fn(); });
-    setupChrome({ runtime: { sendMessage: vi.fn().mockImplementation(() => new Promise(res => setTimeout(() => res({ ai: { success: true, message: 'OK', providers: [] } }), 350))), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    setupChrome({ runtime: { sendMessage: vi.fn().mockImplementation(() => new Promise(res => vi.advanceTimersByTimeAsync(350).then(() => res({ ai: { success: true, message: 'OK', providers: [] } })))), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     // add statusTop element for sync
     document.body.innerHTML += `<div id="statusTop"><div class="ai-test-elapsed"></div></div>`;
     const promise = handleTestAi();
-    await new Promise(r => setTimeout(r, 10));
+    await vi.advanceTimersByTimeAsync(10);
     capturedCb({ provider: 'gemini', index: 0, total: 1 });
     expect(mockedSyncStatusToTop).toHaveBeenCalled();
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 200);
     // Wait for interval tick to happen at least once before promise resolves (handle runs 350ms > 200ms)
-    await new Promise(r => setTimeout(r, 250));
+    await vi.advanceTimersByTimeAsync(250);
     expect(mockedRenderElapsed).toHaveBeenCalled();
     await promise;
     setIntervalSpy.mockRestore();

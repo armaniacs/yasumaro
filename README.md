@@ -93,7 +93,7 @@ flowchart LR
 - 🚫 **uBlock Origin形式フィルター**: EasyListなどの既存のuBlockフィルターリストを直接インポートして使用できます。
 - 🧹 **AI要約クレンジング**: AIに本文を送る前に広告・ナビゲーション・SNSボタン・Cookie同意バナーなどのノイズを除去。`minimal` / `balanced` / `aggressive` / `custom` の4プリセットと、サイト単位の上書き設定に対応。SPA・Shadow DOM・iframe も走査。何がどの理由で除去されたかをダッシュボードで確認できます。詳細は [クレンジングのカスタマイズガイド](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) を参照。
 - ✏️ **AIプロンプトカスタマイズ**: AIへの要約指示プロンプトを自由に編集・保存できます。プロバイダーごとに異なるプロンプトを設定可能。
-- 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
+- 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（デフォルト・タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
 - 🔔 **ツールバーバッジ通知**: プライバシーヘッダー検出時はオレンジ `!`、自動保存完了時は青 `◎` がツールバーアイコンに表示されます。ポップアップを開かなくても状態を確認できます。
 - 🔒 **プライバシー保護**: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能。プライベートページ（銀行・メール等）を自動検出し、誤った記録を防止。
 - ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
@@ -318,13 +318,13 @@ Free and open source, with all of the following built in.
 The following features were added exclusively in Yasumaro from version 2 onwards:
 
 - 🖱️ **Manual Recording**: Record any page instantly with the "Record Now" button. No duplicate URL restrictions - record the same page multiple times.
-- 📱 **Improved UI**: Separated main screen and settings with easy hamburger menu access.
+- 📱 **Improved UI**: Separated main screen and settings with easy access to the dedicated dashboard via the ⚙ icon.
 - 🌐 **Domain Filtering**: Control which domains to record with whitelist/blacklist support. Wildcard patterns supported, with optional automatic subdomain matching.
 - 🗄️ **History Archive**: Back up history up to a chosen date as a standard SQLite file (openable in any SQLite tool), then optionally delete it from the local database. Merge it back (restore) or open it for browsing/editing without touching the main database.
 - 🚫 **uBlock Origin Format Filters**: Import and use existing uBlock filter lists like EasyList directly.
 - 🧹 **AI Summary Cleansing**: Strips noise (ads, navigation, social buttons, cookie consent banners) before sending page text to the AI. Four presets (`minimal` / `balanced` / `aggressive` / `custom`) plus per-site overrides. Also scans SPA content, Shadow DOM, and iframes. The dashboard shows what was removed and why. See [Cleansing Customization Guide](docs/CLEANSING_CUSTOMIZATION_GUIDE.md).
 - ✏️ **AI Prompt Customization**: Edit and save custom AI summarization prompts. Configure different prompts per provider.
-- 📋 **AI Prompt Presets**: Choose from 5 built-in presets (With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
+- 📋 **AI Prompt Presets**: Choose from 5 built-in presets (Default, With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
 - 🔔 **Toolbar Badge Notifications**: An orange `!` badge appears when privacy headers are detected; a blue `◎` badge appears when auto-recording completes. Check status without opening the popup.
 - 🔒 **Privacy Protection**: Select from 4 privacy modes and mask PII before sending to AI. Automatically detects private pages (banking, email, etc.) to prevent accidental recording.
 - ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
@@ -336,7 +336,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🤖 **Built-in AI Support**: Browser-integrated AI summarization using Chrome's Gemini Nano or Edge's Phi-mini. No API key required, works offline (requires supported browser, enabled flags, and downloaded model). See [Built-in AI Setup Guide](docs/BUILT_IN_AI_SETUP_GUIDE.md).
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
-- 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard — a day×hour heatmap, visit-duration rankings, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), and side-by-side tag cluster comparison. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
+- 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard — a day×hour heatmap, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), side-by-side tag cluster comparison, a revisits & time capsule view that groups what you keep re-researching, and research sessions that group records close together in time. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api) (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for setup instructions)
@@ -497,6 +497,8 @@ MIT License
 ### 文書一覧
 - [docs/guides.html](https://armaniacs.github.io/yasumaro/guides.html) - ドキュメントガイド総覧（GitHub Pages）
 - [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
+- [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) - アクセシビリティガイド（WCAG 2.1 AA）
+- [i18n-guide.md](docs/i18n-guide.md) - 多言語化（i18n）ガイド
 - [CHANGELOG.md](CHANGELOG.md) - 更新履歴
 - [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
 - [FAQ.md](docs/FAQ.md) - よくある質問
@@ -518,7 +520,7 @@ MIT License
 - [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP 設定ガイド
 - [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - ドメイン信頼度ガイド
 - [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - タグクラスターガイド
-- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - データ分析ガイド（ヒートマップ・滞在時間・タグ推移・共起ペア表）
+- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - データ分析ガイド（ヒートマップ・ドメイン分析・タグ推移・共起ペア表）
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - ツールバーバッジガイド
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - 記録条件ガイド
 - [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - 旧データベースからの移行ガイド
@@ -527,6 +529,8 @@ MIT License
 ### Documentation
 - [Guides Catalog](https://armaniacs.github.io/yasumaro/guides.html) - All user guides in one place (GitHub Pages)
 - [AGENTS.md](AGENTS.md) - Developer Agent Configuration
+- [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) - Accessibility Guide (WCAG 2.1 AA)
+- [i18n-guide.md](docs/i18n-guide.md) - Internationalization (i18n) Guide
 - [CHANGELOG.md](CHANGELOG.md) - Changelog
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
 - [FAQ.md](docs/FAQ.md) - Frequently Asked Questions
@@ -548,7 +552,7 @@ MIT License
 - [CSP_GUIDE.md](docs/CSP_GUIDE.md) - CSP Guide
 - [TRUST_DOMAIN_GUIDE.md](docs/TRUST_DOMAIN_GUIDE.md) - Trust Domain Guide
 - [TAG_CLUSTER_GUIDE.md](docs/TAG_CLUSTER_GUIDE.md) - Tag Cluster Guide
-- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - Data Analytics Guide (heatmap, visit duration, tag timeline, pair table)
+- [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - Data Analytics Guide (heatmap, domain analysis, tag timeline, pair table)
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - Toolbar Badge Guide
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - Recording Conditions Guide
 - [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Legacy Database Migration Guide

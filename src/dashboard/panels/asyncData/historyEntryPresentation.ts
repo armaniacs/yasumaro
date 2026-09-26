@@ -14,7 +14,8 @@
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
-import { describeDelta, formatBytes } from './entryByteDelta.js';
+import { describeDelta } from './entryByteDelta.js';
+import { formatBytes } from '../../byteFormat.js';
 
 export interface CleansingReduction {
     /** 送信前の元バイト数（null は計算不能 — 呼び出し側で非表示にする）。 */

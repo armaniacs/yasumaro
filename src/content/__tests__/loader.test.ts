@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 const LOADER_PATH = '../loader.js';
 
@@ -42,7 +43,7 @@ describe('loader.ts', () => {
     }
     await import(LOADER_PATH);
     // Allow microtasks and the async IIFE to progress
-    await new Promise((r) => setTimeout(r, 50));
+    await drainMacrotask();
   }
 
   function setStorageData(data: Record<string, unknown>) {
@@ -355,7 +356,7 @@ describe('loader.ts', () => {
       } as any;
       globalThis.document = dom.window.document as any;
       await import(LOADER_PATH);
-      await new Promise((r) => setTimeout(r, 50));
+      await drainMacrotask();
       (globalThis as any).chrome.runtime.getURL = origGetURL;
       expect(getURLSpy).not.toHaveBeenCalled();
     });
@@ -364,7 +365,7 @@ describe('loader.ts', () => {
       const origWindow = (globalThis as any).window;
       (globalThis as any).window = undefined;
       await import(LOADER_PATH);
-      await new Promise((r) => setTimeout(r, 50));
+      await drainMacrotask();
       globalThis.window = origWindow;
       expect(getURLSpy).not.toHaveBeenCalled();
     });
@@ -387,11 +388,13 @@ describe('loader.ts', () => {
       });
       getURLSpy.mockReturnValue('data:text/javascript,throw "string error"');
       await import(LOADER_PATH);
-      await new Promise((r) => setTimeout(r, 50));
-      expect(warnSpy).toHaveBeenCalledWith(
+      await vi.waitFor(
+          () => expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Dynamic import blocked (e2e)',
         'https://example.com/page',
         'string error',
+      ),
+          { interval: 1 }
       );
     });
 
