@@ -73,8 +73,16 @@ test.describe('PII sanitizer WASM initialization @interaction @extension', () =>
       content: 'contact me at wasmcheck@example.com for details',
     });
 
-    // Give the service worker's async log pipeline (addLog batches/flushes
-    // asynchronously — see utils/logger/core.ts) a moment to emit.
+    // The warning is written by the service worker before PREVIEW_RECORD
+    // resolves, so the pipeline has already run by now. What is still in
+    // flight is the console EVENT's delivery back to this process, and the
+    // successful path emits nothing to the service worker's console (the
+    // logger writes to chrome.storage; its console branch is the no-chrome
+    // offscreen path). There is therefore no condition to await: the only
+    // observable is an absence, and polling for the warning would make this
+    // assertion pass by construction. The bounded settle below covers the
+    // event-delivery window and nothing else.
+    // eslint-disable-next-line local/no-fixed-wait -- negative assertion with no awaitable condition; see comment
     await page.waitForTimeout(500);
 
     const wasmFallbackWarning = consoleMessages.find((m) =>

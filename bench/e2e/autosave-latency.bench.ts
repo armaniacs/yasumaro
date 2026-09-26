@@ -39,9 +39,19 @@ test('autosave latency across page sizes @bench', async ({ benchPage, cdp }) => 
     await benchPage.goto(`http://localhost:8110/news?scale=${scale}`, { waitUntil: 'load' });
 
     // The content script auto-reports after the visit threshold; nudge it by
-    // scrolling and waiting past the min duration.
+    // scrolling and wait for the report to actually reach `ow-send-ready`
+    // (benchMark in src/content/visitReporter.ts). Waiting on the mark rather
+    // than a fixed 6s keeps the measurement window identical — the marks still
+    // straddle the same synchronous extract+cleanse — while removing the dead
+    // time on a fast run. The `expect(withMarks.length)` below already required
+    // these marks, so failing here instead of recording a null sample is the
+    // pre-existing contract, not a new one.
     await benchPage.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await benchPage.waitForTimeout(6_000);
+    await benchPage.waitForFunction(
+      () => performance.getEntriesByName('ow-send-ready').length > 0,
+      undefined,
+      { timeout: 15_000 },
+    );
 
     const result = await benchPage.evaluate(() => {
       const marks = performance.getEntriesByType('mark');
