@@ -37,6 +37,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.27] - 2026-09-26
+
+v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能の追加はありません。Firefox など端末内AI非対応ブラウザでの誤案内、自己署名証明書の Obsidian 接続時の案内欠落、Obsidian API の認証エラーの誤分類といった表示上の問題 3 件を修正し、あわせてストレージ書き込みの競合契約を強化しました。
+
 ### Fixed
 
 - **Firefox など端末内AI（Prompt API）非対応ブラウザでの「空き容量 10 GB」誤案内を修正** — 端末内AIに対応していないブラウザでは、ストレージのオリジン割当クォータ上限（約 10 GiB）を実ディスクの空き容量と誤認し、実際には 100 GB 以上の空きがあっても「空き容量 10 GB」と表示されることがありました。Prompt API が存在しない環境では容量推定を行わず、既存のブラウザ非対応案内へフォールバックします。要約エラー・AI 接続テスト・診断パネルの 3 つの表示経路が同時に修正されます（[issue #161](https://github.com/armaniacs/yasumaro/issues/161)）
