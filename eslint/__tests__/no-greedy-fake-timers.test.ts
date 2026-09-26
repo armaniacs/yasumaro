@@ -1,12 +1,13 @@
 /**
  * RuleTester tests for no-greedy-fake-timers
  *
- * Uses ESLint's RuleTester with flat config API (ESLint 9+).
+ * Uses ESLint's RuleTester with flat config API (ESLint 9+), built through
+ * createRepeatSafeRuleTester so the cases also pass `vitest --repeats`.
  */
-import { RuleTester } from 'eslint';
+import { createRepeatSafeRuleTester } from './repeatSafeRuleTester.js';
 import noGreedyFakeTimers from '../rules/no-greedy-fake-timers.mjs';
 
-const ruleTester = new RuleTester({
+const ruleTester = createRepeatSafeRuleTester({
     languageOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',

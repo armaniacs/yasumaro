@@ -46,6 +46,13 @@ const NEEDS_ISOLATION = new RegExp(
     // through isolation — their verdicts depend on the worker's storage state.
     String.raw`chrome\.storage\.(local|sync|session)\.(set|remove|clear)\(`,
     String.raw`createMessageRouter\(`,
+    // repeatSafeRuleTester swaps `RuleTester`'s static describe/it hooks and
+    // keeps the per-file case registry in module scope. With a cached module
+    // (isolate: false) only the first file on a worker would register its
+    // beforeEach, and that file's afterAll would un-patch the statics before
+    // the next file collects — the second file would then look up case bodies
+    // in the first file's registry.
+    String.raw`repeatSafeRuleTester`,
   ].join('|'),
 );
 

@@ -157,6 +157,9 @@ A timing-related fix is not done after one green run. Run it repeatedly with ret
 
 - Unit: `npx vitest run <file> --repeats=20`
 - E2E: `npx playwright test <file> --repeat-each=10 --retries=0 --workers=4`
+- ESLint rule tests: `npx vitest run eslint/__tests__ --repeats=20`
+
+Rule tests reach the same gate through `createRepeatSafeRuleTester` in `eslint/__tests__/repeatSafeRuleTester.ts`; plain `new RuleTester` cannot, because ESLint allocates its duplicate-case registry inside the `describe` body and `--repeats` re-runs only the `it` body. See [ADR: ESLint rule tests and `vitest --repeats`](dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md).
 
 The report must include the cause category, the fix, and the repeat commands with their results.
 

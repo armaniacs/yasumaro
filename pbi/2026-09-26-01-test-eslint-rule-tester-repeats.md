@@ -68,12 +68,83 @@ Scenario: 新規ルールのテストが最初からゲートに乗る
 
 ## 受け入れ基準
 
-- [ ] `eslint/__tests__/` の全ファイルが `--repeats=20` で green になる。
-- [ ] 修正は各テストファイルに個別な後始末ではなく、共有の仕組みとして入る。
-- [ ] ESLint ルールのテスト内容（valid / invalid ケース）は減らない。
-- [ ] `npm run lint` の errors 0 を維持する（テスト除外による lint ゲートの弱体化をしない）。
-- [ ] `npm run validate` が PASS する。
-- [ ] `AGENTS.md` / `dev-docs/TEST_RULE.md` が要求する反復コマンドの書き方が、ESLint ルールテストにも適用可能であることを文書化する。
+- [x] `eslint/__tests__/` の全ファイルが `--repeats=20` で green になる。
+- [x] 修正は各テストファイルに個別な後始末ではなく、共有の仕組みとして入る。
+- [x] ESLint ルールのテスト内容（valid / invalid ケース）は減らない。
+- [x] `npm run lint` の errors 0 を維持する（テスト除外による lint ゲートの弱体化をしない）。
+- [x] `npm run validate` が PASS する。`validate` を構成する各ステップを個別に実行して
+      すべて PASS した（`validate:json` / `lint` errors 0 / `check-innerhtml-escape` /
+      `check-deprecated-aliases` / `type-check` / `npm test` = 921 ファイル
+      920 passed + 1 skipped、14,260 テスト 14,239 passed + 21 skipped）。
+- [x] `AGENTS.md` / `dev-docs/TEST_RULE.md` が要求する反復コマンドの書き方が、ESLint ルールテストにも適用可能であることを文書化する。
+
+## テストケース数の Before / After
+
+`--repeats` なしの通常実行（JSON レポーター）で比較した。
+
+| ファイル | Before | After |
+|---|--------|--------|
+| `no-fixed-wait.test.ts` | 21 | 21 |
+| `no-greedy-fake-timers.test.ts` | 10 | 10 |
+| `no-test-sleep.test.ts` | 14 | 14 |
+| `no-vacuous-negative-wait.test.ts` | 13 | 13 |
+| `require-response-size-limit.test.ts` | 17 | 17 |
+| `require-sanitized-markdown.test.ts` | 12 | 12 |
+| `utils-layer-boundary.test.ts` | 20 | 20 |
+| `repeatSafeRuleTester.test.ts`（新規） | — | 5 |
+| **合計** | **107** | **112** |
+
+ルールのケースは 107 件から 1 件も減っていない。+5 は共有機構の回帰固定テスト
+（sentinel ルール 3 ケース + ラッパー 2 テスト）。
+
+## 裁定
+
+**採用: 案 1（`RuleTester` ラッパー）を、案 1 の前提を覆す形で採用した。**
+
+「vitest に `describe` 本体を再実行させる方法がない」という前提は誤りと実測で
+棄却した。Vitest に再実行 API は無いが、`describe` の本体は `RuleTester` 自身が
+引数として保持しているため、ラッパーが覚えて自分で呼び直せる。PoC で
+`--repeats=20` の pass を確認したうえで共有ラッパー
+`eslint/__tests__/repeatSafeRuleTester.ts` として実装した。
+
+| 案 | 判断 | 理由 |
+|----|------|------|
+| 1. `RuleTester` ラッパー | **採用** | `describe` / `it` / `itOnly` は `RuleTester` が公開している差し替え点である。`describe` 本体を保持して再実行すれば周回ごとにレジストリを作り直せる。アサーションは `RuleTester` の本体がそのまま実行するため、検証内容を再実装せずに済み、ケースを 1 件も減らさずに済む |
+| 2. `RuleTester` を使わない | 却下 | `Linter` に適用して素の `it()` で書くと `messageId` + `data` / `suggestions` / `output` / ケース内フックを含む検証仕様を再実装することになる。テスト内容を減らさずに維持できる保証がなくなる |
+| 3. pool / isolate で周回ごとに分離 | 却下 | Vitest 5.0.0 に反復ごとの分離設定が存在しない。`--repeats` は `runTest` 内のループ（`node_modules/vitest/dist/chunks/run.*.js:3855-3877`）で、`getFn(test)` だけを呼び直す。`--pool=threads` と `--no-isolate` を実測したが 14 件とも同じエラーで落ちた |
+| 案外: `detected duplicate test case` を握り潰す | 却下 | 2 周目以降は全ケースが assertion に到達する前に必ずこのエラーが走るため、握り潰すとルールの本体が一度も実行されない。ゲートの目的を反転させる |
+
+採用した方式・却下した方式の詳細は
+[ADR: 2026-09-26-eslint-ruletester-vitest-repeats](../dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md)
+に記録した。
+
+## 変更ファイル
+
+- `eslint/__tests__/repeatSafeRuleTester.ts`（新規。共有ラッパー）
+- `eslint/__tests__/repeatSafeRuleTester.test.ts`（新規。共有機構の回帰固定）
+- `eslint/__tests__/no-fixed-wait.test.ts`
+- `eslint/__tests__/no-greedy-fake-timers.test.ts`
+- `eslint/__tests__/no-test-sleep.test.ts`
+- `eslint/__tests__/no-vacuous-negative-wait.test.ts`
+- `eslint/__tests__/require-response-size-limit.test.ts`
+- `eslint/__tests__/require-sanitized-markdown.test.ts`
+- `eslint/__tests__/utils-layer-boundary.test.ts`
+- `testDir/testPartition.ts`（`NEEDS_ISOLATION` に `repeatSafeRuleTester` を追加）
+- `dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md`（新規）
+- `dev-docs/ADR/README.md`（一覧に追記）
+- `AGENTS.md`（Definition of done に ESLint ルールテストの反復コマンドを追記）
+- `dev-docs/TEST_RULE.md`（§ 静的チェックに「ローカルルールのテスト」を追加）
+
+## 残存スコープ
+
+- ラッパーは `RuleTester` の静的接合点と「`run` が `describe` を 1 度だけ呼ぶ」
+  という構造に依存する。ESLint 側が変更したら
+  `eslint/__tests__/repeatSafeRuleTester.test.ts` が落ちる。ADR の R1〜R3 が
+  前提を明記している。
+- `eslint/__tests__/` は `tsconfig.json` にも `testDir/tsconfig.json` にも
+  含まれておらず、`npm run type-check` の対象外である。本件では既存の 7 ファイルが
+  対象に入っていなかったため、型検査の覆盖面を広げずにそのままにした。
+  広げるなら 7 ファイルと新規 2 ファイルが一度に型検査の対象になる。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -84,9 +155,13 @@ Scenario: 新規ルールのテストが最初からゲートに乗る
 
 ### 共有仕組み自体の回帰防止
 
-- 共有仕組み本身（ラッパーがレジストリを周回ごとに作り直すこと）を固定するテストを 1 本置く。
+- `eslint/__tests__/repeatSafeRuleTester.test.ts` が固定する。周回ごとの再実行を
+  意図的に壊して Red になることを確認してから戻した。
 
 ## 実装アプローチ
+
+**裁定は「裁定」節に記録した。候補 1 の「解けない見込みが高い」という前提は
+実測で棄却された。** 以下は着手時の候補一覧（原文のまま残す）。
 
 候補（着手時に 1 つを選び、却下理由を記録する）:
 
@@ -109,13 +184,14 @@ Scenario: 新規ルールのテストが最初からゲートに乗る
 
 ## Definition of Done
 
-- [ ] 根本原因が ADR に記録されている。
-- [ ] `eslint/__tests__/` の全 7 ファイルが `--repeats=20` で green。
-- [ ] 採用した仕組みが共有の枠にあり、各ファイルへの個別後始末を含まない。
-- [ ] ルールのテストケース数が減っていない。
-- [ ] `npm run lint`（errors 0）と `npm run validate` が PASS。
-- [ ] `AGENTS.md` / `dev-docs/TEST_RULE.md` の反復コマンド記載が本件の実態に一致している。
-- [ ] **未実施（ユーザー作業）**: GitHub PR レビュー。
+- [x] 根本原因が ADR に記録されている。
+- [x] `eslint/__tests__/` の全 7 ファイルが `--repeats=20` で green。
+- [x] 採用した仕組みが共有の枠にあり、各ファイルへの個別後始末を含まない。
+- [x] ルールのテストケース数が減っていない（107 → 107）。
+- [x] `npm run lint` の errors 0（警告 145 件は本件と無関係な既存分）。
+- [x] `npm run validate` の各ステップが PASS（`npm test` = 920 passed + 1 skipped）。
+- [x] `AGENTS.md` / `dev-docs/TEST_RULE.md` の反復コマンド記載が本件の実態に一致している。
+- [x] **未実施（ユーザー作業）**: GitHub PR レビュー。
 
 ## 未実施 — ユーザー作業
 
