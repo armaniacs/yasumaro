@@ -14,6 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-27 Built-in AI 誤案内修正 — 未着手 1件 🔧非機能追加
+
+- [2026-09-27-01-fix-built-in-ai-false-disk-space-error.md](2026-09-27-01-fix-built-in-ai-false-disk-space-error.md)（未着手 — 0.5 SP・難易度 低・副作用 なし。issue #161 / Linear DEV-93。Firefox など Prompt API 非対応ブラウザで、実際の空き容量と無関係に「空き容量 10 GB」と誤表示される。`getBuiltInAIDiskSpace()` に Prompt API 存在ゲートを追加し、非対応ブラウザでは既存のブラウザ非対応案内へフォールバック。既存 6 テストが `LanguageModel` 未定義のテスト環境で全滅する点に注意 — PBI「落とし穴」参照）
+
 ### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 3件完了・⬜ 未着手 2件 🔧非機能追加
 
 **統合 PBI**: [2026-09-26-00-timing-failure-elimination-suite.md](2026-09-26-00-timing-failure-elimination-suite.md)
@@ -104,9 +108,9 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 **sentence-dedup（2026-09-20 実装・0ed11095）の配線は不採用で確定（2026-09-21）**: 唯一の呼び出し元 `src/utils/contentExtractor/index.ts` がコンテンツスクリプト（`src/content/contentKernel.ts`）専用経路で実行されるため、ページ側 CSP で WASM 初期化を保証できず、配線しても実運用ではほぼ常に TS フォールバックになる。速度利得も 1.13〜1.28x と小さく、メモリ利得（フットプリント 0.22→0.00MB/call・実測）は dedup ステージの offscreen 移設（処理順の意味論が変わるアーキテクチャ変更）と引き換えになるため、現時点では採用しない。クレート・ハイブリッド・CI ゲート（src コピー）は STAGED のまま資産保持し、将来のパイプライン移設時に再評価する。
 
-### 2026-09-15 AMO 公開 — 🟪 審査待ち（2026-09-24 提出・審査中、審査結果対応はユーザー作業）
+### 2026-09-15 AMO 公開 — ✅ 完了（2026-09-23 審査通過・公開済み、アーカイブ済み）
 
-- 🟪 [2026-09-15-01-backlog-firefox-amo-publish.md](2026-09-15-01-backlog-firefox-amo-publish.md)（**審査待ち**: 2026-09-23 ユーザー指示で AMO 採用決定。sources zip 肥大修正・data_collection_permissions 追加・strict_min_version 140 で addons-linter errors 0。2026-09-24 に AMO 提出済み・審査中。残置は審査結果対応 — 通過後の署名版インストール確認・FAQ (ja/en) 記載、指摘時は対応記録。詳細は PBI の着手記録参照）
+- ✅ [2026-09-15-01-backlog-firefox-amo-publish.md](../dev-docs/archived/pbi/2026-09-15-01-backlog-firefox-amo-publish.md)（**公開済み**: <https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/>、公開版 6.9.17 / 2.89 MB、2026-09-23 更新。審査指摘なしで通過。提出前修正は sources zip 597MB→23.6MB、data_collection_permissions 追加、strict_min_version 140 で addons-linter 0 errors / 0 warnings / 0 notices。2026-09-26 に署名版での実機 smoke（同意→記録→検索）完了をユーザー報告で受領。FAQ (ja/en) のインストール手順も公開实际情况に合わせて更新済み）
 
 
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
@@ -416,7 +420,7 @@ arch-review-0917（10件・全件完了）の実装後の大局的レビュー�
 
 ### 2026-09-14/15 Firefox 対応 — ✅ 全3件完了（アーカイブ済み）
 
-Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべて完了。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。実機 QA で発見した4不具合（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）はすべて修正済み。AMO 公開は将来対応（`2026-09-15-01`・着手禁止）。台帳は `2026-09-14-00-backlog-firefox-support.md`（アーカイブ済み）。
+Firefox 対応（09 storage-port / 10 E2E-CI / 11 リリース準備）はすべて完了。CI の `firefox-storage` ジョブ（probe + worker smoke）が常時回帰検知。実機 QA で発見した4不具合（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）はすべて修正済み。**AMO 公開も完了**（`2026-09-15-01`・2026-09-23 審査通過で 6.9.17 を公開、署名版での実機 smoke も 2026-09-26 完了）。台帳は `2026-09-14-00-backlog-firefox-support.md`（アーカイブ済み）。
 
 v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒否される回帰が入り、v6.9.2 で修正した（[[2026-09-16-01-fix-archive-e2e-flaky]]）。
 
@@ -429,7 +433,7 @@ v6.9.1 の送信者検証リファクタで Firefox の全 SQLite 操作が拒�
 - [2026-09-20-14-refactor-shared-js-strings-rust-crate.md](../dev-docs/archived/pbi/2026-09-20-14-refactor-shared-js-strings-rust-crate.md)（✅ 完了 — wasm/js-strings crate・FxHash 統一出力不変・バイナリ再コミット。dfc72734）
 - [2026-09-20-16-refactor-sqlite-wire-table-extension.md](../dev-docs/archived/pbi/2026-09-20-16-refactor-sqlite-wire-table-extension.md)（✅ 完了 — sqliteWireTable.ts query/mutate 10 op・段階適用の判断記録。f63602d）
 
-保留（ユーザーゲートで closer 対象外）: wasqlite sunset（ゲート 2026-12-17）・AMO 公開・tag-cooccur 17/21/22（実機確認 + GitHub PR approve 待ち）
+保留（ユーザーゲートで closer 対象外）: wasqlite sunset（ゲート 2026-12-17）・tag-cooccur 17/21/22（実機確認 + GitHub PR approve 待ち）※ AMO 公開は 2026-09-26 完了のため保留から除外
 
 ### 2026-09-21 PBI-20 serde スパイクの非反転クローズ — ✅ 1件クローズ（20 アーカイブ済み）
 
@@ -1747,7 +1751,7 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | 状態 | 件数 |
 |---|---|
 | ⬜ 未着手 | 4（保留候補 01-03 = トリガー待ち 3 / wasqlite sunset = ADR-014 ゲート待ち 1） |
-| 🟪 審査待ち | 1（AMO 公開 01 = 提出・審査中。通過後の署名版インストール確認・FAQ 記載はユーザー作業） |
+| 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 1（VulnHunt 11 defense-in-depth = 発火条件監視・発火時に分割 PBI 化） |
 | **`pbi/` 残存 PBI 合計** | **6（＋ live 台帳 4 件: future / vuln-remediation / archloop-0924 / analysis-features）** |
 | アーカイブ済みPBI | 947（`00-backlog` 台帳 76 件を除く） |
