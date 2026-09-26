@@ -266,17 +266,39 @@ PR #162（`feat/ci-paths-filter` → `main`、merge commit `f19e6ccf`）で実�
   複製に対する control では 3 件を検出した（actionlint が黙って通っているわけではない）。
 - `npm run type-check` PASS、`npx eslint` 指摘 0。
 
-### 残る未検証事項
+### docs-only case の実測（PR #163）
 
-**docs だけの変更で `wasm-test` と `build` が起動しないこと**のみ未確認。
-本 PR は `ci.yml` を変更しているので全ゲートが起動するのが正しい挙動であり、
-この case だけを実 PR で確認する必要がある。使い捨ての docs-only PR を
-1 件作れば `Classify changed paths` の出力が `validate=false, wasm=false,
-build=false, pbi=false` になることで確認できる（30 秒程度）。
+使い捨ての検証 PR を別途作らずに検証を成立させるため、**PR #163 を docs-only の
+deliverable 自身にして**実測させた（`CONTRIBUTING.md` のみ、`.md` 以外の差分 0 件）。
 
-他の case は次のように確定済み:
-- CI 設定変更 → 全ゲート起動（実 PR で確認）
-- lockfile / `.npmrc` / `wasm` 入力 → テストの振る舞い行列で分類結果を固定
+```
+Classify changed paths -> success
+gitleaks               -> success   ← docs-only でも実行（要件どおり）
+validate               -> skipped
+wasm-test              -> skipped
+dod-check              -> skipped   ← pbi/ 未変更
+build                  -> skipped
+```
+
+`tests.yml` 側（`a11y` / `usability` / `firefox-storage` / `test`）は 4 件とも
+path で絞られず実行された（52s / 2m8s / 58s / 9m51s）。
+
+ここで決定的だったのが、job-level `if` によるスキップのステータスが
+**`skipped` として終端する**こと（`pending` ではない）である。workflow 単位の
+`paths` フィルタなら未実行 job が `pending` になり、branch protection が
+その job 名を必須チェックに指定した場合に merge が塞がる。job-level `if` に
+した判断が実環境で裏付けられた。
+
+### 全 case の確定状況
+
+| case | 確認手段 |
+|---|---|
+| docs のみ変更 | 実 PR #163（4 ゲートすべて skipped、`gitleaks` は実行） |
+| CI 設定を変更 | 実 PR #162（全ゲート起動、`build` は `validate` 完了後に起動） |
+| CI 設定自身を含む自己除外防止 | 実 PR #162（ci.yml 変更で全ゲートが起動） |
+| lockfile / `.npmrc` / `wasm` / `package.json` | テストの振る舞い行列で分類結果を固定 |
+| `gitleaks` が常に実行 | 実 PR #162 / #163 の両方 |
+| `tests.yml` が無条件 | 実 PR #162 / #163 の両方 |
 
 ---
 
