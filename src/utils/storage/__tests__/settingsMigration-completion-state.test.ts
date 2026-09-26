@@ -166,17 +166,23 @@ describe('settings migration — completion is an explicit versioned stage', () 
         expect(isSettingsMigrationComplete({ schemaVersion: 1, stage: 'completed' })).toBe(false);
     });
 
-    it('treats the legacy boolean as unverified, and only the read path accepts it', () => {
-        expect(isSettingsMigrationComplete(true)).toBe(false);
+    it('treats the legacy boolean as complete so installed profiles are not re-migrated', () => {
+        // The legacy boolean is what every install that predates this schema
+        // carries. Re-running for them relocates keys whose owning modules still
+        // read them raw, which silently drops that state — the privacy consent
+        // modal comes back, recording triggers reset, and so on. The migration
+        // entry and the read path therefore have to agree.
+        expect(isSettingsMigrationComplete(true)).toBe(true);
+        expect(isSettingsBlobAuthoritative(true)).toBe(true);
+
         expect(isSettingsMigrationComplete(false)).toBe(false);
         expect(isSettingsMigrationComplete(undefined)).toBe(false);
         expect(isSettingsMigrationComplete('done')).toBe(false);
         expect(isSettingsMigrationComplete({ stage: 'completed' })).toBe(false);
         expect(isSettingsMigrationComplete(1)).toBe(false);
 
-        // Existing installs carry the boolean; their blob stays authoritative so
-        // the repair path — not a scattered re-read — is what updates them.
-        expect(isSettingsBlobAuthoritative(true)).toBe(true);
+        // A partial stage still resumes: the stage names the step to continue.
+        expect(isSettingsMigrationComplete({ schemaVersion: 2, stage: 'pending' })).toBe(false);
         expect(isSettingsBlobAuthoritative({ schemaVersion: 2, stage: 'completed' })).toBe(true);
         expect(isSettingsBlobAuthoritative({ schemaVersion: 2, stage: 'pending' })).toBe(false);
         expect(isSettingsBlobAuthoritative({ schemaVersion: 2, stage: 'backed_up' })).toBe(false);
@@ -431,11 +437,37 @@ describe('settings migration — interruption at every storage boundary', () => 
 });
 
 describe('settings migration — repairing the legacy boolean record', () => {
-    it('keeps the nested settings, backfills the gaps, and only then removes the raw keys', async () => {
+    it('leaves a legacy boolean profile untouched — no backfill, no raw removal', async () => {
+        // Regression pin. Treating the legacy boolean as "not complete" made
+        // every existing install re-run the migration, which relocated raw-owned
+        // keys and deleted the only copy their owner could read. The privacy
+        // consent modal reappeared and recording triggers reset.
         harness.data = {
             settings: { [StorageKeys.OBSIDIAN_PORT]: 'blob-value' },
             settings_version: 4,
             [SETTINGS_MIGRATED_KEY]: true,
+            [StorageKeys.OBSIDIAN_PORT]: 'stale-raw-value',
+            [StorageKeys.OBSIDIAN_HOST]: 'only-in-raw',
+        };
+
+        await expect(migrateToSingleSettingsObject()).resolves.toBe(false);
+
+        // Nothing moved, nothing deleted, and the record keeps its old shape so
+        // a later release can still decide what to do with it.
+        expect(blob()[StorageKeys.OBSIDIAN_PORT]).toBe('blob-value');
+        expect(harness.data[StorageKeys.OBSIDIAN_HOST]).toBe('only-in-raw');
+        expect(harness.data[StorageKeys.OBSIDIAN_PORT]).toBe('stale-raw-value');
+        expect(harness.data[SETTINGS_MIGRATED_KEY]).toBe(true);
+        expect(backupEntries()).toHaveLength(0);
+    });
+
+    it('still backfills the gaps when a partial stage says the run was unfinished', async () => {
+        // The stage machine is what makes a resumed run safe, so the backfill
+        // behaviour is kept and pinned against a partial record.
+        harness.data = {
+            settings: { [StorageKeys.OBSIDIAN_PORT]: 'blob-value' },
+            settings_version: 4,
+            [SETTINGS_MIGRATED_KEY]: { schemaVersion: SETTINGS_MIGRATION_SCHEMA_VERSION, stage: 'backed_up' },
             [StorageKeys.OBSIDIAN_PORT]: 'stale-raw-value',
             [StorageKeys.OBSIDIAN_HOST]: 'only-in-raw',
         };
@@ -451,10 +483,10 @@ describe('settings migration — repairing the legacy boolean record', () => {
         });
     });
 
-    it('upgrades a legacy boolean with nothing left to migrate without creating a backup', async () => {
+    it('completes a partial stage with nothing left to migrate without creating a backup', async () => {
         harness.data = {
             settings: { [StorageKeys.OBSIDIAN_PORT]: RAW_PORT },
-            [SETTINGS_MIGRATED_KEY]: true,
+            [SETTINGS_MIGRATED_KEY]: { schemaVersion: SETTINGS_MIGRATION_SCHEMA_VERSION, stage: 'legacy_removed' },
         };
 
         await expect(migrateToSingleSettingsObject()).resolves.toBe(true);

@@ -85,13 +85,25 @@ export function parseSettingsMigrationState(raw: unknown): SettingsMigrationStat
 }
 
 /**
- * Strict completion: the only record that proves the run finished every step.
- * A partial stage string is truthy and would pass a truthiness check, which is
- * exactly the bug this replaces. The legacy boolean is deliberately NOT
- * complete here — it was written before the backup existed, so it cannot prove
- * anything and belongs to the repair path.
+ * Completion, as the migration entry sees it.
+ *
+ * The legacy boolean `true` counts as complete. It is the record every install
+ * that predates this schema has, and re-running the migration for those installs
+ * is not safe: it relocates keys into the `settings` blob and deletes the raw
+ * copy, while a number of owning modules (`privacyConsent.ts`,
+ * `recordingTriggerManager.ts`, `urlWhitelist.ts`, the offscreen migration
+ * state, …) still read their key straight from `chrome.storage.local` and have
+ * no blob-side reader. Re-running therefore silently drops that state — the
+ * privacy consent modal comes back, recording triggers reset, and so on.
+ *
+ * A *partial* stage record is truthy and would pass a truthiness check, which is
+ * exactly the bug the stage machine replaces: those still resume, because the
+ * stage names the step to continue from.
+ *
+ * Auditing which keys may be relocated at all is PBI 2026-09-25-18.
  */
 export function isSettingsMigrationComplete(raw: unknown): boolean {
+    if (raw === true) return true;
     const state = parseSettingsMigrationState(raw);
     return state !== null && state.stage === 'completed' && state.schemaVersion >= SETTINGS_MIGRATION_SCHEMA_VERSION;
 }
@@ -99,14 +111,13 @@ export function isSettingsMigrationComplete(raw: unknown): boolean {
 /**
  * Read-path predicate: is the `settings` blob the authoritative source?
  *
- * The legacy boolean `true` is accepted because it is the record every installed
- * user has, and the deferred migration repairs it non-destructively before any
- * read depends on it. Rejecting it would push existing installs onto the
- * scattered-key path for no benefit; accepting a *partial* stage would hide raw
- * keys the migration has not folded in yet, so those stay rejected.
+ * Same answer as the migration entry, and deliberately so. When the two
+ * disagreed — blob trusted for reads while the migration still re-ran — the
+ * migration's view won in practice, and any key it relocated became invisible
+ * to the module that owned it.
  */
 export function isSettingsBlobAuthoritative(raw: unknown): boolean {
-    return isSettingsMigrationComplete(raw) || raw === true;
+    return isSettingsMigrationComplete(raw);
 }
 
 const STORAGE_KEY_VALUES: ReadonlySet<string> = new Set<string>(Object.values(StorageKeys) as string[]);
