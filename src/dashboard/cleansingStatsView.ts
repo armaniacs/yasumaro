@@ -2,23 +2,7 @@ import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { tOrKey as t } from '../utils/i18n.js';
-
-/**
- * バイト数を4桁有効数字で KB / MB / GB に自動変換する
- */
-function formatBytes(bytes: number): string {
-  const GB = 1024 * 1024 * 1024;
-  const MB = 1024 * 1024;
-  const KB = 1024;
-
-  if (bytes >= GB) {
-    return `${parseFloat((bytes / GB).toPrecision(4))} GB`;
-  } else if (bytes >= MB) {
-    return `${parseFloat((bytes / MB).toPrecision(4))} MB`;
-  } else {
-    return `${parseFloat((bytes / KB).toPrecision(4))} KB`;
-  }
-}
+import { formatBytes } from './byteFormat.js';
 
 export interface CleansingStats {
   count: number;
@@ -238,13 +222,6 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
   const sentRatio = Math.min(sentToAI / base, 1);
   // 100.0%（完全削減に見える）は誤解を招くため99.9%でキャップ
   const reductionRate = Math.min((1 - sentRatio) * 100, 99.9);
-
-  // 人間が読みやすいバイト表示
-  const formatBytes = (b: number): string => {
-    if (b >= 1024 * 1024) return `${(b / (1024 * 1024)).toFixed(1)} MB`;
-    if (b >= 1024) return `${(b / 1024).toFixed(1)} KB`;
-    return `${b} B`;
-  };
 
   const wrapper = document.createElement('div');
   wrapper.className = 'cleansing-progress-wrapper';
