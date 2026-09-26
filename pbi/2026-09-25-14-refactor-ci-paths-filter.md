@@ -184,10 +184,24 @@ $ gh api repos/armaniacs/yasumaro/rulesets
   workflow 単位の `paths` フィルタを使わない（job-level `if` にする）形は採用した。
 - 必須 job 名の確定は不要になった。
 
-### 残る未検証事項
+### 実 pull request での観測（PR #162 マージ済み）
 
-実 pull request でのジョブ起動観測（DoD の BDD シナリオ群）のみ。PR を作成して
-GitHub Actions の結果を見ることでしか検証できないため、ユーザー作業として分離する。
+PR #162（`feat/ci-paths-filter` → `main`、merge commit `f19e6ccf`）で実観測した。
+
+**CI 設定を変更した場合**（= `validate` / `wasm-test` / `dod-check` / `build` の
+起動条件が該当する場合）、PR の 10 check すべて pass した:
+
+| ジョブ | 結果 | 確認できたこと |
+|---|---|---|
+| Classify changed paths | pass 5s | 分類ジョブが実際に動作する。`predicate-quantifier: every` が受理される |
+| validate | pass 4m34s | ci.yml 変更で起動 = **自己除外防止が機能している** |
+| wasm-test | pass 1m2s | 同上 |
+| dod-check | pass 9s | 同上 |
+| build | pass 33s | **validate 完了後**に起動（4m34s → 33s）。`needs` と `!cancelled()` が正しく効いている |
+| gitleaks | pass 11s | path 条件なしで起動 |
+| a11y / usability / firefox-storage / test | pass | `tests.yml` は無条件起動のまま（PBI の対象外） |
+
+マージ後の `main` でも同構成がすべて success した。
 
 ## 実装先
 
@@ -252,16 +266,24 @@ GitHub Actions の結果を見ることでしか検証できないため、ユ�
   複製に対する control では 3 件を検出した（actionlint が黙って通っているわけではない）。
 - `npm run type-check` PASS、`npx eslint` 指摘 0。
 
-### DoD 仍未達
+### 残る未検証事項
 
-実 pull request での BDD シナリオ観測のみ（ユーザー作業）。
+**docs だけの変更で `wasm-test` と `build` が起動しないこと**のみ未確認。
+本 PR は `ci.yml` を変更しているので全ゲートが起動するのが正しい挙動であり、
+この case だけを実 PR で確認する必要がある。使い捨ての docs-only PR を
+1 件作れば `Classify changed paths` の出力が `validate=false, wasm=false,
+build=false, pbi=false` になることで確認できる（30 秒程度）。
+
+他の case は次のように確定済み:
+- CI 設定変更 → 全ゲート起動（実 PR で確認）
+- lockfile / `.npmrc` / `wasm` 入力 → テストの振る舞い行列で分類結果を固定
 
 ---
 
 ## Definition of Done
 
 - [x] 6 ジョブの入力 path と起動条件が `ci.yml` 内で定義され、共通分類ジョブから参照できる。
-- [ ] docs-only、WASM、build、CI 設定、lockfile、`.npmrc` の BDD シナリオが実際の CI で確認できる。→ **未達（ユーザー作業）**。PR の実行結果で観測する。
+- [ ] docs-only、WASM、build、CI 設定、lockfile、`.npmrc` の BDD シナリオが実際の CI で確認できる。→ **一部確認済み**。CI 設定変更 case は PR #162 で実測（全ゲートが起動し、build は validate 完了後に起動）。**残るは docs-only で `wasm-test` / `build` が起動しないことのみ**（使い捨て docs-only PR が必要）。
 - [x] `gitleaks` が全対象ケースで history scan を実行し、security gate が除外されていない。
 - [x] `build` は `validate` 成功後に限られ、validate が skip または failed の場合に実行されない。
 - [x] required check が pending にならないこと。→ `main` に branch protection も ruleset も存在しないことを `gh api` で実測した（必須チェック自体が無い）。将来 protection を入れても塞がらないよう workflow 単位の `paths` は使わず job-level `if` にしている。
@@ -269,6 +291,6 @@ GitHub Actions の結果を見ることでしか検証できないため、ユ�
 - [x] `npm run validate` が成功する。
 - [x] branch protection の必須 job 名と、skip 時の扱いを実装前に確認している。→ protection なし・ruleset なしを実測。必須 job 名は存在しない。
 - [x] `.github/workflows/tests.yml` が変更対象外である。
-- [ ] コードレビューが完了している。→ **未達（ユーザー作業）**。
+- [x] コードレビューが完了している。→ PR #162 としてレビューを実施し、2026-09-26 にマージ済み（merge commit `f19e6ccf`）。
 - [x] 問題が生じた場合に job 単位の条件と分類定義を戻せる rollback 手段が確認されている。→ 分類は `ci.yml` の `changes` ジョブ 1 箇所に集約され、`if` はその outputs 参照だけなので、`changes` ジョブを削除して `needs` を外せば元の無条件実行に戻る。
 - [x] この PBI の内容と実装の分類表が一致している。
