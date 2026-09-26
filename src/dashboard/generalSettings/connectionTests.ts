@@ -12,6 +12,13 @@
 // eslint-disable-next-line local/require-sanitized-markdown -- test data with hardcoded markdown, not user input
 import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
+import {
+  OBSIDIAN_DEFAULT_HOST,
+  OBSIDIAN_DEFAULT_PORT,
+  validateObsidianHost,
+  validateObsidianPort,
+} from '../../utils/obsidianConfigValidator.js';
+import type { FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
@@ -28,6 +35,127 @@ import {
 } from '../aiTestProgressView.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
+
+const FIREFOX_CERT_GUIDE_FALLBACK =
+  'Firefox keeps its own certificate store, separate from the OS one, so a certificate installed on the operating system can still be untrusted in Firefox. Do one of the following: (1) open the link above in a new tab and add a certificate exception, or (2) import the CA certificate under Settings → Privacy & Security → Certificates. Link target: {url}';
+
+/** What the Dashboard needs from a TEST_OBSIDIAN answer: wording plus the
+ * structured kind. `failure` is absent on success. */
+export interface ObsidianTestOutcome {
+  success: boolean;
+  message: string;
+  failure?: FailureMetadata;
+}
+
+/** Identity of the WebExtension host, as `chrome.runtime.getBrowserInfo` reports it. */
+export interface BrowserIdentity {
+  name?: string;
+}
+
+/** Host/port fallback, used when the form field is empty. */
+export interface SavedObsidianEndpoint {
+  host?: string | undefined;
+  port?: string | undefined;
+}
+
+/**
+ * Seams for `handleTestObsidian`. The handler is registered directly as a
+ * click listener, so its single parameter is a MouseEvent in production; only
+ * these two members are ever read off it (see `resolveConnectionTestDeps`).
+ */
+export interface ObsidianConnectionTestDeps {
+  getBrowserInfo?: () => Promise<BrowserIdentity | undefined> | BrowserIdentity | undefined;
+  readSavedEndpoint?: () => Promise<SavedObsidianEndpoint>;
+}
+
+/**
+ * `chrome.runtime.getBrowserInfo` exists on Firefox only and rejects on some
+ * Firefox builds, so the guard and the catch are both load-bearing: Chrome
+ * must fall through to the generic guidance instead of throwing.
+ */
+async function readHostBrowser(): Promise<BrowserIdentity | undefined> {
+  const runtime = chrome.runtime as typeof chrome.runtime & {
+    getBrowserInfo?: () => Promise<BrowserIdentity>;
+  };
+  if (typeof runtime.getBrowserInfo !== 'function') return undefined;
+  try {
+    return await runtime.getBrowserInfo();
+  } catch {
+    return undefined;
+  }
+}
+
+async function readSavedObsidianEndpoint(): Promise<SavedObsidianEndpoint> {
+  const saved = await settingsRepository.getMany([StorageKeys.OBSIDIAN_HOST, StorageKeys.OBSIDIAN_PORT]);
+  return {
+    host: saved[StorageKeys.OBSIDIAN_HOST],
+    port: saved[StorageKeys.OBSIDIAN_PORT],
+  };
+}
+
+function resolveConnectionTestDeps(options?: Event | ObsidianConnectionTestDeps): Required<ObsidianConnectionTestDeps> {
+  const candidate = (options ?? {}) as Partial<ObsidianConnectionTestDeps>;
+  return {
+    getBrowserInfo: typeof candidate.getBrowserInfo === 'function' ? candidate.getBrowserInfo : readHostBrowser,
+    readSavedEndpoint: typeof candidate.readSavedEndpoint === 'function' ? candidate.readSavedEndpoint : readSavedObsidianEndpoint,
+  };
+}
+
+/**
+ * Firefox keeps its own certificate store, so a CA installed at the OS level
+ * may still be untrusted there and the walkthrough differs from Chrome's.
+ * Resolved before rendering because `getBrowserInfo` is asynchronous.
+ */
+async function isFirefoxHost(
+  getBrowserInfo: Required<ObsidianConnectionTestDeps>['getBrowserInfo'],
+): Promise<boolean> {
+  try {
+    const info = await getBrowserInfo();
+    return info?.name === 'Firefox';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Certificate-approval URL for the endpoint the test actually used.
+ * The scheme is fixed and both components are re-validated, so a host typed
+ * into the form can never inject another scheme, a path, or a second
+ * authority; an invalid value degrades to the default endpoint instead.
+ */
+function buildCertificateUrl(host: string | undefined, port: string | undefined): string {
+  const safeHost = tryOrDefault(() => validateObsidianHost(host), OBSIDIAN_DEFAULT_HOST);
+  const safePort = tryOrDefault(() => validateObsidianPort(port), OBSIDIAN_DEFAULT_PORT);
+  return `https://${safeHost}:${safePort}/`;
+}
+
+function tryOrDefault<T>(read: () => T, fallback: T): T {
+  try {
+    return read();
+  } catch {
+    return fallback;
+  }
+}
+
+async function readSavedEndpointSafely(
+  read: Required<ObsidianConnectionTestDeps>['readSavedEndpoint'],
+): Promise<SavedObsidianEndpoint | undefined> {
+  try {
+    return await read();
+  } catch {
+    // Best-effort: the guidance is still worth rendering with the defaults.
+    return undefined;
+  }
+}
+
+/**
+ * A certificate walkthrough only helps when the transport itself failed over
+ * HTTPS, and the decision is read from `failure.kind` — never from `message`,
+ * which the Service Worker rewrites and which differs per browser.
+ */
+function isCertificateFailure(outcome: ObsidianTestOutcome, protocol: string | undefined): boolean {
+  return !outcome.success && outcome.failure?.kind === 'network' && protocol === 'https';
+}
 
 /**
  * Ask the Service Worker to re-read LOCAL_MARKDOWN_EXPORT_TIMING and
@@ -67,7 +195,7 @@ export function createConnectionStatusElement(label: string, result: { success: 
   return statusDiv;
 }
 
-export async function testObsidianConnection(apiKey: string): Promise<{ success: boolean; message: string }> {
+export async function testObsidianConnection(apiKey: string): Promise<ObsidianTestOutcome> {
   const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
   const portInput = document.getElementById('port') as HTMLInputElement | null;
   const hostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
@@ -89,7 +217,7 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
           ...(host ? { host } : {}),
         }
       : {}
-  }) as { obsidian?: { success: boolean; message: string } };
+  }) as { obsidian?: ObsidianTestOutcome };
 
   return testResult?.obsidian || { success: false, message: getMessageOr('connectionNoResponse', 'No response')};
 }
@@ -139,10 +267,12 @@ export async function handleSaveOnly(): Promise<void> {
   }
 }
 
-export async function handleTestObsidian(): Promise<void> {
+export async function handleTestObsidian(options?: Event | ObsidianConnectionTestDeps): Promise<void> {
   const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   if (!testObsidianBtn || !statusDiv) return;
+
+  const deps = resolveConnectionTestDeps(options);
 
   statusDiv.innerHTML = '';
   statusDiv.className = '';
@@ -152,24 +282,45 @@ export async function handleTestObsidian(): Promise<void> {
   try {
     const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
     const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
+    const hostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
+    const portInput = document.getElementById('port') as HTMLInputElement | null;
     const typedApiKey = apiKeyInput?.value?.trim();
     const obsidianResult = await testObsidianConnection(typedApiKey || '');
+
+    // Resolved before rendering: the guidance text differs per browser.
+    const isFirefox = await isFirefoxHost(deps.getBrowserInfo);
 
     statusDiv.innerHTML = '';
     statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
 
-    // HTTPS証明書警告
-    if (!obsidianResult.success && obsidianResult.message.includes('Failed to fetch') && protocolInput?.value === 'https') {
-      const portInput = document.getElementById('port') as HTMLInputElement | null;
-      const port = parseInt(portInput?.value?.trim() || '0', 10);
-      const url = `https://127.0.0.1:${port}/`;
+    if (isCertificateFailure(obsidianResult, protocolInput?.value)) {
+      const form = {
+        host: hostInput?.value?.trim() ?? '',
+        port: portInput?.value?.trim() ?? '',
+      };
+      const saved = form.host !== '' && form.port !== ''
+        ? undefined
+        : await readSavedEndpointSafely(deps.readSavedEndpoint);
+      const url = buildCertificateUrl(form.host || saved?.host, form.port || saved?.port);
+
+      statusDiv.appendChild(document.createElement('br'));
       const link = document.createElement('a');
       link.href = url;
       link.target = '_blank';
       link.textContent = getMessageOr('acceptCertificate', '証明書を承認する');
       link.rel = 'noopener noreferrer';
-      statusDiv.appendChild(document.createElement('br'));
       statusDiv.appendChild(link);
+
+      if (isFirefox) {
+        const note = document.createElement('div');
+        note.className = 'diag-indent';
+        note.textContent = getMessageWithSubstitutions(
+          'certGuideFirefox',
+          { url },
+          FIREFOX_CERT_GUIDE_FALLBACK,
+        );
+        statusDiv.appendChild(note);
+      }
     }
 
     statusDiv.className = obsidianResult.success ? 'success' : 'error';

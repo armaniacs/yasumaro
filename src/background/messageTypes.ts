@@ -12,6 +12,7 @@ import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseMod
 // through aiClient.js would drag the whole provider Strategy graph along with
 // it. AIService.ts is types-only.
 import type { AiTestProgress } from './ai/AIService.js';
+import type { FailureMetadata } from '../utils/failureTaxonomy.js';
 
 // ============================================================================
 // Protocol version
@@ -123,6 +124,25 @@ export type TestAiMessage = {
      * filter progress broadcasts so multiple tabs do not interfere. */
     runId?: string;
 };
+
+/**
+ * TEST_OBSIDIAN response.
+ *
+ * `failure` is optional and present only on failures. Consumers branch on
+ * `failure.kind` (network / timeout / …), never on `message`: the Service
+ * Worker rewrites every transport error into a sanitized sentence before
+ * returning, so a message substring cannot identify the kind and differs
+ * per browser (Chrome `Failed to fetch` vs Firefox `NetworkError when
+ * attempting to fetch resource`). PBI 2026-09-26-09.
+ */
+export interface TestObsidianResponse {
+    success: true;
+    obsidian: {
+        success: boolean;
+        message: string;
+        failure?: FailureMetadata;
+    };
+}
 
 export type GetPrivacyCacheMessage = {
     type: 'GET_PRIVACY_CACHE';

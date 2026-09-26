@@ -26,7 +26,16 @@ import {
 } from '../utils/obsidianConfigValidator.js';
 import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
 import { describeHttpFailure } from '../utils/httpFailureMessages.js';
-import { failureFromHttpStatus, tagFailure } from '../utils/failureTaxonomy.js';
+import {
+    createFailure,
+    failureFromHttpStatus,
+    resolveFailure,
+    tagFailure,
+    withFailure,
+    FailureKind,
+    type FailureKindValue,
+    type FailureMetadata
+} from '../utils/failureTaxonomy.js';
 import { readBodyCapped } from '../utils/readBodyCapped.js';
 import { truncateForLog } from '../utils/logTruncate.js';
 
@@ -77,11 +86,28 @@ const globalWriteMutex = new Mutex({
 export interface ObsidianConnectionResult {
     success: boolean;
     message: string;
+    /**
+     * Structured reason, present only on failures. Consumers branch on `kind`;
+     * they must never branch on `message`, because this boundary rewrites every
+     * transport error into a sanitized sentence before returning it. A message
+     * substring test can therefore only ever match a raw browser error string
+     * that never reaches the Dashboard (PBI 2026-09-26-09).
+     */
+    failure?: FailureMetadata;
 }
 
 export interface ObsidianClientOptions {
     mutex?: Mutex;
     sleep?: SleepFn;
+}
+
+/**
+ * Metadata for a connection-test failure. A kind the transport already tagged
+ * wins; otherwise the caller's own branch decision (derived from the error
+ * *name*, the only structural signal a browser fetch failure carries) is used.
+ */
+function connectionTestFailure(cause: unknown, kind: FailureKindValue): FailureMetadata {
+    return resolveFailure(cause) ?? createFailure(kind, { cause });
 }
 
 export class ObsidianClient {
@@ -294,9 +320,12 @@ export class ObsidianClient {
                 } catch (e: unknown) {
                     const msg = errorMessage(e);
                     if (msg.includes('API key is missing')) {
-                        return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
+                        return withFailure(
+                            { success: false, message: 'API key is missing. Please enter your Obsidian API key.' },
+                            connectionTestFailure(e, FailureKind.CONFIGURATION)
+                        );
                     }
-                    return { success: false, message: msg };
+                    return withFailure({ success: false, message: msg }, connectionTestFailure(e, FailureKind.CONFIGURATION));
                 }
             } else {
                 ({ baseUrl, headers } = await this._getConfig());
@@ -325,12 +354,24 @@ export class ObsidianClient {
             addLog(LogType.ERROR, `Connection test failed: ${msg}`);
 
             if (errorName === 'AbortError' || msg.includes('timed out')) {
-                return { success: false, message: 'Connection timeout. Is Obsidian running?' };
+                return withFailure(
+                    { success: false, message: 'Connection timeout. Is Obsidian running?' },
+                    connectionTestFailure(e, FailureKind.TIMEOUT)
+                );
             } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
-                return { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' };
+                return withFailure(
+                    { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' },
+                    connectionTestFailure(e, FailureKind.NETWORK)
+                );
             } else if (msg.includes('API key is missing')) {
-                return { success: false, message: 'API key is missing. Please enter your Obsidian API key.' };
+                return withFailure(
+                    { success: false, message: 'API key is missing. Please enter your Obsidian API key.' },
+                    connectionTestFailure(e, FailureKind.CONFIGURATION)
+                );
             } else {
+                // No kind is claimed on purpose: an unrecognized error is
+                // evidence of no specific cause, and the UI must not offer a
+                // targeted remedy (a certificate walkthrough) for it.
                 return { success: false, message: `Connection error: ${msg}` };
             }
         }

@@ -46,6 +46,13 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 3. Verify: consent modal → record a page → dashboard search (FTS5) → preset switching (AI Summary Cleansing panel) → restart Firefox → records persist and no consent re-prompt
 4. Diagnostics panel → SQLite test (final OPFS confirmation on the moz-extension:// origin)
 5. PII sanitizer WASM init: with the browser console open, record a page whose content contains an email address → confirm no `PII WASM module unavailable` / `PII WASM sanitize call failed` warning is logged by the service worker (same assertion Chromium's `pii-wasm-initialization.spec.ts` automates)
+6. Self-signed HTTPS + certificate guidance (PBI 2026-09-26-09) — requires a Local REST API instance serving HTTPS with a self-signed certificate, and a host that is **not** in Firefox's certificate store:
+   1. Start Obsidian with the Local REST API plugin on HTTPS (`https`, non-default port, e.g. `27124`) and do **not** import the CA into Firefox.
+   2. Dashboard → general settings → **Test Connection**. Expect: the failure sentence, a **"Click here to accept self-signed certificate"** link whose href is `https://<configured host>:<configured port>/` (not a hardcoded `127.0.0.1`), and the Firefox-specific two-route note (open the URL in a tab to add an exception, or import the CA under Settings → Privacy & Security → Certificates).
+   3. Click the link, complete the exception in the opened tab, then **Test Connection** again → expect success.
+   4. Record a page → confirm the entry lands in the daily note (the whole flow, not just the handshake).
+   5. Negative cases: switch the protocol field to `http` and repeat → no certificate link; point Host at an unreachable port so the test times out → timeout sentence, still no certificate link.
+   6. Same run in Chromium → the link appears but the Firefox-specific note does not.
 
 ## Test-support placement convention (PBI-14)
 

@@ -405,10 +405,12 @@ describe('handleTestObsidian', () => {
         expect(document.getElementById('status')!.className).toBe('error');
     });
 
-    it('certificate link for HTTPS failed fetch', async () => {
+    it('certificate link for an HTTPS network-kind failure', async () => {
         (document.getElementById('protocol') as HTMLInputElement).value = 'https';
         (document.getElementById('port') as HTMLInputElement).value = '27124';
-        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch: ERR_CERT' } }) } });
+        // PBI 2026-09-26-09: the link is keyed off the structured `failure.kind`,
+        // not off a transport message the Service Worker rewrites before sending.
+        vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.', failure: { kind: 'network' } } }) } });
         await handleTestObsidian();
         const link = document.getElementById('status')!.querySelector('a');
         expect(link).not.toBeNull();

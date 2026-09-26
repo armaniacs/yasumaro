@@ -655,6 +655,9 @@
   "acceptCertificate": {
     "message": "Click here to accept self-signed certificate"
   },
+  "certGuideFirefox": {
+    "message": "Firefox keeps its own certificate store, separate from the OS one, so a certificate installed on the operating system can still be untrusted in Firefox. Do one of the following: (1) open the link above in a new tab and add a certificate exception, or (2) import the CA certificate under Settings → Privacy & Security → Certificates. Link target: {url}"
+  },
   "errorProtocol": {
     "message": "Error: Protocol must be \"http\" or \"https\"."
   },
