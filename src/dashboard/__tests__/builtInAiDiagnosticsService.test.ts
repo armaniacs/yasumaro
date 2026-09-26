@@ -8,16 +8,23 @@ import { Crypto } from '@peculiar/webcrypto';
 import { vi } from 'vitest';
 Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
-vi.mock('../../utils/browserSupport.js', () => ({
-  getBrowserName: vi.fn(() => 'chrome'),
-  getBuiltInAIFlagGuidance: vi.fn((browserName: string) => {
-    if (browserName === 'chrome') {
-      return { url: 'chrome://flags/#prompt-api-for-gemini-nano', flagName: 'Prompt API for Gemini Nano' };
-    }
-    return null;
-  }),
-  getBuiltInAIDiskSpace: vi.fn(async () => null),
-}));
+vi.mock('../../utils/browserSupport.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/browserSupport.js')>();
+  return {
+    ...actual,
+    getBrowserName: vi.fn(() => 'chrome'),
+    getBuiltInAIFlagGuidance: vi.fn((browserName: string) => {
+      if (browserName === 'chrome') {
+        return { url: 'chrome://flags/#prompt-api-for-gemini-nano', flagName: 'Prompt API for Gemini Nano' };
+      }
+      return null;
+    }),
+    // A spy over the real function (wired in beforeEach), not a constant: the
+    // Prompt API gate lives inside it, so a hardcoded mock would leave the
+    // "Prompt API absent" path untestable from here.
+    getBuiltInAIDiskSpace: vi.fn(),
+  };
+});
 
 import {
   checkBuiltInAiAvailability,
@@ -26,6 +33,9 @@ import {
 import * as browserSupportModule from '../../utils/browserSupport.js';
 
 const { getBrowserName, getBuiltInAIDiskSpace } = vi.mocked(browserSupportModule);
+const { getBuiltInAIDiskSpace: realGetBuiltInAIDiskSpace } = await vi.importActual<typeof browserSupportModule>(
+  '../../utils/browserSupport.js'
+);
 
 interface MockSession {
   destroy: ReturnType<typeof vi.fn>;
@@ -44,6 +54,9 @@ describe('builtInAiDiagnosticsService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getBrowserName.mockReturnValue('chrome');
+    // Re-established per test: mockResolvedValue in an earlier test otherwise
+    // survives mockClear and would shadow the real implementation.
+    getBuiltInAIDiskSpace.mockImplementation(realGetBuiltInAIDiskSpace);
     mockLanguageModel = {
       availability: vi.fn(async () => 'available'),
       create: vi.fn(async () => createMockSession()),
@@ -53,6 +66,7 @@ describe('builtInAiDiagnosticsService', () => {
 
   afterEach(() => {
     delete (globalThis as unknown as { LanguageModel?: unknown }).LanguageModel;
+    vi.unstubAllGlobals();
   });
 
   describe('checkBuiltInAiAvailability', () => {
@@ -169,6 +183,10 @@ describe('builtInAiDiagnosticsService', () => {
   describe('unavailable の理由の切り分け', () => {
     const GIB = 1024 * 1024 * 1024;
 
+    // getBuiltInAIDiskSpace is stubbed here, so the state this test represents
+    // is limited to a Chromium browser that HAS the Prompt API: the real
+    // function returns null where the Prompt API is absent (see the
+    // "Prompt API 非対応ブラウザ" block below).
     test('reports disk space instead of flag guidance when space is short', async () => {
       getBuiltInAIDiskSpace.mockResolvedValue({
         freeBytes: 10 * GIB,
@@ -206,6 +224,43 @@ describe('builtInAiDiagnosticsService', () => {
 
       expect(result.guidance?.url).toBe('chrome://flags/#prompt-api-for-gemini-nano');
       expect(result.diskSpace).toBeNull();
+    });
+  });
+
+  // issue #161: the origin quota cap (~10 GiB) reported by Firefox is not free
+  // disk space, so it must not reach the diagnostics panel as a capacity number.
+  describe('Prompt API 非対応ブラウザ', () => {
+    const GIB = 1024 * 1024 * 1024;
+    const FIREFOX_UA = 'Mozilla/5.0 (X11; Linux x86_64; rv:156.0) Gecko/20100101 Firefox/156.0';
+
+    function stubFirefoxStorage(): void {
+      vi.stubGlobal('navigator', {
+        userAgent: FIREFOX_UA,
+        storage: { estimate: async () => ({ quota: 10 * GIB, usage: 0 }) }
+      });
+    }
+
+    test('reads the origin quota as free space where the Prompt API exists (Chromium)', async () => {
+      getBrowserName.mockReturnValue('chrome');
+      stubFirefoxStorage();
+      mockLanguageModel.availability.mockResolvedValueOnce('unavailable');
+
+      const result = await checkBuiltInAiAvailability();
+
+      expect(result.diskSpace?.freeBytes).toBe(10 * GIB);
+      expect(result.diskSpace?.sufficient).toBe(false);
+    });
+
+    test('reports unavailable with no disk space and no guidance when the Prompt API is absent', async () => {
+      getBrowserName.mockReturnValue('unknown');
+      stubFirefoxStorage();
+      delete (globalThis as unknown as { LanguageModel?: unknown }).LanguageModel;
+
+      const result = await checkBuiltInAiAvailability();
+
+      expect(result.status).toBe('unavailable');
+      expect(result.diskSpace).toBeNull();
+      expect(result.guidance).toBeNull();
     });
   });
 });

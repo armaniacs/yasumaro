@@ -399,7 +399,7 @@ describe('BuiltInAIClient', () => {
             expect(result.error).toContain('unavailable');
         });
 
-        test('reports insufficient disk space instead of flag guidance', async () => {
+        test('reports insufficient disk space instead of flag guidance (Chromium, where the Prompt API exists)', async () => {
             const GIB = 1024 * 1024 * 1024;
             vi.stubGlobal('navigator', {
                 userAgent: 'Mozilla/5.0 Chrome/126.0.0.0 Edg/126.0.0.0',
@@ -412,6 +412,26 @@ describe('BuiltInAIClient', () => {
             expect(result.error).toContain('disk space');
             expect(result.error).toContain('10 GB');
             expect(result.error).not.toContain('://flags');
+        });
+
+        // issue #161: Firefox reports the origin quota cap (~10 GiB) rather than
+        // real free space, so the disk-space reading is not a valid explanation
+        // where the Prompt API does not exist in the first place.
+        test('omits the disk-space numbers on a browser without the Prompt API', async () => {
+            const GIB = 1024 * 1024 * 1024;
+            vi.stubGlobal('navigator', {
+                userAgent: 'Mozilla/5.0 (X11; Linux x86_64; rv:156.0) Gecko/20100101 Firefox/156.0',
+                storage: { estimate: async () => ({ quota: 10 * GIB, usage: 0 }) }
+            });
+            delete (globalThis as unknown as { LanguageModel?: unknown }).LanguageModel;
+
+            const result = await client.summarize('Some content');
+
+            expect(result.success).toBe(false);
+            expect(result.error).not.toContain('GB');
+            expect(result.error).not.toContain('disk space');
+            expect(result.error).not.toContain('://flags');
+            expect(result.error).toContain('unavailable');
         });
 
         test('keeps flag guidance when disk space is sufficient', async () => {
