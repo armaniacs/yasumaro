@@ -49,6 +49,8 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | - | [履歴の診断行は欠測時も理由付きで常に表示する](./2026-09-18-history-diagnostic-rows-always-visible.md) | 2026-09-18 | 採用 |
 | 017 | [WASM コアの「完全移植 + TS パリティ参照 + ハイブリッドフォールバック」戦略](./2026-09-20-wasm-exact-port-parity-strategy.md) | 2026-09-20 | Accepted |
 | - | [messaging から background への逆依存を許容する](./2026-09-25-messaging-background-reverse-dependency.md) | 2026-09-25 | 採用済み |
+| - | [`withLock` の object 競合検知は version を唯一の durable signal とし、value-level CAS は採用しない](./2026-09-26-withlock-object-conflict-policy.md) | 2026-09-26 | 採用 |
+| - | [ユニットテストの実行時間を契約として管理する](./2026-09-26-test-suite-execution-time-contract.md) | 2026-09-26 | 採用 |
 
 ---
 
