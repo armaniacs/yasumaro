@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.9.25",
+  "version": "6.9.26",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -20,6 +20,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:perf": "node scripts/test-perf/report.mjs",
     "test:mutate": "stryker run",
     "test:e2e": "playwright test --config testDir/playwright.config.ts",
     "test:e2e:ui": "playwright test --config testDir/playwright.config.ts --ui",
@@ -64,6 +65,7 @@
     "verify:vulnhunt-fix": "node scripts/verify-vulnhunt-fix.mjs",
     "release:check": "node scripts/release-checks/index.mjs",
     "release:check:fast": "node scripts/release-checks/index.mjs --skip-e2e",
+    "release:check:deps": "node scripts/release-checks/index.mjs --category=deps",
     "build:firefox": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build -b firefox"
   },
   "keywords": [
@@ -88,7 +90,7 @@
     "@typescript-eslint/parser": "^8.67.0",
     "@vitest/coverage-v8": "^5.0.0",
     "@vitest/eslint-plugin": "^1.6.27",
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "better-sqlite3": "^13.0.3",
     "crx3": "^2.0.0",
     "esbuild": "^0.28.2",
@@ -109,7 +111,7 @@
     "wa-sqlite": "~1.0.0"
   },
   "overrides": {
-    "adm-zip": "^0.6.0",
+    "adm-zip": "^0.6.1",
     "htmlparser2": "~12.0.0",
     "shell-quote": ">=1.10.0",
     "tmp": ">=0.2.6",
