@@ -18,6 +18,19 @@
 
 - [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（🔵 監視中 — RICE 0.2・1 SP・副作用🟢。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 でスコア 0.00% になる既知制約（上流 #6210、修正 PR #6220 未マージ）の採用待ち。トリガー: #6210 修正を含む vitest-runner 新版の npm リリース、または Vitest 4.x へのダウングレード裁定。トリガーまで Red/Green 手動検証を継続）
 
+### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）— ⬜ 未着手 3件 🔧非機能追加
+
+**統合 PBI**: [2026-09-26-00-backlog-dependency-updates.md](2026-09-26-00-backlog-dependency-updates.md)
+- Vision: 依存棚卸しで検出した未反映 3 件（範囲外メジャー 2 件・テスト基盤破壊 1 件）を PBI 化し着手順を確定
+- 採点: RICE 4.0 / 1.6 / 0.8 の順。3 候補間の依存なし、TypeScript 7 のみ外部トリガー（typescript-eslint 対応待ち）
+- 根拠の実測: `@types/chrome` 0.3.0 はドロップイン互換を実証 / `jsdom` 30.1.1 は dom-selector 9.x のセレクタ長上限 2048 文字に抵触（deep 4191・jpLayout 4714 文字）/ `typescript` 7 は typescript-eslint 8.70.1 の peer <6.1.0 で npm install が失敗
+
+| NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
+|---|---|---|---:|---:|---|
+| 10 | [fix-update-chrome-types](2026-09-26-10-fix-update-chrome-types.md) | fix | 4.0 | 0.25 | なし・即実施可能（ドロップイン互換を実証済み） |
+| 11 | [fix-jsdom-selector-length-limit](2026-09-26-11-fix-jsdom-selector-length-limit.md) | fix | 1.6 | 1 | なし・`stripBySelectors.collect()` でのチャンク分割が前提 |
+| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | 🔵 監視中 — typescript-eslint の TS 7 対応リリース待ち |
+
 ### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 3件完了・⬜ 未着手 2件 🔧非機能追加
 
 **統合 PBI**: [2026-09-26-00-timing-failure-elimination-suite.md](2026-09-26-00-timing-failure-elimination-suite.md)
