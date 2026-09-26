@@ -68,15 +68,14 @@
 
 ### 直近の `npm outdated` 実測と反映（2026-09-26）
 
-- 更新を検出: 12 件。うち 9 件は同日中に反映済み（`@types/node`, `@typescript-eslint/*`, `@vitest/coverage-v8`, `eslint`, `happy-dom`, `knip`, `vite`, `vitest`）
+- 更新を検出: 12 件。うち 10 件は同日中に反映済み（`@types/chrome`, `@types/node`, `@typescript-eslint/*`, `@vitest/coverage-v8`, `eslint`, `happy-dom`, `knip`, `vite`, `vitest`）
 - `vitest` と `@vitest/coverage-v8` は互いに厳密な peer pin（`vitest@5.0.2` ↔ `@vitest/coverage-v8@5.0.2`）を持つため、必ず同時に更新する
-- 意図的に未反映の残り 3 件と理由
+- 意図的に未反映の残り 2 件と理由
 
 | パッケージ | 現在 → 最新 | 未反映の理由 |
 |---|---|---|
 | `typescript` | 6.0.3 → 7.0.2 | メジャー更新。test プロジェクトの型チェックに大規模な修正が必要（移行判断待ち） |
 | `jsdom` | 30.0.1 → 30.1.1 | 同梱 `@asamuzakjp/dom-selector` が導入したセレクタ長上限 2048 文字に、クレンジングルールの長いセレクタが抵触し 86 テストが失敗する。セレクタ短縮のコード変更が前提 |
-| `@types/chrome` | 0.2.9 → 0.3.0 | メジャー更新。影響調査が未実施 |
 
 - 脆弱性: critical / high 0 件。moderate 2 件（開発ツールチェーンの推移依存 `qs`。ランタイム監査 `--omit=dev` の対象外）
 
@@ -103,4 +102,4 @@
 
 - 判定: ライセンスポリシー上の問題なし。全 672 パッケージが許容ライセンスに適合し、脆弱性 critical / high は 0 件
 - `THIRD_PARTY_NOTICES.md` が 622 パッケージ時点で停止しており現状と乖離している。`npm run generate-notices` の再実行を推奨
-- 未反映の更新は 3 件。`jsdom` 30.1.1 はセレクタ長上限のコード修正が前提、`typescript` 7 と `@types/chrome` 0.3 は計画的な移行判断が必要
+- 未反映の更新は 2 件。`jsdom` 30.1.1 はセレクタ長上限のコード修正が前提、`typescript` 7 は計画的な移行判断が必要
