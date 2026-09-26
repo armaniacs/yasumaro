@@ -5,6 +5,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
 import { encryptEnvelope } from '../../utils/crypto/index.js';
 
+// PBKDF2 at the production 600,000 iterations dominates this file's runtime.
+// The production values are asserted in cryptoParamsSSOT.test.ts; here the KDF
+// only needs to behave, not to be expensive.
+vi.mock('../../utils/crypto/cryptoParams.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/crypto/cryptoParams.js')>();
+  return {
+    ...actual,
+    CRYPTO_PARAMS: {
+      ...actual.CRYPTO_PARAMS,
+      PBKDF2_ITERATIONS: 1_000,
+      LEGACY_PBKDF2_ITERATIONS: 100,
+    },
+  };
+});
+
 
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

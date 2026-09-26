@@ -187,6 +187,22 @@ export default [
       'vitest/valid-expect': 'error',
       'no-self-compare': 'error',
       'local/no-tautology-expect': 'error',
+      // A sleep cannot fail, so it only costs wall time. Wait for a condition
+      // instead; see dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
+      // PBI 2026-09-26-05 cleared the 40 literal violations. The rule resolves
+      // const-bound delays too, which surfaced 3 more in privacyPipeline.test.ts;
+      // those measure the sleep itself and are opted out with a reason.
+      'local/no-test-sleep': 'error',
+      // A wait whose only condition is a negative assertion resolves on the
+      // callback's first synchronous evaluation, so it asserts its own
+      // precondition and cannot detect a missing guard. See
+      // dev-docs/TEST_RULE.md § 実時間待ちの禁止と代替手段
+      'local/no-vacuous-negative-wait': 'error',
+      // Migration warning, not an error: vi.useFakeTimers() with the default
+      // toFake replaces setImmediate/queueMicrotask and hangs any dynamic
+      // import awaited under it. 124 pre-existing call sites still use it, so
+      // promoting this to 'error' would break the build for untouched code.
+      'local/no-greedy-fake-timers': 'warn',
     },
   },
 ];

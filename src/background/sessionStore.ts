@@ -26,6 +26,12 @@ export interface SessionStorePort {
 // sub-keys are preserved so the most critical settings cache survives.
 const PRIORITY_SUBKEYS = ['settingsCache', 'cacheTimestamp', 'cacheVersion'];
 
+/**
+ * Debounce window for timer-based flushes. Exported so tests can cross it on a
+ * fake clock instead of hardcoding a delay that silently drifts from this value.
+ */
+export const SESSION_STORE_FLUSH_DELAY_MS = 50;
+
 export class SessionStore implements SessionStorePort {
   private writeQueue = new Map<string, unknown>();
   private deleteQueue = new Set<string>();
@@ -37,7 +43,7 @@ export class SessionStore implements SessionStorePort {
   private localFallbackCheckedKeys = new Set<string>();
 
   // フラッシュ間隔（ミリ秒）- マイクロタスクより少し遅らせるが、まだ応答性を保つ
-  private readonly FLUSH_DELAY = 50;
+  private readonly FLUSH_DELAY = SESSION_STORE_FLUSH_DELAY_MS;
 
   async get<T>(key: string): Promise<T | null> {
     try {

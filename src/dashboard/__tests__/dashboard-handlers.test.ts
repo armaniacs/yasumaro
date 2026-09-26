@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { loadGeneralSettings } from '../generalSettings/settingsForm.js';
 // Save and the connection tests moved out of dashboard.ts (PBI-24): they are
 // driven only by the general settings panel.
@@ -446,6 +447,13 @@ describe('handleTestAi', () => {
         getSavedUrlEntriesCallCount = 0;
     });
 
+    // Belt and braces: the ticker test below restores the clock inline, but a
+    // fake clock that survives into a later describe turns real-timer
+    // expectations into silent passes.
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it('success', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
@@ -571,10 +579,18 @@ describe('handleTestAi', () => {
         const marker = '__stale-marker__';
         topElapsedEl.textContent = marker;
 
-        await new Promise((resolve) => setTimeout(resolve, 250));
-        await vi.waitFor(() => {
-            expect(document.querySelector('#statusTop .ai-test-elapsed')!.textContent).not.toBe(marker);
-        });
+        useTimerClock();
+        try {
+            await vi.advanceTimersByTimeAsync(250);
+            // eslint-disable-next-line local/no-vacuous-negative-wait -- change-detection, not a vacuous negative: the ticker has already overwritten the marker by now, so the wait returns on its first evaluation. If it had not, the wait would keep retrying until the 200ms interval fired.
+            await vi.waitFor(() => {
+                expect(document.querySelector('#statusTop .ai-test-elapsed')!.textContent).not.toBe(marker);
+            });
+        } finally {
+            // Without this the fake clock stays installed for every later test
+            // in the file, including the M15 describe below.
+            vi.useRealTimers();
+        }
 
         resolveSendMessage!({ ai: { success: true, message: 'OK' } });
         await handlePromise;

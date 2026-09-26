@@ -7,6 +7,7 @@
 1. 自明に真となるアサーションを書かない（例: `expect(true).toBe(true)`、`expect(x).toEqual(x)`）
 2. モックの戻り値をそのまま比較するだけのテストを書かない（実装ロジックや状態変化を検証しないテストは無意味）
 3. アサーションのないテストを書かない（`it()` 内に `expect()` が一つも存在しないテストは禁止）
+4. 実時間の経過に依存して待つテストを書かない（`await new Promise(r => setTimeout(r, N))`、`page.waitForTimeout(N)`。詳細は[実時間待ちの禁止と代替手段](#実時間待ちの禁止と代替手段)）
 
 ## テストの必須構造
 
@@ -29,6 +30,83 @@ describe('sessionAlarmsManager', () => {
   });
 });
 ```
+
+## 実時間待ちの禁止と代替手段
+
+固定時間の待機は失敗しえないので、回帰を何も検出しない。実行時間を消費するだけで、負荷の高いマシンでは不安定の原因になる。待つのは条件の成立だけにする。方針の根拠と実測値は [ADR: ユニットテストの実行時間を契約として管理する](ADR/2026-09-26-test-suite-execution-time-contract.md)（R1・R2）を参照。テストが落ちたときの手順と完了判定は [AGENTS.md の Async / Timing Failures](../AGENTS.md#async--timing-failures) に従う。
+
+### 待っているものごとの代替手段
+
+ヘルパーは `testDir/waitPolicy.ts` にある。
+
+| 待っているもの | 代替手段 |
+|---|---|
+| mock が呼ばれる・状態が変わる | `await waitForMock(() => expect(...).toHaveBeenCalled())`（`vi.waitFor` を interval 1ms で呼ぶ） |
+| リトライのバックオフ・タイムアウト・debounce | 既存の差し替え口を使う: `src/utils/retryPredicate.ts` の `SleepFn`、`src/background/pipeline/stepExecutor.ts` の `StepDelayFn`、`ObsidianClientOptions.sleep`、`SqliteHistoryModelDeps.scheduler`。差し替え口がなければ `useTimerClock()` と `await vi.advanceTimersByTimeAsync(ms)` |
+| 投げっぱなしの非同期処理の完了 | 本番コードから Promise を返す、または完了を表す `ready` / `whenIdle()` を公開する。直せない場合は `waitForMock()` で状態の成立を待つ |
+| 並行処理テストでロックや処理を保持させる | 一定時間待つモックではなく、`Promise.withResolvers()` で完了をテスト側から制御する |
+| タイマーを持たない経路で「起きなかった」ことを示す | `await drainMacrotask()`（マクロタスク 1 ターン） |
+| E2E での描画・状態変化 | `await expect(locator).toBeVisible()`、`page.waitForFunction()`、`await expect.poll(() => ...)` |
+
+`vi.useFakeTimers()` を既定の設定で使わない。既定では `setImmediate` と `queueMicrotask` も偽装されるので、動的 import を待つテストがタイムアウトまで止まる。`useTimerClock()` はタイマー API と `Date` だけを偽装する。
+
+**`waitForMock()` を否定形のアサーションに使わない。** `vi.waitFor` はコールバックを
+同期的に 1 回目から評価するので、`expect(mock).not.toHaveBeenCalled()` は待ち時間 0 で
+成立する。「ガードが効いた」証明にならない。否定形は `drainMacrotask()` で
+マクロタスク境界を 1 回跨がせてから評価するか、同じテスト内で完了を示す肯定
+アサーションを先に置く。リトライタイマーまで跨ぐ必要がある場合は
+`useTimerClock()` + `vi.advanceTimersByTimeAsync()` を使う。
+
+```typescript
+// NG: the mock holds the lock for 50ms and the test hopes the second call overlaps
+mockGenerate.mockImplementation(async () => {
+  await new Promise((r) => setTimeout(r, 50));
+  return 'summary';
+});
+
+// OK: the test decides when the first call finishes
+const first = Promise.withResolvers<string>();
+mockGenerate.mockReturnValueOnce(first.promise);
+const p1 = generator.generate();
+const p2 = generator.generate();
+expect(mockGenerate).toHaveBeenCalledTimes(1);
+first.resolve('summary');
+await Promise.all([p1, p2]);
+```
+
+### 本番コード側の書き方
+
+時間に依存する処理（リトライ、タイムアウト、ポーリング、debounce）を新しく書くときは、書く時点で delay 関数や clock を注入できる形にする。テストが不安定になってから後付けしない。既定値は実タイマーのままでよい。panel や factory の層は deps をそのまま下の層へ渡す。途中の層で seam が途切れると、下の層に seam があってもテストは実時間を待つことになる。
+
+### retry も同じ扱い
+
+Vitest の `--retry` や Playwright の `retries` を増やしてテストを通すのは、固定待機と同じく失敗を隠すだけなので禁止する。反復実行による確認は `--retries=0` で行う。
+
+### 例外
+
+実時間そのものを扱うテスト（crypto のタイミング耐性、`bench/`）と、レート制限のある外部 API への意図的な間隔だけは許容する。該当行に `// eslint-disable-next-line local/no-test-sleep -- <条件で待てない理由>` を付ける。
+
+### 静的チェック
+
+`src/**/__tests__/` では、ESLint ルールが 2 つ働く。
+
+- `local/no-test-sleep`（`eslint/rules/no-test-sleep.mjs`、`error`）:
+  `new Promise(... setTimeout(resolve, N))` で N が 20 以上の待機を検出する。
+  N は数値リテラルだけでなく `const DELAY_MS = 30` のような const 束縛も辿って
+  解決する。解決できない値（引数、`let`、計算式）は推測せず見過ごす。
+  違反がゼロになった 2026-09-26（PBI 2026-09-26-05）で `error` へ昇格済み。
+- `local/no-greedy-fake-timers`（`eslint/rules/no-greedy-fake-timers.mjs`、`warn`）:
+  `toFake` に `setImmediate` または `queueMicrotask` を含む `vi.useFakeTimers()` を
+  検出する。既存 124 箇所の移行が残っているため `warn` であり、ゼロになったら
+  `error` に上げる。新規コードが既定の書き方を広げるのを止めるのが今の目的。
+- `local/no-vacuous-negative-wait`（`eslint/rules/no-vacuous-negative-wait.mjs`、`error`）:
+  条件が否定アサーションだけ（肯定アサーションによるアンカーが無い）の
+  `vi.waitFor` / `waitForMock` を検出する。上の「否定形に使わない」が
+  機械で保証される。コールバック内に肯定アサレーションが 1 つでもあれば
+  anchor になるので報告しない。「値が変わるまで待つ」意図の否定アサーションは
+  待機呼び出しの**直前の行**に理由を付きで無効化する
+
+`testDir/` は ESLint の対象外なので、E2E の `page.waitForTimeout()` は機械的には検出されない。レビューで確認する。
 
 ## UI 機能追加・変更時のテスト必須化
 
@@ -62,6 +140,7 @@ UI に関わる機能追加・変更（新規パネル、ボタン、モーダ�
 - [ ] 境界値・エッジケース（空配列、null、上限値など）を検証しているか
 - [ ] アサーションはモックの戻り値ではなく、実装が生成した結果や状態変化を検証しているか
 - [ ] テスト名は検証内容を具体的に説明しているか（「動作すること」のような曖昧な説明を避ける）
+- [ ] 固定時間の待機や retry 回数の増加でテストを通していないか
 
 ## ミューテーションテスト（Stryker）
 
@@ -84,6 +163,9 @@ npm run test:mutate
 - `vitest/expect-expect`: `expect()` を含まないテストをエラーにする
 - `vitest/valid-expect`: `expect()` の誤用（`await` 忘れ等）をエラーにする
 - `no-self-compare`（ESLint組み込み）: `x === x` のような同一変数比較を警戒する
+- `local/no-test-sleep`（ローカルルール）: 固定時間の待機を error で検出する（[実時間待ちの禁止と代替手段](#実時間待ちの禁止と代替手段)）
+- `local/no-greedy-fake-timers`（ローカルルール）: 既定の toFake を使う `vi.useFakeTimers()` を warn で検出する
+- `local/no-vacuous-negative-wait`（ローカルルール）: 否定アサーションしか条件に持たない待ちを error で検出する
 
 ```bash
 npm run lint

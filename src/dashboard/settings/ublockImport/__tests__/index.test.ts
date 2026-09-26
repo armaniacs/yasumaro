@@ -5,7 +5,8 @@
  * Covers init(), setupDragAndDrop(), and re-exported public API
  */
 
-import { vi } from 'vitest';;
+import { vi } from 'vitest';
+import { drainMacrotask } from '../../../../../testDir/waitPolicy.js';
 import type { Mock } from 'vitest';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
@@ -627,10 +628,10 @@ describe('ublockImport/index.ts', () => {
       expect(urlImportBtn.disabled).toBe(true);
       expect(urlImportBtn.textContent).toBe('Loading...');
 
-      await new Promise(r => setTimeout(r, 50));
-
-      // Re-enabled after completion
-      expect(urlImportBtn.disabled).toBe(false);
+      await vi.waitFor(
+          () => expect(urlImportBtn.disabled).toBe(false),
+          { interval: 1 }
+      );
       expect(urlImportBtn.textContent).toBe('Import from URL');
     });
 
@@ -648,7 +649,7 @@ describe('ublockImport/index.ts', () => {
       const urlImportBtn = document.getElementById('uBlockUrlImportBtn')!;
       urlImportBtn.dispatchEvent(new Event('click'));
 
-      await new Promise(r => setTimeout(r, 50));
+      await drainMacrotask();
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       expect(showStatus).toHaveBeenCalledWith('domainStatus', 'Network error', 'error');
@@ -666,9 +667,10 @@ describe('ublockImport/index.ts', () => {
       const urlImportBtn = document.getElementById('uBlockUrlImportBtn')!;
       urlImportBtn.dispatchEvent(new Event('click'));
 
-      await new Promise(r => setTimeout(r, 50));
-
-      expect(textarea.value).toBe('||example.com^');
+      await vi.waitFor(
+          () => expect(textarea.value).toBe('||example.com^'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -938,10 +940,11 @@ describe('ublockImport/index.ts', () => {
       });
 
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise(r => setTimeout(r, 10));
-
       const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement;
-      expect(textarea.value).toBe('||example.com^\n||ads.net^');
+      await vi.waitFor(
+          () => expect(textarea.value).toBe('||example.com^\n||ads.net^'),
+          { interval: 1 }
+      );
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('test-filters.txt'), 'success');
@@ -1142,9 +1145,10 @@ describe('ublockImport/index.ts', () => {
       const deleteCallback = renderCall[1]!;
 
       await deleteCallback(0);
-      await new Promise(r => setTimeout(r, 10));
-
-      expect(deleteSource).toHaveBeenCalledWith(0, expect.any(Function));
+      await vi.waitFor(
+          () => expect(deleteSource).toHaveBeenCalledWith(0, expect.any(Function)),
+          { interval: 1 }
+      );
     });
 
     test('should handle delete error', async () => {

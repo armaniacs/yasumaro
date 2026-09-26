@@ -25,6 +25,12 @@ import path from 'node:path';
 const NEEDS_ISOLATION = new RegExp(
   [
     String.raw`vi\.(mock|doMock|unmock|doUnmock|hoisted|spyOn|stubGlobal|stubEnv|resetModules|useFakeTimers|setSystemTime|importMock)\b`,
+    // useTimerClock() installs the same fake set as vi.useFakeTimers(), so a
+    // file that uses the helper leaks a fake Date/setTimeout just as surely.
+    // It is called as a bare identifier, so the pattern above cannot see it —
+    // match the call and the import that brings it in.
+    String.raw`\buseTimerClock\s*\(`,
+    String.raw`testDir/waitPolicy\.js`,
     String.raw`@vitest-environment`,
     // Direct writes to shared globals, including `(chrome.x.y as T) = ...`.
     String.raw`\b(global|globalThis|window|self|chrome|process\.env)\b[\w.\[\]'"]*(\s+as\s+[^)=]+\))?\s*=(?!=)`,

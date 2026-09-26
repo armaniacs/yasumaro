@@ -4,6 +4,22 @@
  * 【テスト対象】: src/utils/storage.ts のマスターパスワード関連関数
  */
 
+// PBKDF2 at the production 600,000 iterations is by far the most expensive
+// thing these behavioural tests do. The production values themselves are
+// asserted in src/utils/crypto/__tests__/cryptoParamsSSOT.test.ts, so here the
+// KDF is only exercised for behaviour, not for cost.
+vi.mock('../crypto/cryptoParams.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../crypto/cryptoParams.js')>();
+  return {
+    ...actual,
+    CRYPTO_PARAMS: {
+      ...actual.CRYPTO_PARAMS,
+      PBKDF2_ITERATIONS: 1_000,
+      LEGACY_PBKDF2_ITERATIONS: 100,
+    },
+  };
+});
+
 // モックをインポート前に定義する必要がある
 (global as any).crypto = {
     subtle: {},

@@ -6,6 +6,7 @@
 
 import { ObsidianClient } from '../obsidianClient.js';
 import { vi } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import * as storage from '../../utils/storage/types.js';
 import { buildDailyNotePath } from '../../utils/dailyNotePathBuilder.js';
 import { NoteSectionEditor } from '../noteSectionEditor.js';
@@ -270,6 +271,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
   });
 
   describe('testConnectionメソッドのエラーハンドリング', () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
     it('returns a detailed message on successful connection (after fix)', async () => {
   
       mockGetSettings.mockResolvedValue({
@@ -319,7 +324,10 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('omits detailed error messages on network errors (after fix)', async () => {
-  
+      // The retry ladder sleeps 500ms + 1000ms between the three attempts, so
+      // driving the clock keeps this test off the wall clock entirely.
+      useTimerClock();
+
       mockGetSettings.mockResolvedValue({
         OBSIDIAN_API_KEY: 'test_key',
         OBSIDIAN_PROTOCOL: 'http',
@@ -331,7 +339,11 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
   
       global.fetch = vi.fn().mockRejectedValue(networkError);
 
-      const result = await obsidianClient.testConnection();
+      const pending = obsidianClient.testConnection();
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(1000);
+      const result = await pending;
 
       expect(result.success).toBe(false);
       // 修正: ネットワークエラーの詳細が含まれないことを確認
@@ -390,6 +402,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     afterEach(() => {
+      vi.useRealTimers();
       vi.mocked(global.fetch).mockRestore();
     });
 
@@ -503,17 +516,22 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
 
     it('returns a connection error on 500 with override', async () => {
+      useTimerClock();
       fetchMock().mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error'
       });
 
-      const result = await obsidianClient.testConnection({
+      const pending = obsidianClient.testConnection({
         protocol: 'http',
         port: 27123,
         apiKey: 'test_key'
       });
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(500);
+      await vi.advanceTimersByTimeAsync(1000);
+      const result = await pending;
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('Connection failed');
@@ -526,10 +544,12 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
      });
 
      afterEach(() => {
+       vi.useRealTimers();
        vi.mocked(global.fetch).mockRestore();
      });
 
      it('returns an appropriate message for timeout errors', async () => {
+       useTimerClock();
        mockGetSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: 'test_key',
          OBSIDIAN_PROTOCOL: 'http',
@@ -540,7 +560,11 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        const timeoutError = new Error('Request timed out');
        vi.mocked(global.fetch).mockRejectedValue(timeoutError);
 
-       const result = await obsidianClient.testConnection();
+       const pending = obsidianClient.testConnection();
+       await vi.advanceTimersByTimeAsync(0);
+       await vi.advanceTimersByTimeAsync(500);
+       await vi.advanceTimersByTimeAsync(1000);
+       const result = await pending;
        expect(result.success).toBe(false);
        expect(result.message).toContain('Connection timeout');
      });
@@ -594,7 +618,7 @@ describe('ObsidianClient: connection check retry policy', () => {
   });
 
   it('retries a network error and waits for the initial backoff delay', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce({ ok: true, status: 200 });
@@ -613,7 +637,7 @@ describe('ObsidianClient: connection check retry policy', () => {
   });
 
   it('uses increasing delays for consecutive retryable failures', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockRejectedValueOnce(new Error('connection reset'))
@@ -638,7 +662,7 @@ describe('ObsidianClient: connection check retry policy', () => {
   });
 
   it('retries a timeout and uses an increasing delay before the next attempt', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fetchMock = vi.fn()
       .mockRejectedValueOnce(Object.assign(new Error('The operation was aborted.'), { name: 'AbortError' }))
       .mockResolvedValueOnce({ ok: true, status: 200 });
@@ -654,7 +678,7 @@ describe('ObsidianClient: connection check retry policy', () => {
   });
 
   it.each([500, 502, 503, 504])('retries HTTP %s and succeeds on the next attempt', async (status) => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({ ok: false, status, statusText: 'Transient response' })
       .mockResolvedValueOnce({ ok: true, status: 200 });
@@ -708,7 +732,7 @@ describe('ObsidianClient: connection check retry policy', () => {
   });
 
   it('stops after the configured maximum number of attempts', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
       status: 503,
@@ -731,7 +755,7 @@ describe('ObsidianClient: connection check retry policy', () => {
 
    describe('_fetchWithTimeout abort handling', () => {
      beforeEach(() => {
-       vi.useFakeTimers();
+       useTimerClock();
      });
      afterEach(() => {
        vi.useRealTimers();

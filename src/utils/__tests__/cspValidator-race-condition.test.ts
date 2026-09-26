@@ -22,6 +22,7 @@ describe('CSPValidator - Race Condition Fix - Request Queuing', () => {
       // 重いモックfetch（初期化中にリクエストが即時実行されないことを確認）
       global.fetch = vi.fn().mockImplementation(() =>
         new Promise(resolve =>
+          // eslint-disable-next-line local/no-test-sleep -- simulates slow API to verify request queuing during init
           setTimeout(() => resolve({ ok: true, json: async () => ({}) }), 1000)
         )
       );

@@ -5,6 +5,7 @@
  */
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 vi.mock('../../utils/logger/types.js', () => ({
   addLog: vi.fn(),
@@ -392,15 +393,21 @@ describe('SqliteClient — unit tests', () => {
 
   describe('concurrent failures keep their own reason', () => {
     it('gives each concurrent call the error from its own operation', async () => {
-      // Create a transport that returns different errors based on message type
+      // The two calls must settle in a KNOWN order for this assertion to mean
+      // anything: the non-DELETE branch rejects first, SQLITE_DELETE second.
+      // The `waitForMock(() => {})` this replaced resolved on its first
+      // synchronous evaluation, so the 20ms stagger it stood in for was never
+      // actually applied. A deferred makes the ordering explicit.
+      const siblingRejected = Promise.withResolvers<void>();
       let callCount = 0;
       mockTransport = {
         lastPayload: null,
         async msgOffscreen(type: SqliteMessageType): Promise<OffscreenResponse> {
           if (type === 'SQLITE_DELETE') {
-            await new Promise(resolve => setTimeout(resolve, 20));
+            await siblingRejected.promise;
             throw new Error('quota exceeded');
           }
+          siblingRejected.resolve();
           throw new Error('request timed out');
         },
       };

@@ -185,6 +185,8 @@ make test  → npm run build（chromium + firefox をビルド。冒頭で sync-
 
 E2E は `make test` には含まれない。**最終ゲートの `make clean test-full`**（clean → build → validate → test:e2e）でのみ走る。毎イテレーションで clean からやり直すのは過剰なので、検証は「ループで失敗を潰す → 最後に1回だけフル検証」の2段で回す。
 
+リリース前チェック（`npm run release:check` / `release:check:fast` / `release:check:deps`）は**ループにもゲートにも入れない**。これらはレジストリとネットワークに依存し、検証対象のコードとは無関係な既存の脆弱性・バージョンドリフトで赤くなるため、失敗が「実装が壊れた」ことを意味しない。CI（`ci.yml` の license / audit、`security-audit.yml` の週次 audit）が既に回しているため、リリース当日だけローカルで1回走らせる。
+
 ### ループ
 
 初回だけ `make clean` してから入る。以降のループ内では clean しない。
