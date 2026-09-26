@@ -42,21 +42,21 @@ Scenario: 4つの入口と緩和要因を確認する
 
 ## 受け入れ基準
 
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` に、SSRFガードの検査範囲と未検証の範囲を記載する。
-- [ ] `src/utils/ssrfGuard.ts:183-202` の filter import validator と、`:242-260` の AI request validator の位置と役割を記載する。
-- [ ] `src/utils/fetch.ts:169-228` は redirect 先を URL 文字列として再検証するが、実際の接続先 IP は再検査しないことを記載する。
-- [ ] URL ガードが検査する URL 構文、scheme、IP リテラル、localhost、private/link-local/ULA、redirect 先を、既存仕様として記載する。
-- [ ] 主要な入口が、filter インポートの URL 取得、共通 fetch、AI provider、手動/再生成タブの fetch の4系統であることを記載する。
-- [ ] `src/utils/__tests__/ssrfGuard.test.ts:17-135` の契約テストが23ケースであること、private IPv4/IPv6、localhost、scheme、redirect hop がテスト済みであることを記載する。
-- [ ] public hostname をそのまま許可するテスト（`:113-115`、`:131-133`）があり、DNS が private または loopback に変わるケースのテストはないことを記載する。
-- [ ] hostname の DNS 応答がブラウザの fetch 時に再選択され得るため、DNSリバインディングの残存リスクがゼロではないことを記載する。
-- [ ] MV3 Service Worker には利用制御可能な DNS リゾルバや接続先 pinning API がないため、Service Worker 内で hostname と接続先 IP を一致検証できない制約を記載する。
-- [ ] CSP、origin 許可と確認、拡張機能内のみ、手動 redirect、localhost port 制約を、到達範囲を限定する既存の緩和策として記載する。
-- [ ] ドキュメントは「private IP リテラルと redirect を拒否する」以上の保証を記載せず、URL ガードだけで SSRF を完全に防げると表現しない。
-- [ ] DNS 解決結果と接続先 IP の pinning 設計を、この文書だけで実装済みと扱わない。
-- [ ] セキュリティレビュー担当者を残存リスクの受容者として明示し、判断の根拠を追跡できるようにする。
-- [ ] 実コード、テストファイル、`public/PRIVACY.md`、`docs/PRIVACY.md` は変更しない。
-- [ ] ドキュメントは現行仕様のスナップショットとして書き、issue 番号や変更履歴を残さない。
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` に、SSRFガードの検査範囲と未検証の範囲を記載する。
+- [x] `src/utils/ssrfGuard.ts:183-202` の filter import validator と、`:242-260` の AI request validator の位置と役割を記載する。
+- [x] `src/utils/fetch.ts:169-228` は redirect 先を URL 文字列として再検証するが、実際の接続先 IP は再検査しないことを記載する。
+- [x] URL ガードが検査する URL 構文、scheme、IP リテラル、localhost、private/link-local/ULA、redirect 先を、既存仕様として記載する。
+- [x] 主要な入口が、filter インポートの URL 取得、共通 fetch、AI provider、手動/再生成タブの fetch の4系統であることを記載する。
+- [x] `src/utils/__tests__/ssrfGuard.test.ts:17-135` の契約テストが23ケースであること、private IPv4/IPv6、localhost、scheme、redirect hop がテスト済みであることを記載する。
+- [x] public hostname をそのまま許可するテスト（`:113-115`、`:131-133`）があり、DNS が private または loopback に変わるケースのテストはないことを記載する。
+- [x] hostname の DNS 応答がブラウザの fetch 時に再選択され得るため、DNSリバインディングの残存リスクがゼロではないことを記載する。
+- [x] MV3 Service Worker には利用制御可能な DNS リゾルバや接続先 pinning API がないため、Service Worker 内で hostname と接続先 IP を一致検証できない制約を記載する。
+- [x] CSP、origin 許可と確認、拡張機能内のみ、手動 redirect、localhost port 制約を、到達範囲を限定する既存の緩和策として記載する。
+- [x] ドキュメントは「private IP リテラルと redirect を拒否する」以上の保証を記載せず、URL ガードだけで SSRF を完全に防げると表現しない。
+- [x] DNS 解決結果と接続先 IP の pinning 設計を、この文書だけで実装済みと扱わない。
+- [x] セキュリティレビュー担当者を残存リスクの受容者として明示し、判断の根拠を追跡できるようにする。
+- [x] 実コード、テストファイル、`public/PRIVACY.md`、`docs/PRIVACY.md` は変更しない。
+- [x] ドキュメントは現行仕様のスナップショットとして書き、issue 番号や変更履歴を残さない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -159,13 +159,59 @@ Scenario: 4つの入口と緩和要因を確認する
 
 ## Definition of Done
 
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` に SSRFガードの検査範囲が記載されている。
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` に DNS解決結果と実際の接続先IPの一致を検証しないことが記載されている。
-- [ ] DNSリバインディングの残存リスクと、MV3 Service Worker の制約が記載されている。
-- [ ] 4つの入口、CSP、origin 許可と確認、拡張機能内のみ、手動 redirect、localhost port制約が、既存の緩和要因として記載されている。
-- [ ] 契約テスト23ケース、public hostname の許可例、DNS変更ケース未テストという現状が記載されている。
-- [ ] セキュリティレビュー担当者が残存リスクの受容判断を追跡できる。
-- [ ] URLガードの実装、接続先 IP pinning、テストファイルを変更していない。
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` を変更していない。
-- [ ] ドキュメントは現行仕様のスナップショットのみで、issue 番号や変更履歴を含まない。
-- [ ] ガイドの説明が private IP リテラルと redirect の拒否を超える保証を意味していないことをレビューで確認した。
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` に SSRFガードの検査範囲が記載されている。
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` に DNS解決結果と実際の接続先IPの一致を検証しないことが記載されている。
+- [x] DNSリバインディングの残存リスクと、MV3 Service Worker の制約が記載されている。
+- [x] 4つの入口、CSP、origin 許可と確認、拡張機能内のみ、手動redirect、localhost port制約が、既存の緩和要因として記載されている。
+- [x] 契約テスト23ケース、public hostname の許可例、DNS変更ケース未テストという現状が記載されている。
+- [x] セキュリティレビュー担当者が残存リスクの受容判断を追跡できる。
+- [x] URLガードの実装、接続先 IP pinning、テストファイルを変更していない。
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` を変更していない。
+- [x] ドキュメントは現行仕様のスナップショットのみで、issue 番号や変更履歴を含まない。
+- [x] ガイドの説明が private IP リテラルと redirect の拒否を超える保証を意味していないことをレビューで確認した。
+
+## 実施記録（2026-09-26）
+
+### 配置先
+
+`## Threat Model Overview` の表に 1 行（SSRF via user-supplied URL）を追加し、既存セクションの直後に
+`### SSRF guard: what it checks, and what it cannot check` を新設した。PBI 本文が想定していた
+`Security Controls` ではなく **Threat Model Overview** を正とした。理由は、残存リスクの受容判断を
+脅威モデルの一部として追跡する必要があるためで、Controls 側へ置くと「ガードの評価項目」に
+見えてしまう。
+
+### 実測で確認した事実（記載内容はすべてコードと照合済み）
+
+- 3 つの validator の位置: `validateUrl()`（`ssrfGuard.ts:31`）/ `validateUrlForFilterImport()`（`:183`）/ `validateUrlForAIRequests()`（`:242`）。
+- `ALLOWED_LOCALHOST_PORTS` は `{27123, 27124, 11434, 1234}`（`:207`）。
+- 契約テストは 23 ケース（`src/utils/__tests__/ssrfGuard.test.ts`）。public hostname をそのまま
+  許可する 2 例は `https://example.com/filters.txt` と `https://api.openai.com/v1/chat`。
+  DNS 応答が変わる場合のテストは存在しない。
+- 4 つの入口の実位置: filter インポートは `systemHandlers.ts:85`、AI provider は
+  `GeminiProvider.ts` / `OpenAIProvider.ts`、手動/再生成タブは `manualContentFetcher.ts:93` /
+  `regenerateContentFetcher.ts:57` / `recordingHandlers.ts:385`。
+
+### 着手時に見つかった、PBI 本文との差分（本文の想定を修正して記載）
+
+PBI 本文は「redirect 先を URL 文字列として再検証する」ことを 4 入口の共通仕様として記述していたが、
+**実コードでは入口ごとに redirect 方針が異なっていた**:
+
+- `FETCH_URL`（filter インポート）は `fetchWithRedirectGuard` ではなく **`redirect: 'error'`** を使う。
+  `systemHandlers.ts:96-100` にその判断理由（既知の filter ソースは固定 HTTPS ホストで
+  http→https も mirror redirect も利用しない）がコメントとして残っており、
+  ADR `2026-08-29-fetch-redirect-policy.md` を参照している。加えて `response.redirected` の
+  二重チェックがある。
+- per-hop 再検証を行う `fetchWithRedirectGuard`（`fetch.ts:188`）は、AI provider 経路など
+  redirect を辿る必要がある入口向けの契約として存在するが、filter インポート経路では
+  **使われていない**。
+
+この差異はガードの弱さではなく入口ごとの意図的な設計なので、「4 入口すべてが redirect を
+再検証する」という誤解を招かないよう、表の redirect 扱いに入口ごとの差を明記した。
+
+### 保証の表現について
+
+「private IP リテラルと redirect を拒否する」以上の保証を記載していないことを自查した。
+特に次を避けている: URL ガードが SSRF を防止するという表現、redirect hop の再検証を
+接続先 IP の再検査として説明すること、public hostname を許可するテストを DNS 応答の
+安全性に関する証拠として引用すること、MV3 Service Worker に利用制御可能な DNS resolver や
+接続先 pinning API が存在するという書き方。
