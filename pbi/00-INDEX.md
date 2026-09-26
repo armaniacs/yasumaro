@@ -14,9 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-27 Built-in AI 誤案内修正 — 未着手 1件 🔧非機能追加
+### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 — 🔵 監視 1件 🔧非機能追加
 
-- [2026-09-27-01-fix-built-in-ai-false-disk-space-error.md](2026-09-27-01-fix-built-in-ai-false-disk-space-error.md)（未着手 — 0.5 SP・難易度 低・副作用 なし。issue #161 / Linear DEV-93。Firefox など Prompt API 非対応ブラウザで、実際の空き容量と無関係に「空き容量 10 GB」と誤表示される。`getBuiltInAIDiskSpace()` に Prompt API 存在ゲートを追加し、非対応ブラウザでは既存のブラウザ非対応案内へフォールバック。既存 6 テストが `LanguageModel` 未定義のテスト環境で全滅する点に注意 — PBI「落とし穴」参照）
+- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（🔵 監視中 — RICE 0.2・1 SP・副作用🟢。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 でスコア 0.00% になる既知制約（上流 #6210、修正 PR #6220 未マージ）の採用待ち。トリガー: #6210 修正を含む vitest-runner 新版の npm リリース、または Vitest 4.x へのダウングレード裁定。トリガーまで Red/Green 手動検証を継続）
 
 ### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 3件完了・⬜ 未着手 2件 🔧非機能追加
 
@@ -50,14 +50,12 @@
 
 このラウンドの 4 PBI はすべて実装済み・アーカイブ済みです（内訳はアーカイブ履歴を参照）。未実施の DoD は各 PBI の「未実施 — ユーザー作業」表記に残しています。
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 15件完了・アーカイブ済み / ⬜ 未着手 17件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 17件完了・アーカイブ済み / ⬜ 未着手 15件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 32 | [fix-obsidian-auth-error-wording](2026-09-25-32-fix-obsidian-auth-error-wording.md) | fix | — | 0.5 | 11 の裁定から起票。Obsidian 401/403 の表示を auth に訂正（ユーザー表示が変わるため単独） |
-| 31 | [fix-withlock-object-conflict-policy](2026-09-25-31-fix-withlock-object-conflict-policy.md) | fix | — | — | 02 の裁定で起票。`withLock` の object 競合検知を version 単一 signal に固定し、lock 迂回 2 箇所を撤去 |
 | 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
 | 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 完了済み・着手可能 |
 | 13 | [investigate-obsidian-write-replay-idempotency](2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | 11・12 の後（依存で降格） |
@@ -146,6 +144,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 autonomous-task-closer wave 3 — ✅ 5件完了（05 移動漏れ修復・27-01・26-09・25-31・25-32 アーカイブ済み）
+
+バッチ0（機械的修正）+ バッチ1（27-01・26-09・25-31 をファイル非重複で並列実装、25-31 は worktree 隔離）+ バッチ2（25-32 は 26-09 と表示経路・既存 parity テストが隣接するため直列実装）。5 Whys 記録は /tmp/whywhy/。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test 927 files・14,367 passed（21 skipped）/ build PASS / `lint:adr-links` PASS。詳細は各項目を参照。
+
+- [2026-09-26-05-test-remove-fixed-sleeps.md](../dev-docs/archived/pbi/2026-09-26-05-test-remove-fixed-sleeps.md)（✅ 完了済みの移動漏れを修復 — 5 Whys なし。DoD 全 `[x]`・実装証跡（`eslint.config.js` の `local/no-test-sleep: error`）を確認の上アーカイブへ移動し、INDEX 内の 05・08 への壊れた相対リンクを修正）
+- [2026-09-27-01-fix-built-in-ai-false-disk-space-error.md](../dev-docs/archived/pbi/2026-09-27-01-fix-built-in-ai-false-disk-space-error.md)（✅ 完了 — issue #161 / Linear DEV-93。`getBuiltInAIDiskSpace()` 冒頭に Prompt API 存在ゲート（`globalThis.LanguageModel` 未定義 → null・`declare global` は narrowing で回避）を追加し、3 表示経路を同時に修正。テストは `LanguageModel` を beforeEach で立て afterEach で復元。22 GiB 境界値・負値クランプを追加固定。対象 3 ファイル 71 tests green・`--repeats=5` 安定。なぜなぜ: 能力の有無の判定が能力的存続を前提とする推定より後ろに回っていた）
+- [2026-09-26-09-fix-firefox-https-cert-guidance.md](../dev-docs/archived/pbi/2026-09-26-09-fix-firefox-https-cert-guidance.md)（✅ 完了 — issue #160。起票時 NN 08 がアーカイブ済み 08-lint-e2e-tests と衝突していたため運用ルールどおり 09 にリネーム。`ObsidianConnectionResult` にオプショナル `failure?: FailureMetadata` を追加（AbortError→timeout・TypeError→network・文言不変）し、証明書リンクの表示条件をメッセージ部分一致から `failure.kind === 'network' && protocol === 'https'` 起点へ修正。リンク URL は hostInput 値起点（validateObsidianHost/Port でサニタイズ・無効値は既定へ降格）。Firefox 向け案内（新 i18n キー `certGuideFirefox`、ja/en parity テスト付き）。旧条件へ戻すと新規 18 テストが red になることを実証。79 files・1187 tests green。なぜなぜ: 境界が文面と構造情報を 1 本の文字列に押し込み、テストが SW の書き換え段を再現していなかった）
+- [2026-09-25-31-fix-withlock-object-conflict-policy.md](../dev-docs/archived/pbi/2026-09-25-31-fix-withlock-object-conflict-policy.md)（✅ 完了 — ADR 2026-09-26 の R1〜R5 を実装。pendingStorage の legacy migration と savedUrlRepository の quota cleanup を `withOptimisticLock` 経由へ移し、lock key への version 非 bumping な直接 set を production 0 件化（契約テストで機械検出）。permissionManager の 5 updater を非突然変異化、dead code `saveDeniedDomains` 削除、`InMemoryStoragePort` と vitest.setup.ts の storage 境界を structured clone 相当化。`storageTransaction.ts` は 1 行も変更せず既存 pin 維持。3430 tests green ×2。なぜなぜ: 契約が散文でしか表現されず、port の参照返却が違反をテストで観測不能にしていた）
+- [2026-09-25-32-fix-obsidian-auth-error-wording.md](../dev-docs/archived/pbi/2026-09-25-32-fix-obsidian-auth-error-wording.md)（✅ 完了 — PBI 11 が宣言済みだった `FAILURE_KIND_TO_ERROR_TYPE` 表を `classifyError()` の実行経路に接続。Obsidian の 401/403 が errorAuth、429 が errorRateLimit、404/5xx が errorServer を表示するようになり、network 判定が先に評価されて auth 分岐が到達不能だった問題を解消。新規 i18n キー 0 件。PBI 11 の「display と kind が独立」不変条件テストを本裁定に合わせて更新し、実 ObsidianClient → StepExecutor → createErrorResponse の統合テスト 5 件と ja/en キー parity テストを追加。utils+background 501 files・7769 tests green。なぜなぜ: サニタイズ契約がステータスを文面から消した一方で文面の外に構造化チャネルが無かった）
 
 ### 2026-09-26 autonomous-task-closer wave 1 — ✅ 4件完了（02・06・07・08 アーカイブ済み）4件をファイル非重複で並列実装
 
