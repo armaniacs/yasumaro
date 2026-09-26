@@ -283,7 +283,7 @@ build=false, pbi=false` になることで確認できる（30 秒程度）。
 ## Definition of Done
 
 - [x] 6 ジョブの入力 path と起動条件が `ci.yml` 内で定義され、共通分類ジョブから参照できる。
-- [ ] docs-only、WASM、build、CI 設定、lockfile、`.npmrc` の BDD シナリオが実際の CI で確認できる。→ **一部確認済み**。CI 設定変更 case は PR #162 で実測（全ゲートが起動し、build は validate 完了後に起動）。**残るは docs-only で `wasm-test` / `build` が起動しないことのみ**（使い捨て docs-only PR が必要）。
+- [x] docs-only、WASM、build、CI 設定、lockfile、`.npmrc` の BDD シナリオが実際の CI で確認できる。→ 2 つの実 PR で確定。docs-only は PR #163（`validate`/`wasm-test`/`dod-check`/`build` すべて skipped、`gitleaks` は実行、job-level skip が `pending` ではなく `skipped` として終端）。CI 設定変更は PR #162（全ゲート起動、`build` は `validate` 完了後）。lockfile / `.npmrc` / `wasm` / `package.json` はテストの振る舞い行列で分類結果を固定。
 - [x] `gitleaks` が全対象ケースで history scan を実行し、security gate が除外されていない。
 - [x] `build` は `validate` 成功後に限られ、validate が skip または failed の場合に実行されない。
 - [x] required check が pending にならないこと。→ `main` に branch protection も ruleset も存在しないことを `gh api` で実測した（必須チェック自体が無い）。将来 protection を入れても塞がらないよう workflow 単位の `paths` は使わず job-level `if` にしている。
