@@ -30,9 +30,9 @@
 
 | PBI | 状態 | RICE | SP | 内容 |
 |---|---|---:|---:|---|
-| [05](2026-09-26-05-test-remove-fixed-sleeps.md) | ✅ 完了 | 3.0 | 1 | Unit/Integration sleep 40 件 → condition-based |
-| [08](2026-09-26-08-lint-e2e-tests.md) | ✅ 完了 | 1.0 | 1 | testDir ESLint 対象化（`waitForTimeout` 12 件） |
-| [01](2026-09-26-01-test-eslint-rule-tester-repeats.md) | ✅ 完了 | — | 1 | ESLint ルールテスト 7 ファイルを `--repeats` ゲートに乗せる |
+| [05](../dev-docs/archived/pbi/2026-09-26-05-test-remove-fixed-sleeps.md) | ✅ 完了 | 3.0 | 1 | Unit/Integration sleep 40 件 → condition-based |
+| [08](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md) | ✅ 完了 | 1.0 | 1 | testDir ESLint 対象化（`waitForTimeout` 12 件） |
+| [01](../dev-docs/archived/pbi/2026-09-26-01-test-eslint-rule-tester-repeats.md) | ✅ 完了 | — | 1 | ESLint ルールテスト 7 ファイルを `--repeats` ゲートに乗せる |
 | [06](2026-09-26-06-investigate-e2e-retry-flakiness.md) | ⬜ 未着手 | 2.0 | 2 | E2E retry 隠蔽調査・修正（flaky 1 件の実測証拠を採取済み） |
 | [07](2026-09-26-07-lower-eslint-sleep-threshold.md) | ⬜ 未着手 | 1.5 | 1.5 | ESLint 閾値下げ（実測 163 件、PBI 記載の 70 件から大幅増） |
 
@@ -78,9 +78,9 @@
 
 ### 2026-09-26 テストの固定待機の解消 — ✅ 1件完了・アーカイブ済み 🔧非機能追加
 
-- [2026-09-26-05-test-remove-fixed-sleeps.md](2026-09-26-05-test-remove-fixed-sleeps.md)（✅ 完了・アーカイブ済み — RICE 3.0・1 SP・副作用🟢。`local/no-test-sleep` の警告 40 件（16 ファイル）をすべて条件待ちに置き換え、ルールを error に昇格。`npm run validate` 通過、`--repeats=20` で安定）
+- [2026-09-26-05-test-remove-fixed-sleeps.md](../dev-docs/archived/pbi/2026-09-26-05-test-remove-fixed-sleeps.md)（✅ 完了・アーカイブ済み — RICE 3.0・1 SP・副作用🟢。`local/no-test-sleep` の警告 40 件（16 ファイル）をすべて条件待ちに置き換え、ルールを error に昇格。`npm run validate` 通過、`--repeats=20` で安定）
   - 現代化の追加分: ルールの `const` 束縛遅延解決（追加 3 件検出）、`local/no-greedy-fake-timers`（`warn`、既存 124 箇所の移行待ち）、`local/no-vacuous-negative-wait`（`error`、20 件検出して 19 件修正）
-  - 関連 PBI: [06](2026-09-26-06-investigate-e2e-retry-flakiness.md)（E2E retry で隠れる失敗）、[07](2026-09-26-07-lower-eslint-sleep-threshold.md)（閾値 20ms→0）、[08](2026-09-26-08-lint-e2e-tests.md)（`testDir/` を ESLint 対象に）
+  - 関連 PBI: [06](2026-09-26-06-investigate-e2e-retry-flakiness.md)（E2E retry で隠れる失敗）、[07](2026-09-26-07-lower-eslint-sleep-threshold.md)（閾値 20ms→0）、[08](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md)（`testDir/` を ESLint 対象に）
 
 ### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ✅ 全8件完了・アーカイブ済み
 
