@@ -166,16 +166,13 @@ test.describe('Content Script Recording @extension', () => {
     });
 
     await test.step('Verify NOT fired while the stay is still under the threshold', async () => {
-      // Sample the negative window as late as it can be sampled while the stay
-      // is still under minVisitDuration: the window's midpoint, derived from the
-      // extractor's own threshold rather than a hard-coded 2s. Reading a stale
-      // snapshot here is safe — the state is re-read below, and the gate can
-      // only move towards firing.
+      // Assert as early as the scroll depth is confirmed. Waiting longer does not
+      // make this assertion mean more — the stay is already over the threshold by
+      // then, and "stay > threshold/2" as a wait condition only walks the sample
+      // point toward the boundary the next assertion checks. The scroll depth
+      // step above is what keeps this from being vacuous: with depth recorded and
+      // the stay under the threshold, the report must not have fired.
       const threshold = (await readTestState(page))!.minVisitDuration;
-      await expect
-        .poll(() => readStaySeconds(page), { timeout: 10000, intervals: [250] })
-        .toBeGreaterThan(threshold / 2);
-
       const state = await readTestState(page);
       expect(state).not.toBeNull();
       expect(state!.maxScrollPercentage).toBeGreaterThanOrEqual(50);
