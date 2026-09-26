@@ -1,4 +1,4 @@
-.PHONY: build build-store build-edge build-firefox clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast bench bench-micro bench-e2e bench-check bench-baseline bench-clean
+.PHONY: build build-store build-edge build-firefox clean test test-watch test-coverage test-e2e type-check validate test-quick test-unit test-news test-news-watch local-ci test-all lock-linux release-check release-check-fast release-check-deps test-perf bench bench-micro bench-e2e bench-check bench-baseline bench-clean
 
 # build: TypeScript + WXT ビルド — chromium（chrome）と firefox の両方を出力
 # （node_modules/wa-sqlite 経由）。firefox は -b firefox で dist/firefox-mv3 に
@@ -107,6 +107,11 @@ bench-baseline:
 bench-clean:
 	npm run bench:clean -- $(ARGS)
 
+# test-perf: 単体スイートを 1 回走らせ、bench/baselines/test-perf.budget.json と比較する
+# （CI の validate ジョブと同じゲート。スイート自体も実行するので test の二重化になる）
+test-perf:
+	npm run test:perf
+
 # リリース前チェック（全カテゴリ）
 release-check:
 	npm run release:check
@@ -114,3 +119,7 @@ release-check:
 # リリース前チェック（E2E をスキップ）
 release-check-fast:
 	npm run release:check:fast
+
+# 依存・セキュリティ検査のみ（レジストリ照会を伴うためテストループでは回さない）
+release-check-deps:
+	npm run release:check:deps
