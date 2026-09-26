@@ -55,8 +55,18 @@ export interface BuiltInAIDiskSpace {
  * `navigator.storage.estimate()` reports the origin's quota, not the real disk,
  * but Chromium derives that quota from actual free space, so `quota - usage`
  * tracks it closely enough to distinguish "no space" from "flag disabled".
+ * That only holds where the Prompt API exists: elsewhere (e.g. Firefox) the
+ * same call returns a quota cap of a few GiB that has nothing to do with free
+ * disk space, and reporting it produced a false "insufficient space" message
+ * (issue #161).
  */
 export async function getBuiltInAIDiskSpace(): Promise<BuiltInAIDiskSpace | null> {
+    // Declared as `var LanguageModel` in builtInAIClient.ts, which this module
+    // does not import, so globalThis is narrowed here instead of augmenting
+    // the global scope again.
+    if (typeof (globalThis as { LanguageModel?: unknown }).LanguageModel === 'undefined') {
+        return null;
+    }
     if (typeof navigator === 'undefined' || !navigator.storage?.estimate) {
         return null;
     }
