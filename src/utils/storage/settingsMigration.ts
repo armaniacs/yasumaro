@@ -8,11 +8,12 @@ import { ErrorCode } from '../logger/types.js';
 import { logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
-import { withOptimisticLock } from './storageTransaction.js';
+import { withOptimisticLock, StorageTransaction, deepEqual } from './storageTransaction.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
 import { asStorageKeys } from './apiKeyFields.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
+import { ChromeStoragePort, type StoragePort } from './storagePort.js';
 import {
     PROVIDER_ALLOWLIST_ROWS,
     isAllowedProviderBaseUrl,
@@ -25,18 +26,129 @@ const BACKUP_RETENTION_DAYS = 30;
 export const SETTINGS_MIGRATED_KEY = 'settings_migrated';
 
 /**
+ * Explicit migration schema version. Version 1 is the unversioned boolean
+ * contract: it recorded completion *before* the backup existed, so a Service
+ * Worker torn down between the nested-settings write and the legacy-key removal
+ * left the flag set with neither a backup nor the raw keys — the migration could
+ * never run again and the settings were lost. Version 2 records the stage the
+ * run reached and records completion last, so an interrupted run always leaves
+ * "not completed" behind and is retried on the next start.
+ */
+export const SETTINGS_MIGRATION_SCHEMA_VERSION = 2;
+
+export type SettingsMigrationStage = 'pending' | 'backed_up' | 'legacy_removed' | 'completed';
+
+export interface SettingsMigrationState {
+    schemaVersion: number;
+    stage: SettingsMigrationStage;
+}
+
+/** Ordered so a resumed run can never move the recorded stage backwards. */
+const MIGRATION_STAGE_ORDER: readonly SettingsMigrationStage[] = [
+    'pending',
+    'backed_up',
+    'legacy_removed',
+    'completed',
+];
+
+/** Re-reads before removal can race with a concurrent writer this many times. */
+const MAX_REMOVE_ATTEMPTS = 3;
+
+/**
  * One-time gate for migrateLoopbackProviderOriginConfirmations (raw
  * chrome.storage.local key, outside the settings blob — same pattern as
  * SETTINGS_MIGRATED_KEY).
  */
 const PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY = 'provider_loopback_origin_grandfather_done';
 
-function isEncryptionKey(key: string): boolean {
-    return key === StorageKeys.ENCRYPTION_SALT ||
-        key === StorageKeys.ENCRYPTION_SECRET ||
-        key === StorageKeys.HMAC_SECRET ||
-        key === StorageKeys.MASTER_PASSWORD_SALT ||
-        key === StorageKeys.MASTER_PASSWORD_HASH;
+function isSettingsMigrationStage(value: unknown): value is SettingsMigrationStage {
+    return typeof value === 'string' && (MIGRATION_STAGE_ORDER as readonly string[]).includes(value);
+}
+
+/**
+ * Parse whatever `settings_migrated` holds. A bare stage string is accepted as
+ * schema version 1 (an unversioned stage record cannot be trusted as complete).
+ * Anything else — the legacy boolean, `false`, a corrupt object — is unverified
+ * and left for the repair path.
+ */
+export function parseSettingsMigrationState(raw: unknown): SettingsMigrationState | null {
+    if (isSettingsMigrationStage(raw)) {
+        return { schemaVersion: 1, stage: raw };
+    }
+    if (raw !== null && typeof raw === 'object') {
+        const record = raw as { schemaVersion?: unknown; stage?: unknown };
+        if (typeof record.schemaVersion === 'number' && isSettingsMigrationStage(record.stage)) {
+            return { schemaVersion: record.schemaVersion, stage: record.stage };
+        }
+    }
+    return null;
+}
+
+/**
+ * Strict completion: the only record that proves the run finished every step.
+ * A partial stage string is truthy and would pass a truthiness check, which is
+ * exactly the bug this replaces. The legacy boolean is deliberately NOT
+ * complete here — it was written before the backup existed, so it cannot prove
+ * anything and belongs to the repair path.
+ */
+export function isSettingsMigrationComplete(raw: unknown): boolean {
+    const state = parseSettingsMigrationState(raw);
+    return state !== null && state.stage === 'completed' && state.schemaVersion >= SETTINGS_MIGRATION_SCHEMA_VERSION;
+}
+
+/**
+ * Read-path predicate: is the `settings` blob the authoritative source?
+ *
+ * The legacy boolean `true` is accepted because it is the record every installed
+ * user has, and the deferred migration repairs it non-destructively before any
+ * read depends on it. Rejecting it would push existing installs onto the
+ * scattered-key path for no benefit; accepting a *partial* stage would hide raw
+ * keys the migration has not folded in yet, so those stay rejected.
+ */
+export function isSettingsBlobAuthoritative(raw: unknown): boolean {
+    return isSettingsMigrationComplete(raw) || raw === true;
+}
+
+const STORAGE_KEY_VALUES: ReadonlySet<string> = new Set<string>(Object.values(StorageKeys) as string[]);
+
+/**
+ * Keys that stay at the top level of `chrome.storage.local` even though they are
+ * ordinary `StorageKeys` values. This is an explicit allowlist on purpose: the
+ * previous `!key.includes('_version')` substring test also matched
+ * `gemini_api_version` (a user setting the dashboard must be able to change)
+ * while matching nothing about the CAS records it was meant to exclude.
+ *
+ * Each entry is a key whose owning module reads or writes it directly through
+ * `chrome.storage.local`, so migrating it into the `settings` blob deletes the
+ * only copy the owner can see.
+ */
+const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
+    // Keyring: re-encrypting or relocating these would strand the ciphertext.
+    StorageKeys.ENCRYPTION_SALT,
+    StorageKeys.ENCRYPTION_SECRET,
+    StorageKeys.HMAC_SECRET,
+    StorageKeys.MASTER_PASSWORD_SALT,
+    StorageKeys.MASTER_PASSWORD_HASH,
+    // Version-managed state read straight from storage (privacyConsent.ts,
+    // trancoConsentManager.ts). Moving them into the blob would reset the
+    // consent / Tranco UI state the user already acknowledged.
+    StorageKeys.PRIVACY_CONSENT_VERSION,
+    StorageKeys.TRANCO_VERSION,
+    // Device-local trust database owned by TrustDbKernel, which persists it
+    // with its own withOptimisticLock on the raw key and has no blob-side reader.
+    StorageKeys.TRUST_DB,
+]);
+
+/**
+ * A key migrates into the `settings` blob only when it is a `StorageKeys` value
+ * and not on the top-level allowlist. CAS records (`settings_version`,
+ * `savedUrls_version`, …), the `settings` blob itself, `settings_migrated`, the
+ * `legacy_settings_backup_*` family and every other module's keys are all
+ * rejected by the membership test, so no name-pattern guess is involved.
+ */
+export function isMigratableStorageKey(key: string): boolean {
+    if (!STORAGE_KEY_VALUES.has(key)) return false;
+    return !TOP_LEVEL_ONLY_KEYS.has(key);
 }
 
 function assignSettingValue(settings: Settings, key: StorageKey, value: unknown): void {
@@ -44,47 +156,185 @@ function assignSettingValue(settings: Settings, key: StorageKey, value: unknown)
     target[key] = value;
 }
 
-export async function migrateToSingleSettingsObject(): Promise<boolean> {
-    const result = await chrome.storage.local.get(SETTINGS_MIGRATED_KEY);
-    if (result[SETTINGS_MIGRATED_KEY]) {
-        return false;
-    }
-    const existingKeys = await chrome.storage.local.get(null);
-    const settings: Settings = {};
-    for (const [key, value] of Object.entries(existingKeys)) {
-        if (Object.values(StorageKeys).includes(key as StorageKey) &&
-            !key.includes('_version') &&
-            !isEncryptionKey(key) &&
-            key !== SETTINGS_MIGRATED_KEY) {
-            assignSettingValue(settings, key as StorageKey, value);
+function hasOwn(record: Record<string, unknown>, key: string): boolean {
+    return Object.prototype.hasOwnProperty.call(record, key);
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export interface MigrateSettingsOptions {
+    /** Storage seam; defaults to `chrome.storage.local`. */
+    port?: StoragePort;
+    /** Clock seam for the backup key suffix; defaults to `Date.now`. */
+    now?: () => number;
+}
+
+/**
+ * Merge `delta` into the `settings` blob.
+ *
+ * `overwriteExisting === false` is the resume/repair rule: a key the blob
+ * already holds is newer than the raw copy (the blob is the only writer after
+ * migration started), so only the gaps are filled. The conflict path passes
+ * `true` because there the raw value was observed changing *after* the backup,
+ * which makes it the newest copy.
+ */
+async function mergeIntoNestedSettings(
+    tx: StorageTransaction,
+    delta: Settings,
+    overwriteExisting: boolean,
+): Promise<void> {
+    const entries = Object.entries(delta as Record<string, unknown>);
+    if (entries.length === 0) return;
+    await tx.withLock<Settings>('settings', (current) => {
+        const base = isPlainRecord(current) ? current : {};
+        const next: Record<string, unknown> = { ...base };
+        for (const [key, value] of entries) {
+            if (overwriteExisting || next[key] === undefined) next[key] = value;
         }
-    }
-    if (Object.keys(settings).length === 0) {
-        for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-            assignSettingValue(settings, key as StorageKey, value);
-        }
-    }
-    await withOptimisticLock('settings', (currentSettings: Settings) => {
-        return { ...currentSettings, ...settings };
+        return next as Settings;
     });
-    await chrome.storage.local.set({ [SETTINGS_MIGRATED_KEY]: true });
-    const keysToRemove = Object.keys(existingKeys).filter(key =>
-        Object.values(StorageKeys).includes(key as StorageKey) &&
-        !key.includes('_version') &&
-        !isEncryptionKey(key) &&
-        key !== SETTINGS_MIGRATED_KEY
-    );
-    if (keysToRemove.length > 0) {
-        const backupData: Record<string, unknown> = {};
-        for (const key of keysToRemove) {
-            backupData[key] = existingKeys[key];
-        }
-        const backupKey = `${LEGACY_SETTINGS_BACKUP_KEY}_${Date.now()}`;
-        await chrome.storage.local.set({
-            [backupKey]: { data: backupData, createdAt: Date.now() },
-        });
-        await chrome.storage.local.remove(keysToRemove);
+}
+
+async function recordStage(
+    port: StoragePort,
+    stage: SettingsMigrationStage,
+    currentIndex: number,
+): Promise<number> {
+    const nextIndex = MIGRATION_STAGE_ORDER.indexOf(stage);
+    if (nextIndex <= currentIndex) return currentIndex;
+    await port.set({
+        [SETTINGS_MIGRATED_KEY]: {
+            schemaVersion: SETTINGS_MIGRATION_SCHEMA_VERSION,
+            stage,
+        } satisfies SettingsMigrationState,
+    });
+    return nextIndex;
+}
+
+/**
+ * Write the backup and read it back. `tryRestoreFromBackup()` is only useful
+ * with a backup that is actually in storage, so the write is verified before
+ * any legacy key is removed.
+ */
+async function writeAndVerifyBackup(
+    port: StoragePort,
+    values: Record<string, unknown>,
+    now: () => number,
+): Promise<void> {
+    const createdAt = now();
+    const backupKey = `${LEGACY_SETTINGS_BACKUP_KEY}_${createdAt}`;
+    await port.set({ [backupKey]: { data: values, createdAt } });
+    const stored = (await port.get(backupKey))[backupKey];
+    if (!isPlainRecord(stored) || !isPlainRecord(stored['data'])) {
+        throw new Error(`Settings backup ${backupKey} could not be verified`);
     }
+    for (const [key, value] of Object.entries(values)) {
+        if (!deepEqual(stored['data'][key], value)) {
+            throw new Error(`Settings backup ${backupKey} lost key ${key}`);
+        }
+    }
+}
+
+/**
+ * A backup already covers `keys` when a `legacy_settings_backup_*` entry exists
+ * whose `data` holds every one of them — the same shape
+ * `tryRestoreFromBackup()` recognises. Reusing it keeps a resumed run from
+ * stacking duplicate backups after repeated interruptions.
+ */
+async function hasCoveringBackup(port: StoragePort, keys: readonly string[]): Promise<boolean> {
+    if (keys.length === 0) return true;
+    const all = await port.get(null);
+    const backupKeys = Object.keys(all).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
+    for (const backupKey of backupKeys) {
+        const entry = all[backupKey];
+        if (!isPlainRecord(entry) || !isPlainRecord(entry['data'])) continue;
+        if (keys.every((k) => hasOwn(entry['data'] as Record<string, unknown>, k))) return true;
+    }
+    return false;
+}
+
+export async function migrateToSingleSettingsObject(
+    options: MigrateSettingsOptions = {},
+): Promise<boolean> {
+    const port = options.port ?? new ChromeStoragePort();
+    const now = options.now ?? (() => Date.now());
+    const tx = new StorageTransaction(port);
+    const remove = (keys: string[]): Promise<void> =>
+        port.remove
+            ? port.remove(keys)
+            : chrome.storage.local.remove(keys);
+
+    const rawState = (await port.get(SETTINGS_MIGRATED_KEY))[SETTINGS_MIGRATED_KEY];
+    if (isSettingsMigrationComplete(rawState)) return false;
+
+    // Unverified legacy records (boolean true/false, absent, corrupt) restart at
+    // `pending`; a partial stage resumes from the stage it recorded.
+    const parsedState = parseSettingsMigrationState(rawState);
+    let stageIndex = parsedState ? MIGRATION_STAGE_ORDER.indexOf(parsedState.stage) : -1;
+
+    const all = await port.get(null);
+    const legacyKeys = Object.keys(all).filter(
+        (key) => isMigratableStorageKey(key) && hasOwn(all, key),
+    );
+    const nested = all['settings'];
+    const hasNestedSettings = isPlainRecord(nested) && Object.keys(nested).length > 0;
+
+    const collected: Settings = {};
+    for (const key of legacyKeys) assignSettingValue(collected, key as StorageKey, all[key]);
+    if (Object.keys(collected).length === 0 && !hasNestedSettings) {
+        for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+            assignSettingValue(collected, key as StorageKey, value);
+        }
+    }
+
+    stageIndex = await recordStage(port, 'pending', stageIndex);
+    await mergeIntoNestedSettings(tx, collected, false);
+
+    for (let attempt = 0; attempt < MAX_REMOVE_ATTEMPTS; attempt++) {
+        const snapshot = await port.get(null);
+        const remaining = legacyKeys.filter((key) => hasOwn(snapshot, key));
+        if (remaining.length === 0) break;
+
+        if (await hasCoveringBackup(port, remaining)) {
+            stageIndex = await recordStage(port, 'backed_up', stageIndex);
+        } else {
+            const backupData: Record<string, unknown> = {};
+            for (const key of remaining) backupData[key] = snapshot[key];
+            await writeAndVerifyBackup(port, backupData, now);
+            stageIndex = await recordStage(port, 'backed_up', stageIndex);
+        }
+
+        // Re-read immediately before the destructive step. A raw key that
+        // changed after the backup — or a concurrent writer that moved the
+        // nested blob's CAS generation — would be deleted together with the only
+        // copy of the new value, so follow the latest values and start over.
+        // A key that disappeared instead is simply no longer ours to remove.
+        const preRemove = await port.get(null);
+        const stillPresent = remaining.filter((key) => hasOwn(preRemove, key));
+        const changed = stillPresent.filter((key) => !deepEqual(preRemove[key], snapshot[key]));
+        const generationDrift = (preRemove['settings_version'] ?? 0) !== (snapshot['settings_version'] ?? 0);
+        if (changed.length > 0 || generationDrift) {
+            const latest: Settings = {};
+            for (const key of changed) assignSettingValue(latest, key as StorageKey, preRemove[key]);
+            await mergeIntoNestedSettings(tx, latest, true);
+            const refreshed: Record<string, unknown> = {};
+            for (const key of stillPresent) refreshed[key] = preRemove[key];
+            await writeAndVerifyBackup(port, refreshed, now);
+            continue;
+        }
+
+        await remove(stillPresent);
+        stageIndex = await recordStage(port, 'legacy_removed', stageIndex);
+    }
+
+    // Completion is recorded last, and only once nothing migratable is left.
+    // Any earlier failure propagates with the state still short of `completed`,
+    // which is what makes the next start retry instead of trusting the record.
+    const finalAll = await port.get(null);
+    if (legacyKeys.some((key) => hasOwn(finalAll, key))) return false;
+    await recordStage(port, 'completed', stageIndex);
     return true;
 }
 

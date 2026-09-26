@@ -122,14 +122,17 @@ export class SettingsRepository {
     if (this.cached && (now - this.cached.timestamp) < this.CACHE_TTL) {
       return this.cached.data;
     }
-    const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
+    const { applyMigrationsAndDecryptWithReEncrypt, isSettingsBlobAuthoritative } = await import('./settingsMigration.js');
     const keyProvider = await this.resolveKeyProvider();
 
     // Unified read via Port (no direct chrome.storage)
     const result = await this.port.get(['settings', 'settings_migrated']) as Record<string, unknown>;
 
     let migratedResult: SettingsType;
-    if (result['settings'] && result['settings_migrated']) {
+    // A partial migration stage is truthy but not authoritative: reading the blob
+    // alone there would hide raw keys the migration has not folded in yet, so
+    // those states fall back to the scattered-key merge below.
+    if (result['settings'] && isSettingsBlobAuthoritative(result['settings_migrated'])) {
       let settings = result['settings'] as SettingsType;
       if (Object.keys(settings as Record<string, unknown>).length === 0) {
         const recovered = await tryRestoreFromBackupViaPort(this.port);

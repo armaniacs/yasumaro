@@ -95,7 +95,12 @@ function canonicalStringify(value: unknown): string {
   });
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
+/**
+ * Canonical value equality (key-order independent). Exported because the
+ * settings migration re-reads a legacy key right before deleting it and must
+ * decide "did the value change" with the same semantics the CAS uses.
+ */
+export function deepEqual(a: unknown, b: unknown): boolean {
   return canonicalStringify(a) === canonicalStringify(b);
 }
 
