@@ -42,8 +42,27 @@ jobs:
         run: npm run check-deprecated-aliases
       - name: Type Check
         run: npm run type-check
-      - name: Run Tests
-        run: npm test
+      # test:perf runs the whole unit suite itself, so using it here instead of
+      # `npm test` costs no extra CI time and additionally enforces the
+      # per-file budget in bench/baselines/test-perf.budget.json.
+      #
+      # VITEST_MAX_WORKERS is pinned rather than left to
+      # `os.availableParallelism() - 2`. ubuntu-latest is 4 vCPU, so the config's
+      # formula would give 2 workers, and the config's own measurements on one
+      # 8-core box put that at 303s against 184s for 3 workers (+65%). Pinning 3
+      # restores Vitest's previous CI parallelism and makes the runner's budget
+      # explicit instead of inferred.
+      - name: Run Tests + per-file budget
+        env:
+          VITEST_MAX_WORKERS: 3
+        run: npm run test:perf
+      - name: Upload per-file cost report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-perf-report
+          path: bench/reports/test-perf.md
+          retention-days: 30
 
   gitleaks:
     # Secret scan over the full history (CI_SECURITY_CHECKLIST: .gitleaks.toml

@@ -5,10 +5,25 @@
  */
 
 import { defineConfig } from 'vitest/config';
+import os from 'os';
 import path from 'path';
 import { partitionTestFiles } from './testPartition';
 
 const projectRoot = path.resolve(__dirname, '..');
+
+/**
+ * Worker count for the fork pool.
+ *
+ * `VITEST_MAX_WORKERS` wins outright so a constrained runner can trade wall
+ * time back for the memory headroom the default buys. An unusable value is
+ * ignored rather than propagated, because `maxWorkers: 0` would hang the run
+ * instead of failing it.
+ */
+function resolveMaxWorkers(): number {
+    const override = Number.parseInt(process.env.VITEST_MAX_WORKERS ?? '', 10);
+    if (Number.isInteger(override) && override > 0) return override;
+    return Math.max(1, os.availableParallelism() - 2);
+}
 
 const include = ['**/__tests__/**/*.test.ts', 'tests/**/*.test.ts'];
 const exclude = [
@@ -87,9 +102,21 @@ export default defineConfig({
     testTimeout: 30000,
     // forks, not threads: threads measured ~7% faster once, but another run
     // stalled for 30+ min on a thread worker that would not terminate; a
-    // stuck fork can be killed. maxWorkers stays at Vitest's default
-    // (cores - 1): measured faster than both cores and cores - 3.
+    // stuck fork can be killed.
     pool: 'forks',
+    // Cores - 2 rather than Vitest's cores - 1, for peak memory: the isolate
+    // project forks once per file and a full run peaked around 6GB of node RSS
+    // on a 16GB machine, where one run died with
+    // `[vitest-pool-runner]: Timeout waiting for worker to respond`.
+    //
+    // The wall cost is real and is NOT covered by the ADR's 4/8/12-worker table,
+    // which was measured where >=4 workers already saturate the machine. Same
+    // 8-core box, full suite: 6 workers 76.9s, 3 workers 184s, 2 workers 303s
+    // (CPU utilisation 277% -> 168%). `ubuntu-latest` is 4 vCPU, so CI moves
+    // 3 -> 2 workers, and a 2-core runner floors at 1 and serialises everything.
+    // VITEST_MAX_WORKERS overrides the formula, which is how CI restores
+    // parallelism without editing this file.
+    maxWorkers: resolveMaxWorkers(),
   },
   resolve: {
     alias: {

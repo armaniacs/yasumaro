@@ -1,0 +1,13 @@
+{
+  "_comment": "Budget for `npm run test:perf`. `gates` fails the build; `reference` is printed for a human and does not. fileCount is the only gate because it is the only machine-independent one, and per-file fixed cost (environment, transform, import, the shared setup file) scales with it. The JSON reporter cannot measure that cost — both time columns cover the test phase only — so wall is the sole figure that includes it and wall is machine- and worker-count-dependent (76.9s at 6 workers, 184s at 3, 303s at 2 on one 8-core box). See dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md",
+  "budget": {
+    "gates": {
+      "fileCount": 930
+    },
+    "reference": {
+      "totalFileMs": 95000,
+      "p95FileMs": 900,
+      "top10Ms": 26000
+    }
+  }
+}

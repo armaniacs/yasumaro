@@ -104,6 +104,45 @@ Recommended: run `bench:check` in CI on PRs that touch `src/utils/contentExtract
 `src/dashboard/panels/asyncData`. Run the e2e suite nightly or on demand, not
 per-PR.
 
+### The exception: unit-suite wall time
+
+`npm run test:perf` (`scripts/test-perf/report.mjs`) gates the **test suite's own**
+execution cost against `bench/baselines/test-perf.budget.json`, and it runs in
+the `validate` CI job in place of plain `npm test`. It deliberately does not
+follow the "wall is never gated" rule above, for one reason: the suite's cost is
+per-file fixed overhead — a fork, an environment, a transform and the shared
+setup file per file — and nothing else in the repository holds that down. If
+wall is ungated there too, the cost has no gate at all.
+
+What it gates, and what it does not:
+
+- **Gated: file count only.** That is the quantity the per-file fixed cost
+  actually scales with, and the only machine-independent one. The budget file
+  splits its keys into `gates` and `reference` to make the distinction explicit.
+- **Advisory, printed but never failing:** the summed / p95 / top-10 test-body
+  times, and wall. Both are machine- and worker-count-dependent — 76.9s at 6
+  workers, 184s at 3, 303s at 2 on one 8-core box, and CI is a 4-vCPU runner at a
+  pinned 3 workers. A checked-in threshold for either would be so loose it
+  catches nothing or so tight it fails on a routine runner difference. Since
+  `build` declares `needs: validate`, that failure would also block the build
+  artifact, so the times are shown for a human rather than enforced.
+- **The JSON reporter cannot measure fixed cost.** `startTime`/`endTime` bracket
+  the test phase only — measured, summed span 84.67ms against summed assertion
+  durations 84.07ms — so every per-file number here excludes environment,
+  transform, import and the shared setup file. File count is the gate that
+  stands in for that cost, which is also why the fixed cost has no time
+  threshold: nothing measurable could hold it.
+- Load average is sampled **before** the run and decides whether to judge at
+  all: above the core count the gate prints "machine is busy" and exits 0
+  without evaluating, though it still enforces file count. A *delta* between
+  before and after must not be used for this — a suite that saturates every core
+  raises the 1-minute average by roughly the worker count, so the literal "delta
+  >= 1" rule discards every measurement (measured 3.0 -> 14.3 from an idle
+  start) and the gate never reaches a verdict.
+
+Raise the budget only for a deliberate, reviewed change — never to silence a
+regression. `make test-perf` runs the same gate locally.
+
 ## Updating the baseline
 
 Only when a performance change is intentional and reviewed:
