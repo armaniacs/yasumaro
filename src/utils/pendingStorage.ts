@@ -148,6 +148,12 @@ export function buildPendingPage(input: BuildPendingPageInput, now: number): Pen
  * Migrates pending pages data from the legacy 'osh_pending_pages' key
  * (from the pre-rebrand "Obsidian Smart History" project name) to the
  * current 'pending_pages' key. No-op if the legacy key holds no data.
+ *
+ * The merge runs inside withOptimisticLock like add/remove/expire: a raw
+ * get + set could land between a concurrent addPendingPage's read and its
+ * write and drop that page (VULN-005 class). The legacy key is deliberately
+ * NOT removed from inside the updater — the lock covers `pending_pages` only,
+ * and a remove from inside it would widen the transaction's write set.
  */
 export async function migrateLegacyPendingPagesKey(): Promise<void> {
   try {
@@ -160,11 +166,11 @@ export async function migrateLegacyPendingPagesKey(): Promise<void> {
       return;
     }
 
-    const currentPages = await getPendingPagesList();
-    const existingUrls = new Set(currentPages.map(p => p.url));
-    const mergedPages = [...currentPages, ...legacyPages.filter(p => !existingUrls.has(p.url))];
-
-    await chrome.storage.local.set({ [PENDING_PAGES_KEY]: mergedPages });
+    await withOptimisticLock<PendingPage[]>(PENDING_PAGES_KEY, (current) => {
+      const currentPages = Array.isArray(current) ? current : [];
+      const existingUrls = new Set(currentPages.map(p => p.url));
+      return [...currentPages, ...legacyPages.filter(p => !existingUrls.has(p.url))];
+    });
     await chrome.storage.local.remove(LEGACY_PENDING_PAGES_KEY);
 
     await logInfo(

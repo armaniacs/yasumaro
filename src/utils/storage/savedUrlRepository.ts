@@ -455,27 +455,34 @@ const { logWarn, logError } = await import('../logger/api.js');
     let freed = 0;
 
     try {
-        const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-        const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+        // Cheap pre-check so an empty list still costs no write at all; the
+        // updater repeats the emptiness check because this read is outside the lock.
+        const entries = (await chrome.storage.local.get('savedUrlsWithTimestamps')).savedUrlsWithTimestamps as SavedUrlEntry[] | undefined;
 
-        if (entries.length > 0) {
-            let cleaned = [...entries].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        if (entries && entries.length > 0) {
+            // Cap, sort and strip inside the updater so the cleanup joins the
+            // CAS: a raw set here could land between a concurrent writer's
+            // read and its write and silently drop the entry it added.
+            await withOptimisticLock<SavedUrlEntry[]>('savedUrlsWithTimestamps', (currentEntries) => {
+                const current = Array.isArray(currentEntries) ? currentEntries : [];
+                if (current.length === 0) return current;
 
-            if (cleaned.length > LEGACY_MAX_ENTRIES) {
-                cleaned = cleaned.slice(0, LEGACY_MAX_ENTRIES);
-            }
+                let cleaned = [...current].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
-            // Strip large metadata fields (keep only fields needed by legacy history panel)
-            cleaned = cleaned.map(entry => {
-                const stripped: SavedUrlEntry = { url: entry.url, timestamp: entry.timestamp };
-                if (entry.recordType) stripped.recordType = entry.recordType;
-                if (entry.maskedCount !== undefined) stripped.maskedCount = entry.maskedCount;
-                if (entry.tags) stripped.tags = entry.tags;
-                if (entry.isTrancoDomain !== undefined) stripped.isTrancoDomain = entry.isTrancoDomain;
-                return stripped;
+                if (cleaned.length > LEGACY_MAX_ENTRIES) {
+                    cleaned = cleaned.slice(0, LEGACY_MAX_ENTRIES);
+                }
+
+                // Strip large metadata fields (keep only fields needed by legacy history panel)
+                return cleaned.map(entry => {
+                    const stripped: SavedUrlEntry = { url: entry.url, timestamp: entry.timestamp };
+                    if (entry.recordType) stripped.recordType = entry.recordType;
+                    if (entry.maskedCount !== undefined) stripped.maskedCount = entry.maskedCount;
+                    if (entry.tags) stripped.tags = entry.tags;
+                    if (entry.isTrancoDomain !== undefined) stripped.isTrancoDomain = entry.isTrancoDomain;
+                    return stripped;
+                });
             });
-
-            await chrome.storage.local.set({ savedUrlsWithTimestamps: cleaned });
         }
 
         const legacyKeys = ['savedUrls'];

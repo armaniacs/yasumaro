@@ -78,6 +78,25 @@ export class ChromeStoragePort implements StoragePort {
   }
 }
 
+/**
+ * Production `chrome.storage.local` hands out a structured clone on both
+ * `get` and `set`, so a caller that keeps the reference it read (or passed in)
+ * can never mutate the stored value. A port that stores and returns the
+ * reference instead turns every read-modify-write into a write the CAS verify
+ * read cannot see, so tests would be checking a store the real port never
+ * exposes. Values that `structuredClone` rejects (functions, DOM nodes, …)
+ * fall back to the reference: some suites seed those to exercise code paths
+ * that merely pass values through, and failing them at the port boundary
+ * would report a problem they are not testing.
+ */
+function cloneAtBoundary<T>(value: T): T {
+  try {
+    return structuredClone(value);
+  } catch {
+    return value;
+  }
+}
+
 export class InMemoryStoragePort implements StoragePort {
   private store = new Map<string, unknown>();
   private versions = new Map<string, number>();
@@ -86,7 +105,7 @@ export class InMemoryStoragePort implements StoragePort {
   async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
     if (keys === null) {
       const all: Record<string, unknown> = {};
-      for (const [k, v] of this.store) all[k] = v;
+      for (const [k, v] of this.store) all[k] = cloneAtBoundary(v);
       for (const [k, v] of this.versions) all[`${k}_version`] = v;
       return all;
     }
@@ -97,7 +116,7 @@ export class InMemoryStoragePort implements StoragePort {
           const base = k.slice(0, -8);
           if (this.versions.has(base)) result[k] = this.versions.get(base);
         } else if (this.store.has(k)) {
-          result[k] = this.store.get(k);
+          result[k] = cloneAtBoundary(this.store.get(k));
         } else if (this.versions.has(k)) {
           // version key requested directly via base name fallback
           result[`${k}_version`] = this.versions.get(k);
@@ -116,7 +135,7 @@ export class InMemoryStoragePort implements StoragePort {
         const base = keys.slice(0, -8);
         return this.versions.has(base) ? { [keys]: this.versions.get(base) } : {};
       }
-      return this.store.has(keys) ? { [keys]: this.store.get(keys) } : {};
+      return this.store.has(keys) ? { [keys]: cloneAtBoundary(this.store.get(keys)) } : {};
     }
     return {};
   }
@@ -127,10 +146,12 @@ export class InMemoryStoragePort implements StoragePort {
         const base = k.slice(0, -8);
         this.versions.set(base, v);
       } else if (!k.endsWith('_version')) {
-        this.store.set(k, v);
+        this.store.set(k, cloneAtBoundary(v));
       }
     }
-    for (const cb of this.listeners) cb(items);
+    const changes: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(items)) changes[k] = cloneAtBoundary(v);
+    for (const cb of this.listeners) cb(changes);
   }
 
   async remove(keys: string | string[]): Promise<void> {
@@ -170,7 +191,7 @@ export class InMemoryStoragePort implements StoragePort {
       if (k.endsWith('_version') && typeof v === 'number') {
         this.versions.set(k.slice(0, -8), v);
       } else {
-        this.store.set(k, v);
+        this.store.set(k, cloneAtBoundary(v));
       }
     }
   }
@@ -178,7 +199,7 @@ export class InMemoryStoragePort implements StoragePort {
   // Testing helper: inspect underlying store
   dump(): Record<string, unknown> {
     const all: Record<string, unknown> = {};
-    for (const [k, v] of this.store) all[k] = v;
+    for (const [k, v] of this.store) all[k] = cloneAtBoundary(v);
     for (const [k, v] of this.versions) all[`${k}_version`] = v;
     return all;
   }
