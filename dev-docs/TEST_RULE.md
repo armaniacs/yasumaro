@@ -108,6 +108,29 @@ Vitest の `--retry` や Playwright の `retries` を増やしてテストを通
 
 `testDir/` は ESLint の対象外なので、E2E の `page.waitForTimeout()` は機械的には検出されない。レビューで確認する。
 
+### ローカルルールのテスト
+
+`eslint/rules/*.mjs` のテストは `new RuleTester` ではなく
+`createRepeatSafeRuleTester`（`eslint/__tests__/repeatSafeRuleTester.ts`）で
+`RuleTester` を組み立てる。`vitest --repeats` は `describe` 本体を再実行せず
+`it` 本体だけを同じプロセス内で繰り返すのに対して、ESLint の `RuleTester` は
+重複ケース検出用の `Set` を `describe` 本体で生成する。素の `RuleTester` だと
+2 周目以降が自分のケースを重複と判定して落ちる。このラッパーは `RuleTester` の
+`describe` / `it` 注入点に差し込み、周回ごとに新しいレジストリを作らせる。
+ケースの一覧と検証内容は `RuleTester` のものそのままで、1 件も減らす必要がない。
+
+新しいローカルルールのテストを追加するときは `createRepeatSafeRuleTester` を使う。
+反復実行によるゲートは次のように実行する。
+
+```bash
+npx vitest run eslint/__tests__ --repeats=20
+```
+
+仕組みそのものは `eslint/__tests__/repeatSafeRuleTester.test.ts` が回帰を固定する。
+採用した方式と却下した方式は
+[ADR: ESLint ルールテストの `vitest --repeats` 対応](./ADR/2026-09-26-eslint-ruletester-vitest-repeats.md)
+に記録してある。
+
 ## UI 機能追加・変更時のテスト必須化
 
 UI に関わる機能追加・変更（新規パネル、ボタン、モーダル、タグ UI、フィルタ切替など）を行った場合は、**必ずテストを追加する**。追加を省略する場合は PR 説明に理由を明記し、レビュアーの承認を得る。

@@ -1,10 +1,10 @@
 /**
  * RuleTester tests for require-sanitized-markdown
  */
-import { RuleTester } from 'eslint';
+import { createRepeatSafeRuleTester } from './repeatSafeRuleTester.js';
 import requireSanitizedMarkdown from '../rules/require-sanitized-markdown.mjs';
 
-const ruleTester = new RuleTester({
+const ruleTester = createRepeatSafeRuleTester({
   languageOptions: {
     ecmaVersion: 2022,
     sourceType: 'module',
