@@ -224,7 +224,7 @@ Scenario: 完了済み移行を変更せず再実行する
 | `settingsMigration.ts:55-58` / `:71-76` | `Object.values(StorageKeys).includes(key) && !key.includes('_version') && !isEncryptionKey(key)`。`gemini_api_version`（`types.ts:34`）・`privacy_consent_version`（`:130`）・`tranco_version`（`:223`）の 3 つが誤って除外される。CAS record（`settings_version` 等）は StorageKeys 値でないため別の理由で除外される |
 | `defaults.ts:34` | `GEMINI_API_VERSION` の default は `'v1beta'`（`gemini_api_version` が nested に入らないと利用者が変更した値を読み戻せない） |
 | `deferredMigrations.ts:19` | production の直接 call は 1 か所。返値が truthy のときだけ `logInfo` |
-| `SettingsRepository.ts:132` | `if (result['settings'] && result['settings_migrated'])` — truthy 判定 그대로。新しい段階文字列も完了扱いになる |
+| `SettingsRepository.ts:132` | `if (result['settings'] && result['settings_migrated'])` — truthy 判定 そのまま。新しい段階文字列も完了扱いになる |
 | `settingsMigration.ts:243-260` | `tryRestoreFromBackup()` は `legacy_settings_backup*` の最大キーの `data` を取り出し、`withOptimisticLock('settings', ...)` で restore する |
 
 ### 5 Whys
