@@ -22,7 +22,7 @@ import {
 import { pickDefined } from '../../utils/objectUtils.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
-import { tryResolveCatalogEntry } from '../../background/ai/providerCatalog.js';
+import { tryResolveProviderDisplayMetadata } from '../../utils/storage/providerAllowlist.js';
 import { applyI18n } from '../../utils/i18n-dom.js';
 import { escapeHtml } from '../../utils/htmlEscape.js';
 import { setElementHtml } from '../../utils/htmlFragment.js';
@@ -260,7 +260,7 @@ function createPromptListItem(prompt: CustomPrompt): string {
  */
 function getProviderLabel(provider: string): string {
     if (provider === 'all') return getMessageOr('promptProviderAll', 'All Providers');
-    const entry = tryResolveCatalogEntry(provider);
+    const entry = tryResolveProviderDisplayMetadata(provider);
     if (!entry) return provider;
     return getMessageOr(entry.labelI18nKey, entry.label || provider);
 }

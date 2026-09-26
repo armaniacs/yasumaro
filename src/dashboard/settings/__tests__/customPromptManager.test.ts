@@ -315,6 +315,45 @@ describe('customPromptManager', () => {
       const html = el('promptList').innerHTML;
       expect(html).toContain('All Providers');
     });
+
+    it('resolves a known provider label through its i18n key first', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager(asSettings({
+        custom_prompts: [createTestPrompt({ provider: 'gemini' })],
+      }));
+
+      // The i18n mock echoes unlisted keys, so seeing the key (not the neutral
+      // row label) proves the i18n message wins over the fallback.
+      expect(el('promptList').innerHTML).toContain('(googleGemini)');
+    });
+
+    it('falls back to the neutral row label when the i18n message is missing', async () => {
+      const { getMessage } = await import('../../../utils/i18n.js');
+      const spy = vi.mocked(getMessage).mockReturnValue('');
+      try {
+        const { initCustomPromptManager } = await import('../customPromptManager.js');
+        initCustomPromptManager(asSettings({
+          custom_prompts: [createTestPrompt({ provider: 'gemini' })],
+        }));
+
+        expect(el('promptList').innerHTML).toContain('(Google Gemini)');
+      } finally {
+        spy.mockRestore();
+      }
+    });
+
+    it('renders an unknown provider id as-is', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+      initCustomPromptManager(asSettings({
+        // Persisted settings outlive the provider list, so a stored id can be
+        // outside the current union. The raw fallback is the contract for it.
+        custom_prompts: [
+          createTestPrompt({ provider: 'not-a-provider' as CustomPrompt['provider'] }),
+        ],
+      }));
+
+      expect(el('promptList').innerHTML).toContain('(not-a-provider)');
+    });
   });
 
   describe('handleSavePrompt', () => {
