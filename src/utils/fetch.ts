@@ -18,6 +18,14 @@ import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger/api.js';
 import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
 import { backoffDelayMs } from './backoff.js';
+import {
+  FailureKind,
+  createFailure,
+  failureFromHttpStatus,
+  shouldRetryHttpResponse,
+  shouldRetryTransportFailure,
+  tagFailure,
+} from './failureTaxonomy.js';
 
 export {
   normalizeIpHostname,
@@ -117,10 +125,10 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
       if (!CSPValidator.isUrlAllowed(url)) {
         const cspError = getCspErrorMessage(url);
         if (cspError) {
-          throw new Error(cspError);
+          throw tagFailure(new Error(cspError), createFailure(FailureKind.CSP));
         }
         // メッセージがない場合は汎用エラー
-        throw new Error(`URL blocked by CSP policy: ${url}`);
+        throw tagFailure(new Error(`URL blocked by CSP policy: ${url}`), createFailure(FailureKind.CSP));
       }
     }
   }
@@ -128,7 +136,7 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   // 動的URL検証（オプション）
   if (allowedUrls) {
     if (!isUrlAllowed(url, allowedUrls)) {
-      throw new Error(`URL is not allowed: ${url}`);
+      throw tagFailure(new Error(`URL is not allowed: ${url}`), createFailure(FailureKind.CSP));
     }
   }
 
@@ -151,7 +159,9 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
       const timeoutError = new Error(`Request timed out after ${effectiveTimeout}ms`);
       // 下流のリトライ判定やエラーハンドラが name ベースで検出できるようにする
       timeoutError.name = 'AbortError';
-      throw timeoutError;
+      // 旧 error は cause に渡さない: message には response body が混入しうる
+      // ため、診断に必要な name だけを構造化 metadata として残す。
+      throw tagFailure(timeoutError, createFailure(FailureKind.TIMEOUT, { cause: timeoutError }));
     }
     throw error;
   }
@@ -287,41 +297,22 @@ export interface RetryOptions {
 
 /**
  * デフォルトのリトライ条件判定
- * - AbortError（タイムアウト）: 最大1回リトライ（合計2試行）
- * - HTTP 429 Too Many Requests: リトライなし（即時終了）
- * - HTTP 5xx サーバーエラー: 冪等なメソッド（GET等）のみ maxRetryCount まで通常リトライ。
+ * - HTTP 429 / 401 / 403（rate_limit / auth）: リトライしない
+ * - HTTP 5xx（http）: 冪等なメソッド（GET等）のみ maxRetryCount まで通常リトライ。
  *   POST/PUT/PATCH/DELETE は二重生成・二重課金を防ぐためリトライしない
+ * - タイムアウト（timeout）: 最大1回リトライ（合計2試行）
+ * - ネットワークエラー（network）: リトライする
  * @param {string} method - HTTPメソッド（デフォルト 'GET'）
  *
- * Note: retryPredicate.isRetryableNetworkError (obsidianClient connection
- * check) is a separate thrown-error classifier with its own marker table.
- * The two intentionally differ (method/429 awareness here, lowercase marker
- * matching there) — change both together when retryability intent is shared.
+ * 判定は構造化 failure kind のみに依存する（src/utils/failureTaxonomy.ts が
+ * SSOT）。429 を http のまま扱うと retry 資格が曖昧になるため、必ず
+ * rate_limit へ閉じる。message 部分文字列を retry 判断に使わない。
  */
 function defaultShouldRetry(error: Error, attempt: number, response: Response | null, method: string = 'GET'): boolean {
-  // 429 Too Many Requests: リトライしない
-  if (response && response.status === 429) {
-    return false;
+  if (response) {
+    return shouldRetryHttpResponse(response.status, method);
   }
-
-  // 5xxサーバーエラー: 冪等なメソッドのみリトライ
-  if (response && response.status >= 500) {
-    const nonIdempotentMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-    return !nonIdempotentMethods.has(method.toUpperCase());
-  }
-
-  // AbortError（タイムアウト）: 最大1回のみリトライ（attempt=1 のとき、つまり2回目の試行まで）
-  // fetchWithTimeout converts AbortError to Error('Request timed out...'), so check both
-  if (error.name === 'AbortError' || error.message.includes('timed out')) {
-    return attempt <= 1;
-  }
-
-  // その他のネットワークエラー（接続失敗等）
-  if (error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
-    return true;
-  }
-
-  return false;
+  return shouldRetryTransportFailure(error, attempt);
 }
 
 /**
@@ -373,7 +364,12 @@ export async function fetchWithRetry(
       }
 
       // エラーレスポンスの場合、リトライ条件をチェック
-      const attemptError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+      // HTTP status は構造化 failure として持たせる: 呼び出し側が
+      // 「429 / 401 / 403 / 5xx か」を message から推測しなくて済む。
+      const attemptError = tagFailure(
+        new Error(`HTTP ${response.status}: ${response.statusText}`),
+        failureFromHttpStatus(response.status, requestMethod),
+      );
       if (attempt < maxRetryCount && shouldRetry(attemptError, attempt + 1, response, requestMethod)) {
         // リトライ
         lastError = attemptError;

@@ -3,6 +3,7 @@ import { StepExecutor, type StepDelayFn } from '../stepExecutor.js';
 import { ErrorStrategy } from '../types.js';
 import type { PipelineStep, RecordingContext, StepDeps } from '../types.js';
 import type { OfflineNetworkQueue } from '../../offlineNetworkQueue.js';
+import { createFailure, tagFailure, type FailureKindValue } from '../../../utils/failureTaxonomy.js';
 
 function makeContext(overrides?: Partial<RecordingContext>): RecordingContext {
   return {
@@ -247,6 +248,39 @@ describe('StepExecutor', () => {
         executor.executeWithStrategy(step, makeContext(), undefined as unknown as StepDeps),
       ).rejects.toThrow('AI service unavailable');
       expect(queue.enqueue).toHaveBeenCalled();
+    });
+
+    // PBI 2026-09-25-11: a structured kind is the contract, so an Obsidian
+    // "connection" sentence can no longer pull an auth/rate_limit failure into
+    // the offline queue.
+    it.each([
+      ['network', true],
+      ['timeout', true],
+      ['http', false],
+      ['auth', false],
+      ['rate_limit', false],
+      ['configuration', false],
+      ['csp', false],
+    ])('decides offline recovery for a %s carrier by kind', async (kind, enqueued) => {
+      const error = tagFailure(
+        new Error('Error: Failed to connect to Obsidian. Please check your settings and connection.'),
+        createFailure(kind as FailureKindValue),
+      );
+      const step: PipelineStep = {
+        name: 'saveObsidian',
+        errorStrategy: ErrorStrategy.FATAL,
+        offlineRetry: { jobKind: 'obsidian_sync' },
+        execute: vi.fn().mockRejectedValue(error),
+      };
+      await expect(
+        executor.executeWithStrategy(step, makeContext(), undefined as unknown as StepDeps),
+      ).rejects.toThrow('Failed to connect to Obsidian');
+
+      if (enqueued) {
+        expect(queue.enqueue).toHaveBeenCalled();
+      } else {
+        expect(queue.enqueue).not.toHaveBeenCalled();
+      }
     });
   });
 });

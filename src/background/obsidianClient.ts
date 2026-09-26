@@ -26,6 +26,7 @@ import {
 } from '../utils/obsidianConfigValidator.js';
 import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
 import { describeHttpFailure } from '../utils/httpFailureMessages.js';
+import { failureFromHttpStatus, tagFailure } from '../utils/failureTaxonomy.js';
 import { readBodyCapped } from '../utils/readBodyCapped.js';
 import { truncateForLog } from '../utils/logTruncate.js';
 
@@ -188,7 +189,11 @@ export class ObsidianClient {
         } else {
             const errorText = await this._readBodyWithTimeout(response);
             addLog(LogType.ERROR, `Failed to read daily note: ${response.status} ${truncateForLog(errorText)}`, { traceId });
-            throw new Error('Error: Failed to read daily note. Please check your Obsidian connection.');
+            // 表示文言は status を出さない。kind / status / method だけを構造化する。
+            throw tagFailure(
+                new Error('Error: Failed to read daily note. Please check your Obsidian connection.'),
+                failureFromHttpStatus(response.status, 'GET')
+            );
         }
     }
 
@@ -212,15 +217,18 @@ export class ObsidianClient {
         if (!response.ok) {
             // Cap the error body on actual bytes; Content-Length is not trusted.
             const MAX_ERROR_BODY_SIZE = MAX_ERROR_BODY_LIMIT; // 1MB (PBI 2026-09-11-08: value lives in limits.ts)
+            // 401/403 -> auth, 429 -> rate_limit, 5xx -> http。
+            // 5xx の PUT は同一 request 内で再送しない（canResendSameRequest）。
+            const failure = failureFromHttpStatus(response.status, 'PUT');
             let errorText: string;
             try {
                 errorText = await readBodyCapped(response, MAX_ERROR_BODY_SIZE);
             } catch {
                 addLog(LogType.ERROR, `Obsidian API Error: ${response.status} (response body too large or unreadable)`, { traceId });
-                throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
+                throw tagFailure(new Error('Error: Failed to write to daily note. Please check your Obsidian connection.'), failure);
             }
             addLog(LogType.ERROR, `Obsidian API Error: ${response.status} ${truncateForLog(errorText)}`, { traceId });
-            throw new Error('Error: Failed to write to daily note. Please check your Obsidian connection.');
+            throw tagFailure(new Error('Error: Failed to write to daily note. Please check your Obsidian connection.'), failure);
         }
     }
 

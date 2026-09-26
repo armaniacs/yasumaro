@@ -132,7 +132,12 @@ describe('executeHttpSummaryFlow', () => {
     );
     const result = await probe.generateSummary('hello');
 
-    expect(result).toEqual({ success: false, summary: 'Error: API key is missing.' });
+    // Display parity: the user-facing sentence is unchanged.
+    expect(result.summary).toBe('Error: API key is missing.');
+    expect(result.success).toBe(false);
+    // PBI 2026-09-25-11: a missing key is structured as `configuration`, so
+    // the retry decision reads the kind instead of the message.
+    expect(result.failure).toEqual({ kind: 'configuration' });
     expect(fetchWithRetryMock).not.toHaveBeenCalled();
   });
 
@@ -164,12 +169,36 @@ describe('executeHttpSummaryFlow', () => {
     const probe = new FlowProbe({} as Settings, makeHooks());
     const result = await probe.generateSummary('hello');
 
-    expect(result).toEqual({
-      success: false,
-      summary: 'Error: AI request timed out. Please check your connection.',
-      // PBI 2026-09-22-04 follow-up: the catch path now carries the detail in
-      // the diagnostic error field (the per-slot regenerate trail renders it).
-      error: 'timed out',
-    });
+    // Display parity: both the summary sentence and the per-slot diagnostic
+    // detail are byte-identical to the pre-taxonomy result.
+    expect(result.summary).toBe('Error: AI request timed out. Please check your connection.');
+    expect(result.error).toBe('timed out');
+    expect(result.success).toBe(false);
+    // PBI 2026-09-25-11: the AbortError name becomes structured `timeout`
+    // metadata, distinguishable from `network` without reading the message.
+    expect(result.failure).toEqual({ kind: 'timeout', cause: { name: 'AbortError' } });
+  });
+
+  it('classifies a thrown HTTP status without touching the summary wording', async () => {
+    const http = new Error('HTTP 429: Too Many Requests');
+    http.name = 'HttpStatusError';
+    Object.assign(http, { failure: { kind: 'rate_limit', status: 429, method: 'POST' } });
+    fetchWithRetryMock.mockRejectedValue(http);
+    const probe = new FlowProbe({} as Settings, makeHooks());
+    const result = await probe.generateSummary('hello');
+
+    expect(result.summary).toBe('Error: Failed to generate summary. Please try again or check your settings.');
+    expect(result.failure).toEqual({ kind: 'rate_limit', status: 429, method: 'POST' });
+  });
+
+  it('keeps API key material out of the failure metadata', async () => {
+    const leaky = new Error('fetch failed: Authorization Bearer sk-secret-1234 body {"key":"sk-secret-1234"}');
+    leaky.name = 'NetworkError';
+    fetchWithRetryMock.mockRejectedValue(leaky);
+    const probe = new FlowProbe({} as Settings, makeHooks());
+    const result = await probe.generateSummary('hello');
+
+    expect(result.failure).toEqual({ kind: 'network', cause: { name: 'NetworkError' } });
+    expect(JSON.stringify(result.failure)).not.toContain('sk-secret-1234');
   });
 });

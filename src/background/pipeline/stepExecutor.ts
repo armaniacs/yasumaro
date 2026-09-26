@@ -5,6 +5,7 @@ import { backoffDelayMs } from '../../utils/backoff.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
+import { resolveFailure, type FailureKindValue } from '../../utils/failureTaxonomy.js';
 import { extractOfflinePayload } from '../recordRequestBuilder.js';
 
 /** Injectable clock seam for the retry backoff. Defaults to the real timer. */
@@ -50,8 +51,13 @@ export class StepExecutor {
           continue;
         }
 
+        // One normalization for both failure carriers: a step that throws and a
+        // step whose result summary carries `failure` answer the same question
+        // here, so the retry decision below never reads a message.
+        const failure = resolveFailure(error);
+
         if (this.offlineNetworkQueue && step.offlineRetry && this.retryPolicy.shouldEnqueueForOffline(error)) {
-          await this.enqueueOfflineJob(step, context);
+          await this.enqueueOfflineJob(step, context, failure?.kind);
         }
 
         throw error;
@@ -61,7 +67,8 @@ export class StepExecutor {
 
   private async enqueueOfflineJob(
     step: PipelineStep,
-    context: RecordingContext
+    context: RecordingContext,
+    failureKind?: FailureKindValue
   ): Promise<void> {
     if (!step.offlineRetry) {
       return;
@@ -101,6 +108,7 @@ export class StepExecutor {
         url: context.data.url,
         type,
         traceId: context.traceId,
+        ...(failureKind !== undefined ? { failureKind } : {}),
       });
     } catch (enqueueError) {
       addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
