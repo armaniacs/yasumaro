@@ -6,7 +6,7 @@
  * Runs all release checks and reports a unified summary.
  *
  * Usage:
- *   node scripts/release-checks/index.mjs [--skip-e2e] [--category <name>]
+ *   node scripts/release-checks/index.mjs [--skip-e2e] [--category <name>|--category=<name>]
  *
  * Categories:
  *   build       — Build artifacts, bundle size, no eval
@@ -44,8 +44,26 @@ const CHECK_SCRIPTS = {
 function parseArgs() {
   const args = process.argv.slice(2);
   const skipE2E = args.includes('--skip-e2e');
-  const categoryArg = args.find((a) => a.startsWith('--category='));
-  const category = categoryArg ? categoryArg.split('=')[1] : 'all';
+  const categoryIndex = args.findIndex((a) => a === '--category' || a.startsWith('--category='));
+  const inlineCategory = args[categoryIndex]?.startsWith('--category=')
+    ? args[categoryIndex].split('=')[1]
+    : undefined;
+
+  // findIndex yields -1 when the flag is absent, and args[-1 + 1] would then
+  // alias args[0] — turning `--skip-e2e` into a category name. Only read the
+  // next token when the flag was actually found, and only when it is a value
+  // rather than another flag.
+  const separated = args[categoryIndex + 1];
+  const separatedCategory =
+    categoryIndex >= 0 && separated !== undefined && !separated.startsWith('--') ? separated : undefined;
+
+  if (categoryIndex >= 0 && !inlineCategory && !separatedCategory) {
+    console.error(`Missing value for --category`);
+    console.error(`Available categories: ${Object.keys(CHECK_SCRIPTS).join(', ')}`);
+    process.exit(1);
+  }
+
+  const category = inlineCategory ?? separatedCategory ?? 'all';
 
   if (category !== 'all' && !CHECK_SCRIPTS[category]) {
     console.error(`Unknown category: ${category}`);
@@ -53,10 +71,18 @@ function parseArgs() {
     process.exit(1);
   }
 
+  // `--skip-e2e --category=e2e` names a real category that --skip-e2e then
+  // filters out, leaving nothing to run. The verdict is computed from failures
+  // only, so that combination would report success having verified nothing.
+  if (skipE2E && category === 'e2e') {
+    console.error('--category=e2e contradicts --skip-e2e: no check would be selected');
+    process.exit(1);
+  }
+
   return { skipE2E, category };
 }
 
-function runCheck(name, scriptPath) {
+function runCheck(scriptPath) {
   const result = spawnSync('node', [join(ROOT_DIR, scriptPath)], {
     cwd: ROOT_DIR,
     stdio: 'inherit',
@@ -84,8 +110,15 @@ function main() {
 
     const script = CHECK_SCRIPTS[cat];
     console.log(`\n▶ Running: ${cat}`);
-    const ok = runCheck(cat, script);
+    const ok = runCheck(script);
     results[cat] = ok;
+  }
+
+  // A gate that ran nothing must not report success. Guarding here as well as in
+  // parseArgs means no future argv form can produce a vacuous pass.
+  if (Object.keys(results).length === 0) {
+    console.error('\n❌ No release checks were selected — refusing to report success');
+    process.exit(1);
   }
 
   // Summary
