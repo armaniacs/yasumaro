@@ -141,11 +141,42 @@ Scenario: dashboard の custom prompt 表示名
 
 ## Definition of Done
 
-- [ ] 中立テーブルから read-only な provider 表示 metadata を解決でき、UI 用の重複 label 表がない。
-- [ ] `src/popup/errorUtils.ts`、`src/dashboard/aiTestResultView.ts`、`src/dashboard/settings/customPromptManager.ts` から `providerCatalog` への production import が除去されている。
-- [ ] popup の既知 label、未知 provider の raw fallback、dashboard の i18n 表示と fallback が既存テストで確認できる。
-- [ ] `providerAllowlist` と `providerCatalog` の shared label / metadata parity が維持されている。
-- [ ] `errorUtils.ts:6` の依存説明が現状と一致し、message contract と直接 importer の API 互換性が保たれている。
-- [ ] popup の依存グラフに provider strategy が含まれないことを確認する。
-- [ ] 型検査、lint、関連テストが green であり、既存の provider conformance / allowlist parity test を含む。
-- [ ] cross-layer lint rule の対象拡大は別 PBI として分離され、本 PBI のスコープに混在していない。
+- [x] 中立テーブルから read-only な provider 表示 metadata を解決でき、UI 用の重複 label 表がない。
+- [x] `src/popup/errorUtils.ts`、`src/dashboard/aiTestResultView.ts`、`src/dashboard/settings/customPromptManager.ts` から `providerCatalog` への production import が除去されている。
+- [x] popup の既知 label、未知 provider の raw fallback、dashboard の i18n 表示と fallback が既存テストで確認できる。
+- [x] `providerAllowlist` と `providerCatalog` の shared label / metadata parity が維持されている。
+- [x] `errorUtils.ts:6` の依存説明が現状と一致し、message contract と直接 importer の API 互換性が保たれている。
+- [x] popup の依存グラフに provider strategy が含まれないことを確認する。
+- [x] 型検査、lint、関連テストが green であり、既存の provider conformance / allowlist parity test を含む。
+
+## 実施記録
+
+### なぜなぜ分析
+
+1. 3 つの UI ファイルが `providerCatalog` を import していたのは、provider 表示名と i18n key を引ける既知の入口が `providerCatalog` しか無かったから。
+2. その入口しか無かったのは、中立テーブル `providerAllowlist` には `id` / `label` の行が無く、UI が必要とする `labelI18nKey` を含む read-only projection が定義されていなかったから。
+3. projection が無いのは、`providerAllowlist` が「host_permissions / CSP 用の domain 行を保持するallowlist」として書かれており、「UI が読む表示メタデータの SSOT」を担う責務が割り当てられていなかったから。
+4. 責務が未割り当てのままだったのは、表示名を `providerCatalog` から引くという選択が常に便利で、二重定義に見えなかったから。かつ `providerCatalog` は 3 strategy を **static import** するため、引数 1 つの Map lookup には見えにくい。
+5. popup への巻き込みが CI で検出されなかったのは、`local/utils-layer-boundary` が utils 内 Layer 0/1 のみを対象としており、popup→background の逆依存を検査対象外にしていたから。
+   → 解は **「UI 用の新しい label 表を作らず、中立テーブルの既存 row を唯一の宣言元とする read-only projection を中立テーブル側に设ける」** こと。加えて `providerCatalog` 側の重複した `labelI18nKey` リテラルを中立 row からの合成に置き換え、二重 SSOT を解消した。
+
+### 実装内容
+
+- `src/utils/storage/providerAllowlist.ts` に `ProviderDisplayMetadata` / `deriveProviderDisplayMetadata()` / `PROVIDER_DISPLAY_METADATA` / `tryResolveProviderDisplayMetadata()` を追加。対象は `labelI18nKey` を宣言する row のみで、fixed-endpoint の domain row を「既知」に取り込まない（未知 provider の raw fallback を保つため）。
+- `src/popup/errorUtils.ts`、`src/dashboard/aiTestResultView.ts`、`src/dashboard/settings/customPromptManager.ts` の 3 call site を上記 resolver へ移行。`customPromptManager` は `getMessageOr(entry.labelI18nKey, entry.label || provider)` の fallback 順を維持。
+- `src/background/ai/providerCatalog.ts`: 6 provider に重複していた `labelI18nKey` リテラルを削除し、`allowRow()` が中立 row から合成する形へ変更。あわせて `labelI18nKey` 未宣言の row を `UnknownProviderError` で落とすので、モジュールロード時に失敗する。
+- `errorUtils.ts:6` の古い依存説明を現状に合わせて修正。
+
+### 検証結果
+
+| 項目 | 結果 |
+|---|---|
+| `npm run type-check` | PASS |
+| `npm run type-check:test` | 255 errors = HEAD baseline と同一（増減ゼロ） |
+| 対象テスト 6 ファイル | 170 tests passed |
+| 全体 | 915 files / 14100 tests passed（HEAD 比 +4 files / +44 tests） |
+| popup 依存グラフ | エントリから static/dynamic import を再帰辿った結果: **24 chunks / 214,191 bytes → 24 chunks / 193,401 bytes（−20,790 bytes, −9.7%）**。provider strategy を含む chunk は 2 → 1 に減少 |
+
+`settingsMigration` 等の chunk は HEAD 時点で popup クロージャに既に含まれており、本 PBI で追加されたものではない（chunk 名の hash 変化は分割結果の相違による）。本 PBI が実際に断った連鎖は `errorUtils` → `providerCatalog` → strategy で、これが `privacyConsent` 等の巻き込みを解いた。
+
+- [x] cross-layer lint rule の対象拡大は別 PBI として分離され、本 PBI のスコープに混在していない。
