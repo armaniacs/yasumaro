@@ -162,6 +162,48 @@ Scenario: build の依存先が失敗したら build を実行しない
 4. **job filter が単純な理由ではないこと**: `build needs validate` と required check semantics があるため。既存 job 名を維持し、skip を終端状態として扱い、build は validate 成功を必須とする。
 5. **未確定事項の扱い**: branch protection の必須 job 名は本 PBI の調査済み情報に含まれないため、実装時に確認する。名称を変更せず、pending にならない job-level skip 方式を維持する。`tests.yml` の 4 ジョブは別 workflow の対象外であり、本 PBI では変更しない。
 
+## 前提条件の記録（2026-09-26 autonomous-task-closer）
+
+本 PBI は**自律作業では閉じられない**。理由を先に記録し、検証できないものを実装しない。
+
+### 環境では確認できない DoD
+
+DoD 12 項目のうち 4 項目が、この作業環境では検証できない:
+
+| DoD | 理由 |
+|---|---|
+| 「docs-only、WASM、build、CI 設定、lockfile、`.npmrc` の BDD シナリオが**実際の CI** で確認できる」 | pull request を push し、GitHub Actions の実行結果を観測する必要がある |
+| 「required check が **pending にならない**ことを**実際の pull request** で確認する」 | 同上。job-level skip が終端状態として扱われるかは実際の PR でしか確認できない |
+| 「**branch protection の必須 job 名**と skip 時の扱いを実装前に確認している」 | リポジトリ設定（Settings → Branches）へのアクセスが必要 |
+| 「docs-only、WASM、…の BDD シナリオが実際の CI で確認できる」（E2E テスト 3 項目） | 同上 |
+
+### なぜ「static test だけ先に実装する」で済ませないのか
+
+`ci.yml` の job 条件（subject の path パターン）は、**パターンを誤っても CI は緑のまま**になる。
+つまり paths mapping の誤りは pull request を観測するまで検出されず、検出時には既に
+「本来は検証すべき変更が検証されていない」状態ができている。
+これは本 PBI が最適化しようとしている「検証対象を暗黙に除外することはない」という
+要件そのものへの反転である。`gitleaks` を無条件実行のまま保つことで security gate だけを
+守っても、**`validate`（`npm run validate`）が対象入力に対して動かなくなるリスクは残る**。
+
+「static test で mapping を pin する」ことも、そのマッピング定義と CI 実行時のパターンが
+ずれた場合にしか効かない。マッピング定義そのものは pull request で初めて検証できる。
+
+### 推奨する着手手順（ユーザー作業が前置）
+
+1. リポジトリ設定で branch protection の必須 job 名を確定する。
+2. 本 PBI の実装に入る。
+3. **docs-only の使い捨て pull request** を 1 件作り、6 ジョブの起動結果と
+   required check が pending にならないことを観測する。
+4. 続けて Rust / WASM / build / CI 設定 / lockfile / `.npmrc` の代表 path を含む
+   pull request で、対応するジョブが起動することを確認する。
+
+手順 3 と 4 の観測が本 PBI の DoD の中心であり、**これを代替する検証手段は無い**。
+autonomous-task-closer は手順 2（コードと static test の実装）までを完了扱いにしてよいが、
+手順 1・3・4 はユーザー作業として分離する。
+
+---
+
 ## Definition of Done
 
 - [ ] 6 ジョブの入力 path と起動条件が `ci.yml` 内で定義され、共通分類ジョブから参照できる。
