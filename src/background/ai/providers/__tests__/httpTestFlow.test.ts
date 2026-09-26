@@ -114,6 +114,8 @@ describe('executeHttpTestFlow parity — Gemini', () => {
       message: 'Authentication failed (401). Check your Gemini API key.',
       debug: {
         statusCode: 401,
+        // PBI 2026-09-25-11: structured failure alongside the unchanged wording.
+        failure: { kind: 'auth', status: 401, method: 'POST' },
         prompt: CONNECTION_TEST_PROMPT,
         endpoint: GEMINI_ENDPOINT,
       },
@@ -147,6 +149,7 @@ describe('executeHttpTestFlow parity — Gemini', () => {
       message: 'Cannot connect. Check your Base URL and network.',
       debug: {
         error: 'Failed to fetch',
+        failure: { kind: 'network' },
         prompt: CONNECTION_TEST_PROMPT,
         endpoint: GEMINI_ENDPOINT,
       },
@@ -235,6 +238,7 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
       message: 'Authentication failed (401). Check your openai API key.',
       debug: {
         statusCode: 401,
+        failure: { kind: 'auth', status: 401, method: 'POST' },
         prompt: CONNECTION_TEST_PROMPT,
         endpoint: OPENAI_ENDPOINT,
       },
@@ -253,6 +257,8 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
       debug: {
         error: 'HTTP 503: Service Unavailable',
         statusCode: 503,
+        // 503 is classified from the status; no method is known on the throw path.
+        failure: { kind: 'http', status: 503 },
         prompt: CONNECTION_TEST_PROMPT,
         endpoint: OPENAI_ENDPOINT,
       },
@@ -320,6 +326,7 @@ describe('fetch-error provider label — lm-studio regression (PBI 11)', () => {
       debug: {
         error: 'HTTP 401: Unauthorized',
         statusCode: 401,
+        failure: { kind: 'auth', status: 401 },
         prompt: CONNECTION_TEST_PROMPT,
         endpoint: LM_STUDIO_ENDPOINT,
       },
@@ -348,6 +355,7 @@ describe('fetch-error provider label — lm-studio regression (PBI 11)', () => {
       message: 'Cannot connect. Check your Base URL and network.',
       debug: {
         error: 'Failed to fetch',
+        failure: { kind: 'network' },
         prompt: CONNECTION_TEST_PROMPT,
         endpoint: LM_STUDIO_ENDPOINT,
       },

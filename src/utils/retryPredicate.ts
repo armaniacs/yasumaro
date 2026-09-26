@@ -2,14 +2,21 @@
  * retryPredicate.ts
  * Retry classification for the Obsidian connection check (obsidianClient).
  *
- * Deliberately separate from fetch.ts's defaultShouldRetry (fetchWithRetry):
- * that classifier is TransportError/Response-shape aware and method-aware,
- * while this one classifies opaque thrown errors from a raw fetch() by
- * string markers. If you change which network errors count as retryable,
- * check both tables — they intentionally disagree on details (e.g. this
- * one lowercases before matching 'failed to fetch') and must be updated
- * together when the intent is shared.
+ * Structured failure kinds are authoritative here too
+ * (src/utils/failureTaxonomy.ts is the SSOT): anything the transport or the
+ * Obsidian boundary already classified is decided by `kind`. The two marker
+ * tables below are compatibility-only, for opaque thrown errors that carry no
+ * `failure` metadata. fetch.ts's `defaultShouldRetry` used to keep a third copy
+ * of the same transport markers; it now calls `shouldRetryTransportFailure`, so
+ * there is exactly one transport table and one HTTP-status table left.
  */
+
+import {
+  FailureKind,
+  allowsImmediateRetry,
+  canResendSameRequest,
+  resolveFailure,
+} from './failureTaxonomy.js';
 
 const RETRYABLE_NETWORK_MARKERS = [
   'failed to fetch',
@@ -49,6 +56,14 @@ function getStringProperty(value: unknown, key: string): string {
 }
 
 export function isRetryableNetworkError(error: unknown): boolean {
+  // The connection check is a GET, so the safe-method rule never blocks it.
+  const failure = resolveFailure(error);
+  if (failure) {
+    return failure.kind === FailureKind.NETWORK
+      || failure.kind === FailureKind.TIMEOUT
+      || (allowsImmediateRetry(failure.kind) && canResendSameRequest(failure.kind, 'GET'));
+  }
+
   if (typeof error !== 'object' || error === null) {
     return false;
   }

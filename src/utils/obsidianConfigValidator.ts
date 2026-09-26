@@ -8,6 +8,7 @@ import { MAX_BODY_SIZE as LIMIT_MAX_BODY_SIZE } from '../messaging/limits.js';
 import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
 import { readBodyCapped } from './readBodyCapped.js';
+import { FailureKind, createFailure, resolveFailure, tagFailure } from './failureTaxonomy.js';
 
 /** Protocol type used by Obsidian Local REST API. */
 export type ObsidianProtocol = 'http' | 'https';
@@ -50,13 +51,16 @@ export function validateObsidianProtocol(protocol: string | undefined | null, ho
 
     const normalized = protocol.trim().toLowerCase();
     if (normalized !== 'http' && normalized !== 'https') {
-        throw new Error('Protocol must be "http" or "https".');
+        throw tagFailure(new Error('Protocol must be "http" or "https".'), createFailure(FailureKind.CONFIGURATION));
     }
 
     if (normalized === 'http') {
         const hostValue = typeof host === 'string' && host.trim() !== '' ? host : DEFAULT_HOST;
         if (!isLoopbackHost(hostValue)) {
-            throw new Error(`Plaintext HTTP to non-loopback host "${hostValue}" is blocked. Use HTTPS or a loopback address.`);
+            throw tagFailure(
+                new Error(`Plaintext HTTP to non-loopback host "${hostValue}" is blocked. Use HTTPS or a loopback address.`),
+                createFailure(FailureKind.CONFIGURATION)
+            );
         }
         addLog(LogType.WARN, 'HTTP protocol selected — API key and data will be sent in plaintext over the local network. Use HTTPS for encrypted communication.', {
             protocol: normalized
@@ -96,7 +100,7 @@ export function validateObsidianHost(host: string | undefined | null): string {
     if (trimmed.includes(':')) {
         const inner = trimmed.startsWith('[') && trimmed.endsWith(']') ? trimmed.slice(1, -1) : trimmed;
         if (!isIpv6Address(inner)) {
-            throw new Error('Obsidian host contains invalid characters.');
+            throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
         }
         return `[${inner}]`;
     }
@@ -105,20 +109,20 @@ export function validateObsidianHost(host: string | undefined | null): string {
     // userinfo: "127.0.0.1@evil.com" resolves to evil.com and would send the
     // API key there) and '%' (percent-encoded bypasses of the same trick).
     if (/[\s\/\\@%]/.test(trimmed)) {
-        throw new Error('Obsidian host contains invalid characters.');
+        throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
     }
 
     // A dot-or-digit-only value is an IPv4 attempt, so it must parse as one.
     // Otherwise "999.999.999.999" would slip through as a "hostname".
     if (/^[0-9.]+$/.test(trimmed)) {
         if (!isValidIpv4Address(trimmed)) {
-            throw new Error('Obsidian host contains invalid characters.');
+            throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
         }
         return trimmed;
     }
 
     if (!isValidDnsHostname(trimmed)) {
-        throw new Error('Obsidian host contains invalid characters.');
+        throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
     }
 
     return trimmed;
@@ -184,17 +188,20 @@ export function validateObsidianPort(port: string | number | undefined | null): 
 
     // Non-numeric check
     if (isNaN(portNum)) {
-        throw new Error('Invalid port number. Port must be a valid number.');
+        throw tagFailure(new Error('Invalid port number. Port must be a valid number.'), createFailure(FailureKind.CONFIGURATION));
     }
 
     // Integer check
     if (!Number.isInteger(portNum)) {
-        throw new Error('Invalid port number. Port must be an integer.');
+        throw tagFailure(new Error('Invalid port number. Port must be an integer.'), createFailure(FailureKind.CONFIGURATION));
     }
 
     // Range check
     if (portNum < MIN_PORT || portNum > MAX_PORT) {
-        throw new Error(`Invalid port number. Port must be between ${MIN_PORT} and ${MAX_PORT}.`);
+        throw tagFailure(
+            new Error(`Invalid port number. Port must be between ${MIN_PORT} and ${MAX_PORT}.`),
+            createFailure(FailureKind.CONFIGURATION)
+        );
     }
 
     return String(portNum);
@@ -221,7 +228,9 @@ export async function readBodyWithTimeout(response: Response): Promise<string> {
             const timeoutError = new Error(`Body read timed out after ${READ_TIMEOUT_MS}ms`);
             // Named 'AbortError' so downstream _handleError can detect it by name
             timeoutError.name = 'AbortError';
-            reject(timeoutError);
+            // timeout metadata を持たせる: 下流が message ではなく kind で
+            // 「network ではなく timeout」と判断できるようにする。
+            reject(tagFailure(timeoutError, createFailure(FailureKind.TIMEOUT, { cause: timeoutError })));
         }, READ_TIMEOUT_MS);
     });
 
@@ -233,23 +242,40 @@ export async function readBodyWithTimeout(response: Response): Promise<string> {
 /**
  * Handle Obsidian connection errors with user-friendly messages.
  * Preserves error.name behavior used by callers.
+ *
+ * 文面（sanitized message）は従来と一切変えない。ここで新たに足すのは
+ * 構造化 failure metadata だけで、retry 判断は message ではなく kind を見る。
+ * 旧 Error を `cause` に載せない: message には response body が混入しうるため、
+ * 診断に必要な name だけを metadata に残す。
  * @param error - Original error
  * @param targetUrl - URL that was being accessed
  * @param traceId - Trace identifier for logging
- * @returns User-friendly Error with sanitized message
+ * @returns User-friendly Error with sanitized message and failure metadata
  */
 export function handleObsidianError(error: Error, targetUrl: string, traceId: string = ''): Error {
     const errorMessage = error.message;
+    // 内部境界（GET/PUT の status 分類など）が既に kind を決めた場合は、
+    // それを上書きせずsanitized 文面だけを差し替える。
+    const resolved = resolveFailure(error);
     if (errorMessage.includes('Failed to fetch') && targetUrl.startsWith('https')) {
         addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}`, { traceId });
-        return new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.');
+        return tagFailure(
+            new Error('Error: Failed to connect to Obsidian. Please visit the Obsidian URL in a new tab and accept the self-signed certificate.'),
+            resolved ?? createFailure(FailureKind.NETWORK, { cause: error })
+        );
     }
     if (error.name === 'AbortError' || errorMessage.toLowerCase().includes('timed out')) {
         addLog(LogType.WARN, `Obsidian request timed out: ${targetUrl}`, { error: errorMessage, traceId });
-        return new Error('Error: Request timed out. Please check your Obsidian connection.');
+        return tagFailure(
+            new Error('Error: Request timed out. Please check your Obsidian connection.'),
+            resolved ?? createFailure(FailureKind.TIMEOUT, { cause: error })
+        );
     }
     addLog(LogType.ERROR, `Failed to connect to Obsidian at ${targetUrl}. Cause: ${errorMessage}`, { traceId });
-    return new Error('Error: Failed to connect to Obsidian. Please check your settings and connection.');
+    return tagFailure(
+        new Error('Error: Failed to connect to Obsidian. Please check your settings and connection.'),
+        resolved ?? createFailure(FailureKind.NETWORK, { cause: error })
+    );
 }
 
 /** Default port constant for external use (e.g. config building). */
