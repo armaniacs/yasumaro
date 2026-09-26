@@ -497,6 +497,8 @@ MIT License
 ### 文書一覧
 - [docs/guides.html](https://armaniacs.github.io/yasumaro/guides.html) - ドキュメントガイド総覧（GitHub Pages）
 - [AGENTS.md](AGENTS.md) - 開発者向けエージェント設定
+- [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) - アクセシビリティガイド（WCAG 2.1 AA）
+- [i18n-guide.md](docs/i18n-guide.md) - 多言語化（i18n）ガイド
 - [CHANGELOG.md](CHANGELOG.md) - 更新履歴
 - [CONTRIBUTING.md](CONTRIBUTING.md) - コントリビューションガイド
 - [FAQ.md](docs/FAQ.md) - よくある質問
@@ -527,6 +529,8 @@ MIT License
 ### Documentation
 - [Guides Catalog](https://armaniacs.github.io/yasumaro/guides.html) - All user guides in one place (GitHub Pages)
 - [AGENTS.md](AGENTS.md) - Developer Agent Configuration
+- [ACCESSIBILITY.md](docs/ACCESSIBILITY.md) - Accessibility Guide (WCAG 2.1 AA)
+- [i18n-guide.md](docs/i18n-guide.md) - Internationalization (i18n) Guide
 - [CHANGELOG.md](CHANGELOG.md) - Changelog
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing Guide
 - [FAQ.md](docs/FAQ.md) - Frequently Asked Questions

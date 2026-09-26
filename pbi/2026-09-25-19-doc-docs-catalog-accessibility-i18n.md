@@ -38,16 +38,16 @@ Scenario: GitHub Pagesの開発者向けカタログから2つのガイドを開
 
 ## 受け入れ基準
 
-- [ ] 日本語READMEのドキュメント一覧に、既存ガイドへの1 linkを追加する。
-- [ ] 英語READMEのドキュメント一覧に、既存ガイドへの1 linkを追加する。
-- [ ] GitHub Pagesの開発者向けカタログに、既存ガイドへの2 cardを追加する。
-- [ ] 2 cardのtitleとdescriptionは日英併記とし、既存の構造と見た目に合わせる。
-- [ ] 合計6 catalog entriesを追加する。README 4 entries、HTML 2 cardsである。
-- [ ] `docs/ACCESSIBILITY.md` と `docs/i18n-guide.md` の内容は変更しない。
-- [ ] 自動catalog SSOTは導入しない。
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` は変更しない。
-- [ ] `npm run validate` が成功する。
-- [ ] `npm run release:check -- --category=docs` が成功する。
+- [x] 日本語READMEのドキュメント一覧に、既存ガイドへの1 linkを追加する。
+- [x] 英語READMEのドキュメント一覧に、既存ガイドへの1 linkを追加する。
+- [x] GitHub Pagesの開発者向けカタログに、既存ガイドへの2 cardを追加する。
+- [ ] 2 cardのtitleとdescriptionは日英併記とし、既存の構造と見た目に合わせる。→ **title のみ日英併記**。description の日英併記は既存 25 card に 1 例も無く `.card .d small` の CSS も無いため、「既存の構造と見た目に合わせる」と両立しない。理由は「実施記録」参照。
+- [x] 合計6 catalog entriesを追加する。README 4 entries、HTML 2 cardsである。
+- [x] `docs/ACCESSIBILITY.md` と `docs/i18n-guide.md` の内容は変更しない。
+- [x] 自動catalog SSOTは導入しない。
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` は変更しない。
+- [x] `npm run validate` が成功する。
+- [x] `npm run release:check -- --category=docs` が成功する。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -135,12 +135,51 @@ Scenario: GitHub Pagesの開発者向けカタログから2つのガイドを開
 
 ## Definition of Done
 
-- [ ] すべての受け入れ基準を満たす。
-- [ ] 4つのREADME linkと2つのHTML cardを追加し、合計6 catalog entriesを確認する。
-- [ ] BDD受け入れシナリオのリンク到達性と日英併記を確認する。
-- [ ] `docs/ACCESSIBILITY.md` と `docs/i18n-guide.md` を変更していないことを確認する。
-- [ ] 自動catalog SSOTを追加していないことを確認する。
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` を変更していないことを確認する。
-- [ ] `npm run validate` が成功する。
-- [ ] `npm run release:check -- --category=docs` が成功する。
-- [ ] レビューで、READMEの日英対応とHTML 2 cardの構造・表示が妥当であることを確認する。
+- [x] すべての受け入れ基準を満たす（`description` の日英併記については下記「実施記録」参照）。
+- [x] 4つのREADME linkと2つのHTML cardを追加し、合計6 catalog entriesを確認する。
+- [x] BDD受け入れシナリオのリンク到達性と日英併記を確認する。
+- [x] `docs/ACCESSIBILITY.md` と `docs/i18n-guide.md` を変更していないことを確認する。
+- [x] 自動catalog SSOTを追加していないことを確認する。
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` を変更していないことを確認する。
+- [x] `npm run validate` が成功する。
+- [x] `npm run release:check -- --category=docs` が成功する。
+- [x] レビューで、READMEの日英対応とHTML 2 cardの構造・表示が妥当であることを確認する。
+
+## 実施記録（2026-09-26）
+
+### 追加した 6 catalog entries
+
+| # | 場所 | エントリ |
+|---|---|---|
+| 1 | `README.md:500`（文書一覧・日本語） | `ACCESSIBILITY.md` - アクセシビリティガイド（WCAG 2.1 AA） |
+| 2 | `README.md:501`（文書一覧・日本語） | `i18n-guide.md` - 多言語化（i18n）ガイド |
+| 3 | `README.md:532`（Documentation・英語） | `ACCESSIBILITY.md` - Accessibility Guide (WCAG 2.1 AA) |
+| 4 | `README.md:533`（Documentation・英語） | `i18n-guide.md` - Internationalization (i18n) Guide |
+| 5 | `docs/guides.html:229` | 開発者向けカテゴリに ACCESSIBILITY card |
+| 6 | `docs/guides.html:233` | 開発者向けカテゴリに i18n guide card |
+
+README の 2 箇所は独立したリストであり、双方に同じ 2 guide を同じ位置関係（`AGENTS.md` の直後 =
+開発者向け文書の並び）で追加した。開発者向けガイドなのでユーザーガイド群の末尾ではなく
+`AGENTS.md` の直後に置いている。`docs/guides.html` の card 数は 25 → 27。
+
+リンク先 2 ファイルの実在を `ls` で確認済み。
+
+### 裁定: card の description は日本語のみにした（PBI の「description も日英併記」からの逸脱）
+
+PBI は「2 card の title と description は日英併記とし、既存の構造と見た目に合わせる」と要求するが、
+**この 2 条件は実コードでは両立しない**。実測したとおり:
+
+- 既存 25 card すべての `title` は `<small>` で日英併記されている。
+- 一方 `description` は**全 25 card が日本語のみ**。日英併記の description は 1 件も存在しない。
+- CSS に `.card .t small { display: block; ... }` はあるが **`.card .d small` のルールは無い**。
+  description 内に `<small>` を入れても `block` にならずインラインで描画され、
+  周囲 23 card と見た目が崩れる。
+
+したがって「既存の構造と見た目に合わせる」を優先し、既存と同じ形（title のみ日英併記、
+description は日本語）を選んだ。25 件中 2 件だけ description を英訳するとカタログの見た目が
+不揃いになるうえ、`.d small` の CSS 追加は本 PBI の「構造と見た目に合わせる」を超える変更に
+なるため行っていない。英語圏の読者がガイドを見分ける経路は日英併記の `title` で担保される。
+
+**DoD の該当項目は-description の日英併記について未充足**。英語圏向け description を
+另行検討する場合は、`.card .d small` の CSS を更新したうえで 25 card 全体を”一斉に”
+英訳するのが整合する。部分的英訳は本 PBI の範囲外とする。
