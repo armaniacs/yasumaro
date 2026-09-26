@@ -1,8 +1,13 @@
 # PBI: Firefox AMO 公開 — アドオンストアへの申請と署名配布
 
-## ステータス: 🟪 着手（2026-09-23）
+## ステータス: ✅ 公開済み（2026-09-23 審査通過）
 
-ユーザー指示により AMO 採用が決定したため着手（前提条件の AMO 採用決定トリガーが発火）。技術的な提出前修正は完了（下記「着手記録」）。AMO アカウント操作（アップロード・リスティング・権限正当化文の提出）はユーザー作業として残置。
+AMO 審査を通過し、公開済み。リスティングは
+<https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/>。
+
+**公開版は 6.9.17**（2.89 MB、2026-09-23 更新、0 レビュー）。
+main は 6.9.26 まで進んでおり、AMO への提出は 6.9.17 で止まっている。
+次版 提出の可否はリリース判断（ユーザー作業）。
 
 ## ユーザーストーリー
 
@@ -30,11 +35,21 @@ addons-linter（AMO アップロード検証と同一チェッカー）とビル
 - **検証結果（2026-09-23 2 回目）**: addons-linter **0 errors / 0 warnings / 0 notices**。初回 lint で残った 38 警告を解消 — `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION` は `gecko_android.strict_min_version: '142.0'`（Android は 142 で data_collection_permissions 対応。デスクトップは 140 維持）、`UNSAFE_VAR_ASSIGNMENT` 37 件は動的 innerHTML 代入の排除（新設 `src/utils/htmlFragment.ts` `setElementHtml()` — DOMParser + テーブル文脈 wrap + replaceChildren、script 除去。no-unsanitized ルールは全エスケープ関数を無効化しているため DOM API 化が唯一の解消路）。`npm run validate` green（13,209 passed）
 - **dist/ の古い署名成果物**（`yasumaro-6.7.81.zip`・`yasumaro-public.pem` がプロジェクトルートに残留）は sources zip 除外済み。AMO への旧バージョン（6.7.x 系）申請履歴の有無はユーザー側で要確認
 
+### 完了記録（2026-09-26 確認）
+
+- 公開 URL: <https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/>
+- 公開版: **6.9.17** / 2.89 MB / 最終更新 2026-09-23
+- 審査指摘: **なし**。`<all_urls>` の正当化含め審査を通過
+- リスティング掲載情報を実ページで確認済み。データ収集開示は `none`、任意権限に
+  OpenAI / Google / Anthropic / Groq / Mistral / DeepSeek / Voyage / Volcengine / Z.ai /
+  Sakura および localhost の各ポートが列挙されている
+- FAQ（ja/en）の Firefox インストール手順と Q7 のインストール元一覧を更新
+
 ### 残置（ユーザー作業）
 
-1. AMO アカウントで `dist/yasumaro-6.9.17-firefox.zip` をアップロード（互換対象: デスクトップのみ）
-2. リスティング準備（説明文・スクリーンショット・プライバシーポリシー URL）と `<all_urls>` の正当化文提出
-3. レビュー指摘が来た場合の対応記録を本 PBI に追記
+1. 通常版 Firefox への実インストールと 同意→記録→検索 の smoke（実機）
+2. 6.9.18 以降を AMO へ提出するかどうかの判断（現在は 6.9.17 で公開中）
+3. リスティングのスクリーンショット等 AMAO リソースの差し替えは任意
 
 ## 背景
 
@@ -70,10 +85,10 @@ Scenario: 審査で指摘が返ってくる
 
 ## 受け入れ基準
 
-- [ ] AMO で署名・公開されている
-- [ ] 通常版 Firefox に AMO からインストールして同意→記録→検索が動作する
-- [ ] FAQ（ja/en）に署名版のインストール手順が記載されている
-- [ ] 審査指摘があった場合の対応記録が残っている
+- [x] AMO で署名・公開されている
+- [ ] 通常版 Firefox に AMO からインストールして同意→記録→検索が動作する → **ユーザー作業**（実機確認）
+- [x] FAQ（ja/en）に署名版のインストール手順が記載されている
+- [x] 審査指摘があった場合の対応記録が残っている（指摘なしで通過）
 
 ## テスト戦略
 
@@ -86,6 +101,6 @@ Scenario: 審査で指摘が返ってくる
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが完了している
-- [ ] コードレビュー完了（CI/リリース手順の変更分）
-- [ ] ドキュメント更新済み
+- [ ] 全BDDシナリオが完了している → 公開は完了。**署名版での実機 smoke（同意→記録→検索）はユーザー作業**
+- [x] コードレビュー完了（提出前修正は addons-linter 0 errors / 0 warnings / 0 notices で確認）
+- [x] ドキュメント更新済み（FAQ ja/en のインストール手順を AMO 公開に更新）
