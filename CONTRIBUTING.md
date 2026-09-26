@@ -52,6 +52,33 @@ npm test
 - `tests.yml` の E2E テスト（Playwright）は `xvfb-run` でヘッドレス実行されます
 - テスト成果物（Playwright レポート）は7日間保持されます
 
+#### `ci.yml` のジョブは変更 path で起動する
+
+`ci.yml` は `Classify changed paths` ジョブが変更ファイルのパスを分類し、各ジョブは
+自分が必要とする入力が変更されたときだけ起動します。docs だけの変更で WASM の
+再ビルドやビルド成果物の生成が走ることはありません。
+
+| ジョブ | 起動する条件 |
+|---|---|
+| `Classify changed paths` | 常に実行（分類のため） |
+| `gitleaks` | **常に実行**（secret scan。path で絞らない） |
+| `validate` | `.md` / `docs/**` / `LICENSE` 以外のファイルが1つでも変更された場合 |
+| `wasm-test` | `wasm/**`、`scripts/wasm-crates.mjs`、`package.json`、`package-lock.json`、CI 設定 |
+| `dod-check` | `pbi/**`、`scripts/check-pbi-dod.js`、CI 設定 |
+| `build` | `src/**`、`entrypoints/**`、`public/**`、`wasm/**`、依存ファイル、CI 設定（**かつ `validate` の成功が前提**） |
+
+設計上の要点として、`validate` の判定は「検証対象の許可リスト」ではなく
+**「すべてのファイルから docs の一覧を引いたもの」**です。後から追加された
+未知の拡張子や新しいトップレベルディレクトリは自動的に `validate` に入るため、
+新しい入力が黙って検証されずに素通りすることはありません。
+
+`tests.yml`（`a11y` / `usability` / `firefox-storage` / `test`）は path で絞らず
+無条件に実行されます。
+
+**検証を自分で回したい場合**: `.github/workflows/ci.yml` に一時的なコメントを
+1 行入れるか、分類に含まれるファイル（`package.json` など）を触ってください。
+これらは `validate` / `wasm-test` / `dod-check` / `build` のすべてを起動させます。
+
 #### テストの実行
 
 ```bash
@@ -494,6 +521,34 @@ This project defines two CI workflows:
 - On PR, all checks (type-check, test, E2E, PR comment) run sequentially in a single workflow — no duplicate executions
 - E2E tests (Playwright) in `tests.yml` run headlessly via `xvfb-run`
 - Test artifacts (Playwright reports) are retained for 7 days
+
+#### `ci.yml` jobs only start when their inputs change
+
+A `Classify changed paths` job classifies the changed files, and every other job
+starts only when something it actually reads has changed. A docs-only change no
+longer triggers a WASM rebuild or an extension build.
+
+| Job | Starts when |
+|---|---|
+| `Classify changed paths` | Always (it does the classification) |
+| `gitleaks` | **Always** (secret scan; never path-gated) |
+| `validate` | At least one file outside `.md`, `docs/**` and `LICENSE` changed |
+| `wasm-test` | `wasm/**`, `scripts/wasm-crates.mjs`, `package.json`, `package-lock.json`, or CI config changed |
+| `dod-check` | `pbi/**`, `scripts/check-pbi-dod.js`, or CI config changed |
+| `build` | `src/**`, `entrypoints/**`, `public/**`, `wasm/**`, dependency files or CI config changed — **and only if `validate` succeeded** |
+
+The design point worth knowing: `validate` is decided by *subtracting* a docs
+list from "every file", not by allowlisting the inputs it is known to read. A new
+file extension or a new top-level directory therefore lands in `validate`
+automatically, so newly added inputs cannot slip through unvalidated.
+
+`tests.yml` (`a11y` / `usability` / `firefox-storage` / `test`) is never
+path-gated and always runs.
+
+**To run the gates yourself**: add a throwaway comment line to
+`.github/workflows/ci.yml`, or touch any file the classification covers (such as
+`package.json`). Either one starts `validate`, `wasm-test`, `dod-check` and
+`build`.
 
 #### Running Tests
 
