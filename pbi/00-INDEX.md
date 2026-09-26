@@ -147,7 +147,7 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 ### 2026-09-27 autonomous-task-closer wave 3 — ✅ 5件完了（05 移動漏れ修復・27-01・26-09・25-31・25-32 アーカイブ済み）
 
-バッチ0（機械的修正）+ バッチ1（27-01・26-09・25-31 をファイル非重複で並列実装、25-31 は worktree 隔離）+ バッチ2（25-32 は 26-09 と表示経路・既存 parity テストが隣接するため直列実装）。5 Whys 記録は /tmp/whywhy/。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test 927 files・14,367 passed（21 skipped）/ build PASS / `lint:adr-links` PASS。詳細は各項目を参照。
+バッチ0（機械的修正）+ バッチ1（27-01・26-09・25-31 をファイル非重複で並列実装、25-31 は worktree 隔離）+ バッチ2（25-32 は 26-09 と表示経路・既存 parity テストが隣接するため直列実装）。5 Whys 記録は /tmp/whywhy/。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test 927 files・14,375 passed（21 skipped）/ build PASS / `lint:adr-links` PASS / `bench:check` PASS。詳細は各項目を参照。
 
 - [2026-09-26-05-test-remove-fixed-sleeps.md](../dev-docs/archived/pbi/2026-09-26-05-test-remove-fixed-sleeps.md)（✅ 完了済みの移動漏れを修復 — 5 Whys なし。DoD 全 `[x]`・実装証跡（`eslint.config.js` の `local/no-test-sleep: error`）を確認の上アーカイブへ移動し、INDEX 内の 05・08 への壊れた相対リンクを修正）
 - [2026-09-27-01-fix-built-in-ai-false-disk-space-error.md](../dev-docs/archived/pbi/2026-09-27-01-fix-built-in-ai-false-disk-space-error.md)（✅ 完了 — issue #161 / Linear DEV-93。`getBuiltInAIDiskSpace()` 冒頭に Prompt API 存在ゲート（`globalThis.LanguageModel` 未定義 → null・`declare global` は narrowing で回避）を追加し、3 表示経路を同時に修正。テストは `LanguageModel` を beforeEach で立て afterEach で復元。22 GiB 境界値・負値クランプを追加固定。対象 3 ファイル 71 tests green・`--repeats=5` 安定。なぜなぜ: 能力の有無の判定が能力的存続を前提とする推定より後ろに回っていた）
