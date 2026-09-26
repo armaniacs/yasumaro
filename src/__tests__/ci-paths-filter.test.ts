@@ -240,7 +240,7 @@ describe('job structure', () => {
     ['validate', 'validate'],
     ['wasm-test', 'wasm'],
     ['dod-check', 'pbi'],
-    ...(jobs.has('bench-check') ? [['bench']] : []),
+    ...(jobs.has('bench-check') ? [['bench-check', 'bench']] : []),
   ])('gates %s on the %s classification', (job, output) => {
     const found = jobs.get(job);
     expect(found?.condition).toBe(`needs.changes.outputs.${output} == 'true'`);
@@ -286,28 +286,36 @@ describe('quantifiers', () => {
 });
 
 describe('behavioural matrix', () => {
-  it.each([
+  /**
+   * `[changed file, jobs that must run, does the bench filter match?]`.
+   * `bench-check` is appended only when the workflow actually declares it, so
+   * one expectation table is correct for both workflow shapes.
+   */
+  const MATRIX: Array<[string, string[], boolean]> = [
     // [changed file, jobs that must run]
-    ['README.md', ['gitleaks']],
-    ['dev-docs/LAYERS.md', ['gitleaks']],
-    ['docs/guides.html', ['gitleaks']],
-    ['LICENSE', ['gitleaks']],
-    ['src/index.ts', ['validate', 'build', 'gitleaks']],
-    ['entrypoints/background.ts', ['validate', 'build', 'gitleaks']],
-    ['testDir/e2e/x.spec.ts', ['validate', 'gitleaks']],
-    ['eslint.config.js', ['validate', 'gitleaks']],
-    ['package.json', ['validate', 'wasm-test', 'build', 'gitleaks']],
-    ['package-lock.json', ['validate', 'wasm-test', 'build', 'gitleaks']],
-    ['.npmrc', ['validate', 'gitleaks']],
-    ['pbi/00-INDEX.md', ['dod-check', 'gitleaks']],
-    ['wasm/pii-sanitizer/src/lib.rs', ['validate', 'wasm-test', 'build', 'gitleaks']],
-    ['wasm/crates.json', ['validate', 'wasm-test', 'build', 'gitleaks']],
-  ])('%s runs %j', (file, expected) => {
+    ['README.md', ['gitleaks'], false],
+    ['dev-docs/LAYERS.md', ['gitleaks'], false],
+    ['docs/guides.html', ['gitleaks'], false],
+    ['LICENSE', ['gitleaks'], false],
+    ['src/index.ts', ['validate', 'build', 'gitleaks'], true],
+    ['entrypoints/background.ts', ['validate', 'build', 'gitleaks'], true],
+    ['testDir/e2e/x.spec.ts', ['validate', 'gitleaks'], false],
+    ['eslint.config.js', ['validate', 'gitleaks'], false],
+    ['package.json', ['validate', 'wasm-test', 'build', 'gitleaks'], true],
+    ['package-lock.json', ['validate', 'wasm-test', 'build', 'gitleaks'], true],
+    ['.npmrc', ['validate', 'gitleaks'], false],
+    ['pbi/00-INDEX.md', ['dod-check', 'gitleaks'], false],
+    ['wasm/pii-sanitizer/src/lib.rs', ['validate', 'wasm-test', 'build', 'gitleaks'], true],
+    ['wasm/crates.json', ['validate', 'wasm-test', 'build', 'gitleaks'], false],
+  ];
+
+  it.each(MATRIX)('%s runs %j', (file, expected, benchRuns) => {
+    const want = jobs.has('bench-check') && benchRuns ? [...expected, 'bench-check'] : expected;
     const actual = Object.entries(jobsFor(file))
       .filter(([, on]) => on)
       .map(([name]) => name)
       .sort();
-    expect(actual).toEqual([...expected].sort());
+    expect(actual).toEqual([...want].sort());
   });
 });
 
