@@ -20,6 +20,9 @@
   "cancel": {
     "message": "Cancel"
   },
+  "ok": {
+    "message": "OK"
+  },
   "close": {
     "message": "Close"
   },

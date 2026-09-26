@@ -196,6 +196,15 @@ export function checkSourceI18nKeys(srcDir, localesDir, reporter) {
           // i18n wrapper call forms (PBI 2026-09-11-04): the dashboard's
           // localized()/t() wrappers and direct getMessage calls all pass
           // string-literal keys.
+          //
+          // The bare `t` alternative is a name match, not a symbol lookup, so
+          // any local helper also called `t` registers its first argument as a
+          // locale key. That happened once: confirmDialog.ts had a local
+          // `t(key, fallback, substitutions)` pass-through over getMessageOr,
+          // and the gate failed on a missing key named `ok`. The fix was to
+          // delete the shadowing helper, not to weaken this pattern — dropping
+          // `t` would blind the scan to 109 real dashboard keys. Keep `t`
+          // reserved for the i18n wrapper.
           const wrapperPattern = /\b(?:getMessage|getMessageOr|localized|t)\(\s*["']([^"']+)["']/g;
           while ((match = wrapperPattern.exec(content)) !== null) {
             usedKeys.add(match[1]);
