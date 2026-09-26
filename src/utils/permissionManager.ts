@@ -59,10 +59,10 @@ export class PermissionManager {
   }
 
   /**
-   * LRU削除: lastDenied が最も古いエントリを1件削除
+   * LRU削除: lastDenied が最も古いエントリを1件削除した新しいオブジェクトを返す
    * 上限超過時に新規追加の前に呼び出される
    */
-  private evictOldestEntry(deniedDomains: Record<string, DeniedDomainData>): void {
+  private evictOldestEntry(deniedDomains: Record<string, DeniedDomainData>): Record<string, DeniedDomainData> {
     let oldestKey: string | null = null;
     let oldestTime = Infinity;
     for (const [key, entry] of Object.entries(deniedDomains)) {
@@ -73,9 +73,9 @@ export class PermissionManager {
         oldestKey = key;
       }
     }
-    if (oldestKey !== null) {
-      delete deniedDomains[oldestKey];
-    }
+    if (oldestKey === null) return deniedDomains;
+    const { [oldestKey]: _evicted, ...remaining } = deniedDomains;
+    return remaining;
   }
 
   /**
@@ -87,25 +87,20 @@ export class PermissionManager {
   }
 
   /**
-   * 共通: denied_domains を保存するヘルパーメソッド
-   */
-  private async saveDeniedDomains(deniedDomains: Record<string, DeniedDomainData>): Promise<void> {
-    await chrome.storage.local.set({ [StorageKeys.DENIED_DOMAINS]: deniedDomains });
-  }
-
-  /**
    * 共通: denied_domains を更新するヘルパーメソッド
    * Optimistic Lockを使用して競合状態を防止
+   *
+   * `updater` MUST NOT mutate the value it is handed: withLock compares the
+   * pre-write value against what it read, and a port that hands out the stored
+   * reference would let an in-place updater rewrite the store before the CAS
+   * verify runs. Every updater below therefore returns a fresh object.
    */
   private async updateDeniedDomains(
     updater: (domains: Record<string, DeniedDomainData>) => Record<string, DeniedDomainData>
   ): Promise<void> {
     await withOptimisticLock<Record<string, DeniedDomainData>>(
       StorageKeys.DENIED_DOMAINS,
-      (current) => {
-        const deniedDomains = current || {};
-        return updater(deniedDomains);
-      }
+      (current) => updater(current || {})
     );
   }
 
@@ -155,25 +150,23 @@ export class PermissionManager {
     try {
       const nowISO = new Date().toISOString();
       await this.updateDeniedDomains((deniedDomains) => {
-        if (!deniedDomains[domain]) {
+        const existing = deniedDomains[domain];
+        if (!existing) {
           // 新規追加時のみ上限チェック（既存ドメインの更新は上限対象外）
-          if (Object.keys(deniedDomains).length >= PermissionManager.MAX_DENIED_DOMAINS) {
-            this.evictOldestEntry(deniedDomains);
-          }
+          const base = Object.keys(deniedDomains).length >= PermissionManager.MAX_DENIED_DOMAINS
+            ? this.evictOldestEntry(deniedDomains)
+            : deniedDomains;
           // evict失敗時の安全策: 依然として上限超過なら追加を拒否
-          if (Object.keys(deniedDomains).length >= PermissionManager.MAX_DENIED_DOMAINS) {
-            return deniedDomains;
+          if (Object.keys(base).length >= PermissionManager.MAX_DENIED_DOMAINS) {
+            return base;
           }
-          deniedDomains[domain] = {
-            count: 1,
-            lastDenied: nowISO
-          };
-        } else {
-          // 既存エントリー: カウントインクリメントと最後の拒否日時更新
-          deniedDomains[domain].count++;
-          deniedDomains[domain].lastDenied = nowISO;
+          return { ...base, [domain]: { count: 1, lastDenied: nowISO } };
         }
-        return deniedDomains;
+        // 既存エントリー: カウントインクリメントと最後の拒否日時更新
+        return {
+          ...deniedDomains,
+          [domain]: { ...existing, count: existing.count + 1, lastDenied: nowISO },
+        };
       });
       const deniedDomains = await this.getDeniedDomains();
       logDebug('PermissionManager', { domain, count: deniedDomains[domain]?.count }, `Recorded denied visit for ${domain}`);
@@ -190,12 +183,11 @@ export class PermissionManager {
   async recordDomainDismissal(domain: string): Promise<void> {
     try {
       await this.updateDeniedDomains((deniedDomains) => {
-        if (deniedDomains[domain]) {
-          const nowISO = new Date().toISOString();
-          deniedDomains[domain].lastDismissed = nowISO;
-          logDebug('PermissionManager', { domain }, `Recorded dismissal for ${domain}`);
-        }
-        return deniedDomains;
+        const existing = deniedDomains[domain];
+        if (!existing) return deniedDomains;
+        const nowISO = new Date().toISOString();
+        logDebug('PermissionManager', { domain }, `Recorded dismissal for ${domain}`);
+        return { ...deniedDomains, [domain]: { ...existing, lastDismissed: nowISO } };
       });
     } catch (error) {
       logWarn('PermissionManager', { error: errorMessage(error), domain }, undefined, 'Failed to record domain dismissal');
@@ -326,11 +318,10 @@ export class PermissionManager {
   async removeDeniedDomain(domain: string): Promise<void> {
     try {
       await this.updateDeniedDomains((deniedDomains) => {
-        if (deniedDomains[domain]) {
-          delete deniedDomains[domain];
-          logDebug('PermissionManager', { domain }, `Removed denied domain entry for ${domain}`);
-        }
-        return deniedDomains;
+        if (!deniedDomains[domain]) return deniedDomains;
+        logDebug('PermissionManager', { domain }, `Removed denied domain entry for ${domain}`);
+        const { [domain]: _removed, ...remaining } = deniedDomains;
+        return remaining;
       });
     } catch (error) {
       logWarn('PermissionManager', { error: errorMessage(error), domain }, undefined, 'Failed to remove denied domain');
