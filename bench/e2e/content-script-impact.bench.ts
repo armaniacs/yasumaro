@@ -31,6 +31,11 @@ async function measureLoad(page: import('@playwright/test').Page, url: string) {
     }
   });
   await page.goto(url, { waitUntil: 'load' });
+  // The long-task total read below is an accumulation over an observation
+  // window, so the window length is part of the quantity being measured: any
+  // condition-based substitute would change the reported number. Nothing here
+  // names a state to wait for — the metric is the passage of time itself.
+  // eslint-disable-next-line local/no-fixed-wait -- the settle window IS the measured quantity
   await page.waitForTimeout(2_000);
   return page.evaluate(() => {
     const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;

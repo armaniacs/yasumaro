@@ -5,7 +5,7 @@ import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'testDir/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
+    ignores: ['node_modules/', 'dist/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
   },
   {
     files: ['src/**/*.ts'],
@@ -203,6 +203,36 @@ export default [
       // import awaited under it. 124 pre-existing call sites still use it, so
       // promoting this to 'error' would break the build for untouched code.
       'local/no-greedy-fake-timers': 'warn',
+    },
+  },
+  {
+    // PBI 2026-09-26-08: testDir/ used to be listed in the global ignores, so
+    // Playwright's fixed-duration wait accumulated 12 violations that no tool
+    // could see; bench/ was linted but had no rule covering this. `no-fixed-wait`
+    // is the E2E counterpart of local/no-test-sleep.
+    //
+    // Deliberately NOT type-aware: testDir/tsconfig.json includes only
+    // `./e2e/fixtures/**` and the vitest test files, not the `.spec.ts` files,
+    // so a project-based parser would fail to resolve every spec. Type checking
+    // of test code stays with `npm run type-check:test`, which owns its own
+    // tsconfig. Extending lint scope must not drag the E2E specs into a
+    // half-configured type-aware project — that would break src/**'s
+    // `project: './tsconfig.json'` resolution in the same flat config.
+    files: ['testDir/**/*.{ts,js,mjs}', 'bench/**/*.{ts,js,mjs}'],
+    plugins: {
+      local: localPlugin,
+    },
+    rules: {
+      'local/no-fixed-wait': 'error',
+    },
+  },
+  {
+    // Browser-served fixture pages under testDir/e2e/test-pages/ are loaded by
+    // the page (never bundled), so they keep a .js extension while carrying
+    // TypeScript syntax. Without the TS parser they fail to parse at all.
+    files: ['testDir/e2e/test-pages/**/*.js'],
+    languageOptions: {
+      parser: tsParser,
     },
   },
 ];

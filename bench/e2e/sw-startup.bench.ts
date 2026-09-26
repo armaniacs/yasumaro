@@ -41,6 +41,12 @@ test('service worker cold-start round-trip @bench', async ({ context, extensionI
       return performance.now() - t0;
     });
     timings.push(rt);
+    // Cooldown between iterations. The next round-trip is only a cold-start
+    // sample if the worker has been allowed to go idle again, and "idle" has
+    // no observable from the page — the absence of a message is exactly what
+    // cannot be awaited. Shortening or condition-gating it would silently
+    // change what the benchmark reports.
+    // eslint-disable-next-line local/no-fixed-wait -- cooldown with no observable idle state
     await page.waitForTimeout(500);
   }
 

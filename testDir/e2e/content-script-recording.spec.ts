@@ -27,6 +27,16 @@ async function waitForExtractorInit(page: import('@playwright/test').Page, timeo
   ).toPass({ timeout });
 }
 
+/**
+ * Stay duration in seconds, read from the content script's own counter (0 until
+ * it initialises). It is the same `duration` visitGating.evaluate() gates the
+ * report on, so waiting on it never guesses the test process's clock.
+ */
+async function readStaySeconds(page: import('@playwright/test').Page) {
+  const state = await readTestState(page);
+  return state === null ? 0 : state.duration;
+}
+
 test.describe('Content Script Recording @extension', () => {
 
   test('content script is injected and extractor initializes', async ({ context }) => {
@@ -78,7 +88,7 @@ test.describe('Content Script Recording @extension', () => {
     await page.close();
   });
 
-  test('VALID_VISIT fires after 50% scroll + 5s stay @critical', async ({ context, extensionId }) => {
+  test('VALID_VISIT fires after 50% scroll + 5s stay @critical', async ({ context }) => {
     const page = await context.newPage();
     await page.goto('http://localhost:8080/long-page.html');
     await waitForExtractorInit(page);
@@ -115,8 +125,17 @@ test.describe('Content Script Recording @extension', () => {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.3));
     });
 
-    await test.step('Wait 6s and verify NOT fired', async () => {
-      await page.waitForTimeout(6500);
+    await test.step('Wait out the stay threshold and verify NOT fired', async () => {
+      // The missing scroll depth is the only thing suppressing the report here,
+      // so the stay condition has to be satisfied before the negative assertion
+      // means anything. Polling the extractor's own counter for the threshold
+      // replaces the fixed sleep: it also fails (instead of passing green) if
+      // the counter never advances.
+      const threshold = (await readTestState(page))!.minVisitDuration;
+      await expect
+        .poll(() => readStaySeconds(page), { timeout: 15000, intervals: [250] })
+        .toBeGreaterThanOrEqual(threshold);
+
       const state = await readTestState(page);
       expect(state).not.toBeNull();
       expect(state!.maxScrollPercentage).toBeLessThan(50);
@@ -133,15 +152,34 @@ test.describe('Content Script Recording @extension', () => {
 
     await test.step('Scroll to 70% immediately', async () => {
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight * 0.7));
-      // wait for throttled RAF scroll listener to process
-      await page.waitForTimeout(300);
     });
 
-    await test.step('Wait only 2s and verify NOT fired', async () => {
-      await page.waitForTimeout(2000);
+    await test.step('Wait for the throttled scroll listener to record the depth', async () => {
+      // The scroll listener is RAF-throttled, so the depth lands asynchronously.
+      // Waiting for the recorded value is the condition; sleeping 300ms and
+      // hoping the throttle fired is the same guess with a shorter fuse.
+      await expect(async () => {
+        const state = await readTestState(page);
+        expect(state).not.toBeNull();
+        expect(state!.maxScrollPercentage).toBeGreaterThanOrEqual(50);
+      }).toPass({ timeout: 3000, intervals: [50, 100, 200] });
+    });
+
+    await test.step('Verify NOT fired while the stay is still under the threshold', async () => {
+      // Sample the negative window as late as it can be sampled while the stay
+      // is still under minVisitDuration: the window's midpoint, derived from the
+      // extractor's own threshold rather than a hard-coded 2s. Reading a stale
+      // snapshot here is safe — the state is re-read below, and the gate can
+      // only move towards firing.
+      const threshold = (await readTestState(page))!.minVisitDuration;
+      await expect
+        .poll(() => readStaySeconds(page), { timeout: 10000, intervals: [250] })
+        .toBeGreaterThan(threshold / 2);
+
       const state = await readTestState(page);
       expect(state).not.toBeNull();
       expect(state!.maxScrollPercentage).toBeGreaterThanOrEqual(50);
+      expect(state!.duration).toBeLessThan(threshold);
       expect(state!.isValidVisitReported).toBe(false);
     });
 

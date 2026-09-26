@@ -19,8 +19,6 @@ test.describe('Recording traceId correlation @extension', () => {
     // chrome.storage.local for sanitization_logs. The recording pipeline runs and
     // VALID_VISIT fires (verified by content-script-recording tests), but the buffer
     // entries haven't been persisted to storage yet. This is a flush timing issue.
-    const sw = context.serviceWorkers()[0];
-
     await seedPrivacyConsent(context, {
       settings: {
         obsidian_protocol: 'http',
