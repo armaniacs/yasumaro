@@ -71,16 +71,21 @@ export interface ProviderCatalogEntry {
 }
 
 /**
- * Allow-relevant fields (baseUrlKey/isLocal/label) come from the neutral
- * low-tier table — spreading them here makes drift impossible: a missing row
- * throws at module load, and the parity test guards the reverse direction.
+ * Display-relevant fields (baseUrlKey/isLocal/label/labelI18nKey) come from the
+ * neutral low-tier table — spreading them here makes drift impossible: a
+ * missing row or i18n key throws at module load, and the parity test guards
+ * the reverse direction. The same rows back the UI-facing projection
+ * (PROVIDER_DISPLAY_METADATA), so the label and its i18n key have one
+ * declaration site.
  */
-function allowRow(id: string): { baseUrlKey?: string; isLocal: boolean; label: string } {
+function allowRow(
+  id: string,
+): { baseUrlKey?: string; isLocal: boolean; label: string; labelI18nKey: string } {
   const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === id);
-  if (!row) throw new UnknownProviderError(id);
+  if (!row || row.labelI18nKey === undefined) throw new UnknownProviderError(id);
   return row.baseUrlKey === undefined
-    ? { isLocal: row.isLocal, label: row.label }
-    : { baseUrlKey: row.baseUrlKey, isLocal: row.isLocal, label: row.label };
+    ? { isLocal: row.isLocal, label: row.label, labelI18nKey: row.labelI18nKey }
+    : { baseUrlKey: row.baseUrlKey, isLocal: row.isLocal, label: row.label, labelI18nKey: row.labelI18nKey };
 }
 
 // Insertion order == the options-page provider dropdown order.
@@ -94,7 +99,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       requiresApiKey: true,
       cspDomain: 'https://generativelanguage.googleapis.com',
       contentCharsKey: StorageKeys.GEMINI_CONTENT_CHARS,
-      labelI18nKey: 'googleGemini',
       fieldPlaceholders: { apiKey: 'geminiApiKeyPlaceholder', model: 'geminiModelPlaceholder' },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
@@ -129,7 +133,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       requiresApiKey: true,
       cspDomain: 'https://api.openai.com',
       contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
-      labelI18nKey: 'openaiCompatible',
       fieldPlaceholders: {
         apiKey: 'openaiApiKeyPlaceholder',
         baseUrl: 'openaiBaseUrlPlaceholder',
@@ -150,7 +153,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       requiresApiKey: true,
       cspDomain: 'https://api.openai.com',
       contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
-      labelI18nKey: 'openaiCompatible2',
       fieldPlaceholders: {
         apiKey: 'openai2ApiKeyPlaceholder',
         baseUrl: 'openai2BaseUrlPlaceholder',
@@ -168,7 +170,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       defaultBaseUrl: PROVIDER_DEFAULT_BASE_URLS['lm-studio'],
       requiresApiKey: false,
       cspDomain: 'http://127.0.0.1:1234',
-      labelI18nKey: 'lmStudio',
       fieldPlaceholders: { baseUrl: 'lmStudioBaseUrlPlaceholder', model: 'lmStudioModelPlaceholder' },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
@@ -182,7 +183,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       defaultBaseUrl: PROVIDER_DEFAULT_BASE_URLS['ollama'],
       requiresApiKey: false,
       cspDomain: 'http://localhost:11434',
-      labelI18nKey: 'ollama',
       fieldPlaceholders: { baseUrl: 'ollamaBaseUrlPlaceholder', model: 'ollamaModelPlaceholder' },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
@@ -196,7 +196,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       modelKey: StorageKeys.PROVIDER_MODEL,
       requiresApiKey: true,
       contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
-      labelI18nKey: 'openaiCompatibleModelsDev',
       fieldPlaceholders: {
         apiKey: 'providerApiKeyPlaceholder',
         baseUrl: 'providerBaseUrlPlaceholder',
@@ -212,7 +211,6 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       ...allowRow('built-in-ai'),
       modelKey: '',
       requiresApiKey: false,
-      labelI18nKey: 'builtInAi',
       supportsCustomPrompt: true,
       settingsBlockKind: 'built-in-ai',
     },
