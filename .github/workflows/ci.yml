@@ -11,7 +11,97 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    # Single always-running classifier. Job-level `if` is used throughout
+    # instead of a workflow-level `paths` filter on purpose: a workflow-level
+    # filter makes GitHub report the skipped jobs as "pending" rather than
+    # "skipped", which blocks a merge whenever branch protection names them.
+    # This workflow has no branch protection today (verified 2026-09-26), but
+    # the shape is kept correct so adding protection later does not immediately
+    # wedge every docs-only PR.
+    name: Classify changed paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      validate: ${{ steps.filter-subtract.outputs.validate }}
+      wasm: ${{ steps.filter-allow.outputs.wasm }}
+      pbi: ${{ steps.filter-allow.outputs.pbi }}
+      build: ${{ steps.filter-allow.outputs.build }}
+      bench: ${{ steps.filter-allow.outputs.bench }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      # Fail-closed subtraction: start from "every file" and subtract an
+      # explicit docs list. The alternative — allowlisting the inputs each job
+      # is known to read — silently skips validation for anything added later
+      # (a new top-level directory, a new file extension), and that failure is
+      # invisible: the workflow stays green.
+      #
+      # `every` is load-bearing. dorny/paths-filter builds one matcher per
+      # pattern and combines them with the configured quantifier, so with the
+      # default `some` the leading '**' would match every file on its own and
+      # the negations would subtract nothing. `every` turns the list into
+      # "matches '**' AND NOT docs".
+      - id: filter-subtract
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.3
+        with:
+          predicate-quantifier: every
+          filters: |
+            validate:
+              - '**'
+              - '!**/*.md'
+              - '!docs/**'
+              - '!LICENSE'
+
+      # Per-job input allowlists. These want `some` (the default), so they
+      # cannot live in the step above: `predicate-quantifier` is a step input,
+      # not a workflow-wide one.
+      - id: filter-allow
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.3
+        with:
+          filters: |
+            # Rust sources, the crate manifest that owns the crate list, the
+            # script that reads it, and the shared CI config.
+            wasm:
+              - 'wasm/**'
+              - 'scripts/wasm-crates.mjs'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
+              - '.github/actions/**'
+            # The DoD checker and the PBIs it reads.
+            pbi:
+              - 'pbi/**'
+              - 'scripts/check-pbi-dod.js'
+              - '.github/workflows/**'
+              - '.github/actions/**'
+            # Inputs to `npm run build`. Kept a strict subset of validate's
+            # inputs so an artifact is never produced for a change that did not
+            # pass lint / type-check / tests.
+            build:
+              - 'src/**'
+              - 'entrypoints/**'
+              - 'public/**'
+              - 'wasm/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'wxt.config.ts'
+              - '.github/workflows/**'
+              - '.github/actions/**'
+            # Byte-identical to the step-level filter bench-check used before
+            # the classification, so its trigger condition is unchanged.
+            bench:
+              - 'bench/**'
+              - 'src/**'
+              - 'entrypoints/**'
+              - 'wasm/**/*.rs'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'wxt.config.ts'
+
   validate:
+    needs: changes
+    if: ${{ needs.changes.outputs.validate == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -78,6 +168,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   wasm-test:
+    needs: changes
+    if: ${{ needs.changes.outputs.wasm == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -166,6 +258,8 @@ jobs:
           if-no-files-found: ignore
 
   dod-check:
+    needs: changes
+    if: ${{ needs.changes.outputs.pbi == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -179,9 +273,13 @@ jobs:
         run: node scripts/check-pbi-dod.js
 
   build:
+    needs: [changes, validate]
+    # `!cancelled()` is required, not decorative: without a status function in
+    # the expression GitHub skips the job before the `if` is evaluated, so a
+    # skipped validate would silently decide build's fate.
+    if: ${{ !cancelled() && needs.changes.outputs.build == 'true' && needs.validate.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: validate
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -202,32 +300,18 @@ jobs:
   bench-check:
     # PERFORMANCE_GUIDE / bench/README が約束する regression ゲート
     # (bench:check は決定論的カウンタのみを見るため共有ランナーでも安定)。
-    # コードに無関係な変更 (docs のみ等) では paths-filter が false を返し、
-    # 後続ステップはスキップされて即成功する。
+    # docs だけの変更では `bench` 分類が false を返し、ジョブ全体がスキップされる。
+    needs: changes
+    if: ${{ needs.changes.outputs.bench == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
-      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.3
-        id: changes
-        with:
-          filters: |
-            code:
-              - 'bench/**'
-              - 'src/**'
-              - 'entrypoints/**'
-              - 'wasm/**/*.rs'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'wxt.config.ts'
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        if: steps.changes.outputs.code == 'true'
         with:
           node-version: '24'
           cache: 'npm'
       - name: Install dependencies
-        if: steps.changes.outputs.code == 'true'
         run: npm ci
       - name: Micro benchmark regression check
-        if: steps.changes.outputs.code == 'true'
         run: npm run bench:check
