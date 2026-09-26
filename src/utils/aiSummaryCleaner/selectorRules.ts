@@ -59,6 +59,96 @@ export interface SelectorRuleDef {
 /** Built pattern selectors, cached per row so repeated cleanses never rebuild strings. */
 const patternSelectorCache = new WeakMap<SelectorRuleDef, string>();
 
+/**
+ * jsdom 30.1.1 bundles @asamuzakjp/dom-selector 9.x, which throws a RangeError
+ * for any single querySelectorAll call whose selector exceeds its own
+ * MAX_LENGTH (2048). Chrome has no such limit, so rows whose built pattern
+ * selectors grow past ~2000 chars would keep breaking the jsdom test
+ * environment as patterns are added. 2000 leaves a safety margin below 2048.
+ */
+export const SELECTOR_CHUNK_LENGTH = 2000;
+
+/**
+ * Splits a comma-separated selector list at top-level commas only: commas
+ * inside quotes or brackets/parens (e.g. `[class*="a,b"]`, `:is(a, b)`) or
+ * after a backslash are literal and never become split points.
+ */
+export function splitSelectorList(selector: string): string[] {
+    const tokens: string[] = [];
+    let depth = 0;
+    let quote: string | null = null;
+    let start = 0;
+    for (let i = 0; i < selector.length; i++) {
+        const ch = selector[i];
+        if (quote !== null) {
+            if (ch === '\\') {
+                i++;
+            } else if (ch === quote) {
+                quote = null;
+            }
+            continue;
+        }
+        if (ch === '\\') {
+            i++;
+            continue;
+        }
+        if (ch === '"' || ch === "'") {
+            quote = ch;
+            continue;
+        }
+        if (ch === '(' || ch === '[') {
+            depth++;
+            continue;
+        }
+        if (ch === ')' || ch === ']') {
+            depth = Math.max(0, depth - 1);
+            continue;
+        }
+        if (ch === ',' && depth === 0) {
+            const part = selector.slice(start, i).trim();
+            if (part !== '') {
+                tokens.push(part);
+            }
+            start = i + 1;
+        }
+    }
+    const last = selector.slice(start).trim();
+    if (last !== '') {
+        tokens.push(last);
+    }
+    return tokens;
+}
+
+/**
+ * Packs selector tokens into chunks of at most SELECTOR_CHUNK_LENGTH
+ * characters. Splitting is semantics-preserving: matching a comma-separated
+ * list equals the union of matching each selector, and stripBySelectors'
+ * counted Set absorbs duplicates across chunks. A single token longer than
+ * the cap becomes its own chunk — it cannot be split without changing
+ * semantics, so it is passed through unchanged.
+ */
+export function chunkSelector(selector: string): string[] {
+    if (selector.length <= SELECTOR_CHUNK_LENGTH) {
+        return [selector];
+    }
+    const chunks: string[] = [];
+    let current = '';
+    for (const token of splitSelectorList(selector)) {
+        if (current === '') {
+            current = token;
+        } else if (current.length + 2 + token.length <= SELECTOR_CHUNK_LENGTH) {
+            current = `${current}, ${token}`;
+        } else {
+            chunks.push(current);
+            current = token;
+        }
+    }
+    if (current !== '') {
+        chunks.push(current);
+    }
+    return chunks;
+}
+
 function patternSelectorFor(def: SelectorRuleDef, extraPatterns?: string[]): string {
     if (extraPatterns !== undefined && extraPatterns.length > 0) {
         return buildClassIdSelectors([...(def.patterns ?? []), ...extraPatterns]);
@@ -86,16 +176,18 @@ export function stripBySelectors(root: Element, def: SelectorRuleDef, extraPatte
         if (selector === '') {
             return;
         }
-        root.querySelectorAll(selector).forEach((elem) => {
-            if (counted.has(elem)) {
-                return;
-            }
-            if (predicate !== undefined && !predicate(elem)) {
-                return;
-            }
-            collected.push(elem);
-            counted.add(elem);
-        });
+        for (const chunk of chunkSelector(selector)) {
+            root.querySelectorAll(chunk).forEach((elem) => {
+                if (counted.has(elem)) {
+                    return;
+                }
+                if (predicate !== undefined && !predicate(elem)) {
+                    return;
+                }
+                collected.push(elem);
+                counted.add(elem);
+            });
+        }
     };
 
     collect(patternSelectorFor(def, extraPatterns), def.predicate);
