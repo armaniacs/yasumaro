@@ -106,6 +106,16 @@
 *   **Protocol/Port**: デフォルト (`https`, `27124`) のままで通常はOKです。
 *   **Daily Note Path**: デイリーノートが保存されているフォルダパスを指定します（例: `092.Daily` や `Journal`）。日付ファイル（`YYYY-MM-DD.md`）がこのフォルダ直下に作成/追記されます。年月フォルダで管理している場合は `raw/YYYY-MM` のように `YYYY`/`MM`/`DD` プレースホルダーを使うと、記録時点の年月日に自動置換されるため毎月の手動更新が不要になります。
 
+> **接続テストが「接続できない」と表示するとき（自己署名証明書 / Firefox）**
+>
+> Local REST API は既定で HTTPS（自己署名証明書）を使うため、証明書を信頼していないと接続は失敗します。接続テストの失敗表示に **「ここをクリックして自己署名証明書を承認」** というリンクが出たら、リンク先に開かれる URL（設定中の Obsidian Host と Port）を新しいタブで開き、証明書の例外を追加してください。
+>
+> **Firefox を利用している場合**: Firefox は OS とは別の証明書ストアを使うため、OS に証明書を登録しても Firefox からは信頼されないことがあります。次のどちらかを実施してください。
+> 1. 上のリンクの URL を新しいタブで開き、証明書の例外を追加する
+> 2. 設定 → プライバシーとセキュリティ → 証明書 から CA 証明書をインポートする
+>
+> リンクが一切表示されない場合は、接続先の指定自体が違う可能性があります。設定画面の **Obsidian Host** と **Port** を確認してください。HTTP はループバックアドレス（`127.0.0.1` / `localhost`）にのみ許可されるため、リモートのホストには HTTPS が必要です。
+
 #### 2. AIプロバイダー設定
 「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。設定画面には「OpenAI Compatible」「OpenAI Compatible 2」の2つの入力スロットがあり、Priority（Failover Order）リストはフォールバック順序を定めるものです（内部的には最大10スロットまで保持でき、画面には3行表示されます）。
 
@@ -383,6 +393,16 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. For th
 #### 1. Obsidian Settings
 *   **Obsidian API Key**: Paste the key from Step 1.
 *   **Daily Note Path**: Enter the folder path where your daily notes are stored (e.g., `092.Daily`). If you organize notes into monthly subfolders, you can use `YYYY`/`MM`/`DD` placeholders, e.g. `raw/YYYY-MM`, which are automatically replaced with the current date so you never need to update the path manually.
+
+> **When the connection test reports that it cannot connect (self-signed certificate / Firefox)**
+>
+> The Local REST API uses HTTPS with a self-signed certificate by default, so the connection fails until the certificate is trusted. When a failed test shows a **"Click here to accept self-signed certificate"** link, open the URL it points at (your configured Obsidian Host and Port) in a new tab and add the certificate exception.
+>
+> **If you use Firefox**: Firefox keeps its own certificate store, separate from the OS one, so a certificate installed on the operating system can still be untrusted in Firefox. Do one of the following:
+> 1. Open the link's URL in a new tab and add a certificate exception
+> 2. Import the CA certificate under Settings → Privacy & Security → Certificates
+>
+> If no link is shown at all, the endpoint itself is probably misconfigured — check **Obsidian Host** and **Port** in the settings. Plain HTTP is allowed on loopback addresses only (`127.0.0.1` / `localhost`), so a remote host requires HTTPS.
 
 #### 2. AI Provider Settings
 Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers. The settings screen has two input slots ("OpenAI Compatible" and "OpenAI Compatible 2"), and the Priority (Failover Order) list defines the fallback order (up to 10 slots are kept internally; the screen shows 3 rows).
