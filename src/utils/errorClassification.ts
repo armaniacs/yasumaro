@@ -6,7 +6,7 @@
  */
 
 import { maskSensitiveData } from './sensitiveDataMask.js';
-import { type FailureKindValue } from './failureTaxonomy.js';
+import { resolveFailure, type FailureKindValue } from './failureTaxonomy.js';
 
 // ─── Error types ───────────────────────────────────────────────────────
 
@@ -54,19 +54,16 @@ function hasSource(error: unknown): error is { source: string } {
  * rejection, and mapping it to DOMAIN_BLOCKED or VALIDATION would change the
  * sentence a user already sees (errorGeneric).
  *
- * This table is **not consulted by `classifyError()`**. It is the declared
- * target vocabulary for the wording fix filed as a follow-up, kept here so the
- * intended end state is recorded next to the kinds it describes.
+ * `classifyError()` consults this table through `resolveFailure()`: a carrier
+ * with a structured kind is classified by the kind, so an Obsidian 401/403
+ * displays `errorAuth`, a 429 `errorRateLimit`, and a 404 or 5xx `errorServer`
+ * (PBI 2026-09-25-32 wired the table into the display path). All four i18n
+ * keys already existed, so no new wording is introduced — only the routing.
  *
- * Why `classifyError()` keeps its message-based path: before the taxonomy, the
- * network check ran FIRST, so every Obsidian HTTP failure — 401/403, 404, 429
- * and 5xx alike — reached it through the word "connection" and displayed
- * `errorNetwork`; the auth / not-found / rate-limit branches below were
- * unreachable for that message. Which key a failure displayed therefore
- * depended on message text that `kind` now abstracts away, and no static
- * kind→ErrorType table can reproduce it. Routing display through `kind` would
- * silently re-word four messages, so the two concerns are kept apart: `kind`
- * drives the retry decision, and display is untouched.
+ * Carriers without a structured kind keep the message-based classification
+ * below: their sentences were the only signal available before the taxonomy,
+ * and hand-built errors (e.g. bare `new Error('401 unauthorized')`) must keep
+ * classifying as they did.
  */
 export const FAILURE_KIND_TO_ERROR_TYPE: Readonly<Record<FailureKindValue, ErrorTypeValues>> = {
   network: ErrorType.NETWORK,
@@ -78,20 +75,31 @@ export const FAILURE_KIND_TO_ERROR_TYPE: Readonly<Record<FailureKindValue, Error
   csp: ErrorType.UNKNOWN,
 };
 
+/** Map a structured failure onto the display vocabulary; null when untagged. */
+function mapFailureToErrorType(failure: ReturnType<typeof resolveFailure>): ErrorTypeValues | null {
+  return failure ? FAILURE_KIND_TO_ERROR_TYPE[failure.kind] : null;
+}
+
 /**
  * エラーを分類する（統一版）。
  * errorMessages.ts の classifyError と errorUtils.ts の分類ロジックを統合。
  *
- * 表示文言はこの関数の責務であり、構造化 kind の導入とは分離している。kind は
- * `retryPolicy` などの retry 判断が使う。表示経路を kind に寄せると、Obsidian の
- * 401/403・404・429・5xx がすべて別の文面へ変わってしまうため、ここは
- * message ベースの判定を意図的に維持する（理由と移行先は上の表のコメント）。
+ * 構造化 kind（src/utils/failureTaxonomy.ts）を持つ carrier は
+ * FAILURE_KIND_TO_ERROR_TYPE 経由で kind 起点に分類する。Obsidian の
+ * 401/403 は errorAuth、429 は errorRateLimit、404 と 5xx は errorServer を
+ * 表示する（PBI 2026-09-25-32）。kind を持たない carrier は message ベースの
+ * 従来判定を維持する（上の表のコメント参照）。
  *
  * @param error - 発生したエラー
  * @returns エラータイプ
  */
 export function classifyError(error: unknown): ErrorTypeValues {
   if (!error) return ErrorType.UNKNOWN;
+
+  // Structured kind wins over every heuristic: the tag is the sanitized,
+  // message-independent signal (see FAILURE_KIND_TO_ERROR_TYPE above).
+  const taggedType = mapFailureToErrorType(resolveFailure(error));
+  if (taggedType !== null) return taggedType;
 
   // Popup の source ベース分類を優先
   if (hasSource(error)) {
@@ -109,9 +117,6 @@ export function classifyError(error: unknown): ErrorTypeValues {
     }
   }
 
-  // NOTE: `resolveFailure()` is deliberately NOT consulted here. See the comment
-  // on FAILURE_KIND_TO_ERROR_TYPE: the kind is for the retry decision, and
-  // routing display through it would re-word four Obsidian messages.
   const err = error instanceof Error ? error : null;
   const errorLike = !err && isErrorLike(error) ? error : null;
   const message = (err?.message ?? (errorLike ? String(errorLike.message) : '')).toLowerCase();
