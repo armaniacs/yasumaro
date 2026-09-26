@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { createReviewSummaryGenerator } from '../reviewSummaryGenerator.js';
 
 describe('VULN-002: TOCTOU race in review summary generation', () => {
@@ -18,6 +19,7 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        useTimerClock();
         storageState = {
             review_summary_enabled: true,
             review_summary_last_generated_week: '',
@@ -52,7 +54,7 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
         let aiCallCount = 0;
         mockAiService.generateSummary.mockImplementation(async () => {
             aiCallCount++;
-            await new Promise((r) => setTimeout(r, 50));
+            await vi.advanceTimersByTimeAsync(50);
             return { success: true, summary: `digest ${aiCallCount}` };
         });
 
@@ -85,7 +87,7 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
         let aiCallCount = 0;
         mockAiService.generateSummary.mockImplementation(async () => {
             aiCallCount++;
-            await new Promise((r) => setTimeout(r, 50));
+            await vi.advanceTimersByTimeAsync(50);
             return { success: true, summary: `digest ${aiCallCount}` };
         });
 

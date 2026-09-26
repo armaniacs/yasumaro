@@ -9,6 +9,7 @@
  * - E2Eフック
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 import { PageState } from '../pageState.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 
@@ -790,7 +791,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     for (const h of scrollHandlers) { try { h(fakeTrusted); } catch {} }
     const fakeUntrusted = { isTrusted: false } as unknown as Event;
     for (const h of scrollHandlers) { try { h(fakeUntrusted); } catch {} }
-    await new Promise(r => setTimeout(r, 30));
+    await drainMacrotask();
     document.documentElement.removeAttribute('data-ow-e2e-test');
     document.documentElement.removeAttribute('data-ow-test-state');
     stopPeriodicCheck();

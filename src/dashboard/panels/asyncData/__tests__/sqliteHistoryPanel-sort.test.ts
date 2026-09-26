@@ -29,6 +29,7 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
 
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
 import { SQLITE_HISTORY_IDS } from '../sqliteHistoryPanelView.js';
+import type { PersistScheduler } from '../sqliteHistoryModel.js';
 import * as db from '../../../dashboardSqliteService.js';
 import type { PanelLifecycle } from '../../types.js';
 
@@ -36,6 +37,25 @@ const mockedDb = db as unknown as {
   queryLogs: ReturnType<typeof vi.fn>;
   searchLogs: ReturnType<typeof vi.fn>;
 };
+
+// Runs the debounced persist on the microtask queue, so the panel-level test
+// can assert the write without spending the production 500ms debounce.
+function createImmediatePersistScheduler(): PersistScheduler {
+  let queued: (() => void) | null = null;
+  return {
+    defer(fn: () => void): void {
+      queued = fn;
+      queueMicrotask(() => {
+        const run = queued;
+        queued = null;
+        run?.();
+      });
+    },
+    cancel(): void {
+      queued = null;
+    },
+  };
+}
 
 function makeRow(id: number, tags: string): object {
   return {
@@ -47,8 +67,8 @@ function makeRow(id: number, tags: string): object {
   };
 }
 
-function makePanel(container: HTMLElement): PanelLifecycle {
-  const panel = createSqliteHistoryPanel();
+function makePanel(container: HTMLElement, deps = {}): PanelLifecycle {
+  const panel = createSqliteHistoryPanel({ scheduler: createImmediatePersistScheduler(), ...deps });
   panel.mount(container);
   return panel;
 }
@@ -119,13 +139,13 @@ describe('createSqliteHistoryPanel — sort control', () => {
     const select = document.getElementById(SQLITE_HISTORY_IDS.sortSelect) as HTMLSelectElement;
     select.value = 'created_at:ASC';
     select.dispatchEvent(new Event('change'));
-    // PBI 17: persist goes through the production 500ms debounce scheduler —
-    // wait for the debounced write instead of microtask flushing.
+    // The debounce is injected as a microtask scheduler, so the assertion is
+    // reached as soon as the coalesced write runs.
     await vi.waitFor(() => {
       expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({ history_sort_preference: JSON.stringify({ sortBy: 'created_at', sortDir: 'ASC' }) })
       );
-    }, { timeout: 1500, interval: 50 });
+    }, { interval: 1 });
   });
 
   it('does not show relevance while a tag filter is active without a fallback search', async () => {

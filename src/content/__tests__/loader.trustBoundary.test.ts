@@ -38,6 +38,10 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
     globalThis.document = dom.window.document as any;
     if (options.e2eTest) dom.window.document.documentElement.setAttribute('data-ow-e2e-test', 'true');
     await import(LOADER_PATH);
+    // The loader resolves its admission flow through a dynamic import whose
+    // completion has no observable signal, and one macrotask turn is not enough
+    // for the whole chain. Known exception; see the ADR's exemption list.
+    // eslint-disable-next-line local/no-test-sleep -- dynamic import has no completion signal
     await new Promise((r) => setTimeout(r, 50));
   }
 
@@ -73,8 +77,12 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
       setStorageData({});
       sendMessageSpy.mockRejectedValue(new Error('SW not ready'));
       await importLoader('https://example.com/page', { e2eTest: true });
-      // allow retry backoff (200+400+600) within the helper's 50ms? loader does retries sequentially,
-      // the helper waits 50ms after import, then we need extra time
+      // The admission ladder sleeps 200/400/600ms between its three attempts.
+      // This file mocks Date.now to a fixed epoch, so pairing that with a fake
+      // clock leaves the loader's deadlines an epoch apart and advancing the
+      // clock stops terminating once the machine is loaded. Known exception;
+      // see the ADR's exemption list.
+      // eslint-disable-next-line local/no-test-sleep -- real retry ladder, fake clock deadlocks under load
       await new Promise((r) => setTimeout(r, 1500));
       expect(sendMessageSpy).toHaveBeenCalledTimes(3);
       expect(getURLSpy).not.toHaveBeenCalled();
@@ -156,6 +164,9 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
       globalThis.window = { location: { href: 'https://example.com/normal' }, document: dom.window.document } as any;
       globalThis.document = dom.window.document as any;
       await import(LOADER_PATH);
+      // Same exemption as importLoader: the normal-branch import has no
+      // observable completion signal.
+      // eslint-disable-next-line local/no-test-sleep -- dynamic import has no completion signal
       await new Promise((r) => setTimeout(r, 50));
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
     });

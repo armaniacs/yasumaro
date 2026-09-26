@@ -25,7 +25,8 @@ import { PreviewFlow, type PreviewSaveResult, type SaveRecordResult } from './pr
  */
 export type RecordSessionState = 'idle' | 'running' | 'awaiting-force' | 'showing-result';
 
-const RESULT_STATE_MS = 2000;
+/** How long the result state stays on the button before it resets. */
+export const RESULT_STATE_MS = 2000;
 
 /**
  * Settlement outcome. private-page / cancelled are fully settled inside

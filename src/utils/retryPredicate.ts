@@ -77,6 +77,17 @@ export function isRetryableStatus(status: number, retryableStatusCodes: readonly
   return retryableStatusCodes.includes(status);
 }
 
+/**
+ * Injection seam so retry tests do not have to spend real wall time sleeping.
+ *
+ * Consumed by `ObsidianClientOptions.sleep`, which is the single place a retry
+ * wait is injected. `waitForRetry` deliberately takes no seam: adding one gave
+ * the module a second, unreachable injection surface (nothing ever passed it),
+ * which read as though tests injected at this level when they inject one layer
+ * up.
+ */
+export type SleepFn = (ms: number) => Promise<void>;
+
 export async function waitForRetry(delayMs: number): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 }

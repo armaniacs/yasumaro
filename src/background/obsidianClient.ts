@@ -11,7 +11,8 @@ import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js'
 import {
     isRetryableNetworkError,
     isRetryableStatus,
-    waitForRetry
+    waitForRetry,
+    type SleepFn
 } from '../utils/retryPredicate.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import {
@@ -79,18 +80,22 @@ export interface ObsidianConnectionResult {
 
 export interface ObsidianClientOptions {
     mutex?: Mutex;
+    sleep?: SleepFn;
 }
 
 export class ObsidianClient {
     private mutex: Mutex;
+    private sleep: SleepFn;
 
     /**
      * コンストラクタ
      * @param {Object} options - オプション設定
      * @param {Mutex} options.mutex - カスタムMutexインスタンス（テスト用途）
+     * @param {SleepFn} options.sleep - リトライ待機を差し替える関数（テスト用途）
      */
     constructor(options: ObsidianClientOptions = {}) {
         this.mutex = options.mutex || globalWriteMutex;
+        this.sleep = options.sleep ?? ((ms) => waitForRetry(ms));
     }
 
     /**
@@ -263,7 +268,7 @@ export class ObsidianClient {
                 }
             }
 
-            await waitForRetry(backoffDelayMs(attempt, { baseMs: initialDelayMs, multiplier: backoffMultiplier }));
+            await this.sleep(backoffDelayMs(attempt, { baseMs: initialDelayMs, multiplier: backoffMultiplier }));
         }
 
         throw new Error('Connection test retry attempts exhausted');

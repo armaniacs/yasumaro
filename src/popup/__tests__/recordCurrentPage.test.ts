@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
 type MutableLastError = { lastError: chrome.runtime.LastError | null };
@@ -263,6 +264,7 @@ import { showError } from '../errorUtils.js';
 import { showSpinner } from '../spinner.js';
 import { checkPageStatus } from '../statusChecker.js';
 import { showPreview } from '../sanitizePreview.js';
+import { RESULT_STATE_MS } from '../recordCurrentPage/recordSession.js';
 
 // getURL must return a valid URL for new URL() in loadCurrentTab
 vi.spyOn(chrome.runtime, 'getURL').mockImplementation((path: string) =>
@@ -520,25 +522,30 @@ describe('recordCurrentPage', () => {
     });
 
     it('preserves Record Anyway state after result-state reset when domain is blocked', async () => {
-        (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
-            domainFilter: { allowed: false },
-        });
-        // Persistent (not once): the reset path re-reads the tab through the
-        // shared statusStore seam after the timeout (PBI 2026-09-23-14).
-        (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValue({
-            id: 1,
-            url: 'https://blocked.com',
-            title: 'Blocked',
-        });
-        const btn = document.getElementById('recordBtn') as HTMLButtonElement;
+        // The reset is a 2s timer; driving the clock keeps this off the wall clock.
+        useTimerClock();
+        try {
+            (checkPageStatus as ReturnType<typeof vi.fn>).mockResolvedValue({
+                domainFilter: { allowed: false },
+            });
+            // Persistent (not once): the reset path re-reads the tab through the
+            // shared statusStore seam after the timeout (PBI 2026-09-23-14).
+            (getCurrentTab as ReturnType<typeof vi.fn>).mockResolvedValue({
+                id: 1,
+                url: 'https://blocked.com',
+                title: 'Blocked',
+            });
+            const btn = document.getElementById('recordBtn') as HTMLButtonElement;
 
-        await recordCurrentPage();
-        expect(btn.textContent).toBe('recordNowDone');
+            await recordCurrentPage();
+            expect(btn.textContent).toBe('recordNowDone');
 
-        // Wait for the result-state timeout to expire and reset the button
-        await new Promise(resolve => setTimeout(resolve, 2100));
+            await vi.advanceTimersByTimeAsync(RESULT_STATE_MS);
 
-        expect(btn.textContent).toBe('forceRecordAnyway');
-        expect(btn.disabled).toBe(false);
+            expect(btn.textContent).toBe('forceRecordAnyway');
+            expect(btn.disabled).toBe(false);
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });

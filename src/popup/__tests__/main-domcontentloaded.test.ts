@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 // Hoisted mock for logger
 const { logErrorMock } = vi.hoisted(() => ({ logErrorMock: vi.fn() }));
@@ -114,9 +115,10 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        await new Promise(r => setTimeout(r, 50));
-
-        expect(initStatusPanelMock).toHaveBeenCalled();
+        await vi.waitFor(
+            () => expect(initStatusPanelMock).toHaveBeenCalled(),
+            { interval: 1 }
+        );
         expect(initAllUrlsPermissionBannerMock).toHaveBeenCalled();
         expect(chrome.tabs.query).toHaveBeenCalled();
     });
@@ -126,12 +128,13 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        await new Promise(r => setTimeout(r, 50));
-
-        expect(logErrorMock).toHaveBeenCalledWith(
+        await vi.waitFor(
+            () => expect(logErrorMock).toHaveBeenCalledWith(
             expect.stringContaining('Failed to load current tab or init status panel'),
             expect.anything(),
             'INTERNAL_ERROR'
+        ),
+            { interval: 1 }
         );
     });
 
@@ -140,12 +143,13 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockRejectedValue(new Error('banner fail'));
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        await new Promise(r => setTimeout(r, 50));
-
-        expect(logErrorMock).toHaveBeenCalledWith(
+        await vi.waitFor(
+            () => expect(logErrorMock).toHaveBeenCalledWith(
             expect.stringContaining('Failed to init all-urls permission banner'),
             expect.anything(),
             'INTERNAL_ERROR'
+        ),
+            { interval: 1 }
         );
     });
 
@@ -154,9 +158,10 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        await new Promise(r => setTimeout(r, 50));
-
-        expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 123 });
+        await vi.waitFor(
+            () => expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 123 }),
+            { interval: 1 }
+        );
     });
 
     it('does not set badge text when tab has no id', async () => {
@@ -169,8 +174,7 @@ describe('main.ts DOMContentLoaded', () => {
         });
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        await new Promise(r => setTimeout(r, 50));
-
+        await drainMacrotask();
         expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
 
@@ -184,8 +188,7 @@ describe('main.ts DOMContentLoaded', () => {
         });
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
-        await new Promise(r => setTimeout(r, 50));
-
+        await drainMacrotask();
         expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
 });

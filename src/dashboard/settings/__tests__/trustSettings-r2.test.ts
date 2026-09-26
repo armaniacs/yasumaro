@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
 
 const mockInitialize = vi.fn(() => Promise.resolve());
 const mockGetDatabase = vi.fn(() => ({
@@ -362,9 +363,10 @@ describe('trustSettings - r2 missed branches', () => {
       input.value = 'gambling.com';
 
       document.getElementById('sensitiveAddBtn')!.click();
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockAddSensitiveDomain).toHaveBeenCalledWith('gambling.com', 'gaming');
+      await vi.waitFor(
+          () => expect(mockAddSensitiveDomain).toHaveBeenCalledWith('gambling.com', 'gaming'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -377,8 +379,10 @@ describe('trustSettings - r2 missed branches', () => {
       const removeBtn = document.querySelector('#sensitiveList .domain-tag-remove') as HTMLButtonElement;
       removeBtn.click();
 
-      await new Promise((r) => setTimeout(r, 10));
-      expect(mockRemoveSensitiveDomain).toHaveBeenCalledWith('bank.com');
+      await vi.waitFor(
+          () => expect(mockRemoveSensitiveDomain).toHaveBeenCalledWith('bank.com'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -408,8 +412,10 @@ describe('trustSettings - r2 missed branches', () => {
       const removeBtn = document.querySelector('#whitelist .domain-tag-remove') as HTMLButtonElement;
       removeBtn.click();
 
-      await new Promise((r) => setTimeout(r, 10));
-      expect(mockRemoveFromWhitelist).toHaveBeenCalledWith('safe.com');
+      await vi.waitFor(
+          () => expect(mockRemoveFromWhitelist).toHaveBeenCalledWith('safe.com'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -423,13 +429,14 @@ describe('trustSettings - r2 missed branches', () => {
       init();
 
       document.getElementById('saveTrustSettings')!.click();
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(mockSaveAlertSettings).toHaveBeenCalledWith({
+      await vi.waitFor(
+          () => expect(mockSaveAlertSettings).toHaveBeenCalledWith({
         alertFinance: false,
         alertSensitive: false,
         alertUnverified: false,
-      });
+      }),
+          { interval: 1 }
+      );
     });
   });
 
@@ -471,9 +478,10 @@ describe('trustSettings - r2 missed branches', () => {
 
       const gamingTab = document.querySelector('[data-category="gaming"]') as HTMLButtonElement;
       gamingTab.click();
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(gamingTab.classList.contains('active')).toBe(true);
+      await vi.waitFor(
+          () => expect(gamingTab.classList.contains('active')).toBe(true),
+          { interval: 1 }
+      );
       expect(mockGetSensitiveDomains).toHaveBeenCalledWith('gaming');
     });
 
@@ -484,9 +492,10 @@ describe('trustSettings - r2 missed branches', () => {
 
       const snsTab = document.querySelector('[data-category="sns"]') as HTMLButtonElement;
       snsTab.click();
-      await new Promise((r) => setTimeout(r, 10));
-
-      expect(snsTab.classList.contains('active')).toBe(true);
+      await vi.waitFor(
+          () => expect(snsTab.classList.contains('active')).toBe(true),
+          { interval: 1 }
+      );
       expect(mockGetSensitiveDomains).toHaveBeenCalledWith('sns');
     });
   });
@@ -521,8 +530,7 @@ describe('trustSettings - r2 missed branches', () => {
       const input = document.getElementById('sensitiveAdd') as HTMLInputElement;
       input.value = 'test.com';
       input.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter', bubbles: true }));
-      await new Promise((r) => setTimeout(r, 10));
-
+      await drainMacrotask();
       expect(mockAddSensitiveDomain).not.toHaveBeenCalled();
     });
   });
@@ -567,8 +575,7 @@ describe('trustSettings - r2 missed branches', () => {
 
       const allowBtn = document.querySelector('.permission-suggest-allow') as HTMLButtonElement;
       allowBtn.click();
-      await new Promise((r) => setTimeout(r, 10));
-
+      await drainMacrotask();
       expect(mockRemoveDeniedDomain).not.toHaveBeenCalled();
     });
   });

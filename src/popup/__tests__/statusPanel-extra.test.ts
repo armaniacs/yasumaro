@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { waitForMock } from '../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
 type MutableLastError = { lastError: chrome.runtime.LastError | null };
@@ -1119,12 +1119,16 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     expect(btn).toBeTruthy();
     btn.click();
-    await waitForMock(() => expect(mockGetCurrentTab).toHaveBeenCalled());
+    // Wait for the outcome, not for the first step: the status text is written
+    // after the save resolves, so waiting on getCurrentTab returns too early
+    // and the assertion below becomes load-dependent.
+    await waitForMock(() => {
+      expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
+    });
     expect(mockExtractDomain).toHaveBeenCalledWith('https://example.com/page');
     expect(mockSetAll).toHaveBeenCalled();
     const savedArg = mockSetAll.mock.calls[0]![0];
     expect(savedArg.domain_whitelist).toContain('example.com');
-    expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
     expect(document.getElementById('mainStatus')!.className).toBe('success');
   });
 
@@ -1134,7 +1138,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: tab.url undefined — early return', async () => {
@@ -1143,7 +1148,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: getCurrentTab returns null — early return', async () => {
@@ -1152,7 +1158,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue(null as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: extractDomain returns null — early return', async () => {
@@ -1160,7 +1167,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: extractDomain returns empty string — early return', async () => {
@@ -1168,7 +1176,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addDomain: whitelist undefined falls back to []', async () => {
@@ -1225,7 +1234,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addPath: tab.url undefined — early return', async () => {
@@ -1234,7 +1244,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addPath: tab is null — early return', async () => {
@@ -1243,7 +1254,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue(null as any);
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).not.toHaveBeenCalled());
+    await drainMacrotask();
+    expect(mockSetAll).not.toHaveBeenCalled();
   });
 
   it('addPath: whitelist undefined fallback', async () => {

@@ -5,6 +5,7 @@
  */
 import { setHtmlLangAndDir } from '../../utils/i18n-dom.js';
 import { describe, it, expect, vi } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 // Setup chrome mock BEFORE importing popup
 vi.stubGlobal('chrome', {
@@ -186,7 +187,7 @@ describe('initPopup coverage', () => {
             { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await expect(initPopup()).resolves.not.toThrow();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
     });
 
     it('shows private page dialog when exactly one pending page exists', async () => {
@@ -196,8 +197,10 @@ describe('initPopup coverage', () => {
             { url: 'https://example.com', reason: 'cache-control', headerValue: 'Cache-Control: private' }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
-        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', 'Cache-Control: private');
+        await vi.waitFor(
+            () => expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', 'Cache-Control: private'),
+            { interval: 1 }
+        );
     });
 
     it('shows private page dialog with empty headerValue fallback', async () => {
@@ -207,8 +210,10 @@ describe('initPopup coverage', () => {
             { url: 'https://example.com', reason: 'cache-control', headerValue: undefined }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
-        expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', '');
+        await vi.waitFor(
+            () => expect(showPrivatePageDialog).toHaveBeenCalledWith('https://example.com', 'cache-control', ''),
+            { interval: 1 }
+        );
     });
 
     it('does not show dialog when no pending pages exist', async () => {
@@ -216,7 +221,7 @@ describe('initPopup coverage', () => {
         const { showPrivatePageDialog } = await import('../privatePageDialog.js');
         vi.mocked(getPendingPages).mockResolvedValue([]);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
     });
 
@@ -228,7 +233,7 @@ describe('initPopup coverage', () => {
             { url: 'https://example.org', reason: 'cache-control' }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
     });
 
@@ -245,7 +250,7 @@ describe('initPopup coverage', () => {
             { url: 'https://example.com', reason }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
         expect(showRecordingFailedDialog).toHaveBeenCalledWith('https://example.com', expect.any(String));
     });
@@ -263,7 +268,7 @@ describe('initPopup coverage', () => {
             { url: 'https://example.com', reason }
         ] as unknown as Awaited<ReturnType<typeof getPendingPages>>);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(showRecordingFailedDialog).not.toHaveBeenCalled();
         expect(showPrivatePageDialog).toHaveBeenCalled();
     });
@@ -304,7 +309,7 @@ describe('initPopup coverage', () => {
         const { getPendingPages } = await import('../../utils/pendingStorage.js');
         vi.mocked(getPendingPages).mockRejectedValue(new Error('fail'));
         await expect(initPopup()).resolves.not.toThrow();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
     });
 
     it('catches error in setHtmlLangAndDir (navigation init)', async () => {
@@ -324,8 +329,10 @@ describe('initPopup coverage', () => {
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
-        expect(initOnboardingWizard).toHaveBeenCalled();
+        await vi.waitFor(
+            () => expect(initOnboardingWizard).toHaveBeenCalled(),
+            { interval: 1 }
+        );
     });
 
     it('does not show onboarding wizard when not consented', async () => {
@@ -334,7 +341,7 @@ describe('initPopup coverage', () => {
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: false });
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(initOnboardingWizard).not.toHaveBeenCalled();
     });
 
@@ -344,7 +351,7 @@ describe('initPopup coverage', () => {
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
         vi.mocked(hasCompletedWizard).mockResolvedValue(true);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(initOnboardingWizard).not.toHaveBeenCalled();
     });
 
@@ -359,7 +366,7 @@ describe('initPopup coverage', () => {
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
 
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(initOnboardingWizard).not.toHaveBeenCalled();
 
         // Simulate the user accepting consent: getPrivacyConsent now resolves
@@ -369,9 +376,10 @@ describe('initPopup coverage', () => {
         const registeredListener = vi.mocked(subscribeConsentChanges).mock.calls.at(-1)?.[0];
         expect(registeredListener).toBeTypeOf('function');
         registeredListener?.();
-        await new Promise(r => setTimeout(r, 50));
-
-        expect(initOnboardingWizard).toHaveBeenCalled();
+        await vi.waitFor(
+            () => expect(initOnboardingWizard).toHaveBeenCalled(),
+            { interval: 1 }
+        );
     });
 
     it('shows onboarding wizard when the subscribed consent listener fires', async () => {
@@ -385,7 +393,7 @@ describe('initPopup coverage', () => {
         vi.mocked(hasCompletedWizard).mockResolvedValue(false);
 
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(initOnboardingWizard).not.toHaveBeenCalled();
 
         vi.mocked(getPrivacyConsent).mockResolvedValue({ hasConsented: true });
@@ -393,9 +401,10 @@ describe('initPopup coverage', () => {
         const registeredListener = vi.mocked(subscribeConsentChanges).mock.calls.at(-1)?.[0];
         expect(registeredListener).toBeTypeOf('function');
         registeredListener?.();
-        await new Promise(r => setTimeout(r, 50));
-
-        expect(initOnboardingWizard).toHaveBeenCalled();
+        await vi.waitFor(
+            () => expect(initOnboardingWizard).toHaveBeenCalled(),
+            { interval: 1 }
+        );
     });
 
     it('handles pending page with null entry (length 1 but page is null)', async () => {
@@ -405,7 +414,7 @@ describe('initPopup coverage', () => {
         vi.mocked(showRecordingFailedDialog).mockClear();
         vi.mocked(getPendingPages).mockResolvedValue([null as any]);
         await initPopup();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
         expect(showPrivatePageDialog).not.toHaveBeenCalled();
         expect(showRecordingFailedDialog).not.toHaveBeenCalled();
     });
@@ -414,7 +423,7 @@ describe('initPopup coverage', () => {
         const { getPrivacyConsent } = await import('../../utils/storage/privacyConsent.js');
         vi.mocked(getPrivacyConsent).mockRejectedValue(new Error('consent fail'));
         await expect(initPopup()).resolves.not.toThrow();
-        await new Promise(r => setTimeout(r, 50));
+        await drainMacrotask();
     });
 
     it('covers setHtmlLangAndDir with locale containing hyphen (PBI 2026-09-11-04)', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SessionStore, SESSION_KEYS, type SessionStorePort } from '../sessionStore.js';
+import { SessionStore, SESSION_KEYS, SESSION_STORE_FLUSH_DELAY_MS, type SessionStorePort } from '../sessionStore.js';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 describe('SessionStore', () => {
   let store: SessionStore;
@@ -75,8 +76,10 @@ describe('SessionStore', () => {
   // T6
   it('setTimeout-based flush should persist within FLUSH_DELAY', async () => {
     store.set('key1', 'value1');
-    await new Promise((r) => setTimeout(r, 100));
-    expect(mockSession.set).toHaveBeenCalledWith({ key1: 'value1' });
+    await vi.waitFor(
+        () => expect(mockSession.set).toHaveBeenCalledWith({ key1: 'value1' }),
+        { interval: 1 }
+    );
   });
 
   // T7
@@ -109,8 +112,10 @@ describe('SessionStore', () => {
     await store.flushNow();
     expect(mockSession.set).toHaveBeenCalledTimes(1);
     // retry is scheduled; wait for next timer
-    await new Promise((r) => setTimeout(r, 100));
-    expect(mockSession.set).toHaveBeenCalledTimes(2);
+    await vi.waitFor(
+        () => expect(mockSession.set).toHaveBeenCalledTimes(2),
+        { interval: 1 }
+    );
   });
 
   it('flush failure restores delete queue', async () => {
@@ -120,8 +125,10 @@ describe('SessionStore', () => {
     await store.flushNow();
     expect(mockSession.remove).toHaveBeenCalledTimes(1);
     // retry should call remove again
-    await new Promise((r) => setTimeout(r, 100));
-    expect(mockSession.remove).toHaveBeenCalledTimes(2);
+    await vi.waitFor(
+        () => expect(mockSession.remove).toHaveBeenCalledTimes(2),
+        { interval: 1 }
+    );
   });
 
   // T10
@@ -134,22 +141,35 @@ describe('SessionStore', () => {
 
   // T11
   it('quota exceeded should not retry and should keep data in memory', async () => {
-    mockSession.set.mockRejectedValueOnce(new Error('QUOTA_BYTES quota exceeded'));
-    store.set('key1', 'value1');
-    await store.flushNow();
-    expect(mockSession.set).toHaveBeenCalledTimes(1);
-    // Should not retry after quota error
-    await new Promise((r) => setTimeout(r, 100));
-    expect(mockSession.set).toHaveBeenCalledTimes(1);
+    // A retry is a setTimeout(FLUSH_DELAY) away, so a real-clock wait would be
+    // the only way to cross it — which is exactly what the wait policy forbids.
+    // Drive the clock instead: if the quota branch ever regressed into the
+    // retry branch, the 50ms timer below would fire and the count would be 2.
+    useTimerClock();
+    try {
+      mockSession.set.mockRejectedValueOnce(new Error('QUOTA_BYTES quota exceeded'));
+      store.set('key1', 'value1');
+      await store.flushNow();
+      expect(mockSession.set).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 2);
+      expect(mockSession.set).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('handles non-Error quota rejection', async () => {
-    mockSession.set.mockRejectedValueOnce('QUOTA_BYTES quota exceeded');
-    store.set('key1', 'value1');
-    await store.flushNow();
-    expect(mockSession.set).toHaveBeenCalledTimes(1);
-    await new Promise((r) => setTimeout(r, 100));
-    expect(mockSession.set).toHaveBeenCalledTimes(1);
+    useTimerClock();
+    try {
+      mockSession.set.mockRejectedValueOnce('QUOTA_BYTES quota exceeded');
+      store.set('key1', 'value1');
+      await store.flushNow();
+      expect(mockSession.set).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 2);
+      expect(mockSession.set).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // T12, T13

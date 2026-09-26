@@ -453,6 +453,7 @@ describe('PrivacyPipeline', () => {
       const mockCloudService = {
         getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
         generateSummary: vi.fn().mockImplementation(
+          // eslint-disable-next-line local/no-test-sleep -- the simulated AI latency IS the subject under test; no condition can express "took at least DELAY_MS"
           () => new Promise(resolve => setTimeout(() => resolve({ summary: 'Cloud summary' }), DELAY_MS))
         )
       } as any;
@@ -488,6 +489,7 @@ describe('PrivacyPipeline', () => {
       const mockLocalService = {
         getSupportedModes: vi.fn().mockReturnValue(['local_only']),
         generateSummary: vi.fn().mockImplementation(
+          // eslint-disable-next-line local/no-test-sleep -- the simulated AI latency IS the subject under test; no condition can express "took at least DELAY_MS"
           () => new Promise(resolve => setTimeout(() => resolve({ summary: 'Local summary' }), DELAY_MS))
         ),
       };
@@ -510,6 +512,7 @@ describe('PrivacyPipeline', () => {
       const mockCloudService = {
         getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
         generateSummary: vi.fn().mockImplementation(
+          // eslint-disable-next-line local/no-test-sleep -- the simulated AI latency IS the subject under test; no condition can express "took at least DELAY_MS"
           () => new Promise(resolve => setTimeout(() => resolve({ summary: 'Cloud summary' }), DELAY_MS))
         )
       } as any;

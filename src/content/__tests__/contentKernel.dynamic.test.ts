@@ -4,6 +4,7 @@
  * MutationObserver をモックして debounce 500ms の挙動を検証
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 describe('watchDynamicContent (30-13)', () => {
   let mockCallbacks: Array<() => void> = [];
@@ -160,8 +161,12 @@ describe('watchDynamicContent (30-13)', () => {
     const disconnect = watchDynamicContent(target, onChange, 50);
     const el = document.createElement('div');
     target.appendChild(el);
-    await new Promise((r) => setTimeout(r, 80));
-    expect(onChange).toHaveBeenCalledTimes(1);
+    // A MutationObserver notification is a microtask, and jsdom's delivery is
+    // not on any fixed boundary, so wait for the callback rather than yielding
+    // one macrotask turn.
+    await waitForMock(() => {
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
     disconnect();
     vi.useFakeTimers();
   });
