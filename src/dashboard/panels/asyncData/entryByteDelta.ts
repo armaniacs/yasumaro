@@ -7,7 +7,13 @@
  * legitimate 0-byte values, and one branch without a zero guard rendering
  * `Infinity%`/`NaN%` when `page_bytes` was 0. All of that policy lives here
  * once; the HTML builders become thin adapters.
+ *
+ * The byte *sizing* policy itself is not owned here: it belongs to
+ * `src/dashboard/byteFormat.ts` (PBI 2026-09-25-07), the dashboard-wide SSOT
+ * that replaced the three competing definitions.
  */
+
+import { formatBytes } from '../../byteFormat.js';
 
 export interface ByteDelta {
   /** Human-readable "X → Y" bytes label. */
@@ -19,16 +25,6 @@ export interface ByteDelta {
   /** Raw byte numbers, for callers that render the numbers themselves. */
   original: number;
   cleansed: number;
-}
-
-const KB = 1024;
-const MB = 1024 * 1024;
-
-/** Human-readable byte size (MB / KB / B — the single unit table). */
-export function formatBytes(b: number): string {
-  if (b >= MB) return `${(b / MB).toFixed(1)} MB`;
-  if (b >= KB) return `${(b / KB).toFixed(1)} KB`;
-  return `${b} B`;
 }
 
 /**

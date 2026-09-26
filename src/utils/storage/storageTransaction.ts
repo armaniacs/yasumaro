@@ -95,7 +95,12 @@ function canonicalStringify(value: unknown): string {
   });
 }
 
-function deepEqual(a: unknown, b: unknown): boolean {
+/**
+ * Canonical value equality (key-order independent). Exported because the
+ * settings migration re-reads a legacy key right before deleting it and must
+ * decide "did the value change" with the same semantics the CAS uses.
+ */
+export function deepEqual(a: unknown, b: unknown): boolean {
   return canonicalStringify(a) === canonicalStringify(b);
 }
 
@@ -112,6 +117,23 @@ const defaultPort = new ChromeStoragePort();
 export class StorageTransaction {
   constructor(private readonly port: StoragePort = defaultPort) {}
 
+  /**
+   * Serialized read-modify-write with versioned CAS + retry.
+   *
+   * Contract: `updateFn` MUST be pure and idempotent. On a write conflict
+   * (ConflictError) the whole read-modify-write cycle is retried, which
+   * re-invokes `updateFn` with the latest value — a non-idempotent updater
+   * (e.g. one that appends a generated id or increments a counter blindly)
+   * would apply its side effect twice. Keep updaters to pure functions of
+   * their input (e.g. `(cur) => [...(cur ?? []), item]` with a stable item).
+   *
+   * Note (deliberately unchanged): the pre-write value check inside
+   * `performCasUpdate` compares only primitive values (`typeof currentValue
+   * !== 'object'` skips the comparison for objects); object conflicts are
+   * detected by the version check, not by value equality. Do not "fix" this
+   * by switching the CAS to deep-equal without a reviewed design — the
+   * storage layer treats the version as the conflict signal.
+   */
   async withLock<T>(
     key: string,
     updateFn: (currentValue: T) => T,

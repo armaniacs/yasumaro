@@ -1,6 +1,10 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年9月8日 / Last Updated: September 8, 2026**
+**最終更新日: 2026年9月26日 / Last Updated: September 26, 2026**
+**同意バージョン: 2026年9月8日 / Consent Version: September 8, 2026**
+
+> 最終更新日は文書の改訂日です。全利用者に再同意を求める場合は「同意バージョン」を更新します。
+> The Last Updated date is the document's revision date. Re-prompting every user is driven by the Consent Version line instead.
 
 > **更新履歴 / Update History**:
 > - **2026年9月8日**: v6.8.0 - 閲覧履歴アーカイブ機能のデータフローと、ブラウザ内蔵 AI のデータ取り扱いについて追記
@@ -29,6 +33,7 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
    - 滞在時間
    - スクロール深度
    - ページ内容（AI要約生成用）
+   - 遷移記録（オプトイン時のみ）: 直前に開いていたページのURL、検索エンジンの検索語
 
 2. **構成データ**:
    - Obsidian API キー
@@ -142,7 +147,7 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 
 通常の使用では、APIキーは**自動的に暗号化されて保存**されます。マスターパスワードの設定は不要で、ユーザーの操作なくバックグラウンドでAES-GCMによる暗号化が適用されます。
 
- ただし、マスターパスワードが**未設定の場合**、暗号化に使用するキー自体は `chrome.storage.session` に保持されます。ブラウザの再起動後は session storage の内容が失われるため、暗号化キーが再生成され、保存済みのAPIキーを復号できなくなります。この場合、APIキーの再入力を促すフローが表示されます。
+  ただし、マスターパスワードが**未設定の場合**、暗号化キー自体は `chrome.storage.local` に平文で保持されます。Chrome 拡張機能のストレージは拡張機能ごとに分離されており、他の拡張機能から直接読み取ることはできませんが、この拡張機能内からはアクセス可能です。この状態では、暗号化は外部からの読み取りを防ぎますが、拡張機能自身の内部からのアクセスは防げません。
 
 **マスターパスワードを設定すると、暗号化キー自体をマスターパスワードから導出できるようになります。その結果、APIキーの復号にはマスターパスワードの入力が必要になります。**
 
@@ -150,6 +155,25 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 
 #### 自動コンテンツフェッチ（オプトイン方式）
 v4.2.1以降、以下の機能が追加されました：
+
+#### 遷移記録（オプトイン方式）
+「リサーチ・セッション」パネルで「どのページから、どの検索語で、どのページへたどったか」を見せるために使う、任意で有効にできる機能です。**既定は無効**で、有効にする=settings画面で確認ダイアログに同意した場合のみです。
+
+1. **保存する項目**（1件の記録につき2つ）:
+   - `nav_source_url`: 同じタブで直前に開いていたページのURL。URLのフラグメント（`#` 以降）は取り除いて保存します
+   - `search_query`: 流入元が検索エンジン（Google・Bing・DuckDuckGo・Yahoo! Japan・Yahoo!・Brave・Ecosia）の場合に限り、その検索語。个人信息（PII）マスクを通したうえで最大200文字に切ります
+
+2. **除外ドメインの扱い**: 流入元がドメイン除外リスト（`isDomainAllowed` が偽）に一致する場合、URL全体ではなく**オリジンのみ**を保存します。除外したサイトの閲覧歴を、遷移記録経由で持ち出さないためです。
+
+3. **保存先と配布先**: 値はブラウザ内の SQLite DB にのみ保存されます。**AIプロバイダーへの送信内容にも、Obsidian への Markdown にも、CSV / JSON エクスポートにも含まれません。**ただし、あなた自身が**暗号化されたcombined backup**をエクスポートした場合、そのバックアップは SQLite DB を丸ごと含むため、これらの値も一緒にバックアップファイルへ入ります。バックアップは通常の設定エクスポートとは別物で、`privacy_consent`（同意状態）は復元対象の許可リストに含まれないため、別端末で復元しても遷移記録は自動的に有効になりません。
+
+4. **同意の管理**:
+   - 有効化時: 設定画面の Privacy タブで確認ダイアログを出し、同意したときだけ有効になります
+   - 無効化時: 以後の記録には流入元・検索語が入りません。追跡中のタブ状態も破棄されます
+   - プライバシー同意そのものを撤回した場合、本機能は自動的に無効になります
+   - この同意記録は端末固有です。設定のエクスポートにもバックアップの復元にも含まれないため、別の端末で復元しても同意は引き継がれません
+
+5. **保存済みの値**: 記録済みの値は、履歴を削除すると同時に消えます。保持ポリシーによる自動削除でも取り除かれます。
 
 1. **"Record without AI" ボタン**: AI処理をスキップして直接Obsidianに記録
    - ダッシュボードからページ内容なしで記録を試みる場合に使用可能
@@ -226,6 +250,7 @@ Yasumaro ("the Extension") is committed to protecting your privacy. This policy 
 ### Data Collection
 The Extension collects the following data **locally on your device**:
 - Browsing history data (URLs, titles, duration, scroll depth, content)
+- Navigation trail data (previous page URL, search-engine search terms) — **only when you opt in**
 - Configuration data (API keys, connection settings)
 
 ### Storage
@@ -290,6 +315,25 @@ However, when no master password is set, the encryption key itself is stored in 
 
 #### Automatic Content Fetching (Opt-In)
 v4.2.1 introduces the following privacy features:
+
+#### Navigation Trail (Opt-In)
+An optional feature behind the "Research Sessions" panel, which shows which page you came from, which search term you used, and which page you ended on. **Off by default**; turning it on requires confirming a dialog in the settings panel.
+
+1. **What is stored** (two values per record):
+   - `nav_source_url`: the URL of the page previously open in the same tab, with the fragment (everything from `#`) removed
+   - `search_query`: only when the referrer is a search engine (Google, Bing, DuckDuckGo, Yahoo! Japan, Yahoo!, Brave, Ecosia) — the search term, passed through the PII sanitizer and truncated to 200 characters
+
+2. **Excluded domains**: when the referrer matches the domain exclusion list (`isDomainAllowed` returns false), only the **origin** is stored, not the full URL. Otherwise the trail would carry out the very history the exclusion removed.
+
+3. **Where it lives**: the values are stored only in the on-device SQLite database. They are **never included in what is sent to AI providers, in the Markdown written to Obsidian, or in CSV / JSON exports.** One boundary does carry them: the **encrypted combined backup** you export yourself contains the whole SQLite database, so the values travel inside that backup file. A backup is separate from the normal settings export, and the consent state (`privacy_consent`) is not in the restore allowlist — so restoring onto another device does not turn the trail on there.
+
+4. **Managing consent**:
+   - To enable: a confirmation dialog appears in the settings Privacy tab; the feature turns on only if you agree
+   - To disable: later records carry no referrer and no search term, and the tracked tab state is discarded
+   - Withdrawing privacy consent itself turns this feature off automatically
+   - The consent record is device-local. It is excluded from settings export and from backup restore, so restoring onto another device does not carry the authorization over
+
+5. **Already-stored values**: they disappear when the history is deleted, and are also removed by the automatic retention purge.
 
 1. **"Record without AI" Button**: Skip AI processing and record directly to Obsidian
    - Available when attempting manual recording without page content from the dashboard

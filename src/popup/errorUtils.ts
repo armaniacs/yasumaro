@@ -3,8 +3,12 @@
  * エラーハンドリング共通モジュール
  */
 
-// 単一ソース: ProviderRegistry の row（storage/types にのみ依存する純粋テーブル。AIClient を巻き込まない）
-import { tryResolveCatalogEntry } from '../background/ai/providerCatalog.js';
+// Single source for the provider display name: the neutral row table
+// (utils/storage/providerAllowlist, a storage/types-only module). Deliberately
+// NOT background/ai/providerCatalog — the catalog looks like a plain lookup
+// table, but it statically imports the provider strategies, so naming a
+// provider from here would pull background wiring into the popup bundle.
+import { tryResolveProviderDisplayMetadata } from '../utils/storage/providerAllowlist.js';
 
 // エラータイプの定義
 /**
@@ -369,7 +373,7 @@ export function formatSuccessMessage(
 
   if (aiDuration !== undefined && aiDuration > 0) {
     const aiTime = formatDuration(aiDuration);
-    const providerLabel = aiProvider ? (tryResolveCatalogEntry(aiProvider)?.label || aiProvider) : undefined;
+    const providerLabel = aiProvider ? (tryResolveProviderDisplayMetadata(aiProvider)?.label || aiProvider) : undefined;
     const aiLabel = providerLabel ? `AI: ${aiTime} (${providerLabel})` : `AI: ${aiTime}`;
     return `${baseMessage} (${totalTime} / ${aiLabel})`;
   }

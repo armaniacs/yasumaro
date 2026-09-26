@@ -12,7 +12,7 @@
 // eslint-disable-next-line local/require-sanitized-markdown -- test data with hardcoded markdown, not user input
 import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
 import { saveDashboardSettings } from '../settingsPipeline.js';
@@ -51,12 +51,12 @@ export function createConnectionStatusElement(label: string, result: { success: 
   statusDiv.className = 'diag-indent';
 
   const labelEl = document.createElement('strong');
-  labelEl.textContent = getMessage('connectionStatusLabel', { label }) || `${label}: `;
+  labelEl.textContent = getMessageWithSubstitutions('connectionStatusLabel', { label }, `${label}: `);
   statusDiv.appendChild(labelEl);
 
   const spanEl = document.createElement('span');
   if (result.success) {
-    spanEl.textContent = getMessage('connectionSuccess') || '接続成功';
+    spanEl.textContent = getMessageOr('connectionSuccess', '接続成功');
     spanEl.className = 'diag-success';
   } else {
     spanEl.textContent = result.message;
@@ -91,7 +91,7 @@ export async function testObsidianConnection(apiKey: string): Promise<{ success:
       : {}
   }) as { obsidian?: { success: boolean; message: string } };
 
-  return testResult?.obsidian || { success: false, message: getMessage('connectionNoResponse') || 'No response' };
+  return testResult?.obsidian || { success: false, message: getMessageOr('connectionNoResponse', 'No response')};
 }
 
 export async function testAiConnection(runId?: string): Promise<MultiProviderTestResult> {
@@ -102,7 +102,7 @@ export async function testAiConnection(runId?: string): Promise<MultiProviderTes
     ...(runId !== undefined ? { runId } : {}),
   }) as { ai?: MultiProviderTestResult };
 
-  return testResult?.ai || { success: false, message: getMessage('connectionNoResponse') || 'No response', providers: [] };
+  return testResult?.ai || { success: false, message: getMessageOr('connectionNoResponse', 'No response'), providers: [] };
 }
 
 export async function handleSaveOnly(): Promise<void> {
@@ -113,7 +113,7 @@ export async function handleSaveOnly(): Promise<void> {
 
   const result = await saveDashboardSettings({
     onSuccess: () => {
-      statusDiv.textContent = getMessage('saveSuccess') || '設定を保存しました。';
+      statusDiv.textContent = getMessageOr('saveSuccess', '設定を保存しました。');
       statusDiv.className = 'success';
       refreshLocalMarkdownScheduler();
       syncStatusToTop();
@@ -122,18 +122,18 @@ export async function handleSaveOnly(): Promise<void> {
 
   if (!result.success) {
     if (result.error === 'aiProviderPriority1Required') {
-      statusDiv.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+      statusDiv.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
       statusDiv.className = 'error';
       syncStatusToTop();
       return;
     }
     if (result.error === 'aiProviderPriorityDuplicateWarning') {
-      statusDiv.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+      statusDiv.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
       statusDiv.className = 'error';
       syncStatusToTop();
       return;
     }
-    statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+    statusDiv.textContent = getMessageOr('saveError', '設定の保存に失敗しました。');
     statusDiv.className = 'error';
     syncStatusToTop();
   }
@@ -146,7 +146,7 @@ export async function handleTestObsidian(): Promise<void> {
 
   statusDiv.innerHTML = '';
   statusDiv.className = '';
-  statusDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
 
   testObsidianBtn.disabled = true;
   try {
@@ -166,7 +166,7 @@ export async function handleTestObsidian(): Promise<void> {
       const link = document.createElement('a');
       link.href = url;
       link.target = '_blank';
-      link.textContent = getMessage('acceptCertificate') || '証明書を承認する';
+      link.textContent = getMessageOr('acceptCertificate', '証明書を承認する');
       link.rel = 'noopener noreferrer';
       statusDiv.appendChild(document.createElement('br'));
       statusDiv.appendChild(link);
@@ -175,7 +175,7 @@ export async function handleTestObsidian(): Promise<void> {
     statusDiv.className = obsidianResult.success ? 'success' : 'error';
     syncStatusToTop();
   } catch (_e) {
-    statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+    statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
     statusDiv.className = 'error';
     syncStatusToTop();
   } finally {
@@ -240,11 +240,11 @@ export async function handleTestAi(): Promise<void> {
       });
       if (!saveResult.success) {
         if (saveResult.error === 'aiProviderPriority1Required') {
-          statusDiv.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+          statusDiv.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
         } else if (saveResult.error === 'aiProviderPriorityDuplicateWarning') {
-          statusDiv.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+          statusDiv.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
         } else {
-          statusDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+          statusDiv.textContent = getMessageOr('saveError', '設定の保存に失敗しました。');
         }
         statusDiv.className = 'error';
         syncStatusToTop();
@@ -263,13 +263,13 @@ export async function handleTestAi(): Promise<void> {
         container.className = 'diag-indent';
 
         const header = document.createElement('strong');
-        header.textContent = getMessage('aiResultHeader') || 'AI: ';
+        header.textContent = getMessageOr('aiResultHeader', 'AI: ');
         container.appendChild(header);
 
         const statusEl = document.createElement('span');
         statusEl.textContent = aiResult.success
-          ? (getMessage('connectionSuccess') || '接続成功')
-          : (getMessage('connectionFailed') || '接続失敗');
+          ? (getMessageOr('connectionSuccess', '接続成功'))
+          : (getMessageOr('connectionFailed', '接続失敗'));
         statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
         container.appendChild(statusEl);
         statusDiv.appendChild(container);
@@ -297,7 +297,7 @@ export async function handleTestAi(): Promise<void> {
       statusDiv.className = aiResult.success ? 'success' : 'error';
       syncStatusToTop();
     } catch (_e) {
-      statusDiv.textContent = getMessage('testError') || '接続テストに失敗しました。';
+      statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
       statusDiv.className = 'error';
       syncStatusToTop();
     }
@@ -317,7 +317,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
 
   statusTopDiv.innerHTML = '';
   statusTopDiv.className = '';
-  statusTopDiv.textContent = getMessage('testingConnection') || '接続テスト中...';
+  statusTopDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
 
   testLocalMarkdownBtn.disabled = true;
   try {
@@ -328,11 +328,11 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
     });
     if (!saveResult.success) {
       if (saveResult.error === 'aiProviderPriority1Required') {
-        statusTopDiv.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+        statusTopDiv.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
       } else if (saveResult.error === 'aiProviderPriorityDuplicateWarning') {
-        statusTopDiv.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+        statusTopDiv.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
       } else {
-        statusTopDiv.textContent = getMessage('saveError') || '設定の保存に失敗しました。';
+        statusTopDiv.textContent = getMessageOr('saveError', '設定の保存に失敗しました。');
       }
       statusTopDiv.className = 'error';
       return;
@@ -344,7 +344,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
     const settings = await repo.getMany([StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED, StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]);
     const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
     if (!localExportEnabled) {
-      statusTopDiv.textContent = getMessage('testLocalMarkdownDisabled') || 'ローカルMarkdown書き出しが無効です。まず有効にしてください。';
+      statusTopDiv.textContent = getMessageOr('testLocalMarkdownDisabled', 'ローカルMarkdown書き出しが無効です。まず有効にしてください。');
       statusTopDiv.className = 'error';
       return;
     }
@@ -376,10 +376,10 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
 
     setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
-    statusTopDiv.textContent = getMessage('testLocalMarkdownSuccess') || 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました';
+    statusTopDiv.textContent = getMessageOr('testLocalMarkdownSuccess', 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
     statusTopDiv.className = 'success';
   } catch (_e) {
-    statusTopDiv.textContent = getMessage('testLocalMarkdownError') || 'ローカルMarkdown書き出しテストに失敗しました';
+    statusTopDiv.textContent = getMessageOr('testLocalMarkdownError', 'ローカルMarkdown書き出しテストに失敗しました');
     statusTopDiv.className = 'error';
   } finally {
     testLocalMarkdownBtn.disabled = false;

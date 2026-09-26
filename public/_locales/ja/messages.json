@@ -20,6 +20,9 @@
   "cancel": {
     "message": "キャンセル"
   },
+  "ok": {
+    "message": "OK"
+  },
   "close": {
     "message": "閉じる"
   },
@@ -2131,101 +2134,41 @@
   "viewFullPolicy": {
     "message": "プライバシーポリシー全文を表示"
   },
-  "visitDurationAllUnmeasured": {
-    "message": "この期間の記録はすべて未計測です。滞在時間は新しく記録された訪問から保存されます。",
-    "description": "Visit duration all-null state"
-  },
-  "visitDurationAverageTime": {
-    "message": "平均",
-    "description": "Visit duration average-time column header"
-  },
-  "visitDurationDescription": {
-    "message": "選択期間のドメイン別・タグ別の合計滞在時間と平均滞在時間を表示します。",
-    "description": "Visit duration panel description"
-  },
-  "visitDurationDomainColumn": {
-    "message": "ドメイン",
-    "description": "Visit duration domain column header"
-  },
-  "visitDurationDomainRanking": {
-    "message": "ドメイン別滞在時間",
-    "description": "Visit duration by-domain ranking heading"
-  },
-  "visitDurationEmpty": {
-    "message": "この期間の閲覧記録がありません。",
-    "description": "Visit duration empty state"
-  },
-  "visitDurationError": {
-    "message": "閲覧時間分析の読み込みに失敗しました。再試行してください。",
-    "description": "Visit duration load-failure state"
-  },
-  "visitDurationPanelTitle": {
-    "message": "滞在時間分析",
-    "description": "Visit duration panel title"
-  },
-  "visitDurationPeriodAll": {
-    "message": "全期間",
-    "description": "Period filter preset: all time"
-  },
-  "visitDurationPeriodCustom": {
-    "message": "カスタム",
-    "description": "Period filter custom-range label"
-  },
-  "visitDurationPeriodEnd": {
-    "message": "終了日",
-    "description": "Period filter custom end-date label"
-  },
-  "visitDurationPeriodLabel": {
+  "periodFilterLabel": {
     "message": "期間",
     "description": "Period filter group label"
   },
-  "visitDurationPeriodLast30Days": {
-    "message": "過去30日間",
-    "description": "Period filter preset: last 30 days"
-  },
-  "visitDurationPeriodLast7Days": {
-    "message": "過去7日間",
-    "description": "Period filter preset: last 7 days"
-  },
-  "visitDurationPeriodLast90Days": {
-    "message": "過去90日間",
-    "description": "Period filter preset: last 90 days"
-  },
-  "visitDurationPeriodStart": {
-    "message": "開始日",
-    "description": "Period filter custom start-date label"
-  },
-  "visitDurationPeriodToday": {
+  "periodFilterToday": {
     "message": "今日",
     "description": "Period filter preset: today"
   },
-  "visitDurationRecordCount": {
-    "message": "件数",
-    "description": "Visit duration record-count column header"
+  "periodFilterLast7Days": {
+    "message": "過去7日間",
+    "description": "Period filter preset: last 7 days"
   },
-  "visitDurationTab": {
-    "message": "滞在時間分析",
-    "description": "Sidebar tab for visit duration"
+  "periodFilterLast30Days": {
+    "message": "過去30日間",
+    "description": "Period filter preset: last 30 days"
   },
-  "visitDurationTagColumn": {
-    "message": "タグ",
-    "description": "Visit duration tag column header"
+  "periodFilterLast90Days": {
+    "message": "過去90日間",
+    "description": "Period filter preset: last 90 days"
   },
-  "visitDurationTagRanking": {
-    "message": "タグ別滞在時間",
-    "description": "Visit duration by-tag ranking heading"
+  "periodFilterAll": {
+    "message": "全期間",
+    "description": "Period filter preset: all time"
   },
-  "visitDurationTotalTime": {
-    "message": "合計",
-    "description": "Visit duration total-time column header"
+  "periodFilterCustom": {
+    "message": "カスタム",
+    "description": "Period filter custom-range label"
   },
-  "visitDurationTruncated": {
-    "message": "上位{shown}件を表示（全{total}件）。",
-    "description": "Visit duration truncation notice"
+  "periodFilterStart": {
+    "message": "開始日",
+    "description": "Period filter custom start-date label"
   },
-  "visitDurationUnmeasuredRatio": {
-    "message": "未計測: {percent}%（{total}件中{unmeasured}件）",
-    "description": "Visit duration unmeasured ratio"
+  "periodFilterEnd": {
+    "message": "終了日",
+    "description": "Period filter custom end-date label"
   },
   "domainAnalysisTab": {
     "message": "ドメイン分析",
@@ -2290,6 +2233,246 @@
   "domainAnalysisError": {
     "message": "ドメイン分析の読み込みに失敗しました。再試行してください。",
     "description": "ドメイン分析の読み込み失敗状態"
+  },
+  "revisitInsightsTab": {
+    "message": "再訪とタイムカプセル",
+    "description": "Sidebar tab for the revisit insights panel"
+  },
+  "revisitInsights_title": {
+    "message": "再訪とタイムカプセル",
+    "description": "Revisit insights panel title"
+  },
+  "revisitInsights_description": {
+    "message": "直近30日と90日以上前の記録を比べ、何度も調べ直しているテーマと、しばらく触れていないテーマを示します。",
+    "description": "Revisit insights panel description"
+  },
+  "revisitInsights_utcNote": {
+    "message": "同じページの同日再訪は記録されません（日付の区切りはUTC）。",
+    "description": "Note about UTC same-day dedup"
+  },
+  "revisitInsights_empty": {
+    "message": "記録がありません。",
+    "description": "Empty state"
+  },
+  "revisitInsights_rowCap": {
+    "message": "記録が多いため新しい {shown} 件だけで集計しました。古い記録の件数は実際より少なく出ます。",
+    "description": "Row cap notice"
+  },
+  "revisitInsights_sectionEmpty": {
+    "message": "該当なし",
+    "description": "Empty section row"
+  },
+  "revisitInsights_loopsTitle": {
+    "message": "何度も調べているテーマ",
+    "description": "Loop section heading"
+  },
+  "revisitInsights_loopsHint": {
+    "message": "まとめてノートにしておくと、次に調べる手間を省けます。",
+    "description": "Loop section hint"
+  },
+  "revisitInsights_kindColumn": {
+    "message": "種別",
+    "description": "Column header"
+  },
+  "revisitInsights_targetColumn": {
+    "message": "対象",
+    "description": "Column header"
+  },
+  "revisitInsights_recentDaysColumn": {
+    "message": "直近30日の日数",
+    "description": "Column header"
+  },
+  "revisitInsights_pastCountColumn": {
+    "message": "90日以上前の件数",
+    "description": "Column header"
+  },
+  "revisitInsights_actionsColumn": {
+    "message": "操作",
+    "description": "Column header"
+  },
+  "revisitInsights_countColumn": {
+    "message": "件数",
+    "description": "Column header"
+  },
+  "revisitInsights_daysColumn": {
+    "message": "訪問日数",
+    "description": "Column header"
+  },
+  "revisitInsights_lastVisitColumn": {
+    "message": "最終訪問",
+    "description": "Column header"
+  },
+  "revisitInsights_kindUrl": {
+    "message": "ページ",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindDomain": {
+    "message": "ドメイン",
+    "description": "Kind label"
+  },
+  "revisitInsights_kindTag": {
+    "message": "タグ",
+    "description": "Kind label"
+  },
+  "revisitInsights_copyMarkdown": {
+    "message": "Markdownでコピー",
+    "description": "Copy button"
+  },
+  "revisitInsights_copied": {
+    "message": "コピーしました",
+    "description": "Copy success feedback"
+  },
+  "revisitInsights_copyFailed": {
+    "message": "コピーに失敗しました",
+    "description": "Copy failure feedback"
+  },
+  "revisitInsights_openHistory": {
+    "message": "履歴で見る",
+    "description": "Navigate to history button"
+  },
+  "revisitInsights_rankingTitle": {
+    "message": "よく再訪するページ",
+    "description": "Ranking heading"
+  },
+  "revisitInsights_dormantTitle": {
+    "message": "最近触れていないテーマ",
+    "description": "Dormant heading"
+  },
+  "revisitInsights_dormantHint": {
+    "message": "2〜4か月前によく見ていたが、直近30日は記録がありません。",
+    "description": "Dormant hint"
+  },
+  "revisitInsights_capsuleTitle": {
+    "message": "1年前の今週",
+    "description": "Capsule heading"
+  },
+  "revisitInsights_capsuleRange": {
+    "message": "{start} 〜 {end}",
+    "description": "Capsule date range"
+  },
+  "revisitInsightsError": {
+    "message": "再訪データの読み込みに失敗しました。",
+    "description": "Load error"
+  },
+  "researchSessionsTab": {
+    "message": "リサーチ・セッション",
+    "description": "Sidebar tab for the research sessions panel"
+  },
+  "researchSessions_title": {
+    "message": "リサーチ・セッション",
+    "description": "Research sessions panel title"
+  },
+  "researchSessions_description": {
+    "message": "記録どうしの間隔が選択した時間以内のページを、ひとつの調べものとしてまとめます。時間は最初と最後の記録の間隔で、実際の閲覧時間とは異なります。",
+    "description": "Research sessions panel description"
+  },
+  "researchSessions_gapLabel": {
+    "message": "セッションの区切り",
+    "description": "Session gap select label"
+  },
+  "researchSessions_gapOption": {
+    "message": "{n}分",
+    "description": "Session gap option"
+  },
+  "researchSessions_summary": {
+    "message": "{sessions} 件のセッション・単独ページ {singles} 件",
+    "description": "Session counts summary"
+  },
+  "researchSessions_pages": {
+    "message": "{n}ページ",
+    "description": "Pages per session"
+  },
+  "researchSessions_minutes": {
+    "message": "{n}分",
+    "description": "Session duration in minutes"
+  },
+  "researchSessions_starred": {
+    "message": "スター付き",
+    "description": "Starred record marker"
+  },
+  "researchSessions_truncated": {
+    "message": "新しい {shown} 件のセッションを表示しています。",
+    "description": "Session list truncation notice"
+  },
+  "researchSessions_rowCap": {
+    "message": "記録が多いため新しい {shown} 件だけでまとめました。期間を短くすると全件を対象にできます。",
+    "description": "Row cap notice"
+  },
+  "researchSessions_empty": {
+    "message": "この期間の記録がありません。",
+    "description": "Empty state"
+  },
+  "researchSessionsError": {
+    "message": "セッションの読み込みに失敗しました。",
+    "description": "Load error"
+  },
+  "navTrailLabel": {
+    "message": "遷移記録（流入元ページと検索語）を記録する",
+    "description": "Navigation trail opt-in checkbox label"
+  },
+  "navTrailDescription": {
+    "message": "直前に開いていたページと、検索エンジンで使った検索語を、この端末の中だけに保存します。リサーチ・セッションで使います。既定はオフです。",
+    "description": "Navigation trail opt-in description"
+  },
+  "navTrailConsentTitle": {
+    "message": "遷移記録を有効にしますか？",
+    "description": "Navigation trail consent dialog title"
+  },
+  "navTrailConsentMessage": {
+    "message": "有効にすると、同じタブで直前に開いていたページのURL（除外ドメインはドメインのみ）と、検索エンジンの検索語（個人情報はマスク）を記録に加えます。データはこの端末の中だけに保存され、AIやObsidianには送られません。オフにすると以後は記録しません。",
+    "description": "Navigation trail consent dialog body"
+  },
+  "navTrailConsentAccept": {
+    "message": "有効にする",
+    "description": "Navigation trail consent dialog confirm label"
+  },
+  "navTrailSaveFailed": {
+    "message": "設定を保存できませんでした。",
+    "description": "Navigation trail save failure"
+  },
+  "researchSessions_searchQuery": {
+    "message": "検索: {q}",
+    "description": "Search term shown on a session record"
+  },
+  "researchSessions_source": {
+    "message": "流入元: {host}",
+    "description": "Referrer shown on a session record"
+  },
+  "researchSessions_searchToGoalTitle": {
+    "message": "迷子になりやすいトピック",
+    "description": "Search-to-goal metric heading"
+  },
+  "researchSessions_searchToGoalHint": {
+    "message": "検索から始まったセッションを、最後に見たページのタグごとにまとめています。",
+    "description": "Search-to-goal metric hint"
+  },
+  "researchSessions_navTrailOff": {
+    "message": "設定で「遷移記録」を有効にすると、検索から解決までの経路を表示できます。",
+    "description": "Shown when the navigation trail is off"
+  },
+  "researchSessions_tagColumn": {
+    "message": "タグ",
+    "description": "Column header"
+  },
+  "researchSessions_sessionsColumn": {
+    "message": "セッション数",
+    "description": "Column header"
+  },
+  "researchSessions_avgPagesColumn": {
+    "message": "平均ページ数",
+    "description": "Column header"
+  },
+  "researchSessions_avgMinutesColumn": {
+    "message": "平均分",
+    "description": "Column header"
+  },
+  "researchSessions_untagged": {
+    "message": "(タグなし)",
+    "description": "Label for a resolution page with no tag"
+  },
+  "researchSessions_searchToGoalEmpty": {
+    "message": "検索から始まったセッションがまだありません。",
+    "description": "Empty state for the search-to-goal table"
   },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
@@ -2762,6 +2945,33 @@
   },
   "aiSummaryCleansingSave": {
     "message": "保存"
+  },
+  "aiSummaryCleansingPerSiteSection": {
+    "message": "サイト別オーバーライド"
+  },
+  "aiSummaryCleansingPerSiteDesc": {
+    "message": "ドメインの完全一致で指定します。グローバル設定に上書きマージされます（差分のみ保存されます）。"
+  },
+  "aiSummaryCleansingPerSiteDomainLabel": {
+    "message": "ドメイン"
+  },
+  "aiSummaryCleansingPerSiteDomainHelp": {
+    "message": "完全一致（サブドメインは別扱い）。例: example.com"
+  },
+  "aiSummaryCleansingPerSiteSave": {
+    "message": "オーバーライドを保存"
+  },
+  "aiSummaryCleansingPerSiteDelete": {
+    "message": "オーバーライドを削除"
+  },
+  "aiSummaryCleansingFeedbackSection": {
+    "message": "クレンジングのフィードバック"
+  },
+  "aiSummaryCleansingFeedbackDesc": {
+    "message": "誤削除報告の一覧。開発者がパターン改善に利用します。"
+  },
+  "domainTagRemoveAriaLabel": {
+    "message": "{domain} を削除"
   },
   "cspTab": {
     "message": "CSP"

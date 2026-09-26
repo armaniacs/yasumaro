@@ -225,11 +225,25 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
   };
 });;
 
-vi.mock('../../utils/i18n.js', () => ({
-  applyI18n: vi.fn(),
-  getMessage: vi.fn((key) => key),
-  getMessageOr: vi.fn((_key: string, fallback?: string) => fallback ?? ''),
-}));
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => key);
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+    ((subs === undefined ? getMessage(key) : getMessage(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+    key: string,
+    subs: Record<string, string | number>,
+    fallback: string,
+  ): string =>
+    (getMessage(key, subs) ||
+      fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+        subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+    applyI18n: vi.fn(),
+    getMessage,
+    getMessageOr,
+    getMessageWithSubstitutions,
+  };
+});
 // The save path routes new non-local endpoints through the explicit
 // confirmation dialog (VULN-002 policy); tests simulate the user allowing.
 vi.mock('../../utils/ui/confirmDialog.js', () => ({

@@ -1,4 +1,4 @@
-import { test as base, expect, Page, BrowserContext } from '@playwright/test';
+import { test as base, expect, Page } from '@playwright/test';
 import { chromium, type ChromiumBrowserContext } from 'playwright';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';

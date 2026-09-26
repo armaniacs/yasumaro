@@ -4,7 +4,9 @@
  * chrome global mock なしに自動ロック・アラーム二重登録防止を純粋テストする。
  */
 
+
 import { describe, test, expect, beforeEach, vi } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 import { SessionAlarmService } from '../SessionAlarmService.js';
 import type { Clock, StoragePort, StorageArea, AlarmPort } from '../../utils/ports.js';
 
@@ -122,8 +124,8 @@ describe('SessionAlarmService', () => {
 
     clock.advance(31 * 60 * 1000);
     alarms.fire('check_session_timeout');
-    await vi.waitFor(() => expect(sendMessage).not.toHaveBeenCalled());
-
+    await drainMacrotask();
+    expect(sendMessage).not.toHaveBeenCalled();
     const result = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
     expect(result[IS_LOCKED_KEY]).toBeUndefined();
   });

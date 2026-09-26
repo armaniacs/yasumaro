@@ -5,6 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 // Mock all dependencies (must be defined before imports)
 vi.mock('../sanitizePreview.js', () => ({
@@ -84,8 +85,8 @@ vi.mock('../../messaging/messageTransport.js', () => ({
   messageTransport: { send: (message: unknown) => sendMock(message) },
 }));
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string, substitutions?: any) => {
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string, substitutions?: any) => {
     const messages: Record<string, string> = {
       cannotRecordPage: 'Cannot record this page',
       noTitle: 'No title',
@@ -114,8 +115,19 @@ vi.mock('../../utils/i18n.js', () => ({
       });
     }
     return msg;
-  })
-}));
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
 
 vi.mock('../../utils/pendingStorage.js', () => ({
   getPendingPages: vi.fn(() => Promise.resolve([])),
@@ -1124,10 +1136,11 @@ describe('main', () => {
       document.dispatchEvent(new Event('DOMContentLoaded'));
 
       // Wait for async operations
-      await new Promise(r => setTimeout(r, 50));
-
       const domainState = $el('statusDomainState');
-      expect(domainState.innerHTML).toContain('status-success');
+      await vi.waitFor(
+          () => expect(domainState.innerHTML).toContain('status-success'),
+          { interval: 1 }
+      );
     });
 
     it('should render status panel with blocked domain', async () => {
@@ -1146,10 +1159,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const domainState = $el('statusDomainState');
-      expect(domainState.innerHTML).toContain('status-error');
+      await vi.waitFor(
+          () => expect(domainState.innerHTML).toContain('status-error'),
+          { interval: 1 }
+      );
     });
 
     it('should render private page status', async () => {
@@ -1168,10 +1182,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const privacyContent = $el('statusPrivacyContent');
-      expect(privacyContent.innerHTML).toContain('status-warning');
+      await vi.waitFor(
+          () => expect(privacyContent.innerHTML).toContain('status-warning'),
+          { interval: 1 }
+      );
     });
 
     it('should render last saved content when exists', async () => {
@@ -1190,10 +1205,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const lastSavedContent = $el('statusLastSavedContent');
-      expect(lastSavedContent.innerHTML).toContain('10 minutes ago');
+      await vi.waitFor(
+          () => expect(lastSavedContent.innerHTML).toContain('10 minutes ago'),
+          { interval: 1 }
+      );
     });
 
     it('should handle null status (special URL)', async () => {
@@ -1207,20 +1223,22 @@ describe('main', () => {
       mockCheckPageStatus(null);
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const panel = $el('statusPanel');
-      expect(panel.innerHTML).toContain('statusPageNotRecordable');
+      await vi.waitFor(
+          () => expect(panel.innerHTML).toContain('statusPageNotRecordable'),
+          { interval: 1 }
+      );
     });
 
     it('should handle tab without URL', async () => {
       mockChrome.tabs.query.mockResolvedValue([{ id: 1, title: 'No URL' }]);
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const panel = $el('statusPanel');
-      expect(panel.style.display).toBe('none');
+      await vi.waitFor(
+          () => expect(panel.style.display).toBe('none'),
+          { interval: 1 }
+      );
     });
 
     it('should render cache section with cookie and auth', async () => {
@@ -1239,10 +1257,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const cacheContent = $el('statusCacheContent');
-      expect(cacheContent.innerHTML).toContain('statusSetCookiePresent');
+      await vi.waitFor(
+          () => expect(cacheContent.innerHTML).toContain('statusSetCookiePresent'),
+          { interval: 1 }
+      );
       expect(cacheContent.innerHTML).toContain('statusAuthorizationPresent');
     });
 
@@ -1262,10 +1281,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const cacheContent = $el('statusCacheContent');
-      expect(cacheContent.innerHTML).toContain('statusNoCacheInfo');
+      await vi.waitFor(
+          () => expect(cacheContent.innerHTML).toContain('statusNoCacheInfo'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -1452,10 +1472,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const domainMode = $el('statusDomainMode');
-      expect(domainMode.innerHTML).toContain('statusFilterModeBlacklist');
+      await vi.waitFor(
+          () => expect(domainMode.innerHTML).toContain('statusFilterModeBlacklist'),
+          { interval: 1 }
+      );
     });
 
     it('should render private page with set-cookie reason', async () => {
@@ -1474,10 +1495,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const privacyContent = $el('statusPrivacyContent');
-      expect(privacyContent.innerHTML).toContain('statusSetCookieDetected');
+      await vi.waitFor(
+          () => expect(privacyContent.innerHTML).toContain('statusSetCookieDetected'),
+          { interval: 1 }
+      );
     });
 
     it('should render private page with authorization reason', async () => {
@@ -1496,10 +1518,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const privacyContent = $el('statusPrivacyContent');
-      expect(privacyContent.innerHTML).toContain('statusAuthDetected');
+      await vi.waitFor(
+          () => expect(privacyContent.innerHTML).toContain('statusAuthDetected'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -1515,10 +1538,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const domainIcon = $el('statusDomainIcon');
-      expect(domainIcon.className).toContain('status-success');
+      await vi.waitFor(
+          () => expect(domainIcon.className).toContain('status-success'),
+          { interval: 1 }
+      );
     });
 
     it('should render warning icon for private page', async () => {
@@ -1532,10 +1556,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const privacyIcon = $el('statusPrivacyIcon');
-      expect(privacyIcon.className).toContain('status-warning');
+      await vi.waitFor(
+          () => expect(privacyIcon.className).toContain('status-warning'),
+          { interval: 1 }
+      );
     });
 
     it('should render muted icon when no privacy info', async () => {
@@ -1549,10 +1574,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const privacyIcon = $el('statusPrivacyIcon');
-      expect(privacyIcon.className).toContain('status-muted');
+      await vi.waitFor(
+          () => expect(privacyIcon.className).toContain('status-muted'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -1568,7 +1594,12 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
+      // The click below needs the toggle's listener to be attached, and
+      // wireOnce marks the element as wired before attaching it — so that
+      // flag is the signal to wait for, not the initial aria-expanded value.
+      await waitForMock(() => {
+        expect($el('statusToggleBtn').dataset.wired).toBe('true');
+      });
 
       const toggleBtn = $el('statusToggleBtn');
       const detailsPanel = $el('statusDetails');
@@ -1767,10 +1798,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const cleansingContent = $el('statusCleansingContent');
-      expect(cleansingContent.innerHTML).toContain('status-muted');
+      await vi.waitFor(
+          () => expect(cleansingContent.innerHTML).toContain('status-muted'),
+          { interval: 1 }
+      );
     });
   });
 
@@ -1789,10 +1821,11 @@ describe('main', () => {
       });
 
       document.dispatchEvent(new Event('DOMContentLoaded'));
-      await new Promise(r => setTimeout(r, 50));
-
       const banner = $el('allUrlsPermissionBanner');
-      expect(banner.classList.contains('hidden')).toBe(true);
+      await vi.waitFor(
+          () => expect(banner.classList.contains('hidden')).toBe(true),
+          { interval: 1 }
+      );
     });
   });
 });

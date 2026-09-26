@@ -14,7 +14,7 @@ import { init as initUblockImport, handleSaveUblockSettings } from './ublockImpo
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessage, getMessageOr } from '../../utils/i18n.js';
 
 // Elements
 const generalTabBtn = document.getElementById('generalTab');
@@ -210,12 +210,12 @@ function updateDomainListVisibility(): void {
 
             // Update label and load appropriate list
             if (mode === 'whitelist') {
-                domainListLabel.textContent = getMessage('whitelistLabel') || 'Whitelist (1 domain per line)';
+                domainListLabel.textContent = getMessageOr('whitelistLabel', 'Whitelist (1 domain per line)');
                 if (whitelistTextarea) {
                     domainListTextarea.value = whitelistTextarea.value;
                 }
             } else if (mode === 'blacklist') {
-                domainListLabel.textContent = getMessage('blacklistLabel') || 'Blacklist (1 domain per line)';
+                domainListLabel.textContent = getMessageOr('blacklistLabel', 'Blacklist (1 domain per line)');
                 if (blacklistTextarea) {
                     domainListTextarea.value = blacklistTextarea.value;
                 }

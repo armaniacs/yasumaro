@@ -4,7 +4,7 @@
  * 設定フォームの各入力フィールドのバリデーションを行う
  */
 
-import { getMessage } from '../../utils/i18n.js';
+import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import {
     GENERAL_SETTINGS_FIELDS,
     validateGeminiApiVersionValue,
@@ -190,7 +190,7 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
         clearFieldError(input, 'baseUrlError');
         return true;
     } catch (_e) {
-        setFieldError(input, 'baseUrlError', getMessage('errorInvalidUrl') || 'Invalid URL format');
+        setFieldError(input, 'baseUrlError', getMessageOr('errorInvalidUrl', 'Invalid URL format'));
         return false;
     }
 }
@@ -281,7 +281,7 @@ export function validateObsidianHost(input: HTMLInputElement): boolean {
     // Single ownership: decision delegates to the descriptor table, which in
     // turn defers to the SW-side validator so UI and connection test agree.
     if (validateObsidianHostValue(input.value) !== null) {
-        setFieldError(input, 'obsidianHostError', getMessage('obsidianHostError') || 'Obsidian host contains invalid characters.');
+        setFieldError(input, 'obsidianHostError', getMessageOr('obsidianHostError', 'Obsidian host contains invalid characters.'));
         return false;
     }
     clearFieldError(input, 'obsidianHostError');
@@ -296,7 +296,7 @@ export function validateObsidianHost(input: HTMLInputElement): boolean {
 export function validateGeminiApiVersion(input: HTMLInputElement): boolean {
     // Decision delegates to the descriptor table (single owner of the shape).
     if (validateGeminiApiVersionValue(input.value) !== null) {
-        setFieldError(input, 'geminiApiVersionError', getMessage('geminiApiVersionError') || 'Gemini API version must be like v1 or v1beta.');
+        setFieldError(input, 'geminiApiVersionError', getMessageOr('geminiApiVersionError', 'Gemini API version must be like v1 or v1beta.'));
         return false;
     }
     clearFieldError(input, 'geminiApiVersionError');
@@ -341,7 +341,7 @@ export function validateDescriptorField(
 ): boolean {
     const errorKey = descriptor.validate(descriptor.parse(input.value), ctx);
     if (errorKey !== null) {
-        setFieldError(input, descriptor.errorId, getMessage(errorKey) || errorKey);
+        setFieldError(input, descriptor.errorId, getMessageOr(errorKey, errorKey));
         return false;
     }
     clearFieldError(input, descriptor.errorId);

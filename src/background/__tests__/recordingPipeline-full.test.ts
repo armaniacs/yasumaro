@@ -2,6 +2,7 @@
 import { PerUrlMutexMap } from '../pipeline/perUrlMutex.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 import * as storage from '../../utils/storage/types.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
 import * as domainUtils from '../../utils/domainUtils.js';
@@ -230,7 +231,7 @@ describe('RecordingPipeline', () => {
       const url = 'https://mutex-queue.example.com';
 
       const first = mutexMap.runExclusive(url, async () => {
-        await new Promise((r) => setTimeout(r, 20));
+        await drainMacrotask();
         return 'first';
       });
       const second = mutexMap.runExclusive(url, async () => 'second');
@@ -300,7 +301,7 @@ describe('RecordingPipeline', () => {
           processOrder.push(`start-${n}`);
           if (n === 1) {
             resolveFirstProcess?.();
-            await new Promise((r) => setTimeout(r, 20));
+            await drainMacrotask();
           }
           processOrder.push(`end-${n}`);
           return { summary: 'Test summary', maskedCount: 0 };
@@ -334,7 +335,7 @@ describe('RecordingPipeline', () => {
           processOrder.push(`start-${n}`);
           if (n === 1) {
             resolveFirstProcess?.();
-            await new Promise((r) => setTimeout(r, 20));
+            await drainMacrotask();
           }
           processOrder.push(`end-${n}`);
           return { summary: 'Test summary', maskedCount: 0 };

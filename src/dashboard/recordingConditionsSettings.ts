@@ -8,7 +8,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 
 let minVisitDuration = 5;
@@ -70,68 +70,68 @@ async function loadConditionsSettings(repo: SettingsReader = settingsRepository)
 function renderSettings(container: HTMLElement): void {
   setElementHtml(container, `
     <div class="settings-section">
-      <h3 class="settings-section-title">${getMessage('recordingSection') || '記録条件'}</h3>
+      <h3 class="settings-section-title">${getMessageOr('recordingSection', '記録条件')}</h3>
 
       <div class="form-group">
-        <label for="minVisitDuration">${getMessage('minVisitDuration') || 'Min Visit Duration (seconds)'}</label>
+        <label for="minVisitDuration">${getMessageOr('minVisitDuration', 'Min Visit Duration (seconds)')}</label>
         <input type="number" id="minVisitDuration" min="1" value="${minVisitDuration}" aria-invalid="false"
           aria-describedby="minVisitDurationError">
         <div id="minVisitDurationError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="minScrollDepth">${getMessage('minScrollDepth') || 'Min Scroll Depth (%)'}</label>
+        <label for="minScrollDepth">${getMessageOr('minScrollDepth', 'Min Scroll Depth (%)')}</label>
         <input type="number" id="minScrollDepth" min="0" max="100" value="${minScrollDepth}" aria-invalid="false"
           aria-describedby="minScrollDepthError">
         <div id="minScrollDepthError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="maxTokensPerPrompt">${getMessage('label_max_tokens') || 'Max Tokens Per Prompt'}</label>
+        <label for="maxTokensPerPrompt">${getMessageOr('label_max_tokens', 'Max Tokens Per Prompt')}</label>
         <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="${maxTokensPerPrompt}" aria-invalid="false"
           aria-describedby="maxTokensError maxTokensNote">
-        <p class="help-text" id="maxTokensNote">${getMessage('note_max_tokens_cost_control') || ''}</p>
+        <p class="help-text" id="maxTokensNote">${getMessageOr('note_max_tokens_cost_control', '')}</p>
         <div id="maxTokensError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="aiTimeoutSeconds">${getMessage('label_ai_timeout') || 'AI Timeout (seconds)'}</label>
+        <label for="aiTimeoutSeconds">${getMessageOr('label_ai_timeout', 'AI Timeout (seconds)')}</label>
         <input type="number" id="aiTimeoutSeconds" min="10" max="600" step="10" value="${aiTimeoutSeconds || ''}" aria-invalid="false"
           aria-describedby="aiTimeoutNote" placeholder="auto">
-        <p class="help-text" id="aiTimeoutNote">${getMessage('note_ai_timeout') || ''}</p>
+        <p class="help-text" id="aiTimeoutNote">${getMessageOr('note_ai_timeout', '')}</p>
       </div>
 
-      <h3 class="settings-section-title">${getMessage('aiUsageControlsSection') || 'AI 使用量制限'}</h3>
+      <h3 class="settings-section-title">${getMessageOr('aiUsageControlsSection', 'AI 使用量制限')}</h3>
 
       <div class="form-group">
-        <label for="maxMonthlyTokens">${getMessage('label_max_monthly_tokens') || 'Monthly Token Limit (0 = unlimited)'}</label>
+        <label for="maxMonthlyTokens">${getMessageOr('label_max_monthly_tokens', 'Monthly Token Limit (0 = unlimited)')}</label>
         <input type="number" id="maxMonthlyTokens" min="0" step="1000" value="${maxMonthlyTokens}" aria-invalid="false"
           aria-describedby="maxMonthlyTokensNote">
-        <p class="help-text" id="maxMonthlyTokensNote">${getMessage('note_max_monthly_tokens') || '0 を指定すると無制限になります。'}</p>
+        <p class="help-text" id="maxMonthlyTokensNote">${getMessageOr('note_max_monthly_tokens', '0 を指定すると無制限になります。')}</p>
       </div>
 
       <div class="form-group">
-        <label for="aiRateLimitMax">${getMessage('label_ai_rate_limit_max') || 'AI Rate Limit (requests/min)'}</label>
+        <label for="aiRateLimitMax">${getMessageOr('label_ai_rate_limit_max', 'AI Rate Limit (requests/min)')}</label>
         <input type="number" id="aiRateLimitMax" min="1" max="60" step="1" value="${aiRateLimitMax}" aria-invalid="false"
           aria-describedby="aiRateLimitMaxNote">
-        <p class="help-text" id="aiRateLimitMaxNote">${getMessage('note_ai_rate_limit_max') || '1 分間に許可する AI リクエスト数です。'}</p>
+        <p class="help-text" id="aiRateLimitMaxNote">${getMessageOr('note_ai_rate_limit_max', '1 分間に許可する AI リクエスト数です。')}</p>
       </div>
 
       <div class="form-group">
-        <label for="openaiContentChars">${getMessage('label_openai_content_chars') || 'OpenAI Max Content Characters'}</label>
+        <label for="openaiContentChars">${getMessageOr('label_openai_content_chars', 'OpenAI Max Content Characters')}</label>
         <input type="number" id="openaiContentChars" min="1000" max="100000" step="1000" value="${openaiContentChars}" aria-invalid="false">
       </div>
 
       <div class="form-group">
-        <label for="geminiContentChars">${getMessage('label_gemini_content_chars') || 'Gemini Max Content Characters'}</label>
+        <label for="geminiContentChars">${getMessageOr('label_gemini_content_chars', 'Gemini Max Content Characters')}</label>
         <input type="number" id="geminiContentChars" min="1000" max="100000" step="1000" value="${geminiContentChars}" aria-invalid="false">
       </div>
     </div>
 
     <div class="form-actions">
-      <button id="save-conditions-settings" class="btn-primary">${getMessage('save') || 'Save'}</button>
+      <button id="save-conditions-settings" class="btn-primary">${getMessageOr('save', 'Save')}</button>
       <span id="conditions-validation-error" class="validation-error hidden" role="alert"></span>
-      <span id="conditions-save-success" class="save-success hidden" aria-live="polite">${getMessage('settingsSaved') || 'Settings saved.'}</span>
+      <span id="conditions-save-success" class="save-success hidden" aria-live="polite">${getMessageOr('settingsSaved', 'Settings saved.')}</span>
     </div>
   `);
 }
@@ -167,49 +167,49 @@ function wireEvents(container: HTMLElement): void {
     const geminiContentCharsVal = parseInt(geminiContentCharsInput?.value ?? '30000', 10);
 
     if (isNaN(minVisitVal) || minVisitVal < 1) {
-      validationError.textContent = getMessage('minVisitDurationError') || 'Min visit duration must be at least 1 second.';
+      validationError.textContent = getMessageOr('minVisitDurationError', 'Min visit duration must be at least 1 second.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
     }
 
     if (isNaN(minScrollVal) || minScrollVal < 0 || minScrollVal > 100) {
-      validationError.textContent = getMessage('minScrollDepthError') || 'Min scroll depth must be between 0 and 100.';
+      validationError.textContent = getMessageOr('minScrollDepthError', 'Min scroll depth must be between 0 and 100.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
     }
 
     if (isNaN(maxTokensVal) || maxTokensVal < 10 || maxTokensVal > 16000) {
-      validationError.textContent = getMessage('maxTokensError') || 'Max tokens must be between 10 and 16000.';
+      validationError.textContent = getMessageOr('maxTokensError', 'Max tokens must be between 10 and 16000.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
     }
 
     if (isNaN(maxMonthlyTokensVal) || maxMonthlyTokensVal < 0) {
-      validationError.textContent = getMessage('maxMonthlyTokensError') || 'Monthly token limit must be 0 or greater.';
+      validationError.textContent = getMessageOr('maxMonthlyTokensError', 'Monthly token limit must be 0 or greater.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
     }
 
     if (isNaN(aiRateLimitMaxVal) || aiRateLimitMaxVal < 1 || aiRateLimitMaxVal > 60) {
-      validationError.textContent = getMessage('aiRateLimitMaxError') || 'AI rate limit must be between 1 and 60.';
+      validationError.textContent = getMessageOr('aiRateLimitMaxError', 'AI rate limit must be between 1 and 60.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
     }
 
     if (isNaN(openaiContentCharsVal) || openaiContentCharsVal < 1000 || openaiContentCharsVal > 100000) {
-      validationError.textContent = getMessage('openaiContentCharsError') || 'OpenAI content characters must be between 1000 and 100000.';
+      validationError.textContent = getMessageOr('openaiContentCharsError', 'OpenAI content characters must be between 1000 and 100000.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
     }
 
     if (isNaN(geminiContentCharsVal) || geminiContentCharsVal < 1000 || geminiContentCharsVal > 100000) {
-      validationError.textContent = getMessage('geminiContentCharsError') || 'Gemini content characters must be between 1000 and 100000.';
+      validationError.textContent = getMessageOr('geminiContentCharsError', 'Gemini content characters must be between 1000 and 100000.');
       validationError.classList.remove('hidden');
       validationError.style.display = '';
       return;
@@ -241,7 +241,7 @@ function wireEvents(container: HTMLElement): void {
       successMsg.classList.remove('hidden');
       successMsg.style.display = '';
     } catch (err) {
-      validationError.textContent = `${getMessage('error') || 'Error'}: ${errorMessage(err)}`;
+      validationError.textContent = `${getMessageOr('error', 'Error')}: ${errorMessage(err)}`;
       validationError.classList.remove('hidden');
       validationError.style.display = '';
     }

@@ -9,8 +9,8 @@
  * (tagFilter + since/until), so this module only sees the fetched subset.
  *
  * Null/blank-domain rows are kept in the ranking as an UNKNOWN_DOMAIN_LABEL
- * bucket (same convention as visitDurationAggregate) instead of being
- * dropped, and their count is reported separately for the UI notice.
+ * bucket instead of being dropped, and their count is reported separately for
+ * the UI notice.
  */
 
 /** Minimal row shape the aggregation reads (subset of BrowsingLogEntry). */

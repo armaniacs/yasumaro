@@ -349,10 +349,11 @@ describe('sessionAlarmsManager', () => {
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
-
-      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+      await vi.waitFor(
+          () => expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({ IS_LOCKED: true })
+      ),
+          { interval: 1 }
       );
       expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'SESSION_LOCK_REQUEST' })
@@ -367,14 +368,14 @@ describe('sessionAlarmsManager', () => {
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
-
       const logInfo = (await import('../../../../utils/logger/api.js')).logInfo;
-      expect(logInfo).toHaveBeenCalledWith(
-        expect.stringContaining('locked'),
-        expect.objectContaining({ timeoutMinutes: expect.any(Number) }),
-        expect.any(String)
-      );
+      await vi.waitFor(() => {
+        expect(logInfo).toHaveBeenCalledWith(
+          expect.stringContaining('locked'),
+          expect.objectContaining({ timeoutMinutes: expect.any(Number) }),
+          expect.any(String)
+        );
+      });
     });
 
     it('does not throw on lockSession storage errors', async () => {
@@ -387,15 +388,15 @@ describe('sessionAlarmsManager', () => {
 
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
-
       const logError = (await import('../../../../utils/logger/api.js')).logError;
-      expect(logError).toHaveBeenCalledWith(
-        expect.stringContaining('lock'),
-        expect.objectContaining({ error: expect.stringContaining('Lock storage error') }),
-        expect.any(String),
-        expect.any(String)
-      );
+      await vi.waitFor(() => {
+        expect(logError).toHaveBeenCalledWith(
+          expect.stringContaining('lock'),
+          expect.objectContaining({ error: expect.stringContaining('Lock storage error') }),
+          expect.any(String),
+          expect.any(String)
+        );
+      });
     });
 
     it('ignores alarms other than check_session_timeout', async () => {
@@ -404,7 +405,10 @@ describe('sessionAlarmsManager', () => {
 
       capturedListener!({ name: 'other_alarm' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 50));
+      // The listener returns before touching storage for a foreign alarm name,
+      // and that path schedules no timer, so one macrotask turn is enough to
+      // prove the negative.
+      await new Promise((r) => setTimeout(r, 0));
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -420,7 +424,9 @@ describe('sessionAlarmsManager', () => {
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
+      // The no-master-password branch returns right after the storage read and
+      // schedules no timer, so one macrotask turn settles it.
+      await new Promise((r) => setTimeout(r, 0));
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -437,7 +443,7 @@ describe('sessionAlarmsManager', () => {
 
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 0));
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -452,7 +458,7 @@ describe('sessionAlarmsManager', () => {
       storageData['session_last_activity'] = Date.now() - 10 * 60 * 1000;
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
+      await new Promise((r) => setTimeout(r, 0));
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -468,15 +474,15 @@ describe('sessionAlarmsManager', () => {
 
       capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
 
-      await new Promise((r) => setTimeout(r, 100));
-
       const logError = (await import('../../../../utils/logger/api.js')).logError;
-      expect(logError).toHaveBeenCalledWith(
-        expect.stringContaining('check session timeout'),
-        expect.objectContaining({ error: expect.stringContaining('Get error') }),
-        expect.any(String),
-        expect.any(String)
-      );
+      await vi.waitFor(() => {
+        expect(logError).toHaveBeenCalledWith(
+          expect.stringContaining('check session timeout'),
+          expect.objectContaining({ error: expect.stringContaining('Get error') }),
+          expect.any(String),
+          expect.any(String)
+        );
+      });
     });
   });
 });

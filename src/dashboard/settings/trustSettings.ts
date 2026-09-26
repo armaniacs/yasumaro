@@ -11,7 +11,7 @@ import { getTrustDbAdmin } from '../../utils/trustDb/TrustDbAdmin.js';
 import { getTrancoUpdater } from '../../utils/trustDb/trancoUpdater.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logInfo, logError } from '../../utils/logger/api.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getTrustChecker } from '../../utils/trustChecker.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -108,7 +108,7 @@ function updateTrancoStatus(status: {
   if (!trancoStatusDiv) return;
 
   if (status.updating) {
-    trancoStatusDiv.textContent = getMessage('trancoUpdating') || 'Updating...';
+    trancoStatusDiv.textContent = getMessageOr('trancoUpdating', 'Updating...');
     trancoStatusDiv.className = 'status-message updating';
     return;
   }
@@ -120,18 +120,14 @@ function updateTrancoStatus(status: {
   }
 
   const count = status.count ?? 0;
-  const lastUpdated = (status.lastUpdated ?? getMessage('trancoNotUpdated')) || 'Not updated';
+  const lastUpdated = (status.lastUpdated ?? getMessageOr('trancoNotUpdated', 'Not updated')) || 'Not updated';
   const tierObj: Record<TrancoTier | string, string> = {
-    top1k: getMessage('trancoTierTop1k') || 'Top 1,000',
-    top10k: getMessage('trancoTierTop10k') || 'Top 10,000',
-    top100k: getMessage('trancoTierTop100k') || 'Top 100,000'
-  };
+    top1k: getMessageOr('trancoTierTop1k', 'Top 1,000'),
+    top10k: getMessageOr('trancoTierTop10k', 'Top 10,000'),
+    top100k: getMessageOr('trancoTierTop100k', 'Top 100,000')};
   const tierLabel = tierObj[status.tier as TrancoTier] || status.tier || '';
 
-  trancoStatusDiv.textContent = getMessage(
-    getPluralKey('trancoStatusFormat', count),
-    { count, tier: tierLabel, lastUpdated }
-  ) || `Domains: ${count} | Tier: ${tierLabel} | Last updated: ${lastUpdated}`;
+  trancoStatusDiv.textContent = getMessageWithSubstitutions(getPluralKey('trancoStatusFormat', count), { count, tier: tierLabel, lastUpdated }, `Domains: ${count} | Tier: ${tierLabel} | Last updated: ${lastUpdated}`);
   trancoStatusDiv.className = 'status-message';
 }
 
@@ -179,13 +175,13 @@ async function addJpAnchorTld(tld: string): Promise<void> {
   const result = await db.addJpAnchorTld(tld);
 
   if (!result.success) {
-    trustStatus(getMessage(result.error ?? '') || result.error || 'Error', 'error');
+    trustStatus(getMessageOr(result.error ?? '', result.error || 'Error'), 'error');
     return;
   }
 
   renderJpAnchorList(db.getJpAnchorTlds());
   if (jpAnchorAddInput) jpAnchorAddInput.value = '';
-  trustStatus(getMessage('jpAnchorAdded') || 'TLD added', 'success');
+  trustStatus(getMessageOr('jpAnchorAdded', 'TLD added'), 'success');
 }
 
 async function removeJpAnchorTld(tld: string): Promise<void> {
@@ -246,7 +242,7 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
   const result = await db.addSensitiveDomain(domain, category);
 
   if (!result.success) {
-    trustStatus(getMessage(result.error ?? '') || result.error || 'Error', 'error');
+    trustStatus(getMessageOr(result.error ?? '', result.error || 'Error'), 'error');
     return;
   }
 
@@ -254,7 +250,7 @@ async function addSensitiveDomain(domain: string, category: 'finance' | 'gaming'
     renderSensitiveList(db.getSensitiveDomains(category));
   }
   if (sensitiveAddInput) sensitiveAddInput.value = '';
-  trustStatus(getMessage('sensitiveAdded') || 'Domain added', 'success');
+  trustStatus(getMessageOr('sensitiveAdded', 'Domain added'), 'success');
 }
 
 async function removeSensitiveDomain(domain: string, category: 'finance' | 'gaming' | 'sns'): Promise<void> {
@@ -276,13 +272,13 @@ async function addWhitelistDomain(domain: string): Promise<void> {
   const result = await db.addToWhitelist(domain);
 
   if (!result.success) {
-    trustStatus(getMessage(result.error ?? '') || result.error || 'Error', 'error');
+    trustStatus(getMessageOr(result.error ?? '', result.error || 'Error'), 'error');
     return;
   }
 
   renderWhitelistList(db.getWhitelist());
   if (whitelistAddInput) whitelistAddInput.value = '';
-  trustStatus(getMessage('whitelistAdded') || 'Domain added', 'success');
+  trustStatus(getMessageOr('whitelistAdded', 'Domain added'), 'success');
 }
 
 function renderWhitelistList(domains: string[]): void {
@@ -308,7 +304,7 @@ async function updateTrancoList(): Promise<void> {
   const updater = getTrancoUpdater();
 
   if (updater.isUpdateInProgress()) {
-    trustStatus(getMessage('trancoUpdateInProgress') || 'Update already in progress', 'error');
+    trustStatus(getMessageOr('trancoUpdateInProgress', 'Update already in progress'), 'error');
     return;
   }
 
@@ -319,7 +315,7 @@ async function updateTrancoList(): Promise<void> {
 
     if (result.success) {
       await loadTrustSettings(); // Reload settings to reflect changes
-      trustStatus(getMessage('trancoUpdateSuccess') || 'Tranco list updated successfully', 'success');
+      trustStatus(getMessageOr('trancoUpdateSuccess', 'Tranco list updated successfully'), 'success');
       logInfo('TrustSettings', { tier, count: result.domainsCount }, `Tranco update completed`);
     } else {
       logError('TrustSettings', { error: result.error }, ErrorCode.TRANCO_FETCH_FAILED);
@@ -342,7 +338,7 @@ function onSafetyModeChange(): void {
   const targetTier = SAFETY_MODE_TO_TIER[mode];
 
   trancoTierSelect.value = targetTier;
-  trustStatus(getMessage('safetyModeChanged') || 'Safety mode changed', 'success');
+  trustStatus(getMessageOr('safetyModeChanged', 'Safety mode changed'), 'success');
 }
 
 function onTrancoTierChange(): void {
@@ -389,7 +385,7 @@ async function saveTrustSettings(): Promise<void> {
   });
 
   // Note: Trust Database changes are already saved immediately when modified
-  trustStatus(getMessage('settingsSaved') || 'Settings saved', 'success');
+  trustStatus(getMessageOr('settingsSaved', 'Settings saved'), 'success');
   const alertConfig = await checker.getAlertConfig();
   logInfo('TrustSettings', { alertConfig }, 'Trust settings saved');
 }
@@ -618,13 +614,13 @@ export async function renderPermissionSuggestList(): Promise<{ domain: string; c
     row.className = 'permission-suggest-row';
 
     const span = document.createElement('span');
-    span.textContent = `${domain} — ${count}${getMessage('permissionSuggestCount') || '回訪問'}`;
+    span.textContent = `${domain} — ${count}${getMessageOr('permissionSuggestCount', '回訪問')}`;
 
     const allowed = await isHostPermitted(`https://${domain}`);
     if (!allowed) {
       const allowBtn = document.createElement('button');
       allowBtn.className = 'btn-secondary btn-sm permission-suggest-allow';
-      allowBtn.textContent = getMessage('permissionSuggestAdd') || '🔓 許可する';
+      allowBtn.textContent = getMessageOr('permissionSuggestAdd', '🔓 許可する');
       allowBtn.addEventListener('click', async () => {
         const granted = await requestPermission(`https://${domain}`);
         if (granted) {
@@ -636,7 +632,7 @@ export async function renderPermissionSuggestList(): Promise<{ domain: string; c
       const dismissBtn = document.createElement('button');
       dismissBtn.className = 'btn-icon permission-suggest-dismiss';
       dismissBtn.textContent = '×';
-      dismissBtn.title = getMessage('permissionSuggestDismiss') || '無視する（14日表示しない）';
+      dismissBtn.title = getMessageOr('permissionSuggestDismiss', '無視する（14日表示しない）');
       dismissBtn.addEventListener('click', async () => {
         await recordDomainDismissal(domain);
         await renderPermissionSuggestList(); // 再描画

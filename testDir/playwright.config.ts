@@ -1,3 +1,5 @@
+import os from 'node:os';
+import path from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 /**
@@ -6,6 +8,13 @@ import { defineConfig, devices } from '@playwright/test';
  * This configuration is set up for E2E testing of the extension's popup UI
  * and content script functionality.
  */
+if (process.platform === 'darwin') {
+  // macOS app-data protection blocks the Playwright Firefox build from
+  // ~/Library/Application Support/Firefox, causing "Could not find profile folder".
+  // Its throwaway test data can safely live in a temporary directory instead.
+  process.env.MOZ_APP_DATA ??= path.join(os.tmpdir(), 'yasumaro-playwright-firefox-app-data');
+}
+
 export default defineConfig({
   testDir: './e2e',
   /* Run tests in files in parallel */

@@ -14,7 +14,8 @@ This file provides topic-based guidance for agents working on the Yasumaro Chrom
 | Fixing a bug | [Debugging Guide](dev-docs/DEBUGGING_GUIDE.md) |
 | Reviewing code or security | [Security Review Guide](dev-docs/SECURITY_REVIEW_GUIDE.md) |
 | Writing or updating docs | [Documentation Guide](dev-docs/DOCUMENTATION_GUIDE.md) |
-| Testing | [Testing Guide](dev-docs/TESTING_GUIDE.md) |
+| Testing | [Test Rule](dev-docs/TEST_RULE.md) + [Testing Guide](dev-docs/TESTING_GUIDE.md) |
+| A test fails intermittently or only under load | [Async / Timing Failures](#async--timing-failures) |
 | Optimizing performance | [Performance Guide](dev-docs/PERFORMANCE_GUIDE.md) |
 | Preparing a release | [Release](#release) |
 
@@ -40,6 +41,7 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 | Design Tokens | [dev-docs/DESIGN_TOKENS.md](dev-docs/DESIGN_TOKENS.md) |
 | Naming Guidelines | [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md) |
 | Performance Guide | [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md) |
+| Test Rules (required reading before writing tests) | [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) |
 | Testing / Debugging / Security / Docs | [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md) · [DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md) · [SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md) · [DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
@@ -90,7 +92,7 @@ Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_
 
 - **ESM imports**: All imports must use `.js` extensions (including `.ts` source files)
 - **Module resolution**: `nodeNext` mode with strict type checking
-- **Testing**: Jest + jsdom with Web Crypto API polyfill (`@peculiar/webcrypto`)
+- **Testing**: Vitest (config: `testDir/vitest.config.ts`). Rules: [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md)
 - Run `npm run type-check` before committing to catch type errors
 
 ---
@@ -121,6 +123,51 @@ Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_
 > Test commands (`npm test`, `test:watch`, `test:coverage`, `test:e2e`, `type-check`, `validate`) are documented in [CONTRIBUTING.md](CONTRIBUTING.md). After code changes, run `npm run build` before testing in Chrome Extension.
 
 Manual testing requirements, environment setup, key scenarios, and limitations: [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md).
+
+Read [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) before writing or changing tests.
+
+---
+
+## Async / Timing Failures
+
+### Principle
+
+- Never make a test pass by adding a fixed-time wait: `await new Promise(r => setTimeout(r, N))`, `page.waitForTimeout(N)`, or `sleep N` in the shell. Raising `retry` / `retries` counts falls under the same rule.
+- Why: a fixed wait hides the race instead of removing it. The test fails again when load or parallelism changes, and a real bug in production code (a missing `await`, wrong initialization order) goes unnoticed.
+- Production code may wait on purpose (retry backoff in `src/utils/fetch.ts`, `src/utils/storage/storageTransaction.ts`). Such waits must be injectable (`SleepFn`, `StepDelayFn`, a `sleep` option) so that tests never wait in real time.
+
+### When a failure looks timing-related
+
+1. Classify the cause and write down the evidence:
+   - missing `await` (the test does not wait for an async operation to finish)
+   - wrong initialization order
+   - waiting for an external process to start (dev server, offscreen document, worker)
+   - reading right after a write that has not settled yet
+   - state leaking between tests
+2. Fix it with the matching technique from [TEST_RULE.md § 実時間待ちの禁止と代替手段](dev-docs/TEST_RULE.md#実時間待ちの禁止と代替手段), using the helpers in `testDir/waitPolicy.ts`: await the Promise or event that signals completion, wait for a condition with `waitForMock()` (or `expect.poll` in E2E), drive production timers with an injected sleep or `useTimerClock()`, or isolate setup and teardown per test. Do not call `vi.useFakeTimers()` with default options; it also fakes `queueMicrotask` and hangs dynamic imports.
+3. If you cannot identify the cause, stop. Do not work around it with a wait. Report what you observed and your hypotheses.
+
+### Waiting for processes in the shell
+
+Do not write `cmd & sleep N`. To wait for a command to finish, block on it (run it in the foreground, or `wait` on its PID). To wait for a long-running process to become ready, poll a readiness condition with an upper bound, e.g. `timeout 60 bash -c 'until curl -sf http://localhost:PORT/; do sleep 0.5; done'`.
+
+### Definition of done
+
+A timing-related fix is not done after one green run. Run it repeatedly with retries disabled; every run must pass:
+
+- Unit: `npx vitest run <file> --repeats=20`
+- E2E: `npx playwright test <file> --repeat-each=10 --retries=0 --workers=4`
+- ESLint rule tests: `npx vitest run eslint/__tests__ --repeats=20`
+
+Rule tests reach the same gate through `createRepeatSafeRuleTester` in `eslint/__tests__/repeatSafeRuleTester.ts`; plain `new RuleTester` cannot, because ESLint allocates its duplicate-case registry inside the `describe` body and `--repeats` re-runs only the `it` body. See [ADR: ESLint rule tests and `vitest --repeats`](dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md).
+
+The report must include the cause category, the fix, and the repeat commands with their results.
+
+### Exceptions
+
+A real-time wait is acceptable only when real time is what the code is about: tests that measure timing (crypto timing resistance, `bench/`), or deliberate spacing for a rate-limited external API. Put the reason on the line (`// eslint-disable-next-line local/no-test-sleep -- <reason>`) and mention it in the report.
+
+Background and measurements: [ADR: test suite execution time contract](dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md).
 
 ---
 

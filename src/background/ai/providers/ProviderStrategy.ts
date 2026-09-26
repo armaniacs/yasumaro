@@ -14,6 +14,16 @@ import { fetchWithRetry } from '../../../utils/fetch.js';
 import { buildAllowedUrls } from '../../../utils/storage/urlWhitelist.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { describeHttpFailure } from '../../../utils/httpFailureMessages.js';
+import {
+    FailureKind,
+    createFailure,
+    failureFromHttpStatus,
+    resolveFailure,
+    shouldRetryHttpResponse,
+    shouldRetryTransportFailure,
+    withFailure,
+    type FailureMetadata,
+} from '../../../utils/failureTaxonomy.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { logDebug } from '../../../utils/logger/api.js';
 import { LogType } from '../../../utils/logger/types.js';
@@ -34,6 +44,8 @@ export interface AIProviderConnectionResult {
         error?: string;
         /** HTTP status code if applicable. */
         statusCode?: number;
+        /** Structured failure (kind / status / method), PBI 2026-09-25-11. Never carries key material or a response body. */
+        failure?: FailureMetadata;
         /** Whether the response was non-empty. */
         hasContent?: boolean;
         /** 実際にリクエストを送った先のエンドポイント。 */
@@ -62,6 +74,8 @@ export interface AISlotFailure {
     model?: string;
     /** Bare diagnostics only (e.g. "HTTP 401" / "Prompt failed: ...") — never raw response bodies. */
     error: string;
+    /** Structured failure of the slot, when the provider classified it (PBI 2026-09-25-11). */
+    failure?: FailureMetadata;
 }
 
 export interface AISummaryResult {
@@ -77,6 +91,13 @@ export interface AISummaryResult {
     attemptedProviders?: string[];
     /** Per-slot failure details — captured even when a later slot succeeds. */
     slotFailures?: AISlotFailure[];
+    /**
+     * Structured failure behind this result (PBI 2026-09-25-11). This result is a
+     * failure *carrier*, not an exception: a total provider failure keeps flowing
+     * back as `success: false` so privacyPipeline's branch stays intact, and the
+     * kind travels alongside the sanitized `summary` for the retry decision.
+     */
+    failure?: FailureMetadata;
     error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
 }
 
@@ -202,24 +223,29 @@ export abstract class AIProviderStrategy {
         return {
             success: false,
             message: describeHttpFailure(statusCode, providerLabel),
-            debug: { statusCode },
+            debug: { statusCode, failure: failureFromHttpStatus(statusCode) },
         };
     }
 
     /**
      * fetchWithRetry がスローするエラーメッセージをパースし、ユーザー向け接続エラーメッセージに変換
+     *
+     * @param failure - 既に構造化済みの failure（あれば kind の出所はこちらが正）。
+     *   無い compat 入力（呼び出し側が message だけ渡すテストや旧コード）だけ
+     *   文言から kind を補う。
      */
     protected parseAndMapFetchError(
         msg: string,
         providerLabel: string,
-        errorName?: string
+        errorName?: string,
+        failure?: FailureMetadata | null,
     ): AIProviderConnectionResult {
         // タイムアウト判定（AbortErrorはメッセージが環境依存のため name でも判定）
         if (errorName === 'AbortError' || msg.includes('timed out') || msg.includes('timeout')) {
             return {
                 success: false,
                 message: 'Connection timed out. Check your network or increase timeout.',
-                debug: { error: msg },
+                debug: { error: msg, failure: failure ?? createFailure(FailureKind.TIMEOUT) },
             };
         }
 
@@ -235,19 +261,23 @@ export abstract class AIProviderStrategy {
             return {
                 success: false,
                 message: describeHttpFailure(statusCode, providerLabel, 'parse'),
-                debug: { error: msg, statusCode },
+                debug: { error: msg, statusCode, failure: failure ?? failureFromHttpStatus(statusCode) },
             };
         } else if (msg.includes('Failed to fetch')) {
             return {
                 success: false,
                 message: 'Cannot connect. Check your Base URL and network.',
-                debug: { error: msg },
+                debug: { error: msg, failure: failure ?? createFailure(FailureKind.NETWORK) },
             };
         } else {
             return {
                 success: false,
                 message: `Connection error: ${msg}`,
-                debug: { error: msg, ...pickDefined({ statusCode: statusCode || undefined }) },
+                debug: {
+                    error: msg,
+                    ...pickDefined({ statusCode: statusCode || undefined }),
+                    ...(failure ? { failure } : {}),
+                },
             };
         }
     }
@@ -276,7 +306,12 @@ export abstract class AIProviderStrategy {
     ): Promise<AISummaryResult> {
         const credentialError = hooks.checkCredentials();
         if (credentialError) {
-            return { success: false, summary: credentialError };
+            // A missing key is a configuration failure: no request will be made
+            // and no amount of retrying fixes it.
+            return withFailure(
+                { success: false, summary: credentialError },
+                createFailure(FailureKind.CONFIGURATION),
+            );
         }
 
         const preFlight = await this.checkPreFlight();
@@ -330,12 +365,24 @@ export abstract class AIProviderStrategy {
             // so this catch — not handleErrorResponse — is where production
             // HTTP failures actually land. Keep the user-facing summary
             // generic (security pins) but carry the detail in `error`, the
-            // per-slot diagnostic channel the regenerate trail renders.
+            // per-slot diagnostic channel the regenerate trail renders, and
+            // the kind in `failure`, the structured channel retry policy reads.
             const detail = msg.substring(0, 300);
+            const failure = resolveFailure(error);
             if (isTimeout || msg.includes('timed out')) {
-                return { success: false, summary: 'Error: AI request timed out. Please check your connection.', error: detail };
+                const result: AISummaryResult = {
+                    success: false,
+                    summary: 'Error: AI request timed out. Please check your connection.',
+                    error: detail,
+                };
+                return failure ? withFailure(result, failure) : withFailure(result, createFailure(FailureKind.TIMEOUT));
             }
-            return { success: false, summary: 'Error: Failed to generate summary. Please try again or check your settings.', error: detail };
+            const result: AISummaryResult = {
+                success: false,
+                summary: 'Error: Failed to generate summary. Please try again or check your settings.',
+                error: detail,
+            };
+            return failure ? withFailure(result, failure) : result;
         }
     }
 
@@ -386,6 +433,7 @@ export abstract class AIProviderStrategy {
                         prompt: CONNECTION_TEST_PROMPT,
                         endpoint,
                         statusCode: response.status,
+                        failure: failureFromHttpStatus(response.status, 'POST'),
                     },
                 };
             }
@@ -395,7 +443,7 @@ export abstract class AIProviderStrategy {
         } catch (e: unknown) {
             const msg = errorMessage(e);
             const errorName = e instanceof Error ? e.name : undefined;
-            const mapped = this.parseAndMapFetchError(msg, hooks.providerLabel, errorName);
+            const mapped = this.parseAndMapFetchError(msg, hooks.providerLabel, errorName, resolveFailure(e));
             return {
                 ...mapped,
                 debug: { ...mapped.debug, prompt: CONNECTION_TEST_PROMPT, endpoint },
@@ -541,8 +589,11 @@ export abstract class AIProviderStrategy {
      * デフォルトを継承していたため、同じ「AI要約」でありながら
      * Gemini だけが 429（レート制限）でもリトライしていた。
      *
-     * - 429: リトライしない（制限を悪化させるだけ）
-     * - 非冪等メソッドの 5xx: リトライしない（二重送信のリスク）
+     * 判定は src/utils/failureTaxonomy.ts の failure kind に委譲する
+     * （429 → rate_limit、5xx → http、POST は再送不可）。
+     *
+     * - 429 / 401 / 403: リトライしない
+     * - 5xx: 冪等なメソッドのみ（AI 要約は常に POST なので再送しない）
      * - タイムアウト: 1回だけリトライ
      * - ネットワークエラー: リトライする
      */
@@ -552,17 +603,10 @@ export abstract class AIProviderStrategy {
         response: Response | null,
         method?: string,
     ): boolean {
-        if (response?.status === 429) return false;
-        if (response && response.status >= 500) {
-            return !['POST', 'PUT', 'PATCH'].includes(method?.toUpperCase() ?? 'POST');
+        if (response) {
+            return shouldRetryHttpResponse(response.status, method ?? 'POST');
         }
-        if (error.name === 'AbortError' || error.message.includes('timed out')) {
-            return attempt <= 1;
-        }
-        if (error.name === 'NetworkError' || error.message.includes('NetworkError') || error.message.includes('fetch failed')) {
-            return true;
-        }
-        return false;
+        return shouldRetryTransportFailure(error, attempt);
     }
 
     /**

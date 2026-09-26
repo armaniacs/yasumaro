@@ -12,6 +12,7 @@ import type { AIService, AISummaryResult } from './ai/AIService.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { SUMMARY_EMPTY_FALLBACK } from '../utils/summaryFallback.js';
+import type { FailureMetadata } from '../utils/failureTaxonomy.js';
 
 /**
  * Calculate token count approximation from text length.
@@ -67,7 +68,14 @@ export interface PrivacyPipelineResult {
   /** 試行したプロバイダーID（全滅時のみ設定。PBI 2026-09-22-04 follow-up） */
   attemptedProviders?: string[];
   /** スロット別の失敗詳細（成功スロット以降の失敗も保持。同 follow-up） */
-  slotFailures?: { provider: string; model?: string; error: string }[];
+  slotFailures?: { provider: string; model?: string; error: string; failure?: FailureMetadata }[];
+  /**
+   * Structured failure of the AI call (PBI 2026-09-25-11). A total provider
+   * failure is still reported as a normal result, so this field is what lets the
+   * executor ask "which kind?" without reading the summary text. Never holds a
+   * summary body, a response body, or key material.
+   */
+  failure?: FailureMetadata;
   /** クラウドAI要約(L3)の実呼び出し時間 (ミリ秒) — クラウドAIが呼ばれた場合のみセットされる */
   aiCallDurationMs?: number;
 }
@@ -297,6 +305,7 @@ export class PrivacyPipeline {
         modelName: aiResult.modelName,
         attemptedProviders: aiResult.attemptedProviders,
         slotFailures: aiResult.slotFailures,
+        failure: aiResult.failure,
       }),
     };
   }

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => {
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) => {
     const messages: Record<string, string> = {
       'domainBlacklistDesc': 'Blacklist description',
       'domainWhitelistDesc': 'Whitelist description',
@@ -11,10 +11,29 @@ vi.mock('../../utils/i18n.js', () => ({
       'domainTagCount': '{count} items',
       'domainTagCount_one': '1 item',
       'domainTagCount_other': '{count} items',
+      'domainTagRemoveAriaLabel': '{domain} を削除',
     };
-    return messages[key] || key;
-  }),
-}));
+    let message = messages[key] || key;
+    if (subs) {
+      for (const [name, value] of Object.entries(subs)) {
+        message = message.replace(`{${name}}`, String(value));
+      }
+    }
+    return message;
+  });
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 vi.mock('../settings/domainFilter.js', () => ({
   loadDomainSettings: vi.fn().mockResolvedValue(undefined),
@@ -573,7 +592,7 @@ describe('initDomainFilterTagUI', () => {
       await initDomainFilterTagUI();
 
       const tagCount = document.getElementById('domainTagCount')!;
-      expect(tagCount.textContent).toBe('{count} 件');
+      expect(tagCount.textContent).toBe('1 件');
     });
   });
 

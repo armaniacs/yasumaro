@@ -2577,6 +2577,69 @@ details[open] .advanced-details-summary {
   transform: none;
 }
 
+/* Generic button base + variants used with Bootstrap-like `btn` naming
+   (Archive / Gist sections, Privacy danger actions, feedback views).
+   `.btn` alone carries no visual weight; variants mirror `.btn-primary` /
+   `.secondary-btn` metrics so the two naming systems render consistently. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+  min-width: 120px;
+}
+
+.btn-secondary {
+  background: var(--color-bg-subtle);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-code);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: #fff;
+  border: none;
+}
+
+.btn-danger:hover {
+  background: var(--color-danger-hover);
+  box-shadow: 0 4px 8px var(--color-shadow);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn:focus-visible,
+.btn-secondary:focus-visible,
+.btn-danger:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Dark mode overrides */
 @media (prefers-color-scheme: dark) {
   .settings-section {
@@ -4817,10 +4880,19 @@ details[open] > .priority-details-summary {
    ============================================================================= */
 
 .period-filter {
+  /* WHY: dark-mode --color-primary is a light purple, so the filled selection
+     needs a dark foreground there; white on it stays under 3:1. */
+  --period-filter-active-fg: #fff;
   border: 1px solid var(--ym-color-border, #e2e8f0);
   border-radius: var(--ym-radius-sm, 6px);
   padding: var(--ym-space-2, 8px) var(--ym-space-3, 12px);
   margin-top: var(--ym-space-3, 12px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .period-filter {
+    --period-filter-active-fg: #1a1025;
+  }
 }
 
 .period-filter-presets {
@@ -4829,8 +4901,31 @@ details[open] > .priority-details-summary {
   gap: var(--ym-space-1, 4px);
 }
 
+.period-filter-preset {
+  padding: 4px 10px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-subtle);
+  border: 1px solid var(--color-border);
+}
+
+.period-filter-preset:hover {
+  background: var(--color-bg-code);
+  border-color: var(--color-border-hover);
+  color: var(--color-text);
+}
+
 .period-filter-preset[aria-pressed="true"] {
   font-weight: 700;
+  color: var(--period-filter-active-fg);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.period-filter-preset[aria-pressed="true"]:hover {
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
+  color: var(--period-filter-active-fg);
 }
 
 .period-filter-custom {
@@ -4839,31 +4934,51 @@ details[open] > .priority-details-summary {
   align-items: center;
   gap: var(--ym-space-1, 4px);
   margin-top: var(--ym-space-2, 8px);
+  padding: 2px 6px;
+  border-radius: var(--ym-radius-sm, 6px);
 }
 
-.visit-duration-table {
+/* 'custom' has no preset button, so its own row carries the active styling. */
+.period-filter[data-active-preset="custom"] .period-filter-custom {
+  background: var(--color-primary-light);
+  box-shadow: inset 0 0 0 1px var(--color-primary);
+}
+
+.period-filter[data-active-preset="custom"] .period-filter-custom-label {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* =============================================================================
+   Shared analysis table / notice styles
+   Used by every top-N table panel (domain analysis, tag timeline, co-occurrence
+   table, word cluster, tag-cluster compare) — panel-neutral on purpose, so a
+   panel never has to name another panel's styles to render a table.
+   ============================================================================= */
+
+.data-table {
   border-collapse: collapse;
   margin-top: var(--ym-space-2, 8px);
   font-size: var(--ym-text-sm, 13px);
 }
 
-.visit-duration-table th,
-.visit-duration-table td {
+.data-table th,
+.data-table td {
   border: 1px solid var(--ym-color-border, #e2e8f0);
   padding: var(--ym-space-1, 4px) var(--ym-space-2, 8px);
   text-align: left;
 }
 
-.visit-duration-table th[scope="col"] {
+.data-table th[scope="col"] {
   color: var(--ym-color-sumi-muted, #7a7060);
   font-weight: 600;
 }
 
-.visit-duration-heading {
+.data-table-heading {
   margin-top: var(--ym-space-3, 12px);
 }
 
-.visit-duration-tag-btn {
+.data-table-link-btn {
   background: none;
   border: none;
   padding: 0;
@@ -4873,25 +4988,72 @@ details[open] > .priority-details-summary {
   text-align: left;
 }
 
-.visit-duration-tag-btn:focus-visible {
+.data-table-link-btn:focus-visible {
   box-shadow: var(--ym-focus-ring);
   outline: none;
 }
 
-#visitDurationUnmeasuredRatio,
-#visitDurationEmptyState,
-#visitDurationAllUnmeasured,
-.visit-duration-truncated {
+.data-table-notice {
   margin-top: var(--ym-space-2, 8px);
   font-size: var(--ym-text-sm, 13px);
 }
 
-#visitDurationEmptyState,
-#visitDurationAllUnmeasured {
+.data-table-notice.is-muted {
   color: var(--ym-color-sumi-muted, #7a7060);
 }
 
-.visit-duration-truncated {
+/* Revisit insights: the copy / open-history pair inside one table cell. */
+.revisit-insights-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-2, 8px);
+}
+
+/* Research sessions: a collapsible list, so the markers would double up. */
+.research-sessions-list,
+.research-sessions-records {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.research-sessions-item {
+  border-bottom: 1px solid var(--ym-color-border, #e2e8f0);
+  padding: var(--ym-space-2, 8px) 0;
+}
+
+.research-sessions-item summary {
+  cursor: pointer;
+}
+
+.research-sessions-records li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ym-space-2, 8px);
+  padding: var(--ym-space-1, 4px) 0 var(--ym-space-1, 4px) var(--ym-space-3, 12px);
+}
+
+.research-sessions-domain,
+.research-sessions-query,
+.research-sessions-source,
+.research-sessions-starred {
+  color: var(--ym-color-sumi-muted, #7a7060);
+}
+
+/* Navigation path tree (PBI 04): a left rule reads as "came from here". */
+.research-sessions-tree {
+  list-style: none;
+  margin: 0;
+  padding-left: var(--ym-space-3, 12px);
+  border-left: 1px solid var(--ym-color-border, #e2e8f0);
+}
+
+.research-sessions-query-root {
+  margin: var(--ym-space-1, 4px) 0;
+  font-weight: 600;
+}
+
+.data-table-notice.is-warning {
   color: var(--ym-color-warning-text, #92400e);
   background: var(--ym-color-warning-bg, #fef3c7);
   border: 1px solid var(--ym-color-warning-border, #fde68a);
@@ -5078,6 +5240,7 @@ details[open] > .priority-details-summary {
 #tagCompareFirstSvg,
 #tagCompareSecondSvg {
   width: 100%;
+  max-width: 480px;
   height: auto;
   touch-action: none;
   cursor: grab;

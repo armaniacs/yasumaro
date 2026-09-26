@@ -60,8 +60,8 @@ function mountPanel() {
       <button type="button" id="coocTableRunBtn">Run</button>
     </div>
     <div id="coocTableEmptyState" hidden></div>
-    <div id="coocTableTagsTruncated" class="visit-duration-truncated" hidden></div>
-    <div id="coocTableTop20Truncated" class="visit-duration-truncated" hidden></div>
+    <div id="coocTableTagsTruncated" class="data-table-notice is-warning" hidden></div>
+    <div id="coocTableTop20Truncated" class="data-table-notice is-warning" hidden></div>
     <div id="coocTableTableWrap"></div>
   `;
   document.body.appendChild(container);

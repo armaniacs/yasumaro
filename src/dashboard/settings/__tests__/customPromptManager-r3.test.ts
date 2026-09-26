@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
 
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = vi.fn() as any;
@@ -105,6 +106,16 @@ const mockGetPromptDisplayName = vi.fn((preset: any, locale: string) => (locale 
 
 vi.mock('../../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
+  getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
+      ((subs === undefined ? (mockGetMessage as (...a: any[]) => unknown)(key) : (mockGetMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string,
+  getMessageWithSubstitutions: (
+        key: string,
+        subs: Record<string, string | number>,
+        fallback: string,
+      ): string =>
+      ((mockGetMessage as (...a: any[]) => unknown)(key, subs) ||
+        fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+          subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string,
   applyI18n: mockApplyI18n,
 }));
 
@@ -238,15 +249,17 @@ describe('customPromptManager - r3 remaining branches', () => {
     (document.getElementById('promptName') as HTMLInputElement).value = 'Name';
     (document.getElementById('promptText') as HTMLTextAreaElement).value = 'bad';
     document.getElementById('savePromptBtn')!.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     const fallbackDiv = document.createElement('div');
     fallbackDiv.id = 'promptStatus';
     document.body.appendChild(fallbackDiv);
     mockValidatePrompt.mockReturnValueOnce({ valid: false } as any);
     // need fresh click with same null div? promptStatusDiv is still null, fallback lookup will use new div
     document.getElementById('savePromptBtn')!.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(fallbackDiv.textContent).toBeTruthy();
+    await vi.waitFor(
+        () => expect(fallbackDiv.textContent).toBeTruthy(),
+        { interval: 1 }
+    );
   });
 
   it('covers promptNameRequired fallback when getMessage returns falsy and promptStatusDiv null', async () => {
@@ -259,7 +272,7 @@ describe('customPromptManager - r3 remaining branches', () => {
     initCustomPromptManager({ custom_prompts: [] } as any);
     (document.getElementById('promptText') as HTMLTextAreaElement).value = 'something';
     document.getElementById('savePromptBtn')!.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -292,7 +305,7 @@ describe('customPromptManager - r3 remaining branches', () => {
     const settings: any = { custom_prompts: [createTestPrompt({ id: '__default__', name: 'Fake' })] };
     initCustomPromptManager(settings);
     document.getElementById('edit-prompt-__default__')!.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(document.getElementById('edit-prompt-__default__')).not.toBeNull();
   });
 
@@ -318,7 +331,7 @@ describe('customPromptManager - r3 remaining branches', () => {
     const settings: any = { custom_prompts: [createTestPrompt({ id: '__default__' })] };
     initCustomPromptManager(settings);
     document.getElementById('delete-prompt-__default__')!.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -374,7 +387,7 @@ describe('customPromptManager - r3 remaining branches', () => {
     const { initCustomPromptManager } = await import('../customPromptManager.js');
     initCustomPromptManager({ custom_prompts: [] } as any);
     document.getElementById('duplicate-prompt-__preset__concise')!.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -385,7 +398,7 @@ describe('customPromptManager - r3 remaining branches', () => {
     initCustomPromptManager(settings);
     settings.custom_prompts = [];
     document.getElementById('duplicate-prompt-dupMissing')!.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -492,7 +505,7 @@ describe('customPromptManager - r3 remaining branches', () => {
     const { initCustomPromptManager } = await import('../customPromptManager.js');
     initCustomPromptManager({ custom_prompts: [] } as any);
     document.getElementById('savePromptBtn')!.click();
-    await new Promise((r) => setTimeout(r, 10));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -517,9 +530,10 @@ describe('customPromptManager - r3 remaining branches', () => {
     const { initCustomPromptManager } = await import('../customPromptManager.js');
     initCustomPromptManager({ custom_prompts: [] } as any);
     document.getElementById('duplicate-prompt-__default__')!.click();
-    await new Promise((r) => setTimeout(r, 10));
-    // should still set name with (Copy) even when status message fallback triggered
-    expect((document.getElementById('promptName') as HTMLInputElement).value).toContain('(Copy)');
+    await vi.waitFor(
+        () => expect((document.getElementById('promptName') as HTMLInputElement).value).toContain('(Copy)'),
+        { interval: 1 }
+    );
   });
 
   it('covers prompts fallback || [] in delete/activate/duplicate handlers with missing key', async () => {

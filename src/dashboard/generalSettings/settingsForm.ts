@@ -12,7 +12,7 @@ import { StorageKeys, ProviderSlot } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
 import { providerIdsInOrder } from '../aiProviderCatalogView.js';
@@ -198,9 +198,9 @@ export async function handlePurgeNow(): Promise<void> {
     if (isServiceError(result)) {
       statusEl.textContent = result.error || 'Error';
     } else if (result.data.skipped) {
-      statusEl.textContent = getMessage('purgeNowSkipped') || '保持ポリシーが未設定のため、削除をスキップしました';
+      statusEl.textContent = getMessageOr('purgeNowSkipped', '保持ポリシーが未設定のため、削除をスキップしました');
     } else {
-      statusEl.textContent = getMessage(getPluralKey('purgeNowSuccess', result.data.purged), [String(result.data.purged)]) || `${result.data.purged} 件を削除しました`;
+      statusEl.textContent = getMessageOr(getPluralKey('purgeNowSuccess', result.data.purged), `${result.data.purged} 件を削除しました`, [String(result.data.purged)]);
     }
   } finally {
     purgeNowBtn.disabled = false;
@@ -220,9 +220,9 @@ export async function handleContentPurgeNow(): Promise<void> {
     if (isServiceError(result)) {
       statusEl.textContent = result.error || 'Error';
     } else if (result.data.skipped) {
-      statusEl.textContent = getMessage('contentPurgeNowSkipped') || 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました';
+      statusEl.textContent = getMessageOr('contentPurgeNowSkipped', 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました');
     } else {
-      statusEl.textContent = getMessage(getPluralKey('contentPurgeNowSuccess', result.data.purged), [String(result.data.purged)]) || `${result.data.purged} 件の content を削除しました`;
+      statusEl.textContent = getMessageOr(getPluralKey('contentPurgeNowSuccess', result.data.purged), `${result.data.purged} 件の content を削除しました`, [String(result.data.purged)]);
     }
   } finally {
     contentPurgeNowBtn.disabled = false;

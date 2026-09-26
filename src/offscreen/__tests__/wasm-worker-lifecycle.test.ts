@@ -268,6 +268,7 @@ describe('AbortController integration', () => {
     mockUseOpfsStorage.mockImplementation(
       () =>
         new Promise((_, reject) => {
+          // eslint-disable-next-line local/no-test-sleep -- simulates a slow WASM load to test abort behavior
           setTimeout(() => reject(new Error('Aborted')), 50);
         })
     );
@@ -284,6 +285,7 @@ describe('AbortController integration', () => {
     mockRun.mockImplementation(
       () =>
         new Promise((resolve) => {
+          // eslint-disable-next-line local/no-test-sleep -- simulates a slow query to test abort behavior
           setTimeout(() => resolve([{ c: 1 }]), 100);
         })
     );

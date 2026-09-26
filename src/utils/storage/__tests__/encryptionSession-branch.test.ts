@@ -4,6 +4,21 @@
  * encryptionSession-concurrency.test.ts.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// PBKDF2 at the production 600,000 iterations dominates this file's runtime.
+// The production values are asserted in cryptoParamsSSOT.test.ts; here the KDF
+// only needs to behave, not to be expensive.
+vi.mock('../../crypto/cryptoParams.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../crypto/cryptoParams.js')>();
+  return {
+    ...actual,
+    CRYPTO_PARAMS: {
+      ...actual.CRYPTO_PARAMS,
+      PBKDF2_ITERATIONS: 1_000,
+      LEGACY_PBKDF2_ITERATIONS: 100,
+    },
+  };
+});
 import {
     getOrCreateEncryptionKey,
     isMasterPasswordEnabled,
@@ -195,23 +210,25 @@ describe('unlockWithPassword', () => {
     });
 
     it('re-hashes legacy password when iterations differ', async () => {
+        const { CRYPTO_PARAMS } = await import('../../crypto/cryptoParams.js');
+        const legacyIterations = CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS;
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const saltBase64 = btoa(String.fromCharCode(...salt));
-        // Manually set a hash with legacy iteration count (e.g. 100000)
+        // Manually set a hash with the legacy iteration count.
         const { hashPasswordWithPBKDF2 } = await import('../../crypto/index.js');
-        const legacyHash = await hashPasswordWithPBKDF2('LegacyPass123!', salt, 100000);
+        const legacyHash = await hashPasswordWithPBKDF2('LegacyPass123!', salt, legacyIterations);
         await chrome.storage.local.set({
             [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
             [StorageKeys.MASTER_PASSWORD_SALT]: saltBase64,
             [StorageKeys.MASTER_PASSWORD_HASH]: legacyHash,
-            [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: 100000,
+            [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: legacyIterations,
         });
 
         const result = await unlockWithPassword('LegacyPass123!');
         expect(result).toBe(true);
 
         const stored = await chrome.storage.local.get(StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS);
-        expect(stored[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]).toBeGreaterThan(100000);
+        expect(stored[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]).toBe(CRYPTO_PARAMS.PBKDF2_ITERATIONS);
     });
 });
 

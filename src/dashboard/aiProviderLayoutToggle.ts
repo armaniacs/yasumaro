@@ -1,6 +1,6 @@
 import { StorageKeys } from '../utils/storage/types.js';
 import type { SettingsRepository } from '../utils/storage/SettingsRepository.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 
 export type AiProviderLayout = 'a' | 'b';
 
@@ -32,19 +32,19 @@ export function createLayoutToggle(
   const group = document.createElement('div');
   group.className = 'ai-layout-toggle';
   group.setAttribute('role', 'group');
-  group.setAttribute('aria-label', getMessage('aiProviderLayoutToggleLabel') || 'AI provider layout');
+  group.setAttribute('aria-label', getMessageOr('aiProviderLayoutToggleLabel', 'AI provider layout'));
 
   const btnA = document.createElement('button');
   btnA.type = 'button';
   btnA.className = 'ai-layout-toggle-btn';
-  btnA.textContent = getMessage('aiProviderLayoutA') || 'A Unified';
+  btnA.textContent = getMessageOr('aiProviderLayoutA', 'A Unified');
   btnA.setAttribute('aria-pressed', String(current === 'a'));
   if (current === 'a') btnA.classList.add('active');
 
   const btnB = document.createElement('button');
   btnB.type = 'button';
   btnB.className = 'ai-layout-toggle-btn';
-  btnB.textContent = getMessage('aiProviderLayoutB') || 'B Separated';
+  btnB.textContent = getMessageOr('aiProviderLayoutB', 'B Separated');
   btnB.setAttribute('aria-pressed', String(current === 'b'));
   if (current === 'b') btnB.classList.add('active');
 

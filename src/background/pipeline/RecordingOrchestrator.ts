@@ -53,7 +53,6 @@ export interface RecordingOrchestratorDeps {
 }
 
 export interface RecordOptions {
-  previewOnly?: boolean;
   /**
    * Explicit settings, bypassing getSettingsWithCache. Used by the
    * manual/preview record handlers which have already resolved settings and
@@ -89,12 +88,7 @@ export class RecordingOrchestrator {
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 
-    // Recording-allowance precedence (PBI 2026-09-19-08): earlier steps win.
-    // truncate -> domainFilter -> permission -> trust -> privacyHeaders
-    // (headerDetector-backed) -> duplicate. Any FATAL rejection stops the
-    // pipeline, so the first rejecting gate decides. Reordering changes which
-    // refusal the user sees — keep this order unless the precedence is
-    // deliberately renegotiated.
+    // Recording-allowance precedence: order SSOT is src/utils/recordingGateTable.ts.
     this.preSaveSteps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
       { name: 'domainFilter', errorStrategy: ErrorStrategy.FATAL, execute: checkDomainFilterStep },
@@ -133,7 +127,7 @@ export class RecordingOrchestrator {
    * the `previewOnly` data flag short-circuits at the previewBreakpoint step.
    */
   async record(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
-    if (opts.previewOnly || (data as { previewOnly?: boolean }).previewOnly) return this.preview(data, opts);
+    if (data.previewOnly) return this.preview(data, opts);
     const settings = opts.settings ?? await this.getSettingsWithCache();
     return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
   }
@@ -141,7 +135,7 @@ export class RecordingOrchestrator {
   /** Preview path: short-circuit after privacyPipeline (previewBreakpoint) */
   async preview(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
     const settings = opts.settings ?? await this.getSettingsWithCache();
-    const effectiveData = { ...data, previewOnly: true } as RecordingData;
+    const effectiveData = { ...data, previewOnly: true };
     return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
   }
 

@@ -26,10 +26,15 @@ vi.mock('../../utils/retry.js', async (importOriginal) => {
   };
 });
 
-import { fetchPeriodRows } from '../fetchPeriodRows.js';
+import { fetchPeriodRows, fetchAllPeriodRows } from '../fetchPeriodRows.js';
 
 function row(id: number): { id: number; url: string; title: string; created_at: number } {
   return { id, url: 'https://example.com/', title: 't', created_at: 1_700_000_000_000 + id };
+}
+
+/** A page of `size` rows whose created_at descends from `startAt`. */
+function page(startId: number, size: number): { id: number; url: string; title: string; created_at: number }[] {
+  return Array.from({ length: size }, (_, i) => row(startId - i));
 }
 
 describe('fetchPeriodRows', () => {
@@ -174,5 +179,99 @@ describe('fetchPeriodRows', () => {
 
     await expect(fetchPeriodRows({ limit: 10, maxAttempts: 2 })).rejects.toThrow();
     expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('fetchAllPeriodRows', () => {
+  const PAGE = 4;
+  const MAX = 100;
+
+  beforeEach(() => {
+    mockQueryLogs.mockReset();
+    mockGetSqliteStatus.mockReset();
+    mockGetSqliteStatus.mockResolvedValue({ initialized: true });
+  });
+
+  it('stops on a short page and reports capped=false', async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: page(4, PAGE - 1), total: 3 } });
+
+    const result = await fetchAllPeriodRows({ pageSize: PAGE, maxRows: MAX, label: 'revisitInsights' });
+
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+    expect(result.rows).toHaveLength(PAGE - 1);
+    expect(result.capped).toBe(false);
+  });
+
+  it('pages until a short page arrives', async () => {
+    mockQueryLogs
+      .mockResolvedValueOnce({ data: { rows: page(4, PAGE), total: 10 } })
+      .mockResolvedValueOnce({ data: { rows: page(0, PAGE - 1), total: 10 } });
+
+    const result = await fetchAllPeriodRows({ pageSize: PAGE, maxRows: MAX, label: 'revisitInsights' });
+
+    expect(mockQueryLogs).toHaveBeenCalledTimes(2);
+    expect(result.rows).toHaveLength(PAGE + (PAGE - 1));
+    expect(result.capped).toBe(false);
+  });
+
+  it('de-duplicates boundary ties by id across pages', async () => {
+    // The cursor is the previous page's oldest created_at and queryLogs' `until`
+    // is inclusive, so a tie re-reads ids 2 and 3 from the first page.
+    mockQueryLogs
+      .mockResolvedValueOnce({ data: { rows: page(4, PAGE), total: 10 } })
+      .mockResolvedValueOnce({ data: { rows: page(2, PAGE - 1), total: 10 } });
+
+    const result = await fetchAllPeriodRows({ pageSize: PAGE, maxRows: MAX, label: 'revisitInsights' });
+
+    const ids = result.rows.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual([4, 3, 2, 1, 0]);
+  });
+
+  it('reports capped=true and stops at maxRows', async () => {
+    mockQueryLogs.mockImplementation(async () => ({
+      data: { rows: page(4, PAGE), total: 10_000 },
+    }));
+
+    const result = await fetchAllPeriodRows({ pageSize: PAGE, maxRows: 4, label: 'revisitInsights' });
+
+    expect(result.rows).toHaveLength(4);
+    expect(result.capped).toBe(true);
+  });
+
+  it('advances the cursor to the previous page boundary, then steps back 1ms on a full tie page', async () => {
+    // Page 1 is all boundary ties relative to the incoming cursor, so the
+    // cursor steps back 1ms instead of stalling on the same timestamp.
+    const tied = [row(1), row(1)];
+    Object.assign(tied[1]!, { id: 1, created_at: tied[0]!.created_at });
+    mockQueryLogs
+      .mockResolvedValueOnce({ data: { rows: page(4, PAGE), total: 10 } })
+      .mockResolvedValueOnce({ data: { rows: tied, total: 10 } })
+      .mockResolvedValueOnce({ data: { rows: [], total: 0 } });
+
+    await fetchAllPeriodRows({ pageSize: 2, maxRows: MAX, label: 'revisitInsights', until: 5000 });
+
+    const secondUntil = (mockQueryLogs.mock.calls[1]![0] as { until: number }).until;
+    const thirdUntil = (mockQueryLogs.mock.calls[2]![0] as { until: number }).until;
+    expect(thirdUntil).toBe(secondUntil - 1);
+  });
+
+  it('omits since and tagFilter keys when they are undefined', async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+
+    await fetchAllPeriodRows({ pageSize: PAGE, maxRows: MAX, label: 'revisitInsights' });
+
+    const args = mockQueryLogs.mock.calls[0]![0] as Record<string, unknown>;
+    expect('since' in args).toBe(false);
+    expect('tagFilter' in args).toBe(false);
+    expect(args.limit).toBe(PAGE);
+  });
+
+  it('propagates a persistent failure instead of returning a short set', async () => {
+    mockQueryLogs.mockResolvedValue({ error: 'sqlite unavailable' });
+
+    await expect(
+      fetchAllPeriodRows({ pageSize: PAGE, maxRows: MAX, label: 'revisitInsights' }),
+    ).rejects.toThrow('revisitInsights: query failed after retries');
   });
 });

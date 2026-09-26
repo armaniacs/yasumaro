@@ -234,7 +234,24 @@ describe('renderStatsSummary', () => {
     const stats = computeCleansingStats(entries);
     renderStatsSummary(container, stats);
     expect(container.innerHTML).toContain('60.0%');
-    expect(container.innerHTML).toContain('5.859 KB');
+    expect(container.innerHTML).toContain('5.9 KB');
     expect(container.innerHTML).toContain('1 record(s)');
+  });
+
+  // PBI 2026-09-25-07: the summary card shares the dashboard byte policy, so
+  // a saved total above 1 GB reads in GB instead of an unbounded MB number.
+  it('renders a saved total of 1 GB or more in GB', () => {
+    const container = document.createElement('div');
+    const entries: SavedUrlEntry[] = [
+      {
+        url: 'https://a.com',
+        timestamp: 1,
+        pageBytes: 2 * 1024 * 1024 * 1024,
+        aiSummaryCleansedBytes: 1024 * 1024 * 1024,
+      }
+    ];
+    const stats = computeCleansingStats(entries);
+    renderStatsSummary(container, stats);
+    expect(container.innerHTML).toContain('1.0 GB');
   });
 });

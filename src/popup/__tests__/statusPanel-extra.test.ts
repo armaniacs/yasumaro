@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
 type MutableLastError = { lastError: chrome.runtime.LastError | null };
@@ -59,7 +60,17 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
 });
 
-vi.mock('../../utils/i18n.js', () => ({ getMessage: mockGetMessage }));
+vi.mock('../../utils/i18n.js', () => ({ getMessage: mockGetMessage ,
+getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
+      ((subs === undefined ? (mockGetMessage as (...a: any[]) => unknown)(key) : (mockGetMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string,
+getMessageWithSubstitutions: (
+        key: string,
+        subs: Record<string, string | number>,
+        fallback: string,
+      ): string =>
+      ((mockGetMessage as (...a: any[]) => unknown)(key, subs) ||
+        fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+          subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string,}));
 
 vi.mock('../../utils/permissionManager.js', () => ({
   isAllUrlsPermitted: mockIsAllUrlsPermitted,
@@ -1108,13 +1119,16 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     expect(btn).toBeTruthy();
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockGetCurrentTab).toHaveBeenCalled();
+    // Wait for the outcome, not for the first step: the status text is written
+    // after the save resolves, so waiting on getCurrentTab returns too early
+    // and the assertion below becomes load-dependent.
+    await waitForMock(() => {
+      expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
+    });
     expect(mockExtractDomain).toHaveBeenCalledWith('https://example.com/page');
     expect(mockSetAll).toHaveBeenCalled();
     const savedArg = mockSetAll.mock.calls[0]![0];
     expect(savedArg.domain_whitelist).toContain('example.com');
-    expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
     expect(document.getElementById('mainStatus')!.className).toBe('success');
   });
 
@@ -1124,7 +1138,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1134,7 +1148,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1144,7 +1158,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue(null as any);
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1153,7 +1167,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1162,7 +1176,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1172,8 +1186,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockSetAll).toHaveBeenCalled();
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
     expect(mockSetAll.mock.calls[0]![0].domain_whitelist).toContain('example.com');
   });
 
@@ -1184,8 +1197,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     document.getElementById('mainStatus')!.remove();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockSetAll).toHaveBeenCalled();
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
   });
 
   it('addDomain: getMessage fallback when empty', async () => {
@@ -1199,8 +1211,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(document.getElementById('mainStatus')!.textContent).toContain('Added example.com');
+    await waitForMock(() => expect(document.getElementById('mainStatus')!.textContent).toContain('Added example.com'));
     if (orig) mockGetMessage.mockImplementation(orig as any);
   });
 
@@ -1210,8 +1221,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     expect(btn).toBeTruthy();
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockSetAll).toHaveBeenCalled();
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
     const savedArg = mockSetAll.mock.calls[0]![0] as any;
     // The historical raw-URL entry could never match any whitelist consumer
     // (all match hostnames) — the writer normalizes to the hostname.
@@ -1224,7 +1234,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1234,7 +1244,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1244,7 +1254,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     mockGetCurrentTab.mockResolvedValue(null as any);
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockSetAll).not.toHaveBeenCalled();
   });
 
@@ -1253,8 +1263,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockSetAll).toHaveBeenCalled();
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
   });
 
   it('addPath: statusDiv missing — still saves', async () => {
@@ -1263,8 +1272,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     document.getElementById('mainStatus')!.remove();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(mockSetAll).toHaveBeenCalled();
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
   });
 
   it('addPath: getMessage fallback when empty', async () => {
@@ -1277,8 +1285,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await new Promise((r) => setTimeout(r, 20));
-    expect(document.getElementById('mainStatus')!.textContent).toContain('Added path');
+    await waitForMock(() => expect(document.getElementById('mainStatus')!.textContent).toContain('Added path'));
     if (orig) mockGetMessage.mockImplementation(orig as any);
   });
 

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn().mockResolvedValue({}),
   hoistedMockSave: vi.fn().mockResolvedValue(undefined),
@@ -187,9 +188,10 @@ describe('initExportImport', () => {
     initExportImport();
 
     document.getElementById('exportSettingsBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(exportSettings).toHaveBeenCalled();
+    await vi.waitFor(
+        () => expect(exportSettings).toHaveBeenCalled(),
+        { interval: 1 }
+    );
     expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.any(String), 'success');
   });
 
@@ -207,9 +209,10 @@ describe('initExportImport', () => {
     initExportImport();
 
     document.getElementById('exportSettingsBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showPasswordAuthModal).toHaveBeenCalledWith('export', expect.any(Function));
+    await vi.waitFor(
+        () => expect(showPasswordAuthModal).toHaveBeenCalledWith('export', expect.any(Function)),
+        { interval: 1 }
+    );
     expect(exportEncryptedSettings).toHaveBeenCalledWith('test-password');
     expect(saveEncryptedExportToFile).toHaveBeenCalled();
   });
@@ -229,9 +232,10 @@ describe('initExportImport', () => {
     initExportImport();
 
     document.getElementById('exportSettingsBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('exportError'), 'error');
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('exportError'), 'error'),
+        { interval: 1 }
+    );
   });
 
   it('shows export error on exception', async () => {
@@ -242,9 +246,10 @@ describe('initExportImport', () => {
     initExportImport();
 
     document.getElementById('exportSettingsBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('Storage error'), 'error');
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('Storage error'), 'error'),
+        { interval: 1 }
+    );
   });
 
   it('triggers import file input when import button is clicked', async () => {
@@ -311,9 +316,10 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(validateExportData).toHaveBeenCalled();
+    await vi.waitFor(
+        () => expect(validateExportData).toHaveBeenCalled(),
+        { interval: 1 }
+    );
     const modal = document.getElementById('importConfirmModal')!;
     expect(modal.classList.contains('hidden')).toBe(false);
     expect(modal.style.display).toBe('flex');
@@ -348,9 +354,10 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function));
+    await vi.waitFor(
+        () => expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function)),
+        { interval: 1 }
+    );
     expect(importEncryptedSettings).toHaveBeenCalledWith(expect.any(String), 'secret-password');
     expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.any(String), 'success');
     expect(loadDomainSettings).toHaveBeenCalled();
@@ -389,9 +396,10 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(mockShowConfirmDialog).toHaveBeenCalled();
+    await vi.waitFor(
+        () => expect(mockShowConfirmDialog).toHaveBeenCalled(),
+        { interval: 1 }
+    );
     expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function));
   });
 
@@ -410,9 +418,10 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('invalidSettingsFile'), 'error');
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('invalidSettingsFile'), 'error'),
+        { interval: 1 }
+    );
     expect(fileInput.value).toBe('');
   });
 
@@ -427,9 +436,10 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('importError'), 'error');
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('importError'), 'error'),
+        { interval: 1 }
+    );
   });
 
   it('closes modal when close button is clicked', async () => {
@@ -565,11 +575,14 @@ describe('initExportImport', () => {
     await new Promise(r => setTimeout(r, 10));
 
     document.getElementById('confirmImportBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(importSettings).toHaveBeenCalledWith(expect.any(String));
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.any(String), 'success');
-    expect(loadDomainSettings).toHaveBeenCalled();
+    await vi.waitFor(
+        () => {
+            expect(importSettings).toHaveBeenCalledWith(expect.any(String));
+            expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.any(String), 'success');
+            expect(loadDomainSettings).toHaveBeenCalled();
+        },
+        { interval: 1 }
+    );
   });
 
   it('shows error when import apply fails', async () => {
@@ -619,9 +632,10 @@ describe('initExportImport', () => {
     await new Promise(r => setTimeout(r, 10));
 
     document.getElementById('confirmImportBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('importError'), 'error');
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('importError'), 'error'),
+        { interval: 1 }
+    );
   });
 
   it('returns early when confirm import with no pending data', async () => {
@@ -631,8 +645,7 @@ describe('initExportImport', () => {
     initExportImport();
 
     document.getElementById('confirmImportBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
+    await drainMacrotask();
     expect(importSettings).not.toHaveBeenCalled();
   });
 
@@ -664,9 +677,10 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function));
+    await vi.waitFor(
+        () => expect(showPasswordAuthModal).toHaveBeenCalledWith('import', expect.any(Function)),
+        { interval: 1 }
+    );
     expect(importEncryptedSettings).toHaveBeenCalledWith(expect.any(String), 'wrong-password');
     expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('importError'), 'error');
   });
@@ -703,8 +717,9 @@ describe('initExportImport', () => {
     await new Promise(r => setTimeout(r, 10));
 
     document.getElementById('confirmImportBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
-
-    expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('storage full'), 'error');
+    await vi.waitFor(
+        () => expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.stringContaining('storage full'), 'error'),
+        { interval: 1 }
+    );
   });
 });

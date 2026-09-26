@@ -45,6 +45,9 @@ describe('getSettings key refinement', () => {
       StorageKeys.TRUST_DB,
       // Device-local security state: absent until the first confirmation.
       StorageKeys.CONFIRMED_PROVIDER_ORIGINS,
+      // PBI 03: device-local opt-in consent, deliberately not in
+      // DEFAULT_SETTINGS so an export never carries the authorization.
+      StorageKeys.NAV_TRAIL_CONSENT,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as (typeof StorageKeys)[keyof typeof StorageKeys])) {

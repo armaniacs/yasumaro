@@ -134,6 +134,15 @@ describe('TrustChecker - Phase 2 - Module Loading', () => {
     expect(typeof checker.checkDomain).toBe('function');
     expect(typeof checker.getAlertConfig).toBe('function');
   });
+
+  it('should not expose legacy settings APIs', async () => {
+    const { TrustChecker } = await import('../trustChecker.js');
+    const publicMethods = Object.getOwnPropertyNames(TrustChecker.prototype);
+
+    expect(publicMethods).not.toContain('getSafetyMode');
+    expect(publicMethods).not.toContain('setSafetyMode');
+    expect(publicMethods).not.toContain('getTrancoTier');
+  });
 });
 
 describe('TrustChecker - Phase 2 - Default Alert Config', () => {
@@ -253,72 +262,6 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     expect(config.alertSensitive).toBe(DEFAULT_ALERT_CONFIG.alertSensitive);
     expect(config.alertUnverified).toBe(DEFAULT_ALERT_CONFIG.alertUnverified);
     expect(config.saveAbortedPages).toBe(DEFAULT_ALERT_CONFIG.saveAbortedPages);
-  });
-});
-
-describe('TrustChecker - Phase 2 - Safety Mode', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockStorage.clear();
-    setupChromeMocks();
-  });
-
-  it('getSafetyMode should return default balanced', async () => {
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-    const mode = await checker.getSafetyMode();
-    expect(mode).toBe('balanced');
-  });
-
-  it('setSafetyMode should save mode and sync tranco tier', async () => {
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-
-    await checker.setSafetyMode('strict');
-
-    expect(mockStorage.get('safety_mode')).toBe('strict');
-    expect(mockStorage.get('tranco_tier')).toBe('top1k');
-  });
-
-  it('setSafetyMode relaxed should set top100k tier', async () => {
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-
-    await checker.setSafetyMode('relaxed');
-
-    expect(mockStorage.get('tranco_tier')).toBe('top100k');
-  });
-
-  it('setSafetyMode balanced should set top10k tier', async () => {
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-
-    await checker.setSafetyMode('balanced');
-
-    expect(mockStorage.get('tranco_tier')).toBe('top10k');
-  });
-
-  it('getTrancoTier should return default top10k', async () => {
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-    const tier = await checker.getTrancoTier();
-    expect(tier).toBe('top10k');
-  });
-
-  it('getSafetyMode should return stored value', async () => {
-    mockStorage.set('safety_mode', 'strict');
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-    const mode = await checker.getSafetyMode();
-    expect(mode).toBe('strict');
-  });
-
-  it('getTrancoTier should return stored value', async () => {
-    mockStorage.set('tranco_tier', 'top1k');
-    const { TrustChecker } = await import('../trustChecker.js');
-    const checker = new TrustChecker();
-    const tier = await checker.getTrancoTier();
-    expect(tier).toBe('top1k');
   });
 });
 

@@ -1,4 +1,4 @@
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
@@ -52,7 +52,7 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
   // 相対時間
   let timeAgo: string;
   if (diff < 60 * 1000) {
-    timeAgo = getMessage('timeJustNow') || 'たった今';
+    timeAgo = getMessageOr('timeJustNow', 'たった今');
   } else if (diff < 60 * 60 * 1000) {
     const minutes = Math.floor(diff / (60 * 1000));
     const msg = getMessage(getPluralKey('timeMinutesAgo', minutes), { count: minutes });
@@ -62,7 +62,7 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
     const msg = getMessage(getPluralKey('timeHoursAgo', hours), { count: hours });
     timeAgo = msg || `${hours}時間前`;
   } else if (diff < 48 * 60 * 60 * 1000) {
-    timeAgo = getMessage('timeYesterday') || '昨日';
+    timeAgo = getMessageOr('timeYesterday', '昨日');
   } else {
     const days = Math.floor(diff / (24 * 60 * 60 * 1000));
     const msg = getMessage(getPluralKey('timeDaysAgo', days), { count: days });

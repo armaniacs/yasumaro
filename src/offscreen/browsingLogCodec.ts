@@ -66,5 +66,8 @@ export function buildRecordFromPayload(payload: Record<string, unknown>): Browsi
     extracted_sentences_original_bytes: payload.extracted_sentences_original_bytes != null ? toFiniteNumber(payload.extracted_sentences_original_bytes) : null,
     fallback_triggered: payload.fallback_triggered != null ? (toFiniteNumber(payload.fallback_triggered) ?? 0) : 0,
     fallback_reason: payload.fallback_reason != null ? String(payload.fallback_reason) : null,
+    // PBI 03: opt-in navigation trail.
+    nav_source_url: payload.nav_source_url != null ? String(payload.nav_source_url) : null,
+    search_query: payload.search_query != null ? String(payload.search_query) : null,
   };
 }

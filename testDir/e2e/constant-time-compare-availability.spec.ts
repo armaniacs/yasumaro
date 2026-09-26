@@ -33,14 +33,12 @@ test.describe('constantTimeCompare runtime availability @extension', () => {
       };
     });
 
-    // eslint-disable-next-line no-console
     console.log('Service Worker crypto availability:', availability);
 
     expect(availability.hasCrypto, 'crypto object should be present').toBe(true);
     expect(availability.hasSubtle, 'crypto.subtle should be present').toBe(true);
 
     if (!availability.hasTimingSafeEqual) {
-      // eslint-disable-next-line no-console
       console.warn(
         'WARNING: crypto.subtle.timingSafeEqual is NOT available in this Service Worker runtime. '
           + 'The manual fallback path in constantTimeCompare() will be executed.'

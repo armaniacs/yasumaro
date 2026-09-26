@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
 
 const mockInitialize = vi.fn(() => Promise.resolve());
 const mockGetDatabase = vi.fn(() => ({
@@ -125,6 +126,16 @@ const mockGetMessage = vi.fn((key: string) => {
 });
 vi.mock('../../../utils/i18n.js', () => ({
   getMessage: mockGetMessage,
+  getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
+      ((subs === undefined ? (mockGetMessage as (...a: any[]) => unknown)(key) : (mockGetMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string,
+  getMessageWithSubstitutions: (
+        key: string,
+        subs: Record<string, string | number>,
+        fallback: string,
+      ): string =>
+      ((mockGetMessage as (...a: any[]) => unknown)(key, subs) ||
+        fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+          subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string,
 }));
 
 const mockGetAlertConfig = vi.fn(() => Promise.resolve({ alertFinance: false, alertSensitive: false, alertUnverified: false }));
@@ -245,7 +256,7 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     mockIsUpdateInProgress.mockReturnValueOnce(false);
     document.getElementById('updateTrancoBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
+    await drainMacrotask();
     const status = document.getElementById('trancoStatus')!;
     expect(status.textContent).toBe('Updating...');
     expect(status.className).toContain('updating');
@@ -328,8 +339,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     (document.getElementById('jpAnchorAdd') as HTMLInputElement).value = '.test';
     document.getElementById('jpAnchorAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Exists');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Exists'),
+        { interval: 1 }
+    );
     // case 2: both falsy -> should show 'Error'
     vi.resetModules();
     document.body.innerHTML = '';
@@ -340,8 +353,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     mod2.init();
     (document.getElementById('jpAnchorAdd') as HTMLInputElement).value = '.test2';
     document.getElementById('jpAnchorAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Error');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Error'),
+        { interval: 1 }
+    );
     // case 3: getMessage returns mapping -> should show mapped
     vi.resetModules();
     document.body.innerHTML = '';
@@ -352,8 +367,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     mod3.init();
     (document.getElementById('jpAnchorAdd') as HTMLInputElement).value = '.test3';
     document.getElementById('jpAnchorAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('MappedError');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('MappedError'),
+        { interval: 1 }
+    );
   });
 
   it('covers jpAnchorAdded fallback', async () => {
@@ -364,8 +381,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     (document.getElementById('jpAnchorAdd') as HTMLInputElement).value = '.newtld';
     document.getElementById('jpAnchorAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('TLD added');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('TLD added'),
+        { interval: 1 }
+    );
   });
 
   it('covers sensitiveAdded fallback and category mismatch', async () => {
@@ -377,8 +396,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     (document.getElementById('sensitiveCategory') as HTMLSelectElement).value = 'gaming';
     (document.getElementById('sensitiveAdd') as HTMLInputElement).value = 'gameadd.com';
     document.getElementById('sensitiveAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Domain added');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Domain added'),
+        { interval: 1 }
+    );
   });
 
   it('covers whitelistAdded fallback', async () => {
@@ -388,8 +409,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     (document.getElementById('whitelistAdd') as HTMLInputElement).value = 'white.com';
     document.getElementById('whitelistAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Domain added');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Domain added'),
+        { interval: 1 }
+    );
   });
 
   it('covers addSensitiveDomain error fallback with empty error -> Error', async () => {
@@ -400,8 +423,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     (document.getElementById('sensitiveAdd') as HTMLInputElement).value = 'bad';
     document.getElementById('sensitiveAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Error');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Error'),
+        { interval: 1 }
+    );
   });
 
   it('covers addWhitelistDomain error fallback', async () => {
@@ -412,8 +437,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     (document.getElementById('whitelistAdd') as HTMLInputElement).value = 'bad2';
     document.getElementById('whitelistAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Error');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Error'),
+        { interval: 1 }
+    );
   });
 
   it('covers updateTrancoList missing trancoTierSelect early return', async () => {
@@ -422,7 +449,7 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     document.getElementById('updateTrancoBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
+    await drainMacrotask();
     expect(mockUpdateTrancoList).not.toHaveBeenCalled();
   });
 
@@ -433,8 +460,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     document.getElementById('updateTrancoBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Update already in progress');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Update already in progress'),
+        { interval: 1 }
+    );
   });
 
   it('covers trancoUpdateSuccess fallback', async () => {
@@ -443,8 +472,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     document.getElementById('updateTrancoBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Tranco list updated successfully');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Tranco list updated successfully'),
+        { interval: 1 }
+    );
   });
 
   it('covers tranco update failure with empty error -> Update failed', async () => {
@@ -453,9 +484,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     document.getElementById('updateTrancoBtn')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    // should have called updateTrancoStatus with error 'Update failed'
-    expect(document.getElementById('trancoStatus')!.textContent).toBe('Update failed');
+    await vi.waitFor(
+        () => expect(document.getElementById('trancoStatus')!.textContent).toBe('Update failed'),
+        { interval: 1 }
+    );
   });
 
   it('covers onSafetyModeChange missing elements', async () => {
@@ -490,8 +522,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     document.getElementById('saveTrustSettings')!.click();
-    await new Promise(r => setTimeout(r, 20));
-    expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Settings saved');
+    await vi.waitFor(
+        () => expect(document.getElementById('trustSettingsStatus')!.textContent).toBe('Settings saved'),
+        { interval: 1 }
+    );
   });
 
   it('covers loadTrustSettings with missing selects and empty lastUpdated fallback', async () => {
@@ -595,9 +629,10 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     extra.click();
-    await new Promise(r => setTimeout(r, 10));
-    // should not switch
-    expect(extra.classList.contains('active')).toBe(false);
+    await vi.waitFor(
+        () => expect(extra.classList.contains('active')).toBe(false),
+        { interval: 1 }
+    );
   });
 
   it('covers sensitiveAdd missing select on click does not call', async () => {
@@ -608,7 +643,7 @@ describe('trustSettings-r3: cover remaining branches', () => {
     init();
     (document.getElementById('sensitiveAdd') as HTMLInputElement).value = 'test.com';
     document.getElementById('sensitiveAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
+    await drainMacrotask();
     expect(mockAddSensitiveDomain).not.toHaveBeenCalled();
   });
 
@@ -621,7 +656,7 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { init } = await import('../trustSettings.js');
     init();
     document.getElementById('jpAnchorAddBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
+    await drainMacrotask();
     expect(mockAddJpAnchorTld).not.toHaveBeenCalled();
   });
 
@@ -632,7 +667,7 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const input = document.getElementById('permissionThreshold') as HTMLInputElement;
     input.value = 'NaN';
     input.dispatchEvent(new Event('change'));
-    await new Promise(r => setTimeout(r, 10));
+    await drainMacrotask();
     expect(chrome.storage.local.set).not.toHaveBeenCalled();
   });
 });

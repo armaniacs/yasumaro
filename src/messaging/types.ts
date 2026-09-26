@@ -187,6 +187,10 @@ export interface RecordingData {
   fallbackTriggered?: boolean;          // NEW: フォールバックが発動したか
   /** PBI 05: フォールバック発動理由（triggered 時のみ） */
   fallbackReason?: string;
+  /** PBI 03: 同じタブで直前に開いていたページ。遷移記録が有効な場合のみ。 */
+  navSourceUrl?: string;
+  /** PBI 03: 流入元が検索エンジンだった場合の検索語（PII マスク済み）。 */
+  searchQuery?: string;
   cleansedReason?: string;              // コンテンツクレンジング実行理由 (hard/keyword/both/none)
   precomputedMaskedCount?: number;      // 事前計算済みPIIマスク件数（privacy pipeline経由不要時）
   /** PBI 04: UPDATE-in-place target (regenerate) — save step replaces this row. */

@@ -11,7 +11,7 @@
 import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessage } from '../../../utils/i18n.js';
+import { getMessage, getMessageOr } from '../../../utils/i18n.js';
 import {
   createPeriodFilter,
   type PeriodFilterHandle,
@@ -40,7 +40,8 @@ const WEEKDAY_FALLBACK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as co
 
 function weekdayLabel(weekday: number): string {
   const key = WEEKDAY_KEYS[weekday];
-  return (key !== undefined && getMessage(key)) || WEEKDAY_FALLBACK[weekday] || String(weekday);
+  if (key === undefined) return WEEKDAY_FALLBACK[weekday] || String(weekday);
+  return getMessageOr(key, WEEKDAY_FALLBACK[weekday] || String(weekday));
 }
 
 function cellLabel(weekday: number, hour: number, count: number): string {
@@ -163,7 +164,7 @@ function buildHeatmapTable(grid: TimeHeatmapGrid, max: number): HTMLTableElement
   const table = document.createElement('table');
   table.className = 'time-heatmap-grid';
   const caption = document.createElement('caption');
-  caption.textContent = getMessage('dashboardTimeHeatmapTableCaption') || 'Browsing records by weekday and hour';
+  caption.textContent = getMessageOr('dashboardTimeHeatmapTableCaption', 'Browsing records by weekday and hour');
   table.appendChild(caption);
 
   const thead = document.createElement('thead');
@@ -206,7 +207,7 @@ function buildNumericTable(grid: TimeHeatmapGrid): HTMLTableElement {
   const table = document.createElement('table');
   table.className = 'time-heatmap-numeric';
   const caption = document.createElement('caption');
-  caption.textContent = getMessage('dashboardTimeHeatmapNumericCaption') || 'Browsing record counts by weekday and hour';
+  caption.textContent = getMessageOr('dashboardTimeHeatmapNumericCaption', 'Browsing record counts by weekday and hour');
   table.appendChild(caption);
 
   const thead = document.createElement('thead');

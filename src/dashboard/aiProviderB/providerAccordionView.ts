@@ -1,4 +1,4 @@
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
 import { providerIdsInOrder, renderProviderSettings } from '../aiProviderCatalogView.js';
 
@@ -24,7 +24,7 @@ export function createBProviderAccordionView(container: HTMLElement): BProviderA
     const summary = document.createElement('summary');
     summary.className = 'b-provider-summary';
     const entry = PROVIDER_CATALOG.get(id);
-    summary.textContent = (entry && getMessage(entry.labelI18nKey)) || entry?.label || id;
+    summary.textContent = (entry && getMessageOr(entry.labelI18nKey, entry?.label || id)) || entry?.label || id;
 
     const body = document.createElement('div');
     renderProviderSettings(body, id);

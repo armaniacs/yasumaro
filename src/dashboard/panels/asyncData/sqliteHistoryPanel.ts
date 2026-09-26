@@ -4,7 +4,7 @@ import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
 import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
-import type { SqliteHistoryState } from './sqliteHistoryModel.js';
+import type { SqliteHistoryState, SqliteHistoryModelDeps } from './sqliteHistoryModel.js';
 import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
 import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
@@ -85,12 +85,12 @@ export function mapRegenerateError(
   return t('historyRegenerateError');
 }
 
-export function createSqliteHistoryPanel(): PanelLifecycle {
+export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): PanelLifecycle {
   let container: HTMLElement | null = null;
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let _isMounted = false;
 
-  const model = createSqliteHistoryModel();
+  const model = createSqliteHistoryModel(deps);
   // Panel shrinks to model.subscribe(refresh): every state change funnels
   // through view.render()'s single entry (PBI 23). The subscription is taken
   // in load() (PBI 2026-09-11-06) — see modelUnsubscribe below.

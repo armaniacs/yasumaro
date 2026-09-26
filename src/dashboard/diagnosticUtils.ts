@@ -2,7 +2,7 @@
  * Shared diagnostic panel utilities.
  * Used by both diagnosticsPanel.ts (legacy) and panels/diagnostic/diagnosticsPanel.ts.
  */
-import { getMessage } from '../utils/i18n.js';
+import { getMessageOr } from '../utils/i18n.js';
 
 /** Severity level for deficiency items. */
 export type Severity = 'high' | 'medium' | 'low' | string;
@@ -36,9 +36,9 @@ export function makeStatRow(label: string, value: string, masked = false): HTMLE
  */
 export function getSeverityLabel(severity: Severity): string {
   switch (severity) {
-    case 'high': return getMessage('diagSeverityHigh') || 'High';
-    case 'medium': return getMessage('diagSeverityMedium') || 'Medium';
-    case 'low': return getMessage('diagSeverityLow') || 'Low';
+    case 'high': return getMessageOr('diagSeverityHigh', 'High');
+    case 'medium': return getMessageOr('diagSeverityMedium', 'Medium');
+    case 'low': return getMessageOr('diagSeverityLow', 'Low');
     default: return severity;
   }
 }

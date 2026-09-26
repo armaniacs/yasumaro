@@ -6,11 +6,11 @@
  * exceptions, type-only imports, intra-layer imports, comment/string
  * mentions of chrome.*).
  */
-import { RuleTester } from 'eslint';
+import { createRepeatSafeRuleTester } from './repeatSafeRuleTester.js';
 import tsParser from '@typescript-eslint/parser';
 import utilsLayerBoundary from '../rules/utils-layer-boundary.mjs';
 
-const ruleTester = new RuleTester({
+const ruleTester = createRepeatSafeRuleTester({
   languageOptions: {
     // TS parser: the `import type` allowance case needs TS syntax.
     parser: tsParser,

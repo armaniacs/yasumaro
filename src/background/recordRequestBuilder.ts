@@ -101,6 +101,9 @@ export type OfflineJobPayload = {
   content: string;
   summary?: string | undefined;
   tags?: string[] | undefined;
+  /** PBI 03: carried through the offline queue so a retry still records the trail. */
+  navSourceUrl?: string | undefined;
+  searchQuery?: string | undefined;
 } & RecordDiagnosticFields;
 
 /** Pack a pipeline context into the queue payload (single field table). */
@@ -121,6 +124,8 @@ export function extractOfflinePayload(context: RecordingContext): OfflineJobPayl
     aiSummaryCleansedElements: context.data.aiSummaryCleansedElements,
     aiSummaryCleansedReason: context.data.aiSummaryCleansedReason,
     aiSummaryCleansedReasons: context.data.aiSummaryCleansedReasons,
+    navSourceUrl: context.data.navSourceUrl,
+    searchQuery: context.data.searchQuery,
   };
 }
 
@@ -140,6 +145,8 @@ export function buildOfflineRetryRequest(payload: OfflineJobPayload): RecordingD
     aiSummaryCleansedElements: payload.aiSummaryCleansedElements,
     aiSummaryCleansedReason: payload.aiSummaryCleansedReason,
     aiSummaryCleansedReasons: payload.aiSummaryCleansedReasons,
+    navSourceUrl: payload.navSourceUrl,
+    searchQuery: payload.searchQuery,
   });
 }
 
@@ -218,6 +225,14 @@ export function buildRecordRequest(  source: RecordRequestSource,
     title: string;
     url: string;
     content: string;
+    /**
+     * PBI 03: the opt-in navigation trail. Kept OUT of RecordDiagnosticFields
+     * on purpose — it describes how a visit was reached, not a processing
+     * outcome, so it must not travel with the shared diagnostic subset or be
+     * refreshed by pickRecordDiagnostics.
+     */
+    navSourceUrl?: string | undefined;
+    searchQuery?: string | undefined;
   } & RecordDiagnosticFields,
 ): RecordingData {
   const policy = SOURCE_POLICY[source];
@@ -245,6 +260,8 @@ export function buildRecordRequest(  source: RecordRequestSource,
       cleansedReason: fields.cleansedReason,
       fallbackTriggered: fields.fallbackTriggered,
       fallbackReason: fields.fallbackReason,
+      navSourceUrl: fields.navSourceUrl,
+      searchQuery: fields.searchQuery,
       targetEntryId: fields.targetEntryId,
       skipObsidianAppend: policy.skipObsidianAppend,
       skipLocalMarkdownExport: policy.skipLocalMarkdownExport,

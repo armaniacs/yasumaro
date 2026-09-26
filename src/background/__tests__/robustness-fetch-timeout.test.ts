@@ -231,6 +231,13 @@ describe('ObsidianClient: Fetchタイムアウト（P0）', () => {
   });
 
   describe('testConnection - タイムアウト', () => {
+    // A retryable failure sleeps 500ms + 1000ms between the three attempts.
+    // The client's sleep seam removes that from the wall clock, and the abort
+    // timer in fetchWithTimeout simply never fires, which is the point.
+    beforeEach(() => {
+      obsidianClient = new ObsidianClient({ sleep: async () => {} });
+    });
+
     it('returns success on normal responses', async () => {
       mockFetch.mockResolvedValue({
         ok: true

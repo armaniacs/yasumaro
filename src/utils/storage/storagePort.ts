@@ -17,6 +17,12 @@ const API_KEY_FIELDS: readonly string[] = API_KEY_FIELD_NAMES;
 export interface StoragePort {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
+  /**
+   * Optional because only the destructive paths need it (legacy-key cleanup
+   * in the settings migration). Ports that do not implement it keep working;
+   * callers must feature-detect before removing keys.
+   */
+  remove?(keys: string | string[]): Promise<void>;
   onChanged?(callback: (changes: Record<string, unknown>) => void): void;
   getBytesInUse?(keys?: string | string[] | null): Promise<number>;
 }
@@ -45,6 +51,9 @@ export class ChromeStoragePort implements StoragePort {
   }
   async set(items: Record<string, unknown>): Promise<void> {
     await chrome.storage.local.set(items);
+  }
+  async remove(keys: string | string[]): Promise<void> {
+    await chrome.storage.local.remove(keys);
   }
   onChanged(callback: (changes: Record<string, unknown>) => void): void {
     chrome.storage.onChanged.addListener((changes, area) => {
@@ -122,6 +131,11 @@ export class InMemoryStoragePort implements StoragePort {
       }
     }
     for (const cb of this.listeners) cb(items);
+  }
+
+  async remove(keys: string | string[]): Promise<void> {
+    const list = Array.isArray(keys) ? keys : [keys];
+    for (const k of list) this.store.delete(k);
   }
 
   onChanged(callback: (changes: Record<string, unknown>) => void): void {

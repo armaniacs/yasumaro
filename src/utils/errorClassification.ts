@@ -6,6 +6,7 @@
  */
 
 import { maskSensitiveData } from './sensitiveDataMask.js';
+import { type FailureKindValue } from './failureTaxonomy.js';
 
 // ─── Error types ───────────────────────────────────────────────────────
 
@@ -46,8 +47,45 @@ function hasSource(error: unknown): error is { source: string } {
 // ─── Classification ────────────────────────────────────────────────────
 
 /**
+ * How the seven structured failure kinds (src/utils/failureTaxonomy.ts, the
+ * SSOT) surface in the legacy popup vocabulary.
+ *
+ * `csp` maps to UNKNOWN on purpose: no legacy ErrorType expresses a policy
+ * rejection, and mapping it to DOMAIN_BLOCKED or VALIDATION would change the
+ * sentence a user already sees (errorGeneric).
+ *
+ * This table is **not consulted by `classifyError()`**. It is the declared
+ * target vocabulary for the wording fix filed as a follow-up, kept here so the
+ * intended end state is recorded next to the kinds it describes.
+ *
+ * Why `classifyError()` keeps its message-based path: before the taxonomy, the
+ * network check ran FIRST, so every Obsidian HTTP failure — 401/403, 404, 429
+ * and 5xx alike — reached it through the word "connection" and displayed
+ * `errorNetwork`; the auth / not-found / rate-limit branches below were
+ * unreachable for that message. Which key a failure displayed therefore
+ * depended on message text that `kind` now abstracts away, and no static
+ * kind→ErrorType table can reproduce it. Routing display through `kind` would
+ * silently re-word four messages, so the two concerns are kept apart: `kind`
+ * drives the retry decision, and display is untouched.
+ */
+export const FAILURE_KIND_TO_ERROR_TYPE: Readonly<Record<FailureKindValue, ErrorTypeValues>> = {
+  network: ErrorType.NETWORK,
+  timeout: ErrorType.NETWORK,
+  http: ErrorType.SERVER,
+  auth: ErrorType.AUTH,
+  rate_limit: ErrorType.RATE_LIMIT,
+  configuration: ErrorType.VALIDATION,
+  csp: ErrorType.UNKNOWN,
+};
+
+/**
  * エラーを分類する（統一版）。
  * errorMessages.ts の classifyError と errorUtils.ts の分類ロジックを統合。
+ *
+ * 表示文言はこの関数の責務であり、構造化 kind の導入とは分離している。kind は
+ * `retryPolicy` などの retry 判断が使う。表示経路を kind に寄せると、Obsidian の
+ * 401/403・404・429・5xx がすべて別の文面へ変わってしまうため、ここは
+ * message ベースの判定を意図的に維持する（理由と移行先は上の表のコメント）。
  *
  * @param error - 発生したエラー
  * @returns エラータイプ
@@ -71,7 +109,9 @@ export function classifyError(error: unknown): ErrorTypeValues {
     }
   }
 
-  // 既存のメッセージベース分類
+  // NOTE: `resolveFailure()` is deliberately NOT consulted here. See the comment
+  // on FAILURE_KIND_TO_ERROR_TYPE: the kind is for the retry decision, and
+  // routing display through it would re-word four Obsidian messages.
   const err = error instanceof Error ? error : null;
   const errorLike = !err && isErrorLike(error) ? error : null;
   const message = (err?.message ?? (errorLike ? String(errorLike.message) : '')).toLowerCase();

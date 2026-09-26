@@ -50,7 +50,7 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は月間アクティブ
 
 いずれも採点済み。分析ラウンド（PBI 01-08）完遂後の次ラウンド入力候補。
 
-- **再訪分析**（RICE 2.13・1.5pt）— 同一 URL/ドメインの再訪回数ランキング（url + domain + created_at）。トリガー: 次ラウンド開始時またはユーザー要求
+- **再訪分析**（RICE 2.13・1.5pt）— 2026-09-26 に [2026-09-26-01-feat-revisit-loop-time-capsule.md](2026-09-26-01-feat-revisit-loop-time-capsule.md) へ統合した（再訪ランキングはそのパネルの1区分）
 - **スター分析**（RICE 1.60・1pt）— スター記事のタグ/ドメイン分布（is_starred）。トリガー: 同上
 - **記録量・ストリーク**（RICE 1.60・1pt）— 日次記録数の折れ線＋連続記録日数（created_at）。トリガー: 同上
 - **AI利用統計**（RICE 1.07・1.5pt）— provider/model 別の要約回数・トークン消費・fallback 発生率の推移（ai_provider, ai_model, *_tokens, fallback_reason）。トリガー: AI コスト・品質の見える化需要が生じた時

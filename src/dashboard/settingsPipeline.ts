@@ -15,7 +15,7 @@ import { GENERAL_SETTINGS_FIELDS } from './settings/fieldDescriptor.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
 import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, setFieldError, ErrorPair } from './settings/fieldValidation.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
 import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
@@ -117,11 +117,10 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
       return { success: false, error: 'http_non_loopback_blocked' };
     }
     const confirmed = await showConfirmDialog({
-      title: getMessage('warningTitle') || 'Warning',
+      title: getMessageOr('warningTitle', 'Warning'),
       message: getMessage('confirmProtocolHttp'),
-      confirmLabel: getMessage('save') || 'Save',
-      cancelLabel: getMessage('cancel') || 'Cancel'
-    });
+      confirmLabel: getMessageOr('save', 'Save'),
+      cancelLabel: getMessageOr('cancel', 'Cancel')});
     if (!confirmed) {
       return { success: false, error: 'http_confirm_cancelled' };
     }
@@ -152,7 +151,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
           warn.setAttribute('role', 'alert');
           bList.appendChild(warn);
         }
-        warn.textContent = getMessage('aiProviderPriorityDuplicateWarning') || 'Duplicate provider and model';
+        warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
       } else {
         warn?.remove();
       }
@@ -164,12 +163,12 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
           reqWarn.setAttribute('role', 'alert');
           bList.appendChild(reqWarn);
         }
-        reqWarn.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+        reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
         rows[0]?.classList.add('has-error');
         // status エリアにも表示して保存を中断
         const statusEl = document.getElementById('status') as HTMLElement | null;
         if (statusEl) {
-          statusEl.textContent = getMessage('aiProviderPriority1Required') || 'Priority 1 is required';
+          statusEl.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
           statusEl.className = 'error';
           try {
             syncStatusToTop();

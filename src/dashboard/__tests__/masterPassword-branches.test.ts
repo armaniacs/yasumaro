@@ -10,9 +10,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MasterPasswordDomRefs } from '../masterPassword.js';
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: vi.fn((key: string) => `i18n_${key}`),
-}));
+vi.mock('../../utils/i18n.js', () => {
+  const getMessage = vi.fn((key: string) => `i18n_${key}`);
+  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
+  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
+  const getMessageWithSubstitutions = (
+  key: string,
+  subs: Record<string, string | number>,
+  fallback: string,
+      ): string =>
+      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
+  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
+    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
+  return {
+  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
+}; });
 
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
