@@ -50,7 +50,7 @@
 
 このラウンドの 4 PBI はすべて実装済み・アーカイブ済みです（内訳はアーカイブ履歴を参照）。未実施の DoD は各 PBI の「未実施 — ユーザー作業」表記に残しています。
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 17件完了・アーカイブ済み / ⬜ 未着手 15件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 18件完了・アーカイブ済み / ⬜ 未着手 14件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
@@ -59,12 +59,11 @@
 | 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
 | 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 完了済み・着手可能 |
 | 13 | [investigate-obsidian-write-replay-idempotency](2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | 11・12 の後（依存で降格） |
-| 14 | [refactor-ci-paths-filter](2026-09-25-14-refactor-ci-paths-filter.md) | refactor | 1.5 | 2 | **閉塞**: DoD 4 項目が実 PR 観測と branch protection 設定アクセスを要求 |
 | 15 | [investigate-ai-provider-circuit-breaker](2026-09-25-15-investigate-ai-provider-circuit-breaker.md) | investigate | 1.5 | 3 | 11 の failure taxonomy 完了済み・着手可能 |
 | 16 | [investigate-dashboard-sqlite-ipc-roundtrip](2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md) | investigate | 1.33 | 1.5 | 実害未計測。計測結果待ち |
 | 18 | [investigate-settings-key-single-writer](2026-09-25-18-investigate-settings-key-single-writer.md) | investigate | 1.5 | 2 | 02・17 完了済み・着手可能 |
 | 22 | [investigate-pending-queue-poison-record](2026-09-25-22-investigate-pending-queue-poison-record.md) | investigate | 0.75 | 2 | 01 の retry 判定と共有。実データ待ち |
-| 23 | [investigate-deprecated-alias-sunset](2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | 14 の path 対象要与（14 は閉塞中） |
+| 23 | [investigate-deprecated-alias-sunset](2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | 14 の path 対象要与（14 は完了・アーカイブ済み） |
 | 25 | [fix-encryption-secret-wrapped-storage](2026-09-25-25-fix-encryption-secret-wrapped-storage.md) | fix | 0.5 | 3 | 27 の前提。IDB 障害方針が未決 |
 | 26 | [backlog-wasm-binary-reproducibility-watch](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) | backlog | 0.4 | 0.5 | トリガー: toolchain / wasm-pack / manifest 変更時 |
 | 27 | [investigate-master-password-removal-reencrypt](2026-09-25-27-investigate-master-password-removal-reencrypt.md) | investigate | 0.33 | 3 | 25 の後。ADR supersede が未決 |
@@ -145,15 +144,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-09-27 autonomous-task-closer wave 3 — ✅ 5件完了（05 移動漏れ修復・27-01・26-09・25-31・25-32 アーカイブ済み）
+### 2026-09-27 autonomous-task-closer wave 3 — ✅ 6件完了（05 移動漏れ修復・27-01・26-09・25-31・25-32・14 アーカイブ済み）
 
-バッチ0（機械的修正）+ バッチ1（27-01・26-09・25-31 をファイル非重複で並列実装、25-31 は worktree 隔離）+ バッチ2（25-32 は 26-09 と表示経路・既存 parity テストが隣接するため直列実装）。5 Whys 記録は /tmp/whywhy/。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test 927 files・14,375 passed（21 skipped）/ build PASS / `lint:adr-links` PASS / `bench:check` PASS。詳細は各項目を参照。
+バッチ0（機械的修正）+ バッチ1（27-01・26-09・25-31 をファイル非重複で並列実装、25-31 は worktree 隔離）+ バッチ2（25-32 は 26-09 と表示経路・既存 parity テストが隣接するため直列実装）+ 事後分類アーカイブ（14）。5 Whys 記録は /tmp/whywhy/。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test 927 files・14,375 passed（21 skipped）/ build PASS / `lint:adr-links` PASS / `bench:check` PASS。詳細は各項目を参照。
 
 - [2026-09-26-05-test-remove-fixed-sleeps.md](../dev-docs/archived/pbi/2026-09-26-05-test-remove-fixed-sleeps.md)（✅ 完了済みの移動漏れを修復 — 5 Whys なし。DoD 全 `[x]`・実装証跡（`eslint.config.js` の `local/no-test-sleep: error`）を確認の上アーカイブへ移動し、INDEX 内の 05・08 への壊れた相対リンクを修正）
 - [2026-09-27-01-fix-built-in-ai-false-disk-space-error.md](../dev-docs/archived/pbi/2026-09-27-01-fix-built-in-ai-false-disk-space-error.md)（✅ 完了 — issue #161 / Linear DEV-93。`getBuiltInAIDiskSpace()` 冒頭に Prompt API 存在ゲート（`globalThis.LanguageModel` 未定義 → null・`declare global` は narrowing で回避）を追加し、3 表示経路を同時に修正。テストは `LanguageModel` を beforeEach で立て afterEach で復元。22 GiB 境界値・負値クランプを追加固定。対象 3 ファイル 71 tests green・`--repeats=5` 安定。なぜなぜ: 能力の有無の判定が能力的存続を前提とする推定より後ろに回っていた）
 - [2026-09-26-09-fix-firefox-https-cert-guidance.md](../dev-docs/archived/pbi/2026-09-26-09-fix-firefox-https-cert-guidance.md)（✅ 完了 — issue #160。起票時 NN 08 がアーカイブ済み 08-lint-e2e-tests と衝突していたため運用ルールどおり 09 にリネーム。`ObsidianConnectionResult` にオプショナル `failure?: FailureMetadata` を追加（AbortError→timeout・TypeError→network・文言不変）し、証明書リンクの表示条件をメッセージ部分一致から `failure.kind === 'network' && protocol === 'https'` 起点へ修正。リンク URL は hostInput 値起点（validateObsidianHost/Port でサニタイズ・無効値は既定へ降格）。Firefox 向け案内（新 i18n キー `certGuideFirefox`、ja/en parity テスト付き）。旧条件へ戻すと新規 18 テストが red になることを実証。79 files・1187 tests green。なぜなぜ: 境界が文面と構造情報を 1 本の文字列に押し込み、テストが SW の書き換え段を再現していなかった）
 - [2026-09-25-31-fix-withlock-object-conflict-policy.md](../dev-docs/archived/pbi/2026-09-25-31-fix-withlock-object-conflict-policy.md)（✅ 完了 — ADR 2026-09-26 の R1〜R5 を実装。pendingStorage の legacy migration と savedUrlRepository の quota cleanup を `withOptimisticLock` 経由へ移し、lock key への version 非 bumping な直接 set を production 0 件化（契約テストで機械検出）。permissionManager の 5 updater を非突然変異化、dead code `saveDeniedDomains` 削除、`InMemoryStoragePort` と vitest.setup.ts の storage 境界を structured clone 相当化。`storageTransaction.ts` は 1 行も変更せず既存 pin 維持。3430 tests green ×2。なぜなぜ: 契約が散文でしか表現されず、port の参照返却が違反をテストで観測不能にしていた）
 - [2026-09-25-32-fix-obsidian-auth-error-wording.md](../dev-docs/archived/pbi/2026-09-25-32-fix-obsidian-auth-error-wording.md)（✅ 完了 — PBI 11 が宣言済みだった `FAILURE_KIND_TO_ERROR_TYPE` 表を `classifyError()` の実行経路に接続。Obsidian の 401/403 が errorAuth、429 が errorRateLimit、404/5xx が errorServer を表示するようになり、network 判定が先に評価されて auth 分岐が到達不能だった問題を解消。新規 i18n キー 0 件。PBI 11 の「display と kind が独立」不変条件テストを本裁定に合わせて更新し、実 ObsidianClient → StepExecutor → createErrorResponse の統合テスト 5 件と ja/en キー parity テストを追加。utils+background 501 files・7769 tests green。なぜなぜ: サニタイズ契約がステータスを文面から消した一方で文面の外に構造化チャネルが無かった）
+- [2026-09-25-14-refactor-ci-paths-filter.md](../dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md)（✅ 完了 — RICE 1.5・2 SP。全 25 checkbox `[x]`。実装は PR #162（merge `f19e6ccf`・コミット `a885958c`）、docs-only 実測は PR #163、統合テスト欠陥修正は PR #164。docs-only で validate/wasm-test/dod-check/build が skipped・gitleaks は実行・job-level skip は `pending` ではなく `skipped` で終端することを実 PR で観測。`main` に branch protection も ruleset も無いことを `gh api` で実測し、旧 DoD の「branch protection 設定アクセス」前提は解消済み。INDEX の「閉塞」表記は陳腐化していたため本アーカイブで解消。5 Whys なし・分類後の DoD 反映アーカイブ）
 
 ### 2026-09-26 autonomous-task-closer wave 1 — ✅ 4件完了（02・06・07・08 アーカイブ済み）4件をファイル非重複で並列実装
 
