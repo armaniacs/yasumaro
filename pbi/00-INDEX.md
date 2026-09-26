@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 1件完了・⬜ 未着手 3件 🔧非機能追加
+### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 2件完了・⬜ 未着手 3件 🔧非機能追加
 
 **統合 PBI**: [2026-09-26-00-timing-failure-elimination-suite.md](2026-09-26-00-timing-failure-elimination-suite.md)
 - Vision: 全テスト層（Unit/Integration/E2E）から固定待機を完全除去
-- 構成: PBI 05 (完了) + PBI 06/08/07 (未着手)
+- 構成: PBI 05・08 (完了) + PBI 06/07 (未着手)
 - Timeline: Phase 2a・2b は並行可能、Phase 3 で統合
 - Total: 5.5 SP across 2 sprints
 
@@ -27,8 +27,9 @@
 | PBI | 状態 | RICE | SP | 内容 |
 |---|---|---:|---:|---|
 | [05](2026-09-26-05-test-remove-fixed-sleeps.md) | ✅ 完了 | 3.0 | 1 | Unit/Integration sleep 40 件 → condition-based |
+| [08](2026-09-26-08-lint-e2e-tests.md) | ✅ 完了 | 1.0 | 1 | testDir ESLint 対象化（`waitForTimeout` 12 件） |
+| [01](2026-09-26-01-test-eslint-rule-tester-repeats.md) | ⬜ 未着手 | — | 1 | ESLint ルールテスト 7 ファイルを `--repeats` ゲートに乗せる（統合 PBI の「既知の穴」から起票） |
 | [06](2026-09-26-06-investigate-e2e-retry-flakiness.md) | ⬜ 未着手 | 2.0 | 2 | E2E retry 隠蔽調査・修正（43 テスト） |
-| [08](2026-09-26-08-lint-e2e-tests.md) | ⬜ 未着手 | 1.0 | 1 | testDir ESLint 対象化（`waitForTimeout` 12 件） |
 | [07](2026-09-26-07-lower-eslint-sleep-threshold.md) | ⬜ 未着手 | 1.5 | 1.5 | ESLint 閾値下げ（6〜19ms 約 70 件） |
 
 
@@ -45,15 +46,13 @@
 
 このラウンドの 4 PBI はすべて実装済み・アーカイブ済みです（内訳はアーカイブ履歴を参照）。未実施の DoD は各 PBI の「未実施 — ユーザー作業」表記に残しています。
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 8件完了・アーカイブ済み / ⬜ 未着手 22件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 11件完了・アーカイブ済み / ⬜ 未着手 19件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 02 | [investigate-withlock-cas-deep-equal](2026-09-25-02-investigate-withlock-cas-deep-equal.md) | investigate | 8.4 | 2 | 裁定が 18 の前提 |
-| 06 | [refactor-ui-provider-label-ssot](2026-09-25-06-refactor-ui-provider-label-ssot.md) | refactor | 3.0 | 0.5 | 30 と import 競合 |
-| 07 | [refactor-format-bytes-ssot](2026-09-25-07-refactor-format-bytes-ssot.md) | refactor | 3.0 | 1 | 30 と同一ファイル競合 |
+| 31 | [fix-withlock-object-conflict-policy](2026-09-25-31-fix-withlock-object-conflict-policy.md) | fix | — | — | 02 の裁定で起票。`withLock` の object 競合検知を version 単一 signal に固定し、lock 迂回 2 箇所を撤去 |
 | 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
 | 11 | [refactor-structured-failure-taxonomy](2026-09-25-11-refactor-structured-failure-taxonomy.md) | refactor | 1.6 | 3 | 12・13・15 の前提（起点） |
 | 12 | [fix-offline-recovery-single-owner](2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | 11 の後。13 の前提 |
@@ -146,6 +145,15 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-26 autonomous-task-closer wave 1 — ✅ 4件完了（02・06・07・08 アーカイブ済み）4件をファイル非重複で並列実装
+
+RICE 順・依存グラフ・ファイル非重複で判定し、触るファイル集合が互いに交わらない 4 件を 1 つの並列ウェーブで処理した（`pbi/`+`dev-docs/ADR/` / `eslint/`+`testDir/`+`bench/` / popup+dashboard+background / `cleansingStatsView`+`panels/asyncData`）。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline 同一）/ test **915 files / 14100 passed**（HEAD 比 +4 files / +44 tests）/ build PASS。`type-check:test` は 255 errors で HEAD baseline と同一（増減ゼロ）。DoD 反映漏れは 0 件（02・06・07・08 いずれも実装コミット不在の新規実装だった）。**未実施**: GitHub PR レビュー、E2E 実走（`test:e2e` は build と Chrome 起動を要する）。
+
+- [2026-09-25-02-investigate-withlock-cas-deep-equal.md](../dev-docs/archived/pbi/2026-09-25-02-investigate-withlock-cas-deep-equal.md)（✅ 完了 — production code 無変更の裁定記録のみ。**Contracts 強化を採用し `canonical deep-equal + value-level CAS` は不採用**。version が見逃す実在の競合は lock 迂回 2 箇所（`pendingStorage.ts` / `savedUrlRepository.ts`）だけであり、値比較を足すのではなくその 2 箇所を `withLock` へ移せば原因が消える。canonicalization コストは高頻度 write に恒久課され、`structuredClone` 非対応値で新たな失敗モードも増えるため却下。裁定を ADR `2026-09-26-withlock-object-conflict-policy.md` に記録し、後続 `fix` PBI 31 を起票。実測 call site は **15 経路**（`withOptimisticLock` 12 + 直接 `tx.withLock` 3）で PBI 本文の「14 経路」は誤りと判明し訂正。`withAtomicKeys` は version のみの別契約のため対象外。`lint:adr-links` 54 ADR PASS。RICE 8.4）
+- [2026-09-25-06-refactor-ui-provider-label-ssot.md](../dev-docs/archived/pbi/2026-09-25-06-refactor-ui-provider-label-ssot.md)（✅ 完了 — 中立テーブル `providerAllowlist` に read-only projection（`ProviderDisplayMetadata` / `deriveProviderDisplayMetadata` / `tryResolveProviderDisplayMetadata`）を新設し、UI 3 ファイル（`errorUtils` / `aiTestResultView` / `customPromptManager`）から `providerCatalog` import を除去。`providerCatalog` 側に重複していた 6 provider の `labelI18nKey` リテラルも削除し中立 row からの合成に統一（二重 SSOT を解消）。**popup バンドルが 214,191 → 193,401 bytes（−20,790 / −9.7%）に縮小し、provider strategy を含む chunk が 2 → 1 に減少**。対象 6 ファイル 170 tests green。RICE 3.0）
+- [2026-09-25-07-refactor-format-bytes-ssot.md](../dev-docs/archived/pbi/2026-09-25-07-refactor-format-bytes-ssot.md)（✅ 完了 — `formatBytes` 定義 3 つ（うち同一ファイル内の local shadow 1 つ）を撤去し、dashboard-local の SSOT `src/dashboard/byteFormat.ts` へ 6 active 経路を統合。policy は**小数 1 桁 + B/KB/MB/GB 自動切替**を正とし、4 桁有効数字版を却下（`renderFunnelChart` のラベル幅が可変になる／0 byte が `0 KB` 表記になる／GB tier が欠けていた）。unit 表は `1 MiB` リテラルを書かず 1024 派生にしたのは、cap-registry drift guard がそのリテラルを `MAX_ERROR_BODY_SIZE` と誤読し message-size allowlist を借りる必要が生じるため。SSOT ガード（重複定義 0・純モジュール）を `byteFormat-ssot.test.ts` で pin。対象 6 ファイル 79 tests green。**裁定**: PBI 本文の「依存 PBI 30 が完了している」は INDEX（30 は 06・07 の後）と反転していたため、INDEX を SSOT として採用せず 30 の後続を妨げない形で完了。RICE 3.0）
+- [2026-09-26-08-lint-e2e-tests.md](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md)（✅ 完了 — `testDir/` を `ignores` から除外して lint 対象に。新規ルール `local/no-fixed-wait`（`eslint/rules/no-fixed-wait.mjs`、`no-test-sleep` の E2E 版、閾値なし・既定 error）で `waitForTimeout` を検出。`waitForTimeout` 12 件を**条件待ち 9 件 + 理由明示の opt-out 3 件**に裁定（opt-out は ①陰性判定で待つべき条件が存在しない pii-wasm spec ②long task 計測窓そのもの ③「idle」が観測不能な反復間クールダウン。いずれも `AGENTS.md` の実時間待ち例外に該当する）。`testDir`/`bench` は型非依存設定（`testDir/tsconfig.json` が `.spec.ts` を include しないため `project` 指定は全 spec の型解決を壊す）。ルールテスト 21 件 green。RICE 1.0）
 
 ### 2026-09-25 残債ラウンド — ✅ PBI 24 完了（アーカイブ済み）UX 裁定のみ・production code 無変更
 
