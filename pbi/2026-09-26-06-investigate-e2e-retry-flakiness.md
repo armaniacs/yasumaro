@@ -44,6 +44,48 @@ npx playwright test --retries=0 --project=a11y
 npx playwright test --retries=0 --project=usability
 ```
 
+## 実測した証拠（2026-09-26 autonomous-task-closer 実行時）
+
+本 PBI の Phase 1 を部分的に実施し、**retry が実在の失敗を隠している具体例**を 1 件検出した。
+
+### 検出した flaky テスト
+
+`--project=extension` の実走（`retries: 2` の既定設定）で以下が報告された:
+
+```
+1 flaky
+  [extension] › testDir/e2e/regenerate-summary.spec.ts:215:3
+    › Regenerate summary @extension
+    › CRITICAL: regenerate UPDATES the same row (no duplicate) and never persists cleanseMode
+100 passed / 20 skipped
+```
+
+`flaky` は **1 周目で失敗し、retry で成功した**ことを意味する。このテストは名前を冠する
+どおり同一行の更新と `cleanseMode` の非永続化という**データ整合性**を検証する
+CRITICAL ケースであり、初回失敗は「他のテストなら気付けるが、整合性テストなら
+そのまま見落とす」種類の失敗である。`retries: 2` により緑として報告されるため、
+CI 上は検出されない。
+
+### 同時に検出した別の失敗（既に修正済み）
+
+同実走の初回で `content-script-recording.spec.ts:148`
+「does NOT fire when stay < 5 seconds」が `retries: 2` をすべて使い切って失敗した。
+原因は PBI 2026-09-26-08 の条件待ち置換が陰性判定の窓を 5 秒閾値の境へ
+寄せていたことで、`24e3e28f` で修正済み。**retry で緑になるのではなく、
+retries=0 で 5 周回全通過になるよう直した**（`--repeat-each=5 --retries=0` で 25 件 PASS）。
+
+本 PBI の主題である「retry による隠蔽」の実例が既に 1 件存在することは、
+retry 設定を見ずに retry を 0 にして全プロジェクトを走査すべき根拠になる。
+
+### 残作業
+
+- 上記 `regenerate-summary.spec.ts:215` の根本原因調査（**未着手**）。
+- `interaction` / `a11y` / `usability` プロジェクトを `--retries=0` で走査（**未着手**）。
+  既知の `test.skip(true, 'requires headed Chrome with display')` により
+  `pii-wasm-initialization.spec.ts` は headless 環境では常に skip される。
+- retry 設定を 0 にすべきか、あるいは retry 維持でも初回失敗を可視化する仕組み
+  （flaky テストの CI への明示的レポート）を採用すべきかの裁定。
+
 ## 調査フェーズ（Phase 1）
 
 1. `playwright.config.ts` で各プロジェクトの retry 設定を確認
