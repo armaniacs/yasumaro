@@ -151,6 +151,17 @@ Read [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) before writing or changing t
 
 Do not write `cmd & sleep N`. To wait for a command to finish, block on it (run it in the foreground, or `wait` on its PID). To wait for a long-running process to become ready, poll a readiness condition with an upper bound, e.g. `timeout 60 bash -c 'until curl -sf http://localhost:PORT/; do sleep 0.5; done'`.
 
+**Keep every polling interval at 10 seconds or less.** This applies to `gh run watch --interval`, `playwright --repeat-each` pacing, readiness polling, and any `sleep N` used to wait on something:
+
+```bash
+gh run watch <id> --exit-status --interval 10   # OK
+gh run watch <id> --exit-status --interval 30   # violation
+```
+
+The default of 3 seconds is fine. Raising it above 10 is not: the interval is the **worst-case latency of each individual wait**, so a 30-second interval means every wait can waste up to 30 seconds of wall clock, and that cost is paid again on each poll. It also delays `--exit-status` reporting by up to one interval after the run is already finished. The cost multiplies across every wait in a session, and it is invisible — the work is not slower in any visible way, it just sits there.
+
+`src/__tests__/agent-poll-interval.test.ts` fails if this rule's text disappears from `AGENTS.md` or `.kilorules`, or if a file in the repository passes an interval above 10 to a watch/poll flag.
+
 ### Definition of done
 
 A timing-related fix is not done after one green run. Run it repeatedly with retries disabled; every run must pass:
