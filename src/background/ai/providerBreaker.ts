@@ -148,9 +148,22 @@ function sanitizeState(state: unknown): ProviderBreakerState {
   return clean;
 }
 
+/**
+ * Why a slot is not being attempted right now, so a suppressed call can report
+ * the real cause instead of reusing an unrelated failure kind.
+ */
+export interface ProviderCooldown {
+  /** The failure kind that opened the breaker for this slot. */
+  kind: FailureKindValue;
+  /** Epoch ms at which the slot becomes attemptable again. */
+  openUntil: number;
+}
+
 /** Minimal surface RemoteAIService needs; also the test seam. */
 export interface ProviderBreakerLike {
   shouldAttempt(provider: string, model?: string): Promise<boolean>;
+  /** The open cooldown for this slot, or null when it is attemptable. */
+  cooldown(provider: string, model?: string): Promise<ProviderCooldown | null>;
   recordSuccess(provider: string, model?: string): Promise<void>;
   recordFailure(provider: string, model: string | undefined, failure: FailureMetadata): Promise<void>;
 }
@@ -158,28 +171,29 @@ export interface ProviderBreakerLike {
 /** Default when no breaker is wired: try everything, remember nothing. */
 export const disabledBreaker: ProviderBreakerLike = {
   shouldAttempt: async () => true,
+  cooldown: async () => null,
   recordSuccess: async () => {},
   recordFailure: async () => {},
 };
 
 export class ProviderBreaker implements ProviderBreakerLike {
   /**
-   * In-process per-key serialization chains. Locks only — the SSOT lives in
-   * the store, so a SW restart loses nothing but in-flight ordering (which a
-   * fresh process rebuilds on demand).
+   * In-process serialization. The whole breaker state lives under ONE store
+   * key, so every mutation is a read-modify-write of that same map: serializing
+   * per breaker key would let two slots for different providers interleave
+   * between the read and the write and drop each other's entry. One chain for
+   * all mutations, and the SSOT stays in the store, so a SW restart loses
+   * nothing but in-flight ordering (which a fresh process rebuilds on demand).
    */
-  private readonly chains = new Map<string, Promise<void>>();
+  private readonly chain: { tail: Promise<void> } = { tail: Promise.resolve() };
 
   constructor(private readonly store: SessionStorePort) {}
 
-  private async mutate(key: string, fn: (state: ProviderBreakerState) => ProviderBreakerState): Promise<void> {
-    const previous = this.chains.get(key) ?? Promise.resolve();
+  private async mutate(fn: (state: ProviderBreakerState) => ProviderBreakerState): Promise<void> {
+    const previous = this.chain.tail;
     const next = previous.then(() => this.applyMutation(fn)).catch(() => {});
-    this.chains.set(key, next);
+    this.chain.tail = next;
     await next;
-    if (this.chains.get(key) === next) {
-      this.chains.delete(key);
-    }
   }
 
   private async applyMutation(fn: (state: ProviderBreakerState) => ProviderBreakerState): Promise<void> {
@@ -203,9 +217,22 @@ export class ProviderBreaker implements ProviderBreakerLike {
     }
   }
 
+  async cooldown(provider: string, model?: string, now: number = Date.now()): Promise<ProviderCooldown | null> {
+    try {
+      const raw = await this.store.get<ProviderBreakerState>(BREAKER_STATE_KEY);
+      const entry = sanitizeState(raw)[breakerKey(provider, model)];
+      if (entry?.openUntil === undefined || now >= entry.openUntil) {
+        return null;
+      }
+      return { kind: entry.openedBy ?? FailureKind.HTTP, openUntil: entry.openUntil };
+    } catch {
+      return null;
+    }
+  }
+
   async recordSuccess(provider: string, model?: string): Promise<void> {
     const key = breakerKey(provider, model);
-    await this.mutate(key, (state) => {
+    await this.mutate((state) => {
       if (state[key] === undefined) {
         return state;
       }
@@ -217,7 +244,7 @@ export class ProviderBreaker implements ProviderBreakerLike {
 
   async recordFailure(provider: string, model: string | undefined, failure: FailureMetadata): Promise<void> {
     const key = breakerKey(provider, model);
-    await this.mutate(key, (state) => {
+    await this.mutate((state) => {
       const next = nextEntry(state[key], { type: 'failure', failure }, Date.now());
       if (next === undefined) {
         if (state[key] === undefined) {

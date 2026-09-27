@@ -48,17 +48,20 @@ function asClaimMap(value: unknown): ClaimMap {
  * claim is taken over. Atomic via the shared optimistic-lock CAS.
  */
 export async function claimRecoveryOwner(url: string, owner: RecoveryOwner): Promise<boolean> {
-  const now = Date.now();
-  let claimed = false;
-  await withOptimisticLock<ClaimMap>(CLAIMS_KEY, (current) => {
-    const claims = asClaimMap(current);
-    if (isFresh(claims[url], now)) {
-      return claims;
-    }
-    claimed = true;
-    return { ...claims, [url]: { url, owner, claimedAt: now } };
-  });
-  return claimed;
+    const now = Date.now();
+    // The updater must stay pure: withLock re-runs it after a conflict, so a
+    // side effect set on the first attempt would survive a retry that finds
+    // the winner's fresh claim and write nothing — the caller would then be
+    // told it owns a claim it does not. Decide from the value the lock returns.
+    const written = await withOptimisticLock<ClaimMap>(CLAIMS_KEY, (current) => {
+        const claims = asClaimMap(current);
+        if (isFresh(claims[url], now)) {
+            return claims;
+        }
+        return { ...claims, [url]: { url, owner, claimedAt: now } };
+    });
+    const mine = asClaimMap(written)[url];
+    return mine?.owner === owner && mine.claimedAt === now;
 }
 
 /**
@@ -66,21 +69,14 @@ export async function claimRecoveryOwner(url: string, owner: RecoveryOwner): Pro
  * expired and re-taken) is left untouched.
  */
 export async function releaseRecoveryOwner(url: string, owner: RecoveryOwner): Promise<void> {
-  await withOptimisticLock<ClaimMap>(CLAIMS_KEY, (current) => {
-    const claims = asClaimMap(current);
-    const existing = claims[url];
-    if (existing === undefined || existing.owner !== owner) {
-      return claims;
-    }
-    const next = { ...claims };
-    delete next[url];
-    return next;
-  });
-}
-
-/** Read the current claim, if any. Expired claims read as null. */
-export async function getRecoveryOwner(url: string): Promise<RecoveryClaim | null> {
-  const result = await chrome.storage.local.get(CLAIMS_KEY);
-  const claim = asClaimMap(result[CLAIMS_KEY])[url];
-  return isFresh(claim, Date.now()) ? (claim as RecoveryClaim) : null;
+    await withOptimisticLock<ClaimMap>(CLAIMS_KEY, (current) => {
+        const claims = asClaimMap(current);
+        const existing = claims[url];
+        if (existing === undefined || existing.owner !== owner) {
+            return claims;
+        }
+        const next = { ...claims };
+        delete next[url];
+        return next;
+    });
 }

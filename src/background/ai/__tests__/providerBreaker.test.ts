@@ -201,6 +201,35 @@ describe('ProviderBreaker store behavior', () => {
     await expect(breaker.shouldAttempt('openai', 'gpt-4o')).resolves.toBe(false);
   });
 
+  it('serializes concurrent updates across DIFFERENT keys without loss', async () => {
+    // The whole state is one store key, so a per-slot chain would let these
+    // interleave between the read and the write and drop each other's entry —
+    // which is how a failing provider silently never reaches its threshold.
+    const breaker = new ProviderBreaker(store);
+    await Promise.all([
+      breaker.recordFailure('openai', 'gpt-4o', failure('network')),
+      breaker.recordFailure('anthropic', 'claude', failure('timeout')),
+      breaker.recordFailure('gemini', 'flash', failure('network')),
+    ]);
+    const state = store.data.get(KEY) as Record<string, { failures: number }>;
+    expect(state['openai::gpt-4o']?.failures).toBe(1);
+    expect(state['anthropic::claude']?.failures).toBe(1);
+    expect(state['gemini::flash']?.failures).toBe(1);
+  });
+
+  it('reports the cooldown that suppressed a slot', async () => {
+    const breaker = new ProviderBreaker(store);
+    await breaker.recordFailure('openai', 'gpt-4o', failure('auth', 401));
+    await expect(breaker.shouldAttempt('openai', 'gpt-4o')).resolves.toBe(false);
+
+    const cooldown = await breaker.cooldown('openai', 'gpt-4o');
+    expect(cooldown?.kind).toBe(FailureKind.AUTH);
+    expect(cooldown?.openUntil).toBeGreaterThan(Date.now());
+    // A healthy slot has no cooldown, and neither does the disabled breaker.
+    await expect(breaker.cooldown('openai', 'other-model')).resolves.toBeNull();
+    await expect(disabledBreaker.cooldown('openai', 'gpt-4o')).resolves.toBeNull();
+  });
+
   it('fails open when the store throws', async () => {
     const broken: SessionStorePort = {
       get: async () => {

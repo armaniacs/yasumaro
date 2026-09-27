@@ -9,6 +9,7 @@
 
 import type { Settings } from './types.js';
 import { API_KEY_FIELD_NAMES, isApiKeyField } from './apiKeyFields.js';
+import { cloneAtStorageBoundary as cloneAtBoundary } from './structuredCloneBoundary.js';
 
 // Canonical list lives in apiKeyFields.ts (dependency-free so this module
 // stays importable under hoisted vi.mock of SettingsRepository).
@@ -75,25 +76,6 @@ export class ChromeStoragePort implements StoragePort {
       // fallback to 0 in test env
     }
     return 0;
-  }
-}
-
-/**
- * Production `chrome.storage.local` hands out a structured clone on both
- * `get` and `set`, so a caller that keeps the reference it read (or passed in)
- * can never mutate the stored value. A port that stores and returns the
- * reference instead turns every read-modify-write into a write the CAS verify
- * read cannot see, so tests would be checking a store the real port never
- * exposes. Values that `structuredClone` rejects (functions, DOM nodes, …)
- * fall back to the reference: some suites seed those to exercise code paths
- * that merely pass values through, and failing them at the port boundary
- * would report a problem they are not testing.
- */
-function cloneAtBoundary<T>(value: T): T {
-  try {
-    return structuredClone(value);
-  } catch {
-    return value;
   }
 }
 

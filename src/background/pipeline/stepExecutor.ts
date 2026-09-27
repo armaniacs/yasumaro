@@ -82,11 +82,7 @@ export class StepExecutor {
     context: RecordingContext,
     failureKind?: FailureKindValue
   ): Promise<OfflineEnqueueInfo> {
-    const info: OfflineEnqueueInfo = {
-      attempted: false,
-      enqueued: false,
-      jobKind: step.offlineRetry?.jobKind,
-    };
+    const info: OfflineEnqueueInfo = { enqueued: false };
     if (!step.offlineRetry) {
       return info;
     }
@@ -105,7 +101,6 @@ export class StepExecutor {
     }
 
     const type: OfflineJobKind = step.offlineRetry.jobKind;
-    info.attempted = true;
 
     // PBI 2026-09-12-11: pack through the shared field table so enqueue and
     // retry cannot diverge (the table lives in recordRequestBuilder).

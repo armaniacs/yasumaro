@@ -19,9 +19,11 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 /**
- * The six object lock keys under `withLock`/`withAtomic`, plus the constant
+ * The object lock keys under `withLock`/`withOptimisticLock`, plus the constant
  * spellings that appear in a payload as a computed key (`[PENDING_PAGES_KEY]`
- * would otherwise hide behind an identifier).
+ * would otherwise hide behind an identifier). `coversEveryLockKey` below fails
+ * when a new lock key is added without listing it here, so the bypass scan can
+ * never silently stop covering one.
  */
 const LOCK_KEYS: ReadonlyArray<{ key: string; aliases: readonly string[] }> = [
   { key: 'settings', aliases: ['StorageKeys.SETTINGS'] },
@@ -30,6 +32,7 @@ const LOCK_KEYS: ReadonlyArray<{ key: string; aliases: readonly string[] }> = [
   { key: 'pending_pages', aliases: ['PENDING_PAGES_KEY', 'StorageKeys.PENDING_PAGES'] },
   { key: 'denied_domains', aliases: ['StorageKeys.DENIED_DOMAINS'] },
   { key: 'trust_db', aliases: ['StorageKeys.TRUST_DB'] },
+  { key: 'recording_recovery_claims', aliases: ['CLAIMS_KEY'] },
 ];
 
 const SOURCE_ROOTS = ['src', 'entrypoints'];
@@ -73,6 +76,50 @@ interface Bypass {
   line: number;
 }
 
+/** The lock helper's own definition site, not a call that locks a key. */
+const LOCK_HELPER_FILE = 'src/utils/storage/storageTransaction.ts';
+
+const LOCK_CALL = /(?:^|[^\w.])(?:withOptimisticLock|withLock|withAtomic)\s*</g;
+
+/**
+ * Every key the production code passes to the object lock helpers, resolved to
+ * the underlying string. Returns the raw token when it cannot be resolved, so
+ * an unresolvable call site is visible in the failure output instead of being
+ * silently skipped.
+ */
+function discoverLockKeys(): string[] {
+  const files: string[] = [];
+  for (const root of SOURCE_ROOTS) collectSourceFiles(join(projectRoot, root), files);
+  const found = new Set<string>();
+  for (const file of files) {
+    if (relative(projectRoot, file) === LOCK_HELPER_FILE) continue;
+    const source = readFileSync(file, 'utf8');
+    // Module-level `const NAME = 'literal'` / `= 'literal' as const`, and the
+    // `= StorageKeys.X` spelling the inventory also aliases.
+    const constLiterals = new Map<string, string>();
+    for (const m of source.matchAll(/(?:const|let)\s+([A-Z][A-Z0-9_]*)\s*(?::[^=]+)?=\s*['"]([^'"]+)['"]/g)) {
+      constLiterals.set(m[1]!, m[2]!);
+    }
+    for (const m of source.matchAll(/(?:const|let)\s+([A-Z][A-Z0-9_]*)\s*(?::[^=]+)?=\s*(StorageKeys\.[A-Z0-9_]+)\s*;/g)) {
+      constLiterals.set(m[1]!, m[2]!);
+    }
+    for (const m of source.matchAll(LOCK_CALL)) {
+      const openIdx = source.indexOf('(', m.index + m[0].length - 1);
+      if (openIdx === -1) continue;
+      const args = extractArgument(source, openIdx);
+      const token = /^\s*([A-Za-z_$][\w$.]*|['"][^'"]+['"])/.exec(args)?.[1];
+      if (token === undefined) continue;
+      if (token.startsWith("'") || token.startsWith('"')) {
+        found.add(token.slice(1, -1));
+        continue;
+      }
+      const bare = token.split('.').pop()!;
+      found.add(constLiterals.get(bare) ?? token);
+    }
+  }
+  return [...found].sort();
+}
+
 function findBypasses(): Bypass[] {
   const files: string[] = [];
   for (const root of SOURCE_ROOTS) collectSourceFiles(join(projectRoot, root), files);
@@ -103,6 +150,16 @@ function findBypasses(): Bypass[] {
 describe('R2 contract: no version-non-bumping direct write to an object lock key', () => {
   it('finds zero bypass call sites in production sources', () => {
     expect(findBypasses()).toEqual([]);
+  });
+
+  it('lists every object lock key the production code actually locks', () => {
+    // The hand-written inventory is the weak point of a source-scan contract:
+    // a lock key added without being listed here is simply not scanned. Resolve
+    // each withLock/withOptimisticLock first argument (literal or the module
+    // constant that holds it) and require the inventory to cover each one.
+    const covered = new Set(LOCK_KEYS.flatMap(({ key, aliases }) => [key, ...aliases]));
+    const uncovered = discoverLockKeys().filter((key) => !covered.has(key));
+    expect(uncovered).toEqual([]);
   });
 
   it('still detects a bypass when one is reintroduced', () => {

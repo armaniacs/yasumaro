@@ -95,6 +95,29 @@ describe('generateSummary with breaker', () => {
     expect(result.summary).toBe('warm summary');
   });
 
+  it('reports a suppressed call as a cooldown, not as missing configuration', async () => {
+    // Every slot in cooldown used to fall through to the initial result, so
+    // the user was told their provider configuration was missing and that text
+    // was stored as their page summary.
+    await breaker.recordFailure('cold', undefined, networkFailure);
+    await breaker.recordFailure('cold', undefined, networkFailure);
+    await breaker.recordFailure('cold', undefined, networkFailure);
+
+    const service = createService([{ provider: 'cold' }], breaker);
+    const coldFactory = vi.fn(() => failingProvider(networkFailure));
+    service.registerProvider('cold', coldFactory);
+
+    const result = await service.generateSummary('content');
+
+    expect(coldFactory).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('cold');
+    expect(result.summary).not.toContain('configuration is missing');
+    // The real cause travels with the result, not a fabricated kind.
+    expect(result.failure?.kind).toBe(networkFailure.kind);
+    expect(result.attemptedProviders).toEqual([]);
+  });
+
   it('records taxonomy failures into the breaker without reading messages', async () => {
     const service = createService([{ provider: 'flaky' }], breaker);
     // The message is deliberately misleading — the kind decides.

@@ -170,23 +170,7 @@ vi.stubGlobal('import.meta', {
 // Chrome Extensions API Mock
 // ============================================================================
 
-/**
- * Production `chrome.storage.local` structured-clones every value on the way
- * in and on the way out, so a caller cannot reach the stored object by holding
- * on to the reference it read or wrote. The mock must keep that boundary:
- * without it an in-place updater rewrites the store before the CAS verify read
- * happens, and a storage test ends up checking a store the real API never
- * exposes. Values `structuredClone` rejects (functions, DOM nodes, …) are kept
- * by reference so suites that seed them to exercise pass-through paths keep
- * working.
- */
-const cloneAtStorageBoundary = <T,>(value: T): T => {
-  try {
-    return structuredClone(value);
-  } catch {
-    return value;
-  }
-};
+import { cloneAtStorageBoundary } from '../src/utils/storage/structuredCloneBoundary.js';
 
 // In-memory storage
 const localStorage: Record<string, any> = {};

@@ -16,6 +16,7 @@ import { CRYPTO_PARAMS } from './cryptoParams.js';
 // Barrel import: the crypto tests mock '../crypto/index.js', so importing
 // through the barrel ensures the mock covers kdfNegotiator's dependencies too.
 import { deriveKey, decryptData, base64ToBytes } from './index.js';
+import { isSecretEnvelope, loadSecretWrappingKey, unwrapSecretWithKey, type SecretEnvelope } from './secretWrappingKey.js';
 import { StorageKeys } from '../storage/types.js';
 
 /** 交渉結果。legacy 形式は iteration を自己記述しないため usedIterations は null。 */
@@ -90,11 +91,10 @@ export async function deriveLegacyKeyFromStoredSecret(): Promise<CryptoKey | nul
             StorageKeys.ENCRYPTION_SECRET,
         ]);
         const saltB64 = stored[StorageKeys.ENCRYPTION_SALT] as string | undefined;
-        const secretB64 = stored[StorageKeys.ENCRYPTION_SECRET] as unknown;
-        if (!saltB64 || !secretB64) return null;
-        // PBI 25-25: wrapped envelopes are not legacy secrets. atob() on an
-        // object would throw (caught below → null), but reject explicitly so
-        // the fallback chain, not an exception, decides the next candidate.
+        const storedSecret = stored[StorageKeys.ENCRYPTION_SECRET] as unknown;
+        if (!saltB64 || !storedSecret) return null;
+
+        const secretB64 = await resolveSecretMaterial(storedSecret);
         if (typeof secretB64 !== 'string') return null;
 
         const salt = base64ToBytes(saltB64);
@@ -112,6 +112,32 @@ export async function deriveLegacyKeyFromStoredSecret(): Promise<CryptoKey | nul
             false,
             ['encrypt', 'decrypt'],
         );
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * The legacy KDF path needs the secret itself, not a derived key, because the
+ * iteration count it must use is the one the ciphertext was written with —
+ * which is by definition not the current one. PBI 25-25 wrapped ENCRYPTION_SECRET
+ * on first read, so the plaintext this path needs is gone by the time the
+ * decrypt loop runs. Unwrapping here is what keeps the 100k → SSOT migration
+ * reachable for users who upgrade across that boundary.
+ */
+async function resolveSecretMaterial(stored: unknown): Promise<string | null> {
+    if (typeof stored === 'string') {
+        return stored;
+    }
+    if (!isSecretEnvelope(stored)) {
+        return null;
+    }
+    const kek = await loadSecretWrappingKey();
+    if (!kek) {
+        return null;
+    }
+    try {
+        return await unwrapSecretWithKey(stored as SecretEnvelope, kek);
     } catch {
         return null;
     }
