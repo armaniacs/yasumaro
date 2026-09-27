@@ -14,6 +14,30 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-28 全体リファクタリングラウンド — ⬜ 未着手 17件 🔧非機能追加
+
+ユーザー要求「リポジトリ全体のリファクタリング（PBI 作成まで・実装は別ラウンド）」に基づく 4 観点（DRY / SRP・モジュール分離 / 型安全性・テスト容易性 / 堅牢性）の差分レビュー結果を 17 PBI 化。実コード裏取り済み（file:line は採点台帳と各 PBI 参照）。採点・依存マップ・台帳送り 8 件・クリーン領域の詳細は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md)。
+
+| NN | PBI | 種別 | RICE | SP | 依存 / 備考 |
+|---|---|---|---:|---:|---|
+| 01 | [fix-ai-rate-limit-max-reader-writer-split](2026-09-28-01-fix-ai-rate-limit-max-reader-writer-split.md) | fix | 36.0 | 0.5 | 実害: UI のレート上限が常に無視される（getMaxMonthlyTokens の 2026-09-22 修復と同形の未修復残） |
+| 02 | [refactor-domain-filter-cache-save-seam-adoption](2026-09-28-02-refactor-domain-filter-cache-save-seam-adoption.md) | refactor | 20.0 | 0.5 | byte 同一 IIFE 4 箇所残存。delta-write 契約違反の解消 |
+| 03 | [fix-init-export-scheduler-immediate-flush-loss](2026-09-28-03-fix-init-export-scheduler-immediate-flush-loss.md) | fix | 18.0 | 0.5 | 実害: 設定保存/接続テスト直後の当日 export が黙って消える |
+| 04 | [fix-apply-i18n-args-parse-fail-closed](2026-09-28-04-fix-apply-i18n-args-parse-fail-closed.md) | fix | 16.2 | 0.5 | 1 属性の malformed JSON でパネル翻訳一式が死ぬ。pin テスト更新を含む |
+| 05 | [refactor-settings-backup-restore-single-source](2026-09-28-05-refactor-settings-backup-restore-single-source.md) | refactor | 12.0 | 0.5 | バックアップ復元の二重実装 + リテラルハードコード drift |
+| 06 | [fix-local-markdown-export-retention-hardening](2026-09-28-06-fix-local-markdown-export-retention-hardening.md) | fix | 9.0 | 1 | 実害: 孤児バッファ無期限蓄積（1.4-2.2MB/日）+ flush O(N) + RMW 競合 |
+| 07 | [refactor-field-validation-descriptor-activation](2026-09-28-07-refactor-field-validation-descriptor-activation.md) | refactor | 9.0 | 1 | デスクリプタ汎用経路の活性化（死んだ 12 関数の統合・errorId 一元化） |
+| 08 | [fix-removed-counts-type-pollution](2026-09-28-08-fix-removed-counts-type-pollution.md) | fix | 6.0 | 1 | 実害: byte 数・reason 文字列が removal count 地図に混入し feedback view に表示される |
+| 09 | [refactor-asyncdata-panel-reload-lifecycle](2026-09-28-09-refactor-asyncdata-panel-reload-lifecycle.md) | refactor | 5.4 | 2 | 9 パネル × 約 22 行の reload 骨格統合。期間フォールバック 2 系統 drift の是正を含む |
+| 10 | [refactor-layer0-limits-ssot](2026-09-28-10-refactor-layer0-limits-ssot.md) | refactor | 5.3 | 1.5 | Layer 0 cap 定数の SSOT 化 + layer lint の穴封鎖。→ 14 が依存 |
+| 11 | [refactor-local-date-utilities-ssot](2026-09-28-11-refactor-local-date-utilities-ssot.md) | refactor | 4.8 | 1.5 | format 7 + parse 5 + 日レンジ 3 の集約。DST 取り込み漏れの修正 + pin テスト更新。09 の後 |
+| 12 | [investigate-session-store-overflow-persistence](2026-09-28-12-investigate-session-store-overflow-persistence.md) | investigate | 4.8 | 1 | 保存 URL ~9k 件で session 永続化が恒久停止 + 毎 flush O(n) serialize の裁定 |
+| 13 | [refactor-layer-boundary-hygiene-bundle](2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md) | refactor | 4.5 | 1 | 小型境界違反 4 件バンドル（gistSettings DI 迂回・opfsCapabilities 分離・auditLog 移設・DiagnosticsCollector 偽 union） |
+| 14 | [refactor-messaging-background-edge-removal](2026-09-28-14-refactor-messaging-background-edge-removal.md) | refactor | 3.6 | 2 | 中立層 messaging の background runtime edge 4 本解消 + CURRENT_PROTOCOL_VERSION 経路統一。10 の後 |
+| 15 | [refactor-status-message-unification](2026-09-28-15-refactor-status-message-unification.md) | refactor | 3.2 | 1.5 | status 表示 8 実装・class 契約 2 系統の統一。07 の後 |
+| 16 | [refactor-preview-flow-payload-typing](2026-09-28-16-refactor-preview-flow-payload-typing.md) | refactor | 2.4 | 1.5 | popup 3 payload の型化（RecordMessage 削除・maskedCount 誤搬送の構造排除） |
+| 17 | [refactor-render-tag-graph-extraction](2026-09-28-17-refactor-render-tag-graph-extraction.md) | refactor | 2.0 | 1 | archloop-0924 台帳からの昇格（トリガー「3つ目のクラスタグラフ系パネル」発火済み）。09・11 の後 |
+
 ### 2026-09-27 investigate 裁定後の後続 PBI — ✅ 4件完了（13・27-05・27-04・27-03 アーカイブ済み）/ 完了 🔧非機能追加
 
 investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。policy 確定済みのため Confidence 90%。着手順は RICE 順: 27-05 ✅ → 27-04 ✅ → 27-03 ✅。全件完了。
