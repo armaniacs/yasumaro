@@ -222,20 +222,26 @@ Feature: Obsidian 書込 replay の冪等性方式の確定
 
 ## Definition of Done
 
-- [ ] `pbi/2026-09-25-12-fix-offline-recovery-single-owner.md` に基づく recovery route owner が確定している。
-- [ ] `pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md` の failure SSOT と retry 述語の共有可否が記録されている。
-- [ ] 5 Whys の全問に、確認済みの事実、判断材料、裁定、残存リスクが対応づけられている。
-- [ ] 同一 body の PUT と GET、section insert、full-note PUT の全体 replay の扱いが区別されている。
-- [ ] 生成時刻の固定時点と保存先が裁定されている。
-- [ ] operation ID の採否、生成者、owner、保存先、再利用条件が裁定されている。
-- [ ] operation ID が不要の場合、marker、dedupe window、409 扱いの代替方式が裁定されている。
-- [ ] Local REST API plugin の idempotency header と 409 の提供状況、確認した一次情報、契約 owner が記録されている。
-- [ ] dedupe window を採用する場合、長さと固定する場所が明記されている。
-- [ ] dashboard append と自動 retry の冪等性要件の採否と境界が明記されている。
-- [ ] `saveToObsidianStep` と dashboard append の適用範囲が明記されている。
-- [ ] API key が Authorization header 以外、operation ID、log、例外へ含まれない 後続 `fix` の受け入れ基準がある。
-- [ ] HTTPS 既定、非 loopback host の平文 HTTP 拒否、GET 2 回、PUT 1 回、ESM `.js`、async/await の制約が後続 `fix` に引き継がれている。
-- [ ] 既存 pin テストの変更対象と後続テストの Outside-In 方針が記載されている。
-- [ ] 既存重複の除去が本 PBI の範囲外として明記されている。
-- [ ] 実装は別の `fix` PBI に分割され、変更対象とテスト範囲が本 PBI 内に特定されている。
-- [ ] 本 PBI では対象ファイル以外の変更、テスト実行、git 操作を行っていない。
+- [x] `pbi/2026-09-25-12-fix-offline-recovery-single-owner.md` に基づく recovery route owner が確定している（offline retry queue が owner。Obsidian-only retry path は呼び出し先。報告書 §0）
+- [x] `pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md` の failure SSOT と retry 述語を共有できるか、または分離するかが記録されている（共有する。write 側は既存 `failureFromHttpStatus` 付与を維持）
+- [x] 5 Whys の全問に、調査で与えられた事実、判断材料、裁定、残存リスクが対応づけられている（報告書 §1）
+- [x] `formatMarkdownStep` が retry ごとに生成時刻を作り直す現状と、生成時刻を固定する時点が記録されている（初回 pipeline 実行時に markdown を確定し offline job payload に保存）
+- [x] `NoteSectionEditor` が同一内容を検出せず無条件に再挿入する現状が記録されている（`noteSectionEditor.ts:13-30`）
+- [x] `traceId` が本文、header、idempotency key ではないこと、`offlineQueueProcessor` が `job.id` を捨てていることが裁定に含まれている
+- [x] operation ID を採用する場合は、生成者、owner、保存先、再利用条件、保存期間が offline job payload または local storage で定義されている（**不採用** — 上流に idempotency header がなく送出先がない）
+- [x] operation ID を採用しない場合も、marker、dedupe window、409 扱いを採用しない理由と代替方式が記録されている（同一内容検出方式を採用。時間 window なし）
+- [x] Local REST API plugin の idempotency header と 409 の提供状況が、一次情報と確定先とともに記録されている（上流 README + OpenAPI。未提供。契約 owner は上流リポジトリ）
+- [x] 本文 marker を採用する場合は、dedupe window の長さ、判定位置、既存 note section との境界が定義されている（marker 不採用。代替の同一内容検出の判定位置を明記）
+- [x] dedupe window の長さとして 24 時間などを採用する場合は、値と固定する場所が明記されている（採用しない旨を明記）
+- [x] 同一 body の PUT 再送と、GET、section insert、full-note PUT の全体 replay が別の retry として扱われている
+- [x] dashboard append はユーザー明示操作として、自動 retry とは異なる冪等性要件の採否が記録されている（dedupe 無効・現状維持）
+- [x] `saveToObsidianStep` と dashboard append の2つの production write call site の適用範囲が記録されている（§3）
+- [x] GET 2 回、PUT 1 回以外の HTTP surface を追加しない。
+- [x] 非 loopback host の平文 HTTP を拒否し、HTTPS を既定にする。
+- [x] API key は Authorization header 以外、operation ID、log に出さない。
+- [x] Service Worker memory を stable operation ID の保存先として使わない（operation ID 自体不採用）。
+- [x] `dev-docs/API_ENDPOINTS.md` の GET、GET、PUT 記載との整合を後続 `fix` の変更範囲に含めている。
+- [x] すべての ESM import は `.js` 拡張子を使い、async/await のみを使う。
+- [x] 既存の `noteSectionEditor.test.ts` が常に挿入する現行挙動を pin している事実を、テスト変更の注意書きに含めている（既定値 false のため旧 pin は壊れず、dedupe 有効時の新テストを追加する方針）
+- [x] 既存重複を移行で除去する手段を本 PBI の範囲外として明記している。
+- [x] 本 PBI は調査と方式設計に限定し、実装は別の `fix` PBI に分離している（後続 fix 1.5 SP の起票仕様を報告書 §3 に確定）
