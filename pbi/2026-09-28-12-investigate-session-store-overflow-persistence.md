@@ -43,14 +43,14 @@ Scenario: 採用方針が session storage のキー構造を壊さない
 
 ## 受け入れ基準
 
-- [ ] 4 つの裁定点（cap の実測ベースへの引き上げ / urlCache の session からの移動 / キュー滞留の検知と非優先 drop / `estimateStorageSize` の per-entry キャッシュまたは軽量化）の採否と理由が裁定されている。
-- [ ] `chrome.storage.session` の quota（MV3 は 10MB 上限、service worker 全体で共有）が他キーとの取り合いを含めて整理されている。
-- [ ] 採用案と不採用案のいずれも、session storage の既存キーを削除しない（キー追加は可、削除は不可）ことを確認している。
-- [ ] urlCache を session から storage へ移す案は storage 構造変更として扱い、キー削除を伴うため本裁定では採用しない前提でリスクが整理されている。
-- [ ] 10,000 URL 相当の負荷で flush 時のサイズと所要時間を bench/harness で実測し、数値を裁定報告書に残している。
-- [ ] 裁定内容が ADR として起票できる形にまとめられ、後続 fix / refactor PBI の起票基準が列挙されている。
-- [ ] 既存 pin テスト（`src/background/__tests__/sessionStore.test.ts:261-279`）が 1 回きりの超過しか覆っていないことと、恒久ループが未検証であることが報告書に記載されている。
-- [ ] 本 PBI は実装変更を伴わない（sessionStore / recordingCache を含むコードを変更していない）。
+- [x] 4 つの裁定点（cap の実測ベースへの引き上げ / urlCache の session からの移動 / キュー滞留の検知と非優先 drop / `estimateStorageSize` の per-entry キャッシュまたは軽量化）の採否と理由が裁定されている。
+- [x] `chrome.storage.session` の quota（MV3 は 10MB 上限、service worker 全体で共有）が他キーとの取り合いを含めて整理されている。
+- [x] 採用案と不採用案のいずれも、session storage の既存キーを削除しない（キー追加は可、削除は不可）ことを確認している。
+- [x] urlCache を session から storage へ移す案は storage 構造変更として扱い、キー削除を伴うため本裁定では採用しない前提でリスクが整理されている。
+- [x] 10,000 URL 相当の負荷で flush 時のサイズと所要時間を bench/harness で実測し、数値を裁定報告書に残している。
+- [x] 裁定内容が ADR として起票できる形にまとめられ、後続 fix / refactor PBI の起票基準が列挙されている。
+- [x] 既存 pin テスト（`src/background/__tests__/sessionStore.test.ts:261-279`）が 1 回きりの超過しか覆っていないことと、恒久ループが未検証であることが報告書に記載されている。
+- [x] 本 PBI は実装変更を伴わない（sessionStore / recordingCache を含むコードを変更していない）。
 
 ## 調査手順
 
@@ -63,6 +63,70 @@ Scenario: 採用方針が session storage のキー構造を壊さない
 5. **復元側とタブ cache への影響確認**: `src/background/recordingCache.ts:256-258` が `saved.urlCache` を無条件に復元前提としているため、永続化されない場合は空振りになることを明示する。`src/background/tabCache.ts:80-82` も同じ writeQueue を共有しており、remove の即時 flush 意図が超過時に無効化されることを記録する。
 6. **候補策の評価**: 裁定点 4 つを quota・互換性・性能・複雑さの 4 軸で比較する。評価条件には、session storage のキー構造を変更しないこと（キー追加は可、削除は不可）を含める。
 7. **裁定の記録**: 採否・理由・前提・不採用案の不採用理由を `dev-docs/plans/` 配下の裁定報告書にまとめ、ADR の起票可否と後続 fix / refactor PBI の起票基準を列挙する。
+
+## 裁定結果（2026-09-28 記入）
+
+裁定の全文と実測データは ADR に記録した:
+`dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md`
+（spec の DoD が要求する `dev-docs/plans/` 配下の裁定報告書は、本 PBI の書き込み許可範囲外だったため、
+本 ADR を唯一の裁定記録とする。）
+
+### 4 つの裁定点の採否
+
+| 案 | 採否 | 理由 |
+|---|---|---|
+| ① cap の引き上げ | **採用**（`3 * 1024 * 1024` = 3,145,728 バイト） | 10,000 件を 293 文字までの URL で必ず書き切れる（実測）。session quota 10 MiB のうち 2x 保守上界でも 6.93 MiB（69%）に収まり、4 MiB に上げると 89%、5 MiB で超過。 |
+| ② urlCache の session からの移動 | **不採用** | キー削除を伴う storage 構造変更で本裁定の制約違反。かつ実測で `urlCache` は local へフォールバックするため取りこぼしがなく、削除コストに見合わない。別 PBI へ送る。 |
+| ③ キュー滞留の検知と非優先 drop | **採用**（安全網） | 3 MiB でも 10,000 件 × 320 文字超で超過しうるため、cap 引き上げだけでは恒久ループが再発しうる。「連続 N 回 overflow したら再キューイングしない」で恒久ループを構造的に不可能にする。 |
+| ④ `estimateStorageSize` の per-entry / per-key キャッシュ | **保留**（主策にしない） | 実測で 1.00〜1.04 ms/flush、900 flush/日でも 0.4〜0.9 秒/日でボトルネックではない。キャッシュ無効化契約の複雑さが 1 ms の節約に見合わない。任意の後続 refactor。 |
+
+採用案はいずれも session storage の既存キーを削除せず、キー追加も不要。
+
+### 実測で判明した spec の前提の誤り
+
+- `PersistedCacheState.urlCache` の要素は `[url, timestamp]` であり（`recordingCache.ts:34`）、
+  `SavedUrlEntry` 全体ではない（`savedUrlRepository.ts:137-145`、`UrlCache.ts:10`）。
+- 10,000 件での実直列化サイズは **0.664〜1.923 MiB**（URL 長依存、1 件あたり `urlBytes + 21.6` バイト）。
+  spec の「1.0〜1.1 MiB」は URL が 84〜100 文字のときにだけ成立する。
+- 上限 1 MiB は 132 文字なら 6,898 件、180 文字なら 5,201 件で超える（10,000 件より前）。
+- spec の「tabCache の remove が即時 flush 無効化される」は**反証**された。`flush()` の `keysToDelete`
+  処理はサイズ分岐の外側（`sessionStore.ts:200-202`）なので remove は着地し、reduced flush にも
+  `sw:tabCache` はそのまま含まれる。
+- spec の「復元側は空振り」は限定付き。`UrlCache.get()` が `chrome.storage.local` へフォールバック
+  （`UrlCache.ts:19-20`）するため**データ損失はなく**、60 秒 TTL のキャッシュミス 1 回に留まる。
+- 実害の実体は (a) 1.00〜1.04 ms/flush と 672 KiB/flush の transient メモリ、
+  (b) 恒久滞留した writeQueue が SW suspend ごとに `emergencyFlushToLocal()` を通り
+  **1.427 MiB の `sw:recordingCache` を `chrome.storage.local` に書き出す**こと（`service-worker.ts:105`）。
+
+### 既存 pin テストの盲点
+
+`src/background/__tests__/sessionStore.test.ts:261-279` は 1.2 MiB の単一文字列を 1 回 flush して
+1 回目の `set` 呼び出しを検査するだけ。実測では 10 回 flush 連続で毎回 1 回 `set` が呼ばれ
+（毎回 2,715 バイト）、`writeQueue` に 1 キーが残り続けた。2 回目以降の再処理もキュー滞留も
+検証していない。`recordingCache-session.test.ts:208-226` は size cap を模さない fake store である。
+
+なお 1.2 MiB という pin の値は裁定した 3 MiB cap の下にあり、後続 fix PBI では
+この pin を新 cap 超過値へ差し替える必要がある（さもないとテストが壊れる）。
+
+### 実測できなかった項目
+
+Chrome 自身が `chrome.storage.session` をどう勘定するか（`getBytesInUse`、「動的メモリ割り当ての推定」の
+実係数）は Node 環境からは観測できない。裁定は 1x（JSON バイト）と 2x（UTF-16）の両側で
+quota を見積もり、2x 側で安全側に倒している。実ブラウザでの `getBytesInUse` 確認は後続 PBI の
+受入基準に含める。
+
+### 後続 fix / refactor PBI の起票基準
+
+1. **fix PBI（主策）**: 「sessionStore の flush バイト上限を 3 MiB に引き上げ、恒久滞留ループを構造的に断つ」
+   - スコープは `src/background/sessionStore.ts` + 同ディレクトリ test のみ。キーの追加・削除はしない。
+   - 受入基準は ADR「後続 fix / refactor PBI の起票基準」節の 7 項目（既存 pin の差し替え、
+     10,000 件 × 180 文字が縮小されない pin、連続 2 回で drop される pin、
+     drop されたキーが `chrome.storage.local` に書かれない pin、`--repeats=20` green）。
+2. **refactor PBI（任意・保留）**: 「`estimateStorageSize` を per-key サイズキャッシュに置換」。
+   flush 頻度を 1 日 900 回超に上げた場合にのみ起票する。
+3. **storage 構造変更 PBI（本裁定の範囲外）**: 「`sw:recordingCache` の `urlCache` 永続化の再設計」。
+   候補は (a) local へ移す、(b) 別キーへ逃がす、(c) session 永続化をやめて local フォールバックに任せる。
+   実測より (c) が最小変更で最大効果。
 
 ## 実装アプローチ
 
@@ -139,14 +203,18 @@ Scenario: 採用方針が session storage のキー構造を壊さない
 
 ## Definition of Done
 
-- [ ] 4 つの裁定点の採否と理由が裁定記録にまとめられている。
-- [ ] 採用案と不採用案の双方に理由が記載され、不採用案の根拠が明示されている。
-- [ ] `chrome.storage.session` の quota と他キーとの取り合いが整理されている。
-- [ ] 10,000 URL 相当での flush サイズと所要時間が bench/harness で実測され、数値が記録に残っている。
-- [ ] 2 回目以降の flush における恒久ループが再現・確認され、報告書に記録されている。
-- [ ] session storage のキー構造を壊さない（キー追加は可、削除は不可）ことが評価条件として明記されている。
-- [ ] urlCache の session からの移動が storage 構造変更として別 PBI へ送られる旨が記録されている。
+- [x] 4 つの裁定点の採否と理由が裁定記録にまとめられている。
+- [x] 採用案と不採用案の双方に理由が記載され、不採用案の根拠が明示されている。
+- [x] `chrome.storage.session` の quota と他キーとの取り合いが整理されている。
+- [x] 10,000 URL 相当での flush サイズと所要時間が bench/harness で実測され、数値が記録に残っている。
+- [x] 2 回目以降の flush における恒久ループが再現・確認され、報告書に記録されている。
+- [x] session storage のキー構造を壊さない（キー追加は可、削除は不可）ことが評価条件として明記されている。
+- [x] urlCache の session からの移動が storage 構造変更として別 PBI へ送られる旨が記録されている。
 - [ ] 裁定報告書が `dev-docs/plans/` 配下に作成され、ADR の起票可否が判断されている。
-- [ ] 後続 fix / refactor PBI の起票基準が列挙されている。
-- [ ] 本 PBI でコード変更（sessionStore / recordingCache を含む）が発生していない。
-- [ ] BDD 受け入れシナリオの検証が完了している。
+      （未達: 本 PBI の書き込み許可範囲は `dev-docs/ADR/2026-09-28-*.md` と本ファイルのみだったため、
+      裁定報告書は `dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md` として作成した。
+      ADR の起票可否は「可」と判断済み。integrator が本 PBI を close する際に、
+      裁定報告書を `dev-docs/plans/` へ転記するか、ADR 単一記録で可とするかを確定すること。）
+- [x] 後続 fix / refactor PBI の起票基準が列挙されている。
+- [x] 本 PBI でコード変更（sessionStore / recordingCache を含む）が発生していない。
+- [x] BDD 受け入れシナリオの検証が完了している。
