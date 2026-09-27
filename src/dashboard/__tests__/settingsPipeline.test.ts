@@ -55,8 +55,6 @@ vi.mock('../generalSettings/settingsForm.js', () => ({
 vi.mock('../settings/fieldValidation.js', () => ({
   clearAllFieldErrors: vi.fn(),
   validateAllFields: vi.fn().mockReturnValue(true),
-  validateObsidianHost: vi.fn().mockReturnValue(true),
-  validateGeminiApiVersion: vi.fn().mockReturnValue(true),
   setFieldError: vi.fn(),
   ErrorPair: class {},
 }));
@@ -85,6 +83,7 @@ import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS } from '../se
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import * as formBinding from '../../utils/settingsFormBinding.js';
 import * as fieldValidation from '../settings/fieldValidation.js';
+import { GENERAL_SETTINGS_FIELDS } from '../settings/fieldDescriptor.js';
 import { showConfirmDialog } from '../utils/confirmDialog.js';
 
 const mockGetSettings = vi.mocked(settingsRepository.getAll);
@@ -92,8 +91,6 @@ const mockSaveSettings = vi.mocked(settingsRepository.setAll);
 const mockExtract = vi.mocked(formBinding.extractSettingsFromInputs);
 const mockExtractTiming = vi.mocked(formBinding.extractLocalMarkdownExportTiming);
 const mockValidateAll = vi.mocked(fieldValidation.validateAllFields);
-const mockValidateObsidianHost = vi.mocked(fieldValidation.validateObsidianHost);
-const mockValidateGemini = vi.mocked(fieldValidation.validateGeminiApiVersion);
 const mockSetFieldError = vi.mocked(fieldValidation.setFieldError);
 const mockConfirm = vi.mocked(showConfirmDialog);
 
@@ -192,7 +189,7 @@ describe('saveDashboardSettings', () => {
     );
   });
 
-  it('returns validation_failed when validateAllFields returns false', async () => {
+  it('returns validation_failed when the descriptor sweep rejects a field', async () => {
     setupInputs('https');
     mockValidateAll.mockReturnValueOnce(false);
     const result = await saveDashboardSettings();
@@ -200,20 +197,12 @@ describe('saveDashboardSettings', () => {
     expect(result.error).toBe('validation_failed');
   });
 
-  it('returns invalid_obsidian_host when obsidian host is invalid', async () => {
-    setupInputs('https', 'bad host');
-    mockValidateObsidianHost.mockReturnValueOnce(false);
-    const result = await saveDashboardSettings();
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('invalid_obsidian_host');
-  });
-
-  it('returns invalid_gemini_api_version when gemini version is invalid', async () => {
-    setupInputs('https', '127.0.0.1', 'bad');
-    mockValidateGemini.mockReturnValueOnce(false);
-    const result = await saveDashboardSettings();
-    expect(result.success).toBe(false);
-    expect(result.error).toBe('invalid_gemini_api_version');
+  it('sweeps every field through the descriptor table (no per-field wiring)', async () => {
+    setupInputs('https');
+    await saveDashboardSettings();
+    // The sweep resolves its own inputs from the table, so the call site
+    // passes no field list — a new table row needs no edit here.
+    expect(mockValidateAll).toHaveBeenCalledWith();
   });
 
   it('returns http_confirm_cancelled when user cancels http protocol', async () => {
@@ -307,5 +296,11 @@ describe('saveDashboardSettings', () => {
 describe('GENERAL_SETTINGS_VALIDATION_FIELDS', () => {
   it('contains 7 entries', () => {
     expect(GENERAL_SETTINGS_VALIDATION_FIELDS).toHaveLength(7);
+  });
+
+  it('projects the descriptor table so cleared errorIds cannot drift from the raisers', () => {
+    expect(GENERAL_SETTINGS_VALIDATION_FIELDS).toEqual(
+      GENERAL_SETTINGS_FIELDS.map(({ storageKey, elementId, errorId }) => ({ storageKey, elementId, errorId })),
+    );
   });
 });

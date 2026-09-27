@@ -7,13 +7,7 @@
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import {
     GENERAL_SETTINGS_FIELDS,
-    validateGeminiApiVersionValue,
-    validateMaxTokensValue,
-    validateMinScrollDepthValue,
-    validateMinVisitDurationValue,
-    validateObsidianHostValue,
-    validatePortValue,
-    validateProtocolValue,
+    getDescriptorByElementId,
     type FieldDescriptor,
     type ValidationContext,
 } from './fieldDescriptor.js';
@@ -83,73 +77,97 @@ function clearProtocolWarning(): void {
 }
 
 /**
- * プロトコルフィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
+ * Field-specific DOM work a value-level descriptor cannot express — today only
+ * the plaintext-HTTP security note. Keyed by element id so the table keeps one
+ * row per field and the shared route stays free of field names; the
+ * accept/reject decision and the error element still come from the row.
  */
-export function validateProtocol(input: HTMLInputElement): boolean {
-    const v = input.value.trim().toLowerCase();
+const FIELD_SIDE_EFFECTS: Readonly<Record<string, (input: HTMLInputElement) => void>> = {
+    protocol(input: HTMLInputElement): void {
+        clearProtocolWarning();
+        if (input.value.trim().toLowerCase() === 'http') {
+            showProtocolWarning(getMessage('warningProtocolHttp'));
+        }
+    },
+};
 
-    // エラークリア（警告は個別に制御）
-    clearFieldError(input, 'protocolError');
-    clearProtocolWarning();
+/**
+ * Error text for a failed row. Rows without `errorFallback` resolve through
+ * getMessage, which returns '' for an untranslated key — an empty error box is
+ * the dashboard's display contract, and switching those rows to getMessageOr
+ * would print raw key names on untranslated builds.
+ */
+function resolveErrorMessage(descriptor: FieldDescriptor<unknown>, errorKey: string): string {
+    return descriptor.errorFallback === undefined
+        ? getMessage(errorKey)
+        : getMessageOr(errorKey, descriptor.errorFallback);
+}
 
-    if (v === 'http') {
-        // HTTPは有効だが、セキュリティ上の注意を促す
-        showProtocolWarning(getMessage('warningProtocolHttp'));
-    }
-    // Decision delegates to the descriptor table (obsidianConfigValidator SSOT)
-    if (validateProtocolValue(input.value) !== null) {
-        setFieldError(input, 'protocolError', getMessage('errorProtocol'));
+/**
+ * The one validation route for a settings field: parse the raw input, run the
+ * table's SSOT validator, then show or clear the table's error element. Blur
+ * wiring and the save-time sweep both go through here, so a new table row is
+ * validated with no edit in this file.
+ */
+export function validateDescriptorField(
+    descriptor: FieldDescriptor<unknown>,
+    input: HTMLInputElement,
+    ctx?: ValidationContext
+): boolean {
+    FIELD_SIDE_EFFECTS[descriptor.elementId]?.(input);
+    const errorKey = descriptor.validate(descriptor.parse(input.value), ctx);
+    if (errorKey !== null) {
+        setFieldError(input, descriptor.errorId, resolveErrorMessage(descriptor, errorKey));
         return false;
     }
+    clearFieldError(input, descriptor.errorId);
     return true;
 }
 
 /**
- * ポート番号フィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
+ * Blur listener for one descriptor row.
  */
-export function validatePort(input: HTMLInputElement): boolean {
-    // Single ownership: decision delegates to the descriptor table, which in
-    // turn defers to validateObsidianPort so UI and connection test agree.
-    if (validatePortValue(input.value) !== null) {
-        setFieldError(input, 'portError', getMessage('errorPort'));
-        return false;
-    }
-    clearFieldError(input, 'portError');
-    return true;
+export function setupDescriptorValidation(
+    descriptor: FieldDescriptor<unknown>,
+    input: HTMLInputElement | null,
+    ctx?: ValidationContext
+): () => void {
+    if (!input) return () => {};
+    const handler = () => validateDescriptorField(descriptor, input, ctx);
+    input.addEventListener('blur', handler);
+    return () => input.removeEventListener('blur', handler);
 }
 
 /**
- * 最小訪問時間フィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
+ * Row lookup for the element ids the caller hardcodes. A missing row is a table
+ * regression, not a runtime condition, so it fails loudly instead of silently
+ * dropping the field's blur validation.
  */
-export function validateMinVisitDuration(input: HTMLInputElement): boolean {
-    // Decision delegates to the descriptor table (single owner of the floor).
-    if (validateMinVisitDurationValue(parseInt(input.value, 10)) !== null) {
-        setFieldError(input, 'minVisitDurationError', getMessage('errorDuration'));
-        return false;
+function requireDescriptor(elementId: string): FieldDescriptor<unknown> {
+    const descriptor = getDescriptorByElementId(elementId);
+    if (!descriptor) {
+        throw new Error(`fieldDescriptor.ts has no row for element id "${elementId}"`);
     }
-    clearFieldError(input, 'minVisitDurationError');
-    return true;
+    return descriptor;
 }
 
 /**
- * 最小スクロール深度フィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
+ * Container-scoped blur wiring for the rows the general-settings panel passes by
+ * container query. setupAllFieldValidations already reaches them by element id,
+ * so a blur can run their validation twice; harmless because a run only writes
+ * its own row's error element.
  */
-export function validateMinScrollDepth(input: HTMLInputElement): boolean {
-    // Decision delegates to the descriptor table (single owner of 0-100).
-    if (validateMinScrollDepthValue(parseInt(input.value, 10)) !== null) {
-        setFieldError(input, 'minScrollDepthError', getMessage('errorScrollDepth'));
-        return false;
-    }
-    clearFieldError(input, 'minScrollDepthError');
-    return true;
+export function setupObsidianHostValidation(input: HTMLInputElement | null): () => void {
+    return setupDescriptorValidation(requireDescriptor('obsidianHost'), input);
+}
+
+/**
+ * Gemini API バージョンフィールドのバリデーションイベントリスナーを設定
+ * @param {HTMLInputElement} input - 入力要素
+ * @returns {() => void} リスナー削除関数
+ */
+export function setupGeminiApiVersionValidation(input: HTMLInputElement | null): () => void {
+    return setupDescriptorValidation(requireDescriptor('geminiApiVersion'), input);
 }
 
 /**
@@ -196,191 +214,10 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
 }
 
 /**
- * プロトコルフィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupProtocolValidation(input: HTMLInputElement | null): () => void {
-    if (!input) return () => {};
-    const handler = () => validateProtocol(input);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * ポート番号フィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupPortValidation(input: HTMLInputElement | null): () => void {
-    if (!input) return () => {};
-    const handler = () => validatePort(input);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * 最小訪問時間フィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupMinVisitDurationValidation(input: HTMLInputElement | null): () => void {
-    if (!input) return () => {};
-    const handler = () => validateMinVisitDuration(input);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * 最小スクロール深度フィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupMinScrollDepthValidation(input: HTMLInputElement | null): () => void {
-    if (!input) return () => {};
-    const handler = () => validateMinScrollDepth(input);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * 最大トークン数フィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
- */
-export function validateMaxTokens(input: HTMLInputElement, providerId = ''): boolean {
-    // Decision delegates to aiLimits.validateMaxTokens via the descriptor
-    // table — the clamp is the single decision, so provider-specific caps
-    // (e.g. gemini 8192) apply without a UI-side range literal.
-    if (validateMaxTokensValue(parseInt(input.value, 10), providerId) !== null) {
-        setFieldError(input, 'maxTokensError', getMessage('error_max_tokens_range'));
-        return false;
-    }
-    clearFieldError(input, 'maxTokensError');
-    return true;
-}
-
-/**
- * 最大トークン数フィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupMaxTokensValidation(input: HTMLInputElement | null, providerId = ''): () => void {
-    if (!input) return () => {};
-    const handler = () => validateMaxTokens(input, providerId);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * Obsidian ホストフィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
- */
-export function validateObsidianHost(input: HTMLInputElement): boolean {
-    // Single ownership: decision delegates to the descriptor table, which in
-    // turn defers to the SW-side validator so UI and connection test agree.
-    if (validateObsidianHostValue(input.value) !== null) {
-        setFieldError(input, 'obsidianHostError', getMessageOr('obsidianHostError', 'Obsidian host contains invalid characters.'));
-        return false;
-    }
-    clearFieldError(input, 'obsidianHostError');
-    return true;
-}
-
-/**
- * Gemini API バージョンフィールドのバリデーション
- * @param {HTMLInputElement} input - 入力要素
- * @returns {boolean} 有効な場合はtrue
- */
-export function validateGeminiApiVersion(input: HTMLInputElement): boolean {
-    // Decision delegates to the descriptor table (single owner of the shape).
-    if (validateGeminiApiVersionValue(input.value) !== null) {
-        setFieldError(input, 'geminiApiVersionError', getMessageOr('geminiApiVersionError', 'Gemini API version must be like v1 or v1beta.'));
-        return false;
-    }
-    clearFieldError(input, 'geminiApiVersionError');
-    return true;
-}
-
-/**
- * Obsidian ホストフィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupObsidianHostValidation(input: HTMLInputElement | null): () => void {
-    if (!input) return () => {};
-    const handler = () => validateObsidianHost(input);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * Gemini API バージョンフィールドのバリデーションイベントリスナーを設定
- * @param {HTMLInputElement} input - 入力要素
- * @returns {() => void} リスナー削除関数
- */
-export function setupGeminiApiVersionValidation(input: HTMLInputElement | null): () => void {
-    if (!input) return () => {};
-    const handler = () => validateGeminiApiVersion(input);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * Generic descriptor-driven single-field validation: parse the raw input,
- * run the table's SSOT validator, and show/clear the table's error element.
- * New table rows get blur-validation via setupDescriptorValidation with no
- * edits here. (Protocol's HTTP warning side-channel stays in
- * validateProtocol; use the dedicated validator where that warning matters.)
- */
-export function validateDescriptorField(
-    descriptor: FieldDescriptor<unknown>,
-    input: HTMLInputElement,
-    ctx?: ValidationContext
-): boolean {
-    const errorKey = descriptor.validate(descriptor.parse(input.value), ctx);
-    if (errorKey !== null) {
-        setFieldError(input, descriptor.errorId, getMessageOr(errorKey, errorKey));
-        return false;
-    }
-    clearFieldError(input, descriptor.errorId);
-    return true;
-}
-
-/**
- * Generic descriptor-driven blur listener setup.
- */
-export function setupDescriptorValidation(
-    descriptor: FieldDescriptor<unknown>,
-    input: HTMLInputElement | null,
-    ctx?: ValidationContext
-): () => void {
-    if (!input) return () => {};
-    const handler = () => validateDescriptorField(descriptor, input, ctx);
-    input.addEventListener('blur', handler);
-    return () => input.removeEventListener('blur', handler);
-}
-
-/**
- * Validate every descriptor-table field by resolving inputs from the DOM.
- * New table rows are picked up automatically.
- */
-export function validateAllDescriptorFields(ctx?: ValidationContext): boolean {
-    let hasError = false;
-    for (const descriptor of GENERAL_SETTINGS_FIELDS) {
-        const input = document.getElementById(descriptor.elementId) as HTMLInputElement | null;
-        if (input && !validateDescriptorField(descriptor, input, ctx)) hasError = true;
-    }
-    return !hasError;
-}
-
-/**
- * 主要フィールドのバリデーションイベントリスナーを一括設定
- * @param {HTMLInputElement} protocolInput - プロトコル入力
- * @param {HTMLInputElement} portInput - ポート入力
- * @param {HTMLInputElement} minVisitDurationInput - 最小訪問時間入力
- * @param {HTMLInputElement} minScrollDepthInput - 最小スクロール深度入力
+ * Blur validation for the general-settings fields. The caller hands over the
+ * nodes it already resolved; matching them by element id keeps container-scoped
+ * lookups working, and rows the caller did not supply are looked up by id —
+ * which is what makes a newly added table row blur-validated with no line here.
  * @returns {Array.<() => void>} リスナー削除関数の配列
  */
 export function setupAllFieldValidations(
@@ -391,39 +228,29 @@ export function setupAllFieldValidations(
     maxTokensPerPromptInput?: HTMLInputElement | null,
     providerId = ''
 ): (() => void)[] {
-    const listeners: (() => void)[] = [
-        setupProtocolValidation(protocolInput),
-        setupPortValidation(portInput),
-    ];
-    if (minVisitDurationInput) listeners.push(setupMinVisitDurationValidation(minVisitDurationInput));
-    if (minScrollDepthInput) listeners.push(setupMinScrollDepthValidation(minScrollDepthInput));
-    if (maxTokensPerPromptInput) listeners.push(setupMaxTokensValidation(maxTokensPerPromptInput, providerId));
+    const supplied = new Map<string, HTMLInputElement>();
+    for (const input of [protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput]) {
+        if (input?.id) supplied.set(input.id, input);
+    }
+
+    const listeners: (() => void)[] = [];
+    for (const descriptor of GENERAL_SETTINGS_FIELDS) {
+        const input = supplied.get(descriptor.elementId)
+            ?? (document.getElementById(descriptor.elementId) as HTMLInputElement | null);
+        if (input) listeners.push(setupDescriptorValidation(descriptor, input, { providerId }));
+    }
     return listeners;
 }
 
 /**
- * すべてのフィールドバリデーションを実行
- * @param {HTMLInputElement} protocolInput - プロトコル入力
- * @param {HTMLInputElement} portInput - ポート入力
- * @param {HTMLInputElement} minVisitDurationInput - 最小訪問時間入力
- * @param {HTMLInputElement} minScrollDepthInput - 最小スクロール深度入力
- * @returns {boolean} すべて有効な場合はtrue
+ * Save-time validation: every table row whose input is in the DOM, resolved by
+ * element id. A new row is swept without an edit here.
  */
-export function validateAllFields(
-    protocolInput: HTMLInputElement | null,
-    portInput: HTMLInputElement | null,
-    minVisitDurationInput?: HTMLInputElement | null,
-    minScrollDepthInput?: HTMLInputElement | null,
-    maxTokensPerPromptInput?: HTMLInputElement | null,
-    providerId = ''
-): boolean {
+export function validateAllFields(ctx?: ValidationContext): boolean {
     let hasError = false;
-
-    if (protocolInput && !validateProtocol(protocolInput)) hasError = true;
-    if (portInput && !validatePort(portInput)) hasError = true;
-    if (minVisitDurationInput && !validateMinVisitDuration(minVisitDurationInput)) hasError = true;
-    if (minScrollDepthInput && !validateMinScrollDepth(minScrollDepthInput)) hasError = true;
-    if (maxTokensPerPromptInput && !validateMaxTokens(maxTokensPerPromptInput, providerId)) hasError = true;
-
+    for (const descriptor of GENERAL_SETTINGS_FIELDS) {
+        const input = document.getElementById(descriptor.elementId) as HTMLInputElement | null;
+        if (input && !validateDescriptorField(descriptor, input, ctx)) hasError = true;
+    }
     return !hasError;
 }
