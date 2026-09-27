@@ -51,6 +51,7 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 ### Developer Experience
 
 - **テスト基盤の依存を更新し、jsdom 30.1.1 のセレクタ長上限に対応** — `jsdom` を 30.0.1 から 30.1.1 に更新しました。jsdom 30.1.1 が同梱する dom-selector 9.x は 1 回の `querySelectorAll` で 2048 文字を超えるセレクタを拒否するため、クレンジングエンジン（`stripBySelectors`）が長いセレクタを 2000 文字以下のチャンクに分割して実行するようにしました。カンマ区切りセレクタの照合は各セレクタの和集合であるため、ブラウザ実行時の除去対象は変わりません。あわせて `@types/chrome` を 0.2.9 から 0.3.0 に更新しています（型定義のみの変更で、実測では影響なし）
+- **E2E テストの retry を全面廃止し、失敗をその場で検出できるようにした** — Playwright の全プロジェクト（extension / interaction / a11y / usability）とグローバル設定で有効だった `retries` を 0 にしました。retry は最初の失敗を隠すだけで、負荷や実行環境が変わると再発します。全プロジェクトを `--retries=0` で実走し、失敗 0 件（323 passed / 30 skipped）を確認した上での変更です。既知の flaky だった regenerate-summary の CRITICAL ケースも `--repeat-each=5 --retries=0` で 20/20 安定通過しています。あわせて trace 設定を `on-first-retry`（retry 廃止では発火しない）から `retain-on-failure` へ変え、失敗時の調査証拠を残します
 
 ## [6.9.26] - 2026-09-26
 

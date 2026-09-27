@@ -21,8 +21,10 @@ export default defineConfig({
   fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
+  /* No retries anywhere (PBI 2026-09-26-06): a retry hides the first failure
+   * the same way a fixed sleep hides a race. All four extension projects pass
+   * with retries=0, so a flaky first run must be fixed at the cause. */
+  retries: 0,
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
@@ -38,8 +40,9 @@ export default defineConfig({
     /* Base URL to use in actions like `await page/goto('/')`. */
     // baseURL: 'http://127.0.0.1:3000',
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    /* Keep the trace for every failed test. With retries disabled, the old
+     * 'on-first-retry' could never fire and failures were left without a trace. */
+    trace: 'retain-on-failure',
     /* Capture screenshot on failure */
     screenshot: 'only-on-failure',
   },
@@ -65,7 +68,6 @@ export default defineConfig({
       timeout: 60_000,
       expect: { timeout: 15_000 },
       fullyParallel: false,
-      retries: 2,
       workers: 1,
       use: {
         ...devices['Desktop Chrome'],
@@ -80,7 +82,6 @@ export default defineConfig({
       timeout: 60_000,
       expect: { timeout: 15_000 },
       fullyParallel: false,
-      retries: 2,
       workers: 1,
       use: {
         ...devices['Desktop Chrome'],
@@ -96,14 +97,12 @@ export default defineConfig({
       timeout: 60_000,
       expect: { timeout: 15_000 },
       fullyParallel: false,
-      retries: 1,
       workers: 1,
       use: {
         ...devices['Desktop Chrome'],
         channel: 'chromium',
       },
     },
-
     {
       // Usability suite (PBI 2026-09-13 backlog 0913a): task-completion,
       // a11y, i18n-layout, and friction-metrics specs. Scoped by directory
@@ -115,7 +114,6 @@ export default defineConfig({
       timeout: 60_000,
       expect: { timeout: 15_000 },
       fullyParallel: false,
-      retries: 2,
       workers: 1,
       use: {
         ...devices['Desktop Chrome'],
