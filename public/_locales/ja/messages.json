@@ -544,6 +544,9 @@
   "recordingFailed": {
     "message": "記録に失敗しました"
   },
+  "pendingRecoveryReady": {
+    "message": "自動再試行が上限に達しました。保留ページから手動で再実行できます。"
+  },
   "obsidianSyncFailed": {
     "message": "Obsidian同期に失敗しました"
   },

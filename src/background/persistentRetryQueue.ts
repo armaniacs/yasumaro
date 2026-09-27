@@ -137,12 +137,23 @@ export class PersistentRetryQueue<T> {
    * Note: `[]` covers three cases — empty queue, full success, and failed
    * load (logged, snapshot untouched). Callers needing to tell a storage
    * outage apart from an empty queue must load/getQueueSize first (those throw).
+   *
+   * `onDropped` (PBI 2026-09-25-12) reports every item that leaves the queue
+   * as a terminal failure — over-retry, TTL expiry, or the handler failing on
+   * the final attempt — so the consumer can hand it to a fallback owner.
+   * A throwing onDropped is logged and swallowed: the drop already happened.
    */
-  flush(handler: (item: T) => Promise<boolean>): Promise<T[]> {
-    return this.withQueueLock(() => this.flushUnlocked(handler));
+  flush(
+    handler: (item: T) => Promise<boolean>,
+    onDropped?: (item: T, reason: 'max-retries' | 'ttl') => Promise<void> | void
+  ): Promise<T[]> {
+    return this.withQueueLock(() => this.flushUnlocked(handler, onDropped));
   }
 
-  private async flushUnlocked(handler: (item: T) => Promise<boolean>): Promise<T[]> {
+  private async flushUnlocked(
+    handler: (item: T) => Promise<boolean>,
+    onDropped?: (item: T, reason: 'max-retries' | 'ttl') => Promise<void> | void
+  ): Promise<T[]> {
     let items: T[];
     try {
       items = await this.adapter.load<T>(this.options.storageKey);
@@ -165,11 +176,29 @@ export class PersistentRetryQueue<T> {
       await this.saveRemaining([...remaining, ...untouched]);
     };
 
+    const reportDropped = (item: T, reason: 'max-retries' | 'ttl'): void => {
+      if (onDropped === undefined) return;
+      try {
+        void Promise.resolve(onDropped(item, reason)).catch((error: unknown) => {
+          addLog(LogType.ERROR, `${this.options.logLabel}: onDropped callback failed`, {
+            error: errorMessage(error),
+          });
+        });
+      } catch (error) {
+        addLog(LogType.ERROR, `${this.options.logLabel}: onDropped callback failed`, {
+          error: errorMessage(error),
+        });
+      }
+    };
+
     const { kept, dropped } = this.filterExpiredAndOverRetry(toProcess);
     for (const item of dropped) {
       addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries or TTL, dropping`, {
         id: (item as RetryableItem & { id?: string }).id,
       });
+      // filterExpiredAndOverRetry merges over-retry and TTL drops; re-derive
+      // the precise reason so onDropped reports what actually happened.
+      reportDropped(item, shouldDrop(item, this.options.maxRetryCount) ? 'max-retries' : 'ttl');
     }
     if (dropped.length > 0 && this.options.persistPerItem) await persistState();
 
@@ -183,6 +212,7 @@ export class PersistentRetryQueue<T> {
               id: (item as RetryableItem & { id?: string }).id,
             });
             if (this.options.persistPerItem) await persistState();
+            reportDropped(item, 'max-retries');
             continue;
           }
           remaining.push(item);
@@ -195,6 +225,7 @@ export class PersistentRetryQueue<T> {
             id: (item as RetryableItem & { id?: string }).id,
           });
           if (this.options.persistPerItem) await persistState();
+          reportDropped(item, 'max-retries');
           continue;
         }
         remaining.push(item);

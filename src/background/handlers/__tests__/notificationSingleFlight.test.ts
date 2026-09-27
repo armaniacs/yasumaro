@@ -26,6 +26,15 @@ vi.mock('../../../utils/pendingStorage.js', () => ({
   removePendingPages: vi.fn(async () => {}),
 }));
 
+// PBI 2026-09-25-12: the notification re-run now takes the durable recovery
+// claim first. This suite has no chrome.storage in its chrome stub, and its
+// subject is the in-process single-flight (VULN-009) — the claim store has
+// its own suite, so it is stubbed to always grant here.
+vi.mock('../../../utils/recoveryClaimStore.js', () => ({
+  claimRecoveryOwner: vi.fn(async () => true),
+  releaseRecoveryOwner: vi.fn(async () => {}),
+}));
+
 vi.mock('../../notificationHelper.js', () => ({
   PRIVACY_CONFIRM_NOTIFICATION_PREFIX: 'privacy-confirm-',
 }));

@@ -2,7 +2,15 @@ import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { backoffDelayMs } from '../../utils/backoff.js';
-import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type OfflineJobKind } from './types.js';
+import {
+  ErrorStrategy,
+  attachOfflineEnqueueInfo,
+  type RecordingContext,
+  type PipelineStep,
+  type StepDeps,
+  type OfflineJobKind,
+  type OfflineEnqueueInfo,
+} from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
 import { resolveFailure, type FailureKindValue } from '../../utils/failureTaxonomy.js';
@@ -57,7 +65,11 @@ export class StepExecutor {
         const failure = resolveFailure(error);
 
         if (this.offlineNetworkQueue && step.offlineRetry && this.retryPolicy.shouldEnqueueForOffline(error)) {
-          await this.enqueueOfflineJob(step, context, failure?.kind);
+          // PBI 2026-09-25-12: the enqueue result rides on the rethrown error as
+          // structured info — the original error propagation is untouched, while
+          // decideStepOutcome can resolve the sole recovery owner from it.
+          const info = await this.enqueueOfflineJob(step, context, failure?.kind);
+          attachOfflineEnqueueInfo(error, info);
         }
 
         throw error;
@@ -69,9 +81,14 @@ export class StepExecutor {
     step: PipelineStep,
     context: RecordingContext,
     failureKind?: FailureKindValue
-  ): Promise<void> {
+  ): Promise<OfflineEnqueueInfo> {
+    const info: OfflineEnqueueInfo = {
+      attempted: false,
+      enqueued: false,
+      jobKind: step.offlineRetry?.jobKind,
+    };
     if (!step.offlineRetry) {
-      return;
+      return info;
     }
 
     // PBI 2026-09-22-04: regenerate is UPDATE-only — the offline replay
@@ -84,10 +101,11 @@ export class StepExecutor {
         step: step.name,
         traceId: context.traceId
       });
-      return;
+      return info;
     }
 
     const type: OfflineJobKind = step.offlineRetry.jobKind;
+    info.attempted = true;
 
     // PBI 2026-09-12-11: pack through the shared field table so enqueue and
     // retry cannot diverge (the table lives in recordRequestBuilder).
@@ -96,13 +114,14 @@ export class StepExecutor {
     try {
       // enqueue は失敗時に false を返し throw しない（PBI 2026-09-17-15）。
       const queued = await this.offlineNetworkQueue!.enqueue({ type, payload });
+      info.enqueued = queued;
       if (!queued) {
         addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
           url: context.data.url,
           type,
           traceId: context.traceId,
         });
-        return;
+        return info;
       }
       addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${step.name}`, {
         url: context.data.url,
@@ -118,5 +137,6 @@ export class StepExecutor {
         traceId: context.traceId,
       });
     }
+    return info;
   }
 }

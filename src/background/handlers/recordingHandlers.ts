@@ -18,6 +18,8 @@ import { pickDefined } from '../../utils/objectUtils.js';
 import { buildRecordRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
 import { visitRateLimiter } from '../visitRateLimiter.js';
 import { validateUrl } from '../../utils/ssrfGuard.js';
+import { getPendingPages } from '../../utils/pendingStorage.js';
+import { claimRecoveryOwner, releaseRecoveryOwner } from '../../utils/recoveryClaimStore.js';
 import type { RegenerateCleanseMode } from '../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 
 import type {
@@ -270,17 +272,35 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
 
     const pipeline = deps.recordingPipeline;
 
-    // PBI 2026-09-12-04: field whitelist + source policy live in the shared
-    // builder (was a hand-spread literal duplicated with SAVE_RECORD).
-    const result = await pipeline.record(buildRecordRequest('manual', {
-      title: message.payload.title,
-      url: message.payload.url,
-      content,
-      ...pickRecordDiagnostics(message.payload),
-      skipAi,
-      previewOnly: message.type === 'PREVIEW_RECORD',
-      force: message.payload.force,
-    }), { settings });
+    // PBI 2026-09-25-12: a MANUAL_RECORD for a URL that sits in the pending
+    // pages is a manual recovery run — the same durable claim the offline
+    // queue processor holds, so it cannot overlap the 5-minute automatic
+    // retry or another surface's re-run of the same recording.
+    const pendingPages = await getPendingPages().catch(() => []);
+    const isRecoveryRun = pendingPages.some((p) => p.url === message.payload.url);
+    if (isRecoveryRun && !(await claimRecoveryOwner(message.payload.url, 'manual'))) {
+      sendResponse({ success: false, error: 'RECOVERY_CLAIMED' });
+      return;
+    }
+
+    let result: RecordingResult;
+    try {
+      // PBI 2026-09-12-04: field whitelist + source policy live in the shared
+      // builder (was a hand-spread literal duplicated with SAVE_RECORD).
+      result = await pipeline.record(buildRecordRequest('manual', {
+        title: message.payload.title,
+        url: message.payload.url,
+        content,
+        ...pickRecordDiagnostics(message.payload),
+        skipAi,
+        previewOnly: message.type === 'PREVIEW_RECORD',
+        force: message.payload.force,
+      }), { settings });
+    } finally {
+      if (isRecoveryRun) {
+        await releaseRecoveryOwner(message.payload.url, 'manual');
+      }
+    }
 
     if (result.success) {
       await deps.setUrlContent(message.payload.url, content);
