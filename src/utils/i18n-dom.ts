@@ -10,6 +10,37 @@ import { getMessage, getUserLocale, isRTL } from './i18n.js';
 import { getPluralKey } from './i18nPlural.js';
 
 /**
+ * Parse a raw `data-i18n-args` attribute value into substitution args.
+ *
+ * WHY fail-safe: the attribute is user-editable HTML, and a throw from
+ * `JSON.parse` would escape applyI18n and abort the remaining translation
+ * passes, leaving the whole panel untranslated. Non-object JSON (number,
+ * string, array, null) is also rejected because `resolvePluralKey` runs
+ * `'count' in args`, which throws on primitives.
+ *
+ * WHY silent: the i18n modules are imported into the popup bundle and stay
+ * free of any logger dependency, so a malformed attribute is ignored and the
+ * element keeps its untranslated fallback text.
+ */
+export function parseI18nArgs(raw: string | null | undefined): Record<string, string | number> | null {
+  if (!raw) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (_e) {
+    return null;
+  }
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+  // Chrome named substitutions only accept string|number values, so an entry
+  // of any other type makes the whole attribute invalid rather than partial.
+  const entries = Object.entries(parsed);
+  if (entries.some(([, value]) => typeof value !== 'string' && typeof value !== 'number')) {
+    return null;
+  }
+  return parsed as Record<string, string | number>;
+}
+
+/**
  * Resolves the effective message key for `data-i18n-args`, applying
  * getPluralKey() when a numeric `count` substitution is present so the
  * plural-variant message key (e.g. `ruleCount_one` / `ruleCount_other`) is
@@ -77,15 +108,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     const key = htmlEl.getAttribute('data-i18n');
     if (!key) return;
 
-    const substitutions = htmlEl.getAttribute('data-i18n-args');
-    let args = null;
-    if (substitutions) {
-      try {
-        args = JSON.parse(substitutions);
-      } catch (_e) {
-        // Ignore malformed JSON
-      }
-    }
+    const args = parseI18nArgs(htmlEl.getAttribute('data-i18n-args'));
 
     const translatedText = getMessage(resolvePluralKey(key, args), args);
 
@@ -106,8 +129,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     const htmlEl = el as HTMLInputElement | HTMLTextAreaElement;
     const key = htmlEl.getAttribute('data-i18n-input-placeholder');
     if (key) {
-      const substitutions = htmlEl.getAttribute('data-i18n-args');
-      const args = substitutions ? JSON.parse(substitutions) : null;
+      const args = parseI18nArgs(htmlEl.getAttribute('data-i18n-args'));
       htmlEl.placeholder = getMessage(resolvePluralKey(key, args), args);
     }
   });
