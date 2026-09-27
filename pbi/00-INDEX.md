@@ -60,7 +60,12 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 28件完了・アーカイブ済み / ⬜ 未着手 4件 🔧非機能追加
+### 2026-09-25 ラウンドの着手トリガー待ち 2 件 — 🔵 監視 2件 🔧非機能追加
+
+- [2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md)（🔵 監視中 — RICE 0.4・0.5 SP・副作用🟢。wasm の host-crossing byte 再現性は未防御のまま意図的に維持し、防御範囲は「fresh と committed の行動 parity」「ship 対象 3 組の src/public byte 一致」「glue/dts stale check」。トリガー: Rust toolchain・`Cargo.lock`・`wasm-pack`・build/postprocess scripts・ship manifest の変更、または供給網監査で byte provenance が要求された時。再評価の軸は raw binary diff ではなく parity と公開 copy consistency。`pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の完全保持が必須）
+- [2026-09-25-29-backlog-offscreen-gateway-archive-split.md](2026-09-25-29-backlog-offscreen-gateway-archive-split.md)（🔵 監視中 — RICE 0.25・2 SP・副作用🟡。`OffscreenGateway` に 14 種の archive operation が query/mutate と同居している ownership 負債。実害は未確認。トリガー: archive subtype の追加、または `SqliteClient` façade / `SqliteRpcClient` archive overload / dashboard service の caller 契約の変更。`ArchiveGateway` 抽出は 28 caller を変更せずに内部だけを分離する前提）
+
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 28件完了・アーカイブ済み / 🔵 監視 2件 / ⛔ 1件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
@@ -75,11 +80,11 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 | 22 | [investigate-pending-queue-poison-record](../dev-docs/archived/pbi/2026-09-25-22-investigate-pending-queue-poison-record.md) | investigate | 0.75 | 2 | ✅ 完了（2026-09-27 アーカイブ済み。failure-index 方式を裁定・後続 fix 推定 2 SP） |
 | 23 | [investigate-deprecated-alias-sunset](../dev-docs/archived/pbi/2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | ✅ 完了（2026-09-27 アーカイブ済み。後続 refactor 1 SP の垂直 slice を確定） |
 | 25 | [fix-encryption-secret-wrapped-storage](../dev-docs/archived/pbi/2026-09-25-25-fix-encryption-secret-wrapped-storage.md) | fix | 0.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み。専用 KEK でラップした envelope のみを local に保存。ロールバック無損失は one-way door として未達と記録） |
-| 26 | [backlog-wasm-binary-reproducibility-watch](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) | backlog | 0.4 | 0.5 | トリガー: toolchain / wasm-pack / manifest 変更時 |
+| 26 | [backlog-wasm-binary-reproducibility-watch](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) | backlog | 0.4 | 0.5 | 🔵 監視中 — 着手トリガー待ち。gate 入力の変更または byte provenance 要求で発火 |
 | 27 | [investigate-master-password-removal-reencrypt](2026-09-25-27-investigate-master-password-removal-reencrypt.md) | investigate | 0.33 | 3 | 25 の後。ADR supersede が未決 |
 | 28 | [investigate-content-hot-path-yield](../dev-docs/archived/pbi/2026-09-25-28-investigate-content-hot-path-yield.md) | investigate | 0.25 | 2 | ✅ 完了（2026-09-27 アーカイブ済み。offscreen 化を裁定・後続実装は別 PBI） |
-| 29 | [backlog-offscreen-gateway-archive-split](2026-09-25-29-backlog-offscreen-gateway-archive-split.md) | backlog | 0.25 | 2 | 01 の後。archive subtype 追加時に発火 |
-| 30 | [refactor-utils-namespace-reorg](2026-09-25-30-refactor-utils-namespace-reorg.md) | refactor | 0.08 | 3+ | 専用ブランチ必須。03・05・06・07 の後 |
+| 29 | [backlog-offscreen-gateway-archive-split](2026-09-25-29-backlog-offscreen-gateway-archive-split.md) | backlog | 0.25 | 2 | 🔵 監視中 — 着手トリガー待ち。archive subtype 追加時に発火 |
+| 30 | [refactor-utils-namespace-reorg](2026-09-25-30-refactor-utils-namespace-reorg.md) | refactor | 0.08 | 3+ | ⛔ 着手ゲート — 専用ブランチと統合順序の確定が未了（着手ゲート未発火） |
 
 **PBI 化不要と判定した 1 件**: `setElementHtml` の `<script>` 削除層の縮小は、production 呼び出し 37 箇所 15 ファイルに及ぶ二段防御（`DOMParser` の inert 特性 + 生成 script の除去）で、レビューでも「セキュリティを弱めない」方針が確定済み。コード変更を入れると共通描画基盤の安全性が下がるため PBI を作らず、判定根拠を採点台帳の不採用欄に記録した。
 
