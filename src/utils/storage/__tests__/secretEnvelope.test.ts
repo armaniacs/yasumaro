@@ -22,6 +22,7 @@ vi.mock('../../crypto/cryptoParams.js', async (importOriginal) => {
 });
 
 const localData = new Map<string, unknown>();
+const sessionData = new Map<string, unknown>();
 
 (global as unknown as { chrome: unknown }).chrome = {
   storage: {
@@ -41,9 +42,19 @@ const localData = new Map<string, unknown>();
       }),
     },
     session: {
-      get: vi.fn(async () => ({})),
-      set: vi.fn(async () => {}),
-      remove: vi.fn(async () => {}),
+      get: vi.fn(async (keys: string | string[] | null) => {
+        if (keys === null) return Object.fromEntries(sessionData);
+        const list = Array.isArray(keys) ? keys : [keys];
+        const out: Record<string, unknown> = {};
+        for (const k of list) if (sessionData.has(k)) out[k] = sessionData.get(k);
+        return out;
+      }),
+      set: vi.fn(async (items: Record<string, unknown>) => {
+        for (const [k, v] of Object.entries(items)) sessionData.set(k, v);
+      }),
+      remove: vi.fn(async (keys: string | string[]) => {
+        for (const k of Array.isArray(keys) ? keys : [keys]) sessionData.delete(k);
+      }),
     },
   },
 };
@@ -56,6 +67,8 @@ import {
   setSecretKeyStorageOverride,
   isSecretEnvelope,
 } from '../../crypto/secretWrappingKey.js';
+import { deriveLegacyKeyFromStoredSecret } from '../../crypto/kdfNegotiator.js';
+import { CRYPTO_PARAMS } from '../../crypto/cryptoParams.js';
 import { deriveKey, getWebCrypto } from '../../crypto/primitives.js';
 import { bytesToBase64 } from '../../crypto/primitives.js';
 
@@ -78,6 +91,7 @@ async function installMemoryKek(): Promise<void> {
 describe('secret envelope (PBI 25-25)', () => {
   beforeEach(() => {
     localData.clear();
+    sessionData.clear();
     vi.clearAllMocks();
     clearEncryptionKeyCache();
     setSecretKeyStorageOverride(null);
@@ -219,5 +233,60 @@ describe('secret envelope (PBI 25-25)', () => {
     const hmacDb = dbNameOf(read('durableKeyStore.ts'));
     const secretDb = dbNameOf(read('secretWrappingKey.ts'));
     expect(secretDb).not.toBe(hmacDb);
+  });
+
+  it('keeps the session-rescued secret durable in local when no KEK is available', async () => {
+    // Upgrade state: salt in local, secret in session, and the KEK store
+    // unreachable. Persisting only into session would lose the only copy on
+    // the next browser restart, after which a fresh salt+secret is generated
+    // and every API key encrypted under the old one becomes unreadable.
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const rescued = bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
+    localData.set(SALT_KEY, bytesToBase64(salt));
+    sessionData.set(SECRET_KEY, rescued);
+    setSecretKeyStorageOverride(null); // no IndexedDB → no KEK
+
+    const key = await getOrCreateEncryptionKey();
+    expect(key).toBeDefined();
+    // Durability first: the plaintext is what the pre-PBI-25-25 path stored.
+    expect(localData.get(SECRET_KEY)).toBe(rescued);
+    expect(sessionData.has(SECRET_KEY)).toBe(false);
+  });
+
+  it('still recovers a legacy-100k key after the secret has been wrapped', async () => {
+    // The migration runs on the first settings read, before the decrypt loop
+    // asks for a legacy key. Once ENCRYPTION_SECRET is an envelope, the only
+    // remaining copy of the material that legacy path needs is inside it.
+    await installMemoryKek();
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const legacySecret = bytesToBase64(crypto.getRandomValues(new Uint8Array(32)));
+    localData.set(SALT_KEY, bytesToBase64(salt));
+    localData.set(SECRET_KEY, legacySecret);
+
+    // The historical spelling: UTF-8 over atob's latin-1 output, 100k PBKDF2.
+    const secretBytes = new TextEncoder().encode(atob(legacySecret));
+    const baseKey = await crypto.subtle.importKey('raw', secretBytes, 'PBKDF2', false, ['deriveKey']);
+    const legacyKey = await crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: salt as BufferSource, iterations: CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS, hash: 'SHA-256' },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt'],
+    );
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      legacyKey,
+      new TextEncoder().encode('legacy-ciphertext') as BufferSource,
+    );
+
+    // First read: the plaintext secret is replaced by the envelope.
+    await getOrCreateEncryptionKey();
+    expect(isSecretEnvelope(localData.get(SECRET_KEY))).toBe(true);
+
+    const recovered = await deriveLegacyKeyFromStoredSecret();
+    expect(recovered).not.toBeNull();
+    const opened = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, recovered as CryptoKey, ciphertext);
+    expect(new TextDecoder().decode(opened)).toBe('legacy-ciphertext');
   });
 });

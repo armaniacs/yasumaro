@@ -19,7 +19,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { FailureKind, createFailure, resolveFailure, type FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
 import { pickDefined } from '../../utils/objectUtils.js';
-import { disabledBreaker, type ProviderBreakerLike } from './providerBreaker.js';
+import { disabledBreaker, type ProviderBreakerLike, type ProviderCooldown } from './providerBreaker.js';
 
 interface RemoteAIServiceConfig {
   builtInAiClient?: BuiltInAiProvider;
@@ -72,6 +72,19 @@ export class RemoteAIService implements AIService {
       return text.substring(0, 300);
     }
     return `summary too short (${result.summary.length} < minLength ${minLength})`;
+  }
+
+  /**
+   * Text for a call where every slot was held back by the breaker. Naming the
+   * provider and the remaining wait is the point: the configuration is fine and
+   * the user must not be sent to settings, nor have this text stored as their
+   * page summary.
+   */
+  private static describeSuppressed(suppressed: { provider: string; cooldown?: ProviderCooldown }[]): string {
+    const names = suppressed.map((s) => s.provider).join(', ');
+    const soonest = Math.min(...suppressed.map((s) => s.cooldown?.openUntil ?? Date.now()));
+    const minutes = Math.max(1, Math.ceil((soonest - Date.now()) / 60_000));
+    return `Error: AI summary skipped — ${names} is temporarily paused after repeated failures. Retrying in about ${minutes} minute${minutes === 1 ? '' : 's'}.`;
   }
 
   private resolveProviderSlots(settings: Settings): ProviderSlot[] {
@@ -166,6 +179,8 @@ export class RemoteAIService implements AIService {
       };
       const attemptedProviders: string[] = [];
       const slotFailures: { provider: string; model?: string; error: string; failure?: FailureMetadata }[] = [];
+      // Slots the breaker held back, with the cooldown that suppressed them.
+      const suppressed: { provider: string; cooldown?: ProviderCooldown }[] = [];
       // Aggregate carrier: the FIRST slot that classified its failure. A total
       // failure stays a result (never a throw) so privacyPipeline's branch and
       // the result contract are unchanged; the kind simply rides along.
@@ -176,10 +191,13 @@ export class RemoteAIService implements AIService {
         const slotModel = this.resolveEffectiveModel(settings, slot);
         // PBI 27-03: a slot in breaker cooldown is not attempted at all.
         // Skipped slots stay out of attemptedProviders (they were never
-        // tried) and out of slotFailures (a skip is not a failure). When
-        // every slot is cooling down the loop returns the initial result —
-        // the same shape as "no usable provider", never a fabricated kind.
+        // tried) and out of slotFailures (a skip is not a failure). When every
+        // slot is cooling down the result must say so — falling through to
+        // `lastResult` would tell the user their provider configuration is
+        // missing, which is false for a provider that is only suppressed.
         if (!(await this.breaker.shouldAttempt(slot.provider, slotModel))) {
+          const cooldown = await this.breaker.cooldown(slot.provider, slotModel);
+          suppressed.push({ provider: slot.provider, ...(cooldown ? { cooldown } : {}) });
           addLog(LogType.INFO, 'AI provider slot skipped (breaker cooldown)', {
             provider: slot.provider,
             ...pickDefined({ model: slotModel }),
@@ -232,6 +250,16 @@ export class RemoteAIService implements AIService {
           traceId: options?.traceId ?? '',
         });
         lastResult = result;
+      }
+
+      if (attemptedProviders.length === 0 && suppressed.length > 0) {
+        return {
+          success: false,
+          summary: RemoteAIService.describeSuppressed(suppressed),
+          ...(suppressed[0]?.cooldown ? { failure: createFailure(suppressed[0].cooldown.kind) } : {}),
+          attemptedProviders,
+          slotFailures,
+        };
       }
 
       return {

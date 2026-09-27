@@ -222,10 +222,18 @@ async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
             if (restored !== undefined) {
                 secret = restored;
                 // Session-rescued plaintext takes the same envelope road as
-                // legacy secrets. KEK loss keeps the old plaintext-saving
-                // behavior (migrate later) instead of failing first unlock.
+                // legacy secrets — but durability wins over wrapping. Without a
+                // KEK the only copy would stay in chrome.storage.session, which
+                // Chrome clears on restart or update; a later read would then
+                // find a salt with no secret and regenerate the pair, orphaning
+                // every API key encrypted under the lost one. So keep the
+                // pre-PBI-25-25 behavior (plaintext in local) and wrap it on a
+                // later call.
                 const kek = await getOrCreateSecretWrappingKey();
-                if (kek) {
+                if (!kek) {
+                    await chrome.storage.local.set({ [StorageKeys.ENCRYPTION_SECRET]: restored });
+                    await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
+                } else {
                     const envelope = await wrapSecretWithKey(restored, kek);
                     if ((await unwrapSecretWithKey(envelope, kek)) === restored) {
                         await chrome.storage.local.set({ [StorageKeys.ENCRYPTION_SECRET]: envelope });

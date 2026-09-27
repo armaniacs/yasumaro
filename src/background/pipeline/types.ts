@@ -40,8 +40,6 @@ export interface PipelineError {
   strategy: ErrorStrategy;
   timestamp: number;
   recoveryKind?: OfflineJobKind;
-  /** Structured offline-enqueue result carried by StepExecutor (PBI 2026-09-25-12). */
-  offlineEnqueue?: OfflineEnqueueInfo | undefined;
   context?: {
     url: string;
     tabId?: number | undefined;
@@ -55,12 +53,13 @@ export interface PipelineError {
  * owner and no pending page may be registered for the same recording.
  */
 export interface OfflineEnqueueInfo {
-  /** The step was eligible and the enqueue was actually attempted. */
-  attempted: boolean;
-  /** The job is durably queued — the offline job is the sole recovery owner. */
+  /**
+   * The job is durably queued — the offline job is the sole recovery owner.
+   * The only fact the outcome policy branches on: whether a slot was eligible
+   * is decided by the step itself, and the job kind is not needed after the
+   * job is in the queue.
+   */
   enqueued: boolean;
-  /** Job kind that was (or would have been) queued. */
-  jobKind?: OfflineJobKind | undefined;
 }
 
 /**

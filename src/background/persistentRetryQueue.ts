@@ -210,8 +210,11 @@ export class PersistentRetryQueue<T> {
             addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
               id: (item as RetryableItem & { id?: string }).id,
             });
-            if (this.options.persistPerItem) await persistState();
+            // The fallback owner must be durably registered before the job
+            // leaves the queue; a SW death between the two would leave the
+            // recording with neither a queue entry nor a pending page.
             await reportDropped(item, 'max-retries');
+            if (this.options.persistPerItem) await persistState();
             continue;
           }
           remaining.push(item);
@@ -223,8 +226,8 @@ export class PersistentRetryQueue<T> {
           addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
             id: (item as RetryableItem & { id?: string }).id,
           });
-          if (this.options.persistPerItem) await persistState();
           await reportDropped(item, 'max-retries');
+          if (this.options.persistPerItem) await persistState();
           continue;
         }
         remaining.push(item);

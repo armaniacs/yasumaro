@@ -271,7 +271,7 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('RETRY failure with a successfully enqueued offline job registers NO pending page', () => {
     const fakes = makeFakes();
     const error = new Error('AI provider unreachable');
-    attachOfflineEnqueueInfo(error, { attempted: true, enqueued: true, jobKind: 'ai_summary' });
+    attachOfflineEnqueueInfo(error, { enqueued: true });
     const outcome = decideStepOutcome(
       error,
       { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
@@ -289,7 +289,7 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('RETRY failure whose offline enqueue failed still registers the pending page (sole owner)', () => {
     const fakes = makeFakes();
     const error = new Error('AI provider unreachable');
-    attachOfflineEnqueueInfo(error, { attempted: true, enqueued: false, jobKind: 'ai_summary' });
+    attachOfflineEnqueueInfo(error, { enqueued: false });
     const outcome = decideStepOutcome(
       error,
       { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
@@ -304,7 +304,7 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('finalizeSuccess with an enqueued obsidian_sync failure registers NO pending page', () => {
     const fakes = makeFakes();
     const error = new Error('Obsidian unreachable');
-    attachOfflineEnqueueInfo(error, { attempted: true, enqueued: true, jobKind: 'obsidian_sync' });
+    attachOfflineEnqueueInfo(error, { enqueued: true });
     const context = makeContext({
       errors: [{
         step: 'saveObsidian',
@@ -322,7 +322,7 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('finalizeSuccess with an obsidian_sync failure and a failed enqueue still registers the pending page', () => {
     const fakes = makeFakes();
     const error = new Error('Obsidian unreachable');
-    attachOfflineEnqueueInfo(error, { attempted: true, enqueued: false, jobKind: 'obsidian_sync' });
+    attachOfflineEnqueueInfo(error, { enqueued: false });
     const context = makeContext({
       errors: [{
         step: 'saveObsidian',
