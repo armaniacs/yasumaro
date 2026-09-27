@@ -37,13 +37,24 @@ function getNextMidnightTimestamp(): number {
 /**
  * Wire the alarm/listener combination for the current LOCAL_MARKDOWN_EXPORT_TIMING.
  * Safe to call on every Service Worker startup, and whenever the user changes
- * the timing setting — always clears prior alarms first so switching modes
- * doesn't leave stale registrations behind.
+ * the timing setting.
+ *
+ * Only the standing alarms this function owns — the idle fallback and the
+ * daily flush — are cleared, and both clears are awaited so a mode switch
+ * cannot end up with the previous mode's alarm alive next to the new one.
+ *
+ * IMMEDIATE_FLUSH_ALARM is deliberately left untouched: scheduleImmediateFlush()
+ * owns that one-shot, arms it per recording, and there is no way to re-create
+ * it here because this function cannot tell whether the day's buffer is empty.
+ * Clearing it used to drop the pending flush whenever the user merely saved a
+ * setting or ran a connection test, holding the day's export back until the
+ * next recording. The accepted consequence is that switching away from
+ * immediate may still fire one stale one-shot, which is harmless because every
+ * flush rewrites the same daily file with conflictAction: 'overwrite'.
  */
 export async function initExportScheduler(): Promise<void> {
-  chrome.alarms.clear(IDLE_FALLBACK_ALARM);
-  chrome.alarms.clear(DAILY_FLUSH_ALARM);
-  chrome.alarms.clear(IMMEDIATE_FLUSH_ALARM);
+  await chrome.alarms.clear(IDLE_FALLBACK_ALARM);
+  await chrome.alarms.clear(DAILY_FLUSH_ALARM);
 
   const settings = await settingsRepository.getAll();
   const timing = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING];
@@ -61,8 +72,9 @@ export async function initExportScheduler(): Promise<void> {
       periodInMinutes: 1440,
     });
   }
-  // 'manual' needs no standing alarm or listener. 'immediate' uses the
-  // per-recording one-shot alarm created by scheduleImmediateFlush().
+  // 'manual' needs no standing alarm or listener. 'immediate' arms the
+  // per-recording one-shot via scheduleImmediateFlush() and is never re-armed
+  // or cleared here.
 }
 
 /**
