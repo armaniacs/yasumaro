@@ -321,6 +321,7 @@ export class RemoteAIService implements AIService {
   ): Promise<AiConnectionTestResult> {
     const settings = await this.loadSettings();
     const slots = this.resolveProviderSlots(settings);
+    const breakerGateOpen = resolveBreakerGate(settings);
 
     const providerResults: AiProviderTestResult[] = [];
     let anySuccess = false;
@@ -376,6 +377,17 @@ export class RemoteAIService implements AIService {
           ...pickDefined({ model: effectiveModel }),
         });
       }
+    }
+
+    // PBI 27-05: a passing diagnostic is the user telling us the credentials
+    // are fixed, which is the one thing a cooldown cannot work out for itself —
+    // an auth failure parks a provider for 15 minutes with no other way out.
+    // Only success clears: a failing probe proves nothing the breaker does not
+    // already know, and policy §7 keeps test results out of breaker state.
+    // Gated like every other breaker touch, so the kill switch still wins.
+    if (breakerGateOpen && anySuccess) {
+      await this.breaker.clearAll();
+      addLog(LogType.INFO, 'AI provider circuit breaker cooldown cleared after a successful connection test');
     }
 
     const overallMessage = anySuccess
