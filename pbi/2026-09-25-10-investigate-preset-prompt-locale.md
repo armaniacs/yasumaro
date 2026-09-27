@@ -51,20 +51,20 @@ Scenario: 責務境界とロケール契約を保つ
 
 ## 受け入れ基準
 
-- [ ] Default、Tagged、Bullet、English、Technical の5件について、現在の本文と表示名の locale 依存関係を整理している。
-- [ ] 通常の Default が `getDefaultUserPrompt(effectiveLocale)` と `getDefaultSystemPrompt(effectiveLocale)` を使い、他のプリセット本文がソース埋め込みである事実を裁定材料として記録している。
-- [ ] UI locale に従う、Tagged・Bullet・Technical を feature 固有言語として固定する、English プリセットを英語固定する、という候補を個別の採用・不採用と根拠付きで決定している。
-- [ ] プリセット名と `getPromptDisplayName()` の locale 分岐を、本文の locale 仕様と同一視せず、表示責務と本文責務を分けて記録している。
-- [ ] `__preset__*` の保存済み `userPrompt` と `systemPrompt` が fallback より優先される現行挙動を確認し、stable preset ID による実行時 resolve、保持、自動置換の候補を比較している。
-- [ ] 旧 `__preset__*` を自動置換する場合としない場合の互換性条件、ユーザーが既存内容を保持する手順、復元後に同じ選択が再現される条件が明記されている。
-- [ ] `__preset__*` の自動置換でユーザーのカスタマイズ意図を壊さないことが、移行方針に明記されている。
-- [ ] 複製で ID が `prompt_<timestamp>` になる prompt は、由来プリセットを判別できないためユーザー所有スナップショットとして保持する方針が明記されている。
-- [ ] `custom_prompts` が暗号化バックアップの復元対象に含まれること、旧 `custom_prompts`、通常の settings バックアップ、暗号化 combined バックアップを壊さない移行条件が明記されている。
-- [ ] 本番 AI 反映箇所が `ProviderStrategy` と `BuiltInAiProvider` の2箇所であり、Built-in AI の `expectedOutputs` と system prompt も日本語固定である事実を踏まえている。
-- [ ] プリセット定義と active resolution は `customPromptUtils` に置き、dashboard の DOM、event、persistence は `customPromptManager` に置く責務境界を維持している。
-- [ ] 機械向け本文は locale 引数を明示し、ブラウザ locale の暗黙参照に依存しない契約が後続 PBI に渡されている。
-- [ ] en/ja parity を維持し、`_locales` を変更する場合は `pbi/2026-09-25-09-fix-popup-untranslated-title-token.md` との共有編集競合を調査対象として明記している。
-- [ ] 本 PBI は調査と仕様確定に限定し、裁定後の実装は `feat` または `refactor` の別 PBI に分割している。
+- [x] Default、Tagged、Bullet、English、Technical の5件について、現在の本文と表示名の locale 依存関係を整理している。
+- [x] 通常の Default が `getDefaultUserPrompt(effectiveLocale)` と `getDefaultSystemPrompt(effectiveLocale)` を使い、他のプリセット本文がソース埋め込みである事実を裁定材料として記録している。
+- [x] UI locale に従う、Tagged・Bullet・Technical を feature 固有言語として固定する、English プリセットを英語固定する、という候補を個別の採用・不採用と根拠付きで決定している。
+- [x] プリセット名と `getPromptDisplayName()` の locale 分岐を、本文の locale 仕様と同一視せず、表示責務と本文責務を分けて記録している。
+- [x] `__preset__*` の保存済み `userPrompt` と `systemPrompt` が fallback より優先される現行挙動を確認し、stable preset ID による実行時 resolve、保持、自動置換の候補を比較している。
+- [x] 旧 `__preset__*` を自動置換する場合としない場合の互換性条件、ユーザーが既存内容を保持する手順、復元後に同じ選択が再現される条件が明記されている。
+- [x] `__preset__*` の自動置換でユーザーのカスタマイズ意図を壊さないことが、移行方針に明記されている。
+- [x] 複製で ID が `prompt_<timestamp>` になる prompt は、由来プリセットを判別できないためユーザー所有スナップショットとして保持する方針が明記されている。
+- [x] `custom_prompts` が暗号化バックアップの復元対象に含まれること、旧 `custom_prompts`、通常の settings バックアップ、暗号化 combined バックアップを壊さない移行条件が明記されている。
+- [x] 本番 AI 反映箇所が `ProviderStrategy` と `BuiltInAiProvider` の2箇所であり、Built-in AI の `expectedOutputs` と system prompt も日本語固定である事実を踏まえている。
+- [x] プリセット定義と active resolution は `customPromptUtils` に置き、dashboard の DOM、event、persistence は `customPromptManager` に置く責務境界を維持している。
+- [x] 機械向け本文は locale 引数を明示し、ブラウザ locale の暗黙参照に依存しない契約が後続 PBI に渡されている。
+- [x] en/ja parity を維持し、`_locales` を変更する場合は `pbi/2026-09-25-09-fix-popup-untranslated-title-token.md` との共有編集競合を調査対象として明記している。
+- [x] 本 PBI は調査と仕様確定に限定し、裁定後の実装は `feat` または `refactor` の別 PBI に分割している。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -180,13 +180,21 @@ Scenario: 責務境界とロケール契約を保つ
 
 ## Definition of Done
 
-- [ ] 5プリセットの本文、表示名、user prompt、system prompt、期待出力の言語関係を調査成果物に整理している。
-- [ ] 5 Whys の全問に、確認済みの事実、根拠、裁定、残存リスクが対応づけられている。
-- [ ] UI locale 依存、feature 固有言語、English 固定の候補がプリセットごとに採用・不採用として決定されている。
-- [ ] 旧 `__preset__*` の移行方針が、stable ID 実行時 resolve、保存済み表現の保持、自動置換の採否として明記されている。
-- [ ] 複製済み `prompt_<timestamp>` はユーザー所有スナップショットとして保持する扱いが明記されている。
-- [ ] 旧 `custom_prompts`、通常の settings バックアップ、暗号化 combined バックアップの非破壊条件が明記されている。
-- [ ] Built-in AI の日本語固定 `expectedOutputs` と system prompt を含めた出力契約が確認されている。
-- [ ] `customPromptUtils` と `customPromptManager` の責務境界、locale 明示、en/ja parity、`_locales` の共有競合が受け入れ基準に含まれている。
-- [ ] 実装は別 PBI に分離され、種別が `feat` または `refactor` で明示されている。
-- [ ] 本 PBI ではプロダクションコードを変更していない。
+- [x] 5プリセットの本文、表示名、user prompt、system prompt、期待出力の言語関係を調査成果物に整理している。
+- [x] 5 Whys の全問に、確認済みの事実、根拠、裁定、残存リスクが対応づけられている。
+- [x] UI locale 依存、feature 固有言語、English 固定の候補がプリセットごとに採用・不採用として決定されている。
+- [x] 旧 `__preset__*` の移行方針が、stable ID 実行時 resolve、保存済み表現の保持、自動置換の採否として明記されている。
+- [x] 複製済み `prompt_<timestamp>` はユーザー所有スナップショットとして保持する扱いが明記されている。
+- [x] 旧 `custom_prompts`、通常の settings バックアップ、暗号化 combined バックアップの非破壊条件が明記されている。
+- [x] Built-in AI の日本語固定 `expectedOutputs` と system prompt を含めた出力契約が確認されている。
+- [x] `customPromptUtils` と `customPromptManager` の責務境界、locale 明示、en/ja parity、`_locales` の共有競合が受け入れ基準に含まれている。
+- [x] 実装は別 PBI に分離され、種別が `feat` または `refactor` で明示されている。
+- [x] 本 PBI ではプロダクションコードを変更していない。
+
+## 実績（2026-09-27）
+
+- 言語表・保存解決・AI 反映・バックアップ・既存テスト（99 件 green）の事実確認。成果物は `dev-docs/archived/plans/2026-09-27-pbi10-preset-prompt-locale-policy.md` のみ（production 変更なし）
+- 裁定: Default は UI locale 追従、Tagged/Bullet/Technical は JA 固定、English は英語固定。bullet/technical の EN system 混成は現状維持
+- 移行: 自動置換は不採用。byte-identical 時のみ定義使用 + 更新 affordance UI（明示操作のみ）。複製は一律保持
+- PBI 09 アーカイブ済みのため `_locales` 競合なし。Built-in AI の日本語固定は別 PBI 化を明記
+- 後続 `feat`（推定 2 SP）の受け入れ基準とテスト戦略を報告書 §4 に確定
