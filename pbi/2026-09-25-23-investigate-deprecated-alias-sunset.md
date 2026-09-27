@@ -63,21 +63,21 @@ Feature: 非推奨エイリアスと互換 shim の sunset 基準を確定する
 
 ## 受け入れ基準
 
-- [ ] production source の 38 tag / 17 ファイルを一覧化し、4 tag / 4 ファイルの `Sunset:` と 34 tag の日付なし状態を突合している。
-- [ ] 各 tag に internal shim、移行中、外部互換の一次分類と、分類の根拠となる参照・契約・consumer 情報を記録している。
-- [ ] 削除、期限付き維持、据え置きのそれぞれについて、適用条件、再確認条件、削除条件を記録している。
-- [ ] 各 17 ファイルについて、owner、内部で守る契約、外部で守る契約の有無、下限の見直し日、削除条件を記録している。確認できない項目は未確認として残す。
-- [ ] 内部 shim に外部 consumer が無いことを証明できない限り、日付の付与と削除の裁定を確定しない。
-- [ ] crypto / HMAC 系 shim は、利用箇所と移行条件を確認するまで削除対象に確定しない。
-- [ ] `src/utils/storage.ts:26-141` の 15 個の内部互換 export について、内部参照、background import、既存 alert や fix と共有する storage 経路を確認する。
-- [ ] grandfathered import 10 production ファイルを、shim の consumer 調査に含める。
-- [ ] deprecation metadata の SSOT、保管形式、`Sunset:` と再評価日の関係を定義し、自由 format のまま放置しない。
-- [ ] `scripts/check-deprecated-aliases.mjs:21-25` の既存 2 rules と 2026-12-31 の再評価日を保持したまま、全 production `@deprecated` を検査範囲へ広げる検査を後続 `refactor` に引き継ぐ。
-- [ ] script 自体の unit test、日付 parser の test、`@deprecated` 全体の網羅性 test、scope 拡大検査のテスト範囲を定義する。
-- [ ] scripts の新規検査を追加する場合は `scripts/release-checks/index.mjs:32-42` の登録方式に合わせ、既存ガードの `validate` への組込みを優先する。gate を分散させない。
-- [ ] `npm run validate` と `.github/workflows/ci.yml:42-45` で `check-deprecated-aliases` が実行される現状を前提に、依存 PBI 14 と接続する。
-- [ ] コメントには有効期限と移行条件だけを書き、履歴や PBI task ID を書かない。
-- [ ] 本 PBI は分類調査と裁定基準の確定に限定し、production code の変更や shim 削除を行わない。
+- [x] production source の 38 tag / 17 ファイルを一覧化し、4 tag / 4 ファイルの `Sunset:` と 34 tag の日付なし状態を突合している。
+- [x] 各 tag に internal shim、移行中、外部互換の一次分類と、分類の根拠となる参照・契約・consumer 情報を記録している。
+- [x] 削除、期限付き維持、据え置きのそれぞれについて、適用条件、再確認条件、削除条件を記録している。
+- [x] 各 17 ファイルについて、owner、内部で守る契約、外部で守る契約の有無、下限の見直し日、削除条件を記録している。確認できない項目は未確認として残す。
+- [x] 内部 shim に外部 consumer が無いことを証明できない限り、日付の付与と削除の裁定を確定しない。
+- [x] crypto / HMAC 系 shim は、利用箇所と移行条件を確認するまで削除対象に確定しない。
+- [x] `src/utils/storage.ts:26-141` の 15 個の内部互換 export について、内部参照、background import、既存 alert や fix と共有する storage 経路を確認する。
+- [x] grandfathered import 10 production ファイルを、shim の consumer 調査に含める。
+- [x] deprecation metadata の SSOT、保管形式、`Sunset:` と再評価日の関係を定義し、自由 format のまま放置しない。
+- [x] `scripts/check-deprecated-aliases.mjs:21-25` の既存 2 rules と 2026-12-31 の再評価日を保持したまま、全 production `@deprecated` を検査範囲へ広げる検査を後続 `refactor` に引き継ぐ。
+- [x] script 自体の unit test、日付 parser の test、`@deprecated` 全体の網羅性 test、scope 拡大検査のテスト範囲を定義する。
+- [x] scripts の新規検査を追加する場合は `scripts/release-checks/index.mjs:32-42` の登録方式に合わせ、既存ガードの `validate` への組込みを優先する。gate を分散させない。
+- [x] `npm run validate` と `.github/workflows/ci.yml:42-45` で `check-deprecated-aliases` が実行される現状を前提に、依存 PBI 14 と接続する。
+- [x] コメントには有効期限と移行条件だけを書き、履歴や PBI task ID を書かない。
+- [x] 本 PBI は分類調査と裁定基準の確定に限定し、production code の変更や shim 削除を行わない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -195,17 +195,25 @@ Feature: 非推奨エイリアスと互換 shim の sunset 基準を確定する
 
 ## Definition of Done
 
-- [ ] 38 tag / 17 ファイルの一覧と、4 個の `Sunset:`、34 個の未記載 tag の突合が完了している。
-- [ ] 全 tag が internal shim、移行中、外部互換のいずれかへ分類され、判定根拠が記録されている。
-- [ ] 削除、期限付き維持、据え置きの裁定基準と、再確認条件、削除条件が記録されている。
-- [ ] 17 ファイルそれぞれについて owner、内部・外部契約、下限の見直し日、削除条件が記録され、未確認項目が明示されている。
-- [ ] 内部 shim の外部 consumer 不在は、証明できる参照調査だけを根拠に判定されている。
-- [ ] crypto / HMAC 系 shim と `storage.ts` の 15 内部互換 export について、利用箇所と移行条件が調査されている。
-- [ ] grandfathered import 10 production ファイルが consumer 調査に含まれている。
-- [ ] deprecation metadata の SSOT と parser 契約が定義され、自由 format の SSOT 不在が解消される後続仕様になっている。
-- [ ] `scripts/check-deprecated-aliases.mjs` の既存 2 rules と 2026-12-31 の再評価日を保持した全 production scope の guard 仕様になっている。
-- [ ] script unit test、日付 parser、`@deprecated` 全体の網羅性 test、scope 拡大検査が後続テスト戦略に含まれる。
-- [ ] 既存ガードの `validate` への組込みと `scripts/release-checks/index.mjs:32-42` の登録方式に合わせ、gate を分散させない。
-- [ ] コードコメントには有効期限と移行条件だけを書き、履歴や PBI task ID を残さない。
-- [ ] 本 PBI は production code を変更せず、shim を削除せず、後続 `refactor` の垂直 slice とテスト範囲を接続している。
-- [ ] 最終確認として `npm run validate` と `npm run release:check` を確認する手順が後続実装に引き継がれている。
+- [x] 38 tag / 17 ファイルの一覧と、4 個の `Sunset:`、34 個の未記載 tag の突合が完了している。
+- [x] 全 tag が internal shim、移行中、外部互換のいずれかへ分類され、判定根拠が記録されている。
+- [x] 削除、期限付き維持、据え置きの裁定基準と、再確認条件、削除条件が記録されている。
+- [x] 17 ファイルそれぞれについて owner、内部・外部契約、下限の見直し日、削除条件が記録され、未確認項目が明示されている。
+- [x] 内部 shim の外部 consumer 不在は、証明できる参照調査だけを根拠に判定されている。
+- [x] crypto / HMAC 系 shim と `storage.ts` の 15 内部互換 export について、利用箇所と移行条件が調査されている。
+- [x] grandfathered import 10 production ファイルが consumer 調査に含まれている。
+- [x] deprecation metadata の SSOT と parser 契約が定義され、自由 format の SSOT 不在が解消される後続仕様になっている。
+- [x] `scripts/check-deprecated-aliases.mjs` の既存 2 rules と 2026-12-31 の再評価日を保持した全 production scope の guard 仕様になっている。
+- [x] script unit test、日付 parser、`@deprecated` 全体の網羅性 test、scope 拡大検査が後続テスト戦略に含まれる。
+- [x] 既存ガードの `validate` への組込みと `scripts/release-checks/index.mjs:32-42` の登録方式に合わせ、gate を分散させない。
+- [x] コードコメントには有効期限と移行条件だけを書き、履歴や PBI task ID を残さない。
+- [x] 本 PBI は production code を変更せず、shim を削除せず、後続 `refactor` の垂直 slice とテスト範囲を接続している。
+- [x] 最終確認として `npm run validate` と `npm run release:check` を確認する手順が後続実装に引き継がれている。
+
+## 実績（2026-09-27）
+
+- inventory 実測が起票時前提と完全一致（38 tags / 17 files / Sunset 4）。成果物は `dev-docs/archived/plans/2026-09-27-pbi23-deprecated-alias-sunset-policy.md` のみ（production 変更なし）
+- 外部互換クラスは空集合と裁定（公開 surface 不在の構成的事実）。分類: guard 済み 2・Sunset 未 guard 2・移行中 27・削除候補 6（D: removeTab・formatEntryToMarkdown・initializeTrancoVersion・extraWhereSql・matchesWildcardPattern・StorageAdapter 型）
+- 前提訂正 2 件を報告書 §0 に記録（grandfathered 10 ファイルは現存せず・storage.ts 静的 consumer 1 件）
+- 未確認 1 件: logMasker 版 maskSensitiveData の全 caller 特定は後続 refactor の初手
+- 後続 refactor（1 SP）の垂直 slice を報告書 §7 に確定
