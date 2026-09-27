@@ -159,6 +159,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-27 マスターパスワード裁定の follow-up — ⬜ 未着手 1件 🔧非機能追加
+
+- [2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md](2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md)（⬜ 未着手 — 3 SP。PBI 27 の裁定の実装。KEK を切り替える set / change / remove の 3 経路で canonical 6 フィールドを再暗号化。復号不能 1 件で解除を中止する。dashboard の直接 remove を service 経路へ置き換え、i18n キー 2 件を追加。RICE は裁定完了後に再採点）
+
 ### 2026-09-27 PBI 27 アーカイブ — ✅ 1件完了（27 アーカイブ済み）
 
 - [2026-09-25-27-investigate-master-password-removal-reencrypt.md](dev-docs/archived/pbi/2026-09-25-27-investigate-master-password-removal-reencrypt.md)（✅ 完了。investigate。ADR と実装の乖離を確認した結果、ADR が求める API キー削除は実装されておらず、set / change / remove の 3 経路すべてが KEK 切替時に再暗号化しないことを確認。**匿名 KEK への再暗号化を裁定し、ADR supersede を要と判定**。復号不能 1 件で解除を中止する順序、canonical `API_KEY_FIELDS`（6 フィールド）への一元化、UI rollback と i18n キー追加、既存 pin の更新対象を裁定し、後続 `fix`（`2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md`、3 SP）へ仕様化した。RICE 0.33・3 SP）
