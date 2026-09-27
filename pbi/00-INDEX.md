@@ -159,6 +159,17 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-09-27 PBI 27-04 アーカイブ（circuit breaker rollout gate） — ✅ 1件完了（27-04 アーカイブ済み）
+
+- [2026-09-27-04-feat-ai-provider-breaker-rollout-gate.md](../dev-docs/archived/pbi/2026-09-27-04-feat-ai-provider-breaker-rollout-gate.md)（✅ 完了。feat。circuit breaker をユーザー設定の kill switch で無効化できるように。`ai_provider_breaker_enabled` を追加（既定 true・既存挙動を維持）し、OFF のとき `shouldAttempt` / `cooldown` / `recordSuccess` / `recordFailure` を一度も呼ばず `suppressed` も空のままにする。ゲート判定は `RemoteAIService.generateSummary` が既に読み終えた settings snapshot 上で行い追加の storage read を持たない（`repo.getAll` の呼び出し回数 1 回で固定）。無効時の通知ログは 1 行のみ。`testConnection` / `compositionManifest` / `settingsMigration` は非変更。新規テスト 10 件（gate OFF 3・gate ON 1・testConnection 1・one-shot ログ 2・`resolveBreakerGate` 2・schema/locale 7）。設定エクスポート（1.1.0 形式）の必須キーが 1 つ増えることを CHANGELOG に記載。RICE 0.53・1.5 SP）
+
+### 2026-09-27 匿名レビュー残差（circuit breaker rollout） — ⬜ 未着手 2件 🔧非機能追加
+
+27-04（ゲート）は完了・アーカイブ済み（アーカイブ履歴参照）。残る 2 件:
+
+- [2026-09-27-05-feat-ai-provider-breaker-manual-reset.md](2026-09-27-05-feat-ai-provider-breaker-manual-reset.md)（⬜ 未着手・**優先 2**。feat。接続試験の成功時に breaker state を全消去する `clearAll()` を追加。auth の 15 分 cooldown を待たずに API key 更新直後から回復できるようにする。専用ボタンは設けず既存の診断操作に載せる。RICE 0.25・2 SP）
+- [2026-09-27-06-chore-ai-breaker-doc-sync.md](2026-09-27-06-chore-ai-breaker-doc-sync.md)（⬜ 未着手・**優先 3**。chore。`docs/EXTERNAL_API_RELIABILITY_GUIDELINE.md` の 2 箇所以降（§5 適用基準と実装状況表）が「未実装・将来課題」のままで実装と食い違っている。PBI 27-04 の裁定内容を反映して同期する。RICE 0.25・0.5 SP）
+
 ### 2026-09-27 マスターパスワード裁定の follow-up — ⬜ 未着手 1件 🔧非機能追加
 
 - [2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md](2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md)（⬜ 未着手 — 3 SP。PBI 27 の裁定の実装。KEK を切り替える set / change / remove の 3 経路で canonical 6 フィールドを再暗号化。復号不能 1 件で解除を中止する。dashboard の直接 remove を service 経路へ置き換え、i18n キー 2 件を追加。RICE は裁定完了後に再採点）

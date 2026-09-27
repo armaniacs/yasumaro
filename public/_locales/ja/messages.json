@@ -161,6 +161,12 @@
   "reviewSummaryFailed": {
     "message": "サマリの生成に失敗しました。"
   },
+  "aiProviderBreakerEnabledLabel": {
+    "message": "失敗が続くプロバイダを一時停止する"
+  },
+  "aiProviderBreakerEnabledHelp": {
+    "message": "有効にすると、失敗が続くプロバイダを5〜15分一時停止し、停止が終わるまで要約の対象から外します。OFFにすると、要約のたびに全プロバイダを再試行します。一時停止はAPIコストの節約できますが、停止中は要約が生成されません。"
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },

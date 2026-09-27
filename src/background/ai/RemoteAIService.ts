@@ -28,17 +28,35 @@ interface RemoteAIServiceConfig {
   breaker?: ProviderBreakerLike;
 }
 
+/**
+ * PBI 27-04: whether the breaker may consult or touch its state at all.
+ * The flag is a kill switch, not a policy dial, so it defaults to enabled —
+ * an absent key must not silently withdraw the PBI 27-03 behaviour. Only an
+ * explicit `false` disables it.
+ */
+export function resolveBreakerGate(settings: Settings): boolean {
+  return settings[StorageKeys.AI_PROVIDER_BREAKER_ENABLED] !== false;
+}
+
 export class RemoteAIService implements AIService {
   private providers: Map<string, (settings: Settings) => AIProviderStrategy>;
   private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
   private repo: SettingsReader;
   private breaker: ProviderBreakerLike;
+  /**
+   * PBI 27-04: the disabled-gate notice is a one-shot, not a per-request log —
+   * the gate is a persistent setting, so saying so on every summary would
+   * bury the rest of the log. Reset with the service worker, which is the
+   * lifetime of this instance.
+   */
+  private loggedBreakerGateDisabled: boolean;
 
   constructor(private config: RemoteAIServiceConfig = {}) {
     this.providers = new Map();
     this.inFlightSummaryRequests = new Map();
     this.repo = config.repo ?? settingsRepository;
     this.breaker = config.breaker ?? disabledBreaker;
+    this.loggedBreakerGateDisabled = false;
     this.registerDefaultProviders();
   }
 
@@ -158,6 +176,15 @@ export class RemoteAIService implements AIService {
       ?? (DEFAULT_SETTINGS[StorageKeys.SUMMARY_MIN_LENGTH] as number);
     const slots = this.resolveProviderSlots(settings);
 
+    // PBI 27-04: read the gate off the snapshot we already hold. A second
+    // settings read here would make the kill switch cost I/O on every summary,
+    // and could disagree with the slots resolved from the same read.
+    const breakerGateOpen = resolveBreakerGate(settings);
+    if (!breakerGateOpen && !this.loggedBreakerGateDisabled) {
+      this.loggedBreakerGateDisabled = true;
+      addLog(LogType.INFO, 'AI provider circuit breaker disabled by user setting');
+    }
+
     // In-flight deduplication: concurrent calls for the same URL+mode share
     // one provider slot loop (FinOptimization: prevent duplicate API costs).
     const url = options?.url ?? '';
@@ -195,7 +222,9 @@ export class RemoteAIService implements AIService {
         // slot is cooling down the result must say so — falling through to
         // `lastResult` would tell the user their provider configuration is
         // missing, which is false for a provider that is only suppressed.
-        if (!(await this.breaker.shouldAttempt(slot.provider, slotModel))) {
+        // PBI 27-04: with the gate off the breaker is not consulted at all, so
+        // `suppressed` stays empty and this branch is unreachable.
+        if (breakerGateOpen && !(await this.breaker.shouldAttempt(slot.provider, slotModel))) {
           const cooldown = await this.breaker.cooldown(slot.provider, slotModel);
           suppressed.push({ provider: slot.provider, ...(cooldown ? { cooldown } : {}) });
           addLog(LogType.INFO, 'AI provider slot skipped (breaker cooldown)', {
@@ -214,14 +243,16 @@ export class RemoteAIService implements AIService {
           options?.traceId ?? '',
           url,
         );
-        if (result.success) {
-          // Any success resets the breaker — even a too-short one: the
-          // provider answered, so it is healthy (policy §3).
-          await this.breaker.recordSuccess(slot.provider, slotModel);
-        } else if (result.failure !== undefined) {
-          // Only taxonomy-carrying failures feed the breaker. Success-but-
-          // short results and unclassified failures are not breaker inputs.
-          await this.breaker.recordFailure(slot.provider, slotModel, result.failure);
+        if (breakerGateOpen) {
+          if (result.success) {
+            // Any success resets the breaker — even a too-short one: the
+            // provider answered, so it is healthy (policy §3).
+            await this.breaker.recordSuccess(slot.provider, slotModel);
+          } else if (result.failure !== undefined) {
+            // Only taxonomy-carrying failures feed the breaker. Success-but-
+            // short results and unclassified failures are not breaker inputs.
+            await this.breaker.recordFailure(slot.provider, slotModel, result.failure);
+          }
         }
         if (result.success && result.summary.length >= minLength) {
           // A later slot recovered — keep the earlier failures for diagnostics.

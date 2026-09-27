@@ -5,15 +5,18 @@
  * testConnection bypass. Taxonomy kinds — never messages — drive it.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { RemoteAIService } from '../RemoteAIService.js';
-import { ProviderBreaker } from '../providerBreaker.js';
+import { RemoteAIService, resolveBreakerGate } from '../RemoteAIService.js';
+import { ProviderBreaker, type ProviderBreakerLike } from '../providerBreaker.js';
 import { recordAuditLog } from '../../../utils/auditLog.js';
+import { addLog } from '../../../utils/logger/core.js';
+import { LogType } from '../../../utils/logger/types.js';
 import type { AIProviderStrategy } from '../providers/index.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 import type { SessionStorePort } from '../../sessionStore.js';
 import type { FailureMetadata } from '../../../utils/failureTaxonomy.js';
 
 vi.mock('../../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
+vi.mock('../../../utils/logger/core.js', () => ({ addLog: vi.fn() }));
 
 function memoryStore(): SessionStorePort {
   const data = new Map<string, unknown>();
@@ -65,6 +68,58 @@ function createService(
 }
 
 const networkFailure: FailureMetadata = { kind: 'network' };
+
+/** Every breaker method the summary path can reach, in one flat call log. */
+type BreakerCall = 'shouldAttempt' | 'cooldown' | 'recordSuccess' | 'recordFailure';
+
+/** A breaker that must not be reached at all while the gate is off. */
+function disabledSpy(): ProviderBreakerLike & { calls: BreakerCall[] } {
+  return spyBreaker({
+    shouldAttempt: async () => true,
+    cooldown: async () => null,
+    recordSuccess: async () => {},
+    recordFailure: async () => {},
+  });
+}
+
+function spyBreaker(inner: ProviderBreakerLike): ProviderBreakerLike & { calls: BreakerCall[] } {
+  const calls: BreakerCall[] = [];
+  return {
+    calls,
+    shouldAttempt: vi.fn(async (provider: string, model?: string) => {
+      calls.push('shouldAttempt');
+      return inner.shouldAttempt(provider, model);
+    }),
+    cooldown: vi.fn(async (provider: string, model?: string) => {
+      calls.push('cooldown');
+      return inner.cooldown(provider, model);
+    }),
+    recordSuccess: vi.fn(async (provider: string, model?: string) => {
+      calls.push('recordSuccess');
+      return inner.recordSuccess(provider, model);
+    }),
+    recordFailure: vi.fn(async (provider: string, model: string | undefined, failure: FailureMetadata) => {
+      calls.push('recordFailure');
+      return inner.recordFailure(provider, model, failure);
+    }),
+  };
+}
+
+/** Same shape as `createService`, plus an explicit breaker gate and a call log. */
+function createGatedService(
+  slots: Array<{ provider: string; model?: string }>,
+  breaker: ProviderBreakerLike,
+  gateEnabled: boolean,
+) {
+  const repo = makeRepo({
+    ai_provider_priority_list: slots,
+    ai_provider: 'gemini',
+    summary_min_length: 0,
+    ai_provider_breaker_enabled: gateEnabled,
+  });
+  const service = new RemoteAIService({ repo, breaker });
+  return { service, repo };
+}
 
 describe('generateSummary with breaker', () => {
   let store: SessionStorePort;
@@ -202,5 +257,121 @@ describe('testConnection bypass', () => {
     expect(result.providers[0]?.success).toBe(true);
     // Bypass only: the cooldown entry is untouched.
     await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
+  });
+});
+
+describe('generateSummary with the breaker gate', () => {
+  let store: SessionStorePort;
+  let breaker: ProviderBreaker;
+
+  beforeEach(async () => {
+    store = memoryStore();
+    breaker = new ProviderBreaker(store);
+    // Three network failures open the default 5-minute cooldown.
+    await breaker.recordFailure('cold', undefined, networkFailure);
+    await breaker.recordFailure('cold', undefined, networkFailure);
+    await breaker.recordFailure('cold', undefined, networkFailure);
+  });
+
+  it('attempts a cooled-down slot and reports no suppression when the gate is off', async () => {
+    const spy = spyBreaker(breaker);
+    const { service, repo } = createGatedService([{ provider: 'cold' }], spy, false);
+    const coldFactory = vi.fn(() => succeedingProvider('recovered summary'));
+    service.registerProvider('cold', coldFactory);
+
+    const result = await service.generateSummary('content');
+
+    expect(coldFactory).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
+    expect(result.summary).toBe('recovered summary');
+    expect(result.summary).not.toContain('temporarily paused');
+    expect(result.summary).not.toContain('AI summary skipped');
+    // The gate is read off the snapshot the summary already loaded, so neither
+    // gate state costs a storage read of its own.
+    expect(repo.getAll).toHaveBeenCalledTimes(1);
+    // Gate off means breaker state is neither read nor written — not even to
+    // record the success that just happened.
+    expect(spy.calls).toEqual([]);
+    // The pre-existing cooldown survives: the gate hides it, it does not heal it.
+    await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
+  });
+
+  it('records nothing when the gate is off and the slot fails', async () => {
+    const spy = spyBreaker(breaker);
+    const { service } = createGatedService([{ provider: 'cold' }], spy, false);
+    service.registerProvider('cold', () => failingProvider({ kind: 'timeout' }));
+
+    const result = await service.generateSummary('content');
+
+    expect(result.success).toBe(false);
+    expect(spy.calls).toEqual([]);
+    const state = (await store.get<Record<string, unknown>>('sw:aiProviderBreaker')) ?? {};
+    expect(state['cold::default']?.failures).toBe(3);
+  });
+
+  it('keeps the cooldown suppression when the gate is on', async () => {
+    const spy = spyBreaker(breaker);
+    const { service } = createGatedService([{ provider: 'cold' }], spy, true);
+    const coldFactory = vi.fn(() => succeedingProvider('never used'));
+    service.registerProvider('cold', coldFactory);
+
+    const result = await service.generateSummary('content');
+
+    expect(coldFactory).not.toHaveBeenCalled();
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('temporarily paused');
+    expect(result.failure?.kind).toBe(networkFailure.kind);
+    expect(result.attemptedProviders).toEqual([]);
+    expect(spy.calls).toEqual(['shouldAttempt', 'cooldown']);
+  });
+
+  it('runs testConnection as usual with the gate off, breaker untouched', async () => {
+    const spy = spyBreaker(breaker);
+    const { service } = createGatedService([{ provider: 'cold' }], spy, false);
+    const factory = vi.fn(() => succeedingProvider('ok'));
+    service.registerProvider('cold', factory);
+
+    const result = await service.testConnection();
+
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(result.success).toBe(true);
+    expect(spy.calls).toEqual([]);
+  });
+
+  it('notes the disabled gate once, not per summary request', async () => {
+    const { service } = createGatedService([{ provider: 'cold' }], disabledSpy(), false);
+    service.registerProvider('cold', () => succeedingProvider('ok'));
+
+    await service.generateSummary('one', { url: 'https://example.com/1' });
+    await service.generateSummary('two', { url: 'https://example.com/2' });
+
+    const notices = vi.mocked(addLog).mock.calls.filter(
+      ([level, message]) => level === LogType.INFO && message.includes('breaker disabled'),
+    );
+    expect(notices).toHaveLength(1);
+  });
+
+  it('logs nothing about the gate while it is on', async () => {
+    const { service } = createGatedService([{ provider: 'cold' }], disabledSpy(), true);
+    service.registerProvider('cold', () => succeedingProvider('ok'));
+
+    await service.generateSummary('content');
+
+    const notices = vi.mocked(addLog).mock.calls.filter(
+      ([level, message]) => level === LogType.INFO && message.includes('breaker disabled'),
+    );
+    expect(notices).toEqual([]);
+  });
+});
+
+describe('resolveBreakerGate', () => {
+  it('treats an absent setting as enabled so PBI 27-03 behaviour is unchanged', () => {
+    expect(resolveBreakerGate({} as never)).toBe(true);
+    expect(resolveBreakerGate({ ai_provider_breaker_enabled: undefined } as never)).toBe(true);
+  });
+
+  it('is enabled by an explicit true and disabled by an explicit false', () => {
+    expect(resolveBreakerGate({ ai_provider_breaker_enabled: true } as never)).toBe(true);
+    expect(resolveBreakerGate({ ai_provider_breaker_enabled: false } as never)).toBe(false);
   });
 });
