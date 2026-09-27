@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-27 investigate 裁定後の後続 PBI 起票 — ⬜ 未着手 3件 🔧非機能追加
+
+investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。policy 確定済みのため Confidence 90%。着手順は RICE 順（同点は Effort 昇順）: 27-05 → 27-04 → 27-03。3 候補間の依存なし。
+
+| PBI | 種別 | RICE | SP | 内容 |
+|---|---|---:|---:|---|
+| [27-05](2026-09-27-05-fix-obsidian-write-replay-idempotency.md) | fix | 2.0 | 1.5 | Obsidian 書込 replay 冪等性（markdown を payload に確定保存 + section 内同一内容検出。dashboard append は現状維持） |
+| [27-04](2026-09-27-04-refactor-settings-key-single-writer.md) | refactor | 1.5 | 1 | threshold を SettingsRepository に統一 + sweep pin。denied_domains は維持のみ |
+| [27-03](2026-09-27-03-fix-ai-provider-circuit-breaker.md) | fix | 1.5 | 3 | circuit breaker 実装（policy SSOT は PBI 15 報告書 §3〜§5） |
+
 ### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 — 🔵 監視 1件 🔧非機能追加
 
 - [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（🔵 監視中 — RICE 0.2・1 SP・副作用🟢。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 でスコア 0.00% になる既知制約（上流 #6210、修正 PR #6220 未マージ）の採用待ち。トリガー: #6210 修正を含む vitest-runner 新版の npm リリース、または Vitest 4.x へのダウングレード裁定。トリガーまで Red/Green 手動検証を継続）
