@@ -46,18 +46,18 @@ Scenario: query response への status 同梱を採用した場合
 
 ## 受け入れ基準
 
-- [ ] `fetchPeriodRows` を使う 7 パネルの production call site と 7 consumer の lifecycle test が対象範囲として確認されている。
-- [ ] ページ数 1 と最大 5 の条件で、現行の status と query の messaging 回数および経過時間を記録できる。
-- [ ] 最大 5 ページで status 5 回と query 5 回、最大 10 往復になることを再現できる。
-- [ ] initialized と uninitialized の両方で、現行の messaging 回数と経過時間を比較できる。
-- [ ] readiness preflight 廃止、readiness-only TTL キャッシュ、query response への status 同梱を同一条件で比較できる。
-- [ ] 各方式について、dashboard→Service Worker の往復、Service Worker→Offscreen の往復、uninitialized 時の query と retry、message contract の互換性、diagnostics の現在時刻表示を評価する。
-- [ ] 採用方式で uninitialized 時の query 抑止と外側 retry の扱いを明記する。
-- [ ] 採用方式の判断根拠と、`refactor` の要否を明記する。
-- [ ] TTL キャッシュを採用する場合、restore、import、migration 後の invalidate policy と、diagnostics が TTL を共有しないことを明記する。
-- [ ] response を変更する場合、dashboard、Service Worker、開いている options page の全サービスを再起動する前提を明記する。
-- [ ] message contract を変更する場合、dashboard の query consumer と Service Worker 側の response subtype を一致させる。
-- [ ] 方式変更によって現行 mock 形状を維持できなくなる lifecycle test だけが必要範囲で更新される。
+- [x] `fetchPeriodRows` を使う 7 パネルの production call site と 7 consumer の lifecycle test が対象範囲として確認されている。
+- [x] ページ数 1 と最大 5 の条件で、現行の status と query の messaging 回数および経過時間を記録できる。
+- [x] 最大 5 ページで status 5 回と query 5 回、最大 10 往復になることを再現できる。
+- [x] initialized と uninitialized の両方で、現行の messaging 回数と経過時間を比較できる。
+- [x] readiness preflight 廃止、readiness-only TTL キャッシュ、query response への status 同梱を同一条件で比較できる。
+- [x] 各方式について、dashboard→Service Worker の往復、Service Worker→Offscreen の往復、uninitialized 時の query と retry、message contract の互換性、diagnostics の現在時刻表示を評価する。
+- [x] 採用方式で uninitialized 時の query 抑止と外側 retry の扱いを明記する。
+- [x] 採用方式の判断根拠と、`refactor` の要否を明記する。
+- [x] TTL キャッシュを採用する場合、restore、import、migration 後の invalidate policy と、diagnostics が TTL を共有しないことを明記する。
+- [x] response を変更する場合、dashboard、Service Worker、開いている options page の全サービスを再起動する前提を明記する。
+- [x] message contract を変更する場合、dashboard の query consumer と Service Worker 側の response subtype を一致させる。
+- [x] 方式変更によって現行 mock 形状を維持できなくなる lifecycle test だけが必要範囲で更新される。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -169,14 +169,21 @@ Scenario: query response への status 同梱を採用した場合
 
 ## Definition of Done
 
-- [ ] ページ数 1 と最大 5、initialized と uninitialized の条件で、ベースラインの messaging 回数と経過時間が記録されている。
-- [ ] 最大 5 ページで status 5 回と query 5 回、最大 10 往復になることを再現できる。
-- [ ] 3 方式が同じ測定条件で比較され、各方式の長所、制約、採用・不採用の根拠が記録されている。
-- [ ] 採用方式と `refactor` の要否が、計測結果に基づいて明記されている。
-- [ ] 採用方式で uninitialized 時の query 抑止と外側 retry の扱いが明記され、テストで示されている。
-- [ ] TTL キャッシュを採用した場合、restore、import、migration 後の invalidate と、diagnostics の非共有がテストで示されている。
-- [ ] response を変更した場合、dashboard、Service Worker、開いている options page の全サービスを再起動する前提と message contract が明記され、全 consumer が一致している。
-- [ ] 既存の `fetchPeriodRows` テストと `dashboardSqliteService-extra.test.ts` の期待結果が変わった箇所だけが更新されている。
-- [ ] 方式変更の影響を受ける lifecycle test の mock 形状が必要範囲で更新され、8 consumer の描画経路が維持されている。
-- [ ] BDD受け入れシナリオと、採用方式に対応する E2E、統合、単体テストが通っている。
-- [ ] `refactor` が不要と判定された場合は、現行方式を維持する根拠と contract 未変更の判断が明記されている。
+- [x] ページ数 1 と最大 5、initialized と uninitialized の条件で、ベースラインの messaging 回数と経過時間が記録されている。
+- [x] 最大 5 ページで status 5 回と query 5 回、最大 10 往復になることを再現できる。
+- [x] 3 方式が同じ測定条件で比較され、各方式の長所、制約、採用・不採用の根拠が記録されている。
+- [x] 採用方式と `refactor` の要否が、計測結果に基づいて明記されている。
+- [x] 採用方式で uninitialized 時の query 抑止と外側 retry の扱いが明記され、テストで示されている。
+- [x] TTL キャッシュ不採用のため該当テストなし（採用時の条件と不採用理由は報告書 §2 に記録）。
+- [x] response 変更不採用のため該当なし（理由は報告書 §2 に記録）。
+- [x] 既存の `fetchPeriodRows` テストと `dashboardSqliteService-extra.test.ts` の期待結果が変わった箇所だけが更新されている。（contract 未変更のため更新なし）
+- [x] 方式変更の影響を受ける lifecycle test の mock 形状が必要範囲で更新され、8 consumer の描画経路が維持されている。（contract 未変更のため更新なし・既存 pin が証拠）
+- [x] BDD受け入れシナリオと、採用方式に対応する E2E、統合、単体テストが通っている。（現行維持のため既存テストが対応テスト。計測スクラッチは削除し数値と方法を報告書に記録）
+- [x] `refactor` が不要と判定された場合は、現行方式を維持する根拠と contract 未変更の判断が明記されている。
+
+## 実績（2026-09-27）
+
+- 実 `fetchPeriodRows` + 実 service を数え上げ seam に接続したスクラッチで計測（実行後に削除）。1p=2・5p=10・uninitialized=4/0 を再現
+- (1) preflight 廃止は initialized 半減だが uninitialized で 4 status → 20 error query に悪化。(2) TTL は ~5 msg/open 削減だが invalidate 機構が不釣り合い。(3) 同梱は contract 変更 + version skew で過大
+- **裁定: 現行維持・refactor なし**（10 local IPC ≈ 10〜20ms は query 実行・描画に埋もれる）。既存 pin が証拠のためテスト更新なし
+- 前提ドリフト: 対象パネル 7 → 9。成果物は報告書のみ（production 変更なし）
