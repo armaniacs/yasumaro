@@ -1,4 +1,4 @@
-import { updateDomainFilterCache } from '../../../utils/storage/domainFilterCache.js';
+import { saveSettingsAndRefreshDomainFilterCache } from '../../../utils/storage/domainFilterCache.js';
 import { type PanelLifecycle } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
@@ -283,12 +283,15 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
               const providerModelInput = document.getElementById('providerModel') as HTMLInputElement | null;
               if (providerApiKeyInput) providerApiKeyInput.value = apiKey;
               if (providerModelInput) providerModelInput.value = model;
-              const settings2 = await settingsRepository.getAll();
-              settings2[StorageKeys.PROVIDER_TYPE] = providerId;
-              settings2[StorageKeys.PROVIDER_BASE_URL] = baseUrl;
-              settings2[StorageKeys.PROVIDER_API_KEY] = apiKey;
-              settings2[StorageKeys.PROVIDER_MODEL] = model;
-              await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(settings2);
+              // Delta write (PBI 2026-09-17-17): the four connection keys this
+              // dialog owns enter the payload alone, so the connection fields a
+              // concurrent writer changed are not reverted by a getAll() snapshot.
+              await saveSettingsAndRefreshDomainFilterCache({
+                [StorageKeys.PROVIDER_TYPE]: providerId,
+                [StorageKeys.PROVIDER_BASE_URL]: baseUrl,
+                [StorageKeys.PROVIDER_API_KEY]: apiKey,
+                [StorageKeys.PROVIDER_MODEL]: model,
+              });
             },
             onCancel: () => {}
           });

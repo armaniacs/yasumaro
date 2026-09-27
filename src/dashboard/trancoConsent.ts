@@ -1,8 +1,8 @@
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 // ============================================================================
 // Tranco Consent Panel
 // ============================================================================
 
+import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -137,14 +137,14 @@ function updateConsentUI(repo: SettingsReader, state: TrancoConsentState): void 
 
 async function handleTrancoGrant(repo: SettingsReader, version: string): Promise<void> {
   try {
-    const settings = await repo.getAll();
-
-    const updatedSettings = { ...settings };
-    updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = version;
-    updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = null;
-    updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = null;
-
-    await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
+    // Delta write (PBI 2026-09-17-17): only the three consent keys this
+    // decision owns enter the payload, so a concurrent writer's change to an
+    // unrelated key is not reverted by a getAll() snapshot.
+    await saveSettingsAndRefreshDomainFilterCache({
+      [StorageKeys.TRANCO_CONSENT_GRANTED]: version,
+      [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: null,
+      [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null,
+    });
 
     showStatus(
       'trancoStatus',
@@ -165,14 +165,12 @@ async function handleTrancoGrant(repo: SettingsReader, version: string): Promise
 
 async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
   try {
-    const settings = await repo.getAll();
-
-    const updatedSettings = { ...settings };
-    updatedSettings[StorageKeys.TRANCO_CONSENT_GRANTED] = null;
-    updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON] = 'deny';
-    updatedSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP] = Date.now();
-
-    await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(updatedSettings);
+    // Delta write, same three consent keys as the grant path (PBI 2026-09-17-17).
+    await saveSettingsAndRefreshDomainFilterCache({
+      [StorageKeys.TRANCO_CONSENT_GRANTED]: null,
+      [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: 'deny',
+      [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: Date.now(),
+    });
 
     showStatus(
       'trancoStatus',
