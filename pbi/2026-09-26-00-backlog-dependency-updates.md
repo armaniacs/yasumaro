@@ -19,9 +19,11 @@
 
 | NN | PBI | 順位 | 状態 |
 |---|---|---|---|
-| 10 | [fix-update-chrome-types](2026-09-26-10-fix-update-chrome-types.md) | 1 | ⬜ 未着手（即実施可能） |
-| 11 | [fix-jsdom-selector-length-limit](2026-09-26-11-fix-jsdom-selector-length-limit.md) | 2 | ⬜ 未着手 |
-| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | 3 | 🔵 監視中（トリガー待ち） |
+| 10 | [fix-update-chrome-types](../dev-docs/archived/pbi/2026-09-26-10-fix-update-chrome-types.md) | 1 | ✅ 完了（`afde6f6c`、2026-09-27 アーカイブ済み） |
+| 11 | [fix-jsdom-selector-length-limit](../dev-docs/archived/pbi/2026-09-26-11-fix-jsdom-selector-length-limit.md) | 2 | ✅ 完了（`d6aab50c`、2026-09-27 アーカイブ済み） |
+| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | 3 | 🔵 監視中（トリガー待ち。2026-09-27 再調査でトリガー未発火を再確認） |
+
+ラウンド完遂時に本台帳も随伴アーカイブする（12 のトリガー発火・裁定後）。
 
 ## 実測で確認した技術的事実（2026-09-26）
 
