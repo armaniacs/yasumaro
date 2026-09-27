@@ -29,7 +29,7 @@ interface RemoteAIServiceConfig {
 }
 
 /**
- * PBI 27-04: whether the breaker may consult or touch its state at all.
+ * PBI 27-07: whether the breaker may consult or touch its state at all.
  * The flag is a kill switch, not a policy dial, so it defaults to enabled —
  * an absent key must not silently withdraw the PBI 27-03 behaviour. Only an
  * explicit `false` disables it.
@@ -44,7 +44,7 @@ export class RemoteAIService implements AIService {
   private repo: SettingsReader;
   private breaker: ProviderBreakerLike;
   /**
-   * PBI 27-04: the disabled-gate notice is a one-shot, not a per-request log —
+   * PBI 27-07: the disabled-gate notice is a one-shot, not a per-request log —
    * the gate is a persistent setting, so saying so on every summary would
    * bury the rest of the log. Reset with the service worker, which is the
    * lifetime of this instance.
@@ -176,7 +176,7 @@ export class RemoteAIService implements AIService {
       ?? (DEFAULT_SETTINGS[StorageKeys.SUMMARY_MIN_LENGTH] as number);
     const slots = this.resolveProviderSlots(settings);
 
-    // PBI 27-04: read the gate off the snapshot we already hold. A second
+    // PBI 27-07: read the gate off the snapshot we already hold. A second
     // settings read here would make the kill switch cost I/O on every summary,
     // and could disagree with the slots resolved from the same read.
     const breakerGateOpen = resolveBreakerGate(settings);
@@ -222,7 +222,7 @@ export class RemoteAIService implements AIService {
         // slot is cooling down the result must say so — falling through to
         // `lastResult` would tell the user their provider configuration is
         // missing, which is false for a provider that is only suppressed.
-        // PBI 27-04: with the gate off the breaker is not consulted at all, so
+        // PBI 27-07: with the gate off the breaker is not consulted at all, so
         // `suppressed` stays empty and this branch is unreachable.
         if (breakerGateOpen && !(await this.breaker.shouldAttempt(slot.provider, slotModel))) {
           const cooldown = await this.breaker.cooldown(slot.provider, slotModel);
@@ -379,7 +379,7 @@ export class RemoteAIService implements AIService {
       }
     }
 
-    // PBI 27-05: a passing diagnostic is the user telling us the credentials
+    // PBI 27-08: a passing diagnostic is the user telling us the credentials
     // are fixed, which is the one thing a cooldown cannot work out for itself —
     // an auth failure parks a provider for 15 minutes with no other way out.
     // Only success clears: a failing probe proves nothing the breaker does not

@@ -256,7 +256,7 @@ describe('ProviderBreaker store behavior', () => {
   });
 });
 
-describe('clearAll (PBI 27-05)', () => {
+describe('clearAll (PBI 27-08)', () => {
   const KEY = 'sw:aiProviderBreaker';
   let store: ReturnType<typeof memoryStore>;
 
