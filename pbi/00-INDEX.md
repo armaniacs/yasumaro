@@ -60,7 +60,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 25件完了・アーカイブ済み / ⬜ 未着手 7件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 26件完了・アーカイブ済み / ⬜ 未着手 6件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
@@ -70,7 +70,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 | 12 | [fix-offline-recovery-single-owner](../dev-docs/archived/pbi/2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | ✅ 完了（2026-09-27 アーカイブ済み） |
 | 13 | [investigate-obsidian-write-replay-idempotency](../dev-docs/archived/pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | ✅ 完了（2026-09-27 アーカイブ済み。後続 fix 27-05 も完了） |
 | 15 | [investigate-ai-provider-circuit-breaker](../dev-docs/archived/pbi/2026-09-25-15-investigate-ai-provider-circuit-breaker.md) | investigate | 1.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み。後続 fix 3 SP を起票待ち） |
-| 16 | [investigate-dashboard-sqlite-ipc-roundtrip](2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md) | investigate | 1.33 | 1.5 | 実害未計測。計測結果待ち |
+| 16 | [investigate-dashboard-sqlite-ipc-roundtrip](../dev-docs/archived/pbi/2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md) | investigate | 1.33 | 1.5 | ✅ 完了（2026-09-27 アーカイブ済み。現行維持・refactor なしを裁定） |
 | 18 | [investigate-settings-key-single-writer](../dev-docs/archived/pbi/2026-09-25-18-investigate-settings-key-single-writer.md) | investigate | 1.5 | 2 | ✅ 完了（2026-09-27 アーカイブ済み。後続 refactor 1 SP を起票待ち） |
 | 22 | [investigate-pending-queue-poison-record](2026-09-25-22-investigate-pending-queue-poison-record.md) | investigate | 0.75 | 2 | 01 の retry 判定と共有。実データ待ち |
 | 23 | [investigate-deprecated-alias-sunset](../dev-docs/archived/pbi/2026-09-25-23-investigate-deprecated-alias-sunset.md) | investigate | 0.53 | 1.5 | ✅ 完了（2026-09-27 アーカイブ済み。後続 refactor 1 SP の垂直 slice を確定） |
@@ -153,6 +153,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 PBI 16 アーカイブ — ✅ 1件完了（16 アーカイブ済み）
+
+- [2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md](../dev-docs/archived/pbi/2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md)（✅ 完了 — `b51f9475`。investigate。実経路の数え上げで 1p=2・5p=10・uninitialized=4/0 を再現。3 方式いずれも不採用（preflight 廃止は uninitialized 悪化・TTL は機構不釣り合い・同梱は contract 変更過大）。**現行維持・refactor なし**を裁定。RICE 1.33・1.5 SP）
 
 ### 2026-09-27 PBI 10 アーカイブ — ✅ 1件完了（10 アーカイブ済み）
 
