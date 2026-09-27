@@ -18,18 +18,17 @@
 
 - [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（🔵 監視中 — RICE 0.2・1 SP・副作用🟢。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 でスコア 0.00% になる既知制約（上流 #6210、修正 PR #6220 未マージ）の採用待ち。トリガー: #6210 修正を含む vitest-runner 新版の npm リリース、または Vitest 4.x へのダウングレード裁定。トリガーまで Red/Green 手動検証を継続）
 
-### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）— ⬜ 未着手 3件 🔧非機能追加
+### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）— ✅ 2件完了・アーカイブ済み / 🔵 監視 1件 🔧非機能追加
 
 **統合 PBI**: [2026-09-26-00-backlog-dependency-updates.md](2026-09-26-00-backlog-dependency-updates.md)
 - Vision: 依存棚卸しで検出した未反映 3 件（範囲外メジャー 2 件・テスト基盤破壊 1 件）を PBI 化し着手順を確定
 - 採点: RICE 4.0 / 1.6 / 0.8 の順。3 候補間の依存なし、TypeScript 7 のみ外部トリガー（typescript-eslint 対応待ち）
 - 根拠の実測: `@types/chrome` 0.3.0 はドロップイン互換を実証 / `jsdom` 30.1.1 は dom-selector 9.x のセレクタ長上限 2048 文字に抵触（deep 4191・jpLayout 4714 文字）/ `typescript` 7 は typescript-eslint 8.70.1 の peer <6.1.0 で npm install が失敗
+- 10・11 は 2026-09-27 に実装・アーカイブ済み（アーカイブ履歴参照）
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 10 | [fix-update-chrome-types](2026-09-26-10-fix-update-chrome-types.md) | fix | 4.0 | 0.25 | なし・即実施可能（ドロップイン互換を実証済み） |
-| 11 | [fix-jsdom-selector-length-limit](2026-09-26-11-fix-jsdom-selector-length-limit.md) | fix | 1.6 | 1 | なし・`stripBySelectors.collect()` でのチャンク分割が前提 |
-| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | 🔵 監視中 — typescript-eslint の TS 7 対応リリース待ち |
+| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | 🔵 監視中 — typescript-eslint の TS 7 対応リリース待ち（2026-09-27 再調査でトリガー未発火を再確認。TS 7 強行移行は上流でクラッシュ実証済み。typedoc も同時更新対象に追加） |
 
 ### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 3件完了・⬜ 未着手 2件 🔧非機能追加
 
@@ -156,6 +155,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 依存更新ラウンド PBI 10・11 アーカイブ — ✅ 2件完了（10・11 アーカイブ済み）
+
+実装済みで INDEX 未反映だった 2 件を分類・アーカイブ。実装コミット（`afde6f6c`・`d6aab50c`、いずれも main マージ済み）、CHANGELOG 6.9.27 への記載追記、`npm run type-check` / `npm run lint` / `npm test` green（928 files・14,389 tests passed・21 skipped、lint 0 errors / 145 warnings = baseline）を確認の上移動。checkbox は実装実測で反映。12 はトリガー待ちのため pbi/ に維持（2026-09-27 再調査でトリガー未発火・typedoc 同時更新対象を PBI に記録済み）。
+
+- [2026-09-26-10-fix-update-chrome-types.md](../dev-docs/archived/pbi/2026-09-26-10-fix-update-chrome-types.md)（✅ 完了 — `afde6f6c`。`@types/chrome` 0.2.9 → 0.3.0。type-check 0 errors・`type-check:test` エラー発生箇所は更新前と完全一致（既存 278 件のみ・diff 0）・validate PASS・`release:check:deps` PASS。メジャー更新だが実測でドロップイン互換。RICE 4.0・0.25 SP・副作用🟢）
+- [2026-09-26-11-fix-jsdom-selector-length-limit.md](../dev-docs/archived/pbi/2026-09-26-11-fix-jsdom-selector-length-limit.md)（✅ 完了 — `d6aab50c`。jsdom 30.0.1 → 30.1.1。dom-selector 9.x のセレクタ長上限 2048 文字に対し、`stripBySelectors.collect()` 一点でセレクタを 2000 文字以下のチャンクに分割（引用符内・括弧内・エスケープ後のカンマはリテラル保持）。新規 chunk テスト 14 件、aiSummaryCleaner 系 32 ファイル / 932 tests 全 PASS、Red/Green 検証（チャンク無効化で 9 テスト red）済み。`patterns.test.ts` の 3 テストは chunk 経由の照合に変更。RICE 1.6・1 SP・副作用🟡軽微（実測で挙動同一を確認））
 
 ### 2026-09-27 autonomous-task-closer wave 3 — ✅ 6件完了（05 移動漏れ修復・27-01・26-09・25-31・25-32・14 アーカイブ済み）
 
