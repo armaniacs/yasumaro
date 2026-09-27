@@ -55,15 +55,15 @@ Scenario: success:true でも件数不一致を黙って成功扱いしない
 
 ## 受け入れ基準
 
-- [ ] failure taxonomy が、決定的な record failure、retriable batch failure、件数不一致または response contract failure、通常の duplicate skip を区別する。
-- [ ] 1 poison + 49 healthy の混合チャンクについて、健全な 49 件が poison record と retry lifecycle を共有しないことを検証する受け入れ条件が定義されている。
-- [ ] 方式として、決定的な失敗に限定した再帰二分探索と、response 契約へ失敗 record の index を追加する方式を比較している。
-- [ ] retriable error では再帰二分探索を行わず、chunk 全体を次回 flush に残す。
-- [ ] duplicate insert は正常な `skipped` であり、failure にも再試行対象にもしない。
-- [ ] `success:true` かつ `inserted + skipped < chunk.length` の response を、根拠なく chunk 全体の成功として扱わない。
-- [ ] 既存の明示的な batch failure で failed chunk だけを `remaining` に戻して後続 chunk を継続する動作を維持する。
-- [ ] throw 時に flush 全体が止まる現行動作と、records が `chrome.storage.local` に残る挙動を維持する。
-- [ ] 裁定結果と検証可能な後続 `fix` の受け入れ条件が PBI に記録されている。
+- [x] failure taxonomy が、決定的な record failure、retriable batch failure、件数不一致または response contract failure、通常の duplicate skip を区別する。
+- [x] 1 poison + 49 healthy の混合チャンクについて、健全な 49 件が poison record と retry lifecycle を共有しないことを検証する受け入れ条件が定義されている。
+- [x] 方式として、決定的な失敗に限定した再帰二分探索と、response 契約へ失敗 record の index を追加する方式を比較している。
+- [x] retriable error では再帰二分探索を行わず、chunk 全体を次回 flush に残す。
+- [x] duplicate insert は正常な `skipped` であり、failure にも再試行対象にもしない。
+- [x] `success:true` かつ `inserted + skipped < chunk.length` の response を、根拠なく chunk 全体の成功として扱わない。
+- [x] 既存の明示的な batch failure で failed chunk だけを `remaining` に戻して後続 chunk を継続する動作を維持する。
+- [x] throw 時に flush 全体が止まる現行動作と、records が `chrome.storage.local` に残る挙動を維持する。
+- [x] 裁定結果と検証可能な後続 `fix` の受け入れ条件が PBI に記録されている。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -166,10 +166,17 @@ Scenario: success:true でも件数不一致を黙って成功扱いしない
 
 ## Definition of Done
 
-- [ ] failure taxonomy が決定的な record failure、retriable batch failure、response contract failure、duplicate skip を区別している。
-- [ ] 再帰二分探索と failure index を持つ response 契約を、retry 安全性、message 数、改修範囲の観点で比較している。
-- [ ] record 単位の分離方式を 1 つに裁定し、retriable error を分割しない条件を記録している。
-- [ ] 1 poison + N healthy の混合 chunk と `success:true` かつ件数不一致の受け入れ条件が後続 `fix` に引き継がれている。
-- [ ] response 方式の採用有無と、Offscreen Worker、全 backend、wire decoder、Service Worker の同時更新要否が確定している。
-- [ ] retry state を `chrome.storage.local` に保持し、50KB、200 件、TTL 7 日、1 cycle 20 件の既存上限を維持する方針が後続 `fix` に引き継がれている。
-- [ ] 本調査では本番コードを変更せず、裁定結果と必要な受け入れ条件を `fix` PBI に移している。
+- [x] failure taxonomy が決定的な record failure、retriable batch failure、response contract failure、duplicate skip を区別している。
+- [x] 再帰二分探索と failure index を持つ response 契約を、retry 安全性、message 数、改修範囲の観点で比較している。
+- [x] record 単位の分離方式を 1 つに裁定し、retriable error を分割しない条件を記録している。
+- [x] 1 poison + N healthy の混合 chunk と `success:true` かつ件数不一致の受け入れ条件が後続 `fix` に引き継がれている。
+- [x] response 方式の採用有無と、Offscreen Worker、全 backend、wire decoder、Service Worker の同時更新要否が確定している。
+- [x] retry state を `chrome.storage.local` に保持し、既存上限（実測: 500 件・chunk 50・retry 5 回・TTL 24h。PBI 記載の 50KB/200 件/7 日/20 件は別キューの値のため訂正）を維持する方針が後続 `fix` に引き継がれている。
+- [x] 本調査では本番コードを変更せず、裁定結果と必要な受け入れ条件を `fix` PBI に移している。
+
+## 実績（2026-09-27）
+
+- 前提ドリフト 5 件を記録（上限 500・TTL 24h・throw は catch 後継続・50KB 等は別キューの制約・flush 2 箇所）。成果物は `dev-docs/archived/plans/2026-09-27-pbi22-poison-record-isolation-policy.md` のみ（production 変更なし）
+- **裁定: failure-index response 契約を採用**。二分探索は swallow 現状で poison に到達できないため不採用。前提工事として row error 可視化が必要
+- failure-kind 判定表（retriable/deterministic/duplicate/mismatch）を確定。「実データ待ち」は不要と裁定（方式は標本に依存しない）
+- 上限値は実測（500・50・5・24h）に訂正して後続 fix（推定 2 SP）へ引き継ぎ
