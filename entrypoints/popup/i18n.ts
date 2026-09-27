@@ -3,6 +3,11 @@
  * Chrome Extensionのi18n APIを使用して翻訳を適用する
  */
 
+// Shared with src/utils/i18n-dom.ts so args parsing has one spec.
+// entrypoints/popup/main.ts already imports from src/utils directly, so the
+// import path is not an extra bundling constraint.
+import { parseI18nArgs } from '../../src/utils/i18n-dom.js';
+
 /**
  * 単一の翻訳キーから翻訳文字列を取得
  * @param {string} key - 翻訳キー
@@ -91,15 +96,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     const key = htmlEl.getAttribute('data-i18n');
     if (!key) return;
 
-    const substitutions = htmlEl.getAttribute('data-i18n-args');
-    let args = null;
-    if (substitutions) {
-      try {
-        args = JSON.parse(substitutions);
-      } catch (_e) {
-        // 不正なJSONは無視
-      }
-    }
+    const args = parseI18nArgs(htmlEl.getAttribute('data-i18n-args'));
 
     const translatedText = getMessage(key, args);
 
@@ -121,8 +118,7 @@ export function applyI18n(element: HTMLElement | Document = document): void {
     const htmlEl = el as HTMLInputElement | HTMLTextAreaElement;
     const key = htmlEl.getAttribute('data-i18n-input-placeholder');
     if (key) { // Check if key exists
-      const substitutions = htmlEl.getAttribute('data-i18n-args');
-      const args = substitutions ? JSON.parse(substitutions) : null;
+      const args = parseI18nArgs(htmlEl.getAttribute('data-i18n-args'));
       htmlEl.placeholder = getMessage(key, args);
     }
   });
