@@ -40,10 +40,50 @@ export interface PipelineError {
   strategy: ErrorStrategy;
   timestamp: number;
   recoveryKind?: OfflineJobKind;
+  /** Structured offline-enqueue result carried by StepExecutor (PBI 2026-09-25-12). */
+  offlineEnqueue?: OfflineEnqueueInfo | undefined;
   context?: {
     url: string;
     tabId?: number | undefined;
   };
+}
+
+/**
+ * Structured offline-queue enqueue result, attached to the thrown error by
+ * StepExecutor so the outcome policy can decide the sole recovery owner
+ * (PBI 2026-09-25-12): when `enqueued` is true the offline job is the only
+ * owner and no pending page may be registered for the same recording.
+ */
+export interface OfflineEnqueueInfo {
+  /** The step was eligible and the enqueue was actually attempted. */
+  attempted: boolean;
+  /** The job is durably queued — the offline job is the sole recovery owner. */
+  enqueued: boolean;
+  /** Job kind that was (or would have been) queued. */
+  jobKind?: OfflineJobKind | undefined;
+}
+
+/**
+ * Reads the offline-enqueue result a step failure may carry. Absent when the
+ * step never reached the offline-queue eligibility gate.
+ */
+export function readOfflineEnqueueInfo(thrown: unknown): OfflineEnqueueInfo | undefined {
+  if (thrown === null || typeof thrown !== 'object') {
+    return undefined;
+  }
+  const info = (thrown as { offlineEnqueue?: unknown }).offlineEnqueue;
+  if (info === null || typeof info !== 'object') {
+    return undefined;
+  }
+  return info as OfflineEnqueueInfo;
+}
+
+/** Attaches the enqueue result to the original error without altering it. */
+export function attachOfflineEnqueueInfo(error: unknown, info: OfflineEnqueueInfo): void {
+  if (error === null || typeof error !== 'object') {
+    return;
+  }
+  (error as { offlineEnqueue?: OfflineEnqueueInfo }).offlineEnqueue = info;
 }
 
 /**

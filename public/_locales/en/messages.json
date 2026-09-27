@@ -586,6 +586,9 @@
   "recordingFailed": {
     "message": "Recording Failed"
   },
+  "pendingRecoveryReady": {
+    "message": "Automatic retries were exhausted. You can re-run this recording from the pending pages list."
+  },
   "obsidianSyncFailed": {
     "message": "Obsidian Sync Failed"
   },
