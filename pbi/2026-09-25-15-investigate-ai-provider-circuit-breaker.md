@@ -232,17 +232,17 @@ Scenario: 同時に到着した失敗と成功を競合なく反映する
 
 ## Definition of Done
 
-- [ ] 依存 PBI `pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md` の完了条件と、C28 の SSOT 利用方針が記載されている。
-- [ ] 5 Whys の全問に、確認済みの事実、裁定、根拠、残存リスクが対応づけられている。
-- [ ] 429、5xx、timeout、network error、auth failure、success の breaker 扱いを表す failure class matrix が完成している。
-- [ ] threshold、cooldown、half-open probe、success reset、testConnection の bypass および reset rule が裁定されている。
-- [ ] state は chrome.storage.session または裁定した `SessionStorePort` 実装へ保存し、browser close で消える前提が明記されている。
-- [ ] provider と model の key に API key を含まないこと、log および exception に認証情報を出さないことが明記されている。
-- [ ] concurrent state update の直列化方式と、state update 失敗時の既存 fallback 継続が明記されている。
-- [ ] 要約 loop、接続試験 loop、2つの production summary consumer、FallbackAIService の委譲、MessageRouter の adapter について適用範囲が整理されている。
-- [ ] MAX_PROVIDERS、最大10件、built-in 3件、remote 7件、外部候補最大9件、既存 provider retry、in-flight dedupe、single-flight の維持条件が記載されている。
-- [ ] rateLimiter、aiUsageTracker、`SessionStore` との責務境界が裁定され、pendingSqliteQueue が直接スコープ外である。
-- [ ] 新規 module の compositionManifest 登録方針と、state store の test seam が後続 `fix` の受け入れ基準に含まれる。
-- [ ] 新しい Chrome permission、module-global state、setTimeout 依存、API key の漏出を導入しない条件が明記されている。
-- [ ] 裁定結果が3 SP以上の後続 `fix` の垂直 slice、BDD test、Outside-In test strategy へ変換されている。
-- [ ] 本 PBI は調査と仕様確定に限定し、production code を変更していない。
+- [x] 依存 PBI `pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md` の完了条件と、C28 の SSOT 利用方針が記載されている（11 は完了・アーカイブ済み。調査報告書 §0・§3）
+- [x] 5 Whys の全問に、確認済みの事実、裁定、根拠、残存リスクが対応づけられている（調査報告書 §1）
+- [x] 429、5xx、timeout、network error、auth failure、success の breaker 扱いを表す failure class matrix が完成している（§3。auth は threshold 1・15 分、rate_limit は threshold 1・10 分の個別 cooldown）
+- [x] threshold、cooldown、half-open probe、success reset、testConnection の bypass および reset rule が裁定されている（§4・§7。threshold 3・cooldown 5 分・probe 1・testConnection は bypass only）
+- [x] state は chrome.storage.session または裁定した `SessionStorePort` 実装へ保存し、browser close で消える前提が明記されている（§2 Q2・§5。SessionStorePort + flushImmediately 必須）
+- [x] provider と model の key に API key を含まないこと、log および exception に認証情報を出さないことが明記されている（§5）
+- [x] concurrent state update の直列化方式と、state update 失敗時の既存 fallback 継続が明記されている（§6。per-key promise chain + fail-open）
+- [x] 要約 loop、接続試験 loop、2つの production summary consumer、FallbackAIService の委譲、MessageRouter の adapter について適用範囲が整理されている（§8）
+- [x] MAX_PROVIDERS、最大10件、built-in 3件、remote 7件、外部候補最大9件、既存 provider retry、in-flight dedupe、single-flight の維持条件が記載されている（§2）
+- [x] rateLimiter、aiUsageTracker、`SessionStore` との責務境界が裁定され、pendingSqliteQueue が直接スコープ外である（§6・§8）
+- [x] 新規 module の compositionManifest 登録方針と、state store の test seam が後続 `fix` の受け入れ基準に含まれる（§9）
+- [x] 新しい Chrome permission、module-global state、setTimeout 依存、API key の漏出を導入しない条件が明記されている（§5・§9）
+- [x] 裁定結果が3 SP以上の後続 `fix` の垂直 slice、BDD test、Outside-In test strategy へ変換されている（§10）
+- [x] 本 PBI は調査と仕様確定に限定し、production code を変更していない（成果物は `dev-docs/plans/2026-09-27-pbi15-ai-provider-circuit-breaker-policy.md` のみ）
