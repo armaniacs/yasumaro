@@ -12,8 +12,8 @@ API key を差し替えたのに要約が 15 分間出ないユーザーとし�
 
 - 順位: 2 / 3
 - RICEスコア: 0.25（Reach=1 / Impact=1 / Confidence=50% / Effort=2 SP）
-- 根拠: policy §4 が「認証失敗 15 分の UX 不満が出たら testConnection 経由の reset を強化」と再調整トリガーとして名指ししている既有の将来項目。Confidence 50% は「必要性の広さが未計測」による。PBI 27-04 のゲートを OFF にすれば同じ効果を自動的に得られるため、順位は 27-04 の後。
-- 依存: PBI 27-04 のゲート機能に依存しない（独立実装可能）。ただし「OFF にする代わりに別の方法がある」という説明を UI には並記できる関係にある
+- 根拠: policy §4 が「認証失敗 15 分の UX 不満が出たら testConnection 経由の reset を強化」と再調整トリガーとして名指ししている既有の将来項目。Confidence 50% は「必要性の広さが未計測」による。PBI 27-07 のゲートを OFF にすれば同じ効果を自動的に得られるため、順位は 27-07 の後。
+- 依存: PBI 27-07 のゲート機能に依存しない（独立実装可能）。ただし「OFF にする代わりに別の方法がある」という説明を UI には並記できる関係にある
 
 ## 5 Whys の裁定（2026-09-27）
 
@@ -21,7 +21,7 @@ API key を差し替えたのに要約が 15 分間出ないユーザーとし�
 2. なぜ解除手段が無いのか: policy §7 が lazy half-open を採用し、手動 reset を意図的に除外した。
 3. なぜ除外が正しいと考えられるのか: 追加操作を設けると「ユーザーは操作しないと壊れている」という状態を作り、half-open の単純さを壊す。
 4. なぜ今見直さないのか: 認証情報を更新した直後だけ 15 分の待ちが発生する。credential 期限切れはユーザーの操作で回復する故障であり、「待つ」ことが正しい指示ではない。
-5. なぜ PBI 27-04 と別なのか: ゲート（機能を止める）とリセット（状態だけ消す）は別の到達点を持つ。OFF にすると要約の保護も止まるため、「要約は動かしたい、保護だけ外したい」という需要はリセットでしか満たせない。
+5. なぜ PBI 27-07 と別なのか: ゲート（機能を止める）とリセット（状態だけ消す）は別の到達点を持つ。OFF にすると要約の保護も止まるため、「要約は動かしたい、保護だけ外したい」という需要はリセットでしか満たせない。
 
 **裁定**: `ProviderBreaker` に `clearAll()` を追加し、設定画面の既存 connection test の成功時に呼び出す。専用ボタンは設けず、ユーザーの既有の診断操作に載せる。リセット（breaker state の削除）は「cooldown 中にも除外される」既存契約（policy §7）を壊さない。
 
@@ -78,7 +78,7 @@ Scenario: 解除は全 provider をまとめて行う
 
 - `clearAll()` は store が例外を投げても握りつぶす（fail-open）。clear に失敗しても要約は止まらない
 - 既存の single-flight / dedupe 契約は変更しない
-- 本 PBI は PBI 27-04 と並んで「保護を止めたまま要約を動かす」手段になる。UI 文言で 2 者の関係を明示しない（利用者が判断する材料ではない）
+- 本 PBI は PBI 27-07 と並んで「保護を止めたまま要約を動かす」手段になる。UI 文言で 2 者の関係を明示しない（利用者が判断する材料ではない）
 
 ## 見積もり
 
@@ -111,7 +111,7 @@ BDD シナリオの対応:
 
 裁定の補足（2 点）:
 
-1. **ゲート OFF では `clearAll()` を呼ばない。** 解除は breaker state への write なので、PBI 27-04 の「ゲート OFF なら breaker state は read も write もされない」という契約の裏側に置いた。既存テスト `runs testConnection as usual with the gate off, breaker untouched` が「接続試験が成功しても clearAll しない」を担保している。OFF の間は cooldown 自体が無効なので、解除を必要としない状態で write だけ発生させない。
+1. **ゲート OFF では `clearAll()` を呼ばない。** 解除は breaker state への write なので、PBI 27-07 の「ゲート OFF なら breaker state は read も write もされない」という契約の裏側に置いた。既存テスト `runs testConnection as usual with the gate off, breaker untouched` が「接続試験が成功しても clearAll しない」を担保している。OFF の間は cooldown 自体が無効なので、解除を必要としない状態で write だけ発生させない。
 2. **遷移なしの store write を省いた。** `applyMutation` は「遷移関数が入力オブジェクトをそのまま返したら write しない」を採用した。`recordSuccess` / `recordFailure` の既存コメントは「no write needed」と書きながら実際のコードは常に write していたので、この仕様で初めてコメントの意味が通り、既に空の状態への `clearAll()` が真の no-op になる（BDD シナリオ 3）。この write 省略を支える 3 テスト（単体 2・統合 1）は、`applyMutation` の identity 分岐を一時的に外すと 3 件とも red になることを実測済み。
 
 ## Definition of Done

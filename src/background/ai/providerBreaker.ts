@@ -166,7 +166,7 @@ export interface ProviderBreakerLike {
   cooldown(provider: string, model?: string): Promise<ProviderCooldown | null>;
   recordSuccess(provider: string, model?: string): Promise<void>;
   recordFailure(provider: string, model: string | undefined, failure: FailureMetadata): Promise<void>;
-  /** Drop every entry (PBI 27-05). One wholesale form — never a per-slot delete. */
+  /** Drop every entry (PBI 27-08). One wholesale form — never a per-slot delete. */
   clearAll(): Promise<void>;
 }
 
@@ -272,7 +272,7 @@ export class ProviderBreaker implements ProviderBreakerLike {
   }
 
   /**
-   * PBI 27-05: the manual reset. A cooldown is a guess about a provider that
+   * PBI 27-08: the manual reset. A cooldown is a guess about a provider that
    * has not been looked at since it tripped, so one successful connection test
    * invalidates every one of them at once — partial deletion would leave a
    * stale entry to suppress a slot the user never tested. It rides the shared

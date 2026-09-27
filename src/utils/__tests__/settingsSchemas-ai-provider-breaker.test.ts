@@ -19,7 +19,7 @@ function localeMessages(locale: string): Record<string, { message?: string }> {
   ) as Record<string, { message?: string }>;
 }
 
-describe('AI provider breaker rollout gate (PBI 27-04)', () => {
+describe('AI provider breaker rollout gate (PBI 27-07)', () => {
   it('stores the flag under its documented key', () => {
     expect(StorageKeys.AI_PROVIDER_BREAKER_ENABLED).toBe('ai_provider_breaker_enabled');
   });

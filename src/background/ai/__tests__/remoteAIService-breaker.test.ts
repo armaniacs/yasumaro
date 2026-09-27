@@ -246,7 +246,7 @@ describe('generateSummary with breaker', () => {
   });
 });
 
-describe('testConnection reset (PBI 27-05)', () => {
+describe('testConnection reset (PBI 27-08)', () => {
   it('still bypasses the cooldown, then clears it so the next summary is attempted', async () => {
     const store = memoryStore();
     const breaker = new ProviderBreaker(store);
@@ -433,7 +433,7 @@ describe('generateSummary with the breaker gate', () => {
 
     expect(factory).toHaveBeenCalledTimes(1);
     expect(result.success).toBe(true);
-    // PBI 27-05 adds clearAll() to this path, and the kill switch still wins:
+    // PBI 27-08 adds clearAll() to this path, and the kill switch still wins:
     // the reset is a breaker write, so it stays behind the same gate.
     expect(spy.calls).toEqual([]);
     // The gate hides the cooldown, it does not heal it.
