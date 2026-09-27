@@ -6,6 +6,8 @@ export const SESSION_KEYS = {
   SKIP_AI_RATE_LIMITER: 'sw:rateLimiter',
   TAB_CACHE: 'sw:tabCache',
   RECORDING_CACHE: 'sw:recordingCache',
+  /** PBI 27-03: AI provider circuit-breaker state (provider × model entries). */
+  AI_PROVIDER_BREAKER: 'sw:aiProviderBreaker',
 } as const;
 
 /**
