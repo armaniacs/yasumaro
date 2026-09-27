@@ -38,7 +38,12 @@ vi.mock('../builtInAIClient.js', () => ({ BuiltInAIClient: mocks.BuiltInAIClient
 vi.mock('../ai/FallbackAIService.js', () => ({ FallbackAIService: mocks.FallbackAIService }));
 vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService }));
 vi.mock('../ai/RemoteAIService.js', () => ({ RemoteAIService: mocks.RemoteAIService }));
-vi.mock('../sessionStore.js', () => ({ SessionStore: mocks.SessionStore }));
+vi.mock('../sessionStore.js', async (importOriginal) => {
+  // PBI 27-03: providerBreaker.ts reads SESSION_KEYS at module load, so the
+  // mock must preserve the real constants and stub only the class.
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, SessionStore: mocks.SessionStore };
+});
 vi.mock('../headerDetector.js', () => ({ HeaderDetector: mocks.HeaderDetector }));
 vi.mock('../recordingCache.js', () => ({
   RecordingCache: { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache },

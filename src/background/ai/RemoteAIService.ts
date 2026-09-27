@@ -19,21 +19,26 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { FailureKind, createFailure, resolveFailure, type FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { disabledBreaker, type ProviderBreakerLike } from './providerBreaker.js';
 
 interface RemoteAIServiceConfig {
   builtInAiClient?: BuiltInAiProvider;
   repo?: SettingsReader;
+  /** PBI 27-03: injected breaker; defaults to disabled (try all, remember nothing). */
+  breaker?: ProviderBreakerLike;
 }
 
 export class RemoteAIService implements AIService {
   private providers: Map<string, (settings: Settings) => AIProviderStrategy>;
   private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
   private repo: SettingsReader;
+  private breaker: ProviderBreakerLike;
 
   constructor(private config: RemoteAIServiceConfig = {}) {
     this.providers = new Map();
     this.inFlightSummaryRequests = new Map();
     this.repo = config.repo ?? settingsRepository;
+    this.breaker = config.breaker ?? disabledBreaker;
     this.registerDefaultProviders();
   }
 
@@ -168,6 +173,20 @@ export class RemoteAIService implements AIService {
 
       for (let index = 0; index < slots.length; index++) {
         const slot = slots[index]!;
+        const slotModel = this.resolveEffectiveModel(settings, slot);
+        // PBI 27-03: a slot in breaker cooldown is not attempted at all.
+        // Skipped slots stay out of attemptedProviders (they were never
+        // tried) and out of slotFailures (a skip is not a failure). When
+        // every slot is cooling down the loop returns the initial result —
+        // the same shape as "no usable provider", never a fabricated kind.
+        if (!(await this.breaker.shouldAttempt(slot.provider, slotModel))) {
+          addLog(LogType.INFO, 'AI provider slot skipped (breaker cooldown)', {
+            provider: slot.provider,
+            ...pickDefined({ model: slotModel }),
+            traceId: options?.traceId ?? '',
+          });
+          continue;
+        }
         attemptedProviders.push(slot.provider);
         const result = await this.processSummarySlot(
           slot,
@@ -177,6 +196,15 @@ export class RemoteAIService implements AIService {
           options?.traceId ?? '',
           url,
         );
+        if (result.success) {
+          // Any success resets the breaker — even a too-short one: the
+          // provider answered, so it is healthy (policy §3).
+          await this.breaker.recordSuccess(slot.provider, slotModel);
+        } else if (result.failure !== undefined) {
+          // Only taxonomy-carrying failures feed the breaker. Success-but-
+          // short results and unclassified failures are not breaker inputs.
+          await this.breaker.recordFailure(slot.provider, slotModel, result.failure);
+        }
         if (result.success && result.summary.length >= minLength) {
           // A later slot recovered — keep the earlier failures for diagnostics.
           return slotFailures.length > 0 ? { ...result, slotFailures } : result;

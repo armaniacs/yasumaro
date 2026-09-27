@@ -18,6 +18,7 @@
 import { createAIService } from './ai/aiServiceFactory.js';
 import { RemoteAIService } from './ai/RemoteAIService.js';
 import type { AIService } from './ai/AIService.js';
+import { ProviderBreaker } from './ai/providerBreaker.js';
 import { ObsidianClient } from './obsidianClient.js';
 import { getSharedSqliteClient } from './sqlite/offscreenGateway.js';
 import type { SqliteClient } from './sqlite/offscreenGateway.js';
@@ -103,7 +104,10 @@ export const compositionManifest: readonly CompositionEntry[] = [
         },
       }),
   },
-  { key: 'remoteAiService', singleton: true, factory: () => new RemoteAIService() },
+  { key: 'remoteAiService', singleton: true, factory: (c) => new RemoteAIService({ breaker: c.resolve<ProviderBreaker>('aiProviderBreaker') }) },
+  // PBI 27-03: AI provider circuit breaker (policy SSOT in providerBreaker.ts).
+  // Resolved here so the wiring test — not just a direct import — proves it.
+  { key: 'aiProviderBreaker', singleton: true, factory: (c) => new ProviderBreaker(c.resolve<SessionStorePort>('sessionStore')) },
   { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
   { key: 'settingsRepository', singleton: true, factory: () => new SettingsRepository(new SettingsChromeStorageAdapter()) },
   { key: 'perUrlMutexMap', singleton: true, factory: () => new PerUrlMutexMap() },

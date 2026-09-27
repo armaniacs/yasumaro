@@ -53,21 +53,21 @@ Scenario: 同時に到着した失敗と成功を競合なく反映する
 
 ## 受け入れ基準
 
-- [ ] 新規 module `src/background/ai/providerBreaker.ts` が policy 裁定（調査報告書 §3 matrix・§4 parameter table）を SSOT として実装している。threshold 3・cooldown 5 分（auth 15 分・rate_limit 10 分）・probe 1・success reset はテーブルの値を定数化し、テーブルと同時にしか変更できない
-- [ ] breaker state は `SESSION_KEYS.AI_PROVIDER_BREAKER = 'sw:aiProviderBreaker'` で chrome.storage.session（`SessionStorePort` 経由、書き込みは `flushImmediately: true`）に保存し、module-global Map を SSOT にしない
-- [ ] state key は `${provider}::${model}`（model 未設定時 `${provider}::default`）で API key を含まない
-- [ ] 欠落 state は failures 0 扱い、malformed state は当該エントリ削除 + failures 0 扱い（fail-open）
-- [ ] cooldown は保存済み `openUntil` と現在時刻の lazy 比較のみで判定し、setTimeout・alarm を生成しない
-- [ ] concurrent read-modify-write は per-key promise chain で直列化し、update 失敗は握りつぶして要約 fallback を継続する
-- [ ] `generateSummary` の fallback loop で試行前に skip 判定、結果後に state update（成功 reset / matrix 判定による加算）を行う。MAX_PROVIDERS の SSOT（`RemoteAIService.ts:55`）は変更しない
-- [ ] testConnection loop（`RemoteAIService.ts:211-246`、MessageRouter adapter 2 件）は cooldown による skip を受けず、結果を state に反映しない
-- [ ] `compositionManifest.ts` に providerBreaker module を登録する（test からの直接 import 成功だけでは完了としない）
-- [ ] `in-flight dedupe` と `single-flight` の既存挙動を維持し、breaker state update を dedupe に代用しない
-- [ ] rateLimiter（origin policy）・aiUsageTracker（全体 quota）・pendingSqliteQueue（AI 再実行なし）に一切触れない
-- [ ] 新しい Chrome permission・`Promise.then` chain・拡張子なし ESM import を追加しない
-- [ ] `RemoteAIService.test.ts`（10 スロット・優先順位・fallback・dedupe・single-flight の既存契約）と `RemoteAIServiceSlotLog.test.ts` を green 維持する
-- [ ] 単体テスト: matrix の各 kind（加算/無視/reset）・threshold 直前/ちょうど/超過・cooldown 直前/境界/経過後（fake clock）・half-open・malformed state・API key 非包含を網羅する
-- [ ] 統合テスト: 2 consumers（privacyPipeline・reviewSummaryGenerator）経由の一貫適用、同時 update の直列化、taxonomy → breaker 変換が message 依存なしで動作することを確認する
+- [x] 新規 module `src/background/ai/providerBreaker.ts` が policy 裁定（調査報告書 §3 matrix・§4 parameter table）を SSOT として実装している。threshold 3・cooldown 5 分（auth 15 分・rate_limit 10 分）・probe 1・success reset はテーブルの値を定数化し、テーブルと同時にしか変更できない
+- [x] breaker state は `SESSION_KEYS.AI_PROVIDER_BREAKER = 'sw:aiProviderBreaker'` で chrome.storage.session（`SessionStorePort` 経由、書き込みは `flushImmediately: true`）に保存し、module-global Map を SSOT にしない
+- [x] state key は `${provider}::${model}`（model 未設定時 `${provider}::default`）で API key を含まない
+- [x] 欠落 state は failures 0 扱い、malformed state は当該エントリ削除 + failures 0 扱い（fail-open）
+- [x] cooldown は保存済み `openUntil` と現在時刻の lazy 比較のみで判定し、setTimeout・alarm を生成しない
+- [x] concurrent read-modify-write は per-key promise chain で直列化し、update 失敗は握りつぶして要約 fallback を継続する
+- [x] `generateSummary` の fallback loop で試行前に skip 判定、結果後に state update（成功 reset / matrix 判定による加算）を行う。MAX_PROVIDERS の SSOT（`RemoteAIService.ts:55`）は変更しない
+- [x] testConnection loop（`RemoteAIService.ts:211-246`、MessageRouter adapter 2 件）は cooldown による skip を受けず、結果を state に反映しない
+- [x] `compositionManifest.ts` に providerBreaker module を登録する（test からの直接 import 成功だけでは完了としない）
+- [x] `in-flight dedupe` と `single-flight` の既存挙動を維持し、breaker state update を dedupe に代用しない
+- [x] rateLimiter（origin policy）・aiUsageTracker（全体 quota）・pendingSqliteQueue（AI 再実行なし）に一切触れない
+- [x] 新しい Chrome permission・`Promise.then` chain・拡張子なし ESM import を追加しない
+- [x] `RemoteAIService.test.ts`（10 スロット・優先順位・fallback・dedupe・single-flight の既存契約）と `RemoteAIServiceSlotLog.test.ts` を green 維持する
+- [x] 単体テスト: matrix の各 kind（加算/無視/reset）・threshold 直前/ちょうど/超過・cooldown 直前/境界/経過後（fake clock）・half-open・malformed state・API key 非包含を網羅する
+- [x] 統合テスト: 2 consumers（privacyPipeline・reviewSummaryGenerator）経由の一貫適用、同時 update の直列化、taxonomy → breaker 変換が message 依存なしで動作することを確認する
 
 ## 技術的考慮事項
 
@@ -77,6 +77,14 @@ Scenario: 同時に到着した失敗と成功を競合なく反映する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する（既存契約テストの green 維持を含む）
-- [ ] 調査報告書 §9 の compositionManifest 登録と test seam が実装されている
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する（type-check 0 / lint 0 errors / test 932 files・14,451 passed。既存契約 `RemoteAIService.test.ts`・`RemoteAIServiceSlotLog.test.ts` green 維持）
+- [x] 調査報告書 §9 の compositionManifest 登録と test seam が実装されている（`aiProviderBreaker` 登録 + `compositionManifest-breaker.test.ts` で manifest 経由の解決を証明）
+
+## 実績（2026-09-27）
+
+- 新規 module `src/background/ai/providerBreaker.ts`: policy §3 matrix・§4 parameter table を SSOT として実装（threshold 3・cooldown 5 分 / auth 15 分 / rate_limit 10 分・probe は lazy half-open のみ）
+- state は `SESSION_KEYS.AI_PROVIDER_BREAKER = 'sw:aiProviderBreaker'` で `SessionStorePort` 経由（書き込みは `flushImmediately: true`）。key は `${provider}::${model}` のみ
+- `RemoteAIService` は `config.breaker` 注入（既定は disabled — 既存テストは無変更で green）。loop は試行前 skip + 結果後 update（成功 reset / taxonomy 付き失敗のみ加算）。testConnection は無変更（bypass only）
+- 新規テスト 37 件（unit 30・integration 6・wiring 1）。Red/Green 検証済み（module 未作成で import 失敗を確認後に Green）
+- 副作用: 既存 composition テスト 2 件の sessionStore mock が `SESSION_KEYS` を落としていたため `importOriginal` spread に修正（production 変更なし）
