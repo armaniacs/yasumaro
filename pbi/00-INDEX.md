@@ -60,7 +60,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 23件完了・アーカイブ済み / ⬜ 未着手 9件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 24件完了・アーカイブ済み / ⬜ 未着手 8件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
@@ -77,7 +77,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 | 25 | [fix-encryption-secret-wrapped-storage](2026-09-25-25-fix-encryption-secret-wrapped-storage.md) | fix | 0.5 | 3 | 27 の前提。IDB 障害方針が未決 |
 | 26 | [backlog-wasm-binary-reproducibility-watch](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) | backlog | 0.4 | 0.5 | トリガー: toolchain / wasm-pack / manifest 変更時 |
 | 27 | [investigate-master-password-removal-reencrypt](2026-09-25-27-investigate-master-password-removal-reencrypt.md) | investigate | 0.33 | 3 | 25 の後。ADR supersede が未決 |
-| 28 | [investigate-content-hot-path-yield](2026-09-25-28-investigate-content-hot-path-yield.md) | investigate | 0.25 | 2 | 30 と `contentExtractor` で競合 |
+| 28 | [investigate-content-hot-path-yield](../dev-docs/archived/pbi/2026-09-25-28-investigate-content-hot-path-yield.md) | investigate | 0.25 | 2 | ✅ 完了（2026-09-27 アーカイブ済み。offscreen 化を裁定・後続実装は別 PBI） |
 | 29 | [backlog-offscreen-gateway-archive-split](2026-09-25-29-backlog-offscreen-gateway-archive-split.md) | backlog | 0.25 | 2 | 01 の後。archive subtype 追加時に発火 |
 | 30 | [refactor-utils-namespace-reorg](2026-09-25-30-refactor-utils-namespace-reorg.md) | refactor | 0.08 | 3+ | 専用ブランチ必須。03・05・06・07 の後 |
 
@@ -153,6 +153,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 PBI 28 アーカイブ — ✅ 1件完了（28 アーカイブ済み）
+
+- [2026-09-25-28-investigate-content-hot-path-yield.md](../dev-docs/archived/pbi/2026-09-25-28-investigate-content-hot-path-yield.md)（✅ 完了 — `a672c997`。investigate。実 production コードを実 Chromium で計測（`bench/e2e/content-hotpath-measure.mjs`）。等倍 spa32 のみ・4x news32/spa8 以上で longtask 級。チャンク+yield は work 分割されず失敗、offscreen 残余 ~15ms。**offscreen 化を採用**と裁定。RICE 0.25・2 SP）
 
 ### 2026-09-27 PBI 23 アーカイブ — ✅ 1件完了（23 アーカイブ済み）
 
