@@ -226,7 +226,7 @@ class CircuitBreaker {
 2. 失敗が連続して発生する場合、後続のリクエストが無意味
 3. ユーザー体験に大きな影響がある（UIブロッキング等）
 
-現時点では本プロジェクトの全API連携においてサーキットブレーカーの導入は必須ではないが、将来のAI Provider追加時には検討すること。
+AI Provider連携にはcross-requestのサーキットブレーカーを導入済みである。`src/background/ai/providerBreaker.ts` がprovider × model単位で連続失敗を数え、cooldown中のスロットを要約のfallback loopから除外する（`src/background/ai/RemoteAIService.ts`）。stateは`chrome.storage.session`にsession-scopedで保存し、browserを閉じると消える。閾値・cooldown時間・half-open probeなどの数値のSSOTは`dev-docs/archived/plans/2026-09-27-pbi15-ai-provider-circuit-breaker-policy.md`の§3・§4であり、本ガイドラインでは再定義しない。breakerはユーザー設定`ai_provider_breaker_enabled`（既定ON、dashboardのAIプロバイダー設定でOFFにできる）で無効化できる。Obsidian Local REST APIをはじめとする他のAPI連携には導入していない。
 
 ## 6. 冪等性
 
@@ -276,9 +276,10 @@ const response = await fetch(url, {
 | リトライ戦略 | `src/utils/fetch.ts#fetchWithRetry` | 実装済み（指数バックオフ + カスタム条件） |
 | ポーリング設計 | 未実装 | Task TODO: `pbi/2026-07-25-03-fix-cws-publish-reliability.md` でbash実装 |
 | エラーハンドリング | `src/utils/logger/` | 実装済み（構造化ログ） |
-| サーキットブレーカー | 未実装 | 将来の課題 |
+| サーキットブレーカー | `src/background/ai/providerBreaker.ts` | 実装済み（AI Provider連携のみ。既定ON・`ai_provider_breaker_enabled` で無効化可能） |
 | 冪等性 | 未対応 | 将来の課題（POSTリトライ時） |
 
 ## 改訂履歴
 
+- 2026-09-27: §5 適用基準と §8 の対応関係を、AI Provider向けサーキットブレーカー（`src/background/ai/providerBreaker.ts`）の実装に同期
 - 2026-07-25: 初版作成。PBI 03（CWS公開信頼性向上）のインシデント分析に基づく
