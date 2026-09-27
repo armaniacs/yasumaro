@@ -60,13 +60,13 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 24件完了・アーカイブ済み / ⬜ 未着手 8件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 25件完了・アーカイブ済み / ⬜ 未着手 7件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
+| 10 | [investigate-preset-prompt-locale](../dev-docs/archived/pbi/2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | ✅ 完了（2026-09-27 アーカイブ済み。後続 feat 推定 2 SP の仕様を確定） |
 | 12 | [fix-offline-recovery-single-owner](../dev-docs/archived/pbi/2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | ✅ 完了（2026-09-27 アーカイブ済み） |
 | 13 | [investigate-obsidian-write-replay-idempotency](../dev-docs/archived/pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | ✅ 完了（2026-09-27 アーカイブ済み。後続 fix 27-05 も完了） |
 | 15 | [investigate-ai-provider-circuit-breaker](../dev-docs/archived/pbi/2026-09-25-15-investigate-ai-provider-circuit-breaker.md) | investigate | 1.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み。後続 fix 3 SP を起票待ち） |
@@ -153,6 +153,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 PBI 10 アーカイブ — ✅ 1件完了（10 アーカイブ済み）
+
+- [2026-09-25-10-investigate-preset-prompt-locale.md](../dev-docs/archived/pbi/2026-09-25-10-investigate-preset-prompt-locale.md)（✅ 完了 — `329a6d86`。investigate。Default は UI locale 追従、Tagged/Bullet/Technical は JA 固定、English は英語固定を裁定。自動置換は不採用、byte-identical 時の定義使用 + 更新 affordance UI を採用。後続 feat（推定 2 SP）の仕様を確定。RICE 1.67・1.5 SP）
 
 ### 2026-09-27 PBI 28 アーカイブ — ✅ 1件完了（28 アーカイブ済み）
 
