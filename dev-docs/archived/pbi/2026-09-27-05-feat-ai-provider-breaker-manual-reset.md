@@ -86,7 +86,7 @@ Scenario: 解除は全 provider をまとめて行う
 
 ## 検証結果（2026-09-28）
 
-Red/Green 前提: 先に `providerBreaker.test.ts` の `clearAll` 8 件と `remoteAIService-breaker.test.ts` の 4 件を書いて Red（8 failed / 32 passed、4 failed / 17 passed）を確認してから実装した。
+Red/Green 前提: `providerBreaker.test.ts` の `clearAll` 6 件と `remoteAIService-breaker.test.ts` の 4 件を先に書き、Red （6 failed / 32 passed、4 failed / 17 passed）を確認してから実装した。下の裁定の補足 2 で述べる identity 分岐の pin となる単体 2 件は、その分岐を実装後に一時的に外して Red になることを確認している。
 
 BDD シナリオの対応:
 
