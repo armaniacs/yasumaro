@@ -1,9 +1,9 @@
-import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 /**
  * tagsPanel.ts
  * Tag settings panel: categories + normalization dictionary management.
  */
 
+import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
@@ -208,24 +208,25 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   // Settings save
   // ========================================================================
 
-  async function saveTagSettings(repo: SettingsReader = settingsRepository): Promise<void> {
-    const settings = await repo.getAll();
-
-    // Tag summary mode
-    settings[StorageKeys.TAG_SUMMARY_MODE] = tagSummaryModeInput?.checked || false;
-
-    // User categories
-    settings[StorageKeys.TAG_CATEGORIES] = userCategories.map((name) => ({
-      name,
-      isDefault: false,
-      createdAt: Date.now(),
-    }));
-
-    // Normalization dictionary
-    settings[StorageKeys.TAG_NORMALIZATION_DICT] = normalizationEntries;
-
+  async function saveTagSettings(): Promise<void> {
     try {
-      await (async (s)=>{ await settingsRepository.setAll(s); await updateDomainFilterCache(await settingsRepository.getAll()); })(settings);
+      // Delta write (PBI 2026-09-17-17): this panel owns three keys, and the
+      // literal is the payload. A getAll() snapshot would revert every key a
+      // concurrent writer changed between that read and this write.
+      await saveSettingsAndRefreshDomainFilterCache({
+        // Tag summary mode
+        [StorageKeys.TAG_SUMMARY_MODE]: tagSummaryModeInput?.checked || false,
+
+        // User categories
+        [StorageKeys.TAG_CATEGORIES]: userCategories.map((name) => ({
+          name,
+          isDefault: false,
+          createdAt: Date.now(),
+        })),
+
+        // Normalization dictionary
+        [StorageKeys.TAG_NORMALIZATION_DICT]: normalizationEntries,
+      });
       showStatus(
         'exportImportStatus',
         getMessageOr('tagSettingsSaved', 'タグ設定を保存しました'),
@@ -301,5 +302,5 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   });
 
   // Main save button
-  saveTagsBtn?.addEventListener('click', () => saveTagSettings(repo));
+  saveTagsBtn?.addEventListener('click', () => saveTagSettings());
 }
