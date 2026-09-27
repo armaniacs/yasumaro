@@ -4,6 +4,7 @@
  * user's chosen LOCAL_MARKDOWN_EXPORT_TIMING.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
 const mockFlushBufferedExports = vi.hoisted(() => vi.fn());
@@ -183,11 +184,20 @@ vi.stubGlobal('chrome', {
   alarms: { create: mockAlarmsCreate, clear: mockAlarmsClear },
 });
 
-import { initExportScheduler, IDLE_FALLBACK_ALARM, DAILY_FLUSH_ALARM } from '../localMarkdownIdleFlusher.js';
+import {
+  initExportScheduler,
+  scheduleImmediateFlush,
+  IDLE_FALLBACK_ALARM,
+  DAILY_FLUSH_ALARM,
+  IMMEDIATE_FLUSH_ALARM,
+} from '../localMarkdownIdleFlusher.js';
 
 describe('initExportScheduler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks keeps implementations, so the pending-clear stand-in below
+    // would otherwise leak into every later test.
+    mockAlarmsClear.mockReset();
   });
 
   it('registers idle listener and 30-min fallback alarm for timing="idle"', async () => {
@@ -223,7 +233,7 @@ describe('initExportScheduler', () => {
     expect(mockOnStateChangedAddListener).not.toHaveBeenCalled();
   });
 
-  it('registers no alarms or listeners for timing="immediate"', async () => {
+  it('registers no standing alarm or listener for timing="immediate"', async () => {
     mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'immediate' });
 
     await initExportScheduler();
@@ -232,12 +242,84 @@ describe('initExportScheduler', () => {
     expect(mockOnStateChangedAddListener).not.toHaveBeenCalled();
   });
 
-  it('always clears both alarms before registering new ones (mode switch safety)', async () => {
+  it('leaves an armed immediate one-shot in place so a settings save cannot drop the buffered export', async () => {
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'immediate' });
+    scheduleImmediateFlush();
+    expect(mockAlarmsCreate).toHaveBeenCalledWith(
+      IMMEDIATE_FLUSH_ALARM,
+      expect.objectContaining({ when: expect.any(Number) })
+    );
+    mockAlarmsCreate.mockClear();
+
+    await initExportScheduler();
+
+    // scheduleImmediateFlush owns the one-shot; a re-init that cleared it would
+    // hold the buffered entries back until the next recording.
+    expect(mockAlarmsClear).not.toHaveBeenCalledWith(IMMEDIATE_FLUSH_ALARM);
+    expect(mockAlarmsCreate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a stale immediate one-shot when switching to daily (harmless overwrite)', async () => {
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'immediate' });
+    scheduleImmediateFlush();
+    expect(mockAlarmsCreate).toHaveBeenCalledWith(IMMEDIATE_FLUSH_ALARM, expect.any(Object));
+    mockAlarmsCreate.mockClear();
+
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'daily' });
+    await initExportScheduler();
+
+    // The old one-shot may still fire once after the switch. Accepted: the
+    // flush rewrites the same daily file with conflictAction: 'overwrite'.
+    expect(mockAlarmsClear.mock.calls.map(([name]) => name)).toEqual([
+      IDLE_FALLBACK_ALARM,
+      DAILY_FLUSH_ALARM,
+    ]);
+    expect(mockAlarmsCreate).toHaveBeenCalledTimes(1);
+    expect(mockAlarmsCreate).toHaveBeenCalledWith(
+      DAILY_FLUSH_ALARM,
+      expect.objectContaining({ periodInMinutes: 1440 })
+    );
+  });
+
+  it('awaits the standing-alarm clears before creating the new alarm', async () => {
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'daily' });
+    const clearedNames: string[] = [];
+    let releaseClears = (): void => {};
+    const pendingClears = new Promise<void>((resolve) => {
+      releaseClears = resolve;
+    });
+    mockAlarmsClear.mockImplementation((name: string) => {
+      clearedNames.push(name);
+      return pendingClears;
+    });
+
+    const init = initExportScheduler();
+    // A macrotask turn lets the scheduler run through every already-resolved
+    // await; it must still be parked on the pending clear.
+    await drainMacrotask();
+    expect(clearedNames).toEqual([IDLE_FALLBACK_ALARM]);
+    expect(mockAlarmsCreate).not.toHaveBeenCalled();
+
+    releaseClears();
+    await init;
+
+    expect(clearedNames).toEqual([IDLE_FALLBACK_ALARM, DAILY_FLUSH_ALARM]);
+    expect(mockAlarmsCreate).toHaveBeenCalledWith(
+      DAILY_FLUSH_ALARM,
+      expect.objectContaining({ periodInMinutes: 1440 })
+    );
+  });
+
+  it('clears only the standing alarms on a mode switch, with no listener left behind', async () => {
     mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'manual' });
 
     await initExportScheduler();
 
-    expect(mockAlarmsClear).toHaveBeenCalledWith(IDLE_FALLBACK_ALARM);
-    expect(mockAlarmsClear).toHaveBeenCalledWith(DAILY_FLUSH_ALARM);
+    expect(mockAlarmsClear.mock.calls.map(([name]) => name)).toEqual([
+      IDLE_FALLBACK_ALARM,
+      DAILY_FLUSH_ALARM,
+    ]);
+    expect(mockAlarmsCreate).not.toHaveBeenCalled();
+    expect(mockOnStateChangedAddListener).not.toHaveBeenCalled();
   });
 });
