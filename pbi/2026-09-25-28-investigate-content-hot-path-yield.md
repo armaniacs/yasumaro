@@ -66,22 +66,22 @@ Feature: コンテンツ抽出ホットパスの負荷測定と方式裁定
 
 ## 受け入れ基準
 
-- [ ] 現状の production ホットパスとして、`src/content/contentKernel.ts:99-101`、`src/utils/contentExtractor/pageContentPipeline.ts:7-11`、`src/utils/contentExtractor/index.ts:437-441` を確認する。
-- [ ] 現状の `cloneNode(true)` の production 2 箇所（`src/utils/contentExtractor/index.ts:221,276`）を測定対象として記録する。
-- [ ] 対象ページごとに、現行方式の main-thread longtask 件数と最大 duration をベースラインとして記録できる。
-- [ ] longtask 件数と最大 duration を、既存の `__benchLongTasks` duration 合計から区別して記録する。
-- [ ] 同期最適化、非同期 rAF batching + `scheduler.yield()`、offscreen 化の 3 方式を同じ実 DOM 分布と同じ測定条件で比較する。
-- [ ] 3 方式それぞれの測定結果、制約、採用・不採用の根拠を記録し、採用方式を 1 つだけ裁定する。
-- [ ] offscreen 方式については、`cleansing_offscreen_enabled` の default、production call site、production wiring を含めて評価する。
-- [ ] Offscreen document の利用を `chrome.runtime` messaging と Web API に限定する。
-- [ ] 非同期候補では scheduler 非対応時の fallback と mutation generation epoch の要点を裁定する。
-- [ ] 非同期化する場合でも、ページ DOM を変更しない detached clone または text 抽出であることを受け入れ条件にする。
-- [ ] rAF batching と `scheduler.yield()` の規約を、両方とも満たす適用方式として評価する。
-- [ ] longtask 件数を CI の判定対象にする場合は、既存の `bench:check` と別の command および別の baseline にする。
-- [ ] 既存の `bench:check` の deterministic micro counter 4 種の責務を変更しない。
-- [ ] 既存テストとして、`src/content/__tests__/contentKernel.offscreen.test.ts`、`src/utils/contentExtractor/__tests__/index.clone-dedup.test.ts`、`src/utils/contentExtractor/__tests__/bytesize-lazy.test.ts`、`bench/micro/c4.clone-dedup.bench.mjs` の対象範囲を確認する。
-- [ ] `pbi/2026-09-25-30-refactor-utils-namespace-reorg.md` および `pbi/2026-09-25-14-refactor-ci-paths-filter.md` との依存・競合点を記録する。
-- [ ] 本 PBI は計測と方式裁定に限定し、production の最適化実装は別 PBI にする。
+- [x] 現状の production ホットパスとして、`src/content/contentKernel.ts:99-101`、`src/utils/contentExtractor/pageContentPipeline.ts:7-11`、`src/utils/contentExtractor/index.ts:437-441` を確認する。
+- [x] 現状の `cloneNode(true)` の production 2 箇所（`src/utils/contentExtractor/index.ts:221,276`）を測定対象として記録する。
+- [x] 対象ページごとに、現行方式の main-thread longtask 件数と最大 duration をベースラインとして記録できる。
+- [x] longtask 件数と最大 duration を、既存の `__benchLongTasks` duration 合計から区別して記録する。
+- [x] 同期最適化、非同期 rAF batching + `scheduler.yield()`、offscreen 化の 3 方式を同じ実 DOM 分布と同じ測定条件で比較する。
+- [x] 3 方式それぞれの測定結果、制約、採用・不採用の根拠を記録し、採用方式を 1 つだけ裁定する。
+- [x] offscreen 方式については、`cleansing_offscreen_enabled` の default、production call site、production wiring を含めて評価する。
+- [x] Offscreen document の利用を `chrome.runtime` messaging と Web API に限定する。
+- [x] 非同期候補では scheduler 非対応時の fallback と mutation generation epoch の要点を裁定する。
+- [x] 非同期化する場合でも、ページ DOM を変更しない detached clone または text 抽出であることを受け入れ条件にする。
+- [x] rAF batching と `scheduler.yield()` の規約を、両方とも満たす適用方式として評価する。
+- [x] longtask 件数を CI の判定対象にする場合は、既存の `bench:check` と別の command および別の baseline にする。
+- [x] 既存の `bench:check` の deterministic micro counter 4 種の責務を変更しない。
+- [x] 既存テストとして、`src/content/__tests__/contentKernel.offscreen.test.ts`、`src/utils/contentExtractor/__tests__/index.clone-dedup.test.ts`、`src/utils/contentExtractor/__tests__/bytesize-lazy.test.ts`、`bench/micro/c4.clone-dedup.bench.mjs` の対象範囲を確認する。
+- [x] `pbi/2026-09-25-30-refactor-utils-namespace-reorg.md` および `pbi/2026-09-25-14-refactor-ci-paths-filter.md` との依存・競合点を記録する。
+- [x] 本 PBI は計測と方式裁定に限定し、production の最適化実装は別 PBI にする。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -205,15 +205,23 @@ Feature: コンテンツ抽出ホットパスの負荷測定と方式裁定
 
 ## Definition of Done
 
-- [ ] 現状の production ホットパス、clone 使用箇所、offscreen delegate、設定キー、scheduler、bench の計測経路が確認済みである。
-- [ ] ページごとに現行方式の main-thread longtask 件数と最大 duration のベースラインが記録されている。
-- [ ] 同期最適化、非同期 rAF batching + `scheduler.yield()`、offscreen 化の実 DOM 分布・条件での比較結果が記録されている。
-- [ ] 各方式について longtask 件数、最大 duration、duration 合計が区別されて記録されている。
-- [ ] 採用方式を1つ裁定し、不採用方式の理由と残存制約が記録されている。
-- [ ] offscreen 方式について default、production call site、production wiring、Offscreen document の API 制約が評価されている。
-- [ ] scheduler 非対応時の fallback と mutation generation epoch の扱いが裁定されている。
-- [ ] detached clone または text 抽出という、ページ DOM を変更しない条件が非同期方式の受け入れ条件として記録されている。
-- [ ] longtask 件数を gate に含める場合、既存 `bench:check` と別の command・baseline とする方針が記録されている。
-- [ ] 既存テスト4件と既存の deterministic micro counter の対象範囲が確認されている。
-- [ ] `pbi/2026-09-25-30-refactor-utils-namespace-reorg.md` と `pbi/2026-09-25-14-refactor-ci-paths-filter.md` への依存・競合点が記録されている。
-- [ ] 本 PBI は計測と方式裁定に限定し、production の最適化実装を別 PBI に分けている。
+- [x] 現状の production ホットパス、clone 使用箇所、offscreen delegate、設定キー、scheduler、bench の計測経路が確認済みである。
+- [x] ページごとに現行方式の main-thread longtask 件数と最大 duration のベースラインが記録されている。
+- [x] 同期最適化、非同期 rAF batching + `scheduler.yield()`、offscreen 化の実 DOM 分布・条件での比較結果が記録されている。
+- [x] 各方式について longtask 件数、最大 duration、duration 合計が区別されて記録されている。
+- [x] 採用方式を1つ裁定し、不採用方式の理由と残存制約が記録されている。
+- [x] offscreen 方式について default、production call site、production wiring、Offscreen document の API 制約が評価されている。
+- [x] scheduler 非対応時の fallback と mutation generation epoch の扱いが裁定されている。
+- [x] detached clone または text 抽出という、ページ DOM を変更しない条件が非同期方式の受け入れ条件として記録されている。
+- [x] longtask 件数を gate に含める場合、既存 `bench:check` と別の command・baseline とする方針が記録されている。
+- [x] 既存テスト4件と既存の deterministic micro counter の対象範囲が確認されている。
+- [x] `pbi/2026-09-25-30-refactor-utils-namespace-reorg.md` および `pbi/2026-09-25-14-refactor-ci-paths-filter.md` への依存・競合点が記録されている。
+- [x] 本 PBI は計測と方式裁定に限定し、production の最適化実装を別 PBI に分けている。
+
+## 実績（2026-09-27）
+
+- 実 production コード（esbuild browser IIFE）を実 Chromium で計測する `bench/e2e/content-hotpath-measure.mjs` を作成（gate 対象外の `*.mjs`）。再現手順は報告書 §2 冒頭
+- v1（PerformanceObserver）は当環境で発火せず全件 0 の偽陰性 → v2（per-run wall 分布）に切替。同期 1 実行 = 1 task のため wall > 50ms ⟺ longtask
+- 測定値: 等倍では spa32 のみ LT（71ms）。4x では news32・spa8 以上で LT（最大 spa32 で 284ms）。B は chunk max ≈ 全量・total ×4-7 で失敗、 C の main-thread 残余は ~15ms
+- **裁定: offscreen 化を採用**、yield チャンキングは不採用、sync clone 除去は補完施策。後続実装 PBI（推定 3 SP）の範囲を報告書 §4 に確定
+- 成果物は報告書 + 計測 script のみ（production 変更なし）。計測 JSON は `bench/reports/`（gitignored）に保存
