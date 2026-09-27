@@ -101,6 +101,13 @@ export type OfflineJobPayload = {
   content: string;
   summary?: string | undefined;
   tags?: string[] | undefined;
+  /**
+   * PBI 2026-09-25-13: the pipeline-final markdown, frozen at enqueue time so
+   * a replay PUTs the byte-identical body (HTTP-idempotent) instead of
+   * regenerating a new timestamp. Absent on legacy payloads and on jobs whose
+   * formatting never ran.
+   */
+  markdown?: string | undefined;
   /** PBI 03: carried through the offline queue so a retry still records the trail. */
   navSourceUrl?: string | undefined;
   searchQuery?: string | undefined;
@@ -115,6 +122,7 @@ export function extractOfflinePayload(context: RecordingContext): OfflineJobPayl
     summary: context.privacyResult?.summary,
     maskedCount: context.privacyResult?.maskedCount,
     tags: context.privacyResult?.tags,
+    markdown: context.markdown,
     pageBytes: context.data.pageBytes,
     candidateBytes: context.data.candidateBytes,
     originalBytes: context.data.originalBytes,

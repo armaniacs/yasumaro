@@ -16,6 +16,14 @@ import { PIPELINE_TEXT_EMPTY_FALLBACK, selectDisplayText } from '../pipelineText
 export const formatMarkdownStep: PipelineStepFunction = async (
   context: RecordingContext
 ): Promise<RecordingContext> => {
+  // PBI 2026-09-25-13: the offline replay re-runs this step via retrySteps,
+  // but the payload carries the pipeline-final markdown — regenerating it
+  // would produce a new timestamp, break the byte-identical replay body, and
+  // let the section editor stack a duplicate. Frozen markdown wins.
+  if (context.markdown) {
+    return context;
+  }
+
   const { data, privacyResult } = context;
   const { url, title } = data;
 

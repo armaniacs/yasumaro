@@ -58,6 +58,34 @@ describe('createOfflineQueueProcessor', () => {
         expect(record).not.toHaveBeenCalled();
     });
 
+    it('passes the frozen payload markdown through to retryObsidianWrite (PBI 2026-09-25-13)', async () => {
+        const retryObsidianWrite = vi.fn().mockResolvedValue(true);
+        const record = vi.fn();
+        const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+            await handler({
+                type: 'obsidian_sync',
+                payload: {
+                    title: 't',
+                    url: 'https://example.com',
+                    content: 'c',
+                    summary: 's',
+                    markdown: '- [t](https://example.com)\n  - s',
+                },
+            });
+        });
+
+        const processQueue = createOfflineQueueProcessor({
+            offlineNetworkQueue: { retryAll },
+            recordingPipeline: { record, retryObsidianWrite },
+        });
+
+        await processQueue();
+
+        expect(retryObsidianWrite).toHaveBeenCalledWith(
+            expect.objectContaining({ markdown: '- [t](https://example.com)\n  - s' })
+        );
+    });
+
     it('falls back to full record() pipeline for ai_summary jobs', async () => {
         const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
         const retryObsidianWrite = vi.fn();

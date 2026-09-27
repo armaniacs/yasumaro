@@ -152,13 +152,21 @@ export class RecordingOrchestrator {
    * Uses the 2-step subset compiled at construction (`retrySteps`) via `executeRetrySubset`;
    * `RecordingOrchestrator.steps` (13 elements) is not touched.
    */
-  async retryObsidianWrite(job: { title: string; url: string; summary: string; tags?: string[] }): Promise<boolean> {
+  async retryObsidianWrite(job: { title: string; url: string; summary: string; markdown?: string | undefined; tags?: string[] }): Promise<boolean> {
     return this.mutexMap.runExclusive(job.url, async () => {
       const settings = await this.getSettingsWithCache();
       const traceId = this.generateTraceId();
       const context = createRetryContext(job, settings, traceId);
+      // PBI 2026-09-25-13: the replay path is the only one where the section
+      // editor dedupes — the same operation retrying must not stack a second
+      // copy of the section content. Dashboard append (user-invoked) and the
+      // first pipeline run keep unconditional insertion.
+      const replayObsidian: ObsidianClient = Object.assign(Object.create(this.obsidian) as ObsidianClient, {
+        appendToDailyNote: (content: string, traceIdForWrite: string) =>
+          this.obsidian.appendToDailyNote(content, traceIdForWrite, { dedupe: true }),
+      });
       const deps = createStepDeps({
-        obsidian: this.obsidian,
+        obsidian: replayObsidian,
         aiService: this.aiService,
         urlStore: this.urlStore,
         sqliteClient: this.sqliteClient,

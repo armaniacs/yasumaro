@@ -52,5 +52,59 @@ describe('NoteSectionEditor', () => {
       // The function should ensure content ends with newline
       expect(result).toBe('Existing content\n# 🌐 ブラウザ閲覧履歴\nNew entry\n');
     });
+
+    // PBI 2026-09-25-13: dedupe is opt-in and only the offline replay path
+    // sets it — the default keeps the historical "always insert" behavior.
+    describe('dedupe option (offline replay idempotency)', () => {
+      it('skips insertion when the section already contains the identical block', () => {
+        const existing = '# 🌐 ブラウザ閲覧履歴\n- [Page](https://example.com)\n- Old entry';
+        const entry = '- [Page](https://example.com)';
+
+        const result = NoteSectionEditor.insertIntoSection(existing, '# 🌐 ブラウザ閲覧履歴', entry, { dedupe: true });
+
+        expect(result).toBe(existing);
+        expect(result.split('- [Page](https://example.com)').length - 1).toBe(1);
+      });
+
+      it('still inserts when dedupe is not set (historical behavior)', () => {
+        const existing = '# 🌐 ブラウザ閲覧履歴\n- [Page](https://example.com)';
+
+        const result = NoteSectionEditor.insertIntoSection(existing, '# 🌐 ブラウザ閲覧履歴', '- [Page](https://example.com)');
+
+        expect(result).not.toBe(existing);
+        expect(result.split('- [Page](https://example.com)').length - 1).toBe(2);
+      });
+
+      it('inserts when the section contains a different block', () => {
+        const existing = '# 🌐 ブラウザ閲覧履歴\n- [Other page](https://other.example)';
+
+        const result = NoteSectionEditor.insertIntoSection(existing, '# 🌐 ブラウザ閲覧履歴', '- [Page](https://example.com)', { dedupe: true });
+
+        expect(result).toContain('- [Page](https://example.com)');
+        expect(result).toContain('- [Other page](https://other.example)');
+      });
+
+      it('inserts when only a partial line match exists', () => {
+        const existing = '# 🌐 ブラウザ閲覧履歴\n- [Page](https://example.com) with extra';
+
+        const result = NoteSectionEditor.insertIntoSection(existing, '# 🌐 ブラウザ閲覧履歴', '- [Page](https://example.com)', { dedupe: true });
+
+        expect(result.split('- [Page](https://example.com)').length - 1).toBe(2);
+      });
+
+      it('does not match a block that spans across the section boundary', () => {
+        const existing = '# 🌐 ブラウザ閲覧履歴\n- entry\n## Next\n- [Page](https://example.com)';
+
+        const result = NoteSectionEditor.insertIntoSection(existing, '# 🌐 ブラウザ閲覧履歴', '- [Page](https://example.com)', { dedupe: true });
+
+        expect(result).toContain('- [Page](https://example.com)');
+      });
+
+      it('creates the section normally when the header is missing, even with dedupe', () => {
+        const result = NoteSectionEditor.insertIntoSection('', '# 🌐 ブラウザ閲覧履歴', '- Entry', { dedupe: true });
+
+        expect(result).toBe('# 🌐 ブラウザ閲覧履歴\n- Entry\n');
+      });
+    });
   });
 });

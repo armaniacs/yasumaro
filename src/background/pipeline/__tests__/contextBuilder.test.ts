@@ -32,6 +32,24 @@ describe('contextBuilder', () => {
     expect((ctx as any).traceId).toBeUndefined();
   });
 
+  it('createRetryContext carries the frozen markdown into the context (PBI 2026-09-25-13)', () => {
+    const ctx = createRetryContext(
+      { title: 'T', url: 'https://example.com', summary: 'sum', markdown: '- [T](https://example.com)\n  - sum' },
+      {} as any
+    );
+    // The replay body must stay byte-identical: the frozen markdown lands on
+    // the context so formatMarkdownStep skips regeneration.
+    expect(ctx.markdown).toBe('- [T](https://example.com)\n  - sum');
+  });
+
+  it('createRetryContext leaves markdown unset when the payload has none (legacy)', () => {
+    const ctx = createRetryContext(
+      { title: 'T', url: 'https://example.com', summary: 'sum' },
+      {} as any
+    );
+    expect(ctx.markdown).toBeUndefined();
+  });
+
   it('createStepDeps handles optional urlStore/sqliteClient via explicit conditionals', () => {
     const obsidian = { appendToDailyNote: async () => {} } as unknown as ObsidianClient;
     const depsWithoutOptionals = createStepDeps({ obsidian, aiService: null });
