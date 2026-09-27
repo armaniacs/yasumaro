@@ -2,7 +2,7 @@
 
 種別: chore
 
-上流: `dev-docs/archived/pbi/2026-09-27-03-fix-ai-provider-circuit-breaker.md`（実装済み）/ `pbi/2026-09-27-04-feat-ai-provider-breaker-rollout-gate.md`（ゲート）
+上流: `dev-docs/archived/pbi/2026-09-27-03-fix-ai-provider-circuit-breaker.md`（実装済み）/ `dev-docs/archived/pbi/2026-09-27-04-feat-ai-provider-breaker-rollout-gate.md`（ゲート）
 
 ## ユーザーストーリー
 
@@ -12,8 +12,8 @@
 
 - 順位: 3 / 3
 - RICEスコア: 0.25（Reach=0.5 / Impact=0.25 / Confidence=100% / Effort=0.5 SP）
-- 根拠: 文書 2 箇所の記述だけが実際のコードと食い違っている。ユーザー影響は無く、開発者の誤判断を防ぐだけなので Impact は最小。ただし PBI 01 の内容を説明しないと記述が古びるため、01 と同じコミットで更新する
-- 依存: PBI 01 の裁定内容（トグル名・既定値）に追随するため、実質的に 01 の後
+- 根拠: 文書 2 箇所の記述だけが実際のコードと食い違っている。ユーザー影響は無く、開発者の誤判断を防ぐだけなので Impact は最小。ただし PBI 27-04 の内容を説明しないと記述が古びるため、27-04 と同じラウンドで更新する
+- 依存: PBI 27-04 の裁定内容（トグル名・既定値）に追随するため、実質的に 27-04 の後
 
 ## BDD受け入れシナリオ
 
@@ -30,11 +30,11 @@ Scenario: 適用基準の記述が現状の裁定と矛盾しない
 
 ## 受け入れ基準
 
-- [ ] `docs/EXTERNAL_API_RELIABILITY_GUIDELINE.md` の実装状況表にある `| サーキットブレーカー | 未実装 | 将来の課題 |` を、実装済み・参照先 `src/background/ai/providerBreaker.ts`・既定 ON／ユーザー設定で無効化可能、へ更新する
-- [ ] 同ファイル §5 の「将来 AI Provider 追加時に検討すること」という文面を、既に AI プロバイダへ導入済みである旨へ更新する
-- [ ] 同じファイルが `public/` に複製されていないか確認する（存在する場合は byte-identical で同期する）
-- [ ] Breaker の閾値・cooldown 時間をこのドキュメントに二重定義しない（SSOT は policy 報告書）
-- [ ] コードを変更しない
+- [x] `docs/EXTERNAL_API_RELIABILITY_GUIDELINE.md` の実装状況表にある `| サーキットブレーカー | 未実装 | 将来の課題 |` を、実装済み・参照先 `src/background/ai/providerBreaker.ts`・既定 ON／ユーザー設定で無効化可能、へ更新する
+- [x] 同ファイル §5 の「将来 AI Provider 追加時に検討すること」という文面を、既に AI プロバイダへ導入済みである旨へ更新する
+- [x] 同じファイルが `public/` に複製されていないか確認する（存在する場合は byte-identical で同期する）
+- [x] Breaker の閾値・cooldown 時間をこのドキュメントに二重定義しない（SSOT は policy 報告書）
+- [x] コードを変更しない
 
 ## テスト戦略
 
@@ -44,7 +44,7 @@ Scenario: 適用基準の記述が現状の裁定と矛盾しない
 ## 技術的考慮事項
 
 - このファイルは指針であり、実装の SSOT ではない。数値や遷移規則を追記せず、参照先リンクと決定だけを置く
-- PBI 01 が未着手のうちは「既定 ON、トグル追加予定」と書くのでなく、PBI 01 と同時に確定させる
+- PBI 27-04 が未着手のうちは「既定 ON、トグル追加予定」と書くのでなく、PBI 27-04 と同時に確定させる
 
 ## 見積もり
 
@@ -52,6 +52,6 @@ Scenario: 適用基準の記述が現状の裁定と矛盾しない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] 文書が実装と矛盾しないことをレビューで確認する
-- [ ] `npm run validate` が green
+- [x] 上記受け入れ基準をすべて満たす
+- [x] 文書が実装と矛盾しないことをレビューで確認する
+- [x] `npm run validate` が green
