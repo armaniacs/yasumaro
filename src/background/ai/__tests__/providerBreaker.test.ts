@@ -256,10 +256,146 @@ describe('ProviderBreaker store behavior', () => {
   });
 });
 
+describe('clearAll (PBI 27-05)', () => {
+  const KEY = 'sw:aiProviderBreaker';
+  let store: ReturnType<typeof memoryStore>;
+
+  beforeEach(() => {
+    store = memoryStore();
+  });
+
+  it('empties the whole state, not just one slot', async () => {
+    const breaker = new ProviderBreaker(store);
+    await breaker.recordFailure('openai', 'gpt-4o', failure('auth', 401));
+    await breaker.recordFailure('anthropic', 'claude', failure('rate_limit', 429));
+    await expect(breaker.shouldAttempt('openai', 'gpt-4o')).resolves.toBe(false);
+
+    await breaker.clearAll();
+
+    const state = store.data.get(KEY) as Record<string, unknown>;
+    expect(state).toEqual({});
+    await expect(breaker.shouldAttempt('openai', 'gpt-4o')).resolves.toBe(true);
+    await expect(breaker.shouldAttempt('anthropic', 'claude')).resolves.toBe(true);
+  });
+
+  it('persists the empty state with flushImmediately', async () => {
+    const setSpy = vi.spyOn(store, 'set');
+    const breaker = new ProviderBreaker(store);
+    await breaker.recordFailure('openai', 'gpt-4o', failure('network'));
+
+    await breaker.clearAll();
+
+    expect(setSpy).toHaveBeenLastCalledWith(KEY, {}, { flushImmediately: true });
+  });
+
+  it('spends no write when there is nothing to clear', async () => {
+    const setSpy = vi.spyOn(store, 'set');
+    const breaker = new ProviderBreaker(store);
+
+    await breaker.clearAll();
+
+    expect(setSpy).not.toHaveBeenCalled();
+  });
+
+  it('spends no write when a mutation cannot change the state', async () => {
+    // The identity return is the no-op signal shared by every transition, so
+    // an ignored kind and an already-cleared slot must not both pay a flush.
+    const setSpy = vi.spyOn(store, 'set');
+    const breaker = new ProviderBreaker(store);
+    await breaker.recordFailure('openai', 'gpt-4o', failure('network'));
+    setSpy.mockClear();
+
+    // configuration/csp are ignored, and a success on an absent slot is a no-op.
+    await breaker.recordFailure('openai', 'gpt-4o', failure('configuration'));
+    await breaker.recordSuccess('anthropic', 'claude');
+
+    expect(setSpy).not.toHaveBeenCalled();
+  });
+
+  it('shares the single mutation chain, so at most one read-modify-write is in flight', async () => {
+    // The whole state is ONE store key, so a clear that bypasses the chain can
+    // land between another mutation's read and its write and silently resurrect
+    // or drop entries. Serialization is observable as the read concurrency.
+    const base = memoryStore();
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const tracked: SessionStorePort = {
+      get: async <T,>(key: string): Promise<T | null> => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        try {
+          return await base.get<T>(key);
+        } finally {
+          inFlight -= 1;
+        }
+      },
+      set: async (key: string, value: unknown): Promise<void> => {
+        await base.set(key, value);
+      },
+      remove: (key: string): void => {
+        base.remove(key);
+      },
+    };
+    const breaker = new ProviderBreaker(tracked);
+
+    await Promise.all([
+      breaker.clearAll(),
+      breaker.recordFailure('openai', 'gpt-4o', failure('network')),
+      breaker.recordSuccess('anthropic', 'claude'),
+    ]);
+
+    expect(maxInFlight).toBe(1);
+  });
+
+  it('orders against the other mutations instead of racing them', async () => {
+    const breaker = new ProviderBreaker(store);
+    // Chain order, not completion order: the failure is recorded after the
+    // wipe, so it survives.
+    await Promise.all([
+      breaker.clearAll(),
+      breaker.recordFailure('openai', 'gpt-4o', failure('network')),
+    ]);
+    let state = store.data.get(KEY) as Record<string, { failures: number }>;
+    expect(state['openai::gpt-4o']?.failures).toBe(1);
+
+    // Reversed order: the wipe is the later write, so nothing survives.
+    await Promise.all([
+      breaker.recordFailure('anthropic', 'claude', failure('network')),
+      breaker.clearAll(),
+    ]);
+    state = store.data.get(KEY) as Record<string, { failures: number }>;
+    expect(state['anthropic::claude']).toBeUndefined();
+  });
+
+  it('fails open when the store throws, leaving the other calls working', async () => {
+    const broken: SessionStorePort = {
+      get: async () => {
+        throw new Error('session gone');
+      },
+      set: async () => {
+        throw new Error('session gone');
+      },
+      remove: () => {},
+    };
+    const breaker = new ProviderBreaker(broken);
+
+    // Must not reject: a connection test must never fail because of a reset.
+    await expect(breaker.clearAll()).resolves.toBeUndefined();
+    // And the dead store must not poison the chain for later mutations.
+    await expect(breaker.recordFailure('openai', undefined, failure('network'))).resolves.toBeUndefined();
+    await expect(breaker.recordSuccess('openai')).resolves.toBeUndefined();
+    await expect(breaker.shouldAttempt('openai')).resolves.toBe(true);
+  });
+});
+
 describe('disabledBreaker', () => {
   it('attempts everything and records nothing', async () => {
     await expect(disabledBreaker.shouldAttempt('x', 'y')).resolves.toBe(true);
     await expect(disabledBreaker.recordFailure('x', 'y', failure('network'))).resolves.toBeUndefined();
     await expect(disabledBreaker.recordSuccess('x')).resolves.toBeUndefined();
+  });
+
+  it('clears nothing without a store', async () => {
+    await expect(disabledBreaker.clearAll()).resolves.toBeUndefined();
   });
 });

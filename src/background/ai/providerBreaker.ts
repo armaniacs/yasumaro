@@ -166,6 +166,8 @@ export interface ProviderBreakerLike {
   cooldown(provider: string, model?: string): Promise<ProviderCooldown | null>;
   recordSuccess(provider: string, model?: string): Promise<void>;
   recordFailure(provider: string, model: string | undefined, failure: FailureMetadata): Promise<void>;
+  /** Drop every entry (PBI 27-05). One wholesale form — never a per-slot delete. */
+  clearAll(): Promise<void>;
 }
 
 /** Default when no breaker is wired: try everything, remember nothing. */
@@ -174,6 +176,7 @@ export const disabledBreaker: ProviderBreakerLike = {
   cooldown: async () => null,
   recordSuccess: async () => {},
   recordFailure: async () => {},
+  clearAll: async () => {},
 };
 
 export class ProviderBreaker implements ProviderBreakerLike {
@@ -201,7 +204,13 @@ export class ProviderBreaker implements ProviderBreakerLike {
     // then behaves as if the breaker had no entry (try everything).
     try {
       const raw = await this.store.get<ProviderBreakerState>(BREAKER_STATE_KEY);
-      const next = fn(sanitizeState(raw));
+      const state = sanitizeState(raw);
+      const next = fn(state);
+      // Returning the input object unchanged means "nothing to record" — the
+      // identity is the no-op signal, so no storage write is spent on it.
+      if (next === state) {
+        return;
+      }
       await this.store.set(BREAKER_STATE_KEY, next, { flushImmediately: true });
     } catch {
       // Swallowed on purpose — see above.
@@ -260,5 +269,17 @@ export class ProviderBreaker implements ProviderBreakerLike {
       }
       return { ...state, [key]: next };
     });
+  }
+
+  /**
+   * PBI 27-05: the manual reset. A cooldown is a guess about a provider that
+   * has not been looked at since it tripped, so one successful connection test
+   * invalidates every one of them at once — partial deletion would leave a
+   * stale entry to suppress a slot the user never tested. It rides the shared
+   * chain for the same reason the other mutations do, and it swallows store
+   * errors so a reset can never turn a working summary into an error.
+   */
+  async clearAll(): Promise<void> {
+    await this.mutate((state) => (Object.keys(state).length === 0 ? state : {}));
   }
 }

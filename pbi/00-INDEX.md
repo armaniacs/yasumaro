@@ -163,15 +163,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 - [2026-09-27-06-chore-ai-breaker-doc-sync.md](../dev-docs/archived/pbi/2026-09-27-06-chore-ai-breaker-doc-sync.md)（✅ 完了。chore。`docs/EXTERNAL_API_RELIABILITY_GUIDELINE.md` の 2 箇所を実装に同期。§5 適用基準の「将来の AI Provider 追加時に検討」を、AI Provider 連携へ cross-request breaker を導入済みの記述へ（`src/background/ai/providerBreaker.ts`・state は `chrome.storage.session` の session-scoped・既定 ON の `ai_provider_breaker_enabled` で無効化可）。§8 対応関係の `| サーキットブレーカー | 未実装 | 将来の課題 |` を実装済みへ更新。閾値・cooldown は数値を再定義せず policy SSOT（`dev-docs/archived/plans/2026-09-27-pbi15-ai-provider-circuit-breaker-policy.md` §3・§4）へリンク。`public/` 等に複製は無く tracked コピーは 1 件のみ。改訂履歴に 1 行追記。RICE 0.25・0.5 SP）
 
+### 2026-09-27 PBI 27-05 アーカイブ（circuit breaker manual reset） — ✅ 1件完了（27-05 アーカイブ済み）
+
+- [2026-09-27-05-feat-ai-provider-breaker-manual-reset.md](../dev-docs/archived/pbi/2026-09-27-05-feat-ai-provider-breaker-manual-reset.md)（✅ 完了。feat。接続試験の成功時に breaker state を全消去する `clearAll()` を追加し、auth の 15 分 cooldown を待たずに API key 更新直後から回復できるように。`clearAll()` は全 provider × model をまとめて空にする 1 方式のみで、部分削除はしない。state 全体が 1 つの store key なので `mutate` と同じ単一チェーンで直列化し、store 例外は握りつぶす（fail-open・接続試験を失敗させない）。成功パスからのみ呼び、失敗時は cooldown を不変のまま据え置く（policy §7）。解除は 27-04 のゲートの裏側に置き、ゲート OFF では breaker state に read も write もしない。INFO ログは 1 行のみ・要約本文には出さない。専用ボタン・新規 storage key・新規 Chrome permission・`.then()` chain は 0 件。`applyMutation` は「遷移なし（入力オブジェクトを 그대로返す）では write しない」を採用（既存コメントの "no write needed" が初めて実態と一致し、空の状態への clearAll が真の no-op になる）。新規テスト 14 件（単体 8・統合 6）。Red/Green 検証済み。RICE 0.25・2 SP）
+
 ### 2026-09-27 PBI 27-04 アーカイブ（circuit breaker rollout gate） — ✅ 1件完了（27-04 アーカイブ済み）
 
 - [2026-09-27-04-feat-ai-provider-breaker-rollout-gate.md](../dev-docs/archived/pbi/2026-09-27-04-feat-ai-provider-breaker-rollout-gate.md)（✅ 完了。feat。circuit breaker をユーザー設定の kill switch で無効化できるように。`ai_provider_breaker_enabled` を追加（既定 true・既存挙動を維持）し、OFF のとき `shouldAttempt` / `cooldown` / `recordSuccess` / `recordFailure` を一度も呼ばず `suppressed` も空のままにする。ゲート判定は `RemoteAIService.generateSummary` が既に読み終えた settings snapshot 上で行い追加の storage read を持たない（`repo.getAll` の呼び出し回数 1 回で固定）。無効時の通知ログは 1 行のみ。`testConnection` / `compositionManifest` / `settingsMigration` は非変更。新規テスト 10 件（gate OFF 3・gate ON 1・testConnection 1・one-shot ログ 2・`resolveBreakerGate` 2・schema/locale 7）。設定エクスポート（1.1.0 形式）の必須キーが 1 つ増えることを CHANGELOG に記載。RICE 0.53・1.5 SP）
-
-### 2026-09-27 匿名レビュー残差（circuit breaker rollout） — ⬜ 未着手 1件 🔧非機能追加
-
-27-04（ゲート）と 27-06（doc sync）は完了・アーカイブ済み（アーカイブ履歴参照）。残る 1 件:
-
-- [2026-09-27-05-feat-ai-provider-breaker-manual-reset.md](2026-09-27-05-feat-ai-provider-breaker-manual-reset.md)（⬜ 未着手・**優先 2**。feat。接続試験の成功時に breaker state を全消去する `clearAll()` を追加。auth の 15 分 cooldown を待たずに API key 更新直後から回復できるようにする。専用ボタンは設けず既存の診断操作に載せる。RICE 0.25・2 SP）
 
 ### 2026-09-27 マスターパスワード裁定の follow-up — ⬜ 未着手 1件 🔧非機能追加
 

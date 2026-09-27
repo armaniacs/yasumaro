@@ -69,8 +69,8 @@ function createService(
 
 const networkFailure: FailureMetadata = { kind: 'network' };
 
-/** Every breaker method the summary path can reach, in one flat call log. */
-type BreakerCall = 'shouldAttempt' | 'cooldown' | 'recordSuccess' | 'recordFailure';
+/** Every breaker method the service can reach, in one flat call log. */
+type BreakerCall = 'shouldAttempt' | 'cooldown' | 'recordSuccess' | 'recordFailure' | 'clearAll';
 
 /** A breaker that must not be reached at all while the gate is off. */
 function disabledSpy(): ProviderBreakerLike & { calls: BreakerCall[] } {
@@ -79,6 +79,7 @@ function disabledSpy(): ProviderBreakerLike & { calls: BreakerCall[] } {
     cooldown: async () => null,
     recordSuccess: async () => {},
     recordFailure: async () => {},
+    clearAll: async () => {},
   });
 }
 
@@ -101,6 +102,10 @@ function spyBreaker(inner: ProviderBreakerLike): ProviderBreakerLike & { calls: 
     recordFailure: vi.fn(async (provider: string, model: string | undefined, failure: FailureMetadata) => {
       calls.push('recordFailure');
       return inner.recordFailure(provider, model, failure);
+    }),
+    clearAll: vi.fn(async () => {
+      calls.push('clearAll');
+      return inner.clearAll();
     }),
   };
 }
@@ -241,22 +246,115 @@ describe('generateSummary with breaker', () => {
   });
 });
 
-describe('testConnection bypass', () => {
-  it('attempts a slot in cooldown and records nothing', async () => {
+describe('testConnection reset (PBI 27-05)', () => {
+  it('still bypasses the cooldown, then clears it so the next summary is attempted', async () => {
+    const store = memoryStore();
+    const breaker = new ProviderBreaker(store);
+    // Auth opens the long 15-minute cooldown on the first failure.
+    await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
+    await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
+
+    const service = createService([{ provider: 'cold' }], breaker);
+    const factory = vi.fn(() => succeedingProvider('recovered summary'));
+    service.registerProvider('cold', factory);
+
+    const result = await service.testConnection();
+
+    // The diagnostic itself is still not suppressed.
+    expect(factory).toHaveBeenCalledTimes(1);
+    expect(result.providers[0]?.success).toBe(true);
+    // And now the cooldown is gone: the fixed credentials are actually usable.
+    await expect(breaker.shouldAttempt('cold')).resolves.toBe(true);
+
+    const summaryFactory = vi.fn(() => succeedingProvider('recovered summary'));
+    service.registerProvider('cold', summaryFactory);
+    const summary = await service.generateSummary('content');
+
+    expect(summaryFactory).toHaveBeenCalledTimes(1);
+    expect(summary.success).toBe(true);
+    expect(summary.summary).toBe('recovered summary');
+    // The reset notice is a log line; it must never become page content.
+    expect(summary.summary).not.toContain('breaker');
+  });
+
+  it('clears every cooled-down slot, not only the one that was tested', async () => {
+    const store = memoryStore();
+    const breaker = new ProviderBreaker(store);
+    await breaker.recordFailure('cold', 'gpt-4o', { kind: 'auth', status: 401 });
+    await breaker.recordFailure('anthropic', 'claude', { kind: 'rate_limit', status: 429 });
+
+    const service = createService([{ provider: 'cold', model: 'gpt-4o' }], breaker);
+    service.registerProvider('cold', () => succeedingProvider('ok'));
+
+    await service.testConnection();
+
+    await expect(breaker.shouldAttempt('cold', 'gpt-4o')).resolves.toBe(true);
+    await expect(breaker.shouldAttempt('anthropic', 'claude')).resolves.toBe(true);
+  });
+
+  it('logs the reset once as INFO', async () => {
+    const breaker = new ProviderBreaker(memoryStore());
+    await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
+    const service = createService([{ provider: 'cold' }], breaker);
+    service.registerProvider('cold', () => succeedingProvider('plain summary'));
+
+    const result = await service.testConnection();
+
+    const notices = vi.mocked(addLog).mock.calls.filter(
+      ([level, message]) => level === LogType.INFO && message.includes('cooldown cleared'),
+    );
+    expect(notices).toHaveLength(1);
+    expect(result.message).toBe('cold: OK');
+  });
+
+  it('leaves the cooldown untouched when the test fails (policy §7)', async () => {
     const store = memoryStore();
     const breaker = new ProviderBreaker(store);
     await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
+    const cooldownBefore = await breaker.cooldown('cold');
 
     const service = createService([{ provider: 'cold' }], breaker);
-    const factory = vi.fn(() => succeedingProvider('ok'));
+    const factory = vi.fn(() => failingProvider({ kind: 'auth', status: 401 }));
     service.registerProvider('cold', factory);
 
     const result = await service.testConnection();
 
     expect(factory).toHaveBeenCalledTimes(1);
-    expect(result.providers[0]?.success).toBe(true);
-    // Bypass only: the cooldown entry is untouched.
+    expect(result.success).toBe(false);
+    // A test result is never written back into breaker state.
     await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
+    await expect(breaker.cooldown('cold')).resolves.toEqual(cooldownBefore);
+  });
+
+  it('leaves the cooldown untouched when every provider throws', async () => {
+    const store = memoryStore();
+    const breaker = new ProviderBreaker(store);
+    await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
+
+    const service = createService([{ provider: 'cold' }], breaker);
+    service.registerProvider('cold', () => ({
+      generateSummary: vi.fn(),
+      testConnection: vi.fn().mockRejectedValue(new Error('probe exploded')),
+    } as unknown as AIProviderStrategy));
+
+    const result = await service.testConnection();
+
+    expect(result.success).toBe(false);
+    await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
+  });
+
+  it('does not clear anything when no slot is in cooldown', async () => {
+    const store = memoryStore();
+    const breaker = new ProviderBreaker(store);
+    const setSpy = vi.spyOn(store, 'set');
+    const service = createService([{ provider: 'fine' }], breaker);
+    service.registerProvider('fine', () => succeedingProvider('ok'));
+
+    const result = await service.testConnection();
+
+    expect(result.success).toBe(true);
+    // Nothing was recorded, so nothing had to be rewritten.
+    expect(setSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -335,7 +433,23 @@ describe('generateSummary with the breaker gate', () => {
 
     expect(factory).toHaveBeenCalledTimes(1);
     expect(result.success).toBe(true);
+    // PBI 27-05 adds clearAll() to this path, and the kill switch still wins:
+    // the reset is a breaker write, so it stays behind the same gate.
     expect(spy.calls).toEqual([]);
+    // The gate hides the cooldown, it does not heal it.
+    await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
+  });
+
+  it('clears the cooldown on a successful testConnection with the gate on', async () => {
+    const spy = spyBreaker(breaker);
+    const { service } = createGatedService([{ provider: 'cold' }], spy, true);
+    service.registerProvider('cold', () => succeedingProvider('ok'));
+
+    const result = await service.testConnection();
+
+    expect(result.success).toBe(true);
+    expect(spy.calls).toEqual(['clearAll']);
+    await expect(breaker.shouldAttempt('cold')).resolves.toBe(true);
   });
 
   it('notes the disabled gate once, not per summary request', async () => {
