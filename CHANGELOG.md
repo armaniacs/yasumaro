@@ -37,6 +37,11 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **AI プロバイダの一時停止を設定で無効化できるように**（PBI 27-04）。AI 要約の失敗抑制（circuit breaker）が入る cooldown は 5〜15 分で、API キーを差し替えても、その時間が終わるまで要約が出ない状態から抜けられませんでした。AI プロバイダー設定に「失敗が続くプロバイダを一時停止する」を追加し、OFF にすると一時停止による省略と抑制状態（breaker state）の記録を完全に止めます。OFF の間は失敗数に関係なく一時停止されないため、要約のたびに全プロバイダを再試行します。既定は ON で、既存の抑制挙動は変わりません。判定は接続試験には及ばず、接続試験は従来どおり一時停止中でも実行されます
+  - **注意**: 設定エクスポート（形式 1.1.0）の必須キーは既定値から自動導出されます。本キーの追加により、1.1.0 形式のエクスポートファイルは `ai_provider_breaker_enabled` を含まない場合インポートできなくなります。1.1.0 より前の形式で書き出されたエクスポートファイルのインポートは影響を受けません
+
 ### Security
 
 - **ENCRYPTION_SECRET を平文で保存しない**（PBI 25-25）。マスターパスワード未設定時に自動生成される secret は、これまで `chrome.storage.local` に Base64 平文で保存されていた。本リリースから `chrome.storage.local` には専用 KEK で AES-GCM ラップした envelope（`{ v, wrapped, iv }`）のみを保存し、復号鍵は `chrome.storage.local` とは別の store（IndexedDB）に保存した non-extractable `CryptoKey` とする。`chrome.storage.local` が単独で漏洩しても API キー群を復号できない。

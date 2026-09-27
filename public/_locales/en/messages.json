@@ -161,6 +161,12 @@
   "reviewSummaryFailed": {
     "message": "Failed to generate summary."
   },
+  "aiProviderBreakerEnabledLabel": {
+    "message": "Pause a provider after repeated failures"
+  },
+  "aiProviderBreakerEnabledHelp": {
+    "message": "When enabled, a provider that keeps failing is paused for 5 to 15 minutes and skipped until the pause ends. Turn this off to retry every provider on every summary. Pausing saves API costs, but the summary is not generated while a provider is paused."
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },

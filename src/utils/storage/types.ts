@@ -42,6 +42,7 @@ export const StorageKeys = {
     AI_PROVIDER_PRIORITY_LIST: 'ai_provider_priority_list', // 優先度1〜3位のプロバイダ設定（ProviderSlot[]）
     AI_PROVIDER_LAYOUT: 'ai_provider_layout', // A/Bレイアウト切替 'a'|'b'
     SUMMARY_MIN_LENGTH: 'summary_min_length', // 要約の最小文字数しきい値（デフォルト: 10）。未満の場合フォールバック対象
+    AI_PROVIDER_BREAKER_ENABLED: 'ai_provider_breaker_enabled', // AIプロバイダの circuit breaker を無効化する kill switch（デフォルト: true。false にすると cooldown による抑制と breaker state の記録を完全に止める）
     OPENAI_BASE_URL: 'openai_base_url',
     OPENAI_API_KEY: 'openai_api_key',
     OPENAI_MODEL: 'openai_model',
@@ -312,6 +313,7 @@ export interface StorageKeyValues {
     [StorageKeys.AI_PROVIDER_PRIORITY_LIST]: ProviderSlot[];
     [StorageKeys.AI_PROVIDER_LAYOUT]: 'a' | 'b';
     [StorageKeys.SUMMARY_MIN_LENGTH]: number;
+    [StorageKeys.AI_PROVIDER_BREAKER_ENABLED]: boolean;
     [StorageKeys.OPENAI_BASE_URL]: string;
     [StorageKeys.OPENAI_API_KEY]: string | EncryptedData;
     [StorageKeys.OPENAI_MODEL]: string;
