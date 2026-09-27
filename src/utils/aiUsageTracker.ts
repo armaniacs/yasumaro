@@ -58,11 +58,51 @@ export function resetClockForTesting(): void {
  * @returns {Promise<{allowed: boolean; remaining: number; resetTime: number}>}
  */
 async function getRateLimitMax(): Promise<number> {
-  const result = await chrome.storage.local.get(StorageKeys.AI_RATE_LIMIT_MAX);
-  const value = result[StorageKeys.AI_RATE_LIMIT_MAX];
-  if (typeof value === 'number' && value > 0) {
-    return value;
+  // "> 0", deliberately not shared with getMaxMonthlyTokens' ">= 0": there 0
+  // means unlimited, while a 0 requests/minute cap would deny every AI call,
+  // so sharing one predicate would silently make 0 the strictest setting.
+  const isValid = (v: unknown): v is number =>
+    typeof v === 'number' && Number.isFinite(v) && v > 0;
+
+  // 1) Canonical 'settings' blob (writer/reader mismatch fix 2026-09-28, the
+  //    same defect the 2026-09-22 getMaxMonthlyTokens fix repaired for
+  //    MAX_MONTHLY_TOKENS): the recording-conditions UI saves through
+  //    settingsRepository.setAll into the blob, while this getter read only a
+  //    top-level key that nothing writes — every custom cap fell back to the
+  //    10/min default and the rate limit was effectively disarmed.
+  try {
+    const result = await chrome.storage.local.get('settings');
+    const blob = result['settings'];
+    if (blob && typeof blob === 'object' && !Array.isArray(blob)) {
+      const value = (blob as Record<string, unknown>)[StorageKeys.AI_RATE_LIMIT_MAX];
+      if (isValid(value)) return value;
+    }
+  } catch {
+    // fall through
   }
+
+  // 2) Legacy top-level key: writes from before the UI moved into the blob,
+  //    plus test fixtures.
+  try {
+    const result = await chrome.storage.local.get(StorageKeys.AI_RATE_LIMIT_MAX);
+    const legacy = result[StorageKeys.AI_RATE_LIMIT_MAX];
+    if (isValid(legacy)) return legacy;
+  } catch {
+    // fall through
+  }
+
+  // 3) Encrypted-at-rest installs: the repository decrypts the blob for us.
+  //    Dynamic import keeps SettingsRepository's module-load side effects out
+  //    of test setups that stub chrome.storage before importing this module.
+  try {
+    const { settingsRepository } = await import('./storage/SettingsRepository.js');
+    const settings = await settingsRepository.getAll();
+    const value = settings[StorageKeys.AI_RATE_LIMIT_MAX];
+    if (isValid(value)) return value;
+  } catch {
+    // fall through
+  }
+
   return DEFAULT_RATE_LIMIT_MAX;
 }
 
