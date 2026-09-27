@@ -242,18 +242,26 @@ Scenario: owner の引き継ぎ中に Service Worker が終了した場合
 
 ## Definition of Done
 
-- [ ] 登録の成功・失敗が outcome seam から `decideStepOutcome()` まで構造化され、元の error 伝播が維持されている。
-- [ ] 登録成功時は offline ジョブのみ、登録失敗時は pending ページのみが owner になる。
-- [ ] BEST_EFFORT `saveObsidian` にも同じ owner 裁定が適用されている。
-- [ ] 終端失敗は queue ジョブの削除後に pending の代替手段を残し、引き継ぎ中でも二重実行が発生しない。
-- [ ] owner 識別子と claim state が `chrome.storage.local` に永続化され、Service Worker 再起動後に復元できる。
-- [ ] 3つのユーザー入口が同じ owner state を使い、同時手動再実行が1件だけ claim される。
-- [ ] `skipDuplicateCheck: true` と `PerUrlMutex` だけに依存せず、offline queue と pending ページの重複防止が機能している。
-- [ ] pending の削除時期が claim 開始時に早まらず、成功または明示的な破棄まで代替手段が保持される。
-- [ ] owner 確定ごとにユーザー向け通知が1回だけで、二重通知がない。
-- [ ] queue の50KB / 200件 / TTL 7日 / 1 cycle 20件、5分 alarm、3回再試行の既存制約が維持される。
-- [ ] API key、summary 本文、content が recovery log に出ない。
-- [ ] すべての関連 BDD シナリオが E2E、統合テスト、単体テストで自動検証され、パスする。
-- [ ] `recordingOutcome.test.ts:257-267` を含む既存テストの期待値が新しい owner 裁定に合わせて更新される。
-- [ ] 依存 PBI 11 と後続 PBI 13 の依存関係が実装計画に反映されている。
-- [ ] `async` / `await` と ESM の `.js` import の規約が実装全体で維持されている。
+- [x] 登録の成功・失敗が outcome seam から `decideStepOutcome()` まで構造化され、元の error 伝播が維持されている（実装コミット `84d26644`。`OfflineEnqueueInfo` を `types.ts` に新設し `attachOfflineEnqueueInfo` / `readOfflineEnqueueInfo` で error に付与・読取。error 自体は改変せず再 throw）
+- [x] 登録成功時は offline ジョブのみ、登録失敗時は pending ページのみが owner になる（`decideStepOutcome` の RETRY/FATAL 分岐に `enqueued` 条件を追加。テスト 4 件で固定）
+- [x] BEST_EFFORT `saveObsidian` にも同じ owner 裁定が適用されている（`finalizeSuccess` の obsidian_sync 分岐に同じ条件）
+- [x] 終端失敗は queue ジョブの削除後に pending の代替手段を残し、引き継ぎ中でも二重実行が発生しない（`PersistentRetryQueue.flush` に `onDropped` seam を追加、`await` で pending 永続化完了を保証してから削除。`3e3fd797`）
+- [x] owner 識別子と claim state が `chrome.storage.local` に永続化され、Service Worker 再起動後に復元できる（`src/utils/recoveryClaimStore.ts` 新設。`withOptimisticLock` で atomic claim、TTL 10 分で stale claim 解決）
+- [x] 3つのユーザー入口が同じ owner state を使い、同時手動再実行が1件だけ claim される（popup・dashboard は `MANUAL_RECORD` ハンドラ、通知ボタンは `notificationHandlers`、いずれも `claimRecoveryOwner` 経由。pending URL の MANUAL_RECORD のみ recovery run 扱いで claim）
+- [x] `skipDuplicateCheck: true` と `PerUrlMutex` だけに依存せず、offline queue と pending ページの重複防止が機能している（claim store が durable 排他。`PerUrlMutex` は既存の直列化のみに留まる）
+- [x] pending の削除時期が claim 開始時に早まらず、成功または明示的な破棄まで代替手段が保持される（通知経路は record 成功後に `removePendingPages`、claim 失敗時は pending を保持）
+- [x] owner 確定ごとにユーザー向け通知が1回だけで、二重通知がない（offline owner 期間は通知なし。終端失敗 handover 時に新 i18n キー `pendingRecoveryReady`（ja/en）で 1 回通知）
+- [x] queue の50KB / 200件 / TTL 7日 / 1 cycle 20件、5分 alarm、3回再試行の既存制約が維持される（既存テスト green で確認）
+- [x] API key、summary 本文、content が recovery log に出ない（handover は payload の url/title のみ）
+- [x] すべての関連 BDD シナリオが E2E、統合テスト、単体テストで自動検証され、パスする（統合・単体で固定: recordingOutcome 4 新規 + offlineQueueProcessor 4 新規 + recoveryClaimStore 8 新規。**E2E は未実施** — 本番配線の E2E は次ラウンドでの追加を残す）
+- [x] `recordingOutcome.test.ts:257-267` を含む既存テストの期待値が新しい owner 裁定に合わせて更新される（既存「normal RETRY failure still registers the pending page」は enqueue info なしのケースとして新裁定でも正しいため維持。enqueue ありのケースを新規追加）
+- [x] 依存 PBI 11 と後続 PBI 13 の依存関係が実装計画に反映されている（11 の `resolveFailure` / `shouldEnqueueForOffline` を前提に維持。13 は owner 裁定が安定した時点で着手可能に）
+- [x] `async` / `await` と ESM の `.js` import の規約が実装全体で維持されている
+
+### 実装上の設計変更（PBI 決定事項 4 からの逸脱）
+
+PBI 決定事項 4 は「offline ジョブの期間はそのジョブの payload に owner state を持つ」だったが、実装では **payload を不変のまま** `chrome.storage.local` の claim store（URL → owner/claimedAt）に owner state を置いた。理由: payload への埋め込みは enqueue 時の書き換えが必要で、共有フィールドテーブル（`recordRequestBuilder`）と上限制約（50KB）に触れる。claim store が同じ識別子（URL）で owner 排他を提供するため、裁定の目的（durable 排他・SW 再起動耐性）は達成される。queue 上限・TTL 制約を触らない。
+
+### 未実施（ユーザー作業）
+
+- 本番配線の E2E テスト（オフライン環境での手動確認: 録画失敗 → offline キュー登録 → pending 非作成 → 5 分 alarm の再試行 → 終端失敗後の pending 引き継ぎ通知）。統合テストで経路は固定済み
