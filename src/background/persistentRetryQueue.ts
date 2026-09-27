@@ -176,14 +176,13 @@ export class PersistentRetryQueue<T> {
       await this.saveRemaining([...remaining, ...untouched]);
     };
 
-    const reportDropped = (item: T, reason: 'max-retries' | 'ttl'): void => {
+    const reportDropped = async (item: T, reason: 'max-retries' | 'ttl'): Promise<void> => {
       if (onDropped === undefined) return;
       try {
-        void Promise.resolve(onDropped(item, reason)).catch((error: unknown) => {
-          addLog(LogType.ERROR, `${this.options.logLabel}: onDropped callback failed`, {
-            error: errorMessage(error),
-          });
-        });
+        // Awaited on purpose (PBI 2026-09-25-12): the fallback owner must be
+        // durably registered before the job leaves the queue, otherwise the
+        // recording briefly has no recovery owner at all.
+        await onDropped(item, reason);
       } catch (error) {
         addLog(LogType.ERROR, `${this.options.logLabel}: onDropped callback failed`, {
           error: errorMessage(error),
@@ -198,7 +197,7 @@ export class PersistentRetryQueue<T> {
       });
       // filterExpiredAndOverRetry merges over-retry and TTL drops; re-derive
       // the precise reason so onDropped reports what actually happened.
-      reportDropped(item, shouldDrop(item, this.options.maxRetryCount) ? 'max-retries' : 'ttl');
+      await reportDropped(item, shouldDrop(item, this.options.maxRetryCount) ? 'max-retries' : 'ttl');
     }
     if (dropped.length > 0 && this.options.persistPerItem) await persistState();
 
@@ -212,7 +211,7 @@ export class PersistentRetryQueue<T> {
               id: (item as RetryableItem & { id?: string }).id,
             });
             if (this.options.persistPerItem) await persistState();
-            reportDropped(item, 'max-retries');
+            await reportDropped(item, 'max-retries');
             continue;
           }
           remaining.push(item);
@@ -225,7 +224,7 @@ export class PersistentRetryQueue<T> {
             id: (item as RetryableItem & { id?: string }).id,
           });
           if (this.options.persistPerItem) await persistState();
-          reportDropped(item, 'max-retries');
+          await reportDropped(item, 'max-retries');
           continue;
         }
         remaining.push(item);
