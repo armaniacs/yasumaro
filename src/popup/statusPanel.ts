@@ -11,6 +11,7 @@ import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
+import { buildRemovedCounts } from '../utils/commonTypes.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
@@ -408,10 +409,10 @@ function initCleansingFeedbackButton(): void {
       if (tab?.id !== undefined) {
         const resp = await requestContentFromTab(tab.id);
         if (resp?.content) htmlSnippet = resp.content.slice(0, 500);
-        if (resp?.cleanseStats) removedByReason = { ...resp.cleanseStats } as unknown as Record<string, number>;
-        if (resp?.aiSummaryCleansedStats) {
-          removedByReason = { ...removedByReason, ...resp.aiSummaryCleansedStats } as unknown as Record<string, number>;
-        }
+        // Counts and AI-summary byte/reason stats are separate units: the
+        // builder keeps them apart, and only the count side is stored (the wire
+        // shape has a single Record<string, number> field).
+        removedByReason = buildRemovedCounts(resp?.cleanseStats, resp?.aiSummaryCleansedStats).byReason;
       }
       if (!htmlSnippet) {
         htmlSnippet = document.documentElement.outerHTML.slice(0, 500);

@@ -4517,6 +4517,9 @@
   "cleansingFeedbackReason": {
     "message": "理由"
   },
+  "cleansingFeedbackReasons": {
+    "message": "理由"
+  },
   "cleansingFeedbackDate": {
     "message": "日時"
   },
