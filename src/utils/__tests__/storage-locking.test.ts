@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { settingsRepository } from '../storage/SettingsRepository.js';
 import { StorageKeys } from '../storage/types.js';
 import { clearEncryptionKeyCache } from '../storage/encryptionSession.js';
+import { installTestSecretKek } from '../crypto/__tests__/secretKekHelper.js';
 
 // Mock chrome.storage.local
 const mockStorage: Record<string, unknown> = {};
@@ -77,7 +78,9 @@ global.crypto = {
 global.chrome = mockChrome as unknown as typeof chrome;
 
 describe('saveSettings - 楽観的ロック', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
+        // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+        await installTestSecretKek();
         // テストごとにストレージをクリア
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         // 暗号化キーキャッシュをクリア
@@ -236,7 +239,10 @@ describe('migrateToSingleSettingsObject', () => {
 });
 
 describe('暗号化エラーハンドリング', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
+        // Same reason as the suite above: this describe exercises the save
+        // path on its own, and the override is module state, not per-describe.
+        await installTestSecretKek();
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
         clearEncryptionKeyCache();
         mockStorage['settings_version'] = 0;

@@ -103,9 +103,12 @@ import { getTrustDbAdmin, TrustDbAdmin } from '../TrustDbAdmin.js';
 import { DomainTrustLevel } from '../trustDbSchema.js';
 import { DomainVerifier } from '../domainVerifier.js';
 import { settingsRepository } from '../../storage/SettingsRepository.js';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 
 describe('TrustDb', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     vi.clearAllMocks();
     settingsRepository.clearCache();
     // storage モックをリセット (PBI-2026-08-01-16)

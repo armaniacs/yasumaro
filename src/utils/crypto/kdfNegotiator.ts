@@ -90,8 +90,12 @@ export async function deriveLegacyKeyFromStoredSecret(): Promise<CryptoKey | nul
             StorageKeys.ENCRYPTION_SECRET,
         ]);
         const saltB64 = stored[StorageKeys.ENCRYPTION_SALT] as string | undefined;
-        const secretB64 = stored[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
+        const secretB64 = stored[StorageKeys.ENCRYPTION_SECRET] as unknown;
         if (!saltB64 || !secretB64) return null;
+        // PBI 25-25: wrapped envelopes are not legacy secrets. atob() on an
+        // object would throw (caught below → null), but reject explicitly so
+        // the fallback chain, not an exception, decides the next candidate.
+        if (typeof secretB64 !== 'string') return null;
 
         const salt = base64ToBytes(saltB64);
         // Deliberately NOT base64ToBytes: this reproduces how the legacy key

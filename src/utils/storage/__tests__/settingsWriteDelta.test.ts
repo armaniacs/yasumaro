@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { SettingsRepository, InMemoryStorageAdapter } from '../SettingsRepository.js';
 import { StorageKeys } from '../types.js';
 
@@ -16,7 +17,9 @@ describe('SettingsRepository — delta write contract', () => {
   const KEY_A = StorageKeys.OBSIDIAN_HOST;
   const KEY_B = StorageKeys.OBSIDIAN_PORT;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     adapter = new InMemoryStorageAdapter();
     repo = new SettingsRepository(adapter);
   });

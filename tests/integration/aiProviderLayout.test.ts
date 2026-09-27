@@ -1,10 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { installTestSecretKek } from '../../src/utils/crypto/__tests__/secretKekHelper.js';
 import { JSDOM } from 'jsdom';
 import { InMemoryStoragePort } from '../../src/utils/storage/InMemoryStoragePort.js';
 import { SettingsRepository } from '../../src/utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../src/utils/storage/types.js';
 import { collectBProviderPrioritySlots, createBPriorityListView } from '../../src/dashboard/aiProviderB/priorityListView.js';
 import { collectProviderPrioritySlots, applyProviderPrioritySlots } from '../../src/dashboard/generalSettings/settingsForm.js';
+
+// PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+beforeEach(async () => {
+  await installTestSecretKek();
+});
 
 function setupADom(): void {
   const dom = new JSDOM(`

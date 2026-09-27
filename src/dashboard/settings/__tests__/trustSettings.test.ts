@@ -314,9 +314,17 @@ function setupFullDOM() {
 }
 
 describe('trustSettings.ts', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     vi.resetModules();
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    // Imported dynamically, and after resetModules, because the override lives
+    // in module state: a statically imported helper would install it on the
+    // pre-reset instance that the freshly imported production code never sees.
+    const { installTestSecretKek } = await import(
+      '../../../utils/crypto/__tests__/secretKekHelper.js'
+    );
+    await installTestSecretKek();
     document.body.innerHTML = '';
   });
 

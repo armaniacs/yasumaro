@@ -200,6 +200,50 @@ export async function decryptData(encryptedData: EncryptedData, key: CryptoKey):
 }
 
 /**
+ * AES-GCM でラップした文字列の形式。wrapping key は呼び出し側が渡す。
+ */
+export interface AeadStringEnvelope {
+    wrapped: string;
+    iv: string;
+}
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
+/**
+ * 指定した AES-GCM 鍵で文字列をラップする。
+ *
+ * 鍵を引数で受け取るのは、同一の暗号機構を「鍵の寿命が別々」の用途で
+ * 使い分けるため（HMAC 署名鍵のラップと API 暗号シークレットのラップ）。
+ * 鍵の選択をこの module 内に閉じると、KEYSTORE 側の rotation が
+ * 別用途の鍵の寿命に結合してしまう。
+ */
+export async function wrapStringWithKey(secret: string, key: CryptoKey): Promise<AeadStringEnvelope> {
+    const webcrypto = getWebCrypto();
+    const iv = generateIV();
+    const ciphertext = await webcrypto.subtle.encrypt(
+        { name: ENCRYPTION_ALGORITHM, iv: iv as BufferSource },
+        key,
+        textEncoder.encode(secret) as BufferSource
+    );
+    return {
+        wrapped: bytesToBase64(new Uint8Array(ciphertext)),
+        iv: bytesToBase64(iv),
+    };
+}
+
+/** wrapStringWithKey の逆。鍵が違う場合は decrypt が失敗する。 */
+export async function unwrapStringWithKey(envelope: AeadStringEnvelope, key: CryptoKey): Promise<string> {
+    const webcrypto = getWebCrypto();
+    const plaintext = await webcrypto.subtle.decrypt(
+        { name: ENCRYPTION_ALGORITHM, iv: base64ToBytes(envelope.iv) as BufferSource },
+        key,
+        base64ToBytes(envelope.wrapped) as BufferSource
+    );
+    return textDecoder.decode(plaintext);
+}
+
+/**
  * データが暗号化されているかをチェックする
  * @param {unknown} data - チェック対象のデータ
  * @returns {boolean} 暗号化されているかどうか
