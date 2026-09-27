@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { getSettings, clearSettingsCache } from '../../storage.js';
 
 vi.mock('../../logger/types.js', () => ({
@@ -53,7 +54,9 @@ vi.mock('../../logger/api.js', () => ({
 describe('storage — plaintext API key detection', () => {
   let storageData: Record<string, unknown>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     vi.clearAllMocks();
     storageData = {
       settings: {

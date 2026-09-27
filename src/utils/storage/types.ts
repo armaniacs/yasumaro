@@ -6,6 +6,7 @@
  */
 
 import type { EncryptedData } from '../crypto/types.js';
+import type { SecretEnvelope } from '../crypto/secretWrappingKey.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
 import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
 import type { NavTrailConsent } from './navTrailConsent.js';
@@ -92,7 +93,7 @@ export const StorageKeys = {
     NAV_TRAIL_CONSENT: 'nav_trail_consent',
     // Encryption settings
     ENCRYPTION_SALT: 'encryption_salt',     // PBKDF2用ソルト（Base64）
-    ENCRYPTION_SECRET: 'encryption_secret', // マスターパスワード未設定時の自動暗号化鍵導出に使う自動生成シークレット（Base64）。現役で読み書きされる — 新鍵管理スキームへのマイグレーションなしに削除すると、既存の暗号化データ（APIキー等）が復号不能になる
+    ENCRYPTION_SECRET: 'encryption_secret', // マスターパスワード未設定時の自動暗号化鍵導出に使う自動生成シークレット。PBI 25-25 以降は専用 KEK でラップした envelope（object）として保存し、legacy は Base64 平文（読み取り時に移行） — 新鍵管理スキームへのマイグレーションなしに削除すると、既存の暗号化データ（APIキー等）が復号不能になる
     HMAC_SECRET: 'hmac_secret',             // 設定エクスポート用HMACシークレット（Base64）
     // 【セキュリティ修正】マスターパスワード関連
     MASTER_PASSWORD_ENABLED: 'master_password_enabled', // マスターパスワード設定済みフラグ
@@ -351,7 +352,9 @@ export interface StorageKeyValues {
      */
     [StorageKeys.NAV_TRAIL_CONSENT]: NavTrailConsent;
     [StorageKeys.ENCRYPTION_SALT]: string;
-    [StorageKeys.ENCRYPTION_SECRET]: string;
+    // PBI 25-25: wrapped envelope object for new saves; legacy Base64 string
+    // still readable (migrated on read). Never persist a new plaintext string.
+    [StorageKeys.ENCRYPTION_SECRET]: string | SecretEnvelope;
     [StorageKeys.HMAC_SECRET]: string;
     [StorageKeys.MASTER_PASSWORD_ENABLED]: boolean;
     [StorageKeys.MASTER_PASSWORD_SALT]: string;

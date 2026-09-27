@@ -1,4 +1,11 @@
 import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, isLocalhostAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
+import { beforeEach } from 'vitest';
+import { installTestSecretKek } from '../crypto/__tests__/secretKekHelper.js';
+
+// PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+beforeEach(async () => {
+  await installTestSecretKek();
+});
 import { normalizeUrl } from '../urlUtils.js';
 import { logDebug } from '../logger/api.js';
 import * as cspValidatorModule from '../cspValidator.js';

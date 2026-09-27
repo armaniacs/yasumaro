@@ -62,20 +62,20 @@ Scenario: IndexedDB の KEK が利用できない状態から既存データを�
 
 ## 受け入れ基準
 
-- [ ] マスターパスワード未設定時の新規保存で、`ENCRYPTION_SECRET` はラップ済み envelope として `chrome.storage.local` に保存される。
-- [ ] `ENCRYPTION_SECRET` の永続領域を session に戻していない。
-- [ ] `chrome.storage.local` に raw key bytes または平文 Base64 の `ENCRYPTION_SECRET` を保存しない。
-- [ ] ラップと unwrap には既存の AES-GCM の `wrapSecretString` / `unwrapSecretString` helper を再利用する。
-- [ ] KEK は IndexedDB に保存された non-extractable `CryptoKey` とし、Service Worker 再起動と拡張機能更新後も利用できる。
-- [ ] legacy な平文 `ENCRYPTION_SECRET` は読み取り後にラップ済み envelope へ移行され、移行後も既存 API キー群を復号できる。
-- [ ] `kdfNegotiator` の legacy fallback は、移行済みユーザーと未移行ユーザーの双方で正しい secret を復元できる。
-- [ ] IndexedDB または KEK が利用できない場合は、`durableKeyStore` の fail-open をそのまま適用せず、IDB 利用不可時の挙動を明示する。
-- [ ] 復号不能な状態から既存 API キーを失わせる新規 secret の自動生成へ進まない。
-- [ ] API キーは引き続き `SettingsRepository` 経由で暗号化され、secret 値はログへ出力されない。
-- [ ] ESM import は `.js` 拡張子を使用し、Promise の `.then()` チェーンを使用しない。
-- [ ] Manifest V3 の制約を維持する。
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` の更新要否と `PRIVACY_POLICY_VERSION` の更新要否を裁定する。
-- [ ] プライバシー文書を更新する場合は、両ファイルがバイト一致することを検証する。
+- [x] マスターパスワード未設定時の新規保存で、`ENCRYPTION_SECRET` はラップ済み envelope として `chrome.storage.local` に保存される。
+- [x] `ENCRYPTION_SECRET` の永続領域を session に戻していない。
+- [x] `chrome.storage.local` に raw key bytes または平文 Base64 の `ENCRYPTION_SECRET` を保存しない。
+- [x] ラップと unwrap には既存の AES-GCM の `wrapSecretString` / `unwrapSecretString` helper を再利用する。
+- [x] KEK は IndexedDB に保存された non-extractable `CryptoKey` とし、Service Worker 再起動と拡張機能更新後も利用できる。
+- [x] legacy な平文 `ENCRYPTION_SECRET` は読み取り後にラップ済み envelope へ移行され、移行後も既存 API キー群を復号できる。
+- [x] `kdfNegotiator` の legacy fallback は、移行済みユーザーと未移行ユーザーの双方で正しい secret を復元できる。
+- [x] IndexedDB または KEK が利用できない場合は、`durableKeyStore` の fail-open をそのまま適用せず、IDB 利用不可時の挙動を明示する。
+- [x] 復号不能な状態から既存 API キーを失わせる新規 secret の自動生成へ進まない。
+- [x] API キーは引き続き `SettingsRepository` 経由で暗号化され、secret 値はログへ出力されない。
+- [x] ESM import は `.js` 拡張子を使用し、Promise の `.then()` チェーンを使用しない。
+- [x] Manifest V3 の制約を維持する。
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` の更新要否と `PRIVACY_POLICY_VERSION` の更新要否を裁定する。
+- [x] プライバシー文書を更新する場合は、両ファイルがバイト一致することを検証する。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -197,18 +197,38 @@ Scenario: IndexedDB の KEK が利用できない状態から既存データを�
 
 ## Definition of Done
 
-- [ ] 5 Whys の裁定内容を実装、型契約、受け入れテストに反映した。
-- [ ] BDD 受け入れシナリオが自動テストとして実装され、IDB 利用不可・KEK 欠損時も既存 API キー群を失わない。
-- [ ] `chrome.storage.local` の `ENCRYPTION_SECRET` に raw key bytes または平文 Base64 が残らない。
-- [ ] ラップ済み envelope のみが local に保存され、IndexedDB の non-extractable KEK を用いて Service Worker 再起動と拡張機能更新後に復号できる。
-- [ ] legacy 平文 secret の移行と `kdfNegotiator` の legacy fallback を統合テストで確認した。
-- [ ] `src/utils/__tests__/storage-security.test.ts:433-476` の旧 pin を新しい期待値へ更新した。
-- [ ] `src/utils/storage/__tests__/encryptionSession-branch.test.ts:65-83` と `src/utils/storage/__tests__/encryptionSession-concurrency.test.ts:29-103` の関連検証を更新した。
-- [ ] `hmacKeyStoreChain.test.ts` と `hmacKeyStoreRestart.test.ts` 相当の既存検証で回帰がないことを確認した。
-- [ ] API キーが `SettingsRepository` 経由で暗号化されたまま、secret 値がログへ出力されないことを確認した。
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` の更新要否と `PRIVACY_POLICY_VERSION` の更新要否を裁定し、必要なら両文書をバイト一致で更新した。
-- [ ] ESM import の `.js` 拡張子、async / await のみ、Manifest V3 の制約を満たした。
-- [ ] `pbi/2026-09-25-27-investigate-master-password-removal-reencrypt.md` の anonymous secret 形式と `pbi/2026-09-25-17-fix-settings-migration-completion-state.md` の migration 完了状態との依存整合を確認した。
-- [ ] ロールバック時に旧平文データと新 envelope の切替が データ損失 を出さないことを確認した。
-- [ ] セキュリティ欠陥の修正として、IDB 障害時、KEK 分離、移行順序、secret のログ出力防止の観点をレビューした。
-- [ ] コードレビュー、関連ドキュメント更新、受け入れテストの結果を記録した。
+- [x] 5 Whys の裁定内容を実装、型契約、受け入れテストに反映した。
+- [x] BDD 受け入れシナリオが自動テストとして実装され、IDB 利用不可・KEK 欠損時も既存 API キー群を失わない。
+- [x] `chrome.storage.local` の `ENCRYPTION_SECRET` に raw key bytes または平文 Base64 が残らない。
+- [x] ラップ済み envelope のみが local に保存され、IndexedDB の non-extractable KEK を用いて Service Worker 再起動と拡張機能更新後に復号できる。
+- [x] legacy 平文 secret の移行と `kdfNegotiator` の legacy fallback を統合テストで確認した。
+- [x] `src/utils/__tests__/storage-security.test.ts:433-476` の旧 pin を新しい期待値へ更新した。
+- [x] `src/utils/storage/__tests__/encryptionSession-branch.test.ts:65-83` と `src/utils/storage/__tests__/encryptionSession-concurrency.test.ts:29-103` の関連検証を更新した。
+- [x] `hmacKeyStoreChain.test.ts` と `hmacKeyStoreRestart.test.ts` 相当の既存検証で回帰がないことを確認した。
+- [x] API キーが `SettingsRepository` 経由で暗号化されたまま、secret 値がログへ出力されないことを確認した。
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` の更新要否と `PRIVACY_POLICY_VERSION` の更新要否を裁定し、必要なら両文書をバイト一致で更新した。
+- [x] ESM import の `.js` 拡張子、async / await のみ、Manifest V3 の制約を満たした。
+- [x] `pbi/2026-09-25-27-investigate-master-password-removal-reencrypt.md` の anonymous secret 形式と `pbi/2026-09-25-17-fix-settings-migration-completion-state.md` の migration 完了状態との依存整合を確認した。
+- [ ] ロールバック時に旧平文データと新 envelope の切替が データ損失 を出さないことを確認した。**→ 未達（one-way door。下記裁定を参照）**
+
+## 実装結果と裁定（2026-09-27）
+
+### 達成した内容
+
+- `ENCRYPTION_SECRET` の新規保存は専用 KEK でラップした `{ v: 1, wrapped, iv }` envelope のみ。平文 Base64 は新規に書かない。
+- KEK は `yasumaro-secret-crypto`（専用 DB）に保存した non-extractable `CryptoKey`。HMAC の `yasumaro-crypto` とは DB を分離した。
+  - IndexedDB の `onupgradeneeded` はバージョン番号が変わるときだけ走る。同一 DB 名・同一 version で 2 つの object store を開くと、先に開いた側が version 1 で自分の store を作り、後に開いた側は upgrade を得られず store が永久に作られない。fail-closed 契約と組み合わせると恒久的な `ENCRYPTION_UNAVAILABLE` になるため、DB を分離した（`secretEnvelope.test.ts` に pin 済み）。
+- 既存 user は無停止移行: 平文 secret をラップ → unwrap で一致確認 → その後にだけ local を上書き。移行失敗時は平文を残す。
+- KEK 喪失時: envelope があれば fail closed（削除・再生成なし）、legacy 平文があれば legacy 導出を継続して移行を延期する（データ損失より可用性を優先）。salt だけ欠落した record は再生成せず `CORRUPTION` を返す。
+- `kdfNegotiator` の legacy fallback は envelope を string と誤認しないよう型で弾く。
+- `PRIVACY.md` 2 ファイルを更新し、revision date を 2026-09-27 に更新。`PRIVACY_POLICY_VERSION` は据え置き（露出範囲の縮小であり同意 scope の変化ではないため）。
+
+### 未達（ロールバック）
+
+平文を廃止する以上、旧バージョンへ戻すと旧コードは envelope を Base64 と解釈できず、保存済み API キーが復号不能になる。**この移行は one-way door であり、ロールバックでデータ損失を出さないようにすることは構造上不可能**である。旧版へ戻す場合の復旧は API キーの再入力となる。これは「local 単体漏洩で API キー群を復号できない」という主受け入れ条件を満たすために受け入れた制約であり、ロールバックでの無損失回復は要求しない。移行**途中**での上書き・削除によるデータ損失だけは、unwrap 確認を挟む順序と fail-closed により防いでいる。
+
+### 引き渡し契約（後続 PBI 27 向け）
+
+`chrome.storage.local[ENCRYPTION_SECRET]` は `string | SecretEnvelope` の和集合型で、`SecretEnvelope` は `{ v: 1, wrapped: string, iv: string }`。PBI 25-27（master password 廃止時の再暗号化）はこの envelope を読む実装にして，平文 string を新規に書かないこと。
+- [x] セキュリティ欠陥の修正として、IDB 障害時、KEK 分離、移行順序、secret のログ出力防止の観点をレビューした。
+- [x] コードレビュー、関連ドキュメント更新、受け入れテストの結果を記録した。

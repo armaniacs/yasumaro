@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { SettingsRepository, InMemoryStorageAdapter } from '../SettingsRepository.js';
 import { StorageKeys } from '../types.js';
 
@@ -6,7 +7,9 @@ describe('SettingsRepository — deep module via StorageAdapter', () => {
   let adapter: InMemoryStorageAdapter;
   let repo: SettingsRepository;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     adapter = new InMemoryStorageAdapter();
     repo = new SettingsRepository(adapter);
   });

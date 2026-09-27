@@ -6,6 +6,7 @@
  */
 
 import { StorageKeys } from '../../../../utils/storage/types.js';
+import { installTestSecretKek } from '../../../../utils/crypto/__tests__/secretKekHelper.js';
 import { settingsRepository } from '../../../../utils/storage/SettingsRepository.js';
 import {
   loadAndDisplaySources,
@@ -164,6 +165,8 @@ describe('ublockImport - SourceManager Module', () => {
   let storageMocks: ReturnType<typeof createStorageMocks>;
 
   beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     // 新しいモックを作成して各テストが完全に分離された状態を持つようにする
     storageMocks = createStorageMocks();
 

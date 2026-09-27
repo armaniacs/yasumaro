@@ -22,6 +22,14 @@ import {
 } from '../crypto/index.js';
 import { validatePasswordPolicy } from '../crypto/cryptoParams.js';
 import { hmacSignerForSecret, type HmacSigner } from '../crypto/hmacSigner.js';
+import {
+  getOrCreateSecretWrappingKey,
+  loadSecretWrappingKey,
+  wrapSecretWithKey,
+  unwrapSecretWithKey,
+  isSecretEnvelope,
+  type SecretEnvelope,
+} from '../crypto/secretWrappingKey.js';
 import { StorageKeys } from './types.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 import { isLocked as authGuardIsLocked } from './authGuard.js';
@@ -112,8 +120,8 @@ async function deriveKeyFromMasterPassword(passwordSaltBase64: string | undefine
 }
 
 /**
- * 直前のバージョンでsession storageに一時的に移されたsecretを、まだSWコンテキストが
- * 生きていてsession storageが失われていない間にlocalへ復元する（救済マイグレーション）。
+ * 直前のバージョンでsession storageに一時的に移されたsecretを返す（救済マイグレーション）。
+ * PBI 25-25: local への保存は行わない — 呼び出し側が envelope 化して保存する。
  * アップデートを跨いでsession storageが既にクリアされてしまったユーザーは復旧できない
  * （＝暗号化済みAPIキーの再入力が必要）。
  * @returns 復元できた場合はsecret、できなかった場合はundefined
@@ -125,14 +133,10 @@ async function restoreSecretFromSessionIfPresent(): Promise<string | undefined> 
     const sessionSecret = sessionResult[StorageKeys.ENCRYPTION_SECRET] as string | undefined;
     if (!sessionSecret) return undefined;
 
-    await chrome.storage.local.set({
-        [StorageKeys.ENCRYPTION_SECRET]: sessionSecret
-    });
-    await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
     return sessionSecret;
 }
 
-/** 初回: ランダムなソルトとシークレットを生成してlocalに保存する。 */
+/** 初回: ランダムなソルトとシークレットを生成し、ラップ済み envelope として保存する。 */
 async function generateAndPersistSecret(): Promise<{ saltBase64: string; secret: string }> {
     const salt = generateSalt();
     const saltBase64 = bytesToBase64(salt);
@@ -140,12 +144,45 @@ async function generateAndPersistSecret(): Promise<{ saltBase64: string; secret:
     const secretBytes = crypto.getRandomValues(new Uint8Array(32));
     const secret = bytesToBase64(secretBytes);
 
+    // PBI 25-25: 平文 Base64 を local に置かない。専用 KEK でラップした
+    // envelope のみ保存する。KEK 利用不可時は fail closed（明示エラー） —
+    // 平文保存へのフォールバックも自動再生成も行わない。
+    const kek = await getOrCreateSecretWrappingKey();
+    if (!kek) {
+        throw new Error('ENCRYPTION_UNAVAILABLE: secret wrapping key unavailable (IndexedDB)');
+    }
+    const envelope = await wrapSecretWithKey(secret, kek);
+
     await chrome.storage.local.set({
         [StorageKeys.ENCRYPTION_SALT]: saltBase64,
-        [StorageKeys.ENCRYPTION_SECRET]: secret
+        [StorageKeys.ENCRYPTION_SECRET]: envelope,
     });
 
     return { saltBase64, secret };
+}
+
+/**
+ * 保存済み secret を envelope へ移行する。unwrap 確認後にだけ保存し、
+ * 確認前は平文を除去しない（移行失敗で API キーを失わない順序）。
+ * KEK 利用不可時は移行を延期し、legacy 導出を継続する。
+ */
+async function migrateLegacySecretToEnvelope(legacySecret: string): Promise<void> {
+    const kek = await getOrCreateSecretWrappingKey();
+    if (!kek) {
+        // Not fail-closed: the legacy plaintext still decrypts every stored API
+        // key, so refusing here would lock the user out of data they can read.
+        // Deferring keeps the read path working; the next call migrates.
+        logDebug('Secret migration deferred: wrapping key unavailable', undefined);
+        return;
+    }
+    const envelope = await wrapSecretWithKey(legacySecret, kek);
+    // Verify before replacing: an envelope that does not unwrap must never
+    // displace the working plaintext.
+    const roundTripped = await unwrapSecretWithKey(envelope, kek);
+    if (roundTripped !== legacySecret) {
+        throw new Error('ENCRYPTION_MIGRATION_FAILED: envelope round-trip mismatch');
+    }
+    await chrome.storage.local.set({ [StorageKeys.ENCRYPTION_SECRET]: envelope });
 }
 
 /**
@@ -177,10 +214,54 @@ async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
             StorageKeys.ENCRYPTION_SECRET,
         ]);
         let saltBase64 = recheck[StorageKeys.ENCRYPTION_SALT] as string;
-        let secret = recheck[StorageKeys.ENCRYPTION_SECRET] as string;
+        const storedSecret = recheck[StorageKeys.ENCRYPTION_SECRET] as string | SecretEnvelope | undefined;
+        let secret: string | undefined;
 
-        if (saltBase64 && !secret) {
-            secret = (await restoreSecretFromSessionIfPresent()) ?? secret;
+        if (saltBase64 && !storedSecret) {
+            const restored = await restoreSecretFromSessionIfPresent();
+            if (restored !== undefined) {
+                secret = restored;
+                // Session-rescued plaintext takes the same envelope road as
+                // legacy secrets. KEK loss keeps the old plaintext-saving
+                // behavior (migrate later) instead of failing first unlock.
+                const kek = await getOrCreateSecretWrappingKey();
+                if (kek) {
+                    const envelope = await wrapSecretWithKey(restored, kek);
+                    if ((await unwrapSecretWithKey(envelope, kek)) === restored) {
+                        await chrome.storage.local.set({ [StorageKeys.ENCRYPTION_SECRET]: envelope });
+                        await chrome.storage.session.remove(StorageKeys.ENCRYPTION_SECRET);
+                    }
+                }
+            }
+        }
+
+        if (storedSecret !== undefined && !secret) {
+            if (isSecretEnvelope(storedSecret)) {
+                // Wrapped envelope: unwrap with the dedicated KEK. KEK loss
+                // is fail-closed — explicit error, no regeneration (which
+                // would orphan existing encrypted API keys), no deletion.
+                const kek = await loadSecretWrappingKey();
+                if (!kek) {
+                    throw new Error('ENCRYPTION_UNAVAILABLE: secret wrapping key unavailable (IndexedDB)');
+                }
+                secret = await unwrapSecretWithKey(storedSecret, kek);
+            } else if (typeof storedSecret === 'string') {
+                // Legacy plaintext: keep serving it (no data loss), then
+                // migrate to an envelope when the KEK is available.
+                secret = storedSecret;
+                await migrateLegacySecretToEnvelope(storedSecret);
+            }
+        }
+
+        if (!saltBase64 && storedSecret !== undefined) {
+            // Salt and secret are written in one set(), so a stored secret
+            // without its salt means the record is damaged. Generating a fresh
+            // pair here would replace the only copy of the wrapped secret and
+            // orphan every API key encrypted under it, so report the
+            // corruption instead — the same reason the KEK path above refuses
+            // to regenerate. (A fresh install has neither key and still
+            // generates normally.)
+            throw new Error('CORRUPTION: encryption salt missing');
         }
 
         if (!saltBase64 || !secret) {

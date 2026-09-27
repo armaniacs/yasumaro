@@ -46,6 +46,18 @@ vi.mock('../authGuard.js', () => ({
 beforeEach(async () => {
     clearEncryptionKeyCache();
     vi.clearAllMocks();
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    // Install the in-memory backend (stands in for IndexedDB).
+    const { getWebCrypto } = await import('../../crypto/primitives.js');
+    const { setSecretKeyStorageOverride } = await import('../../crypto/secretWrappingKey.js');
+    const kek = await getWebCrypto().subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, [
+        'encrypt',
+        'decrypt',
+    ]);
+    setSecretKeyStorageOverride({
+        get: async () => kek,
+        put: async () => {},
+    });
     // Make sendMessage return a promise so .catch() works in unlockWithPassword
     (chrome.runtime as any).sendMessage = vi.fn().mockResolvedValue(undefined);
     // Reset rate limiter to success for every test

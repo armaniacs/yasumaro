@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { StorageKeys } from '../types.js';
 import { DEFAULT_SETTINGS } from '../defaults.js';
 import { SettingsRepository, InMemoryStorageAdapter } from '../SettingsRepository.js';
@@ -8,6 +9,8 @@ describe('domainCleansingOverrides storage', () => {
     let adapter: InMemoryStorageAdapter;
 
     beforeEach(async () => {
+        // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+        await installTestSecretKek();
         adapter = new InMemoryStorageAdapter();
         // Provide dummy keyProvider to avoid real crypto
         const dummyKey = await (async () => {

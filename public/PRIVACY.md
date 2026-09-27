@@ -1,12 +1,13 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年9月26日 / Last Updated: September 26, 2026**
+**最終更新日: 2026年9月27日 / Last Updated: September 27, 2026**
 **同意バージョン: 2026年9月8日 / Consent Version: September 8, 2026**
 
 > 最終更新日は文書の改訂日です。全利用者に再同意を求める場合は「同意バージョン」を更新します。
 > The Last Updated date is the document's revision date. Re-prompting every user is driven by the Consent Version line instead.
 
 > **更新履歴 / Update History**:
+> - **2026年9月27日**: API キーの自動暗号化について、マスターパスワード未設定時に secret を平文で保存していた記述を、専用 KEK でラップした envelope のみを保存する実装へ更新（露出範囲の縮小のため同意バージョンは据え置き）
 > - **2026年9月8日**: v6.8.0 - 閲覧履歴アーカイブ機能のデータフローと、ブラウザ内蔵 AI のデータ取り扱いについて追記
 > - **2026年7月31日**: v6.7.0 - プライバシー同意撤回時のデータ削除確認ダイアログについて追記
 > - **2026年6月20日**: v6.0.1 - GDPR 準拠修正。プライバシー同意拒否を「永久非表示」から「30日後に再表示」に変更
@@ -307,7 +308,7 @@ For regular use (storing API keys within the extension), a separate auto-encrypt
 
 Under normal use, API keys are **automatically encrypted** before being stored. No master password is required; AES-GCM encryption is applied in the background without any user action.
 
-However, when no master password is set, the encryption key itself is stored in plaintext within `chrome.storage.local`. While Chrome extension storage is scoped to the extension and cannot be read directly by other extensions, it is accessible from within this extension. In this state, encryption prevents external read access, but does not prevent access from within the extension itself.
+When no master password is set, the auto-generated secret itself is never stored in plaintext: `chrome.storage.local` holds only a wrapped envelope, and unwrapping requires a dedicated non-extractable key kept in a separate store (IndexedDB) that never exists as readable bytes. A leak of `chrome.storage.local` alone therefore cannot decrypt the API key set. While Chrome extension storage is scoped to the extension and cannot be read directly by other extensions, it is accessible from within this extension. In this state, encryption prevents external read access, but does not prevent access from within the extension itself.
 
 **Setting a master password changes this behavior: the encryption key is derived from the master password via PBKDF2, providing protection beyond the extension's own storage boundary.**
 

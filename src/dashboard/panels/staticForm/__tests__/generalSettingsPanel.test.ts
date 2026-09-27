@@ -16,6 +16,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { installTestSecretKek } from '../../../../utils/crypto/__tests__/secretKekHelper.js';
 
 import { createGeneralSettingsPanel } from '../generalSettingsPanel.js';
 
@@ -24,7 +25,9 @@ const panelSource = readFileSync(
   'utf-8',
 );
 
-beforeEach(() => {
+beforeEach(async () => {
+  // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+  await installTestSecretKek();
   document.body.innerHTML = '<div id="panel-general"></div>';
 });
 

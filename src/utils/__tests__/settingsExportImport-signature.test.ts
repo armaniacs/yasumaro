@@ -7,6 +7,7 @@
  */
 
 import { vi } from 'vitest';;
+import { installTestSecretKek } from '../crypto/__tests__/secretKekHelper.js';
 import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { API_KEY_FIELDS } from '../storage/settingsMigration.js';
 
@@ -29,7 +30,9 @@ function sanitizedSettings(overrides: Record<string, unknown> = {}): Record<stri
  * （PBI 2026-09-17-19: utils はダイアログを開かない — 拒否は戻り値で伝わる。
  *  モックは「UI 層がダイアログを出していないこと」の監視用に残す）
  */
-beforeEach(() => {
+beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     // 【モック設定】accessible dialog seam（production は呼ばない）
     global.alert = vi.fn(() => {});
     global.confirm = vi.fn(() => false);

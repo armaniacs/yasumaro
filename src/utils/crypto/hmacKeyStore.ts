@@ -13,6 +13,8 @@ import {
     ENVELOPE_ITERATIONS,
     bytesToBase64,
     base64ToBytes,
+    wrapStringWithKey,
+    unwrapStringWithKey,
 } from './primitives.js';
 import { loadDurableWrappingKey, saveDurableWrappingKey } from './durableKeyStore.js';
 import { hmacSignerForKey, type HmacSigner } from './hmacSigner.js';
@@ -71,7 +73,6 @@ const HMAC_SIGNATURE_KEY_STORAGE = 'notification-signature-key';
 const HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation
 const CONSENT_HMAC_SIGNATURE_KEY_STORAGE = 'privacy-consent-signature-key';
 const CONSENT_HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation
-const textEncoder = new TextEncoder();
 
 // ============================================================================
 // HMAC Key Wrapping (PBI-03: never store HMAC keys as plaintext base64)
@@ -346,18 +347,7 @@ async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: s
  * @returns {Promise<WrappedHmacKey>} Encrypted envelope
  */
 export async function wrapSecretString(secret: string): Promise<WrappedHmacKey> {
-    const webcrypto = getWebCrypto();
-    const wrappingKey = await getOrCreateHmacWrappingKey();
-    const iv = webcrypto.getRandomValues(new Uint8Array(IV_LENGTH));
-    const ciphertext = await webcrypto.subtle.encrypt(
-        { name: 'AES-GCM', iv: iv as BufferSource },
-        wrappingKey,
-        textEncoder.encode(secret) as BufferSource
-    );
-    return {
-        wrapped: bytesToBase64(new Uint8Array(ciphertext)),
-        iv: bytesToBase64(iv),
-    };
+    return wrapStringWithKey(secret, await getOrCreateHmacWrappingKey());
 }
 
 /**
@@ -366,14 +356,7 @@ export async function wrapSecretString(secret: string): Promise<WrappedHmacKey> 
  * @returns {Promise<string>} Original secret string
  */
 export async function unwrapSecretString(envelope: WrappedHmacKey): Promise<string> {
-    const webcrypto = getWebCrypto();
-    const wrappingKey = await getOrCreateHmacWrappingKey();
-    const plaintext = await webcrypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: base64ToBytes(envelope.iv) as BufferSource },
-        wrappingKey,
-        base64ToBytes(envelope.wrapped) as BufferSource
-    );
-    return new TextDecoder().decode(plaintext);
+    return unwrapStringWithKey(envelope, await getOrCreateHmacWrappingKey());
 }
 
 /**

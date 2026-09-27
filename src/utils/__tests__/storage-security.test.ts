@@ -21,6 +21,10 @@ vi.mock('../crypto/cryptoParams.js', async (importOriginal) => {
 });
 
 // モックをインポート前に定義する必要がある
+// NOTE: このファイルの global.crypto への代入は、vitest の jsdom 環境では
+// production の参照する globalThis.crypto には届かない（歴史的経緯の dead
+// config として残す）。production が使うWebCrypto は getWebCrypto() 経由で
+// 解決されるため、テストの KEK も同じ関数から生成する（realm 一致）。
 (global as any).crypto = {
     subtle: {},
     getRandomValues: (arr: Uint8Array) => {
@@ -30,6 +34,10 @@ vi.mock('../crypto/cryptoParams.js', async (importOriginal) => {
         return arr;
     }
 };
+
+import { setSecretKeyStorageOverride } from '../crypto/secretWrappingKey.js';
+import { isSecretEnvelope } from '../crypto/secretWrappingKey.js';
+import { getWebCrypto } from '../crypto/primitives.js';
 
 // Web Crypto APIのモック設定
 const storageData: Record<string, any> = { settings_migrated: true };
@@ -265,6 +273,18 @@ describe('Master Password Security', () => {
 
         // global.cryptoの設定
         global.crypto = webcrypto;
+        // PBI 25-25: dedicated secret KEK behind the override seam (stands in
+        // for IndexedDB). MUST run after the real-crypto assignment above:
+        // getWebCrypto() resolves per call, and only the peculiar Crypto has
+        // a working subtle here. Persists across tests like a durable KEK.
+        const kek = await getWebCrypto().subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, [
+            'encrypt',
+            'decrypt',
+        ]);
+        setSecretKeyStorageOverride({
+            get: async () => kek,
+            put: async () => {},
+        });
         clearEncryptionKeyCache();
         // テストごとにストレージをクリア
         for (const key in storageData) {
@@ -454,12 +474,13 @@ describe('Master Password Security', () => {
             // chrome.storage.session は拡張機能のアップデートでクリアされる
             // ため、秘密をそこに置くと update のたびに暗号化済みAPIキーが
             // 復号不能になる（2026-08-12 インシデントの再発防止）。
+            // PBI 25-25: 平文 Base64 ではなくラップ済み envelope のみ保存する。
             const localSetCalls = (chrome.storage.local.set as any).mock.calls;
             const localSetWithSecret = localSetCalls.find((call: any) =>
                 call[0] && call[0].encryption_secret !== undefined
             );
             expect(localSetWithSecret).toBeDefined();
-            expect(typeof localSetWithSecret[0].encryption_secret).toBe('string');
+            expect(isSecretEnvelope(localSetWithSecret[0].encryption_secret)).toBe(true);
         });
 
         test('retains the local-storage secret across restarts and derives the same key', async () => {
@@ -488,7 +509,9 @@ describe('Master Password Security', () => {
                 call[0] && call[0].encryption_secret !== undefined
             );
             expect(secretRewritten).toBeUndefined();
-            expect(storageData['encryption_secret']).toBe(firstSecret);
+            expect(storageData['encryption_secret']).toEqual(firstSecret);
+            // PBI 25-25: 永続値は envelope object であり平文 string ではない。
+            expect(isSecretEnvelope(storageData['encryption_secret'])).toBe(true);
         });
 
         test('rescue-migrates secrets moved to session storage back to local storage', async () => {
@@ -500,8 +523,9 @@ describe('Master Password Security', () => {
             const key = await getOrCreateEncryptionKey();
             expect(key).toBeDefined();
 
-            // secretがlocalへ復元されている
-            expect(storageData['encryption_secret']).toBe('secret_stranded_in_session');
+            // secret が local へ envelope として復元されている
+            // （PBI 25-25: 平文保存はしない）。
+            expect(isSecretEnvelope(storageData['encryption_secret'])).toBe(true);
             // sessionからは削除されている（役目を終えたため）
             expect(sessionData['encryption_secret']).toBeUndefined();
         });

@@ -3,6 +3,7 @@ import { ObsidianClient } from '../obsidianClient.js';
 import { vi } from 'vitest';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { installTestSecretKek } from '../../utils/crypto/__tests__/secretKekHelper.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
 
@@ -24,7 +25,9 @@ vi.mock('../../utils/promptSanitizer.js', () => ({
 }));
 
 describe('Integration: Robustness improvements', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     vi.clearAllMocks();
     // ストレージのクリアはjest.setup.jsのbeforeEachで行われています
   });

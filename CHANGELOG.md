@@ -37,6 +37,15 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Security
+
+- **ENCRYPTION_SECRET を平文で保存しない**（PBI 25-25）。マスターパスワード未設定時に自動生成される secret は、これまで `chrome.storage.local` に Base64 平文で保存されていた。本リリースから `chrome.storage.local` には専用 KEK で AES-GCM ラップした envelope（`{ v, wrapped, iv }`）のみを保存し、復号鍵は `chrome.storage.local` とは別の store（IndexedDB）に保存した non-extractable `CryptoKey` とする。`chrome.storage.local` が単独で漏洩しても API キー群を復号できない。
+  - 既存の平文 secret は読み取り時に envelope へ無停止移行する。ラップした envelope の unwrap 確認が取れてから local を上書きするため、移行途中で保存済み API キーを失うことはない。
+  - 復号鍵が利用できない場合は fail closed とし、既存 envelope の削除も新規 secret の自動生成も行わない（自動生成すると既存 API キーが復号不能になるため）。未移行の平文 secret のみ、読み取りを継続したうえで移行を延期する。
+  - HMAC 署名鍵の KEK とは別の KEK を使う。KEK を共有すると、rotation と自己修復が HMAC 鍵の寿命に結合してしまうため。
+  - **注意**: 平文保存を廃止する一方向の移行であり、旧バージョンへ戻すと保存済み API キーが復号不能になる。復旧には API キーの再入力が必要。
+  - 利用者に公開しているプライバシー記述に影響するため `PRIVACY.md` 2 ファイルを更新した（最終更新日 2026-09-27、同意バージョンは据え置き）。
+
 ## [6.9.27] - 2026-09-26
 
 v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能の追加はありません。Firefox など端末内AI非対応ブラウザでの誤案内、自己署名証明書の Obsidian 接続時の案内欠落、Obsidian API の認証エラーの誤分類といった表示上の問題 3 件を修正し、あわせてストレージ書き込みの競合契約を強化しました。
