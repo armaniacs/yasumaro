@@ -40,11 +40,11 @@ Scenario: 依存ゲートが PASS する
 
 ## 受け入れ基準
 
-- [ ] `package.json` の `@types/chrome` を `^0.3.0` に更新し、`package-lock.json` も同期している
-- [ ] `npm run type-check` がエラー 0 件で終了する
-- [ ] `npm run type-check:test` の型エラー発生箇所が更新前と同一である（既存の型エラー 278 件は先行ドリフトであり本 PBI のスコープ外。修正は別途）
-- [ ] `npm run validate` が PASS する
-- [ ] `docs/DEPENDINGS.md` の「意図的に未反映の残り 3 件」表から `@types/chrome` を除去する
+- [x] `package.json` の `@types/chrome` を `^0.3.0` に更新し、`package-lock.json` も同期している（実装コミット `afde6f6c`）
+- [x] `npm run type-check` がエラー 0 件で終了する（実測 exit 0）
+- [x] `npm run type-check:test` の型エラー発生箇所が更新前と同一である（実測 diff 0。既存の型エラー 278 件は先行ドリフトであり本 PBI のスコープ外。修正は別途）
+- [x] `npm run validate` が PASS する（実測 927 ファイル / 14,375 tests green）
+- [x] `docs/DEPENDINGS.md` の「意図的に未反映の残り 3 件」表から `@types/chrome` を除去する
 
 ## テスト戦略
 
@@ -58,8 +58,8 @@ Scenario: 依存ゲートが PASS する
 
 ## DoD
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `docs/DEPENDINGS.md` が更新されている
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `docs/DEPENDINGS.md` が更新されている
 
 ## 参考
 

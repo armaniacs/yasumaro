@@ -53,12 +53,12 @@ Scenario: 更新後の全テストが PASS する
 
 ## 受け入れ基準
 
-- [ ] `collect()`（または同等の注入点）で長いカンマ区切りセレクタをチャンク分割する実装がある
-- [ ] チャンク分割の単体テストがある（2048 ちょうど / 超過 / 極端に長い単一セレクタの境界を含む）
-- [ ] `package.json` の `jsdom` を `^30.1.1` に更新し、`package-lock.json` も同期している
-- [ ] `npm run validate` が PASS する（更新前の 86 失敗の解消を含む）
-- [ ] クレンジングの除去対象集合が更新前と同一であることを、既存の aiSummaryCleaner 系テストで確認している
-- [ ] `docs/DEPENDINGS.md` の「意図的に未反映の残り 3 件」表から `jsdom` を除去する
+- [x] `collect()`（または同等の注入点）で長いカンマ区切りセレクタをチャンク分割する実装がある（実装コミット `d6aab50c`。`splitSelectorList` / `chunkSelector` を `selectorRules.ts` に新設し `collect()` に配線）
+- [x] チャンク分割の単体テストがある（2048 ちょうど / 超過 / 極端に長い単一セレクタの境界を含む。新規 `__tests__/selectorRules.test.ts` 14 tests）
+- [x] `package.json` の `jsdom` を `^30.1.1` に更新し、`package-lock.json` も同期している
+- [x] `npm run validate` が PASS する（更新前の 86 失敗の解消を含む。aiSummaryCleaner 系 32 ファイル / 932 tests 全 PASS。Red/Green 検証: チャンク無効化で 9 テスト失敗を確認）
+- [x] クレンジングの除去対象集合が更新前と同一であることを、既存の aiSummaryCleaner 系テストで確認している（`stripEngineEquivalence.test.ts` 含む全 32 ファイル green）
+- [x] `docs/DEPENDINGS.md` の「意図的に未反映の残り 3 件」表から `jsdom` を除去する
 
 ## テスト戦略
 
@@ -72,8 +72,8 @@ Scenario: 更新後の全テストが PASS する
 
 ## DoD
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `docs/DEPENDINGS.md` が更新されている
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `docs/DEPENDINGS.md` が更新されている
 
 ## 参考
 
