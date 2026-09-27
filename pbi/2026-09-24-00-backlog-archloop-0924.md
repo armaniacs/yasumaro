@@ -37,4 +37,4 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は影響する呼び出
 ## 台帳送り候補（着手トリガー）
 
 - **defineAnalysisPanel 単一登録シーム**（RICE 3.6・2pt）: カタログ+ファクトリー+pinned リストの二重管理解消。静的サイドバー HTML は CSP/初回描画/a11y の記録済み決定により維持。トリガー: 次回パネル追加ラウンドで登録ミスが起きた時、またはパネル数が 30 を超えた時
-- **renderTagGraph 抽出**（RICE 0.8・1pt）: tagCluster と timeSlider の SVG 描画重複。トリガー: 3つ目のクラスタグラフ系パネルを追加する時
+- **renderTagGraph 抽出**（RICE 0.8・1pt）: tagCluster と timeSlider の SVG 描画重複。トリガー: 3つ目のクラスタグラフ系パネルを追加する時 → **トリガー発火済み（2026-09-28）**: wordClusterPanel が第 2 実装、tagClusterTimeSliderPanel が第 3 実装として存在し、MAX_NODES/SVG_NS も 3 重再宣言。PBI 化済み: [2026-09-28-17-refactor-render-tag-graph-extraction.md](2026-09-28-17-refactor-render-tag-graph-extraction.md)
