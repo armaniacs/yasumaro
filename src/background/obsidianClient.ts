@@ -171,7 +171,11 @@ export class ObsidianClient {
         return validateObsidianPort(port);
     }
 
-    async appendToDailyNote(content: string, traceId: string = ''): Promise<void> {
+    async appendToDailyNote(
+        content: string,
+        traceId: string = '',
+        options: { dedupe?: boolean } = {}
+    ): Promise<void> {
         // ロックを取得して競合を回避
         await this.mutex.acquire();
 
@@ -189,7 +193,8 @@ export class ObsidianClient {
                 const newContent = NoteSectionEditor.insertIntoSection(
                     existingContent,
                     NoteSectionEditor.DEFAULT_SECTION_HEADER,
-                    content
+                    content,
+                    options
                 );
 
                 await this._writeContent(targetUrl, headers, newContent, traceId);

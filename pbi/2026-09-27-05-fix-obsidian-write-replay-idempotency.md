@@ -38,18 +38,18 @@ Scenario: 契約の維持
 
 ## 受け入れ基準
 
-- [ ] `saveToObsidianStep` 失敗時の offline enqueue で、payload に**完成済み markdown**（`formatMarkdownStep` の出力）を保存する（変換入力ではなく完成品を運ぶ）
-- [ ] `RecordingOrchestrator.retryObsidianWrite` / `executeRetrySubset` で、obsidian_sync replay は formatMarkdownStep を再実行せず payload の markdown を使用する（2-step subset 構造を保つ）
-- [ ] `NoteSectionEditor.insertIntoSection` に新オプション（例: `dedupe?: boolean`、既定 false）を追加し、true 時は section 範囲内（DEFAULT_SECTION_HEADER から次の `#` まで）の同一 content 行を検出して再挿入しない
-- [ ] `appendToDailyNote` はオプションを透過する。dashboard append（`dashboardSqlite/deps.ts:237-240`）は無指定（現状維持・後方互換）
-- [ ] offline replay 経路のみ dedupe 有効（PBI 13 裁定 Q5）
-- [ ] `noteSectionEditor.test.ts` の「常に挿入する」既存 pin は**残したまま**（既定値 false のため壊れない）、dedupe 有効時の新テストを追加する
-- [ ] 単体テスト: 同一 payload → 同一 markdown（時刻不変）/ 内容検出の一致・不一致・欠落 3 分岐 / dashboard append が dedupe 無効のまま / API key 非包含
-- [ ] 統合テスト: `offlineQueueProcessor.test.ts` の AI 再実行なし契約維持 + payload markdown がそのまま PUT される契約。`recordingPipeline-full.test.ts:247-292` の replay 境界。mutex 済み read-modify-write で同一 operation の replay が 1 件だけ残る
-- [ ] HTTP surface（GET 2 + PUT 1）を変更しない。`dev-docs/API_ENDPOINTS.md` との整合を確認する
-- [ ] HTTPS 既定・非 loopback 平文 HTTP 拒否（`obsidianConfigValidator.ts`）を維持する
-- [ ] 既存重複（すでにノートに溜まった重複 section）の除去は本 PBI の範囲外である
-- [ ] ESM `.js`・async/await を維持する
+- [x] `saveToObsidianStep` 失敗時の offline enqueue で、payload に**完成済み markdown**（`formatMarkdownStep` の出力）を保存する（`extractOfflinePayload` に `markdown: context.markdown` を追加。saveObsidian 実行時は format 済みのため確定済み）
+- [x] `RecordingOrchestrator.retryObsidianWrite` / `executeRetrySubset` で、obsidian_sync replay は formatMarkdownStep を再実行せず payload の markdown を使用する（`RetryJobInput.markdown` → `createRetryContext` → `formatMarkdownStep` の frozen guard。`formatMarkdownStep.test.ts` で固定）
+- [x] `NoteSectionEditor.insertIntoSection` に新オプション（`dedupe?: boolean`、既定 false）を追加し、true 時は section 範囲内（DEFAULT_SECTION_HEADER から次の `#` まで）の同一 content 行を検出して再挿入しない（`_sectionContains` — 連続行一致のため部分・順序違い・境界跨ぎは挿入される）
+- [x] `appendToDailyNote` はオプションを透過する。dashboard append（`dashboardSqlite/deps.ts:237-240`）は無指定（現状維持・後方互換）
+- [x] offline replay 経路のみ dedupe 有効（`retryObsidianWrite` が dedupe 付き obsidian ラッパを注入。初回 pipeline・dashboard は既定 false のまま）
+- [x] `noteSectionEditor.test.ts` の「常に挿入する」既存 pin は**残したまま**、dedupe 有効時の新テスト 6 件を追加（不一致・部分一致・section 境界跨ぎ・header 欠落を含む）
+- [x] 単体テスト: 同一 payload → 同一 markdown（`contextBuilder.test.ts` 2 件）/ 内容検出の一致・不一致・欠落（`noteSectionEditor.test.ts`）/ dashboard append が dedupe 無効のまま（既存 pin 維持）/ API key 非包含（既存テスト green 維持）
+- [x] 統合テスト: `offlineQueueProcessor.test.ts` の markdown 透過 + AI 再実行なし契約維持。`RecordingPipeline-offline-policy.test.ts` の payload shape pin を markdown 追加に更新（timestamp 部分は `stringContaining` で時刻非依存に）
+- [x] HTTP surface（GET 2 + PUT 1）を変更しない（変更なし。`dev-docs/API_ENDPOINTS.md` 整合確認済み）
+- [x] HTTPS 既定・非 loopback 平文 HTTP 拒否（`obsidianConfigValidator.ts`）を維持する（変更なし）
+- [x] 既存重複（すでにノートに溜まった重複 section）の除去は本 PBI の範囲外である
+- [x] ESM `.js`・async/await を維持する
 
 ## 技術的考慮事項
 
@@ -60,6 +60,6 @@ Scenario: 契約の維持
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] Red/Green 検証: 内容検出を bypass する改変で replay 重複テストが失敗することを確認する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する（type-check 0 / lint 0 errors / test 929 files・14,412 passed。Red/Green 検証: guard/dedupe 無効化で該当テスト red を確認）
+- [x] Red/Green 検証: 内容検出を bypass する改変で replay 重複テストが失敗することを確認する（実施済み）

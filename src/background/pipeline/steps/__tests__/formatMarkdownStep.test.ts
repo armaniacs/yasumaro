@@ -380,4 +380,20 @@ describe('formatMarkdownStep', () => {
       expect(result.markdown).toContain('Summary not available.');
     });
   });
+
+  // PBI 2026-09-25-13: the frozen-markdown guard — when the context already
+  // carries markdown (offline replay), the step must not regenerate it. A
+  // regenerated body would carry a new timestamp, break the byte-identical
+  // replay PUT, and let the section editor stack a duplicate.
+  describe('frozen markdown guard', () => {
+    it('keeps the existing markdown byte-for-byte and skips regeneration', async () => {
+      const frozen = '- [Test Page](https://example.com)\n  - summary text';
+      const result = await formatMarkdownStep(makeContext({ markdown: frozen }));
+
+      expect(result.markdown).toBe(frozen);
+      // The step's other outputs are not recomputed either — the context
+      // passes through untouched.
+      expect(result.markdownEntryData).toBeUndefined();
+    });
+  });
 });

@@ -43,6 +43,7 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 
 ### Fixed
 
+- **offline 再試行で Obsidian ノートの section が重複しなくなった** — `obsidian_sync` の replay ごとに Markdown（現在時刻を含む）を再生成していたため、同じ録画の再試行がノートへ重複 section として積み上がっていました。初回 pipeline 実行時に確定した Markdown を offline job の payload に保存し、replay は byte-identical な本文を PUT するようにしました。さらに section 範囲内の同一内容ブロック検出を導入し、replay 経路（offline 自動再試行のみ、既定は無効のまま）では既に存在する section の再挿入を抑止します。dashboard からのユーザー明示 append は従来どおり無条件挿入です
 - **録画復旧の owner を単一化し、同一録画の二重回収を防止** — 録画が失敗して offline キューへ登録された録画が、従来は pending ページにも同時に登録され、5 分ごとの自動再試行と手動再実行が両方走ることで AI 呼び出しと Obsidian への追記が二重になる復旧経路がありました。offline キューへの登録結果をパイプラインの outcome 判定へ構造化して渡し、登録成功時は offline ジョブだけを復旧 owner、登録失敗時だけ pending ページを owner とする裁定に統一しました。offline ジョブが 3 回の再試行を使い果たしたときは、ジョブを削除する前に pending ページへ復旧手段を引き継ぎ、ユーザーへ 1 回だけ案内します。さらに復旧実行の claim を chrome.storage.local に永続化し（Service Worker 再起動を跨いで有効）、通知ボタン・popup・dashboard のどの入口から同時に再実行しても 1 件だけが開始するようにします
 - **Firefox など端末内AI（Prompt API）非対応ブラウザでの「空き容量 10 GB」誤案内を修正** — 端末内AIに対応していないブラウザでは、ストレージのオリジン割当クォータ上限（約 10 GiB）を実ディスクの空き容量と誤認し、実際には 100 GB 以上の空きがあっても「空き容量 10 GB」と表示されることがありました。Prompt API が存在しない環境では容量推定を行わず、既存のブラウザ非対応案内へフォールバックします。要約エラー・AI 接続テスト・診断パネルの 3 つの表示経路が同時に修正されます（[issue #161](https://github.com/armaniacs/yasumaro/issues/161)）
 - **Firefox で HTTPS + 自己署名証明書の Obsidian 接続時に証明書案内が表示されない問題を修正** — 証明書承認リンクの表示条件がメッセージ文言の部分一致になっており、実際には一度も表示されない状態でした。接続テストの応答に構造化 failure 情報を追加し、証明書エラー（ネットワーク層の失敗）のときに設定中の host:port への証明書承認リンクを表示します。Firefox では証明書例外の追加手順と証明書マネージャーへの CA 取り込み手順を追加案内します（[issue #160](https://github.com/armaniacs/yasumaro/issues/160)）

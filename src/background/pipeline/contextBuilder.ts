@@ -32,6 +32,12 @@ export interface RetryJobInput {
   url: string;
   summary: string;
   tags?: string[] | undefined;
+  /**
+   * PBI 2026-09-25-13: pipeline-final markdown frozen in the offline payload.
+   * When present, the retry subset must not re-run formatMarkdownStep — the
+   * replay body must be byte-identical to the failed first attempt.
+   */
+  markdown?: string | undefined;
 }
 
 /**
@@ -56,6 +62,10 @@ export function createRetryContext(
     errors: [],
     privacyResult,
   };
+
+  if (job.markdown !== undefined) {
+    (base as RecordingContext).markdown = job.markdown;
+  }
 
   if (traceId !== undefined) {
     (base as RecordingContext).traceId = traceId;

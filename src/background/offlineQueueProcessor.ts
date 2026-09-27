@@ -108,6 +108,10 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                     title: payload.title,
                     url: payload.url,
                     summary: payload.summary,
+                    // PBI 2026-09-25-13: the frozen markdown rides along so the
+                    // replay PUTs the byte-identical body. Absent on legacy
+                    // payloads — those regenerate as before.
+                    ...pickDefined({ markdown: payload.markdown }),
                     ...pickDefined({ tags: payload.tags }),
                 });
             } catch (error) {

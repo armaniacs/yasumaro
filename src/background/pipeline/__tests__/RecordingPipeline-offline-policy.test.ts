@@ -313,6 +313,10 @@ describe('Offline retry policy via step metadata', () => {
           summary: 'AI summary',
           maskedCount: 3,
           tags: ['x'],
+          // PBI 2026-09-25-13: the pipeline-final markdown rides along so the
+          // replay PUTs a byte-identical body instead of regenerating one.
+          // Time of day varies per run, so pin only the stable parts.
+          markdown: expect.stringContaining('[Payload Shape](https://example.com/payload)'),
         },
       });
     });
