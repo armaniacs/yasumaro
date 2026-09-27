@@ -14,15 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-27 investigate 裁定後の後続 PBI — ✅ 3件完了（13・27-05・27-04 アーカイブ済み）/ ⬜ 未着手 1件 🔧非機能追加
+### 2026-09-27 investigate 裁定後の後続 PBI — ✅ 4件完了（13・27-05・27-04・27-03 アーカイブ済み）/ 完了 🔧非機能追加
 
-investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。policy 確定済みのため Confidence 90%。着手順は RICE 順: 27-05 ✅ → 27-04 ✅ → 27-03 ⬜。3 候補間の依存なし。
+investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。policy 確定済みのため Confidence 90%。着手順は RICE 順: 27-05 ✅ → 27-04 ✅ → 27-03 ✅。全件完了。
 
 | PBI | 種別 | RICE | SP | 内容 |
 |---|---|---:|---:|---|
 | [27-05](../dev-docs/archived/pbi/2026-09-27-05-fix-obsidian-write-replay-idempotency.md) | fix | 2.0 | 1.5 | ✅ 完了（2026-09-27 アーカイブ済み）。replay 冪等性: markdown 確定保存 + 同一内容検出 |
 | [27-04](../dev-docs/archived/pbi/2026-09-27-04-refactor-settings-key-single-writer.md) | refactor | 1.5 | 1 | ✅ 完了（2026-09-27 アーカイブ済み）。threshold を SettingsRepository に統一 |
-| [27-03](2026-09-27-03-fix-ai-provider-circuit-breaker.md) | fix | 1.5 | 3 | circuit breaker 実装（policy SSOT は PBI 15 報告書 §3〜§5） |
+| [27-03](../dev-docs/archived/pbi/2026-09-27-03-fix-ai-provider-circuit-breaker.md) | fix | 1.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み）。circuit breaker 実装（lazy half-open・session スコープ） |
 
 ### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 — 🔵 監視 1件 🔧非機能追加
 
@@ -153,6 +153,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 PBI 27-03 アーカイブ — ✅ 1件完了（27-03 アーカイブ済み）
+
+- [2026-09-27-03-fix-ai-provider-circuit-breaker.md](../dev-docs/archived/pbi/2026-09-27-03-fix-ai-provider-circuit-breaker.md)（✅ 完了 — `f4ec798f`。provider × model 単位の circuit breaker: threshold 3（auth/429 は初回）・cooldown 5 分（auth 15 分・429 は 10 分）・lazy half-open probe。入力は taxonomy kind のみ、testConnection は bypass only。session スコープ + flushImmediately、per-key 直列化、fail-open。`config.breaker` 注入（既定 disabled）。新規テスト 37 件（unit 30・integration 6・wiring 1）。RICE 1.5・3 SP）
 
 ### 2026-09-27 PBI 27-04 アーカイブ — ✅ 1件完了（27-04 アーカイブ済み）
 
