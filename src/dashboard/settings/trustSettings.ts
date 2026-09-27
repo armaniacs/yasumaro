@@ -7,6 +7,7 @@
 import type { TrancoTier, SafetyMode } from '../../utils/trustDb/trustDbSchema.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { getTrustDbAdmin } from '../../utils/trustDb/TrustDbAdmin.js';
 import { getTrancoUpdater } from '../../utils/trustDb/trancoUpdater.js';
 import { ErrorCode } from '../../utils/logger/types.js';
@@ -562,10 +563,13 @@ export function init(): void {
     thresholdInput.addEventListener('change', async (e) => {
       const newValue = parseInt((e.target as HTMLInputElement).value, 10);
        if (newValue >= 1 && newValue <= 50) {
-         await chrome.storage.local.set({ [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: newValue });
-         const _ = await renderPermissionSuggestList(); // 再描画
-       }
-    });
+          // PBI 27-04: canonical writer is SettingsRepository (delta write
+          // into the nested settings blob). The old raw top-level single-key
+          // write is removed — it forked from the blob the migration owns.
+          await settingsRepository.set(StorageKeys.PERMISSION_NOTIFY_THRESHOLD, newValue);
+          const _ = await renderPermissionSuggestList(); // 再描画
+        }
+     });
   }
 
   document.getElementById('dismissAllPermissions')?.addEventListener('click', async () => {
