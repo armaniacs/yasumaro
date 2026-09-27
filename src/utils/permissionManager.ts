@@ -5,6 +5,7 @@
  */
 
 import { StorageKeys } from './storage/types.js';
+import { settingsRepository } from './storage/SettingsRepository.js';
 import { logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { withOptimisticLock } from './storage/storageTransaction.js';
@@ -276,11 +277,16 @@ export class PermissionManager {
      threshold?: number,
      dismissalDays: number = 14
    ): Promise<DeniedDomainEntry[]> {
-     try {
-       const deniedDomains = await this.getDeniedDomains();
-       const thresholdData = await chrome.storage.local.get({ [StorageKeys.PERMISSION_NOTIFY_THRESHOLD]: 3 });
-       // Validate threshold is within expected range (1-50)
-       const notifyThreshold = Math.max(1, Math.min(50, threshold ?? (thresholdData[StorageKeys.PERMISSION_NOTIFY_THRESHOLD] as number)));
+    try {
+      const deniedDomains = await this.getDeniedDomains();
+      // PBI 27-04: reader goes through SettingsRepository (canonical reader
+      // for the nested settings blob). Clamp stays here — it is this caller's
+      // defense, and the repository's typed default (3) applies when unset.
+      const storedThreshold = await settingsRepository.get(StorageKeys.PERMISSION_NOTIFY_THRESHOLD);
+      // Validate threshold is within expected range (1-50). The repository
+      // carries the typed default (3) when unset; the ?? 3 keeps the clamp
+      // total over the optional field type.
+      const notifyThreshold = Math.max(1, Math.min(50, threshold ?? storedThreshold ?? 3));
 
        const dismissalThreshold = Date.now() - (dismissalDays * 24 * 60 * 60 * 1000);
        const entries: DeniedDomainEntry[] = [];

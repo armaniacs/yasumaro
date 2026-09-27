@@ -39,16 +39,16 @@ Scenario: 既存契約の維持
 
 ## 受け入れ基準
 
-- [ ] `trustSettings.ts:565` の raw `chrome.storage.local.set` を `SettingsRepository.set(StorageKeys.PERMISSION_NOTIFY_THRESHOLD, clampedValue)`（delta write 契約）に置換する。クランプ 1-50 は呼び出し側で維持する
-- [ ] `permissionManager.ts:281` の raw get を `SettingsRepository.get(StorageKeys.PERMISSION_NOTIFY_THRESHOLD)` に置換する。クランプは permissionManager 内に保持する
-- [ ] `denied_domains` は production 変更なし（`updateDeniedDomains()` 専用 CAS を canonical writer として維持。nested 統合・export 対象化はしない — PBI 18 裁定）
-- [ ] `trustSettings.ts` 内の `chrome.storage.local.set` 直接呼び出しが 0 件であることを static test で pin する
-- [ ] denied_domains 経路が `withLock('settings')` を呼ばないことを spy で pin する
-- [ ] 既存テスト変更: `trustSettings.test.ts:434-437`（raw set pin → repository 呼び出し pin）。`trustSettings-r2` / `trustSettings-r3` の同系 pin
-- [ ] `permissionManager.test.ts` の top-level pin は denied_domains 分を維持、threshold raw get 分を repository 経由に更新
-- [ ] migration parity テスト（`settingsRepository-migration-parity.test.ts` / `restorableSettings.test.ts` / `restorableSettings-spec-table.test.ts`）を green 維持する
-- [ ] 既存 storage キー名を変更せず、ESM `.js`・async/await・型付き get/set + delta write 契約（cached full snapshot を `setAll()` に渡さない）を維持する
-- [ ] API key の restore 対象契約を変えない
+- [x] `trustSettings.ts:565` の raw `chrome.storage.local.set` を `SettingsRepository.set(StorageKeys.PERMISSION_NOTIFY_THRESHOLD, clampedValue)`（delta write 契約）に置換する。クランプ 1-50 は呼び出し側で維持する
+- [x] `permissionManager.ts:281` の raw get を `SettingsRepository.get(StorageKeys.PERMISSION_NOTIFY_THRESHOLD)` に置換する。クランプは permissionManager 内に保持する
+- [x] `denied_domains` は production 変更なし（`updateDeniedDomains()` 専用 CAS を canonical writer として維持。nested 統合・export 対象化はしない — PBI 18 裁定）
+- [x] `trustSettings.ts` 内の `chrome.storage.local.set` 直接呼び出しが 0 件であることを static test で pin する
+- [x] denied_domains 経路が `withLock('settings')` を呼ばないことを spy で pin する
+- [x] 既存テスト変更: `trustSettings.test.ts:434-437`（raw set pin → repository 呼び出し pin）。`trustSettings-r2` / `trustSettings-r3` の同系 pin
+- [x] `permissionManager.test.ts` の top-level pin は denied_domains 分を維持、threshold raw get 分を repository 経由に更新
+- [x] migration parity テスト（`settingsRepository-migration-parity.test.ts` / `restorableSettings.test.ts` / `restorableSettings-spec-table.test.ts`）を green 維持する
+- [x] 既存 storage キー名を変更せず、ESM `.js`・async/await・型付き get/set + delta write 契約（cached full snapshot を `setAll()` に渡さない）を維持する
+- [x] API key の restore 対象契約を変えない
 
 ## 技術的考慮事項
 
@@ -58,6 +58,14 @@ Scenario: 既存契約の維持
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] Red/Green 検証: 実装前に期待動作テストを追加して失敗を確認する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] Red/Green 検証: 実装前に期待動作テストを追加して失敗を確認する
+
+## 実績（2026-09-27）
+
+- Red: 新契約テスト（repository set 呼び出し + raw set 不呼び出し）が実装前に失敗を確認
+- writer 置換: `trustSettings.ts:565` → `settingsRepository.set`（delta write）、`permissionManager.ts:281` → `settingsRepository.get`（`?? 3` で optional を吸収、クランプ維持）
+- 新規 pin: `single-writer contract` describe（static sweep + repository 呼び出し + raw 不呼び出し）/ `withLock('settings')` 非接触 spy（専用キー CAS の実行も確認）
+- 既存 pin 更新: `trustSettings.test.ts` の raw set pin → repository 契約 pin（blob 着陸待ちでテスト間漏れを防止）。r2/r3 は挙動 pin なし・green 維持
+- ゲート: type-check 0 / lint 0 errors / test 929 files・14,414 passed / migration parity 3 ファイル 17 件 green

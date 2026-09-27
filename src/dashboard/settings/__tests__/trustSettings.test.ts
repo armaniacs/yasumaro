@@ -7,6 +7,7 @@
  */
 
 import { vi } from 'vitest';;
+import { readFileSync } from 'node:fs';
 import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
 
 // Mock dependencies - all at top level
@@ -322,6 +323,16 @@ describe('trustSettings.ts', () => {
   // =========================================================================
   // init()
   // =========================================================================
+  describe('single-writer contract (PBI 27-04)', () => {
+    // Static pin: future raw writes reintroduce the second writer. The only
+    // sanctioned storage path in this module is SettingsRepository.
+    it('contains no direct chrome.storage.local writes', () => {
+      const source = readFileSync('src/dashboard/settings/trustSettings.ts', 'utf-8');
+      expect(source).not.toMatch(/chrome\.storage\.local\.(set|remove|clear)/);
+      expect(source).toMatch(/settingsRepository\.set\(/);
+    });
+  });
+
   describe('init()', () => {
     test('should initialize without errors', async () => {
       setupFullDOM();
@@ -428,9 +439,14 @@ describe('trustSettings.ts', () => {
       );
     });
 
+    // PBI 27-04: canonical writer is SettingsRepository (delta write into the
+    // nested blob). Asserts the repository call AND waits for the blob write
+    // to land, so the async write cannot leak into the next test's window.
     test('should save threshold on valid change', async () => {
       setupFullDOM();
       const { init } = await import('../trustSettings.js');
+      const { settingsRepository } = await import('../../../utils/storage/SettingsRepository.js');
+      const setSpy = vi.spyOn(settingsRepository, 'set');
       init();
 
       const thresholdInput = document.getElementById('permissionThreshold') as HTMLInputElement;
@@ -438,11 +454,21 @@ describe('trustSettings.ts', () => {
       thresholdInput.dispatchEvent(new Event('change'));
 
       await vi.waitFor(
-          () => expect(chrome.storage.local.set).toHaveBeenCalledWith(
-        expect.objectContaining({ permission_notify_threshold: 5 })
-      ),
-          { interval: 1 }
+        () => expect(setSpy).toHaveBeenCalledWith('permission_notify_threshold', 5),
+        { interval: 1 }
       );
+      await vi.waitFor(
+        () => expect(chrome.storage.local.set).toHaveBeenCalledWith(
+          expect.objectContaining({
+            settings: expect.objectContaining({ permission_notify_threshold: 5 }),
+          })
+        ),
+        { interval: 1 }
+      );
+      expect(chrome.storage.local.set).not.toHaveBeenCalledWith(
+        expect.objectContaining({ permission_notify_threshold: 5 })
+      );
+      setSpy.mockRestore();
     });
 
     test('should ignore threshold below 1', async () => {
