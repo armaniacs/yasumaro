@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-27 investigate 裁定後の後続 PBI 起票 — ⬜ 未着手 3件 🔧非機能追加
+### 2026-09-27 investigate 裁定後の後続 PBI — ✅ 2件完了（13・27-05 アーカイブ済み）/ ⬜ 未着手 2件 🔧非機能追加
 
-investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。policy 確定済みのため Confidence 90%。着手順は RICE 順（同点は Effort 昇順）: 27-05 → 27-04 → 27-03。3 候補間の依存なし。
+investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。policy 確定済みのため Confidence 90%。着手順は RICE 順: 27-05 ✅ → 27-04 ⬜ → 27-03 ⬜。3 候補間の依存なし。
 
 | PBI | 種別 | RICE | SP | 内容 |
 |---|---|---:|---:|---|
-| [27-05](2026-09-27-05-fix-obsidian-write-replay-idempotency.md) | fix | 2.0 | 1.5 | Obsidian 書込 replay 冪等性（markdown を payload に確定保存 + section 内同一内容検出。dashboard append は現状維持） |
+| [27-05](../dev-docs/archived/pbi/2026-09-27-05-fix-obsidian-write-replay-idempotency.md) | fix | 2.0 | 1.5 | ✅ 完了（2026-09-27 アーカイブ済み）。replay 冪等性: markdown 確定保存 + 同一内容検出 |
 | [27-04](2026-09-27-04-refactor-settings-key-single-writer.md) | refactor | 1.5 | 1 | threshold を SettingsRepository に統一 + sweep pin。denied_domains は維持のみ |
 | [27-03](2026-09-27-03-fix-ai-provider-circuit-breaker.md) | fix | 1.5 | 3 | circuit breaker 実装（policy SSOT は PBI 15 報告書 §3〜§5） |
 
@@ -60,7 +60,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 
 
-### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 21件完了・アーカイブ済み / ⬜ 未着手 11件 🔧非機能追加
+### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 22件完了・アーカイブ済み / ⬜ 未着手 10件 🔧非機能追加
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
@@ -68,7 +68,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 |---|---|---|---:|---:|---|
 | 10 | [investigate-preset-prompt-locale](2026-09-25-10-investigate-preset-prompt-locale.md) | investigate | 1.67 | 1.5 | 製品の言語方針が未決 |
 | 12 | [fix-offline-recovery-single-owner](../dev-docs/archived/pbi/2026-09-25-12-fix-offline-recovery-single-owner.md) | fix | 1.6 | 3 | ✅ 完了（2026-09-27 アーカイブ済み） |
-| 13 | [investigate-obsidian-write-replay-idempotency](2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | 12 完了済み・**着手可能**（11・12 の後） |
+| 13 | [investigate-obsidian-write-replay-idempotency](../dev-docs/archived/pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md) | investigate | 2.0 | 1 | ✅ 完了（2026-09-27 アーカイブ済み。後続 fix 27-05 も完了） |
 | 15 | [investigate-ai-provider-circuit-breaker](../dev-docs/archived/pbi/2026-09-25-15-investigate-ai-provider-circuit-breaker.md) | investigate | 1.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み。後続 fix 3 SP を起票待ち） |
 | 16 | [investigate-dashboard-sqlite-ipc-roundtrip](2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md) | investigate | 1.33 | 1.5 | 実害未計測。計測結果待ち |
 | 18 | [investigate-settings-key-single-writer](../dev-docs/archived/pbi/2026-09-25-18-investigate-settings-key-single-writer.md) | investigate | 1.5 | 2 | ✅ 完了（2026-09-27 アーカイブ済み。後続 refactor 1 SP を起票待ち） |
@@ -153,6 +153,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-27 PBI 13・27-05 アーカイブ — ✅ 2件完了（13・27-05 アーカイブ済み）
+
+PBI 13（investigate）の裁定に基づく後続 fix 27-05 を実装。12 完了による解錠 → 13 裁定 → 27-05 実装の 3 段階が完結。
+
+- [2026-09-25-13-investigate-obsidian-write-replay-idempotency.md](../dev-docs/archived/pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md)（✅ 完了 — `0e5a8fd1`。investigate。markdown 確定保存 + 同一内容検出を裁定。operation ID・marker・dedupe window・409 扱いは不採用（上流 README + OpenAPI で idempotency header 未提供を一次情報確認）。後続 fix 27-05（1.5 SP）の起票仕様を確定。報告書: `dev-docs/archived/plans/2026-09-27-pbi13-obsidian-write-replay-idempotency-policy.md`。RICE 2.0・1 SP）
+- [2026-09-27-05-fix-obsidian-write-replay-idempotency.md](../dev-docs/archived/pbi/2026-09-27-05-fix-obsidian-write-replay-idempotency.md)（✅ 完了 — `cb19f6e4`。payload に完成済み markdown を保存し replay は byte-identical PUT。`insertIntoSection` に opt-in の dedupe を追加（offline replay 経路のみ有効、dashboard append は無条件挿入のまま）。新規テスト 11 件（dedupe 6・context 2・format guard 1・processor 透過 1・payload shape 更新 1）。Red/Green 検証済み。RICE 2.0・1.5 SP）
 
 ### 2026-09-27 メタ認知分析ラウンド台帳アーカイブ — ✅ 台帳随伴アーカイブ（ラウンド完遂）
 
