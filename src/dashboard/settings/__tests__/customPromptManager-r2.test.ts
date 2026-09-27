@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask, waitForMock } from '../../../../testDir/waitPolicy.js';
 import type { CustomPrompt } from '../../../utils/types.js';
 
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
@@ -254,7 +255,7 @@ describe('customPromptManager - r2 missed branches', () => {
 
       const activateBtn = document.getElementById('activate-prompt-__preset__nonexistent')!;
       activateBtn.click();
-      await new Promise((r) => setTimeout(r, 10));
+      await drainMacrotask();
 
       expect(mockSetAll).not.toHaveBeenCalled();
     });
@@ -353,8 +354,6 @@ describe('customPromptManager - r2 missed branches', () => {
       nameInput.value = '';
       textInput.value = '';
       expect(() => document.getElementById('savePromptBtn')!.click()).not.toThrow();
-
-      await new Promise((r) => setTimeout(r, 10));
     });
 
     it('should clear status after timeout', async () => {
@@ -431,7 +430,7 @@ describe('customPromptManager - r2 missed branches', () => {
       initCustomPromptManager({ custom_prompts: [] });
 
       document.getElementById('savePromptBtn')!.click();
-      await new Promise((r) => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
 
@@ -523,7 +522,6 @@ describe('customPromptManager - r2 missed branches', () => {
       const delBtn = document.getElementById('delete-prompt-__default__');
       expect(delBtn).not.toBeNull();
       delBtn!.click();
-      await new Promise(r => setTimeout(r, 10));
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toBe('Cannot delete default prompt');
       expect(status.className).toBe('error');
@@ -539,7 +537,7 @@ describe('customPromptManager - r2 missed branches', () => {
       // When div is removed before init, promptStatusDiv is null, so showStatus will lookup by id string and find null -> early return safely
       const delBtn = document.getElementById('delete-prompt-__default__')!;
       delBtn.click();
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
   });
@@ -551,7 +549,6 @@ describe('customPromptManager - r2 missed branches', () => {
       initCustomPromptManager(settings);
       const editBtn = document.getElementById('edit-prompt-__default__')!;
       editBtn.click();
-      await new Promise(r => setTimeout(r, 10));
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toContain('Cannot edit default');
       expect(status.className).toBe('error');
@@ -625,7 +622,6 @@ describe('customPromptManager - r2 missed branches', () => {
       nameInput.value = 'before';
       settings.custom_prompts = [];
       document.getElementById('duplicate-prompt-dupMissing')!.click();
-      await new Promise(r => setTimeout(r, 10));
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toBe('Prompt not found');
       expect(status.className).toBe('error');
@@ -688,7 +684,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const settings: any = { custom_prompts: [] };
       initCustomPromptManager(settings);
       document.getElementById('activate-prompt-__preset__concise')!.click();
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
 
@@ -705,8 +701,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const btn = document.getElementById('activate-prompt-__preset__concise');
       expect(btn).not.toBeNull();
       btn!.click();
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockSetAll).toHaveBeenCalled();
+      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
       expect(settings.custom_prompts[0].isActive).toBe(true);
     });
   });
@@ -777,7 +772,6 @@ describe('customPromptManager - r2 missed branches', () => {
       (document.getElementById('promptName') as HTMLInputElement).value = 'Name';
       (document.getElementById('promptText') as HTMLTextAreaElement).value = 'bad';
       document.getElementById('savePromptBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toBe('Invalid prompt');
       expect(status.className).toBe('error');
@@ -792,7 +786,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const saveBtn = document.getElementById('savePromptBtn');
       if (saveBtn) {
         saveBtn.click();
-        await new Promise(r => setTimeout(r, 10));
+        await drainMacrotask();
         expect(mockSetAll).not.toHaveBeenCalled();
       }
     });
@@ -802,7 +796,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [] } as any);
       document.getElementById('savePromptBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
 
@@ -811,7 +805,7 @@ describe('customPromptManager - r2 missed branches', () => {
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [] } as any);
       document.getElementById('savePromptBtn')!.click();
-      await new Promise(r => setTimeout(r, 10));
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
   });

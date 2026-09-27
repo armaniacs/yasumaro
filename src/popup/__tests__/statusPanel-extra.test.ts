@@ -1393,8 +1393,7 @@ describe('additional branch coverage — trust and record fallback', () => {
     await updateTrustStatus('https://example.com');
     const btn = document.getElementById('btnRequestPermission') as HTMLButtonElement;
     await btn.click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(mockRecordDeniedVisit).toHaveBeenCalled();
+    await waitForMock(() => expect(mockRecordDeniedVisit).toHaveBeenCalled());
   });
 
   it('covers permission denied animation branch with errorMsg present', async () => {
@@ -1448,8 +1447,7 @@ describe('additional branch coverage — trust and record fallback', () => {
     await initAllUrlsPermissionBanner();
     const btn = document.getElementById('btnRequestAllUrls') as HTMLButtonElement;
     await btn.click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(mockRequestAllUrls).toHaveBeenCalled();
+    await waitForMock(() => expect(mockRequestAllUrls).toHaveBeenCalled());
   });
 
   it('covers missing recordBtn/recordBtn disabled branches (146,153)', async () => {

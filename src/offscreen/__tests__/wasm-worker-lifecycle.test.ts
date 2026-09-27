@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 // ── Mock sqlite-wasm ──────────────────────────────────────────────────
 
@@ -107,20 +108,28 @@ describe('concurrent WASM initialization race', () => {
 
   it('handles concurrent createEngine calls (no shared mutable state)', async () => {
     let callCount = 0;
-    mockUseOpfsStorage.mockImplementation(async () => {
+    // The first OPFS handle stays unresolved until the second init has also
+    // entered, so the overlap is a fact of the test rather than a race that
+    // happens to occur.
+    const first = Promise.withResolvers<{ path: string }>();
+    mockUseOpfsStorage.mockImplementation(() => {
       callCount++;
-      await new Promise((r) => setTimeout(r, 10));
-      return { path: `db${callCount}.db` };
+      if (callCount === 1) return first.promise;
+      return Promise.resolve({ path: `db${callCount}.db` });
     });
     mockInitSQLite.mockImplementation(async () => ({
       run: vi.fn().mockResolvedValue([]),
       close: vi.fn(),
     }));
 
-    const [e1, e2] = await Promise.all([
+    const engines = Promise.all([
       createEngine('a.db', 'wasm.wasm'),
       createEngine('b.db', 'wasm.wasm'),
     ]);
+    await waitForMock(() => expect(callCount).toBe(2));
+    first.resolve({ path: 'db1.db' });
+
+    const [e1, e2] = await engines;
 
     expect(e1).toBeDefined();
     expect(e2).toBeDefined();

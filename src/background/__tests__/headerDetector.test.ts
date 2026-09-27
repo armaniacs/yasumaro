@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 import { HeaderDetector, sessionCacheKeysToEvict } from '../headerDetector.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { checkPrivacy } from '../../utils/privacyChecker.js';
@@ -183,7 +184,7 @@ describe('HeaderDetector', () => {
        expect(RecordingCache.getPrivacyCache()?.has('https://example.com/noct')).toBeFalsy();
      });
 
-    test('should handle errors in onHeadersReceived gracefully', () => {
+    test('should handle errors in onHeadersReceived gracefully', async () => {
       vi.mocked(checkPrivacy).mockImplementation(() => {
         throw new Error('Test error');
       });
@@ -198,10 +199,12 @@ describe('HeaderDetector', () => {
 
       expect(() => detector['onHeadersReceived'](details)).not.toThrow();
 
-      return new Promise<void>(resolve => setTimeout(resolve, 10)).then(() => {
+      // The catch branch reports through a detached async IIFE, so the log
+      // arrives after onHeadersReceived returned; its completion is the signal.
+      await waitForMock(() => {
         expect(logError).toHaveBeenCalledWith(
           'HeaderDetector error',
-          expect.objectContaining({ 
+          expect.objectContaining({
             error: 'Test error',
             source: 'headerDetector'
           }),

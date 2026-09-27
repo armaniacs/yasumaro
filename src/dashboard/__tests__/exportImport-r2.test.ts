@@ -5,7 +5,7 @@
  * confirm/cancel exception handling, and modal close/focus-trap paths.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drainMacrotask } from '../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // ------------------------------------------------------------------
 // Mocks (must be before any imports)
@@ -224,7 +224,7 @@ describe('exportImport-r2 — Import logs', () => {
     const file = new File(['{"logs":[]}'], 'logs.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() => expect(mockImportFromJson).toHaveBeenCalled());
 
     if (capturedProgress) {
       (capturedProgress as (c: number, t: number) => void)(2, 3);
@@ -411,7 +411,9 @@ describe('exportImport-r2 — confirmImportBtn exception', () => {
     const file = new File([JSON.stringify(testData)], 'test.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() =>
+      expect(document.getElementById('importConfirmModal')!.classList.contains('show')).toBe(true)
+    );
 
     document.getElementById('confirmImportBtn')!.click();
     await vi.waitFor(
@@ -463,7 +465,7 @@ describe('exportImport-r2 — closeImportModal trap management', () => {
     const file = new File([JSON.stringify(testData)], 'test.json', { type: 'application/json' });
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() => expect(focusTrapManager.trap).toHaveBeenCalled());
 
     // Now closeImportModal should release the trap
     document.getElementById('closeImportModalBtn')!.click();

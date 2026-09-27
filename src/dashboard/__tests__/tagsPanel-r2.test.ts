@@ -6,6 +6,7 @@
  * duplicate norm entry detection, and renderDefaultCategories coverage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 vi.stubGlobal('chrome', {
   i18n: {
@@ -242,7 +243,7 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
     addBtn.click();
 
     (document.getElementById('saveTagsBtn') as HTMLButtonElement).click();
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
 
     expect(mockSetAll).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -269,7 +270,7 @@ describe('tagsPanel-r2 — Save error handling', () => {
     await initTagsPanel();
 
     (document.getElementById('saveTagsBtn') as HTMLButtonElement).click();
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() => expect(showStatus).toHaveBeenCalled());
 
     expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.any(String), 'error');
   });

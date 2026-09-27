@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { showConfirmDialog } from '../confirmDialog.js';
+import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
 
 describe('showConfirmDialog', () => {
   let prevFocus: HTMLElement;
@@ -68,7 +69,9 @@ describe('showConfirmDialog', () => {
 
     const dialog = document.querySelector('.confirm-dialog') as HTMLElement;
     dialog.click();
-    await new Promise(r => setTimeout(r, 10));
+    // The promise stays pending until a button/backdrop/Escape resolves it, so
+    // crossing one macrotask turn is enough to prove the inner click did nothing.
+    await drainMacrotask();
     expect(resolved).toBe(false);
 
     (document.querySelector('.confirm-dialog-btn-cancel') as HTMLElement | null)?.click();
