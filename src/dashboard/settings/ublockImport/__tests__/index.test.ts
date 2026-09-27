@@ -6,7 +6,7 @@
  */
 
 import { vi } from 'vitest';
-import { drainMacrotask } from '../../../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock } from '../../../../../testDir/waitPolicy.js';
 import type { Mock } from 'vitest';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
@@ -501,10 +501,8 @@ describe('ublockImport/index.ts', () => {
       });
       dropZone.dispatchEvent(dropEvent);
 
-      await new Promise(r => setTimeout(r, 10));
-
       const { readFile } = await import('../fileReader.js');
-      expect(readFile).toHaveBeenCalledWith(file);
+      await waitForMock(() => expect(readFile).toHaveBeenCalledWith(file));
 
       expect(dropZone.classList.contains('active')).toBe(false);
     });
@@ -529,10 +527,10 @@ describe('ublockImport/index.ts', () => {
       });
       dropZone.dispatchEvent(dropEvent);
 
-      await new Promise(r => setTimeout(r, 10));
-
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Read error'), 'error');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Read error'), 'error')
+      );
     });
   });
 
@@ -747,10 +745,8 @@ describe('ublockImport/index.ts', () => {
       const exportBtn = document.getElementById('uBlockExportBtn')!;
       exportBtn.dispatchEvent(new Event('click'));
 
-      await new Promise(r => setTimeout(r, 10));
-
       const { exportSimpleFormat } = await import('../uiRenderer.js');
-      expect(exportSimpleFormat).toHaveBeenCalled();
+      await waitForMock(() => expect(exportSimpleFormat).toHaveBeenCalled());
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('exported'), 'success');
@@ -767,10 +763,10 @@ describe('ublockImport/index.ts', () => {
       const exportBtn = document.getElementById('uBlockExportBtn')!;
       exportBtn.dispatchEvent(new Event('click'));
 
-      await new Promise(r => setTimeout(r, 10));
-
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Storage error'), 'error');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Storage error'), 'error')
+      );
     });
 
     test('should handle copy error', async () => {
@@ -787,10 +783,10 @@ describe('ublockImport/index.ts', () => {
       const copyBtn = document.getElementById('uBlockCopyBtn')!;
       copyBtn.dispatchEvent(new Event('click'));
 
-      await new Promise(r => setTimeout(r, 10));
-
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Clipboard error'), 'error');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Clipboard error'), 'error')
+      );
     });
   });
 
@@ -958,13 +954,21 @@ describe('ublockImport/index.ts', () => {
       await init();
 
       const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      // The handler reads input.files before deciding, so a getter that records
+      // the read proves the change listener ran. Without that anchor the
+      // negative below would also pass when nothing was bound at all.
+      const filesRead = vi.fn(() => [] as File[]);
       Object.defineProperty(fileInput, 'files', {
-        value: [],
-        writable: true,
+        get: filesRead,
+        configurable: true,
       });
 
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise(r => setTimeout(r, 10));
+      expect(filesRead).toHaveBeenCalled();
+
+      // The guard returns before any await, so one macrotask turn is the whole
+      // handler. waitForMock would resolve instantly and prove nothing.
+      await drainMacrotask();
 
       const { readFile: readFileMock } = await import('../fileReader.js');
       expect(readFileMock).not.toHaveBeenCalled();
@@ -986,10 +990,11 @@ describe('ublockImport/index.ts', () => {
       });
 
       fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-      await new Promise(r => setTimeout(r, 10));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('File read error'), 'error');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('File read error'), 'error')
+      );
     });
   });
 
@@ -1045,10 +1050,11 @@ describe('ublockImport/index.ts', () => {
       const reloadCallback = renderCall[2]!;
       
       await reloadCallback(0);
-      await new Promise(r => setTimeout(r, 10));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('5'), 'success');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('5'), 'success')
+      );
     });
 
     test('should handle reload error and restore button state', async () => {
@@ -1077,10 +1083,11 @@ describe('ublockImport/index.ts', () => {
       const reloadCallback = renderCall[2]!;
 
       await reloadCallback(0);
-      await new Promise(r => setTimeout(r, 10));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Reload error'), 'error');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Reload error'), 'error')
+      );
 
       const { addLog } = await import('../../../../utils/logger/core.js');
       expect(addLog).toHaveBeenCalledWith('ERROR', 'Reload error', { error: 'Network error' });
@@ -1114,10 +1121,11 @@ describe('ublockImport/index.ts', () => {
       const reloadCallback = renderCall[2]!;
 
       await reloadCallback(0);
-      await new Promise(r => setTimeout(r, 10));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('+3'), 'success');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('+3'), 'success')
+      );
     });
   });
 
@@ -1164,10 +1172,11 @@ describe('ublockImport/index.ts', () => {
       const deleteCallback = renderCall[1]!;
 
       await deleteCallback(0);
-      await new Promise(r => setTimeout(r, 10));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Delete error'), 'error');
+      await waitForMock(() =>
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Delete error'), 'error')
+      );
     });
   });
 });

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drainMacrotask } from '../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn().mockResolvedValue({}),
   hoistedMockSave: vi.fn().mockResolvedValue(undefined),
@@ -175,6 +175,17 @@ describe('initExportImport', () => {
       <button id="confirmImportBtn"></button>
       <div id="exportImportStatus"></div>
     `;
+  }
+
+  /**
+   * The change handler parses the file, then stores the pending payload and
+   * reveals the confirm modal. The reveal is the signal that the payload is
+   * ready for confirmImportBtn to consume.
+   */
+  async function waitForImportPreview(): Promise<void> {
+    await waitForMock(() =>
+      expect(document.getElementById('importConfirmModal')!.classList.contains('show')).toBe(true)
+    );
   }
 
   it('exports plain settings when master password is disabled', async () => {
@@ -572,7 +583,7 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
+    await waitForImportPreview();
 
     document.getElementById('confirmImportBtn')!.click();
     await vi.waitFor(
@@ -629,7 +640,7 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
+    await waitForImportPreview();
 
     document.getElementById('confirmImportBtn')!.click();
     await vi.waitFor(
@@ -714,7 +725,7 @@ describe('initExportImport', () => {
     setFileOnInput(fileInput, file);
     fileInput.dispatchEvent(new Event('change', { bubbles: true }));
 
-    await new Promise(r => setTimeout(r, 10));
+    await waitForImportPreview();
 
     document.getElementById('confirmImportBtn')!.click();
     await vi.waitFor(

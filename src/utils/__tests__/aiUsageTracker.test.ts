@@ -309,50 +309,43 @@ describe('aiUsageTracker', () => {
 
         // VULN-010 (CWE-362): concurrent calls must not lose increments on the
         // read-modify-write of the rate-limit counter. With max=1, exactly one
-        // of two concurrent calls may be allowed. Timer-based interleaving uses
-        // scoped fake timers so the stretch under load cannot flake.
+        // of two concurrent calls may be allowed. The storage doubles block on
+        // a gate the test opens itself, so both callers are in flight before
+        // any read or write lands — the interleaving is forced, not timed.
         test('VULN-010: blocks rate-limit bypass via concurrent calls', async () => {
-            vi.useFakeTimers();
-            try {
-                const origGet = mockChrome.storage.local.get;
-                const origSet = mockChrome.storage.local.set;
-                const setOrder: unknown[] = [];
-                // Force both reads to observe the initial count before either write,
-                // reproducing the read-modify-write interleaving.
-                mockChrome.storage.local.get = vi.fn(async (keys: any) => {
-                    await new Promise<void>(r => setTimeout(r, 5));
-                    return origGet(keys);
-                });
-                mockChrome.storage.local.set = vi.fn(async (data: any) => {
-                    await new Promise<void>(r => setTimeout(r, 5));
-                    setOrder.push(data['ai_rate_limit_count']);
-                    return origSet(data);
-                });
+            const origGet = mockChrome.storage.local.get;
+            const origSet = mockChrome.storage.local.set;
+            const setOrder: unknown[] = [];
+            const storageGate = Promise.withResolvers<void>();
+            mockChrome.storage.local.get = vi.fn(async (keys: any) => {
+                await storageGate.promise;
+                return origGet(keys);
+            });
+            mockChrome.storage.local.set = vi.fn(async (data: any) => {
+                await storageGate.promise;
+                setOrder.push(data['ai_rate_limit_count']);
+                return origSet(data);
+            });
 
-                mockStorage['ai_rate_limit_max'] = 1;
-                mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
-                mockStorage['ai_rate_limit_count'] = 0;
+            mockStorage['ai_rate_limit_max'] = 1;
+            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
+            mockStorage['ai_rate_limit_count'] = 0;
 
-                const pending = Promise.all([checkRateLimit(), checkRateLimit()]);
-                // Each serialized call performs 3 storage ops x 5ms; 100ms
-                // covers the full chain deterministically.
-                await vi.advanceTimersByTimeAsync(100);
-                const [a, b] = await pending;
+            const pending = Promise.all([checkRateLimit(), checkRateLimit()]);
+            storageGate.resolve();
+            const [a, b] = await pending;
 
-                mockChrome.storage.local.get = origGet;
-                mockChrome.storage.local.set = origSet;
+            mockChrome.storage.local.get = origGet;
+            mockChrome.storage.local.set = origSet;
 
-                const allowed = [a, b].filter(r => r.allowed).length;
-                expect(allowed).toBe(1);
-                // The counter must reflect both increments (reach the cap of 1),
-                // not a lost update back to 1.
-                expect(mockStorage['ai_rate_limit_count']).toBe(1);
-                // Serialization proof: the count write happened exactly once
-                // (the denied call wrote nothing), in increment order.
-                expect(setOrder).toEqual([1]);
-            } finally {
-                vi.useRealTimers();
-            }
+            const allowed = [a, b].filter(r => r.allowed).length;
+            expect(allowed).toBe(1);
+            // The counter must reflect both increments (reach the cap of 1),
+            // not a lost update back to 1.
+            expect(mockStorage['ai_rate_limit_count']).toBe(1);
+            // Serialization proof: the count write happened exactly once
+            // (the denied call wrote nothing), in increment order.
+            expect(setOrder).toEqual([1]);
         });
 
         test('starts from 0 when count is undefined', async () => {

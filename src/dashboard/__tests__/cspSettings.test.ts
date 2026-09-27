@@ -7,6 +7,7 @@
 
 import { vi } from 'vitest';
 import type { Mock, MockedFunction } from 'vitest';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // Mock dependencies before importing cspSettings
 // PBI 2026-09-17-19: the reset confirmation goes through the accessible
@@ -417,8 +418,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const saveButton = document.getElementById('cspSaveButton');
       saveButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockSetAll).toHaveBeenCalled();
+      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
     });
   });
 
@@ -437,11 +437,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockSetAll).toHaveBeenCalledWith({
-        [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
-        [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],
-      });
+      await waitForMock(() =>
+        expect(mockSetAll).toHaveBeenCalledWith({
+          [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
+          [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],
+        })
+      );
     });
 
     test('should not reset when confirm is rejected', async () => {
@@ -458,7 +459,11 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
+      // The handler's only async work is awaiting the confirm dialog, so the
+      // dialog call is the positive anchor and one macrotask turn covers the
+      // resumption after it. waitForMock would be vacuous for a negative.
+      await waitForMock(() => expect(mockShowConfirmDialog).toHaveBeenCalled());
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
 
@@ -529,9 +534,10 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
+      await waitForMock(() =>
+        expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings reset failed', expect.objectContaining({ error: expect.any(String) }))
+      );
 
-      expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings reset failed', expect.objectContaining({ error: expect.any(String) }));
       const message = document.getElementById('cspResetMessage');
       expect(message?.style.display).toBe('block');
       expect(message?.textContent).toBe('cspResetError');

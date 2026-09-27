@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
   hoistedMockSave: vi.fn().mockResolvedValue(undefined),
@@ -483,8 +484,9 @@ describe('privatePageDialog', () => {
 
       document.getElementById('dialog-save-once')!.click();
 
-      // Allow microtasks to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // The handler returns before any await when there is nothing pending, so
+      // one macrotask turn is enough to prove no send was attempted.
+      await drainMacrotask();
 
       expect(global.chrome.runtime.sendMessage).not.toHaveBeenCalled();
     });

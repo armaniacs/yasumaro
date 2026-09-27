@@ -25,6 +25,7 @@ vi.mock('../../utils/logger/criticalAlertSink.js', () => ({
 }));
 
 import { logCritical } from '../../utils/logger/api.js';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 async function freshAlertModule() {
   vi.resetModules();
@@ -33,11 +34,10 @@ async function freshAlertModule() {
 
 /** Wait for the module's fire-and-forget session writes to land. */
 async function flushSessionWrites(): Promise<void> {
-  for (let i = 0; i < 20; i++) {
+  await waitForMock(async () => {
     const stored = (await chrome.storage.session.get('sqliteAlertState')) as Record<string, unknown>;
-    if ('sqliteAlertState' in stored) return;
-    await new Promise((resolve) => setTimeout(resolve, 5));
-  }
+    expect(stored).toHaveProperty('sqliteAlertState');
+  });
 }
 
 describe('sqliteAlert — SW restart durability', () => {

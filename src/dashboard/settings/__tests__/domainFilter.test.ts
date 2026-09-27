@@ -6,6 +6,7 @@
  */
 
 import { vi } from 'vitest';;
+import { waitForMock } from '../../../../testDir/waitPolicy.js';
 
 // Mock dependencies - all at top level
 const mockGetSettings = vi.fn((): Promise<{
@@ -343,7 +344,7 @@ describe('domainFilter.ts (improved coverage)', () => {
 
       const { init } = await import('../domainFilter.js');
       init();
-      await new Promise(r => setTimeout(r, 10));
+      await waitForMock(() => expect(mockGetSettings).toHaveBeenCalled());
 
       expect(mockGetSettings).toHaveBeenCalled();
     });
@@ -366,7 +367,7 @@ describe('domainFilter.ts (improved coverage)', () => {
       init();
 
       document.getElementById('domainTab')!.dispatchEvent(new Event('click'));
-      await new Promise(r => setTimeout(r, 10));
+      await waitForMock(() => expect(mockGetSettings).toHaveBeenCalled());
 
       expect(mockGetSettings).toHaveBeenCalled();
     });
