@@ -173,12 +173,12 @@ Feature: 設定と閲覧履歴の単一 writer 化
 
 ## Definition of Done
 
-- [ ] `denied_domains` と `permission_notify_threshold` の reader、writer、migration、export/import を含む所有表が作成されている。
-- [ ] 5 Whys の根拠と結論が各決定事項に記録されている。
-- [ ] 各キーの単一 writer と、raw write を残す場合はその不可避な理由が確定している。
-- [ ] `denied_domains` の export/import 契約が明文化されている。
-- [ ] migration 中の writer precedence と C16 object conflict policy への依存関係が明記されている。
-- [ ] 高頻度 CAS の競合と遅延について、裁定結果と検証方法が明記されている。
-- [ ] 後続 `refactor` PBI に、Outside-In のテスト順、既存テストの変更対象、実装範囲、依存関係、ロールバック方法が含まれている。
-- [ ] 既存キー名を変更しない前提、`.js` 付与、async/await、型付き get/set と delta write 契約が後続 PBI の制約に含まれる。
-- [ ] `investigate` PBI として調査と裁定が完了し、実装変更は後続 `refactor` PBI に分かれている。
+- [x] `denied_domains` と `permission_notify_threshold` の reader、writer、migration、export/import を含む所有表が作成されている（報告書 §1。raw access 実サイト 4 箇所を行番号付きで棚卸し）
+- [x] 5 Whys の根拠と結論が各決定事項に記録されている（報告書 §2。5 問それぞれに事実・裁定・根拠・残存リスク）
+- [x] 各キーの単一 writer と、raw write を残す場合はその不可避な理由が確定している（denied_domains: `updateDeniedDomains()` 専用 CAS を canonical writer として採用・他に writer なし。threshold: SettingsRepository に統一、旧 raw set は廃止）
+- [x] `denied_domains` の export/import 契約が明文化されている（閲覧履歴として export しない。`restorableSettings` の意図的除外を正とする）
+- [x] migration 中の writer precedence と C16 object conflict policy への依存関係が明記されている（denied_domains は migration 対象外。threshold は旧 raw set を廃止し blob 正本に統一。C16 + PBI 02 は完了済みで nested 統合は「しない」と確定）
+- [x] 高頻度 CAS の競合と遅延について、裁定結果と検証方法が明記されている（専用 CAS 維持で `withLock('settings')` 呼び出し 0 件を spy pin する契約）
+- [x] 後続 `refactor` PBI に、Outside-In のテスト順、既存テストの変更対象、実装範囲、依存関係、ロールバック方法が含まれている（報告書 §5。2 SP → 1 SP に縮小）
+- [x] 既存キー名を変更しない前提、`.js` 付与、async/await、型付き get/set と delta write 契約が後続 PBI の制約に含まれる（報告書 §5 制約）
+- [x] `investigate` PBI として調査と裁定が完了し、実装変更は後続 `refactor` PBI に分かれている（成果物は `dev-docs/archived/plans/2026-09-27-pbi18-settings-single-writer-policy.md`）
