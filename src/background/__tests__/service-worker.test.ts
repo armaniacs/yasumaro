@@ -494,6 +494,12 @@ vi.mock('../pendingSqliteQueue.js', () => ({
     enqueuePendingRecord: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('../localMarkdownIdleFlusher.js', () => ({
+    // The alarm-name constants stay importable through this mock:
+    // MarkdownBufferManager reads DAILY_FLUSH_ALARM at module evaluation and
+    // is reached via dailyPurgeHandler -> saveLocalMarkdownStep.
+    IDLE_FALLBACK_ALARM: 'yasumaro-local-md-flush',
+    DAILY_FLUSH_ALARM: 'yasumaro-local-md-daily-flush',
+    IMMEDIATE_FLUSH_ALARM: 'yasumaro-local-md-immediate',
     initExportScheduler: vi.fn().mockResolvedValue(undefined),
     flushYesterdaysExport: vi.fn().mockResolvedValue(undefined),
 }));

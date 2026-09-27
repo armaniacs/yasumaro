@@ -5,7 +5,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetAll = vi.hoisted(() => vi.fn());
-const mockStorageGet = vi.hoisted(() => vi.fn());
 const mockDownload = vi.hoisted(() => vi.fn());
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
@@ -67,8 +66,41 @@ vi.mock('../../utils/markdownTemplateUtils.js', () => ({
   })),
 }));
 
-const mockStorageSet = vi.hoisted(() => vi.fn());
 const mockStorageRemove = vi.hoisted(() => vi.fn());
+
+/**
+ * Stateful chrome.storage.local stand-in.
+ *
+ * It has to answer two call shapes that come from different code: the flush
+ * reads everything with a no-arg get, while `recordDownloadId` writes the
+ * download-id list through withOptimisticLock, whose post-write verification
+ * re-reads that key by name and compares the value. One mockResolvedValue
+ * snapshot answers every call with the same pre-write object, so the lock's own
+ * verification could never pass and the record write ended in a retried conflict
+ * — which surfaced as the flush never reaching its key removal.
+ */
+const storageState = vi.hoisted(() => ({ data: {} as Record<string, unknown> }));
+
+function seedStorage(data: Record<string, unknown>): void {
+  for (const key of Object.keys(storageState.data)) delete storageState.data[key];
+  Object.assign(storageState.data, structuredClone(data));
+}
+
+const mockStorageGet = vi.hoisted(() =>
+  vi.fn((keys?: unknown): Promise<Record<string, unknown>> => {
+    if (keys === undefined || keys === null) return Promise.resolve({ ...storageState.data });
+    const out: Record<string, unknown> = {};
+    const requested = Array.isArray(keys) ? keys : [keys as string];
+    for (const key of requested) if (key in storageState.data) out[key] = storageState.data[key];
+    return Promise.resolve(out);
+  }),
+);
+const mockStorageSet = vi.hoisted(() =>
+  vi.fn((items: Record<string, unknown>): Promise<void> => {
+    Object.assign(storageState.data, structuredClone(items));
+    return Promise.resolve();
+  }),
+);
 
 vi.stubGlobal('chrome', {
   storage: { local: { get: mockStorageGet, set: mockStorageSet, remove: mockStorageRemove } },
@@ -80,14 +112,14 @@ import { flushBufferedExports } from '../localMarkdownExportCore.js';
 describe('flushBufferedExports', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    seedStorage({});
     mockGetAll.mockResolvedValue({ local_markdown_export_path: 'Yasumaro' });
     mockDownload.mockResolvedValue(123);
-    mockStorageSet.mockResolvedValue(undefined);
     mockStorageRemove.mockResolvedValue(undefined);
   });
 
   it('downloads every buffered day when no filter is given', async () => {
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-07-08': ['# a'],
       'local_export_2026-07-09': ['# b'],
     });
@@ -98,7 +130,7 @@ describe('flushBufferedExports', () => {
   });
 
   it('downloads only days that pass the filter', async () => {
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-07-08': ['# a'],
       'local_export_2026-07-09': ['# b'],
     });
@@ -111,7 +143,7 @@ describe('flushBufferedExports', () => {
   });
 
   it('skips days with empty entries', async () => {
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-07-08': [],
     });
 
@@ -121,7 +153,7 @@ describe('flushBufferedExports', () => {
   });
 
   it('ignores non-buffer keys', async () => {
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       other_key: 'value',
     });
 
@@ -131,7 +163,7 @@ describe('flushBufferedExports', () => {
   });
 
   it('swallows errors and does not throw', async () => {
-    mockStorageGet.mockRejectedValue(new Error('storage failure'));
+    mockStorageGet.mockRejectedValueOnce(new Error('storage failure'));
 
     await expect(flushBufferedExports()).resolves.toBeUndefined();
   });
@@ -147,7 +179,7 @@ describe('flushBufferedExports', () => {
       return `# ${date}\n${entries.join('\n')}`;
     });
 
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-07-08': ['# poisoned'],
       'local_export_2026-07-09': ['# ok'],
     });
@@ -160,7 +192,7 @@ describe('flushBufferedExports', () => {
   });
 
   it('VULN-004: deletes the daily buffer key after a successful flush', async () => {
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-09-15': ['# a'],
     });
 
@@ -171,7 +203,7 @@ describe('flushBufferedExports', () => {
 
   it('VULN-004: does not delete the buffer key when the download throws', async () => {
     mockDownload.mockRejectedValue(new Error('download failed'));
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-09-15': ['# a'],
     });
 
@@ -182,7 +214,7 @@ describe('flushBufferedExports', () => {
 
   it('VULN-004: records the generated download ID', async () => {
     mockDownload.mockResolvedValue(555);
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-09-15': ['# a'],
     });
 
@@ -198,7 +230,7 @@ describe('flushBufferedExports', () => {
 
   it('PBI 27: traversal in exportPath never reaches the download filename', async () => {
     mockGetAll.mockResolvedValue({ local_markdown_export_path: '../../etc/passwd' });
-    mockStorageGet.mockResolvedValue({
+    seedStorage({
       'local_export_2026-09-15': ['# a'],
     });
 

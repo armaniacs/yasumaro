@@ -33,6 +33,7 @@ const LOCK_KEYS: ReadonlyArray<{ key: string; aliases: readonly string[] }> = [
   { key: 'denied_domains', aliases: ['StorageKeys.DENIED_DOMAINS'] },
   { key: 'trust_db', aliases: ['StorageKeys.TRUST_DB'] },
   { key: 'recording_recovery_claims', aliases: ['CLAIMS_KEY'] },
+  { key: 'local_md_export_download_ids', aliases: ['LOCAL_EXPORT_DOWNLOAD_IDS_KEY'] },
 ];
 
 const SOURCE_ROOTS = ['src', 'entrypoints'];
