@@ -165,6 +165,18 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 
 （0915 は全11候補が PBI 02-12 として消化済み、holistic-0921 の台帳送り3件は 2026-09-22 の保留候補 PBI 01/02/03 として採番済みのため、両台帳は候補ゼロでアーカイブ。0915b の PBI 03 でスコープ外とした recordingCache ensureReady の別候補は RecordingCache→RecordingCacheInstance 移行（2026-08-17）後の実在確認が前提のため、次回 recording cache 系改修時に要否を再評価する。）
 
+**2026-09-27 整理（2026-09-26 メタ認知分析ラウンド台帳の未採番候補を統合・5 項目）:**
+
+| 項目 | RICE | 再評価条件 | 出典 |
+|------|------|-----------|------|
+| 熟読度フィルター＆マトリクス（提案1・不採用→トリガー管理） | 0.60 | 可視区間の累積計時が記録経路に配線されたとき（`visit_duration` は新規行で常に NULL・滞在時間パネルは `54cfab5e` で撤去済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| 遷移データだけを削除するボタン（`nav_source_url` / `search_query` の 2 列のみを消す操作） | — | ユーザーから要望があったとき（現状は記録 OFF が将来行も止めるのみ・既存行は履歴削除で消える） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| `EXPORT_COLUMNS` に遷移の 2 列を加える | — | エクスポートの互換方針を見直すとき（`fallback_reason` と同じく列は固定） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| 手動保存でも遷移を記録する（03 の v1 は自動記録 `valid-visit` のみ対象） | — | PBI 03 完了後の利用実態確認後（03 は 2026-09-26 に実装完了・アーカイブ済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| キーワード単位のループ検出（`wordClusterAdapter` の語抽出を流用し、タグ OFF のユーザーにもテーマ単位のループを出す） | — | PBI 01 完了後（完了済み）にドメイン・URL 単位では粗いという声が出たとき | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+
+（メタ認知台帳の採用 4 PBI（01-04）は全件実装・アーカイブ済みのため、未採番候補 5 件を本台帳へ統合し、台帳は 2026-09-27 にアーカイブ。）
+
 ## 運用
 
 - 次ラウンドの architecture review（`/improve-codebase-architecture`）は本台帳を入力に再評価する
