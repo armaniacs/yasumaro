@@ -127,6 +127,40 @@ describe('statusPanel cleansing feedback synthesis', () => {
   });
 });
 
+describe('statusPanel cleansing feedback AI summary passthrough', () => {
+  it('passes the AI summary stats as their own field, never inside the count map', async () => {
+    await clickReport({
+      content: '<p>hello</p>',
+      cleanseStats: { hardStripRemoved: 4 },
+      aiSummaryCleansedStats: {
+        aiSummaryOriginalBytes: 31204,
+        aiSummaryCleansedBytes: 21000,
+        aiSummaryCleansedElements: 12,
+        aiSummaryCleansedReason: 'ads',
+        aiSummaryCleansedReasons: ['ads', 'nav'],
+      },
+    });
+
+    const entry = mockEnqueueFeedback.mock.calls[0][0];
+    expect(entry.aiSummary).toEqual({
+      reason: 'ads',
+      reasons: ['ads', 'nav'],
+      elements: 12,
+      originalBytes: 31204,
+      cleansedBytes: 21000,
+    });
+    expect(entry.removedByReason).toEqual({ hardStripRemoved: 4 });
+  });
+
+  it('omits the AI summary field when the response carries no AI stats', async () => {
+    await clickReport({ content: '<p>hello</p>', cleanseStats: { hardStripRemoved: 4 } });
+
+    const entry = mockEnqueueFeedback.mock.calls[0][0];
+    expect(entry.aiSummary).toBeUndefined();
+    expect('aiSummary' in entry).toBe(false);
+  });
+});
+
 describe('statusPanel cleansing feedback status render', () => {
   it('keeps the popup-only 2000ms clear and the status-message contract', async () => {
     useTimerClock();

@@ -12,6 +12,7 @@ import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import { buildRemovedCounts } from '../utils/commonTypes.js';
+import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
@@ -399,19 +400,22 @@ function initCleansingFeedbackButton(): void {
       const domain = getDomainForUrl(url) ?? '';
       let htmlSnippet = '';
       let removedByReason: Record<string, number> = {};
+      let aiSummary: AiSummaryRemovedStats | undefined;
       if (tab?.id !== undefined) {
         const resp = await requestContentFromTab(tab.id);
         if (resp?.content) htmlSnippet = resp.content.slice(0, 500);
         // Counts and AI-summary byte/reason stats are separate units: the
-        // builder keeps them apart, and only the count side is stored (the wire
-        // shape has a single Record<string, number> field).
-        removedByReason = buildRemovedCounts(resp?.cleanseStats, resp?.aiSummaryCleansedStats).byReason;
+        // builder keeps them apart and the entry carries them in separate
+        // fields, so a byte size can never be read as a removal count.
+        const counts = buildRemovedCounts(resp?.cleanseStats, resp?.aiSummaryCleansedStats);
+        removedByReason = counts.byReason;
+        aiSummary = counts.aiSummary;
       }
       if (!htmlSnippet) {
         htmlSnippet = document.documentElement.outerHTML.slice(0, 500);
       }
       const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
-      await enqueueFeedback({ url, domain, htmlSnippet, removedByReason });
+      await enqueueFeedback({ url, domain, htmlSnippet, removedByReason, ...(aiSummary ? { aiSummary } : {}) });
       // 2000ms is the popup-only contract: the panel is too small to keep the
       // dashboard's 3s/5s defaults.
       showStatus(statusEl, getMessageOr('reportCleansingFeedbackSuccess', '報告しました'), 'success', { durationMs: 2000 });
