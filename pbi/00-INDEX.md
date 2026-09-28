@@ -18,7 +18,20 @@
 
 ユーザー要求「リポジトリ全体のリファクタリング（PBI 作成まで・実装は別ラウンド）」に基づく 4 観点（DRY / SRP・モジュール分離 / 型安全性・テスト容易性 / 堅牢性）の差分レビュー結果を 17 PBI 化。実コード裏取り済み（file:line は採点台帳と各 PBI 参照）。採点・依存マップ・台帳送り 8 件・クリーン領域の詳細は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md)。
 
-**実装状況（2026-09-28 バッチ 1〜3 完了）**: 01/02/03/04/06/07/08/09/11/12/13/15/16/17 は実装・全ゲート green（validate 14,640 tests / build OK）。12 は investigate として裁定記録済み（[ADR 2026-09-28-session-store-overflow-persistence](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）。**05・10・14 は `2026-09-27-fix-master-password-reencrypt-preserve-api-keys` とファイル交差するため保留**（着地後に着手）。12 の後続 fix PBI（sessionStore cap 3MiB 化）の起票基準は ADR に整理済み。
+**実装状況（2026-09-28 バッチ 1〜3 完了）**: 01/02/03/04/06/07/08/09/11/12/13/15/16/17 は実装・全ゲート green（validate 14,640 tests / build OK）。12 は investigate として裁定記録済み（[ADR 2026-09-28-session-store-overflow-persistence](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）。**05・10・14 は `2026-09-27-fix-master-password-reencrypt-preserve-api-keys` とファイル交差するため保留**（着地後に着手）。
+
+### 2026-09-28 追加ラウンド: 残課題 PBI 化 + sessionStore 後続 fix — ⬜ 未着手 6件
+
+ラウンド実装で判明した残課題 7 件を 5 PBI に整理し、investigate 12 の裁定（[ADR](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）に基づく後続 fix を起票。詳細・採点は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md) 追加ラウンド節。
+
+| NN | PBI | 種別 | RICE | SP | 出典 |
+|---|---|---|---:|---:|---|
+| 18 | [fix-session-store-flush-cap-stagnation-drop](2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md) | fix | 9.0 | 1 | **12 の後続 fix**。cap 3MiB 化 + 恒久滞留 drop（ADR 受入基準を継承） |
+| 19 | [refactor-status-message-residual-bundle](2026-09-28-19-refactor-status-message-residual-bundle.md) | refactor | 4.05 | 1 | 15 の残留 3 件（stale-timer race・markup class 落ち・popup mainStatus 旧経路） |
+| 20 | [refactor-ai-summary-cleansing-settings-delta-write](2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 4.0 | 0.5 | 02 のスコープ外だった full-snapshot writer の delta 化 |
+| 21 | [fix-cleansing-feedback-ai-stats-persistence](2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md) | fix | 3.2 | 1 | 08 のスコープ外。feedback エントリへの AI 統計永続化（加算的・後方互換） |
+| 22 | [investigate-dst-ambiguous-day-end](2026-09-28-22-investigate-dst-ambiguous-day-end.md) | investigate | 1.6 | 0.5 | 11 の既知残留。曖昧時刻の「日の終端」意味論の裁定 |
+| 23 | [refactor-svg-ns-single-source](2026-09-28-23-refactor-svg-ns-single-source.md) | refactor | 1.0 | 0.5 | 17 の既知残留。SVG_NS 完全単一ソース化 |
 
 | NN | PBI | 種別 | RICE | SP | 依存 / 備考 |
 |---|---|---|---:|---:|---|

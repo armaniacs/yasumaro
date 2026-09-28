@@ -88,3 +88,18 @@ RICE = Reach（今後 1 年の関与頻度 1-10）× Impact（3=実害解消 / 2
 | DST 曖昧時刻（夜中遷移ゾーン例: America/Santiago）で `setHours(23,59,59,999)` が反復 23:00-23:59 を取りこぼす（periodFilter 由来の継承仕様。CI の TZ=UTC では観測不能） | investigate | タイムゾーン多様性の製品要件が生じた時（`src/utils/localDate.ts`） |
 | aiSummaryCleansingSettingsV2 の full-snapshot writer 残存（02 のスコープ外。delta への局所修正で完結） | refactor | 次回 aiSummaryCleansingSettingsV2 改修時（`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151/:171`） |
 | 新規 cleansing feedback エントリに AI 統計が永続化されない（`CleansingFeedbackEntry` の wire 契約変更が必要 = 別 PBI） | fix | feedback データの分析要件が生じた時（`src/utils/aiSummaryCleaner/feedbackQueue.ts`） |
+
+## 追加ラウンド: 残課題の PBI 化 + sessionStore 後続 fix（2026-09-28）
+
+「ラウンド完了時に判明した残課題」7 件を 5 PBI に整理（status 関連 3 件はバンドル）し、ADR の裁定に基づく sessionStore 後続 fix PBI を起票した。実行順は RICE 降順（ファイル非重複のため並列可）。
+
+| NN | PBI | 種別 | R | I | C | E | RICE | SP | 出典 |
+|---|---|---|---:|---:|---:|---:|---:|---:|---|
+| 18 | [fix-session-store-flush-cap-stagnation-drop](2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md) | fix | 3 | 3 | 100% | 1 | 9.0 | 1 | investigate 12 の裁定（ADR 2026-09-28-session-store-overflow-persistence） |
+| 19 | [refactor-status-message-residual-bundle](2026-09-28-19-refactor-status-message-residual-bundle.md) | refactor | 3 | 1.5 | 90% | 1 | 4.05 | 1 | 残課題 1-3（stale-timer race・markup class 落ち・mainStatus 旧経路） |
+| 20 | [refactor-ai-summary-cleansing-settings-delta-write](2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 2 | 1 | 100% | 0.5 | 4.0 | 0.5 | 残課題 6（full-snapshot writer。実読の結果 writer は 1 本で :171 は同関数内の代入行 — PBI 側に記録済み） |
+| 21 | [fix-cleansing-feedback-ai-stats-persistence](2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md) | fix | 2 | 2 | 80% | 1 | 3.2 | 1 | 残課題 7（CleansingFeedbackEntry への加算的 optional フィールド・後方互換） |
+| 22 | [investigate-dst-ambiguous-day-end](2026-09-28-22-investigate-dst-ambiguous-day-end.md) | investigate | 1 | 1 | 80% | 0.5 | 1.6 | 0.5 | 残課題 5（localDate endOfLocalDayMs の曖昧時刻） |
+| 23 | [refactor-svg-ns-single-source](2026-09-28-23-refactor-svg-ns-single-source.md) | refactor | 1 | 0.5 | 100% | 0.5 | 1.0 | 0.5 | 残課題 4（SVG_NS 残留 + computeLimits doc drift） |
+
+依存なし（先行 PBI 01-17 はすべて着地済み）。ファイル非重複のため全 6 件並列実装可。18 は上流 ADR の受入基準をそのまま継承。
