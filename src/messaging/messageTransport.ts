@@ -44,6 +44,18 @@ export interface MessageTransportOptions {
   clock?: { now: () => number; sleep: (ms: number) => Promise<void> };
 }
 
+/**
+ * What a caller hands to send(): the wire contract minus `protocolVersion`.
+ *
+ * Senders must not stamp the version themselves — send() does it for every
+ * message — so requiring `protocolVersion` in the parameter is what pushed
+ * callers into casting their envelopes through `ExtensionMessage`. The
+ * conditional distributes over the union so each envelope keeps its `type`
+ * discriminant.
+ */
+type WithoutProtocolVersion<M> = M extends unknown ? Omit<M, 'protocolVersion'> : never;
+type OutgoingMessage = WithoutProtocolVersion<ExtensionMessage>;
+
 const defaultClock: { now: () => number; sleep: (ms: number) => Promise<void> } = {
   now: () => Date.now(),
   sleep: (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
@@ -55,12 +67,12 @@ export class MessageTransport {
     private clock: { now: () => number; sleep: (ms: number) => Promise<void> } = defaultClock,
   ) {}
 
-  async send<T extends ExtensionMessage>(message: T, opts: MessageTransportOptions = {}): Promise<unknown> {
+  async send<M extends OutgoingMessage>(message: M, opts: MessageTransportOptions = {}): Promise<unknown> {
     const retries = opts.retries ?? 3;
     const clock = opts.clock ?? this.clock;
 
     // Attach protocol version and validate
-    const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION } as T & { protocolVersion: number };
+    const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION } as M & { protocolVersion: number };
     if (!VALID_MESSAGE_TYPES.includes(enriched.type as never)) {
       throw new Error(`Invalid message type: ${String((enriched as Record<string, unknown>).type)}`);
     }
