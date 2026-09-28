@@ -9,7 +9,10 @@ import type { SettingsReader } from '../../../utils/storage/SettingsRepository.j
 // ------------------------------------------------------------------
 // Mock dependencies – hoisted by vitest
 // ------------------------------------------------------------------
-vi.mock('../../settingsPipeline.js', () => ({
+// Only the save pipeline is faked; saveErrorText is the real one, because the
+// save-error wording is the single definition these tests pin against.
+vi.mock('../../settingsPipeline.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../settingsPipeline.js')>()),
   saveDashboardSettings: vi.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -361,7 +364,7 @@ describe('handleSaveOnly', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false, error: 'validation_failed' } as any);
     await handleSaveOnly();
     expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 
@@ -371,6 +374,22 @@ describe('handleSaveOnly', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
     await handleSaveOnly();
     expect(document.getElementById('status')!.textContent).toBe('SAVE_ERR');
+  });
+
+  // The three save-error kinds used to be spelled out per handler, so the
+  // wording could drift between the four call sites. They now come from
+  // settingsPipeline's single definition, and these are the three keys it maps.
+  it.each([
+    ['aiProviderPriority1Required', 'Priority 1 is required'],
+    ['aiProviderPriorityDuplicateWarning', 'Duplicate provider and model'],
+    ['http_confirm_cancelled', '設定の保存に失敗しました。'],
+  ])('derives the save-error wording for %s from the shared definition', async (error, expected) => {
+    document.body.innerHTML = `<div id="status"></div><div id="statusTop"></div>`;
+    mockedGetMessage.mockReturnValue('' as any);
+    mockedSaveDashboardSettings.mockResolvedValue({ success: false, error } as any);
+    await handleSaveOnly();
+    expect(document.getElementById('status')!.textContent).toBe(expected);
+    expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 
   it('refreshLocalMarkdownScheduler swallowed sync throw', async () => {
@@ -715,7 +734,7 @@ describe('handleTestAi', () => {
     setupChrome({ runtime: { sendMessage: vi.fn(), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestAi();
     expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     expect((document.getElementById('testAiBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
@@ -1028,7 +1047,7 @@ describe('handleTestLocalMarkdown', () => {
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
     expect(document.getElementById('statusTop')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('statusTop')!.className).toBe('status-message error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 

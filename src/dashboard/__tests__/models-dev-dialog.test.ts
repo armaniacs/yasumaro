@@ -745,8 +745,13 @@ describe('ModelsDevDialog', () => {
       document.getElementById('dialog-save')?.click();
       const errorEl = document.getElementById('dialog-error');
       expect(errorEl!.classList.contains('hidden')).toBe(false);
+      expect(errorEl!.className).toBe('status-message error');
       vi.advanceTimersByTime(5000);
-      expect(errorEl!.classList.contains('hidden')).toBe(true);
+      // The unified clear empties the box and drops the type class; the
+      // `#models-dev-dialog .status-message:empty` rule collapses it, so the
+      // `hidden` class it was shown up with is no longer the hide mechanism.
+      expect(errorEl!.textContent).toBe('');
+      expect(errorEl!.className).toBe('status-message');
       vi.useRealTimers();
     });
   });

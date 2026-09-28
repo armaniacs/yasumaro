@@ -524,7 +524,7 @@ describe('customPromptManager - r2 missed branches', () => {
       delBtn!.click();
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toBe('Cannot delete default prompt');
-      expect(status.className).toBe('error');
+      expect(status.className).toBe('status-message error');
       expect(mockSetAll).not.toHaveBeenCalled();
     });
 
@@ -551,7 +551,7 @@ describe('customPromptManager - r2 missed branches', () => {
       editBtn.click();
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toContain('Cannot edit default');
-      expect(status.className).toBe('error');
+      expect(status.className).toBe('status-message error');
     });
 
     it('should handle edit when prompt not found after mutation', async () => {
@@ -624,7 +624,7 @@ describe('customPromptManager - r2 missed branches', () => {
       document.getElementById('duplicate-prompt-dupMissing')!.click();
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toBe('Prompt not found');
-      expect(status.className).toBe('error');
+      expect(status.className).toBe('status-message error');
       expect(nameInput.value).toBe('before');
     });
 
@@ -774,7 +774,7 @@ describe('customPromptManager - r2 missed branches', () => {
       document.getElementById('savePromptBtn')!.click();
       const status = document.getElementById('promptStatus') as HTMLElement;
       expect(status.textContent).toBe('Invalid prompt');
-      expect(status.className).toBe('error');
+      expect(status.className).toBe('status-message error');
     });
 
     it('should handle save when currentSettings is null (early return)', async () => {

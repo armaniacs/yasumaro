@@ -20,6 +20,7 @@ const ruleTester = createRepeatSafeRuleTester({
 const LAYER0_FILE = '/repo/src/utils/errorUtils.ts';
 const LAYER1_FILE = '/repo/src/utils/storage/defaults.ts';
 const UNLISTED_FILE = '/repo/src/utils/domainUtils.ts';
+const SANCTIONED_UTILS_FILE = '/repo/src/utils/storage/storageMaintenance.ts';
 
 ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
   valid: [
@@ -108,6 +109,47 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
       code: "import { x } from './ublockMatcher.js';",
       filename: UNLISTED_FILE,
     },
+    {
+      name: 'utils module re-exporting from src/messaging is allowed',
+      code: "export { recordAuditLog } from '../messaging/auditLogGateway.js';",
+      filename: '/repo/src/utils/auditLog.ts',
+    },
+    {
+      name: 'utils module type-only import of a sibling layer is erased',
+      code: "import type { SqliteClient } from '../background/sqlite/offscreenGateway.js';",
+      filename: UNLISTED_FILE,
+    },
+    {
+      name: 'utils module type-only re-export of a sibling layer is erased',
+      code: "export type { SqliteClient } from '../background/sqlite/offscreenGateway.js';",
+      filename: UNLISTED_FILE,
+    },
+    {
+      name: 'sanctioned reverse edge (storageMaintenance health check) passes',
+      code: [
+        'export async function check() {',
+        "  const { SqliteClient } = await import('../../background/sqlite/offscreenGateway.js');",
+        '  return new SqliteClient();',
+        '}',
+      ].join('\n'),
+      filename: SANCTIONED_UTILS_FILE,
+    },
+    {
+      name: 'allowlisted reverse edge passes',
+      code: "import { getSharedSqliteClient } from '../background/sqlite/offscreenGateway.js';",
+      filename: UNLISTED_FILE,
+      options: [{ allow: [{ from: 'src/utils/domainUtils.ts', to: 'src/background/sqlite/offscreenGateway' }] }],
+    },
+    {
+      name: 'utils module dynamic-importing a node builtin is out of scope',
+      code: "const src = await import('node:fs');",
+      filename: UNLISTED_FILE,
+    },
+    {
+      name: 'utils module re-exporting another utils module is not a reverse edge',
+      code: "export { helper } from './shim.js';",
+      filename: '/repo/src/utils/shim.ts',
+    },
   ],
 
   invalid: [
@@ -159,6 +201,47 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
       code: "import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';",
       filename: LAYER1_FILE,
       errors: [{ messageId: 'layer1ForbiddenImport' }],
+    },
+    {
+      name: 'unclassified utils module dynamically importing a sibling layer is a violation',
+      code: [
+        'export async function load() {',
+        "  const { getSharedSqliteClient } = await import('../background/sqlite/offscreenGateway.js');",
+        '  return getSharedSqliteClient();',
+        '}',
+      ].join('\n'),
+      filename: UNLISTED_FILE,
+      errors: [{ messageId: 'utilsReverseEdge' }],
+    },
+    {
+      name: 'unclassified utils module statically importing background is a violation',
+      code: "import { ObsidianClient } from '../background/obsidianClient.js';",
+      filename: UNLISTED_FILE,
+      errors: [{ messageId: 'utilsReverseEdge' }],
+    },
+    {
+      name: 'utils module re-exporting from a sibling layer is a violation',
+      code: "export { recordAuditLog } from '../background/audit.js';",
+      filename: UNLISTED_FILE,
+      errors: [{ messageId: 'utilsReverseEdge' }],
+    },
+    {
+      name: 'utils module re-exporting * from a sibling layer is a violation',
+      code: "export * from '../background/obsidianClient.js';",
+      filename: UNLISTED_FILE,
+      errors: [{ messageId: 'utilsReverseEdge' }],
+    },
+    {
+      name: 'utils module importing a UI layer is a violation',
+      code: "import { initGistSettings } from '../dashboard/gistSettings.js';",
+      filename: '/repo/src/utils/unclassifiedThing.ts',
+      errors: [{ messageId: 'utilsReverseEdge' }],
+    },
+    {
+      name: 'classified Layer 0 module importing a sibling layer is a violation',
+      code: "import { ObsidianClient } from '../background/obsidianClient.js';",
+      filename: LAYER0_FILE,
+      errors: [{ messageId: 'utilsReverseEdge' }],
     },
   ],
 });

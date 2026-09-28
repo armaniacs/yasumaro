@@ -97,8 +97,8 @@ function setupDOM() {
     <button id="cspSaveButton"></button>
     <button id="cspResetButton"></button>
     <input type="text" id="cspProviderSearch" />
-    <div id="cspSaveMessage" style="display:none;"></div>
-    <div id="cspResetMessage" style="display:none;"></div>
+    <div id="cspSaveMessage" class="success-message"></div>
+    <div id="cspResetMessage" class="success-message"></div>
   `;
 }
 
@@ -319,7 +319,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       await cspSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message success');
     });
 
     test('should auto-hide success message after 3 seconds', async () => {
@@ -332,10 +332,11 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       await cspSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message success');
 
       vi.advanceTimersByTime(3000);
-      expect(message?.style.display).toBe('none');
+      expect(message?.textContent).toBe('');
+      expect(message?.className).toBe('status-message');
     });
 
     test('should show inline error message on save failure (no window.alert)', async () => {
@@ -348,7 +349,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
       expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings save failed', expect.objectContaining({ error: expect.any(String) }));
       const message = document.getElementById('cspSaveMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message error');
       expect(message?.textContent).toBe('cspSaveError');
     });
 
@@ -485,7 +486,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       // for the DOM update instead of relying on a fixed timeout.
       const message = document.getElementById('cspResetMessage');
       await vi.waitFor(() => {
-        expect(message?.style.display).toBe('block');
+        expect(message?.className).toBe('status-message success');
       });
     });
 
@@ -511,12 +512,13 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         // Advance timers to flush the import() promise microtasks
         await vi.advanceTimersByTimeAsync(10);
         const msg = document.getElementById('cspResetMessage');
-        expect(msg?.style.display).toBe('block');
+        expect(msg?.className).toBe('status-message success');
       }, { timeout: 2000 });
 
       const message = document.getElementById('cspResetMessage');
       await vi.advanceTimersByTimeAsync(3000);
-      expect(message?.style.display).toBe('none');
+      expect(message?.textContent).toBe('');
+      expect(message?.className).toBe('status-message');
     });
 
     test('should show inline error message on reset failure (no window.alert)', async () => {
@@ -539,7 +541,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       );
 
       const message = document.getElementById('cspResetMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message error');
       expect(message?.textContent).toBe('cspResetError');
     });
   });
