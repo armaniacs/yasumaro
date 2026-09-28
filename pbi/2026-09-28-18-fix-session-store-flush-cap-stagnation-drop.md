@@ -176,4 +176,4 @@ Scenario: drop 時にキー名と連続回数がログに残る
 - [ ] `src/background/sessionStore.ts:183` の `1MB` 固定文言が実値参照へ変わっている。
 - [ ] session のキー集合に変更がない（追加・削除ともにゼロ）。
 - [ ] `npx vitest run src/background/__tests__/sessionStore.test.ts --repeats=20` と `npm run validate` が成功している。
-- [ ] 実ブラウザで `chrome.storage.session.getBytesInUse()` による quota 確認を実施し、結果が PR に残っている。
+- [x] 実ブラウザで `chrome.storage.session.getBytesInUse()` による quota 確認を実施し、結果が PR に残っている。（2026-09-28 実施: cap 相当の JSON 3,145,731 文字 payload の set が quota エラーなしで成功、実消費 4,115,584 B = 実係数 **1.308**。1x 見積もり 3.46 MiB → 実際 ≈ 4.5 MiB（43%）で 2x（6.93 MiB / UTF-16 仮定）は発生しない。詳細は ADR の「実機計測の結果」節）

@@ -259,3 +259,22 @@ spec の DoD が要求する「`dev-docs/plans/` 配下の裁定報告書」は�
 - `pbi/2026-09-28-12-investigate-session-store-overflow-persistence.md`
 - Chrome storage API: <https://developer.chrome.com/docs/extensions/reference/api/storage>
   （session `QUOTA_BYTES = 10485760`、Chrome 111 及以前は 1 MiB）
+
+## 実機計測の結果（2026-09-28 追記）
+
+Node から観測できなかった `chrome.storage.session.getBytesInUse()` の実係数を、実ブラウザ（Chromium / `dist/chromium-mv3`）の service worker コンソールで計測した。
+
+| 項目 | 実測値 |
+|---|---|
+| probe payload | 11,692 エントリ / JSON 3,145,731 文字（cap 相当） |
+| `set()` の結果 | **成功**（quota エラーなし） |
+| 実消費バイト | 4,115,584 B（before 528 → after 4,116,112） |
+| 実係数（used / JSON chars） | **1.308** |
+| `remove()` 後 | 528 B に復帰 / QUOTA_BYTES 10,485,760 |
+
+判定:
+
+- 実係数 1.308 は 1x（JSON バイト長）想定と 2x（UTF-16 保守上界）の**中間だが 1x 寄り**。UTF-16 の 2.0 は発生しない。
+- 1x 見積もり 3.46 MiB（recordingCache 3 MiB + 他キー 0.463 MiB）→ 実際は **≈ 4.5 MiB（quota の 43%）**。
+- 2x 保守上界 6.93 MiB は起きないことが実証された。cap 3 MiB の裁定は変更なし（より強く支持される）。
+- cap 相当 payload の `set()` がエラーなしで通るため、flush 経路が quota エラーで落ちるケースも実機で否定された。
