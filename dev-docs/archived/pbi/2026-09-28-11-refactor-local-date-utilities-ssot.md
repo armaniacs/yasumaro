@@ -47,14 +47,14 @@ Scenario: daily note path の出力が変わらない
 
 ## 受け入れ基準（4-8件）
 
-- [ ] Layer 0 の純関数モジュール（`chrome` / DOM 依存なし）を新規作成し、ローカル日付 format・parse・1 日レンジの 3 責務だけを持つ。format は timestamp 入力の 1 形と、日付文字列の 0 padding 規約を 1 箇所に定義している。
-- [ ] format の再実装 7 箇所（`tagFrequencyTimeline.ts:107`、`tagClusterTimeSliderPanel.ts:73`、`sqliteHistoryPanelView.ts:26`、`archivePanel.ts:60`、`localMarkdownIdleFlusher.ts:23`、`MarkdownBufferManager.ts:80`、`dailyNotePathBuilder.ts:66`）が新モジュールへ置き換わっている。
-- [ ] parse の再実装 5 箇所（`markdownExport.ts:219`、`sqliteHistoryModel.ts:755`、`sqliteHistoryPanelView.ts:204` と `:773`、`sqliteHistoryQuery.ts:145`）が新モジュールへ置き換わっている。`Date` を受け取る異形（`sqliteHistoryPanelView.ts:26`）は薄い wrapper で 1 関数に寄せている。
-- [ ] archive 検証の strict な日付処理（`archiveGuards.ts:85-106`）は archive validation の契約として維持し、新モジュールへ統合していない。差異は docstring に明記されている。
-- [ ] 1 日レンジはローカルの終端（`endOfLocalDay` 相当）で計算され、`+ 86400000 - 1` の 3 重複（`sqliteHistoryQuery.ts:146`、`sqliteHistoryModel.ts:756-757`、`sqliteHistoryPanelView.ts:774-775`）が解消されている。
-- [ ] 誤った挙動を固定していた既存テスト（`sqliteHistoryQuery.test.ts:237`）が、ローカル終端計算の期待へ更新されている。更新理由がテストコメントに残されている。
-- [ ] `dailyNotePathBuilder.ts:66` の zero padding なし出力は現行のまま保持され（パス文字列の観測挙動不変）、padding 正規化は別裁定事項として文書化されている。
-- [ ] `npm run validate` が成功し、既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
+- [x] Layer 0 の純関数モジュール（`chrome` / DOM 依存なし）を新規作成し、ローカル日付 format・parse・1 日レンジの 3 責務だけを持つ。format は timestamp 入力の 1 形と、日付文字列の 0 padding 規約を 1 箇所に定義している。
+- [x] format の再実装 7 箇所（`tagFrequencyTimeline.ts:107`、`tagClusterTimeSliderPanel.ts:73`、`sqliteHistoryPanelView.ts:26`、`archivePanel.ts:60`、`localMarkdownIdleFlusher.ts:23`、`MarkdownBufferManager.ts:80`、`dailyNotePathBuilder.ts:66`）が新モジュールへ置き換わっている。
+- [x] parse の再実装 5 箇所（`markdownExport.ts:219`、`sqliteHistoryModel.ts:755`、`sqliteHistoryPanelView.ts:204` と `:773`、`sqliteHistoryQuery.ts:145`）が新モジュールへ置き換わっている。`Date` を受け取る異形（`sqliteHistoryPanelView.ts:26`）は薄い wrapper で 1 関数に寄せている。
+- [x] archive 検証の strict な日付処理（`archiveGuards.ts:85-106`）は archive validation の契約として維持し、新モジュールへ統合していない。差異は docstring に明記されている。
+- [x] 1 日レンジはローカルの終端（`endOfLocalDay` 相当）で計算され、`+ 86400000 - 1` の 3 重複（`sqliteHistoryQuery.ts:146`、`sqliteHistoryModel.ts:756-757`、`sqliteHistoryPanelView.ts:774-775`）が解消されている。
+- [x] 誤った挙動を固定していた既存テスト（`sqliteHistoryQuery.test.ts:237`）が、ローカル終端計算の期待へ更新されている。更新理由がテストコメントに残されている。
+- [x] `dailyNotePathBuilder.ts:66` の zero padding なし出力は現行のまま保持され（パス文字列の観測挙動不変）、padding 正規化は別裁定事項として文書化されている。
+- [x] `npm run validate` が成功し、既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -155,13 +155,13 @@ Scenario: daily note path の出力が変わらない
 
 ## Definition of Done
 
-- [ ] Layer 0 の純関数モジュールに format / parse / 1 日レンジの 3 関数が存在し、`chrome` / DOM / storage への依存がない。
-- [ ] format 再実装 7 箇所と parse 再実装 5 箇所が新モジュールへ置換され、インライン再実装が残っていない。
-- [ ] 1 日レンジの `+ 86400000 - 1` 3 重複がローカルの終端計算へ置き換えられ、DST 遷移日（23h / 25h）で取り込み漏れ・取りこぼしが発生しない。
-- [ ] 観測挙動が不変である: date 文字列の出力、日付入力の往復、archive 検証の throw 契約、daily note path の文字列が本 PBI 前と一致する（DST の 1 日レンジ終端のみ意図的な修正であり、DoD に明記した唯一の挙動差である）。`dailyNotePathBuilder.ts:66` の zero padding なし出力も維持され、正規化を行わない判断が記録されている。
-- [ ] 誤った挙動を固定していた `sqliteHistoryQuery.test.ts:237` の期待が更新され、理由がコメントに残っている。
-- [ ] `archiveGuards` の strict 検証が維持され、共通モジュールと統合されていない（docstring に差異が明記されている）。
-- [ ] 追加したテストがタイムゾーン非依存であり、実時間待ち sleep を含まない。
-- [ ] 共通モジュールに format 種別の options、Intl 依存、タイムゾーンライブラリ、他の日付処理（週次バケット、相対表記、locale 変換）を追加していない（YAGNI 遵守）。
-- [ ] `npm run validate` が成功し、既存ビルド・テスト・ユーザー観測挙動に回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] Layer 0 の純関数モジュールに format / parse / 1 日レンジの 3 関数が存在し、`chrome` / DOM / storage への依存がない。
+- [x] format 再実装 7 箇所と parse 再実装 5 箇所が新モジュールへ置換され、インライン再実装が残っていない。
+- [x] 1 日レンジの `+ 86400000 - 1` 3 重複がローカルの終端計算へ置き換えられ、DST 遷移日（23h / 25h）で取り込み漏れ・取りこぼしが発生しない。
+- [x] 観測挙動が不変である: date 文字列の出力、日付入力の往復、archive 検証の throw 契約、daily note path の文字列が本 PBI 前と一致する（DST の 1 日レンジ終端のみ意図的な修正であり、DoD に明記した唯一の挙動差である）。`dailyNotePathBuilder.ts:66` の zero padding なし出力も維持され、正規化を行わない判断が記録されている。
+- [x] 誤った挙動を固定していた `sqliteHistoryQuery.test.ts:237` の期待が更新され、理由がコメントに残っている。
+- [x] `archiveGuards` の strict 検証が維持され、共通モジュールと統合されていない（docstring に差異が明記されている）。
+- [x] 追加したテストがタイムゾーン非依存であり、実時間待ち sleep を含まない。
+- [x] 共通モジュールに format 種別の options、Intl 依存、タイムゾーンライブラリ、他の日付処理（週次バケット、相対表記、locale 変換）を追加していない（YAGNI 遵守）。
+- [x] `npm run validate` が成功し、既存ビルド・テスト・ユーザー観測挙動に回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。

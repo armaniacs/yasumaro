@@ -42,14 +42,14 @@ Scenario: refactor 後も送信されるメッセージの観測挙動が不変�
 
 ## 受け入れ基準
 
-- [ ] `src/popup/recordCurrentPage/previewFlow.ts:8-11` の `RecordMessage` 型が削除され、契約を `src/background/messageTypes.ts:92-105` から抽出した型が payload スキーマの SSOT になっている。
-- [ ] `buildRecordPayload`（`previewFlow.ts:59-81`）の戻り値型が `PayloadForType<Op>` に対して型付けされ、`pickDefined`（`:79`）が op の payload キーに制限され、maskedCount がその op に属さない場合に載らないことが保証されている。
-- [ ] `messageTransport.send`（`:85`）の `as unknown as ExtensionMessage` が解消され、`src/messaging/messageTransport.ts` の send シグネチャ（`send<T extends 'MANUAL_RECORD'|'PREVIEW_RECORD'|'SAVE_RECORD'>(m: Extract<ExtensionMessage, { type: T }>)`）が既存ジェネリクス・オーバーロードと整合している。
-- [ ] `ByteStatsPayload`（`src/background/messageTypes.ts:92-105`）の op 間必須 / 任意差（maskedCount? は SAVE_RECORD のみ）が型で表現され、未知の message type がコンパイル時に拒否されることを確認している。
-- [ ] 既存テストのうち `Record<string, unknown>` を前提にしている箇所の型更新（pin 更新）が必要か確認し、反映している。
-- [ ] マスターパスワード re-encrypt PBI（`2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md`）と競合しない、`2026-09-28-14`（messageTypes.ts の runtime 定数移設）との型参照の整合を保っている。
-- [ ] 観測挙動（送信 type・payload のキー集合と値・`retries: 5`）が不変である。
-- [ ] 既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
+- [x] `src/popup/recordCurrentPage/previewFlow.ts:8-11` の `RecordMessage` 型が削除され、契約を `src/background/messageTypes.ts:92-105` から抽出した型が payload スキーマの SSOT になっている。
+- [x] `buildRecordPayload`（`previewFlow.ts:59-81`）の戻り値型が `PayloadForType<Op>` に対して型付けされ、`pickDefined`（`:79`）が op の payload キーに制限され、maskedCount がその op に属さない場合に載らないことが保証されている。
+- [x] `messageTransport.send`（`:85`）の `as unknown as ExtensionMessage` が解消され、`src/messaging/messageTransport.ts` の send シグネチャ（`send<T extends 'MANUAL_RECORD'|'PREVIEW_RECORD'|'SAVE_RECORD'>(m: Extract<ExtensionMessage, { type: T }>)`）が既存ジェネリクス・オーバーロードと整合している。
+- [x] `ByteStatsPayload`（`src/background/messageTypes.ts:92-105`）の op 間必須 / 任意差（maskedCount? は SAVE_RECORD のみ）が型で表現され、未知の message type がコンパイル時に拒否されることを確認している。
+- [x] 既存テストのうち `Record<string, unknown>` を前提にしている箇所の型更新（pin 更新）が必要か確認し、反映している。
+- [x] マスターパスワード re-encrypt PBI（`2026-09-27-fix-master-password-reencrypt-preserve-api-keys.md`）と競合しない、`2026-09-28-14`（messageTypes.ts の runtime 定数移設）との型参照の整合を保っている。
+- [x] 観測挙動（送信 type・payload のキー集合と値・`retries: 5`）が不変である。
+- [x] 既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -163,13 +163,13 @@ Scenario: refactor 後も送信されるメッセージの観測挙動が不変�
 
 ## Definition of Done
 
-- [ ] `src/popup/recordCurrentPage/previewFlow.ts:8-11` の `RecordMessage` 型が削除され、契約を `src/background/messageTypes.ts:92-105` から抽出した型が payload スキーマの SSOT になっている。
-- [ ] `buildRecordPayload`（`:59-81`）の戻り値型が `PayloadForType<Op>` に対して型付けされ、`pickDefined`（`:79`）が op の payload キーに制限されている。
-- [ ] `messageTransport.send`（`:85`）の `as unknown as ExtensionMessage` が解消され、`src/messaging/messageTransport.ts` の send シグネチャが既存ジェネリクス / オーバーロードと整合し、他の利用箇所の型推論が壊れていない。
-- [ ] `ByteStatsPayload`（`messageTypes.ts:92-105`）の op 間必須 / 任意差が型で表現され、未知の message type がコンパイル時に拒否されることを確認している。
-- [ ] 既存テストのうち `Record<string, unknown>` を前提にしている箇所の pin 更新が必要か確認し、反映している。
-- [ ] 3 op それぞれについて送信 type と payload のキー集合・値が refactor 前 baseline と一致する（parity pin）ことを示し、`retries: 5`（`previewFlow.ts:85`）が維持されている。
-- [ ] `validators.ts` の unknown-key 厳格化を受容でき、popup が送る payload が strict 検証を通過することが type-level で確認されている。
-- [ ] `2026-09-28-14`（messageTypes.ts の runtime 定数移設）との型参照の整合を保ち、マスターパスワード re-encrypt PBI（`2026-09-27`）と競合していない。
-- [ ] refactor 前後の観測挙動（送信 type・payload のキー集合と値・retries）が不変であることを parity テストで示している。byte-identical でなくても観測挙動不変でよい。
-- [ ] `npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。
+- [x] `src/popup/recordCurrentPage/previewFlow.ts:8-11` の `RecordMessage` 型が削除され、契約を `src/background/messageTypes.ts:92-105` から抽出した型が payload スキーマの SSOT になっている。
+- [x] `buildRecordPayload`（`:59-81`）の戻り値型が `PayloadForType<Op>` に対して型付けされ、`pickDefined`（`:79`）が op の payload キーに制限されている。
+- [x] `messageTransport.send`（`:85`）の `as unknown as ExtensionMessage` が解消され、`src/messaging/messageTransport.ts` の send シグネチャが既存ジェネリクス / オーバーロードと整合し、他の利用箇所の型推論が壊れていない。
+- [x] `ByteStatsPayload`（`messageTypes.ts:92-105`）の op 間必須 / 任意差が型で表現され、未知の message type がコンパイル時に拒否されることを確認している。
+- [x] 既存テストのうち `Record<string, unknown>` を前提にしている箇所の pin 更新が必要か確認し、反映している。
+- [x] 3 op それぞれについて送信 type と payload のキー集合・値が refactor 前 baseline と一致する（parity pin）ことを示し、`retries: 5`（`previewFlow.ts:85`）が維持されている。
+- [x] `validators.ts` の unknown-key 厳格化を受容でき、popup が送る payload が strict 検証を通過することが type-level で確認されている。
+- [x] `2026-09-28-14`（messageTypes.ts の runtime 定数移設）との型参照の整合を保ち、マスターパスワード re-encrypt PBI（`2026-09-27`）と競合していない。
+- [x] refactor 前後の観測挙動（送信 type・payload のキー集合と値・retries）が不変であることを parity テストで示している。byte-identical でなくても観測挙動不変でよい。
+- [x] `npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。

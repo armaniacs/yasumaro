@@ -50,14 +50,14 @@ Scenario: タイマー duration と自動 clear の有無が呼び出し側か�
 
 ## 受け入れ基準
 
-- [ ] 「ステータスを出す」演算が単一実装（`src/utils/ui/settingsUiHelper.ts:6-20`）へ統合され、変種 7 実装（`gistSettings.ts:17-22` / `encryptedBackupPanel.ts:31-36` / `aiSummaryCleansingSettingsV2.ts:490-503` / `domainFilterTagUI.ts:210-215` / `cspSettings.ts:233-237` / `models-dev-dialog.ts:502-507` / `popup/statusPanel.ts:426`）が共通実装へ置換されている。
-- [ ] 実装冒頭で「`.status-message` 系へ寄せるか、素 class 系へ寄せるか」を 1 回決め、CSS とコードのどちらを正としたかを記録し、class 契約の分裂（素の `.success`/`.error` と `.status-message.success`/`.status-message.error`）が解消されている。
-- [ ] clear 時にベースクラスが落ちる挙動が解消され、margin / font-size / padding と toast アニメーション（`entrypoints/options/dashboard.css:4286-4293`）の消失が防がれ、toast アニメーションが二重適用されないことを確認している。
-- [ ] タイマー duration（3000ms / 5000ms / 2000ms）と自動 clear の有無がオプションで指定でき、既定値が現状を維持している。
-- [ ] `popup/statusPanel.ts:426` の 2000ms（popup 専用契約）が維持され、`gistSettings.ts:17-22` と `encryptedBackupPanel.ts:31-36` の自動 clear なし（opt-out）が維持されている。
-- [ ] `aiSummaryCleansingSettingsV2.ts:490-503` の「エラー時 clear されない」が意図か抜けかを切り分け、結果（維持または修正）を記録している。
-- [ ] 連鎖重複している保存エラー 3 分岐（`connectionTests.ts:252-267` / `:393-402` / `:481-489`）と 4 番目の亜種（`settingsPipeline.ts:169-176`）が単一箇所へ集約され、意図的な見た目変化が DoD に列挙されている。
-- [ ] 既存テストのうち class 名・timeout 値を pin している箇所の更新が必要か確認し、既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
+- [x] 「ステータスを出す」演算が単一実装（`src/utils/ui/settingsUiHelper.ts:6-20`）へ統合され、変種 7 実装（`gistSettings.ts:17-22` / `encryptedBackupPanel.ts:31-36` / `aiSummaryCleansingSettingsV2.ts:490-503` / `domainFilterTagUI.ts:210-215` / `cspSettings.ts:233-237` / `models-dev-dialog.ts:502-507` / `popup/statusPanel.ts:426`）が共通実装へ置換されている。
+- [x] 実装冒頭で「`.status-message` 系へ寄せるか、素 class 系へ寄せるか」を 1 回決め、CSS とコードのどちらを正としたかを記録し、class 契約の分裂（素の `.success`/`.error` と `.status-message.success`/`.status-message.error`）が解消されている。
+- [x] clear 時にベースクラスが落ちる挙動が解消され、margin / font-size / padding と toast アニメーション（`entrypoints/options/dashboard.css:4286-4293`）の消失が防がれ、toast アニメーションが二重適用されないことを確認している。
+- [x] タイマー duration（3000ms / 5000ms / 2000ms）と自動 clear の有無がオプションで指定でき、既定値が現状を維持している。
+- [x] `popup/statusPanel.ts:426` の 2000ms（popup 専用契約）が維持され、`gistSettings.ts:17-22` と `encryptedBackupPanel.ts:31-36` の自動 clear なし（opt-out）が維持されている。
+- [x] `aiSummaryCleansingSettingsV2.ts:490-503` の「エラー時 clear されない」が意図か抜けかを切り分け、結果（維持または修正）を記録している。
+- [x] 連鎖重複している保存エラー 3 分岐（`connectionTests.ts:252-267` / `:393-402` / `:481-489`）と 4 番目の亜種（`settingsPipeline.ts:169-176`）が単一箇所へ集約され、意図的な見た目変化が DoD に列挙されている。
+- [x] 既存テストのうち class 名・timeout 値を pin している箇所の更新が必要か確認し、既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -174,13 +174,13 @@ Scenario: タイマー duration と自動 clear の有無が呼び出し側か�
 
 ## Definition of Done
 
-- [ ] 「ステータスを出す」演算が `src/utils/ui/settingsUiHelper.ts:6-20` の単一実装へ統合され、変種 7 実装（`gistSettings.ts:17-22`、`encryptedBackupPanel.ts:31-36`、`aiSummaryCleansingSettingsV2.ts:490-503`、`domainFilterTagUI.ts:210-215`、`cspSettings.ts:233-237`、`models-dev-dialog.ts:502-507`、`popup/statusPanel.ts:426`）が共通実装へ置換されている。
-- [ ] class 契約の分裂（素の `.success`/`.error` と `.status-message.success`/`.status-message.error`）が解消され、決定と理由が記録されている。
-- [ ] clear 時にベースクラスが落ちない実装になっており、margin / font-size / padding と toast アニメーション（`entrypoints/options/dashboard.css:4286-4293`）の消失が防がれ、二重適用されないことを確認している。
-- [ ] duration（3000 / 5000 / 2000ms）と自動 clear の有無がオプションで指定でき、既定値が現状を維持している。
-- [ ] `popup/statusPanel.ts:426` の 2000ms（popup 専用契約）が維持され、`gistSettings.ts:17-22` と `encryptedBackupPanel.ts:31-36` の自動 clear なし（opt-out）が維持されている。
-- [ ] `aiSummaryCleansingSettingsV2.ts:490-503` の clear 挙動について、意図か抜けかの判定と対応結果が記録されている。
-- [ ] 保存エラー 4 箇所（`connectionTests.ts:252-267` / `:393-402` / `:481-489`、`settingsPipeline.ts:169-176`）が単一箇所へ集約され、意図的な見た目変化（class 名・余白・フォントサイズ・アニメーション・`style.display` 経路からの離脱）が一覧化され DoD に列挙されている。
-- [ ] 既存テストのうち class 名・timeout を pin している箇所の更新が必要か確認し、反映している。
-- [ ] refactor 前後の観測挙動が、DoD に列挙した意図的な変化以外は不変であることを parity テストで示している。byte-identical でなくても観測挙動不変でよい。
-- [ ] `2026-09-28-07` の完了後に着手しており、`npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。
+- [x] 「ステータスを出す」演算が `src/utils/ui/settingsUiHelper.ts:6-20` の単一実装へ統合され、変種 7 実装（`gistSettings.ts:17-22`、`encryptedBackupPanel.ts:31-36`、`aiSummaryCleansingSettingsV2.ts:490-503`、`domainFilterTagUI.ts:210-215`、`cspSettings.ts:233-237`、`models-dev-dialog.ts:502-507`、`popup/statusPanel.ts:426`）が共通実装へ置換されている。
+- [x] class 契約の分裂（素の `.success`/`.error` と `.status-message.success`/`.status-message.error`）が解消され、決定と理由が記録されている。
+- [x] clear 時にベースクラスが落ちない実装になっており、margin / font-size / padding と toast アニメーション（`entrypoints/options/dashboard.css:4286-4293`）の消失が防がれ、二重適用されないことを確認している。
+- [x] duration（3000 / 5000 / 2000ms）と自動 clear の有無がオプションで指定でき、既定値が現状を維持している。
+- [x] `popup/statusPanel.ts:426` の 2000ms（popup 専用契約）が維持され、`gistSettings.ts:17-22` と `encryptedBackupPanel.ts:31-36` の自動 clear なし（opt-out）が維持されている。
+- [x] `aiSummaryCleansingSettingsV2.ts:490-503` の clear 挙動について、意図か抜けかの判定と対応結果が記録されている。
+- [x] 保存エラー 4 箇所（`connectionTests.ts:252-267` / `:393-402` / `:481-489`、`settingsPipeline.ts:169-176`）が単一箇所へ集約され、意図的な見た目変化（class 名・余白・フォントサイズ・アニメーション・`style.display` 経路からの離脱）が一覧化され DoD に列挙されている。
+- [x] 既存テストのうち class 名・timeout を pin している箇所の更新が必要か確認し、反映している。
+- [x] refactor 前後の観測挙動が、DoD に列挙した意図的な変化以外は不変であることを parity テストで示している。byte-identical でなくても観測挙動不変でよい。
+- [x] `2026-09-28-07` の完了後に着手しており、`npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。

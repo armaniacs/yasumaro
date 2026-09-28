@@ -40,14 +40,14 @@ Scenario: initExportScheduler 終了時点で clear が完了している
 
 ## 受け入れ基準
 
-- [ ] `initExportScheduler` が `IMMEDIATE_FLUSH_ALARM` を clear しない（一つ前の one-shot の所有者を `scheduleImmediateFlush` に残す）か、当日 buffer が非空のときだけ再 arm する。
-- [ ] `src/background/localMarkdownIdleFlusher.ts:44-46` の 3 つの `chrome.alarms.clear` がすべて await されている。
-- [ ] mode 切替（immediate から daily へ）の直後に旧 one-shot が 1 回発火する挙動が、テストで明示的に pin されている。
-- [ ] 無害化の根拠（`conflictAction: 'overwrite'`）がコードコメントとして残っている。
-- [ ] 更新対象テスト `src/background/__tests__/localMarkdownIdleFlusher.test.ts:226-233` が更新されている。
-- [ ] `src/background/__tests__/localMarkdownIdleFlusher.test.ts:235-242` の alarm clear のみを検証している assert が、listener の解除も含めて確認する形に更新されている。
-- [ ] `src/dashboard/generalSettings/connectionTests.ts:246`、`:405`、`:492` の無条件 REFRESH_LOCAL_MARKDOWN_SCHEDULER が 変更しないまま、A の修正で無害になっている。
-- [ ] `npm run validate` が成功し、idle / daily モードの既存挙動に回帰がない。
+- [x] `initExportScheduler` が `IMMEDIATE_FLUSH_ALARM` を clear しない（一つ前の one-shot の所有者を `scheduleImmediateFlush` に残す）か、当日 buffer が非空のときだけ再 arm する。
+- [x] `src/background/localMarkdownIdleFlusher.ts:44-46` の 3 つの `chrome.alarms.clear` がすべて await されている。
+- [x] mode 切替（immediate から daily へ）の直後に旧 one-shot が 1 回発火する挙動が、テストで明示的に pin されている。
+- [x] 無害化の根拠（`conflictAction: 'overwrite'`）がコードコメントとして残っている。
+- [x] 更新対象テスト `src/background/__tests__/localMarkdownIdleFlusher.test.ts:226-233` が更新されている。
+- [x] `src/background/__tests__/localMarkdownIdleFlusher.test.ts:235-242` の alarm clear のみを検証している assert が、listener の解除も含めて確認する形に更新されている。
+- [x] `src/dashboard/generalSettings/connectionTests.ts:246`、`:405`、`:492` の無条件 REFRESH_LOCAL_MARKDOWN_SCHEDULER が 変更しないまま、A の修正で無害になっている。
+- [x] `npm run validate` が成功し、idle / daily モードの既存挙動に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -139,13 +139,13 @@ Scenario: initExportScheduler 終了時点で clear が完了している
 
 ## Definition of Done
 
-- [ ] `initExportScheduler` が `IMMEDIATE_FLUSH_ALARM` を clear しないことがテストで pin されている。
-- [ ] 3 つの `chrome.alarms.clear` がすべて await されている。
-- [ ] 設定保存・接続テスト後も当日 buffer が失われないことを外部観測で確認している。
-- [ ] immediate から daily 切替時の余分な flush が pin され、無害化の根拠がコメントに残っている。
-- [ ] 更新対象テスト `src/background/__tests__/localMarkdownIdleFlusher.test.ts:226-233` が更新されている。
-- [ ] `src/background/__tests__/localMarkdownIdleFlusher.test.ts:235-242` が listener の解除も含めて assert する形に更新されている。
-- [ ] idle / daily モードの既存挙動に回帰がない。
-- [ ] `npm run validate` が成功している。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `initExportScheduler` が `IMMEDIATE_FLUSH_ALARM` を clear しないことがテストで pin されている。
+- [x] 3 つの `chrome.alarms.clear` がすべて await されている。
+- [x] 設定保存・接続テスト後も当日 buffer が失われないことを外部観測で確認している。
+- [x] immediate から daily 切替時の余分な flush が pin され、無害化の根拠がコメントに残っている。
+- [x] 更新対象テスト `src/background/__tests__/localMarkdownIdleFlusher.test.ts:226-233` が更新されている。
+- [x] `src/background/__tests__/localMarkdownIdleFlusher.test.ts:235-242` が listener の解除も含めて assert する形に更新されている。
+- [x] idle / daily モードの既存挙動に回帰がない。
+- [x] `npm run validate` が成功している。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

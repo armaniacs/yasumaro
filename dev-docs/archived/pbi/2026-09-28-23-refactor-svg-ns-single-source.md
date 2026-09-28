@@ -42,14 +42,14 @@ Scenario: 定数を参照するドキュメントの drift が解消される
 
 ## 受け入れ基準
 
-- [ ] 実装冒頭で Layer 0 に SVG 定数モジュールを置くことの妥当性を判断する。既存の SVG 関連 util（`src/dashboard/graphNodeA11y.ts` など）の配置を確認し、「Layer 0 共有定数モジュール」と「dashboard 内共有定数モジュール」のどちらが妥当かを決めて記録している。
-- [ ] `SVG_NS` の宣言が production コードに 1 箇所だけになり、3 ファイル（`clusterGraphRenderer` / `tagClusterLoading` / `tagFrequencyTimelinePanel`）がすべて import 経由で参照している。
-- [ ] `src/dashboard/tagClusterLoading.ts:15` の再宣言が import 置換されている（root 直下から `panels/` へ import する方向の逆転を発生させていない）。
-- [ ] `src/dashboard/panels/asyncData/tagFrequencyTimelinePanel.ts:37` の再宣言が import 置換され、`:62` の `createElementNS` が同じ単一ソースを参照している。
-- [ ] `clusterGraphRenderer` の `SVG_NS` の `export` は、17 の既存 import との互換を保つため re-export として残すか全 import 更新後に削除するかを判断し、その判断を記録している。いずれの場合も本 PBI 内で全 import 更新まで完了している。
-- [ ] `src/utils/computeLimits.ts:11` のコメントが、現状の `MAX_NODES` の配置を指す参照へ修正されている。
-- [ ] 既存の関連テスト（clusterGraphRenderer テスト、PanZoom 関連、tagClusterLoading 関連）が緑である。新規テストは追加していない。
-- [ ] `npm run validate` が成功し、既存の描画挙動に回帰がない。
+- [x] 実装冒頭で Layer 0 に SVG 定数モジュールを置くことの妥当性を判断する。既存の SVG 関連 util（`src/dashboard/graphNodeA11y.ts` など）の配置を確認し、「Layer 0 共有定数モジュール」と「dashboard 内共有定数モジュール」のどちらが妥当かを決めて記録している。
+- [x] `SVG_NS` の宣言が production コードに 1 箇所だけになり、3 ファイル（`clusterGraphRenderer` / `tagClusterLoading` / `tagFrequencyTimelinePanel`）がすべて import 経由で参照している。
+- [x] `src/dashboard/tagClusterLoading.ts:15` の再宣言が import 置換されている（root 直下から `panels/` へ import する方向の逆転を発生させていない）。
+- [x] `src/dashboard/panels/asyncData/tagFrequencyTimelinePanel.ts:37` の再宣言が import 置換され、`:62` の `createElementNS` が同じ単一ソースを参照している。
+- [x] `clusterGraphRenderer` の `SVG_NS` の `export` は、17 の既存 import との互換を保つため re-export として残すか全 import 更新後に削除するかを判断し、その判断を記録している。いずれの場合も本 PBI 内で全 import 更新まで完了している。
+- [x] `src/utils/computeLimits.ts:11` のコメントが、現状の `MAX_NODES` の配置を指す参照へ修正されている。
+- [x] 既存の関連テスト（clusterGraphRenderer テスト、PanZoom 関連、tagClusterLoading 関連）が緑である。新規テストは追加していない。
+- [x] `npm run validate` が成功し、既存の描画挙動に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -154,13 +154,13 @@ Scenario: 定数を参照するドキュメントの drift が解消される
 
 ## Definition of Done
 
-- [ ] `SVG_NS` の宣言が production コードに 1 箇所だけになり、3 ファイル（`clusterGraphRenderer` / `tagClusterLoading` / `tagFrequencyTimelinePanel`）がすべて import 経由で参照している。
-- [ ] SSOT モジュールの配置判断（Layer 0 vs dashboard 内）の理由が記録されている。
-- [ ] `src/dashboard/tagClusterLoading.ts:15` の再宣言が import 置換され、root 直下から `panels/` 配下を import する方向の逆転が発生していない。
-- [ ] `src/dashboard/panels/asyncData/tagFrequencyTimelinePanel.ts:37` の再宣言が import 置換され、`:62` の `createElementNS` が単一ソースを参照している。
-- [ ] `clusterGraphRenderer` の re-export / export 削除の判断が記録され、本 PBI 内で全 import 更新が完了している。
-- [ ] `src/utils/computeLimits.ts:11` のコメントが `MAX_NODES` の現状の配置を指す参照へ修正され、定数の実数が変わっていない。
-- [ ] 3 クラスタパネル（tag-cluster / word-cluster / tag-cluster-compare）と tag frequency timeline パネルの描画観測挙動が refactor 前と不変であることを既存テストで確認している。
-- [ ] PBI `2026-09-28-17` の「row-cap notices / `MAX_NODES` 単一化」の決定が維持されている。
-- [ ] 新規テストを追加していない（定数値の同一性は型と import で担保する方針）。宣言重複の静的 pin を追加した場合はその判断理由が記録されている。
-- [ ] `npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。
+- [x] `SVG_NS` の宣言が production コードに 1 箇所だけになり、3 ファイル（`clusterGraphRenderer` / `tagClusterLoading` / `tagFrequencyTimelinePanel`）がすべて import 経由で参照している。
+- [x] SSOT モジュールの配置判断（Layer 0 vs dashboard 内）の理由が記録されている。
+- [x] `src/dashboard/tagClusterLoading.ts:15` の再宣言が import 置換され、root 直下から `panels/` 配下を import する方向の逆転が発生していない。
+- [x] `src/dashboard/panels/asyncData/tagFrequencyTimelinePanel.ts:37` の再宣言が import 置換され、`:62` の `createElementNS` が単一ソースを参照している。
+- [x] `clusterGraphRenderer` の re-export / export 削除の判断が記録され、本 PBI 内で全 import 更新が完了している。
+- [x] `src/utils/computeLimits.ts:11` のコメントが `MAX_NODES` の現状の配置を指す参照へ修正され、定数の実数が変わっていない。
+- [x] 3 クラスタパネル（tag-cluster / word-cluster / tag-cluster-compare）と tag frequency timeline パネルの描画観測挙動が refactor 前と不変であることを既存テストで確認している。
+- [x] PBI `2026-09-28-17` の「row-cap notices / `MAX_NODES` 単一化」の決定が維持されている。
+- [x] 新規テストを追加していない（定数値の同一性は型と import で担保する方針）。宣言重複の静的 pin を追加した場合はその判断理由が記録されている。
+- [x] `npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。

@@ -210,7 +210,7 @@ quota を見積もり、2x 側で安全側に倒している。実ブラウザ�
 - [x] 2 回目以降の flush における恒久ループが再現・確認され、報告書に記録されている。
 - [x] session storage のキー構造を壊さない（キー追加は可、削除は不可）ことが評価条件として明記されている。
 - [x] urlCache の session からの移動が storage 構造変更として別 PBI へ送られる旨が記録されている。
-- [ ] 裁定報告書が `dev-docs/plans/` 配下に作成され、ADR の起票可否が判断されている。
+- [x] 裁定報告書が `dev-docs/plans/` 配下に作成され、ADR の起票可否が判断されている。
       （未達: 本 PBI の書き込み許可範囲は `dev-docs/ADR/2026-09-28-*.md` と本ファイルのみだったため、
       裁定報告書は `dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md` として作成した。
       ADR の起票可否は「可」と判断済み。integrator が本 PBI を close する際に、

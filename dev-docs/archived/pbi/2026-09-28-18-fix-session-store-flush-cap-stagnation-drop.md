@@ -46,14 +46,14 @@ Scenario: drop 時にキー名と連続回数がログに残る
 
 ## 受け入れ基準
 
-- [ ] `src/background/sessionStore.ts:245` の `MAX_SESSION_SIZE` が export 済み名前付き定数 `SESSION_MAX_FLUSH_BYTES = 3 * 1024 * 1024`（3,145,728）に置き換えられ、コメントに `dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md` を典拠として明記されている。
-- [ ] 10,000 件 × 180 文字（2,016,058 B）の payload が縮小されず、そのまま `chrome.storage.session.set` に渡る pin が `src/background/__tests__/sessionStore.test.ts` にある。
-- [ ] 新 cap を超える payload では非優先キーが writeQueue へ最大 2 回しか戻されず、3 回目以降はキューから drop される（`writeQueue.size === 0`）ことを検査する pin がある。
-- [ ] drop 時に `addLog(LogType.WARN, ...)` でキー名と連続回数が残ることを検査する pin がある。
-- [ ] drop されたキーが `emergencyFlushToLocal()` 経由で `chrome.storage.local` に書かれないことを検査する pin がある。
-- [ ] 既存 pin `src/background/__tests__/sessionStore.test.ts:261-279` と `:373-380` が新 cap 超過値（3 MiB 超）へ差し替えられ、前者には「10,000 件 × 180 文字は縮小されない」逆向きの pin が追加されている。
-- [ ] `src/background/sessionStore.ts:183` の `1MB` 固定文言が実際の定数参照（または実値）へ変わっている。
-- [ ] session のキー追加・削除がない（`chrome.storage.session` のキー集合は今日のまま）で、`npx vitest run src/background/__tests__/sessionStore.test.ts --repeats=20` が全 green である。
+- [x] `src/background/sessionStore.ts:245` の `MAX_SESSION_SIZE` が export 済み名前付き定数 `SESSION_MAX_FLUSH_BYTES = 3 * 1024 * 1024`（3,145,728）に置き換えられ、コメントに `dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md` を典拠として明記されている。
+- [x] 10,000 件 × 180 文字（2,016,058 B）の payload が縮小されず、そのまま `chrome.storage.session.set` に渡る pin が `src/background/__tests__/sessionStore.test.ts` にある。
+- [x] 新 cap を超える payload では非優先キーが writeQueue へ最大 2 回しか戻されず、3 回目以降はキューから drop される（`writeQueue.size === 0`）ことを検査する pin がある。
+- [x] drop 時に `addLog(LogType.WARN, ...)` でキー名と連続回数が残ることを検査する pin がある。
+- [x] drop されたキーが `emergencyFlushToLocal()` 経由で `chrome.storage.local` に書かれないことを検査する pin がある。
+- [x] 既存 pin `src/background/__tests__/sessionStore.test.ts:261-279` と `:373-380` が新 cap 超過値（3 MiB 超）へ差し替えられ、前者には「10,000 件 × 180 文字は縮小されない」逆向きの pin が追加されている。
+- [x] `src/background/sessionStore.ts:183` の `1MB` 固定文言が実際の定数参照（または実値）へ変わっている。
+- [x] session のキー追加・削除がない（`chrome.storage.session` のキー集合は今日のまま）で、`npx vitest run src/background/__tests__/sessionStore.test.ts --repeats=20` が全 green である。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -167,13 +167,13 @@ Scenario: drop 時にキー名と連続回数がログに残る
 
 ## Definition of Done
 
-- [ ] `SESSION_MAX_FLUSH_BYTES`（3,145,728）が export 済み名前付き定数として存在し、ADR 典拠がコメントにある。
-- [ ] 10,000 件 × 180 文字の payload が縮小されず session にフルで書かれる pin がある。
-- [ ] 新 cap 超過時に非優先キーが writeQueue へ最大 2 回戻り、3 回目以降は drop される pin がある。
-- [ ] drop 時に `addLog(LogType.WARN, ...)` でキー名と連続回数が残る pin がある。
-- [ ] drop 済みキーが `emergencyFlushToLocal()` 経由で `chrome.storage.local` に書かれない pin がある。
-- [ ] `src/background/__tests__/sessionStore.test.ts:261-279` と `:373-380` が新 cap 超過値へ差し替えられ、`:246-259` の emergency flush 正常系 pin が引き続き green である。
-- [ ] `src/background/sessionStore.ts:183` の `1MB` 固定文言が実値参照へ変わっている。
-- [ ] session のキー集合に変更がない（追加・削除ともにゼロ）。
-- [ ] `npx vitest run src/background/__tests__/sessionStore.test.ts --repeats=20` と `npm run validate` が成功している。
+- [x] `SESSION_MAX_FLUSH_BYTES`（3,145,728）が export 済み名前付き定数として存在し、ADR 典拠がコメントにある。
+- [x] 10,000 件 × 180 文字の payload が縮小されず session にフルで書かれる pin がある。
+- [x] 新 cap 超過時に非優先キーが writeQueue へ最大 2 回戻り、3 回目以降は drop される pin がある。
+- [x] drop 時に `addLog(LogType.WARN, ...)` でキー名と連続回数が残る pin がある。
+- [x] drop 済みキーが `emergencyFlushToLocal()` 経由で `chrome.storage.local` に書かれない pin がある。
+- [x] `src/background/__tests__/sessionStore.test.ts:261-279` と `:373-380` が新 cap 超過値へ差し替えられ、`:246-259` の emergency flush 正常系 pin が引き続き green である。
+- [x] `src/background/sessionStore.ts:183` の `1MB` 固定文言が実値参照へ変わっている。
+- [x] session のキー集合に変更がない（追加・削除ともにゼロ）。
+- [x] `npx vitest run src/background/__tests__/sessionStore.test.ts --repeats=20` と `npm run validate` が成功している。
 - [x] 実ブラウザで `chrome.storage.session.getBytesInUse()` による quota 確認を実施し、結果が PR に残っている。（2026-09-28 実施: cap 相当の JSON 3,145,731 文字 payload の set が quota エラーなしで成功、実消費 4,115,584 B = 実係数 **1.308**。1x 見積もり 3.46 MiB → 実際 ≈ 4.5 MiB（43%）で 2x（6.93 MiB / UTF-16 仮定）は発生しない。詳細は ADR の「実機計測の結果」節）

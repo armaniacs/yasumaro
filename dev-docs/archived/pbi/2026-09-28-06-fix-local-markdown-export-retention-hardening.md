@@ -61,14 +61,14 @@ Scenario: 孤児が蓄積しても flush コストが線形に収まる
 
 ## 受け入れ基準
 
-- [ ] `local_export_` プレフィックスのキーを列挙し、保持期限（定数）を超えたキーのみ削除する回収 sweep を実装し、`dailyPurgeHandler` の日次処理から呼ぶ。
-- [ ] 回収 sweep は日付文字列を保持期限の基準日と比較し、当日と前日の未 flush バッファを保護する。保持日数は既存 export retention の定数と並べて明示する。
-- [ ] 回収 sweep は `chrome.storage.local.remove` のみを使用し、`chrome.downloads`（`removeFile` / `erase`）には触れない。
-- [ ] `localMarkdownExportCore` の「成功時のみ `chrome.storage.local.remove(key)`」という挙動を変更していない。`src/background/__tests__/localMarkdownExportCore.test.ts:172` の VULN-004 pin を維持する。
-- [ ] `recordDownloadId` と `purgeExpiredDownloadRecords` の read→push/slice→set を `withOptimisticLock` 経由の 1 回の更新へ置き換え、単一プロセス内で直列化されている。
-- [ ] RMW 修正は既存契約（lock key への version 非 bumping 直接 set 禁止、`withOptimisticLock` 経由）に従い、lock key を直接 set していない。
-- [ ] `chrome.storage.local.get()`（全 storage 取得、flush ごと）の維持理由をコメントに残す。削減は動的キーのため今回行わない。
-- [ ] `npm run validate` が成功し、既存の retention / download-id 記録のテストに回帰がない。
+- [x] `local_export_` プレフィックスのキーを列挙し、保持期限（定数）を超えたキーのみ削除する回収 sweep を実装し、`dailyPurgeHandler` の日次処理から呼ぶ。
+- [x] 回収 sweep は日付文字列を保持期限の基準日と比較し、当日と前日の未 flush バッファを保護する。保持日数は既存 export retention の定数と並べて明示する。
+- [x] 回収 sweep は `chrome.storage.local.remove` のみを使用し、`chrome.downloads`（`removeFile` / `erase`）には触れない。
+- [x] `localMarkdownExportCore` の「成功時のみ `chrome.storage.local.remove(key)`」という挙動を変更していない。`src/background/__tests__/localMarkdownExportCore.test.ts:172` の VULN-004 pin を維持する。
+- [x] `recordDownloadId` と `purgeExpiredDownloadRecords` の read→push/slice→set を `withOptimisticLock` 経由の 1 回の更新へ置き換え、単一プロセス内で直列化されている。
+- [x] RMW 修正は既存契約（lock key への version 非 bumping 直接 set 禁止、`withOptimisticLock` 経由）に従い、lock key を直接 set していない。
+- [x] `chrome.storage.local.get()`（全 storage 取得、flush ごと）の維持理由をコメントに残す。削減は動的キーのため今回行わない。
+- [x] `npm run validate` が成功し、既存の retention / download-id 記録のテストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -173,13 +173,13 @@ Scenario: 孤児が蓄積しても flush コストが線形に収まる
 
 ## Definition of Done
 
-- [ ] `local_export_` キーの回収 sweep が実装され、`src/background/dailyPurgeHandler.ts` の日次処理から呼ばれている。
-- [ ] sweep は保持期限超過分のみ削除し、当日と前日の未 flush バッファを保護する。
-- [ ] sweep は `chrome.storage.local.remove` のみを使い、`chrome.downloads` に触れない。
-- [ ] `src/background/localMarkdownExportCore.ts:172` の VULN-004 pin（download 失敗時にキーを消さない）が維持され、成功時の即時削除も変更されていない。
-- [ ] `recordDownloadId` と `purgeExpiredDownloadRecords` の RMW が `withOptimisticLock` の 1 回の updater に統合され、lock key への直接 set がない。
-- [ ] flush と日次 sweep の並行実行で、新 ID の消失・削除済み記録の復活が起きないことをテストで確認している。
-- [ ] 回収 sweep の単体テスト（当日 / 前日 / 期限ちょうど / 期限超過 / プレフィックス外）が green である。
-- [ ] `npm run validate` が成功し、既存の retention / download-id 記録のテストに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `local_export_` キーの回収 sweep が実装され、`src/background/dailyPurgeHandler.ts` の日次処理から呼ばれている。
+- [x] sweep は保持期限超過分のみ削除し、当日と前日の未 flush バッファを保護する。
+- [x] sweep は `chrome.storage.local.remove` のみを使い、`chrome.downloads` に触れない。
+- [x] `src/background/localMarkdownExportCore.ts:172` の VULN-004 pin（download 失敗時にキーを消さない）が維持され、成功時の即時削除も変更されていない。
+- [x] `recordDownloadId` と `purgeExpiredDownloadRecords` の RMW が `withOptimisticLock` の 1 回の updater に統合され、lock key への直接 set がない。
+- [x] flush と日次 sweep の並行実行で、新 ID の消失・削除済み記録の復活が起きないことをテストで確認している。
+- [x] 回収 sweep の単体テスト（当日 / 前日 / 期限ちょうど / 期限超過 / プレフィックス外）が green である。
+- [x] `npm run validate` が成功し、既存の retention / download-id 記録のテストに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

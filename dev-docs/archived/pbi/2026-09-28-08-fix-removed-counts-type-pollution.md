@@ -55,14 +55,14 @@ Scenario: storage と messaging の契約は変わらない
 
 ## 受け入れ基準
 
-- [ ] `RemovedCounts` 型（`{ byReason: Record<string, number>; aiSummary?: { reason: AiSummaryCleansedReason; reasons?: string[]; elements: number; originalBytes: number; cleansedBytes: number } }`）を `src/utils/commonTypes.ts` に定義している。
-- [ ] `buildRemovedCounts(cleanseStats, aiSummaryCleansedStats)` を純粋関数として実装し、popup の合成と view の描画が同じ型を共有している。
-- [ ] `src/dashboard/cleansingFeedbackView.ts:62` の `Object.entries(...).map(([k,v]) => ...)` による平坦描画をやめ、`byReason` と `aiSummary` を別ラベルで描画する。
-- [ ] `aiSummaryCleansedReasons`（string[]）が文字列として無加工に連結されず、理由名として読みやすく描画される。
-- [ ] 新規ラベルは i18n キーで定義し、`public/_locales/en/messages.json` と `ja` の両方を更新している。既存の「Reason」列見出しとキーは維持する。
-- [ ] wire 形（`CleansingFeedbackEntry.removedByReason: Record<string, number>`、`src/utils/storage/types.ts:526-533`）を維持し、storage 構造・メッセージ契約・extractor 側の `Map<string, number>`（`src/utils/contentExtractor/types.ts:65`）を変更していない。
-- [ ] 誤混入エントリが消えることによる表示内容の変化を、意図的な変化として DoD に記録している。
-- [ ] `npm run validate` が成功し、既存の feedback view / feedbackQueue テストに回帰がない。
+- [x] `RemovedCounts` 型（`{ byReason: Record<string, number>; aiSummary?: { reason: AiSummaryCleansedReason; reasons?: string[]; elements: number; originalBytes: number; cleansedBytes: number } }`）を `src/utils/commonTypes.ts` に定義している。
+- [x] `buildRemovedCounts(cleanseStats, aiSummaryCleansedStats)` を純粋関数として実装し、popup の合成と view の描画が同じ型を共有している。
+- [x] `src/dashboard/cleansingFeedbackView.ts:62` の `Object.entries(...).map(([k,v]) => ...)` による平坦描画をやめ、`byReason` と `aiSummary` を別ラベルで描画する。
+- [x] `aiSummaryCleansedReasons`（string[]）が文字列として無加工に連結されず、理由名として読みやすく描画される。
+- [x] 新規ラベルは i18n キーで定義し、`public/_locales/en/messages.json` と `ja` の両方を更新している。既存の「Reason」列見出しとキーは維持する。
+- [x] wire 形（`CleansingFeedbackEntry.removedByReason: Record<string, number>`、`src/utils/storage/types.ts:526-533`）を維持し、storage 構造・メッセージ契約・extractor 側の `Map<string, number>`（`src/utils/contentExtractor/types.ts:65`）を変更していない。
+- [x] 誤混入エントリが消えることによる表示内容の変化を、意図的な変化として DoD に記録している。
+- [x] `npm run validate` が成功し、既存の feedback view / feedbackQueue テストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -161,13 +161,13 @@ Scenario: storage と messaging の契約は変わらない
 
 ## Definition of Done
 
-- [ ] `RemovedCounts` 型と `buildRemovedCounts` が `src/utils/commonTypes.ts` に定義・実装されている。
-- [ ] `src/popup/statusPanel.ts:407-414` の `as unknown as Record<string, number>` による合成が排除されている。
-- [ ] `src/dashboard/cleansingFeedbackView.ts:62` の平坦描画が、byReason と aiSummary の別ラベル描画へ変更されている。
-- [ ] byte 数が件数として Reason 列に表示されないことをテストで確認している。
-- [ ] 新規 i18n キーが `public/_locales/en/messages.json` と `ja` の両方に追加されている。
-- [ ] wire 形（`src/utils/storage/types.ts:526-533`）、storage 構造、messaging 契約、extractor の `Map<string, number>` が変更されていない。
-- [ ] Reason 列の表示内容が変わる（誤混入エントリが消える）ことを意図的な変化として記録している。
-- [ ] `npm run validate` が成功し、既存の feedbackQueue テストに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `RemovedCounts` 型と `buildRemovedCounts` が `src/utils/commonTypes.ts` に定義・実装されている。
+- [x] `src/popup/statusPanel.ts:407-414` の `as unknown as Record<string, number>` による合成が排除されている。
+- [x] `src/dashboard/cleansingFeedbackView.ts:62` の平坦描画が、byReason と aiSummary の別ラベル描画へ変更されている。
+- [x] byte 数が件数として Reason 列に表示されないことをテストで確認している。
+- [x] 新規 i18n キーが `public/_locales/en/messages.json` と `ja` の両方に追加されている。
+- [x] wire 形（`src/utils/storage/types.ts:526-533`）、storage 構造、messaging 契約、extractor の `Map<string, number>` が変更されていない。
+- [x] Reason 列の表示内容が変わる（誤混入エントリが消える）ことを意図的な変化として記録している。
+- [x] `npm run validate` が成功し、既存の feedbackQueue テストに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

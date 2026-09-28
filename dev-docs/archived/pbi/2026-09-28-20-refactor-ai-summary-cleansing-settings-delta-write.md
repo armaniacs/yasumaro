@@ -45,15 +45,15 @@ Scenario: 静的 pin が full-snapshot への回帰を検出する
 
 ## 受け入れ基準
 
-- [ ] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` の `saveAiSummaryCleansingSettings` が、`settingsRepository.getAll()` を通さずに delta オブジェクトを `setAll` へ渡す形に変更されている。
-- [ ] 受け取る delta は `settings` 引数から組み立てられ、フォームが所有するキー（enabled、`CLEANSING_RULES` 由来の動的キー、各スライダーとトグル）だけを含む。
-- [ ] 動的キーの構築は `ruleOptionKey(rule)` を経由し、既存の `?? false` フォールバックが維持されている。
-- [ ] `settingsRepository` の新しい API（`set` 以外）を追加していない。`setAll` へ delta を渡す形を維持している。
-- [ ] `src/utils/storage/__tests__/domainFilterCacheSaveSeamContract.test.ts` の detector は本 PBI で大改修していない。対象ファイル限定の局所 pin（`settingsRepository.getAll()` 呼び出し 0 件）として追加している。
-- [ ] 局所 pin には「構文を再導入すれば検出できる」negative control が 1 件あり、単に常時 Green なアサーションになっていない。
-- [ ] `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts:207-218` の既存テスト（`getAll` の戻り値が `setAll` の payload に残ることを前提としたアサーション）が delta 前提へ更新されている。
-- [ ] IIFE 化は行っていない。`saveSettingsAndRefreshDomainFilterCache` seam は domain キー専用であり、本 PBI の対象キーは含まれない。
-- [ ] `npm run validate` が成功し、既存の settings / preset / cleanse 関連テストに回帰がない。
+- [x] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` の `saveAiSummaryCleansingSettings` が、`settingsRepository.getAll()` を通さずに delta オブジェクトを `setAll` へ渡す形に変更されている。
+- [x] 受け取る delta は `settings` 引数から組み立てられ、フォームが所有するキー（enabled、`CLEANSING_RULES` 由来の動的キー、各スライダーとトグル）だけを含む。
+- [x] 動的キーの構築は `ruleOptionKey(rule)` を経由し、既存の `?? false` フォールバックが維持されている。
+- [x] `settingsRepository` の新しい API（`set` 以外）を追加していない。`setAll` へ delta を渡す形を維持している。
+- [x] `src/utils/storage/__tests__/domainFilterCacheSaveSeamContract.test.ts` の detector は本 PBI で大改修していない。対象ファイル限定の局所 pin（`settingsRepository.getAll()` 呼び出し 0 件）として追加している。
+- [x] 局所 pin には「構文を再導入すれば検出できる」negative control が 1 件あり、単に常時 Green なアサーションになっていない。
+- [x] `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts:207-218` の既存テスト（`getAll` の戻り値が `setAll` の payload に残ることを前提としたアサーション）が delta 前提へ更新されている。
+- [x] IIFE 化は行っていない。`saveSettingsAndRefreshDomainFilterCache` seam は domain キー専用であり、本 PBI の対象キーは含まれない。
+- [x] `npm run validate` が成功し、既存の settings / preset / cleanse 関連テストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -153,15 +153,15 @@ Scenario: 静的 pin が full-snapshot への回帰を検出する
 
 ## Definition of Done
 
-- [ ] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` の `saveAiSummaryCleansingSettings` が `getAll()` を通さず delta を `setAll` へ渡す形に変更されている。
-- [ ] delta がフォーム所有キー（enabled と `CLEANSING_RULES` 由来の動的キーと各スライダー・トグル）のみを含み、無関係なキーが含まれない。
-- [ ] `ruleOptionKey(rule)` の動的アクセスと `?? false` フォールバックが維持され、既存テストの pin が通る。
-- [ ] 局所静的 pin（対象ファイルの getAll 呼び出し 0 件）が追加され、negative control で検出可能であることが確認されている。
-- [ ] IIFE 化と seam 採用を行っていないことが理由コメントとして残っている。
-- [ ] 台帳が指す第 2 経路の有無を実読で確認し、結果が判断記録に残されている。
-- [ ] getAll スナップショットの流転を前提とした既存アサーションが、delta 前提（無関係なキーが含まれない）へ更新されている。
-- [ ] `npm run validate` と契約テスト、AI 要約クレンジング関連テストが成功している。
-- [ ] 書かれる最終値（フォーム所有キー）が変更前と同一であることをテストで確認している。
-- [ ] PBI 2026-09-28-02 の seam 採用決定と PBI 2026-09-17-17 の delta-write 契約を壊していない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` の `saveAiSummaryCleansingSettings` が `getAll()` を通さず delta を `setAll` へ渡す形に変更されている。
+- [x] delta がフォーム所有キー（enabled と `CLEANSING_RULES` 由来の動的キーと各スライダー・トグル）のみを含み、無関係なキーが含まれない。
+- [x] `ruleOptionKey(rule)` の動的アクセスと `?? false` フォールバックが維持され、既存テストの pin が通る。
+- [x] 局所静的 pin（対象ファイルの getAll 呼び出し 0 件）が追加され、negative control で検出可能であることが確認されている。
+- [x] IIFE 化と seam 採用を行っていないことが理由コメントとして残っている。
+- [x] 台帳が指す第 2 経路の有無を実読で確認し、結果が判断記録に残されている。
+- [x] getAll スナップショットの流転を前提とした既存アサーションが、delta 前提（無関係なキーが含まれない）へ更新されている。
+- [x] `npm run validate` と契約テスト、AI 要約クレンジング関連テストが成功している。
+- [x] 書かれる最終値（フォーム所有キー）が変更前と同一であることをテストで確認している。
+- [x] PBI 2026-09-28-02 の seam 採用決定と PBI 2026-09-17-17 の delta-write 契約を壊していない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

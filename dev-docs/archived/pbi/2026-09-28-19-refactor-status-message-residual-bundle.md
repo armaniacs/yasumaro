@@ -51,14 +51,14 @@ Scenario: popup の mainStatus が単一実装の契約に乗る
 
 ## 受け入れ基準
 
-- [ ] (a) 同一要素へ短時間で 2 回 `showStatus` を呼んだとき、古いタイマーが新しいメッセージを早期 clear しない。`WeakMap<HTMLElement, ReturnType<typeof setTimeout>>` で要素ごとに前回タイマーを保持し、新規 schedule の直前と `autoClear: false` 遷移時に `clearTimeout` している。
-- [ ] (a) のテストは実時間待ちを使わず、fake timers / `useTimerClock()` 等の注入可能な手段で race を再現している（`local/no-test-sleep` に違反していない）。
-- [ ] (b) ダッシュボード markup 内の status 要素に付いている utility class を grep で全数調査し、採用方針（(i) spacing を `.status-message` ベース CSS へ吸収 / (ii) keep-list 方式で既知 utility class を退避・復元）とその理由を記録している。
-- [ ] (b) の (i) 採用時、margin-top 12px が全 status 要素に付く既存挙動（15 の DoD で意図的変化としたもの）を変えていない。spacing を吸収する場合は「margin-top 12px → 8px」のような既存 pin の置き換えを明示的に列挙している。
-- [ ] (c) `src/popup/statusPanel.ts:317-350` の `mainStatus` 直書き 4 箇所が popup 用 `showStatus`（`durationMs` 2000）へ置換され、素の `'success'` / `'error'` 直書きが残っていない。
-- [ ] (c) の 2000ms は PBI 15 が確立した popup 側契約（`src/popup/statusPanel.ts:426`）と同一値であり、既定値へ寄せたり変更したりしていない。
-- [ ] 既存 pin（`src/utils/ui/__tests__/statusMessageCssContract.test.ts` ほか、class 名・timeout 値を固定している箇所）を維持しつつ、必要な更新だけを反映している。
-- [ ] 既存ビルド・テスト・ユーザーに観測される動作に回帰がなく、`npm run validate` が成功している。
+- [x] (a) 同一要素へ短時間で 2 回 `showStatus` を呼んだとき、古いタイマーが新しいメッセージを早期 clear しない。`WeakMap<HTMLElement, ReturnType<typeof setTimeout>>` で要素ごとに前回タイマーを保持し、新規 schedule の直前と `autoClear: false` 遷移時に `clearTimeout` している。
+- [x] (a) のテストは実時間待ちを使わず、fake timers / `useTimerClock()` 等の注入可能な手段で race を再現している（`local/no-test-sleep` に違反していない）。
+- [x] (b) ダッシュボード markup 内の status 要素に付いている utility class を grep で全数調査し、採用方針（(i) spacing を `.status-message` ベース CSS へ吸収 / (ii) keep-list 方式で既知 utility class を退避・復元）とその理由を記録している。
+- [x] (b) の (i) 採用時、margin-top 12px が全 status 要素に付く既存挙動（15 の DoD で意図的変化としたもの）を変えていない。spacing を吸収する場合は「margin-top 12px → 8px」のような既存 pin の置き換えを明示的に列挙している。
+- [x] (c) `src/popup/statusPanel.ts:317-350` の `mainStatus` 直書き 4 箇所が popup 用 `showStatus`（`durationMs` 2000）へ置換され、素の `'success'` / `'error'` 直書きが残っていない。
+- [x] (c) の 2000ms は PBI 15 が確立した popup 側契約（`src/popup/statusPanel.ts:426`）と同一値であり、既定値へ寄せたり変更したりしていない。
+- [x] 既存 pin（`src/utils/ui/__tests__/statusMessageCssContract.test.ts` ほか、class 名・timeout 値を固定している箇所）を維持しつつ、必要な更新だけを反映している。
+- [x] 既存ビルド・テスト・ユーザーに観測される動作に回帰がなく、`npm run validate` が成功している。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -163,13 +163,13 @@ Scenario: popup の mainStatus が単一実装の契約に乗る
 
 ## Definition of Done
 
-- [ ] (a) が修正され、同一要素への連続 `showStatus` で古いタイマーが新しいメッセージを早期 clear しないことを fake timers 駆動のテストで示している。
-- [ ] `autoClear: false` 遷移時に直前のタイマーが解除され、期限経過後もメッセージが残ることをテストで示している。
-- [ ] 別要素のタイマーが他要素の表示に影響しないことをテストで示している。
-- [ ] (b) について、markup 上の utility class の全数調査の結果と採用方針（(i) 推奨）とその理由が記録されている。
-- [ ] (b) が反映され、`src/utils/ui/__tests__/statusMessageCssContract.test.ts` を含む既存の pin が緑である。margin-top 12px の挙動は意図的に列挙した領域を除いて不変である。
-- [ ] (c) の `src/popup/statusPanel.ts:317-350` 4 箇所がすべて `showStatus`（`durationMs: 2000`）へ置換され、素 class 直書きが残っていない。
-- [ ] popup の mainStatus 表示の chip 見た目と 2000ms の表示時間が baseline と一致することを pin / テストで確認している。
-- [ ] PBI `2026-09-28-15` の決定（全要素書き換え・単一 class 契約・`durationMs` / `autoClear` オプション）が維持されている。
-- [ ] 意図的な見た目変化（margin / padding の pin 変更分など）が一覧化され、実際の差分と一致している。byte-identical でなくても観測挙動不変でよい。
-- [ ] `npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。
+- [x] (a) が修正され、同一要素への連続 `showStatus` で古いタイマーが新しいメッセージを早期 clear しないことを fake timers 駆動のテストで示している。
+- [x] `autoClear: false` 遷移時に直前のタイマーが解除され、期限経過後もメッセージが残ることをテストで示している。
+- [x] 別要素のタイマーが他要素の表示に影響しないことをテストで示している。
+- [x] (b) について、markup 上の utility class の全数調査の結果と採用方針（(i) 推奨）とその理由が記録されている。
+- [x] (b) が反映され、`src/utils/ui/__tests__/statusMessageCssContract.test.ts` を含む既存の pin が緑である。margin-top 12px の挙動は意図的に列挙した領域を除いて不変である。
+- [x] (c) の `src/popup/statusPanel.ts:317-350` 4 箇所がすべて `showStatus`（`durationMs: 2000`）へ置換され、素 class 直書きが残っていない。
+- [x] popup の mainStatus 表示の chip 見た目と 2000ms の表示時間が baseline と一致することを pin / テストで確認している。
+- [x] PBI `2026-09-28-15` の決定（全要素書き換え・単一 class 契約・`durationMs` / `autoClear` オプション）が維持されている。
+- [x] 意図的な見た目変化（margin / padding の pin 変更分など）が一覧化され、実際の差分と一致している。byte-identical でなくても観測挙動不変でよい。
+- [x] `npm run validate` が成功し、既存動作に回帰がなく、コードレビューが完了している。

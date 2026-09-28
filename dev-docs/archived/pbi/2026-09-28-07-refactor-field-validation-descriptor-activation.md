@@ -49,14 +49,14 @@ Scenario: 複合 validator と cross-field 文脈を持つフィールドがテ�
 
 ## 受け入れ基準
 
-- [ ] descriptor テーブル（`fieldDescriptor.ts:142-199`）の 7 行が parse / validate / save / errorId の SSOT として全 production 経路から参照され、手書き errorId リテラル（`fieldValidation.ts:94` 等の 7 箇所）が 0 箇所になっている。
-- [ ] 汎用インタプリタ（`fieldValidation.ts:337-363`、`:369`）が production 参照 0 件の状態を解消し、配線するか削除するかを決断している。
-- [ ] `validateAllFields`（`fieldValidation.ts:412-428`）と手書き setup 7 個（`:203-323`）が descriptor テーブルを 1 ループで走査する実装に置き換わっている。
-- [ ] 手書き validator 本体（`validateProtocol :90` / `validatePort :114` / `validateMinVisitDuration :130` / `validateMinScrollDepth :145` / `validateMaxTokens :251` / `validateObsidianHost :280` / `validateGeminiApiVersion :296`）の判定ロジックが descriptor の validate に集約されている。
-- [ ] クリア用射影（`settingsPipeline.ts:31-36`）がテーブル SSOT から導出され、3 重管理が解消されている。
-- [ ] メッセージ解決は現行の `getMessage`（`src/dashboard/settings/i18n.ts:38`、未翻訳なら `""`）を正とし、汎用側の `getMessageOr(errorKey, errorKey)`（`fieldValidation.ts:344`、キー名をそのまま表示）へ寄せた表示契約変更が発生していない。
-- [ ] 7 フィールドについて invalid 入力時の表示文言・表示タイミング・クリア条件を pin する parity テストが存在し、既存テストの pin 更新が必要か確認して反映している。
-- [ ] 既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
+- [x] descriptor テーブル（`fieldDescriptor.ts:142-199`）の 7 行が parse / validate / save / errorId の SSOT として全 production 経路から参照され、手書き errorId リテラル（`fieldValidation.ts:94` 等の 7 箇所）が 0 箇所になっている。
+- [x] 汎用インタプリタ（`fieldValidation.ts:337-363`、`:369`）が production 参照 0 件の状態を解消し、配線するか削除するかを決断している。
+- [x] `validateAllFields`（`fieldValidation.ts:412-428`）と手書き setup 7 個（`:203-323`）が descriptor テーブルを 1 ループで走査する実装に置き換わっている。
+- [x] 手書き validator 本体（`validateProtocol :90` / `validatePort :114` / `validateMinVisitDuration :130` / `validateMinScrollDepth :145` / `validateMaxTokens :251` / `validateObsidianHost :280` / `validateGeminiApiVersion :296`）の判定ロジックが descriptor の validate に集約されている。
+- [x] クリア用射影（`settingsPipeline.ts:31-36`）がテーブル SSOT から導出され、3 重管理が解消されている。
+- [x] メッセージ解決は現行の `getMessage`（`src/dashboard/settings/i18n.ts:38`、未翻訳なら `""`）を正とし、汎用側の `getMessageOr(errorKey, errorKey)`（`fieldValidation.ts:344`、キー名をそのまま表示）へ寄せた表示契約変更が発生していない。
+- [x] 7 フィールドについて invalid 入力時の表示文言・表示タイミング・クリア条件を pin する parity テストが存在し、既存テストの pin 更新が必要か確認して反映している。
+- [x] 既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -157,13 +157,13 @@ Scenario: 複合 validator と cross-field 文脈を持つフィールドがテ�
 
 ## Definition of Done
 
-- [ ] descriptor テーブル（`fieldDescriptor.ts:142-199`）の 7 行が全 production 経路の唯一の SSOT として参照され、手書き errorId リテラル（`fieldValidation.ts:94` / `:118` / `:133` / `:148` / `:256` / `:284` / `:299`）が 0 箇所になっている。
-- [ ] クリア射影（`settingsPipeline.ts:31-36`）がテーブル SSOT から導出され、3 重管理が解消されている。
-- [ ] `validateAllFields`（`fieldValidation.ts:412-428`）と手書き setup 7 個（`:203-323`）が descriptor テーブルを 1 ループで走査する実装に置き換わっている。
-- [ ] 汎用インタプリタ（`:337-363`、`:369`）の配線または削除が判断済みで、production 参照 0 件の状態が解消または維持として記録され、docstring（`fieldDescriptor.ts:9`、`fieldValidation.ts:333`）が実態と一致している。
-- [ ] メッセージ解決が `getMessage`（`src/dashboard/settings/i18n.ts:38`）の未翻訳 `""` 契約を維持している。
-- [ ] 7 フィールドについて表示文言・表示タイミング・クリア条件を pin する parity テストが存在し green である。
-- [ ] `validateMaxTokens`（`:251`）の providerId と `validateObsidianHost`（`:280`）の複合判定が置換前と一致する（結果 parity）。
-- [ ] 既存テストのうち descriptor 経路を前提にしていた箇所の pin 更新が必要か確認し、反映している。
-- [ ] refactor 前後の観測挙動（表示・表示タイミング・クリア条件）が不変であることを parity テストで示している。byte-identical でなくても観測挙動不変でよい。
-- [ ] `npm run validate` が成功し、既存のビルド、テスト、ユーザーに観測される動作に回帰がなく、コードレビューが完了している。
+- [x] descriptor テーブル（`fieldDescriptor.ts:142-199`）の 7 行が全 production 経路の唯一の SSOT として参照され、手書き errorId リテラル（`fieldValidation.ts:94` / `:118` / `:133` / `:148` / `:256` / `:284` / `:299`）が 0 箇所になっている。
+- [x] クリア射影（`settingsPipeline.ts:31-36`）がテーブル SSOT から導出され、3 重管理が解消されている。
+- [x] `validateAllFields`（`fieldValidation.ts:412-428`）と手書き setup 7 個（`:203-323`）が descriptor テーブルを 1 ループで走査する実装に置き換わっている。
+- [x] 汎用インタプリタ（`:337-363`、`:369`）の配線または削除が判断済みで、production 参照 0 件の状態が解消または維持として記録され、docstring（`fieldDescriptor.ts:9`、`fieldValidation.ts:333`）が実態と一致している。
+- [x] メッセージ解決が `getMessage`（`src/dashboard/settings/i18n.ts:38`）の未翻訳 `""` 契約を維持している。
+- [x] 7 フィールドについて表示文言・表示タイミング・クリア条件を pin する parity テストが存在し green である。
+- [x] `validateMaxTokens`（`:251`）の providerId と `validateObsidianHost`（`:280`）の複合判定が置換前と一致する（結果 parity）。
+- [x] 既存テストのうち descriptor 経路を前提にしていた箇所の pin 更新が必要か確認し、反映している。
+- [x] refactor 前後の観測挙動（表示・表示タイミング・クリア条件）が不変であることを parity テストで示している。byte-identical でなくても観測挙動不変でよい。
+- [x] `npm run validate` が成功し、既存のビルド、テスト、ユーザーに観測される動作に回帰がなく、コードレビューが完了している。

@@ -46,14 +46,14 @@ Scenario: 2 日付入力の比較パネルが共通の日付 parse/format 契約
 
 ## 受け入れ基準（4-8件）
 
-- [ ] `createAsyncDataPanelLifecycle` 相当の共通部品を 1 本新設し、host 取得・`createPeriodFilter` の mount・`reload`（seq 管理）・`destroy`（seq の加算と notices クリア）の 4 責務だけを持ち、他責務を引き受けない。
-- [ ] 対象 9 パネル（`tagClusterPanel` / `wordClusterPanel` / `timeHeatmapPanel` / `domainAnalysisPanel` / `researchSessionsPanel` / `tagFrequencyTimelinePanel` / `tagCooccurrenceTablePanel` / `revisitInsightsPanel` / `tagClusterTimeSliderPanel`）の reload 骨格が共通部品経由になり、手書きの逐語コピーが残っていない。
-- [ ] `createPeriodFilter` の mount 6 行の重複 7 箇所（`tagClusterPanel.ts:216-231`、`wordClusterPanel.ts:278-288`、`timeHeatmapPanel.ts:133-146`、`domainAnalysisPanel.ts:225-231`、`researchSessionsPanel.ts:358-369`、`tagFrequencyTimelinePanel.ts:450-456`、`tagCooccurrenceTablePanel.ts:283-289`）が共通部品の mount に集約されている。
-- [ ] 期間フォールバックが各パネルの宣言プリセット（`presetToRange`）に統一され、無制限 `{}` 系統（`tagClusterPanel.ts:65`、`wordClusterPanel.ts:86`、`timeHeatmapPanel.ts:83`、`tagCooccurrenceTablePanel.ts:217`）が解消されている。唯一の意図的挙動変化として、filter host 欠損時に全期間へ落ちるパネルの既存テストの期待を宣言プリセットへ更新し、変更理由をテストコメントに記している。
-- [ ] 共通部品は notices の種類差（empty / showError キー）と destroy 差（panZoom cleanup の有無、`firstNotices` / `secondNotices` の 2 分割）をパネル側 callback で吸収し、部品側に特定パネル名の分岐を持ち越していない。
-- [ ] `tagClusterTimeSliderPanel` の 2 日付入力ウィンドウ（`tagClusterTimeSliderPanel.ts:361-420`）が `customRangeToBounds` / `parseDateInput` へ寄せられ、補正通知と空 window 検証という既存の UX 挙動が保存されている。
-- [ ] 描画本体（`renderTagGraph` 相当、SVG 組立、cooccurrence 計算）は変更せず、`entrypoints/options/index.html:1775/1951/1961/2043/2072/2093/2111` の host div id も変更していない。
-- [ ] `npm run validate` が成功し、既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
+- [x] `createAsyncDataPanelLifecycle` 相当の共通部品を 1 本新設し、host 取得・`createPeriodFilter` の mount・`reload`（seq 管理）・`destroy`（seq の加算と notices クリア）の 4 責務だけを持ち、他責務を引き受けない。
+- [x] 対象 9 パネル（`tagClusterPanel` / `wordClusterPanel` / `timeHeatmapPanel` / `domainAnalysisPanel` / `researchSessionsPanel` / `tagFrequencyTimelinePanel` / `tagCooccurrenceTablePanel` / `revisitInsightsPanel` / `tagClusterTimeSliderPanel`）の reload 骨格が共通部品経由になり、手書きの逐語コピーが残っていない。
+- [x] `createPeriodFilter` の mount 6 行の重複 7 箇所（`tagClusterPanel.ts:216-231`、`wordClusterPanel.ts:278-288`、`timeHeatmapPanel.ts:133-146`、`domainAnalysisPanel.ts:225-231`、`researchSessionsPanel.ts:358-369`、`tagFrequencyTimelinePanel.ts:450-456`、`tagCooccurrenceTablePanel.ts:283-289`）が共通部品の mount に集約されている。
+- [x] 期間フォールバックが各パネルの宣言プリセット（`presetToRange`）に統一され、無制限 `{}` 系統（`tagClusterPanel.ts:65`、`wordClusterPanel.ts:86`、`timeHeatmapPanel.ts:83`、`tagCooccurrenceTablePanel.ts:217`）が解消されている。唯一の意図的挙動変化として、filter host 欠損時に全期間へ落ちるパネルの既存テストの期待を宣言プリセットへ更新し、変更理由をテストコメントに記している。
+- [x] 共通部品は notices の種類差（empty / showError キー）と destroy 差（panZoom cleanup の有無、`firstNotices` / `secondNotices` の 2 分割）をパネル側 callback で吸収し、部品側に特定パネル名の分岐を持ち越していない。
+- [x] `tagClusterTimeSliderPanel` の 2 日付入力ウィンドウ（`tagClusterTimeSliderPanel.ts:361-420`）が `customRangeToBounds` / `parseDateInput` へ寄せられ、補正通知と空 window 検証という既存の UX 挙動が保存されている。
+- [x] 描画本体（`renderTagGraph` 相当、SVG 組立、cooccurrence 計算）は変更せず、`entrypoints/options/index.html:1775/1951/1961/2043/2072/2093/2111` の host div id も変更していない。
+- [x] `npm run validate` が成功し、既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -150,13 +150,13 @@ Scenario: 2 日付入力の比較パネルが共通の日付 parse/format 契約
 
 ## Definition of Done
 
-- [ ] 共通部品が host 取得・mount・`reload`（seq 管理）・`destroy` の 4 責務を持ち、9 パネルの reload 骨格と mount 7 箇所の重複が解消されている。
-- [ ] 期間フォールバックが宣言プリセットに統一され、`timeHeatmapPanel` の 'last90' 宣言とフォールバックの不整合が解消されている。無制限 `{}` 系統を前提にした既存テストの期待が更新され、理由がコメントで明示されている。
-- [ ] 意図的変化（filter host 欠損時のフォールバック）を例外として、reload の観測挙動が不変である: 表示結果・empty/truncated/error 表示・reload 順序・destroy 後の非反映がすべて移行前と一致する。
-- [ ] `tagClusterTimeSliderPanel` の 2 日付入力が共通の日付 parse/format 関数を通り、補正通知・空 window 検証の挙動が保存されている。
-- [ ] 共通部品にパネル固有の分岐・retry 方針・abort 制御・描画ロジックを持ち込まず、YAGNI 遵守が保たれている。
-- [ ] 共通部品の単体テスト（正常・空・失敗・destroy 後 race）と 9 パネルの既存パネルテストが green である。
-- [ ] 既存のパネル単体テストが `fetchPeriodRows` の mock 経由で lifecycle 経由の呼び出しに合わせて更新され、期待値がズレず整合している。
-- [ ] 描画本体、`fetchPeriodRows`、`entrypoints/options/index.html` の host div id が変更されていない。
-- [ ] `npm run validate` が成功し、既存ビルド・テスト・ユーザー観測挙動に回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] 共通部品が host 取得・mount・`reload`（seq 管理）・`destroy` の 4 責務を持ち、9 パネルの reload 骨格と mount 7 箇所の重複が解消されている。
+- [x] 期間フォールバックが宣言プリセットに統一され、`timeHeatmapPanel` の 'last90' 宣言とフォールバックの不整合が解消されている。無制限 `{}` 系統を前提にした既存テストの期待が更新され、理由がコメントで明示されている。
+- [x] 意図的変化（filter host 欠損時のフォールバック）を例外として、reload の観測挙動が不変である: 表示結果・empty/truncated/error 表示・reload 順序・destroy 後の非反映がすべて移行前と一致する。
+- [x] `tagClusterTimeSliderPanel` の 2 日付入力が共通の日付 parse/format 関数を通り、補正通知・空 window 検証の挙動が保存されている。
+- [x] 共通部品にパネル固有の分岐・retry 方針・abort 制御・描画ロジックを持ち込まず、YAGNI 遵守が保たれている。
+- [x] 共通部品の単体テスト（正常・空・失敗・destroy 後 race）と 9 パネルの既存パネルテストが green である。
+- [x] 既存のパネル単体テストが `fetchPeriodRows` の mock 経由で lifecycle 経由の呼び出しに合わせて更新され、期待値がズレず整合している。
+- [x] 描画本体、`fetchPeriodRows`、`entrypoints/options/index.html` の host div id が変更されていない。
+- [x] `npm run validate` が成功し、既存ビルド・テスト・ユーザー観測挙動に回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。

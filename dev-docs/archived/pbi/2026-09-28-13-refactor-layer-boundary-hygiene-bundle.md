@@ -49,18 +49,18 @@ Scenario: 偽 union の cast が局所 union に置き換わる
 
 ## 受け入れ基準
 
-- [ ] (a) `src/dashboard/gistSettings.ts:9-10,55-56` の `GistSyncTarget` / `SqliteClient` の直接構築がなくなり、正規 singleton（`src/background/compositionManifest.ts:88` の `getSharedSqliteClient`）が利用されている。
-- [ ] (a) で導入した注入 seam が、dashboard からメッセージを送る経路または factory 注入のいずれかとして明示され、既存 singleton 契約（both-paths-one-instance）を壊さない。
-- [ ] (a) の副次目標として、`src/dashboard/gistSettings.ts` 内の 3 責務（DOM 処理 / settings 永続化 / 接続テスト）の分離方針が決められている。
-- [ ] (b) `src/offscreen/opfsCapabilities.ts:10-52` の純関数（`OpfsProbeGlobals` / `detectOpfsCapabilities` / `selectVfsStrategy` / `VfsStrategy`）が `src/utils/vfsCapabilities.ts` へ移っている。
-- [ ] (b) `src/offscreen/opfsCapabilities.ts:54-71` の `probeLiveEnv` / `detectLiveVfsStrategy` は offscreen 側に残り、`src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:21` から offscreen への runtime import が解消されている。
-- [ ] (b) の移設で値と公開 API が変化していない（純粋な移設である）。
-- [ ] (c) `src/utils/auditLog.ts:20-31` の dynamic import による background 参照が解消され、`src/messaging/` 配下の gateway（`pendingRecordGateway.ts` / `regenerateSummaryGateway.ts` と同形）へ移設されている。
-- [ ] (c) で client promise のキャッシュが `storageMaintenance.ts` のパターンと重複したまま残っていない。
-- [ ] (c) に伴い LAYERS.md の分類追記と、`eslint/rules/utils-layer-boundary.mjs` への未分類 utils ファイル検出の追加（または auditLog 移設により解消した旨の記録）のいずれかが完了している。
-- [ ] (d) `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:123,126` の `as unknown as` による偽 union が局所 union（`number | 'unavailable'` / `Pick<Settings, StorageKey> | null`）に置き換えられ、`:138-140` の手動 narrow が 型付きの判定に置き換わっている。
-- [ ] (d) の変更後も DiagnosticsCollector の「Unavailable」表示文言が変わっていない。
-- [ ] `npm run validate` が成功し、既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
+- [x] (a) `src/dashboard/gistSettings.ts:9-10,55-56` の `GistSyncTarget` / `SqliteClient` の直接構築がなくなり、正規 singleton（`src/background/compositionManifest.ts:88` の `getSharedSqliteClient`）が利用されている。
+- [x] (a) で導入した注入 seam が、dashboard からメッセージを送る経路または factory 注入のいずれかとして明示され、既存 singleton 契約（both-paths-one-instance）を壊さない。
+- [x] (a) の副次目標として、`src/dashboard/gistSettings.ts` 内の 3 責務（DOM 処理 / settings 永続化 / 接続テスト）の分離方針が決められている。
+- [x] (b) `src/offscreen/opfsCapabilities.ts:10-52` の純関数（`OpfsProbeGlobals` / `detectOpfsCapabilities` / `selectVfsStrategy` / `VfsStrategy`）が `src/utils/vfsCapabilities.ts` へ移っている。
+- [x] (b) `src/offscreen/opfsCapabilities.ts:54-71` の `probeLiveEnv` / `detectLiveVfsStrategy` は offscreen 側に残り、`src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:21` から offscreen への runtime import が解消されている。
+- [x] (b) の移設で値と公開 API が変化していない（純粋な移設である）。
+- [x] (c) `src/utils/auditLog.ts:20-31` の dynamic import による background 参照が解消され、`src/messaging/` 配下の gateway（`pendingRecordGateway.ts` / `regenerateSummaryGateway.ts` と同形）へ移設されている。
+- [x] (c) で client promise のキャッシュが `storageMaintenance.ts` のパターンと重複したまま残っていない。
+- [x] (c) に伴い LAYERS.md の分類追記と、`eslint/rules/utils-layer-boundary.mjs` への未分類 utils ファイル検出の追加（または auditLog 移設により解消した旨の記録）のいずれかが完了している。
+- [x] (d) `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:123,126` の `as unknown as` による偽 union が局所 union（`number | 'unavailable'` / `Pick<Settings, StorageKey> | null`）に置き換えられ、`:138-140` の手動 narrow が 型付きの判定に置き換わっている。
+- [x] (d) の変更後も DiagnosticsCollector の「Unavailable」表示文言が変わっていない。
+- [x] `npm run validate` が成功し、既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -166,16 +166,16 @@ Scenario: 偽 union の cast が局所 union に置き換わる
 
 ## Definition of Done
 
-- [ ] (a) `src/dashboard/gistSettings.ts` から background runtime クラスの直接構築がなくなり、正規 singleton（`getSharedSqliteClient`）が利用されている。
-- [ ] (a) の注入 seam が方式（メッセージ経由 / factory 注入）として明示され、both-paths-one-instance 契約が維持されている。
-- [ ] (a) の 3 責務（DOM / settings 永続化 / 接続テスト）の分離方針が確定している。
-- [ ] (b) 純 core が `src/utils/vfsCapabilities.ts` に移られ、`src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:21` から offscreen への runtime import が解消されている。
-- [ ] (b) の live wrapper が offscreen 側に残り、値と公開 API が変更されていない。
-- [ ] (c) `src/utils/auditLog.ts` が `src/messaging/` 配下の gateway へ移され、utils から background への逆辺が 0 件になっている。
-- [ ] (c) の client promise キャッシュの重複の扱いが確定し、LAYERS.md の分類追記または linter の未分類検出の追加が完了している。
-- [ ] (d) `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:123,126` の `as unknown as` が局所 union に置き換えられ、手動 narrow が型付き判定に置き換わっている。
-- [ ] (d) の変更後も DiagnosticsCollector の「Unavailable」表示文言が同一である。
-- [ ] 4 サブ項目がそれぞれ独立 commit の候補として実装されている。
-- [ ] `npm run validate` が成功し、既存テストとビルドに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] (a) `src/dashboard/gistSettings.ts` から background runtime クラスの直接構築がなくなり、正規 singleton（`getSharedSqliteClient`）が利用されている。
+- [x] (a) の注入 seam が方式（メッセージ経由 / factory 注入）として明示され、both-paths-one-instance 契約が維持されている。
+- [x] (a) の 3 責務（DOM / settings 永続化 / 接続テスト）の分離方針が確定している。
+- [x] (b) 純 core が `src/utils/vfsCapabilities.ts` に移られ、`src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:21` から offscreen への runtime import が解消されている。
+- [x] (b) の live wrapper が offscreen 側に残り、値と公開 API が変更されていない。
+- [x] (c) `src/utils/auditLog.ts` が `src/messaging/` 配下の gateway へ移され、utils から background への逆辺が 0 件になっている。
+- [x] (c) の client promise キャッシュの重複の扱いが確定し、LAYERS.md の分類追記または linter の未分類検出の追加が完了している。
+- [x] (d) `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:123,126` の `as unknown as` が局所 union に置き換えられ、手動 narrow が型付き判定に置き換わっている。
+- [x] (d) の変更後も DiagnosticsCollector の「Unavailable」表示文言が同一である。
+- [x] 4 サブ項目がそれぞれ独立 commit の候補として実装されている。
+- [x] `npm run validate` が成功し、既存テストとビルドに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。
