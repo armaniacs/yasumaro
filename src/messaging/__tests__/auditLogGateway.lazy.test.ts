@@ -20,17 +20,22 @@ vi.mock('../../background/sqlite/offscreenGateway.js', () => ({
   getSharedSqliteClient: shared.getSharedSqliteClient,
 }));
 
-describe('auditLog lazy gateway resolution (PBI 2026-09-21-06)', () => {
+describe('auditLogGateway lazy gateway resolution', () => {
   it('has no static import of the background gateway; resolves via await import', () => {
-    const src = readFileSync(new URL('../auditLog.ts', import.meta.url), 'utf8');
+    const src = readFileSync(new URL('../auditLogGateway.ts', import.meta.url), 'utf8');
     expect(src).not.toMatch(/^import\s(?!type)[^;]*offscreenGateway/m);
-    expect(src).toMatch(/await import\(|import\(['"]\.\.\/background\/sqlite\/offscreenGateway\.js['"]\)/);
+    expect(src).toMatch(/import\(['"]\.\.\/background\/sqlite\/offscreenGateway\.js['"]\)/);
+  });
+
+  it('leaves the utils shim free of any background module specifier', () => {
+    const shim = readFileSync(new URL('../../utils/auditLog.ts', import.meta.url), 'utf8');
+    expect(shim).not.toMatch(/['"][^'"]*background[^'"]*['"]/);
   });
 
   it('does not resolve the shared client at import time; resolves at record time', async () => {
     shared.getSharedSqliteClient.mockClear();
     shared.mutate.mockClear();
-    const mod = await import('../auditLog.js');
+    const mod = await import('../auditLogGateway.js');
     expect(shared.getSharedSqliteClient).not.toHaveBeenCalled();
     await mod.recordAuditLog({ provider: 'gemini', url: 'https://example.com/lazy' });
     expect(shared.getSharedSqliteClient).toHaveBeenCalledTimes(1);
@@ -40,7 +45,7 @@ describe('auditLog lazy gateway resolution (PBI 2026-09-21-06)', () => {
   });
 
   it('reuses the cached client promise across calls (single dynamic import)', async () => {
-    const mod = await import('../auditLog.js');
+    const mod = await import('../auditLogGateway.js');
     shared.getSharedSqliteClient.mockClear();
     await mod.getAuditLogs();
     await mod.recordAuditLog({ provider: 'gemini', url: 'https://example.com/cached' });

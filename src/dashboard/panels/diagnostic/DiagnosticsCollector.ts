@@ -18,16 +18,48 @@ import { settingsRepository, type SettingsRepository } from '../../../utils/stor
 import { getSqliteStatus, getLogCount } from '../../dashboardSqliteService.js';
 import { diagnoseDeficiencies, type DiagnosticInput } from '../../diagnoseDeficiencies.js';
 import { checkBuiltInAiAvailability, type BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
-import { detectLiveVfsStrategy } from '../../../offscreen/opfsCapabilities.js';
+import { detectOpfsCapabilities, probeOpfsGlobals, selectVfsStrategy, type VfsStrategy } from '../../../utils/vfsCapabilities.js';
+
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getDebugMode } from './debugModeStore.js';
 import type { EncryptedData } from '../../../utils/crypto/types.js';
 import { ProviderCatalog } from '../../../background/ai/providerCatalog.js';
 
+/**
+ * Default VFS strategy probe for the dashboard page. The offscreen document
+ * keeps its own live wrapper (src/offscreen/opfsCapabilities.ts); importing it
+ * here would be a dashboard → offscreen runtime edge, so the dashboard reads
+ * the same ambient globals through the shared pure core and reaches the same
+ * answer.
+ */
+function detectDashboardVfsStrategy(): { strategy: VfsStrategy } {
+  return { strategy: selectVfsStrategy(detectOpfsCapabilities(probeOpfsGlobals(globalThis))) };
+}
+
 function stringOrEmpty(value: string | EncryptedData | undefined): string {
   return typeof value === 'string' ? value : '';
 }
+
+/** Settings as this collector reads them: the projection getMany returns. */
+type SettingsProjection = Pick<Settings, StorageKey>;
+
+/**
+ * A loaded settings projection, or null when the load failed (the defaults
+ * table stands in, and `settingsLoadFailed` says so). Stated as a union so the
+ * failure path is visible in the type instead of being forged away with a cast.
+ */
+type SettingsLoad = SettingsProjection | null;
+
+/** Sentinel for a log count the service worker could not supply. */
+const LOG_COUNT_UNAVAILABLE = 'unavailable';
+
+/**
+ * A log count, or the sentinel when getLogCount failed. `ServiceResult` has no
+ * `success` field, so the value is read where it exists rather than inferred
+ * from a discriminant.
+ */
+type LogCountValue = number | typeof LOG_COUNT_UNAVAILABLE;
 
 export interface ProviderDetail {
   provider: string;
@@ -99,7 +131,7 @@ export class DiagnosticsCollector {
     const getManifestFn = this.deps.getManifest ?? (() => {
       try { return chrome.runtime.getManifest(); } catch { return { version: 'unknown', name: 'unknown' }; }
     });
-    const detectVfsStrategyFn = this.deps.detectVfsStrategy ?? detectLiveVfsStrategy;
+    const detectVfsStrategyFn = this.deps.detectVfsStrategy ?? detectDashboardVfsStrategy;
 
     let settingsLoadFailed = false;
 
@@ -116,18 +148,25 @@ export class DiagnosticsCollector {
     ];
 
     // Parallel gathering — faster than sequential awaits in the old panel
-    const [settings, sqliteStatus, logCountResult, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
-      getManyFn(settingsKeys).catch(async () => {
+    const [loadedSettings, sqliteStatus, logCount, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
+      getManyFn(settingsKeys).catch((): SettingsLoad | null => {
         settingsLoadFailed = true;
-        const { DEFAULT_SETTINGS } = await import('../../../utils/storage/defaults.js');
-        return DEFAULT_SETTINGS as unknown as Pick<Settings, StorageKey>;
+        return null;
       }),
       getSqliteStatusFn().catch(() => null),
-      getLogCountFn().catch(() => ({ error: 'unavailable' } as unknown as Awaited<ReturnType<typeof getLogCount>>)),
+      getLogCountFn()
+        .then((result): LogCountValue => ('data' in result ? result.data : LOG_COUNT_UNAVAILABLE))
+        .catch((): LogCountValue => LOG_COUNT_UNAVAILABLE),
       checkBuiltInAiFn().catch(() => null),
       getBytesInUse().catch(() => 0),
       getDebugModeFn().catch(() => false),
     ]);
+
+    // The defaults table is a DeepReadonly<Settings> of the same shape as the
+    // projection getMany returns, so the union needs no cast. Imported only on
+    // the failure path: a successful load must not pay for the module.
+    const settings: SettingsProjection = loadedSettings
+      ?? (await import('../../../utils/storage/defaults.js')).DEFAULT_SETTINGS;
 
     const protocol = settings[StorageKeys.OBSIDIAN_PROTOCOL] ?? 'https';
     const port = settings[StorageKeys.OBSIDIAN_PORT] ?? '27124';
@@ -135,9 +174,7 @@ export class DiagnosticsCollector {
     const dailyPath = settings[StorageKeys.OBSIDIAN_DAILY_PATH] ?? '';
 
     const bytesUsedKb = (bytesUsed / 1024).toFixed(1);
-    const savedUrls = (logCountResult && typeof logCountResult === 'object' && 'data' in logCountResult)
-      ? String((logCountResult as { data: number }).data)
-      : 'Unavailable';
+    const savedUrls = logCount === LOG_COUNT_UNAVAILABLE ? 'Unavailable' : String(logCount);
 
     // Deficiency diagnosis needs sqliteStatus
     let deficiencies: DiagnosticsSnapshot['deficiencies'] = [];
@@ -202,7 +239,7 @@ export class DiagnosticsCollector {
     try {
       const { strategy } = detectVfsStrategyFn();
       dashboardDetectsOpfs = strategy !== 'fallback';
-    } catch { /* detectLiveVfsStrategy may fail */ }
+    } catch { /* the VFS probe may fail in contexts without the OPFS globals */ }
     const offscreenUsesFallback = sqliteStatus?.fallback ?? false;
 
     return {
