@@ -67,6 +67,21 @@ async function renderReasonCells(removedByReason: Record<string, unknown>): Prom
   return [...container.querySelectorAll('tbody tr td:nth-child(3)')] as HTMLTableCellElement[];
 }
 
+async function renderRows(entries: Array<Record<string, unknown>>): Promise<HTMLTableCellElement[]> {
+  mockedGetFeedbackQueue.mockResolvedValue(entries as never);
+  const container = document.createElement('div');
+  await renderCleansingFeedback(container);
+  return [...container.querySelectorAll('tbody tr td:nth-child(3)')] as HTMLTableCellElement[];
+}
+
+/** The `key:count` text of a Reason cell, without the appended AI group. */
+function countText(td: HTMLTableCellElement): string {
+  return [...td.childNodes]
+    .filter((node) => node.nodeType === 3)
+    .map((node) => node.textContent)
+    .join('');
+}
+
 describe('renderCleansingFeedback header', () => {
   it('renders table headers via i18n keys', async () => {
     const container = document.createElement('div');
@@ -150,5 +165,68 @@ describe('renderCleansingFeedback reason cell', () => {
     expect(reasonLines[1]).toBe('cleansingFeedbackReasons: historyAiSummaryCleansedReasonAds, historyAiSummaryCleansedReasonNav');
     expect(td.textContent).not.toContain('ads,nav');
     expect(td.textContent).not.toContain(',,');
+  });
+});
+
+// PBI 2026-09-28-21: entries saved after the split carry the AI stats in
+// their own field; entries saved before it only have the legacy wire record.
+describe('renderCleansingFeedback persisted aiSummary field', () => {
+  it('renders the AI group from the entry field when no legacy keys are present', async () => {
+    const [td] = await renderRows([
+      sampleEntry({
+        removedByReason: { keyword: 2 },
+        aiSummary: {
+          reason: 'ads',
+          elements: 12,
+          originalBytes: 31204,
+          cleansedBytes: 21000,
+        },
+      }),
+    ]);
+
+    expect(countText(td)).toBe('keyword:2');
+    const group = td.querySelector('.cleansing-feedback-ai-summary');
+    expect(group?.textContent).toContain('30.5 KB');
+    expect(group?.textContent).toContain('20.5 KB');
+    expect(group?.textContent).toContain('Count: 12');
+  });
+
+  it('prefers the entry field over the legacy aiSummary* keys when both are present', async () => {
+    const [td] = await renderRows([
+      sampleEntry({
+        removedByReason: { keyword: 2, aiSummaryCleansedElements: 999 },
+        aiSummary: {
+          reason: 'ads',
+          elements: 12,
+          originalBytes: 31204,
+          cleansedBytes: 21000,
+        },
+      }),
+    ]);
+
+    const group = td.querySelector('.cleansing-feedback-ai-summary');
+    expect(group?.textContent).toContain('Count: 12');
+    expect(group?.textContent).not.toContain('999');
+  });
+
+  it('renders legacy and persisted entries side by side without affecting the old ones', async () => {
+    const [legacy, persisted, plain] = await renderRows([
+      sampleEntry({ id: 'fb-legacy', removedByReason: { keyword: 1, aiSummaryCleansedElements: 1, aiSummaryCleansedReason: 'ads' } }),
+      sampleEntry({
+        id: 'fb-persisted',
+        removedByReason: {},
+        aiSummary: { reason: 'ads', elements: 7, originalBytes: 2048, cleansedBytes: 1024 },
+      }),
+      sampleEntry({ id: 'fb-plain', removedByReason: { keyword: 1 } }),
+    ]);
+
+    expect(legacy.querySelector('.cleansing-feedback-ai-summary')).not.toBeNull();
+    expect(countText(legacy)).toBe('keyword:1');
+
+    expect(countText(persisted)).toBe('');
+    expect(persisted.querySelector('.cleansing-feedback-ai-summary')?.textContent).toContain('Count: 7');
+
+    expect(plain.querySelector('.cleansing-feedback-ai-summary')).toBeNull();
+    expect(countText(plain)).toBe('keyword:1');
   });
 });

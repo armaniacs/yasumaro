@@ -8,6 +8,7 @@
 import type { EncryptedData } from '../crypto/types.js';
 import type { SecretEnvelope } from '../crypto/secretWrappingKey.js';
 import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCategory, TagNormalizationEntry } from '../types.js';
+import type { AiSummaryRemovedStats } from '../commonTypes.js';
 import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
 import type { NavTrailConsent } from './navTrailConsent.js';
 
@@ -528,7 +529,14 @@ export interface CleansingFeedbackEntry {
     url: string;
     domain: string;
     htmlSnippet: string;
+    /** Removal counts only. AI-summary byte totals and reason labels must never
+     *  be merged in here — they live in `aiSummary` so the two units can not be
+     *  read as the same number. */
     removedByReason: Record<string, number>;
+    /** AI-summary cleansing stats, stored separately from the counts. Optional
+     *  so entries written before the split keep loading unchanged; a missing
+     *  field means "the report carried no AI stats", not zero. */
+    aiSummary?: AiSummaryRemovedStats;
     createdAt: number;
 }
 

@@ -51,13 +51,25 @@ function appendAiSummaryGroup(td: HTMLElement, stats: AiSummaryRemovedStats): vo
   td.appendChild(group);
 }
 
-function renderReasonCell(td: HTMLElement, removedByReason: Record<string, number>): void {
+/**
+ * @param aiSummary stats persisted on the entry itself. `readRemovedCounts`
+ * stays the fallback for entries written before the split, whose `aiSummary*`
+ * keys live inside the count map. The persisted field wins when both exist:
+ * the count map is the contaminated shape, so it is the less trustworthy
+ * source of the two.
+ */
+function renderReasonCell(
+  td: HTMLElement,
+  removedByReason: Record<string, number>,
+  aiSummary?: AiSummaryRemovedStats,
+): void {
   const counts = readRemovedCounts(removedByReason);
   const pairs = Object.entries(counts.byReason);
   if (pairs.length > 0) {
     td.textContent = pairs.map(([k, v]) => `${k}:${v}`).join(', ');
   }
-  if (counts.aiSummary) appendAiSummaryGroup(td, counts.aiSummary);
+  const stats = aiSummary ?? counts.aiSummary;
+  if (stats) appendAiSummaryGroup(td, stats);
 }
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
@@ -118,7 +130,7 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
     tdSnippet.textContent = e.htmlSnippet.slice(0, 100);
     tdSnippet.title = e.htmlSnippet;
     const tdReason = document.createElement('td');
-    renderReasonCell(tdReason, e.removedByReason);
+    renderReasonCell(tdReason, e.removedByReason, e.aiSummary);
     const tdDate = document.createElement('td');
     tdDate.textContent = new Date(e.createdAt).toLocaleString();
     const tdAction = document.createElement('td');
