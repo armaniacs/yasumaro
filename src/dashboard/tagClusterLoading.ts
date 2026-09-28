@@ -5,14 +5,13 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
+import { SVG_NS } from '../utils/svgNamespace.js';
 
 interface LoadingStep {
   number: number;
   label: string;
   completed: boolean;
 }
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** i18n keys in step order — labels re-resolve on each show (PBI 2026-09-12-29). */
 const LOADING_STEP_KEYS = [

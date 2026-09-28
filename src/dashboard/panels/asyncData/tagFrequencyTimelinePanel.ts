@@ -19,6 +19,7 @@
  */
 
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
+import { SVG_NS } from '../../../utils/svgNamespace.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
@@ -33,8 +34,6 @@ import {
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Number of token-based series color classes cycled through in CSS. */
 const SERIES_COLOR_SLOTS = 8;

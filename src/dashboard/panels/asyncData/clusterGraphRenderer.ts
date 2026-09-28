@@ -7,7 +7,9 @@
  * (node cap → canvas size → layout → edges → nodes → role/aria-label →
  * pan/zoom attach) and each re-declared MAX_NODES and SVG_NS, so a change to
  * the graph markup had to be made in three places and a cap could drift per
- * panel without anyone noticing.
+ * panel without anyone noticing. MAX_NODES stays here; SVG_NS moved to
+ * src/utils/svgNamespace.ts so the dashboard-root and timeline draw sites can
+ * share it without importing down into panels/.
  *
  * The per-panel differences are options here, not copies: only the compare
  * panel colors a node by its stable tag hue and carries the compare node
@@ -22,10 +24,8 @@ import { tagHue } from '../../tagClusterColor.js';
 import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 import { getMessageWithSubstitutions } from '../../../utils/i18n.js';
+import { SVG_NS } from '../../../utils/svgNamespace.js';
 import type { PanelNotices } from '../PanelNotices.js';
-
-/** Single source of the SVG namespace for every cluster-graph draw site. */
-export const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Node cap every cluster graph renders under. Single-sourced so raising it

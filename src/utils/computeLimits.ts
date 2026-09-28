@@ -8,7 +8,7 @@
  * matrix), making the dashboard freeze. These caps bound each such computation.
  *
  * Values match existing precedent (MAX_TAGS_AFTER_TRUNCATION = 50 in
- * pendingChromeStorageQueue.ts, MAX_NODES = 50 in tagClusterPanel.ts).
+ * pendingChromeStorageQueue.ts, MAX_NODES = 50 in clusterGraphRenderer.ts).
  */
 
 import { QUERY_CAPS } from '../messaging/limits.js';
