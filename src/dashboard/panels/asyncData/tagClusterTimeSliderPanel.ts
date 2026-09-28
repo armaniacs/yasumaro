@@ -19,7 +19,7 @@
  * stays static, so prefers-reduced-motion needs no handling here.
  */
 
-import { limitToTopNodes, type TagNode, type TagEdge } from '../../tagCooccurrence.js';
+import { type TagNode, type TagEdge } from '../../tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
@@ -28,7 +28,6 @@ import {
   MAX_QUERY_ROWS,
   MAX_TAG_CLUSTER_TAGS,
 } from '../../../utils/computeLimits.js';
-import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
@@ -44,12 +43,14 @@ import { formatLocalDateString } from '../../../utils/localDate.js';
 import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import {
+  limitClusterNodes,
+  renderClusterGraph,
+  showRowCapNotice,
+} from './clusterGraphRenderer.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
-import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 
-const MAX_NODES = 50;
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_WINDOW_DAYS = 30;
 
 interface HalfBounds {
@@ -152,15 +153,14 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       // more rows the analyzed set is a prefix — the PBI requires the
       // truncation to be visible per half.
       if (fetched.capped) {
-        sideNotices.setMessage(
-          'rowCap',
-          msg(
-            'tagClusterCompareCapNotice',
-            { max: MAX_QUERY_ROWS, shown: fetched.rows.length, total: fetched.total },
-            `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${fetched.rows.length} of ${fetched.total} records in this half.`,
-          ),
-        );
-        sideNotices.show('rowCap');
+        showRowCapNotice({
+          notices: sideNotices,
+          messageKey: 'tagClusterCompareCapNotice',
+          fallback: `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${fetched.rows.length} of ${fetched.total} records in this half.`,
+          shown: fetched.rows.length,
+          total: fetched.total,
+          limit: MAX_QUERY_ROWS,
+        });
       }
 
       // Narrow to the most frequent tags BEFORE cooccurrence — same O(n^2)
@@ -179,12 +179,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
         return { nodes: [], edges: [], ok: true, empty: true };
       }
 
-      const limited = limitToTopNodes(nodes, edges, MAX_NODES);
-      if (limited.truncated) {
-        sideNotices.show('truncated');
-      } else {
-        sideNotices.hide('truncated');
-      }
+      const limited = limitClusterNodes(nodes, edges, sideNotices);
       return { nodes: limited.nodes, edges: limited.edges, ok: true, empty: false };
     } catch (error) {
       loadingManager.cleanup();
@@ -223,80 +218,32 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     );
     // WHY: both sides size their canvas from the union node count so the
     // circular seeds share the same geometry, not just the same order.
-    const canvasSize = computeCanvasSize(unionCount);
-    const positions = computeLayout(orderedNodes, data.edges, canvasSize.width, canvasSize.height);
     loadingManager.updateStep(2);
 
-    for (const edge of data.edges) {
-      const a = positions.get(edge.source);
-      const b = positions.get(edge.target);
-      if (!a || !b) continue;
-      const line = document.createElementNS(SVG_NS, 'line');
-      line.setAttribute('x1', String(a.x));
-      line.setAttribute('y1', String(a.y));
-      line.setAttribute('x2', String(b.x));
-      line.setAttribute('y2', String(b.y));
-      line.setAttribute('class', 'tag-cluster-edge');
-      line.setAttribute('stroke-width', String(Math.min(edge.weight, 5)));
-      side.svg.appendChild(line);
-    }
-
-    for (const node of orderedNodes) {
-      const pos = positions.get(node.tag);
-      if (!pos) continue;
-      const circle = document.createElementNS(SVG_NS, 'circle');
-      circle.setAttribute('cx', String(pos.x));
-      circle.setAttribute('cy', String(pos.y));
-      circle.setAttribute('r', String(4 + Math.min(node.count, 20)));
-      circle.setAttribute('class', 'tag-cluster-node tag-cluster-compare-node');
-      // WHY: the hue travels as a CSS custom property so dashboard.css can
-      // resolve the scheme-appropriate fixed saturation/lightness per node.
-      circle.style.setProperty('--tag-hue', String(tagHue(node.tag)));
-      const activate = (): void => {
-        navigateToHistoryWithTag(node.tag);
-      };
-      makeGraphNodeAccessible(circle, `#${node.tag} (${node.count})`, activate);
-      circle.addEventListener('click', () => {
-        if (side.panZoom?.wasDragSuppressingClick()) return;
-        activate();
-      });
-
-      const title = document.createElementNS(SVG_NS, 'title');
-      title.textContent = `#${node.tag} (${node.count})`;
-      circle.appendChild(title);
-
-      const text = document.createElementNS(SVG_NS, 'text');
-      text.setAttribute('x', String(pos.x));
-      text.setAttribute('y', String(pos.y));
-      text.setAttribute('dy', '0.3em');
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('class', 'tag-cluster-text');
-      text.setAttribute('pointer-events', 'none');
-      text.textContent = `#${node.tag}`;
-
-      side.svg.appendChild(circle);
-      side.svg.appendChild(text);
-    }
-
-    // Text alternative for the graph (wordClusterPanel precedent).
-    side.svg.setAttribute('role', 'img');
-    side.svg.setAttribute(
-      'aria-label',
-      `${getMessageOr(halfLabelKey, halfLabelFallback)}: ${orderedNodes
-        .slice(0, 10)
-        .map((node) => `#${node.tag}`)
-        .join(', ')}`,
-    );
+    side.panZoom = renderClusterGraph({
+      svg: side.svg,
+      nodes: orderedNodes,
+      edges: data.edges,
+      canvasNodeCount: unionCount,
+      // WHY: the compare panel is the only one that colors a node by its tag
+      // hue and marks it with the compare class, so a tag common to both
+      // halves looks the same on both sides.
+      nodeClassName: 'tag-cluster-node tag-cluster-compare-node',
+      hueByTag: true,
+      ariaLabel: (rendered) =>
+        `${getMessageOr(halfLabelKey, halfLabelFallback)}: ${rendered
+          .slice(0, 10)
+          .map((node) => `#${node.tag}`)
+          .join(', ')}`,
+      buttons: {
+        zoomInBtn: side.zoomInBtn,
+        zoomOutBtn: side.zoomOutBtn,
+        resetBtn: side.zoomResetBtn,
+      },
+    });
 
     loadingManager.updateStep(3);
     loadingManager.cleanup();
-
-    side.panZoom = new TagClusterPanZoomController(side.svg, canvasSize, {
-      zoomInBtn: side.zoomInBtn,
-      zoomOutBtn: side.zoomOutBtn,
-      resetBtn: side.zoomResetBtn,
-    });
-    side.panZoom.attach();
   }
 
   function appendDiffSection(host: HTMLElement, headingKey: string, headingFallback: string, items: Array<{ tag: string; delta: number | null }>): void {
