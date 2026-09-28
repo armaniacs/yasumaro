@@ -12,6 +12,7 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { flushBufferedExports } from './localMarkdownExportCore.js';
+import { formatLocalDateString } from '../utils/localDate.js';
 
 export const IDLE_FALLBACK_ALARM = 'yasumaro-local-md-flush';
 export const DAILY_FLUSH_ALARM = 'yasumaro-local-md-daily-flush';
@@ -21,11 +22,7 @@ const IMMEDIATE_DEBOUNCE_MIN = 1;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function getYesterdayDateString(): string {
-  const d = new Date(Date.now() - DAY_MS);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatLocalDateString(Date.now() - DAY_MS);
 }
 
 function getNextMidnightTimestamp(): number {
