@@ -13,6 +13,7 @@ import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import { buildRemovedCounts } from '../utils/commonTypes.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
 
@@ -419,12 +420,13 @@ function initCleansingFeedbackButton(): void {
       }
       const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
       await enqueueFeedback({ url, domain, htmlSnippet, removedByReason });
-      if (statusEl) statusEl.textContent = getMessageOr('reportCleansingFeedbackSuccess', '報告しました');
+      // 2000ms is the popup-only contract: the panel is too small to keep the
+      // dashboard's 3s/5s defaults.
+      showStatus(statusEl, getMessageOr('reportCleansingFeedbackSuccess', '報告しました'), 'success', { durationMs: 2000 });
     } catch (e) {
-      if (statusEl) statusEl.textContent = getMessageOr('reportCleansingFeedbackError', '報告に失敗しました');
+      showStatus(statusEl, getMessageOr('reportCleansingFeedbackError', '報告に失敗しました'), 'error', { durationMs: 2000 });
       logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
     }
-    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
     });
   });
 }

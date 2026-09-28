@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initGistSettings } from '../gistSettings.js';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 const { mockGetAll, mockSetAll, mockTestConnection, mockGetSharedSqliteClient, mockSqliteClientConstructor } = vi.hoisted(() => ({
   mockGetAll: vi.fn(),
@@ -209,6 +210,28 @@ describe('initGistSettings', () => {
           github_pat: '',
         });
       });
+    });
+
+    it('keeps the success message: the gist status does not auto-clear', async () => {
+      useTimerClock();
+      try {
+        const { saveBtn, statusEl } = setupDom();
+        mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+        mockSetAll.mockResolvedValue(undefined);
+
+        await initGistSettings();
+        saveBtn.click();
+        for (let i = 0; i < 5 && statusEl.textContent === ''; i++) {
+          await vi.advanceTimersByTimeAsync(0);
+        }
+        expect(statusEl.className).toBe('status-message success');
+
+        await vi.advanceTimersByTimeAsync(60000);
+        expect(statusEl.textContent).toBe('Gist settings saved');
+        expect(statusEl.className).toBe('status-message success');
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

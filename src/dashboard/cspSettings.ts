@@ -15,6 +15,7 @@ import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
+import { showStatus, type StatusType } from '../utils/ui/settingsUiHelper.js';
 import { ProviderCatalog } from '../background/ai/providerCatalog.js';
 
 /**
@@ -162,10 +163,10 @@ export class CspSettingsController {
         conditional_csp_providers: selectedProviders
       });
 
-      this.showMessage(dom.cspSaveMessage, getMessage('cspSaveSuccess'));
+      this.showMessage(dom.cspSaveMessage, getMessage('cspSaveSuccess'), 'success');
     } catch (error) {
       addLog(LogType.ERROR, 'CSP settings save failed', { error: errorMessage(error) });
-      this.showMessage(this.resolveDom().cspSaveMessage, getMessage('cspSaveError'));
+      this.showMessage(this.resolveDom().cspSaveMessage, getMessage('cspSaveError'), 'error');
     }
   }
 
@@ -219,22 +220,20 @@ export class CspSettingsController {
       });
 
       await this.loadCSPSettings();
-      this.showMessage(this.resolveDom().cspResetMessage, getMessage('cspResetSuccess'));
+      this.showMessage(this.resolveDom().cspResetMessage, getMessage('cspResetSuccess'), 'success');
     } catch (error) {
       addLog(LogType.ERROR, 'CSP settings reset failed', { error: errorMessage(error) });
-      this.showMessage(this.resolveDom().cspResetMessage, getMessage('cspResetError'));
+      this.showMessage(this.resolveDom().cspResetMessage, getMessage('cspResetError'), 'error');
     }
   }
 
   /**
    * 保存/リセットメッセージ要素にテキストを表示し、3秒後に非表示化する。
    * window.alert の代替として、cspSaveMessage/cspResetMessage 要素にインライン表示する。
+   * durationMs は成功・エラーとも 3000ms（元の style.display 経路の契約）。
    */
-  private showMessage(element: HTMLElement | null, text: string): void {
-    if (!element) return;
-    element.textContent = text;
-    element.style.display = 'block';
-    setTimeout(() => { element.style.display = 'none'; }, 3000);
+  private showMessage(element: HTMLElement | null, text: string, type: StatusType): void {
+    showStatus(element, text, type, { durationMs: 3000 });
   }
 
   private static resolveProviderOrigin(provider: string): string | null {

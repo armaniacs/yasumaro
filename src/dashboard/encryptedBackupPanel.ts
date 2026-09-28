@@ -11,6 +11,7 @@ import {
   isEncryptedBackupFile,
 } from './encryptedBackupService.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 /** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
 const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
@@ -29,10 +30,7 @@ function getExportFilename(): string {
 }
 
 function setStatus(message: string, isError: boolean): void {
-  const el = document.getElementById('encryptedBackupStatus');
-  if (!el) return;
-  el.textContent = message;
-  el.className = isError ? 'status-message error' : 'status-message success';
+  showStatus('encryptedBackupStatus', message, isError ? 'error' : 'success', { autoClear: false });
 }
 
 function downloadJson(data: unknown, filename: string): void {
