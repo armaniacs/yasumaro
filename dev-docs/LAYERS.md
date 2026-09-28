@@ -32,6 +32,7 @@ src/utils/crypto/cryptoParams.ts
 src/utils/logger/types.ts
 src/utils/logger/buffer.ts
 src/utils/commonTypes.ts
+src/utils/svgNamespace.ts
 src/utils/types.ts
 src/utils/urlEntry.ts
 src/utils/luhn.ts

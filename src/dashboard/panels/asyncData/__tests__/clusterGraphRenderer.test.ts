@@ -9,11 +9,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
   MAX_NODES,
-  SVG_NS,
   limitClusterNodes,
   renderClusterGraph,
   showRowCapNotice,
 } from '../clusterGraphRenderer.js';
+import { SVG_NS } from '../../../../utils/svgNamespace.js';
 import { PanelNotices } from '../../PanelNotices.js';
 import { tagHue } from '../../../tagClusterColor.js';
 import type { TagEdge, TagNode } from '../../../tagCooccurrence.js';
