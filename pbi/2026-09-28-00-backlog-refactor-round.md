@@ -76,3 +76,15 @@ RICE = Reach（今後 1 年の関与頻度 1-10）× Impact（3=実害解消 / 2
 - `BackendOrError` / `sqliteValidators.ts` のデコーダ（mapped-type exhaustive assert の規範実装）
 - production の non-null assertion は 7 件のみで全て直前ガード付き
 - production の `JSON.parse` 12 箇所のうち 11 箇所はガード済み（唯一の未ガードが PBI 04）
+
+## ラウンド完了時に判明した残課題（2026-09-28 バッチ 1〜3 の実装から）
+
+| 項目 | 種別 | 再検討トリガー |
+|------|------|----------------|
+| status 表示の stale-timer race（古いタイマーが新しいメッセージを clear し得る。showStatus 統一で構造は 1 箇所に集約済み、タイマー管理だけが残留） | fix | 次回 settingsUiHelper 改修時（`src/utils/ui/settingsUiHelper.ts`） |
+| showStatus の全要素書き換えが markup 側 utility class（`status-message-spaced` / `mt-4`）を落とす | refactor | 次回 status 要素のマークアップ変更時（`src/utils/ui/statusMessageCssContract.test.ts` に pin 済み） |
+| popup `statusPanel.ts` の `mainStatus` writer（:317-350）が素 class を書く旧経路のまま（15 の 8 変種対象外だった） | refactor | 次回 popup statusPanel 改修時 |
+| `SVG_NS` が `src/dashboard/tagClusterLoading.ts:15` と `tagFrequencyTimelinePanel.ts:37` に残留（17 は panels/asyncData 配下のみ単一化。root→panels 方向の import 制約が理由） | refactor | 次回 tagClusterLoading 改修時。`src/utils/computeLimits.ts:11` の MAX_NODES 参照コメントも同時に更新 |
+| DST 曖昧時刻（夜中遷移ゾーン例: America/Santiago）で `setHours(23,59,59,999)` が反復 23:00-23:59 を取りこぼす（periodFilter 由来の継承仕様。CI の TZ=UTC では観測不能） | investigate | タイムゾーン多様性の製品要件が生じた時（`src/utils/localDate.ts`） |
+| aiSummaryCleansingSettingsV2 の full-snapshot writer 残存（02 のスコープ外。delta への局所修正で完結） | refactor | 次回 aiSummaryCleansingSettingsV2 改修時（`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151/:171`） |
+| 新規 cleansing feedback エントリに AI 統計が永続化されない（`CleansingFeedbackEntry` の wire 契約変更が必要 = 別 PBI） | fix | feedback データの分析要件が生じた時（`src/utils/aiSummaryCleaner/feedbackQueue.ts`） |
