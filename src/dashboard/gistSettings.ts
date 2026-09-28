@@ -18,6 +18,7 @@ import { StorageKeys, Settings } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import type { EncryptedData } from '../utils/crypto/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 export interface GistConnectionTestResult {
   success: boolean;
@@ -51,10 +52,7 @@ function stringOrEmpty(value: string | EncryptedData | undefined): string {
 }
 
 function setStatus(message: string, isError: boolean): void {
-  const el = document.getElementById('gistStatus');
-  if (!el) return;
-  el.textContent = message;
-  el.className = isError ? 'status-message error' : 'status-message success';
+  showStatus('gistStatus', message, isError ? 'error' : 'success', { autoClear: false });
 }
 
 export async function initGistSettings(

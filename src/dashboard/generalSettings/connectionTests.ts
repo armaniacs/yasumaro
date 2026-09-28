@@ -22,8 +22,9 @@ import type { FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
-import { saveDashboardSettings } from '../settingsPipeline.js';
+import { saveDashboardSettings, saveErrorText } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../aiTestResultView.js';
 import { subscribeAiTestProgress, generateAiTestRunId } from '../aiTestProgressClient.js';
 import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
@@ -38,6 +39,22 @@ const SETTINGS_FORM_SELECTOR = '#panel-general';
 
 const FIREFOX_CERT_GUIDE_FALLBACK =
   'Firefox keeps its own certificate store, separate from the OS one, so a certificate installed on the operating system can still be untrusted in Firefox. Do one of the following: (1) open the link above in a new tab and add a certificate exception, or (2) import the CA certificate under Settings → Privacy & Security → Certificates. Link target: {url}';
+
+/**
+ * Renders a saveDashboardSettings failure into a general-settings status area.
+ * The wording comes from settingsPipeline (one definition for all four call
+ * sites) and the message is not self-clearing: the next save or test replaces
+ * it. The status area is the whole record of a failed save, so autoClear is off
+ * here on purpose.
+ */
+function showSaveError(
+  statusEl: HTMLElement,
+  error: string | undefined,
+  options: { syncTop?: boolean } = {},
+): void {
+  showStatus(statusEl, saveErrorText(error), 'error', { autoClear: false });
+  if (options.syncTop) syncStatusToTop();
+}
 
 /** What the Dashboard needs from a TEST_OBSIDIAN answer: wording plus the
  * structured kind. `failure` is absent on success. */
@@ -249,21 +266,8 @@ export async function handleSaveOnly(): Promise<void> {
   });
 
   if (!result.success) {
-    if (result.error === 'aiProviderPriority1Required') {
-      statusDiv.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-      statusDiv.className = 'error';
-      syncStatusToTop();
-      return;
-    }
-    if (result.error === 'aiProviderPriorityDuplicateWarning') {
-      statusDiv.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-      statusDiv.className = 'error';
-      syncStatusToTop();
-      return;
-    }
-    statusDiv.textContent = getMessageOr('saveError', '設定の保存に失敗しました。');
-    statusDiv.className = 'error';
-    syncStatusToTop();
+    showSaveError(statusDiv, result.error, { syncTop: true });
+    return;
   }
 }
 
@@ -390,15 +394,7 @@ export async function handleTestAi(): Promise<void> {
         includeTiming: true,
       });
       if (!saveResult.success) {
-        if (saveResult.error === 'aiProviderPriority1Required') {
-          statusDiv.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-        } else if (saveResult.error === 'aiProviderPriorityDuplicateWarning') {
-          statusDiv.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-        } else {
-          statusDiv.textContent = getMessageOr('saveError', '設定の保存に失敗しました。');
-        }
-        statusDiv.className = 'error';
-        syncStatusToTop();
+        showSaveError(statusDiv, saveResult.error, { syncTop: true });
         return;
       }
 
@@ -478,14 +474,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
       includeTiming: true,
     });
     if (!saveResult.success) {
-      if (saveResult.error === 'aiProviderPriority1Required') {
-        statusTopDiv.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-      } else if (saveResult.error === 'aiProviderPriorityDuplicateWarning') {
-        statusTopDiv.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-      } else {
-        statusTopDiv.textContent = getMessageOr('saveError', '設定の保存に失敗しました。');
-      }
-      statusTopDiv.className = 'error';
+      showSaveError(statusTopDiv, saveResult.error);
       return;
     }
 

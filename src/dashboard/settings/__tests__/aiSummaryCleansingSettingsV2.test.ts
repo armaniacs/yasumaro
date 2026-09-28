@@ -703,6 +703,22 @@ describe('setupAiSummaryCleansingEventListeners', () => {
     expect(mockLogError).toHaveBeenCalled();
   });
 
+  it('save button error does not self-clear: the reason is the only record', async () => {
+    vi.useFakeTimers();
+    createFullDom();
+    mockSaveSettings.mockRejectedValueOnce(new Error('fail'));
+    setupAiSummaryCleansingEventListeners();
+    const btn = document.getElementById('saveAiSummaryCleansingSettings') as HTMLButtonElement;
+    const status = document.getElementById('aiSummaryCleansingSettingsStatus') as HTMLElement;
+    btn.click();
+    await vi.advanceTimersByTimeAsync(0);
+    await vi.waitFor(() => expect(status.textContent).toBe('Save error'));
+
+    await vi.advanceTimersByTimeAsync(60000);
+    expect(status.textContent).toBe('Save error');
+    expect(status.className).toBe('status-message error');
+  });
+
   it('save button error fallback message when i18n empty', async () => {
     vi.useFakeTimers();
     createFullDom();

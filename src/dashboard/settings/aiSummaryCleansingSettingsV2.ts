@@ -12,6 +12,7 @@ import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleane
 import { type RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
 import { createCleansingPresetStore } from './cleansingPresetStore.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // The preset store owns the ordering constraints (apply epoch, dual write,
 // busy windows) that used to leak into this file's module state. migrateTo
@@ -488,18 +489,16 @@ export function setupAiSummaryCleansingEventListeners(): void {
                 
                 // ステータスメッセージを表示
                 if (statusElement) {
-                    statusElement.textContent = getMessageOr('settingsSaved', '設定を保存しました');
-                    statusElement.className = 'status-message success';
-                    setTimeout(() => {
-                        statusElement.textContent = '';
-                        statusElement.className = 'status-message';
-                    }, 3000);
+                    showStatus(statusElement, getMessageOr('settingsSaved', '設定を保存しました'), 'success');
                 }
             } catch (error) {
                 logError('Failed to save AI summary cleansing settings', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
                 if (statusElement) {
-                    statusElement.textContent = getMessageOr('settingsSaveError', '設定の保存に失敗しました');
-                    statusElement.className = 'status-message error';
+                    // autoClear opt-out: the failure reason is the only record of
+                    // why the save did not land, so it stays until the next save
+                    // overwrites it. Grep before changing this to a self-clearing
+                    // message.
+                    showStatus(statusElement, getMessageOr('settingsSaveError', '設定の保存に失敗しました'), 'error', { autoClear: false });
                 }
             }
         });

@@ -8,7 +8,7 @@
  * reach the wire shape.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { waitForMock } from '../../../testDir/waitPolicy.js';
+import { waitForMock, useTimerClock } from '../../../testDir/waitPolicy.js';
 import type { ContentResponse } from '../../messaging/types.js';
 
 const {
@@ -124,5 +124,53 @@ describe('statusPanel cleansing feedback synthesis', () => {
   it('stores an empty count map when the content request fails', async () => {
     await clickReport(null);
     expect(mockEnqueueFeedback.mock.calls[0][0].removedByReason).toEqual({});
+  });
+});
+
+describe('statusPanel cleansing feedback status render', () => {
+  it('keeps the popup-only 2000ms clear and the status-message contract', async () => {
+    useTimerClock();
+    try {
+      mockRequestContentFromTab.mockResolvedValue(null);
+      await initStatusPanel();
+      document.getElementById('reportCleansingFeedbackBtn')?.click();
+      // 0ms advances, never a guessed duration: the clock has to stay below the
+      // 2000ms under test or the assertion would be measuring the clear.
+      const status = document.getElementById('reportCleansingFeedbackStatus')!;
+      for (let i = 0; i < 5 && !status.classList.contains('success'); i++) {
+        await vi.advanceTimersByTimeAsync(0);
+      }
+
+      expect(status.textContent).toBeTruthy();
+      expect(status.className).toBe('status-message success');
+
+      vi.advanceTimersByTime(1999);
+      expect(status.textContent).toBeTruthy();
+
+      vi.advanceTimersByTime(1);
+      expect(status.textContent).toBe('');
+      expect(status.className).toBe('status-message');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('renders the error message through the same contract', async () => {
+    useTimerClock();
+    try {
+      mockRequestContentFromTab.mockResolvedValue(null);
+      mockEnqueueFeedback.mockRejectedValueOnce(new Error('queue full'));
+      await initStatusPanel();
+      document.getElementById('reportCleansingFeedbackBtn')?.click();
+      const status = document.getElementById('reportCleansingFeedbackStatus')!;
+      for (let i = 0; i < 5 && !status.classList.contains('error'); i++) {
+        await vi.advanceTimersByTimeAsync(0);
+      }
+
+      expect(status.className).toBe('status-message error');
+      expect(status.textContent).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

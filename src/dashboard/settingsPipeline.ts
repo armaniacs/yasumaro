@@ -21,6 +21,7 @@ import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { syncStatusToTop } from './statusView.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 /**
  * General settings validation schema — derived from the descriptor table
@@ -46,6 +47,24 @@ function resolveValidationPairs(schema: ValidationSchema): ErrorPair[] {
     document.getElementById(field.elementId) as HTMLInputElement | null,
     field.errorId,
   ]);
+}
+
+/**
+ * Save-failure wording, defined once for the four call sites that render a
+ * saveDashboardSettings failure into the general-settings status area. Each of
+ * them used to re-spell the same i18n key and fallback inline, so the wording
+ * could drift per call site.
+ */
+const SAVE_ERROR_MESSAGES: Readonly<Record<string, readonly [key: string, fallback: string]>> = {
+  aiProviderPriority1Required: ['aiProviderPriority1Required', 'Priority 1 is required'],
+  aiProviderPriorityDuplicateWarning: ['aiProviderPriorityDuplicateWarning', 'Duplicate provider and model'],
+};
+
+/** Message for a saveDashboardSettings failure; unknown errors share one text. */
+export function saveErrorText(error: string | undefined): string {
+  const entry = error ? SAVE_ERROR_MESSAGES[error] : undefined;
+  if (entry) return getMessageOr(entry[0], entry[1]);
+  return getMessageOr('saveError', '設定の保存に失敗しました。');
 }
 
 export interface SaveSettingsOptions {
@@ -157,8 +176,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
         // status エリアにも表示して保存を中断
         const statusEl = document.getElementById('status') as HTMLElement | null;
         if (statusEl) {
-          statusEl.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-          statusEl.className = 'error';
+          showStatus(statusEl, saveErrorText('aiProviderPriority1Required'), 'error', { autoClear: false });
           try {
             syncStatusToTop();
           } catch {}
