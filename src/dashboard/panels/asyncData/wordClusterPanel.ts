@@ -4,7 +4,7 @@
  * from each row's summary+title (keywordExtractor), fakes them as "#kw"
  * pseudo-tags (wordClusterAdapter), then reuses the tag-cluster pipeline
  * unchanged: narrowEntriesToTopTagsHybrid → computeTagCooccurrenceHybrid →
- * limitToTopNodes → computeLayout → SVG with pan/zoom.
+ * the shared clusterGraphRenderer (node cap, layout, SVG with pan/zoom).
  *
  * Fetch strategy follows the domain-analysis panel (explicit-apply): the
  * panel passes no onChange handler and the Run button reads the current
@@ -18,7 +18,7 @@
  * search navigation).
  */
 
-import { limitToTopNodes, type TagNode } from '../../tagCooccurrence.js';
+import { type TagNode } from '../../tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
@@ -27,7 +27,6 @@ import {
   MAX_QUERY_ROWS,
   MAX_TAG_CLUSTER_TAGS,
 } from '../../../utils/computeLimits.js';
-import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { buildWordClusterRows } from '../../wordClusterAdapter.js';
@@ -35,12 +34,13 @@ import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import {
+  limitClusterNodes,
+  renderClusterGraph,
+  showRowCapNotice,
+} from './clusterGraphRenderer.js';
 import { type PanelLifecycle } from '../types.js';
-import { navigateToHistoryWithTag } from '../navigateToHistory.js';
-import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 
-const MAX_NODES = 50;
-const SVG_NS = 'http://www.w3.org/2000/svg';
 // Keywords are longer than tags; the aria-label stays a compact summary.
 const ARIA_LABEL_MAX_KEYWORDS = 8;
 
@@ -99,15 +99,17 @@ export function createWordClusterPanel(): PanelLifecycle {
         loadingManager.updateStep(0);
 
         // WHY: queryLogs caps the fetch at MAX_QUERY_ROWS, so when the period
-        // holds more rows the analyzed set is a prefix — the PBI requires the
-        // truncation to be visible (BDD "上限 10000 行での期間フィルタ").
-        if (fetched.capped && rowCapNotice) {
-          rowCapNotice.textContent = msg(
-            'wordClusterRowCapNotice',
-            { max: MAX_QUERY_ROWS, shown: rows.length, total: fetched.total },
-            `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${rows.length} of ${fetched.total} records.`,
-          );
-          notices.show('rowCap');
+        // holds more rows the analyzed set is a prefix — the PBI requires
+        // the truncation to be visible (BDD "上限 10000 行での期間フィルタ").
+        if (fetched.capped) {
+          showRowCapNotice({
+            notices,
+            messageKey: 'wordClusterRowCapNotice',
+            fallback: `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${rows.length} of ${fetched.total} records.`,
+            shown: rows.length,
+            total: fetched.total,
+            limit: MAX_QUERY_ROWS,
+          });
         }
 
         const adapter = buildWordClusterRows(rows);
@@ -159,85 +161,29 @@ export function createWordClusterPanel(): PanelLifecycle {
           return;
         }
 
-        const limited = limitToTopNodes(nodes, edges, MAX_NODES);
-        if (limited.truncated) {
-          notices.show('truncated');
-        } else {
-          notices.hide('truncated');
-        }
-
-        const canvasSize = computeCanvasSize(limited.nodes.length);
-        const positions = computeLayout(limited.nodes, limited.edges, canvasSize.width, canvasSize.height);
+        const limited = limitClusterNodes(nodes, edges, notices);
         loadingManager.updateStep(2);
 
-        for (const edge of limited.edges) {
-          const a = positions.get(edge.source);
-          const b = positions.get(edge.target);
-          if (!a || !b) continue;
-          const line = document.createElementNS(SVG_NS, 'line');
-          line.setAttribute('x1', String(a.x));
-          line.setAttribute('y1', String(a.y));
-          line.setAttribute('x2', String(b.x));
-          line.setAttribute('y2', String(b.y));
-          line.setAttribute('class', 'tag-cluster-edge');
-          line.setAttribute('stroke-width', String(Math.min(edge.weight, 5)));
-          svg.appendChild(line);
-        }
-
-        for (const node of limited.nodes) {
-          const pos = positions.get(node.tag);
-          if (!pos) continue;
-          const circle = document.createElementNS(SVG_NS, 'circle');
-          circle.setAttribute('cx', String(pos.x));
-          circle.setAttribute('cy', String(pos.y));
-          circle.setAttribute('r', String(4 + Math.min(node.count, 20)));
-          circle.setAttribute('class', 'tag-cluster-node');
-          // WHY: keyword nodes reuse the tag search navigation — keywords are
-          // not stored tags, so the history search may be empty, accepted for
-          // v1 (PBI: click-through unified on search navigation).
-          // Keyboard/AT access (WCAG 2.1.1/1.1.1) via the shared helper.
-          const activate = (): void => {
-            navigateToHistoryWithTag(node.tag);
-          };
-          makeGraphNodeAccessible(circle, `${node.tag} (${node.count})`, activate);
-          circle.addEventListener('click', () => {
-            if (panZoomController?.wasDragSuppressingClick()) return;
-            activate();
-          });
-
-          const title = document.createElementNS(SVG_NS, 'title');
-          title.textContent = `${node.tag} (${node.count})`;
-          circle.appendChild(title);
-
-          const text = document.createElementNS(SVG_NS, 'text');
-          text.setAttribute('x', String(pos.x));
-          text.setAttribute('y', String(pos.y));
-          text.setAttribute('dy', '0.3em');
-          text.setAttribute('text-anchor', 'middle');
-          text.setAttribute('class', 'tag-cluster-text');
-          text.setAttribute('pointer-events', 'none');
-          text.textContent = node.tag;
-
-          svg.appendChild(circle);
-          svg.appendChild(text);
-        }
-
-        // WHY: a text alternative for the graph (PBI a11y requirement) — the
-        // top keywords list changes per render, so the aria-label is rebuilt
-        // from the localized panel title plus the rendered keyword list.
-        svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', buildGraphAriaLabel(limited.nodes));
+        panZoomController = renderClusterGraph({
+          svg,
+          nodes: limited.nodes,
+          edges: limited.edges,
+          // WHY: a text alternative for the graph (PBI a11y requirement) — the
+          // top keyword list changes per render, so the aria-label is rebuilt
+          // from the localized panel title plus the rendered keyword list.
+          ariaLabel: buildGraphAriaLabel,
+          // Keywords are not tags, so the graph drops the tag panels' '#'.
+          labelPrefix: '',
+          buttons: {
+            zoomInBtn: document.getElementById('wordClusterZoomIn'),
+            zoomOutBtn: document.getElementById('wordClusterZoomOut'),
+            resetBtn: document.getElementById('wordClusterZoomReset'),
+          },
+        });
 
         loadingManager.updateStep(3);
         loadingManager.cleanup();
         notices.hide('loading');
-
-        panZoomController = new TagClusterPanZoomController(svg, canvasSize, {
-          zoomInBtn: document.getElementById('wordClusterZoomIn'),
-          zoomOutBtn: document.getElementById('wordClusterZoomOut'),
-          resetBtn: document.getElementById('wordClusterZoomReset'),
-        });
-        panZoomController.attach();
       } catch (error) {
         loadingManager.cleanup();
         notices.hide('loading');
