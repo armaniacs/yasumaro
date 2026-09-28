@@ -232,9 +232,16 @@ describe('dateRangeFromSelectedDate', () => {
 
   it('converts a selected date into the local-time range for that day', () => {
     const range = dateRangeFromSelectedDate('2026-08-08');
-    const start = new Date('2026-08-08T00:00:00').getTime();
+    // WHY the numeric Date constructor on both sides: it reads the local zone,
+    // so the expectation holds in any TZ.
+    const start = new Date(2026, 7, 8, 0, 0, 0, 0).getTime();
+    const end = new Date(2026, 7, 8, 23, 59, 59, 999).getTime();
     expect(range.since).toBe(start);
-    expect(range.until).toBe(start + 86_400_000 - 1);
+    // This expectation used to be `start + 86_400_000 - 1`, which pinned the
+    // bug: a DST day is 23h or 25h, so the fixed-offset end missed the last
+    // hour of a 25h day and spilled an hour into the next day on a 23h day
+    // (PBI 2026-09-28-11). The end is now the local 23:59:59.999.
+    expect(range.until).toBe(end);
   });
 
   it('does not overlap the next day', () => {

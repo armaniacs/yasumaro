@@ -1,6 +1,7 @@
 import type { MarkdownTemplateEntryData } from '../../../utils/types.js';
 import { withAtomicKeys } from '../../../utils/storage/storageTransaction.js';
 import { DAILY_FLUSH_ALARM } from '../../localMarkdownIdleFlusher.js';
+import { formatLocalDateString } from '../../../utils/localDate.js';
 
 export interface MarkdownEntry {
   url: string;
@@ -78,9 +79,5 @@ export class MarkdownBufferManager {
 }
 
 function getTodayDateString(): string {
-  const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatLocalDateString(Date.now());
 }

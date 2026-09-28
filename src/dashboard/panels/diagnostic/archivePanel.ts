@@ -19,6 +19,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { cutoffMsFromLocalDate, assertCutoffPair, MAX_ARCHIVE_FILE_BYTES } from '../../../utils/archiveGuards.js';
 import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { tOrKey as localized } from '../../../utils/i18n.js';
+import { formatLocalDateString } from '../../../utils/localDate.js';
 import { createArchiveSessionStore } from './archiveSessionStore.js';
 
 /** Per-message binary payload — keeps base64 hops under the 10MB cap. */
@@ -57,10 +58,7 @@ export function createArchivePanel(): PanelLifecycle {
         if (statusEl) statusEl.setAttribute('aria-busy', String(busy));
       };
 
-      const isoToday = (): string => {
-        const d = new Date();
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      };
+      const isoToday = (): string => formatLocalDateString(Date.now());
       if (dateInput && !dateInput.value) dateInput.value = isoToday();
       if (dateInput) dateInput.max = isoToday();
 

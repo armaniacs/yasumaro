@@ -40,6 +40,7 @@ import {
   parseDateInput,
 } from '../../components/periodFilter.js';
 import { splitPeriodInHalves, type PeriodHalves } from '../../periodSplit.js';
+import { formatLocalDateString } from '../../../utils/localDate.js';
 import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
@@ -73,10 +74,7 @@ interface SideData {
 
 /** Local-date YYYY-MM-DD for a date input's value attribute. */
 function toDateInputValue(ts: number): string {
-  const d = new Date(ts);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
+  return formatLocalDateString(ts);
 }
 
 function clearChildren(element: HTMLElement): void {

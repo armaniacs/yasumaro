@@ -1,5 +1,7 @@
 // src/utils/dailyNotePathBuilder.ts
 
+import { formatLocalDate } from './localDate.js';
+
 /**
  * URLのパス部分で特別な意味を持つメタ文字をエンコードする
  * フォルダ名に # や ? が含まれるとURLのパス解析が壊れるため
@@ -63,9 +65,18 @@ export function sanitizePathComponent(component: string): string {
  * @throws {Error} 無効なパス入力時
  */
 export function buildDailyNotePath(pathRaw: string, date: Date = new Date()): string {
-    const year = String(date.getFullYear());
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    // WHY slice from the end of the SSOT's YYYY-MM-DD rather than splitting on
+    // '-': the formatted string is already the only date format, and slicing
+    // backwards stays correct for the (unreachable) negative and 5+ digit years
+    // the numeric Date constructor allows. The year keeps whatever width
+    // formatLocalDateString emitted, which is the raw getFullYear() — this
+    // string lands inside user-configured vault paths, so padding the year
+    // would silently relocate existing notes. Widening the year is a separate
+    // decision, not a drive-by change.
+    const formatted = formatLocalDate(date);
+    const day = formatted.slice(-2);
+    const month = formatted.slice(-5, -3);
+    const year = formatted.slice(0, -6);
 
     if (!pathRaw) return `${year}-${month}-${day}`;
 

@@ -22,6 +22,7 @@
 
 import { parseTagsForDisplay } from '../utils/tagUtils.js';
 import { MAX_TAGS_PER_RECORD } from '../utils/computeLimits.js';
+import { formatLocalDateString } from '../utils/localDate.js';
 
 export type TimelineGranularity = 'week' | 'month';
 
@@ -105,10 +106,7 @@ export function nextBucketStart(start: number, granularity: TimelineGranularity)
 
 /** Locale-neutral YYYY-MM-DD label for a bucket start (local parts). */
 export function formatBucketDate(ts: number): string {
-  const d = new Date(ts);
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
+  return formatLocalDateString(ts);
 }
 
 function clampTopN(topN: number | undefined): number {
