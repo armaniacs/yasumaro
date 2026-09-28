@@ -197,6 +197,36 @@ describe('timeHeatmapPanel — PanelLifecycle', () => {
     expect(mockQueryLogs.mock.calls[1]![0]).toEqual({ limit: MAX_TIME_HEATMAP_ROWS });
   });
 
+  it('falls back to the declared last90 bounds when the filter host is missing', async () => {
+    mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+    const before = Date.now();
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <div id="timeHeatmapEmptyState" hidden></div>
+      <div id="timeHeatmapLimitNotice" hidden></div>
+      <div id="timeHeatmapGrid"></div>
+      <div id="timeHeatmapTableWrap"></div>
+    `;
+    document.body.appendChild(container);
+    const panel = createTimeHeatmapPanel();
+    panel.mount(container);
+    await panel.load?.();
+    const after = Date.now();
+
+    expect(container.querySelector('.period-filter')).toBeNull();
+    expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+    // Intentional behavior change (PBI 2026-09-28-09): the panel declares
+    // 'last90' but used to fall back to an all-time query without a filter
+    // host, silently rendering every record against a "last 90 days" label.
+    // The missing-host fallback is now the declared preset for every panel.
+    const args = mockQueryLogs.mock.calls[0]![0] as { since: number; until: number };
+    expect(args.until as number).toBeGreaterThanOrEqual(before);
+    expect(args.until as number).toBeLessThanOrEqual(after);
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(90 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(90 * DAY_MS + 60_000);
+  });
+
   it('destroy cleans up the filter and stays safe when called twice', async () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
     const { panel, container } = mountPanel();

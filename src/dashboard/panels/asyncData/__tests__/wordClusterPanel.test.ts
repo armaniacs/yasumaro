@@ -381,9 +381,15 @@ describe('wordClusterPanel — lifecycle (PBI 2026-09-24-07)', () => {
     panel.mount(container);
     await panel.load?.();
     expect(container.querySelector('.period-filter')).toBeNull();
-    // No Run button and no filter, but load() still queries unbounded —
-    // same behavior as the tag-cluster panel without a filter host.
+    // No Run button and no filter, but load() still queries — with the
+    // 'last7' preset the panel declares. Intentional behavior change
+    // (PBI 2026-09-28-09): a missing filter host used to widen the query to
+    // all time; every panel now falls back to its declared preset.
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
-    expect(lastQueryArgs()).toEqual({ limit: 10000 });
+    const args = lastQueryArgs();
+    expect(args.limit).toBe(10000);
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(7 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(7 * DAY_MS + 60_000);
   });
 });

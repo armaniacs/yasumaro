@@ -205,8 +205,9 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     expect(emptyState.textContent).toBe('No tagged history yet.');
   });
 
-  it('mounts without a filter host unchanged (no filter, no bounds)', async () => {
+  it("mounts without a filter host: no filter is rendered, and the query falls back to the declared 'last7' preset", async () => {
     mockQueryLogs.mockResolvedValue({ data: { rows: makeEntries(20), total: 20 } });
+    const before = Date.now();
     const container = document.createElement('div');
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.id = 'tagClusterSvg';
@@ -222,10 +223,21 @@ describe('tagClusterPanel — period filter (PBI 2026-09-24-04)', () => {
     const panel = createTagClusterPanel();
     panel.mount(container);
     await panel.load?.();
+    const after = Date.now();
 
     expect(container.querySelector('#tagClusterFilter')).toBeNull();
     expect(container.querySelector('.period-filter')).toBeNull();
     expect(mockQueryLogs).toHaveBeenCalledTimes(1);
-    expect(lastQueryArgs()).toEqual({ limit: 10000 });
+    // Intentional behavior change (PBI 2026-09-28-09): a missing filter host
+    // used to widen the query to all time while the panel still declared
+    // 'last7'. Every panel now falls back to the preset it declares, so the
+    // landing view is the same with and without the filter element.
+    const args = lastQueryArgs();
+    expect(args.limit).toBe(10000);
+    expect(args.until as number).toBeGreaterThanOrEqual(before);
+    expect(args.until as number).toBeLessThanOrEqual(after);
+    const span = (args.until as number) - (args.since as number);
+    expect(span).toBeGreaterThanOrEqual(7 * DAY_MS - 60_000);
+    expect(span).toBeLessThanOrEqual(7 * DAY_MS + 60_000);
   });
 });

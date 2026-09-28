@@ -12,10 +12,7 @@ import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
-import {
-  createPeriodFilter,
-  type PeriodFilterHandle,
-} from '../../components/periodFilter.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import {
   aggregateTimeHeatmap,
   gridMax,
@@ -56,61 +53,63 @@ function cellLabel(weekday: number, hour: number, count: number): string {
 export function createTimeHeatmapPanel(): PanelLifecycle {
   let gridEl: HTMLElement | null = null;
   let tableWrapEl: HTMLElement | null = null;
-  let filterHost: HTMLElement | null = null;
-  let filterHandle: PeriodFilterHandle | null = null;
   // WHY: the empty-state element doubles as the error surface (one element,
   // two modes) and the limit notice is fetch-scoped, so resetForReaggregate
   // semantics stay available if this panel ever gains a re-aggregation path.
   const notices = new PanelNotices();
-  let loadSeq = 0;
 
-  async function reload(): Promise<void> {
-    if (!gridEl || !tableWrapEl) return;
-    const seq = ++loadSeq;
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'timeHeatmapPanel',
+    notices: [notices],
+    filterHostSelector: '#timeHeatmapFilter',
+    // WHY: auto-apply on selection — each load is a single capped query (no
+    // paging), so the explicit Run-button pattern of the domain-analysis
+    // panel is not warranted here. Construction emits nothing
+    // (PBI 2026-09-24-11), so firing reload directly is duplicate-safe.
+    initialPreset: 'last90',
+    autoApply: true,
+    isReady: () => gridEl !== null && tableWrapEl !== null,
+    resetOutput: () => {
+      if (gridEl) gridEl.innerHTML = '';
+      if (tableWrapEl) tableWrapEl.innerHTML = '';
+    },
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // hosts for the body.
+    load: async ({ range, isStale }) => {
+      if (!gridEl || !tableWrapEl) return;
 
-    gridEl.innerHTML = '';
-    tableWrapEl.innerHTML = '';
-    // Fresh-fetch reset: restores the normal empty binding in case a previous
-    // load failed and swapped in the error message, and hides the limit
-    // notice until this fetch's own results decide visibility.
-    notices.reset();
+      try {
+        const fetched = await fetchPeriodRows({
+          ...range,
+          limit: MAX_TIME_HEATMAP_ROWS,
+          label: 'timeHeatmap',
+        });
+        const rows = fetched.rows;
+        if (isStale()) return;
 
-    try {
-      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
-      // the snapshot lets retries reuse one consistent window even if the
-      // user changes the filter mid-flight (stale loads bail via seq). No
-      // filter host → unbounded, like the pre-filter panel.
-      const bounds = filterHandle ? filterHandle.getRange() : {};
-      const fetched = await fetchPeriodRows({
-        ...bounds,
-        limit: MAX_TIME_HEATMAP_ROWS,
-        label: 'timeHeatmap',
-      });
-      const rows = fetched.rows;
-      if (seq !== loadSeq) return;
+        if (rows.length === 0) {
+          notices.showEmpty();
+          return;
+        }
 
-      if (rows.length === 0) {
-        notices.showEmpty();
-        return;
+        if (fetched.capped) {
+          notices.show('limit');
+        }
+
+        const grid = aggregateTimeHeatmap(rows.map((r) => r.created_at));
+        const max = gridMax(grid);
+        gridEl.appendChild(buildHeatmapTable(grid, max));
+        tableWrapEl.appendChild(buildNumericTable(grid));
+      } catch (error) {
+        console.error('[timeHeatmapPanel] error:', error);
+        if (isStale()) return;
+        notices.showError(
+          'dashboardTimeHeatmapError',
+          'Failed to load the time heatmap. Try again.',
+        );
       }
-
-      if (fetched.capped) {
-        notices.show('limit');
-      }
-
-      const grid = aggregateTimeHeatmap(rows.map((r) => r.created_at));
-      const max = gridMax(grid);
-      gridEl.appendChild(buildHeatmapTable(grid, max));
-      tableWrapEl.appendChild(buildNumericTable(grid));
-    } catch (error) {
-      console.error('[timeHeatmapPanel] error:', error);
-      if (seq !== loadSeq) return;
-      notices.showError(
-        'dashboardTimeHeatmapError',
-        'Failed to load the time heatmap. Try again.',
-      );
-    }
-  }
+    },
+  });
 
   return {
     id: 'panel-time-heatmap',
@@ -118,7 +117,6 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
     mount(container) {
       gridEl = container.querySelector('#timeHeatmapGrid');
       tableWrapEl = container.querySelector('#timeHeatmapTableWrap');
-      filterHost = container.querySelector('#timeHeatmapFilter');
       notices.register(
         'empty',
         container.querySelector('#timeHeatmapEmptyState'),
@@ -130,32 +128,15 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       notices.register('limit', container.querySelector('#timeHeatmapLimitNotice'), {
         fetchScoped: true,
       });
-      if (filterHost) {
-        filterHandle = createPeriodFilter({
-          initialPreset: 'last90',
-          onChange: () => {
-            // WHY: auto-apply on selection — each load is a single capped
-            // query (no paging), so the explicit Run-button pattern of the
-            // domain-analysis panel is not warranted here. Construction
-            // emits nothing (PBI 2026-09-24-11), so firing reload directly
-            // is duplicate-safe.
-            void reload();
-          },
-        });
-        filterHost.appendChild(filterHandle.element);
-      }
+      lifecycle.mount(container);
     },
     async load() {
-      await reload();
+      await lifecycle.reload();
     },
     destroy() {
-      loadSeq += 1;
-      filterHandle?.destroy();
-      filterHandle = null;
-      filterHost = null;
+      lifecycle.destroy();
       gridEl = null;
       tableWrapEl = null;
-      notices.clear();
     },
   };
 }

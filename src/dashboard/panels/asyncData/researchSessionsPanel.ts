@@ -17,11 +17,7 @@
  * only ever used to clear the list before a re-render.
  */
 
-import {
-  createPeriodFilter,
-  presetToRange,
-  type PeriodFilterHandle,
-} from '../../components/periodFilter.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
@@ -181,14 +177,12 @@ function renderSession(session: ResearchSession): HTMLLIElement {
 }
 
 export function createResearchSessionsPanel(): PanelLifecycle {
-  let filterHost: HTMLElement | null = null;
   let gapSelect: HTMLSelectElement | null = null;
   let emptyEl: HTMLElement | null = null;
   let rowCapEl: HTMLElement | null = null;
   let summaryEl: HTMLElement | null = null;
   let truncatedEl: HTMLElement | null = null;
   let listEl: HTMLElement | null = null;
-  let filterHandle: PeriodFilterHandle | null = null;
   let lastRows: SessionInput[] | null = null;
   let gapMinutes: number = DEFAULT_SESSION_GAP_MIN;
   const notices = new PanelNotices();
@@ -198,7 +192,6 @@ export function createResearchSessionsPanel(): PanelLifecycle {
   // PBI 04: the trail is opt-in, so the path tree and the metric table are
   // only meaningful — and only rendered — when consent is on.
   let navTrailActive = false;
-  let loadSeq = 0;
 
   /** Re-groups the cached rows. Never refetches — the gap is a different cut
    *  of the same records, not a different question. */
@@ -282,62 +275,72 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     }
   }
 
-  async function reload(): Promise<void> {
-    if (!listEl) return;
-    const seq = ++loadSeq;
-    const range = filterHandle ? filterHandle.getRange() : presetToRange('last7', Date.now());
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'researchSessionsPanel',
+    notices: [notices],
+    filterHostSelector: '#researchSessionsFilter',
+    initialPreset: 'last7',
+    // WHY: auto-apply here (unlike the explicit-apply domain-analysis panel)
+    // — a period change is a cheap single-page fetch, so an explicit Run
+    // button would only add a step.
+    autoApply: true,
+    isReady: () => listEl !== null,
+    resetOutput: () => {
+      if (listEl) listEl.innerHTML = '';
+    },
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // host for the body.
+    load: async ({ range, isStale }) => {
+      if (!listEl) return;
 
-    listEl.innerHTML = '';
-    notices.reset();
-
-    try {
-      // PBI 04: read the opt-in alongside the rows so the panel can choose a
-      // renderer. A consent read failure must not fail the panel load.
-      const [res] = await Promise.all([
-        fetchPeriodRows({
-        ...range,
-          limit: MAX_RESEARCH_SESSION_ROWS,
-          label: 'researchSessions',
-        }),
-        getNavTrailConsent().then(
-          (consent) => { navTrailActive = isNavTrailActive(consent); },
-          () => { navTrailActive = false; },
-        ),
-      ]);
-      if (seq !== loadSeq) return;
-      lastRows = res.rows;
-
-      if (res.capped) {
-        notices.setMessage(
-          'rowCap',
-          msg(
-            'researchSessions_rowCap',
-            { shown: res.rows.length },
-            'Grouped only the newest {shown} records. Shorten the period to include all records.',
+      try {
+        // PBI 04: read the opt-in alongside the rows so the panel can choose a
+        // renderer. A consent read failure must not fail the panel load.
+        const [res] = await Promise.all([
+          fetchPeriodRows({
+            ...range,
+            limit: MAX_RESEARCH_SESSION_ROWS,
+            label: 'researchSessions',
+          }),
+          getNavTrailConsent().then(
+            (consent) => { navTrailActive = isNavTrailActive(consent); },
+            () => { navTrailActive = false; },
           ),
-        );
-        notices.show('rowCap');
-      }
+        ]);
+        if (isStale()) return;
+        lastRows = res.rows;
 
-      if (res.rows.length === 0) {
-        listEl.innerHTML = '';
-        notices.showEmpty();
-        return;
+        if (res.capped) {
+          notices.setMessage(
+            'rowCap',
+            msg(
+              'researchSessions_rowCap',
+              { shown: res.rows.length },
+              'Grouped only the newest {shown} records. Shorten the period to include all records.',
+            ),
+          );
+          notices.show('rowCap');
+        }
+
+        if (res.rows.length === 0) {
+          listEl.innerHTML = '';
+          notices.showEmpty();
+          return;
+        }
+        render();
+      } catch (error) {
+        console.error('[researchSessionsPanel] error:', error);
+        if (isStale()) return;
+        lastRows = null;
+        notices.showError('researchSessionsError', 'Failed to load sessions.');
       }
-      render();
-    } catch (error) {
-      console.error('[researchSessionsPanel] error:', error);
-      if (seq !== loadSeq) return;
-      lastRows = null;
-      notices.showError('researchSessionsError', 'Failed to load sessions.');
-    }
-  }
+    },
+  });
 
   return {
     id: 'panel-research-sessions',
     category: 'async-data',
     mount(container) {
-      filterHost = container.querySelector('#researchSessionsFilter');
       gapSelect = container.querySelector('#researchSessionsGap');
       emptyEl = container.querySelector('#researchSessionsEmptyState');
       rowCapEl = container.querySelector('#researchSessionsRowCap');
@@ -355,18 +358,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       notices.register('rowCap', rowCapEl, { fetchScoped: true });
       notices.register('truncated', truncatedEl, { fetchScoped: true });
 
-      if (filterHost) {
-        // WHY: auto-apply here (unlike the explicit-apply domain-analysis
-        // panel) — a period change is a cheap single-page fetch, so an
-        // explicit Run button would only add a step.
-        filterHandle = createPeriodFilter({
-          initialPreset: 'last7',
-          onChange: () => {
-            void reload();
-          },
-        });
-        filterHost.appendChild(filterHandle.element);
-      }
+      lifecycle.mount(container);
 
       if (gapSelect) {
         for (const minutes of SESSION_GAP_OPTIONS_MIN) {
@@ -384,13 +376,10 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       }
     },
     async load() {
-      await reload();
+      await lifecycle.reload();
     },
     destroy() {
-      loadSeq += 1;
-      filterHandle?.destroy();
-      filterHandle = null;
-      filterHost = null;
+      lifecycle.destroy();
       gapSelect = null;
       emptyEl = null;
       rowCapEl = null;
@@ -402,7 +391,6 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       searchToGoalOff = null;
       navTrailActive = false;
       lastRows = null;
-      notices.clear();
     },
   };
 }
