@@ -901,6 +901,24 @@ button#changeMasterPassword:hover {
   min-height: 20px;
 }
 
+/* Spacing that the markup declared per status element. showStatus writes the
+   class list whole, so a spacing utility class was dropped by the first render
+   and the box fell back to the base 12px. An ID selector survives that
+   rewrite, so the intent is restated here rather than weakening the whole-list
+   class contract. Surveyed 2026-09-28: the only status elements in
+   entrypoints/options/index.html carrying a spacing utility class are these
+   four, and they declare two different values, so a single absorbed value on
+   the base class would have moved one group or the other. */
+#localExportManualStatus,
+#reviewSummaryStatus,
+#exportLocalMarkdownStatus {
+  margin-top: var(--space-2, 8px);
+}
+
+#trancoUpdateStatus {
+  margin-top: var(--space-4);
+}
+
 .status-message,
 .success,
 .error {
@@ -4799,6 +4817,9 @@ details[open] > .priority-details-summary {
   margin-top: var(--space-4, 16px);
 }
 
+/* Only ever reached before the first showStatus render: the status elements
+   that used to carry it are spaced by the ID-scoped rules near .status-message
+   now, because the helper's whole-list write drops this class. */
 .status-message-spaced {
   margin-top: var(--space-2, 8px);
 }

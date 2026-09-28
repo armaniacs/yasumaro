@@ -18,6 +18,25 @@ const DEFAULT_CLEAR_DELAY_MS: Record<StatusType, number> = {
   error: 5000,
 };
 
+/**
+ * Pending clear timer, owned per element rather than per module.
+ *
+ * Without element ownership a second render left the first timer running, so a
+ * longer-lived message could be blanked by a deadline that belonged to the
+ * message before it (3s success followed by 5s error cleared the error at 3s).
+ * A WeakMap keeps the bookkeeping per element — a shared handle would let one
+ * element's clear cancel another element's — and lets a detached element be
+ * collected with its timer entry.
+ */
+const pendingClearTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
+function cancelPendingClear(el: HTMLElement): void {
+  const pending = pendingClearTimers.get(el);
+  if (pending === undefined) return;
+  clearTimeout(pending);
+  pendingClearTimers.delete(el);
+}
+
 export interface ShowStatusOptions {
   /** Milliseconds until the message clears. Defaults to 3000 / 5000 by type. */
   durationMs?: number;
@@ -47,14 +66,17 @@ export function showStatus(
   const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
   if (!el) return;
 
+  cancelPendingClear(el);
+
   el.textContent = message;
   el.className = `${STATUS_BASE_CLASS} ${type}`;
 
   if (options.autoClear === false) return;
 
   const timeout = options.durationMs ?? DEFAULT_CLEAR_DELAY_MS[type];
-  setTimeout(() => {
+  pendingClearTimers.set(el, setTimeout(() => {
+    pendingClearTimers.delete(el);
     el.textContent = '';
     el.className = STATUS_BASE_CLASS;
-  }, timeout);
+  }, timeout));
 }

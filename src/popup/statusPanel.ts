@@ -315,20 +315,17 @@ function attachPrivacyActionListeners(): void {
         // in the shared whitelist writer seam.
         const result = await addDomainToWhitelist(domain);
         if (result.ok && result.added) {
-          const statusDiv = document.getElementById('mainStatus');
-          if (statusDiv) {
-            statusDiv.textContent = getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`);
-            statusDiv.className = 'success';
-          }
+          // 2000ms is the popup-only contract: the panel is too small to keep
+          // the dashboard's 3s/5s defaults.
+          showStatus('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success', { durationMs: 2000 });
           await initStatusPanel();
         } else if (!result.ok) {
-          const statusDiv = document.getElementById('mainStatus');
-          if (statusDiv) {
-            statusDiv.textContent = result.reason === 'no-domain'
-              ? 'Invalid URL'
-              : `Invalid pattern: ${domain}`;
-            statusDiv.className = 'error';
-          }
+          showStatus(
+            'mainStatus',
+            result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
+            'error',
+            { durationMs: 2000 }
+          );
         }
       }
     }
@@ -340,20 +337,15 @@ function attachPrivacyActionListeners(): void {
     if (tab?.url) {
       const result = await addPathToWhitelist(tab.url);
       if (result.ok && result.added) {
-        const statusDiv = document.getElementById('mainStatus');
-        if (statusDiv) {
-          statusDiv.textContent = getMessageOr('pathAddedToWhitelist', `Added path to whitelist`);
-          statusDiv.className = 'success';
-        }
+        showStatus('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success', { durationMs: 2000 });
         await initStatusPanel();
       } else if (!result.ok) {
-        const statusDiv = document.getElementById('mainStatus');
-        if (statusDiv) {
-          statusDiv.textContent = result.reason === 'no-domain'
-            ? 'Invalid URL'
-            : `Invalid pattern: ${tab.url}`;
-          statusDiv.className = 'error';
-        }
+        showStatus(
+          'mainStatus',
+          result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
+          'error',
+          { durationMs: 2000 }
+        );
       }
     }
   });

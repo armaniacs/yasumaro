@@ -49,6 +49,15 @@ describe('status message class contract', () => {
     expect(bodyOf('.status-message', '.success', '.error')).toContain('padding: 10px 12px');
   });
 
+  it('restates the per-element spacing the markup declared, keyed by id so the class write cannot drop it', () => {
+    const eightPx = bodyOf('#localExportManualStatus', '#reviewSummaryStatus', '#exportLocalMarkdownStatus');
+    expect(eightPx).toContain('margin-top: var(--space-2, 8px)');
+    expect(bodyOf('#trancoUpdateStatus')).toContain('margin-top: var(--space-4)');
+    // The base value stays the 12px every other status element relies on, so
+    // the id rules are the only per-element override.
+    expect(bodyOf('.status-message')).toContain('margin-top: 12px');
+  });
+
   it('gives the bare and prefixed success spellings one declaration set', () => {
     const body = bodyOf('.status-message.success', '.success');
     expect(body).toContain('color: var(--color-success-text)');
