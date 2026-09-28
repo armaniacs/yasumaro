@@ -1,14 +1,16 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { sendMock, showPreviewMock } = vi.hoisted(() => ({
+const { sendMock, showPreviewMock, settingsMock } = vi.hoisted(() => ({
   sendMock: vi.fn(),
   showPreviewMock: vi.fn(),
+  settingsMock: { value: {} as Record<string, unknown> },
 }));
 
 vi.mock('../../../messaging/messageTransport.js', () => ({
   messageTransport: {
-    send: (message: unknown) => sendMock(message),
+    // opts is forwarded so the retry contract can be pinned next to the envelope
+    send: (message: unknown, opts?: unknown) => sendMock(message, opts),
   },
 }));
 
@@ -22,13 +24,13 @@ vi.mock('../../../utils/storage/SettingsRepository.js', () => {
   // mock must expose it alongside the class-shaped legacy mock.
   const settingsRepository = {
     async getAll(): Promise<Record<string, unknown>> {
-      return { pii_confirmation_ui: true };
+      return settingsMock.value;
     },
   };
   return {
     SettingsRepository: class {
       async getAll(): Promise<Record<string, unknown>> {
-        return { pii_confirmation_ui: true };
+        return settingsMock.value;
       }
     },
     settingsRepository,
@@ -65,7 +67,9 @@ vi.mock('../../../utils/i18n.js', () => {
 }; });
 
 import { PreviewFlow, buildRecordPayload } from '../previewFlow.js';
+import type { PreviewSaveOptions, RecordPayloadStats } from '../previewFlow.js';
 import { SpinnerScope } from '../../spinner.js';
+import type { PayloadForType } from '../../../messaging/types.js';
 
 function makeTab(): chrome.tabs.Tab {
   return { id: 1, title: 'T', url: 'https://example.com' } as chrome.tabs.Tab;
@@ -91,7 +95,7 @@ describe('buildRecordPayload (PBI 2026-09-12-14)', () => {
     } as never;
 
     for (const content of ['original', 'confirmed']) {
-      const payload = buildRecordPayload(tab, content, true, stats);
+      const payload = buildRecordPayload('SAVE_RECORD', tab, content, true, stats);
       expect(payload).toMatchObject({
         title: 'T',
         url: 'https://example.com',
@@ -112,8 +116,8 @@ describe('buildRecordPayload (PBI 2026-09-12-14)', () => {
 
   it('attaches maskedCount only when provided (SAVE envelope)', () => {
     const tab = makeTab();
-    expect(buildRecordPayload(tab, 'c', true, {})).not.toHaveProperty('maskedCount');
-    expect(buildRecordPayload(tab, 'c', true, { maskedCount: 3 })).toMatchObject({ maskedCount: 3 });
+    expect(buildRecordPayload('SAVE_RECORD', tab, 'c', true, {})).not.toHaveProperty('maskedCount');
+    expect(buildRecordPayload('SAVE_RECORD', tab, 'c', true, { maskedCount: 3 })).toMatchObject({ maskedCount: 3 });
   });
 });
 
@@ -145,6 +149,7 @@ describe('PreviewFlow.run error normalization (PBI 2026-09-12-14)', () => {
     mountSpinner();
     sendMock.mockReset();
     showPreviewMock.mockReset();
+    settingsMock.value = { pii_confirmation_ui: true };
   });
 
   it('returns instead of throwing on no-response, with spinner hidden', async () => {
@@ -177,5 +182,125 @@ describe('PreviewFlow.run error normalization (PBI 2026-09-12-14)', () => {
     const saveCall = sendMock.mock.calls.find(([m]) => (m as { type: string }).type === 'SAVE_RECORD');
     expect(saveCall).toBeDefined();
     expect((saveCall![0] as { payload: Record<string, unknown> }).payload).toMatchObject({ content: 'confirmed-edited' });
+  });
+});
+
+/**
+ * Parity pin for the contract-typed payloads (PBI 2026-09-28-16). The
+ * envelopes are now built from the wire contract instead of a hand-written
+ * `Record<string, unknown>`, so the observed wire shape is pinned here: same
+ * type, same payload key set, same `retries: 5` on every send.
+ */
+describe('record envelope parity (PBI 2026-09-28-16)', () => {
+  const STAT_KEYS = [
+    'aiSummaryCleansedBytes',
+    'aiSummaryCleansedElements',
+    'aiSummaryCleansedReason',
+    'aiSummaryCleansedReasons',
+    'aiSummaryOriginalBytes',
+    'candidateBytes',
+    'cleansedBytes',
+    'content',
+    'force',
+    'originalBytes',
+    'pageBytes',
+    'title',
+    'url',
+  ];
+
+  interface Envelope {
+    type: string;
+    payload: Record<string, unknown>;
+  }
+
+  function sentEnvelopes(): Envelope[] {
+    return sendMock.mock.calls.map(([message]) => message as Envelope);
+  }
+
+  function retryOptions(): unknown[] {
+    return sendMock.mock.calls.map(([, opts]) => opts);
+  }
+
+  function runWith(piiConfirmationUi: boolean): Promise<unknown> {
+    settingsMock.value = { pii_confirmation_ui: piiConfirmationUi };
+    sendMock.mockImplementation(async (message: Envelope) => {
+      if (message.type === 'PREVIEW_RECORD') {
+        return { success: true, maskedCount: 2, processedContent: 'orig', maskedItems: [] };
+      }
+      return { success: true };
+    });
+    showPreviewMock.mockResolvedValue({ confirmed: true, content: 'confirmed-edited' });
+    const options: PreviewSaveOptions = {
+      tab: makeTab(),
+      content: 'orig',
+      force: true,
+      byteStats: { pageBytes: 1, candidateBytes: 2, originalBytes: 3, cleansedBytes: 4 },
+      aiSummaryCleansedStats: {
+        aiSummaryOriginalBytes: 5,
+        aiSummaryCleansedBytes: 6,
+        aiSummaryCleansedElements: 7,
+        aiSummaryCleansedReason: 'fixed',
+      },
+    };
+    return new PreviewFlow().run(options);
+  }
+
+  beforeEach(() => {
+    mountSpinner();
+    sendMock.mockReset();
+    showPreviewMock.mockReset();
+    settingsMock.value = { pii_confirmation_ui: true };
+  });
+
+  it('pins the PREVIEW → SAVE envelopes, payload keys and retry option', async () => {
+    await runWith(true);
+
+    const envelopes = sentEnvelopes();
+    expect(envelopes.map((e) => e.type)).toEqual(['PREVIEW_RECORD', 'SAVE_RECORD']);
+    expect(Object.keys(envelopes[0]!.payload).sort()).toEqual(STAT_KEYS);
+    expect(Object.keys(envelopes[1]!.payload).sort()).toEqual([...STAT_KEYS, 'maskedCount'].sort());
+    expect(envelopes[0]!.payload).toMatchObject({
+      title: 'T',
+      url: 'https://example.com',
+      content: 'orig',
+      force: true,
+      pageBytes: 1,
+      aiSummaryOriginalBytes: 5,
+    });
+    expect(envelopes[1]!.payload).toMatchObject({ content: 'confirmed-edited', maskedCount: 2 });
+    expect(retryOptions()).toEqual([{ retries: 5 }, { retries: 5 }]);
+  });
+
+  it('pins the MANUAL_RECORD envelope, which carries no maskedCount', async () => {
+    await runWith(false);
+
+    const envelopes = sentEnvelopes();
+    expect(envelopes.map((e) => e.type)).toEqual(['MANUAL_RECORD']);
+    expect(Object.keys(envelopes[0]!.payload).sort()).toEqual(STAT_KEYS);
+    expect(retryOptions()).toEqual([{ retries: 5 }]);
+  });
+
+  it('keeps maskedCount exclusive to the SAVE_RECORD contract', () => {
+    // Compile-time: the wire contract owns the op split, not this module.
+    const saveOwnsMaskedCount: 'maskedCount' extends keyof PayloadForType<'SAVE_RECORD'> ? true : false = true;
+    const manualLacksMaskedCount: 'maskedCount' extends keyof PayloadForType<'MANUAL_RECORD'> ? false : true = true;
+    const previewLacksMaskedCount: 'maskedCount' extends keyof PayloadForType<'PREVIEW_RECORD'> ? false : true = true;
+    expect([saveOwnsMaskedCount, manualLacksMaskedCount, previewLacksMaskedCount]).toEqual([true, true, true]);
+
+    // The narrowed stat bundle rejects the field as a literal and as a value,
+    // and the envelope gate still drops it once the call is past the checker.
+    // @ts-expect-error maskedCount is not part of the MANUAL_RECORD payload
+    const rejectedLiteral = buildRecordPayload('MANUAL_RECORD', makeTab(), 'c', true, { maskedCount: 1 });
+    const smuggled = { maskedCount: 1 };
+    // @ts-expect-error maskedCount is not part of the PREVIEW_RECORD payload
+    const rejectedValue = buildRecordPayload('PREVIEW_RECORD', makeTab(), 'c', true, smuggled);
+    expect(rejectedLiteral).not.toHaveProperty('maskedCount');
+    expect(rejectedValue).not.toHaveProperty('maskedCount');
+
+    // A stats bundle that does satisfy the narrowed type (it shares the byte
+    // fields) reaches the builder, so the field is gated on the envelope it is
+    // sent with rather than on the input shape alone.
+    const wideStats = { maskedCount: 1, byteStats: undefined } as RecordPayloadStats;
+    expect(buildRecordPayload('SAVE_RECORD', makeTab(), 'c', true, wideStats)).toHaveProperty('maskedCount', 1);
   });
 });
