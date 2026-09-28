@@ -20,9 +20,11 @@
 
 **実装状況（2026-09-28 バッチ 1〜3 完了）**: 01/02/03/04/06/07/08/09/11/12/13/15/16/17 は実装・全ゲート green（validate 14,640 tests / build OK）。12 は investigate として裁定記録済み（[ADR 2026-09-28-session-store-overflow-persistence](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）。**05・10・14 は `2026-09-27-fix-master-password-reencrypt-preserve-api-keys` とファイル交差するため保留**（着地後に着手）。
 
-### 2026-09-28 追加ラウンド: 残課題 PBI 化 + sessionStore 後続 fix — ⬜ 未着手 6件
+### 2026-09-28 追加ラウンド: 残課題 PBI 化 + sessionStore 後続 fix — ✅ 6件実装済み（アーカイブ待ち）
 
 ラウンド実装で判明した残課題 7 件を 5 PBI に整理し、investigate 12 の裁定（[ADR](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）に基づく後続 fix を起票。詳細・採点は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md) 追加ラウンド節。
+
+**実装状況（2026-09-28 追加ラウンド完了）**: 18〜23 すべて実装・全ゲート green（validate 14,668 tests / build OK）。22 は investigate として裁定記録済み（[ADR 2026-09-28-dst-ambiguous-day-end](../dev-docs/ADR/2026-09-28-dst-ambiguous-day-end.md)、後続 fix PBI 起票基準は ADR 内）。18 のみ実ブラウザでの `chrome.storage.session.getBytesInUse()` 確認（Node から観測不能）が手動確認項目として残存。
 
 | NN | PBI | 種別 | RICE | SP | 出典 |
 |---|---|---|---:|---:|---|
