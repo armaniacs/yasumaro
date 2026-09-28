@@ -266,8 +266,8 @@ export const SQLITE_WIRE_TABLE = [
     family: 'mutate',
     messageType: 'SQLITE_AUDIT_LOG_INSERT',
     repoMethod: 'insertAuditLog',
-    // No deps path: the only caller (utils/auditLog.ts) drives SqliteClient
-    // directly, and no dashboard subtype exists.
+    // No deps path: the only caller (messaging/auditLogGateway.ts) drives
+    // SqliteClient directly, and no dashboard subtype exists.
     depsMethod: null,
     encodeOp: (record: Omit<AuditLogRecord, 'id'>): Extract<MutateOp, { type: 'insertAuditLog' }> => ({
       type: 'insertAuditLog',

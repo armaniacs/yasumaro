@@ -1,67 +1,23 @@
 /**
  * opfsCapabilities.ts
- * OPFS feature detection and VFS strategy selection for the SQLite storage layer.
+ * Live OPFS detection for the offscreen document.
  *
- * Carried forward from the OPFS feasibility spike (PBI-10). Pure, dependency-injected
- * functions so the probing logic is testable in jsdom where the OPFS APIs are absent.
+ * The decision itself is pure and lives in src/utils/vfsCapabilities.ts, which
+ * the dashboard also imports; only the ambient-globals read stays here because
+ * the offscreen document is the context the backend resolver asks.
  */
 
-/** Injectable view of the globals we probe for OPFS support. */
-export interface OpfsProbeGlobals {
-  /** navigator.storage */
-  storage?: { getDirectory?: unknown } | undefined;
-  /** globalThis.FileSystemFileHandle */
-  fileSystemFileHandle?: { prototype?: { createSyncAccessHandle?: unknown } } | undefined;
-  /** globalThis.Worker constructor */
-  worker?: unknown;
-}
+import { detectOpfsCapabilities, probeOpfsGlobals, selectVfsStrategy } from '../utils/vfsCapabilities.js';
+import type { OpfsCapabilities, OpfsProbeGlobals, VfsStrategy } from '../utils/vfsCapabilities.js';
 
-export interface OpfsCapabilities {
-  /** navigator.storage.getDirectory() is available (OPFS root reachable). */
-  opfsDirectory: boolean;
-  /** FileSystemFileHandle.prototype.createSyncAccessHandle is available (Worker-only sync API). */
-  syncAccessHandle: boolean;
-  /** The Worker constructor is available. */
-  worker: boolean;
-}
-
-/**
- * VFS strategy chosen for the current environment.
- * - `opfs-sync-worker`: 案A — Worker + OPFS SyncAccessHandle (preferred, high performance)
- * - `idb`:              OPFS 利用不可環境の実行時選択（IDB VFS。resolver が権威）
- * - `fallback`:         chrome.storage.local FallbackStorage (OPFS unavailable)
- */
-export type VfsStrategy = 'opfs-sync-worker' | 'idb' | 'fallback';
-
-/** Probe the given globals and report which OPFS capabilities are present. */
-export function detectOpfsCapabilities(env: OpfsProbeGlobals): OpfsCapabilities {
-  return {
-    opfsDirectory: typeof env.storage?.getDirectory === 'function',
-    syncAccessHandle: typeof env.fileSystemFileHandle?.prototype?.createSyncAccessHandle === 'function',
-    worker: typeof env.worker === 'function',
-  };
-}
-
-/** Choose the best available VFS strategy for the detected capabilities. */
-export function selectVfsStrategy(caps: OpfsCapabilities): VfsStrategy {
-  if (!caps.opfsDirectory) return 'fallback';
-  if (caps.syncAccessHandle && caps.worker) return 'opfs-sync-worker';
-  // OPFS ディレクトリはあるが sync handle / Worker が無い環境 — resolver は
-  // ここで IDB へ転落させるため、実行時に選ばれるのは IDB VFS（案B は未実装）。
-  return 'idb';
-}
+// Re-exported so the offscreen consumers of the pure core keep importing it from
+// here; the public surface of this module is unchanged by the move.
+export { detectOpfsCapabilities, selectVfsStrategy };
+export type { OpfsCapabilities, OpfsProbeGlobals, VfsStrategy };
 
 /** Probe the live runtime globals (navigator.storage, FileSystemFileHandle, Worker). */
 function probeLiveEnv(): OpfsProbeGlobals {
-  const g = globalThis as typeof globalThis & {
-    FileSystemFileHandle?: OpfsProbeGlobals['fileSystemFileHandle'];
-    Worker?: unknown;
-  };
-  return {
-    storage: typeof navigator !== 'undefined' ? navigator.storage : undefined,
-    fileSystemFileHandle: g.FileSystemFileHandle,
-    worker: g.Worker,
-  };
+  return probeOpfsGlobals(globalThis);
 }
 
 /** Detect capabilities and strategy for the current runtime in one call. */
