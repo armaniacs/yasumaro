@@ -89,7 +89,18 @@ describe('tagClusterPanel', () => {
       const { panel, svg, emptyState } = mountPanel();
       await panel.load?.();
 
-      expect(mockQueryLogs).toHaveBeenCalledWith({ limit: 10000 });
+      // The 10000-row cap is what this regression guards. The mount has no
+      // filter host, so the query also carries bounds: the panel declares
+      // 'last7' and PBI 2026-09-28-09 unified the missing-host fallback onto
+      // the declared preset instead of an unbounded all-time query.
+      const query = mockQueryLogs.mock.calls[0]![0] as {
+        limit: number;
+        since: number;
+        until: number;
+      };
+      expect(query.limit).toBe(10000);
+      expect(typeof query.since).toBe('number');
+      expect(typeof query.until).toBe('number');
       expect(emptyState.hidden).toBe(true);
       const circles = svg.querySelectorAll('circle.tag-cluster-node');
       expect(circles.length).toBeGreaterThan(0);

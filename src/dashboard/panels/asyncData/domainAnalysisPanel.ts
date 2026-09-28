@@ -35,11 +35,7 @@ import {
 import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
-import {
-  createPeriodFilter,
-  presetToRange,
-  type PeriodFilterHandle,
-} from '../../components/periodFilter.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import {
   aggregateDomainAnalysis,
   UNKNOWN_DOMAIN_LABEL,
@@ -60,7 +56,6 @@ export function toTagFilter(raw: string): string | undefined {
 }
 
 export function createDomainAnalysisPanel(): PanelLifecycle {
-  let filterHost: HTMLElement | null = null;
   let tagInput: HTMLInputElement | null = null;
   let runButton: HTMLButtonElement | null = null;
   let domainBody: HTMLElement | null = null;
@@ -69,13 +64,11 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   let rowCapNotice: HTMLElement | null = null;
   let domainTruncated: HTMLElement | null = null;
   let urlTruncated: HTMLElement | null = null;
-  let filterHandle: PeriodFilterHandle | null = null;
   // WHY: the empty-state element doubles as the error surface (one element,
   // two modes) — the unified failure policy swaps in the error wording. The
   // (unknown) bucket count and row cap describe the FETCH, so they are
   // fetch-scoped; the top-N truncation notices are re-decided per fetch.
   const notices = new PanelNotices();
-  let loadSeq = 0;
 
   function renderDomainRows(rows: DomainAnalysisRankRow[]): void {
     if (!domainBody) return;
@@ -120,92 +113,93 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
     }
   }
 
-  async function reload(): Promise<void> {
-    if (!domainBody || !urlBody) return;
-    const seq = ++loadSeq;
-    // WHY: getRange() is the single source of truth (PBI 2026-09-24-11) —
-    // the explicit-apply host reads the selection at Run time instead of
-    // recording it per change. The presetToRange fallback preserves the
-    // pre-filter last30 default when the panel mounts without a filter host.
-    const { since, until } = filterHandle
-      ? filterHandle.getRange()
-      : presetToRange('last30', Date.now());
-    const tagFilter = tagInput ? toTagFilter(tagInput.value) : undefined;
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'domainAnalysisPanel',
+    notices: [notices],
+    filterHostSelector: '#domainAnalysisFilter',
+    // WHY: no auto-apply — the panel is explicit-apply (Run button or Enter),
+    // so it reads getRange() at apply time instead of recording every change
+    // (PBI 2026-09-24-11).
+    initialPreset: 'last30',
+    isReady: () => domainBody !== null && urlBody !== null,
+    resetOutput: () => {
+      if (domainBody) domainBody.innerHTML = '';
+      if (urlBody) urlBody.innerHTML = '';
+    },
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // hosts for the body.
+    load: async ({ range, isStale }) => {
+      if (!domainBody || !urlBody) return;
+      const { since, until } = range;
+      const tagFilter = tagInput ? toTagFilter(tagInput.value) : undefined;
 
-    domainBody.innerHTML = '';
-    urlBody.innerHTML = '';
-    // Fresh-fetch reset: restores the normal empty binding in case a previous
-    // load failed and swapped in the error message, and hides the notices
-    // until this fetch's own results decide visibility.
-    notices.reset();
+      try {
+        const { rows, capped } = await fetchAllPeriodRows({
+          since,
+          until,
+          tagFilter,
+          pageSize: DOMAIN_ANALYSIS_PAGE_SIZE,
+          maxRows: MAX_DOMAIN_ANALYSIS_ROWS,
+          label: 'domainAnalysis',
+        });
+        if (isStale()) return;
 
-    try {
-      const { rows, capped } = await fetchAllPeriodRows({
-        since,
-        until,
-        tagFilter,
-        pageSize: DOMAIN_ANALYSIS_PAGE_SIZE,
-        maxRows: MAX_DOMAIN_ANALYSIS_ROWS,
-        label: 'domainAnalysis',
-      });
-      if (seq !== loadSeq) return;
+        if (rows.length === 0) {
+          notices.showEmpty();
+          return;
+        }
 
-      if (rows.length === 0) {
-        notices.showEmpty();
-        return;
-      }
+        const agg = aggregateDomainAnalysis(rows);
+        renderDomainRows(agg.domains);
+        renderUrlRows(agg.urls);
 
-      const agg = aggregateDomainAnalysis(rows);
-      renderDomainRows(agg.domains);
-      renderUrlRows(agg.urls);
-
-      if (agg.unknownDomainCount > 0 && unknownNotice) {
-        unknownNotice.textContent = msg(
-          'domainAnalysis_excludedNullDomainCount',
-          { count: agg.unknownDomainCount },
-          '{count} records have no domain and are grouped as (unknown).',
+        if (agg.unknownDomainCount > 0 && unknownNotice) {
+          unknownNotice.textContent = msg(
+            'domainAnalysis_excludedNullDomainCount',
+            { count: agg.unknownDomainCount },
+            '{count} records have no domain and are grouped as (unknown).',
+          );
+          notices.show('unknown');
+        }
+        if (capped && rowCapNotice) {
+          rowCapNotice.textContent = msg(
+            'domainAnalysis_rowCap',
+            { max: MAX_DOMAIN_ANALYSIS_ROWS },
+            'Reached the {max}-record analysis limit — showing a partial aggregation.',
+          );
+          notices.show('rowCap');
+        }
+        if (agg.domainsTruncated && domainTruncated) {
+          domainTruncated.textContent = msg(
+            'domainAnalysis_truncated',
+            { shown: DOMAIN_ANALYSIS_TOP_N, total: agg.domainTotal },
+            'Showing top {shown} of {total}.',
+          );
+          notices.show('domainTruncated');
+        }
+        if (agg.urlsTruncated && urlTruncated) {
+          urlTruncated.textContent = msg(
+            'domainAnalysis_truncated',
+            { shown: DOMAIN_ANALYSIS_TOP_N, total: agg.urlTotal },
+            'Showing top {shown} of {total}.',
+          );
+          notices.show('urlTruncated');
+        }
+      } catch (error) {
+        console.error('[domainAnalysisPanel] error:', error);
+        if (isStale()) return;
+        notices.showError(
+          'domainAnalysisError',
+          'Failed to load the domain analysis. Try again.',
         );
-        notices.show('unknown');
       }
-      if (capped && rowCapNotice) {
-        rowCapNotice.textContent = msg(
-          'domainAnalysis_rowCap',
-          { max: MAX_DOMAIN_ANALYSIS_ROWS },
-          'Reached the {max}-record analysis limit — showing a partial aggregation.',
-        );
-        notices.show('rowCap');
-      }
-      if (agg.domainsTruncated && domainTruncated) {
-        domainTruncated.textContent = msg(
-          'domainAnalysis_truncated',
-          { shown: DOMAIN_ANALYSIS_TOP_N, total: agg.domainTotal },
-          'Showing top {shown} of {total}.',
-        );
-        notices.show('domainTruncated');
-      }
-      if (agg.urlsTruncated && urlTruncated) {
-        urlTruncated.textContent = msg(
-          'domainAnalysis_truncated',
-          { shown: DOMAIN_ANALYSIS_TOP_N, total: agg.urlTotal },
-          'Showing top {shown} of {total}.',
-        );
-        notices.show('urlTruncated');
-      }
-    } catch (error) {
-      console.error('[domainAnalysisPanel] error:', error);
-      if (seq !== loadSeq) return;
-      notices.showError(
-        'domainAnalysisError',
-        'Failed to load the domain analysis. Try again.',
-      );
-    }
-  }
+    },
+  });
 
   return {
     id: 'panel-domain-analysis',
     category: 'async-data',
     mount(container) {
-      filterHost = container.querySelector('#domainAnalysisFilter');
       tagInput = container.querySelector('#domainAnalysisTagInput');
       runButton = container.querySelector('#domainAnalysisRunBtn');
       domainBody = container.querySelector('#domainAnalysisDomainBody');
@@ -222,31 +216,22 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       notices.register('rowCap', rowCapNotice, { fetchScoped: true });
       notices.register('domainTruncated', domainTruncated);
       notices.register('urlTruncated', urlTruncated);
-      if (filterHost) {
-        // WHY: no onChange handler — the panel is explicit-apply (Run button
-        // or Enter), so it reads getRange() in reload() instead of recording
-        // every change (PBI 2026-09-24-11).
-        filterHandle = createPeriodFilter({ initialPreset: 'last30' });
-        filterHost.appendChild(filterHandle.element);
-      }
+      lifecycle.mount(container);
       runButton?.addEventListener('click', () => {
-        void reload();
+        void lifecycle.reload();
       });
       tagInput?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
           event.preventDefault();
-          void reload();
+          void lifecycle.reload();
         }
       });
     },
     async load() {
-      await reload();
+      await lifecycle.reload();
     },
     destroy() {
-      loadSeq += 1;
-      filterHandle?.destroy();
-      filterHandle = null;
-      filterHost = null;
+      lifecycle.destroy();
       tagInput = null;
       runButton = null;
       domainBody = null;
@@ -255,7 +240,6 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       rowCapNotice = null;
       domainTruncated = null;
       urlTruncated = null;
-      notices.clear();
     },
   };
 }
