@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
 const mockSaveSettings = vi.hoisted(() => vi.fn());
@@ -210,7 +212,11 @@ describe('saveAiSummaryCleansingSettings', () => {
     // leave all rule flags undefined to hit ?? false
     await saveAiSummaryCleansingSettings(partial);
     const saved = mockSaveSettings.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(saved.keep).toBe('yes');
+    // Delta write (PBI 2026-09-28-20): the getAll() snapshot is never read, so
+    // the unrelated key it would have carried is not written back. Pinned by
+    // absence rather than presence — a snapshot write re-adds it.
+    expect('keep' in saved).toBe(false);
+    expect(mockGetSettings).not.toHaveBeenCalled();
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]).toBe(false);
     for (const rule of CLEANSING_RULES) {
       expect(saved[rule.storageKey]).toBe(false);
@@ -241,6 +247,83 @@ describe('saveAiSummaryCleansingSettings', () => {
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD]).toBe(150);
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]).toBe(0.15);
     expect(saved[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]).toBe(450);
+  });
+});
+
+// ── delta-write contract (PBI 2026-09-28-20) ──
+const MODULE_SOURCE = join(import.meta.dirname, '../aiSummaryCleansingSettingsV2.ts');
+const SAVE_FN_HEAD = /export\s+async\s+function\s+saveAiSummaryCleansingSettings\b/;
+const NEXT_TOP_LEVEL_DECL = /^export\s/m;
+const SNAPSHOT_READ = /settingsRepository\s*\.\s*getAll\s*\(/g;
+
+/**
+ * The save function's own source, up to the next top-level declaration. Reading
+ * the getter's getAll() is allowed — only writing a snapshot back is the delta
+ * violation — so the scan has to stop before the next export.
+ */
+function savePathSource(source: string): string {
+  const head = SAVE_FN_HEAD.exec(source);
+  if (!head) throw new Error('saveAiSummaryCleansingSettings declaration not found');
+  const rest = source.slice(head.index + head[0].length);
+  const next = NEXT_TOP_LEVEL_DECL.exec(rest);
+  return next ? rest.slice(0, next.index) : rest;
+}
+
+function snapshotReadsInSavePath(source: string): string[] {
+  return [...savePathSource(source).matchAll(SNAPSHOT_READ)].map((m) => m[0]);
+}
+
+describe('saveAiSummaryCleansingSettings delta write (PBI 2026-09-28-20)', () => {
+  it('takes no getAll() snapshot on the save path', () => {
+    expect(snapshotReadsInSavePath(readFileSync(MODULE_SOURCE, 'utf-8'))).toEqual([]);
+  });
+
+  it('still detects a reintroduced getAll snapshot write', () => {
+    // The exact shape this file used to have, followed by a getter that reads
+    // getAll(): the detector must flag the save path only.
+    const reintroduced = [
+      'export async function saveAiSummaryCleansingSettings(settings) {',
+      '    const currentSettings = await settingsRepository.getAll();',
+      '    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED] = settings.enabled;',
+      '    await settingsRepository.setAll(currentSettings);',
+      '}',
+      'export async function getAiSummaryCleansingSettings() {',
+      '    return settingsRepository.getAll();',
+      '}',
+    ].join('\n');
+    expect(snapshotReadsInSavePath(reintroduced)).toEqual(['settingsRepository.getAll(']);
+
+    // ...and a reformatted delta stays clean, so the pin is not just a
+    // spelling lock.
+    const delta = [
+      'export async function saveAiSummaryCleansingSettings(settings) {',
+      '    const delta = {};',
+      '    await settingsRepository.setAll(delta);',
+      '}',
+    ].join('\n');
+    expect(snapshotReadsInSavePath(delta)).toEqual([]);
+  });
+
+  it('writes exactly the form-owned keys', async () => {
+    await saveAiSummaryCleansingSettings(makeFullSettings());
+    const delta = mockSaveSettings.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    const owned = new Set<string>([
+      StorageKeys.AI_SUMMARY_CLEANSING_ENABLED,
+      ...CLEANSING_RULES.map((r) => r.storageKey),
+      StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD,
+      StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD,
+      StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT,
+      StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD,
+      StorageKeys.WHITELIST_EXTRACTION_ENABLED,
+      StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED,
+      StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD,
+      StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO,
+      StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES,
+      StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS,
+      StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED,
+      StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED,
+    ]);
+    expect(new Set(Object.keys(delta))).toEqual(owned);
   });
 });
 
