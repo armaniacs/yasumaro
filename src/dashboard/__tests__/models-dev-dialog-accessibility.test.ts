@@ -47,7 +47,26 @@ describe('Models Dev Dialog - Accessibility (ARIA Attributes)', () => {
       const error = el.querySelector('#dialog-error');
       expect(error).not.toBeNull();
       expect(error!.getAttribute('aria-live')).toBe('polite');
-      expect(error!.className).toContain('error-message');
+    });
+
+    it('ships the dialog box class and hidden, before any status render', async () => {
+      // show() loads the providers and a failed load renders into the box, so
+      // the shipped markup is read right after the DOM is built.
+      const { ModelsDevDialog } = await import('../models-dev-dialog.js');
+      const dialog = new ModelsDevDialog({ onCancel: vi.fn(), onSave: vi.fn() } as never);
+      (dialog as unknown as { createDialog: () => void }).createDialog();
+      const error = document.getElementById('dialog-error')!;
+      expect(error.getAttribute('aria-live')).toBe('polite');
+      expect(error.className).toBe('error-message hidden');
+    });
+
+    it('keeps the live region when a status render replaces the class list', async () => {
+      const dialog = await createMountedDialog();
+      (dialog as unknown as { showError: (m: string) => void }).showError('boom');
+      const error = (dialog as unknown as { dialog: HTMLElement }).dialog
+        .querySelector('#dialog-error')!;
+      expect(error.getAttribute('aria-live')).toBe('polite');
+      expect(error.className).toBe('status-message error');
     });
   });
 

@@ -17,6 +17,7 @@ vi.mock('../masterPassword.js', () => ({
 import { exportEncryptedBackup, importEncryptedBackup, isEncryptedBackupFile } from '../encryptedBackupService.js';
 import { showPasswordAuthModal } from '../masterPassword.js';
 import { initEncryptedBackupPanel } from '../encryptedBackupPanel.js';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 function setDom() {
   document.body.innerHTML = `
@@ -117,5 +118,28 @@ describe('initEncryptedBackupPanel', () => {
 
     const status = document.getElementById('encryptedBackupStatus')!;
     expect(status.textContent).toContain('2件の設定項目は無効なためスキップされました');
+  });
+
+  it('keeps the error visible: the panel status does not auto-clear', async () => {
+    useTimerClock();
+    try {
+      initEncryptedBackupPanel();
+
+      const fileInput = document.getElementById('importEncryptedBackupFileInput') as HTMLInputElement;
+      const file = new File(['x'], 'big.json', { type: 'application/json' });
+      Object.defineProperty(file, 'size', { value: 60 * 1024 * 1024 });
+      Object.defineProperty(fileInput, 'files', { value: [file] });
+      fileInput.dispatchEvent(new Event('change'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      const status = document.getElementById('encryptedBackupStatus')!;
+      expect(status.className).toBe('status-message error');
+
+      await vi.advanceTimersByTimeAsync(60000);
+      expect(status.textContent).toBe('バックアップファイルが大きすぎます');
+      expect(status.className).toBe('status-message error');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

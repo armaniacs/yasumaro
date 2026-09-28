@@ -466,7 +466,7 @@ describe('customPromptManager', () => {
       await vi.waitFor(() => {
         const statusDiv = el('promptStatus');
         expect(statusDiv.textContent).toBe('Invalid prompt content');
-        expect(statusDiv.className).toBe('error');
+        expect(statusDiv.className).toBe('status-message error');
       });
 
       expect(mockSetAll).not.toHaveBeenCalled();
@@ -789,7 +789,7 @@ describe('customPromptManager', () => {
 
       const statusDiv = el('promptStatus');
       expect(statusDiv.textContent).toBeTruthy();
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe('status-message success');
     });
 
     it('should show error status when name is empty', async () => {
@@ -800,7 +800,7 @@ describe('customPromptManager', () => {
 
       await vi.waitFor(() => {
         const statusDiv = el('promptStatus');
-        expect(statusDiv.className).toBe('error');
+        expect(statusDiv.className).toBe('status-message error');
       });
     });
   });
