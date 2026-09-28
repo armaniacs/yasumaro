@@ -46,14 +46,14 @@ Scenario: メッセージング契約は変更されない
 
 ## 受け入れ基準
 
-- [ ] `src/utils/storage/types.ts:526-533` の `CleansingFeedbackEntry` に `aiSummary?: AiSummaryRemovedStats`（`src/utils/commonTypes.ts:45-53` の型を再利用）を追加している。
-- [ ] `src/utils/aiSummaryCleaner/feedbackQueue.ts:43-57` の `enqueueFeedback` が、入力の `aiSummary` があれば保存エントリへ格納し、なければ省略する（optional 欠落を許す）。
-- [ ] `src/popup/statusPanel.ts` が `buildRemovedCounts(...)` の結果から `byReason` だけでなく `aiSummary` も取り、`enqueueFeedback` へ渡す。
-- [ ] `src/dashboard/cleansingFeedbackView.ts` の Reason セル描画が、`entry.aiSummary` があれば既存の AI グループ描画を使い、なければ現行の件数のみ描画にフォールバックする。
-- [ ] `StorageKeys.CLEANSING_FEEDBACK_QUEUE` のキー名と、キューの 50 件上限・FIFO 退避の挙動を変更していない。
-- [ ] messaging の `ContentResponse`（`src/messaging/types.ts:50-56`）を変更していない。
-- [ ] 既存 storage の移行処理を追加していない（optional 欠落で旧エントリがそのまま読めるため不要）。
-- [ ] `npm run validate` が成功し、既存の feedbackQueue / cleansingFeedbackView / statusPanel テストに回帰がない。
+- [x] `src/utils/storage/types.ts:526-533` の `CleansingFeedbackEntry` に `aiSummary?: AiSummaryRemovedStats`（`src/utils/commonTypes.ts:45-53` の型を再利用）を追加している。
+- [x] `src/utils/aiSummaryCleaner/feedbackQueue.ts:43-57` の `enqueueFeedback` が、入力の `aiSummary` があれば保存エントリへ格納し、なければ省略する（optional 欠落を許す）。
+- [x] `src/popup/statusPanel.ts` が `buildRemovedCounts(...)` の結果から `byReason` だけでなく `aiSummary` も取り、`enqueueFeedback` へ渡す。
+- [x] `src/dashboard/cleansingFeedbackView.ts` の Reason セル描画が、`entry.aiSummary` があれば既存の AI グループ描画を使い、なければ現行の件数のみ描画にフォールバックする。
+- [x] `StorageKeys.CLEANSING_FEEDBACK_QUEUE` のキー名と、キューの 50 件上限・FIFO 退避の挙動を変更していない。
+- [x] messaging の `ContentResponse`（`src/messaging/types.ts:50-56`）を変更していない。
+- [x] 既存 storage の移行処理を追加していない（optional 欠落で旧エントリがそのまま読めるため不要）。
+- [x] `npm run validate` が成功し、既存の feedbackQueue / cleansingFeedbackView / statusPanel テストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -154,14 +154,14 @@ Scenario: メッセージング契約は変更されない
 
 ## Definition of Done
 
-- [ ] `src/utils/storage/types.ts:526-533` の `CleansingFeedbackEntry` に optional な `aiSummary?: AiSummaryRemovedStats` が追加されている。
-- [ ] `src/utils/aiSummaryCleaner/feedbackQueue.ts:43-57` の `enqueueFeedback` が `aiSummary` を条件付きで保存し、既存フィールドの保存挙動が変わっていない。
-- [ ] `src/popup/statusPanel.ts` が `buildRemovedCounts` の `aiSummary` を `enqueueFeedback` へ渡している。
-- [ ] `src/dashboard/cleansingFeedbackView.ts` の Reason セル描画が `entry.aiSummary` あれば AI グループを描画し、無ければ件数のみ描画にフォールバックする。
-- [ ] `removedByReason` が件数のみを保持するという PBI 2026-09-28-08 の決定が壊れていない（既存テストの pin が通っている）。
-- [ ] messaging の `ContentResponse`（`src/messaging/types.ts:50-56`）と storage のキー名が変更されていない。
-- [ ] 旧形式エントリ（`aiSummary` なし）が混在しても一覧が壊れないことをテストで確認している。
-- [ ] 50 件 FIFO 退避と 500 字 snippet 切り詰めの挙動が維持されている。
-- [ ] `npm run validate` が成功し、既存の feedbackQueue / cleansingFeedbackView / statusPanel テストに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `src/utils/storage/types.ts:526-533` の `CleansingFeedbackEntry` に optional な `aiSummary?: AiSummaryRemovedStats` が追加されている。
+- [x] `src/utils/aiSummaryCleaner/feedbackQueue.ts:43-57` の `enqueueFeedback` が `aiSummary` を条件付きで保存し、既存フィールドの保存挙動が変わっていない。
+- [x] `src/popup/statusPanel.ts` が `buildRemovedCounts` の `aiSummary` を `enqueueFeedback` へ渡している。
+- [x] `src/dashboard/cleansingFeedbackView.ts` の Reason セル描画が `entry.aiSummary` あれば AI グループを描画し、無ければ件数のみ描画にフォールバックする。
+- [x] `removedByReason` が件数のみを保持するという PBI 2026-09-28-08 の決定が壊れていない（既存テストの pin が通っている）。
+- [x] messaging の `ContentResponse`（`src/messaging/types.ts:50-56`）と storage のキー名が変更されていない。
+- [x] 旧形式エントリ（`aiSummary` なし）が混在しても一覧が壊れないことをテストで確認している。
+- [x] 50 件 FIFO 退避と 500 字 snippet 切り詰めの挙動が維持されている。
+- [x] `npm run validate` が成功し、既存の feedbackQueue / cleansingFeedbackView / statusPanel テストに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

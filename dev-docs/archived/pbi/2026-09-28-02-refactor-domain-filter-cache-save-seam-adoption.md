@@ -39,14 +39,14 @@ Scenario: pasted IIFE が production に残っていない
 
 ## 受け入れ基準
 
-- [ ] `src/dashboard/trancoConsent.ts:147` と `:175` の IIFE が専用 seam 経由の呼び出しへ置換されている。
-- [ ] `src/dashboard/tagsPanel.ts:228` の IIFE が置換されている。
-- [ ] `src/dashboard/panels/staticForm/generalSettingsPanel.ts:291` の IIFE が置換されている。
-- [ ] 置換箇所が delta patch を渡しており、full-snapshot をそのまま setAll していない。
-- [ ] delta 化が難しい呼び出しは、seam の明示モードへ寄せ、その理由をコメントに残している。
-- [ ] IIFE 形式の呼び出しが production に残らないことを pin する静的テストを追加している。
-- [ ] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` と `:171` の full-snapshot writer について、本 PBI で扱うか台帳送りするかを判断し記録している。
-- [ ] `npm run validate` と domainFilterCache 関連テストが成功し、既存挙動に回帰がない。
+- [x] `src/dashboard/trancoConsent.ts:147` と `:175` の IIFE が専用 seam 経由の呼び出しへ置換されている。
+- [x] `src/dashboard/tagsPanel.ts:228` の IIFE が置換されている。
+- [x] `src/dashboard/panels/staticForm/generalSettingsPanel.ts:291` の IIFE が置換されている。
+- [x] 置換箇所が delta patch を渡しており、full-snapshot をそのまま setAll していない。
+- [x] delta 化が難しい呼び出しは、seam の明示モードへ寄せ、その理由をコメントに残している。
+- [x] IIFE 形式の呼び出しが production に残らないことを pin する静的テストを追加している。
+- [x] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` と `:171` の full-snapshot writer について、本 PBI で扱うか台帳送りするかを判断し記録している。
+- [x] `npm run validate` と domainFilterCache 関連テストが成功し、既存挙動に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -136,14 +136,14 @@ Scenario: pasted IIFE が production に残っていない
 
 ## Definition of Done
 
-- [ ] production 4 箇所の IIFE がすべて seam 経由の呼び出しへ置換されている。
-- [ ] 置換箇所が delta patch を渡しており、full-snapshot を setAll していない。
-- [ ] patch 化できない呼び出しは seam の明示モードへ寄せ、理由がコメントとして残っている。
-- [ ] IIFE 形式の呼び出しが production に残らないことを pin する静的テストが追加されている。
-- [ ] `settingsRepository` の動的 import が維持され、Layer 0 依存境界が保たれている。
-- [ ] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` と `:171` の扱いが判断として記録されている。
-- [ ] 保存後の cache 再構築順序が既存と同じであることをテストで確認している。
-- [ ] `npm run validate` と domainFilterCache 関連テストが成功している。
-- [ ] 既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] production 4 箇所の IIFE がすべて seam 経由の呼び出しへ置換されている。
+- [x] 置換箇所が delta patch を渡しており、full-snapshot を setAll していない。
+- [x] patch 化できない呼び出しは seam の明示モードへ寄せ、理由がコメントとして残っている。
+- [x] IIFE 形式の呼び出しが production に残らないことを pin する静的テストが追加されている。
+- [x] `settingsRepository` の動的 import が維持され、Layer 0 依存境界が保たれている。
+- [x] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` と `:171` の扱いが判断として記録されている。
+- [x] 保存後の cache 再構築順序が既存と同じであることをテストで確認している。
+- [x] `npm run validate` と domainFilterCache 関連テストが成功している。
+- [x] 既存のビルド、テスト、ユーザーに観測される動作に回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

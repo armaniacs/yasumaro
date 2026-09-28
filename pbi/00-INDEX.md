@@ -14,46 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-28 全体リファクタリングラウンド — ✅ 14件実装済み（アーカイブ待ち）/ 🔶 3件保留 🔧非機能追加
+### 2026-09-28 全体リファクタリングラウンド — ✅ 14件完了・アーカイブ済み / 保留 3件 🔧非機能追加
 
-ユーザー要求「リポジトリ全体のリファクタリング（PBI 作成まで・実装は別ラウンド）」に基づく 4 観点（DRY / SRP・モジュール分離 / 型安全性・テスト容易性 / 堅牢性）の差分レビュー結果を 17 PBI 化。実コード裏取り済み（file:line は採点台帳と各 PBI 参照）。採点・依存マップ・台帳送り 8 件・クリーン領域の詳細は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md)。
+ユーザー要求「リポジトリ全体のリファクタリング（PBI 作成まで・実装は別ラウンド）」に基づく 4 観点（DRY / SRP・モジュール分離 / 型安全性・テスト容易性 / 堅牢性）の差分レビュー結果を 17 PBI 化。実コード裏取り済み（file:line は採点台帳と各 PBI 参照）。採点・依存マップ・台帳送り 8 件・クリーン領域の詳細は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md)（live 台帳として残置）。
 
-**実装状況（2026-09-28 バッチ 1〜3 完了）**: 01/02/03/04/06/07/08/09/11/12/13/15/16/17 は実装・全ゲート green（validate 14,640 tests / build OK）。12 は investigate として裁定記録済み（[ADR 2026-09-28-session-store-overflow-persistence](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）。**05・10・14 は `2026-09-27-fix-master-password-reencrypt-preserve-api-keys` とファイル交差するため保留**（着地後に着手）。
+**実装状況**: 01/02/03/04/06/07/08/09/11/12/13/15/16/17 は実装・全ゲート green で 2026-09-28 にアーカイブ（アーカイブ履歴参照）。12 は investigate として裁定記録済み（[ADR 2026-09-28-session-store-overflow-persistence](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）。**05・10・14 は `2026-09-27-fix-master-password-reencrypt-preserve-api-keys` とファイル交差するため保留**（着地後に着手）。
 
-### 2026-09-28 追加ラウンド: 残課題 PBI 化 + sessionStore 後続 fix — ✅ 6件実装済み（アーカイブ待ち）
+### 2026-09-28 追加ラウンド: 残課題 PBI 化 + sessionStore 後続 fix — ✅ 6件完了・アーカイブ済み
 
-ラウンド実装で判明した残課題 7 件を 5 PBI に整理し、investigate 12 の裁定（[ADR](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）に基づく後続 fix を起票。詳細・採点は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md) 追加ラウンド節。
+ラウンド実装で判明した残課題 7 件を 5 PBI に整理し、investigate 12 の裁定（[ADR](../dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md)）に基づく後続 fix を起票。詳細・採点は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md) 追加ラウンド節（live 台帳として残置）。
 
-**実装状況（2026-09-28 追加ラウンド完了）**: 18〜23 すべて実装・全ゲート green（validate 14,668 tests / build OK）。22 は investigate として裁定記録済み（[ADR 2026-09-28-dst-ambiguous-day-end](../dev-docs/ADR/2026-09-28-dst-ambiguous-day-end.md)、後続 fix PBI 起票基準は ADR 内）。18 のみ実ブラウザでの `chrome.storage.session.getBytesInUse()` 確認（Node から観測不能）が手動確認項目として残存。
+**実装状況**: 18〜23 すべて実装・全ゲート green で 2026-09-28 にアーカイブ（アーカイブ履歴参照）。22 は investigate として裁定記録済み（[ADR 2026-09-28-dst-ambiguous-day-end](../dev-docs/ADR/2026-09-28-dst-ambiguous-day-end.md)、後続 fix PBI 起票基準は ADR 内）。18 のみ実ブラウザでの `chrome.storage.session.getBytesInUse()` 確認（Node から観測不能）が手動確認項目として残存。
 
-| NN | PBI | 種別 | RICE | SP | 出典 |
-|---|---|---|---:|---:|---|
-| 18 | [fix-session-store-flush-cap-stagnation-drop](2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md) | fix | 9.0 | 1 | **12 の後続 fix**。cap 3MiB 化 + 恒久滞留 drop（ADR 受入基準を継承） |
-| 19 | [refactor-status-message-residual-bundle](2026-09-28-19-refactor-status-message-residual-bundle.md) | refactor | 4.05 | 1 | 15 の残留 3 件（stale-timer race・markup class 落ち・popup mainStatus 旧経路） |
-| 20 | [refactor-ai-summary-cleansing-settings-delta-write](2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 4.0 | 0.5 | 02 のスコープ外だった full-snapshot writer の delta 化 |
-| 21 | [fix-cleansing-feedback-ai-stats-persistence](2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md) | fix | 3.2 | 1 | 08 のスコープ外。feedback エントリへの AI 統計永続化（加算的・後方互換） |
-| 22 | [investigate-dst-ambiguous-day-end](2026-09-28-22-investigate-dst-ambiguous-day-end.md) | investigate | 1.6 | 0.5 | 11 の既知残留。曖昧時刻の「日の終端」意味論の裁定 |
-| 23 | [refactor-svg-ns-single-source](2026-09-28-23-refactor-svg-ns-single-source.md) | refactor | 1.0 | 0.5 | 17 の既知残留。SVG_NS 完全単一ソース化 |
-
-| NN | PBI | 種別 | RICE | SP | 依存 / 備考 |
-|---|---|---|---:|---:|---|
-| 01 | [fix-ai-rate-limit-max-reader-writer-split](2026-09-28-01-fix-ai-rate-limit-max-reader-writer-split.md) | fix | 36.0 | 0.5 | 実害: UI のレート上限が常に無視される（getMaxMonthlyTokens の 2026-09-22 修復と同形の未修復残） |
-| 02 | [refactor-domain-filter-cache-save-seam-adoption](2026-09-28-02-refactor-domain-filter-cache-save-seam-adoption.md) | refactor | 20.0 | 0.5 | byte 同一 IIFE 4 箇所残存。delta-write 契約違反の解消 |
-| 03 | [fix-init-export-scheduler-immediate-flush-loss](2026-09-28-03-fix-init-export-scheduler-immediate-flush-loss.md) | fix | 18.0 | 0.5 | 実害: 設定保存/接続テスト直後の当日 export が黙って消える |
-| 04 | [fix-apply-i18n-args-parse-fail-closed](2026-09-28-04-fix-apply-i18n-args-parse-fail-closed.md) | fix | 16.2 | 0.5 | 1 属性の malformed JSON でパネル翻訳一式が死ぬ。pin テスト更新を含む |
-| 05 | [refactor-settings-backup-restore-single-source](2026-09-28-05-refactor-settings-backup-restore-single-source.md) | refactor | 12.0 | 0.5 | バックアップ復元の二重実装 + リテラルハードコード drift。**保留: マスターパスワード PBI と settingsMigration/SettingsRepository が交差** |
-| 06 | [fix-local-markdown-export-retention-hardening](2026-09-28-06-fix-local-markdown-export-retention-hardening.md) | fix | 9.0 | 1 | 実害: 孤児バッファ無期限蓄積（1.4-2.2MB/日）+ flush O(N) + RMW 競合 |
-| 07 | [refactor-field-validation-descriptor-activation](2026-09-28-07-refactor-field-validation-descriptor-activation.md) | refactor | 9.0 | 1 | デスクリプタ汎用経路の活性化（死んだ 12 関数の統合・errorId 一元化） |
-| 08 | [fix-removed-counts-type-pollution](2026-09-28-08-fix-removed-counts-type-pollution.md) | fix | 6.0 | 1 | 実害: byte 数・reason 文字列が removal count 地図に混入し feedback view に表示される |
-| 09 | [refactor-asyncdata-panel-reload-lifecycle](2026-09-28-09-refactor-asyncdata-panel-reload-lifecycle.md) | refactor | 5.4 | 2 | 9 パネル × 約 22 行の reload 骨格統合。期間フォールバック 2 系統 drift の是正を含む |
-| 10 | [refactor-layer0-limits-ssot](2026-09-28-10-refactor-layer0-limits-ssot.md) | refactor | 5.3 | 1.5 | Layer 0 cap 定数の SSOT 化 + layer lint の穴封鎖。→ 14 が依存。**保留: import sweep が crypto/envelope（KEK 領域）に及ぶ** |
-| 11 | [refactor-local-date-utilities-ssot](2026-09-28-11-refactor-local-date-utilities-ssot.md) | refactor | 4.8 | 1.5 | format 7 + parse 5 + 日レンジ 3 の集約。DST 取り込み漏れの修正 + pin テスト更新。09 の後 |
-| 12 | [investigate-session-store-overflow-persistence](2026-09-28-12-investigate-session-store-overflow-persistence.md) | investigate | 4.8 | 1 | 保存 URL ~9k 件で session 永続化が恒久停止 + 毎 flush O(n) serialize の裁定 |
-| 13 | [refactor-layer-boundary-hygiene-bundle](2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md) | refactor | 4.5 | 1 | 小型境界違反 4 件バンドル（gistSettings DI 迂回・opfsCapabilities 分離・auditLog 移設・DiagnosticsCollector 偽 union） |
-| 14 | [refactor-messaging-background-edge-removal](2026-09-28-14-refactor-messaging-background-edge-removal.md) | refactor | 3.6 | 2 | 中立層 messaging の background runtime edge 4 本解消 + CURRENT_PROTOCOL_VERSION 経路統一。10 の後。**保留: マスターパスワード PBI の messaging 触りと交差の可能性** |
-| 15 | [refactor-status-message-unification](2026-09-28-15-refactor-status-message-unification.md) | refactor | 3.2 | 1.5 | status 表示 8 実装・class 契約 2 系統の統一。07 の後 |
-| 16 | [refactor-preview-flow-payload-typing](2026-09-28-16-refactor-preview-flow-payload-typing.md) | refactor | 2.4 | 1.5 | popup 3 payload の型化（RecordMessage 削除・maskedCount 誤搬送の構造排除） |
-| 17 | [refactor-render-tag-graph-extraction](2026-09-28-17-refactor-render-tag-graph-extraction.md) | refactor | 2.0 | 1 | archloop-0924 台帳からの昇格（トリガー「3つ目のクラスタグラフ系パネル」発火済み）。09・11 の後 |
 
 ### 2026-09-27 investigate 裁定後の後続 PBI — ✅ 4件完了（13・27-05・27-04・27-03 アーカイブ済み）/ 完了 🔧非機能追加
 
@@ -199,6 +171,32 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-28 全体リファクタリングラウンド アーカイブ — ✅ 14件完了（01/02/03/04/06/07/08/09/11/12/13/15/16/17 アーカイブ済み）
+
+- [2026-09-28-01-fix-ai-rate-limit-max-reader-writer-split.md](../dev-docs/archived/pbi/2026-09-28-01-fix-ai-rate-limit-max-reader-writer-split.md)（✅ 完了 — `a9502715`。fix。UI のレート上限が常に無視される実害を reader/writer 分離の 3 段 fallback で修復。RICE 36.0・0.5 SP）
+- [2026-09-28-02-refactor-domain-filter-cache-save-seam-adoption.md](../dev-docs/archived/pbi/2026-09-28-02-refactor-domain-filter-cache-save-seam-adoption.md)（✅ 完了 — `5b723b76`。refactor。byte 同一 IIFE 4 箇所残存。domain 設定保存を専用 seam に統一し delta-write 契約を回復。RICE 20.0・0.5 SP）
+- [2026-09-28-03-fix-init-export-scheduler-immediate-flush-loss.md](../dev-docs/archived/pbi/2026-09-28-03-fix-init-export-scheduler-immediate-flush-loss.md)（✅ 完了 — `352a009e`。fix。設定保存/接続テスト直後の当日 export 消失を scheduler 再初期化の one-shot 温存で修復。RICE 18.0・0.5 SP）
+- [2026-09-28-04-fix-apply-i18n-args-parse-fail-closed.md](../dev-docs/archived/pbi/2026-09-28-04-fix-apply-i18n-args-parse-fail-closed.md)（✅ 完了 — `ce35efbe`。fix。1 属性の malformed JSON でパネル翻訳一式が死ぬ問題を fail-closed 化 + pin テスト更新。RICE 16.2・0.5 SP）
+- [2026-09-28-06-fix-local-markdown-export-retention-hardening.md](../dev-docs/archived/pbi/2026-09-28-06-fix-local-markdown-export-retention-hardening.md)（✅ 完了 — `564a8e5b`。fix。孤児バッファ無期限蓄積（1.4-2.2MB/日）に保持期限 sweep と download 記録の直列化を追加。RICE 9.0・1 SP）
+- [2026-09-28-07-refactor-field-validation-descriptor-activation.md](../dev-docs/archived/pbi/2026-09-28-07-refactor-field-validation-descriptor-activation.md)（✅ 完了 — `e80022ff`。refactor。設定フィールド validation を descriptor テーブル駆動に統一（死んだ 12 関数の統合・errorId 一元化）。RICE 9.0・1 SP）
+- [2026-09-28-08-fix-removed-counts-type-pollution.md](../dev-docs/archived/pbi/2026-09-28-08-fix-removed-counts-type-pollution.md)（✅ 完了 — `eb7a88be`。fix。byte 数・reason 文字列の removal count 混入を分離し feedback の Reason 表示を修復。RICE 6.0・1 SP）
+- [2026-09-28-09-refactor-asyncdata-panel-reload-lifecycle.md](../dev-docs/archived/pbi/2026-09-28-09-refactor-asyncdata-panel-reload-lifecycle.md)（✅ 完了 — `106496bd`。refactor。analysis パネル 9 件の reload ライフサイクルを共通部品へ統合（期間フォールバック 2 系統 drift の是正を含む）。RICE 5.4・2 SP）
+- [2026-09-28-11-refactor-local-date-utilities-ssot.md](../dev-docs/archived/pbi/2026-09-28-11-refactor-local-date-utilities-ssot.md)（✅ 完了 — `1170d630`。refactor。ローカル日付 format 7 + parse 5 + 1 日レンジ 3 を SSOT へ集約（DST 取り込み漏れの修正 + pin テスト更新）。RICE 4.8・1.5 SP）
+- [2026-09-28-12-investigate-session-store-overflow-persistence.md](../dev-docs/archived/pbi/2026-09-28-12-investigate-session-store-overflow-persistence.md)（✅ 完了 — `0e1a52aa`。investigate。保存 URL ~9k 件での session 永続化恒久停止 + 毎 flush O(n) serialize を裁定し ADR に記録（後続 fix 18 へ引き継ぎ）。RICE 4.8・1 SP）
+- [2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md](../dev-docs/archived/pbi/2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md)（✅ 完了 — `71f9972e`。refactor。小型境界違反 4 件バンドルを解消（gistSettings DI 迂回・OPFS 純 core・auditLog 配置・DiagnosticsCollector 偽 union）。RICE 4.5・1 SP）
+- [2026-09-28-15-refactor-status-message-unification.md](../dev-docs/archived/pbi/2026-09-28-15-refactor-status-message-unification.md)（✅ 完了 — `dbfbcf9a`。refactor。status 表示 8 実装を 1 ヘルパーと単一 class 契約へ統一（collateral pin 更新 `255a4765` を含む）。RICE 3.2・1.5 SP）
+- [2026-09-28-16-refactor-preview-flow-payload-typing.md](../dev-docs/archived/pbi/2026-09-28-16-refactor-preview-flow-payload-typing.md)（✅ 完了 — `be511fc1`。refactor。popup 3 payload を wire 契約の型から直接導出（RecordMessage 削除・maskedCount 誤搬送の構造排除）。RICE 2.4・1.5 SP）
+- [2026-09-28-17-refactor-render-tag-graph-extraction.md](../dev-docs/archived/pbi/2026-09-28-17-refactor-render-tag-graph-extraction.md)（✅ 完了 — `91ec7335`。refactor。SVG クラスタグラフ描画を clusterGraphRenderer へ統合（archloop-0924 台帳から昇格）。RICE 2.0・1 SP）
+
+### 2026-09-28 追加ラウンド アーカイブ — ✅ 6件完了（18/19/20/21/22/23 アーカイブ済み）
+
+- [2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md](../dev-docs/archived/pbi/2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md)（✅ 完了 — `57dc4889`。fix。sessionStore の flush 上限を 3MiB へ引き上げ恒久滞留を断つ（ADR 受入基準を継承。実ブラウザでの `getBytesInUse()` 確認のみ手動項目として残存）。RICE 9.0・1 SP）
+- [2026-09-28-19-refactor-status-message-residual-bundle.md](../dev-docs/archived/pbi/2026-09-28-19-refactor-status-message-residual-bundle.md)（✅ 完了 — `60b0a057`。refactor。status 表示統合の残留 3 件を閉じる（stale-timer race・markup class 落ち・popup mainStatus 旧経路）。RICE 4.05・1 SP）
+- [2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md](../dev-docs/archived/pbi/2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md)（✅ 完了 — `a40fa407`。refactor。AI クレンジング設定の保存を delta-write へ変更（02 のスコープ外だった full-snapshot writer）。RICE 4.0・0.5 SP）
+- [2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md](../dev-docs/archived/pbi/2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md)（✅ 完了 — `ebac2955`。fix。クレンジング feedback エントリに AI 要約統計を永続化（加算的・後方互換）。RICE 3.2・1 SP）
+- [2026-09-28-22-investigate-dst-ambiguous-day-end.md](../dev-docs/archived/pbi/2026-09-28-22-investigate-dst-ambiguous-day-end.md)（✅ 完了 — `2be5a266`。investigate。DST 曖昧時刻の「日の終端」意味論を裁定し ADR に記録（後続 fix PBI 起票基準は ADR 内）。RICE 1.6・0.5 SP）
+- [2026-09-28-23-refactor-svg-ns-single-source.md](../dev-docs/archived/pbi/2026-09-28-23-refactor-svg-ns-single-source.md)（✅ 完了 — `53ff0b42`。refactor。SVG_NS を Layer 0 の単一ソースへ統合（17 の既知残留）。RICE 1.0・0.5 SP）
 
 ### 2026-09-27 PBI 27-09 アーカイブ（circuit breaker doc sync） — ✅ 1件完了（27-09 アーカイブ済み）
 
@@ -1896,12 +1894,14 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手 | 4（保留候補 01-03 = トリガー待ち 3 / wasqlite sunset = ADR-014 ゲート待ち 1） |
+| ⬜ 未着手・保留 | 9（マスターパスワード後続 1 = 他 3 件のブロッカー / ファイル交差で保留 3 / トリガー待ち 3 / 着手ゲート待ち 2） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
-| 🔵 監視 | 1（VulnHunt 11 defense-in-depth = 発火条件監視・発火時に分割 PBI 化） |
-| **`pbi/` 残存 PBI 合計** | **6（＋ live 台帳 4 件: future / vuln-remediation / archloop-0924 / analysis-features）** |
-| アーカイブ済みPBI | 947（`00-backlog` 台帳 76 件を除く） |
+| 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視） |
+| **`pbi/` 残存 PBI 合計** | **23（B 9 / 監視 5 / live 台帳 8 + INDEX）** |
+| アーカイブ済みPBI | 967（`00-backlog` 台帳 76 件を除く） |
 | アーカイブ済み実装計画 | 138 |
+
+※ 2026-09-28 整理: 全体リファクタリングラウンド 14 件（01/02/03/04/06/07/08/09/11/12/13/15/16/17）+ 追加ラウンド 6 件（18/19/20/21/22/23）の計 20 件を実装確認の上アーカイブ。確認内容は実装コミット 20 件の対応付け・3 ゲート green（type-check / lint 0 errors / npm test 14,668 passed）。ドリフト修正: (1) アーカイブ 20 件のファイル内 checkbox が未チェックのままだったため全 [x] 化（22 は元から完了）、(2) PBI 12 の box 文言「`dev-docs/plans/` 配下」が実態（ADR 記録）と不一致だったため [x] 化で解消、(3) 集計表の件数が実態と乖離していたため再同期（未着手 4→9・監視 1→5・残存 6→23・live 台帳 4→8・アーカイブ 947→967）、(4) CHANGELOG には 09-28 ラウンド分の記載なし（最新 6.9.27 は 09-26 リリース分。リリース時バッチ方式のため次回リリース時に記載要）、(5) PBI 18 の実ブラウザ手動確認（`getBytesInUse()`）は残存項目としてアーカイブファイル内の注記を維持。
 
 ※ 2026-09-24 整理: 完遂ラウンドの台帳 3 件（archloop-0923 / archloop-0923b / archloop-0923c）を `dev-docs/archived/pbi/` へアーカイブ。各ラウンドの未採用候補（ProviderSlotRunner・queryPlan・CleansingRuleView・KeyDerivation・Retry-policy）は 2026-09-23 時点で future.md 統合台帳へマージ済みのため、台帳に live な追跡項目はない。INDEX 集計表を現状に再同期し、future.md・アーカイブ履歴の台帳リンクをアーカイブ先へ張替え。
 

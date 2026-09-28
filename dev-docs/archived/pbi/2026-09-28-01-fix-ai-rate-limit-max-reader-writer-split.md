@@ -39,14 +39,14 @@ Scenario: 0 や負値および非有限数は有効値として扱わない
 
 ## 受け入れ基準
 
-- [ ] `getRateLimitMax` が blob → legacy top-level → SettingsRepository（動的 import）の 3 段 fallback を持ち、優先順位は blob を最優先にしている。
-- [ ] 有効値の判定は `typeof value === 'number' && value > 0` の現行意味論を保持し、0・負値・非有限数・数値文字列は採用しない。
-- [ ] `MAX_MONTHLY_TOKENS` の 0 = 無制限という意味論を `AI_RATE_LIMIT_MAX` に適用していない。
-- [ ] blob 経由の writer（`settingsRepository.setAll`）から reader（`getRateLimitMax`）への round-trip テストを新設している。
-- [ ] `src/utils/__tests__/aiUsageTracker.test.ts:14-22` の手書き StorageKeys テーブルを実型から導出する形に置き換えている。
-- [ ] `src/utils/__tests__/aiUsageTracker.test.ts:330,360` の `mockStorage['ai_rate_limit_max']` 直書きテストの扱いを、legacy 経路の pin として残すか更新するかを明示している。
-- [ ] 暗号化済みインストールで段 3 の動的 import が機能することをテストしている。
-- [ ] `npm run validate` が成功し、既存のビルド・テストに回帰がない。
+- [x] `getRateLimitMax` が blob → legacy top-level → SettingsRepository（動的 import）の 3 段 fallback を持ち、優先順位は blob を最優先にしている。
+- [x] 有効値の判定は `typeof value === 'number' && value > 0` の現行意味論を保持し、0・負値・非有限数・数値文字列は採用しない。
+- [x] `MAX_MONTHLY_TOKENS` の 0 = 無制限という意味論を `AI_RATE_LIMIT_MAX` に適用していない。
+- [x] blob 経由の writer（`settingsRepository.setAll`）から reader（`getRateLimitMax`）への round-trip テストを新設している。
+- [x] `src/utils/__tests__/aiUsageTracker.test.ts:14-22` の手書き StorageKeys テーブルを実型から導出する形に置き換えている。
+- [x] `src/utils/__tests__/aiUsageTracker.test.ts:330,360` の `mockStorage['ai_rate_limit_max']` 直書きテストの扱いを、legacy 経路の pin として残すか更新するかを明示している。
+- [x] 暗号化済みインストールで段 3 の動的 import が機能することをテストしている。
+- [x] `npm run validate` が成功し、既存のビルド・テストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -134,13 +134,13 @@ Scenario: 0 や負値および非有限数は有効値として扱わない
 
 ## Definition of Done
 
-- [ ] `getRateLimitMax` が 3 段 fallback を持ち、blob を最優先に解決している。
-- [ ] 有効値判定が `> 0` を保持し、0・負値・非有限数が採用されない。
-- [ ] blob 経由の writer から reader への round-trip テストが新設され、Red から Green への過程が確認できる。
-- [ ] legacy top-level 経路の pin が維持されている。
-- [ ] `src/utils/__tests__/aiUsageTracker.test.ts:14-22` の StorageKeys mock が実型から導出される形に置き換わっている。
-- [ ] 暗号化済みインストール相当で repository 経路が解決されることをテストしている。
-- [ ] `MAX_MONTHLY_TOKENS` の 0 = unlimited 意味論が `AI_RATE_LIMIT_MAX` に影響していない。
-- [ ] `npm run validate` が成功し、既存テストに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `getRateLimitMax` が 3 段 fallback を持ち、blob を最優先に解決している。
+- [x] 有効値判定が `> 0` を保持し、0・負値・非有限数が採用されない。
+- [x] blob 経由の writer から reader への round-trip テストが新設され、Red から Green への過程が確認できる。
+- [x] legacy top-level 経路の pin が維持されている。
+- [x] `src/utils/__tests__/aiUsageTracker.test.ts:14-22` の StorageKeys mock が実型から導出される形に置き換わっている。
+- [x] 暗号化済みインストール相当で repository 経路が解決されることをテストしている。
+- [x] `MAX_MONTHLY_TOKENS` の 0 = unlimited 意味論が `AI_RATE_LIMIT_MAX` に影響していない。
+- [x] `npm run validate` が成功し、既存テストに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

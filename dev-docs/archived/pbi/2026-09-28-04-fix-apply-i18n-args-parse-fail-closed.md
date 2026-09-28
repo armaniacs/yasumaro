@@ -46,14 +46,14 @@ Scenario: 同じ不正値が複数要素に存在しても warn は 1 度だけ�
 
 ## 受け入れ基準
 
-- [ ] `parseI18nArgs` として、i18n 引数の解析が object 以外（null・配列・数値・文字列）で null を返す単一の helper に抽出されている。
-- [ ] helper は try でガードしており、throw を外へ漏らさない。
-- [ ] `src/utils/i18n-dom.ts:110` と `entrypoints/popup/i18n.ts:125` の非ガード `JSON.parse` が helper 経由に置き換わっている。
-- [ ] 不正 args 検出時に、既存の構造化 logger で warn が 1 度だけ記録される。
-- [ ] `resolvePluralKey`（`src/utils/i18n-dom.ts:18-19`）の `'count' in args` が非 object 値で TypeError を出さない。
-- [ ] 複数形キーで `count` が欠落したときのフォールバック文言が現行挙動から変わらない。
-- [ ] 更新対象テスト `src/utils/__tests__/i18n-dom-branch.test.ts:274-281` の `expect(() => applyI18n()).toThrow()` が `not.toThrow()` へ更新され、`data-i18n-args="5"` のケースが追加されている。
-- [ ] `npm run validate` が成功し、既存の翻訳・i18n 挙動に回帰がない。
+- [x] `parseI18nArgs` として、i18n 引数の解析が object 以外（null・配列・数値・文字列）で null を返す単一の helper に抽出されている。
+- [x] helper は try でガードしており、throw を外へ漏らさない。
+- [x] `src/utils/i18n-dom.ts:110` と `entrypoints/popup/i18n.ts:125` の非ガード `JSON.parse` が helper 経由に置き換わっている。
+- [x] 不正 args 検出時に、既存の構造化 logger で warn が 1 度だけ記録される。
+- [x] `resolvePluralKey`（`src/utils/i18n-dom.ts:18-19`）の `'count' in args` が非 object 値で TypeError を出さない。
+- [x] 複数形キーで `count` が欠落したときのフォールバック文言が現行挙動から変わらない。
+- [x] 更新対象テスト `src/utils/__tests__/i18n-dom-branch.test.ts:274-281` の `expect(() => applyI18n()).toThrow()` が `not.toThrow()` へ更新され、`data-i18n-args="5"` のケースが追加されている。
+- [x] `npm run validate` が成功し、既存の翻訳・i18n 挙動に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -150,14 +150,14 @@ Scenario: 同じ不正値が複数要素に存在しても warn は 1 度だけ�
 
 ## Definition of Done
 
-- [ ] `parseI18nArgs` が object 以外と parse 失敗に対して null を返す helper として実装されている。
-- [ ] `src/utils/i18n-dom.ts:110` と `entrypoints/popup/i18n.ts:125` が helper 経由に置き換わっている。
-- [ ] `src/utils/i18n-dom.ts:80-88` のガード済みコードも helper へ寄せ、重複が解消されている。
-- [ ] `resolvePluralKey` へ非 object が渡らず、TypeError が発生しないことをテストしている。
-- [ ] 不正 args 検出時に構造化 logger へ warn が 1 pass に 1 度だけ記録されることをテストしている。
-- [ ] 更新対象テスト `src/utils/__tests__/i18n-dom-branch.test.ts:274-281` が `not.toThrow()` へ更新され、`data-i18n-args="5"` のケースが追加されている。
-- [ ] 複数形キーの `count` 欠落時のフォールバック文言が変わっていない。
-- [ ] 正しい要素の翻訳、panel.init() の到達、パネルの `.active` 化に回帰がない。
-- [ ] `npm run validate` が成功している。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] `parseI18nArgs` が object 以外と parse 失敗に対して null を返す helper として実装されている。
+- [x] `src/utils/i18n-dom.ts:110` と `entrypoints/popup/i18n.ts:125` が helper 経由に置き換わっている。
+- [x] `src/utils/i18n-dom.ts:80-88` のガード済みコードも helper へ寄せ、重複が解消されている。
+- [x] `resolvePluralKey` へ非 object が渡らず、TypeError が発生しないことをテストしている。
+- [x] 不正 args 検出時に構造化 logger へ warn が 1 pass に 1 度だけ記録されることをテストしている。
+- [x] 更新対象テスト `src/utils/__tests__/i18n-dom-branch.test.ts:274-281` が `not.toThrow()` へ更新され、`data-i18n-args="5"` のケースが追加されている。
+- [x] 複数形キーの `count` 欠落時のフォールバック文言が変わっていない。
+- [x] 正しい要素の翻訳、panel.init() の到達、パネルの `.active` 化に回帰がない。
+- [x] `npm run validate` が成功している。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。

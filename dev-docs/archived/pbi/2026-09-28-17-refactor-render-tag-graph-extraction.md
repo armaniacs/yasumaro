@@ -42,17 +42,17 @@ Scenario: 抽出後も 3 パネルの SVG 出力が不変である
 
 ## 受け入れ基準
 
-- [ ] 共通レンダラが `src/dashboard/panels/asyncData/clusterGraphRenderer.ts` として作成されている。
-- [ ] `limitToTopNodes` → `computeCanvasSize` → `computeLayout` → edge line → node circle + title + text → `role="img"` / `aria-label` → `TagClusterPanZoomController.attach` の骨格が共通レンダラに集約されている。
-- [ ] `src/dashboard/panels/asyncData/tagClusterPanel.ts:121-194`、`src/dashboard/panels/asyncData/wordClusterPanel.ts:168-239`、`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:224-297` の 3 箇所が共通レンダラの呼び出しに置き換わっている。
-- [ ] `MAX_NODES = 50` の宣言が 1 箇所に集約され、`src/dashboard/panels/asyncData/tagClusterPanel.ts:33`、`src/dashboard/panels/asyncData/wordClusterPanel.ts:45`、`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:48` の 3 重宣言が解消されている。
-- [ ] `SVG_NS` の宣言が 1 箇所に集約され、`src/dashboard/panels/asyncData/tagClusterLoading.ts:15` を含む production 4 ファイルが共通定数を参照している。
-- [ ] 差分はオプション（`nodeClassName` / `hueByRelativeSize` / `ariaLabel` 組立）で吸収されている。
-- [ ] 見た目は現状のまま維持されている。具体的には、`--tag-hue` を設定するのは比較パネルのみ（`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:252`）で、単体 2 パネルは全ノード同色である。
-- [ ] circle の class の差（単体 `tag-cluster-node` / 比較 `tag-cluster-node tag-cluster-compare-node`）が維持されている。
-- [ ] row-cap メッセージの共通化により、`src/dashboard/panels/asyncData/wordClusterPanel.ts:103-110` と `src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:152-162` の同形 2 箇所が 1 箇所に集約されている。
-- [ ] `notices.show('truncated')` / `hide` の 3 連（3 パネルの各 3 箇所）が共通化されている。
-- [ ] `npm run validate` が成功し、既存のビルド・テストに回帰がない。
+- [x] 共通レンダラが `src/dashboard/panels/asyncData/clusterGraphRenderer.ts` として作成されている。
+- [x] `limitToTopNodes` → `computeCanvasSize` → `computeLayout` → edge line → node circle + title + text → `role="img"` / `aria-label` → `TagClusterPanZoomController.attach` の骨格が共通レンダラに集約されている。
+- [x] `src/dashboard/panels/asyncData/tagClusterPanel.ts:121-194`、`src/dashboard/panels/asyncData/wordClusterPanel.ts:168-239`、`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:224-297` の 3 箇所が共通レンダラの呼び出しに置き換わっている。
+- [x] `MAX_NODES = 50` の宣言が 1 箇所に集約され、`src/dashboard/panels/asyncData/tagClusterPanel.ts:33`、`src/dashboard/panels/asyncData/wordClusterPanel.ts:45`、`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:48` の 3 重宣言が解消されている。
+- [x] `SVG_NS` の宣言が 1 箇所に集約され、`src/dashboard/panels/asyncData/tagClusterLoading.ts:15` を含む production 4 ファイルが共通定数を参照している。
+- [x] 差分はオプション（`nodeClassName` / `hueByRelativeSize` / `ariaLabel` 組立）で吸収されている。
+- [x] 見た目は現状のまま維持されている。具体的には、`--tag-hue` を設定するのは比較パネルのみ（`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:252`）で、単体 2 パネルは全ノード同色である。
+- [x] circle の class の差（単体 `tag-cluster-node` / 比較 `tag-cluster-node tag-cluster-compare-node`）が維持されている。
+- [x] row-cap メッセージの共通化により、`src/dashboard/panels/asyncData/wordClusterPanel.ts:103-110` と `src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts:152-162` の同形 2 箇所が 1 箇所に集約されている。
+- [x] `notices.show('truncated')` / `hide` の 3 連（3 パネルの各 3 箇所）が共通化されている。
+- [x] `npm run validate` が成功し、既存のビルド・テストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -156,17 +156,17 @@ Scenario: 抽出後も 3 パネルの SVG 出力が不変である
 
 ## Definition of Done
 
-- [ ] 共通レンダラが `src/dashboard/panels/asyncData/clusterGraphRenderer.ts` として作成され、描画骨格が 1 箇所に集約されている。
-- [ ] 3 パネル（`tagClusterPanel.ts:121-194`、`wordClusterPanel.ts:168-239`、`tagClusterTimeSliderPanel.ts:224-297`）が共通レンダラの呼び出しに置き換えられている。
-- [ ] `MAX_NODES` の宣言が 1 箇所に集約され、3 パネルの個別宣言が解消されている。
-- [ ] `SVG_NS` の宣言が 1 箇所に集約され、production 4 ファイル（`tagClusterLoading.ts:15` を含む）が共通定数を参照している。
-- [ ] 差分が `nodeClassName` / `hueByRelativeSize` / `ariaLabel` 組立のオプションで吸収されている。
-- [ ] 見た目が維持されている（比較パネルの色分け、単体 2 パネルの単色、circle class の差）。
-- [ ] aria-label の文言差が維持されている。
-- [ ] row-cap メッセージと `notices` の 3 連が共通化されている。
-- [ ] pan / zoom の attach タイミングが 3 パネルとも維持されている。
-- [ ] 3 パネルの SVG 出力が抽出前と一致する parity が確認されている。
-- [ ] 過剰な golden テストが追加されていない。
-- [ ] `npm run validate` が成功し、既存テストとビルドに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] 共通レンダラが `src/dashboard/panels/asyncData/clusterGraphRenderer.ts` として作成され、描画骨格が 1 箇所に集約されている。
+- [x] 3 パネル（`tagClusterPanel.ts:121-194`、`wordClusterPanel.ts:168-239`、`tagClusterTimeSliderPanel.ts:224-297`）が共通レンダラの呼び出しに置き換えられている。
+- [x] `MAX_NODES` の宣言が 1 箇所に集約され、3 パネルの個別宣言が解消されている。
+- [x] `SVG_NS` の宣言が 1 箇所に集約され、production 4 ファイル（`tagClusterLoading.ts:15` を含む）が共通定数を参照している。
+- [x] 差分が `nodeClassName` / `hueByRelativeSize` / `ariaLabel` 組立のオプションで吸収されている。
+- [x] 見た目が維持されている（比較パネルの色分け、単体 2 パネルの単色、circle class の差）。
+- [x] aria-label の文言差が維持されている。
+- [x] row-cap メッセージと `notices` の 3 連が共通化されている。
+- [x] pan / zoom の attach タイミングが 3 パネルとも維持されている。
+- [x] 3 パネルの SVG 出力が抽出前と一致する parity が確認されている。
+- [x] 過剰な golden テストが追加されていない。
+- [x] `npm run validate` が成功し、既存テストとビルドに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。
