@@ -1175,11 +1175,11 @@
   "passwordIncorrect": {
     "message": "Incorrect password."
   },
-  "passwordSaved": {
-    "message": "Master password saved successfully."
+  "masterPasswordReencryptedKept": {
+    "message": "Master password updated. API keys were kept."
   },
-  "passwordRemoved": {
-    "message": "Master password removed."
+  "masterPasswordReencryptAborted": {
+    "message": "Could not decrypt {fields}. The operation was stopped and nothing was changed. Re-enter the items, then retry."
   },
   "passwordRequired": {
     "message": "Please enter your master password."

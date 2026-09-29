@@ -208,7 +208,7 @@ describe('migrateToSingleSettingsObject', () => {
         mockStorage[StorageKeys.MIN_VISIT_DURATION] = 10;
         mockStorage['settings_version'] = 0;
 
-        const { migrateToSingleSettingsObject } = await import('../storage.ts');
+        const { migrateToSingleSettingsObject } = await import('../storage/settingsMigration.js');
         const migrated = await migrateToSingleSettingsObject();
 
         expect(migrated).toBe(true);
@@ -230,7 +230,7 @@ describe('migrateToSingleSettingsObject', () => {
         };
         mockStorage['settings_version'] = 5;
 
-        const { migrateToSingleSettingsObject } = await import('../storage.ts');
+        const { migrateToSingleSettingsObject } = await import('../storage/settingsMigration.js');
         const migrated = await migrateToSingleSettingsObject();
 
         expect(migrated).toBe(false);

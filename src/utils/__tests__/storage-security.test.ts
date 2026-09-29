@@ -571,7 +571,7 @@ describe('Master Password Security', () => {
             await setMasterPassword('StrongPass123!@#');
             expect(await isMasterPasswordEnabled()).toBe(true);
 
-            await removeMasterPassword();
+            await removeMasterPassword('StrongPass123!@#');
 
             expect(await isMasterPasswordEnabled()).toBe(false);
             expect(await isEncryptionLocked()).toBe(false);
@@ -587,6 +587,22 @@ describe('Master Password Security', () => {
             expect(data.master_password_salt).toBeFalsy();
             expect(data.master_password_hash).toBeFalsy();
             expect(data.is_locked).toBeFalsy();
+        });
+
+        test('keeps canonical API keys readable under the anonymous KEK (PBI 2026-09-27)', async () => {
+            await setMasterPassword('StrongPass123!@#');
+            await unlockWithPassword('StrongPass123!@#');
+            const key = await getOrCreateEncryptionKey();
+            await chrome.storage.local.set({
+                settings: { github_pat: await encryptApiKey('ghp_live514', key) },
+            });
+
+            await removeMasterPassword('StrongPass123!@#');
+
+            const anonKey = await getOrCreateEncryptionKey();
+            const stored = (await chrome.storage.local.get('settings')) as Record<string, unknown>;
+            const blob = stored['settings'] as Record<string, unknown>;
+            expect(await decryptApiKey(blob['github_pat'] as never, anonKey)).toBe('ghp_live514');
         });
     });
 
