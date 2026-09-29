@@ -12,18 +12,15 @@ import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord,
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
-  buildQuerySpec, QUERY_CAPS, buildExtraWhereSql,
-  buildFtsMatchQuery, buildLikePattern,
-  buildFtsSearchStatements, buildLikeSearchStatements, buildPlainListStatements,
+  buildQuerySpec, QUERY_CAPS, buildPlainListStatements, buildFtsMatchQuery,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements, buildAuditLogPurgeStatements,
   type AlreadyCappedQuery,
 } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { withTransaction } from './sqliteTransaction.js';
+import { withTransaction, type TransactionExecutor } from './sqliteTransaction.js';
 import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
-import { selectTagFilter } from './queryPlan.js';
 import { AUDIT_CAP_IDB } from '../messaging/limits.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
 import type { SerializeResult } from './StorageBackend.js';
@@ -31,12 +28,41 @@ import {
   SEARCH_COLUMNS_WITH_RANK, BROWSING_LOG_FULL_COLUMNS, BROWSING_LOG_FULL_COLUMNS_SQL,
   mapPositional,
 } from './rowCodec.js';
+import { runSearch, type SearchInput, type SearchRowSource } from './searchExecution.js';
+
+/** What the two search paths and the plain listing hand back. */
+type SearchRow = BrowsingLogEntry & { rank: number };
 
 export class IdbVfsBackend implements StorageBackend {
   constructor(private engine: SqliteEngineHost) {}
 
   private ensureDb(): void {
     if (!this.engine.idbEngine) throw new Error('IDB VFS database not initialized');
+  }
+
+  /**
+   * One-line adapter onto the neutral transaction discipline. Reused by every
+   * multi-statement write so the wrap policy below is stated once, not
+   * re-decided per method.
+   */
+  private get transaction(): TransactionExecutor {
+    return { exec: (sql) => this.engine.execWithCache(sql) };
+  }
+
+  /**
+   * The host's half of the shared search skeleton: `execWithCache` yields
+   * positional values in SELECT order, so rows decode positionally and a COUNT
+   * row is its first cell. `per-path` qualification qualifies the FTS JOIN's
+   * filter columns and leaves the unaliased LIKE path alone — one unqualified
+   * projection for both throws `no such column: b.is_deleted` on the short-text
+   * path, so the two paths cannot share one projection.
+   */
+  private get searchRowSource(): SearchRowSource<SqliteValue[], SearchRow> {
+    return {
+      run: (sql, params, onRow) => this.engine.execWithCache(sql, params, onRow),
+      count: (row) => Number(row[0]),
+      decode: (row) => mapPositional<SearchRow>(row, SEARCH_COLUMNS_WITH_RANK),
+    };
   }
 
   async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
@@ -55,7 +81,7 @@ export class IdbVfsBackend implements StorageBackend {
 
     let inserted = 0;
     let skipped = 0;
-    await withTransaction({ exec: (sql) => this.engine.execWithCache(sql) }, async () => {
+    await withTransaction(this.transaction, async () => {
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
         await this.engine.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
@@ -76,82 +102,32 @@ export class IdbVfsBackend implements StorageBackend {
     const spec = buildQuerySpec(q as unknown as AlreadyCappedQuery, { caps: QUERY_CAPS, fts5Available: this.engine.fts5Available });
     if (spec.error) return { success: false, error: spec.error };
 
-    // PBI 2026-09-12-38: build the projection PER SEARCH PATH. The round-12
-    // version built one `{qualified: true}` ExtraWhere and fed it to both
-    // paths — but the LIKE SQL is `FROM browsing_logs` (no alias) while the
-    // FTS JOIN needs `b.` qualification, so every short-text IDB search
-    // (useFts=false) threw `no such column: b.is_deleted`. Params are
-    // positionally identical; the SQL TEXT is not.
-    const extraFts = buildExtraWhereSql(q, { qualified: true });
-    const extraLike = buildExtraWhereSql(q, { qualified: false });
-
-    // Dispatch decided once by queryPlanner.planQueryMode (spec.mode) — see
-    // PBI 2026-09-14-01. Root cause of 4a1f6093/43385d95: this branch used
-    // to re-test `if (q.text)` independently of the other backends.
     if (spec.mode === 'search') {
       const bare = spec.bareText;
       if (!bare) return { success: true, rows: [], total: 0 };
 
-      if (spec.useFts) {
-        // PBI 2026-09-11-06 (round 5): text+tag applies BOTH conditions — the
-        // tag rides on the FTS/LIKE statements like any other extra filter.
-        // PBI 2026-09-12-39: path-aware tag seam (FTS needs b.id qualification).
-        const tagFilter = selectTagFilter(q.tag, 'fts', this.engine.fts5Available);
-        const stmts = buildFtsSearchStatements(extraFts, {
-          ftsQuery: buildFtsMatchQuery(bare),
-          orderClause: spec.order,
-          limit: spec.limit,
-          offset: spec.offset,
-          tagFilter,
-        });
-
-        let total = 0;
-        await this.engine.execWithCache(
-          stmts.countSql,
-          stmts.countParams,
-          (row: SqliteValue[]) => { total = Number(row[0]); }
-        );
-
-        const rows: (BrowsingLogEntry & { rank: number })[] = [];
-        await this.engine.execWithCache(
-          stmts.rowsSql,
-          stmts.rowsParams,
-          (row: SqliteValue[]) => {
-            rows.push(mapPositional<BrowsingLogEntry & { rank: number }>(row, SEARCH_COLUMNS_WITH_RANK));
-          }
-        );
-        return { success: true, rows, total };
-      }
-
-      // LIKE fallback
-      // PBI 2026-09-12-39: path-aware tag seam (LIKE never MATCHes).
-      const likeTagFilter = selectTagFilter(q.tag, 'like', this.engine.fts5Available);
-      const stmts = buildLikeSearchStatements(extraLike, {
+      // FTS takes the phrase-quoted sanitized term, LIKE the raw text
+      // (buildLikePattern applies it) — the same split the worker makes.
+      const input: SearchInput = spec.useFts
+        ? { path: 'fts', ftsQuery: buildFtsMatchQuery(bare) }
         // Non-null: spec.mode === 'search' is derived from `q.text` truthiness
-        // (planQueryMode), so this branch is only reached when it is set.
-        likePattern: buildLikePattern(q.text!),
-        orderClause: spec.order,
+        // (planQueryMode), so this branch has text.
+        : { path: 'like', rawTerm: q.text! };
+
+      const { rows, total } = await runSearch({
+        reader: this.searchRowSource,
+        input,
+        query: q,
         limit: spec.limit,
         offset: spec.offset,
-        tagFilter: likeTagFilter,
+        orderBy: q.orderBy,
+        orderDir: q.orderDir,
+        // 'error' is the host's policy, and spec.error above already rejected
+        // anything out of the whitelist — this is the belt to that braces.
+        onInvalid: 'error',
+        extraQualification: 'per-path',
+        fts5Available: this.engine.fts5Available,
       });
-
-      let total = 0;
-      await this.engine.execWithCache(
-        stmts.countSql,
-        stmts.countParams,
-        (row: SqliteValue[]) => { total = Number(row[0]); }
-      );
-
-      const rows: (BrowsingLogEntry & { rank: number })[] = [];
-      await this.engine.execWithCache(
-        stmts.rowsSql,
-        stmts.rowsParams,
-        (row: SqliteValue[]) => {
-          // LIKE rows carry no rank column; the codec defaults rank to 0.
-          rows.push(mapPositional<BrowsingLogEntry & { rank: number }>(row, SEARCH_COLUMNS_WITH_RANK));
-        }
-      );
       return { success: true, rows, total };
     }
 
@@ -162,7 +138,7 @@ export class IdbVfsBackend implements StorageBackend {
     // Columns are explicit (was SELECT *): same 33 fields, codec order.
     const stmts = buildPlainListStatements(spec, { columns: BROWSING_LOG_FULL_COLUMNS_SQL });
 
-    const rows: (BrowsingLogEntry & { rank: number })[] = [];
+    const rows: SearchRow[] = [];
     await this.engine.execWithCache(
       stmts.rowsSql,
       stmts.rowsParams,
@@ -226,6 +202,17 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: true, is_starred: newStarred };
   }
 
+  /**
+   * Transaction policy for the purge family, shared verbatim with
+   * opfsWorker/purgeHandlers.ts: a purge runs its whole sequence inside one
+   * `withTransaction`. Every purge here reads (`SELECT changes()` after a
+   * write, or a COUNT that decides the next write's LIMIT), and a purge
+   * interleaved with a recording would otherwise report a count taken from one
+   * snapshot while deleting rows selected from another. `clearAll` is the one
+   * deliberate exception: its statements are unconditional deletes with no
+   * read between writes, and its closing `wal_checkpoint` is rejected inside
+   * a transaction.
+   */
   async purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
     // PBI 2026-09-12-36: skip guards — same contract as purgeContent. Before
@@ -235,27 +222,29 @@ export class IdbVfsBackend implements StorageBackend {
     const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays ?? DEFAULT_PURGE_RETENTION_DAYS));
     let totalPurged = 0;
 
-    if (retentionDays != null && retentionDays > 0) {
-      await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
-      let changes1 = 0;
-      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
-      totalPurged += changes1;
-    }
+    await withTransaction(this.transaction, async () => {
+      if (retentionDays != null && retentionDays > 0) {
+        await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
+        let changes1 = 0;
+        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
+        totalPurged += changes1;
+      }
 
-    let totalCount = 0;
-    await this.engine.execWithCache(
-      stmts.countSql,
-      [],
-      (row: SqliteValue[]) => { totalCount = Number(row[0]); }
-    );
+      let totalCount = 0;
+      await this.engine.execWithCache(
+        stmts.countSql,
+        [],
+        (row: SqliteValue[]) => { totalCount = Number(row[0]); }
+      );
 
-    if (maxRecords != null && maxRecords > 0 && totalCount > maxRecords) {
-      const excess = totalCount - maxRecords;
-      await this.engine.execWithCache(stmts.deleteExcessSql, [excess]);
-      let changes2 = 0;
-      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
-      totalPurged += changes2;
-    }
+      if (maxRecords != null && maxRecords > 0 && totalCount > maxRecords) {
+        const excess = totalCount - maxRecords;
+        await this.engine.execWithCache(stmts.deleteExcessSql, [excess]);
+        let changes2 = 0;
+        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
+        totalPurged += changes2;
+      }
+    });
 
     return { success: true, purged: totalPurged };
   }
@@ -265,30 +254,32 @@ export class IdbVfsBackend implements StorageBackend {
     const stmts = buildContentPurgeStatements(contentPurgeStarredClause(includeStarred));
     let totalPurged = 0;
 
-    if (retentionDays != null && retentionDays > 0) {
-      const cutoffMs = purgeCutoffMs(retentionDays);
-      await this.engine.execWithCache(stmts.deleteOldSql, [cutoffMs]);
-      let changes1 = 0;
-      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
-      totalPurged += changes1;
-    }
-
-    if (maxRecords != null && maxRecords > 0) {
-      let count = 0;
-      await this.engine.execWithCache(
-        stmts.countSql,
-        [],
-        (row: SqliteValue[]) => { count = Number(row[0]); }
-      );
-
-      if (count > maxRecords) {
-        const excess = count - maxRecords;
-        await this.engine.execWithCache(stmts.clearExcessSql, [excess]);
-        let changes2 = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
-        totalPurged += changes2;
+    await withTransaction(this.transaction, async () => {
+      if (retentionDays != null && retentionDays > 0) {
+        const cutoffMs = purgeCutoffMs(retentionDays);
+        await this.engine.execWithCache(stmts.deleteOldSql, [cutoffMs]);
+        let changes1 = 0;
+        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
+        totalPurged += changes1;
       }
-    }
+
+      if (maxRecords != null && maxRecords > 0) {
+        let count = 0;
+        await this.engine.execWithCache(
+          stmts.countSql,
+          [],
+          (row: SqliteValue[]) => { count = Number(row[0]); }
+        );
+
+        if (count > maxRecords) {
+          const excess = count - maxRecords;
+          await this.engine.execWithCache(stmts.clearExcessSql, [excess]);
+          let changes2 = 0;
+          await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
+          totalPurged += changes2;
+        }
+      }
+    });
 
     return { success: true, purged: totalPurged };
   }
@@ -301,9 +292,11 @@ export class IdbVfsBackend implements StorageBackend {
       return { success: true, purged: 0 };
     }
     const stmts = buildAuditLogPurgeStatements(purgeCutoffMs(retentionDays));
-    await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
     let purged = 0;
-    await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { purged = Number(row[0]); });
+    await withTransaction(this.transaction, async () => {
+      await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
+      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { purged = Number(row[0]); });
+    });
     return { success: true, purged };
   }
 
@@ -420,6 +413,9 @@ export class IdbVfsBackend implements StorageBackend {
 
   async clearAll(): Promise<BackendOrError<MutationResult>> {
     this.ensureDb();
+    // The documented exception to the purge transaction policy above: every
+    // statement here is an unconditional delete with no read between writes,
+    // and `wal_checkpoint` cannot run inside a transaction.
     await this.engine.execWithCache('DELETE FROM browsing_logs');
     await this.engine.execWithCache('DELETE FROM browsing_logs_fts');
     // audit_log is a separate table with its own retention sweep, so clearing

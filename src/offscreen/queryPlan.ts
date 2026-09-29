@@ -123,7 +123,13 @@ export function qualifyCondition(condition: FilterCondition, qualifier: string):
   return { ...condition, sql: qualified };
 }
 
-export function buildExtraWhereSql(query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>, options: { qualified?: boolean } = {}): ExtraWhere {
+/** The filter fields `buildExtraWhereSql` reads; everything else on a query is paging or text. */
+export type ExtraWhereQuery = Pick<
+  StorageQuery,
+  'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'
+>;
+
+export function buildExtraWhereSql(query: ExtraWhereQuery, options: { qualified?: boolean } = {}): ExtraWhere {
   const conditions = buildFilterConditions(query);
   const qualified = options.qualified === true;
   const projected = conditions
@@ -614,9 +620,9 @@ export function contentPurgeStarredClause(includeStarred?: boolean | null): stri
 /**
  * Content-purge statements shared by idb/opfs implementations.
  *
- * NOTE on counting (preserved, not unified): the idb backend reports
- * `changes()` for the cap-based UPDATE while the opfs worker adds the
- * computed excess — both equal the affected-row count in the normal case.
+ * NOTE on counting: both backends report `SELECT changes()` for every step,
+ * including the cap-based UPDATE. The excess the cap-delete is handed says
+ * what it was asked to touch, not what it touched, so it is not a row count.
  * FallbackStorage additionally differs in cap eviction: it can NULL the
  * content of starred rows when over maxRecords, while this SQL only touches
  * unstarred rows unless includeStarred is set (documented divergence).
