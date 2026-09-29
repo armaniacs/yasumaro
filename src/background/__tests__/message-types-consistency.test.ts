@@ -103,4 +103,41 @@ describe('Message Type Consistency', () => {
             expect(VALID_MESSAGE_TYPES).toContain(type);
         }
     });
+
+    test('every VALID_MESSAGE_TYPES entry has a router handler or an allow-listed reason', () => {
+        // PBI 2026-09-28-26: the contract tables and the handler table drifted
+        // apart before (a type could exist with no handler and no test noticing).
+        const routerSource = readFileSync(
+            fileURLToPath(new URL('../handlers/MessageRouter.ts', import.meta.url)),
+            'utf-8',
+        );
+        const recordBlock = routerSource.match(
+            /const handlers: Record<string, MessageHandler> = \{([\s\S]*?)\n    \};/,
+        );
+        if (!recordBlock) throw new Error('handlers Record not found in MessageRouter.ts');
+        const registered = new Set(
+            [...recordBlock[1]!.matchAll(/^\s{6}([A-Z][A-Z0-9_]*):/gm)].map((m) => m[1]!),
+        );
+        expect(registered.size).toBeGreaterThan(0);
+        // Intentionally handler-less: delivered to the content script, never dispatched.
+        const INTENTIONALLY_UNREGISTERED = new Set(['GET_CONTENT']);
+        for (const type of VALID_MESSAGE_TYPES) {
+            expect(registered.has(type) || INTENTIONALLY_UNREGISTERED.has(type)).toBe(true);
+        }
+    });
+
+    test('every registered router handler is a VALID_MESSAGE_TYPES entry', () => {
+        const routerSource = readFileSync(
+            fileURLToPath(new URL('../handlers/MessageRouter.ts', import.meta.url)),
+            'utf-8',
+        );
+        const recordBlock = routerSource.match(
+            /const handlers: Record<string, MessageHandler> = \{([\s\S]*?)\n    \};/,
+        );
+        if (!recordBlock) throw new Error('handlers Record not found in MessageRouter.ts');
+        const valid = new Set<string>(VALID_MESSAGE_TYPES);
+        for (const [, type] of recordBlock[1]!.matchAll(/^\s{6}([A-Z][A-Z0-9_]*):/gm)) {
+            expect(valid.has(type!)).toBe(true);
+        }
+    });
 });

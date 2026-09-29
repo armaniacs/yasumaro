@@ -15,9 +15,10 @@
  * behavior.
  */
 
-import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { withRuntimeTimeout } from './withRuntimeTimeout.js';
+import { messageTransport } from './messageTransport.js';
+import type { ManualRecordMessage } from '../background/messageTypes.js';
 
 export interface PendingRecordRequest {
   title: string;
@@ -43,7 +44,7 @@ export async function recordPendingPage(
   opts: { timeoutMs?: number } = {},
 ): Promise<PendingRecordResult> {
   const timeoutMs = opts.timeoutMs ?? PENDING_RECORD_TIMEOUT_MS;
-  const payload: Record<string, unknown> = {
+  const payload: ManualRecordMessage['payload'] = {
     title: request.title,
     url: request.url,
     content: request.content ?? '',
@@ -56,11 +57,17 @@ export async function recordPendingPage(
   let response: { success?: boolean; error?: string } | undefined;
   try {
     response = (await withRuntimeTimeout(
-      chrome.runtime.sendMessage({
-        type: 'MANUAL_RECORD',
-        protocolVersion: CURRENT_PROTOCOL_VERSION,
-        payload,
-      }),
+      // The gateway's own timeout bounds the call; the seam adds version
+      // stamping and validation inside that budget. Retries stay off: extra
+      // attempts would extend past the documented timeout contract (and stall
+      // under fake timers, which the timeout tests install).
+      messageTransport.send(
+        {
+          type: 'MANUAL_RECORD',
+          payload,
+        },
+        { retries: 0 },
+      ),
       timeoutMs,
       new Error(PENDING_RECORD_TIMEOUT_ERROR),
     )) as { success?: boolean; error?: string } | undefined;

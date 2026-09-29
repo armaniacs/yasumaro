@@ -88,7 +88,11 @@ export class RecordingOrchestrator {
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 
-    // Recording-allowance precedence: order SSOT is src/utils/recordingGateTable.ts.
+    // Recording-allowance precedence: this hand-written list is canonical
+    // (ADR 2026-09-28-recording-gate-order-canonical). Only the hand list
+    // carries each step's errorStrategy / maxRetries / offlineRetry, so the
+    // name-only RECORDING_GATE_TABLE cannot drive execution.
+    // RECORDING_GATE_TABLE stays the gate-name registry for decideGate callers.
     this.preSaveSteps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
       { name: 'domainFilter', errorStrategy: ErrorStrategy.FATAL, execute: checkDomainFilterStep },

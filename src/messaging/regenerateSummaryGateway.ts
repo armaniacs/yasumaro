@@ -11,7 +11,7 @@
 
 import type { ResponseForType } from './types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
-import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
+import { messageTransport } from './messageTransport.js';
 import { withRuntimeTimeout } from './withRuntimeTimeout.js';
 
 export const REGENERATE_TIMEOUT_MS = 60_000;
@@ -33,11 +33,16 @@ export async function regenerateSummary(
 ): Promise<RegenerateSummaryResponse> {
   try {
     const raw = (await withRuntimeTimeout(
-      chrome.runtime.sendMessage({
-        type: 'REGENERATE_SUMMARY',
-        payload: params,
-        protocolVersion: CURRENT_PROTOCOL_VERSION,
-      }),
+      // Own timeout bounds the call; the seam adds version stamping and
+      // validation inside that budget. Retries stay off for the same reason
+      // as pendingRecordGateway (documented timeout contract + fake timers).
+      messageTransport.send(
+        {
+          type: 'REGENERATE_SUMMARY',
+          payload: params,
+        },
+        { retries: 0 },
+      ),
       REGENERATE_TIMEOUT_MS,
       new Error(REGENERATE_TIMEOUT_ERROR),
     )) as unknown;

@@ -35,6 +35,11 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
       filename: '/repo/src/utils/pathSanitizer.ts',
     },
     {
+      name: 'apiKeyTransition (Layer 0) importing the canonical field list (Layer 0)',
+      code: "import { API_KEY_FIELD_NAMES } from './apiKeyFields.js';",
+      filename: '/repo/src/utils/storage/apiKeyTransition.ts',
+    },
+    {
       name: 'Layer 0 mentioning chrome.* only in a comment',
       code: [
         '/** Pure primitives with no chrome.storage side effects. */',
@@ -157,6 +162,12 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
       name: 'Layer 0 referencing chrome.storage is a violation',
       code: 'export async function get(k) { return chrome.storage.local.get(k); }',
       filename: LAYER0_FILE,
+      errors: [{ messageId: 'layer0Chrome' }],
+    },
+    {
+      name: 'apiKeyTransition (Layer 0) referencing chrome.storage is a violation',
+      code: 'export async function get(k) { return chrome.storage.local.get(k); }',
+      filename: '/repo/src/utils/storage/apiKeyTransition.ts',
       errors: [{ messageId: 'layer0Chrome' }],
     },
     {

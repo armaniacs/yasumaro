@@ -5,6 +5,7 @@
  */
 
 import { StorageKeys } from '../utils/storage/types.js';
+import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
@@ -46,8 +47,8 @@ async function loadConditionsSettings(repo: SettingsReader = settingsRepository)
       StorageKeys.OPENAI_CONTENT_CHARS,
       StorageKeys.GEMINI_CONTENT_CHARS,
     ]);
-    minVisitDuration = settings[StorageKeys.MIN_VISIT_DURATION] ?? 5;
-    minScrollDepth = settings[StorageKeys.MIN_SCROLL_DEPTH] ?? 50;
+    minVisitDuration = settings[StorageKeys.MIN_VISIT_DURATION] ?? DEFAULT_MIN_VISIT_DURATION;
+    minScrollDepth = settings[StorageKeys.MIN_SCROLL_DEPTH] ?? DEFAULT_MIN_SCROLL_DEPTH;
     maxTokensPerPrompt = settings[StorageKeys.MAX_TOKENS_PER_PROMPT] ?? 1000;
     const aiTimeoutMs = settings[StorageKeys.AI_TIMEOUT_MS] ?? 0;
     aiTimeoutSeconds = aiTimeoutMs > 0 ? Math.round(aiTimeoutMs / 1000) : 0;

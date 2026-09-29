@@ -22,12 +22,12 @@
  * (domain / starred / date range / ids) plus a substring match for `text`.
  */
 
-import type { OffscreenTransport } from './offscreenTransport.js';
-import type { SqliteMessageType } from '../messaging/sqliteMessages.js';
-import type { OffscreenResponse } from '../messaging/sqliteMessages.js';
-import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
-import { sanitizeFtsTerm } from '../offscreen/schema.js';
-import { QUERY_CAPS, clampLimit, matchesExtraWhere } from '../offscreen/queryPlan.js';
+import type { OffscreenTransport } from '../../offscreenTransport.js';
+import type { SqliteMessageType } from '../../../messaging/sqliteMessages.js';
+import type { OffscreenResponse } from '../../../messaging/sqliteMessages.js';
+import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
+import { sanitizeFtsTerm } from '../../../offscreen/schema.js';
+import { QUERY_CAPS, clampLimit, matchesExtraWhere } from '../../../offscreen/queryPlan.js';
 
 interface QueryPayload {
   text?: string;

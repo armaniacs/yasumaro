@@ -6,9 +6,9 @@ import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainU
 import { ErrorCode } from '../utils/logger/types.js';
 import { logDebug, logWarn, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { messageTransport } from '../messaging/messageTransport.js';
 import { hashUrl } from '../utils/urlHash.js';
 import { matchesDomainPattern } from '../utils/wildcardToRegex.js';
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { normalizeUrlSafe } from '../utils/urlUtils.js';
 
@@ -127,7 +127,10 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     type PrivacyInfo = { isPrivate?: boolean; reason?: 'cache-control' | 'set-cookie' | 'authorization'; headers?: { cacheControl?: string; hasCookie?: boolean; hasAuth?: boolean } };
     let privacyInfo: PrivacyInfo | null = null;
     try {
-      const response = await chrome.runtime.sendMessage({ type: 'GET_PRIVACY_CACHE', protocolVersion: CURRENT_PROTOCOL_VERSION });
+      const response = (await messageTransport.send({ type: 'GET_PRIVACY_CACHE' })) as {
+        success?: boolean;
+        cache?: Array<[string, PrivacyInfo]>;
+      };
       await logDebug('Privacy cache response', { success: response?.success, cacheSize: response?.cache?.length, source: 'statusChecker' });
 
       if (response && response.success && response.cache) {

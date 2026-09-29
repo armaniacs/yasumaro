@@ -34,7 +34,16 @@ const RETRYABLE_ERROR_PATTERNS = [
   /Extension context invalidated/i,
 ];
 
-function isRetryableError(error: unknown): boolean {
+/**
+ * Canonical transport-level retriability predicate (PBI 2026-09-28-29).
+ *
+ * Scope: message-transport failures only (dead port, torn-down context).
+ * Network-fetch failures (pipeline/retryPolicy.ts LEGACY_NETWORK_MARKERS)
+ * and provider HTTP failures (ProviderStrategy.shouldRetrySummaryRequest)
+ * are different error universes with their own policies — they cross-link
+ * here for the transport class instead of merging into one function.
+ */
+export function isRetryableError(error: unknown): boolean {
   const msg = errorMessage(error);
   return RETRYABLE_ERROR_PATTERNS.some((p) => p.test(msg));
 }
