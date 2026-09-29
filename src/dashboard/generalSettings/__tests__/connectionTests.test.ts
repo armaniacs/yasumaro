@@ -703,7 +703,7 @@ describe('handleTestAi', () => {
     await expect(handleTestAi()).resolves.toBeUndefined();
   });
 
-  it('guards re-entrancy via aiTestInFlight', async () => {
+  it('guards re-entrancy via the shared runner in-flight guard', async () => {
     buildDomWithTop();
     // make saveDashboardSettings hang
     let resolveSave: (v: any) => void;
@@ -711,7 +711,7 @@ describe('handleTestAi', () => {
     const sendMessage = vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK', providers: [] } });
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
 
-    const first = handleTestAi(); // sets aiTestInFlight = true
+    const first = handleTestAi(); // takes the runner's in-flight guard
     // second call should return immediately without calling sendMessage again
     await handleTestAi();
     expect(sendMessage).not.toHaveBeenCalled(); // first hasn't reached sendMessage yet due to pending save
@@ -970,7 +970,7 @@ describe('handleTestAi', () => {
     mockedGetMessage.mockReturnValue('' as any);
     // outer try has no catch for this region, so it rejects; finally still runs
     await expect(handleTestAi()).rejects.toThrow('build fail');
-    // finally should have run and reset state despite rejection (aiTestInFlight reset allows next call)
+    // finally should have run and reset state despite rejection (the guard release allows next call)
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     // verify re-entrancy guard cleared
     mockedBuildView.mockImplementation(() => {
