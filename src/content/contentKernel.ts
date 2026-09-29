@@ -6,6 +6,7 @@
  */
 
 import type { StoragePort } from '../utils/storage/storagePort.js';
+import { readSettingsSnapshot } from '../utils/storage/settingsSnapshot.js';
 import type { DomainPolicyPort } from './domainPolicyPort.js';
 import type { Clock } from './domainPolicyPort.js';
 import { PageState, type CleansingConfig, DEFAULT_CLEANSING_CONFIG } from './pageState.js';
@@ -155,8 +156,9 @@ export class ContentKernel {
     // -----------------------------------------------------------------------
 
     async loadSettings(): Promise<void> {
-        const result = await this.storage.get(['settings']);
-        const s: Record<string, unknown> = (result['settings'] as Record<string, unknown> | undefined) ?? {};
+        // Decrypt-free snapshot from the storage side (PBI 2026-09-28-30):
+        // migration-folded and defaults-filled, ciphertext stays opaque.
+        const s = (await readSettingsSnapshot(this.storage)) as unknown as Record<string, unknown>;
         applySettingsTable(this.pageState, s);
 
         void logInfo(

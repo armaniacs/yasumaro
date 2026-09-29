@@ -56,6 +56,11 @@ const LAYER0_FILES = [
   'src/utils/summaryFallback.ts',
   'src/utils/failureTaxonomy.ts',
   'src/utils/vfsCapabilities.ts',
+  'src/utils/storage/apiKeyTransition.ts',
+  // Canonical API-key field list: dependency-free by design (PBI 2026-09-27).
+  'src/utils/storage/apiKeyFields.ts',
+  // Visit-gating default thresholds: no imports (PBI 2026-09-28-28).
+  'src/utils/visitThresholds.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md
@@ -72,6 +77,8 @@ const LAYER1_FILES = [
   'src/utils/storage/privacyConsent.ts',
   'src/utils/storage/quota.ts',
   'src/utils/storage/storageMaintenance.ts',
+  // Decrypt-free settings snapshot for content scripts (PBI 2026-09-28-30).
+  'src/utils/storage/settingsSnapshot.ts',
   'src/utils/Mutex.ts',
   'src/utils/rateLimiter.ts',
   'src/utils/trustDb/domainValidation.ts',

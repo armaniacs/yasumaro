@@ -21,7 +21,7 @@ import {
 import type { FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { messageTransport } from '../../messaging/messageTransport.js';
 import { saveDashboardSettings, saveErrorText } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -185,7 +185,7 @@ function refreshLocalMarkdownScheduler(): void {
   try {
     // Best-effort: a failure just means the old schedule keeps running
     // until the next natural Service Worker restart.
-    Promise.resolve(chrome.runtime.sendMessage({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER', protocolVersion: CURRENT_PROTOCOL_VERSION })).catch(() => {});
+    Promise.resolve(messageTransport.send({ type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' })).catch(() => {});
   } catch {
     // sendMessage can throw synchronously (e.g. extension context invalidated).
   }
@@ -223,9 +223,8 @@ export async function testObsidianConnection(apiKey: string): Promise<ObsidianTe
   const port = portInput?.value?.trim();
   const host = hostInput?.value?.trim();
   const hasFormValue = Boolean(apiKey || protocol || port || host);
-  const testResult = await chrome.runtime.sendMessage({
+  const testResult = await messageTransport.send({
     type: 'TEST_OBSIDIAN',
-    protocolVersion: CURRENT_PROTOCOL_VERSION,
     payload: hasFormValue
       ? {
           ...(apiKey ? { apiKey } : {}),
@@ -240,9 +239,8 @@ export async function testObsidianConnection(apiKey: string): Promise<ObsidianTe
 }
 
 export async function testAiConnection(runId?: string): Promise<MultiProviderTestResult> {
-  const testResult = await chrome.runtime.sendMessage({
+  const testResult = await messageTransport.send({
     type: 'TEST_AI',
-    protocolVersion: CURRENT_PROTOCOL_VERSION,
     payload: {},
     ...(runId !== undefined ? { runId } : {}),
   }) as { ai?: MultiProviderTestResult };

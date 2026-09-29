@@ -53,22 +53,6 @@ export default [
         {
           patterns: [],
           paths: [
-            {
-              name: '../../utils/storage.js',
-              message: 'Use direct module imports instead (e.g., from ./storage/types.js or ./storage/settingsStore.js). See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: '../utils/storage.js',
-              message: 'Use direct module imports instead (e.g., from ../utils/storage/types.js). See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: './storage.js',
-              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: 'src/utils/storage.js',
-              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
-            },
           ],
         },
       ],
@@ -131,22 +115,6 @@ export default [
             },
           ],
           paths: [
-            {
-              name: '../../utils/storage.js',
-              message: 'Use direct module imports instead (e.g., from ./storage/types.js or ./storage/settingsStore.js). See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: '../utils/storage.js',
-              message: 'Use direct module imports instead (e.g., from ../utils/storage/types.js). See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: './storage.js',
-              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
-            },
-            {
-              name: 'src/utils/storage.js',
-              message: 'Use direct module imports instead. See dev-docs/LAYERS.md Wave 3.',
-            },
           ],
         },
       ],
@@ -198,6 +166,9 @@ export default [
       // precondition and cannot detect a missing guard. See
       // dev-docs/TEST_RULE.md § 実時間待ちの禁止と代替手段
       'local/no-vacuous-negative-wait': 'error',
+      // PBI 2026-09-28-29: protocolVersion is stamped by MessageTransport.send()
+      // only. Hand-stamped envelopes bypass validation and retry.
+      'local/no-manual-protocol-version': 'error',
       // Migration warning, not an error: vi.useFakeTimers() with the default
       // toFake replaces setImmediate/queueMicrotask and hangs any dynamic
       // import awaited under it. 124 pre-existing call sites still use it, so

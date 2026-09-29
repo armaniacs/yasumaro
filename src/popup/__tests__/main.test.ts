@@ -1719,11 +1719,13 @@ describe('main', () => {
 
       await saveSelectedPages();
 
-      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith(
+      // PBI 2026-09-28-29: sends go through the seam (version stamped there).
+      // The file's sendMock harness forwards the message only (drops opts).
+      expect(sendMock).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'MANUAL_RECORD',
           payload: expect.objectContaining({ url: 'https://a.com', force: true })
-        })
+        }),
       );
       expect(removePendingPages).toHaveBeenCalledWith(['https://a.com']);
     });

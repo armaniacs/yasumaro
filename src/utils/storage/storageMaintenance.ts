@@ -61,3 +61,18 @@ export async function ensureStorageQuota(
     await logError(errorMsg, { freed, usageAfter: afterCleanup }, ErrorCode.STORAGE_QUOTA_EXCEEDED, 'storage/storageMaintenance.ts');
     throw new Error(errorMsg);
 }
+
+/**
+ * clearAllLocalData(): remove every chrome.storage.local key.
+ *
+ * Defined path for full-data deletion (PBI 2026-09-28-28): previously the
+ * dashboard called chrome.storage.local.clear() directly, leaving the
+ * version-counter interaction undocumented. This removes `<key>_version`
+ * CAS records together with the data, so an in-flight withLock write that
+ * started before the clear fails closed on its post-write verification
+ * instead of resurrecting a half-deleted state. Callers must still serialize
+ * against their own writes (clear itself is not a transaction).
+ */
+export async function clearAllLocalData(): Promise<void> {
+    await chrome.storage.local.clear();
+}

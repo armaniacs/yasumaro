@@ -18,12 +18,15 @@ import { shouldSkipUrl } from './urlSkipper.js';
 import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { resolveVisitAdmission } from './visitAdmission.js';
+import type { CheckDomainResponse } from './visitAdmission.js';
+import { messageTransport } from '../messaging/messageTransport.js';
 
 // Content Script entry point runs without ESM module support, so we cannot
 // import CURRENT_PROTOCOL_VERSION statically. The value is injected at build
 // time via wxt.config.ts `define.__PROTOCOL_VERSION__` (SSOT: src/messaging/protocol.ts).
+// (No longer used for sends: CHECK_DOMAIN goes through messageTransport, which
+// stamps the version itself. The define stays for wxt.config.ts compatibility.)
 declare const __PROTOCOL_VERSION__: number | undefined;
-const CURRENT_PROTOCOL_VERSION: number = typeof __PROTOCOL_VERSION__ !== 'undefined' ? __PROTOCOL_VERSION__ : 1;
 
 // Benchmark A/B build flag. Only builds made with OW_BENCH=1 define this as
 // true; production builds define it as false so the page-controllable
@@ -66,7 +69,8 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
         warnLabel: isE2E ? ' (e2e)' : '',
         shouldSkip: (u) => typeof window.location !== 'undefined' && shouldSkipUrl(u),
         checkCache: (u) => defaultPort.checkDomainAllowedFromCache(u),
-        sendCheckDomain: () => chrome.runtime.sendMessage({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION }),
+        sendCheckDomain: () =>
+          messageTransport.send({ type: 'CHECK_DOMAIN' }, { retries: 0 }) as Promise<CheckDomainResponse | undefined>,
         sleep: (ms) => new Promise<void>((r) => setTimeout(r, ms)),
         loadExtractor: async () => {
             // ビルド後のパスを指定（distディレクトリ内）

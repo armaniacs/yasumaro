@@ -9,6 +9,7 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import { logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { withOptimisticLock } from './storage/storageTransaction.js';
+import { ChromeStoragePort, type StoragePort } from './storage/storagePort.js';
 
 // ============================================================================
 // Types
@@ -36,6 +37,14 @@ export interface DeniedDomainData {
 // ============================================================================
 
 export class PermissionManager {
+  // Reads and writes share one port (PBI 2026-09-28-28): the read used bare
+  // chrome.storage.local while writes went through withOptimisticLock, hiding
+  // that both hit the same store. Injecting the port also makes the seam
+  // replaceable in tests.
+  private readonly port: StoragePort;
+  constructor(port: StoragePort = new ChromeStoragePort()) {
+    this.port = port;
+  }
   // DoS対策: denied_domains の上限とドメイン長の上限
   // 100件根拠: chrome.storage.local quota 5-10MB に対し1件あたり数百バイトのため100件で十分に収まる。
   // O(n) の上限チェックコストも n=100 で無視可能。時間ベースの cleanup(90日) と併用し件数ベースで発散を防止。
@@ -83,8 +92,8 @@ export class PermissionManager {
    * 共通: denied_domains を取得するヘルパーメソッド
    */
   private async getDeniedDomains(): Promise<Record<string, DeniedDomainData>> {
-    const data = await chrome.storage.local.get({ [StorageKeys.DENIED_DOMAINS]: {} });
-    return (data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData>) || {};
+    const data = await this.port.get(StorageKeys.DENIED_DOMAINS);
+    return (data[StorageKeys.DENIED_DOMAINS] as Record<string, DeniedDomainData> | undefined) ?? {};
   }
 
   /**

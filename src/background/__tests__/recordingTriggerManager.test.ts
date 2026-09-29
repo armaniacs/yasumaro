@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RecordingTriggerManager } from '../recordingTriggerManager.js';
+import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 
 describe('RecordingTriggerManager', () => {
   let manager: RecordingTriggerManager;
@@ -69,6 +70,28 @@ describe('RecordingTriggerManager', () => {
         scrollPercent: 100,
         visitDuration: 60000,
       })).toBe(false); // scrollAndTime defaults to false
+    });
+
+    it('honors blob thresholds instead of defaults (PBI 2026-09-28-24)', async () => {
+      mockStorage['recording_triggers'] = JSON.stringify({ scrollAndTime: true });
+      // Mark migration complete so the seeded blob survives getAll(), and drop
+      // the repository's 1s TTL cache so earlier tests' empty reads don't leak.
+      mockStorage['settings_migrated'] = { stage: 'completed', schemaVersion: 2 };
+      mockStorage['settings'] = { min_scroll_depth: 80, min_visit_duration: 30 };
+      settingsRepository.clearCache();
+      manager.invalidateCache();
+      // 75% passes the default 50 but not the configured 80: proves the blob
+      // value (not the fallback) drives the decision.
+      expect(await manager.shouldRecord({
+        type: 'scroll_idle',
+        scrollPercent: 75,
+        visitDuration: 40000,
+      })).toBe(false);
+      expect(await manager.shouldRecord({
+        type: 'scroll_idle',
+        scrollPercent: 85,
+        visitDuration: 40000,
+      })).toBe(true);
     });
 
     it('returns true for manual_save when enabled (default)', async () => {

@@ -7,15 +7,15 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger/types.js', () => ({
+vi.mock('../../../utils/logger/types.js', () => ({
   logError: vi.fn(),
   ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
 }));
-vi.mock('../../utils/logger/core.js', () => ({
+vi.mock('../../../utils/logger/core.js', () => ({
   logError: vi.fn(),
   ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
 }));
-vi.mock('../../utils/logger/api.js', () => ({
+vi.mock('../../../utils/logger/api.js', () => ({
   logError: vi.fn(),
   ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
 }));
@@ -24,9 +24,9 @@ vi.mock('../sqliteAlert.js', () => ({
   recordSqliteFailure: vi.fn(),
 }));
 
-import { InMemoryTransport } from '../inMemoryTransport.js';
-import { SqliteGateway } from '../sqliteGateway.js';
-import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import { InMemoryTransport } from './inMemoryTransport.js';
+import { SqliteGateway } from '../../sqliteGateway.js';
+import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
 function rec(over: Partial<BrowsingLogRecord> = {}): BrowsingLogRecord {
   return { url: 'https://example.com/', domain: 'example.com', created_at: 1000, ...over };
@@ -193,7 +193,7 @@ describe('InMemoryTransport + SqliteGateway', () => {
   });
 
   it('shares caps with QUERY_CAPS: plain cap is 10000, FTS cap is 100000', async () => {
-    const { QUERY_CAPS } = await import('../../offscreen/queryPlan.js');
+    const { QUERY_CAPS } = await import('../../../offscreen/queryPlan.js');
     expect(QUERY_CAPS.plain).toBe(10000);
     expect(QUERY_CAPS.fts).toBe(100000);
     // InMemory must clamp using those same caps — insert 5 and request huge limit

@@ -5,7 +5,7 @@
 
 import { isValidUrl } from './validation.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../../background/messageTypes.js';
+import { messageTransport } from '../../../messaging/messageTransport.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 
@@ -21,11 +21,10 @@ export async function fetchFromUrl(url: string): Promise<string> {
   }
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = (await messageTransport.send({
       type: 'FETCH_URL',
-      protocolVersion: CURRENT_PROTOCOL_VERSION,
       payload: { url }
-    });
+    })) as { success?: boolean; error?: string; data?: unknown; contentType?: unknown };
 
     if (!response) {
       throw new Error('バックグラウンドスクリプトからの応答がありません');

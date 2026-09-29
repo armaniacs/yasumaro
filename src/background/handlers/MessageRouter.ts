@@ -139,7 +139,7 @@ export class MessageRouter {
   constructor(deps: MessageRouterDeps) {
     this.runtimeId = deps.runtimeId ?? (typeof chrome !== 'undefined' ? chrome.runtime?.id : undefined);
 
-    // — Deep implementation: 20 handlers + trust table + 9 validators are all hidden behind the seam —
+    // — Deep implementation: 20 handlers + trust table + 10 validators are all hidden behind the seam —
     const validVisitPick = {
       hasPrivacyConsent: deps.hasPrivacyConsent,
       tabCache: deps.tabCache,
@@ -222,7 +222,7 @@ export class MessageRouter {
   }
 
   /**
-   * Deep seam: one method hides 20 handlers + trust table + 9 validators
+   * Deep seam: one method hides 20 handlers + trust table + 10 validators
    * Returns true if the message was handled (async response), false otherwise.
    */
   dispatch(

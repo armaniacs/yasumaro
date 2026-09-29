@@ -6,7 +6,7 @@
  * handleGenerateMonthlySummary in dashboard.ts.
  */
 
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { messageTransport } from '../messaging/messageTransport.js';
 import { getMessageOr } from '../utils/i18n.js';
 
 export interface GenerateReviewSummaryOptions {
@@ -32,9 +32,8 @@ export async function generateReviewSummary(options: GenerateReviewSummaryOption
   statusElement.className = '';
 
   try {
-    const response = await chrome.runtime.sendMessage({
+    const response = await messageTransport.send({
       type: 'GENERATE_REVIEW_SUMMARY',
-      protocolVersion: CURRENT_PROTOCOL_VERSION,
       payload: { periodType },
     }) as { success: boolean; generated?: boolean };
 
