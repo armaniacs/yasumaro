@@ -20,20 +20,14 @@ import {
 } from '../../utils/obsidianConfigValidator.js';
 import type { FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
-import { type AiTestProgress, type MultiProviderTestResult } from '../../background/ai/AIService.js';
+import { type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
 import { saveDashboardSettings, saveErrorText } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
-import { formatProviderHeadline, formatProviderDetailLines } from '../aiTestResultView.js';
-import { subscribeAiTestProgress, generateAiTestRunId } from '../aiTestProgressClient.js';
+import { runAiConnectionTest } from '../aiTestRunner.js';
 import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
 import { getLocalDateString } from '../markdownExport.js';
-import {
-  buildAiTestProgressView,
-  renderAiTestProgressLabel,
-  renderAiTestProgressElapsed,
-} from '../aiTestProgressView.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
@@ -336,74 +330,46 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
   }
 }
 
-let aiTestInFlight = false;
-
 export async function handleTestAi(): Promise<void> {
   const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
   const testAiBtnTop = document.getElementById('testAiBtnTop') as HTMLButtonElement | null;
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   if (!testAiBtn || !statusDiv) return;
-  // Guard against re-entrancy (the top button is not covered by testAiBtn's
-  // disabled state, so a mid-test click would double-register the listener,
-  // timer and TEST_AI request).
-  if (aiTestInFlight) return;
-  let elapsedTimer: ReturnType<typeof setInterval> | undefined;
-  let unsubscribeProgress: (() => void) | undefined;
-  try {
-    aiTestInFlight = true;
 
-    const startTime = performance.now();
-    // Correlation id for this test run so that when multiple Dashboard tabs run a
-    // test concurrently, each tab only renders the progress it initiated.
-    const runId = generateAiTestRunId();
-    let latestProgress: AiTestProgress | undefined;
-    let lastProviderKey = '';
-
-    const view = buildAiTestProgressView(statusDiv);
-
-    // announceProvider=true re-renders the live-region label (only on provider
-    // switch); the elapsed timer updates textContent only and is aria-hidden.
-    const updateView = (announceProvider: boolean): void => {
-      if (announceProvider) {
-        renderAiTestProgressLabel(view, latestProgress);
-        syncStatusToTop();
-      }
-      renderAiTestProgressElapsed(view, startTime, document.getElementById('statusTop'));
-    };
-
-    unsubscribeProgress = subscribeAiTestProgress(runId, (progress) => {
-      latestProgress = progress;
-      const key = `${progress.provider}:${progress.index}`;
-      const changed = key !== lastProviderKey;
-      lastProviderKey = key;
-      updateView(changed);
-    });
-
-    renderAiTestProgressLabel(view, undefined);
-    renderAiTestProgressElapsed(view, startTime);
-    syncStatusToTop();
-    elapsedTimer = setInterval(() => updateView(false), 200);
-
-    testAiBtn.disabled = true;
-    if (testAiBtnTop) testAiBtnTop.disabled = true;
-    try {
+  // The re-entrancy guard lives in the shared runner: the top button is not
+  // covered by testAiBtn's disabled state, and the diagnostics panel runs the
+  // same loop, so both buttons must be absorbed in one place.
+  await runAiConnectionTest({
+    target: statusDiv,
+    run: testAiConnection,
+    onStart: () => {
+      testAiBtn.disabled = true;
+      if (testAiBtnTop) testAiBtnTop.disabled = true;
+    },
+    onFinish: () => {
+      testAiBtn.disabled = false;
+      if (testAiBtnTop) testAiBtnTop.disabled = false;
+    },
+    prepare: async () => {
       const saveResult = await saveDashboardSettings({
         formSelector: SETTINGS_FORM_SELECTOR,
         includeTiming: true,
       });
       if (!saveResult.success) {
         showSaveError(statusDiv, saveResult.error, { syncTop: true });
-        return;
+        return false;
       }
 
       refreshLocalMarkdownScheduler();
-
-      const aiResult = await testAiConnection(runId);
-
-      statusDiv.innerHTML = '';
-
-      if (aiResult.providers && aiResult.providers.length > 1) {
-        // Multi-provider: show per-provider results
+      return true;
+    },
+    draw: {
+      // The one-shot syncStatusToTop copy only runs on a provider switch, so
+      // the elapsed ticker has to update #statusTop's node directly.
+      elapsedMirror: document.getElementById('statusTop'),
+      onProviderAnnounced: () => syncStatusToTop(),
+      onProgressStarted: () => syncStatusToTop(),
+      multiProviderSummary: (target, aiResult) => {
         const container = document.createElement('div');
         container.className = 'diag-indent';
 
@@ -417,42 +383,22 @@ export async function handleTestAi(): Promise<void> {
           : (getMessageOr('connectionFailed', '接続失敗'));
         statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
         container.appendChild(statusEl);
-        statusDiv.appendChild(container);
-
-        for (const provider of aiResult.providers) {
-          const row = document.createElement('div');
-          row.className = 'diag-indent';
-          row.textContent = formatProviderHeadline(provider);
-          row.classList.add(provider.success ? 'diag-success' : 'diag-error');
-          statusDiv.appendChild(row);
-
-          // 何を送って何が返ったかを1行ずつ表示する
-          for (const line of formatProviderDetailLines(provider)) {
-            const detailRow = document.createElement('div');
-            detailRow.className = 'diag-indent ai-debug-details';
-            detailRow.textContent = line;
-            statusDiv.appendChild(detailRow);
-          }
-        }
-      } else {
-        // Single provider: show simple result
-        statusDiv.appendChild(createConnectionStatusElement('AI', aiResult));
-      }
-
-      statusDiv.className = aiResult.success ? 'success' : 'error';
-      syncStatusToTop();
-    } catch (_e) {
-      statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
-      statusDiv.className = 'error';
-      syncStatusToTop();
-    }
-  } finally {
-    if (elapsedTimer) clearInterval(elapsedTimer);
-    if (unsubscribeProgress) unsubscribeProgress();
-    testAiBtn.disabled = false;
-    if (testAiBtnTop) testAiBtnTop.disabled = false;
-    aiTestInFlight = false;
-  }
+        target.appendChild(container);
+      },
+      singleProviderSummary: (target, aiResult) => {
+        target.appendChild(createConnectionStatusElement('AI', aiResult));
+      },
+      onResultRendered: (target, aiResult) => {
+        target.className = aiResult.success ? 'success' : 'error';
+        syncStatusToTop();
+      },
+      onError: (target) => {
+        target.textContent = getMessageOr('testError', '接続テストに失敗しました。');
+        target.className = 'error';
+        syncStatusToTop();
+      },
+    },
+  });
 }
 
 export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRepository): Promise<void> {

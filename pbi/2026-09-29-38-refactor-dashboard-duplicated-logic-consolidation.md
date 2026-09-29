@@ -1,7 +1,7 @@
 # PBI: ダッシュボード重複ロジック統合（AI 接続テスト runner・Tranco 同意判定）
 
 種別: refactor
-状態: 部分実装（2026-09-29）
+状態: 実装済み（2026-09-29）
 
 上流: 大局的コードレビュー 2026-09-29（テーマ5）。同じ「AI 接続テストの実行ループ」と「Tranco 同意の 30 日ルール」が popup 側と dashboard 側にそれぞれ独立実装され、判定と guard が二重化している。
 
@@ -58,9 +58,9 @@ Scenario: 同意判定は同一ルールを使う
 
 ## 受け入れ基準
 
-- [ ] AI 接続テストのループ本体（runId 生成 / progress 購読 / interval / `testAiConnection` 呼び出し / format 行の描画）が 1 モジュールに集約され、`src/dashboard/generalSettings/connectionTests.ts:374-385` と `src/dashboard/panels/diagnostic/diagnosticsActions.ts:129-139` の重複ループが削除されている
-- [ ] in-flight guard が runner 側の単一 state として管理され、`src/dashboard/generalSettings/connectionTests.ts:339` と `src/dashboard/panels/diagnostic/diagnosticsActions.ts:61` の二重定義が解消されている
-- [ ] 描画先（`#status` 側 / `#diagConnectionResult` 側）は注入引数として runner から分離され、既存の共有 view（`src/dashboard/aiTestProgressView.ts` / `src/dashboard/aiTestResultView.ts`）の利用は維持されている
+- [x] AI 接続テストのループ本体（runId 生成 / progress 購読 / interval / `testAiConnection` 呼び出し / format 行の描画）が 1 モジュールに集約され、`src/dashboard/generalSettings/connectionTests.ts:374-385` と `src/dashboard/panels/diagnostic/diagnosticsActions.ts:129-139` の重複ループが削除されている
+- [x] in-flight guard が runner 側の単一 state として管理され、`src/dashboard/generalSettings/connectionTests.ts:339` と `src/dashboard/panels/diagnostic/diagnosticsActions.ts:61` の二重定義が解消されている
+- [x] 描画先（`#status` 側 / `#diagConnectionResult` 側）は注入引数として runner から分離され、既存の共有 view（`src/dashboard/aiTestProgressView.ts` / `src/dashboard/aiTestResultView.ts`）の利用は維持されている
 - [x] 30 日ルールと 3 キー delta write が共通モジュールに集約され、`src/popup/trancoNotification.ts:35-45`・`:81-85`・`:102-106` と `src/dashboard/trancoConsent.ts:59-95`・`:143-147`・`:169-173` が同じ関数を呼ぶ形になっている
 - [x] 状態の粒度差（dashboard の 5 状態、popup の boolean）は呼び出し側の写像として残っており、ルール判定が二重に存在しない
 - [ ] `src/dashboard/dashboard.ts:91` × `src/dashboard/panels/staticForm/staticPanels.ts:74-81` の panel lifecycle 問題は本 PBI の変更対象に含まれていない
@@ -94,14 +94,46 @@ Scenario: 同意判定は同一ルールを使う
 - テスト: 29/30/31 日（および 30 日境界の 1ms 前・ちょうど）を `src/utils/storage/__tests__/trancoConsent.test.ts` に集約。両呼び出し側のテストは自分の写像（PBI テスト戦略どおり境界は 1 箇所だけ）。`trancoConsentRuleOwnership.test.ts` はソース走査で呼び出し側に日数演算・`'deny'` リテラルが戻っていないことを固定
 - `domainFilterCacheSaveSeamContract.test.ts` の `ADOPTED_CALL_SITES` は、seam に直接乗る場所が変わったため `src/utils/storage/trancoConsent.ts` に差し替え。dashboard / popup は「直接 `updateDomainFilterCache` を通らない」ガード側に移した
 
-### (b) 受け入れ基準 1-3（AI 接続テスト runner 抽出）は延期
+### (b) AI 接続テスト runner の抽出（受け入れ基準 1-3 実装済み）
 
-`src/dashboard/generalSettings/connectionTests.ts` に別 effort（PBI 2026-09-28-30 の transport 移行）の未コミット WIP があり、同ファイルと対の `src/dashboard/panels/diagnostic/diagnosticsActions.ts` も同移行の配下にある。その WIP がコミットされる前に runner 抽出を重ねると差分が混線し、どちらのレビューも追えなくなるため、runner 抽出は WIP コミット後に着手する。判定・guard の置き場所は今後変わる可能性があるが、方針は本 PBI の記載どおり。
+- 新規モジュール: `src/dashboard/aiTestRunner.ts`（共有 view と同じ `src/dashboard/` 直下に置く）
+  - `runAiConnectionTest(options): Promise<AiTestRunOutcome>` — guard → runId 生成 → 進捗購読 → 経過時間 interval → `prepare` → `run(runId)` → 結果描画。戻り値は `'ran' | 'aborted' | 'failed' | 'guarded'`
+  - `renderAiTestProviderLines(target, providers)` — `aiTestResultView` の整形結果を DOM 化する共有描画（両面が完全に同一だった部分）
+  - in-flight guard はモジュールスコープ 1 個。`finally` で必ず解放する（例外終了時も解放）
+  - `intervalMs`（既定 200ms）を引数で注入できる
+- 注入引数: `target`（描画先）/ `run`（TEST_AI 送信）/ `draw`（`elapsedMirror`・`onProviderAnnounced`・`onProgressStarted`・`multiProviderSummary`・`singleProviderSummary`・`onResultRendered`・`onError`）/ `prepare` / `onStart` / `onFinish`
+- 呼び出し側は「描画先を解決して runner を呼ぶ」だけに縮小し、公開関数の形（`handleTestAi` / `createDiagnosticActions`）は変えていない
+  - 一般設定: `#status` と `#statusTop` の解決、`syncStatusToTop`、複数/単一プロバイダのサマリ、設定保存（`prepare` として送信前に実行、save 失敗は `showSaveError` 後に送信しない）、2 ボタンの無効化
+  - 診断: `#diagConnectionResult`、診断パネル独自のサマリ行とエラー表示、1 ボタンの無効化
+- 減量: `connectionTests.ts` +43/-97、`diagnosticsActions.ts` +24/-86（いずれも AI テスト部分のみ）
+- テスト: `src/dashboard/__tests__/aiTestRunner.test.ts`（17 件。guard の抑止と解放、runId の相関、注入 interval での経過時間描画、プロバイダ切替の読み上げ、prepare の中止、例外描画、複数/単一プロバイダの行、clean-up）
+  - `src/dashboard/__tests__/aiTestRunnerOwnership.test.ts`（5 件。ソース走査で「ループの各ステップと guard が呼び出し側に了回去ら落ちる」ことを固定。`aiTestProgressClient` の production import が runner 以外から無いことも見る）
+- 逸脱:
+  1. `testAiConnection` は import せず `run` 引数で注入した。送信関数が `connectionTests.ts` にあり、そのファイルが本 runner を import するため、import するとモジュールが循環する
+  2. 共有 view のうち `aiTestProgressView` / `aiTestResultView` / `aiTestProgressClient` は移さずそのまま利用した（受け入れ基準 3 のとおり）。runner はこれらを呼ぶ側
+  3. 診断側の到達不能だった `else { connectionResult.textContent = 'Test complete.' }` は削除した（`testAiConnection` は必ずオブジェクトを返す）
+  4. 受け入れ基準 6（`dashboard.ts:91` × `staticPanels.ts:74-81` の panel lifecycle）は本 PBI の変更対象外のまま未チェック。別 PBI の責務
 
 ### 検証（2026-09-29）
+
+#### (a) Tranco 同意判定（受け入れ基準 4・5）
 
 - `npx vitest run src/utils/storage/__tests__/trancoConsent.test.ts src/utils/storage/__tests__/trancoConsentRuleOwnership.test.ts src/popup/__tests__/trancoNotification.test.ts src/dashboard/__tests__/trancoConsent.test.ts src/utils/storage/__tests__/domainFilterCacheSaveSeamContract.test.ts` — 63 tests passed
 - 同 5 ファイルを 20 回連続実行 — 全回 green
 - `npx vitest run src/popup/__tests__ src/utils/storage/__tests__`（81 files / 1255 tests）、`npx vitest run src/dashboard/__tests__`（86 files / 1121 tests）— いずれも passed
 - `npx tsc --noEmit`、変更ファイルへの `npx eslint` — エラーなし
-- `npm run validate` は本 PBI の延期分（未着手の runner 抽出）を含むため未実行。DoD のチェックは未チェックのまま
+
+#### (b) AI 接続テスト runner（受け入れ基準 1-3）
+
+- `npx vitest run src/dashboard/__tests__/aiTestRunner.test.ts src/dashboard/__tests__/aiTestRunnerOwnership.test.ts src/dashboard/generalSettings/__tests__/connectionTests.test.ts src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts` — 4 files / 135 tests passed
+- 同 4 ファイルを 10 回連続実行 — 全回 green
+- `npx vitest run src/dashboard/__tests__` — 89 files / 1160 tests passed
+- `npx vitest run src/dashboard`（配下の `__tests__` を含む全 dashboard テスト）— 199 files / 2927 tests passed
+- `npx vitest run src/dashboard/__tests__/dashboard-handlers.test.ts src/dashboard/__tests__/dashboard.test.ts` — 2 files / 56 tests passed（進捗購読と statusTop の経過時間ミラーの既存テストが、runner 経由でも同じ挙動であることを確認）
+- `npx tsc --noEmit`、変更 6 ファイルへの `npx eslint` — エラーなし（`connectionTests.test.ts` の `vi.useFakeTimers()` 警告は既存の `handleTestLocalMarkdown` 側のもので本次の触れていない範囲）
+- 備考: `npx vitest run <file> --repeats=20` は本リポジトリの `projects` 設定では回数が反映されない（wall clock も変わらない）ため、連続 10 回のプロセス実行で代替した
+
+### 未完了（DoD）
+
+- `npm run validate` 未実行（本次指示でフルスイート・validate は対象外）。DoD のチェックは未チェックのまま
+- コードレビュー未実施
