@@ -1,6 +1,7 @@
 import { StorageKeys } from '../storage/types.js';
 import type { CleansingFeedbackEntry } from '../storage/types.js';
 import type { AiSummaryRemovedStats } from '../commonTypes.js';
+import { withOptimisticLock } from '../storage/storageTransaction.js';
 
 const QUEUE_KEY = StorageKeys.CLEANSING_FEEDBACK_QUEUE;
 const MAX_QUEUE_SIZE = 50;
@@ -45,12 +46,14 @@ async function readQueue(): Promise<CleansingFeedbackEntry[]> {
   return Array.isArray(queue) ? queue : [];
 }
 
-async function writeQueue(queue: CleansingFeedbackEntry[]): Promise<void> {
-  await chrome.storage.local.set({ [QUEUE_KEY]: queue });
-}
-
-export async function enqueueFeedback(entry: Omit<CleansingFeedbackEntry, 'id' | 'createdAt'>): Promise<void> {
-  const queue = await readQueue();
+/**
+ * All writers go through withOptimisticLock: this queue is read-modify-write
+ * over a shared key, so two concurrent enqueues would otherwise lose one
+ * entry (the same VULN-005/056 shape every other persist-and-retry store in
+ * the repo guards against). The lock's `<key>_version` companion key is
+ * write-only bookkeeping; readers ignore it.
+ */
+function enqueueEntry(queue: CleansingFeedbackEntry[], entry: Omit<CleansingFeedbackEntry, 'id' | 'createdAt'>): CleansingFeedbackEntry[] {
   const newEntry: CleansingFeedbackEntry = {
     id: generateId(),
     url: entry.url,
@@ -60,11 +63,17 @@ export async function enqueueFeedback(entry: Omit<CleansingFeedbackEntry, 'id' |
     ...(entry.aiSummary ? { aiSummary: clampAiSummary(entry.aiSummary) } : {}),
     createdAt: Date.now(),
   };
-  queue.push(newEntry);
-  while (queue.length > MAX_QUEUE_SIZE) {
-    queue.shift();
+  const next = [...queue, newEntry];
+  while (next.length > MAX_QUEUE_SIZE) {
+    next.shift();
   }
-  await writeQueue(queue);
+  return next;
+}
+
+export async function enqueueFeedback(entry: Omit<CleansingFeedbackEntry, 'id' | 'createdAt'>): Promise<void> {
+  await withOptimisticLock<CleansingFeedbackEntry[]>(QUEUE_KEY, (current) => {
+    return enqueueEntry(Array.isArray(current) ? current : [], entry);
+  });
 }
 
 export async function getFeedbackQueue(): Promise<CleansingFeedbackEntry[]> {
@@ -72,11 +81,12 @@ export async function getFeedbackQueue(): Promise<CleansingFeedbackEntry[]> {
 }
 
 export async function clearFeedbackQueue(): Promise<void> {
-  await writeQueue([]);
+  await withOptimisticLock<CleansingFeedbackEntry[]>(QUEUE_KEY, () => []);
 }
 
 export async function removeFeedbackEntry(id: string): Promise<void> {
-  const queue = await readQueue();
-  const filtered = queue.filter(e => e.id !== id);
-  await writeQueue(filtered);
+  await withOptimisticLock<CleansingFeedbackEntry[]>(QUEUE_KEY, (current) => {
+    const queue = Array.isArray(current) ? current : [];
+    return queue.filter(e => e.id !== id);
+  });
 }
