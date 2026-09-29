@@ -27,9 +27,9 @@ holistic-code-review skill による構造レビュー（並列サブエージ�
 
 アーカイブ済み（RICE 順）: 31 audit_log 保持（36.0）→ 32 tag/RTL（18.0）→ 33 logger masking（16.0）→ 34 seam residue bundle（10.0）→ 35 AI 失敗契約（9.0）→ 36 OPFS デグレ（6.4）→ 37 SQLite 統合（2.4）→ 39 ProviderStrategy 分離（1.0）。
 
-### 2026-09-28 大局的コードレビュー改善ラウンド — ✅ 7件実装済み 🔧非機能追加
+### 2026-09-28 大局的コードレビュー改善ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 
-holistic-code-review skill による構造レビュー（DRY / SoC / 拡張性 / 堅牢性）から抽出した7候補を RICE 採点して PBI 化。証拠の file:line は各 PBI に記載。採点・依存・対象外の詳細は [2026-09-28-00-backlog-holistic-review.md](2026-09-28-00-backlog-holistic-review.md)（live 台帳として残置）。
+holistic-code-review skill による構造レビュー（DRY / SoC / 拡張性 / 堅牢性）から抽出した7候補を RICE 採点して PBI 化。証拠の file:line は各 PBI に記載。2026-09-29 に WIP を着地（KEK 再暗号化の fix(security) 1 件 + ラウンド一括の refactor 1 件）し、validate 14,988 tests green を確認してアーカイブ。詳細はアーカイブ済み台帳 [2026-09-28-00-backlog-holistic-review.md](../dev-docs/archived/pbi/2026-09-28-00-backlog-holistic-review.md)。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
