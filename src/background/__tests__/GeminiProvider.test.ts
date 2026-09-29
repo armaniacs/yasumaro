@@ -360,7 +360,11 @@ describe('GeminiProvider', () => {
             expect(result.summary).toContain('Error');
         });
 
-        test('returns a model-not-found message on 404', async () => {
+        // The transport throws on a non-ok response, so this state is not one
+        // production reaches — but if a transport ever resolves one, the error
+        // body must not be parsed as a summary, and the wording must be the
+        // generic one users already get for every HTTP failure.
+        test('reports a 404 response as a generic failure, not a parsed summary', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({
                 ok: false,
                 status: 404
@@ -369,7 +373,10 @@ describe('GeminiProvider', () => {
             const provider = new GeminiProvider(baseSettings);
             const result = await provider.generateSummary('content');
 
-            expect(result.summary).toContain('Model not found');
+            expect(result.success).toBe(false);
+            expect(result.summary).toBe('Error: Failed to generate summary. Please try again or check your settings.');
+            expect(result.error).toBe('HTTP 404');
+            expect(result.failure).toEqual({ kind: 'http', status: 404, method: 'POST' });
         });
 
         test('returns a timeout message on a timeout error', async () => {

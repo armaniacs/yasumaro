@@ -18,6 +18,7 @@ const RULES = [
         canonical: 'AIProviderStrategy',
         grandfathered: new Set([
             'src/background/ai/providers/ProviderStrategy.ts',
+            'src/background/ai/providers/HttpProviderStrategy.ts',
             'src/background/ai/AIService.ts',
             'src/background/ai/RemoteAIService.ts',
             'src/background/ai/providers/BuiltInAiProvider.ts',

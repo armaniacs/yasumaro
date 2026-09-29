@@ -3,7 +3,13 @@
  * OpenAI互換APIを使用するAIプロバイダー — registry 駆動の Generic 実装
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { HttpProviderStrategy } from './HttpProviderStrategy.js';
+import {
+    resolveMaxContentChars,
+    resolveMaxTokens,
+    resolveTimeoutMs,
+} from './providerSettingsResolver.js';
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
@@ -25,7 +31,7 @@ function collectConfirmed(baseUrlKey: string, settings: Record<string, unknown>)
     return new Set(all?.[baseUrlKey] ?? []);
 }
 
-export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
+export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     protected providerName: string;
     protected baseUrl: string;
     protected apiKey: string | undefined;
@@ -126,9 +132,9 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
             }
         }
 
-        // タイムアウト設定: 0=自動（isLocal から導出 — SSOT on the base）
+        // タイムアウト設定: 0=自動（isLocal から導出）
         const storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        this.timeoutMs = this.resolveTimeoutMs(storedTimeout, this.isLocal);
+        this.timeoutMs = resolveTimeoutMs(storedTimeout, this.isLocal);
     }
 
     static isLocalUrl(url: string): boolean {
@@ -145,7 +151,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
     }
 
     private getMaxContentLength(): number {
-        return this.getMaxContentChars(10_000, this.contentCharsKey);
+        return resolveMaxContentChars(this.settings, this.getProviderId(), 10_000, this.contentCharsKey);
     }
 
     getName(): string {
@@ -184,7 +190,7 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                             content: userPrompt
                         }
                     ],
-                    max_tokens: this.getMaxTokens(),
+                    max_tokens: resolveMaxTokens(this.settings, this.getProviderId()),
                     temperature: 0.1
                 };
                 const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -193,13 +199,6 @@ export class GenericOpenAICompatibleProvider extends AIProviderStrategy {
                 }
                 return { url, headers, body: JSON.stringify(payload) };
             },
-            handleErrorResponse: async (response) => ({
-                success: false,
-                summary: "Error: Failed to generate summary. Please check your API settings.",
-                // Bare status only — the summary deliberately omits it (security
-                // pins); `error` is the diagnostic channel surfaced per-slot.
-                error: `HTTP ${response.status}`,
-            }),
             extractSummary: (data, tid) => this._extractSummary(data as OpenAIApiResponse, tid),
         });
     }
