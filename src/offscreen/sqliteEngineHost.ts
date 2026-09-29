@@ -17,7 +17,7 @@
 
 import { errorMessage } from '../utils/errorUtils.js';
 import { ErrorCode } from '../utils/logger/types.js';
-import { logError } from '../utils/logger/api.js';
+import { logError, logWarn } from '../utils/logger/api.js';
 import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import type { StorageBackend, StatusResult, BackendOrError } from './StorageBackend.js';
@@ -61,6 +61,13 @@ export { MAX_QUERY_LIMIT } from '../messaging/limits.js';
 export { extractDomain } from '../utils/domainUtils.js';
 
 /**
+ * How far the runtime-degrade ladder has descended in this offscreen document's
+ * life. Mirrors resolveBackend's BackendType minus 'none': there is nothing to
+ * degrade from before init and nothing left to degrade to after fallback.
+ */
+type DegradeStage = 'opfs' | 'idb' | 'fallback';
+
+/**
  * Host owns all mutable engine state via private #state. External callers
  * (IdbVfsBackend, OpfsWorkerBackend, backendResolver, recordsRepo) access
  * state via public getters/setters that proxy to #state — this keeps the
@@ -94,6 +101,25 @@ export class SqliteEngineHost {
   };
 
   #mutex = new Mutex();
+
+  /** Rung of the runtime-degrade ladder the host has settled on — see degradeFromOpfs. */
+  #degradeStage: DegradeStage = 'opfs';
+  /** In-flight re-resolution, so concurrent signals join one run. */
+  #degradeRun: Promise<BackendType> | null = null;
+
+  /**
+   * Current post-init state in the shape resolveBackend takes. One literal for
+   * every caller — the three call sites used to spell the same four flags out
+   * separately, and the degradation path would have been a fourth copy.
+   */
+  private get resolverState(): Parameters<typeof resolveBackend>[0] {
+    return {
+      opfsWorker: !!this.#state.opfsWorker,
+      idbEngine: !!this.#state.idbEngine,
+      usingFallbackStorage: this.#state.usingFallbackStorage,
+      fallbackStorage: !!this.#state.fallbackStorage,
+    };
+  }
 
   // ── Public accessors for backward compat (proxy to #state) ──────
 
@@ -234,13 +260,16 @@ export class SqliteEngineHost {
     return this.#state;
   }
 
-  private async _doInit(): Promise<boolean> {
+  private async _doInit(options: { skipOpfs?: boolean } = {}): Promise<boolean> {
     try {
-      // 1. Try OPFS Worker first (preferred — persistent, fast)
-      const opfsOk = await initOpfsWorker(this.opfsProxyState);
-      if (opfsOk) {
-        this.#state.fts5Available = true; // new engine includes FTS5
-        return true;
+      // 1. Try OPFS Worker first (preferred — persistent, fast). Skipped only
+      //    by the degradation path, which already knows the worker is dead.
+      if (!options.skipOpfs) {
+        const opfsOk = await initOpfsWorker(this.opfsProxyState);
+        if (opfsOk) {
+          this.#state.fts5Available = true; // new engine includes FTS5
+          return true;
+        }
       }
 
       // 2. IndexedDB VFS as fallback (@subframe7536/sqlite-wasm).
@@ -312,24 +341,14 @@ export class SqliteEngineHost {
    */
   async ensureBackend(): Promise<BackendType> {
     // Already initialized?
-    const current: BackendType = resolveBackend({
-      opfsWorker: !!this.#state.opfsWorker,
-      idbEngine: !!this.#state.idbEngine,
-      usingFallbackStorage: this.#state.usingFallbackStorage,
-      fallbackStorage: !!this.#state.fallbackStorage,
-    });
+    const current: BackendType = resolveBackend(this.resolverState);
     if (current !== 'none') return current;
 
     // Try to initialize
     await this.init();
 
     // Re-check after init
-    return resolveBackend({
-      opfsWorker: !!this.#state.opfsWorker,
-      idbEngine: !!this.#state.idbEngine,
-      usingFallbackStorage: this.#state.usingFallbackStorage,
-      fallbackStorage: !!this.#state.fallbackStorage,
-    });
+    return resolveBackend(this.resolverState);
   }
 
   async getBackend(): Promise<StorageBackend> {
@@ -340,15 +359,109 @@ export class SqliteEngineHost {
       await this.init();
     }
 
-    const resolved = resolveBackend({
-      opfsWorker: !!this.#state.opfsWorker,
-      idbEngine: !!this.#state.idbEngine,
-      usingFallbackStorage: this.#state.usingFallbackStorage,
-      fallbackStorage: !!this.#state.fallbackStorage,
-    });
+    const resolved = resolveBackend(this.resolverState);
 
     this.#state._backend = await createBackend(this as unknown as never, resolved);
     return this.#state._backend;
+  }
+
+  /**
+   * Re-resolve the backend after the OPFS worker died mid-session, and report
+   * which one won. Public because backendResolver wires it into
+   * OpfsWorkerBackend's constructor: the adapter holds no engine state, and the
+   * ladder below is the only place that can run it.
+   *
+   * The rung is latched, so the ladder only ever descends: 'opfs' → 'idb' →
+   * 'fallback'. A second signal therefore skips straight to fallback storage
+   * instead of re-running the IDB rung, and a third is a no-op — the backend is
+   * never climbed back up, which is what stops OPFS→IDB→OPFS flapping.
+   *
+   * Never rejects — a failed re-resolution is logged here so the caller still
+   * gets the ordinary `{ success: false }` for the operation that tripped it.
+   */
+  async degradeFromOpfs(): Promise<BackendType> {
+    if (this.#degradeStage === 'fallback') return resolveBackend(this.resolverState);
+    // Concurrent signals join the run already in flight rather than queueing a
+    // second ladder walk behind it.
+    this.#degradeRun ??= this.#runDegrade(this.#degradeStage);
+    return this.#degradeRun;
+  }
+
+  async #runDegrade(from: DegradeStage): Promise<BackendType> {
+    try {
+      if (from === 'opfs') {
+        await this.#reinitWithoutOpfs();
+      } else {
+        await this.#enterFallbackStorage();
+      }
+    } catch (error) {
+      logError('SQLite: OPFS degradation re-resolve failed', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'sqlite');
+    } finally {
+      // Dropped once the re-resolution has settled, failed or not: until then
+      // `_backend` still holds the adapter pointing at the dead worker, and a
+      // cache that outlives a failed re-resolution would hand that same dead
+      // adapter to every later getBackend().
+      this.resetBackend();
+      this.#degradeRun = null;
+    }
+
+    const resolved = resolveBackend(this.resolverState);
+    // 'none' counts as 'fallback': nothing is serving, so the next signal must
+    // descend to storage rather than sit on a rung that resolved to nothing.
+    this.#degradeStage = resolved === 'idb' ? 'idb' : 'fallback';
+    logWarn(
+      'SQLite: OPFS worker degraded, backend re-resolved',
+      { from, resolvedTo: resolved, ladderRung: this.#degradeStage },
+      undefined,
+      'sqlite'
+    );
+    return resolved;
+  }
+
+  /**
+   * Enter chrome.storage.local fallback storage directly, skipping the IDB rung.
+   * Mirrors what _doInit's catch does on a cold start, so both entries into
+   * fallback mode set the same flags and the same durable marker.
+   */
+  async #enterFallbackStorage(): Promise<void> {
+    if (this.#state.opfsWorker) {
+      this.terminateOpfsWorker();
+    }
+    this.#state.idbEngine = null;
+    this.#state.initPromise = null;
+    this.#state.usingFallbackStorage = true;
+    this.#state.fallbackStorage = new FallbackStorage();
+    try {
+      await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
+    } catch {
+      /* offscreen context */
+    }
+  }
+
+  /**
+   * Re-run the existing init ladder with the OPFS rung removed.
+   *
+   * Skipped rather than retried on purpose: a worker that failed
+   * OPFS_DEGRADE_FAILURE_THRESHOLD proxy calls in a row does not come back by
+   * being constructed again, and resolveBackend would pick it again the moment
+   * it did — the flapping this path exists to prevent. What remains of the
+   * ladder (IDB, then fallback storage) is untouched, so the priority order is
+   * still decided by resolveBackend and not re-implemented here.
+   */
+  async #reinitWithoutOpfs(): Promise<boolean> {
+    await this.#mutex.acquire();
+    try {
+      // A concurrent init() can bring a worker up while we wait for the lock;
+      // drop it here so the re-resolution cannot land back on OPFS.
+      if (this.#state.opfsWorker) {
+        this.terminateOpfsWorker();
+      }
+      if (this.#state.idbEngine) return true;
+      if (this.#state.usingFallbackStorage) return false;
+      return await this._doInit({ skipOpfs: true });
+    } finally {
+      this.#mutex.release();
+    }
   }
 
   /** Proxy getStatus via the resolved StorageBackend (PBI-14 Host re-export). */
@@ -357,7 +470,11 @@ export class SqliteEngineHost {
     return backend.getStatus();
   }
 
-  /** Reset backend selection (used by resetForTesting / offscreen recreate). */
+  /**
+   * Reset backend selection so the next getBackend() re-resolves through
+   * resolveBackend. Production reachability: degradeFromOpfs() after the OPFS
+   * worker dies mid-session, plus resetForTesting().
+   */
   resetBackend(): void {
     this.#state._backend = null;
   }
@@ -365,6 +482,8 @@ export class SqliteEngineHost {
   /** Reset the module state for testing. */
   resetForTesting(): void {
     this.resetBackend();
+    this.#degradeStage = 'opfs';
+    this.#degradeRun = null;
     this.#state.idbEngine = null;
     this.#state.initPromise = null;
     this.#state.usingFallbackStorage = false;
