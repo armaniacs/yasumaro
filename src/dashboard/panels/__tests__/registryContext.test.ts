@@ -8,10 +8,11 @@
  * NavigationRegistry を無視した迂回だが、単なる手抜きではなく
  * **初期化順の制約**への対処でもある:
  *
- *   entrypoints/options/main.ts は dashboard.ts を main.ts より先に import し、
- *   dashboard.ts は末尾で void initDashboard() を自己実行する。
- *   その時点では main.ts の setRegistry() がまだ走っておらず、
- *   getRegistry() は例外を投げる。
+ *   src/dashboard/main.ts は自分のモジュール本体で setRegistry() を呼ぶが、
+ *   ESM は import を先に評価する（NavigationRegistry → DashboardBootstrapper
+ *   → panelFactories → 全パネルモジュール）。その連鎖の中のパネルモジュールが
+ *   import 時に行う処理と、main.ts を通さずパネルだけ取り込む単体テストは
+ *   registry 展開前に動く。
  *
  * tryGetRegistry() はこの「まだ居ないかもしれない」状態を型と戻り値で
  * 表現し、呼び出し側がフォールバックできるようにする。

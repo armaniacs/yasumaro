@@ -84,4 +84,30 @@ describe('attachIssueReportTrigger queue', () => {
         expect(attachSpy).toHaveBeenCalledTimes(2);
         expect(attachSpy).toHaveBeenLastCalledWith(lateBtn);
     });
+
+    // A second init used to build a second controller and attach the sidebar
+    // button to it as well, leaving the first controller's listener in place —
+    // one click, two opens. init is now idempotent.
+    it('a second init reuses the controller and does not re-wire triggers', async () => {
+        const { createIssueReportModalController } = await import('../panels/diagnostic/issueReportLink.js');
+        const { registerReportBugButton, initIssueReportEntry } = await import(
+            '../panels/diagnostic/issueReportEntry.js'
+        );
+        const earlyBtn = document.createElement('button');
+
+        registerReportBugButton(earlyBtn);
+        initIssueReportEntry();
+        const afterFirstInit = attachSpy.mock.calls.length;
+
+        initIssueReportEntry();
+
+        expect(vi.mocked(createIssueReportModalController)).toHaveBeenCalledTimes(1);
+        expect(attachSpy).toHaveBeenCalledTimes(afterFirstInit);
+
+        // A button registered after the double init is still wired exactly once.
+        const lateBtn = document.createElement('button');
+        registerReportBugButton(lateBtn);
+        expect(attachSpy).toHaveBeenCalledTimes(afterFirstInit + 1);
+        expect(attachSpy).toHaveBeenLastCalledWith(lateBtn);
+    });
 });

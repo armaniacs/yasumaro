@@ -46,8 +46,9 @@ function buildDom(): { containerEls: Container3; parentEls: Parent7 } {
 }
 
 describe('aiProviderLayoutManager', () => {
-  // Restore tests run FIRST so module-level originalParents is still empty.
-  // Subsequent tests also work because they never call restoreOriginalProviderSettingsLayout.
+  // Every restore test used to have to run first, because the recorded parents
+  // were a module-level Map that no test could clear. restoreOriginalProviderSettingsLayout
+  // drops the record now, so the order below carries no hidden dependency.
   //
   // parentEls index layout:
   //   0=geminiSettings, 1=openaiSettings, 2=openai2Settings,
@@ -73,6 +74,27 @@ describe('aiProviderLayoutManager', () => {
       expect(parentEls[1].contains(document.getElementById('openaiSettings'))).toBe(true);
       expect(parentEls[4].contains(document.getElementById('ollamaSettings'))).toBe(true);
       expect(containerEls[0].contains(document.getElementById('geminiSettings'))).toBe(false);
+    });
+
+    // The Map was the only owner of the moved HTMLElements and had no teardown,
+    // so a destroyed document's parents stayed referenced across re-mounts. A
+    // second restore proves the record is gone: the next restore follows the
+    // parent that was live at the second move, not the one from the first.
+    it('drops the recorded parents, so a re-move restores from the live DOM', () => {
+      const { parentEls } = buildDom();
+
+      updateProviderSettingsLayout(['gemini', '', '']);
+      restoreOriginalProviderSettingsLayout();
+
+      const staging = document.createElement('div');
+      document.body.appendChild(staging);
+      staging.appendChild(document.getElementById('geminiSettings')!);
+
+      updateProviderSettingsLayout(['gemini', '', '']);
+      restoreOriginalProviderSettingsLayout();
+
+      expect(staging.contains(document.getElementById('geminiSettings'))).toBe(true);
+      expect(parentEls[0].contains(document.getElementById('geminiSettings'))).toBe(false);
     });
 
     it('handles missing settings element gracefully', () => {
