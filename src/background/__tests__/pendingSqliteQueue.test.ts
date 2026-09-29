@@ -146,6 +146,34 @@ describe('pendingSqliteQueue (M14)', () => {
       remaining: 50,
     });
   });
+
+  it('treats a failed pre-flush load as an error, not as an empty queue', async () => {
+    const { LogType } = await import('../../utils/logger/types.js');
+    const { addLog } = await import('../../utils/logger/core.js');
+
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [makeRecord('https://a.example.com')];
+    // getQueueSize()/load() must never have their rejection read as "0 = empty":
+    // a swallowed failure would silently skip the flush cycle.
+    vi.stubGlobal('chrome', {
+      storage: {
+        local: {
+          get: vi.fn().mockRejectedValue(new Error('storage unavailable')),
+          set: vi.fn(),
+        },
+      },
+    });
+
+    const mutate = vi.fn();
+
+    await expect(flushPendingRecords({ mutate } as any)).resolves.toBeUndefined();
+
+    expect(mutate).not.toHaveBeenCalled();
+    expect(addLog).toHaveBeenCalledWith(
+      LogType.ERROR,
+      'pendingSqliteQueue: failed to load queue for flush',
+      expect.objectContaining({ error: expect.stringContaining('storage unavailable') })
+    );
+  });
 });
 
 describe('chunkArray', () => {

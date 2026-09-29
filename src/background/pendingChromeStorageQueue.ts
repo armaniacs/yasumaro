@@ -126,9 +126,10 @@ function getActiveQueue(): ReturnType<typeof createPendingWriteQueue> {
 }
 
 /**
- * Inject the queue used by enqueuePendingWrite/flushPendingWrites. Production
- * code calls this once from createBackgroundServices; tests call it with a
- * queue built from InMemoryAdapter to avoid touching chrome.storage.
+ * Inject the queue used by enqueuePendingWrite/flushPendingWrites. The
+ * composition root wires this once via the manifest's onReady
+ * (compositionManifest.pendingWriteQueue); tests call it with a queue built
+ * from InMemoryAdapter to avoid touching chrome.storage.
  */
 export function setPendingWriteQueue(queue: ReturnType<typeof createPendingWriteQueue>): void {
   activeQueue = queue;

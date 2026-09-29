@@ -28,7 +28,7 @@ import { RateLimiter } from './rateLimiter.js';
 import { ManualContentFetcher } from './manualContentFetcher.js';
 import { SessionStore, type SessionStorePort } from './sessionStore.js';
 import { HeaderDetector } from './headerDetector.js';
-import { createPendingWriteQueue } from './pendingChromeStorageQueue.js';
+import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
 import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
@@ -111,7 +111,15 @@ export const compositionManifest: readonly CompositionEntry[] = [
   { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
   { key: 'settingsRepository', singleton: true, factory: () => new SettingsRepository(new SettingsChromeStorageAdapter()) },
   { key: 'perUrlMutexMap', singleton: true, factory: () => new PerUrlMutexMap() },
-  { key: 'pendingWriteQueue', singleton: true, factory: () => createPendingWriteQueue(new ChromeStorageAdapter()) },
+  {
+    key: 'pendingWriteQueue',
+    singleton: true,
+    factory: () => createPendingWriteQueue(new ChromeStorageAdapter()),
+    // The facade in pendingChromeStorageQueue.ts serves callers that bypass
+    // DI; without this wiring the facade would lazily build a SECOND queue
+    // over the same storage key with its own lock chain (lost-update shape).
+    onReady: (c) => setPendingWriteQueue(c.resolve<ReturnType<typeof createPendingWriteQueue>>('pendingWriteQueue')),
+  },
   {
     key: 'reviewSummaryGenerator',
     singleton: true,

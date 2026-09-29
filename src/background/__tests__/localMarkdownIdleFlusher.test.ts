@@ -9,7 +9,8 @@ import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 const mockGetSettings = vi.hoisted(() => vi.fn());
 const mockFlushBufferedExports = vi.hoisted(() => vi.fn());
 const mockOnStateChangedAddListener = vi.hoisted(() => vi.fn());
-const mockIdle = vi.hoisted(() => ({ onStateChanged: { addListener: mockOnStateChangedAddListener } }));
+const mockOnStateChangedRemoveListener = vi.hoisted(() => vi.fn());
+const mockIdle = vi.hoisted(() => ({ onStateChanged: { addListener: mockOnStateChangedAddListener, removeListener: mockOnStateChangedRemoveListener } }));
 const mockAlarmsCreate = vi.hoisted(() => vi.fn());
 const mockAlarmsClear = vi.hoisted(() => vi.fn());
 
@@ -321,5 +322,39 @@ describe('initExportScheduler', () => {
     ]);
     expect(mockAlarmsCreate).not.toHaveBeenCalled();
     expect(mockOnStateChangedAddListener).not.toHaveBeenCalled();
+  });
+
+  it('never accumulates idle listeners across repeated init calls', async () => {
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'idle' });
+
+    await initExportScheduler();
+    await initExportScheduler();
+    await initExportScheduler();
+
+    // Same named handler every time, always removed before it is re-added
+    // (the first init removes a stale handler from a previous SW generation,
+    // which is a no-op): the net registration count stays 1 no matter how
+    // often settings saves or connection tests re-run the scheduler.
+    expect(mockOnStateChangedAddListener).toHaveBeenCalledTimes(3);
+    expect(mockOnStateChangedRemoveListener).toHaveBeenCalledTimes(3);
+    const registered = mockOnStateChangedAddListener.mock.calls.map(([fn]) => fn);
+    expect(registered[0]).toBe(registered[1]);
+    expect(registered[1]).toBe(registered[2]);
+    expect(mockOnStateChangedRemoveListener.mock.calls[2]?.[0]).toBe(registered[2]);
+  });
+
+  it('removes a stale idle listener when the mode switches away from idle', async () => {
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'idle' });
+    await initExportScheduler();
+    expect(mockOnStateChangedAddListener).toHaveBeenCalledTimes(1);
+
+    mockGetSettings.mockResolvedValue({ local_markdown_export_timing: 'daily' });
+    await initExportScheduler();
+
+    expect(mockOnStateChangedRemoveListener).toHaveBeenCalledTimes(2);
+    expect(mockOnStateChangedRemoveListener.mock.calls[1]?.[0]).toBe(
+      mockOnStateChangedAddListener.mock.calls[0]?.[0]
+    );
+    expect(mockOnStateChangedAddListener).toHaveBeenCalledTimes(1);
   });
 });

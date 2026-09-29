@@ -140,4 +140,33 @@ describe('feedbackQueue', () => {
     const raw = await chrome.storage.local.get(StorageKeys.CLEANSING_FEEDBACK_QUEUE) as Record<string, unknown>;
     expect(Array.isArray(raw[StorageKeys.CLEANSING_FEEDBACK_QUEUE])).toBe(true);
   });
+
+  it('concurrent enqueues both survive the read-modify-write', async () => {
+    // Writers go through withOptimisticLock, whose per-key promise chain
+    // serializes the read-modify-write. Without it, two interleaved
+    // enqueues each read the same base and one entry is silently lost.
+    await Promise.all([
+      enqueueFeedback({ url: 'https://a.com', domain: 'a.com', htmlSnippet: 'a', removedByReason: {} }),
+      enqueueFeedback({ url: 'https://b.com', domain: 'b.com', htmlSnippet: 'b', removedByReason: {} }),
+    ]);
+
+    const queue = await getFeedbackQueue();
+    expect(queue).toHaveLength(2);
+    expect(queue.map(e => e.url).sort()).toEqual(['https://a.com', 'https://b.com']);
+  });
+
+  it('concurrent remove and enqueue do not lose either operation', async () => {
+    await enqueueFeedback({ url: 'https://a.com', domain: 'a.com', htmlSnippet: 'a', removedByReason: {} });
+    const queue = await getFeedbackQueue();
+    const firstId = queue[0]!.id;
+
+    await Promise.all([
+      removeFeedbackEntry(firstId),
+      enqueueFeedback({ url: 'https://b.com', domain: 'b.com', htmlSnippet: 'b', removedByReason: {} }),
+    ]);
+
+    const after = await getFeedbackQueue();
+    expect(after).toHaveLength(1);
+    expect(after[0]!.url).toBe('https://b.com');
+  });
 });

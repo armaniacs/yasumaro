@@ -39,6 +39,10 @@ function getNextMidnightTimestamp(): number {
  * Only the standing alarms this function owns — the idle fallback and the
  * daily flush — are cleared, and both clears are awaited so a mode switch
  * cannot end up with the previous mode's alarm alive next to the new one.
+ * The idle listener follows the same re-registration discipline: it is a
+ * module-level named function removed before re-adding, so repeated calls
+ * never accumulate listeners (the shape manualContentFetcher had to fix once
+ * already for its tab listener).
  *
  * IMMEDIATE_FLUSH_ALARM is deliberately left untouched: scheduleImmediateFlush()
  * owns that one-shot, arms it per recording, and there is no way to re-create
@@ -49,6 +53,10 @@ function getNextMidnightTimestamp(): number {
  * immediate may still fire one stale one-shot, which is harmless because every
  * flush rewrites the same daily file with conflictAction: 'overwrite'.
  */
+function onIdleStateChanged(state: string): void {
+  if (state === 'idle') void flushBufferedExports();
+}
+
 export async function initExportScheduler(): Promise<void> {
   await chrome.alarms.clear(IDLE_FALLBACK_ALARM);
   await chrome.alarms.clear(DAILY_FLUSH_ALARM);
@@ -56,12 +64,16 @@ export async function initExportScheduler(): Promise<void> {
   const settings = await settingsRepository.getAll();
   const timing = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING];
 
+  if (chrome.idle) {
+    // Remove-then-add regardless of the new mode: a leftover listener from a
+    // previous 'idle' setting must not survive a switch to 'daily'/'manual'.
+    chrome.idle.onStateChanged.removeListener(onIdleStateChanged);
+  }
+
   if (timing === 'idle') {
     chrome.alarms.create(IDLE_FALLBACK_ALARM, { periodInMinutes: IDLE_FALLBACK_INTERVAL_MIN });
     if (chrome.idle) {
-      chrome.idle.onStateChanged.addListener((state) => {
-        if (state === 'idle') void flushBufferedExports();
-      });
+      chrome.idle.onStateChanged.addListener(onIdleStateChanged);
     }
   } else if (timing === 'daily') {
     chrome.alarms.create(DAILY_FLUSH_ALARM, {
