@@ -14,8 +14,8 @@
 
 import { createEngine, setSqliteWasmUrlOverride, type SqliteEngine, type SqliteValue } from './sqliteEngine.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from './schema.js';
-import { runMigrations, type MigrationEngine } from './migrations.js';
+import { bootSqliteEngine } from './sqliteBoot.js';
+import { DB_FILENAME } from './dbFilename.js';
 
 import type { WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -95,7 +95,6 @@ export async function handleRestore(data: Uint8Array): Promise<{ restored: true 
 // Constants
 // ---------------------------------------------------------------------------
 
-const DB_FILENAME = 'yasumaro.db';
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 
 // ---------------------------------------------------------------------------
@@ -139,24 +138,9 @@ async function initSqlite(): Promise<void> {
 async function initSqliteInner(): Promise<void> {
   engine = await createEngine(DB_FILENAME, WASM_URL);
 
-  await engine.exec('PRAGMA journal_mode=WAL;');
-  await engine.exec(SCHEMA_SQL);
-  await engine.exec(AUDIT_LOG_SCHEMA_SQL);
-
-  const workerEngine: MigrationEngine = {
-    exec: async (sql) => {
-      await engine!.exec(sql);
-    },
-    queryValue: async (sql) => {
-      const v = await engine!.queryValue(sql);
-      return v !== undefined ? Number(v) : null;
-    },
-  };
-  const { fts5Available: fts } = await runMigrations(workerEngine);
-  fts5Available = fts;
-
-  const opts = await engine.query('PRAGMA compile_options');
-  cachedCompileOptions = opts.map((r) => String(Object.values(r)[0] ?? ''));
+  const booted = await bootSqliteEngine(engine);
+  fts5Available = booted.fts5Available;
+  cachedCompileOptions = booted.compileOptions;
 
   // Migrate old AccessHandlePoolVFS database (one-time, idempotent)
   const migrationCtx: MigrationContext = {
