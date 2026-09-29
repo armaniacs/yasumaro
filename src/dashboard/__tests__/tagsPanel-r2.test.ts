@@ -96,6 +96,8 @@ vi.mock('../../utils/tagUtils.js', () => ({
 }));
 
 import { initTagsPanel } from '../tagsPanel.js';
+import { setRegistry } from '../panels/registryContext.js';
+import type { NavigationRegistry } from '../panels/NavigationRegistry.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 function fullDom(): void {
@@ -350,6 +352,7 @@ describe('tagsPanel-r2 — renderDefaultCategories', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    setRegistry(null as unknown as NavigationRegistry);
   });
 
   it('renders all default categories as buttons', async () => {
@@ -361,12 +364,17 @@ describe('tagsPanel-r2 — renderDefaultCategories', () => {
     expect((items[0] as HTMLButtonElement).textContent).toBe('#tech');
   });
 
-  it('clicking default category dispatches navigate-to-tag', async () => {
+  it('clicking default category navigates to history panel with that tag', async () => {
+    const navigateTyped = vi.fn().mockResolvedValue(undefined);
+    setRegistry({ navigateTyped } as unknown as NavigationRegistry);
     fullDom();
     await initTagsPanel();
     const eventSpy = vi.fn();
     document.addEventListener('navigate-to-tag', eventSpy);
+
     (document.querySelector('.default-category-item') as HTMLButtonElement).click();
-    expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({ detail: 'tech' }));
+
+    expect(navigateTyped).toHaveBeenCalledWith('panel-sqlite-history', { searchTag: 'tech' });
+    expect(eventSpy).not.toHaveBeenCalled();
   });
 });
