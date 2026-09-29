@@ -14,18 +14,24 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-29 大局的コードレビュー改善ラウンド第2弾 — ✅ 8件完了・アーカイブ済み / 🔶 部分実装 2件 🔧非機能追加
+### 2026-09-29 大局的コードレビュー改善ラウンド第2弾 — ✅ 10件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-review skill による構造レビュー（並列サブエージェント調査 5 系統 + 実コード裏取り）から抽出した 10 候補を RICE 採点して PBI 化。全バッチ実装後 `make clean test-full`（build + validate + E2E 325 passed）でゲート通過。採点・依存・対象外・既存台帳反映の詳細は [2026-09-29-00-backlog-holistic-0929.md](2026-09-29-00-backlog-holistic-0929.md)（live 台帳として残置）。
 
-**実装状況**: 31〜37・39 は実装・全ゲート green で 2026-09-29 にアーカイブ（アーカイブ履歴参照）。**38（接続テスト runner 部）と 40（recordingConditionsSettings 部）は 2026-09-28 ラウンドの未コミット WIP（transport 移行・PBI 30 関連）とファイル交差するため部分実装で残置**（WIP 着地後に残部を実施）。
+**全 10 件完了（2026-09-29 アーカイブ）**: 38（接続テスト runner）と 40（recordingConditionsSettings）は 2026-09-28 ラウンドの未コミット WIP とファイル交差のため部分実装で残したが、WIP 着地後に残部を実施し、validate 15,014 tests green を確認して完了とした。
 
-| NN | PBI | 種別 | RICE | SP | 状態 |
-|---|---|---|---:|---:|---|
-| 38 | [refactor-dashboard-duplicated-logic-consolidation](2026-09-29-38-refactor-dashboard-duplicated-logic-consolidation.md) | refactor | 2.4 | 1.5 | 🔶 Tranco 統合のみ完了（runner は WIP 着地後） |
-| 40 | [refactor-dashboard-legacy-module-factory-ization](2026-09-29-40-refactor-dashboard-legacy-module-factory-ization.md) | refactor | 0.8 | 3.0 | 🔶 3/4 モジュール完了（recordingConditionsSettings は WIP 着地後） |
-
-アーカイブ済み（RICE 順）: 31 audit_log 保持（36.0）→ 32 tag/RTL（18.0）→ 33 logger masking（16.0）→ 34 seam residue bundle（10.0）→ 35 AI 失敗契約（9.0）→ 36 OPFS デグレ（6.4）→ 37 SQLite 統合（2.4）→ 39 ProviderStrategy 分離（1.0）。
+| 順位 | NN | PBI | 種別 | RICE | SP |
+|---|---|---|---|---:|---:|
+| 1 | 31 | fix-audit-log-retention-and-clear-all | fix | 36.0 | 0.5 |
+| 2 | 32 | fix-tag-panel-navigation-and-rtl-ssot | fix | 18.0 | 0.5 |
+| 3 | 33 | fix-logger-key-name-masking | fix | 16.0 | 0.5 |
+| 4 | 34 | fix-background-seam-residue-bundle | fix | 10.0 | 1.0 |
+| 5 | 35 | fix-ai-provider-failure-contract-unify | fix | 9.0 | 1.0 |
+| 6 | 36 | fix-opfs-worker-runtime-degradation | fix | 6.4 | 1.0 |
+| 7 | 37 | refactor-sqlite-backend-boot-purge-search-unify | refactor | 2.4 | 2.0 |
+| 8 | 38 | refactor-dashboard-duplicated-logic-consolidation | refactor | 2.4 | 1.5 |
+| 9 | 39 | refactor-provider-strategy-responsibility-split | refactor | 1.0 | 2.5 |
+| 10 | 40 | refactor-dashboard-legacy-module-factory-ization | refactor | 0.8 | 3.0 |
 
 ### 2026-09-28 大局的コードレビュー改善ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 
