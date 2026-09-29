@@ -15,6 +15,21 @@ type ContentPurgeFn = (
     maxRecords?: number,
     includeStarred?: boolean,
 ) => Promise<CallResult<{ purged: number }>>;
+type AuditPurgeFn = (retentionDays?: number) => Promise<CallResult<{ purged: number }>>;
+
+/**
+ * Audit-log retention window in days.
+ *
+ * Not a user setting on purpose: the trail records every URL handed to a cloud
+ * AI provider, and a knob that defaults to "keep everything" is not a privacy
+ * guarantee. The value mirrors the content-retention default
+ * (DEFAULT_SETTINGS.content_retention_days) so the two retention policies read
+ * as one policy — the equality is pinned by a test rather than re-derived,
+ * because DEFAULT_SETTINGS types every key as nullable ("unset"), and a
+ * derived window would silently turn the sweep off the day someone made that
+ * default optional.
+ */
+export const AUDIT_LOG_RETENTION_DAYS = 7;
 
 const BUFFER_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -83,6 +98,7 @@ export async function handleDailyPurgeAlarm(
   purgeOldRecords: PurgeFn,
   purgeContent?: ContentPurgeFn,
   clearExpiredPages: () => Promise<void> = defaultClearExpiredPages,
+  purgeAuditLog?: AuditPurgeFn,
 ): Promise<void> {
     try {
         const settings = await settingsRepository.getAll();
@@ -121,6 +137,18 @@ export async function handleDailyPurgeAlarm(
                     purged: result.success ? result.data.purged : -1,
                 }, 'dailyPurgeHandler');
             }
+        }
+
+        // Audit-log retention sweep. Unconditional (no setting can disable it):
+        // the trail is the record of what was sent to a cloud provider, and a
+        // user-facing switch would only add a way to leave it unbounded.
+        if (purgeAuditLog) {
+            const result = await purgeAuditLog(AUDIT_LOG_RETENTION_DAYS);
+            // Same convention as the record purge above: a failure is never
+            // folded into "0 purged".
+            logInfo('daily-audit-purge completed', {
+                purged: result.success ? result.data.purged : -1,
+            }, 'dailyPurgeHandler');
         }
 
         // PBI-15: clean up expired settings migration backups

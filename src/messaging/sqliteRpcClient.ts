@@ -141,6 +141,7 @@ export type MaintainOp =
   | { type: 'clearAll' }
   | { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number }
    | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }
+   | { type: 'purgeAuditLog'; retentionDays?: number }
    | { type: 'healthCheck' }
   | { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }
   | { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }
@@ -176,7 +177,10 @@ export interface SqliteRpcClient {
   maintain(op: Extract<MaintainOp, { type: 'backup' }>): Promise<SqliteRpcResult<Uint8Array>>;
   maintain(op: Extract<MaintainOp, { type: 'restore' } | Extract<MaintainOp, { type: 'clearAll' }>>): Promise<SqliteRpcResult<void>>;
   maintain(
-    op: Extract<MaintainOp, { type: 'purgeOldRecords' }> | Extract<MaintainOp, { type: 'purgeContent' }>,
+    op:
+      | Extract<MaintainOp, { type: 'purgeOldRecords' }>
+      | Extract<MaintainOp, { type: 'purgeContent' }>
+      | Extract<MaintainOp, { type: 'purgeAuditLog' }>,
   ): Promise<SqliteRpcResult<{ purged: number }>>;
   maintain(op: Extract<MaintainOp, { type: 'healthCheck' }>): Promise<SqliteRpcResult<boolean>>;
   maintain(op: Extract<MaintainOp, { type: 'archivePreview' }>): Promise<SqliteRpcResult<ArchivePreviewData>>;

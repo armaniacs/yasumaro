@@ -45,7 +45,7 @@ import {
   handleArchiveDiscard,
   handleArchiveSweep,
 } from './opfsWorker/archiveSessionHandlers.js';
-import { handlePurgeOldRecords, handleContentPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
+import { handlePurgeOldRecords, handleContentPurge, handleAuditLogPurge, handleClearAll } from './opfsWorker/purgeHandlers.js';
 import { handleAuditLogInsert, handleAuditLogQuery } from './opfsWorker/auditHandlers.js';
 import { handleGetStatus, handleFtsIndexSize } from './opfsWorker/statusHandlers.js';
 import { runMigrationV2, type MigrationContext } from './opfsWorker/migrationV2.js';
@@ -369,6 +369,10 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
       }
       case 'AUDIT_LOG_QUERY': {
         result = await handleAuditLogQuery(handlerCtx, payload as import('./opfsWorker/types.js').AuditLogQueryPayload);
+        break;
+      }
+      case 'AUDIT_LOG_PURGE': {
+        result = await handleAuditLogPurge(handlerCtx, payload as import('./opfsWorker/types.js').AuditLogPurgePayload);
         break;
       }
       default:

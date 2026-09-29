@@ -586,6 +586,24 @@ export function buildPurgeOldRecordsStatements(cutoffMs: number): {
 }
 
 /**
+ * Audit-log retention delete shared by the idb/opfs purge paths.
+ *
+ * Age is the only dimension: audit_log has no starred/deleted columns and no
+ * cap, and the trail is metadata whose whole value is bounded by how long it
+ * stays readable — so the cutoff rides the existing `created_at` index rather
+ * than a per-row expiry column.
+ */
+export function buildAuditLogPurgeStatements(cutoffMs: number): {
+  deleteOldSql: string;
+  deleteOldParams: SqliteValue[];
+} {
+  return {
+    deleteOldSql: 'DELETE FROM audit_log WHERE created_at < ?',
+    deleteOldParams: [cutoffMs],
+  };
+}
+
+/**
  * Starred-row guard for content purge (sets content NULL, keeps the row).
  * '' when includeStarred is truthy, otherwise excludes starred rows.
  */

@@ -110,6 +110,14 @@ export interface Mutable {
    */
   purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<BackendOrError<PurgeResult>>;
   purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>>;
+  /**
+   * Delete audit-log rows older than the retention window.
+   *
+   * Age-only by design (audit_log has no starred/deleted columns and no cap),
+   * and `undefined` means "skip this dimension" for the same reason
+   * purgeOldRecords takes it: there is nothing to purge without a window.
+   */
+  purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
   // Archive operations are NOT part of this interface — see ArchiveStaging
@@ -148,6 +156,7 @@ export class NoopBackend implements StorageBackend {
   async toggleStar() { return this.err(); }
   async purgeOldRecords() { return this.err(); }
   async purgeContent() { return this.err(); }
+  async purgeAuditLog() { return this.err(); }
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
   async restoreDb() { return this.err(); }

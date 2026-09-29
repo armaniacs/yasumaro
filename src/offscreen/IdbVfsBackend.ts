@@ -17,7 +17,7 @@ import {
   buildFtsSearchStatements, buildLikeSearchStatements, buildPlainListStatements,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
-  buildAuditLogStatements,
+  buildAuditLogStatements, buildAuditLogPurgeStatements,
   type AlreadyCappedQuery,
 } from './queryPlan.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -293,6 +293,20 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: true, purged: totalPurged };
   }
 
+  async purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
+    this.ensureDb();
+    // Same skip guard as the other purges: without a positive window there is
+    // no cutoff, and "no window" must not degrade into "cutoff = now".
+    if (retentionDays == null || retentionDays <= 0) {
+      return { success: true, purged: 0 };
+    }
+    const stmts = buildAuditLogPurgeStatements(purgeCutoffMs(retentionDays));
+    await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
+    let purged = 0;
+    await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { purged = Number(row[0]); });
+    return { success: true, purged };
+  }
+
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
     this.ensureDb();
     let count = 0;
@@ -408,6 +422,9 @@ export class IdbVfsBackend implements StorageBackend {
     this.ensureDb();
     await this.engine.execWithCache('DELETE FROM browsing_logs');
     await this.engine.execWithCache('DELETE FROM browsing_logs_fts');
+    // audit_log is a separate table with its own retention sweep, so clearing
+    // the browsing history without it would leave the send trail behind.
+    await this.engine.execWithCache('DELETE FROM audit_log');
     await this.engine.execWithCache('PRAGMA wal_checkpoint(TRUNCATE)');
     return { success: true };
   }
