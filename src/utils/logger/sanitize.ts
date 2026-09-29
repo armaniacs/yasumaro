@@ -1,4 +1,5 @@
 import { sanitizeRegex } from '../piiSanitizer.js';
+import { maskSecretValueByKey } from '../sensitiveDataMask.js';
 import { neutralizeLogText } from './neutralize.js';
 
 // セキュリティ強化: log sanitization への深度制限と循環参照保護
@@ -10,7 +11,8 @@ const SANITIZE_RESULT = {
 } as const;
 
 /**
- * ログの詳細情報をサニタイズする（PII 検出とマスキング）
+ * ログの詳細情報をサニタイズする（キー名による秘匿マスキングと PII 検出・マスキング）。
+ * 順序は「キー名による秘匿マスキング → PII 正規表現」で固定され、
  * 深度制限と循環参照保護付き。
  *
  * @param details - サニタイズ対象の詳細情報
@@ -63,6 +65,16 @@ async function sanitizeLogDetails(
   const sanitized = Object.create(null) as Record<string, unknown>;
 
   for (const [key, value] of Object.entries(details)) {
+    // 秘匿マスキングを PII 段より先に適用する。キー名で秘匿と判定できるものは
+    // 値の型（文字列・数値・null・undefined・オブジェクト）に関わらず丸ごと
+    // 置換し、PII 判定に値の形を依存させない。マスクされなかった値は
+    // 同一参照で返るので、ここで `!==` による通過判定ができる。
+    const maskedValue = maskSecretValueByKey(key, value);
+    if (maskedValue !== value) {
+      sanitized[key] = maskedValue;
+      continue;
+    }
+
     if (value === null || value === undefined) {
       sanitized[key] = value;
       continue;
@@ -127,6 +139,9 @@ async function sanitizeArray(
         sanitized.push(neutralizeLogText(item));
       }
     } else if (typeof item === 'object') {
+      // 配列要素にはキー名が無いため、秘匿マスキングはオブジェクト要素を
+      // sanitizeLogDetails に渡した再帰の中でだけ効く。生の文字列要素は
+      // PII 段と中立制御バイトの除去に委ねる。
       if (Array.isArray(item)) {
         sanitized.push(await sanitizeArray(item, visitedObjects, depth + 1));
       } else {

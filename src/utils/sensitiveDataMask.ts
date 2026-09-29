@@ -5,7 +5,11 @@
  * 単一ソースオブトゥルースを提供する。
  */
 
-import { API_KEY_FIELDS } from './storage/settingsMigration.js';
+// 依存の無い正規の一覧から読む。settingsMigration を経由すると
+// logger/sanitize → sensitiveDataMask → settingsMigration → logger/api の
+// 静的循環が成立し、読み込み順によっては API_KEY_FIELDS の TDZ 参照で
+// logger 全体が初期化に失敗する。
+import { API_KEY_FIELD_NAMES } from './storage/apiKeyFields.js';
 
 // ─── Field lists ───────────────────────────────────────────────────────
 
@@ -14,8 +18,8 @@ import { API_KEY_FIELDS } from './storage/settingsMigration.js';
  * redaction.ts の SENSITIVE_KEYS + logMasker.ts の LEVEL1_FIELDS を統合。
  */
 const LEVEL1_FIELDS = [
-  // From redaction.ts (API_KEY_FIELDS from storage)
-  ...API_KEY_FIELDS,
+  // API キー系（storage/apiKeyFields.ts の正規一覧）
+  ...API_KEY_FIELD_NAMES,
   // From redaction.ts (ADDITIONAL_SENSITIVE_KEYS)
   'apiKey',
   'fullKey',
@@ -57,9 +61,21 @@ const LEVEL2_FIELDS = [
 const LOWERCASE_LEVEL1 = LEVEL1_FIELDS.map(k => k.toLowerCase());
 const LOWERCASE_LEVEL2 = LEVEL2_FIELDS.map(k => k.toLowerCase());
 
+// 'partial' 戦略（ログ出力）が使う Level 1 の置換文字列。
+const LEVEL1_PARTIAL_MASK = '***';
+
 // ─── Masking strategies ────────────────────────────────────────────────
 
 export type MaskStrategy = 'full' | 'partial';
+
+/**
+ * Level 1 相当のキー名かどうか（小文字化済みのキーを渡す）。
+ * 部分一致は既存の共有実装と同じで、`github_pat` は `githubPersonalAccessToken`
+ * にも効く。呼び出し側ごとに一致規則を分けず、ここを単一判定点にする。
+ */
+function isLevel1Key(lowerKey: string): boolean {
+  return LOWERCASE_LEVEL1.some(k => lowerKey.includes(k));
+}
 
 /**
  * メールアドレスの部分マスキング。
@@ -84,10 +100,10 @@ function maskEmail(email: string): string {
  */
 function maskValue(key: string, value: unknown, strategy: MaskStrategy): unknown {
   const lowerKey = key.toLowerCase();
-  const replacement = strategy === 'full' ? '[REDACTED]' : '***';
+  const replacement = strategy === 'full' ? '[REDACTED]' : LEVEL1_PARTIAL_MASK;
 
   // LEVEL1: 完全マスキング
-  if (LOWERCASE_LEVEL1.some(k => lowerKey.includes(k))) {
+  if (isLevel1Key(lowerKey)) {
     // 'full' 戦略: 値の型に関わらずマスキング
     // 'partial' 戦略: 文字列のみマスキング（数値/null/undefinedはスキップ）
     if (strategy === 'full' || typeof value === 'string') {
@@ -107,6 +123,21 @@ function maskValue(key: string, value: unknown, strategy: MaskStrategy): unknown
 }
 
 // ─── Public API ────────────────────────────────────────────────────────
+
+/**
+ * キー名のみで値を秘匿マスキングする。Level 1 は値の型に関わらず `***` になる。
+ *
+ * ログサニタイザーは「キー名による秘匿マスキング → PII 正規表現」の順を
+ * 固定したうえで合成するため、1 値ずつ適用できるこの形を公开する。
+ * Level 2 は既存の PII サニタイザが担当するため、ここでは対象外。
+ *
+ * @param key - フィールド名
+ * @param value - マスキング対象の値
+ * @returns Level 1 キーなら `***`、そうでなければ `value` を同一参照で返す
+ */
+export function maskSecretValueByKey(key: string, value: unknown): unknown {
+  return isLevel1Key(key.toLowerCase()) ? LEVEL1_PARTIAL_MASK : value;
+}
 
 /**
  * オブジェクト内の機密フィールドを再帰的にマスキングする。
