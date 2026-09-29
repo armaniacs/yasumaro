@@ -1,7 +1,7 @@
 # PBI: マスターパスワードの KEK 切替時に API キーを再暗号化して保持する
 
 種別: fix
-状態: 未着手
+状態: 実装済み（2026-09-28・レビュー対応込み）
 
 上流: `dev-docs/archived/pbi/2026-09-25-27-investigate-master-password-removal-reencrypt.md`（裁定記録。本 PBI はその裁定の仕様化であり、裁定内容に変更しない）
 
@@ -49,19 +49,19 @@
 
 ## 受け入れ基準
 
-- [ ] `setMasterPassword` / `changeMasterPassword` / `removeMasterPassword` の 3 経路が、同一の再暗号化手順を共有する。
-- [ ] 対象は `API_KEY_FIELDS` の 6 フィールド（`provider_api_key` と `github_pat` を含む）で、canonical 一覧の複製を作らない。
-- [ ] nested `settings` blob と legacy scattered key の両方を独立に検出し、存在する側を再暗号化してから認証メタデータを更新する。
-- [ ] 復号不能が 1 件でもあれば、認証メタデータに触れず処理を中止し、空文字上書きをしない。
-- [ ] 再暗号化後に新 KEK で read back して復号できることを確認し、その確認が通るまで認証メタデータを更新しない。
-- [ ] `settings` への書き込みは repository の delta write 契約に従い、古い snapshot を書き戻さない。
-- [ ] dashboard から直接 `chrome.storage.local.remove()` する経路を廃止し、service 関数を呼ぶ。
-- [ ] 解除成功時の `IS_LOCKED` と認証メタデータの最終状態を service と dashboard で一致させる。
-- [ ] 失敗時はチェックボックスを元の状態へ戻し、完了メッセージを出さない。
-- [ ] i18n キーを 2 つ追加し、`public/_locales/en/messages.json` と `ja` の両方を更新する。`passwordIncorrect` は流用しない。
-- [ ] 既存 pin（`dashboard/__tests__/masterPassword.test.ts` の 3 キー直接 remove、`encryptionSession-branch.test.ts` と `storage-security.test.ts` の認証キー検証）を裁定内容へ更新する。
-- [ ] ADR `2026-03-24-master-password-data-cleanup.md` を superseded として記録し、「匿名 KEK へ再暗号化」を規定する ADR を追加する。
-- [ ] 例外や UI メッセージに API キー値・復号結果・認証情報を含めない。
+- [x] `setMasterPassword` / `changeMasterPassword` / `removeMasterPassword` の 3 経路が、同一の再暗号化手順を共有する。
+- [x] 対象は `API_KEY_FIELDS` の 6 フィールド（`provider_api_key` と `github_pat` を含む）で、canonical 一覧の複製を作らない。
+- [x] nested `settings` blob と legacy scattered key の両方を独立に検出し、存在する側を再暗号化してから認証メタデータを更新する。
+- [x] 復号不能が 1 件でもあれば、認証メタデータに触れず処理を中止し、空文字上書きをしない。
+- [x] 再暗号化後に新 KEK で read back して復号できることを確認し、その確認が通るまで認証メタデータを更新しない。
+- [x] `settings` への書き込みは repository の delta write 契約に従い、古い snapshot を書き戻さない。
+- [x] dashboard から直接 `chrome.storage.local.remove()` する経路を廃止し、service 関数を呼ぶ。
+- [x] 解除成功時の `IS_LOCKED` と認証メタデータの最終状態を service と dashboard で一致させる。
+- [x] 失敗時はチェックボックスを元の状態へ戻し、完了メッセージを出さない。
+- [x] i18n キーを 2 つ追加し、`public/_locales/en/messages.json` と `ja` の両方を更新する。`passwordIncorrect` は流用しない。
+- [x] 既存 pin（`dashboard/__tests__/masterPassword.test.ts` の 3 キー直接 remove、`encryptionSession-branch.test.ts` と `storage-security.test.ts` の認証キー検証）を裁定内容へ更新する。
+- [x] ADR `2026-03-24-master-password-data-cleanup.md` を superseded として記録し、「匿名 KEK へ再暗号化」を規定する ADR を追加する。
+- [x] 例外や UI メッセージに API キー値・復号結果・認証情報を含めない。
 
 ## テスト戦略
 

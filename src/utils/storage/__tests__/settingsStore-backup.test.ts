@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { getSettings } from '../../storage.js';
+import { settingsRepository } from '../SettingsRepository.js';
 import { migrateToSingleSettingsObject, LEGACY_SETTINGS_BACKUP_KEY } from '../settingsMigration.js';
 
 describe('getSettings — recovery from backup on corruption', () => {
@@ -33,7 +33,7 @@ describe('getSettings — recovery from backup on corruption', () => {
     (globalThis.chrome.storage.local.get as unknown) = mockGet;
     (globalThis.chrome.storage.local.set as unknown) = mockSet;
 
-    const settings = await getSettings();
+    const settings = (await settingsRepository.getAll()) as unknown as Record<string, unknown>;
     expect(settings['obsidian_api_key']).toBe('recovered-key');
 
     (globalThis.chrome.storage.local.get as unknown) = originalGet;

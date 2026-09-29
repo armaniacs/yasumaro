@@ -7,6 +7,7 @@ import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storag
 import { getMessageOr } from '../../../utils/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
+import { clearAllLocalData } from '../../../utils/storage/storageMaintenance.js';
 
 export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   return {
@@ -79,7 +80,7 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
         });
         if (!confirmed) return;
         try {
-          await chrome.storage.local.clear();
+          await clearAllLocalData();
           const sqliteResult = await clearAllLogs();
           if (isServiceError(sqliteResult)) {
             const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;

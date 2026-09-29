@@ -116,4 +116,4 @@ showPasswordAuthModal('export', async () => {
 - **Proposed**: 2026-03-24
 - **Approved**: 2026-03-24
 - **Implemented**: Phase 1-3 全フェーズ完了
-- **Superseded By** -
+- **Superseded By**: [2026-09-28-master-password-kek-reencryption](./2026-09-28-master-password-kek-reencryption.md) — 解除時の API キー削除方針を、匿名 KEK への再暗号化保持方針へ置き換える（裁定: `dev-docs/archived/pbi/2026-09-25-27-investigate-master-password-removal-reencrypt.md`）

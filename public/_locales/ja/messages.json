@@ -1121,11 +1121,11 @@
   "passwordIncorrect": {
     "message": "パスワードが正しくありません。"
   },
-  "passwordSaved": {
-    "message": "マスターパスワードを保存しました。"
+  "masterPasswordReencryptedKept": {
+    "message": "マスターパスワードを更新しました。API キーは保持されました。"
   },
-  "passwordRemoved": {
-    "message": "マスターパスワードを削除しました。"
+  "masterPasswordReencryptAborted": {
+    "message": "復号できない項目（{fields}）があるため処理を中止しました。何も変更していません。再入力のうえ再試行してください。"
   },
   "passwordRequired": {
     "message": "マスターパスワードを入力してください。"

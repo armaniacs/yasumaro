@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
-import { getSettings, clearSettingsCache } from '../../storage.js';
+import { settingsRepository } from '../SettingsRepository.js';
 
 vi.mock('../../logger/types.js', () => ({
   logInfo: vi.fn(() => Promise.resolve()),
@@ -88,9 +88,9 @@ describe('storage — plaintext API key detection', () => {
 
   it('warns when an API key field is stored as plaintext', async () => {
     const { logWarn } = await import('../../logger/api.js');
-    clearSettingsCache();
+    settingsRepository.clearCache();
 
-    const settings = await getSettings();
+    const settings = (await settingsRepository.getAll()) as unknown as Record<string, unknown>;
 
     expect(settings['openai_api_key']).toBe('sk-plaintext-key');
     expect(logWarn).toHaveBeenCalledTimes(1);
@@ -102,17 +102,17 @@ describe('storage — plaintext API key detection', () => {
   it('does not warn when API key fields are absent', async () => {
     storageData.settings = {};
     const { logWarn } = await import('../../logger/api.js');
-    clearSettingsCache();
+    settingsRepository.clearCache();
 
-    await getSettings();
+    await settingsRepository.getAll();
 
     expect(logWarn).not.toHaveBeenCalled();
   });
 
   it('VULN-015: re-encrypts plaintext API keys at rest during migration', async () => {
-    clearSettingsCache();
+    settingsRepository.clearCache();
 
-    const settings = await getSettings();
+    const settings = (await settingsRepository.getAll()) as unknown as Record<string, unknown>;
 
     // In-memory settings still expose the decrypted value for the session.
     expect(settings['openai_api_key']).toBe('sk-plaintext-key');

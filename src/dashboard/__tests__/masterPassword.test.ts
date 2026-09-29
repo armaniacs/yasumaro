@@ -38,6 +38,20 @@ vi.mock('../../utils/masterPassword.js', () => ({
   PasswordStrength: { WEAK: 'weak', MEDIUM: 'medium', STRONG: 'strong' },
 }));
 
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  setMasterPassword: vi.fn(),
+  changeMasterPassword: vi.fn(),
+  removeMasterPassword: vi.fn(),
+  ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
+    fields: readonly string[];
+    constructor(fields: readonly string[]) {
+      super(`ReencryptionAbortedError: ${fields.length} field(s)`);
+      this.name = 'ReencryptionAbortedError';
+      this.fields = fields;
+    }
+  },
+}));
+
 const mockChromeGet = vi.fn();
 const mockChromeSet = vi.fn();
 const mockChromeRemove = vi.fn();
@@ -67,6 +81,12 @@ import {
   validatePasswordMatch,
   PasswordStrength,
 } from '../../utils/masterPassword.js';
+import {
+  setMasterPassword as setMasterPasswordService,
+  changeMasterPassword as changeMasterPasswordService,
+  removeMasterPassword as removeMasterPasswordService,
+  ReencryptionAbortedError,
+} from '../../utils/storage/encryptionSession.js';
 
 function flushPromises(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -110,6 +130,9 @@ function setupDefaultMockValues(): void {
   vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
   vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
   vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+  vi.mocked(setMasterPasswordService).mockResolvedValue(true);
+  vi.mocked(changeMasterPasswordService).mockResolvedValue(true);
+  vi.mocked(removeMasterPasswordService).mockResolvedValue(undefined);
 }
 
 function openModalViaCheckbox(): void {
@@ -367,13 +390,51 @@ describe('initMasterPasswordSettings - checkbox events', () => {
 
     await flushPromises();
 
-    expect(mockChromeRemove).toHaveBeenCalledWith([
-      'master_password_enabled',
-      'master_password_salt',
-      'master_password_hash',
-    ]);
+    // PBI 2026-09-27: removal goes through the service with the auth password;
+    // direct chrome.storage.local.remove of the master-password keys is gone
+    // (the rate limiter may still remove its own attempt counters).
+    expect(removeMasterPasswordService).toHaveBeenCalledWith('correct-password');
+    const removedKeys = mockChromeRemove.mock.calls.flat(2).filter((k) => typeof k === 'string');
+    expect(removedKeys.filter((k) => k.startsWith('master_password_'))).toEqual([]);
     expect(options.classList.contains('hidden')).toBe(true);
-    expect(showStatus).toHaveBeenCalledWith('status', 'i18n_passwordRemoved', 'success');
+    expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordReencryptedKept', 'success');
+    // The modal closes only after the action succeeds.
+    expect(authModal.classList.contains('hidden')).toBe(true);
+  });
+
+  it('should keep the checkbox checked and the modal open when service removal aborts', async () => {
+    vi.mocked(removeMasterPasswordService).mockRejectedValue(new ReencryptionAbortedError(['github_pat']));
+
+    setupFullDOM();
+    vi.resetModules();
+    const { initMasterPasswordSettings } = await import('../masterPassword.js');
+
+    initMasterPasswordSettings();
+
+    const checkbox = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
+    const options = document.getElementById('masterPasswordOptions')!;
+
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change'));
+
+    await flushPromises();
+
+    const authInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement;
+    authInput.value = 'correct-password';
+    document.getElementById('submitPasswordAuthBtn')!.click();
+
+    await flushPromises();
+
+    // Rollback: checkbox restored, options reshown, modal stays open with the
+    // field-named error, and no success message is shown.
+    expect(checkbox.checked).toBe(true);
+    expect(options.classList.contains('hidden')).toBe(false);
+    const authModal = document.getElementById('passwordAuthModal')!;
+    expect(authModal.classList.contains('hidden')).toBe(false);
+    const modalError = document.getElementById('passwordAuthError')!;
+    expect(modalError.textContent).toBe('i18n_masterPasswordReencryptAborted');
+    expect(modalError.classList.contains('visible')).toBe(true);
+    expect(showStatus).not.toHaveBeenCalledWith('status', 'i18n_masterPasswordReencryptedKept', expect.anything());
   });
 });
 
@@ -386,7 +447,6 @@ describe('initMasterPasswordSettings - change password flow', () => {
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
-
     initMasterPasswordSettings();
 
     document.getElementById('changeMasterPassword')!.click();
@@ -419,6 +479,37 @@ describe('initMasterPasswordSettings - change password flow', () => {
 
     const title = document.getElementById('passwordModalTitle')!;
     expect(title.textContent).toBe('i18n_changeMasterPassword');
+  });
+
+  it('should call the service change route with old and new passwords on save (PBI 2026-09-27)', async () => {
+    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+
+    setupFullDOM();
+    vi.resetModules();
+    const { initMasterPasswordSettings } = await import('../masterPassword.js');
+
+    initMasterPasswordSettings();
+
+    document.getElementById('changeMasterPassword')!.click();
+
+    const authInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement;
+    authInput.value = 'old-password';
+    document.getElementById('submitPasswordAuthBtn')!.click();
+
+    await flushPromises();
+
+    // The auth modal closes before the change modal opens (single focus trap).
+    expect(document.getElementById('passwordAuthModal')!.classList.contains('hidden')).toBe(true);
+    expect(document.getElementById('passwordModal')!.classList.contains('hidden')).toBe(false);
+
+    const input = document.getElementById('masterPasswordInput') as HTMLInputElement;
+    input.value = 'NewP@ssw0rd123!';
+    document.getElementById('savePasswordBtn')!.click();
+
+    await flushPromises();
+
+    expect(changeMasterPasswordService).toHaveBeenCalledWith('old-password', 'NewP@ssw0rd123!');
+    expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordReencryptedKept', 'success');
   });
 });
 
@@ -515,7 +606,7 @@ describe('initMasterPasswordSettings - modal button events', () => {
 
     await flushPromises();
 
-    expect(setMasterPassword).toHaveBeenCalled();
+    expect(setMasterPasswordService).toHaveBeenCalledWith('ValidP@ss1');
   });
 });
 
@@ -714,8 +805,6 @@ describe('savePassword flow', () => {
   });
 
   it('should save password successfully and update UI', async () => {
-    vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
-
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
@@ -731,7 +820,8 @@ describe('savePassword flow', () => {
 
     await flushPromises();
 
-    expect(showStatus).toHaveBeenCalledWith('status', 'i18n_passwordSaved', 'success');
+    expect(setMasterPasswordService).toHaveBeenCalledWith('ValidP@ss1');
+    expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordReencryptedKept', 'success');
 
     const modal = document.getElementById('passwordModal')!;
     expect(modal.classList.contains('hidden')).toBe(true);
@@ -744,8 +834,8 @@ describe('savePassword flow', () => {
     expect(options.classList.contains('hidden')).toBe(false);
   });
 
-  it('should show error status when setMasterPassword fails', async () => {
-    vi.mocked(setMasterPassword).mockResolvedValue({ success: false, error: 'Storage error' });
+  it('should show error status when the service throws', async () => {
+    vi.mocked(setMasterPasswordService).mockRejectedValue(new Error('Storage error'));
 
     setupFullDOM();
     vi.resetModules();
@@ -763,8 +853,8 @@ describe('savePassword flow', () => {
     expect(showStatus).toHaveBeenCalledWith('status', 'Storage error', 'error');
   });
 
-  it('should show generic error message when setMasterPassword fails with no error text', async () => {
-    vi.mocked(setMasterPassword).mockResolvedValue({ success: false });
+  it('should restore the checkbox when the service throws during save', async () => {
+    vi.mocked(setMasterPasswordService).mockRejectedValue(new Error('KDF failed'));
 
     setupFullDOM();
     vi.resetModules();
@@ -772,6 +862,8 @@ describe('savePassword flow', () => {
 
     initMasterPasswordSettings();
 
+    const checkbox = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
+    checkbox.checked = false;
     const input = document.getElementById('masterPasswordInput') as HTMLInputElement;
     input.value = 'ValidP@ss1';
 
@@ -779,7 +871,8 @@ describe('savePassword flow', () => {
 
     await flushPromises();
 
-    expect(showStatus).toHaveBeenCalledWith('status', 'Failed to save password.', 'error');
+    expect(checkbox.checked).toBe(false);
+    expect(showStatus).toHaveBeenCalledWith('status', 'KDF failed', 'error');
   });
 
   it('should do nothing when masterPasswordInput element is null', async () => {

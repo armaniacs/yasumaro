@@ -31,6 +31,18 @@ import {
   type SecretEnvelope,
 } from '../crypto/secretWrappingKey.js';
 import { StorageKeys } from './types.js';
+import {
+  collectApiKeyTargets,
+  planKekTransition,
+  ReencryptionAbortedError,
+  type TrialDecrypt,
+} from './apiKeyTransition.js';
+import { API_KEY_FIELD_NAMES } from './apiKeyFields.js';
+import { constantTimeCompare, decryptApiKey, encryptApiKey, isEncrypted } from '../crypto/index.js';
+import { StorageTransaction } from './storageTransaction.js';
+import { ChromeStoragePort, type StoragePort } from './storagePort.js';
+
+export { ReencryptionAbortedError };
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 import { isLocked as authGuardIsLocked } from './authGuard.js';
 import { Mutex } from '../Mutex.js';
@@ -64,11 +76,20 @@ const encryptionKeyMutex = new Mutex();
  * マスターパスワード方式専用
  * VULN-019 fix: uses stored iteration count with fallback to legacy
  */
-async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promise<CryptoKey> {
-    // VULN-019 fix: use stored iteration count or ENVELOPE_ITERATIONS for new setups
-    const kdfResult = await chrome.storage.local.get([StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]);
-    const iterations = (kdfResult[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS] as number) || ENVELOPE_ITERATIONS;
-    const webcrypto = global.crypto || crypto;
+async function deriveKeyFromPassword(password: string, salt: Uint8Array, iterations?: number): Promise<CryptoKey> {
+    // VULN-019 fix: use stored iteration count or ENVELOPE_ITERATIONS for new setups.
+    // An explicit iterations argument wins: callers deriving a *new* KEK before
+    // its metadata is persisted must not read the still-old stored count.
+    // Skip the storage read entirely then — every rotation caller passes it.
+    const storedIterations = iterations === undefined
+        ? (await chrome.storage.local.get([StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]))[
+            StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS
+        ] as number | undefined
+        : undefined;
+    const iterationsToUse = iterations ?? storedIterations ?? ENVELOPE_ITERATIONS;
+    // globalThis: the dashboard bundle has no Node `global` shim, and bare
+    // `global` throws ReferenceError there. globalThis exists everywhere.
+    const webcrypto = globalThis.crypto;
     const encoder = new TextEncoder();
     const passwordBuffer = encoder.encode(password);
 
@@ -84,7 +105,7 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array): Promis
         {
             name: 'PBKDF2',
             salt: salt as BufferSource,
-            iterations,
+            iterations: iterationsToUse,
             hash: 'SHA-256'
         },
         baseKey,
@@ -287,6 +308,195 @@ async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
 }
 
 // ============================================================================
+// KEK rotation — shared re-encryption procedure for set / change / remove
+// ============================================================================
+
+// Keys dropped when master-password protection is removed (adjudicated 4-key contract).
+const DISABLE_REMOVED_KEYS = [
+  StorageKeys.MASTER_PASSWORD_ENABLED,
+  StorageKeys.MASTER_PASSWORD_SALT,
+  StorageKeys.MASTER_PASSWORD_HASH,
+  StorageKeys.IS_LOCKED,
+] as const;
+
+/**
+ * Run fn, restoring the session key cache if it throws. Key resolution
+ * during rotation (notably the anonymous KEK) populates the module cache as
+ * a side effect; on abort the pre-call session must stand, otherwise the next
+ * reader silently uses the wrong KEK. Success paths set their final cache
+ * state explicitly after this returns.
+ */
+async function withPreservedSessionCache<T>(fn: () => Promise<T>): Promise<T> {
+  const savedPassword = cachedMasterPassword;
+  const savedKey = cachedEncryptionKey;
+  try {
+    return await fn();
+  } catch (e) {
+    cachedMasterPassword = savedPassword;
+    cachedEncryptionKey = savedKey;
+    throw e;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** Read both API-key placements in one round trip. */
+async function readApiKeyPlacements(
+  port: StoragePort,
+): Promise<{ nested: Record<string, unknown> | undefined; scattered: Record<string, unknown> }> {
+  const stored = await port.get(['settings', ...API_KEY_FIELD_NAMES]);
+  const scattered: Record<string, unknown> = {};
+  for (const field of API_KEY_FIELD_NAMES) {
+    if (Object.prototype.hasOwnProperty.call(stored, field)) {
+      scattered[field] = stored[field];
+    }
+  }
+  return { nested: asRecord(stored['settings']), scattered };
+}
+
+/**
+ * Move every canonical API-key ciphertext from the previous KEK to the next
+ * one, across both the nested `settings` blob and legacy scattered keys.
+ *
+ * Fixed order (adjudicated): read both placements → decrypt everything with
+ * the old KEK (abort on the first failure, zero writes) → re-encrypt with the
+ * next KEK → delta write → read back and verify under the next KEK. Auth
+ * metadata is never touched here; callers update it only after this resolves.
+ *
+ * Keys resolve lazily so a run with no ciphertext performs one storage read
+ * and derives nothing (no PBKDF2, no secret generation).
+ */
+async function reencryptApiKeysToKek(options: {
+  resolveKeys: () => Promise<{ previous: CryptoKey; next: CryptoKey }>;
+  port?: StoragePort;
+}): Promise<void> {
+  const port: StoragePort = options.port ?? new ChromeStoragePort();
+  const { nested, scattered } = await readApiKeyPlacements(port);
+  const targets = collectApiKeyTargets(nested, scattered);
+  if (!targets.some((t) => isEncrypted(t.value))) {
+    return;
+  }
+
+  const keys = await options.resolveKeys();
+  const trialDecrypt: TrialDecrypt = async (value, key) => {
+    try {
+      return await decryptApiKey(value, key);
+    } catch {
+      return null;
+    }
+  };
+  const plan = await planKekTransition(targets, keys, trialDecrypt);
+  if (plan.unrecoverable.length > 0) {
+    const fields = [...new Set(plan.unrecoverable.map((u) => u.field))];
+    throw new ReencryptionAbortedError(fields);
+  }
+
+  const nestedDelta: Record<string, unknown> = {};
+  const scatteredDelta: Record<string, unknown> = {};
+  for (const item of plan.toReencrypt) {
+    const reencrypted = await encryptApiKey(item.plaintext, keys.next);
+    (item.placement === 'nested' ? nestedDelta : scatteredDelta)[item.field] = reencrypted;
+  }
+  if (Object.keys(nestedDelta).length > 0) {
+    // Delta-only write through the transaction (persistReEncrypted precedent):
+    // never spread a cached snapshot, and never route EncryptedData objects
+    // through writeSettings (its keyProvider resolves before auth metadata
+    // exists and would fail closed mid-rotation).
+    const tx = new StorageTransaction(port);
+    await tx.withLock<Record<string, unknown>>('settings', (current) => ({ ...(current ?? {}), ...nestedDelta }));
+  }
+  if (Object.keys(scatteredDelta).length > 0) {
+    // Single set without per-field withLock: field-level locks would write
+    // `<field>_version` CAS records into user-visible storage.
+    await port.set(scatteredDelta);
+  }
+  // Drop the repository cache right after writing (before verification), so a
+  // failed read-back never leaves readers on the pre-rotation snapshot.
+  const { settingsRepository } = await import('./SettingsRepository.js');
+  settingsRepository.clearCache();
+
+  // Durable confirmation under the next KEK before any metadata change.
+  const reread = await readApiKeyPlacements(port);
+  const byLocation = new Map(
+    collectApiKeyTargets(reread.nested, reread.scattered).map((t) => [`${t.placement}:${t.field}`, t.value]),
+  );
+  for (const item of plan.toReencrypt) {
+    const current = byLocation.get(`${item.placement}:${item.field}`);
+    let roundTripped: string | null = null;
+    if (isEncrypted(current)) {
+      try {
+        roundTripped = await decryptApiKey(current, keys.next);
+      } catch {
+        roundTripped = null;
+      }
+    }
+    if (roundTripped === null || !(await constantTimeCompare(roundTripped, item.plaintext))) {
+      throw new Error(`REENCRYPT_VERIFY_FAILED: read-back mismatch for field ${item.field}`);
+    }
+  }
+}
+
+/**
+ * Shared set/change body: rotate all API keys to a KEK derived from
+ * `password`, then persist the new auth metadata in one write.
+ *
+ * The new salt is anchored in `MASTER_PASSWORD_PENDING_SALT` before any
+ * ciphertext moves, and deleted only once the metadata carries it — so an
+ * interrupted run re-derives the identical next KEK on retry (resume), while
+ * a run that never reaches the metadata write leaves the anchor for the next
+ * attempt instead of stranding migrated items.
+ */
+async function rotateToNewMasterPassword(options: {
+  password: string;
+  resolvePrevious: () => Promise<CryptoKey>;
+  lockAfter: boolean;
+}): Promise<void> {
+  const policy = validatePasswordPolicy(options.password);
+  if (!policy.ok) {
+    throw new Error(policy.reason);
+  }
+  const port = new ChromeStoragePort();
+  const anchored = await port.get(StorageKeys.MASTER_PASSWORD_PENDING_SALT);
+  const anchoredSalt = anchored[StorageKeys.MASTER_PASSWORD_PENDING_SALT] as string | undefined;
+  const saltBase64 = anchoredSalt ?? bytesToBase64(generateSalt());
+  if (anchoredSalt === undefined) {
+    await port.set({ [StorageKeys.MASTER_PASSWORD_PENDING_SALT]: saltBase64 });
+  }
+  const salt = base64ToBytes(saltBase64);
+  const hash = await hashPasswordWithPBKDF2(options.password, salt);
+  try {
+    await withPreservedSessionCache(async () => {
+      // resolvePrevious stays inside the lazy resolver: a run with no
+      // ciphertext must derive nothing (fast path inside reencryptApiKeysToKek).
+      await reencryptApiKeysToKek({
+        resolveKeys: async () => ({
+          previous: await options.resolvePrevious(),
+          next: await deriveKeyFromPassword(options.password, salt, ENVELOPE_ITERATIONS),
+        }),
+        port,
+      });
+      await chrome.storage.local.set({
+        [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
+        [StorageKeys.MASTER_PASSWORD_SALT]: saltBase64,
+        [StorageKeys.MASTER_PASSWORD_HASH]: hash,
+        [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
+        [StorageKeys.IS_LOCKED]: options.lockAfter,
+      });
+    });
+  } finally {
+    const meta = await chrome.storage.local.get(StorageKeys.MASTER_PASSWORD_SALT);
+    if (meta[StorageKeys.MASTER_PASSWORD_SALT] === saltBase64) {
+      if (port.remove) await port.remove(StorageKeys.MASTER_PASSWORD_PENDING_SALT);
+      else throw new Error('StoragePort.remove is required to clean up the rotation anchor');
+    }
+  }
+}
+
+// ============================================================================
 // Public interface
 // ============================================================================
 
@@ -346,29 +556,17 @@ export async function isEncryptionLocked(): Promise<boolean> {
 
 /**
  * マスターパスワードを設定する
+ *
+ * 既存 API キーは旧 KEK（未設定時は匿名 KEK）から新 KEK へ再暗号化される。
+ * 認証メタデータは read back 確認が通るまで書かない。
  * @param {string} password - マスターパスワード
  * @returns {Promise<boolean>} 成功した場合true
  */
 export async function setMasterPassword(password: string): Promise<boolean> {
-    const policy = validatePasswordPolicy(password);
-    if (!policy.ok) {
-        throw new Error(policy.reason);
-    }
-    // Keep scoring for logInfo (strength still computed via shared scorer)
-    const strength = calculatePasswordStrength(password);
-
-    const salt = generateSalt();
-    const saltBase64 = bytesToBase64(salt);
-    const hash = await hashPasswordWithPBKDF2(password, salt);
-
-    // VULN-019 fix: persist the iteration count used for this hash so
-    // verifyPasswordWithPBKDF2 can verify with a single pass (constant time).
-    await chrome.storage.local.set({
-        [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
-        [StorageKeys.MASTER_PASSWORD_SALT]: saltBase64,
-        [StorageKeys.MASTER_PASSWORD_HASH]: hash,
-        [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
-        [StorageKeys.IS_LOCKED]: true // 初期状態でロック（アンロック必要）
+    await rotateToNewMasterPassword({
+        password,
+        resolvePrevious: () => getOrCreateEncryptionKey(),
+        lockAfter: true,
     });
 
     // 【セキュリティ修正】設定時はパスワードキャッシュをクリア（ロック状態で開始）
@@ -378,6 +576,8 @@ export async function setMasterPassword(password: string): Promise<boolean> {
     // キャッシュをクリア
     cachedEncryptionKey = null;
 
+    // Keep scoring for logInfo (strength still computed via shared scorer)
+    const strength = calculatePasswordStrength(password);
     await logInfo(
         'Master password set',
         { strength: strength.score, level: strength.level },
@@ -463,8 +663,12 @@ export async function lockSession(): Promise<void> {
 
 /**
  * マスターパスワードを再設定する（古いパスワード検証後）
+ *
+ * 既存 API キーは旧パスワード由来 KEK から新 KEK へ再暗号化される。
+ * unlock は1回だけ呼ぶ（以前は新パスワードでも unlock していたが、read back
+ * 確認が同等の保証をするため、レート制限の二重計上と KDF 2 回分を避ける）。
  * @param {string} oldPassword - 現在のマスターパスワード
- * @param {string} newPassword - 新しいマスターパスワード
+ * @param {string} newPassword - 新しいパスワード
  * @returns {Promise<boolean>} 成功した場合true
  */
 export async function changeMasterPassword(oldPassword: string, newPassword: string): Promise<boolean> {
@@ -474,27 +678,86 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
         return false;
     }
 
-    // 新しいパスワードを設定（ロック状態になる）
-    await setMasterPassword(newPassword);
+    await rotateToNewMasterPassword({
+        password: newPassword,
+        // Session already holds the old KEK after unlock: no extra KDF.
+        resolvePrevious: () => getOrCreateEncryptionKey(),
+        lockAfter: false,
+    });
 
-    // 新しいパスワードでアンロックしてセッションを維持
-    return unlockWithPassword(newPassword);
+    // Take over the session with the new password (replaces the removed
+    // second unlockWithPassword call and its extra KDF + rate-limit count).
+    cachedMasterPassword = newPassword;
+    cachedEncryptionKey = null;
+    await logInfo('Master password changed', {}, 'storage/encryptionSession.ts');
+    return true;
 }
 
 /**
- * マスターパスワード設定を解除する（すべての暗号化データを再暗号化できないため注意が必要）
+ * マスターパスワード設定を解除する（API キーは匿名 KEK へ再暗号化して保持）
+ *
+ * 復号不能な項目が1件でもあれば ReencryptionAbortedError を投げ、認証
+ * メタデータと元 ciphertext には一切触れない。
+ * NOTE: rate limiting is the caller's job — the dashboard checks it in the
+ * auth modal before calling. Direct callers (e.g. future message handlers)
+ * must rate-limit the password attempts themselves.
+ * @param {string} [password] - 現在のマスターパスワード（dashboard の認証モーダルが渡す）。省略時はセッションキャッシュを使う
  */
-export async function removeMasterPassword(): Promise<void> {
-    await chrome.storage.local.remove([
+export async function removeMasterPassword(password?: string): Promise<void> {
+    const meta = await chrome.storage.local.get([
         StorageKeys.MASTER_PASSWORD_ENABLED,
         StorageKeys.MASTER_PASSWORD_SALT,
         StorageKeys.MASTER_PASSWORD_HASH,
-        StorageKeys.IS_LOCKED
+        StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
     ]);
+    if (!meta[StorageKeys.MASTER_PASSWORD_ENABLED]) {
+        // Idempotent cleanup when no master password is set: nothing is
+        // encrypted under a master KEK, so there is nothing to migrate.
+        await chrome.storage.local.remove([...DISABLE_REMOVED_KEYS]);
+        cachedMasterPassword = null;
+        isMasterPasswordRequired = false;
+        cachedEncryptionKey = null;
+        return;
+    }
+    const storedHash = meta[StorageKeys.MASTER_PASSWORD_HASH] as string | undefined;
+    const saltBase64 = meta[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined;
+    const storedIterations = meta[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS] as number | undefined;
+    if (!storedHash || !saltBase64) {
+        throw new Error('CORRUPTION: master password metadata incomplete');
+    }
+    const oldPassword = password ?? cachedMasterPassword;
+    if (!oldPassword) {
+        throw new Error('ENCRYPTION_LOCKED: Master password required');
+    }
+    const saltBytes = base64ToBytes(saltBase64);
+    return withPreservedSessionCache(async () => {
+        // Self-verify without a full unlock: the dashboard already rate-limits,
+        // and flipping IS_LOCKED here would add writes before confirmation.
+        const verifyResult = await verifyPasswordWithPBKDF2(
+            oldPassword,
+            storedHash,
+            saltBytes,
+            storedIterations
+        );
+        if (!verifyResult.isValid) {
+            throw new Error('Incorrect password');
+        }
+        const previous = await deriveKeyFromPassword(oldPassword, saltBytes, storedIterations);
+        // Drop the session key cache before resolving the next KEK:
+        // getOrCreateAnonymousSecretKey() short-circuits on a cached key, and the
+        // cache currently holds the master-derived key. Resolving "anonymous"
+        // against it would re-encrypt under the same KEK being removed and strand
+        // every API key. Previous is already derived above, so clearing is safe.
+        clearEncryptionKeyCache();
+        const next = await getOrCreateAnonymousSecretKey();
+        await reencryptApiKeysToKek({ resolveKeys: async () => ({ previous, next }) });
 
-    cachedMasterPassword = null;
-    isMasterPasswordRequired = false;
-    cachedEncryptionKey = null;
+        await chrome.storage.local.remove([...DISABLE_REMOVED_KEYS]);
+
+        cachedMasterPassword = null;
+        isMasterPasswordRequired = false;
+        cachedEncryptionKey = null;
+    });
 }
 
 /**
