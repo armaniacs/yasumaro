@@ -10,12 +10,13 @@ import { addLog } from '../../../utils/logger/core.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { FailureKind, createFailure, withFailure } from '../../../utils/failureTaxonomy.js';
 import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { PROVIDER_ALLOWLIST_ROWS, isAllowedProviderBaseUrl, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
 
 /** The only origin Gemini traffic may ever target (fixed-endpoint provider). */
-const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
+export const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
 
 interface GeminiApiResponse {
     candidates?: Array<{
@@ -128,10 +129,21 @@ export class GeminiProvider extends AIProviderStrategy {
                 try {
                     modelSegment = this.buildModelPathSegment();
                 } catch {
-                    return { failure: { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." } };
+                    // A model name the pinned origin path cannot express is a
+                    // settings defect, so the breaker must read it as a
+                    // configuration failure and leave the slot alone.
+                    return {
+                        failure: withFailure(
+                            { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." },
+                            createFailure(FailureKind.CONFIGURATION),
+                        ),
+                    };
                 }
                 const apiVersion = this._getApiVersion();
-                const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelSegment}:generateContent`;
+                // Derived from the pinned origin, never re-spelled: the literal
+                // the constructor authorizes and the URL actually requested must
+                // not be able to drift apart.
+                const url = `${GEMINI_PINNED_ORIGIN}/${apiVersion}/models/${modelSegment}:generateContent`;
                 const payload = {
                     systemInstruction: {
                         parts: [{
@@ -202,11 +214,14 @@ export class GeminiProvider extends AIProviderStrategy {
                         failure: {
                             success: false,
                             message: `Invalid model name: ${errorMessage(error)}`,
-                            debug: { error: errorMessage(error) },
+                            debug: {
+                                error: errorMessage(error),
+                                failure: createFailure(FailureKind.CONFIGURATION),
+                            },
                         },
                     };
                 }
-                const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
+                const testUrl = `${GEMINI_PINNED_ORIGIN}/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
 
                 // BaseUrl SSRF対策 - テストURLの検証
                 try {
@@ -217,7 +232,14 @@ export class GeminiProvider extends AIProviderStrategy {
                         failure: {
                             success: false,
                             message: `Invalid test URL: ${errorMessage(error)}`,
-                            debug: { error: errorMessage(error) },
+                            debug: {
+                                error: errorMessage(error),
+                                // The URL is built from the already-authorized
+                                // pinned origin, so a rejection here means a
+                                // poisoned api-version setting, not a bad
+                                // request from the user.
+                                failure: createFailure(FailureKind.CONFIGURATION),
+                            },
                         },
                     };
                 }

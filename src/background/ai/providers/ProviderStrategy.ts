@@ -399,7 +399,17 @@ export abstract class AIProviderStrategy {
     ): Promise<AIProviderConnectionResult> {
         const credentialFailure = hooks.checkCredentials();
         if (credentialFailure) {
-            return credentialFailure;
+            // Same reading as the summary flow's own credential gate: no request
+            // is made and no retry can fix a missing credential, so the test
+            // result carries the configuration kind. A hook that already knows
+            // better (a future provider with a structured reason) keeps its kind.
+            return {
+                ...credentialFailure,
+                debug: {
+                    ...credentialFailure.debug,
+                    failure: credentialFailure.debug?.failure ?? createFailure(FailureKind.CONFIGURATION),
+                },
+            };
         }
 
         const built = await hooks.buildRequest();
@@ -481,11 +491,23 @@ export abstract class AIProviderStrategy {
     /**
      * Invalid-schema failure shared by the providers' _extractSummary twins
      * (PBI 2026-09-18-09). Logs the technical reason and returns the stable
-     * user-facing message — pinned by aiExtract-twins-parity.test.ts.
+     * user-facing message — pinned by aiExtract-twins-parity.test.ts — plus the
+     * structured kind the breaker gate branches on.
      */
     protected failInvalidSchema(reason: string, traceId: string = ''): AISummaryResult {
         addLog(LogType.ERROR, reason, { traceId });
-        return { success: false, summary: 'Error: Invalid API response format - unexpected schema.', error: reason };
+        // WHY `http` and not `configuration`: the taxonomy has no schema kind,
+        // and the two candidates mean opposite things to the breaker. A
+        // malformed payload is a fault of the *response* (the provider answered
+        // and the answer was unusable) and is not repaired by any setting, so it
+        // must count toward the breaker — `configuration` would be ignored there
+        // and a provider serving garbage would never be cooled down. `http` is
+        // the taxonomy's "the response, not the request, was at fault" bucket,
+        // and it keeps the failure out of the offline-recovery queue.
+        return withFailure(
+            { success: false, summary: 'Error: Invalid API response format - unexpected schema.', error: reason },
+            createFailure(FailureKind.HTTP),
+        );
     }
 
     /**
