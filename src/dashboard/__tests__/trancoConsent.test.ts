@@ -254,7 +254,7 @@ describe('initTrancoConsentPanel', () => {
 
     it('handles DENIED consent state with retry info', async () => {
         document.body.innerHTML = getBaseDom();
-        const deniedTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 5; // 5 days ago
+        const deniedTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 20; // 20 days ago
         settingsReturn = {
             tranco_version: '2025-03-15',
             tranco_domains: [],
@@ -455,9 +455,12 @@ describe('initTrancoConsentPanel', () => {
         expect(statusEl?.textContent).toBe('trancoConsentStatusPENDING');
     });
 
-    it('handles retryDaysRemaining of 0 as RETRY_NEEDED', async () => {
+    it('maps a retry that is not due to DENIED with the remaining-days row', async () => {
         document.body.innerHTML = getBaseDom();
-        const deniedTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 30; // exactly 30 days
+        // Well inside the retry window. The 29/30/31-day boundary is pinned in
+        // src/utils/storage/__tests__/trancoConsent.test.ts; this suite covers
+        // the dashboard-side mapping, decision -> one of the five states.
+        const deniedTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 25;
         settingsReturn = {
             tranco_version: '2025-03-15',
             tranco_domains: [],
@@ -467,12 +470,16 @@ describe('initTrancoConsentPanel', () => {
         await initTrancoConsentPanel();
 
         const statusEl = document.getElementById('trancoConsentStatus');
-        expect(statusEl?.textContent).toBe('trancoConsentStatusRETRY_NEEDED');
+        expect(statusEl?.textContent).toBe('trancoConsentStatusDENIED');
+        const retryEl = document.getElementById('trancoConsentRetryInfo');
+        expect(retryEl?.hidden).toBe(false);
+        const actionsEl = document.getElementById('trancoConsentActions');
+        expect(actionsEl?.hidden).toBe(true);
     });
 
-    it('handles edge case: deniedTimestamp with exactly 0 remaining days (ceil edge)', async () => {
+    it('maps a due retry to RETRY_NEEDED and hides the remaining-days row', async () => {
         document.body.innerHTML = getBaseDom();
-        const deniedTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 29.5; // 29.5 days ago
+        const deniedTimestamp = Date.now() - 1000 * 60 * 60 * 24 * 40;
         settingsReturn = {
             tranco_version: '2025-03-15',
             tranco_domains: [],
@@ -481,11 +488,29 @@ describe('initTrancoConsentPanel', () => {
 
         await initTrancoConsentPanel();
 
-        // 29.5 days => ceil(29.5)=30 => remaining=0 => RETRY_NEEDED => retry info hidden
-        const retryEl = document.getElementById('trancoConsentRetryInfo');
-        expect(retryEl?.hidden).toBe(true);
         const statusEl = document.getElementById('trancoConsentStatus');
         expect(statusEl?.textContent).toBe('trancoConsentStatusRETRY_NEEDED');
+        const retryEl = document.getElementById('trancoConsentRetryInfo');
+        expect(retryEl?.hidden).toBe(true);
+        const actionsEl = document.getElementById('trancoConsentActions');
+        expect(actionsEl?.hidden).toBe(false);
+    });
+
+    it('maps a granted current version to ALREADY_GRANTED even with a stale denial', async () => {
+        document.body.innerHTML = getBaseDom();
+        settingsReturn = {
+            tranco_version: '2025-03-15',
+            tranco_domains: [],
+            tranco_consent_granted: '2025-03-15',
+            tranco_consent_denied_timestamp: Date.now() - 1000 * 60 * 60 * 24 * 90,
+        };
+
+        await initTrancoConsentPanel();
+
+        const statusEl = document.getElementById('trancoConsentStatus');
+        expect(statusEl?.textContent).toBe('trancoConsentStatusALREADY_GRANTED');
+        const actionsEl = document.getElementById('trancoConsentActions');
+        expect(actionsEl?.hidden).toBe(true);
     });
 
     it('handles null version with unknown latest version', async () => {

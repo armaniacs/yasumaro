@@ -2,11 +2,11 @@
 // Tranco Consent Panel
 // ============================================================================
 
-import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { evaluateTrancoConsent, persistTrancoConsentDeny, persistTrancoConsentGrant } from '../utils/storage/trancoConsent.js';
 
 interface TrancoConsentState {
   needsConsent: 'GRANTED' | 'DENIED' | 'PENDING' | 'ALREADY_GRANTED' | 'RETRY_NEEDED';
@@ -66,23 +66,25 @@ async function getTrancoConsentState(repo: SettingsReader, latestVersion: string
   const deniedTimestamp = consentSettings[StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP];
   const deniedReason = consentSettings[StorageKeys.TRANCO_CONSENT_DENIED_REASON];
 
+  // 30 日ルールは共有モジュールの判定 1 箇所だけ。ここは 5 状態への写像のみ。
+  const decision = evaluateTrancoConsent({
+    currentVersion: latestVersion,
+    grantedVersion: grantedVersion ?? null,
+    deniedTimestamp: deniedTimestamp ?? null,
+  });
+
   let needsConsent: TrancoConsentState['needsConsent'];
   let calculatedRetryDays: number | null = null;
 
-  if (grantedVersion === latestVersion) {
+  if (decision.alreadyGranted) {
     needsConsent = 'ALREADY_GRANTED';
-  } else if (deniedTimestamp) {
-    const elapsedDays = (Date.now() - (deniedTimestamp as number)) / (1000 * 60 * 60 * 24);
-    const retryDaysRemaining = Math.max(0, 30 - Math.ceil(elapsedDays));
-
-    if (retryDaysRemaining > 0) {
-      needsConsent = 'DENIED';
-      calculatedRetryDays = retryDaysRemaining;
-    } else {
-      needsConsent = 'RETRY_NEEDED';
-    }
-  } else {
+  } else if (!decision.hasDenial) {
     needsConsent = 'PENDING';
+  } else if (decision.needsConsent) {
+    needsConsent = 'RETRY_NEEDED';
+  } else {
+    needsConsent = 'DENIED';
+    calculatedRetryDays = decision.daysUntilRetry;
   }
 
   return {
@@ -137,14 +139,7 @@ function updateConsentUI(repo: SettingsReader, state: TrancoConsentState): void 
 
 async function handleTrancoGrant(repo: SettingsReader, version: string): Promise<void> {
   try {
-    // Delta write (PBI 2026-09-17-17): only the three consent keys this
-    // decision owns enter the payload, so a concurrent writer's change to an
-    // unrelated key is not reverted by a getAll() snapshot.
-    await saveSettingsAndRefreshDomainFilterCache({
-      [StorageKeys.TRANCO_CONSENT_GRANTED]: version,
-      [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: null,
-      [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null,
-    });
+    await persistTrancoConsentGrant(version);
 
     showStatus(
       'trancoStatus',
@@ -165,12 +160,7 @@ async function handleTrancoGrant(repo: SettingsReader, version: string): Promise
 
 async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
   try {
-    // Delta write, same three consent keys as the grant path (PBI 2026-09-17-17).
-    await saveSettingsAndRefreshDomainFilterCache({
-      [StorageKeys.TRANCO_CONSENT_GRANTED]: null,
-      [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: 'deny',
-      [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: Date.now(),
-    });
+    await persistTrancoConsentDeny();
 
     showStatus(
       'trancoStatus',

@@ -29,11 +29,25 @@ const SEAM_EXPORT = 'saveSettingsAndRefreshDomainFilterCache';
  * cache rebuild through the seam, so a direct `updateDomainFilterCache` call in
  * one of them is a re-opened path around the delta contract — and the seam
  * payload must be the delta literal, never a forwarded settings snapshot.
+ *
+ * The Tranco consent write moved behind its own owner
+ * (`src/utils/storage/trancoConsent.ts`, PBI 2026-09-29-38), so it is the
+ * shared module that sits on the seam now, and the two UI call sites are
+ * guarded separately below.
  */
 const ADOPTED_CALL_SITES = [
-  'src/dashboard/trancoConsent.ts',
+  'src/utils/storage/trancoConsent.ts',
   'src/dashboard/tagsPanel.ts',
   'src/dashboard/panels/staticForm/generalSettingsPanel.ts',
+];
+
+/**
+ * Call sites that write the same three consent keys indirectly. They must not
+ * re-open the path around the seam with a direct cache rebuild.
+ */
+const DELEGATED_CONSENT_WRITERS = [
+  'src/dashboard/trancoConsent.ts',
+  'src/popup/trancoNotification.ts',
 ];
 
 /**
@@ -144,5 +158,17 @@ describe('domain filter cache save seam (PBI 2026-09-28-02)', () => {
       .toEqual(['snapshot);']);
     expect(findForwardedSnapshotPayloads('await saveSettingsAndRefreshDomainFilterCache(\n    { a: 1 },\n  );'))
       .toEqual([]);
+  });
+
+  it('keeps delegated consent writers off the direct cache-rebuild path', () => {
+    for (const rel of DELEGATED_CONSENT_WRITERS) {
+      const source = readFileSync(join(projectRoot, ...rel.split('/')), 'utf-8');
+      expect(source, `${rel} must save consent through the shared module`).toMatch(
+        /utils\/storage\/trancoConsent\.js/,
+      );
+      expect(source, `${rel} must not re-open a direct cache rebuild`).not.toMatch(
+        /\bupdateDomainFilterCache\s*\(/,
+      );
+    }
   });
 });

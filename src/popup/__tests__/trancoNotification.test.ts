@@ -242,7 +242,6 @@ function setupBannerElements(): void {
 
 describe('initTrancoUpdateNotification', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
     setupBannerElements();
     mockGetSettings.mockReset();
     mockSaveSettingsWithAllowedUrls.mockReset();
@@ -258,7 +257,6 @@ describe('initTrancoUpdateNotification', () => {
   });
 
   afterEach(() => {
-    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -306,7 +304,10 @@ describe('initTrancoUpdateNotification', () => {
     expect(actions?.children[1]?.textContent).toBe('Deny');
   });
 
-  it('should show the banner when granted version differs and denied >30 days ago', async () => {
+  it('should show the banner when granted version differs and the retry window has passed', async () => {
+    // Well past the retry window: the 29/30/31-day boundary itself is pinned in
+    // src/utils/storage/__tests__/trancoConsent.test.ts. This suite covers the
+    // popup-side mapping, boolean decision -> banner visibility.
     const thirtyOneDaysAgo = Date.now() - 31 * 24 * 60 * 60 * 1000;
     mockGetSettings.mockResolvedValue({
       tranco_version: 'v2',
@@ -321,13 +322,13 @@ describe('initTrancoUpdateNotification', () => {
     expect(banner?.classList.contains('hidden')).toBe(false);
   });
 
-  it('should NOT show the banner when denied within the last 30 days', async () => {
-    const fiveDaysAgo = Date.now() - 5 * 24 * 60 * 60 * 1000;
+  it('should NOT show the banner while the retry window is still open', async () => {
+    const twentyDaysAgo = Date.now() - 20 * 24 * 60 * 60 * 1000;
     mockGetSettings.mockResolvedValue({
       tranco_version: 'v2',
       tranco_consent_granted: 'v1',
       tranco_consent_denied_reason: 'deny',
-      tranco_consent_denied_timestamp: fiveDaysAgo,
+      tranco_consent_denied_timestamp: twentyDaysAgo,
     });
 
     await initTrancoUpdateNotification();
@@ -365,8 +366,8 @@ describe('initTrancoUpdateNotification', () => {
 
   describe('consent button behavior', () => {
     beforeEach(() => {
-      // Consent button tests do not need fake timers since the consent
-      // handlers use async/await internally and we use vi.waitFor.
+      // The handlers run through the shared consent module; assertions target
+      // the storage delta it writes, so no timer control is needed here.
     });
 
     it('should grant consent when accept button is clicked', async () => {
