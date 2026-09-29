@@ -77,7 +77,8 @@ import { resolveFailure } from '../../../utils/failureTaxonomy.js';
 import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { RemoteAIService } from '../../ai/RemoteAIService.js';
-import { AIProviderStrategy, type AISummaryResult, type HttpSummaryHooks } from '../../ai/providers/ProviderStrategy.js';
+import { AIProviderStrategy, type AISummaryResult } from '../../ai/providers/ProviderStrategy.js';
+import { HttpProviderStrategy, type HttpSummaryHooks } from '../../ai/providers/HttpProviderStrategy.js';
 import type { Settings } from '../../../utils/storage/types.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 import type { AIService, AISummaryOptions } from '../../ai/AIService.js';
@@ -185,7 +186,7 @@ describe('Obsidian boundary → RetryPolicy', () => {
 // ─── AI boundary ──────────────────────────────────────────────────────────
 
 /** A provider probe that runs the real HTTP summary template. */
-class FlowProbe extends AIProviderStrategy {
+class FlowProbe extends HttpProviderStrategy {
   constructor(
     settings: Settings,
     private readonly hooks: HttpSummaryHooks,
@@ -214,11 +215,9 @@ function makeHooks(): HttpSummaryHooks {
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     }),
-    handleErrorResponse: async () => ({ success: false, summary: 'hook error' }),
     extractSummary: async () => ({ success: true, summary: 'ok' }),
   };
 }
-
 /** Real RemoteAIService chain whose single slot runs the real summary template. */
 function makeService(provider: AIProviderStrategy): RemoteAIService {
   const repo = {

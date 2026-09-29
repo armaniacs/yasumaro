@@ -3,7 +3,13 @@
  * Google Gemini APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { HttpProviderStrategy } from './HttpProviderStrategy.js';
+import {
+    resolveMaxContentChars,
+    resolveMaxTokens,
+    resolveTimeoutMs,
+} from './providerSettingsResolver.js';
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
@@ -33,7 +39,7 @@ interface GeminiApiResponse {
     promptFeedback?: { blockReason?: string };
 }
 
-export class GeminiProvider extends AIProviderStrategy {
+export class GeminiProvider extends HttpProviderStrategy {
     private apiKey: string;
     /**
      * Where the API key was resolved from. Diagnostics only — never the key.
@@ -84,7 +90,7 @@ export class GeminiProvider extends AIProviderStrategy {
         // passed explicitly — the fixed 30000 default is intentional, not a
         // missing branch. A future local-Gemini variant can flip this flag.
         const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        this.timeoutMs = this.resolveTimeoutMs(storedTimeout, false);
+        this.timeoutMs = resolveTimeoutMs(storedTimeout, false);
         this.contentCharsKey = contentCharsKey;
         // Diagnostics: record where the API key came from (SSOT on the base).
         this.logApiKeySource(this.apiKeySource, this.getName());
@@ -123,7 +129,7 @@ export class GeminiProvider extends AIProviderStrategy {
             checkCredentials: () => !this.apiKey
                 ? "Error: API key is missing. Please check your settings."
                 : null,
-            contentLimit: () => this.getMaxContentChars(30_000, this.contentCharsKey),
+            contentLimit: () => resolveMaxContentChars(this.settings, this.getProviderId(), 30_000, this.contentCharsKey),
             prepareRequest: async (userPrompt, systemPrompt) => {
                 let modelSegment: string;
                 try {
@@ -157,7 +163,7 @@ export class GeminiProvider extends AIProviderStrategy {
                     }],
                     generationConfig: {
                         temperature: 0.1,
-                        maxOutputTokens: this.getMaxTokens(),
+                        maxOutputTokens: resolveMaxTokens(this.settings, this.getProviderId()),
                         // Gemini 2.5系以降は thinking がデフォルト有効で、思考トークンが
                         // maxOutputTokens に加算される。要約は思考を必要としないため
                         // 明示的に切り、枠をすべて本文に使う。これを入れないと
@@ -175,7 +181,6 @@ export class GeminiProvider extends AIProviderStrategy {
                     body: JSON.stringify(payload),
                 };
             },
-            handleErrorResponse: (response) => this._handleError(response),
             extractSummary: (data, tid) => this._extractSummary(data as GeminiApiResponse, tid),
         });
     }
@@ -337,16 +342,6 @@ export class GeminiProvider extends AIProviderStrategy {
             }
         }
         return parts.join(' | ');
-    }
-
-    private async _handleError(response: Response): Promise<AISummaryResult> {
-        // const errorText = await response.text();
-        // Bare status only in `error` — summary omits it (security pins),
-        // `error` is the per-slot diagnostic channel.
-        if (response.status === 404) {
-            return { success: false, summary: "Error: Model not found. Please check your AI model settings.", error: `HTTP ${response.status}` };
-        }
-        return { success: false, summary: "Error: Failed to generate summary. Please check your API settings.", error: `HTTP ${response.status}` };
     }
 
     private async _extractSummary(data: GeminiApiResponse, traceId: string = ''): Promise<AISummaryResult> {
