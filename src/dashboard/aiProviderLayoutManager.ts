@@ -68,6 +68,12 @@ export function hideAllProviderSettings(): void {
 
 /**
  * すべてのプロバイダ設定を元の親に戻す（クリーンアップ用）
+ *
+ * 復元に続けて記録を捨てる: この Map は HTMLElement を保持する唯一の所有者で、
+ * 破棄経路がないと、破棄済み document のノードが代わる再 mount のたびに
+ * 古い親要素への参照が残り続ける。記録を消すと次の移動は「その時点で实际的
+ * な親」を覚えて、A→B→A 切替（generalSettingsPanel.refreshAIProviderLayout）が
+ * 一度破棄したブロックではなく現在の配置基準に戻す。
  */
 export function restoreOriginalProviderSettingsLayout(): void {
   originalParents.forEach((parent, id) => {
@@ -76,4 +82,5 @@ export function restoreOriginalProviderSettingsLayout(): void {
       parent.appendChild(settingsDiv);
     }
   });
+  originalParents.clear();
 }
