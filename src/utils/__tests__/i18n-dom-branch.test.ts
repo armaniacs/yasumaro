@@ -559,6 +559,14 @@ describe('i18n-dom - branch coverage', () => {
       expect(document.documentElement.dir).toBe('rtl');
     });
 
+    it.each(['ckb', 'sd', 'ps', 'ku', 'dv'])('sets rtl for %s', (locale) => {
+      mockGetMessage(() => '');
+      (globalThis.chrome.i18n.getUILanguage as ReturnType<typeof vi.fn>).mockReturnValue(locale);
+      setHtmlLangAndDir();
+      expect(document.documentElement.lang).toBe(locale);
+      expect(document.documentElement.dir).toBe('rtl');
+    });
+
     it('falls back to en-US / ltr when chrome undefined', () => {
       delete (globalThis as unknown as Record<string, unknown>).chrome;
       setHtmlLangAndDir();

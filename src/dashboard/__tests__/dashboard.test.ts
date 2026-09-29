@@ -511,7 +511,6 @@ vi.mock('../../utils/storage/privacyConsent.js', () => ({
 // Import after mocks
 import {
     initDashboard,
-    setHtmlLangDir,
     toMarkdownTemplateEntryData,
 } from '../dashboard.js';
 // Connection tests moved out of dashboard.ts (PBI-24).
@@ -529,68 +528,6 @@ describe('dashboard.ts exports', () => {
 
     it('exports createConnectionStatusElement', () => {
         expect(typeof createConnectionStatusElement).toBe('function');
-    });
-
-    it('exports setHtmlLangDir', () => {
-        expect(typeof setHtmlLangDir).toBe('function');
-    });
-});
-
-describe('setHtmlLangDir', () => {
-    it('sets RTL for Arabic', () => {
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            i18n: {
-                ...chrome.i18n,
-                getUILanguage: vi.fn().mockReturnValue('ar'),
-            },
-        });
-
-        setHtmlLangDir();
-        expect(document.documentElement.lang).toBe('ar');
-        expect(document.documentElement.dir).toBe('rtl');
-    });
-
-    it('sets LTR for English', () => {
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            i18n: {
-                ...chrome.i18n,
-                getUILanguage: vi.fn().mockReturnValue('en'),
-            },
-        });
-
-        setHtmlLangDir();
-        expect(document.documentElement.lang).toBe('en');
-        expect(document.documentElement.dir).toBe('ltr');
-    });
-
-    it('sets LTR for Japanese', () => {
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            i18n: {
-                ...chrome.i18n,
-                getUILanguage: vi.fn().mockReturnValue('ja'),
-            },
-        });
-
-        setHtmlLangDir();
-        expect(document.documentElement.lang).toBe('ja');
-        expect(document.documentElement.dir).toBe('ltr');
-    });
-
-    it('sets RTL for Hebrew', () => {
-        vi.stubGlobal('chrome', {
-            ...chrome,
-            i18n: {
-                ...chrome.i18n,
-                getUILanguage: vi.fn().mockReturnValue('he'),
-            },
-        });
-
-        setHtmlLangDir();
-        expect(document.documentElement.lang).toBe('he');
-        expect(document.documentElement.dir).toBe('rtl');
     });
 });
 

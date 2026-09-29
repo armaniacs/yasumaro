@@ -11,6 +11,7 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
+import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
 
 /**
  * Initialize the tag settings panel.
@@ -48,9 +49,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
       item.className = 'default-category-item category-tag-btn';
       item.textContent = `#${category}`;
       item.title = `「#${category}」の履歴を表示`;
-      item.addEventListener('click', () => {
-        document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: category }));
-      });
+      item.addEventListener('click', () => navigateToHistoryWithTag(category));
       defaultCategoriesList.appendChild(item);
     });
   }
@@ -79,9 +78,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
       nameEl.className = 'user-category-name category-tag-btn';
       nameEl.textContent = `#${category}`;
       nameEl.title = `「#${category}」の履歴を表示`;
-      nameEl.addEventListener('click', () => {
-        document.dispatchEvent(new CustomEvent('navigate-to-tag', { detail: category }));
-      });
+      nameEl.addEventListener('click', () => navigateToHistoryWithTag(category));
 
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'user-category-delete';
