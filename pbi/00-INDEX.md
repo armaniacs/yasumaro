@@ -14,6 +14,33 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-29 大局的コードレビュー改善ラウンド第2弾 — ✅ 8件完了・アーカイブ済み / 🔶 部分実装 2件 🔧非機能追加
+
+holistic-code-review skill による構造レビュー（並列サブエージェント調査 5 系統 + 実コード裏取り）から抽出した 10 候補を RICE 採点して PBI 化。全バッチ実装後 `make clean test-full`（build + validate + E2E 325 passed）でゲート通過。採点・依存・対象外・既存台帳反映の詳細は [2026-09-29-00-backlog-holistic-0929.md](2026-09-29-00-backlog-holistic-0929.md)（live 台帳として残置）。
+
+**実装状況**: 31〜37・39 は実装・全ゲート green で 2026-09-29 にアーカイブ（アーカイブ履歴参照）。**38（接続テスト runner 部）と 40（recordingConditionsSettings 部）は 2026-09-28 ラウンドの未コミット WIP（transport 移行・PBI 30 関連）とファイル交差するため部分実装で残置**（WIP 着地後に残部を実施）。
+
+| NN | PBI | 種別 | RICE | SP | 状態 |
+|---|---|---|---:|---:|---|
+| 38 | [refactor-dashboard-duplicated-logic-consolidation](2026-09-29-38-refactor-dashboard-duplicated-logic-consolidation.md) | refactor | 2.4 | 1.5 | 🔶 Tranco 統合のみ完了（runner は WIP 着地後） |
+| 40 | [refactor-dashboard-legacy-module-factory-ization](2026-09-29-40-refactor-dashboard-legacy-module-factory-ization.md) | refactor | 0.8 | 3.0 | 🔶 3/4 モジュール完了（recordingConditionsSettings は WIP 着地後） |
+
+アーカイブ済み（RICE 順）: 31 audit_log 保持（36.0）→ 32 tag/RTL（18.0）→ 33 logger masking（16.0）→ 34 seam residue bundle（10.0）→ 35 AI 失敗契約（9.0）→ 36 OPFS デグレ（6.4）→ 37 SQLite 統合（2.4）→ 39 ProviderStrategy 分離（1.0）。
+
+### 2026-09-28 大局的コードレビュー改善ラウンド — ✅ 7件実装済み 🔧非機能追加
+
+holistic-code-review skill による構造レビュー（DRY / SoC / 拡張性 / 堅牢性）から抽出した7候補を RICE 採点して PBI 化。証拠の file:line は各 PBI に記載。採点・依存・対象外の詳細は [2026-09-28-00-backlog-holistic-review.md](2026-09-28-00-backlog-holistic-review.md)（live 台帳として残置）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 24 | [fix-recording-trigger-threshold-blob-read](2026-09-28-24-fix-recording-trigger-threshold-blob-read.md) | fix | 24.0 | 0.25 | Quick Win。aiUsageTracker と同型の残存1件 |
+| 25 | [refactor-dead-code-removal-migration-shim](2026-09-28-25-refactor-dead-code-removal-migration-shim.md) | refactor | 24.0 | 0.5 | migration.ts / storage.ts shim / tranco chain / inMemoryTransport 移動 |
+| 26 | [fix-message-contract-linkage-fallback](2026-09-28-26-fix-message-contract-linkage-fallback.md) | fix | 10.8 | 1.0 | consistency テスト拡張 + 未登録型 fallback 応答 |
+| 27 | [refactor-gate-order-ssot-unification](2026-09-28-27-refactor-gate-order-ssot-unification.md) | refactor | 6.4 | 1.0 | ADR 裁定を含む |
+| 28 | [refactor-defaults-centralization-seams](2026-09-28-28-refactor-defaults-centralization-seams.md) | refactor | 5.0 | 1.0 | PBI 24 の姉妹 |
+| 29 | [refactor-sender-seam-retry-normalization](2026-09-28-29-refactor-sender-seam-retry-normalization.md) | refactor | 4.8 | 2.0 | PBI 26 の後に着手 |
+| 30 | [refactor-layer-edge-cleanup](2026-09-28-30-refactor-layer-edge-cleanup.md) | refactor | 4.0 | 1.5 | protocol 中立層・content reader・offscreen proof |
+
 ### 2026-09-28 全体リファクタリングラウンド — ✅ 14件完了・アーカイブ済み / 保留 3件 🔧非機能追加
 
 ユーザー要求「リポジトリ全体のリファクタリング（PBI 作成まで・実装は別ラウンド）」に基づく 4 観点（DRY / SRP・モジュール分離 / 型安全性・テスト容易性 / 堅牢性）の差分レビュー結果を 17 PBI 化。実コード裏取り済み（file:line は採点台帳と各 PBI 参照）。採点・依存マップ・台帳送り 8 件・クリーン領域の詳細は [2026-09-28-00-backlog-refactor-round.md](2026-09-28-00-backlog-refactor-round.md)（live 台帳として残置）。
