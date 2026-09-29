@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 /**
  * dashboardLegacyPanelFactories.test.ts
- * PBI 2026-09-29-40 (partial): the three legacy dashboard modules that carried
+ * PBI 2026-09-29-40: the four legacy dashboard modules that carried
  * module-level mutable DOM state now hand out instances that own it and can
  * release it.
  *
@@ -14,7 +14,7 @@
  * keep routing through staticPanelAdapter rather than calling a factory
  * directly, so a test that mounts a panel the production way still works.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // ── shared mocks ────────────────────────────────────────────────────────────
 // WHY hoisted: every value a `vi.mock` factory closes over is hoisted above the
@@ -26,6 +26,7 @@ const {
   mockGetSensitiveDomains,
   mockRepoSet,
   mockRepoSetAll,
+  mockRepoGetMany,
   mockShowStatus,
 } = vi.hoisted(() => ({
   mockAddSensitiveDomain: vi.fn(() => Promise.resolve({ success: true })),
@@ -33,6 +34,7 @@ const {
   mockGetSensitiveDomains: vi.fn((cat: string) => [`${cat}.example`]),
   mockRepoSet: vi.fn(() => Promise.resolve()),
   mockRepoSetAll: vi.fn(() => Promise.resolve()),
+  mockRepoGetMany: vi.fn(() => Promise.resolve({})),
   mockShowStatus: vi.fn(),
 }));
 
@@ -101,6 +103,7 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
     ...actual,
     settingsRepository: {
       getAll: vi.fn(() => Promise.resolve({})),
+      getMany: mockRepoGetMany,
       get: vi.fn(),
       set: mockRepoSet,
       setAll: mockRepoSetAll,
@@ -135,9 +138,11 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
 import { createTrustSettings } from '../settings/trustSettings.js';
 import { createCustomPromptManager } from '../settings/customPromptManager.js';
 import { createMarkdownTemplateManager } from '../markdownTemplateManager.js';
+import { createRecordingConditionsSettings } from '../recordingConditionsSettings.js';
 import { STATIC_FORM_SPECS, createStaticPanelById } from '../panels/staticForm/staticPanels.js';
 import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
-import type { Settings } from '../../utils/storage/types.js';
+import { StorageKeys, type Settings } from '../../utils/storage/types.js';
+import type { SettingsReader } from '../../utils/storage/SettingsRepository.js';
 
 // jsdom implements no layout, so scrollIntoView is absent; the panel calls it
 // to bring the editor into view.
@@ -204,8 +209,24 @@ function templateDom(): void {
   `;
 }
 
+function recordingConditionsDom(): void {
+  document.body.innerHTML = '<div id="recording-conditions-settings"></div>';
+}
+
+/** A reader over one bag of persisted values, so each instance can differ. */
+function makeRepo(values: Record<string, number>): SettingsReader {
+  return {
+    getMany: vi.fn(() => Promise.resolve(values)),
+    getAll: vi.fn(() => Promise.resolve({})),
+  } as unknown as SettingsReader;
+}
+
 function click(id: string): void {
   document.getElementById(id)!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+}
+
+function valueOf(id: string): string {
+  return (document.getElementById(id) as HTMLInputElement).value;
 }
 
 /**
@@ -229,6 +250,24 @@ function trackClickListener(id: string): {
     added: () => addSpy.mock.calls.find(([type]) => type === 'click')?.[1],
     removed: removeSpy,
   };
+}
+
+/**
+ * Every function object a prototype spy saw handed to
+ * add/removeEventListener for one (target, type) pair, in call order.
+ *
+ * The save button is built by renderSettings, so a test cannot hold a
+ * reference to it before the listeners are attached and no element-local spy
+ * can see the registration. `mock.contexts[i]` is the `this` of call `i`, which
+ * is what ties a recorded call to the node it was attached to.
+ */
+type ListenerSpy = { mock: { calls: unknown[][]; contexts: unknown[] } };
+
+function handlersFor(spy: ListenerSpy, target: EventTarget, type: string): unknown[] {
+  return spy.mock.contexts
+    .map((context, i) =>
+      context === target && spy.mock.calls[i]?.[0] === type ? spy.mock.calls[i]?.[1] : undefined)
+    .filter((handler) => handler !== undefined);
 }
 
 beforeEach(() => {
@@ -388,13 +427,103 @@ describe('createMarkdownTemplateManager lifecycle', () => {
   });
 });
 
+describe('createRecordingConditionsSettings lifecycle', () => {
+  afterEach(() => {
+    // The identity test spies on EventTarget.prototype; a spy left in place
+    // would keep recording unrelated jsdom registrations in later tests.
+    vi.restoreAllMocks();
+  });
+
+  it('destroy() removes exactly the listeners init() registered', async () => {
+    recordingConditionsDom();
+    const container = document.getElementById('recording-conditions-settings')!;
+    const addSpy = vi.spyOn(EventTarget.prototype, 'addEventListener') as unknown as ListenerSpy;
+    const removeSpy = vi.spyOn(EventTarget.prototype, 'removeEventListener') as unknown as ListenerSpy;
+
+    const panel = createRecordingConditionsSettings();
+    await panel.init(makeRepo({}));
+
+    const saveBtn = document.getElementById('save-conditions-settings')!;
+    const saveHandler = handlersFor(addSpy, saveBtn, 'click').at(-1);
+    const inputHandler = handlersFor(addSpy, container, 'input').at(-1);
+    expect(saveHandler).toBeDefined();
+    expect(inputHandler).toBeDefined();
+
+    panel.destroy();
+
+    // A click after destroy() cannot show this on its own: both handlers
+    // short-circuit once the instance released its state, so a leaked listener
+    // stays invisible. The references are the only observable.
+    expect(handlersFor(removeSpy, saveBtn, 'click')).toEqual([saveHandler]);
+    expect(handlersFor(removeSpy, container, 'input')).toEqual([inputHandler]);
+  });
+
+  it('a second init() on a surviving container does not stack its input listener', async () => {
+    recordingConditionsDom();
+    const container = document.getElementById('recording-conditions-settings')!;
+    const addSpy = vi.spyOn(EventTarget.prototype, 'addEventListener') as unknown as ListenerSpy;
+    const removeSpy = vi.spyOn(EventTarget.prototype, 'removeEventListener') as unknown as ListenerSpy;
+
+    const panel = createRecordingConditionsSettings();
+    await panel.init(makeRepo({}));
+    await panel.init(makeRepo({}));
+
+    // renderSettings replaces the container's children but not the container,
+    // so without the release-then-wire order the second init would leave two
+    // 'input' handlers on it, the first one outliving the panel.
+    const liveListeners =
+      handlersFor(addSpy, container, 'input').length - handlersFor(removeSpy, container, 'input').length;
+    expect(liveListeners).toBe(1);
+  });
+
+  it('keeps two instances independent', async () => {
+    recordingConditionsDom();
+    const first = createRecordingConditionsSettings();
+    const second = createRecordingConditionsSettings();
+
+    await first.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 11 }));
+    // The second mount replaces the container, as a re-created page does.
+    recordingConditionsDom();
+    await second.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 22 }));
+    expect(valueOf('minVisitDuration')).toBe('22');
+
+    first.destroy();
+    click('save-conditions-settings');
+
+    // first's teardown targets the nodes it captured, so the surviving
+    // instance keeps both its listener and its element references. Shared state
+    // would leave the second panel inert here.
+    await waitForMock(() => expect(mockRepoSetAll).toHaveBeenCalledWith(
+      expect.objectContaining({ [StorageKeys.MIN_VISIT_DURATION]: 22 })));
+  });
+
+  it('re-mounts after destroy(): a later init() re-resolves the container', async () => {
+    recordingConditionsDom();
+    const panel = createRecordingConditionsSettings();
+    await panel.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 11 }));
+    expect(valueOf('minVisitDuration')).toBe('11');
+
+    panel.destroy();
+    recordingConditionsDom();
+    await panel.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 22 }));
+
+    expect(valueOf('minVisitDuration')).toBe('22');
+    click('save-conditions-settings');
+    await waitForMock(() => expect(mockRepoSetAll).toHaveBeenCalledWith(
+      expect.objectContaining({ [StorageKeys.MIN_VISIT_DURATION]: 22 })));
+  });
+});
+
 describe('static-form mount path', () => {
-  it('the three migrated panels still mount through staticPanelAdapter', async () => {
+  it('the four migrated panels still mount through staticPanelAdapter', async () => {
     trustDom();
     promptDom();
     templateDom();
+    // The three builders above own document.body wholesale, so the recording
+    // conditions container has to be added afterwards.
+    document.body.insertAdjacentHTML('beforeend', '<div id="recording-conditions-settings"></div>');
 
-    for (const id of ['panel-trust', 'panel-prompt', 'panel-markdown-template'] as const) {
+    for (const id of ['panel-trust', 'panel-prompt', 'panel-markdown-template', 'panel-recording-conditions'] as const) {
       const panel = createStaticPanelById(id);
       await panel.mount(document.body);
       expect(panel.id).toBe(id);
@@ -403,9 +532,9 @@ describe('static-form mount path', () => {
 
   it('the specs stay declarative (mount only, no direct factory wiring)', () => {
     expect(Object.keys(STATIC_FORM_SPECS)).toEqual(
-      expect.arrayContaining(['panel-trust', 'panel-prompt', 'panel-markdown-template']),
+      expect.arrayContaining(['panel-trust', 'panel-prompt', 'panel-markdown-template', 'panel-recording-conditions']),
     );
-    for (const id of ['panel-trust', 'panel-prompt', 'panel-markdown-template'] as const) {
+    for (const id of ['panel-trust', 'panel-prompt', 'panel-markdown-template', 'panel-recording-conditions'] as const) {
       expect(STATIC_FORM_SPECS[id].id).toBe(id);
       expect(typeof STATIC_FORM_SPECS[id].mount).toBe('function');
     }

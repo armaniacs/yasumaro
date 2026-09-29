@@ -1,7 +1,7 @@
 # PBI: 旧形式ダッシュボードモジュールの factory 化（58 個の module-global 状態の解消）
 
 種別: refactor
-状態: 部分実装（2026-09-29）
+状態: 実装済み（2026-09-29）
 
 上流: 大局的コードレビュー 2026-09-29（テーマ5）。ダッシュボード旧形式モジュールに module-level の可変状態が集中し、テスト隔離と破棄経路が欠けている。
 
@@ -65,8 +65,8 @@ Scenario: 静的フォーム spec の mount 経路が維持される
 
 ## 受け入れ基準
 
-- [ ] `trustSettings` / `markdownTemplateManager` / `customPromptManager` / `recordingConditionsSettings` の module-level 可変状態がゼロになる（3/4 — `recordingConditionsSettings` は未着手、理由は実装記録）
-- [ ] 4 モジュールが instance state を持つ factory として公開され、`destroy()` で全参照を解放する（3/4 — 同上）
+- [x] `trustSettings` / `markdownTemplateManager` / `customPromptManager` / `recordingConditionsSettings` の module-level 可変状態がゼロになる（4/4）
+- [x] 4 モジュールが instance state を持つ factory として公開され、`destroy()` で全参照を解放する（4/4）
 - [x] 静的フォームからの利用が `staticPanelAdapter` 経由のままである
 - [x] `registryContext.ts:19-21` のコメントが実際の import 関係と一致する（DI 化の判断が記録されている）
 - [x] `aiProviderLayoutManager` の `originalParents` に破棄経路がある
@@ -89,7 +89,7 @@ Scenario: 静的フォーム spec の mount 経路が維持される
 - [ ] `npm run validate` が通る
 - [ ] コードレビュー完了
 
-## 実装記録（2026-09-29・部分実装）
+## 実装記録（2026-09-29・前半：3 モジュール + 付随修正）
 
 ### 変更ファイル
 
@@ -136,9 +136,54 @@ npx tsc --noEmit -p tsconfig.json                                          →  
 
 ### 未実施・逸脱
 
-- **`recordingConditionsSettings.ts`（module-level 可変状態 8 個）は未着手。** 本 PBI のスコープから外され、加えて作業ツリー上で別 WIP の変更が入っていた（`git status --porcelain` が `M src/dashboard/recordingConditionsSettings.ts`）ため、編集を避けた。残る 3 モジュールと同一パターン（`createRecordingConditionsSettings()` + `destroy()`、`staticPanels` の `panel-recording-conditions` spec 経由）で着手できる。
-- **`npm run validate` は実行していない。** type-check は通ったが、同僚 PBI 39（`src/background/ai/providers/` 配下）が作業中のため `tsc` がそちら由来の error を出す。`DoD` のチェックは未達のまま残す。
-- **作業ツリーに他作業の WIP がある。** 検証中に `src/background/ai/providers/ProviderStrategy.ts`（PBI 39 の担当範囲）が別セッションで書き換えられ、実行の合間に一時的に構文 error を含む状態になった。対象は本 PBI のスコープ外のため一切触っていない。`tsc` が報告する error は全て `src/background/ai/providers/` 配下で、本 PBI が変更したファイル由来のものではない。
 - **`providerLabelSso.test.ts` のファイル名一覧は変更なし。** `customPromptManager.ts` のパスは変わらないため追加対応不要。
 - **`staticPanels.ts` / `staticPanelAdapter.ts` は無改変。** spec 側の配線は 3 モジュールとも `mount` 関数のままで(factory を直接呼ばない)、factory 化はこの 1 層の下の委譲だけで完結した。
 - **`exportImport.ts` の `loadTrustSettings` 参照は無改変で動く。** module-level の委譲関数を残したため。
+
+## 実装記録（2026-09-29・後半：`recordingConditionsSettings`）
+
+### 変更ファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/dashboard/recordingConditionsSettings.ts` | 8 個の module-level `let` を `createRecordingConditionsSettings()` のクロージャへ移動。`dom`（container / saveBtn / validationError / successMsg）と teardown 配列をインスタンスが保持し、`destroy()` が save の click と container の input リスナを解除して参照と値を破棄。`RecordingConditionsSettingsController` を export。module-level の `initRecordingConditionsSettings(repo)` と `destroyRecordingConditionsSettings()` は既定インスタンスへの委譲 |
+| `src/dashboard/__tests__/dashboardLegacyPanelFactories.test.ts` | `createRecordingConditionsSettings` のライフサイクル 4 テストを追加（リスナ同一性の照合・二重 init の非スタック・2 インスタンス独立・destroy 後の再 mount）。static-form 経由の mount テストを `panel-recording-conditions` を含めて拡張（11 → 15 tests） |
+
+### 設計判断
+
+**保存ハンドラは `if (!dom) return;` で早期 return する形にした。** 元は `container` と 2 つのメッセージ要素をクロージャに捕まえており、破棄経路が無かったので破棄後も detached なノードへ書き込んでいた。`dom` をインスタンス state に置き換えて null クリアすると、破棄後のノード参照とクリックの副作用が同時に消える。副産物として destroy 後のクリックは無反応になるが、**クリックでは破棄を証明できない**（ハンドラが早期 return するため、リスナが漏れていても観測差が出ない。3 モジュールの記録と同じ制約）。よってテストは `addEventListener` に渡された関数を `removeEventListener` が同じ参照で受け取ったかを突き合わせる形にした。
+
+**save ボタンの登録は要素ローカルの spy では捕まらない。** save ボタンは `renderSettings` が `innerHTML` 経由で生成するため、テストがリスナ登録より先に要素への参照を持てない。他の 3 モジュールが使った `trackClickListener`（要素に `vi.spyOn`）は使えないため、`EventTarget.prototype.addEventListener` に spy を置き、`mock.contexts[i]`（各コールの `this`）でノードを突き合わせる方式にした。container 側は DOM fixture が init 前から存在するため要素ローカルの spy でも可だが、判定を 1 方式に揃えた。
+
+**`init()` は配線前に前回の teardown を流す（release-then-wire）。** `renderSettings` は container の *子* を置き換えるので container 要素自体は生き残り、destroy を挟まずに init を 2 回呼ぶと container の `input` リスナが重複する。3 つの sibling は init で先に `removeEventListener` を呼ぶ方式（markdownTemplateManager）か append のみ（trustSettings）だが、本モジュールは `listen()` の teardown 配列を 1 か所に集約しているため、init の先頭で `teardown.splice(0)` を実行する形にした。テストで「生存 container に対する 2 回目の init が input リスナを積まない」ことを固定している。
+
+**既定値リテラルを `resetToDefaults()` に集約した。** 8 個の既定値は「宣言時の初期化」「`loadConditionsSettings` の catch」「`destroy()` 後のリセット」の 3 箇所に同値で書かれていた。3 箇所を 1 つの関数に寄せ、save ハンドラが保持する値の基準点と破棄後の基準点がずれないようにした。値は従来どおりリテラル（`5` / `50` / `1000` / `0` / `1000000` / `10` / `10000` / `30000`）で、`DEFAULT_MIN_VISIT_DURATION` 等の定数への置き換えはしていない（別 PBI のスコープ）。`loadConditionsSettings` の正常系の `??` フォールバックは定数のまま。
+
+**`staticPanels.ts` / `staticPanelAdapter.ts` は無改変。** `panel-recording-conditions` の spec は `mount: () => initRecordingConditionsSettings()` のままで、factory 化はこの 1 層の下の委譲だけで完結した。
+
+### 検証
+
+```
+npx vitest run src/dashboard/__tests__/dashboardLegacyPanelFactories.test.ts   →  15 tests passed
+npx vitest run src/dashboard/__tests__/recordingConditionsSettings.test.ts
+                src/dashboard/__tests__/recordingConditionsSettings.branches.test.ts
+                src/dashboard/__tests__/recordingConditionsSettings-seam.test.ts  →  3 files / 39 tests passed（無改変）
+npx vitest run src/dashboard/__tests__                                          →  87 files / 1138 tests passed
+npx vitest run <変更テストファイル> × 5 回                                       →  15 tests passed / 回（5/5 green）
+npx eslint src/dashboard/recordingConditionsSettings.ts
+           src/dashboard/__tests__/dashboardLegacyPanelFactories.test.ts        →  issues なし
+npx tsc --noEmit -p tsconfig.json                                                →  error 0 件
+```
+
+既存 39 テストは 1 件も修正せず green のままだった。すなわち当モジュールの既存 spec は module-global の持ち越しに依存していなかった。
+
+回帰ガード（挙動を戻して新テストが落ちることを確認済み）:
+
+- `destroy()` の teardown ループを削除 → 「destroy() removes exactly the listeners init() registered」が失敗
+- `init()` 冒頭の release-then-wire を削除 → 「a second init() on a surviving container does not stack its input listener」が失敗
+
+### 未実施・逸脱
+
+- **`npm run validate` は実行していない（指示による）。** `npx tsc --noEmit` は error 0 件で通る。`DoD` の「`npm run validate` が通る」は未チェックのまま残る。
+- **公開 API の据え置きは `initRecordingConditionsSettings` のみ。** production の呼び出し元は `staticPanels.ts:42` の 1 箇所で、既存 spec 3 ファイルは module-level 版を直接呼ぶ。`recordingTriggerManager.ts` は本モジュールを import していない（保存先 keys についてのコメント参照のみ）。`destroyRecordingConditionsSettings` は production 呼び出し元が無いが、他の 3 モジュールと同じ「panel 破棄経路を対称にする」命名で export した。`staticPanels` の `StaticPanelSpec` に `destroy` を足す余地は本 PBI のスコープ外（`refresh` だけを持つ契約）。
+- **既存 spec への追随修正は不要だった。** `recordingConditionsSettings` の既存 spec 3 ファイルは module-global への依存が無く、無改変で green。
