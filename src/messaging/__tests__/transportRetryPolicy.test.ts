@@ -48,6 +48,7 @@ const EXPECTED_RETRY_UNSAFE = [
   'SQLITE_RESTORE',
   'SQLITE_PURGE',
   'CONTENT_PURGE',
+  'SQLITE_AUDIT_LOG_PURGE',
   'SQLITE_ARCHIVE_CREATE',
   'SQLITE_ARCHIVE_PREPARE_INCOMING',
   'SQLITE_ARCHIVE_RESTORE',
@@ -58,10 +59,10 @@ const EXPECTED_RETRY_UNSAFE = [
 ] as const;
 
 describe('messaging transport retry policy', () => {
-  it('classifies all 32 wire operations without an unconfigured policy', () => {
-    expect(routes).toHaveLength(32);
+  it('classifies all 33 wire operations without an unconfigured policy', () => {
+    expect(routes).toHaveLength(33);
     expect(routes.filter((route) => route.retryPolicy === RETRY_SAFE)).toHaveLength(18);
-    expect(routes.filter((route) => route.retryPolicy === RETRY_UNSAFE)).toHaveLength(14);
+    expect(routes.filter((route) => route.retryPolicy === RETRY_UNSAFE)).toHaveLength(15);
     expect(routes.every((route) => route.retryPolicy !== RETRY_UNCONFIGURED)).toBe(true);
     for (const route of routes) {
       expect(route.retryPolicy).toBe(getTransportRetryPolicy(route.messageType));
@@ -70,7 +71,7 @@ describe('messaging transport retry policy', () => {
 
   it('matches the explicit safe and unsafe message contract', () => {
     expect(EXPECTED_RETRY_SAFE).toHaveLength(17);
-    expect(EXPECTED_RETRY_UNSAFE).toHaveLength(14);
+    expect(EXPECTED_RETRY_UNSAFE).toHaveLength(15);
     for (const type of EXPECTED_RETRY_SAFE) {
       expect(getTransportRetryPolicy(type)).toBe(RETRY_SAFE);
     }
@@ -102,6 +103,7 @@ describe('messaging transport retry policy', () => {
     expect(getTransportRetryPolicy('SQLITE_RESTORE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_PURGE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('CONTENT_PURGE')).toBe(RETRY_UNSAFE);
+    expect(getTransportRetryPolicy('SQLITE_AUDIT_LOG_PURGE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_ARCHIVE_PREPARE_INCOMING')).toBe(RETRY_UNSAFE);
   });
 

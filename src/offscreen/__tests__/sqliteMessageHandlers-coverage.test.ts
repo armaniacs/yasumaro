@@ -37,6 +37,7 @@ const dbMaintenanceMock = vi.hoisted(() => ({
 const auditLogRepoMock = vi.hoisted(() => ({
   insertAuditLog: vi.fn().mockResolvedValue({ success: true, id: 42 }),
   queryAuditLog: vi.fn().mockResolvedValue({ success: true, rows: [], total: 0 }),
+  purgeAuditLog: vi.fn().mockResolvedValue({ success: true, purged: 4 }),
 }));
 
 vi.mock('../sqliteEngineHost.js', () => ({
@@ -67,6 +68,7 @@ vi.mock('../dbMaintenance.js', () => ({
 vi.mock('../auditLogRepo.js', () => ({
   insertAuditLog: auditLogRepoMock.insertAuditLog,
   queryAuditLog: auditLogRepoMock.queryAuditLog,
+  purgeAuditLog: auditLogRepoMock.purgeAuditLog,
 }));
 
 import { sqliteMessageHandlers } from '../sqliteMessageHandlers.js';
@@ -83,11 +85,12 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 33 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(33);
+  it('Map contains all 34 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(34);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
+      'SQLITE_AUDIT_LOG_PURGE',
       'SQLITE_SEARCH', 'SQLITE_UPDATE', 'SQLITE_DELETE', 'SQLITE_TOGGLE_STAR',
       'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL', 'SQLITE_EXPORT',
       'SQLITE_BACKUP', 'SQLITE_RESTORE', 'SQLITE_PURGE', 'CONTENT_PURGE',

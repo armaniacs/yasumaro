@@ -48,6 +48,13 @@ export class FallbackStorageAdapter implements StorageBackend {
     return this.fallback.purgeContent(retentionDays, maxRecords, includeStarred);
   }
 
+  async purgeAuditLog(_retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
+    // The JSON fallback keeps no audit_log at all (same reason insert/query
+    // refuse), so there is nothing to sweep — reporting success would be a
+    // lie the retention-failure convention depends on.
+    return { success: false, error: AUDIT_LOG_UNSUPPORTED_ERROR };
+  }
+
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
     return { success: true, count: 0 };
   }

@@ -13,6 +13,7 @@ import {
   buildPurgeOldRecordsStatements,
   contentPurgeStarredClause,
   buildContentPurgeStatements,
+  buildAuditLogPurgeStatements,
 } from '../queryPlan.js';
 import { DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from '../queryPlanner.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -92,8 +93,27 @@ export async function handleContentPurge(
   return { purged: totalPurged };
 }
 
+export async function handleAuditLogPurge(
+  ctx: HandlerContext,
+  payload: { retentionDays?: number },
+): Promise<{ purged: number }> {
+  // Same skip guard as the sibling purges: without a positive window there is
+  // no cutoff, and "no window" must not degrade into "cutoff = now".
+  if (payload.retentionDays == null || payload.retentionDays <= 0) {
+    return { purged: 0 };
+  }
+  const stmts = buildAuditLogPurgeStatements(purgeCutoffMs(payload.retentionDays));
+  await sqlExec(ctx, stmts.deleteOldSql, [...stmts.deleteOldParams]);
+  let purged = 0;
+  await sqlQuery(ctx, 'SELECT changes() AS c', [], (row) => { purged = Number(row.c); });
+  return { purged };
+}
+
 export async function handleClearAll(ctx: HandlerContext, fts5Available: boolean): Promise<void> {
   await sqlExec(ctx, 'DELETE FROM browsing_logs', []);
+  // audit_log is a separate table with its own retention sweep, so clearing
+  // the browsing history without it would leave the send trail behind.
+  await sqlExec(ctx, 'DELETE FROM audit_log', []);
   if (fts5Available) {
     await sqlExec(ctx, "INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')", []);
   }

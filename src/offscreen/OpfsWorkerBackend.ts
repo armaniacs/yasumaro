@@ -74,6 +74,12 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     return { success: true, purged: result.purged };
   }
 
+  async purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
+    const result = await this.engine.tryOpfsProxy<{ purged: number }>('AUDIT_LOG_PURGE', { retentionDays });
+    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    return { success: true, purged: result.purged };
+  }
+
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
     const result = await this.engine.tryOpfsProxy<{ count: number }>('FTS_INDEX_SIZE');
     if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
