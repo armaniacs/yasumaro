@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GeminiProvider } from '../GeminiProvider.js';
 import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
+import { FailureKind } from '../../../../utils/failureTaxonomy.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 import type { AISummaryResult } from '../ProviderStrategy.js';
 
@@ -72,6 +73,24 @@ describe('ai extract twins parity (PBI 09)', () => {
     expect(g2.error).toBe('Gemini schema validation failed: candidates[0].content is missing');
     expect(o1.error).toBe('OpenAI schema validation failed: choices is missing or empty');
     expect(o2.error).toBe('OpenAI schema validation failed: choices[0].message is missing');
+  });
+
+  it('attaches the same failure kind to every invalid-schema rejection', async () => {
+    // The breaker reads only the kind, so the twins must not drift apart here
+    // either: an unusable payload is a response-side fault, not a settings one.
+    const gemini = extractOf(new GeminiProvider(geminiSettings));
+    const openai = extractOf(new GenericOpenAICompatibleProvider(openaiSettings, 'openai'));
+    const results = await Promise.all([
+      gemini._extractSummary({}, 't'),
+      gemini._extractSummary({ candidates: [{}] }, 't'),
+      openai._extractSummary({}, 't'),
+      openai._extractSummary({ choices: [{}] }, 't'),
+      openai._extractSummary({ choices: [{ message: { content: 42 } }] }, 't'),
+    ]);
+
+    for (const r of results) {
+      expect(r.failure).toEqual({ kind: FailureKind.HTTP });
+    }
   });
 
   it('shares the test-debug base field set on empty responses', async () => {

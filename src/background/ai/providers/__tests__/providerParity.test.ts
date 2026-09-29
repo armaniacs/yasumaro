@@ -15,6 +15,7 @@
  *    「トークン数不明」は「0トークン使った」ではない。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { Crypto } from '@peculiar/webcrypto';
 
 Object.defineProperty(global, 'crypto', { value: new Crypto() });
@@ -251,8 +252,11 @@ vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import { fetchWithRetry } from '../../../../utils/fetch.js';
-import { GeminiProvider } from '../GeminiProvider.js';
+import { BuiltInAiProvider } from '../BuiltInAiProvider.js';
+import { GeminiProvider, GEMINI_PINNED_ORIGIN } from '../GeminiProvider.js';
 import { OpenAIProvider } from '../OpenAIProvider.js';
+import { FAILURE_KINDS, FailureKind } from '../../../../utils/failureTaxonomy.js';
+import type { BuiltInAISummarizer } from '../BuiltInAiProvider.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
 const mockedFetch = vi.mocked(fetchWithRetry);
@@ -270,6 +274,17 @@ const openAiSettings = {
   // (VULN-002 origin authorization).
   confirmed_provider_origins: { provider_base_url: ['https://api.example.com'] },
 } as unknown as Settings;
+
+const builtInSettings = {} as Settings;
+
+/** A successful on-device summarizer; the on-device provider takes no request. */
+function builtInProvider(
+  result: Record<string, unknown> = { success: true, summary: 'ok' },
+): BuiltInAiProvider {
+  return new BuiltInAiProvider(builtInSettings, {
+    summarize: vi.fn(async () => result),
+  });
+}
 
 /** Retry options object passed to fetchWithRetry by generateSummary. */
 function retryOptions(): {
@@ -290,6 +305,9 @@ beforeEach(() => {
 });
 
 describe('リトライ方針は全プロバイダーで揃っている', () => {
+  // Only the two HTTP providers reach the transport, so only they can install a
+  // retry predicate; BuiltIn issues no request and is covered by the
+  // no-transport parity below.
   const cases = [
     {
       name: 'Gemini',
@@ -337,57 +355,239 @@ describe('リトライ方針は全プロバイダーで揃っている', () => {
     const err = new Error('fetch failed');
     expect(shouldRetry(err, 1, null, 'POST')).toBe(true);
   });
+
+  // The on-device provider's parity statement: it owns no request, so it has no
+  // retry policy to diverge on — and it must not reach the HTTP transport.
+  it('BuiltIn: issues no request, so there is no retry policy to diverge on', async () => {
+    const result = await builtInProvider().generateSummary('content');
+
+    expect(result.success).toBe(true);
+    expect(mockedFetch).not.toHaveBeenCalled();
+  });
 });
 
+/**
+ * One row per provider, one shape: a successful summary produced through that
+ * provider's own seam. `withUsage` decides whether the payload carries token
+ * counts, so the recording rule can be asserted identically for all three.
+ */
+const usageCases = [
+  {
+    name: 'Gemini',
+    run: (withUsage: boolean) => {
+      mockedFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          candidates: [{ content: { parts: [{ text: 'ok' }] } }],
+          ...(withUsage ? { usageMetadata: { promptTokenCount: 11, candidatesTokenCount: 3 } } : {}),
+        }),
+      } as unknown as Response);
+      return new GeminiProvider(geminiSettings).generateSummary('content');
+    },
+  },
+  {
+    name: 'OpenAI-compatible',
+    run: (withUsage: boolean) => {
+      mockedFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'ok' } }],
+          ...(withUsage ? { usage: { prompt_tokens: 11, completion_tokens: 3 } } : {}),
+        }),
+      } as unknown as Response);
+      return new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+    },
+  },
+  {
+    name: 'BuiltIn',
+    run: (withUsage: boolean) =>
+      builtInProvider({
+        success: true,
+        summary: 'ok',
+        ...(withUsage ? { sentTokens: 11, receivedTokens: 3 } : {}),
+      }).generateSummary('content'),
+  },
+];
+
 describe('使用量記録は全プロバイダーで揃っている', () => {
-  it('Gemini: skips recording when usageMetadata is missing', async () => {
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] }),
-    } as unknown as Response);
+  it.each(usageCases)('$name: skips recording when usage is missing', async ({ run }) => {
+    await run(false);
 
-    await new GeminiProvider(geminiSettings).generateSummary('content');
-
-    // Regression: this used to record a bogus (0, 0) row.
+    // Regression: Gemini used to record a bogus (0, 0) row for unknown usage.
     expect(mockRecordUsage).not.toHaveBeenCalled();
   });
 
-  it('Gemini: records usage when usageMetadata is present', async () => {
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        candidates: [{ content: { parts: [{ text: 'ok' }] } }],
-        usageMetadata: { promptTokenCount: 11, candidatesTokenCount: 3 },
+  it.each(usageCases)('$name: records usage when usage is present', async ({ run }) => {
+    await run(true);
+
+    expect(mockRecordUsage).toHaveBeenCalledWith(11, 3);
+  });
+});
+
+/** Make the transport answer 200 with the given body. */
+function respondWith(body: unknown): void {
+  mockedFetch.mockResolvedValue({ ok: true, json: async () => body } as unknown as Response);
+}
+
+/** The first request URL the transport was asked for. */
+function requestedUrl(): string {
+  expect(mockedFetch).toHaveBeenCalled();
+  return mockedFetch.mock.calls[0]![0] as unknown as string;
+}
+
+describe('失敗契約は全プロバイダーで揃っている', () => {
+  // Missing credentials: no request is made and no retry can fix it, so every
+  // flow that guards a credential must report a configuration failure.
+  const credentialCases = [
+    {
+      name: 'Gemini 要約',
+      run: () => new GeminiProvider({ ...geminiSettings, gemini_api_key: '' } as unknown as Settings).generateSummary('c'),
+      kindOf: (r: { failure?: { kind: string } }) => r.failure?.kind,
+    },
+    {
+      name: 'Gemini テスト',
+      run: () => new GeminiProvider({ ...geminiSettings, gemini_api_key: '' } as unknown as Settings).testConnection(),
+      kindOf: (r: { debug?: { failure?: { kind: string } } }) => r.debug?.failure?.kind,
+    },
+    {
+      name: 'OpenAI互換 要約',
+      run: () => new OpenAIProvider({ provider_model: 'm' } as unknown as Settings, 'openai-compatible').generateSummary('c'),
+      kindOf: (r: { failure?: { kind: string } }) => r.failure?.kind,
+    },
+    {
+      name: 'OpenAI互換 テスト',
+      run: () => new OpenAIProvider({ provider_model: 'm' } as unknown as Settings, 'openai-compatible').testConnection(),
+      kindOf: (r: { debug?: { failure?: { kind: string } } }) => r.debug?.failure?.kind,
+    },
+  ];
+
+  it.each(credentialCases)('$name は credential 欠如を configuration として返す', async ({ run, kindOf }) => {
+    const result = await run();
+
+    expect(kindOf(result as never)).toBe(FailureKind.CONFIGURATION);
+    expect(mockedFetch).not.toHaveBeenCalled();
+  });
+
+  const invalidModelCases = [
+    {
+      name: 'Gemini 要約',
+      run: () => new GeminiProvider({ ...geminiSettings, gemini_model: '../../etc/passwd' } as unknown as Settings).generateSummary('c'),
+      kindOf: (r: { failure?: { kind: string } }) => r.failure?.kind,
+    },
+    {
+      name: 'Gemini テスト',
+      run: () => new GeminiProvider({ ...geminiSettings, gemini_model: '../../etc/passwd' } as unknown as Settings).testConnection(),
+      kindOf: (r: { debug?: { failure?: { kind: string } } }) => r.debug?.failure?.kind,
+    },
+  ];
+
+  it.each(invalidModelCases)('$name は model 名不正を configuration として返す', async ({ run, kindOf }) => {
+    const result = await run();
+
+    expect(kindOf(result as never)).toBe(FailureKind.CONFIGURATION);
+    expect(mockedFetch).not.toHaveBeenCalled();
+  });
+
+  it('OpenAI互換: 空文字の要約を schema 失敗と同じ kind で拒否する', async () => {
+    respondWith({ choices: [{ message: { content: '   ' } }] });
+
+    const result = await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+
+    // Same condition and sentence as the test path, so the two flows cannot
+    // disagree about whether an empty body is a summary.
+    expect(result.success).toBe(false);
+    expect(result.summary).toBe('Error: Response contained no content.');
+    expect(result.failure?.kind).toBe(FailureKind.HTTP);
+  });
+
+  it('OpenAI互換: 空文字の要約は接続テストと同じ文面で拒否する', async () => {
+    respondWith({ choices: [{ message: { content: '' } }] });
+
+    const summaryResult = await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+    const testResult = await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
+
+    const summarySentence = summaryResult.summary.replace(/^Error: /, '');
+    expect(summarySentence).toBe(testResult.message);
+  });
+
+  it('BuiltIn: 例外文を summary に出さず固定文と error に分離する', async () => {
+    const provider = new BuiltInAiProvider(builtInSettings, {
+      summarize: vi.fn(async () => {
+        throw new Error('LanguageModel is not defined at window.__ai');
       }),
-    } as unknown as Response);
+    });
+
+    const result = await provider.generateSummary('content');
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toBe('Error: Failed to generate summary. Please try again or check your settings.');
+    expect(result.summary).not.toContain('__ai');
+    expect(result.error).toBe('LanguageModel is not defined at window.__ai');
+    expect(result.failure?.kind).toBe(FailureKind.CONFIGURATION);
+  });
+
+  it('BuiltIn: client が失敗を返した経路も kind を持つ', async () => {
+    const summaryResult = await builtInProvider({ success: false, error: 'downloadable' }).generateSummary('content');
+    const testResult = await builtInProvider({ success: false, error: 'downloadable' }).testConnection();
+
+    expect(summaryResult.failure?.kind).toBe(FailureKind.CONFIGURATION);
+    expect(testResult.debug?.failure?.kind).toBe(FailureKind.CONFIGURATION);
+  });
+
+  // Every kind these providers attach must be one the taxonomy declares, or the
+  // breaker gate (RemoteAIService) cannot branch on it at all.
+  it('添付される kind は必ず taxonomy の kind である', async () => {
+    const failures: Array<{ kind: string } | undefined> = [];
+
+    respondWith({});
+    failures.push((await new GeminiProvider(geminiSettings).generateSummary('c')).failure);
+    respondWith({});
+    failures.push((await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('c')).failure);
+    failures.push((await new GeminiProvider({ ...geminiSettings, gemini_api_key: '' } as unknown as Settings)
+      .generateSummary('c')).failure);
+    respondWith({ choices: [{ message: { content: '' } }] });
+    failures.push((await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('c')).failure);
+    failures.push((await builtInProvider({ success: false, error: 'x' }).generateSummary('c')).failure);
+
+    expect(failures.length).toBe(5);
+    for (const failure of failures) {
+      expect(failure).toBeDefined();
+      expect(FAILURE_KINDS).toContain(failure!.kind);
+    }
+  });
+});
+
+describe('Gemini の接続先は pinned origin から導出される', () => {
+  it('要約フローの URL が pinned origin から始まる', async () => {
+    respondWith({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
 
     await new GeminiProvider(geminiSettings).generateSummary('content');
 
-    expect(mockRecordUsage).toHaveBeenCalledWith(11, 3);
+    expect(requestedUrl().startsWith(`${GEMINI_PINNED_ORIGIN}/`)).toBe(true);
   });
 
-  it('OpenAI-compatible: skips recording when usage is missing', async () => {
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ choices: [{ message: { content: 'ok' } }] }),
-    } as unknown as Response);
+  it('テストフローの URL が要約フローと同じ origin を使う', async () => {
+    respondWith({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
+    const summaryUrl = (await new GeminiProvider(geminiSettings).generateSummary('content'), requestedUrl());
 
-    await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+    mockedFetch.mockClear();
+    respondWith({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
+    await new GeminiProvider(geminiSettings).testConnection();
+    const testUrl = requestedUrl();
 
-    expect(mockRecordUsage).not.toHaveBeenCalled();
+    expect(testUrl.startsWith(`${GEMINI_PINNED_ORIGIN}/`)).toBe(true);
+    // Same origin, so the authorized origin and the request target cannot drift.
+    expect(new URL(testUrl).origin).toBe(new URL(summaryUrl).origin);
   });
 
-  it('OpenAI-compatible: records usage when usage is present', async () => {
-    mockedFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [{ message: { content: 'ok' } }],
-        usage: { prompt_tokens: 11, completion_tokens: 3 },
-      }),
-    } as unknown as Response);
+  // A behavioural assertion cannot tell an identical literal from a derived
+  // value, and the derivation IS the contract: the origin the constructor
+  // authorizes must be the only spelling of that origin in the file, or the
+  // two can drift apart again on the next edit.
+  it('pinned origin リテラルは定数の定義にしか現れない', () => {
+    const source = readFileSync(new URL('../GeminiProvider.ts', import.meta.url), 'utf8');
+    const occurrences = source.split(GEMINI_PINNED_ORIGIN).length - 1;
 
-    await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
-
-    expect(mockRecordUsage).toHaveBeenCalledWith(11, 3);
+    expect(occurrences).toBe(1);
   });
 });

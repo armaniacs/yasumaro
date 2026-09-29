@@ -13,8 +13,13 @@ import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { FailureKind, createFailure, resolveFailure, withFailure } from '../../../utils/failureTaxonomy.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../../utils/storage/providerAllowlist.js';
+
+/** Fixed user-facing sentence for a failed on-device summary (HTTP path convention). */
+const BUILTIN_SUMMARY_FAILURE_MESSAGE =
+    'Error: Failed to generate summary. Please try again or check your settings.';
 
 /**
  * The on-device summarize surface BuiltInAiProvider depends on. Structural so
@@ -81,10 +86,16 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                 ? await this.builtInAiClient.summarize(content, customPromptOptions)
                 : await this.builtInAiClient.summarize(content);
             if (!result.success) {
-                return {
-                    success: false,
-                    summary: result.error || 'Built-in AI returned no content',
-                };
+                // The client reports availability, blocked content and session
+                // failures as one plain sentence, and the taxonomy refuses to
+                // classify a message. Every one of those states is something the
+                // user must act on (enable the flag, download the model, pick
+                // other content), never a transient outage — so this is the
+                // user-fixable kind, and the breaker leaves the slot alone.
+                return withFailure(
+                    { success: false, summary: result.error || 'Built-in AI returned no content' },
+                    createFailure(FailureKind.CONFIGURATION),
+                );
             }
 
             await this.recordUsageIfPresent(result.sentTokens, result.receivedTokens);
@@ -97,11 +108,19 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                 ...pickDefined({ sentTokens: result.sentTokens, receivedTokens: result.receivedTokens }),
             };
         } catch (error: unknown) {
+            // WHY the fixed sentence: the summary is the page summary the
+            // recording path persists, so an exception text that lands here
+            // would be written into Obsidian as page content. The detail goes to
+            // `error`, the per-slot diagnostic channel the HTTP paths use.
             addLog(LogType.ERROR, `Built-in AI generateSummary failed: ${errorMessage(error)}`, {});
-            return {
-                success: false,
-                summary: `Error: Failed to generate summary. ${errorMessage(error)}`,
-            };
+            return withFailure(
+                {
+                    success: false,
+                    summary: BUILTIN_SUMMARY_FAILURE_MESSAGE,
+                    error: errorMessage(error).substring(0, 300),
+                },
+                resolveFailure(error) ?? createFailure(FailureKind.CONFIGURATION),
+            );
         }
     }
 
@@ -133,11 +152,17 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                     endpoint: 'on-device (Built-in AI)',
                     hasContent: false,
                     ...pickDefined({ response: result.summary || undefined, error: result.error }),
+                    // Same reading as the summary path: a client-reported state
+                    // the user must resolve, not a provider outage.
+                    failure: createFailure(FailureKind.CONFIGURATION),
                 },
             };
         } catch (error: unknown) {
             const msg = errorMessage(error);
             addLog(LogType.ERROR, `Connection test failed for built-in-ai: ${msg}`, {});
+            // The connection-test message is a diagnostic shown in the settings
+            // test panel (never persisted as page content), so the raw text stays
+            // there; the kind is what the breaker and the debug channel read.
             return {
                 success: false,
                 message: msg,
@@ -146,6 +171,7 @@ export class BuiltInAiProvider extends AIProviderStrategy {
                     endpoint: 'on-device (Built-in AI)',
                     error: msg,
                     hasContent: false,
+                    failure: resolveFailure(error) ?? createFailure(FailureKind.CONFIGURATION),
                 },
             };
         }
