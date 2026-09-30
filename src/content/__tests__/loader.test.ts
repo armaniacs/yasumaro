@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 const LOADER_PATH = '../loader.js';

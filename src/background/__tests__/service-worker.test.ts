@@ -590,7 +590,7 @@ import type {
     SessionLockRequestMessage,
     PingMessage,
 } from '../messageTypes.js';
-import { CURRENT_PROTOCOL_VERSION } from '../messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { createRecordingOrchestrator } from '../pipeline/RecordingOrchestrator.js';
 
 // The production composition root builds the shared RecordingOrchestrator once at

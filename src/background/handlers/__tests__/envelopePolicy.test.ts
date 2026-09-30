@@ -11,7 +11,7 @@ import {
   PROTOCOL_VERSION_POLICY,
   classifyProtocolVersion,
 } from '../envelopePolicy.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../../messaging/protocol.js';
 
 const { logInfo } = vi.hoisted(() => ({ logInfo: vi.fn() }));
 vi.mock('../../../utils/logger/api.js', () => ({

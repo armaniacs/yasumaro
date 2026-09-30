@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { givenHandshakeResponse, givenHandshakeError } from './helpers/dashboardSqliteMock.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 
 vi.mock('../../utils/logger/api.js', () => ({
   logWarn: vi.fn(),

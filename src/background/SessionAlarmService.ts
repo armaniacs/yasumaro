@@ -9,7 +9,7 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logWarn, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { CURRENT_PROTOCOL_VERSION } from './messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
 import {
   SYSTEM_CLOCK,
   CHROME_STORAGE_PORT,

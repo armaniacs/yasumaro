@@ -11,7 +11,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DashboardGateway } from '../dashboardGateway.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 
 // Helper to install a controllable chrome.runtime.sendMessage mock
 function installChromeMock() {

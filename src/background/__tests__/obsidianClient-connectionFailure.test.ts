@@ -18,7 +18,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import { createMessageRouter } from '../handlers/MessageRouter.js';
-import { CURRENT_PROTOCOL_VERSION } from '../messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { NoOpOfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import * as storage from '../../utils/storage/types.js';
 
