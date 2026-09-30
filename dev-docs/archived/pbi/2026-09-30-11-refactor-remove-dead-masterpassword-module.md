@@ -46,10 +46,10 @@
 
 ## 受け入れ基準
 
-- [ ] `utils/masterPassword.ts` の `setMasterPassword` / `changeMasterPassword` と、テスト専用ヘルパー(`masterPasswordUiCore.ts` の `buildSetStorageFn` がテスト専用と確認できればそれも)を削除する
-- [ ] `verifyMasterPassword` / `isMasterPasswordSet` / `calculatePasswordStrength` / validator は残す(本番使用中)
-- [ ] `utils/__tests__/masterPassword.test.ts` の set/change 関連テストを削除または encryptionSession 経路のテストへ置換する
-- [ ] 4 件ハードコード field リストが消え、canonical(`API_KEY_FIELD_NAMES`)のみが残る
+- [x] `utils/masterPassword.ts` の `setMasterPassword` / `changeMasterPassword` と、テスト専用ヘルパー(`masterPasswordUiCore.ts` の `buildSetStorageFn` がテスト専用と確認できればそれも)を削除する
+- [x] `verifyMasterPassword` / `isMasterPasswordSet` / `calculatePasswordStrength` / validator は残す(本番使用中)
+- [x] `utils/__tests__/masterPassword.test.ts` の set/change 関連テストを削除または encryptionSession 経路のテストへ置換する
+- [x] 4 件ハードコード field リストが消え、canonical(`API_KEY_FIELD_NAMES`)のみが残る
 - [ ] `npm run validate` が green
 
 ## テスト戦略
