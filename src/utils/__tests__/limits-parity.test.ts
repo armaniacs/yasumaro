@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import * as limitsModule from '../limits.js';
-import * as validatorsModule from '../../messaging/validators.js';
 import { MAX_QUERY_LIMIT as ENGINE_LIMIT } from '../../offscreen/sqliteEngineHost.js';
 import { STORAGE_QUOTA_BYTES as QUOTA } from '../storage/quota.js';
 
@@ -46,7 +45,7 @@ const EXPECTED: Record<string, number> = {
   MAX_CLEANSED_REASONS: 64,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 36;
+const EXPECTED_LIMITS_EXPORT_COUNT = 41;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',
@@ -65,7 +64,7 @@ const VALIDATOR_LIMIT_KEYS = [
 ].sort();
 
 describe('cap parity guard', () => {
-  const surface = { ...validatorsModule, ...limitsModule } as Record<string, object | number>;
+  const surface = { ...limitsModule } as Record<string, object | number>;
 
   it.each(Object.entries(EXPECTED))('%s keeps its value', (name, value) => {
     expect(surface[name]).toBe(value);

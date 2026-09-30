@@ -11,8 +11,8 @@ import {
   MAX_RESTORE_BASE64_BYTES,
   AUDIT_CAP_OPFS,
   AUDIT_CAP_IDB,
+  VALIDATOR_LIMITS,
 } from '../limits.js';
-import { VALIDATOR_LIMITS } from '../../messaging/validators.js';
 import {
   MAX_APPEND_IDS as DEPS_MAX_APPEND_IDS,
   MAX_IMPORT_ROWS as DEPS_MAX_IMPORT_ROWS,

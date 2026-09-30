@@ -4,8 +4,8 @@ import {
   FetchUrlValidator,
   ManualRecordValidator,
   ValidationError,
-  VALIDATOR_LIMITS,
 } from '../validators.js';
+import { VALIDATOR_LIMITS } from '../../utils/limits.js';
 
 function errorOf(fn: () => unknown): ValidationError {
   try {

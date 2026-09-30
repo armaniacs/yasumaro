@@ -4,10 +4,9 @@ import {
   DashboardSqliteValidator,
   ManualRecordValidator,
   ValidationError,
-  VALIDATOR_LIMITS,
   STAGING_NAME_SUBTYPES,
 } from '../validators.js';
-import { MAX_ARCHIVE_QUERY_LIMIT } from '../limits.js';
+import { VALIDATOR_LIMITS, MAX_ARCHIVE_QUERY_LIMIT } from '../../utils/limits.js';
 import { ALL_DASHBOARD_SQLITE_SUBTYPES } from '../sqliteOperationSecurity.js';
 
 const manual = (payload: Record<string, unknown>, type = 'MANUAL_RECORD') => ({
