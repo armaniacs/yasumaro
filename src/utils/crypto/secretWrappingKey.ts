@@ -20,9 +20,14 @@
  * error when IndexedDB or the KEK is unavailable. Callers must NOT fall back
  * to generating a fresh secret (that would orphan existing encrypted API
  * keys) and must NOT delete the stored envelope.
+ *
+ * The IndexedDB mechanics are shared with durableKeyStore (idbKeyStorage),
+ * which has the opposite contract. The mechanics stay policy-free; the
+ * fail-closed reading of a null/error is decided by the wrappers below.
  */
 
 import { getWebCrypto, wrapStringWithKey, unwrapStringWithKey, type AeadStringEnvelope } from './primitives.js';
+import { createIdbKeyStorage, type IdbKeyStorage } from './idbKeyStorage.js';
 
 const DB_NAME = 'yasumaro-secret-crypto';
 const STORE_NAME = 'secret-wrapping-key';
@@ -47,62 +52,11 @@ export function isSecretEnvelope(data: unknown): data is SecretEnvelope {
   );
 }
 
-/** Minimal read/write surface for the dedicated KEK (mirrors durableKeyStore). */
-export interface SecretKeyStorage {
-  get(): Promise<CryptoKey | null>;
-  put(key: CryptoKey): Promise<void>;
-}
-
-function idbAvailable(): boolean {
-  return typeof indexedDB !== 'undefined';
-}
+/** Read/write surface for the dedicated KEK (same shape as durableKeyStore's). */
+export type SecretKeyStorage = IdbKeyStorage;
 
 function idbStorage(): SecretKeyStorage | null {
-  if (!idbAvailable()) {
-    return null;
-  }
-  return {
-    get(): Promise<CryptoKey | null> {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          req.result.createObjectStore(STORE_NAME);
-        };
-        req.onerror = () => reject(req.error ?? new Error('IDB open failed'));
-        req.onsuccess = () => {
-          const db = req.result;
-          try {
-            const get = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(KEY_ID);
-            get.onerror = () => { db.close(); reject(get.error ?? new Error('IDB get failed')); };
-            get.onsuccess = () => { db.close(); resolve((get.result as CryptoKey | undefined) ?? null); };
-          } catch (e) {
-            db.close();
-            reject(e instanceof Error ? e : new Error(String(e)));
-          }
-        };
-      });
-    },
-    put(key: CryptoKey): Promise<void> {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          req.result.createObjectStore(STORE_NAME);
-        };
-        req.onerror = () => reject(req.error ?? new Error('IDB open failed'));
-        req.onsuccess = () => {
-          const db = req.result;
-          try {
-            const put = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(key, KEY_ID);
-            put.onerror = () => { db.close(); reject(put.error ?? new Error('IDB put failed')); };
-            put.onsuccess = () => { db.close(); resolve(); };
-          } catch (e) {
-            db.close();
-            reject(e instanceof Error ? e : new Error(String(e)));
-          }
-        };
-      });
-    },
-  };
+  return createIdbKeyStorage({ dbName: DB_NAME, storeName: STORE_NAME, keyId: KEY_ID, version: 1 });
 }
 
 // Injectable for tests: unit environments have no IndexedDB, so tests swap in
