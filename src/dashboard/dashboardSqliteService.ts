@@ -4,7 +4,7 @@
  * The service worker's DASHBOARD_SQLITE handler proxies requests to SqliteClient.
  */
 
-import type { DashboardSqliteRequest } from '../background/handlers/dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../messaging/dashboardSqliteProtocol.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../messaging/sqliteMessages.js';
 import { archiveWireFor, isArchiveOpType, type ArchiveDescriptor, type DescriptorPublic } from '../messaging/archiveWireTable.js';
 import {

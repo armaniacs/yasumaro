@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { verifyRequestToken } from '../index.js';
 import { buildListParams, buildSearchParams } from '../readOnlyHandler.js';
-import type { DashboardSqliteRequest } from '../../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../../../messaging/dashboardSqliteProtocol.js';
 
 /**
  * dispatch-seams.test.ts (PBI 2026-09-11-07 spike slice)

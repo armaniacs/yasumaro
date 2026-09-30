@@ -2,7 +2,7 @@ import { ErrorCode } from '../../../utils/logger/types.js';
 import { logError } from '../../../utils/logger/api.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { TOKEN_REQUIRED_SUBTYPES, ALL_DASHBOARD_SQLITE_SUBTYPES, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from '../../../messaging/sqliteOperationSecurity.js';
-import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { DashboardSqliteHandlerDeps } from './deps.js';
 import { READ_ONLY_SUBTYPES, createReadOnlyHandler } from './readOnlyHandler.js';
 import { CORE_CRUD_SUBTYPES, createCoreCrudHandler } from './coreCrudHandler.js';

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildListParams, buildSearchParams } from '../readOnlyHandler.js';
 import { QUERY_CAPS } from '../../../../utils/limits.js';
-import type { DashboardSqliteRequest } from '../../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../../../messaging/dashboardSqliteProtocol.js';
 
 /**
  * readOnlyProjection-pins.test.ts (PBI 2026-09-21-20)

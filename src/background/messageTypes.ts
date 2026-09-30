@@ -214,7 +214,7 @@ export type LogForwardMessage = {
  * Type-safe union of all messages the Service Worker can receive.
  * Discriminate on `type` to narrow to a specific message shape.
  */
-import type { DashboardSqliteRequest } from './handlers/dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../messaging/dashboardSqliteProtocol.js';
 type DashboardSqliteMessage = {
     type: 'DASHBOARD_SQLITE';
     payload?: DashboardSqliteRequest;

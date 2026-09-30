@@ -10,12 +10,12 @@
  * convention, with `payload.x as T` casts hiding any mismatch.
  */
 
-import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
-import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../messaging/sqliteMessages.js';
-import type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
+import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from './sqliteMessages.js';
+import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 
-export type { DashboardSqliteSubtype } from '../../messaging/sqliteOperationSecurity.js';
-export { TOKEN_REQUIRED_SUBTYPES } from '../../messaging/sqliteOperationSecurity.js';
+export type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
+export { TOKEN_REQUIRED_SUBTYPES } from './sqliteOperationSecurity.js';
 
 // ============================================================================
 // Requests (subtype -> payload shape, excluding confirmToken which is

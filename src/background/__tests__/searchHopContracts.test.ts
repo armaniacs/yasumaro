@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // ── Hop 1: buildSearchParams (dashboard → background payload) ─────────────
 
 import { buildSearchParams } from '../handlers/dashboardSqlite/readOnlyHandler.js';
-import type { DashboardSqliteRequest } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../../messaging/dashboardSqliteProtocol.js';
 
 describe('hop 1 — buildSearchParams maps query→text (PBI 2026-09-12-43)', () => {
   it('maps query to text and preserves limit/offset', () => {
