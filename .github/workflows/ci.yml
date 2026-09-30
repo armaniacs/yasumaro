@@ -43,7 +43,7 @@ jobs:
       # the negations would subtract nothing. `every` turns the list into
       # "matches '**' AND NOT docs".
       - id: filter-subtract
-        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.3
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3.0.4.0.3
         with:
           predicate-quantifier: every
           filters: |
@@ -57,7 +57,7 @@ jobs:
       # cannot live in the step above: `predicate-quantifier` is a step input,
       # not a workflow-wide one.
       - id: filter-allow
-        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.3
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3.0.4.0.3
         with:
           filters: |
             # Rust sources, the crate manifest that owns the crate list, the
