@@ -124,7 +124,7 @@ describe('masterPassword-r2 — showPasswordModal change mode', () => {
     setupDefaultMockValues();
   });
 
-  it('shows confirmPasswordGroup in change mode', async () => {
+  it('hides confirmPasswordGroup in change mode (only the set flow confirms)', async () => {
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
@@ -140,7 +140,7 @@ describe('masterPassword-r2 — showPasswordModal change mode', () => {
     await flushPromises();
 
     const confirmGroup = document.getElementById('confirmPasswordGroup')!;
-    expect(confirmGroup.classList.contains('hidden')).toBe(false);
+    expect(confirmGroup.classList.contains('hidden')).toBe(true);
   });
 });
 
