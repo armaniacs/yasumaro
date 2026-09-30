@@ -15,19 +15,6 @@ import type { AiTestProgress } from './ai/AIService.js';
 import type { FailureMetadata } from '../utils/failureTaxonomy.js';
 
 // ============================================================================
-// Protocol version
-// ============================================================================
-
-/**
- * Current Content-SW message protocol version.
- *
- * 正本は src/messaging/protocol.ts。全レイヤーが参照する定数のため、
- * background 層ではなく中立な位置に置いている。
- * ここでは後方互換のために再エクスポートする。
- */
-export { CURRENT_PROTOCOL_VERSION, PROTOCOL_VERSION_WINDOW_SIZE } from '../messaging/protocol.js';
-
-// ============================================================================
 // Reusable payload fragments
 // ============================================================================
 

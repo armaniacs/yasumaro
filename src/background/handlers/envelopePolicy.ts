@@ -19,10 +19,12 @@
 import {
   VALID_MESSAGE_TYPES,
   NO_PAYLOAD_TYPES,
-  CURRENT_PROTOCOL_VERSION,
-  PROTOCOL_VERSION_WINDOW_SIZE,
   type ExtensionMessage,
 } from '../messageTypes.js';
+import {
+  CURRENT_PROTOCOL_VERSION,
+  PROTOCOL_VERSION_WINDOW_SIZE,
+} from '../../messaging/protocol.js';
 import { logInfo } from '../../utils/logger/api.js';
 
 export const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };

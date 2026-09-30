@@ -16,7 +16,8 @@ import {
     sendFromContentScript,
     sendFromPopup,
 } from '../types.js';
-import { CURRENT_PROTOCOL_VERSION, VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
+import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../messageTypeRegistry.js';
 
 describe('messaging/types: isMaskedItem', () => {
     it('returns false for null', () => {

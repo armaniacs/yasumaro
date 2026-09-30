@@ -10,7 +10,7 @@ import {
   setDashboardTransportForTesting,
   resetDashboardTransportForTesting,
 } from '../dashboardGateway.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 
 describe('dashboardGateway transport wiring (PBI 10)', () => {
   beforeEach(() => {
