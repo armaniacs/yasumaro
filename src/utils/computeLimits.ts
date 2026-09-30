@@ -11,7 +11,7 @@
  * pendingChromeStorageQueue.ts, MAX_NODES = 50 in clusterGraphRenderer.ts).
  */
 
-import { QUERY_CAPS } from '../messaging/limits.js';
+import { QUERY_CAPS } from './limits.js';
 
 /**
  * Max unique tags considered per record in tag-cooccurrence.
@@ -87,16 +87,16 @@ export const MAX_TAG_TIMELINE_ROWS = 10000;
 
 /**
  * WHY: this must equal QUERY_CAPS.plain (the wire clamp owned by
- * src/messaging/limits.ts) because the panels interpolate it into their
+ * src/utils/limits.ts) because the panels interpolate it into their
  * truncation notices — if the dashboard ask and the wire clamp drifted, the
  * notice text would quietly lie about the effective limit. It is derived by
  * reference (not re-declared) so drift is structurally impossible.
  *
- * Layer direction: importing it from utils is safe — messaging/limits.ts is a
+ * Layer direction: importing it from utils is safe — utils/limits.ts is a
  * pure foundation module (@layer 0, zero imports, no chrome API), so this edge
  * points downward into foundation, matching the queryPlan.ts precedent and the
- * LAYERS.md rule allowing pure-constant imports across seams (PBI
- * 2026-09-24-09). Equality with QUERY_CAPS.plain is additionally pinned by
- * src/messaging/__tests__/limits-drift.test.ts.
+ * LAYERS.md rule allowing pure-constant imports across seams.
+ * Equality with QUERY_CAPS.plain is additionally pinned by
+ * src/utils/__tests__/limits-drift.test.ts.
  */
 export const MAX_QUERY_ROWS = QUERY_CAPS.plain;

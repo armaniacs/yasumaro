@@ -8,7 +8,7 @@
  * phase B (pbi/2026-09-06-04), intentionally not wired here.
  */
 
-import { MAX_ARCHIVE_EXPORT_CHUNK_BYTES } from '../../../messaging/limits.js';
+import { MAX_ARCHIVE_EXPORT_CHUNK_BYTES } from '../../../utils/limits.js';
 import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus } from '../../dashboardSqliteService.js';
 
 import { showConfirmDialog } from '../../utils/confirmDialog.js';

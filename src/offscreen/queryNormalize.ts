@@ -10,7 +10,7 @@
 
 import { pickDefined } from '../utils/objectUtils.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
-import { MAX_QUERY_IDS } from '../messaging/limits.js';
+import { MAX_QUERY_IDS } from '../utils/limits.js';
 
 /**
  * Normalize a query-shaped wire payload into a StorageQuery.

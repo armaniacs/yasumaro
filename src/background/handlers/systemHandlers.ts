@@ -72,7 +72,7 @@ export interface GenerateReviewSummaryHandlerDeps {
 
 export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
   // VULN-012 fix: limit response size to prevent memory exhaustion
-  // (value lives in messaging/limits.ts — PBI 2026-09-11-08 round 6)
+  // (value lives in utils/limits.ts)
 
   return async (
     message: FetchUrlMessage,
@@ -287,14 +287,14 @@ export function deriveLogSource(sender: chrome.runtime.MessageSender): string {
 // Per-entry size bounds for forwarded logs (VULN-004). Count caps in
 // LogBuffer / storageAdapter bound entry COUNT, not per-entry size or CPU;
 // the trust boundary is this handler, so enforcement lives here — the values
-// themselves moved to messaging/limits.ts (PBI 2026-09-11-08) so they are
+// themselves moved to utils/limits.ts so they are
 // greppable from the cap registry.
 import {
   MAX_LOG_FORWARD_MESSAGE_CHARS,
   MAX_LOG_FORWARD_DETAILS_KEYS,
   MAX_LOG_FORWARD_SERIALIZED_CHARS,
   MAX_FILTER_LIST_SIZE as LIMIT_MAX_FILTER_LIST_SIZE,
-} from '../../messaging/limits.js';
+} from '../../utils/limits.js';
 
 export function createLogForwardHandler() {
   return async (

@@ -42,7 +42,7 @@ import {
   mapHttpFetchFailure,
   SUMMARY_FAILURE_MESSAGE,
 } from '../../../utils/httpFailureMessages.js';
-import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../messaging/limits.js';
+import { MAX_AI_HTTP_RESPONSE_BYTES } from '../../../utils/limits.js';
 import {
   AIProviderStrategy,
   CONNECTION_TEST_PROMPT,

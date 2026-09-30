@@ -1,4 +1,4 @@
-import { MAX_ERROR_BODY_SIZE as MAX_ERROR_BODY_LIMIT } from '../messaging/limits.js';
+import { MAX_ERROR_BODY_SIZE as MAX_ERROR_BODY_LIMIT } from '../utils/limits.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { buildDailyNotePath } from '../utils/dailyNotePathBuilder.js';

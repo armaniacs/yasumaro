@@ -6,7 +6,7 @@
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
 import { buildAuditLogStatements } from '../queryPlan.js';
 import { planAuditLog } from '../queryPlanner.js';
-import { AUDIT_CAP_OPFS } from '../../messaging/limits.js';
+import { AUDIT_CAP_OPFS } from '../../utils/limits.js';
 import type { AuditLogQueryPayload } from './types.js';
 
 export async function handleAuditLogInsert(
