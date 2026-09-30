@@ -370,5 +370,62 @@ describe('encryptionSession KEK rotation', () => {
       ).toBe('ghp_live514');
     });
   });
+
+  describe('KEK rotation — read-back failure', () => {
+    // Corrupts only reads issued after the rotation wrote ciphertext, so the
+    // pre-write plan sees real data and the verification sees a mismatch.
+    function corruptReadBackAfterWrite(field: string): () => void {
+      const getMock = vi.mocked(chrome.storage.local.get) as unknown as ReturnType<typeof vi.fn>;
+      const setMock = vi.mocked(chrome.storage.local.set) as unknown as ReturnType<typeof vi.fn>;
+      const originalGet = getMock.getMockImplementation()!;
+      const originalSet = setMock.getMockImplementation()!;
+      let written = false;
+      setMock.mockImplementation((items: Record<string, unknown>) => {
+        if ('settings' in items || field in items) written = true;
+        return originalSet(items);
+      });
+      getMock.mockImplementation(async (keys?: unknown) => {
+        const result = (await originalGet(keys)) as Record<string, unknown>;
+        // Only the read-back verification reads ['settings', ...API_KEY_FIELD_NAMES].
+        // The transaction's own CAS checks read ['settings', 'settings_version']
+        // and must stay clean, otherwise the failure surfaces as a ConflictError.
+        if (!written || !Array.isArray(keys) || !keys.includes('settings') || !keys.includes(field)) return result;
+        const bogus = { ciphertext: btoa('x'.repeat(32)), iv: btoa('y'.repeat(12)) };
+        const nested = (result['settings'] ?? {}) as Record<string, unknown>;
+        return { ...result, settings: { ...nested, [field]: bogus } };
+      });
+      return () => {
+        getMock.mockImplementation(originalGet);
+        setMock.mockImplementation(originalSet);
+      };
+    }
+
+    it('set: fails with REENCRYPT_VERIFY_FAILED and never writes auth metadata', async () => {
+      await seedCiphertext('obsidian_api_key', 'nested', 'sk-live-obsidian');
+      const metaBefore = await snapshotAuth();
+      const restore = corruptReadBackAfterWrite('obsidian_api_key');
+      try {
+        await expect(setMasterPassword('NewP@ssw0rd123!')).rejects.toThrow('REENCRYPT_VERIFY_FAILED');
+      } finally {
+        restore();
+      }
+      expect(await snapshotAuth()).toEqual(metaBefore);
+      expect(await isMasterPasswordEnabled()).toBe(false);
+    });
+
+    it('change: fails with REENCRYPT_VERIFY_FAILED and leaves the previous auth metadata', async () => {
+      await setMasterPassword('OldP@ssw0rd123!');
+      await unlockWithPassword('OldP@ssw0rd123!');
+      await seedCiphertext('obsidian_api_key', 'nested', 'sk-live-obsidian');
+      const metaBefore = await snapshotAuth();
+      const restore = corruptReadBackAfterWrite('obsidian_api_key');
+      try {
+        await expect(changeMasterPassword('OldP@ssw0rd123!', 'NewP@ssw0rd123!')).rejects.toThrow('REENCRYPT_VERIFY_FAILED');
+      } finally {
+        restore();
+      }
+      expect(await snapshotAuth()).toEqual(metaBefore);
+    });
+  });
 });
 
