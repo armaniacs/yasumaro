@@ -12,7 +12,7 @@ import { encrypt, deriveKey } from './crypto/index.js';
 import { generateSalt, bytesToBase64 } from './crypto/index.js';
 import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
 import { ErrorCode } from './logger/types.js';
-import { logError, logInfo } from './logger/api.js';
+import { logError, logInfo, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { DEFAULT_IMPORT_SIZE_CAP_BYTES } from './importPipeline.js';
 import { CRYPTO_PARAMS } from './crypto/cryptoParams.js';
@@ -27,8 +27,24 @@ export const EXPORT_VERSION = '1.1.0';
  */
 export const LEGACY_EXPORT_VERSION = '1.0.0';
 
-/** Encrypted export format version — v2 uses ciphertext HMAC (SSOT migration) */
-export const ENCRYPTED_EXPORT_VERSION = '2';
+/** Encrypted export format version — v3 signs iterations along with ciphertext:iv:salt */
+export const ENCRYPTED_EXPORT_VERSION = '3';
+
+/** v2 signed only ciphertext:iv:salt; still accepted on import. */
+export const LEGACY_ENCRYPTED_EXPORT_VERSION = '2';
+
+/**
+ * Single builder for the encrypted-export HMAC payload so export and import
+ * cannot drift. v2 omits iterations, which lets a signed file carry a forged
+ * KDF cost.
+ */
+function buildEncryptedHmacPayload(
+  data: { ciphertext: string; iv: string; salt: string; iterations?: number },
+  version: typeof ENCRYPTED_EXPORT_VERSION | typeof LEGACY_ENCRYPTED_EXPORT_VERSION
+): string {
+  const base = `${data.ciphertext}:${data.iv}:${data.salt}`;
+  return version === ENCRYPTED_EXPORT_VERSION ? `${base}:${data.iterations}` : base;
+}
 
 export interface SettingsExportData {
   version: string;
@@ -197,8 +213,17 @@ export async function exportEncryptedSettings(
     const encrypted = await encrypt(json, key);
 
     // HMAC署名を計算（ciphertext全体に対して — version:2 ciphertext-HMAC）
-    const hmacPayload = `${encrypted.ciphertext}:${encrypted.iv}:${saltB64}`;
-    const hmac = await exportHmacSigner.sign(hmacPayload);
+    const hmac = await exportHmacSigner.sign(
+      buildEncryptedHmacPayload(
+        {
+          ciphertext: encrypted.ciphertext,
+          iv: encrypted.iv,
+          salt: saltB64,
+          iterations: CRYPTO_PARAMS.PBKDF2_ITERATIONS,
+        },
+        ENCRYPTED_EXPORT_VERSION
+      )
+    );
 
     const encryptedExportData: EncryptedExportData = {
       encrypted: true,
@@ -256,12 +281,19 @@ export async function importEncryptedSettings(
       return null;
     }
 
-    // Version branching: v2 = ciphertext HMAC (SSOT), v1 = legacy compat (HMAC skip)
-    const isV2 = encryptedData.version === ENCRYPTED_EXPORT_VERSION || (encryptedData.version as unknown as number) === 2;
+    // Version branching: v3 = ciphertext+iterations HMAC, v2 = ciphertext HMAC,
+    // v1 = legacy compat (plaintext HMAC, or none)
+    const versionText = String(encryptedData.version);
+    const isV3 = versionText === ENCRYPTED_EXPORT_VERSION;
+    const isV2 = versionText === LEGACY_ENCRYPTED_EXPORT_VERSION;
+    const hasCiphertextHmac = isV3 || isV2;
 
-    if (isV2) {
+    if (hasCiphertextHmac) {
       // HMAC verification BEFORE KDF/decrypt (VULN-034): cheap auth, then amplify
-      const hmacPayload = `${encryptedData.ciphertext}:${encryptedData.iv}:${encryptedData.salt}`;
+      const hmacPayload = buildEncryptedHmacPayload(
+        encryptedData,
+        isV3 ? ENCRYPTED_EXPORT_VERSION : LEGACY_ENCRYPTED_EXPORT_VERSION
+      );
       if (!(await exportHmacSigner.verify(hmacPayload, encryptedData.hmac))) {
         await logError(
           'HMAC verification failed',
@@ -307,7 +339,17 @@ export async function importEncryptedSettings(
     // If HMAC exists on v1, we still verify it against decryptedJson to preserve
     // integrity for existing tests that expect wrong-HMAC rejection.
     // For v2, HMAC was already verified over ciphertext before KDF, so no plaintext check.
-    if (!isV2 && encryptedData.hmac) {
+    if (!hasCiphertextHmac && !encryptedData.hmac) {
+      // Pre-signing exports carry no hmac and cannot be authenticated; they
+      // stay importable so existing backups are not orphaned.
+      await logWarn(
+        'Importing an unsigned legacy encrypted export',
+        { version: versionText },
+        undefined,
+        'settingsExportImport.ts'
+      );
+    }
+    if (!hasCiphertextHmac && encryptedData.hmac) {
       if (!(await exportHmacSigner.verify(decryptedJson, encryptedData.hmac))) {
         await logError(
           'HMAC verification failed',
