@@ -81,6 +81,7 @@ const LAYER1_FILES = [
   'src/utils/storage/storageMaintenance.ts',
   // Decrypt-free settings snapshot for content scripts (PBI 2026-09-28-30).
   'src/utils/storage/settingsSnapshot.ts',
+  'src/utils/storage/rotationLock.ts',
   'src/utils/Mutex.ts',
   'src/utils/rateLimiter.ts',
   'src/utils/trustDb/domainValidation.ts',

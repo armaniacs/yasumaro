@@ -43,6 +43,7 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   },
   MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
   PendingRotationMismatchError: class PendingRotationMismatchError extends Error {},
+  RotationInProgressError: class RotationInProgressError extends Error {},
 }));
 
 vi.stubGlobal('chrome', {
@@ -53,6 +54,7 @@ import { isMasterPasswordSet } from '../../utils/masterPassword.js';
 import {
   setMasterPassword as setMasterPasswordService,
   MasterPasswordAlreadySetError,
+  RotationInProgressError,
 } from '../../utils/storage/encryptionSession.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
@@ -150,6 +152,20 @@ describe('dashboard set-mode guard', () => {
 
     await waitForMock(() =>
       expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordAlreadySet', 'error')
+    );
+  });
+
+  it('shows the rotation-in-progress message when another tab holds the lock', async () => {
+    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(setMasterPasswordService).mockRejectedValue(new RotationInProgressError());
+    await initController();
+    checkCheckbox();
+    await waitForMock(() => expect(isShown('passwordModal')).toBe(true));
+
+    document.getElementById('savePasswordBtn')!.click();
+
+    await waitForMock(() =>
+      expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordRotationInProgress', 'error')
     );
   });
 });
