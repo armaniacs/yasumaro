@@ -9,15 +9,11 @@
 
 import { isServiceWorkerRequest } from './types.js';
 import {
-  MAX_CONTENT_LENGTH,
-  MAX_TITLE_LENGTH,
-  MAX_SEARCH_QUERY_LENGTH,
-  MAX_IMPORT_ROWS,
-  MAX_IMPORT_BYTES,
-  MAX_RESTORE_DB_BYTES,
-  MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
-  MAX_APPEND_IDS,
-  MAX_ARCHIVE_QUERY_LIMIT,
+  MAX_BYTE_STAT_BYTES,
+  MAX_CLEANSED_ELEMENTS,
+  MAX_CLEANSED_REASON_CHARS,
+  MAX_CLEANSED_REASONS,
+  VALIDATOR_LIMITS,
 } from '../utils/limits.js';
 import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
 import type {
@@ -46,53 +42,6 @@ export class ValidationError extends Error {
 export interface MessageValidator<T> {
   validate(msg: unknown): T;
 }
-
-/**
- * ByteStats bounds for VALID_VISIT payloads. Page content is capped at
- * MAX_CONTENT_LENGTH chars (≈4MiB worst-case UTF-8) and AI responses at
- * 10MiB, so 16MiB accepts every legitimate measurement with headroom while
- * rejecting absurd self-reported values. Element/reason caps likewise sit
- * orders of magnitude above real cleanser output (hundreds of elements,
- * reason keys under 20 chars).
- */
-export const MAX_BYTE_STAT_BYTES = 16 * 1024 * 1024;
-export const MAX_CLEANSED_ELEMENTS = 1_000_000;
-export const MAX_CLEANSED_REASON_CHARS = 128;
-export const MAX_CLEANSED_REASONS = 64;
-
-/**
- * Payload size caps. Oversized payloads are rejected (not truncated) so a
- * compromised or buggy sender cannot exhaust SW memory or chrome.storage
- * quota via the recording pipeline.
- */
-export const VALIDATOR_LIMITS = {
-  /** VALID_VISIT / MANUAL_RECORD body text */
-  MAX_CONTENT_LENGTH,
-  /** MANUAL_RECORD title */
-  MAX_TITLE_LENGTH,
-  /** DASHBOARD_SQLITE search query */
-  MAX_SEARCH_QUERY_LENGTH,
-  /** DASHBOARD_SQLITE import rows per request */
-  MAX_IMPORT_ROWS,
-  /** DASHBOARD_SQLITE import payload (JSON estimate) */
-  MAX_IMPORT_BYTES,
-  /** DASHBOARD_SQLITE restore_db payload */
-  MAX_RESTORE_DB_BYTES,
-  /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
-  MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
-  /** DASHBOARD_SQLITE append_to_obsidian ids per request */
-  MAX_APPEND_IDS,
-  /** DASHBOARD_SQLITE archive_query rows per request (PBI 2026-09-17-18) */
-  MAX_ARCHIVE_QUERY_LIMIT,
-  /** VALID_VISIT ByteStats byte fields (page/candidate/original/cleansed/AI-summary bytes) */
-  MAX_BYTE_STAT_BYTES,
-  /** VALID_VISIT aiSummaryCleansedElements */
-  MAX_CLEANSED_ELEMENTS,
-  /** VALID_VISIT aiSummaryCleansedReason / aiSummaryCleansedReasons[] element length */
-  MAX_CLEANSED_REASON_CHARS,
-  /** VALID_VISIT aiSummaryCleansedReasons[] element count */
-  MAX_CLEANSED_REASONS,
-} as const;
 
 // ------------------------------------------------------------------
 // Shared wire checks (PBI 2026-09-18-05): protocolVersion, http(s) URL,

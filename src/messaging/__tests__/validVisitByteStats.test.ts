@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   ValidVisitValidator,
   ValidationError,
+} from '../validators.js';
+import {
   MAX_BYTE_STAT_BYTES,
   MAX_CLEANSED_ELEMENTS,
   MAX_CLEANSED_REASON_CHARS,
   MAX_CLEANSED_REASONS,
-} from '../validators.js';
+} from '../../utils/limits.js';
 
 const v = new ValidVisitValidator();
 

@@ -5,7 +5,7 @@ import {
   MAX_CLEANSED_ELEMENTS,
   MAX_CLEANSED_REASON_CHARS,
   MAX_CLEANSED_REASONS,
-} from '../../../../messaging/validators.js';
+} from '../../../../utils/limits.js';
 import type { RecordingContext } from '../../types.js';
 
 function makeContext(data: Record<string, unknown>): RecordingContext {
