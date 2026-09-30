@@ -41,11 +41,11 @@
 
 ## 受け入れ基準
 
-- [ ] `saveDurableWrappingKey` の戻り値を検査し、失敗時は warn 以上でログに残る
-- [ ] unwrap 失敗時の再生成前に、旧 envelope を隔離キーへ退避する(1 世代)
-- [ ] 再生イベントを `logError` + ErrorCode 付きで記録する
-- [ ] consent 検証失敗の状態を UI が検知できる手段(ストレージフラグまたは既存の状態取得経路)を用意し、再同意を促す
-- [ ] 通知・監査経路(`urlNotificationHandlers` の旧通知 ID 無効)への影響をドキュメント化する
+- [x] `saveDurableWrappingKey` の戻り値を検査し、失敗時は warn 以上でログに残る
+- [x] unwrap 失敗時の再生成前に、旧 envelope を隔離キーへ退避する(1 世代)
+- [x] 再生イベントを `logError` + ErrorCode 付きで記録する
+- [x] consent 検証失敗の状態を UI が検知できる手段(ストレージフラグまたは既存の状態取得経路)を用意し、再同意を促す
+- [x] 通知・監査経路(`urlNotificationHandlers` の旧通知 ID 無効)への影響をドキュメント化する
 
 ## テスト戦略
 
@@ -72,5 +72,5 @@
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
