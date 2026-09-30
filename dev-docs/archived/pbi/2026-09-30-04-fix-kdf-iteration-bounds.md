@@ -39,11 +39,11 @@
 
 ## 受け入れ基準
 
-- [ ] unlock 経路(`unlockWithPassword`)と導出経路(`deriveKeyFromPassword`)の両方に floor(`LEGACY_PBKDF2_ITERATIONS`)と ceiling(`MAX_ENVELOPE_ITERATIONS` 相当)を適用する
-- [ ] 範囲外の値は既定値へのフォールバックではなく fail-closed(CORRUPTION 系エラー)とする
-- [ ] floor 未満は「弱 KDF 強制」、ceiling 超過は「DoS 強制」の双方を遮断する
-- [ ] 範囲外を検知したことをログに残す(値自体は出力可、秘密は出力しない)
-- [ ] 型チェック(非整数・負値・NaN・文字列)も fail-closed 扱いとする
+- [x] unlock 経路(`unlockWithPassword`)と導出経路(`deriveKeyFromPassword`)の両方に floor(`LEGACY_PBKDF2_ITERATIONS`)と ceiling(`MAX_ENVELOPE_ITERATIONS` 相当)を適用する
+- [x] 範囲外の値は既定値へのフォールバックではなく fail-closed(CORRUPTION 系エラー)とする
+- [x] floor 未満は「弱 KDF 強制」、ceiling 超過は「DoS 強制」の双方を遮断する
+- [x] 範囲外を検知したことをログに残す(値自体は出力可、秘密は出力しない)
+- [x] 型チェック(非整数・負値・NaN・文字列)も fail-closed 扱いとする
 
 ## テスト戦略
 
@@ -70,5 +70,5 @@
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
