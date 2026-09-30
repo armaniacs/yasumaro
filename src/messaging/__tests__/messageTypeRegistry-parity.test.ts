@@ -10,7 +10,8 @@ import {
     VALID_MESSAGE_TYPES,
     CONTENT_SCRIPT_ALLOWED_TYPES,
     NO_PAYLOAD_TYPES,
-} from '../../background/messageTypes.js';
+} from '../messageTypeRegistry.js';
+import * as backgroundMessageTypes from '../../background/messageTypes.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 import { isServiceWorkerRequest } from '../types.js';
 import { fetchUrlValidator, ValidationError } from '../validators.js';
@@ -107,6 +108,13 @@ describe('messaging parity: message type registry', () => {
                 protocolVersion: 1,
             }),
         ).toMatchObject({ type: 'FETCH_URL' });
+    });
+
+    it('re-exports the identical references via background/messageTypes.js', () => {
+        expect(backgroundMessageTypes.AI_TEST_PROGRESS_MESSAGE_TYPE).toBe(AI_TEST_PROGRESS_MESSAGE_TYPE);
+        expect(backgroundMessageTypes.VALID_MESSAGE_TYPES).toBe(VALID_MESSAGE_TYPES);
+        expect(backgroundMessageTypes.CONTENT_SCRIPT_ALLOWED_TYPES).toBe(CONTENT_SCRIPT_ALLOWED_TYPES);
+        expect(backgroundMessageTypes.NO_PAYLOAD_TYPES).toBe(NO_PAYLOAD_TYPES);
     });
 
     it('pins TOKEN_REQUIRED_SUBTYPES snapshot', () => {

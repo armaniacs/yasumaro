@@ -153,7 +153,7 @@ export interface RecordingResult {
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
 // protocolVersion stamping lives in MessageTransport.send (Checking Team
 // 2026-09-22: System Architect Medium — single owner for version stamping).
-import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
+import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from './messageTypeRegistry.js';
 import type { ExtensionMessage, TestObsidianResponse } from '../background/messageTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { pickDefined } from '../utils/objectUtils.js';

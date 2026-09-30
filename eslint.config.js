@@ -121,6 +121,23 @@ export default [
     },
   },
   {
+    files: ['src/messaging/**/*.ts'],
+    ignores: ['src/**/__tests__/**'],
+    languageOptions: { parser: tsParser },
+    plugins: { '@typescript-eslint': tsPlugin },
+    rules: {
+      // Core rule cannot exempt `import type`; the TS variant can.
+      'no-restricted-imports': 'off',
+      '@typescript-eslint/no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/background/**'],
+          allowTypeImports: true,
+          message: 'messaging is the neutral wire layer: no runtime import from background (import type is allowed). See dev-docs/LAYERS.md.',
+        }],
+      }],
+    },
+  },
+  {
     files: ['**/*.ts'],
     ignores: ['src/**/*.ts'],
     languageOptions: {
