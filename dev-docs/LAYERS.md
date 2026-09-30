@@ -79,6 +79,7 @@ src/utils/storage/privacyConsent.ts — 同意状態ロジック。background/po
 src/utils/storage/quota.ts
 src/utils/storage/storageMaintenance.ts
 src/utils/storage/settingsSnapshot.ts — 復号なし設定スナップショット。content scripts 用の読み専用経路
+src/utils/storage/rotationLock.ts — KEK 回転のクロスコンテキスト排他(Web Locks)
 src/utils/storage/storageTransaction.ts — withOptimisticLock 等（旧 optimisticLock.ts の後継）
 src/utils/Mutex.ts
 src/utils/rateLimiter.ts

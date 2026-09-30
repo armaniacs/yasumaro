@@ -21,6 +21,7 @@ import {
   ReencryptionAbortedError,
   MasterPasswordAlreadySetError,
   PendingRotationMismatchError,
+  RotationInProgressError,
 } from '../utils/storage/encryptionSession.js';
 import {
   validateAndSetPasswordErrors,
@@ -248,6 +249,8 @@ export class MasterPasswordController {
         showStatus('status', getMessage('masterPasswordAlreadySet'), 'error');
       } else if (e instanceof PendingRotationMismatchError) {
         showStatus('status', getMessage('masterPasswordPendingRotationMismatch'), 'error');
+      } else if (e instanceof RotationInProgressError) {
+        showStatus('status', getMessage('masterPasswordRotationInProgress'), 'error');
       } else {
         showStatus('status', errorMessage(e), 'error');
       }
@@ -323,7 +326,9 @@ export class MasterPasswordController {
         if (this.dom.passwordAuthError) {
           this.dom.passwordAuthError.textContent = e instanceof ReencryptionAbortedError
             ? this.abortMessage(e)
-            : errorMessage(e);
+            : e instanceof RotationInProgressError
+              ? getMessage('masterPasswordRotationInProgress')
+              : errorMessage(e);
           this.dom.passwordAuthError.classList.add('visible');
         }
       } finally {

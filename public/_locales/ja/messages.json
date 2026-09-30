@@ -1127,6 +1127,9 @@
   "masterPasswordAlreadySet": {
     "message": "マスターパスワードは既に設定されています。「パスワードを変更」から、現在のパスワードを入力してください。"
   },
+  "masterPasswordRotationInProgress": {
+    "message": "別のタブまたはウィンドウでマスターパスワードを変更中です。完了してからもう一度お試しください。"
+  },
   "masterPasswordPendingRotationMismatch": {
     "message": "前回のマスターパスワード変更が中断されています。前回入力した新しいパスワードをもう一度入力して完了してください。何も変更していません。"
   },

@@ -67,6 +67,7 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   },
   MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
   PendingRotationMismatchError: class PendingRotationMismatchError extends Error {},
+  RotationInProgressError: class RotationInProgressError extends Error {},
 }));
 
 vi.stubGlobal('chrome', {

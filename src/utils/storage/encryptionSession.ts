@@ -44,6 +44,8 @@ import { StorageTransaction } from './storageTransaction.js';
 import { ChromeStoragePort, type StoragePort } from './storagePort.js';
 
 export { ReencryptionAbortedError };
+import { withRotationLock, RotationInProgressError } from './rotationLock.js';
+export { RotationInProgressError };
 
 /** Thrown by setMasterPassword when a master password already exists; use changeMasterPassword. */
 export class MasterPasswordAlreadySetError extends Error {
@@ -613,16 +615,18 @@ export async function isEncryptionLocked(): Promise<boolean> {
  * @returns {Promise<boolean>} 成功した場合true
  */
 export async function setMasterPassword(password: string): Promise<boolean> {
-    // Outside the re-encryption path on purpose: with no ciphertext that path
-    // never verifies the old KEK, so only this check stops a set from
-    // overwriting an existing password's salt/hash without proving it.
-    if (await isMasterPasswordEnabled()) {
-        throw new MasterPasswordAlreadySetError();
-    }
-    await rotateToNewMasterPassword({
-        password,
-        resolvePrevious: () => getOrCreateEncryptionKey(),
-        lockAfter: true,
+    await withRotationLock(async () => {
+        // Outside the re-encryption path on purpose: with no ciphertext that path
+        // never verifies the old KEK, so only this check stops a set from
+        // overwriting an existing password's salt/hash without proving it.
+        if (await isMasterPasswordEnabled()) {
+            throw new MasterPasswordAlreadySetError();
+        }
+        await rotateToNewMasterPassword({
+            password,
+            resolvePrevious: () => getOrCreateEncryptionKey(),
+            lockAfter: true,
+        });
     });
 
     // 【セキュリティ修正】設定時はパスワードキャッシュをクリア（ロック状態で開始）
@@ -734,12 +738,12 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
         return false;
     }
 
-    await rotateToNewMasterPassword({
+    await withRotationLock(() => rotateToNewMasterPassword({
         password: newPassword,
         // Session already holds the old KEK after unlock: no extra KDF.
         resolvePrevious: () => getOrCreateEncryptionKey(),
         lockAfter: false,
-    });
+    }));
 
     // Take over the session with the new password (replaces the removed
     // second unlockWithPassword call and its extra KDF + rate-limit count).
@@ -760,6 +764,10 @@ export async function changeMasterPassword(oldPassword: string, newPassword: str
  * @param {string} [password] - 現在のマスターパスワード（dashboard の認証モーダルが渡す）。省略時はセッションキャッシュを使う
  */
 export async function removeMasterPassword(password?: string): Promise<void> {
+    return withRotationLock(() => removeMasterPasswordUnlocked(password));
+}
+
+async function removeMasterPasswordUnlocked(password?: string): Promise<void> {
     const meta = await chrome.storage.local.get([
         StorageKeys.MASTER_PASSWORD_ENABLED,
         StorageKeys.MASTER_PASSWORD_SALT,
