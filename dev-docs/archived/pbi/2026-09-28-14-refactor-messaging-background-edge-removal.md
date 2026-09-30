@@ -49,14 +49,14 @@ Scenario: lint が messaging の runtime 境界を機械的に拒否する
 
 ## 受け入れ基準
 
-- [ ] `src/background/messageTypes.ts` から runtime 定数 4 つ（`AI_TEST_PROGRESS_MESSAGE_TYPE` / `VALID_MESSAGE_TYPES` / `CONTENT_SCRIPT_ALLOWED_TYPES` / `NO_PAYLOAD_TYPES`）が `src/messaging/` へ移されている。
-- [ ] `src/background/messageTypes.ts` は re-export shim に降格しており、`ExtensionMessage` union は `import type` のまま移設されていない。
-- [ ] `src/messaging/` から `src/background/` への runtime import が 0 件になっている（type-only の 7 文と動的 import 2 件は対象外）。
-- [ ] `src/background/handlers/dashboardSqliteProtocol.ts` が messaging 配下へ移され、`messaging/sqliteMessages.ts` および `messaging/sqliteOperationSecurity.ts` と同列の wire 契約として配置されている。
-- [ ] `CURRENT_PROTOCOL_VERSION` の参照が `src/messaging/protocol.ts` の直参照 1 経路に収束している。
-- [ ] `src/messaging/` 配下から `src/background` への runtime import を拒否する `@typescript-eslint/no-restricted-imports`（`allowTypeImports: true`）設定が `files: ['src/messaging/**/*.ts']` で追加されている（`eslint/rules/utils-layer-boundary.mjs` は使わない。utils への runtime import は正当なため禁止しない）。
-- [ ] 定数値、メッセージ契約、プロトコルバージョンの値が変更されていない。
-- [ ] `npm run validate` が成功し、既存のビルド・テストに回帰がない。
+- [x] `src/background/messageTypes.ts` から runtime 定数 4 つ（`AI_TEST_PROGRESS_MESSAGE_TYPE` / `VALID_MESSAGE_TYPES` / `CONTENT_SCRIPT_ALLOWED_TYPES` / `NO_PAYLOAD_TYPES`）が `src/messaging/` へ移されている。
+- [x] `src/background/messageTypes.ts` は re-export shim に降格しており、`ExtensionMessage` union は `import type` のまま移設されていない。
+- [x] `src/messaging/` から `src/background/` への runtime import が 0 件になっている（type-only の 7 文と動的 import 2 件は対象外）。
+- [x] `src/background/handlers/dashboardSqliteProtocol.ts` が messaging 配下へ移され、`messaging/sqliteMessages.ts` および `messaging/sqliteOperationSecurity.ts` と同列の wire 契約として配置されている。
+- [x] `CURRENT_PROTOCOL_VERSION` の参照が `src/messaging/protocol.ts` の直参照 1 経路に収束している。
+- [x] `src/messaging/` 配下から `src/background` への runtime import を拒否する `@typescript-eslint/no-restricted-imports`（`allowTypeImports: true`）設定が `files: ['src/messaging/**/*.ts']` で追加されている（`eslint/rules/utils-layer-boundary.mjs` は使わない。utils への runtime import は正当なため禁止しない）。
+- [x] 定数値、メッセージ契約、プロトコルバージョンの値が変更されていない。
+- [x] `npm run validate` が成功し、既存のビルド・テストに回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -350,17 +350,17 @@ git commit -m "docs(pbi): 09-28 PBI 14(messaging から background への edge �
 
 ## Definition of Done
 
-- [ ] runtime 定数 4 つ（`AI_TEST_PROGRESS_MESSAGE_TYPE` / `VALID_MESSAGE_TYPES` / `CONTENT_SCRIPT_ALLOWED_TYPES` / `NO_PAYLOAD_TYPES`）が `src/messaging/` へ移されている。
-- [ ] `src/background/messageTypes.ts` が re-export shim に降格し、`ExtensionMessage` union が `import type` のまま残されている。
-- [ ] `src/messaging/` から `src/background/` への runtime import が 0 件になっている。
-- [ ] type-only import 7 文が `import type` のまま維持されている。
-- [ ] `src/background/handlers/dashboardSqliteProtocol.ts` が messaging 配下へ移され、wire 契約として配置されている。
-- [ ] `CURRENT_PROTOCOL_VERSION` の参照が `src/messaging/protocol.ts` の直参照 1 経路に収束している。
-- [ ] `@typescript-eslint/no-restricted-imports` の `files: ['src/messaging/**/*.ts']` ブロックが background への runtime import を拒否し、`import type` を許容する。
-- [ ] `messageTypes` 経由の `CURRENT_PROTOCOL_VERSION` import が 0 件で、実装ガイド P3 の `rg` が空である。
-- [ ] `npm run check-deprecated-aliases` が shim 化後も成功している。
-- [ ] 既存の protocol-version 関連 pin テストが import パスを mock していた場合の更新が完了している。
-- [ ] 定数値、メッセージ契約、プロトコルバージョンの値が変更されていない。
-- [ ] `npm run validate` が成功し、既存テストとビルドに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] runtime 定数 4 つ（`AI_TEST_PROGRESS_MESSAGE_TYPE` / `VALID_MESSAGE_TYPES` / `CONTENT_SCRIPT_ALLOWED_TYPES` / `NO_PAYLOAD_TYPES`）が `src/messaging/` へ移されている。
+- [x] `src/background/messageTypes.ts` が re-export shim に降格し、`ExtensionMessage` union が `import type` のまま残されている。
+- [x] `src/messaging/` から `src/background/` への runtime import が 0 件になっている。
+- [x] type-only import 7 文が `import type` のまま維持されている。
+- [x] `src/background/handlers/dashboardSqliteProtocol.ts` が messaging 配下へ移され、wire 契約として配置されている。
+- [x] `CURRENT_PROTOCOL_VERSION` の参照が `src/messaging/protocol.ts` の直参照 1 経路に収束している。
+- [x] `@typescript-eslint/no-restricted-imports` の `files: ['src/messaging/**/*.ts']` ブロックが background への runtime import を拒否し、`import type` を許容する。
+- [x] `messageTypes` 経由の `CURRENT_PROTOCOL_VERSION` import が 0 件で、実装ガイド P3 の `rg` が空である。
+- [x] `npm run check-deprecated-aliases` が shim 化後も成功している。
+- [x] 既存の protocol-version 関連 pin テストが import パスを mock していた場合の更新が完了している。
+- [x] 定数値、メッセージ契約、プロトコルバージョンの値が変更されていない。
+- [x] `npm run validate` が成功し、既存テストとビルドに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
 - [ ] コードレビューが完了している。
