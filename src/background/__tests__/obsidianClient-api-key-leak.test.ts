@@ -13,6 +13,7 @@
  */
 
 import { ObsidianClient } from '../obsidianClient.js';
+import { EncryptionLockedError } from '../../utils/storage/encryptionLockedError.js';
 import { vi } from 'vitest';
 import * as storage from '../../utils/storage/types.js';
 
@@ -141,10 +142,10 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
   });
 
   it('never emits a full raw key even when an object-shaped key slips into settings', async () => {
-    // Simulates an encryption failure that yields an object instead of a string.
+    // Simulates a locked session: an undecrypted envelope reaches the consumer.
     mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: { fullKey: RAW_KEY } });
 
-    await expect(client._getConfig()).rejects.toThrow(/API key is missing/);
+    await expect(client._getConfig()).rejects.toBeInstanceOf(EncryptionLockedError);
 
     for (const call of consoleErrorSpy.mock.calls) {
       expect(JSON.stringify(call)).not.toContain(RAW_KEY);

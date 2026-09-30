@@ -20,6 +20,7 @@ import { FailureKind, createFailure, withFailure } from '../../../utils/failureT
 import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { PROVIDER_ALLOWLIST_ROWS, isAllowedProviderBaseUrl, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
+import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedError.js';
 
 /** The only origin Gemini traffic may ever target (fixed-endpoint provider). */
 export const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
@@ -78,6 +79,7 @@ export class GeminiProvider extends HttpProviderStrategy {
         // storage.jsのStorageKeysと対応するキー名を使用（snake_case）。
         // GEMINI_API_KEY は復号済みで string として返るが、型上 EncryptedData も
         // 許容するため、decrypt 済みであることを明示して string に絞る。
+        assertApiKeyResolved(settings[StorageKeys.GEMINI_API_KEY]);
         const storedKey = settings[StorageKeys.GEMINI_API_KEY] as string | undefined;
         this.apiKey = storedKey
             ?? (DEFAULT_SETTINGS[StorageKeys.GEMINI_API_KEY] as string);

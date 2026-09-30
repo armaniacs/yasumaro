@@ -8,6 +8,7 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys, Settings } from './storage/types.js';
 import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
+import { assertApiKeyResolved } from './storage/encryptionLockedError.js';
 import { redactSensitiveData } from './redaction.js';
 import {
     validateObsidianProtocol,
@@ -77,6 +78,7 @@ async function buildFromSettings(): Promise<ObsidianConfig> {
         isEmpty: apiKey === ''
     });
 
+    assertApiKeyResolved(apiKey);
     if (!apiKey || apiKey === '' || typeof apiKey === 'object') {
         console.error('[ObsidianClient] API Key is missing or invalid!', redactSensitiveData({
             apiKey: typeof apiKey
@@ -118,6 +120,7 @@ async function buildFromOverride(override: ObsidianConfigOverride): Promise<Obsi
         apiKey = await resolveStoredKeyForHost(host);
     }
 
+    assertApiKeyResolved(apiKey);
     if (!apiKey || typeof apiKey !== 'string') {
         // Throw to match the original behavior in testConnection
         throw new Error('API key is missing');
