@@ -29,6 +29,8 @@ export interface PrivacyConsentState {
     consentVersion?: string;
     /** ポリシーバージョンが変更され、再同意が必要かどうか */
     needsReconsent?: boolean;
+    /** 署名検証に失敗した（HMAC キー再生成など）ため同意を無効化した */
+    signatureInvalid?: boolean;
 }
 
 /** ストレージに保存される同意状態（HMAC署名付き） */
@@ -99,7 +101,7 @@ export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
                         undefined,
                         'privacyConsent.ts'
                     );
-                    return { hasConsented: false };
+                    return { hasConsented: false, needsReconsent: true, signatureInvalid: true };
                 }
             }
 

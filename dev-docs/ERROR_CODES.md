@@ -34,7 +34,13 @@ Yasumaroで使用するエラーコードの定義と使用ガイドラインで
 | `CRPT_ENC_001` | CRYPTO_ENCRYPTION_FAILURE | 暗号化失敗 | High |
 | `CRPT_KEY_001` | CRYPTO_KEY_DERIVE_FAILURE | キー派生失敗 | High |
 | `CRPT_HSH_001` | CRYPTO_HASH_FAILURE | ハッシュ計算失敗 | Medium |
-| `CRPT_HMAC_001` | CRYPTO_HMAC_FAILURE | HMAC計算失敗 | High |
+| `CRPT_HMAC_001` | CRYPTO_HMAC_FAILURE | HMAC計算失敗、および HMAC キーの unwrap 失敗による再生成・durable wrapping key の永続化失敗 | High |
+
+`CRPT_HMAC_001` の再生成イベント（`hmacKeyStore.ts`）が起きると、旧キーで作った署名はすべて検証できなくなる。影響範囲は次のとおり。
+
+- 同意署名: `getPrivacyConsent()` が `needsReconsent: true` と `signatureInvalid: true` を返し、再同意モーダルが表示される。
+- 通知 ID: `urlNotificationHandlers.ts` が `notificationHmacSigner` で署名した既発行の通知 ID は検証に失敗し、無効になる。表示中の通知のクリックは何も開かない。新規に発行する通知には影響しない。
+- 復旧用: 再生成前の旧 envelope は `<storageKey>-quarantine` に 1 世代だけ退避される。
 
 ### API通信関連 (API_)
 

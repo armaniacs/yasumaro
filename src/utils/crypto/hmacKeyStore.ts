@@ -7,6 +7,8 @@
  */
 
 import { errorMessage } from '../errorUtils.js';
+import { ErrorCode } from '../logger/types.js';
+import { logError, logWarn } from '../logger/api.js';
 import { Mutex } from '../Mutex.js';
 import {
     getWebCrypto,
@@ -83,6 +85,17 @@ const CONSENT_HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rota
 // storage area alone and is cleared when the browser closes.
 
 const HMAC_WRAPPING_KEY_SESSION = 'hmac-wrapping-key';
+
+const QUARANTINE_SUFFIX = '-quarantine';
+
+// Logging must never block key regeneration (fail-open availability).
+async function safeLog(fn: () => Promise<void>): Promise<void> {
+    try {
+        await fn();
+    } catch {
+        // Ignored on purpose.
+    }
+}
 
 interface WrappedHmacKey {
     wrapped: string;
@@ -222,7 +235,14 @@ async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
         false,
         ['wrapKey', 'unwrapKey', 'encrypt', 'decrypt']
     );
-    await saveDurableWrappingKey(key);
+    if (!(await saveDurableWrappingKey(key))) {
+        await safeLog(() => logWarn(
+            'Failed to persist durable HMAC wrapping key; it will be regenerated after the session cache is lost',
+            {},
+            ErrorCode.CRYPTO_HMAC_FAILURE,
+            'hmacKeyStore.ts'
+        ));
+    }
     return key;
 }
 
@@ -309,6 +329,14 @@ async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: s
                 return await unwrapHmacKey(stored.wrapped, stored.iv, wrappingKey);
             } catch (error: unknown) {
                 console.warn(`Failed to unwrap HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+                // One generation only; storage.local.set below would otherwise destroy the old envelope.
+                await chrome.storage.local.set({ [`${storageKey}${QUARANTINE_SUFFIX}`]: stored }).catch(() => undefined);
+                await safeLog(() => logError(
+                    'HMAC key regenerated after unwrap failure; signatures made with the old key will no longer verify',
+                    { storageKey, reason: errorMessage(error) },
+                    ErrorCode.CRYPTO_HMAC_FAILURE,
+                    'hmacKeyStore.ts'
+                ));
             }
         } else if (typeof stored === 'string' && stored.length > 0) {
             // Legacy plaintext key (pre-PBI-03): wrap and persist the encrypted
