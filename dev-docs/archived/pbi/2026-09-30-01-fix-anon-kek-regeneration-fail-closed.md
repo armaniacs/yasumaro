@@ -37,10 +37,10 @@
 
 ## 受け入れ基準
 
-- [ ] `saltBase64 && !storedSecret` で session 救済も失敗した場合、`generateAndPersistSecret()` を呼ばず fail-closed する
-- [ ] 鏡像ケース(secret あり salt なし)の既存 CORRUPTION throw(`:285-294`)は維持される
-- [ ] session storage 救済経路(`:241-265`)の現行動作は変更しない
-- [ ] 秘密値・salt がエラーメッセージ・ログに現れない
+- [x] `saltBase64 && !storedSecret` で session 救済も失敗した場合、`generateAndPersistSecret()` を呼ばず fail-closed する
+- [x] 鏡像ケース(secret あり salt なし)の既存 CORRUPTION throw(`:285-294`)は維持される
+- [x] session storage 救済経路(`:241-265`)の現行動作は変更しない
+- [x] 秘密値・salt がエラーメッセージ・ログに現れない
 
 ## テスト戦略
 
@@ -67,5 +67,5 @@
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
