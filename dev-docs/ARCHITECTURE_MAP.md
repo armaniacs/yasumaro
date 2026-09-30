@@ -52,6 +52,8 @@ Content Scripts (entrypoints/content/ + src/content/)
 | SQLite read policy (QueryPlanner) | `src/offscreen/queryPlanner.ts` | Single read seam: wire payload → StorageQuery (normalize → clamp → FTS truncate). Internals: queryNormalize / queryPlan / sqliteQueryBuilder / rowCodec; adjacent: recordsRepo (execution), browsingLogCodec (write encode) |
 | SQLite STATUS enrichment | `src/offscreen/sqliteStatus.ts` | Migration extras collection (field-isolated allSettled) + legacy-DB probes |
 | Archive wire descriptors | `src/messaging/archiveWireTable.ts` | Codec-carrying descriptor rows for archive ops (single projection source) |
+| Message-type runtime registry | `src/messaging/messageTypeRegistry.ts` | Runtime message-type constants (VALID_MESSAGE_TYPES / NO_PAYLOAD_TYPES / CONTENT_SCRIPT_ALLOWED_TYPES / AI_TEST_PROGRESS_MESSAGE_TYPE); background/messageTypes.ts re-exports them |
+| Dashboard SQLite wire contract | `src/messaging/dashboardSqliteProtocol.ts` | DASHBOARD_SQLITE subtype payload/response union + MODAL_REQUIRED_SUBTYPES |
 | Archive staging seam | `src/offscreen/archiveStaging.ts` | 14 archive ops behind ArchiveStaging (OPFS backend only); dispatch fails closed via supportsArchive/narrowing |
 | Popup content fetch | `src/popup/contentFetchGateway.ts` | Single seam for "popup asks a tab for content" (timeout + permission ladder) |
 | Cleansing badge policy | `src/utils/cleansingBadge.ts` | reason → badge text table + counts → reason derivation (Layer 0) |

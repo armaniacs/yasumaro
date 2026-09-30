@@ -124,6 +124,16 @@ utils 側は再 export シムだけになった。シムが指すのは sibling 
 残る逆辺は `storageMaintenance.ts` の 1 件だけになり、`local/utils-layer-boundary` の
 `utilsReverseEdge` が機械的に検出する（下記「機械検査」節）。
 
+#### 解決済み: messaging → background 逆辺（wire 層の中立化）
+
+`src/messaging/` は中立 wire 層であり、background への runtime import は禁止
+（`import type` と意図的な動的 import 2 件は例外）。`eslint.config.js` の
+`src/messaging/**/*.ts` ブロック（`@typescript-eslint/no-restricted-imports`、
+`allowTypeImports: true`）と `src/messaging/__tests__/layer-boundary.test.ts` が
+機械的に検査する。メッセージ種別の runtime 定数は `src/messaging/messageTypeRegistry.ts`、
+DASHBOARD_SQLITE の wire 契約は `src/messaging/dashboardSqliteProtocol.ts` に配置し、
+`src/background/messageTypes.ts` は re-export シムである。
+
 ### Layer 2 — High-level Utilities (Layer 0/1 依存)
 
 ```
