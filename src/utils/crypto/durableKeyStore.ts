@@ -18,73 +18,20 @@
  * a different store than chrome.storage.local, so the "plaintext adjacency"
  * concern of VULN-010 does not apply.
  *
- * Fails open: any IndexedDB absence or error resolves to null, and callers
- * fall back to generating a fresh key (the pre-fix behavior).
+ * Fail-open contract: any IndexedDB absence or error resolves to null /
+ * false, and callers fall back to generating a fresh key (the pre-fix
+ * behavior). secretWrappingKey talks to the same helper with the opposite
+ * contract — the difference lives in these wrappers, not in the plumbing.
  */
+
+import { createIdbKeyStorage, type IdbKeyStorage } from './idbKeyStorage.js';
 
 const DB_NAME = 'yasumaro-crypto';
 const STORE_NAME = 'hmac-wrapping-key';
 const KEY_ID = 'kek-v1';
 
 /** Minimal read/write surface used by hmacKeyStore. */
-export interface DurableKeyStorage {
-  get(): Promise<CryptoKey | null>;
-  put(key: CryptoKey): Promise<void>;
-}
-
-function idbAvailable(): boolean {
-  return typeof indexedDB !== 'undefined';
-}
-
-/** IndexedDB-backed implementation. Returns null when IndexedDB is absent. */
-function idbStorage(): DurableKeyStorage | null {
-  if (!idbAvailable()) return null;
-  return {
-    get(): Promise<CryptoKey | null> {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          req.result.createObjectStore(STORE_NAME);
-        };
-        req.onerror = () => reject(req.error ?? new Error('IDB open failed'));
-        req.onsuccess = () => {
-          const db = req.result;
-          try {
-            const get = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(KEY_ID);
-            get.onerror = () => { db.close(); reject(get.error ?? new Error('IDB get failed')); };
-            get.onsuccess = () => {
-              db.close();
-              resolve((get.result as CryptoKey | undefined) ?? null);
-            };
-          } catch (e) {
-            db.close();
-            reject(e instanceof Error ? e : new Error(String(e)));
-          }
-        };
-      });
-    },
-    put(key: CryptoKey): Promise<void> {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, 1);
-        req.onupgradeneeded = () => {
-          req.result.createObjectStore(STORE_NAME);
-        };
-        req.onerror = () => reject(req.error ?? new Error('IDB open failed'));
-        req.onsuccess = () => {
-          const db = req.result;
-          try {
-            const put = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(key, KEY_ID);
-            put.onerror = () => { db.close(); reject(put.error ?? new Error('IDB put failed')); };
-            put.onsuccess = () => { db.close(); resolve(); };
-          } catch (e) {
-            db.close();
-            reject(e instanceof Error ? e : new Error(String(e)));
-          }
-        };
-      });
-    },
-  };
-}
+export type DurableKeyStorage = IdbKeyStorage;
 
 // Injectable for tests: unit environments have no IndexedDB, so tests swap in
 // an in-memory implementation to exercise the durable path.
@@ -95,9 +42,16 @@ export function setDurableKeyStorageOverride(s: DurableKeyStorage | null): void 
   storageOverride = s;
 }
 
-/** Load the durable wrapping key, or null when absent/unavailable. */
+function activeStorage(): DurableKeyStorage | null {
+  return storageOverride ?? createIdbKeyStorage({ dbName: DB_NAME, storeName: STORE_NAME, keyId: KEY_ID, version: 1 });
+}
+
+/**
+ * Load the durable wrapping key. Fail-open: absent or broken IndexedDB is
+ * null, which this module's callers read as "generate a fresh key".
+ */
 export async function loadDurableWrappingKey(): Promise<CryptoKey | null> {
-  const storage = storageOverride ?? idbStorage();
+  const storage = activeStorage();
   if (!storage) return null;
   try {
     return await storage.get();
@@ -106,9 +60,13 @@ export async function loadDurableWrappingKey(): Promise<CryptoKey | null> {
   }
 }
 
-/** Persist the durable wrapping key. Fails open (callers regenerate later). */
+/**
+ * Persist the durable wrapping key. Fail-open: false on any failure, and the
+ * caller keeps the in-memory key (hmacKeyStore warns and relies on the
+ * session cache).
+ */
 export async function saveDurableWrappingKey(key: CryptoKey): Promise<boolean> {
-  const storage = storageOverride ?? idbStorage();
+  const storage = activeStorage();
   if (!storage) return false;
   try {
     await storage.put(key);
