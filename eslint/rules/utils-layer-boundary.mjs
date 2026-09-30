@@ -61,6 +61,8 @@ const LAYER0_FILES = [
   'src/utils/storage/apiKeyFields.ts',
   // Visit-gating default thresholds: no imports (PBI 2026-09-28-28).
   'src/utils/visitThresholds.ts',
+  // Cap registry: dependency-free constants.
+  'src/utils/limits.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md
