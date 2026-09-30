@@ -3,7 +3,7 @@ import { logError, logInfo } from '../../../utils/logger/api.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
-import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { CoreCrudDeps, DepsResult } from './deps.js';
 import { toFailure, DASHBOARD_MUTABLE_SUBSET, MAX_APPEND_IDS } from './deps.js';
 import { SQLITE_WIRE_DESCRIPTORS, type SqliteWireDescriptor, type SqliteDashboardHop } from '../../../messaging/sqliteWireTable.js';

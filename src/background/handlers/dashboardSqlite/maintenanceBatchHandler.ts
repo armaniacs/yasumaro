@@ -1,5 +1,5 @@
 import { StorageKeys } from '../../../utils/storage/types.js';
-import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
 import type { MaintenanceBatchDeps } from './deps.js';
 import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';

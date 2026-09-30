@@ -1,4 +1,4 @@
-import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { ReadOnlyDeps } from './deps.js';
 import { toFailure } from './deps.js';
 import { pickDefined } from '../../../utils/objectUtils.js';

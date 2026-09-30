@@ -12,7 +12,7 @@
  * the wire-table descriptor row, and runArchive executes the shared shape.
  */
 
-import type { DashboardSqliteRequest } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { ArchiveDeps, DepsResult } from './deps.js';
 import { toFailure } from './deps.js';
 import { ARCHIVE_SUBTYPES } from './archiveSubtypes.js';

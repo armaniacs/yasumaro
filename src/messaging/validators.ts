@@ -25,7 +25,7 @@ import type {
   RegenerateSummaryMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
-import type { DashboardSqliteRequest } from '../background/handlers/dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 import { ALL_DASHBOARD_SQLITE_SUBTYPES } from './sqliteOperationSecurity.js';
 
 export class ValidationError extends Error {

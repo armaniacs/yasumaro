@@ -13,7 +13,7 @@ export type { SqliteResult };
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import { ChromeTransport, type TransportPort } from './messageTransport.js';
 import { tokenExempt, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from './sqliteOperationSecurity.js';
-import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from './dashboardSqliteProtocol.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 

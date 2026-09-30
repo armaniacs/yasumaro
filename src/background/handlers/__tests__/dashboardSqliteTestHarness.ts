@@ -24,7 +24,7 @@ type SqliteClientBackedDepOverrides = Partial<SqliteClientBackedDeps> & {
   getConfirmToken?: () => Promise<string>;
 };
 import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
-import type { DashboardSqliteRequest } from '../dashboardSqliteProtocol.js';
+import type { DashboardSqliteRequest } from '../../../messaging/dashboardSqliteProtocol.js';
 
 /** Matches the wrapper's former defaults so migrated tests keep their behaviour. */
 function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
