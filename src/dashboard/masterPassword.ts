@@ -20,6 +20,7 @@ import {
   removeMasterPassword as removeMasterPasswordService,
   ReencryptionAbortedError,
   MasterPasswordAlreadySetError,
+  PendingRotationMismatchError,
 } from '../utils/storage/encryptionSession.js';
 import {
   validateAndSetPasswordErrors,
@@ -245,6 +246,8 @@ export class MasterPasswordController {
         showStatus('status', this.abortMessage(e), 'error');
       } else if (e instanceof MasterPasswordAlreadySetError) {
         showStatus('status', getMessage('masterPasswordAlreadySet'), 'error');
+      } else if (e instanceof PendingRotationMismatchError) {
+        showStatus('status', getMessage('masterPasswordPendingRotationMismatch'), 'error');
       } else {
         showStatus('status', errorMessage(e), 'error');
       }

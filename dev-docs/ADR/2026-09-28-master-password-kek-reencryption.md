@@ -15,8 +15,8 @@
 1. KEK 切替時は API キーを保持する。新 KEK（設定・変更時は新パスワード由来、解除時は匿名 secret 由来）へ再暗号化する。
 2. 復号不能な項目が1件でもあれば、認証メタデータと元 ciphertext に触れず処理を中止し、空文字で上書きしない。中止時は復号不能の項目名のみを UI に示す（値・復号結果・認証情報は出さない）。
 3. 確定手順は lock 取得 → 両配置（nested `settings` blob / legacy scattered key）から読取 → 旧 KEK で全件復号 → 新 KEK で再暗号化 → delta write → 新 KEK で read back 確認 → 認証メタデータ更新 → キャッシュと `IS_LOCKED` 更新。確認が通るまで認証メタデータに触れない。lock は settings トランザクションの CAS リトライで直列化し（nested 書き込み）、試行検出の冪等性により再実行は収束する。UI の二重実行ガードと合わせ、タブ跨ぎの同時実行は残存リスクとして受容する。
-4. 再開規則: 項目ごとに旧 KEK → 新 KEK の順で復号を試み、新で読めれば移行済みとして skip する（試行検出）。進捗マーカーは使わない。設定・変更時は新 salt を `master_password_pending_salt` に先行保存する。中断時はアンカーを残し、次回実行で同じ新 KEK を再導出して収束させる。認証メタデータが当該 salt を担った場合にのみアンカーを削除する（salt 単体では鍵を導出できないため認証状態は変わらない）。
-5. `settings` への書き込みは delta のみとし、スナップショット全量を書き戻さない。`master_password_pending_salt` は settings blob へ移行しない（top-level 固定）。
+4. 再開規則: 項目ごとに旧 KEK → 新 KEK の順で復号を試み、新で読めれば移行済みとして skip する（試行検出）。進捗マーカーは使わない。設定・変更時は新 salt と入力パスワードの hash を `master_password_pending_salt` / `master_password_pending_hash` に先行保存する。異なるパスワードでの再試行は書き込み前に専用エラーで拒否する。中断時はアンカーを残し、次回実行で同じ新 KEK を再導出して収束させる。認証メタデータが当該 salt を担った場合にのみアンカーを削除する（salt 単体では鍵を導出できないため認証状態は変わらない）。
+5. `settings` への書き込みは delta のみとし、スナップショット全量を書き戻さない。`master_password_pending_salt` / `master_password_pending_hash` は settings blob へ移行しない（top-level 固定）。
 
 ## Consequences
 

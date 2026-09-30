@@ -28,6 +28,7 @@ const LEVEL1_FIELDS = [
   'password',
   'token',
   'master_password_hash',
+  'master_password_pending_hash',
   'hmac_secret',
   // From logMasker.ts (LEVEL1_FIELDS)
   'api_key',

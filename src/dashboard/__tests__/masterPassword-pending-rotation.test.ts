@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 /**
- * When a master password already exists (per storage, not per checkbox), the
- * dashboard must route "enable" actions to the change flow (old password
- * authentication) instead of opening the set modal.
+ * When an interrupted KEK rotation exists and the user retries with a
+ * different password, the dashboard shows the localized pending-rotation
+ * message (with recovery guidance) instead of the generic error text.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { waitForMock } from '../../../testDir/waitPolicy.js';
@@ -52,7 +52,7 @@ vi.stubGlobal('chrome', {
 import { isMasterPasswordSet } from '../../utils/masterPassword.js';
 import {
   setMasterPassword as setMasterPasswordService,
-  MasterPasswordAlreadySetError,
+  PendingRotationMismatchError,
 } from '../../utils/storage/encryptionSession.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
@@ -78,8 +78,6 @@ function setupDOM(): void {
     </div>`;
 }
 
-const isShown = (id: string): boolean => !document.getElementById(id)!.classList.contains('hidden');
-
 async function initController(): Promise<void> {
   vi.resetModules();
   const { initMasterPasswordSettings } = await import('../masterPassword.js');
@@ -92,56 +90,17 @@ function checkCheckbox(): void {
   cb.dispatchEvent(new Event('change'));
 }
 
-describe('dashboard set-mode guard', () => {
+const isShown = (id: string): boolean => !document.getElementById(id)!.classList.contains('hidden');
+
+describe('dashboard pending-rotation mismatch', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setupDOM();
   });
 
-  it('routes checkbox ON to the auth modal, not the set modal, when a password is already set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
-    await initController();
-
-    checkCheckbox();
-
-    await waitForMock(() => expect(isShown('passwordAuthModal')).toBe(true));
-    expect(isShown('passwordModal')).toBe(false);
-  });
-
-  it('routes the "set now" button to the auth modal when a password is already set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
-    await initController();
-
-    document.getElementById('setMasterPasswordNowBtn')!.click();
-
-    await waitForMock(() => expect(isShown('passwordAuthModal')).toBe(true));
-    expect(isShown('passwordModal')).toBe(false);
-  });
-
-  it('opens the set modal when no password is set (fresh install)', async () => {
+  it('shows the localized pending-rotation message when the service reports a mismatch', async () => {
     vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
-    await initController();
-
-    checkCheckbox();
-
-    await waitForMock(() => expect(isShown('passwordModal')).toBe(true));
-    expect(isShown('passwordAuthModal')).toBe(false);
-    expect(document.getElementById('passwordModalTitle')!.textContent).toBe('i18n_setMasterPassword');
-  });
-
-  it('never calls the set service when the set flow is diverted', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
-    await initController();
-
-    checkCheckbox();
-    await waitForMock(() => expect(isShown('passwordAuthModal')).toBe(true));
-
-    expect(setMasterPasswordService).not.toHaveBeenCalled();
-  });
-
-  it('shows the localized already-set message when the service refuses a set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
-    vi.mocked(setMasterPasswordService).mockRejectedValue(new MasterPasswordAlreadySetError());
+    vi.mocked(setMasterPasswordService).mockRejectedValue(new PendingRotationMismatchError());
     await initController();
     checkCheckbox();
     await waitForMock(() => expect(isShown('passwordModal')).toBe(true));
@@ -149,7 +108,26 @@ describe('dashboard set-mode guard', () => {
     document.getElementById('savePasswordBtn')!.click();
 
     await waitForMock(() =>
-      expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordAlreadySet', 'error')
+      expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordPendingRotationMismatch', 'error'),
+    );
+  });
+
+  it('the mismatch message differs from the generic abort message', async () => {
+    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(setMasterPasswordService).mockRejectedValue(new PendingRotationMismatchError());
+    await initController();
+    checkCheckbox();
+    await waitForMock(() => expect(isShown('passwordModal')).toBe(true));
+
+    document.getElementById('savePasswordBtn')!.click();
+
+    await waitForMock(() =>
+      expect(showStatus).toHaveBeenCalledWith('status', 'i18n_masterPasswordPendingRotationMismatch', 'error'),
+    );
+    expect(showStatus).not.toHaveBeenCalledWith(
+      'status',
+      expect.stringContaining('i18n_masterPasswordReencryptAborted'),
+      'error',
     );
   });
 });

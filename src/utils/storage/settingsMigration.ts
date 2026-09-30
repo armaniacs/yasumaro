@@ -144,6 +144,7 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // new salt before auth metadata is updated. Migrating it into the blob
     // would silently break resume (the blob reader cannot see it in time).
     StorageKeys.MASTER_PASSWORD_PENDING_SALT,
+    StorageKeys.MASTER_PASSWORD_PENDING_HASH,
     // Version-managed state read straight from storage (privacyConsent.ts,
     // trancoConsentManager.ts). Moving them into the blob would reset the
     // consent / Tranco UI state the user already acknowledged.

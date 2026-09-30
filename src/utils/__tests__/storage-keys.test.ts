@@ -28,6 +28,7 @@ describe('getSettings key refinement', () => {
       StorageKeys.MASTER_PASSWORD_HASH,
       // PBI 2026-09-27: KEK-transition anchor. Recovery state, never UI data.
       StorageKeys.MASTER_PASSWORD_PENDING_SALT,
+      StorageKeys.MASTER_PASSWORD_PENDING_HASH,
       StorageKeys.IS_LOCKED,
       StorageKeys.YASUMARO_MIGRATION_STATUS,
       StorageKeys.YASUMARO_MIGRATION_PROGRESS,

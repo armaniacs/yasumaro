@@ -52,6 +52,14 @@ export class MasterPasswordAlreadySetError extends Error {
     this.name = 'MasterPasswordAlreadySetError';
   }
 }
+
+/** Thrown when a rotation is retried with a different password than the interrupted one. */
+export class PendingRotationMismatchError extends Error {
+  constructor() {
+    super('PendingRotationMismatchError: an interrupted master password rotation exists; retry with the password you entered before');
+    this.name = 'PendingRotationMismatchError';
+  }
+}
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 import { isLocked as authGuardIsLocked } from './authGuard.js';
 import { Mutex } from '../Mutex.js';
@@ -477,6 +485,9 @@ async function reencryptApiKeysToKek(options: {
  * interrupted run re-derives the identical next KEK on retry (resume), while
  * a run that never reaches the metadata write leaves the anchor for the next
  * attempt instead of stranding migrated items.
+ *
+ * The anchor is the salt plus the hash of the entered password. A retry with
+ * a different password is rejected with `PendingRotationMismatchError`.
  */
 async function rotateToNewMasterPassword(options: {
   password: string;
@@ -488,14 +499,25 @@ async function rotateToNewMasterPassword(options: {
     throw new Error(policy.reason);
   }
   const port = new ChromeStoragePort();
-  const anchored = await port.get(StorageKeys.MASTER_PASSWORD_PENDING_SALT);
+  const anchored = await port.get([
+    StorageKeys.MASTER_PASSWORD_PENDING_SALT,
+    StorageKeys.MASTER_PASSWORD_PENDING_HASH,
+  ]);
   const anchoredSalt = anchored[StorageKeys.MASTER_PASSWORD_PENDING_SALT] as string | undefined;
+  const anchoredHash = anchored[StorageKeys.MASTER_PASSWORD_PENDING_HASH] as string | undefined;
   const saltBase64 = anchoredSalt ?? bytesToBase64(generateSalt());
-  if (anchoredSalt === undefined) {
-    await port.set({ [StorageKeys.MASTER_PASSWORD_PENDING_SALT]: saltBase64 });
-  }
   const salt = base64ToBytes(saltBase64);
   const hash = await hashPasswordWithPBKDF2(options.password, salt);
+  if (anchoredSalt === undefined) {
+    await port.set({
+      [StorageKeys.MASTER_PASSWORD_PENDING_SALT]: saltBase64,
+      [StorageKeys.MASTER_PASSWORD_PENDING_HASH]: hash,
+    });
+  } else if (anchoredHash !== undefined && !(await constantTimeCompare(hash, anchoredHash))) {
+    // Thrown before the try/finally below: nothing has been written yet, so the
+    // anchor and every ciphertext stay exactly as the interrupted run left them.
+    throw new PendingRotationMismatchError();
+  }
   try {
     await withPreservedSessionCache(async () => {
       // resolvePrevious stays inside the lazy resolver: a run with no
@@ -518,7 +540,7 @@ async function rotateToNewMasterPassword(options: {
   } finally {
     const meta = await chrome.storage.local.get(StorageKeys.MASTER_PASSWORD_SALT);
     if (meta[StorageKeys.MASTER_PASSWORD_SALT] === saltBase64) {
-      if (port.remove) await port.remove(StorageKeys.MASTER_PASSWORD_PENDING_SALT);
+      if (port.remove) await port.remove([StorageKeys.MASTER_PASSWORD_PENDING_SALT, StorageKeys.MASTER_PASSWORD_PENDING_HASH]);
       else throw new Error('StoragePort.remove is required to clean up the rotation anchor');
     }
   }

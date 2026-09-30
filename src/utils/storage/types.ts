@@ -102,7 +102,8 @@ export const StorageKeys = {
     MASTER_PASSWORD_SALT: 'master_password_salt',       // マスターパスワード用ソルト（Base64）
     MASTER_PASSWORD_HASH: 'master_password_hash',       // マスターパスワードのハッシュ（Base64）
     MASTER_PASSWORD_KDF_ITERATIONS: 'master_password_kdf_iterations', // KDF反復回数（VULN-019）
-    MASTER_PASSWORD_PENDING_SALT: 'master_password_pending_salt', // KEK 切替中の新 salt 一時置き場。成功時に MASTER_PASSWORD_SALT へ昇格、中止時に削除。再開可能性のアンカーであり認証状態は変えない
+    MASTER_PASSWORD_PENDING_SALT: 'master_password_pending_salt', // KEK 切替中の新 salt 一時置き場。成功時に MASTER_PASSWORD_SALT へ昇格して削除、中断時は再開用に保持。再開可能性のアンカーであり認証状態は変えない
+    MASTER_PASSWORD_PENDING_HASH: 'master_password_pending_hash', // 上記 salt で導出した新パスワードの hash。別パスワードでの再試行を検出する
     IS_LOCKED: 'is_locked',                  // 暗号化がロックされているかどうか
     // 【マスターパスワード保護オプション】
     MP_PROTECTION_ENABLED: 'mp_protection_enabled',    // マスターパスワード保護有効フラグ
@@ -365,6 +366,7 @@ export interface StorageKeyValues {
     [StorageKeys.MASTER_PASSWORD_HASH]: string;
     [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: number;
     [StorageKeys.MASTER_PASSWORD_PENDING_SALT]: string;
+    [StorageKeys.MASTER_PASSWORD_PENDING_HASH]: string;
     [StorageKeys.IS_LOCKED]: boolean;
     [StorageKeys.MP_PROTECTION_ENABLED]: boolean;
     [StorageKeys.MP_ENCRYPT_API_KEYS]: boolean;
