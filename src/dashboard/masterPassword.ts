@@ -109,6 +109,9 @@ export class MasterPasswordController {
   // failure, so the open change modal stays retryable. Never persisted.
   private pendingOldPassword: string | null = null;
   private saveInFlight = false;
+  // Checkbox state before the user's toggle; the DOM value is already flipped
+  // by the time save runs, so it cannot be read back then.
+  private preToggleChecked = false;
 
   constructor(domRefs?: MasterPasswordDomRefs) {
     this.dom = domRefs ?? resolveDefaultDomRefs();
@@ -135,12 +138,10 @@ export class MasterPasswordController {
     const titleKey = mode === 'change' ? 'changeMasterPassword' : 'setMasterPassword';
     if (this.dom.passwordModalTitle) this.dom.passwordModalTitle.textContent = getMessage(titleKey);
     if (this.dom.passwordModalDesc) this.dom.passwordModalDesc.textContent = getMessage('setMasterPasswordDesc');
-    if (mode === 'change' && this.dom.confirmPasswordGroup) this.dom.confirmPasswordGroup.classList.remove('hidden');
+    // Only the set flow collects a confirmation; hide label, input and error together.
+    this.dom.confirmPasswordGroup?.classList.toggle('hidden', mode === 'change');
     if (this.dom.masterPasswordInput) this.dom.masterPasswordInput.value = '';
-    if (this.dom.masterPasswordConfirm) {
-      this.dom.masterPasswordConfirm.value = '';
-      this.dom.masterPasswordConfirm.classList.toggle('hidden', mode === 'change');
-    }
+    if (this.dom.masterPasswordConfirm) this.dom.masterPasswordConfirm.value = '';
     if (this.dom.passwordStrengthError) this.dom.passwordStrengthError.textContent = '';
     if (this.dom.passwordMatchError) this.dom.passwordMatchError.textContent = '';
     this.updatePasswordStrength('');
@@ -148,7 +149,7 @@ export class MasterPasswordController {
     this.dom.passwordModal.style.display = 'flex';
     void this.dom.passwordModal.offsetHeight;
     this.dom.passwordModal.classList.add('show');
-    this.passwordTrapId = focusTrapManager.trap(this.dom.passwordModal, () => this.closePasswordModal());
+    this.passwordTrapId = focusTrapManager.trap(this.dom.passwordModal, () => this.cancelPasswordModal());
     this.dom.masterPasswordInput?.focus();
   }
 
@@ -164,6 +165,18 @@ export class MasterPasswordController {
     if (this.dom.passwordMatchError) this.dom.passwordMatchError.textContent = '';
     this.pendingOldPassword = null;
     this.updatePasswordStrength('');
+  }
+
+  // User-initiated dismissal: the checkbox may have been toggled optimistically,
+  // so re-read storage instead of trusting the DOM.
+  private cancelPasswordModal(): void {
+    this.closePasswordModal();
+    void this.loadSettings();
+  }
+
+  private cancelPasswordAuthModal(): void {
+    this.closePasswordAuthModal();
+    void this.loadSettings();
   }
 
   private async savePassword(): Promise<void> {
@@ -202,7 +215,6 @@ export class MasterPasswordController {
       if (validateAndSetMatchErrors(password, confirmPasswordValue, this.dom.passwordMatchError)) return;
     }
 
-    const wasChecked = this.dom.masterPasswordEnabled?.checked ?? false;
     try {
       if (this.passwordModalMode === 'change') {
         const oldPassword = this.pendingOldPassword;
@@ -225,7 +237,10 @@ export class MasterPasswordController {
       if (this.dom.masterPasswordOptions) this.dom.masterPasswordOptions.classList.remove('hidden');
       this.updateMasterPasswordWarningVisibility(true);
     } catch (e) {
-      if (this.dom.masterPasswordEnabled) this.dom.masterPasswordEnabled.checked = wasChecked;
+      // In change mode the checkbox was never toggled by this flow.
+      if (this.passwordModalMode === 'set' && this.dom.masterPasswordEnabled) {
+        this.dom.masterPasswordEnabled.checked = this.preToggleChecked;
+      }
       if (e instanceof ReencryptionAbortedError) {
         showStatus('status', this.abortMessage(e), 'error');
       } else if (e instanceof MasterPasswordAlreadySetError) {
@@ -245,7 +260,7 @@ export class MasterPasswordController {
     this.dom.passwordAuthModal.style.display = 'flex';
     void this.dom.passwordAuthModal.offsetHeight;
     this.dom.passwordAuthModal.classList.add('show');
-    this.passwordAuthTrapId = focusTrapManager.trap(this.dom.passwordAuthModal, () => this.closePasswordAuthModal());
+    this.passwordAuthTrapId = focusTrapManager.trap(this.dom.passwordAuthModal, () => this.cancelPasswordAuthModal());
     this.dom.masterPasswordAuthInput?.focus();
   }
 
@@ -354,6 +369,7 @@ export class MasterPasswordController {
     if (dom.masterPasswordEnabled && dom.masterPasswordOptions) {
       dom.masterPasswordEnabled.addEventListener('change', async (e: Event) => {
         const isChecked = (e.target as HTMLInputElement).checked;
+        this.preToggleChecked = !isChecked;
         if (isChecked) {
           await this.beginSetOrChange();
         } else {
@@ -378,6 +394,7 @@ export class MasterPasswordController {
     }
 
     dom.setMasterPasswordNowBtn?.addEventListener('click', async () => {
+      this.preToggleChecked = dom.masterPasswordEnabled?.checked ?? false;
       if (dom.masterPasswordEnabled) dom.masterPasswordEnabled.checked = true;
       await this.beginSetOrChange();
     });
@@ -388,21 +405,21 @@ export class MasterPasswordController {
       if (dom.masterPasswordInput) this.updatePasswordStrength(dom.masterPasswordInput.value);
     });
 
-    dom.closePasswordModalBtn?.addEventListener('click', () => this.closePasswordModal());
-    dom.cancelPasswordBtn?.addEventListener('click', () => this.closePasswordModal());
+    dom.closePasswordModalBtn?.addEventListener('click', () => this.cancelPasswordModal());
+    dom.cancelPasswordBtn?.addEventListener('click', () => this.cancelPasswordModal());
     dom.savePasswordBtn?.addEventListener('click', () => this.savePassword());
     dom.passwordModal?.addEventListener('click', (e: MouseEvent) => {
-      if (e.target === dom.passwordModal) this.closePasswordModal();
+      if (e.target === dom.passwordModal) this.cancelPasswordModal();
     });
 
-    dom.closePasswordAuthModalBtn?.addEventListener('click', () => this.closePasswordAuthModal());
-    dom.cancelPasswordAuthBtn?.addEventListener('click', () => this.closePasswordAuthModal());
+    dom.closePasswordAuthModalBtn?.addEventListener('click', () => this.cancelPasswordAuthModal());
+    dom.cancelPasswordAuthBtn?.addEventListener('click', () => this.cancelPasswordAuthModal());
     dom.submitPasswordAuthBtn?.addEventListener('click', () => this.authenticatePassword());
     dom.masterPasswordAuthInput?.addEventListener('keypress', (e: KeyboardEvent) => {
       if (e.key === 'Enter') this.authenticatePassword();
     });
     dom.passwordAuthModal?.addEventListener('click', (e: MouseEvent) => {
-      if (e.target === dom.passwordAuthModal) this.closePasswordAuthModal();
+      if (e.target === dom.passwordAuthModal) this.cancelPasswordAuthModal();
     });
   }
 
