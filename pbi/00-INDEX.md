@@ -14,27 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-09-30 adversarial code review ラウンド（encryption 関連） — ⬜ 未着手 13件 🔧非機能追加
+### 2026-09-30 adversarial code review ラウンド（encryption 関連） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
 
-adversarial-code-review skill による encryption 関連モジュール（encryptionSession / apiKeyTransition / masterPassword 2種 / crypto primitives / SettingsRepository / settingsMigration）の攻撃視点レビューから抽出した 13 候補を RICE 採点して PBI 化。発見 25 指摘のうち重大度上位を反証エージェントで検証し、主要な到達可能性の主張は配線コードを直接確認済み。却下された指摘（誤検出 6 件）の記録を含む詳細は [2026-09-30-00-backlog-adversarial-review-0930.md](2026-09-30-00-backlog-adversarial-review-0930.md)。
-
-**実装順の注意**: 02 → 07 の順（同一ファイル、service ガードを先行）、03 / 08 / 09 は encryptionSession 周辺でバッチ分割・直列着地推奨、01 / 04 は独立 quick win。
-
-| 順位 | NN | PBI | 種別 | RICE | SP |
-|---|---|---|---|---:|---:|
-| 1 | 01 | fix-anon-kek-regeneration-fail-closed | fix | 36.0 | 1.0 |
-| 2 | 02 | fix-master-password-set-takeover-guard | fix | 12.0 | 2.0 |
-| 3 | 03 | fix-encryption-aad-field-binding | fix | 10.7 | 5.0 |
-| 4 | 04 | fix-kdf-iteration-bounds | fix | 8.0 | 1.0 |
-| 5 | 05 | fix-hmac-key-regeneration-visibility | fix | 8.0 | 2.0 |
-| 6 | 06 | fix-sw-decryption-lock-propagation | fix | 4.8 | 3.0 |
-| 7 | 07 | fix-dashboard-mp-ui-state-bugs | fix | 4.0 | 1.0 |
-| 8 | 08 | fix-pending-salt-password-binding | fix | 4.0 | 2.0 |
-| 9 | 09 | fix-kek-rotation-cross-context-lock | fix | 3.2 | 2.0 |
-| 10 | 10 | test-restore-assertion-integrity | test | 2.0 | 1.0 |
-| 11 | 11 | refactor-remove-dead-masterpassword-module | refactor | 2.0 | 1.0 |
-| 12 | 12 | fix-export-hmac-iterations | fix | 2.0 | 2.0 |
-| 13 | 13 | refactor-idb-keystore-consolidation | refactor | 1.0 | 1.0 |
+adversarial-code-review skill による encryption 関連モジュールの攻撃視点レビューから抽出した 13 候補を RICE 採点して PBI 化。全件実装・全ゲート green で 2026-09-30 にアーカイブ（アーカイブ履歴参照）。詳細は [2026-09-30-00-backlog-adversarial-review-0930.md](2026-09-30-00-backlog-adversarial-review-0930.md)（live 台帳として残置）。
 
 ### 2026-09-29 大局的コードレビュー改善ラウンド第2弾 — ✅ 10件完了・アーカイブ済み 🔧非機能追加
 
@@ -226,6 +208,22 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-09-30 adversarial code review ラウンド アーカイブ — ✅ 13件完了（01-13 アーカイブ済み）
+
+- [2026-09-30-01-fix-anon-kek-regeneration-fail-closed.md](../dev-docs/archived/pbi/2026-09-30-01-fix-anon-kek-regeneration-fail-closed.md)（✅ 完了 — `785d3a7b` + `c4da6513`。fix。匿名 KEK の secret 欠落時に salt 再生成せず fail-closed。RICE 36.0・1 SP）
+- [2026-09-30-02-fix-master-password-set-takeover-guard.md](../dev-docs/archived/pbi/2026-09-30-02-fix-master-password-set-takeover-guard.md)（✅ 完了 — `27e019ca`。fix。設定済み MP の set 経路を service 層で拒否。RICE 12.0・2 SP）
+- [2026-09-30-03-fix-encryption-aad-field-binding.md](../dev-docs/archived/pbi/2026-09-30-03-fix-encryption-aad-field-binding.md)（✅ 完了 — `573d02f8`。fix。暗号文を保存先フィールドへ AAD 束縛。RICE 10.7・5 SP）
+- [2026-09-30-04-fix-kdf-iteration-bounds.md](../dev-docs/archived/pbi/2026-09-30-04-fix-kdf-iteration-bounds.md)（✅ 完了 — `e584808f`。fix。保存済み KDF iterations に上下限。RICE 8.0・1 SP）
+- [2026-09-30-05-fix-hmac-key-regeneration-visibility.md](../dev-docs/archived/pbi/2026-09-30-05-fix-hmac-key-regeneration-visibility.md)（✅ 完了 — `bf1e9364`。fix。HMAC キー再生成の可視化。RICE 8.0・2 SP）
+- [2026-09-30-06-fix-sw-decryption-lock-propagation.md](../dev-docs/archived/pbi/2026-09-30-06-fix-sw-decryption-lock-propagation.md)（✅ 完了 — `87fd03f1`。fix。SW ロック伝搬。RICE 4.8・3 SP）
+- [2026-09-30-07-fix-dashboard-mp-ui-state-bugs.md](../dev-docs/archived/pbi/2026-09-30-07-fix-dashboard-mp-ui-state-bugs.md)（✅ 完了 — `abfbd3fc`。fix。dashboard MP UI 状態バグ。RICE 4.0・1 SP）
+- [2026-09-30-08-fix-pending-salt-password-binding.md](../dev-docs/archived/pbi/2026-09-30-08-fix-pending-salt-password-binding.md)（✅ 完了 — `4bba4f1c`。fix。PENDING_SALT のパスワード束縛。RICE 4.0・2 SP）
+- [2026-09-30-09-fix-kek-rotation-cross-context-lock.md](../dev-docs/archived/pbi/2026-09-30-09-fix-kek-rotation-cross-context-lock.md)（✅ 完了 — `9191e7f6`。fix。KEK 回転の相互排他。RICE 3.2・2 SP）
+- [2026-09-30-10-test-restore-assertion-integrity.md](../dev-docs/archived/pbi/2026-09-30-10-test-restore-assertion-integrity.md)（✅ 完了 — `086d52d5`。test。空振り assertion 修正。RICE 2.0・1 SP）
+- [2026-09-30-11-refactor-remove-dead-masterpassword-module.md](../dev-docs/archived/pbi/2026-09-30-11-refactor-remove-dead-masterpassword-module.md)（✅ 完了 — `7aba1286`。refactor。死蔵実装削除。RICE 2.0・1 SP）
+- [2026-09-30-12-fix-export-hmac-iterations.md](../dev-docs/archived/pbi/2026-09-30-12-fix-export-hmac-iterations.md)（✅ 完了 — `fe9adec8`。fix。エクスポート HMAC iterations。RICE 2.0・2 SP）
+- [2026-09-30-13-refactor-idb-keystore-consolidation.md](../dev-docs/archived/pbi/2026-09-30-13-refactor-idb-keystore-consolidation.md)（✅ 完了 — `e52dee4a`。refactor。IDB キーストア共通化。RICE 1.0・1 SP）
 
 ### 2026-09-28 全体リファクタリングラウンド アーカイブ — ✅ 14件完了（01/02/03/04/06/07/08/09/11/12/13/15/16/17 アーカイブ済み）
 
