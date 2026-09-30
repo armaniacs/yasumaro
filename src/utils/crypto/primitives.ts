@@ -30,6 +30,32 @@ export const CURRENT_ENVELOPE_VERSION = CRYPTO_PARAMS.ENVELOPE_VERSION;
 export const ENVELOPE_ITERATIONS = CRYPTO_PARAMS.PBKDF2_ITERATIONS;
 
 /**
+ * Bounds for iteration counts read from storage or a self-describing envelope
+ * (attacker-controllable). Floor blocks weak-KDF forcing; ceiling blocks DoS.
+ * Lives here, the lowest crypto layer, so envelope/negotiator/session share it.
+ */
+export const MAX_KDF_ITERATIONS = ENVELOPE_ITERATIONS * 10;
+export const MIN_KDF_ITERATIONS = CRYPTO_PARAMS.LEGACY_PBKDF2_ITERATIONS;
+
+/**
+ * Fail-closed validation of a stored master-password KDF iteration count.
+ * undefined means "not stored" (legacy record) and is passed through.
+ * @throws {Error} on any present value that is not an integer within bounds
+ */
+export function assertValidStoredKdfIterations(value: unknown): number | undefined {
+    if (value === undefined) return undefined;
+    if (
+        typeof value !== 'number' ||
+        !Number.isInteger(value) ||
+        value < MIN_KDF_ITERATIONS ||
+        value > MAX_KDF_ITERATIONS
+    ) {
+        throw new Error('Master password data corrupted');
+    }
+    return value;
+}
+
+/**
  * Web Crypto APIのインスタンスを取得する
  * global.crypto.subtleが利用可能ならglobal.cryptoを使用し、なければcryptoを使用
  * @returns {Crypto} Web Crypto APIインスタンス

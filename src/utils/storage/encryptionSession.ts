@@ -5,7 +5,7 @@
  * management. Split out of storage.ts (PBI: storage.ts deepening).
  */
 
-import { logInfo, logDebug } from '../logger/api.js';
+import { logInfo, logDebug, logWarn } from '../logger/api.js';
 import { sendFromPopup } from '../../messaging/types.js';
 import { calculatePasswordStrength } from '../masterPassword.js';
 import {
@@ -20,6 +20,7 @@ import {
     bytesToBase64,
     base64ToBytes,
 } from '../crypto/index.js';
+import { assertValidStoredKdfIterations } from '../crypto/primitives.js';
 import { validatePasswordPolicy } from '../crypto/cryptoParams.js';
 import { hmacSignerForSecret, type HmacSigner } from '../crypto/hmacSigner.js';
 import {
@@ -71,6 +72,16 @@ const encryptionKeyMutex = new Mutex();
 // spread these call sites used — which overflows the argument stack on a
 // large enough array — is gone too.
 
+/** Rejects tampered stored iterations, logging the (non-secret) value. */
+function validateStoredIterations(value: unknown): number | undefined {
+    try {
+        return assertValidStoredKdfIterations(value);
+    } catch (error) {
+        logWarn('Stored master password KDF iterations out of bounds', { iterations: String(value) }, undefined, 'storage/encryptionSession.ts');
+        throw error;
+    }
+}
+
 /**
  * パスワードから暗号化キーを導出する（PBKDF2、extensionIdなし）
  * マスターパスワード方式専用
@@ -82,9 +93,11 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array, iterati
     // its metadata is persisted must not read the still-old stored count.
     // Skip the storage read entirely then — every rotation caller passes it.
     const storedIterations = iterations === undefined
-        ? (await chrome.storage.local.get([StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]))[
-            StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS
-        ] as number | undefined
+        ? validateStoredIterations(
+            (await chrome.storage.local.get([StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]))[
+                StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS
+            ]
+        )
         : undefined;
     const iterationsToUse = iterations ?? storedIterations ?? ENVELOPE_ITERATIONS;
     // globalThis: the dashboard bundle has no Node `global` shim, and bare
@@ -620,11 +633,11 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
 
     const storedHash = result[StorageKeys.MASTER_PASSWORD_HASH] as string;
     const saltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string;
-    const storedIterations = result[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS] as number | undefined;
 
     if (!storedHash || !saltBase64) {
         throw new Error('Master password data corrupted');
     }
+    const storedIterations = validateStoredIterations(result[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]);
 
     const salt = base64ToBytes(saltBase64);
     // Pass stored iterations to enable constant-time verification:
@@ -728,7 +741,7 @@ export async function removeMasterPassword(password?: string): Promise<void> {
     }
     const storedHash = meta[StorageKeys.MASTER_PASSWORD_HASH] as string | undefined;
     const saltBase64 = meta[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined;
-    const storedIterations = meta[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS] as number | undefined;
+    const storedIterations = validateStoredIterations(meta[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]);
     if (!storedHash || !saltBase64) {
         throw new Error('CORRUPTION: master password metadata incomplete');
     }

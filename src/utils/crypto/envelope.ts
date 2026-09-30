@@ -17,13 +17,13 @@ import {
     decryptData,
     CURRENT_ENVELOPE_VERSION,
     ENVELOPE_ITERATIONS,
+    MAX_KDF_ITERATIONS,
     bytesToBase64,
     base64ToBytes,
 } from './primitives.js';
 
 const ENCRYPTION_ALGORITHM = 'AES-GCM';
 const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
-const MAX_ENVELOPE_ITERATIONS = ENVELOPE_ITERATIONS * 10;
 const MIN_ENVELOPE_ITERATIONS = 1;
 const MAX_ENVELOPE_BASE64_LENGTH = LIMIT_ENVELOPE_BASE64_LENGTH;
 const ALLOWED_ENVELOPE_HASHES = ['SHA-256'] as const;
@@ -42,7 +42,7 @@ function validateEnvelope(envelope: EncryptionEnvelope): void {
     if (envelope.version !== CURRENT_ENVELOPE_VERSION) {
         throw new Error(`Unsupported envelope version: ${envelope.version}. Expected ${CURRENT_ENVELOPE_VERSION}.`);
     }
-    if (envelope.iterations < MIN_ENVELOPE_ITERATIONS || envelope.iterations > MAX_ENVELOPE_ITERATIONS) {
+    if (envelope.iterations < MIN_ENVELOPE_ITERATIONS || envelope.iterations > MAX_KDF_ITERATIONS) {
         throw new Error(`Invalid envelope iterations: ${envelope.iterations}`);
     }
     if (!ALLOWED_ENVELOPE_HASHES.includes(envelope.hash as typeof ALLOWED_ENVELOPE_HASHES[number])) {
@@ -94,7 +94,7 @@ export async function decryptEnvelope(envelope: EncryptionEnvelope, password: st
 export function isEncryptionEnvelope(data: unknown): data is EncryptionEnvelope {
     if (!data || typeof data !== 'object') return false;
     const d = data as Record<string, unknown>;
-    if (typeof d.iterations !== 'number' || d.iterations < MIN_ENVELOPE_ITERATIONS || d.iterations > MAX_ENVELOPE_ITERATIONS) {
+    if (typeof d.iterations !== 'number' || d.iterations < MIN_ENVELOPE_ITERATIONS || d.iterations > MAX_KDF_ITERATIONS) {
         return false;
     }
     if (typeof d.hash !== 'string' || !ALLOWED_ENVELOPE_HASHES.includes(d.hash as typeof ALLOWED_ENVELOPE_HASHES[number])) {

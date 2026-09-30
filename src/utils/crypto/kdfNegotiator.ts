@@ -17,14 +17,10 @@ import { CRYPTO_PARAMS } from './cryptoParams.js';
 // through the barrel ensures the mock covers kdfNegotiator's dependencies too.
 import { deriveKey, decryptData, base64ToBytes } from './index.js';
 import { isSecretEnvelope, loadSecretWrappingKey, unwrapSecretWithKey, type SecretEnvelope } from './secretWrappingKey.js';
+import { MAX_KDF_ITERATIONS } from './primitives.js';
 import { StorageKeys } from '../storage/types.js';
 
-/**
- * Ceiling for a self-described (attacker-controllable) iteration count. Same
- * formula as envelope.ts MAX_ENVELOPE_ITERATIONS, which is not exported, so
- * the two must move together.
- */
-export const MAX_KDF_ITERATIONS = CRYPTO_PARAMS.PBKDF2_ITERATIONS * 10;
+export { MAX_KDF_ITERATIONS };
 
 /** 交渉結果。legacy 形式は iteration を自己記述しないため usedIterations は null。 */
 export interface KdfNegotiationResult {
