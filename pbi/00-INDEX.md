@@ -14,6 +14,28 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-09-30 adversarial code review ラウンド（encryption 関連） — ⬜ 未着手 13件 🔧非機能追加
+
+adversarial-code-review skill による encryption 関連モジュール（encryptionSession / apiKeyTransition / masterPassword 2種 / crypto primitives / SettingsRepository / settingsMigration）の攻撃視点レビューから抽出した 13 候補を RICE 採点して PBI 化。発見 25 指摘のうち重大度上位を反証エージェントで検証し、主要な到達可能性の主張は配線コードを直接確認済み。却下された指摘（誤検出 6 件）の記録を含む詳細は [2026-09-30-00-backlog-adversarial-review-0930.md](2026-09-30-00-backlog-adversarial-review-0930.md)。
+
+**実装順の注意**: 02 → 07 の順（同一ファイル、service ガードを先行）、03 / 08 / 09 は encryptionSession 周辺でバッチ分割・直列着地推奨、01 / 04 は独立 quick win。
+
+| 順位 | NN | PBI | 種別 | RICE | SP |
+|---|---|---|---|---:|---:|
+| 1 | 01 | fix-anon-kek-regeneration-fail-closed | fix | 36.0 | 1.0 |
+| 2 | 02 | fix-master-password-set-takeover-guard | fix | 12.0 | 2.0 |
+| 3 | 03 | fix-encryption-aad-field-binding | fix | 10.7 | 5.0 |
+| 4 | 04 | fix-kdf-iteration-bounds | fix | 8.0 | 1.0 |
+| 5 | 05 | fix-hmac-key-regeneration-visibility | fix | 8.0 | 2.0 |
+| 6 | 06 | fix-sw-decryption-lock-propagation | fix | 4.8 | 3.0 |
+| 7 | 07 | fix-dashboard-mp-ui-state-bugs | fix | 4.0 | 1.0 |
+| 8 | 08 | fix-pending-salt-password-binding | fix | 4.0 | 2.0 |
+| 9 | 09 | fix-kek-rotation-cross-context-lock | fix | 3.2 | 2.0 |
+| 10 | 10 | test-restore-assertion-integrity | test | 2.0 | 1.0 |
+| 11 | 11 | refactor-remove-dead-masterpassword-module | refactor | 2.0 | 1.0 |
+| 12 | 12 | fix-export-hmac-iterations | fix | 2.0 | 2.0 |
+| 13 | 13 | refactor-idb-keystore-consolidation | refactor | 1.0 | 1.0 |
+
 ### 2026-09-29 大局的コードレビュー改善ラウンド第2弾 — ✅ 10件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-review skill による構造レビュー（並列サブエージェント調査 5 系統 + 実コード裏取り）から抽出した 10 候補を RICE 採点して PBI 化。全バッチ実装後 `make clean test-full`（build + validate + E2E 325 passed）でゲート通過。採点・依存・対象外・既存台帳反映の詳細は [2026-09-29-00-backlog-holistic-0929.md](2026-09-29-00-backlog-holistic-0929.md)（live 台帳として残置）。
