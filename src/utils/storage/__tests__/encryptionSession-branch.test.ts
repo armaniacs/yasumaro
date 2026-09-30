@@ -110,14 +110,8 @@ describe('getOrCreateEncryptionKey branches', () => {
     });
 
     it('uses master password path when enabled', async () => {
-        const salt = crypto.getRandomValues(new Uint8Array(16));
-        const saltBase64 = btoa(String.fromCharCode(...salt));
-        await chrome.storage.local.set({
-            [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
-            [StorageKeys.MASTER_PASSWORD_SALT]: saltBase64,
-        });
-
-        // First set the master password to cache it, then clear cache
+        // Set writes ENABLED/SALT/HASH itself; pre-seeding ENABLED would make
+        // set refuse (a password already exists).
         await setMasterPassword('StrongP@ssw0rd123!');
         clearEncryptionKeyCache();
 

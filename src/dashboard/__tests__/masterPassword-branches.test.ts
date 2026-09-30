@@ -9,6 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MasterPasswordDomRefs } from '../masterPassword.js';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 vi.mock('../../utils/i18n.js', () => {
   const getMessage = vi.fn((key: string) => `i18n_${key}`);
@@ -65,6 +66,7 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
       this.fields = fields;
     }
   },
+  MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
 }));
 
 vi.stubGlobal('chrome', {
@@ -530,7 +532,8 @@ describe('masterPassword-branches — initEventListeners: setMasterPasswordNowBt
     vi.mocked(validatePasswordMatch).mockReturnValue(null);
   });
 
-  it('skips setting checked state when masterPasswordEnabled is null', () => {
+  it('skips setting checked state when masterPasswordEnabled is null', async () => {
+    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
     const { MasterPasswordController } = mod;
     const refs = emptyDomRefs();
     refs.masterPasswordEnabled = null;
@@ -539,7 +542,7 @@ describe('masterPassword-branches — initEventListeners: setMasterPasswordNowBt
     const controller = new MasterPasswordController(refs);
     controller.initEventListeners();
     expect(() => refs.setMasterPasswordNowBtn!.click()).not.toThrow();
-    expect(refs.passwordModal.classList.contains('show')).toBe(true);
+    await waitForMock(() => expect(refs.passwordModal!.classList.contains('show')).toBe(true));
   });
 });
 

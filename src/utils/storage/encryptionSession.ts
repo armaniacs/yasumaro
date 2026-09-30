@@ -44,6 +44,14 @@ import { StorageTransaction } from './storageTransaction.js';
 import { ChromeStoragePort, type StoragePort } from './storagePort.js';
 
 export { ReencryptionAbortedError };
+
+/** Thrown by setMasterPassword when a master password already exists; use changeMasterPassword. */
+export class MasterPasswordAlreadySetError extends Error {
+  constructor() {
+    super('MasterPasswordAlreadySetError: a master password is already set; use change with the current password');
+    this.name = 'MasterPasswordAlreadySetError';
+  }
+}
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../rateLimiter.js';
 import { isLocked as authGuardIsLocked } from './authGuard.js';
 import { Mutex } from '../Mutex.js';
@@ -583,6 +591,12 @@ export async function isEncryptionLocked(): Promise<boolean> {
  * @returns {Promise<boolean>} 成功した場合true
  */
 export async function setMasterPassword(password: string): Promise<boolean> {
+    // Outside the re-encryption path on purpose: with no ciphertext that path
+    // never verifies the old KEK, so only this check stops a set from
+    // overwriting an existing password's salt/hash without proving it.
+    if (await isMasterPasswordEnabled()) {
+        throw new MasterPasswordAlreadySetError();
+    }
     await rotateToNewMasterPassword({
         password,
         resolvePrevious: () => getOrCreateEncryptionKey(),

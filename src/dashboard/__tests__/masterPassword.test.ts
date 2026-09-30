@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 vi.mock('../../utils/i18n.js', () => {
   const getMessage = vi.fn((key: string) => `i18n_${key}`);
@@ -50,6 +51,7 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
       this.fields = fields;
     }
   },
+  MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
 }));
 
 const mockChromeGet = vi.fn();
@@ -135,10 +137,16 @@ function setupDefaultMockValues(): void {
   vi.mocked(removeMasterPasswordService).mockResolvedValue(undefined);
 }
 
-function openModalViaCheckbox(): void {
+// Models the fresh-install path: with a password already set, enabling routes
+// to the auth (change) modal instead of the set modal.
+async function openModalViaCheckbox(): Promise<void> {
+  vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
   const checkbox = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
   checkbox.checked = true;
   checkbox.dispatchEvent(new Event('change'));
+  await waitForMock(() =>
+    expect(document.getElementById('passwordModal')!.classList.contains('show')).toBe(true),
+  );
 }
 
 describe('loadMasterPasswordSettings', () => {
@@ -291,7 +299,7 @@ describe('closePasswordModal', () => {
     vi.resetModules();
     const { initMasterPasswordSettings, closePasswordModal } = await import('../masterPassword.js');
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
     vi.mocked(focusTrapManager.trap).mockClear();
 
     closePasswordModal();
@@ -355,7 +363,7 @@ describe('initMasterPasswordSettings - checkbox events', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     const modal = document.getElementById('passwordModal')!;
     expect(modal.classList.contains('hidden')).toBe(false);
@@ -565,7 +573,7 @@ describe('initMasterPasswordSettings - modal button events', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     const modal = document.getElementById('passwordModal')!;
     expect(modal.classList.contains('hidden')).toBe(false);
@@ -582,7 +590,7 @@ describe('initMasterPasswordSettings - modal button events', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     document.getElementById('cancelPasswordBtn')!.click();
 
@@ -621,7 +629,7 @@ describe('initMasterPasswordSettings - click outside to close', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     const modal = document.getElementById('passwordModal')!;
 
@@ -637,7 +645,7 @@ describe('initMasterPasswordSettings - click outside to close', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     const modal = document.getElementById('passwordModal')!;
     expect(modal.style.display).toBe('flex');
@@ -1093,7 +1101,7 @@ describe('showPasswordModal (via checkbox)', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     const title = document.getElementById('passwordModalTitle')!;
     expect(title.textContent).toBe('i18n_setMasterPassword');
@@ -1113,7 +1121,7 @@ describe('showPasswordModal (via checkbox)', () => {
     input.value = 'leftover';
     confirm.value = 'leftover';
 
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     expect(input.value).toBe('');
     expect(confirm.value).toBe('');
@@ -1125,7 +1133,7 @@ describe('showPasswordModal (via checkbox)', () => {
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
 
     initMasterPasswordSettings();
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     const modal = document.getElementById('passwordModal')!;
     expect(focusTrapManager.trap).toHaveBeenCalledWith(modal, expect.any(Function));
@@ -1141,7 +1149,7 @@ describe('showPasswordModal (via checkbox)', () => {
     const input = document.getElementById('masterPasswordInput') as HTMLInputElement;
     const focusSpy = vi.spyOn(input, 'focus');
 
-    openModalViaCheckbox();
+    await openModalViaCheckbox();
 
     expect(focusSpy).toHaveBeenCalled();
   });

@@ -19,6 +19,7 @@ import {
   changeMasterPassword as changeMasterPasswordService,
   removeMasterPassword as removeMasterPasswordService,
   ReencryptionAbortedError,
+  MasterPasswordAlreadySetError,
 } from '../utils/storage/encryptionSession.js';
 import {
   validateAndSetPasswordErrors,
@@ -227,6 +228,8 @@ export class MasterPasswordController {
       if (this.dom.masterPasswordEnabled) this.dom.masterPasswordEnabled.checked = wasChecked;
       if (e instanceof ReencryptionAbortedError) {
         showStatus('status', this.abortMessage(e), 'error');
+      } else if (e instanceof MasterPasswordAlreadySetError) {
+        showStatus('status', getMessage('masterPasswordAlreadySet'), 'error');
       } else {
         showStatus('status', errorMessage(e), 'error');
       }
@@ -317,6 +320,31 @@ export class MasterPasswordController {
     }
   }
 
+  private beginChange(): void {
+    this.showPasswordAuthModal('export', async (password) => {
+      // The change modal only collects the new password; carry the old one
+      // here so savePassword() can call the service change route.
+      this.pendingOldPassword = password;
+      // Close the auth modal before opening the change modal: two live
+      // focus traps would fight over focus and leak keydown handlers.
+      // (This action cannot fail, so closing first is safe.)
+      this.closePasswordAuthModal();
+      this.showPasswordModal('change');
+    });
+  }
+
+  // The checkbox can disagree with storage (cancelling the remove auth modal
+  // leaves it unchecked while the password stays enabled), so storage decides
+  // whether "enable" means set or change.
+  private async beginSetOrChange(): Promise<void> {
+    const alreadySet = await isMasterPasswordSet(async (keys) => chrome.storage.local.get(keys));
+    if (alreadySet) {
+      this.beginChange();
+    } else {
+      this.showPasswordModal('set');
+    }
+  }
+
   /**
    * イベントリスナーを初期化する。
    */
@@ -327,7 +355,7 @@ export class MasterPasswordController {
       dom.masterPasswordEnabled.addEventListener('change', async (e: Event) => {
         const isChecked = (e.target as HTMLInputElement).checked;
         if (isChecked) {
-          this.showPasswordModal('set');
+          await this.beginSetOrChange();
         } else {
           this.showPasswordAuthModal('export', async (password) => {
             try {
@@ -349,23 +377,12 @@ export class MasterPasswordController {
       });
     }
 
-    dom.setMasterPasswordNowBtn?.addEventListener('click', () => {
+    dom.setMasterPasswordNowBtn?.addEventListener('click', async () => {
       if (dom.masterPasswordEnabled) dom.masterPasswordEnabled.checked = true;
-      this.showPasswordModal('set');
+      await this.beginSetOrChange();
     });
 
-    dom.changeMasterPasswordBtn?.addEventListener('click', () => {
-      this.showPasswordAuthModal('export', async (password) => {
-        // The change modal only collects the new password; carry the old one
-        // here so savePassword() can call the service change route.
-        this.pendingOldPassword = password;
-        // Close the auth modal before opening the change modal: two live
-        // focus traps would fight over focus and leak keydown handlers.
-        // (This action cannot fail, so closing first is safe.)
-        this.closePasswordAuthModal();
-        this.showPasswordModal('change');
-      });
-    });
+    dom.changeMasterPasswordBtn?.addEventListener('click', () => this.beginChange());
 
     dom.masterPasswordInput?.addEventListener('input', () => {
       if (dom.masterPasswordInput) this.updatePasswordStrength(dom.masterPasswordInput.value);

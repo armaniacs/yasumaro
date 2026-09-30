@@ -1124,6 +1124,9 @@
   "masterPasswordReencryptedKept": {
     "message": "マスターパスワードを更新しました。API キーは保持されました。"
   },
+  "masterPasswordAlreadySet": {
+    "message": "マスターパスワードは既に設定されています。「パスワードを変更」から、現在のパスワードを入力してください。"
+  },
   "masterPasswordReencryptAborted": {
     "message": "復号できない項目（{fields}）があるため処理を中止しました。何も変更していません。再入力のうえ再試行してください。"
   },
