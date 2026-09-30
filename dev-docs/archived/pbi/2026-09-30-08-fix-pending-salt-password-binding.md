@@ -1,7 +1,7 @@
 # PBI: KEK 回転アンカーをパスワードに紐付けて別パスワード再試行時の詰まりを防ぐ
 
 種別: fix
-状態: 未着手
+状態: 実装済み
 上流: `pbi/2026-09-30-00-backlog-adversarial-review-0930.md`
 
 ## ユーザーストーリー
@@ -42,12 +42,12 @@
 
 ## 受け入れ基準
 
-- [ ] アンカーレコードに回転開始時の新パスワード検証子(hash)を追加し、再試行時に一致検証する
-- [ ] 不一致時は専用エラー(既存の `ReencryptionAbortedError` と区別可能)を投げ、回復手順をメッセージに含める
-- [ ] ciphertext・metadata・アンカーは不一致時に一切変更されない
-- [ ] `types.ts:105` のコメントを実際の挙動(成功時に昇格、abort 時は resume 用に保持)へ修正する。または abort 時削除を実装する場合は resume テストとの整合を先に確認する
-- [ ] `dashboard/masterPassword.ts` のエラー表示(`abortMessage`)が新エラーを適切に扱う
-- [ ] i18n 2 言語でメッセージを追加する
+- [x] アンカーレコードに回転開始時の新パスワード検証子(hash)を追加し、再試行時に一致検証する
+- [x] 不一致時は専用エラー(既存の `ReencryptionAbortedError` と区別可能)を投げ、回復手順をメッセージに含める
+- [x] ciphertext・metadata・アンカーは不一致時に一切変更されない
+- [x] `types.ts:105` のコメントを実際の挙動(成功時に昇格、abort 時は resume 用に保持)へ修正する。または abort 時削除を実装する場合は resume テストとの整合を先に確認する
+- [x] `dashboard/masterPassword.ts` のエラー表示(`abortMessage`)が新エラーを適切に扱う
+- [x] i18n 2 言語でメッセージを追加する
 
 ## テスト戦略
 
@@ -336,16 +336,16 @@ git commit -m "docs(pbi): 09-30 PBI 08(PENDING_SALT のパスワード束縛)を
 
 ### 10. 完了条件
 
-- [ ] 着手前 grep が期待どおりだった
-- [ ] 新規テスト 2 ファイルが修正前に失敗し、修正後に通る
-- [ ] `encryptionSession-reencrypt.test.ts` が無変更で通る
-- [ ] type-check / eslint / `npx vitest run src/utils src/dashboard src/background src/popup` が全て green
-- [ ] 新規テスト 2 ファイルが `--repeats=20` で全て green
-- [ ] en / ja に同じ i18n キーがある
-- [ ] 不一致時にアンカー・ciphertext・metadata が変化しない(テスト 2)
-- [ ] ログ・エラー文言にパスワード・hash・salt が含まれない
-- [ ] `types.ts` のコメントが実挙動と一致している
-- [ ] 実装コミットとアーカイブコミットが分かれ、明示パスのみを対象にしている
+- [x] 着手前 grep が期待どおりだった
+- [x] 新規テスト 2 ファイルが修正前に失敗し、修正後に通る
+- [x] `encryptionSession-reencrypt.test.ts` が無変更で通る
+- [x] type-check / eslint / `npx vitest run src/utils src/dashboard src/background src/popup` が全て green
+- [x] 新規テスト 2 ファイルが `--repeats=20` で全て green
+- [x] en / ja に同じ i18n キーがある
+- [x] 不一致時にアンカー・ciphertext・metadata が変化しない(テスト 2)
+- [x] ログ・エラー文言にパスワード・hash・salt が含まれない
+- [x] `types.ts` のコメントが実挙動と一致している
+- [x] 実装コミットとアーカイブコミットが分かれ、明示パスのみを対象にしている
 
 ## 見積もり
 
@@ -353,6 +353,6 @@ git commit -m "docs(pbi): 09-30 PBI 08(PENDING_SALT のパスワード束縛)を
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] i18n 更新済み(en/ja)
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] i18n 更新済み(en/ja)
 - [ ] コードレビュー完了
