@@ -38,11 +38,11 @@ crypto レイヤを保守する開発者として、IndexedDB の open/get/put �
 
 ## 受け入れ基準
 
-- [ ] open/get/put の共通ヘルパー(DB 名・store 名・キー ID を引数に取る)を作成する
-- [ ] `secretWrappingKey` / `durableKeyStore` を共通ヘルパーへ置き換える
-- [ ] 契約(fail-open / fail-closed)はヘルパーの挙動としてではなく、各モジュールの呼び出し側ポリシーとして明示する(型コメントまたはラッパー関数名)
-- [ ] 既存テスト(`secretEnvelope.test.ts:85` 等、override 差し替え型)との整合を保つ
-- [ ] `npm run validate` が green
+- [x] open/get/put の共通ヘルパー(DB 名・store 名・キー ID を引数に取る)を作成する
+- [x] `secretWrappingKey` / `durableKeyStore` を共通ヘルパーへ置き換える
+- [x] 契約(fail-open / fail-closed)はヘルパーの挙動としてではなく、各モジュールの呼び出し側ポリシーとして明示する(型コメントまたはラッパー関数名)
+- [x] 既存テスト(`secretEnvelope.test.ts:85` 等、override 差し替え型)との整合を保つ
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -65,5 +65,5 @@ crypto レイヤを保守する開発者として、IndexedDB の open/get/put �
 
 ## Definition of Done
 
-- [ ] 共通化完了と validate green
+- [x] 共通化完了と validate green
 - [ ] コードレビュー完了
