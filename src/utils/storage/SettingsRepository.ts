@@ -11,8 +11,7 @@
  */
 
 import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './types.js';
-import { StorageKeys } from './types.js';
-import { STORAGE_KEY_VALUES } from './settingsBackup.js';
+import { STORAGE_KEY_VALUES, restoreLatestSettingsBackup } from './settingsBackup.js';
 import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './storagePort.js';
 import { StorageTransaction } from './storageTransaction.js';
 
@@ -32,29 +31,6 @@ export class InMemoryStorageAdapter extends InMemoryStoragePort implements Stora
 export interface SettingsRepositoryOptions {
   /** Injected KeyProvider for decrypt/re-encrypt; defaults to getOrCreateEncryptionKey */
   keyProvider?: () => Promise<CryptoKey>;
-}
-
-async function tryRestoreFromBackupViaPort(port: StoragePort): Promise<SettingsType | null> {
-  const all = await port.get(null);
-  const backupKeys = Object.keys(all).filter((k) => k.startsWith('legacy_settings_backup'));
-  if (backupKeys.length === 0) return null;
-  backupKeys.sort().reverse();
-  const firstKey = backupKeys[0];
-  if (!firstKey) return null;
-  const latest = all[firstKey] as { data: Record<string, unknown>; createdAt: number } | undefined;
-  if (!latest?.data) return null;
-  const restored: SettingsType = {};
-  for (const [key, value] of Object.entries(latest.data)) {
-    if ((Object.values(StorageKeys) as string[]).includes(key)) {
-      (restored as Record<string, unknown>)[key] = value;
-    }
-  }
-  // Persist restored via StorageTransaction (deep module) — same seam for all ports
-  if (restored && Object.keys(restored).length > 0) {
-    const tx = new StorageTransaction(port);
-    await tx.withLock<SettingsType>('settings', (current) => ({ ...((current as Record<string, unknown>) || {}), ...restored } as SettingsType));
-  }
-  return restored;
 }
 
 /**
@@ -136,7 +112,7 @@ export class SettingsRepository {
     if (result['settings'] && isSettingsBlobAuthoritative(result['settings_migrated'])) {
       let settings = result['settings'] as SettingsType;
       if (Object.keys(settings as Record<string, unknown>).length === 0) {
-        const recovered = await tryRestoreFromBackupViaPort(this.port);
+        const recovered = await restoreLatestSettingsBackup(this.port);
         if (recovered) settings = recovered as SettingsType;
       }
       const filtered = {} as SettingsType;

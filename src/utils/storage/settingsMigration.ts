@@ -25,6 +25,7 @@ import {
     STORAGE_KEY_VALUES,
     assignSettingValue,
     listSettingsBackupKeys,
+    restoreLatestSettingsBackup,
 } from './settingsBackup.js';
 
 export { LEGACY_SETTINGS_BACKUP_KEY };
@@ -508,22 +509,7 @@ export async function applyMigrationsAndDecryptWithReEncrypt(
 }
 
 export async function tryRestoreFromBackup(): Promise<Settings | null> {
-    const all = await chrome.storage.local.get(null);
-    const backupKeys = Object.keys(all).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
-    if (backupKeys.length === 0) return null;
-    backupKeys.sort().reverse();
-    const firstKey = backupKeys[0];
-    if (!firstKey) return null;
-    const latest = all[firstKey] as { data: Record<string, unknown>; createdAt: number } | undefined;
-    if (!latest?.data) return null;
-    const restored: Settings = {};
-    for (const [key, value] of Object.entries(latest.data)) {
-        if (Object.values(StorageKeys).includes(key as StorageKey)) {
-            assignSettingValue(restored, key as StorageKey, value);
-        }
-    }
-    await withOptimisticLock('settings', (current: Settings) => ({ ...current, ...restored }));
-    return restored;
+    return restoreLatestSettingsBackup(new ChromeStoragePort());
 }
 
 export async function cleanupExpiredSettingsBackups(): Promise<void> {
