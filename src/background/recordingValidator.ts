@@ -13,7 +13,7 @@ import { isPrivateIpAddress } from '../utils/fetch.js';
  * Performance: prevents large pages from hanging the pipeline.
  * Cost: limits data volume sent to AI APIs.
  */
-import { MAX_RECORD_SIZE } from '../messaging/limits.js';
+import { MAX_RECORD_SIZE } from '../utils/limits.js';
 
 export { MAX_RECORD_SIZE };
 

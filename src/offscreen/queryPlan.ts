@@ -5,8 +5,7 @@
  * PBI-12: Phase 2 — QueryPlanner as pure function.
  * Grilling decision: Fallback を含めつつ QuerySpec 構造体で統一。
  * LIMIT は fts:100000 / plain:10000 の2種を cap として明示。定義本体は
- * messaging/limits.ts にあり、queryPlanner が cap 選択を所有する
- * (PBI 2026-09-12-16)。ここの clamp は worker 境界での防御的再適用。
+ * utils/limits.ts にあり、queryPlanner が cap 選択を所有する。ここの clamp は worker 境界での防御的再適用。
  */
 
 import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
@@ -14,7 +13,7 @@ import type { TagFilterCondition } from './sqliteQueryBuilder.js';
 import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
-import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../messaging/limits.js';
+import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../utils/limits.js';
 
 // ============================================================================
 // Mode + cap policy (moved from queryPlanner, PBI 2026-09-15-03) — breaking
@@ -253,9 +252,8 @@ export function matchesExtraWhere(
 }
 
 /**
- * Re-exported for the OPFS worker boundary (PBI 2026-09-12-16): worker code
- * cannot import the messaging layer directly, so the single definition in
- * messaging/limits.ts is surfaced here. Do not re-declare the values here.
+ * Re-exported for the OPFS worker boundary: the single definition in
+ * utils/limits.ts is surfaced here. Do not re-declare the values here.
  */
 export const QUERY_CAPS: typeof QUERY_CAPS_SOURCE = QUERY_CAPS_SOURCE;
 

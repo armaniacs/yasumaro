@@ -21,7 +21,7 @@ import {
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction, type TransactionExecutor } from './sqliteTransaction.js';
 import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
-import { AUDIT_CAP_IDB } from '../messaging/limits.js';
+import { AUDIT_CAP_IDB } from '../utils/limits.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
 import type { SerializeResult } from './StorageBackend.js';
 import {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildListParams, buildSearchParams } from '../readOnlyHandler.js';
-import { QUERY_CAPS } from '../../../../messaging/limits.js';
+import { QUERY_CAPS } from '../../../../utils/limits.js';
 import type { DashboardSqliteRequest } from '../../dashboardSqliteProtocol.js';
 
 /**

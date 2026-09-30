@@ -7,7 +7,7 @@ describe('planAuditLog (PBI 2026-09-12-17)', () => {
 
   beforeEach(async () => {
     const planner = await import('../../offscreen/queryPlanner.js');
-    const limits = await import('../../messaging/limits.js');
+    const limits = await import('../../utils/limits.js');
     planAuditLog = planner.planAuditLog;
     AUDIT_CAP_OPFS = limits.AUDIT_CAP_OPFS;
     AUDIT_CAP_IDB = limits.AUDIT_CAP_IDB;

@@ -4,7 +4,7 @@
  * These functions have no dependency on the ObsidianClient class.
  */
 
-import { MAX_BODY_SIZE as LIMIT_MAX_BODY_SIZE } from '../messaging/limits.js';
+import { MAX_BODY_SIZE as LIMIT_MAX_BODY_SIZE } from './limits.js';
 import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
 import { readBodyCapped } from './readBodyCapped.js';
@@ -215,7 +215,7 @@ export function validateObsidianPort(port: string | number | undefined | null): 
  */
 export async function readBodyWithTimeout(response: Response): Promise<string> {
     // Cap the streamed body on actual bytes (Content-Length can be omitted or lie).
-    // Value lives in messaging/limits.ts (PBI 2026-09-11-08 round 6).
+    // Value lives in utils/limits.ts.
     const MAX_BODY_SIZE = LIMIT_MAX_BODY_SIZE;
 
     const textPromise = readBodyCapped(response, MAX_BODY_SIZE);

@@ -18,7 +18,7 @@ import {
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   MAX_APPEND_IDS,
   MAX_ARCHIVE_QUERY_LIMIT,
-} from './limits.js';
+} from '../utils/limits.js';
 import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
 import type {
   ExtensionMessage,

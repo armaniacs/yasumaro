@@ -17,7 +17,7 @@ export const DASHBOARD_MUTABLE_SUBSET = ['url', 'title', 'summary', 'tags', 'dom
 // VULN-006: cap bulk import rows to prevent SW/offscreen queue saturation
 // (the append path already caps at MAX_APPEND_IDS). Values live in the
 // messaging limits registry so validators and handlers cannot drift apart.
-export { MAX_APPEND_IDS, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from '../../../messaging/limits.js';
+export { MAX_APPEND_IDS, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from '../../../utils/limits.js';
 
 /**
  * Every result the SqliteClient-backed deps return carries its own failure

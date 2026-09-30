@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import * as limitsModule from '../../messaging/limits.js';
+import * as limitsModule from '../limits.js';
 import * as validatorsModule from '../../messaging/validators.js';
 import { MAX_QUERY_LIMIT as ENGINE_LIMIT } from '../../offscreen/sqliteEngineHost.js';
 import { STORAGE_QUOTA_BYTES as QUOTA } from '../storage/quota.js';

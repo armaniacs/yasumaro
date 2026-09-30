@@ -5,7 +5,7 @@
  * パフォーマンス改善: 1回のスキャンで全パターンを検出
  */
 
-import { MAX_PII_INPUT_SIZE, MAX_PII_OUTPUT_SIZE } from '../messaging/limits.js';
+import { MAX_PII_INPUT_SIZE, MAX_PII_OUTPUT_SIZE } from './limits.js';
 import { validateLuhn } from './luhn.js';
 import { errorMessage } from './errorUtils.js';
 import type { MaskedItem } from '../messaging/types.js';

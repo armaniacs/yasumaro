@@ -16,7 +16,7 @@ import {
   MAX_PAYLOAD_STRING_BYTES,
   MAX_BATCH_TOTAL_BYTES,
   MAX_PAYLOAD_TOTAL_BYTES,
-} from '../messaging/limits.js';
+} from '../utils/limits.js';
 
 /** Per-field cap for large text fields (PBI 2026-09-11-08: value lives in limits.ts). */
 export { MAX_PAYLOAD_STRING_BYTES };

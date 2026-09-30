@@ -3,7 +3,7 @@
  * ダッシュボードの「暗号化バックアップ」ボタン・モーダルの結線
  */
 
-import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../messaging/limits.js';
+import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../utils/limits.js';
 import { showPasswordAuthModal } from './masterPassword.js';
 import {
   exportEncryptedBackup,

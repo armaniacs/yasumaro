@@ -8,7 +8,7 @@
  */
 
 import type { EncryptedData } from './types.js';
-import { MAX_ENVELOPE_BASE64_LENGTH as LIMIT_ENVELOPE_BASE64_LENGTH } from '../../messaging/limits.js';
+import { MAX_ENVELOPE_BASE64_LENGTH as LIMIT_ENVELOPE_BASE64_LENGTH } from '../limits.js';
 import {
     getWebCrypto,
     generateSalt,

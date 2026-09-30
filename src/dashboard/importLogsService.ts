@@ -29,13 +29,13 @@ interface ExportedData {
 /**
  * Upper bound on total rows accepted from a single import file (VULN-023).
  * A different concept from the per-message MAX_IMPORT_ROWS in
- * messaging/limits.ts: this pre-check gates the whole file before it is
+ * utils/limits.ts: this pre-check gates the whole file before it is
  * split into per-request batches, so it stays larger by design.
  */
-import { IMPORT_TOTAL_ROW_CAP, MAX_SUMMARY_LENGTH } from '../messaging/limits.js';
+import { IMPORT_TOTAL_ROW_CAP, MAX_SUMMARY_LENGTH } from '../utils/limits.js';
 export { IMPORT_TOTAL_ROW_CAP };
 /** Upper bound on the raw import text, mirroring the settings 10 MiB cap. */
-import { MAX_IMPORT_TEXT_BYTES } from '../messaging/limits.js';
+import { MAX_IMPORT_TEXT_BYTES } from '../utils/limits.js';
 export { MAX_IMPORT_TEXT_BYTES };
 
 const MAX_URL_LENGTH = 2048;
