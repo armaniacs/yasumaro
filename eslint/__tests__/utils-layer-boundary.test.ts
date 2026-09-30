@@ -71,9 +71,20 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
       filename: LAYER0_FILE,
     },
     {
-      name: 'Layer 0 importing messaging constants (outside utils, v1 out of scope)',
-      code: "import { MAX } from '../../messaging/limits.js';",
+      name: 'Layer 0 importing outside utils with allow passes',
+      code: "import { X } from '../../messaging/limits.js';",
       filename: '/repo/src/utils/crypto/envelope.ts',
+      options: [{ allow: [{ from: 'src/utils/crypto/envelope.ts', to: 'src/messaging/limits' }] }],
+    },
+    {
+      name: 'Layer 0 type-only import of a sibling layer is erased',
+      code: "import type { T } from '../messaging/types.js';",
+      filename: LAYER0_FILE,
+    },
+    {
+      name: 'Layer 0 importing another Layer 0 module in a subdirectory',
+      code: "import { x } from './crypto/primitives.js';",
+      filename: LAYER0_FILE,
     },
     {
       name: 'Layer 1 dynamic import of Layer 2 for cycle avoidance passes',
@@ -182,6 +193,18 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
       ].join('\n'),
       filename: LAYER0_FILE,
       errors: [{ messageId: 'layer0Chrome' }, { messageId: 'layer0Chrome' }],
+    },
+    {
+      name: 'Layer 0 statically importing outside src/utils/ is a violation',
+      code: "import { MAX } from '../messaging/limits.js';",
+      filename: LAYER0_FILE,
+      errors: [{ messageId: 'layer0ForbiddenImport' }],
+    },
+    {
+      name: 'Layer 0 statically importing background reports only the reverse edge',
+      code: "import { x } from '../background/foo.js';",
+      filename: LAYER0_FILE,
+      errors: [{ messageId: 'utilsReverseEdge' }],
     },
     {
       name: 'Layer 0 statically importing Layer 2 is a violation',
