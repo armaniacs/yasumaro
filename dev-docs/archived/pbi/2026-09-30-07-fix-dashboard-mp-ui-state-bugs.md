@@ -45,11 +45,11 @@ dashboard のプライバシー設定を使うユーザーとして、checkbox �
 
 ## 受け入れ基準
 
-- [ ] トグル直前の checkbox 状態を change イベント冒頭で記録し、save 失敗時にその値へ復元する
-- [ ] `closePasswordAuthModal` で checkbox を storage の実態と再同期する(または cancel 時に明示復元する)
-- [ ] change モードの confirm group / input の表示が一致する(どちらを正とするかは実装時に set モードのみ confirm を使う現行設計に合わせ、group ごと隠す)
-- [ ] `masterPasswordEnabled.checked =` の全代入箇所を見直し、storage 実態との不整合が残らないことを確認する
-- [ ] 既存テスト(`masterPassword.test.ts:856-874` は本番到達不能シナリオ)との整合は順位 10 の PBI で処理する
+- [x] トグル直前の checkbox 状態を change イベント冒頭で記録し、save 失敗時にその値へ復元する
+- [x] `closePasswordAuthModal` で checkbox を storage の実態と再同期する(または cancel 時に明示復元する)
+- [x] change モードの confirm group / input の表示が一致する(どちらを正とするかは実装時に set モードのみ confirm を使う現行設計に合わせ、group ごと隠す)
+- [x] `masterPasswordEnabled.checked =` の全代入箇所を見直し、storage 実態との不整合が残らないことを確認する
+- [x] 既存テスト(`masterPassword.test.ts:856-874` は本番到達不能シナリオ)との整合は順位 10 の PBI で処理する
 
 ## テスト戦略
 
@@ -76,5 +76,5 @@ dashboard のプライバシー設定を使うユーザーとして、checkbox �
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
