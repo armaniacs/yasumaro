@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { QUERY_CAPS, buildQuerySpec, clampLimit } from '../queryPlan.js';
+import { buildQuerySpec, clampLimit } from '../queryPlan.js';
+import { QUERY_CAPS } from '../../utils/limits.js';
 import { computeTagCooccurrence, narrowEntriesToTopTags } from '../../dashboard/tagCooccurrence.js';
 
 describe('queryPlan tagCluster regression (6.8.12 hotfix)', () => {

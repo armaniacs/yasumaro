@@ -9,7 +9,8 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import { buildQuerySpec, QUERY_CAPS, matchesExtraWhere, type AlreadyCappedQuery } from './queryPlan.js';
+import { buildQuerySpec, matchesExtraWhere, type AlreadyCappedQuery } from './queryPlan.js';
+import { QUERY_CAPS } from '../utils/limits.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';

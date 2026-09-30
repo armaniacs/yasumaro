@@ -27,7 +27,8 @@ import type { SqliteMessageType } from '../../../messaging/sqliteMessages.js';
 import type { OffscreenResponse } from '../../../messaging/sqliteMessages.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import { sanitizeFtsTerm } from '../../../offscreen/schema.js';
-import { QUERY_CAPS, clampLimit, matchesExtraWhere } from '../../../offscreen/queryPlan.js';
+import { clampLimit, matchesExtraWhere } from '../../../offscreen/queryPlan.js';
+import { QUERY_CAPS } from '../../../utils/limits.js';
 
 interface QueryPayload {
   text?: string;

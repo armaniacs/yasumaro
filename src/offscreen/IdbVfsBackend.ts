@@ -12,12 +12,13 @@ import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord,
 import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
-  buildQuerySpec, QUERY_CAPS, buildPlainListStatements, buildFtsMatchQuery,
+  buildQuerySpec, buildPlainListStatements, buildFtsMatchQuery,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements, buildAuditLogPurgeStatements,
   type AlreadyCappedQuery,
 } from './queryPlan.js';
+import { QUERY_CAPS } from '../utils/limits.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction, type TransactionExecutor } from './sqliteTransaction.js';
 import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
