@@ -47,11 +47,11 @@
 
 ## 受け入れ基準
 
-- [ ] `masterPassword-branches.test.ts` の confirm mismatch テストを `setMasterPasswordService` への assert に修正する
-- [ ] 同種の空振り assertion(`masterPassword.test.ts` の 3 件: validation error / match error / masterPasswordInput null)を本番シンボルへ修正する
-- [ ] `masterPassword.test.ts` の「restore the checkbox」テストを、set モーダルをチェックボックス操作で開いた状態から失敗させるシナリオへ書き換える
-- [ ] `REENCRYPT_VERIFY_FAILED` の失敗経路テスト(set と change)を追加する(read-back 不一致の注入方法を実装する)
-- [ ] 修正後、当該テストが意図した契約を壊す変更で赤くなることを確認する(テストのテスト)。本番コードは確認後に厳密に元へ戻す
+- [x] `masterPassword-branches.test.ts` の confirm mismatch テストを `setMasterPasswordService` への assert に修正する
+- [x] 同種の空振り assertion(`masterPassword.test.ts` の 3 件: validation error / match error / masterPasswordInput null)を本番シンボルへ修正する
+- [x] `masterPassword.test.ts` の「restore the checkbox」テストを、set モーダルをチェックボックス操作で開いた状態から失敗させるシナリオへ書き換える
+- [x] `REENCRYPT_VERIFY_FAILED` の失敗経路テスト(set と change)を追加する(read-back 不一致の注入方法を実装する)
+- [x] 修正後、当該テストが意図した契約を壊す変更で赤くなることを確認する(テストのテスト)。本番コードは確認後に厳密に元へ戻す
 
 ## テスト戦略
 
@@ -358,6 +358,6 @@ git commit -m "docs(pbi): 09-30 PBI 10(テストの空振り assertion 修正)�
 
 ## Definition of Done
 
-- [ ] 全修正済みテストが green
-- [ ] 意図的破壊テスト(契約を壊すと赤になる)の確認済み
+- [x] 全修正済みテストが green
+- [x] 意図的破壊テスト(契約を壊すと赤になる)の確認済み
 - [ ] コードレビュー完了
