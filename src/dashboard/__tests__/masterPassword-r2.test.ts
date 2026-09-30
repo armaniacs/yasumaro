@@ -36,7 +36,6 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  setMasterPassword: vi.fn(),
   verifyMasterPassword: vi.fn(),
   isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn(),
@@ -66,7 +65,6 @@ vi.stubGlobal('chrome', {
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 import {
-  setMasterPassword,
   verifyMasterPassword,
   isMasterPasswordSet,
   calculatePasswordStrength,
@@ -114,7 +112,6 @@ function setupDefaultMockValues(): void {
   vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: PasswordStrength.MEDIUM, text: 'Medium' });
   vi.mocked(validatePasswordRequirements).mockReturnValue(null);
   vi.mocked(validatePasswordMatch).mockReturnValue(null);
-  vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
   vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
   vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
 }

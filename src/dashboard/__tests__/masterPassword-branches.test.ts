@@ -39,7 +39,6 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  setMasterPassword: vi.fn(),
   verifyMasterPassword: vi.fn(),
   isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn(),
@@ -82,7 +81,6 @@ vi.stubGlobal('chrome', {
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
 import {
-  setMasterPassword,
   verifyMasterPassword,
   isMasterPasswordSet,
   calculatePasswordStrength,
@@ -229,7 +227,6 @@ describe('masterPassword-branches — savePassword branches', () => {
     const { MasterPasswordController } = mod;
     const refs = fullSaveRefs();
     refs.savePasswordBtn = el('button') as HTMLButtonElement;
-    vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
     const controller = new MasterPasswordController(refs);
     controller.showPasswordModal('change');
     refs.masterPasswordInput!.value = 'StrongPassword1!';
@@ -248,7 +245,6 @@ describe('masterPassword-branches — savePassword branches', () => {
     refs.masterPasswordEnabled = null;
     refs.masterPasswordOptions = null;
     refs.savePasswordBtn = el('button') as HTMLButtonElement;
-    vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
     const controller = new MasterPasswordController(refs);
     controller.showPasswordModal('change');
     refs.masterPasswordInput!.value = 'StrongPassword1!';
@@ -273,7 +269,7 @@ describe('masterPassword-branches — savePassword branches', () => {
     controller.initEventListeners();
     refs.savePasswordBtn.click();
     await new Promise((r) => setTimeout(r, 0));
-    expect(setMasterPassword).not.toHaveBeenCalled();
+    expect(setMasterPasswordService).not.toHaveBeenCalled();
   });
 });
 

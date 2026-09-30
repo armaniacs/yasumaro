@@ -29,7 +29,6 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  setMasterPassword: vi.fn().mockResolvedValue({ success: true }),
   verifyMasterPassword: vi.fn().mockResolvedValue({ success: true }),
   isMasterPasswordSet: vi.fn().mockResolvedValue(true),
   calculatePasswordStrength: vi.fn().mockReturnValue({

@@ -30,7 +30,6 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  setMasterPassword: vi.fn(),
   verifyMasterPassword: vi.fn(),
   isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn(),
@@ -75,7 +74,6 @@ vi.stubGlobal('chrome', {
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 import {
-  setMasterPassword,
   verifyMasterPassword,
   isMasterPasswordSet,
   calculatePasswordStrength,
@@ -129,7 +127,6 @@ function setupDefaultMockValues(): void {
   vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: PasswordStrength.MEDIUM, text: 'Medium' });
   vi.mocked(validatePasswordRequirements).mockReturnValue(null);
   vi.mocked(validatePasswordMatch).mockReturnValue(null);
-  vi.mocked(setMasterPassword).mockResolvedValue({ success: true });
   vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
   vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
   vi.mocked(setMasterPasswordService).mockResolvedValue(true);
@@ -785,7 +782,7 @@ describe('savePassword flow', () => {
     const errorEl = document.getElementById('passwordStrengthError')!;
     expect(errorEl.textContent).toBe('i18n_passwordTooShort');
     expect(errorEl.classList.contains('visible')).toBe(true);
-    expect(setMasterPassword).not.toHaveBeenCalled();
+    expect(setMasterPasswordService).not.toHaveBeenCalled();
   });
 
   it('should show match error when passwords do not match in set mode', async () => {
@@ -809,7 +806,7 @@ describe('savePassword flow', () => {
     const matchError = document.getElementById('passwordMatchError')!;
     expect(matchError.textContent).toBe('i18n_passwordMismatch');
     expect(matchError.classList.contains('visible')).toBe(true);
-    expect(setMasterPassword).not.toHaveBeenCalled();
+    expect(setMasterPasswordService).not.toHaveBeenCalled();
   });
 
   it('should save password successfully and update UI', async () => {
@@ -898,7 +895,7 @@ describe('savePassword flow', () => {
 
     await flushPromises();
 
-    expect(setMasterPassword).not.toHaveBeenCalled();
+    expect(setMasterPasswordService).not.toHaveBeenCalled();
   });
 });
 

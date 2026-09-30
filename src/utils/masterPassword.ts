@@ -1,22 +1,17 @@
 /**
  * masterPassword.ts
- * マスターパスワード管理モジュール
- * パスワード設定、検証、変更、パスワード強度チェック
+ * Master password verification, strength check, and validation helpers.
+ * Setting and changing passwords live in utils/storage/encryptionSession.js,
+ * the single canonical implementation.
  */
 
-import type { EncryptedData } from './crypto/types.js';
 import { errorMessage } from './errorUtils.js';
 import {
-    generateSalt,
     hashPasswordWithPBKDF2,
     verifyPasswordWithPBKDF2,
-    encrypt,
-    decryptData,
-    deriveKey,
-    bytesToBase64,
     base64ToBytes,
 } from './crypto/index.js';
-import { validatePasswordPolicy, CRYPTO_PARAMS } from './crypto/cryptoParams.js';
+import { validatePasswordPolicy } from './crypto/cryptoParams.js';
 
 // パスワード強度レベル
 export enum PasswordStrength {
@@ -97,40 +92,6 @@ export function validatePasswordMatch(password: string, confirmPassword: string)
 }
 
 /**
- * マスターパスワードを設定
- * @param {string} password - パスワード
- * @param {(key: string, value: unknown) => Promise<void>} setStorageFn - ストレージ保存関数
- * @returns {Promise<{success: boolean; error?: string}>} 結果
- */
-export async function setMasterPassword(
-    password: string,
-    setStorageFn: (key: string, value: unknown) => Promise<void>
-): Promise<{ success: boolean; error?: string }> {
-    try {
-        // パスワード要件チェック
-        const error = validatePasswordRequirements(password);
-        if (error) {
-            return { success: false, error };
-        }
-
-        // ソルト生成
-        const salt = generateSalt();
-
-        // パスワードハッシュ生成
-        const hash = await hashPasswordWithPBKDF2(password, salt);
-
-        // ストレージに保存
-        await setStorageFn('master_password_salt', bytesToBase64(salt));
-        await setStorageFn('master_password_hash', hash);
-        await setStorageFn('master_password_enabled', true);
-
-        return { success: true };
-    } catch (e: unknown) {
-        return { success: false, error: errorMessage(e) };
-    }
-}
-
-/**
  * マスターパスワードを検証
  * @param {string} password - パスワード
  * @param {(keys: string[]) => Promise<Record<string, unknown>>} getStorageFn - ストレージ取得関数
@@ -164,81 +125,6 @@ export async function verifyMasterPassword(
             const newHash = await hashPasswordWithPBKDF2(password, salt);
             await chrome.storage.local.set({ master_password_hash: newHash });
         }
-
-        return { success: true };
-    } catch (e: unknown) {
-        return { success: false, error: errorMessage(e) };
-    }
-}
-
-/**
- * マスターパスワードを変更
- * @param {string} oldPassword - 古いパスワード
- * @param {string} newPassword - 新しいパスワード
- * @param {(keys: string[]) => Promise<Record<string, unknown>>} getStorageFn - ストレージ取得関数
- * @param {(key: string, value: unknown) => Promise<void>} setStorageFn - ストレージ保存関数
- * @param {encryptedData: EncryptedData | null, newKey: CryptoKey} reencryptFn - 再暗号化関数
- * @returns {Promise<{success: boolean; error?: string}>} 結果
- */
-export async function changeMasterPassword(
-    oldPassword: string,
-    newPassword: string,
-    getStorageFn: (keys: string[]) => Promise<Record<string, unknown>>,
-    setStorageFn: (key: string, value: unknown) => Promise<void>,
-    _reencryptFn: (encryptedData: EncryptedData | null, newKey: CryptoKey) => Promise<void>
-): Promise<{ success: boolean; error?: string }> {
-    try {
-        // 古いパスワード検証
-        const verifyResult = await verifyMasterPassword(oldPassword, getStorageFn);
-        if (!verifyResult.success) {
-            return verifyResult;
-        }
-
-        // 新しいパスワード要件チェック
-        const error = validatePasswordRequirements(newPassword);
-        if (error) {
-            return { success: false, error };
-        }
-
-        // 古いソルトを取得
-        const result = await getStorageFn(['master_password_salt']);
-        const oldSaltBase64 = result['master_password_salt'] as string | undefined;
-
-        // 古いパスワードでキーを取得（再暗号化用）— SSOT iterations
-        const oldSalt = oldSaltBase64
-            ? base64ToBytes(oldSaltBase64)
-            : generateSalt();
-        const oldKey = await deriveKey(oldPassword, oldSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
-
-        // 新しいソルト、ハッシュ、キーを生成 — SSOT iterations
-        const newSalt = generateSalt();
-        const newHash = await hashPasswordWithPBKDF2(newPassword, newSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
-        const newKey = await deriveKey(newPassword, newSalt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
-
-        // 暗号化されたAPIキーを再暗号化
-        const encryptedDataList: Array<{ key: string; encryptedData: EncryptedData | null }> = [];
-        const apiKeyFields = ['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key'];
-        for (const field of apiKeyFields) {
-            const settings = await getStorageFn([field]);
-            const value = settings[field] as EncryptedData | string | undefined;
-
-            if (value && typeof value === 'object' && value.ciphertext) {
-                encryptedDataList.push({ key: field, encryptedData: value as EncryptedData });
-            }
-        }
-
-        // 古いキーで復号して新しいキーで暗号化
-        for (const { key, encryptedData } of encryptedDataList) {
-            // 古いキーで復号
-            const plaintext = await decryptData(encryptedData!, oldKey);
-            const reencrypted = await encrypt(plaintext, newKey);
-            await setStorageFn(key, reencrypted);
-        }
-
-        // 新しいソルトとハッシュを保存
-        await setStorageFn('master_password_salt', bytesToBase64(newSalt));
-        await setStorageFn('master_password_hash', newHash);
-        await setStorageFn('master_password_enabled', true);
 
         return { success: true };
     } catch (e: unknown) {
