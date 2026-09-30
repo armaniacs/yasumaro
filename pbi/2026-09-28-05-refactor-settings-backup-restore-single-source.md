@@ -57,14 +57,14 @@ Scenario: 復元結果の等価性を維持する
 
 ## 受け入れ基準
 
-- [ ] 復元アルゴリズムが 1 実装に統合され、port ベースの実装（`tryRestoreFromBackupViaPort`）を正とする。`chrome.storage.local` 直参照の復元は残さない。
-- [ ] 移行ステートマシン側の復元は port または共通関数へ委譲し、候補列挙・最新世代選択・既知キーフィルタのロジックを重複させない。
-- [ ] バックアップキー判定に export 定数 `LEGACY_SETTINGS_BACKUP_KEY` を使用し、`SettingsRepository` に `'legacy_settings_backup'` のリテラル直書きを残さない。
-- [ ] 既知キー判定を `STORAGE_KEY_VALUES` 相当の集合 1 箇所へ統一し、`Object.values(StorageKeys)` の毎回の配列生成 + `.includes()` 線形走査を残さない。
-- [ ] 復元値の書き込みを共通の型付き代入（`assignSettingValue`）1 箇所に統一し、`as Record<string, unknown>` による生インデックス書き込みを残さない。両者とも検証や変換を行わない単純代入なので、値は統合前後で同一である。
-- [ ] 挙動の pin は byte 同一ではなく復元結果の等価性（同じ世代選択・同じキー集合・同じ検証結果）で行う。
-- [ ] 静的 pin として、production コードに `'legacy_settings_backup'` の直書きが 0 件であることを検証するテストを追加する。
-- [ ] 既存の復元テスト（`settingsMigration` 側と `SettingsRepository` 側）を parity として維持し、`npm run validate` が成功する。
+- [x] 復元アルゴリズムが 1 実装に統合され、port ベースの実装（`tryRestoreFromBackupViaPort`）を正とする。`chrome.storage.local` 直参照の復元は残さない。
+- [x] 移行ステートマシン側の復元は port または共通関数へ委譲し、候補列挙・最新世代選択・既知キーフィルタのロジックを重複させない。
+- [x] バックアップキー判定に export 定数 `LEGACY_SETTINGS_BACKUP_KEY` を使用し、`SettingsRepository` に `'legacy_settings_backup'` のリテラル直書きを残さない。
+- [x] 既知キー判定を `STORAGE_KEY_VALUES` 相当の集合 1 箇所へ統一し、`Object.values(StorageKeys)` の毎回の配列生成 + `.includes()` 線形走査を残さない。
+- [x] 復元値の書き込みを共通の型付き代入（`assignSettingValue`）1 箇所に統一し、`as Record<string, unknown>` による生インデックス書き込みを残さない。両者とも検証や変換を行わない単純代入なので、値は統合前後で同一である。
+- [x] 挙動の pin は byte 同一ではなく復元結果の等価性（同じ世代選択・同じキー集合・同じ検証結果）で行う。
+- [x] 静的 pin として、production コードに `'legacy_settings_backup'` の直書きが 0 件であることを検証するテストを追加する。
+- [x] 既存の復元テスト（`settingsMigration` 側と `SettingsRepository` 側）を parity として維持し、`npm run validate` が成功する。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -377,13 +377,13 @@ git commit -m "docs(pbi): 09-28 PBI 05(設定バックアップ復元の単一�
 
 ## Definition of Done
 
-- [ ] 復元アルゴリズムが 1 実装に統合され、port ベースの実装が正になっている。
-- [ ] 移行ステートマシン側の復元が共通関数へ委譲され、`chrome.storage.local` 直参照の復元ロジックが残っていない。
-- [ ] `LEGACY_SETTINGS_BACKUP_KEY` を import しており、production に `'legacy_settings_backup'` のリテラル直書きが 0 件である。
-- [ ] 既知キー判定が集合 1 箇所に統一され、毎回の配列生成 + 線形走査が残っていない。
-- [ ] 復元値の書き込みが `assignSettingValue` 1 箇所に統一され、生インデックス書き込みが排除されている。
-- [ ] バックアップキーの前方一致（suffix 変種）意味論が保持されている。
-- [ ] 2 系統の復元結果の parity テストが green であり、既存復元テストが pin として維持されている。
-- [ ] `npm run validate` が成功し、既存テストに回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] 復元アルゴリズムが 1 実装に統合され、port ベースの実装が正になっている。
+- [x] 移行ステートマシン側の復元が共通関数へ委譲され、`chrome.storage.local` 直参照の復元ロジックが残っていない。
+- [x] `LEGACY_SETTINGS_BACKUP_KEY` を import しており、production に `'legacy_settings_backup'` のリテラル直書きが 0 件である。
+- [x] 既知キー判定が集合 1 箇所に統一され、毎回の配列生成 + 線形走査が残っていない。
+- [x] 復元値の書き込みが `assignSettingValue` 1 箇所に統一され、生インデックス書き込みが排除されている。
+- [x] バックアップキーの前方一致（suffix 変種）意味論が保持されている。
+- [x] 2 系統の復元結果の parity テストが green であり、既存復元テストが pin として維持されている。
+- [x] `npm run validate` が成功し、既存テストに回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
 - [ ] コードレビューが完了している。
