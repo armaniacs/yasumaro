@@ -242,6 +242,7 @@ export default {
     const utilsRootIndex = filename.lastIndexOf('src/utils/');
     const inUtils = utilsRootIndex !== -1;
     const utilsPrefix = inUtils ? filename.slice(0, utilsRootIndex + 'src/utils/'.length) : '';
+    const utilsPrefixResolved = utilsPrefix.replace(/^\/+/, '');
     const reverseEdgeSanctioned = SANCTIONED_REVERSE_EDGES.some((f) => filename.endsWith(f));
 
     /**
@@ -311,6 +312,12 @@ export default {
         return;
       }
       if (inLayer0) {
+        if (!resolved.startsWith(utilsPrefixResolved)) {
+          if (!matchesAny(resolved, FORBIDDEN_TARGET_LAYERS) && !isAllowlisted(allow, filename, resolved)) {
+            context.report({ node, messageId: 'layer0ForbiddenImport', data: { target: source, targetLayer: 'outside src/utils/' } });
+          }
+          return;
+        }
         const layer1Hit = matchesAny(resolved, LAYER1_FILES);
         if (layer1Hit) {
           if (!isAllowlisted(allow, filename, resolved)) {

@@ -211,6 +211,7 @@ CI 組み込み判断（PBI 2026-09-17-14）: `npm run validate` への配線は
 - Layer 0: `chrome` グローバル参照の禁止（AST の MemberExpression 検出のため、
   コメント・文字列リテラル内の `chrome.*` 言及は誤検出しない。ローカル変数の
   shadowing は scope 解決で除外）。Layer 1／Layer 2／Barrel への静的 import 禁止。
+  `src/utils/` 外への静的 import の禁止（`import type` と `allow` 指定を除く）。
 - Layer 1: Layer 2 への静的 import 禁止。
 - 検査対象は静的 `ImportDeclaration` のみ。dynamic `import()` は循環回避の正規手法として
   一律対象外（ADR 記録済み例外は構成上 lint を通過する）。`import type` は消去されるため対象外。
