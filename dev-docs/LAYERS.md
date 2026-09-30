@@ -47,6 +47,7 @@ src/utils/vfsCapabilities.ts
 src/utils/storage/apiKeyTransition.ts
 src/utils/storage/apiKeyFields.ts
 src/utils/visitThresholds.ts
+src/utils/limits.ts
 ```
 
 注記:
