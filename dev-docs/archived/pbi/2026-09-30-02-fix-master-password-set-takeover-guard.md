@@ -46,11 +46,11 @@
 
 ## 受け入れ基準
 
-- [ ] `encryptionSession.setMasterPassword` 冒頭で `MASTER_PASSWORD_ENABLED` を検査し、設定済みなら書き込み前に専用エラーで失敗する
-- [ ] ciphertext が無い場合(fast path `:380-384`)でもガードが有効(ガードは reencrypt の外側に置く)
-- [ ] dashboard の set モード開始(`:327-330`、`:352-354`)が設定状態を検査し、設定済みなら change 認証へ誘導する
-- [ ] エラーメッセージは i18n 2 言語(en/ja)で追加し、既存キーを流用しない
-- [ ] 既存テスト(`encryptionSession-reencrypt.test.ts` 等)が green を維持する
+- [x] `encryptionSession.setMasterPassword` 冒頭で `MASTER_PASSWORD_ENABLED` を検査し、設定済みなら書き込み前に専用エラーで失敗する
+- [x] ciphertext が無い場合(fast path `:380-384`)でもガードが有効(ガードは reencrypt の外側に置く)
+- [x] dashboard の set モード開始(`:327-330`、`:352-354`)が設定状態を検査し、設定済みなら change 認証へ誘導する
+- [x] エラーメッセージは i18n 2 言語(en/ja)で追加し、既存キーを流用しない
+- [x] 既存テスト(`encryptionSession-reencrypt.test.ts` 等)が green を維持する
 
 ## テスト戦略
 
@@ -80,6 +80,6 @@
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
-- [ ] i18n 更新済み(en/ja)
+- [x] i18n 更新済み(en/ja)
