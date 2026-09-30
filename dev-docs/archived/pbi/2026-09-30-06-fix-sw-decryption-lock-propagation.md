@@ -44,10 +44,10 @@
 
 ## 受け入れ基準
 
-- [ ] `applyMigrationsAndDecryptWithReEncrypt` がキー導出失敗を握りつぶさず、ロック状態を示すシグナル(結果フィールドまたは専用エラー)を返す
-- [ ] `OpenAIProvider` を含む apiKey 消費者が、string 以外の値を黙って使わず明示エラーにする
-- [ ] ロック状態のエラーが通知・AI 要約結果・接続テスト結果まで届き、i18n 文言(en/ja)でロックが原因だと分かる(SW 向け unlock 経路は本 PBI の範囲外で、文言は「バックグラウンドでは使えない」ことを明示する)
-- [ ] 既存の decrypt 成功パスと migration 挙動は変えない
+- [x] `applyMigrationsAndDecryptWithReEncrypt` がキー導出失敗を握りつぶさず、ロック状態を示すシグナル(結果フィールドまたは専用エラー)を返す
+- [x] `OpenAIProvider` を含む apiKey 消費者が、string 以外の値を黙って使わず明示エラーにする
+- [x] ロック状態のエラーが通知・AI 要約結果・接続テスト結果まで届き、i18n 文言(en/ja)でロックが原因だと分かる(SW 向け unlock 経路は本 PBI の範囲外で、文言は「バックグラウンドでは使えない」ことを明示する)
+- [x] 既存の decrypt 成功パスと migration 挙動は変えない
 
 ## テスト戦略
 
@@ -274,14 +274,14 @@ git commit -m "docs(pbi): 09-30 PBI 06(SW 復号ロック伝搬)をアーカイ�
 
 ### 9. 完了条件
 
-- [ ] 節 4 のテスト 5 ファイルを実装前に実行して失敗を確認した
-- [ ] `npm run type-check` / `npx eslint <変更ファイル>` / `npm run lint:layers-docs` が通る
-- [ ] `npx vitest run src/utils src/dashboard src/background src/popup` が全件 green
-- [ ] 新テストが `--repeats=20` で全て green
-- [ ] `encryptionSession.ts` / `SettingsRepository.ts` / `compositionManifest.ts` に差分が無い
-- [ ] en/ja に `encryptionLockedApiKeys` が同一キーで存在する
-- [ ] ログ・エラーメッセージに鍵・暗号文の値が含まれない
-- [ ] 実装コミットとアーカイブコミットが分かれ、`git add -A` を使っていない
+- [x] 節 4 のテスト 5 ファイルを実装前に実行して失敗を確認した
+- [x] `npm run type-check` / `npx eslint <変更ファイル>` / `npm run lint:layers-docs` が通る
+- [x] `npx vitest run src/utils src/dashboard src/background src/popup` が全件 green
+- [x] 新テストが `--repeats=20` で全て green
+- [x] `encryptionSession.ts` / `SettingsRepository.ts` / `compositionManifest.ts` に差分が無い
+- [x] en/ja に `encryptionLockedApiKeys` が同一キーで存在する
+- [x] ログ・エラーメッセージに鍵・暗号文の値が含まれない
+- [x] 実装コミットとアーカイブコミットが分かれ、`git add -A` を使っていない
 
 ## 見積もり
 
@@ -289,6 +289,6 @@ git commit -m "docs(pbi): 09-30 PBI 06(SW 復号ロック伝搬)をアーカイ�
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] ロック時のユーザー向け文言が i18n(en/ja)で整備される
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] ロック時のユーザー向け文言が i18n(en/ja)で整備される
 - [ ] コードレビュー完了
