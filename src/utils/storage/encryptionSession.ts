@@ -293,6 +293,13 @@ async function getOrCreateAnonymousSecretKey(): Promise<CryptoKey> {
             throw new Error('CORRUPTION: encryption salt missing');
         }
 
+        if (saltBase64 && !secret) {
+            // Session rescue found nothing. Generating a pair here would
+            // overwrite the existing salt and orphan every API key encrypted
+            // under it, so report the corruption and leave storage untouched.
+            throw new Error('CORRUPTION: encryption secret missing');
+        }
+
         if (!saltBase64 || !secret) {
             ({ saltBase64, secret } = await generateAndPersistSecret());
         }
