@@ -1,6 +1,18 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
-import { PANEL_CATALOG, type PanelCatalogId } from './panelCatalog.js';
+import { DEFAULT_PANEL_ID, PANEL_CATALOG, type PanelCatalogId } from './panelCatalog.js';
 import { type PanelLifecycle } from './types.js';
+
+/**
+ * Settings panels shown only while the settings subgroup is expanded
+ * (everything in the settings sidebar section except the Initial Setup
+ * toggle itself). Derived from the catalog so a panel added to the
+ * settings section automatically joins the collapsible group.
+ */
+const SETTINGS_CHILD_IDS: ReadonlySet<string> = new Set(
+  PANEL_CATALOG.filter((e) => e.sidebarSection === 'settings' && e.id !== DEFAULT_PANEL_ID).map(
+    (e) => e.id,
+  ),
+);
 
 export class DashboardBootstrapper {
   private sidebar: HTMLElement | null = null;
@@ -39,14 +51,52 @@ export class DashboardBootstrapper {
     });
   }
 
+  /**
+   * Shows or hides the settings subgroup (the settings-section buttons under
+   * the Initial Setup toggle). No subgroup in the DOM (unit-test fixtures,
+   * future layouts) is a no-op, so plain button lists keep working.
+   */
+  #setSettingsExpanded(expanded: boolean): void {
+    if (!this.sidebar) return;
+    const group = this.sidebar.querySelector<HTMLElement>('#settingsSubgroup');
+    if (!group) return;
+    group.hidden = !expanded;
+    const toggle = this.sidebar.querySelector<HTMLElement>(`[data-panel="${DEFAULT_PANEL_ID}"]`);
+    toggle?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+
+  /**
+   * Follows a navigation that did not go through the sidebar click handler
+   * (deep link, in-panel jump): a settings child must reveal its own button,
+   * a non-settings panel collapses the group again. The Initial Setup panel
+   * itself leaves the state untouched so the group only opens on an explicit
+   * press of its button (or on landing inside the group).
+   */
+  #syncSettingsGroupOnNavigate(panelId: string): void {
+    if (panelId === DEFAULT_PANEL_ID) return;
+    this.#setSettingsExpanded(SETTINGS_CHILD_IDS.has(panelId));
+  }
+
   wireSidebar(sidebar: HTMLElement): void {
     this.sidebar = sidebar;
+    // Settings children stay hidden until the Initial Setup button is
+    // pressed (or a navigation lands inside the group).
+    this.#setSettingsExpanded(false);
     // Programmatic navigations (registry.navigate from inside a panel) bypass
     // the click handler below, so sync the sidebar on every navigation. This
     // keeps aria-selected correct no matter how the panel was opened.
-    this.registry.onDidNavigate((panelId) => this.#updateActiveTabForPanel(panelId));
+    this.registry.onDidNavigate((panelId) => {
+      this.#updateActiveTabForPanel(panelId);
+      this.#syncSettingsGroupOnNavigate(panelId);
+    });
     const getTabs = (): HTMLElement[] => {
-      return Array.from(sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn'));
+      return Array.from(sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn')).filter((el) => {
+        // Arrow-key navigation skips buttons hidden inside the collapsed
+        // settings subgroup. Buttons without a subgroup ancestor (or without
+        // any subgroup in the DOM) are always reachable.
+        const group = el.closest('#settingsSubgroup');
+        return !(group instanceof HTMLElement && group.hidden);
+      });
     };
 
     const setRovingTabindex = (activeBtn: HTMLElement): void => {
@@ -69,6 +119,11 @@ export class DashboardBootstrapper {
 
       const panelId = btn.getAttribute('data-panel');
       if (!panelId) return;
+
+      // The Initial Setup button doubles as the settings-group toggle:
+      // pressing it reveals the settings children. Leaving the group
+      // collapses it again so the settings buttons only show on demand.
+      this.#setSettingsExpanded(panelId === DEFAULT_PANEL_ID || SETTINGS_CHILD_IDS.has(panelId));
 
       // Update sidebar active state and ARIA selection
       this.#updateActiveTabForPanel(panelId);

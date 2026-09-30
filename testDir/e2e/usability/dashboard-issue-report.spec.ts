@@ -9,6 +9,8 @@ import { test, expect, SEEDED_API_KEY } from '../fixtures/dashboard-issue-report
 
 test.describe('Dashboard bug report link @extension', () => {
   test('preview shows sanitized diagnostics and "Open GitHub" opens the issue tab', async ({ dashboardPage: page }) => {
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-diagnostics"]').click();
     await expect(page.locator('#panel-diagnostics')).toBeVisible();
 
@@ -33,6 +35,8 @@ test.describe('Dashboard bug report link @extension', () => {
   });
 
   test('Cancel closes the preview without opening a tab', async ({ dashboardPage: page }) => {
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-diagnostics"]').click();
     await page.locator('#diagReportBugBtn').click();
 
@@ -68,7 +72,8 @@ test.describe('Dashboard bug report link @extension', () => {
   });
 
   test('the diagnostics panel button and the sidebar button both work in the same session', async ({ dashboardPage: page }) => {
-    // Diagnostics panel button first.
+    // Diagnostics panel button first (settings subgroup needs expanding).
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-diagnostics"]').click();
     await page.locator('#diagReportBugBtn').click();
     const modal = page.locator('#bugReportPreviewModal');

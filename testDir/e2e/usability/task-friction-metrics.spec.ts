@@ -20,6 +20,8 @@ test.describe('Task friction budget @extension', () => {
   test('adding a domain filter entry stays within its click budget', async ({ dashboardPage: page }) => {
     const meter = new FrictionMeter(page);
 
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await meter.click('[data-panel="panel-general"]');
     await meter.click('[data-panel="panel-domain"]');
     const toggle = page.locator('#domainFilterToggle');
     if (!(await toggle.isChecked())) {
@@ -71,6 +73,8 @@ test.describe('Task friction budget @extension', () => {
 
   test('opening the bug report preview stays within its click budget', async ({ dashboardPage: page }) => {
     const meter = new FrictionMeter(page);
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await meter.click('[data-panel="panel-general"]');
     await meter.click('[data-panel="panel-diagnostics"]');
     await meter.click('#diagReportBugBtn');
 

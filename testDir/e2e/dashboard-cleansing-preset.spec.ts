@@ -16,6 +16,8 @@ import { testInteraction as test, expect } from './fixtures/dashboard.fixture.js
  */
 test.describe('Dashboard cleansing preset @extension', () => {
   test('selecting Balanced sticks in the UI and in the settings blob', async ({ dashboardPage: page }) => {
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('button[data-panel="panel-general"]').click();
     await page.locator('button[data-panel="panel-ai-summary-cleansing"]').click();
     const select = page.locator('#cleansing-preset');
     await expect(select).toBeVisible({ timeout: 10000 });

@@ -16,6 +16,10 @@ const SAMPLE_PANELS = ['panel-general', 'panel-domain', 'panel-diagnostics'];
 test.describe('Dashboard accessibility @extension', () => {
   for (const panelId of SAMPLE_PANELS) {
     test(`${panelId} has no WCAG AA violations`, async ({ dashboardPage: page }) => {
+      // Settings children stay collapsed until Initial Setup is pressed.
+      if (panelId !== 'panel-general') {
+        await page.locator('[data-panel="panel-general"]').click();
+      }
       await page.locator(`[data-panel="${panelId}"]`).click();
       const panel = page.locator(`#${panelId}`);
       await expect(panel).toBeVisible();
@@ -36,7 +40,14 @@ test.describe('Dashboard accessibility @extension', () => {
   test('user can reach and activate a settings change using only the keyboard', async ({ dashboardPage: page }) => {
     // Tab from the top of the page until a sidebar tab receives focus, then
     // Enter/Space activates it — no mouse click anywhere in this test.
+    // The settings subgroup starts collapsed: activating Initial Setup first
+    // reveals the settings tabs, then the Domain Filter tab is reachable.
+    const generalTab = page.locator('[data-panel="panel-general"]');
+    await generalTab.focus();
+    await page.keyboard.press('Enter');
+
     const domainTab = page.locator('[data-panel="panel-domain"]');
+    await expect(domainTab).toBeVisible();
     await domainTab.focus();
     await page.keyboard.press('Enter');
 
@@ -45,6 +56,12 @@ test.describe('Dashboard accessibility @extension', () => {
   });
 
   test('sidebar tabs are keyboard-focusable in document order', async ({ dashboardPage: page }) => {
+    // Expand the settings subgroup via keyboard first so every tab is a
+    // focus target — still no mouse click anywhere in this test.
+    const generalTab = page.locator('[data-panel="panel-general"]');
+    await generalTab.focus();
+    await page.keyboard.press('Enter');
+
     const tabs = page.locator('#sidebar [role="tab"]');
     const count = await tabs.count();
     expect(count).toBeGreaterThan(10);

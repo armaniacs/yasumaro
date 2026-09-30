@@ -17,6 +17,8 @@ const GENERIC_ONLY_PATTERN = /^(error|an error occurred|failed|エラーが発�
 test.describe('Dashboard error message usability @extension', () => {
   test('AI provider unconfigured: message names the missing key and what to do', async ({ dashboardPage: page }) => {
     // Ensure no Gemini API key is set (fixture defaults to gemini provider, no key seeded).
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-diagnostics"]').click();
     await page.locator('#diagTestAiBtn').click();
 
@@ -29,6 +31,8 @@ test.describe('Dashboard error message usability @extension', () => {
   });
 
   test('Obsidian unreachable: message explains the likely cause and what to check', async ({ dashboardPage: page }) => {
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-diagnostics"]').click();
     await page.locator('#diagTestObsidianBtn').click();
 
@@ -43,6 +47,8 @@ test.describe('Dashboard error message usability @extension', () => {
   test('offline network: AI connection test still reports an actionable message', async ({ dashboardPage: page, context }) => {
     await context.setOffline(true);
     try {
+      // Settings children stay collapsed until Initial Setup is pressed.
+      await page.locator('[data-panel="panel-general"]').click();
       await page.locator('[data-panel="panel-diagnostics"]').click();
       await page.locator('#diagTestAiBtn').click();
 

@@ -185,6 +185,27 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
       expect(html, `${entry.id} has no <section id>`).toContain(`id="${entry.id}"`);
     }
   });
+
+  it('wraps exactly the settings children (not the toggle) in #settingsSubgroup', () => {
+    const groupStart = sidebarNav.indexOf('<div class="sidebar-subgroup" id="settingsSubgroup">');
+    expect(groupStart).toBeGreaterThan(-1);
+    // No nested divs inside the buttons, so the first closing div ends the group.
+    const groupEnd = sidebarNav.indexOf('</div>', groupStart);
+    const groupHtml = sidebarNav.slice(groupStart, groupEnd);
+    const ids = [...groupHtml.matchAll(/data-panel="([^"]+)"/g)].map((m) => m[1]);
+    expect(ids).toEqual(
+      SIDEBAR_PANELS.filter((e) => e.sidebarSection === 'settings' && e.id !== 'panel-general').map(
+        (e) => e.id,
+      ),
+    );
+    // The Initial Setup toggle stays outside the group so it is always visible.
+    expect(sidebarNav.indexOf('data-panel="panel-general"')).toBeLessThan(groupStart);
+    // The toggle starts collapsed but keyboard-reachable (Tab lands on it,
+    // Enter expands the group).
+    const toggleTag = /<button\b[^>]*data-panel="panel-general"[^>]*>/.exec(sidebarNav)?.[0] ?? '';
+    expect(toggleTag).toContain('aria-expanded="false"');
+    expect(toggleTag).toContain('tabindex="0"');
+  });
 });
 
 describe('panelCatalog — deep-link 派生', () => {

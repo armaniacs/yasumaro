@@ -273,6 +273,13 @@ a:hover {
   flex: 1;
 }
 
+/* Settings subgroup wrapper: layout-neutral so the static sidebar keeps its
+   current look when expanded; collapsing is driven by the hidden attribute
+   (global [hidden] rule above) owned by DashboardBootstrapper. */
+.sidebar-subgroup {
+  display: contents;
+}
+
 .sidebar-section-label {
   font-size: 10px;
   font-weight: 700;

@@ -6,7 +6,8 @@ test.describe('domain filter UI @extension', () => {
     await page.goto(`chrome-extension://${extensionId}/options.html`);
     await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
 
-    // ドメインフィルターパネルを開く
+    // ドメインフィルターパネルを開く（設定タブは初期設定ボタンで展開してから）
+    await page.locator('button[aria-controls="panel-general"]').click();
     await page.locator('button[aria-controls="panel-domain"]').click();
     await expect(page.locator('#panel-domain')).toBeVisible();
 
@@ -42,6 +43,8 @@ test.describe('domain filter UI @extension', () => {
     const page = await context.newPage();
     await page.goto(`chrome-extension://${extensionId}/options.html`);
     await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
+    // 設定タブは初期設定ボタンで展開してから
+    await page.locator('button[aria-controls="panel-general"]').click();
     await page.locator('button[aria-controls="panel-domain"]').click();
     await expect(page.locator('#panel-domain')).toBeVisible();
 
