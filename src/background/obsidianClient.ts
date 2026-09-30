@@ -37,6 +37,7 @@ import {
     type FailureMetadata
 } from '../utils/failureTaxonomy.js';
 import { readBodyCapped } from '../utils/readBodyCapped.js';
+import { isEncryptionLockedError } from '../utils/storage/encryptionLockedError.js';
 import { truncateForLog } from '../utils/logTruncate.js';
 
 /**
@@ -324,6 +325,12 @@ export class ObsidianClient {
                     headers = config.headers;
                 } catch (e: unknown) {
                     const msg = errorMessage(e);
+                    if (isEncryptionLockedError(e)) {
+                        return withFailure(
+                            { success: false, message: errorMessage(e) },
+                            connectionTestFailure(e, FailureKind.CONFIGURATION)
+                        );
+                    }
                     if (msg.includes('API key is missing')) {
                         return withFailure(
                             { success: false, message: 'API key is missing. Please enter your Obsidian API key.' },
@@ -358,7 +365,12 @@ export class ObsidianClient {
             const errorName = e instanceof Error ? e.name : 'Error';
             addLog(LogType.ERROR, `Connection test failed: ${msg}`);
 
-            if (errorName === 'AbortError' || msg.includes('timed out')) {
+            if (isEncryptionLockedError(e)) {
+                return withFailure(
+                    { success: false, message: errorMessage(e) },
+                    connectionTestFailure(e, FailureKind.CONFIGURATION)
+                );
+            } else if (errorName === 'AbortError' || msg.includes('timed out')) {
                 return withFailure(
                     { success: false, message: 'Connection timeout. Is Obsidian running?' },
                     connectionTestFailure(e, FailureKind.TIMEOUT)

@@ -7,6 +7,7 @@
 import { ErrorCode } from '../logger/types.js';
 import { logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
+import { isEncryptionLockedError } from './encryptionLockedError.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
 import { withOptimisticLock, StorageTransaction, deepEqual } from './storageTransaction.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
@@ -417,7 +418,9 @@ export interface ApplyMigrationsResult {
    * permanently destroy it; callers should surface these fields via a
    * re-authentication prompt instead of treating them as empty.
    */
-  unrecoverable: StorageKey[];
+   unrecoverable: StorageKey[];
+  /** True when the key provider refused because the session is locked; ciphertext is left untouched in `settings`. */
+  locked: boolean;
 }
 
 async function applyMigrationsCore(
@@ -441,6 +444,7 @@ async function applyMigrationsCore(
     }
     const reEncrypted: Record<string, unknown> = {};
     const unrecoverable: StorageKey[] = [];
+    let locked = false;
     try {
         const keyProvider = (opts as ApplyMigrationsOptions | undefined)?.getEncryptionKey ?? getOrCreateEncryptionKey;
         const key = await keyProvider();
@@ -482,9 +486,14 @@ async function applyMigrationsCore(
             }
         }
     } catch (e) {
-        await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
+        if (isEncryptionLockedError(e)) {
+            locked = true;
+            await logWarn('Encryption key unavailable: session is locked', {}, undefined, 'settingsMigration');
+        } else {
+            await logError('Failed to get encryption key for decryption', { error: errorMessage(e) }, ErrorCode.CRYPTO_KEY_DERIVE_FAILURE);
+        }
     }
-    return { settings: merged, reEncrypted, unrecoverable };
+    return { settings: merged, reEncrypted, unrecoverable, locked };
 }
 
 /**

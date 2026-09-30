@@ -18,6 +18,7 @@ import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { FailureKind, createFailure, resolveFailure, type FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
+import { isEncryptionLockedError } from '../../utils/storage/encryptionLockedError.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { disabledBreaker, type ProviderBreakerLike, type ProviderCooldown } from './providerBreaker.js';
 
@@ -158,6 +159,14 @@ export class RemoteAIService implements AIService {
       const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
       return result;
     } catch (error: unknown) {
+      if (isEncryptionLockedError(error)) {
+        addLog(LogType.WARN, 'AI provider slot skipped: API keys are locked', { traceId });
+        return {
+          success: false,
+          summary: `Error: ${errorMessage(error)}`,
+          failure: createFailure(FailureKind.CONFIGURATION),
+        };
+      }
       addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
       const result: AISummaryResult = {
         success: false,

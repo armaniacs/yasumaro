@@ -17,6 +17,7 @@ import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/t
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { FailureKind, createFailure } from '../../../utils/failureTaxonomy.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
+import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedError.js';
 import { PROVIDER_ALLOWLIST_ROWS, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
@@ -66,7 +67,9 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 this.baseUrl = entry.defaultBaseUrl ?? '';
             }
             if (entry.apiKeyKey) {
-                this.apiKey = s[entry.apiKeyKey] as string | undefined;
+                const rawKey = s[entry.apiKeyKey];
+                assertApiKeyResolved(rawKey);
+                this.apiKey = rawKey as string | undefined;
                 this.apiKeySource = entry.apiKeyKey;
             } else {
                 this.apiKey = undefined;
@@ -87,7 +90,9 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
             // this path serves direct construction only.
             const normalizedName = providerName.replace('2', '_2').replace(/-/g, '_').toLowerCase();
             this.baseUrl = str(`${normalizedName}_base_url`, 'https://api.openai.com/v1');
-            this.apiKey = s[`${normalizedName}_api_key`] as string | undefined;
+            const rawLegacyKey = s[`${normalizedName}_api_key`];
+            assertApiKeyResolved(rawLegacyKey);
+            this.apiKey = rawLegacyKey as string | undefined;
             this.apiKeySource = `${normalizedName}_api_key (legacy fallback)`;
             const modelKey = providerName === 'openai-compatible' ? StorageKeys.PROVIDER_MODEL : `${normalizedName}_model`;
             this.model = str(modelKey, 'gpt-3.5-turbo');

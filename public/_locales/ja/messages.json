@@ -1133,6 +1133,9 @@
   "masterPasswordPendingRotationMismatch": {
     "message": "前回のマスターパスワード変更が中断されています。前回入力した新しいパスワードをもう一度入力して完了してください。何も変更していません。"
   },
+  "encryptionLockedApiKeys": {
+    "message": "API キーがマスターパスワードでロックされているため、バックグラウンド処理では使用できません。ダッシュボードでマスターパスワードの設定を確認してください。"
+  },
   "masterPasswordReencryptAborted": {
     "message": "復号できない項目（{fields}）があるため処理を中止しました。何も変更していません。再入力のうえ再試行してください。"
   },
