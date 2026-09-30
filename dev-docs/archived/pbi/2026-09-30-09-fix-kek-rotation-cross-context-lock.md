@@ -41,11 +41,11 @@
 
 ## 受け入れ基準
 
-- [ ] set / change / remove の変更区間(検証〜再暗号化〜metadata 書き込み)を Web Locks の排他ロック(`ifAvailable: true`)でクロスコンテキスト直列化する
-- [ ] anchor の read-modify-write はロック内で行う(ロック取得後の再読み取りになるため別途 CAS は不要。storage 上の CAS は原子的でなく二重の保証にならない)
-- [ ] ロック取得失敗は専用エラー `RotationInProgressError` で即座に失敗し、dashboard が i18n(en/ja)メッセージで再試行を促す。ciphertext と metadata は変更されない
-- [ ] コンテキスト消滅(タブ close・crash・SW 終了)時のロックはブラウザが自動解放する。storage に holder record を持たないため TTL は不要
-- [ ] 既存の nested delta 書き込み(`tx.withLock`)と干渉しない(別機構のため同一 key を共有しない)
+- [x] set / change / remove の変更区間(検証〜再暗号化〜metadata 書き込み)を Web Locks の排他ロック(`ifAvailable: true`)でクロスコンテキスト直列化する
+- [x] anchor の read-modify-write はロック内で行う(ロック取得後の再読み取りになるため別途 CAS は不要。storage 上の CAS は原子的でなく二重の保証にならない)
+- [x] ロック取得失敗は専用エラー `RotationInProgressError` で即座に失敗し、dashboard が i18n(en/ja)メッセージで再試行を促す。ciphertext と metadata は変更されない
+- [x] コンテキスト消滅(タブ close・crash・SW 終了)時のロックはブラウザが自動解放する。storage に holder record を持たないため TTL は不要
+- [x] 既存の nested delta 書き込み(`tx.withLock`)と干渉しない(別機構のため同一 key を共有しない)
 
 ## テスト戦略
 
@@ -310,13 +310,13 @@ git commit -m "docs(pbi): 09-30 PBI 09(KEK 回転の相互排他)をアーカイ
 
 ### 9. 完了条件
 
-- [ ] `rotationLock.ts` が `withRotationLock` / `RotationInProgressError` / `ROTATION_LOCK_NAME` を export し、`encryptionSession.ts` が `RotationInProgressError` を再 export している
-- [ ] set(ガード込み)・change(`rotateToNewMasterPassword` のみ)・remove(本体全体)がロック内で実行され、`rotateToNewMasterPassword` 内部にはロックが無い
-- [ ] 新規テストを実装前に走らせて失敗を確認し、実装後に green(`--repeats=20` も green)
-- [ ] 既存 4 本の dashboard テストの factory に `RotationInProgressError` を追加し、`npx vitest run src/utils src/dashboard src/background src/popup` が全件 green
-- [ ] `type-check` / `eslint` / `lint:layers-docs` が green、i18n が en/ja 両方に存在
-- [ ] ログ・エラーにパスワード等の機微情報が出ない
-- [ ] 実装コミットとアーカイブコミットが分かれ、`git add -A` を使っていない
+- [x] `rotationLock.ts` が `withRotationLock` / `RotationInProgressError` / `ROTATION_LOCK_NAME` を export し、`encryptionSession.ts` が `RotationInProgressError` を再 export している
+- [x] set(ガード込み)・change(`rotateToNewMasterPassword` のみ)・remove(本体全体)がロック内で実行され、`rotateToNewMasterPassword` 内部にはロックが無い
+- [x] 新規テストを実装前に走らせて失敗を確認し、実装後に green(`--repeats=20` も green)
+- [x] 既存 4 本の dashboard テストの factory に `RotationInProgressError` を追加し、`npx vitest run src/utils src/dashboard src/background src/popup` が全件 green
+- [x] `type-check` / `eslint` / `lint:layers-docs` が green、i18n が en/ja 両方に存在
+- [x] ログ・エラーにパスワード等の機微情報が出ない
+- [x] 実装コミットとアーカイブコミットが分かれ、`git add -A` を使っていない
 
 ## 見積もり
 
@@ -324,5 +324,5 @@ git commit -m "docs(pbi): 09-30 PBI 09(KEK 回転の相互排他)をアーカイ
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
