@@ -12,9 +12,7 @@ import {
     calculatePasswordStrength,
     validatePasswordRequirements,
     validatePasswordMatch,
-    setMasterPassword,
     verifyMasterPassword,
-    changeMasterPassword,
     isMasterPasswordSet,
     PasswordStrength
 } from '../masterPassword.js';
@@ -26,21 +24,11 @@ vi.mock('../crypto/index.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../crypto/index.js')>();
   return {
     ...actual,
-    generateSalt: vi.fn(() => new Uint8Array(16).fill(1)),
     hashPasswordWithPBKDF2: vi.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
     verifyPasswordWithPBKDF2: vi.fn(async (password: string, hash: string, _salt: Uint8Array) => {
         const isValid = password === 'correct_password' && hash === 'hashed_value';
         return { isValid, needsRehash: false };
     }),
-    encrypt: vi.fn(async (plaintext: string, _key: CryptoKey) => ({
-        ciphertext: 'encrypted_' + plaintext,
-        iv: 'test_iv'
-    })),
-    decryptData: vi.fn(async (data: any, _key: CryptoKey) => {
-        if (data.ciphertext === 'encrypted_old_secret') return 'old_secret';
-        return 'decrypted_data';
-    }),
-    deriveKey: vi.fn(async (_password: string, _salt: Uint8Array) => 'mock_key' as unknown as CryptoKey),
   };
 });
 
@@ -147,45 +135,6 @@ describe('masterPassword', () => {
         });
     });
 
-    describe('setMasterPassword', () => {
-        test('succeeds with a valid password (meets SSOT strength)', async () => {
-            const mockSet = vi.fn(async () => {});
-            const result = await setMasterPassword('StrongPass123!@#', mockSet);
-
-            expect(result.success).toBe(true);
-            expect(result.error).toBeUndefined();
-            expect(mockSet).toHaveBeenCalledTimes(3);
-            expect(mockSet).toHaveBeenCalledWith('master_password_salt', expect.any(String));
-            expect(mockSet).toHaveBeenCalledWith('master_password_hash', 'hashed_value');
-            expect(mockSet).toHaveBeenCalledWith('master_password_enabled', true);
-        });
-
-        test('returns an error for a short password (SSOT 12 characters)', async () => {
-            const mockSet = vi.fn(async () => {});
-            const result = await setMasterPassword('short', mockSet);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Password must be at least 12 characters long');
-            expect(mockSet).not.toHaveBeenCalled();
-        });
-
-        test('returns an error for an empty password', async () => {
-            const mockSet = vi.fn(async () => {});
-            const result = await setMasterPassword('', mockSet);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Password is required');
-        });
-
-        test('returns an error on storage failure', async () => {
-            const mockSet = vi.fn(async () => { throw new Error('Storage failed'); });
-            const result = await setMasterPassword('StrongPass123!@#', mockSet);
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Storage failed');
-        });
-    });
-
     describe('verifyMasterPassword', () => {
         test('succeeds with the correct password', async () => {
             const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
@@ -224,115 +173,6 @@ describe('masterPassword', () => {
             const result = await verifyMasterPassword('any', mockGet);
             expect(result.success).toBe(false);
             expect(result.error).toBe('Storage error');
-        });
-    });
-
-    describe('changeMasterPassword', () => {
-        test('changes the password with the correct old password (new password meets SSOT strength)', async () => {
-            const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = vi.fn(async (keys: string[]) => {
-                if (keys.includes('master_password_hash')) {
-                    return {
-                        'master_password_salt': saltBase64,
-                        'master_password_hash': 'hashed_value'
-                    };
-                }
-                if (keys.includes('master_password_salt')) {
-                    return { 'master_password_salt': saltBase64 };
-                }
-                return {};
-            });
-            const mockSet = vi.fn(async () => {});
-            const mockReencrypt = vi.fn(async () => {});
-
-            const result = await changeMasterPassword(
-                'correct_password',
-                'NewStrongPass123!@#',
-                mockGet,
-                mockSet,
-                mockReencrypt
-            );
-
-            expect(result.success).toBe(true);
-            expect(mockSet).toHaveBeenCalledWith('master_password_salt', expect.any(String));
-            expect(mockSet).toHaveBeenCalledWith('master_password_hash', 'hashed_value');
-            expect(mockSet).toHaveBeenCalledWith('master_password_enabled', true);
-        });
-
-        test('returns an error for a wrong old password', async () => {
-            const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = vi.fn(async () => ({
-                'master_password_salt': saltBase64,
-                'master_password_hash': 'hashed_value'
-            }));
-            const mockSet = vi.fn(async () => {});
-            const mockReencrypt = vi.fn(async () => {});
-
-            const result = await changeMasterPassword(
-                'wrong_password',
-                'newpassword123',
-                mockGet,
-                mockSet,
-                mockReencrypt
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Incorrect password');
-        });
-
-        test('returns an error when the new password is short (SSOT 12 characters)', async () => {
-            const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = vi.fn(async () => ({
-                'master_password_salt': saltBase64,
-                'master_password_hash': 'hashed_value'
-            }));
-            const mockSet = vi.fn(async () => {});
-            const mockReencrypt = vi.fn(async () => {});
-
-            const result = await changeMasterPassword(
-                'correct_password',
-                'short',
-                mockGet,
-                mockSet,
-                mockReencrypt
-            );
-
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Password must be at least 12 characters long');
-        });
-
-        test('re-encrypts encrypted API keys', async () => {
-            const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const encryptedData = { ciphertext: 'encrypted_old_secret', iv: 'test_iv' };
-            const mockGet = vi.fn(async (keys: string[]) => {
-                if (keys.includes('master_password_hash')) {
-                    return {
-                        'master_password_salt': saltBase64,
-                        'master_password_hash': 'hashed_value'
-                    };
-                }
-                if (keys.includes('master_password_salt')) {
-                    return { 'master_password_salt': saltBase64 };
-                }
-                for (const key of keys) {
-                    if (key.includes('api_key')) {
-                        return { [key]: encryptedData };
-                    }
-                }
-                return {};
-            });
-            const mockSet = vi.fn(async () => {});
-            const mockReencrypt = vi.fn(async () => {});
-
-            const result = await changeMasterPassword(
-                'correct_password',
-                'NewStrongPass123!@#',
-                mockGet,
-                mockSet,
-                mockReencrypt
-            );
-
-            expect(result.success).toBe(true);
         });
     });
 

@@ -43,15 +43,6 @@ export function validateAndSetMatchErrors(
 }
 
 /**
- * chrome.storage.local.set をラップする関数を生成
- */
-export function buildSetStorageFn() {
-    return async (key: string, value: unknown) => {
-        await chrome.storage.local.set({ [key]: value });
-    };
-}
-
-/**
  * chrome.storage.local.get をラップする関数を生成
  */
 export function buildGetStorageFn() {
