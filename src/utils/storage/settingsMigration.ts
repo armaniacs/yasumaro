@@ -20,8 +20,15 @@ import {
     isLoopbackOriginHostname,
 } from './providerAllowlist.js';
 import type { StorageKey, StorageKeyValues, Settings } from './types.js';
+import {
+    LEGACY_SETTINGS_BACKUP_KEY,
+    STORAGE_KEY_VALUES,
+    assignSettingValue,
+    listSettingsBackupKeys,
+} from './settingsBackup.js';
 
-export const LEGACY_SETTINGS_BACKUP_KEY = 'legacy_settings_backup';
+export { LEGACY_SETTINGS_BACKUP_KEY };
+
 const BACKUP_RETENTION_DAYS = 30;
 export const SETTINGS_MIGRATED_KEY = 'settings_migrated';
 
@@ -120,8 +127,6 @@ export function isSettingsBlobAuthoritative(raw: unknown): boolean {
     return isSettingsMigrationComplete(raw);
 }
 
-const STORAGE_KEY_VALUES: ReadonlySet<string> = new Set<string>(Object.values(StorageKeys) as string[]);
-
 /**
  * Keys that stay at the top level of `chrome.storage.local` even though they are
  * ordinary `StorageKeys` values. This is an explicit allowlist on purpose: the
@@ -165,11 +170,6 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
 export function isMigratableStorageKey(key: string): boolean {
     if (!STORAGE_KEY_VALUES.has(key)) return false;
     return !TOP_LEVEL_ONLY_KEYS.has(key);
-}
-
-function assignSettingValue(settings: Settings, key: StorageKey, value: unknown): void {
-    const target = settings as Record<StorageKey, unknown>;
-    target[key] = value;
 }
 
 function hasOwn(record: Record<string, unknown>, key: string): boolean {
@@ -262,7 +262,7 @@ async function writeAndVerifyBackup(
 async function hasCoveringBackup(port: StoragePort, keys: readonly string[]): Promise<boolean> {
     if (keys.length === 0) return true;
     const all = await port.get(null);
-    const backupKeys = Object.keys(all).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
+    const backupKeys = listSettingsBackupKeys(all);
     for (const backupKey of backupKeys) {
         const entry = all[backupKey];
         if (!isPlainRecord(entry) || !isPlainRecord(entry['data'])) continue;
@@ -529,8 +529,7 @@ export async function tryRestoreFromBackup(): Promise<Settings | null> {
 export async function cleanupExpiredSettingsBackups(): Promise<void> {
     const all = await chrome.storage.local.get(null);
     const cutoff = Date.now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-    const expiredKeys = Object.keys(all).filter((k) => {
-        if (!k.startsWith(LEGACY_SETTINGS_BACKUP_KEY)) return false;
+    const expiredKeys = listSettingsBackupKeys(all).filter((k) => {
         const entry = all[k] as { createdAt?: number } | undefined;
         return typeof entry?.createdAt === 'number' && entry.createdAt < cutoff;
     });
