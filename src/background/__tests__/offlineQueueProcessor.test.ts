@@ -1,7 +1,42 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createOfflineQueueProcessor } from '../offlineQueueProcessor.js';
+import type { OfflineJob } from '../offlineNetworkQueue.js';
+
+const CLAIMS_KEY = 'recording_recovery_claims';
+
+/** Seeds a fresh claim through the setup-provided chrome.storage mock. */
+async function seedClaim(url: string, owner: string): Promise<void> {
+    const claims = { [url]: { url, owner, claimedAt: Date.now() } };
+    await global.chrome.storage.local.set({ [CLAIMS_KEY]: claims });
+}
+
+/** Two-arg retryAll mock that feeds one job to the handler, like the real queue. */
+function retryAllFeeding(
+    job: Partial<OfflineJob>,
+    handlerResult: boolean,
+    dropsAfterHandler: boolean,
+): { retryAll: ReturnType<typeof vi.fn>; onDropped: ReturnType<typeof vi.fn> } {
+    const onDropped = vi.fn().mockResolvedValue(undefined);
+    const retryAll = vi.fn(async (
+        handler: (job: OfflineJob) => Promise<boolean>,
+        reportDropped?: (job: OfflineJob, reason: string) => Promise<void> | void,
+    ) => {
+        const result = await handler(job as OfflineJob);
+        if (dropsAfterHandler && !result && reportDropped) {
+            await reportDropped(job as OfflineJob, 'max-retries');
+        }
+    });
+    return { retryAll, onDropped };
+}
 
 describe('createOfflineQueueProcessor', () => {
+    beforeEach(async () => {
+        // chrome.storage.local is the vitest.setup mock; clear the claims key
+        // so one test's recovery claims never leak into the next.
+        await global.chrome.storage.local.remove(CLAIMS_KEY);
+        vi.clearAllMocks();
+    });
+
     it('retries obsidian_sync jobs via retryObsidianWrite when summary is present', async () => {
         const retryObsidianWrite = vi.fn().mockResolvedValue(true);
         const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
@@ -21,6 +56,34 @@ describe('createOfflineQueueProcessor', () => {
 
         expect(retryObsidianWrite).toHaveBeenCalledWith({ title: 't', url: 'https://example.com', summary: 's', tags: undefined });
         expect(record).not.toHaveBeenCalled();
+    });
+
+    it('passes the frozen payload markdown through to retryObsidianWrite (PBI 2026-09-25-13)', async () => {
+        const retryObsidianWrite = vi.fn().mockResolvedValue(true);
+        const record = vi.fn();
+        const retryAll = vi.fn(async (handler: (job: unknown) => Promise<boolean>) => {
+            await handler({
+                type: 'obsidian_sync',
+                payload: {
+                    title: 't',
+                    url: 'https://example.com',
+                    content: 'c',
+                    summary: 's',
+                    markdown: '- [t](https://example.com)\n  - s',
+                },
+            });
+        });
+
+        const processQueue = createOfflineQueueProcessor({
+            offlineNetworkQueue: { retryAll },
+            recordingPipeline: { record, retryObsidianWrite },
+        });
+
+        await processQueue();
+
+        expect(retryObsidianWrite).toHaveBeenCalledWith(
+            expect.objectContaining({ markdown: '- [t](https://example.com)\n  - s' })
+        );
     });
 
     it('falls back to full record() pipeline for ai_summary jobs', async () => {
@@ -290,6 +353,88 @@ describe('createOfflineQueueProcessor', () => {
             });
             await processQueue();
             expect(record).toHaveBeenCalledWith(expect.objectContaining({ force: false }));
+        });
+    });
+
+    describe('recovery owner arbitration (PBI 2026-09-25-12)', () => {
+        it('hands a terminal-failure job over to the terminal-failure handler', async () => {
+            const handOver = vi.fn().mockResolvedValue(undefined);
+            const record = vi.fn().mockResolvedValue({ success: false });
+            const { retryAll } = retryAllFeeding(
+                { type: 'ai_summary', payload: { title: 't', url: 'https://example.com/terminal', content: 'c' } },
+                false,
+                true,
+            );
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite: vi.fn() },
+                terminalFailureHandler: { handOver },
+            });
+
+            await processQueue();
+
+            expect(handOver).toHaveBeenCalledTimes(1);
+            expect(handOver).toHaveBeenCalledWith(expect.objectContaining({ type: 'ai_summary' }));
+        });
+
+        it('skips processing when the durable claim is held by another owner', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+            const retryObsidianWrite = vi.fn();
+            const { retryAll, onDropped } = retryAllFeeding(
+                { type: 'ai_summary', payload: { title: 't', url: 'https://example.com/claimed', content: 'c' } },
+                true,
+                false,
+            );
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite },
+            });
+
+            await seedClaim('https://example.com/claimed', 'manual');
+            await processQueue();
+
+            expect(record).not.toHaveBeenCalled();
+            expect(retryObsidianWrite).not.toHaveBeenCalled();
+            expect(onDropped).not.toHaveBeenCalled();
+        });
+
+        it('releases the durable claim after the job finishes', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+            const retryObsidianWrite = vi.fn();
+            const { retryAll } = retryAllFeeding(
+                { type: 'ai_summary', payload: { title: 't', url: 'https://example.com/release', content: 'c' } },
+                true,
+                false,
+            );
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite },
+            });
+
+            await processQueue();
+
+            expect(record).toHaveBeenCalledTimes(1);
+            const stored = await global.chrome.storage.local.get(CLAIMS_KEY);
+            expect(stored[CLAIMS_KEY]?.['https://example.com/release']).toBeUndefined();
+        });
+
+        it('releases the durable claim even when the pipeline throws', async () => {
+            const record = vi.fn().mockRejectedValue(new Error('boom'));
+            const retryObsidianWrite = vi.fn();
+            const { retryAll } = retryAllFeeding(
+                { type: 'ai_summary', payload: { title: 't', url: 'https://example.com/throwing', content: 'c' } },
+                false,
+                true,
+            );
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite },
+            });
+
+            await processQueue();
+
+            const stored = await global.chrome.storage.local.get(CLAIMS_KEY);
+            expect(stored[CLAIMS_KEY]?.['https://example.com/throwing']).toBeUndefined();
         });
     });
 });

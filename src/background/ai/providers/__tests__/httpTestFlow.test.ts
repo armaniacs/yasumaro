@@ -15,6 +15,7 @@ import { GeminiProvider } from '../GeminiProvider.js';
 import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import { createProviderStrategy } from '../../providerCatalog.js';
 import { CONNECTION_TEST_PROMPT } from '../ProviderStrategy.js';
+import { FailureKind } from '../../../../utils/failureTaxonomy.js';
 import { StorageKeys } from '../../../../utils/storage/types.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
@@ -165,7 +166,7 @@ describe('executeHttpTestFlow parity — Gemini', () => {
     expect(result).toEqual({
       success: false,
       message: 'Gemini API Key is not set. Please enter it in the AI provider settings.',
-      debug: { error: 'API key is missing' },
+      debug: { error: 'API key is missing', failure: { kind: FailureKind.CONFIGURATION } },
     });
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -292,7 +293,7 @@ describe('executeHttpTestFlow parity — OpenAI-compatible', () => {
     expect(result).toEqual({
       success: false,
       message: 'Base URL is not set.',
-      debug: { error: 'Base URL is missing' },
+      debug: { error: 'Base URL is missing', failure: { kind: FailureKind.CONFIGURATION } },
     });
     expect(fetch).not.toHaveBeenCalled();
   });

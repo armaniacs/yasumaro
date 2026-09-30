@@ -161,6 +161,12 @@
   "reviewSummaryFailed": {
     "message": "サマリの生成に失敗しました。"
   },
+  "aiProviderBreakerEnabledLabel": {
+    "message": "失敗が続くプロバイダを一時停止する"
+  },
+  "aiProviderBreakerEnabledHelp": {
+    "message": "有効にすると、失敗が続くプロバイダを5〜15分一時停止し、停止が終わるまで要約の対象から外します。OFFにすると、要約のたびに全プロバイダを再試行します。一時停止はAPIコストの節約できますが、停止中は要約が生成されません。"
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },
@@ -544,6 +550,9 @@
   "recordingFailed": {
     "message": "記録に失敗しました"
   },
+  "pendingRecoveryReady": {
+    "message": "自動再試行が上限に達しました。保留ページから手動で再実行できます。"
+  },
   "obsidianSyncFailed": {
     "message": "Obsidian同期に失敗しました"
   },
@@ -612,6 +621,9 @@
   },
   "acceptCertificate": {
     "message": "ここをクリックして自己署名証明書を承認"
+  },
+  "certGuideFirefox": {
+    "message": "FirefoxはOSとは別の証明書ストアを使うため、OSに証明書を登録してもFirefoxから信頼されていないことがあります。次のどちらかを実施してください: (1) 上のリンクを新しいタブで開き、証明書の例外を追加する (2) 設定 → プライバシーとセキュリティ → 証明書 からCA証明書をインポートする。リンク先: {url}"
   },
   "errorProtocol": {
     "message": "エラー: プロトコルは\"http\"または\"https\"である必要があります。"
@@ -1109,11 +1121,11 @@
   "passwordIncorrect": {
     "message": "パスワードが正しくありません。"
   },
-  "passwordSaved": {
-    "message": "マスターパスワードを保存しました。"
+  "masterPasswordReencryptedKept": {
+    "message": "マスターパスワードを更新しました。API キーは保持されました。"
   },
-  "passwordRemoved": {
-    "message": "マスターパスワードを削除しました。"
+  "masterPasswordReencryptAborted": {
+    "message": "復号できない項目（{fields}）があるため処理を中止しました。何も変更していません。再入力のうえ再試行してください。"
   },
   "passwordRequired": {
     "message": "マスターパスワードを入力してください。"
@@ -4503,6 +4515,9 @@
     "message": "スニペット"
   },
   "cleansingFeedbackReason": {
+    "message": "理由"
+  },
+  "cleansingFeedbackReasons": {
     "message": "理由"
   },
   "cleansingFeedbackDate": {

@@ -28,6 +28,12 @@
  */
 
 import { getMessageOr } from '../../utils/i18n.js';
+import {
+  DAY_MS,
+  endOfLocalDayMs,
+  parseLocalDateStart,
+  startOfLocalDayMs,
+} from '../../utils/localDate.js';
 
 /** Preset buttons rendered by the component. 'custom' is entered via the date inputs. */
 export type PeriodPreset = 'today' | 'last7' | 'last30' | 'last90' | 'all' | 'custom';
@@ -49,20 +55,21 @@ export interface PeriodRange {
   until?: number;
 }
 
-export const DAY_MS = 86_400_000;
+/** Re-exported from the localDate SSOT; kept here for existing panel imports. */
+export { DAY_MS };
 
-/** Local-midnight start of the day containing `ts`. */
+/**
+ * Local-midnight start of the day containing `ts`.
+ * Delegates to the localDate SSOT; re-exported because dashboard panels and
+ * their tests import it from here (PBI 2026-09-28-11).
+ */
 export function startOfLocalDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+  return startOfLocalDayMs(ts);
 }
 
 /** Inclusive local end-of-day (23:59:59.999) of the day containing `ts`. */
 export function endOfLocalDay(ts: number): number {
-  const d = new Date(ts);
-  d.setHours(23, 59, 59, 999);
-  return d.getTime();
+  return endOfLocalDayMs(ts);
 }
 
 /**
@@ -87,8 +94,7 @@ export function presetToRange(preset: PeriodButtonPreset, now: number): PeriodRa
 
 /** Parses a YYYY-MM-DD date-input value as a local-midnight timestamp (NaN when invalid). */
 export function parseDateInput(value: string): number {
-  if (!value) return NaN;
-  return new Date(value + 'T00:00:00').getTime();
+  return parseLocalDateStart(value);
 }
 
 /**

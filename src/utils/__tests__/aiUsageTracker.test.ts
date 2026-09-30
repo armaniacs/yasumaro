@@ -6,181 +6,24 @@
 import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
-// StorageKeys モック
-vi.mock('../storage/types.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
+// StorageKeys come from the real type module: a hand-copied third table here
+// silently drifts whenever src/utils/storage/types.ts gains or renames a key.
+import { StorageKeys } from '../storage/types.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
+import { settingsRepository } from '../storage/SettingsRepository.js';
 
-      StorageKeys: {
-          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-          AI_USAGE_MONTH: 'ai_usage_month',
-          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-      }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../storage/defaults.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: {
-          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-          AI_USAGE_MONTH: 'ai_usage_month',
-          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-      }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+// The real key derivation is 600k PBKDF2 iterations behind an IndexedDB KEK.
+// Neither exists in a unit environment, and SettingsRepository rethrows a
+// keyProvider failure — so without this stub the writer path never reaches the
+// storage write and the round-trip below could not run. The deltas written
+// here hold no API-key field, so the returned key is never used for crypto.
 vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: {
-          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-          AI_USAGE_MONTH: 'ai_usage_month',
-          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-      }
-
-  } as Record<string, unknown>;
   return {
     ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
+    getOrCreateEncryptionKey: vi.fn(async () => ({}) as CryptoKey),
   };
-});;
-vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: {
-          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-          AI_USAGE_MONTH: 'ai_usage_month',
-          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-      }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: {
-          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-          AI_USAGE_MONTH: 'ai_usage_month',
-          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-      }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
-vi.mock('../storage/quota.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  const overrides = {
-
-      StorageKeys: {
-          AI_RATE_LIMIT_WINDOW_START: 'ai_rate_limit_window_start',
-          AI_RATE_LIMIT_COUNT: 'ai_rate_limit_count',
-          AI_RATE_LIMIT_MAX: 'ai_rate_limit_max',
-          AI_USAGE_MONTH: 'ai_usage_month',
-          AI_USAGE_TOKENS_SENT: 'ai_usage_tokens_sent',
-          AI_USAGE_TOKENS_RECEIVED: 'ai_usage_tokens_received',
-          AI_USAGE_REQUEST_COUNT: 'ai_usage_request_count',
-          MAX_MONTHLY_TOKENS: 'max_monthly_tokens'
-      }
-
-  } as Record<string, unknown>;
-  return {
-    ...actual,
-    ...Object.fromEntries(
-      Object.entries(overrides).map(([k, v]) => [
-        k,
-        v !== null && typeof v === 'object' && !Array.isArray(v) &&
-        actual[k] !== null && typeof actual[k] === 'object' && !Array.isArray(actual[k])
-          ? { ...(actual[k] as Record<string, unknown>), ...(v as Record<string, unknown>) }
-          : v,
-      ]),
-    ),
-  };
-});;
+});
 
 // logger モック
 vi.mock('../logger/types.js', () => ({
@@ -201,7 +44,10 @@ const mockStorage: Record<string, any> = {};
 const mockChrome = {
     storage: {
         local: {
-            get: vi.fn(async (keys: string | string[] | Record<string, any>) => {
+            get: vi.fn(async (keys: string | string[] | Record<string, any> | null) => {
+                if (keys === null) {
+                    return { ...mockStorage };
+                }
                 const result: Record<string, any> = {};
                 if (typeof keys === 'string') {
                     if (keys in mockStorage) result[keys] = mockStorage[keys];
@@ -245,6 +91,9 @@ describe('aiUsageTracker', () => {
 
     beforeEach(() => {
         Object.keys(mockStorage).forEach(key => delete mockStorage[key]);
+        // The repository tier caches getAll() for 1s; without this a value
+        // resolved by an earlier test would leak into the next one.
+        settingsRepository.clearCache();
         vi.clearAllMocks();
         resetCounterLockForTesting();
         resetClockForTesting();
@@ -309,50 +158,43 @@ describe('aiUsageTracker', () => {
 
         // VULN-010 (CWE-362): concurrent calls must not lose increments on the
         // read-modify-write of the rate-limit counter. With max=1, exactly one
-        // of two concurrent calls may be allowed. Timer-based interleaving uses
-        // scoped fake timers so the stretch under load cannot flake.
+        // of two concurrent calls may be allowed. The storage doubles block on
+        // a gate the test opens itself, so both callers are in flight before
+        // any read or write lands — the interleaving is forced, not timed.
         test('VULN-010: blocks rate-limit bypass via concurrent calls', async () => {
-            vi.useFakeTimers();
-            try {
-                const origGet = mockChrome.storage.local.get;
-                const origSet = mockChrome.storage.local.set;
-                const setOrder: unknown[] = [];
-                // Force both reads to observe the initial count before either write,
-                // reproducing the read-modify-write interleaving.
-                mockChrome.storage.local.get = vi.fn(async (keys: any) => {
-                    await new Promise<void>(r => setTimeout(r, 5));
-                    return origGet(keys);
-                });
-                mockChrome.storage.local.set = vi.fn(async (data: any) => {
-                    await new Promise<void>(r => setTimeout(r, 5));
-                    setOrder.push(data['ai_rate_limit_count']);
-                    return origSet(data);
-                });
+            const origGet = mockChrome.storage.local.get;
+            const origSet = mockChrome.storage.local.set;
+            const setOrder: unknown[] = [];
+            const storageGate = Promise.withResolvers<void>();
+            mockChrome.storage.local.get = vi.fn(async (keys: any) => {
+                await storageGate.promise;
+                return origGet(keys);
+            });
+            mockChrome.storage.local.set = vi.fn(async (data: any) => {
+                await storageGate.promise;
+                setOrder.push(data['ai_rate_limit_count']);
+                return origSet(data);
+            });
 
-                mockStorage['ai_rate_limit_max'] = 1;
-                mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
-                mockStorage['ai_rate_limit_count'] = 0;
+            mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = 1; // legacy top-level path
+            mockStorage[StorageKeys.AI_RATE_LIMIT_WINDOW_START] = FIXED_NOW;
+            mockStorage[StorageKeys.AI_RATE_LIMIT_COUNT] = 0;
 
-                const pending = Promise.all([checkRateLimit(), checkRateLimit()]);
-                // Each serialized call performs 3 storage ops x 5ms; 100ms
-                // covers the full chain deterministically.
-                await vi.advanceTimersByTimeAsync(100);
-                const [a, b] = await pending;
+            const pending = Promise.all([checkRateLimit(), checkRateLimit()]);
+            storageGate.resolve();
+            const [a, b] = await pending;
 
-                mockChrome.storage.local.get = origGet;
-                mockChrome.storage.local.set = origSet;
+            mockChrome.storage.local.get = origGet;
+            mockChrome.storage.local.set = origSet;
 
-                const allowed = [a, b].filter(r => r.allowed).length;
-                expect(allowed).toBe(1);
-                // The counter must reflect both increments (reach the cap of 1),
-                // not a lost update back to 1.
-                expect(mockStorage['ai_rate_limit_count']).toBe(1);
-                // Serialization proof: the count write happened exactly once
-                // (the denied call wrote nothing), in increment order.
-                expect(setOrder).toEqual([1]);
-            } finally {
-                vi.useRealTimers();
-            }
+            const allowed = [a, b].filter(r => r.allowed).length;
+            expect(allowed).toBe(1);
+            // The counter must reflect both increments (reach the cap of 1),
+            // not a lost update back to 1.
+            expect(mockStorage['ai_rate_limit_count']).toBe(1);
+            // Serialization proof: the count write happened exactly once
+            // (the denied call wrote nothing), in increment order.
+            expect(setOrder).toEqual([1]);
         });
 
         test('starts from 0 when count is undefined', async () => {
@@ -363,10 +205,13 @@ describe('aiUsageTracker', () => {
             expect(result.remaining).toBe(9);
         });
 
-        test('honors the AI_RATE_LIMIT_MAX setting', async () => {
-            mockStorage['ai_rate_limit_max'] = 5;
-            mockStorage['ai_rate_limit_window_start'] = FIXED_NOW;
-            mockStorage['ai_rate_limit_count'] = 5;
+        // Legacy top-level pin: only pre-migration writes and fixtures land
+        // here, so this path must keep resolving. The canonical blob path is
+        // covered by the round-trip suite at the end of this file.
+        test('honors a legacy top-level AI_RATE_LIMIT_MAX write', async () => {
+            mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = 5;
+            mockStorage[StorageKeys.AI_RATE_LIMIT_WINDOW_START] = FIXED_NOW;
+            mockStorage[StorageKeys.AI_RATE_LIMIT_COUNT] = 5;
 
             const result = await checkRateLimit();
             expect(result.allowed).toBe(false);
@@ -665,5 +510,102 @@ describe('checkHardLimit — settings blob limit (writer/reader fix)', () => {
 
     const result = await checkHardLimit(0);
     expect(result.blocked).toBe(false); // 1.5M < 2M
+  });
+});
+
+// Writer/reader mismatch fix (2026-09-28), same defect the 2026-09-22 fix
+// repaired for MAX_MONTHLY_TOKENS: the recording-conditions UI saves
+// AI_RATE_LIMIT_MAX through settingsRepository.setAll into the 'settings'
+// blob, while checkRateLimit read only a top-level key nothing writes — every
+// user-configured cap silently fell back to the 10/min default.
+describe('checkRateLimit — settings blob limit (writer/reader fix)', () => {
+  const DEFAULT_MAX = DEFAULT_SETTINGS[StorageKeys.AI_RATE_LIMIT_MAX];
+
+  beforeEach(() => {
+    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    settingsRepository.clearCache();
+    resetCounterLockForTesting();
+    setClockForTesting(() => FIXED_NOW);
+  });
+
+  afterEach(() => {
+    resetClockForTesting();
+    resetCounterLockForTesting();
+  });
+
+  /** Puts the counter inside the open window at `count`. */
+  function seedWindow(count: number): void {
+    mockStorage[StorageKeys.AI_RATE_LIMIT_WINDOW_START] = FIXED_NOW;
+    mockStorage[StorageKeys.AI_RATE_LIMIT_COUNT] = count;
+  }
+
+  test('round-trips a cap saved through settingsRepository.setAll', async () => {
+    // Exactly the writer the dashboard uses (recordingConditionsSettings.ts).
+    await settingsRepository.setAll({ [StorageKeys.AI_RATE_LIMIT_MAX]: 5 });
+    expect(mockStorage['settings']).toMatchObject({ [StorageKeys.AI_RATE_LIMIT_MAX]: 5 });
+
+    seedWindow(5);
+    const result = await checkRateLimit();
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  test('round-tripped cap is not the default', async () => {
+    await settingsRepository.setAll({ [StorageKeys.AI_RATE_LIMIT_MAX]: 5 });
+    seedWindow(4);
+    const result = await checkRateLimit();
+    // A default of 10 would leave 5 remaining here.
+    expect(result.allowed).toBe(true);
+    expect(result.remaining).toBe(0);
+  });
+
+  test('blob cap wins over a stale legacy top-level key', async () => {
+    await settingsRepository.setAll({ [StorageKeys.AI_RATE_LIMIT_MAX]: 3 });
+    mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = 20; // stale pre-migration write
+
+    seedWindow(3);
+    const result = await checkRateLimit();
+    expect(result.allowed).toBe(false);
+    expect(result.remaining).toBe(0);
+  });
+
+  test('resolves through SettingsRepository when only it can see the cap', async () => {
+    // An authoritative but empty blob plus the migration backup: tiers 1 and 2
+    // are blind here, so a non-default cap can only come from getAll()'s
+    // backup restore — i.e. the dynamic import really runs.
+    mockStorage['settings_migrated'] = true;
+    mockStorage['settings'] = {};
+    mockStorage['legacy_settings_backup_1000'] = {
+      data: { [StorageKeys.AI_RATE_LIMIT_MAX]: 7 },
+      createdAt: 1000,
+    };
+
+    seedWindow(7);
+    const blocked = await checkRateLimit();
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.remaining).toBe(0);
+  });
+
+  // MAX_MONTHLY_TOKENS treats 0 as unlimited; AI_RATE_LIMIT_MAX must not.
+  // A digit string and a non-finite number are equally unusable as a cap.
+  it.each([
+    { label: '0 (unlimited for MAX_MONTHLY_TOKENS, not here)', value: 0 },
+    { label: 'a negative value', value: -3 },
+    { label: 'Infinity', value: Number.POSITIVE_INFINITY },
+    { label: 'NaN', value: Number.NaN },
+    { label: 'a numeric string', value: '5' },
+  ])('falls back to the default for $label', async ({ value }) => {
+    mockStorage['settings'] = { [StorageKeys.AI_RATE_LIMIT_MAX]: value };
+    mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = value; // both tiers
+
+    seedWindow(DEFAULT_MAX - 1);
+    const atCap = await checkRateLimit();
+    expect(atCap.allowed).toBe(true);
+    expect(atCap.remaining).toBe(0);
+
+    seedWindow(DEFAULT_MAX);
+    const overCap = await checkRateLimit();
+    expect(overCap.allowed).toBe(false);
+    expect(overCap.remaining).toBe(0);
   });
 });

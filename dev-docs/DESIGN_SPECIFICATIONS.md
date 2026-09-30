@@ -354,12 +354,12 @@ The catalog is built from `PROVIDER_REGISTRY` (wiring data) augmented with `cspD
 
 - `cspValidator` / `cspSettings` add a provider's base-URL origin from `baseUrlKey` + `isLocal`, and conditional-CSP origins from `cspDomain`.
 - `DiagnosticsCollector` reads each provider's model / base URL / API key via the catalog entry's keys.
-- `getMaxContentChars` (`ProviderStrategy`) reads the typed `settings.providers[<id>]` bag, then the global `StorageKey`, then a default.
+- `resolveMaxContentChars` (`providerSettingsResolver`) reads the typed `settings.providers[<id>]` bag, then the global `StorageKey`, then a default. Timeout and max-token budgets go through the same resolver.
 
 HTTP provider response size and allowlist handling are SSOT-driven:
 
-- `MAX_AI_HTTP_RESPONSE_BYTES` (`ProviderStrategy`) is the single response-size cap for both the summary flow (`executeHttpSummaryFlow` → `readJsonCapped`) and each provider's `testConnection` read. Providers import the constant; no local copies exist.
-- `getAllowedUrlsForRequests()` (`AIProviderStrategy`, protected) is the single path to `urlWhitelist.getAllowedUrls()` for provider request-time URL validation (testConnection). Note this is distinct from the summary-flow pre-flight allowlist built from the `providerAllowlist` neutral table.
+- `MAX_AI_HTTP_RESPONSE_BYTES` (`src/messaging/limits.ts`) is the single response-size cap for both the summary flow and each provider's `testConnection` read; both are applied by `HttpProviderStrategy` (`readJsonCapped`). Providers import the constant; no local copies exist.
+- `getAllowedUrlsForRequests()` (`HttpProviderStrategy`, protected) is the single path to `urlWhitelist.getAllowedUrls()` for provider request-time URL validation (testConnection). Note this is distinct from the summary-flow pre-flight allowlist built from the `providerAllowlist` neutral table.
 
 ## 12. uBlock Origin Format Support
 

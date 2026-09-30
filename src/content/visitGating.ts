@@ -23,6 +23,7 @@ import type { PageState, CleansingConfig } from './pageState.js';
 import { VisitGate } from './visitGate.js';
 import type { VisitGateThresholds, VisitState } from './visitGate.js';
 import { StorageKeys, type StorageKey } from '../utils/storage/types.js';
+import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 
@@ -147,9 +148,6 @@ export class VisitGating {
         return this.isE2ECached ?? false;
     }
 }
-
-const DEFAULT_MIN_VISIT_DURATION = 5;
-const DEFAULT_MIN_SCROLL_DEPTH = 50;
 
 /**
  * Table-driven settings mapping (SSOT: CLEANSING_RULES + THRESHOLD_RULES +

@@ -124,7 +124,7 @@ export class OffscreenGateway {
   async maintain(op: { type: 'init' }): Promise<SqliteResult<boolean>>;
   async maintain(op: { type: 'backup' }): Promise<SqliteResult<Uint8Array>>;
   async maintain(op: { type: 'restore'; data: Uint8Array } | { type: 'clearAll' }): Promise<SqliteResult<void>>;
-  async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }): Promise<SqliteResult<{ purged: number }>>;
+  async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean } | { type: 'purgeAuditLog'; retentionDays?: number }): Promise<SqliteResult<{ purged: number }>>;
   async maintain(op: { type: 'healthCheck' }): Promise<SqliteResult<boolean>>;
   async maintain(op: { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }): Promise<SqliteResult<ArchivePreviewData>>;
   async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteResult<ArchiveCreateData>>;

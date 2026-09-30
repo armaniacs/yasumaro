@@ -154,7 +154,7 @@ import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.j
 // protocolVersion stamping lives in MessageTransport.send (Checking Team
 // 2026-09-22: System Architect Medium — single owner for version stamping).
 import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
-import type { ExtensionMessage } from '../background/messageTypes.js';
+import type { ExtensionMessage, TestObsidianResponse } from '../background/messageTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
@@ -359,7 +359,7 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'PREVIEW_RECORD' ? RecordingResult :
   T extends 'SAVE_RECORD' ? RecordingResult :
   T extends 'TEST_CONNECTIONS' ? { success: true; obsidian: { success: boolean; message: string }; ai: { success: boolean; message: string } } :
-  T extends 'TEST_OBSIDIAN' ? { success: true; obsidian: { success: boolean; message: string } } :
+  T extends 'TEST_OBSIDIAN' ? TestObsidianResponse :
   T extends 'TEST_AI' ? { success: true; ai: { success: boolean; message: string } } :
   T extends 'GET_PRIVACY_CACHE' ? { success: true; cache: [string, PrivacyInfo][] } :
   T extends 'ACTIVITY_UPDATE' ? { success: true } :

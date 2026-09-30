@@ -476,6 +476,16 @@
           <!-- Provider settings blocks are built from the catalog at mount
                (generalSettingsPanel.ts). Each becomes `#<providerId>Settings`. -->
           <div id="providerSettingsMount"></div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="aiProviderBreakerEnabled" data-storage-key="ai_provider_breaker_enabled">
+              <span data-i18n="aiProviderBreakerEnabledLabel">Pause a provider after repeated failures</span>
+            </label>
+            <div class="help-text" data-i18n="aiProviderBreakerEnabledHelp">
+              When enabled, a provider that keeps failing is paused for 5–15 minutes. Turn this off to retry every provider on every summary.
+            </div>
+          </div>
         </div>
 
         <!-- 記録条件・AI設定 -->

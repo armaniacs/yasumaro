@@ -6,8 +6,85 @@ import type { ArchiveStaging } from './archiveStaging.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorResponse } from '../messaging/archiveWireTable.js';
 import { planQueryMode } from './queryPlan.js';
 
+/**
+ * The one reason string for "the worker proxy answered null". Every proxy call
+ * folds its null into this constant, so the value cannot drift per method and
+ * stays greppable for callers that match on it.
+ */
+export const OPFS_WORKER_UNAVAILABLE_ERROR = 'OPFS Worker unavailable';
+
+/**
+ * Consecutive null proxy responses that count as a dead worker.
+ *
+ * One null is not evidence of death: a worker GC pause or a dropped
+ * postMessage race loses a single call on a perfectly healthy engine, and
+ * degrading on it would move a live session's data path onto a different
+ * engine for a transient hiccup. Three in a row with no intervening success
+ * leaves "the worker is alive but slow" as the only explanation left, and that
+ * is the point where the host must re-resolve.
+ */
+export const OPFS_DEGRADE_FAILURE_THRESHOLD = 3;
+
+/**
+ * Notified once when the consecutive-failure threshold is reached. The return
+ * value is ignored — only the side effect (a finished re-resolution) matters,
+ * which is why the parameter is loose about its type.
+ */
+export type OpfsDegradeSignal = () => unknown;
+
 export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
-  constructor(private engine: SqliteEngineHost) {}
+  #consecutiveFailures = 0;
+  #degradeSignalled = false;
+
+  /**
+   * `onDegraded` is injected rather than reached through `engine` because this
+   * adapter is also constructed with a bare host-shaped object in tests, and
+   * the signal is the only thing the host has to add — keeping it a parameter
+   * leaves the degradation policy (threshold, one-shot) here and the storage
+   * policy (re-resolve, latch) in SqliteEngineHost.
+   */
+  constructor(
+    private engine: SqliteEngineHost,
+    private onDegraded: OpfsDegradeSignal = () => {},
+  ) {}
+
+  /**
+   * Single point where a worker call is observed. Routing every proxy call
+   * through it is what makes the failure counter complete: the per-method
+   * `if (result === null)` checks it replaces each saw only their own call, so
+   * a mixed success/failure workload could never accumulate evidence.
+   */
+  private async callWorker<T>(type: string, payload?: unknown): Promise<T | null> {
+    const result = await this.engine.tryOpfsProxy<T>(type, payload);
+    if (result === null) {
+      this.#consecutiveFailures += 1;
+      await this.#signalDegrade();
+    } else {
+      this.#consecutiveFailures = 0;
+    }
+    return result;
+  }
+
+  async #signalDegrade(): Promise<void> {
+    if (this.#consecutiveFailures < OPFS_DEGRADE_FAILURE_THRESHOLD) return;
+    // A dead worker answers null for the rest of the session, so signalling
+    // once per adapter is enough: a re-armed counter could only re-run a
+    // re-resolution that has already happened (or already failed).
+    if (this.#degradeSignalled) return;
+    this.#degradeSignalled = true;
+    this.#consecutiveFailures = 0;
+    // Awaited on purpose. Fire-and-forget would let every call between the
+    // signal and the finished re-resolution pick the same dead backend out of
+    // the cache and fail again; awaiting makes the next call the one that sees
+    // the re-resolved backend.
+    try {
+      await this.onDegraded();
+    } catch {
+      // The host reports a failed re-resolution itself, and this call still
+      // returns its ordinary `{ success: false }` — a degraded re-resolve must
+      // not turn one failed operation into a thrown one.
+    }
+  }
 
   /**
    * Single construction point for `{ success: true, ...data }` over the
@@ -19,8 +96,8 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     descriptor: D,
     payload: unknown,
   ): Promise<BackendOrError<DescriptorResponse<D>>> {
-    const result = await this.engine.tryOpfsProxy<unknown>(descriptor.workerType, payload);
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<unknown>(descriptor.workerType, payload);
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, ...descriptor.project(result) } as DescriptorResponse<D>;
   }
 
@@ -42,8 +119,8 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     // once by queryPlanner.planQueryMode (PBI 2026-09-14-01) and mirrored by
     // IdbVfsBackend.query's `spec.mode` check and FallbackStorage.query's.
     const workerType = planQueryMode(q) === 'search' ? 'SEARCH' : 'QUERY';
-    const result = await this.engine.tryOpfsProxy<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>(workerType, q);
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>(workerType, q);
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
   }
 
@@ -63,26 +140,32 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>> {
-    const result = await this.engine.tryOpfsProxy<{ purged: number }>('PURGE', { retentionDays, maxRecords });
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<{ purged: number }>('PURGE', { retentionDays, maxRecords });
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, purged: result.purged };
   }
 
   async purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>> {
-    const result = await this.engine.tryOpfsProxy<{ purged: number }>('CONTENT_PURGE', { retentionDays, maxRecords, includeStarred });
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<{ purged: number }>('CONTENT_PURGE', { retentionDays, maxRecords, includeStarred });
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
+    return { success: true, purged: result.purged };
+  }
+
+  async purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
+    const result = await this.callWorker<{ purged: number }>('AUDIT_LOG_PURGE', { retentionDays });
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, purged: result.purged };
   }
 
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
-    const result = await this.engine.tryOpfsProxy<{ count: number }>('FTS_INDEX_SIZE');
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<{ count: number }>('FTS_INDEX_SIZE');
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, count: result.count };
   }
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
-    const result = await this.engine.tryOpfsProxy<Uint8Array>('BACKUP');
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<Uint8Array>('BACKUP');
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, data: result };
   }
 
@@ -143,20 +226,20 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    const result = await this.engine.tryOpfsProxy<{ restored: boolean }>('RESTORE', { data });
+    const result = await this.callWorker<{ restored: boolean }>('RESTORE', { data });
     if (result && result.restored) return { success: true };
     return { success: false, error: 'Binary restore failed' };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {
-    const result = await this.engine.tryOpfsProxy<{ ok: boolean }>('HEALTH_CHECK');
+    const result = await this.callWorker<{ ok: boolean }>('HEALTH_CHECK');
     if (result !== null && result.ok) return { success: true };
     return { success: false, error: 'Health check failed' };
   }
 
   async getStatus(): Promise<BackendOrError<StatusResult>> {
-    const result = await this.engine.tryOpfsProxy<StatusResult>('STATUS');
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<StatusResult>('STATUS');
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return result;
   }
 
@@ -166,22 +249,22 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
-    const result = await this.engine.tryOpfsProxy<{ rows: AuditLogRecord[]; total: number }>('AUDIT_LOG_QUERY', options);
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<{ rows: AuditLogRecord[]; total: number }>('AUDIT_LOG_QUERY', options);
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, rows: result.rows as AuditLogEntry[], total: result.total };
   }
 
   async serialize(): Promise<BackendOrError<SerializeResult>> {
     // PBI 2026-09-12-22: the worker handler now returns the shared envelope
     // (was a bare array over 13 hand-mapped columns).
-    const result = await this.engine.tryOpfsProxy<Uint8Array>('SERIALIZE');
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<Uint8Array>('SERIALIZE');
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, data: result };
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {
-    const result = await this.engine.tryOpfsProxy<{ count: number }>('GET_COUNT');
-    if (result === null) return { success: false, error: 'OPFS Worker unavailable' };
+    const result = await this.callWorker<{ count: number }>('GET_COUNT');
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, count: result.count };
   }
 

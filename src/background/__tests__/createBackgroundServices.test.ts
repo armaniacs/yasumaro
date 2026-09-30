@@ -38,7 +38,12 @@ vi.mock('../builtInAIClient.js', () => ({ BuiltInAIClient: mocks.BuiltInAIClient
 vi.mock('../ai/FallbackAIService.js', () => ({ FallbackAIService: mocks.FallbackAIService }));
 vi.mock('../ai/LocalAIService.js', () => ({ LocalAIService: mocks.LocalAIService }));
 vi.mock('../ai/RemoteAIService.js', () => ({ RemoteAIService: mocks.RemoteAIService }));
-vi.mock('../sessionStore.js', () => ({ SessionStore: mocks.SessionStore }));
+vi.mock('../sessionStore.js', async (importOriginal) => {
+  // PBI 27-03: providerBreaker.ts reads SESSION_KEYS at module load, so the
+  // mock must preserve the real constants and stub only the class.
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return { ...actual, SessionStore: mocks.SessionStore };
+});
 vi.mock('../headerDetector.js', () => ({ HeaderDetector: mocks.HeaderDetector }));
 vi.mock('../recordingCache.js', () => ({
   RecordingCache: { getPrivacyInfoWithCache: mocks.getPrivacyInfoWithCache },
@@ -117,6 +122,7 @@ vi.mock('../../utils/storage/storageMaintenance.js', () => ({ setSqliteHealthChe
 
 import { createBackgroundServices } from '../createBackgroundServices.js';
 import { ServiceContainer } from '../serviceContainer.js';
+import { flushPendingWrites } from '../pendingChromeStorageQueue.js';
 
 describe('createBackgroundServices', () => {
   beforeEach(() => {
@@ -172,6 +178,26 @@ describe('createBackgroundServices', () => {
     const services = createBackgroundServices();
 
     expect(services.aiService).toEqual({ fallbackAIService: true });
+  });
+
+  it('wires the pendingWriteQueue facade to the container singleton via manifest onReady', async () => {
+    // The facade serves callers that bypass DI; if the composition root did
+    // not install the container's instance, the facade's lazy default would
+    // build a second queue over the same storage key with its own lock chain
+    // (lost-update shape). Overriding before createBackgroundServices proves
+    // the facade delegates to the container's instance.
+    const fakeQueue = {
+      flushPendingWrites: vi.fn().mockResolvedValue(undefined),
+      enqueuePendingWrite: vi.fn(),
+    };
+    const container = new ServiceContainer();
+    container.override('pendingWriteQueue', fakeQueue);
+
+    createBackgroundServices(container);
+
+    await flushPendingWrites(async () => true);
+
+    expect(fakeQueue.flushPendingWrites).toHaveBeenCalledTimes(1);
   });
 
   it('builds the review summary generator once with the shared AIService and SqliteClient', () => {

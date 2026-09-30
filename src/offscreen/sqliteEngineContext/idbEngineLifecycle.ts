@@ -8,12 +8,16 @@
 import { errorMessage } from '../../utils/errorUtils.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
-import { SCHEMA_SQL, AUDIT_LOG_SCHEMA_SQL } from '../schema.js';
-import { runMigrations } from '../migrations.js';
 import { createIdbEngine, type SqliteEngine, type SqliteRow } from '../sqliteEngine.js';
+import { bootSqliteEngine } from '../sqliteBoot.js';
+import { DB_FILENAME } from '../dbFilename.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 
-export const DB_FILENAME = 'yasumaro.db';
+// Re-exported, not declared: the host facade and the pre-migration backup
+// still import the name from here, and the declaration belongs to
+// dbFilename.ts alongside the two worker-side readers of the same file.
+export { DB_FILENAME };
+
 const IDB_WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm-async', import.meta.url).href;
 
 export interface IdbeEngineState {
@@ -24,39 +28,16 @@ export interface IdbeEngineState {
 }
 
 /**
- * Initialize the IDB engine: create the engine, enable WAL, run schema
- * creation, run migrations, and log compile options.
- * Returns true on success, false on failure (state.lastInitError set).
+ * Initialize the IDB engine: create the engine, run the shared boot sequence
+ * (pragmas, schema, migrations, compile options). Returns true on success,
+ * false on failure (state.lastInitError set).
  */
 export async function initIdbEngine(state: IdbeEngineState): Promise<boolean> {
   try {
     state.idbEngine = await createIdbEngine(DB_FILENAME, IDB_WASM_URL);
 
-    // Enable WAL mode before any schema/migration operations for journal consistency
-    await state.idbEngine.exec('PRAGMA journal_mode=WAL;');
-    await state.idbEngine.exec('PRAGMA wal_autocheckpoint=1000;');
-
-    // Execute schema creation
-    await state.idbEngine.exec(SCHEMA_SQL);
-    await state.idbEngine.exec(AUDIT_LOG_SCHEMA_SQL);
-
-    // Run schema migrations through shared migration engine
-    const idbEngine = state.idbEngine;
-    const { fts5Available } = await runMigrations({
-      exec: (sql) => idbEngine.exec(sql),
-      queryValue: async (sql) => {
-        const value = await idbEngine.queryValue(sql);
-        return value != null ? Number(value) : null;
-      },
-    });
+    const { fts5Available, compileOptions } = await bootSqliteEngine(state.idbEngine);
     state.fts5Available = fts5Available;
-
-    // Log available extensions
-    const compileOptions: string[] = [];
-    const rows = await state.idbEngine.query('PRAGMA compile_options');
-    for (const row of rows) {
-      compileOptions.push(String(Object.values(row)[0]));
-    }
     state.cachedCompileOptions = compileOptions;
 
     return true;

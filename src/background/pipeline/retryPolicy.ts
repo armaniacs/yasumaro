@@ -41,6 +41,9 @@ const LEGACY_NETWORK_MARKERS = [
  * seam is real because tests inject different policies (e.g. always-network-error).
  */
 export class RetryPolicy {
+  // NOTE (PBI 2026-09-28-29): network-fetch failures live here, transport
+  // failures (dead port, torn-down context) live in messageTransport's
+  // isRetryableError. Different error universes — deliberately not merged.
   isNetworkError(error: unknown): boolean {
     if (!error) return false;
     const failure = resolveFailure(error);

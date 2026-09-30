@@ -78,6 +78,29 @@ describe('GENERAL_SETTINGS_FIELDS shape (DOM ids / storage keys are pinned)', ()
     expect(getDescriptorByElementId('port')?.storageKey).toBe(StorageKeys.OBSIDIAN_PORT);
     expect(getDescriptorByElementId('nope')).toBeUndefined();
   });
+
+  it('carries an errorFallback on exactly the two rows that showed English text', () => {
+    // getMessage returns '' for an untranslated key, so the English fallback is
+    // opt-in: switching every row to it would print raw key names instead.
+    expect(GENERAL_SETTINGS_FIELDS.filter((d) => d.errorFallback !== undefined).map((d) => d.elementId))
+      .toEqual(['obsidianHost', 'geminiApiVersion']);
+    expect(getDescriptorByElementId('obsidianHost')?.errorFallback)
+      .toBe('Obsidian host contains invalid characters.');
+    expect(getDescriptorByElementId('geminiApiVersion')?.errorFallback)
+      .toBe('Gemini API version must be like v1 or v1beta.');
+  });
+
+  it('routes the cross-field token cap and the compound host check through function references', () => {
+    // maxTokens reads the provider cap from the context, the host check owns the
+    // whole endpoint shape; both stay one row instead of a new table shape.
+    const tokens = getDescriptorByElementId('maxTokensPerPrompt');
+    expect(tokens?.validate(tokens.parse('10000'), { providerId: 'gemini' })).toBe('error_max_tokens_range');
+    expect(tokens?.validate(tokens.parse('10000'), { providerId: '' })).toBeNull();
+
+    const host = getDescriptorByElementId('obsidianHost');
+    expect(host?.validate(host.parse('127.0.0.1@evil.com'))).toBe('obsidianHostError');
+    expect(host?.validate(host.parse('::1'))).toBeNull();
+  });
 });
 
 describe('token range delegates to aiLimits.validateMaxTokens', () => {

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { DiagnosticsCollector } from '../DiagnosticsCollector.js';
 import { StorageKeys, type StorageKey, type Settings } from '../../../../utils/storage/types.js';
 import type { SettingsRepository } from '../../../../utils/storage/SettingsRepository.js';
@@ -249,5 +250,58 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('DiagnosticsCollector — honest local unions', () => {
+  it('has no `as unknown as` in the collector source', () => {
+    const src = readFileSync(new URL('../DiagnosticsCollector.ts', import.meta.url), 'utf8');
+    expect(src).not.toMatch(/as unknown as/);
+  });
+
+  it('renders the count when getLogCount resolves a data result', async () => {
+    const collector = new DiagnosticsCollector({
+      ...baseDeps(),
+      getMany: mockGetMany({}),
+      getSqliteStatus: vi.fn().mockResolvedValue(null),
+      getLogCount: vi.fn().mockResolvedValue({ data: 7 }),
+    });
+
+    expect((await collector.collect()).storage.savedUrls).toBe('7');
+  });
+
+  it("renders 'Unavailable' when getLogCount resolves an error result", async () => {
+    const collector = new DiagnosticsCollector({
+      ...baseDeps(),
+      getMany: mockGetMany({}),
+      getSqliteStatus: vi.fn().mockResolvedValue(null),
+      getLogCount: vi.fn().mockResolvedValue({ error: 'unavailable' }),
+    });
+
+    expect((await collector.collect()).storage.savedUrls).toBe('Unavailable');
+  });
+
+  it("renders 'Unavailable' when getLogCount rejects", async () => {
+    const collector = new DiagnosticsCollector({
+      ...baseDeps(),
+      getMany: mockGetMany({}),
+      getSqliteStatus: vi.fn().mockResolvedValue(null),
+      getLogCount: vi.fn().mockRejectedValue(new Error('sw gone')),
+    });
+
+    expect((await collector.collect()).storage.savedUrls).toBe('Unavailable');
+  });
+
+  it('falls back to the defaults table when the settings load fails', async () => {
+    const collector = new DiagnosticsCollector({
+      ...baseDeps(),
+      getMany: vi.fn().mockRejectedValue(new Error('storage broken')),
+      getSqliteStatus: vi.fn().mockResolvedValue(null),
+    });
+
+    const snapshot = await collector.collect();
+
+    expect(snapshot.settingsLoadFailed).toBe(true);
+    expect(snapshot.obsidian).toEqual({ protocol: 'https', port: '27124', apiKey: '', dailyPath: '092.Daily' });
   });
 });

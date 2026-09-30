@@ -6,9 +6,9 @@
 import { errorMessage } from '../../utils/errorUtils.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from '../exportEnvelope.js';
+import { DB_FILENAME } from '../dbFilename.js';
 import type { NamedRow } from '../rowCodec.js';
 
-const DB_FILENAME = 'yasumaro.db';
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
 

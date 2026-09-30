@@ -6,6 +6,7 @@
  * duplicate norm entry detection, and renderDefaultCategories coverage.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 vi.stubGlobal('chrome', {
   i18n: {
@@ -95,6 +96,8 @@ vi.mock('../../utils/tagUtils.js', () => ({
 }));
 
 import { initTagsPanel } from '../tagsPanel.js';
+import { setRegistry } from '../panels/registryContext.js';
+import type { NavigationRegistry } from '../panels/NavigationRegistry.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 function fullDom(): void {
@@ -242,7 +245,7 @@ describe('tagsPanel-r2 — Normalization dictionary', () => {
     addBtn.click();
 
     (document.getElementById('saveTagsBtn') as HTMLButtonElement).click();
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
 
     expect(mockSetAll).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -269,7 +272,7 @@ describe('tagsPanel-r2 — Save error handling', () => {
     await initTagsPanel();
 
     (document.getElementById('saveTagsBtn') as HTMLButtonElement).click();
-    await new Promise(r => setTimeout(r, 10));
+    await waitForMock(() => expect(showStatus).toHaveBeenCalled());
 
     expect(showStatus).toHaveBeenCalledWith('exportImportStatus', expect.any(String), 'error');
   });
@@ -349,6 +352,7 @@ describe('tagsPanel-r2 — renderDefaultCategories', () => {
 
   afterEach(() => {
     document.body.innerHTML = '';
+    setRegistry(null as unknown as NavigationRegistry);
   });
 
   it('renders all default categories as buttons', async () => {
@@ -360,12 +364,17 @@ describe('tagsPanel-r2 — renderDefaultCategories', () => {
     expect((items[0] as HTMLButtonElement).textContent).toBe('#tech');
   });
 
-  it('clicking default category dispatches navigate-to-tag', async () => {
+  it('clicking default category navigates to history panel with that tag', async () => {
+    const navigateTyped = vi.fn().mockResolvedValue(undefined);
+    setRegistry({ navigateTyped } as unknown as NavigationRegistry);
     fullDom();
     await initTagsPanel();
     const eventSpy = vi.fn();
     document.addEventListener('navigate-to-tag', eventSpy);
+
     (document.querySelector('.default-category-item') as HTMLButtonElement).click();
-    expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({ detail: 'tech' }));
+
+    expect(navigateTyped).toHaveBeenCalledWith('panel-sqlite-history', { searchTag: 'tech' });
+    expect(eventSpy).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { InMemoryStorageAdapter, SettingsRepository } from '../SettingsRepository.js';
 import { ChromeStoragePort } from '../storagePort.js';
 import { DEFAULT_SETTINGS } from '../defaults.js';
@@ -21,7 +22,9 @@ vi.stubGlobal('chrome', {
 });
 
 describe('SettingsRepository migration parity', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     vi.clearAllMocks();
     chromeGet.mockResolvedValue({});
     chromeSet.mockResolvedValue(undefined);

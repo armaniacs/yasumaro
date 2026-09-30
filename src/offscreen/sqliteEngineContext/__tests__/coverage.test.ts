@@ -7,6 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import { waitForMock } from '../../../../testDir/waitPolicy.js';
 
 // ── Hoisted mocks for SqliteEngineContext dependencies ──────────────────
 const mockInitIdbEngine = vi.fn();
@@ -302,13 +303,18 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
 
     // initPromise が既にある場合は同じ Promise インスタンスは deduplicate される（解決値が同じ）
     setOpfsAvailable(false);
+    // The first init must still be in flight when the second call arrives, so the
+    // test parks the IDB open with a resolver it controls instead of a duration.
+    const idbGate = Promise.withResolvers<void>();
     mockInitIdbEngine.mockImplementation(async (s: { idbEngine: unknown }) => {
       s.idbEngine = {} as unknown as never;
-      await new Promise((r) => setTimeout(r, 10));
+      await idbGate.promise;
       return true;
     });
     const p1 = ctx.init();
     const p2 = ctx.init();
+    await waitForMock(() => expect(mockInitIdbEngine).toHaveBeenCalledTimes(1));
+    idbGate.resolve();
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(r1).toBe(r2);
     // 2回目は early return で true（idbEngine が立っている）

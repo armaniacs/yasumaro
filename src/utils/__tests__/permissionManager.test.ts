@@ -221,20 +221,50 @@ describe('PermissionManager - P0 - recordDeniedVisit', () => {
     expect(stored['example.com'].lastDenied).not.toBe(oldTimestamp);
   });
 
-  it('should handle multiple domains independently', async () => {
-    mockStorage.set('denied_domains', {});
-    const { getPermissionManager } = await import('../permissionManager.js');
-    const manager = getPermissionManager();
+    it('should handle multiple domains independently', async () => {
+      mockStorage.set('denied_domains', {});
+      const { getPermissionManager } = await import('../permissionManager.js');
+      const manager = getPermissionManager();
 
-    await manager.recordDeniedVisit('example.com');
-    await manager.recordDeniedVisit('another.com');
-    await manager.recordDeniedVisit('example.com');
+      await manager.recordDeniedVisit('example.com');
+      await manager.recordDeniedVisit('another.com');
+      await manager.recordDeniedVisit('example.com');
 
-    const stored = mockStorage.get('denied_domains');
-    expect(stored['example.com'].count).toBe(2);
-    expect(stored['another.com'].count).toBe(1);
+      const stored = mockStorage.get('denied_domains');
+      expect(stored['example.com'].count).toBe(2);
+      expect(stored['another.com'].count).toBe(1);
+    });
   });
-});
+
+  describe('PermissionManager - single-writer contract (PBI 27-04)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      mockStorage.clear();
+    });
+
+    // The denied_domains history key owns a dedicated CAS. Locking the
+    // settings blob here would serialize high-frequency denial recording
+    // against settings saves — that is exactly what the dedicated key avoids.
+    it('records and reads denied domains without locking the settings blob', async () => {
+      const { StorageTransaction } = await import('../storage/storageTransaction.js');
+      const lockSpy = vi.spyOn(StorageTransaction.prototype, 'withLock');
+      try {
+        mockStorage.set('denied_domains', {});
+        const { getPermissionManager } = await import('../permissionManager.js');
+        const manager = getPermissionManager();
+
+        await manager.recordDeniedVisit('example.com');
+        await manager.getFrequentDeniedDomains();
+
+        const settingsLocks = lockSpy.mock.calls.filter(([key]) => key === 'settings');
+        expect(settingsLocks).toHaveLength(0);
+        // The dedicated CAS on the history key itself still runs.
+        expect(lockSpy.mock.calls.some(([key]) => key === 'denied_domains')).toBe(true);
+      } finally {
+        lockSpy.mockRestore();
+      }
+    });
+  });
 
 describe('PermissionManager - P0 - recordDomainDismissal', () => {
   beforeEach(() => {

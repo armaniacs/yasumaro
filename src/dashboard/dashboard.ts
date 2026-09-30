@@ -4,8 +4,10 @@
  *
  * The settings-panel behaviour that used to live here moved to
  * generalSettings/ and localMarkdownExport.ts (PBI 2026-08-09-24); what
- * remains is page-level initialization: language direction, deep links
- * (?tab= / ?section=), and the export buttons that sit outside any panel.
+ * remains is page-level initialization: deep links (?tab= / ?section=) and
+ * the export buttons that sit outside any panel. <html lang/dir> is owned by
+ * src/utils/i18n-dom.ts's setHtmlLangAndDir(), called from the entrypoint
+ * bootstrap, so it is deliberately not set from here.
  *
  * This module is imported by src/dashboard/main.ts, which owns the single
  * bootstrap. It must not import panel implementations from panels/ — the
@@ -72,19 +74,9 @@ export function applySectionDeepLink(search: string = window.location.search): v
   }
 }
 
-export function setHtmlLangDir(): void {
-  const locale = chrome.i18n.getUILanguage();
-  const langCode = locale.split('-')[0] ?? locale;
-  document.documentElement.lang = locale;
-  const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'ku', 'yi', 'dv'];
-  document.documentElement.dir = rtlLanguages.includes(langCode) ? 'rtl' : 'ltr';
-}
-
 /** Page-level wiring that does not depend on any panel being mounted. */
 export async function initDashboard(): Promise<void> {
   console.log('[Dashboard] Starting initialization...');
-
-  try { setHtmlLangDir(); } catch (e) { console.error('[Dashboard] setHtmlLangDir error:', e); }
 
   document.getElementById('historyExportAllMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);

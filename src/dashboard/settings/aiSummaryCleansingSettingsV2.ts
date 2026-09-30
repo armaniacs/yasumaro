@@ -12,6 +12,7 @@ import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleane
 import { type RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
 import { createCleansingPresetStore } from './cleansingPresetStore.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // The preset store owns the ordering constraints (apply epoch, dual write,
 // busy windows) that used to leak into this file's module state. migrateTo
@@ -148,27 +149,32 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
  * @param settings AI要約クレンジング設定
  */
 export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansingSettings): Promise<void> {
-    const currentSettings = await settingsRepository.getAll();
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_ENABLED] = settings.enabled;
+    // Delta write (PBI 2026-09-17-17) — only the keys this form owns enter the
+    // payload. A getAll() snapshot here would carry the repository cache
+    // (which may be stale) back into storage and revert unrelated keys a
+    // concurrent writer changed; setAll merges this delta over freshly-read
+    // storage under the write lock.
+    const delta: Record<string, unknown> = {
+        [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: settings.enabled,
+    };
     for (const rule of CLEANSING_RULES) {
-        (currentSettings as Record<string, boolean>)[rule.storageKey] =
         // WHY: dynamic property access on settings object; rule keys are generated at runtime
-        (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)] ?? false;
+        delta[rule.storageKey] = (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)] ?? false;
     }
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] = settings.shortSeqCount;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] = settings.linkParaThreshold;
-    currentSettings[StorageKeys.WHITELIST_EXTRACTION_ENABLED] = settings.whitelistExtractionEnabled;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] = settings.fallbackRatio;
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] = settings.fallbackMinBytes;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT] = settings.shortSeqCount;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD] = settings.linkParaThreshold;
+    delta[StorageKeys.WHITELIST_EXTRACTION_ENABLED] = settings.whitelistExtractionEnabled;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_ENABLED] = settings.bodyProtectionEnabled;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD] = settings.bodyProtectionThreshold;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO] = settings.fallbackRatio;
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES] = settings.fallbackMinBytes;
     // PBI 05 overcut guards
-    currentSettings[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS] = settings.fallbackMinChars;
-    currentSettings[StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED] = settings.candidateGuardEnabled;
-    currentSettings[StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED] = settings.cleanseGuardEnabled;
-    await settingsRepository.setAll(currentSettings);
+    delta[StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS] = settings.fallbackMinChars;
+    delta[StorageKeys.EXTRACTION_GUARD_CANDIDATE_ENABLED] = settings.candidateGuardEnabled;
+    delta[StorageKeys.EXTRACTION_GUARD_CONTENT_CLEANSE_ENABLED] = settings.cleanseGuardEnabled;
+    await settingsRepository.setAll(delta);
 }
 
 /**
@@ -488,18 +494,16 @@ export function setupAiSummaryCleansingEventListeners(): void {
                 
                 // ステータスメッセージを表示
                 if (statusElement) {
-                    statusElement.textContent = getMessageOr('settingsSaved', '設定を保存しました');
-                    statusElement.className = 'status-message success';
-                    setTimeout(() => {
-                        statusElement.textContent = '';
-                        statusElement.className = 'status-message';
-                    }, 3000);
+                    showStatus(statusElement, getMessageOr('settingsSaved', '設定を保存しました'), 'success');
                 }
             } catch (error) {
                 logError('Failed to save AI summary cleansing settings', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
                 if (statusElement) {
-                    statusElement.textContent = getMessageOr('settingsSaveError', '設定の保存に失敗しました');
-                    statusElement.className = 'status-message error';
+                    // autoClear opt-out: the failure reason is the only record of
+                    // why the save did not land, so it stays until the next save
+                    // overwrites it. Grep before changing this to a self-clearing
+                    // message.
+                    showStatus(statusElement, getMessageOr('settingsSaveError', '設定の保存に失敗しました'), 'error', { autoClear: false });
                 }
             }
         });

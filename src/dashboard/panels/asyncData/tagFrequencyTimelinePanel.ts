@@ -19,14 +19,11 @@
  */
 
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
+import { SVG_NS } from '../../../utils/svgNamespace.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
-import {
-  createPeriodFilter,
-  presetToRange,
-  type PeriodFilterHandle,
-} from '../../components/periodFilter.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import {
   computeTagFrequencyTimeline,
   formatBucketDate,
@@ -37,8 +34,6 @@ import {
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /** Number of token-based series color classes cycled through in CSS. */
 const SERIES_COLOR_SLOTS = 8;
@@ -79,7 +74,6 @@ function seriesClass(index: number): string {
 }
 
 export function createTagFrequencyTimelinePanel(): PanelLifecycle {
-  let filterHost: HTMLElement | null = null;
   let weekButton: HTMLButtonElement | null = null;
   let monthButton: HTMLButtonElement | null = null;
   let topNInput: HTMLInputElement | null = null;
@@ -88,7 +82,6 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   let chartWrap: HTMLElement | null = null;
   let tableWrap: HTMLElement | null = null;
   let legendWrap: HTMLElement | null = null;
-  let filterHandle: PeriodFilterHandle | null = null;
   let granularity: TimelineGranularity = 'week';
   let cachedRows: BrowsingLogEntry[] | null = null;
   // WHY: the cap notice describes the FETCH, not the current re-aggregation —
@@ -98,7 +91,6 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   // WHY: the empty-state element doubles as the error surface (one element,
   // two modes) — the unified failure policy swaps in the error wording.
   const notices = new PanelNotices();
-  let loadSeq = 0;
   function parseTopN(): number {
     if (!topNInput) return TIMELINE_DEFAULT_TOP_N;
     const n = Number.parseInt(topNInput.value, 10);
@@ -369,69 +361,66 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     renderTable(timeline);
   }
 
-  async function reload(): Promise<void> {
-    if (!chartWrap || !tableWrap) return;
-    const seq = ++loadSeq;
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'tagFrequencyTimelinePanel',
+    notices: [notices],
+    filterHostSelector: '#tagTimelineFilter',
+    // WHY: no auto-apply — explicit-apply host (domain-analysis precedent):
+    // Run reads getRange() instead of recording every change
+    // (PBI 2026-09-24-11 contract).
+    initialPreset: 'last30',
+    isReady: () => chartWrap !== null && tableWrap !== null,
+    resetOutput: clearOutput,
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // hosts for the body.
+    load: async ({ range, isStale }) => {
+      if (!chartWrap || !tableWrap) return;
 
-    clearOutput();
-    // Fresh-fetch reset: restores the normal empty binding in case a previous
-    // load failed and swapped in the error message, and hides the cap notice
-    // until this fetch's own results decide visibility.
-    notices.reset();
+      try {
+        const fetched = await fetchPeriodRows({
+          since: range.since,
+          until: range.until,
+          limit: MAX_TAG_TIMELINE_ROWS,
+          label: 'tagFrequencyTimeline',
+        });
+        const rows = fetched.rows;
+        if (isStale()) return;
 
-    try {
-      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
-      // the snapshot lets retries reuse one consistent window even if the
-      // user changes the filter mid-flight (stale loads bail via seq). The
-      // presetToRange fallback preserves the pre-filter last30 default when
-      // the panel mounts without a filter host.
-      const bounds = filterHandle
-        ? filterHandle.getRange()
-        : presetToRange('last30', Date.now());
-      const fetched = await fetchPeriodRows({
-        since: bounds.since,
-        until: bounds.until,
-        limit: MAX_TAG_TIMELINE_ROWS,
-        label: 'tagFrequencyTimeline',
-      });
-      const rows = fetched.rows;
-      if (seq !== loadSeq) return;
+        cachedRows = rows;
+        if (rows.length === 0) {
+          notices.showEmpty();
+          return;
+        }
 
-      cachedRows = rows;
-      if (rows.length === 0) {
-        notices.showEmpty();
-        return;
-      }
+        if (fetched.capped && capNotice) {
+          capNotice.textContent = msg(
+            'dashboardTagTimelineCapNote',
+            { max: MAX_TAG_TIMELINE_ROWS },
+            'Reached the {max}-record query limit — showing a partial aggregation.',
+          );
+          notices.show('cap');
+        }
 
-      if (fetched.capped && capNotice) {
-        capNotice.textContent = msg(
-          'dashboardTagTimelineCapNote',
-          { max: MAX_TAG_TIMELINE_ROWS },
-          'Reached the {max}-record query limit — showing a partial aggregation.',
+        const timeline = computeTagFrequencyTimeline(rows, {
+          granularity,
+          topN: parseTopN(),
+        });
+        renderTimeline(timeline);
+      } catch (error) {
+        console.error('[tagFrequencyTimelinePanel] error:', error);
+        if (isStale()) return;
+        notices.showError(
+          'dashboardTagTimelineError',
+          'Failed to load the tag frequency timeline. Try again.',
         );
-        notices.show('cap');
       }
-
-      const timeline = computeTagFrequencyTimeline(rows, {
-        granularity,
-        topN: parseTopN(),
-      });
-      renderTimeline(timeline);
-    } catch (error) {
-      console.error('[tagFrequencyTimelinePanel] error:', error);
-      if (seq !== loadSeq) return;
-      notices.showError(
-        'dashboardTagTimelineError',
-        'Failed to load the tag frequency timeline. Try again.',
-      );
-    }
-  }
+    },
+  });
 
   return {
     id: 'panel-tag-frequency-timeline',
     category: 'async-data',
     mount(container) {
-      filterHost = container.querySelector('#tagTimelineFilter');
       weekButton = container.querySelector('#tagTimelineWeekBtn');
       monthButton = container.querySelector('#tagTimelineMonthBtn');
       topNInput = container.querySelector('#tagTimelineTopN');
@@ -447,19 +436,13 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       notices.register('cap', capNotice, { fetchScoped: true });
       setGranularityButtons();
 
-      if (filterHost) {
-        // WHY: no onChange handler — explicit-apply host (domain-analysis
-        // precedent): Run reads getRange() instead of recording every
-        // change (PBI 2026-09-24-11 contract).
-        filterHandle = createPeriodFilter({ initialPreset: 'last30' });
-        filterHost.appendChild(filterHandle.element);
-      }
+      lifecycle.mount(container);
 
       // WHY: explicit apply — a full fetch is disproportionate per preset
       // click (domain-analysis precedent); granularity/top-N changes instead
       // re-aggregate the cached rows locally without a refetch.
       runButton?.addEventListener('click', () => {
-        void reload();
+        void lifecycle.reload();
       });
       topNInput?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
@@ -486,14 +469,11 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       });
     },
     async load() {
-      await reload();
+      await lifecycle.reload();
     },
     destroy() {
-      loadSeq += 1;
+      lifecycle.destroy();
       cachedRows = null;
-      filterHandle?.destroy();
-      filterHandle = null;
-      filterHost = null;
       weekButton = null;
       monthButton = null;
       topNInput = null;
@@ -502,7 +482,6 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       chartWrap = null;
       tableWrap = null;
       legendWrap = null;
-      notices.clear();
     },
   };
 }

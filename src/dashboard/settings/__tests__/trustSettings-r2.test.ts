@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock } from '../../../../testDir/waitPolicy.js';
 
 const mockInitialize = vi.fn(() => Promise.resolve());
 const mockGetDatabase = vi.fn(() => ({
@@ -343,9 +343,8 @@ describe('trustSettings - r2 missed branches', () => {
       input.value = '.invalid';
       document.getElementById('jpAnchorAddBtn')!.click();
 
-      await new Promise((r) => setTimeout(r, 10));
       const statusDiv = document.getElementById('trustSettingsStatus') as HTMLElement;
-      expect(statusDiv.textContent).toBe('Invalid TLD');
+      await waitForMock(() => expect(statusDiv.textContent).toBe('Invalid TLD'));
     });
   });
 
@@ -397,9 +396,8 @@ describe('trustSettings - r2 missed branches', () => {
       input.value = 'dup.com';
       document.getElementById('whitelistAddBtn')!.click();
 
-      await new Promise((r) => setTimeout(r, 10));
       const statusDiv = document.getElementById('trustSettingsStatus') as HTMLElement;
-      expect(statusDiv.textContent).toBe('Already exists');
+      await waitForMock(() => expect(statusDiv.textContent).toBe('Already exists'));
     });
   });
 

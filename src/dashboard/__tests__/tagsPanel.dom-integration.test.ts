@@ -99,6 +99,8 @@ vi.mock('../../utils/tagUtils.js', () => ({
 }));
 
 import { initTagsPanel } from '../tagsPanel.js';
+import { setRegistry } from '../panels/registryContext.js';
+import type { NavigationRegistry } from '../panels/NavigationRegistry.js';
 
 describe('tagsPanel DOM Integration Tests', () => {
   const requiredDomElements = `
@@ -233,20 +235,21 @@ describe('tagsPanel DOM Integration Tests', () => {
       expect(mockShowAlertDialog).toHaveBeenCalled();
     });
 
-    it('clicking default category dispatches navigate-to-tag event', async () => {
+    it('clicking default category navigates to history panel with searchTag', async () => {
+      const navigateTyped = vi.fn().mockResolvedValue(undefined);
+      setRegistry({ navigateTyped } as unknown as NavigationRegistry);
       await initTagsPanel();
       const eventSpy = vi.fn();
       document.addEventListener('navigate-to-tag', eventSpy);
       const defaultCategoryBtn = document.querySelector('.default-category-item') as HTMLButtonElement;
       defaultCategoryBtn.click();
-      expect(eventSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          detail: expect.any(String),
-        })
-      );
+      expect(navigateTyped).toHaveBeenCalledWith('panel-sqlite-history', { searchTag: 'tech' });
+      expect(eventSpy).not.toHaveBeenCalled();
     });
 
-    it('clicking user category dispatches navigate-to-tag event', async () => {
+    it('clicking user category navigates to history panel with searchTag', async () => {
+      const navigateTyped = vi.fn().mockResolvedValue(undefined);
+      setRegistry({ navigateTyped } as unknown as NavigationRegistry);
       mockGetMany.mockResolvedValueOnce({
         tagCategories: [{ name: 'customTag', isDefault: false, createdAt: Date.now() }],
       });
@@ -255,11 +258,18 @@ describe('tagsPanel DOM Integration Tests', () => {
       document.addEventListener('navigate-to-tag', eventSpy);
       const userCategoryBtn = document.querySelector('.user-category-name') as HTMLButtonElement;
       userCategoryBtn.click();
-      expect(eventSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          detail: 'customTag',
-        })
-      );
+      expect(navigateTyped).toHaveBeenCalledWith('panel-sqlite-history', { searchTag: 'customTag' });
+      expect(eventSpy).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the navigate-to-tag event when the registry is not initialized', async () => {
+      setRegistry(null as unknown as NavigationRegistry);
+      await initTagsPanel();
+      const eventSpy = vi.fn();
+      document.addEventListener('navigate-to-tag', eventSpy);
+      const defaultCategoryBtn = document.querySelector('.default-category-item') as HTMLButtonElement;
+      defaultCategoryBtn.click();
+      expect(eventSpy).toHaveBeenCalledWith(expect.objectContaining({ detail: 'tech' }));
     });
 
     it('can delete user category', async () => {

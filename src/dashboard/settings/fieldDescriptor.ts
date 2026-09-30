@@ -5,8 +5,10 @@
  *
  * Each row maps a StorageKey to its DOM element/error IDs plus pure
  * value-level parse/validate/save functions. DOM glue (fieldValidation.ts)
- * and the save pipeline (settingsPipeline.ts) both derive from this table,
- * so adding a field is one row here with no edits elsewhere.
+ * drives blur validation and save-time validation from this table, and the save
+ * pipeline (settingsPipeline.ts) projects its error-clearing pairs from it, so
+ * adding a field is one row here with no edits there. Reading the saved values
+ * back is a separate concern owned by utils/settingsSchemas.ts.
  *
  * `validate` delegates to existing SSOTs only (aiLimits /
  * obsidianConfigValidator / urlWhitelist) and holds no independent range
@@ -44,6 +46,13 @@ export interface FieldDescriptor<T = unknown> {
   readonly parse: (raw: string) => T;
   readonly validate: (value: T, ctx?: ValidationContext) => string | null;
   readonly save: (value: T) => unknown;
+  /**
+   * English text shown when the error key is untranslated. Absent means the key
+   * resolves through getMessage, which returns '' — the dashboard display
+   * contract, so the fallback is opt-in per row and only rows that had one
+   * before this table carried it.
+   */
+  readonly errorFallback?: string;
 }
 
 const identitySave = <T>(value: T): unknown => value;
@@ -161,8 +170,11 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     elementId: 'obsidianHost',
     errorId: 'obsidianHostError',
     parse: (raw) => raw,
+    // Compound scheme+host+port decision: kept as a function reference because
+    // the SSOT validator owns the whole endpoint shape, not a bare hostname.
     validate: (value) => validateObsidianHostValue(value as string),
     save: identitySave,
+    errorFallback: 'Obsidian host contains invalid characters.',
   },
   {
     storageKey: StorageKeys.GEMINI_API_VERSION,
@@ -171,6 +183,7 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     parse: (raw) => raw,
     validate: (value) => validateGeminiApiVersionValue(value as string),
     save: identitySave,
+    errorFallback: 'Gemini API version must be like v1 or v1beta.',
   },
   {
     storageKey: StorageKeys.MIN_VISIT_DURATION,
@@ -193,6 +206,8 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     elementId: 'maxTokensPerPrompt',
     errorId: 'maxTokensError',
     parse: (raw) => parseInt(raw, 10),
+    // Cross-field: the provider-specific cap arrives through ctx, so the row
+    // hands every caller (blur and save-time) the same decision function.
     validate: (value, ctx) => validateMaxTokensValue(value as number, ctx?.providerId ?? ''),
     save: identitySave,
   },

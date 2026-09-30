@@ -1,12 +1,8 @@
 /**
- * Bans fixed-duration sleeps in test files:
- *
- *   await new Promise((resolve) => setTimeout(resolve, 50));
- *
- * A sleep cannot fail, so it proves nothing; it only burns wall time, and on a
- * loaded machine it is the difference between green and flaky. Tests must wait
- * for a condition instead (vi.waitFor for a mock to be called, or a fake clock
- * when a production timer is the subject).
+ * Any resolvable positive delay is banned. `setTimeout(fn, 0)` stays allowed:
+ * it is the macrotask flush idiom (and `drainMacrotask()` in waitPolicy.ts is
+ * the spelling to prefer), not a wait — a 0ms timer never "sleeps" long enough
+ * to hide a race, it only yields a turn.
  *
  * The delay is resolved through const bindings, so the `const DELAY_MS = 30;
  * setTimeout(fn, DELAY_MS)` spelling is caught as well. Anything that cannot be
@@ -18,7 +14,7 @@
  *
  * See dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
  */
-const DEFAULT_THRESHOLD_MS = 20;
+const DEFAULT_THRESHOLD_MS = 1;
 
 function isPromiseConstructor(node) {
   return node.type === 'NewExpression' && node.callee.type === 'Identifier' && node.callee.name === 'Promise';

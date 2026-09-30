@@ -10,7 +10,7 @@ Service Worker (entrypoints/background/ + src/background/)
   ├── service-worker.ts → composition root: createBackgroundServices() + MessageRouter dispatch (19 handler types)
   ├── MessageRouter → single dispatch table, trust derivation per route
   ├── ObsidianClient → Obsidian Local REST API
-  ├── AIService family → AI providers (ProviderStrategy base + per-provider strategies)
+  ├── AIService family → AI providers (AIProviderStrategy base + HttpProviderStrategy templates + per-provider strategies)
   ├── localAiClient → Local AI provider (Ollama, etc.)
   ├── sessionAlarmsManager → Session timeout management
   ├── Mutex / ServiceWorkerContext → Concurrency management

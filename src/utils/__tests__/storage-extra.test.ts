@@ -131,6 +131,7 @@ import {
   purgeLegacyStorage
 } from '../storage/savedUrlRepository.js';
 import { settingsRepository } from '../storage/SettingsRepository.js';
+import { installTestSecretKek } from '../crypto/__tests__/secretKekHelper.js';
 import {
   isMasterPasswordEnabled,
   isEncryptionLocked,
@@ -189,6 +190,8 @@ describe('getStorageUsage', () => {
 
 describe('URL set functions', () => {
   beforeEach(async () => {
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    await installTestSecretKek();
     // Reset storage via chrome mock
     const keys = Object.keys(await chrome.storage.local.get(null));
     if (keys.length > 0) {

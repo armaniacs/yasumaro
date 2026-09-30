@@ -6,6 +6,8 @@ export const SESSION_KEYS = {
   SKIP_AI_RATE_LIMITER: 'sw:rateLimiter',
   TAB_CACHE: 'sw:tabCache',
   RECORDING_CACHE: 'sw:recordingCache',
+  /** PBI 27-03: AI provider circuit-breaker state (provider × model entries). */
+  AI_PROVIDER_BREAKER: 'sw:aiProviderBreaker',
 } as const;
 
 /**
@@ -32,6 +34,29 @@ const PRIORITY_SUBKEYS = ['settingsCache', 'cacheTimestamp', 'cacheVersion'];
  */
 export const SESSION_STORE_FLUSH_DELAY_MS = 50;
 
+/**
+ * Byte cap for one chrome.storage.session write. The previous 1 MiB cap cut
+ * legitimate payloads: MAX_URL_SET_SIZE bounds the entry *count*, not its bytes,
+ * so 10,000 x 180-char [url, timestamp] entries serialize to ~2 MB and were
+ * reduced on every flush. 3 MiB covers 10,000 entries up to 293-char URLs and
+ * keeps the 10 MiB session quota at 35% (69% under a UTF-16 upper bound);
+ * 4 MiB reaches 89% and 5 MiB exceeds the quota. Measured sizes and the
+ * rejected alternatives: dev-docs/ADR/2026-09-28-session-store-overflow-persistence.md
+ * (decisions 1-2, lines 156-172).
+ */
+export const SESSION_MAX_FLUSH_BYTES = 3 * 1024 * 1024;
+
+/**
+ * How often one key may be re-queued for exceeding SESSION_MAX_FLUSH_BYTES
+ * before the next overflow flush drops it. Unbounded re-queueing is the state
+ * this guards: a key too large for the cap is re-queued at the same size on
+ * every flush forever, re-serializing the whole queue each time and copying
+ * itself to chrome.storage.local on every service-worker suspend. Bounding the
+ * retries makes that loop impossible rather than merely unlikely (same ADR,
+ * decision 2).
+ */
+const MAX_OVERFLOW_REQUEUES = 2;
+
 export class SessionStore implements SessionStorePort {
   private writeQueue = new Map<string, unknown>();
   private deleteQueue = new Set<string>();
@@ -41,6 +66,14 @@ export class SessionStore implements SessionStorePort {
   private flushToken = 0;
   private disposed = false;
   private localFallbackCheckedKeys = new Set<string>();
+  /**
+   * Consecutive overflow re-queues per key, kept apart from writeQueue so the
+   * queue's own key set stays intact. In-memory only: a service-worker restart
+   * resets the counts, which is accepted because "a key leaves the queue within
+   * MAX_OVERFLOW_REQUEUES + 1 overflow flushes" holds for every lifetime.
+   * Persisting the counts would add a chrome.storage.session key.
+   */
+  private overflowRequeueCounts = new Map<string, number>();
 
   // フラッシュ間隔（ミリ秒）- マイクロタスクより少し遅らせるが、まだ応答性を保つ
   private readonly FLUSH_DELAY = SESSION_STORE_FLUSH_DELAY_MS;
@@ -87,6 +120,7 @@ export class SessionStore implements SessionStorePort {
   remove(key: string): void {
     if (this.disposed) return;
     this.writeQueue.delete(key);
+    this.overflowRequeueCounts.delete(key);
     this.deleteQueue.add(key);
     this.scheduleFlush();
   }
@@ -115,6 +149,7 @@ export class SessionStore implements SessionStorePort {
     }
     this.writeQueue.clear();
     this.deleteQueue.clear();
+    this.overflowRequeueCounts.clear();
     this.flushPromise = null;
     this.flushQueue.length = 0;
     this.localFallbackCheckedKeys.clear();
@@ -177,22 +212,42 @@ export class SessionStore implements SessionStorePort {
           }
 
           const estimatedSize = this.estimateStorageSize(obj);
-          if (estimatedSize > this.MAX_SESSION_SIZE) {
-            addLog(LogType.WARN, 'SessionStore: estimated flush size exceeds 1MB, saving priority data only', {
+          if (estimatedSize > SESSION_MAX_FLUSH_BYTES) {
+            addLog(LogType.WARN, `SessionStore: estimated flush size ${estimatedSize} exceeds cap ${SESSION_MAX_FLUSH_BYTES}, saving priority data only`, {
               estimatedSize,
+              cap: SESSION_MAX_FLUSH_BYTES,
               keys: Array.from(items.keys()),
             });
             const priorityObj = this.extractPriorityData(items);
             await chrome.storage.session.set(priorityObj);
             // Restore non-priority data to the write queue so it stays in memory
-            // for the current service-worker lifetime.
+            // for the current service-worker lifetime, but only a bounded number
+            // of times: a key that cannot fit under the cap would otherwise be
+            // re-queued at the same size on every flush, forever.
             for (const [key, value] of items) {
               if (!(key in priorityObj) || priorityObj[key] !== value) {
+                const consecutiveOverflowFlushes = (this.overflowRequeueCounts.get(key) ?? 0) + 1;
+                if (consecutiveOverflowFlushes > MAX_OVERFLOW_REQUEUES) {
+                  this.overflowRequeueCounts.delete(key);
+                  addLog(LogType.WARN, 'SessionStore: dropping key that stayed over the flush cap', {
+                    key,
+                    consecutiveOverflowFlushes,
+                    estimatedSize,
+                  });
+                  continue;
+                }
+                this.overflowRequeueCounts.set(key, consecutiveOverflowFlushes);
                 this.writeQueue.set(key, value);
+              } else {
+                // The key was written as-is, so it gets a full re-queue budget again.
+                this.overflowRequeueCounts.delete(key);
               }
             }
           } else {
             await chrome.storage.session.set(obj);
+            for (const key of items.keys()) {
+              this.overflowRequeueCounts.delete(key);
+            }
           }
         }
         if (keysToDelete.size > 0) {
@@ -239,8 +294,6 @@ export class SessionStore implements SessionStorePort {
       this.flushQueue.splice(index, 1);
     }
   }
-
-  private readonly MAX_SESSION_SIZE = 1 * 1024 * 1024;
 
   private estimateStorageSize(value: unknown): number {
     try {

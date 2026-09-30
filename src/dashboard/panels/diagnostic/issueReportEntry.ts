@@ -5,6 +5,8 @@
  *
  * 不変条件:
  * - controller は initIssueReportEntry() で1度だけ生成される（DOM 準備後）。
+ *   二度目の呼び出しは何もしない: controller を作り直すと、既存のトリガ
+ *   ボタンのリスナが二重に残り、1クリックでモーダルが2回開く。
  * - registerReportBugButton() は controller が無くても安全 — ボタンはキューに
  *   入り、controller 生成直後に配線される。mount は再実行されないため、
  *   静かなスキップはボタンを恒久的に未配線のままにする（過去の退行）。
@@ -38,8 +40,15 @@ export function registerReportBugButton(reportBtn: HTMLButtonElement | null): vo
 /**
  * Create the shared controller and wire the sidebar button + any queued
  * panel buttons. Called once from initDashboard() after the DOM is ready.
+ *
+ * Idempotent by construction: a second call returns without creating a new
+ * controller, so triggers wired by the first call keep exactly one listener.
+ * Anything registered after the controller exists is attached immediately
+ * (see registerReportBugButton), so the queue is always empty here once a
+ * controller is present.
  */
 export function initIssueReportEntry(): void {
+  if (controller) return;
   try {
     const created = createIssueReportModalController(
       {

@@ -34,7 +34,16 @@ const RETRYABLE_ERROR_PATTERNS = [
   /Extension context invalidated/i,
 ];
 
-function isRetryableError(error: unknown): boolean {
+/**
+ * Canonical transport-level retriability predicate (PBI 2026-09-28-29).
+ *
+ * Scope: message-transport failures only (dead port, torn-down context).
+ * Network-fetch failures (pipeline/retryPolicy.ts LEGACY_NETWORK_MARKERS)
+ * and provider HTTP failures (ProviderStrategy.shouldRetrySummaryRequest)
+ * are different error universes with their own policies — they cross-link
+ * here for the transport class instead of merging into one function.
+ */
+export function isRetryableError(error: unknown): boolean {
   const msg = errorMessage(error);
   return RETRYABLE_ERROR_PATTERNS.some((p) => p.test(msg));
 }
@@ -43,6 +52,18 @@ export interface MessageTransportOptions {
   retries?: number;
   clock?: { now: () => number; sleep: (ms: number) => Promise<void> };
 }
+
+/**
+ * What a caller hands to send(): the wire contract minus `protocolVersion`.
+ *
+ * Senders must not stamp the version themselves — send() does it for every
+ * message — so requiring `protocolVersion` in the parameter is what pushed
+ * callers into casting their envelopes through `ExtensionMessage`. The
+ * conditional distributes over the union so each envelope keeps its `type`
+ * discriminant.
+ */
+type WithoutProtocolVersion<M> = M extends unknown ? Omit<M, 'protocolVersion'> : never;
+type OutgoingMessage = WithoutProtocolVersion<ExtensionMessage>;
 
 const defaultClock: { now: () => number; sleep: (ms: number) => Promise<void> } = {
   now: () => Date.now(),
@@ -55,12 +76,12 @@ export class MessageTransport {
     private clock: { now: () => number; sleep: (ms: number) => Promise<void> } = defaultClock,
   ) {}
 
-  async send<T extends ExtensionMessage>(message: T, opts: MessageTransportOptions = {}): Promise<unknown> {
+  async send<M extends OutgoingMessage>(message: M, opts: MessageTransportOptions = {}): Promise<unknown> {
     const retries = opts.retries ?? 3;
     const clock = opts.clock ?? this.clock;
 
     // Attach protocol version and validate
-    const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION } as T & { protocolVersion: number };
+    const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION } as M & { protocolVersion: number };
     if (!VALID_MESSAGE_TYPES.includes(enriched.type as never)) {
       throw new Error(`Invalid message type: ${String((enriched as Record<string, unknown>).type)}`);
     }

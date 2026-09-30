@@ -29,7 +29,7 @@ import {
   notifyObsidianSaveSuccess,
 } from './resultBuilder.js';
 import { PrivatePageError, DuplicateError, RegenerateUpdateError } from './steps/index.js';
-import { ErrorStrategy, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
+import { ErrorStrategy, readOfflineEnqueueInfo, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
 
 /**
@@ -149,7 +149,11 @@ export function decideStepOutcome(
     // PBI 2026-09-22-04: regenerate is UPDATE-only — pending-page recovery
     // replays a MANUAL_RECORD INSERT that would duplicate the row being
     // replaced. The failure still surfaces as an error result + notice.
-    if (context.data.targetEntryId === undefined) {
+    // PBI 2026-09-25-12: when the offline enqueue succeeded, the offline job
+    // is the sole recovery owner — a pending page for the same recording
+    // would let the 5-minute alarm retry and a manual re-run run it twice.
+    const offlineEnqueued = readOfflineEnqueueInfo(thrown)?.enqueued === true;
+    if (context.data.targetEntryId === undefined && !offlineEnqueued) {
       adapters.pending.addPending(pendingEntry(context, 'pipeline-error', error.message));
     }
     const result = buildErrorResult(context, error);
@@ -189,7 +193,12 @@ export function finalizeSuccess(
   }
 
   const obsidianError = errors.find((e) => e.recoveryKind === 'obsidian_sync');
-  if (obsidianError) {
+  // PBI 2026-09-25-12: BEST_EFFORT saveObsidian follows the same owner rule —
+  // when the offline enqueue succeeded the queued obsidian_sync job is the
+  // only recovery owner and no pending page is registered for the recording.
+  const obsidianOfflineEnqueued =
+    obsidianError !== undefined && readOfflineEnqueueInfo(obsidianError.error)?.enqueued === true;
+  if (obsidianError && !obsidianOfflineEnqueued) {
     adapters.pending.addPending(pendingEntry(context, 'obsidian-write-failed', obsidianError.error.message));
   }
 

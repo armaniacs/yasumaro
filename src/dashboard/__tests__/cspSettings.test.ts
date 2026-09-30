@@ -7,6 +7,7 @@
 
 import { vi } from 'vitest';
 import type { Mock, MockedFunction } from 'vitest';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // Mock dependencies before importing cspSettings
 // PBI 2026-09-17-19: the reset confirmation goes through the accessible
@@ -96,8 +97,8 @@ function setupDOM() {
     <button id="cspSaveButton"></button>
     <button id="cspResetButton"></button>
     <input type="text" id="cspProviderSearch" />
-    <div id="cspSaveMessage" style="display:none;"></div>
-    <div id="cspResetMessage" style="display:none;"></div>
+    <div id="cspSaveMessage" class="success-message"></div>
+    <div id="cspResetMessage" class="success-message"></div>
   `;
 }
 
@@ -318,7 +319,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       await cspSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message success');
     });
 
     test('should auto-hide success message after 3 seconds', async () => {
@@ -331,10 +332,11 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       await cspSettings.saveCSPSettings();
 
       const message = document.getElementById('cspSaveMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message success');
 
       vi.advanceTimersByTime(3000);
-      expect(message?.style.display).toBe('none');
+      expect(message?.textContent).toBe('');
+      expect(message?.className).toBe('status-message');
     });
 
     test('should show inline error message on save failure (no window.alert)', async () => {
@@ -347,7 +349,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
 
       expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings save failed', expect.objectContaining({ error: expect.any(String) }));
       const message = document.getElementById('cspSaveMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message error');
       expect(message?.textContent).toBe('cspSaveError');
     });
 
@@ -417,8 +419,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const saveButton = document.getElementById('cspSaveButton');
       saveButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockSetAll).toHaveBeenCalled();
+      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
     });
   });
 
@@ -437,11 +438,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
-      expect(mockSetAll).toHaveBeenCalledWith({
-        [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
-        [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],
-      });
+      await waitForMock(() =>
+        expect(mockSetAll).toHaveBeenCalledWith({
+          [StorageKeys.CONDITIONAL_CSP_ENABLED]: true,
+          [StorageKeys.CONDITIONAL_CSP_PROVIDERS]: [],
+        })
+      );
     });
 
     test('should not reset when confirm is rejected', async () => {
@@ -458,7 +460,11 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
+      // The handler's only async work is awaiting the confirm dialog, so the
+      // dialog call is the positive anchor and one macrotask turn covers the
+      // resumption after it. waitForMock would be vacuous for a negative.
+      await waitForMock(() => expect(mockShowConfirmDialog).toHaveBeenCalled());
+      await drainMacrotask();
       expect(mockSetAll).not.toHaveBeenCalled();
     });
 
@@ -480,7 +486,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       // for the DOM update instead of relying on a fixed timeout.
       const message = document.getElementById('cspResetMessage');
       await vi.waitFor(() => {
-        expect(message?.style.display).toBe('block');
+        expect(message?.className).toBe('status-message success');
       });
     });
 
@@ -506,12 +512,13 @@ describe('cspSettings (CspSettingsController default instance)', () => {
         // Advance timers to flush the import() promise microtasks
         await vi.advanceTimersByTimeAsync(10);
         const msg = document.getElementById('cspResetMessage');
-        expect(msg?.style.display).toBe('block');
+        expect(msg?.className).toBe('status-message success');
       }, { timeout: 2000 });
 
       const message = document.getElementById('cspResetMessage');
       await vi.advanceTimersByTimeAsync(3000);
-      expect(message?.style.display).toBe('none');
+      expect(message?.textContent).toBe('');
+      expect(message?.className).toBe('status-message');
     });
 
     test('should show inline error message on reset failure (no window.alert)', async () => {
@@ -529,11 +536,12 @@ describe('cspSettings (CspSettingsController default instance)', () => {
       const resetButton = document.getElementById('cspResetButton');
       resetButton?.click();
 
-      await new Promise(r => setTimeout(r, 10));
+      await waitForMock(() =>
+        expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings reset failed', expect.objectContaining({ error: expect.any(String) }))
+      );
 
-      expect(mockAddLog).toHaveBeenCalledWith('ERROR', 'CSP settings reset failed', expect.objectContaining({ error: expect.any(String) }));
       const message = document.getElementById('cspResetMessage');
-      expect(message?.style.display).toBe('block');
+      expect(message?.className).toBe('status-message error');
       expect(message?.textContent).toBe('cspResetError');
     });
   });

@@ -74,9 +74,15 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
                     };
                 }
 
-                // Single dispatch seam: MessageRouter hides the 19 handler table,
-                // trust levels, and validators behind one method.
-                return deps.router.dispatch(outcome.message, sender, respond);
+                // Single dispatch seam: MessageRouter hides the handler table,
+                // trust levels, and validators behind one method. An unknown
+                // type must still get a response: without it the sender sees
+                // only "message port closed before a response was received".
+                const handled = deps.router.dispatch(outcome.message, sender, respond);
+                if (!handled) {
+                    respond({ success: false, error: 'Unknown message type' });
+                }
+                return handled;
             } catch (error) {
                 logError(
                     'Service Worker Error',

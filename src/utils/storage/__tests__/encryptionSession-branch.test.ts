@@ -46,6 +46,18 @@ vi.mock('../authGuard.js', () => ({
 beforeEach(async () => {
     clearEncryptionKeyCache();
     vi.clearAllMocks();
+    // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
+    // Install the in-memory backend (stands in for IndexedDB).
+    const { getWebCrypto } = await import('../../crypto/primitives.js');
+    const { setSecretKeyStorageOverride } = await import('../../crypto/secretWrappingKey.js');
+    const kek = await getWebCrypto().subtle.generateKey({ name: 'AES-GCM', length: 256 }, false, [
+        'encrypt',
+        'decrypt',
+    ]);
+    setSecretKeyStorageOverride({
+        get: async () => kek,
+        put: async () => {},
+    });
     // Make sendMessage return a promise so .catch() works in unlockWithPassword
     (chrome.runtime as any).sendMessage = vi.fn().mockResolvedValue(undefined);
     // Reset rate limiter to success for every test
@@ -260,7 +272,7 @@ describe('changeMasterPassword', () => {
 describe('removeMasterPassword', () => {
     it('removes all master password keys', async () => {
         await setMasterPassword('StrongP@ssw0rd123!');
-        await removeMasterPassword();
+        await removeMasterPassword('StrongP@ssw0rd123!');
         const stored = await chrome.storage.local.get([
             StorageKeys.MASTER_PASSWORD_ENABLED,
             StorageKeys.MASTER_PASSWORD_SALT,
@@ -269,6 +281,23 @@ describe('removeMasterPassword', () => {
         ]);
         expect(stored[StorageKeys.MASTER_PASSWORD_ENABLED]).toBeUndefined();
         expect(stored[StorageKeys.MASTER_PASSWORD_HASH]).toBeUndefined();
+    });
+
+    it('keeps canonical API keys readable after removal (PBI 2026-09-27)', async () => {
+        await setMasterPassword('StrongP@ssw0rd123!');
+        await unlockWithPassword('StrongP@ssw0rd123!');
+        const key = await getOrCreateEncryptionKey();
+        const { encryptApiKey, decryptApiKey } = await import('../../crypto/index.js');
+        await chrome.storage.local.set({
+            settings: { provider_api_key: await encryptApiKey('sk-live-provider', key) },
+        });
+
+        await removeMasterPassword('StrongP@ssw0rd123!');
+
+        const anonKey = await getOrCreateEncryptionKey();
+        const stored = (await chrome.storage.local.get('settings')) as Record<string, unknown>;
+        const blob = stored['settings'] as Record<string, unknown>;
+        expect(await decryptApiKey(blob['provider_api_key'] as never, anonKey)).toBe('sk-live-provider');
     });
 });
 

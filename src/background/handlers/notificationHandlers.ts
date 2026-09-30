@@ -1,6 +1,7 @@
 import { decodeUrlFromNotificationId } from './urlNotificationHandlers.js';
 import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
+import { claimRecoveryOwner, releaseRecoveryOwner } from '../../utils/recoveryClaimStore.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logWarn, logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -77,13 +78,34 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
                     const pages = await getPendingPages();
                     const page = pages.find(p => p.url === url);
                     if (page) {
-                        // PBI 2026-09-12-04: source policy (force, duplicate
-                        // check, record type) lives in the shared builder.
-                        await deps.record(buildRecordRequest('notification-confirm', {
-                            title: page.title,
-                            url: page.url,
-                            content: '',
-                        }));
+                        // PBI 2026-09-25-12: the notification re-run is the third
+                        // manual recovery surface — it takes the same durable
+                        // claim as the popup / dashboard re-runs and the offline
+                        // queue owner, so two surfaces cannot run it at once.
+                        // A failed claim leaves the pending page in place: the
+                        // user can retry once the other owner finishes.
+                        if (await claimRecoveryOwner(url, 'manual')) {
+                            try {
+                                // PBI 2026-09-12-04: source policy (force, duplicate
+                                // check, record type) lives in the shared builder.
+                                await deps.record(buildRecordRequest('notification-confirm', {
+                                    title: page.title,
+                                    url: page.url,
+                                    content: '',
+                                }));
+                            } finally {
+                                await releaseRecoveryOwner(url, 'manual');
+                            }
+                            await removePendingPages([url]);
+                            return;
+                        }
+                        await logWarn(
+                            'Notification re-run skipped: recovery claim held by another owner',
+                            { url: url.substring(0, 10) + '...' },
+                            ErrorCode.INTERNAL_ERROR,
+                            'service-worker',
+                        );
+                        return;
                     }
                 }
                 await removePendingPages([url]);

@@ -30,6 +30,7 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { QueryCache } from './historyQueryCache.js';
+import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 
 // ---------------------------------------------------------------------------
 // State — moved from sqliteHistoryPanelState.ts so HistoryModel owns it.
@@ -752,10 +753,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
 
   async function selectDate(dateStr: string): Promise<void> {
     dispatch({ type: 'dateSelect', date: dateStr });
-    const date = new Date(dateStr + 'T00:00:00');
-    const since = date.getTime();
-    const until = date.getTime() + 86400000 - 1;
-    await fetchData({ since, until });
+    await fetchData(localDayRangeFromDateString(dateStr));
   }
 
   async function changeSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {

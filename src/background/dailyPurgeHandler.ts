@@ -4,16 +4,91 @@ import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsMigratio
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { purgeExpiredDownloadRecords } from './localMarkdownExportRetention.js';
+import { purgeExpiredDownloadRecords, LOCAL_MARKDOWN_BUFFER_RETENTION_DAYS } from './localMarkdownExportRetention.js';
 import { clearExpiredPages as defaultClearExpiredPages } from '../utils/pendingStorage.js';
+import { DAILY_BUFFER_PREFIX } from './pipeline/steps/saveLocalMarkdownStep.js';
 import type { CallResult } from './sqlite/offscreenGateway.js';
 
 type PurgeFn = (retentionDays?: number, maxRecords?: number) => Promise<CallResult<{ purged: number }>>;
 type ContentPurgeFn = (
-  retentionDays?: number,
-  maxRecords?: number,
-  includeStarred?: boolean,
+    retentionDays?: number,
+    maxRecords?: number,
+    includeStarred?: boolean,
 ) => Promise<CallResult<{ purged: number }>>;
+type AuditPurgeFn = (retentionDays?: number) => Promise<CallResult<{ purged: number }>>;
+
+/**
+ * Audit-log retention window in days.
+ *
+ * Not a user setting on purpose: the trail records every URL handed to a cloud
+ * AI provider, and a knob that defaults to "keep everything" is not a privacy
+ * guarantee. The value mirrors the content-retention default
+ * (DEFAULT_SETTINGS.content_retention_days) so the two retention policies read
+ * as one policy — the equality is pinned by a test rather than re-derived,
+ * because DEFAULT_SETTINGS types every key as nullable ("unset"), and a
+ * derived window would silently turn the sweep off the day someone made that
+ * default optional.
+ */
+export const AUDIT_LOG_RETENTION_DAYS = 7;
+
+const BUFFER_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Local-calendar `YYYY-MM-DD`, matching how MarkdownBufferManager names a day. */
+function toCalendarDate(date: Date): string {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function daysAgo(now: Date, days: number): string {
+    // The local Date constructor, not a millisecond subtraction: buffer keys are
+    // local-calendar names, so the cutoff has to be one too (and this stays
+    // correct across month ends and DST shifts).
+    return toCalendarDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days));
+}
+
+/**
+ * Reclaim `local_export_YYYY-MM-DD` buffer keys that no longer belong in storage.
+ *
+ * A key is orphaned whenever its download failed or export mode was 'manual'
+ * that day: `flushBufferedExports` removes a key only after a successful
+ * download, and its per-date catch deliberately leaves the key in place.
+ * Deleting at failure time would drop that day's unsaved data, so the
+ * retention sweep here is the ONLY reclaim path — keep the two concerns apart
+ * instead of folding "reclaim" into the failure branch.
+ *
+ * Only `chrome.storage.local.remove` is used: the exported files themselves are
+ * not this sweep's business, and touching `chrome.downloads` here would delete
+ * user-visible download history.
+ *
+ * @param now - injectable clock so the day boundary is testable without a sleep.
+ * @returns how many buffer keys were removed.
+ */
+export async function sweepExpiredLocalExportBuffers(now: Date = new Date()): Promise<number> {
+    const stored = await chrome.storage.local.get(DAILY_BUFFER_PREFIX);
+
+    const today = toCalendarDate(now);
+    const yesterday = daysAgo(now, 1);
+    const cutoff = daysAgo(now, LOCAL_MARKDOWN_BUFFER_RETENTION_DAYS);
+
+    // Today and yesterday are never eligible, whatever the window says: their
+    // flush runs on its own schedule, so they can still legitimately hold
+    // unflushed entries when the daily alarm fires. The window is a tuning knob;
+    // this is the data-safety invariant under it.
+    const expiredKeys = Object.keys(stored).filter((key) => {
+        const date = key.slice(DAILY_BUFFER_PREFIX.length);
+        if (!BUFFER_DATE_PATTERN.test(date)) return false;
+        if (date === today || date === yesterday) return false;
+        // Inclusive, so a key sitting exactly on the boundary is reclaimed —
+        // the same "exactly N days is expired" rule the download records use.
+        return date <= cutoff;
+    });
+
+    if (expiredKeys.length === 0) return 0;
+
+    await chrome.storage.local.remove(expiredKeys);
+    return expiredKeys.length;
+}
 
 /**
  * Runs the daily SQLite purge according to user retention settings.
@@ -23,6 +98,7 @@ export async function handleDailyPurgeAlarm(
   purgeOldRecords: PurgeFn,
   purgeContent?: ContentPurgeFn,
   clearExpiredPages: () => Promise<void> = defaultClearExpiredPages,
+  purgeAuditLog?: AuditPurgeFn,
 ): Promise<void> {
     try {
         const settings = await settingsRepository.getAll();
@@ -63,12 +139,32 @@ export async function handleDailyPurgeAlarm(
             }
         }
 
+        // Audit-log retention sweep. Unconditional (no setting can disable it):
+        // the trail is the record of what was sent to a cloud provider, and a
+        // user-facing switch would only add a way to leave it unbounded.
+        if (purgeAuditLog) {
+            const result = await purgeAuditLog(AUDIT_LOG_RETENTION_DAYS);
+            // Same convention as the record purge above: a failure is never
+            // folded into "0 purged".
+            logInfo('daily-audit-purge completed', {
+                purged: result.success ? result.data.purged : -1,
+            }, 'dailyPurgeHandler');
+        }
+
         // PBI-15: clean up expired settings migration backups
         await cleanupExpiredSettingsBackups();
 
         // VULN-004: remove local Markdown export download records older than
         // LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS.
         await purgeExpiredDownloadRecords();
+
+        // VULN-004 follow-up: reclaim `local_export_YYYY-MM-DD` buffer keys past
+        // LOCAL_MARKDOWN_BUFFER_RETENTION_DAYS, which no download failure path
+        // reclaims on its own.
+        const sweptBuffers = await sweepExpiredLocalExportBuffers();
+        if (sweptBuffers > 0) {
+            logInfo('local-export buffer sweep completed', { swept: sweptBuffers }, 'dailyPurgeHandler');
+        }
     } catch (error) {
         logError('daily-purge failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'dailyPurgeHandler');
     }

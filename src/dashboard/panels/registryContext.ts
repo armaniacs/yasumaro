@@ -15,10 +15,23 @@ export function getRegistry(): NavigationRegistry {
 /**
  * The registry if panels have been registered, otherwise null.
  *
- * Use this from code that can run before `src/dashboard/main.ts` has executed.
- * `entrypoints/options/main.ts` imports dashboard.ts before main.ts, so
- * dashboard.ts's own bootstrap runs while the registry is still unset —
- * getRegistry() would throw there.
+ * WHY the registry can still be unset: `src/dashboard/main.ts` calls
+ * `setRegistry()` in its own module body, but ESM evaluates a module's
+ * imports first (NavigationRegistry → DashboardBootstrapper → panelFactories
+ * → every panel module), so anything those modules do at import time runs
+ * before the registry exists. Unit tests that import a panel module without
+ * main.ts are the same case. getRegistry() would throw in both.
+ *
+ * This is NOT the `entrypoints/options/main.ts` ordering the comment used to
+ * claim: that entrypoint imports `src/dashboard/main.js`, not `dashboard.js`,
+ * and main.ts registers the registry before it calls initDashboard().
+ *
+ * No production caller uses tryGetRegistry() today — the fire-and-forget
+ * navigations (tryNavigate / tryNavigateTyped) wrap getRegistry() in their
+ * own try/catch. It stays as the typed "may not be there yet" accessor for
+ * those and for tests; converting this module to injection is a separate,
+ * wider change (see the PBI note) because every panel module would have to
+ * take the registry as a parameter.
  */
 export function tryGetRegistry(): NavigationRegistry | null {
   return _registry;

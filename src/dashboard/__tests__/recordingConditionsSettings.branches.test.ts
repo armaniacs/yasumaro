@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks for storage module
@@ -80,19 +81,6 @@ function setupDOM(includeContainer = true) {
   // Provide container empty, init will render. Also pre-fill with existing rendered structure
   // for fallback tests we need container to exist.
   document.body.innerHTML = '<div id="recording-conditions-settings"></div>';
-}
-
-async function clickSaveAndWait(shouldSucceed = false) {
-  const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;
-  expect(saveBtn).not.toBeNull();
-  saveBtn.click();
-  // allow async handler to run
-  await new Promise((r) => setTimeout(r, 0));
-  await vi.waitFor(() => {
-    // whichever message appears, ensure handler completed; check that mockSetAll or error visible
-  }, { timeout: 200 }).catch(() => {});
-  // flush microtasks
-  await new Promise((r) => setTimeout(r, 10));
 }
 
 describe('recordingConditionsSettings branches', () => {
@@ -349,7 +337,10 @@ describe('recordingConditionsSettings branches', () => {
     invalidSetup();
     const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;
     saveBtn.click();
-    await new Promise((r) => setTimeout(r, 10));
+    // The validation branch renders the message and returns before setAll, so
+    // the visible error is the completion signal the assertions below anchor on.
+    const err = document.getElementById('conditions-validation-error') as HTMLElement;
+    await waitForMock(() => expect(err.style.display).toBe(''));
   }
 
   it('validation: minScrollDepth invalid with fallback message (|| fallback)', async () => {

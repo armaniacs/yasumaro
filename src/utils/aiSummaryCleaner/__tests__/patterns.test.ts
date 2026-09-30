@@ -19,8 +19,23 @@ import {
     I18N_SOCIAL_TEXT_PATTERNS,
 } from '../patterns.js';
 import { buildClassIdSelectors } from '../helpers.js';
+import { chunkSelector } from '../selectorRules.js';
 import { stripCookieConsentElements } from '../stripExtended.js';
 import { stripLegalTextNodes } from '../stripCore.js';
+
+/**
+ * Counts the union of elements matched by a comma-separated selector across
+ * chunks, mirroring stripBySelectors: jsdom 30.1.1 rejects any single
+ * querySelectorAll call over 2048 chars, so built selectors must be chunked
+ * before they reach the DOM.
+ */
+function countMatches(selector: string): number {
+    const matched = new Set<Element>();
+    for (const chunk of chunkSelector(selector)) {
+        document.querySelectorAll(chunk).forEach((el) => matched.add(el));
+    }
+    return matched.size;
+}
 
 describe('aiSummaryCleaner/patterns', () => {
     beforeEach(() => {
@@ -115,17 +130,17 @@ describe('aiSummaryCleaner/patterns', () => {
 
         it('matches an element with a cookie consent class', () => {
             document.body.innerHTML = '<div class="cookie-consent-banner">同意</div>';
-            expect(document.querySelectorAll(selector).length).toBe(1);
+            expect(countMatches(selector)).toBe(1);
         });
 
         it('matches an element with a related articles class', () => {
             document.body.innerHTML = '<div class="related-posts">関連記事</div>';
-            expect(document.querySelectorAll(selector).length).toBe(1);
+            expect(countMatches(selector)).toBe(1);
         });
 
         it('does not match a main article body element', () => {
             document.body.innerHTML = '<div class="post-body">本文コンテンツ</div>';
-            expect(document.querySelectorAll(selector).length).toBe(0);
+            expect(countMatches(selector)).toBe(0);
         });
     });
 

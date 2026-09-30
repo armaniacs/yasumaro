@@ -170,6 +170,8 @@ vi.stubGlobal('import.meta', {
 // Chrome Extensions API Mock
 // ============================================================================
 
+import { cloneAtStorageBoundary } from '../src/utils/storage/structuredCloneBoundary.js';
+
 // In-memory storage
 const localStorage: Record<string, any> = {};
 const syncStorage: Record<string, any> = {};
@@ -198,11 +200,12 @@ const chromeStorageMock = {
           }
         }
 
+        for (const key of Object.keys(result)) result[key] = cloneAtStorageBoundary(result[key]);
         return Promise.resolve(result);
       }
     ),
     set: vi.fn<Promise<void>, [Record<string, any>]>((items) => {
-      Object.assign(localStorage, items);
+      for (const [key, value] of Object.entries(items)) localStorage[key] = cloneAtStorageBoundary(value);
       return Promise.resolve();
     }),
     remove: vi.fn<Promise<void>, [string | string[]]>((keys) => {

@@ -5,6 +5,8 @@
  */
 
 import { StorageKeys } from '../utils/storage/types.js';
+import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
+import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -121,10 +123,13 @@ export class RecordingTriggerManager {
     const triggers = await this.loadTriggers();
 
     if (event.type === 'scroll_idle') {
-      // Read user-configured thresholds from storage, fall back to defaults
-      const settings = await chrome.storage.local.get([StorageKeys.MIN_SCROLL_DEPTH, StorageKeys.MIN_VISIT_DURATION]);
-      const minScrollDepth = (settings[StorageKeys.MIN_SCROLL_DEPTH] as number) ?? 50;
-      const minVisitDuration = (settings[StorageKeys.MIN_VISIT_DURATION] as number) ?? 5;
+      // Read user-configured thresholds from the settings blob — the only
+      // writer (recordingConditionsSettings) saves through the repository.
+      // A previous top-level read always missed and fell back to defaults.
+      const {
+        [StorageKeys.MIN_SCROLL_DEPTH]: minScrollDepth = DEFAULT_MIN_SCROLL_DEPTH,
+        [StorageKeys.MIN_VISIT_DURATION]: minVisitDuration = DEFAULT_MIN_VISIT_DURATION,
+      } = await settingsRepository.getMany([StorageKeys.MIN_SCROLL_DEPTH, StorageKeys.MIN_VISIT_DURATION]);
       return decideRecordingTrigger(event, triggers, minScrollDepth, minVisitDuration * 1000);
     }
 

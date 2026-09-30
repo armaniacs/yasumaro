@@ -32,15 +32,32 @@ src/utils/crypto/cryptoParams.ts
 src/utils/logger/types.ts
 src/utils/logger/buffer.ts
 src/utils/commonTypes.ts
+src/utils/svgNamespace.ts
 src/utils/types.ts
 src/utils/urlEntry.ts
 src/utils/luhn.ts
-src/utils/urlHash.ts — ログ用 URL ハッシュ化（ piiSanitizer.ts と同 性質のプライバシー保護。PBI 2026-09-16-05）
-src/utils/backoff.ts — 指数バックオフ遅延計算の SSOT（PBI 2026-09-17-09）
-src/utils/httpFailureMessages.ts — HTTP status→ユーザー文言テーブルの SSOT（PBI 2026-09-17-09）
-src/utils/summaryFallback.ts — AI要約空欄フォールバック文言の SSOT（PBI 2026-09-24-09）
-src/utils/failureTaxonomy.ts — 構造化 failure kind（7種）と kind 単位 retry 資格、正規化関数の SSOT（PBI 2026-09-25-11）
+src/utils/urlHash.ts
+src/utils/backoff.ts
+src/utils/httpFailureMessages.ts
+src/utils/summaryFallback.ts
+src/utils/failureTaxonomy.ts
+src/utils/vfsCapabilities.ts
+src/utils/failureTaxonomy.ts
+src/utils/vfsCapabilities.ts
+src/utils/storage/apiKeyTransition.ts
+src/utils/storage/apiKeyFields.ts
+src/utils/visitThresholds.ts
 ```
+
+注記:
+- `vfsCapabilities.ts` は OPFS 能力判定の純 core。globalThis を読む部分は
+  `probeOpfsGlobals(scope: unknown)` としてスコープを受け取る形にし、
+  offscreen / dashboard / テストのいずれも同じ判定を共有できる。
+- `storage/` 配下で Layer 0 なのは `apiKeyTransition.ts`（KEK 切替の純粋判定コア。
+  chrome・storage・crypto provider を import せず、復号は注入する）と
+  `apiKeyFields.ts`（canonical 一覧。依存なしが設計）の2本だけ。
+  storage I/O を持つ層は Layer 1（`storage/types.ts` 等）に置く。
+
 
 `logger/` の一部は `piiSanitizer` に依存するが、これは Layer 0 内の相互依存として許容する。
 ただし `logger/sanitize.ts` は Layer 2 の `piiSanitizer` を静的に import するため Layer 2 に分類する
@@ -60,6 +77,7 @@ src/utils/storage/domainFilterCache.ts
 src/utils/storage/privacyConsent.ts — 同意状態ロジック。background/popup/dashboard から直接 import する中立配置
 src/utils/storage/quota.ts
 src/utils/storage/storageMaintenance.ts
+src/utils/storage/settingsSnapshot.ts — 復号なし設定スナップショット。content scripts 用の読み専用経路
 src/utils/storage/storageTransaction.ts — withOptimisticLock 等（旧 optimisticLock.ts の後継）
 src/utils/Mutex.ts
 src/utils/rateLimiter.ts
@@ -83,9 +101,6 @@ src/utils/trustDb/TrustDbKernel.ts → src/utils/storage/SettingsRepository.ts (
   - 回避手法: await import() による遅延 import。ESM モジュールキャッシュで2回目以降即時解決
   - 詳細は ADR 2026-08-20-utils-layer-circular-dependency を参照（旧ファイル名時代の記録）
 
-src/utils/trustDb/trancoConsentManager.ts → src/utils/storage.ts (barrel) + settingsStore 系 (dynamic)
-  - getSettings/saveSettings を await import('../storage.js') で実行時に取得
-
 src/utils/storage/storageMaintenance.ts → src/background/sqlite/offscreenGateway.js (dynamic)
   - SqliteClient を await import() で遅延参照し、utils → background の静的逆辺を回避
 ```
@@ -94,6 +109,18 @@ src/utils/storage/storageMaintenance.ts → src/background/sqlite/offscreenGatew
 循環例外ファイル群は現状ルールの検査対象外（未分類）のため、dynamic → static 化の検出は
 レビュー＋下記「機械検査」節の grep 例で行う。分類済みファイルへの新規の上位層 static import
 は `local/utils-layer-boundary` が検出する。
+
+#### 解決済み: utils → background 逆辺（auditLog）
+
+`src/utils/auditLog.ts` は共有 SQLite クライアントへ書き込むため utils → background の
+逆辺を持っていた。実装は `src/messaging/auditLogGateway.ts`
+（`pendingRecordGateway` / `regenerateSummaryGateway` と同じ gateway 群）へ移り、
+utils 側は再 export シムだけになった。シムが指すのは sibling 層 `src/messaging/` で、
+本表の禁止対象（background / popup / dashboard / content / offscreen）には含まれない。
+`utils/auditLog.ts` に残る specifier はシム 1 本のみで background を含まない。
+
+残る逆辺は `storageMaintenance.ts` の 1 件だけになり、`local/utils-layer-boundary` の
+`utilsReverseEdge` が機械的に検出する（下記「機械検査」節）。
 
 ### Layer 2 — High-level Utilities (Layer 0/1 依存)
 
@@ -189,6 +216,14 @@ CI 組み込み判断（PBI 2026-09-17-14）: `npm run validate` への配線は
 - Barrel 経由の新規 import 抑制は既存 `no-restricted-imports`（warn）を維持する。
   本ルールの Layer 1 検査は Barrel 宛を対象外とし二重報告を避ける（Layer 0 の純粋性としての
   Barrel 禁止のみ本ルールが担う）。warn → error への引き上げは barrel 移行の進捗を見て別途判断する。
+- 逆辺（`utilsReverseEdge`）: 上の「静的 import のみ」より広い検査。`src/utils/**` の
+  全ファイル（未分類を含む）を対象に、`ImportDeclaration` / `ImportExpression` /
+  `ExportNamedDeclaration` / `ExportAllDeclaration` のいずれでも
+  `src/background/`・`src/popup/`・`src/dashboard/`・`src/content/`・`src/offscreen/`
+  へ届く specifier があれば報告する。dynamic import と re-export シムは同じ実行時
+  依存を運ぶため、構文を限定すると検出漏れになる。`import type` / `export type` は
+  対象外。意図された例外はルール内の `SANCTIONED_REVERSE_EDGES` に列挙し、
+  追加の許可は `eslint.config.js` の `allow` で与える。
 
 既知の暫定許可（`eslint.config.js` の `allow`。ADR 2026-09-17-defaults-cleansing-rules-provisional-allow で裁定済み）:
 
@@ -206,7 +241,7 @@ CI 組み込み判断（PBI 2026-09-17-14）: `npm run validate` への配線は
 
 ```bash
 # 循環 import が dynamic import のままであることを検証（出力の static 化に注意）
-grep -n "await import" src/utils/trustDb/TrustDbKernel.ts src/utils/storage/SettingsRepository.ts src/utils/trustDb/trancoConsentManager.ts src/utils/storage/storageMaintenance.ts
+grep -n "await import" src/utils/trustDb/TrustDbKernel.ts src/utils/storage/SettingsRepository.ts src/utils/storage/storageMaintenance.ts
 
 # 未分類モジュールの洗い出し（ルール対象外の src/utils ファイル）
 comm -23 <(find src/utils -name '*.ts' -not -path '*__tests__*' | sort) <(grep -o "src/utils/[^']*\.ts" eslint/rules/utils-layer-boundary.mjs | sort -u)
@@ -232,7 +267,7 @@ export function getDomainFilterCacheSync() { ... }
 
 ## 将来の移行計画
 
-* **Wave 3**: `storage.ts` barrel — 完了（PBI 2026-08-21-04 + PBI-28）。production・テストとも直接 import 化済み（テスト参照ゼロ）。barrel 本体は `trancoConsentManager.ts` の dynamic import（循環回避の意図的設計）が残るため維持し、`storage.ts` ヘッダに残置理由を記録
+* **Wave 3**: `storage.ts` barrel — 完了（PBI 2026-08-21-04 + PBI-28）後、唯一の利用者 `trancoConsentManager.ts` 系の削除（PBI 2026-09-28-25）に伴い barrel 本体を削除。`eslint.config.js` の対応する禁止エントリも削除済み
 * **Wave 4**: `logger.ts` barrel の同様の分割 — 完了（PBI 2026-09-05-03 で配線、PBI 2026-09-18-19 で呼び出し側133箇所の直接 import 移行と barrel 削除）。`core.ts` が `LoggerWiring`（`initLogger` 注入・lazy chrome デフォルト・`resetLoggerWiring`）を受け、offscreen console フォールバックは `ChromeStorageLogAdapter` に移動。logger への import は `logger/types.js`（ErrorCode・LogType）/ `logger/core.js`（addLog 系）/ `logger/api.js`（log* 系）の直接参照のみ
 * 循環の解消は業務ルール上不可のため、dynamic import による回避を維持し、ADR で保護する
 

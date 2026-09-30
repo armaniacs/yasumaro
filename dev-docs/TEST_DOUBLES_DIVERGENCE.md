@@ -16,14 +16,14 @@
 
 ## 1. InMemoryTransport — DELETE: ソフトデリート近似 vs 製品ハードデリート
 
-- **ダブル**: `src/background/inMemoryTransport.ts` — `SQLITE_DELETE` は `is_deleted = 1` を立てるだけ（行は配列に残る）
+- **ダブル**: `src/background/__tests__/fakes/inMemoryTransport.ts` — `SQLITE_DELETE` は `is_deleted = 1` を立てるだけ（行は配列に残る）
 - **製品側の実体**（すべてハードデリート）:
   - `src/offscreen/FallbackStorageAdapter.ts` — `delete(id)` → `hardDelete(id)`
   - `src/offscreen/storageFallback.ts` — `hardDelete(id)` → `records.filter(r => r.id !== id)`
   - `src/offscreen/opfsWorker/crudHandlers.ts` — `handleHardDelete`: `DELETE FROM browsing_logs WHERE id = ?`
   - メッセージ層 `src/offscreen/sqliteMessageHandlers.ts` — `handleDelete` → `sqliteHardDelete(id)`
 - **統一しない方針の理由**: InMemoryTransport は SQL エンジンを積まない方針。製品挙動（物理削除）に寄せるとダブルが重くなる。ソフトデリート近似で軽さを保ち、乖離は本レジストリで固定する
-- **ガードテスト**: `src/background/__tests__/inMemoryTransport.test.ts` の `DELETE divergence pinned as spec` describe（乖離を仕様として固定するアサート）
+- **ガードテスト**: `src/background/__tests__/fakes/inMemoryTransport.test.ts` の `DELETE divergence pinned as spec` describe（乖離を仕様として固定するアサート）
 
 ### 観点別影響表
 

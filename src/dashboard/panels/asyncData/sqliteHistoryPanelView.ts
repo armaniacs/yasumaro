@@ -1,4 +1,9 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
+import {
+  endOfLocalDayMs,
+  formatLocalDate,
+  parseLocalDateStart,
+} from '../../../utils/localDate.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
@@ -23,11 +28,9 @@ export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
   return renderCleansingBar(entry);
 }
 
+/** Thin `Date` wrapper over the localDate SSOT's YYYY-MM-DD formatter. */
 export function formatDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return formatLocalDate(date);
 }
 
 export function formatTimestamp(ts: number): string {
@@ -201,7 +204,7 @@ export function buildCalendarNavHtml(
 ): CalendarNavHtml {
   const now = new Date();
   const currentMonth = selectedDate
-    ? new Date(selectedDate + 'T00:00:00')
+    ? new Date(parseLocalDateStart(selectedDate))
     : now;
 
   const year = currentMonth.getFullYear();
@@ -770,9 +773,12 @@ export function wireCalendarNav(
       const date = (el as HTMLElement).dataset.date!;
       const range = (el as HTMLElement).dataset.range;
       if (range) {
-        const d = new Date(date + 'T00:00:00');
-        const since = d.getTime() - (Number(range) * 86400000);
-        callbacks.onRangeSelect(since, d.getTime() + 86400000 - 1);
+        const dayStart = parseLocalDateStart(date);
+        // WHY the end is a local end-of-day: the quick buttons mean "the last
+        // N days up to and including the clicked day", and on a DST
+        // transition that day is not 86_400_000 ms long.
+        const since = dayStart - (Number(range) * 86_400_000);
+        callbacks.onRangeSelect(since, endOfLocalDayMs(dayStart));
       } else {
         callbacks.onDateSelect(date);
       }

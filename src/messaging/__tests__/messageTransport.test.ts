@@ -165,3 +165,42 @@ describe('messageTransport singleton', () => {
         expect(messageTransport).toBeInstanceOf(MessageTransport);
     });
 });
+
+/**
+ * The send parameter is the wire contract minus `protocolVersion` (PBI
+ * 2026-09-28-16), so callers no longer cast their envelopes through
+ * `ExtensionMessage`. The negative cases are compile-time only: an unused
+ * `@ts-expect-error` fails `type-check:test`, and the arrows are never called
+ * so nothing reaches a real transport.
+ */
+describe('send signature (PBI 2026-09-28-16)', () => {
+    it('accepts the record envelopes without protocolVersion and stamps it', async () => {
+        const handler = vi.fn().mockResolvedValue({ ok: true });
+        const transport = new MessageTransport(new ImmediateTransport(handler));
+
+        await transport.send({ type: 'MANUAL_RECORD', payload: { title: 'T', url: 'u', content: 'c' } });
+        await transport.send({ type: 'PREVIEW_RECORD', payload: { title: 'T', url: 'u', content: 'c' } });
+        await transport.send({ type: 'SAVE_RECORD', payload: { title: 'T', url: 'u', content: 'c', maskedCount: 2 } });
+
+        expect(handler).toHaveBeenCalledTimes(3);
+        expect(handler).toHaveBeenLastCalledWith(
+            expect.objectContaining({ protocolVersion: CURRENT_PROTOCOL_VERSION }),
+        );
+    });
+
+    it('rejects an unknown type and a payload the envelope does not declare', () => {
+        const transport = new MessageTransport(new ImmediateTransport(vi.fn().mockResolvedValue({})));
+
+        const sendUnknownType = (): Promise<unknown> => {
+            // @ts-expect-error NOT_A_REAL_TYPE is not part of the wire contract
+            return transport.send({ type: 'NOT_A_REAL_TYPE' });
+        };
+        const sendIncompletePayload = (): Promise<unknown> => {
+            // @ts-expect-error content and url are required by the MANUAL_RECORD payload
+            return transport.send({ type: 'MANUAL_RECORD', payload: { title: 'T' } });
+        };
+
+        expect(sendUnknownType).toBeInstanceOf(Function);
+        expect(sendIncompletePayload).toBeInstanceOf(Function);
+    });
+});

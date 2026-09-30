@@ -53,6 +53,20 @@ vi.mock('../../utils/rateLimiter.js', () => ({
   resetFailedAttempts: vi.fn(),
 }));
 
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  setMasterPassword: vi.fn(),
+  changeMasterPassword: vi.fn(),
+  removeMasterPassword: vi.fn(),
+  ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
+    fields: readonly string[];
+    constructor(fields: readonly string[]) {
+      super(`ReencryptionAbortedError: ${fields.length} field(s)`);
+      this.name = 'ReencryptionAbortedError';
+      this.fields = fields;
+    }
+  },
+}));
+
 vi.stubGlobal('chrome', {
   storage: {
     local: {
@@ -75,6 +89,11 @@ import {
   PasswordStrength,
 } from '../../utils/masterPassword.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../../utils/rateLimiter.js';
+import {
+  setMasterPassword as setMasterPasswordService,
+  changeMasterPassword as changeMasterPasswordService,
+  removeMasterPassword as removeMasterPasswordService,
+} from '../../utils/storage/encryptionSession.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
 /**
@@ -185,6 +204,9 @@ describe('masterPassword-branches — savePassword branches', () => {
     vi.mocked(validatePasswordRequirements).mockReturnValue(null);
     vi.mocked(validatePasswordMatch).mockReturnValue(null);
     vi.mocked(getMessage).mockImplementation((key: string) => `i18n_${key}`);
+    vi.mocked(setMasterPasswordService).mockResolvedValue(true);
+    vi.mocked(changeMasterPasswordService).mockResolvedValue(true);
+    vi.mocked(removeMasterPasswordService).mockResolvedValue(undefined);
   });
 
   function fullSaveRefs(): MasterPasswordDomRefs {
@@ -209,10 +231,12 @@ describe('masterPassword-branches — savePassword branches', () => {
     const controller = new MasterPasswordController(refs);
     controller.showPasswordModal('change');
     refs.masterPasswordInput!.value = 'StrongPassword1!';
+    // Change mode needs the old password carried from the auth modal.
+    (controller as unknown as { pendingOldPassword: string }).pendingOldPassword = 'old-password';
     controller.initEventListeners();
     refs.savePasswordBtn.click();
     await new Promise((r) => setTimeout(r, 0));
-    expect(setMasterPassword).toHaveBeenCalledWith('StrongPassword1!', expect.any(Function));
+    expect(changeMasterPasswordService).toHaveBeenCalledWith('old-password', 'StrongPassword1!');
   });
 
   it('falls back to default success message when getMessage returns falsy, and skips enabled/options refs when null', async () => {
@@ -226,10 +250,12 @@ describe('masterPassword-branches — savePassword branches', () => {
     const controller = new MasterPasswordController(refs);
     controller.showPasswordModal('change');
     refs.masterPasswordInput!.value = 'StrongPassword1!';
+    // Change mode needs the old password carried from the auth modal.
+    (controller as unknown as { pendingOldPassword: string }).pendingOldPassword = 'old-password';
     controller.initEventListeners();
     refs.savePasswordBtn.click();
     await new Promise((r) => setTimeout(r, 0));
-    expect(showStatus).toHaveBeenCalledWith('status', 'Master password saved successfully.', 'success');
+    expect(showStatus).toHaveBeenCalledWith('status', 'Master password updated. API keys were kept.', 'success');
   });
 
   it('mode=set requires matching confirm password (returns early on mismatch)', async () => {
@@ -488,7 +514,7 @@ describe('masterPassword-branches — initEventListeners: enabled-checkbox toggl
     refs.submitPasswordAuthBtn.click();
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(showStatus).toHaveBeenCalledWith('status', 'Master password removed.', 'success');
+    expect(showStatus).toHaveBeenCalledWith('status', 'Master password updated. API keys were kept.', 'success');
     expect(refs.masterPasswordOptions.classList.contains('hidden')).toBe(true);
   });
 });

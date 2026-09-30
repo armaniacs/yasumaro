@@ -19,21 +19,22 @@ import {
 import { SQLITE_MESSAGE_TYPES } from '../sqliteMessages.js';
 
 describe('messaging/sqliteMaintainWireTable: shape', () => {
-  it('has exactly the 7 non-archive maintain ops', () => {
-    expect(SQLITE_MAINTAIN_WIRE_TABLE).toHaveLength(7);
+  it('has exactly the 8 non-archive maintain ops', () => {
+    expect(SQLITE_MAINTAIN_WIRE_TABLE).toHaveLength(8);
     expect(SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.op).sort()).toEqual(
-      ['backup', 'clearAll', 'healthCheck', 'init', 'purgeContent', 'purgeOldRecords', 'restore'].sort(),
+      ['backup', 'clearAll', 'healthCheck', 'init', 'purgeAuditLog', 'purgeContent', 'purgeOldRecords', 'restore'].sort(),
     );
     for (const entry of SQLITE_MAINTAIN_WIRE_TABLE) expect(entry.family).toBe('maintain');
   });
 
-  it('ops and messages are unique; the purge split stays two distinct messages', () => {
+  it('ops and messages are unique; the purge split stays three distinct messages', () => {
     const ops = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.op);
-    expect(new Set(ops).size).toBe(7);
+    expect(new Set(ops).size).toBe(8);
     const messages = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.messageType);
-    expect(new Set(messages).size).toBe(7);
+    expect(new Set(messages).size).toBe(8);
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeOldRecords.messageType).toBe('SQLITE_PURGE');
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeContent.messageType).toBe('CONTENT_PURGE');
+    expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeAuditLog.messageType).toBe('SQLITE_AUDIT_LOG_PURGE');
   });
 
   it('every message is a real message type and no archive message leaks in', () => {
@@ -109,5 +110,16 @@ describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the 
     expect(row.messageType).toBe('SQLITE_HEALTH_CHECK');
     expect(row.encodePayload({ type: 'healthCheck' })).toEqual({});
     expect(row.decodeGateway({ success: true })).toBe(true);
+  });
+
+  it('purgeAuditLog sends SQLITE_AUDIT_LOG_PURGE with a literal retentionDays key and projects purged', () => {
+    const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeAuditLog;
+    expect(row.messageType).toBe('SQLITE_AUDIT_LOG_PURGE');
+    expect(row.encodePayload({ type: 'purgeAuditLog', retentionDays: 7 })).toStrictEqual({ retentionDays: 7 });
+    // Absent stays a present-but-undefined key, the same arity rule the two
+    // record purges follow: the handler reads "no window" off the key.
+    const empty = row.encodePayload({ type: 'purgeAuditLog' });
+    expect(Object.keys(empty)).toEqual(['retentionDays']);
+    expect(row.decodeGateway({ success: true, purged: 3 })).toEqual({ purged: 3 });
   });
 });

@@ -52,6 +52,7 @@ vi.mock('../../../../utils/customPromptUtils.js', () => ({
 
 import { BuiltInAiProvider } from '../BuiltInAiProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ProviderStrategy.js';
+import { FailureKind, createFailure, tagFailure } from '../../../../utils/failureTaxonomy.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
 const settings = {} as Settings;
@@ -113,6 +114,9 @@ describe('BuiltInAiProvider — generateSummary', () => {
 
     expect(result.success).toBe(false);
     expect(result.summary).toBe('Content contains potentially dangerous patterns');
+    // A state the user resolves (other content / other model), so the breaker
+    // must not cool the slot down for it.
+    expect(result.failure).toEqual({ kind: FailureKind.CONFIGURATION });
   });
 
   it('applies an active custom prompt as the prompt override', async () => {
@@ -150,15 +154,31 @@ describe('BuiltInAiProvider — generateSummary', () => {
 
     expect(result.success).toBe(false);
     expect(result.summary).toBe('model unavailable');
+    expect(result.failure).toEqual({ kind: FailureKind.CONFIGURATION });
   });
 
-  it('turns a thrown error into a failed result', async () => {
+  it('keeps the exception text out of the summary and carries the kind', async () => {
     mockSummarize.mockRejectedValue(new Error('LanguageModel missing'));
 
     const result = await new BuiltInAiProvider(settings).generateSummary('content');
 
+    // The summary is the page summary the recording path persists, so it holds
+    // the fixed sentence only; the detail travels on `error`.
     expect(result.success).toBe(false);
-    expect(result.summary).toContain('LanguageModel missing');
+    expect(result.summary).toBe('Error: Failed to generate summary. Please try again or check your settings.');
+    expect(result.summary).not.toContain('LanguageModel missing');
+    expect(result.error).toBe('LanguageModel missing');
+    expect(result.failure).toEqual({ kind: FailureKind.CONFIGURATION });
+  });
+
+  it('prefers a structured kind carried by the thrown error', async () => {
+    mockSummarize.mockRejectedValue(
+      tagFailure(new Error('aborted'), createFailure(FailureKind.TIMEOUT, { cause: new Error('aborted') })),
+    );
+
+    const result = await new BuiltInAiProvider(settings).generateSummary('content');
+
+    expect(result.failure?.kind).toBe(FailureKind.TIMEOUT);
   });
 
   it('records token usage when the client reports it', async () => {
@@ -199,6 +219,7 @@ describe('BuiltInAiProvider — testConnection', () => {
 
     expect(result.success).toBe(false);
     expect(result.debug?.hasContent).toBe(false);
+    expect(result.debug?.failure).toEqual({ kind: FailureKind.CONFIGURATION });
   });
 
   it('reports the underlying error when the model is unavailable', async () => {
@@ -208,6 +229,7 @@ describe('BuiltInAiProvider — testConnection', () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toBe('downloadable');
+    expect(result.debug?.failure).toEqual({ kind: FailureKind.CONFIGURATION });
   });
 
   it('turns a thrown error into a failed result', async () => {
@@ -215,8 +237,11 @@ describe('BuiltInAiProvider — testConnection', () => {
 
     const result = await new BuiltInAiProvider(settings).testConnection();
 
+    // The test-panel message keeps the raw detail; only the summary path is a
+    // persistence surface, and there the detail is already split off.
     expect(result.success).toBe(false);
     expect(result.message).toBe('boom');
     expect(result.debug?.error).toBe('boom');
+    expect(result.debug?.failure).toEqual({ kind: FailureKind.CONFIGURATION });
   });
 });

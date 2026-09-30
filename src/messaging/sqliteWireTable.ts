@@ -266,8 +266,8 @@ export const SQLITE_WIRE_TABLE = [
     family: 'mutate',
     messageType: 'SQLITE_AUDIT_LOG_INSERT',
     repoMethod: 'insertAuditLog',
-    // No deps path: the only caller (utils/auditLog.ts) drives SqliteClient
-    // directly, and no dashboard subtype exists.
+    // No deps path: the only caller (messaging/auditLogGateway.ts) drives
+    // SqliteClient directly, and no dashboard subtype exists.
     depsMethod: null,
     encodeOp: (record: Omit<AuditLogRecord, 'id'>): Extract<MutateOp, { type: 'insertAuditLog' }> => ({
       type: 'insertAuditLog',
@@ -664,14 +664,15 @@ export function dashboardServiceWireFor(op: string): DashboardServiceDescriptor 
 // ============================================================================
 // Maintain wire table (PBI 2026-09-23-13)
 //
-// The 7 non-archive maintain ops (init/backup/restore/clearAll/
-// purgeOldRecords/purgeContent/healthCheck) were the last hand-wired hop in
-// the offscreen gateway: each switch branch re-spelled messageType + payload
-// shape + decoder, so a shape change broke in the gateway instead of in one
-// codec. Each row here owns that same triple — messageType, encodePayload,
-// decodeGateway — and the gateway dissolves into the same table.for(op.type)
-// + callInternal seam query/mutate already use. Archive ops stay in
-// ARCHIVE_WIRE_TABLE; this table covers exactly the non-archive remainder.
+// The 8 non-archive maintain ops (init/backup/restore/clearAll/
+// purgeOldRecords/purgeContent/purgeAuditLog/healthCheck) were the last
+// hand-wired hop in the offscreen gateway: each switch branch re-spelled
+// messageType + payload shape + decoder, so a shape change broke in the
+// gateway instead of in one codec. Each row here owns that same triple —
+// messageType, encodePayload, decodeGateway — and the gateway dissolves into
+// the same table.for(op.type) + callInternal seam query/mutate already use.
+// Archive ops stay in ARCHIVE_WIRE_TABLE; this table covers exactly the
+// non-archive remainder.
 //
 // Definition-site move only: wire shapes are frozen byte-identical to the
 // former inline lambdas. Two edges pin that deliberately:
@@ -760,6 +761,16 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
       const o = op as Extract<MaintainOp, { type: 'purgeContent' }>;
       return { retentionDays: o.retentionDays, maxRecords: o.maxRecords, includeStarred: o.includeStarred };
     },
+    decodeGateway: (response) => ({ purged: response.purged as number }),
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'purgeAuditLog',
+    family: 'maintain',
+    messageType: 'SQLITE_AUDIT_LOG_PURGE',
+    // Literal key (undefined rides along), same rule as the two purges above:
+    // the handler distinguishes "no window" from a window of 0 by arity, not
+    // by a missing key.
+    encodePayload: (op) => ({ retentionDays: (op as Extract<MaintainOp, { type: 'purgeAuditLog' }>).retentionDays }),
     decodeGateway: (response) => ({ purged: response.purged as number }),
   }),
   defineSqliteMaintainWireOp({

@@ -81,6 +81,12 @@ const MIN_CUTOFF_MS = new Date(2000, 0, 1).getTime();
  * Throws when the input is not a well-formed, real, in-range calendar date —
  * "2026-02-30" must not silently normalize to March, and "9999-99-99" must
  * not become a giant cutoff that archives/deletes everything.
+ *
+ * WHY this is NOT the shared localDate.parseLocalDateStart: that function is
+ * the lenient majority policy and accepts a non-existent date by normalizing
+ * it. Here a wrong cutoff silently archives the wrong month, so validation is
+ * the contract. The duplication is intentional across a policy boundary —
+ * PBI 2026-09-28-11 deliberately left both in place.
  */
 export function cutoffMsFromLocalDate(dateStr: string): number {
   if (typeof dateStr !== 'string') {

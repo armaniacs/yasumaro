@@ -1,6 +1,67 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SessionStore, SESSION_KEYS, SESSION_STORE_FLUSH_DELAY_MS, type SessionStorePort } from '../sessionStore.js';
+import { SessionStore, SESSION_KEYS, SESSION_STORE_FLUSH_DELAY_MS, SESSION_MAX_FLUSH_BYTES, type SessionStorePort } from '../sessionStore.js';
+import { LogType } from '../../utils/logger/types.js';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
+
+const mockAddLog = vi.hoisted(() => vi.fn());
+
+// The drop decision is only observable through its WARN log, so the real logger
+// (which buffers into chrome.storage) is replaced by a spy.
+vi.mock('../../utils/logger/core.js', () => ({ addLog: mockAddLog }));
+
+function serializedSize(value: unknown): number {
+  return new Blob([JSON.stringify(value)]).size;
+}
+
+/** URL of exactly `length` characters so the 10k-entry payload is byte-predictable. */
+function urlOfLength(index: number, length: number): string {
+  const prefix = 'https://example.com/';
+  const suffix = `/${index}`;
+  return `${prefix}${'a'.repeat(length - prefix.length - suffix.length)}${suffix}`;
+}
+
+/**
+ * The payload shape saveCacheToSession writes: [url, timestamp] entries, not
+ * whole SavedUrlEntry records. 10,000 x 180 chars is the size the old 1 MiB cap
+ * rejected and the 3 MiB cap accepts.
+ */
+function realisticRecordingCache(): Record<string, unknown> {
+  const urlCache: [string, number][] = Array.from({ length: 10000 }, (_, i) => [
+    urlOfLength(i, 180),
+    1758000000000 + i,
+  ]);
+  return {
+    settingsCache: { geminiApiKey: '', someFlag: true },
+    cacheTimestamp: 1758000000000,
+    cacheVersion: 1,
+    urlCache,
+    urlCacheTimestamp: 1758000000000,
+    privacyCache: [],
+    privacyCacheTimestamp: 1758000000000,
+  };
+}
+
+/** A payload that cannot fit under the cap for any URL length. */
+function overCapRecordingCache(): Record<string, unknown> {
+  const value: Record<string, unknown> = {
+    settingsCache: { value: 'priority' },
+    cacheTimestamp: 12345,
+    cacheVersion: 1,
+    urlCache: 'x'.repeat(SESSION_MAX_FLUSH_BYTES + 1024),
+  };
+  // Guards every consumer: without the over-cap guarantee the overflow branch
+  // would never run and the pins below would pass vacuously.
+  expect(serializedSize({ [SESSION_KEYS.RECORDING_CACHE]: value })).toBeGreaterThan(SESSION_MAX_FLUSH_BYTES);
+  return value;
+}
+
+/**
+ * Read the private queue so queue residency is observable from outside; the
+ * drop guarantee is precisely "the key is no longer queued".
+ */
+function queuedKeys(target: SessionStore): string[] {
+  return Array.from((target as unknown as { writeQueue: Map<string, unknown> }).writeQueue.keys());
+}
 
 describe('SessionStore', () => {
   let store: SessionStore;
@@ -258,15 +319,13 @@ describe('SessionStore', () => {
     expect(mockLocal.set).toHaveBeenCalledWith({ key1: 'value1', key2: 'value2' });
   });
 
-  it('flush() saves only priority data when estimated size exceeds 1MB', async () => {
-    // Build a value larger than 1MB when serialized
-    const bigString = 'x'.repeat(1.2 * 1024 * 1024);
-    store.set(SESSION_KEYS.RECORDING_CACHE, {
-      settingsCache: { value: 'priority' },
-      cacheTimestamp: 12345,
-      cacheVersion: 1,
-      urlCache: bigString,
-    });
+  it('SESSION_MAX_FLUSH_BYTES is the 3 MiB cap fixed by the overflow ADR', () => {
+    expect(SESSION_MAX_FLUSH_BYTES).toBe(3_145_728);
+  });
+
+  it('flush() saves only priority data when the estimated size exceeds the flush cap', async () => {
+    const value = overCapRecordingCache();
+    store.set(SESSION_KEYS.RECORDING_CACHE, value);
     await store.flushNow();
 
     const setCall = mockSession.set.mock.calls[0][0];
@@ -276,6 +335,112 @@ describe('SessionStore', () => {
       cacheVersion: 1,
     });
     expect(setCall[SESSION_KEYS.RECORDING_CACHE].urlCache).toBeUndefined();
+  });
+
+  it('flush() writes 10,000 x 180-char urlCache entries whole instead of reducing them', async () => {
+    const value = realisticRecordingCache();
+    const size = serializedSize({ [SESSION_KEYS.RECORDING_CACHE]: value });
+    // The realistic heavy-user payload: over the old 1 MiB cap, under the new one.
+    expect(size).toBeGreaterThan(1024 * 1024);
+    expect(size).toBeLessThan(SESSION_MAX_FLUSH_BYTES);
+
+    store.set(SESSION_KEYS.RECORDING_CACHE, value);
+    await store.flushNow();
+
+    expect(mockSession.set).toHaveBeenCalledTimes(1);
+    const written = mockSession.set.mock.calls[0][0][SESSION_KEYS.RECORDING_CACHE];
+    expect(written).toEqual(value);
+    expect((written as { urlCache: [string, number][] }).urlCache).toHaveLength(10000);
+    // Written in full, so nothing stays queued for the next flush to re-serialize.
+    expect(queuedKeys(store)).toEqual([]);
+
+    mockSession.set.mockClear();
+    await store.flushNow();
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
+  it('re-queues an over-cap key at most twice and drops it on the third overflow flush', async () => {
+    store.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
+
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([SESSION_KEYS.RECORDING_CACHE]);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([SESSION_KEYS.RECORDING_CACHE]);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([]);
+
+    // Nothing left, so a 4th flush has no work and the loop cannot restart.
+    mockSession.set.mockClear();
+    await store.flushNow();
+    expect(mockSession.set).not.toHaveBeenCalled();
+  });
+
+  it('logs the dropped key name and consecutive overflow count at WARN', async () => {
+    mockAddLog.mockClear();
+    store.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
+
+    await store.flushNow();
+    await store.flushNow();
+    expect(mockAddLog).not.toHaveBeenCalledWith(LogType.WARN, expect.stringContaining('dropping'), expect.anything());
+
+    await store.flushNow();
+
+    expect(mockAddLog).toHaveBeenCalledWith(
+      LogType.WARN,
+      expect.stringContaining('dropping'),
+      expect.objectContaining({ key: SESSION_KEYS.RECORDING_CACHE, consecutiveOverflowFlushes: 3 }),
+    );
+    const dropLogs = mockAddLog.mock.calls.filter(
+      ([, message]) => typeof message === 'string' && message.includes('dropping'),
+    );
+    expect(dropLogs).toHaveLength(1);
+  });
+
+  it('keeps a dropped over-cap key out of the suspend emergency flush to local storage', async () => {
+    const listeners: Array<() => void> = [];
+    (globalThis as any).chrome.runtime = {
+      onSuspend: { addListener: vi.fn((cb: () => void) => listeners.push(cb)) },
+    };
+    const mockLocal = {
+      get: vi.fn().mockResolvedValue({}),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    // Mirrors how the service worker wires suspend handling.
+    SessionStore.registerSuspendHandler(store);
+    store.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
+    await store.flushNow();
+    await store.flushNow();
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([]);
+
+    listeners[0]!();
+
+    expect(mockLocal.set).not.toHaveBeenCalled();
+  });
+
+  it('clears the re-queue count after a successful write so a later overflow gets a full budget', async () => {
+    const overCap = overCapRecordingCache();
+    const shrunk = { ...overCap, urlCache: 'x'.repeat(1024) };
+
+    store.set(SESSION_KEYS.RECORDING_CACHE, overCap);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([SESSION_KEYS.RECORDING_CACHE]);
+
+    // The payload shrinks, so this flush writes it whole and the count resets.
+    store.set(SESSION_KEYS.RECORDING_CACHE, shrunk);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([]);
+
+    store.set(SESSION_KEYS.RECORDING_CACHE, overCap);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([SESSION_KEYS.RECORDING_CACHE]);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([SESSION_KEYS.RECORDING_CACHE]);
+    await store.flushNow();
+    expect(queuedKeys(store)).toEqual([]);
   });
 
   it('set() is a no-op after dispose()', async () => {
@@ -365,13 +530,14 @@ describe('SessionStore', () => {
     circular.self = circular;
     store.set('key1', circular);
     await store.flushNow();
-    // Falls through the try/catch to 0, so the size never exceeds MAX_SESSION_SIZE
-    // and the value is written as-is rather than reduced to priority-only data.
+    // Falls through the try/catch to 0, so the size never exceeds
+    // SESSION_MAX_FLUSH_BYTES and the value is written as-is rather than reduced
+    // to priority-only data.
     expect(mockSession.set).toHaveBeenCalledWith({ key1: circular });
   });
 
-  it('extractPriorityData() keeps non-RECORDING_CACHE keys as-is when payload exceeds 1MB', async () => {
-    const bigString = 'x'.repeat(1.2 * 1024 * 1024);
+  it('extractPriorityData() keeps non-RECORDING_CACHE keys as-is when the payload exceeds the flush cap', async () => {
+    const bigString = 'x'.repeat(SESSION_MAX_FLUSH_BYTES + 1024);
     store.set('someOtherKey', bigString);
     await store.flushNow();
 

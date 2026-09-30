@@ -54,7 +54,10 @@ export function resolveBackend(state: PostInitState): BackendType {
  * return 'idb' before the engine is fully set up).
  */
 const BACKEND_FACTORIES = {
-  opfs: (context: SqliteEngineHost): StorageBackend => new OpfsWorkerBackend(context),
+  // The degrade signal is wired here because this table is the single place
+  // that knows a backend was chosen from this context — the adapter itself only
+  // counts failures and cannot reach the host's init ladder.
+  opfs: (context: SqliteEngineHost): StorageBackend => new OpfsWorkerBackend(context, () => context.degradeFromOpfs()),
   idb: async (context: SqliteEngineHost): Promise<StorageBackend | null> => {
     // Ensure the IDB engine is initialized — the resolver may have
     // returned 'idb' before the engine was fully set up.

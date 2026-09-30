@@ -888,21 +888,54 @@ button#changeMasterPassword:hover {
   border-radius: var(--radius-sm);
 }
 
+/* Status message class contract.
+   `status-message` is the base class, `success` / `error` / `updating` are the
+   type classes. showStatus (src/utils/ui/settingsUiHelper.ts) writes exactly
+   `status-message <type>` on render and `status-message` on clear, so the base
+   class cannot drop out and take the box metrics and the toast transition with
+   it. The bare `.success` / `.error` spellings predate that contract and are
+   still written by call paths that have not moved to the helper, so they are
+   grouped into the same declarations rather than kept as a second copy. */
 .status-message {
   margin-top: 12px;
-  font-size: 13px;
   min-height: 20px;
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
 }
 
-.status-message.success {
+/* Spacing that the markup declared per status element. showStatus writes the
+   class list whole, so a spacing utility class was dropped by the first render
+   and the box fell back to the base 12px. An ID selector survives that
+   rewrite, so the intent is restated here rather than weakening the whole-list
+   class contract. Surveyed 2026-09-28: the only status elements in
+   entrypoints/options/index.html carrying a spacing utility class are these
+   four, and they declare two different values, so a single absorbed value on
+   the base class would have moved one group or the other. */
+#localExportManualStatus,
+#reviewSummaryStatus,
+#exportLocalMarkdownStatus {
+  margin-top: var(--space-2, 8px);
+}
+
+#trancoUpdateStatus {
+  margin-top: var(--space-4);
+}
+
+.status-message,
+.success,
+.error {
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.status-message.success,
+.success {
   color: var(--color-success-text);
   background: var(--color-success-bg);
   border: 1px solid var(--color-success-border);
 }
 
-.status-message.error {
+.status-message.error,
+.error {
   color: var(--color-danger-text);
   background: var(--color-danger-bg);
   border: 1px solid var(--color-danger-border);
@@ -914,22 +947,26 @@ button#changeMasterPassword:hover {
   border: 1px solid var(--color-info);
 }
 
-.success {
-  color: var(--color-success-text);
-  background: var(--color-success-bg);
-  border: 1px solid var(--color-success-border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-size: 13px;
+/* The models-dev dialog draws its error box from .error-message in
+   models-dev-dialog.css. showStatus replaces the class list, so the box
+   geometry that stylesheet keys off has to be restated here or the dialog
+   message would render with the dashboard status box's metrics. An emptied
+   message collapses on its own, because the clear can no longer put the
+   `hidden` class back. */
+#models-dev-dialog .status-message {
+  margin-top: 0;
+  min-height: 0;
+  border: 0;
+  border-top: 1px solid var(--ym-color-danger-border, #fcc);
+  border-radius: 0;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  color: var(--ym-color-danger, #c00);
+  background-color: var(--ym-color-danger-bg, #fee);
 }
 
-.error {
-  color: var(--color-danger-text);
-  background: var(--color-danger-bg);
-  border: 1px solid var(--color-danger-border);
-  border-radius: var(--radius-sm);
-  padding: 10px 12px;
-  font-size: 13px;
+#models-dev-dialog .status-message:empty {
+  display: none;
 }
 
 .ai-test-progress {
@@ -3333,6 +3370,14 @@ details[open] .advanced-details-summary {
   display: none !important;
 }
 
+/* cspSettings renders through showStatus, so the save messages are revealed by
+   the type class instead of an inline style.display write, and the clear that
+   follows leaves them empty — which the :empty rule above already hides. */
+.csp-save-area .success-message.success,
+.csp-save-area .success-message.error {
+  display: block;
+}
+
 .settings-actions {
   display: flex;
   gap: 12px;
@@ -4772,6 +4817,9 @@ details[open] > .priority-details-summary {
   margin-top: var(--space-4, 16px);
 }
 
+/* Only ever reached before the first showStatus render: the status elements
+   that used to carry it are spaced by the ID-scoped rules near .status-message
+   now, because the helper's whole-list write drops this class. */
 .status-message-spaced {
   margin-top: var(--space-2, 8px);
 }

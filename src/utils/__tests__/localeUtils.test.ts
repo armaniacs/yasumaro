@@ -113,6 +113,28 @@ describe('localeUtils', () => {
       expect(isRTL()).toBe(true);
     });
 
+    it('returns true for Kurdish (ku)', () => {
+      mockGetUILanguage.mockReturnValue('ku');
+      expect(isRTL()).toBe(true);
+    });
+
+    it('returns true for Dhivehi', () => {
+      mockGetUILanguage.mockReturnValue('dv');
+      expect(isRTL()).toBe(true);
+    });
+
+    // The RTL list lives only in localeUtils.ts now; dashboard.ts used to keep a
+    // second copy that silently dropped ckb / sd / ps. Pin the whole set so a
+    // future addition cannot be made to a non-canonical place instead.
+    it.each(['ar', 'he', 'fa', 'ur', 'yi', 'ckb', 'sd', 'ps', 'ku', 'dv'])(
+      'treats %s as RTL',
+      (code) => {
+        mockGetUILanguage.mockReturnValue(code);
+        expect(isRTL()).toBe(true);
+        expect(isRTL(`${code}-XX`)).toBe(true);
+      }
+    );
+
     // LTR言語テスト
     it('returns false for English', () => {
       mockGetUILanguage.mockReturnValue('en');

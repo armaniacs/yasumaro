@@ -157,7 +157,6 @@ describe('masterPassword-r2 — closePasswordAuthModal (via close button)', () =
     mod.showPasswordAuthModal('export', vi.fn());
 
     document.getElementById('closePasswordAuthModalBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
     const authModal = document.getElementById('passwordAuthModal')!;
     expect(authModal.classList.contains('show')).toBe(false);
     expect(authModal.style.display).toBe('none');
@@ -177,7 +176,6 @@ describe('masterPassword-r2 — closePasswordAuthModal (via close button)', () =
     authError.textContent = 'error';
 
     document.getElementById('closePasswordAuthModalBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
     expect(authInput.value).toBe('');
     expect(authError.textContent).toBe('');
   });
@@ -189,7 +187,6 @@ describe('masterPassword-r2 — closePasswordAuthModal (via close button)', () =
     mod.showPasswordAuthModal('export', vi.fn());
 
     document.getElementById('cancelPasswordAuthBtn')!.click();
-    await new Promise(r => setTimeout(r, 10));
     const authModal = document.getElementById('passwordAuthModal')!;
     expect(authModal.classList.contains('show')).toBe(false);
   });

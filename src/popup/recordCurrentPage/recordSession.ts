@@ -7,7 +7,7 @@ import { isRecordableTab } from '../../utils/recordingGateTable.js';
 import { formatSuccessMessage } from '../errorUtils.js';
 import { clearElement } from '../domUtils.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
-import { CURRENT_PROTOCOL_VERSION } from '../../background/messageTypes.js';
+import { messageTransport } from '../../messaging/messageTransport.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
@@ -321,7 +321,7 @@ export class RecordSession {
 
   /** Shared: report background activity fire-and-forget. */
   private reportActivity(): void {
-    chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} }).catch(() => {});
+    messageTransport.send({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
   }
 
   /** Shared: render the success message into the status div. */
