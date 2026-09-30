@@ -152,21 +152,56 @@ export async function deriveKey(password: string, salt: Uint8Array, iterations: 
 }
 
 /**
+ * Optional AES-GCM parameters shared by encrypt/decrypt.
+ *
+ * `additionalData` is context the ciphertext is bound to but that is
+ * deliberately NOT written into the envelope: an attacker with storage write
+ * access would move the binding together with the ciphertext otherwise.
+ */
+export interface AeadOptions {
+    additionalData?: string;
+}
+
+/** EncryptedData.version value that marks an AAD-bound envelope (types.ts). */
+export const AAD_BOUND_ENVELOPE_VERSION = 2;
+
+/**
+ * AAD for an API-key ciphertext: binds it to the settings field it is stored
+ * under, so moving `gemini_api_key`'s ciphertext into `openai_api_key` makes
+ * decryption fail instead of sending the key to the wrong provider.
+ *
+ * The prefix separates this from every other AES-GCM use of the same KEK
+ * (settings export, whole-blob envelopes), so a ciphertext from another
+ * context cannot be dropped into a key field either.
+ */
+export function apiKeyAdditionalData(field: string): string {
+    if (!field || typeof field !== 'string') {
+        throw new Error('Invalid API key field');
+    }
+    return `yasumaro/api-key-field/v${AAD_BOUND_ENVELOPE_VERSION}/${field}`;
+}
+
+/**
  * 平文を暗号化する
  * @param {string} plaintext - 平文
  * @param {CryptoKey} key - 暗号化キー
+ * @param {AeadOptions} [options] - additionalData を渡すと v2 envelope を返す
  * @returns {Promise<EncryptedData>} 暗号文とIV（Base64エンコード）
  */
-export async function encrypt(plaintext: string, key: CryptoKey): Promise<EncryptedData> {
+export async function encrypt(plaintext: string, key: CryptoKey, options?: AeadOptions): Promise<EncryptedData> {
     const webcrypto = getWebCrypto();
     const encoder = new TextEncoder();
     const data = encoder.encode(plaintext);
     const iv = generateIV();
+    const additionalData = options?.additionalData;
 
     const ciphertextBuffer = await webcrypto.subtle.encrypt(
         {
             name: ENCRYPTION_ALGORITHM,
-            iv: iv as BufferSource
+            iv: iv as BufferSource,
+            ...(additionalData !== undefined
+                ? { additionalData: encoder.encode(additionalData) as BufferSource }
+                : {}),
         },
         key,
         data
@@ -175,10 +210,19 @@ export async function encrypt(plaintext: string, key: CryptoKey): Promise<Encryp
     const ciphertextArray = new Uint8Array(ciphertextBuffer);
     const ivBytes = iv;
 
-    return {
-        ciphertext: bytesToBase64(ciphertextArray),
-        iv: bytesToBase64(ivBytes)
-    };
+    // The version mark must track how the ciphertext was produced: the reader
+    // picks its AAD from this field, so stamping anything else would let a
+    // v1 reader (or a v2 reader) be pointed at the wrong interpretation.
+    return additionalData !== undefined
+        ? {
+            ciphertext: bytesToBase64(ciphertextArray),
+            iv: bytesToBase64(ivBytes),
+            version: AAD_BOUND_ENVELOPE_VERSION
+        }
+        : {
+            ciphertext: bytesToBase64(ciphertextArray),
+            iv: bytesToBase64(ivBytes)
+        };
 }
 
 /**
@@ -186,20 +230,25 @@ export async function encrypt(plaintext: string, key: CryptoKey): Promise<Encryp
  * @param {string} ciphertext - 暗号文（Base64エンコード）
  * @param {string} iv - IV（Base64エンコード）
  * @param {CryptoKey} key - 暗号化キー
+ * @param {AeadOptions} [options] - 暗号化時に指定した additionalData
  * @returns {Promise<string>} 復号された平文
  * @throws {Error} 復号化に失敗した場合
  */
-export async function decrypt(ciphertext: string, iv: string, key: CryptoKey): Promise<string> {
+export async function decrypt(ciphertext: string, iv: string, key: CryptoKey, options?: AeadOptions): Promise<string> {
     try {
         const webcrypto = getWebCrypto();
         // Base64デコード
         const ciphertextArray = base64ToBytes(ciphertext);
         const ivArray = base64ToBytes(iv);
+        const additionalData = options?.additionalData;
 
         const plaintextBuffer = await webcrypto.subtle.decrypt(
             {
                 name: ENCRYPTION_ALGORITHM,
-                iv: ivArray
+                iv: ivArray,
+                ...(additionalData !== undefined
+                    ? { additionalData: new TextEncoder().encode(additionalData) as BufferSource }
+                    : {}),
             },
             key,
             ciphertextArray
@@ -216,13 +265,14 @@ export async function decrypt(ciphertext: string, iv: string, key: CryptoKey): P
  * 暗号化されたデータを復号化する（オブジェクト形式）
  * @param {EncryptedData} encryptedData - 暗号化データ
  * @param {CryptoKey} key - 暗号化キー
+ * @param {AeadOptions} [options] - 暗号化時に指定した additionalData
  * @returns {Promise<string>} 復号された平文
  */
-export async function decryptData(encryptedData: EncryptedData, key: CryptoKey): Promise<string> {
+export async function decryptData(encryptedData: EncryptedData, key: CryptoKey, options?: AeadOptions): Promise<string> {
     if (!encryptedData || !encryptedData.ciphertext || !encryptedData.iv) {
         throw new Error('Invalid encrypted data format');
     }
-    return decrypt(encryptedData.ciphertext, encryptedData.iv, key);
+    return decrypt(encryptedData.ciphertext, encryptedData.iv, key, options);
 }
 
 /**
@@ -290,35 +340,57 @@ export function isEncrypted(data: unknown): data is EncryptedData {
 
 /**
  * APIキーを暗号化する（ユーティリティ関数）
+ *
+ * The ciphertext is AAD-bound to `field` (the storage key it will be written
+ * under) and marked v2. `field` is the caller's to know — it is the only
+ * place the binding can come from, since the envelope must not carry it.
  * @param {string} apiKey - APIキー
  * @param {CryptoKey} key - 暗号化キー
+ * @param {string} field - 保存先のフィールド識別子（例: `openai_api_key`）
  * @returns {Promise<EncryptedData>} 暗号化されたAPIキー
  */
-export async function encryptApiKey(apiKey: string, key: CryptoKey): Promise<EncryptedData> {
+export async function encryptApiKey(apiKey: string, key: CryptoKey, field: string): Promise<EncryptedData> {
     if (!apiKey || typeof apiKey !== 'string') {
         throw new Error('Invalid API key');
     }
-    return encrypt(apiKey, key);
+    if (!field || typeof field !== 'string') {
+        throw new Error('Invalid API key field');
+    }
+    return encrypt(apiKey, key, { additionalData: apiKeyAdditionalData(field) });
 }
 
 /**
  * APIキーを復号化する（ユーティリティ関数）
+ *
+ * v2 は保存位置 `field` の AAD で復号する。呼び出し側がフィールドを渡さない
+ * と v2 を読めない（fail closed）— 束縛を検証せずに開ければ入れ替え検出が
+ * 形骸化するから。v1（AAD なしの旧形式）は互換のためそのまま読む。
  * @param {EncryptedData | string} encryptedApiKey - 暗号化されたAPIキーまたは平文
  * @param {CryptoKey} key - 暗号化キー
+ * @param {string} field - 読み出し位置のフィールド識別子
  * @returns {Promise<string>} 復号されたAPIキー
  */
-export async function decryptApiKey(encryptedApiKey: EncryptedData | string, key: CryptoKey): Promise<string> {
+export async function decryptApiKey(encryptedApiKey: EncryptedData | string, key: CryptoKey, field: string): Promise<string> {
     // 平文の場合はそのまま返す（後方互換性）
     if (typeof encryptedApiKey === 'string') {
         return encryptedApiKey;
     }
 
-    // 暗号化されている場合は復号化
-    if (isEncrypted(encryptedApiKey)) {
-        return decryptData(encryptedApiKey, key);
+    if (!isEncrypted(encryptedApiKey)) {
+        throw new Error('Invalid API key format');
     }
 
-    throw new Error('Invalid API key format');
+    const version = encryptedApiKey.version ?? 1;
+    if (version === 1) {
+        return decryptData(encryptedApiKey, key);
+    }
+    if (version === AAD_BOUND_ENVELOPE_VERSION) {
+        if (!field) {
+            throw new Error('API key field is required to decrypt a v2 envelope');
+        }
+        return decryptData(encryptedApiKey, key, { additionalData: apiKeyAdditionalData(field) });
+    }
+    throw new Error(`Unsupported API key envelope version: ${version}`);
 }
 
 /**

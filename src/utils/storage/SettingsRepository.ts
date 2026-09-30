@@ -210,7 +210,7 @@ export class SettingsRepository {
       for (const field of API_KEY_FIELDS) {
         const val = toSave[field];
         if (typeof val === 'string' && val !== '') {
-          toSave[field] = await encryptApiKey(val, key);
+          toSave[field] = await encryptApiKey(val, key, field);
         }
       }
     } catch (e) {

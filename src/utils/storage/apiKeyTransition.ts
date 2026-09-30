@@ -59,8 +59,11 @@ export function collectApiKeyTargets(
  * Attempt decryption, returning the plaintext or null. Implementations must
  * not throw on a wrong key — a null return is normal control flow here
  * (trial detection), not an error.
+ *
+ * `field` is the storage field the value was read from: v2 envelopes are
+ * AAD-bound to it, so a trial that omits it cannot decrypt at all.
  */
-export type TrialDecrypt = (value: EncryptedData, key: CryptoKey) => Promise<string | null>;
+export type TrialDecrypt = (value: EncryptedData, key: CryptoKey, field: string) => Promise<string | null>;
 
 export interface TransitionPlan {
   toReencrypt: Array<{ field: string; placement: ApiKeyPlacement; value: EncryptedData; plaintext: string }>;
@@ -97,12 +100,12 @@ export async function planKekTransition(
   for (const target of targets) {
     if (classifyStoredValue(target.value) !== 'ciphertext') continue;
     const value = target.value as EncryptedData;
-    const withOld = await trialDecrypt(value, keys.previous);
+    const withOld = await trialDecrypt(value, keys.previous, target.field);
     if (withOld !== null) {
       plan.toReencrypt.push({ field: target.field, placement: target.placement, value, plaintext: withOld });
       continue;
     }
-    const withNext = await trialDecrypt(value, keys.next);
+    const withNext = await trialDecrypt(value, keys.next, target.field);
     if (withNext !== null) {
       plan.alreadyMigrated.push({ field: target.field, placement: target.placement });
       continue;

@@ -283,7 +283,7 @@ describe('removeMasterPassword', () => {
         const key = await getOrCreateEncryptionKey();
         const { encryptApiKey, decryptApiKey } = await import('../../crypto/index.js');
         await chrome.storage.local.set({
-            settings: { provider_api_key: await encryptApiKey('sk-live-provider', key) },
+            settings: { provider_api_key: await encryptApiKey('sk-live-provider', key, 'provider_api_key') },
         });
 
         await removeMasterPassword('StrongP@ssw0rd123!');
@@ -291,7 +291,7 @@ describe('removeMasterPassword', () => {
         const anonKey = await getOrCreateEncryptionKey();
         const stored = (await chrome.storage.local.get('settings')) as Record<string, unknown>;
         const blob = stored['settings'] as Record<string, unknown>;
-        expect(await decryptApiKey(blob['provider_api_key'] as never, anonKey)).toBe('sk-live-provider');
+        expect(await decryptApiKey(blob['provider_api_key'] as never, anonKey, 'provider_api_key')).toBe('sk-live-provider');
     });
 });
 

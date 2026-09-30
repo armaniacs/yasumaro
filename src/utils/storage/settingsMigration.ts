@@ -366,9 +366,10 @@ import { deriveLegacyKeyFromStoredSecret } from '../crypto/kdfNegotiator.js';
 async function tryDecryptWithLegacyFallback(
     encryptedValue: unknown,
     currentKey: CryptoKey,
+    field: StorageKey,
 ): Promise<{ decrypted: string | null; legacySucceeded: boolean }> {
     try {
-        const decrypted = await decryptApiKey(encryptedValue as never, currentKey);
+        const decrypted = await decryptApiKey(encryptedValue as never, currentKey, field);
         return { decrypted, legacySucceeded: false };
     } catch {
         // Try legacy 100k iteration fallback
@@ -390,7 +391,7 @@ async function tryDecryptWithLegacyFallback(
             // kdfNegotiator.deriveLegacyKeyFromStoredSecret.
             const legacyKey = await deriveLegacyKeyFromStoredSecret();
             if (!legacyKey) return { decrypted: null, legacySucceeded: false };
-            const decrypted = await decryptApiKey(encryptedValue as never, legacyKey);
+            const decrypted = await decryptApiKey(encryptedValue as never, legacyKey, field);
             return { decrypted, legacySucceeded: true };
         } catch {
             return { decrypted: null, legacySucceeded: false };
@@ -444,13 +445,13 @@ async function applyMigrationsCore(
         for (const field of API_KEY_FIELDS) {
             const value = merged[field];
             if (isEncrypted(value)) {
-                const attempt = await tryDecryptWithLegacyFallback(value, key);
+                const attempt = await tryDecryptWithLegacyFallback(value, key, field);
                 if (attempt.decrypted !== null) {
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = attempt.decrypted as StorageKeyValues[StorageKey];
                     // If legacy fallback succeeded, re-encrypt with current key for migration
                     if (attempt.legacySucceeded) {
                         try {
-                            const reEncryptedValue = await encryptApiKey(attempt.decrypted, key);
+                            const reEncryptedValue = await encryptApiKey(attempt.decrypted, key, field);
                             reEncrypted[field] = reEncryptedValue;
                             await logWarn(`Migrated ${field} from legacy 100k to 600k KDF`, { field }, undefined, 'settingsMigration');
                         } catch {}
@@ -470,7 +471,7 @@ async function applyMigrationsCore(
                     'settingsStore',
                 );
                 try {
-                    const encrypted = await encryptApiKey(value, key);
+                    const encrypted = await encryptApiKey(value, key, field);
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = value as StorageKeyValues[StorageKey];
                     reEncrypted[field] = encrypted;
                 } catch (e) {

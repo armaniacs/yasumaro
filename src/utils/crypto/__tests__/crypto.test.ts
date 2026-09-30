@@ -263,10 +263,10 @@ describe('crypto', () => {
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
 
-            const encrypted = await encryptApiKey(apiKey, key);
+            const encrypted = await encryptApiKey(apiKey, key, 'openai_api_key');
             expect(isEncrypted(encrypted)).toBe(true);
 
-            const decrypted = await decryptApiKey(encrypted, key);
+            const decrypted = await decryptApiKey(encrypted, key, 'openai_api_key');
             expect(decrypted).toBe(apiKey);
         });
 
@@ -276,7 +276,7 @@ describe('crypto', () => {
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
 
-            const decrypted = await decryptApiKey(apiKey, key);
+            const decrypted = await decryptApiKey(apiKey, key, 'openai_api_key');
             expect(decrypted).toBe(apiKey);
         });
 
@@ -285,8 +285,8 @@ describe('crypto', () => {
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
 
-            await expect(encryptApiKey(null as unknown as string, key)).rejects.toThrow('Invalid API key');
-            await expect(encryptApiKey(123 as unknown as string, key)).rejects.toThrow('Invalid API key');
+            await expect(encryptApiKey(null as unknown as string, key, 'openai_api_key')).rejects.toThrow('Invalid API key');
+            await expect(encryptApiKey(123 as unknown as string, key, 'openai_api_key')).rejects.toThrow('Invalid API key');
         });
 
         test('throws for invalid encrypted data', async () => {
@@ -294,7 +294,7 @@ describe('crypto', () => {
             const salt = generateSalt();
             const key = await deriveKey(password, salt);
 
-            await expect(decryptApiKey({} as EncryptedData, key)).rejects.toThrow('Invalid API key format');
+            await expect(decryptApiKey({} as EncryptedData, key, 'openai_api_key')).rejects.toThrow('Invalid API key format');
         });
     });
 
