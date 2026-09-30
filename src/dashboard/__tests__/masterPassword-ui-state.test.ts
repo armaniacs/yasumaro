@@ -41,6 +41,7 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
     fields: readonly string[] = [];
   },
   MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
+  PendingRotationMismatchError: class PendingRotationMismatchError extends Error {},
 }));
 
 vi.stubGlobal('chrome', {
