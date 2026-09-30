@@ -1178,6 +1178,9 @@
   "masterPasswordReencryptedKept": {
     "message": "Master password updated. API keys were kept."
   },
+  "masterPasswordAlreadySet": {
+    "message": "A master password is already set. Use Change Password and enter your current password."
+  },
   "masterPasswordReencryptAborted": {
     "message": "Could not decrypt {fields}. The operation was stopped and nothing was changed. Re-enter the items, then retry."
   },
