@@ -40,14 +40,14 @@ Scenario: メッセージ契約と値が変わらない
 
 ## 受け入れ基準（4-8件）
 
-- [ ] Layer 0 に `src/utils/limits.ts` を新設し、`src/messaging/limits.ts` の純定数部を移設している。定数の値・名前・export 形状は不変である。
-- [ ] 旧パス `src/messaging/limits.ts` は移行中のみ value-preserving な re-export shim（`export * from '../utils/limits.js'`）とし、全消費ファイル（production と test。`grep -rln "messaging/limits" src` で列挙）を新規パスへ更新したうえで shim を削除している。
-- [ ] `src/messaging/validators.ts` の 4 cap 定数（`MAX_BYTE_STAT_BYTES` / `MAX_CLEANSED_ELEMENTS` / `MAX_CLEANSED_REASON_CHARS` / `MAX_CLEANSED_REASONS`）と `VALIDATOR_LIMITS` が `src/utils/limits.ts` へ統合され、`src/background/pipeline/mappers/commonStorageFields.ts` が `utils/limits` を直参照している。
-- [ ] `src/offscreen/queryPlan.ts` の `export const QUERY_CAPS` re-export を廃止し、`QUERY_CAPS` の全消費ファイルが `utils/limits` を直接 import している。kludge の根拠コメント（`QUERY_CAPS` 直上の「OPFS worker cannot import messaging」）が削除されている。
-- [ ] `src/utils/crypto/envelope.ts` が `messaging/limits` を import している Layer 0 → messaging の逆辺が解消され、`dev-docs/LAYERS.md` の Layer 0 コードブロックと `eslint/rules/utils-layer-boundary.mjs` の `LAYER0_FILES` に `src/utils/limits.ts` が登録され、`npm run lint:layers-docs` が成功する。
-- [ ] 移設後の `src/utils/limits.ts` に、drift した説明コメント（「Layer 0 modules can't import messaging → re-declare locally」）が残っていない。
-- [ ] layer lint の Layer 0 分岐（`LAYER0_FILES` の各ファイル）が「`src/utils/` 外への static import（`import type` を除く）は error（`allow` オプションの指定例外を除く）」を報告し、rule test を追加している。
-- [ ] `npm run validate` が成功し、既存のビルド・テスト・メッセージ契約・ユーザーに観測される動作に回帰がない。
+- [x] Layer 0 に `src/utils/limits.ts` を新設し、`src/messaging/limits.ts` の純定数部を移設している。定数の値・名前・export 形状は不変である。
+- [x] 旧パス `src/messaging/limits.ts` は移行中のみ value-preserving な re-export shim（`export * from '../utils/limits.js'`）とし、全消費ファイル（production と test。`grep -rln "messaging/limits" src` で列挙）を新規パスへ更新したうえで shim を削除している。
+- [x] `src/messaging/validators.ts` の 4 cap 定数（`MAX_BYTE_STAT_BYTES` / `MAX_CLEANSED_ELEMENTS` / `MAX_CLEANSED_REASON_CHARS` / `MAX_CLEANSED_REASONS`）と `VALIDATOR_LIMITS` が `src/utils/limits.ts` へ統合され、`src/background/pipeline/mappers/commonStorageFields.ts` が `utils/limits` を直参照している。
+- [x] `src/offscreen/queryPlan.ts` の `export const QUERY_CAPS` re-export を廃止し、`QUERY_CAPS` の全消費ファイルが `utils/limits` を直接 import している。kludge の根拠コメント（`QUERY_CAPS` 直上の「OPFS worker cannot import messaging」）が削除されている。
+- [x] `src/utils/crypto/envelope.ts` が `messaging/limits` を import している Layer 0 → messaging の逆辺が解消され、`dev-docs/LAYERS.md` の Layer 0 コードブロックと `eslint/rules/utils-layer-boundary.mjs` の `LAYER0_FILES` に `src/utils/limits.ts` が登録され、`npm run lint:layers-docs` が成功する。
+- [x] 移設後の `src/utils/limits.ts` に、drift した説明コメント（「Layer 0 modules can't import messaging → re-declare locally」）が残っていない。
+- [x] layer lint の Layer 0 分岐（`LAYER0_FILES` の各ファイル）が「`src/utils/` 外への static import（`import type` を除く）は error（`allow` オプションの指定例外を除く）」を報告し、rule test を追加している。
+- [x] `npm run validate` が成功し、既存のビルド・テスト・メッセージ契約・ユーザーに観測される動作に回帰がない。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -342,13 +342,13 @@ git commit -m "docs(pbi): 09-28 PBI 10(Layer 0 cap 定数の SSOT 化)をアー�
 
 ## Definition of Done
 
-- [ ] すべての Layer 0 cap 定数が `src/utils/limits.ts` に定義され、値・名前・export 形状が着手前と一致している（parity test で pin）。
-- [ ] 旧パス `src/messaging/limits` への import が残存しておらず、`src/messaging/limits.ts` 自体が削除されている。
-- [ ] `commonStorageFields.ts` が `utils/limits` を直参照し、pipeline から messaging validators への runtime 依存が解消されている。`queryPlan.ts` の `QUERY_CAPS` re-export が廃止され、offscreen が `utils/limits` を直接 import している。
-- [ ] 観測挙動が不変である: cap の値、API 形状、メッセージ契約、検証結果と表示メッセージがすべて本 PBI 前と一致している。
-- [ ] `src/utils/crypto/envelope.ts` を含む Layer 0 からの messaging import が解消され、LAYERS 文書と lint の Layer 0 登録リストが新配置と一致している。
-- [ ] layer lint が `src/utils/` 外への Layer 0 static import を error として報告し、rule test（allow なし / allow あり / type-only / utils 内 import）が `createRepeatSafeRuleTester` 経由で green である。
-- [ ] drift したコメント（「Layer 0 は messaging を import できない」主張、`QUERY_CAPS` の kludge 理由）が `src/utils/limits.ts` に残っておらず、`limits-drift.test.ts` の所在 pin が新配置へ更新されている。
-- [ ] 共通化と同時に定数の追加・export 形状の変更・lint オプションの DSL 化を行っていない（YAGNI 遵守）。
-- [ ] `npm run validate` が成功し、既存ビルド・テスト・メッセージ契約・ユーザー観測挙動に回帰がない。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] すべての Layer 0 cap 定数が `src/utils/limits.ts` に定義され、値・名前・export 形状が着手前と一致している（parity test で pin）。
+- [x] 旧パス `src/messaging/limits` への import が残存しておらず、`src/messaging/limits.ts` 自体が削除されている。
+- [x] `commonStorageFields.ts` が `utils/limits` を直参照し、pipeline から messaging validators への runtime 依存が解消されている。`queryPlan.ts` の `QUERY_CAPS` re-export が廃止され、offscreen が `utils/limits` を直接 import している。
+- [x] 観測挙動が不変である: cap の値、API 形状、メッセージ契約、検証結果と表示メッセージがすべて本 PBI 前と一致している。
+- [x] `src/utils/crypto/envelope.ts` を含む Layer 0 からの messaging import が解消され、LAYERS 文書と lint の Layer 0 登録リストが新配置と一致している。
+- [x] layer lint が `src/utils/` 外への Layer 0 static import を error として報告し、rule test（allow なし / allow あり / type-only / utils 内 import）が `createRepeatSafeRuleTester` 経由で green である。
+- [x] drift したコメント（「Layer 0 は messaging を import できない」主張、`QUERY_CAPS` の kludge 理由）が `src/utils/limits.ts` に残っておらず、`limits-drift.test.ts` の所在 pin が新配置へ更新されている。
+- [x] 共通化と同時に定数の追加・export 形状の変更・lint オプションの DSL 化を行っていない（YAGNI 遵守）。
+- [x] `npm run validate` が成功し、既存ビルド・テスト・メッセージ契約・ユーザー観測挙動に回帰がない。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
