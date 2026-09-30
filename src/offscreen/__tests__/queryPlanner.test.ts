@@ -84,8 +84,7 @@ describe('selectReadCap / applySearchPolicy (PBI 2026-09-12-16)', () => {
   });
 
   it('QUERY_CAPS is a single definition shared with the planner', async () => {
-    const limits = await import('../../utils/limits.js');
     const plan = await import('../queryPlan.js');
-    expect(plan.QUERY_CAPS).toBe(limits.QUERY_CAPS);
+    expect(plan).not.toHaveProperty('QUERY_CAPS');
   });
 });

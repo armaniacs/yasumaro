@@ -21,7 +21,8 @@ import { handleSearchFts, handleSearchLike, __setEngineForTesting } from '../opf
 import { handleQuery } from '../opfsWorker/crudHandlers.js';
 import { handlePurgeOldRecords } from '../opfsWorker/purgeHandlers.js';
 import { FallbackStorage } from '../storageFallback.js';
-import { buildQuerySpec, QUERY_CAPS } from '../queryPlan.js';
+import { buildQuerySpec } from '../queryPlan.js';
+import { QUERY_CAPS } from '../../utils/limits.js';
 import type { StorageQuery } from '../../utils/sqlite-types.js';
 
 function makeIdbStub(fts5Available = true, countResult = 0) {

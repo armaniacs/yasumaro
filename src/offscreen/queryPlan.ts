@@ -13,7 +13,7 @@ import type { TagFilterCondition } from './sqliteQueryBuilder.js';
 import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
-import { QUERY_CAPS as QUERY_CAPS_SOURCE } from '../utils/limits.js';
+import { QUERY_CAPS } from '../utils/limits.js';
 
 // ============================================================================
 // Mode + cap policy (moved from queryPlanner, PBI 2026-09-15-03) — breaking
@@ -50,7 +50,7 @@ export function planQueryMode(q: Pick<StorageQuery, 'text'>): QueryMode {
  * at the worker boundary.
  */
 export function selectReadCap(useFts: boolean): number {
-  return useFts ? QUERY_CAPS_SOURCE.fts : QUERY_CAPS_SOURCE.plain;
+  return useFts ? QUERY_CAPS.fts : QUERY_CAPS.plain;
 }
 
 /** Brand proving a query has passed the planner's read policy (cap + truncate).
@@ -250,12 +250,6 @@ export function matchesExtraWhere(
   if (query.tag != null && query.tag !== '' && !rowMatchesTagLike(record.tags, query.tag)) return false;
   return true;
 }
-
-/**
- * Re-exported for the OPFS worker boundary: the single definition in
- * utils/limits.ts is surfaced here. Do not re-declare the values here.
- */
-export const QUERY_CAPS: typeof QUERY_CAPS_SOURCE = QUERY_CAPS_SOURCE;
 
 /**
  * Both-sided LIMIT clamp for the trust boundary.

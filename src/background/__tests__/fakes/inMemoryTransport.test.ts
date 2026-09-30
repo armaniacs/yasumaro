@@ -193,7 +193,7 @@ describe('InMemoryTransport + SqliteGateway', () => {
   });
 
   it('shares caps with QUERY_CAPS: plain cap is 10000, FTS cap is 100000', async () => {
-    const { QUERY_CAPS } = await import('../../../offscreen/queryPlan.js');
+    const { QUERY_CAPS } = await import('../../../utils/limits.js');
     expect(QUERY_CAPS.plain).toBe(10000);
     expect(QUERY_CAPS.fts).toBe(100000);
     // InMemory must clamp using those same caps — insert 5 and request huge limit

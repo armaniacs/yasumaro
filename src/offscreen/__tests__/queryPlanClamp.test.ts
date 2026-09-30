@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { clampLimit, buildQuerySpec, QUERY_CAPS } from '../queryPlan.js';
+import { clampLimit, buildQuerySpec } from '../queryPlan.js';
+import { QUERY_CAPS } from '../../utils/limits.js';
 
 describe('clampLimit', () => {
   const cap = 1000;
