@@ -12,6 +12,7 @@
 
 import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './types.js';
 import { StorageKeys } from './types.js';
+import { STORAGE_KEY_VALUES } from './settingsBackup.js';
 import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './storagePort.js';
 import { StorageTransaction } from './storageTransaction.js';
 
@@ -138,10 +139,9 @@ export class SettingsRepository {
         const recovered = await tryRestoreFromBackupViaPort(this.port);
         if (recovered) settings = recovered as SettingsType;
       }
-      const validKeys: string[] = Object.values(StorageKeys) as string[];
       const filtered = {} as SettingsType;
       for (const [k, v] of Object.entries(settings as Record<string, unknown>)) {
-        if (validKeys.includes(k)) (filtered as Record<string, unknown>)[k] = v;
+        if (STORAGE_KEY_VALUES.has(k)) (filtered as Record<string, unknown>)[k] = v;
       }
       const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(filtered, { getEncryptionKey: keyProvider });
       if (Object.keys(reEncrypted).length > 0) {
@@ -167,7 +167,7 @@ export class SettingsRepository {
   ): Promise<SettingsType> {
     const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
     // Scattered fallback (legacy pre-migration path) — also via Port
-    const keysToGet: string[] = Object.values(StorageKeys) as string[];
+    const keysToGet: string[] = [...STORAGE_KEY_VALUES];
     let scattered = await this.port.get(keysToGet) as Record<string, unknown>;
     if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
     const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(scattered as SettingsType, { getEncryptionKey: keyProvider });
