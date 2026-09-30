@@ -270,8 +270,9 @@ describe('masterPassword-branches — savePassword branches', () => {
     refs.masterPasswordConfirm.value = 'different-value';
     controller.initEventListeners();
     refs.savePasswordBtn.click();
-    await new Promise((r) => setTimeout(r, 0));
+    await waitForMock(() => expect(refs.passwordMatchError!.textContent).toBe('i18n_passwordMismatch'));
     expect(setMasterPasswordService).not.toHaveBeenCalled();
+    expect(changeMasterPasswordService).not.toHaveBeenCalled();
   });
 });
 

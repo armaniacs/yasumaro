@@ -785,6 +785,7 @@ describe('savePassword flow', () => {
     expect(errorEl.textContent).toBe('i18n_passwordTooShort');
     expect(errorEl.classList.contains('visible')).toBe(true);
     expect(setMasterPasswordService).not.toHaveBeenCalled();
+    expect(changeMasterPasswordService).not.toHaveBeenCalled();
   });
 
   it('should show match error when passwords do not match in set mode', async () => {
@@ -809,6 +810,7 @@ describe('savePassword flow', () => {
     expect(matchError.textContent).toBe('i18n_passwordMismatch');
     expect(matchError.classList.contains('visible')).toBe(true);
     expect(setMasterPasswordService).not.toHaveBeenCalled();
+    expect(changeMasterPasswordService).not.toHaveBeenCalled();
   });
 
   it('should save password successfully and update UI', async () => {
@@ -860,26 +862,23 @@ describe('savePassword flow', () => {
     expect(showStatus).toHaveBeenCalledWith('status', 'Storage error', 'error');
   });
 
-  it('should restore the checkbox when the service throws during save', async () => {
+  it('should restore the checkbox to OFF when the service throws during a set save', async () => {
     vi.mocked(setMasterPasswordService).mockRejectedValue(new Error('KDF failed'));
-
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings } = await import('../masterPassword.js');
-
     initMasterPasswordSettings();
 
+    await openModalViaCheckbox(); // checkbox is now checked, preToggleChecked === false
     const checkbox = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
-    checkbox.checked = false;
-    const input = document.getElementById('masterPasswordInput') as HTMLInputElement;
-    input.value = 'ValidP@ss1';
+    expect(checkbox.checked).toBe(true);
+    (document.getElementById('masterPasswordInput') as HTMLInputElement).value = 'ValidP@ss1';
+    (document.getElementById('masterPasswordConfirm') as HTMLInputElement).value = 'ValidP@ss1';
 
     document.getElementById('savePasswordBtn')!.click();
 
-    await flushPromises();
-
+    await waitForMock(() => expect(showStatus).toHaveBeenCalledWith('status', 'KDF failed', 'error'));
     expect(checkbox.checked).toBe(false);
-    expect(showStatus).toHaveBeenCalledWith('status', 'KDF failed', 'error');
   });
 
   it('should do nothing when masterPasswordInput element is null', async () => {
@@ -898,6 +897,7 @@ describe('savePassword flow', () => {
     await flushPromises();
 
     expect(setMasterPasswordService).not.toHaveBeenCalled();
+    expect(changeMasterPasswordService).not.toHaveBeenCalled();
   });
 });
 
