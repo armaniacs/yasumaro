@@ -80,7 +80,22 @@ All notable changes to this project will be documented in this file.
 - 単体: `npm run validate` green（15,014 passed / 21 skipped、957 ファイル、lint 0 errors）。新規テスト: 秘匿キーのキー名マスキング行列、AI 失敗の種別付け、OPFS デグ���の段階ラダー（fault injection）、SQLite 2 バックエンドの parity（stub と実 SQLite）、接続テスト runner、旧形式モジュールの destroy ライフサイクル
 - E2E: `npm run test:e2e` green（325 passed / 30 skipped）。KEK 切替の E2E を新設し、復号不能項目がある解除が中途半端な状態（チェックボックスとメタデータ・暗号文の維持）で止まることを確認
 
-## [Unreleased]
+## [6.9.29] - 2026-09-30
+
+v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整理（設定系メニューの折りたたみ）のみを含みます。
+
+### Changed
+
+- **ダッシュボードの設定系メニューを折りたたみ式に** — サイドバーの Settings 欄に並んでいた 11 項目（ドメインフィルター〜診断）を「初期設定」ボタン配下のサブグループにまとめ、初期設定を押すまで表示しないようにしました。設定系パネルへの直接リンクやパネル内ジャンプでは自動で展開されるため、表示中のパネルに対応するボタンが見えなくなることはありません。キーボード操作では折りたたみ中の項目を飛ばし、開閉状態は `aria-expanded` で支援技術に伝えます。タスク完了までの手順が 1 手増えたため、E2E の friction budget を更新しました（`domain-filter-add` 4→5、`issue-report-open` 2→3）
+
+### Developer Experience
+
+- **CI の GitHub Actions を更新** — `dorny/paths-filter` を 4.0.3、`gitleaks/gitleaks-action` を 3.0.0 に更新（動作変更なし）
+
+### Tested
+
+- 単体: `npm run validate` green（15,022 passed / 21 skipped、957 ファイル、lint 0 errors）。新規テスト: 設定サブグループの開閉 7 件、sidebar 構造ピン 1 件
+- E2E: 対象 spec を実走し全件通過（navigation / task-flows / issue-report / error-recovery / a11y / friction-metrics / master-password-reencrypt / cleansing-preset / domain-filter-ui / dashboard-ui）
 
 ## [6.9.27] - 2026-09-26
 
