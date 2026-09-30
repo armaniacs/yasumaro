@@ -20,6 +20,7 @@ import type { ServiceResult } from '../../dashboardSqliteService.js';
 import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { shouldFallbackToTextSearch } from '../../historyFilters.js';
+import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 
 export { isServiceError };
 export type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
@@ -139,11 +140,12 @@ export function enrichRowsWithLegacyMetadata(
 /**
  * Convert the calendar-selected date (YYYY-MM-DD) into a local-time range for
  * that day. An empty object (all time) is returned when no date is selected.
+ * The end is the local 23:59:59.999, so a DST day is covered exactly once and
+ * never bleeds into its neighbour.
  */
 export function dateRangeFromSelectedDate(selectedDate: string | null): { since?: number; until?: number } {
   if (!selectedDate) return {};
-  const date = new Date(selectedDate + 'T00:00:00');
-  return { since: date.getTime(), until: date.getTime() + 86400000 - 1 };
+  return localDayRangeFromDateString(selectedDate);
 }
 
 // ============================================================================

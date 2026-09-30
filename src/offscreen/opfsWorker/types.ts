@@ -32,6 +32,7 @@ export const WORKER_MESSAGE_TYPES = [
   'HEALTH_CHECK',
   'AUDIT_LOG_INSERT',
   'AUDIT_LOG_QUERY',
+  'AUDIT_LOG_PURGE',
   'ARCHIVE_PREVIEW',
   'ARCHIVE_CREATE',
   'ARCHIVE_CLEANUP',
@@ -63,6 +64,10 @@ export type SearchPayload = StorageQuery;
 export interface AuditLogQueryPayload {
   limit?: number;
   offset?: number;
+}
+
+export interface AuditLogPurgePayload {
+  retentionDays?: number;
 }
 
 export interface PurgePayload {

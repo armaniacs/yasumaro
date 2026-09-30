@@ -336,12 +336,12 @@ describe('getAiSummaryCleansingSettings — extra defaults', () => {
 // saveAiSummaryCleansingSettings — merge & all fields
 // ──────────────────────────────────────────────
 describe('saveAiSummaryCleansingSettings — merge & all fields', () => {
-  it('merges with existing unrelated settings', async () => {
+  it('writes only the settings delta, never unrelated keys (delta-write contract)', async () => {
     mockGetSettings.mockResolvedValueOnce({ other_key: 'keep' } as never);
     await saveAiSummaryCleansingSettings(baseSettings);
-    expect(mockSaveSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ other_key: 'keep', ai_summary_cleansing_enabled: true })
-    );
+    const payload = mockSaveSettings.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    expect(payload.ai_summary_cleansing_enabled).toBe(true);
+    expect(payload).not.toHaveProperty('other_key');
   });
 
   it('saves all nine additional boolean fields', async () => {

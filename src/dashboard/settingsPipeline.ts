@@ -14,19 +14,22 @@ import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { GENERAL_SETTINGS_FIELDS } from './settings/fieldDescriptor.js';
 import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
-import { clearAllFieldErrors, validateAllFields, validateObsidianHost, validateGeminiApiVersion, setFieldError, ErrorPair } from './settings/fieldValidation.js';
+import { clearAllFieldErrors, validateAllFields, setFieldError, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
 import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { syncStatusToTop } from './statusView.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 /**
  * General settings validation schema — derived from the descriptor table
  * (settings/fieldDescriptor.ts), which is the single source of truth for the
- * 7 element IDs that were previously hardcoded here. Order is positional:
- * saveDashboardSettings indexes pairs[0..6] below.
+ * 7 element/error IDs that were previously hardcoded here. Order is positional:
+ * saveDashboardSettings indexes pairs[0] and pairs[2] below. The same table also
+ * drives fieldValidation's validation sweep, so the clear targets here cannot
+ * drift from the fields that raise them.
  */
 export const GENERAL_SETTINGS_VALIDATION_FIELDS: ValidationSchema =
   GENERAL_SETTINGS_FIELDS.map(({ storageKey, elementId, errorId }) => ({
@@ -44,6 +47,24 @@ function resolveValidationPairs(schema: ValidationSchema): ErrorPair[] {
     document.getElementById(field.elementId) as HTMLInputElement | null,
     field.errorId,
   ]);
+}
+
+/**
+ * Save-failure wording, defined once for the four call sites that render a
+ * saveDashboardSettings failure into the general-settings status area. Each of
+ * them used to re-spell the same i18n key and fallback inline, so the wording
+ * could drift per call site.
+ */
+const SAVE_ERROR_MESSAGES: Readonly<Record<string, readonly [key: string, fallback: string]>> = {
+  aiProviderPriority1Required: ['aiProviderPriority1Required', 'Priority 1 is required'],
+  aiProviderPriorityDuplicateWarning: ['aiProviderPriorityDuplicateWarning', 'Duplicate provider and model'],
+};
+
+/** Message for a saveDashboardSettings failure; unknown errors share one text. */
+export function saveErrorText(error: string | undefined): string {
+  const entry = error ? SAVE_ERROR_MESSAGES[error] : undefined;
+  if (entry) return getMessageOr(entry[0], entry[1]);
+  return getMessageOr('saveError', '設定の保存に失敗しました。');
 }
 
 export interface SaveSettingsOptions {
@@ -78,12 +99,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   const pairs = resolveValidationPairs(GENERAL_SETTINGS_VALIDATION_FIELDS);
   const getElement = (index: number): HTMLInputElement | null => pairs[index]?.[0] ?? null;
   const protocolInput = getElement(0);
-  const portInput = getElement(1);
   const obsidianHostInput = getElement(2);
-  const geminiApiVersionInput = getElement(3);
-  const minVisitDurationInput = getElement(4);
-  const minScrollDepthInput = getElement(5);
-  const maxTokensPerPromptInput = getElement(6);
 
   const errorPairs: ErrorPair[] = [
     ...pairs,
@@ -92,16 +108,8 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
 
   clearAllFieldErrors(errorPairs);
 
-  if (!validateAllFields(protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput)) {
+  if (!validateAllFields()) {
     return { success: false, error: 'validation_failed' };
-  }
-
-  if (obsidianHostInput && !validateObsidianHost(obsidianHostInput)) {
-    return { success: false, error: 'invalid_obsidian_host' };
-  }
-
-  if (geminiApiVersionInput && !validateGeminiApiVersion(geminiApiVersionInput)) {
-    return { success: false, error: 'invalid_gemini_api_version' };
   }
 
   // HTTP プロトコルが選択されている場合、確認ダイアログを表示
@@ -168,8 +176,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
         // status エリアにも表示して保存を中断
         const statusEl = document.getElementById('status') as HTMLElement | null;
         if (statusEl) {
-          statusEl.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-          statusEl.className = 'error';
+          showStatus(statusEl, saveErrorText('aiProviderPriority1Required'), 'error', { autoClear: false });
           try {
             syncStatusToTop();
           } catch {}

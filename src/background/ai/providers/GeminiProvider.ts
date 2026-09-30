@@ -3,19 +3,26 @@
  * Google Gemini APIを使用するAIプロバイダー
  */
 
-import { AIProviderStrategy, AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
+import { HttpProviderStrategy } from './HttpProviderStrategy.js';
+import {
+    resolveMaxContentChars,
+    resolveMaxTokens,
+    resolveTimeoutMs,
+} from './providerSettingsResolver.js';
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { DEFAULT_SETTINGS } from '../../../utils/storage/defaults.js';
 import { Settings, StorageKeys, type StorageKey } from '../../../utils/storage/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { FailureKind, createFailure, withFailure } from '../../../utils/failureTaxonomy.js';
 import { getDefaultSystemPrompt } from '../../../utils/customPromptUtils.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { PROVIDER_ALLOWLIST_ROWS, isAllowedProviderBaseUrl, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
 
 /** The only origin Gemini traffic may ever target (fixed-endpoint provider). */
-const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
+export const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
 
 interface GeminiApiResponse {
     candidates?: Array<{
@@ -32,7 +39,7 @@ interface GeminiApiResponse {
     promptFeedback?: { blockReason?: string };
 }
 
-export class GeminiProvider extends AIProviderStrategy {
+export class GeminiProvider extends HttpProviderStrategy {
     private apiKey: string;
     /**
      * Where the API key was resolved from. Diagnostics only — never the key.
@@ -83,7 +90,7 @@ export class GeminiProvider extends AIProviderStrategy {
         // passed explicitly — the fixed 30000 default is intentional, not a
         // missing branch. A future local-Gemini variant can flip this flag.
         const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        this.timeoutMs = this.resolveTimeoutMs(storedTimeout, false);
+        this.timeoutMs = resolveTimeoutMs(storedTimeout, false);
         this.contentCharsKey = contentCharsKey;
         // Diagnostics: record where the API key came from (SSOT on the base).
         this.logApiKeySource(this.apiKeySource, this.getName());
@@ -122,16 +129,27 @@ export class GeminiProvider extends AIProviderStrategy {
             checkCredentials: () => !this.apiKey
                 ? "Error: API key is missing. Please check your settings."
                 : null,
-            contentLimit: () => this.getMaxContentChars(30_000, this.contentCharsKey),
+            contentLimit: () => resolveMaxContentChars(this.settings, this.getProviderId(), 30_000, this.contentCharsKey),
             prepareRequest: async (userPrompt, systemPrompt) => {
                 let modelSegment: string;
                 try {
                     modelSegment = this.buildModelPathSegment();
                 } catch {
-                    return { failure: { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." } };
+                    // A model name the pinned origin path cannot express is a
+                    // settings defect, so the breaker must read it as a
+                    // configuration failure and leave the slot alone.
+                    return {
+                        failure: withFailure(
+                            { success: false, summary: "Error: Invalid AI model name. Please check your AI model settings." },
+                            createFailure(FailureKind.CONFIGURATION),
+                        ),
+                    };
                 }
                 const apiVersion = this._getApiVersion();
-                const url = `https://generativelanguage.googleapis.com/${apiVersion}/models/${modelSegment}:generateContent`;
+                // Derived from the pinned origin, never re-spelled: the literal
+                // the constructor authorizes and the URL actually requested must
+                // not be able to drift apart.
+                const url = `${GEMINI_PINNED_ORIGIN}/${apiVersion}/models/${modelSegment}:generateContent`;
                 const payload = {
                     systemInstruction: {
                         parts: [{
@@ -145,7 +163,7 @@ export class GeminiProvider extends AIProviderStrategy {
                     }],
                     generationConfig: {
                         temperature: 0.1,
-                        maxOutputTokens: this.getMaxTokens(),
+                        maxOutputTokens: resolveMaxTokens(this.settings, this.getProviderId()),
                         // Gemini 2.5系以降は thinking がデフォルト有効で、思考トークンが
                         // maxOutputTokens に加算される。要約は思考を必要としないため
                         // 明示的に切り、枠をすべて本文に使う。これを入れないと
@@ -163,7 +181,6 @@ export class GeminiProvider extends AIProviderStrategy {
                     body: JSON.stringify(payload),
                 };
             },
-            handleErrorResponse: (response) => this._handleError(response),
             extractSummary: (data, tid) => this._extractSummary(data as GeminiApiResponse, tid),
         });
     }
@@ -202,11 +219,14 @@ export class GeminiProvider extends AIProviderStrategy {
                         failure: {
                             success: false,
                             message: `Invalid model name: ${errorMessage(error)}`,
-                            debug: { error: errorMessage(error) },
+                            debug: {
+                                error: errorMessage(error),
+                                failure: createFailure(FailureKind.CONFIGURATION),
+                            },
                         },
                     };
                 }
-                const testUrl = `https://generativelanguage.googleapis.com/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
+                const testUrl = `${GEMINI_PINNED_ORIGIN}/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
 
                 // BaseUrl SSRF対策 - テストURLの検証
                 try {
@@ -217,7 +237,14 @@ export class GeminiProvider extends AIProviderStrategy {
                         failure: {
                             success: false,
                             message: `Invalid test URL: ${errorMessage(error)}`,
-                            debug: { error: errorMessage(error) },
+                            debug: {
+                                error: errorMessage(error),
+                                // The URL is built from the already-authorized
+                                // pinned origin, so a rejection here means a
+                                // poisoned api-version setting, not a bad
+                                // request from the user.
+                                failure: createFailure(FailureKind.CONFIGURATION),
+                            },
                         },
                     };
                 }
@@ -315,16 +342,6 @@ export class GeminiProvider extends AIProviderStrategy {
             }
         }
         return parts.join(' | ');
-    }
-
-    private async _handleError(response: Response): Promise<AISummaryResult> {
-        // const errorText = await response.text();
-        // Bare status only in `error` — summary omits it (security pins),
-        // `error` is the per-slot diagnostic channel.
-        if (response.status === 404) {
-            return { success: false, summary: "Error: Model not found. Please check your AI model settings.", error: `HTTP ${response.status}` };
-        }
-        return { success: false, summary: "Error: Failed to generate summary. Please check your API settings.", error: `HTTP ${response.status}` };
     }
 
     private async _extractSummary(data: GeminiApiResponse, traceId: string = ''): Promise<AISummaryResult> {

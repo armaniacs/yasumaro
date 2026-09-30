@@ -12,6 +12,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
 import { resolveFailure, type FailureMetadata } from '../../utils/failureTaxonomy.js';
+import { createErrorResponse, ErrorType, getErrorI18nKey } from '../../utils/errorClassification.js';
+import { StepExecutor } from '../pipeline/stepExecutor.js';
+import {
+  ErrorStrategy,
+  type PipelineStep,
+  type RecordingContext,
+  type StepDeps,
+} from '../pipeline/types.js';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 const mockGetSettings = vi.hoisted(() => vi.fn());
@@ -165,6 +173,61 @@ describe('Obsidian PUT status classification', () => {
     expect(serialized).not.toContain('sk-live-SECRET-999');
     expect(serialized).not.toContain('Forbidden');
     expect(error.message).not.toContain('sk-live-SECRET-999');
+  });
+});
+
+describe('Obsidian failure display routing (PBI 2026-09-25-32)', () => {
+  // Real chain: the client throws a tagged error, the executor rethrows it
+  // unchanged, and the message-handler error response classifies by kind.
+  it.each([
+    [401, ErrorType.AUTH, 'errorAuth'],
+    [403, ErrorType.AUTH, 'errorAuth'],
+    [429, ErrorType.RATE_LIMIT, 'errorRateLimit'],
+    [500, ErrorType.SERVER, 'errorServer'],
+    [503, ErrorType.SERVER, 'errorServer'],
+  ])(
+    'routes a real HTTP %i failure through the executor to %s',
+    async (status, expectedType, expectedKey) => {
+      const fetch = fetchMock();
+      fetch.mockImplementation((_url: string, init: { method?: string }) =>
+        Promise.resolve(
+          init?.method === 'GET'
+            ? ({ ok: false, status: 404, body: bodyOf(''), headers: { get: () => null } } as unknown as Response)
+            : errorResponse(status),
+        ),
+      );
+      const executor = new StepExecutor(null);
+      const step: PipelineStep = {
+        name: 'saveToObsidian',
+        errorStrategy: ErrorStrategy.FATAL,
+        execute: async () => {
+          await client.appendToDailyNote('content');
+          return {} as unknown as RecordingContext;
+        },
+      };
+
+      const thrown = (await executor
+        .executeWithStrategy(step, { data: {} } as unknown as RecordingContext, {} as unknown as StepDeps)
+        .catch((e: unknown) => e)) as Error;
+
+      expect(resolveFailure(thrown)?.status).toBe(status);
+      const response = createErrorResponse(thrown);
+      expect(response.errorType).toBe(expectedType);
+      expect(getErrorI18nKey(response.errorType)).toBe(expectedKey);
+    },
+  );
+
+  it('keeps a transport failure on the network display', async () => {
+    const fetch = fetchMock();
+    fetch.mockImplementation((_url: string, init: { method?: string }) =>
+      init?.method === 'GET'
+        ? Promise.reject(new TypeError('Failed to fetch'))
+        : Promise.resolve({ ok: true } as Response),
+    );
+
+    const error = (await client.appendToDailyNote('content').catch((e: unknown) => e)) as Error;
+
+    expect(createErrorResponse(error).errorType).toBe(ErrorType.NETWORK);
   });
 });
 

@@ -62,7 +62,7 @@ export interface QueuePort<T> {
   enqueue(item: T): Promise<boolean>;
   load(): Promise<T[]>;
   save(items: T[]): Promise<void>;
-  flush(handler: (item: T) => Promise<boolean>): Promise<T[]>;
+  flush(handler: (item: T) => Promise<boolean>, onDropped?: (item: T, reason: 'max-retries' | 'ttl') => Promise<void> | void): Promise<T[]>;
   getQueueSize(): Promise<number>;
   filterExpiredAndOverRetry(items: T[]): { kept: T[]; dropped: T[] };
   /** In-lock read-modify-write (VULN-056). dequeue/peek route through this. */
@@ -126,8 +126,11 @@ export class OfflineNetworkQueue {
     return job;
   }
 
-  async retryAll(handler: (job: OfflineJob) => Promise<boolean>): Promise<void> {
-    await this.port.flush(handler);
+  async retryAll(
+    handler: (job: OfflineJob) => Promise<boolean>,
+    onDropped?: (job: OfflineJob, reason: 'max-retries' | 'ttl') => Promise<void> | void
+  ): Promise<void> {
+    await this.port.flush(handler, onDropped);
   }
 
   async getQueueSize(): Promise<number> {

@@ -9,7 +9,10 @@
 import { buildDailyNotePath, sanitizePathComponent } from '../dailyNotePathBuilder.js';
 
 describe('buildDailyNotePath - セキュリティテスト（パートラバーサル対策済み）', () => {
-  const testDate = new Date('2026-02-07');
+  // WHY the numeric constructor: a bare `new Date('2026-02-07')` is UTC
+  // midnight, so in a negative-offset zone the path would come out one day
+  // earlier and the test would only pass east of Greenwich.
+  const testDate = new Date(2026, 1, 7);
 
   describe('パートラバーサル攻撃のブロック', () => {
     it('blocks parent directory traversal (../)', () => {

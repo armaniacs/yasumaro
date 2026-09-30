@@ -2,12 +2,20 @@
  * errorClassification-taxonomy.test.ts
  *
  * The structured failure taxonomy (PBI 2026-09-25-11) introduces `kind` for the
- * RETRY decision. It is deliberately not wired into the popup display path, and
- * these tests pin that separation: attaching a kind must never change the
- * ErrorType, the i18n key, or the sentence a user already saw.
+ * RETRY decision. PBI 2026-09-25-32 wired the kind into the display vocabulary
+ * through FAILURE_KIND_TO_ERROR_TYPE: a carrier with a structured kind is
+ * classified by its kind, so an Obsidian 401/403 displays errorAuth, a 429
+ * errorRateLimit, and a 404 or 5xx errorServer. Carriers without a kind keep
+ * the message-based classification they had before the taxonomy.
  */
 import { describe, it, expect } from 'vitest';
-import { ErrorType, classifyError, getUserMessage } from '../errorClassification.js';
+import {
+  ErrorType,
+  FAILURE_KIND_TO_ERROR_TYPE,
+  classifyError,
+  getErrorI18nKey,
+  getUserMessage,
+} from '../errorClassification.js';
 import {
   createFailure,
   failureFromHttpStatus,
@@ -26,12 +34,13 @@ const ALL_KINDS: FailureKindValue[] = [
   'csp',
 ];
 
-describe('classifyError — display is independent of the structured kind', () => {
+describe('classifyError — a structured kind routes the display vocabulary', () => {
   it.each(ALL_KINDS)(
-    'attaching a %s carrier leaves the displayed ErrorType unchanged',
+    'attaching a %s carrier classifies the display by the kind table',
     (kind) => {
-      // The taxonomy refactor must be invisible to the user. For any message,
-      // classifyError(with kind) has to equal classifyError(without kind).
+      // The kind is the sanitized, message-independent signal: whatever the
+      // message says, a tagged carrier must classify through the declared
+      // kind→ErrorType table (PBI 2026-09-25-32).
       const messages = [
         'Error: Failed to write to daily note. Please check your Obsidian connection.',
         'network error',
@@ -42,23 +51,37 @@ describe('classifyError — display is independent of the structured kind', () =
         '',
       ];
       for (const message of messages) {
-        const bare = classifyError(new Error(message));
         const tagged = classifyError(tagFailure(new Error(message), createFailure(kind)));
-        expect(tagged).toBe(bare);
+        expect(tagged).toBe(FAILURE_KIND_TO_ERROR_TYPE[kind]);
       }
     },
   );
 
-  it('leaves the pre-taxonomy Obsidian 401 display on errorNetwork', () => {
-    // Before the taxonomy the network branch ran first, so every Obsidian HTTP
-    // failure matched on the word "connection" and displayed errorNetwork; the
-    // 401/404/429/5xx branches were unreachable for that message. Correcting the
-    // wording is filed as its own change, so it must stay as it was here.
+  it('classifies the pre-taxonomy Obsidian statuses into the right display keys', async () => {
+    // Before PBI 2026-09-25-32 the network branch ran first, so every Obsidian
+    // HTTP failure matched on the word "connection" and displayed errorNetwork.
+    // The kind now routes the display: 401/403 → auth, 429 → rate limit,
+    // 404 and 5xx → server. All four keys predate the fix; no new key is added.
+    const expected: Array<[number, string, string]> = [
+      [401, ErrorType.AUTH, 'errorAuth'],
+      [403, ErrorType.AUTH, 'errorAuth'],
+      [429, ErrorType.RATE_LIMIT, 'errorRateLimit'],
+      [404, ErrorType.SERVER, 'errorServer'],
+      [500, ErrorType.SERVER, 'errorServer'],
+      [503, ErrorType.SERVER, 'errorServer'],
+    ];
     const message = 'Error: Failed to write to daily note. Please check your Obsidian connection.';
-    for (const status of [401, 403, 404, 429, 500, 503]) {
+    for (const [status, errorType, i18nKey] of expected) {
       const error = tagFailure(new Error(message), failureFromHttpStatus(status, 'PUT'));
-      expect(classifyError(error)).toBe(ErrorType.NETWORK);
+      expect(classifyError(error)).toBe(errorType);
+      expect(getErrorI18nKey(classifyError(error))).toBe(i18nKey);
     }
+  });
+
+  it('keeps transport failures on errorNetwork so they are never misread as auth', () => {
+    const error = tagFailure(new Error('Failed to fetch'), createFailure('network'));
+    expect(classifyError(error)).toBe(ErrorType.NETWORK);
+    expect(getErrorI18nKey(ErrorType.NETWORK)).toBe('errorNetwork');
   });
 
   it('still classifies a 401 that names the status, as it did before', () => {
@@ -87,14 +110,12 @@ describe('the kind stays correct for the retry decision', () => {
     [500, 'http'],
     [503, 'http'],
   ] as Array<[number, FailureKindValue]>)(
-    'reads status %i as %s even though the display still says network',
+    'reads status %i as %s and the display now agrees with the kind',
     (status, kind) => {
       const message = 'Error: Failed to write to daily note. Please check your Obsidian connection.';
       const error = tagFailure(new Error(message), failureFromHttpStatus(status, 'PUT'));
-      // Display and kind disagree on purpose: that disagreement is the bug the
-      // taxonomy exists to fix, and it is what the retry path must read.
-      expect(classifyError(error)).toBe(ErrorType.NETWORK);
       expect(resolveFailure(error)?.kind).toBe(kind);
+      expect(classifyError(error)).toBe(FAILURE_KIND_TO_ERROR_TYPE[kind]);
     },
   );
 });

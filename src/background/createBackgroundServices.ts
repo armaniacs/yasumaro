@@ -91,8 +91,9 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     }
   }
 
-  // Resolve everything, then run onReady side effects once (setPendingWriteQueue,
-  // setSqliteHealthCheck — the utils↔background boundary wiring).
+  // Resolve everything, then run onReady side effects once (the manifest's
+  // pendingWriteQueue entry installs the facade's queue instance — the
+  // utils↔background boundary wiring).
   for (const entry of compositionManifest) {
     container.resolve(entry.key);
   }

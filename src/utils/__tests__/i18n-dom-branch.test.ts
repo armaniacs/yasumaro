@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { applyI18n, translatePageTitle, setHtmlLangAndDir } from '../i18n-dom.js';
+import { applyI18n, translatePageTitle, setHtmlLangAndDir, parseI18nArgs } from '../i18n-dom.js';
 
 describe('i18n-dom - branch coverage', () => {
   let origChrome: unknown;
@@ -32,6 +32,40 @@ describe('i18n-dom - branch coverage', () => {
       runtime: { lastError: null },
     } as unknown;
   }
+
+  describe('parseI18nArgs', () => {
+    it('returns the parsed object for a valid JSON object string', () => {
+      expect(parseI18nArgs('{"count":2,"name":"Bob"}')).toEqual({ count: 2, name: 'Bob' });
+    });
+
+    it('returns an empty object for "{}"', () => {
+      expect(parseI18nArgs('{}')).toEqual({});
+    });
+
+    it('returns null for malformed JSON instead of throwing', () => {
+      expect(() => parseI18nArgs('{not-json}')).not.toThrow();
+      expect(parseI18nArgs('{not-json}')).toBeNull();
+      expect(parseI18nArgs('not json')).toBeNull();
+    });
+
+    it('returns null for non-object JSON values', () => {
+      expect(parseI18nArgs('5')).toBeNull();
+      expect(parseI18nArgs('"text"')).toBeNull();
+      expect(parseI18nArgs('true')).toBeNull();
+      expect(parseI18nArgs('null')).toBeNull();
+    });
+
+    it('returns null for arrays (arrays would make `count in args` type-check but not a record)', () => {
+      expect(parseI18nArgs('[1,2]')).toBeNull();
+      expect(parseI18nArgs('[]')).toBeNull();
+    });
+
+    it('returns null for missing or empty attribute values', () => {
+      expect(parseI18nArgs(null)).toBeNull();
+      expect(parseI18nArgs(undefined)).toBeNull();
+      expect(parseI18nArgs('')).toBeNull();
+    });
+  });
 
   describe('resolvePluralKey branches via applyI18n', () => {
     it('returns base key when args is null', () => {
@@ -153,6 +187,19 @@ describe('i18n-dom - branch coverage', () => {
       expect(div.textContent).toBe('Hello');
     });
 
+    it('treats non-object data-i18n-args as null (numeric, array and string values)', () => {
+      mockGetMessage((key) => (key === 'hello' ? 'Hello' : ''));
+      for (const raw of ['5', '[1,2]', '"text"']) {
+        document.body.innerHTML = '';
+        const div = document.createElement('div');
+        div.setAttribute('data-i18n', 'hello');
+        div.setAttribute('data-i18n-args', raw);
+        document.body.appendChild(div);
+        expect(() => applyI18n()).not.toThrow();
+        expect(div.textContent).toBe('Hello');
+      }
+    });
+
     it('sets placeholder for INPUT element via data-i18n', () => {
       mockGetMessage(() => 'Placeholder Text');
       const input = document.createElement('input');
@@ -271,13 +318,96 @@ describe('i18n-dom - branch coverage', () => {
       expect(input.placeholder).toBe('keep');
     });
 
-    it('placeholder element with invalid JSON args uses raw JSON.parse failure path', () => {
+    it('placeholder element with invalid JSON args stays untranslated instead of throwing', () => {
       mockGetMessage(() => 'ok');
       const input = document.createElement('input');
       input.setAttribute('data-i18n-input-placeholder', 'k');
       input.setAttribute('data-i18n-args', '{bad}');
       document.body.appendChild(input);
-      expect(() => applyI18n()).toThrow(); // placeholder branch does JSON.parse without try-catch -> should throw
+      expect(() => applyI18n()).not.toThrow();
+      // args resolve to null -> base key is used and the element is still translated
+      expect(input.placeholder).toBe('ok');
+      expect((globalThis.chrome.i18n.getMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('k');
+    });
+
+    it('placeholder element with non-JSON string args does not throw', () => {
+      mockGetMessage(() => 'ok');
+      const input = document.createElement('input');
+      input.setAttribute('data-i18n-input-placeholder', 'k');
+      input.setAttribute('data-i18n-args', 'not json');
+      document.body.appendChild(input);
+      expect(() => applyI18n()).not.toThrow();
+      expect(input.placeholder).toBe('ok');
+    });
+
+    it('placeholder element with numeric args does not throw (no TypeError from `count in args`)', () => {
+      mockGetMessage(() => 'ok');
+      const input = document.createElement('input');
+      input.setAttribute('data-i18n-input-placeholder', 'k');
+      input.setAttribute('data-i18n-args', '5');
+      document.body.appendChild(input);
+      expect(() => applyI18n()).not.toThrow();
+      expect(input.placeholder).toBe('ok');
+      expect((globalThis.chrome.i18n.getMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('k');
+    });
+
+    it('placeholder element with array args does not throw', () => {
+      mockGetMessage(() => 'ok');
+      const input = document.createElement('input');
+      input.setAttribute('data-i18n-input-placeholder', 'k');
+      input.setAttribute('data-i18n-args', '[1,2]');
+      document.body.appendChild(input);
+      expect(() => applyI18n()).not.toThrow();
+      expect(input.placeholder).toBe('ok');
+    });
+
+    it('placeholder element with valid object args still resolves plural key', () => {
+      mockGetMessage((k) => {
+        if (k === 'cnt_one') return '1 item';
+        if (k === 'cnt_other') return '{count} items';
+        return '';
+      });
+      (globalThis.chrome.i18n.getUILanguage as ReturnType<typeof vi.fn>).mockReturnValue('en');
+      const input = document.createElement('input');
+      input.setAttribute('data-i18n-input-placeholder', 'cnt');
+      input.setAttribute('data-i18n-args', '{"count":1}');
+      document.body.appendChild(input);
+      applyI18n();
+      expect(input.placeholder).toBe('1 item');
+    });
+
+    it('one malformed args attribute does not abort the remaining translation passes', () => {
+      mockGetMessage((k) => {
+        if (k === 'k') return 'Placeholder';
+        if (k === 'opt1') return 'Option One';
+        if (k === 'btn') return 'Click Me';
+        if (k === 'hlp') return 'Help here';
+        return '';
+      });
+      const broken = document.createElement('input');
+      broken.setAttribute('data-i18n-input-placeholder', 'k');
+      broken.setAttribute('data-i18n-args', '{bad}');
+      document.body.appendChild(broken);
+
+      const select = document.createElement('select');
+      const opt = document.createElement('option');
+      opt.setAttribute('data-i18n-opt', 'opt1');
+      select.appendChild(opt);
+      document.body.appendChild(select);
+
+      const btn = document.createElement('button');
+      btn.setAttribute('data-i18n-label', 'btn');
+      document.body.appendChild(btn);
+
+      const help = document.createElement('div');
+      help.className = 'help-text';
+      help.setAttribute('data-i18n', 'hlp');
+      document.body.appendChild(help);
+
+      expect(() => applyI18n()).not.toThrow();
+      expect(opt.text).toBe('Option One');
+      expect(btn.textContent).toBe('Click Me');
+      expect(help.textContent).toBe('Help here');
     });
 
     it('translates data-i18n-aria-label', () => {
@@ -426,6 +556,14 @@ describe('i18n-dom - branch coverage', () => {
       mockGetMessage(() => '');
       (globalThis.chrome.i18n.getUILanguage as ReturnType<typeof vi.fn>).mockReturnValue('fa');
       setHtmlLangAndDir();
+      expect(document.documentElement.dir).toBe('rtl');
+    });
+
+    it.each(['ckb', 'sd', 'ps', 'ku', 'dv'])('sets rtl for %s', (locale) => {
+      mockGetMessage(() => '');
+      (globalThis.chrome.i18n.getUILanguage as ReturnType<typeof vi.fn>).mockReturnValue(locale);
+      setHtmlLangAndDir();
+      expect(document.documentElement.lang).toBe(locale);
       expect(document.documentElement.dir).toBe('rtl');
     });
 

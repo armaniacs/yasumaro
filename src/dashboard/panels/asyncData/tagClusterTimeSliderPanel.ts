@@ -1,23 +1,25 @@
 /**
  * tagClusterTimeSliderPanel.ts (PanelLifecycle)
  * Side-by-side tag-cluster comparison over the two halves of a user-specified
- * window (PBI 2026-09-24-08). Two native date inputs define the window; the
- * Compare button splits it at the midpoint and runs the tag-cluster pipeline
- * once per half ({since, until, limit: 10000} each), renders both snapshots
- * as two SVGs with independent pan/zoom controllers, and lists the tag diff
+ * window (PBI 2026-09-24-08). Two native date inputs define the window through
+ * the shared local-date contract (periodFilter's customRangeToBounds /
+ * parseDateInput); the Compare button splits the resolved window at the
+ * midpoint and runs the tag-cluster pipeline once per half
+ * ({since, until, limit: 10000} each), renders both snapshots as two SVGs with
+ * independent pan/zoom controllers, and lists the tag diff
  * (appeared / disappeared / increased / decreased) below the graphs.
  *
  * WHY explicit Apply (not live recompute): each apply fires TWO capped
  * queries plus a client-side pipeline per half; the PBI fixes the interaction
- * as 2-time-point selection + apply, and a loadSeq generation guard makes
- * rapid input changes safe.
+ * as 2-time-point selection + apply, and the shared reload ring's generation
+ * guard (PBI 2026-09-28-09) makes rapid input changes safe.
  *
  * WHY no animation: transition animations between snapshots are explicitly
  * out of scope (user-confirmed design: side-by-side + diff list); the panel
  * stays static, so prefers-reduced-motion needs no handling here.
  */
 
-import { limitToTopNodes, type TagNode, type TagEdge } from '../../tagCooccurrence.js';
+import { type TagNode, type TagEdge } from '../../tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
@@ -26,7 +28,6 @@ import {
   MAX_QUERY_ROWS,
   MAX_TAG_CLUSTER_TAGS,
 } from '../../../utils/computeLimits.js';
-import { computeLayout, computeCanvasSize } from '../../tagClusterLayout.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
@@ -34,19 +35,22 @@ import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import {
   DAY_MS,
-  endOfLocalDay,
+  customRangeToBounds,
   parseDateInput,
-  startOfLocalDay,
 } from '../../components/periodFilter.js';
-import { splitPeriodInHalves } from '../../periodSplit.js';
+import { splitPeriodInHalves, type PeriodHalves } from '../../periodSplit.js';
+import { formatLocalDateString } from '../../../utils/localDate.js';
 import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import {
+  limitClusterNodes,
+  renderClusterGraph,
+  showRowCapNotice,
+} from './clusterGraphRenderer.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
-import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 
-const MAX_NODES = 50;
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const DEFAULT_WINDOW_DAYS = 30;
 
 interface HalfBounds {
@@ -71,10 +75,7 @@ interface SideData {
 
 /** Local-date YYYY-MM-DD for a date input's value attribute. */
 function toDateInputValue(ts: number): string {
-  const d = new Date(ts);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
+  return formatLocalDateString(ts);
 }
 
 function clearChildren(element: HTMLElement): void {
@@ -91,12 +92,14 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
   let diffListHost: HTMLElement | null = null;
   let first: SideRefs = createEmptySideRefs();
   let second: SideRefs = createEmptySideRefs();
+  // WHY: the halves the next load compares. Set by apply() once the window
+  // parsed, read by the load body — a rejected window never reaches a load.
+  let pendingHalves: PeriodHalves | null = null;
   // WHY: each half is its own notice scope — its empty-state element doubles
   // as the error surface (one element, two modes). The per-half row-cap
   // notice describes the FETCH, so it is fetch-scoped.
   const firstNotices = new PanelNotices();
   const secondNotices = new PanelNotices();
-  let loadSeq = 0;
 
   function createEmptySideRefs(): SideRefs {
     return {
@@ -125,7 +128,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     side: SideRefs,
     sideNotices: PanelNotices,
     bounds: HalfBounds,
-    seq: number,
+    isStale: () => boolean,
     label: string,
     loadingManager: TagClusterLoadingManager
   ): Promise<SideData | null> {
@@ -140,7 +143,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
         limit: MAX_QUERY_ROWS,
         label,
       });
-      if (seq !== loadSeq) {
+      if (isStale()) {
         loadingManager.cleanup();
         return null;
       }
@@ -150,22 +153,21 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       // more rows the analyzed set is a prefix — the PBI requires the
       // truncation to be visible per half.
       if (fetched.capped) {
-        sideNotices.setMessage(
-          'rowCap',
-          msg(
-            'tagClusterCompareCapNotice',
-            { max: MAX_QUERY_ROWS, shown: fetched.rows.length, total: fetched.total },
-            `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${fetched.rows.length} of ${fetched.total} records in this half.`,
-          ),
-        );
-        sideNotices.show('rowCap');
+        showRowCapNotice({
+          notices: sideNotices,
+          messageKey: 'tagClusterCompareCapNotice',
+          fallback: `The query hit the ${MAX_QUERY_ROWS}-row limit — aggregating the most recent ${fetched.rows.length} of ${fetched.total} records in this half.`,
+          shown: fetched.rows.length,
+          total: fetched.total,
+          limit: MAX_QUERY_ROWS,
+        });
       }
 
       // Narrow to the most frequent tags BEFORE cooccurrence — same O(n^2)
       // bound as the tag-cluster panel (VULN-053).
       const narrowedRows = await narrowEntriesToTopTagsHybrid(fetched.rows, MAX_TAG_CLUSTER_TAGS);
       const { nodes, edges } = await computeTagCooccurrenceHybrid(narrowedRows);
-      if (seq !== loadSeq) {
+      if (isStale()) {
         loadingManager.cleanup();
         return null;
       }
@@ -177,17 +179,12 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
         return { nodes: [], edges: [], ok: true, empty: true };
       }
 
-      const limited = limitToTopNodes(nodes, edges, MAX_NODES);
-      if (limited.truncated) {
-        sideNotices.show('truncated');
-      } else {
-        sideNotices.hide('truncated');
-      }
+      const limited = limitClusterNodes(nodes, edges, sideNotices);
       return { nodes: limited.nodes, edges: limited.edges, ok: true, empty: false };
     } catch (error) {
       loadingManager.cleanup();
       console.error(`[${label}] error:`, error);
-      if (seq !== loadSeq) return null;
+      if (isStale()) return null;
       sideNotices.showError(
         'tagClusterTimeSliderError',
         'Failed to load this half of the comparison. Try again.',
@@ -221,80 +218,32 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     );
     // WHY: both sides size their canvas from the union node count so the
     // circular seeds share the same geometry, not just the same order.
-    const canvasSize = computeCanvasSize(unionCount);
-    const positions = computeLayout(orderedNodes, data.edges, canvasSize.width, canvasSize.height);
     loadingManager.updateStep(2);
 
-    for (const edge of data.edges) {
-      const a = positions.get(edge.source);
-      const b = positions.get(edge.target);
-      if (!a || !b) continue;
-      const line = document.createElementNS(SVG_NS, 'line');
-      line.setAttribute('x1', String(a.x));
-      line.setAttribute('y1', String(a.y));
-      line.setAttribute('x2', String(b.x));
-      line.setAttribute('y2', String(b.y));
-      line.setAttribute('class', 'tag-cluster-edge');
-      line.setAttribute('stroke-width', String(Math.min(edge.weight, 5)));
-      side.svg.appendChild(line);
-    }
-
-    for (const node of orderedNodes) {
-      const pos = positions.get(node.tag);
-      if (!pos) continue;
-      const circle = document.createElementNS(SVG_NS, 'circle');
-      circle.setAttribute('cx', String(pos.x));
-      circle.setAttribute('cy', String(pos.y));
-      circle.setAttribute('r', String(4 + Math.min(node.count, 20)));
-      circle.setAttribute('class', 'tag-cluster-node tag-cluster-compare-node');
-      // WHY: the hue travels as a CSS custom property so dashboard.css can
-      // resolve the scheme-appropriate fixed saturation/lightness per node.
-      circle.style.setProperty('--tag-hue', String(tagHue(node.tag)));
-      const activate = (): void => {
-        navigateToHistoryWithTag(node.tag);
-      };
-      makeGraphNodeAccessible(circle, `#${node.tag} (${node.count})`, activate);
-      circle.addEventListener('click', () => {
-        if (side.panZoom?.wasDragSuppressingClick()) return;
-        activate();
-      });
-
-      const title = document.createElementNS(SVG_NS, 'title');
-      title.textContent = `#${node.tag} (${node.count})`;
-      circle.appendChild(title);
-
-      const text = document.createElementNS(SVG_NS, 'text');
-      text.setAttribute('x', String(pos.x));
-      text.setAttribute('y', String(pos.y));
-      text.setAttribute('dy', '0.3em');
-      text.setAttribute('text-anchor', 'middle');
-      text.setAttribute('class', 'tag-cluster-text');
-      text.setAttribute('pointer-events', 'none');
-      text.textContent = `#${node.tag}`;
-
-      side.svg.appendChild(circle);
-      side.svg.appendChild(text);
-    }
-
-    // Text alternative for the graph (wordClusterPanel precedent).
-    side.svg.setAttribute('role', 'img');
-    side.svg.setAttribute(
-      'aria-label',
-      `${getMessageOr(halfLabelKey, halfLabelFallback)}: ${orderedNodes
-        .slice(0, 10)
-        .map((node) => `#${node.tag}`)
-        .join(', ')}`,
-    );
+    side.panZoom = renderClusterGraph({
+      svg: side.svg,
+      nodes: orderedNodes,
+      edges: data.edges,
+      canvasNodeCount: unionCount,
+      // WHY: the compare panel is the only one that colors a node by its tag
+      // hue and marks it with the compare class, so a tag common to both
+      // halves looks the same on both sides.
+      nodeClassName: 'tag-cluster-node tag-cluster-compare-node',
+      hueByTag: true,
+      ariaLabel: (rendered) =>
+        `${getMessageOr(halfLabelKey, halfLabelFallback)}: ${rendered
+          .slice(0, 10)
+          .map((node) => `#${node.tag}`)
+          .join(', ')}`,
+      buttons: {
+        zoomInBtn: side.zoomInBtn,
+        zoomOutBtn: side.zoomOutBtn,
+        resetBtn: side.zoomResetBtn,
+      },
+    });
 
     loadingManager.updateStep(3);
     loadingManager.cleanup();
-
-    side.panZoom = new TagClusterPanZoomController(side.svg, canvasSize, {
-      zoomInBtn: side.zoomInBtn,
-      zoomOutBtn: side.zoomOutBtn,
-      resetBtn: side.zoomResetBtn,
-    });
-    side.panZoom.attach();
   }
 
   function appendDiffSection(host: HTMLElement, headingKey: string, headingFallback: string, items: Array<{ tag: string; delta: number | null }>): void {
@@ -365,33 +314,40 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     // Fresh-apply reset per half: restores the normal empty binding in case
     // a previous apply failed and swapped in the error message, and hides
     // the truncation/row-cap notices until the new halves decide visibility.
-    firstNotices.reset();
-    secondNotices.reset();
+    // It runs before the input check so a rejected window still leaves no
+    // stale comparison behind.
+    lifecycle.resetNotices();
     if (diffListHost) clearChildren(diffListHost);
 
     const startValue = startInput.value;
     const endValue = endInput.value;
     const startTs = parseDateInput(startValue);
-    const endDayTs = parseDateInput(endValue);
-    if (!Number.isFinite(startTs) || !Number.isFinite(endDayTs)) {
+    const endTs = parseDateInput(endValue);
+    // WHY: the gate stays panel-owned — customRangeToBounds reads an empty
+    // start as "unbounded", while an unusable input here is a validation
+    // message, not an all-time window.
+    if (!Number.isFinite(startTs) || !Number.isFinite(endTs)) {
       showValidation('Select both a start and an end date to compare.');
       return;
     }
 
-    let since = startTs;
-    let until = endOfLocalDay(endDayTs);
-    // WHY: swap the input values too, so the correction is visible and the
-    // next apply is already in the corrected order (PBI: 補正される).
+    const now = Date.now();
+    // WHY: customRangeToBounds is the shared local-date contract (local
+    // midnight start, end-of-day end, whole local days) — the panel must not
+    // re-derive day boundaries of its own. Both inputs passed the gate, so
+    // both bounds are present; the `??` defaults only satisfy PeriodRange's
+    // optional fields.
+    let bounds = customRangeToBounds(startValue, endValue, now);
+    let since = bounds.since ?? startTs;
+    let until = bounds.until ?? now;
     if (since > until) {
-      // WHY: `since` is midnight of the later day and `until` end-of-day of
-      // the earlier one — each timestamp already carries its own day, so the
-      // swap needs no extra day math.
-      const earlierDay = until;
-      const laterDay = since;
-      startInput.value = toDateInputValue(earlierDay);
-      endInput.value = toDateInputValue(laterDay);
-      since = startOfLocalDay(earlierDay);
-      until = endOfLocalDay(laterDay);
+      // WHY: swap the input values too, so the correction is visible and the
+      // next apply is already in the corrected order (PBI: 補正される).
+      startInput.value = endValue;
+      endInput.value = startValue;
+      bounds = customRangeToBounds(endValue, startValue, now);
+      since = bounds.since ?? endTs;
+      until = bounds.until ?? now;
       if (correctedNotice) {
         correctedNotice.textContent = getMessageOr(
           'tagClusterCompareInvalidRangeCorrected',
@@ -414,59 +370,88 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       return;
     }
 
-    const seq = ++loadSeq;
-    setStatus('tagClusterTimeSliderLoading', 'Comparing tag clusters…');
-    clearSideSvg(first);
-    clearSideSvg(second);
-    // Idempotent second reset — validation early-returns above may have
-    // already run it, and reset() is safe to call twice.
-    firstNotices.reset();
-    secondNotices.reset();
-
-    if (!first.svg || !second.svg) return;
-    const firstLoading = new TagClusterLoadingManager(first.svg);
-    const secondLoading = new TagClusterLoadingManager(second.svg);
-
-    // WHY: the two halves are independent queries — run them in parallel
-    // (Promise.all) instead of serially, or every Compare click waits twice
-    // the wall-clock for capped queries plus two co-occurrence pipelines.
-    const [firstData, secondData] = await Promise.all([
-      fetchSide(first, firstNotices, halves.first, seq, 'tagClusterTimeSliderFirst', firstLoading),
-      fetchSide(second, secondNotices, halves.second, seq, 'tagClusterTimeSliderSecond', secondLoading),
-    ]);
-    if (seq !== loadSeq) return;
-
-    const bothOk = firstData !== null && firstData.ok && secondData !== null && secondData.ok;
-    if (bothOk && firstData && secondData) {
-      const unionOrder = unionTagOrder(firstData.nodes, secondData.nodes);
-      const unionCount = unionOrder.size;
-      renderSide(first, 'tagClusterCompareFirstHalf', 'First half', firstData, unionOrder, unionCount, firstLoading);
-      renderSide(second, 'tagClusterCompareSecondHalf', 'Second half', secondData, unionOrder, unionCount, secondLoading);
-
-      const diff = computeTagDiff(firstData.nodes, secondData.nodes);
-      renderDiffList(diff);
-      setStatus(
-        'tagClusterTimeSliderStatusDone',
-        'Comparison complete: first half {first} tags, second half {second} tags, {appeared} appeared, {disappeared} disappeared.',
-        {
-          first: firstData.nodes.length,
-          second: secondData.nodes.length,
-          appeared: diff.appeared.length,
-          disappeared: diff.disappeared.length,
-        },
-      );
-    } else {
-      // WHY: a failed half would fabricate appeared/disappeared entries for
-      // every tag of the healthy side — the diff stays empty until both
-      // halves load successfully.
-      setStatus('tagClusterTimeSliderError', 'Failed to load this half of the comparison. Try again.');
-      // WHY: fetchSide defers overlay cleanup to renderSide, which only runs
-      // when BOTH halves succeed — clean up the surviving side's frozen
-      // overlay here so a failure does not leave it on screen.
-      firstLoading.cleanup();
-      secondLoading.cleanup();
-    }
+    // WHY: the window is resolved before the load so a rejected window shows
+    // its validation message WITHOUT invalidating an apply already in flight.
+    // The halves ride along as panel state instead of a load argument because
+    // the ring's per-load channel carries a period range, not this panel's
+    // two half-windows.
+    pendingHalves = halves;
+    await lifecycle.reload();
   }
+
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'tagClusterTimeSliderPanel',
+    // WHY: each compared half is its own notice scope.
+    notices: [firstNotices, secondNotices],
+    // WHY: no filter host selector — this panel owns its own two date inputs
+    // and validates them before a load, so the ring's range is unused.
+    isReady: () =>
+      startInput !== null &&
+      endInput !== null &&
+      first.svg !== null &&
+      second.svg !== null,
+    resetOutput: () => {
+      clearSideSvg(first);
+      clearSideSvg(second);
+    },
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // hosts for the body.
+    load: async ({ isStale }) => {
+      const firstSvg = first.svg;
+      const secondSvg = second.svg;
+      const halves = pendingHalves;
+      if (!firstSvg || !secondSvg || !halves) return;
+      setStatus('tagClusterTimeSliderLoading', 'Comparing tag clusters…');
+      const firstLoading = new TagClusterLoadingManager(firstSvg);
+      const secondLoading = new TagClusterLoadingManager(secondSvg);
+
+      // WHY: the two halves are independent queries — run them in parallel
+      // (Promise.all) instead of serially, or every Compare click waits twice
+      // the wall-clock for capped queries plus two co-occurrence pipelines.
+      const [firstData, secondData] = await Promise.all([
+        fetchSide(first, firstNotices, halves.first, isStale, 'tagClusterTimeSliderFirst', firstLoading),
+        fetchSide(second, secondNotices, halves.second, isStale, 'tagClusterTimeSliderSecond', secondLoading),
+      ]);
+      if (isStale()) return;
+
+      const bothOk = firstData !== null && firstData.ok && secondData !== null && secondData.ok;
+      if (bothOk && firstData && secondData) {
+        const unionOrder = unionTagOrder(firstData.nodes, secondData.nodes);
+        const unionCount = unionOrder.size;
+        renderSide(first, 'tagClusterCompareFirstHalf', 'First half', firstData, unionOrder, unionCount, firstLoading);
+        renderSide(second, 'tagClusterCompareSecondHalf', 'Second half', secondData, unionOrder, unionCount, secondLoading);
+
+        const diff = computeTagDiff(firstData.nodes, secondData.nodes);
+        renderDiffList(diff);
+        setStatus(
+          'tagClusterTimeSliderStatusDone',
+          'Comparison complete: first half {first} tags, second half {second} tags, {appeared} appeared, {disappeared} disappeared.',
+          {
+            first: firstData.nodes.length,
+            second: secondData.nodes.length,
+            appeared: diff.appeared.length,
+            disappeared: diff.disappeared.length,
+          },
+        );
+      } else {
+        // WHY: a failed half would fabricate appeared/disappeared entries for
+        // every tag of the healthy side — the diff stays empty until both
+        // halves load successfully.
+        setStatus('tagClusterTimeSliderError', 'Failed to load this half of the comparison. Try again.');
+        // WHY: fetchSide defers overlay cleanup to renderSide, which only runs
+        // when BOTH halves succeed — clean up the surviving side's frozen
+        // overlay here so a failure does not leave it on screen.
+        firstLoading.cleanup();
+        secondLoading.cleanup();
+      }
+    },
+    teardown: () => {
+      first.panZoom?.cleanup();
+      second.panZoom?.cleanup();
+      first = createEmptySideRefs();
+      second = createEmptySideRefs();
+    },
+  });
 
   return {
     id: 'panel-tag-cluster-time-slider',
@@ -530,11 +515,8 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       await apply();
     },
     destroy() {
-      loadSeq += 1;
-      first.panZoom?.cleanup();
-      second.panZoom?.cleanup();
-      first = createEmptySideRefs();
-      second = createEmptySideRefs();
+      lifecycle.destroy();
+      pendingHalves = null;
       startInput = null;
       endInput = null;
       runButton = null;
@@ -542,8 +524,6 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       correctedNotice = null;
       statusLive = null;
       diffListHost = null;
-      firstNotices.clear();
-      secondNotices.clear();
     },
   };
 }

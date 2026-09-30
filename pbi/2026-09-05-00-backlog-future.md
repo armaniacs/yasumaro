@@ -14,7 +14,7 @@
 
 | 項目 | トリガー | 内容 |
 |------|----------|------|
-| provider catalog 残債（06d 候補・5 項目） | 次に AI provider を追加するとき（`PROVIDER_REGISTRY` エントリ追加時） | `cspDomains.ts` の host-permission build 時生成・`cspValidator.PROVIDER_TO_DOMAIN`（Models.dev 由来の別レイヤ）・`aiLimits.PROVIDER_MAX_TOKENS` の catalog 吸収（出典管理が別課題）・`RemoteAIService` factory 分岐の `createProvider` 化（循環リスク要設計）・per-provider `StorageKeys`/`defaults` の型自動生成（単独 PBI 相当）。出典: 2026-08-31 backlog 06d（効果確認 2026-09-01 済） |
+| provider catalog 残債（06d 候補・5 項目） | 次に AI provider を追加するとき（`PROVIDER_REGISTRY` エントリ追加時） | `cspDomains.ts` の host-permission build 時生成・`cspValidator.PROVIDER_TO_DOMAIN`（Models.dev 由来の別レイヤ）・`aiLimits.PROVIDER_MAX_TOKENS` の catalog 吸収（出典管理が別課題）。**2026-09-29 レビューで乖離を実証**: aiLimits.ts:7-17 は slot 実 id と不一致で、slot id が `openai-compatible` に解決される groq/perplexity/openrouter/anthropic/claude/localai の cap は到達不能・`openai2`/`lm-studio`/`openai-compatible`/`built-in-ai` は欠落・幻の `'localai'` が builtInAIClient.ts:205 で使用。cap が効くのは openai/gemini/ollama のみ（残りは GLOBAL_MAX_TOKENS=16000 にフォールバック）・`RemoteAIService` factory 分岐の `createProvider` 化（循環リスク要設計）・per-provider `StorageKeys`/`defaults` の型自動生成（単独 PBI 相当）。出典: 2026-08-31 backlog 06d（効果確認 2026-09-01 済）+ 2026-09-29 大局的レビュー（乖離証拠追記） |
 | text/tokenizer 3 系統 `splitSentences`/`toWordSet` の署名化 | 第 3 の similarity 消費者の出現 | 各 NOTE は正確で動作リスクなし（arch2・Speculative） |
 | debug envelope のヘルパー化 | 次回 testConnection 改修時 | Gemini/OpenAI で debug envelope 組み立てが反復（形状差の検証が必要 — arch4/arch5 見送り） |
 | `extractMainContent` string entry の削減 | bench の再計測タイミング（c1/c4 baseline 更新時） | entry 2 種は c1/c4 計測面として維持中（PBI 13・arch5 見送り） |
@@ -155,7 +155,7 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | utils/ の物理再階層化（約120モジュール移動。層定義は PBI 2026-09-17-05 で import boundary lint として機械化済み） | — | PBI 05 完了後に violation 率・循環 dynamic import の残数が基準を超える時 / `utils/` の新規追加が分類作業の継続コスト化した時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
 | formatBytes 双子統合（cleansingStatsView の4桁有効数字 GB/MB/KB 版と entryByteDelta の toFixed(1) MB/KB/B 版。出力差の統一は意図的 UI 変更になる） | 1.6 | UI 出力統一の要望 / いずれかの形式変更が必要になった時 | [0918b](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918b.md) |
 | console → logger seam 統一（dashboard/popup 約30サイト。init tracing は意図的 console の可能性があり設計判断が残る） | 2.1 | 可観測性方針の明確化（console 残置の許容範囲を LAYERS.md 等に規定する時）/ ダッシュボードのエラーログ収集を強化する時 | [0918c](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918c.md) |
-| P3: 2 wire table の dashboard-hop codec 形状統合（interface 抽出のみで deletion test passes） | — | 2 wire table を同時に改修する時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
+| P3: 2 wire table の dashboard-hop codec 形状統合（interface 抽出のみで deletion test passes） | — | 2 wire table を同時に改修する時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md)。**2026-09-28 追記**: archiveWireTable 行内の `backendArgs`/`depsArgs` 双子（7 行 byte 同一・`archivePreview` のみ `includeDeleted` 正規化が乖離、`src/messaging/archiveWireTable.ts:219/220` 等対 `:126/127`）を着手時の同梱対象に含める |
 | P4: ensureBackend/getBackend の resolver 入力 literal（trivial サイズ） | — | backend 状態 field の追加時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
 | ProviderSlotRunner 化（要約 7 フック + 接続テスト 3 フックのスロット走査を `runSlots(slots, task)` に統合。slotFailures 組立の 2 経路 drift を構造的に防止） | 4.0 | 直近の VULN-001/002 修正（origin 認可・ペアリング禁止）の運用が落ち着いた後の AI プロバイダ改修時 | [0923](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923.md) |
 | queryPlan Interface 圧縮（`planStorageQuery(q): QuerySpec` 唯一 Seam 化 + `qualifyCondition` regex の列ホワイトリスト駆動置換） | 1.5 | OPFS/IDB/fallback 以外の backend 追加時 / 新列追加で qualifyCondition 誤爆が顕在化する時 | [0923](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923.md) |
@@ -164,6 +164,18 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | Retry-policy Module（gateway / transport / storage CAS / visitAdmission / fetch / stepExecutor / tranco の 7 retry 綴りを `shouldRetry＋delayMs` の単一 Seam に。retriable 述語自体は統一対象外） | 2.7 | いずれかの retry 系改修時 | [0923c](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923c.md) |
 
 （0915 は全11候補が PBI 02-12 として消化済み、holistic-0921 の台帳送り3件は 2026-09-22 の保留候補 PBI 01/02/03 として採番済みのため、両台帳は候補ゼロでアーカイブ。0915b の PBI 03 でスコープ外とした recordingCache ensureReady の別候補は RecordingCache→RecordingCacheInstance 移行（2026-08-17）後の実在確認が前提のため、次回 recording cache 系改修時に要否を再評価する。）
+
+**2026-09-27 整理（2026-09-26 メタ認知分析ラウンド台帳の未採番候補を統合・5 項目）:**
+
+| 項目 | RICE | 再評価条件 | 出典 |
+|------|------|-----------|------|
+| 熟読度フィルター＆マトリクス（提案1・不採用→トリガー管理） | 0.60 | 可視区間の累積計時が記録経路に配線されたとき（`visit_duration` は新規行で常に NULL・滞在時間パネルは `54cfab5e` で撤去済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| 遷移データだけを削除するボタン（`nav_source_url` / `search_query` の 2 列のみを消す操作） | — | ユーザーから要望があったとき（現状は記録 OFF が将来行も止めるのみ・既存行は履歴削除で消える） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| `EXPORT_COLUMNS` に遷移の 2 列を加える | — | エクスポートの互換方針を見直すとき（`fallback_reason` と同じく列は固定） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| 手動保存でも遷移を記録する（03 の v1 は自動記録 `valid-visit` のみ対象） | — | PBI 03 完了後の利用実態確認後（03 は 2026-09-26 に実装完了・アーカイブ済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| キーワード単位のループ検出（`wordClusterAdapter` の語抽出を流用し、タグ OFF のユーザーにもテーマ単位のループを出す） | — | PBI 01 完了後（完了済み）にドメイン・URL 単位では粗いという声が出たとき | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+
+（メタ認知台帳の採用 4 PBI（01-04）は全件実装・アーカイブ済みのため、未採番候補 5 件を本台帳へ統合し、台帳は 2026-09-27 にアーカイブ。）
 
 ## 運用
 

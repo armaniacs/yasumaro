@@ -31,6 +31,7 @@ import { sqliteWireFor, type SqliteWireDescriptor, type SqliteWireOp } from '../
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
+  purgeAuditLog as sqlitePurgeAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { planPurge, planQueryOrSearch, planSearch } from './queryPlanner.js';
@@ -220,6 +221,15 @@ async function handleContentPurge(msg: SqliteMessage, sendResponse: (r: unknown)
   );
 }
 
+async function handleAuditLogPurge(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_AUDIT_LOG_PURGE' }>).payload;
+  // Same trust boundary as the other purges: a NaN/negative window makes
+  // purgeCutoffMs NaN and would report "0 purged" while deleting nothing.
+  // maxRecords 0 is the planner's "skip this dimension" marker — audit_log
+  // has no cap dimension, the age filter is the whole purge.
+  await runPlannedPurge({ ...payload, maxRecords: 0 }, sendResponse, (days) => sqlitePurgeAuditLog(days));
+}
+
 /**
  * Table-driven archive dispatch (PBI 2026-09-07-22, codec by 2026-09-09-05).
  *
@@ -312,6 +322,7 @@ const handlerRecord = {
   SQLITE_QUERY: (msg, sendResponse) => handleSqliteWire('records', msg, sendResponse),
   SQLITE_AUDIT_LOG_INSERT: (msg, sendResponse) => handleSqliteWire('insertAuditLog', msg, sendResponse),
   SQLITE_AUDIT_LOG_QUERY: (msg, sendResponse) => handleSqliteWire('auditLog', msg, sendResponse),
+  SQLITE_AUDIT_LOG_PURGE: handleAuditLogPurge,
   SQLITE_SEARCH: handleSearch,
   SQLITE_UPDATE: (msg, sendResponse) => handleSqliteWire('update', msg, sendResponse),
   SQLITE_DELETE: (msg, sendResponse) => handleSqliteWire('delete', msg, sendResponse),

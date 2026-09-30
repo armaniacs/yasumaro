@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { drainMacrotask, useTimerClock, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
 type MutableLastError = { lastError: chrome.runtime.LastError | null };
@@ -1129,7 +1132,47 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     expect(mockSetAll).toHaveBeenCalled();
     const savedArg = mockSetAll.mock.calls[0]![0];
     expect(savedArg.domain_whitelist).toContain('example.com');
-    expect(document.getElementById('mainStatus')!.className).toBe('success');
+    expect(document.getElementById('mainStatus')!.className).toBe('status-message success');
+  });
+
+  it('addDomain: rejection renders the error chip through the same contract', async () => {
+    mockGetAll.mockResolvedValue({ domain_whitelist: [] });
+    mockExtractDomain.mockReturnValue('not a valid pattern');
+    await initPrivatePanel();
+    const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
+    btn.click();
+    await waitForMock(() => {
+      expect(document.getElementById('mainStatus')!.textContent).toContain('Invalid pattern');
+    });
+    expect(document.getElementById('mainStatus')!.className).toBe('status-message error');
+  });
+
+  it('addDomain: mainStatus clears on the popup-only 2000ms, not the 3s/5s defaults', async () => {
+    useTimerClock();
+    try {
+      mockGetAll.mockResolvedValue({ domain_whitelist: [] });
+      mockExtractDomain.mockReturnValue('example.com');
+      await initPrivatePanel();
+      mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 } as any);
+      document.getElementById('statusAddDomain')!.click();
+      // 0ms advances, never a guessed duration: the clock has to stay below the
+      // 2000ms under test or the assertion would be measuring the clear.
+      const status = document.getElementById('mainStatus')!;
+      for (let i = 0; i < 20 && !status.classList.contains('success'); i++) {
+        await vi.advanceTimersByTimeAsync(0);
+      }
+
+      expect(status.className).toBe('status-message success');
+
+      vi.advanceTimersByTime(1999);
+      expect(status.textContent).toContain('Domain added');
+
+      vi.advanceTimersByTime(1);
+      expect(status.textContent).toBe('');
+      expect(status.className).toBe('status-message');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('addDomain: domain already in whitelist — skips save', async () => {
@@ -1318,6 +1361,15 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     // Temporarily remove privacyContent to skip rendering? Instead directly ensure no error
     await expect(initStatusPanel()).resolves.not.toThrow();
   });
+
+  it('routes all four mainStatus renders through the shared helper, with no bare class write left', () => {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'statusPanel.ts'),
+      'utf-8'
+    );
+    expect(source.match(/showStatus\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    expect(source).not.toMatch(/className\s*=\s*'(success|error)'/);
+  });
 });
 
 describe('additional branch coverage — trust and record fallback', () => {
@@ -1393,8 +1445,7 @@ describe('additional branch coverage — trust and record fallback', () => {
     await updateTrustStatus('https://example.com');
     const btn = document.getElementById('btnRequestPermission') as HTMLButtonElement;
     await btn.click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(mockRecordDeniedVisit).toHaveBeenCalled();
+    await waitForMock(() => expect(mockRecordDeniedVisit).toHaveBeenCalled());
   });
 
   it('covers permission denied animation branch with errorMsg present', async () => {
@@ -1448,8 +1499,7 @@ describe('additional branch coverage — trust and record fallback', () => {
     await initAllUrlsPermissionBanner();
     const btn = document.getElementById('btnRequestAllUrls') as HTMLButtonElement;
     await btn.click();
-    await new Promise((r) => setTimeout(r, 10));
-    expect(mockRequestAllUrls).toHaveBeenCalled();
+    await waitForMock(() => expect(mockRequestAllUrls).toHaveBeenCalled());
   });
 
   it('covers missing recordBtn/recordBtn disabled branches (146,153)', async () => {

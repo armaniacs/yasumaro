@@ -16,6 +16,7 @@ import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 
@@ -500,14 +501,6 @@ export class ModelsDevDialog {
      * Show error message
      */
     private showError(message: string): void {
-        if (this.errorEl) {
-            this.errorEl.textContent = message;
-            this.errorEl.classList.remove('hidden');
-
-            // Hide after 5 seconds
-            setTimeout(() => {
-                this.errorEl?.classList.add('hidden');
-            }, 5000);
-        }
+        showStatus(this.errorEl, message, 'error', { durationMs: 5000 });
     }
 }

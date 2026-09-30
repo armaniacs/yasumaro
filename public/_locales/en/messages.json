@@ -161,6 +161,12 @@
   "reviewSummaryFailed": {
     "message": "Failed to generate summary."
   },
+  "aiProviderBreakerEnabledLabel": {
+    "message": "Pause a provider after repeated failures"
+  },
+  "aiProviderBreakerEnabledHelp": {
+    "message": "When enabled, a provider that keeps failing is paused for 5 to 15 minutes and skipped until the pause ends. Turn this off to retry every provider on every summary. Pausing saves API costs, but the summary is not generated while a provider is paused."
+  },
   "googleGemini": {
     "message": "Google Gemini"
   },
@@ -586,6 +592,9 @@
   "recordingFailed": {
     "message": "Recording Failed"
   },
+  "pendingRecoveryReady": {
+    "message": "Automatic retries were exhausted. You can re-run this recording from the pending pages list."
+  },
   "obsidianSyncFailed": {
     "message": "Obsidian Sync Failed"
   },
@@ -654,6 +663,9 @@
   },
   "acceptCertificate": {
     "message": "Click here to accept self-signed certificate"
+  },
+  "certGuideFirefox": {
+    "message": "Firefox keeps its own certificate store, separate from the OS one, so a certificate installed on the operating system can still be untrusted in Firefox. Do one of the following: (1) open the link above in a new tab and add a certificate exception, or (2) import the CA certificate under Settings → Privacy & Security → Certificates. Link target: {url}"
   },
   "errorProtocol": {
     "message": "Error: Protocol must be \"http\" or \"https\"."
@@ -1163,11 +1175,11 @@
   "passwordIncorrect": {
     "message": "Incorrect password."
   },
-  "passwordSaved": {
-    "message": "Master password saved successfully."
+  "masterPasswordReencryptedKept": {
+    "message": "Master password updated. API keys were kept."
   },
-  "passwordRemoved": {
-    "message": "Master password removed."
+  "masterPasswordReencryptAborted": {
+    "message": "Could not decrypt {fields}. The operation was stopped and nothing was changed. Re-enter the items, then retry."
   },
   "passwordRequired": {
     "message": "Please enter your master password."
@@ -4522,6 +4534,9 @@
   },
   "cleansingFeedbackReason": {
     "message": "Reason"
+  },
+  "cleansingFeedbackReasons": {
+    "message": "Reasons"
   },
   "cleansingFeedbackDate": {
     "message": "Date"

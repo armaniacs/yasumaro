@@ -47,6 +47,45 @@ export interface PipelineError {
 }
 
 /**
+ * Structured offline-queue enqueue result, attached to the thrown error by
+ * StepExecutor so the outcome policy can decide the sole recovery owner
+ * (PBI 2026-09-25-12): when `enqueued` is true the offline job is the only
+ * owner and no pending page may be registered for the same recording.
+ */
+export interface OfflineEnqueueInfo {
+  /**
+   * The job is durably queued — the offline job is the sole recovery owner.
+   * The only fact the outcome policy branches on: whether a slot was eligible
+   * is decided by the step itself, and the job kind is not needed after the
+   * job is in the queue.
+   */
+  enqueued: boolean;
+}
+
+/**
+ * Reads the offline-enqueue result a step failure may carry. Absent when the
+ * step never reached the offline-queue eligibility gate.
+ */
+export function readOfflineEnqueueInfo(thrown: unknown): OfflineEnqueueInfo | undefined {
+  if (thrown === null || typeof thrown !== 'object') {
+    return undefined;
+  }
+  const info = (thrown as { offlineEnqueue?: unknown }).offlineEnqueue;
+  if (info === null || typeof info !== 'object') {
+    return undefined;
+  }
+  return info as OfflineEnqueueInfo;
+}
+
+/** Attaches the enqueue result to the original error without altering it. */
+export function attachOfflineEnqueueInfo(error: unknown, info: OfflineEnqueueInfo): void {
+  if (error === null || typeof error !== 'object') {
+    return;
+  }
+  (error as { offlineEnqueue?: OfflineEnqueueInfo }).offlineEnqueue = info;
+}
+
+/**
  * Permission check result
  */
 export interface PermissionCheckResult {

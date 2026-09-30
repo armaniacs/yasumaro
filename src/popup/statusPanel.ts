@@ -11,7 +11,10 @@ import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
+import { buildRemovedCounts } from '../utils/commonTypes.js';
+import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
 
@@ -313,20 +316,17 @@ function attachPrivacyActionListeners(): void {
         // in the shared whitelist writer seam.
         const result = await addDomainToWhitelist(domain);
         if (result.ok && result.added) {
-          const statusDiv = document.getElementById('mainStatus');
-          if (statusDiv) {
-            statusDiv.textContent = getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`);
-            statusDiv.className = 'success';
-          }
+          // 2000ms is the popup-only contract: the panel is too small to keep
+          // the dashboard's 3s/5s defaults.
+          showStatus('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success', { durationMs: 2000 });
           await initStatusPanel();
         } else if (!result.ok) {
-          const statusDiv = document.getElementById('mainStatus');
-          if (statusDiv) {
-            statusDiv.textContent = result.reason === 'no-domain'
-              ? 'Invalid URL'
-              : `Invalid pattern: ${domain}`;
-            statusDiv.className = 'error';
-          }
+          showStatus(
+            'mainStatus',
+            result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
+            'error',
+            { durationMs: 2000 }
+          );
         }
       }
     }
@@ -338,20 +338,15 @@ function attachPrivacyActionListeners(): void {
     if (tab?.url) {
       const result = await addPathToWhitelist(tab.url);
       if (result.ok && result.added) {
-        const statusDiv = document.getElementById('mainStatus');
-        if (statusDiv) {
-          statusDiv.textContent = getMessageOr('pathAddedToWhitelist', `Added path to whitelist`);
-          statusDiv.className = 'success';
-        }
+        showStatus('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success', { durationMs: 2000 });
         await initStatusPanel();
       } else if (!result.ok) {
-        const statusDiv = document.getElementById('mainStatus');
-        if (statusDiv) {
-          statusDiv.textContent = result.reason === 'no-domain'
-            ? 'Invalid URL'
-            : `Invalid pattern: ${tab.url}`;
-          statusDiv.className = 'error';
-        }
+        showStatus(
+          'mainStatus',
+          result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
+          'error',
+          { durationMs: 2000 }
+        );
       }
     }
   });
@@ -405,25 +400,29 @@ function initCleansingFeedbackButton(): void {
       const domain = getDomainForUrl(url) ?? '';
       let htmlSnippet = '';
       let removedByReason: Record<string, number> = {};
+      let aiSummary: AiSummaryRemovedStats | undefined;
       if (tab?.id !== undefined) {
         const resp = await requestContentFromTab(tab.id);
         if (resp?.content) htmlSnippet = resp.content.slice(0, 500);
-        if (resp?.cleanseStats) removedByReason = { ...resp.cleanseStats } as unknown as Record<string, number>;
-        if (resp?.aiSummaryCleansedStats) {
-          removedByReason = { ...removedByReason, ...resp.aiSummaryCleansedStats } as unknown as Record<string, number>;
-        }
+        // Counts and AI-summary byte/reason stats are separate units: the
+        // builder keeps them apart and the entry carries them in separate
+        // fields, so a byte size can never be read as a removal count.
+        const counts = buildRemovedCounts(resp?.cleanseStats, resp?.aiSummaryCleansedStats);
+        removedByReason = counts.byReason;
+        aiSummary = counts.aiSummary;
       }
       if (!htmlSnippet) {
         htmlSnippet = document.documentElement.outerHTML.slice(0, 500);
       }
       const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
-      await enqueueFeedback({ url, domain, htmlSnippet, removedByReason });
-      if (statusEl) statusEl.textContent = getMessageOr('reportCleansingFeedbackSuccess', '報告しました');
+      await enqueueFeedback({ url, domain, htmlSnippet, removedByReason, ...(aiSummary ? { aiSummary } : {}) });
+      // 2000ms is the popup-only contract: the panel is too small to keep the
+      // dashboard's 3s/5s defaults.
+      showStatus(statusEl, getMessageOr('reportCleansingFeedbackSuccess', '報告しました'), 'success', { durationMs: 2000 });
     } catch (e) {
-      if (statusEl) statusEl.textContent = getMessageOr('reportCleansingFeedbackError', '報告に失敗しました');
+      showStatus(statusEl, getMessageOr('reportCleansingFeedbackError', '報告に失敗しました'), 'error', { durationMs: 2000 });
       logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
     }
-    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2000);
     });
   });
 }

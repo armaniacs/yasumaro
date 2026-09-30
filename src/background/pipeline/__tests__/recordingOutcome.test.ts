@@ -26,7 +26,7 @@ vi.mock('../../../utils/logger/api.js', () => ({
 }));
 
 import { decideStepOutcome, finalizeSuccess, type OutcomeAdapters } from '../recordingOutcome.js';
-import { ErrorStrategy, type RecordingContext } from '../types.js';
+import { attachOfflineEnqueueInfo, ErrorStrategy, type RecordingContext } from '../types.js';
 import { PrivatePageError } from '../steps/checkPrivacyHeadersStep.js';
 import { DuplicateError } from '../steps/checkDuplicateStep.js';
 import { RegenerateUpdateError } from '../steps/saveSqliteStep.js';
@@ -263,6 +263,77 @@ describe('decideStepOutcome — regenerate AI failure (PBI 2026-09-22-04 review 
       fakes,
     );
     expect(outcome.done).toBe(true);
+    expect(fakes.pendings).toHaveLength(1);
+  });
+});
+
+describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
+  it('RETRY failure with a successfully enqueued offline job registers NO pending page', () => {
+    const fakes = makeFakes();
+    const error = new Error('AI provider unreachable');
+    attachOfflineEnqueueInfo(error, { enqueued: true });
+    const outcome = decideStepOutcome(
+      error,
+      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
+      makeContext(),
+      fakes,
+    );
+    expect(outcome.done).toBe(true);
+    if (!outcome.done) throw new Error('expected terminal outcome');
+    expect(outcome.result.success).toBe(false);
+    expect(outcome.result.error).toBe('AI provider unreachable');
+    expect(fakes.pendings).toHaveLength(0);
+    expect(fakes.notifiedErrors).toHaveLength(1);
+  });
+
+  it('RETRY failure whose offline enqueue failed still registers the pending page (sole owner)', () => {
+    const fakes = makeFakes();
+    const error = new Error('AI provider unreachable');
+    attachOfflineEnqueueInfo(error, { enqueued: false });
+    const outcome = decideStepOutcome(
+      error,
+      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
+      makeContext(),
+      fakes,
+    );
+    expect(outcome.done).toBe(true);
+    expect(fakes.pendings).toHaveLength(1);
+    expect(fakes.notifiedErrors).toHaveLength(1);
+  });
+
+  it('finalizeSuccess with an enqueued obsidian_sync failure registers NO pending page', () => {
+    const fakes = makeFakes();
+    const error = new Error('Obsidian unreachable');
+    attachOfflineEnqueueInfo(error, { enqueued: true });
+    const context = makeContext({
+      errors: [{
+        step: 'saveObsidian',
+        error,
+        strategy: ErrorStrategy.BEST_EFFORT,
+        timestamp: Date.now(),
+        recoveryKind: 'obsidian_sync',
+      }],
+    });
+    const result = finalizeSuccess(context, fakes);
+    expect(result.success).toBe(true);
+    expect(fakes.pendings).toHaveLength(0);
+  });
+
+  it('finalizeSuccess with an obsidian_sync failure and a failed enqueue still registers the pending page', () => {
+    const fakes = makeFakes();
+    const error = new Error('Obsidian unreachable');
+    attachOfflineEnqueueInfo(error, { enqueued: false });
+    const context = makeContext({
+      errors: [{
+        step: 'saveObsidian',
+        error,
+        strategy: ErrorStrategy.BEST_EFFORT,
+        timestamp: Date.now(),
+        recoveryKind: 'obsidian_sync',
+      }],
+    });
+    const result = finalizeSuccess(context, fakes);
+    expect(result.success).toBe(true);
     expect(fakes.pendings).toHaveLength(1);
   });
 });

@@ -196,14 +196,15 @@ describe('extractPageContent', () => {
         expect(addEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
     });
 
-    it('loads settings from a single storage key', async () => {
+    it('loads settings from the snapshot reader (PBI 2026-09-28-30)', async () => {
         const getSpy = vi.fn((_keys: string | string[] | null) => {
             return Promise.resolve({ settings: {} });
         });
         chrome.storage.local.get = getSpy as unknown as typeof chrome.storage.local.get;
 
         await init();
-        expect(getSpy).toHaveBeenCalledWith(['settings']);
+        // Snapshot read: blob plus migration state (no scattered sweep here).
+        expect(getSpy).toHaveBeenCalledWith(['settings', 'settings_migrated']);
     });
 
     it('schedules a one-shot deadline timer after init (PBI 02: polling removed)', async () => {

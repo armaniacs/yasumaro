@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { drainMacrotask, waitForMock } from '../../../../testDir/waitPolicy.js';
 import type { Mock } from 'vitest';
 import type { CustomPrompt } from '../../../utils/types.js';
 import type { Settings } from '../../../utils/storage/types.js';
@@ -465,7 +466,7 @@ describe('customPromptManager', () => {
       await vi.waitFor(() => {
         const statusDiv = el('promptStatus');
         expect(statusDiv.textContent).toBe('Invalid prompt content');
-        expect(statusDiv.className).toBe('error');
+        expect(statusDiv.className).toBe('status-message error');
       });
 
       expect(mockSetAll).not.toHaveBeenCalled();
@@ -571,8 +572,12 @@ describe('customPromptManager', () => {
 
       el('delete-prompt-delete_test_2').click();
 
-      // Give microtasks time to process
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // The handler awaits the confirm dialog before deciding, so anchor on the
+      // dialog call, then cross a macrotask turn so its continuation has run.
+      await waitForMock(() => {
+        expect(mockShowConfirmDialog).toHaveBeenCalled();
+      });
+      await drainMacrotask();
 
       expect(mockSetAll).not.toHaveBeenCalled();
       expect(settings.custom_prompts).toHaveLength(1);
@@ -784,7 +789,7 @@ describe('customPromptManager', () => {
 
       const statusDiv = el('promptStatus');
       expect(statusDiv.textContent).toBeTruthy();
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe('status-message success');
     });
 
     it('should show error status when name is empty', async () => {
@@ -795,7 +800,7 @@ describe('customPromptManager', () => {
 
       await vi.waitFor(() => {
         const statusDiv = el('promptStatus');
-        expect(statusDiv.className).toBe('error');
+        expect(statusDiv.className).toBe('status-message error');
       });
     });
   });

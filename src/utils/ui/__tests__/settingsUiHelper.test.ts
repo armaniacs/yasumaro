@@ -54,7 +54,7 @@ describe('settingsUiHelper', () => {
 
             const el = document.getElementById('status-message');
             expect(el?.textContent).toBe('Saved!');
-            expect(el?.className).toBe('success');
+            expect(el?.className).toBe('status-message success');
         });
 
         test('displays an error message', () => {
@@ -63,7 +63,7 @@ describe('settingsUiHelper', () => {
 
             const el = document.getElementById('status-message');
             expect(el?.textContent).toBe('Error!');
-            expect(el?.className).toBe('error');
+            expect(el?.className).toBe('status-message error');
         });
 
         test('clears a success message after 3 seconds', () => {
@@ -74,7 +74,7 @@ describe('settingsUiHelper', () => {
 
             const el = document.getElementById('status-message');
             expect(el?.textContent).toBe('');
-            expect(el?.className).toBe('');
+            expect(el?.className).toBe('status-message');
         });
 
         test('clears an error message after 5 seconds', () => {
@@ -86,11 +86,57 @@ describe('settingsUiHelper', () => {
 
             vi.advanceTimersByTime(1);
             expect(document.getElementById('status-message')?.textContent).toBe('');
-            expect(document.getElementById('status-message')?.className).toBe('');
+            expect(document.getElementById('status-message')?.className).toBe('status-message');
         });
 
         test('does nothing for a nonexistent element ID', () => {
             expect(() => showStatus('nonexistent', 'msg', 'success')).not.toThrow();
+        });
+
+        test('keeps the base class when the type class changes, never both', () => {
+            vi.useFakeTimers();
+            const el = document.getElementById('status-message')!;
+
+            showStatus(el, 'Saved!', 'success');
+            showStatus(el, 'Failed!', 'error');
+
+            expect(el.className).toBe('status-message error');
+
+            showStatus(el, 'Saved again!', 'success');
+            expect(el.className).toBe('status-message success');
+        });
+
+        test('honours an explicit duration instead of the per-type default', () => {
+            vi.useFakeTimers();
+            showStatus('status-message', 'Saved!', 'success', { durationMs: 2000 });
+
+            vi.advanceTimersByTime(1999);
+            expect(document.getElementById('status-message')?.textContent).toBe('Saved!');
+
+            vi.advanceTimersByTime(1);
+            expect(document.getElementById('status-message')?.textContent).toBe('');
+        });
+
+        test('autoClear: false keeps the message and schedules no clear', () => {
+            vi.useFakeTimers();
+            showStatus('status-message', 'Saved!', 'success', { autoClear: false });
+
+            vi.advanceTimersByTime(60000);
+
+            const el = document.getElementById('status-message');
+            expect(el?.textContent).toBe('Saved!');
+            expect(el?.className).toBe('status-message success');
+        });
+
+        test('never adds the toast animation class that would double-apply the keyframes', () => {
+            vi.useFakeTimers();
+            const el = document.getElementById('status-message')!;
+
+            showStatus(el, 'Saved!', 'success');
+            showStatus(el, 'Failed!', 'error');
+            vi.advanceTimersByTime(5000);
+
+            expect(el.classList.contains('show')).toBe(false);
         });
     });
 

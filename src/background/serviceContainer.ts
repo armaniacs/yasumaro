@@ -21,6 +21,7 @@ export const ServiceTokens = {
   rateLimiter: 'rateLimiter',
   manualContentFetcher: 'manualContentFetcher',
   remoteAiService: 'remoteAiService',
+  aiProviderBreaker: 'aiProviderBreaker',
   aiService: 'aiService',
   settingsRepository: 'settingsRepository',
   pendingWriteQueue: 'pendingWriteQueue',

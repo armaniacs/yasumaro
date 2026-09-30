@@ -10,7 +10,7 @@ import { backoffDelayMs } from '../utils/backoff.js';
 import { categorizeError } from './sqliteRpcClient.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
-import { CURRENT_PROTOCOL_VERSION } from '../background/messageTypes.js';
+import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import { ChromeTransport, type TransportPort } from './messageTransport.js';
 import { tokenExempt, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from './sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from '../background/handlers/dashboardSqliteProtocol.js';

@@ -3,6 +3,7 @@
  * The HTTP summary spine (executeHttpSummaryFlow) is driven once through the
  * interface with faked hooks — providers narrow to parsing/limits afterwards.
  */
+import { readFileSync } from 'node:fs';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 const { fetchWithRetryMock, applyCustomPromptMock, readJsonCappedMock, buildAllowedUrlsMock } = vi.hoisted(() => ({
@@ -56,14 +57,13 @@ vi.mock('../../../../utils/logger/api.js', () => ({
 }));
 
 import {
-  AIProviderStrategy,
-  type AISummaryResult,
-  type AIProviderConnectionResult,
+  HttpProviderStrategy,
   type HttpSummaryHooks,
-} from '../ProviderStrategy.js';
+} from '../HttpProviderStrategy.js';
+import type { AISummaryResult, AIProviderConnectionResult } from '../ProviderStrategy.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
-class FlowProbe extends AIProviderStrategy {
+class FlowProbe extends HttpProviderStrategy {
   constructor(
     settings: Settings,
     private readonly hooks: HttpSummaryHooks,
@@ -92,12 +92,10 @@ function makeHooks(overrides: Partial<HttpSummaryHooks> = {}): HttpSummaryHooks 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: userPrompt }),
     }),
-    handleErrorResponse: async () => ({ success: false, summary: 'hook error' }),
     extractSummary: async (data) => ({ success: true, summary: `parsed:${JSON.stringify(data)}` }),
     ...overrides,
   };
 }
-
 function okResponse(body: unknown = {}): Response {
   return { ok: true, json: async () => body } as Response;
 }
@@ -154,12 +152,35 @@ describe('executeHttpSummaryFlow', () => {
     expect(fetchWithRetryMock).not.toHaveBeenCalled();
   });
 
-  it('non-ok response delegates to handleErrorResponse', async () => {
+  // `fetchWithRetry` throws on a non-ok response, so no provider owns a
+  // non-ok wording any more. The template still refuses to parse an error
+  // body as a summary, and reports the same generic sentence the throw path
+  // reports — the one users already saw for every HTTP failure.
+  it('reports a non-ok response as a generic failure instead of parsing it', async () => {
     fetchWithRetryMock.mockResolvedValue({ ok: false, status: 404 } as Response);
+    readJsonCappedMock.mockClear();
     const probe = new FlowProbe({} as Settings, makeHooks());
+
     const result = await probe.generateSummary('hello');
 
-    expect(result).toEqual({ success: false, summary: 'hook error' });
+    expect(result).toEqual({
+      success: false,
+      summary: 'Error: Failed to generate summary. Please try again or check your settings.',
+      error: 'HTTP 404',
+      failure: { kind: 'http', status: 404, method: 'POST' },
+    });
+    // The error body must never reach the parser.
+    expect(readJsonCappedMock).not.toHaveBeenCalled();
+  });
+
+  // The predicate lives in src/utils/fetch.ts and both flows inherit it, so a
+  // provider cannot install a retry policy of its own.
+  it('installs no retry predicate of its own', async () => {
+    const probe = new FlowProbe({} as Settings, makeHooks());
+    await probe.generateSummary('hello');
+
+    const retry = fetchWithRetryMock.mock.calls[0]![2] as Record<string, unknown>;
+    expect(retry.shouldRetry).toBeUndefined();
   });
 
   it('timeout maps to the shared timeout message', async () => {

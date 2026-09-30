@@ -107,9 +107,11 @@ describe('tag cluster panel — query retry', () => {
     await panel.load?.();
     // Reload start resets the empty-state message before the result renders,
     // so a recovered load cannot keep the error binding. This panel mounts
-    // without a filter host, so the restored message is the generic one.
+    // without a filter host, so the range comes from the declared 'last7'
+    // preset (PBI 2026-09-28-09 unified the missing-host fallback onto the
+    // preset) — the recovered message is the period-aware one.
     expect(document.getElementById('tagClusterEmptyState')!.getAttribute('data-i18n')).toBe(
-      'tagClusterEmptyState',
+      'tagCluster_empty_period',
     );
     expect(document.getElementById('tagClusterEmptyState')!.hidden).toBe(false);
   });

@@ -12,6 +12,8 @@
 // 実際の型を使って値の割り当てが通ることをコンパイル時に保証しつつ、
 // 実行時に正しい文字列リテラルの集合であることを検証する
 import type { RecordType, AiSummaryCleansedReason } from '../commonTypes.js';
+import { buildRemovedCounts, readRemovedCounts } from '../commonTypes.js';
+import type { ContentResponse } from '../../messaging/types.js';
 
 describe('commonTypes: RecordType', () => {
     it("'auto' is a valid RecordType", () => {
@@ -45,6 +47,109 @@ describe('commonTypes: AiSummaryCleansedReason', () => {
         const value: AiSummaryCleansedReason = reason;
         expect(typeof value).toBe('string');
         expect(value.length).toBeGreaterThan(0);
+    });
+});
+
+describe('commonTypes: buildRemovedCounts', () => {
+    const aiStats = (overrides: Partial<NonNullable<ContentResponse['aiSummaryCleansedStats']>> = {}) => ({
+        aiSummaryOriginalBytes: 31204,
+        aiSummaryCleansedBytes: 21000,
+        aiSummaryCleansedElements: 12,
+        aiSummaryCleansedReason: 'ads' as AiSummaryCleansedReason,
+        ...overrides,
+    });
+
+    const counts = (overrides: Partial<NonNullable<ContentResponse['cleanseStats']>> = {}) => ({
+        hardStripRemoved: 4,
+        keywordStripRemoved: 2,
+        totalRemoved: 6,
+        ...overrides,
+    });
+
+    it('counts only: keeps the count map and adds no aiSummary group', () => {
+        const result = buildRemovedCounts(counts());
+        expect(result.byReason).toEqual({ hardStripRemoved: 4, keywordStripRemoved: 2, totalRemoved: 6 });
+        expect(result.aiSummary).toBeUndefined();
+    });
+
+    it('aiSummary only: keeps byte totals and reasons out of the count map', () => {
+        const result = buildRemovedCounts(undefined, aiStats());
+        expect(result.byReason).toEqual({});
+        expect(result.aiSummary).toEqual({
+            reason: 'ads',
+            elements: 12,
+            originalBytes: 31204,
+            cleansedBytes: 21000,
+        });
+        expect(Object.keys(result.byReason)).toHaveLength(0);
+    });
+
+    it('both: neither side overwrites the other', () => {
+        const result = buildRemovedCounts(counts(), aiStats({ aiSummaryCleansedReason: 'multiple' }));
+        expect(result.byReason).toEqual({ hardStripRemoved: 4, keywordStripRemoved: 2, totalRemoved: 6 });
+        expect(result.aiSummary).toMatchObject({ reason: 'multiple', originalBytes: 31204, cleansedBytes: 21000 });
+    });
+
+    it('neither: an empty entry, no exception', () => {
+        const result = buildRemovedCounts(undefined, undefined);
+        expect(result).toEqual({ byReason: {} });
+    });
+
+    it('reason array: copied, not shared with the response object', () => {
+        const response = aiStats({ aiSummaryCleansedReasons: ['ads', 'nav'] });
+        const result = buildRemovedCounts(undefined, response);
+        expect(result.aiSummary?.reasons).toEqual(['ads', 'nav']);
+        response.aiSummaryCleansedReasons?.push('card');
+        expect(result.aiSummary?.reasons).toEqual(['ads', 'nav']);
+    });
+
+    it('reason array: omitted when the response has none', () => {
+        const result = buildRemovedCounts(undefined, aiStats());
+        expect(result.aiSummary).not.toHaveProperty('reasons');
+    });
+});
+
+describe('commonTypes: readRemovedCounts', () => {
+    it('routes the wire aiSummary* keys out of the count map', () => {
+        const result = readRemovedCounts({
+            keyword: 1,
+            aiSummaryOriginalBytes: 31204,
+            aiSummaryCleansedBytes: 21000,
+            aiSummaryCleansedElements: 12,
+            aiSummaryCleansedReason: 'multiple',
+            aiSummaryCleansedReasons: ['ads', 'nav'],
+        });
+        expect(result.byReason).toEqual({ keyword: 1 });
+        expect(result.aiSummary).toEqual({
+            reason: 'multiple',
+            reasons: ['ads', 'nav'],
+            elements: 12,
+            originalBytes: 31204,
+            cleansedBytes: 21000,
+        });
+    });
+
+    it('has no aiSummary group when the record holds counts only', () => {
+        const result = readRemovedCounts({ keyword: 1, hardStripRemoved: 3 });
+        expect(result).toEqual({ byReason: { keyword: 1, hardStripRemoved: 3 } });
+    });
+
+    it('drops non-numeric leftovers from the count map', () => {
+        const result = readRemovedCounts({ keyword: 1, broken: Number.NaN, note: 'n/a' });
+        expect(result.byReason).toEqual({ keyword: 1 });
+        expect(result.aiSummary).toBeUndefined();
+    });
+
+    it('reads a partial aiSummary record without throwing', () => {
+        const result = readRemovedCounts({ aiSummaryCleansedElements: 5 });
+        expect(result.byReason).toEqual({});
+        expect(result.aiSummary).toEqual({ reason: 'none', elements: 5, originalBytes: 0, cleansedBytes: 0 });
+    });
+
+    it('ignores a malformed reason array', () => {
+        const result = readRemovedCounts({ aiSummaryCleansedReason: 'ads', aiSummaryCleansedReasons: 'nav' });
+        expect(result.aiSummary?.reason).toBe('ads');
+        expect(result.aiSummary?.reasons).toBeUndefined();
     });
 });
 

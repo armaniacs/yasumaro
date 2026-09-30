@@ -56,6 +56,8 @@ async function runDailyPurge(deps: AlarmHandlerDeps): Promise<void> {
   await handleDailyPurgeAlarm(
     (days, max) => deps.sqliteClient.maintain({ type: 'purgeOldRecords', retentionDays: days, maxRecords: max } as { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number }),
     (days, max, starred) => deps.sqliteClient.maintain({ type: 'purgeContent', retentionDays: days, maxRecords: max, includeStarred: starred } as { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean }),
+    undefined,
+    (days) => deps.sqliteClient.maintain({ type: 'purgeAuditLog', retentionDays: days } as { type: 'purgeAuditLog'; retentionDays?: number }),
   );
 }
 

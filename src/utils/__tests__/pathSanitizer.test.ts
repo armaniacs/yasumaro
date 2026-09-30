@@ -242,7 +242,7 @@ describe('encodePathForUrl - URLエンコード関数', () => {
 describe('既存コードとの統合検証', () => {
   it('integrates with buildDailyNotePath', async () => {
     const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
-    const testDate = new Date('2026-02-07');
+    const testDate = new Date(2026, 1, 7);
 
     // 危険な入力をサニタイズしてから使用
     const dangerousInput = '../../../malicious/path/../../';
@@ -257,7 +257,7 @@ describe('既存コードとの統合検証', () => {
 
   it('processes safe input normally in integration', async () => {
     const { buildDailyNotePath } = await import('../dailyNotePathBuilder.js');
-    const testDate = new Date('2026-02-07');
+    const testDate = new Date(2026, 1, 7);
 
     // 安全な入力
     const safeInput = 'journal/YYYY-MM-DD';

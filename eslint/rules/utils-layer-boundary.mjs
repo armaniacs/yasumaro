@@ -14,6 +14,14 @@
  * Type-only imports (`import type`) are skipped: they are erased at compile
  * time and create no runtime dependency edge.
  *
+ * The utils→background / utils→UI edge check below is different: it covers
+ * every file under src/utils/, not just the classified ones, and it also
+ * inspects dynamic `import()` and re-exports. A module can hide a reverse edge
+ * behind any of the three syntaxes, and the unclassified tail of src/utils/
+ * was exactly where that happened — an audit module reached the SQLite
+ * gateway through `await import()` and the linter could not see it.
+ * dev-docs/LAYERS.md records the sanctioned exceptions.
+ *
  * The layer file lists below are the single source of truth (SSOT) for the
  * mechanical check. dev-docs/LAYERS.md documents the mapping in its
  * "Mechanical enforcement" section. Drift between these lists and the LAYERS.md
@@ -38,6 +46,7 @@ const LAYER0_FILES = [
   'src/utils/logger/types.ts',
   'src/utils/logger/buffer.ts',
   'src/utils/commonTypes.ts',
+  'src/utils/svgNamespace.ts',
   'src/utils/types.ts',
   'src/utils/urlEntry.ts',
   'src/utils/luhn.ts',
@@ -46,6 +55,12 @@ const LAYER0_FILES = [
   'src/utils/httpFailureMessages.ts',
   'src/utils/summaryFallback.ts',
   'src/utils/failureTaxonomy.ts',
+  'src/utils/vfsCapabilities.ts',
+  'src/utils/storage/apiKeyTransition.ts',
+  // Canonical API-key field list: dependency-free by design (PBI 2026-09-27).
+  'src/utils/storage/apiKeyFields.ts',
+  // Visit-gating default thresholds: no imports (PBI 2026-09-28-28).
+  'src/utils/visitThresholds.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md
@@ -62,6 +77,8 @@ const LAYER1_FILES = [
   'src/utils/storage/privacyConsent.ts',
   'src/utils/storage/quota.ts',
   'src/utils/storage/storageMaintenance.ts',
+  // Decrypt-free settings snapshot for content scripts (PBI 2026-09-28-30).
+  'src/utils/storage/settingsSnapshot.ts',
   'src/utils/Mutex.ts',
   'src/utils/rateLimiter.ts',
   'src/utils/trustDb/domainValidation.ts',
@@ -94,6 +111,26 @@ const LAYER2_MODULES = [
 // already discouraged by no-restricted-imports (warn) in eslint.config.js.
 // Double-reporting the same edge in two rules would obscure the layer signal.
 const BARREL_MODULES = ['src/utils/storage.ts', 'src/utils/logger.ts', 'src/utils/crypto/index.ts'];
+
+// Sibling layers a src/utils/ module must never reach, in any syntax: the
+// direction inverts utils' role as the lowest layer (LAYERS.md "依存ルール").
+// src/messaging/ is deliberately absent — a re-export shim may point there.
+const FORBIDDEN_TARGET_LAYERS = [
+  'src/background/',
+  'src/popup/',
+  'src/dashboard/',
+  'src/content/',
+  'src/offscreen/',
+];
+
+// Reverse edges that exist on purpose. Each one is a documented cycle escape,
+// not a missing classification; removing an entry here must come with a
+// reclassification, not a suppression.
+const SANCTIONED_REVERSE_EDGES = [
+  // ADR 2026-08-20-utils-layer-circular-dependency: the purge health check
+  // must reach the SQLite client; static import is still forbidden.
+  'src/utils/storage/storageMaintenance.ts',
+];
 
 function normalizePath(p) {
   return p.replace(/\\/g, '/');
@@ -164,6 +201,8 @@ export default {
         "Layer 0 (Foundation) module must not statically import '{{target}}' ({{targetLayer}}). Layer 0 may only depend on Layer 0. See dev-docs/LAYERS.md.",
       layer1ForbiddenImport:
         "Layer 1 (Infrastructure) module must not statically import '{{target}}' (Layer 2). Use dynamic import() for sanctioned circular exceptions only. See dev-docs/LAYERS.md.",
+      utilsReverseEdge:
+        "src/utils/ module must not reach '{{target}}'. This inverts the layer order; a runtime dependency on a sibling layer belongs in src/messaging/ or the caller injects it. See dev-docs/LAYERS.md.",
     },
     schema: [
       {
@@ -196,8 +235,52 @@ export default {
     const inLayer0 = LAYER0_FILES.some((f) => filename.endsWith(f));
     const inLayer1 = LAYER1_FILES.some((f) => filename.endsWith(f));
 
+    // The reverse-edge check covers the whole src/utils/ tree, classified or
+    // not, so it must not be gated by the layer early return below.
+    const utilsRootIndex = filename.lastIndexOf('src/utils/');
+    const inUtils = utilsRootIndex !== -1;
+    const utilsPrefix = inUtils ? filename.slice(0, utilsRootIndex + 'src/utils/'.length) : '';
+    const reverseEdgeSanctioned = SANCTIONED_REVERSE_EDGES.some((f) => filename.endsWith(f));
+
+    /**
+     * True when the module specifier of an import / re-export node points from
+     * a src/utils/ module at a sibling layer. Static imports, dynamic imports
+     * and re-exports are all inspected, because a shim can carry the same
+     * runtime edge a direct import did.
+     */
+    function checkReverseEdge(node) {
+      if (!inUtils || reverseEdgeSanctioned) {
+        return;
+      }
+      if (node.importKind === 'type' || node.exportKind === 'type') {
+        return;
+      }
+      const source = node.source && node.source.value;
+      if (typeof source !== 'string') {
+        return;
+      }
+      const resolved = resolveImport(filename, source);
+      if (resolved === null || resolved.startsWith(utilsPrefix)) {
+        return;
+      }
+      if (!matchesAny(resolved, FORBIDDEN_TARGET_LAYERS)) {
+        return;
+      }
+      if (isAllowlisted(allow, filename, resolved)) {
+        return;
+      }
+      context.report({ node, messageId: 'utilsReverseEdge', data: { target: source } });
+    }
+
     if (!inLayer0 && !inLayer1) {
-      return {};
+      return inUtils
+        ? {
+            ImportDeclaration: checkReverseEdge,
+            ImportExpression: checkReverseEdge,
+            ExportNamedDeclaration: checkReverseEdge,
+            ExportAllDeclaration: checkReverseEdge,
+          }
+        : {};
     }
 
     /** True when `chrome` in this scope is a local binding, not the global. */
@@ -213,6 +296,7 @@ export default {
     }
 
     function checkStaticImport(node) {
+      checkReverseEdge(node);
       if (node.importKind === 'type') {
         return;
       }
@@ -254,6 +338,9 @@ export default {
 
     const visitors = {
       ImportDeclaration: checkStaticImport,
+      ImportExpression: checkReverseEdge,
+      ExportNamedDeclaration: checkReverseEdge,
+      ExportAllDeclaration: checkReverseEdge,
     };
 
     if (inLayer0) {

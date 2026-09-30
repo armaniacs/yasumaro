@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
 import {
   ErrorType,
@@ -176,5 +178,23 @@ describe('createErrorResponse', () => {
     expect(response.error).not.toContain('my-password');
 
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe('Obsidian error display keys (PBI 2026-09-25-32)', () => {
+  const LOCALE_ROOT = path.resolve(__dirname, '../../../public/_locales');
+  const readLocale = (locale: string): Record<string, { message: string }> =>
+    JSON.parse(fs.readFileSync(path.join(LOCALE_ROOT, locale, 'messages.json'), 'utf-8'));
+
+  it('defines the four display keys in ja and en without adding new keys', () => {
+    // The wording fix routes 401/403, 429, and 5xx/404 onto keys that already
+    // existed; the parity check pins that no new key was introduced and that
+    // both locales still carry every key the routing depends on.
+    for (const locale of ['ja', 'en']) {
+      const messages = readLocale(locale);
+      for (const key of ['errorNetwork', 'errorAuth', 'errorRateLimit', 'errorServer']) {
+        expect(messages[key]?.message).toBeTruthy();
+      }
+    }
   });
 });

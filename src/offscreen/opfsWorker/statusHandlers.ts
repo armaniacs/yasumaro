@@ -5,8 +5,7 @@
 
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import { pickDefined } from '../../utils/objectUtils.js';
-
-const DB_FILENAME = 'yasumaro.db';
+import { DB_FILENAME } from '../dbFilename.js';
 
 export async function handleGetStatus(
   ctx: HandlerContext,

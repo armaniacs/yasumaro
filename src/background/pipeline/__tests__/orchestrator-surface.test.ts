@@ -36,4 +36,26 @@ describe('RecordingOrchestrator public surface', () => {
       expect(source).not.toContain(banned);
     }
   });
+
+  it('keeps the canonical pre-save gate order (PBI 2026-09-28-27)', () => {
+    // The hand-written preSaveSteps list is canonical (ADR
+    // 2026-09-28-recording-gate-order-canonical). Pin the order so a reorder
+    // is a deliberate, reviewed diff — not a silent drift.
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'RecordingOrchestrator.ts'),
+      'utf-8',
+    );
+    const names = [...source.matchAll(/name: '([a-zA-Z]+)', errorStrategy/g)].map((m) => m[1]!);
+    expect(names.slice(0, 9)).toEqual([
+      'truncate',
+      'domainFilter',
+      'permission',
+      'trust',
+      'privacyHeaders',
+      'duplicate',
+      'privacyPipeline',
+      'extractSentences',
+      'formatMarkdown',
+    ]);
+  });
 });

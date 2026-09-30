@@ -20,6 +20,7 @@ import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils
 import { buildTemplateEntryData } from '../utils/markdownFormatter.js';
 import { getPlatformOs } from '../utils/deviceUtils.js';
 import { resolveSafeExportDir } from '../utils/pathSanitizer.js';
+import { formatLocalDateString, parseLocalDateStart } from '../utils/localDate.js';
 
 /** Batch size for paginated full-history export (desktop). */
 export const EXPORT_BATCH_SIZE_DESKTOP = 1000;
@@ -45,13 +46,13 @@ export interface DownloadPort {
   (filename: string, content: string): Promise<void>;
 }
 
-/** Local date string (YYYY-MM-DD) for a timestamp, in the user's timezone. */
+/**
+ * Local date string (YYYY-MM-DD) for a timestamp, in the user's timezone.
+ * Thin alias kept for existing callers/tests; the implementation and the
+ * zero-padding convention live in the localDate SSOT (PBI 2026-09-28-11).
+ */
 export function getLocalDateString(timestamp: number): string {
-  const d = new Date(timestamp);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return formatLocalDateString(timestamp);
 }
 
 /**
@@ -216,7 +217,10 @@ export async function exportFullHistoryInBatches(
  */
 export function dateRangeToTimestamps(startDate: string, endDate: string): { since: number; until: number } {
   return {
-    since: new Date(startDate + 'T00:00:00').getTime(),
+    since: parseLocalDateStart(startDate),
+    // WHY not endOfLocalDayMs here: this bound deliberately stops at 23:59:59
+    // (the historical markdownExport contract) rather than 23:59:59.999, and
+    // widening it would change which rows an existing export includes.
     until: new Date(endDate + 'T23:59:59').getTime(),
   };
 }

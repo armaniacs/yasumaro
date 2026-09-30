@@ -2,6 +2,7 @@ import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { loadDomainSettings, saveDomainLists } from './settings/domainFilter.js';
 import { normalizeDomainInput, validateDomainInput } from './domainInputPolicy.js';
+import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 /**
  * Initialize the domain filter tag UI in settings panel
@@ -210,8 +211,9 @@ export async function initDomainFilterTagUI(): Promise<void> {
     if (saveStatus) saveStatus.textContent = '';
     const { ok, message } = await saveDomainLists();
     if (saveStatus) {
-      saveStatus.textContent = message;
-      saveStatus.className = `status-message ${ok ? 'success' : 'error'}`;
+      // autoClear opt-out: the result is replaced by the next save, and the
+      // original render had no timer here.
+      showStatus(saveStatus, message, ok ? 'success' : 'error', { autoClear: false });
     }
   });
 

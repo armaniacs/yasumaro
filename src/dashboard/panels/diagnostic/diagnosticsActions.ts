@@ -22,14 +22,7 @@ import {
   startBuiltInAiDownload,
   type BuiltInAiDiagnosticsResult,
 } from '../../builtInAiDiagnosticsService.js';
-import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
-import { subscribeAiTestProgress, generateAiTestRunId } from '../../aiTestProgressClient.js';
-import {
-  buildAiTestProgressView,
-  renderAiTestProgressLabel,
-  renderAiTestProgressElapsed,
-} from '../../aiTestProgressView.js';
-import { type AiTestProgress } from '../../../background/ai/AIService.js';
+import { runAiConnectionTest } from '../../aiTestRunner.js';
 
 export interface DiagnosticActionElements {
   testObsidianBtn: HTMLButtonElement | null;
@@ -57,8 +50,6 @@ function successColor(): string {
 function errorColor(): string {
   return `var(--color-danger, ${UI_COLORS.CSS_ERROR_FALLBACK})`;
 }
-
-let aiTestInFlight = false;
 
 /**
  * Wire all action handlers. Each handler keeps the current behavior:
@@ -103,87 +94,34 @@ export function createDiagnosticActions(
   // AI connection test
   testAiBtn?.addEventListener('click', async () => {
     if (!connectionResult) return;
-    if (aiTestInFlight) return;
-    let elapsedTimer: ReturnType<typeof setInterval> | undefined;
-    let unsubscribeProgress: (() => void) | undefined;
-    try {
-      aiTestInFlight = true;
-      testAiBtn.disabled = true;
-
-      const startTime = performance.now();
-      // Correlation id so that a concurrent Dashboard tab's progress broadcasts
-      // don't leak into this run's UI.
-      const runId = generateAiTestRunId();
-      let latestProgress: AiTestProgress | undefined;
-      let lastProviderKey = '';
-
-      const view = buildAiTestProgressView(connectionResult);
-
-      const updateView = (announceProvider: boolean): void => {
-        if (announceProvider) {
-          renderAiTestProgressLabel(view, latestProgress);
-        }
-        renderAiTestProgressElapsed(view, startTime);
-      };
-
-      unsubscribeProgress = subscribeAiTestProgress(runId, (progress) => {
-        latestProgress = progress;
-        const key = `${progress.provider}:${progress.index}`;
-        const changed = key !== lastProviderKey;
-        lastProviderKey = key;
-        updateView(changed);
-      });
-
-      renderAiTestProgressLabel(view, undefined);
-      renderAiTestProgressElapsed(view, startTime);
-      elapsedTimer = setInterval(() => updateView(false), 200);
-
-      // PBI 11: the TEST_AI send lives in the connectionTests helper (runId
-      // correlation preserved); this handler only renders progress + results.
-      const ai = await testAiConnection(runId);
-
-      if (ai) {
-        connectionResult.innerHTML = '';
-
-        if (ai.providers && ai.providers.length > 1) {
+    // The TEST_AI send lives in the connectionTests helper; the runner owns the
+    // runId correlation, progress subscription and in-flight guard, so this
+    // handler only supplies the panel's own rendering.
+    await runAiConnectionTest({
+      target: connectionResult,
+      run: testAiConnection,
+      onStart: () => { testAiBtn.disabled = true; },
+      onFinish: () => { testAiBtn.disabled = false; },
+      draw: {
+        multiProviderSummary: (target, ai) => {
           const header = document.createElement('div');
           header.textContent = ai.success
             ? `AI: ${getMessageOr('testSuccess', '✓ Connection successful')}`
             : `AI: ${getMessageOr('testFailed', '✗ Connection failed')}`;
           header.className = ai.success ? 'diag-success diag-bold' : 'diag-error diag-bold';
-          connectionResult.appendChild(header);
-
-          for (const provider of ai.providers) {
-            const row = document.createElement('div');
-            row.className = 'diag-indent';
-            row.textContent = formatProviderHeadline(provider);
-            row.classList.add(provider.success ? 'diag-success' : 'diag-error');
-            connectionResult.appendChild(row);
-
-            for (const line of formatProviderDetailLines(provider)) {
-              const detailRow = document.createElement('div');
-              detailRow.className = 'diag-indent ai-debug-details';
-              detailRow.textContent = line;
-              connectionResult.appendChild(detailRow);
-            }
-          }
-        } else {
-          connectionResult.textContent = `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`;
-          connectionResult.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
-        }
-      } else {
-        connectionResult.textContent = getMessageOr('testComplete', 'Test complete.');
-      }
-    } catch (err) {
-      console.error('Diagnostics: AI test failed', err);
-      connectionResult.textContent = getMessageOr('testError', 'Connection test failed.');
-      connectionResult.className = 'diag-result diag-error';
-    } finally {
-      if (elapsedTimer) clearInterval(elapsedTimer);
-      if (unsubscribeProgress) unsubscribeProgress();
-      testAiBtn.disabled = false;
-      aiTestInFlight = false;
-    }
+          target.appendChild(header);
+        },
+        singleProviderSummary: (target, ai) => {
+          target.textContent = `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`;
+          target.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
+        },
+        onError: (target, err) => {
+          console.error('Diagnostics: AI test failed', err);
+          target.textContent = getMessageOr('testError', 'Connection test failed.');
+          target.className = 'diag-result diag-error';
+        },
+      },
+    });
   });
 
   // SQLite test

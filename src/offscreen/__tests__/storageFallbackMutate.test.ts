@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FallbackStorage } from '../storageFallback.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 /**
  * These tests prove that all fallback mutators share a single serialization
@@ -31,9 +32,9 @@ function record(overrides: Partial<BrowsingLogRecord>): BrowsingLogRecord {
 }
 
 /**
- * Stall the first `times` reads of the records blob by a few ms so two
- * overlapping mutators have a window to interleave. Uses the real (unspied)
- * mock implementation captured before installing the wrapper.
+ * Stall the first `times` reads of the records blob so two overlapping mutators
+ * have a window to interleave. Uses the real (unspied) mock implementation
+ * captured before installing the wrapper.
  */
 function stallRecordReads(times: number): () => void {
   const original = chrome.storage.local.get as unknown as (
@@ -44,7 +45,10 @@ function stallRecordReads(times: number): () => void {
     const result = await original(keys);
     if (remaining > 0 && keys === STORAGE_KEY) {
       remaining--;
-      await new Promise(resolve => setTimeout(resolve, 5));
+      // A macrotask turn, not a microtask: the concurrently started mutator must
+      // run its whole read chain before this read returns. Same checkpoint would
+      // resume this one first and reproduce no interleave at all.
+      await drainMacrotask();
     }
     // Real chrome.storage returns a fresh copy per read; the in-memory mock
     // shares a reference, which would hide the RMW race.

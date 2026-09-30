@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getOrCreateEncryptionKey, clearEncryptionKeyCache } from '../encryptionSession.js';
 import { StorageKeys } from '../types.js';
+import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
+import { isSecretEnvelope } from '../../crypto/secretWrappingKey.js';
 
 /**
  * Creates a promise together with externally-callable resolve/reject
@@ -100,5 +102,40 @@ describe('getOrCreateEncryptionKey concurrency', () => {
         const cipherFromA = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, keyA, plaintext);
         const decryptedWithB = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, keyB, cipherFromA);
         expect(new TextDecoder().decode(decryptedWithB)).toBe('race-condition-check');
+    });
+
+    it('persists exactly one envelope when racing callers generate a secret (PBI 25-25)', async () => {
+        // No KEK override in the suite above meant the session-rescued secret
+        // stayed plaintext. With the KEK available the rescue must land as an
+        // envelope, once, and clear the session copy.
+        await installTestSecretKek();
+        await chrome.storage.local.set({
+            [StorageKeys.MASTER_PASSWORD_ENABLED]: false,
+            [StorageKeys.ENCRYPTION_SALT]: 'ZmFrZS1zYWx0LWJhc2U2NA==',
+        });
+        await chrome.storage.session.set({
+            [StorageKeys.ENCRYPTION_SECRET]: 'ZmFrZS1zZWNyZXQtYmFzZTY0',
+        });
+
+        const [keyA, keyB] = await Promise.all([
+            getOrCreateEncryptionKey(),
+            getOrCreateEncryptionKey(),
+        ]);
+
+        const stored = (await chrome.storage.local.get(StorageKeys.ENCRYPTION_SECRET))[
+            StorageKeys.ENCRYPTION_SECRET
+        ];
+        expect(isSecretEnvelope(stored)).toBe(true);
+        expect(
+            (await chrome.storage.session.get(StorageKeys.ENCRYPTION_SECRET))[
+                StorageKeys.ENCRYPTION_SECRET
+            ],
+        ).toBeUndefined();
+
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const plaintext = new TextEncoder().encode('single-envelope-check');
+        const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, keyA, plaintext);
+        const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, keyB, cipher);
+        expect(new TextDecoder().decode(decrypted)).toBe('single-envelope-check');
     });
 });

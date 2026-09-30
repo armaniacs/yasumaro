@@ -27,6 +27,7 @@ import {
 import { DAY_MS } from '../../components/periodFilter.js';
 import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { COPY_FEEDBACK_RESET_MS } from '../../../utils/copyMarkdownButton.js';
@@ -68,7 +69,6 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
   let capsuleEl: HTMLElement | null = null;
   const copyStates: CopyButtonState[] = [];
   const notices = new PanelNotices();
-  let loadSeq = 0;
 
   function label(key: string, fallback: string): string {
     return msg(key, {}, fallback);
@@ -328,54 +328,73 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
     }
   }
 
-  async function reload(): Promise<void> {
-    if (!loopsBody || !rankingBody || !dormantBody || !capsuleEl) return;
-    const seq = ++loadSeq;
-    const now = Date.now();
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'revisitInsightsPanel',
+    notices: [notices],
+    // WHY: no filter host selector — every bucket is defined relative to
+    // `now` (see the module docs), so a user-chosen range has no meaning here.
+    isReady: () =>
+      loopsBody !== null &&
+      rankingBody !== null &&
+      dormantBody !== null &&
+      capsuleEl !== null,
+    resetOutput: () => {
+      if (loopsBody) loopsBody.innerHTML = '';
+      if (rankingBody) rankingBody.innerHTML = '';
+      if (dormantBody) dormantBody.innerHTML = '';
+      if (capsuleEl) capsuleEl.innerHTML = '';
+    },
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // hosts for the body.
+    load: async ({ isStale }) => {
+      if (!loopsBody || !rankingBody || !dormantBody || !capsuleEl) return;
+      const now = Date.now();
 
-    loopsBody.innerHTML = '';
-    rankingBody.innerHTML = '';
-    dormantBody.innerHTML = '';
-    capsuleEl.innerHTML = '';
-    notices.reset();
+      try {
+        const { rows, capped } = await fetchAllPeriodRows({
+          since: now - REVISIT_CONFIG.fetchLookbackDays * DAY_MS,
+          pageSize: REVISIT_INSIGHTS_PAGE_SIZE,
+          maxRows: MAX_REVISIT_INSIGHTS_ROWS,
+          label: 'revisitInsights',
+        });
+        if (isStale()) return;
 
-    try {
-      const { rows, capped } = await fetchAllPeriodRows({
-        since: now - REVISIT_CONFIG.fetchLookbackDays * DAY_MS,
-        pageSize: REVISIT_INSIGHTS_PAGE_SIZE,
-        maxRows: MAX_REVISIT_INSIGHTS_ROWS,
-        label: 'revisitInsights',
-      });
-      if (seq !== loadSeq) return;
+        if (rows.length === 0) {
+          notices.showEmpty();
+          return;
+        }
 
-      if (rows.length === 0) {
-        notices.showEmpty();
-        return;
+        const insights = aggregateRevisitInsights(rows, now);
+        renderLoops(insights.loops);
+        renderRanking(insights.ranking);
+        renderDormant(insights.dormant);
+        renderCapsule(insights);
+
+        if (capped) {
+          notices.setMessage(
+            'rowCap',
+            msg(
+              'revisitInsights_rowCap',
+              { shown: rows.length },
+              'Aggregated only the newest {shown} records; older counts may be understated.',
+            ),
+          );
+          notices.show('rowCap');
+        }
+      } catch (error) {
+        console.error('[revisitInsightsPanel] error:', error);
+        if (isStale()) return;
+        notices.showError('revisitInsightsError', 'Failed to load revisit data.');
       }
-
-      const insights = aggregateRevisitInsights(rows, now);
-      renderLoops(insights.loops);
-      renderRanking(insights.ranking);
-      renderDormant(insights.dormant);
-      renderCapsule(insights);
-
-      if (capped) {
-        notices.setMessage(
-          'rowCap',
-          msg(
-            'revisitInsights_rowCap',
-            { shown: rows.length },
-            'Aggregated only the newest {shown} records; older counts may be understated.',
-          ),
-        );
-        notices.show('rowCap');
+    },
+    teardown: () => {
+      for (const state of copyStates) {
+        if (state.timer !== null) clearTimeout(state.timer);
+        state.timer = null;
       }
-    } catch (error) {
-      console.error('[revisitInsightsPanel] error:', error);
-      if (seq !== loadSeq) return;
-      notices.showError('revisitInsightsError', 'Failed to load revisit data.');
-    }
-  }
+      copyStates.length = 0;
+    },
+  });
 
   return {
     id: 'panel-revisit-insights',
@@ -394,22 +413,16 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
       notices.register('rowCap', rowCapEl, { fetchScoped: true });
     },
     async load() {
-      await reload();
+      await lifecycle.reload();
     },
     destroy() {
-      loadSeq += 1;
-      for (const state of copyStates) {
-        if (state.timer !== null) clearTimeout(state.timer);
-        state.timer = null;
-      }
-      copyStates.length = 0;
+      lifecycle.destroy();
       emptyEl = null;
       rowCapEl = null;
       loopsBody = null;
       rankingBody = null;
       dormantBody = null;
       capsuleEl = null;
-      notices.clear();
     },
   };
 }

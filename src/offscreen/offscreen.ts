@@ -32,7 +32,10 @@ export const _resetSqliteForTesting = (): void => {
 // The switch was replaced by Map lookup (shallow seam eliminated) and the
 // previously scattered per-case size checks are now unified in payloadGuard.ts.
 async function dispatchSqliteMessage(
-    _authorized: AuthorizedSqliteSender,
+    // Null on the non-sqlite path (no authorization applies — the registry
+    // lookup below fails closed with an error response either way). Sqlite
+    // messages always carry the proof authorizeSqliteSender returned.
+    _authorized: AuthorizedSqliteSender | null,
     msg: SqliteMessage,
     sendResponse: (response: unknown) => void
 ): Promise<void> {
@@ -71,6 +74,10 @@ export function handleOffscreenMessage(
     // authorizeSqliteSender (src/utils/extensionOrigin.ts) — shared with the
     // background's senderTrust gate so Chrome and Firefox cannot diverge.
     const isSqliteMessage = isSqliteMessageType(msg.type);
+    // The authorization proof travels from authorizeSqliteSender to the
+    // dispatch — never hand-constructed here (PBI 2026-09-28-30). Non-sqlite
+    // messages carry no proof; the registry lookup rejects them either way.
+    let authorizedSender: AuthorizedSqliteSender | null = null;
     if (isSqliteMessage) {
       const auth = authorizeSqliteSender(_sender, chrome.runtime.id);
       if (!auth.ok) {
@@ -83,12 +90,8 @@ export function handleOffscreenMessage(
         });
         return true;
       }
-      void auth.proof;
+      authorizedSender = auth.proof;
     }
-
-    // Only constructible here, after the sender authorization above — this is
-    // the sole authorization proof dispatchSqliteMessage accepts.
-    const authorizedSender: AuthorizedSqliteSender = { __brand: 'AuthorizedSqliteSender' };
 
     (async () => {
         try {

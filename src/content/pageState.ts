@@ -18,10 +18,7 @@ export {
     createDefaultCleansingConfig,
 } from '../utils/cleansingConfig.js';
 import type { CleansingConfig } from '../utils/cleansingConfig.js';
-
-// 【設定定数】: デフォルト値の定義
-const DEFAULT_MIN_VISIT_DURATION = 5; // 秒
-const DEFAULT_MIN_SCROLL_DEPTH = 50;   // パーセンテージ
+import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
 
 // ---------------------------------------------------------------------------
 // CleansingConfig type + defaults: owned by src/utils/cleansingConfig.js,

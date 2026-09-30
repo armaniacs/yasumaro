@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
@@ -7,7 +9,10 @@ import type { SettingsReader } from '../../../utils/storage/SettingsRepository.j
 // ------------------------------------------------------------------
 // Mock dependencies – hoisted by vitest
 // ------------------------------------------------------------------
-vi.mock('../../settingsPipeline.js', () => ({
+// Only the save pipeline is faked; saveErrorText is the real one, because the
+// save-error wording is the single definition these tests pin against.
+vi.mock('../../settingsPipeline.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../settingsPipeline.js')>()),
   saveDashboardSettings: vi.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -359,7 +364,7 @@ describe('handleSaveOnly', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false, error: 'validation_failed' } as any);
     await handleSaveOnly();
     expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 
@@ -369,6 +374,22 @@ describe('handleSaveOnly', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
     await handleSaveOnly();
     expect(document.getElementById('status')!.textContent).toBe('SAVE_ERR');
+  });
+
+  // The three save-error kinds used to be spelled out per handler, so the
+  // wording could drift between the four call sites. They now come from
+  // settingsPipeline's single definition, and these are the three keys it maps.
+  it.each([
+    ['aiProviderPriority1Required', 'Priority 1 is required'],
+    ['aiProviderPriorityDuplicateWarning', 'Duplicate provider and model'],
+    ['http_confirm_cancelled', '設定の保存に失敗しました。'],
+  ])('derives the save-error wording for %s from the shared definition', async (error, expected) => {
+    document.body.innerHTML = `<div id="status"></div><div id="statusTop"></div>`;
+    mockedGetMessage.mockReturnValue('' as any);
+    mockedSaveDashboardSettings.mockResolvedValue({ success: false, error } as any);
+    await handleSaveOnly();
+    expect(document.getElementById('status')!.textContent).toBe(expected);
+    expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 
   it('refreshLocalMarkdownScheduler swallowed sync throw', async () => {
@@ -438,11 +459,13 @@ describe('handleTestObsidian', () => {
     expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ payload: { protocol: 'https' } }));
   });
 
-  it('shows certificate link when https + Failed to fetch', async () => {
-    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="27124"/>`;
+  it('shows certificate link when https + a network-kind failure arrives', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="host" value=""/><input id="obsidianHost" value=""/><input id="port" value="27124"/>`;
     mockedGetMessage.mockImplementation((k: string) => k === 'acceptCertificate' ? '証明書を承認' : k);
-    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch: cert error' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
-    await handleTestObsidian();
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({
+      readSavedEndpoint: async () => ({ host: '127.0.0.1', port: '27124' }),
+    });
     const link = document.querySelector('#status a') as HTMLAnchorElement;
     expect(link).not.toBeNull();
     expect(link.href).toContain('https://127.0.0.1:27124/');
@@ -451,42 +474,176 @@ describe('handleTestObsidian', () => {
     expect(link.textContent).toBe('証明書を承認');
   });
 
-  it('uses fallback acceptCertificate text when getMessage returns falsy', async () => {
-    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="27124"/>`;
+  it('ignores the message wording and keys off failure.kind alone', async () => {
+    // PBI 2026-09-26-09: the old condition matched a raw transport message the
+    // Service Worker never returns. Firefox's wording differs from Chrome's, so
+    // any wording must show the link as long as the kind is `network`.
+    for (const message of [
+      'Cannot connect. Check if Obsidian is running and Local REST API is enabled.',
+      'NetworkError when attempting to fetch resource.',
+      'Failed to fetch',
+    ]) {
+      document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+      setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message, failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+      await handleTestObsidian();
+      expect(document.querySelector('#status a')).not.toBeNull();
+    }
+  });
+
+  it('builds the link URL from the configured host instead of a hardcoded 127.0.0.1', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="vault.example.com"/><input id="port" value="27124"/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian();
+    const link = document.querySelector('#status a') as HTMLAnchorElement;
+    expect(link.href).toContain('https://vault.example.com:27124/');
+    expect(link.href).not.toContain('127.0.0.1');
+  });
+
+  it('falls back to the saved endpoint when the form host is empty', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="  "/><input id="port" value="27124"/>`;
+    const readSavedEndpoint = vi.fn().mockResolvedValue({ host: 'obsidian.lan', port: '27124' });
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({ readSavedEndpoint });
+    expect(readSavedEndpoint).toHaveBeenCalled();
+    expect((document.querySelector('#status a') as HTMLAnchorElement).href).toContain('https://obsidian.lan:27124/');
+  });
+
+  it('prefers the form port over the saved port', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value=""/><input id="port" value="8443"/>`;
+    const readSavedEndpoint = vi.fn().mockResolvedValue({ host: 'saved.example.com', port: '1111' });
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({ readSavedEndpoint });
+    const href = (document.querySelector('#status a') as HTMLAnchorElement).href;
+    expect(href).toContain('https://saved.example.com:8443/');
+  });
+
+  it('uses the default endpoint when neither the form nor storage has a host or port', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/>`;
+    const readSavedEndpoint = vi.fn().mockResolvedValue({});
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({ readSavedEndpoint });
+    expect((document.querySelector('#status a') as HTMLAnchorElement).href).toContain('https://127.0.0.1:27124/');
+  });
+
+  it('never lets a form value change the scheme or inject an authority', async () => {
+    for (const host of ['evil.example.com@127.0.0.1', 'host/../..', '127.0.0.1#', 'a b', '127.0.0.1\nX-Injected: 1']) {
+      document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="${host.replace(/"/g, '&quot;')}"/><input id="port" value="27124"/>`;
+      setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+      await handleTestObsidian({ readSavedEndpoint: async () => ({}) });
+      // getAttribute is the literal href that was assigned, so this pins the
+      // built string rather than the browser's normalized form.
+      const href = (document.querySelector('#status a') as HTMLAnchorElement).getAttribute('href') ?? '';
+      expect(href).toBe('https://127.0.0.1:27124/');
+      expect(href).not.toContain('@');
+    }
+  });
+
+  it('keeps an IPv6 host bracketed and drops an out-of-range port', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="::1"/><input id="port" value="99999"/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian();
+    const link = document.querySelector('#status a') as HTMLAnchorElement;
+    expect(link.getAttribute('href')).toBe('https://[::1]:27124/');
+  });
+
+  it('adds the Firefox steps when running on Firefox', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+    mockedGetMessage.mockImplementation((k: string) => {
+      if (k === 'acceptCertificate') return '証明書を承認';
+      if (k === 'certGuideFirefox') return 'FFGUIDE https://127.0.0.1:27124/';
+      return k;
+    });
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({ getBrowserInfo: async () => ({ name: 'Firefox' }) });
+    expect(document.getElementById('status')!.textContent).toContain('FFGUIDE https://127.0.0.1:27124/');
+  });
+
+  it('shows only the generic guidance on Chrome', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    // Chrome has no getBrowserInfo at all — the typeof guard must absorb that.
+    await handleTestObsidian();
+    expect(document.querySelector('#status a')).not.toBeNull();
+    expect(document.getElementById('status')!.textContent).not.toContain('FFGUIDE');
+  });
+
+  it('treats a rejecting or non-Firefox getBrowserInfo as not Firefox', async () => {
+    for (const getBrowserInfo of [
+      async () => { throw new Error('unsupported'); },
+      async () => ({ name: 'Chrome' }),
+      async () => undefined,
+    ]) {
+      document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+      mockedGetMessage.mockImplementation((k: string) => k === 'certGuideFirefox' ? 'FFGUIDE' : k);
+      setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+      await handleTestObsidian({ getBrowserInfo: getBrowserInfo as never });
+      expect(document.getElementById('status')!.textContent).not.toContain('FFGUIDE');
+    }
+  });
+
+  it('uses the English Firefox fallback when the key is missing', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
     mockedGetMessage.mockReturnValue('' as any);
-    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({ getBrowserInfo: async () => ({ name: 'Firefox' }) });
+    const text = document.getElementById('status')!.textContent ?? '';
+    expect(text).toContain('Firefox keeps its own certificate store');
+  });
+
+  it('uses fallback acceptCertificate text when getMessage returns falsy', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+    mockedGetMessage.mockReturnValue('' as any);
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     const link = document.querySelector('#status a') as HTMLAnchorElement;
     expect(link.textContent).toBe('証明書を承認する');
   });
 
-  it('does not show link when protocol is http even with Failed to fetch', async () => {
-    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="http"/><input id="port" value="27124"/>`;
-    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+  it('does not show link when protocol is http even on a network failure', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="http"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     expect(document.querySelector('#status a')).toBeNull();
   });
 
-  it('does not show link when message does not include Failed to fetch', async () => {
-    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="27124"/>`;
-    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Unauthorized' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+  it('does not show link on a timeout failure', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Connection timeout. Is Obsidian running?', failure: { kind: 'timeout' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     expect(document.querySelector('#status a')).toBeNull();
+    expect(document.getElementById('status')!.textContent).toContain('Connection timeout');
   });
 
-  it('handles missing port element fallback to 0', async () => {
-    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/>`;
-    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+  it.each(['auth', 'http', 'configuration', undefined])(
+    'does not show link when failure kind is %s',
+    async (kind) => {
+      document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+      const failure = kind === undefined ? undefined : { kind };
+      setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch', failure } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+      await handleTestObsidian();
+      expect(document.querySelector('#status a')).toBeNull();
+    },
+  );
+
+  it('does not show link on a successful connection', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="27124"/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: true, message: 'OK' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
-    const link = document.querySelector('#status a') as HTMLAnchorElement;
-    expect(link.href).toContain('https://127.0.0.1:0/');
+    expect(document.querySelector('#status a')).toBeNull();
   });
 
   it('handles port with whitespace trimming', async () => {
-    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="  8080 "/>`;
-    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Failed to fetch' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value="127.0.0.1"/><input id="port" value="  8080 "/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     expect((document.querySelector('#status a') as HTMLAnchorElement).href).toContain(':8080/');
+  });
+
+  it('still renders when the saved endpoint cannot be read', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="obsidianHost" value=""/><input id="port" value=""/>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'x', failure: { kind: 'network' } } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    await handleTestObsidian({ readSavedEndpoint: async () => { throw new Error('storage unavailable'); } });
+    expect((document.querySelector('#status a') as HTMLAnchorElement).href).toContain('https://127.0.0.1:27124/');
   });
 
   it('sets error class on failed obsidian', async () => {
@@ -546,7 +703,7 @@ describe('handleTestAi', () => {
     await expect(handleTestAi()).resolves.toBeUndefined();
   });
 
-  it('guards re-entrancy via aiTestInFlight', async () => {
+  it('guards re-entrancy via the shared runner in-flight guard', async () => {
     buildDomWithTop();
     // make saveDashboardSettings hang
     let resolveSave: (v: any) => void;
@@ -554,7 +711,7 @@ describe('handleTestAi', () => {
     const sendMessage = vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK', providers: [] } });
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
 
-    const first = handleTestAi(); // sets aiTestInFlight = true
+    const first = handleTestAi(); // takes the runner's in-flight guard
     // second call should return immediately without calling sendMessage again
     await handleTestAi();
     expect(sendMessage).not.toHaveBeenCalled(); // first hasn't reached sendMessage yet due to pending save
@@ -577,7 +734,7 @@ describe('handleTestAi', () => {
     setupChrome({ runtime: { sendMessage: vi.fn(), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestAi();
     expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     expect((document.getElementById('testAiBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
@@ -813,7 +970,7 @@ describe('handleTestAi', () => {
     mockedGetMessage.mockReturnValue('' as any);
     // outer try has no catch for this region, so it rejects; finally still runs
     await expect(handleTestAi()).rejects.toThrow('build fail');
-    // finally should have run and reset state despite rejection (aiTestInFlight reset allows next call)
+    // finally should have run and reset state despite rejection (the guard release allows next call)
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     // verify re-entrancy guard cleared
     mockedBuildView.mockImplementation(() => {
@@ -890,7 +1047,7 @@ describe('handleTestLocalMarkdown', () => {
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
     expect(document.getElementById('statusTop')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('statusTop')!.className).toBe('status-message error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -1161,5 +1318,41 @@ describe('handleTestLocalMarkdown', () => {
     expect(document.getElementById('statusTop')!.className).toBe('error');
     // also test with custom repo to cover other side of default-arg branch
     vi.useRealTimers();
+  });
+});
+
+// ------------------------------------------------------------------
+// Certificate-guidance i18n parity (PBI 2026-09-26-09)
+// ------------------------------------------------------------------
+describe('certificate guidance i18n', () => {
+  const LOCALE_ROOT = path.resolve(__dirname, '../../../../public/_locales');
+  const readLocale = (locale: string): Record<string, { message: string }> =>
+    JSON.parse(fs.readFileSync(path.join(LOCALE_ROOT, locale, 'messages.json'), 'utf-8'));
+
+  it('defines the certificate guidance keys in both locales', () => {
+    for (const locale of ['ja', 'en']) {
+      const messages = readLocale(locale);
+      expect(messages.acceptCertificate?.message).toBeTruthy();
+      expect(messages.certGuideFirefox?.message).toBeTruthy();
+    }
+  });
+
+  it('keeps the {url} substitution and both Firefox routes in either locale', () => {
+    // Route (a): add a certificate exception for the host in a tab.
+    // Route (b): import the CA in Firefox's own certificate manager.
+    const routes = {
+      ja: ['例外を追加する', 'インポートする', 'プライバシーとセキュリティ'],
+      en: ['add a certificate exception', 'import the CA certificate', 'Privacy & Security'],
+    } as const;
+
+    for (const locale of ['ja', 'en'] as const) {
+      const text = readLocale(locale).certGuideFirefox.message;
+      // The URL is substituted at render time, so a missing placeholder would
+      // silently drop the endpoint the user is told to open.
+      expect(text).toContain('{url}');
+      for (const marker of routes[locale]) {
+        expect(text).toContain(marker);
+      }
+    }
   });
 });

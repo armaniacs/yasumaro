@@ -19,21 +19,44 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { FailureKind, createFailure, resolveFailure, type FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { recordAuditLog } from '../../utils/auditLog.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { disabledBreaker, type ProviderBreakerLike, type ProviderCooldown } from './providerBreaker.js';
 
 interface RemoteAIServiceConfig {
   builtInAiClient?: BuiltInAiProvider;
   repo?: SettingsReader;
+  /** PBI 27-03: injected breaker; defaults to disabled (try all, remember nothing). */
+  breaker?: ProviderBreakerLike;
+}
+
+/**
+ * PBI 27-07: whether the breaker may consult or touch its state at all.
+ * The flag is a kill switch, not a policy dial, so it defaults to enabled —
+ * an absent key must not silently withdraw the PBI 27-03 behaviour. Only an
+ * explicit `false` disables it.
+ */
+export function resolveBreakerGate(settings: Settings): boolean {
+  return settings[StorageKeys.AI_PROVIDER_BREAKER_ENABLED] !== false;
 }
 
 export class RemoteAIService implements AIService {
   private providers: Map<string, (settings: Settings) => AIProviderStrategy>;
   private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
   private repo: SettingsReader;
+  private breaker: ProviderBreakerLike;
+  /**
+   * PBI 27-07: the disabled-gate notice is a one-shot, not a per-request log —
+   * the gate is a persistent setting, so saying so on every summary would
+   * bury the rest of the log. Reset with the service worker, which is the
+   * lifetime of this instance.
+   */
+  private loggedBreakerGateDisabled: boolean;
 
   constructor(private config: RemoteAIServiceConfig = {}) {
     this.providers = new Map();
     this.inFlightSummaryRequests = new Map();
     this.repo = config.repo ?? settingsRepository;
+    this.breaker = config.breaker ?? disabledBreaker;
+    this.loggedBreakerGateDisabled = false;
     this.registerDefaultProviders();
   }
 
@@ -67,6 +90,19 @@ export class RemoteAIService implements AIService {
       return text.substring(0, 300);
     }
     return `summary too short (${result.summary.length} < minLength ${minLength})`;
+  }
+
+  /**
+   * Text for a call where every slot was held back by the breaker. Naming the
+   * provider and the remaining wait is the point: the configuration is fine and
+   * the user must not be sent to settings, nor have this text stored as their
+   * page summary.
+   */
+  private static describeSuppressed(suppressed: { provider: string; cooldown?: ProviderCooldown }[]): string {
+    const names = suppressed.map((s) => s.provider).join(', ');
+    const soonest = Math.min(...suppressed.map((s) => s.cooldown?.openUntil ?? Date.now()));
+    const minutes = Math.max(1, Math.ceil((soonest - Date.now()) / 60_000));
+    return `Error: AI summary skipped — ${names} is temporarily paused after repeated failures. Retrying in about ${minutes} minute${minutes === 1 ? '' : 's'}.`;
   }
 
   private resolveProviderSlots(settings: Settings): ProviderSlot[] {
@@ -140,6 +176,15 @@ export class RemoteAIService implements AIService {
       ?? (DEFAULT_SETTINGS[StorageKeys.SUMMARY_MIN_LENGTH] as number);
     const slots = this.resolveProviderSlots(settings);
 
+    // PBI 27-07: read the gate off the snapshot we already hold. A second
+    // settings read here would make the kill switch cost I/O on every summary,
+    // and could disagree with the slots resolved from the same read.
+    const breakerGateOpen = resolveBreakerGate(settings);
+    if (!breakerGateOpen && !this.loggedBreakerGateDisabled) {
+      this.loggedBreakerGateDisabled = true;
+      addLog(LogType.INFO, 'AI provider circuit breaker disabled by user setting');
+    }
+
     // In-flight deduplication: concurrent calls for the same URL+mode share
     // one provider slot loop (FinOptimization: prevent duplicate API costs).
     const url = options?.url ?? '';
@@ -161,6 +206,8 @@ export class RemoteAIService implements AIService {
       };
       const attemptedProviders: string[] = [];
       const slotFailures: { provider: string; model?: string; error: string; failure?: FailureMetadata }[] = [];
+      // Slots the breaker held back, with the cooldown that suppressed them.
+      const suppressed: { provider: string; cooldown?: ProviderCooldown }[] = [];
       // Aggregate carrier: the FIRST slot that classified its failure. A total
       // failure stays a result (never a throw) so privacyPipeline's branch and
       // the result contract are unchanged; the kind simply rides along.
@@ -168,6 +215,25 @@ export class RemoteAIService implements AIService {
 
       for (let index = 0; index < slots.length; index++) {
         const slot = slots[index]!;
+        const slotModel = this.resolveEffectiveModel(settings, slot);
+        // PBI 27-03: a slot in breaker cooldown is not attempted at all.
+        // Skipped slots stay out of attemptedProviders (they were never
+        // tried) and out of slotFailures (a skip is not a failure). When every
+        // slot is cooling down the result must say so — falling through to
+        // `lastResult` would tell the user their provider configuration is
+        // missing, which is false for a provider that is only suppressed.
+        // PBI 27-07: with the gate off the breaker is not consulted at all, so
+        // `suppressed` stays empty and this branch is unreachable.
+        if (breakerGateOpen && !(await this.breaker.shouldAttempt(slot.provider, slotModel))) {
+          const cooldown = await this.breaker.cooldown(slot.provider, slotModel);
+          suppressed.push({ provider: slot.provider, ...(cooldown ? { cooldown } : {}) });
+          addLog(LogType.INFO, 'AI provider slot skipped (breaker cooldown)', {
+            provider: slot.provider,
+            ...pickDefined({ model: slotModel }),
+            traceId: options?.traceId ?? '',
+          });
+          continue;
+        }
         attemptedProviders.push(slot.provider);
         const result = await this.processSummarySlot(
           slot,
@@ -177,6 +243,17 @@ export class RemoteAIService implements AIService {
           options?.traceId ?? '',
           url,
         );
+        if (breakerGateOpen) {
+          if (result.success) {
+            // Any success resets the breaker — even a too-short one: the
+            // provider answered, so it is healthy (policy §3).
+            await this.breaker.recordSuccess(slot.provider, slotModel);
+          } else if (result.failure !== undefined) {
+            // Only taxonomy-carrying failures feed the breaker. Success-but-
+            // short results and unclassified failures are not breaker inputs.
+            await this.breaker.recordFailure(slot.provider, slotModel, result.failure);
+          }
+        }
         if (result.success && result.summary.length >= minLength) {
           // A later slot recovered — keep the earlier failures for diagnostics.
           return slotFailures.length > 0 ? { ...result, slotFailures } : result;
@@ -204,6 +281,16 @@ export class RemoteAIService implements AIService {
           traceId: options?.traceId ?? '',
         });
         lastResult = result;
+      }
+
+      if (attemptedProviders.length === 0 && suppressed.length > 0) {
+        return {
+          success: false,
+          summary: RemoteAIService.describeSuppressed(suppressed),
+          ...(suppressed[0]?.cooldown ? { failure: createFailure(suppressed[0].cooldown.kind) } : {}),
+          attemptedProviders,
+          slotFailures,
+        };
       }
 
       return {
@@ -234,6 +321,7 @@ export class RemoteAIService implements AIService {
   ): Promise<AiConnectionTestResult> {
     const settings = await this.loadSettings();
     const slots = this.resolveProviderSlots(settings);
+    const breakerGateOpen = resolveBreakerGate(settings);
 
     const providerResults: AiProviderTestResult[] = [];
     let anySuccess = false;
@@ -289,6 +377,17 @@ export class RemoteAIService implements AIService {
           ...pickDefined({ model: effectiveModel }),
         });
       }
+    }
+
+    // PBI 27-08: a passing diagnostic is the user telling us the credentials
+    // are fixed, which is the one thing a cooldown cannot work out for itself —
+    // an auth failure parks a provider for 15 minutes with no other way out.
+    // Only success clears: a failing probe proves nothing the breaker does not
+    // already know, and policy §7 keeps test results out of breaker state.
+    // Gated like every other breaker touch, so the kill switch still wins.
+    if (breakerGateOpen && anySuccess) {
+      await this.breaker.clearAll();
+      addLog(LogType.INFO, 'AI provider circuit breaker cooldown cleared after a successful connection test');
     }
 
     const overallMessage = anySuccess

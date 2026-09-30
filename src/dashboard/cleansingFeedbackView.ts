@@ -1,5 +1,76 @@
 import { getFeedbackQueue, clearFeedbackQueue, removeFeedbackEntry } from '../utils/aiSummaryCleaner/feedbackQueue.js';
 import { getMessageOr } from '../utils/i18n.js';
+import { readRemovedCounts } from '../utils/commonTypes.js';
+import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
+import { ruleLabelFallback, ruleMessageKey } from '../utils/aiSummaryCleaner/ruleLabels.js';
+import { formatBytes } from './byteFormat.js';
+
+/** Reason label for a cleansing rule key, falling back to the raw key. */
+function reasonLabel(reason: string): string {
+  return getMessageOr(ruleMessageKey(reason), ruleLabelFallback(reason));
+}
+
+function appendAiSummaryDetail(group: HTMLElement, text: string): void {
+  const detail = document.createElement('div');
+  detail.className = 'cleansing-feedback-ai-summary-detail';
+  detail.textContent = text;
+  group.appendChild(detail);
+}
+
+/**
+ * Render the AI-summary stats under their own label.
+ *
+ * WHY separate lines: the wire field is a single Record<string, number>, so
+ * these byte totals and reason labels used to be printed as `key:count` pairs
+ * next to the real removal counts. Each item is rendered explicitly so the
+ * reason array never collapses into a comma-only string.
+ */
+function appendAiSummaryGroup(td: HTMLElement, stats: AiSummaryRemovedStats): void {
+  const group = document.createElement('div');
+  group.className = 'cleansing-feedback-ai-summary';
+  const label = document.createElement('div');
+  label.className = 'cleansing-feedback-ai-summary-label';
+  label.textContent = getMessageOr('historyAiSummaryCleansing', 'AI Summary Cleansing');
+  group.appendChild(label);
+
+  appendAiSummaryDetail(
+    group,
+    `${getMessageOr('historyBytes', 'Bytes')}: ${formatBytes(stats.originalBytes)} → ${formatBytes(stats.cleansedBytes)}`,
+  );
+  appendAiSummaryDetail(group, `${getMessageOr('cleansingCount', 'Count')}: ${stats.elements}`);
+  appendAiSummaryDetail(
+    group,
+    `${getMessageOr('cleansingFeedbackReason', 'Reason')}: ${reasonLabel(stats.reason)}`,
+  );
+  if (stats.reasons && stats.reasons.length > 0) {
+    appendAiSummaryDetail(
+      group,
+      `${getMessageOr('cleansingFeedbackReasons', 'Reasons')}: ${stats.reasons.map(reasonLabel).join(', ')}`,
+    );
+  }
+  td.appendChild(group);
+}
+
+/**
+ * @param aiSummary stats persisted on the entry itself. `readRemovedCounts`
+ * stays the fallback for entries written before the split, whose `aiSummary*`
+ * keys live inside the count map. The persisted field wins when both exist:
+ * the count map is the contaminated shape, so it is the less trustworthy
+ * source of the two.
+ */
+function renderReasonCell(
+  td: HTMLElement,
+  removedByReason: Record<string, number>,
+  aiSummary?: AiSummaryRemovedStats,
+): void {
+  const counts = readRemovedCounts(removedByReason);
+  const pairs = Object.entries(counts.byReason);
+  if (pairs.length > 0) {
+    td.textContent = pairs.map(([k, v]) => `${k}:${v}`).join(', ');
+  }
+  const stats = aiSummary ?? counts.aiSummary;
+  if (stats) appendAiSummaryGroup(td, stats);
+}
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
   const entries = await getFeedbackQueue();
@@ -59,7 +130,7 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
     tdSnippet.textContent = e.htmlSnippet.slice(0, 100);
     tdSnippet.title = e.htmlSnippet;
     const tdReason = document.createElement('td');
-    tdReason.textContent = Object.entries(e.removedByReason).map(([k, v]) => `${k}:${v}`).join(', ');
+    renderReasonCell(tdReason, e.removedByReason, e.aiSummary);
     const tdDate = document.createElement('td');
     tdDate.textContent = new Date(e.createdAt).toLocaleString();
     const tdAction = document.createElement('td');

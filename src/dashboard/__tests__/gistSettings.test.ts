@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { initGistSettings } from '../gistSettings.js';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
-const { mockGetAll, mockSetAll, mockTestConnection } = vi.hoisted(() => ({
+const { mockGetAll, mockSetAll, mockTestConnection, mockGetSharedSqliteClient, mockSqliteClientConstructor } = vi.hoisted(() => ({
   mockGetAll: vi.fn(),
   mockSetAll: vi.fn(),
   mockTestConnection: vi.fn(),
+  mockGetSharedSqliteClient: vi.fn(),
+  mockSqliteClientConstructor: vi.fn(),
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
@@ -43,6 +46,13 @@ vi.mock('../../background/syncTargets/gistSyncTarget.js', () => ({
   }),
 }));
 
+// The dashboard must reach the shared client through the canonical accessor.
+// `new SqliteClient()` here would be the second instance the composition root
+// already owns, so the constructor is spied to fail the test if it is used.
+vi.mock('../../background/sqlite/offscreenGateway.js', () => ({
+  getSharedSqliteClient: mockGetSharedSqliteClient,
+  SqliteClient: mockSqliteClientConstructor,
+}));
 
 function setupDom(): {
   gistEnabled: HTMLInputElement;
@@ -80,6 +90,7 @@ function setupDom(): {
 describe('initGistSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetSharedSqliteClient.mockReturnValue({ marker: 'shared-sqlite-client' });
     document.body.innerHTML = '';
   });
 
@@ -200,6 +211,28 @@ describe('initGistSettings', () => {
         });
       });
     });
+
+    it('keeps the success message: the gist status does not auto-clear', async () => {
+      useTimerClock();
+      try {
+        const { saveBtn, statusEl } = setupDom();
+        mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+        mockSetAll.mockResolvedValue(undefined);
+
+        await initGistSettings();
+        saveBtn.click();
+        for (let i = 0; i < 5 && statusEl.textContent === ''; i++) {
+          await vi.advanceTimersByTimeAsync(0);
+        }
+        expect(statusEl.className).toBe('status-message success');
+
+        await vi.advanceTimersByTimeAsync(60000);
+        expect(statusEl.textContent).toBe('Gist settings saved');
+        expect(statusEl.className).toBe('status-message success');
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 
   describe('test connection handler', () => {
@@ -237,6 +270,51 @@ describe('initGistSettings', () => {
       testBtn.click();
       await vi.waitFor(() =>
         expect(statusEl.textContent).toBe('Test failed: network error')
+      );
+      expect(statusEl.className).toBe('status-message error');
+    });
+  });
+
+  describe('canonical singleton path (composition-root bypass removed)', () => {
+    it('builds the tester on the shared SqliteClient, never a second client', async () => {
+      const { testBtn, statusEl } = setupDom();
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+      mockTestConnection.mockResolvedValue({ success: true, message: 'Connected!' });
+
+      await initGistSettings();
+      testBtn.click();
+      await vi.waitFor(() => expect(statusEl.textContent).toBe('Connected!'));
+
+      expect(mockGetSharedSqliteClient).toHaveBeenCalledTimes(1);
+      expect(mockSqliteClientConstructor).not.toHaveBeenCalled();
+    });
+
+    it('re-asks the canonical accessor per test and never constructs a client', async () => {
+      const { testBtn, statusEl } = setupDom();
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+      mockTestConnection.mockResolvedValue({ success: true, message: 'Connected!' });
+
+      await initGistSettings();
+      testBtn.click();
+      await vi.waitFor(() => expect(statusEl.textContent).toBe('Connected!'));
+      testBtn.click();
+      await vi.waitFor(() => expect(mockTestConnection).toHaveBeenCalledTimes(2));
+
+      expect(mockGetSharedSqliteClient).toHaveBeenCalledTimes(2);
+      expect(mockSqliteClientConstructor).not.toHaveBeenCalled();
+    });
+
+    it('reports an unreachable shared gateway through the same test-failure path', async () => {
+      const { testBtn, statusEl } = setupDom();
+      mockGetAll.mockResolvedValue({ gist_enabled: true, github_pat: 'pat' });
+      mockGetSharedSqliteClient.mockImplementation(() => {
+        throw new Error('service worker unavailable');
+      });
+
+      await initGistSettings();
+      testBtn.click();
+      await vi.waitFor(() =>
+        expect(statusEl.textContent).toBe('Test failed: service worker unavailable')
       );
       expect(statusEl.className).toBe('status-message error');
     });

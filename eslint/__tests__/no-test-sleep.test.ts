@@ -21,14 +21,6 @@ ruleTester.run('no-test-sleep', noTestSleep, {
             code: 'await new Promise((resolve) => setTimeout(resolve, 0));',
         },
         {
-            name: 'sub-threshold delay',
-            code: 'await new Promise((resolve) => setTimeout(resolve, 5));',
-        },
-        {
-            name: 'const delay below the threshold',
-            code: 'const DELAY_MS = 10;\nawait new Promise((r) => setTimeout(r, DELAY_MS));',
-        },
-        {
             name: 'unresolvable delay is left alone rather than guessed at',
             code: 'await new Promise((r) => setTimeout(r, getDelay()));',
         },
@@ -47,19 +39,26 @@ ruleTester.run('no-test-sleep', noTestSleep, {
     ],
     invalid: [
         {
+            // Threshold 1 (PBI 2026-09-26-07): any resolvable positive delay is
+            // a fixed sleep; only 0 (a pure macrotask yield) is allowed.
+            name: 'a small positive delay counts as a fixed sleep',
+            code: 'await new Promise((resolve) => setTimeout(resolve, 5));',
+            errors: [{ messageId: 'fixedSleep', data: { ms: 5 } }],
+        },
+        {
+            name: 'const-bound delay is resolved to its literal',
+            code: 'const DELAY_MS = 10;\nawait new Promise((r) => setTimeout(r, DELAY_MS));',
+            errors: [{ messageId: 'fixedSleep', data: { ms: 10 } }],
+        },
+        {
             name: 'literal sleep above the threshold',
             code: 'await new Promise((resolve) => setTimeout(resolve, 50));',
             errors: [{ messageId: 'fixedSleep', data: { ms: 50 } }],
         },
         {
-            name: 'exactly the threshold counts',
-            code: 'await new Promise((resolve) => setTimeout(resolve, 20));',
-            errors: [{ messageId: 'fixedSleep', data: { ms: 20 } }],
-        },
-        {
-            name: 'const-bound delay is resolved to its literal',
-            code: 'const DELAY_MS = 30;\nawait new Promise((r) => setTimeout(r, DELAY_MS));',
-            errors: [{ messageId: 'fixedSleep', data: { ms: 30 } }],
+            name: 'exactly one millisecond counts',
+            code: 'await new Promise((resolve) => setTimeout(resolve, 1));',
+            errors: [{ messageId: 'fixedSleep', data: { ms: 1 } }],
         },
         {
             name: 'const-bound delay inside a test callback',
@@ -77,12 +76,18 @@ ruleTester.run('no-test-sleep', noTestSleep, {
             // one and the 50ms below escaped the rule.
             name: 'two same-named consts in one file resolve independently',
             code: 'function shortWait() {\n  const D = 5;\n  return new Promise((r) => setTimeout(r, D));\n}\nfunction longWait() {\n  const D = 50;\n  return new Promise((r) => setTimeout(r, D));\n}',
-            errors: [{ messageId: 'fixedSleep', data: { ms: 50 } }],
+            errors: [
+                { messageId: 'fixedSleep', data: { ms: 5 } },
+                { messageId: 'fixedSleep', data: { ms: 50 } },
+            ],
         },
         {
             name: 'the reverse order does not misreport the short sleep',
             code: 'function longWait() {\n  const D = 50;\n  return new Promise((r) => setTimeout(r, D));\n}\nfunction shortWait() {\n  const D = 5;\n  return new Promise((r) => setTimeout(r, D));\n}',
-            errors: [{ messageId: 'fixedSleep', data: { ms: 50 } }],
+            errors: [
+                { messageId: 'fixedSleep', data: { ms: 50 } },
+                { messageId: 'fixedSleep', data: { ms: 5 } },
+            ],
         },
     ],
 });

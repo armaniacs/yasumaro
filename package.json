@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.9.26",
+  "version": "6.9.28",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -84,11 +84,11 @@
     "@stryker-mutator/core": "^10.0.0",
     "@stryker-mutator/vitest-runner": "^10.0.0",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/chrome": "^0.2.7",
+    "@types/chrome": "^0.3.0",
     "@types/node": "^26.2.0",
     "@typescript-eslint/eslint-plugin": "^8.67.0",
     "@typescript-eslint/parser": "^8.67.0",
-    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/coverage-v8": "^5.0.2",
     "@vitest/eslint-plugin": "^1.6.27",
     "adm-zip": "^0.6.1",
     "better-sqlite3": "^13.0.3",
@@ -96,14 +96,14 @@
     "esbuild": "^0.28.2",
     "eslint": "^10.9.0",
     "happy-dom": "^20.11.6",
-    "jsdom": "^30.0.1",
+    "jsdom": "^30.1.1",
     "knip": "^6.32.2",
     "license-checker": "^25.0.1",
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.20",
     "typescript": "^6.0.3",
     "vite": "^8.2.2",
-    "vitest": "^5.0.0",
+    "vitest": "^5.0.2",
     "wxt": "^0.21.4"
   },
   "dependencies": {

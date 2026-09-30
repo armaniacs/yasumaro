@@ -1,10 +1,7 @@
 import { describe, it, test, expect, vi, beforeEach } from 'vitest';
-import type { Mocked } from 'vitest';
 import { settingsRepository } from '../storage/SettingsRepository.js';
 import { StorageKeys } from '../storage/types.js';
-import * as migration from '../migration.js';
 
-const mockedMigration = migration as Mocked<typeof migration>;
 
 describe('getSettings key refinement', () => {
   beforeEach(() => {
@@ -29,6 +26,8 @@ describe('getSettings key refinement', () => {
       StorageKeys.MASTER_PASSWORD_ENABLED,
       StorageKeys.MASTER_PASSWORD_SALT,
       StorageKeys.MASTER_PASSWORD_HASH,
+      // PBI 2026-09-27: KEK-transition anchor. Recovery state, never UI data.
+      StorageKeys.MASTER_PASSWORD_PENDING_SALT,
       StorageKeys.IS_LOCKED,
       StorageKeys.YASUMARO_MIGRATION_STATUS,
       StorageKeys.YASUMARO_MIGRATION_PROGRESS,

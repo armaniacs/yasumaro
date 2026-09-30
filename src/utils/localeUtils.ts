@@ -36,8 +36,9 @@ export function isRTL(locale?: string): boolean {
   const targetLocale = locale || getUserLocale();
   const localeCode = targetLocale.toLowerCase().split('-')[0] ?? '';
 
-  // RTL言語リスト（主要なRTL言語）
-  const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'yi', 'ckb', 'sd', 'ps'];
+  // RTL言語リスト（正本）。ckb / sd / ps はアラビア系派生、ku は Chrome UI
+  // ロケールで Sorani（アラビア文字）を指し、dv は Thaana 文字。いずれも右向き。
+  const rtlLanguages = ['ar', 'he', 'fa', 'ur', 'yi', 'ckb', 'sd', 'ps', 'ku', 'dv'];
 
   return rtlLanguages.includes(localeCode);
 }

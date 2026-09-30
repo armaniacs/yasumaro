@@ -5,6 +5,7 @@ import noGreedyFakeTimers from './rules/no-greedy-fake-timers.mjs';
 import noTestSleep from './rules/no-test-sleep.mjs';
 import noFixedWait from './rules/no-fixed-wait.mjs';
 import noVacuousNegativeWait from './rules/no-vacuous-negative-wait.mjs';
+import noManualProtocolVersion from './rules/no-manual-protocol-version.mjs';
 import utilsLayerBoundary from './rules/utils-layer-boundary.mjs';
 
 export default {
@@ -16,6 +17,7 @@ export default {
     'no-test-sleep': noTestSleep,
     'no-fixed-wait': noFixedWait,
     'no-vacuous-negative-wait': noVacuousNegativeWait,
+    'no-manual-protocol-version': noManualProtocolVersion,
     'utils-layer-boundary': utilsLayerBoundary,
   },
 };

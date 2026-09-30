@@ -36,10 +36,7 @@ import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
-import {
-  createPeriodFilter,
-  type PeriodFilterHandle,
-} from '../../components/periodFilter.js';
+import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
@@ -54,20 +51,17 @@ function countUniqueTags(rows: Array<{ tags?: string | null }>): number {
 }
 
 export function createTagCooccurrenceTablePanel(): PanelLifecycle {
-  let filterHost: HTMLElement | null = null;
   let tagSelect: HTMLSelectElement | null = null;
   let runButton: HTMLButtonElement | null = null;
   let tagsTruncatedNotice: HTMLElement | null = null;
   let topTruncatedNotice: HTMLElement | null = null;
   let tableWrap: HTMLElement | null = null;
-  let filterHandle: PeriodFilterHandle | null = null;
   let cachedGraph: CooccurrenceGraph | null = null;
   // WHY: the empty-state element doubles as the error surface (one element,
   // two modes) with per-render empty wordings swapped via setEmptyMessage.
   // The pre-narrowing notice describes the FETCHED tag universe, so it is
   // fetch-scoped: tag-select re-ranking keeps it while it applies.
   const notices = new PanelNotices();
-  let loadSeq = 0;
 
   function clearOutput(): void {
     if (tableWrap) tableWrap.innerHTML = '';
@@ -198,75 +192,74 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
     renderTable(cachedGraph, tagSelect?.value ?? '');
   }
 
-  async function reload(): Promise<void> {
-    if (!tableWrap) return;
-    const seq = ++loadSeq;
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'tagCooccurrenceTablePanel',
+    notices: [notices],
+    filterHostSelector: '#coocTableFilter',
+    // WHY: no auto-apply — explicit-apply host (domain-analysis precedent):
+    // Run reads getRange() instead of recording every change
+    // (PBI 2026-09-24-11 contract).
+    initialPreset: 'all',
+    isReady: () => tableWrap !== null,
+    resetOutput: clearOutput,
+    // WHY: isReady() already gated this load; the check narrows the captured
+    // host for the body.
+    load: async ({ range, isStale }) => {
+      if (!tableWrap) return;
 
-    clearOutput();
-    // Fresh-fetch reset: restores the normal empty binding in case a previous
-    // load failed and swapped in the error message, and hides the truncation
-    // notices until this fetch's own results decide visibility.
-    notices.reset();
+      try {
+        const fetched = await fetchPeriodRows({
+          since: range.since,
+          until: range.until,
+          limit: MAX_QUERY_ROWS,
+          label: 'tagCooccurrenceTable',
+        });
+        const rows = fetched.rows;
+        if (isStale()) return;
 
-    try {
-      // WHY: getRange() is the single source of truth (PBI 2026-09-24-11);
-      // the snapshot lets retries reuse one consistent window even if the
-      // user changes the filter mid-flight (stale loads bail via seq). No
-      // filter host → unbounded ('all'): the tag-cluster panel default,
-      // matching the pre-filter query shape ({ limit: 10000 }).
-      const bounds = filterHandle ? filterHandle.getRange() : {};
-      const fetched = await fetchPeriodRows({
-        since: bounds.since,
-        until: bounds.until,
-        limit: MAX_QUERY_ROWS,
-        label: 'tagCooccurrenceTable',
-      });
-      const rows = fetched.rows;
-      if (seq !== loadSeq) return;
+        if (rows.length === 0) {
+          cachedGraph = null;
+          notices.showEmpty();
+          return;
+        }
 
-      if (rows.length === 0) {
+        const beforeTagCount = countUniqueTags(rows);
+        const narrowedRows = await narrowEntriesToTopTagsHybrid(rows, MAX_TAG_CLUSTER_TAGS);
+        const graph = await computeTagCooccurrenceHybrid(narrowedRows);
+        if (isStale()) return;
+        cachedGraph = graph;
+
+        populateTagSelect(graph);
+
+        // WHY: narrowing dropped tags only when the ORIGINAL tag universe
+        // exceeded the cap — a naturally small graph must not warn.
+        if (beforeTagCount > MAX_TAG_CLUSTER_TAGS && tagsTruncatedNotice) {
+          tagsTruncatedNotice.textContent = msg(
+            'cooccurrenceTableTruncatedTags',
+            { max: MAX_TAG_CLUSTER_TAGS },
+            'More than {max} unique tags — ranking covers the top {max} tags only.',
+          );
+          notices.show('tagsTruncated');
+        }
+
+        renderFromCache();
+      } catch (error) {
+        console.error('[tagCooccurrenceTablePanel] error:', error);
+        if (isStale()) return;
         cachedGraph = null;
-        notices.showEmpty();
-        return;
-      }
-
-      const beforeTagCount = countUniqueTags(rows);
-      const narrowedRows = await narrowEntriesToTopTagsHybrid(rows, MAX_TAG_CLUSTER_TAGS);
-      const graph = await computeTagCooccurrenceHybrid(narrowedRows);
-      if (seq !== loadSeq) return;
-      cachedGraph = graph;
-
-      populateTagSelect(graph);
-
-      // WHY: narrowing dropped tags only when the ORIGINAL tag universe
-      // exceeded the cap — a naturally small graph must not warn.
-      if (beforeTagCount > MAX_TAG_CLUSTER_TAGS && tagsTruncatedNotice) {
-        tagsTruncatedNotice.textContent = msg(
-          'cooccurrenceTableTruncatedTags',
-          { max: MAX_TAG_CLUSTER_TAGS },
-          'More than {max} unique tags — ranking covers the top {max} tags only.',
+        clearOutput();
+        notices.showError(
+          'cooccurrenceTableError',
+          'Failed to load the tag co-occurrence pairs. Try again.',
         );
-        notices.show('tagsTruncated');
       }
-
-      renderFromCache();
-    } catch (error) {
-      console.error('[tagCooccurrenceTablePanel] error:', error);
-      if (seq !== loadSeq) return;
-      cachedGraph = null;
-      clearOutput();
-      notices.showError(
-        'cooccurrenceTableError',
-        'Failed to load the tag co-occurrence pairs. Try again.',
-      );
-    }
-  }
+    },
+  });
 
   return {
     id: 'panel-tag-cooccurrence-table',
     category: 'async-data',
     mount(container) {
-      filterHost = container.querySelector('#coocTableFilter');
       tagSelect = container.querySelector('#coocTableTagSelect');
       runButton = container.querySelector('#coocTableRunBtn');
       tagsTruncatedNotice = container.querySelector('#coocTableTagsTruncated');
@@ -280,36 +273,26 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       notices.register('tagsTruncated', tagsTruncatedNotice, { fetchScoped: true });
       notices.register('topTruncated', topTruncatedNotice);
 
-      if (filterHost) {
-        // WHY: no onChange handler — explicit-apply host (domain-analysis
-        // precedent): Run reads getRange() instead of recording every
-        // change (PBI 2026-09-24-11 contract).
-        filterHandle = createPeriodFilter({ initialPreset: 'all' });
-        filterHost.appendChild(filterHandle.element);
-      }
+      lifecycle.mount(container);
 
       tagSelect?.addEventListener('change', () => {
         renderFromCache();
       });
       runButton?.addEventListener('click', () => {
-        void reload();
+        void lifecycle.reload();
       });
     },
     async load() {
-      await reload();
+      await lifecycle.reload();
     },
     destroy() {
-      loadSeq += 1;
+      lifecycle.destroy();
       cachedGraph = null;
-      filterHandle?.destroy();
-      filterHandle = null;
-      filterHost = null;
       tagSelect = null;
       runButton = null;
       tagsTruncatedNotice = null;
       topTruncatedNotice = null;
       tableWrap = null;
-      notices.clear();
     },
   };
 }

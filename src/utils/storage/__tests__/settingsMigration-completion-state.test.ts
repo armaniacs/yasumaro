@@ -213,6 +213,9 @@ describe('settings migration — key classification is by stored value, not by n
         expect(isMigratableStorageKey(StorageKeys.HMAC_SECRET)).toBe(false);
         expect(isMigratableStorageKey(StorageKeys.MASTER_PASSWORD_SALT)).toBe(false);
         expect(isMigratableStorageKey(StorageKeys.MASTER_PASSWORD_HASH)).toBe(false);
+        // PBI 2026-09-27: the KEK-transition anchor must stay top-level so a
+        // restart can find the new salt before auth metadata is updated.
+        expect(isMigratableStorageKey(StorageKeys.MASTER_PASSWORD_PENDING_SALT)).toBe(false);
         expect(isMigratableStorageKey(StorageKeys.TRUST_DB)).toBe(false);
     });
 

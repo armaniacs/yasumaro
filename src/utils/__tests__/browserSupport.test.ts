@@ -1,7 +1,7 @@
 /**
  * browserSupport.test.ts
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { supportsSidePanel, supportsOffscreen, supportsFavicon, getBrowserName, getBuiltInAIFlagGuidance, getBuiltInAIDiskSpace, formatGigabytes } from '../browserSupport.js';
 
 const GIB = 1024 * 1024 * 1024;
@@ -58,6 +58,44 @@ describe('browserSupport', () => {
   });
 
   describe('getBuiltInAIDiskSpace', () => {
+    const globals = globalThis as { LanguageModel?: unknown };
+    let originalLanguageModel: unknown;
+    let hadLanguageModel: boolean;
+
+    beforeEach(() => {
+      hadLanguageModel = 'LanguageModel' in globals;
+      originalLanguageModel = globals.LanguageModel;
+      // The 22 GiB rule only applies where the Prompt API exists; without it the
+      // function short-circuits to null and every reading below would be null.
+      globals.LanguageModel = {};
+    });
+
+    afterEach(() => {
+      // Restored rather than deleted outright: leaking the stub would let a
+      // suite that expects the API to be absent pass for the wrong reason.
+      if (hadLanguageModel) {
+        globals.LanguageModel = originalLanguageModel;
+      } else {
+        delete globals.LanguageModel;
+      }
+    });
+
+    it('returns null when the Prompt API is absent (issue #161)', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 10 * GIB, usage: 0 }) }
+      });
+
+      // Anchor: the same reading is 10 GiB of free space where the Prompt API
+      // exists, which is the number issue #161 was shown as "free".
+      const withPromptApi = await getBuiltInAIDiskSpace();
+      expect(withPromptApi?.freeBytes).toBe(10 * GIB);
+      expect(withPromptApi?.sufficient).toBe(false);
+
+      delete globals.LanguageModel;
+
+      expect(await getBuiltInAIDiskSpace()).toBeNull();
+    });
+
     it('reports insufficient space when free space is below the requirement', async () => {
       vi.stubGlobal('navigator', {
         storage: { estimate: async () => ({ quota: 20 * GIB, usage: 10 * GIB }) }
@@ -73,6 +111,33 @@ describe('browserSupport', () => {
       });
       const result = await getBuiltInAIDiskSpace();
       expect(result?.sufficient).toBe(true);
+    });
+
+    it('reports sufficient space when free space exactly equals the requirement', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 33 * GIB, usage: 11 * GIB }) }
+      });
+      const result = await getBuiltInAIDiskSpace();
+      expect(result?.freeBytes).toBe(22 * GIB);
+      expect(result?.sufficient).toBe(true);
+    });
+
+    it('reports insufficient space when free space is one byte below the requirement', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 33 * GIB, usage: 11 * GIB + 1 }) }
+      });
+      const result = await getBuiltInAIDiskSpace();
+      expect(result?.freeBytes).toBe(22 * GIB - 1);
+      expect(result?.sufficient).toBe(false);
+    });
+
+    it('clamps a negative free-space reading to zero', async () => {
+      vi.stubGlobal('navigator', {
+        storage: { estimate: async () => ({ quota: 1 * GIB, usage: 2 * GIB }) }
+      });
+      const result = await getBuiltInAIDiskSpace();
+      expect(result?.freeBytes).toBe(0);
+      expect(result?.sufficient).toBe(false);
     });
 
     it('treats a missing usage value as zero usage', async () => {
