@@ -11,6 +11,8 @@ const TEST_DOMAIN = 'example-blocked-site.test';
 
 test.describe('Dashboard settings task completion @extension', () => {
   test('user adds a domain filter, saves, and it survives a reload', async ({ dashboardPage: page }) => {
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-domain"]').click();
     await expect(page.locator('#panel-domain')).toBeVisible();
 
@@ -36,6 +38,8 @@ test.describe('Dashboard settings task completion @extension', () => {
     await page.reload({ waitUntil: 'networkidle' });
     await expect(page.locator('#geminiSettings')).toBeVisible();
 
+    // Reload collapses the settings subgroup again.
+    await page.locator('[data-panel="panel-general"]').click();
     await page.locator('[data-panel="panel-domain"]').click();
     await expect(page.locator('#domainFilterToggle')).toBeChecked();
     await expect(page.locator('#domainTagList')).toContainText(TEST_DOMAIN);

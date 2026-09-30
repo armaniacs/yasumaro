@@ -16,6 +16,8 @@ test.use({ locale: 'en-US' });
 const PASSWORD = 'E2eValidP@ss1';
 
 async function gotoPrivacy(page: Page): Promise<void> {
+  // Settings children stay collapsed until Initial Setup is pressed.
+  await page.locator('button[data-panel="panel-general"]').click();
   await page.locator('button[data-panel="panel-privacy"]').click();
   await expect(page.locator('#masterPasswordEnabled')).toBeVisible();
 }

@@ -35,6 +35,8 @@ test.describe('Dashboard sidebar navigation @extension', () => {
   });
 
   test('activating a tab via keyboard (focus + Enter) reaches the same panel as a click', async ({ dashboardPage: page }) => {
+    // Settings children stay collapsed until Initial Setup is pressed.
+    await page.locator('[data-panel="panel-general"]').click();
     const tab = page.locator('[data-panel="panel-tags"]');
     await tab.focus();
     await page.keyboard.press('Enter');

@@ -143,4 +143,116 @@ describe('DashboardBootstrapper', () => {
     expect(btnA.classList.contains('active')).toBe(false);
     expect(btnB.classList.contains('active')).toBe(true);
   });
+
+  describe('settings subgroup collapse (Initial Setup toggle)', () => {
+    /** Minimal production-shaped sidebar: toggle + subgroup child + data tab. */
+    function buildGroupedSidebar(): {
+      general: HTMLButtonElement;
+      child: HTMLButtonElement;
+      data: HTMLButtonElement;
+      group: HTMLElement;
+    } {
+      bootstrapper.registerPanels([
+        mockPanel({ id: 'panel-general' }),
+        mockPanel({ id: 'panel-domain' }),
+        mockPanel({ id: 'panel-tag-cluster' }),
+      ]);
+      const general = document.createElement('button');
+      general.className = 'sidebar-nav-btn active';
+      general.setAttribute('data-panel', 'panel-general');
+      general.setAttribute('aria-selected', 'true');
+      general.setAttribute('aria-expanded', 'false');
+      const group = document.createElement('div');
+      group.className = 'sidebar-subgroup';
+      group.id = 'settingsSubgroup';
+      const child = document.createElement('button');
+      child.className = 'sidebar-nav-btn';
+      child.setAttribute('data-panel', 'panel-domain');
+      child.setAttribute('aria-selected', 'false');
+      group.appendChild(child);
+      const data = document.createElement('button');
+      data.className = 'sidebar-nav-btn';
+      data.setAttribute('data-panel', 'panel-tag-cluster');
+      data.setAttribute('aria-selected', 'false');
+      sidebar.appendChild(general);
+      sidebar.appendChild(group);
+      sidebar.appendChild(data);
+      bootstrapper.wireSidebar(sidebar);
+      return { general, child, data, group };
+    }
+
+    it('collapses the subgroup on wire and marks the toggle collapsed', () => {
+      const { general, group } = buildGroupedSidebar();
+      expect(group.hidden).toBe(true);
+      expect(general.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('pressing the Initial Setup button expands the group and navigates', async () => {
+      const { general, group } = buildGroupedSidebar();
+      general.click();
+      await flush();
+      expect(group.hidden).toBe(false);
+      expect(general.getAttribute('aria-expanded')).toBe('true');
+      expect(registry.activeId).toBe('panel-general');
+    });
+
+    it('clicking a settings child keeps the group expanded', async () => {
+      const { general, child, group } = buildGroupedSidebar();
+      general.click();
+      await flush();
+      child.click();
+      await flush();
+      expect(group.hidden).toBe(false);
+      expect(registry.activeId).toBe('panel-domain');
+    });
+
+    it('leaving the group collapses it again', async () => {
+      const { general, data, group } = buildGroupedSidebar();
+      general.click();
+      await flush();
+      expect(group.hidden).toBe(false);
+      data.click();
+      await flush();
+      expect(group.hidden).toBe(true);
+      expect(general.getAttribute('aria-expanded')).toBe('false');
+      expect(registry.activeId).toBe('panel-tag-cluster');
+    });
+
+    it('programmatic navigate into a settings child expands; out of settings collapses', async () => {
+      const { group } = buildGroupedSidebar();
+      expect(group.hidden).toBe(true);
+      await registry.navigate('panel-domain');
+      expect(group.hidden).toBe(false);
+      await registry.navigate('panel-tag-cluster');
+      expect(group.hidden).toBe(true);
+    });
+
+    it('programmatic navigate to Initial Setup leaves the group state untouched', async () => {
+      const { group } = buildGroupedSidebar();
+      await registry.navigate('panel-general');
+      expect(group.hidden).toBe(true);
+      await registry.navigate('panel-domain');
+      expect(group.hidden).toBe(false);
+      await registry.navigate('panel-general');
+      expect(group.hidden).toBe(false);
+    });
+
+    it('arrow-key navigation skips buttons hidden in the collapsed group', () => {
+      const { general, child, data, group } = buildGroupedSidebar();
+      // focus() only moves document.activeElement for attached nodes.
+      document.body.appendChild(sidebar);
+      try {
+        general.focus();
+        general.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        expect(document.activeElement).toBe(data);
+
+        group.hidden = false;
+        general.focus();
+        general.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        expect(document.activeElement).toBe(child);
+      } finally {
+        sidebar.remove();
+      }
+    });
+  });
 });
