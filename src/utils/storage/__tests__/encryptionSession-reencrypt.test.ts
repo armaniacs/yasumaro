@@ -29,7 +29,7 @@ import {
   removeMasterPassword,
   clearEncryptionKeyCache,
 } from '../encryptionSession.js';
-import { encryptApiKey, decryptApiKey } from '../../crypto/index.js';
+import { encryptApiKey, decryptApiKey, encrypt } from '../../crypto/index.js';
 import { StorageKeys } from '../types.js';
 import { API_KEY_FIELD_NAMES } from '../apiKeyFields.js';
 import { ReencryptionAbortedError } from '../apiKeyTransition.js';
@@ -83,7 +83,7 @@ async function seedCiphertext(
   plaintext: string,
 ): Promise<EncryptedData> {
   const key = await getOrCreateEncryptionKey();
-  const envelope = await encryptApiKey(plaintext, key);
+  const envelope = await encryptApiKey(plaintext, key, field);
   if (placement === 'nested') {
     const cur = (await chrome.storage.local.get('settings')) as Record<string, unknown>;
     const blob = (cur['settings'] as Record<string, unknown>) ?? {};
@@ -128,10 +128,51 @@ describe('encryptionSession KEK rotation', () => {
       const nextKey = await getOrCreateEncryptionKey();
       const afterNested = (await readStored('obsidian_api_key', 'nested')) as EncryptedData;
       const afterScattered = (await readStored('github_pat', 'scattered')) as EncryptedData;
-      expect(await decryptApiKey(afterNested, nextKey)).toBe('sk-live-obsidian');
-      expect(await decryptApiKey(afterScattered, nextKey)).toBe('ghp_live514');
-      await expect(decryptApiKey(beforeNested, nextKey)).rejects.toThrow();
-      await expect(decryptApiKey(beforeScattered, nextKey)).rejects.toThrow();
+      expect(await decryptApiKey(afterNested, nextKey, 'obsidian_api_key')).toBe('sk-live-obsidian');
+      expect(await decryptApiKey(afterScattered, nextKey, 'github_pat')).toBe('ghp_live514');
+      await expect(decryptApiKey(beforeNested, nextKey, 'obsidian_api_key')).rejects.toThrow();
+      await expect(decryptApiKey(beforeScattered, nextKey, 'github_pat')).rejects.toThrow();
+    });
+
+    it('carries the field binding through rotation: a swapped envelope no longer opens', async () => {
+      await seedCiphertext('obsidian_api_key', 'nested', 'sk-live-obsidian');
+      await seedCiphertext('gemini_api_key', 'nested', 'AIza-live-gemini');
+
+      const ok = await setMasterPassword('NewP@ssw0rd123!');
+      expect(ok).toBe(true);
+      await unlockWithPassword('NewP@ssw0rd123!');
+      const nextKey = await getOrCreateEncryptionKey();
+
+      const obsidian = (await readStored('obsidian_api_key', 'nested')) as EncryptedData;
+      const gemini = (await readStored('gemini_api_key', 'nested')) as EncryptedData;
+      // Rotation re-encrypts into field-bound v2 envelopes.
+      expect(obsidian.version).toBe(2);
+      expect(gemini.version).toBe(2);
+      expect(await decryptApiKey(obsidian, nextKey, 'obsidian_api_key')).toBe('sk-live-obsidian');
+
+      // Swap the two stored envelopes: neither field may come back as plaintext.
+      await chrome.storage.local.set({ settings: { obsidian_api_key: gemini, gemini_api_key: obsidian } });
+      await expect(decryptApiKey(gemini, nextKey, 'obsidian_api_key')).rejects.toThrow('Decryption failed');
+      await expect(decryptApiKey(obsidian, nextKey, 'gemini_api_key')).rejects.toThrow('Decryption failed');
+    });
+
+    it('rotates a v1 envelope to v2 without losing the value (read-back verified)', async () => {
+      // Old versions wrote AAD-less envelopes; rotation must carry the value
+      // across the format change and verify the read-back under the next KEK.
+      const key = await getOrCreateEncryptionKey();
+      const v1 = await encrypt('sk-live-obsidian', key);
+      expect(v1.version).toBeUndefined();
+      await chrome.storage.local.set({ settings: { obsidian_api_key: v1 } });
+
+      const ok = await setMasterPassword('NewP@ssw0rd123!');
+      expect(ok).toBe(true);
+      await unlockWithPassword('NewP@ssw0rd123!');
+      const nextKey = await getOrCreateEncryptionKey();
+
+      const after = (await readStored('obsidian_api_key', 'nested')) as EncryptedData;
+      expect(after.version).toBe(2);
+      expect(await decryptApiKey(after, nextKey, 'obsidian_api_key')).toBe('sk-live-obsidian');
+      await expect(decryptApiKey(after, nextKey, 'gemini_api_key')).rejects.toThrow('Decryption failed');
     });
 
     it('succeeds with no ciphertext without deriving keys (fast path)', async () => {
@@ -156,13 +197,13 @@ describe('encryptionSession KEK rotation', () => {
 
       await unlockWithPassword('NewP@ssw0rd123!');
       const nextKey = await getOrCreateEncryptionKey();
-      expect(await decryptApiKey((await readStored('provider_api_key', 'nested')) as EncryptedData, nextKey)).toBe(
-        'sk-live-provider',
-      );
-      expect(await decryptApiKey((await readStored('openai_api_key', 'scattered')) as EncryptedData, nextKey)).toBe(
-        'sk-live-openai',
-      );
-      await expect(decryptApiKey(before, nextKey)).rejects.toThrow();
+      expect(
+        await decryptApiKey((await readStored('provider_api_key', 'nested')) as EncryptedData, nextKey, 'provider_api_key'),
+      ).toBe('sk-live-provider');
+      expect(
+        await decryptApiKey((await readStored('openai_api_key', 'scattered')) as EncryptedData, nextKey, 'openai_api_key'),
+      ).toBe('sk-live-openai');
+      await expect(decryptApiKey(before, nextKey, 'provider_api_key')).rejects.toThrow();
 
       const meta = await snapshotAuth();
       expect(meta[StorageKeys.IS_LOCKED]).toBe(false);
@@ -208,12 +249,12 @@ describe('encryptionSession KEK rotation', () => {
       // set derives the new KEK from freshly written iterations, never this one.
       // Anonymous KEK opens the kept values (no password in session).
       const anonKey = await getOrCreateEncryptionKey();
-      expect(await decryptApiKey((await readStored('obsidian_api_key', 'nested')) as EncryptedData, anonKey)).toBe(
-        'sk-live-obsidian',
-      );
-      expect(await decryptApiKey((await readStored('github_pat', 'scattered')) as EncryptedData, anonKey)).toBe(
-        'ghp_live514',
-      );
+      expect(
+        await decryptApiKey((await readStored('obsidian_api_key', 'nested')) as EncryptedData, anonKey, 'obsidian_api_key'),
+      ).toBe('sk-live-obsidian');
+      expect(
+        await decryptApiKey((await readStored('github_pat', 'scattered')) as EncryptedData, anonKey, 'github_pat'),
+      ).toBe('ghp_live514');
     });
 
     it('cleans up idempotently when no master password is set', async () => {
@@ -274,9 +315,9 @@ describe('encryptionSession KEK rotation', () => {
       expect(pending[StorageKeys.MASTER_PASSWORD_PENDING_SALT]).toBeUndefined();
       // The good field still opens under the old KEK (no empty overwrite).
       const oldKey = await getOrCreateEncryptionKey();
-      expect(await decryptApiKey((await readStored('obsidian_api_key', 'nested')) as EncryptedData, oldKey)).toBe(
-        'sk-live-obsidian',
-      );
+      expect(
+        await decryptApiKey((await readStored('obsidian_api_key', 'nested')) as EncryptedData, oldKey, 'obsidian_api_key'),
+      ).toBe('sk-live-obsidian');
     });
   });
 
@@ -307,7 +348,7 @@ describe('encryptionSession KEK rotation', () => {
       const oldKey = await getOrCreateEncryptionKey();
       const { encryptApiKey: encryptOld } = await import('../../crypto/index.js');
       const githubField = API_KEY_FIELD_NAMES.find((f) => f === 'github_pat') as string;
-      await chrome.storage.local.set({ [githubField]: await encryptOld('ghp_live514', oldKey) });
+      await chrome.storage.local.set({ [githubField]: await encryptOld('ghp_live514', oldKey, githubField) });
       await chrome.storage.local.set({ [StorageKeys.MASTER_PASSWORD_PENDING_SALT]: saltAfter });
 
       // Run 2 must succeed (not abort): the nested field skips as migrated,
@@ -322,10 +363,10 @@ describe('encryptionSession KEK rotation', () => {
       await unlockWithPassword('NewP@ssw0rd123!');
       const nextKey = await getOrCreateEncryptionKey();
       expect(
-        await decryptApiKey((await readStored('obsidian_api_key', 'nested')) as EncryptedData, nextKey),
+        await decryptApiKey((await readStored('obsidian_api_key', 'nested')) as EncryptedData, nextKey, 'obsidian_api_key'),
       ).toBe('sk-live-obsidian');
       expect(
-        await decryptApiKey((await readStored('github_pat', 'scattered')) as EncryptedData, nextKey),
+        await decryptApiKey((await readStored('github_pat', 'scattered')) as EncryptedData, nextKey, 'github_pat'),
       ).toBe('ghp_live514');
     });
   });

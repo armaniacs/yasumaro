@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { settingsRepository } from '../SettingsRepository.js';
+import { getOrCreateEncryptionKey } from '../encryptionSession.js';
+import { decryptApiKey } from '../../crypto/index.js';
 
 vi.mock('../../logger/types.js', () => ({
   logInfo: vi.fn(() => Promise.resolve()),
@@ -124,5 +126,10 @@ describe('storage — plaintext API key detection', () => {
       iv: expect.any(String),
     });
     expect((persisted.ciphertext as string).length).toBeGreaterThan(0);
+    // The replacement ciphertext is bound to its storage field (PBI 2026-09-30-03).
+    expect(persisted.version).toBe(2);
+    const key = await getOrCreateEncryptionKey();
+    expect(await decryptApiKey(persisted as never, key, 'openai_api_key')).toBe('sk-plaintext-key');
+    await expect(decryptApiKey(persisted as never, key, 'gemini_api_key')).rejects.toThrow('Decryption failed');
   });
 });

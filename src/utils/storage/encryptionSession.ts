@@ -410,9 +410,9 @@ async function reencryptApiKeysToKek(options: {
   }
 
   const keys = await options.resolveKeys();
-  const trialDecrypt: TrialDecrypt = async (value, key) => {
+  const trialDecrypt: TrialDecrypt = async (value, key, field) => {
     try {
-      return await decryptApiKey(value, key);
+      return await decryptApiKey(value, key, field);
     } catch {
       return null;
     }
@@ -426,7 +426,7 @@ async function reencryptApiKeysToKek(options: {
   const nestedDelta: Record<string, unknown> = {};
   const scatteredDelta: Record<string, unknown> = {};
   for (const item of plan.toReencrypt) {
-    const reencrypted = await encryptApiKey(item.plaintext, keys.next);
+    const reencrypted = await encryptApiKey(item.plaintext, keys.next, item.field);
     (item.placement === 'nested' ? nestedDelta : scatteredDelta)[item.field] = reencrypted;
   }
   if (Object.keys(nestedDelta).length > 0) {
@@ -457,7 +457,7 @@ async function reencryptApiKeysToKek(options: {
     let roundTripped: string | null = null;
     if (isEncrypted(current)) {
       try {
-        roundTripped = await decryptApiKey(current, keys.next);
+        roundTripped = await decryptApiKey(current, keys.next, item.field);
       } catch {
         roundTripped = null;
       }

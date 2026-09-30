@@ -53,7 +53,7 @@ describe('settingsMigration — undecryptable API key preservation', () => {
   it('keeps the original ciphertext and reports unrecoverable instead of blanking with empty string', async () => {
     const keyA = await generateKey();
     const keyB = await generateKey();
-    const ciphertext = await encryptApiKey('sk-secret-value', keyA);
+    const ciphertext = await encryptApiKey('sk-secret-value', keyA, StorageKeys.GEMINI_API_KEY);
 
     const result = await applyMigrationsAndDecryptWithReEncrypt(
       { [StorageKeys.GEMINI_API_KEY]: ciphertext } as never,
@@ -72,7 +72,7 @@ describe('settingsMigration — undecryptable API key preservation', () => {
   it('round-trips a preserved ciphertext through writeSettings without data loss', async () => {
     const keyA = await generateKey();
     const keyB = await generateKey();
-    const ciphertext = await encryptApiKey('sk-secret-value', keyA);
+    const ciphertext = await encryptApiKey('sk-secret-value', keyA, StorageKeys.GEMINI_API_KEY);
 
     const result = await applyMigrationsAndDecryptWithReEncrypt(
       { [StorageKeys.GEMINI_API_KEY]: ciphertext } as never,
@@ -88,7 +88,7 @@ describe('settingsMigration — undecryptable API key preservation', () => {
 
   it('still decrypts normally with the correct key and reports no unrecoverable fields', async () => {
     const key = await generateKey();
-    const ciphertext = await encryptApiKey('sk-secret-value', key);
+    const ciphertext = await encryptApiKey('sk-secret-value', key, StorageKeys.GEMINI_API_KEY);
 
     const result = await applyMigrationsAndDecryptWithReEncrypt(
       { [StorageKeys.GEMINI_API_KEY]: ciphertext } as never,

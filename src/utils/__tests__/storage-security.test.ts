@@ -540,11 +540,11 @@ describe('Master Password Security', () => {
             await unlockWithPassword(password);
 
             const key = await getOrCreateEncryptionKey();
-            const encrypted = await encryptApiKey(apiKey, key);
+            const encrypted = await encryptApiKey(apiKey, key, 'openai_api_key');
 
             expect(isEncrypted(encrypted)).toBe(true);
 
-            const decrypted = await decryptApiKey(encrypted, key);
+            const decrypted = await decryptApiKey(encrypted, key, 'openai_api_key');
             expect(decrypted).toBe(apiKey);
         });
 
@@ -554,7 +554,7 @@ describe('Master Password Security', () => {
             await setMasterPassword('StrongPass1!@#Aa');
             await unlockWithPassword('StrongPass1!@#Aa');
             const key1 = await getOrCreateEncryptionKey();
-            const encrypted = await encryptApiKey(apiKey, key1);
+            const encrypted = await encryptApiKey(apiKey, key1, 'openai_api_key');
 
             // 新しいパスワードに変更して別のキーを取得
             clearEncryptionKeyCache();
@@ -562,7 +562,7 @@ describe('Master Password Security', () => {
             await unlockWithPassword('StrongPass2!@#Bb');
             const key2 = await getOrCreateEncryptionKey();
 
-            await expect(decryptApiKey(encrypted, key2)).rejects.toThrow();
+            await expect(decryptApiKey(encrypted, key2, 'openai_api_key')).rejects.toThrow();
         });
     });
 
@@ -594,7 +594,7 @@ describe('Master Password Security', () => {
             await unlockWithPassword('StrongPass123!@#');
             const key = await getOrCreateEncryptionKey();
             await chrome.storage.local.set({
-                settings: { github_pat: await encryptApiKey('ghp_live514', key) },
+                settings: { github_pat: await encryptApiKey('ghp_live514', key, 'github_pat') },
             });
 
             await removeMasterPassword('StrongPass123!@#');
@@ -602,7 +602,7 @@ describe('Master Password Security', () => {
             const anonKey = await getOrCreateEncryptionKey();
             const stored = (await chrome.storage.local.get('settings')) as Record<string, unknown>;
             const blob = stored['settings'] as Record<string, unknown>;
-            expect(await decryptApiKey(blob['github_pat'] as never, anonKey)).toBe('ghp_live514');
+            expect(await decryptApiKey(blob['github_pat'] as never, anonKey, 'github_pat')).toBe('ghp_live514');
         });
     });
 

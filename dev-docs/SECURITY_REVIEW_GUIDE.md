@@ -127,6 +127,7 @@ that is a design question, not a guard change.
 - **Privacy Consent** (`src/utils/storage/privacyConsent.ts`): User consent tracking for data collection
 - **Privacy Pipeline** (`src/background/privacyPipeline.ts`): Privacy-preserving content processing
 - All API keys encrypted in storage (PBKDF2 + AES-GCM)
+- API-key ciphertext is AAD-bound to the settings field it lives under (`EncryptedData.version: 2`), so moving an envelope between fields fails to decrypt instead of sending the key to the wrong provider. The binding is passed by the reader, never stored in the envelope; AAD-less envelopes (v1) stay readable until rewritten.
 
 ## Regular Audits
 
