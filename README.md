@@ -471,7 +471,7 @@ Yasumaro は、閲覧履歴を AI に送信する前にプライバシーを保�
 - **ローカル処理優先**: 履歴の保存、検索、要約の履歴管理はローカルの SQLite（OPFS + FTS5）で行います。Obsidian 連携も任意です。
 - **API キー暗号化**: PBKDF2 + AES-GCM で API キーを暗号化し、`chrome.storage.local` に保存します。
 - **プライベートページ検出**: 銀行、メール、管理画面などのプライベートページを自動検出し、保存前に確認ダイアログを表示します。
-- **監査ログ**: いつ、どの AI プロバイダーに、どの URL の要約を送信したかを記録します。
+- **監査ログ**: いつ、どの AI プロバイダーに、どの URL の要約を送信したかを記録します（7日間保持）。
 - **プライバシー同意フロー**: 初回起動時に同意を取得。3 回拒否すると制限モードで動作します。
 - **GDPR 対応**: データ削除は物理削除（`DELETE FROM`）で実行します。
 
@@ -483,7 +483,7 @@ Yasumaro は、閲覧履歴を AI に送信する前にプライバシーを保�
 - **Local-First Processing**: History storage, search, and summary history are managed in a local SQLite database (OPFS + FTS5). Obsidian integration is optional.
 - **API Key Encryption**: API keys are encrypted with PBKDF2 + AES-GCM and stored in `chrome.storage.local`.
 - **Private Page Detection**: Automatically detects private pages such as banking, email, and admin panels, and shows a confirmation dialog before saving.
-- **Audit Log**: Records when, which AI provider, and which URL summary was sent.
+- **Audit Log**: Records when, which AI provider, and which URL summary was sent (retained for 7 days).
 - **Privacy Consent Flow**: Requests consent on first launch. After 3 declines, the extension runs in restricted mode.
 - **GDPR Compliance**: Data deletion is performed via physical deletion (`DELETE FROM`).
 

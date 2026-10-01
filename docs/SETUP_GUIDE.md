@@ -79,7 +79,7 @@
 右上の「⚙」アイコンをクリックすると、新しいタブでダッシュボードが開きます。初回セットアップや設定を見直す場合は、ダッシュボードの「Setup Wizard」ボタンからセットアップウィザードを再表示できます。ダッシュボードは左サイドバーのナビゲーションで構成されており、3つのセクションに分かれています：
 
 **Settings セクション**
-- **初期設定**: Obsidian接続設定、AIプロバイダー設定、ローカル Markdown 書き出し設定
+- **初期設定**: Obsidian接続設定、AIプロバイダー設定、ローカル Markdown 書き出し設定。このボタンは折りたたみ式で、以下の Domain Filter 〜 Diagnostics はこの配下にまとめられており、押すまで表示されません。設定系パネルへのリンクやパネル内のジャンプでは自動で展開されます
 - **Domain Filter**: ホワイトリスト/ブラックリストの管理
 - **Prompt**: カスタムプロンプトの作成・管理
 - **Privacy**: PIIマスク設定、プライベートページ検出の動作設定、マスターパスワード保護
@@ -257,6 +257,9 @@ ollama list
 - 設定後、設定のエクスポート/インポート時にAES-GCMでファイルが暗号化されます
 - APIキーなどの機密情報を含む設定を安全に移行・バックアップする際に使用してください
 - パスワード強度は設定時にリアルタイム表示（Weak / Medium / Strong）で確認できます
+- パスワードの設定・変更・解除を行っても、保存済みの API キーは再暗号化されて引き継がれるため、入力し直す必要はありません。復号できない項目が1つでもあると処理を中止し、既存のデータと画面の状態はそのまま残ります
+- パスワード設定中に拡張機能がロックされていると、バックグラウンドの要約などは「ロック中」のエラーで失敗します。ダッシュボードでパスワードを入力して解除してください
+- パスワード変更が中断した場合は、中断時と同じパスワードで再試行してください
 
 #### 6. AI要約クレンジング設定
 `Dashboard → AI Summary Cleansing` で、AIに本文を送る前のノイズ除去を設定します。
@@ -368,7 +371,7 @@ Click the extension icon to open the main screen.
 Click the "⚙" icon in the top right to open the Dashboard in a new tab. For the initial setup or a settings review, reopen the setup wizard anytime with the "Setup Wizard" button in the dashboard. The Dashboard is organized as a left sidebar with three sections:
 
 **Settings section**
-- **Initial Setup**: Obsidian connection settings, AI provider settings, and local Markdown export settings
+- **Initial Setup**: Obsidian connection settings, AI provider settings, and local Markdown export settings. This button is collapsible: Domain Filter through Diagnostics below are grouped under it and hidden until you click it. They expand automatically when you follow a link to a settings panel or jump between panels
 - **Domain Filter**: Manage whitelist/blacklist rules
 - **Prompt**: Create and manage custom prompts
 - **Privacy**: PII masking settings, private page detection behavior, and master password protection
@@ -529,6 +532,9 @@ In the "Privacy" tab, you can configure detailed privacy behavior.
 - Once configured, settings exports/imports are automatically encrypted with AES-GCM
 - Use this when migrating or backing up settings that include API keys and other sensitive data
 - Password strength is shown in real time during setup (Weak / Medium / Strong)
+- Setting, changing, or removing the password re-encrypts and keeps your stored API keys, so you do not need to enter them again. If even one item cannot be decrypted, the operation is aborted and existing data and the screen state are left unchanged
+- While the extension is locked with a master password, background operations such as summarization fail with a "locked" error. Enter the password in the dashboard to unlock
+- If a password change is interrupted, retry it with the same password you used originally
 
 #### 6. AI Summary Cleansing Settings
 In `Dashboard → AI Summary Cleansing`, configure the noise removal applied before page text is sent to the AI.

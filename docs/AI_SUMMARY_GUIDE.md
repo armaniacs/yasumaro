@@ -51,6 +51,8 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 3. 失敗した場合、または要約が短すぎる場合は、優先度2位のプロバイダーに切り替えて再試行
 4. 2位も失敗すれば3位で再試行
 
+失敗が続いたプロバイダーは、約5〜15分間一時停止され、その間は試行対象から外れます。AIプロバイダー設定の「失敗が続くプロバイダを一時停止する」（既定は ON）を OFF にすると一時停止は行われず、要約のたびに全プロバイダーを再試行します。
+
 優先度リストが未設定の場合は、従来通り単一の「AI Provider」設定のみが使用されます。ローカルLLMをメインに据えつつ、失敗時のみクラウドAIにフォールバックする、といった構成も可能です。
 
 ### コンテンツサイズとコスト管理
@@ -86,7 +88,7 @@ AIに送信する前に、PIIマスキング（メールアドレス・クレジ
 
 **Q. AIプロバイダーへの接続に失敗する**
 
-ダッシュボードの「Test AI」で接続テストを行い、Base URL・APIキー・モデル名が正しいか確認してください。接続テストは実際に AI へ短いプロンプトを1往復させ、送信内容・受信内容・モデル名・所要時間・HTTP ステータスを画面に表示します。空応答は成功扱いにならないため、「テストは通ったのに本番で要約が空」という状態を切り分けられます。優先度リストを設定している場合、1位が失敗しても自動的に2位・3位が試行されるため、複数プロバイダーを登録しておくと可用性が上がります。
+ダッシュボードの「Test AI」で接続テストを行い、Base URL・APIキー・モデル名が正しいか確認してください。接続テストは実際に AI へ短いプロンプトを1往復させ、送信内容・受信内容・モデル名・所要時間・HTTP ステータスを画面に表示します。空応答は成功扱いにならないため、「テストは通ったのに本番で要約が空」という状態を切り分けられます。優先度リストを設定している場合、1位が失敗しても自動的に2位・3位が試行されるため、複数プロバイダーを登録しておくと可用性が上がります。API キーの期限切れや入力ミスで一時停止中のプロバイダーは、接続テストが成功した時点で一時停止が解除され、次回の要約から再び試行されます。接続テストは一時停止中でも実行でき、失敗した場合は一時停止の状態は変わりません。
 
 **Q. 要約が短すぎる・空になることがある**
 
@@ -165,6 +167,8 @@ In the dashboard's "Initial Setup," you can configure AI providers with priority
 3. If it fails, or the summary is too short, fall back to the rank-2 provider and retry
 4. If rank 2 also fails, retry with rank 3
 
+A provider that keeps failing is paused for about 5–15 minutes and skipped during that time. Turning off "Pause providers that keep failing" in the AI provider settings (ON by default) disables the pause, so every provider is retried on each summary.
+
 If no priority list is configured, the single legacy "AI Provider" setting is used as before. This lets you run a local LLM as your primary provider and fall back to a cloud AI only on failure, for example.
 
 ### Content Size and Cost Control
@@ -200,7 +204,7 @@ When monthly usage exceeds a configured threshold, a warning is shown in the das
 
 **Q. Connecting to an AI provider fails**
 
-Use "Test AI" in the dashboard to verify the Base URL, API key, and model name are correct. The connection test sends a short prompt to the AI and waits for one round-trip, then displays what was sent, what came back, the model name, the elapsed time, and the HTTP status. An empty response does not count as success, so you can tell apart the "test passed but the real summary is empty" case. If you've configured a priority list, a failure at rank 1 automatically falls through to rank 2 and 3, so registering multiple providers improves availability.
+Use "Test AI" in the dashboard to verify the Base URL, API key, and model name are correct. The connection test sends a short prompt to the AI and waits for one round-trip, then displays what was sent, what came back, the model name, the elapsed time, and the HTTP status. An empty response does not count as success, so you can tell apart the "test passed but the real summary is empty" case. If you've configured a priority list, a failure at rank 1 automatically falls through to rank 2 and 3, so registering multiple providers improves availability. A provider paused because of an expired or mistyped API key is resumed as soon as its connection test succeeds, and is tried again on the next summary. The test also runs while a provider is paused; a failed test leaves the pause unchanged.
 
 **Q. Summaries are sometimes too short or empty**
 

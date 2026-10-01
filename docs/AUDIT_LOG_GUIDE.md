@@ -27,7 +27,7 @@ Yasumaro は、AI要約の生成リクエストを送信するたびに、いつ
 
 ### 保持期間
 
-監査ログには自動削除機能がなく、SQLiteバックエンド使用時は無期限に蓄積されます（保存先はローカルの SQLite データベースです）。フォールバックストレージ使用時は監査ログの記録・参照は未対応であり、イベントは破棄され、TSVダウンロードはエラーになります。蓄積量が気になる場合は、SQLite の定期的なメンテナンス（PURGE）と併せてご利用ください。
+監査ログは、ローカルの SQLite データベースに保存され、1日1回の保持処理で7日を超えたエントリが自動的に削除されます（閲覧履歴の既定の保持期間と同じです）。保持期間は利用者の設定では延長できません。「すべてのデータを削除」でも監査ログは削除されます。フォールバックストレージ使用時は監査ログの記録・参照は未対応であり、イベントは破棄され、TSVダウンロードはエラーになります。
 
 ### 想定される使い方
 
@@ -61,7 +61,7 @@ From the dashboard's **Export Logs** panel, use "TSV でダウンロード" to d
 
 ### Retention
 
-Audit log entries are never automatically deleted; on SQLite backends they accumulate indefinitely (stored in the local SQLite database). On Fallback Storage, audit log recording and querying are unsupported — events are dropped and TSV download fails with an error. If storage size becomes a concern, periodic SQLite maintenance (PURGE) can help manage it.
+Audit log entries are stored in the local SQLite database, and a daily retention job automatically deletes entries older than 7 days (the same as the default browsing-history retention period). The retention period cannot be extended in user settings. "Delete All Data" also removes the audit log. On Fallback Storage, audit log recording and querying are unsupported — events are dropped and TSV download fails with an error.
 
 ### Typical Use Cases
 

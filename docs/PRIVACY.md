@@ -1,12 +1,13 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年9月27日 / Last Updated: September 27, 2026**
+**最終更新日: 2026年10月1日 / Last Updated: October 1, 2026**
 **同意バージョン: 2026年9月8日 / Consent Version: September 8, 2026**
 
 > 最終更新日は文書の改訂日です。全利用者に再同意を求める場合は「同意バージョン」を更新します。
 > The Last Updated date is the document's revision date. Re-prompting every user is driven by the Consent Version line instead.
 
 > **更新履歴 / Update History**:
+> - **2026年10月1日**: AI 送信の監査ログの保持期間（7日、利用者設定では延長不可）と、「すべてのデータを削除」で削除される旨を追記（保持の明確化であり収集範囲は変わらないため同意バージョンは据え置き）
 > - **2026年9月27日**: API キーの自動暗号化について、マスターパスワード未設定時に secret を平文で保存していた記述を、専用 KEK でラップした envelope のみを保存する実装へ更新（露出範囲の縮小のため同意バージョンは据え置き）
 > - **2026年9月8日**: v6.8.0 - 閲覧履歴アーカイブ機能のデータフローと、ブラウザ内蔵 AI のデータ取り扱いについて追記
 > - **2026年7月31日**: v6.7.0 - プライバシー同意撤回時のデータ削除確認ダイアログについて追記
@@ -192,7 +193,12 @@ v4.2.1以降、以下の機能が追加されました：
      - タブは処理完了後に自動的に閉じられます
    - **重要**: 無効化（デフォルト）設定では、バックグラウンドタブは開かれません
 
-3. **URL ログの記録**:
+3. **AI 送信の監査ログ**:
+   - 「いつ、どの AI プロバイダーに、どの URL の要約を送信したか」はデバイス内にのみ記録されます
+   - 監査ログは7日を超えると自動的に削除されます。利用者の設定で保持期間を延長することはできません
+   - 「すべてのデータを削除」でも削除されます
+
+4. **URL ログの記録**:
    - 記録操作のログにURLが含まれる場合があります（最大7日間保存）
    - URLはドメイン名のみが記録され（パス情報は除外）、完全なURLは記録されません
    - これらのログはデバッグ目的のみであり、ダッシュボードから確認や削除が可能です
@@ -352,7 +358,12 @@ An optional feature behind the "Research Sessions" panel, which shows which page
      - Tab automatically closes after processing
    - **Important**: With disabled (default) setting, no background tabs are opened
 
-3. **URL Logging**:
+3. **AI Send Audit Log**:
+   - A record of when, to which AI provider, and for which URL a summary was sent is kept on your device only
+   - Audit log entries are automatically deleted after 7 days. The retention period cannot be extended in user settings
+   - "Delete All Data" also removes the audit log
+
+4. **URL Logging**:
    - Recording operation logs may contain URLs (retained for up to 7 days)
    - URLs are logged as domain names only (path information excluded); full URLs are not recorded
    - These logs are for debugging purposes only and can be viewed or deleted from the dashboard
@@ -467,8 +478,8 @@ This extension requires the following permissions:
 
 Dashboard → Privacy Settings → "Data Management" section → "Delete All Data" button
 
-個別の閲覧履歴エントリは物理的に削除されます（GDPR Art.17 対応）。WAL チェックポイントにより、削除後にディスク領域も確実に解放されます。
+個別の閲覧履歴エントリは物理的に削除されます（GDPR Art.17 対応）。WAL チェックポイントにより、削除後にディスク領域も確実に解放されます。AI 送信の監査ログも同時に削除されます。
 
-Individual browsing history entries are physically deleted from the database (GDPR Art.17 compliance). WAL checkpoint ensures disk space is released after deletion.
+Individual browsing history entries are physically deleted from the database (GDPR Art.17 compliance). WAL checkpoint ensures disk space is released after deletion. The AI send audit log is deleted at the same time.
 
 All data is stored locally and can be deleted by uninstalling the extension or manually deleting notes in Obsidian.

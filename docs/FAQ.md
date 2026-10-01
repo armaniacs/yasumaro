@@ -159,7 +159,7 @@ Groq も Ollama も独立した入力があるので、シンプルに OpenAI �
 
 **Q23. API キーは安全に保管されますか？**
 
-マスターパスワードを設定している場合は、API キーは AES-GCM（PBKDF2 鍵導出）で暗号化されて Chrome のローカルストレージに保存されます。マスターパスワードが未設定の場合、API キーは `chrome.storage.local` に平文で保存されます。安全のため、マスターパスワードの設定を推奨します。ダッシュボードの「プライバシー」タブで「マスターパスワード保護」を有効にしてください。なお、設定のエクスポートファイルの暗号化も同様にオプトインです（デフォルトでは暗号化されません）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
+マスターパスワードを設定している場合は、API キーは AES-GCM（PBKDF2 鍵導出）で暗号化されて Chrome のローカルストレージに保存されます。マスターパスワードが未設定の場合も、API キーは拡張機能が自動生成した鍵で AES-GCM により暗号化されて保存されます。マスターパスワードを設定すると、これに加えてパスワードから導出した鍵で保護されるため、設定を推奨します。マスターパスワードの設定・変更・解除では、保存済みの API キーは再暗号化されて引き継がれるため、入力し直す必要はありません。ダッシュボードの「プライバシー」タブで「マスターパスワード保護」を有効にしてください。なお、設定のエクスポートファイルの暗号化も同様にオプトインです（デフォルトでは暗号化されません）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
 **Q24. 設定をエクスポートしたファイルには API キーが含まれますか？**
 
@@ -461,7 +461,7 @@ The text content of the page is sent to the API of your chosen provider to gener
 
 **Q23. Are my API keys stored securely?**
 
-When a master password is configured, API keys are encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage. Without a master password, API keys are stored in plaintext in `chrome.storage.local`. Setting a master password is recommended: enable "Master Password Protection" in the Privacy tab of the dashboard. Encryption of settings-export files is likewise opt-in (exports are unencrypted by default). See [PRIVACY.md](PRIVACY.md) for details.
+When a master password is configured, API keys are encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage. Without a master password, API keys are still encrypted with AES-GCM using a key the extension generates automatically. Setting a master password adds protection with a key derived from the password, so it is recommended. Setting, changing, or removing the master password re-encrypts and keeps your stored API keys, so you do not need to enter them again: enable "Master Password Protection" in the Privacy tab of the dashboard. Encryption of settings-export files is likewise opt-in (exports are unencrypted by default). See [PRIVACY.md](PRIVACY.md) for details.
 
 **Q24. Does the exported settings file include API keys?**
 
