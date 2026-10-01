@@ -56,7 +56,14 @@ export const saveToObsidianStep = async (
 
   const obsidianStart = Date.now();
   try {
-    await obsidianClient!.appendToDailyNote(markdown, context.traceId);
+    // Write-visibility policy home: a replay write carries dedupe so the
+    // section editor skips already-saved content; every other write (first
+    // pipeline run, user-invoked append) stays unconditional.
+    if (context.replayWrite === true) {
+      await obsidianClient!.appendToDailyNote(markdown, context.traceId, { dedupe: true });
+    } else {
+      await obsidianClient!.appendToDailyNote(markdown, context.traceId);
+    }
     const obsidianDuration = Date.now() - obsidianStart;
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url, traceId: context.traceId });
 

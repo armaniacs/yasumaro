@@ -120,6 +120,14 @@ export interface PipelineInput {
   force: boolean;
   aiService?: AIService | null;
   traceId?: string;
+  /**
+   * Replay write marker set only by `createRetryContext` (the offline
+   * Obsidian-write retry). The saveObsidian sink reads it to pass
+   * `dedupe: true` to the Obsidian client, so a retried operation cannot
+   * stack a second copy of identical section content. Normal recordings and
+   * user-invoked appends never set it — their insertion stays unconditional.
+   */
+  replayWrite?: boolean;
 }
 
 /**

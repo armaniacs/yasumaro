@@ -59,6 +59,7 @@ export function createRetryContext(
     data: { title: job.title, url: job.url, content: '' } as RecordingData,
     settings,
     force: true,
+    replayWrite: true,
     errors: [],
     privacyResult,
   };
