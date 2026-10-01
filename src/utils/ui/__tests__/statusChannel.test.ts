@@ -77,15 +77,4 @@ describe('StatusChannel report', () => {
     expect(target().textContent).toBe('Saved!');
     expect(mirror().textContent).toBe('');
   });
-
-  it('mirrorIfBound runs the hook without rendering', () => {
-    const channel = new StatusChannel();
-    const hook = vi.fn();
-    channel.register('target', { mirror: hook });
-
-    channel.mirrorIfBound('target');
-    channel.mirrorIfBound('unknown');
-
-    expect(hook).toHaveBeenCalledTimes(1);
-  });
 });

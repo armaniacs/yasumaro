@@ -72,7 +72,7 @@ export class RecordingAdmission {
     // path).
     if (kind === 'valid-visit') {
       const url = sender.tab?.url;
-      if (url && visitRateLimiter.isRateLimited(url)) {
+      if (url && isRateLimitedVisit(url)) {
         return { rejected: { success: false, reason: 'rate_limited' } };
       }
       if (!(await this.deps.isRecordingAllowed())) {

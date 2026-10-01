@@ -4,16 +4,20 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Track exec calls to control behavior per SQL statement (IDB engine path,
 // used after OPFS Worker fails). Mirrors sqliteEngine.ts's SqliteEngine
 // interface (exec/query/queryValue/close) — see PBI 2026-07-16-06.
+// PBI-05 moved the production createIdbEngine import to sqliteBoot.js, so the
+// mock targets that module (with the original exports preserved for the boot
+// ladder) — a mock on the dead '../sqliteEngine.js' compat path would let
+// these scenarios pass vacuously against the real WASM engine.
 const mockExec = vi.fn();
 
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createIdbEngine: vi.fn().mockImplementation(() => Promise.resolve({
     exec: (sql: string) => mockExec(sql),
     query: vi.fn().mockResolvedValue([]),
     queryValue: vi.fn().mockResolvedValue(null),
     close: vi.fn().mockResolvedValue(undefined),
   })),
-  createEngine: vi.fn(),
 }));
 
 // migrateIdbIfNeeded() dynamically imports wa-sqlite only when an old IDB
@@ -80,7 +84,7 @@ describe('ALTER TABLE migration error handling', () => {
 
   it('re-throws non-duplicate-column ALTER TABLE errors through runMigrations()', async () => {
     // Make ALTER TABLE throw a "disk full" type error
-    mockExec.mockImplementation(async (_db: unknown, sql: string) => {
+    mockExec.mockImplementation(async (sql: string) => {
       if (sql.includes('ALTER TABLE')) {
         throw new Error('disk I/O error: database disk image is malformed');
       }
@@ -97,6 +101,9 @@ describe('ALTER TABLE migration error handling', () => {
     // to fail and ultimately fall back to storage.
     const result = await init();
 
+    // The scenario is only real when the fake engine's exec actually drove
+    // the migration statements — a vacuous pass here would hide a broken mock.
+    expect(mockExec.mock.calls.some((args) => String(args[0]).includes('ALTER TABLE'))).toBe(true);
     // The error is re-thrown by runMigrations(), not logged via console.warn
     expect(warnSpy).not.toHaveBeenCalledWith(
       expect.stringContaining('unexpected ALTER TABLE error'),
@@ -108,7 +115,7 @@ describe('ALTER TABLE migration error handling', () => {
 
   it('does NOT log for duplicate column name errors (expected during migration)', async () => {
     // Simulate what happens on fresh install: columns already defined in SCHEMA_SQL
-    mockExec.mockImplementation(async (_db: unknown, sql: string) => {
+    mockExec.mockImplementation(async (sql: string) => {
       if (sql.includes('ALTER TABLE')) {
         throw new Error('SQLITE_ERROR: duplicate column name: content');
       }
@@ -120,6 +127,9 @@ describe('ALTER TABLE migration error handling', () => {
     warnSpy.mockClear();
     await init();
 
+    // The scenario is only real when the fake engine's exec actually drove
+    // the migration statements — a vacuous pass here would hide a broken mock.
+    expect(mockExec.mock.calls.some((args) => String(args[0]).includes('ALTER TABLE'))).toBe(true);
     // Should NOT warn because "duplicate column name" is expected
     expect(warnSpy).not.toHaveBeenCalledWith(
       expect.stringContaining('unexpected ALTER TABLE error'),

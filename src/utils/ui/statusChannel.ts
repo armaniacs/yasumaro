@@ -2,9 +2,10 @@ import { showStatus, type ShowStatusOptions, type StatusType } from './settingsU
 
 export interface StatusTargetBinding {
   /**
-   * Mirror hook run after each report to this target. The dashboard registers
-   * `syncStatusToTop` here; the channel never imports dashboard code so the
-   * utils → entry dependency direction stays intact.
+   * Mirror hook run after each report to this target. No surface registers it
+   * yet (the dashboard keeps `showStatus` + `syncStatusToTop` per call site);
+   * the channel never imports entry code so the utils → entry dependency
+   * direction stays intact.
    */
   mirror?: () => void;
   defaultTtlMs?: number;
@@ -40,11 +41,6 @@ export class StatusChannel {
     }
     showStatus(target, message, type, resolved);
     binding?.mirror?.();
-  }
-
-  /** Mirror policy for a target id, without rendering. */
-  mirrorIfBound(targetId: string): void {
-    this.bindings.get(targetId)?.mirror?.();
   }
 }
 
