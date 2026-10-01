@@ -1,34 +1,30 @@
 /**
- * contentExtractor メインエントリーポイント
- * Webページのメインコンテンツを抽出し、ノイズ（ナビゲーション、ヘッダー等）を除去する
+ * contentExtractor internal orchestrator
+ * Extracts the main content of a web page and removes noise (navigation,
+ * headers, etc.).
  *
- * 【リファクタリング履歴】: 単一ファイル（912行）からモジュール分割へ実装
- * 新しいモジュール構成:
- * - contentExtractor/types.ts              - 型定義（ExtractResult, CleanseCallback）
- * - contentExtractor/classifier.ts         - 要素分類（除外判定・アジアコンテンツ判定）
- * - contentExtractor/scoring.ts            - スコア計算・候補探索
- * - contentExtractor/textExtraction.ts      - テキスト抽出
- * - contentExtractor/index.ts              - オーケストレーター（このファイル）+ 再エクスポート
- *
- * 【entry の実態】(PBI 13 で確定):
- * - 本番の抽出経路は 1 本のみ: contentKernel.extractPageContent()
- *   → preparePageContent() → extractMainContentWithInfo()。string entry
- *   extractMainContent の本番呼び出しはゼロ。
- * - string entry は bench 計測面として維持する: bench/micro/c1-bytesize.bench.mjs
- *   と c4-clonenode.bench.mjs が非診断 path を計測する。削除すると bench baseline
- *   の連続性が切れるため、entry 削減は bench 再計測のタイミングで再評価する。
- * 🟢
+ * Seam map: the ONLY external seam is pageContentPipeline.preparePageContent()
+ * (config in → ExtractResult out). The production route is
+ * contentKernel.extractPageContent() → preparePageContent() →
+ * extractMainContentWithInfo(). Every export in this file is an internal seam:
+ * - extractMainContentWithInfo — legacy-compat adapter (the entry
+ *   preparePageContent calls; diagnostics expanded to the flat ExtractResult).
+ * - extractMainContent — bench-measurement adapter ONLY (bench/micro
+ *   c1-bytesize and c4-clonenode measure this non-diagnostic path). Zero
+ *   production callers. Do not delete: removal would break the bench baseline
+ *   continuity; entry reduction is re-evaluated at the next bench
+ *   re-measurement.
+ * - extract — internal seam for consumers that need the opaque ExtractionReport.
  */
 
-import { cleanseContent, INITIAL_KEYWORDS, type CleanseOptions, type CleanseResult } from '../contentCleaner.js';
+import { INITIAL_KEYWORDS, type CleanseOptions } from '../contentCleaner.js';
 import type { AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
 import type { ExtractResult } from './types.js';
-import { applyAiCleanseStep, applyFallback, getByteSize, resolvePreAiBytes, type FallbackDecision } from './extractPipeline.js';
+import { runCleanseAndExtract } from './extractPipeline.js';
 import { createReportBuilder, ExtractionReport, type ExtractionReportBuilder } from './extractionReport.js';
 import { scanMainContentCandidates } from './scoring.js';
-import { extractTextFromElement } from './textExtraction.js';
 import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAdapters.js';
 
 // パブリックAPIを再エクスポート
@@ -45,22 +41,9 @@ export { calculateTextScore } from './scoring.js';
  */
 
 /**
- * ページのメインコンテンツを抽出する
- * 【機能概要】: メインコンテンツ（記事、本文等）をテキストとして抽出
- * 【処理内容】:
- *   1. article/mainタグを優先的に探索
- *   2. 見出し、段落の多い要素を選択
- *   3. ナビゲーション、ヘッダー等を除外
- *   4. （オプション）コンテンツ・クレンジング（Hard Strip + Keyword Strip）
- *   5. （オプション）AI要約クレンジング（alt属性、メタデータ、広告、ナビゲーション、ソーシャルウィジェット削除）
- *   6. 最大文字数で切り詰め
- * 【フォールバック】: メインコンテンツが見つからない場合は body.innerText を使用
- * 【サイズ制限】: maxChars で指定された最大文字数（デフォルト: 10000）
- * 🟢
- * @param maxChars - 最大文字数（デフォルト: 10000）
- * @param cleanseOptions - クレンジングオプション（デフォルト: クレンジング無効）
- * @param aiSummaryCleanseOptions - AI要約クレンジングオプション（デフォルト: クレンジング無効）
- * @returns 抽出されたテキスト（空白正規化済み、最大文字数制限適用）
+ * Internal seam family. The positional options mirror the CleansingConfig
+ * mapping built by buildExtractionOptions; the external seam
+ * (preparePageContent) is the only caller that resolves a config into them.
  */
 /**
  * Cleanse options accepted by the extractor entries.
@@ -74,7 +57,7 @@ export type ExtractAiSummaryOptions = AiSummaryCleanseOptions & { aiSummaryClean
 export type ExtractDedupOptions = { dedupEnabled?: boolean; dedupThreshold?: number };
 
 /**
- * Config for the primary extract() entry. Mirrors the positional options of
+ * Config for the internal report-path entry. Mirrors the positional options of
  * the legacy entries in one struct.
  */
 export interface ExtractConfig {
@@ -84,14 +67,14 @@ export interface ExtractConfig {
     dedupOptions?: ExtractDedupOptions;
 }
 
-/** Primary output: extracted text plus the opaque diagnostics report. */
+/** Internal report-path output: extracted text plus the opaque diagnostics report. */
 export interface ExtractOutput {
     content: string;
     report: ExtractionReport;
 }
 
 /**
- * Primary entry: extract the page main content WITH full diagnostics behind
+ * Internal seam: extract the page main content WITH full diagnostics behind
  * an opaque ExtractionReport. Consumers cross only the narrow seam
  * (bytesFunnel / cleanseCounts / fallbackCause / originalText).
  */
@@ -108,8 +91,8 @@ export function extract(config: ExtractConfig = {}): ExtractOutput {
 }
 
 /**
- * Legacy compat: full diagnostics expanded to the flat ExtractResult shape.
- * 本番経路（contentKernel → preparePageContent が使用する唯一の entry）。
+ * Legacy-compat adapter: full diagnostics expanded to the flat ExtractResult
+ * shape. The only entry the external seam (preparePageContent) calls.
  */
 export function extractMainContentWithInfo(
     maxChars: number = 10000,
@@ -123,10 +106,11 @@ export function extractMainContentWithInfo(
 }
 
 /**
- * Thin string wrapper for the hot path (every autosave). Diagnostic byte
- * measurement is disabled; only fallback-critical encodes run.
- * 本番未使用 — bench c1/c4 の計測面として維持する（削除すると bench baseline の
- * 連続性が切れる）。将来 bench を再計測するタイミングで entry 削減を再評価する。
+ * Bench-measurement adapter: thin string wrapper with diagnostic byte
+ * measurement disabled (only fallback-critical encodes run). Zero production
+ * callers — kept only as the c1/c4 micro-bench measurement surface. Do not
+ * delete: removal would break the bench baseline continuity; entry reduction
+ * is re-evaluated at the next bench re-measurement.
  */
 export function extractMainContent(
     maxChars: number = 10000,
@@ -141,9 +125,10 @@ export function extractMainContent(
 /**
  * Shared orchestration for all entries. Diagnostic policy (measurement,
  * retention, funnel, recount) is owned by the builder — no boolean threads
- * through this function.
- * clone 以降の抽出工程は runCleanseAndExtract に集約（PBI 13）。candidate/body
- * の経路差分は入力要素の決定（先頭候補 / document.body）のみ。
+ * through this function. The clone→cleanse→AI→fallback orchestration lives in
+ * extractPipeline.runCleanseAndExtract; the candidate/body path difference
+ * folds into the source element (top candidate / document.body) and the
+ * preBytes origin (candidateBytes / pageBytes).
  */
 function extractInternal(
     maxChars: number = 10000,
@@ -177,145 +162,7 @@ function extractInternal(
         // work would be discarded.
         measureBytes: false,
     };
-    // Unified fallback settlement shared by the candidate path and the body
-    // path (previously two duplicated blocks). The policy decision itself
-    // comes from applyFallback; diagnostic settlement lives in the builder.
-    const settleFallback = (decision: FallbackDecision): void => {
-        content = decision.content;
-        builder.settleFallback(decision);
-    };
     const readBodyText = (): string => document.body?.innerText || '';
-
-    /**
-     * runCleanseAndExtract — clone → cleanse → pre-AI bytes → reason → AI step
-     * → dual payload → extract → fallback の単一オーケストレーション（PBI 13）。
-     * candidate path と body path で共有し、経路差分は呼び出し側が渡す入力要素
-     * （先頭候補 / document.body）と preBytes の出所（candidateBytes / pageBytes）
-     * のみに畳み込む。meter 呼び出し順は旧両 path と同一（診断 reuse → 条件付き
-     * measure のみ。bench c1 の計測対象を動かさない）。
-     *
-     * 旧両 path の歴史的非対称性は candidate 側に統一して解消した:
-     * dual payload は常に抽出元から clone 前に保持し（AI step は clone 上で
-     * 動くため source 文字列は前後で同一）、sanitize ログは実際に要素を
-     * 削除したときに常時発行する。旧 body-path の沈黙を pin するテストは
-     * 存在しない。
-     * cleanse=false は candidate の no-cleanse ポリシー（live 要素＋任意の AI-only
-     * clone）を再現する。body-plain ポリシー（innerText・fallback/AI なし）は本質的に
-     * 異なるため呼び出し側にインラインで残す。
-     */
-    const runCleanseAndExtract = (source: {
-        sourceElement: Element;
-        preCleanseText: string;
-        preBytes: number;
-        cleanse: boolean;
-        /** PBI 05: candidate-source only — gates the ② restore (body restore would ship raw textContent). */
-        candidateSource?: boolean;
-    }): void => {
-        // 30-11: 二重ペイロード — 抽出元からクレンジング前に原文を保持
-        builder.retainSourceOriginal(source.sourceElement.textContent || '');
-
-        let targetElement: Element;
-
-        if (source.cleanse) {
-            // DOMを直接操作しないようにクローンを作成
-            const clone = source.sourceElement.cloneNode(true) as Element;
-
-            // クレンジング前のバイト数（textContentベースで統一）
-            // preCleanseText は preBytes と同一文字列のため再利用し、重複エンコードしない
-            builder.noteCleanseStart(source.preBytes);
-
-            // クローンに対してコンテンツクレンジングを実行
-            const cleanseResult: CleanseResult = cleanseContent(clone, {
-                hardStripEnabled,
-                keywordStripEnabled,
-                keywords
-            });
-
-            // クレンジング後のバイト数（textContentベースで統一）
-            // AIフォールバック判定に渡す値。診断時は cleansedBytes をそのまま使い回す
-            // 何も削除されず文字列が同一の場合は再エンコードせず使い回す
-            const cloneText = clone.textContent || '';
-            builder.notePostCleanseChars(cloneText.length);
-            const resolvedPreAi = resolvePreAiBytes(meter, cloneText, { text: source.preCleanseText, bytes: builder.originalBytes }, aiSummaryCleanseEnabled);
-            builder.noteCleansedBytes(resolvedPreAi.cleansedBytes);
-            const preAiBytes = resolvedPreAi.preAiBytes;
-
-            builder.noteCleanseOutcome(
-                cleanseResult,
-                {
-                    keywords: keywords.join(', '),
-                    mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword',
-                },
-                { aiSummaryCleanseEnabled, aiSummaryOptions: resolvedAiSummaryOptions },
-            );
-
-            targetElement = clone;
-
-            // AI要約クレンジングを実行（cleanseEnabledとは独立して動作）
-            if (aiSummaryCleanseEnabled) {
-                const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytes);
-                builder.noteAiApplied(applied);
-            }
-        } else {
-            targetElement = source.sourceElement;
-            // バイト数（クレンジングなし、textContentベースで統一）
-            // targetElement.textContent は preBytes と同一文字列のため再利用する
-            // meter無効では診断値を残さず、AIフォールバック用に1回だけ計測する
-            let preAiBytesElse = 0;
-            if (meter.enabled) {
-                builder.noteUncleansedBytes(source.preBytes);
-                preAiBytesElse = builder.cleansedBytes;
-            } else if (aiSummaryCleanseEnabled) {
-                preAiBytesElse = getByteSize(targetElement.textContent || '');
-            }
-
-            // AI要約クレンジングのみ有効な場合（cleanseEnabled=false, aiSummaryCleanseEnabled=true）
-            // クローンを作成してAI要約クレンジングを実行
-            if (aiSummaryCleanseEnabled) {
-                // DOMを直接操作しないようにクローンを作成
-                const clone = source.sourceElement.cloneNode(true) as Element;
-
-                const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytesElse);
-                builder.noteAiApplied(applied);
-
-                // クレンジング後のクローンからテキストを抽出
-                targetElement = clone;
-            }
-        }
-
-        // 要素からテキストを抽出
-        content = extractTextFromElement(targetElement);
-
-        // フォールバック判定: 短すぎるコンテンツまたは過剰削減
-        // (single policy via applyFallback — shared by both paths)
-        // PBI 05 ② pair is supplied only when Content Cleansing ran on a
-        // candidate source AND the ② guard flag is on — omitted otherwise,
-        // which reproduces the legacy decision byte-for-byte.
-        const supplyCleansePair = cleanseGuardEnabled
-            && source.candidateSource === true
-            && builder.postCleanseChars !== undefined;
-        const fallbackDecision = applyFallback({
-            content,
-            contentBytes: getByteSize(content),
-            preAiCleanseText: builder.preAiCleanseText,
-            aiSummaryOriginalBytes: builder.aiSummaryOriginalBytes,
-            fallbackRatio,
-            fallbackMinBytes,
-            readBodyText,
-            ...(supplyCleansePair
-                ? {
-                    preCleanseText: source.preCleanseText,
-                    preCleanseChars: source.preCleanseText.length,
-                    postCleanseChars: builder.postCleanseChars,
-                    preCleanseBytes: source.preBytes,
-                    fallbackMinChars,
-                }
-                : {}),
-        });
-        if (fallbackDecision.fallbackTriggered) {
-            settleFallback(fallbackDecision);
-        }
-    };
 
     try {
         // ホワイトリスト抽出モード判定: ドメイン一致 or DOM構造検知
@@ -358,37 +205,61 @@ function extractInternal(
         }
 
         if (candidates.length > 0) {
-            // 30-11: 二重ペイロード — 候補の原文を保持（クレンジング前のテキスト）
-            // 30-14: ファネルの候補バイト数は既に candidateBytes で計測済み
-            // clone 以降の全工程は runCleanseAndExtract に集約（PBI 13）。
-            // 経路差分は入力要素（先頭候補）と preBytes の出所（candidateBytes）のみ。
+            // The funnel's candidate bytes are already measured; everything
+            // after the clone lives in the pipeline.
             const firstCandidate = candidates[0]!;
-            runCleanseAndExtract({
-                sourceElement: firstCandidate,
-                preCleanseText: firstCandidate.textContent || '',
-                preBytes: builder.candidateBytes,
-                cleanse: cleanseEnabled,
-                candidateSource: true,
+            content = runCleanseAndExtract({
+                source: {
+                    sourceElement: firstCandidate,
+                    preCleanseText: firstCandidate.textContent || '',
+                    preBytes: builder.candidateBytes,
+                    cleanse: cleanseEnabled,
+                    candidateSource: true,
+                },
+                builder,
+                meter,
+                hardStripEnabled,
+                keywordStripEnabled,
+                keywords,
+                aiSummaryCleanseEnabled,
+                fallbackRatio,
+                fallbackMinBytes,
+                fallbackMinChars,
+                cleanseGuardEnabled,
+                resolvedAiSummaryOptions,
+                readBodyText,
             });
         } else {
-            // 候補がない場合、body全体をクレンジング対象としてフォールバック
-            // clone 以降の全工程は runCleanseAndExtract に集約（PBI 13）。
-            // 経路差分は入力要素（document.body）と preBytes の出所（pageBytes）のみ。
+            // No candidate: the body itself becomes the cleanse source.
             if (cleanseEnabled && document.body) {
-                runCleanseAndExtract({
-                    sourceElement: document.body,
-                    preCleanseText: document.body.textContent || '',
-                    preBytes: builder.pageBytes,
-                    cleanse: true,
+                content = runCleanseAndExtract({
+                    source: {
+                        sourceElement: document.body,
+                        preCleanseText: document.body.textContent || '',
+                        preBytes: builder.pageBytes,
+                        cleanse: true,
+                    },
+                    builder,
+                    meter,
+                    hardStripEnabled,
+                    keywordStripEnabled,
+                    keywords,
+                    aiSummaryCleanseEnabled,
+                    fallbackRatio,
+                    fallbackMinBytes,
+                    fallbackMinChars,
+                    cleanseGuardEnabled,
+                    resolvedAiSummaryOptions,
+                    readBodyText,
                 });
-              } else {
-                  content = document.body?.innerText || '';
-                  // バイト数（クレンジングなし、診断専用）
-                  if (meter.enabled) {
-                      builder.noteUncleansedBytes(meter.measure(content));
-                  }
-              }
-         }
+            } else {
+                content = document.body?.innerText || '';
+                // Diagnostic-only byte measurement.
+                if (meter.enabled) {
+                    builder.noteUncleansedBytes(meter.measure(content));
+                }
+            }
+        }
      } catch (_error) {
          // エラー時は安全なフォールバック
          content = document.body?.innerText || '';

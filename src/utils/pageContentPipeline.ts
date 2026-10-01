@@ -2,6 +2,12 @@
 /**
  * PageContentPipeline — deep module hiding the 10 shallow content-extraction modules
  *
+ * THE single external seam of content extraction: config in → ExtractResult
+ * out. The contentExtractor entries behind it are internal seams:
+ * extractMainContentWithInfo (legacy-compat adapter, called here),
+ * extractMainContent (bench-measurement adapter only), and extract (the
+ * opaque ExtractionReport path).
+ *
  * 10 shallow modules (contentExtractor/index, optionBuilder, classifier, scoring,
  * textExtraction, whitelistAdapters, aiSummaryCleaner/index, stripCore,
  * stripExtended, helpers/patterns/rules) are composed behind one seam.

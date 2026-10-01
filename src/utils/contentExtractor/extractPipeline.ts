@@ -13,13 +13,19 @@
  * - resolvePreAiBytes: single copy of the pre-AI byte computation previously
  *   repeated at three sites (same-string reuse on the diagnostic path,
  *   fallback-critical single encode otherwise).
+ * - runCleanseAndExtract: single owner of the clone → cleanse → pre-AI bytes
+ *   → AI step → extract → fallback orchestration, shared by the candidate
+ *   path and the body path.
  * - applyFallback: THE single copy of the fallback policy previously
  *   duplicated in two blocks (candidate path vs body path): short content or
  *   over-cleansed content falls back to the pre-AI text or the body text.
  */
 
+import { cleanseContent, type CleanseResult } from '../contentCleaner.js';
 import { cleanseAISummaryContent, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { deriveCleansedReason, removedRecordToMap } from './cleansedReason.js';
+import { extractTextFromElement } from './textExtraction.js';
+import type { ExtractionReportBuilder } from './extractionReport.js';
 import type { AiSummaryCleanseRunResult, ExtractResult, FallbackReason } from './types.js';
 
 /**
@@ -257,4 +263,166 @@ export function applyFallback(input: FallbackInput): FallbackDecision {
         fallbackReason: 'short_content',
         usePreAiText: false,
     };
+}
+
+/**
+ * Source descriptor for runCleanseAndExtract. The difference between the
+ * candidate route and the body route folds into this input: the caller picks
+ * the source element (top candidate / document.body) and the preBytes origin
+ * (candidateBytes / pageBytes).
+ */
+export interface CleanseAndExtractSource {
+    sourceElement: Element;
+    preCleanseText: string;
+    preBytes: number;
+    cleanse: boolean;
+    /** Candidate-source only — gates the ② restore (a body-source restore would ship raw textContent). */
+    candidateSource?: boolean;
+}
+
+/**
+ * Input to runCleanseAndExtract. The builder owns the diagnostic policy;
+ * the caller passes its already-resolved cleanse/AI values through unchanged.
+ */
+export interface RunCleanseAndExtractInput {
+    source: CleanseAndExtractSource;
+    builder: ExtractionReportBuilder;
+    meter: ByteMeter;
+    hardStripEnabled: boolean;
+    keywordStripEnabled: boolean;
+    keywords: string[];
+    aiSummaryCleanseEnabled: boolean;
+    fallbackRatio: number;
+    fallbackMinBytes: number;
+    fallbackMinChars: number;
+    cleanseGuardEnabled: boolean;
+    resolvedAiSummaryOptions: AiSummaryCleanseOptions;
+    readBodyText: () => string;
+}
+
+/**
+ * Single owner of the clone → cleanse → pre-AI bytes → AI step → extract →
+ * fallback orchestration, shared by the candidate path and the body path.
+ * The body-plain policy (innerText, no fallback/AI) is inherently different
+ * and stays inlined at the call site.
+ *
+ * Hidden constraint: the meter call order is part of the c1 bench baseline —
+ * diagnostic reuse first, conditional measure only; do not reorder.
+ * Returns the settled content: the extracted text, or the fallback decision's
+ * content when a fallback won (builder.settleFallback already ran).
+ */
+export function runCleanseAndExtract(input: RunCleanseAndExtractInput): string {
+    const {
+        source,
+        builder,
+        meter,
+        hardStripEnabled,
+        keywordStripEnabled,
+        keywords,
+        aiSummaryCleanseEnabled,
+        fallbackRatio,
+        fallbackMinBytes,
+        fallbackMinChars,
+        cleanseGuardEnabled,
+        resolvedAiSummaryOptions,
+        readBodyText,
+    } = input;
+    let content = '';
+
+    // Dual payload — retain the source text before any cleansing mutation.
+    builder.retainSourceOriginal(source.sourceElement.textContent || '');
+
+    let targetElement: Element;
+
+    if (source.cleanse) {
+        // Clone keeps the live DOM untouched.
+        const clone = source.sourceElement.cloneNode(true) as Element;
+
+        // preCleanseText is the same string as preBytes — reuse, no re-encode.
+        builder.noteCleanseStart(source.preBytes);
+
+        const cleanseResult: CleanseResult = cleanseContent(clone, {
+            hardStripEnabled,
+            keywordStripEnabled,
+            keywords
+        });
+
+        // AI-fallback ratio input. Nothing removed + identical string → reuse
+        // instead of re-encoding; diagnostics reuse cleansedBytes as-is.
+        const cloneText = clone.textContent || '';
+        builder.notePostCleanseChars(cloneText.length);
+        const resolvedPreAi = resolvePreAiBytes(meter, cloneText, { text: source.preCleanseText, bytes: builder.originalBytes }, aiSummaryCleanseEnabled);
+        builder.noteCleansedBytes(resolvedPreAi.cleansedBytes);
+        const preAiBytes = resolvedPreAi.preAiBytes;
+
+        builder.noteCleanseOutcome(
+            cleanseResult,
+            {
+                keywords: keywords.join(', '),
+                mode: hardStripEnabled ? (keywordStripEnabled ? 'both' : 'hard') : 'keyword',
+            },
+            { aiSummaryCleanseEnabled, aiSummaryOptions: resolvedAiSummaryOptions },
+        );
+
+        targetElement = clone;
+
+        // AI-summary cleansing runs independently of cleanseEnabled.
+        if (aiSummaryCleanseEnabled) {
+            const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytes);
+            builder.noteAiApplied(applied);
+        }
+    } else {
+        targetElement = source.sourceElement;
+        // A disabled meter keeps no diagnostic values; one encode for the AI fallback.
+        let preAiBytesElse = 0;
+        if (meter.enabled) {
+            builder.noteUncleansedBytes(source.preBytes);
+            preAiBytesElse = builder.cleansedBytes;
+        } else if (aiSummaryCleanseEnabled) {
+            preAiBytesElse = getByteSize(targetElement.textContent || '');
+        }
+
+        // AI-only path (cleanseEnabled=false, aiSummaryCleanseEnabled=true)
+        // still clones so the AI step never mutates live DOM.
+        if (aiSummaryCleanseEnabled) {
+            const clone = source.sourceElement.cloneNode(true) as Element;
+
+            const applied = applyAiCleanseStep(clone, resolvedAiSummaryOptions, preAiBytesElse);
+            builder.noteAiApplied(applied);
+
+            targetElement = clone;
+        }
+    }
+
+    content = extractTextFromElement(targetElement);
+
+    // The ② pair is supplied only when Content Cleansing ran on a candidate
+    // source AND the ② guard flag is on — omitted otherwise, which reproduces
+    // the legacy decision byte-for-byte.
+    const supplyCleansePair = cleanseGuardEnabled
+        && source.candidateSource === true
+        && builder.postCleanseChars !== undefined;
+    const fallbackDecision = applyFallback({
+        content,
+        contentBytes: getByteSize(content),
+        preAiCleanseText: builder.preAiCleanseText,
+        aiSummaryOriginalBytes: builder.aiSummaryOriginalBytes,
+        fallbackRatio,
+        fallbackMinBytes,
+        readBodyText,
+        ...(supplyCleansePair
+            ? {
+                preCleanseText: source.preCleanseText,
+                preCleanseChars: source.preCleanseText.length,
+                postCleanseChars: builder.postCleanseChars,
+                preCleanseBytes: source.preBytes,
+                fallbackMinChars,
+            }
+            : {}),
+    });
+    if (fallbackDecision.fallbackTriggered) {
+        builder.settleFallback(fallbackDecision);
+        return fallbackDecision.content;
+    }
+    return content;
 }
