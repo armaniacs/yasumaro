@@ -10,9 +10,8 @@ function makeSaveDeps(
   overrides: Partial<SaveRecordHandlerDeps> = {},
 ): SaveRecordHandlerDeps {
   return {
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) } as SaveRecordHandlerDeps['recordingPipeline'],
-    getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };

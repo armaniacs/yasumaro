@@ -64,7 +64,10 @@ export function mapRegenerateError(
   if (needsForce) return t('historyRegenerateGateBlocked');
   // The handler threads reason:'rate_limited'; match it first so the raw
   // RateLimiter message (capital 'Rate limit…') never needs case gymnastics.
+  // PBI 03: consent rejections thread reason:'privacy_consent_required' (the
+  // unified admission shape) — matched before the error-based checks.
   if (reason === 'rate_limited') return t('historyRegenerateErrorRateLimit');
+  if (reason === 'privacy_consent_required') return t('historyRegenerateErrorConsent');
   if (!error) return t('historyRegenerateError');
   if (error === 'invalid_url') return t('historyRegenerateErrorUrl');
   if (error === 'rate_limited' || /rate limit/i.test(error)) return t('historyRegenerateErrorRateLimit');

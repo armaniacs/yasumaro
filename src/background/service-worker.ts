@@ -70,7 +70,7 @@ export function init(): void {
           // The Firefox worker bundle inlines its wasm as data: (unusable
           // under the extension CSP) — point the engine at the stable public
           // asset instead. Propagates to the worker via the INIT payload.
-          const { setSqliteWasmUrlOverride } = await import('../offscreen/sqliteEngine.js');
+          const { setSqliteWasmUrlOverride } = await import('../offscreen/sqliteBoot.js');
           setSqliteWasmUrlOverride(chrome.runtime.getURL('wasm/wa-sqlite-async.wasm'));
           await import('../offscreen/offscreen.js');
         } catch (err) {

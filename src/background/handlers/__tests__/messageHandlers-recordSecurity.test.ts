@@ -54,11 +54,9 @@ const CONTENT_SCRIPT_SENDER = {
 
 function makeManualDeps(overrides: Partial<ManualRecordHandlerDeps> = {}): ManualRecordHandlerDeps {
   return {
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
-    checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     fetchContent: vi.fn().mockResolvedValue('content'),
     recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) } as ManualRecordHandlerDeps['recordingPipeline'],
-    getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -66,9 +64,8 @@ function makeManualDeps(overrides: Partial<ManualRecordHandlerDeps> = {}): Manua
 
 function makeSaveDeps(overrides: Partial<SaveRecordHandlerDeps> = {}): SaveRecordHandlerDeps {
   return {
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) } as SaveRecordHandlerDeps['recordingPipeline'],
-    getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
@@ -99,9 +96,18 @@ function makeRouterDeps(
     tabCache: { add: () => undefined, update: () => undefined },
     obsidian: { testConnection: async () => ({ success: true }) } as unknown as MessageRouterDeps['obsidian'],
     aiService: { testConnection: async () => ({ success: true }) } as unknown as MessageRouterDeps['aiService'],
-    manualRecordDeps: manualDeps,
-    saveRecordDeps: saveDeps,
-    hasPrivacyConsent: async () => true,
+    recordingAdmission: {
+      admit: async (kind, sender) => {
+        // Route through the per-test handler deps so the router test observes
+        // the manual handler's own admit mock.
+        if (kind === 'manual') return manualDeps.admit(kind, sender);
+        if (kind === 'save') return saveDeps.admit(kind, sender);
+        return { settings: {} };
+      },
+    },
+    fetchManualContent: async () => 'content',
+    fetchRegenerated: async () => ({ content: '' }),
+    setUrlContent: async () => undefined,
     buildAllowedUrls: () => new Set(),
     getSettings: async () => ({}),
     isDomainAllowed: async () => true,
@@ -170,7 +176,7 @@ describe('createManualRecordHandler — VULN-004 URL scheme validation', () => {
     await Promise.resolve();
 
     expect(handled).toBe(false);
-    expect(deps.isRecordingAllowed).not.toHaveBeenCalled();
+    expect(deps.admit).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
@@ -178,8 +184,10 @@ describe('createManualRecordHandler — VULN-004 URL scheme validation', () => {
     });
   });
 
-  it('refuses to record without privacy consent', async () => {
-    const deps = makeManualDeps({ isRecordingAllowed: vi.fn().mockResolvedValue(false) });
+  it('rejects when admission rejects (consent) and never reaches storage', async () => {
+    const deps = makeManualDeps({
+      admit: vi.fn().mockResolvedValue({ rejected: { success: false, reason: 'privacy_consent_required' } }),
+    });
     const handler = createManualRecordHandler(deps);
     const sendResponse = vi.fn();
 
@@ -218,7 +226,7 @@ describe('createSaveRecordHandler — VULN-004 URL scheme validation', () => {
     await Promise.resolve();
 
     expect(handled).toBe(false);
-    expect(deps.isRecordingAllowed).not.toHaveBeenCalled();
+    expect(deps.admit).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
@@ -226,8 +234,10 @@ describe('createSaveRecordHandler — VULN-004 URL scheme validation', () => {
     });
   });
 
-  it('refuses to record without privacy consent', async () => {
-    const deps = makeSaveDeps({ isRecordingAllowed: vi.fn().mockResolvedValue(false) });
+  it('rejects when admission rejects (consent) and never reaches storage', async () => {
+    const deps = makeSaveDeps({
+      admit: vi.fn().mockResolvedValue({ rejected: { success: false, reason: 'privacy_consent_required' } }),
+    });
     const handler = createSaveRecordHandler(deps);
     const sendResponse = vi.fn();
 
@@ -243,9 +253,10 @@ describe('createSaveRecordHandler — VULN-004 URL scheme validation', () => {
 
 // These success/failure cases pin the recording-handler behaviour when driven
 // through the minimal base deps (deep-dig 子PBI 4): the handler must only
-// require isRecordingAllowed / recordingPipeline / getSettings / setUrlContent
-// (plus checkRateLimit and fetchContent for MANUAL_RECORD), and the existing
-// result mapping must be preserved.
+// require admit / recordingPipeline / setUrlContent (plus fetchContent for
+// MANUAL_RECORD), and the existing result mapping must be preserved. The
+// admission pre-stage's own behaviour (consent, rate, buckets) is pinned in
+// recordingAdmission.test.ts.
 describe('recording handlers — minimal base deps behaviour', () => {
   it('MANUAL_RECORD forwards the pipeline result and backfills content on success', async () => {
     const pipeline = { record: vi.fn().mockResolvedValue({ success: true, url: 'https://example.com' }) };
@@ -272,9 +283,11 @@ describe('recording handlers — minimal base deps behaviour', () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'boom' });
   });
 
-  it('MANUAL_RECORD rejects when the rate limit is exceeded (skipAi)', async () => {
+  it('MANUAL_RECORD passes the admission rate rejection through (rate_limited)', async () => {
     const deps = makeManualDeps({
-      checkRateLimit: vi.fn().mockResolvedValue({ allowed: false, error: 'rate limited' }),
+      admit: vi.fn().mockResolvedValue({
+        rejected: { success: false, reason: 'rate_limited', error: 'rate limited' },
+      }),
     });
     const handler = createManualRecordHandler(deps);
     const sendResponse = vi.fn();
@@ -283,12 +296,15 @@ describe('recording handlers — minimal base deps behaviour', () => {
 
     expect(deps.recordingPipeline.record).not.toHaveBeenCalled();
     expect(deps.setUrlContent).not.toHaveBeenCalled();
-    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'rate limited' });
+    expect(sendResponse).toHaveBeenCalledWith({ success: false, reason: 'rate_limited', error: 'rate limited' });
   });
 
-  it('MANUAL_RECORD fetches content only when none was supplied', async () => {
-    const fetchContent = vi.fn().mockResolvedValue('fetched');
-    const deps = makeManualDeps({ fetchContent });
+  it('MANUAL_RECORD forwards the admission settings to the pipeline and the fetch gate', async () => {
+    const pipeline = { record: vi.fn().mockResolvedValue({ success: true }) };
+    const deps = makeManualDeps({
+      admit: vi.fn().mockResolvedValue({ settings: { AUTO_CONTENT_FETCH_ENABLED: true } }),
+      recordingPipeline: pipeline as never,
+    });
     const handler = createManualRecordHandler(deps);
     const sendResponse = vi.fn();
 
@@ -298,8 +314,9 @@ describe('recording handlers — minimal base deps behaviour', () => {
       sendResponse,
     );
 
-    expect(fetchContent).toHaveBeenCalledWith('https://example.com');
-    expect(deps.setUrlContent).toHaveBeenCalledWith('https://example.com', 'fetched');
+    expect(pipeline.record).toHaveBeenCalledWith(expect.anything(), { settings: { AUTO_CONTENT_FETCH_ENABLED: true } });
+    expect(deps.fetchContent).toHaveBeenCalledWith('https://example.com');
+    expect(deps.setUrlContent).toHaveBeenCalledWith('https://example.com', 'content');
   });
 
   it('SAVE_RECORD forwards the pipeline result and backfills content on success', async () => {

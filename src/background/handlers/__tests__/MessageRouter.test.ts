@@ -9,30 +9,10 @@ function makeDeps() {
     tabCache: { add: vi.fn(), update: vi.fn() },
     obsidian: { testConnection: vi.fn().mockResolvedValue({ success: true }) },
     aiService: { testConnection: vi.fn().mockResolvedValue({ success: true }) },
-    manualRecordDeps: {
-      isRecordingAllowed: vi.fn().mockResolvedValue(true),
-      checkRateLimit: vi.fn(),
-      fetchContent: vi.fn(),
-      recordingPipeline: {} as never,
-      getSettings: vi.fn().mockResolvedValue({}),
-      setUrlContent: vi.fn(),
-    },
-    saveRecordDeps: {
-      isRecordingAllowed: vi.fn().mockResolvedValue(true),
-      checkRateLimit: vi.fn(),
-      fetchContent: vi.fn(),
-      recordingPipeline: {} as never,
-      getSettings: vi.fn().mockResolvedValue({}),
-      setUrlContent: vi.fn(),
-    },
-    regenerateDeps: {
-      isRecordingAllowed: vi.fn().mockResolvedValue(true),
-      checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
-      fetchExtracted: vi.fn().mockResolvedValue({ content: 'extracted' }),
-      recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) },
-      getSettings: vi.fn().mockResolvedValue({}),
-    },
-    hasPrivacyConsent: vi.fn().mockResolvedValue(true),
+    recordingAdmission: { admit: vi.fn().mockResolvedValue({ settings: {} }) },
+    fetchManualContent: vi.fn(),
+    fetchRegenerated: vi.fn().mockResolvedValue({ content: 'extracted' }),
+    setUrlContent: vi.fn(),
     buildAllowedUrls: vi.fn().mockReturnValue(new Set()),
     getSettings: vi.fn().mockResolvedValue({}),
     isDomainAllowed: vi.fn().mockResolvedValue(true),
@@ -116,8 +96,8 @@ describe('MessageRouter — REGENERATE_SUMMARY seam (PBI 2026-09-22-04)', () => 
     );
     expect(handled).toBe(true);
     await new Promise((r) => setTimeout(r, 0));
-    expect(deps.regenerateDeps.fetchExtracted).toHaveBeenCalledWith('https://example.com', 'looser');
-    expect(deps.regenerateDeps.recordingPipeline.record).toHaveBeenCalledTimes(1);
+    expect(deps.fetchRegenerated).toHaveBeenCalledWith('https://example.com', 'looser');
+    expect(deps.recordingPipeline.record).toHaveBeenCalledTimes(1);
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
     expect(router.getTrustLevel('REGENERATE_SUMMARY')).toBe('extension-only');
   });
@@ -137,7 +117,7 @@ describe('MessageRouter — REGENERATE_SUMMARY seam (PBI 2026-09-22-04)', () => 
     );
     expect(handled).toBe(false);
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
-    expect(deps.regenerateDeps.fetchExtracted).not.toHaveBeenCalled();
+    expect(deps.fetchRegenerated).not.toHaveBeenCalled();
   });
 
   it('blocks an external extension sender (extension-only trust)', () => {
@@ -154,6 +134,6 @@ describe('MessageRouter — REGENERATE_SUMMARY seam (PBI 2026-09-22-04)', () => 
       sendResponse,
     );
     expect(handled).toBe(false);
-    expect(deps.regenerateDeps.fetchExtracted).not.toHaveBeenCalled();
+    expect(deps.fetchRegenerated).not.toHaveBeenCalled();
   });
 });

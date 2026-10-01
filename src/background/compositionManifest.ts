@@ -45,7 +45,7 @@ import { notifyAiTestProgress } from './aiTestProgressNotifier.js';
 import { updateActivity } from './sessionAlarmsManager.js';
 import { createMessageRouter, type MessageRouterDeps } from './handlers/MessageRouter.js';
 import type { MessageHandler } from './handlers/MessageRouter.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps, RegenerateSummaryHandlerDeps } from './handlers/recordingHandlers.js';
+import { RecordingAdmission } from './recordingAdmission.js';
 import { RegenerateContentFetcher } from './regenerateContentFetcher.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
@@ -208,39 +208,16 @@ export const compositionManifest: readonly CompositionEntry[] = [
     },
   },
   {
-    key: 'manualRecordDeps',
+    key: 'recordingAdmission',
     singleton: true,
-    factory: (c) => ({
+    // PBI 03: the recording pre-stage (consent → settings → sender narrow →
+    // rate) is one shared module. The RateLimiter counter is its internal
+    // adapter; the three handler dep objects collapsed into this single entry.
+    factory: (c) => new RecordingAdmission({
       isRecordingAllowed: () => hasPrivacyConsent(),
-      checkRateLimit: (sender, settings) => c.resolve<RateLimiter>('rateLimiter').check(sender as never, settings as never),
-      fetchContent: (url: string) => c.resolve<ManualContentFetcher>('manualContentFetcher').fetchContent(url),
-      recordingPipeline: c.resolve('recordingPipeline'),
       getSettings: () => settingsRepository.getAll(),
-      setUrlContent,
-    } as ManualRecordHandlerDeps),
-  },
-  {
-    key: 'saveRecordDeps',
-    singleton: true,
-    factory: (c) => ({
-      isRecordingAllowed: () => hasPrivacyConsent(),
-      recordingPipeline: c.resolve('recordingPipeline'),
-      getSettings: () => settingsRepository.getAll(),
-      setUrlContent,
-    } as SaveRecordHandlerDeps),
-  },
-  {
-    key: 'regenerateDeps',
-    singleton: true,
-    factory: (c) => ({
-      isRecordingAllowed: () => hasPrivacyConsent(),
-      checkRateLimit: (sender, settings, opts) =>
-        c.resolve<RateLimiter>('rateLimiter').check(sender as never, settings as never, opts),
-      fetchExtracted: (url, cleanseMode) =>
-        c.resolve<RegenerateContentFetcher>('regenerateContentFetcher').fetchExtracted(url, cleanseMode),
-      recordingPipeline: c.resolve('recordingPipeline'),
-      getSettings: () => settingsRepository.getAll(),
-    } as RegenerateSummaryHandlerDeps),
+      rateLimiter: c.resolve<RateLimiter>('rateLimiter'),
+    }),
   },
   {
     key: 'messageRouter',
@@ -251,14 +228,17 @@ export const compositionManifest: readonly CompositionEntry[] = [
       const recordingCache = c.resolve<RecordingCacheInstance>('recordingCache');
       const reviewSummaryGenerator = c.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator');
       const messageRouterDeps: MessageRouterDeps = {
-        recordingPipeline: { record: (data) => recordingPipeline.record(data) },
+        // Forward opts too: manual/save/regenerate pass { settings } through
+        // the same seam (VALID_VISIT passes none).
+        recordingPipeline: { record: (data, opts) => recordingPipeline.record(data, opts) },
         tabCache: { add: (tab) => tabCache.add(tab), update: (tabId, data) => tabCache.update(tabId, data) },
         obsidian: c.resolve<ObsidianClient>('obsidian'),
         aiService: c.resolve<AIService>('aiService'),
-        manualRecordDeps: c.resolve<ManualRecordHandlerDeps>('manualRecordDeps'),
-        saveRecordDeps: c.resolve<SaveRecordHandlerDeps>('saveRecordDeps'),
-        regenerateDeps: c.resolve<RegenerateSummaryHandlerDeps>('regenerateDeps'),
-        hasPrivacyConsent: () => hasPrivacyConsent(),
+        recordingAdmission: c.resolve<RecordingAdmission>('recordingAdmission'),
+        fetchManualContent: (url: string) => c.resolve<ManualContentFetcher>('manualContentFetcher').fetchContent(url),
+        fetchRegenerated: (url, cleanseMode) =>
+          c.resolve<RegenerateContentFetcher>('regenerateContentFetcher').fetchExtracted(url, cleanseMode),
+        setUrlContent,
         buildAllowedUrls: (settings) => buildAllowedUrls(settings),
         getSettings: () => settingsRepository.getAll(),
         isDomainAllowed: (url) => isDomainAllowed(url),

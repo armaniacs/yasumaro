@@ -14,7 +14,6 @@ import {
   createManualRecordHandler,
   createSaveRecordHandler,
   createRegenerateSummaryHandler,
-  resetVisitRateLimiter,
 } from '../recordingHandlers.js';
 import type {
   ValidVisitHandlerDeps,
@@ -85,7 +84,7 @@ function runValidVisit(url: string, payload: Record<string, unknown>): Promise<R
     async () => ({ success: true, skipped: false }),
   );
   const handler = createValidVisitHandler({
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     cacheTab: vi.fn(),
     updateCachedTab: vi.fn(),
     recordVisit,
@@ -100,11 +99,9 @@ function runValidVisit(url: string, payload: Record<string, unknown>): Promise<R
 function runManual(payload: Record<string, unknown>): Promise<RecordingData> {
   const record = vi.fn().mockResolvedValue({ success: true });
   const handler = createManualRecordHandler({
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
-    checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     fetchContent: vi.fn().mockResolvedValue('fetched'),
     recordingPipeline: { record } as ManualRecordHandlerDeps['recordingPipeline'],
-    getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
   });
   const message = {
@@ -117,9 +114,8 @@ function runManual(payload: Record<string, unknown>): Promise<RecordingData> {
 function runSave(payload: Record<string, unknown>): Promise<RecordingData> {
   const record = vi.fn().mockResolvedValue({ success: true });
   const handler = createSaveRecordHandler({
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     recordingPipeline: { record } as SaveRecordHandlerDeps['recordingPipeline'],
-    getSettings: vi.fn().mockResolvedValue({}),
     setUrlContent: vi.fn().mockResolvedValue(undefined),
   });
   const message = {
@@ -132,10 +128,8 @@ function runSave(payload: Record<string, unknown>): Promise<RecordingData> {
 function runRegenerate(extracted: ContentResponse): Promise<RecordingData> {
   const record = vi.fn().mockResolvedValue({ success: true });
   const handler = createRegenerateSummaryHandler({
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     recordingPipeline: { record } as RegenerateSummaryHandlerDeps['recordingPipeline'],
-    getSettings: vi.fn().mockResolvedValue({}),
-    checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
     fetchExtracted: vi.fn().mockResolvedValue(extracted),
   });
   const message: RegenerateSummaryMessage = {
@@ -149,7 +143,6 @@ function runRegenerate(extracted: ContentResponse): Promise<RecordingData> {
 
 describe('record diagnostics convergence (PBI 2026-09-23-12)', () => {
   beforeEach(() => {
-    resetVisitRateLimiter();
     vi.stubGlobal('chrome', {
       action: {
         setBadgeText: vi.fn(),

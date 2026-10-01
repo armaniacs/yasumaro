@@ -3,10 +3,10 @@
  * Production composition contract (Candidate 2).
  *
  * Fixes that service-worker's recording paths share ONE composition: the same
- * SqliteClient (via getSharedSqliteClient, never `new SqliteClient()`), and the
- * same RecordingPipeline injected into manual/save handler deps. The handlers
- * must not rebuild a pipeline per message; a per-message fallback would make
- * these identity assertions impossible.
+ * SqliteClient (via getSharedSqliteClient, never `new SqliteClient()`), the
+ * same RecordingPipeline, and the shared RecordingAdmission pre-stage. The
+ * handlers must not rebuild a pipeline per message; a per-message fallback
+ * would make these identity assertions impossible.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -167,11 +167,14 @@ describe('production composition contract', () => {
     expect(mocks.SqliteClient).not.toHaveBeenCalled();
   });
 
-  it('injects one shared RecordingPipeline into manual and save handler deps', () => {
+  it('builds the shared RecordingAdmission pre-stage (PBI 2026-10-01-03)', () => {
     const composition = createBackgroundServices();
 
-    expect(composition.recordingPipeline).toBe(composition.manualRecordDeps.recordingPipeline);
-    expect(composition.recordingPipeline).toBe(composition.saveRecordDeps.recordingPipeline);
+    // The three handler dep objects collapsed into one admission entry; the
+    // router narrows it into the per-handler admit adapter.
+    expect(typeof (composition.recordingAdmission as unknown as { admit: unknown }).admit).toBe('function');
+    // Consent is read lazily per admit — the composition must not call it.
+    expect(mocks.hasPrivacyConsent).not.toHaveBeenCalled();
   });
 
   it('builds the review summary generator once with the shared AIService and SqliteClient', () => {
@@ -195,22 +198,5 @@ describe('production composition contract', () => {
         sqliteClient: { sqlite: true },
       }),
     );
-  });
-
-  it('builds the setUrlContent closure once and shares it between the recording handlers', () => {
-    const composition = createBackgroundServices();
-
-    expect(composition.manualRecordDeps.setUrlContent).toBe(composition.saveRecordDeps.setUrlContent);
-  });
-
-  it('keeps the recording handler deps to the minimum behaviour the handlers use', () => {
-    const composition = createBackgroundServices();
-
-    for (const deps of [composition.manualRecordDeps, composition.saveRecordDeps]) {
-      expect(deps).not.toHaveProperty('obsidian');
-      expect(deps).not.toHaveProperty('aiService');
-      expect(deps).not.toHaveProperty('sqliteClient');
-      expect(deps).not.toHaveProperty('getPrivacyInfoWithCache');
-    }
   });
 });

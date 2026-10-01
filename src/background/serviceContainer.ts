@@ -29,10 +29,8 @@ export const ServiceTokens = {
   recordingPipeline: 'recordingPipeline',
   dashboardSqliteHandler: 'dashboardSqliteHandler',
   autoSavedBadgeTabs: 'autoSavedBadgeTabs',
-  manualRecordDeps: 'manualRecordDeps',
-  saveRecordDeps: 'saveRecordDeps',
+  recordingAdmission: 'recordingAdmission',
   regenerateContentFetcher: 'regenerateContentFetcher',
-  regenerateDeps: 'regenerateDeps',
   messageRouter: 'messageRouter',
   perUrlMutexMap: 'perUrlMutexMap',
 } as const;

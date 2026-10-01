@@ -2,10 +2,10 @@
  * regenerateSummaryHandler.test.ts — REGENERATE_SUMMARY (PBI 2026-09-22-04).
  *
  * Handler-level with the REAL buildRecordRequest policy; only I/O seams are
- * mocked (pipeline / fetch / rate limit / consent). Pins the binding matrix:
- * force-default-off, needsForce only for force-bypassable gates (and never
- * after an explicit force), in-flight ignore, bucket separation, non-
- * destructive fetch/URL failures.
+ * mocked (pipeline / fetch / the shared admission pre-stage). Pins the binding
+ * matrix: force-default-off, needsForce only for force-bypassable gates (and
+ * never after an explicit force), in-flight ignore, admission pass-through,
+ * non-destructive fetch/URL failures.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
@@ -55,10 +55,8 @@ function makeHarness(): Harness {
   const responses: unknown[] = [];
   const record = vi.fn().mockResolvedValue({ success: true });
   const deps: RegenerateSummaryHandlerDeps = {
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     recordingPipeline: { record },
-    getSettings: vi.fn().mockResolvedValue({}),
-    checkRateLimit: vi.fn().mockResolvedValue({ allowed: true }),
     fetchExtracted: vi.fn().mockResolvedValue(makeExtracted()),
   };
   return {
@@ -117,26 +115,27 @@ describe('createRegenerateSummaryHandler — success path (CRITICAL)', () => {
     expect(data.force).toBe(true);
   });
 
-  it('runs the rate limit in the separated regenerate bucket (CRITICAL: bucket)', async () => {
+  it('admits through the shared pre-stage with the regenerate kind (PBI 2026-10-01-03)', async () => {
     await h.handler(makeMessage(), sender, h.respond);
-    expect(h.deps.checkRateLimit).toHaveBeenCalledWith(
-      expect.anything(),
-      {},
-      { bucket: 'regenerate' },
-    );
+    // The bucket knowledge lives in the admission module now; the handler
+    // only names its kind. The bucket table itself is pinned in
+    // recordingAdmission.test.ts.
+    expect(h.deps.admit).toHaveBeenCalledWith('regenerate', sender);
   });
 
-  it('rejects when consent is missing and never touches fetch/pipeline', async () => {
-    (h.deps.isRecordingAllowed as ReturnType<typeof vi.fn>).mockResolvedValue(false);
+  it('rejects when admission rejects and never touches fetch/pipeline', async () => {
+    (h.deps.admit as ReturnType<typeof vi.fn>).mockResolvedValue({
+      rejected: { success: false, reason: 'privacy_consent_required' },
+    });
     await h.handler(makeMessage(), sender, h.respond);
-    expect(h.responses).toEqual([{ success: false, error: 'privacy_consent_required' }]);
+    expect(h.responses).toEqual([{ success: false, reason: 'privacy_consent_required' }]);
     expect(h.deps.fetchExtracted).not.toHaveBeenCalled();
     expect(h.record).not.toHaveBeenCalled();
   });
 
-  it('surfaces rate limiting with the rate_limited reason', async () => {
-    (h.deps.checkRateLimit as ReturnType<typeof vi.fn>).mockResolvedValue({
-      allowed: false, error: 'rate limit exceeded',
+  it('surfaces the admission rate rejection with the rate_limited reason', async () => {
+    (h.deps.admit as ReturnType<typeof vi.fn>).mockResolvedValue({
+      rejected: { success: false, error: 'rate limit exceeded', reason: 'rate_limited' },
     });
     await h.handler(makeMessage(), sender, h.respond);
     expect(h.responses).toEqual([

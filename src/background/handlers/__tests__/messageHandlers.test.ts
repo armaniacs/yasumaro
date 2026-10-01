@@ -1,16 +1,18 @@
 /**
  * messageHandlers.test.ts
- * Tests for message handler factories, focusing on VALID_VISIT rate limiting.
+ * Tests for the VALID_VISIT handler factory (PBI 2026-10-01-03: the flood
+ * guard and the consent read live in the shared RecordingAdmission — those
+ * behaviours are pinned in recordingAdmission.test.ts. The handler keeps
+ * request assembly, badge updates, and the confirmation notification).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createValidVisitHandler, resetVisitRateLimiter } from '../recordingHandlers.js';
+import { createValidVisitHandler } from '../recordingHandlers.js';
 import type { ValidVisitHandlerDeps } from '../recordingHandlers.js';
 import type { ValidVisitMessage } from '../../messageTypes.js';
-import type { RecordingResult } from '../../../messaging/types.js';
 
 function makeDeps(overrides: Partial<ValidVisitHandlerDeps> = {}): ValidVisitHandlerDeps {
   return {
-    isRecordingAllowed: vi.fn().mockResolvedValue(true),
+    admit: vi.fn().mockResolvedValue({ settings: {} }),
     cacheTab: vi.fn(),
     updateCachedTab: vi.fn(),
     recordVisit: vi.fn<ValidVisitHandlerDeps['recordVisit']>(
@@ -28,7 +30,6 @@ function makeVisitMessage(): ValidVisitMessage {
 
 describe('createValidVisitHandler', () => {
   beforeEach(() => {
-    resetVisitRateLimiter();
     vi.stubGlobal('chrome', {
       action: {
         setBadgeText: vi.fn(),
@@ -53,9 +54,10 @@ describe('createValidVisitHandler', () => {
 
     expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'Invalid sender' });
     expect(deps.recordVisit).not.toHaveBeenCalled();
+    expect(deps.admit).not.toHaveBeenCalled();
   });
 
-  it('records the first visit for a URL', async () => {
+  it('admits with the valid-visit kind and records the first visit', async () => {
     const deps = makeDeps();
     const handler = createValidVisitHandler(deps);
     const sendResponse = vi.fn();
@@ -65,99 +67,40 @@ describe('createValidVisitHandler', () => {
 
     await handler(makeVisitMessage(), sender, sendResponse);
 
+    expect(deps.admit).toHaveBeenCalledWith('valid-visit', sender);
     expect(deps.recordVisit).toHaveBeenCalledTimes(1);
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
   });
 
-  it('rejects a repeated VALID_VISIT for the same URL within the rate window', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000_000);
-
-    const deps = makeDeps();
+  it('passes the admission rejection through unchanged', async () => {
+    const deps = makeDeps({
+      admit: vi.fn().mockResolvedValue({ rejected: { success: false, reason: 'rate_limited' } }),
+    });
     const handler = createValidVisitHandler(deps);
+    const sendResponse = vi.fn();
     const sender = {
       tab: { id: 1, url: 'https://rate-limit.example.com', title: 'Example' },
     } as chrome.runtime.MessageSender;
 
-    const firstResponse = vi.fn();
-    await handler(makeVisitMessage(), sender, firstResponse);
-    expect(firstResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    await handler(makeVisitMessage(), sender, sendResponse);
 
-    const secondResponse = vi.fn();
-    await handler(makeVisitMessage(), sender, secondResponse);
-    expect(secondResponse).toHaveBeenCalledWith({ success: false, reason: 'rate_limited' });
-    expect(deps.recordVisit).toHaveBeenCalledTimes(1);
+    expect(sendResponse).toHaveBeenCalledWith({ success: false, reason: 'rate_limited' });
+    expect(deps.recordVisit).not.toHaveBeenCalled();
   });
 
-  it('allows a new VALID_VISIT after the rate window has elapsed', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000_000);
-
-    const deps = makeDeps();
+  it('adds the badge tab only for a successful, non-skipped record', async () => {
+    const deps = makeDeps({
+      recordVisit: vi.fn<ValidVisitHandlerDeps['recordVisit']>(
+        async () => ({ success: true, skipped: true }),
+      ),
+    });
     const handler = createValidVisitHandler(deps);
     const sender = {
-      tab: { id: 1, url: 'https://rate-window.example.com', title: 'Example' },
+      tab: { id: 1, url: 'https://example.com', title: 'Example' },
     } as chrome.runtime.MessageSender;
 
     await handler(makeVisitMessage(), sender, vi.fn());
 
-    vi.advanceTimersByTime(5001);
-
-    const retryResponse = vi.fn();
-    await handler(makeVisitMessage(), sender, retryResponse);
-    expect(retryResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-    expect(deps.recordVisit).toHaveBeenCalledTimes(2);
-  });
-
-  it('VULN-002: throttles same-origin visits across path/fragment rotation', async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(1_000_000);
-
-    const deps = makeDeps();
-    const handler = createValidVisitHandler(deps);
-    const first = { tab: { id: 1, url: 'https://rotate.example.com/start', title: 'T' } } as chrome.runtime.MessageSender;
-    await handler(makeVisitMessage(), first, vi.fn());
-
-    // Same origin, different path + fragment (pushState rotation) — the
-    // throttle must still apply, otherwise a hostile page bypasses it.
-    const rotated = { tab: { id: 1, url: 'https://rotate.example.com/other#frag?x=1', title: 'T' } } as chrome.runtime.MessageSender;
-    const resp = vi.fn();
-    await handler(makeVisitMessage(), rotated, resp);
-
-    expect(resp).toHaveBeenCalledWith({ success: false, reason: 'rate_limited' });
-    expect(deps.recordVisit).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not rate limit different registrable domains against each other', async () => {
-    const deps = makeDeps();
-    const handler = createValidVisitHandler(deps);
-
-    const senderA = {
-      tab: { id: 1, url: 'https://a.example-a.com', title: 'A' },
-    } as chrome.runtime.MessageSender;
-    const senderB = {
-      tab: { id: 2, url: 'https://b.example-b.com', title: 'B' },
-    } as chrome.runtime.MessageSender;
-
-    await handler(makeVisitMessage(), senderA, vi.fn());
-    const responseB = vi.fn();
-    await handler(makeVisitMessage(), senderB, responseB);
-
-    expect(responseB).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
-    expect(deps.recordVisit).toHaveBeenCalledTimes(2);
-  });
-
-  it('skips the rate limiter when sender.tab.url is missing', async () => {
-    const deps = makeDeps();
-    const handler = createValidVisitHandler(deps);
-    const sender = {
-      tab: { id: 1, title: 'No URL' },
-    } as chrome.runtime.MessageSender;
-
-    const sendResponse = vi.fn();
-    await handler(makeVisitMessage(), sender, sendResponse);
-
-    expect(deps.recordVisit).toHaveBeenCalledTimes(1);
-    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    expect(deps.addBadgeTab).not.toHaveBeenCalled();
   });
 });

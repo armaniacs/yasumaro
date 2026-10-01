@@ -58,8 +58,11 @@ import type { AIService, AiTestProgress } from '../ai/AIService.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 import type { Settings } from '../../utils/storage/types.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps, RegenerateSummaryHandlerDeps, RecordingRunner } from './recordingHandlers.js';
+import type { RecordingRunner } from './recordingHandlers.js';
 import type { MessageValidator } from '../../messaging/validators.js';
+import type { RecordingAdmission, RecordingAdmit } from '../recordingAdmission.js';
+import type { RegenerateCleanseMode } from '../../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import type { ContentResponse } from '../../messaging/types.js';
 
 /**
  * Heterogeneous collection type: the router stores handlers for different
@@ -86,14 +89,20 @@ export interface CommonHandlerDeps {
 export interface RecordingHandlerDeps {
   recordingPipeline: Pick<RecordingRunner, 'record'>;
   tabCache: Pick<TabCache, 'add' | 'update'>;
-  hasPrivacyConsent: () => Promise<boolean>;
+  /**
+   * The shared admission pre-stage (consent → settings → sender narrow → rate),
+   * built once by the composition root. The router narrows it into the
+   * per-handler admit adapter; handlers never see the limiter or the consent
+   * reader directly.
+   */
+  recordingAdmission: RecordingAdmission;
+  fetchManualContent: (url: string) => Promise<string>;
+  fetchRegenerated: (url: string, cleanseMode: RegenerateCleanseMode) => Promise<ContentResponse>;
+  setUrlContent: (url: string, content: string) => Promise<void>;
   autoSavedBadgeTabs: {
     add(tabId: number): void;
     has(tabId: number): boolean;
   };
-  manualRecordDeps: ManualRecordHandlerDeps;
-  saveRecordDeps: SaveRecordHandlerDeps;
-  regenerateDeps: RegenerateSummaryHandlerDeps;
 }
 
 export interface TestingHandlerDeps {
@@ -141,10 +150,8 @@ export class MessageRouter {
 
     // — Deep implementation: 20 handlers + trust table + 10 validators are all hidden behind the seam —
     const validVisitPick = {
-      hasPrivacyConsent: deps.hasPrivacyConsent,
       tabCache: deps.tabCache,
       recordingPipeline: deps.recordingPipeline,
-      autoSavedBadgeTabs: deps.autoSavedBadgeTabs,
     };
     const fetchUrlPick = {
       getSettings: deps.getSettings,
@@ -153,22 +160,43 @@ export class MessageRouter {
     const checkDomainPick = {
       isDomainAllowed: deps.isDomainAllowed,
     };
+    // PBI 03: one shared admission pre-stage — the router narrows it into the
+    // per-handler admit adapter, so each handler receives only its own gates.
+    const admit: RecordingAdmit = (kind, sender) => deps.recordingAdmission.admit(kind, sender);
 
     const handlers: Record<string, MessageHandler> = {
       VALID_VISIT: createValidVisitHandler({
-        isRecordingAllowed: validVisitPick.hasPrivacyConsent,
+        admit,
         cacheTab: validVisitPick.tabCache.add.bind(validVisitPick.tabCache),
         updateCachedTab: validVisitPick.tabCache.update.bind(validVisitPick.tabCache),
         recordVisit: (data) => validVisitPick.recordingPipeline.record(data),
-        addBadgeTab: (tabId) => validVisitPick.autoSavedBadgeTabs.add(tabId),
-        hasBadgeTab: (tabId) => validVisitPick.autoSavedBadgeTabs.has(tabId),
+        addBadgeTab: (tabId) => deps.autoSavedBadgeTabs.add(tabId),
+        hasBadgeTab: (tabId) => deps.autoSavedBadgeTabs.has(tabId),
       }),
       FETCH_URL: createFetchUrlHandler({ getSettings: fetchUrlPick.getSettings, buildAllowedUrls: fetchUrlPick.buildAllowedUrls }),
-      MANUAL_RECORD: createManualRecordHandler(deps.manualRecordDeps),
-      PREVIEW_RECORD: createManualRecordHandler(deps.manualRecordDeps),
-      SAVE_RECORD: createSaveRecordHandler(deps.saveRecordDeps),
+      MANUAL_RECORD: createManualRecordHandler({
+        admit,
+        fetchContent: deps.fetchManualContent,
+        recordingPipeline: deps.recordingPipeline,
+        setUrlContent: deps.setUrlContent,
+      }),
+      PREVIEW_RECORD: createManualRecordHandler({
+        admit,
+        fetchContent: deps.fetchManualContent,
+        recordingPipeline: deps.recordingPipeline,
+        setUrlContent: deps.setUrlContent,
+      }),
+      SAVE_RECORD: createSaveRecordHandler({
+        admit,
+        recordingPipeline: deps.recordingPipeline,
+        setUrlContent: deps.setUrlContent,
+      }),
       // PBI 04: extension-only trust (default branch below — not in either allowlist).
-      REGENERATE_SUMMARY: createRegenerateSummaryHandler(deps.regenerateDeps),
+      REGENERATE_SUMMARY: createRegenerateSummaryHandler({
+        admit,
+        fetchExtracted: deps.fetchRegenerated,
+        recordingPipeline: deps.recordingPipeline,
+      }),
       CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({}),
       CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
       TEST_CONNECTIONS: createTestConnectionsHandler({

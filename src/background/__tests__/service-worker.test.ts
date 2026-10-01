@@ -573,7 +573,7 @@ import * as savedUrlStore from '../../utils/storage/savedUrlStore.js';
 import * as permissionManager from '../../utils/permissionManager.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError, logWarn } from '../../utils/logger/api.js';
-import { resetVisitRateLimiter } from '../handlers/recordingHandlers.js';
+import { resetVisitRateLimiter } from '../recordingAdmission.js';
 import type {
     ValidVisitMessage,
     FetchUrlMessage,

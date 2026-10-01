@@ -1,6 +1,5 @@
 import type { RecordingData, RecordingResult, ContentResponse } from '../../messaging/types.js';
 import type { TabData } from '../tabCache.js';
-import type { Settings } from '../../utils/storage/types.js';
 import { isSecureUrl, sanitizeUrlForLogging } from '../../utils/urlUtils.js';
 import { setBadge } from '../badgePolicy.js';
 import { ErrorCode } from '../../utils/logger/types.js';
@@ -12,15 +11,13 @@ import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { resolveReasonLabel } from '../../utils/reasonLabel.js';
 import { resolveNavTrailFields } from '../navTrail/navTrailTracker.js';
 import { NotificationHelper } from '../notificationHelper.js';
-import type { MessageSenderLike } from '../rateLimiter.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
-import { pickDefined } from '../../utils/objectUtils.js';
 import { buildRecordRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
-import { visitRateLimiter } from '../visitRateLimiter.js';
 import { validateUrl } from '../../utils/ssrfGuard.js';
 import { getPendingPages } from '../../utils/pendingStorage.js';
 import { claimRecoveryOwner, releaseRecoveryOwner } from '../../utils/recoveryClaimStore.js';
 import type { RegenerateCleanseMode } from '../../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import type { RecordingAdmit } from '../recordingAdmission.js';
 
 import type {
   ValidVisitMessage,
@@ -40,7 +37,7 @@ export interface RecordingRunner {
 // ============================================================================
 
 export interface ValidVisitHandlerDeps {
-  isRecordingAllowed: () => Promise<boolean>;
+  admit: RecordingAdmit;
   cacheTab: (tab: chrome.tabs.Tab) => void;
   updateCachedTab: (tabId: number, data: Partial<TabData>) => void;
   recordVisit: (data: RecordingData) => Promise<RecordingResult>;
@@ -52,20 +49,21 @@ export interface ValidVisitHandlerDeps {
  * Behaviour shared by the recording handlers (MANUAL_RECORD/PREVIEW_RECORD and
  * SAVE_RECORD). Kept to what the handlers actually invoke (deep-dig 子PBI 4):
  * adding a collaborator to one handler must not force it onto the other.
+ * The admission pre-stage (consent → settings → sender narrow → rate) is the
+ * shared RecordingAdmission — handlers never see the limiter or the consent
+ * reader directly.
  */
 export interface RecordingHandlerBaseDeps {
-  isRecordingAllowed: () => Promise<boolean>;
+  admit: RecordingAdmit;
   /**
    * Injected by the composition root. The handler never constructs the
    * orchestrator itself; a missing runner is a wiring error, not a fallback.
    */
   recordingPipeline: RecordingRunner;
-  getSettings: () => Promise<Settings>;
   setUrlContent: (url: string, content: string) => Promise<void>;
 }
 
 export interface ManualRecordHandlerDeps extends RecordingHandlerBaseDeps {
-  checkRateLimit: (sender: MessageSenderLike | undefined, settings: Record<string, unknown>) => Promise<{ allowed: boolean; error?: string }>;
   fetchContent: (url: string) => Promise<string>;
 }
 
@@ -73,18 +71,12 @@ export interface SaveRecordHandlerDeps extends RecordingHandlerBaseDeps {}
 
 /**
  * PBI 04: REGENERATE_SUMMARY deps — deliberately standalone (not the manual
- * base): the handler needs a rate-limit bucket and the re-extraction seam,
- * and never uses setUrlContent (no pending-queue insert on its path).
+ * base): the handler needs the re-extraction seam and never uses setUrlContent
+ * (no pending-queue insert on its path).
  */
 export interface RegenerateSummaryHandlerDeps {
-  isRecordingAllowed: () => Promise<boolean>;
+  admit: RecordingAdmit;
   recordingPipeline: RecordingRunner;
-  getSettings: () => Promise<Settings>;
-  checkRateLimit: (
-    sender: MessageSenderLike | undefined,
-    settings: Record<string, unknown>,
-    opts?: { bucket?: string },
-  ) => Promise<{ allowed: boolean; error?: string }>;
   fetchExtracted: (url: string, cleanseMode: RegenerateCleanseMode) => Promise<ContentResponse>;
 }
 
@@ -104,24 +96,6 @@ const FORCE_OFFERABLE_ERRORS: ReadonlySet<string> = new Set([
 // Factory functions
 // ============================================================================
 
-// ----------------------------------------------------------------------------
-// VALID_VISIT per-URL rate limiting
-//
-// Delegates to the VisitRateLimiter instance (see ../visitRateLimiter.ts).
-// The instance keeps the flood guard injectable and testable in isolation
-// instead of a raw module-level Map here.
-// ----------------------------------------------------------------------------
-
-/** Exported for unit tests; used internally by the VALID_VISIT handler. */
-export function isRateLimitedVisit(url: string): boolean {
-    return visitRateLimiter.isRateLimited(url);
-}
-
-/** Clear all tracked rate-limit entries (used by tests). */
-export function resetVisitRateLimiter(): void {
-    visitRateLimiter.reset();
-}
-
 export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
   return async (
     message: ValidVisitMessage,
@@ -133,13 +107,9 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
       return;
     }
 
-    if (sender.tab.url && isRateLimitedVisit(sender.tab.url)) {
-      sendResponse({ success: false, reason: 'rate_limited' });
-      return;
-    }
-
-    if (!(await deps.isRecordingAllowed())) {
-      sendResponse({ success: false, reason: 'privacy_consent_required' });
+    const admitted = await deps.admit('valid-visit', sender);
+    if ('rejected' in admitted) {
+      sendResponse(admitted.rejected);
       return;
     }
 
@@ -213,14 +183,15 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
   ): Promise<void> => {
     // VULN-004: MANUAL_RECORD/PREVIEW_RECORD are extension-page operations.
     // Enforced by the registry's 'extension-only' trust level.
-    if (!(await deps.isRecordingAllowed())) {
-      sendResponse({ success: false, reason: 'privacy_consent_required' });
+    const admitted = await deps.admit('manual', sender);
+    if ('rejected' in admitted) {
+      sendResponse(admitted.rejected);
       return;
     }
+    const { settings } = admitted;
 
     let content = message.payload.content;
     const skipAi = message.type === 'MANUAL_RECORD' ? message.payload.skipAi : false;
-    const settings = await deps.getSettings();
 
     if (!isSecureUrl(message.payload.url)) {
       await logWarn(
@@ -230,18 +201,6 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
         'service-worker',
       );
       sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
-      return;
-    }
-
-    const senderLike: MessageSenderLike = {
-      ...pickDefined({
-        url: sender.url,
-        tab: sender.tab ? pickDefined({ id: sender.tab.id }) : undefined,
-      }),
-    };
-    const rateLimitResult = await deps.checkRateLimit(senderLike, settings);
-    if (!rateLimitResult.allowed) {
-      sendResponse({ success: false, error: rateLimitResult.error });
       return;
     }
 
@@ -318,10 +277,12 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
   ): Promise<void> => {
     // VULN-004: SAVE_RECORD is an extension-page operation.
     // Enforced by the registry's 'extension-only' trust level.
-    if (!(await deps.isRecordingAllowed())) {
-      sendResponse({ success: false, reason: 'privacy_consent_required' });
+    const admitted = await deps.admit('save', sender);
+    if ('rejected' in admitted) {
+      sendResponse(admitted.rejected);
       return;
     }
+    const { settings } = admitted;
 
     // VULN-004 fix: validate URL scheme before processing (same as MANUAL_RECORD)
     if (!isSecureUrl(message.payload.url)) {
@@ -334,8 +295,6 @@ export function createSaveRecordHandler(deps: SaveRecordHandlerDeps) {
       sendResponse({ success: false, error: 'Insecure URL protocol not allowed' });
       return;
     }
-
-    const settings = await deps.getSettings();
 
     const pipeline = deps.recordingPipeline;
 
@@ -383,23 +342,12 @@ export function createRegenerateSummaryHandler(deps: RegenerateSummaryHandlerDep
       inFlight.add(id);
 
       try {
-        if (!(await deps.isRecordingAllowed())) {
-          sendResponse({ success: false, error: 'privacy_consent_required' });
+        const admitted = await deps.admit('regenerate', sender);
+        if ('rejected' in admitted) {
+          sendResponse(admitted.rejected);
           return;
         }
-
-        const settings = await deps.getSettings();
-        const senderLike: MessageSenderLike = {
-          ...pickDefined({
-            url: sender.url,
-            tab: sender.tab ? pickDefined({ id: sender.tab.id }) : undefined,
-          }),
-        };
-        const rate = await deps.checkRateLimit(senderLike, settings, { bucket: 'regenerate' });
-        if (!rate.allowed) {
-          sendResponse({ success: false, error: rate.error ?? 'rate_limited', reason: 'rate_limited' });
-          return;
-        }
+        const { settings } = admitted;
 
         try {
           validateUrl(url, { requireValidProtocol: true, blockLocalhost: true });

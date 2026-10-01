@@ -4,7 +4,7 @@
  *
  * service-worker.ts constructs every singleton through this module (shared
  * SqliteClient via getSharedSqliteClient, one shared RecordingPipeline, and the
- * manual/save handler dependency objects), so manual record, context menu, and
+ * shared RecordingAdmission pre-stage), so manual record, context menu, and
  * message paths observe the same references instead of rebuilding per message.
  *
  * The wiring itself is declared in `compositionManifest.ts`. This function
@@ -26,7 +26,7 @@ import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js'
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
 import type { MessageRouter, MessageHandler } from './handlers/MessageRouter.js';
-import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from './handlers/recordingHandlers.js';
+import type { RecordingAdmission } from './recordingAdmission.js';
 import type { SessionAlarmService } from './SessionAlarmService.js';
 import type { AlarmRegistry } from './alarmRegistry.js';
 import { ServiceContainer } from './serviceContainer.js';
@@ -72,8 +72,8 @@ export interface BackgroundServices {
  * `messageRouter.getHandler('DASHBOARD_SQLITE')`.
  */
 export interface BackgroundServicesComposition extends BackgroundServices {
-  manualRecordDeps: ManualRecordHandlerDeps;
-  saveRecordDeps: SaveRecordHandlerDeps;
+  /** PBI 03: the shared recording admission pre-stage. */
+  recordingAdmission: RecordingAdmission;
   messageRouter: MessageRouter;
   autoSavedBadgeTabs: AutoSavedBadgeTabs;
   /** PBI 2026-09-15-17: promoted from service-worker.ts direct creation. */
@@ -113,8 +113,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     headerDetector: container.resolve<HeaderDetector>('headerDetector'),
     recordingCache: container.resolve<RecordingCacheInstance>('recordingCache'),
     recordingPipeline: container.resolve<RecordingOrchestrator>('recordingPipeline'),
-    manualRecordDeps: container.resolve<ManualRecordHandlerDeps>('manualRecordDeps'),
-    saveRecordDeps: container.resolve<SaveRecordHandlerDeps>('saveRecordDeps'),
+    recordingAdmission: container.resolve<RecordingAdmission>('recordingAdmission'),
     messageRouter: container.resolve<MessageRouter>('messageRouter'),
     autoSavedBadgeTabs: container.resolve<AutoSavedBadgeTabs>('autoSavedBadgeTabs'),
     sessionAlarmService: container.resolve<SessionAlarmService>('sessionAlarmService'),

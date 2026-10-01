@@ -164,8 +164,7 @@ describe('createBackgroundServices', () => {
     expect(services).toHaveProperty('headerDetector');
     expect(services).toHaveProperty('recordingCache');
     expect(services).toHaveProperty('recordingPipeline');
-    expect(services).toHaveProperty('manualRecordDeps');
-    expect(services).toHaveProperty('saveRecordDeps');
+    expect(services).toHaveProperty('recordingAdmission');
     expect(services).toHaveProperty('messageRouter');
     expect(services.messageRouter.getHandlerCount()).toBe(20); // + REGENERATE_SUMMARY (PBI 2026-09-22-04)
     // dashboardSqliteHandler is internal wiring — reached via the router, not
@@ -263,11 +262,12 @@ describe('createBackgroundServices', () => {
     expect(mocks.SqliteClient).not.toHaveBeenCalled();
   });
 
-  it('shares one RecordingPipeline across manual and save handler deps', () => {
+  it('builds the shared RecordingAdmission pre-stage (PBI 2026-10-01-03)', () => {
     const services = createBackgroundServices();
 
-    expect(services.recordingPipeline).toBe(services.manualRecordDeps.recordingPipeline);
-    expect(services.recordingPipeline).toBe(services.saveRecordDeps.recordingPipeline);
+    expect(typeof (services.recordingAdmission as unknown as { admit: unknown }).admit).toBe('function');
+    // Consent is read lazily per admit — the composition must not call it.
+    expect(mocks.hasPrivacyConsent).not.toHaveBeenCalled();
   });
 
   it('builds the shared RecordingPipeline exactly once with the shared collaborators', () => {
@@ -284,34 +284,34 @@ describe('createBackgroundServices', () => {
   });
 
   it('wires setUrlContent through saveSavedUrlEntryMetadata without refreshing the timestamp', async () => {
-    const services = createBackgroundServices();
+    // PBI 2026-10-01-03: the setUrlContent closure is internal router wiring
+    // now — dispatch a MANUAL_RECORD through the real router to prove it.
+    const container = new ServiceContainer();
+    container.override('recordingAdmission', { admit: async () => ({ settings: {} }) });
+    container.override('recordingPipeline', { record: vi.fn().mockResolvedValue({ success: true, url: 'https://example.com' }) });
+    const services = createBackgroundServices(container);
 
-    await services.manualRecordDeps.setUrlContent('https://example.com', 'content');
-    await services.saveRecordDeps.setUrlContent('https://example.com', 'content');
+    vi.stubGlobal('chrome', {
+      runtime: { id: 'test-extension-id' },
+      i18n: { getMessage: vi.fn((key: string) => key) },
+      storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn().mockResolvedValue(undefined) } },
+    } as unknown as typeof chrome);
 
-    expect(mocks.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(2);
+    const sendResponse = vi.fn();
+    services.messageRouter.dispatch(
+      { type: 'MANUAL_RECORD', payload: { url: 'https://example.com', title: 'T', content: 'content', skipAi: true }, protocolVersion: 1 },
+      { id: 'test-extension-id' } as chrome.runtime.MessageSender,
+      sendResponse,
+    );
+    await vi.waitFor(() => expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true })));
+
     expect(mocks.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
       'https://example.com',
       { content: 'content' },
       { refreshTimestamp: false, createIfMissing: false },
     );
-  });
 
-  it('builds the setUrlContent closure once and shares it between the recording handlers', () => {
-    const services = createBackgroundServices();
-
-    expect(services.manualRecordDeps.setUrlContent).toBe(services.saveRecordDeps.setUrlContent);
-  });
-
-  it('keeps the recording handler deps to the minimum behaviour the handlers use', () => {
-    const services = createBackgroundServices();
-
-    for (const deps of [services.manualRecordDeps, services.saveRecordDeps]) {
-      expect(deps).not.toHaveProperty('obsidian');
-      expect(deps).not.toHaveProperty('aiService');
-      expect(deps).not.toHaveProperty('sqliteClient');
-      expect(deps).not.toHaveProperty('getPrivacyInfoWithCache');
-    }
+    vi.unstubAllGlobals();
   });
 
   it('reuses every pre-registered container entry instead of re-registering it', () => {
@@ -334,8 +334,7 @@ describe('createBackgroundServices', () => {
       'recordingPipeline',
       'dashboardSqliteHandler',
       'autoSavedBadgeTabs',
-      'manualRecordDeps',
-      'saveRecordDeps',
+      'recordingAdmission',
       'messageRouter',
     ] as const;
 
@@ -369,8 +368,7 @@ describe('createBackgroundServices', () => {
     expect(services.reviewSummaryGenerator).toEqual({ fake: 'reviewSummaryGenerator' });
     expect(services.recordingPipeline).toEqual({ fake: 'recordingPipeline' });
     expect(services.autoSavedBadgeTabs).toEqual({ fake: 'autoSavedBadgeTabs' });
-    expect(services.manualRecordDeps).toEqual({ fake: 'manualRecordDeps' });
-    expect(services.saveRecordDeps).toEqual({ fake: 'saveRecordDeps' });
+    expect(services.recordingAdmission).toEqual({ fake: 'recordingAdmission' });
     expect(services.messageRouter).toEqual({ fake: 'messageRouter' });
   });
 
