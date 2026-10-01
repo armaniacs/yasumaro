@@ -14,6 +14,20 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-01 arch-delivery-loop 診断ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
+
+arch-delivery-loop（Phase 0 並列診断 4 系統）で抽出した 14 候補を RICE 採点し、上位 7 件を PBI 化。残り 7 件は台帳送り。詳細は [2026-10-01-00-backlog-archloop-1001.md](2026-10-01-00-backlog-archloop-1001.md)。依存: S3 は PBI 04 着地後に台帳から昇格。O3/O4 は一体設計が条件。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 01 | [2026-10-01-01-refactor-status-channel-unification.md](../dev-docs/archived/pbi/2026-10-01-01-refactor-status-channel-unification.md) | refactor | 24.0 | 2 | ✅ 完了・アーカイブ済み |
+| 02 | [2026-10-01-02-refactor-reload-guard-single-module.md](../dev-docs/archived/pbi/2026-10-01-02-refactor-reload-guard-single-module.md) | refactor | 19.2 | 1 | ✅ 完了・アーカイブ済み。ReloadGuard 単一 module |
+| 03 | [2026-10-01-03-refactor-recording-admission-module.md](../dev-docs/archived/pbi/2026-10-01-03-refactor-recording-admission-module.md) | refactor | 16.0 | 1 | ✅ 完了・アーカイブ済み。RecordingAdmission 単一 module |
+| 04 | [2026-10-01-04-refactor-gateway-execute-collapse.md](../dev-docs/archived/pbi/2026-10-01-04-refactor-gateway-execute-collapse.md) | refactor | 16.0 | 1.5 | ✅ 完了・アーカイブ済み。execute(op) 単一 seam |
+| 05 | [2026-10-01-05-refactor-engine-host-narrow-seam.md](../dev-docs/archived/pbi/2026-10-01-05-refactor-engine-host-narrow-seam.md) | refactor | 8.5 | 1.5 | ✅ 完了・アーカイブ済み。host 狭 seam + sqliteBoot 単一生成 seam |
+| 06 | [2026-10-01-06-refactor-retry-savephase-seam.md](../dev-docs/archived/pbi/2026-10-01-06-refactor-retry-savephase-seam.md) | refactor | 6.4 | 0.75 | ✅ 完了・アーカイブ済み。replay flag を SavePhase seam 内へ |
+| 07 | [2026-10-01-07-refactor-extractor-single-seam.md](../dev-docs/archived/pbi/2026-10-01-07-refactor-extractor-single-seam.md) | refactor | 4.8 | 1 | ✅ 完了・アーカイブ済み。preparePageContent 単一外部 seam |
+
 ### 2026-09-30 adversarial code review ラウンド（encryption 関連） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
 
 adversarial-code-review skill による encryption 関連モジュールの攻撃視点レビューから抽出した 13 候補を RICE 採点して PBI 化。全件実装・全ゲート green で 2026-09-30 にアーカイブ（アーカイブ履歴参照）。詳細は [2026-09-30-00-backlog-adversarial-review-0930.md](2026-09-30-00-backlog-adversarial-review-0930.md)（live 台帳として残置）。
