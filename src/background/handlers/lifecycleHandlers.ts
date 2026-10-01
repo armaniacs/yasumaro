@@ -52,7 +52,7 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
     /**
      * Initialize extension on install/update.
      */
-    async function handleInstalled(details: { reason?: string; previousVersion?: string }): Promise<void> {
+    async function handleInstalled(details: chrome.runtime.InstalledDetails): Promise<void> {
         if (details.reason === 'install') {
             logInfo('Service Worker installed', {}, 'service-worker');
             await syncOllamaOriginRuleFromSettings('install');
