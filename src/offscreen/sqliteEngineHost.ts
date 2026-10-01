@@ -21,8 +21,15 @@ import { logError, logWarn } from '../utils/logger/api.js';
 import { FallbackStorage } from './storageFallback.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import type { StorageBackend, StatusResult, BackendOrError } from './StorageBackend.js';
-import type { SqliteEngine } from './sqliteEngine.js';
-import { resolveBackend, createBackend, type BackendType } from './backendResolver.js';
+import { NoopBackend } from './StorageBackend.js';
+import type { SqliteValue } from './sqliteEngine.js';
+import { resolveBackend, type BackendType } from './backendResolver.js';
+// Static imports (not dynamic): the Firefox background hosts the engine
+// in-page, and nested dynamic imports inside an IIFE library build force
+// rolldown into code-splitting, which IIFE rejects. The adapters are small.
+import { OpfsWorkerBackend } from './OpfsWorkerBackend.js';
+import { IdbVfsBackend, type IdbVfsBackendHost } from './IdbVfsBackend.js';
+import { FallbackStorageAdapter } from './FallbackStorageAdapter.js';
 import {
   sendToOpfsWorker,
   tryOpfsProxy,
@@ -45,7 +52,6 @@ import {
   tryMigrateFallbackToSqlite,
   type FallbackMigrationState,
 } from './sqliteEngineContext/fallbackMigration.js';
-import type { SqliteValue } from './sqliteEngine.js';
 import { Mutex } from '../utils/Mutex.js';
 
 // Re-export from the canonical source so callers importing from either module get the same type.
@@ -121,84 +127,21 @@ export class SqliteEngineHost {
     };
   }
 
-  // ── Public accessors for backward compat (proxy to #state) ──────
+  // ── Narrow views for the adapters (private) ──────────────────────
+  //
+  // PBI-05: the public get/set state accessors are gone. IdbVfsBackend reads
+  // these off a duck type, so the host hands a live view of exactly the exec
+  // seam plus the two boot-time reads — nothing else reaches #state.
 
-  get idbEngine(): SqliteEngine | null {
-    return this.#state.idbEngine;
-  }
-  set idbEngine(v: SqliteEngine | null) {
-    this.#state.idbEngine = v;
-  }
-
-  get initPromise(): Promise<boolean> | null {
-    return this.#state.initPromise;
-  }
-  set initPromise(v: Promise<boolean> | null) {
-    this.#state.initPromise = v;
-  }
-
-  get usingFallbackStorage(): boolean {
-    return this.#state.usingFallbackStorage;
-  }
-  set usingFallbackStorage(v: boolean) {
-    this.#state.usingFallbackStorage = v;
-  }
-
-  get fallbackStorage(): FallbackStorage | null {
-    return this.#state.fallbackStorage;
-  }
-  set fallbackStorage(v: FallbackStorage | null) {
-    this.#state.fallbackStorage = v;
-  }
-
-  get lastInitError(): string | null {
-    return this.#state.lastInitError;
-  }
-  set lastInitError(v: string | null) {
-    this.#state.lastInitError = v;
-  }
-
-  get fts5Available(): boolean {
-    return this.#state.fts5Available;
-  }
-  set fts5Available(v: boolean) {
-    this.#state.fts5Available = v;
-  }
-
-  get cachedCompileOptions(): string[] | null {
-    return this.#state.cachedCompileOptions;
-  }
-  set cachedCompileOptions(v: string[] | null) {
-    this.#state.cachedCompileOptions = v;
-  }
-
-  // _backend is private in original but accessed via resetForTesting; keep private field name with accessor
-  get _backend(): StorageBackend | null {
-    return this.#state._backend;
-  }
-  set _backend(v: StorageBackend | null) {
-    this.#state._backend = v;
-  }
-
-  get opfsWorker(): Worker | null {
-    return this.#state.opfsWorker;
-  }
-  set opfsWorker(v: Worker | null) {
-    this.#state.opfsWorker = v;
-  }
-
-  get opfsRequestId(): number {
-    return this.#state.opfsRequestId;
-  }
-  set opfsRequestId(v: number) {
-    this.#state.opfsRequestId = v;
-  }
-
-  get opfsPending(): Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }> {
-    return this.#state.opfsPending;
-  }
-  set opfsPending(v: Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>) {
-    this.#state.opfsPending = v;
+  private get idbBackendView(): IdbVfsBackendHost {
+    const host = this;
+    return {
+      execWithCache: (sql: string, params?: SqliteValue[], callback?: (row: SqliteValue[]) => void) =>
+        host.execWithCache(sql, params, callback),
+      get idbEngine() { return host.#state.idbEngine; },
+      get fts5Available() { return host.#state.fts5Available; },
+      get cachedCompileOptions() { return host.#state.cachedCompileOptions; },
+    };
   }
 
   // ==========================================================================
@@ -221,7 +164,7 @@ export class SqliteEngineHost {
     return tryOpfsProxy<T>(this.opfsProxyState, type, payload);
   }
 
-  terminateOpfsWorker(): void {
+  private terminateOpfsWorker(): void {
     terminateOpfsWorker(this.opfsProxyState);
   }
 
@@ -361,8 +304,43 @@ export class SqliteEngineHost {
 
     const resolved = resolveBackend(this.resolverState);
 
-    this.#state._backend = await createBackend(this as unknown as never, resolved);
+    this.#state._backend = await this.createBackendFor(resolved);
     return this.#state._backend;
+  }
+
+  /**
+   * Backend adapter registry (moved from backendResolver.ts, PBI-05): the
+   * factory table is the single place that knows a backend was chosen from
+   * this context, and the IDB rung's init precondition is init-order
+   * knowledge that belongs to the host — backendResolver.ts stays a pure
+   * decision table. Falls back to NoopBackend when the resolved type has no
+   * matching adapter.
+   */
+  private async createBackendFor(resolved: BackendType): Promise<StorageBackend> {
+    switch (resolved) {
+      // The degrade signal is wired here because this is the only place that
+      // knows a backend was chosen from this context — the adapter itself
+      // only counts failures and cannot reach the host's init ladder.
+      case 'opfs':
+        return new OpfsWorkerBackend(this, () => this.degradeFromOpfs());
+      case 'idb': {
+        // Defensive belt: the resolver may have returned 'idb' before the
+        // engine is fully set up.
+        if (!this.#state.idbEngine) {
+          await this.init();
+        }
+        if (this.#state.idbEngine) {
+          return new IdbVfsBackend(this.idbBackendView);
+        }
+        return new NoopBackend();
+      }
+      case 'fallback':
+        return this.#state.fallbackStorage
+          ? new FallbackStorageAdapter(this.#state.fallbackStorage)
+          : new NoopBackend();
+      case 'none':
+        return new NoopBackend();
+    }
   }
 
   /**
@@ -475,7 +453,7 @@ export class SqliteEngineHost {
    * resolveBackend. Production reachability: degradeFromOpfs() after the OPFS
    * worker dies mid-session, plus resetForTesting().
    */
-  resetBackend(): void {
+  private resetBackend(): void {
     this.#state._backend = null;
   }
 

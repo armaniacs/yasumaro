@@ -12,7 +12,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import { COLUMN_NAMES } from '../schema.js';
 
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createEngine: vi.fn(),
 }));
 
@@ -21,7 +22,7 @@ vi.mock('../opfsWorker/archiveValidation.js', () => ({
 }));
 
 import { handleArchiveRestore } from '../opfsWorker/archiveRestoreHandlers.js';
-import { createEngine } from '../sqliteEngine.js';
+import { createEngine } from '../sqliteBoot.js';
 import { validateArchiveEngine } from '../opfsWorker/archiveValidation.js';
 import {
   MAX_ARCHIVE_RESTORE_ROWS,

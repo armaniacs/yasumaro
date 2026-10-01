@@ -10,7 +10,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import { COLUMN_NAMES } from '../schema.js';
 
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createEngine: vi.fn(),
 }));
 
@@ -23,7 +24,7 @@ import {
   handleArchiveClose,
   handleArchiveStatus,
 } from '../opfsWorker/archiveSessionHandlers.js';
-import { createEngine } from '../sqliteEngine.js';
+import { createEngine } from '../sqliteBoot.js';
 import {
   setArchiveStagingDirProviderForTesting,
   resetArchiveStagingForTesting,

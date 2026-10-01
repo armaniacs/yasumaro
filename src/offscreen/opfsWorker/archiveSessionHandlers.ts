@@ -28,7 +28,8 @@ import type {
   ArchiveSavePayload,
   ArchiveClosePayload,
 } from './types.js';
-import { createEngine, type SqliteEngine, type SqliteValue } from '../sqliteEngine.js';
+import { createEngine } from '../sqliteBoot.js';
+import type { SqliteEngine, SqliteValue } from '../sqliteEngine.js';
 import { UPDATABLE_FIELDS } from '../schema.js';
 import {
   validateArchiveEngine,

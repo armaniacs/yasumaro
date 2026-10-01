@@ -5,10 +5,11 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock createEngine to avoid WASM dependency
-vi.mock('../sqliteEngine.js', () => ({
+// Mock createEngine to avoid WASM dependency (the generation seam moved to
+// sqliteBoot.js, PBI-05)
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createEngine: vi.fn(),
-  SqliteEngine: class {},
 }));
 
 vi.mock('../utils/errorUtils.js', () => ({
@@ -79,7 +80,7 @@ describe('handleRestore', () => {
     vi.stubGlobal('navigator', { storage: { getDirectory: async () => root } });
 
     // Mock createEngine to reject (simulating invalid SQLite)
-    const { createEngine } = await import('../sqliteEngine.js');
+    const { createEngine } = await import('../sqliteBoot.js');
     vi.mocked(createEngine).mockRejectedValue(new Error('not a valid database'));
 
     const invalidData = new Uint8Array([0, 1, 2, 3]); // not a valid SQLite file
@@ -95,7 +96,7 @@ describe('handleRestore', () => {
     vi.stubGlobal('navigator', { storage: { getDirectory: async () => root } });
 
     // Mock createEngine to return a valid engine
-    const { createEngine } = await import('../sqliteEngine.js');
+    const { createEngine } = await import('../sqliteBoot.js');
     vi.mocked(createEngine).mockResolvedValue({
       exec: vi.fn().mockResolvedValue(undefined),
       query: vi.fn().mockResolvedValue([]),

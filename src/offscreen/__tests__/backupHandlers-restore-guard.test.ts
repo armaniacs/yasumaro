@@ -65,7 +65,7 @@ function makeQueryFn(archiveTablePresent: boolean): QueryFn {
 
 async function loadHandleRestore() {
   vi.resetModules();
-  vi.doMock('../sqliteEngine.js', () => ({
+  vi.doMock('../sqliteBoot.js', () => ({
     createEngine: vi.fn(async (_path: string, _url: string) =>
       makeTmpEngine(currentQueryFn),
     ),

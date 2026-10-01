@@ -8,7 +8,7 @@
 import { errorMessage } from '../../utils/errorUtils.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError, logInfo, logWarn } from '../../utils/logger/api.js';
-import { getSqliteWasmUrlOverride } from '../sqliteEngine.js';
+import { getSqliteWasmUrlOverride } from '../sqliteBoot.js';
 import type { WorkerLogMessage } from '../opfsWorker.js';
 
 function isWorkerLogMessage(

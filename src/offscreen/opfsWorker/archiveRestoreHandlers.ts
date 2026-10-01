@@ -25,7 +25,8 @@
 import type { HandlerContext } from './handlers.js';
 import { sqlExec, withTransaction } from './handlers.js';
 import type { ArchiveRestorePreviewPayload, ArchiveRestorePayload } from './types.js';
-import { createEngine, type SqliteValue } from '../sqliteEngine.js';
+import { createEngine } from '../sqliteBoot.js';
+import type { SqliteValue } from '../sqliteEngine.js';
 import { COLUMN_NAMES, INSERT_IGNORE_SQL, buildInsertParams } from '../schema.js';
 import { validateArchiveEngine } from './archiveValidation.js';
 import {

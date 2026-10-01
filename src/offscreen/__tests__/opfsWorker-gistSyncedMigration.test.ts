@@ -12,9 +12,9 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createEngine: vi.fn(),
-  SqliteEngine: class {},
 }));
 
 vi.mock('../utils/errorUtils.js', () => ({

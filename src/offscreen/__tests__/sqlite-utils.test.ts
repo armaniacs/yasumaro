@@ -20,7 +20,8 @@ import { describe, it, expect, vi } from 'vitest';
 // Emscripten WASM loader, which cannot fetch a real .wasm binary in jsdom
 // and aborts asynchronously outside the normal Promise chain. Mock it so
 // init() falls through to chrome.storage.local fallback deterministically.
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createIdbEngine: vi.fn().mockRejectedValue(new Error('WASM unavailable in test env')),
   createEngine: vi.fn(),
 }));

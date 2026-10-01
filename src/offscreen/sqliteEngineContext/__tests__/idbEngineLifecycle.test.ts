@@ -10,7 +10,8 @@ const mockExec = vi.fn().mockResolvedValue(undefined);
 const mockQuery = vi.fn().mockResolvedValue([]);
 const mockQueryValue = vi.fn().mockResolvedValue(1);
 
-vi.mock('../../sqliteEngine.js', () => ({
+vi.mock('../../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../sqliteBoot.js')>()),
   createIdbEngine: vi.fn().mockImplementation(() => Promise.resolve({
     exec: mockExec,
     query: mockQuery,

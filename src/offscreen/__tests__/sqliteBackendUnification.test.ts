@@ -38,8 +38,8 @@ const boot = vi.hoisted(() => {
   return { stmts, idbEngine: recorder(stmts.idb), workerEngine: recorder(stmts.worker) };
 });
 
-vi.mock('../sqliteEngine.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../sqliteEngine.js')>();
+vi.mock('../sqliteBoot.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../sqliteBoot.js')>();
   return {
     ...actual,
     createIdbEngine: vi.fn(async () => boot.idbEngine),

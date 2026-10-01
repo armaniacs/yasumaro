@@ -13,12 +13,13 @@ import { COLUMN_NAMES, ARCHIVE_INSERT_COLUMN_NAMES } from '../schema.js';
 // Mocks — createEngine is mocked (real WASM SQLite runs only in E2E)
 // ---------------------------------------------------------------------------
 
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createEngine: vi.fn(),
 }));
 
 import { handleArchivePreview, handleArchiveCreate, handleArchiveCleanup, handleArchiveExport } from '../opfsWorker/archiveCreateHandlers.js';
-import { createEngine } from '../sqliteEngine.js';
+import { createEngine } from '../sqliteBoot.js';
 import {
   setArchiveStagingDirProviderForTesting,
   resetArchiveStagingForTesting,

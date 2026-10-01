@@ -7,7 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // asynchronously outside the normal Promise chain. Mock it so init()
 // reliably falls through to chrome.storage.local fallback, matching this
 // suite's intent (SQLite WASM unavailable -> error responses).
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createIdbEngine: vi.fn().mockRejectedValue(new Error('WASM unavailable in test env')),
   createEngine: vi.fn(),
 }));

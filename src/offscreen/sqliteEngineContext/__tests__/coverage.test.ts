@@ -68,6 +68,35 @@ vi.mock('../../../utils/logger/api.js', () => ({
   ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
 }));
 
+// PBI-05: the host's public state accessors are gone. The host tests observe
+// and drive the ladder's state through the state object the host hands its
+// context modules — captured by wrapping the real initOpfsWorker
+// (call-through, so the OPFS routing stays the real one).
+type HostTestState = {
+  opfsWorker: Worker | null;
+  opfsRequestId: number;
+  opfsPending: Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }>;
+  idbEngine: unknown;
+  fts5Available: boolean;
+  cachedCompileOptions: string[] | null;
+  lastInitError: string | null;
+  initPromise: Promise<boolean> | null;
+  usingFallbackStorage: boolean;
+  fallbackStorage: unknown;
+  _backend: unknown;
+};
+let hostState: HostTestState | null = null;
+vi.mock('../opfsWorkerProxy.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../opfsWorkerProxy.js')>();
+  return {
+    ...actual,
+    initOpfsWorker: async (state: HostTestState) => {
+      hostState = state;
+      return actual.initOpfsWorker(state);
+    },
+  };
+});
+
 // ── Imports after mocks ─────────────────────────────────────────────────
 const { SqliteEngineHost: SqliteEngineContext, extractDomain } = await import('../../sqliteEngineHost.js');
 const {
@@ -139,7 +168,7 @@ function makeOpfsState(worker: Partial<Worker> | null) {
 describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
   let ctx: InstanceType<typeof SqliteEngineContext>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockInitIdbEngine.mockReset();
     mockRunMigrationBackup.mockReset();
@@ -157,7 +186,26 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     mockRunMigrationRestore.mockResolvedValue(undefined);
     mockTryMigrateFallback.mockResolvedValue(undefined);
     ctx = new SqliteEngineContext();
-  });
+    // PBI-05: bind hostState to this host's private state. The ladder runs to
+    // the fallback rung (OPFS unavailable, IDB mocked down) so the wrapped
+    // context seam hands the state object over; resetForTesting mutates the
+    // same object, so the captured reference stays live for the whole test.
+    setOpfsAvailable(false);
+    mockInitIdbEngine.mockResolvedValue(false);
+    await ctx.init();
+    ctx.resetForTesting();
+    // The throwaway run ticked the migration mocks and set FALLBACK_MODE —
+    // clear them so the per-test assertions see only their own calls.
+    mockRunMigrationBackup.mockClear();
+    mockRunMigrationRestore.mockClear();
+    mockTryMigrateFallback.mockClear();
+    (chrome.storage.local.set as unknown as ReturnType<typeof vi.fn>).mockClear();
+    (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockClear();
+    (chrome.storage.local.remove as unknown as ReturnType<typeof vi.fn>).mockClear();
+    // restore the per-test defaults the original beforeEach set up
+    setOpfsAvailable(true);
+    mockInitIdbEngine.mockReset();
+  }, 15000);
 
   afterEach(() => {
     ctx.resetForTesting();
@@ -189,8 +237,8 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     const ok = await ctx.init();
 
     expect(ok).toBe(true);
-    expect(ctx.fts5Available).toBe(true);
-    expect(ctx.opfsWorker).not.toBeNull();
+    expect(hostState.fts5Available).toBe(true);
+    expect(hostState.opfsWorker).not.toBeNull();
     expect(mockInitIdbEngine).not.toHaveBeenCalled();
     // OPFS 成功時は FALLBACK_MODE を立てない
     expect(chrome.storage.local.set).not.toHaveBeenCalledWith({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
@@ -207,13 +255,13 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     const ok = await ctx.init();
 
     expect(ok).toBe(true);
-    expect(ctx.fts5Available).toBe(true);
-    expect(ctx.idbEngine).not.toBeNull();
+    expect(hostState.fts5Available).toBe(true);
+    expect(hostState.idbEngine).not.toBeNull();
     expect(mockRunMigrationBackup).toHaveBeenCalledOnce();
     expect(mockInitIdbEngine).toHaveBeenCalledOnce();
     expect(mockRunMigrationRestore).toHaveBeenCalledOnce();
     expect(mockTryMigrateFallback).toHaveBeenCalledOnce();
-    expect(ctx.usingFallbackStorage).toBe(false);
+    expect(hostState.usingFallbackStorage).toBe(false);
   });
 
   it('Edge case: falls back to FallbackStorage and sets FALLBACK_MODE when both OPFS and IDB fail', async () => {
@@ -226,9 +274,9 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     const ok = await ctx.init();
 
     expect(ok).toBe(false);
-    expect(ctx.usingFallbackStorage).toBe(true);
-    expect(ctx.fallbackStorage).not.toBeNull();
-    expect(ctx.lastInitError).toBe('IDB blocked');
+    expect(hostState.usingFallbackStorage).toBe(true);
+    expect(hostState.fallbackStorage).not.toBeNull();
+    expect(hostState.lastInitError).toBe('IDB blocked');
     expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
   });
 
@@ -236,13 +284,13 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     setOpfsAvailable(false);
     mockInitIdbEngine.mockResolvedValue(false);
     // lastInitError が null の場合はデフォルトメッセージが throw される
-    ctx.lastInitError = null;
+    hostState.lastInitError = null;
 
     const ok = await ctx.init();
 
     expect(ok).toBe(false);
-    expect(ctx.lastInitError).toBe('SQLite: IDB engine init failed');
-    expect(ctx.usingFallbackStorage).toBe(true);
+    expect(hostState.lastInitError).toBe('SQLite: IDB engine init failed');
+    expect(hostState.usingFallbackStorage).toBe(true);
   });
 
   it('terminates the OPFS Worker when it exists in catch', async () => {
@@ -262,7 +310,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     } as unknown as typeof MockWorker;
 
     mockInitIdbEngine.mockResolvedValue(false);
-    ctx.lastInitError = 'boom';
+    hostState.lastInitError = 'boom';
 
     const ok = await ctx.init();
 
@@ -271,7 +319,7 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     // このパスでは OPFS Worker は INIT 失敗後に残る？ createOpfsWorker は Worker を state にセットするが
     // initOpfsWorker が false を返しても Worker は state に残る実装なので、catch では terminate される
     // ただし上記モックでは Worker が state に残るため、usingFallbackStorage が立つ
-    expect(ctx.usingFallbackStorage).toBe(true);
+    expect(hostState.usingFallbackStorage).toBe(true);
   });
 
   it('continues the fallback even when chrome.storage.local.set throws (offscreen context)', async () => {
@@ -282,24 +330,24 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     const ok = await ctx.init();
 
     expect(ok).toBe(false);
-    expect(ctx.usingFallbackStorage).toBe(true);
+    expect(hostState.usingFallbackStorage).toBe(true);
   });
 
   it('covers the early-return branches of init', async () => {
     // opfsWorker が既にある場合は true
-    ctx.opfsWorker = { terminate: vi.fn() } as unknown as Worker;
+    hostState.opfsWorker = { terminate: vi.fn() } as unknown as Worker;
     await expect(ctx.init()).resolves.toBe(true);
-    ctx.opfsWorker = null;
+    hostState.opfsWorker = null;
 
     // idbEngine が既にある場合は true
-    ctx.idbEngine = {} as unknown as never;
+    hostState.idbEngine = {} as unknown as never;
     await expect(ctx.init()).resolves.toBe(true);
-    ctx.idbEngine = null;
+    hostState.idbEngine = null;
 
     // usingFallbackStorage が true なら false
-    ctx.usingFallbackStorage = true;
+    hostState.usingFallbackStorage = true;
     await expect(ctx.init()).resolves.toBe(false);
-    ctx.usingFallbackStorage = false;
+    hostState.usingFallbackStorage = false;
 
     // initPromise が既にある場合は同じ Promise インスタンスは deduplicate される（解決値が同じ）
     setOpfsAvailable(false);
@@ -329,12 +377,12 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
 
     // execWithCache は idbEngineLifecycle の execWithCache に委譲（mock）
     mockExecWithCache.mockResolvedValue(undefined);
-    ctx.idbEngine = { exec: vi.fn(), query: vi.fn() } as unknown as never;
+    hostState.idbEngine = { exec: vi.fn(), query: vi.fn() } as unknown as never;
     await expect(ctx.execWithCache('SELECT 1', [])).resolves.toBeUndefined();
     expect(mockExecWithCache).toHaveBeenCalledOnce();
-    // 代わりに ensureBackend / getBackend / resetBackend を検証
-    ctx.resetBackend();
-    expect((ctx as unknown as { _backend: unknown })._backend).toBeNull();
+    // resetBackend is private now (PBI-05) — its effect is covered through
+    // resetForTesting below and through the degrade path in
+    // opfsDegradation.integration.test.ts.
 
     // ensureBackend: 未初期化なら init を経由して backend を解決
     setOpfsAvailable(false);
@@ -352,13 +400,14 @@ describe('sqliteEngineContext coverage — _doInit 3分岐', () => {
     const b2 = await ctx.getBackend();
     expect(b1).toBe(b2);
 
-    // resetForTesting は全状態をクリアする
+    // resetForTesting は全状態をクリアする（resetBackend を内包）
     ctx.resetForTesting();
-    expect(ctx.idbEngine).toBeNull();
-    expect(ctx.fts5Available).toBe(false);
-    expect(ctx.opfsWorker).toBeNull();
-    expect(ctx.usingFallbackStorage).toBe(false);
-    expect(ctx.lastInitError).toBeNull();
+    expect(hostState.idbEngine).toBeNull();
+    expect(hostState.fts5Available).toBe(false);
+    expect(hostState.opfsWorker).toBeNull();
+    expect(hostState.usingFallbackStorage).toBe(false);
+    expect(hostState.lastInitError).toBeNull();
+    expect(hostState._backend).toBeNull();
   });
 });
 

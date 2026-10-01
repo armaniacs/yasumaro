@@ -8,9 +8,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock createEngine to avoid WASM dependency
-vi.mock('../sqliteEngine.js', () => ({
+vi.mock('../sqliteBoot.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sqliteBoot.js')>()),
   createEngine: vi.fn(),
-  SqliteEngine: class {},
 }));
 
 vi.mock('../utils/errorUtils.js', () => ({

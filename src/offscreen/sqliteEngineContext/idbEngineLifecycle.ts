@@ -8,10 +8,10 @@
 import { errorMessage } from '../../utils/errorUtils.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
-import { createIdbEngine, type SqliteEngine, type SqliteRow } from '../sqliteEngine.js';
+import { createIdbEngine } from '../sqliteBoot.js';
+import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import { bootSqliteEngine } from '../sqliteBoot.js';
 import { DB_FILENAME } from '../dbFilename.js';
-import type { SqliteValue } from '../sqliteEngine.js';
 
 // Re-exported, not declared: the host facade and the pre-migration backup
 // still import the name from here, and the declaration belongs to

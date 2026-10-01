@@ -61,7 +61,7 @@ export async function handleRestore(
   setEngine: (e: import('../sqliteEngine.js').SqliteEngine | null) => void,
   initSqlite: () => Promise<void>,
 ): Promise<{ restored: true }> {
-  const { createEngine } = await import('../sqliteEngine.js');
+  const { createEngine } = await import('../sqliteBoot.js');
   const root = await navigator.storage.getDirectory();
 
   // 1. Write to temp file

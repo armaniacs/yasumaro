@@ -12,7 +12,8 @@
  */
 /// <reference lib="webworker" />
 
-import { createEngine, setSqliteWasmUrlOverride, type SqliteEngine, type SqliteValue } from './sqliteEngine.js';
+import { createEngine, setSqliteWasmUrlOverride } from './sqliteBoot.js';
+import type { SqliteEngine, SqliteValue } from './sqliteEngine.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { bootSqliteEngine } from './sqliteBoot.js';
 import { DB_FILENAME } from './dbFilename.js';

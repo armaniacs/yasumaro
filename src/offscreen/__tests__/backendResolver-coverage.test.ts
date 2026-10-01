@@ -32,20 +32,37 @@ vi.mock('../FallbackStorageAdapter.js', () => ({
   FallbackStorageAdapter: class { constructor() { return mockFallbackBackend as never; } },
 }));
 
-// Must import after mocks
-import { resolveBackend, createBackend, detectOpfsCapabilitiesForResolver } from '../backendResolver.js';
-import type { SqliteEngineHost } from '../sqliteEngineHost.js';
+// The rung factories moved into the host (PBI-05), so the boot seams they
+// touch are mocked per rung instead of a fake context object.
+const mockInitOpfsWorker = vi.hoisted(() => vi.fn());
+const mockInitIdbEngine = vi.hoisted(() => vi.fn());
 
-function makeContext(overrides: Partial<Record<string, unknown>> = {}): SqliteEngineHost {
-  return {
-    idbEngine: null,
-    fallbackStorage: null,
-    usingFallbackStorage: false,
-    opfsWorker: null,
-    init: vi.fn().mockResolvedValue(true),
-    ...overrides,
-  } as unknown as SqliteEngineHost;
-}
+vi.mock('../sqliteEngineContext/opfsWorkerProxy.js', () => ({
+  initOpfsWorker: (...args: unknown[]) => mockInitOpfsWorker(...args),
+  sendToOpfsWorker: vi.fn(),
+  tryOpfsProxy: vi.fn().mockResolvedValue(null),
+  terminateOpfsWorker: vi.fn(),
+}));
+vi.mock('../sqliteEngineContext/idbEngineLifecycle.js', () => ({
+  DB_FILENAME: 'yasumaro.db',
+  initIdbEngine: (...args: unknown[]) => mockInitIdbEngine(...args),
+  execWithCache: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../sqliteEngineContext/migrationBackup.js', () => ({
+  runMigrationBackup: vi.fn().mockResolvedValue(undefined),
+  runMigrationRestore: vi.fn().mockResolvedValue(undefined),
+  extractDomain: (url: string) => url,
+}));
+vi.mock('../sqliteEngineContext/fallbackMigration.js', () => ({
+  tryMigrateFallbackToSqlite: vi.fn().mockResolvedValue(undefined),
+}));
+vi.mock('../storageFallback.js', () => ({
+  FallbackStorage: class {},
+}));
+
+// Must import after mocks
+import { resolveBackend, detectOpfsCapabilitiesForResolver } from '../backendResolver.js';
+import { SqliteEngineHost } from '../sqliteEngineHost.js';
 
 describe('backendResolver — coverage 90% (PBI 10)', () => {
   beforeEach(() => {
@@ -92,68 +109,44 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
     });
   });
 
-  // ── createBackend: 4パターン + Noop フォールバック ─────────────────────
-  describe('createBackend — 動的 import と Noop フォールバック', () => {
-    it('opfs: returns OpfsWorkerBackend', async () => {
-      const ctx = makeContext({ opfsWorker: {} });
-      const backend = await createBackend(ctx, 'opfs');
+  // ── createBackend: the adapter registry moved into the host (PBI-05) ──
+  // The factories are the host's private createBackendFor now, exercised
+  // through the public getBackend() seam with the engine boot mocked per
+  // rung. The Noop fallback for unresolvable states is unreachable through
+  // the seam (init always ends on a rung) — resolveBackend's 'none' is
+  // covered by the pure decision tests above.
+  describe('createBackend (host seam) — rung factories', () => {
+    beforeEach(() => {
+      mockInitOpfsWorker.mockImplementation(async (state: { opfsWorker: unknown }) => {
+        state.opfsWorker = { worker: true };
+        return true;
+      });
+      mockInitIdbEngine.mockImplementation(async (state: { idbEngine: unknown; fts5Available: boolean }) => {
+        state.idbEngine = { engine: true };
+        state.fts5Available = true;
+        return true;
+      });
+    });
+
+    it('opfs rung: returns OpfsWorkerBackend', async () => {
+      const host = new SqliteEngineHost();
+      const backend = await host.getBackend();
       expect(backend).toBe(mockOpfsBackend);
     });
 
-    it('idb: returns IdbVfsBackend when idbEngine exists', async () => {
-      const ctx = makeContext({ idbEngine: {} });
-      const backend = await createBackend(ctx, 'idb');
+    it('idb rung: returns IdbVfsBackend when the engine comes up', async () => {
+      mockInitOpfsWorker.mockResolvedValue(false);
+      const host = new SqliteEngineHost();
+      const backend = await host.getBackend();
       expect(backend).toBe(mockIdbBackend);
     });
 
-    it('idb: calls init then returns IdbVfsBackend when idbEngine is null (init brings the engine up)', async () => {
-      const init = vi.fn().mockImplementation(async function (this: unknown) {
-        (this as { idbEngine: unknown }).idbEngine = {};
-      });
-      const ctx = makeContext({ idbEngine: null, init } as never);
-      // init が idbEngine をセットするようにこのテストでは ctx.idbEngine を初期 null にし、init 後にセット
-      // ただし makeContext が idbEngine: null を持つので、createBackend 内の if (!context.idbEngine) await context.init() で init が呼ばれる
-      // init 内で idbEngine を埋めるため、呼び出し後に second check で IdbVfsBackend が返る
-      // 実際には init が this を通じて埋めるので、ctx オブジェクトを直接操作する
-      init.mockImplementation(async () => { ctx.idbEngine = {} as never; });
-      const backend = await createBackend(ctx, 'idb');
-      expect(init).toHaveBeenCalledOnce();
-      expect(backend).toBe(mockIdbBackend);
-    });
-
-    it('idb: falls back to NoopBackend when idbEngine stays null', async () => {
-      const ctx = makeContext({ idbEngine: null, init: vi.fn().mockResolvedValue(undefined) } as never);
-      const backend = await createBackend(ctx, 'idb');
-      // NoopBackend は healthCheck が false になる backend
-      const health = await backend.healthCheck();
-      expect(health.success).toBe(false);
-    });
-
-    it('fallback: returns FallbackStorageAdapter when fallbackStorage exists', async () => {
-      const ctx = makeContext({ fallbackStorage: {} });
-      const backend = await createBackend(ctx, 'fallback');
+    it('fallback rung: returns FallbackStorageAdapter when both engines fail', async () => {
+      mockInitOpfsWorker.mockResolvedValue(false);
+      mockInitIdbEngine.mockResolvedValue(false);
+      const host = new SqliteEngineHost();
+      const backend = await host.getBackend();
       expect(backend).toBe(mockFallbackBackend);
-    });
-
-    it('fallback: falls back to NoopBackend when fallbackStorage is null', async () => {
-      const ctx = makeContext({ fallbackStorage: null });
-      const backend = await createBackend(ctx, 'fallback');
-      expect((await backend.healthCheck()).success).toBe(false);
-    });
-
-    it('none: returns NoopBackend', async () => {
-      const ctx = makeContext();
-      const backend = await createBackend(ctx, 'none');
-      expect((await backend.healthCheck()).success).toBe(false);
-      // NoopBackend の healthCheck は success:false,  getStatus も false
-      const status = await backend.getStatus() as { success: boolean };
-      expect(status.success).toBe(false);
-    });
-
-    it('returns NoopBackend even for unknown resolved values (exhaustive switch default)', async () => {
-      const ctx = makeContext();
-      const backend = await createBackend(ctx, 'none' as never);
-      expect((await backend.healthCheck()).success).toBe(false);
     });
   });
 });

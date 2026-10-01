@@ -1,6 +1,5 @@
 // src/offscreen/IdbVfsBackend.ts
-import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { SqliteValue } from './sqliteEngine.js';
+import type { SqliteEngine, SqliteValue } from './sqliteEngine.js';
 import type {
   StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult,
   MutationResult, StarResult, PurgeResult, FtsSizeResult,
@@ -34,8 +33,20 @@ import { runSearch, type SearchInput, type SearchRowSource } from './searchExecu
 /** What the two search paths and the plain listing hand back. */
 type SearchRow = BrowsingLogEntry & { rank: number };
 
+/**
+ * The narrow host surface the IDB backend needs (PBI-05): the exec seam plus
+ * the two boot-time reads. The host hands a live view of these over at
+ * construction; the backend never reaches the host's mutable state directly.
+ */
+export interface IdbVfsBackendHost {
+  execWithCache(sql: string, params?: SqliteValue[], callback?: (row: SqliteValue[]) => void): Promise<void>;
+  idbEngine: SqliteEngine | null;
+  fts5Available: boolean;
+  cachedCompileOptions: string[] | null;
+}
+
 export class IdbVfsBackend implements StorageBackend {
-  constructor(private engine: SqliteEngineHost) {}
+  constructor(private engine: IdbVfsBackendHost) {}
 
   private ensureDb(): void {
     if (!this.engine.idbEngine) throw new Error('IDB VFS database not initialized');

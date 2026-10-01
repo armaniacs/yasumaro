@@ -21,7 +21,8 @@
 import type { HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { sqlExec, withTransaction } from './handlers.js';
-import { createEngine, type SqliteEngine, type SqliteValue } from '../sqliteEngine.js';
+import { createEngine } from '../sqliteBoot.js';
+import type { SqliteEngine, SqliteValue } from '../sqliteEngine.js';
 import { validateArchiveEngine } from './archiveValidation.js';
 import {
   getStagingRecord,

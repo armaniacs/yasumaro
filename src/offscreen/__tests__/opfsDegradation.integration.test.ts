@@ -31,6 +31,27 @@ vi.mock('../sqliteEngineContext/idbEngineLifecycle.js', () => ({
   execWithCache: vi.fn().mockResolvedValue(undefined),
 }));
 
+// PBI-05: the host's public state accessors are gone. The suite observes the
+// ladder's state transitions through the state object the host hands its
+// context modules — captured by wrapping the real initOpfsWorker (call-through,
+// so the OPFS routing stays the real one).
+let hostState: {
+  opfsWorker: unknown;
+  _backend: unknown;
+  usingFallbackStorage: boolean;
+  fallbackStorage: unknown;
+} | null = null;
+vi.mock('../sqliteEngineContext/opfsWorkerProxy.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../sqliteEngineContext/opfsWorkerProxy.js')>();
+  return {
+    ...actual,
+    initOpfsWorker: async (state: NonNullable<typeof hostState>) => {
+      hostState = state;
+      return actual.initOpfsWorker(state);
+    },
+  };
+});
+
 vi.mock('../sqliteEngineContext/migrationBackup.js', () => ({
   runMigrationBackup: vi.fn().mockResolvedValue(undefined),
   runMigrationRestore: vi.fn().mockResolvedValue(undefined),
@@ -174,18 +195,18 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
     expect(next).toBe(idbBackend);
     expect(await next.getCount()).toEqual({ success: true, count: 42 });
     // The dead worker is gone from the host, not merely bypassed.
-    expect(host.opfsWorker).toBeNull();
+    expect(hostState?.opfsWorker).toBeNull();
   });
 
   it('terminates the dead worker and clears the cached backend', async () => {
     const { host, worker, backend } = await hostOnOpfs();
-    const cached = (host as unknown as { _backend: unknown })._backend;
+    const cached = hostState?._backend;
     kill(worker);
 
     await failUntilDegraded(backend);
 
     expect(worker.terminate).toHaveBeenCalled();
-    expect((host as unknown as { _backend: unknown })._backend).toBeNull();
+    expect(hostState?._backend).toBeNull();
   });
 
   it('records the degradation through addLog', async () => {
@@ -213,7 +234,7 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
     await opfs.getCount();
 
     expect(await host.getBackend()).toBe(opfs);
-    expect(host.opfsWorker).not.toBeNull();
+    expect(hostState?.opfsWorker).not.toBeNull();
   });
 
   it('sends a repeated signal past the IDB rung instead of re-running it', async () => {
@@ -229,7 +250,7 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
     const again = await host.degradeFromOpfs();
     expect(again).toBe('fallback');
     expect(mockInitIdbEngine).toHaveBeenCalledOnce();
-    expect(host.usingFallbackStorage).toBe(true);
+    expect(hostState?.usingFallbackStorage).toBe(true);
   });
 
   it('never climbs back to OPFS and never re-enters the ladder afterwards', async () => {
@@ -241,9 +262,9 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
     expect(await host.getBackend()).toBe(fallbackBackend);
 
     // Third and later signals are inert: no new fallback storage, no flap.
-    const fallbackStorage = host.fallbackStorage;
+    const fallbackStorage = hostState?.fallbackStorage;
     expect(await host.degradeFromOpfs()).toBe('fallback');
-    expect(host.fallbackStorage).toBe(fallbackStorage);
+    expect(hostState?.fallbackStorage).toBe(fallbackStorage);
   });
 
   it('falls through to fallback storage when IDB cannot come up', async () => {
@@ -302,7 +323,7 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
       'SQLite: OPFS worker degraded, backend re-resolved',
       expect.objectContaining({ resolvedTo: 'fallback' })
     );
-    expect(host.usingFallbackStorage).toBe(true);
+    expect(hostState?.usingFallbackStorage).toBe(true);
   });
 
   it('drops the cached adapter even when the re-resolution itself fails', async () => {
@@ -324,7 +345,7 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
       'SQLite: OPFS degradation re-resolve failed',
       expect.objectContaining({ error: 'terminate blew up' })
     );
-    expect((host as unknown as { _backend: unknown })._backend).toBeNull();
+    expect(hostState?._backend).toBeNull();
   });
 
   it('joins concurrent signals into a single ladder run', async () => {
@@ -342,7 +363,7 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
 
     expect(resolved).toBe('idb');
     expect(mockInitIdbEngine).toHaveBeenCalledOnce();
-    expect(host.usingFallbackStorage).toBe(false);
+    expect(hostState?.usingFallbackStorage).toBe(false);
   });
 
   it('does not re-create an OPFS worker on a later init()', async () => {
@@ -355,7 +376,7 @@ describe('OPFS worker dies mid-session — runtime degradation', () => {
 
     // init() takes the idbEngine early return, so the dead rung is never walked
     // again — that is what keeps the backend from climbing back to OPFS.
-    expect(host.opfsWorker).toBeNull();
+    expect(hostState?.opfsWorker).toBeNull();
     expect(mockInitIdbEngine).toHaveBeenCalledOnce();
   });
 });
