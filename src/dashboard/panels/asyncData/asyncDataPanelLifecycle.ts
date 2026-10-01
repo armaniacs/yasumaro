@@ -28,6 +28,7 @@ import {
   type PeriodRange,
 } from '../../components/periodFilter.js';
 import type { PanelNotices } from '../PanelNotices.js';
+import { ReloadGuard } from './reloadGuard.js';
 
 /** Per-load context handed to a panel's fetch/render body. */
 export interface AsyncDataPanelLoad {
@@ -104,7 +105,7 @@ export function createAsyncDataPanelLifecycle(
   options: AsyncDataPanelLifecycleOptions,
 ): AsyncDataPanelLifecycle {
   let filterHandle: PeriodFilterHandle | null = null;
-  let loadSeq = 0;
+  const guard = new ReloadGuard();
 
   /**
    * The filter's own selection, or the declared preset when the host is
@@ -127,11 +128,11 @@ export function createAsyncDataPanelLifecycle(
     // WHY: the bump precedes the reset so a load started while this one is
     // already resetting can still win — the guard is checked after every
     // await, never before the reset.
-    const seq = ++loadSeq;
+    const seq = guard.start();
     const range = currentRange();
     const load: AsyncDataPanelLoad = {
       range,
-      isStale: () => seq !== loadSeq,
+      isStale: () => !guard.isCurrent(seq),
     };
     options.resetOutput();
     // Fresh-fetch reset: restores the normal empty binding in case a
@@ -176,7 +177,7 @@ export function createAsyncDataPanelLifecycle(
   function destroy(): void {
     // WHY: the bump is what makes a load that resolves after destroy a no-op,
     // so it must happen even when there is no filter to tear down.
-    loadSeq += 1;
+    guard.invalidate();
     filterHandle?.destroy();
     filterHandle = null;
     options.teardown?.();

@@ -20,6 +20,7 @@ import { getDebugMode, setDebugMode } from './debugModeStore.js';
 import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
 import { registerReportBugButton } from './issueReportEntry.js';
+import { ReloadGuard } from '../asyncData/reloadGuard.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -597,11 +598,13 @@ function renderCompileOptions(el: HTMLElement | null, snap: DiagnosticsSnapshot)
 
 export function createDiagnosticsPanel(): PanelLifecycle {
   let _container: HTMLElement | null = null;
+  const guard = new ReloadGuard();
 
   async function loadAndPopulate(): Promise<void> {
     const container = _container;
     if (!container) return;
 
+    const token = guard.start();
     // Clear first so the sqlite "Checking..." placeholder is visible during
     // collect()'s retrying status fetch (legacy UX), not just after it.
     for (const section of SECTIONS) {
@@ -609,6 +612,9 @@ export function createDiagnosticsPanel(): PanelLifecycle {
     }
     const snapshot = await diagnosticsCollector.collect();
 
+    // A rapid re-navigate interleaves two collect() runs; only the latest
+    // renders so a stale snapshot never overwrites a newer one.
+    if (!guard.isCurrent(token)) return;
     for (const section of SECTIONS) {
       section.render(container.querySelector(section.selector) as HTMLElement | null, snapshot);
     }

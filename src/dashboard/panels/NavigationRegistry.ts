@@ -1,5 +1,6 @@
 import { type PanelLifecycle, type PanelInitMap } from './types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { ReloadGuard } from './asyncData/reloadGuard.js';
 
 /**
  * NavigationRegistry manages dashboard panel lifecycle using the unified
@@ -12,8 +13,9 @@ export class NavigationRegistry {
   private navigateListeners = new Set<(panelId: string) => void>();
   // Bumped at the start of every #navigateInternal call so a navigate() that
   // gets superseded by a newer one while suspended at an await can detect it
-  // is stale and skip its remaining (visible) side effects.
-  private navGeneration = 0;
+  // is stale and skip its remaining (visible) side effects. The counter lives
+  // in the shared ReloadGuard module.
+  private readonly guard = new ReloadGuard();
 
   /**
    * Fired as soon as a navigation is decided (before panel.mount()/activate()
@@ -45,7 +47,7 @@ export class NavigationRegistry {
   }
 
   async #navigateInternal(panelId: string, init?: Record<string, unknown>): Promise<void> {
-    const generation = ++this.navGeneration;
+    const generation = this.guard.start();
 
     const panel = this.panels.get(panelId);
     if (!panel) {
@@ -103,11 +105,11 @@ export class NavigationRegistry {
     // init/activate/load on a panel that's no longer the target would be
     // wasted work on an already-hidden panel (and could surface a load-error
     // banner nobody can see), so bail out silently here.
-    if (generation !== this.navGeneration) return;
+    if (!this.guard.isCurrent(generation)) return;
 
     await (panel.init ?? panel.activate)?.(init);
 
-    if (generation !== this.navGeneration) return;
+    if (!this.guard.isCurrent(generation)) return;
 
     if ((panel.category === 'async-data' || panel.category === 'diagnostic') && panel.load) {
       panel.load().catch((err: unknown) => {

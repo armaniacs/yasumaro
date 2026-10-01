@@ -31,6 +31,7 @@ import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { QueryCache } from './historyQueryCache.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
+import { ReloadGuard } from './reloadGuard.js';
 
 // ---------------------------------------------------------------------------
 // State — moved from sqliteHistoryPanelState.ts so HistoryModel owns it.
@@ -403,7 +404,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   const runGetSqliteStatus = deps.getSqliteStatus ?? getSqliteStatus;
 
   let state = createInitialHistoryState();
-  let requestGeneration = 0;
+  const guard = new ReloadGuard();
   let pendingInit: Record<string, unknown> | null = null;
   const listeners = new Set<() => void>();
   if (deps.onStateChange) listeners.add(deps.onStateChange);
@@ -469,14 +470,13 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
 
     const cached = cache.get(cacheKey);
     if (cached !== undefined) {
-      const generation = ++requestGeneration;
-      void generation;
+      guard.start();
       dispatch({ type: 'loadSuccess', data: cached });
       notify();
       return;
     }
 
-    const generation = ++requestGeneration;
+    const generation = guard.start();
     dispatch({ type: 'loadStart' });
     notify();
 
@@ -498,7 +498,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
         }),
       });
 
-      if (generation !== requestGeneration) return;
+      if (!guard.isCurrent(generation)) return;
 
       if (isServiceError(result)) {
         dispatch({ type: 'loadFailure', error: 'historyLoadError' });
@@ -507,10 +507,10 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
         cache.set(cacheKey, result.data);
       }
     } catch (err) {
-      if (generation !== requestGeneration) return;
+      if (!guard.isCurrent(generation)) return;
       dispatch({ type: 'loadFailure', error: `Error: ${errorMessage(err)}` });
     } finally {
-      if (generation === requestGeneration) {
+      if (guard.isCurrent(generation)) {
         state = { ...state, loading: false };
         notify();
       }
@@ -593,14 +593,14 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   //   page-0 entry would otherwise keep serving a stale row set.
   // - 'mutation': this panel changed rows itself (star/delete/append), so
   //   cached pages no longer reflect storage. Mutation sites intentionally do
-  //   NOT bump requestGeneration — only unmount discards in-flight queries.
+  //   NOT invalidate the guard — only unmount discards in-flight queries.
   function invalidateCache(reason: 'unmount' | 'fresh-load' | 'mutation'): void {
     void reason;
     cache.clear();
   }
 
   function bumpGenerationOnUnmount(): void {
-    requestGeneration += 1;
+    guard.invalidate();
     flushPendingPersist();
     invalidateCache('unmount');
   }
