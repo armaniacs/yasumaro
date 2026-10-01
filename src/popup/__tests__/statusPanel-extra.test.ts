@@ -1362,12 +1362,13 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await expect(initStatusPanel()).resolves.not.toThrow();
   });
 
-  it('routes all four mainStatus renders through the shared helper, with no bare class write left', () => {
+  it('routes all four mainStatus renders through the channel, with no bare class write left', () => {
     const source = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), '..', 'statusPanel.ts'),
       'utf-8'
     );
-    expect(source.match(/showStatus\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    expect(source).not.toMatch(/showStatus\(\s*'mainStatus'/);
     expect(source).not.toMatch(/className\s*=\s*'(success|error)'/);
   });
 });

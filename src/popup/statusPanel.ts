@@ -14,7 +14,13 @@ import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import { buildRemovedCounts } from '../utils/commonTypes.js';
 import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
-import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { statusChannel } from '../utils/ui/statusChannel.js';
+
+// 2000ms is the popup-only contract: the panel is too small to keep the
+// dashboard's 3s/5s defaults. TTL lives in the channel adapter, not at the
+// call sites.
+statusChannel.register('mainStatus', { defaultTtlMs: 2000 });
+statusChannel.register('reportCleansingFeedbackStatus', { defaultTtlMs: 2000 });
 import { renderCleansingHtml, renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml, renderPrivacyHtml, renderCacheHtml, renderDomainStateHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
 
@@ -316,16 +322,13 @@ function attachPrivacyActionListeners(): void {
         // in the shared whitelist writer seam.
         const result = await addDomainToWhitelist(domain);
         if (result.ok && result.added) {
-          // 2000ms is the popup-only contract: the panel is too small to keep
-          // the dashboard's 3s/5s defaults.
-          showStatus('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success', { durationMs: 2000 });
+          statusChannel.report('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success');
           await initStatusPanel();
         } else if (!result.ok) {
-          showStatus(
+          statusChannel.report(
             'mainStatus',
             result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
-            'error',
-            { durationMs: 2000 }
+            'error'
           );
         }
       }
@@ -338,14 +341,13 @@ function attachPrivacyActionListeners(): void {
     if (tab?.url) {
       const result = await addPathToWhitelist(tab.url);
       if (result.ok && result.added) {
-        showStatus('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success', { durationMs: 2000 });
+        statusChannel.report('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success');
         await initStatusPanel();
       } else if (!result.ok) {
-        showStatus(
+        statusChannel.report(
           'mainStatus',
           result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
-          'error',
-          { durationMs: 2000 }
+          'error'
         );
       }
     }
@@ -416,11 +418,9 @@ function initCleansingFeedbackButton(): void {
       }
       const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
       await enqueueFeedback({ url, domain, htmlSnippet, removedByReason, ...(aiSummary ? { aiSummary } : {}) });
-      // 2000ms is the popup-only contract: the panel is too small to keep the
-      // dashboard's 3s/5s defaults.
-      showStatus(statusEl, getMessageOr('reportCleansingFeedbackSuccess', '報告しました'), 'success', { durationMs: 2000 });
+      if (statusEl) statusChannel.report(statusEl, getMessageOr('reportCleansingFeedbackSuccess', '報告しました'), 'success');
     } catch (e) {
-      showStatus(statusEl, getMessageOr('reportCleansingFeedbackError', '報告に失敗しました'), 'error', { durationMs: 2000 });
+      if (statusEl) statusChannel.report(statusEl, getMessageOr('reportCleansingFeedbackError', '報告に失敗しました'), 'error');
       logError('Failed to enqueue cleansing feedback', { cause: e }, ErrorCode.INTERNAL_ERROR);
     }
     });

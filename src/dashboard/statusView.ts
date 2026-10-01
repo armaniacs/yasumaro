@@ -4,6 +4,7 @@
  */
 
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { statusChannel } from '../utils/ui/statusChannel.js';
 
 /**
  * Mirrors the bottom status element into the sticky top bar.
@@ -25,3 +26,7 @@ export function syncStatusToTop(): void {
     statusTopDiv.className = statusDiv.className;
   }
 }
+
+// The dashboard status pair is registered once here. Callers report to
+// `statusChannel` and no longer decide about mirroring per call site.
+statusChannel.register('status', { mirror: syncStatusToTop });
