@@ -7,9 +7,20 @@
  * *coverage* itself is already checked by scripts/release-checks/check-i18n.mjs;
  * this test is about the rendered layout, which that script cannot see.
  */
-import { test, expect } from '../fixtures/dashboard-locale.fixture.js';
+import { test, expect, type Page } from '../fixtures/dashboard-locale.fixture.js';
 
 const SAMPLE_PANELS = ['panel-general', 'panel-domain', 'panel-diagnostics'];
+
+/**
+ * The settings children (panel-domain, panel-diagnostics) live inside the
+ * collapsed settings subgroup; a user reaches them only after pressing the
+ * Initial Setup toggle, whose visibility is owned by DashboardBootstrapper.
+ */
+async function openPanel(page: Page, panelId: string): Promise<void> {
+  await page.locator('[data-panel="panel-general"]').click();
+  await page.locator(`[data-panel="${panelId}"]`).click();
+  await expect(page.locator(`#${panelId}`)).toBeVisible();
+}
 
 for (const locale of ['en-US', 'ja-JP'] as const) {
   test.describe(`Dashboard i18n layout @extension (${locale})`, () => {
@@ -17,9 +28,8 @@ for (const locale of ['en-US', 'ja-JP'] as const) {
 
     for (const panelId of SAMPLE_PANELS) {
       test(`${panelId} has no horizontal overflow`, async ({ dashboardPage: page }) => {
-        await page.locator(`[data-panel="${panelId}"]`).click();
+        await openPanel(page, panelId);
         const panel = page.locator(`#${panelId}`);
-        await expect(panel).toBeVisible();
 
         const overflowing = await panel.evaluate((el) => {
           const offenders: string[] = [];
@@ -45,9 +55,8 @@ for (const locale of ['en-US', 'ja-JP'] as const) {
       });
 
       test(`${panelId} has no raw i18n key left untranslated`, async ({ dashboardPage: page }) => {
-        await page.locator(`[data-panel="${panelId}"]`).click();
+        await openPanel(page, panelId);
         const panel = page.locator(`#${panelId}`);
-        await expect(panel).toBeVisible();
 
         // Compare each data-i18n element's own key against its rendered text —
         // a mistranslation only ever regresses to the literal key string, so
