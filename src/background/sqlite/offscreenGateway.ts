@@ -26,13 +26,16 @@ import type { OffscreenTransport } from '../offscreenTransport.js';
 import { createOffscreenTransport } from '../offscreenTransport.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
 import { archiveWireFor, isArchiveOpType, type ArchiveOpType } from '../../messaging/archiveWireTable.js';
-import { SQLITE_WIRE_DESCRIPTORS, sqliteWireFor, sqliteMaintainWireFor } from '../../messaging/sqliteWireTable.js';
+import { sqliteWireFor, sqliteMaintainWireFor, isSqliteWireOp } from '../../messaging/sqliteWireTable.js';
 
 export type SqliteResult<T> = { success: true; data: T } | { success: false; error: SqliteError };
 export type { SqliteError };
 export { categorizeError };
 
 type GatewaySuccessResponse = { success: true } & Record<string, unknown>;
+
+/** The single execution seam accepts any op the three wire tables route. */
+export type SqliteGatewayOp = QueryOp | MutateOp | MaintainOp;
 
 export class OffscreenGateway {
   private readonly injectedTransport: OffscreenTransport | null;
@@ -50,6 +53,11 @@ export class OffscreenGateway {
     return this.transportPromise;
   }
 
+  /**
+   * The single transport seam (PBI 04). Every branch routes through here, so
+   * the neutral policy table's retry decision is applied at exactly one
+   * transport boundary — no gateway method adds a caller-side override.
+   */
   private async callInternal<T, R = unknown>(type: SqliteMessageType, payload: Record<string, unknown> = {}, transform?: (res: Extract<R, { success: true }>) => T, traceId?: string): Promise<SqliteResult<T>> {
     try {
       const transport = await this.getTransport();
@@ -70,18 +78,15 @@ export class OffscreenGateway {
     }
   }
 
-  async query(q?: StorageQuery): Promise<SqliteResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  async query(op: Extract<QueryOp, { kind: 'search' }>): Promise<SqliteResult<{ rows: BrowsingLogRecord[]; total: number }>>;
-  async query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteResult<number>>;
-  async query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteResult<{ rows: AuditLogRecord[]; total: number }>>;
-  async query(op: QueryOp | StorageQuery = {}): Promise<SqliteResult<unknown>> {
-    // Query ops (PBI 2026-09-20-16): routed through SQLITE_WIRE_TABLE. The
-    // row supplies the message type, the wire payload, and the response
-    // decoder — the per-kind switch (including the search -> StorageQuery
-    // fold, now the search row's encodePayload) is dissolved. A plain
-    // StorageQuery still enters as the records op. Adding a QueryOp kind
-    // without a row fails the table's compile-time sync assert; a drifted
-    // lookup fails closed here.
+  /**
+   * The single execution seam (PBI 04): every op routes through its wire-table
+   * row + callInternal. Adding a QueryOp/MutateOp kind without a row fails the
+   * table's compile-time sync assert; a drifted lookup fails closed here.
+   * Adding a maintain op needs only the row (or archive entry) — the overload
+   * lists on query/mutate/maintain stay type-level adapters for call-site
+   * precision, so no dispatch logic is ever hand-updated per op.
+   */
+  async execute(op: SqliteGatewayOp): Promise<SqliteResult<unknown>> {
     if (isQueryOp(op)) {
       const row = sqliteWireFor(op.kind);
       if (!row || row.family !== 'query') throw new Error('Unhandled query op');
@@ -91,56 +96,22 @@ export class OffscreenGateway {
         (res) => row.decodeGateway(res),
       );
     }
-    const recordsRow = SQLITE_WIRE_DESCRIPTORS.records;
-    return this.callInternal<unknown>(
-      recordsRow.messageType,
-      recordsRow.encodePayload(recordsRow.encodeOp(op)),
-      (res) => recordsRow.decodeGateway(res),
-    );
-  }
-
-  async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteResult<{ id: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteResult<{ count: number; skipped: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'update' }> | Extract<MutateOp, { type: 'delete' }>): Promise<SqliteResult<void>>;
-  async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteResult<{ is_starred: number }>>;
-  async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteResult<{ id: number }>>;
-  async mutate(op: MutateOp): Promise<SqliteResult<unknown>> {
-    // Mutate ops (PBI 2026-09-20-16): routed through SQLITE_WIRE_TABLE, same
-    // shape as query() above. The flattened update contract lives in the
-    // update row's encodePayload now (see its comment).
-    const row = sqliteWireFor(op.type);
-    if (!row || row.family !== 'mutate') throw new Error('Unhandled mutate op');
-    // Retry safety is owned by the neutral policy table. A lost response can
-    // follow a committed write, so this hop must not infer replay safety from
-    // the operation name or add a caller-side retry override.
-    return this.callInternal<unknown>(
-      row.messageType,
-      row.encodePayload(op),
-      (res) => row.decodeGateway(res),
-      (op as { traceId?: string }).traceId,
-    );
-  }
-
-  async maintain(op: { type: 'init' }): Promise<SqliteResult<boolean>>;
-  async maintain(op: { type: 'backup' }): Promise<SqliteResult<Uint8Array>>;
-  async maintain(op: { type: 'restore'; data: Uint8Array } | { type: 'clearAll' }): Promise<SqliteResult<void>>;
-  async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean } | { type: 'purgeAuditLog'; retentionDays?: number }): Promise<SqliteResult<{ purged: number }>>;
-  async maintain(op: { type: 'healthCheck' }): Promise<SqliteResult<boolean>>;
-  async maintain(op: { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }): Promise<SqliteResult<ArchivePreviewData>>;
-  async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteResult<ArchiveCreateData>>;
-  async maintain(op: { type: 'archiveCleanup' }): Promise<SqliteResult<{ removed: string[] }>>;
-  async maintain(op: { type: 'archiveExport'; stagingName: string; offset: number; length: number }): Promise<SqliteResult<ArchiveExportData>>;
-  async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteResult<string>>;
-  async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteResult<ArchiveRestorePreviewData>>;
-  async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteResult<ArchiveRestoreData>>;
-  async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteResult<ArchivePurgeData>>;
-  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteResult<void>>;
-  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteResult<{ rows: ArchiveSessionRow[]; total: number }>>;
-  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
-  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteResult<ArchiveSessionStatusData>>;
-  async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
+    // MutateOp and MaintainOp share the `type` discriminator but never share
+    // an op name (each is compile-time synced with its own table), so the
+    // wire-table membership decides the family.
+    if (isSqliteWireOp(op.type)) {
+      const row = sqliteWireFor(op.type);
+      if (!row || row.family !== 'mutate') throw new Error('Unhandled mutate op');
+      // Retry safety is owned by the neutral policy table. A lost response can
+      // follow a committed write, so this hop must not infer replay safety from
+      // the operation name or add a caller-side retry override.
+      return this.callInternal<unknown>(
+        row.messageType,
+        row.encodePayload(op as MutateOp),
+        (res) => row.decodeGateway(res),
+        (op as { traceId?: string }).traceId,
+      );
+    }
     // Archive ops (PBI 2026-09-07-22): routed through ARCHIVE_WIRE_TABLE.
     // The op object minus its discriminator is the wire payload; the table
     // supplies the message type, response decoder, and retry policy. The
@@ -168,14 +139,59 @@ export class OffscreenGateway {
     // CONTENT_PURGE split); callInternal stays the single transport and
     // error-mapping seam. Exhaustiveness moved to the table's compile-time
     // two-way sync assert; a drifted lookup fails closed here.
-    const rest = op as Exclude<MaintainOp, { type: ArchiveOpType }>;
-    const row = sqliteMaintainWireFor(rest.type);
+    const row = sqliteMaintainWireFor(op.type);
     if (!row) throw new Error('Unhandled maintain op');
     return this.callInternal<unknown>(
       row.messageType,
-      row.encodePayload(rest),
+      row.encodePayload(op as Exclude<MaintainOp, { type: ArchiveOpType }>),
       (res) => row.decodeGateway(res),
     );
+  }
+
+  async query(q?: StorageQuery): Promise<SqliteResult<{ rows: BrowsingLogRecord[]; total: number }>>;
+  async query(op: Extract<QueryOp, { kind: 'search' }>): Promise<SqliteResult<{ rows: BrowsingLogRecord[]; total: number }>>;
+  async query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteResult<number>>;
+  async query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteResult<{ rows: AuditLogRecord[]; total: number }>>;
+  /** Thin adapter over execute() — the dispatch lives in the single seam. */
+  async query(op: QueryOp | StorageQuery = {}): Promise<SqliteResult<unknown>> {
+    if (isQueryOp(op)) return this.execute(op);
+    // A plain StorageQuery still enters as the records op (the records row's
+    // encodeOp folds it).
+    return this.execute({ kind: 'records', q: op });
+  }
+
+  async mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteResult<{ id: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insertBatch' }>): Promise<SqliteResult<{ count: number; skipped: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'update' }> | Extract<MutateOp, { type: 'delete' }>): Promise<SqliteResult<void>>;
+  async mutate(op: Extract<MutateOp, { type: 'toggleStar' }>): Promise<SqliteResult<{ is_starred: number }>>;
+  async mutate(op: Extract<MutateOp, { type: 'insertAuditLog' }>): Promise<SqliteResult<{ id: number }>>;
+  /** Thin adapter over execute() — the dispatch lives in the single seam. */
+  async mutate(op: MutateOp): Promise<SqliteResult<unknown>> {
+    return this.execute(op);
+  }
+
+  async maintain(op: { type: 'init' }): Promise<SqliteResult<boolean>>;
+  async maintain(op: { type: 'backup' }): Promise<SqliteResult<Uint8Array>>;
+  async maintain(op: { type: 'restore'; data: Uint8Array } | { type: 'clearAll' }): Promise<SqliteResult<void>>;
+  async maintain(op: { type: 'purgeOldRecords'; retentionDays?: number; maxRecords?: number } | { type: 'purgeContent'; retentionDays?: number; maxRecords?: number; includeStarred?: boolean } | { type: 'purgeAuditLog'; retentionDays?: number }): Promise<SqliteResult<{ purged: number }>>;
+  async maintain(op: { type: 'healthCheck' }): Promise<SqliteResult<boolean>>;
+  async maintain(op: { type: 'archivePreview'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean }): Promise<SqliteResult<ArchivePreviewData>>;
+  async maintain(op: { type: 'archiveCreate'; cutoffDate: string; cutoffMs: number; includeDeleted: boolean; yasumaroVersion: string }): Promise<SqliteResult<ArchiveCreateData>>;
+  async maintain(op: { type: 'archiveCleanup' }): Promise<SqliteResult<{ removed: string[] }>>;
+  async maintain(op: { type: 'archiveExport'; stagingName: string; offset: number; length: number }): Promise<SqliteResult<ArchiveExportData>>;
+  async maintain(op: { type: 'archivePrepareIncoming' }): Promise<SqliteResult<string>>;
+  async maintain(op: { type: 'archiveRestorePreview'; stagingName: string }): Promise<SqliteResult<ArchiveRestorePreviewData>>;
+  async maintain(op: { type: 'archiveRestore'; stagingName: string }): Promise<SqliteResult<ArchiveRestoreData>>;
+  async maintain(op: { type: 'archiveDeleteByStaging'; stagingName: string }): Promise<SqliteResult<ArchivePurgeData>>;
+  async maintain(op: { type: 'archiveOpen'; stagingName: string }): Promise<SqliteResult<void>>;
+  async maintain(op: { type: 'archiveQuery'; stagingName: string; query: string; limit: number; offset: number }): Promise<SqliteResult<{ rows: ArchiveSessionRow[]; total: number }>>;
+  async maintain(op: { type: 'archiveUpdate'; stagingName: string; id: number; changes: Record<string, unknown> }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveSave'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveClose'; stagingName: string }): Promise<SqliteResult<{ dirty: boolean }>>;
+  async maintain(op: { type: 'archiveStatus' }): Promise<SqliteResult<ArchiveSessionStatusData>>;
+  /** Thin adapter over execute() — the dispatch lives in the single seam. */
+  async maintain(op: MaintainOp): Promise<SqliteResult<unknown>> {
+    return this.execute(op);
   }
 
   async status(): Promise<SqliteResult<Omit<OffscreenStatusData, 'success'>>> {
@@ -194,7 +210,7 @@ export class OffscreenGateway {
   }
 }
 
-function isQueryOp(op: QueryOp | StorageQuery): op is QueryOp { return typeof op === 'object' && op !== null && 'kind' in op; }
+function isQueryOp(op: SqliteGatewayOp | StorageQuery): op is QueryOp { return typeof op === 'object' && op !== null && 'kind' in op; }
 
 // Backward compat — keep both value and type for callers that use
 // SqliteGateway / SqliteClient as types. SqliteClient used to be a
