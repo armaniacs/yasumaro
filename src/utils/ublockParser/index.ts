@@ -70,8 +70,14 @@ export {
 };
 
 // ============================================================================
-// 複数行パース関数（エラーハンドリング対応）
+// 複数行パース関数
 // ============================================================================
+
+/** 入力サイズの上限。1 つの貼り付けでメモリを枯渇させないためのガード。 */
+const MAX_INPUT_SIZE = 10 * 1024 * 1024; // 10MB
+
+/** 入力行数の上限。過剰な処理時間を防ぐためのガード。 */
+const MAX_LINES = 500000;
 
 /**
  * パースエラー情報
@@ -91,18 +97,17 @@ export interface ParseResultWithErrors {
 }
 
 /**
- * 複数行のuBlockフィルターテキストを一括パース（エラーハンドリング対応）
+ * 複数行のuBlockフィルターテキストを一括パースし、パースできなかった行を
+ * `errors` に集める。
  *
- * 【改善内容】:
- *   - createEmptyRulesetヘルパー関数でDRY原則適用
- *   - isValidStringによる一貫した入力検証
- *   - 定数DEFAULT_METADATAの使用
- *   - キャッシュ機能の追加（UF-302 パフォーマンス最適化）
- *   - エラーハンドリング機能の追加（UF-303 エラーハンドリング）
- * 【設計方針】: 各行をparseUblockFilterLineでパースし、ブロック/例外ルールに分類
- * 【パフォーマンス】: O(n)のループ処理、1行あたり一定の処理時間
- * 【保守性】: ルールセット構造が変更された場合も保守しやすい
- * 🟢 信頼性レベル: plan/UII/02-phase2-parser.md に記載される機能
+ * 【仕様】: 各行を `parseUblockFilterLine` でパースし、ブロック / 例外ルールに
+ * 分類する。空行・コメント行・IGNORED ルールは無視し、それ以外の行でパースに
+ * 失敗した場合は行番号・原文・メッセージを `errors` に積む。
+ * `MAX_INPUT_SIZE` / `MAX_LINES` を超えた場合は空 ruleset とエラー 1 件を返す。
+ * 結果はキャッシュされ、2 回目以降は 1 回目と同じ `importedAt` を持つ値を返す。
+ *
+ * 【パフォーマンス】: O(n) の 1 パス。1 行あたりの処理時間は一定。
+ *
  * @param {string} text - 複数行のフィルターテキスト
  * @returns {ParseResultWithErrors} - パース結果とエラー情報
  */
@@ -125,13 +130,7 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     if (cached) {
         return { ...cached, errors: cached.errors || [] };
     }
-    //   if (hasCacheKey(cacheKey)) {
-    //     const cached = getFromCache(cacheKey);
-    //     return { ...cached, errors: cached.errors || [] }; // ディープコピーして返す
-    //   }
 
-    // VULN-012 fix: limit input size to prevent memory exhaustion
-    const MAX_INPUT_SIZE = 10 * 1024 * 1024; // 10MB
     if (text.length > MAX_INPUT_SIZE) {
         return {
             rules: createEmptyRuleset(),
@@ -142,8 +141,6 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     // 【行分割】: 改行区切りのテキストを配列に変換 🟢
     const lines = text.split('\n');
 
-    // VULN-012 fix: limit line count to prevent excessive processing
-    const MAX_LINES = 500000;
     if (lines.length > MAX_LINES) {
         return {
             rules: createEmptyRuleset(),
@@ -226,100 +223,19 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
 }
 
 /**
- * 複数行のuBlockフィルターテキストを一括パース（キャッシュ対応）
+ * 複数行のuBlockフィルターテキストを一括パースし、エラーを返さない。
  *
- * 【改善内容】:
- *   - createEmptyRulesetヘルパー関数でDRY原則適用
- *   - isValidStringによる一貫した入力検証
- *   - 定数DEFAULT_METADATAの使用
- *   - キャッシュ機能の追加（UF-302 パフォーマンス最適化）
- * 【設計方針】: 各行をparseUblockFilterLineでパースし、ブロック/例外ルールに分類
- * 【パフォーマンス】: O(n)のループ処理、1行あたり一定の処理時間
- * 【保守性】: ルールセット構造が変更された場合も保守しやすい
- * 🟢 信頼性レベル: plan/UII/02-phase2-parser.md に記載される機能
+ * 【仕様】: `parseUblockFilterListWithErrors` の `rules` だけを返す薄いラッパ。
+ * パースできなかった行は WithErrors 版の `errors` に集積されるため、ここでは
+ * 黙って除外される。入力ガードとキャッシュの挙動は WithErrors 版と同じ。
+ *
+ * 【戻り値のコピー】: キャッシュヒット経路と同じく ruleset を浅いコピーで
+ * 返す。呼び出し側が cache 内のオブジェクトを書き換えても他呼び出しに影響
+ * しないため。
+ *
  * @param {string} text - 複数行のフィルターテキスト
- * @returns {ParsedUblockRuleset} - パースされたParsedUblockRulesetオブジェクト
+ * @returns {ParsedUblockRuleset} - パースされた ParsedUblockRuleset オブジェクト
  */
 export function parseUblockFilterList(text: string): ParsedUblockRuleset {
-    // 【キャッシュクリーンアップ】: 定期的にキャッシュをクリーンアップ 🟢
-    cleanupCache();
-
-    // 【入力値検証】: null/undefinedの場合は空のルールセットを返す 🟢
-    if (!isValidString(text)) {
-        return createEmptyRuleset();
-    }
-
-    // 【キャッシュチェック】: キャッシュに存在する場合はキャッシュを返す 🟢
-    // 【キャッシュキー生成】: 最初の100文字と長さでキャッシュキーを生成
-    const cacheKey = generateCacheKey(text);
-    const cached = getFromCache(cacheKey) as (ParseResultWithErrors & { rules: ParsedUblockRuleset }) | ParsedUblockRuleset | null;
-    if (cached && typeof cached === 'object' && 'rules' in cached) {
-        return { ...(cached as ParseResultWithErrors & { rules: ParsedUblockRuleset }).rules };
-    } else if (cached) {
-        return { ...(cached as ParsedUblockRuleset) };
-    }
-
-    // VULN-012 fix: limit input size to prevent memory exhaustion
-    const MAX_INPUT_SIZE = 10 * 1024 * 1024; // 10MB
-    if (text.length > MAX_INPUT_SIZE) {
-        return createEmptyRuleset();
-    }
-
-    // 【行分割】: 改行区切りのテキストを配列に変換 🟢
-    const lines = text.split('\n');
-
-    // VULN-012 fix: limit line count to prevent excessive processing
-    const MAX_LINES = 500000;
-    if (lines.length > MAX_LINES) {
-        return createEmptyRuleset();
-    }
-
-    // 【配列初期化】: ルール格納用配列 🟢
-    const blockRules: UblockRule[] = [];
-    const exceptionRules: UblockRule[] = [];
-
-    // 【行パース】: 各行をパースしてルールに分類 🟢
-    // 【パフォーマンス】: linearループで効率的、1,000行<1秒が達成可能 🟢
-    // 【メモリ最適化】: early returnで無駄な処理をスキップ 🟢
-    for (const line of lines) {
-        // 【空行スキップ】: 空行は事前にスキップして処理を軽量化 🟢
-        if (isEmptyLine(line)) {
-            continue;
-        }
-
-        // 【コメント行スキップ】: コメント行も事前にスキップ 🟢
-        if (isCommentLine(line)) {
-            continue;
-        }
-
-        const rule = parseUblockFilterLine(line); // 【単行パース】: 1行ずつ処理
-
-        // 【ルール分類】: nullでない場合にタイプごとに追加 🟢
-        if (rule) {
-            if (rule.type === RULE_TYPES.BLOCK) {
-                blockRules.push(rule);
-            } else if (rule.type === RULE_TYPES.EXCEPTION) {
-                exceptionRules.push(rule);
-            } else if (rule.type === RULE_TYPES.IGNORE) {
-                // 【無視ルール】: 意図的に無視されたルールは何もしない 🟢
-            }
-        }
-    }
-
-    // 【メタデータ構築】: パース結果の集計情報 🟢
-    const result: ParsedUblockRuleset = {
-        blockRules: blockRules,                         // 【ブロックルール配列】
-        exceptionRules: exceptionRules,                 // 【例外ルール配列】
-        metadata: {
-            source: DEFAULT_METADATA.SOURCE,  // 【データソース】: テキストエリア貼り付け
-            importedAt: Date.now(),           // 【インポート日時】: UNIXタイムスタンプ
-            lineCount: lines.length,          // 【入力行数】: コメント・空行を含む
-            ruleCount: blockRules.length + exceptionRules.length // 【有効ルール数】
-        }
-    };
-
-    // 【キャッシュ保存】: キャッシュに結果を保存 🟢
-    saveToCache(cacheKey, result);
-
-    return result;
+    return { ...parseUblockFilterListWithErrors(text).rules };
 }

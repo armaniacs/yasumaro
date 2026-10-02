@@ -141,3 +141,45 @@ describe('parseUblockFilterListWithErrors', () => {
         expect(result.rules.metadata.lineCount).toBe(2);
     });
 });
+
+/**
+ * The plain entry point is a projection of the WithErrors one, so the two must
+ * agree on rules for every input shape — including the shapes the guards and
+ * the cache intercept. `importedAt` is excluded: it is a parse-time stamp and
+ * the two calls run at different times.
+ */
+describe('parseUblockFilterList / parseUblockFilterListWithErrors parity', () => {
+    const cases: Array<{ name: string; text: string }> = [
+        { name: 'block, exception, comment and blank lines', text: '! header\n||example.com^\n@@||trusted.com^\n\n# hosts note' },
+        { name: 'invalid lines mixed in', text: 'not-a-rule\n||example.com^\n||example..com^' },
+        { name: 'hosts-format lines', text: '127.0.0.1 localhost\n0.0.0.0 example.com' },
+        { name: 'only invalid lines', text: 'garbage\nmore garbage' },
+        { name: 'line count over the guard', text: Array.from({ length: 500001 }, () => '||example.com^').join('\n') },
+    ];
+
+    for (const { name, text } of cases) {
+        it(`returns the same rules for ${name}`, () => {
+            clearCache();
+            const plain = parseUblockFilterList(text);
+            clearCache();
+            const withErrors = parseUblockFilterListWithErrors(text);
+            const { importedAt: _plainAt, ...plainMeta } = plain.metadata;
+            const { importedAt: _withAt, ...withMeta } = withErrors.rules.metadata;
+            expect({ ...plain, metadata: plainMeta }).toEqual({ ...withErrors.rules, metadata: withMeta });
+        });
+    }
+
+    it('drops invalid rules from the plain result', () => {
+        const text = 'not-a-rule\n||example.com^';
+        clearCache();
+        expect(parseUblockFilterList(text).blockRules.map((r) => r.domain)).toEqual(['example.com']);
+    });
+
+    it('serves the plain result from the entry the WithErrors version cached', () => {
+        const text = '||cached.example^';
+        const first = parseUblockFilterListWithErrors(text);
+        const second = parseUblockFilterList(text);
+        expect(second.metadata.importedAt).toBe(first.rules.metadata.importedAt);
+        expect(second).toEqual(first.rules);
+    });
+});
