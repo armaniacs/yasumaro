@@ -327,53 +327,60 @@ export function renderSpecialUrlStatus(): void {
 }
 
 function attachPrivacyActionListeners(): void {
-  const addDomainBtn = document.getElementById('statusAddDomain');
-  addDomainBtn?.addEventListener('click', async () => {
-    try {
-      const tab = await getCurrentTab();
-      if (tab?.url) {
-        const domain = extractDomain(tab.url);
-        if (domain) {
-          // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
-          // in the shared whitelist writer seam.
-          const result = await addDomainToWhitelist(domain);
+  // Wire once per element — same discipline as the toggle / permission /
+  // feedback buttons. A bare addEventListener here stacks a duplicate
+  // whitelist write on every re-init of a persistent button node.
+  const addDomainBtn = document.getElementById('statusAddDomain') as (HTMLElement & { dataset: DOMStringMap }) | null;
+  wireOnce(addDomainBtn, (el) => {
+    el.addEventListener('click', async () => {
+      try {
+        const tab = await getCurrentTab();
+        if (tab?.url) {
+          const domain = extractDomain(tab.url);
+          if (domain) {
+            // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
+            // in the shared whitelist writer seam.
+            const result = await addDomainToWhitelist(domain);
+            if (result.ok && result.added) {
+              statusChannel.report('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success');
+              await initStatusPanel();
+            } else if (!result.ok) {
+              statusChannel.report(
+                'mainStatus',
+                result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
+                'error'
+              );
+            }
+          }
+        }
+      } catch (e) {
+        reportHandlerError('Failed to add the domain to the whitelist', e);
+      }
+    });
+  });
+
+  const addPathBtn = document.getElementById('statusAddPath') as (HTMLElement & { dataset: DOMStringMap }) | null;
+  wireOnce(addPathBtn, (el) => {
+    el.addEventListener('click', async () => {
+      try {
+        const tab = await getCurrentTab();
+        if (tab?.url) {
+          const result = await addPathToWhitelist(tab.url);
           if (result.ok && result.added) {
-            statusChannel.report('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success');
+            statusChannel.report('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success');
             await initStatusPanel();
           } else if (!result.ok) {
             statusChannel.report(
               'mainStatus',
-              result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
+              result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
               'error'
             );
           }
         }
+      } catch (e) {
+        reportHandlerError('Failed to add the path to the whitelist', e);
       }
-    } catch (e) {
-      reportHandlerError('Failed to add the domain to the whitelist', e);
-    }
-  });
-
-  const addPathBtn = document.getElementById('statusAddPath');
-  addPathBtn?.addEventListener('click', async () => {
-    try {
-      const tab = await getCurrentTab();
-      if (tab?.url) {
-        const result = await addPathToWhitelist(tab.url);
-        if (result.ok && result.added) {
-          statusChannel.report('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success');
-          await initStatusPanel();
-        } else if (!result.ok) {
-          statusChannel.report(
-            'mainStatus',
-            result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
-            'error'
-          );
-        }
-      }
-    } catch (e) {
-      reportHandlerError('Failed to add the path to the whitelist', e);
-    }
+    });
   });
 }
 

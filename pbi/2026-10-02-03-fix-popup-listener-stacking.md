@@ -40,12 +40,12 @@ Scenario: 兄弟箇所と同一の wireOnce 意味論
 
 ## 受け入れ基準
 
-- [ ] A1: `src/popup/statusPanel.ts:329-377` の `statusAddDomain` 配線が `wireOnce` 経由になる
-- [ ] A2: `src/popup/statusPanel.ts:329-377` の `statusAddPath` 配線が `wireOnce` 経由になる
-- [ ] A3: init を 2 回以上呼んでボタンを 1 回押しても whitelist 書き込みが 1 回だけである（重複登録なし）
-- [ ] 対象区間内に素の `addEventListener` が残存しない（兄弟 `:88,157,398,423` と同一パターンに統一）
-- [ ] parity テストが存在し、再 init + 1 クリックで書き込み 1 回を固定する
-- [ ] `npm run type-check` と popup 配下の vitest が green（既存テスト群を変更なしで通過、または配線置換に伴う最小限の mock 差し替えのみ）
+- [x] A1: `src/popup/statusPanel.ts:329-377` の `statusAddDomain` 配線が `wireOnce` 経由になる
+- [x] A2: `src/popup/statusPanel.ts:329-377` の `statusAddPath` 配線が `wireOnce` 経由になる
+- [x] A3: init を 2 回以上呼んでボタンを 1 回押しても whitelist 書き込みが 1 回だけである（重複登録なし）
+- [x] 対象区間内に素の `addEventListener` が残存しない（兄弟 `:88,157,398,423` と同一パターンに統一）
+- [x] parity テストが存在し、再 init + 1 クリックで書き込み 1 回を固定する
+- [x] `npm run type-check` と popup 配下の vitest が green（既存テスト群を変更なしで通過、または配線置換に伴う最小限の mock 差し替えのみ）
 
 ## テスト戦略
 
@@ -65,10 +65,13 @@ Scenario: 兄弟箇所と同一の wireOnce 意味論
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る
 - [ ] コードレビュー完了
 
 ## 実装記録
 
-- （未着手）
+- 2026-10-02 実装済み。`attachPrivacyActionListeners` 内の素の `addEventListener` 2 件を `wireOnce` 経由に置換（`src/popup/statusPanel.ts:334,363`）。`wireOnce` は既存 import（`domUtils.ts:11`）を再利用し本体無変更。
+- 引数形の選択: element 渡し（`getElementById` + `wireOnce(el, cb)`）。兄弟 `:88,157,398,423` と同一形のため。
+- 新規テスト `src/popup/__tests__/statusPanel-wireOnce-parity.test.ts`（4 tests: 配線形 2 + 2 回 init + 1 クリックで書き込み 1 回 2 系統）。
+- ゲート: `npx tsc --noEmit` 0 errors、`npm run lint` 0 errors、全 suite 15397 passed。

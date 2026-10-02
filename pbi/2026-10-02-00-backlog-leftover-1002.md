@@ -25,6 +25,12 @@ RICE = R × I × C / E。C7 は 4×2×0.83/1.0 = 6.64 ≒ 6.67（2/3 端数丸�
 - **Wave1: 03 + 04 + 05 + 06** — C6/C8 serial 注記: 03（C6）と 07（C8）はいずれも `src/popup/statusPanel.ts`（03:329-377 / 07:346,369）に触るため直列（03 → 07 の順）。06 はテスト追加のみでソース変更なしのため Wave1 内で並列安全（parallel-safe）。
 - **Wave2: 07 + 08 + 09 + 10** — 相互にファイル非重複（locales+statusPanel / domainFilter 3 層 / settingsPipeline-collector / testDir+validate 配線）のため並列可。ただし 07 は Wave1 の 03 完了後に着手（上記 serial 制約）。
 
+## 実装状況（Wave1）
+
+| PBI | 状態 | 内容 |
+|---|---|---|
+| 03 | ✅ 完了 | `statusPanel.ts` wireOnce 寄せ + parity 4 tests |
+
 ## 送り（deferred・トリガー待ち）
 
 - 未読 alarm deps: `AlarmHandlerDeps` の `reviewSummaryGenerator` / `settingsReader` 未読 — 次の alarmRegistry 整備時に再検討。
