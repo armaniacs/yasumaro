@@ -24,6 +24,22 @@ export { MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, URL_RETENTION_DAYS, MAX_CONTEN
 export type { SavedUrlEntry } from '../urlEntry.js';
 
 /**
+ * Drop the content of every entry beyond the newest MAX_CONTENT_ENTRIES.
+ *
+ * WHY: content dominates the storage footprint, and the quota guards only see
+ * the total size, so shedding the oldest content is the measure that actually
+ * keeps a write from hitting the quota ceiling.
+ *
+ * WHY the copy: the entries are ranked on a copy so the caller's array keeps
+ * the order it was built in — updateUrlTimestamp derives savedUrls from that
+ * order right after capping.
+ */
+function capContentEntries(entries: SavedUrlEntry[]): void {
+    const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+    sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
+}
+
+/**
  * Metadata-only subset of a SavedUrlEntry. `url` and `timestamp` are owned by
  * the module and never appear in a patch. A key present with `undefined` means
  * "do not update"; fields that need an explicit empty value follow the storage
@@ -225,9 +241,7 @@ export async function setSavedUrlsWithTimestamps(urlMap: Map<string, number>, ur
                 spreadExistingFields(entry, existing);
                 entries.push(entry);
             }
-            // contentは最新MAX_CONTENT_ENTRIES件のみ保持（ストレージ節約）
-            const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
-            sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
+            capContentEntries(entries);
 
             const currentSet = new Set(currentUrls || []);
             const newSet = new Set(urlArray);
@@ -277,9 +291,7 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
                 entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
             }
 
-            // contentは最新MAX_CONTENT_ENTRIES件のみ保持
-            const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
-            sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
+            capContentEntries(entries);
 
             // savedUrls must be derived from the filtered/evicted entries, not
             // from the old savedUrls + add — otherwise savedUrls never drops
