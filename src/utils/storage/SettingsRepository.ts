@@ -56,15 +56,37 @@ export class SettingsRepository {
     return getOrCreateEncryptionKey;
   }
 
-  private async persistReEncrypted(reEncrypted: Record<string, unknown>): Promise<void> {
-    if (Object.keys(reEncrypted).length === 0) return;
+  /**
+   * Spread `patch` over the blob read fresh under the write lock, so keys the
+   * patch does not mention keep their stored values.
+   */
+  private mergeSettingsBlob(base: unknown, patch: Record<string, unknown>): SettingsType {
+    const current = (base as Record<string, unknown>) || {};
+    return { ...(current as object), ...patch } as SettingsType;
+  }
+
+  /**
+   * The single settings write path: merge a delta under the write lock and drop
+   * the repo cache around it.
+   *
+   * WHY: every write funnels through here so the delta-write contract (see
+   * setAll) has one implementation — a full cached snapshot in the payload
+   * would revert keys a concurrent writer changed.
+   *
+   * WHY the cache is dropped on both sides: a concurrent getAll() during the
+   * merge window would otherwise re-populate it with the pre-write snapshot,
+   * and the post-write drop is what keeps that snapshot from being served.
+   */
+  private async persistMerged(patch: Record<string, unknown>): Promise<void> {
     this.cached = null;
     const tx = new StorageTransaction(this.port);
-    await tx.withLock<SettingsType>('settings', (current) => {
-      const base = (current as Record<string, unknown>) || {};
-      return { ...(base as object), ...reEncrypted } as SettingsType;
-    });
+    await tx.withLock<SettingsType>('settings', (current) => this.mergeSettingsBlob(current, patch));
     this.cached = null;
+  }
+
+  private async persistReEncrypted(reEncrypted: Record<string, unknown>): Promise<void> {
+    if (Object.keys(reEncrypted).length === 0) return;
+    await this.persistMerged(reEncrypted);
   }
 
   /**
@@ -197,13 +219,7 @@ const { logError } = await import('../logger/api.js');
       throw e;
     }
     await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
-    this.cached = null;
-    const tx = new StorageTransaction(this.port);
-    await tx.withLock<SettingsType>('settings', (current) => {
-      const base = (current as Record<string, unknown>) || {};
-      return { ...(base as object), ...toSave } as SettingsType;
-    });
-    this.cached = null;
+    await this.persistMerged(toSave);
   }
 
   /**
