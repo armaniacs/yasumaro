@@ -23,9 +23,16 @@ test.describe('Task friction budget @extension', () => {
     // Settings children stay collapsed until Initial Setup is pressed.
     await meter.click('[data-panel="panel-general"]');
     await meter.click('[data-panel="panel-domain"]');
+    // The panel's mount resolves the saved filter mode asynchronously
+    // (initDomainFilterTagUI → loadDomainSettings → syncFromHidden); before it
+    // lands, isChecked() reads the static unchecked state. #domainTagInput is
+    // revealed by that same sync, so its visibility is the completion signal.
+    await expect(page.locator('#domainTagInput')).toBeVisible();
     const toggle = page.locator('#domainFilterToggle');
     if (!(await toggle.isChecked())) {
-      await meter.click('#domainFilterToggle');
+      // The visually-hidden checkbox (0x0, opacity:0) never receives pointer
+      // events; users click the visible toggle-switch label.
+      await meter.click('label[for="domainFilterToggle"]');
     }
     await meter.fill('#domainTagInput', 'friction-budget-test.example');
     await meter.click('#domainTagAddBtn');
@@ -64,7 +71,10 @@ test.describe('Task friction budget @extension', () => {
 
     const downloadPromise = page.waitForEvent('download');
     await meter.click('#export-markdown-btn');
-    await downloadPromise;
+    const download = await downloadPromise;
+    // Settle the download: an unconsumed one keeps context.close() in the
+    // fixture teardown waiting past the test timeout.
+    await download.path();
 
     expect(meter.count, 'markdown-export task took more steps than budgeted').toBeLessThanOrEqual(
       budget['markdown-export']
