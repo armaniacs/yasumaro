@@ -120,6 +120,17 @@ export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStat
   setElementHtml(cleansingContent, renderCleansingHtml(cleanseStats, cleansedReason, { t: getMessage, esc: escapeHtml }));
 }
 
+/**
+ * Failure path for the panel's async handlers. A rejected permission request
+ * or a storage write used to end the click silently — the click had no other
+ * visible effect, so the user could not tell it apart from a no-op. The
+ * message goes through the same status seam the success paths use.
+ */
+function reportHandlerError(message: string, error: unknown): void {
+  statusChannel.report('mainStatus', getMessageOr('errorGeneric', 'An error occurred.'), 'error');
+  logError(message, { cause: error }, ErrorCode.INTERNAL_ERROR);
+}
+
 export async function updateTrustStatus(url: string): Promise<void> {
   const trustContent = document.getElementById('statusTrustContent');
   const permArea = document.getElementById('permissionRequestArea');
@@ -151,28 +162,32 @@ export async function updateTrustStatus(url: string): Promise<void> {
             // is noted but re-querying chrome.tabs added async complexity
             // that broke the wiring contract; revisit with an event-based
             // tab-URL refresh.
-            const granted = await requestPermission(url);
-            if (granted) {
-              permArea.classList.add('hidden');
-              void updateTrustStatus(url);
-            } else {
-              const domain = extractDomain(url);
-              if (domain) await recordDeniedVisit(domain);
-              if (errorMsg) {
-                errorMsg.classList.remove('hidden');
-                requestAnimationFrame(() => {
-                  errorMsg.classList.add('visible');
-                });
-                // PBI 2026-09-12-41: per-element timer token — rapid double-deny
-                // used to start two competing toast chains.
-                if (errorToastTimer !== undefined) clearTimeout(errorToastTimer);
-                errorToastTimer = setTimeout(() => {
-                  errorMsg.classList.remove('visible');
-                  setTimeout(() => {
-                    errorMsg.classList.add('hidden');
-                  }, 300);
-                }, 3000);
+            try {
+              const granted = await requestPermission(url);
+              if (granted) {
+                permArea.classList.add('hidden');
+                void updateTrustStatus(url);
+              } else {
+                const domain = extractDomain(url);
+                if (domain) await recordDeniedVisit(domain);
+                if (errorMsg) {
+                  errorMsg.classList.remove('hidden');
+                  requestAnimationFrame(() => {
+                    errorMsg.classList.add('visible');
+                  });
+                  // PBI 2026-09-12-41: per-element timer token — rapid double-deny
+                  // used to start two competing toast chains.
+                  if (errorToastTimer !== undefined) clearTimeout(errorToastTimer);
+                  errorToastTimer = setTimeout(() => {
+                    errorMsg.classList.remove('visible');
+                    setTimeout(() => {
+                      errorMsg.classList.add('hidden');
+                    }, 300);
+                  }, 3000);
+                }
               }
+            } catch (e) {
+              reportHandlerError('Failed to request host permission', e);
             }
           });
         });
@@ -314,42 +329,50 @@ export function renderSpecialUrlStatus(): void {
 function attachPrivacyActionListeners(): void {
   const addDomainBtn = document.getElementById('statusAddDomain');
   addDomainBtn?.addEventListener('click', async () => {
-    const tab = await getCurrentTab();
-    if (tab?.url) {
-      const domain = extractDomain(tab.url);
-      if (domain) {
-        // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
-        // in the shared whitelist writer seam.
-        const result = await addDomainToWhitelist(domain);
-        if (result.ok && result.added) {
-          statusChannel.report('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success');
-          await initStatusPanel();
-        } else if (!result.ok) {
-          statusChannel.report(
-            'mainStatus',
-            result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
-            'error'
-          );
+    try {
+      const tab = await getCurrentTab();
+      if (tab?.url) {
+        const domain = extractDomain(tab.url);
+        if (domain) {
+          // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
+          // in the shared whitelist writer seam.
+          const result = await addDomainToWhitelist(domain);
+          if (result.ok && result.added) {
+            statusChannel.report('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success');
+            await initStatusPanel();
+          } else if (!result.ok) {
+            statusChannel.report(
+              'mainStatus',
+              result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
+              'error'
+            );
+          }
         }
       }
+    } catch (e) {
+      reportHandlerError('Failed to add the domain to the whitelist', e);
     }
   });
 
   const addPathBtn = document.getElementById('statusAddPath');
   addPathBtn?.addEventListener('click', async () => {
-    const tab = await getCurrentTab();
-    if (tab?.url) {
-      const result = await addPathToWhitelist(tab.url);
-      if (result.ok && result.added) {
-        statusChannel.report('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success');
-        await initStatusPanel();
-      } else if (!result.ok) {
-        statusChannel.report(
-          'mainStatus',
-          result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
-          'error'
-        );
+    try {
+      const tab = await getCurrentTab();
+      if (tab?.url) {
+        const result = await addPathToWhitelist(tab.url);
+        if (result.ok && result.added) {
+          statusChannel.report('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success');
+          await initStatusPanel();
+        } else if (!result.ok) {
+          statusChannel.report(
+            'mainStatus',
+            result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
+            'error'
+          );
+        }
       }
+    } catch (e) {
+      reportHandlerError('Failed to add the path to the whitelist', e);
     }
   });
 }
@@ -374,13 +397,17 @@ async function initAllUrlsPermissionBanner(): Promise<void> {
   const btn = document.getElementById('btnRequestAllUrls') as HTMLElement & { dataset: DOMStringMap } | null;
   wireOnce(btn, (el) => {
     el.addEventListener('click', async () => {
-      const granted = await requestAllUrls();
-      if (granted) {
-        banner.classList.add('hidden');
-        const url = await getActiveTabUrl();
-        if (url) {
-          void updateTrustStatus(url);
+      try {
+        const granted = await requestAllUrls();
+        if (granted) {
+          banner.classList.add('hidden');
+          const url = await getActiveTabUrl();
+          if (url) {
+            void updateTrustStatus(url);
+          }
         }
+      } catch (e) {
+        reportHandlerError('Failed to request the all-URLs permission', e);
       }
     });
   });

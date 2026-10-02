@@ -126,6 +126,18 @@ function hidePrivacyConsentModal(): void {
 }
 
 /**
+ * 失敗をボタンに一時表示し、元のラベルへ戻す
+ */
+function flashButtonError(btn: HTMLButtonElement | null): void {
+    if (!btn) return;
+    const originalText = btn.textContent;
+    btn.textContent = getMessageOr('saveFailed', 'Failed to save consent');
+    setTimeout(() => {
+        btn.textContent = originalText;
+    }, 2000);
+}
+
+/**
  * 同意ボタンハンドラー
  */
 async function handleAcceptConsent(): Promise<void> {
@@ -137,16 +149,7 @@ async function handleAcceptConsent(): Promise<void> {
         hidePrivacyConsentModal();
     } catch (error) {
         logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
-
-        // エラー表示
-        const acceptBtn = getAcceptConsentBtnEl();
-        if (acceptBtn) {
-            const originalText = acceptBtn.textContent;
-            acceptBtn.textContent = getMessageOr('saveFailed', 'Failed to save consent');
-            setTimeout(() => {
-                acceptBtn.textContent = originalText;
-            }, 2000);
-        }
+        flashButtonError(getAcceptConsentBtnEl());
     }
 }
 
@@ -154,17 +157,23 @@ async function handleAcceptConsent(): Promise<void> {
  * 拒否ボタンハンドラー
  */
 async function handleDeclineConsent(): Promise<void> {
-    const newCount = await declineConsent();
+    try {
+        const newCount = await declineConsent();
 
-    hidePrivacyConsentModal();
+        hidePrivacyConsentModal();
 
-    if (newCount >= 3) {
-        return;
+        if (newCount >= 3) {
+            return;
+        }
+
+        const message = getMessageOr('consentDeclinedMessage', 'Without consent, main features of the extension will not be available. You can consent later from the settings screen.');
+        // Accessible dialog seam (PBI 2026-09-17-19) replaces native alert().
+        void showAlertDialog({ message });
+    } catch (error) {
+        // 拒否も同意レコードの書き込みなので、保存失敗は同意側と同じ扱いにする。
+        logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
+        flashButtonError(getDeclineConsentBtnEl());
     }
-
-    const message = getMessageOr('consentDeclinedMessage', 'Without consent, main features of the extension will not be available. You can consent later from the settings screen.');
-    // Accessible dialog seam (PBI 2026-09-17-19) replaces native alert().
-    void showAlertDialog({ message });
 }
 
 /**

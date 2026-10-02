@@ -184,11 +184,29 @@ vi.mock('../autoClose.js', () => ({
   startAutoCloseTimer: vi.fn(),
 }));
 
+// The dialog buttons close themselves before the awaited write runs, so a
+// rejection has no dialog left to land in — the boundary reports to #mainStatus
+// and the log instead. Mocked so the assertion can see the call and so the
+// real logger never touches chrome.storage here.
+const hoistedMockLogError = vi.hoisted(() => vi.fn());
+vi.mock('../../utils/logger/types.js', () => ({
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  logError: hoistedMockLogError,
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+vi.mock('../../utils/logger/api.js', () => ({
+  logError: hoistedMockLogError,
+  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+}));
+
 vi.mock('../../utils/i18n.js', () => {
   const getMessage = vi.fn((key: string) => {
     const messages: Record<string, string> = {
       saveSuccess: 'Saved to Obsidian',
       saveError: 'Save error',
+      errorGeneric: 'An error occurred.',
     };
     return messages[key] || key;
   });
@@ -684,6 +702,49 @@ describe('privatePageDialog', () => {
       });
 
       expect(startAutoCloseTimer).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('dialog buttons — rejected dependency', () => {
+    function expectReported(): void {
+      const statusDiv = document.getElementById('mainStatus');
+      expect(statusDiv!.textContent).toBe('An error occurred.');
+      expect(statusDiv!.className).toBe('status-message error');
+      expect(hoistedMockLogError).toHaveBeenCalledWith(
+        expect.stringContaining('[privatePageDialog]'),
+        expect.objectContaining({ cause: expect.any(Error) }),
+        'INT_001'
+      );
+    }
+
+    it('reports a rejected domain write after the dialog is already closed', async () => {
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
+      (settingsRepository.setAll as any).mockRejectedValueOnce(new Error('settings are locked'));
+
+      const mod = await import('../privatePageDialog.js');
+      mod.showPrivatePageDialog('https://example.com/private', 'auth_required', 'Basic Auth');
+      mod.setCurrentPendingSave(createPendingSave({ url: 'https://example.com/some-page' }));
+
+      document.getElementById('dialog-save-domain')!.click();
+
+      await vi.waitFor(() => expect(hoistedMockLogError).toHaveBeenCalled());
+      expectReported();
+      expect((document.getElementById('private-page-dialog') as HTMLDialogElement).open).toBe(false);
+    });
+
+    it('reports a rejected path write', async () => {
+      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
+      (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
+      (settingsRepository.setAll as any).mockRejectedValueOnce(new Error('settings are locked'));
+
+      const mod = await import('../privatePageDialog.js');
+      mod.setCurrentPendingSave(createPendingSave({ url: 'https://example.com/private-path' }));
+
+      document.getElementById('dialog-save-path')!.click();
+
+      await vi.waitFor(() => expect(hoistedMockLogError).toHaveBeenCalled());
+      expectReported();
     });
   });
 

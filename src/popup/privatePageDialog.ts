@@ -1,10 +1,13 @@
 import type { PendingSave } from './mainTypes.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { startAutoCloseTimer } from './autoClose.js';
-import { getMessage } from '../utils/i18n.js';
+import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
+import { statusChannel } from '../utils/ui/statusChannel.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
 import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { logError } from '../utils/logger/api.js';
 
 export let currentPendingSave: PendingSave | null = null;
 
@@ -118,6 +121,16 @@ async function recordWithForce(): Promise<void> {
   await recordPendingSave(true);
 }
 
+/**
+ * Failure path for the dialog buttons. The dialog is already closed by the time
+ * the awaited work runs, so a rejection has no surface of its own to fail on —
+ * without this the popup kept the pre-dialog state and the click looked inert.
+ */
+function reportDialogActionFailure(action: string, error: unknown): void {
+  statusChannel.report('mainStatus', getMessageOr('errorGeneric', 'An error occurred.'), 'error');
+  logError(`[privatePageDialog] ${action} failed`, { cause: error }, ErrorCode.INTERNAL_ERROR);
+}
+
 document.getElementById('dialog-cancel')?.addEventListener('click', () => {
   const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
   dialog?.close();
@@ -131,7 +144,11 @@ document.getElementById('dialog-save-once')?.addEventListener('click', async () 
   releasePrivatePageTrap();
 
   if (currentPendingSave) {
-    await recordWithForce();
+    try {
+      await recordWithForce();
+    } catch (e) {
+      reportDialogActionFailure('Recording the private page', e);
+    }
   }
 });
 
@@ -141,12 +158,16 @@ document.getElementById('dialog-save-domain')?.addEventListener('click', async (
   releasePrivatePageTrap();
 
   if (currentPendingSave) {
-    const domain = extractDomain(currentPendingSave.url);
-    if (domain) {
-      // PBI 2026-09-12-05: validated + deduped write through the shared seam.
-      await addDomainToWhitelist(domain);
+    try {
+      const domain = extractDomain(currentPendingSave.url);
+      if (domain) {
+        // PBI 2026-09-12-05: validated + deduped write through the shared seam.
+        await addDomainToWhitelist(domain);
+      }
+      await recordWithForce();
+    } catch (e) {
+      reportDialogActionFailure('Whitelisting the domain', e);
     }
-    await recordWithForce();
   }
 });
 
@@ -160,8 +181,12 @@ document.getElementById('dialog-save-path')?.addEventListener('click', async () 
   // the await was a TOCTOU crash.
   const pending = currentPendingSave;
   if (pending) {
-    await addPathToWhitelist(pending.url);
-    await recordWithForce();
+    try {
+      await addPathToWhitelist(pending.url);
+      await recordWithForce();
+    } catch (e) {
+      reportDialogActionFailure('Whitelisting the path', e);
+    }
   }
 });
 
@@ -178,8 +203,12 @@ document.getElementById('recording-failed-retry')?.addEventListener('click', asy
   releaseRecordingFailedTrap();
 
   if (currentPendingSave) {
-    // Not a privacy decision: retry the normal path so detection still applies.
-    await recordPendingSave(false);
+    try {
+      // Not a privacy decision: retry the normal path so detection still applies.
+      await recordPendingSave(false);
+    } catch (e) {
+      reportDialogActionFailure('Retrying the recording', e);
+    }
   }
 });
 

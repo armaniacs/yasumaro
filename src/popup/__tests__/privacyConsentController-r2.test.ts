@@ -227,6 +227,38 @@ describe('privacyConsentController - r2 missed branches', () => {
     });
   });
 
+  describe('handleDeclineConsent error branch', () => {
+    it('should mirror the accept handler: log, flash the decline button, keep the modal', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      mockDeclineConsent.mockRejectedValue(new Error('Save failed'));
+
+      setupPrivacyConsentListeners();
+      await initPrivacyConsent();
+
+      const declineBtn = document.getElementById('declineConsentBtn') as HTMLButtonElement;
+      declineBtn.click();
+
+      await vi.waitFor(() => {
+        expect(mockLogError).toHaveBeenCalledWith(
+          '[PrivacyConsent] Failed to save consent',
+          expect.anything(),
+          'INTERNAL_ERROR'
+        );
+      });
+
+      // The decision was not recorded, so the modal stays open — which is also
+      // the only place the error text is visible.
+      expect(getModal()?.open).toBe(true);
+      expect(declineBtn.textContent).toBe('Failed to save consent');
+      // The "features are unavailable" notice must not claim a decline that
+      // never persisted.
+      expect(mockShowAlertDialog).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(2000);
+      expect(declineBtn.textContent).toBe('Decline');
+    });
+  });
+
   describe('hidePrivacyConsentModal (M21: native dialog)', () => {
     it('calls showModal()/close() instead of the old focus-trap flow', async () => {
       mockShouldPromptForConsent.mockResolvedValue(true);

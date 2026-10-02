@@ -28,6 +28,7 @@ const {
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockSetAll = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const mockGetMany = vi.hoisted(() => vi.fn());
+const mockLogError = vi.hoisted(() => vi.fn());
 const mockRecordDeniedVisit = vi.hoisted(() => vi.fn());
 const mockRequestPermission = vi.hoisted(() => vi.fn());
 const mockRequestAllUrls = vi.hoisted(() => vi.fn());
@@ -91,15 +92,15 @@ vi.mock('../../utils/trustChecker.js', () => ({
 vi.mock('../statusChecker.js', () => ({ checkPageStatus: mockCheckPageStatus }));
 
 vi.mock('../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
+  logError: mockLogError,
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));
 vi.mock('../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
+  logError: mockLogError,
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));
 vi.mock('../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
+  logError: mockLogError,
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));
 
@@ -170,6 +171,7 @@ const defaultMessages: Record<string, string> = {
   pathAddedToWhitelist: 'Path added',
   saveDomain: 'Save domain',
   savePath: 'Save path',
+  errorGeneric: 'An error occurred.',
 };
 
 function setDefaultChromeTabsQuery(): void {
@@ -1362,12 +1364,14 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await expect(initStatusPanel()).resolves.not.toThrow();
   });
 
-  it('routes all four mainStatus renders through the channel, with no bare class write left', () => {
+  it('routes every mainStatus render through the channel, with no bare class write left', () => {
     const source = readFileSync(
       join(dirname(fileURLToPath(import.meta.url)), '..', 'statusPanel.ts'),
       'utf-8'
     );
-    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    // 2 success renders (domain / path) + 2 validation-failure renders + the
+    // shared handler-failure report the async click handlers catch into.
+    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(5);
     expect(source).not.toMatch(/showStatus\(\s*'mainStatus'/);
     expect(source).not.toMatch(/className\s*=\s*'(success|error)'/);
   });
@@ -1526,5 +1530,141 @@ describe('additional branch coverage — trust and record fallback', () => {
     mockCheckDomainTrust.mockResolvedValue({ showAlert: false, trustResult: {} });
     await updateTrustStatus('https://example.com');
     expect(document.getElementById('statusTrustContent')!.textContent).toContain('Trusted');
+  });
+});
+
+// ──────────────────────────────────────────────
+// async click handlers — error boundary
+//
+// Each of these buttons is a fire-and-forget click whose awaited work can
+// reject (settings write, permission prompt). Without a boundary the rejection
+// left no trace and the click looked inert, so each case asserts both halves
+// of the report: the message on #mainStatus and the cause in the log.
+// ──────────────────────────────────────────────
+describe('statusPanel async handlers — rejected dependencies', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetMessage.mockImplementation((key: string) => defaultMessages[key] || key);
+    mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline', domain_whitelist: [] });
+    mockSetAll.mockResolvedValue(undefined);
+    mockExtractDomain.mockImplementation((url: string) => {
+      try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
+    });
+    mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 });
+  });
+
+  function expectReported(): void {
+    const status = document.getElementById('mainStatus')!;
+    expect(status.textContent).toBe('An error occurred.');
+    expect(status.className).toBe('status-message error');
+    expect(mockLogError).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ cause: expect.any(Error) }),
+      'INT_001'
+    );
+  }
+
+  async function initPrivatePanel(): Promise<void> {
+    setupDefaultDom();
+    setDefaultChromeTabsQuery();
+    document.body.insertAdjacentHTML('beforeend', '<div id="mainStatus"></div>');
+    mockCheckPageStatus.mockResolvedValue({
+      domainFilter: { allowed: true, mode: 'disabled' },
+      privacy: { isPrivate: true, hasCache: true, reason: 'cache-control' },
+      cache: { hasCache: false },
+      lastSaved: { exists: false },
+    });
+    await initStatusPanel();
+  }
+
+  it('addDomain: a rejected whitelist write lands on mainStatus and the log', async () => {
+    mockSetAll.mockRejectedValue(new Error('settings are locked'));
+    await initPrivatePanel();
+
+    document.getElementById('statusAddDomain')!.click();
+
+    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
+    expectReported();
+  });
+
+  it('addPath: a rejected whitelist write lands on mainStatus and the log', async () => {
+    mockSetAll.mockRejectedValue(new Error('settings are locked'));
+    await initPrivatePanel();
+
+    document.getElementById('statusAddPath')!.click();
+
+    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
+    expectReported();
+  });
+
+  it('addDomain: a rejected active-tab read lands on mainStatus and the log', async () => {
+    await initPrivatePanel();
+    mockGetCurrentTab.mockRejectedValue(new Error('no active tab'));
+
+    document.getElementById('statusAddDomain')!.click();
+
+    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
+    expectReported();
+  });
+
+  it('requestPermission: a rejected prompt is reported instead of leaking', async () => {
+    const { updateTrustStatus } = await import('../statusPanel.js');
+    document.body.innerHTML = [
+      '<div id="statusTrustContent"></div>',
+      '<div id="permissionRequestArea" class="hidden">',
+      '  <button id="btnRequestPermission"></button>',
+      '</div>',
+      '<div id="permissionDeniedMessage" class="hidden"></div>',
+      '<div id="mainStatus"></div>',
+    ].join('\n');
+    mockIsAllUrlsPermitted.mockResolvedValue(false);
+    mockIsHostPermitted.mockResolvedValue(false);
+    mockRequestPermission.mockRejectedValue(new Error('user gesture required'));
+    await updateTrustStatus('https://example.com/page');
+
+    document.getElementById('btnRequestPermission')!.click();
+
+    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
+    expectReported();
+  });
+
+  it('requestPermission: a rejected denied-visit record is reported too', async () => {
+    const { updateTrustStatus } = await import('../statusPanel.js');
+    document.body.innerHTML = [
+      '<div id="statusTrustContent"></div>',
+      '<div id="permissionRequestArea" class="hidden">',
+      '  <button id="btnRequestPermission"></button>',
+      '</div>',
+      '<div id="permissionDeniedMessage" class="hidden"></div>',
+      '<div id="mainStatus"></div>',
+    ].join('\n');
+    mockIsAllUrlsPermitted.mockResolvedValue(false);
+    mockIsHostPermitted.mockResolvedValue(false);
+    mockRequestPermission.mockResolvedValue(false);
+    mockRecordDeniedVisit.mockRejectedValue(new Error('settings are locked'));
+    await updateTrustStatus('https://example.com/page');
+
+    document.getElementById('btnRequestPermission')!.click();
+
+    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
+    expectReported();
+  });
+
+  it('requestAllUrls: a rejected prompt keeps the banner and reports the failure', async () => {
+    const { initAllUrlsPermissionBanner } = await import('../statusPanel.js');
+    document.body.innerHTML = [
+      '<div id="allUrlsPermissionBanner" class="hidden"></div>',
+      '<button id="btnRequestAllUrls"></button>',
+      '<div id="mainStatus"></div>',
+    ].join('\n');
+    mockIsAllUrlsPermitted.mockResolvedValue(false);
+    mockRequestAllUrls.mockRejectedValue(new Error('user dismissed the prompt'));
+    await initAllUrlsPermissionBanner();
+
+    document.getElementById('btnRequestAllUrls')!.click();
+
+    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
+    expectReported();
+    expect(document.getElementById('allUrlsPermissionBanner')!.classList.contains('hidden')).toBe(false);
   });
 });

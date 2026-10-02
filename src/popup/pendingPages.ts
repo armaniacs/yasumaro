@@ -1,13 +1,25 @@
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
-import { ErrorCode } from '../utils/logger/types.js';
+import { ErrorCode, type ErrorCodeValues } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
-import { showSuccess } from './errorUtils.js';
+import { showSuccess, showError } from './errorUtils.js';
 import { escapeHtml, clearElement } from './domUtils.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
 import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
+
+/**
+ * Single failure path for the pending-list actions. The awaited storage and
+ * messaging seams reject on their own (a locked master password makes every
+ * settings write throw), and a rejected click handler left no trace — the
+ * list simply stopped changing.
+ */
+function reportActionFailure(message: string, error: unknown, errorCode: ErrorCodeValues): void {
+  const statusDiv = document.getElementById('mainStatus');
+  if (statusDiv) showError(statusDiv, error);
+  logError(message, { cause: error }, errorCode);
+}
 
 export async function loadPendingPages(): Promise<void> {
   try {
@@ -66,7 +78,19 @@ async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'pa
   // pattern validation.
   for (const url of urls) {
     if (type === 'domain') {
-      const domain = new URL(url).hostname;
+      // Guarded per entry: one unparsable stored URL must not cost the user
+      // the remaining whitelist writes, nor the save pass that follows them.
+      let domain: string;
+      try {
+        domain = new URL(url).hostname;
+      } catch (error) {
+        reportActionFailure(
+          'Failed to read the hostname of a pending page URL',
+          error,
+          ErrorCode.INVALID_INPUT
+        );
+        continue;
+      }
       await addDomainToWhitelist(domain);
     } else {
       await addPathToWhitelist(url);
@@ -80,25 +104,29 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
 
   if (urls.length === 0) return;
 
-  if (whitelistType) {
-    await addDomainsOrPathsToWhitelist(urls, whitelistType);
-  }
-
-  // Single read for the whole batch — the per-URL read inside the loop was an
-  // N+1 over chrome.storage (PBI 2026-09-11-03).
-  const pages = await getPendingPages();
-
-  for (const url of urls) {
-    const page = pages.find(p => p.url === url);
-    if (page) {
-      // PBI 2026-09-12-01: envelope + timeout contract lives in the shared
-      // pending-record seam (the dead {type:'record'} copy here predates it).
-      await recordPendingPage({ title: page.title, url: page.url, force: true });
+  try {
+    if (whitelistType) {
+      await addDomainsOrPathsToWhitelist(urls, whitelistType);
     }
-  }
 
-  await removePendingPages(urls);
-  await loadPendingPages();
+    // Single read for the whole batch — the per-URL read inside the loop was an
+    // N+1 over chrome.storage (PBI 2026-09-11-03).
+    const pages = await getPendingPages();
+
+    for (const url of urls) {
+      const page = pages.find(p => p.url === url);
+      if (page) {
+        // PBI 2026-09-12-01: envelope + timeout contract lives in the shared
+        // pending-record seam (the dead {type:'record'} copy here predates it).
+        await recordPendingPage({ title: page.title, url: page.url, force: true });
+      }
+    }
+
+    await removePendingPages(urls);
+    await loadPendingPages();
+  } catch (error) {
+    reportActionFailure('Failed to save the selected pending pages', error, ErrorCode.STORAGE_WRITE_FAILURE);
+  }
 }
 
 export function setupEventListeners(): void {
@@ -132,12 +160,16 @@ export function setupEventListeners(): void {
     }
 
     // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
-    const confirmed = await showConfirmDialog({
-      message: chrome.i18n.getMessage('warningConfirmSave'),
-    });
-    if (confirmed) {
-      await removePendingPages(urls);
-      await loadPendingPages();
+    try {
+      const confirmed = await showConfirmDialog({
+        message: chrome.i18n.getMessage('warningConfirmSave'),
+      });
+      if (confirmed) {
+        await removePendingPages(urls);
+        await loadPendingPages();
+      }
+    } catch (error) {
+      reportActionFailure('Failed to discard the selected pending pages', error, ErrorCode.STORAGE_WRITE_FAILURE);
     }
   });
 }
