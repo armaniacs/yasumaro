@@ -658,7 +658,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
 
   async function toggleStarImpl(id: number): Promise<void> {
     const result = await toggleStar(id);
-    if ('error' in result) {
+    if (isServiceError(result)) {
       dispatch({ type: 'operationError', error: result.error });
       notify();
       return;
@@ -674,7 +674,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   async function deleteEntry(id: number): Promise<void> {
     const entry = state.entries.find((candidate) => candidate.id === id);
     const result = await deleteLog(id);
-    if ('error' in result) {
+    if (isServiceError(result)) {
       dispatch({ type: 'operationError', error: result.error });
       notify();
       return;
@@ -704,7 +704,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     let error: string | null = null;
     for (const id of ids) {
       const result = await deleteLog(id);
-      if ('error' in result) {
+      if (isServiceError(result)) {
         error = result.error;
         break;
       }

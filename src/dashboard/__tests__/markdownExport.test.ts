@@ -20,6 +20,7 @@ const mockGetPlatformOs = vi.fn();
 
 vi.mock('../dashboardSqliteService.js', () => ({
   queryLogs: (...args: unknown[]) => mockQueryLogs(...args),
+  isServiceError: (result: object) => 'error' in result,
 }));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {

@@ -14,7 +14,7 @@
 
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
-import { queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
+import { isServiceError, queryLogs, type BrowsingLogEntry } from './dashboardSqliteService.js';
 import { renderFileTemplate, getActiveTemplate } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { buildTemplateEntryData } from '../utils/markdownFormatter.js';
@@ -184,7 +184,7 @@ export async function exportFullHistoryInBatches(
     // A failed batch must not look like "reached the end", or a mid-export
     // database error would silently produce a partial export reported as
     // complete.
-    if ('error' in result) {
+    if (isServiceError(result)) {
       throw new Error(result.error);
     }
     if (result.data.rows.length === 0) break;
@@ -244,7 +244,7 @@ export async function exportDateRange(
   // Distinguish a failure from a genuinely empty range: both used to return
   // zero rows, so a database error was reported to the user as "no records in
   // this period".
-  if ('error' in result) {
+  if (isServiceError(result)) {
     throw new Error(result.error);
   }
   if (result.data.rows.length === 0) {

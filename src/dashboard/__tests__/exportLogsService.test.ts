@@ -16,6 +16,7 @@ const mockQueryLogs = vi.fn();
 // same rows/total stub so the export assertions below are unchanged.
 vi.mock('../dashboardSqliteService.js', () => ({
   sqliteClient: { call: (...args: any[]) => mockQueryLogs(args[1]) },
+  isServiceError: (result: object) => 'error' in result,
 }));
 
 // Deterministic signer so fixtures are reproducible; the real one needs a

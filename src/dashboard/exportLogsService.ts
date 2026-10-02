@@ -4,7 +4,7 @@
  * Uses the DASHBOARD_SQLITE service worker messaging for data access.
  */
 
-import { sqliteClient, backupDb } from './dashboardSqliteService.js';
+import { isServiceError, sqliteClient, backupDb } from './dashboardSqliteService.js';
 import { getLocalDateString, parseJsonTagsArray } from './markdownExport.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
@@ -41,7 +41,7 @@ async function queryAllData() {
   // PBI 2026-09-23-02: generic seam call — retry lives in the records row.
   const result = await sqliteClient.call('records', { subtype: 'query', limit: EXPORT_ROW_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
 
-  if ('error' in result) {
+  if (isServiceError(result)) {
     throw new Error(result.error);
   }
   if (result.data.total > result.data.rows.length) {
@@ -127,7 +127,7 @@ export async function exportJson(): Promise<Blob> {
 export async function exportDb(): Promise<Blob> {
   const result = await backupDb();
   // Preserve the backend error so callers can report the actual failure reason.
-  if ('error' in result) {
+  if (isServiceError(result)) {
     throw new Error(result.error);
   }
   // Uint8Array を Blob に変換

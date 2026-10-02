@@ -42,6 +42,7 @@ const mockQueryLogs = vi.fn();
 const mockDownload = vi.fn().mockResolvedValue(undefined);
 
 vi.mock('../dashboardSqliteService.js', () => ({
+    isServiceError: (result: object) => 'error' in result,
     queryLogs: (...args: unknown[]) => mockQueryLogs(...args),
     clearAllLogs: vi.fn(),
 }));

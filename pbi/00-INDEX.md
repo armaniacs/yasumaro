@@ -50,6 +50,7 @@ holistic-code-review の大局的レビュー（3 領域の地図 32 候補 → 
 | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---|
 | [2026-10-02-01-refactor-provider-priority-slots-consolidation.md](2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | 4.0 | 0.5 | ✅ 実装完了・レビュー待ち。NN21 積み残し（A/B 収集重複の単一ヘルパー集約） |
+| [2026-10-02-02-refactor-nn22-guard-sweep.md](2026-10-02-02-refactor-nn22-guard-sweep.md) | refactor | 4.8 | 0.5 | ✅ 実装完了・レビュー待ち。NN22 積み残し（残存 8 箇所の共有ガード寄せ、exportImport:179 は D1 除外） |
 
 ### 2026-10-01 arch-delivery-loop 診断ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 

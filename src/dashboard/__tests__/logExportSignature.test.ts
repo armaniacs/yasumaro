@@ -13,6 +13,7 @@ const mockImportLogs = vi.fn();
 // PBI 2026-09-23-02: both services call the generic seam; the mock routes
 // by op to the same stubs so the round-trip assertions below are unchanged.
 vi.mock('../dashboardSqliteService.js', () => ({
+  isServiceError: (result: object) => 'error' in result,
   sqliteClient: {
     call: (...args: unknown[]) => (args[0] === 'import' ? mockImportLogs(args[1]) : mockQueryLogs(args[1])),
   },

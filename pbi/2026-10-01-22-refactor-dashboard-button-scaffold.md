@@ -63,7 +63,7 @@ Scenario: unwrap 判定が共有ガードを通る
 
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] type-check / lint / test が通る
-- [ ] コードレビュー完了
+- [x] コードレビュー完了（verdict KEEP — 下記追記参照）
 
 ## 実装記録（2026-10-02）
 
@@ -94,3 +94,8 @@ Scenario: unwrap 判定が共有ガードを通る
 ### 検証
 
 `npx tsc --noEmit` / `npm run lint`（error 0）/ `npm test`（999 files, 15367 tests passed）/ `npm run validate` すべて green。
+
+### レビュー追記（2026-10-02 統合パス）
+
+- verdict: KEEP。per-trigger isolation（ボタン単位の busy 無効化・in-flight guard・abort 経路の分離）は意図的設計であり安全。コード変更なし。
+- §未達に残した guard sweep 残存分は follow-up PBI [2026-10-02-02-refactor-nn22-guard-sweep.md](2026-10-02-02-refactor-nn22-guard-sweep.md) で解消済み（`exportImport.ts:179` の 1 件は D1 除外で意図的残存）。
