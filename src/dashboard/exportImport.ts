@@ -21,7 +21,7 @@ import { loadDomainSettings } from './settings/domainFilter.js';
 import { loadPrivacySettings } from './settings/privacySettings.js';
 import { loadContentSettings } from './settings/contentSettings.js';
 import { loadTrustSettings } from './settings/trustSettings.js';
-import { importFromJson } from './importLogsService.js';
+import { importFromJson, isImportError } from './importLogsService.js';
 
 // DOM Elements
 const exportSettingsBtn = document.getElementById('exportSettingsBtn') as HTMLButtonElement | null;
@@ -176,7 +176,7 @@ export function initExportImport(): void {
         }
       });
 
-      if ('error' in result) {
+      if (isImportError(result)) {
         if (importLogsProgress) {
           importLogsProgress.textContent = `${getMessageOr('importLogsError', 'Import error')}: ${result.error}`;
           importLogsProgress.className = 'diag-result error';

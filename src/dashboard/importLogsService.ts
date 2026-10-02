@@ -106,10 +106,25 @@ function validateRow(row: unknown): row is ExportedRow {
   return true;
 }
 
+export type ImportLogsResult =
+  | { inserted: number; skipped: number; total: number }
+  | { error: string };
+
+/**
+ * Narrowing helper for the import result shape.
+ *
+ * Kept separate from `isServiceError` on purpose: the success side here
+ * carries bare `{ inserted, skipped, total }` with no `data` wrapper, so it
+ * is not a `ServiceResult<T>` and must never be passed to that guard.
+ */
+export function isImportError(result: ImportLogsResult): result is { error: string } {
+  return 'error' in result;
+}
+
 export async function importFromJson(
   jsonText: string,
   onProgress?: (current: number, total: number) => void,
-): Promise<{ inserted: number; skipped: number; total: number } | { error: string }> {
+): Promise<ImportLogsResult> {
   // Size cap before parse (VULN-023): reject an oversized file up front.
   if (typeof jsonText === 'string' && jsonText.length > MAX_IMPORT_TEXT_BYTES) {
     return { error: 'Import file is too large' };

@@ -41,12 +41,12 @@ Scenario: import 成功がそのまま通過する
 
 ## 受け入れ基準
 
-- [ ] D1: 三択のいずれかが実装される — (a) `isServiceError` の構造的 overload 追加 OR (b) 専用 narrow guard の新設 OR (c) 型証拠付きの codified 除外（除外理由 + 型差分の記録）
-- [ ] D1 が (a)/(b) 選択の場合: `src/dashboard/exportImport.ts:179` の inline 判定が新ガード経由になり、成功 / `{ error }` 失敗の両経路で現状と同一の表示になる
-- [ ] D1 が (c) 選択の場合: 除外理由と型証拠（`importLogsService.ts:109-112` vs `dashboardSqliteService.ts:55-56` の型差分）が実装記録に残り、`exportImport.ts:179` の残存が意図的と明示される
-- [ ] parity テストが存在し、成功 / `{ error }` 失敗の両経路で旧 inline 判定と同一の結果（error 表示 / complete 表示）を返すことを固定する（(c) 選択時は parity 追加不要だが除外の型証拠テストまたは記録で代替）
-- [ ] `npm run type-check` が clean（0 errors）で既存 caller への波及がない
-- [ ] 変更ディレクトリ配下の vitest が green（上記既存テスト群を変更なしで通過、またはガード置換に伴う最小限の mock 差し替えのみ）
+- [x] D1: 三択のいずれかが実装される — (a) `isServiceError` の構造的 overload 追加 OR (b) 専用 narrow guard の新設 OR (c) 型証拠付きの codified 除外（除外理由 + 型差分の記録）
+- [x] D1 が (a)/(b) 選択の場合: `src/dashboard/exportImport.ts:179` の inline 判定が新ガード経由になり、成功 / `{ error }` 失敗の両経路で現状と同一の表示になる
+- [x] D1 が (c) 選択の場合: 除外理由と型証拠（`importLogsService.ts:109-112` vs `dashboardSqliteService.ts:55-56` の型差分）が実装記録に残り、`exportImport.ts:179` の残存が意図的と明示される
+- [x] parity テストが存在し、成功 / `{ error }` 失敗の両経路で旧 inline 判定と同一の結果（error 表示 / complete 表示）を返すことを固定する（(c) 選択時は parity 追加不要だが除外の型証拠テストまたは記録で代替）
+- [x] `npm run type-check` が clean（0 errors）で既存 caller への波及がない
+- [x] 変更ディレクトリ配下の vitest が green（上記既存テスト群を変更なしで通過、またはガード置換に伴う最小限の mock 差し替えのみ）
 
 ## テスト戦略
 
@@ -68,10 +68,13 @@ Scenario: import 成功がそのまま通過する
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る
 - [ ] コードレビュー完了
 
 ## 実装記録
 
-- （未着手）
+- 2026-10-02 実装済み。D1 は (b) 専用 narrow guard を選択。`importFromJson` の戻り型を `ImportLogsResult` として名前付けし、`isImportError` ガードを `importLogsService.ts` に新設。`exportImport.ts:179` の inline 判定を新ガード経由に置換。
+- 選択理由: 成功側が bare `{ inserted, skipped, total }` で `data` ラッパーを持たないため `ServiceResult<T>` ではなく、`isServiceError` の型契約を弱めずに済む (b) が最小波及。`dashboardSqliteService.ts` は無変更。
+- 新規テスト `src/dashboard/__tests__/importLogsService-guard.test.ts`（2 tests: `{ error }` / 成功形の両経路で旧 inline 判定との parity + narrow 後の型アクセス）。`exportImport-r2.test.ts` の `importLogsService` mock に `isImportError` shim を 1 行追加（ガード置換に伴う最小限の mock 差し替え）。
+- ゲート: `npx tsc --noEmit` 0 errors（既存 caller への波及なし）、`npm run lint` 0 errors、全 suite 15397 passed。

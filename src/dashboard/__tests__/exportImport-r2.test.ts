@@ -74,6 +74,7 @@ vi.mock('../masterPassword.js', () => ({
 const mockImportFromJson = vi.fn();
 vi.mock('../importLogsService.js', () => ({
   importFromJson: (...args: unknown[]) => mockImportFromJson(...args),
+  isImportError: (result: object) => 'error' in result,
 }));
 
 // Helper to get fresh module instance with current DOM
