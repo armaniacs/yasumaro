@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { useTimerClock } from '../../../../testDir/waitPolicy.js';
+import { useTimerClock, waitForMock } from '../../../../testDir/waitPolicy.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 
@@ -1098,7 +1098,6 @@ describe('handleTestLocalMarkdown', () => {
 
   it('successful export with custom path and verifies download filename', async () => {
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     const downloadMock = vi.fn().mockResolvedValue('id');
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: downloadMock } });
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
@@ -1107,10 +1106,7 @@ describe('handleTestLocalMarkdown', () => {
       getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true, [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'MyExport' }),
       getAll: vi.fn(),
     };
-    const promise = handleTestLocalMarkdown(repo);
-    // need to flush microtasks for getMany
-    await vi.advanceTimersByTimeAsync(0);
-    await promise;
+    await handleTestLocalMarkdown(repo);
     expect(downloadMock).toHaveBeenCalledWith(expect.objectContaining({
       filename: expect.stringContaining('MyExport/test-'),
       saveAs: false,
@@ -1121,17 +1117,12 @@ describe('handleTestLocalMarkdown', () => {
     expect(downloadMock.mock.calls[0]?.[0].filename).toMatch(/\.md$/);
     expect(document.getElementById('statusTop')!.textContent).toBe('SUCCESS_MSG');
     expect(document.getElementById('statusTop')!.className).toBe('success');
-    // revoke after 1000ms
-    expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1000);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
-    vi.useRealTimers();
   });
 
   it('successful export with fallback success message when getMessage falsy', async () => {
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: vi.fn().mockResolvedValue('id') } });
     mockedGetMessage.mockReturnValue('' as any);
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
@@ -1139,19 +1130,13 @@ describe('handleTestLocalMarkdown', () => {
       getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true, [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'Yasumaro' }),
       getAll: vi.fn(),
     };
-    const p = handleTestLocalMarkdown(repo);
-    await vi.advanceTimersByTimeAsync(0);
-    await p;
+    await handleTestLocalMarkdown(repo);
     expect(document.getElementById('statusTop')!.textContent).toBe('ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
-    // advance to cover revoke
-    await vi.advanceTimersByTimeAsync(1000);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
   it('uses default exportPath Yasumaro when settings missing (nullish coalescing)', async () => {
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     const downloadMock = vi.fn().mockResolvedValue('id');
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: downloadMock } });
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
@@ -1159,18 +1144,13 @@ describe('handleTestLocalMarkdown', () => {
       getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true }),
       getAll: vi.fn(),
     };
-    const p = handleTestLocalMarkdown(repo);
-    await vi.advanceTimersByTimeAsync(0);
-    await p;
+    await handleTestLocalMarkdown(repo);
     expect(downloadMock.mock.calls[0]?.[0].filename).toContain('Yasumaro/test-');
-    await vi.advanceTimersByTimeAsync(1000);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalled();
-    vi.useRealTimers();
   });
 
   it('uses default exportPath when getMany returns null value explicitly', async () => {
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     const downloadMock = vi.fn().mockResolvedValue('id');
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: downloadMock } });
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
@@ -1179,14 +1159,68 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     // ??? null ?? 'Yasumaro' -> 'Yasumaro' but undefined path via ?? ensures Yasumaro
-    const p = handleTestLocalMarkdown(repo);
-    await vi.advanceTimersByTimeAsync(0);
-    await p;
+    await handleTestLocalMarkdown(repo);
     // Depending on null vs undefined, ?? treats null as fallback too, so Yasumaro
     expect(downloadMock.mock.calls[0]?.[0].filename).toContain('Yasumaro/test-');
-    await vi.advanceTimersByTimeAsync(1000);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalled();
-    vi.useRealTimers();
+  });
+
+  it('revokes the object url once the download promise resolves, without a timer', async () => {
+    resetDomForLocalMarkdown();
+    let releaseDownload: ((id: string) => void) | undefined;
+    const downloadMock = vi.fn().mockImplementation(() => new Promise<string>((resolve) => { releaseDownload = resolve; }));
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: downloadMock } });
+    mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
+    const repo: SettingsReader = {
+      getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true, [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'Yasumaro' }),
+      getAll: vi.fn(),
+    };
+    const promise = handleTestLocalMarkdown(repo);
+    await waitForMock(() => expect(downloadMock).toHaveBeenCalled());
+    // Still in flight: the url must stay usable.
+    expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
+    releaseDownload!('dl-id');
+    await promise;
+    expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    expect(document.getElementById('statusTop')!.className).toBe('success');
+  });
+
+  it('revokes the object url when the download rejects', async () => {
+    resetDomForLocalMarkdown();
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: vi.fn().mockRejectedValue(new Error('dl fail')) } });
+    mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
+    const repo: SettingsReader = {
+      getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true, [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'Yasumaro' }),
+      getAll: vi.fn(),
+    };
+    await handleTestLocalMarkdown(repo);
+    expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
+    expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    // the failure still reports the error and re-enables the button
+    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('leaves no object url alive when save fails or export is disabled', async () => {
+    resetDomForLocalMarkdown();
+    mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
+    const enabledRepo: SettingsReader = {
+      getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true }),
+      getAll: vi.fn(),
+    };
+    await handleTestLocalMarkdown(enabledRepo);
+    expect((globalThis.URL as any).createObjectURL).not.toHaveBeenCalled();
+    expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
+
+    mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
+    const disabledRepo: SettingsReader = {
+      getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: false }),
+      getAll: vi.fn(),
+    };
+    await handleTestLocalMarkdown(disabledRepo);
+    expect((globalThis.URL as any).createObjectURL).not.toHaveBeenCalled();
+    expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
   });
 
   it('handles download throwing and shows error fallback', async () => {
@@ -1240,7 +1274,6 @@ describe('handleTestLocalMarkdown', () => {
 
   it('disables button during test and re-enables even on success', async () => {
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: vi.fn().mockResolvedValue('id') } });
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
     const repo: SettingsReader = {
@@ -1250,16 +1283,12 @@ describe('handleTestLocalMarkdown', () => {
     const btn = document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement;
     const p = handleTestLocalMarkdown(repo);
     expect(btn.disabled).toBe(true);
-    await vi.advanceTimersByTimeAsync(0);
     await p;
     expect(btn.disabled).toBe(false);
-    await vi.advanceTimersByTimeAsync(1000);
-    vi.useRealTimers();
   });
 
-  it('verifies blob content type and url revoke timing', async () => {
+  it('verifies blob content type and revokes the url exactly once per export', async () => {
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     const downloadMock = vi.fn().mockResolvedValue('id');
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: downloadMock } });
     // spy Blob
@@ -1279,20 +1308,17 @@ describe('handleTestLocalMarkdown', () => {
       getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true, [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'YPath' }),
       getAll: vi.fn(),
     };
-    const p = handleTestLocalMarkdown(repo);
-    await vi.advanceTimersByTimeAsync(0);
-    await p;
+    try {
+      await handleTestLocalMarkdown(repo);
+    } finally {
+      globalThis.Blob = origBlob;
+    }
     expect(capturedBlob).toBeDefined();
     expect((capturedBlob as any)._opts.type).toBe('text/markdown');
     expect(downloadMock).toHaveBeenCalledWith(expect.objectContaining({ url: 'blob:mock-url' }));
-    // not yet revoked
-    expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(999);
-    expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(1);
+    // Revoked by the time the handler settles, and only for that one export.
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
-    globalThis.Blob = origBlob;
-    vi.useRealTimers();
+    expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
   });
 
   it('covers default repo parameter via settingsRepository seam', async () => {
@@ -1301,7 +1327,6 @@ describe('handleTestLocalMarkdown', () => {
     // Instead verify that passing undefined uses fallback repo (we already tested injected repo)
     // For coverage, call with injected repo that returns enabled true, ensures path works
     resetDomForLocalMarkdown();
-    vi.useFakeTimers();
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: vi.fn().mockResolvedValue('id') } });
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
     // We cannot easily test default repo without importing real storage, but we ensure branch 39 covered:
@@ -1316,8 +1341,6 @@ describe('handleTestLocalMarkdown', () => {
     // Need to ensure it doesn't throw for missing chrome storage keys
     await handleTestLocalMarkdown(); // default param
     expect(document.getElementById('statusTop')!.className).toBe('error');
-    // also test with custom repo to cover other side of default-arg branch
-    vi.useRealTimers();
   });
 });
 
