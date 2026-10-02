@@ -128,8 +128,10 @@ export class DashboardBootstrapper {
       // Update sidebar active state and ARIA selection
       this.#updateActiveTabForPanel(panelId);
 
-      void this.registry.navigate(panelId).catch(() => {
-        // Panel not yet migrated to new system; old navigation handles it
+      // Every catalog panel is registered, so a rejected navigate is a real
+      // failure (typo'd id, throwing mount) that must not disappear silently.
+      void this.registry.navigate(panelId).catch((error: unknown) => {
+        this.#reportNavigateFailure(panelId, error);
       });
     });
 
@@ -165,9 +167,19 @@ export class DashboardBootstrapper {
   }
 
   async start(defaultPanelId?: string): Promise<void> {
-    if (defaultPanelId) {
+    if (!defaultPanelId) return;
+    try {
       await this.registry.navigate(defaultPanelId);
       this.#updateActiveTabForPanel(defaultPanelId);
+    } catch (error: unknown) {
+      // Callers await start() at module top level, so letting the rejection
+      // through would kill the rest of the dashboard initialisation with no
+      // record of why.
+      this.#reportNavigateFailure(defaultPanelId, error);
     }
+  }
+
+  #reportNavigateFailure(panelId: string, error: unknown): void {
+    console.error(`[DashboardBootstrapper] navigate failed for panel "${panelId}":`, error);
   }
 }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry.js';
 import { DashboardBootstrapper } from '../DashboardBootstrapper.js';
 import { PANEL_CATALOG } from '../panelCatalog.js';
@@ -142,6 +142,58 @@ describe('DashboardBootstrapper', () => {
     expect(btnB.getAttribute('aria-selected')).toBe('true');
     expect(btnA.classList.contains('active')).toBe(false);
     expect(btnB.classList.contains('active')).toBe(true);
+  });
+
+  describe('navigate failures are recorded, not swallowed', () => {
+    let consoleError: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleError.mockRestore();
+    });
+
+    it('records a rejected navigation triggered by a sidebar click', async () => {
+      const failure = new Error('panel exploded on mount');
+      const navigate = vi.spyOn(registry, 'navigate').mockRejectedValue(failure);
+
+      const btn = document.createElement('button');
+      btn.setAttribute('data-panel', 'panel-missing');
+      sidebar.appendChild(btn);
+      bootstrapper.wireSidebar(sidebar);
+
+      btn.click();
+      await flush();
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-missing'), failure);
+    });
+
+    it('records the initial navigate failure without rejecting start()', async () => {
+      const failure = new Error('panel exploded on mount');
+      vi.spyOn(registry, 'navigate').mockRejectedValue(failure);
+
+      await expect(bootstrapper.start('panel-missing')).resolves.toBeUndefined();
+
+      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-missing'), failure);
+    });
+
+    it('says nothing when the navigation succeeds', async () => {
+      bootstrapper.registerPanels([mockPanel({ id: 'panel-ok' })]);
+
+      const btn = document.createElement('button');
+      btn.setAttribute('data-panel', 'panel-ok');
+      sidebar.appendChild(btn);
+      bootstrapper.wireSidebar(sidebar);
+
+      btn.click();
+      await flush();
+
+      expect(registry.activeId).toBe('panel-ok');
+      expect(consoleError).not.toHaveBeenCalled();
+    });
   });
 
   describe('settings subgroup collapse (Initial Setup toggle)', () => {
