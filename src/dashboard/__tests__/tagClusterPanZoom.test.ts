@@ -469,7 +469,6 @@ describe('TagClusterPanZoomController', () => {
       svg.dispatchEvent(makeTouchEvent('touchstart', start));
 
       const sparse: FakeTouch[] = [{ identifier: 1, clientX: 300, clientY: 300 }];
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (sparse as any)[1] = undefined;
       const event = new Event('touchmove', { bubbles: true, cancelable: true }) as Event & {
         touches: FakeTouch[];

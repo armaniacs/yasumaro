@@ -270,13 +270,11 @@ const baseStorageValues = {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mockSaveSettings.mockResolvedValue(undefined as any);
 });
 
 describe('getAiSummaryCleansingSettings', () => {
     test('returns jsonLdEnabled true when storage has true', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({
             ...baseStorageValues,
             ai_summary_cleansing_json_ld: true,
@@ -291,7 +289,6 @@ describe('getAiSummaryCleansingSettings', () => {
     });
 
     test('returns lazyLoadEnabled true when storage has true', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({
             ...baseStorageValues,
             ai_summary_cleansing_json_ld: false,
@@ -306,7 +303,6 @@ describe('getAiSummaryCleansingSettings', () => {
     });
 
     test('returns skipLinkEnabled true when storage has true', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({
             ...baseStorageValues,
             ai_summary_cleansing_json_ld: false,
@@ -321,7 +317,6 @@ describe('getAiSummaryCleansingSettings', () => {
     });
 
     test('returns cardEnabled true when storage has true', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({
             ...baseStorageValues,
             ai_summary_cleansing_json_ld: false,
@@ -336,7 +331,6 @@ describe('getAiSummaryCleansingSettings', () => {
     });
 
     test('defaults all 4 new fields to false when absent from storage', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({ ...baseStorageValues } as any);
 
         const settings = await getAiSummaryCleansingSettings();
@@ -367,7 +361,6 @@ describe('saveAiSummaryCleansingSettings', () => {
     } as unknown as AiSummaryCleansingSettings;
 
     test('saves jsonLdEnabled to storage', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({} as any);
 
         await saveAiSummaryCleansingSettings({ ...baseSettings, jsonLdEnabled: true });
@@ -378,7 +371,6 @@ describe('saveAiSummaryCleansingSettings', () => {
     });
 
     test('saves lazyLoadEnabled to storage', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({} as any);
 
         await saveAiSummaryCleansingSettings({ ...baseSettings, lazyLoadEnabled: true });
@@ -389,7 +381,6 @@ describe('saveAiSummaryCleansingSettings', () => {
     });
 
     test('saves skipLinkEnabled to storage', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({} as any);
 
         await saveAiSummaryCleansingSettings({ ...baseSettings, skipLinkEnabled: true });
@@ -400,7 +391,6 @@ describe('saveAiSummaryCleansingSettings', () => {
     });
 
     test('saves cardEnabled to storage', async () => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mockGetSettings.mockResolvedValueOnce({} as any);
 
         await saveAiSummaryCleansingSettings({ ...baseSettings, cardEnabled: true });

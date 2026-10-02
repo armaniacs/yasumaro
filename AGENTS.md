@@ -83,9 +83,8 @@ Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_
 
 ### Concurrency Management
 
-- **Mutex** (`src/background/Mutex.ts`): Prevents race conditions in service worker
-- **ServiceWorkerContext** (`src/background/ServiceWorkerContext.ts`): Manages context state
-- **Optimistic Lock** (`src/utils/optimisticLock.ts`): Version-based conflict detection for storage updates
+- **Mutex** (`src/utils/Mutex.ts`): Prevents race conditions in service worker
+- **Optimistic Lock** (`src/utils/storage/storageTransaction.ts`): Version-based conflict detection for storage updates
 - Use `withOptimisticLock()` for critical storage operations
 
 ### TypeScript Conventions

@@ -1,5 +1,4 @@
 /* tslint:disable */
-/* eslint-disable */
 
 /**
  * Result of `extractTopIndices`: the selected sentence indices (into the
