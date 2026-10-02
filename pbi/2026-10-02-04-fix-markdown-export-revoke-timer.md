@@ -39,12 +39,12 @@ Scenario: 失敗時も URL が漏れない
 
 ## 受け入れ基準
 
-- [ ] A1: `src/dashboard/markdownExport.ts:285` の固定 1s タイマーが、完了シグナル駆動の revoke（または `finally` 確定実行）に置換される。または保持理由が証拠付きで実装記録に残される
-- [ ] A2: 成功経路で revoke が 1 回だけ確定実行される（重複 revoke なし・URL 漏れなし）
-- [ ] A3: 失敗経路でもクリーンアップが確定実行される（`connectionTests.ts:464-470` の `finally` パターンと同等の確定性）
-- [ ] A4: `exportLogsService` の 60s 変種との対比（なぜ 60s でなく完了シグナルか／なぜ 60s が許容されるか）が実装記録に残される
-- [ ] parity テストが存在し、成功 / 失敗の両経路で旧タイマー経路と同一のダウンロード結果 + 新 revoke タイミングを固定する
-- [ ] `npm run type-check` と変更ディレクトリ配下の vitest が green（上記既存テスト群を変更なしで通過、または revoke 置換に伴う最小限の mock 差し替えのみ）
+- [x] A1: `src/dashboard/markdownExport.ts:285` の固定 1s タイマーが、完了シグナル駆動の revoke（または `finally` 確定実行）に置換される。または保持理由が証拠付きで実装記録に残される
+- [x] A2: 成功経路で revoke が 1 回だけ確定実行される（重複 revoke なし・URL 漏れなし）
+- [x] A3: 失敗経路でもクリーンアップが確定実行される（`connectionTests.ts:464-470` の `finally` パターンと同等の確定性）
+- [x] A4: `exportLogsService` の 60s 変種との対比（なぜ 60s でなく完了シグナルか／なぜ 60s が許容されるか）が実装記録に残される
+- [x] parity テストが存在し、成功 / 失敗の両経路で旧タイマー経路と同一のダウンロード結果 + 新 revoke タイミングを固定する
+- [x] `npm run type-check` と変更ディレクトリ配下の vitest が green（上記既存テスト群を変更なしで通過、または revoke 置換に伴う最小限の mock 差し替えのみ）
 
 ## テスト戦略
 
@@ -66,10 +66,14 @@ Scenario: 失敗時も URL が漏れない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る
 - [ ] コードレビュー完了
 
 ## 実装記録
 
-- （未着手）
+- 2026-10-02 実装済み。固定 1s タイマーを `try/finally` の確定 revoke に置換（`src/dashboard/markdownExport.ts:285` 付近）。`chrome.downloads.download` の settle 駆動でありタイマー不使用。
+- 完了シグナルの取り方: `finally` 確定実行を選択。download promise の settle は Chromium が blob fetch を開始した時点で解決し、進行中 fetch は File API が blob を保持するため revoke が後続 fetch を阻害しない。タイマーは早すぎる revoke か失敗経路の漏れのいずれかに傾く。
+- A4 対比: `exportLogsService` の 60s 変種は anchor-click 経路に await 可能な完了シグナルが無いため timer 維持が許容される。本経路は完了シグナルがあるため settle 駆動が正しい。対比理由はソース内コメントにも記録。`exportLogsService` 自体は無変更。
+- 新規テスト `src/dashboard/__tests__/markdownExport-revoke.test.ts`（2 tests: 成功 settle で revoke 1 回・タイマー不使用 / reject 時に revoke + エラー伝搬）。
+- ゲート: `npx tsc --noEmit` 0 errors、`npm run lint` 0 errors、全 suite 15397 passed。

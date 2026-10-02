@@ -30,6 +30,7 @@ RICE = R × I × C / E。C7 は 4×2×0.83/1.0 = 6.64 ≒ 6.67（2/3 端数丸�
 | PBI | 状態 | 内容 |
 |---|---|---|
 | 03 | ✅ 完了 | `statusPanel.ts` wireOnce 寄せ + parity 4 tests |
+| 04 | ✅ 完了 | `markdownExport.ts` finally 確定 revoke + 2 tests（`exportLogsService` 60s 変種は意図的に無変更） |
 
 ## 送り（deferred・トリガー待ち）
 

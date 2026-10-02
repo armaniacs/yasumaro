@@ -21,7 +21,7 @@ CHANGELOG 6.9.32 の 15 items はすべて ALREADY-FIXED のため起票不要�
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
 | 03 | [2026-10-02-03-fix-popup-listener-stacking.md](2026-10-02-03-fix-popup-listener-stacking.md) | fix | 28.80 | 0.5 | ✅ 完了。C6。Wave1。07 と直列（先） |
-| 04 | [2026-10-02-04-fix-markdown-export-revoke-timer.md](2026-10-02-04-fix-markdown-export-revoke-timer.md) | fix | 21.25 | 0.5 | ⬜ 未着手。C4。Wave1 |
+| 04 | [2026-10-02-04-fix-markdown-export-revoke-timer.md](2026-10-02-04-fix-markdown-export-revoke-timer.md) | fix | 21.25 | 0.5 | ✅ 完了。C4。Wave1 |
 | 05 | [2026-10-02-05-refactor-import-guard-structural.md](2026-10-02-05-refactor-import-guard-structural.md) | refactor | 19.20 | 0.5 | ⬜ 未着手。C1。Wave1 |
 | 06 | [2026-10-02-06-test-concurrent-export-isolation.md](2026-10-02-06-test-concurrent-export-isolation.md) | test | 8.10 | 0.5 | ⬜ 未着手。C3。Wave1（テストのみ・並列安全） |
 | 07 | [2026-10-02-07-fix-error-copy-locales.md](2026-10-02-07-fix-error-copy-locales.md) | fix | 13.30 | 1 | ⬜ 未着手。C8。Wave2（03 完了後に着手） |

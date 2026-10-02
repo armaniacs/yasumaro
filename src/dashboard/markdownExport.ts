@@ -272,15 +272,25 @@ export const chromeDownloadPort: DownloadPort = async (filename, content) => {
   const blob = new Blob([content], { type: 'text/markdown' });
   const blobUrl = URL.createObjectURL(blob);
 
-  await chrome.downloads.download({
-    url: blobUrl,
-    filename,
-    saveAs: false,
-    // PBI 27 上書きガード方針: filename は exportFilenameFor 経由で sanitize
-    // 済み。日次ファイルは日付キーで冪等な再書き込みが正しい動作のため、
-    // 明示 'overwrite' で無警告の黙示上書きにはしない（全 4 箇所で統一）。
-    conflictAction: 'overwrite',
-  });
-
-  setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+  try {
+    await chrome.downloads.download({
+      url: blobUrl,
+      filename,
+      saveAs: false,
+      // PBI 27 上書きガード方針: filename は exportFilenameFor 経由で sanitize
+      // 済み。日次ファイルは日付キーで冪等な再書き込みが正しい動作のため、
+      // 明示 'overwrite' で無警告の黙示上書きにはしない（全 4 箇所で統一）。
+      conflictAction: 'overwrite',
+    });
+  } finally {
+    // WHY settle-driven instead of a fixed timer: chrome.downloads.download
+    // resolves once Chromium has started the blob fetch, and the File API
+    // keeps the blob alive for fetches in progress — revoke only blocks
+    // later fetches. A timer either revokes too early (large/slow
+    // downloads) or leaks on the failure path. Same pattern as
+    // connectionTests handleTestLocalMarkdown. exportLogsService keeps a
+    // 60s timer only because its anchor-click path has no completion
+    // signal to await.
+    URL.revokeObjectURL(blobUrl);
+  }
 };
