@@ -1,9 +1,10 @@
 /**
  * recoveryClaimStore.test.ts
- * PBI 2026-09-25-12: the durable recovery claim — one owner per recording
- * URL across manual re-runs and the offline queue processor. Drives the real
- * withOptimisticLock over an in-memory chrome.storage.local mock so the CAS
- * behavior is the production one.
+ * The durable recovery claim — one owner per recording URL across manual
+ * re-runs and the offline queue processor. Drives the real withOptimisticLock
+ * over an in-memory chrome.storage.local mock so the CAS behavior is the
+ * production one. TTL is exercised through a controlled clock, never by waiting
+ * it out.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -27,7 +28,7 @@ vi.mock('./logger/api.js', () => ({
     ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
 }));
 
-import { claimRecoveryOwner, releaseRecoveryOwner } from '../recoveryClaimStore.js';
+import { claimRecoveryOwner, releaseRecoveryOwner, createRecoveryClaimStore } from '../recoveryClaimStore.js';
 
 const CLAIMS_KEY = 'recording_recovery_claims';
 
@@ -127,6 +128,111 @@ describe('claimRecoveryOwner', () => {
         ]);
         expect([a, b].filter(Boolean)).toHaveLength(1);
         expect(readClaims()['https://example.com']).toBeDefined();
+    });
+});
+
+const TTL_MS = 10 * 60 * 1000;
+
+describe('expired-claim sweep', () => {
+    beforeEach(() => {
+        mockStorage[CLAIMS_KEY] = undefined;
+        vi.clearAllMocks();
+    });
+
+    it('removes an expired claim when another URL takes a claim', async () => {
+        // Only Date is faked: the CAS path must keep running on real timers.
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            const t0 = new Date('2026-10-01T00:00:00Z').getTime();
+            vi.setSystemTime(t0);
+            await expect(claimRecoveryOwner('https://stale.example', 'offline-queue')).resolves.toBe(true);
+
+            vi.setSystemTime(t0 + TTL_MS - 1);
+            await expect(claimRecoveryOwner('https://fresh.example', 'manual')).resolves.toBe(true);
+
+            vi.setSystemTime(t0 + TTL_MS + 1);
+            await expect(claimRecoveryOwner('https://new.example', 'manual')).resolves.toBe(true);
+
+            // The stale URL is gone without having been claimed again, the two
+            // live claims survive, and the map holds nothing expired.
+            expect(readClaims()['https://stale.example']).toBeUndefined();
+            expect(readClaims()['https://fresh.example']).toMatchObject({ owner: 'manual' });
+            expect(readClaims()['https://new.example']).toMatchObject({ owner: 'manual' });
+            expect(Object.keys(readClaims())).toHaveLength(2);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('keeps a refused claim untouched, sweep included', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            const t0 = new Date('2026-10-01T00:00:00Z').getTime();
+            vi.setSystemTime(t0);
+            await expect(claimRecoveryOwner('https://stale.example', 'offline-queue')).resolves.toBe(true);
+
+            // Claimed a minute later, so it outlives the older entry.
+            vi.setSystemTime(t0 + 60_000);
+            await expect(claimRecoveryOwner('https://held.example', 'offline-queue')).resolves.toBe(true);
+
+            vi.setSystemTime(t0 + TTL_MS + 1);
+            await expect(claimRecoveryOwner('https://held.example', 'manual')).resolves.toBe(false);
+
+            // A refused claim writes nothing, so the entry that is already
+            // expired stays until some claim is actually taken.
+            expect(readClaims()['https://held.example']).toMatchObject({ owner: 'offline-queue' });
+            expect(readClaims()['https://stale.example']).toMatchObject({ owner: 'offline-queue' });
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it('reads the TTL from the injected time source', async () => {
+        let clock = 1_700_000_000_000;
+        const store = createRecoveryClaimStore({ now: () => clock });
+
+        await expect(store.claimRecoveryOwner('https://example.com', 'manual')).resolves.toBe(true);
+
+        clock += TTL_MS - 1;
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(false);
+
+        clock += 1;
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(true);
+        expect(readClaims()['https://example.com']).toMatchObject({
+            owner: 'offline-queue',
+            claimedAt: 1_700_000_000_000 + TTL_MS,
+        });
+    });
+});
+
+describe('claim TTL boundary', () => {
+    beforeEach(() => {
+        mockStorage[CLAIMS_KEY] = undefined;
+        vi.clearAllMocks();
+    });
+
+    it('holds a claim one millisecond short of the TTL and re-claims it at the TTL', async () => {
+        // Freshness is `age < TTL`, so the claim stops being fresh exactly at
+        // the TTL and no millisecond later.
+        vi.useFakeTimers({ toFake: ['Date'] });
+        try {
+            const t0 = new Date('2026-10-01T00:00:00Z').getTime();
+            vi.setSystemTime(t0);
+            await expect(claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(true);
+
+            vi.setSystemTime(t0 + TTL_MS - 1);
+            await expect(claimRecoveryOwner('https://example.com', 'manual')).resolves.toBe(false);
+            expect(readClaims()['https://example.com']).toMatchObject({ owner: 'offline-queue' });
+
+            vi.setSystemTime(t0 + TTL_MS);
+            await expect(claimRecoveryOwner('https://example.com', 'manual')).resolves.toBe(true);
+            expect(readClaims()['https://example.com']).toMatchObject({
+                owner: 'manual',
+                claimedAt: t0 + TTL_MS,
+            });
+        } finally {
+            vi.useRealTimers();
+        }
     });
 });
 
