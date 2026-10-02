@@ -5,6 +5,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 // Hoisted mock for logger
@@ -43,9 +45,12 @@ vi.mock('../sanitizePreview.js', () => ({
     initializeModalEvents: vi.fn()
 }));
 
-// Mock tabUtils
+// Mock tabUtils — the single seam main.ts reads the active tab through
+const { getCurrentTabMock } = vi.hoisted(() => ({
+    getCurrentTabMock: vi.fn().mockResolvedValue(null)
+}));
 vi.mock('../tabUtils.js', () => ({
-    getCurrentTab: vi.fn().mockResolvedValue(null),
+    getCurrentTab: getCurrentTabMock,
     isRecordable: vi.fn().mockReturnValue(false)
 }));
 
@@ -56,17 +61,18 @@ vi.mock('../recordCurrentPage.js', () => ({
     setRecordCurrentPageFn: vi.fn()
 }));
 
-// Global chrome mock with callback support for tabs.query
+// chrome.tabs.query stays stubbed as a tripwire: main.ts must not call it
+// directly, the seam owns active-tab reads.
 vi.stubGlobal('chrome', {
     tabs: {
-        query: vi.fn((_query, callback) => {
-            if (callback) callback([{ id: 123, url: 'https://example.com' }]);
-        }),
+        query: vi.fn(),
     },
     action: {
         setBadgeText: vi.fn()
     }
 });
+
+const mainSource = readFileSync(resolve(process.cwd(), 'src/popup/main.ts'), 'utf-8');
 
 // Import main.ts for side effects (registers DOMContentLoaded listener)
 import '../main.js';
@@ -75,6 +81,7 @@ describe('main.ts DOMContentLoaded', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         logErrorMock.mockClear();
+        getCurrentTabMock.mockResolvedValue(null);
 
         document.body.innerHTML = `
             <img id="favicon" src="" alt="Favicon">
@@ -120,7 +127,11 @@ describe('main.ts DOMContentLoaded', () => {
             { interval: 1 }
         );
         expect(initAllUrlsPermissionBannerMock).toHaveBeenCalled();
-        expect(chrome.tabs.query).toHaveBeenCalled();
+        expect(getCurrentTabMock).toHaveBeenCalled();
+    });
+
+    it('contains no raw chrome.tabs.query', () => {
+        expect(mainSource).not.toMatch(/chrome\.tabs\.query/);
     });
 
     it('logs error when loadCurrentTabAndInitStatus fails', async () => {
@@ -153,42 +164,62 @@ describe('main.ts DOMContentLoaded', () => {
         );
     });
 
-    it('clears badge text via chrome.tabs.query callback when tab id exists', async () => {
+    it('reads the active tab through the seam instead of chrome.tabs.query', async () => {
         initStatusPanelMock.mockResolvedValue(undefined);
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
+
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await vi.waitFor(
+            () => expect(getCurrentTabMock).toHaveBeenCalled(),
+            { interval: 1 }
+        );
+        expect(chrome.tabs.query).not.toHaveBeenCalled();
+    });
+
+    it('clears badge text when the seam resolves a tab with an id', async () => {
+        initStatusPanelMock.mockResolvedValue(undefined);
+        initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
+        getCurrentTabMock.mockResolvedValue({ id: 123, url: 'https://example.com' });
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await vi.waitFor(
             () => expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 123 }),
             { interval: 1 }
         );
+        expect(chrome.action.setBadgeText).toHaveBeenCalledTimes(1);
     });
 
-    it('does not set badge text when tab has no id', async () => {
+    it('does not set badge text when the seam returns a tab with no id', async () => {
         initStatusPanelMock.mockResolvedValue(undefined);
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
-
-        // @ts-expect-error mockImplementation override
-        chrome.tabs.query.mockImplementation((_query, callback) => {
-            if (callback) callback([{ url: 'https://example.com' }]);
-        });
+        getCurrentTabMock.mockResolvedValue({ url: 'https://example.com' });
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await drainMacrotask();
         expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
 
-    it('does not set badge text when tabs.query returns empty array', async () => {
+    it('does not set badge text when the seam returns no tab', async () => {
         initStatusPanelMock.mockResolvedValue(undefined);
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
-
-        // @ts-expect-error mockImplementation override
-        chrome.tabs.query.mockImplementation((_query, callback) => {
-            if (callback) callback([]);
-        });
+        getCurrentTabMock.mockResolvedValue(null);
 
         document.dispatchEvent(new Event('DOMContentLoaded'));
         await drainMacrotask();
         expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+    });
+
+    it('swallows a failing tab read without logging or breaking the other init work', async () => {
+        initStatusPanelMock.mockResolvedValue(undefined);
+        initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
+        getCurrentTabMock.mockRejectedValue(new Error('tabs unavailable'));
+
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await vi.waitFor(
+            () => expect(initStatusPanelMock).toHaveBeenCalled(),
+            { interval: 1 }
+        );
+        expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
+        expect(logErrorMock).not.toHaveBeenCalled();
     });
 });

@@ -3,12 +3,25 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { loadCurrentTab, recordCurrentPage } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
+import { getCurrentTab } from './tabUtils.js';
 
 export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus };
 
 async function loadCurrentTabAndInitStatus(): Promise<void> {
   await loadCurrentTab();
   await initStatusPanel();
+}
+
+async function clearActionBadge(): Promise<void> {
+  try {
+    const tab = await getCurrentTab();
+    if (tab?.id !== undefined) {
+      chrome.action.setBadgeText({ text: '', tabId: tab.id });
+    }
+  } catch {
+    // Best-effort: the badge is a leftover from a previous recording, so a
+    // failed read must not break the rest of popup startup.
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,10 +36,5 @@ document.addEventListener('DOMContentLoaded', () => {
   initAllUrlsPermissionBanner().catch((error) => {
     logError('[Initialize] Failed to init all-urls permission banner', { cause: error }, ErrorCode.INTERNAL_ERROR);
   });
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tabId = tabs[0]?.id;
-    if (tabId !== undefined) {
-      chrome.action.setBadgeText({ text: '', tabId });
-    }
-  });
+  void clearActionBadge();
 });
