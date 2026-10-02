@@ -726,20 +726,53 @@ describe('setupAiSummaryCleansingEventListeners', () => {
     expect(document.getElementById('link-ratio-threshold-value')).toBeNull();
   });
 
-  it('range change event triggers save', async () => {
+  it('range change event writes only the moved slider key', async () => {
     createFullDom();
     setupAiSummaryCleansingEventListeners();
     const slider = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
+    slider.value = '92';
     slider.dispatchEvent(new Event('change'));
     await vi.waitFor(() => expect(mockSaveSettings).toHaveBeenCalled());
+    expect(mockSaveSettings).toHaveBeenCalledTimes(1);
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      [StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 92,
+    });
   });
 
   it('handles range configs with missing inputs gracefully', () => {
     createFullDom();
     document.getElementById('ai-summary-cleansing-link-ratio-threshold')!.remove();
     document.getElementById('ai-summary-cleansing-body-protection-threshold')!.remove();
-    document.getElementById('popup-body-protection-threshold')!.remove();
     expect(() => setupAiSummaryCleansingEventListeners()).not.toThrow();
+  });
+
+  it('writes the fallback ratio slider as the fraction the key stores', async () => {
+    createFullDom();
+    setupAiSummaryCleansingEventListeners();
+    const slider = document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement;
+    const val = document.getElementById('ai-summary-cleansing-fallback-ratio-value')!;
+    slider.value = '35';
+    slider.dispatchEvent(new Event('input'));
+    slider.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(mockSaveSettings).toHaveBeenCalled());
+    expect(mockSaveSettings).toHaveBeenCalledTimes(1);
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO]: 0.35,
+    });
+    expect(val.textContent).toBe('35');
+  });
+
+  it('writes the fallback min-bytes slider key alone', async () => {
+    createFullDom();
+    setupAiSummaryCleansingEventListeners();
+    const slider = document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement;
+    slider.value = '450';
+    slider.dispatchEvent(new Event('change'));
+    await vi.waitFor(() => expect(mockSaveSettings).toHaveBeenCalled());
+    expect(mockSaveSettings).toHaveBeenCalledTimes(1);
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      [StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES]: 450,
+    });
   });
 
   it('save button success shows message and clears after 3s', async () => {

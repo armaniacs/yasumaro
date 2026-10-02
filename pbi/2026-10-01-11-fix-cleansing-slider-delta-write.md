@@ -99,3 +99,17 @@ And 変更キー linkParaThreshold のみが更新される
 **逸脱なし**。ただし実装内容 1 は「`aiSummaryCleansingSettingsV2.ts` に `saveAiSummaryCleansingSliderValue` seam を追加する」案だったが、本 PBI のファイル集合はパネル本体とテストのみに限られていたため、受け入れ基準 4 が明示的に認める `settingsRepository.setAll` をパネルから直接呼ぶ形で満たした。`aiSummaryCleansingPanel.ts` は `src/dashboard/panels/**` 配下で `aiSummaryCleansingSettingsV2.ts` の UI ヘルパー群と同じ層であるため、循環依存は生じない。
 
 検証: `npx vitest run <11 batch-A テストファイル> --repeats=20` → 155 passed / 11 files passed、`npm run validate` green。
+
+### 追補（2026-10-02 Wave 2 後の実測）: 本 PBI の受け入れ基準は端到端では未達
+
+同じ 4 スライダーが **2 本の `change` リスナに束縛**されており、本 PBI が修正したパネル側の delta-write とは別に、full-form 書き込みが残っている。
+
+- `src/dashboard/panels/staticForm/aiSummaryCleansingPanel.ts:29` が `setupAiSummaryCleansingEventListeners()`（`aiSummaryCleansingSettingsV2.ts` から import）を呼ぶ
+- `src/dashboard/panels/staticForm/aiSummaryCleansingPanel.ts:43-59` がパネル自身でも同じ 4 スライダーを束縛（本 PBI の delta-write）
+- `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:455-480` の `rangeConfigs` ループが **7 スライダー**に `change` を貼り、`:475-478` で `getAiSummaryCleansingSettingsFromUI()` → `saveAiSummaryCleansingSettings(settings)`（フォーム全体の full-form 書き込み）を実行する
+
+バインド順は `:29` が `:43-59` より先なので、1 回の `change` で V2 の full-form 書き込みが**先に**発火する。V2 側は生 DOM から全フォームを組み立てるため、マウント後に他経路で変わった兄弟キーは DOM に反映されておらず、full-form 書き込みで古い値に戻る。**「兄弟キーの巻き戻りが構造的に起きなくなった」は V2 経路が残る限り成立しない。**
+
+本 PBI の新テストはパネル単体（`createAiSummaryCleansingPanel`）を直接 mount するため V2 の setup を経由せず、この二重バインドを検出できなかった。
+
+残存分は [2026-10-01-27-fix-cleansing-slider-double-binding.md](2026-10-01-27-fix-cleansing-slider-double-binding.md)（NN27）が閉じる。NN27 完了までは、本 PBI の受け入れ基準 2（兄弟キーの巻き戻し防止）は**未達**として扱う。

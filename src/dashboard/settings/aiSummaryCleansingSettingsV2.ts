@@ -348,6 +348,39 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     if (popupBodyProtectionThresholdSlider) popupBodyProtectionThresholdSlider.disabled = false;
 }
 
+export type CleansingThresholdRange = {
+    id: string;
+    valId: string;
+    storageKey: string;
+    divisor?: number;
+};
+
+/**
+ * Every threshold slider this module wires, each row carrying the one storage
+ * key its `change` writes. A whole-form snapshot assembled from live DOM would
+ * revert any sibling key another route changed after the form was painted, so
+ * `change` writes the moved key alone.
+ *
+ * Exported so a test can pin the table against the sliders
+ * entrypoints/options/index.html actually renders: a slider with no row here
+ * binds nothing (its value is lost unless the user presses save), and a row for
+ * a slider the page no longer renders is inert — `getElementById` returns null
+ * and nothing can move it.
+ */
+export const CLEANSING_THRESHOLD_RANGES: readonly CleansingThresholdRange[] = [
+    { id: 'ai-summary-cleansing-link-ratio-threshold', valId: 'link-ratio-threshold-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD },
+    { id: 'ai-summary-cleansing-short-text-threshold', valId: 'short-text-threshold-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD },
+    { id: 'ai-summary-cleansing-short-seq-count', valId: 'short-seq-count-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_SHORT_SEQ_COUNT },
+    { id: 'ai-summary-cleansing-link-para-threshold', valId: 'link-para-threshold-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_LINK_PARA_THRESHOLD },
+    { id: 'ai-summary-cleansing-body-protection-threshold', valId: 'ai-summary-cleansing-body-protection-threshold-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD },
+    // WHY divisor: this slider is a percentage (5..50) while
+    // ai_summary_cleansing_fallback_ratio holds a 0..1 fraction, so the shared
+    // parseInt would store 20 where every reader expects 0.2.
+    { id: 'ai-summary-cleansing-fallback-ratio', valId: 'ai-summary-cleansing-fallback-ratio-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_RATIO, divisor: 100 },
+    { id: 'ai-summary-cleansing-fallback-min-bytes', valId: 'ai-summary-cleansing-fallback-min-bytes-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES },
+    { id: 'ai-summary-cleansing-fallback-min-chars', valId: 'ai-summary-cleansing-fallback-min-chars-value', storageKey: StorageKeys.AI_SUMMARY_CLEANSING_FALLBACK_MIN_CHARS }
+];
+
 /**
  * AI要約クレンジング設定のイベントリスナーを設定
  */
@@ -452,18 +485,9 @@ export function setupAiSummaryCleansingEventListeners(): void {
         }
     }
 
-    const rangeConfigs = [
-        { id: 'ai-summary-cleansing-link-ratio-threshold', valId: 'link-ratio-threshold-value' },
-        { id: 'ai-summary-cleansing-short-text-threshold', valId: 'short-text-threshold-value' },
-        { id: 'ai-summary-cleansing-short-seq-count', valId: 'short-seq-count-value' },
-        { id: 'ai-summary-cleansing-link-para-threshold', valId: 'link-para-threshold-value' },
-        { id: 'ai-summary-cleansing-body-protection-threshold', valId: 'ai-summary-cleansing-body-protection-threshold-value' },
-        { id: 'popup-body-protection-threshold', valId: 'popup-body-protection-threshold-value' },
-        // PBI 05 char floor
-        { id: 'ai-summary-cleansing-fallback-min-chars', valId: 'ai-summary-cleansing-fallback-min-chars-value' }
-    ];
-
-    for (const conf of rangeConfigs) {
+    // Threshold sliders: `input` mirrors the value into its display element,
+    // `change` writes the single key the row owns.
+    for (const conf of CLEANSING_THRESHOLD_RANGES) {
         const input = document.getElementById(conf.id) as HTMLInputElement;
         const valElem = document.getElementById(conf.valId);
         if (input) {
@@ -473,8 +497,8 @@ export function setupAiSummaryCleansingEventListeners(): void {
                 });
             }
             input.addEventListener('change', async () => {
-                const settings = getAiSummaryCleansingSettingsFromUI();
-                await saveAiSummaryCleansingSettings(settings);
+                const delta: Record<string, unknown> = { [conf.storageKey]: parseInt(input.value, 10) / (conf.divisor ?? 1) };
+                await settingsRepository.setAll(delta);
             });
         }
     }

@@ -678,13 +678,17 @@ describe('setupAiSummaryCleansingEventListeners', () => {
     expect(valSpan.textContent).toBe('90');
   });
 
-  it('range change event saves settings', async () => {
+  it('range change event writes only the moved slider key', async () => {
     setupAiSummaryCleansingEventListeners();
     const slider = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
     slider.value = '90';
     slider.dispatchEvent(new Event('change'));
     await vi.waitFor(() => {
       expect(mockSaveSettings).toHaveBeenCalled();
+    });
+    expect(mockSaveSettings).toHaveBeenCalledTimes(1);
+    expect(mockSaveSettings).toHaveBeenCalledWith({
+      [storage.StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD]: 90,
     });
   });
 
