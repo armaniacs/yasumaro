@@ -347,7 +347,7 @@ function attachPrivacyActionListeners(): void {
             } else if (!result.ok) {
               statusChannel.report(
                 'mainStatus',
-                result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${domain}`,
+                result.reason === 'no-domain' ? getMessageOr('statusInvalidUrl', 'Invalid URL') : `Invalid pattern: ${domain}`,
                 'error'
               );
             }
@@ -372,7 +372,7 @@ function attachPrivacyActionListeners(): void {
           } else if (!result.ok) {
             statusChannel.report(
               'mainStatus',
-              result.reason === 'no-domain' ? 'Invalid URL' : `Invalid pattern: ${tab.url}`,
+              result.reason === 'no-domain' ? getMessageOr('statusInvalidUrl', 'Invalid URL') : `Invalid pattern: ${tab.url}`,
               'error'
             );
           }

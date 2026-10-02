@@ -1370,6 +1370,9 @@
   "pathAddedToWhitelist": {
     "message": "Path added to whitelist"
   },
+  "statusInvalidUrl": {
+    "message": "Invalid URL"
+  },
   "whitelistLabel": {
     "message": "Whitelist"
   },
@@ -2052,6 +2055,9 @@
   },
   "purgeNowSkipped": {
     "message": "No retention policy set — purge skipped"
+  },
+  "purgeNowFailed": {
+    "message": "Purge failed"
   },
   "saveBtn": {
     "message": "Save"
@@ -4315,6 +4321,9 @@
   },
   "contentPurgeNowSkipped": {
     "message": "No content retention policy set — purge skipped"
+  },
+  "contentPurgeNowFailed": {
+    "message": "Content purge failed"
   },
   "diagBackfillBtn": {
     "message": "Backfill SQLite history metrics",

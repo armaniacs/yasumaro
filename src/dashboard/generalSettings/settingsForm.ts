@@ -185,8 +185,12 @@ export async function handlePurgeNow(): Promise<void> {
     },
     // A rejected gateway call never reaches the ServiceResult branches above, so
     // without this the status span stays blank and the click looks like a no-op.
-    onError: (message, kind) => {
-      statusEl.textContent = kind === 'service' ? (message || 'Error') : message;
+    // The technical reason is preserved after a localized prefix so a missing
+    // translation never swallows the failure silently.
+    onError: (message) => {
+      const prefix = getMessageOr('purgeNowFailed', 'Purge failed');
+      const detail = (message || '').trim();
+      statusEl.textContent = detail && detail !== 'Error' ? `${prefix}: ${detail}` : prefix;
     },
   });
 }
@@ -209,8 +213,10 @@ export async function handleContentPurgeNow(): Promise<void> {
         statusEl.textContent = getMessageOr(getPluralKey('contentPurgeNowSuccess', data.purged), `${data.purged} 件の content を削除しました`, [String(data.purged)]);
       }
     },
-    onError: (message, kind) => {
-      statusEl.textContent = kind === 'service' ? (message || 'Error') : message;
+    onError: (message) => {
+      const prefix = getMessageOr('contentPurgeNowFailed', 'Content purge failed');
+      const detail = (message || '').trim();
+      statusEl.textContent = detail && detail !== 'Error' ? `${prefix}: ${detail}` : prefix;
     },
   });
 }

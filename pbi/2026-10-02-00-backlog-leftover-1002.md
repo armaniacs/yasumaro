@@ -34,6 +34,15 @@ RICE = R × I × C / E。C7 は 4×2×0.83/1.0 = 6.64 ≒ 6.67（2/3 端数丸�
 | 05 | ✅ 完了 | D1=(b) narrow guard `isImportError` + `exportImport.ts:179` 置換 + guard 2 tests（`dashboardSqliteService` 無変更） |
 | 06 | ✅ 完了 | 分離テスト 11 件のみ追加（ソース無変更、M1/M2 は RED 確認後に revert） |
 
+## 実装状況（Wave2）
+
+| PBI | 状態 | 内容 |
+|---|---|---|
+| 07 | ✅ 完了 | locales 3 キー×日英 + `settingsForm.ts` getMessageOr + `statusPanel.ts` 2 箇所 i18n 化 + 新規 2 テスト・更新 2 スイート |
+| 08 | ✅ 完了 | 既定値裁定 `'blacklist'` (`defaults.ts` を正、他 2 層を寄せ) + matrix 5 tests + `storage.test.ts` 4 assertions 更新。経路は `src/utils/...` 移設先で実施 |
+| 09 | ✅ 完了 | 裁定 RESTORE propagate (`collectASafe` 削除) + pipeline `collector_failed` 中断 + B-view stored fallback + 新規 3 tests |
+| 10 | ✅ 完了 | 方式 (b) baseline 復活 (pin 496、実測 489) + `validate` 配線。本番 tsc clean |
+
 ## 送り（deferred・トリガー待ち）
 
 - 未読 alarm deps: `AlarmHandlerDeps` の `reviewSummaryGenerator` / `settingsReader` 未読 — 次の alarmRegistry 整備時に再検討。

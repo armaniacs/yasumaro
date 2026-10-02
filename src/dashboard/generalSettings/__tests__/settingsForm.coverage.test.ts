@@ -28,6 +28,8 @@ vi.mock('../../../utils/i18n.js', async (importOriginal) => {
       contentPurgeNowSuccess_other: 'content-other $COUNT$',
       purgeNowSuccess: 'fallback-purge',
       contentPurgeNowSuccess: 'fallback-content',
+      purgeNowFailed: 'purge-failed-msg',
+      contentPurgeNowFailed: 'content-failed-msg',
     };
     return map[key] ?? `msg:${key}`;
   });
@@ -559,6 +561,7 @@ describe('handlePurgeNow', () => {
         purgeNowSuccess_one: 'purged-one $COUNT$',
         purgeNowSuccess_other: 'purged-other $COUNT$',
         purgeNowSuccess: 'fallback-purge',
+        purgeNowFailed: 'purge-failed-msg',
       };
       return (map as any)[key] ?? `msg:${key}`;
     });
@@ -580,7 +583,7 @@ describe('handlePurgeNow', () => {
     vi.mocked(sqliteService.purgeOldRecordsNow).mockRejectedValue(new Error('boom'));
     await expect(handlePurgeNow()).resolves.toBeUndefined();
     expect(btn.disabled).toBe(false);
-    expect(status.textContent).toBe('boom');
+    expect(status.textContent).toBe('purge-failed-msg: boom');
   });
 
   it('renders a non-Error rejection value through errorMessage', async () => {
@@ -588,7 +591,7 @@ describe('handlePurgeNow', () => {
     const status = document.getElementById('purgeNowStatus')!;
     vi.mocked(sqliteService.purgeOldRecordsNow).mockRejectedValue('gateway down');
     await handlePurgeNow();
-    expect(status.textContent).toBe('gateway down');
+    expect(status.textContent).toBe('purge-failed-msg: gateway down');
   });
 
   it('shows service error with error string and fallback', async () => {
@@ -596,18 +599,18 @@ describe('handlePurgeNow', () => {
     const status = document.getElementById('purgeNowStatus')!;
     vi.mocked(sqliteService.purgeOldRecordsNow).mockResolvedValue({ error: 'db error' } as any);
     await handlePurgeNow();
-    expect(status.textContent).toBe('db error');
+    expect(status.textContent).toBe('purge-failed-msg: db error');
 
     vi.mocked(sqliteService.purgeOldRecordsNow).mockResolvedValue({ error: '' } as any);
     await handlePurgeNow();
-    expect(status.textContent).toBe('Error');
+    expect(status.textContent).toBe('purge-failed-msg');
 
     vi.mocked(sqliteService.purgeOldRecordsNow).mockResolvedValue({} as any); // error falsy but isServiceError true if we mock? need to force isServiceError
     // force isServiceError to return true even with undefined error
     const spy = vi.spyOn(sqliteService, 'isServiceError').mockReturnValue(true);
     vi.mocked(sqliteService.purgeOldRecordsNow).mockResolvedValue({ error: undefined } as any);
     await handlePurgeNow();
-    expect(status.textContent).toBe('Error');
+    expect(status.textContent).toBe('purge-failed-msg');
     spy.mockRestore();
   });
 
@@ -684,6 +687,7 @@ describe('handleContentPurgeNow', () => {
         contentPurgeNowSuccess_one: 'content-one $COUNT$',
         contentPurgeNowSuccess_other: 'content-other $COUNT$',
         contentPurgeNowSuccess: 'fallback-content',
+        contentPurgeNowFailed: 'content-failed-msg',
       };
       return (map as any)[key] ?? `msg:${key}`;
     });
@@ -705,7 +709,7 @@ describe('handleContentPurgeNow', () => {
     vi.mocked(sqliteService.purgeContentNow).mockRejectedValue(new Error('boom'));
     await expect(handleContentPurgeNow()).resolves.toBeUndefined();
     expect(btn.disabled).toBe(false);
-    expect(status.textContent).toBe('boom');
+    expect(status.textContent).toBe('content-failed-msg: boom');
   });
 
   it('renders a non-Error rejection value through errorMessage', async () => {
@@ -713,7 +717,7 @@ describe('handleContentPurgeNow', () => {
     const status = document.getElementById('contentPurgeNowStatus')!;
     vi.mocked(sqliteService.purgeContentNow).mockRejectedValue('gateway down');
     await handleContentPurgeNow();
-    expect(status.textContent).toBe('gateway down');
+    expect(status.textContent).toBe('content-failed-msg: gateway down');
   });
 
   it('shows service error with fallback', async () => {
@@ -721,16 +725,16 @@ describe('handleContentPurgeNow', () => {
     const status = document.getElementById('contentPurgeNowStatus')!;
     vi.mocked(sqliteService.purgeContentNow).mockResolvedValue({ error: 'err' } as any);
     await handleContentPurgeNow();
-    expect(status.textContent).toBe('err');
+    expect(status.textContent).toBe('content-failed-msg: err');
 
     vi.mocked(sqliteService.purgeContentNow).mockResolvedValue({ error: '' } as any);
     await handleContentPurgeNow();
-    expect(status.textContent).toBe('Error');
+    expect(status.textContent).toBe('content-failed-msg');
 
     const spy = vi.spyOn(sqliteService, 'isServiceError').mockReturnValue(true);
     vi.mocked(sqliteService.purgeContentNow).mockResolvedValue({ error: undefined } as any);
     await handleContentPurgeNow();
-    expect(status.textContent).toBe('Error');
+    expect(status.textContent).toBe('content-failed-msg');
     spy.mockRestore();
   });
 

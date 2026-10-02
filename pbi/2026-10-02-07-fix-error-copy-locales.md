@@ -34,11 +34,11 @@ Scenario: Invalid URL 表示が i18n 経由になる
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] `purgeNowFailed` キーが `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加されている (またはフォールバック仕様がコードとして明文化されている)
-- [ ] `contentPurgeNowFailed` キーが `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加されている (またはフォールバック仕様がコードとして明文化されている)
-- [ ] `src/popup/statusPanel.ts:346` のハードコード `Invalid URL` が i18n キー参照に置換されている
-- [ ] `src/popup/statusPanel.ts:369` のハードコード `Invalid URL` が i18n キー参照に置換されている
-- [ ] 日本語と英語の両言語で表示が目視またはテストにより確認されている
+- [x] `purgeNowFailed` キーが `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加されている (またはフォールバック仕様がコードとして明文化されている)
+- [x] `contentPurgeNowFailed` キーが `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加されている (またはフォールバック仕様がコードとして明文化されている)
+- [x] `src/popup/statusPanel.ts:346` のハードコード `Invalid URL` が i18n キー参照に置換されている
+- [x] `src/popup/statusPanel.ts:369` のハードコード `Invalid URL` が i18n キー参照に置換されている
+- [x] 日本語と英語の両言語で表示が目視またはテストにより確認されている
 
 ## テスト戦略
 
@@ -58,6 +58,14 @@ Scenario: Invalid URL 表示が i18n 経由になる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] コードレビュー完了
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] コードレビュー完了
+
+## 実装記録 (2026-10-02)
+
+- `public/_locales/ja/messages.json` / `en/messages.json` に 3 キーずつ追加: `purgeNowFailed` / `contentPurgeNowFailed` / `statusInvalidUrl` (既存英語コピーと意味同一、日本語は「削除に失敗しました」「content の削除に失敗しました」「無効なURLです」)
+- `src/dashboard/generalSettings/settingsForm.ts`: `handlePurgeNow` / `handleContentPurgeNow` の `onError` を `getMessageOr('<key>', fallback)` + 技術理由サフィックス (`: detail`) に統一。フォールバック仕様はコードで明文化 (理由付きで沈黙の握りつぶしなし)
+- `src/popup/statusPanel.ts`: 2 箇所のハードコード `'Invalid URL'` を `getMessageOr('statusInvalidUrl', 'Invalid URL')` に置換
+- テスト: 新規 2 ファイル (`settingsForm-purgeFailedLocales.test.ts` 日英コピー表示、`statusInvalidUrlLocales.test.ts` 日英解決)、更新 2 スイート (`settingsForm.coverage.test.ts` 期待値を `prefix: detail` 形へ、`generalSettingsPanel-purge.test.ts` 2 assertions)
+- 注: `check-i18n` という npm スクリプトは存在しないため locale pin テスト + validate で代替確認。`npm run validate` フル PASS (15423 passed)

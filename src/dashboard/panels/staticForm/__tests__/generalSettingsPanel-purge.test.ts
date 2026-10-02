@@ -46,7 +46,7 @@ describe('generalSettingsPanel — purge error boundary', () => {
     const status = document.getElementById('purgeNowStatus')!;
     btn.click();
 
-    await waitForMock(() => expect(status.textContent).toBe('gateway down'));
+    await waitForMock(() => expect(status.textContent).toBe('Purge failed: gateway down'));
     expect(btn.disabled).toBe(false);
   });
 
@@ -58,7 +58,7 @@ describe('generalSettingsPanel — purge error boundary', () => {
     const status = document.getElementById('contentPurgeNowStatus')!;
     btn.click();
 
-    await waitForMock(() => expect(status.textContent).toBe('gateway down'));
+    await waitForMock(() => expect(status.textContent).toBe('Content purge failed: gateway down'));
     expect(btn.disabled).toBe(false);
   });
 

@@ -1316,6 +1316,9 @@
   "pathAddedToWhitelist": {
     "message": "パスをホワイトリストに追加しました"
   },
+  "statusInvalidUrl": {
+    "message": "無効なURLです"
+  },
   "whitelistLabel": {
     "message": "ホワイトリスト"
   },
@@ -1970,6 +1973,9 @@
   },
   "purgeNowSkipped": {
     "message": "保持ポリシーが未設定のため、削除をスキップしました"
+  },
+  "purgeNowFailed": {
+    "message": "削除に失敗しました"
   },
   "saveBtn": {
     "message": "保存する"
@@ -4177,6 +4183,9 @@
   },
   "contentPurgeNowSkipped": {
     "message": "コンテンツ保持ポリシーが未設定のため、削除をスキップしました"
+  },
+  "contentPurgeNowFailed": {
+    "message": "content の削除に失敗しました"
   },
   "diagBackfillBtn": {
     "message": "SQLite 履歴のメトリクスを補完",
