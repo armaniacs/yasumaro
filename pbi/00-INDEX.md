@@ -14,43 +14,43 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-01 大局的コード改善ラウンド（holistic-code-improvement） — ✅ 21件完了 🔧非機能追加
+### 2026-10-01 大局的コード改善ラウンド（holistic-code-improvement） — ✅ 21件完了・アーカイブ済み 🔧非機能追加
 
-holistic-code-review の大局的レビュー（3 領域の地図 32 候補 → TOP 5 テーマ）を 19 個の独立実装単位に分解。詳細は [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md)。実行順は依存優先。積み残し 6 テーマは次ラウンド予約。
+holistic-code-review の大局的レビュー（3 領域の地図 32 候補 → TOP 5 テーマ）を 19 個の独立実装単位に分解。詳細は [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md)（live 台帳として残置）。実行順は依存優先。積み残し 6 テーマは次ラウンド予約。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| 08 | [2026-10-01-08-fix-alarm-double-dispatch.md](2026-10-01-08-fix-alarm-double-dispatch.md) | fix | 48.0 | 0.5 | alarm 二重ディスパッチ解消 |
-| 09 | [2026-10-01-09-fix-dashboard-purge-boundary.md](2026-10-01-09-fix-dashboard-purge-boundary.md) | fix | 36.0 | 0.5 | purge ハンドラ catch + 表示 |
-| 10 | [2026-10-01-10-fix-bootstrapper-silent-catch.md](2026-10-01-10-fix-bootstrapper-silent-catch.md) | fix | 30.0 | 0.5 | Bootstrapper サイレント catch |
-| 11 | [2026-10-01-11-fix-cleansing-slider-delta-write.md](2026-10-01-11-fix-cleansing-slider-delta-write.md) | fix | 20.0 | 0.5 | delta-write 化 |
-| 12 | [2026-10-01-12-fix-popup-error-boundary.md](2026-10-01-12-fix-popup-error-boundary.md) | fix | 16.0 | 1.5 | popup async エラー境界 |
-| 13 | [2026-10-01-13-refactor-settings-repository-merge-unification.md](2026-10-01-13-refactor-settings-repository-merge-unification.md) | refactor | 14.0 | 0.5 | merge-under-lock 統一 |
-| 14 | [2026-10-01-14-fix-current-page-tab-seam.md](2026-10-01-14-fix-current-page-tab-seam.md) | fix | 12.0 | 0.5 | tabUtils seam 追従 |
-| 15 | [2026-10-01-15-refactor-obsidian-client-classification.md](2026-10-01-15-refactor-obsidian-client-classification.md) | refactor | 10.0 | 0.5 | 失敗分類共通化 |
-| 16 | [2026-10-01-16-refactor-saved-url-retention-unification.md](2026-10-01-16-refactor-saved-url-retention-unification.md) | refactor | 10.0 | 0.5 | 保持ルール統一 |
-| 17 | [2026-10-01-17-fix-provider-settings-stale-snapshot.md](2026-10-01-17-fix-provider-settings-stale-snapshot.md) | fix | 10.0 | 1.0 | stale スナップショット |
-| 18 | [2026-10-01-18-refactor-ublock-parser-unification.md](2026-10-01-18-refactor-ublock-parser-unification.md) | refactor | 8.0 | 0.5 | plain 版統一 |
-| 19 | [2026-10-01-19-fix-download-blob-lifecycle.md](2026-10-01-19-fix-download-blob-lifecycle.md) | fix | 8.0 | 0.5 | blob URL ライフサイクル |
-| 20 | [2026-10-01-20-fix-wizard-observer-accumulation.md](2026-10-01-20-fix-wizard-observer-accumulation.md) | fix | 8.0 | 0.5 | MutationObserver 蓄積 |
-| 21 | [2026-10-01-21-refactor-dead-seams-removal.md](2026-10-01-21-refactor-dead-seams-removal.md) | refactor | 7.0 | 1.0 | 死んだシーム撤去 |
-| 22 | [2026-10-01-22-refactor-dashboard-button-scaffold.md](2026-10-01-22-refactor-dashboard-button-scaffold.md) | refactor | 7.2 | 2.0 | ボタン足場抽出 |
-| 23 | [2026-10-01-23-refactor-storage-transaction-cas-unification.md](2026-10-01-23-refactor-storage-transaction-cas-unification.md) | refactor | 6.5 | 1.5 | CAS 統一 |
-| 24 | [2026-10-01-24-fix-recovery-claim-sweep.md](2026-10-01-24-fix-recovery-claim-sweep.md) | fix | 6.4 | 0.5 | claim sweep |
-| 25 | [2026-10-01-25-refactor-provider-catalog-lookup-unification.md](2026-10-01-25-refactor-provider-catalog-lookup-unification.md) | refactor | 6.0 | 0.5 | lookup 統合 |
-| 26 | [2026-10-01-26-refactor-ai-summary-cleaner-strip-scaffold.md](2026-10-01-26-refactor-ai-summary-cleaner-strip-scaffold.md) | refactor | 4.8 | 2.0 | strip scaffold |
-| 27 | [2026-10-01-27-fix-cleansing-slider-double-binding.md](2026-10-01-27-fix-cleansing-slider-double-binding.md) | fix | — | 1.0 | 二重バインド解消 |
-| 28 | [2026-10-01-28-fix-cleansing-sliders-unwired.md](2026-10-01-28-fix-cleansing-sliders-unwired.md) | fix | — | 0.5 | 未結線 2 スライダー |
+| 08 | [2026-10-01-08-fix-alarm-double-dispatch.md](../dev-docs/archived/pbi/2026-10-01-08-fix-alarm-double-dispatch.md) | fix | 48.0 | 0.5 | ✅ 完了・アーカイブ済み（`880f95ba`）。alarm 二重ディスパッチ解消 |
+| 09 | [2026-10-01-09-fix-dashboard-purge-boundary.md](../dev-docs/archived/pbi/2026-10-01-09-fix-dashboard-purge-boundary.md) | fix | 36.0 | 0.5 | ✅ 完了・アーカイブ済み（`4edfcbc0`、NN17・NN20 と同梱）。purge ハンドラ catch + 表示 |
+| 10 | [2026-10-01-10-fix-bootstrapper-silent-catch.md](../dev-docs/archived/pbi/2026-10-01-10-fix-bootstrapper-silent-catch.md) | fix | 30.0 | 0.5 | ✅ 完了・アーカイブ済み（`7d26b2bb`）。Bootstrapper サイレント catch |
+| 11 | [2026-10-01-11-fix-cleansing-slider-delta-write.md](../dev-docs/archived/pbi/2026-10-01-11-fix-cleansing-slider-delta-write.md) | fix | 20.0 | 0.5 | ✅ 完了・アーカイブ済み（`f2cc31f3`）。delta-write 化 |
+| 12 | [2026-10-01-12-fix-popup-error-boundary.md](../dev-docs/archived/pbi/2026-10-01-12-fix-popup-error-boundary.md) | fix | 16.0 | 1.5 | ✅ 完了・アーカイブ済み（`963e34e4`）。popup async エラー境界 |
+| 13 | [2026-10-01-13-refactor-settings-repository-merge-unification.md](../dev-docs/archived/pbi/2026-10-01-13-refactor-settings-repository-merge-unification.md) | refactor | 14.0 | 0.5 | ✅ 完了・アーカイブ済み（`afe6635f`）。merge-under-lock 統一 |
+| 14 | [2026-10-01-14-fix-current-page-tab-seam.md](../dev-docs/archived/pbi/2026-10-01-14-fix-current-page-tab-seam.md) | fix | 12.0 | 0.5 | ✅ 完了・アーカイブ済み（`476ff256`）。tabUtils seam 追従 |
+| 15 | [2026-10-01-15-refactor-obsidian-client-classification.md](../dev-docs/archived/pbi/2026-10-01-15-refactor-obsidian-client-classification.md) | refactor | 10.0 | 0.5 | ✅ 完了・アーカイブ済み（`5186059e`）。失敗分類共通化 |
+| 16 | [2026-10-01-16-refactor-saved-url-retention-unification.md](../dev-docs/archived/pbi/2026-10-01-16-refactor-saved-url-retention-unification.md) | refactor | 10.0 | 0.5 | ✅ 完了・アーカイブ済み（`1a6d182a`）。保持ルール統一 |
+| 17 | [2026-10-01-17-fix-provider-settings-stale-snapshot.md](../dev-docs/archived/pbi/2026-10-01-17-fix-provider-settings-stale-snapshot.md) | fix | 10.0 | 1.0 | ✅ 完了・アーカイブ済み（`4edfcbc0`、NN09・NN20 と同梱）。stale スナップショット |
+| 18 | [2026-10-01-18-refactor-ublock-parser-unification.md](../dev-docs/archived/pbi/2026-10-01-18-refactor-ublock-parser-unification.md) | refactor | 8.0 | 0.5 | ✅ 完了・アーカイブ済み（`26aa935f`）。plain 版統一 |
+| 19 | [2026-10-01-19-fix-download-blob-lifecycle.md](../dev-docs/archived/pbi/2026-10-01-19-fix-download-blob-lifecycle.md) | fix | 8.0 | 0.5 | ✅ 完了・アーカイブ済み（`a0bf550a`）。blob URL ライフサイクル |
+| 20 | [2026-10-01-20-fix-wizard-observer-accumulation.md](../dev-docs/archived/pbi/2026-10-01-20-fix-wizard-observer-accumulation.md) | fix | 8.0 | 0.5 | ✅ 完了・アーカイブ済み（`4edfcbc0`、NN09・NN17 と同梱）。MutationObserver 蓄積 |
+| 21 | [2026-10-01-21-refactor-dead-seams-removal.md](../dev-docs/archived/pbi/2026-10-01-21-refactor-dead-seams-removal.md) | refactor | 7.0 | 1.0 | ✅ 完了・アーカイブ済み（`b21034d0`、NN22 と同梱）。死んだシーム撤去 |
+| 22 | [2026-10-01-22-refactor-dashboard-button-scaffold.md](../dev-docs/archived/pbi/2026-10-01-22-refactor-dashboard-button-scaffold.md) | refactor | 7.2 | 2.0 | ✅ 完了・アーカイブ済み（`b21034d0`、NN21 と同梱）。ボタン足場抽出 |
+| 23 | [2026-10-01-23-refactor-storage-transaction-cas-unification.md](../dev-docs/archived/pbi/2026-10-01-23-refactor-storage-transaction-cas-unification.md) | refactor | 6.5 | 1.5 | ✅ 完了・アーカイブ済み（`48b7df6d`）。CAS 統一 |
+| 24 | [2026-10-01-24-fix-recovery-claim-sweep.md](../dev-docs/archived/pbi/2026-10-01-24-fix-recovery-claim-sweep.md) | fix | 6.4 | 0.5 | ✅ 完了・アーカイブ済み（`de70c8d3`）。claim sweep |
+| 25 | [2026-10-01-25-refactor-provider-catalog-lookup-unification.md](../dev-docs/archived/pbi/2026-10-01-25-refactor-provider-catalog-lookup-unification.md) | refactor | 6.0 | 0.5 | ✅ 完了・アーカイブ済み（`146a470c`）。lookup 統合 |
+| 26 | [2026-10-01-26-refactor-ai-summary-cleaner-strip-scaffold.md](../dev-docs/archived/pbi/2026-10-01-26-refactor-ai-summary-cleaner-strip-scaffold.md) | refactor | 4.8 | 2.0 | ✅ 完了・アーカイブ済み（`bb4fa36b`）。strip scaffold |
+| 27 | [2026-10-01-27-fix-cleansing-slider-double-binding.md](../dev-docs/archived/pbi/2026-10-01-27-fix-cleansing-slider-double-binding.md) | fix | — | 1.0 | ✅ 完了・アーカイブ済み（`80dfeef9`、NN28 と同梱）。二重バインド解消 |
+| 28 | [2026-10-01-28-fix-cleansing-sliders-unwired.md](../dev-docs/archived/pbi/2026-10-01-28-fix-cleansing-sliders-unwired.md) | fix | — | 0.5 | ✅ 完了・アーカイブ済み（`80dfeef9`、NN27 と同梱）。未結線 2 スライダー |
 
 実行順: 依存優先（NN21 → NN22 の順、NN17 → NN20 の順）。
 追加 NN27 / NN28 は 2026-10-02 実装フェーズで判明した残存バグ（[台帳](2026-10-01-00-backlog-holistic-1001.md) 参照）。
 
-### 2026-10-02 follow-up（NN21 / NN22 積み残し解消） 🔧非機能追加
+### 2026-10-02 follow-up（NN21 / NN22 積み残し解消） — ✅ 2件完了・アーカイブ済み 🔧非機能追加
 
 | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---|
-| [2026-10-02-01-refactor-provider-priority-slots-consolidation.md](2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | 4.0 | 0.5 | ✅ 実装完了・レビュー待ち。NN21 積み残し（A/B 収集重複の単一ヘルパー集約） |
-| [2026-10-02-02-refactor-nn22-guard-sweep.md](2026-10-02-02-refactor-nn22-guard-sweep.md) | refactor | 4.8 | 0.5 | ✅ 実装完了・レビュー待ち。NN22 積み残し（残存 8 箇所の共有ガード寄せ、exportImport:179 は D1 除外） |
+| [2026-10-02-01-refactor-provider-priority-slots-consolidation.md](../dev-docs/archived/pbi/2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | 4.0 | 0.5 | ✅ 完了・アーカイブ済み（`dc566120`）。NN21 積み残し（A/B 収集重複の単一ヘルパー集約） |
+| [2026-10-02-02-refactor-nn22-guard-sweep.md](../dev-docs/archived/pbi/2026-10-02-02-refactor-nn22-guard-sweep.md) | refactor | 4.8 | 0.5 | ✅ 完了・アーカイブ済み（`ca177d9e`）。NN22 積み残し（残存 8 箇所の共有ガード寄せ、exportImport:179 は D1 除外） |
 
 ### 2026-10-01 arch-delivery-loop 診断ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 
@@ -260,6 +260,32 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-01 大局的コード改善ラウンド + 2026-10-02 follow-up アーカイブ — ✅ 23件完了（NN08-28 + follow-up 2件）
+
+- [2026-10-01-08-fix-alarm-double-dispatch.md](../dev-docs/archived/pbi/2026-10-01-08-fix-alarm-double-dispatch.md)（✅ 完了 — `880f95ba`。fix。alarm 二重ディスパッチ解消。RICE 48.0・0.5 SP）
+- [2026-10-01-09-fix-dashboard-purge-boundary.md](../dev-docs/archived/pbi/2026-10-01-09-fix-dashboard-purge-boundary.md)（✅ 完了 — `4edfcbc0`（NN17・NN20 と同梱）。fix。purge ハンドラ catch + 表示。RICE 36.0・0.5 SP）
+- [2026-10-01-10-fix-bootstrapper-silent-catch.md](../dev-docs/archived/pbi/2026-10-01-10-fix-bootstrapper-silent-catch.md)（✅ 完了 — `7d26b2bb`。fix。Bootstrapper サイレント catch。RICE 30.0・0.5 SP）
+- [2026-10-01-11-fix-cleansing-slider-delta-write.md](../dev-docs/archived/pbi/2026-10-01-11-fix-cleansing-slider-delta-write.md)（✅ 完了 — `f2cc31f3`。fix。delta-write 化。RICE 20.0・0.5 SP）
+- [2026-10-01-12-fix-popup-error-boundary.md](../dev-docs/archived/pbi/2026-10-01-12-fix-popup-error-boundary.md)（✅ 完了 — `963e34e4`。fix。popup async エラー境界。RICE 16.0・1.5 SP）
+- [2026-10-01-13-refactor-settings-repository-merge-unification.md](../dev-docs/archived/pbi/2026-10-01-13-refactor-settings-repository-merge-unification.md)（✅ 完了 — `afe6635f`。refactor。merge-under-lock 統一。RICE 14.0・0.5 SP）
+- [2026-10-01-14-fix-current-page-tab-seam.md](../dev-docs/archived/pbi/2026-10-01-14-fix-current-page-tab-seam.md)（✅ 完了 — `476ff256`。fix。tabUtils seam 追従。RICE 12.0・0.5 SP）
+- [2026-10-01-15-refactor-obsidian-client-classification.md](../dev-docs/archived/pbi/2026-10-01-15-refactor-obsidian-client-classification.md)（✅ 完了 — `5186059e`。refactor。失敗分類共通化。RICE 10.0・0.5 SP）
+- [2026-10-01-16-refactor-saved-url-retention-unification.md](../dev-docs/archived/pbi/2026-10-01-16-refactor-saved-url-retention-unification.md)（✅ 完了 — `1a6d182a`。refactor。保持ルール統一。RICE 10.0・0.5 SP）
+- [2026-10-01-17-fix-provider-settings-stale-snapshot.md](../dev-docs/archived/pbi/2026-10-01-17-fix-provider-settings-stale-snapshot.md)（✅ 完了 — `4edfcbc0`（NN09・NN20 と同梱）。fix。stale スナップショット。RICE 10.0・1.0 SP）
+- [2026-10-01-18-refactor-ublock-parser-unification.md](../dev-docs/archived/pbi/2026-10-01-18-refactor-ublock-parser-unification.md)（✅ 完了 — `26aa935f`。refactor。plain 版統一。RICE 8.0・0.5 SP）
+- [2026-10-01-19-fix-download-blob-lifecycle.md](../dev-docs/archived/pbi/2026-10-01-19-fix-download-blob-lifecycle.md)（✅ 完了 — `a0bf550a`。fix。blob URL ライフサイクル。RICE 8.0・0.5 SP）
+- [2026-10-01-20-fix-wizard-observer-accumulation.md](../dev-docs/archived/pbi/2026-10-01-20-fix-wizard-observer-accumulation.md)（✅ 完了 — `4edfcbc0`（NN09・NN17 と同梱）。fix。MutationObserver 蓄積。RICE 8.0・0.5 SP）
+- [2026-10-01-21-refactor-dead-seams-removal.md](../dev-docs/archived/pbi/2026-10-01-21-refactor-dead-seams-removal.md)（✅ 完了 — `b21034d0`（NN22 と同梱）。refactor。死んだシーム撤去。RICE 7.0・1.0 SP）
+- [2026-10-01-22-refactor-dashboard-button-scaffold.md](../dev-docs/archived/pbi/2026-10-01-22-refactor-dashboard-button-scaffold.md)（✅ 完了 — `b21034d0`（NN21 と同梱）。refactor。ボタン足場抽出。RICE 7.2・2.0 SP）
+- [2026-10-01-23-refactor-storage-transaction-cas-unification.md](../dev-docs/archived/pbi/2026-10-01-23-refactor-storage-transaction-cas-unification.md)（✅ 完了 — `48b7df6d`。refactor。CAS 統一。RICE 6.5・1.5 SP）
+- [2026-10-01-24-fix-recovery-claim-sweep.md](../dev-docs/archived/pbi/2026-10-01-24-fix-recovery-claim-sweep.md)（✅ 完了 — `de70c8d3`。fix。claim sweep。RICE 6.4・0.5 SP）
+- [2026-10-01-25-refactor-provider-catalog-lookup-unification.md](../dev-docs/archived/pbi/2026-10-01-25-refactor-provider-catalog-lookup-unification.md)（✅ 完了 — `146a470c`。refactor。lookup 統合。RICE 6.0・0.5 SP）
+- [2026-10-01-26-refactor-ai-summary-cleaner-strip-scaffold.md](../dev-docs/archived/pbi/2026-10-01-26-refactor-ai-summary-cleaner-strip-scaffold.md)（✅ 完了 — `bb4fa36b`。refactor。strip scaffold。RICE 4.8・2.0 SP）
+- [2026-10-01-27-fix-cleansing-slider-double-binding.md](../dev-docs/archived/pbi/2026-10-01-27-fix-cleansing-slider-double-binding.md)（✅ 完了 — `80dfeef9`（NN28 と同梱）。fix。二重バインド解消。1.0 SP）
+- [2026-10-01-28-fix-cleansing-sliders-unwired.md](../dev-docs/archived/pbi/2026-10-01-28-fix-cleansing-sliders-unwired.md)（✅ 完了 — `80dfeef9`（NN27 と同梱）。fix。未結線 2 スライダー。0.5 SP）
+- [2026-10-02-01-refactor-provider-priority-slots-consolidation.md](../dev-docs/archived/pbi/2026-10-02-01-refactor-provider-priority-slots-consolidation.md)（✅ 完了 — `dc566120`。refactor。NN21 積み残し（A/B 収集重複の単一ヘルパー集約）。RICE 4.0・0.5 SP）
+- [2026-10-02-02-refactor-nn22-guard-sweep.md](../dev-docs/archived/pbi/2026-10-02-02-refactor-nn22-guard-sweep.md)（✅ 完了 — `ca177d9e`。refactor。NN22 積み残し（残存 8 箇所の共有ガード寄せ、exportImport:179 は D1 除外）。RICE 4.8・0.5 SP）
 
 ### 2026-09-30 adversarial code review ラウンド アーカイブ — ✅ 13件完了（01-13 アーカイブ済み）
 
