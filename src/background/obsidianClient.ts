@@ -111,6 +111,49 @@ function connectionTestFailure(cause: unknown, kind: FailureKindValue): FailureM
     return resolveFailure(cause) ?? createFailure(kind, { cause });
 }
 
+/**
+ * The one place where a connection-test error becomes a message/kind pair, so a
+ * new failure pattern is recognized the same way on every testConnection path.
+ */
+function classifyConnectionFailure(
+    e: unknown,
+    opts: { errorName: string; transport: boolean; fallbackKind?: FailureKindValue }
+): ObsidianConnectionResult {
+    const msg = errorMessage(e);
+    const configuration = (message: string): ObsidianConnectionResult => withFailure(
+        { success: false, message },
+        connectionTestFailure(e, FailureKind.CONFIGURATION)
+    );
+
+    if (isEncryptionLockedError(e)) {
+        return configuration(msg);
+    }
+    if (opts.transport) {
+        if (opts.errorName === 'AbortError' || msg.includes('timed out')) {
+            return withFailure(
+                { success: false, message: 'Connection timeout. Is Obsidian running?' },
+                connectionTestFailure(e, FailureKind.TIMEOUT)
+            );
+        }
+        if (msg.includes('Failed to fetch') || opts.errorName === 'TypeError') {
+            return withFailure(
+                { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' },
+                connectionTestFailure(e, FailureKind.NETWORK)
+            );
+        }
+    }
+    if (msg.includes('API key is missing')) {
+        return configuration('API key is missing. Please enter your Obsidian API key.');
+    }
+    // No kind is claimed on purpose: an unrecognized error is evidence of no
+    // specific cause, and the UI must not offer a targeted remedy (a
+    // certificate walkthrough) for it. A caller that has no transport branches
+    // to try still tags the build failure as a configuration problem.
+    return opts.fallbackKind
+        ? withFailure({ success: false, message: msg }, connectionTestFailure(e, opts.fallbackKind))
+        : { success: false, message: `Connection error: ${msg}` };
+}
+
 export class ObsidianClient {
     private mutex: Mutex;
     private sleep: SleepFn;
@@ -324,20 +367,13 @@ export class ObsidianClient {
                     baseUrl = config.baseUrl;
                     headers = config.headers;
                 } catch (e: unknown) {
-                    const msg = errorMessage(e);
-                    if (isEncryptionLockedError(e)) {
-                        return withFailure(
-                            { success: false, message: errorMessage(e) },
-                            connectionTestFailure(e, FailureKind.CONFIGURATION)
-                        );
-                    }
-                    if (msg.includes('API key is missing')) {
-                        return withFailure(
-                            { success: false, message: 'API key is missing. Please enter your Obsidian API key.' },
-                            connectionTestFailure(e, FailureKind.CONFIGURATION)
-                        );
-                    }
-                    return withFailure({ success: false, message: msg }, connectionTestFailure(e, FailureKind.CONFIGURATION));
+                    // buildObsidianConfig performs no I/O, so this path has no
+                    // transport failure to recognize.
+                    return classifyConnectionFailure(e, {
+                        errorName: e instanceof Error ? e.name : 'Error',
+                        transport: false,
+                        fallbackKind: FailureKind.CONFIGURATION,
+                    });
                 }
             } else {
                 ({ baseUrl, headers } = await this._getConfig());
@@ -362,35 +398,12 @@ export class ObsidianClient {
             }
         } catch (e: unknown) {
             const msg = errorMessage(e);
-            const errorName = e instanceof Error ? e.name : 'Error';
             addLog(LogType.ERROR, `Connection test failed: ${msg}`);
 
-            if (isEncryptionLockedError(e)) {
-                return withFailure(
-                    { success: false, message: errorMessage(e) },
-                    connectionTestFailure(e, FailureKind.CONFIGURATION)
-                );
-            } else if (errorName === 'AbortError' || msg.includes('timed out')) {
-                return withFailure(
-                    { success: false, message: 'Connection timeout. Is Obsidian running?' },
-                    connectionTestFailure(e, FailureKind.TIMEOUT)
-                );
-            } else if (msg.includes('Failed to fetch') || errorName === 'TypeError') {
-                return withFailure(
-                    { success: false, message: 'Cannot connect. Check if Obsidian is running and Local REST API is enabled.' },
-                    connectionTestFailure(e, FailureKind.NETWORK)
-                );
-            } else if (msg.includes('API key is missing')) {
-                return withFailure(
-                    { success: false, message: 'API key is missing. Please enter your Obsidian API key.' },
-                    connectionTestFailure(e, FailureKind.CONFIGURATION)
-                );
-            } else {
-                // No kind is claimed on purpose: an unrecognized error is
-                // evidence of no specific cause, and the UI must not offer a
-                // targeted remedy (a certificate walkthrough) for it.
-                return { success: false, message: `Connection error: ${msg}` };
-            }
+            return classifyConnectionFailure(e, {
+                errorName: e instanceof Error ? e.name : 'Error',
+                transport: true,
+            });
         }
     }
 }
