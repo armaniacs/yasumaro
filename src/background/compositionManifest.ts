@@ -179,7 +179,8 @@ export const compositionManifest: readonly CompositionEntry[] = [
   {
     key: 'sessionAlarmService',
     singleton: true,
-    // PBI 2026-09-15-15: the alarm creation + listener live in the registry.
+    // The alarm itself is created here, but creation and dispatch are owned by
+    // the registry: this service only computes whether the session timed out.
     factory: () => new SessionAlarmService(),
   },
   {
@@ -202,7 +203,6 @@ export const compositionManifest: readonly CompositionEntry[] = [
         getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
         retryPendingChromeStorageWrite,
         settingsReader: c.resolve<SettingsRepository>('settingsRepository'),
-        sessionTimeoutChecker: async () => { sessionAlarmService.checkTimeout(); },
         sessionTimeoutInstall: async () => { await sessionAlarmService.startTimeoutChecker(); },
       }) as AlarmRegistry;
     },

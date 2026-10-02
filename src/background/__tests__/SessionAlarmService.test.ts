@@ -1,12 +1,11 @@
 /**
  * SessionAlarmService.test.ts
  * SessionAlarmService (AlarmPort + Clock + StoragePort 注入) のテスト。
- * chrome global mock なしに自動ロック・アラーム二重登録防止を純粋テストする。
+ * chrome global mock なしに自動ロック判定を純粋テストする。
  */
 
 
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 import { SessionAlarmService } from '../SessionAlarmService.js';
 import type { Clock, StoragePort, StorageArea, AlarmPort } from '../../utils/ports.js';
 
@@ -67,12 +66,6 @@ class FakeAlarmPort implements AlarmPort {
     this.listeners.push(listener);
   }
 
-  fire(name: string): void {
-    for (const listener of this.listeners) {
-      listener({ name });
-    }
-  }
-
   get listenerCount(): number {
     return this.listeners.length;
   }
@@ -96,12 +89,14 @@ describe('SessionAlarmService', () => {
     service = new SessionAlarmService(alarms, clock, storage, sendMessage as unknown as ConstructorParameters<typeof SessionAlarmService>[3]);
   });
 
-  test('startTimeoutChecker creates the alarm and registers only one listener', async () => {
+  test('startTimeoutChecker creates the alarm and never registers its own alarm listener', async () => {
     await service.startTimeoutChecker();
-    await service.startTimeoutChecker(); // 2回呼んでも重複登録しない
+    await service.startTimeoutChecker();
 
     expect(alarms.created).toHaveLength(2);
-    expect(alarms.listenerCount).toBe(1);
+    // alarmRegistry is the single dispatch path; a listener here would run
+    // checkTimeout a second time on every firing.
+    expect(alarms.listenerCount).toBe(0);
   });
 
   test('stopTimeoutChecker clears the alarm', async () => {
@@ -123,8 +118,7 @@ describe('SessionAlarmService', () => {
     await service.startTimeoutChecker();
 
     clock.advance(31 * 60 * 1000);
-    alarms.fire('check_session_timeout');
-    await drainMacrotask();
+    await service.checkTimeout();
     expect(sendMessage).not.toHaveBeenCalled();
     const result = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
     expect(result[IS_LOCKED_KEY]).toBeUndefined();
@@ -138,12 +132,10 @@ describe('SessionAlarmService', () => {
     await service.startTimeoutChecker();
 
     clock.advance(31 * 60 * 1000);
-    alarms.fire('check_session_timeout');
+    await service.checkTimeout();
 
-    await vi.waitFor(async () => {
-      const result = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
-      expect(result[IS_LOCKED_KEY]).toBe(true);
-    });
+    const result = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
+    expect(result[IS_LOCKED_KEY]).toBe(true);
     expect(sendMessage).toHaveBeenCalledTimes(1);
   });
 
@@ -156,9 +148,9 @@ describe('SessionAlarmService', () => {
     await service.startTimeoutChecker();
 
     clock.advance(31 * 60 * 1000);
-    alarms.fire('check_session_timeout');
+    await service.checkTimeout();
 
-    await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(3));
+    expect(sendMessage).toHaveBeenCalledTimes(3);
   });
 
   test('does not lock when the timeout has not elapsed', async () => {
@@ -169,8 +161,7 @@ describe('SessionAlarmService', () => {
     await service.startTimeoutChecker();
 
     clock.advance(10 * 60 * 1000); // 10分のみ経過
-    alarms.fire('check_session_timeout');
-    await Promise.resolve();
+    await service.checkTimeout();
 
     const result = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
     expect(result[IS_LOCKED_KEY]).toBeUndefined();

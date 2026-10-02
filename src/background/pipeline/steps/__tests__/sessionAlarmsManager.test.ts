@@ -3,9 +3,9 @@
  *
  * 検証対象:
  * - updateActivity: chrome.storage.local に last_activity を保存
- * - startTimeoutChecker: chrome.alarms.create でアラーム作成 + リスナー設定
+ * - startTimeoutChecker: chrome.alarms.create でアラーム作成
  * - stopTimeoutChecker: chrome.alarms.clear でアラーム削除
- * - アラームリスナー: check_session_timeout アラームでタイムアウトチェック実行
+ * - checkTimeout: タイムアウト判定とセッションロック（実行は alarmRegistry 経由）
  * - タイムアウト: SESSION_TIMEOUT_MS 超過時にセッションロック
  * - 初期化: initialize() で startTimeoutChecker を呼ぶ
  */
@@ -155,22 +155,16 @@ vi.mock('../../../../utils/storage/quota.js', async (importOriginal) => {
 // chrome.alarms のモック
 let mockAlarmsCreate: Mock;
 let mockAlarmsClear: Mock;
-let capturedListener: ((alarm: chrome.alarms.Alarm) => void) | null = null;
 
 function setupChromeAlarms() {
   mockAlarmsCreate = vi.fn<() => Promise<void>>().mockResolvedValue(undefined as any);
   mockAlarmsClear = vi.fn<() => Promise<boolean>>().mockResolvedValue(true as any);
-  capturedListener = null;
 
   (global as any).chrome = (global as any).chrome || {};
   (global as any).chrome.alarms = {
     create: mockAlarmsCreate,
     clear: mockAlarmsClear,
-    onAlarm: {
-      addListener: vi.fn((listener: (alarm: chrome.alarms.Alarm) => void) => {
-        capturedListener = listener;
-      }),
-    },
+    onAlarm: { addListener: vi.fn() },
   };
 }
 
@@ -200,13 +194,26 @@ function setupStorageMocks() {
   }) as any;
 }
 
-// Helper: load a fresh module instance (resets alarmListenerSetUp)
+// Helper: load a fresh module instance (per-test singleton state)
 async function loadFreshModule() {
   vi.resetModules();
   setupChromeAlarms();
   setupStorageMocks();
   const mod = await import('../../../sessionAlarmsManager.js');
   return mod;
+}
+
+/**
+ * checkTimeout is not re-exported by the compat shim, and alarmRegistry is now
+ * the only caller of it in production, so drive it through the service class
+ * with the same injected-in-terms-of-chrome mocks.
+ */
+async function loadFreshService() {
+  vi.resetModules();
+  setupChromeAlarms();
+  setupStorageMocks();
+  const { SessionAlarmService } = await import('../../../SessionAlarmService.js');
+  return new SessionAlarmService();
 }
 
 describe('sessionAlarmsManager', () => {
@@ -259,20 +266,16 @@ describe('sessionAlarmsManager', () => {
       );
     });
 
-    it('registers the alarm listener', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
-
-      expect(chrome.alarms.onAlarm.addListener).toHaveBeenCalled();
-      expect(capturedListener).not.toBeNull();
-    });
-
-    it('does not register the listener twice on the second startTimeoutChecker call', async () => {
+    it('never registers an alarm listener of its own', async () => {
       const { startTimeoutChecker } = await loadFreshModule();
       await startTimeoutChecker();
       await startTimeoutChecker();
 
-      expect(chrome.alarms.onAlarm.addListener).toHaveBeenCalledTimes(1);
+      // alarmRegistry owns the check_session_timeout firing; a listener here
+      // would run checkTimeout twice per firing.
+      expect(chrome.alarms.onAlarm.addListener).not.toHaveBeenCalled();
+      expect(mockAlarmsClear).toHaveBeenCalledTimes(2);
+      expect(mockAlarmsCreate).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -339,21 +342,16 @@ describe('sessionAlarmsManager', () => {
     });
   });
 
-  describe('アラームリスナー', () => {
-    it('locks on the check_session_timeout alarm only when timed out with the master password enabled', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
-      expect(capturedListener).not.toBeNull();
+  describe('checkTimeout', () => {
+    it('locks on the check_session_timeout check only when timed out with the master password enabled', async () => {
+      const service = await loadFreshService();
 
       storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
+      await service.checkTimeout();
 
-      await vi.waitFor(
-          () => expect(chrome.storage.local.set).toHaveBeenCalledWith(
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
         expect.objectContaining({ IS_LOCKED: true })
-      ),
-          { interval: 1 }
       );
       expect(chrome.runtime.sendMessage).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'SESSION_LOCK_REQUEST' })
@@ -361,12 +359,11 @@ describe('sessionAlarmsManager', () => {
     });
 
     it('logs an INFO on timeout', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
+      const service = await loadFreshService();
 
       storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
+      await service.checkTimeout();
 
       const logInfo = (await import('../../../../utils/logger/api.js')).logInfo;
       await vi.waitFor(() => {
@@ -379,14 +376,13 @@ describe('sessionAlarmsManager', () => {
     });
 
     it('does not throw on lockSession storage errors', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
+      const service = await loadFreshService();
 
       storageData['MASTER_PASSWORD_ENABLED'] = true;
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
       (chrome.storage.local.set as Mock).mockRejectedValueOnce(new Error('Lock storage error'));
 
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
+      await service.checkTimeout();
 
       const logError = (await import('../../../../utils/logger/api.js')).logError;
       await vi.waitFor(() => {
@@ -399,34 +395,12 @@ describe('sessionAlarmsManager', () => {
       });
     });
 
-    it('ignores alarms other than check_session_timeout', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
-
-      capturedListener!({ name: 'other_alarm' } as chrome.alarms.Alarm);
-
-      // The listener returns before touching storage for a foreign alarm name,
-      // and that path schedules no timer, so one macrotask turn is enough to
-      // prove the negative.
-      await new Promise((r) => setTimeout(r, 0));
-
-      const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
-        (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
-      );
-      expect(setCalls.length).toBe(0);
-    });
-
     it('does not lock on timeout when the master password is unset', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
+      const service = await loadFreshService();
 
       // MASTER_PASSWORD_ENABLED を明示的に設定しない（未設定ユーザーを再現）
       storageData['session_last_activity'] = Date.now() - 31 * 60 * 1000;
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
-
-      // The no-master-password branch returns right after the storage read and
-      // schedules no timer, so one macrotask turn settles it.
-      await new Promise((r) => setTimeout(r, 0));
+      await service.checkTimeout();
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -438,12 +412,9 @@ describe('sessionAlarmsManager', () => {
     });
 
     it('does not lock when no activity is recorded', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
+      const service = await loadFreshService();
 
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
-
-      await new Promise((r) => setTimeout(r, 0));
+      await service.checkTimeout();
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -452,13 +423,10 @@ describe('sessionAlarmsManager', () => {
     });
 
     it('does not lock before the timeout elapses', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
+      const service = await loadFreshService();
 
       storageData['session_last_activity'] = Date.now() - 10 * 60 * 1000;
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
-
-      await new Promise((r) => setTimeout(r, 0));
+      await service.checkTimeout();
 
       const setCalls = (chrome.storage.local.set as Mock).mock.calls.filter(
         (call: unknown[]) => (call[0] as any)?.IS_LOCKED !== undefined
@@ -467,12 +435,11 @@ describe('sessionAlarmsManager', () => {
     });
 
     it('does not throw on checkTimeout storage errors', async () => {
-      const { startTimeoutChecker } = await loadFreshModule();
-      await startTimeoutChecker();
+      const service = await loadFreshService();
 
       (chrome.storage.local.get as Mock).mockRejectedValueOnce(new Error('Get error'));
 
-      capturedListener!({ name: 'check_session_timeout' } as chrome.alarms.Alarm);
+      await service.checkTimeout();
 
       const logError = (await import('../../../../utils/logger/api.js')).logError;
       await vi.waitFor(() => {

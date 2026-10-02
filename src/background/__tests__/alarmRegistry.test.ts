@@ -43,6 +43,7 @@ vi.mock('../../utils/logger/api.js', () => ({
 }));
 
 import { createAlarmRegistry, type AlarmHandlerDeps } from '../alarmRegistry.js';
+import { setSessionTimeoutRefs } from '../alarmRegistryRefs.js';
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
 
@@ -155,5 +156,49 @@ describe('createAlarmRegistry', () => {
     } finally {
       globalRef.chrome = savedChrome;
     }
+  });
+
+  describe('check_session_timeout (the only session-timeout dispatch path)', () => {
+    it('runs checkTimeout exactly once per firing', async () => {
+      const install = vi.fn(async () => {});
+      const run = vi.fn(async () => {});
+      setSessionTimeoutRefs(install, run);
+
+      const registry = createAlarmRegistry(makeDeps());
+      registry.handleAlarm(alarm('check_session_timeout'));
+      await settle();
+
+      expect(run).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not run checkTimeout for other jobs', async () => {
+      const install = vi.fn(async () => {});
+      const run = vi.fn(async () => {});
+      setSessionTimeoutRefs(install, run);
+
+      const registry = createAlarmRegistry(makeDeps());
+      registry.handleAlarm(alarm('yasumaro-daily-purge'));
+      await settle();
+
+      expect(run).not.toHaveBeenCalled();
+    });
+
+    it('installs the session alarm once per installAll', async () => {
+      const globalRef = globalThis as unknown as { chrome?: unknown };
+      const savedChrome = globalRef.chrome;
+      globalRef.chrome = { alarms: { create: vi.fn(), clear: vi.fn() } };
+      const install = vi.fn(async () => {});
+      const run = vi.fn(async () => {});
+      setSessionTimeoutRefs(install, run);
+      try {
+        const registry = createAlarmRegistry(makeDeps());
+        await registry.installAll();
+
+        expect(install).toHaveBeenCalledTimes(1);
+        expect(run).not.toHaveBeenCalled();
+      } finally {
+        globalRef.chrome = savedChrome;
+      }
+    });
   });
 });

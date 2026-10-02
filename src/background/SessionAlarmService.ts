@@ -2,7 +2,7 @@
  * SessionAlarmService.ts
  * セッションタイムアウト管理 (chrome.alarms API)。
  * AlarmPort / Clock / StoragePort を注入することで chrome global mock なしに
- * 自動ロック・アラーム二重登録防止を単体テスト可能にする。
+ * 自動ロック判定を単体テスト可能にする。
  */
 
 import { ErrorCode } from '../utils/logger/types.js';
@@ -31,8 +31,6 @@ export type SendMessageFn = (message: unknown) => Promise<unknown>;
 const defaultSendMessage: SendMessageFn = (message) => chrome.runtime.sendMessage(message);
 
 export class SessionAlarmService {
-  private alarmListenerSetUp = false;
-
   constructor(
     private readonly alarms: AlarmPort = CHROME_ALARM_PORT,
     private readonly clock: Clock = SYSTEM_CLOCK,
@@ -59,8 +57,6 @@ export class SessionAlarmService {
       await this.alarms.create(ALARM_NAME_CHECK_SESSION, {
         periodInMinutes: SESSION_CHECK_INTERVAL_MINUTES,
       });
-
-      this.setupAlarmListener();
 
       await logInfo(
         'Session timeout checker started',
@@ -108,7 +104,11 @@ export class SessionAlarmService {
     }
   }
 
-  /** Called by alarmRegistry on `check_session_timeout` firing (PBI 2026-09-15-15). */
+  /**
+   * Sole entry point for the timeout check: alarmRegistry owns the
+   * `check_session_timeout` firing and calls this through its run hook, so an
+   * extra onAlarm listener here would run the check twice per firing.
+   */
   async checkTimeout(): Promise<void> {
     try {
       const result = await this.storage.local.get<Record<string, unknown>>([
@@ -186,18 +186,5 @@ export class SessionAlarmService {
         'SessionAlarmService.ts'
       );
     }
-  }
-
-  private setupAlarmListener(): void {
-    if (this.alarmListenerSetUp) {
-      return;
-    }
-
-    this.alarms.onAlarm((alarm) => {
-      if (alarm.name === ALARM_NAME_CHECK_SESSION) {
-        void this.checkTimeout();
-      }
-    });
-    this.alarmListenerSetUp = true;
   }
 }

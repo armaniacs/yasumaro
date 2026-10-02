@@ -37,14 +37,11 @@ export function init(): void {
     // are migrated ahead of the fail-closed reader.
     void initAllowedUrlsSync();
 
-    // Session alarm initialization for master password timeout
-    // (PBI 2026-09-15-15: the alarm creation + listener live in the registry)
-    void sessionAlarmService.initialize();
-
-    // PBI 2026-09-15-15: all timed jobs (daily purge, local-md, offline retry,
-    // review-summary, session-timeout) are unified under the registry's
-    // installAll() — static schedules + conditional install hooks + uniform
-    // failure policy live in alarmRegistry.ts's table.
+    // All timed jobs (daily purge, local-md, offline retry, review-summary,
+    // session-timeout) are unified under the registry's installAll() — static
+    // schedules + conditional install hooks + uniform failure policy live in
+    // alarmRegistry.ts's table. The session-timeout alarm is armed here and
+    // nowhere else; arming it in two places would clear+create it twice.
     void alarmRegistry.installAll();
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
@@ -181,14 +178,15 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({ handleManualRecord: handleManualRecordForContextMenu });
 
-// PBI 2026-09-15-17: alarmRegistry is resolved via the manifest (deps include
-// sessionAlarmService and settingsReader). The refs (reviewSummaryGeneratorRef
-// etc.) must be injected after resolution so the registry's install/run hooks
-// can reach the generator.
+// alarmRegistry is resolved via the manifest (deps include sessionAlarmService
+// and settingsReader). The refs (reviewSummaryGeneratorRef etc.) must be
+// injected after resolution so the registry's install/run hooks can reach the
+// generator. They are also the only wiring for the session-timeout job: the
+// registry's run hook is the single dispatch path for check_session_timeout.
 setReviewSummaryGeneratorRef(reviewSummaryGenerator);
 setSessionTimeoutRefs(
   async () => { await sessionAlarmService.startTimeoutChecker(); },
-  async () => { sessionAlarmService.checkTimeout(); },
+  async () => { await sessionAlarmService.checkTimeout(); },
 );
 const handleAlarm = alarmRegistry.handleAlarm;
 

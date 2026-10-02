@@ -39,7 +39,6 @@ export interface AlarmHandlerDeps {
   /** PBI 2026-09-15-15: injected for review-summary and session-timeout jobs. */
   reviewSummaryGenerator?: ReviewSummaryGenerator;
   settingsReader?: SettingsReader;
-  sessionTimeoutChecker?: () => Promise<void>;
   sessionTimeoutInstall?: () => Promise<void>;
 }
 
