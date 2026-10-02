@@ -35,6 +35,24 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.33] - 2026-10-02
+
+v6.9.32 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、実残8件ラウンド（leftover-1002）の 8 PBI（内部整理）のみを含みます。
+
+### Fixed
+
+- **popup のステータスパネル多重登録を解消** — リスナー登録を wireOnce へ統一しました（PBI 03）
+- **markdown export の revoke タイミングを修正** — 固定タイマーから完了シグナル駆動へ置換しました（PBI 04）
+- **並行 export の分離をテストで固定** — archive の相互排除を含みます（PBI 06）
+- **purge 失敗コピーと Invalid URL 表示を日英ロケールへ移行**（PBI 07）
+- **domain filter の既定値を blacklist へ裁定し統一** — 三者不一致を解消しました（PBI 08）
+- **collector の throw 意味論を propagate へ復元**（PBI 09）
+
+### Refactored
+
+- **import 判定を専用 narrow ガードへ構造化**（PBI 05）
+- **テスト型エラーの baseline ゲートを復活** — pin 496 で固定しました（PBI 10）
+
 ## [6.9.32] - 2026-10-02
 
 v6.9.31 に続く翌日リリースです。拡張機能の通常利用の動作変更はなく、大局的コード改善ラウンドの 21 PBI と follow-up 2 件（内部整理）のみを含みます。最終レビュー verdict は KEEP（全件維持・ロールバックなし）です。
