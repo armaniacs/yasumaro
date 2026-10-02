@@ -55,12 +55,12 @@ Phase 0 で並列サブエージェント 4 系統（background / dashboard / of
 
 | NN | PBI | 順位 | 状態 |
 |---|---|---|---|
-| 01 | [2026-10-01-01-refactor-status-channel-unification.md](2026-10-01-01-refactor-status-channel-unification.md) | 1 | 未着手 |
-| 02 | [2026-10-01-02-refactor-reload-guard-single-module.md](2026-10-01-02-refactor-reload-guard-single-module.md) | 2 | 未着手 |
-| 03 | [2026-10-01-03-refactor-recording-admission-module.md](2026-10-01-03-refactor-recording-admission-module.md) | 3 | 未着手 |
-| 04 | [2026-10-01-04-refactor-gateway-execute-collapse.md](2026-10-01-04-refactor-gateway-execute-collapse.md) | 4 | 未着手 |
-| 05 | [2026-10-01-05-refactor-engine-host-narrow-seam.md](2026-10-01-05-refactor-engine-host-narrow-seam.md) | 5 | 未着手 |
-| 06 | [2026-10-01-06-refactor-retry-savephase-seam.md](2026-10-01-06-refactor-retry-savephase-seam.md) | 6 | 未着手 |
-| 07 | [2026-10-01-07-refactor-extractor-single-seam.md](2026-10-01-07-refactor-extractor-single-seam.md) | 7 | 未着手 |
+| 01 | [2026-10-01-01-refactor-status-channel-unification.md](../dev-docs/archived/pbi/2026-10-01-01-refactor-status-channel-unification.md) | 1 | 完了・アーカイブ済み |
+| 02 | [2026-10-01-02-refactor-reload-guard-single-module.md](../dev-docs/archived/pbi/2026-10-01-02-refactor-reload-guard-single-module.md) | 2 | 完了・アーカイブ済み |
+| 03 | [2026-10-01-03-refactor-recording-admission-module.md](../dev-docs/archived/pbi/2026-10-01-03-refactor-recording-admission-module.md) | 3 | 完了・アーカイブ済み |
+| 04 | [2026-10-01-04-refactor-gateway-execute-collapse.md](../dev-docs/archived/pbi/2026-10-01-04-refactor-gateway-execute-collapse.md) | 4 | 完了・アーカイブ済み |
+| 05 | [2026-10-01-05-refactor-engine-host-narrow-seam.md](../dev-docs/archived/pbi/2026-10-01-05-refactor-engine-host-narrow-seam.md) | 5 | 完了・アーカイブ済み |
+| 06 | [2026-10-01-06-refactor-retry-savephase-seam.md](../dev-docs/archived/pbi/2026-10-01-06-refactor-retry-savephase-seam.md) | 6 | 完了・アーカイブ済み |
+| 07 | [2026-10-01-07-refactor-extractor-single-seam.md](../dev-docs/archived/pbi/2026-10-01-07-refactor-extractor-single-seam.md) | 7 | 完了・アーカイブ済み |
 
-ラウンド完遂時に本台帳も随伴アーカイブする。
+ラウンド完遂済み（PBI 01-07 は 2026-10-01 に実装・アーカイブ）。本台帳は live 台帳として残す。

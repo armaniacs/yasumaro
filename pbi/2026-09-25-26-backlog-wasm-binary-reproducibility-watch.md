@@ -55,7 +55,7 @@ Scenario: 供給網監査から byte provenance を求められる
 - [ ] binary の大きな byte 差分を基本契約にせず、parity と公開 copy consistency を基本軸とすること。
 - [ ] build crate 4 件、ship binary 3 件、STAGED の `sentence-dedup`、Rust unit test 対象 5 crate directories、parity suite 7 suite paths、ship byte comparison 3 pairs、glue/dts gate 7 generated paths の現状を混同なく記載する。
 - [ ] `release:check` categories に wasm gate がなく、failure 時は 3 fresh binaries を artifact 化而已であること、継続的な byte reproducibility monitor ではないことを明記する。
-- [ ] `pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の job が完全保持されることを依存条件として明記する。`pbi/2026-09-25-13-...` は依存先ではない。
+- [ ] `dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の job が完全保持されることを依存条件として明記する。`dev-docs/archived/pbi/2026-09-25-13-...` は依存先ではない。
 - [ ] lockfile または `.npmrc` の変更が `wasm-test` 内の `npm ci` に波及することを明記する。
 
 ## テスト戦略（t_wadaスタイル）
@@ -98,7 +98,7 @@ Scenario: 供給網監査から byte provenance を求められる
 - 同じ host で double build をしても、path 正規化や banner の差により一致しない可能性がある。
 - 現在の gate は fresh と committed の振る舞いを比較し、shipped copy は src/public の同一性だけを byte check する。
 - `wasm-test` failure 時の 3 fresh binaries artifact は調査用の出力であり、継続的な byte reproducibility monitor ではない。
-- 依存関係は `pbi/2026-09-25-14-refactor-ci-paths-filter.md` であり、paths filter 後も `wasm-test` の完全保持が必要。
+- 依存関係は `dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` であり、paths filter 後も `wasm-test` の完全保持が必要。
 - lockfile / `.npmrc` の変更は `wasm-test` 内の `npm ci` に波及するため、gate 入力として扱う。
 
 ## 実装者向け注記

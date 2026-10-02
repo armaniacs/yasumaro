@@ -20,14 +20,14 @@
 - E2E test code: `page.waitForTimeout` 12 件（検出対象外）
 - small sleep: 6〜19ms 約 70 件（閾値外）
 
-## 構成する PBI（全 4 件）
+## 構成する PBI（全 5 件）
 
 ### 1️⃣ PBI 2026-09-26-05: Unit/Integration の固定 sleep 40 件を除去（DONE）
 - ✅ 完了: statusPanel-extra(16) / recordingPipeline-full(3) / popup(3) / loader(3) / その他 7 ファイル
 - ✅ ESLint rule: error に昇格
 - **関連**: dev-docs/TEST_RULE.md / AGENTS.md
 
-### 2️⃣ PBI 2026-09-26-06: E2E test の retry 隠蔽を調査・修正（新規）
+### 2️⃣ PBI 2026-09-26-06: E2E test の retry 隠蔽を調査・修正（✅ 完了・アーカイブ済み）
 - **対象**: extension/interaction/a11y/usability プロジェクト計 43 E2E テスト
 - **現状**: `retries: 2` で失敗を見えなくしている
 - **ゴール**: `--retries=0` でも全テスト PASS
@@ -35,7 +35,7 @@
 - **RICE**: 2.0 / **SP**: 2
 - **依存**: なし（並行可能）
 
-### 3️⃣ PBI 2026-09-26-08: testDir を ESLint 対象に + `waitForTimeout` 検出（新規）
+### 3️⃣ PBI 2026-09-26-08: testDir を ESLint 対象に + `waitForTimeout` 検出（✅ 完了・アーカイブ済み）
 - **対象**: E2E の `page.waitForTimeout` 12 件
 - **現状**: ESLint が testDir/ を ignore → 検出されない
 - **ゴール**: 自動検出で 12 件すべて error にする
@@ -43,13 +43,19 @@
 - **RICE**: 1.0 / **SP**: 1
 - **依存**: なし（並行可能）
 
-### 4️⃣ PBI 2026-09-26-07: ESLint 閾値を 20ms → 0 に下げる + 6〜19ms 置き換え（新規）
+### 4️⃣ PBI 2026-09-26-07: ESLint 閾値を 20ms → 0 に下げる + 6〜19ms 置き換え（✅ 完了・アーカイブ済み）
 - **対象**: 6〜19ms の sleep 約 70 件
 - **現状**: 閾値外で検出されない
 - **ゴール**: すべての fixed sleep を警告（0は明示的に正当化）
 - **手法**: ルール修正 + 既存コード置き換え
 - **RICE**: 1.5 / **SP**: 1.5
 - **依存**: 06・08 完了後が推奨（衝突回避）
+
+### 5️⃣ PBI 2026-09-26-01: ESLint ルールテストを `--repeats` ゲートに乗せる（✅ 完了・アーカイブ済み）
+- **対象**: `eslint/__tests__/` 7 ファイル（`--repeats` で全滅していた）
+- **手法**: 共有ラッパー `createRepeatSafeRuleTester` で RuleTester の重複ケース `Set` をキャッシュ
+- **RICE**: — / **SP**: 1
+- **依存**: なし（07 とは独立 PBI）
 
 ## 実装トポロジー
 
@@ -92,26 +98,30 @@ PBI 07 (1.5SP)┘
 ## 完了条件（統合 DoD）
 
 - [x] PBI 05: ✅ (完了・アーカイブ済み)
-- [ ] PBI 06: `npx playwright test --retries=0 --project=extension/interaction/a11y/usability` で全テスト PASS
-- [ ] PBI 08: ESLint が testDir/e2e を対象に、`waitForTimeout` 12 件を検出
-- [ ] PBI 07: ESLint 閾値を 0 に下げ、6〜19ms 約 70 件を置き換え
-- [ ] `npm run lint` → violation 0
-- [ ] `npm run test` → 全テスト PASS
-- [ ] `npm run test:e2e` (または `testDir` で `npx playwright test`) → 全テスト PASS
-- [ ] `npm run validate` → PASS
-- [ ] CHANGELOG に「タイミング失敗隠蔽の完全除去」記載
+- [x] PBI 06: `npx playwright test --retries=0 --project=extension/interaction/a11y/usability` で全テスト PASS（アーカイブ済み PBI 06 の実測: 323 passed / 30 skipped / 0 failed。`testDir/playwright.config.ts` の `retries: 0` を確認）
+- [x] PBI 08: ESLint が testDir/e2e を対象に、`waitForTimeout` 12 件を検出（アーカイブ済み。条件待ち 9 件 + 理由明示 opt-out 3 件に裁定済み）
+- [x] PBI 07: ESLint 閾値を 0 に下げ、6〜19ms 約 70 件を置き換え（アーカイブ済み。実装は `DEFAULT_THRESHOLD_MS = 1` で delay 0 のみ許可、置換は 57 件・20 テストファイル）
+- [x] `npm run lint` → violation 0
+- [x] `npm run test` → 全テスト PASS
+- [x] `npm run test:e2e` (または `testDir` で `npx playwright test`) → 全テスト PASS（PBI 06 実測 323 passed / 30 skipped / 0 failed）
+- [x] `npm run validate` → PASS（PBI 07 実測 929 files / 14,402 tests green）
+- [ ] CHANGELOG に「タイミング失敗隠蔽の完全除去」記載 — **未達**: この見出しの記載は無い。個別実績は 6.9.26 / 6.9.27 に記載済み。INDEX に不整合として記録
 
-### 既知の検証上の穴（2026-09-26 追記）
+### 既知の検証上の穴（2026-09-26 追記・PBI 01 で解消）
 
 統合 DoD の「`--repeats=20` で反復実行確認」は、ESLint ルールテストについては
-達成できない。RuleTester は同一モジュールインスタンス内で再入できず、
+達成できないと予想された。RuleTester は同一モジュールインスタンス内で再入できず、
 `eslint/__tests__/*.test.ts` 4 ファイルは全件失敗する（未変更の
 `require-response-size-limit.test.ts` でも `--repeats=5` で 17/17 失敗することを
 確認済み）。`service-worker.test.ts` の
 `should rehydrate caches on first startup` も `--repeats` でのみ落ちる
 （モジュール級 init 状態が反復間で漏れる。`HEAD` でも再現する既存課題）。
 どちらもPBI 05 の範囲外のテスト分離の欠陥なので、07 の着手時ではなく
-独立した PBI として扱う。
+独立した PBI として扱う方針だった。
+
+**解消**: 独立 PBI として起票した `2026-09-26-01-test-eslint-rule-tester-repeats`
+（`createRepeatSafeRuleTester`）で `eslint/__tests__/` 7 ファイルが `--repeats=20`
+で green になり、統合 DoD の反復確認が達成可能になった（アーカイブ済み）。
 
 ## 実装タイムライン
 
@@ -149,4 +159,5 @@ PBI 07 (1.5SP)┘
 - PBI 2026-09-26-06: E2E test retry (調査・修正)
 - PBI 2026-09-26-07: ESLint 閾値下げ (small sleep 置き換え)
 - PBI 2026-09-26-08: testDir ESLint 対象化 (waitForTimeout 検出)
+- PBI 2026-09-26-01: ESLint ルールテストの `--repeats` ゲート化 (createRepeatSafeRuleTester)
 - dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md: 背景・根拠

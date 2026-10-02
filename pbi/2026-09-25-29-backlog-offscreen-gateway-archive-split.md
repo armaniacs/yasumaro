@@ -48,7 +48,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 
 ## 受け入れ基準
 
-- [ ] 本 PBI は着手トリガー待ちであり、依存 PBI `pbi/2026-09-25-01-fix-transport-replay-safety.md` の完了と同一 archive noRetry 契約の確定を確認するまでは production code を変更しない。
+- [ ] 本 PBI は着手トリガー待ちであり、依存 PBI `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` の完了と同一 archive noRetry 契約の確定を確認するまでは production code を変更しない。
 - [ ] `ArchiveGateway` が14種の archive routing を所有し、`OffscreenGateway` に archive の routing 責務を残さない。
 - [ ] `OffscreenGateway` は query、getStatus、mutate、maintain の責務を維持する。
 - [ ] `ArchiveGateway` と `OffscreenGateway` は同じ `OffscreenTransport` を注入・共有する。
@@ -86,7 +86,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 
 ## 実装アプローチ
 
-1. 依存 PBI `pbi/2026-09-25-01-fix-transport-replay-safety.md` の完了と、同一 archive noRetry 契約の変更がないことを確認する。着手トリガーが成立するまで実装を開始しない。
+1. 依存 PBI `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` の完了と、同一 archive noRetry 契約の変更がないことを確認する。着手トリガーが成立するまで実装を開始しない。
 2. archive routing の owner が `ArchiveGateway` であることを示す構造テストを先に追加し、現状の `OffscreenGateway` に archive routing が残る状態を失敗として固定する。
 3. 既存の `src/background/sqlite/offscreenGateway.ts` から archive の routing 部分と所有境界を切り出し、`ArchiveGateway` を追加する。
 4. `ArchiveGateway` に既存と同じ `OffscreenTransport` を注入する。transport の生成、singleton、mutex、message serialization は変更しない。
@@ -120,7 +120,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 - 同一 `OffscreenTransport` の共有を維持し、transport ごとの mutex を分離しない。
 - wire payload と型を変えないため、archive dispatch の外部契約を変更しない。
 - 新しい class seam は archive routing の owner を深めるものとし、ファイル配置だけを変更して委譲境界を残さない。
-- 依存 PBI `pbi/2026-09-25-01-fix-transport-replay-safety.md` との同一ファイル・同一 archive noRetry 契約の競合を避けるため、本 PBI は依存 PBI を先に実施する。
+- 依存 PBI `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` との同一ファイル・同一 archive noRetry 契約の競合を避けるため、本 PBI は依存 PBI を先に実施する。
 
 ## 実装者向け注記
 
@@ -134,7 +134,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 - `src/background/OffscreenTransportBase.ts:11` に transport ごとの mutex がある。
 - `src/messaging/__tests__/archiveWireTable.test.ts`、`src/offscreen/__tests__/archiveWireDispatch.test.ts`、`src/background/__tests__/sqliteMaintainWireDispatch.test.ts`、`src/background/handlers/dashboardSqlite/__tests__/archiveHandler.test.ts` が既存テストである。
 - archive routing が `OffscreenGateway` 由来であることを固定する構造テストは存在しない。
-- `pbi/2026-09-25-01-fix-transport-replay-safety.md` が同一ファイル・同一 archive noRetry 契約で先行する。
+- `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` が同一ファイル・同一 archive noRetry 契約で先行する。
 - 既存 scope の記録では、Offscreen/Dashboard の hop は分割対象だが、archive gateway 案は acceptance criteria に含まれない（`dev-docs/archived/pbi/2026-09-03-07-refactor-sqlite-gateway-fidelity.md:14-17`）。
 
 ### 実装手順
@@ -172,7 +172,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 
 ## Definition of Done
 
-- [ ] 依存 PBI `pbi/2026-09-25-01-fix-transport-replay-safety.md` が完了し、同一 archive noRetry 契約が維持されている。
+- [ ] 依存 PBI `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` が完了し、同一 archive noRetry 契約が維持されている。
 - [ ] 着手トリガー待ちの条件と、実害未確認である backlog としての範囲が明記されている。
 - [ ] `ArchiveGateway` が14種の archive routing を所有し、`OffscreenGateway` に archive routing 責務が残っていない。
 - [ ] `OffscreenGateway` は query、getStatus、mutate、maintain の責務を維持している。
