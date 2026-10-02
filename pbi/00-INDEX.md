@@ -14,21 +14,6 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-02 実残8件ラウンド（leftover-1002） — ✅ 8件完了 🔧非機能追加
-
-CHANGELOG 6.9.32 の 15 items はすべて ALREADY-FIXED のため起票不要。実残 ~8 件を harvest し PBI 03–10 に起票。採点・バッチ順・送りの詳細は [2026-10-02-00-backlog-leftover-1002.md](2026-10-02-00-backlog-leftover-1002.md)。実行順は Wave1（03+04+05+06）→ Wave2（07+08+09+10）。03 と 07 は `statusPanel.ts` 共通のため直列（03 → 07）。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---:|---:|---|
-| 03 | [2026-10-02-03-fix-popup-listener-stacking.md](2026-10-02-03-fix-popup-listener-stacking.md) | fix | 28.80 | 0.5 | ✅ 完了。C6。Wave1。07 と直列（先） |
-| 04 | [2026-10-02-04-fix-markdown-export-revoke-timer.md](2026-10-02-04-fix-markdown-export-revoke-timer.md) | fix | 21.25 | 0.5 | ✅ 完了。C4。Wave1 |
-| 05 | [2026-10-02-05-refactor-import-guard-structural.md](2026-10-02-05-refactor-import-guard-structural.md) | refactor | 19.20 | 0.5 | ✅ 完了。C1。Wave1 |
-| 06 | [2026-10-02-06-test-concurrent-export-isolation.md](2026-10-02-06-test-concurrent-export-isolation.md) | test | 8.10 | 0.5 | ✅ 完了。C3。Wave1（テストのみ・並列安全） |
-| 07 | [2026-10-02-07-fix-error-copy-locales.md](2026-10-02-07-fix-error-copy-locales.md) | fix | 13.30 | 1 | ✅ 完了。C8。Wave2（03 の後に直列実施） |
-| 08 | [2026-10-02-08-fix-domain-filter-defaults.md](2026-10-02-08-fix-domain-filter-defaults.md) | fix | 6.67 | 1 | ✅ 完了。C7。Wave2（裁定 'blacklist'） |
-| 09 | [2026-10-02-09-fix-collector-throw-semantics.md](2026-10-02-09-fix-collector-throw-semantics.md) | fix | 3.20 | 1 | ✅ 完了。C2。Wave2（裁定 RESTORE propagate） |
-| 10 | [2026-10-02-10-chore-type-test-gate.md](2026-10-02-10-chore-type-test-gate.md) | chore | 2.00 | 1 | ✅ 完了。C5。Wave2（方式 b baseline pin 496） |
-
 ### 2026-10-01 大局的コード改善ラウンド（holistic-code-improvement） — ✅ 21件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-review の大局的レビュー（3 領域の地図 32 候補 → TOP 5 テーマ）を 19 個の独立実装単位に分解。詳細は [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md)（live 台帳として残置）。実行順は依存優先。積み残し 6 テーマは次ラウンド予約。
@@ -275,6 +260,19 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-02 実残8件ラウンド（leftover-1002）アーカイブ — ✅ 8件完了（03-10 アーカイブ済み）
+
+CHANGELOG 6.9.32 の 15 items はすべて ALREADY-FIXED のため起票不要。実残 ~8 件を harvest し PBI 03–10 に起票。採点・バッチ順・送りの詳細は [2026-10-02-00-backlog-leftover-1002.md](2026-10-02-00-backlog-leftover-1002.md)（live 台帳として残置）。実行順は Wave1（03+04+05+06）→ Wave2（07+08+09+10）。03 と 07 は `statusPanel.ts` 共通のため直列（03 → 07）。
+
+- [2026-10-02-03-fix-popup-listener-stacking.md](../dev-docs/archived/pbi/2026-10-02-03-fix-popup-listener-stacking.md)（✅ 完了 — `2d96d873`。fix。statusPanel のリスナー多重登録を wireOnce へ統一。RICE 28.80・0.5 SP）
+- [2026-10-02-04-fix-markdown-export-revoke-timer.md](../dev-docs/archived/pbi/2026-10-02-04-fix-markdown-export-revoke-timer.md)（✅ 完了 — `c1e210fd`。fix。markdown export の revoke を固定タイマーから完了シグナル駆動へ置換。RICE 21.25・0.5 SP）
+- [2026-10-02-05-refactor-import-guard-structural.md](../dev-docs/archived/pbi/2026-10-02-05-refactor-import-guard-structural.md)（✅ 完了 — `1559f0e2`。refactor。import 判定を専用 narrow ガードへ構造化。RICE 19.20・0.5 SP）
+- [2026-10-02-06-test-concurrent-export-isolation.md](../dev-docs/archived/pbi/2026-10-02-06-test-concurrent-export-isolation.md)（✅ 完了 — `d93e9f9a`。test。並行 export の分離と archive の相互排除をテストで固定。RICE 8.10・0.5 SP）
+- [2026-10-02-07-fix-error-copy-locales.md](../dev-docs/archived/pbi/2026-10-02-07-fix-error-copy-locales.md)（✅ 完了 — `d2c8f27e`。fix。purge 失敗コピーと Invalid URL 表示を日英ロケールへ移行。RICE 13.30・1 SP）
+- [2026-10-02-08-fix-domain-filter-defaults.md](../dev-docs/archived/pbi/2026-10-02-08-fix-domain-filter-defaults.md)（✅ 完了 — `caa8b68d`。fix。既定値の三者不一致を blacklist へ裁定し統一。RICE 6.67・1 SP）
+- [2026-10-02-09-fix-collector-throw-semantics.md](../dev-docs/archived/pbi/2026-10-02-09-fix-collector-throw-semantics.md)（✅ 完了 — `b98a871b`。fix。collector の throw 意味論を propagate へ復元。RICE 3.20・1 SP）
+- [2026-10-02-10-chore-type-test-gate.md](../dev-docs/archived/pbi/2026-10-02-10-chore-type-test-gate.md)（✅ 完了 — `08fbe3fd`。chore。テスト型エラーの baseline ゲートを復活（pin 496）。RICE 2.00・1 SP）
 
 ### 2026-10-01 大局的コード改善ラウンド + 2026-10-02 follow-up アーカイブ — ✅ 23件完了（NN08-28 + follow-up 2件）
 
