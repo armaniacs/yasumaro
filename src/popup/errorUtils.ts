@@ -36,11 +36,6 @@ export const ErrorMessages = {
   get SUCCESS(): string { return getMsgWithCache('success'); },
 
   /**
-   * キャンセルメッセージ
-   */
-  get CANCELLED(): string { return getMsgWithCache('cancelled'); },
-
-  /**
    * 不明なエラー
    */
   get UNKNOWN_ERROR(): string { return getMsgWithCache('unknownError'); }
@@ -281,41 +276,6 @@ function createForceRecordButton(parentElement: HTMLElement, onClick: () => void
   };
 
   parentElement.appendChild(forceBtn);
-}
-
-interface ErrorHandlers {
-  onConnectionError?: (error: unknown) => void;
-  onDomainBlocked?: (error: unknown) => void;
-  onGeneralError?: (error: unknown) => void;
-}
-
-/**
- * エラーハンドリング共通処理
- * @param {unknown} error - エラーオブジェクト
- * @param {Object} handlers - ハンドラー設定
- * @param {Function} handlers.onConnectionError - コネクションエラーハンドラー
- * @param {Function} handlers.onDomainBlocked - ドメインブロックエラーハンドラー
- * @param {Function} handlers.onGeneralError - 一般エラーハンドラー
- */
-export function handleError(error: unknown, handlers: ErrorHandlers): void {
-  const type = getErrorType(error);
-
-  switch (type) {
-    case ErrorType.CONNECTION:
-      if (handlers.onConnectionError) {
-        handlers.onConnectionError(error);
-      }
-      break;
-    case ErrorType.DOMAIN_BLOCKED:
-      if (handlers.onDomainBlocked) {
-        handlers.onDomainBlocked(error);
-      }
-      break;
-    default:
-      if (handlers.onGeneralError) {
-        handlers.onGeneralError(error);
-      }
-  }
 }
 
 /**

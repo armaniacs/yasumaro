@@ -1,7 +1,6 @@
 // Auto-close functionality after successful recording
 
 import { getScreenState } from './screenState.js';
-import { getMessage } from '../utils/i18n.js';
 
 /**
  * 【定数定義群】: タイマー関連の各種設定値
@@ -9,8 +8,6 @@ import { getMessage } from '../utils/i18n.js';
  * 【パフォーマンス】: 適切な遅延時間と更新間隔により、ユーザー体験を最適化
  */
 const DEFAULT_AUTO_CLOSE_DELAY_MS = 2000;
-const COUNTDOWN_UPDATE_INTERVAL_MS = 1000;
-const COUNTDOWN_START_VALUE = 3;
 
 /**
  * 【動的import使用に関する説名】
@@ -29,7 +26,6 @@ const COUNTDOWN_START_VALUE = 3;
  * 【テスト容易性】: 外部からclearAutoCloseTimer経由でクリア可能
  */
 let autoCloseTimerId: NodeJS.Timeout | number | null = null;
-let countdownIntervalId: NodeJS.Timeout | number | null = null;
 
 /**
  * 【機能概要】: 自動クローズタイマーを起動
@@ -76,13 +72,11 @@ export function startAutoCloseTimer(delayMs: number = DEFAULT_AUTO_CLOSE_DELAY_M
  * 【機能概要】: 自動クローズタイマーをキャンセル
  * 【実装方針】:
  *   - setTimeoutで設定されたタイマーをクリア
- *   - setIntervalで設定されたカウントダウンをクリア
  * 【設計上の改善】:
  *   - 明確な条件分岐により、nullチェックを自明にする
  *   - IDをnullに戻すことで、次回のclearAutoCloseTimer呼び出しでの不要な処理を回避
  * 【テスト対応】:
  *   - 「clearAutoCloseTimerでタイマーがキャンセルされる」
- *   - 「カウントダウン中に設定画面へ遷移するとタイマーがキャンセルされる」
  * 🟢 要求定義（tdd-requirements.md 166-167行目、連続記録時のタイマー管理）
  */
 export function clearAutoCloseTimer(): void {
@@ -91,41 +85,4 @@ export function clearAutoCloseTimer(): void {
     clearTimeout(autoCloseTimerId);
     autoCloseTimerId = null; // 【状態リセット】: タイマーIDを初期値に戻す
   }
-
-  // 【カウントダウンクリア】: setIntervalで設定されたカウントダウンを解除
-  if (countdownIntervalId !== null) {
-    clearInterval(countdownIntervalId);
-    countdownIntervalId = null; // 【状態リセット】: インターバルIDを初期値に戻す
-  }
-}
-
-/**
- * Show countdown display
- * @param {HTMLElement} statusDiv Status display DOM element
- */
-export function showCountdown(statusDiv: HTMLElement): void {
-  // Initialize countdown value to start value
-  let count = COUNTDOWN_START_VALUE;
-
-  // Show initial countdown value
-  statusDiv.textContent = getMessage('countdownNumber', { count: count.toString() });
-
-  // Start countdown update at 1000ms intervals
-  countdownIntervalId = setInterval(() => {
-    count--;
-
-    if (count > 0) {
-      // Still counting down, show number
-      statusDiv.textContent = getMessage('countdownNumber', { count: count.toString() });
-    } else {
-      // Countdown complete message
-      statusDiv.textContent = getMessage('autoClosing');
-
-      // End interval to prevent memory leaks
-      if (countdownIntervalId !== null) {
-        clearInterval(countdownIntervalId as number);
-        countdownIntervalId = null; // Reset interval ID to initial value
-      }
-    }
-  }, COUNTDOWN_UPDATE_INTERVAL_MS);
 }

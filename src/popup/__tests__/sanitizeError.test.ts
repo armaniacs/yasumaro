@@ -363,7 +363,6 @@ describe('getUserErrorMessage - パフォーマンス検証', () => {
       expect(ErrorMessages.DOMAIN_BLOCKED).toBe('Domain is blocked');
       expect(ErrorMessages.UNKNOWN_ERROR).toBe('Unknown error occurred');
       expect(ErrorMessages.SUCCESS).toBe('success');
-      expect(ErrorMessages.CANCELLED).toBe('cancelled');
     });
   });
 });

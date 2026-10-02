@@ -25,6 +25,9 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   archiveSave: vi.fn(),
   archiveClose: vi.fn(),
   archiveStatus: vi.fn(),
+  // The shared unwrap guard: without it on the mock every result read through
+  // it throws "No ... export is defined on the mock".
+  isServiceError: (result: object): boolean => 'error' in result,
 }));
 
 import { createArchivePanel } from '../archivePanel.js';

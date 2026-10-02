@@ -2,9 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getCurrentTab,
   getActiveTabUrl,
-  getActiveTabDomain,
   getDomainForUrl,
-  requireActiveTabUrl,
 } from '../tabUtils.js';
 
 const mockQuery = vi.fn();
@@ -77,34 +75,5 @@ describe('getDomainForUrl', () => {
 
   it('returns null for unparseable input instead of throwing', () => {
     expect(getDomainForUrl('not a url')).toBeNull();
-  });
-});
-
-describe('getActiveTabDomain', () => {
-  it('returns the normalized domain', async () => {
-    mockQuery.mockResolvedValue([{ id: 1, url: 'https://www.example.com/page' }]);
-    await expect(getActiveTabDomain()).resolves.toBe('example.com');
-  });
-
-  it('returns null when there is no tab url', async () => {
-    mockQuery.mockResolvedValue([]);
-    await expect(getActiveTabDomain()).resolves.toBeNull();
-  });
-
-  it('returns null for an unparseable tab url instead of throwing', async () => {
-    mockQuery.mockResolvedValue([{ id: 1, url: 'not a url' }]);
-    await expect(getActiveTabDomain()).resolves.toBeNull();
-  });
-});
-
-describe('requireActiveTabUrl', () => {
-  it('resolves the url when present', async () => {
-    mockQuery.mockResolvedValue([{ id: 1, url: 'https://example.com/' }]);
-    await expect(requireActiveTabUrl()).resolves.toBe('https://example.com/');
-  });
-
-  it('throws when there is no tab url', async () => {
-    mockQuery.mockResolvedValue([]);
-    await expect(requireActiveTabUrl()).rejects.toThrow('No active tab URL');
   });
 });

@@ -14,7 +14,6 @@ import {
   getUserErrorMessage,
   showError,
   showSuccess,
-  handleError,
   escapeHtml,
   formatDuration,
   formatSuccessMessage
@@ -25,7 +24,6 @@ const MOCK_CONNECTION_ERROR = 'Please refresh the page and try again';
 const MOCK_DOMAIN_BLOCKED_DISPLAY = 'This domain is not allowed to be recorded. Do you want to record it anyway?';
 const MOCK_ERROR_PREFIX = '✗ Error:';
 const MOCK_SUCCESS = '✓ Saved to Obsidian';
-const MOCK_CANCELLED = 'Cancelled';
 
 describe('ErrorMessages', () => {
   test('defines the required messages', () => {
@@ -33,7 +31,6 @@ describe('ErrorMessages', () => {
     expect(ErrorMessages.DOMAIN_BLOCKED).toBe(MOCK_DOMAIN_BLOCKED_DISPLAY);
     expect(ErrorMessages.ERROR_PREFIX).toBe(MOCK_ERROR_PREFIX);
     expect(ErrorMessages.SUCCESS).toBe(MOCK_SUCCESS);
-    expect(ErrorMessages.CANCELLED).toBe(MOCK_CANCELLED);
   });
 });
 
@@ -252,47 +249,6 @@ describe('showSuccess', () => {
   });
 });
 
-describe('handleError', () => {
-  test('invokes the connection error handler', () => {
-    const error = new Error('Receiving end does not exist');
-    const handlers = {
-      onConnectionError: vi.fn()
-    };
-
-    handleError(error, handlers);
-
-    expect(handlers.onConnectionError).toHaveBeenCalledWith(error);
-  });
-
-  test('invokes the domain-blocked error handler', () => {
-    const error = new Error(DOMAIN_BLOCKED_ERROR_CODE);
-    const handlers = {
-      onDomainBlocked: vi.fn()
-    };
-
-    handleError(error, handlers);
-
-    expect(handlers.onDomainBlocked).toHaveBeenCalledWith(error);
-  });
-
-  test('invokes the general error handler', () => {
-    const error = new Error('Some other error');
-    const handlers = {
-      onGeneralError: vi.fn()
-    };
-
-    handleError(error, handlers);
-
-    expect(handlers.onGeneralError).toHaveBeenCalledWith(error);
-  });
-
-  test('does nothing when no matching handler exists', () => {
-    const error = new Error('Some error');
-    const handlers = {};
-
-    expect(() => handleError(error, handlers)).not.toThrow();
-  });
-});
 describe('escapeHtml - XSS対策テスト（問題点3）', () => {
   describe('HTMLエンティティのエスケープ', () => {
     it('escapes ampersands', () => {

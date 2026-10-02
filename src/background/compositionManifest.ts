@@ -196,14 +196,12 @@ export const compositionManifest: readonly CompositionEntry[] = [
     // session-timeout. The refs (reviewSummaryGeneratorRef etc.) are set by
     // service-worker.ts after createBackgroundServices resolves.
     factory: (c) => {
-      const sessionAlarmService = c.resolve<SessionAlarmService>('sessionAlarmService');
       return createAlarmRegistry({
         sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
         recordingPipeline: c.resolve<RecordingOrchestrator>('recordingPipeline'),
         getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
         retryPendingChromeStorageWrite,
         settingsReader: c.resolve<SettingsRepository>('settingsRepository'),
-        sessionTimeoutInstall: async () => { await sessionAlarmService.startTimeoutChecker(); },
       }) as AlarmRegistry;
     },
   },

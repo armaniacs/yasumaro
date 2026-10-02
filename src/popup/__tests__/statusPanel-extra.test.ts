@@ -45,13 +45,6 @@ vi.mock('../tabUtils.js', async (importOriginal) => {
     ...actual,
     getCurrentTab: mockGetCurrentTab,
     getActiveTabUrl: async () => (await mockGetCurrentTab())?.url ?? null,
-    getActiveTabDomain: async () =>
-      actual.getDomainForUrl((await mockGetCurrentTab())?.url ?? null),
-    requireActiveTabUrl: async () => {
-      const url = (await mockGetCurrentTab())?.url ?? null;
-      if (!url) throw new Error('No active tab URL');
-      return url;
-    },
   };
 });
 

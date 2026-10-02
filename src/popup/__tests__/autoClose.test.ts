@@ -33,14 +33,12 @@ vi.mock('../../utils/i18n.js', () => {
 
 import {
   getScreenState,
-  setScreenState,
-  clearScreenState
+  setScreenState
 } from '../screenState.js';
 
 import {
   startAutoCloseTimer,
-  clearAutoCloseTimer,
-  showCountdown
+  clearAutoCloseTimer
 } from '../autoClose.js';
 
 describe('画面状態追跡 (screenState.js)', () => {
@@ -50,7 +48,7 @@ describe('画面状態追跡 (screenState.js)', () => {
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前に画面状態をクリア
     // 【環境初期化】: 前のテストの影響を受けないよう状態をリセット
-    clearScreenState();
+    setScreenState('main');
   });
 
   test('getScreenState returns main as the initial state', () => {
@@ -77,28 +75,11 @@ describe('画面状態追跡 (screenState.js)', () => {
     // 【処理内容】: 画面状態を'settings'に設定
     setScreenState('settings');
 
-    // 【結果検証】: 画面状態が'settings'であること
+// 【結果検証】: 画面状態が'settings'であること
     expect(getScreenState()).toBe('settings'); // 【確認内容】: 設定画面に切り替わったこと
   });
-
-  test('returns to the initial state via clearScreenState after setScreenState', () => {
-    // 【テスト目的】: 画面状態のクリア機能の確認
-    // 【テスト内容】: 画面を設定に変更した後、クリアすると'main'に戻る
-    // 【期待される動作】: クリア後に画面状態が'main'に戻ること
-    // 🟢 要件定義に基づき初期状態を'main'とするアプローチ
-
-    // 【テストデータ準備】: 画面を設定画面に設定
-    setScreenState('settings');
-    expect(getScreenState()).toBe('settings'); // 【前提条件確認】: 設定画面であること
-
-    // 【実際の処理実行】: 画面状態をクリア
-    // 【処理内容】: 画面状態を初期値'main'に戻す
-    clearScreenState();
-
-    // 【結果検証】: 初期状態'main'に戻っていること
-    expect(getScreenState()).toBe('main'); // 【確認内容】: 初期状態に戻ったこと
-  });
 });
+
 
 describe('自動クローズタイマー (autoClose.js)', () => {
   // 【テストグループの目的】: 記録成功後の自動クローズタイマー管理を検証
@@ -116,7 +97,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
       </div>
       <div id="settingsScreen" style="display: none;"></div>
     `;
-    clearScreenState();
+    setScreenState('main');
 
     // 【モック設定】: chrome APIをモック
     global.chrome = {
@@ -161,68 +142,6 @@ describe('自動クローズタイマー (autoClose.js)', () => {
 
     // 【結果検証】: window.closeが1回呼ばれたこと
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: 2000ms後に1回呼ばれたこと
-  });
-
-  test('updates the countdown display correctly', () => {
-    // 【テスト目的】: カウントダウン表示の確認
-    // 【テスト内容】: showCountdownを呼び出すとステータスエリアにカウントダウンが表示される
-    // 【期待される動作】: ステータスエリアのtextContentが「3...2...自動閉じる」に更新される
-    // 🟢 要件定義（tdd-testcases.md TC-002、カウントダウン表示）
-
-    const statusDiv = document.getElementById('mainStatus')!;
-
-    // 【実際の処理実行】: カウントダウン表示を開始
-    // 【処理内容】: 1000ms間隔でカウントダウンを更新
-    showCountdown(statusDiv);
-
-    // 【初期状態確認】: 初期値が「3...」であること
-    expect(statusDiv.textContent).toContain('3...'); // 【確認内容】: 初期表示が3であること
-
-    // 【タイマー進行】: 1秒進める
-    vi.advanceTimersByTime(1000);
-    expect(statusDiv.textContent).toContain('2...'); // 【確認内容】: 2に更新されたこと
-
-    // 【タイマー進行】: もう1秒進める
-    vi.advanceTimersByTime(1000);
-    expect(statusDiv.textContent).toContain('1...'); // 【確認内容】: 1に更新されたこと
-  });
-
-  test('shows the auto-close message when the countdown completes', () => {
-    const statusDiv = document.getElementById('mainStatus')!;
-    showCountdown(statusDiv);
-
-    // 3→2→1→完了まで進める
-    vi.advanceTimersByTime(1000); // 2
-    vi.advanceTimersByTime(1000); // 1
-    vi.advanceTimersByTime(1000); // 0 → autoClosing
-
-    expect(statusDiv.textContent).toBe('自動閉じる...');
-  });
-
-  test('clears the interval after the countdown completes', () => {
-    const statusDiv = document.getElementById('mainStatus')!;
-    showCountdown(statusDiv);
-
-    vi.advanceTimersByTime(3000); // reach 0
-    expect(statusDiv.textContent).toBe('自動閉じる...');
-
-    // さらに進めてもテキストが変わらない（intervalが停止している）
-    vi.advanceTimersByTime(2000);
-    expect(statusDiv.textContent).toBe('自動閉じる...');
-  });
-
-  test('cancels via clearAutoCloseTimer during the countdown', () => {
-    const statusDiv = document.getElementById('mainStatus')!;
-    showCountdown(statusDiv);
-
-    vi.advanceTimersByTime(1000); // 2
-    expect(statusDiv.textContent).toContain('2...');
-
-    clearAutoCloseTimer();
-
-    // intervalがクリアされたので、進一步しても変化しない
-    vi.advanceTimersByTime(2000);
-    expect(statusDiv.textContent).toContain('2...');
   });
 
   test('does not start the auto-close timer on the settings screen', () => {
@@ -280,7 +199,7 @@ describe('連続記録時のタイマー管理', () => {
         <div id="mainStatus"></div>
       </div>
     `;
-    clearScreenState();
+    setScreenState('main');
 
     // 【モック設定】: chrome APIをモック
     global.chrome = {
@@ -337,11 +256,13 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
     vi.useFakeTimers();
     document.body.innerHTML = `
-      <div id="mainScreen" style="display: block;">
+<div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>
       </div>
       <div id="settingsScreen" style="display: none;"></div>
     `;
+
+    setScreenState('main');
 
     // 【モック設定】: chrome APIをモック
     global.chrome = {
@@ -380,8 +301,8 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     const navigation = await import('../navigation.js');
 
     // 【環境初期化】: 画面状態を初期化
-    const { clearScreenState: clear, setScreenState } = await import('../screenState.js');
-    clear();
+    const { setScreenState } = await import('../screenState.js');
+    setScreenState('main');
 
     // 【画面表示遷移】: showSettingsScreen() を呼び出す
     navigation.showSettingsScreen();

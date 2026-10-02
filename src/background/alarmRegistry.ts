@@ -36,10 +36,9 @@ export interface AlarmHandlerDeps {
   recordingPipeline: RecordingOrchestrator;
   getOfflineNetworkQueue: () => Promise<OfflineNetworkQueue>;
   retryPendingChromeStorageWrite: (write: never) => Promise<boolean>;
-  /** PBI 2026-09-15-15: injected for review-summary and session-timeout jobs. */
+  /** Injected for the review-summary job. */
   reviewSummaryGenerator?: ReviewSummaryGenerator;
   settingsReader?: SettingsReader;
-  sessionTimeoutInstall?: () => Promise<void>;
 }
 
 export interface AlarmJobSpec {

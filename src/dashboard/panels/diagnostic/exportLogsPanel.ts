@@ -1,9 +1,9 @@
 import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, downloadBlob } from '../../exportLogsService.js';
+import { runPanelAction, unwrapServiceResult } from '../panelAction.js';
 import { type PanelLifecycle } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
 import { toTsvString } from '../../utils/auditLogTsv.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
-import { errorMessage } from '../../../utils/errorUtils.js';
 
 export function createExportLogsPanel(): PanelLifecycle {
   return {
@@ -18,52 +18,56 @@ export function createExportLogsPanel(): PanelLifecycle {
 
       const statusTarget = statusEl ?? 'export-status';
 
-      jsonBtn?.addEventListener('click', async () => {
-        try {
-          showStatus(statusTarget, 'Exporting JSON…', 'success');
-          const blob = await exportJson();
-          downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.json`);
-          showStatus(statusTarget, 'JSON export completed.', 'success');
-        } catch (err) {
-          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
-        }
+      const exportToday = (ext: string): string => `yasumaro_export_${new Date().toISOString().split('T')[0]}.${ext}`;
+
+      jsonBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: [jsonBtn],
+          onStart: () => showStatus(statusTarget, 'Exporting JSON…', 'success'),
+          run: async () => downloadBlob(await exportJson(), exportToday('json')),
+          onSuccess: () => showStatus(statusTarget, 'JSON export completed.', 'success'),
+          onError: (message) => showStatus(statusTarget, `Export failed: ${message}`, 'error'),
+        });
       });
 
-      mdBtn?.addEventListener('click', async () => {
-        try {
-          showStatus(statusTarget, 'Exporting Markdown…', 'success');
-          const md = await exportMarkdown();
-          downloadText(md, `yasumaro_export_${new Date().toISOString().split('T')[0]}.md`, 'text/markdown');
-          showStatus(statusTarget, 'Markdown export completed.', 'success');
-        } catch (err) {
-          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
-        }
+      mdBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: [mdBtn],
+          onStart: () => showStatus(statusTarget, 'Exporting Markdown…', 'success'),
+          run: async () => downloadText(await exportMarkdown(), exportToday('md'), 'text/markdown'),
+          onSuccess: () => showStatus(statusTarget, 'Markdown export completed.', 'success'),
+          onError: (message) => showStatus(statusTarget, `Export failed: ${message}`, 'error'),
+        });
       });
 
-      csvBtn?.addEventListener('click', async () => {
-        try {
-          showStatus(statusTarget, 'Exporting CSV…', 'success');
-          const blob = await exportCsv();
-          downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.csv`);
-          showStatus(statusTarget, 'CSV export completed.', 'success');
-        } catch (err) {
-          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
-        }
+      csvBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: [csvBtn],
+          onStart: () => showStatus(statusTarget, 'Exporting CSV…', 'success'),
+          run: async () => downloadBlob(await exportCsv(), exportToday('csv')),
+          onSuccess: () => showStatus(statusTarget, 'CSV export completed.', 'success'),
+          onError: (message) => showStatus(statusTarget, `Export failed: ${message}`, 'error'),
+        });
       });
 
-      dbBtn?.addEventListener('click', async () => {
-        try {
-          showStatus(statusTarget, 'Exporting database…', 'success');
-          const blob = await exportDb();
-          if (blob) {
-            downloadBlob(blob, `yasumaro_export_${new Date().toISOString().split('T')[0]}.db`);
-            showStatus(statusTarget, 'Database export completed.', 'success');
-          } else {
-            showStatus(statusTarget, 'Binary export requires OPFS storage. Use JSON export instead.', 'error');
-          }
-        } catch (err) {
-          showStatus(statusTarget, `Export failed: ${errorMessage(err)}`, 'error');
-        }
+      dbBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: [dbBtn],
+          onStart: () => showStatus(statusTarget, 'Exporting database…', 'success'),
+          run: async () => {
+            const blob = await exportDb();
+            if (blob) downloadBlob(blob, exportToday('db'));
+            return blob;
+          },
+          onSuccess: (blob) => {
+            showStatus(
+              statusTarget,
+              blob ? 'Database export completed.' : 'Binary export requires OPFS storage. Use JSON export instead.',
+              blob ? 'success' : 'error',
+            );
+          },
+          onError: (message) => showStatus(statusTarget, `Export failed: ${message}`, 'error'),
+        });
       });
 
       // Audit Log TSV Export
@@ -71,42 +75,42 @@ export function createExportLogsPanel(): PanelLifecycle {
       const auditStatusEl = container.querySelector('#auditLogStatus') as HTMLElement | null;
 
       if (auditTsvBtn) {
-        auditTsvBtn.addEventListener('click', async () => {
-          auditTsvBtn.disabled = true;
-          if (auditStatusEl) auditStatusEl.textContent = '取得中...';
-          try {
-            const result = await queryAuditLogs({ limit: 100000, offset: 0 });
+        auditTsvBtn.addEventListener('click', () => {
+          void runPanelAction({
+            buttons: [auditTsvBtn],
+            onStart: () => {
+              if (auditStatusEl) auditStatusEl.textContent = '取得中...';
+            },
+            run: async () => unwrapServiceResult(await queryAuditLogs({ limit: 100000, offset: 0 })),
+            onSuccess: ({ rows, total }) => {
+              if (rows.length === 0) {
+                if (auditStatusEl) auditStatusEl.textContent = 'データがありません';
+                return;
+              }
+              // PBI 2026-09-12-17: a backend audit cap (e.g. OPFS 1000) can make
+              // `rows` shorter than `total` — reporting success while silently
+              // distributing a partial log is worse than stating the limit
+              // (mirrors exportLogsService.queryAllData's guard).
+              if (total > rows.length) {
+                if (auditStatusEl) {
+                  auditStatusEl.textContent = `監査ログは ${rows.length} / ${total} 件のみ取得できました（バックエンドの取得上限）。.db エクスポートをご利用ください。`;
+                }
+                return;
+              }
+              const tsv = toTsvString(rows);
+              const filename = `yasumaro-audit-log-${new Date().toISOString().split('T')[0]}.tsv`;
+              downloadText(tsv, filename, 'text/tab-separated-values');
+              if (auditStatusEl) auditStatusEl.textContent = `${rows.length} 件をダウンロードしました`;
+            },
             // Distinguish "could not read" from "nothing stored": reporting a
             // failed database read as an empty log tells the user their audit
             // history is empty when it may not be.
-            if ('error' in result) {
-              if (auditStatusEl) auditStatusEl.textContent = `エラー: ${result.error}`;
-              return;
-            }
-            const rows = result.data.rows;
-            if (rows.length === 0) {
-              if (auditStatusEl) auditStatusEl.textContent = 'データがありません';
-              return;
-            }
-            // PBI 2026-09-12-17: a backend audit cap (e.g. OPFS 1000) can make
-            // `rows` shorter than `total` — reporting success while silently
-            // distributing a partial log is worse than stating the limit
-            // (mirrors exportLogsService.queryAllData's guard).
-            if (result.data.total > rows.length) {
+            onError: (message, kind, cause) => {
               if (auditStatusEl) {
-                auditStatusEl.textContent = `監査ログは ${rows.length} / ${result.data.total} 件のみ取得できました（バックエンドの取得上限）。.db エクスポートをご利用ください。`;
+                auditStatusEl.textContent = `エラー: ${kind === 'thrown' ? String(cause) : message}`;
               }
-              return;
-            }
-            const tsv = toTsvString(rows);
-            const filename = `yasumaro-audit-log-${new Date().toISOString().split('T')[0]}.tsv`;
-            downloadText(tsv, filename, 'text/tab-separated-values');
-            if (auditStatusEl) auditStatusEl.textContent = `${rows.length} 件をダウンロードしました`;
-          } catch (err) {
-            if (auditStatusEl) auditStatusEl.textContent = `エラー: ${String(err)}`;
-          } finally {
-            auditTsvBtn.disabled = false;
-          }
+            },
+          });
         });
       }
     },

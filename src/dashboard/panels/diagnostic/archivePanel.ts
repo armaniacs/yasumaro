@@ -9,10 +9,11 @@
  */
 
 import { MAX_ARCHIVE_EXPORT_CHUNK_BYTES } from '../../../utils/limits.js';
-import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus } from '../../dashboardSqliteService.js';
+import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, archivePrepareIncoming, archiveRestorePreview, archiveRestore, archiveDeleteByStaging, archiveOpen, archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus, isServiceError } from '../../dashboardSqliteService.js';
 
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { downloadBlob } from '../../exportLogsService.js';
+import { abortPanelAction, runPanelAction, unwrapServiceResult } from '../panelAction.js';
 import { type PanelLifecycle } from '../types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -53,8 +54,7 @@ export function createArchivePanel(): PanelLifecycle {
       let lastFileName = '';
 
       const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn, purgeBtn, sessionQueryBtn, sessionSaveBtn, sessionCloseBtn];
-      const setBusy = (busy: boolean): void => {
-        for (const el of controls) if (el) el.disabled = busy;
+      const setAriaBusy = (busy: boolean): void => {
         if (statusEl) statusEl.setAttribute('aria-busy', String(busy));
       };
 
@@ -78,133 +78,126 @@ export function createArchivePanel(): PanelLifecycle {
         const parts: BlobPart[] = [];
         let offset = 0;
         for (;;) {
-          const result = await archiveExportChunk(lastStagingName, offset, EXPORT_CHUNK_BYTES);
-          if ('error' in result) throw new Error(result.error);
+          const chunk = unwrapServiceResult(await archiveExportChunk(lastStagingName, offset, EXPORT_CHUNK_BYTES));
           // Uint8Array.from avoids the spread-operator stack overflow on 7MB chunks
-          const bytes = Uint8Array.from(result.data.chunk);
+          const bytes = Uint8Array.from(chunk.chunk);
           parts.push(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
-          offset = result.data.nextOffset;
-          if (result.data.done) break;
+          offset = chunk.nextOffset;
+          if (chunk.done) break;
         }
         downloadBlob(new Blob(parts, { type: 'application/x-sqlite3' }), lastFileName);
       };
 
-      previewBtn?.addEventListener('click', async () => {
-        if (!previewBtn) return;
-        try {
-          setBusy(true);
-          showStatus(statusTarget(statusEl), localized('archiveStatusWorking'), 'success');
-          const cutoffDate = dateInput?.value ?? '';
-          const cutoffMs = cutoffMsFromInput();
-          const result = await archivePreview(cutoffDate, cutoffMs, includeDeletedInput?.checked === true);
-          if ('error' in result) throw new Error(result.error);
-          const p = result.data;
-          if (summaryEl) {
-            summaryEl.hidden = false;
-            summaryEl.textContent = localized('archivePreviewSummary', {
-              total: p.total, starred: p.starred, deleted: p.deleted,
+      previewBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          onStart: () => showStatus(statusTarget(statusEl), localized('archiveStatusWorking'), 'success'),
+          run: async () => {
+            const cutoffDate = dateInput?.value ?? '';
+            const cutoffMs = cutoffMsFromInput();
+            return unwrapServiceResult(await archivePreview(cutoffDate, cutoffMs, includeDeletedInput?.checked === true));
+          },
+          onSuccess: (p) => {
+            if (summaryEl) {
+              summaryEl.hidden = false;
+              summaryEl.textContent = localized('archivePreviewSummary', {
+                total: p.total, starred: p.starred, deleted: p.deleted,
+              });
+            }
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archivePreviewFailed')}: ${message}`, 'error'),
+        });
+      });
+
+      createBtn?.addEventListener('click', () => {
+        const cutoffDate = dateInput?.value ?? '';
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          onStart: () => showStatus(statusTarget(statusEl), localized('archiveStatusWorking'), 'success'),
+          run: async () => {
+            const cutoffMs = cutoffMsFromInput();
+            return unwrapServiceResult(await archiveCreate({
+              cutoffDate,
+              cutoffMs,
+              includeDeleted: includeDeletedInput?.checked === true,
+              yasumaroVersion: chrome.runtime.getManifest().version,
+            }));
+          },
+          onSuccess: (data) => {
+            lastStagingName = data.stagingName;
+            lastFileName = `yasumaro_archive_${cutoffDate}.db`;
+            if (downloadBtn) downloadBtn.hidden = false;
+            if (cleanupBtn) cleanupBtn.hidden = false;
+            if (purgeBtn) purgeBtn.hidden = false;
+            if (summaryEl) {
+              summaryEl.hidden = false;
+              summaryEl.textContent = localized('archiveCreatedSummary', { count: data.recordCount });
+            }
+            showStatus(statusTarget(statusEl), localized('archiveCreatedDownloadHint'), 'success');
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archiveCreateFailed')}: ${message}`, 'error'),
+        });
+      });
+
+      downloadBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: downloadStaging,
+          onSuccess: () => showStatus(statusTarget(statusEl), localized('archiveDownloadDone'), 'success'),
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archiveDownloadFailed')}: ${message}`, 'error'),
+        });
+      });
+
+      purgeBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: async () => {
+            if (!lastStagingName) throw new Error(localized('archiveDateRequired'));
+            const cutoffDate = dateInput?.value ?? '';
+            const confirmed = await showConfirmDialog({
+              title: localized('archivePurgeConfirmTitle'),
+              message: localized('archivePurgeConfirmMessage', {
+                date: cutoffDate,
+                legacy: localized('archiveLegacyDisclosure'),
+              }),
+              confirmLabel: localized('archivePurgeConfirmOk'),
+              dangerous: true,
             });
-          }
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archivePreviewFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
+            if (!confirmed) return abortPanelAction();
+            return unwrapServiceResult(await archiveDeleteByStaging(lastStagingName));
+          },
+          onSuccess: (data) => {
+            lastStagingName = null;
+            if (downloadBtn) downloadBtn.hidden = true;
+            if (cleanupBtn) cleanupBtn.hidden = true;
+            if (purgeBtn) purgeBtn.hidden = true;
+            const done = localized('archivePurgeDone', {
+              deleted: data.deleted,
+              remaining: data.remaining,
+            });
+            showStatus(statusTarget(statusEl), data.vacuumOk ? done : `${done} ${localized('archiveVacuumNote')}`, data.vacuumOk ? 'success' : 'error');
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archivePurgeFailed')}: ${message}`, 'error'),
+        });
       });
 
-      createBtn?.addEventListener('click', async () => {
-        if (!createBtn) return;
-        try {
-          setBusy(true);
-          showStatus(statusTarget(statusEl), localized('archiveStatusWorking'), 'success');
-          const cutoffDate = dateInput?.value ?? '';
-          const cutoffMs = cutoffMsFromInput();
-          const result = await archiveCreate({
-            cutoffDate,
-            cutoffMs,
-            includeDeleted: includeDeletedInput?.checked === true,
-            yasumaroVersion: chrome.runtime.getManifest().version,
-          });
-          if ('error' in result) throw new Error(result.error);
-          lastStagingName = result.data.stagingName;
-          lastFileName = `yasumaro_archive_${cutoffDate}.db`;
-          if (downloadBtn) downloadBtn.hidden = false;
-          if (cleanupBtn) cleanupBtn.hidden = false;
-          if (purgeBtn) purgeBtn.hidden = false;
-          if (summaryEl) {
-            summaryEl.hidden = false;
-            summaryEl.textContent = localized('archiveCreatedSummary', { count: result.data.recordCount });
-          }
-          showStatus(statusTarget(statusEl), localized('archiveCreatedDownloadHint'), 'success');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archiveCreateFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
-      });
-
-      downloadBtn?.addEventListener('click', async () => {
-        if (!downloadBtn) return;
-        try {
-          setBusy(true);
-          await downloadStaging();
-          showStatus(statusTarget(statusEl), localized('archiveDownloadDone'), 'success');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archiveDownloadFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
-      });
-
-      purgeBtn?.addEventListener('click', async () => {
-        if (!purgeBtn) return;
-        try {
-          setBusy(true);
-          if (!lastStagingName) throw new Error(localized('archiveDateRequired'));
-          const cutoffDate = dateInput?.value ?? '';
-          const confirmed = await showConfirmDialog({
-            title: localized('archivePurgeConfirmTitle'),
-            message: localized('archivePurgeConfirmMessage', {
-              date: cutoffDate,
-              legacy: localized('archiveLegacyDisclosure'),
-            }),
-            confirmLabel: localized('archivePurgeConfirmOk'),
-            dangerous: true,
-          });
-          if (!confirmed) return;
-          const result = await archiveDeleteByStaging(lastStagingName);
-          if ('error' in result) throw new Error(result.error);
-          lastStagingName = null;
-          if (downloadBtn) downloadBtn.hidden = true;
-          if (cleanupBtn) cleanupBtn.hidden = true;
-          if (purgeBtn) purgeBtn.hidden = true;
-          const done = localized('archivePurgeDone', {
-            deleted: result.data.deleted,
-            remaining: result.data.remaining,
-          });
-          showStatus(statusTarget(statusEl), result.data.vacuumOk ? done : `${done} ${localized('archiveVacuumNote')}`, result.data.vacuumOk ? 'success' : 'error');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archivePurgeFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
-      });
-
-      cleanupBtn?.addEventListener('click', async () => {
-        if (!cleanupBtn) return;
-        try {
-          setBusy(true);
-          const result = await archiveCleanup();
-          if ('error' in result) throw new Error(result.error);
-          lastStagingName = null;
-          if (downloadBtn) downloadBtn.hidden = true;
-          if (cleanupBtn) cleanupBtn.hidden = true;
-          showStatus(statusTarget(statusEl), localized('archiveCleanupDone', { count: result.data.removed.length }), 'success');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archiveCleanupFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
+      cleanupBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: async () => unwrapServiceResult(await archiveCleanup()),
+          onSuccess: (data) => {
+            lastStagingName = null;
+            if (downloadBtn) downloadBtn.hidden = true;
+            if (cleanupBtn) cleanupBtn.hidden = true;
+            showStatus(statusTarget(statusEl), localized('archiveCleanupDone', { count: data.removed.length }), 'success');
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archiveCleanupFailed')}: ${message}`, 'error'),
+        });
       });
 
       // セッションビューアの staging ライフサイクル（PBI 2026-09-15-09）:
@@ -214,9 +207,7 @@ export function createArchivePanel(): PanelLifecycle {
       const renderSessionList = async (): Promise<void> => {
         const staging = sessionStore.getSessionName();
         if (!staging || !sessionListEl) return;
-        const result = await archiveQuery(staging, sessionQueryInput?.value ?? '', 100, 0);
-        if ('error' in result) throw new Error(result.error);
-        const rows = result.data.rows;
+        const { rows } = unwrapServiceResult(await archiveQuery(staging, sessionQueryInput?.value ?? '', 100, 0));
         if (!rows.length) {
           sessionListEl.textContent = localized('archiveSessionEmpty');
           return;
@@ -234,8 +225,7 @@ export function createArchivePanel(): PanelLifecycle {
             editBtn.addEventListener('click', () => {
               openEditModal(row, editBtn, {
                 onSave: async (newTitle: string) => {
-                  const update = await archiveUpdate(staging, row.id, { title: newTitle });
-                  if ('error' in update) throw new Error(update.error);
+                  unwrapServiceResult(await archiveUpdate(staging, row.id, { title: newTitle }));
                   sessionStore.markDirty();
                 },
                 onClosed: async () => {
@@ -362,7 +352,7 @@ export function createArchivePanel(): PanelLifecycle {
       // 再接続: mount時にstatusを取得し、open中なら一覧を再表示
       void (async () => {
         const status = await archiveStatus();
-        if ('error' in status) return;
+        if (isServiceError(status)) return;
         if (status.data.open && status.data.stagingName) {
           sessionStore.reopen(status.data.stagingName, status.data.dirty);
           if (sessionSection) sessionSection.hidden = false;
@@ -374,148 +364,141 @@ export function createArchivePanel(): PanelLifecycle {
         }
       })();
 
-      sessionQueryBtn?.addEventListener('click', async () => {
-        try {
-          setBusy(true);
-          await renderSessionList();
-        } catch (err) {
-          showStatus(statusTarget(statusEl), errorMessage(err), 'error');
-        } finally {
-          setBusy(false);
-        }
+      sessionQueryBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: renderSessionList,
+          onError: (message) => showStatus(statusTarget(statusEl), message, 'error'),
+        });
       });
 
-      sessionSaveBtn?.addEventListener('click', async () => {
+      sessionSaveBtn?.addEventListener('click', () => {
         const staging = sessionStore.getSessionName();
-        if (!staging || !sessionSaveBtn) return;
-        try {
-          setBusy(true);
-          const result = await archiveSave(staging);
-          if ('error' in result) throw new Error(result.error);
-          sessionStore.markSaved();
-          showStatus(statusTarget(statusEl), localized('archiveSessionSaved'), 'success');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), errorMessage(err), 'error');
-        } finally {
-          setBusy(false);
-        }
+        if (!staging) return;
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: async () => unwrapServiceResult(await archiveSave(staging)),
+          onSuccess: () => {
+            sessionStore.markSaved();
+            showStatus(statusTarget(statusEl), localized('archiveSessionSaved'), 'success');
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), message, 'error'),
+        });
       });
 
       sessionCloseBtn?.addEventListener('click', async () => {
         const staging = sessionStore.getSessionName();
-        if (!staging || !sessionCloseBtn) return;
-        try {
-          if (sessionStore.isDirty()) {
-            const confirmed = await showConfirmDialog({
-              title: localized('archiveSessionDiscardTitle'),
-              message: localized('archiveSessionDiscardMessage'),
-              dangerous: true,
-            });
-            if (!confirmed) return;
-          }
-          setBusy(true);
-          const result = await archiveClose(staging);
-          if ('error' in result) throw new Error(result.error);
-          sessionStore.clear();
-          if (sessionSection) sessionSection.hidden = true;
-        } catch (err) {
-          showStatus(statusTarget(statusEl), errorMessage(err), 'error');
-        } finally {
-          setBusy(false);
+        if (!staging) return;
+        if (sessionStore.isDirty()) {
+          const confirmed = await showConfirmDialog({
+            title: localized('archiveSessionDiscardTitle'),
+            message: localized('archiveSessionDiscardMessage'),
+            dangerous: true,
+          });
+          if (!confirmed) return;
         }
+        await runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: async () => unwrapServiceResult(await archiveClose(staging)),
+          onSuccess: () => {
+            sessionStore.clear();
+            if (sessionSection) sessionSection.hidden = true;
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), message, 'error'),
+        });
       });
 
       let restoreStagingName: string | null = null;
 
-      restoreFileInput?.addEventListener('change', async () => {
+      restoreFileInput?.addEventListener('change', () => {
         const file = restoreFileInput?.files?.[0];
-        if (!restoreFileInput || !file) return;
-        try {
-          setBusy(true);
-          if (file.size > MAX_ARCHIVE_FILE_BYTES) {
-            throw new Error(localized('archiveFileTooLarge', {
-              max: Math.floor(MAX_ARCHIVE_FILE_BYTES / (1024 * 1024)),
-            }));
-          }
-          // Staging name must be issued by the offscreen registry (fail-closed).
-          const prepared = await archivePrepareIncoming();
-          if ('error' in prepared) throw new Error(prepared.error);
-          lastStagingName = prepared.data;
-          restoreStagingName = prepared.data;
-
-          // Dashboard writes the picked file into the OPFS staging file
-          // (same origin); the worker never trusts client paths.
-          const root = await navigator.storage.getDirectory();
-          const handle = await root.getFileHandle(restoreStagingName, { create: true });
-          const writable = await handle.createWritable();
-          try {
-            let offset = 0;
-            while (offset < file.size) {
-              const end = Math.min(offset + EXPORT_CHUNK_BYTES, file.size);
-              const buf = await file.slice(offset, end).arrayBuffer();
-              await writable.write(buf);
-              offset = end;
+        if (!file) return;
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: async () => {
+            if (file.size > MAX_ARCHIVE_FILE_BYTES) {
+              throw new Error(localized('archiveFileTooLarge', {
+                max: Math.floor(MAX_ARCHIVE_FILE_BYTES / (1024 * 1024)),
+              }));
             }
-            await writable.close();
-          } catch (err) {
-            try { await writable.abort?.(); } catch { /* ignore */ }
-            throw err;
-          }
+            // Staging name must be issued by the offscreen registry (fail-closed).
+            restoreStagingName = unwrapServiceResult(await archivePrepareIncoming());
+            lastStagingName = restoreStagingName;
 
-          const previewResult = await archiveRestorePreview(restoreStagingName);
-          if ('error' in previewResult) throw new Error(previewResult.error);
-          const meta = previewResult.data;
-          if (restorePreviewEl) {
-            restorePreviewEl.hidden = false;
-            restorePreviewEl.textContent = localized('archiveRestorePreviewSummary', {
-              count: meta.recordCount,
-              date: meta.cutoffDate,
-            });
-          }
-          // PBI 2026-09-12-02: hand off to the session viewer inside the busy
-          // scope. The staged name must reach the store BEFORE
-          // renderSessionList — its guard returns without it, which used to
-          // leave the restored session list empty (and save/close dead) until
-          // a remount.
-          const openResult = await archiveOpen(restoreStagingName);
-          if ('error' in openResult) throw new Error(openResult.error);
-          sessionStore.stageSession(restoreStagingName);
-          sessionStore.markOpen();
-          if (sessionSection) sessionSection.hidden = false;
-          await renderSessionList();
-          if (restoreBtn) restoreBtn.hidden = false;
-          showStatus(statusTarget(statusEl), localized('archiveRestorePreviewReady'), 'success');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archiveRestorePreviewFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
+            // Dashboard writes the picked file into the OPFS staging file
+            // (same origin); the worker never trusts client paths.
+            const root = await navigator.storage.getDirectory();
+            const handle = await root.getFileHandle(restoreStagingName, { create: true });
+            const writable = await handle.createWritable();
+            try {
+              let offset = 0;
+              while (offset < file.size) {
+                const end = Math.min(offset + EXPORT_CHUNK_BYTES, file.size);
+                const buf = await file.slice(offset, end).arrayBuffer();
+                await writable.write(buf);
+                offset = end;
+              }
+              await writable.close();
+            } catch (err) {
+              try { await writable.abort?.(); } catch { /* ignore */ }
+              throw err;
+            }
+
+            const meta = unwrapServiceResult(await archiveRestorePreview(restoreStagingName));
+            if (restorePreviewEl) {
+              restorePreviewEl.hidden = false;
+              restorePreviewEl.textContent = localized('archiveRestorePreviewSummary', {
+                count: meta.recordCount,
+                date: meta.cutoffDate,
+              });
+            }
+            // PBI 2026-09-12-02: hand off to the session viewer inside the busy
+            // scope. The staged name must reach the store BEFORE
+            // renderSessionList — its guard returns without it, which used to
+            // leave the restored session list empty (and save/close dead) until
+            // a remount.
+            unwrapServiceResult(await archiveOpen(restoreStagingName));
+            sessionStore.stageSession(restoreStagingName);
+            sessionStore.markOpen();
+            if (sessionSection) sessionSection.hidden = false;
+            await renderSessionList();
+          },
+          onSuccess: () => {
+            if (restoreBtn) restoreBtn.hidden = false;
+            showStatus(statusTarget(statusEl), localized('archiveRestorePreviewReady'), 'success');
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archiveRestorePreviewFailed')}: ${message}`, 'error'),
+        });
       });
 
-      restoreBtn?.addEventListener('click', async () => {
-        if (!restoreBtn) return;
-        try {
-          setBusy(true);
-          if (!restoreStagingName) throw new Error(localized('archiveDateRequired'));
-          const result = await archiveRestore(restoreStagingName);
-          if ('error' in result) throw new Error(result.error);
-          if (restorePreviewEl) {
-            restorePreviewEl.textContent = localized('archiveRestoreDone', {
-              restored: result.data.restored,
-              deleted: result.data.restoredDeleted,
-              skipped: result.data.skipped,
-              invalid: result.data.skippedInvalid,
-            });
-          }
-          restoreStagingName = null;
-          if (restoreBtn) restoreBtn.hidden = true;
-          if (restoreFileInput) restoreFileInput.value = '';
-          showStatus(statusTarget(statusEl), localized('archiveRestoreDoneStatus'), 'success');
-        } catch (err) {
-          showStatus(statusTarget(statusEl), `${localized('archiveRestoreFailed')}: ${errorMessage(err)}`, 'error');
-        } finally {
-          setBusy(false);
-        }
+      restoreBtn?.addEventListener('click', () => {
+        void runPanelAction({
+          buttons: controls,
+          onBusy: setAriaBusy,
+          run: async () => {
+            if (!restoreStagingName) throw new Error(localized('archiveDateRequired'));
+            return unwrapServiceResult(await archiveRestore(restoreStagingName));
+          },
+          onSuccess: (data) => {
+            if (restorePreviewEl) {
+              restorePreviewEl.textContent = localized('archiveRestoreDone', {
+                restored: data.restored,
+                deleted: data.restoredDeleted,
+                skipped: data.skipped,
+                invalid: data.skippedInvalid,
+              });
+            }
+            restoreStagingName = null;
+            if (restoreBtn) restoreBtn.hidden = true;
+            if (restoreFileInput) restoreFileInput.value = '';
+            showStatus(statusTarget(statusEl), localized('archiveRestoreDoneStatus'), 'success');
+          },
+          onError: (message) => showStatus(statusTarget(statusEl), `${localized('archiveRestoreFailed')}: ${message}`, 'error'),
+        });
       });
 
       // Local helper keeping showStatus target id logic in one place.

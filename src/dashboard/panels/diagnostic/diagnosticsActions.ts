@@ -18,6 +18,7 @@ import {
 } from '../../dashboardSqliteService.js';
 import { testObsidianConnection, testAiConnection } from '../../generalSettings/connectionTests.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
+import { runPanelAction, unwrapServiceResult } from '../panelAction.js';
 import {
   startBuiltInAiDownload,
   type BuiltInAiDiagnosticsResult,
@@ -52,7 +53,7 @@ function errorColor(): string {
 }
 
 /**
- * Wire all action handlers. Each handler keeps the current behavior:
+ * Wire all action handlers. Each handler routes through runPanelAction:
  * disable button → "Working..." → try/catch → result text → re-enable in finally.
  */
 export function createDiagnosticActions(
@@ -68,89 +69,92 @@ export function createDiagnosticActions(
   } = els;
 
   // Obsidian connection test
-  testObsidianBtn?.addEventListener('click', async () => {
+  testObsidianBtn?.addEventListener('click', () => {
     if (!connectionResult) return;
-    testObsidianBtn.disabled = true;
-    connectionResult.textContent = getMessageOr('testing', 'Testing...');
-    connectionResult.className = 'diag-result';
-
-    try {
+    void runPanelAction({
+      buttons: [testObsidianBtn],
+      onStart: () => {
+        connectionResult.textContent = getMessageOr('testing', 'Testing...');
+        connectionResult.className = 'diag-result';
+      },
       // PBI 11: the TEST_OBSIDIAN send lives in the connectionTests helper;
       // this handler only renders. Progress choreography is untouched (ADR 2026-08-23).
-      const obsidian = await testObsidianConnection('');
-
-      connectionResult.textContent = obsidian
-        ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
-        : getMessageOr('testComplete', 'Test complete.');
-      connectionResult.style.color = obsidian?.success ? successColor() : errorColor();
-    } catch {
-      connectionResult.textContent = getMessageOr('testError', 'Connection test failed.');
-      connectionResult.style.color = errorColor();
-    } finally {
-      testObsidianBtn.disabled = false;
-    }
-  });
-
-  // AI connection test
-  testAiBtn?.addEventListener('click', async () => {
-    if (!connectionResult) return;
-    // The TEST_AI send lives in the connectionTests helper; the runner owns the
-    // runId correlation, progress subscription and in-flight guard, so this
-    // handler only supplies the panel's own rendering.
-    await runAiConnectionTest({
-      target: connectionResult,
-      run: testAiConnection,
-      onStart: () => { testAiBtn.disabled = true; },
-      onFinish: () => { testAiBtn.disabled = false; },
-      draw: {
-        multiProviderSummary: (target, ai) => {
-          const header = document.createElement('div');
-          header.textContent = ai.success
-            ? `AI: ${getMessageOr('testSuccess', '✓ Connection successful')}`
-            : `AI: ${getMessageOr('testFailed', '✗ Connection failed')}`;
-          header.className = ai.success ? 'diag-success diag-bold' : 'diag-error diag-bold';
-          target.appendChild(header);
-        },
-        singleProviderSummary: (target, ai) => {
-          target.textContent = `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`;
-          target.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
-        },
-        onError: (target, err) => {
-          console.error('Diagnostics: AI test failed', err);
-          target.textContent = getMessageOr('testError', 'Connection test failed.');
-          target.className = 'diag-result diag-error';
-        },
+      run: async () => testObsidianConnection(''),
+      onSuccess: (obsidian) => {
+        connectionResult.textContent = obsidian
+          ? `Obsidian: ${obsidian.success ? '✓' : '✗'} ${obsidian.message}`
+          : getMessageOr('testComplete', 'Test complete.');
+        connectionResult.style.color = obsidian?.success ? successColor() : errorColor();
+      },
+      onError: () => {
+        connectionResult.textContent = getMessageOr('testError', 'Connection test failed.');
+        connectionResult.style.color = errorColor();
       },
     });
   });
 
-  // SQLite test
-  testSqliteBtn?.addEventListener('click', async () => {
-    if (!sqliteResult) return;
-    testSqliteBtn.disabled = true;
-    sqliteResult.textContent = getMessageOr('testing', 'Testing...');
-    sqliteResult.className = 'diag-result';
+  // AI connection test
+  testAiBtn?.addEventListener('click', () => {
+    if (!connectionResult) return;
+    // The TEST_AI send lives in the connectionTests helper; the runner owns the
+    // runId correlation, progress subscription and in-flight guard, so this
+    // handler only supplies the panel's own rendering.
+    void runPanelAction({
+      buttons: [testAiBtn],
+      run: async () => runAiConnectionTest({
+        target: connectionResult,
+        run: testAiConnection,
+        draw: {
+          multiProviderSummary: (target, ai) => {
+            const header = document.createElement('div');
+            header.textContent = ai.success
+              ? `AI: ${getMessageOr('testSuccess', '✓ Connection successful')}`
+              : `AI: ${getMessageOr('testFailed', '✗ Connection failed')}`;
+            header.className = ai.success ? 'diag-success diag-bold' : 'diag-error diag-bold';
+            target.appendChild(header);
+          },
+          singleProviderSummary: (target, ai) => {
+            target.textContent = `AI: ${ai.success ? '✓' : '✗'} ${ai.message}`;
+            target.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
+          },
+          onError: (target, err) => {
+            console.error('Diagnostics: AI test failed', err);
+            target.textContent = getMessageOr('testError', 'Connection test failed.');
+            target.className = 'diag-result diag-error';
+          },
+        },
+      }),
+    });
+  });
 
-    try {
+  // SQLite test
+  testSqliteBtn?.addEventListener('click', () => {
+    if (!sqliteResult) return;
+    void runPanelAction({
+      buttons: [testSqliteBtn],
+      onStart: () => {
+        sqliteResult.textContent = getMessageOr('testing', 'Testing...');
+        sqliteResult.className = 'diag-result';
+      },
       // PBI 11: status goes through getSqliteStatus() (gateway transport +
       // service conversion) instead of a direct inline send.
-      const status = await getSqliteStatus();
-
-      if (status.initialized) {
-        const fts5Text = status.fts5 ? 'FTS5 ✓' : 'LIKE fallback';
-        sqliteResult.textContent = `✓ ${getMessageOr('diagSqliteTestOk', 'SQLite is working correctly.')} (${fts5Text})`;
-        sqliteResult.style.color = successColor();
-      } else {
-        const errorMsg = status.initError || 'SQLite initialization failed.';
-        sqliteResult.textContent = `✗ ${getMessageOr('diagSqliteTestInitFailed', 'SQLite initialization failed.')}\n${errorMsg}`;
+      run: async () => getSqliteStatus(),
+      onSuccess: (status) => {
+        if (status.initialized) {
+          const fts5Text = status.fts5 ? 'FTS5 ✓' : 'LIKE fallback';
+          sqliteResult.textContent = `✓ ${getMessageOr('diagSqliteTestOk', 'SQLite is working correctly.')} (${fts5Text})`;
+          sqliteResult.style.color = successColor();
+        } else {
+          const errorMsg = status.initError || 'SQLite initialization failed.';
+          sqliteResult.textContent = `✗ ${getMessageOr('diagSqliteTestInitFailed', 'SQLite initialization failed.')}\n${errorMsg}`;
+          sqliteResult.style.color = errorColor();
+        }
+      },
+      onError: () => {
+        sqliteResult.textContent = getMessageOr('testError', 'Connection test failed.');
         sqliteResult.style.color = errorColor();
-      }
-    } catch {
-      sqliteResult.textContent = getMessageOr('testError', 'Connection test failed.');
-      sqliteResult.style.color = errorColor();
-    } finally {
-      testSqliteBtn.disabled = false;
-    }
+      },
+    });
   });
 
   // Migrate legacy history to SQLite (destructive-ish, confirmed)
@@ -164,75 +168,69 @@ export function createDiagnosticActions(
     });
     if (!confirmed) return;
 
-    migrateBtn.disabled = true;
-    migrateResult.textContent = getMessageOr('testing', 'Working...');
-    migrateResult.className = 'diag-result';
-
-    try {
-      const result = await migrateLogs();
-      if ('data' in result) {
-        migrateResult.textContent = `✓ ${getMessageOr('diagMigrateDone', 'Conversion complete.')} read=${result.data.read} inserted=${result.data.inserted} total=${result.data.count}`;
+    await runPanelAction({
+      buttons: [migrateBtn],
+      onStart: () => {
+        migrateResult.textContent = getMessageOr('testing', 'Working...');
+        migrateResult.className = 'diag-result';
+      },
+      run: async () => unwrapServiceResult(await migrateLogs()),
+      onSuccess: (data) => {
+        migrateResult.textContent = `✓ ${getMessageOr('diagMigrateDone', 'Conversion complete.')} read=${data.read} inserted=${data.inserted} total=${data.count}`;
         migrateResult.style.color = successColor();
-      } else {
-        migrateResult.textContent = `✗ ${getMessageOr('diagMigrateFailed', 'Conversion failed.')}: ${result.error}`;
+      },
+      onError: (message, kind) => {
+        const failed = getMessageOr('diagMigrateFailed', 'Conversion failed.');
+        migrateResult.textContent = kind === 'service' ? `✗ ${failed}: ${message}` : `✗ ${failed}`;
         migrateResult.style.color = errorColor();
-      }
-    } catch {
-      migrateResult.textContent = `✗ ${getMessageOr('diagMigrateFailed', 'Conversion failed.')}`;
-      migrateResult.style.color = errorColor();
-    } finally {
-      migrateBtn.disabled = false;
-    }
+      },
+    });
   });
 
   // Backfill diagnostic metadata
-  backfillBtn?.addEventListener('click', async () => {
+  backfillBtn?.addEventListener('click', () => {
     if (!backfillResult) return;
-    backfillBtn.disabled = true;
-    backfillResult.textContent = getMessageOr('testing', 'Working...');
-    backfillResult.className = 'diag-result';
-
-    try {
-      const result = await backfillMetadata();
-      if ('data' in result) {
-        backfillResult.textContent = `✓ ${getMessageOr('diagBackfillDone', 'Backfill complete.')} updated=${result.data.updated}/${result.data.total}`;
+    void runPanelAction({
+      buttons: [backfillBtn],
+      onStart: () => {
+        backfillResult.textContent = getMessageOr('testing', 'Working...');
+        backfillResult.className = 'diag-result';
+      },
+      run: async () => unwrapServiceResult(await backfillMetadata()),
+      onSuccess: (data) => {
+        backfillResult.textContent = `✓ ${getMessageOr('diagBackfillDone', 'Backfill complete.')} updated=${data.updated}/${data.total}`;
         backfillResult.style.color = successColor();
-      } else {
-        backfillResult.textContent = `✗ ${getMessageOr('diagBackfillFailed', 'Backfill failed.')}: ${result.error}`;
+      },
+      onError: (message, kind) => {
+        const failed = getMessageOr('diagBackfillFailed', 'Backfill failed.');
+        backfillResult.textContent = kind === 'service' ? `✗ ${failed}: ${message}` : `✗ ${failed}`;
         backfillResult.style.color = errorColor();
-      }
-    } catch {
-      backfillResult.textContent = `✗ ${getMessageOr('diagBackfillFailed', 'Backfill failed.')}`;
-      backfillResult.style.color = errorColor();
-    } finally {
-      backfillBtn.disabled = false;
-    }
+      },
+    });
   });
 
   // Manual SQLite → legacy resync (PBI 22, MANUAL-ONLY trigger).
   // No confirm dialog: the merge is idempotent and non-destructive
   // (unlike migrate/cleanup, which use showConfirmDialog above).
-  resyncBtn?.addEventListener('click', async () => {
+  resyncBtn?.addEventListener('click', () => {
     if (!resyncResult) return;
-    resyncBtn.disabled = true;
-    resyncResult.textContent = getMessageOr('testing', 'Working...');
-    resyncResult.className = 'diag-result';
-
-    try {
-      const result = await resyncLegacyStorage();
-      if ('data' in result) {
-        resyncResult.textContent = `✓ ${getMessageOr('diagResyncDone', 'Resync complete.')} written=${result.data.written}/${result.data.examined} skipped=${result.data.skipped} total=${result.data.total}`;
+    void runPanelAction({
+      buttons: [resyncBtn],
+      onStart: () => {
+        resyncResult.textContent = getMessageOr('testing', 'Working...');
+        resyncResult.className = 'diag-result';
+      },
+      run: async () => unwrapServiceResult(await resyncLegacyStorage()),
+      onSuccess: (data) => {
+        resyncResult.textContent = `✓ ${getMessageOr('diagResyncDone', 'Resync complete.')} written=${data.written}/${data.examined} skipped=${data.skipped} total=${data.total}`;
         resyncResult.style.color = successColor();
-      } else {
-        resyncResult.textContent = `✗ ${getMessageOr('diagResyncFailed', 'Resync failed.')}: ${result.error}`;
+      },
+      onError: (message, kind) => {
+        const failed = getMessageOr('diagResyncFailed', 'Resync failed.');
+        resyncResult.textContent = kind === 'service' ? `✗ ${failed}: ${message}` : `✗ ${failed}`;
         resyncResult.style.color = errorColor();
-      }
-    } catch {
-      resyncResult.textContent = `✗ ${getMessageOr('diagResyncFailed', 'Resync failed.')}`;
-      resyncResult.style.color = errorColor();
-    } finally {
-      resyncBtn.disabled = false;
-    }
+      },
+    });
   });
 
   // Cleanup legacy storage (destructive, confirmed)
@@ -246,53 +244,54 @@ export function createDiagnosticActions(
     });
     if (!confirmed) return;
 
-    cleanupBtn.disabled = true;
-    cleanupResult.textContent = getMessageOr('testing', 'Working...');
-    cleanupResult.className = 'diag-result';
-
-    try {
-      const result = await cleanupLegacyStorage();
-      if ('data' in result) {
-        cleanupResult.textContent = `✓ ${getMessageOr('diagCleanupDone', 'Cleanup complete.')} removed=${result.data.removed.length} keys, ${result.data.totalBytes} bytes freed`;
+    await runPanelAction({
+      buttons: [cleanupBtn],
+      onStart: () => {
+        cleanupResult.textContent = getMessageOr('testing', 'Working...');
+        cleanupResult.className = 'diag-result';
+      },
+      run: async () => unwrapServiceResult(await cleanupLegacyStorage()),
+      onSuccess: (data) => {
+        cleanupResult.textContent = `✓ ${getMessageOr('diagCleanupDone', 'Cleanup complete.')} removed=${data.removed.length} keys, ${data.totalBytes} bytes freed`;
         cleanupResult.style.color = successColor();
-      } else {
-        cleanupResult.textContent = `✗ ${getMessageOr('diagCleanupFailed', 'Cleanup failed.')}: ${result.error}`;
+      },
+      onError: (message, kind) => {
+        const failed = getMessageOr('diagCleanupFailed', 'Cleanup failed.');
+        cleanupResult.textContent = kind === 'service' ? `✗ ${failed}: ${message}` : `✗ ${failed}`;
         cleanupResult.style.color = errorColor();
-      }
-    } catch {
-      cleanupResult.textContent = `✗ ${getMessageOr('diagCleanupFailed', 'Cleanup failed.')}`;
-      cleanupResult.style.color = errorColor();
-    } finally {
-      cleanupBtn.disabled = false;
-    }
+      },
+    });
   });
 
   // Built-in AI model download
-  builtInAiDownloadBtn?.addEventListener('click', async () => {
+  builtInAiDownloadBtn?.addEventListener('click', () => {
     if (!builtInAiDownloadResult) return;
-    builtInAiDownloadBtn.disabled = true;
-    builtInAiDownloadResult.textContent = getMessageOr('diagBuiltInAiDownloadStarting', 'Starting download... 0%');
-    builtInAiDownloadResult.className = 'diag-result';
-
-    try {
-      const result = await startBuiltInAiDownload((percent) => {
-        builtInAiDownloadResult.textContent = `${getMessageOr('diagBuiltInAiDownloading', 'Downloading...')} ${percent}%`;
-      });
-
-      hooks.onBuiltInAiDownloaded(result);
-
-      if (result.status === 'available') {
-        builtInAiDownloadResult.textContent = `✓ ${getMessageOr('diagBuiltInAiDownloadDone', 'Download complete.')}`;
-        builtInAiDownloadResult.style.color = successColor();
-      } else {
+    void runPanelAction({
+      buttons: [builtInAiDownloadBtn],
+      onStart: () => {
+        builtInAiDownloadResult.textContent = getMessageOr('diagBuiltInAiDownloadStarting', 'Starting download... 0%');
+        builtInAiDownloadResult.className = 'diag-result';
+      },
+      run: async () => {
+        const result = await startBuiltInAiDownload((percent) => {
+          builtInAiDownloadResult.textContent = `${getMessageOr('diagBuiltInAiDownloading', 'Downloading...')} ${percent}%`;
+        });
+        hooks.onBuiltInAiDownloaded(result);
+        return result;
+      },
+      onSuccess: (result) => {
+        if (result.status === 'available') {
+          builtInAiDownloadResult.textContent = `✓ ${getMessageOr('diagBuiltInAiDownloadDone', 'Download complete.')}`;
+          builtInAiDownloadResult.style.color = successColor();
+        } else {
+          builtInAiDownloadResult.textContent = `✗ ${getMessageOr('diagBuiltInAiDownloadFailed', 'Download failed.')}`;
+          builtInAiDownloadResult.style.color = errorColor();
+        }
+      },
+      onError: () => {
         builtInAiDownloadResult.textContent = `✗ ${getMessageOr('diagBuiltInAiDownloadFailed', 'Download failed.')}`;
         builtInAiDownloadResult.style.color = errorColor();
-      }
-    } catch {
-      builtInAiDownloadResult.textContent = `✗ ${getMessageOr('diagBuiltInAiDownloadFailed', 'Download failed.')}`;
-      builtInAiDownloadResult.style.color = errorColor();
-    } finally {
-      builtInAiDownloadBtn.disabled = false;
-    }
+      },
+    });
   });
 }

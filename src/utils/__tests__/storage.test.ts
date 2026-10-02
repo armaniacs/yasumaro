@@ -10,6 +10,7 @@ import { buildAllowedUrls, getAllowedUrls, computeUrlsHash } from '../storage/ur
 import { deriveRequiredDomains } from '../storage/providerAllowlist.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
+import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 
 describe('storage', () => {
   beforeEach(() => {
@@ -259,6 +260,63 @@ describe('storage', () => {
           [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: expect.any(Number)
         })
       );
+    });
+
+    // The write path and the read path disagree on the missing-mode default
+    // ('whitelist' vs 'disabled'), and the settings default is a third value
+    // ('blacklist'). Pinned until that inconsistency is decided on purpose.
+    it('writes "whitelist" as the mode when settings carry no mode', async () => {
+      const mockSet = vi.fn().mockResolvedValue(undefined);
+      // @ts-ignore
+      global.chrome = { storage: { local: { set: mockSet } } } as any;
+
+      await updateDomainFilterCache({} as unknown as Settings);
+
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'whitelist' })
+      );
+    });
+  });
+
+  describe('domain filter mode defaults', () => {
+    // Three different defaults are in play for a missing mode: the settings
+    // default, the write-path fallback, and the read-path fallback. They are
+    // pinned separately on purpose — aligning them is a behaviour change that
+    // has to be decided, not something a refactor may quietly do.
+    it('keeps "blacklist" as the settings default', () => {
+      expect(DEFAULT_SETTINGS[StorageKeys.DOMAIN_FILTER_MODE]).toBe('blacklist');
+    });
+
+    it('keeps "whitelist" as the write-path fallback', async () => {
+      const mockSet = vi.fn().mockResolvedValue(undefined);
+      // @ts-ignore
+      global.chrome = { storage: { local: { set: mockSet } } } as any;
+
+      await updateDomainFilterCache({} as unknown as Settings);
+
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'whitelist' })
+      );
+    });
+
+    it('keeps "disabled" as the read-path fallback', async () => {
+      // @ts-ignore
+      global.chrome = {
+        storage: {
+          local: {
+            get: vi.fn((_keys, callback) => {
+              callback({});
+              return Promise.resolve({});
+            }),
+          },
+        },
+      } as any;
+
+      const mode = await new Promise<string>((resolve) => {
+        getDomainFilterCacheSync((data) => resolve(data.mode));
+      });
+
+      expect(mode).toBe('disabled');
     });
   });
 });

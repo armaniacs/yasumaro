@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { getScreenState, setScreenState, clearScreenState, SCREEN_STATES } from '../screenState.js';
+import { getScreenState, setScreenState, SCREEN_STATES } from '../screenState.js';
 
 describe('screenState', () => {
   afterEach(() => {
-    clearScreenState();
+    setScreenState(SCREEN_STATES.MAIN);
   });
 
   it('default state is MAIN', () => {
@@ -18,12 +18,6 @@ describe('screenState', () => {
   it('setScreenState changes state to main', () => {
     setScreenState('settings');
     setScreenState('main');
-    expect(getScreenState()).toBe('main');
-  });
-
-  it('clearScreenState resets to MAIN', () => {
-    setScreenState('settings');
-    clearScreenState();
     expect(getScreenState()).toBe('main');
   });
 

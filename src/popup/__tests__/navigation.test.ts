@@ -9,7 +9,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 vi.mock('../screenState.js', () => ({
   getScreenState: vi.fn(),
   setScreenState: vi.fn(),
-  clearScreenState: vi.fn(),
   SCREEN_STATES: {
     MAIN: 'main',
     SETTINGS: 'settings'

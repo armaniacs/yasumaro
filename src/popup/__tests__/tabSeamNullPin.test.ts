@@ -12,7 +12,6 @@ vi.mock('../tabUtils.js', () => ({
     const tab = await mockGetCurrentTab();
     return tab?.url ?? null;
   }),
-  getActiveTabDomain: vi.fn(),
   getDomainForUrl: vi.fn((url: string | null | undefined) => {
     if (!url) return null;
     try {
@@ -21,7 +20,6 @@ vi.mock('../tabUtils.js', () => ({
       return null;
     }
   }),
-  requireActiveTabUrl: vi.fn(),
 }));
 
 vi.mock('../statusChecker.js', () => ({ checkPageStatus: mockCheckPageStatus }));

@@ -25,6 +25,9 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   resyncLegacyStorage: vi.fn(),
   cleanupLegacyStorage: vi.fn(),
   getSqliteStatus: vi.fn(),
+  // The shared unwrap guard: without it on the mock every result read through
+  // it throws "No ... export is defined on the mock".
+  isServiceError: (result: object): boolean => 'error' in result,
 }));
 
 vi.mock('../../../utils/confirmDialog.js', () => ({

@@ -31,23 +31,3 @@ export function getDomainForUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     return extractDomain(url);
 }
-
-/**
- * Get the active tab domain via the shared extractor, or null when
- * there is no tab, no URL, or the URL is unparseable.
- */
-export async function getActiveTabDomain(): Promise<string | null> {
-    const url = await getActiveTabUrl();
-    return getDomainForUrl(url);
-}
-
-/**
- * Get the active tab URL, throwing when absent.
- * Callers that must distinguish "no tab" from other failures use this
- * instead of branching on null themselves.
- */
-export async function requireActiveTabUrl(): Promise<string> {
-    const url = await getActiveTabUrl();
-    if (!url) throw new Error('No active tab URL');
-    return url;
-}

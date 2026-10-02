@@ -47,15 +47,6 @@ export function setScreenState(state: ScreenState): void {
 }
 
 /**
- * 【機能概要】: 画面状態を初期値に戻す
- * 【設計方針】: モジュール初期化時やテストクリーンアップ時に使用
- * 🟢 要求定義に基づき初期状態を'main'とするアプローチ
- */
-export function clearScreenState(): void {
-  currentScreen = DEFAULT_SCREEN_STATE;
-}
-
-/**
  * 【画面状態定数オブジェクトの取得】: 他モジュールから定数を参照可能にする 🟢
  * 【改善内容】: magic stringを避けるため、定数値を型定義として公開
  * 【再利用性】: navigation.js等で画面状態設定時に使用

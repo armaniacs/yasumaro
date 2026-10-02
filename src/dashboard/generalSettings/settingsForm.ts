@@ -14,12 +14,11 @@ import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
-import { errorMessage } from '../../utils/errorUtils.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
 import { providerIdsInOrder } from '../aiProviderCatalogView.js';
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
-import { purgeOldRecordsNow, purgeContentNow, isServiceError } from '../dashboardSqliteService.js';
-import { collectBProviderPrioritySlots } from '../aiProviderB/priorityListView.js';
+import { purgeOldRecordsNow, purgeContentNow } from '../dashboardSqliteService.js';
+import { runPanelAction, unwrapServiceResult } from '../panels/panelAction.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
@@ -166,50 +165,30 @@ export function setupRetentionUnlimitedWarning(): void {
   updateRetentionUnlimitedWarning();
 }
 
-/**
- * 現在レイアウトに応じた優先度スロット収集（A/B分岐）
- * 保存時に呼び出す共通ヘルパ
- */
-export async function collectCurrentProviderPrioritySlots(): Promise<ProviderSlot[]> {
-  try {
-    const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
-    if (layout === 'b') {
-      const bList = document.getElementById('bPriorityList') as HTMLElement | null;
-      const hasBRow = !!bList?.querySelector('.b-priority-row');
-      if (bList && hasBRow) {
-        return collectBProviderPrioritySlots(bList);
-      }
-    }
-  } catch {
-    // fallback to A
-  }
-  return collectProviderPrioritySlots();
-}
-
 export async function handlePurgeNow(): Promise<void> {
   const purgeNowBtn = document.getElementById('purgeNowBtn') as HTMLButtonElement | null;
   const statusEl = document.getElementById('purgeNowStatus');
   if (!purgeNowBtn || !statusEl) return;
 
-  purgeNowBtn.disabled = true;
-  statusEl.textContent = '';
-  try {
-    const result = await purgeOldRecordsNow();
-
-    if (isServiceError(result)) {
-      statusEl.textContent = result.error || 'Error';
-    } else if (result.data.skipped) {
-      statusEl.textContent = getMessageOr('purgeNowSkipped', '保持ポリシーが未設定のため、削除をスキップしました');
-    } else {
-      statusEl.textContent = getMessageOr(getPluralKey('purgeNowSuccess', result.data.purged), `${result.data.purged} 件を削除しました`, [String(result.data.purged)]);
-    }
-  } catch (error) {
+  await runPanelAction({
+    buttons: [purgeNowBtn],
+    onStart: () => {
+      statusEl.textContent = '';
+    },
+    run: async () => unwrapServiceResult(await purgeOldRecordsNow()),
+    onSuccess: (data) => {
+      if (data.skipped) {
+        statusEl.textContent = getMessageOr('purgeNowSkipped', '保持ポリシーが未設定のため、削除をスキップしました');
+      } else {
+        statusEl.textContent = getMessageOr(getPluralKey('purgeNowSuccess', data.purged), `${data.purged} 件を削除しました`, [String(data.purged)]);
+      }
+    },
     // A rejected gateway call never reaches the ServiceResult branches above, so
     // without this the status span stays blank and the click looks like a no-op.
-    statusEl.textContent = errorMessage(error);
-  } finally {
-    purgeNowBtn.disabled = false;
-  }
+    onError: (message, kind) => {
+      statusEl.textContent = kind === 'service' ? (message || 'Error') : message;
+    },
+  });
 }
 
 export async function handleContentPurgeNow(): Promise<void> {
@@ -217,21 +196,21 @@ export async function handleContentPurgeNow(): Promise<void> {
   const statusEl = document.getElementById('contentPurgeNowStatus');
   if (!contentPurgeNowBtn || !statusEl) return;
 
-  contentPurgeNowBtn.disabled = true;
-  statusEl.textContent = '';
-  try {
-    const result = await purgeContentNow();
-
-    if (isServiceError(result)) {
-      statusEl.textContent = result.error || 'Error';
-    } else if (result.data.skipped) {
-      statusEl.textContent = getMessageOr('contentPurgeNowSkipped', 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました');
-    } else {
-      statusEl.textContent = getMessageOr(getPluralKey('contentPurgeNowSuccess', result.data.purged), `${result.data.purged} 件の content を削除しました`, [String(result.data.purged)]);
-    }
-  } catch (error) {
-    statusEl.textContent = errorMessage(error);
-  } finally {
-    contentPurgeNowBtn.disabled = false;
-  }
+  await runPanelAction({
+    buttons: [contentPurgeNowBtn],
+    onStart: () => {
+      statusEl.textContent = '';
+    },
+    run: async () => unwrapServiceResult(await purgeContentNow()),
+    onSuccess: (data) => {
+      if (data.skipped) {
+        statusEl.textContent = getMessageOr('contentPurgeNowSkipped', 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました');
+      } else {
+        statusEl.textContent = getMessageOr(getPluralKey('contentPurgeNowSuccess', data.purged), `${data.purged} 件の content を削除しました`, [String(data.purged)]);
+      }
+    },
+    onError: (message, kind) => {
+      statusEl.textContent = kind === 'service' ? (message || 'Error') : message;
+    },
+  });
 }
