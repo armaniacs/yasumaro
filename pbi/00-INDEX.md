@@ -14,6 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-02 実残8件ラウンド（leftover-1002） — ⬜ 未着手 8件 🔧非機能追加
+
+CHANGELOG 6.9.32 の 15 items はすべて ALREADY-FIXED のため起票不要。実残 ~8 件を harvest し PBI 03–10 に起票。採点・バッチ順・送りの詳細は [2026-10-02-00-backlog-leftover-1002.md](2026-10-02-00-backlog-leftover-1002.md)。実行順は Wave1（03+04+05+06）→ Wave2（07+08+09+10）。03 と 07 は `statusPanel.ts` 共通のため直列（03 → 07）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 03 | [2026-10-02-03-fix-popup-listener-stacking.md](2026-10-02-03-fix-popup-listener-stacking.md) | fix | 28.80 | 0.5 | ⬜ 未着手。C6。Wave1。07 と直列（先） |
+| 04 | [2026-10-02-04-fix-markdown-export-revoke-timer.md](2026-10-02-04-fix-markdown-export-revoke-timer.md) | fix | 21.25 | 0.5 | ⬜ 未着手。C4。Wave1 |
+| 05 | [2026-10-02-05-refactor-import-guard-structural.md](2026-10-02-05-refactor-import-guard-structural.md) | refactor | 19.20 | 0.5 | ⬜ 未着手。C1。Wave1 |
+| 06 | [2026-10-02-06-test-concurrent-export-isolation.md](2026-10-02-06-test-concurrent-export-isolation.md) | test | 8.10 | 0.5 | ⬜ 未着手。C3。Wave1（テストのみ・並列安全） |
+| 07 | [2026-10-02-07-fix-error-copy-locales.md](2026-10-02-07-fix-error-copy-locales.md) | fix | 13.30 | 1 | ⬜ 未着手。C8。Wave2（03 完了後に着手） |
+| 08 | [2026-10-02-08-fix-domain-filter-defaults.md](2026-10-02-08-fix-domain-filter-defaults.md) | fix | 6.67 | 1 | ⬜ 未着手。C7。Wave2 |
+| 09 | [2026-10-02-09-fix-collector-throw-semantics.md](2026-10-02-09-fix-collector-throw-semantics.md) | fix | 3.20 | 1 | ⬜ 未着手。C2。Wave2 |
+| 10 | [2026-10-02-10-chore-type-test-gate.md](2026-10-02-10-chore-type-test-gate.md) | chore | 2.00 | 1 | ⬜ 未着手。C5。Wave2 |
+
 ### 2026-10-01 大局的コード改善ラウンド（holistic-code-improvement） — ✅ 21件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-review の大局的レビュー（3 領域の地図 32 候補 → TOP 5 テーマ）を 19 個の独立実装単位に分解。詳細は [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md)（live 台帳として残置）。実行順は依存優先。積み残し 6 テーマは次ラウンド予約。
