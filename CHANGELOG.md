@@ -35,6 +35,23 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.32] - 2026-10-02
+
+v6.9.31 に続く翌日リリースです。拡張機能の通常利用の動作変更はなく、大局的コード改善ラウンドの 21 PBI と follow-up 2 件（内部整理）のみを含みます。最終レビュー verdict は KEEP（全件維持・ロールバックなし）です。
+
+### Refactored
+
+大局的レビュー（holistic-code-review）で抽出した 23 項目を整理しました。いずれも通常利用の挙動は変わりません。
+
+- **死んだシームを撤去** — 使われなくなった dashboard の export と import を削除しました（NN21）
+- **ダッシュボードのボタン足場を共通部品に抽出** — 20 箇所の inline 判定を共有ガードへ寄せました（NN22）
+- **AI 要約クレンジングの strip 処理を共通骨格に集約** — selector 以外の 8 つの strip を「候補収集 → 重複除去 → 安全な削除 → 件数報告」の骨格にまとめました（NN26）
+- **洗浄スライダーの二重バインドと未結線を解消** — 重複した結線をほどき、未接続だった 2 スライダーをつなぎました（NN27・NN28）
+- **provider priority 収集の A/B 重複を単一ヘルパーへ集約** — 2 レイアウトに inline 重複していた判定規則を 1 つのヘルパーに寄せました（follow-up、NN21 積み残し）
+- **残存ガード 8 箇所を共有ガードへ集約** — throw 系は Error の同一性を保ったまま共通化しました（follow-up、NN22 積み残し）。`exportImport.ts:179` の 1 件は戻り値の型契約が異なるため意図的に除外しています
+
+その他の 15 項目（alarm 二重ディスパッチ解消・purge ハンドラのエラー境界・Bootstrapper のサイレント catch・スライダーの delta-write 化・popup の非同期エラー境界・設定 merge 統一・tabUtils 追従・接続失敗分類の共通化・保持ルール統一・uBlock パーサー統一・blob URL ライフサイクル・observer 蓄積解消・CAS 統一・claim sweep・catalog lookup 統合）も挙動を変えずに整理しました。
+
 ## [6.9.31] - 2026-10-01
 
 v6.9.30 に続く翌日リリースです。拡張機能の通常利用の動作変更はなく、arch-delivery-loop ラウンドの 7 PBI（アーキテクチャ整理）と開発環境まわりの整備のみを含みます。
