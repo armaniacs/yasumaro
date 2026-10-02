@@ -35,6 +35,16 @@ export function isBPriorityListActive(
 /**
  * Collect the current provider priority slots, B-first with A fallback.
  * B try -> A fallback, then storage fallback when DOM collection is empty.
+ *
+ * Throw semantics (PBI 2026-10-02-09, restore decision): an A-collector throw
+ * propagates to the caller instead of being swallowed to []. The pre-consolidation
+ * save path let collectProviderPrioritySlots() throw, aborting the save and
+ * preserving the stored list; swallowing here would instead persist [] and
+ * silently blank the priority list on the save path (which passes no stored
+ * snapshot). Callers handle the throw: the save pipeline catches it and returns
+ * { success: false, error: 'collector_failed' } (rendered via saveErrorText's
+ * generic saveError text), and the B-view init catches it and falls back to
+ * the stored snapshot.
  */
 export function collectCurrentProviderPrioritySlots({
   layout,
@@ -46,19 +56,11 @@ export function collectCurrentProviderPrioritySlots({
     try {
       slots = collectBProviderPrioritySlots(bList);
     } catch {
-      slots = collectASafe();
+      slots = collectProviderPrioritySlots();
     }
   } else {
-    slots = collectASafe();
+    slots = collectProviderPrioritySlots();
   }
   if (slots.length === 0 && Array.isArray(stored)) return stored as ProviderSlot[];
   return slots;
-}
-
-function collectASafe(): ProviderSlot[] {
-  try {
-    return collectProviderPrioritySlots();
-  } catch {
-    return [];
-  }
 }

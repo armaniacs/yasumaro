@@ -80,6 +80,7 @@ vi.mock('../utils/confirmDialog.js', () => ({
 }));
 
 import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS } from '../settingsPipeline.js';
+import { collectProviderPrioritySlots } from '../generalSettings/settingsForm.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import * as formBinding from '../../utils/settingsFormBinding.js';
 import * as fieldValidation from '../settings/fieldValidation.js';
@@ -290,6 +291,19 @@ describe('saveDashboardSettings', () => {
     mockExtract.mockReturnValue({});
     const result = await saveDashboardSettings();
     expect(result.success).toBe(true);
+  });
+
+  it("returns collector_failed without writing when priority collection throws (PBI 2026-10-02-09)", async () => {
+    // Parity: the pre-consolidation save path let the A-collector throw abort
+    // the save; the consolidated helper swallowed it and persisted []. The
+    // restore decision aborts again via this catch, preserving stored slots.
+    setupInputs('https');
+    vi.mocked(collectProviderPrioritySlots).mockImplementationOnce(() => {
+      throw new Error('injected collector failure');
+    });
+    const result = await saveDashboardSettings();
+    expect(result).toEqual({ success: false, error: 'collector_failed' });
+    expect(mockSaveSettings).not.toHaveBeenCalled();
   });
 });
 

@@ -211,11 +211,19 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           const bAccordionContainer = container.querySelector('#bProviderAccordion') as HTMLElement | null;
           if (bListContainer && !bPriorityView) {
             // A collect + empty-DOM storage fallback live in the shared helper;
-            // this path seeds the B view from A DOM or stored slots.
-            const existingSlots = collectCurrentProviderPrioritySlots({
-              layout: currentLayout,
-              stored: currentSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST],
-            });
+            // this path seeds the B view from A DOM or stored slots. An
+            // A-collector throw propagates (PBI 2026-10-02-09), so catch it
+            // here and seed from the stored snapshot instead of breaking mount.
+            const stored = currentSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST];
+            let existingSlots;
+            try {
+              existingSlots = collectCurrentProviderPrioritySlots({
+                layout: currentLayout,
+                stored,
+              });
+            } catch {
+              existingSlots = Array.isArray(stored) ? stored : [];
+            }
             bPriorityView = createBPriorityListView(bListContainer, existingSlots, currentSettings);
           } else if (bListContainer && bPriorityView) {
             // Ensure hidden flag sync even if view already exists

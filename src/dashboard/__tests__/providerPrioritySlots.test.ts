@@ -11,7 +11,7 @@
  * Uses the real DOM collectors (no collector mocks), so every expectation is
  * a literal ProviderSlot[] — a broken fallback order fails the test.
  */
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { collectCurrentProviderPrioritySlots } from '../providerPrioritySlots.js';
 
 function setADom(p1: string, p1Model: string, p2: string, p2Model: string): void {
@@ -149,6 +149,45 @@ describe('collectCurrentProviderPrioritySlots', () => {
     it('ignores a non-array stored value', () => {
       document.body.innerHTML = '';
       expect(collectCurrentProviderPrioritySlots({ layout: 'b', stored: 'gemini' })).toEqual([]);
+    });
+  });
+
+  describe('throw semantics (PBI 2026-10-02-09, restore: propagate)', () => {
+    function breakACollector(): void {
+      vi.spyOn(document, 'getElementById').mockImplementation(() => {
+        throw new Error('injected A-collector failure');
+      });
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('propagates an A-collector throw instead of swallowing to []', () => {
+      // Parity: the old save path let collectProviderPrioritySlots() throw;
+      // the consolidated helper swallowed it to []. The restore decision
+      // propagates again, so this expectation fails on the swallow behavior.
+      setADom('gemini', '', '', '');
+      breakACollector();
+      expect(() => collectCurrentProviderPrioritySlots({ layout: 'a' })).toThrow(
+        'injected A-collector failure',
+      );
+    });
+
+    it('propagates when B collection throws and the A fallback also throws', () => {
+      setADom('gemini', '', '', '');
+      // Row presence check passes but row reading throws, so the B->A
+      // fallback runs and the broken A collector throw must propagate.
+      const broken = {
+        querySelector: () => document.createElement('div'),
+        querySelectorAll: () => {
+          throw new Error('unreadable B rows');
+        },
+      } as unknown as HTMLElement;
+      breakACollector();
+      expect(() => collectCurrentProviderPrioritySlots({ layout: 'b', bList: broken })).toThrow(
+        'injected A-collector failure',
+      );
     });
   });
 });

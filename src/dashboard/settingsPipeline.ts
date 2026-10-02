@@ -139,7 +139,16 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   // below only guards the B validation UI + P1 save block, not collection.
   const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
   const bList = document.getElementById('bPriorityList') as HTMLElement | null;
-  newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectCurrentProviderPrioritySlots({ layout, bList });
+  // Throw semantics (PBI 2026-10-02-09): the A-collector throw propagates out
+  // of collectCurrentProviderPrioritySlots. A failed collection must abort the
+  // save as { success: false } (rendered by callers via saveErrorText's generic
+  // saveError text) rather than persist a silently-blanked priority list.
+  try {
+    newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectCurrentProviderPrioritySlots({ layout, bList });
+  } catch {
+    logInfo('settingsPipeline', { layout }, 'Provider priority collection failed; aborting save');
+    return { success: false, error: 'collector_failed' };
+  }
   if (isBPriorityListActive(layout, bList)) {
     // Bレイアウト時の保存ブロック: P1必須（Spec §6）。Aは従来通りフォールバックでgeminiのためブロックしない。
     const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
