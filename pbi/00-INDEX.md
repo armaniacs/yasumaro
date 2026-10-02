@@ -45,6 +45,12 @@ holistic-code-review の大局的レビュー（3 領域の地図 32 候補 → 
 実行順: 依存優先（NN21 → NN22 の順、NN17 → NN20 の順）。
 追加 NN27 / NN28 は 2026-10-02 実装フェーズで判明した残存バグ（[台帳](2026-10-01-00-backlog-holistic-1001.md) 参照）。
 
+### 2026-10-02 follow-up（NN21 / NN22 積み残し解消） 🔧非機能追加
+
+| PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---|
+| [2026-10-02-01-refactor-provider-priority-slots-consolidation.md](2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | 4.0 | 0.5 | ✅ 実装完了・レビュー待ち。NN21 積み残し（A/B 収集重複の単一ヘルパー集約） |
+
 ### 2026-10-01 arch-delivery-loop 診断ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 
 arch-delivery-loop（Phase 0 並列診断 4 系統）で抽出した 14 候補を RICE 採点し、上位 7 件を PBI 化。残り 7 件は台帳送り。詳細は [2026-10-01-00-backlog-archloop-1001.md](2026-10-01-00-backlog-archloop-1001.md)。依存: S3 は PBI 04 着地後に台帳から昇格。O3/O4 は一体設計が条件。

@@ -12,8 +12,8 @@ import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domain
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProviderConnectionField, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { GENERAL_SETTINGS_FIELDS } from './settings/fieldDescriptor.js';
-import { collectProviderPrioritySlots } from './generalSettings/settingsForm.js';
-import { collectBProviderPrioritySlots, validateBContainer } from './aiProviderB/priorityListView.js';
+import { validateBContainer } from './aiProviderB/priorityListView.js';
+import { collectCurrentProviderPrioritySlots, isBPriorityListActive } from './providerPrioritySlots.js';
 import { clearAllFieldErrors, validateAllFields, setFieldError, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
@@ -135,61 +135,51 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   }
 
   const newSettings = extractSettingsFromInputs(document.querySelector(formSelector) ?? document.body, GENERAL_SETTINGS_SCHEMA);
-  // A/B分岐: layout === 'b' のときはBの優先度リストから収集
+  // A/B collection lives in collectCurrentProviderPrioritySlots; the gate
+  // below only guards the B validation UI + P1 save block, not collection.
   const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
-  if (layout === 'b') {
-    const bList = document.getElementById('bPriorityList') as HTMLElement | null;
-    const hasBRow = !!bList?.querySelector('.b-priority-row');
-    if (bList && hasBRow) {
-      try {
-        newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectBProviderPrioritySlots(bList);
-      } catch {
-        newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
+  const bList = document.getElementById('bPriorityList') as HTMLElement | null;
+  newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectCurrentProviderPrioritySlots({ layout, bList });
+  if (isBPriorityListActive(layout, bList)) {
+    // Bレイアウト時の保存ブロック: P1必須（Spec §6）。Aは従来通りフォールバックでgeminiのためブロックしない。
+    const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
+    // UIの重複警告を同期（row-aware）
+    const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
+    rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
+    let warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
+    if (!valid) {
+      if (!warn) {
+        warn = document.createElement('div');
+        warn.className = 'b-priority-warn field-error';
+        warn.setAttribute('role', 'alert');
+        bList.appendChild(warn);
       }
-      // Bレイアウト時の保存ブロック: P1必須（Spec §6）。Aは従来通りフォールバックでgeminiのためブロックしない。
-      const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
-      // UIの重複警告を同期（row-aware）
-      const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
-      rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
-      let warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
-      if (!valid) {
-        if (!warn) {
-          warn = document.createElement('div');
-          warn.className = 'b-priority-warn field-error';
-          warn.setAttribute('role', 'alert');
-          bList.appendChild(warn);
-        }
-        warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-      } else {
-        warn?.remove();
-      }
-      let reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
-      if (p1Empty) {
-        if (!reqWarn) {
-          reqWarn = document.createElement('div');
-          reqWarn.className = 'b-priority-req-warn field-error';
-          reqWarn.setAttribute('role', 'alert');
-          bList.appendChild(reqWarn);
-        }
-        reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-        rows[0]?.classList.add('has-error');
-        // status エリアにも表示して保存を中断
-        const statusEl = document.getElementById('status') as HTMLElement | null;
-        if (statusEl) {
-          showStatus(statusEl, saveErrorText('aiProviderPriority1Required'), 'error', { autoClear: false });
-          try {
-            syncStatusToTop();
-          } catch {}
-        }
-        return { success: false, error: 'aiProviderPriority1Required' };
-      } else {
-        reqWarn?.remove();
-      }
+      warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
     } else {
-      newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
+      warn?.remove();
     }
-  } else {
-    newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectProviderPrioritySlots();
+    let reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
+    if (p1Empty) {
+      if (!reqWarn) {
+        reqWarn = document.createElement('div');
+        reqWarn.className = 'b-priority-req-warn field-error';
+        reqWarn.setAttribute('role', 'alert');
+        bList.appendChild(reqWarn);
+      }
+      reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
+      rows[0]?.classList.add('has-error');
+      // status エリアにも表示して保存を中断
+      const statusEl = document.getElementById('status') as HTMLElement | null;
+      if (statusEl) {
+        showStatus(statusEl, saveErrorText('aiProviderPriority1Required'), 'error', { autoClear: false });
+        try {
+          syncStatusToTop();
+        } catch {}
+      }
+      return { success: false, error: 'aiProviderPriority1Required' };
+    } else {
+      reqWarn?.remove();
+    }
   }
 
   if (includeTiming) {

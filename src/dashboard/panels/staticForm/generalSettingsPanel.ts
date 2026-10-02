@@ -22,7 +22,7 @@ import { providerIdsInOrder, renderProviderOptions, renderProviderSettings } fro
 import { resolveInitialLayout, mountLayoutToggle } from '../../aiProviderLayoutToggle.js';
 import { createBPriorityListView } from '../../aiProviderB/priorityListView.js';
 import { createBProviderAccordionView } from '../../aiProviderB/providerAccordionView.js';
-import { collectProviderPrioritySlots } from '../../generalSettings/settingsForm.js';
+import { collectCurrentProviderPrioritySlots } from '../../providerPrioritySlots.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../utils/ui/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
@@ -210,15 +210,12 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           const bListContainer = container.querySelector('#bPriorityList') as HTMLElement | null;
           const bAccordionContainer = container.querySelector('#bProviderAccordion') as HTMLElement | null;
           if (bListContainer && !bPriorityView) {
-            let existingSlots: ReturnType<typeof collectProviderPrioritySlots> = [];
-            try {
-              existingSlots = collectProviderPrioritySlots();
-            } catch { existingSlots = []; }
-            // storage fallback if DOM collection is empty (initial load after reload)
-            if (existingSlots.length === 0) {
-              const stored = currentSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST];
-              if (Array.isArray(stored)) existingSlots = stored;
-            }
+            // A collect + empty-DOM storage fallback live in the shared helper;
+            // this path seeds the B view from A DOM or stored slots.
+            const existingSlots = collectCurrentProviderPrioritySlots({
+              layout: currentLayout,
+              stored: currentSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST],
+            });
             bPriorityView = createBPriorityListView(bListContainer, existingSlots, currentSettings);
           } else if (bListContainer && bPriorityView) {
             // Ensure hidden flag sync even if view already exists

@@ -50,6 +50,7 @@
 |---|---|---|---|
 | 27 | [2026-10-01-27-fix-cleansing-slider-double-binding](2026-10-01-27-fix-cleansing-slider-double-binding.md) | fix | NN11 の実装後、`aiSummaryCleansingPanel.ts:29` が V2 の setup を呼び `:43-59` でも同じ 4 スライダーを束縛しており、V2 側の full-form 書き込み（`aiSummaryCleansingSettingsV2.ts:475-478`）が先に発火して巻き戻しが残っていた。NN11 の新テストはパネル単体 mount で V2 を経由しないため検出できなかった |
 | 28 | [2026-10-01-28-fix-cleansing-sliders-unwired](2026-10-01-28-fix-cleansing-sliders-unwired.md) | fix | NN27 の検証中、`entrypoints/options/index.html:1236,1246` に実在する 2 スライダー（`fallback-ratio` / `fallback-min-bytes`）が `rangeConfigs` に無く保存されないこと、および `popup-body-protection-threshold` 行に HTML 要素が存在しないことを発見 |
+| — | [2026-10-02-01-refactor-provider-priority-slots-consolidation](2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | NN21 の積み残し（`collectCurrentProviderPrioritySlots()` の inline コピー集約）。✅ 実装済み（レビュー待ち） |
 
 ## 台帳送り（積み残し → 次ラウンド予約）
 
