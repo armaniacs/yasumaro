@@ -91,7 +91,9 @@ describe('storage', () => {
         getDomainFilterCacheSync(resolve);
       });
 
-      expect(result).toEqual({ allowedDomains: [], blockedDomains: [], cachedAt: 0, mode: 'disabled', matchSubdomains: false });
+      // PBI 2026-10-02-08: read-path fallback adjudicated to 'blacklist'
+      // (was 'disabled', which ignored the curated default blacklist).
+      expect(result).toEqual({ allowedDomains: [], blockedDomains: [], cachedAt: 0, mode: 'blacklist', matchSubdomains: false });
     });
   });
 
@@ -262,10 +264,10 @@ describe('storage', () => {
       );
     });
 
-    // The write path and the read path disagree on the missing-mode default
-    // ('whitelist' vs 'disabled'), and the settings default is a third value
-    // ('blacklist'). Pinned until that inconsistency is decided on purpose.
-    it('writes "whitelist" as the mode when settings carry no mode', async () => {
+    // PBI 2026-10-02-08: the missing-mode default was decided on purpose —
+    // all three legs are 'blacklist' (was 'whitelist' here, 'disabled' on the
+    // read path, 'blacklist' in settings).
+    it('writes "blacklist" as the mode when settings carry no mode', async () => {
       const mockSet = vi.fn().mockResolvedValue(undefined);
       // @ts-ignore
       global.chrome = { storage: { local: { set: mockSet } } } as any;
@@ -273,21 +275,21 @@ describe('storage', () => {
       await updateDomainFilterCache({} as unknown as Settings);
 
       expect(mockSet).toHaveBeenCalledWith(
-        expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'whitelist' })
+        expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist' })
       );
     });
   });
 
   describe('domain filter mode defaults', () => {
-    // Three different defaults are in play for a missing mode: the settings
-    // default, the write-path fallback, and the read-path fallback. They are
-    // pinned separately on purpose — aligning them is a behaviour change that
-    // has to be decided, not something a refactor may quietly do.
+    // PBI 2026-10-02-08: the three missing-mode defaults were pinned
+    // separately until the inconsistency was decided on purpose. Decision:
+    // 'blacklist' on all three legs (settings default wins — it is the only
+    // default paired with data: non-empty DOMAIN_BLACKLIST vs empty whitelist).
     it('keeps "blacklist" as the settings default', () => {
       expect(DEFAULT_SETTINGS[StorageKeys.DOMAIN_FILTER_MODE]).toBe('blacklist');
     });
 
-    it('keeps "whitelist" as the write-path fallback', async () => {
+    it('keeps "blacklist" as the write-path fallback', async () => {
       const mockSet = vi.fn().mockResolvedValue(undefined);
       // @ts-ignore
       global.chrome = { storage: { local: { set: mockSet } } } as any;
@@ -295,11 +297,12 @@ describe('storage', () => {
       await updateDomainFilterCache({} as unknown as Settings);
 
       expect(mockSet).toHaveBeenCalledWith(
-        expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'whitelist' })
+        expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist' })
       );
     });
 
-    it('keeps "disabled" as the read-path fallback', async () => {
+    it('keeps "blacklist" as the read-path fallback', async () => {
+      // PBI 2026-10-02-08: adjudicated default is 'blacklist' (was 'disabled').
       // @ts-ignore
       global.chrome = {
         storage: {
@@ -316,7 +319,7 @@ describe('storage', () => {
         getDomainFilterCacheSync((data) => resolve(data.mode));
       });
 
-      expect(mode).toBe('disabled');
+      expect(mode).toBe('blacklist');
     });
   });
 });

@@ -34,7 +34,7 @@ export function getDomainFilterCacheSync(callback: (data: { allowedDomains: stri
     ], (result) => {
         const allowedDomains = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
         const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
-        const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
+        const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'blacklist';
         const matchSubdomains = result[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
 
         // ブロックドメインは設定に基づいて動的に算出（シンプル形式のみ）

@@ -123,7 +123,7 @@ export class DomainFilter {
    * Generate cache record valid for ttlMs — used by updateDomainFilterCache.
    */
   cache(settings: Settings, now = Date.now()): { cachedDomains: string[]; cachedAt: number; validFor: number; mode: string } {
-    const mode = (settings[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'whitelist';
+    const mode = (settings[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'blacklist';
     return {
       cachedDomains: this.buildCacheDomains(settings),
       cachedAt: now,

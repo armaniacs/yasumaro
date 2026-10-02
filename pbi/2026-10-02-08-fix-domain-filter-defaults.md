@@ -33,13 +33,13 @@ Scenario: 裁定が記録される
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] 単一の既定値が裁定され、選定理由が本 PBI に記録されている (`defaults.ts:66` / `domainFilterCache.ts:37,84` / `DomainFilter.ts:125-133` のいずれを正としたか明示)
-- [ ] `src/utils/storage/defaults.ts:66` が裁定値と一致している
-- [ ] `src/background/cache/domainFilterCache.ts:37` が裁定値と一致している
-- [ ] `src/background/cache/domainFilterCache.ts:84` が裁定値と一致している
-- [ ] `src/background/domain/DomainFilter.ts:125-133` が裁定値と一致している
-- [ ] 既存 DomainFilter テストが green である
-- [ ] 3 層の既定値を横断比較する default-matrix テストが新規追加されている
+- [x] 単一の既定値が裁定され、選定理由が本 PBI に記録されている (`defaults.ts:66` / `domainFilterCache.ts:37,84` / `DomainFilter.ts:125-133` のいずれを正としたか明示)
+- [x] `src/utils/storage/defaults.ts:66` が裁定値と一致している
+- [x] `src/background/cache/domainFilterCache.ts:37` が裁定値と一致している
+- [x] `src/background/cache/domainFilterCache.ts:84` が裁定値と一致している
+- [x] `src/background/domain/DomainFilter.ts:125-133` が裁定値と一致している
+- [x] 既存 DomainFilter テストが green である
+- [x] 3 層の既定値を横断比較する default-matrix テストが新規追加されている
 
 ## テスト戦略
 
@@ -59,6 +59,14 @@ Scenario: 裁定が記録される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] コードレビュー完了
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] コードレビュー完了
+
+## 実装記録 (2026-10-02)
+
+- 裁定: 単一既定値は `'blacklist'`。選定理由は `defaults.ts` のみがデータ裏付けを持つ既定だから (`DEFAULT_SETTINGS` は非空 `DOMAIN_BLACKLIST` + 空 `DOMAIN_WHITELIST` を同梱。`'whitelist'` は fresh install で全拒否、`'disabled'` は curated blacklist を無視するため不採用)。`defaults.ts:66` (`'blacklist'`) を正とし、他 2 層を寄せた
+- 変更: `src/utils/domainFilter/DomainFilter.ts:126` (`'whitelist'` → `'blacklist'`)、`src/utils/storage/domainFilterCache.ts:37` (`'disabled'` → `'blacklist'`)。`defaults.ts` は変更なし (既に `'blacklist'`)
+- 経路差異の注記: 本 PBI 起票時のスコープは `src/background/...` 配下だが、現行コードは `src/utils/...` 配下に移設済み (`src/utils/domainFilter/DomainFilter.ts`、`src/utils/storage/domainFilterCache.ts`)。対象の 3 層は同一であり、移設先で実施した
+- テスト: 新規 `src/utils/__tests__/domainFilter-defaults.matrix.test.ts` 5 tests (3 層×単独 + 横断一致 + fresh-install 動作 pin)、`src/utils/__tests__/storage.test.ts` 4 assertions を理由付きで更新 (read-path `'disabled'`→`'blacklist'`、write-path `'whitelist'`→`'blacklist'` 他)
+- `npm run validate` フル PASS (15423 passed)
