@@ -8,11 +8,11 @@ VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`�
 
 | 順位 | PBI | 候補 | Reach | Impact | Conf | Effort | RICE |
 |---|---|---|---|---|---|---|---|
-| 1 | [2026-09-22-06](2026-09-22-06-fix-obsidian-host-credential-pairing.md) | Obsidian ホスト×保存キー修正 (VULN-001 High) | 8 | 3 | 1.0 | 0.5 | **48** |
-| 2 | [2026-09-22-07](2026-09-22-07-fix-provider-baseurl-authorization.md) | プロバイダ baseUrl 認可 (VULN-002 High + VULN-003 Medium) | 8 | 3 | 1.0 | 1 | **24** |
-| 3 | [2026-09-22-08](2026-09-22-08-fix-archive-restore-resource-caps.md) | アーカイブ復元上限 (VULN-004 Medium) | 3 | 2 | 1.0 | 0.5 | **12** |
-| 4 | [2026-09-22-09](2026-09-22-09-fix-message-field-validation.md) | フィールド検証完全化 (VULN-005 + VULN-007 Low) | 7 | 0.5 | 1.0 | 0.5 | **7.0** |
-| 5 | [2026-09-22-10](2026-09-22-10-fix-rate-limiter-domain-key.md) | レート制限キー eTLD+1 化 (VULN-006 Low) | 7 | 0.5 | 1.0 | 0.5 | **7.0** |
+| 1 | [2026-09-22-06](../dev-docs/archived/pbi/2026-09-22-06-fix-obsidian-host-credential-pairing.md) | Obsidian ホスト×保存キー修正 (VULN-001 High) | 8 | 3 | 1.0 | 0.5 | **48** |
+| 2 | [2026-09-22-07](../dev-docs/archived/pbi/2026-09-22-07-fix-provider-baseurl-authorization.md) | プロバイダ baseUrl 認可 (VULN-002 High + VULN-003 Medium) | 8 | 3 | 1.0 | 1 | **24** |
+| 3 | [2026-09-22-08](../dev-docs/archived/pbi/2026-09-22-08-fix-archive-restore-resource-caps.md) | アーカイブ復元上限 (VULN-004 Medium) | 3 | 2 | 1.0 | 0.5 | **12** |
+| 4 | [2026-09-22-09](../dev-docs/archived/pbi/2026-09-22-09-fix-message-field-validation.md) | フィールド検証完全化 (VULN-005 + VULN-007 Low) | 7 | 0.5 | 1.0 | 0.5 | **7.0** |
+| 5 | [2026-09-22-10](../dev-docs/archived/pbi/2026-09-22-10-fix-rate-limiter-domain-key.md) | レート制限キー eTLD+1 化 (VULN-006 Low) | 7 | 0.5 | 1.0 | 0.5 | **7.0** |
 | 6 | [2026-09-22-11](2026-09-22-11-backlog-defense-in-depth-hardening.md) | 防御深度ハードニング監視（Code Quality 4項） | 2 | 1 | 0.5 | 1 | **1.0** |
 
 ## 依存と再検討トリガー

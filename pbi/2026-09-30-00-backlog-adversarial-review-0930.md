@@ -14,19 +14,19 @@ RICE スコア = (Reach × Impact × Confidence) / Effort
 
 | 順 | PBI | type | R×I×C/E | スコア | 根拠 |
 |---|------|------|---------|--------|------|
-| 1 | [匿名 KEK 再生成の fail-closed 化](2026-09-30-01-fix-anon-kek-regeneration-fail-closed.md) | fix | 3×3×1.0/0.25 | 36.0 | 全 API キー孤立を数時間で塞げる quick win |
-| 2 | [set 経路の乗っ取りガード](2026-09-30-02-fix-master-password-set-takeover-guard.md) | fix | 2×3×1.0/0.5 | 12.0 | 旧パスワード不要の乗っ取りを service 層で封じる |
-| 3 | [AAD 導入による ciphertext フィールド束縛](2026-09-30-03-fix-encryption-aad-field-binding.md) | fix | 10×2×0.8/1.5 | 10.7 | 効果は全 API キー保持者。envelope 互換 migration で工数大 |
-| 4 | [KDF iteration の上下限](2026-09-30-04-fix-kdf-iteration-bounds.md) | fix | 2×1×1.0/0.25 | 8.0 | unlock バイパス+DoS を塞ぐ小修正(同点はリスク軽減で C 優先) |
-| 5 | [HMAC キー再生の可視化と consent 取扱い](2026-09-30-05-fix-hmac-key-regeneration-visibility.md) | fix | 5×1×0.8/0.5 | 8.0 | 記録ゲートが黙って止まる可用性問題 |
-| 6 | [SW 復号失敗の握りつぶし解消](2026-09-30-06-fix-sw-decryption-lock-propagation.md) | fix | 2×3×0.8/1.0 | 4.8 | マスターパスワード ON 時に AI/Obsidian 保存が機能しない機能バグ |
-| 7 | [dashboard checkbox/confirm 欄の UI 状態バグ](2026-09-30-07-fix-dashboard-mp-ui-state-bugs.md) | fix | 2×0.5×1.0/0.25 | 4.0 | 候補2の前提条件になる不整合の解消(同点は G 優先) |
-| 8 | [PENDING_SALT のパスワード束縛+ドキュメント整合](2026-09-30-08-fix-pending-salt-password-binding.md) | fix | 2×1×1.0/0.5 | 4.0 | 別パスワード再試行時の恒久詰まり防止 |
-| 9 | [ローテーションの相互排他](2026-09-30-09-fix-kek-rotation-cross-context-lock.md) | fix | 2×1×0.8/0.5 | 3.2 | 2 タブ同時操作での API キー損失。発生条件は狭い |
-| 10 | [テスト信頼性回復](2026-09-30-10-test-restore-assertion-integrity.md) | test | 1×0.5×1.0/0.25 | 2.0 | 他修正の検証基盤(同点 3 件の先頭) |
-| 11 | [死蔵並行実装の削除](2026-09-30-11-refactor-remove-dead-masterpassword-module.md) | refactor | 1×0.5×1.0/0.25 | 2.0 | 誤修正・誤 wiring の防止 |
-| 12 | [エクスポート HMAC へ iterations 追加](2026-09-30-12-fix-export-hmac-iterations.md) | fix | 1×1×1.0/0.5 | 2.0 | 攻撃前提かつ利用者層が狭い |
-| 13 | [IDB キーストア実装の共通化](2026-09-30-13-refactor-idb-keystore-consolidation.md) | refactor | 1×0.5×1.0/0.5 | 1.0 | 保守性のみ |
+| 1 | [匿名 KEK 再生成の fail-closed 化](../dev-docs/archived/pbi/2026-09-30-01-fix-anon-kek-regeneration-fail-closed.md) | fix | 3×3×1.0/0.25 | 36.0 | 全 API キー孤立を数時間で塞げる quick win |
+| 2 | [set 経路の乗っ取りガード](../dev-docs/archived/pbi/2026-09-30-02-fix-master-password-set-takeover-guard.md) | fix | 2×3×1.0/0.5 | 12.0 | 旧パスワード不要の乗っ取りを service 層で封じる |
+| 3 | [AAD 導入による ciphertext フィールド束縛](../dev-docs/archived/pbi/2026-09-30-03-fix-encryption-aad-field-binding.md) | fix | 10×2×0.8/1.5 | 10.7 | 効果は全 API キー保持者。envelope 互換 migration で工数大 |
+| 4 | [KDF iteration の上下限](../dev-docs/archived/pbi/2026-09-30-04-fix-kdf-iteration-bounds.md) | fix | 2×1×1.0/0.25 | 8.0 | unlock バイパス+DoS を塞ぐ小修正(同点はリスク軽減で C 優先) |
+| 5 | [HMAC キー再生の可視化と consent 取扱い](../dev-docs/archived/pbi/2026-09-30-05-fix-hmac-key-regeneration-visibility.md) | fix | 5×1×0.8/0.5 | 8.0 | 記録ゲートが黙って止まる可用性問題 |
+| 6 | [SW 復号失敗の握りつぶし解消](../dev-docs/archived/pbi/2026-09-30-06-fix-sw-decryption-lock-propagation.md) | fix | 2×3×0.8/1.0 | 4.8 | マスターパスワード ON 時に AI/Obsidian 保存が機能しない機能バグ |
+| 7 | [dashboard checkbox/confirm 欄の UI 状態バグ](../dev-docs/archived/pbi/2026-09-30-07-fix-dashboard-mp-ui-state-bugs.md) | fix | 2×0.5×1.0/0.25 | 4.0 | 候補2の前提条件になる不整合の解消(同点は G 優先) |
+| 8 | [PENDING_SALT のパスワード束縛+ドキュメント整合](../dev-docs/archived/pbi/2026-09-30-08-fix-pending-salt-password-binding.md) | fix | 2×1×1.0/0.5 | 4.0 | 別パスワード再試行時の恒久詰まり防止 |
+| 9 | [ローテーションの相互排他](../dev-docs/archived/pbi/2026-09-30-09-fix-kek-rotation-cross-context-lock.md) | fix | 2×1×0.8/0.5 | 3.2 | 2 タブ同時操作での API キー損失。発生条件は狭い |
+| 10 | [テスト信頼性回復](../dev-docs/archived/pbi/2026-09-30-10-test-restore-assertion-integrity.md) | test | 1×0.5×1.0/0.25 | 2.0 | 他修正の検証基盤(同点 3 件の先頭) |
+| 11 | [死蔵並行実装の削除](../dev-docs/archived/pbi/2026-09-30-11-refactor-remove-dead-masterpassword-module.md) | refactor | 1×0.5×1.0/0.25 | 2.0 | 誤修正・誤 wiring の防止 |
+| 12 | [エクスポート HMAC へ iterations 追加](../dev-docs/archived/pbi/2026-09-30-12-fix-export-hmac-iterations.md) | fix | 1×1×1.0/0.5 | 2.0 | 攻撃前提かつ利用者層が狭い |
+| 13 | [IDB キーストア実装の共通化](../dev-docs/archived/pbi/2026-09-30-13-refactor-idb-keystore-consolidation.md) | refactor | 1×0.5×1.0/0.5 | 1.0 | 保守性のみ |
 
 ## 依存・実装順の注意(スコアより優先)
 

@@ -12,23 +12,23 @@ RICE = Reach（今後 1 年の関与頻度 1-10）× Impact（3=実害解消 / 2
 
 | NN | PBI | 種別 | R | I | C | E | RICE | SP | 依存 / 備考 |
 |---|---|---|---:|---:|---:|---:|---:|---:|---|
-| 01 | [fix-ai-rate-limit-max-reader-writer-split](2026-09-28-01-fix-ai-rate-limit-max-reader-writer-split.md) | fix | 6 | 3 | 100% | 0.5 | 36.0 | 0.5 | 実害: UI 設定が読まれず常に既定値。getMaxMonthlyTokens の 2026-09-22 修復と同形の未修復残 |
-| 02 | [refactor-domain-filter-cache-save-seam-adoption](2026-09-28-02-refactor-domain-filter-cache-save-seam-adoption.md) | refactor | 5 | 2 | 100% | 0.5 | 20.0 | 0.5 | 専用 seam が存在するのに byte 同一 IIFE 4 箇所が残存。delta-write 契約（2026-09-17-17）違反 |
-| 03 | [fix-init-export-scheduler-immediate-flush-loss](2026-09-28-03-fix-init-export-scheduler-immediate-flush-loss.md) | fix | 3 | 3 | 100% | 0.5 | 18.0 | 0.5 | 実害: 設定保存/接続テスト直後の当日 export が黙って消える |
-| 04 | [fix-apply-i18n-args-parse-fail-closed](2026-09-28-04-fix-apply-i18n-args-parse-fail-closed.md) | fix | 3 | 3 | 90% | 0.5 | 16.2 | 0.5 | 1 属性の malformed JSON でパネル翻訳一式が死ぬ。現行テストが throw を pin（要更新） |
-| 05 | [refactor-settings-backup-restore-single-source](2026-09-28-05-refactor-settings-backup-restore-single-source.md) | refactor | 3 | 2 | 100% | 0.5 | 12.0 | 0.5 | バックアップ復元の二重実装 + リテラルハードコード drift |
-| 06 | [fix-local-markdown-export-retention-hardening](2026-09-28-06-fix-local-markdown-export-retention-hardening.md) | fix | 3 | 3 | 100% | 1 | 9.0 | 1 | 実害: 失敗時の孤児バッファが無期限蓄積（1.4-2.2MB/日）+ flush O(N) 退行 + RMW 競合 |
-| 07 | [refactor-field-validation-descriptor-activation](2026-09-28-07-refactor-field-validation-descriptor-activation.md) | refactor | 5 | 2 | 90% | 1 | 9.0 | 1 | デスクリプタ汎用経路が死んでおり手書き 12 関数と 3 重管理。docstring が現状と不一致 |
-| 08 | [fix-removed-counts-type-pollution](2026-09-28-08-fix-removed-counts-type-pollution.md) | fix | 2 | 3 | 100% | 1 | 6.0 | 1 | 実害: 文字列（reason 名・byte 数）が removal count 地図に混入し feedback view に表示される |
-| 09 | [refactor-asyncdata-panel-reload-lifecycle](2026-09-28-09-refactor-asyncdata-panel-reload-lifecycle.md) | refactor | 6 | 2 | 90% | 2 | 5.4 | 2 | 9 パネル × 約 22 行の reload 骨格重複。期間フォールバック 2 系統 drift を是正 |
-| 10 | [refactor-layer0-limits-ssot](2026-09-28-10-refactor-layer0-limits-ssot.md) | refactor | 4 | 2 | 100% | 1.5 | 5.3 | 1.5 | Layer 0 cap 定数の SSOT 化。14 が 10 に依存 |
-| 11 | [refactor-local-date-utilities-ssot](2026-09-28-11-refactor-local-date-utilities-ssot.md) | refactor | 4 | 2 | 90% | 1.5 | 4.8 | 1.5 | format 7 + parse 5 + 日レンジ 3 の再実装。DST 取り込み漏れと日付正規化 2 ポリシー併存（実害 2 件）。テスト pin の更新が要る。10 と tagClusterTimeSliderPanel.ts でファイル重複 → 09 の後 |
-| 12 | [investigate-session-store-overflow-persistence](2026-09-28-12-investigate-session-store-overflow-persistence.md) | investigate | 3 | 2 | 80% | 1 | 4.8 | 1 | 保存 URL ~9k 件で session 永続化が恒久停止し毎 flush が O(n) serialize。cap 値と戦略の裁定が前提 |
-| 13 | [refactor-layer-boundary-hygiene-bundle](2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md) | refactor | 3 | 1.5 | 100% | 1 | 4.5 | 1 | 小型境界違反 4 件のバンドル（gistSettings DI 迂回・opfsCapabilities 純 core 分離・auditLog 移設・DiagnosticsCollector 偽 union 解消） |
-| 14 | [refactor-messaging-background-edge-removal](2026-09-28-14-refactor-messaging-background-edge-removal.md) | refactor | 4 | 2 | 90% | 2 | 3.6 | 2 | 中立層 messaging が background に runtime 依存（4 edge）+ CURRENT_PROTOCOL_VERSION 2 経路。**10 に依存**（validators.ts / limits 関連が重なる） |
-| 15 | [refactor-status-message-unification](2026-09-28-15-refactor-status-message-unification.md) | refactor | 4 | 1.5 | 80% | 1.5 | 3.2 | 1.5 | status 表示 8 実装・class 契約 2 系統（CSS と非互換を実証）。**07 に依存**（settingsPipeline.ts 重複） |
-| 16 | [refactor-preview-flow-payload-typing](2026-09-28-16-refactor-preview-flow-payload-typing.md) | refactor | 2 | 2 | 90% | 1.5 | 2.4 | 1.5 | popup の 3 payload 再宣言と `as unknown as ExtensionMessage`。maskedCount 誤搬送を構造的に排除 |
-| 17 | [refactor-render-tag-graph-extraction](2026-09-28-17-refactor-render-tag-graph-extraction.md) | refactor | 2 | 1 | 100% | 1 | 2.0 | 1 | **既存台帳（archloop-0924）からの昇格**。トリガー「3つ目のクラスタグラフ系パネル追加時」が発火済み（wordCluster・timeSlider が第 2・3 実装） |
+| 01 | [fix-ai-rate-limit-max-reader-writer-split](../dev-docs/archived/pbi/2026-09-28-01-fix-ai-rate-limit-max-reader-writer-split.md) | fix | 6 | 3 | 100% | 0.5 | 36.0 | 0.5 | 実害: UI 設定が読まれず常に既定値。getMaxMonthlyTokens の 2026-09-22 修復と同形の未修復残 |
+| 02 | [refactor-domain-filter-cache-save-seam-adoption](../dev-docs/archived/pbi/2026-09-28-02-refactor-domain-filter-cache-save-seam-adoption.md) | refactor | 5 | 2 | 100% | 0.5 | 20.0 | 0.5 | 専用 seam が存在するのに byte 同一 IIFE 4 箇所が残存。delta-write 契約（2026-09-17-17）違反 |
+| 03 | [fix-init-export-scheduler-immediate-flush-loss](../dev-docs/archived/pbi/2026-09-28-03-fix-init-export-scheduler-immediate-flush-loss.md) | fix | 3 | 3 | 100% | 0.5 | 18.0 | 0.5 | 実害: 設定保存/接続テスト直後の当日 export が黙って消える |
+| 04 | [fix-apply-i18n-args-parse-fail-closed](../dev-docs/archived/pbi/2026-09-28-04-fix-apply-i18n-args-parse-fail-closed.md) | fix | 3 | 3 | 90% | 0.5 | 16.2 | 0.5 | 1 属性の malformed JSON でパネル翻訳一式が死ぬ。現行テストが throw を pin（要更新） |
+| 05 | [refactor-settings-backup-restore-single-source](../dev-docs/archived/pbi/2026-09-28-05-refactor-settings-backup-restore-single-source.md) | refactor | 3 | 2 | 100% | 0.5 | 12.0 | 0.5 | バックアップ復元の二重実装 + リテラルハードコード drift |
+| 06 | [fix-local-markdown-export-retention-hardening](../dev-docs/archived/pbi/2026-09-28-06-fix-local-markdown-export-retention-hardening.md) | fix | 3 | 3 | 100% | 1 | 9.0 | 1 | 実害: 失敗時の孤児バッファが無期限蓄積（1.4-2.2MB/日）+ flush O(N) 退行 + RMW 競合 |
+| 07 | [refactor-field-validation-descriptor-activation](../dev-docs/archived/pbi/2026-09-28-07-refactor-field-validation-descriptor-activation.md) | refactor | 5 | 2 | 90% | 1 | 9.0 | 1 | デスクリプタ汎用経路が死んでおり手書き 12 関数と 3 重管理。docstring が現状と不一致 |
+| 08 | [fix-removed-counts-type-pollution](../dev-docs/archived/pbi/2026-09-28-08-fix-removed-counts-type-pollution.md) | fix | 2 | 3 | 100% | 1 | 6.0 | 1 | 実害: 文字列（reason 名・byte 数）が removal count 地図に混入し feedback view に表示される |
+| 09 | [refactor-asyncdata-panel-reload-lifecycle](../dev-docs/archived/pbi/2026-09-28-09-refactor-asyncdata-panel-reload-lifecycle.md) | refactor | 6 | 2 | 90% | 2 | 5.4 | 2 | 9 パネル × 約 22 行の reload 骨格重複。期間フォールバック 2 系統 drift を是正 |
+| 10 | [refactor-layer0-limits-ssot](../dev-docs/archived/pbi/2026-09-28-10-refactor-layer0-limits-ssot.md) | refactor | 4 | 2 | 100% | 1.5 | 5.3 | 1.5 | Layer 0 cap 定数の SSOT 化。14 が 10 に依存 |
+| 11 | [refactor-local-date-utilities-ssot](../dev-docs/archived/pbi/2026-09-28-11-refactor-local-date-utilities-ssot.md) | refactor | 4 | 2 | 90% | 1.5 | 4.8 | 1.5 | format 7 + parse 5 + 日レンジ 3 の再実装。DST 取り込み漏れと日付正規化 2 ポリシー併存（実害 2 件）。テスト pin の更新が要る。10 と tagClusterTimeSliderPanel.ts でファイル重複 → 09 の後 |
+| 12 | [investigate-session-store-overflow-persistence](../dev-docs/archived/pbi/2026-09-28-12-investigate-session-store-overflow-persistence.md) | investigate | 3 | 2 | 80% | 1 | 4.8 | 1 | 保存 URL ~9k 件で session 永続化が恒久停止し毎 flush が O(n) serialize。cap 値と戦略の裁定が前提 |
+| 13 | [refactor-layer-boundary-hygiene-bundle](../dev-docs/archived/pbi/2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md) | refactor | 3 | 1.5 | 100% | 1 | 4.5 | 1 | 小型境界違反 4 件のバンドル（gistSettings DI 迂回・opfsCapabilities 純 core 分離・auditLog 移設・DiagnosticsCollector 偽 union 解消） |
+| 14 | [refactor-messaging-background-edge-removal](../dev-docs/archived/pbi/2026-09-28-14-refactor-messaging-background-edge-removal.md) | refactor | 4 | 2 | 90% | 2 | 3.6 | 2 | 中立層 messaging が background に runtime 依存（4 edge）+ CURRENT_PROTOCOL_VERSION 2 経路。**10 に依存**（validators.ts / limits 関連が重なる） |
+| 15 | [refactor-status-message-unification](../dev-docs/archived/pbi/2026-09-28-15-refactor-status-message-unification.md) | refactor | 4 | 1.5 | 80% | 1.5 | 3.2 | 1.5 | status 表示 8 実装・class 契約 2 系統（CSS と非互換を実証）。**07 に依存**（settingsPipeline.ts 重複） |
+| 16 | [refactor-preview-flow-payload-typing](../dev-docs/archived/pbi/2026-09-28-16-refactor-preview-flow-payload-typing.md) | refactor | 2 | 2 | 90% | 1.5 | 2.4 | 1.5 | popup の 3 payload 再宣言と `as unknown as ExtensionMessage`。maskedCount 誤搬送を構造的に排除 |
+| 17 | [refactor-render-tag-graph-extraction](../dev-docs/archived/pbi/2026-09-28-17-refactor-render-tag-graph-extraction.md) | refactor | 2 | 1 | 100% | 1 | 2.0 | 1 | **既存台帳（archloop-0924）からの昇格**。トリガー「3つ目のクラスタグラフ系パネル追加時」が発火済み（wordCluster・timeSlider が第 2・3 実装） |
 
 台帳送り（トリガー管理・PBI 化せず）は本ファイル末尾。
 
@@ -95,11 +95,11 @@ RICE = Reach（今後 1 年の関与頻度 1-10）× Impact（3=実害解消 / 2
 
 | NN | PBI | 種別 | R | I | C | E | RICE | SP | 出典 |
 |---|---|---|---:|---:|---:|---:|---:|---:|---|
-| 18 | [fix-session-store-flush-cap-stagnation-drop](2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md) | fix | 3 | 3 | 100% | 1 | 9.0 | 1 | investigate 12 の裁定（ADR 2026-09-28-session-store-overflow-persistence） |
-| 19 | [refactor-status-message-residual-bundle](2026-09-28-19-refactor-status-message-residual-bundle.md) | refactor | 3 | 1.5 | 90% | 1 | 4.05 | 1 | 残課題 1-3（stale-timer race・markup class 落ち・mainStatus 旧経路） |
-| 20 | [refactor-ai-summary-cleansing-settings-delta-write](2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 2 | 1 | 100% | 0.5 | 4.0 | 0.5 | 残課題 6（full-snapshot writer。実読の結果 writer は 1 本で :171 は同関数内の代入行 — PBI 側に記録済み） |
-| 21 | [fix-cleansing-feedback-ai-stats-persistence](2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md) | fix | 2 | 2 | 80% | 1 | 3.2 | 1 | 残課題 7（CleansingFeedbackEntry への加算的 optional フィールド・後方互換） |
-| 22 | [investigate-dst-ambiguous-day-end](2026-09-28-22-investigate-dst-ambiguous-day-end.md) | investigate | 1 | 1 | 80% | 0.5 | 1.6 | 0.5 | 残課題 5（localDate endOfLocalDayMs の曖昧時刻） |
-| 23 | [refactor-svg-ns-single-source](2026-09-28-23-refactor-svg-ns-single-source.md) | refactor | 1 | 0.5 | 100% | 0.5 | 1.0 | 0.5 | 残課題 4（SVG_NS 残留 + computeLimits doc drift） |
+| 18 | [fix-session-store-flush-cap-stagnation-drop](../dev-docs/archived/pbi/2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md) | fix | 3 | 3 | 100% | 1 | 9.0 | 1 | investigate 12 の裁定（ADR 2026-09-28-session-store-overflow-persistence） |
+| 19 | [refactor-status-message-residual-bundle](../dev-docs/archived/pbi/2026-09-28-19-refactor-status-message-residual-bundle.md) | refactor | 3 | 1.5 | 90% | 1 | 4.05 | 1 | 残課題 1-3（stale-timer race・markup class 落ち・mainStatus 旧経路） |
+| 20 | [refactor-ai-summary-cleansing-settings-delta-write](../dev-docs/archived/pbi/2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 2 | 1 | 100% | 0.5 | 4.0 | 0.5 | 残課題 6（full-snapshot writer。実読の結果 writer は 1 本で :171 は同関数内の代入行 — PBI 側に記録済み） |
+| 21 | [fix-cleansing-feedback-ai-stats-persistence](../dev-docs/archived/pbi/2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md) | fix | 2 | 2 | 80% | 1 | 3.2 | 1 | 残課題 7（CleansingFeedbackEntry への加算的 optional フィールド・後方互換） |
+| 22 | [investigate-dst-ambiguous-day-end](../dev-docs/archived/pbi/2026-09-28-22-investigate-dst-ambiguous-day-end.md) | investigate | 1 | 1 | 80% | 0.5 | 1.6 | 0.5 | 残課題 5（localDate endOfLocalDayMs の曖昧時刻） |
+| 23 | [refactor-svg-ns-single-source](../dev-docs/archived/pbi/2026-09-28-23-refactor-svg-ns-single-source.md) | refactor | 1 | 0.5 | 100% | 0.5 | 1.0 | 0.5 | 残課題 4（SVG_NS 残留 + computeLimits doc drift） |
 
 依存なし（先行 PBI 01-17 はすべて着地済み）。ファイル非重複のため全 6 件並列実装可。18 は上流 ADR の受入基準をそのまま継承。

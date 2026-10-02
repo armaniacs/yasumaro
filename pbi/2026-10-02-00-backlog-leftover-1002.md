@@ -9,14 +9,14 @@
 
 | 順 | PBI | 系統 | R | I | C | E | RICE |
 |---|---|---|---|---|---|---|---:|
-| 1 | [2026-10-02-03-fix-popup-listener-stacking.md](2026-10-02-03-fix-popup-listener-stacking.md) | C6 | 8 | 3 | 0.60 | 0.5 | 28.80 |
-| 2 | [2026-10-02-04-fix-markdown-export-revoke-timer.md](2026-10-02-04-fix-markdown-export-revoke-timer.md) | C4 | 10 | 2 | 0.85 | 0.8 | 21.25 |
-| 3 | [2026-10-02-05-refactor-import-guard-structural.md](2026-10-02-05-refactor-import-guard-structural.md) | C1 | 8 | 3 | 0.80 | 1.0 | 19.20 |
-| 4 | [2026-10-02-07-fix-error-copy-locales.md](2026-10-02-07-fix-error-copy-locales.md) | C8 | 7 | 2 | 0.95 | 1.0 | 13.30 |
-| 5 | [2026-10-02-06-test-concurrent-export-isolation.md](2026-10-02-06-test-concurrent-export-isolation.md) | C3 | 6 | 1.5 | 0.90 | 1.0 | 8.10 |
-| 6 | [2026-10-02-08-fix-domain-filter-defaults.md](2026-10-02-08-fix-domain-filter-defaults.md) | C7 | 4 | 2 | 0.83 | 1.0 | 6.67 |
-| 7 | [2026-10-02-09-fix-collector-throw-semantics.md](2026-10-02-09-fix-collector-throw-semantics.md) | C2 | 4 | 1 | 0.80 | 1.0 | 3.20 |
-| 8 | [2026-10-02-10-chore-type-test-gate.md](2026-10-02-10-chore-type-test-gate.md) | C5 | 4 | 1 | 0.50 | 1.0 | 2.00 |
+| 1 | [2026-10-02-03-fix-popup-listener-stacking.md](../dev-docs/archived/pbi/2026-10-02-03-fix-popup-listener-stacking.md) | C6 | 8 | 3 | 0.60 | 0.5 | 28.80 |
+| 2 | [2026-10-02-04-fix-markdown-export-revoke-timer.md](../dev-docs/archived/pbi/2026-10-02-04-fix-markdown-export-revoke-timer.md) | C4 | 10 | 2 | 0.85 | 0.8 | 21.25 |
+| 3 | [2026-10-02-05-refactor-import-guard-structural.md](../dev-docs/archived/pbi/2026-10-02-05-refactor-import-guard-structural.md) | C1 | 8 | 3 | 0.80 | 1.0 | 19.20 |
+| 4 | [2026-10-02-07-fix-error-copy-locales.md](../dev-docs/archived/pbi/2026-10-02-07-fix-error-copy-locales.md) | C8 | 7 | 2 | 0.95 | 1.0 | 13.30 |
+| 5 | [2026-10-02-06-test-concurrent-export-isolation.md](../dev-docs/archived/pbi/2026-10-02-06-test-concurrent-export-isolation.md) | C3 | 6 | 1.5 | 0.90 | 1.0 | 8.10 |
+| 6 | [2026-10-02-08-fix-domain-filter-defaults.md](../dev-docs/archived/pbi/2026-10-02-08-fix-domain-filter-defaults.md) | C7 | 4 | 2 | 0.83 | 1.0 | 6.67 |
+| 7 | [2026-10-02-09-fix-collector-throw-semantics.md](../dev-docs/archived/pbi/2026-10-02-09-fix-collector-throw-semantics.md) | C2 | 4 | 1 | 0.80 | 1.0 | 3.20 |
+| 8 | [2026-10-02-10-chore-type-test-gate.md](../dev-docs/archived/pbi/2026-10-02-10-chore-type-test-gate.md) | C5 | 4 | 1 | 0.50 | 1.0 | 2.00 |
 
 RICE = R × I × C / E。C7 は 4×2×0.83/1.0 = 6.64 ≒ 6.67（2/3 端数丸め）。
 
