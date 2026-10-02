@@ -218,6 +218,12 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
 ]);
 
 
+/**
+ * The non-throwing catalog lookup: the table read itself, returning undefined
+ * for an id the catalog does not know. This is the only public form of a
+ * non-throwing lookup — call sites that want a guaranteed entry use
+ * `resolveCatalogEntry`, which throws instead.
+ */
 export function getRegistryEntry(providerId: string): ProviderCatalogEntry | undefined {
   return PROVIDER_CATALOG.get(providerId as ProviderId);
 }
@@ -228,13 +234,9 @@ export function resolveCatalogEntry(providerId: string): ProviderCatalogEntry {
   return entry;
 }
 
-export function tryResolveCatalogEntry(providerId: string): ProviderCatalogEntry | undefined {
-  return PROVIDER_CATALOG.get(providerId as ProviderId);
-}
-
 export const ProviderCatalog = {
   resolve: resolveCatalogEntry,
-  tryResolve: tryResolveCatalogEntry,
+  getRegistryEntry,
   get all(): ReadonlyMap<ProviderId, ProviderCatalogEntry> {
     return PROVIDER_CATALOG;
   },

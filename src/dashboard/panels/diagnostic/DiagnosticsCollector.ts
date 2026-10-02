@@ -24,7 +24,7 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getDebugMode } from './debugModeStore.js';
 import type { EncryptedData } from '../../../utils/crypto/types.js';
-import { ProviderCatalog } from '../../../background/ai/providerCatalog.js';
+import { ProviderCatalog, getRegistryEntry } from '../../../background/ai/providerCatalog.js';
 
 /**
  * Default VFS strategy probe for the dashboard page. The offscreen document
@@ -201,7 +201,7 @@ export class DiagnosticsCollector {
     const legacyProvider = settings[StorageKeys.AI_PROVIDER] ?? 'gemini';
     const slots = priorityList.length > 0 ? priorityList : [{ provider: legacyProvider }];
     const aiProviders = slots.map((slot: { provider: string; model?: string }) => {
-      const entry = ProviderCatalog.tryResolve(slot.provider);
+      const entry = getRegistryEntry(slot.provider);
       return {
         provider: slot.provider,
         model: slot.model,
@@ -211,7 +211,7 @@ export class DiagnosticsCollector {
 
     // Per-provider detailed settings (baseUrl, apiKey) for panel rendering — Catalog-driven
     const aiProviderDetails: ProviderDetail[] = slots.map((slot: { provider: string; model?: string }) => {
-      const entry = ProviderCatalog.tryResolve(slot.provider);
+      const entry = getRegistryEntry(slot.provider);
       const base: ProviderDetail = {
         provider: slot.provider,
         model: slot.model,

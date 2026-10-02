@@ -16,7 +16,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showStatus, type StatusType } from '../utils/ui/settingsUiHelper.js';
-import { ProviderCatalog } from '../background/ai/providerCatalog.js';
+import { getRegistryEntry } from '../background/ai/providerCatalog.js';
 
 /**
  * CSP設定UIのDOM参照インターフェース。
@@ -237,7 +237,7 @@ export class CspSettingsController {
   }
 
   private static resolveProviderOrigin(provider: string): string | null {
-    const catalogEntry = ProviderCatalog.tryResolve(provider);
+    const catalogEntry = getRegistryEntry(provider);
     if (catalogEntry?.cspDomain) {
       try {
         const u = new URL(catalogEntry.cspDomain);

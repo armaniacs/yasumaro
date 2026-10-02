@@ -42,7 +42,7 @@ describe('ProviderCatalog conformance', () => {
 
   it('throws UnknownProviderError for an unknown provider', () => {
     expect(() => ProviderCatalog.resolve('bogus-provider')).toThrow(UnknownProviderError);
-    expect(ProviderCatalog.tryResolve('bogus-provider')).toBeUndefined();
+    expect(ProviderCatalog.getRegistryEntry('bogus-provider')).toBeUndefined();
   });
 
   it('every referenced storage key is a real StorageKeys value', () => {

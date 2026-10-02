@@ -4,7 +4,7 @@
  * (src/utils/storage/providerAllowlist), never from the background catalog.
  *
  * WHY this needs a test of its own: at the call site,
- * `tryResolveCatalogEntry(provider)?.label` reads like a pure table lookup, so
+ * `getRegistryEntry(provider)?.label` reads like a pure table lookup, so
  * importing background/ai/providerCatalog from a UI file looks free. It is not —
  * that module statically imports the three provider strategies, so a display-only
  * dependency turns into a background dependency edge in the UI bundle.
