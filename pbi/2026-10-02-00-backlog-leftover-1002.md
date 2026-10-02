@@ -32,6 +32,7 @@ RICE = R × I × C / E。C7 は 4×2×0.83/1.0 = 6.64 ≒ 6.67（2/3 端数丸�
 | 03 | ✅ 完了 | `statusPanel.ts` wireOnce 寄せ + parity 4 tests |
 | 04 | ✅ 完了 | `markdownExport.ts` finally 確定 revoke + 2 tests（`exportLogsService` 60s 変種は意図的に無変更） |
 | 05 | ✅ 完了 | D1=(b) narrow guard `isImportError` + `exportImport.ts:179` 置換 + guard 2 tests（`dashboardSqliteService` 無変更） |
+| 06 | ✅ 完了 | 分離テスト 11 件のみ追加（ソース無変更、M1/M2 は RED 確認後に revert） |
 
 ## 送り（deferred・トリガー待ち）
 

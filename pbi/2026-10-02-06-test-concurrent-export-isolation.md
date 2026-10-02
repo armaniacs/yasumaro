@@ -41,11 +41,11 @@ Scenario: archive ops は相互排除される（または意図がコード化�
 
 ## 受け入れ基準
 
-- [ ] T1: 並行 exports の分離を証明する新規テストが存在する（`panelAction.ts:76,88` 経由の 2 件並行で結果の帰属が正しい）
-- [ ] T2: archive ops の相互排除を証明する新規テストが存在する、または並行許容の意図がテストとしてコード化される（どちらかを明示）
-- [ ] T3: exportLogsPanel single-button の多重起動可否の意図がテストとしてコード化される
-- [ ] ソースの振る舞い変更なし（バグ発見時のみ最小修正を許容し、発見内容と理由を実装記録に残す）
-- [ ] `npm run type-check` と変更ディレクトリ配下の vitest が green（既存テスト群を変更なしで通過）
+- [x] T1: 並行 exports の分離を証明する新規テストが存在する（`panelAction.ts:76,88` 経由の 2 件並行で結果の帰属が正しい）
+- [x] T2: archive ops の相互排除を証明する新規テストが存在する、または並行許容の意図がテストとしてコード化される（どちらかを明示）
+- [x] T3: exportLogsPanel single-button の多重起動可否の意図がテストとしてコード化される
+- [x] ソースの振る舞い変更なし（バグ発見時のみ最小修正を許容し、発見内容と理由を実装記録に残す）
+- [x] `npm run type-check` と変更ディレクトリ配下の vitest が green（既存テスト群を変更なしで通過）
 
 ## テスト戦略
 
@@ -68,10 +68,15 @@ Scenario: archive ops は相互排除される（または意図がコード化�
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る
 - [ ] コードレビュー完了
 
 ## 実装記録
 
-- （未着手）
+- 2026-10-02 実装済み。テスト追加のみでソース変更なし。
+- `src/dashboard/panels/__tests__/concurrentExportIsolation.test.ts`（5 tests: 並行 2 件の結果帰属・single-button 範囲の独立復元・archive group 全体 disable/復元・service 失敗と throw の経路分離・throw と成功の分離）。
+- `src/dashboard/panels/diagnostic/__tests__/exportArchiveIsolation.test.ts`（6 tests: export 単一ボタン disable・JSON/MD 並行の帰属・CSV/DB 分離・archive group 相互排除・create settle 後復元・失敗後復元で deadlock なし）。
+- 意図のコード化: export は single-button スコープで分離（isolation）、archive は group `controls` 共有で相互排除（serialize）。
+- 変異 M1/M2 は RED を確認後に revert し、ソースは無変更のまま着地。
+- ゲート: 対象 11/11 passed、`--repeats=20` green（実時間待ち不使用）、全 suite 15397 passed、`npx tsc --noEmit` 0 errors、`npm run lint` 0 errors。
