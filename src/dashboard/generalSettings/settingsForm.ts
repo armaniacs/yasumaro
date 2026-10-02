@@ -14,6 +14,7 @@ import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
 import { providerIdsInOrder } from '../aiProviderCatalogView.js';
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
@@ -202,6 +203,10 @@ export async function handlePurgeNow(): Promise<void> {
     } else {
       statusEl.textContent = getMessageOr(getPluralKey('purgeNowSuccess', result.data.purged), `${result.data.purged} 件を削除しました`, [String(result.data.purged)]);
     }
+  } catch (error) {
+    // A rejected gateway call never reaches the ServiceResult branches above, so
+    // without this the status span stays blank and the click looks like a no-op.
+    statusEl.textContent = errorMessage(error);
   } finally {
     purgeNowBtn.disabled = false;
   }
@@ -224,6 +229,8 @@ export async function handleContentPurgeNow(): Promise<void> {
     } else {
       statusEl.textContent = getMessageOr(getPluralKey('contentPurgeNowSuccess', result.data.purged), `${result.data.purged} 件の content を削除しました`, [String(result.data.purged)]);
     }
+  } catch (error) {
+    statusEl.textContent = errorMessage(error);
   } finally {
     contentPurgeNowBtn.disabled = false;
   }

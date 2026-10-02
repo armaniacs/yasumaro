@@ -573,14 +573,22 @@ describe('handlePurgeNow', () => {
     await expect(handlePurgeNow()).resolves.toBeUndefined();
   });
 
-  it('disables button and restores even on error thrown', async () => {
+  it('disables button and renders the rejection instead of escaping it', async () => {
     document.body.innerHTML = '<button id="purgeNowBtn"></button><span id="purgeNowStatus"></span>';
     const btn = document.getElementById('purgeNowBtn') as HTMLButtonElement;
     const status = document.getElementById('purgeNowStatus')!;
     vi.mocked(sqliteService.purgeOldRecordsNow).mockRejectedValue(new Error('boom'));
-    await expect(handlePurgeNow()).rejects.toThrow('boom');
+    await expect(handlePurgeNow()).resolves.toBeUndefined();
     expect(btn.disabled).toBe(false);
-    expect(status.textContent).toBe('');
+    expect(status.textContent).toBe('boom');
+  });
+
+  it('renders a non-Error rejection value through errorMessage', async () => {
+    document.body.innerHTML = '<button id="purgeNowBtn"></button><span id="purgeNowStatus"></span>';
+    const status = document.getElementById('purgeNowStatus')!;
+    vi.mocked(sqliteService.purgeOldRecordsNow).mockRejectedValue('gateway down');
+    await handlePurgeNow();
+    expect(status.textContent).toBe('gateway down');
   });
 
   it('shows service error with error string and fallback', async () => {
@@ -690,14 +698,22 @@ describe('handleContentPurgeNow', () => {
     await expect(handleContentPurgeNow()).resolves.toBeUndefined();
   });
 
-  it('disables button and restores on throw', async () => {
+  it('disables button and renders the rejection instead of escaping it', async () => {
     document.body.innerHTML = '<button id="contentPurgeNowBtn"></button><span id="contentPurgeNowStatus"></span>';
     const btn = document.getElementById('contentPurgeNowBtn') as HTMLButtonElement;
     const status = document.getElementById('contentPurgeNowStatus')!;
     vi.mocked(sqliteService.purgeContentNow).mockRejectedValue(new Error('boom'));
-    await expect(handleContentPurgeNow()).rejects.toThrow('boom');
+    await expect(handleContentPurgeNow()).resolves.toBeUndefined();
     expect(btn.disabled).toBe(false);
-    expect(status.textContent).toBe('');
+    expect(status.textContent).toBe('boom');
+  });
+
+  it('renders a non-Error rejection value through errorMessage', async () => {
+    document.body.innerHTML = '<button id="contentPurgeNowBtn"></button><span id="contentPurgeNowStatus"></span>';
+    const status = document.getElementById('contentPurgeNowStatus')!;
+    vi.mocked(sqliteService.purgeContentNow).mockRejectedValue('gateway down');
+    await handleContentPurgeNow();
+    expect(status.textContent).toBe('gateway down');
   });
 
   it('shows service error with fallback', async () => {

@@ -9,6 +9,10 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createGeneralSettingsPanel } from '../generalSettingsPanel.js';
+import { settingsRepository } from '../../../../utils/storage/SettingsRepository.js';
+import { StorageKeys } from '../../../../utils/storage/types.js';
+import { waitForMock } from '../../../../../testDir/waitPolicy.js';
+import { installTestSecretKek } from '../../../../utils/crypto/__tests__/secretKekHelper.js';
 
 const AI_SECTION = `
   <section id="panel-general" class="panel active">
@@ -100,5 +104,67 @@ describe('generalSettingsPanel — B layout provider settings', () => {
     expect(openai).not.toBeNull();
     const baseUrl = openai!.querySelector('input[data-storage-key="openai_base_url"]') as HTMLInputElement;
     expect(baseUrl.value).toBe('https://api.ai.sakura.ad.jp/v1');
+  });
+});
+
+/**
+ * The layout toggle used to rebuild from the snapshot mount() captured, so a
+ * refresh() or an external write left it showing (and re-saving) pre-refresh
+ * values.
+ */
+describe('generalSettingsPanel — A/B toggle after an external write', () => {
+  beforeEach(async () => {
+    await installTestSecretKek();
+    document.body.innerHTML = AI_SECTION;
+  });
+
+  function toggleButton(layout: 'a' | 'b'): HTMLButtonElement {
+    const group = document.querySelector('.ai-layout-toggle')!;
+    return group.querySelectorAll<HTMLButtonElement>('button')[layout === 'b' ? 1 : 0]!;
+  }
+
+  it('A→B builds the B views from the post-refresh settings', async () => {
+    await seedSettings({ ai_provider_layout: 'a' });
+
+    const panel = createGeneralSettingsPanel();
+    await panel.mount(document.getElementById('panel-general')!);
+
+    await settingsRepository.set(StorageKeys.OPENAI_MODEL, 'post-refresh-model');
+    await settingsRepository.set(StorageKeys.OPENAI_BASE_URL, 'https://post-refresh.example/v1');
+    await panel.refresh?.();
+
+    toggleButton('b').click();
+
+    // The priority row resolves its model through the settings snapshot it was
+    // built with; the accordion input is filled from the same snapshot.
+    await waitForMock(() => {
+      const rowModel = document.querySelector('#bPriorityList .b-priority-row input.b-priority-model-input') as HTMLInputElement;
+      expect(rowModel?.value).toBe('post-refresh-model');
+    });
+    const accordionModel = document.querySelector('#bProviderAccordion input[data-storage-key="openai_model"]') as HTMLInputElement;
+    expect(accordionModel.value).toBe('post-refresh-model');
+  });
+
+  it('B→A restores the A mount from the post-refresh settings', async () => {
+    await seedSettings({ ai_provider_layout: 'b' });
+
+    const panel = createGeneralSettingsPanel();
+    await panel.mount(document.getElementById('panel-general')!);
+
+    await settingsRepository.set(StorageKeys.OPENAI_BASE_URL, 'https://post-refresh.example/v1');
+    await panel.refresh?.();
+
+    toggleButton('a').click();
+
+    // refresh() leaves the accordion's block in place, so the value assertion
+    // below would hold before the toggle ran. The A mount is empty while B is
+    // showing, so repopulation is the completion signal.
+    await waitForMock(() => {
+      expect(document.getElementById('providerSettingsMount')?.children.length).toBeGreaterThan(0);
+    });
+    const openai = document.getElementById('openaiSettings');
+    expect(openai).not.toBeNull();
+    const baseUrl = openai!.querySelector('input[data-storage-key="openai_base_url"]') as HTMLInputElement;
+    expect(baseUrl.value).toBe('https://post-refresh.example/v1');
   });
 });

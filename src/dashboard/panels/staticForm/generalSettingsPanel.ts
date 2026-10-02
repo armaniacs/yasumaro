@@ -3,7 +3,7 @@ import { type PanelLifecycle } from '../types.js';
 import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
-import { StorageKeys } from '../../../utils/storage/types.js';
+import { StorageKeys, type Settings } from '../../../utils/storage/types.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import {
   loadGeneralSettings,
@@ -44,14 +44,44 @@ async function handleGenerateMonthlySummary(): Promise<void> {
   await generateReviewSummary({ button: btn, statusElement: statusEl, periodType: 'monthly' });
 }
 
+const WIZARD_CLASS_OBSERVER_INIT: MutationObserverInit = { attributes: true, attributeFilter: ['class'] };
+
+let wizardClassObserver: MutationObserver | null = null;
+let wizardClassObserverTarget: Element | null = null;
+
+function syncWizardBackdrop(): void {
+  const backdropNow = document.getElementById('wizardBackdrop');
+  const wizardNow = document.getElementById('onboardingWizard');
+  if (backdropNow) backdropNow.style.display = wizardNow?.classList.contains('hidden') ? 'none' : 'block';
+}
+
+/**
+ * One observer for the wizard's class attribute, reused by every reopen. A
+ * fresh MutationObserver per click stacked up on the same element — nothing
+ * ever disconnected them, so N reopens meant N live observers.
+ */
+function observeWizardClasses(wizardEl: Element): void {
+  if (wizardClassObserverTarget !== wizardEl) {
+    wizardClassObserver?.disconnect();
+    wizardClassObserverTarget = wizardEl;
+  }
+  if (!wizardClassObserver) wizardClassObserver = new MutationObserver(syncWizardBackdrop);
+  wizardClassObserver.observe(wizardEl, WIZARD_CLASS_OBSERVER_INIT);
+}
+
 export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   let panelContainer: HTMLElement | null = null;
+  // One mutable snapshot shared by mount() and refresh(). The layout toggle
+  // reads it lazily, so a per-path local would leave it rebuilding the A/B
+  // inputs from the values captured at mount time after any refresh or
+  // external write.
+  let currentSettings: Settings = {};
   return {
     id: 'panel-general',
     category: 'static-form',
     async mount(container) {
       panelContainer = container;
-      const settings = await settingsRepository.getAll();
+      currentSettings = await settingsRepository.getAll();
 
       // Shared singleton: reads and the layout write go through the same port
       // and settings transaction as every other panel, so no isolated repo.
@@ -92,7 +122,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       };
       if (currentLayout === 'a') rebuildProviderSettingsMount();
 
-      loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
+      loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
       await loadGeneralSettings();
 
       const obsidianEnabled = container.querySelector('#obsidianEnabled') as HTMLInputElement | null;
@@ -186,10 +216,10 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
             } catch { existingSlots = []; }
             // storage fallback if DOM collection is empty (initial load after reload)
             if (existingSlots.length === 0) {
-              const stored = settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] as unknown as typeof existingSlots | undefined;
+              const stored = currentSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST];
               if (Array.isArray(stored)) existingSlots = stored;
             }
-            bPriorityView = createBPriorityListView(bListContainer, existingSlots, settings);
+            bPriorityView = createBPriorityListView(bListContainer, existingSlots, currentSettings);
           } else if (bListContainer && bPriorityView) {
             // Ensure hidden flag sync even if view already exists
             bPriorityView.container.hidden = false;
@@ -197,7 +227,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           if (bAccordionContainer && !bAccordionView) {
             bAccordionView = createBProviderAccordionView(bAccordionContainer);
             // The accordion's inputs were just created empty — populate them.
-            loadSettingsToInputs(bAccordionContainer, settings, GENERAL_SETTINGS_SCHEMA);
+            loadSettingsToInputs(bAccordionContainer, currentSettings, GENERAL_SETTINGS_SCHEMA);
           }
         } else {
           bPriorityView?.container?.querySelectorAll('.b-priority-warn, .b-priority-req-warn').forEach((el) => el.remove());
@@ -206,7 +236,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           bAccordionView = null;
           // Rebuild the A mount (empty in B) and reload its values.
           rebuildProviderSettingsMount();
-          loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
+          loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
           hideAllProviderSettings();
           refreshMultiVisibility();
         }
@@ -225,17 +255,11 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       refreshAIProviderLayout();
 
       {
-        const syncBackdrop = () => {
-          const backdropNow = document.getElementById('wizardBackdrop');
-          const wizardNow = document.getElementById('onboardingWizard');
-          if (backdropNow) backdropNow.style.display = wizardNow?.classList.contains('hidden') ? 'none' : 'block';
-        };
         const observeWizard = () => {
           const wizardEl = document.getElementById('onboardingWizard');
           const backdropEl = document.getElementById('wizardBackdrop');
           if (wizardEl && backdropEl) {
-            const obs = new MutationObserver(syncBackdrop);
-            obs.observe(wizardEl, { attributes: true, attributeFilter: ['class'] });
+            observeWizardClasses(wizardEl);
           }
         };
         const reopenWizard = () => {
@@ -245,7 +269,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
           }
           initOnboardingWizard(true);
           observeWizard();
-          syncBackdrop();
+          syncWizardBackdrop();
         };
         container.querySelector('#reopenWizardBtn')?.addEventListener('click', reopenWizard);
         container.querySelector('#reopenWizardBtnTop')?.addEventListener('click', reopenWizard);
@@ -327,8 +351,17 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       document.getElementById('testObsidianBtn')?.addEventListener('click', handleTestObsidian);
       document.getElementById('testAiBtn')?.addEventListener('click', handleTestAi);
       container.querySelector('#testLocalMarkdownBtnBottom')?.addEventListener('click', () => handleTestLocalMarkdown());
-      document.getElementById('purgeNowBtn')?.addEventListener('click', handlePurgeNow);
-      document.getElementById('contentPurgeNowBtn')?.addEventListener('click', handleContentPurgeNow);
+      // The purge handlers render their own failure text; this boundary only
+      // stops an unexpected throw from escaping as an unhandled rejection.
+      const onPurgeClick = (handler: () => Promise<void>) => async (): Promise<void> => {
+        try {
+          await handler();
+        } catch (error) {
+          console.error('General settings: purge failed', error);
+        }
+      };
+      document.getElementById('purgeNowBtn')?.addEventListener('click', onPurgeClick(handlePurgeNow));
+      document.getElementById('contentPurgeNowBtn')?.addEventListener('click', onPurgeClick(handleContentPurgeNow));
 
       // Unlimited-retention warning follows the two record-layer bound selects.
       setupRetentionUnlimitedWarning();
@@ -336,8 +369,8 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
     async refresh() {
       const container = panelContainer;
       if (container) {
-        const settings = await settingsRepository.getAll();
-        loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA);
+        currentSettings = await settingsRepository.getAll();
+        loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
         await loadGeneralSettings();
       }
     },
