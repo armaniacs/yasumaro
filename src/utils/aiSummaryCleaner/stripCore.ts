@@ -8,9 +8,9 @@
  * density) stays implemented here.
  */
 
-import { safeRemoveElement } from './helpers.js';
+import { isLinkDenseBlock } from './helpers.js';
 import { LEGAL_TEXT_PATTERNS } from './patterns.js';
-import { SELECTOR_RULE_DEFS, stripBySelectors } from './selectorRules.js';
+import { SELECTOR_RULE_DEFS, stripBySelectors, stripCollected } from './selectorRules.js';
 
 // Re-exported from patterns.ts (moved there with the other pattern constants
 // so selectorRules.ts can own the card row without an import cycle).
@@ -34,42 +34,33 @@ export function stripAltAttributes(element: Element): number {
     return removedCount;
 }
 
+/** 法的テキストの判定（500文字以下かつ単一コンテナのみ） */
+function isLegalTextNode(elem: Element): boolean {
+    const text = (elem.textContent || '').trim();
+    // 500文字超は本文の可能性が高いためスキップ
+    if (text.length > 500) return false;
+    // 子に p/article/section が複数あればコンテナなのでスキップ
+    if (elem.querySelectorAll('p, article, section').length >= 2) return false;
+    return LEGAL_TEXT_PATTERNS.some((pattern) => pattern.test(text));
+}
+
 /**
  * 法的テキストを含む要素を削除（クラス名に依存しないテキストベース削除）
  * @param element - クレンジング対象のルート要素
  * @returns 削除した要素の数
  */
 export function stripLegalTextNodes(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
+    return stripCollected(element, [{
+        // p, div, span, small, footer, section を対象
+        css: 'p, div, span, small, footer, section',
+        predicate: isLegalTextNode,
+    }]);
+}
 
-    // p, div, span, small, footer, section を対象（500文字以下のみ）
-    const candidates = element.querySelectorAll('p, div, span, small, footer, section');
-    candidates.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = (elem.textContent || '').trim();
-        // 500文字超は本文の可能性が高いためスキップ
-        if (text.length > 500) return;
-        // 子に p/article/section が複数あればコンテナなのでスキップ
-        const contentChildren = elem.querySelectorAll('p, article, section');
-        if (contentChildren.length >= 2) return;
-        // テキストパターンマッチ
-        for (const pattern of LEGAL_TEXT_PATTERNS) {
-            if (pattern.test(text)) {
-                elementsToRemove.push(elem);
-                counted.add(elem);
-                break;
-            }
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-    return removedCount;
+/** 直接の親が p/article/section なら本文内コンテンツとして保護する */
+function isInsideBodyContent(elem: Element): boolean {
+    const parent = elem.parentElement;
+    return parent !== null && ['p', 'article', 'section'].includes(parent.tagName.toLowerCase());
 }
 
 /**
@@ -78,37 +69,12 @@ export function stripLegalTextNodes(element: Element): number {
  * @returns 削除した要素の数
  */
 export function stripHighLinkDensityElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    // ul, ol, div, section を対象
-    const candidates = element.querySelectorAll('ul, ol, div, section');
-    candidates.forEach(elem => {
-        if (counted.has(elem)) return;
-        const totalText = (elem.textContent || '').length;
+    return stripCollected(element, [{
+        // ul, ol, div, section を対象
+        css: 'ul, ol, div, section',
         // 100文字未満は除外（空・短すぎる要素）
-        if (totalText < 100) return;
-        // 直接の親が p/article/section なら本文内コンテンツとして保護
-        const parent = elem.parentElement;
-        if (parent && ['p', 'article', 'section'].includes(parent.tagName.toLowerCase())) return;
-        // リンク密度計算
-        let linkText = 0;
-        elem.querySelectorAll('a').forEach(a => {
-            linkText += (a.textContent || '').length;
-        });
-        if (totalText > 0 && linkText / totalText >= 0.7) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-    return removedCount;
+        predicate: (elem) => isLinkDenseBlock(elem, 100, 0.7) && !isInsideBodyContent(elem),
+    }]);
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +82,7 @@ export function stripHighLinkDensityElements(element: Element): number {
 // ---------------------------------------------------------------------------
 // Each historic strip* name below used to own a ~20-line copy of the same
 // shape (fresh Set, querySelectorAll, counted dedupe guard, safeRemoveElement
-// loop). The loop now lives once in stripBySelectors; the row owns the
+// loop). The loop now lives once in the shared collector; the row owns the
 // selectors. These delegates preserve the public names so per-rule tests
 // guard the engine without modification.
 

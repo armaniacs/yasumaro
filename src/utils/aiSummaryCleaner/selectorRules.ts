@@ -8,12 +8,14 @@
  * `predicate` entries hold the gated checks (isLikelyAd, isLikelyPopup,
  * isPlatformNoise, text/keyword guards) that used to sit inline.
  *
- * stripBySelectors owns the single counted Set for the whole row, so a row
+ * stripCollected owns the single claimed Set for a whole strip, so a row
  * behaves exactly like the function it replaces: the union of all groups is
  * collected before any removal, and each element is removed at most once.
  * Splitting a row into several engine calls would NOT preserve counting when
  * an ancestor and a descendant match different groups, which is why groups
- * with different predicates still live in one row.
+ * with different predicates still live in one row. The non-selector strips in
+ * stripCore.ts / stripExtended.ts share the same collector and tail, so every
+ * strip counts a removal the same way.
  */
 
 import { escapeCssSelector } from '../cssUtils.js';
@@ -39,10 +41,14 @@ import {
     VIDEO_SITE_PATTERNS,
 } from './patterns.js';
 
-/** One selector group inside a row: a verbatim CSS query plus an optional gate. */
+/**
+ * One collection group: a verbatim CSS query plus an optional gate. The gate
+ * also receives the elements earlier matches already claimed, which is what
+ * lets a rule keep only the outermost of a nested family.
+ */
 export interface SelectorGroupDef {
     css: string;
-    predicate?: (el: Element) => boolean;
+    predicate?: (el: Element, claimed: ReadonlySet<Element>) => boolean;
 }
 
 /**
@@ -165,53 +171,83 @@ function patternSelectorFor(def: SelectorRuleDef, extraPatterns?: string[]): str
     return cached;
 }
 
+/** What a strip does to one collected element: false when body protection blocked it. */
+export type StripAction = (elem: Element) => boolean;
+
 /**
- * Runs one selector row: collects the union of every group under a single
- * counted Set, then removes. Returns how many elements were removed.
+ * The single remove-and-count tail of every strip. Returns how many elements
+ * the action actually succeeded on, so a body-protected element leaves the
+ * DOM untouched and contributes nothing to the count.
  */
-export function stripBySelectors(root: Element, def: SelectorRuleDef, extraPatterns?: string[]): number {
-    const counted = new Set<Element>();
-    const collected: Element[] = [];
-    const collect = (selector: string, predicate?: (el: Element) => boolean): void => {
-        if (selector === '') {
-            return;
+export function removeCollected(collected: Iterable<Element>, apply: StripAction = safeRemoveElement): number {
+    let processed = 0;
+    for (const elem of collected) {
+        if (apply(elem)) {
+            processed++;
         }
-        for (const chunk of chunkSelector(selector)) {
+    }
+    return processed;
+}
+
+/**
+ * Runs one strip: collects the union of every group under a single claimed
+ * Set, then runs the shared tail over it. Collecting the whole union before
+ * any removal is what keeps an ancestor and a descendant that match different
+ * groups both countable — the descendant is still reachable when the ancestor
+ * is removed.
+ */
+export function stripCollected(
+    root: Element,
+    groups: readonly SelectorGroupDef[],
+    apply?: StripAction,
+): number {
+    const claimed = new Set<Element>();
+    const collected: Element[] = [];
+
+    for (const group of groups) {
+        if (group.css === '') {
+            continue;
+        }
+        for (const chunk of chunkSelector(group.css)) {
             root.querySelectorAll(chunk).forEach((elem) => {
-                if (counted.has(elem)) {
+                if (claimed.has(elem)) {
                     return;
                 }
-                if (predicate !== undefined && !predicate(elem)) {
+                if (group.predicate !== undefined && !group.predicate(elem, claimed)) {
                     return;
                 }
                 collected.push(elem);
-                counted.add(elem);
+                claimed.add(elem);
             });
         }
-    };
+    }
 
-    collect(patternSelectorFor(def, extraPatterns), def.predicate);
+    return removeCollected(collected, apply);
+}
+
+/**
+ * Runs one selector row: the row's pattern selectors and extra selectors
+ * become groups of the shared collector. Returns how many elements were
+ * removed.
+ */
+export function stripBySelectors(root: Element, def: SelectorRuleDef, extraPatterns?: string[]): number {
+    const groups: SelectorGroupDef[] = [];
+    const patternSelector = patternSelectorFor(def, extraPatterns);
+    if (patternSelector !== '') {
+        groups.push(def.predicate === undefined
+            ? { css: patternSelector }
+            : { css: patternSelector, predicate: def.predicate });
+    }
     for (const entry of def.extraSelectors ?? []) {
-        if (typeof entry === 'string') {
-            collect(entry);
-        } else {
-            collect(entry.css, entry.predicate);
-        }
+        groups.push(typeof entry === 'string' ? { css: entry } : entry);
     }
-
-    let removed = 0;
-    for (const elem of collected) {
-        if (safeRemoveElement(elem)) {
-            removed++;
-        }
-    }
-    return removed;
+    return stripCollected(root, groups);
 }
 
 /**
  * Text-based cookie-consent check shared by the cookie rule implementation
- * (stripExtended keeps collectCookieConsentElements as the proven precedent)
- * and the popup row below, so both match the same elements.
+ * (which strips through the same collector) and the popup row below, so both
+ * match the same elements.
  */
 export function isCookieConsentText(elem: Element): boolean {
     const text = (elem.textContent || '').trim();

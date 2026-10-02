@@ -5,8 +5,8 @@
  * テキスト系 cookie 同意検出の bespoke 関数のみ残る。
  */
 
-import { buildClassIdSelectors, isFixedOrSticky, safeRemoveElement, safeReplaceWithText } from './helpers.js';
-import { SELECTOR_RULE_DEFS, isCookieConsentText, stripBySelectors } from './selectorRules.js';
+import { buildClassIdSelectors, isFixedOrSticky, isLinkDenseBlock, safeRemoveElement, safeReplaceWithText } from './helpers.js';
+import { SELECTOR_RULE_DEFS, isCookieConsentText, removeCollected, stripBySelectors, stripCollected } from './selectorRules.js';
 
 const AFFILIATE_PATTERNS = [
     // Rinker (SWELL bundled) — container-level only
@@ -34,90 +34,39 @@ const SPEECH_BUBBLE_TEXT_PATTERNS = [
 const SPEECH_BUBBLE_TEXT_SELECTOR = buildClassIdSelectors(SPEECH_BUBBLE_TEXT_PATTERNS);
 
 /**
- * Shared helper for text-based cookie consent detection.
- * Matching logic lives in selectorRules.isCookieConsentText so the cookie
- * rule and the popup selector row test the same elements.
- */
-function collectCookieConsentElements(root: Element, counted: Set<Element>): Element[] {
-    const elementsToRemove: Element[] = [];
-    const candidates = root.querySelectorAll('p, div, span, small, footer, section');
-    candidates.forEach(elem => {
-        if (counted.has(elem)) return;
-        if (isCookieConsentText(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-    return elementsToRemove;
-}
-
-/**
  * 固定要素を削除（position:fixed/sticky）
  * @param element - クレンジング対象のルート要素
  * @returns 削除した要素の数
  */
 export function stripFixedElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
-    const fixedElements = element.querySelectorAll('[style*="position: fixed"], [style*="position:fixed"]');
-    fixedElements.forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    const stickyElements = element.querySelectorAll('[style*="position: sticky"], [style*="position:sticky"]');
-    stickyElements.forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    const fixedPlayerElements = element.querySelectorAll('[class*="fixed-video"], [class*="sticky-player"]');
-    fixedPlayerElements.forEach(elem => {
-        if (!counted.has(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // Yahoo! News 固定ヘッダー
-    element.querySelectorAll('[class*="yahoo-news"], [id*="headerWrap"], [class*="Topics"], [class*="IssueTop"]').forEach(elem => {
-        if (!counted.has(elem) && isFixedOrSticky(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    // Game8 固定メニュー
-    element.querySelectorAll('[class*="game8"], [class*="headerMenu"], [class*="SideBar"], [id*="SideBar"]').forEach(elem => {
-        if (!counted.has(elem) && isFixedOrSticky(elem)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-
-    return removedCount;
+    return stripCollected(element, [
+        { css: '[style*="position: fixed"], [style*="position:fixed"]' },
+        { css: '[style*="position: sticky"], [style*="position:sticky"]' },
+        { css: '[class*="fixed-video"], [class*="sticky-player"]' },
+        // Yahoo! News 固定ヘッダー
+        {
+            css: '[class*="yahoo-news"], [id*="headerWrap"], [class*="Topics"], [class*="IssueTop"]',
+            predicate: isFixedOrSticky,
+        },
+        // Game8 固定メニュー
+        {
+            css: '[class*="game8"], [class*="headerMenu"], [class*="SideBar"], [id*="SideBar"]',
+            predicate: isFixedOrSticky,
+        },
+    ]);
 }
 
+/**
+ * Cookie 同意テキストの要素を削除
+ * 判定は selectorRules.isCookieConsentText に置き、popup 行と同じ要素を拾う
+ * @param element - クレンジング対象のルート要素
+ * @returns 削除した要素の数
+ */
 export function stripCookieConsentElements(element: Element): number {
-    let removedCount = 0;
-    const counted = new Set<Element>();
-    const elementsToRemove = collectCookieConsentElements(element, counted);
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) removedCount++;
-    }
-    return removedCount;
+    return stripCollected(element, [{
+        css: 'p, div, span, small, footer, section',
+        predicate: isCookieConsentText,
+    }]);
 }
 
 // ============================================================================
@@ -131,33 +80,12 @@ export function stripCookieConsentElements(element: Element): number {
  * @returns 削除した要素の数
  */
 export function stripTextDensityElements(element: Element, threshold: number = 70): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
     const ratio = threshold / 100;
-
-    const targets = element.querySelectorAll('ul, ol, div, nav');
-    targets.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = elem.textContent || '';
-        const totalText = text.length;
-        if (totalText < 50) return;
-
-        let linkText = 0;
-        elem.querySelectorAll('a').forEach(a => {
-            linkText += (a.textContent || '').length;
-        });
-
-        if (totalText > 0 && linkText / totalText >= ratio) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
-    }
-    return removedCount;
+    return stripCollected(element, [{
+        css: 'ul, ol, div, nav',
+        // 50文字未満は対象外
+        predicate: (elem) => isLinkDenseBlock(elem, 50, ratio),
+    }]);
 }
 
 /**
@@ -168,21 +96,17 @@ export function stripTextDensityElements(element: Element, threshold: number = 7
  * @returns 削除した要素の数
  */
 export function stripShortSequenceElements(element: Element, shortThreshold: number = 30, seqCount: number = 5): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-
     const targets = element.querySelectorAll('p, span, li, div');
     const shortElements: Element[] = [];
 
     targets.forEach(elem => {
-        if (counted.has(elem)) return;
         const text = (elem.textContent || '').trim();
         if (text.length > 0 && text.length <= shortThreshold) {
             shortElements.push(elem);
         }
     });
 
+    const collected: Element[] = [];
     let consecutive = 0;
     let lastParent: Element | null = null;
 
@@ -196,17 +120,19 @@ export function stripShortSequenceElements(element: Element, shortThreshold: num
         }
 
         if (consecutive >= seqCount) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
+            collected.push(elem);
         }
     }
 
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) {
-            removedCount++;
-        }
-    }
-    return removedCount;
+    return removeCollected(collected);
+}
+
+const SYMBOL_LINE_PATTERN = /^[|\►◀▶«»•·]+$/;
+
+/** 記号のみで構成される行かどうか */
+function isSymbolLine(elem: Element): boolean {
+    const text = (elem.textContent || '').trim();
+    return text.length > 0 && SYMBOL_LINE_PATTERN.test(text);
 }
 
 /**
@@ -215,25 +141,59 @@ export function stripShortSequenceElements(element: Element, shortThreshold: num
  * @returns 削除した要素の数
  */
 export function stripSymbolLineElements(element: Element): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
-    const symbolPattern = /^[|\►◀▶«»•·]+$/;
+    return stripCollected(element, [{
+        css: 'p, span, div, li',
+        predicate: isSymbolLine,
+    }]);
+}
 
-    const targets = element.querySelectorAll('p, span, div, li');
-    targets.forEach(elem => {
-        if (counted.has(elem)) return;
-        const text = (elem.textContent || '').trim();
-        if (text.length > 0 && symbolPattern.test(text)) {
-            elementsToRemove.push(elem);
-            counted.add(elem);
+/** リンク要素と br 以外がすべて空で、リンクを1つ以上含む段落かどうか */
+function isLinkOnlyParagraph(p: Element, maxLength: number): boolean {
+    const text = (p.textContent || '').trim();
+    if (text.length > maxLength) return false;
+
+    const children = p.children;
+    let hasLinks = false;
+    let hasOnlyLinks = true;
+    let hasNonLinkText = false;
+
+    for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (!child) continue;
+        if (child.tagName.toLowerCase() === 'a') {
+            hasLinks = true;
+            continue;
         }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
+        if (child.tagName.toLowerCase() === 'br') {
+            continue;
+        }
+        hasOnlyLinks = false;
+        break;
     }
-    return removedCount;
+
+    for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        if (!child) continue;
+        if (child.tagName.toLowerCase() !== 'a' && child.tagName.toLowerCase() !== 'br') {
+            const childText = child.textContent || '';
+            if (childText.trim().length > 0) {
+                hasNonLinkText = true;
+                break;
+            }
+        }
+    }
+
+    // Check for direct text nodes outside of links
+    if (!hasNonLinkText) {
+        for (const node of Array.from(p.childNodes)) {
+            if (node.nodeType === 3 && (node.nodeValue || '').trim().length > 0) {
+                hasNonLinkText = true;
+                break;
+            }
+        }
+    }
+
+    return hasLinks && hasOnlyLinks && !hasNonLinkText && text.length > 0;
 }
 
 /**
@@ -243,67 +203,42 @@ export function stripSymbolLineElements(element: Element): number {
  * @returns 削除した要素の数
  */
 export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50): number {
-    let removedCount = 0;
-    const elementsToRemove: Element[] = [];
-    const counted = new Set<Element>();
+    return stripCollected(element, [{
+        css: 'p',
+        predicate: (p) => isLinkOnlyParagraph(p, maxLength),
+    }]);
+}
 
-    const paragraphs = element.querySelectorAll('p');
-    paragraphs.forEach(p => {
-        if (counted.has(p)) return;
-        const text = (p.textContent || '').trim();
-        if (text.length > maxLength) return;
-
-        const children = p.children;
-        let hasLinks = false;
-        let hasOnlyLinks = true;
-        let hasNonLinkText = false;
-
-        for (let i = 0; i < children.length; i++) {
-            const child = children[i];
-            if (!child) continue;
-            if (child.tagName.toLowerCase() === 'a') {
-                hasLinks = true;
-                continue;
-            }
-            if (child.tagName.toLowerCase() === 'br') {
-                continue;
-            }
-            hasOnlyLinks = false;
-            break;
+/** 祖先が既に採用済みなら入れ子のアフィリエイトボックスなので対象外 */
+function isTopLevelAffiliateBox(elem: Element, claimed: ReadonlySet<Element>): boolean {
+    // cleanse root の上で打ち切らない: claimed は root の直下孫しか含まない
+    // ので、それより上の祖先が claimed に入ることはない
+    for (let ancestor = elem.parentElement; ancestor !== null; ancestor = ancestor.parentElement) {
+        if (claimed.has(ancestor)) {
+            return false;
         }
-
-        for (let i = 0; i < children.length; i++) {
-            const child = children[i];
-            if (!child) continue;
-            if (child.tagName.toLowerCase() !== 'a' && child.tagName.toLowerCase() !== 'br') {
-                const childText = child.textContent || '';
-                if (childText.trim().length > 0) {
-                    hasNonLinkText = true;
-                    break;
-                }
-            }
-        }
-
-        // Check for direct text nodes outside of links
-        if (!hasNonLinkText) {
-            for (const node of Array.from(p.childNodes)) {
-                if (node.nodeType === 3 && (node.nodeValue || '').trim().length > 0) {
-                    hasNonLinkText = true;
-                    break;
-                }
-            }
-        }
-
-        if (hasLinks && hasOnlyLinks && !hasNonLinkText && text.length > 0) {
-            elementsToRemove.push(p);
-            counted.add(p);
-        }
-    });
-
-    for (const elem of elementsToRemove) {
-        if (safeRemoveElement(elem)) { removedCount++; }
     }
-    return removedCount;
+    return true;
+}
+
+/** 商品名と価格テキストを要素に差し替える。抽出できない場合は要素ごと削除する */
+function extractAffiliateText(elem: Element): boolean {
+    const textParts: string[] = [];
+    const titleEl = elem.querySelector('.yyi-rinker-title, .kaerebalink-name, [class*="title"]');
+    const textEl = elem.querySelector('.yyi-rinker-text, [class*="detail"], [class*="text"]');
+    const priceEl = elem.querySelector('[class*="price"], [class*="yen"], [class*="cost"]');
+
+    if (titleEl?.textContent?.trim()) textParts.push(titleEl.textContent.trim());
+    if (textEl?.textContent?.trim()) textParts.push(textEl.textContent.trim());
+    if (priceEl?.textContent?.trim()) textParts.push(priceEl.textContent.trim());
+
+    const extractedText = textParts.join(' | ');
+
+    if (extractedText) {
+        return safeReplaceWithText(elem, extractedText);
+    }
+    // No extractable text found, remove entirely
+    return safeRemoveElement(elem);
 }
 
 /**
@@ -314,50 +249,11 @@ export function stripLinkOnlyParagraphs(element: Element, maxLength: number = 50
  * @returns 処理した要素の数
  */
 export function stripAffiliateElements(element: Element): number {
-    let processedCount = 0;
-    const elementsToProcess: Element[] = [];
-    const counted = new Set<Element>();
-
-    element.querySelectorAll(AFFILIATE_SELECTOR).forEach(elem => {
-        // Skip elements whose ancestor already matched (process only top-level containers)
-        if (counted.has(elem)) return;
-        // Check if any ancestor of this element is already in the counted set
-        let ancestor = elem.parentElement;
-        let hasMatchingAncestor = false;
-        while (ancestor && ancestor !== element) {
-            if (counted.has(ancestor)) {
-                hasMatchingAncestor = true;
-                break;
-            }
-            ancestor = ancestor.parentElement;
-        }
-        if (!hasMatchingAncestor) {
-            elementsToProcess.push(elem);
-            counted.add(elem);
-        }
-    });
-
-    for (const elem of elementsToProcess) {
-        // Extract product name and price text, skip other noise
-        const textParts: string[] = [];
-        const titleEl = elem.querySelector('.yyi-rinker-title, .kaerebalink-name, [class*="title"]');
-        const textEl = elem.querySelector('.yyi-rinker-text, [class*="detail"], [class*="text"]');
-        const priceEl = elem.querySelector('[class*="price"], [class*="yen"], [class*="cost"]');
-
-        if (titleEl?.textContent?.trim()) textParts.push(titleEl.textContent.trim());
-        if (textEl?.textContent?.trim()) textParts.push(textEl.textContent.trim());
-        if (priceEl?.textContent?.trim()) textParts.push(priceEl.textContent.trim());
-
-        const extractedText = textParts.join(' | ');
-
-        if (extractedText) {
-            if (safeReplaceWithText(elem, extractedText)) { processedCount++; }
-        } else {
-            // No extractable text found, remove entirely
-            if (safeRemoveElement(elem)) { processedCount++; }
-        }
-    }
-    return processedCount;
+    return stripCollected(
+        element,
+        [{ css: AFFILIATE_SELECTOR, predicate: isTopLevelAffiliateBox }],
+        extractAffiliateText,
+    );
 }
 
 /**

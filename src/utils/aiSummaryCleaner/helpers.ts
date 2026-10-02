@@ -58,6 +58,26 @@ export function isFixedOrSticky(elem: Element): boolean {
 }
 
 /**
+ * リンク密度ゲート。リンク密度を使う2つの strip は候補タグと最小文字数だけが
+ * 異なるため、比率の計算は 1 実装にまとめ、差分だけを引数で受ける
+ * @param elem 判定対象の要素
+ * @param minTextLength 対象とする最小文字数（これ未満は対象外）
+ * @param ratioThreshold リンク文字の比率閾値（この値以上を対象とする）
+ * @returns リンク密度が閾値以上に達するかどうか
+ */
+export function isLinkDenseBlock(elem: Element, minTextLength: number, ratioThreshold: number): boolean {
+    const totalText = (elem.textContent || '').length;
+    if (totalText < minTextLength) {
+        return false;
+    }
+    let linkText = 0;
+    elem.querySelectorAll('a').forEach((a) => {
+        linkText += (a.textContent || '').length;
+    });
+    return totalText > 0 && linkText / totalText >= ratioThreshold;
+}
+
+/**
  * 要素が広告かどうかを判定
  * 「 ad 」は単語境界レベルでマッチし、header/loaded 等の誤マッチを防ぐ
  */
