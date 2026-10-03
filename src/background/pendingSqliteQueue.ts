@@ -72,7 +72,9 @@ export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<b
 /**
  * Retry every queued record in chunks. Records from chunks that succeed
  * are removed from the queue; records from chunks that fail stay queued
- * for the next flush.
+ * for the next flush. Records dropped as a terminal failure (over-retry
+ * or TTL-expired) are logged so the loss is visible — there is no fallback
+ * owner below this queue.
  */
 export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
   // Same measurement shape as pendingChromeStorageQueue: take the pre-flush
@@ -104,7 +106,12 @@ export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promi
     } catch {
       return items.map(() => false);
     }
-  }, BATCH_SIZE);
+  }, BATCH_SIZE, async (record, reason) => {
+    addLog(LogType.WARN, 'pendingSqliteQueue: record dropped after terminal failure', {
+      url: record.url,
+      reason,
+    });
+  });
 
   const recovered = before.length - stillPending.length;
   if (recovered > 0) {

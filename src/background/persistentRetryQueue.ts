@@ -176,19 +176,7 @@ export class PersistentRetryQueue<T> {
       await this.saveRemaining([...remaining, ...untouched]);
     };
 
-    const reportDropped = async (item: T, reason: 'max-retries' | 'ttl'): Promise<void> => {
-      if (onDropped === undefined) return;
-      try {
-        // Awaited on purpose (PBI 2026-09-25-12): the fallback owner must be
-        // durably registered before the job leaves the queue, otherwise the
-        // recording briefly has no recovery owner at all.
-        await onDropped(item, reason);
-      } catch (error) {
-        addLog(LogType.ERROR, `${this.options.logLabel}: onDropped callback failed`, {
-          error: errorMessage(error),
-        });
-      }
-    };
+    const reportDropped = this.makeDropReporter(onDropped);
 
     const { kept, dropped } = this.filterExpiredAndOverRetry(toProcess);
     for (const item of dropped) {
@@ -203,34 +191,11 @@ export class PersistentRetryQueue<T> {
 
     for (const item of kept) {
       try {
-        const ok = await handler(item);
-        if (!ok) {
-          incrementRetryCount(item);
-          if (shouldDrop(item, this.options.maxRetryCount)) {
-            addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
-              id: (item as RetryableItem & { id?: string }).id,
-            });
-            // The fallback owner must be durably registered before the job
-            // leaves the queue; a SW death between the two would leave the
-            // recording with neither a queue entry nor a pending page.
-            await reportDropped(item, 'max-retries');
-            if (this.options.persistPerItem) await persistState();
-            continue;
-          }
-          remaining.push(item);
+        if (!(await handler(item))) {
+          await this.recordFailedItem(item, undefined, remaining, reportDropped);
         }
       } catch (error) {
-        incrementRetryCount(item);
-        setLastError(item, error);
-        if (shouldDrop(item, this.options.maxRetryCount)) {
-          addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
-            id: (item as RetryableItem & { id?: string }).id,
-          });
-          await reportDropped(item, 'max-retries');
-          if (this.options.persistPerItem) await persistState();
-          continue;
-        }
-        remaining.push(item);
+        await this.recordFailedItem(item, error, remaining, reportDropped);
       }
       if (this.options.persistPerItem) await persistState();
     }
@@ -241,23 +206,81 @@ export class PersistentRetryQueue<T> {
   }
 
   /**
+   * Build the per-cycle drop reporter behind the onDropped contract. A
+   * throwing onDropped is logged and swallowed: the drop already happened,
+   * and a failed fallback registration must not abort the remaining items.
+   */
+  private makeDropReporter(
+    onDropped?: (item: T, reason: 'max-retries' | 'ttl') => Promise<void> | void
+  ): (item: T, reason: 'max-retries' | 'ttl') => Promise<void> {
+    return async (item: T, reason: 'max-retries' | 'ttl'): Promise<void> => {
+      if (onDropped === undefined) return;
+      try {
+        // Awaited on purpose (PBI 2026-09-25-12): the fallback owner must be
+        // durably registered before the job leaves the queue, otherwise the
+        // recording briefly has no recovery owner at all.
+        await onDropped(item, reason);
+      } catch (error) {
+        addLog(LogType.ERROR, `${this.options.logLabel}: onDropped callback failed`, {
+          error: errorMessage(error),
+        });
+      }
+    };
+  }
+
+  /**
+   * Shared tail of every failed-handler path in flush/flushBatch (returned
+   * false or thrown, per item or per batch): bump the retry count, record
+   * the error, then either report the terminal drop to onDropped or re-queue
+   * the item. Persistence is left to the caller — flush persists per item,
+   * flushBatch per chunk.
+   */
+  private async recordFailedItem(
+    item: T,
+    error: unknown | undefined,
+    remaining: T[],
+    reportDropped: (item: T, reason: 'max-retries' | 'ttl') => Promise<void>
+  ): Promise<void> {
+    incrementRetryCount(item);
+    if (error !== undefined) setLastError(item, error);
+    if (shouldDrop(item, this.options.maxRetryCount)) {
+      addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
+        id: (item as RetryableItem & { id?: string }).id,
+      });
+      // The fallback owner must be durably registered before the job leaves
+      // the queue; a SW death between the two would leave the recording with
+      // neither a queue entry nor a pending page.
+      await reportDropped(item, 'max-retries');
+      return;
+    }
+    remaining.push(item);
+  }
+
+  /**
    * Flush items in batches. Each batch is passed to the handler as an array.
    * The handler returns per-item booleans indicating success/failure.
    * Failed items are retained with retry count incremented.
    *
    * Always persists per-item for Service Worker resilience.
    * Note: `[]` also covers a failed load (logged, snapshot untouched) — see flush().
+   *
+   * `onDropped` (PBI 2026-10-03-18) reports every terminal drop with the same
+   * contract as flush(): over-retry, TTL expiry, or the handler failing on
+   * the final attempt. A throwing onDropped is logged and swallowed; when
+   * omitted, the WARN logs below still record each drop so it is never silent.
    */
   flushBatch(
     handler: (items: T[]) => Promise<boolean[]>,
-    batchSize: number
+    batchSize: number,
+    onDropped?: (item: T, reason: 'max-retries' | 'ttl') => Promise<void> | void
   ): Promise<T[]> {
-    return this.withQueueLock(() => this.flushBatchUnlocked(handler, batchSize));
+    return this.withQueueLock(() => this.flushBatchUnlocked(handler, batchSize, onDropped));
   }
 
   private async flushBatchUnlocked(
     handler: (items: T[]) => Promise<boolean[]>,
-    batchSize: number
+    batchSize: number,
+    onDropped?: (item: T, reason: 'max-retries' | 'ttl') => Promise<void> | void
   ): Promise<T[]> {
     let items: T[];
     try {
@@ -279,6 +302,8 @@ export class PersistentRetryQueue<T> {
       await this.saveRemaining([...remaining, ...untouched]);
     };
 
+    const reportDropped = this.makeDropReporter(onDropped);
+
     const chunks = chunkArray(toProcess, batchSize);
 
     for (const chunk of chunks) {
@@ -288,6 +313,9 @@ export class PersistentRetryQueue<T> {
         addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries or TTL, dropping`, {
           id: (item as RetryableItem & { id?: string }).id,
         });
+        // Same reason re-derivation as flush(): filterExpiredAndOverRetry
+        // merges over-retry and TTL drops; report what actually happened.
+        await reportDropped(item, shouldDrop(item, this.options.maxRetryCount) ? 'max-retries' : 'ttl');
       }
 
       if (validItems.length === 0) {
@@ -299,28 +327,13 @@ export class PersistentRetryQueue<T> {
         const results = await handler(validItems);
         for (let i = 0; i < validItems.length; i++) {
           if (!results[i]) {
-            incrementRetryCount(validItems[i]);
-            if (shouldDrop(validItems[i], this.options.maxRetryCount)) {
-              addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
-                id: (validItems[i] as RetryableItem & { id?: string }).id,
-              });
-              continue;
-            }
-            remaining.push(validItems[i]!);
+            await this.recordFailedItem(validItems[i]!, undefined, remaining, reportDropped);
           }
         }
       } catch (error) {
-        // On batch failure, all items in the batch are retained
+        // On batch failure, all items in the batch are retained (unless over retry)
         for (const item of validItems) {
-          incrementRetryCount(item);
-          setLastError(item, error);
-          if (shouldDrop(item, this.options.maxRetryCount)) {
-            addLog(LogType.WARN, `${this.options.logLabel}: item exceeded max retries, dropping`, {
-              id: (item as RetryableItem & { id?: string }).id,
-            });
-            continue;
-          }
-          remaining.push(item);
+          await this.recordFailedItem(item, error, remaining, reportDropped);
         }
       }
       await persistState();

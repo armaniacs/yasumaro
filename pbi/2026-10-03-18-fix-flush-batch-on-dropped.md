@@ -20,6 +20,7 @@
   - → flush() が持つ onDropped コールバック契約が flushBatch には無い
 - `src/background/pendingSqliteQueue.ts:95`: flushBatch の唯一の本番利用箇所。fallback owner が指定されておらず、drop が消費者側へ伝わらない（silent drop）
 - 重複指摘（follow-up）: retry-block が 3 重に重複（:206-221 vs :222-234 vs :300-325）。自明な統合なら本 PBI 内で、そうでなければ別 PBI 化
+  - **実装結果: 統合は自明だったため本 PBI 内で実施済み。** `makeDropReporter()`（onDropped クロージャ生成を flush/flushBatch で共通化）と `recordFailedItem()`（retryCount 加算 + shouldDrop 分岐 + WARN ログ + drop 報告 / remaining 再キューを 4 箇所から共通化）を追加し、follow-up PBI は不要
 
 ## BDD受け入れシナリオ
 
@@ -47,12 +48,12 @@ Scenario: handler throw 経路でも報告される
 
 ## 受け入れ基準
 
-- [ ] `src/background/persistentRetryQueue.ts` の flushBatch（現 :251-332）に、flush() と同一契約の onDropped コールバックが追加され、3 経路（現 :287-291, :303-307, :317-321）の drop が報告される
-- [ ] `src/background/pendingSqliteQueue.ts:95` の利用箇所が onDropped を受け取り、drop をログへ記録する
-- [ ] onDropped 未指定時は既存の `addLog(LogType.WARN)` が最低限残る（silent drop 撲滅）
-- [ ] retry-block 重複（現 :206-221 / :222-234 / :300-325）の統合は自明な場合のみ本 PBI 内で実施し、そうでなければ follow-up PBI として記録が残る
-- [ ] drop 報告の単体テストが追加される（実時間待ちなし）
-- [ ] 既存 flush/flushBatch テストが green
+- [x] `src/background/persistentRetryQueue.ts` の flushBatch（現 :251-332）に、flush() と同一契約の onDropped コールバックが追加され、3 経路（現 :287-291, :303-307, :317-321）の drop が報告される
+- [x] `src/background/pendingSqliteQueue.ts:95` の利用箇所が onDropped を受け取り、drop をログへ記録する
+- [x] onDropped 未指定時は既存の `addLog(LogType.WARN)` が最低限残る（silent drop 撲滅）
+- [x] retry-block 重複（現 :206-221 / :222-234 / :300-325）の統合は自明な場合のみ本 PBI 内で実施し、そうでなければ follow-up PBI として記録が残る（統合を実施、上記参照）
+- [x] drop 報告の単体テストが追加される（実時間待ちなし）
+- [x] 既存 flush/flushBatch テストが green
 
 ## テスト戦略
 
@@ -66,6 +67,12 @@ Scenario: handler throw 経路でも報告される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する（フルゲートで検証済み: `npx tsc --noEmit` 0 エラー / `npm test` 15529 passed・21 skipped / type-check:test 489 = pinned 489）
 - [ ] コードレビュー完了
+
+## 実装記録
+
+- 回帰テスト: 修正前に 7 件の新規テストが FAIL（flushBatch が onDropped 引数を無視し 0 呼び出し、pendingSqliteQueue の消費者ログ無し）→ 修正後に GREEN。既存 42 件は変更前後で green
+- 変更ファイル: `src/background/persistentRetryQueue.ts`（flushBatch に onDropped 契約 + makeDropReporter/recordFailedItem で retry-block 統合）、`src/background/pendingSqliteQueue.ts`（onDropped 受取 + WARN ログ）、両テストファイル
+- テスト型修正: `persistentRetryQueue.test.ts` の `onDropped` 変数宣言を `ReturnType<typeof vi.fn>`（`Mock<Procedure | Constructable>` で onDropped 引数に不適合）から onDropped 契約の関数型へ置換。test 型 baseline を 493 → 489（pinned 489 相当）へ戻し、baseline pin は未変更

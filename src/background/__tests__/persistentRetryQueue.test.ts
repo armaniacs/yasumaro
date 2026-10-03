@@ -1,6 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PersistentRetryQueue, chunkArray, type RetryableItem } from '../persistentRetryQueue.js';
 import type { QueueStorageAdapter } from '../queueStorageAdapter.js';
+import { addLog } from '../../utils/logger/core.js';
+import { LogType } from '../../utils/logger/types.js';
+
+vi.mock('../../utils/logger/types.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
+vi.mock('../../utils/logger/core.js', () => ({
+  addLog: vi.fn(),
+  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+}));
 
 interface TestItem extends RetryableItem {
   id: string;
@@ -300,6 +311,113 @@ describe('PersistentRetryQueue', () => {
 
       // save called: batch 1 (items 0,1) + batch 2 (items 2,3) + batch 3 (item 4) + final = 4
       expect(adapter.save.mock.calls.length).toBe(saveCalls + 4);
+    });
+
+    it('drops records silently when no fallback owner is wired (pre-onDropped bug pin)', async () => {
+      // Regression pin: before the onDropped contract, flushBatch dropped a
+      // final-attempt failure from the queue with only a WARN log and no way
+      // for the consumer to observe the loss.
+      const item = { id: 'a', data: 'x', createdAt: Date.now(), retryCount: 2 } as TestItem;
+      adapter.store['test'] = [item];
+
+      await queue.flushBatch(async () => [false], 10);
+
+      expect(adapter.store['test']).toEqual([]);
+    });
+  });
+
+  describe('flushBatch() with onDropped', () => {
+    let onDropped: (item: TestItem, reason: 'max-retries' | 'ttl') => Promise<void> | void;
+
+    beforeEach(() => {
+      adapter = createMockAdapter();
+      queue = new PersistentRetryQueue<TestItem>(adapter, {
+        storageKey: 'test',
+        maxSize: 100,
+        logLabel: 'test',
+        maxRetryCount: 3,
+        ttlMs: 1000,
+        persistPerItem: true,
+      });
+      onDropped = vi.fn().mockResolvedValue(undefined);
+    });
+
+    it('reports over-retry and TTL filter drops via onDropped (same contract as flush)', async () => {
+      const atLimit: TestItem = { id: 'at-limit', data: 'x', createdAt: Date.now(), retryCount: 3 };
+      const expired: TestItem = { id: 'expired', data: 'x', createdAt: Date.now() - 2000, retryCount: 0 };
+      const fresh: TestItem = { id: 'fresh', data: 'x', createdAt: Date.now(), retryCount: 0 };
+      adapter.store['test'] = [atLimit, expired, fresh];
+
+      await queue.flushBatch(async (items) => items.map(() => true), 50, onDropped);
+
+      expect(onDropped).toHaveBeenCalledTimes(2);
+      expect(onDropped).toHaveBeenCalledWith(atLimit, 'max-retries');
+      expect(onDropped).toHaveBeenCalledWith(expired, 'ttl');
+      expect(onDropped).not.toHaveBeenCalledWith(fresh, expect.anything());
+      expect(adapter.store['test']).toEqual([]);
+    });
+
+    it('reports handler-false over-retry drops via onDropped', async () => {
+      const item: TestItem = { id: 'a', data: 'x', createdAt: Date.now(), retryCount: 2 };
+      adapter.store['test'] = [item];
+
+      await queue.flushBatch(async () => [false], 10, onDropped);
+
+      // retryCount 2 -> 3 >= maxRetryCount 3: terminal drop, must reach the consumer
+      expect(onDropped).toHaveBeenCalledTimes(1);
+      expect(onDropped).toHaveBeenCalledWith(item, 'max-retries');
+      expect(adapter.store['test']).toEqual([]);
+    });
+
+    it('reports batch-throw over-retry drops via onDropped', async () => {
+      const item: TestItem = { id: 'a', data: 'x', createdAt: Date.now(), retryCount: 2 };
+      adapter.store['test'] = [item];
+
+      await queue.flushBatch(async () => { throw new Error('batch fail'); }, 10, onDropped);
+
+      expect(onDropped).toHaveBeenCalledTimes(1);
+      expect(onDropped).toHaveBeenCalledWith(item, 'max-retries');
+      expect(adapter.store['test']).toEqual([]);
+    });
+
+    it('does not report successful or retained items via onDropped', async () => {
+      const ok = makeItem('ok');
+      const retained = makeItem('retained');
+      adapter.store['test'] = [ok, retained];
+
+      await queue.flushBatch(async () => [true, false], 10, onDropped);
+
+      expect(onDropped).not.toHaveBeenCalled();
+      expect((adapter.store['test'] as TestItem[]).map(i => i.id)).toEqual(['retained']);
+    });
+
+    it('swallows a throwing onDropped and completes the flush (same contract as flush)', async () => {
+      const item: TestItem = { id: 'a', data: 'x', createdAt: Date.now(), retryCount: 3 };
+      adapter.store['test'] = [item];
+      const throwing = vi.fn().mockRejectedValue(new Error('fallback owner failed'));
+
+      await expect(queue.flushBatch(async () => [true], 10, throwing)).resolves.toEqual([]);
+
+      expect(throwing).toHaveBeenCalledTimes(1);
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.ERROR,
+        'test: onDropped callback failed',
+        expect.objectContaining({ error: expect.stringContaining('fallback owner failed') })
+      );
+    });
+
+    it('keeps the WARN log path when onDropped is omitted (no silent drop either way)', async () => {
+      const item: TestItem = { id: 'a', data: 'x', createdAt: Date.now(), retryCount: 3 };
+      adapter.store['test'] = [item];
+
+      await queue.flushBatch(async () => [true], 10);
+
+      expect(adapter.store['test']).toEqual([]);
+      expect(addLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        'test: item exceeded max retries or TTL, dropping',
+        expect.objectContaining({ id: 'a' })
+      );
     });
   });
 

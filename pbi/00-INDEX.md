@@ -22,7 +22,7 @@ holistic-code-improvement skill による 6.9.34 時点の大局的レビュー�
 |---|---|---|---:|---:|---|---|
 | 16 | [2026-10-03-16-fix-fetch-5xx-backoff.md](2026-10-03-16-fix-fetch-5xx-backoff.md) | fix | 24.0 | 1.0 | ✅ 完了 | なし |
 | 17 | [2026-10-03-17-fix-reload-seam-wiring.md](2026-10-03-17-fix-reload-seam-wiring.md) | fix | 18.0 | 2.0 | ⬜ 未着手 | 20 に先行（チェーン起点） |
-| 18 | [2026-10-03-18-fix-flush-batch-on-dropped.md](2026-10-03-18-fix-flush-batch-on-dropped.md) | fix | 18.0 | 1.0 | ⬜ 未着手 | なし |
+| 18 | [2026-10-03-18-fix-flush-batch-on-dropped.md](2026-10-03-18-fix-flush-batch-on-dropped.md) | fix | 18.0 | 1.0 | ✅ 完了 | なし |
 | 19 | [2026-10-03-19-fix-anchor-download-unify.md](2026-10-03-19-fix-anchor-download-unify.md) | fix | 16.0 | 0.5 | ⬜ 未着手 | なし |
 | 20 | [2026-10-03-20-fix-preset-status-orphan-class.md](2026-10-03-20-fix-preset-status-orphan-class.md) | fix | 16.0 | 1.0 | ⬜ 未着手 | 17 の後・23 に先行（チェーン） |
 | 21 | [2026-10-03-21-fix-gateway-version-contract.md](2026-10-03-21-fix-gateway-version-contract.md) | fix | 10.0 | 0.5 | ⬜ 未着手 | なし |

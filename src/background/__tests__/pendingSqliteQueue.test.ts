@@ -332,4 +332,77 @@ describe('pendingSqliteQueue retry semantics', () => {
     const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
     expect(remaining).toHaveLength(0);
   });
+
+  it('reports a filter drop to the consumer and logs it (flushBatch onDropped)', async () => {
+    const { LogType } = await import('../../utils/logger/types.js');
+    const { addLog } = await import('../../utils/logger/core.js');
+
+    // Regression pin: before flushBatch took onDropped, this terminal drop
+    // was invisible to the consumer (only the queue module's WARN existed).
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [{
+      ...makeRecord('https://a.example.com'),
+      createdAt: Date.now(),
+      retryCount: 5, // already at max
+    }];
+
+    const mutate = vi.fn();
+
+    await flushPendingRecords({ mutate } as any);
+
+    expect(mutate).not.toHaveBeenCalled();
+    expect(addLog).toHaveBeenCalledWith(
+      LogType.WARN,
+      'pendingSqliteQueue: record dropped after terminal failure',
+      { url: 'https://a.example.com', reason: 'max-retries' }
+    );
+  });
+
+  it('reports a mutate-failure terminal drop to the consumer and logs it', async () => {
+    const { LogType } = await import('../../utils/logger/types.js');
+    const { addLog } = await import('../../utils/logger/core.js');
+
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [{
+      ...makeRecord('https://a.example.com'),
+      createdAt: Date.now(),
+      retryCount: 4,
+    }];
+
+    const mutate = vi.fn().mockResolvedValue({
+      success: false,
+      error: { kind: 'sqlite_error', message: 'insert failed', retriable: false },
+    });
+
+    await flushPendingRecords({ mutate } as any);
+
+    const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
+    expect(remaining).toHaveLength(0);
+    expect(addLog).toHaveBeenCalledWith(
+      LogType.WARN,
+      'pendingSqliteQueue: record dropped after terminal failure',
+      { url: 'https://a.example.com', reason: 'max-retries' }
+    );
+  });
+
+  it('reports a mutate-throw terminal drop to the consumer and logs it', async () => {
+    const { LogType } = await import('../../utils/logger/types.js');
+    const { addLog } = await import('../../utils/logger/core.js');
+
+    mockStorage[PENDING_SQLITE_RECORDS_KEY] = [{
+      ...makeRecord('https://a.example.com'),
+      createdAt: Date.now(),
+      retryCount: 4,
+    }];
+
+    const mutate = vi.fn().mockRejectedValue(new Error('DB unavailable'));
+
+    await flushPendingRecords({ mutate } as any);
+
+    const remaining = mockStorage[PENDING_SQLITE_RECORDS_KEY] as unknown[];
+    expect(remaining).toHaveLength(0);
+    expect(addLog).toHaveBeenCalledWith(
+      LogType.WARN,
+      'pendingSqliteQueue: record dropped after terminal failure',
+      { url: 'https://a.example.com', reason: 'max-retries' }
+    );
+  });
 });
