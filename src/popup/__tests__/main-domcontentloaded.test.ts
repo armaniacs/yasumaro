@@ -62,7 +62,13 @@ vi.mock('../recordCurrentPage.js', () => ({
 }));
 
 // chrome.tabs.query stays stubbed as a tripwire: main.ts must not call it
-// directly, the seam owns active-tab reads.
+// directly, the seam owns active-tab reads. Role split: the runtime twin
+// below ("reads the active tab through the seam") proves the DOMContentLoaded
+// path never touches chrome.tabs.query; the source pin ("contains no raw
+// chrome.tabs.query") catches a direct call in ANY future main.ts path the
+// twin does not execute. The pin is an intentional tripwire, not a style
+// check — it also trips on a comment mentioning chrome.tabs.query in main.ts;
+// edit the comment, never delete the pin.
 vi.stubGlobal('chrome', {
     tabs: {
         query: vi.fn(),
@@ -130,6 +136,11 @@ describe('main.ts DOMContentLoaded', () => {
         expect(getCurrentTabMock).toHaveBeenCalled();
     });
 
+    // Deliberate tripwire, kept on purpose (role split with the runtime twin
+    // below is documented at the chrome stub above): fails on any direct
+    // chrome.tabs.query usage in main.ts source, including forms the runtime
+    // twin could miss (destructuring, aliasing). Update consciously; do not
+    // delete silently.
     it('contains no raw chrome.tabs.query', () => {
         expect(mainSource).not.toMatch(/chrome\.tabs\.query/);
     });

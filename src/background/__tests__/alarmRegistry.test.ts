@@ -4,6 +4,7 @@
  * per arm, no unawaited voids to mock.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
 const { flushBufferedExportsMock, flushYesterdaysExportMock, addLogMock } = vi.hoisted(() => ({
   flushBufferedExportsMock: vi.fn(async (..._args: unknown[]) => {}),
@@ -85,16 +86,6 @@ function stubChromeAlarms(): {
   return { create, clear, restore: () => { globalRef.chrome = savedChrome; } };
 }
 
-/**
- * Let the void-fired handleAlarm settle. Dynamic-import hops need macrotask
- * turns, not just microtasks.
- */
-async function settle(): Promise<void> {
-  for (let i = 0; i < 20; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  }
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -103,17 +94,17 @@ describe('createAlarmRegistry', () => {
   it('routes daily-purge to the purge handler', async () => {
     const registry = createAlarmRegistry(makeDeps());
     registry.handleAlarm(alarm('yasumaro-daily-purge'));
-    await settle();
-
-    expect(handleDailyPurgeAlarm).toHaveBeenCalledTimes(1);
+    // Condition-based: resolves as soon as the routed handler lands, through
+    // any number of dynamic-import hops — no fixed macrotask-turn budget.
+    await waitForMock(() => expect(handleDailyPurgeAlarm).toHaveBeenCalledTimes(1));
   });
 
   it('flush and immediate share one body', async () => {
     const registry = createAlarmRegistry(makeDeps());
     registry.handleAlarm(alarm('yasumaro-local-md-flush'));
-    await settle();
+    await waitForMock(() => expect(flushBufferedExportsMock).toHaveBeenCalledTimes(1));
     registry.handleAlarm(alarm('yasumaro-local-md-immediate'));
-    await settle();
+    await waitForMock(() => expect(flushBufferedExportsMock).toHaveBeenCalledTimes(2));
 
     expect(flushBufferedExportsMock).toHaveBeenCalledTimes(2);
   });
@@ -121,9 +112,7 @@ describe('createAlarmRegistry', () => {
   it('routes daily-flush to the idle flusher', async () => {
     const registry = createAlarmRegistry(makeDeps());
     registry.handleAlarm(alarm('yasumaro-local-md-daily-flush'));
-    await settle();
-
-    expect(flushYesterdaysExportMock).toHaveBeenCalledTimes(1);
+    await waitForMock(() => expect(flushYesterdaysExportMock).toHaveBeenCalledTimes(1));
   });
 
   it('offline-retry fans out without one failure blocking the others', async () => {
@@ -133,7 +122,7 @@ describe('createAlarmRegistry', () => {
     );
     const registry = createAlarmRegistry(deps);
     registry.handleAlarm(alarm('yasumaro-offline-network-retry'));
-    await settle();
+    await waitForMock(() => expect(flushPendingRecords).toHaveBeenCalledTimes(1));
 
     // allSettled: the pending flushes still ran despite the maintain failure.
     expect(flushPendingRecords).toHaveBeenCalledTimes(1);
@@ -147,21 +136,28 @@ describe('createAlarmRegistry', () => {
     });
     const failingRegistry = createAlarmRegistry(failing);
     failingRegistry.handleAlarm(alarm('yasumaro-offline-network-retry'));
-    await settle();
-
-    expect(addLogMock).toHaveBeenCalledWith(
-      'ERROR',
-      expect.stringContaining('yasumaro-offline-network-retry'),
-      expect.anything(),
+    await waitForMock(() =>
+      expect(addLogMock).toHaveBeenCalledWith(
+        'ERROR',
+        expect.stringContaining('yasumaro-offline-network-retry'),
+        expect.anything(),
+      ),
     );
   });
 
   it('ignores unknown alarm names', async () => {
     const registry = createAlarmRegistry(makeDeps());
-    registry.handleAlarm(alarm('someone-elses-alarm'));
-    await settle();
+    // Positive anchor first: routing a known alarm proves the dispatch
+    // machinery (dynamic-import hops included) resolves. The unknown-name
+    // path schedules no timer of its own, so one macrotask boundary is the
+    // sanctioned negative shape (waitPolicy: drainMacrotask is for negatives).
+    registry.handleAlarm(alarm('yasumaro-daily-purge'));
+    await waitForMock(() => expect(handleDailyPurgeAlarm).toHaveBeenCalledTimes(1));
 
-    expect(handleDailyPurgeAlarm).not.toHaveBeenCalled();
+    registry.handleAlarm(alarm('someone-elses-alarm'));
+    await drainMacrotask();
+
+    expect(handleDailyPurgeAlarm).toHaveBeenCalledTimes(1);
     expect(addLogMock).not.toHaveBeenCalled();
   });
 
@@ -190,7 +186,7 @@ describe('createAlarmRegistry', () => {
 
       const registry = createAlarmRegistry(makeDeps());
       registry.handleAlarm(alarm('check_session_timeout'));
-      await settle();
+      await waitForMock(() => expect(run).toHaveBeenCalledTimes(1));
 
       expect(run).toHaveBeenCalledTimes(1);
     });
@@ -201,8 +197,12 @@ describe('createAlarmRegistry', () => {
       setSessionTimeoutRefs(install, run);
 
       const registry = createAlarmRegistry(makeDeps());
+      // Anchor: the routed job's handler landing proves the dispatch (and any
+      // dynamic-import hop) completed for this alarm; the drain then gives a
+      // macrotask boundary for the negative.
       registry.handleAlarm(alarm('yasumaro-daily-purge'));
-      await settle();
+      await waitForMock(() => expect(handleDailyPurgeAlarm).toHaveBeenCalledTimes(1));
+      await drainMacrotask();
 
       expect(run).not.toHaveBeenCalled();
     });

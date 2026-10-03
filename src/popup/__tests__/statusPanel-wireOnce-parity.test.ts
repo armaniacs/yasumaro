@@ -1,24 +1,13 @@
 // @vitest-environment jsdom
-// PBI 2026-10-02-03: parity pin — re-init must not stack duplicate
-// statusAddDomain / statusAddPath handlers (wireOnce discipline, same as
-// siblings :88,157,398,423). 2x init + 1 click => exactly 1 whitelist write.
+// Parity pin — re-init must not stack duplicate statusAddDomain /
+// statusAddPath handlers (wireOnce discipline, same as the toggle /
+// permission / feedback buttons). Pinned at runtime, not by source regex:
+// the attach spy proves each persistent button node gets exactly one click
+// listener across 2x init — attach is where a stacked duplicate would have
+// to land, regardless of how many macrotask hops a late write needs — and
+// one click then produces exactly one whitelist write.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
-
-function readAttachBody(): string {
-  const source = readFileSync(
-    join(dirname(fileURLToPath(import.meta.url)), '..', 'statusPanel.ts'),
-    'utf-8',
-  );
-  const start = source.indexOf('function attachPrivacyActionListeners');
-  expect(start).toBeGreaterThanOrEqual(0);
-  const end = source.indexOf('\n}\n', start);
-  expect(end).toBeGreaterThan(start);
-  return source.slice(start, end);
-}
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 const {
   mockGetCurrentTab,
@@ -188,49 +177,65 @@ beforeEach(() => {
   mockIsHostPermitted.mockResolvedValue(true);
 });
 
-describe('statusPanel wireOnce wiring — attachPrivacyActionListeners uses the shared seam', () => {
-  it('statusAddDomain is wired through wireOnce, not a bare addEventListener', () => {
-    const body = readAttachBody();
-    expect(body).toMatch(/wireOnce\(\s*addDomainBtn/);
-    expect(body).not.toMatch(/addDomainBtn\?\.\s*addEventListener/);
+// Observes every click-listener attach at the EventTarget seam. The renderer
+// rebuilds the privacy content on each init, so the visible button is a fresh
+// node; the invariant is that the button the user ends up with received
+// exactly one attach. Delegating to the captured original keeps the real
+// listeners attached while the count is recorded.
+function observeClickAttaches(): { targets: EventTarget[]; restore: () => void } {
+  const targets: EventTarget[] = [];
+  const proto = EventTarget.prototype;
+  const original = proto.addEventListener;
+  const spy = vi.spyOn(proto, 'addEventListener').mockImplementation(function (
+    this: EventTarget,
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ) {
+    if (type === 'click') targets.push(this);
+    return original.call(this, type, listener, options);
   });
-
-  it('statusAddPath is wired through wireOnce, not a bare addEventListener', () => {
-    const body = readAttachBody();
-    expect(body).toMatch(/wireOnce\(\s*addPathBtn/);
-    expect(body).not.toMatch(/addPathBtn\?\.\s*addEventListener/);
-  });
-});
+  return { targets, restore: () => spy.mockRestore() };
+}
 
 describe('statusPanel wireOnce parity — re-init does not duplicate whitelist writes', () => {
   it('statusAddDomain: 2x init + 1 click => exactly 1 write', async () => {
     setupDefaultDom();
     stubTabs();
     privateStatus();
-    await initStatusPanel();
-    await initStatusPanel();
-    mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 } as any);
-    document.getElementById('statusAddDomain')!.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
-    // Negative pin: a stacked duplicate handler resolves in the same flush,
-    // so yield macrotask turns (no fixed duration) to let it land before
-    // asserting the count stays at 1.
-    await drainMacrotask();
-    await drainMacrotask();
-    expect(mockSetAll).toHaveBeenCalledTimes(1);
+    // Attach-level negative: a stacked duplicate handler would have to attach
+    // a second click listener to the visible button. Observing the attach
+    // itself holds no matter how many macrotask hops a late write would
+    // need — no fixed drain.
+    const observed = observeClickAttaches();
+    try {
+      await initStatusPanel();
+      await initStatusPanel();
+      const visibleBtn = document.getElementById('statusAddDomain') as HTMLButtonElement;
+      expect(observed.targets.filter((t) => t === visibleBtn)).toHaveLength(1);
+      visibleBtn.click();
+      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
+      expect(mockSetAll).toHaveBeenCalledTimes(1);
+    } finally {
+      observed.restore();
+    }
   });
 
   it('statusAddPath: 2x init + 1 click => exactly 1 write', async () => {
     setupDefaultDom();
     stubTabs();
     privateStatus();
-    await initStatusPanel();
-    await initStatusPanel();
-    mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 } as any);
-    document.getElementById('statusAddPath')!.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
-    await drainMacrotask();
-    await drainMacrotask();
-    expect(mockSetAll).toHaveBeenCalledTimes(1);
+    const observed = observeClickAttaches();
+    try {
+      await initStatusPanel();
+      await initStatusPanel();
+      const visibleBtn = document.getElementById('statusAddPath') as HTMLButtonElement;
+      expect(observed.targets.filter((t) => t === visibleBtn)).toHaveLength(1);
+      visibleBtn.click();
+      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
+      expect(mockSetAll).toHaveBeenCalledTimes(1);
+    } finally {
+      observed.restore();
+    }
   });
 });

@@ -58,11 +58,11 @@ And 実行時 twin で同等の回帰信号が担保されている
 
 ## 受け入れ基準
 
-- [ ] 1. `statusPanel-wireOnce-parity.test.ts:184-196` のソース正規表現ピンを実行時 twin（`:198-229`）で置換または抑制する。リネーム・抽出・非 optional chain 形で落ちない形にする。
-- [ ] 2. `statusPanel-wireOnce-parity.test.ts:207-213` の `drainMacrotask()` ×2 を、重複リスナーの完了を決定的に待つ方式（完了シグナル、mock 呼び出しの安定待ち等）に置換し、>2-hop の重複でも偽陰性にならないことを検証する。
-- [ ] 3. `alarmRegistry.test.ts:68-72` の `settle()`（×20）を、駆動対象の完了条件に基づく待ちへ置換するか、回数の根拠と限界をコメントで明示する。
-- [ ] 4. `main-domcontentloaded.test.ts:133-135` の逸脱ピンは tripwire として保持する場合、`:64-66` のコメントに実行時 twin（`:167-177`）との役割分担を明記する。
-- [ ] 5. 対象は上記 2 テストファイルと `testDir/waitPolicy.ts`（必要な場合のみ）に限定し、production コードは変更しない。
+- [x] 1. `statusPanel-wireOnce-parity.test.ts:184-196` のソース正規表現ピンを実行時 twin（`:198-229`）で置換または抑制する。リネーム・抽出・非 optional chain 形で落ちない形にする。
+- [x] 2. `statusPanel-wireOnce-parity.test.ts:207-213` の `drainMacrotask()` ×2 を、重複リスナーの完了を決定的に待つ方式（完了シグナル、mock 呼び出しの安定待ち等）に置換し、>2-hop の重複でも偽陰性にならないことを検証する。
+- [x] 3. `alarmRegistry.test.ts:68-72` の `settle()`（×20）を、駆動対象の完了条件に基づく待ちへ置換するか、回数の根拠と限界をコメントで明示する。
+- [x] 4. `main-domcontentloaded.test.ts:133-135` の逸脱ピンは tripwire として保持する場合、`:64-66` のコメントに実行時 twin（`:167-177`）との役割分担を明記する。
+- [x] 5. 対象は上記 2 テストファイルと `testDir/waitPolicy.ts`（必要な場合のみ）に限定し、production コードは変更しない。
 
 ## テスト戦略
 
@@ -77,9 +77,19 @@ And 実行時 twin で同等の回帰信号が担保されている
 
 ## Definition of Done
 
-- [ ] BDD 3 シナリオが検証され green
-- [ ] ソース正規表現ピンの置換または文書化が完了している
-- [ ] 固定 drain の置換または根拠明示が完了している
-- [ ] リファクタ耐性・偽陰性検証の結果が報告に含まれる
-- [ ] `npm run validate` が green
-- [ ] backlog（順位 13）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] BDD 3 シナリオが検証され green
+- [x] ソース正規表現ピンの置換または文書化が完了している
+- [x] 固定 drain の置換または根拠明示が完了している
+- [x] リファクタ耐性・偽陰性検証の結果が報告に含まれる
+- [x] `npm run validate` が green
+- [x] backlog（順位 13）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+
+## 実装記録（2026-10-03）
+
+- 1. `statusPanel-wireOnce-parity.test.ts` — ソース正規表現ピン（`readAttachBody()` + `/wireOnce\(\s*addDomainBtn/`）を削除し、EventTarget seam での attach 観測（`observeClickAttaches()`）に置換。2x init 後に可視ボタンへ正確に 1 click listener が attach されていることを断言 — 変数リネーム・関数抽出・optional chain 形式に依存しない
+- 2. 同ファイルの `drainMacrotask()` ×2 を廃止 — 重複ハンドラは attach レベル（2 attach 目）として観測されるため、macrotask hop 数に依存しない負の断言になり、>2-hop の重複も偽陰性にならない
+- 3. `alarmRegistry.test.ts` — `settle()`（×20）を削除し、`waitForMock` による正確な期待値待ちへ置換（8 箇所）。負のテスト（unknown name / session-timeout non-dispatch）には正の anchor（既知 alarm の dispatch 完了待ち）+ 1 drain を付与（waitPolicy の sanctioned negative 形）
+- 4. `main-domcontentloaded.test.ts` — 逸脱ピン（`/chrome\.tabs\.query/` 不在断言）は tripwire として保持し、chrome stub のコメントに runtime twin との役割分担（twin は実行経路、pin は twin が実行しない将来経路の直接呼出を捕捉）を明記
+- 5. 対象限定を遵守 — `testDir/waitPolicy.ts` 無変更、production コード無変更（`alarmRegistry.ts` / `service-worker.ts` の差分は PBI 15 のコメントのみ）
+- 逸脱: spy の `mockImplementation` 型注釈に `| null` を追加 — testDir 型ベースラインが 489→490 に増加したため修正し 489 に復帰（validate ゲート対応）
+- 検証: tsc 0 エラー・test 15,476 pass・validate exit 0・当該 24 tests green・repeats=20
