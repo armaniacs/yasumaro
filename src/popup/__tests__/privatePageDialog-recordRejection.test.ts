@@ -84,9 +84,9 @@ function setupDom(): void {
 // Must run before the module is imported: its listeners bind at load time.
 setupDom();
 
-function expectReported(): void {
+function expectReported(detail: string): void {
   const statusDiv = document.getElementById('mainStatus');
-  expect(statusDiv!.textContent).toBe('An error occurred.');
+  expect(statusDiv!.textContent).toContain(detail);
   expect(statusDiv!.className).toBe('status-message error');
   expect(mockLogError).toHaveBeenCalledWith(
     expect.stringContaining('[privatePageDialog]'),
@@ -129,7 +129,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
     document.getElementById('dialog-save-once')!.click();
 
     await vi.waitFor(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('worker is asleep');
     expect((document.getElementById('private-page-dialog') as HTMLDialogElement).open).toBe(false);
   });
 
@@ -140,7 +140,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
     document.getElementById('dialog-save-domain')!.click();
 
     await vi.waitFor(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('worker is asleep');
   });
 
   it('reports the save-path failure on #mainStatus', async () => {
@@ -150,7 +150,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
     document.getElementById('dialog-save-path')!.click();
 
     await vi.waitFor(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('worker is asleep');
   });
 
   it('reports the retry failure on #mainStatus', async () => {
@@ -161,7 +161,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
     document.getElementById('recording-failed-retry')!.click();
 
     await vi.waitFor(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('worker is asleep');
     expect((document.getElementById('recording-failed-dialog') as HTMLDialogElement).open).toBe(false);
   });
 });

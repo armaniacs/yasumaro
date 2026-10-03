@@ -1546,9 +1546,9 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 });
   });
 
-  function expectReported(): void {
+  function expectReported(detail: string): void {
     const status = document.getElementById('mainStatus')!;
-    expect(status.textContent).toBe('An error occurred.');
+    expect(status.textContent).toContain(detail);
     expect(status.className).toBe('status-message error');
     expect(mockLogError).toHaveBeenCalledWith(
       expect.any(String),
@@ -1577,7 +1577,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     document.getElementById('statusAddDomain')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('settings are locked');
   });
 
   it('addPath: a rejected whitelist write lands on mainStatus and the log', async () => {
@@ -1587,7 +1587,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     document.getElementById('statusAddPath')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('settings are locked');
   });
 
   it('addDomain: a rejected active-tab read lands on mainStatus and the log', async () => {
@@ -1597,7 +1597,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     document.getElementById('statusAddDomain')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('no active tab');
   });
 
   it('requestPermission: a rejected prompt is reported instead of leaking', async () => {
@@ -1618,7 +1618,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     document.getElementById('btnRequestPermission')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('user gesture required');
   });
 
   it('requestPermission: a rejected denied-visit record is reported too', async () => {
@@ -1640,7 +1640,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     document.getElementById('btnRequestPermission')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('settings are locked');
   });
 
   it('requestAllUrls: a rejected prompt keeps the banner and reports the failure', async () => {
@@ -1657,7 +1657,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     document.getElementById('btnRequestAllUrls')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported();
+    expectReported('user dismissed the prompt');
     expect(document.getElementById('allUrlsPermissionBanner')!.classList.contains('hidden')).toBe(false);
   });
 });

@@ -706,9 +706,9 @@ describe('privatePageDialog', () => {
   });
 
   describe('dialog buttons — rejected dependency', () => {
-    function expectReported(): void {
+    function expectReported(detail: string): void {
       const statusDiv = document.getElementById('mainStatus');
-      expect(statusDiv!.textContent).toBe('An error occurred.');
+      expect(statusDiv!.textContent).toContain(detail);
       expect(statusDiv!.className).toBe('status-message error');
       expect(hoistedMockLogError).toHaveBeenCalledWith(
         expect.stringContaining('[privatePageDialog]'),
@@ -729,7 +729,7 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-save-domain')!.click();
 
       await vi.waitFor(() => expect(hoistedMockLogError).toHaveBeenCalled());
-      expectReported();
+      expectReported('settings are locked');
       expect((document.getElementById('private-page-dialog') as HTMLDialogElement).open).toBe(false);
     });
 
@@ -744,7 +744,7 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-save-path')!.click();
 
       await vi.waitFor(() => expect(hoistedMockLogError).toHaveBeenCalled());
-      expectReported();
+      expectReported('settings are locked');
     });
   });
 

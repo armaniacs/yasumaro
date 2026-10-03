@@ -1,13 +1,14 @@
 import type { PendingSave } from './mainTypes.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { startAutoCloseTimer } from './autoClose.js';
-import { getMessage, getMessageOr } from '../utils/i18n.js';
+import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { statusChannel } from '../utils/ui/statusChannel.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
 import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
+import { getUserErrorMessage } from './errorUtils.js';
 
 export let currentPendingSave: PendingSave | null = null;
 
@@ -125,9 +126,12 @@ async function recordWithForce(): Promise<void> {
  * Failure path for the dialog buttons. The dialog is already closed by the time
  * the awaited work runs, so a rejection has no surface of its own to fail on —
  * without this the popup kept the pre-dialog state and the click looked inert.
+ *
+ * The sentence derives from the error object, matching the result-failure
+ * branch in recordPendingSave — one display contract inside this path.
  */
 function reportDialogActionFailure(action: string, error: unknown): void {
-  statusChannel.report('mainStatus', getMessageOr('errorGeneric', 'An error occurred.'), 'error');
+  statusChannel.report('mainStatus', getUserErrorMessage(error), 'error');
   logError(`[privatePageDialog] ${action} failed`, { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 

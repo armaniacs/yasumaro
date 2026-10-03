@@ -10,6 +10,7 @@ import { getActiveTabUrl, getCurrentTab, getDomainForUrl } from './tabUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { updateStatusIcon, escapeHtml, wireOnce } from './domUtils.js';
 import { requestContentFromTab } from './contentFetchGateway.js';
+import { getUserErrorMessage } from './errorUtils.js';
 import { getCleansedBadgeText } from '../utils/cleansingBadge.js';
 import { buildRemovedCounts } from '../utils/commonTypes.js';
 import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
@@ -125,9 +126,13 @@ export function updateCleansingStatus(cleanseStats: ContentResponse['cleanseStat
  * or a storage write used to end the click silently — the click had no other
  * visible effect, so the user could not tell it apart from a no-op. The
  * message goes through the same status seam the success paths use.
+ *
+ * The sentence derives from the error object (same rule as the pending-list
+ * showError path) so the logged cause stays visible to the user; a fixed
+ * generic would read differently from the other failure paths.
  */
 function reportHandlerError(message: string, error: unknown): void {
-  statusChannel.report('mainStatus', getMessageOr('errorGeneric', 'An error occurred.'), 'error');
+  statusChannel.report('mainStatus', getUserErrorMessage(error), 'error');
   logError(message, { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 

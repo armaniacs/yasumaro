@@ -21,6 +21,10 @@ import {
  * the pending-record gateway normalizes every record failure to
  * {success:false} instead of rejecting, and the whitelist writer returns
  * {ok:false} for rejected patterns.
+ *
+ * The user-visible sentence derives from the failure payload via
+ * errorUtils.showError — the single popup display contract, shared with the
+ * status-panel and private-page dialog boundaries.
  */
 function reportActionFailure(message: string, error: unknown, errorCode: ErrorCodeValues): void {
   const statusDiv = document.getElementById('mainStatus');
