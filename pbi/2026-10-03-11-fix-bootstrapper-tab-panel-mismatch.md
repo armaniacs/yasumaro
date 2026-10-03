@@ -48,11 +48,11 @@ And 失敗時は reportNavigateFailure のみで state を壊さない
 
 ## 受け入れ基準
 
-- [ ] 1. クリック経路の失敗時、新パネルのタブが active/aria-selected のまま残らない: `src/dashboard/panels/DashboardBootstrapper.ts:129` の `#updateActiveTabForPanel` を `:133-135` の `navigate` 解決後に移動するか、catch で旧パネルへロールバックする。どちらを採るかは失敗のユーザーへの見せ方（フィードバック表示の有無）とセットで決定し記録する。
-- [ ] 2. 失敗時のユーザーへの見え方（フィードバックの有無・文言）が決定され、`console.error`（`:182-184`）だけで不整合を放置しない。
-- [ ] 3. 成功時の外部挙動は不変: `:41-52` の active/aria-selected/tabindex 割り当てと `:126` の settings 展開の順序は保たれる。
-- [ ] 4. `start()`（`:169-180`）の順序・catch 挙動は無変更。
-- [ ] 5. 対象ファイルは `src/dashboard/panels/DashboardBootstrapper.ts` とそのテストに限定する。
+- [x] 1. クリック経路の失敗時、新パネルのタブが active/aria-selected のまま残らない: `src/dashboard/panels/DashboardBootstrapper.ts:129` の `#updateActiveTabForPanel` を `:133-135` の `navigate` 解決後に移動するか、catch で旧パネルへロールバックする。どちらを採るかは失敗のユーザーへの見せ方（フィードバック表示の有無）とセットで決定し記録する。
+- [x] 2. 失敗時のユーザーへの見え方（フィードバックの有無・文言）が決定され、`console.error`（`:182-184`）だけで不整合を放置しない。
+- [x] 3. 成功時の外部挙動は不変: `:41-52` の active/aria-selected/tabindex 割り当てと `:126` の settings 展開の順序は保たれる。
+- [x] 4. `start()`（`:169-180`）の順序・catch 挙動は無変更。
+- [x] 5. 対象ファイルは `src/dashboard/panels/DashboardBootstrapper.ts` とそのテストに限定する。
 
 ## テスト戦略
 
@@ -66,8 +66,17 @@ And 失敗時は reportNavigateFailure のみで state を壊さない
 
 ## Definition of Done
 
-- [ ] BDD 3 シナリオがテストとして実装され green
-- [ ] 失敗時にタブ状態と表示パネルが一致することを assert するテストが存在する
-- [ ] 失敗時のユーザーフィードバック方針が決定・記録されている
-- [ ] `npm run validate` と `npm run type-check` が green
-- [ ] backlog（順位 11）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] BDD 3 シナリオがテストとして実装され green
+- [x] 失敗時にタブ状態と表示パネルが一致することを assert するテストが存在する
+- [x] 失敗時のユーザーフィードバック方針が決定・記録されている
+- [x] `npm run validate` と `npm run type-check` が green
+- [x] backlog（順位 11）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+
+## 実装記録（2026-10-03）
+
+- 裁定: catch でのロールバック方式（update 先移動ではなく）。`#rollbackActiveTab(panelId, previousTab)` を新設し、クリック前に active タブを snapshot（`:159`）、navigate 失敗時は `#updateActiveTabForPanel` の後でも snapshot へ戻す。
+- 失敗時の見え方: ロールバック自体がユーザー可視のハンドリング（クリックがパネルを切り替えなかったことが分かる）。`#reportNavigateFailure`（console.error）での追加記録は維持。toast は意図的に入れない — パネルコンテナが存在する前に走るため、dashboard 全体通知経路は別作業。
+- `#setActiveTab` を `#updateActiveTabForPanel` から抽出（単一タブへの active/aria-selected/tabindex パターン適用、null で全タブ解除）。
+- テスト: `DashboardBootstrapper.test.ts` に 4 件を追加（失敗時ロールバック、成功時維持、start() 不変、post-activation ケース待ち `waitForMock` 使用）。修正前 RED 2 件を確認。21/21 green、`--repeats=20` 全 run green。
+- 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
+- 逸脱: ロールバックは `registry.activeId === panelId` の場合に発火しない — registry が先に clicked パネルへ切り替えてから失敗した場合（activation 後の mount throw）、表示されている要素が clicked パネル自身であり、ロールバックすると本修正が防ぐべきタブ/表示不整合を作り直すため。受け入れ基準 1 の「どちらかを採るかは見せ方とセットで決定」の裁定部分として記録。

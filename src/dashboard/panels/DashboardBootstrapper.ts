@@ -42,6 +42,16 @@ export class DashboardBootstrapper {
     if (!this.sidebar) return;
     const btn = this.sidebar.querySelector<HTMLElement>(`[data-panel="${panelId}"]`);
     if (!btn) return;
+    this.#setActiveTab(btn);
+  }
+
+  /**
+   * Applies the active/aria-selected/tabindex tab pattern to one tab,
+   * clearing it from every other sidebar tab. A null btn clears every tab,
+   * matching a displayed panel that has no tab of its own.
+   */
+  #setActiveTab(btn: HTMLElement | null): void {
+    if (!this.sidebar) return;
     const tabs = Array.from(this.sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn'));
     tabs.forEach((el) => {
       const isActive = el === btn;
@@ -49,6 +59,25 @@ export class DashboardBootstrapper {
       el.setAttribute('aria-selected', isActive ? 'true' : 'false');
       el.setAttribute('tabindex', isActive ? '0' : '-1');
     });
+  }
+
+  /**
+   * Rollback for a click-path navigate that failed before the registry
+   * switched panels: the displayed panel is unchanged, so the sidebar
+   * returns to the tab that was active before the click. When the registry
+   * DID switch to the clicked panel before failing (mount throw after
+   * activation), its element is the one displayed and the tab already
+   * points at it — rolling back would recreate the very tab/display
+   * mismatch this exists to prevent. This rollback is the user-visible
+   * failure handling (the click visibly does not switch panels); failures
+   * are additionally recorded via #reportNavigateFailure. No toast here on
+   * purpose: this runs before any panel container exists, and a
+   * dashboard-wide notification path is separate work.
+   */
+  #rollbackActiveTab(panelId: string, previousTab: HTMLElement | null): void {
+    if (!this.sidebar) return;
+    if (this.registry.activeId === panelId) return;
+    this.#setActiveTab(previousTab);
   }
 
   /**
@@ -125,12 +154,17 @@ export class DashboardBootstrapper {
       // collapses it again so the settings buttons only show on demand.
       this.#setSettingsExpanded(panelId === DEFAULT_PANEL_ID || SETTINGS_CHILD_IDS.has(panelId));
 
+      // Snapshot the pre-click active tab so a navigate that fails before
+      // taking effect can roll the sidebar back to the displayed panel.
+      const previousTab = sidebar.querySelector<HTMLElement>('.sidebar-nav-btn.active');
+
       // Update sidebar active state and ARIA selection
       this.#updateActiveTabForPanel(panelId);
 
       // Every catalog panel is registered, so a rejected navigate is a real
       // failure (typo'd id, throwing mount) that must not disappear silently.
       void this.registry.navigate(panelId).catch((error: unknown) => {
+        this.#rollbackActiveTab(panelId, previousTab);
         this.#reportNavigateFailure(panelId, error);
       });
     });

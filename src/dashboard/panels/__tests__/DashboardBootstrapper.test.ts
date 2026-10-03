@@ -196,6 +196,131 @@ describe('DashboardBootstrapper', () => {
     });
   });
 
+  describe('failed click navigation keeps the sidebar consistent with the displayed panel', () => {
+    let consoleError: ReturnType<typeof vi.spyOn>;
+
+    beforeEach(() => {
+      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      consoleError.mockRestore();
+    });
+
+    /** Tab A active (the displayed panel's tab) + tab B (the failed target). */
+    function buildTabs(): { btnA: HTMLButtonElement; btnB: HTMLButtonElement } {
+      const btnA = document.createElement('button');
+      btnA.className = 'sidebar-nav-btn active';
+      btnA.setAttribute('data-panel', 'panel-a');
+      btnA.setAttribute('aria-selected', 'true');
+      const btnB = document.createElement('button');
+      btnB.className = 'sidebar-nav-btn';
+      btnB.setAttribute('data-panel', 'panel-b');
+      btnB.setAttribute('aria-selected', 'false');
+      sidebar.appendChild(btnA);
+      sidebar.appendChild(btnB);
+      bootstrapper.wireSidebar(sidebar);
+      return { btnA, btnB };
+    }
+
+    it('restores the previously active tab when a click navigation rejects', async () => {
+      const failure = new Error('panel exploded on mount');
+      const navigate = vi.spyOn(registry, 'navigate').mockRejectedValue(failure);
+      const { btnA, btnB } = buildTabs();
+
+      btnB.click();
+      await flush();
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-b'), failure);
+      expect(btnB.classList.contains('active')).toBe(false);
+      expect(btnB.getAttribute('aria-selected')).toBe('false');
+      expect(btnB.getAttribute('tabindex')).toBe('-1');
+      expect(btnA.classList.contains('active')).toBe(true);
+      expect(btnA.getAttribute('aria-selected')).toBe('true');
+      expect(btnA.getAttribute('tabindex')).toBe('0');
+    });
+
+    it('restores the tab and leaves the old panel displayed when the clicked panel is not registered', async () => {
+      // Display proxy: the panel currently shown when the click happens.
+      const panelAEl = document.createElement('div');
+      panelAEl.className = 'panel active';
+      panelAEl.id = 'panel-a';
+      document.body.appendChild(panelAEl);
+      try {
+        const btnA = document.createElement('button');
+        btnA.className = 'sidebar-nav-btn active';
+        btnA.setAttribute('data-panel', 'panel-a');
+        btnA.setAttribute('aria-selected', 'true');
+        const btnGhost = document.createElement('button');
+        btnGhost.className = 'sidebar-nav-btn';
+        btnGhost.setAttribute('data-panel', 'panel-ghost');
+        btnGhost.setAttribute('aria-selected', 'false');
+        sidebar.appendChild(btnA);
+        sidebar.appendChild(btnGhost);
+        bootstrapper.wireSidebar(sidebar);
+
+        btnGhost.click();
+        await flush();
+
+        expect(consoleError).toHaveBeenCalledWith(
+          expect.stringContaining('panel-ghost'),
+          expect.anything(),
+        );
+        expect(btnGhost.classList.contains('active')).toBe(false);
+        expect(btnGhost.getAttribute('aria-selected')).toBe('false');
+        expect(btnA.classList.contains('active')).toBe(true);
+        expect(btnA.getAttribute('aria-selected')).toBe('true');
+        expect(panelAEl.classList.contains('active')).toBe(true);
+      } finally {
+        panelAEl.remove();
+      }
+    });
+
+    it('keeps the tab on the newly displayed panel when the registry switched before failing (mount throw)', async () => {
+      const failure = new Error('mount exploded');
+      const panelBEl = document.createElement('div');
+      panelBEl.className = 'panel';
+      panelBEl.id = 'panel-b';
+      document.body.appendChild(panelBEl);
+      try {
+        bootstrapper.registerPanels([
+          mockPanel({ id: 'panel-a' }),
+          mockPanel({ id: 'panel-b', mount: vi.fn().mockRejectedValue(failure) }),
+        ]);
+        const { btnA, btnB } = buildTabs();
+
+        btnB.click();
+        await flush();
+
+        expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-b'), failure);
+        expect(panelBEl.classList.contains('active')).toBe(true);
+        expect(btnB.classList.contains('active')).toBe(true);
+        expect(btnB.getAttribute('aria-selected')).toBe('true');
+        expect(btnA.classList.contains('active')).toBe(false);
+      } finally {
+        panelBEl.remove();
+      }
+    });
+
+    it('leaves the sidebar untouched when the initial navigate fails (start order preserved)', async () => {
+      const failure = new Error('panel exploded on mount');
+      vi.spyOn(registry, 'navigate').mockRejectedValue(failure);
+      const btnA = document.createElement('button');
+      btnA.className = 'sidebar-nav-btn active';
+      btnA.setAttribute('data-panel', 'panel-a');
+      btnA.setAttribute('aria-selected', 'true');
+      sidebar.appendChild(btnA);
+      bootstrapper.wireSidebar(sidebar);
+
+      await expect(bootstrapper.start('panel-missing')).resolves.toBeUndefined();
+
+      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-missing'), failure);
+      expect(btnA.classList.contains('active')).toBe(true);
+      expect(btnA.getAttribute('aria-selected')).toBe('true');
+    });
+  });
+
   describe('settings subgroup collapse (Initial Setup toggle)', () => {
     /** Minimal production-shaped sidebar: toggle + subgroup child + data tab. */
     function buildGroupedSidebar(): {
