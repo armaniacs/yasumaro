@@ -146,7 +146,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   try {
     newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectCurrentProviderPrioritySlots({ layout, bList });
   } catch {
-    logInfo('settingsPipeline', { layout }, 'Provider priority collection failed; aborting save');
+    logInfo('Provider priority collection failed; aborting save', { layout }, 'settingsPipeline');
     return { success: false, error: 'collector_failed' };
   }
   if (isBPriorityListActive(layout, bList)) {
@@ -228,9 +228,9 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
     if (nextEmpty && curPresent) {
       delete newSettings[key];
       logInfo(
-        'settingsPipeline',
-        { key },
         'Skipped overwriting a stored provider connection field with an empty value',
+        { key },
+        'settingsPipeline',
       );
     }
   }

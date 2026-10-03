@@ -2,6 +2,10 @@ import { describe, test, expect, vi } from 'vitest';
 import { TrancoManager } from '../trancoManager.js';
 import { BloomFilterManager } from '../bloomFilterManager.js';
 import type { TrustDatabase } from '../trustDbSchema.js';
+import { initLogger, resetLoggerWiring, getLogs, clearPendingLogs } from '../../logger/core.js';
+import { InMemoryLogAdapter } from '../../logger/storageAdapter.js';
+import { ImmediateFlushScheduler } from '../../logger/flushScheduler.js';
+import { waitForMock } from '../../../../testDir/waitPolicy.js';
 
 function makeDatabase(): TrustDatabase {
   return {
@@ -57,5 +61,31 @@ describe('TrancoManager', () => {
     expect(manager.isTrancoDomain('cnn.com')).toBe(true);
     expect(manager.isTrancoDomain('https://cnn.com/path')).toBe(true);
     expect(manager.isTrancoDomain('unknown.com')).toBe(false);
+  });
+
+  test('updateTranco logs the update in the message slot with TrustDb as source', async () => {
+    clearPendingLogs();
+    initLogger({ storage: new InMemoryLogAdapter(), scheduler: new ImmediateFlushScheduler() });
+    try {
+      const save = vi.fn().mockResolvedValue(undefined);
+      const manager = new TrancoManager({ bloomFilterManager: new BloomFilterManager(), save });
+      const db = makeDatabase();
+
+      await manager.updateTranco(db, ['cnn.com', 'bbc.com'], 'top10k');
+
+      await waitForMock(async () => {
+        const logs = await getLogs();
+        const entry = logs.find((l) => l.message === 'Updated Tranco list: 2 domains');
+        expect(entry).toBeDefined();
+        expect(entry!.type).toBe('INFO');
+        const details = entry!.details as Record<string, unknown>;
+        expect(details._source).toBe('TrustDb');
+        expect(details.tier).toBe('top10k');
+        expect(details.count).toBe(2);
+      });
+    } finally {
+      resetLoggerWiring();
+      clearPendingLogs();
+    }
   });
 });

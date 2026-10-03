@@ -58,7 +58,7 @@ export class TrancoManager {
 
     await this.deps.save();
 
-    logInfo('TrustDb', { tier, count: domains.length }, `Updated Tranco list: ${domains.length} domains`);
+    logInfo(`Updated Tranco list: ${domains.length} domains`, { tier, count: domains.length }, 'TrustDb');
 
     return { bloomFilter: bloom };
   }

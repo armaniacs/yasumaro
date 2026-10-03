@@ -41,11 +41,11 @@ Scenario: 既存の正しい呼び出しは影響を受けない
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] `src/dashboard/settingsPipeline.ts:149` — `logInfo` 呼び出しが `message` / `details` / `source` の契約 (`logger/api.ts:61-64`) に沿う
-- [ ] `src/dashboard/settingsPipeline.ts:230-234` — 同上
-- [ ] `src/dashboard/trancoManager.ts:61` — 同上
-- [ ] `logger-enhanced.test.ts:208` が pin する正しい使用例との整合が維持される
-- [ ] 入れ替わっていた 3 箇所の修正後に、message / source の位置を検証するテストが追加される
+- [x] `src/dashboard/settingsPipeline.ts:149` — `logInfo` 呼び出しが `message` / `details` / `source` の契約 (`logger/api.ts:61-64`) に沿う
+- [x] `src/dashboard/settingsPipeline.ts:230-234` — 同上
+- [x] `src/dashboard/trancoManager.ts:61` — 同上
+- [x] `logger-enhanced.test.ts:208` が pin する正しい使用例との整合が維持される
+- [x] 入れ替わっていた 3 箇所の修正後に、message / source の位置を検証するテストが追加される
 
 ## テスト戦略
 
@@ -59,6 +59,13 @@ Scenario: 既存の正しい呼び出しは影響を受けない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- `settingsPipeline.ts:149` / `:230-234` / `trancoManager.ts:61` の 3 箇所でスロットを入れ替え: 本文メッセージを `message` スロットへ、モジュール名を `source` スロットへ移動。`details` は変更なしで、修正後のログ内容はスロット解釈を除きバイト同一。
+- テスト: `settingsPipeline.test.ts` に 2 件、`trancoManager.test.ts` に 1 件の回帰テストを追加（message / source の位置契約を pin、入れ替わりが再発すると落ちる）。settingsPipeline 149 と trancoManager は修正前 RED を確認。
+- 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
+- 逸脱: `trancoManager.ts` の実パスは `src/dashboard/trancoManager.ts` ではなく `src/utils/trustDb/trancoManager.ts`（移設済み）。スコープ記載のパスを訂正。スロット入れ替わりは「message / source の位置の修正」であり、ログ出力される文字列そのものは同一という解釈で実装。

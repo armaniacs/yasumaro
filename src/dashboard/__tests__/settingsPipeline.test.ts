@@ -86,6 +86,10 @@ import * as formBinding from '../../utils/settingsFormBinding.js';
 import * as fieldValidation from '../settings/fieldValidation.js';
 import { GENERAL_SETTINGS_FIELDS } from '../settings/fieldDescriptor.js';
 import { showConfirmDialog } from '../utils/confirmDialog.js';
+import { initLogger, resetLoggerWiring, getLogs, clearPendingLogs } from '../../utils/logger/core.js';
+import { InMemoryLogAdapter } from '../../utils/logger/storageAdapter.js';
+import { ImmediateFlushScheduler } from '../../utils/logger/flushScheduler.js';
+import { waitForMock } from '../../../testDir/waitPolicy.js';
 
 const mockGetSettings = vi.mocked(settingsRepository.getAll);
 const mockSaveSettings = vi.mocked(settingsRepository.setAll);
@@ -316,5 +320,62 @@ describe('GENERAL_SETTINGS_VALIDATION_FIELDS', () => {
     expect(GENERAL_SETTINGS_VALIDATION_FIELDS).toEqual(
       GENERAL_SETTINGS_FIELDS.map(({ storageKey, elementId, errorId }) => ({ storageKey, elementId, errorId })),
     );
+  });
+});
+
+describe('logInfo argument contract', () => {
+  beforeEach(() => {
+    clearPendingLogs();
+    initLogger({ storage: new InMemoryLogAdapter(), scheduler: new ImmediateFlushScheduler() });
+  });
+
+  afterEach(() => {
+    resetLoggerWiring();
+    clearPendingLogs();
+  });
+
+  it("records the collector failure text in the message slot with settingsPipeline as source", async () => {
+    setupInputs('https');
+    mockGetSettings.mockResolvedValue({ ai_provider_layout: 'a' } as never);
+    vi.mocked(collectProviderPrioritySlots).mockImplementationOnce(() => {
+      throw new Error('injected collector failure');
+    });
+
+    const result = await saveDashboardSettings();
+    expect(result).toEqual({ success: false, error: 'collector_failed' });
+
+    await waitForMock(async () => {
+      const logs = await getLogs();
+      const entry = logs.find((l) => l.message === 'Provider priority collection failed; aborting save');
+      expect(entry).toBeDefined();
+      expect(entry!.type).toBe('INFO');
+      const details = entry!.details as Record<string, unknown>;
+      expect(details._source).toBe('settingsPipeline');
+      expect(details.layout).toBe('a');
+    });
+  });
+
+  it("records the skipped-provider-field note in the message slot with settingsPipeline as source", async () => {
+    setupInputs('https');
+    mockGetSettings.mockResolvedValue({
+      openai_base_url: 'https://api.ai.sakura.ad.jp/v1',
+      openai_model: 'preview/gemma-4-31B-it',
+      openai_api_key: { iv: 'x', ciphertext: 'y' },
+    } as never);
+    mockExtract.mockReturnValue({
+      openai_base_url: '',
+      openai_model: '',
+      openai_api_key: '',
+    });
+
+    await saveDashboardSettings();
+
+    await waitForMock(async () => {
+      const logs = await getLogs();
+      const entry = logs.find((l) => (l.details as Record<string, unknown>).key === 'openai_base_url');
+      expect(entry).toBeDefined();
+      expect(entry!.message).toBe('Skipped overwriting a stored provider connection field with an empty value');
+      expect((entry!.details as Record<string, unknown>)._source).toBe('settingsPipeline');
+    });
   });
 });
