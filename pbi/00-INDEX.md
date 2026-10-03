@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 19件完了 / ⬜ 未着手 1件 🔧非機能追加
+### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 20件完了 🔧非機能追加
 
 holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。起票・採点登録のみで実装は未着手。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
 
@@ -33,7 +33,7 @@ holistic-code-improvement skill による 6.9.34 時点の大局的レビュー�
 | 26 | [2026-10-03-26-refactor-e2e-launch-context.md](2026-10-03-26-refactor-e2e-launch-context.md) | refactor | 6.0 | 1.5 | ✅ 完了 | 32 に先行（e2e） |
 | 27 | [2026-10-03-27-test-lint-rule-tautology.md](2026-10-03-27-test-lint-rule-tautology.md) | test | 6.0 | 0.5 | ✅ 完了 | なし |
 | 28 | [2026-10-03-28-refactor-archive-panel-split.md](2026-10-03-28-refactor-archive-panel-split.md) | refactor | 4.8 | 2.0 | ✅ 完了 | なし |
-| 29 | [2026-10-03-29-refactor-general-settings-panel-split.md](2026-10-03-29-refactor-general-settings-panel-split.md) | refactor | 4.8 | 2.0 | ⬜ 未着手 | 23 の後（チェーン末端） |
+| 29 | [2026-10-03-29-refactor-general-settings-panel-split.md](2026-10-03-29-refactor-general-settings-panel-split.md) | refactor | 4.8 | 2.0 | ✅ 完了 | 23 の後（チェーン末端） |
 | 30 | [2026-10-03-30-refactor-i18n-storage-mock-factories.md](2026-10-03-30-refactor-i18n-storage-mock-factories.md) | refactor | 4.5 | 1.0 | ✅ 完了 | なし |
 | 31 | [2026-10-03-31-refactor-double-casts-cleanup.md](2026-10-03-31-refactor-double-casts-cleanup.md) | refactor | 4.0 | 0.5 | ✅ 完了 | 25 の後 |
 | 32 | [2026-10-03-32-test-e2e-seeded-panel-fixture.md](2026-10-03-32-test-e2e-seeded-panel-fixture.md) | test | 4.0 | 1.0 | ✅ 完了 | 26 の後（e2e） |

@@ -18,6 +18,11 @@ const panelSource = readFileSync(
   'utf-8',
 );
 
+const layoutModuleSource = readFileSync(
+  resolve(process.cwd(), 'src/dashboard/panels/staticForm/generalSettingsLayout.ts'),
+  'utf-8',
+);
+
 const PANEL_MARKUP = `
   <section id="panel-general" class="panel active">
     <div id="aiProviderSection" class="settings-section">
@@ -89,9 +94,11 @@ describe('generalSettingsPanel — priority select parity', () => {
   it('derives the priority select ids from the shared SSOT constant', () => {
     // The former 4x handwritten id lists are gone; the ids live in
     // PRIORITY_SELECT_IDS (providerPrioritySlots.ts), so a slot change is a
-    // single edit there and cannot be missed in the panel.
+    // single edit there and cannot be missed in the wiring. The wiring now
+    // lives in the layout module, so the pin follows it there.
     expect(panelSource).not.toMatch(/aiProviderPriority[23]/);
-    expect(panelSource).toContain('PRIORITY_SELECT_IDS');
+    expect(layoutModuleSource).not.toMatch(/'aiProviderPriority[23]'/);
+    expect(layoutModuleSource).toContain('PRIORITY_SELECT_IDS');
   });
 
   it('renders slot 1 without the None option and slots 2-3 with it plus every provider', async () => {
