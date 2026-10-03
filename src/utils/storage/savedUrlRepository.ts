@@ -35,7 +35,11 @@ export type { SavedUrlEntry } from '../urlEntry.js';
  * order right after capping.
  */
 function capContentEntries(entries: SavedUrlEntry[]): void {
-    const sorted = entries.slice().sort((a, b) => b.timestamp - a.timestamp);
+    // WHY: hand-made / migrated entries can carry a missing timestamp; a bare
+    // subtraction then returns NaN, Array.prototype.sort accepts it silently,
+    // and the content-deletion set becomes unspecified. The || 0 defense is
+    // the same one purgeLegacyStorage's sort uses below.
+    const sorted = entries.slice().sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     sorted.forEach((e, i) => { if (i >= MAX_CONTENT_ENTRIES) delete e.content; });
 }
 
@@ -155,7 +159,11 @@ export async function getSavedUrlsWithTimestamps(): Promise<Map<string, number>>
     const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
     const urlMap = new Map<string, number>();
     for (const entry of entries) {
-        urlMap.set(entry.url, entry.timestamp);
+        // WHY: hand-made entries can lack a timestamp; normalizing to 0 keeps
+        // the Map<string, number> contract honest and stops undefined from
+        // round-tripping into setSavedUrlsWithTimestamps writes. Callers treat
+        // 0 and undefined identically (falsy / not the same UTC day).
+        urlMap.set(entry.url, entry.timestamp || 0);
     }
     return urlMap;
 }
@@ -283,11 +291,15 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
             entries.push(entry);
 
             // 7日より古いエントリを削除
+            // WHY: missing timestamps normalize to 0, making the retention
+            // verdict for hand-made entries the explicit "oldest → expired"
+            // policy. NaN >= cutoff happens to drop them too, but only by
+            // accident of the comparison, not by policy.
             const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-            entries = entries.filter(entry => entry.timestamp >= cutoff);
+            entries = entries.filter(entry => (entry.timestamp || 0) >= cutoff);
 
             if (entries.length > MAX_URL_SET_SIZE) {
-                entries.sort((a, b) => a.timestamp - b.timestamp);
+                entries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
                 entries = entries.slice(entries.length - MAX_URL_SET_SIZE);
             }
 

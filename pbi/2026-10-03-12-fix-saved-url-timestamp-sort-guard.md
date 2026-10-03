@@ -40,11 +40,11 @@ And 欠損の有無で他エントリの保持・削除が変わらない
 
 ## 受け入れ基準
 
-- [ ] 1. `src/utils/storage/savedUrlRepository.ts:38` の comparator が欠損 timestamp で NaN を返さない: `(timestamp || 0)` 正規化または事前 filter のいずれかで、`purgeLegacyStorage`（同ファイル `:482`）の既存防御と同じ方針に揃える。
-- [ ] 2. 欠損時の `capContentEntries` の content 削除対象が決定的になる（`:39` の `delete e.content` がタイムスタンプ順に従う）。
-- [ ] 3. `updateUrlTimestamp` `:287` の cutoff filter における欠損エントリの扱い（保持 or 除外）が方針として決定され、テストで固定される。
-- [ ] 4. `getSavedUrlsWithTimestamps` `:158` の `undefined` 搬入に対する方針（正規化 or 呼び出し側契約の明示）を決定する。
-- [ ] 5. 対象は `src/utils/storage/savedUrlRepository.ts` とそのテストに限定し、型 `src/utils/urlEntry.ts` は変更しない。
+- [x] 1. `src/utils/storage/savedUrlRepository.ts:38` の comparator が欠損 timestamp で NaN を返さない: `(timestamp || 0)` 正規化または事前 filter のいずれかで、`purgeLegacyStorage`（同ファイル `:482`）の既存防御と同じ方針に揃える。
+- [x] 2. 欠損時の `capContentEntries` の content 削除対象が決定的になる（`:39` の `delete e.content` がタイムスタンプ順に従う）。
+- [x] 3. `updateUrlTimestamp` `:287` の cutoff filter における欠損エントリの扱い（保持 or 除外）が方針として決定され、テストで固定される。
+- [x] 4. `getSavedUrlsWithTimestamps` `:158` の `undefined` 搬入に対する方針（正規化 or 呼び出し側契約の明示）を決定する。
+- [x] 5. 対象は `src/utils/storage/savedUrlRepository.ts` とそのテストに限定し、型 `src/utils/urlEntry.ts` は変更しない。
 
 ## テスト戦略
 
@@ -58,8 +58,17 @@ And 欠損の有無で他エントリの保持・削除が変わらない
 
 ## Definition of Done
 
-- [ ] BDD 2 シナリオがテストとして実装され green
-- [ ] 欠損 timestamp 混在時に comparator が NaN にならないことを assert するテストが存在する
-- [ ] updateUrlTimestamp / getSavedUrlsWithTimestamps の欠損扱い方針が決定・テスト固定されている
-- [ ] `npm run validate` が green
-- [ ] backlog（順位 12）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] BDD 2 シナリオがテストとして実装され green
+- [x] 欠損 timestamp 混在時に comparator が NaN にならないことを assert するテストが存在する
+- [x] updateUrlTimestamp / getSavedUrlsWithTimestamps の欠損扱い方針が決定・テスト固定されている
+- [x] `npm run validate` が green
+- [x] backlog（順位 12）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+
+## 実装記録（2026-10-03）
+
+- `capContentEntries`（`:38`）と LRU ソート（`:289-291`）の comparator を `(timestamp || 0)` 正規化に揃え、`purgeLegacyStorage`（同ファイル）と同じ `|| 0` 防御で統一。欠損エントリは 0 扱いで最古側に安定配置される。
+- `updateUrlTimestamp` の cutoff filter（`:287`）も `(timestamp || 0) >= cutoff` に正規化 — 欠損エントリの扱いは「oldest → expired の明示ポリシー」で決定（旧挙動の `NaN >= cutoff` false による偶然の除外はポリシーではない旨を WHY コメントで記録）。
+- `getSavedUrlsWithTimestamps`（`:158`）: `urlMap.set(entry.url, entry.timestamp || 0)` に正規化 — `undefined` 搬入の方針は正規化を選択（`Map<string, number>` 契約を正直に保ち、`setSavedUrlsWithTimestamps` の書き戻しで `timestamp: undefined` が往復しない。呼び出し側は 0 と undefined を同じく falsy で扱うため実挙動は不変）。
+- テスト: `savedUrlRepository-timestamp-guard.test.ts` を新設（6 テスト: 欠損混在時の content 削除決定性、purge 防御との同一方針、cutoff 除外、reader 正規化）。修正前 RED を確認。隣接スイート 74/74 green。
+- 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
+- 逸脱: 受け入れ基準 4 は「方針を決定する」のみが要件だったが、実装として reader 正規化まで適用（決定だけでは `undefined` の往復書き戻しが残るため）。BDD 2 シナリオに加え reader 正規化のテストを追加。
