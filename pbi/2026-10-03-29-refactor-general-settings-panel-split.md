@@ -89,3 +89,4 @@ Scenario: 分割前後でユーザーから見た挙動が同一
 
 - `chrome.storage.local.getAll` 呼び出しを `resolveInitialLayout` の後に移動した（初回レイアウト確定を await してから設定を読む順序に統一。挙動は変わらないが、分割前の呼び出し順とは異なる）
 - `generalSettingsPanel-priorityIds.test.ts` のソース pin 参照先を `generalSettingsPanel.ts` から `generalSettingsLayout.ts` へ変更した（SSOT の配線が layout モジュールに移ったため。pin の意図である「SSOT 変更の取りこぼし防止」は維持）
+- `domainFilterCacheSaveSeamContract.test.ts` の `ADOPTED_CALL_SITES` pin 参照先を `generalSettingsPanel.ts` から `generalSettingsModelsDev.ts` へ変更した（seam 呼び出し `saveSettingsAndRefreshDomainFilterCache` が modelsDev モジュールの onSave bridge に移ったため。delta literal 契約は維持、`--repeats=5` で green 確認）

@@ -34,11 +34,15 @@ const SEAM_EXPORT = 'saveSettingsAndRefreshDomainFilterCache';
  * (`src/utils/storage/trancoConsent.ts`, PBI 2026-09-29-38), so it is the
  * shared module that sits on the seam now, and the two UI call sites are
  * guarded separately below.
+ *
+ * The general settings panel's save moved into the models.dev dialog module
+ * (generalSettingsPanel split, PBI 2026-10-03-29), so the pin follows the
+ * module that owns the seam call now.
  */
 const ADOPTED_CALL_SITES = [
   'src/utils/storage/trancoConsent.ts',
   'src/dashboard/tagsPanel.ts',
-  'src/dashboard/panels/staticForm/generalSettingsPanel.ts',
+  'src/dashboard/panels/staticForm/generalSettingsModelsDev.ts',
 ];
 
 /**
