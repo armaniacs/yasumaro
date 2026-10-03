@@ -53,7 +53,7 @@ export function createArchivePanel(): PanelLifecycle {
       let lastStagingName: string | null = null;
       let lastFileName = '';
 
-      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn, purgeBtn, sessionQueryBtn, sessionSaveBtn, sessionCloseBtn];
+      const controls = [previewBtn, createBtn, cleanupBtn, downloadBtn, restoreBtn, purgeBtn, sessionQueryBtn, sessionSaveBtn, sessionCloseBtn, restoreFileInput];
       const setAriaBusy = (busy: boolean): void => {
         if (statusEl) statusEl.setAttribute('aria-busy', String(busy));
       };
@@ -388,21 +388,25 @@ export function createArchivePanel(): PanelLifecycle {
         });
       });
 
-      sessionCloseBtn?.addEventListener('click', async () => {
+      sessionCloseBtn?.addEventListener('click', () => {
         const staging = sessionStore.getSessionName();
         if (!staging) return;
-        if (sessionStore.isDirty()) {
-          const confirmed = await showConfirmDialog({
-            title: localized('archiveSessionDiscardTitle'),
-            message: localized('archiveSessionDiscardMessage'),
-            dangerous: true,
-          });
-          if (!confirmed) return;
-        }
-        await runPanelAction({
+        void runPanelAction({
           buttons: controls,
           onBusy: setAriaBusy,
-          run: async () => unwrapServiceResult(await archiveClose(staging)),
+          run: async () => {
+            // The dialog sits inside the busy scope: while it is open the
+            // controls stay disabled, so no second action can start.
+            if (sessionStore.isDirty()) {
+              const confirmed = await showConfirmDialog({
+                title: localized('archiveSessionDiscardTitle'),
+                message: localized('archiveSessionDiscardMessage'),
+                dangerous: true,
+              });
+              if (!confirmed) return abortPanelAction();
+            }
+            return unwrapServiceResult(await archiveClose(staging));
+          },
           onSuccess: () => {
             sessionStore.clear();
             if (sessionSection) sessionSection.hidden = true;
@@ -426,15 +430,19 @@ export function createArchivePanel(): PanelLifecycle {
               }));
             }
             // Staging name must be issued by the offscreen registry (fail-closed).
-            restoreStagingName = unwrapServiceResult(await archivePrepareIncoming());
-            lastStagingName = restoreStagingName;
+            // Held in a local: a re-pick during the await used to overwrite the
+            // shared closure and make this flow preview/stage the other pick.
+            const stagingName = unwrapServiceResult(await archivePrepareIncoming());
+            restoreStagingName = stagingName;
+            lastStagingName = stagingName;
 
             // Dashboard writes the picked file into the OPFS staging file
             // (same origin); the worker never trusts client paths.
             const root = await navigator.storage.getDirectory();
-            const handle = await root.getFileHandle(restoreStagingName, { create: true });
-            const writable = await handle.createWritable();
+            const handle = await root.getFileHandle(stagingName, { create: true });
+            let writable: FileSystemWritableFileStream | undefined;
             try {
+              writable = await handle.createWritable();
               let offset = 0;
               while (offset < file.size) {
                 const end = Math.min(offset + EXPORT_CHUNK_BYTES, file.size);
@@ -444,11 +452,11 @@ export function createArchivePanel(): PanelLifecycle {
               }
               await writable.close();
             } catch (err) {
-              try { await writable.abort?.(); } catch { /* ignore */ }
+              try { await writable?.abort?.(); } catch { /* ignore */ }
               throw err;
             }
 
-            const meta = unwrapServiceResult(await archiveRestorePreview(restoreStagingName));
+            const meta = unwrapServiceResult(await archiveRestorePreview(stagingName));
             if (restorePreviewEl) {
               restorePreviewEl.hidden = false;
               restorePreviewEl.textContent = localized('archiveRestorePreviewSummary', {
@@ -461,8 +469,8 @@ export function createArchivePanel(): PanelLifecycle {
             // renderSessionList — its guard returns without it, which used to
             // leave the restored session list empty (and save/close dead) until
             // a remount.
-            unwrapServiceResult(await archiveOpen(restoreStagingName));
-            sessionStore.stageSession(restoreStagingName);
+            unwrapServiceResult(await archiveOpen(stagingName));
+            sessionStore.stageSession(stagingName);
             sessionStore.markOpen();
             if (sessionSection) sessionSection.hidden = false;
             await renderSessionList();

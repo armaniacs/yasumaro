@@ -18,7 +18,7 @@ import {
 } from '../../dashboardSqliteService.js';
 import { testObsidianConnection, testAiConnection } from '../../generalSettings/connectionTests.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
-import { runPanelAction, unwrapServiceResult } from '../panelAction.js';
+import { abortPanelAction, runPanelAction, unwrapServiceResult } from '../panelAction.js';
 import {
   startBuiltInAiDownload,
   type BuiltInAiDiagnosticsResult,
@@ -158,23 +158,26 @@ export function createDiagnosticActions(
   });
 
   // Migrate legacy history to SQLite (destructive-ish, confirmed)
-  migrateBtn?.addEventListener('click', async () => {
+  migrateBtn?.addEventListener('click', () => {
     if (!migrateResult) return;
-    const confirmed = await showConfirmDialog({
-      title: getMessageOr('diagMigrateBtn', 'Convert history to SQLite'),
-      message: getMessageOr('diagMigrateConfirm', 'Convert legacy browsing history into SQLite. The original chrome.storage data is preserved (you can clean it up separately from the diagnostics panel).'),
-      confirmLabel: getMessageOr('diagMigrateConfirmLabel', 'Convert'),
-      cancelLabel: getMessageOr('cancel', 'Cancel'),
-    });
-    if (!confirmed) return;
-
-    await runPanelAction({
+    // The dialog sits inside the busy scope: while it is open the button stays
+    // disabled, so no second action can start underneath it.
+    void runPanelAction({
       buttons: [migrateBtn],
       onStart: () => {
         migrateResult.textContent = getMessageOr('testing', 'Working...');
         migrateResult.className = 'diag-result';
       },
-      run: async () => unwrapServiceResult(await migrateLogs()),
+      run: async () => {
+        const confirmed = await showConfirmDialog({
+          title: getMessageOr('diagMigrateBtn', 'Convert history to SQLite'),
+          message: getMessageOr('diagMigrateConfirm', 'Convert legacy browsing history into SQLite. The original chrome.storage data is preserved (you can clean it up separately from the diagnostics panel).'),
+          confirmLabel: getMessageOr('diagMigrateConfirmLabel', 'Convert'),
+          cancelLabel: getMessageOr('cancel', 'Cancel'),
+        });
+        if (!confirmed) return abortPanelAction();
+        return unwrapServiceResult(await migrateLogs());
+      },
       onSuccess: (data) => {
         migrateResult.textContent = `✓ ${getMessageOr('diagMigrateDone', 'Conversion complete.')} read=${data.read} inserted=${data.inserted} total=${data.count}`;
         migrateResult.style.color = successColor();
@@ -234,23 +237,25 @@ export function createDiagnosticActions(
   });
 
   // Cleanup legacy storage (destructive, confirmed)
-  cleanupBtn?.addEventListener('click', async () => {
+  cleanupBtn?.addEventListener('click', () => {
     if (!cleanupResult) return;
-    const confirmed = await showConfirmDialog({
-      title: getMessageOr('diagCleanupBtn', 'Delete legacy storage data'),
-      message: getMessageOr('diagCleanupConfirm', 'Delete the original chrome.storage browsing history? This is a destructive operation. The data is already copied to SQLite.'),
-      confirmLabel: getMessageOr('diagCleanupConfirmLabel', 'Delete'),
-      cancelLabel: getMessageOr('cancel', 'Cancel'),
-    });
-    if (!confirmed) return;
-
-    await runPanelAction({
+    // Same busy-scope shape as migrate: the dialog keeps the button disabled.
+    void runPanelAction({
       buttons: [cleanupBtn],
       onStart: () => {
         cleanupResult.textContent = getMessageOr('testing', 'Working...');
         cleanupResult.className = 'diag-result';
       },
-      run: async () => unwrapServiceResult(await cleanupLegacyStorage()),
+      run: async () => {
+        const confirmed = await showConfirmDialog({
+          title: getMessageOr('diagCleanupBtn', 'Delete legacy storage data'),
+          message: getMessageOr('diagCleanupConfirm', 'Delete the original chrome.storage browsing history? This is a destructive operation. The data is already copied to SQLite.'),
+          confirmLabel: getMessageOr('diagCleanupConfirmLabel', 'Delete'),
+          cancelLabel: getMessageOr('cancel', 'Cancel'),
+        });
+        if (!confirmed) return abortPanelAction();
+        return unwrapServiceResult(await cleanupLegacyStorage());
+      },
       onSuccess: (data) => {
         cleanupResult.textContent = `✓ ${getMessageOr('diagCleanupDone', 'Cleanup complete.')} removed=${data.removed.length} keys, ${data.totalBytes} bytes freed`;
         cleanupResult.style.color = successColor();

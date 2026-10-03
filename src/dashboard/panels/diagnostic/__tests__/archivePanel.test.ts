@@ -30,8 +30,14 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   isServiceError: (result: object): boolean => 'error' in result,
 }));
 
+vi.mock('../../../utils/confirmDialog.js', () => ({
+  showConfirmDialog: vi.fn(),
+}));
+
 import { createArchivePanel } from '../archivePanel.js';
+import { showConfirmDialog } from '../../../utils/confirmDialog.js';
 import { archivePreview, archiveCreate, archiveStatus } from '../../../dashboardSqliteService.js';
+import { drainMacrotask } from '../../../../../testDir/waitPolicy.js';
 
 async function mountPanel(): Promise<{
   container: HTMLElement;
@@ -219,6 +225,175 @@ describe('archivePanel mount (PBI 2026-09-06-02)', () => {
     // and the query runs against the restored staging name.
     expect(svc.archiveOpen).toHaveBeenCalledWith('archive_incoming_test.db');
     expect(svc.archiveQuery).toHaveBeenCalledWith('archive_incoming_test.db', '', 100, 0);
+    expect(sessionSection.hidden).toBe(false);
+  });
+
+  it('ignores a file re-pick while a restore is in flight (staging race guard)', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    const firstPrepare = Promise.withResolvers<{ data: string }>();
+    let prepareCalls = 0;
+    vi.mocked(svc.archivePrepareIncoming).mockImplementation(async () => {
+      prepareCalls += 1;
+      if (prepareCalls === 1) return firstPrepare.promise;
+      return { data: 'archive_incoming_second.db' };
+    });
+    vi.mocked(svc.archiveRestorePreview).mockResolvedValue({
+      data: { recordCount: 3, cutoffDate: '2026-09-01' },
+    } as never);
+    vi.mocked(svc.archiveOpen).mockResolvedValue({ data: {} } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({
+      data: { rows: [{ id: 1, created_at: 1727000000000, title: 'Row A', url: 'https://a.example.com' }], total: 1 },
+    } as never);
+
+    // Stub the OPFS write the restore flow uses to stage the picked file.
+    const writable = { write: vi.fn(), close: vi.fn(), abort: vi.fn() };
+    (globalThis.navigator as unknown as { storage: unknown }).storage = {
+      getDirectory: async () => ({
+        getFileHandle: async () => ({ createWritable: async () => writable }),
+      }),
+    };
+
+    const container = document.createElement('section');
+    container.innerHTML = `
+      <input type="date" id="archive-date">
+      <input type="checkbox" id="archive-include-deleted">
+      <button id="archive-preview-btn"></button>
+      <button id="archive-create-btn"></button>
+      <div id="archive-preview-summary" hidden></div>
+      <div id="archive-status" aria-live="polite"></div>
+      <section id="archive-session-section" hidden>
+        <input id="archive-session-query">
+        <button id="archive-session-query-btn"></button>
+        <div id="archive-session-list"></div>
+        <button id="archive-session-save-btn"></button>
+        <button id="archive-session-close-btn"></button>
+      </section>
+      <input type="file" id="archive-restore-file">
+      <div id="archive-restore-preview-summary" hidden></div>
+      <button id="archive-restore-btn" hidden></button>
+    `;
+    document.body.appendChild(container);
+    const panel = createArchivePanel();
+    await panel.mount(container);
+
+    const input = container.querySelector('#archive-restore-file') as HTMLInputElement;
+    Object.defineProperty(input, 'files', { value: [new File(['first-db'], 'first.db')], configurable: true });
+    input.dispatchEvent(new Event('change'));
+
+    // In flight: the first flow is parked on archivePrepareIncoming.
+    await vi.waitFor(() => expect(prepareCalls).toBe(1));
+    // The file input belongs to the busy scope: disabled while the flow runs.
+    expect(input.disabled).toBe(true);
+
+    // Re-pick a different file while the first restore is still in flight.
+    Object.defineProperty(input, 'files', { value: [new File(['second-db'], 'second.db')], configurable: true });
+    input.dispatchEvent(new Event('change'));
+    await drainMacrotask();
+
+    // FAIL pre-fix: the re-pick started a second runPanelAction, so
+    // archivePrepareIncoming was called twice and the shared staging closure
+    // crossed wires between the two flows.
+    expect(prepareCalls).toBe(1);
+
+    firstPrepare.resolve({ data: 'archive_incoming_first.db' });
+    const list = container.querySelector('#archive-session-list') as HTMLElement;
+    await vi.waitFor(() => expect(list.querySelectorAll('.archive-session-row').length).toBe(1));
+
+    // flow1 must preview/open its OWN staging name, never the re-pick's.
+    expect(svc.archiveRestorePreview).toHaveBeenCalledTimes(1);
+    expect(svc.archiveRestorePreview).toHaveBeenCalledWith('archive_incoming_first.db');
+    expect(svc.archiveOpen).toHaveBeenCalledTimes(1);
+    expect(svc.archiveOpen).toHaveBeenCalledWith('archive_incoming_first.db');
+  });
+
+  it('keeps controls disabled while the session-close confirm dialog is open', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveStatus).mockResolvedValue({
+      data: { open: true, stagingName: 'session_open.db', dirty: true },
+    } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({ data: { rows: [], total: 0 } } as never);
+    vi.mocked(svc.archiveClose).mockResolvedValue({ data: { dirty: false } } as never);
+    const gate = Promise.withResolvers<boolean>();
+    vi.mocked(showConfirmDialog).mockImplementation(() => gate.promise);
+
+    const container = document.createElement('section');
+    container.innerHTML = `
+      <input type="date" id="archive-date">
+      <input type="checkbox" id="archive-include-deleted">
+      <button id="archive-preview-btn"></button>
+      <button id="archive-create-btn"></button>
+      <div id="archive-preview-summary" hidden></div>
+      <div id="archive-status" aria-live="polite"></div>
+      <section id="archive-session-section" hidden>
+        <input id="archive-session-query">
+        <button id="archive-session-query-btn"></button>
+        <div id="archive-session-list"></div>
+        <button id="archive-session-save-btn"></button>
+        <button id="archive-session-close-btn"></button>
+      </section>
+      <input type="file" id="archive-restore-file">
+      <div id="archive-restore-preview-summary" hidden></div>
+      <button id="archive-restore-btn" hidden></button>
+    `;
+    document.body.appendChild(container);
+    const panel = createArchivePanel();
+    await panel.mount(container);
+
+    const closeBtn = container.querySelector('#archive-session-close-btn') as HTMLButtonElement;
+    const sessionSection = container.querySelector('#archive-session-section') as HTMLElement;
+    closeBtn.click();
+    await vi.waitFor(() => expect(showConfirmDialog).toHaveBeenCalled());
+
+    // FAIL pre-fix: the dialog was awaited before runPanelAction, so the
+    // controls stayed enabled while it was open.
+    expect(closeBtn.disabled).toBe(true);
+
+    gate.resolve(true);
+    await vi.waitFor(() => expect(svc.archiveClose).toHaveBeenCalledWith('session_open.db'));
+    expect(closeBtn.disabled).toBe(false);
+    expect(sessionSection.hidden).toBe(true);
+  });
+
+  it('does not close the session when the discard dialog is cancelled', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveStatus).mockResolvedValue({
+      data: { open: true, stagingName: 'session_open.db', dirty: true },
+    } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({ data: { rows: [], total: 0 } } as never);
+    const gate = Promise.withResolvers<boolean>();
+    vi.mocked(showConfirmDialog).mockImplementation(() => gate.promise);
+
+    const container = document.createElement('section');
+    container.innerHTML = `
+      <input type="date" id="archive-date">
+      <input type="checkbox" id="archive-include-deleted">
+      <button id="archive-preview-btn"></button>
+      <button id="archive-create-btn"></button>
+      <div id="archive-preview-summary" hidden></div>
+      <div id="archive-status" aria-live="polite"></div>
+      <section id="archive-session-section" hidden>
+        <input id="archive-session-query">
+        <button id="archive-session-query-btn"></button>
+        <div id="archive-session-list"></div>
+        <button id="archive-session-save-btn"></button>
+        <button id="archive-session-close-btn"></button>
+      </section>
+      <input type="file" id="archive-restore-file">
+      <div id="archive-restore-preview-summary" hidden></div>
+      <button id="archive-restore-btn" hidden></button>
+    `;
+    document.body.appendChild(container);
+    const panel = createArchivePanel();
+    await panel.mount(container);
+
+    const closeBtn = container.querySelector('#archive-session-close-btn') as HTMLButtonElement;
+    const sessionSection = container.querySelector('#archive-session-section') as HTMLElement;
+    closeBtn.click();
+    await vi.waitFor(() => expect(showConfirmDialog).toHaveBeenCalled());
+
+    gate.resolve(false);
+    await vi.waitFor(() => expect(closeBtn.disabled).toBe(false));
+    expect(svc.archiveClose).not.toHaveBeenCalled();
     expect(sessionSection.hidden).toBe(false);
   });
 });

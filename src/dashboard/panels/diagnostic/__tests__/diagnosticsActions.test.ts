@@ -85,7 +85,9 @@ describe('diagnosticsActions', () => {
     await vi.waitFor(() => expect(showConfirmDialog).toHaveBeenCalled());
 
     expect(cleanupLegacyStorage).not.toHaveBeenCalled();
-    expect(els.cleanupBtn!.disabled).toBe(false);
+    // The abort path restores the button in a microtask after the dialog
+    // resolves: wait for the release instead of asserting a racing instant.
+    await vi.waitFor(() => expect(els.cleanupBtn!.disabled).toBe(false));
   });
 
   it('runs cleanup after confirmation and reports freed bytes', async () => {
@@ -261,5 +263,44 @@ describe('diagnosticsActions', () => {
       expect(els.resyncResult!.textContent).toContain('Resync not available');
     });
     expect(els.resyncBtn!.disabled).toBe(false);
+  });
+
+  it('keeps the cleanup button disabled while its confirm dialog is open', async () => {
+    const gate = Promise.withResolvers<boolean>();
+    vi.mocked(showConfirmDialog).mockImplementation(() => gate.promise);
+    vi.mocked(cleanupLegacyStorage).mockResolvedValue({
+      data: { removed: ['k'], totalBytes: 1 },
+    } as any);
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.cleanupBtn!.click();
+    await vi.waitFor(() => expect(showConfirmDialog).toHaveBeenCalled());
+
+    // FAIL pre-fix: the dialog was awaited before runPanelAction, so the
+    // button stayed enabled while the dialog was open.
+    expect(els.cleanupBtn!.disabled).toBe(true);
+
+    gate.resolve(true);
+    await vi.waitFor(() => expect(els.cleanupResult!.textContent).toContain('removed=1'));
+    expect(els.cleanupBtn!.disabled).toBe(false);
+  });
+
+  it('keeps the migrate button disabled while its confirm dialog is open', async () => {
+    const gate = Promise.withResolvers<boolean>();
+    vi.mocked(showConfirmDialog).mockImplementation(() => gate.promise);
+    vi.mocked(migrateLogs).mockResolvedValue({
+      data: { read: 10, inserted: 8, count: 10 },
+    } as any);
+    const els = makeElements();
+    createDiagnosticActions(els, { onBuiltInAiDownloaded: vi.fn() });
+
+    els.migrateBtn!.click();
+    await vi.waitFor(() => expect(showConfirmDialog).toHaveBeenCalled());
+    expect(els.migrateBtn!.disabled).toBe(true);
+
+    gate.resolve(true);
+    await vi.waitFor(() => expect(els.migrateResult!.textContent).toContain('inserted=8'));
+    expect(els.migrateBtn!.disabled).toBe(false);
   });
 });

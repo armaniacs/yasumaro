@@ -43,11 +43,11 @@ Scenario: confirm dialog 中もボタンが二重発火しない
 
 ## 受け入れ基準
 
-- [ ] `src/dashboard/panels/diagnostic/archivePanel.ts:49` の `restoreFileInput` が busy スコープ（`:56` の controls）に含まれるか、in-flight 中の `runPanelAction` 二重開始が構造的に防がれる
-- [ ] `src/dashboard/panels/panelAction.ts:70-91` の二重実行が guard（counter または in-flight 判定）で防がれ、finally（`:88`）が他実行を壊さない
-- [ ] `src/dashboard/panels/diagnostic/archivePanel.ts:429-430` の staging name 共有クロージャで誤ファイルの preview/open/stage が起こらない
-- [ ] `archivePanel.ts:436` の `createWritable` reject が try 外の raw reject で放置されない
-- [ ] confirm dialog を await する前に `runPanelAction` を外す経路（`src/dashboard/panels/diagnosticsActions.ts:163-169, :239-245`、`archivePanel.ts:161, :395`）のボタン有効状態が対応される
+- [x] `src/dashboard/panels/diagnostic/archivePanel.ts:49` の `restoreFileInput` が busy スコープ（`:56` の controls）に含まれるか、in-flight 中の `runPanelAction` 二重開始が構造的に防がれる
+- [x] `src/dashboard/panels/panelAction.ts:70-91` の二重実行が guard（counter または in-flight 判定）で防がれ、finally（`:88`）が他実行を壊さない
+- [x] `src/dashboard/panels/diagnostic/archivePanel.ts:429-430` の staging name 共有クロージャで誤ファイルの preview/open/stage が起こらない
+- [x] `archivePanel.ts:436` の `createWritable` reject が try 外の raw reject で放置されない
+- [x] confirm dialog を await する前に `runPanelAction` を外す経路（`src/dashboard/panels/diagnosticsActions.ts:163-169, :239-245`、`archivePanel.ts:161, :395`）のボタン有効状態が対応される
 
 ## テスト戦略
 
@@ -62,6 +62,15 @@ Scenario: confirm dialog 中もボタンが二重発火しない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- 裁定: 両方の防御を採用 — `restoreFileInput` を busy スコープ（controls）へ含め、かつ `runPanelAction` に `inFlightControls`（WeakSet）guard を導入して共有 control の二重開始を構造的に拒否
+- `src/dashboard/panels/panelAction.ts` — `buttons` 型を `HTMLInputElement` へ拡張（file input を格納可能に）、`inFlightControls` WeakSet で in-flight 中の共有 control を検出して return。finally は自分の control のみ restore（他実行を壊さない）
+- `src/dashboard/panels/diagnostic/archivePanel.ts` — `restoreFileInput` を controls に追加、staging name をローカル変数化（await 中の再 pick による共有クロージャ上書きを除去し、自分の名前で preview/open/stage）、`createWritable` を try 内へ移動（reject を abort 経路へ）、sessionClose の confirm dialog を run 内へ移動（dialog 中も controls disabled、キャンセルは `abortPanelAction`）
+- `src/dashboard/panels/diagnostic/diagnosticsActions.ts` — migrate/cleanup の confirm dialog を run 内へ移動（`abortPanelAction` でキャンセル中断）。purge（`archivePanel.ts:161`）も同型で run 内 + `abortPanelAction`
+- テスト: `panelAction.test.ts`（二重開始拒否 pin）、`archivePanel.test.ts`（restore 経路の file input 再操作・staging 分離）、`diagnosticsActions.test.ts`（dialog 経路 busy 状態）を更新・追加
+- 検証: tsc 0 エラー・lint 0 エラー・test 15,476 pass・validate exit 0・当該 53 tests green・repeats=20

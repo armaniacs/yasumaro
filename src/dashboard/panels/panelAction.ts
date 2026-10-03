@@ -48,7 +48,7 @@ export function unwrapServiceResult<T>(result: ServiceResult<T>): T {
 
 export interface PanelActionSpec<TData> {
   /** Controls disabled for the duration and restored in `finally`. */
-  buttons?: readonly (HTMLButtonElement | null | undefined)[];
+  buttons?: readonly (HTMLButtonElement | HTMLInputElement | null | undefined)[];
   /** Busy bookkeeping beyond the buttons (`aria-busy` on a status element, …). */
   onBusy?: (busy: boolean) => void;
   /** Swaps the first button's label while the action runs, and puts it back. */
@@ -67,13 +67,26 @@ export interface PanelActionSpec<TData> {
   onError?: (message: string, kind: PanelActionErrorKind, cause: unknown) => void;
 }
 
+// Controls currently owned by an in-flight action. A second action sharing any
+// of them must not start: the first `finally` would re-enable the buttons
+// under the still-running operation, and shared panel closures (e.g. the
+// archive staging name) would cross wires between the two runs.
+const inFlightControls = new WeakSet<HTMLElement>();
+
 export async function runPanelAction<TData>(spec: PanelActionSpec<TData>): Promise<void> {
   const { buttons = [], onBusy, busyLabel, onStart, run, onSuccess, onError } = spec;
-  const trigger = buttons.find((button) => button != null) ?? null;
+  if (buttons.some((control) => control != null && inFlightControls.has(control))) return;
+  const controls = buttons.filter(
+    (control): control is HTMLButtonElement | HTMLInputElement => control != null,
+  );
+  const trigger = controls[0] ?? null;
   const restoreLabel = trigger && busyLabel !== undefined ? trigger.textContent : null;
 
   try {
-    for (const button of buttons) if (button) button.disabled = true;
+    for (const control of controls) {
+      control.disabled = true;
+      inFlightControls.add(control);
+    }
     if (trigger && restoreLabel !== null) trigger.textContent = busyLabel as string;
     onBusy?.(true);
     onStart?.();
@@ -92,7 +105,10 @@ export async function runPanelAction<TData>(spec: PanelActionSpec<TData>): Promi
       console.error('runPanelAction: onError handler threw', handlerError);
     }
   } finally {
-    for (const button of buttons) if (button) button.disabled = false;
+    for (const control of controls) {
+      control.disabled = false;
+      inFlightControls.delete(control);
+    }
     if (trigger && restoreLabel !== null) trigger.textContent = restoreLabel;
     onBusy?.(false);
   }

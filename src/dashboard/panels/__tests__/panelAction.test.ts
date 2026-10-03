@@ -234,6 +234,63 @@ describe('runPanelAction', () => {
   });
 });
 
+describe('runPanelAction in-flight guard', () => {
+  it('rejects a second action that shares an in-flight control', async () => {
+    const button = makeButton();
+    const gate = Promise.withResolvers<void>();
+    const firstSuccess = vi.fn();
+    const first = runPanelAction({ buttons: [button], run: () => gate.promise, onSuccess: firstSuccess });
+
+    expect(button.disabled).toBe(true);
+
+    const secondRun = vi.fn(async () => 'second');
+    const secondSuccess = vi.fn();
+    await runPanelAction({ buttons: [button], run: secondRun, onSuccess: secondSuccess });
+
+    expect(secondRun).not.toHaveBeenCalled();
+    expect(secondSuccess).not.toHaveBeenCalled();
+    expect(button.disabled).toBe(true);
+
+    gate.resolve();
+    await first;
+    expect(firstSuccess).toHaveBeenCalled();
+    expect(button.disabled).toBe(false);
+  });
+
+  it('rejects a second action whose fresh array overlaps an in-flight control', async () => {
+    const button = makeButton();
+    const gate = Promise.withResolvers<void>();
+    const first = runPanelAction({ buttons: [button], run: () => gate.promise });
+
+    expect(button.disabled).toBe(true);
+
+    const secondRun = vi.fn(async () => 'x');
+    await runPanelAction({ buttons: [button], run: secondRun });
+
+    expect(secondRun).not.toHaveBeenCalled();
+
+    gate.resolve();
+    await first;
+    expect(button.disabled).toBe(false);
+  });
+
+  it('still starts actions on disjoint controls while another is in flight', async () => {
+    const a = makeButton('A');
+    const b = makeButton('B');
+    const gate = Promise.withResolvers<void>();
+    const aAction = runPanelAction({ buttons: [a], run: () => gate.promise });
+    const bRun = vi.fn(async () => 'b');
+    await runPanelAction({ buttons: [b], run: bRun });
+
+    expect(bRun).toHaveBeenCalledTimes(1);
+    expect(a.disabled).toBe(true);
+
+    gate.resolve();
+    await aAction;
+    expect(a.disabled).toBe(false);
+  });
+});
+
 describe('unwrapServiceResult', () => {
   it('returns the data for a successful result', () => {
     expect(unwrapServiceResult({ data: [1, 2] })).toEqual([1, 2]);
