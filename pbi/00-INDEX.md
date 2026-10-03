@@ -14,6 +14,35 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-03 holistic ラウンド（holistic-1003b） — ⬜ 未着手 20件 🔧非機能追加
+
+holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。起票・採点登録のみで実装は未着手。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
+
+| NN | PBI | 種別 | RICE | SP | 状態 | 依存 |
+|---|---|---|---:|---:|---|---|
+| 16 | [2026-10-03-16-fix-fetch-5xx-backoff.md](2026-10-03-16-fix-fetch-5xx-backoff.md) | fix | 24.0 | 1.0 | ⬜ 未着手 | なし |
+| 17 | [2026-10-03-17-fix-reload-seam-wiring.md](2026-10-03-17-fix-reload-seam-wiring.md) | fix | 18.0 | 2.0 | ⬜ 未着手 | 20 に先行（チェーン起点） |
+| 18 | [2026-10-03-18-fix-flush-batch-on-dropped.md](2026-10-03-18-fix-flush-batch-on-dropped.md) | fix | 18.0 | 1.0 | ⬜ 未着手 | なし |
+| 19 | [2026-10-03-19-fix-anchor-download-unify.md](2026-10-03-19-fix-anchor-download-unify.md) | fix | 16.0 | 0.5 | ⬜ 未着手 | なし |
+| 20 | [2026-10-03-20-fix-preset-status-orphan-class.md](2026-10-03-20-fix-preset-status-orphan-class.md) | fix | 16.0 | 1.0 | ⬜ 未着手 | 17 の後・23 に先行（チェーン） |
+| 21 | [2026-10-03-21-fix-gateway-version-contract.md](2026-10-03-21-fix-gateway-version-contract.md) | fix | 10.0 | 0.5 | ⬜ 未着手 | なし |
+| 22 | [2026-10-03-22-refactor-status-class-constant.md](2026-10-03-22-refactor-status-class-constant.md) | refactor | 10.0 | 0.5 | ⬜ 未着手 | なし |
+| 23 | [2026-10-03-23-refactor-preset-buttons-id-ssot.md](2026-10-03-23-refactor-preset-buttons-id-ssot.md) | refactor | 9.0 | 0.5 | ⬜ 未着手 | 20 の後・29 に先行（チェーン） |
+| 24 | [2026-10-03-24-refactor-generate-id-unify.md](2026-10-03-24-refactor-generate-id-unify.md) | refactor | 8.0 | 0.5 | ⬜ 未着手 | なし |
+| 25 | [2026-10-03-25-refactor-status-panel-split.md](2026-10-03-25-refactor-status-panel-split.md) | refactor | 8.0 | 1.0 | ⬜ 未着手 | 31 に先行 |
+| 26 | [2026-10-03-26-refactor-e2e-launch-context.md](2026-10-03-26-refactor-e2e-launch-context.md) | refactor | 6.0 | 1.5 | ⬜ 未着手 | 32 に先行（e2e） |
+| 27 | [2026-10-03-27-test-lint-rule-tautology.md](2026-10-03-27-test-lint-rule-tautology.md) | test | 6.0 | 0.5 | ⬜ 未着手 | なし |
+| 28 | [2026-10-03-28-refactor-archive-panel-split.md](2026-10-03-28-refactor-archive-panel-split.md) | refactor | 4.8 | 2.0 | ⬜ 未着手 | なし |
+| 29 | [2026-10-03-29-refactor-general-settings-panel-split.md](2026-10-03-29-refactor-general-settings-panel-split.md) | refactor | 4.8 | 2.0 | ⬜ 未着手 | 23 の後（チェーン末端） |
+| 30 | [2026-10-03-30-refactor-i18n-storage-mock-factories.md](2026-10-03-30-refactor-i18n-storage-mock-factories.md) | refactor | 4.5 | 1.0 | ⬜ 未着手 | なし |
+| 31 | [2026-10-03-31-refactor-double-casts-cleanup.md](2026-10-03-31-refactor-double-casts-cleanup.md) | refactor | 4.0 | 0.5 | ⬜ 未着手 | 25 の後 |
+| 32 | [2026-10-03-32-test-e2e-seeded-panel-fixture.md](2026-10-03-32-test-e2e-seeded-panel-fixture.md) | test | 4.0 | 1.0 | ⬜ 未着手 | 26 の後（e2e） |
+| 33 | [2026-10-03-33-refactor-message-router-dead-code.md](2026-10-03-33-refactor-message-router-dead-code.md) | refactor | 3.6 | 0.5 | ⬜ 未着手 | なし |
+| 34 | [2026-10-03-34-refactor-logger-mock-factory.md](2026-10-03-34-refactor-logger-mock-factory.md) | test | 2.4 | 3.0 | ⬜ 未着手 | 35 に先行（test 広域） |
+| 35 | [2026-10-03-35-test-timer-clock-migration.md](2026-10-03-35-test-timer-clock-migration.md) | test | 1.8 | 1.0 | ⬜ 未着手 | 34 の後 |
+
+実行順: W1（16+18+21+24+27+33）→ W2（26+19+25+30）→ W3（17+28+22+31+32）→ W4（20+34）→ W5（23+35）→ W6（29）。
+
 ### 2026-10-03 adversarial review ラウンド（adversarial-1003） — ✅ 15件完了・アーカイブ済み 🔧非機能追加
 
 adversarial-code-review skill による `7edc8c6d..HEAD`（37 commits / 163 files）の差分レビュー（hacker + maintainer の 6 agents 発見・独立検証で反証による裏取り。5 findings REFUTED 分は起票対象外）から抽出した 15 候補を RICE 採点して PBI 化。採点・依存・到達可能性証拠の詳細は [2026-10-03-00-backlog-adversarial-1003.md](2026-10-03-00-backlog-adversarial-1003.md)（live 台帳として残置）。実行順は依存優先（04 → 06 / 01 → 10 / 05 → 08、他は並列可）。個別 PBI の行はアーカイブ履歴を参照。
@@ -150,28 +179,6 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 |---|---|---|---:|---:|---|
 | 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | 🔵 監視中 — typescript-eslint の TS 7 対応リリース待ち（2026-09-27 再調査でトリガー未発火を再確認。TS 7 強行移行は上流でクラッシュ実証済み。typedoc も同時更新対象に追加） |
 
-### 2026-09-26 タイミング失敗の隠蔽除去ラウンド — ✅ 5件完了・アーカイブ済み 🔧非機能追加
-
-**統合 PBI**: [2026-09-26-00-timing-failure-elimination-suite.md](2026-09-26-00-timing-failure-elimination-suite.md)
-- Vision: 全テスト層（Unit/Integration/E2E）から固定待機を完全除去
-- 構成: PBI 05・08・01・06・07（すべて完了・アーカイブ済み）
-- Timeline: 完遂
-- Total: 5.5 SP across 2 sprints
-
-**個別 PBI**:
-
-| PBI | 状態 | RICE | SP | 内容 |
-|---|---|---:|---:|---|
-| [05](../dev-docs/archived/pbi/2026-09-26-05-test-remove-fixed-sleeps.md) | ✅ 完了 | 3.0 | 1 | Unit/Integration sleep 40 件 → condition-based |
-| [08](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md) | ✅ 完了 | 1.0 | 1 | testDir ESLint 対象化（`waitForTimeout` 12 件） |
-| [01](../dev-docs/archived/pbi/2026-09-26-01-test-eslint-rule-tester-repeats.md) | ✅ 完了 | — | 1 | ESLint ルールテスト 7 ファイルを `--repeats` ゲートに乗せる |
-| [06](../dev-docs/archived/pbi/2026-09-26-06-investigate-e2e-retry-flakiness.md) | ✅ 完了 | 2.0 | 2 | E2E retry を全面廃止（`--retries=0` 全走 0 失敗を確認の上変更） |
-| [07](../dev-docs/archived/pbi/2026-09-26-07-lower-eslint-sleep-threshold.md) | ✅ 完了 | 1.5 | 1.5 | ESLint 閾値を 1ms に強化 + 残り 57 件の固定 sleep を撤去 |
-
-- 統合 DoD は 8/9 達成（2026-10-02 裏取り・構成 5 PBI のアーカイブ内容で確認）。未達 1 件は「CHANGELOG に『タイミング失敗隠蔽の完全除去』の記載」— 該当見出しの記載が無いため統合 PBI 内で `[ ]` のまま（個別実績は 6.9.26 / 6.9.27 に記載済み）。統合 PBI 本体は全構成 PBI 完了済みだが `pbi/` に live 残置。
-
-
-
 ### 2026-09-25 ラウンドの着手トリガー待ち 2 件 — 🔵 監視 2件 🔧非機能追加
 
 - [2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md)（🔵 監視中 — RICE 0.4・0.5 SP・副作用🟢。wasm の host-crossing byte 再現性は未防御のまま意図的に維持し、防御範囲は「fresh と committed の行動 parity」「ship 対象 3 組の src/public byte 一致」「glue/dts stale check」。トリガー: Rust toolchain・`Cargo.lock`・`wasm-pack`・build/postprocess scripts・ship manifest の変更、または供給網監査で byte provenance が要求された時。再評価の軸は raw binary diff ではなく parity と公開 copy consistency。`dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の完全保持が必須）
@@ -220,12 +227,12 @@ VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`�
 
 - [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
 
-### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 3件 🔧非機能追加 RICE順: 01 → 02 → 03
+### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 2件 / 🔶 部分実装 1件 🔧非機能追加 RICE順: 01 → 02 → 03
 
 holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台帳送りにした空 catch を PBI 化。いずれも再検討トリガーが未発火のため、トリガーが発火するまで着手しない。
 
 - [2026-09-22-01-backlog-empty-catch-audit.md](2026-09-22-01-backlog-empty-catch-audit.md)（⬜ 未着手 — RICE 2.0・1 SP・副作用🟢。非テストの空 catch 6箇所の監査と best-effort 経路の可観測化。トリガー: 握りつぶした失敗が原因の不具合報告）
-- [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（⬜ 未着手 — RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了（2026-09-24 アーカイブ済み — 前提は消化済みで着手可能）。トリガー: compute の offscreen/パイプライン移設）
+- [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（🔶 部分実装 — 実装チェック 1/8 達成（前提レビュー 1 項目・残り 7 項目未着手）— RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了（2026-09-24 アーカイブ済み — 前提は消化済みで着手可能）。トリガー: compute の offscreen/パイプライン移設）
 - [2026-09-22-03-backlog-local-provider-origin-rule.md](2026-09-22-03-backlog-local-provider-origin-rule.md)（⬜ 未着手 — RICE 1.0・調査1 SP / 実装3 SP・副作用🟢。ローカルプロバイダ向け Origin-strip の汎用化（investigate 込み）。トリガー: 2つ目のローカルプロバイダで CORS 対策が必要になった時）
 
 **WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。tag-cooccur（17/21/22）は 2026-09-24 にアーカイブ済み（アーカイブ履歴参照）。
@@ -463,6 +470,10 @@ PBI 13（investigate）の裁定に基づく後続 fix 27-05 を実装。12 完�
 - [2026-09-25-31-fix-withlock-object-conflict-policy.md](../dev-docs/archived/pbi/2026-09-25-31-fix-withlock-object-conflict-policy.md)（✅ 完了 — ADR 2026-09-26 の R1〜R5 を実装。pendingStorage の legacy migration と savedUrlRepository の quota cleanup を `withOptimisticLock` 経由へ移し、lock key への version 非 bumping な直接 set を production 0 件化（契約テストで機械検出）。permissionManager の 5 updater を非突然変異化、dead code `saveDeniedDomains` 削除、`InMemoryStoragePort` と vitest.setup.ts の storage 境界を structured clone 相当化。`storageTransaction.ts` は 1 行も変更せず既存 pin 維持。3430 tests green ×2。なぜなぜ: 契約が散文でしか表現されず、port の参照返却が違反をテストで観測不能にしていた）
 - [2026-09-25-32-fix-obsidian-auth-error-wording.md](../dev-docs/archived/pbi/2026-09-25-32-fix-obsidian-auth-error-wording.md)（✅ 完了 — PBI 11 が宣言済みだった `FAILURE_KIND_TO_ERROR_TYPE` 表を `classifyError()` の実行経路に接続。Obsidian の 401/403 が errorAuth、429 が errorRateLimit、404/5xx が errorServer を表示するようになり、network 判定が先に評価されて auth 分岐が到達不能だった問題を解消。新規 i18n キー 0 件。PBI 11 の「display と kind が独立」不変条件テストを本裁定に合わせて更新し、実 ObsidianClient → StepExecutor → createErrorResponse の統合テスト 5 件と ja/en キー parity テストを追加。utils+background 501 files・7769 tests green。なぜなぜ: サニタイズ契約がステータスを文面から消した一方で文面の外に構造化チャネルが無かった）
 - [2026-09-25-14-refactor-ci-paths-filter.md](../dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md)（✅ 完了 — RICE 1.5・2 SP。全 25 checkbox `[x]`。実装は PR #162（merge `f19e6ccf`・コミット `a885958c`）、docs-only 実測は PR #163、統合テスト欠陥修正は PR #164。docs-only で validate/wasm-test/dod-check/build が skipped・gitleaks は実行・job-level skip は `pending` ではなく `skipped` で終端することを実 PR で観測。`main` に branch protection も ruleset も無いことを `gh api` で実測し、旧 DoD の「branch protection 設定アクセス」前提は解消済み。INDEX の「閉塞」表記は陳腐化していたため本アーカイブで解消。5 Whys なし・分類後の DoD 反映アーカイブ）
+
+### 2026-09-26 タイミング失敗の隠蔽除去ラウンド（統合 PBI）アーカイブ — ✅ 5件完了（05・08・01・06・07 アーカイブ済み）
+
+- [2026-09-26-00-timing-failure-elimination-suite.md](../dev-docs/archived/pbi/2026-09-26-00-timing-failure-elimination-suite.md)（✅ 完了 — 2026-10-03 アーカイブ。統合 PBI。構成 5 PBI（05・08・01・06・07）すべて完了・アーカイブ済み。統合 DoD 9/9 達成 — 未達だった「CHANGELOG に『タイミング失敗隠蔽の完全除去』の記載」は 2026-10-03 裏取りで解消（見出し語そのものは無いが、6.9.26 の固定 sleep 完全排除 + `local/no-test-sleep` error 昇格、6.9.27 の E2E retry 全面廃止・57 件撤去・全ファイル 10〜20 回の反復実行で flaky 無しを確認、に記載済み）。5.5 SP across 2 sprints）
 
 ### 2026-09-26 autonomous-task-closer wave 1 — ✅ 4件完了（02・06・07・08 アーカイブ済み）4件をファイル非重複で並列実装
 

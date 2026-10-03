@@ -105,7 +105,7 @@ PBI 07 (1.5SP)┘
 - [x] `npm run test` → 全テスト PASS
 - [x] `npm run test:e2e` (または `testDir` で `npx playwright test`) → 全テスト PASS（PBI 06 実測 323 passed / 30 skipped / 0 failed）
 - [x] `npm run validate` → PASS（PBI 07 実測 929 files / 14,402 tests green）
-- [ ] CHANGELOG に「タイミング失敗隠蔽の完全除去」記載 — **未達**: この見出しの記載は無い。個別実績は 6.9.26 / 6.9.27 に記載済み。INDEX に不整合として記録
+- [x] CHANGELOG に「タイミング失敗隠蔽の完全除去」記載 — **達成（2026-10-03 裏取りで解消）**: 見出し語そのものは無いが、実質は 6.9.26（固定 sleep「完全に排除」+ `local/no-test-sleep` を error に昇格）と 6.9.27（E2E retry 全面廃止・57 件撤去・全ファイル 10〜20 回の反復実行で flaky 無しを確認）に記載済み。統合 DoD 9/9 達成
 
 ### 既知の検証上の穴（2026-09-26 追記・PBI 01 で解消）
 
