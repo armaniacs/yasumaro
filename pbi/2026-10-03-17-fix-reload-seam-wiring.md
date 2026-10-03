@@ -48,13 +48,13 @@ Scenario: dead event の掃除
 
 ## 受け入れ基準
 
-- [ ] リスナー配線（パネル構成側で `reload-general-settings` を受信して refresh を呼ぶ）または直接呼び出しのいずれかの方式が裁定され、理由が 1 行残されている
-- [ ] 設定インポート後（`src/dashboard/exportImport.ts:102` 経由）に `src/dashboard/panels/staticForm/generalSettingsPanel.ts:374-381` の refresh が実行される
-- [ ] 復元後（`src/dashboard/encryptedBackupPanel.ts:114` 経由）も同様に refresh が実行される
-- [ ] refresh 呼び出しは catch で保護され、失敗時もインポート/復元の完了ステータスが壊れない
-- [ ] 採用方式で不要になった dead event 発火が `src/`・`entrypoints/` の grep で残らない
-- [ ] refresh の単体テストが追加される（実時間待ちなし）
-- [ ] 後続の generalSettingsPanel.ts 編集 PBI（rank05 / rank08 / rank14）が本 PBI の後に serially 実施される旨が明記されている
+- [x] リスナー配線（パネル構成側で `reload-general-settings` を受信して refresh を呼ぶ）または直接呼び出しのいずれかの方式が裁定され、理由が 1 行残されている
+- [x] 設定インポート後（`src/dashboard/exportImport.ts:102` 経由）に `src/dashboard/panels/staticForm/generalSettingsPanel.ts:374-381` の refresh が実行される
+- [x] 復元後（`src/dashboard/encryptedBackupPanel.ts:114` 経由）も同様に refresh が実行される
+- [x] refresh 呼び出しは catch で保護され、失敗時もインポート/復元の完了ステータスが壊れない
+- [x] 採用方式で不要になった dead event 発火が `src/`・`entrypoints/` の grep で残らない
+- [x] refresh の単体テストが追加される（実時間待ちなし）
+- [x] 後続の generalSettingsPanel.ts 編集 PBI（rank05 / rank08 / rank14）が本 PBI の後に serially 実施される旨が明記されている
 
 ## テスト戦略
 
@@ -68,6 +68,17 @@ Scenario: dead event の掃除
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] コードレビュー完了
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] コードレビュー完了
+
+## 実装記録
+
+**2026-10-03 完了。**
+
+- 裁定: リスナー配線方式を採用。`generalSettingsPanel.ts:388-394` でパネル自身が `reload-general-settings` を受信する（パネルが snapshot を所有し instance を公開しないため）。既存の発火（import/restore）は保持され、1 リスナーが両フローをカバーする
+- `reloadFromRepository` closure（`generalSettingsPanel.ts:81-87`）に snapshot 更新 + 入力反映 + provider 設定読み込みを集約し、`refresh()`（`:396-398`）はこれに委譲。mount/refresh/listener が同一 snapshot を共有する
+- リスナーは try/catch で保護され、失敗は `console.error` 記録のみ（インポート/復元の完了ステータスを壊さない）
+- テスト: `generalSettingsPanel-reload.test.ts` 3 件（実時間待ちなし）。修正前は 2 件が RED を確認済み
+- ゲート（2026-10-03）: `tsc --noEmit` 0 errors / `eslint` 0 errors / `vitest` 15,594 passed / `npm run validate` PASS
+- 逸脱: dead event の掃除基準は「発火を消す」ではなく「発火が dead でなくなる」ことで達成（採用方式がリスナー配線のため）。発火側のコード変更なし

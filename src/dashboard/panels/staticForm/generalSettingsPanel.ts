@@ -76,6 +76,15 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
   // inputs from the values captured at mount time after any refresh or
   // external write.
   let currentSettings: Settings = {};
+  // Shared by refresh() and the import/restore listener so both update the
+  // same snapshot and the same inputs.
+  const reloadFromRepository = async (): Promise<void> => {
+    const container = panelContainer;
+    if (!container) return;
+    currentSettings = await settingsRepository.getAll();
+    loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
+    await loadGeneralSettings();
+  };
   return {
     id: 'panel-general',
     category: 'static-form',
@@ -370,14 +379,22 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
 
       // Unlimited-retention warning follows the two record-layer bound selects.
       setupRetentionUnlimitedWarning();
+
+      // Settings import/restore completion (exportImport.ts, encryptedBackupPanel.ts)
+      // is signalled with this document event; those flows only see settings
+      // modules, so the panel — which owns the snapshot the layout toggle
+      // reads — listens itself instead of exposing its instance. A failed
+      // reload is logged and must not break the flow's own completion status.
+      document.addEventListener('reload-general-settings', async () => {
+        try {
+          await reloadFromRepository();
+        } catch (error) {
+          console.error('General settings: reload after import/restore failed', error);
+        }
+      });
     },
     async refresh() {
-      const container = panelContainer;
-      if (container) {
-        currentSettings = await settingsRepository.getAll();
-        loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
-        await loadGeneralSettings();
-      }
+      await reloadFromRepository();
     },
   };
 }
