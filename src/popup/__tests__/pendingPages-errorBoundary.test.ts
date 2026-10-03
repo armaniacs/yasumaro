@@ -56,6 +56,7 @@ vi.mock('../../utils/logger/types.js', () => ({
     CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
     STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE',
     INVALID_INPUT: 'INVALID_INPUT',
+    OBSIDIAN_SEND_FAILURE: 'OBS_SEND_001',
   },
 }));
 vi.mock('../../utils/logger/core.js', () => ({
@@ -227,6 +228,105 @@ describe('saveSelectedPages — one malformed URL must not abort the batch', () 
       expect.objectContaining({ cause: expect.any(Error) }),
       'STORAGE_WRITE_FAILURE'
     );
+  });
+});
+
+describe('saveSelectedPages — record result failures (PBI 2026-10-03-01)', () => {
+  it('shows the error and keeps the page pending when the record result is {success:false}', async () => {
+    check('https://example.com/page');
+    mockGetPendingPages.mockResolvedValue([
+      { url: 'https://example.com/page', title: 'Example', reason: 'test', headerValue: '' },
+    ]);
+    mockRecordPendingPage.mockResolvedValue({ success: false, error: 'obsidian is unreachable' });
+
+    await saveSelectedPages();
+
+    const status = document.getElementById('mainStatus')!;
+    expect(status.textContent).toContain('obsidian is unreachable');
+    expect(status.className).toBe('error');
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Failed to record a pending page',
+      expect.objectContaining({ cause: expect.any(Error) }),
+      'OBS_SEND_001'
+    );
+    expect(mockRemovePendingPages).not.toHaveBeenCalled();
+  });
+
+  it('removes only the recorded URLs when part of the batch fails, so a retry does not duplicate them', async () => {
+    check('https://a.example/page', 'https://b.example/page');
+    mockGetPendingPages.mockResolvedValue([
+      { url: 'https://a.example/page', title: 'A', reason: 'r', headerValue: '' },
+      { url: 'https://b.example/page', title: 'B', reason: 'r', headerValue: '' },
+    ]);
+    mockRecordPendingPage
+      .mockResolvedValueOnce({ success: false, error: 'obsidian is unreachable' })
+      .mockResolvedValueOnce({ success: true });
+
+    await saveSelectedPages();
+
+    // The failed URL stays in pending (retry re-records it; removing it could
+    // also race the background's fire-and-forget re-registration), while the
+    // recorded URL is removed so the retry cannot duplicate it.
+    expect(mockRemovePendingPages).toHaveBeenCalledTimes(1);
+    expect(mockRemovePendingPages).toHaveBeenCalledWith(['https://b.example/page']);
+    const status = document.getElementById('mainStatus')!;
+    expect(status.textContent).toContain('obsidian is unreachable');
+  });
+
+  it('removes nothing when every record in the batch fails', async () => {
+    check('https://a.example/page', 'https://b.example/page');
+    mockGetPendingPages.mockResolvedValue([
+      { url: 'https://a.example/page', title: 'A', reason: 'r', headerValue: '' },
+      { url: 'https://b.example/page', title: 'B', reason: 'r', headerValue: '' },
+    ]);
+    mockRecordPendingPage.mockResolvedValue({ success: false, error: 'obsidian is unreachable' });
+
+    await saveSelectedPages();
+
+    expect(mockRemovePendingPages).not.toHaveBeenCalled();
+    expect(mockLogError).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports a {ok:false} whitelist write and still runs the save pass', async () => {
+    check('https://example.com/page');
+    mockGetPendingPages.mockResolvedValue([
+      { url: 'https://example.com/page', title: 'Example', reason: 'test', headerValue: '' },
+    ]);
+    mockAddDomainToWhitelist.mockResolvedValue({
+      ok: false,
+      reason: 'invalid-pattern',
+      error: 'Invalid pattern: example.com',
+    });
+
+    await saveSelectedPages('domain');
+
+    const status = document.getElementById('mainStatus')!;
+    expect(status.textContent).toContain('Invalid pattern');
+    expect(status.className).toBe('error');
+    expect(mockLogError).toHaveBeenCalledWith(
+      'Failed to add a pending page URL to the whitelist',
+      expect.objectContaining({ cause: expect.any(Error) }),
+      'INVALID_INPUT'
+    );
+    // Per-entry guard: the whitelist failure must not abort the save pass.
+    expect(mockRecordPendingPage).toHaveBeenCalledWith(
+      expect.objectContaining({ url: 'https://example.com/page' })
+    );
+    expect(mockRemovePendingPages).toHaveBeenCalledWith(['https://example.com/page']);
+  });
+
+  it('reports a {ok:false} path whitelist write (no-domain)', async () => {
+    check('https://example.com/page');
+    mockGetPendingPages.mockResolvedValue([
+      { url: 'https://example.com/page', title: 'Example', reason: 'test', headerValue: '' },
+    ]);
+    mockAddPathToWhitelist.mockResolvedValue({ ok: false, reason: 'no-domain' });
+
+    await saveSelectedPages('path');
+
+    const status = document.getElementById('mainStatus')!;
+    expect(status.textContent).toContain('no-domain');
+    expect(status.className).toBe('error');
   });
 });
 

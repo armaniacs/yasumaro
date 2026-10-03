@@ -47,11 +47,11 @@ Scenario: 白リスト追加に失敗したことが表示される
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] `src/popup/pendingPages.ts:116-123` — `recordPendingPage` の戻り値 `{success:false}` を検査し、失敗を `reportActionFailure` 経由で報告する (現在は無視)
-- [ ] `src/popup/pendingPages.ts:125` — `removePendingPages` を記録結果に応じて実行し、失敗 URL が pending に残る仕様を明文化する
-- [ ] `src/popup/pendingPages.ts:127-129` — reject 経由だけでなく result 経由の失敗でも報告が到達する
-- [ ] `src/popup/pendingPages.ts:94,96` — `addDomainToWhitelist` / `addPathToWhitelist` の `{ok:false}` を検査して報告する (現在は無視)
-- [ ] 一括保存で一部のみ成功した場合、未成功 URL が pending に残り、再試行で重複記録が起きないことがテストで固定される (`recordingOutcome.ts:64` の fire-and-forget 登録との last-write 競合を考慮)
+- [x] `src/popup/pendingPages.ts:116-123` — `recordPendingPage` の戻り値 `{success:false}` を検査し、失敗を `reportActionFailure` 経由で報告する (現在は無視)
+- [x] `src/popup/pendingPages.ts:125` — `removePendingPages` を記録結果に応じて実行し、失敗 URL が pending に残る仕様を明文化する
+- [x] `src/popup/pendingPages.ts:127-129` — reject 経由だけでなく result 経由の失敗でも報告が到達する
+- [x] `src/popup/pendingPages.ts:94,96` — `addDomainToWhitelist` / `addPathToWhitelist` の `{ok:false}` を検査して報告する (現在は無視)
+- [x] 一括保存で一部のみ成功した場合、未成功 URL が pending に残り、再試行で重複記録が起きないことがテストで固定される (`recordingOutcome.ts:64` の fire-and-forget 登録との last-write 競合を考慮)
 
 ## テスト戦略
 
@@ -65,6 +65,13 @@ Scenario: 白リスト追加に失敗したことが表示される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- `saveSelectedPages` を result 駆動化: `recordPendingPage` の `{success:false}` を検査して `reportActionFailure`（`ErrorCode.OBSIDIAN_SEND_FAILURE`）へ報告し、reject も同一経路で捕捉。削除は記録成功 URL（`recordedUrls`）のみに限定し、失敗 URL は pending 残留（再試行で重複記録しない、`recordingOutcome` の fire-and-forget 再登録との last-write 競合を回避）。whitelist writer の `{ok:false}` も `ErrorCode.INVALID_INPUT` で報告。gateway（`src/messaging/pendingRecordGateway.ts`）は不変。
+- テスト: `pendingPages-errorBoundary.test.ts` に result 経由失敗の 5 テストを追加（修正前 RED 5/5）。
+- 検証: tsc --noEmit 0 / lint 0 errors / npm test 15434 pass / npm run validate exit 0。
+- 逸脱: なし。

@@ -7,13 +7,20 @@ import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showSuccess, showError } from './errorUtils.js';
 import { escapeHtml, clearElement } from './domUtils.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
-import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
+import {
+  addDomainToWhitelist,
+  addPathToWhitelist,
+  type WhitelistWriteResult,
+} from './whitelistWriter.js';
 
 /**
  * Single failure path for the pending-list actions. The awaited storage and
  * messaging seams reject on their own (a locked master password makes every
  * settings write throw), and a rejected click handler left no trace — the
- * list simply stopped changing.
+ * list simply stopped changing. Result-based failures are routed here too:
+ * the pending-record gateway normalizes every record failure to
+ * {success:false} instead of rejecting, and the whitelist writer returns
+ * {ok:false} for rejected patterns.
  */
 function reportActionFailure(message: string, error: unknown, errorCode: ErrorCodeValues): void {
   const statusDiv = document.getElementById('mainStatus');
@@ -77,6 +84,7 @@ async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'pa
   // match any whitelist consumer (all of them match hostnames) and failed
   // pattern validation.
   for (const url of urls) {
+    let result: WhitelistWriteResult;
     if (type === 'domain') {
       // Guarded per entry: one unparsable stored URL must not cost the user
       // the remaining whitelist writes, nor the save pass that follows them.
@@ -91,9 +99,18 @@ async function addDomainsOrPathsToWhitelist(urls: string[], type: 'domain' | 'pa
         );
         continue;
       }
-      await addDomainToWhitelist(domain);
+      result = await addDomainToWhitelist(domain);
     } else {
-      await addPathToWhitelist(url);
+      result = await addPathToWhitelist(url);
+    }
+    // The writer normalizes validation failures to {ok:false} instead of
+    // rejecting — an ignored result dropped the entry without a trace.
+    if (!result.ok) {
+      reportActionFailure(
+        'Failed to add a pending page URL to the whitelist',
+        new Error(result.error || result.reason),
+        ErrorCode.INVALID_INPUT
+      );
     }
   }
 }
@@ -113,16 +130,37 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
     // N+1 over chrome.storage (PBI 2026-09-11-03).
     const pages = await getPendingPages();
 
+    // The gateway normalizes every record failure to {success:false} and never
+    // rejects, so the outer catch alone could not see a dead record. Guarded
+    // per entry: one failed record must not cost the rest of the batch.
+    // Removal is result-driven (PBI 2026-10-03-01): a failed URL stays in
+    // pending — removing it would lose the page and could race the
+    // background's fire-and-forget re-registration (recordingOutcome) — while
+    // removing recorded URLs keeps a retry from re-recording them.
+    const failedUrls: string[] = [];
     for (const url of urls) {
       const page = pages.find(p => p.url === url);
-      if (page) {
-        // PBI 2026-09-12-01: envelope + timeout contract lives in the shared
-        // pending-record seam (the dead {type:'record'} copy here predates it).
-        await recordPendingPage({ title: page.title, url: page.url, force: true });
+      if (!page) continue;
+      // PBI 2026-09-12-01: envelope + timeout contract lives in the shared
+      // pending-record seam (the dead {type:'record'} copy here predates it).
+      try {
+        const result = await recordPendingPage({ title: page.title, url: page.url, force: true });
+        if (result.success) continue;
+        reportActionFailure(
+          'Failed to record a pending page',
+          new Error(result.error || 'Unknown record failure'),
+          ErrorCode.OBSIDIAN_SEND_FAILURE
+        );
+      } catch (error) {
+        reportActionFailure('Failed to record a pending page', error, ErrorCode.OBSIDIAN_SEND_FAILURE);
       }
+      failedUrls.push(url);
     }
 
-    await removePendingPages(urls);
+    const recordedUrls = urls.filter(url => !failedUrls.includes(url));
+    if (recordedUrls.length > 0) {
+      await removePendingPages(recordedUrls);
+    }
     await loadPendingPages();
   } catch (error) {
     reportActionFailure('Failed to save the selected pending pages', error, ErrorCode.STORAGE_WRITE_FAILURE);
