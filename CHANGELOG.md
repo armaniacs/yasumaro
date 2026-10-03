@@ -35,6 +35,34 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.34] - 2026-10-03
+
+v6.9.33 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、adversarial review ラウンド（adversarial-1003）の 15 PBI（内部整理）のみを含みます。
+
+### Fixed
+
+- **popup の pending 保存の失敗結果握りつぶしを解消** — result 駆動削除 + whitelist `{ok:false}` 報告へ統一しました（PBI 01）
+- **レビューサマリアラームが生成されない問題を解消** — `createJobs(deps)` ファクトリ + `settingsReader` 必須化（PBI 02）
+- **設定キャッシュの read-your-write 違反を解消** — `writeEpoch` 版スタンプで閉鎖（PBI 03）
+- **logInfo の引数入れ替わりを修正** — settingsPipeline と trancoManager の 3 箇所（PBI 04）
+- **runPanelAction の onError throw が新たな rejection になる問題を解消** — try/catch guard + console.error 記録（PBI 05）
+- **provider priority の B-throw を propagate に統一** — A の silent fallback を廃止し doc に A/B 両 throw を追記（PBI 06）
+- **archive 操作の busy 相互排除を強化** — restore file input と confirm dialog を busy スコープへ（PBI 08）
+- **sidebar クリックの navigate 失敗時にタブ active 状態をロールバック** — pre-click snapshot 込み（PBI 11）
+- **saved URL の timestamp 欠損を決定的に扱う** — `(|| 0)` 正規化 4 箇所 + reader 正規化（PBI 12）
+- **recoveryClaimStore の同一ミリ秒再取得を claim token で防止**（PBI 14）
+
+### Refactored
+
+- **anchor-click の 60s revoke 維持理由を WHY コメントで codify** — 3 箇所一貫 pin（PBI 09）
+- **失敗表示を getUserErrorMessage 派生の単一契約に統一** — `:112` 不整合解消 + errorDisplayContract.test.ts（PBI 10）
+- **テストの pin を実装詳細から観測可能な振る舞いへ寄せ** — ソース正規表現ピンを attach 観測へ、固定 drain を完了シグナルへ置換（PBI 13）
+- **コメント・デッド比較の現状整合** — 5 件修正（PBI 15）
+
+### Chore
+
+- **テスト型 baseline ゲートに tsc-ran sanity を追加し CI へ配線**（PBI 07）
+
 ## [6.9.33] - 2026-10-02
 
 v6.9.32 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、実残8件ラウンド（leftover-1002）の 8 PBI（内部整理）のみを含みます。
