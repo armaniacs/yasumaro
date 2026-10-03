@@ -156,7 +156,6 @@ import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.j
 import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from './messageTypeRegistry.js';
 import type { ExtensionMessage, TestObsidianResponse } from '../background/messageTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
-import { pickDefined } from '../utils/objectUtils.js';
 
 /**
  * 記録データ型
@@ -233,15 +232,6 @@ export interface ErrorResponse {
   errorCode?: string;
 }
 
-/**
- * メッセージ受信時に送信者情報から抽出した情報
- */
-export interface MessageContext {
-  tabId?: number;
-  tabUrl?: string;
-  isValidSender: boolean;
-}
-
 // ============================================================================
 // Type Guards
 // ============================================================================
@@ -294,29 +284,6 @@ export function isErrorResponse(response: unknown): response is ErrorResponse {
   }
   const obj = response as Record<string, unknown>;
   return 'success' in obj && obj.success === false;
-}
-
-// ============================================================================
-// 発信者情報から Context を抽出
-// ============================================================================
-
-/**
- * chrome.runtime.MessageSender からコンテキスト情報を抽出
- */
-export function extractMessageContent(sender: chrome.runtime.MessageSender): MessageContext {
-  const tabId = sender.tab?.id;
-  const tabUrl = sender.tab?.url;
-
-  // VALID_VISIT, CHECK_DOMAIN are only allowed from Content Scripts
-  // Returns true if sender is a content script (all of tab, tab.id, tab.url exist)
-  const _isContentScriptSender = !!(sender.tab && sender.tab.id && sender.tab.url);
-
-  return {
-    ...pickDefined({ tabId, tabUrl }),
-    // isValidSender: Allow all messages from popup/dashboard (no tab)
-    // VALID_VISIT, CHECK_DOMAIN are restricted to content scripts only (checked separately in service-worker.ts)
-    isValidSender: true
-  };
 }
 
 // ============================================================================

@@ -114,8 +114,10 @@ export function handleOffscreenMessage(
                 sendResponse(res);
                 return;
             } else {
-                const traceId = isSqliteMessageType(msg.type) ? (msg as SqliteMessage).traceId : undefined;
-                forwardWarn(`Offscreen: Unknown message type ${msg.type}`, {}, 'offscreen', traceId);
+                // Non-sqlite path: isSqliteMessageType(msg.type) was already
+                // false at the branch above, so no traceId applies here (the
+                // catch block below keeps its ternary for sqlite errors).
+                forwardWarn(`Offscreen: Unknown message type ${msg.type}`, {}, 'offscreen');
                 sendResponse({ success: false, error: 'Unknown message type' });
             }
         } catch (err: unknown) {

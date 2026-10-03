@@ -10,7 +10,6 @@ import { logError, logWarn } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 // Constants for URL encoding
-const MAX_URL_LENGTH = 2000;
 const MAX_ENCODED_LENGTH = 5000;
 
 /**
@@ -30,16 +29,11 @@ export async function encodeUrlSafeBase64(
     throw new Error('encodeUrlSafeBase64: Invalid URL');
   }
 
-  // URL長のバリデーション
-  if (url.length > MAX_URL_LENGTH) {
-    throw new Error('encodeUrlSafeBase64: URL too long');
-  }
-
   // 完全なHMAC-SHA256署名は32バイト → URL-safe base64で43文字
   const signatureLength = 43; // 完全な署名長（URL-safe base64）
   const maxUrlLength = (maxLength - prefixLength - signatureLength) * 0.75; // Base64オーバーヘッドを考慮
 
-  // URL过长チェック
+  // URL length check against the notification ID cap
   if (url.length > maxUrlLength) {
     throw new Error('encodeUrlSafeBase64: URL too long for notification ID');
   }
@@ -113,22 +107,4 @@ export async function decodeUrlFromNotificationId(notificationId: string): Promi
     );
     throw error;
   }
-}
-
-/**
- * Create notification ID from URL
- * @param url URL to encode
- * @returns Notification ID
- */
-export async function createNotificationId(url: string): Promise<string> {
-  return encodeUrlSafeBase64(url);
-}
-
-/**
- * Extract URL from notification ID
- * @param notificationId Notification ID
- * @returns Decoded URL
- */
-export async function getUrlFromNotificationId(notificationId: string): Promise<string> {
-  return decodeUrlFromNotificationId(notificationId);
 }

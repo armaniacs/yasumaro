@@ -38,7 +38,7 @@ vi.mock('../../../utils/logger/api.js', () => ({
   ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
 }));
 
-import { encodeUrlSafeBase64, decodeUrlFromNotificationId, createNotificationId, getUrlFromNotificationId } from '../urlNotificationHandlers.js';
+import { encodeUrlSafeBase64, decodeUrlFromNotificationId } from '../urlNotificationHandlers.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { logWarn } from '../../../utils/logger/api.js';
 
@@ -58,8 +58,10 @@ describe('encodeUrlSafeBase64', () => {
   });
 
    it('throws for URL too long', async () => {
+     // The former MAX_URL_LENGTH=2000 check was dead (subsumed by the
+     // notification ID cap below, ~148 chars with the default maxLength).
      const longUrl = 'https://example.com/' + 'a'.repeat(3000);
-     await expect(encodeUrlSafeBase64(longUrl)).rejects.toThrow('URL too long');
+     await expect(encodeUrlSafeBase64(longUrl)).rejects.toThrow('URL too long for notification ID');
    });
 
    it('throws when URL exceeds encoded length limit', async () => {
@@ -118,20 +120,4 @@ describe('decodeUrlFromNotificationId', () => {
         'notification-helpers'
       );
     });
-});
-
-describe('createNotificationId', () => {
-  it('delegates to encodeUrlSafeBase64', async () => {
-    const result = await createNotificationId('https://test.com');
-    expect(result).toContain('privacy-confirm-');
-  });
-});
-
-describe('getUrlFromNotificationId', () => {
-  it('delegates to decodeUrlFromNotificationId', async () => {
-    const url = 'https://test.com';
-    const id = await createNotificationId(url);
-    const decoded = await getUrlFromNotificationId(id);
-    expect(decoded).toBe(url);
-  });
 });

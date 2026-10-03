@@ -237,16 +237,26 @@ export class MessageRouter {
       );
     }
 
-    this.validators.set('VALID_VISIT', validVisitValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('DASHBOARD_SQLITE', dashboardSqliteValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('FETCH_URL', fetchUrlValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('MANUAL_RECORD', manualRecordValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('PREVIEW_RECORD', manualRecordValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('SAVE_RECORD', manualRecordValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('CHECK_DOMAIN', checkDomainValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('REGENERATE_SUMMARY', regenerateSummaryValidator as unknown as MessageValidator<unknown>);
-    this.validators.set('TEST_OBSIDIAN', testObsidianValidator as unknown as MessageValidator<unknown>);
+    this.setValidator('VALID_VISIT', validVisitValidator);
+    this.setValidator('DASHBOARD_SQLITE', dashboardSqliteValidator);
+    this.setValidator('FETCH_URL', fetchUrlValidator);
+    this.setValidator('MANUAL_RECORD', manualRecordValidator);
+    this.setValidator('PREVIEW_RECORD', manualRecordValidator);
+    this.setValidator('SAVE_RECORD', manualRecordValidator);
+    this.setValidator('CHECK_DOMAIN', checkDomainValidator);
+    this.setValidator('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator);
+    this.setValidator('REGENERATE_SUMMARY', regenerateSummaryValidator);
+    this.setValidator('TEST_OBSIDIAN', testObsidianValidator);
+  }
+
+  /**
+   * `MessageValidator<T>` declares `validate(msg: unknown): T`, so any
+   * `MessageValidator<SpecificType>` is assignable to the stored
+   * `MessageValidator<unknown>` — a new handler registers its validator
+   * with one cast-free line here instead of a double cast.
+   */
+  private setValidator(type: string, validator: MessageValidator<unknown>): void {
+    this.validators.set(type, validator);
   }
 
   /**

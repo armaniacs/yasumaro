@@ -2,7 +2,7 @@
  * messaging-types.test.ts
  * Tests for messaging/types.ts runtime type functions
  * Target: isMaskedItem, isServiceWorkerRequest, isSuccessResponse, isErrorResponse,
- *         extractMessageContent, sendServiceWorkerMessage, sendFromContentScript, sendFromPopup
+ *         sendServiceWorkerMessage, sendFromContentScript, sendFromPopup
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -11,7 +11,6 @@ import {
     isServiceWorkerRequest,
     isSuccessResponse,
     isErrorResponse,
-    extractMessageContent,
     sendServiceWorkerMessage,
     sendFromContentScript,
     sendFromPopup,
@@ -276,40 +275,6 @@ describe('messaging/types: isErrorResponse', () => {
 
     it('returns true for object with success false and extra properties', () => {
         expect(isErrorResponse({ success: false, code: 500 })).toBe(true);
-    });
-});
-
-describe('messaging/types: extractMessageContent', () => {
-    it('extracts tabId and tabUrl from sender with tab', () => {
-        const sender = {
-            tab: { id: 42, url: 'https://example.com' },
-        } as chrome.runtime.MessageSender;
-
-        const result = extractMessageContent(sender);
-
-        expect(result.tabId).toBe(42);
-        expect(result.tabUrl).toBe('https://example.com');
-        expect(result.isValidSender).toBe(true);
-    });
-
-    it('allows popup sender without tab', () => {
-        const sender = {} as chrome.runtime.MessageSender;
-
-        const result = extractMessageContent(sender);
-
-        expect(result.tabId).toBeUndefined();
-        expect(result.tabUrl).toBeUndefined();
-        expect(result.isValidSender).toBe(true);
-    });
-
-    it('allows sender with tab but no id', () => {
-        const sender = { tab: { url: 'https://example.com' } } as unknown as chrome.runtime.MessageSender;
-
-        const result = extractMessageContent(sender);
-
-        expect(result.tabId).toBeUndefined();
-        expect(result.tabUrl).toBe('https://example.com');
-        expect(result.isValidSender).toBe(true);
     });
 });
 
