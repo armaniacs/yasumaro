@@ -38,18 +38,15 @@ vi.mock('../../utils/logger/api.js', () => ({
   ErrorCode: { INTERNAL_ERROR: 'INT_001' },
 }));
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
   const messages: Record<string, string> = {
     saveSuccess: 'Saved to Obsidian',
     saveError: 'Save error',
     errorGeneric: 'An error occurred.',
   };
   const getMessage = vi.fn((key: string, _subs?: string[]) => messages[key] || key);
-  return {
-    getMessage,
-    getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
-      ((subs === undefined ? getMessage(key) : getMessage(key, subs as string[])) || fallback) as string,
-  };
+  return i18nMock(getMessage);
 });
 
 function setupDom(): void {

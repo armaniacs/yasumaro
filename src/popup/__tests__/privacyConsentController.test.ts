@@ -24,19 +24,10 @@ const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockChromeTabsCreate = vi.hoisted(() => vi.fn());
 const mockChromeStorageSet = vi.hoisted(() => vi.fn());
 
-vi.mock('../../utils/i18n.js', () => ({
-  getMessage: mockGetMessage,
-  getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
-      ((subs === undefined ? (mockGetMessage as (...a: any[]) => unknown)(key) : (mockGetMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string,
-  getMessageWithSubstitutions: (
-        key: string,
-        subs: Record<string, string | number>,
-        fallback: string,
-      ): string =>
-      ((mockGetMessage as (...a: any[]) => unknown)(key, subs) ||
-        fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-          subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string,
-}));
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
+  return i18nMock(mockGetMessage);
+});
 
 vi.mock('../../utils/storage/privacyConsent.js', () => ({
   shouldPromptForConsent: mockShouldPromptForConsent,

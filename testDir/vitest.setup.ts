@@ -34,6 +34,7 @@ console.error = (...args: unknown[]) => {
 
 import { createRequire } from 'node:module';
 import { vi } from 'vitest';
+import { createStorageAreaMock } from './storageMock.js';
 
 // ============================================================================
 // chrome.i18n.getMessage mock backed by the real en messages.json
@@ -170,8 +171,6 @@ vi.stubGlobal('import.meta', {
 // Chrome Extensions API Mock
 // ============================================================================
 
-import { cloneAtStorageBoundary } from '../src/utils/storage/structuredCloneBoundary.js';
-
 // In-memory storage
 const localStorage: Record<string, any> = {};
 const syncStorage: Record<string, any> = {};
@@ -181,86 +180,13 @@ const sessionStorage: Record<string, any> = {};
 
 // Chrome Storage Mock
 const chromeStorageMock = {
-  local: {
-    get: vi.fn<Promise<Record<string, any>>, [string | string[] | null | undefined]>(
-      (keys?: string | string[] | null) => {
-        let result: Record<string, any> = {};
-
-        if (keys === null || keys === undefined) {
-          result = { ...localStorage };
-        } else if (Array.isArray(keys)) {
-          keys.forEach((key) => {
-            if (key in localStorage) {
-              result[key] = localStorage[key];
-            }
-          });
-        } else if (typeof keys === 'string') {
-          if (keys in localStorage) {
-            result[keys] = localStorage[keys];
-          }
-        }
-
-        for (const key of Object.keys(result)) result[key] = cloneAtStorageBoundary(result[key]);
-        return Promise.resolve(result);
-      }
-    ),
-    set: vi.fn<Promise<void>, [Record<string, any>]>((items) => {
-      for (const [key, value] of Object.entries(items)) localStorage[key] = cloneAtStorageBoundary(value);
-      return Promise.resolve();
-    }),
-    remove: vi.fn<Promise<void>, [string | string[]]>((keys) => {
-      if (Array.isArray(keys)) {
-        keys.forEach((key) => delete localStorage[key]);
-      } else {
-        delete localStorage[keys];
-      }
-      return Promise.resolve();
-    }),
-    clear: vi.fn<Promise<void>, []>(() => {
-      Object.keys(localStorage).forEach((key) => delete localStorage[key]);
-      return Promise.resolve();
-    }),
-    getBytesInUse: vi.fn<Promise<number>, []>(() => Promise.resolve(1024)),
-  },
-  session: {
-    get: vi.fn<Promise<Record<string, any>>, [string | string[] | null | undefined]>(
-      (keys?: string | string[] | null) => {
-        let result: Record<string, any> = {};
-
-        if (keys === null || keys === undefined) {
-          result = { ...sessionStorage };
-        } else if (Array.isArray(keys)) {
-          keys.forEach((key) => {
-            if (key in sessionStorage) {
-              result[key] = sessionStorage[key];
-            }
-          });
-        } else if (typeof keys === 'string') {
-          if (keys in sessionStorage) {
-            result[keys] = sessionStorage[keys];
-          }
-        }
-
-        return Promise.resolve(result);
-      }
-    ),
-    set: vi.fn<Promise<void>, [Record<string, any>]>((items) => {
-      Object.assign(sessionStorage, items);
-      return Promise.resolve();
-    }),
-    remove: vi.fn<Promise<void>, [string | string[]]>((keys) => {
-      if (Array.isArray(keys)) {
-        keys.forEach((key) => delete sessionStorage[key]);
-      } else {
-        delete sessionStorage[keys];
-      }
-      return Promise.resolve();
-    }),
-    clear: vi.fn<Promise<void>, []>(() => {
-      Object.keys(sessionStorage).forEach((key) => delete sessionStorage[key]);
-      return Promise.resolve();
-    }),
-  },
+  local: createStorageAreaMock(localStorage, {
+    clone: true,
+    remove: true,
+    clear: true,
+    getBytesInUse: true,
+  }),
+  session: createStorageAreaMock(sessionStorage, { clone: false, remove: true, clear: true }),
 };
 
 // Chrome Runtime Mock
@@ -322,29 +248,7 @@ const chromeRuntimeMock = {
   storage: {
     local: chromeStorageMock.local,
     session: chromeStorageMock.session,
-    sync: {
-      get: vi.fn<Promise<Record<string, any>>, any[]>((keys?: any) => {
-        let result: Record<string, any> = {};
-        if (keys === null || keys === undefined) {
-          result = { ...syncStorage };
-        } else if (Array.isArray(keys)) {
-          keys.forEach((key) => {
-            if (key in syncStorage) {
-              result[key] = syncStorage[key];
-            }
-          });
-        } else if (typeof keys === 'string') {
-          if (keys in syncStorage) {
-            result[keys] = syncStorage[keys];
-          }
-        }
-        return Promise.resolve(result);
-      }),
-      set: vi.fn<Promise<void>, [Record<string, any>]>((items) => {
-        Object.assign(syncStorage, items);
-        return Promise.resolve();
-      }),
-    },
+    sync: createStorageAreaMock(syncStorage, { clone: false }),
     onChanged: {
       addListener: vi.fn(),
       removeListener: vi.fn(),

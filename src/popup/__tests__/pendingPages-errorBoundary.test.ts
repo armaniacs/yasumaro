@@ -68,7 +68,8 @@ vi.mock('../../utils/logger/api.js', () => ({
   ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
 }));
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
   const messages: Record<string, string> = {
     pendingPagesEmpty: 'No items selected.',
     errorPrefix: '✗ Error:',
@@ -81,11 +82,7 @@ vi.mock('../../utils/i18n.js', () => {
     recording: 'Recording',
   };
   const getMessage = vi.fn((key: string, _subs?: string[]) => messages[key] ?? key);
-  return {
-    getMessage,
-    getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
-      (subs === undefined ? getMessage(key) : getMessage(key, subs as string[])) || fallback,
-  };
+  return i18nMock(getMessage);
 });
 
 Object.defineProperty(global, 'chrome', {
