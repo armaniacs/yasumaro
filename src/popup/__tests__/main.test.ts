@@ -187,6 +187,7 @@ import {
 import { getPendingPages, removePendingPages } from '../../utils/pendingStorage.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
+import { STATUS_CLASS } from '../statusClasses.js';
 
 // These modules are vi.mock()-ed above; bind the mock-typed views once so the
 // suites can drive them without repeating vi.mocked() at every call site.
@@ -344,7 +345,7 @@ describe('main', () => {
 
     // Mock showError to properly set error styles with prefix
     showError.mockImplementation((statusElement: HTMLElement, error: any, onForceRecord?: (() => void) | null) => {
-      statusElement.className = 'error';
+      statusElement.className = STATUS_CLASS.error;
       statusElement.textContent = '';
 
       const errorMsg = typeof error === 'string' ? error : error?.message || 'Unknown error';
@@ -560,7 +561,7 @@ describe('main', () => {
       await recordCurrentPage();
 
       const statusDiv = $el('mainStatus');
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(statusDiv.textContent).toContain('✗ Error');
     });
 
@@ -572,7 +573,7 @@ describe('main', () => {
       await recordCurrentPage();
 
       const statusDiv = $el('mainStatus');
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(showError).toHaveBeenCalled();
     });
 
@@ -590,7 +591,7 @@ describe('main', () => {
       await recordCurrentPage();
 
       const statusDiv = $el('mainStatus');
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
     });
 
     it('should handle connection error', async () => {
@@ -615,7 +616,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(statusDiv.textContent).toContain('✗ Error:');
     });
 
@@ -686,7 +687,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe(STATUS_CLASS.success);
       expect(statusDiv.textContent).toContain('✓ Saved to Obsidian');
       expect(startAutoCloseTimer).not.toHaveBeenCalled();
     });
@@ -717,7 +718,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe(STATUS_CLASS.success);
       expect(statusDiv.textContent).toContain('✓ Saved to Obsidian');
       expect(startAutoCloseTimer).not.toHaveBeenCalled();
     });
@@ -774,7 +775,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(statusDiv.textContent).toBe('✗ Error: AI_PROVIDER_ERROR: Rate limit exceeded');
     });
 
@@ -803,7 +804,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(statusDiv.textContent).toContain('PRIVATE_PAGE_DETECTED');
 
       expect(recordBtn.disabled).toBe(false);
@@ -835,7 +836,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(statusDiv.textContent).toContain('PRIVATE_PAGE_DETECTED');
       expect(recordBtn.disabled).toBe(false);
       expect(recordBtn.textContent).toBe('Record Anyway');
@@ -872,7 +873,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe(STATUS_CLASS.success);
       expect(showPreview).not.toHaveBeenCalled();
       expect(sendMessageWithRetry).toHaveBeenCalledWith(
         expect.objectContaining({ type: 'SAVE_RECORD' })
@@ -905,7 +906,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(showError).toHaveBeenCalled();
     });
 
@@ -934,7 +935,7 @@ describe('main', () => {
       await recordCurrentPage();
 
       expect(mockChrome.scripting.executeScript).toHaveBeenCalled();
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe(STATUS_CLASS.success);
     });
 
     it('should handle content script failure with force=true fallback to empty content', async () => {
@@ -962,7 +963,7 @@ describe('main', () => {
       await recordCurrentPage(true);
 
       // With permission ladder, executeScript is attempted after per-origin grant; failure with force=true yields success with empty content
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe(STATUS_CLASS.success);
     });
 
     it('should handle content script failure without force', async () => {
@@ -1011,7 +1012,7 @@ describe('main', () => {
 
       await recordCurrentPage(true);
 
-      expect(statusDiv.className).toBe('success');
+      expect(statusDiv.className).toBe(STATUS_CLASS.success);
     });
 
     it('should handle contentResponse null without force', async () => {
@@ -1058,7 +1059,7 @@ describe('main', () => {
 
       await recordCurrentPage();
 
-      expect(statusDiv.className).toBe('error');
+      expect(statusDiv.className).toBe(STATUS_CLASS.error);
       expect(showError).toHaveBeenCalled();
     });
 

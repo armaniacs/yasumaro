@@ -35,13 +35,13 @@ Scenario: クラス名のリネームは 1 箇所の変更で完結する
 
 ## 受け入れ基準
 
-- [ ] STATUS_CLASS 定数が production 側の共有位置に定義されている。
-- [ ] `errorUtils.ts:233,257` のリテラルが STATUS_CLASS 参照に置き換わっている。
-- [ ] `privatePageDialog.ts:107-114` のリテラルが STATUS_CLASS 参照に置き換わっている。
-- [ ] `main.test.ts` および `recordOrchestrator.test.ts` のクラス名アサーションが STATUS_CLASS 参照に置き換わっている。
-- [ ] DOM への適用結果（クラス名の文字列）は変更前と同一である。
-- [ ] CSS 側のセレクタ定義は変更していない。
-- [ ] `npm run validate` が成功している。
+- [x] STATUS_CLASS 定数が production 側の共有位置に定義されている。
+- [x] `errorUtils.ts:233,257` のリテラルが STATUS_CLASS 参照に置き換わっている。
+- [x] `privatePageDialog.ts:107-114` のリテラルが STATUS_CLASS 参照に置き換わっている。
+- [x] `main.test.ts` および `recordOrchestrator.test.ts` のクラス名アサーションが STATUS_CLASS 参照に置き換わっている。
+- [x] DOM への適用結果（クラス名の文字列）は変更前と同一である。
+- [x] CSS 側のセレクタ定義は変更していない。
+- [x] `npm run validate` が成功している。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -62,10 +62,20 @@ Scenario: クラス名のリネームは 1 箇所の変更で完結する
 
 ## Definition of Done
 
-- [ ] STATUS_CLASS 定数が production とテストから参照されている。
-- [ ] production 側のクラス名リテラルが残っていない。
-- [ ] テスト側のリテラル pin が解消されている。
-- [ ] DOM 適用結果に回帰がない。
-- [ ] `npm run validate` が成功している。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
-- [ ] コードレビューが完了している。
+- [x] STATUS_CLASS 定数が production とテストから参照されている。
+- [x] production 側のクラス名リテラルが残っていない。
+- [x] テスト側のリテラル pin が解消されている。
+- [x] DOM 適用結果に回帰がない。
+- [x] `npm run validate` が成功している。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] コードレビューが完了している。
+
+## 実装記録
+
+**2026-10-03 完了。**
+
+- `src/popup/statusClasses.ts` を新設し `STATUS_CLASS` 定数（success / error）を定義
+- production 置換: `errorUtils.ts`（showError / showSuccess）、`privatePageDialog.ts`、`recordSession.ts`（`:333,350,524` — 起票時に記載のなかった 3 箇所目 `:524` の write site を実装中に発見し同時置換）
+- テスト置換: `main.test.ts` 15 アサーション + showError モック自体も `:348` で定数化（モックが実コードと別のリテラルを pin していたため）、`recordOrchestrator.test.ts`
+- ゲート（2026-10-03）: `tsc --noEmit` 0 errors / `eslint` 0 errors / `vitest` 15,594 passed / `npm run validate` PASS
+- 逸脱: `popup-xss.test.ts` のリテラルは残置（XSS fixture の setup に使われるテストフィクスチャで、STATUS_CLASS 契約の pin 対象外）

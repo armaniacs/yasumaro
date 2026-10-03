@@ -72,6 +72,7 @@ vi.mock('../statusPanel.js', () => ({
 }));
 
 import { RecordSession } from '../recordCurrentPage/recordSession.js';
+import { STATUS_CLASS } from '../statusClasses.js';
 
 // Helper to create mock collaborators
 function createMocks() {
@@ -730,7 +731,7 @@ describe('RecordSession.recordCurrentPage', () => {
     // key itself, so the canonical key surfaces here (was the raw legacy
     // key 'privatePageReason_cachecontrol').
     expect(document.getElementById('mainStatus')!.textContent).toBe('errorPrefix PRIVATE_PAGE_DETECTED (privacyStatus_cacheControl)');
-    expect(document.getElementById('mainStatus')!.className).toBe('error');
+    expect(document.getElementById('mainStatus')!.className).toBe(STATUS_CLASS.error);
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(btn.textContent).toBe('forceRecordAnyway');
     expect(o.state).toBe('awaiting-force');

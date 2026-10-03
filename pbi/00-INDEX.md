@@ -26,7 +26,7 @@ holistic-code-improvement skill による 6.9.34 時点の大局的レビュー�
 | 19 | [2026-10-03-19-fix-anchor-download-unify.md](2026-10-03-19-fix-anchor-download-unify.md) | fix | 16.0 | 0.5 | ✅ 完了 | なし |
 | 20 | [2026-10-03-20-fix-preset-status-orphan-class.md](2026-10-03-20-fix-preset-status-orphan-class.md) | fix | 16.0 | 1.0 | ⬜ 未着手 | 17 の後・23 に先行（チェーン） |
 | 21 | [2026-10-03-21-fix-gateway-version-contract.md](2026-10-03-21-fix-gateway-version-contract.md) | fix | 10.0 | 0.5 | ✅ 完了 | なし |
-| 22 | [2026-10-03-22-refactor-status-class-constant.md](2026-10-03-22-refactor-status-class-constant.md) | refactor | 10.0 | 0.5 | ⬜ 未着手 | なし |
+| 22 | [2026-10-03-22-refactor-status-class-constant.md](2026-10-03-22-refactor-status-class-constant.md) | refactor | 10.0 | 0.5 | ✅ 完了 | なし |
 | 23 | [2026-10-03-23-refactor-preset-buttons-id-ssot.md](2026-10-03-23-refactor-preset-buttons-id-ssot.md) | refactor | 9.0 | 0.5 | ⬜ 未着手 | 20 の後・29 に先行（チェーン） |
 | 24 | [2026-10-03-24-refactor-generate-id-unify.md](2026-10-03-24-refactor-generate-id-unify.md) | refactor | 8.0 | 0.5 | ✅ 完了 | なし |
 | 25 | [2026-10-03-25-refactor-status-panel-split.md](2026-10-03-25-refactor-status-panel-split.md) | refactor | 8.0 | 1.0 | ✅ 完了 | 31 に先行 |

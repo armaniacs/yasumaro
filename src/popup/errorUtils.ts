@@ -9,6 +9,7 @@
 // table, but it statically imports the provider strategies, so naming a
 // provider from here would pull background wiring into the popup bundle.
 import { tryResolveProviderDisplayMetadata } from '../utils/storage/providerAllowlist.js';
+import { STATUS_CLASS } from './statusClasses.js';
 
 // エラータイプの定義
 /**
@@ -230,7 +231,7 @@ export function getUserErrorMessage(error: unknown): string {
  */
 export function showError(statusElement: HTMLElement, error: unknown, onForceRecord: (() => void) | null = null): void {
   // エラークラスを設定
-  statusElement.className = 'error';
+  statusElement.className = STATUS_CLASS.error;
 
   // ステータス要素をクリア
   statusElement.textContent = '';
@@ -254,7 +255,7 @@ export function showError(statusElement: HTMLElement, error: unknown, onForceRec
  */
 export function showSuccess(statusElement: HTMLElement, message: string = ErrorMessages.SUCCESS): void {
   statusElement.textContent = message;
-  statusElement.className = 'success';
+  statusElement.className = STATUS_CLASS.success;
 }
 
 /**

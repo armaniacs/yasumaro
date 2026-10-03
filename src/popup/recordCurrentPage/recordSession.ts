@@ -12,6 +12,7 @@ import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
 import { showError } from '../errorUtils.js';
+import { STATUS_CLASS } from '../statusClasses.js';
 import { resolveReasonLabel } from '../../utils/reasonLabel.js';
 import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
@@ -329,7 +330,7 @@ export class RecordSession {
     const totalDuration = performance.now() - startTime;
     const message = formatSuccessMessage(totalDuration, result?.aiDuration, result?.obsidianDuration !== undefined, result?.aiProvider);
     statusDiv.textContent = message;
-    statusDiv.className = 'success';
+    statusDiv.className = STATUS_CLASS.success;
   }
 
   /**
@@ -346,7 +347,7 @@ export class RecordSession {
     if (previewSave.error === 'PRIVATE_PAGE_DETECTED') {
       hideSpinner();
       statusDiv.textContent = this.buildPrivatePageErrorMessage(previewSave.reason);
-      statusDiv.className = 'error';
+      statusDiv.className = STATUS_CLASS.error;
 
       if (recordBtn) {
         this.setRecordAnywayButton(recordBtn, tab, content);
@@ -520,7 +521,7 @@ export class RecordSession {
         if (button) this.showButtonResultState(button, 'done');
       } else {
         statusDiv.textContent = `${getMessage('saveError')}: ${result?.error || previewSave.error || 'Unknown error'}`;
-        statusDiv.className = 'error';
+        statusDiv.className = STATUS_CLASS.error;
         if (button) this.showButtonResultState(button, 'error');
       }
     } catch (error: unknown) {
