@@ -139,8 +139,15 @@ export async function exportDb(): Promise<Blob> {
 // ============================================================================
 
 /**
- * Delay before revoking the object URL. A synchronous revoke can abort large
- * downloads before the browser persists the blob (PBI 2026-09-06-01).
+ * Revoke on a bounded delay, not on settle: the anchor-click path
+ * (a.click() + download attribute) is fire-and-forget — no promise or event
+ * exposes the download's completion to the page, so there is no settle point
+ * to revoke on, unlike the chrome.downloads.download paths
+ * (generalSettings/connectionTests.ts, markdownExport.ts) whose promise
+ * resolves once the blob fetch has started. 60s is a deliberate upper bound:
+ * generous enough that a slow environment persists a large download before
+ * the revoke fires, while still releasing the object URL instead of leaking
+ * it for the page's lifetime.
  */
 export const DOWNLOAD_REVOKE_DELAY_MS = 60_000;
 

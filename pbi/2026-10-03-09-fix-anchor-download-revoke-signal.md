@@ -34,11 +34,11 @@ Scenario: 60s 維持の場合は理由が 3 箇所で一貫して成文化され
 
 ## 受け入れ基準
 
-- [ ] `src/dashboard/exportLogsService.ts:147-156`（anchor-click 経路）に await 可能な完了シグナルが存在するかを調査した結果が実装記録に 1 行残されている
+- [x] `src/dashboard/exportLogsService.ts:147-156`（anchor-click 経路）に await 可能な完了シグナルが存在するかを調査した結果が実装記録に 1 行残されている
 - [ ] シグナルが存在する場合: `src/dashboard/exportLogsService.ts:155` の setTimeout revoke が完了シグナル駆動に置換される
-- [ ] シグナルが存在しない場合: `src/dashboard/exportLogsService.ts:145` の 60s 根拠が `src/dashboard/panels/connectionTests.ts:465-469` と `src/dashboard/markdownExport.ts:290-294` と一貫した単一 WHY コメントとして 3 箇所に成文化される
-- [ ] 成功経路で revoke が 1 回だけ実行され、重複 revoke と URL 漏れがない
-- [ ] 裁定（シグナル化 / codify 60s）と証拠が実装記録に残されている
+- [x] シグナルが存在しない場合: `src/dashboard/exportLogsService.ts:145` の 60s 根拠が `src/dashboard/panels/connectionTests.ts:465-469` と `src/dashboard/markdownExport.ts:290-294` と一貫した単一 WHY コメントとして 3 箇所に成文化される
+- [x] 成功経路で revoke が 1 回だけ実行され、重複 revoke と URL 漏れがない
+- [x] 裁定（シグナル化 / codify 60s）と証拠が実装記録に残されている
 
 ## テスト戦略
 
@@ -52,6 +52,14 @@ Scenario: 60s 維持の場合は理由が 3 箇所で一貫して成文化され
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- 調査結果: anchor-click 経路（`a.click()` + download 属性）は fire-and-forget で、download 完了を page 側が観測できる promise もイベントも存在しない。await 可能な完了シグナルは存在しない。
+- 裁定: codify 60s。`exportLogsService.ts` の `DOWNLOAD_REVOKE_DELAY_MS` に WHY コメントを追加（シグナル不在の根拠、chrome.downloads 経路との対照、60s が遅い環境での大容量保存と revoke 先行のバランスを取る意図的な上限であること）。ロジック変更なし。
+- テスト: `exportLogsRevokeJustification.test.ts` を新設（5 テスト）。3 箇所（exportLogsService / connectionTests / markdownExport）の WHY 一貫性 pin、`useTimerClock` による 60s 経過時の exactly-once revoke、60s 未満で revoke しない 60s floor。
+- 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
+- 逸脱: シグナル化の条件（「シグナルが存在する場合」）は該当しないため未達のまま記録（構造的に不成立）。置換対象の setTimeout は不変。
