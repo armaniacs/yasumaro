@@ -48,12 +48,12 @@ Scenario: 設定の読み出しに失敗した場合は登録を諦めて記録�
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] `src/background/alarmRegistry.ts:131,136` — install クロージャが `deps.settingsReader` を受け取り、取得した設定を `installReviewSummary` に渡す (現在は引数なし)
-- [ ] `src/background/alarmRegistry.ts:87-90` — reader が必ず渡るため `settings={}` への暗黙フォールバックが本番経路から消える
-- [ ] `src/background/alarmRegistry.ts:97,99` — 有効設定時に `yasumaro-review-weekly` / `yasumaro-review-monthly` の `alarms.create` が実行される (現在は到達不能)
-- [ ] `src/background/alarmRegistry.ts:91-94` — 無効設定時に両アラームをクリアする現行ふるまいが維持される
-- [ ] `JOBS` (`:123`) は deps を参照できる形にする (ファクトリ化またはクロージャキャプチャのいずれかで統一)
-- [ ] `alarmRegistry.test.ts:144-155` の unpinned 状態が解消され、review install が pin 済みになる
+- [x] `src/background/alarmRegistry.ts:131,136` — install クロージャが `deps.settingsReader` を受け取り、取得した設定を `installReviewSummary` に渡す (現在は引数なし)
+- [x] `src/background/alarmRegistry.ts:87-90` — reader が必ず渡るため `settings={}` への暗黙フォールバックが本番経路から消える
+- [x] `src/background/alarmRegistry.ts:97,99` — 有効設定時に `yasumaro-review-weekly` / `yasumaro-review-monthly` の `alarms.create` が実行される (現在は到達不能)
+- [x] `src/background/alarmRegistry.ts:91-94` — 無効設定時に両アラームをクリアする現行ふるまいが維持される
+- [x] `JOBS` (`:123`) は deps を参照できる形にする (ファクトリ化またはクロージャキャプチャのいずれかで統一)
+- [x] `alarmRegistry.test.ts:144-155` の unpinned 状態が解消され、review install が pin 済みになる
 
 ## テスト戦略
 
@@ -67,6 +67,13 @@ Scenario: 設定の読み出しに失敗した場合は登録を諦めて記録�
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- `JOBS` を `createJobs(deps)` ファクトリ化し、review 2 job の install クロージャが `deps.settingsReader` をキャプチャして `installReviewSummary` に渡す。`installReviewSummary(settingsReader)` を必須引数化して `settings={}` への暗黙フォールバックを撤去、`AlarmHandlerDeps.settingsReader` も必須化。無効設定時の両アラーム clear は現行ふるまいのまま維持。
+- テスト: `alarmRegistry.test.ts` に review install 3 テストを追加（有効→ `alarms.create` 2 件 pin / 無効→ `alarms.clear` 2 件 pin / reader 失敗→ create せず ERROR 記録 pin）。修正前 RED 2/3、Repeats=10 green。
+- 検証: npm test 15434 pass / npm run validate exit 0。
+- 逸脱: 基準「ファクトリ化またはクロージャキャプチャのいずれかで統一」を deps 必須化 + install クロージャの deps キャプチャとして解釈・実装（ファクトリ化とクロージャキャプチャを併用し、基準 1・2・5 を同時に満たす形）。

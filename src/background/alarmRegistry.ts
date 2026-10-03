@@ -38,7 +38,7 @@ export interface AlarmHandlerDeps {
   retryPendingChromeStorageWrite: (write: never) => Promise<boolean>;
   /** Injected for the review-summary job. */
   reviewSummaryGenerator?: ReviewSummaryGenerator;
-  settingsReader?: SettingsReader;
+  settingsReader: SettingsReader;
 }
 
 export interface AlarmJobSpec {
@@ -84,10 +84,8 @@ async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
   ]);
 }
 
-async function installReviewSummary(settingsReader?: SettingsReader): Promise<void> {
-  const settings = settingsReader
-    ? await settingsReader.getAll()
-    : {};
+async function installReviewSummary(settingsReader: SettingsReader): Promise<void> {
+  const settings = await settingsReader.getAll();
   if (!settings[StorageKeys.REVIEW_SUMMARY_ENABLED]) {
     await chrome.alarms.clear('yasumaro-review-weekly');
     await chrome.alarms.clear('yasumaro-review-monthly');
@@ -120,7 +118,9 @@ function getNextMonthFirstDayAt(hour: number, minute: number): number {
   return target.getTime();
 }
 
-const JOBS: AlarmJobSpec[] = [
+// Factory, not a module constant: conditional install hooks capture deps
+// (the review-summary jobs need deps.settingsReader to read the enabled flag).
+const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
   { name: 'yasumaro-daily-purge', staticSchedule: { periodInMinutes: 1440 }, run: runDailyPurge },
   { name: 'yasumaro-local-md-flush', run: runLocalMdFlush },
   { name: 'yasumaro-local-md-immediate', run: runLocalMdFlush },
@@ -128,12 +128,12 @@ const JOBS: AlarmJobSpec[] = [
   { name: 'yasumaro-offline-network-retry', staticSchedule: { periodInMinutes: 5 }, run: runOfflineNetworkRetry },
   {
     name: 'yasumaro-review-weekly',
-    install: () => installReviewSummary(),
+    install: () => installReviewSummary(deps.settingsReader),
     run: async () => { await reviewSummaryGeneratorRef?.generateWeeklySummary(); },
   },
   {
     name: 'yasumaro-review-monthly',
-    install: () => installReviewSummary(),
+    install: () => installReviewSummary(deps.settingsReader),
     run: async () => { await reviewSummaryGeneratorRef?.generateMonthlySummary(); },
   },
   {
@@ -151,10 +151,11 @@ export interface AlarmRegistry {
 }
 
 export function createAlarmRegistry(deps: AlarmHandlerDeps): AlarmRegistry {
-  const byName = new Map(JOBS.map((job) => [job.name, job]));
+  const jobs = createJobs(deps);
+  const byName = new Map(jobs.map((job) => [job.name, job]));
   return {
     async installAll() {
-      for (const job of JOBS) {
+      for (const job of jobs) {
         try {
           if (job.staticSchedule) {
             chrome.alarms.create(job.name, job.staticSchedule);

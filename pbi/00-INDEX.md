@@ -21,7 +21,7 @@ adversarial-code-review skill による `7edc8c6d..HEAD`（37 commits / 163 file
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
 | 01 | [2026-10-03-01-fix-popup-save-silent-data-loss.md](2026-10-03-01-fix-popup-save-silent-data-loss.md) | fix | 36.0 | 0.5 | ✅ 完了（2026-10-03）— result 駆動削除 + whitelist `{ok:false}` 報告。検証: validate exit 0。10 の着手制約は解除済 |
-| 02 | [2026-10-03-02-fix-review-summary-alarms-never-created.md](2026-10-03-02-fix-review-summary-alarms-never-created.md) | fix | 16.0 | 0.5 | ⬜ 未着手 |
+| 02 | [2026-10-03-02-fix-review-summary-alarms-never-created.md](2026-10-03-02-fix-review-summary-alarms-never-created.md) | fix | 16.0 | 0.5 | ✅ 完了（2026-10-03）— `createJobs(deps)` ファクトリ + `settingsReader` 必須化。検証: validate exit 0 |
 | 03 | [2026-10-03-03-fix-settings-cache-read-your-write.md](2026-10-03-03-fix-settings-cache-read-your-write.md) | fix | 12.6 | 1.0 | ⬜ 未着手 |
 | 04 | [2026-10-03-04-fix-loginfo-argument-swap.md](2026-10-03-04-fix-loginfo-argument-swap.md) | fix | 10.0 | 0.5 | ⬜ 未着手 — 完了後に 06 が `settingsPipeline.ts` に触るため先に着手 |
 | 05 | [2026-10-03-05-fix-panelaction-onerror-rejection.md](2026-10-03-05-fix-panelaction-onerror-rejection.md) | fix | 10.0 | 0.5 | ⬜ 未着手 — 完了後に 08 が `panelAction.ts` を共有するため先に着手 |

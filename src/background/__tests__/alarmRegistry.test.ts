@@ -46,6 +46,8 @@ import { createAlarmRegistry, type AlarmHandlerDeps } from '../alarmRegistry.js'
 import { setSessionTimeoutRefs } from '../alarmRegistryRefs.js';
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
+import type { SettingsReader } from '../../utils/storage/SettingsRepository.js';
+import { StorageKeys } from '../../utils/storage/types.js';
 
 function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
   return {
@@ -53,12 +55,34 @@ function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
     recordingPipeline: {} as never,
     getOfflineNetworkQueue: async () => ({}) as never,
     retryPendingChromeStorageWrite: vi.fn(async () => true),
+    settingsReader: makeReader(false),
     ...overrides,
   };
 }
 
+function makeReader(enabled: boolean): SettingsReader {
+  const settings = { [StorageKeys.REVIEW_SUMMARY_ENABLED]: enabled } as never;
+  return {
+    getAll: vi.fn(async () => settings),
+    getMany: vi.fn(async () => settings),
+  } as unknown as SettingsReader;
+}
+
 function alarm(name: string): chrome.alarms.Alarm {
   return { name } as chrome.alarms.Alarm;
+}
+
+function stubChromeAlarms(): {
+  create: ReturnType<typeof vi.fn>;
+  clear: ReturnType<typeof vi.fn>;
+  restore: () => void;
+} {
+  const globalRef = globalThis as unknown as { chrome?: unknown };
+  const savedChrome = globalRef.chrome;
+  const create = vi.fn();
+  const clear = vi.fn();
+  globalRef.chrome = { alarms: { create, clear } };
+  return { create, clear, restore: () => { globalRef.chrome = savedChrome; } };
 }
 
 /**
@@ -198,6 +222,64 @@ describe('createAlarmRegistry', () => {
         expect(run).not.toHaveBeenCalled();
       } finally {
         globalRef.chrome = savedChrome;
+      }
+    });
+  });
+
+  describe('review-summary install (pinned: reader-driven)', () => {
+    it('creates both review alarms when the setting is enabled', async () => {
+      const { create, restore } = stubChromeAlarms();
+      try {
+        const registry = createAlarmRegistry(makeDeps({ settingsReader: makeReader(true) }));
+        await registry.installAll();
+
+        expect(create).toHaveBeenCalledWith('yasumaro-review-weekly', {
+          when: expect.any(Number),
+          periodInMinutes: 7 * 24 * 60,
+        });
+        expect(create).toHaveBeenCalledWith('yasumaro-review-monthly', {
+          when: expect.any(Number),
+          periodInMinutes: 31 * 24 * 60,
+        });
+      } finally {
+        restore();
+      }
+    });
+
+    it('clears both review alarms without creating when the setting is disabled', async () => {
+      const { create, clear, restore } = stubChromeAlarms();
+      try {
+        const registry = createAlarmRegistry(makeDeps({ settingsReader: makeReader(false) }));
+        await registry.installAll();
+
+        expect(clear).toHaveBeenCalledWith('yasumaro-review-weekly');
+        expect(clear).toHaveBeenCalledWith('yasumaro-review-monthly');
+        expect(create).not.toHaveBeenCalledWith('yasumaro-review-weekly', expect.anything());
+        expect(create).not.toHaveBeenCalledWith('yasumaro-review-monthly', expect.anything());
+      } finally {
+        restore();
+      }
+    });
+
+    it('skips review alarm creation and records the failure when reading settings fails', async () => {
+      const { create, restore } = stubChromeAlarms();
+      try {
+        const failingReader = {
+          getAll: vi.fn(async () => { throw new Error('storage down'); }),
+          getMany: vi.fn(async () => { throw new Error('storage down'); }),
+        } as unknown as SettingsReader;
+        const registry = createAlarmRegistry(makeDeps({ settingsReader: failingReader }));
+        await registry.installAll();
+
+        expect(create).not.toHaveBeenCalledWith('yasumaro-review-weekly', expect.anything());
+        expect(create).not.toHaveBeenCalledWith('yasumaro-review-monthly', expect.anything());
+        expect(addLogMock).toHaveBeenCalledWith(
+          'ERROR',
+          expect.stringContaining('yasumaro-review-weekly'),
+          expect.anything(),
+        );
+      } finally {
+        restore();
       }
     });
   });
