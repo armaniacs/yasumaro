@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-03 adversarial review ラウンド（adversarial-1003） — ⬜ 15件未着手 🔧非機能追加
+### 2026-10-03 adversarial review ラウンド（adversarial-1003） — 🔶 10件完了・5件未着手 🔧非機能追加
 
 adversarial-code-review skill による `7edc8c6d..HEAD`（37 commits / 163 files）の差分レビュー（hacker + maintainer の 6 agents 発見・独立検証で反証による裏取り。5 findings REFUTED 分は起票対象外）から抽出した 15 候補を RICE 採点して PBI 化。採点・依存・到達可能性証拠の詳細は [2026-10-03-00-backlog-adversarial-1003.md](2026-10-03-00-backlog-adversarial-1003.md)（live 台帳として残置）。実行順は依存優先（04 → 06 / 01 → 10 / 05 → 08、他は並列可）。
 
@@ -23,17 +23,17 @@ adversarial-code-review skill による `7edc8c6d..HEAD`（37 commits / 163 file
 | 01 | [2026-10-03-01-fix-popup-save-silent-data-loss.md](2026-10-03-01-fix-popup-save-silent-data-loss.md) | fix | 36.0 | 0.5 | ✅ 完了（2026-10-03）— result 駆動削除 + whitelist `{ok:false}` 報告。検証: validate exit 0。10 の着手制約は解除済 |
 | 02 | [2026-10-03-02-fix-review-summary-alarms-never-created.md](2026-10-03-02-fix-review-summary-alarms-never-created.md) | fix | 16.0 | 0.5 | ✅ 完了（2026-10-03）— `createJobs(deps)` ファクトリ + `settingsReader` 必須化。検証: validate exit 0 |
 | 03 | [2026-10-03-03-fix-settings-cache-read-your-write.md](2026-10-03-03-fix-settings-cache-read-your-write.md) | fix | 12.6 | 1.0 | ✅ 完了（2026-10-03）— `writeEpoch` 版スタンプで read-your-write を閉鎖。検証: validate exit 0 |
-| 04 | [2026-10-03-04-fix-loginfo-argument-swap.md](2026-10-03-04-fix-loginfo-argument-swap.md) | fix | 10.0 | 0.5 | ⬜ 未着手 — 完了後に 06 が `settingsPipeline.ts` に触るため先に着手 |
-| 05 | [2026-10-03-05-fix-panelaction-onerror-rejection.md](2026-10-03-05-fix-panelaction-onerror-rejection.md) | fix | 10.0 | 0.5 | ⬜ 未着手 — 完了後に 08 が `panelAction.ts` を共有するため先に着手 |
+| 04 | [2026-10-03-04-fix-loginfo-argument-swap.md](2026-10-03-04-fix-loginfo-argument-swap.md) | fix | 10.0 | 0.5 | ✅ 完了（2026-10-03）— 3 箇所の logInfo スロット入れ替え修正。検証: validate exit 0・test 15,465 pass |
+| 05 | [2026-10-03-05-fix-panelaction-onerror-rejection.md](2026-10-03-05-fix-panelaction-onerror-rejection.md) | fix | 10.0 | 0.5 | ✅ 完了（2026-10-03）— onError の try/catch guard + console.error 記録。検証: validate exit 0・panels 304/304 |
 | 06 | [2026-10-03-06-fix-provider-priority-b-throw-divergence.md](2026-10-03-06-fix-provider-priority-b-throw-divergence.md) | fix | 7.2 | 0.5 | ⬜ 未着手 — 04 の完了後に着手 |
-| 07 | [2026-10-03-07-chore-type-baseline-gate-reliability.md](2026-10-03-07-chore-type-baseline-gate-reliability.md) | chore | 4.0 | 1.0 | ⬜ 未着手 |
+| 07 | [2026-10-03-07-chore-type-baseline-gate-reliability.md](2026-10-03-07-chore-type-baseline-gate-reliability.md) | chore | 4.0 | 1.0 | ✅ 完了（2026-10-03）— tsc-ran sanity + CI validate job へ baseline 配線 + CHANGELOG 整合。検証: baseline 489/489 PASS |
 | 08 | [2026-10-03-08-fix-archive-concurrent-exclusion.md](2026-10-03-08-fix-archive-concurrent-exclusion.md) | fix | 3.6 | 1.5 | ⬜ 未着手 — 05 の完了後に着手 |
-| 09 | [2026-10-03-09-fix-anchor-download-revoke-signal.md](2026-10-03-09-fix-anchor-download-revoke-signal.md) | fix | 2.7 | 0.5 | ⬜ 未着手 |
+| 09 | [2026-10-03-09-fix-anchor-download-revoke-signal.md](2026-10-03-09-fix-anchor-download-revoke-signal.md) | fix | 2.7 | 0.5 | ✅ 完了（2026-10-03）— anchor-click はシグナル不在のため 60s を WHY コメントで codify（3 箇所一貫 pin）。検証: validate exit 0 |
 | 10 | [2026-10-03-10-refactor-error-display-contract.md](2026-10-03-10-refactor-error-display-contract.md) | refactor | 2.25 | 1.0 | ⬜ 未着手 — 01 の完了後に着手 |
-| 11 | [2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md](2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md) | fix | 2.0 | 2.0 | ⬜ 未着手（RICE Effort 0.5） |
-| 12 | [2026-10-03-12-fix-saved-url-timestamp-sort-guard.md](2026-10-03-12-fix-saved-url-timestamp-sort-guard.md) | fix | 1.6 | 2.0 | ⬜ 未着手（RICE Effort 0.5） |
+| 11 | [2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md](2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md) | fix | 2.0 | 2.0 | ✅ 完了（2026-10-03）— navigate 失敗時の #rollbackActiveTab + pre-click snapshot。検証: validate exit 0・21/21 repeats=20 |
+| 12 | [2026-10-03-12-fix-saved-url-timestamp-sort-guard.md](2026-10-03-12-fix-saved-url-timestamp-sort-guard.md) | fix | 1.6 | 2.0 | ✅ 完了（2026-10-03）— timestamp 欠損の `(|| 0)` 正規化 4 箇所 + reader 正規化。検証: validate exit 0・74/74 |
 | 13 | [2026-10-03-13-test-pin-behavior-over-implementation.md](2026-10-03-13-test-pin-behavior-over-implementation.md) | test | 0.9 | 3.0 | ⬜ 未着手（RICE Effort 1.0） |
-| 14 | [2026-10-03-14-fix-recovery-claim-same-ms-guard.md](2026-10-03-14-fix-recovery-claim-same-ms-guard.md) | fix | 0.8 | 2.0 | ⬜ 未着手（RICE Effort 0.5） |
+| 14 | [2026-10-03-14-fix-recovery-claim-same-ms-guard.md](2026-10-03-14-fix-recovery-claim-same-ms-guard.md) | fix | 0.8 | 2.0 | ✅ 完了（2026-10-03）— claim token 導入 + `sleep?` 注入オプション。検証: validate exit 0・17 tests repeats=20 |
 | 15 | [2026-10-03-15-chore-comment-docs-alignment.md](2026-10-03-15-chore-comment-docs-alignment.md) | chore | 0.5 | 2.0 | ⬜ 未着手（RICE Effort 0.5） |
 
 ### 2026-10-01 大局的コード改善ラウンド（holistic-code-improvement） — ✅ 21件完了・アーカイブ済み 🔧非機能追加

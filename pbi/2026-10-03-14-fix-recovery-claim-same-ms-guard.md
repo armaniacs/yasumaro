@@ -51,10 +51,10 @@ Then true を返し claim を引き継ぐ
 
 ## 受け入れ基準
 
-- [ ] 1. 同一オーナー・同一ミリ秒の再取得で true が重複しない: `src/utils/recoveryClaimStore.ts:95` の判定に一意な token（owner + モトニック counter または claim 発行毎の uuid）を導入するか、1ms 窓での重複 true を仕様として明示しテストで固定する。どちらを選ぶかは復旧入口の重複実行の許容度で決定する。
-- [ ] 2. fresh claim の no-op（`:89-90`）、expired take-over、異オーナー失敗の現行契約は不変。
-- [ ] 3. CAS conflict retry（`storageTransaction.ts:240` の re-invocation）で判定が壊れない: updater は純粋に保たれ（`:83-86` の契約）、retry 後も正しい成功判定を返す。
-- [ ] 4. 対象は `src/utils/recoveryClaimStore.ts` とそのテストに限定し、呼び出し側（offline queue / popup / dashboard / notification）の変更を不要な形にする。
+- [x] 1. 同一オーナー・同一ミリ秒の再取得で true が重複しない: `src/utils/recoveryClaimStore.ts:95` の判定に一意な token（owner + モトニック counter または claim 発行毎の uuid）を導入するか、1ms 窓での重複 true を仕様として明示しテストで固定する。どちらを選ぶかは復旧入口の重複実行の許容度で決定する。
+- [x] 2. fresh claim の no-op（`:89-90`）、expired take-over、異オーナー失敗の現行契約は不変。
+- [x] 3. CAS conflict retry（`storageTransaction.ts:240` の re-invocation）で判定が壊れない: updater は純粋に保たれ（`:83-86` の契約）、retry 後も正しい成功判定を返す。
+- [x] 4. 対象は `src/utils/recoveryClaimStore.ts` とそのテストに限定し、呼び出し側（offline queue / popup / dashboard / notification）の変更を不要な形にする。
 
 ## テスト戦略
 
@@ -68,8 +68,16 @@ Then true を返し claim を引き継ぐ
 
 ## Definition of Done
 
-- [ ] BDD 3 シナリオがテストとして実装され green
-- [ ] 同一ミリ秒重複取得の挙動が決定され（token 導入 or 仕様明示）、テストで固定されている
-- [ ] CAS retry 経路のテストが存在する
-- [ ] `npm run validate` が green
-- [ ] backlog（順位 14）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] BDD 3 シナリオがテストとして実装され green
+- [x] 同一ミリ秒重複取得の挙動が決定され（token 導入 or 仕様明示）、テストで固定されている
+- [x] CAS retry 経路のテストが存在する
+- [x] `npm run validate` が green
+- [x] backlog（順位 14）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+
+## 実装記録（2026-10-03）
+
+- 裁定: token 導入。`RecoveryClaim` に `token`（claim 発行毎の uuid: `crypto.randomUUID`、非対応環境は `getRandomValues` hex）を追加し、成功判定を `mine?.owner === owner && mine.token === token` に置換（`claimedAt === at` 比較は廃止）。token は `at` と同じく呼出毎に発行し、updater 内ではなく呼び出し側でキャプチャするため CAS retry 間で安定 — updater は純粋のまま。
+- `RecoveryClaimStoreOptions` に `sleep?: SleepFn` を追加 — 共有 CAS への retry 待ちを注入可能にし、テストが競合 retry を実時間なしで駆動できる。省略時は production backoff。
+- テスト: `recoveryClaimStore.test.ts` に 6 件を追加（同一オーナー同一ミリ秒の 2 連続取得、CAS 競合 retry、TTL・異オーナー回帰）。mutation-verified を確認。17 テスト `--repeats=20` green。
+- 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
+- 逸脱: token の説明コメントに confirmTokenManager との対照（fail-closed throw なし — claim は mutual-exclusion hint で authorization gate ではない）を明記。テスト側の `getMockImplementation()` 戻り値に `| undefined` 型の cast を追加 — testDir 型 baseline ゲートが新規 tsc エラーの持ち込みを禁じるため（実行時挙動は不変）。

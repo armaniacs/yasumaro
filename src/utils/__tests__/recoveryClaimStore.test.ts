@@ -129,6 +129,41 @@ describe('claimRecoveryOwner', () => {
         expect([a, b].filter(Boolean)).toHaveLength(1);
         expect(readClaims()['https://example.com']).toBeDefined();
     });
+
+    it('does not grant the same owner twice within one millisecond', async () => {
+        // Regression: the success check used to be `claimedAt === at`, which a
+        // same-owner claim written in the same millisecond also satisfies —
+        // the second claim returned true and a duplicate recovery run started.
+        const store = createRecoveryClaimStore({ now: () => 1_700_000_000_000 });
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(true);
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(false);
+        expect(readClaims()['https://example.com']).toMatchObject({
+            owner: 'offline-queue',
+            claimedAt: 1_700_000_000_000,
+        });
+    });
+
+    it('rejects a different-owner claim within the same millisecond', async () => {
+        const store = createRecoveryClaimStore({ now: () => 1_700_000_000_000 });
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(true);
+        await expect(store.claimRecoveryOwner('https://example.com', 'manual')).resolves.toBe(false);
+        expect(readClaims()['https://example.com']).toMatchObject({
+            owner: 'offline-queue',
+            claimedAt: 1_700_000_000_000,
+        });
+    });
+
+    it('grants one of two concurrent same-owner claims', async () => {
+        // Same-owner double claim: the loser either no-ops on the winner's
+        // fresh claim or retries the CAS into the same no-op. Either way only
+        // one run may start.
+        const [a, b] = await Promise.all([
+            claimRecoveryOwner('https://example.com', 'offline-queue'),
+            claimRecoveryOwner('https://example.com', 'offline-queue'),
+        ]);
+        expect([a, b].filter(Boolean)).toHaveLength(1);
+        expect(readClaims()['https://example.com']).toBeDefined();
+    });
 });
 
 const TTL_MS = 10 * 60 * 1000;
@@ -233,6 +268,88 @@ describe('claim TTL boundary', () => {
         } finally {
             vi.useRealTimers();
         }
+    });
+});
+
+describe('legacy claim compatibility', () => {
+    beforeEach(() => {
+        mockStorage[CLAIMS_KEY] = undefined;
+        vi.clearAllMocks();
+    });
+
+    it('takes over a claim stored without a token once it is expired', async () => {
+        const store = createRecoveryClaimStore({ now: () => 1_700_000_000_000 });
+        mockStorage[CLAIMS_KEY] = {
+            'https://example.com': {
+                url: 'https://example.com',
+                owner: 'manual',
+                claimedAt: 1_700_000_000_000 - TTL_MS - 1,
+            },
+        };
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(true);
+        expect(readClaims()['https://example.com']).toMatchObject({ owner: 'offline-queue' });
+    });
+
+    it('refuses a fresh claim stored without a token', async () => {
+        // A pre-token claim behaves like a foreign fresh claim: the conservative
+        // refusal matches the old behavior for every case except the
+        // same-owner same-millisecond double claim this store fixes.
+        const store = createRecoveryClaimStore({ now: () => 1_700_000_000_000 });
+        mockStorage[CLAIMS_KEY] = {
+            'https://example.com': {
+                url: 'https://example.com',
+                owner: 'manual',
+                claimedAt: 1_700_000_000_000 - 60_000,
+            },
+        };
+        await expect(store.claimRecoveryOwner('https://example.com', 'manual')).resolves.toBe(false);
+        expect(readClaims()['https://example.com']).toMatchObject({ owner: 'manual' });
+    });
+});
+
+describe('claim under CAS conflict retry', () => {
+    beforeEach(() => {
+        mockStorage[CLAIMS_KEY] = undefined;
+        vi.clearAllMocks();
+    });
+
+    it('grants the claim after a conflicting write forces a retry', async () => {
+        const store = createRecoveryClaimStore({
+            now: () => 1_700_000_000_000,
+            // A forced conflict retry re-runs the updater with the token
+            // captured before the lock; the wait is the CAS's own retry sleep,
+            // injected as a no-op so no test run spends wall time on it.
+            sleep: () => Promise.resolve(),
+        });
+        const versionKey = `${CLAIMS_KEY}_version`;
+        // A concurrent writer wins the version race on the first attempt: the
+        // CAS writes version 1, the racer lands version 2 right after, so
+        // post-write verification conflicts and withLock re-runs the updater.
+        // getMockImplementation() is `| undefined` in vitest's types; the
+        // base implementation is always set by this point, and the testDir
+        // type-check baseline forbids adding new tsc errors here.
+        const baseSet = mockChrome.storage.local.set.getMockImplementation() as (
+            items: Record<string, unknown>,
+        ) => Promise<void>;
+        let raced = false;
+        mockChrome.storage.local.set.mockImplementation((items: Record<string, unknown>) => {
+            void baseSet(items);
+            if (!raced && CLAIMS_KEY in items) {
+                raced = true;
+                mockStorage[versionKey] = (items[versionKey] as number) + 1;
+            }
+            return Promise.resolve();
+        });
+        try {
+            await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(true);
+        } finally {
+            mockChrome.storage.local.set.mockImplementation(baseSet);
+        }
+        expect(readClaims()['https://example.com']).toMatchObject({ owner: 'offline-queue' });
+
+        // The retry kept the same token, so a same-millisecond re-claim is
+        // still refused.
+        await expect(store.claimRecoveryOwner('https://example.com', 'offline-queue')).resolves.toBe(false);
     });
 });
 

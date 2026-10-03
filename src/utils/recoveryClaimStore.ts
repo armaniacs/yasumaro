@@ -17,7 +17,8 @@
  * its own URL is claimed again and the map only ever grows.
  */
 
-import { withOptimisticLock } from './storage/storageTransaction.js';
+import { withOptimisticLock, type CasRetryOptions } from './storage/storageTransaction.js';
+import type { SleepFn } from './retryPredicate.js';
 
 const CLAIMS_KEY = 'recording_recovery_claims';
 
@@ -31,6 +32,8 @@ export interface RecoveryClaim {
   url: string;
   owner: RecoveryOwner;
   claimedAt: number;
+  /** Unique per claim issuance; the success signal for the issuing call. */
+  token: string;
 }
 
 interface ClaimMap {
@@ -48,6 +51,25 @@ export interface RecoveryClaimStoreOptions {
    * injects a controllable one instead of waiting out the TTL.
    */
   now?: () => number;
+  /**
+   * Retry wait handed to the shared CAS. Defaults to the production backoff; a
+   * test injects a no-op so a forced conflict retry never spends wall time.
+   */
+  sleep?: SleepFn;
+}
+
+/**
+ * Unique per issuance, not secrecy — unlike confirmTokenManager there is no
+ * fail-closed throw because a claim is a mutual-exclusion hint, not an
+ * authorization gate.
+ */
+function newClaimToken(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 /** A claim is fresh while its age is strictly below the TTL. */
@@ -80,19 +102,27 @@ export function createRecoveryClaimStore(options: RecoveryClaimStoreOptions = {}
    */
   async function claimRecoveryOwner(url: string, owner: RecoveryOwner): Promise<boolean> {
     const at = now();
+    // Issued per call like `at` and stable across CAS retries (captured, not
+    // generated inside the updater): a token check, not `claimedAt === at`,
+    // is what keeps a same-owner same-millisecond re-claim from reporting
+    // ownership of a claim its updater never wrote — two recovery runs would
+    // otherwise start.
+    const token = newClaimToken();
     // The updater must stay pure: withLock re-runs it after a conflict, so a
     // side effect set on the first attempt would survive a retry that finds
     // the winner's fresh claim and write nothing — the caller would then be
     // told it owns a claim it does not. Decide from the value the lock returns.
-    const written = await withOptimisticLock<ClaimMap>(CLAIMS_KEY, (current) => {
+    const updater = (current: ClaimMap): ClaimMap => {
       const claims = asClaimMap(current);
       if (isFresh(claims[url], at)) {
         return claims;
       }
-      return { ...withoutExpiredClaims(claims, at), [url]: { url, owner, claimedAt: at } };
-    });
+      return { ...withoutExpiredClaims(claims, at), [url]: { url, owner, claimedAt: at, token } };
+    };
+    const casOptions: CasRetryOptions = options.sleep === undefined ? {} : { sleep: options.sleep };
+    const written = await withOptimisticLock<ClaimMap>(CLAIMS_KEY, updater, casOptions);
     const mine = asClaimMap(written)[url];
-    return mine?.owner === owner && mine.claimedAt === at;
+    return mine?.owner === owner && mine.token === token;
   }
 
   /**

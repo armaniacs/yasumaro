@@ -62,4 +62,15 @@ RICE = R × I × C / E。値は各 PBI 内「優先度」セクションの記�
 | 01 | ✅ 完了（2026-10-03）— result 駆動削除 + whitelist `{ok:false}` 報告。検証: validate exit 0 |
 | 02 | ✅ 完了（2026-10-03）— `createJobs(deps)` ファクトリ + `settingsReader` 必須化。逸脱: クロージャキャプチャ解釈 |
 | 03 | ✅ 完了（2026-10-03）— `writeEpoch` 版スタンプで read-your-write を閉鎖。逸脱: observe branch も epoch advance |
-| 04–15 | ⬜ 未着手 |
+| 04 | ✅ 完了（2026-10-03）— 3 箇所の logInfo スロット入れ替え修正。逸脱: `trancoManager` 実パスは `utils/trustDb/`（移設済み）、スロット解釈を除きログ内容バイト同一。検証: validate exit 0 |
+| 05 | ✅ 完了（2026-10-03）— onError の try/catch guard + console.error 記録。逸脱: purge-test characterization 更新（漏れ経路は設計上除去）。検証: validate exit 0・panels 304/304 |
+| 06 | ⬜ 未着手 |
+| 07 | ✅ 完了（2026-10-03）— tsc-ran sanity（exit-code 方式）+ CI validate job へ baseline 配線 + CHANGELOG 整合。逸脱: summary 行 sanity は tsc 6.0.3 で採用不可のため棄却、swap 限界を文書化。検証: baseline 489/489 PASS |
+| 08 | ⬜ 未着手 |
+| 09 | ✅ 完了（2026-10-03）— anchor-click はシグナル不在のため 60s を WHY コメントで codify（3 箇所一貫 pin、ロジック変更なし）。検証: validate exit 0 |
+| 10 | ⬜ 未着手 |
+| 11 | ✅ 完了（2026-10-03）— navigate 失敗時の `#rollbackActiveTab` + pre-click snapshot。逸脱: activeId guard（activation 後失敗はロールバックせず）、toast なし裁定。検証: validate exit 0・21/21 repeats=20 |
+| 12 | ✅ 完了（2026-10-03）— timestamp 欠損の `(|| 0)` 正規化（comparator ×2 + cutoff + reader）。逸脱: reader 正規化は AC 4 の決定を超えた実装。検証: validate exit 0・74/74 |
+| 13 | ⬜ 未着手 |
+| 14 | ✅ 完了（2026-10-03）— claim token 導入（`token` 一致判定へ置換）+ `sleep?` 注入オプション。逸脱: テスト側 `getMockImplementation()` cast（baseline ゲート対応）。検証: validate exit 0・17 tests repeats=20 |
+| 15 | ⬜ 未着手 |
