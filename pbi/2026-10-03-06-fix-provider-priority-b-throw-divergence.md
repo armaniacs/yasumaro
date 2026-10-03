@@ -40,11 +40,11 @@ Scenario: UI と保存値が一致する
 
 ## 受け入れ基準
 
-- [ ] 裁定（B-throw → `collector_failed` で保存中断 / stored fallback のいずれか）が実装記録に 1 行残されている
-- [ ] `src/dashboard/providerPrioritySlots.ts:56-60` の B-throw catch 経路が裁定後の意味論に従い、fallback 結果の `[]` がそのまま保存対象にならない
-- [ ] `src/dashboard/settingsPipeline.ts:147` の呼び出しで `[]` が `AI_PROVIDER_PRIORITY_LIST` に保存されない（`:64` の stored fallback が効くか、保存が中断される）
-- [ ] B validation（`src/dashboard/settingsPipeline.ts:152-192`、`src/dashboard/aiProviderB/priorityListView.ts:75-85`）で UI と保存値の発散が構造的に発生しない
-- [ ] doc comment（`src/dashboard/providerPrioritySlots.ts:39-47`）に B-throw 経路の意味論が追記されている
+- [x] 裁定（B-throw → `collector_failed` で保存中断 / stored fallback のいずれか）が実装記録に 1 行残されている
+- [x] `src/dashboard/providerPrioritySlots.ts:56-60` の B-throw catch 経路が裁定後の意味論に従い、fallback 結果の `[]` がそのまま保存対象にならない
+- [x] `src/dashboard/settingsPipeline.ts:147` の呼び出しで `[]` が `AI_PROVIDER_PRIORITY_LIST` に保存されない（`:64` の stored fallback が効くか、保存が中断される）
+- [x] B validation（`src/dashboard/settingsPipeline.ts:152-192`、`src/dashboard/aiProviderB/priorityListView.ts:75-85`）で UI と保存値の発散が構造的に発生しない
+- [x] doc comment（`src/dashboard/providerPrioritySlots.ts:39-47`）に B-throw 経路の意味論が追記されている
 
 ## テスト戦略
 
@@ -58,6 +58,14 @@ Scenario: UI と保存値が一致する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- 裁定: B-throw も A-throw と同一の propagate 意味論に統一（B-try/catch → A silent fallback を廃止）。B-throw 時は保存が `collector_failed` で中断され、`[]` は `AI_PROVIDER_PRIORITY_LIST` に保存されない
+- `src/dashboard/providerPrioritySlots.ts` — B-try/catch → A silent fallback を削除し、両 collector の throw を propagate（三項演算子化）。doc comment（`:36-53`）に A/B 両方の throw 意味論と「storage fallback は throw では発火しない」ことを追記
+- `src/dashboard/settingsPipeline.ts` — コメントのみ更新（B-throw 統一を `:142-147` に反映、コード無変更）
+- テスト: `providerPrioritySlots.test.ts` に B-throw 伝播の回帰テスト（修正前 RED 4 件を確認済み）、`settingsPipeline.test.ts` に B-throw 保存中断 + B-success parity テストを追加
+- 検証: tsc 0 エラー・lint 0 エラー・test 15,476 pass・validate exit 0・当該 35/35 green・repeats=5

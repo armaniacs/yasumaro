@@ -157,6 +157,13 @@ function stubTabs(): void {
       sendMessage: vi.fn(),
     },
     runtime: { lastError: null, sendMessage: vi.fn() },
+    // The failure boundary now derives its sentence via errorUtils, which
+    // reads chrome.i18n directly — a stub without it turns the boundary into
+    // an unhandled rejection instead of a displayed message.
+    i18n: {
+      getMessage: vi.fn((key: string) => key),
+      getUILanguage: vi.fn(() => 'en'),
+    },
   });
 }
 

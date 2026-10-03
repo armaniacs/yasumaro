@@ -5,8 +5,9 @@
  * Consolidates the inline copies that lived in settingsPipeline.ts (save path:
  * layout b -> B collect -> A fallback) and generalSettingsPanel.ts (B-view
  * init: A collect -> storage fallback). Saved ProviderSlot[] content, order,
- * empty-array conditions, and the B-try-before-A fallback priority are
- * unchanged — only the branching location moved.
+ * and empty-array conditions are unchanged; the B-collector's throw is not
+ * swallowed into the A fallback (collector failures propagate uniformly —
+ * see collectCurrentProviderPrioritySlots).
  */
 
 import type { ProviderSlot } from '../utils/storage/types.js';
@@ -34,33 +35,30 @@ export function isBPriorityListActive(
 
 /**
  * Collect the current provider priority slots, B-first with A fallback.
- * B try -> A fallback, then storage fallback when DOM collection is empty.
+ * B collect when the B layout is active, A collect otherwise, then storage
+ * fallback when DOM collection is empty.
  *
- * Throw semantics (PBI 2026-10-02-09, restore decision): an A-collector throw
- * propagates to the caller instead of being swallowed to []. The pre-consolidation
- * save path let collectProviderPrioritySlots() throw, aborting the save and
- * preserving the stored list; swallowing here would instead persist [] and
- * silently blank the priority list on the save path (which passes no stored
- * snapshot). Callers handle the throw: the save pipeline catches it and returns
- * { success: false, error: 'collector_failed' } (rendered via saveErrorText's
- * generic saveError text), and the B-view init catches it and falls back to
- * the stored snapshot.
+ * Throw semantics (PBI 2026-10-02-09 A-throw; B-throw unified with it): BOTH
+ * collectors' throws propagate to the caller — a failed collection never
+ * falls back to the other collector or to []. Swallowing would persist data
+ * the DOM never showed: the save path passes no stored snapshot, so an
+ * A-throw swallowed to [] silently blanks the priority list, and a B-throw
+ * swallowed into the A collector persists the A hidden inputs' [] while the
+ * B UI still shows valid rows. Callers handle the throw: the save pipeline
+ * catches it and returns { success: false, error: 'collector_failed' }
+ * (rendered via saveErrorText's generic saveError text), and the B-view init
+ * catches it and falls back to the stored snapshot. The storage fallback at
+ * the end only fires on a legitimately empty DOM collection, never on a
+ * throw.
  */
 export function collectCurrentProviderPrioritySlots({
   layout,
   bList,
   stored,
 }: CurrentProviderPrioritySlotsInput): ProviderSlot[] {
-  let slots: ProviderSlot[];
-  if (isBPriorityListActive(layout, bList)) {
-    try {
-      slots = collectBProviderPrioritySlots(bList);
-    } catch {
-      slots = collectProviderPrioritySlots();
-    }
-  } else {
-    slots = collectProviderPrioritySlots();
-  }
+  const slots = isBPriorityListActive(layout, bList)
+    ? collectBProviderPrioritySlots(bList)
+    : collectProviderPrioritySlots();
   if (slots.length === 0 && Array.isArray(stored)) return stored as ProviderSlot[];
   return slots;
 }

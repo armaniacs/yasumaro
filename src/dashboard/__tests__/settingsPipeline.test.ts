@@ -52,6 +52,14 @@ vi.mock('../generalSettings/settingsForm.js', () => ({
   collectProviderPrioritySlots: vi.fn().mockReturnValue(['gemini']),
 }));
 
+vi.mock('../aiProviderB/priorityListView.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../aiProviderB/priorityListView.js')>();
+  return {
+    ...actual,
+    collectBProviderPrioritySlots: vi.fn(actual.collectBProviderPrioritySlots),
+  };
+});
+
 vi.mock('../settings/fieldValidation.js', () => ({
   clearAllFieldErrors: vi.fn(),
   validateAllFields: vi.fn().mockReturnValue(true),
@@ -81,6 +89,7 @@ vi.mock('../utils/confirmDialog.js', () => ({
 
 import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS } from '../settingsPipeline.js';
 import { collectProviderPrioritySlots } from '../generalSettings/settingsForm.js';
+import { collectBProviderPrioritySlots } from '../aiProviderB/priorityListView.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import * as formBinding from '../../utils/settingsFormBinding.js';
 import * as fieldValidation from '../settings/fieldValidation.js';
@@ -109,6 +118,23 @@ function setupInputs(protocol = 'https', obsidianHost = '127.0.0.1', geminiVersi
     <input id="minScrollDepth" value="50" />
     <input id="maxTokensPerPrompt" value="1000" />
   `;
+}
+
+function setupBDom(): void {
+  setupInputs('https');
+  const list = document.createElement('div');
+  list.id = 'bPriorityList';
+  list.innerHTML = `
+    <div class="b-priority-row">
+      <select>
+        <option value="">--</option>
+        <option value="openai" selected>openai</option>
+        <option value="gemini">gemini</option>
+      </select>
+      <input class="b-priority-model-input" value="gpt-4o" />
+    </div>
+  `;
+  document.body.appendChild(list);
 }
 
 beforeEach(() => {
@@ -308,6 +334,36 @@ describe('saveDashboardSettings', () => {
     const result = await saveDashboardSettings();
     expect(result).toEqual({ success: false, error: 'collector_failed' });
     expect(mockSaveSettings).not.toHaveBeenCalled();
+  });
+
+  it('aborts a B-layout save when the B collector throws instead of persisting A-fallback content', async () => {
+    // Parity: pre-fix the B-collector throw was swallowed into the A
+    // collector (['gemini'] here) and saved while the B UI still showed valid
+    // rows — the same collector_failed abort as an A-throw must apply.
+    setupBDom();
+    mockGetSettings.mockResolvedValue({ ai_provider_layout: 'b' } as never);
+    vi.mocked(collectBProviderPrioritySlots).mockImplementationOnce(() => {
+      throw new Error('injected B-collector failure');
+    });
+
+    const result = await saveDashboardSettings();
+
+    expect(result).toEqual({ success: false, error: 'collector_failed' });
+    expect(mockSaveSettings).not.toHaveBeenCalled();
+  });
+
+  it('saves the B rows content when the B collector succeeds (UI and saved value agree)', async () => {
+    setupBDom();
+    mockGetSettings.mockResolvedValue({ ai_provider_layout: 'b' } as never);
+
+    const result = await saveDashboardSettings();
+
+    expect(result.success).toBe(true);
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ai_provider_priority_list: [{ provider: 'openai', model: 'gpt-4o' }],
+      }),
+    );
   });
 });
 

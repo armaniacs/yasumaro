@@ -3,9 +3,10 @@
  * providerPrioritySlots.test.ts
  * Parity tests for collectCurrentProviderPrioritySlots (PBI 2026-10-02-01).
  *
- * Pins the old inline behavior of the two call sites being consolidated:
+ * Pins the call-site behavior of the two consumers of the helper:
  * - settingsPipeline.ts save path: layout b + bList rows -> B collect,
- *   B throw -> A fallback, otherwise A collect.
+ *   otherwise A collect; a B-collector throw propagates (no silent A
+ *   fallback) so the save aborts instead of persisting A/[] content.
  * - generalSettingsPanel.ts B-view init: A collect, empty -> storage fallback.
  *
  * Uses the real DOM collectors (no collector mocks), so every expectation is
@@ -94,20 +95,36 @@ describe('collectCurrentProviderPrioritySlots', () => {
       ]);
     });
 
-    it('falls back to A slots when B collection throws', () => {
+    it('propagates a B-collector throw instead of silently collecting A slots', () => {
+      // The A DOM is populated, so the pre-fix silent B-throw -> A fallback
+      // returned the A slots below (diverging from the B UI); a B-throw must
+      // surface so the save pipeline aborts instead.
       setADom('gemini', '', 'openai', 'gpt-4');
-      // Row presence check passes but row reading throws, mirroring the old
-      // try { collectB } catch { collectA } fallback in the save path.
+      // Row presence check passes but row reading throws.
       const broken = {
         querySelector: () => document.createElement('div'),
         querySelectorAll: () => {
           throw new Error('unreadable B rows');
         },
       } as unknown as HTMLElement;
-      expect(collectCurrentProviderPrioritySlots({ layout: 'b', bList: broken })).toEqual([
-        { provider: 'gemini' },
-        { provider: 'openai', model: 'gpt-4' },
-      ]);
+      expect(() => collectCurrentProviderPrioritySlots({ layout: 'b', bList: broken })).toThrow(
+        'unreadable B rows',
+      );
+    });
+
+    it('propagates a B-collector throw when the A DOM is empty and no stored snapshot exists', () => {
+      // Pre-fix the B throw was swallowed into the A collector's [] and that
+      // [] became the save payload while the B UI still showed valid rows.
+      document.body.innerHTML = '';
+      const broken = {
+        querySelector: () => document.createElement('div'),
+        querySelectorAll: () => {
+          throw new Error('unreadable B rows');
+        },
+      } as unknown as HTMLElement;
+      expect(() => collectCurrentProviderPrioritySlots({ layout: 'b', bList: broken })).toThrow(
+        'unreadable B rows',
+      );
     });
 
     it('returns A slots when layout is b but no B list is given', () => {
@@ -152,7 +169,7 @@ describe('collectCurrentProviderPrioritySlots', () => {
     });
   });
 
-  describe('throw semantics (PBI 2026-10-02-09, restore: propagate)', () => {
+  describe('throw semantics (collector throws propagate, PBI 2026-10-02-09)', () => {
     function breakACollector(): void {
       vi.spyOn(document, 'getElementById').mockImplementation(() => {
         throw new Error('injected A-collector failure');
@@ -174,10 +191,13 @@ describe('collectCurrentProviderPrioritySlots', () => {
       );
     });
 
-    it('propagates when B collection throws and the A fallback also throws', () => {
+    it('propagates the B-collector error without consulting the A collector', () => {
+      // The A collector is rigged to fail here, so if the B throw were
+      // swallowed into an A fallback the surfaced error would be the A one;
+      // the B error itself must propagate (pre-fix: 'injected A-collector
+      // failure' leaked out of the catch block instead).
       setADom('gemini', '', '', '');
-      // Row presence check passes but row reading throws, so the B->A
-      // fallback runs and the broken A collector throw must propagate.
+      // Row presence check passes but row reading throws.
       const broken = {
         querySelector: () => document.createElement('div'),
         querySelectorAll: () => {
@@ -186,7 +206,7 @@ describe('collectCurrentProviderPrioritySlots', () => {
       } as unknown as HTMLElement;
       breakACollector();
       expect(() => collectCurrentProviderPrioritySlots({ layout: 'b', bList: broken })).toThrow(
-        'injected A-collector failure',
+        'unreadable B rows',
       );
     });
   });

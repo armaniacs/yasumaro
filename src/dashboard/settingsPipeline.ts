@@ -139,10 +139,11 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   // below only guards the B validation UI + P1 save block, not collection.
   const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
   const bList = document.getElementById('bPriorityList') as HTMLElement | null;
-  // Throw semantics (PBI 2026-10-02-09): the A-collector throw propagates out
-  // of collectCurrentProviderPrioritySlots. A failed collection must abort the
-  // save as { success: false } (rendered by callers via saveErrorText's generic
-  // saveError text) rather than persist a silently-blanked priority list.
+  // Throw semantics (PBI 2026-10-02-09; B-throw unified): any collector
+  // failure (A or B) propagates out of collectCurrentProviderPrioritySlots.
+  // A failed collection must abort the save as { success: false } (rendered
+  // by callers via saveErrorText's generic saveError text) rather than
+  // persist a silently-blanked priority list while the B UI still shows rows.
   try {
     newSettings[StorageKeys.AI_PROVIDER_PRIORITY_LIST] = collectCurrentProviderPrioritySlots({ layout, bList });
   } catch {
