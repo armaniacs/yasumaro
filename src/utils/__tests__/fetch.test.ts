@@ -7,7 +7,7 @@ beforeEach(async () => {
   await installTestSecretKek();
 });
 import { normalizeUrl } from '../urlUtils.js';
-import { logDebug } from '../logger/api.js';
+import { logDebug, logWarn } from '../logger/api.js';
 import * as cspValidatorModule from '../cspValidator.js';
 
 
@@ -582,6 +582,7 @@ describe('fetchWithRetry', () => {
         maxRetryCount: 2,
         initialDelayMs: 10,
         maxDelayMs: 50,
+        sleep: vi.fn((_ms: number) => Promise.resolve()),
       })
     ).rejects.toThrow('HTTP 500');
   });
@@ -595,6 +596,7 @@ describe('fetchWithRetry', () => {
         maxRetryCount: 2,
         initialDelayMs: 10,
         maxDelayMs: 50,
+        sleep: vi.fn((_ms: number) => Promise.resolve()),
       })
     ).rejects.toThrow('Network failure');
   });
@@ -614,6 +616,7 @@ describe('fetchWithRetry', () => {
       initialDelayMs: 10,
       maxDelayMs: 50,
       shouldRetry: () => true,
+      sleep: vi.fn((_ms: number) => Promise.resolve()),
     });
 
     expect(response.ok).toBe(true);
@@ -690,6 +693,7 @@ describe('fetchWithRetry', () => {
       maxRetryCount: 3,
       initialDelayMs: 10,
       maxDelayMs: 50,
+      sleep: vi.fn((_ms: number) => Promise.resolve()),
     });
 
     expect(response.ok).toBe(true);
@@ -767,10 +771,115 @@ describe('fetchWithRetry', () => {
       initialDelayMs: 10,
       maxDelayMs: 50,
       shouldRetry: () => true,
+      sleep: vi.fn((_ms: number) => Promise.resolve()),
     });
 
     expect(response.ok).toBe(true);
     expect(logDebug).toHaveBeenCalled();
+  });
+});
+
+describe('fetchWithRetry - HTTP 5xx backoff parity', () => {
+  const originalFetch = global.fetch;
+
+  const makeSleepStub = () => vi.fn((_ms: number) => Promise.resolve());
+  const sleepDelays = (sleep: ReturnType<typeof makeSleepStub>): number[] =>
+    sleep.mock.calls.map(([ms]) => ms);
+
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  test('HTTP 5xx retry waits the same backoff series as the network-error path', async () => {
+    const sleep = makeSleepStub();
+    vi.mocked(logWarn).mockClear();
+    global.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 503, statusText: 'Service Unavailable' } as Response));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
+        maxRetryCount: 3,
+        initialDelayMs: 1000,
+        backoffMultiplier: 2,
+        maxDelayMs: 10000,
+        sleep,
+      })
+    ).rejects.toThrow('HTTP 503');
+
+    // catch 経路と同一の 0-origin 指数バックオフ（1000 → 2000 → 4000）
+    expect(sleepDelays(sleep)).toEqual([1000, 2000, 4000]);
+    expect(global.fetch).toHaveBeenCalledTimes(4);
+  });
+
+  test('network-error retry drives the same injected SleepFn with the same series', async () => {
+    const sleep = makeSleepStub();
+    // 実際の fetch ネットワークエラーと同じ TypeError('fetch failed'):
+    // 既定の shouldRetry がこれをリトライ対象と判定する
+    global.fetch = vi.fn(() => Promise.reject(new TypeError('fetch failed')));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
+        maxRetryCount: 3,
+        initialDelayMs: 1000,
+        backoffMultiplier: 2,
+        maxDelayMs: 10000,
+        sleep,
+      })
+    ).rejects.toThrow('fetch failed');
+
+    expect(sleepDelays(sleep)).toEqual([1000, 2000, 4000]);
+  });
+
+  test('HTTP 5xx retry logs the computed delay', async () => {
+    const sleep = makeSleepStub();
+    vi.mocked(logWarn).mockClear();
+    global.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 503, statusText: 'Service Unavailable' } as Response));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
+        maxRetryCount: 1,
+        initialDelayMs: 1000,
+        sleep,
+      })
+    ).rejects.toThrow('HTTP 503');
+
+    expect(logWarn).toHaveBeenCalledWith(
+      expect.stringContaining('retrying in 1000ms'),
+      expect.objectContaining({ delay: 1000, status: 503 }),
+      undefined,
+      'fetchWithRetry',
+    );
+  });
+
+  test('the exhausted final attempt throws without a further sleep', async () => {
+    const sleep = makeSleepStub();
+    global.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 503, statusText: 'Service Unavailable' } as Response));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
+        maxRetryCount: 0,
+        sleep,
+      })
+    ).rejects.toThrow('HTTP 503');
+
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  test('all retries fail: the last HTTP error is thrown after the full series', async () => {
+    const sleep = makeSleepStub();
+    global.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 503, statusText: 'Service Unavailable' } as Response));
+
+    await expect(
+      fetchWithRetry('https://example.com/api', { skipCspValidation: true }, {
+        maxRetryCount: 2,
+        initialDelayMs: 1000,
+        backoffMultiplier: 2,
+        maxDelayMs: 10000,
+        sleep,
+      })
+    ).rejects.toThrow('HTTP 503');
+
+    expect(sleepDelays(sleep)).toEqual([1000, 2000]);
+    expect(global.fetch).toHaveBeenCalledTimes(3);
   });
 });
 

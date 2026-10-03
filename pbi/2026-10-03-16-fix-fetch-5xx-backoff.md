@@ -40,12 +40,12 @@ Scenario: 全リトライ失敗時は従来どおり例外送出
 
 ## 受け入れ基準
 
-- [ ] `src/utils/fetch.ts` の HTTP リトライ経路（現 :373-376）に、catch 経路（現 :389-395）と同一の `backoffDelayMs` 遅延が追加されている
-- [ ] 遅延実行は注入可能な SleepFn 経由（既定は `setTimeout` ラッパ）で、catch 経路も同一ヘルパーに統一されている
-- [ ] JSDoc の totalBackoff 記述（現 :322-327）が実動作と整合する
-- [ ] HTTP リトライ時の `logWarn` に delay が含まれる
-- [ ] 追加・既存テストは SleepFn を stub し、実時間待ち・固定 sleep・retry 増加による回避を行わない
-- [ ] 既存 fetch 関連テストが green
+- [x] `src/utils/fetch.ts` の HTTP リトライ経路（現 :373-376）に、catch 経路（現 :389-395）と同一の `backoffDelayMs` 遅延が追加されている
+- [x] 遅延実行は注入可能な SleepFn 経由（既定は `setTimeout` ラッパ）で、catch 経路も同一ヘルパーに統一されている
+- [x] JSDoc の totalBackoff 記述（現 :322-327）が実動作と整合する
+- [x] HTTP リトライ時の `logWarn` に delay が含まれる
+- [x] 追加・既存テストは SleepFn を stub し、実時間待ち・固定 sleep・retry 増加による回避を行わない
+- [x] 既存 fetch 関連テストが green
 
 ## テスト戦略
 
@@ -59,6 +59,12 @@ Scenario: 全リトライ失敗時は従来どおり例外送出
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録
+
+- 回帰テスト: 修正前に新規 5 件のパリティテストのうち 4 件が FAIL（HTTP 経路が遅延ゼロで連打リトライ）→ 修正後に GREEN。既存 5 件の retry テストには SleepFn stub を注入し、実時間待ちを排除
+- 変更ファイル: `src/utils/fetch.ts`（HTTP 5xx リトライ経路に backoffDelayMs 遅延を追加、catch 経路を同一の injectable `sleepFn` に統一、`SleepFn`/`defaultSleep` を export、`RetryOptions.sleep?` 追加、JSDoc の totalBackoff 記述を実動作と整合）、`src/utils/__tests__/fetch.test.ts`（新規 5 件 + 既存 5 件の sleep stub 化）
+- ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー（119 warning は既存） / `npm test` 15529 passed・21 skipped / `npm run validate` PASS

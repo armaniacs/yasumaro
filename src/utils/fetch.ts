@@ -278,6 +278,15 @@ export function isUrlAllowed(url: string, allowedUrls: Set<string> | null): bool
 }
 
 /**
+ * リトライ間の待機関数。AGENTS.md の待機ポリシーにより、本番コードの意図的待機は
+ * 注入可能にする。両リトライ経路（HTTP 5xx / ネットワークエラー）が同一ヘルパーを
+ * 経由しないと、片方だけが遅延ゼロの連打リトライに戻るためここで一元化する。
+ */
+export type SleepFn = (ms: number) => Promise<void>;
+
+const defaultSleep: SleepFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
  * リトライ設定
  */
 export interface RetryOptions {
@@ -291,6 +300,8 @@ export interface RetryOptions {
   maxDelayMs?: number;
   /** リトライすべきエラー条件 */
   shouldRetry?: (error: Error, attempt: number, response: Response | null, method?: string) => boolean;
+  /** 待機関数（リトライ間のバックオフ。既定は setTimeout ラッパ） */
+  sleep?: SleepFn;
   /** HTTPメソッドの明示的な指定（省略時はリクエストオプションのmethodを使用） */
   method?: string;
 }
@@ -319,6 +330,9 @@ function defaultShouldRetry(error: Error, attempt: number, response: Response | 
  * 指数バックオフ付きリトライ機能付きフェッチ
  * ネットワークエラーや5xxエラー時に自動リトライ
  *
+ * ネットワークエラー・HTTP 5xx のどちらのリトライも同一の指数バックオフ
+ * （backoffDelayMs + SleepFn）で待機する。下記の totalBackoff 契約は両経路で成立する。
+ *
  * **タイムアウト動作:**
  * - 各リトライ試行は `timeoutMs` でタイムアウト
  * - 全リトライ失敗時の最大待機時間: `(maxRetryCount + 1) * timeoutMs + totalBackoff`
@@ -341,7 +355,8 @@ export async function fetchWithRetry(
     initialDelayMs = 1000,
     backoffMultiplier = 2,
     maxDelayMs = 10000,
-    shouldRetry = defaultShouldRetry
+    shouldRetry = defaultShouldRetry,
+    sleep: sleepFn = defaultSleep
   } = retryOptions;
 
   const requestMethod = retryOptions.method ?? options.method ?? 'GET';
@@ -371,9 +386,15 @@ export async function fetchWithRetry(
         failureFromHttpStatus(response.status, requestMethod),
       );
       if (attempt < maxRetryCount && shouldRetry(attemptError, attempt + 1, response, requestMethod)) {
-        // リトライ
+        // リトライ遅延（catch 経路と同一の指数バックオフ）
         lastError = attemptError;
-        logWarn(`HTTP error, retrying...`, { url, attempt: attempt + 1, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
+        const delay = backoffDelayMs(attempt, {
+          baseMs: initialDelayMs,
+          multiplier: backoffMultiplier,
+          maxMs: maxDelayMs,
+        });
+        logWarn(`HTTP error, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, status: response.status }, undefined, 'fetchWithRetry');
+        await sleepFn(delay);
       } else {
         // リトライなしまたは全リトライ失敗
         logWarn(`HTTP error, no more retries`, { url, attempt, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
@@ -392,7 +413,7 @@ export async function fetchWithRetry(
           maxMs: maxDelayMs,
         });
         logWarn(`Request failed, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, error: lastError.message }, undefined, 'fetchWithRetry');
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await sleepFn(delay);
       } else {
         // リトライなしまたは全リトライ失敗
         logWarn(`Request failed, no more retries`, { url, attempt, maxRetryCount, error: lastError.message }, undefined, 'fetchWithRetry');
