@@ -64,13 +64,13 @@ RICE = R × I × C / E。値は各 PBI 内「優先度」セクションの記�
 | 03 | ✅ 完了（2026-10-03）— `writeEpoch` 版スタンプで read-your-write を閉鎖。逸脱: observe branch も epoch advance |
 | 04 | ✅ 完了（2026-10-03）— 3 箇所の logInfo スロット入れ替え修正。逸脱: `trancoManager` 実パスは `utils/trustDb/`（移設済み）、スロット解釈を除きログ内容バイト同一。検証: validate exit 0 |
 | 05 | ✅ 完了（2026-10-03）— onError の try/catch guard + console.error 記録。逸脱: purge-test characterization 更新（漏れ経路は設計上除去）。検証: validate exit 0・panels 304/304 |
-| 06 | ⬜ 未着手 |
+| 06 | ✅ 完了（2026-10-03）— B-throw も propagate に統一（B-try/catch → A silent fallback 廃止、doc に A/B 両 throw を追記）。逸脱: stored fallback 分岐は不採用（propagate 統一で保存中断が上回る）。検証: validate exit 0・35/35 repeats=5 |
 | 07 | ✅ 完了（2026-10-03）— tsc-ran sanity（exit-code 方式）+ CI validate job へ baseline 配線 + CHANGELOG 整合。逸脱: summary 行 sanity は tsc 6.0.3 で採用不可のため棄却、swap 限界を文書化。検証: baseline 489/489 PASS |
-| 08 | ⬜ 未着手 |
+| 08 | ✅ 完了（2026-10-03）— restoreFileInput を busy スコープへ + `inFlightControls`（WeakSet）guard + confirm dialog を run 内へ移動（`abortPanelAction`）。検証: validate exit 0・panels 53 tests repeats=20 |
 | 09 | ✅ 完了（2026-10-03）— anchor-click はシグナル不在のため 60s を WHY コメントで codify（3 箇所一貫 pin、ロジック変更なし）。検証: validate exit 0 |
-| 10 | ⬜ 未着手 |
+| 10 | ✅ 完了（2026-10-03）— 失敗表示を `getUserErrorMessage` 派生に統一（privatePageDialog :112 不整合解消）+ `errorDisplayContract.test.ts`。逸脱: wireOnce-parity の chrome.i18n stub 7 行は本 PBI 帰属（残差分は 13）。検証: validate exit 0・popup sweep 903 |
 | 11 | ✅ 完了（2026-10-03）— navigate 失敗時の `#rollbackActiveTab` + pre-click snapshot。逸脱: activeId guard（activation 後失敗はロールバックせず）、toast なし裁定。検証: validate exit 0・21/21 repeats=20 |
 | 12 | ✅ 完了（2026-10-03）— timestamp 欠損の `(|| 0)` 正規化（comparator ×2 + cutoff + reader）。逸脱: reader 正規化は AC 4 の決定を超えた実装。検証: validate exit 0・74/74 |
-| 13 | ⬜ 未着手 |
+| 13 | ✅ 完了（2026-10-03）— ソース正規表現ピンを attach 観測（EventTarget seam）へ置換、settle()/drain を waitForMock 完了シグナルへ置換、tripwire 文書化。逸脱: spy 型注釈に `| null`（testDir baseline 489 復帰）。検証: validate exit 0・24 tests repeats=20 |
 | 14 | ✅ 完了（2026-10-03）— claim token 導入（`token` 一致判定へ置換）+ `sleep?` 注入オプション。逸脱: テスト側 `getMockImplementation()` cast（baseline ゲート対応）。検証: validate exit 0・17 tests repeats=20 |
-| 15 | ⬜ 未着手 |
+| 15 | ✅ 完了（2026-10-03）— (a)-(e) コメント・デッド比較修正（(d) はガード不採用・契約コメント）。(f) CHANGELOG は rank-07 で解消済み。検証: validate exit 0 |

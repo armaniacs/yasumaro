@@ -137,6 +137,13 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
     run: async () => { await reviewSummaryGeneratorRef?.generateMonthlySummary(); },
   },
   {
+    // WHY the optional-chained refs: both hooks are wired by
+    // setSessionTimeoutRefs() in service-worker.ts at module-eval time, after
+    // this table is built. Until injection each hook is a silent no-op — the
+    // session-timeout alarm is never armed and a stray firing is dropped
+    // without a log. installAll() is fired un-awaited from init(), so nothing
+    // here synchronizes with the injection; the ordering guarantee lives in
+    // service-worker.ts's module-eval order (refs injected before init()).
     name: 'check_session_timeout',
     install: async () => { await sessionTimeoutInstallRef?.(); },
     run: async () => { await sessionTimeoutRunRef?.(); },

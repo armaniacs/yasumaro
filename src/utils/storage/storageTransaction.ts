@@ -134,7 +134,12 @@ interface CasRetryShell {
    * part of the log contract, not just diagnostics.
    */
   retryLogData: (attempt: number, delay: number) => Record<string, unknown>;
-  /** Unreachable while the budget check throws; kept per method for identity. */
+  /**
+   * Unreachable at runtime: the budget-exhausted check throws before the loop
+   * can exit. Kept so the tail throw closes the last path of `Promise<R>`
+   * (TypeScript cannot statically prove the loop always returns or throws)
+   * and names the calling method in the otherwise-impossible fallback error.
+   */
   fallbackMessage: string;
 }
 
@@ -176,6 +181,13 @@ async function runCasRetryLoop<R>(runAttempt: () => Promise<R>, shell: CasRetryS
  * when the caller resumes": a writer that lost the key in between shows up as
  * a version or value mismatch, reported as a ConflictError so the retry shell
  * re-reads and re-derives instead of reporting a lost update as committed.
+ *
+ * Contract limitation: version keys are derived as `${key}_version`, so a key
+ * that itself ends in `_version` (e.g. `withAtomic(['foo', 'foo_version'])`)
+ * collides the two key sets and the per-key loop below reads a version of a
+ * version — behavior for such keys is accidental, not designed. Callers pass
+ * only repository keys (savedUrls / savedUrlsWithTimestamps); keep data keys
+ * free of the `_version` suffix.
  */
 async function verifyPostWrite(
   port: StoragePort,

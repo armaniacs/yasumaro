@@ -190,7 +190,7 @@ export async function handlePurgeNow(): Promise<void> {
     onError: (message) => {
       const prefix = getMessageOr('purgeNowFailed', 'Purge failed');
       const detail = (message || '').trim();
-      statusEl.textContent = detail && detail !== 'Error' ? `${prefix}: ${detail}` : prefix;
+      statusEl.textContent = detail ? `${prefix}: ${detail}` : prefix;
     },
   });
 }
@@ -216,7 +216,7 @@ export async function handleContentPurgeNow(): Promise<void> {
     onError: (message) => {
       const prefix = getMessageOr('contentPurgeNowFailed', 'Content purge failed');
       const detail = (message || '').trim();
-      statusEl.textContent = detail && detail !== 'Error' ? `${prefix}: ${detail}` : prefix;
+      statusEl.textContent = detail ? `${prefix}: ${detail}` : prefix;
     },
   });
 }

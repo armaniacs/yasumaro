@@ -230,8 +230,10 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
  * 黙って除外される。入力ガードとキャッシュの挙動は WithErrors 版と同じ。
  *
  * 【戻り値のコピー】: キャッシュヒット経路と同じく ruleset を浅いコピーで
- * 返す。呼び出し側が cache 内のオブジェクトを書き換えても他呼び出しに影響
- * しないため。
+ * 返す。コピーはトップレベルのプロパティ再代入に対する保護のみで、
+ * `blockRules` / `exceptionRules`（キャッシュヒット経路の `errors` も同様）
+ * の配列は cache と共有される。呼び出し側の読み取り専用利用が前提で、
+ * 配列を書き換えると cache 内の値も変わる。
  *
  * @param {string} text - 複数行のフィルターテキスト
  * @returns {ParsedUblockRuleset} - パースされた ParsedUblockRuleset オブジェクト

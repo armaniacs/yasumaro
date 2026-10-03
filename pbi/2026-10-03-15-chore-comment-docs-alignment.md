@@ -67,13 +67,13 @@ Then コメントから session-timeout install が ref 未注入で no-op に�
 
 ## 受け入れ基準
 
-- [ ] (a) `src/utils/ublockParser/index.ts:232-234` のコメントが実際の保証（浅いコピーはトップレベルのみ、ネスト `rules`/`errors` 配列は cache 共有、呼び出し側は読み取り専用が前提）を述べる。コード（`:131`, `:240`）は無変更。
-- [ ] (b) `src/dashboard/generalSettings/settingsForm.ts:193, :219` の `detail !== 'Error'` を削除するか、残置理由を明示する。表示挙動は不変。
-- [ ] (c) `src/utils/storage/storageTransaction.ts:170` の tail throw は保持し、`:137` コメントに identity 目的（到達不能・型確定用）が明記されていることを確認・補完する。
-- [ ] (d) `verifyPostWrite`（`storageTransaction.ts:180-196`）の key/version-key 衝突について、現行呼び出し側（`savedUrlRepository.ts:230, :273, :324`）が安全であることの契約コメントまたは衝突ガードを追加する。
-- [ ] (e) `src/background/service-worker.ts:45` + `:187` と `alarmRegistry.ts:139-143` の session-timeout install 順序の暗黙依存に WHY コメントを追加する。コードの順序は無変更。
-- [ ] (f) `CHANGELOG.md:1192` の記述を現状（`package.json:36,44` の baseline 版存在・validate 実行、`ci.yml:133-134` が src の type-check のみ）と一致するよう修正する。
-- [ ] 全件で実行時挙動は不変（`npm run validate` green、型・テストに差分なし）。
+- [x] (a) `src/utils/ublockParser/index.ts:232-234` のコメントが実際の保証（浅いコピーはトップレベルのみ、ネスト `rules`/`errors` 配列は cache 共有、呼び出し側は読み取り専用が前提）を述べる。コード（`:131`, `:240`）は無変更。
+- [x] (b) `src/dashboard/generalSettings/settingsForm.ts:193, :219` の `detail !== 'Error'` を削除するか、残置理由を明示する。表示挙動は不変。
+- [x] (c) `src/utils/storage/storageTransaction.ts:170` の tail throw は保持し、`:137` コメントに identity 目的（到達不能・型確定用）が明記されていることを確認・補完する。
+- [x] (d) `verifyPostWrite`（`storageTransaction.ts:180-196`）の key/version-key 衝突について、現行呼び出し側（`savedUrlRepository.ts:230, :273, :324`）が安全であることの契約コメントまたは衝突ガードを追加する。
+- [x] (e) `src/background/service-worker.ts:45` + `:187` と `alarmRegistry.ts:139-143` の session-timeout install 順序の暗黙依存に WHY コメントを追加する。コードの順序は無変更。
+- [x] (f) `CHANGELOG.md:1192` の記述を現状（`package.json:36,44` の baseline 版存在・validate 実行、`ci.yml:133-134` が src の type-check のみ）と一致するよう修正する。
+- [x] 全件で実行時挙動は不変（`npm run validate` green、型・テストに差分なし）。
 
 ## テスト戦略
 
@@ -88,7 +88,17 @@ Then コメントから session-timeout install が ref 未注入で no-op に�
 
 ## Definition of Done
 
-- [ ] 6 件 (a)-(f) がすべて処理され、各受け入れ基準を満たす
-- [ ] 実行時挙動が不変であることを `npm run validate` で確認
-- [ ] 変更対象がコメント・ドキュメント（(b) の比較削除、(d) のガードは必要な場合のみ）に限定されている
-- [ ] backlog（順位 15）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] 6 件 (a)-(f) がすべて処理され、各受け入れ基準を満たす
+- [x] 実行時挙動が不変であることを `npm run validate` で確認
+- [x] 変更対象がコメント・ドキュメント（(b) の比較削除、(d) のガードは必要な場合のみ）に限定されている
+- [x] backlog（順位 15）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+
+## 実装記録（2026-10-03）
+
+- (a) `src/utils/ublockParser/index.ts:232-234` — 浅いコピーのコメントを実際の保証（トップレベルのプロパティ再代入のみ保護、`blockRules`/`exceptionRules`/`errors` 配列は cache 共有、読み取り専用前提）に修正。コード無変更
+- (b) `src/dashboard/generalSettings/settingsForm.ts:193, :219` — デッド比較 `detail !== 'Error'` を削除。現行プロデューサは `'Error'` を返さないため表示挙動は不変
+- (c) `src/utils/storage/storageTransaction.ts:137` — tail throw は保持、コメントに identity 目的（budget check が先に throw するため到達不能・TypeScript が loop の常時 return/throw を静的証明できないための tail throw・fallback error に呼び出し元メソッド名を記録）を補完
+- (d) `src/utils/storage/storageTransaction.ts:184` — `verifyPostWrite` に key/version-key 衝突の契約コメントを追加（`${key}_version` 派生のため `_version` 接尾辞付きデータ key は衝突し動作が偶発的になる旨、呼び出し側は repository key のみで安全）。衝突ガードは不採用 — 現行呼び出し側契約で十分なため
+- (e) `src/background/service-worker.ts` + `src/background/alarmRegistry.ts` — session-timeout install hook が ref 未注入時に no-op（アラーム未装着・無ログ）になることと、現在の成立条件が service-worker.ts の module-eval 順序（ref 注入が init() の `void alarmRegistry.installAll()` より前）であることを WHY コメントで復元。コード順序無変更
+- (f) `CHANGELOG.md:1192` — 追加修正不要。rank-07（PBI 2026-10-03-07）の CHANGELOG 整合で「※現行（v6.9.33 以降）は素の tsc ゲートではなく `type-check:test:baseline` の pin 上限が CI の validate で合否を判定」の現状一致記述が既に存在する
+- 検証: tsc 0 エラー・lint 0 エラー・test 15,476 pass・validate exit 0（実行時挙動不変・型・テストに差分なし）

@@ -42,6 +42,15 @@ export function init(): void {
     // schedules + conditional install hooks + uniform failure policy live in
     // alarmRegistry.ts's table. The session-timeout alarm is armed here and
     // nowhere else; arming it in two places would clear+create it twice.
+    // WHY `void` here is not just style: the check_session_timeout install
+    // hook calls sessionTimeoutInstallRef, a silent no-op until
+    // setSessionTimeoutRefs() runs at module level below. Nothing synchronizes
+    // installAll() with that injection — the guarantee is module-eval order
+    // (the entrypoint imports this module, which injects the refs, before
+    // calling init()) plus the loop's own awaits. If the ref injection ever
+    // moves to a lazy call site or the import/init order flips, the hook can
+    // execute un-injected and the session-timeout alarm is never armed
+    // (no error, no log).
     void alarmRegistry.installAll();
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
@@ -183,6 +192,10 @@ const _contextClickHandler = createContextClickHandler({ handleManualRecord: han
 // injected after resolution so the registry's install/run hooks can reach the
 // generator. They are also the only wiring for the session-timeout job: the
 // registry's run hook is the single dispatch path for check_session_timeout.
+// These injections run at module evaluation, before the entrypoint's init()
+// call reaches `void alarmRegistry.installAll()` — that order is the only
+// thing keeping the check_session_timeout install hook from executing while
+// sessionTimeoutInstallRef is still unset (a silent no-op, no alarm, no log).
 setReviewSummaryGeneratorRef(reviewSummaryGenerator);
 setSessionTimeoutRefs(
   async () => { await sessionAlarmService.startTimeoutChecker(); },
