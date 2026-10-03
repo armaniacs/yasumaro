@@ -1,14 +1,22 @@
 // @vitest-environment jsdom
 /**
  * dashboard-lmstudio-preset.test.ts
- * Tests for LM Studio preset button functionality
- * 
- * 対象機能: LM Studio プリセットボタン
- * - Base URL入力フィールドへのLM Studio URL自動設定
- * - openai-compatibleプロバイダーでのLM Studio対応
+ * Tests for the LM Studio / Ollama preset buttons (dashboard general panel)
+ *
+ * 対象機能: LM Studio / Ollama プリセットボタン（本番ハンドラ経由）
+ * - providerBaseUrl 入力フィールドへのプリセット URL 自動設定
+ * - #status / #statusTop への dashboard.css ステータス契約（status-message + type）の書き込み
  */
 
-import { describe, test, expect, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { handleLmStudioPreset, handleOllamaPreset } from '../generalSettings/providerPresets.js';
+import { PROVIDER_DEFAULT_BASE_URLS } from '../../utils/storage/providerDefaultBaseUrls.js';
+
+// The production handlers read i18n through getMessageOr; an empty
+// translation routes them to the fallback text the assertions pin.
+vi.stubGlobal('chrome', {
+  i18n: { getMessage: vi.fn(() => '') },
+});
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -186,6 +194,7 @@ describe('LM Studio Preset', () => {
       <button type="button" id="lmStudioPresetBtn">LM Studio</button>
       <button type="button" id="ollamaPresetBtn">Ollama</button>
       <div id="status" class="status"></div>
+      <div id="statusTop"></div>
       <select id="aiProvider">
         <option value="openai-compatible">OpenAI Compatible</option>
       </select>
@@ -199,22 +208,20 @@ describe('LM Studio Preset', () => {
 
   test('LM Studio preset button should set correct Base URL', () => {
     const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement;
-    const lmStudioPresetBtn = document.getElementById('lmStudioPresetBtn') as HTMLButtonElement;
     const statusDiv = document.getElementById('status') as HTMLElement;
+    const statusTopDiv = document.getElementById('statusTop') as HTMLElement;
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      providerBaseUrlInput.value = 'http://localhost:1234/v1';
-      statusDiv.textContent = 'LM Studio preset applied (http://localhost:1234/v1)';
-      statusDiv.className = 'status-success';
-    };
+    handleLmStudioPreset();
 
-    lmStudioPresetBtn.addEventListener('click', handler);
-    lmStudioPresetBtn.click();
-
-    expect(providerBaseUrlInput.value).toBe('http://localhost:1234/v1');
+    expect(providerBaseUrlInput.value).toBe(PROVIDER_DEFAULT_BASE_URLS['lm-studio']);
     expect(statusDiv.textContent).toContain('LM Studio preset applied');
-    expect(statusDiv.className).toContain('status-success');
+    // Dashboard status contract (dashboard.css): .status-message base + type
+    // class. The old self-defined handler wrote the orphan .status-success,
+    // which only popup styles.css declares, so the preset status rendered
+    // unstyled — this pins the contract the production handler must write.
+    expect(statusDiv.className).toBe('status-message success');
+    expect(statusDiv.classList.contains('status-success')).toBe(false);
+    expect(statusTopDiv.className).toBe('status-message success');
   });
 
   test('LM Studio URL should match expected format', () => {
@@ -286,6 +293,7 @@ describe('Ollama Preset', () => {
       <input type="text" id="providerBaseUrl" />
       <button type="button" id="ollamaPresetBtn">Ollama</button>
       <div id="status" class="status"></div>
+      <div id="statusTop"></div>
       <select id="aiProvider">
         <option value="openai-compatible">OpenAI Compatible</option>
       </select>
@@ -299,22 +307,17 @@ describe('Ollama Preset', () => {
 
   test('Ollama preset button should set correct Base URL', () => {
     const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement;
-    const ollamaPresetBtn = document.getElementById('ollamaPresetBtn') as HTMLButtonElement;
     const statusDiv = document.getElementById('status') as HTMLElement;
+    const statusTopDiv = document.getElementById('statusTop') as HTMLElement;
 
-    const handler = (e: Event) => {
-      e.preventDefault();
-      providerBaseUrlInput.value = 'http://localhost:11434/v1';
-      statusDiv.textContent = 'Ollama preset applied (http://localhost:11434/v1)';
-      statusDiv.className = 'status-success';
-    };
+    handleOllamaPreset();
 
-    ollamaPresetBtn.addEventListener('click', handler);
-    ollamaPresetBtn.click();
-
-    expect(providerBaseUrlInput.value).toBe('http://localhost:11434/v1');
+    expect(providerBaseUrlInput.value).toBe(PROVIDER_DEFAULT_BASE_URLS['ollama']);
     expect(statusDiv.textContent).toContain('Ollama preset applied');
-    expect(statusDiv.className).toContain('status-success');
+    // Same derived contract as every other dashboard status write.
+    expect(statusDiv.className).toBe('status-message success');
+    expect(statusDiv.classList.contains('status-success')).toBe(false);
+    expect(statusTopDiv.className).toBe('status-message success');
   });
 
   test('Ollama URL should match expected format', () => {

@@ -4,7 +4,6 @@ import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys, type Settings } from '../../../utils/storage/types.js';
-import { getMessageOr } from '../../../utils/i18n.js';
 import {
   loadGeneralSettings,
   handlePurgeNow, handleContentPurgeNow,
@@ -15,7 +14,7 @@ import {
 } from '../../generalSettings/connectionTests.js';
 import { handleManualLocalMarkdownExport } from '../../localMarkdownExport.js';
 import { generateReviewSummary } from '../../reviewSummaryHandler.js';
-import { syncStatusToTop } from '../../statusView.js';
+import { handleLmStudioPreset, handleOllamaPreset } from '../../generalSettings/providerPresets.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings, restoreOriginalProviderSettingsLayout } from '../../aiProviderLayoutManager.js';
 import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
 import { providerIdsInOrder, renderProviderOptions, renderProviderSettings } from '../../aiProviderCatalogView.js';
@@ -26,7 +25,6 @@ import { collectCurrentProviderPrioritySlots } from '../../providerPrioritySlots
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../utils/ui/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
-import { PROVIDER_DEFAULT_BASE_URLS } from '../../../utils/storage/providerDefaultBaseUrls.js';
 
 /**
  * Review summary buttons live only on this panel, so their handlers do too.
@@ -337,29 +335,9 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         await modelsDevDialog.show();
       });
 
-      container.querySelector('#lmStudioPresetBtn')?.addEventListener('click', () => {
-        const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement | null;
-        const statusDiv = document.getElementById('status') as HTMLElement | null;
-        const presetUrl = PROVIDER_DEFAULT_BASE_URLS['lm-studio'];
-        if (providerBaseUrlInput) providerBaseUrlInput.value = presetUrl;
-        if (statusDiv) {
-          statusDiv.textContent = getMessageOr('lmStudioPresetApplied', `LM Studio preset applied (${presetUrl})`);
-          statusDiv.className = 'status-success';
-          syncStatusToTop();
-        }
-      });
+      container.querySelector('#lmStudioPresetBtn')?.addEventListener('click', handleLmStudioPreset);
 
-      container.querySelector('#ollamaPresetBtn')?.addEventListener('click', () => {
-        const providerBaseUrlInput = document.getElementById('providerBaseUrl') as HTMLInputElement | null;
-        const statusDiv = document.getElementById('status') as HTMLElement | null;
-        const presetUrl = PROVIDER_DEFAULT_BASE_URLS['ollama'];
-        if (providerBaseUrlInput) providerBaseUrlInput.value = presetUrl;
-        if (statusDiv) {
-          statusDiv.textContent = getMessageOr('ollamaPresetApplied', `Ollama preset applied (${presetUrl})`);
-          statusDiv.className = 'status-success';
-          syncStatusToTop();
-        }
-      });
+      container.querySelector('#ollamaPresetBtn')?.addEventListener('click', handleOllamaPreset);
 
       document.getElementById('save')?.addEventListener('click', handleSaveOnly);
       document.getElementById('testObsidianBtn')?.addEventListener('click', handleTestObsidian);
