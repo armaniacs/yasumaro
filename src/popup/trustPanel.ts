@@ -10,7 +10,7 @@ import { statusChannel } from '../utils/ui/statusChannel.js';
 import { renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml } from './statusRenderers.js';
 
 /** Per-element toast timer — rapid double-deny used to start two competing chains (PBI 2026-09-12-41). */
-let errorToastTimer: ReturnType<typeof setTimeout> | undefined = null as unknown as ReturnType<typeof setTimeout> | undefined;
+let errorToastTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 
 /**
  * Failure path for the panel's async handlers. A rejected permission request

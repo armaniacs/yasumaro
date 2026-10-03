@@ -468,14 +468,14 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
 
       first = {
         ...createEmptySideRefs(),
-        svg: container.querySelector('#tagCompareFirstSvg') as unknown as SVGSVGElement | null,
+        svg: container.querySelector<SVGSVGElement>('#tagCompareFirstSvg'),
         zoomInBtn: container.querySelector('#tagCompareFirstZoomIn'),
         zoomOutBtn: container.querySelector('#tagCompareFirstZoomOut'),
         zoomResetBtn: container.querySelector('#tagCompareFirstZoomReset'),
       };
       second = {
         ...createEmptySideRefs(),
-        svg: container.querySelector('#tagCompareSecondSvg') as unknown as SVGSVGElement | null,
+        svg: container.querySelector<SVGSVGElement>('#tagCompareSecondSvg'),
         zoomInBtn: container.querySelector('#tagCompareSecondZoomIn'),
         zoomOutBtn: container.querySelector('#tagCompareSecondZoomOut'),
         zoomResetBtn: container.querySelector('#tagCompareSecondZoomReset'),

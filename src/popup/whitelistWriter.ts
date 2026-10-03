@@ -23,7 +23,6 @@
 import { DomainFilter } from '../utils/domainFilter/DomainFilter.js';
 import { extractHostname } from '../utils/wildcardToRegex.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import type { Settings } from '../utils/storage/types.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { updateDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 
@@ -65,7 +64,7 @@ async function addToWhitelist(entry: string): Promise<WhitelistWriteResult> {
 
   await settingsRepository.setAll({
     [StorageKeys.DOMAIN_WHITELIST]: [...whitelist, normalized],
-  } as unknown as Settings);
+  });
   await updateDomainFilterCache(await settingsRepository.getAll());
   return { ok: true, entry: normalized, added: true };
 }

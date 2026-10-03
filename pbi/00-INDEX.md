@@ -35,7 +35,7 @@ holistic-code-improvement skill による 6.9.34 時点の大局的レビュー�
 | 28 | [2026-10-03-28-refactor-archive-panel-split.md](2026-10-03-28-refactor-archive-panel-split.md) | refactor | 4.8 | 2.0 | ✅ 完了 | なし |
 | 29 | [2026-10-03-29-refactor-general-settings-panel-split.md](2026-10-03-29-refactor-general-settings-panel-split.md) | refactor | 4.8 | 2.0 | ⬜ 未着手 | 23 の後（チェーン末端） |
 | 30 | [2026-10-03-30-refactor-i18n-storage-mock-factories.md](2026-10-03-30-refactor-i18n-storage-mock-factories.md) | refactor | 4.5 | 1.0 | ✅ 完了 | なし |
-| 31 | [2026-10-03-31-refactor-double-casts-cleanup.md](2026-10-03-31-refactor-double-casts-cleanup.md) | refactor | 4.0 | 0.5 | ⬜ 未着手 | 25 の後 |
+| 31 | [2026-10-03-31-refactor-double-casts-cleanup.md](2026-10-03-31-refactor-double-casts-cleanup.md) | refactor | 4.0 | 0.5 | ✅ 完了 | 25 の後 |
 | 32 | [2026-10-03-32-test-e2e-seeded-panel-fixture.md](2026-10-03-32-test-e2e-seeded-panel-fixture.md) | test | 4.0 | 1.0 | ⬜ 未着手 | 26 の後（e2e） |
 | 33 | [2026-10-03-33-refactor-message-router-dead-code.md](2026-10-03-33-refactor-message-router-dead-code.md) | refactor | 3.6 | 0.5 | ✅ 完了 | なし |
 | 34 | [2026-10-03-34-refactor-logger-mock-factory.md](2026-10-03-34-refactor-logger-mock-factory.md) | test | 2.4 | 3.0 | ⬜ 未着手 | 35 に先行（test 広域） |

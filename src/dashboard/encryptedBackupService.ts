@@ -93,10 +93,9 @@ export async function importEncryptedBackup(
     return { success: false, error: `Failed to restore history database: ${restored.error}` };
   }
 
-  const { sanitized, skippedKeys } = validateRestorableSettings(
-    // WHY: backup payload settings type is `unknown`; validateRestorableSettings narrows to `Record<string, unknown>`
-    payload.settings as unknown as Record<string, unknown>
-  );
+  // WHY: the runtime value is untrusted parsed JSON; the declared Settings
+  // type is not verified, so the validator re-checks every key before restore.
+  const { sanitized, skippedKeys } = validateRestorableSettings(payload.settings);
   await settingsRepository.setAll(sanitized);
 
   return { success: true, skippedKeys };

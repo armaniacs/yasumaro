@@ -42,13 +42,13 @@ Scenario: 型を狭める際は検査を省略しない
 
 ## 受け入れ基準
 
-- [ ] 対象 7 ファイル（tagClusterTimeSliderPanel / aiSummaryCleansingSettingsV2 / encryptedBackupService / statusPanel / whitelistWriter / messaging/types / visitGating / previewPresenter）の指定箇所から `as unknown as` が消えている。
-- [ ] `aiSummaryCleansingSettingsV2.ts` の置き換えには typeof による narrow が付いている。
-- [ ] `statusPanel.ts:29` は `= undefined` で置換され、rank-10 / rank-07 の変更と競合していない。
-- [ ] `whitelistWriter.ts:68` は `setAll` のシグネチャを確認した上でキャスト削除している。
-- [ ] `sqliteWireTable.ts` は本 PBI で変更していない。
-- [ ] `npm run validate` が成功している。
-- [ ] production の動作に回帰がない。
+- [x] 対象 7 ファイル（tagClusterTimeSliderPanel / aiSummaryCleansingSettingsV2 / encryptedBackupService / statusPanel / whitelistWriter / messaging/types / visitGating / previewPresenter）の指定箇所から `as unknown as` が消えている。
+- [x] `aiSummaryCleansingSettingsV2.ts` の置き換えには typeof による narrow が付いている。
+- [x] `statusPanel.ts:29` は `= undefined` で置換され、rank-10 / rank-07 の変更と競合していない。
+- [x] `whitelistWriter.ts:68` は `setAll` のシグネチャを確認した上でキャスト削除している。
+- [x] `sqliteWireTable.ts` は本 PBI で変更していない。
+- [x] `npm run validate` が成功している。
+- [x] production の動作に回帰がない。
 
 ## テスト戦略
 
@@ -70,8 +70,16 @@ Scenario: 型を狭める際は検査を省略しない
 
 ## Definition of Done
 
-- [ ] 指定箇所の二段キャストがすべて解消されている。
-- [ ] 除外対象（sqliteWireTable.ts）を変更していない。
-- [ ] `npm run validate` が成功している。
-- [ ] 既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
-- [ ] rank-10 / rank-07 との統合順序が確定している。
+- [x] 指定箇所の二段キャストがすべて解消されている。
+- [x] 除外対象（sqliteWireTable.ts）を変更していない。
+- [x] `npm run validate` が成功している。
+- [x] 既存のビルド・テスト・ユーザーに観測される動作に回帰がない。
+- [x] rank-10 / rank-07 との統合順序が確定している。
+
+## 実装記録
+
+**2026-10-03 完了。**
+
+- 8 ファイルの二段キャストを解消: `trustPanel.ts:13`（`null as unknown as` → `= undefined`）、`whitelistWriter.ts:66`（キャスト削除）、`types.ts:350-352`、`visitGating.ts:224-228`（3 段チェーン → 単一キャスト + 積集合型）、`previewPresenter.ts`、`tagClusterTimeSliderPanel.ts`、`aiSummaryCleansingSettingsV2.ts`（typeof narrow 付き）、`encryptedBackupService.ts`（キャストフリー化）
+- 検証: 対象 8 ファイルの `as unknown as` grep が 0 件。`tsc --noEmit` 0 errors / `vitest` 15,594 passed / `npm run validate` PASS（2026-10-03）
+- 逸脱: `statusPanel.ts:29` は rank-25（statusPanel 分割）で `trustPanel.ts` へ抽出済みのため、置換は抽出先 `trustPanel.ts:13` に着地。`encryptedBackupService.ts` の実パスは `src/dashboard/` 配下（起票時は `src/utils/` 表記）。`sqliteWireTable.ts` は対象外として未変更を確認

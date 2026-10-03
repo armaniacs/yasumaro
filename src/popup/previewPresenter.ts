@@ -199,10 +199,10 @@ export class PreviewPresenter {
       try {
         modal.showModal();
       } catch {
-        (modal as unknown as { open: boolean }).open = true;
+        modal.open = true;
       }
     } else {
-      (modal as unknown as { open: boolean }).open = true;
+      modal.open = true;
     }
 
     this.trapModal(modal);
@@ -249,7 +249,7 @@ export class PreviewPresenter {
     try {
       modal.close();
     } catch {
-      (modal as unknown as { open: boolean }).open = false;
+      modal.open = false;
       modal.dispatchEvent(new Event('close'));
     }
     this.view.doc.body.style.width = DEFAULT_WIDTH;

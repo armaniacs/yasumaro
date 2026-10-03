@@ -348,10 +348,8 @@ export async function sendServiceWorkerMessage<T extends ExtensionMessage['type'
   payload?: PayloadForType<T>
 ): Promise<ResponseForType<T>> {
   const { messageTransport } = await import('./messageTransport.js');
-  const message = payload !== undefined
-    ? { type, payload } as unknown as ExtensionMessage & { type: T }
-    : { type } as unknown as ExtensionMessage & { type: T };
-  const response = await messageTransport.send(message as ExtensionMessage);
+  const message = (payload !== undefined ? { type, payload } : { type }) as ExtensionMessage & { type: T };
+  const response = await messageTransport.send(message);
   if (isErrorResponse(response)) {
     throw new Error((response as { error: string }).error);
   }

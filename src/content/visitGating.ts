@@ -222,11 +222,8 @@ export function applySettingsTable(pageState: PageState, s: Record<string, unkno
                     ? window.location.hostname
                     : '';
             if (hostname) {
-                const merged = getCleansingConfigForDomain(
-                    hostname,
-                    pageState.cleansingConfig as unknown as Record<string, unknown>,
-                    rawOverrides as unknown as import('../utils/storage/types.js').DomainCleansingOverride[],
-                ) as unknown as CleansingConfig;
+                const base = pageState.cleansingConfig as CleansingConfig & Record<string, unknown>;
+                const merged = getCleansingConfigForDomain(hostname, base, rawOverrides);
                 pageState.cleansingConfig = merged;
             }
         }

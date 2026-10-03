@@ -157,9 +157,11 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     const delta: Record<string, unknown> = {
         [StorageKeys.AI_SUMMARY_CLEANSING_ENABLED]: settings.enabled,
     };
+    // WHY: dynamic property access on settings object; rule keys are generated at runtime
+    const ruleValues: Record<string, unknown> = settings;
     for (const rule of CLEANSING_RULES) {
-        // WHY: dynamic property access on settings object; rule keys are generated at runtime
-        delta[rule.storageKey] = (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)] ?? false;
+        const value = ruleValues[ruleOptionKey(rule)];
+        delta[rule.storageKey] = typeof value === 'boolean' ? value : false;
     }
     delta[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
     delta[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
@@ -205,10 +207,12 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (enabledCheckbox) enabledCheckbox.checked = settings.enabled;
     // The 32 rule checkboxes are looked up and set from CLEANSING_RULES via
     // ruleHtmlId()/ruleOptionKey() instead of 32 named lookups + 32 assignments.
+    // WHY: dynamic property access on settings object; rule keys are generated at runtime
+    const ruleValues: Record<string, unknown> = settings;
     for (const rule of CLEANSING_RULES) {
         const checkbox = document.getElementById(ruleHtmlId(rule)) as HTMLInputElement | null;
-        // WHY: dynamic property access on settings object; rule keys are generated at runtime
-        if (checkbox) checkbox.checked = (settings as unknown as Record<string, boolean>)[ruleOptionKey(rule)] ?? false;
+        const value = ruleValues[ruleOptionKey(rule)];
+        if (checkbox) checkbox.checked = typeof value === 'boolean' ? value : false;
     }
     if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.checked = settings.whitelistExtractionEnabled;
     // Body protection (dashboard)
