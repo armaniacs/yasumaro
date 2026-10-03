@@ -1,22 +1,16 @@
 /**
- * history-panel-ui.spec.ts (PBI 2026-09-11-01, round 8)
+ * history-panel-ui.spec.ts
  *
  * Behavioral e2e for the SQLite history panel — the area rounds 5-7 changed
  * most (tag filter moved to SQL, pagination, star persistence). Previously
  * only panel-existence was covered (round 6 audit: High gap).
  *
- * Seeded via the DASHBOARD_SQLITE import path; the UI is driven through the
- * real sidebar navigation. Uses one shared seeded DB per test (fixture
- * context is per-test, so each test seeds its own rows).
+ * Seeded and opened by the seededHistoryPanel fixture (DASHBOARD_SQLITE import
+ * path); the UI is driven through the real sidebar navigation. The fixture
+ * context is per-test, so each test seeds its own rows.
  */
-import { test, expect } from './fixtures/extension.fixture.js';
-import {
-  openOptionsPage,
-  createDashboardSqliteClient,
-  seedRows,
-  migrationSettled,
-  poll,
-} from './fixtures/dashboardSqliteHelpers.js';
+import { test, expect } from './fixtures/seeded-history-panel.fixture.js';
+import { migrationSettled, poll } from './fixtures/dashboardSqliteHelpers.js';
 
 test.use({ locale: 'en-US' });
 
@@ -38,16 +32,11 @@ function buildSeedRows() {
   return rows;
 }
 
-test.describe('History panel UI @extension', () => {
-  test('panel lists the seeded rows (first page of 20)', async ({ context, extensionId }) => {
-    const page = await openOptionsPage(context, extensionId);
-    const client = createDashboardSqliteClient(page);
-    await migrationSettled(page, client);
-    await seedRows(client, buildSeedRows());
+test.use({ panelSeedParams: { rows: buildSeedRows() } });
 
-    await page.locator('[data-panel="panel-sqlite-history"]').click();
-    const firstRow = page.locator('#sqlite-entry-list .sqlite-entry').first();
-    await firstRow.waitFor({ state: 'visible', timeout: 15000 });
+test.describe('History panel UI @extension', () => {
+  test('panel lists the seeded rows (first page of 20)', async ({ seededHistoryPanel }) => {
+    const { page } = seededHistoryPanel;
 
     const rowCount = await page.locator('#sqlite-entry-list .sqlite-entry').count();
     expect(rowCount).toBe(20);
@@ -55,14 +44,8 @@ test.describe('History panel UI @extension', () => {
     await expect(page.locator('.sqlite-history-count')).toContainText('25');
   });
 
-  test('tag badge filters the list and clear restores it', async ({ context, extensionId }) => {
-    const page = await openOptionsPage(context, extensionId);
-    const client = createDashboardSqliteClient(page);
-    await migrationSettled(page, client);
-    await seedRows(client, buildSeedRows());
-
-    await page.locator('[data-panel="panel-sqlite-history"]').click();
-    await page.locator('#sqlite-entry-list .sqlite-entry').first().waitFor({ state: 'visible', timeout: 15000 });
+  test('tag badge filters the list and clear restores it', async ({ seededHistoryPanel }) => {
+    const { page } = seededHistoryPanel;
 
     // Click the e2eAlpha badge on the first row carrying it.
     await page.locator('.tag-badge[data-tag="e2eAlpha"]').first().click();
@@ -82,15 +65,8 @@ test.describe('History panel UI @extension', () => {
     await expect(page.locator('#sqlite-tag-filter-bar')).toBeHidden();
   });
 
-  test('star toggles and persists across reload', async ({ context, extensionId }) => {
-    const page = await openOptionsPage(context, extensionId);
-    const client = createDashboardSqliteClient(page);
-    await migrationSettled(page, client);
-    await seedRows(client, buildSeedRows());
-
-    await page.locator('[data-panel="panel-sqlite-history"]').click();
-    const firstRow = page.locator('#sqlite-entry-list .sqlite-entry').first();
-    await firstRow.waitFor({ state: 'visible', timeout: 15000 });
+  test('star toggles and persists across reload', async ({ seededHistoryPanel }) => {
+    const { page, client, seedRow: firstRow } = seededHistoryPanel;
 
     const rowId = await firstRow.getAttribute('data-id');
     const starBtn = firstRow.locator('[data-action="star"]');
@@ -109,14 +85,8 @@ test.describe('History panel UI @extension', () => {
     await expect(reloadedStar).toHaveAttribute('aria-pressed', 'true');
   });
 
-  test('pagination pages through the second page', async ({ context, extensionId }) => {
-    const page = await openOptionsPage(context, extensionId);
-    const client = createDashboardSqliteClient(page);
-    await migrationSettled(page, client);
-    await seedRows(client, buildSeedRows());
-
-    await page.locator('[data-panel="panel-sqlite-history"]').click();
-    await page.locator('#sqlite-entry-list .sqlite-entry').first().waitFor({ state: 'visible', timeout: 15000 });
+  test('pagination pages through the second page', async ({ seededHistoryPanel }) => {
+    const { page, client } = seededHistoryPanel;
 
     const firstPageIds = await page.locator('#sqlite-entry-list .sqlite-entry')
       .evaluateAll((rows) => rows.map((r) => r.getAttribute('data-id')));

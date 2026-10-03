@@ -38,12 +38,12 @@ Scenario: パネルが visible になるまで fixture 内で待つ
 
 ## 受け入れ基準
 
-- [ ] `seededHistoryPanel` fixture が openOptionsPage → createDashboardSqliteClient → migrationSettled → seedRows → パネル click をカプセル化している。
-- [ ] `history-panel-ui.spec.ts` と `regenerate-summary.spec.ts` が fixture を利用し、4 ステップの複製が消えている。
-- [ ] `waitFor({state:'visible', timeout:15000})` の重複 8 箇所が fixture 内の単一定義に置き換わっている。
-- [ ] E2E テストが実時間待ちの追加なしに成功する（`testDir/waitPolicy.ts` のポリシーに従う）。
-- [ ] fixture の導入により spec の観測対象（アサーション内容）が変わっていない。
-- [ ] `npx playwright test` が成功している。
+- [x] `seededHistoryPanel` fixture が openOptionsPage → createDashboardSqliteClient → migrationSettled → seedRows → パネル click をカプセル化している。
+- [x] `history-panel-ui.spec.ts` と `regenerate-summary.spec.ts` が fixture を利用し、4 ステップの複製が消えている。
+- [x] `waitFor({state:'visible', timeout:15000})` の重複 8 箇所が fixture 内の単一定義に置き換わっている。
+- [x] E2E テストが実時間待ちの追加なしに成功する（`testDir/waitPolicy.ts` のポリシーに従う）。
+- [x] fixture の導入により spec の観測対象（アサーション内容）が変わっていない。
+- [x] `npx playwright test` が成功している。
 
 ## テスト戦略
 
@@ -64,9 +64,20 @@ fixture 1 本の新設と 2 spec の書き換え。launch context が統一済�
 
 ## Definition of Done
 
-- [ ] seededHistoryPanel fixture が実装されている。
-- [ ] 対象 2 spec が fixture 利用に移行している。
-- [ ] 重複していた waitFor が fixture 内に集約されている。
-- [ ] E2E 全テストが成功している。
-- [ ] repeat-each 検証が通っている。
-- [ ] rank-11 との統合順序が確定している。
+- [x] seededHistoryPanel fixture が実装されている。
+- [x] 対象 2 spec が fixture 利用に移行している。
+- [x] 重複していた waitFor が fixture 内に集約されている。
+- [x] E2E 全テストが成功している。
+- [x] repeat-each 検証が通っている。
+- [x] rank-11 との統合順序が確定している。
+
+## 実装記録
+
+**2026-10-03 完了。**
+
+- `testDir/e2e/fixtures/seeded-history-panel.fixture.ts` を新設。4 ステップの準備 + パネル click + entry-visible 待ちを `seededHistoryPanel` fixture にカプセル化
+- `history-panel-ui.spec.ts` / `regenerate-summary.spec.ts` を fixture 利用に移行。両 spec の `waitFor` は 0 件になり、visible 待ちは fixture 内 1 箇所（`ENTRY_VISIBLE_TIMEOUT_MS`）に集約
+- spec 固有の差分（rows / rowText / seedConsent / onPage / beforeSeed）は `panelSeedParams` オブジェクトで明示的に保持（暗黙の統一をしない）
+- repeat-each 検証: `npx playwright test <対象 2 spec> --repeat-each=10 --retries=0 --workers=4` で全 run green（実装エージェント報告 + 統合検証で再実行確認）
+- ゲート（2026-10-03）: `tsc --noEmit` 0 errors / `vitest` 15,594 passed / `npm run validate` PASS
+- 逸脱: なし

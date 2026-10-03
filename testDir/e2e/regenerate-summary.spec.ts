@@ -1,12 +1,6 @@
-import { test, expect } from './fixtures/extension.fixture.js';
-import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
-import {
-  openOptionsPage,
-  createDashboardSqliteClient,
-  seedRows,
-  migrationSettled,
-  poll,
-} from './fixtures/dashboardSqliteHelpers.js';
+import { test, expect } from './fixtures/seeded-history-panel.fixture.js';
+import { poll } from './fixtures/dashboardSqliteHelpers.js';
+import type { Page } from '@playwright/test';
 import { createServer, type Server } from 'node:http';
 import { createServer as createHttpsServer, type Server as HttpsServer } from 'node:https';
 import { readFileSync } from 'node:fs';
@@ -14,7 +8,7 @@ import { join } from 'node:path';
 import { pickLoopbackPort, listenHttp } from './fixtures/localServers.js';
 
 /**
- * AI summary regenerate full flow (PBI 2026-09-22-04) @extension
+ * AI summary regenerate full flow @extension
  *
  * CRITICAL: same-row UPDATE (summary flips to the mock marker, still exactly
  * one row for the URL) + cleansing settings never persist the cleanseMode.
@@ -169,10 +163,6 @@ test.afterAll(() => {
   fixtureTlsServer = undefined;
 });
 
-async function seedConsent(context: import('@playwright/test').BrowserContext) {
-  await seedPrivacyConsent(context);
-}
-
 /** Merge the lm-studio mock provider into the single 'settings' blob. */
 async function seedAiMockSettings(
   page: import('@playwright/test').Page,
@@ -211,162 +201,168 @@ async function readSettings(page: import('@playwright/test').Page): Promise<Reco
   return (res.settings as Record<string, unknown>) ?? {};
 }
 
+/** Captures the options-page console that the failure dumps report verbatim. */
+function attachConsoleCapture(page: Page, consoleLogs: string[]): void {
+  page.on('console', (m) => consoleLogs.push(`[options ${m.type()}] ${m.text()}`));
+  page.on('pageerror', (e) => consoleLogs.push(`[OPTIONS_ERROR] ${e.message}`));
+}
+
 test.describe('Regenerate summary @extension', () => {
-  test('CRITICAL: regenerate UPDATES the same row (no duplicate) and never persists cleanseMode', async ({ context, extensionId }) => {
-    test.setTimeout(120_000); // gateway budget 60s + tab load + AI + save headroom
+  // Per-test parameters: test.use() is describe-scoped, so each test's seed
+  // lives in its own describe (empty titles keep the reported paths unchanged).
+  test.describe('', () => {
     const consoleLogs: string[] = [];
+    let cleansingBefore: Record<string, unknown>;
 
-    await seedConsent(context);
-
-    const page = await openOptionsPage(context, extensionId);
-    page.on('console', (m) => consoleLogs.push(`[options ${m.type()}] ${m.text()}`));
-    page.on('pageerror', (e) => consoleLogs.push(`[OPTIONS_ERROR] ${e.message}`));
-    try {
-        const client = createDashboardSqliteClient(page);
-        await migrationSettled(page, client);
-        await seedAiMockSettings(page);
-        const cleansingBefore = pickCleansingKeys(await readSettings(page));
-
-        await seedRows(client, [{
+    test.use({
+      panelSeedParams: {
+        rows: [{
           url: ENTRY_URL,
           title: ENTRY_TITLE,
           summary: OLD_SUMMARY,
           created_at: Date.UTC(2026, 8, 1, 12, 0, 0),
           domain: 'api.openai.com',
-        }]);
+        }],
+        rowText: ENTRY_TITLE,
+        seedConsent: true,
+        onPage: (page) => attachConsoleCapture(page, consoleLogs),
+        beforeSeed: async (page) => {
+          await seedAiMockSettings(page);
+          cleansingBefore = pickCleansingKeys(await readSettings(page));
+        },
+      },
+    });
 
-        await page.locator('[data-panel="panel-sqlite-history"]').click();
-        const row = page.locator('#sqlite-entry-list .sqlite-entry', { hasText: ENTRY_TITLE });
-        await row.waitFor({ state: 'visible', timeout: 15_000 });
-        const rowId = Number(await row.getAttribute('data-id'));
-        expect(rowId, 'seeded row must expose data-id').toBeGreaterThan(0);
+    test('CRITICAL: regenerate UPDATES the same row (no duplicate) and never persists cleanseMode', async ({ seededHistoryPanel }) => {
+      test.setTimeout(120_000); // gateway budget 60s + tab load + AI + save headroom
+      const { page, client, seedRow: row } = seededHistoryPanel;
 
-        // Drive the looser rung through the real header select.
-        await row.locator('.regenerate-mode-select').selectOption('looser');
-        await row.locator('[data-action="regenerate"]').click();
+      const rowId = Number(await row.getAttribute('data-id'));
+      expect(rowId, 'seeded row must expose data-id').toBeGreaterThan(0);
 
-        // Poll the real query projection until the mock marker lands.
-        // 30 × 2000ms = 60s matches REGENERATE_TIMEOUT_MS. poll() returns the
-        // LAST value on exhaustion (never throws) — treat a missing marker as
-        // the failure and dump a direct handler probe for root cause.
-        const res = await poll(
-          () => client.dashboardMsg({ subtype: 'query', domain: 'api.openai.com', limit: 20, offset: 0 } as never),
-          (r) => {
-            const rows = (r?.['rows'] as Array<{ url?: string; summary?: string }> | undefined) ?? [];
-            return rows.some((x) => x.url === ENTRY_URL && (x.summary ?? '').includes('E2E-REGEN-MARKER-9f27'));
-          },
-          30,
-          2000,
+      // Drive the looser rung through the real header select.
+      await row.locator('.regenerate-mode-select').selectOption('looser');
+      await row.locator('[data-action="regenerate"]').click();
+
+      // Poll the real query projection until the mock marker lands.
+      // 30 × 2000ms = 60s matches REGENERATE_TIMEOUT_MS. poll() returns the
+      // LAST value on exhaustion (never throws) — treat a missing marker as
+      // the failure and dump a direct handler probe for root cause.
+      const res = await poll(
+        () => client.dashboardMsg({ subtype: 'query', domain: 'api.openai.com', limit: 20, offset: 0 } as never),
+        (r) => {
+          const rows = (r?.['rows'] as Array<{ url?: string; summary?: string }> | undefined) ?? [];
+          return rows.some((x) => x.url === ENTRY_URL && (x.summary ?? '').includes('E2E-REGEN-MARKER-9f27'));
+        },
+        30,
+        2000,
+      );
+      const rows = (res?.['rows'] as Array<{ url?: string; summary?: string; id?: number }>) ?? [];
+      const matches = rows.filter((x) => x.url === ENTRY_URL);
+      const landed = matches.some((x) => (x.summary ?? '').includes('E2E-REGEN-MARKER-9f27'));
+      if (!landed) {
+        // Root-cause probe: invoke the handler once directly and report its
+        // verbatim response alongside the captured options-page console.
+        const probe = await page.evaluate(async (payload) => {
+          try {
+            return await chrome.runtime.sendMessage({
+              type: 'REGENERATE_SUMMARY',
+              payload,
+              protocolVersion: 1,
+            });
+          } catch (e) {
+            return { success: false, error: String(e) };
+          }
+        }, { id: rowId, url: ENTRY_URL, title: ENTRY_TITLE, cleanseMode: 'looser' });
+        throw new Error(
+          `marker not landed.\nrows=${JSON.stringify(matches)}\nhandler probe=${JSON.stringify(probe)}\nconsole:\n${consoleLogs.join('\n')}`,
         );
-        const rows = (res?.['rows'] as Array<{ url?: string; summary?: string; id?: number }>) ?? [];
-        const matches = rows.filter((x) => x.url === ENTRY_URL);
-        const landed = matches.some((x) => (x.summary ?? '').includes('E2E-REGEN-MARKER-9f27'));
-        if (!landed) {
-          // Root-cause probe: invoke the handler once directly and report its
-          // verbatim response alongside the captured options-page console.
-          const probe = await page.evaluate(async (payload) => {
-            try {
-              return await chrome.runtime.sendMessage({
-                type: 'REGENERATE_SUMMARY',
-                payload,
-                protocolVersion: 1,
-              });
-            } catch (e) {
-              return { success: false, error: String(e) };
-            }
-          }, { id: rowId, url: ENTRY_URL, title: ENTRY_TITLE, cleanseMode: 'looser' });
-          throw new Error(
-            `marker not landed.\nrows=${JSON.stringify(matches)}\nhandler probe=${JSON.stringify(probe)}\nconsole:\n${consoleLogs.join('\n')}`,
-          );
-        }
-        expect(
-          matches.length,
-          `expected exactly one row for ${ENTRY_URL}: ${JSON.stringify(res).slice(0, 2000)}\nconsole:\n${consoleLogs.join('\n')}`,
-        ).toBe(1);
-        expect(matches[0]!.summary).toContain('E2E-REGEN-MARKER-9f27');
-        expect(matches[0]!.summary).not.toBe(OLD_SUMMARY);
+      }
+      expect(
+        matches.length,
+        `expected exactly one row for ${ENTRY_URL}: ${JSON.stringify(res).slice(0, 2000)}\nconsole:\n${consoleLogs.join('\n')}`,
+      ).toBe(1);
+      expect(matches[0]!.summary).toContain('E2E-REGEN-MARKER-9f27');
+      expect(matches[0]!.summary).not.toBe(OLD_SUMMARY);
 
-        // Re-extracted content landed via the legacy dual-write (the query
-        // projection never carries content by design).
-        const stored = await page.evaluate(async () => {
-          const r = await chrome.storage.local.get('savedUrlsWithTimestamps');
-          return (r.savedUrlsWithTimestamps as Array<Record<string, unknown>>) ?? [];
-        });
-        const legacy = stored.find((e) => e['url'] === ENTRY_URL);
-        expect(
-          legacy,
-          `legacy metadata missing for ${ENTRY_URL}\nconsole:\n${consoleLogs.join('\n')}`,
-        ).toBeDefined();
-        expect(String(legacy!['content'] ?? '').length).toBeGreaterThan(0);
+      // Re-extracted content landed via the legacy dual-write (the query
+      // projection never carries content by design).
+      const stored = await page.evaluate(async () => {
+        const r = await chrome.storage.local.get('savedUrlsWithTimestamps');
+        return (r.savedUrlsWithTimestamps as Array<Record<string, unknown>>) ?? [];
+      });
+      const legacy = stored.find((e) => e['url'] === ENTRY_URL);
+      expect(
+        legacy,
+        `legacy metadata missing for ${ENTRY_URL}\nconsole:\n${consoleLogs.join('\n')}`,
+      ).toBeDefined();
+      expect(String(legacy!['content'] ?? '').length).toBeGreaterThan(0);
 
-        // Binding: the ladder never persists to chrome.storage.
-        const cleansingAfter = pickCleansingKeys(await readSettings(page));
-        expect(cleansingAfter).toEqual(cleansingBefore);
-    } finally {
-      await page.close();
-    }
+      // Binding: the ladder never persists to chrome.storage.
+      const cleansingAfter = pickCleansingKeys(await readSettings(page));
+      expect(cleansingAfter).toEqual(cleansingBefore);
 
-    if (consoleLogs.length > 0) console.log('Browser console:\n' + consoleLogs.join('\n'));
+      if (consoleLogs.length > 0) console.log('Browser console:\n' + consoleLogs.join('\n'));
+    });
   });
 
-  test('IMPORTANT: invalid_url shows an in-row error with NO force button', async ({ context, extensionId }) => {    test.setTimeout(120_000);
-    await seedConsent(context);
+  test.describe('', () => {
+    test.use({
+      panelSeedParams: {
+        rows: [{
+          url: ERROR_URL,
+          title: 'Never page',
+          summary: OLD_SUMMARY,
+          created_at: Date.UTC(2026, 8, 2, 12, 0, 0),
+          domain: 'localhost',
+        }],
+        rowText: 'Never page',
+        seedConsent: true,
+      },
+    });
 
-    const page = await openOptionsPage(context, extensionId);
-    try {
-      const client = createDashboardSqliteClient(page);
-      await migrationSettled(page, client);
-      await seedRows(client, [{
-        url: ERROR_URL,
-        title: 'Never page',
-        summary: OLD_SUMMARY,
-        created_at: Date.UTC(2026, 8, 2, 12, 0, 0),
-        domain: 'localhost',
-      }]);
+    test('IMPORTANT: invalid_url shows an in-row error with NO force button', async ({ seededHistoryPanel }) => {
+      test.setTimeout(120_000);
+      const { seedRow: row } = seededHistoryPanel;
 
-      await page.locator('[data-panel="panel-sqlite-history"]').click();
-      const row = page.locator('#sqlite-entry-list .sqlite-entry', { hasText: 'Never page' });
-      await row.waitFor({ state: 'visible', timeout: 15_000 });
       await row.locator('[data-action="regenerate"]').click();
 
       // invalid_url is NOT force-offerable: error row appears, force button
       // absent. Text is locale-dependent — assert structure, not wording.
       await expect(row.locator('.regenerate-error-row')).toBeVisible({ timeout: 30_000 });
       await expect(row.locator('.regenerate-force-btn')).toHaveCount(0);
-    } finally {
-      await page.close();
-    }
+    });
   });
 
-  test('CRITICAL: a failing first provider falls through to the second (cross-provider retry)', async ({ context, extensionId }) => {
-    test.setTimeout(120_000);
+  test.describe('', () => {
     const consoleLogs: string[] = [];
 
-    await seedConsent(context);
+    test.use({
+      panelSeedParams: {
+        rows: [{
+          url: ENTRY_URL,
+          title: ENTRY_TITLE,
+          summary: OLD_SUMMARY,
+          created_at: Date.UTC(2026, 8, 3, 12, 0, 0),
+          domain: 'api.openai.com',
+        }],
+        rowText: ENTRY_TITLE,
+        seedConsent: true,
+        onPage: (page) => attachConsoleCapture(page, consoleLogs),
+        beforeSeed: async (page) => {
+          // Slot 1 (broken model → HTTP 500) must fall through to slot 2.
+          await seedAiMockSettings(page, [
+            { provider: 'lm-studio', model: 'e2e-mock-model-broken' },
+            { provider: 'lm-studio', model: 'e2e-mock-model' },
+          ]);
+        },
+      },
+    });
 
-    const page = await openOptionsPage(context, extensionId);
-    page.on('console', (m) => consoleLogs.push(`[options ${m.type()}] ${m.text()}`));
-    page.on('pageerror', (e) => consoleLogs.push(`[OPTIONS_ERROR] ${e.message}`));
-    try {
-      const client = createDashboardSqliteClient(page);
-      await migrationSettled(page, client);
-      // Slot 1 (broken model → HTTP 500) must fall through to slot 2.
-      await seedAiMockSettings(page, [
-        { provider: 'lm-studio', model: 'e2e-mock-model-broken' },
-        { provider: 'lm-studio', model: 'e2e-mock-model' },
-      ]);
+    test('CRITICAL: a failing first provider falls through to the second (cross-provider retry)', async ({ seededHistoryPanel }) => {
+      test.setTimeout(120_000);
+      const { client, seedRow: row } = seededHistoryPanel;
 
-      await seedRows(client, [{
-        url: ENTRY_URL,
-        title: ENTRY_TITLE,
-        summary: OLD_SUMMARY,
-        created_at: Date.UTC(2026, 8, 3, 12, 0, 0),
-        domain: 'api.openai.com',
-      }]);
-
-      await page.locator('[data-panel="panel-sqlite-history"]').click();
-      const row = page.locator('#sqlite-entry-list .sqlite-entry', { hasText: ENTRY_TITLE });
-      await row.waitFor({ state: 'visible', timeout: 15_000 });
       await row.locator('[data-action="regenerate"]').click();
 
       const res = await poll(
@@ -384,41 +380,39 @@ test.describe('Regenerate summary @extension', () => {
       // though the first slot failed.
       expect(matches.length).toBe(1);
       expect(matches[0]!.summary).toContain('E2E-REGEN-MARKER-9f27');
-    } finally {
-      await page.close();
-    }
 
-    if (consoleLogs.length > 0) console.log('Browser console:\n' + consoleLogs.join('\n'));
+      if (consoleLogs.length > 0) console.log('Browser console:\n' + consoleLogs.join('\n'));
+    });
   });
 
-  test('CRITICAL: total AI failure is non-destructive (old summary kept, error row shown)', async ({ context, extensionId }) => {
-    test.setTimeout(120_000);
+  test.describe('', () => {
     const consoleLogs: string[] = [];
 
-    await seedConsent(context);
+    test.use({
+      panelSeedParams: {
+        rows: [{
+          url: ENTRY_URL,
+          title: ENTRY_TITLE,
+          summary: OLD_SUMMARY,
+          created_at: Date.UTC(2026, 8, 4, 12, 0, 0),
+          domain: 'api.openai.com',
+        }],
+        rowText: ENTRY_TITLE,
+        seedConsent: true,
+        onPage: (page) => attachConsoleCapture(page, consoleLogs),
+        beforeSeed: async (page) => {
+          // Only a broken slot: every provider fails → aiSucceeded false.
+          await seedAiMockSettings(page, [
+            { provider: 'lm-studio', model: 'e2e-mock-model-broken' },
+          ]);
+        },
+      },
+    });
 
-    const page = await openOptionsPage(context, extensionId);
-    page.on('console', (m) => consoleLogs.push(`[options ${m.type()}] ${m.text()}`));
-    page.on('pageerror', (e) => consoleLogs.push(`[OPTIONS_ERROR] ${e.message}`));
-    try {
-      const client = createDashboardSqliteClient(page);
-      await migrationSettled(page, client);
-      // Only a broken slot: every provider fails → aiSucceeded false.
-      await seedAiMockSettings(page, [
-        { provider: 'lm-studio', model: 'e2e-mock-model-broken' },
-      ]);
+    test('CRITICAL: total AI failure is non-destructive (old summary kept, error row shown)', async ({ seededHistoryPanel }) => {
+      test.setTimeout(120_000);
+      const { client, seedRow: row } = seededHistoryPanel;
 
-      await seedRows(client, [{
-        url: ENTRY_URL,
-        title: ENTRY_TITLE,
-        summary: OLD_SUMMARY,
-        created_at: Date.UTC(2026, 8, 4, 12, 0, 0),
-        domain: 'api.openai.com',
-      }]);
-
-      await page.locator('[data-panel="panel-sqlite-history"]').click();
-      const row = page.locator('#sqlite-entry-list .sqlite-entry', { hasText: ENTRY_TITLE });
-      await row.waitFor({ state: 'visible', timeout: 15_000 });
       await row.locator('[data-action="regenerate"]').click();
 
       // Failure surfaces in-row (structure only — wording is locale-dependent).
@@ -431,10 +425,8 @@ test.describe('Regenerate summary @extension', () => {
       const matches = rows.filter((x) => x.url === ENTRY_URL);
       expect(matches.length).toBe(1);
       expect(matches[0]!.summary).toBe(OLD_SUMMARY);
-    } finally {
-      await page.close();
-    }
 
-    if (consoleLogs.length > 0) console.log('Browser console:\n' + consoleLogs.join('\n'));
+      if (consoleLogs.length > 0) console.log('Browser console:\n' + consoleLogs.join('\n'));
+    });
   });
 });
