@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createSqliteHistoryModel,
@@ -10,7 +11,7 @@ function makeRow(id: number): BrowsingLogEntry {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useTimerClock();
   (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockClear();
   (chrome.storage.local.set as unknown as ReturnType<typeof vi.fn>).mockClear();
 });

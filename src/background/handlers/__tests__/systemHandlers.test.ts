@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   createFetchUrlHandler,
@@ -198,7 +199,7 @@ describe('createFetchUrlHandler', () => {
 describe('createContentCleansingExecutedHandler', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers();
+    useTimerClock();
   });
 
   afterEach(() => {

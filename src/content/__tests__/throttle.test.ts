@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { throttle } from '../throttle.js';
 
@@ -14,7 +15,7 @@ describe('throttle (PBI 2026-09-11-07)', () => {
   });
 
   it('fires on the leading edge immediately', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const { fn: throttled } = throttle(fn, { delayMs: 100 });
     throttled('a');
@@ -23,7 +24,7 @@ describe('throttle (PBI 2026-09-11-07)', () => {
   });
 
   it('fires a guaranteed trailing call with the latest args', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const { fn: throttled } = throttle(fn, { delayMs: 100 });
     throttled(1);
@@ -40,7 +41,7 @@ describe('throttle (PBI 2026-09-11-07)', () => {
   });
 
   it('sustained calls keep ticking at the throttle interval (throttle, not debounce)', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const { fn: throttled } = throttle(fn, { delayMs: 100 });
     // A call every 50ms for 1s → leading + ~19 trailing ticks (not just one).
@@ -52,7 +53,7 @@ describe('throttle (PBI 2026-09-11-07)', () => {
   });
 
   it('dispose cancels the pending trailing call', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const handle = throttle(fn, { delayMs: 100 });
     handle.fn(1);

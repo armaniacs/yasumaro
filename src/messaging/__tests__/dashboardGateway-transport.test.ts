@@ -4,6 +4,7 @@
  * 10s timeout, and confirmToken flow are byte-identical through a fake port,
  * and chrome.runtime.sendMessage is not touched when a port is injected.
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -79,7 +80,7 @@ describe('dashboardGateway transport wiring (PBI 10)', () => {
   });
 
   it('times out identically through a hanging injected port', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     setDashboardTransportForTesting({ send: () => new Promise(() => {}) });
     const promise = dashboardGateway.callDashboard(
       { subtype: 'search', query: 'hi' } as never,

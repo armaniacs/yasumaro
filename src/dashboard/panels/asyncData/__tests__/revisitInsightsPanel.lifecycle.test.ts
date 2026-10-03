@@ -5,6 +5,7 @@
  * round-trips Markdown through the clipboard with transient feedback, and
  * domain rows hand off to the history panel.
  */
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockQueryLogs = vi.fn();
@@ -185,7 +186,7 @@ describe('revisitInsightsPanel — PanelLifecycle', () => {
     await panel.load();
     await flush();
 
-    vi.useFakeTimers();
+    useTimerClock();
     const copyBtn = Array.from(
       document.querySelectorAll<HTMLButtonElement>('#revisitInsightsLoopsBody button'),
     ).find((b) => b.textContent === 'Copy as Markdown') as HTMLButtonElement;
@@ -213,7 +214,7 @@ describe('revisitInsightsPanel — PanelLifecycle', () => {
     await panel.load();
     await flush();
 
-    vi.useFakeTimers();
+    useTimerClock();
     const copyBtn = Array.from(
       document.querySelectorAll<HTMLButtonElement>('#revisitInsightsLoopsBody button'),
     ).find((b) => b.textContent === 'Copy as Markdown') as HTMLButtonElement;

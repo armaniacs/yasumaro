@@ -4,14 +4,14 @@
  * MutationObserver をモックして debounce 500ms の挙動を検証
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { waitForMock } from '../../../testDir/waitPolicy.js';
+import { waitForMock, useTimerClock } from '../../../testDir/waitPolicy.js';
 
 describe('watchDynamicContent (30-13)', () => {
   let mockCallbacks: Array<() => void> = [];
   let OriginalMutationObserver: typeof MutationObserver | undefined;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     document.body.innerHTML = '<div id="root"></div>';
     mockCallbacks = [];
     OriginalMutationObserver = (globalThis as unknown as { MutationObserver?: typeof MutationObserver }).MutationObserver;
@@ -168,6 +168,6 @@ describe('watchDynamicContent (30-13)', () => {
       expect(onChange).toHaveBeenCalledTimes(1);
     });
     disconnect();
-    vi.useFakeTimers();
+    useTimerClock();
   });
 });

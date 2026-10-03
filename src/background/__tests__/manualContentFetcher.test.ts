@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ManualContentFetcher } from '../manualContentFetcher.js';
 
@@ -124,7 +125,7 @@ describe('ManualContentFetcher', () => {
 
 describe('ManualContentFetcher timeout path (PBI 2026-09-17-16)', () => {
   it('removes the onUpdated listener when the tab load times out', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       const addListener = vi.fn();
       const removeListener = vi.fn();

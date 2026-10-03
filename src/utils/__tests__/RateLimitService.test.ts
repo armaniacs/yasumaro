@@ -4,6 +4,7 @@
  * chrome global mock なしに NTP skew / 二重ロック挙動を純粋テストする。
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { RateLimitService, RATE_LIMIT_WRITE_COALESCE_MS } from '../RateLimitService.js';
 import type { Clock, StoragePort, StorageArea } from '../ports.js';
@@ -210,7 +211,7 @@ describe('RateLimitService 書き込み合体 (PBI-17)', () => {
   let service: RateLimitService;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     clock = new FakeClock(1_000_000);
     session = new CountingStorageArea();
     local = new CountingStorageArea();

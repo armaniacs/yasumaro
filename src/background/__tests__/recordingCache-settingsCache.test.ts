@@ -3,6 +3,7 @@
  * 設定キャッシュのテスト
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { RecordingCache, SETTINGS_CACHE_TTL } from './helpers/recordingCache.js';
 import { makeRecordingLogic } from './helpers/makeRecordingLogic.js';
@@ -165,7 +166,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       await RecordingCache.getSettingsWithCache();
 
       // fake timers で TTL を経過させる（timestamp 直書きの代替）
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         vi.advanceTimersByTime(SETTINGS_CACHE_TTL + 1000);
 
@@ -209,7 +210,7 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       await RecordingCache.getSettingsWithCache();
 
       // fake timers で TTL を経過させる（timestamp 直書きの代替）
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         vi.advanceTimersByTime(SETTINGS_CACHE_TTL + 1000);
 

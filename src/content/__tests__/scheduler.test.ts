@@ -5,6 +5,7 @@
  * and contentKernel.js keeps only a compat re-export. Behavioral depth is
  * covered by contentKernel.idleScheduler.test.ts (unchanged).
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { IdleScheduler as FromScheduler } from '../scheduler.js';
 import { IdleScheduler as FromKernel } from '../contentKernel.js';
@@ -19,7 +20,7 @@ describe('scheduler module move', () => {
     });
 
     it('schedules and cancels through the module import', () => {
-        vi.useFakeTimers();
+        useTimerClock();
         const s = new FromScheduler();
         const cb = vi.fn();
         const id = s.schedule(cb, 100);

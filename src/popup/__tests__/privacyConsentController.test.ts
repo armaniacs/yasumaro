@@ -10,6 +10,7 @@
  * decline reach the module with the checkbox value, and the focus trap works.
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // ============================================================================
@@ -142,7 +143,7 @@ function getPolicyLink(): HTMLAnchorElement | null {
 
 describe('privacyConsentController', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     setupDom();
     mockShouldPromptForConsent.mockReset();
     mockAcceptConsent.mockReset();

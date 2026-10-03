@@ -3,6 +3,7 @@
  * Regression tests for eTLD+1-scoped visit throttling: sibling subdomains
  * share one window, special hosts keep port-suffixed origin keys.
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
 import { VisitRateLimiter, MapVisitRateLimiterStore } from '../visitRateLimiter.js';
@@ -17,7 +18,7 @@ describe('VisitRateLimiter eTLD+1 scoping', () => {
   });
 
   it('throttles a same-origin revisit inside the window and allows it after expiry', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
     const limiter = makeLimiter();
 

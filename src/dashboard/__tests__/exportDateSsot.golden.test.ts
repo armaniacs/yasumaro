@@ -13,6 +13,7 @@
  */
 process.env.TZ = 'Asia/Tokyo';
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockQueryLogs = vi.fn();
@@ -210,7 +211,7 @@ describe('golden: connectionTests test-export filename (post-SSOT)', () => {
       },
       downloads: { download: downloadMock },
     };
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       vi.setSystemTime(new Date('2026-09-20T23:00:00Z'));
       const repo = {

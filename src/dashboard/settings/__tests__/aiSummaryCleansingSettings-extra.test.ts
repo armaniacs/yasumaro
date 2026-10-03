@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockStorageKeys = vi.hoisted(() => ({
@@ -589,7 +590,7 @@ describe('updateAiSummaryCleansingCheckboxStates', () => {
 describe('setupAiSummaryCleansingEventListeners', () => {
   beforeEach(() => {
     createCleansingDom();
-    vi.useFakeTimers();
+    useTimerClock();
     mockGetSettings.mockResolvedValue({ ai_summary_cleansing_enabled: true } as never);
   });
 

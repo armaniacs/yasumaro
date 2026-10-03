@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GistSyncTarget } from '../syncTargets/gistSyncTarget.js';
 import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList } from '../../utils/markdownFormatter.js';
@@ -104,7 +105,7 @@ describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
     new Date(t).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(FIXED_NOW);
   });
 

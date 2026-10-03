@@ -4,6 +4,7 @@
  * Tests for browsing log export functionality.
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
@@ -261,7 +262,7 @@ describe('exportLogsService', () => {
     });
 
     it('delays URL revocation so large downloads are not aborted (PBI 2026-09-06-01)', () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:delayed');
       const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
       const appendChild = vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
@@ -344,7 +345,7 @@ describe('exportLogsService', () => {
 
 describe('downloadBlob — delayed revoke (PBI 2026-09-06-01)', () => {
   it('does not revoke synchronously; revokes after the delay', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const createSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     const { downloadBlob, DOWNLOAD_REVOKE_DELAY_MS } = await import('../exportLogsService.js');

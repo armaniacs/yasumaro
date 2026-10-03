@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockCopyTextToClipboard = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
@@ -40,7 +41,7 @@ async function flush(): Promise<void> {
 
 describe('createCopyMarkdownButton', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     mockCopyTextToClipboard.mockReset().mockResolvedValue(undefined);
     mockFormatEntryToMarkdown.mockReset().mockReturnValue('# md');
   });

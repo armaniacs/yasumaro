@@ -4,6 +4,7 @@
  * transport failure) is driven through injected fakes — no chrome globals.
  * The shared stat builder is covered directly.
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VisitReporter, buildVisitStats, type VisitReporterDeps } from '../visitReporter.js';
 
@@ -193,7 +194,7 @@ describe('VisitReporter policy matrix', () => {
     });
 
     it('leaves the flag false on a transient transport failure so the visit is not lost', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         // Both the initial send and the single bounded retry fail.
         const deps = makeDeps();
@@ -208,7 +209,7 @@ describe('VisitReporter policy matrix', () => {
     });
 
     it('retries once after a transient failure and commits on success', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         const deps = makeDeps();
         deps.sender.sendMessageWithRetry

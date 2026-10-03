@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StorageKeys } from '../../../utils/storage/types.js';
-import { waitForMock } from '../../../../testDir/waitPolicy.js';
+import { waitForMock, useTimerClock } from '../../../../testDir/waitPolicy.js';
 
 // ── Hoisted mocks for SqliteEngineContext dependencies ──────────────────
 const mockInitIdbEngine = vi.fn();
@@ -427,7 +427,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
   });
 
   it('sendToOpfsWorker times out after 15s without a response and is removed from pending', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const state = makeOpfsState({ postMessage: vi.fn() });
 
     const promise = sendToOpfsWorker(state, 'QUERY');
@@ -441,7 +441,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
   });
 
   it('clears the timer and avoids rejection when resolved before the timeout', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const state = makeOpfsState({ postMessage: vi.fn() });
 
     const promise = sendToOpfsWorker(state, 'QUERY');
@@ -617,7 +617,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     // ただし postMessage の throw は sendToOpfsWorker 内では try されないので、onerror ではなく直接 throw なら
     // initOpfsWorker の外側 catch に入る。ここでは Worker 生成自体は成功するが sendToOpfsWorker が timeout するケースを模擬
     // timeout を使って reject させる（fake timers）
-    vi.useFakeTimers();
+    useTimerClock();
     const s7 = makeOpfsState({ postMessage: vi.fn() } as unknown as Worker);
     // isOpfsAvailable/canCreateWorker を true にしつつ、createOpfsWorker を迂回して直接 sendToOpfsWorker を失敗させる
     // 簡易に、s7 に Worker をセットし、sendToOpfsWorker が timeout するのと同じ挙動で initOpfsWorker が false になることを検証
@@ -641,7 +641,7 @@ describe('opfsWorkerProxy coverage — タイムアウトと terminate', () => {
     await expect(tryOpfsProxy(sNull, 'QUERY')).resolves.toBeNull();
 
     const sFail = makeOpfsState({ postMessage: vi.fn() } as unknown as Worker);
-    vi.useFakeTimers();
+    useTimerClock();
     const pFail = tryOpfsProxy(sFail, 'QUERY');
     vi.advanceTimersByTime(15000);
     await expect(pFail).resolves.toBeNull();

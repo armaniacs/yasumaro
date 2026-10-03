@@ -8,6 +8,7 @@
  */
 
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { vi } from 'vitest';
 
 // Mock i18n before importing autoClose.js
@@ -90,7 +91,7 @@ describe('自動クローズタイマー (autoClose.js)', () => {
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
     // 【環境初期化】: DOMとタイマーを初期化状態にする
-    vi.useFakeTimers();
+    useTimerClock();
     document.body.innerHTML = `
       <div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>
@@ -193,7 +194,7 @@ describe('連続記録時のタイマー管理', () => {
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
-    vi.useFakeTimers();
+    useTimerClock();
     document.body.innerHTML = `
       <div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>
@@ -254,7 +255,7 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
 
   beforeEach(() => {
     // 【テスト前準備】: 各テスト実行前にテスト環境を初期化
-    vi.useFakeTimers();
+    useTimerClock();
     document.body.innerHTML = `
 <div id="mainScreen" style="display: block;">
         <div id="mainStatus"></div>

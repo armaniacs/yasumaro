@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // PBI 2026-09-15-08: the controller delegates state transitions to the deep
@@ -108,7 +109,7 @@ function getAcceptBtn(): HTMLButtonElement | null {
 
 describe('privacyConsentController - r2 missed branches', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     setupDom();
     mockShouldPromptForConsent.mockReset();
     mockAcceptConsent.mockReset();

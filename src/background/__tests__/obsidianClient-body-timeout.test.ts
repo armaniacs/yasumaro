@@ -5,6 +5,7 @@
  */
 
 import type { Mock } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { ObsidianClient } from '../obsidianClient.js';
 import * as storage from '../../utils/storage/types.js';
 import { LogType } from '../../utils/logger/types.js';
@@ -123,7 +124,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
 
   describe('_fetchExistingContent - ボディ読み込みタイムアウト', () => {
     it('throws a timeout error when no body is returned', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       mockFetch.mockResolvedValue({
         ok: true,
         body: bodyNever()
@@ -144,7 +145,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
     });
 
     it('sets the timeout error name to AbortError (detectable by _handleError)', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       mockFetch.mockResolvedValue({
         ok: true,
         body: bodyNever()
@@ -166,7 +167,7 @@ describe('ObsidianClient: レスポンスボディ読み込みタイムアウト
 
   describe('appendToDailyNote - タイムアウト時のMutex解放', () => {
     it('releases the Mutex after a body read timeout', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       mockFetch.mockResolvedValue({
         ok: true,
         body: bodyNever()

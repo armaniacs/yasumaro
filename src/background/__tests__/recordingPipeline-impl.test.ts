@@ -2,6 +2,7 @@
 // Tests for RecordingPipeline internal methods and record() path
 // Covers: isValidFetchUrl, truncateContentSize, record branches, saveMetadata branches
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { vi } from 'vitest';
 import type { Mock } from 'vitest';
 
@@ -605,7 +606,7 @@ describe('RecordingPipeline', () => {
 
   describe('指数バックオフの上限（5000ms cap）', () => {
     beforeEach(() => {
-      vi.useFakeTimers();
+      useTimerClock();
     });
 
     afterEach(() => {

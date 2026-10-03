@@ -5,6 +5,7 @@
  * concurrent same-key CAS cannot lose a write (VULN-012 TOCTOU residual).
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { withOptimisticLock, withAtomicKeys } from '../storage/storageTransaction.js';
 import { runSerialized, _resetKeySerializerForTest } from '../keySerializer.js';
 import { ChromeStorageLogAdapter } from '../logger/storageAdapter.js';
@@ -48,7 +49,7 @@ describe('keySerializer primitive', () => {
   });
 
   it('resolves under fake timers without advancing them', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       let done = false;
       const p = runSerialized('k', async () => {
@@ -91,7 +92,7 @@ describe('withOptimisticLock same-key serialization (TOCTOU)', () => {
   });
 
   it('completes under fake timers', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       await chrome.storage.local.set({ fk: [] as number[], fk_version: 0 });
       const p = withOptimisticLock<number[]>('fk', (cur) => [...(cur ?? []), 9]);

@@ -5,6 +5,7 @@
  * canonical equality, and fake-timer safety.
  */
 
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from '../storagePort.js';
 import { StorageTransaction, ConflictError, __resetStorageTransactionForTest } from '../storageTransaction.js';
@@ -112,7 +113,7 @@ function runContractSuite(factory: PortFactory) {
   });
 
   it('resolves under fake timers without advancing', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       const p = tx.withLock<number[]>('fk', (cur) => [...(cur ?? []), 9]);
       await p;

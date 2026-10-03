@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi } from 'vitest';
 
 describe('TabCache remove durability (PBI 2026-09-12-24)', () => {
@@ -10,7 +11,7 @@ describe('TabCache remove durability (PBI 2026-09-12-24)', () => {
 
     const { TabCache } = await import('../tabCache.js');
     const cache = new TabCache();
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       cache.add({ id: 1, url: 'https://a.com', title: 'A' } as chrome.tabs.Tab);
       // Debounced write has NOT flushed yet

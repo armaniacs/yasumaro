@@ -9,6 +9,7 @@
 
 import { vi } from 'vitest';;
 import type { Mock, MockedClass } from 'vitest';
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 
 // Mock chrome.storage.local for pendingStorage integration
 const mockStorage: Record<string, unknown> = {};
@@ -525,7 +526,7 @@ describe('RecordingPipeline', () => {
 
   describe('指数バックオフの上限（5000ms cap）', () => {
     beforeEach(() => {
-      vi.useFakeTimers();
+      useTimerClock();
     });
 
     afterEach(() => {
@@ -582,7 +583,7 @@ describe('RecordingPipeline', () => {
     // リトライの指数バックオフは実タイマーで約11秒 sleep するため、
     // この describe では scoped fake timers で完走させる（指数バックオフの上限ブロックと同手法）。
     beforeEach(() => {
-      vi.useFakeTimers();
+      useTimerClock();
     });
 
     afterEach(() => {
@@ -722,7 +723,7 @@ describe('RecordingPipeline', () => {
     // リトライの指数バックオフは実タイマーで約11秒 sleep するため、
     // この describe では scoped fake timers で完走させる（指数バックオフの上限ブロックと同手法）。
     beforeEach(() => {
-      vi.useFakeTimers();
+      useTimerClock();
     });
 
     afterEach(() => {

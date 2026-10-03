@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { IdleScheduler } from '../contentKernel.js';
 
@@ -13,7 +14,7 @@ function internals(s: IdleScheduler): SchedulerInternals {
 
 describe('IdleScheduler — schedule/cancel tracking', () => {
     beforeEach(() => {
-        vi.useFakeTimers();
+        useTimerClock();
     });
 
     afterEach(() => {

@@ -3,6 +3,7 @@
  * Comprehensive tests for extractor.ts
  * Covers error handling paths, edge cases, and fallback logic
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 
@@ -710,7 +711,7 @@ describe('throttle function - beforeunload cleanup', () => {
     });
 
     it('throttle returns a function that can be called', async () => {
-        vi.useFakeTimers();
+        useTimerClock();
 
         await init();
         // init starts the periodic check (assert before timers run: advancing
@@ -1676,7 +1677,7 @@ describe('showPrivacyConfirmDialog - setTimeout focus behavior', () => {
     });
 
     it('calls setTimeout to focus cancel button', async () => {
-        vi.useFakeTimers();
+        useTimerClock();
 
         // Mock setTimeout to track calls
         const setTimeoutSpy = vi.spyOn(global, 'setTimeout');
@@ -1700,7 +1701,7 @@ describe('showPrivacyConfirmDialog - setTimeout focus behavior', () => {
     });
 
     it('focuses cancel button after dialog is shown', async () => {
-        vi.useFakeTimers();
+        useTimerClock();
 
         document.body.innerHTML = `
             <article>
@@ -1756,7 +1757,7 @@ describe('showPrivacyConfirmDialog - full dialog creation', () => {
     });
 
     it('creates dialog with all expected elements', async () => {
-        vi.useFakeTimers();
+        useTimerClock();
 
         // Create the dialog structure similar to showPrivacyConfirmDialog
         const host = document.createElement('div');

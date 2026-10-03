@@ -4,6 +4,7 @@
  */
 
 import { vi } from 'vitest';;
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 describe('Logger - Enhanced Coverage', () => {
     let logger: any;
@@ -146,7 +147,7 @@ describe('Logger - Enhanced Coverage', () => {
         });
 
         test('onSuspend logs a best-effort warning when flush times out', async () => {
-            vi.useFakeTimers();
+            useTimerClock();
             const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
             try {
                 // chrome.storage.local.get を永久に解決しないPromiseにして、

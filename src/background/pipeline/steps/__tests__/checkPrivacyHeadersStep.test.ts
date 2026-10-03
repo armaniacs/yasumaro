@@ -8,6 +8,7 @@
  */
 
 import { vi } from 'vitest';;
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 
 vi.mock('../../../../utils/logger/types.js');;vi.mock('../../../../utils/logger/core.js');;vi.mock('../../../../utils/logger/api.js');
 vi.mock('../../../../utils/storage/types.js');
@@ -407,7 +408,7 @@ describe('PrivacyHeadersChecker', () => {
 
     it('deniedBy=skip saves the exact pending args and throws reason-only payload', async () => {
       const T0 = 1726876800000;
-      vi.useFakeTimers();
+      useTimerClock();
       vi.setSystemTime(T0);
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
@@ -443,7 +444,7 @@ describe('PrivacyHeadersChecker', () => {
 
     it('deniedBy=requireConfirmation throws confirmation payload WITHOUT headerValue', async () => {
       const T0 = 1726876800000;
-      vi.useFakeTimers();
+      useTimerClock();
       vi.setSystemTime(T0);
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
@@ -482,7 +483,7 @@ describe('PrivacyHeadersChecker', () => {
 
     it('deniedBy=confirm throws confirmation payload WITH headerValue', async () => {
       const T0 = 1726876800000;
-      vi.useFakeTimers();
+      useTimerClock();
       vi.setSystemTime(T0);
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,
@@ -521,7 +522,7 @@ describe('PrivacyHeadersChecker', () => {
 
     it('invalid reason falls through to cache-control (not rejected)', async () => {
       const T0 = 1726876800000;
-      vi.useFakeTimers();
+      useTimerClock();
       vi.setSystemTime(T0);
       const getPrivacyInfo = vi.fn<() => Promise<any>>().mockResolvedValue({
         isPrivate: true,

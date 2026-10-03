@@ -1,4 +1,5 @@
 // src/background/__tests__/obsidianClient-mutex-map.test.js
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { ObsidianClient } from '../obsidianClient.js';
 import { Mutex } from '../../utils/Mutex.js';
 
@@ -96,7 +97,7 @@ describe('Mutex Map improvement', () => {
 
   test('removes the entry from the Map on timeout', async () => {
     // タイムアウト値を一時的に短く設定してテスト
-    vi.useFakeTimers();
+    useTimerClock();
 
     const mutex = new Mutex();
 

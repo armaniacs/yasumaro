@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 
 const mockChrome = {
     storage: { local: { get: vi.fn(), set: vi.fn() } },
@@ -49,7 +50,7 @@ describe('settingsUiHelper', () => {
 
     describe('showStatus', () => {
         test('displays a success message', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             showStatus('status-message', 'Saved!', 'success');
 
             const el = document.getElementById('status-message');
@@ -58,7 +59,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('displays an error message', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             showStatus('status-message', 'Error!', 'error');
 
             const el = document.getElementById('status-message');
@@ -67,7 +68,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('clears a success message after 3 seconds', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             showStatus('status-message', 'Saved!', 'success');
 
             vi.advanceTimersByTime(3000);
@@ -78,7 +79,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('clears an error message after 5 seconds', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             showStatus('status-message', 'Error!', 'error');
 
             vi.advanceTimersByTime(4999);
@@ -94,7 +95,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('keeps the base class when the type class changes, never both', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             const el = document.getElementById('status-message')!;
 
             showStatus(el, 'Saved!', 'success');
@@ -107,7 +108,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('honours an explicit duration instead of the per-type default', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             showStatus('status-message', 'Saved!', 'success', { durationMs: 2000 });
 
             vi.advanceTimersByTime(1999);
@@ -118,7 +119,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('autoClear: false keeps the message and schedules no clear', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             showStatus('status-message', 'Saved!', 'success', { autoClear: false });
 
             vi.advanceTimersByTime(60000);
@@ -129,7 +130,7 @@ describe('settingsUiHelper', () => {
         });
 
         test('never adds the toast animation class that would double-apply the keyframes', () => {
-            vi.useFakeTimers();
+            useTimerClock();
             const el = document.getElementById('status-message')!;
 
             showStatus(el, 'Saved!', 'success');

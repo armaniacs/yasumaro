@@ -7,7 +7,7 @@
 
 import { vi } from 'vitest';
 import type { Mock, MockedFunction } from 'vitest';
-import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock, useTimerClock } from '../../../testDir/waitPolicy.js';
 
 // Mock dependencies before importing cspSettings
 // PBI 2026-09-17-19: the reset confirmation goes through the accessible
@@ -329,7 +329,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should auto-hide success message after 3 seconds', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const checkbox = document.getElementById('conditionalCspEnabled') as HTMLInputElement;
       checkbox.checked = true;
       mockSetAll.mockResolvedValue(undefined);
@@ -497,7 +497,7 @@ describe('cspSettings (CspSettingsController default instance)', () => {
     });
 
     test('should auto-hide reset message after 3 seconds', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       mockGetAll.mockResolvedValue({
         conditional_csp_enabled: true,
         conditional_csp_providers: [],

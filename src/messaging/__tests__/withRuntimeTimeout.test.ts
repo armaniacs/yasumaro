@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { withRuntimeTimeout } from '../withRuntimeTimeout.js';
 
 describe('withRuntimeTimeout', () => {
-  beforeEach(() => vi.useFakeTimers());
+  beforeEach(() => useTimerClock());
   afterEach(() => vi.useRealTimers());
 
   it('passes through the resolved value when the operation wins', async () => {

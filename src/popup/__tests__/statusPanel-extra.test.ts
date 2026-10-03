@@ -1450,7 +1450,7 @@ describe('additional branch coverage — trust and record fallback', () => {
   });
 
   it('covers permission denied animation branch with errorMsg present', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const { updateTrustStatus } = await import('../statusPanel.js');
     document.body.innerHTML = `
       <div id="statusTrustContent"></div>

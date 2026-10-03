@@ -9,6 +9,7 @@
  * - Exempt ops: query/search bypass token check, IPC sent without token
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { DashboardGateway } from '../dashboardGateway.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
@@ -212,7 +213,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
   // -------------------------------------------------------------------------
   describe('Fail-closed timeout: token fetch times out', () => {
     it('Given token fetch times out (never resolves), When calling destructive op with fake timers, Then IPC NOT sent for destructive op and error is returned', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
 
       // Never-resolving promise simulates the chrome.runtime.sendMessage hanging until the internal 10s race fires
       const hangingMock = vi.fn(() => new Promise(() => {}));
@@ -290,7 +291,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
     });
 
     it('Given token fetch hang times out once, When calling destructive op, Then exactly one token fetch is attempted', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const hangingMock = vi.fn(() => new Promise(() => {}));
       (globalThis as any).chrome.runtime.sendMessage = hangingMock;
 
@@ -403,7 +404,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
   // -------------------------------------------------------------------------
   describe('Retry option: throw or retriable retries once, decode failure never', () => {
     it('Given the send throws once, When retryAttempts 2, Then it retries once and returns the decoded success', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         let calls = 0;
         (globalThis as any).chrome.runtime.sendMessage = vi.fn(async (msg: any) => {
@@ -431,7 +432,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
     });
 
     it('Given a retriable failure first, When retryAttempts 2, Then it retries once and returns the decoded success', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         let calls = 0;
         (globalThis as any).chrome.runtime.sendMessage = vi.fn(async () => {
@@ -477,7 +478,7 @@ describe('DashboardGateway — PBI 03 confirm-token fail-closed', () => {
     });
 
     it('Given both attempts fail, When retryAttempts 2, Then it returns the classified final error', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       try {
         (globalThis as any).chrome.runtime.sendMessage = vi.fn(async () => ({
           success: false, error: 'DB locked', retriable: true,

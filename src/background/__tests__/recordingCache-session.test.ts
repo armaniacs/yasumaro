@@ -15,6 +15,7 @@
  *   4. getSavedUrlsWithCache / invalidateUrlCache のキャッシュ挙動
  *   5. getPrivacyInfoWithCache の session storage フォールバック
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mockGetAll = vi.hoisted(() => vi.fn());
@@ -269,7 +270,7 @@ describe('RecordingCache — URL cache', () => {
   });
 
   it('re-reads storage once the TTL has elapsed', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     await cache.getSavedUrlsWithCache();
     expect(mockGetSavedUrlsWithTimestamps).toHaveBeenCalledTimes(1);
 

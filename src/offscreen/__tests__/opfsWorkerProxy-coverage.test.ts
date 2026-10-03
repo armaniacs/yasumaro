@@ -4,6 +4,7 @@
  * PBI 10: opfsWorkerProxy の 15s タイムアウトを vi.useFakeTimers で検証、terminate パス追加。
  * さらに isOpfsAvailable / canCreateWorker / createOpfsWorker / initOpfsWorker / tryOpfsProxy で 90% 到達。
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../utils/logger/types.js', async () =>
@@ -229,7 +230,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     });
 
     it('rejects with a timeout after 15s and removes the pending entry', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -245,7 +246,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     });
 
     it('clears the timeout and resolves the Promise on success', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -265,7 +266,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     });
 
     it('clears the timeout and propagates the rejection on reject', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -283,7 +284,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     });
 
     it('ignores a late resolve after a timeout (pending already removed)', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -298,7 +299,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     });
 
     it('times out multiple pending entries independently', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
 
@@ -313,7 +314,7 @@ describe('opfsWorkerProxy — coverage 90% (PBI 10)', () => {
     });
 
     it('keeps incrementing IDs', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const postMessage = vi.fn();
       const state = makeState({ postMessage });
       state.opfsRequestId = 5;

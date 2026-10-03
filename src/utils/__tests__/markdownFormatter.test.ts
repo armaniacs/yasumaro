@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList, buildEntryMarkdown } from '../markdownFormatter.js';
 import type { BrowsingLogEntry } from '../sqlite-types.js';
@@ -99,7 +100,7 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
   const FIXED_NOW = new Date('2026-03-15T09:30:00.000Z').getTime();
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(FIXED_NOW);
   });
 

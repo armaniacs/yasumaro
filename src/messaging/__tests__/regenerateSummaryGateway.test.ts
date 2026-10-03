@@ -3,6 +3,7 @@
  * Mirrors pendingRecordGateway.test.ts: envelope + normalization + timeout.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import {
   regenerateSummary,
   REGENERATE_TIMEOUT_MS,
@@ -15,7 +16,7 @@ function stubSendMessage(impl: ReturnType<typeof vi.fn>) {
 }
 
 describe('regenerateSummaryGateway', () => {
-  beforeEach(() => vi.useFakeTimers());
+  beforeEach(() => useTimerClock());
   afterEach(() => {
     vi.useRealTimers();
     delete (globalThis as { chrome?: unknown }).chrome;

@@ -8,7 +8,7 @@
 
 import { vi } from 'vitest';;
 import { readFileSync } from 'node:fs';
-import { drainMacrotask } from '../../../../testDir/waitPolicy.js';
+import { drainMacrotask, useTimerClock } from '../../../../testDir/waitPolicy.js';
 
 // Mock dependencies - all at top level
 vi.mock('../../../utils/trustDb/trustDbSchema.js', () => ({}));
@@ -1065,7 +1065,7 @@ describe('trustSettings.ts', () => {
       const { init } = await import('../trustSettings.js');
       init();
 
-      vi.useFakeTimers();
+      useTimerClock();
 
       document.getElementById('saveTrustSettings')!.click();
       await Promise.resolve();

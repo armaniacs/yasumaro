@@ -1,9 +1,10 @@
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createConfirmToken, verifyConfirmToken, computeScopeHash, CONFIRM_TOKEN_TTL_MS, __resetConfirmTokensForTesting } from '../../../confirmTokenManager.js';
 
 describe('confirmTokenManager per-action single-use TTL', () => {
   beforeEach(async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     await __resetConfirmTokensForTesting();
   });
   afterEach(async () => {
@@ -101,7 +102,7 @@ describe('confirmTokenManager per-action single-use TTL', () => {
 
 describe('confirmTokenManager scopeHash binding (PBI 2026-09-06-01)', () => {
   beforeEach(async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     await __resetConfirmTokensForTesting();
   });
   afterEach(async () => {

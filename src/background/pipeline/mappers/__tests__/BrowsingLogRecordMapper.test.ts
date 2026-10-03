@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mapToBrowsingLogRecord } from '../BrowsingLogRecordMapper.js';
 import type { RecordingContext } from '../../types.js';
@@ -34,7 +35,7 @@ function makePrivacyResult(overrides: ExplicitUndefined<PrivacyPipelineResult> =
 
 describe('mapToBrowsingLogRecord', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(new Date('2026-07-13T00:00:00Z'));
   });
 

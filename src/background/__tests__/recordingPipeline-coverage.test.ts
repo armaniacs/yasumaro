@@ -5,6 +5,7 @@
 //          normalizeUrlForCache, getPrivacyInfoWithCache (session storage),
 //          _recordImpl branches, preview via record({ previewOnly: true })
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
@@ -314,7 +315,7 @@ describe('RecordingPipeline - getSavedUrlsWithCache', () => {
     await RecordingCache.getSavedUrlsWithCache();
 
     // Expire the cache via fake timers (61s > 60s URL_CACHE_TTL).
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       vi.advanceTimersByTime(61 * 1000);
 

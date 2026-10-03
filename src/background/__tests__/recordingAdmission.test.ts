@@ -6,6 +6,7 @@
  * kind → bucket derivation, the sender narrowing, and the valid-visit flood
  * guard (ported from the former handler-level flood tests).
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   RecordingAdmission,
@@ -154,7 +155,7 @@ describe('RecordingAdmission — valid-visit order (flood guard before consent)'
   });
 
   it('rejects a repeat visit within the flood window before the consent read', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
     const { deps, admission } = makeAdmission();
     const sender = { tab: { id: 1, url: 'https://rate-limit.example.com' } } as unknown as chrome.runtime.MessageSender;
@@ -170,7 +171,7 @@ describe('RecordingAdmission — valid-visit order (flood guard before consent)'
   });
 
   it('allows a new visit after the flood window has elapsed', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
     const { admission } = makeAdmission();
     const sender = { tab: { id: 1, url: 'https://rate-window.example.com' } } as unknown as chrome.runtime.MessageSender;
@@ -184,7 +185,7 @@ describe('RecordingAdmission — valid-visit order (flood guard before consent)'
   });
 
   it('VULN-002: throttles same-origin visits across path/fragment rotation', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
     const { admission } = makeAdmission();
 
@@ -219,7 +220,7 @@ describe('isRateLimitedVisit (visitRateLimiter adapter)', () => {
   });
 
   it('sweeps expired entries on every call even when size is below MAX_ENTRIES', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
 
     for (let i = 0; i < 997; i++) {
@@ -235,7 +236,7 @@ describe('isRateLimitedVisit (visitRateLimiter adapter)', () => {
   });
 
   it('still enforces the 5-second rate-limit window', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
 
     isRateLimitedVisit('https://same-origin.example.com/page');
@@ -246,7 +247,7 @@ describe('isRateLimitedVisit (visitRateLimiter adapter)', () => {
   });
 
   it('evicts the oldest entry when size still exceeds MAX_ENTRIES after TTL sweep', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
 
     for (let i = 0; i < 1001; i++) {
@@ -257,7 +258,7 @@ describe('isRateLimitedVisit (visitRateLimiter adapter)', () => {
   });
 
   it('does not trigger the oldest-entry safeguard when TTL sweep already shrinks the map', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     vi.setSystemTime(1_000_000);
 
     for (let i = 0; i < 1050; i++) {

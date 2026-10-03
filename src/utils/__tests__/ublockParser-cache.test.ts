@@ -3,6 +3,7 @@
  * uBlock Parser - Cacheモジュールのユニットテスト
  */
 
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import {
   clearCache,
   updateLRUTracker,
@@ -303,7 +304,7 @@ describe('ublockParser - Cache Module', () => {
     });
 
     test('cleanupCache: clears the cache after CLEANUP_INTERVAL elapses', () => {
-      vi.useFakeTimers();
+      useTimerClock();
 
       saveToCache('cleanup_key', { blockRules: ['test.com'] });
       expect(hasCacheKey('cleanup_key')).toBe(true);

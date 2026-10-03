@@ -4,6 +4,7 @@
  */
 
 import type { Mock } from 'vitest';
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', {
     value: new Crypto()
@@ -60,7 +61,7 @@ describe('trancoUpdater', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        vi.useFakeTimers();
+        useTimerClock();
     });
 
     afterEach(() => {

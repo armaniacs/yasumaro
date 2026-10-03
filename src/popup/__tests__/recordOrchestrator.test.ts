@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // --- hoisted mocks ---
@@ -407,7 +408,7 @@ describe('RecordSession.handleRecordNowClick', () => {
 // ---------------------------------------------------------------------------
 describe('RecordSession private helpers', () => {
   it('showButtonResultState sets done/error and resets after timeout', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const mocks = createMocks();
     const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
@@ -427,7 +428,7 @@ describe('RecordSession private helpers', () => {
     (o as any).showButtonResultState(btn, 'error');
     expect(btn.textContent).toBe('Failed');
     // timeout where recordBtn missing
-    vi.useFakeTimers();
+    useTimerClock();
     document.getElementById('recordBtn')!.remove();
     mockCheckPageStatus.mockResolvedValue(null);
     (o as any).showButtonResultState(btn, 'done');
@@ -532,7 +533,7 @@ describe('RecordSession private helpers', () => {
   });
 
   it('showCopyMarkdownButton returns false when container missing and true on success, handles copy success/failure', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const mocks = createMocks();
     const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);
     // container missing (tagPanel missing)

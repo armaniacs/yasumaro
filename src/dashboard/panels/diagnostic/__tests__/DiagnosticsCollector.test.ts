@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { DiagnosticsCollector } from '../DiagnosticsCollector.js';
@@ -234,7 +235,7 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
         initialized: true, path: 'OPFS:/y.db', fallback: false, fts5: true,
       } as Awaited<ReturnType<typeof getSqliteStatus>>);
 
-    vi.useFakeTimers();
+    useTimerClock();
     try {
       const collector = new DiagnosticsCollector({
         ...baseDeps(),

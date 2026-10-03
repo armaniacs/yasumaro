@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drainMacrotask, waitForMock } from '../../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock, useTimerClock } from '../../../../testDir/waitPolicy.js';
 import type { CustomPrompt } from '../../../utils/types.js';
 
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
@@ -357,7 +357,7 @@ describe('customPromptManager - r2 missed branches', () => {
     });
 
     it('should clear status after timeout', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [] });
 

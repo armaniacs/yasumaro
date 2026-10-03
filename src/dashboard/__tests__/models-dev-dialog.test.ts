@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn().mockResolvedValue({}),
@@ -739,7 +740,7 @@ describe('ModelsDevDialog', () => {
 
   describe('showError timeout', () => {
     it('should hide error message after 5 seconds', async () => {
-      vi.useFakeTimers();
+      useTimerClock();
       const dialog = new ModelsDevDialog();
       await dialog.show();
       document.getElementById('dialog-save')?.click();

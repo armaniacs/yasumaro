@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -782,7 +783,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button success shows message and clears after 3s', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     mockSaveSettings.mockResolvedValue(undefined as never);
     setupAiSummaryCleansingEventListeners();
@@ -798,7 +799,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button shows fallback message when i18n returns empty', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     (globalThis.chrome.i18n.getMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue('');
     mockSaveSettings.mockResolvedValue(undefined as never);
@@ -812,7 +813,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button error shows error message and logs', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     mockSaveSettings.mockRejectedValueOnce(new Error('fail'));
     setupAiSummaryCleansingEventListeners();
@@ -826,7 +827,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button error does not self-clear: the reason is the only record', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     mockSaveSettings.mockRejectedValueOnce(new Error('fail'));
     setupAiSummaryCleansingEventListeners();
@@ -842,7 +843,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button error fallback message when i18n empty', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     (globalThis.chrome.i18n.getMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue('');
     mockSaveSettings.mockRejectedValueOnce(new Error('fail'));
@@ -853,7 +854,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button handles missing status element (success path)', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     document.getElementById('aiSummaryCleansingSettingsStatus')!.remove();
     mockSaveSettings.mockResolvedValue(undefined as never);
@@ -865,7 +866,7 @@ describe('setupAiSummaryCleansingEventListeners', () => {
   });
 
   it('save button handles missing status element (error path)', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     createFullDom();
     document.getElementById('aiSummaryCleansingSettingsStatus')!.remove();
     mockSaveSettings.mockRejectedValueOnce(new Error('fail'));

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import {
   recordPendingPage,
   PENDING_RECORD_TIMEOUT_MS,
@@ -7,7 +8,7 @@ import {
 
 describe('pendingRecordGateway', () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
   });
 
   afterEach(() => {

@@ -1,3 +1,4 @@
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { subscribeAiTestProgress } from '../aiTestProgressClient.js';
 import { AI_TEST_PROGRESS_MESSAGE_TYPE } from '../../background/aiTestProgressNotifier.js';
@@ -28,7 +29,7 @@ describe('aiTestProgressClient', () => {
   let extensionId: string;
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    useTimerClock();
     ({ listeners, extensionId } = installMockRuntime());
   });
 

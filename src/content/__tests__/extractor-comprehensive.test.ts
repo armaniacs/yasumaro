@@ -9,7 +9,7 @@
  * - E2Eフック
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { drainMacrotask } from '../../../testDir/waitPolicy.js';
+import { drainMacrotask, useTimerClock } from '../../../testDir/waitPolicy.js';
 import { PageState } from '../pageState.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 
@@ -283,7 +283,7 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
   });
 
   it('throttle: leading + guaranteed trailing, beforeunload flush must not throw (PBI 2026-09-11-07)', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const handle = throttle(fn);
     // leading call fires immediately; second rapid call arms trailing
@@ -382,7 +382,7 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
   });
 
   it('scheduleNextCheck fallback to setTimeout', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.isValidVisitReported = false;
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
@@ -654,7 +654,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
   });
 
   it('throttle leading then trailing (covers old 309,312)', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const handle = throttle(fn);
     handle.fn('a');
@@ -668,7 +668,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
   });
 
   it('beforeunload flushes the pending trailing call (covers old 323)', () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const fn = vi.fn();
     const handle = throttle(fn);
     handle.fn('x'); // leading

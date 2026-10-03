@@ -6,6 +6,7 @@
  * path, injection-race retry (200ms × 10), tab_load_timeout, invalid-reply
  * rejection. All chrome access is injected — no global stubs.
  */
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { RegenerateContentFetcher, type RegenerateContentFetcherDeps } from '../regenerateContentFetcher.js';
 
@@ -106,7 +107,7 @@ describe('RegenerateContentFetcher', () => {
   });
 
   it('gives up after 10 attempts with get_content_send_failed', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const deps = makeDeps({
       sendMessage: vi.fn().mockRejectedValue(new Error('Could not establish connection')),
     });
@@ -132,7 +133,7 @@ describe('RegenerateContentFetcher', () => {
   });
 
   it('tab_load_timeout after 10s when the tab never completes', async () => {
-    vi.useFakeTimers();
+    useTimerClock();
     const deps = makeDeps({ getTab: vi.fn().mockResolvedValue({ status: 'loading' }) });
     const pending = new RegenerateContentFetcher(deps).fetchExtracted('https://example.com', 'current');
     // Synchronously mark the promise handled (same race as above).

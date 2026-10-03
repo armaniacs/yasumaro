@@ -1,11 +1,13 @@
 // src/utils/__tests__/dailyNotePathBuilder.test.ts
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { buildDailyNotePath } from '../dailyNotePathBuilder.js';
 
 describe('buildDailyNotePath', () => {
   beforeEach(() => {
     // WHY local components: a UTC-noon instant is a different calendar day
     // east of UTC+12, which would make every assertion below TZ-dependent.
-    vi.useFakeTimers().setSystemTime(new Date(2026, 1, 4, 12, 0, 0));
+    useTimerClock();
+    vi.setSystemTime(new Date(2026, 1, 4, 12, 0, 0));
   });
 
   afterEach(() => {
@@ -53,7 +55,8 @@ describe('buildDailyNotePath - URLメタ文字エンコード', () => {
   beforeEach(() => {
     // WHY local components: a UTC-noon instant is a different calendar day
     // east of UTC+12, which would make every assertion below TZ-dependent.
-    vi.useFakeTimers().setSystemTime(new Date(2026, 1, 4, 12, 0, 0));
+    useTimerClock();
+    vi.setSystemTime(new Date(2026, 1, 4, 12, 0, 0));
   });
 
   afterEach(() => {
