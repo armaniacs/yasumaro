@@ -24,21 +24,27 @@ vi.mock('../sqliteEngineHost.js', () => ({
   },
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
 
 beforeEach(() => {
   vi.clearAllMocks();

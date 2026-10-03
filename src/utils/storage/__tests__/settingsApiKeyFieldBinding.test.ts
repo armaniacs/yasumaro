@@ -33,44 +33,34 @@ vi.mock('../../crypto/cryptoParams.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../logger/types.js', () => ({
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  logSanitize: vi.fn(() => Promise.resolve()),
-  ErrorCode: {
-    INTERNAL_ERROR: 'INT_001',
-    API_REQUEST_FAILURE: 'API_REQ_001',
-    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
-    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
-    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
-    STORAGE_QUOTA_EXCEEDED: 'STO_001',
-    STORAGE_WRITE_FAILURE: 'STO_003',
-  },
-}));
-vi.mock('../../logger/core.js', () => ({
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: {
-    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
-    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
-    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
-  },
-}));
-vi.mock('../../logger/api.js', () => ({
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: {
-    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
-    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
-    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
-  },
-}));
+vi.mock('../../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    logSanitize: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', API_REQUEST_FAILURE: 'API_REQ_001', CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001', CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003', STORAGE_QUOTA_EXCEEDED: 'STO_001', STORAGE_WRITE_FAILURE: 'STO_003' },
+  }),
+);
+vi.mock('../../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001', CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003' },
+  }),
+);
+vi.mock('../../logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001', CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003' },
+  }),
+);
 
 describe('settings — API key field binding (AAD)', () => {
   let storageData: Record<string, unknown>;

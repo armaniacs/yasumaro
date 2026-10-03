@@ -44,18 +44,24 @@ vi.mock('../../utils/trustChecker.js', () => ({
   checkDomainTrust: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
 
 import { initStatusPanel } from '../statusPanel.js';
 

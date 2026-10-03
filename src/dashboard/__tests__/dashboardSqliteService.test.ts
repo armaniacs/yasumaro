@@ -10,10 +10,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { givenHandshakeResponse, givenHandshakeError } from './helpers/dashboardSqliteMock.js';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 
-vi.mock('../../utils/logger/api.js', () => ({
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-}));
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+    logError: 'fn',
+  }),
+);
 
 import { logWarn } from '../../utils/logger/api.js';
 

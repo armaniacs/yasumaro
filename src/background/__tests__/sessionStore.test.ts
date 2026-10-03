@@ -7,7 +7,11 @@ const mockAddLog = vi.hoisted(() => vi.fn());
 
 // The drop decision is only observable through its WARN log, so the real logger
 // (which buffers into chrome.storage) is replaced by a spy.
-vi.mock('../../utils/logger/core.js', () => ({ addLog: mockAddLog }));
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: mockAddLog,
+  }),
+);
 
 function serializedSize(value: unknown): number {
   return new Blob([JSON.stringify(value)]).size;

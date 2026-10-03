@@ -51,22 +51,23 @@ vi.mock('../../utils/ui/confirmDialog.js', () => ({
   showAlertDialog: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  ErrorCode: {
-    CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
-    STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE',
-    INVALID_INPUT: 'INVALID_INPUT',
-    OBSIDIAN_SEND_FAILURE: 'OBS_SEND_001',
-  },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE', STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE', INVALID_INPUT: 'INVALID_INPUT', OBSIDIAN_SEND_FAILURE: 'OBS_SEND_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
 
 vi.mock('../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');

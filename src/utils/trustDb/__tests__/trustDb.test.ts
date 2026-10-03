@@ -41,27 +41,33 @@ vi.mock('../bloomFilter.js', () => ({
 }));
 
 // logger をモック
-vi.mock('../../logger/types.js', () => ({
-  logDebug: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: {},
-}));
-vi.mock('../../logger/core.js', () => ({
-  logDebug: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: {},
-}));
-vi.mock('../../logger/api.js', () => ({
-  logDebug: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: {},
-}));
+vi.mock('../../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: {  },
+  }),
+);
+vi.mock('../../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: {  },
+  }),
+);
+vi.mock('../../logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: {  },
+  }),
+);
 
 // storageTransaction をモック（optimisticLock shim は削除済み）
 vi.mock('../../storage/storageTransaction.js', () => ({

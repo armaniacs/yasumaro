@@ -32,12 +32,14 @@ vi.mock('../TrustPolicy.js', () => ({
   })),
 }));
 
-vi.mock('../../logger/api.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logDebug: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+  }),
+);
 
 const mockStorage = new Map<string, unknown>();
 

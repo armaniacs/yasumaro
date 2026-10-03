@@ -54,30 +54,36 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
 vi.mock('../../utils/dailyNotePathBuilder.js', () => ({
   buildDailyNotePath: vi.fn((p: string) => p || '2026-02-07'),
 }));

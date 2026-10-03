@@ -13,18 +13,26 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../../storage/../logger/types.js', () => ({
-  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
-}));
-vi.mock('../../../storage/../logger/core.js', () => ({
-  addLog: vi.fn(),
-}));
-vi.mock('../../logger/types.js', () => ({
-  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
-}));
-vi.mock('../../logger/core.js', () => ({
-  addLog: vi.fn(),
-}));
+vi.mock('../../../storage/../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../../storage/../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
+vi.mock('../../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
 
 import { PRESETS } from '../presets.js';
 import { CLEANSING_RULES, CLEANSING_RULE_KEYS } from '../rules.js';

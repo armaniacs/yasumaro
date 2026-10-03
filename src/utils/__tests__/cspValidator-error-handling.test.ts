@@ -45,21 +45,27 @@ const mockLogError = vi.fn();
 const mockLogWarn = vi.fn();
 const mockLogInfo = vi.fn();
 
-vi.mock('../logger/types.js', () => ({
-  logError: vi.fn((...args) => mockLogError(...args)),
-  logWarn: vi.fn((...args) => mockLogWarn(...args)),
-  logInfo: vi.fn((...args) => mockLogInfo(...args))
-}));
-vi.mock('../logger/core.js', () => ({
-  logError: vi.fn((...args) => mockLogError(...args)),
-  logWarn: vi.fn((...args) => mockLogWarn(...args)),
-  logInfo: vi.fn((...args) => mockLogInfo(...args))
-}));
-vi.mock('../logger/api.js', () => ({
-  logError: vi.fn((...args) => mockLogError(...args)),
-  logWarn: vi.fn((...args) => mockLogWarn(...args)),
-  logInfo: vi.fn((...args) => mockLogInfo(...args))
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: vi.fn((...args) => mockLogError(...args)),
+    logWarn: vi.fn((...args) => mockLogWarn(...args)),
+    logInfo: vi.fn((...args) => mockLogInfo(...args)),
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: vi.fn((...args) => mockLogError(...args)),
+    logWarn: vi.fn((...args) => mockLogWarn(...args)),
+    logInfo: vi.fn((...args) => mockLogInfo(...args)),
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: vi.fn((...args) => mockLogError(...args)),
+    logWarn: vi.fn((...args) => mockLogWarn(...args)),
+    logInfo: vi.fn((...args) => mockLogInfo(...args)),
+  }),
+);
 
 describe('CSP Validator - Error Handling', () => {
   let logger: any;

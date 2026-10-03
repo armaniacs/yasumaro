@@ -12,30 +12,36 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  addLog: vi.fn(),
-  ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
-  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  addLog: vi.fn(),
-  ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
-  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  addLog: vi.fn(),
-  ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
-  LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    addLog: 'fn',
+    ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
+    LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    addLog: 'fn',
+    ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
+    LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    addLog: 'fn',
+    ErrorCode: { API_REQUEST_FAILURE: 'API_REQUEST_FAILURE' },
+    LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
 
 import { createManualRecordHandler, createSaveRecordHandler } from '../recordingHandlers.js';
 import type { ManualRecordHandlerDeps, SaveRecordHandlerDeps } from '../recordingHandlers.js';

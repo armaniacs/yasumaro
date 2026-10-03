@@ -19,30 +19,27 @@ vi.mock('../../utils/pendingStorage.js', () => ({
   migrateLegacyPendingPagesKey: mockMigrateLegacyPendingPagesKey,
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  logInfo: mockLogInfo,
-  logError: mockLogError,
-  ErrorCode: {
-    STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE',
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
-  },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logInfo: mockLogInfo,
-  logError: mockLogError,
-  ErrorCode: {
-    STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE',
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
-  },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logInfo: mockLogInfo,
-  logError: mockLogError,
-  ErrorCode: {
-    STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE',
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
-  },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: mockLogInfo,
+    logError: mockLogError,
+    ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: mockLogInfo,
+    logError: mockLogError,
+    ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: mockLogInfo,
+    logError: mockLogError,
+    ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
 
 vi.mock('../sessionStore.js', () => ({
   SessionStore: {

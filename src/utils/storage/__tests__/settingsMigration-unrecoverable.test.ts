@@ -3,39 +3,33 @@ import { applyMigrationsAndDecryptWithReEncrypt } from '../settingsMigration.js'
 import { StorageKeys } from '../types.js';
 import { isEncrypted, encryptApiKey } from '../../crypto/index.js';
 
-vi.mock('../../logger/types.js', () => ({
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: {
-    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
-    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
-    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
-  },
-}));
-vi.mock('../../logger/core.js', () => ({
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: {
-    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
-    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
-    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
-  },
-}));
-vi.mock('../../logger/api.js', () => ({
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: {
-    CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002',
-    CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001',
-    CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003',
-  },
-}));
+vi.mock('../../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001', CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003' },
+  }),
+);
+vi.mock('../../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001', CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003' },
+  }),
+);
+vi.mock('../../logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_002', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_001', CRYPTO_ENCRYPTION_FAILURE: 'CRYPTO_003' },
+  }),
+);
 
 async function generateKey(): Promise<CryptoKey> {
   return globalThis.crypto.subtle.generateKey(

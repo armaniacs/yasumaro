@@ -37,18 +37,24 @@ vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) =
   };
 });
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
+  }),
+);
 
 import { CLEANSING_RULES } from '../../../utils/aiSummaryCleaner/rules.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';

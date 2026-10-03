@@ -39,24 +39,30 @@ vi.mock('../sqliteEngineHost.js', () => ({
 }));
 
 // logger noise suppression
-vi.mock('../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  ErrorCode: {},
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  ErrorCode: {},
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  ErrorCode: {},
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    ErrorCode: {  },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    ErrorCode: {  },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    ErrorCode: {  },
+  }),
+);
 
 import { query, insert, insertBatch, update, hardDelete, toggleStar, getCount, getStatus, clearAll, serialize } from '../recordsRepo.js';
 import { FTS_QUERY_MAX_LENGTH } from '../schema.js';

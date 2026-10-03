@@ -13,24 +13,30 @@
 import { vi } from 'vitest';;
 import type { Mock } from 'vitest';
 
-vi.mock('../../../../utils/logger/types.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
-vi.mock('../../../../utils/logger/core.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
-vi.mock('../../../../utils/logger/api.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
 vi.mock('../../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   const overrides = {

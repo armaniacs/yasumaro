@@ -193,27 +193,33 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../utils/logger/types.js', () => ({
-    logInfo: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    logDebug: vi.fn(),
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
     ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-    logInfo: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    logDebug: vi.fn(),
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
     ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-    logInfo: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    logDebug: vi.fn(),
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
     ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', INTERNAL_ERROR: 'INT_001' },
-}));
+  }),
+);
 
 vi.mock('../../utils/errorUtils.js', () => ({
     errorMessage: vi.fn((e: unknown) => String(e)),

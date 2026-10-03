@@ -70,27 +70,25 @@ vi.mock('../../utils/storage/savedUrlRepository.js', async (importOriginal) => {
 });
 vi.mock('../privacyPipeline.ts');
 vi.mock('../notificationHelper.ts');
-vi.mock('../../utils/logger/types.js', () => ({
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  },
-  ErrorCode: {
-    INTERNAL_ERROR: 'INT_001',
-    UNKNOWN_ERROR: 'UNK_001'
-  },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNK_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
 
 vi.mock('../../utils/domainUtils.ts', () => ({
   isDomainAllowed: vi.fn((url) => Promise.resolve(true))

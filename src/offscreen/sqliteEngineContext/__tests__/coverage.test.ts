@@ -49,24 +49,30 @@ vi.mock('../../storageFallback.js', () => ({
 }));
 
 // logger は副作用のみなので潰しておく
-vi.mock('../../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { STORAGE_MIGRATION_FAILURE: 'STORAGE_MIGRATION_FAILURE', INTERNAL_ERROR: 'INTERNAL_ERROR', MIGRATION_ROLLBACK_FAILED: 'MIGRATION_ROLLBACK_FAILED' },
+  }),
+);
 
 // PBI-05: the host's public state accessors are gone. The host tests observe
 // and drive the ladder's state through the state object the host hands its

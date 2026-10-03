@@ -7,7 +7,11 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../../utils/logger/core.js', () => ({ addLog: vi.fn() }));
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
 vi.mock('../../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
 
 import { RemoteAIService } from '../RemoteAIService.js';

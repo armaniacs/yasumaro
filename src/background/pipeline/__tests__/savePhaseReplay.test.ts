@@ -9,14 +9,26 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../utils/logger/core.js', () => ({ addLog: vi.fn(), logError: vi.fn() }));
-vi.mock('../../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({ addLog: vi.fn(), logError: vi.fn() }));
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+  }),
+);
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+  }),
+);
 
 import type { RecordingContext, StepDeps } from '../types.js';
 import type { Settings } from '../../../utils/storage/types.js';

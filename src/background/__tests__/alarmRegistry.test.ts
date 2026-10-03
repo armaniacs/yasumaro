@@ -30,18 +30,24 @@ vi.mock('../pendingChromeStorageQueue.js', () => ({
 vi.mock('../offlineQueueProcessor.js', () => ({
   createOfflineQueueProcessor: () => vi.fn(async () => {}),
 }));
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: addLogMock,
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: addLogMock,
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: addLogMock,
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+  }),
+);
 
 import { createAlarmRegistry, type AlarmHandlerDeps } from '../alarmRegistry.js';
 import { setSessionTimeoutRefs } from '../alarmRegistryRefs.js';

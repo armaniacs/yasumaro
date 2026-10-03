@@ -13,21 +13,27 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { ChromeOffscreenTransport } from '../ChromeOffscreenTransport.js';
 import { Mutex } from '../../utils/Mutex.js';
 
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  }),
+);
 
 vi.mock('../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),

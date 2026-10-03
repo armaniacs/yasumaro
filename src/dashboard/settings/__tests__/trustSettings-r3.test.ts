@@ -79,27 +79,33 @@ vi.mock('../../../utils/trustDb/trancoUpdater.js', () => ({
 
 const mockLogInfo = vi.fn();
 const mockLogError = vi.fn();
-vi.mock('../../../utils/logger/types.js', () => ({
-  logDebug: vi.fn(),
-  logInfo: mockLogInfo,
-  logWarn: vi.fn(),
-  logError: mockLogError,
-  ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logDebug: vi.fn(),
-  logInfo: mockLogInfo,
-  logWarn: vi.fn(),
-  logError: mockLogError,
-  ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logDebug: vi.fn(),
-  logInfo: mockLogInfo,
-  logWarn: vi.fn(),
-  logError: mockLogError,
-  ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logInfo: mockLogInfo,
+    logWarn: 'fn',
+    logError: mockLogError,
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logInfo: mockLogInfo,
+    logWarn: 'fn',
+    logError: mockLogError,
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logInfo: mockLogInfo,
+    logWarn: 'fn',
+    logError: mockLogError,
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+  }),
+);
 
 const mockGetMessage = vi.fn((key: string) => {
   const msgs: Record<string, string> = {

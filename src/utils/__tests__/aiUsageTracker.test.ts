@@ -26,18 +26,24 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
 });
 
 // logger モック
-vi.mock('../logger/types.js', () => ({
-    addLog: vi.fn(),
-    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
-}));
-vi.mock('../logger/core.js', () => ({
-    addLog: vi.fn(),
-    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
-}));
-vi.mock('../logger/api.js', () => ({
-    addLog: vi.fn(),
-    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' }
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
 
 // chrome API モック
 const mockStorage: Record<string, any> = {};

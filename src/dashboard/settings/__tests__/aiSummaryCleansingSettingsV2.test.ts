@@ -25,18 +25,24 @@ vi.mock('../../../utils/storage/SettingsRepository.js', async (importOriginal) =
     },
   };
 });
-vi.mock('../../../utils/logger/types.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
 
 // Keep real StorageKeys, CLEANSING_RULES, and other utils
 import {

@@ -64,18 +64,24 @@ vi.mock('../../../../utils/ui/settingsUiHelper.js', () => ({
   showStatus: vi.fn(),
 }));
 
-vi.mock('../../../../utils/logger/types.js', () => ({
-  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-  addLog: vi.fn(),
-}));
-vi.mock('../../../../utils/logger/core.js', () => ({
-  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-  addLog: vi.fn(),
-}));
-vi.mock('../../../../utils/logger/api.js', () => ({
-  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-  addLog: vi.fn(),
-}));
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+    addLog: 'fn',
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+    addLog: 'fn',
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+    addLog: 'fn',
+  }),
+);
 
 vi.mock('../../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

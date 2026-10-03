@@ -3,30 +3,36 @@ import { makeOrchestrator } from '../../__tests__/helpers/makeRecordingLogic.js'
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { Settings } from '../../../utils/storage/types.js';
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
 
 function mockObsidian() {
   return { appendToDailyNote: vi.fn().mockResolvedValue(undefined) };

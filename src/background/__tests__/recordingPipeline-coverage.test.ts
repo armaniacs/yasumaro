@@ -43,16 +43,22 @@ vi.mock('../../utils/domainUtils.ts', () => ({
   extractDomain: vi.fn(),
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+  }),
+);
 
 
 vi.mock('../../utils/piiSanitizer.ts', () => ({

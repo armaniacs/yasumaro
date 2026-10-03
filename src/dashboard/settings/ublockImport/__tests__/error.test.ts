@@ -12,18 +12,24 @@ import { addLog } from '../../../../utils/logger/core.js';
 import { LogType } from '../../../../utils/logger/types.js';
 
 // Mock the logger module
-vi.mock('../../../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
-}));
-vi.mock('../../../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
-}));
-vi.mock('../../../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' }
-}));
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' },
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' },
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO' },
+  }),
+);
 
 describe('fetchFromUrl - Error Handling', () => {
   beforeEach(() => {

@@ -2,19 +2,25 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PROVIDER_CATALOG as PROVIDER_REGISTRY, getRegistryEntry } from '../providerCatalog.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 
-vi.mock('../../../utils/logger/types.js', () => ({
-    addLog: vi.fn(),
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-    addLog: vi.fn(),
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logDebug: vi.fn(),
-    addLog: vi.fn(),
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    addLog: 'fn',
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
-}));
+  }),
+);
 
 
 vi.mock('../../../utils/fetch.js', () => ({

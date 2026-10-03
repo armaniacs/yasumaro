@@ -72,33 +72,24 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
 vi.mock('../../utils/storage/savedUrlRepository.js');
 vi.mock('../../utils/storage/domainFilterCache.js');
 vi.mock('../../utils/storage/quota.js');
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
 
 describe('ObsidianClient: レスポンスボディ読み込みタイムアウト', () => {
   let client: ObsidianClient;

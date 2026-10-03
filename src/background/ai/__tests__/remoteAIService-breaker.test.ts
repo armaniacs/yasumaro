@@ -16,7 +16,11 @@ import type { SessionStorePort } from '../../sessionStore.js';
 import type { FailureMetadata } from '../../../utils/failureTaxonomy.js';
 
 vi.mock('../../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
-vi.mock('../../../utils/logger/core.js', () => ({ addLog: vi.fn() }));
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
 
 function memoryStore(): SessionStorePort {
   const data = new Map<string, unknown>();

@@ -2,33 +2,39 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MigrationService } from '../migrationService.js';
 import { mapLegacyEntryToRecord } from '../migrationService.js';
 
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STO_003' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STO_003' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
-  logInfo: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STO_003' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STO_003' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STO_003' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STO_003' },
+  }),
+);
 
 describe('mapLegacyEntryToRecord', () => {
   it('maps a minimal entry with url and timestamp', () => {

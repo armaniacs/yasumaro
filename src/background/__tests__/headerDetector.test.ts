@@ -23,42 +23,39 @@ vi.mock('../../utils/urlHash.js', () => ({
   hashUrl: vi.fn((url: string) => Promise.resolve(url)),
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
-  ErrorCode: {
-    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
-    BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED',
-  },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
-  ErrorCode: {
-    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
-    BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED',
-  },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(() => Promise.resolve()),
-  logDebug: vi.fn(() => Promise.resolve()),
-  logError: vi.fn(() => Promise.resolve()),
-  logWarn: vi.fn(() => Promise.resolve()),
-  LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
-  ErrorCode: {
-    UNKNOWN_ERROR: 'UNKNOWN_ERROR',
-    BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED',
-  },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logInfo: 'resolved',
+    logDebug: 'resolved',
+    logError: 'resolved',
+    logWarn: 'resolved',
+    LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logInfo: 'resolved',
+    logDebug: 'resolved',
+    logError: 'resolved',
+    logWarn: 'resolved',
+    LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logInfo: 'resolved',
+    logDebug: 'resolved',
+    logError: 'resolved',
+    logWarn: 'resolved',
+    LogType: { ERROR: 'error', DEBUG: 'debug', INFO: 'info', WARN: 'warn' },
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', BADGE_UPDATE_FAILED: 'BADGE_UPDATE_FAILED' },
+  }),
+);
 
 import { logError, logDebug } from '../../utils/logger/api.js';
 

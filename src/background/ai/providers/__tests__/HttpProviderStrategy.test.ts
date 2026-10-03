@@ -42,19 +42,25 @@ vi.mock('../../../../utils/promptSanitizer.js', () => ({
   sanitizePromptContent: sanitizePromptContentMock,
 }));
 
-vi.mock('../../../../utils/logger/types.js', () => ({
-  addLog: addLogMock,
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../../utils/logger/core.js', () => ({
-  addLog: addLogMock,
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../../utils/logger/api.js', () => ({
-  logDebug: vi.fn(),
-  addLog: addLogMock,
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-}));
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    addLog: addLogMock,
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
 
 class HttpProbe extends HttpProviderStrategy {
   async generateSummary(): Promise<AISummaryResult> {

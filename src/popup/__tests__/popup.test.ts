@@ -46,24 +46,24 @@ document.body.innerHTML = `
 
 // Mock logger - must be before importing popup
 const { logErrorMock } = vi.hoisted(() => ({ logErrorMock: vi.fn() }));
-vi.mock('../../utils/logger/types.js', () => ({
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     logError: logErrorMock,
-    ErrorCode: {
-        INTERNAL_ERROR: 'INTERNAL_ERROR',
-    },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     logError: logErrorMock,
-    ErrorCode: {
-        INTERNAL_ERROR: 'INTERNAL_ERROR',
-    },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     logError: logErrorMock,
-    ErrorCode: {
-        INTERNAL_ERROR: 'INTERNAL_ERROR',
-    },
-}));
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
 
 // Mock navigation
 vi.mock('../navigation.js', () => ({

@@ -12,30 +12,36 @@ const asAIService = (mock: Pick<AIService, 'getSupportedModes' | 'generateSummar
   mock as AIService;
 
 // Mock logger to capture addLog calls
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
 
 vi.mock('../../utils/pendingStorage.js', () => ({
   addPendingPage: vi.fn().mockResolvedValue(undefined),

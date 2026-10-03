@@ -10,51 +10,36 @@ import {
   URL_RETENTION_DAYS
 } from '../../utils/urlEntry.js';
 
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: {
-    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
-  },
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: {
-    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
-  },
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: {
-    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
-  },
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED' },
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED' },
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED' },
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
 
 describe('URLセットのサイズ制限', () => {
   describe('定数定義', () => {

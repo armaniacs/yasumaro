@@ -26,17 +26,23 @@ vi.mock('../whitelistWriter.js', () => ({
 
 vi.mock('../autoClose.js', () => ({ startAutoCloseTimer: vi.fn() }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
 
 vi.mock('../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');

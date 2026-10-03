@@ -8,27 +8,33 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 
-vi.mock('../../utils/logger/types.js', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logDebug: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'x', STORAGE_WRITE_FAILURE: 'x' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logDebug: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'x', STORAGE_WRITE_FAILURE: 'x' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logDebug: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'x', STORAGE_WRITE_FAILURE: 'x' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'x', STORAGE_WRITE_FAILURE: 'x' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'x', STORAGE_WRITE_FAILURE: 'x' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'x', STORAGE_WRITE_FAILURE: 'x' },
+  }),
+);
 
 describe('handleDailyPurgeAlarm × clearExpiredPages', () => {
   beforeEach(() => {

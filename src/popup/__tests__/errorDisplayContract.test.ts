@@ -42,23 +42,23 @@ const {
   mockStartAutoCloseTimer: vi.fn(),
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  ErrorCode: {
-    INTERNAL_ERROR: 'INT_001',
-    STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE',
-    INVALID_INPUT: 'INVALID_INPUT',
-    OBSIDIAN_SEND_FAILURE: 'OBS_SEND_001',
-    CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE',
-  },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE', INVALID_INPUT: 'INVALID_INPUT', OBSIDIAN_SEND_FAILURE: 'OBS_SEND_001', CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', STORAGE_WRITE_FAILURE: 'STORAGE_WRITE_FAILURE' },
+  }),
+);
 
 vi.mock('../../utils/pendingStorage.js', () => ({
   getPendingPages: mockGetPendingPages,

@@ -189,17 +189,23 @@ vi.mock('../autoClose.js', () => ({
 // and the log instead. Mocked so the assertion can see the call and so the
 // real logger never touches chrome.storage here.
 const hoistedMockLogError = vi.hoisted(() => vi.fn());
-vi.mock('../../utils/logger/types.js', () => ({
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: hoistedMockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: hoistedMockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: hoistedMockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: hoistedMockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
 
 vi.mock('../../utils/i18n.js', () => {
   const getMessage = vi.fn((key: string) => {

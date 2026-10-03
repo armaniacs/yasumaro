@@ -34,13 +34,17 @@ vi.mock('../../../utils/i18n.js', () => {
     getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
 }; });
 
-vi.mock('../../../utils/logger/api.js', () => ({
-    logError: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'resolvedUndefined',
+  }),
+);
 
-vi.mock('../../../utils/logger/types.js', () => ({
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
-}));
+  }),
+);
 
 import { initPerSiteOverrides } from '../perSiteOverrides.js';
 import { StorageKeys } from '../../../utils/storage/types.js';

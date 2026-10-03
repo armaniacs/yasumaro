@@ -52,39 +52,36 @@ const chromeMock = {
 vi.stubGlobal('chrome', chromeMock);
 
 // We need to import after mocking
-vi.mock('../utils/logger/types.js', () => ({
-    logInfo: vi.fn(() => Promise.resolve()),
-    logWarn: vi.fn(() => Promise.resolve()),
-    logError: vi.fn(() => Promise.resolve()),
-    logDebug: vi.fn(() => Promise.resolve()),
-    logSanitize: vi.fn(() => Promise.resolve()),
-    ErrorCode: {
-        INTERNAL_ERROR: 'INT_001',
-        API_REQUEST_FAILURE: 'API_REQ_001',
-    },
-}));
-vi.mock('../utils/logger/core.js', () => ({
-    logInfo: vi.fn(() => Promise.resolve()),
-    logWarn: vi.fn(() => Promise.resolve()),
-    logError: vi.fn(() => Promise.resolve()),
-    logDebug: vi.fn(() => Promise.resolve()),
-    logSanitize: vi.fn(() => Promise.resolve()),
-    ErrorCode: {
-        INTERNAL_ERROR: 'INT_001',
-        API_REQUEST_FAILURE: 'API_REQ_001',
-    },
-}));
-vi.mock('../utils/logger/api.js', () => ({
-    logInfo: vi.fn(() => Promise.resolve()),
-    logWarn: vi.fn(() => Promise.resolve()),
-    logError: vi.fn(() => Promise.resolve()),
-    logDebug: vi.fn(() => Promise.resolve()),
-    logSanitize: vi.fn(() => Promise.resolve()),
-    ErrorCode: {
-        INTERNAL_ERROR: 'INT_001',
-        API_REQUEST_FAILURE: 'API_REQ_001',
-    },
-}));
+vi.mock('../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    logSanitize: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', API_REQUEST_FAILURE: 'API_REQ_001' },
+  }),
+);
+vi.mock('../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    logSanitize: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', API_REQUEST_FAILURE: 'API_REQ_001' },
+  }),
+);
+vi.mock('../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolved',
+    logWarn: 'resolved',
+    logError: 'resolved',
+    logDebug: 'resolved',
+    logSanitize: 'resolved',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', API_REQUEST_FAILURE: 'API_REQ_001' },
+  }),
+);
 
 vi.mock('../contentMessageSender.js', () => ({
     createContentMessageSender: vi.fn(() => ({

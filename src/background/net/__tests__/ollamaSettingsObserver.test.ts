@@ -8,15 +8,21 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createOllamaSettingsObserver } from '../ollamaSettingsObserver.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logWarn: vi.fn(),
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logWarn: vi.fn(),
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logWarn: vi.fn(),
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+  }),
+);
 
 import { logWarn } from '../../../utils/logger/api.js';
 const mockLogWarn = vi.mocked(logWarn);

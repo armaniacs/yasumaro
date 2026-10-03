@@ -9,25 +9,31 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+  }),
+);
 
 vi.mock('../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),

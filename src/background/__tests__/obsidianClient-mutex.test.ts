@@ -58,33 +58,24 @@ vi.mock('../noteSectionEditor.js', () => ({
     insertIntoSection: vi.fn((existingContent, sectionHeader, content) => `${sectionHeader}\n${content}`)
   }
 }));
-vi.mock('../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
 
 describe('ObsidianClient: Mutex ロック機構（タスク6）', () => {
   let obsidianClient: ObsidianClient;

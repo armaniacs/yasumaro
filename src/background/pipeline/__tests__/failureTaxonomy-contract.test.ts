@@ -13,24 +13,28 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  addLog: vi.fn(),
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
-}));
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logWarn: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    logError: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logWarn: 'fn',
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+  }),
+);
 vi.mock('../../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
 
 // The Obsidian config is fixed so the storage cascade stays out of the seam

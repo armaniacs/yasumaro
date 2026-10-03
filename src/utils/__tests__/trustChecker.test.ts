@@ -55,42 +55,33 @@ function setupChromeMocks() {
 }
 
 // Mock logger to prevent real storage calls from logWarn/logDebug
-vi.mock('../logger/types.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logDebug: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: {
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
-    TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED',
-    TRUST_DB_INIT_FAILED: 'TRUST_DB_INIT_FAILED',
-    TRUST_DB_MIGRATION_FAILED: 'TRUST_DB_MIGRATION_FAILED',
-  }
-}));
-vi.mock('../logger/core.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logDebug: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: {
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
-    TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED',
-    TRUST_DB_INIT_FAILED: 'TRUST_DB_INIT_FAILED',
-    TRUST_DB_MIGRATION_FAILED: 'TRUST_DB_MIGRATION_FAILED',
-  }
-}));
-vi.mock('../logger/api.js', () => ({
-  logInfo: vi.fn().mockResolvedValue(undefined),
-  logDebug: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  logError: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: {
-    INTERNAL_ERROR: 'INTERNAL_ERROR',
-    TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED',
-    TRUST_DB_INIT_FAILED: 'TRUST_DB_INIT_FAILED',
-    TRUST_DB_MIGRATION_FAILED: 'TRUST_DB_MIGRATION_FAILED',
-  }
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR', TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED', TRUST_DB_INIT_FAILED: 'TRUST_DB_INIT_FAILED', TRUST_DB_MIGRATION_FAILED: 'TRUST_DB_MIGRATION_FAILED' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR', TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED', TRUST_DB_INIT_FAILED: 'TRUST_DB_INIT_FAILED', TRUST_DB_MIGRATION_FAILED: 'TRUST_DB_MIGRATION_FAILED' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR', TRUST_DB_NOT_INITIALIZED: 'TRUST_DB_NOT_INITIALIZED', TRUST_DB_INIT_FAILED: 'TRUST_DB_INIT_FAILED', TRUST_DB_MIGRATION_FAILED: 'TRUST_DB_MIGRATION_FAILED' },
+  }),
+);
 
 // Mock for trustDb
 const mockDbInitialize = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);

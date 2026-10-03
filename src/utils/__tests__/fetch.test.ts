@@ -172,13 +172,17 @@ vi.mock('../storage/quota.js', async (importOriginal) => {
   };
 });;
 
-vi.mock('../logger/core.js', () => ({
-  logDebug: vi.fn(),
-}));
-vi.mock('../logger/api.js', () => ({
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-}));
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logWarn: 'fn',
+  }),
+);
 
 // Access mocked modules
 const { CSPValidator, getCspErrorMessage } = vi.mocked(cspValidatorModule);

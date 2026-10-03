@@ -4,27 +4,33 @@ import { LOCAL_MARKDOWN_BUFFER_RETENTION_DAYS } from '../localMarkdownExportRete
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { logInfo } from '../../utils/logger/api.js';
 
-vi.mock('../../utils/logger/types.js', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logDebug: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logDebug: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logInfo: vi.fn(),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logDebug: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    logDebug: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
+  }),
+);
 
 describe('handleDailyPurgeAlarm', () => {
   let storageData: Record<string, unknown>;

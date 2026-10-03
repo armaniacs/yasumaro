@@ -26,36 +26,30 @@ vi.mock('../i18n.js', () => {
   };
 });
 
-vi.mock('../logger/types.js', () => ({
-    logInfo: vi.fn().mockResolvedValue(undefined),
-    logDebug: vi.fn().mockResolvedValue(undefined),
-    logError: vi.fn().mockResolvedValue(undefined),
-    ErrorCode: {
-        STORAGE_READ_FAILURE: 'STRG_RD_001',
-        STORAGE_WRITE_FAILURE: 'STRG_WR_001',
-        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
-    },
-}));
-vi.mock('../logger/core.js', () => ({
-    logInfo: vi.fn().mockResolvedValue(undefined),
-    logDebug: vi.fn().mockResolvedValue(undefined),
-    logError: vi.fn().mockResolvedValue(undefined),
-    ErrorCode: {
-        STORAGE_READ_FAILURE: 'STRG_RD_001',
-        STORAGE_WRITE_FAILURE: 'STRG_WR_001',
-        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
-    },
-}));
-vi.mock('../logger/api.js', () => ({
-    logInfo: vi.fn().mockResolvedValue(undefined),
-    logDebug: vi.fn().mockResolvedValue(undefined),
-    logError: vi.fn().mockResolvedValue(undefined),
-    ErrorCode: {
-        STORAGE_READ_FAILURE: 'STRG_RD_001',
-        STORAGE_WRITE_FAILURE: 'STRG_WR_001',
-        STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001',
-    },
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001', STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001', STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'resolvedUndefined',
+    logDebug: 'resolvedUndefined',
+    logError: 'resolvedUndefined',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001', STORAGE_MIGRATION_FAILURE: 'STRG_MIG_001' },
+  }),
+);
 
 vi.mock('../urlHash.js', () => ({
     hashUrl: vi.fn().mockResolvedValue('mocked-hash'),

@@ -4,18 +4,24 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../../logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
-}));
-vi.mock('../../logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
-}));
-vi.mock('../../logger/api.js', () => ({
-  addLog: vi.fn(),
-  LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
-}));
+vi.mock('../../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../../logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { DEBUG: 'DEBUG', WARN: 'WARN', INFO: 'INFO', ERROR: 'ERROR' },
+  }),
+);
 
 import { validateRestorableSettings } from '../restorableSettings.js';
 

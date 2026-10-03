@@ -230,18 +230,24 @@ vi.mock('../ublockImport/index.js', () => ({
 
 const mockAddLog = vi.fn();
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  addLog: mockAddLog,
-  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  addLog: mockAddLog,
-  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  addLog: mockAddLog,
-  LogType: { ERROR: 'ERROR', INFO: 'INFO' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: mockAddLog,
+    LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: mockAddLog,
+    LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: mockAddLog,
+    LogType: { ERROR: 'ERROR', INFO: 'INFO' },
+  }),
+);
 
 vi.mock('../../../popup/tabUtils.js', () => ({
   getCurrentTab: vi.fn(),

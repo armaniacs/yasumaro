@@ -7,18 +7,24 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { STORAGE_READ_FAILURE: 'STRG_RD_001' },
+  }),
+);
 vi.mock('../sqliteAlert.js', () => ({
   recordSqliteSuccess: vi.fn(),
   recordSqliteFailure: vi.fn(),

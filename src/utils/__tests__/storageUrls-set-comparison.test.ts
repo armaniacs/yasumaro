@@ -14,18 +14,24 @@ vi.mock('../storage/storageTransaction.js', async (importOriginal) => {
     const actual = await importOriginal() as typeof import('../storage/storageTransaction.js');
     return actual;
 });
-vi.mock('../logger/types.js', () => ({
-  LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-  ErrorCode: {},
-}));
-vi.mock('../logger/core.js', () => ({
-  addLog: vi.fn(),
-}));
-vi.mock('../logger/api.js', () => ({
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
+    ErrorCode: {  },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+  }),
+);
 
 
 import { setSavedUrlsWithTimestamps } from '../storageUrls.ts';

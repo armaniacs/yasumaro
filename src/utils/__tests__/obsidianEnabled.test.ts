@@ -5,24 +5,30 @@ import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 
 const mockStorage: Record<string, unknown> = {};
 
-vi.mock('../logger/types.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
-}));
-vi.mock('../logger/core.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
-}));
-vi.mock('../logger/api.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    ErrorCode: { CRYPTO_DECRYPTION_FAILURE: 'CRYPTO_001', CRYPTO_KEY_DERIVE_FAILURE: 'CRYPTO_002' },
+  }),
+);
 
 vi.mock('../crypto/index.js', () => ({
   encryptApiKey: vi.fn(async (v: string) => ({ ciphertext: 'enc_' + v, iv: 'iv' })),

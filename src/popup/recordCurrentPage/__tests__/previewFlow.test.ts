@@ -37,18 +37,24 @@ vi.mock('../../../utils/storage/SettingsRepository.js', () => {
   };
 });
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    ErrorCode: { CONTENT_EXTRACTION_FAILURE: 'CONTENT_EXTRACTION_FAILURE' },
+  }),
+);
 
 vi.mock('../../../utils/i18n.js', () => {
   const getMessage = (key: string) => key;

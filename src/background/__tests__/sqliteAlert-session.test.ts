@@ -10,16 +10,20 @@
 
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logCritical: vi.fn(async () => undefined),
-  logError: vi.fn(),
-  logWarn: vi.fn(),
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-}));
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logCritical: vi.fn(async () => undefined),
+    logError: 'fn',
+    logWarn: 'fn',
+    logInfo: 'fn',
+    logDebug: 'fn',
+  }),
+);
 vi.mock('../../utils/logger/criticalAlertSink.js', () => ({
   ChromeNotificationCriticalSink: class {},
 }));

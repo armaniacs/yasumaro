@@ -5,10 +5,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../utils/logger/api.js', () => ({
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-}));
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+    logError: 'fn',
+  }),
+);
 
 import { dashboardGateway } from '../dashboardGateway.js';
 import { logWarn, logError } from '../../utils/logger/api.js';

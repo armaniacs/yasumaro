@@ -51,27 +51,33 @@ vi.mock('../../../utils/permissionManager.js', () => ({
   cleanupDismissedEntries: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', STORAGE_READ_FAILURE: 'STORAGE_READ_FAILURE' },
+  }),
+);
 
 vi.mock('../../consentBadge.js', () => ({
   updateConsentBadge: vi.fn().mockResolvedValue(undefined),

@@ -9,21 +9,27 @@ import { vi, describe, it, expect, beforeEach } from 'vitest';
 const mockGetAll = vi.hoisted(() => vi.fn());
 
 // Mock dependencies
-vi.mock('../../utils/logger/types.js', () => ({
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: vi.fn(),
-  logInfo: vi.fn(),
-  ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { UNKNOWN_ERROR: 'UNKNOWN_ERROR', INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
 
 vi.mock('../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),

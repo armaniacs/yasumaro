@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../../../../utils/logger/api.js', () => ({
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-}));
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+    logError: 'fn',
+  }),
+);
 
 import { createConfirmToken, verifyConfirmToken, __resetConfirmTokensForTesting } from '../../../confirmTokenManager.js';
 import { logWarn } from '../../../../utils/logger/api.js';

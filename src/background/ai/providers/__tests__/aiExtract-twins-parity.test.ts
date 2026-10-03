@@ -20,19 +20,25 @@ vi.mock('../../../../utils/aiUsageTracker.js', () => ({
 vi.mock('../../../../utils/promptSanitizer.js', () => ({
   sanitizePromptContent: vi.fn((content: string) => ({ sanitized: content, warnings: [], dangerLevel: 'low' })),
 }));
-vi.mock('../../../../utils/logger/types.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../../utils/logger/core.js', () => ({
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-}));
-vi.mock('../../../../utils/logger/api.js', () => ({
-  logDebug: vi.fn(),
-  addLog: vi.fn(),
-  LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
-}));
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    addLog: 'fn',
+    LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug' },
+  }),
+);
 vi.mock('../../../../utils/fetch.js', () => ({
   fetchWithRetry: vi.fn(),
   validateUrlForAIRequests: vi.fn(),

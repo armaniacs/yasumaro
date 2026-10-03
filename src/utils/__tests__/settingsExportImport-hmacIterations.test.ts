@@ -12,12 +12,14 @@ const repo = vi.hoisted(() => ({
   setAll: vi.fn(async () => {}),
 }));
 vi.mock('../storage/SettingsRepository.js', () => ({ settingsRepository: repo }));
-vi.mock('../logger/api.js', () => ({
-  logError: vi.fn(async () => {}),
-  logInfo: vi.fn(async () => {}),
-  logWarn: vi.fn(async () => {}),
-  logDebug: vi.fn(async () => {}),
-}));
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'asyncNoop',
+    logInfo: 'asyncNoop',
+    logWarn: 'asyncNoop',
+    logDebug: 'asyncNoop',
+  }),
+);
 
 import {
   exportEncryptedSettings,

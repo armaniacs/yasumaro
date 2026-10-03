@@ -10,24 +10,30 @@ Object.defineProperty(global, 'crypto', {
 });
 
 // logger モック
-vi.mock('../../logger/types.js', () => ({
-    logInfo: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' }
-}));
-vi.mock('../../logger/core.js', () => ({
-    logInfo: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' }
-}));
-vi.mock('../../logger/api.js', () => ({
-    logInfo: vi.fn(),
-    logError: vi.fn(),
-    logWarn: vi.fn(),
-    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' }
-}));
+vi.mock('../../logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+  }),
+);
+vi.mock('../../logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+  }),
+);
+vi.mock('../../logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logError: 'fn',
+    logWarn: 'fn',
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+  }),
+);
 
 // fetch モック
 vi.mock('../../fetch.js', () => ({

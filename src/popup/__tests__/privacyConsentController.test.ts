@@ -35,18 +35,24 @@ vi.mock('../../utils/storage/privacyConsent.js', () => ({
   declineConsent: mockDeclineConsent,
 }));
 
-vi.mock('../../utils/logger/types.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
-}));
-vi.mock('../../utils/logger/core.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
-}));
-vi.mock('../../utils/logger/api.js', () => ({
-  logError: mockLogError,
-  ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
-}));
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+  }),
+);
 
 // PBI 2026-09-17-19: the decline notice goes through the accessible dialog
 // seam, so the stub moved from window.alert to the module mock.

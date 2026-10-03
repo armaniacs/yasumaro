@@ -90,12 +90,14 @@ vi.mock('../../utils/i18n.js', () => {
   };
 });
 
-vi.mock('../../utils/logger/api.js', () => ({
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-  logDebug: vi.fn(),
-}));
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+    logDebug: 'fn',
+  }),
+);
 
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

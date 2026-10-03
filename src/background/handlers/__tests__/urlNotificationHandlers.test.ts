@@ -22,21 +22,27 @@ vi.mock('../../../utils/crypto/index.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../../utils/logger/types.js', () => ({
-  logError: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-  logError: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logError: vi.fn().mockResolvedValue(undefined),
-  logWarn: vi.fn().mockResolvedValue(undefined),
-  ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'resolvedUndefined',
+    logWarn: 'resolvedUndefined',
+    ErrorCode: { CRYPTO_HMAC_FAILURE: 'CRYPTO_HMAC_FAILURE' },
+  }),
+);
 
 import { encodeUrlSafeBase64, decodeUrlFromNotificationId } from '../urlNotificationHandlers.js';
 import { ErrorCode } from '../../../utils/logger/types.js';

@@ -10,16 +10,20 @@ vi.mock('../../../utils/aiUsageTracker.js', () => ({
   checkUsageWarning: vi.fn().mockResolvedValue({ allowed: true }),
   getRateLimitMessage: vi.fn().mockReturnValue(''),
 }));
-vi.mock('../../../utils/logger/core.js', () => ({
-  addLog: vi.fn().mockResolvedValue(undefined),
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-  logDebug: vi.fn(),
-  logSanitize: vi.fn(),
-  logInfo: vi.fn(),
-  logWarn: vi.fn(),
-  logError: vi.fn(),
-}));
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: 'resolvedUndefined',
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logDebug: 'fn',
+    logSanitize: 'fn',
+    logInfo: 'fn',
+    logWarn: 'fn',
+    logError: 'fn',
+  }),
+);
 
 import { recordUsage } from '../../../utils/aiUsageTracker.js';
 

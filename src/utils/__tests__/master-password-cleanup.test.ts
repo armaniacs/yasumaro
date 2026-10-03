@@ -6,51 +6,36 @@
 
 import { vi } from 'vitest';;
 
-vi.mock('../logger/types.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  addLog: vi.fn(),
-  ErrorCode: {
-    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
-  },
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../logger/core.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  addLog: vi.fn(),
-  ErrorCode: {
-    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
-  },
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
-vi.mock('../logger/api.js', () => ({
-  logInfo: vi.fn(),
-  logDebug: vi.fn(),
-  logError: vi.fn(),
-  addLog: vi.fn(),
-  ErrorCode: {
-    STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED'
-  },
-  LogType: {
-    DEBUG: 'DEBUG',
-    INFO: 'INFO',
-    WARN: 'WARN',
-    ERROR: 'ERROR'
-  }
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    addLog: 'fn',
+    ErrorCode: { STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED' },
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    addLog: 'fn',
+    ErrorCode: { STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED' },
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logInfo: 'fn',
+    logDebug: 'fn',
+    logError: 'fn',
+    addLog: 'fn',
+    ErrorCode: { STORAGE_QUOTA_EXCEEDED: 'STORAGE_QUOTA_EXCEEDED' },
+    LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+  }),
+);
 
 describe('Master Password Data Cleanup', () => {
   const API_KEY_FIELDS = [

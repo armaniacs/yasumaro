@@ -14,18 +14,24 @@ vi.mock('../promptSanitizer.js', () => ({
   sanitizePromptContent: sanitizePromptContentMock,
   DangerLevel: { SAFE: 'safe', LOW: 'low', MEDIUM: 'medium', HIGH: 'high' },
 }));
-vi.mock('../logger/types.js', () => ({
-  addLog: addLogMock,
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
-}));
-vi.mock('../logger/core.js', () => ({
-  addLog: addLogMock,
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
-}));
-vi.mock('../logger/api.js', () => ({
-  addLog: addLogMock,
-  LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
-}));
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: addLogMock,
+    LogType: { ERROR: 'ERROR', WARN: 'WARN', INFO: 'INFO', DEBUG: 'DEBUG' },
+  }),
+);
 
 import { checkPromptSafety } from '../promptSafety.js';
 

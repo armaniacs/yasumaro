@@ -12,15 +12,21 @@ import {
     AIProviderElements,
 } from '../aiProvider.js';
 
-vi.mock('../../../utils/logger/types.js', () => ({
-    logWarn: vi.fn(),
-}));
-vi.mock('../../../utils/logger/core.js', () => ({
-    logWarn: vi.fn(),
-}));
-vi.mock('../../../utils/logger/api.js', () => ({
-    logWarn: vi.fn(),
-}));
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logWarn: 'fn',
+  }),
+);
 
 const PROVIDER_IDS = ['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai'];
 
