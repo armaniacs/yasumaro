@@ -35,6 +35,36 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.35] - 2026-10-03
+
+v6.9.34 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、holistic ラウンド（holistic-1003b）の 20 PBI（内部整理）のみを含みます。
+
+### Fixed
+
+- **fetchWithRetry の HTTP 5xx リトライに指数バックオフを追加** — `SleepFn` 注入でテストも実時間待ちなし（PBI 16）
+- **flushBatch の over-retry/TTL drop を onDropped 契約で報告** — 破棄理由が観測可能に（PBI 18）
+- **dashboardGateway のバージョンスタンプを messageTransport 契約へ統一**（PBI 21）
+- **anchor-click ダウンロードを exportLogsService.downloadBlob に統一**（PBI 19）
+- **プリセットステータスの孤立クラスを showStatus 契約に統一**（PBI 20）
+
+### Refactored
+
+- **拡張起動コンテキストを launchExtensionContext() に統一** — e2e の起動重複を解消（PBI 26）
+- **ステータス CSS クラス名を STATUS_CLASS 定数に統一**（PBI 22）
+- **ID 生成を共有 generateId() に統一し toCalendarDate を委譲**（PBI 24）
+- **statusPanel から信頼・権限フローを trustPanel へ抽出**（PBI 25）
+- **archivePanel を lifecycle factory 3 件に分割** — composition root 59 行化（PBI 28）
+- **generalSettingsPanel を composition root と state machine モジュールに分割** — layout / wizard / modelsDev の 3 モジュール化（PBI 29）
+- **プリセットボタンをデータテーブル化し優先スロット ID を SSOT 統一**（PBI 23）
+- **i18n・storage・logger モックを共通ファクトリに統一**（PBI 30・34）
+- **残存 vi.useFakeTimers を useTimerClock に移行** — 58 ファイル（PBI 35）
+- **残存 as unknown as 二段キャストを単一キャストに整理**（PBI 31）
+- **MessageRouter の二段キャストを解消しデッドコードを削除**（PBI 33）
+
+### Chore
+
+- **no-tautology-expect ルールのテストを追加**（PBI 27）
+
 ## [6.9.34] - 2026-10-03
 
 v6.9.33 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、adversarial review ラウンド（adversarial-1003）の 15 PBI（内部整理）のみを含みます。
