@@ -61,4 +61,5 @@ RICE = R × I × C / E。値は各 PBI 内「優先度」セクションの記�
 |---|---|
 | 01 | ✅ 完了（2026-10-03）— result 駆動削除 + whitelist `{ok:false}` 報告。検証: validate exit 0 |
 | 02 | ✅ 完了（2026-10-03）— `createJobs(deps)` ファクトリ + `settingsReader` 必須化。逸脱: クロージャキャプチャ解釈 |
-| 03–15 | ⬜ 未着手 |
+| 03 | ✅ 完了（2026-10-03）— `writeEpoch` 版スタンプで read-your-write を閉鎖。逸脱: observe branch も epoch advance |
+| 04–15 | ⬜ 未着手 |

@@ -42,10 +42,10 @@ Scenario: 読み出しと保存が重なっても古い値が供給されない
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] `src/utils/storage/SettingsRepository.ts:152` — 書き込みと重なった `getAll` の cached 代入が、書き込み後の状態を反映しない形で固定される (現在は `await` 後の無条件代入)
-- [ ] `src/utils/storage/SettingsRepository.ts:81-85` — `persistMerged` の pre/post drop と `:152` の代入が競合で逆転しても、TTL (`:43`, 1000ms) 内に書き込み前スナップショットが供給されない
-- [ ] `await set()` → `await get()` の read-your-write 契約がテストで pin される
-- [ ] race クロージャ以外の本番ふるまい変更がない (既存 API 形状・応答は不変)
+- [x] `src/utils/storage/SettingsRepository.ts:152` — 書き込みと重なった `getAll` の cached 代入が、書き込み後の状態を反映しない形で固定される (現在は `await` 後の無条件代入)
+- [x] `src/utils/storage/SettingsRepository.ts:81-85` — `persistMerged` の pre/post drop と `:152` の代入が競合で逆転しても、TTL (`:43`, 1000ms) 内に書き込み前スナップショットが供給されない
+- [x] `await set()` → `await get()` の read-your-write 契約がテストで pin される
+- [x] race クロージャ以外の本番ふるまい変更がない (既存 API 形状・応答は不変)
 
 ## テスト戦略
 
@@ -59,6 +59,13 @@ Scenario: 読み出しと保存が重なっても古い値が供給されない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- `writeEpoch`（単調増加の無効化カウンタ）を導入: `getAll` は最初の await 前に epoch をキャプチャし、キャッシュヒットは epoch 一致 + TTL を要求、`persistMerged` は書き込み完了後に epoch を進める。await を挟んだ後の書き込み前スナップショット代入は次回ヒットで無効化され、TTL 内でも供給されない。既存 API 形状・応答（delta contract 含む）は不変。
+- テスト: `settingsCacheReadYourWrite.test.ts` を新設（読み出しと書き込みのインターリーブ回帰、実時間待ちなし）。修正前 RED、Repeats=20 green。
+- 検証: npm test 15434 pass / npm run validate exit 0。
+- 逸脱: `observe` の `'settings'` branch にも書き込み経路と同じ epoch advance を追加（外部変更後に着地する in-flight `getAll` の同種 interleave を閉じるため、書き込み経路と同一の無効化を適用）。

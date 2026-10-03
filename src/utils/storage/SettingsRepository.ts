@@ -39,7 +39,16 @@ export interface SettingsRepositoryOptions {
 export class SettingsRepository {
   private port: StoragePort;
   private keyProvider: (() => Promise<CryptoKey>) | undefined;
-  private cached: { data: SettingsType; timestamp: number } | null = null;
+  private cached: { data: SettingsType; timestamp: number; epoch: number } | null = null;
+  /**
+   * Monotonic invalidation counter, advanced by every completed write and by
+   * every observed 'settings' change. A getAll() stamps its cache entry with
+   * the epoch captured before its read, so a write landing inside the read's
+   * async window invalidates the entry even when the assignment lands after
+   * the write's post-drop — ordering alone cannot close that interleave,
+   * because the stale assignment has no ordering handle on the write.
+   */
+  private writeEpoch = 0;
   private readonly CACHE_TTL = 1000;
 
   constructor(port: StoragePort = new ChromeStoragePort(), opts?: SettingsRepositoryOptions) {
@@ -76,11 +85,17 @@ export class SettingsRepository {
    * WHY the cache is dropped on both sides: a concurrent getAll() during the
    * merge window would otherwise re-populate it with the pre-write snapshot,
    * and the post-write drop is what keeps that snapshot from being served.
+   *
+   * WHY the epoch also advances: the drops alone cannot close the interleave
+   * where a getAll() that started earlier assigns its pre-write snapshot after
+   * both drops land. The epoch stamp invalidates such an entry on the next
+   * cache hit instead.
    */
   private async persistMerged(patch: Record<string, unknown>): Promise<void> {
     this.cached = null;
     const tx = new StorageTransaction(this.port);
     await tx.withLock<SettingsType>('settings', (current) => this.mergeSettingsBlob(current, patch));
+    this.writeEpoch++;
     this.cached = null;
   }
 
@@ -117,8 +132,11 @@ export class SettingsRepository {
   }
 
   async getAll(): Promise<SettingsType> {
+    // Captured before the first await: any write completing below advances the
+    // epoch, so the entry assigned at the tail can never be served as current.
+    const readEpoch = this.writeEpoch;
     const now = Date.now();
-    if (this.cached && (now - this.cached.timestamp) < this.CACHE_TTL) {
+    if (this.cached && this.cached.epoch === this.writeEpoch && (now - this.cached.timestamp) < this.CACHE_TTL) {
       return this.cached.data;
     }
     const { applyMigrationsAndDecryptWithReEncrypt, isSettingsBlobAuthoritative } = await import('./settingsMigration.js');
@@ -149,7 +167,7 @@ export class SettingsRepository {
     } else {
       migratedResult = await this.__getAllScatteredFallback(result['settings'] as SettingsType | undefined, keyProvider);
     }
-    this.cached = { data: migratedResult, timestamp: Date.now() };
+    this.cached = { data: migratedResult, timestamp: Date.now(), epoch: readEpoch };
     return migratedResult;
   }
 
@@ -237,6 +255,9 @@ const { logError } = await import('../logger/api.js');
   observe(callback: (changes: Partial<SettingsType>) => void): void {
     this.port.onChanged?.((changes) => {
       if ('settings' in changes) {
+        // Same invalidation the write path performs: an in-flight getAll()
+        // that assigns after this drop must not serve the pre-change snapshot.
+        this.writeEpoch++;
         this.cached = null;
         callback(changes['settings'] as Partial<SettingsType>);
       }
