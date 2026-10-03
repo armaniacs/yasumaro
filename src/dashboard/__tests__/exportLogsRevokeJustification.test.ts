@@ -10,7 +10,9 @@
  * because their promise resolves once the blob fetch has started. This suite
  * pins (1) that the WHY stays codified at all three sites, so the timer
  * cannot be deleted quietly or a timer re-introduced where a settle point
- * exists, and (2) that the timer path revokes exactly once, after the delay.
+ * exists, (2) that the timer path revokes exactly once, after the delay, and
+ * (3) that the other anchor-click sites (encryptedBackupPanel, ublockImport)
+ * stay unified on downloadBlob instead of re-adding a local sync revoke.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -75,6 +77,34 @@ describe('revoke justification codified at all three download sites', () => {
     for (const marker of markers) {
       expect(source, `${file} must keep the WHY marker: "${marker}"`).toContain(marker);
     }
+  });
+});
+
+/**
+ * Anchor-click sites unified on the SSOT helper: each must import
+ * downloadBlob from exportLogsService and must not carry a local
+ * revokeObjectURL — a synchronous revoke kills a download before the browser
+ * persists it (PBI 2026-10-03-19). markdownExport.ts and
+ * generalSettings/connectionTests.ts are settle-driven chrome.downloads paths
+ * with a different completion signal; they are intentionally out of scope.
+ */
+const UNIFIED_ANCHOR_SITES = [
+  {
+    file: 'src/dashboard/encryptedBackupPanel.ts',
+    importLine: "import { downloadBlob } from './exportLogsService.js';",
+  },
+  {
+    file: 'src/dashboard/settings/ublockImport/index.ts',
+    importLine: "import { downloadBlob } from '../../exportLogsService.js';",
+  },
+];
+
+describe('anchor-click download sites unified on exportLogsService.downloadBlob', () => {
+  it.each(UNIFIED_ANCHOR_SITES)('$file delegates to downloadBlob with no local revoke', ({ file, importLine }) => {
+    const raw = readFileSync(join(REPO_ROOT, file), 'utf-8');
+    expect(raw, `${file} must delegate to the SSOT downloadBlob`).toContain(importLine);
+    expect(raw).toContain('downloadBlob(');
+    expect(raw, `${file} must keep no local revokeObjectURL`).not.toMatch(/revokeObjectURL/);
   });
 });
 

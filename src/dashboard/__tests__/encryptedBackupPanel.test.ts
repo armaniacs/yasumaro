@@ -17,6 +17,7 @@ vi.mock('../masterPassword.js', () => ({
 import { exportEncryptedBackup, importEncryptedBackup, isEncryptedBackupFile } from '../encryptedBackupService.js';
 import { showPasswordAuthModal } from '../masterPassword.js';
 import { initEncryptedBackupPanel } from '../encryptedBackupPanel.js';
+import { DOWNLOAD_REVOKE_DELAY_MS } from '../exportLogsService.js';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
 function setDom() {
@@ -141,5 +142,43 @@ describe('initEncryptedBackupPanel', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('export download unification (PBI 2026-10-03-19)', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    });
+
+    it('downloads via the shared blob path: no sync revoke, revoke after the 60s bound', async () => {
+      useTimerClock();
+      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+      vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:encrypted-backup');
+      vi.spyOn(document.body, 'appendChild').mockImplementation((n) => n);
+      vi.spyOn(document.body, 'removeChild').mockImplementation((n) => n);
+      vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+        void action('my-password');
+      });
+      vi.mocked(exportEncryptedBackup).mockResolvedValue({
+        version: 2, kdf: 'pbkdf2', hash: 'SHA-256', iterations: 600000, salt: 's', iv: 'i', data: 'd',
+      });
+
+      initEncryptedBackupPanel();
+      document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
+      await vi.advanceTimersByTimeAsync(0);
+
+      // The envelope goes through exportLogsService.downloadBlob, which
+      // revokes on a bounded delay — a synchronous revoke killed long
+      // downloads before Chromium persisted the backup.
+      expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+      expect(revokeSpy).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(DOWNLOAD_REVOKE_DELAY_MS - 1);
+      expect(revokeSpy).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(revokeSpy).toHaveBeenCalledTimes(1);
+      expect(revokeSpy).toHaveBeenCalledWith('blob:encrypted-backup');
+    });
   });
 });

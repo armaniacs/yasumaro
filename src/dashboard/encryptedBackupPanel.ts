@@ -10,6 +10,7 @@ import {
   importEncryptedBackup,
   isEncryptedBackupFile,
 } from './encryptedBackupService.js';
+import { downloadBlob } from './exportLogsService.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
@@ -35,15 +36,10 @@ function setStatus(message: string, isError: boolean): void {
 
 function downloadJson(data: unknown, filename: string): void {
   const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  // SSOT: exportLogsService.downloadBlob owns the anchor-click revoke policy
+  // (60s bounded delay) — a synchronous revoke here killed large backups
+  // before Chromium finished persisting them.
+  downloadBlob(new Blob([json], { type: 'application/json' }), filename);
 }
 
 export function initEncryptedBackupPanel(): void {

@@ -16,6 +16,7 @@ import { addLog } from '../../../utils/logger/core.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { getMessage } from '../../../utils/i18n.js';
+import { downloadBlob } from '../../exportLogsService.js';
 
 // グローバル状態
 let dropZoneActive = false;
@@ -153,15 +154,10 @@ async function handleExport(): Promise<void> {
     }
 
     const simpleFormat = exportSimpleFormat(sources);
-    const blob = new Blob([simpleFormat], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `domain-list-${Date.now()}.txt`;
-    a.click();
-
-    URL.revokeObjectURL(url);
+    // SSOT: exportLogsService.downloadBlob owns the anchor-click revoke policy
+    // (60s bounded delay); it also appends the anchor to document.body, which
+    // the bare click here previously skipped.
+    downloadBlob(new Blob([simpleFormat], { type: 'text/plain' }), `domain-list-${Date.now()}.txt`);
     showStatus('domainStatus', getMessage('fileExported'), 'success');
   } catch (error: unknown) {
     showStatus('domainStatus', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');

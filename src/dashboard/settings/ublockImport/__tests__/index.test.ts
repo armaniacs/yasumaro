@@ -6,7 +6,8 @@
  */
 
 import { vi } from 'vitest';
-import { drainMacrotask, waitForMock } from '../../../../../testDir/waitPolicy.js';
+import { drainMacrotask, waitForMock, useTimerClock } from '../../../../../testDir/waitPolicy.js';
+import { DOWNLOAD_REVOKE_DELAY_MS } from '../../../exportLogsService.js';
 import type { Mock } from 'vitest';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn(() => Promise.resolve({ ublock_sources: [], ublock_format_enabled: false })),
@@ -729,27 +730,44 @@ describe('ublockImport/index.ts', () => {
 
     test('should export sources when available', async () => {
       setupUblockDOM();
-      // Mock URL methods for blob handling
-      global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
-      global.URL.revokeObjectURL = vi.fn();
+      try {
+        useTimerClock();
+        const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+        vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
 
-      const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as Mock).mockImplementation(() => Promise.resolve({
-        ublock_sources: [{ url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }],
-        ublock_format_enabled: false,
-      }));
+        const { settingsRepository } = await import('../../../../utils/storage/SettingsRepository.js');
+        (settingsRepository.getAll as Mock).mockImplementation(() => Promise.resolve({
+          ublock_sources: [{ url: 'manual', blockDomains: ['example.com'], exceptionDomains: [] }],
+          ublock_format_enabled: false,
+        }));
 
-      const { init } = await import('../index.js');
-      await init();
+        const { init } = await import('../index.js');
+        await init();
 
-      const exportBtn = document.getElementById('uBlockExportBtn')!;
-      exportBtn.dispatchEvent(new Event('click'));
+        const exportBtn = document.getElementById('uBlockExportBtn')!;
+        exportBtn.dispatchEvent(new Event('click'));
 
-      const { exportSimpleFormat } = await import('../uiRenderer.js');
-      await waitForMock(() => expect(exportSimpleFormat).toHaveBeenCalled());
+        const { exportSimpleFormat } = await import('../uiRenderer.js');
+        await vi.advanceTimersByTimeAsync(0);
+        expect(exportSimpleFormat).toHaveBeenCalled();
 
-      const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('exported'), 'success');
+        // Unification pin (PBI 2026-10-03-19): the export hands the blob to
+        // exportLogsService.downloadBlob — append → click → bounded revoke.
+        // The old bare click + synchronous revoke here killed long downloads
+        // and skipped the body append.
+        expect(URL.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+        expect(revokeSpy).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(DOWNLOAD_REVOKE_DELAY_MS - 1);
+        expect(revokeSpy).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        expect(revokeSpy).toHaveBeenCalledTimes(1);
+
+        const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
+        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('exported'), 'success');
+      } finally {
+        vi.restoreAllMocks();
+        vi.useRealTimers();
+      }
     });
 
     test('should handle export error', async () => {
