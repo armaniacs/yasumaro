@@ -39,11 +39,11 @@ Scenario: local-only の裁定は正直に文書化される
 
 ## 受け入れ基準
 
-- [ ] 方式裁定（CI へ baseline 配線 / local-only として正直に文書化）が実装記録に 1 行残されている
-- [ ] `scripts/check-type-test-baseline.mjs:53-56` の catch 経路に tsc 実行の健全性チェック（summary 行検出 / 異常終了の扱い）が追加され、crash → count 0 → PASS の fake green が構造的に起こらない
-- [ ] `scripts/check-type-test-baseline.mjs:28-42`（evaluateBaseline）の総数比較の限界（相殺変更・`testDir/tsconfig.json` include 縮小）が文書化され、include set pin テストの要否が実装記録に残る
-- [ ] `CHANGELOG.md:1192` の「テストコードに型エラーを持ち込むと CI が落ちる」の stale 記載が現状と整合する
-- [ ] `testDir/__tests__/type-test-baseline.test.ts` に crash 経路のテストが追加されている（`:72-75` は stub 空出力のみ）
+- [x] 方式裁定（CI へ baseline 配線 / local-only として正直に文書化）が実装記録に 1 行残されている
+- [x] `scripts/check-type-test-baseline.mjs:53-56` の catch 経路に tsc 実行の健全性チェック（summary 行検出 / 異常終了の扱い）が追加され、crash → count 0 → PASS の fake green が構造的に起こらない
+- [x] `scripts/check-type-test-baseline.mjs:28-42`（evaluateBaseline）の総数比較の限界（相殺変更・`testDir/tsconfig.json` include 縮小）が文書化され、include set pin テストの要否が実装記録に残る
+- [x] `CHANGELOG.md:1192` の「テストコードに型エラーを持ち込むと CI が落ちる」の stale 記載が現状と整合する
+- [x] `testDir/__tests__/type-test-baseline.test.ts` に crash 経路のテストが追加されている（`:72-75` は stub 空出力のみ）
 
 ## テスト戦略
 
@@ -57,6 +57,15 @@ Scenario: local-only の裁定は正直に文書化される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- 方式裁定: CI へ baseline 配線。`.github/workflows/ci.yml` の validate job に `Test type baseline gate` ステップ（`npm run type-check:test:baseline`）を追加。full `npm run validate` ではなく単独ステップにしたのは、同 job が validate の他ゲートを個別実行済みで二度手間になるため。
+- `scripts/check-type-test-baseline.mjs`: tsc-ran sanity を導入（`runTsc()` / `assertTscRan()`）。tsc 未完了（spawn 失敗）・exit 非ゼロで TS エラー 0 件・TS エラー検出時に exit 2 以外、の 3 経路で評価を拒否し、crash → count 0 → PASS の fake green を構造的に閉じる。テストフック `TYPE_TEST_BASELINE_TSC_EXIT` を追加。
+- `testDir/__tests__/type-test-baseline.test.ts`: crash 経路 3 件 + include/exclude set pin、計 9 テスト（修正前は stub 空出力のみ）。
+- `CHANGELOG.md:1192`: 「テストコードに型エラーを持ち込むと CI が落ちる」の stale 記載を現行仕様（baseline pin が CI validate で合否判定）に整合。
+- 検証: baseline PASS 489/489 / npm test 15,465 pass / npm run validate exit 0。
+- 逸脱: summary 行検出による sanity は採用せず exit-code sanity を採用 — 実測 tsc 6.0.3 では「Found N errors」要約行は pretty モードのみで出力され（ANSI ラップがエラー行正規表現を壊す）、summary は sanity シグナルにならないため。総数比較の swap 限界（exit ちょうど 2 で部分エラーリストを出す crash は完走と区別できず通過する残留穴）をスクリプトヘッダに文書化。

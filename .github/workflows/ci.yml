@@ -132,6 +132,13 @@ jobs:
         run: npm run check-deprecated-aliases
       - name: Type Check
         run: npm run type-check
+      # Test-type baseline gate (decision: wire into CI rather than stay
+      # local-only — growth past the pin in testDir/type-check-baseline.json
+      # must fail CI). Runs as its own step instead of a full `npm run
+      # validate`: this job already executes validate's other gates
+      # individually and a second full pass would duplicate them all.
+      - name: Test type baseline gate
+        run: npm run type-check:test:baseline
       # test:perf runs the whole unit suite itself, so using it here instead of
       # `npm test` costs no extra CI time and additionally enforces the
       # per-file budget in bench/baselines/test-perf.budget.json.
