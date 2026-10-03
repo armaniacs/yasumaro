@@ -14,34 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 20件完了 🔧非機能追加
+### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 20件完了・アーカイブ済み 🔧非機能追加
 
-holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。起票・採点登録のみで実装は未着手。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
-
-| NN | PBI | 種別 | RICE | SP | 状態 | 依存 |
-|---|---|---|---:|---:|---|---|
-| 16 | [2026-10-03-16-fix-fetch-5xx-backoff.md](2026-10-03-16-fix-fetch-5xx-backoff.md) | fix | 24.0 | 1.0 | ✅ 完了 | なし |
-| 17 | [2026-10-03-17-fix-reload-seam-wiring.md](2026-10-03-17-fix-reload-seam-wiring.md) | fix | 18.0 | 2.0 | ✅ 完了 | 20 に先行（チェーン起点） |
-| 18 | [2026-10-03-18-fix-flush-batch-on-dropped.md](2026-10-03-18-fix-flush-batch-on-dropped.md) | fix | 18.0 | 1.0 | ✅ 完了 | なし |
-| 19 | [2026-10-03-19-fix-anchor-download-unify.md](2026-10-03-19-fix-anchor-download-unify.md) | fix | 16.0 | 0.5 | ✅ 完了 | なし |
-| 20 | [2026-10-03-20-fix-preset-status-orphan-class.md](2026-10-03-20-fix-preset-status-orphan-class.md) | fix | 16.0 | 1.0 | ✅ 完了 | 17 の後・23 に先行（チェーン） |
-| 21 | [2026-10-03-21-fix-gateway-version-contract.md](2026-10-03-21-fix-gateway-version-contract.md) | fix | 10.0 | 0.5 | ✅ 完了 | なし |
-| 22 | [2026-10-03-22-refactor-status-class-constant.md](2026-10-03-22-refactor-status-class-constant.md) | refactor | 10.0 | 0.5 | ✅ 完了 | なし |
-| 23 | [2026-10-03-23-refactor-preset-buttons-id-ssot.md](2026-10-03-23-refactor-preset-buttons-id-ssot.md) | refactor | 9.0 | 0.5 | ✅ 完了 | 20 の後・29 に先行（チェーン） |
-| 24 | [2026-10-03-24-refactor-generate-id-unify.md](2026-10-03-24-refactor-generate-id-unify.md) | refactor | 8.0 | 0.5 | ✅ 完了 | なし |
-| 25 | [2026-10-03-25-refactor-status-panel-split.md](2026-10-03-25-refactor-status-panel-split.md) | refactor | 8.0 | 1.0 | ✅ 完了 | 31 に先行 |
-| 26 | [2026-10-03-26-refactor-e2e-launch-context.md](2026-10-03-26-refactor-e2e-launch-context.md) | refactor | 6.0 | 1.5 | ✅ 完了 | 32 に先行（e2e） |
-| 27 | [2026-10-03-27-test-lint-rule-tautology.md](2026-10-03-27-test-lint-rule-tautology.md) | test | 6.0 | 0.5 | ✅ 完了 | なし |
-| 28 | [2026-10-03-28-refactor-archive-panel-split.md](2026-10-03-28-refactor-archive-panel-split.md) | refactor | 4.8 | 2.0 | ✅ 完了 | なし |
-| 29 | [2026-10-03-29-refactor-general-settings-panel-split.md](2026-10-03-29-refactor-general-settings-panel-split.md) | refactor | 4.8 | 2.0 | ✅ 完了 | 23 の後（チェーン末端） |
-| 30 | [2026-10-03-30-refactor-i18n-storage-mock-factories.md](2026-10-03-30-refactor-i18n-storage-mock-factories.md) | refactor | 4.5 | 1.0 | ✅ 完了 | なし |
-| 31 | [2026-10-03-31-refactor-double-casts-cleanup.md](2026-10-03-31-refactor-double-casts-cleanup.md) | refactor | 4.0 | 0.5 | ✅ 完了 | 25 の後 |
-| 32 | [2026-10-03-32-test-e2e-seeded-panel-fixture.md](2026-10-03-32-test-e2e-seeded-panel-fixture.md) | test | 4.0 | 1.0 | ✅ 完了 | 26 の後（e2e） |
-| 33 | [2026-10-03-33-refactor-message-router-dead-code.md](2026-10-03-33-refactor-message-router-dead-code.md) | refactor | 3.6 | 0.5 | ✅ 完了 | なし |
-| 34 | [2026-10-03-34-refactor-logger-mock-factory.md](2026-10-03-34-refactor-logger-mock-factory.md) | test | 2.4 | 3.0 | ✅ 完了 | 35 に先行（test 広域） |
-| 35 | [2026-10-03-35-test-timer-clock-migration.md](2026-10-03-35-test-timer-clock-migration.md) | test | 1.8 | 1.0 | ✅ 完了 | 34 の後 |
-
-実行順: W1（16+18+21+24+27+33）→ W2（26+19+25+30）→ W3（17+28+22+31+32）→ W4（20+34）→ W5（23+35）→ W6（29）。
+holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。全件実装・全ゲート green でアーカイブ（個別 PBI の行はアーカイブ履歴を参照）。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
 
 ### 2026-10-03 adversarial review ラウンド（adversarial-1003） — ✅ 15件完了・アーカイブ済み 🔧非機能追加
 
@@ -277,6 +252,29 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-03 holistic ラウンド（holistic-1003b）アーカイブ — ✅ 20件完了（16-35 アーカイブ済み）
+
+- [2026-10-03-16-fix-fetch-5xx-backoff.md](../dev-docs/archived/pbi/2026-10-03-16-fix-fetch-5xx-backoff.md)（✅ 完了 — `c2e68f48`。fix。fetchWithRetry の HTTP 5xx リトライに指数バックオフと SleepFn 注入。RICE 24.0・1.0 SP）
+- [2026-10-03-17-fix-reload-seam-wiring.md](../dev-docs/archived/pbi/2026-10-03-17-fix-reload-seam-wiring.md)（✅ 完了 — `9513bfe3`。fix。reload-general-settings を一般設定パネルで受信し refresh を配線。RICE 18.0・2.0 SP）
+- [2026-10-03-18-fix-flush-batch-on-dropped.md](../dev-docs/archived/pbi/2026-10-03-18-fix-flush-batch-on-dropped.md)（✅ 完了 — `ebd722e2`。fix。flushBatch の over-retry/TTL drop を onDropped 契約で報告。RICE 18.0・1.0 SP）
+- [2026-10-03-19-fix-anchor-download-unify.md](../dev-docs/archived/pbi/2026-10-03-19-fix-anchor-download-unify.md)（✅ 完了 — `ad351986`。fix。anchor-click ダウンロードを exportLogsService.downloadBlob に統一。RICE 16.0・0.5 SP）
+- [2026-10-03-20-fix-preset-status-orphan-class.md](../dev-docs/archived/pbi/2026-10-03-20-fix-preset-status-orphan-class.md)（✅ 完了 — `295eae1e`。fix。プリセットステータスの孤立クラスを showStatus 契約に統一。RICE 16.0・1.0 SP）
+- [2026-10-03-21-fix-gateway-version-contract.md](../dev-docs/archived/pbi/2026-10-03-21-fix-gateway-version-contract.md)（✅ 完了 — `a7cc96cf`。fix。dashboardGateway のバージョンスタンプを messageTransport 契約へ統一。RICE 10.0・0.5 SP）
+- [2026-10-03-22-refactor-status-class-constant.md](../dev-docs/archived/pbi/2026-10-03-22-refactor-status-class-constant.md)（✅ 完了 — `85bfca27`。refactor。ステータス CSS クラス名を STATUS_CLASS 定数に統一。RICE 10.0・0.5 SP）
+- [2026-10-03-23-refactor-preset-buttons-id-ssot.md](../dev-docs/archived/pbi/2026-10-03-23-refactor-preset-buttons-id-ssot.md)（✅ 完了 — `024126de`。refactor。プリセットボタンをデータテーブル化し優先スロット ID を SSOT 統一。RICE 9.0・0.5 SP）
+- [2026-10-03-24-refactor-generate-id-unify.md](../dev-docs/archived/pbi/2026-10-03-24-refactor-generate-id-unify.md)（✅ 完了 — `559334ca`。refactor。ID 生成を共有 generateId() に統一し toCalendarDate を委譲。RICE 8.0・0.5 SP）
+- [2026-10-03-25-refactor-status-panel-split.md](../dev-docs/archived/pbi/2026-10-03-25-refactor-status-panel-split.md)（✅ 完了 — `dbadc37d`。refactor。statusPanel から信頼・権限フローを trustPanel へ抽出。RICE 8.0・1.0 SP）
+- [2026-10-03-26-refactor-e2e-launch-context.md](../dev-docs/archived/pbi/2026-10-03-26-refactor-e2e-launch-context.md)（✅ 完了 — `e8d1475c`。refactor。拡張起動コンテキストを launchExtensionContext() に統一。RICE 6.0・1.5 SP）
+- [2026-10-03-27-test-lint-rule-tautology.md](../dev-docs/archived/pbi/2026-10-03-27-test-lint-rule-tautology.md)（✅ 完了 — `760dbd77`。test。no-tautology-expect ルールのテストを追加。RICE 6.0・0.5 SP）
+- [2026-10-03-28-refactor-archive-panel-split.md](../dev-docs/archived/pbi/2026-10-03-28-refactor-archive-panel-split.md)（✅ 完了 — `57ba11d9`。refactor。archivePanel を lifecycle factory 3 件に分割。RICE 4.8・2.0 SP）
+- [2026-10-03-29-refactor-general-settings-panel-split.md](../dev-docs/archived/pbi/2026-10-03-29-refactor-general-settings-panel-split.md)（✅ 完了 — `7ad8b2d8`（pin 追従 `85330d0e`）。refactor。generalSettingsPanel を composition root と state machine モジュールに分割。RICE 4.8・2.0 SP）
+- [2026-10-03-30-refactor-i18n-storage-mock-factories.md](../dev-docs/archived/pbi/2026-10-03-30-refactor-i18n-storage-mock-factories.md)（✅ 完了 — `1398f62b`。refactor。i18n・storage モックを共通ファクトリに統一。RICE 4.5・1.0 SP）
+- [2026-10-03-31-refactor-double-casts-cleanup.md](../dev-docs/archived/pbi/2026-10-03-31-refactor-double-casts-cleanup.md)（✅ 完了 — `565e8549`。refactor。残存 as unknown as 二段キャストを単一キャストに整理。RICE 4.0・0.5 SP）
+- [2026-10-03-32-test-e2e-seeded-panel-fixture.md](../dev-docs/archived/pbi/2026-10-03-32-test-e2e-seeded-panel-fixture.md)（✅ 完了 — `2fb39de2`。test。シード済みパネル fixture を導入し 2 spec を移行。RICE 4.0・1.0 SP）
+- [2026-10-03-33-refactor-message-router-dead-code.md](../dev-docs/archived/pbi/2026-10-03-33-refactor-message-router-dead-code.md)（✅ 完了 — `fd5f53ec`。refactor。MessageRouter の二段キャストを解消しデッドコードを削除。RICE 3.6・0.5 SP）
+- [2026-10-03-34-refactor-logger-mock-factory.md](../dev-docs/archived/pbi/2026-10-03-34-refactor-logger-mock-factory.md)（✅ 完了 — `33c4f8e6`。test。logger モックを共通ファクトリに機械的に統一。RICE 2.4・3.0 SP）
+- [2026-10-03-35-test-timer-clock-migration.md](../dev-docs/archived/pbi/2026-10-03-35-test-timer-clock-migration.md)（✅ 完了 — `9f348b0a`。test。残存 vi.useFakeTimers を useTimerClock に移行。RICE 1.8・1.0 SP）
 
 ### 2026-10-03 adversarial review ラウンド（adversarial-1003）アーカイブ — ✅ 15件完了（01-15 アーカイブ済み）
 
