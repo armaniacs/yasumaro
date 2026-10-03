@@ -42,13 +42,13 @@ Scenario: toCalendarDate の重複は utils への委譲で解消される
 
 ## 受け入れ基準
 
-- [ ] utils に共有 generateId() が定義されている。
-- [ ] offlineNetworkQueue / RecordingOrchestrator / confirmTokenManager / logger core の ID 生成が generateId() に統一されている。
-- [ ] フォールバック形式が全呼び出し元で同一になり、分岐した形式が残らない。
-- [ ] `dailyPurgeHandler.ts` の toCalendarDate が `utils/localDate.ts` への委譲に置き換わっている。
-- [ ] 生成される ID の文字列形式（randomUUID 使用時）は変更前と同一である。
-- [ ] 日次パージの日付変換結果に回帰がない。
-- [ ] `npm run validate` が成功している。
+- [x] utils に共有 generateId() が定義されている。
+- [x] offlineNetworkQueue / RecordingOrchestrator / confirmTokenManager / logger core の ID 生成が generateId() に統一されている。
+- [x] フォールバック形式が全呼び出し元で同一になり、分岐した形式が残らない。
+- [x] `dailyPurgeHandler.ts` の toCalendarDate が `utils/localDate.ts` への委譲に置き換わっている。
+- [x] 生成される ID の文字列形式（randomUUID 使用時）は変更前と同一である。
+- [x] 日次パージの日付変換結果に回帰がない。
+- [x] `npm run validate` が成功している。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -69,10 +69,18 @@ Scenario: toCalendarDate の重複は utils への委譲で解消される
 
 ## Definition of Done
 
-- [ ] generateId() への統一が完了している。
-- [ ] フォールバック形式の分岐が解消されている。
-- [ ] toCalendarDate が委譲に置き換わっている。
-- [ ] ID 形式と日付変換に回帰がない。
-- [ ] `npm run validate` が成功している。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] generateId() への統一が完了している。
+- [x] フォールバック形式の分岐が解消されている。
+- [x] toCalendarDate が委譲に置き換わっている。
+- [x] ID 形式と日付変換に回帰がない。
+- [x] `npm run validate` が成功している。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
 - [ ] コードレビューが完了している。
+
+## 実装記録
+
+- 新設: `src/utils/generateId.ts` — randomUUID 優先、フォールバックは hex-32（16 バイトの 16 進 32 文字）に統一。旧 offlineNetworkQueue の hex-32 フォールバックと logger core の Uint32Array base36 分岐を解消（決定事項: フォールバック形式は hex-32 に統一）。`hasSecureRandom()` を export し、confirmTokenManager 側の Math.random 由来の予測可能フォールバックは保持しない
+- 統一先（6 src ファイル）: `src/background/offlineNetworkQueue.ts`、`src/background/pipeline/RecordingOrchestrator.ts`、`src/background/confirmTokenManager.ts`、`src/utils/logger/core.ts`（上記 4 か所が generateId() に統一）、`src/background/dailyPurgeHandler.ts`（toCalendarDate を `utils/localDate.ts` の `formatLocalDate` へ委譲）、`src/utils/generateId.ts`
+- テスト（6 ファイル）: `src/utils/__tests__/generateId.test.ts` 新設、`src/background/__tests__/offlineNetworkQueue-id.test.ts` 新設（共有 ID ソース pin）、`confirmTokenManager.test.ts`・`RecordingPipeline.test.ts`・`orchestrator-surface.test.ts`・`core-branch.test.ts` 更新（randomUUID 伝播と統一フォールバックの pin）
+- follow-up（範囲外・未実施）: `src/background/feedbackQueue.ts:36-40` に Math.random フォールバックが残存。別 PBI 化の余地あり
+- ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15529 passed・21 skipped / `npm run validate` PASS

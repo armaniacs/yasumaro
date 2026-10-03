@@ -50,7 +50,7 @@ describe('addLog', () => {
         expect(logs.some(l => l.type === 'DEBUG')).toBe(true);
     });
 
-    it('uses fallback random id when crypto.randomUUID is unavailable', async () => {
+    it('uses the shared generateId fallback when crypto.randomUUID is unavailable', async () => {
         const originalRandomUUID = crypto.randomUUID;
         // @ts-expect-error mocking missing randomUUID
         crypto.randomUUID = undefined;
@@ -59,7 +59,23 @@ describe('addLog', () => {
             await flushLogs(true);
             const logs = await getLogs();
             expect(logs.length).toBeGreaterThan(0);
-            expect(logs[0]!.id.length).toBeGreaterThan(0);
+            // Unified fallback (PBI 2026-10-03-24): 32-char hex from
+            // getRandomValues — the same format the other ID sites share.
+            expect(logs[0]!.id).toMatch(/^[0-9a-f]{32}$/);
+        } finally {
+            crypto.randomUUID = originalRandomUUID;
+        }
+    });
+
+    it('propagates crypto.randomUUID into the log entry id (shared id source)', async () => {
+        const fixed = '11111111-2222-4333-8444-555555555555';
+        const originalRandomUUID = crypto.randomUUID;
+        crypto.randomUUID = () => fixed;
+        try {
+            await addLog('INFO', 'msg', {});
+            await flushLogs(true);
+            const logs = await getLogs();
+            expect(logs[0]!.id).toBe(fixed);
         } finally {
             crypto.randomUUID = originalRandomUUID;
         }

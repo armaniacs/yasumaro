@@ -312,6 +312,39 @@ describe('RecordingPipeline', () => {
       const firstTraceId = traceIds[0];
       expect(traceIds.every((id: string) => id === firstTraceId)).toBe(true);
     });
+
+    it('propagates crypto.randomUUID into the traceId (shared id source)', async () => {
+      const fixed = '11111111-2222-4333-8444-555555555555';
+      const realCrypto = globalThis.crypto;
+      vi.stubGlobal('crypto', {
+        getRandomValues: realCrypto.getRandomValues.bind(realCrypto),
+        randomUUID: () => fixed,
+      });
+      try {
+        mockProcess.mockResolvedValue({
+          summary: 'AI summary',
+          maskedCount: 0,
+        });
+
+        const pipeline = makeOrchestrator(
+          makeGetPrivacyInfo(),
+          makeObsidian() as any,
+          makeAiClient() as any
+        );
+
+        await pipeline.record({
+          title: 'Test',
+          url: 'https://example.com',
+          content: 'Some content',
+        }, { settings: mockSettings });
+
+        const calls = (addLog as Mock).mock.calls;
+        const traceIds = new Set(calls.map((call: any[]) => call[2]?.traceId).filter(Boolean));
+        expect(traceIds).toEqual(new Set([fixed]));
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
   });
 
   describe('previewOnly モード', () => {

@@ -20,8 +20,8 @@ describe('RecordingOrchestrator public surface', () => {
       expect(methods).toContain(kept);
     }
     // TS `private` is compile-time only, so internals (create*Step,
-    // execute*, generateTraceId) still appear on the prototype — only the
-    // removed public spellings must stay gone.
+    // execute*) still appear on the prototype — only the removed public
+    // spellings must stay gone.
     for (const removed of ['recordFull', 'retryObsidian', 'retryObsidianWriteOnly']) {
       expect(methods).not.toContain(removed);
     }

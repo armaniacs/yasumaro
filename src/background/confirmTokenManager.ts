@@ -8,6 +8,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { logWarn } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { generateId, hasSecureRandom } from '../utils/generateId.js';
 
 export const CONFIRM_TOKENS_SESSION_KEY = 'dashboardSqliteConfirmTokens';
 export const CONFIRM_TOKEN_TTL_MS = 60_000;
@@ -47,17 +48,15 @@ type TokenMap = Record<string, ConfirmTokenRecord>;
  * Fail-closed token generation: this token is the sole authorization gate
  * for destructive operations (delete/clear_all/restore_db), so issuance
  * fails outright when no cryptographically secure RNG is available.
- * No Math.random-based predictable fallback is kept.
+ * No Math.random-based predictable fallback is kept. The randomUUID/hex
+ * branches are shared with utils/generateId; hasSecureRandom() gates the
+ * fail-closed branch so a missing RNG throws instead of degrading.
  */
 function generateToken(): string {
-  if (typeof crypto !== 'undefined' && typeof (crypto as unknown as { randomUUID?: () => string }).randomUUID === 'function') {
-    return (crypto as unknown as { randomUUID: () => string }).randomUUID!();
+  if (!hasSecureRandom()) {
+    throw new Error('Secure random number generator is unavailable; refusing to issue confirm token');
   }
-  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
-    const bytes = crypto.getRandomValues(new Uint8Array(16));
-    return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-  throw new Error('Secure random number generator is unavailable; refusing to issue confirm token');
+  return generateId();
 }
 
 async function loadMap(): Promise<TokenMap> {

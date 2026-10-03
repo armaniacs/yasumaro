@@ -15,6 +15,7 @@ import { ChromeStorageLogAdapter, type LogStorageAdapter } from './storageAdapte
 import { ChromeAlarmFlushScheduler, type LogFlushScheduler } from './flushScheduler.js';
 import { LogEntry, LogTypeValues } from './types.js';
 import { pickDefined } from '../objectUtils.js';
+import { generateId } from '../generateId.js';
 
 const MAX_PENDING_LOGS = 100;
 const BATCH_FLUSH_SIZE = 10;
@@ -100,14 +101,7 @@ export async function addLog<T extends object = Record<string, unknown>>(
     const traceId = typeof traceIdValue === 'string' ? traceIdValue : undefined;
 
     const entry: LogEntry = {
-      id:
-        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-          ? crypto.randomUUID()
-          : (() => {
-              const a = new Uint32Array(2);
-              crypto.getRandomValues(a);
-              return (a[0] ?? 0).toString(36) + (a[1] ?? 0).toString(36);
-            })(),
+      id: generateId(),
       timestamp: Date.now(),
       type,
       message: neutralizeLogText(

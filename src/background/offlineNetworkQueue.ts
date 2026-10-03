@@ -7,6 +7,7 @@
 
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
+import { generateId } from '../utils/generateId.js';
 import { PersistentRetryQueue, ChromeStorageAdapter, RetryableItem } from './persistentRetryQueue.js';
 import type { OfflineJobKind } from './pipeline/types.js';
 
@@ -31,15 +32,6 @@ const MAX_RETRY_COUNT = 3;
 // back-to-back in one 5-minute alarm cycle with no rate limiting
 // (PBI-2026-08-01-15). Jobs beyond the cap stay queued for the next cycle.
 const MAX_JOBS_PER_CYCLE = 20;
-
-function generateId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
 
 const adapter = new ChromeStorageAdapter();
 const queue = new PersistentRetryQueue<OfflineJob>(adapter, {

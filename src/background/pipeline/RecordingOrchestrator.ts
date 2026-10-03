@@ -12,6 +12,7 @@
 
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
+import { generateId } from '../../utils/generateId.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
 import { decideStepOutcome, defaultOutcomeAdapters, finalizeSuccess, type OutcomeAdapters } from './recordingOutcome.js';
 import { toExternalResult } from './piiBoundary.js';
@@ -117,15 +118,6 @@ export class RecordingOrchestrator {
     return (context: RecordingContext, _deps?: StepDeps) => checker.execute(context);
   }
 
-  private generateTraceId(): string {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-      return crypto.randomUUID();
-    }
-    const a = new Uint32Array(2);
-    if (typeof crypto !== 'undefined') crypto.getRandomValues(a);
-    return (a[0] ?? 0).toString(36) + (a[1] ?? 0).toString(36);
-  }
-
   /**
    * Normal path: full 13 steps. Preview requests must use `preview()` —
    * the `previewOnly` data flag short-circuits at the previewBreakpoint step.
@@ -161,7 +153,7 @@ export class RecordingOrchestrator {
   async retryObsidianWrite(job: { title: string; url: string; summary: string; markdown?: string | undefined; tags?: string[] }): Promise<boolean> {
     return this.mutexMap.runExclusive(job.url, async () => {
       const settings = await this.getSettingsWithCache();
-      const traceId = this.generateTraceId();
+      const traceId = generateId();
       const context = createRetryContext(job, settings, traceId);
       const deps = createStepDeps({
         obsidian: this.obsidian,
@@ -186,7 +178,7 @@ export class RecordingOrchestrator {
    * injected adapters.
    */
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
-    const traceId = this.generateTraceId();
+    const traceId = generateId();
     const deps = createStepDeps({
       obsidian: this.obsidian,
       aiService: this.aiService,

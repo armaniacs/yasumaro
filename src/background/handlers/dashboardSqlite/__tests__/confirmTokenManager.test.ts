@@ -19,6 +19,21 @@ describe('confirmTokenManager per-action single-use TTL', () => {
     expect(ok).toBe(true);
   });
 
+  it('issues the exact crypto.randomUUID value when available (shared id source)', async () => {
+    const fixed = '11111111-2222-4333-8444-555555555555';
+    const realCrypto = globalThis.crypto;
+    vi.stubGlobal('crypto', {
+      getRandomValues: realCrypto.getRandomValues.bind(realCrypto),
+      randomUUID: () => fixed,
+    });
+    try {
+      const token = await createConfirmToken('delete', 1);
+      expect(token).toBe(fixed);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('single-use: second verify fails', async () => {
     const token = await createConfirmToken('delete', 1);
     expect(await verifyConfirmToken(token, 'delete', 1)).toBe(true);

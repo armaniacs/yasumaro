@@ -1,6 +1,7 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { cleanupExpiredSettingsBackups } from '../utils/storage/settingsMigration.js';
+import { formatLocalDate } from '../utils/localDate.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -33,18 +34,12 @@ export const AUDIT_LOG_RETENTION_DAYS = 7;
 
 const BUFFER_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Local-calendar `YYYY-MM-DD`, matching how MarkdownBufferManager names a day. */
-function toCalendarDate(date: Date): string {
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${date.getFullYear()}-${month}-${day}`;
-}
-
 function daysAgo(now: Date, days: number): string {
     // The local Date constructor, not a millisecond subtraction: buffer keys are
-    // local-calendar names, so the cutoff has to be one too (and this stays
-    // correct across month ends and DST shifts).
-    return toCalendarDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days));
+    // local-calendar names (matching how MarkdownBufferManager names a day), so
+    // the cutoff has to be one too (and this stays correct across month ends
+    // and DST shifts).
+    return formatLocalDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - days));
 }
 
 /**
@@ -67,7 +62,7 @@ function daysAgo(now: Date, days: number): string {
 export async function sweepExpiredLocalExportBuffers(now: Date = new Date()): Promise<number> {
     const stored = await chrome.storage.local.get(DAILY_BUFFER_PREFIX);
 
-    const today = toCalendarDate(now);
+    const today = formatLocalDate(now);
     const yesterday = daysAgo(now, 1);
     const cutoff = daysAgo(now, LOCAL_MARKDOWN_BUFFER_RETENTION_DAYS);
 
