@@ -10,21 +10,21 @@
 
 | 順 | PBI | 種別 | R | I | C | E | RICE |
 |---|---|---|---|---|---|---|---:|
-| 1 | [2026-10-03-01-fix-popup-save-silent-data-loss.md](2026-10-03-01-fix-popup-save-silent-data-loss.md) | fix | 6 | 3 | 1.0 | 0.5 | 36.0 |
-| 2 | [2026-10-03-02-fix-review-summary-alarms-never-created.md](2026-10-03-02-fix-review-summary-alarms-never-created.md) | fix | 4 | 2 | 1.0 | 0.5 | 16.0 |
-| 3 | [2026-10-03-03-fix-settings-cache-read-your-write.md](2026-10-03-03-fix-settings-cache-read-your-write.md) | fix | 7 | 2 | 0.9 | 1.0 | 12.6 |
-| 4 | [2026-10-03-04-fix-loginfo-argument-swap.md](2026-10-03-04-fix-loginfo-argument-swap.md) | fix | 5 | 1 | 1.0 | 0.5 | 10.0 |
-| 5 | [2026-10-03-05-fix-panelaction-onerror-rejection.md](2026-10-03-05-fix-panelaction-onerror-rejection.md) | fix | 5 | 1 | 1.0 | 0.5 | 10.0 |
-| 6 | [2026-10-03-06-fix-provider-priority-b-throw-divergence.md](2026-10-03-06-fix-provider-priority-b-throw-divergence.md) | fix | 2 | 2 | 0.9 | 0.5 | 7.2 |
-| 7 | [2026-10-03-07-chore-type-baseline-gate-reliability.md](2026-10-03-07-chore-type-baseline-gate-reliability.md) | chore | 2 | 2 | 1.0 | 1.0 | 4.0 |
-| 8 | [2026-10-03-08-fix-archive-concurrent-exclusion.md](2026-10-03-08-fix-archive-concurrent-exclusion.md) | fix | 3 | 2 | 0.9 | 1.5 | 3.6 |
-| 9 | [2026-10-03-09-fix-anchor-download-revoke-signal.md](2026-10-03-09-fix-anchor-download-revoke-signal.md) | fix | 3 | 0.5 | 0.9 | 0.5 | 2.7 |
-| 10 | [2026-10-03-10-refactor-error-display-contract.md](2026-10-03-10-refactor-error-display-contract.md) | refactor | 5 | 0.5 | 0.9 | 1.0 | 2.25 |
-| 11 | [2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md](2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md) | fix | 2 | 0.5 | 1.0 | 0.5 | 2.0 |
-| 12 | [2026-10-03-12-fix-saved-url-timestamp-sort-guard.md](2026-10-03-12-fix-saved-url-timestamp-sort-guard.md) | fix | 2 | 0.5 | 0.8 | 0.5 | 1.6 |
-| 13 | [2026-10-03-13-test-pin-behavior-over-implementation.md](2026-10-03-13-test-pin-behavior-over-implementation.md) | test | 1 | 1 | 0.9 | 1.0 | 0.9 |
-| 14 | [2026-10-03-14-fix-recovery-claim-same-ms-guard.md](2026-10-03-14-fix-recovery-claim-same-ms-guard.md) | fix | 1 | 0.5 | 0.8 | 0.5 | 0.8 |
-| 15 | [2026-10-03-15-chore-comment-docs-alignment.md](2026-10-03-15-chore-comment-docs-alignment.md) | chore | 1 | 0.25 | 1.0 | 0.5 | 0.5 |
+| 1 | [2026-10-03-01-fix-popup-save-silent-data-loss.md](../dev-docs/archived/pbi/2026-10-03-01-fix-popup-save-silent-data-loss.md) | fix | 6 | 3 | 1.0 | 0.5 | 36.0 |
+| 2 | [2026-10-03-02-fix-review-summary-alarms-never-created.md](../dev-docs/archived/pbi/2026-10-03-02-fix-review-summary-alarms-never-created.md) | fix | 4 | 2 | 1.0 | 0.5 | 16.0 |
+| 3 | [2026-10-03-03-fix-settings-cache-read-your-write.md](../dev-docs/archived/pbi/2026-10-03-03-fix-settings-cache-read-your-write.md) | fix | 7 | 2 | 0.9 | 1.0 | 12.6 |
+| 4 | [2026-10-03-04-fix-loginfo-argument-swap.md](../dev-docs/archived/pbi/2026-10-03-04-fix-loginfo-argument-swap.md) | fix | 5 | 1 | 1.0 | 0.5 | 10.0 |
+| 5 | [2026-10-03-05-fix-panelaction-onerror-rejection.md](../dev-docs/archived/pbi/2026-10-03-05-fix-panelaction-onerror-rejection.md) | fix | 5 | 1 | 1.0 | 0.5 | 10.0 |
+| 6 | [2026-10-03-06-fix-provider-priority-b-throw-divergence.md](../dev-docs/archived/pbi/2026-10-03-06-fix-provider-priority-b-throw-divergence.md) | fix | 2 | 2 | 0.9 | 0.5 | 7.2 |
+| 7 | [2026-10-03-07-chore-type-baseline-gate-reliability.md](../dev-docs/archived/pbi/2026-10-03-07-chore-type-baseline-gate-reliability.md) | chore | 2 | 2 | 1.0 | 1.0 | 4.0 |
+| 8 | [2026-10-03-08-fix-archive-concurrent-exclusion.md](../dev-docs/archived/pbi/2026-10-03-08-fix-archive-concurrent-exclusion.md) | fix | 3 | 2 | 0.9 | 1.5 | 3.6 |
+| 9 | [2026-10-03-09-fix-anchor-download-revoke-signal.md](../dev-docs/archived/pbi/2026-10-03-09-fix-anchor-download-revoke-signal.md) | fix | 3 | 0.5 | 0.9 | 0.5 | 2.7 |
+| 10 | [2026-10-03-10-refactor-error-display-contract.md](../dev-docs/archived/pbi/2026-10-03-10-refactor-error-display-contract.md) | refactor | 5 | 0.5 | 0.9 | 1.0 | 2.25 |
+| 11 | [2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md](../dev-docs/archived/pbi/2026-10-03-11-fix-bootstrapper-tab-panel-mismatch.md) | fix | 2 | 0.5 | 1.0 | 0.5 | 2.0 |
+| 12 | [2026-10-03-12-fix-saved-url-timestamp-sort-guard.md](../dev-docs/archived/pbi/2026-10-03-12-fix-saved-url-timestamp-sort-guard.md) | fix | 2 | 0.5 | 0.8 | 0.5 | 1.6 |
+| 13 | [2026-10-03-13-test-pin-behavior-over-implementation.md](../dev-docs/archived/pbi/2026-10-03-13-test-pin-behavior-over-implementation.md) | test | 1 | 1 | 0.9 | 1.0 | 0.9 |
+| 14 | [2026-10-03-14-fix-recovery-claim-same-ms-guard.md](../dev-docs/archived/pbi/2026-10-03-14-fix-recovery-claim-same-ms-guard.md) | fix | 1 | 0.5 | 0.8 | 0.5 | 0.8 |
+| 15 | [2026-10-03-15-chore-comment-docs-alignment.md](../dev-docs/archived/pbi/2026-10-03-15-chore-comment-docs-alignment.md) | chore | 1 | 0.25 | 1.0 | 0.5 | 0.5 |
 
 RICE = R × I × C / E。値は各 PBI 内「優先度」セクションの記載に基づく。
 
