@@ -4,8 +4,9 @@
  *
  * Extracted from statusPanel.ts so the trust taxonomy and cleansing display
  * are unit-testable without a popup DOM. The wiring (DOM writes, wireOnce,
- * timers, dynamic imports) stays in statusPanel.ts — only string building
- * moved here. No `document`, no `chrome.*`, no dynamic import, no timers.
+ * timers, dynamic imports) lives in statusPanel.ts and popup/trustPanel.ts —
+ * only string building moved here. No `document`, no `chrome.*`, no dynamic
+ * import, no timers.
  */
 import type { ContentResponse } from './mainTypes.js';
 import type { StatusInfo } from './statusChecker.js';

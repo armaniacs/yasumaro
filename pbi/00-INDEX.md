@@ -29,7 +29,7 @@ holistic-code-improvement skill による 6.9.34 時点の大局的レビュー�
 | 22 | [2026-10-03-22-refactor-status-class-constant.md](2026-10-03-22-refactor-status-class-constant.md) | refactor | 10.0 | 0.5 | ⬜ 未着手 | なし |
 | 23 | [2026-10-03-23-refactor-preset-buttons-id-ssot.md](2026-10-03-23-refactor-preset-buttons-id-ssot.md) | refactor | 9.0 | 0.5 | ⬜ 未着手 | 20 の後・29 に先行（チェーン） |
 | 24 | [2026-10-03-24-refactor-generate-id-unify.md](2026-10-03-24-refactor-generate-id-unify.md) | refactor | 8.0 | 0.5 | ✅ 完了 | なし |
-| 25 | [2026-10-03-25-refactor-status-panel-split.md](2026-10-03-25-refactor-status-panel-split.md) | refactor | 8.0 | 1.0 | ⬜ 未着手 | 31 に先行 |
+| 25 | [2026-10-03-25-refactor-status-panel-split.md](2026-10-03-25-refactor-status-panel-split.md) | refactor | 8.0 | 1.0 | ✅ 完了 | 31 に先行 |
 | 26 | [2026-10-03-26-refactor-e2e-launch-context.md](2026-10-03-26-refactor-e2e-launch-context.md) | refactor | 6.0 | 1.5 | ✅ 完了 | 32 に先行（e2e） |
 | 27 | [2026-10-03-27-test-lint-rule-tautology.md](2026-10-03-27-test-lint-rule-tautology.md) | test | 6.0 | 0.5 | ✅ 完了 | なし |
 | 28 | [2026-10-03-28-refactor-archive-panel-split.md](2026-10-03-28-refactor-archive-panel-split.md) | refactor | 4.8 | 2.0 | ⬜ 未着手 | なし |

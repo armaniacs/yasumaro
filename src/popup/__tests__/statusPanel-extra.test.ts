@@ -57,17 +57,10 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
 });
 
-vi.mock('../../utils/i18n.js', () => ({ getMessage: mockGetMessage ,
-getMessageOr: (key: string, fallback: string, subs?: unknown): string =>
-      ((subs === undefined ? (mockGetMessage as (...a: any[]) => unknown)(key) : (mockGetMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string,
-getMessageWithSubstitutions: (
-        key: string,
-        subs: Record<string, string | number>,
-        fallback: string,
-      ): string =>
-      ((mockGetMessage as (...a: any[]) => unknown)(key, subs) ||
-        fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-          subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string,}));
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
+  return i18nMock(mockGetMessage);
+});
 
 vi.mock('../../utils/permissionManager.js', () => ({
   isAllUrlsPermitted: mockIsAllUrlsPermitted,
@@ -1358,15 +1351,19 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
   });
 
   it('routes every mainStatus render through the channel, with no bare class write left', () => {
-    const source = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '..', 'statusPanel.ts'),
-      'utf-8'
-    );
-    // 2 success renders (domain / path) + 2 validation-failure renders + the
-    // shared handler-failure report the async click handlers catch into.
-    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(5);
+    const dir = dirname(fileURLToPath(import.meta.url));
+    const source = readFileSync(join(dir, '..', 'statusPanel.ts'), 'utf-8');
+    const trustSource = readFileSync(join(dir, '..', 'trustPanel.ts'), 'utf-8');
+    // 2 success renders (domain / path) + 2 validation-failure renders in the
+    // panel + the shared handler-failure report the async click handlers catch
+    // into. The trust/permission split (pbi/2026-10-03-25) moved that report
+    // into trustPanel.ts — the total across both files is unchanged.
+    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    expect(trustSource.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(1);
     expect(source).not.toMatch(/showStatus\(\s*'mainStatus'/);
     expect(source).not.toMatch(/className\s*=\s*'(success|error)'/);
+    expect(trustSource).not.toMatch(/showStatus\(\s*'mainStatus'/);
+    expect(trustSource).not.toMatch(/className\s*=\s*'(success|error)'/);
   });
 });
 

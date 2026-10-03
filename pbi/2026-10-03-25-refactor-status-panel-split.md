@@ -39,13 +39,13 @@ Scenario: 抽出後も statusPanel の残存責務に回帰がない
 
 ## 受け入れ基準
 
-- [ ] 信頼・権限フロー（`:139-216`）と全 URL バナー（`:392-426`）が trustPanel モジュールへ抽出されている。
-- [ ] 抽出されたモジュールは自己完結し、statusPanel からの配線で接続されている。
-- [ ] statusPanel.ts の行数が削減され、init 制御・ホワイトリスト配線・フィードバックボタンの責務配置が明確になっている。
-- [ ] permissionManager の動的 import の挙動が維持されている。
-- [ ] パリティテストにより、抽出前後で UI 動作（バナー、trust 判定、権限フロー）が同一であることを確認している。
-- [ ] rank-16 との統合順序（本分割を先に実施するか調整）が確定している。
-- [ ] `npm run validate` が成功している。
+- [x] 信頼・権限フロー（`:139-216`）と全 URL バナー（`:392-426`）が trustPanel モジュールへ抽出されている。
+- [x] 抽出されたモジュールは自己完結し、statusPanel からの配線で接続されている。
+- [x] statusPanel.ts の行数が削減され、init 制御・ホワイトリスト配線・フィードバックボタンの責務配置が明確になっている。
+- [x] permissionManager の動的 import の挙動が維持されている。
+- [x] パリティテストにより、抽出前後で UI 動作（バナー、trust 判定、権限フロー）が同一であることを確認している。
+- [x] rank-16 との統合順序（本分割を先に実施するか調整）が確定している。
+- [x] `npm run validate` が成功している。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -66,11 +66,21 @@ trustPanel 抽出、statusPanel からの配線、パリティテストの新設
 
 ## Definition of Done
 
-- [ ] trustPanel モジュールへの抽出が完了している。
-- [ ] statusPanel の残存責務に回帰がない。
-- [ ] パリティテストが整備されている。
-- [ ] 動的 import の挙動が維持されている。
-- [ ] rank-16 との統合順序が確定している。
-- [ ] `npm run validate` が成功している。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] trustPanel モジュールへの抽出が完了している。
+- [x] statusPanel の残存責務に回帰がない。
+- [x] パリティテストが整備されている。
+- [x] 動的 import の挙動が維持されている。
+- [x] rank-16 との統合順序が確定している。
+- [x] `npm run validate` が成功している。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
 - [ ] コードレビューが完了している。
+
+## 実装記録
+
+- 抽出: `src/popup/trustPanel.ts`（新設・143 行）に信頼・権限フロー（updateTrustStatus）、全 URL バナー（initAllUrlsPermissionBanner）、共有失敗経路（reportHandlerError）、errorToastTimer を移設。permissionManager / trustChecker の動的 import 経路（タイミング含む）は実装同一で維持
+- statusPanel.ts: 468 → 340 行（imports/re-exports に集約、init のモードバッジ取得を `renderPrivacyModeBadge` ヘルパーへ抽出）。statusPanel は updateTrustStatus / initAllUrlsPermissionBanner を再 export し、main.ts / recordSession.ts 側の import 面は不変
+- statusRenderers.ts: trust renderer 移設に伴う doc コメント整備
+- テスト: `trustPanel.test.ts`（新設・15 tests）でバナー表示条件・trust 判定・権限フロー・toast チェーンのパリティと statusPanel re-export の配線 pin。`statusPanel-extra.test.ts` の mainStatus ソース pin を 2 ファイル横断チェックへ更新（statusPanel 4 + trustPanel 1 = 計 5、旧 1 ファイル 5 の合計は不変）— 旧 pin は分割後に落ちるため本テスト更新は本 PBI コミットに同梱必須
+- 検証: `src/popup` スイープ 916 tests green / `npm run validate` PASS / 全 E2E 324 passed（`npm run build` 後）
+- rank-16（NN31 double casts cleanup）への引き継ぎメモ: 旧 `statusPanel.ts:29` の as-unknown-as（errorToastTimer 初期化）は trustPanel.ts への移設で `trustPanel.ts:12` に位置変更。NN31 実装時は参照位置を trustPanel.ts 側に更新すること（ファイル分割の現時点では清掃対象外として保持）
+- 備考: trustPanel.test.ts のファイル自体は PBI 30 のコミットに同梱（PBI 30 の mockGetMessage ファクトリ置換が同一ファイルに及ぶためのファイル単位の帰属 — 25 の実装時点でパリティ検証済み）
