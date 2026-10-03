@@ -35,11 +35,11 @@ Scenario: ルールテストがリピートセーフに実行される
 
 ## 受け入れ基準
 
-- [ ] `eslint/__tests__/` に no-tautology-expect のルールテストを追加する
-- [ ] `createRepeatSafeRuleTester` を使用する（プレーンな `new RuleTester` を使わない）
-- [ ] valid ケースと invalid ケースを両方カバーする
-- [ ] tautology 判定のエッジケース（常に真になるアサーションの各パターン）を検証する
-- [ ] 既存 8 ルールのテストパターンに沿った構成にする
+- [x] `eslint/__tests__/` に no-tautology-expect のルールテストを追加する
+- [x] `createRepeatSafeRuleTester` を使用する（プレーンな `new RuleTester` を使わない）
+- [x] valid ケースと invalid ケースを両方カバーする
+- [x] tautology 判定のエッジケース（常に真になるアサーションの各パターン）を検証する
+- [x] 既存 8 ルールのテストパターンに沿った構成にする
 
 ## テスト戦略
 
@@ -53,7 +53,13 @@ Scenario: ルールテストがリピートセーフに実行される
 
 ## DoD
 
-- [ ] ルールテストが追加され、全 9 ルールがテスト済みになっている
-- [ ] `npx vitest run eslint/__tests__ --repeats=20` が成功している
-- [ ] `createRepeatSafeRuleTester` を使用している
-- [ ] `npm run validate` が成功している
+- [x] ルールテストが追加され、全 9 ルールがテスト済みになっている
+- [x] `npx vitest run eslint/__tests__ --repeats=20` が成功している
+- [x] `createRepeatSafeRuleTester` を使用している
+- [x] `npm run validate` が成功している
+
+## 実装記録
+
+- 新設: `eslint/__tests__/no-tautology-expect.test.ts`（27 ケース作成 — valid: 通常アサーション・別識別子比較・メンバーチェーン等、invalid: 同一識別子×同一リテラル等の常真 expect パターン）。`createRepeatSafeRuleTester` 経由で flat config API を使用
+- 実行: `npx vitest run eslint/__tests__ --repeats=20` = 10 ファイル・162 tests すべて green（`--repeats` 重複ケース衝突なし）
+- ゲート: `npm test` 15529 passed・21 skipped / `npm run validate` PASS
