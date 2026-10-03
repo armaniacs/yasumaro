@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 17件完了 / ⬜ 未着手 3件 🔧非機能追加
+### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 18件完了 / ⬜ 未着手 2件 🔧非機能追加
 
 holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。起票・採点登録のみで実装は未着手。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
 
@@ -27,7 +27,7 @@ holistic-code-improvement skill による 6.9.34 時点の大局的レビュー�
 | 20 | [2026-10-03-20-fix-preset-status-orphan-class.md](2026-10-03-20-fix-preset-status-orphan-class.md) | fix | 16.0 | 1.0 | ✅ 完了 | 17 の後・23 に先行（チェーン） |
 | 21 | [2026-10-03-21-fix-gateway-version-contract.md](2026-10-03-21-fix-gateway-version-contract.md) | fix | 10.0 | 0.5 | ✅ 完了 | なし |
 | 22 | [2026-10-03-22-refactor-status-class-constant.md](2026-10-03-22-refactor-status-class-constant.md) | refactor | 10.0 | 0.5 | ✅ 完了 | なし |
-| 23 | [2026-10-03-23-refactor-preset-buttons-id-ssot.md](2026-10-03-23-refactor-preset-buttons-id-ssot.md) | refactor | 9.0 | 0.5 | ⬜ 未着手 | 20 の後・29 に先行（チェーン） |
+| 23 | [2026-10-03-23-refactor-preset-buttons-id-ssot.md](2026-10-03-23-refactor-preset-buttons-id-ssot.md) | refactor | 9.0 | 0.5 | ✅ 完了 | 20 の後・29 に先行（チェーン） |
 | 24 | [2026-10-03-24-refactor-generate-id-unify.md](2026-10-03-24-refactor-generate-id-unify.md) | refactor | 8.0 | 0.5 | ✅ 完了 | なし |
 | 25 | [2026-10-03-25-refactor-status-panel-split.md](2026-10-03-25-refactor-status-panel-split.md) | refactor | 8.0 | 1.0 | ✅ 完了 | 31 に先行 |
 | 26 | [2026-10-03-26-refactor-e2e-launch-context.md](2026-10-03-26-refactor-e2e-launch-context.md) | refactor | 6.0 | 1.5 | ✅ 完了 | 32 に先行（e2e） |

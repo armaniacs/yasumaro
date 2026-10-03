@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { handleLmStudioPreset, handleOllamaPreset } from '../generalSettings/providerPresets.js';
+import { handleLmStudioPreset, handleOllamaPreset, wireProviderPresetButtons } from '../generalSettings/providerPresets.js';
 import { PROVIDER_DEFAULT_BASE_URLS } from '../../utils/storage/providerDefaultBaseUrls.js';
 
 // The production handlers read i18n through getMessageOr; an empty
@@ -367,5 +367,61 @@ describe('OpenAIProvider with Ollama', () => {
     const apiKey = '';
     
     expect(apiKey).toBe('');
+  });
+});
+
+describe('Provider preset button wiring (data-driven table)', () => {
+  const PRESET_FIXTURE = `
+    <input type="text" id="providerBaseUrl" />
+    <button type="button" id="lmStudioPresetBtn">LM Studio</button>
+    <button type="button" id="ollamaPresetBtn">Ollama</button>
+    <div id="status" class="status"></div>
+    <div id="statusTop"></div>
+    <select id="aiProvider">
+      <option value="openai-compatible">OpenAI Compatible</option>
+    </select>
+  `;
+
+  beforeEach(() => {
+    document.body.innerHTML = PRESET_FIXTURE;
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+    vi.clearAllMocks();
+  });
+
+  test('one wireProviderPresetButtons call wires every table row', () => {
+    wireProviderPresetButtons(document.body);
+
+    (document.getElementById('lmStudioPresetBtn') as HTMLButtonElement).click();
+    expect((document.getElementById('providerBaseUrl') as HTMLInputElement).value)
+      .toBe(PROVIDER_DEFAULT_BASE_URLS['lm-studio']);
+
+    (document.getElementById('ollamaPresetBtn') as HTMLButtonElement).click();
+    expect((document.getElementById('providerBaseUrl') as HTMLInputElement).value)
+      .toBe(PROVIDER_DEFAULT_BASE_URLS['ollama']);
+    // Same derived status contract as the direct handler write.
+    expect((document.getElementById('status') as HTMLElement).className).toBe('status-message success');
+  });
+
+  test('wired button click is state-identical to the direct handler call (parity)', () => {
+    handleLmStudioPreset();
+    const viaHandler = {
+      url: (document.getElementById('providerBaseUrl') as HTMLInputElement).value,
+      status: (document.getElementById('status') as HTMLElement).className,
+      statusTop: (document.getElementById('statusTop') as HTMLElement).className,
+    };
+
+    document.body.innerHTML = PRESET_FIXTURE;
+    wireProviderPresetButtons(document.body);
+    (document.getElementById('lmStudioPresetBtn') as HTMLButtonElement).click();
+    const viaClick = {
+      url: (document.getElementById('providerBaseUrl') as HTMLInputElement).value,
+      status: (document.getElementById('status') as HTMLElement).className,
+      statusTop: (document.getElementById('statusTop') as HTMLElement).className,
+    };
+
+    expect(viaClick).toEqual(viaHandler);
   });
 });

@@ -14,14 +14,18 @@ import {
 } from '../../generalSettings/connectionTests.js';
 import { handleManualLocalMarkdownExport } from '../../localMarkdownExport.js';
 import { generateReviewSummary } from '../../reviewSummaryHandler.js';
-import { handleLmStudioPreset, handleOllamaPreset } from '../../generalSettings/providerPresets.js';
+import { wireProviderPresetButtons } from '../../generalSettings/providerPresets.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings, restoreOriginalProviderSettingsLayout } from '../../aiProviderLayoutManager.js';
 import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
 import { providerIdsInOrder, renderProviderOptions, renderProviderSettings } from '../../aiProviderCatalogView.js';
 import { resolveInitialLayout, mountLayoutToggle } from '../../aiProviderLayoutToggle.js';
 import { createBPriorityListView } from '../../aiProviderB/priorityListView.js';
 import { createBProviderAccordionView } from '../../aiProviderB/providerAccordionView.js';
-import { collectCurrentProviderPrioritySlots } from '../../providerPrioritySlots.js';
+import {
+  collectCurrentProviderPrioritySlots,
+  PRIORITY_SELECT_IDS,
+  OPTIONAL_PRIORITY_SELECT_IDS,
+} from '../../providerPrioritySlots.js';
 import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVersionValidation } from '../../settings/fieldValidation.js';
 import { initOnboardingWizard } from '../../../utils/ui/onboardingWizard.js';
 import { ModelsDevDialog } from '../../models-dev-dialog.js';
@@ -98,7 +102,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       // Provider <option> lists are shared by both layouts.
       const providerSelect = container.querySelector('#aiProvider') as HTMLSelectElement | null;
       if (providerSelect) renderProviderOptions(providerSelect);
-      for (const priorityId of ['aiProviderPriority2', 'aiProviderPriority3']) {
+      for (const priorityId of OPTIONAL_PRIORITY_SELECT_IDS) {
         const sel = container.querySelector(`#${priorityId}`) as HTMLSelectElement | null;
         if (sel) renderProviderOptions(sel, { includeNone: true });
       }
@@ -167,14 +171,9 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       const refreshMultiVisibility = (): void => {
         // A-layout only: B owns its accordion DOM and never reparents #*Settings.
         if (currentLayout === 'b') return;
-        const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
-        const aiProviderPriority2Select = document.getElementById('aiProviderPriority2') as HTMLSelectElement | null;
-        const aiProviderPriority3Select = document.getElementById('aiProviderPriority3') as HTMLSelectElement | null;
-        const selected = [
-          aiProviderSelect?.value ?? '',
-          aiProviderPriority2Select?.value ?? '',
-          aiProviderPriority3Select?.value ?? ''
-        ];
+        const selected = PRIORITY_SELECT_IDS.map(
+          (id) => (document.getElementById(id) as HTMLSelectElement | null)?.value ?? '',
+        );
         updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
         updateProviderSettingsLayout(selected);
         updatePrioritySummaryNames(selected);
@@ -182,8 +181,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
 
       // Update <summary> provider names dynamically
       const updatePrioritySummaryNames = (_selected: string[]): void => {
-        const selects = ['aiProvider', 'aiProviderPriority2', 'aiProviderPriority3'];
-        selects.forEach((id, index) => {
+        PRIORITY_SELECT_IDS.forEach((id, index) => {
           const select = document.getElementById(id) as HTMLSelectElement | null;
           const summaryName = document.querySelector(`.priority-provider-name[data-priority="${index + 1}"]`) as HTMLElement | null;
           if (select && summaryName) {
@@ -193,9 +191,9 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         });
       };
 
-      document.getElementById('aiProvider')?.addEventListener('change', refreshMultiVisibility);
-      document.getElementById('aiProviderPriority2')?.addEventListener('change', refreshMultiVisibility);
-      document.getElementById('aiProviderPriority3')?.addEventListener('change', refreshMultiVisibility);
+      for (const priorityId of PRIORITY_SELECT_IDS) {
+        document.getElementById(priorityId)?.addEventListener('change', refreshMultiVisibility);
+      }
 
       let bPriorityView: ReturnType<typeof createBPriorityListView> | null = null;
       let bAccordionView: ReturnType<typeof createBProviderAccordionView> | null = null;
@@ -335,9 +333,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         await modelsDevDialog.show();
       });
 
-      container.querySelector('#lmStudioPresetBtn')?.addEventListener('click', handleLmStudioPreset);
-
-      container.querySelector('#ollamaPresetBtn')?.addEventListener('click', handleOllamaPreset);
+      wireProviderPresetButtons(container);
 
       document.getElementById('save')?.addEventListener('click', handleSaveOnly);
       document.getElementById('testObsidianBtn')?.addEventListener('click', handleTestObsidian);

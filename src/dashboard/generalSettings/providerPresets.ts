@@ -39,3 +39,20 @@ export function handleLmStudioPreset(): void {
 export function handleOllamaPreset(): void {
   applyProviderPreset('ollama');
 }
+
+/**
+ * One row per preset button; the message key lives in PRESET_LABELS keyed by
+ * the same presetId. The panel wires every button through
+ * wireProviderPresetButtons, so adding a provider preset button is one row
+ * here plus the PRESET_LABELS/PROVIDER_DEFAULT_BASE_URLS entries.
+ */
+const PRESET_BUTTONS: ReadonlyArray<{ btnId: string; presetId: ProviderPresetId }> = [
+  { btnId: 'lmStudioPresetBtn', presetId: 'lm-studio' },
+  { btnId: 'ollamaPresetBtn', presetId: 'ollama' },
+];
+
+export function wireProviderPresetButtons(container: HTMLElement): void {
+  for (const { btnId, presetId } of PRESET_BUTTONS) {
+    container.querySelector(`#${btnId}`)?.addEventListener('click', () => applyProviderPreset(presetId));
+  }
+}

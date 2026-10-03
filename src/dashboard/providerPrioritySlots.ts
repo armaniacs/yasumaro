@@ -23,6 +23,20 @@ export interface CurrentProviderPrioritySlotsInput {
   stored?: unknown;
 }
 
+/**
+ * Priority select ids in slot order: index i is slot i+1. The positional
+ * coupling is deliberate — the general settings panel derives
+ * data-priority="${i+1}", the visibility-refresh slot order, and the change
+ * listener wiring from this single list, so a slot change is one edit here.
+ */
+export const PRIORITY_SELECT_IDS = ['aiProvider', 'aiProviderPriority2', 'aiProviderPriority3'] as const;
+
+/**
+ * The optional priority selects (slots 2-3). Slot 1 is required, so only
+ * these render with the includeNone "Not set" option.
+ */
+export const OPTIONAL_PRIORITY_SELECT_IDS = PRIORITY_SELECT_IDS.slice(1);
+
 // Rationale (params/sync over async): callers already hold layout/DOM/storage snapshots from
 // different async (save pipeline) vs sync (panel init) paths, so the helper takes them as params
 // and stays sync/testable instead of reading the settings repository itself.
