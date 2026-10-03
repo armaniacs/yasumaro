@@ -5,6 +5,9 @@
  * and chrome.runtime.sendMessage is not touched when a port is injected.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   dashboardGateway,
   setDashboardTransportForTesting,
@@ -47,6 +50,32 @@ describe('dashboardGateway transport wiring (PBI 10)', () => {
       payload: { subtype: 'search', query: 'hi' },
     });
     expect(chromeSend).not.toHaveBeenCalled();
+  });
+
+  it('stamps protocolVersion exactly once at the transport layer (gateway does not self-stamp)', async () => {
+    const sent: unknown[] = [];
+    setDashboardTransportForTesting({
+      send: async (message: unknown) => {
+        sent.push(message);
+        return { success: true, rows: [] as never[] };
+      },
+    });
+    await dashboardGateway.callDashboard(
+      { subtype: 'query', query: 'hi' } as never,
+      (r) => r as never,
+      'fallback',
+    );
+    expect(sent).toHaveLength(1);
+    // The injected port receives the version stamped by the contract send(),
+    // not by the gateway: exactly one protocolVersion key on the envelope.
+    expect((sent[0] as { protocolVersion: number }).protocolVersion).toBe(CURRENT_PROTOCOL_VERSION);
+    expect(JSON.stringify(sent[0]).match(/protocolVersion/g)).toHaveLength(1);
+    // The gateway no longer imports the version constant — send() owns stamping.
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), '..', 'dashboardGateway.ts'),
+      'utf-8',
+    );
+    expect(source).not.toContain('CURRENT_PROTOCOL_VERSION');
   });
 
   it('times out identically through a hanging injected port', async () => {

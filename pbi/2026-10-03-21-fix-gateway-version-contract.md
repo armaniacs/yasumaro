@@ -40,13 +40,13 @@ Scenario: テスト注入のポートは維持される
 
 ## 受け入れ基準
 
-- [ ] dashboardGateway から protocolVersion の自己スタンプが除去されている。
-- [ ] dashboardGateway は生の `TransportPort.send` を使わず、messageTransport の send() を経由する。
-- [ ] protocolVersion のスタンプは messageTransport 側でのみ行われる。
-- [ ] gateway 送信メッセージに `VALID_MESSAGE_TYPES` 検証が適用される。
-- [ ] テスト注入ポートの仕組みが維持されている。
-- [ ] ワイヤフォーマット（スタンプ済みメッセージの形状）に変化がない。
-- [ ] 既存テストを新しい経路に更新し、`npm run validate` が成功している。
+- [x] dashboardGateway から protocolVersion の自己スタンプが除去されている。
+- [x] dashboardGateway は生の `TransportPort.send` を使わず、messageTransport の send() を経由する。
+- [x] protocolVersion のスタンプは messageTransport 側でのみ行われる。
+- [x] gateway 送信メッセージに `VALID_MESSAGE_TYPES` 検証が適用される。
+- [x] テスト注入ポートの仕組みが維持されている。
+- [x] ワイヤフォーマット（スタンプ済みメッセージの形状）に変化がない。
+- [x] 既存テストを新しい経路に更新し、`npm run validate` が成功している。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -67,10 +67,16 @@ Scenario: テスト注入のポートは維持される
 
 ## Definition of Done
 
-- [ ] 自己スタンプの除去と transport 側への一元化が完了している。
-- [ ] `VALID_MESSAGE_TYPES` 検証が gateway メッセージに適用されている。
-- [ ] テスト注入ポートが維持され、既存テストが更新されている。
-- [ ] ワイヤフォーマットに変化がないことを確認している。
-- [ ] `npm run validate` が成功している。
-- [ ] BDD 受け入れシナリオとテスト戦略の検証が完了している。
+- [x] 自己スタンプの除去と transport 側への一元化が完了している。
+- [x] `VALID_MESSAGE_TYPES` 検証が gateway メッセージに適用されている。
+- [x] テスト注入ポートが維持され、既存テストが更新されている。
+- [x] ワイヤフォーマットに変化がないことを確認している。
+- [x] `npm run validate` が成功している。
+- [x] BDD 受け入れシナリオとテスト戦略の検証が完了している。
 - [ ] コードレビューが完了している。
+
+## 実装記録
+
+- 変更ファイル: `src/messaging/dashboardGateway.ts`（`CURRENT_PROTOCOL_VERSION` の自己スタンプを除去、`dashboardTransport` を `MessageTransport` 契約へ変更、注入ポートは `new MessageTransport(port)` でラップし同一ワイヤエンベロープを維持、transport 送信に `retries: 0` を明示し callDashboard 側リトライとの二重リトライを構造的に排除）、`src/messaging/__tests__/dashboardGateway-transport.test.ts`（回帰 pin: transport 層で protocolVersion が正確に 1 回スタンプされること、gateway がバージョン定数を import しないことをソース読み込みで pin）
+- 変更なし: `src/messaging/messageTransport.ts`（既存の MessageTransport 契約を利用。33 の types.ts 変更とは別系統）
+- ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15529 passed・21 skipped / `npm run validate` PASS

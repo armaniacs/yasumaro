@@ -10,29 +10,30 @@ import { backoffDelayMs } from '../utils/backoff.js';
 import { categorizeError } from './sqliteRpcClient.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
-import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
-import { ChromeTransport, type TransportPort } from './messageTransport.js';
+import { MessageTransport, type TransportPort } from './messageTransport.js';
 import { tokenExempt, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from './sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from './dashboardSqliteProtocol.js';
 
 const DASHBOARD_SQLITE_TIMEOUT = 10000;
 
 /**
- * Send port for the dashboard → service worker hop (PBI 2026-09-18-10).
- * Production sends via chrome.runtime.sendMessage (ChromeTransport); tests
- * inject a fake. The 10s timeout race in sendDashboardRaw and the
- * confirmToken/retry semantics above it are unchanged — only the raw send
- * is swappable. Follows the setXForTesting/reset pattern used by
+ * Send transport for the dashboard → service worker hop (PBI 2026-09-18-10).
+ * Production sends through the MessageTransport contract, which stamps
+ * protocolVersion and validates the message type once per send; tests inject
+ * a TransportPort, which is wrapped in the same contract so injected sends
+ * keep the identical wire envelope. The 10s timeout race in sendDashboardRaw
+ * and the confirmToken/retry semantics above it are unchanged — only the
+ * inner port is swappable. Follows the setXForTesting/reset pattern used by
  * sqliteEngine (setOpfsWorkerFactory) — reset after each test.
  */
-let dashboardTransport: TransportPort = new ChromeTransport();
+let dashboardTransport: MessageTransport = new MessageTransport();
 
 export function setDashboardTransportForTesting(port: TransportPort): void {
-  dashboardTransport = port;
+  dashboardTransport = new MessageTransport(port);
 }
 
 export function resetDashboardTransportForTesting(): void {
-  dashboardTransport = new ChromeTransport();
+  dashboardTransport = new MessageTransport();
 }
 
 export interface DashboardRetryOptions {
@@ -57,8 +58,11 @@ async function getDashboardConfirmToken(action: string, id?: number, scopeHash?:
 }
 
 async function sendDashboardRaw<T extends DashboardSqliteRequest>(payload: T): Promise<DashboardSqliteResponseFor<T['subtype']>> {
+  // retries: 0 keeps the attempt count identical: callDashboard owns retrying,
+  // so the transport retry policy must not add a second layer. The contract
+  // send still stamps protocolVersion and validates the type.
   return Promise.race([
-    dashboardTransport.send({ type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload }) as Promise<
+    dashboardTransport.send({ type: 'DASHBOARD_SQLITE', payload }, { retries: 0 }) as Promise<
       DashboardSqliteResponseFor<T['subtype']>
     >,
     new Promise<never>((_, reject) => { setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT); }),
