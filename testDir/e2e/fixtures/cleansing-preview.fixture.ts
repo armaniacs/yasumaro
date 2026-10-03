@@ -7,14 +7,14 @@
  * - captures every SAVE_RECORD payload into window.__saveRecordPayloads
  * - passes everything else through to the real service worker
  */
-import { test as base, expect, chromium, ChromiumBrowserContext, Page } from '@playwright/test';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { test as base, expect, Page } from '@playwright/test';
+import type { ChromiumBrowserContext } from 'playwright';
 import { dismissConsentModal } from './consentModal.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const EXTENSION_PATH = path.join(__dirname, '../../../dist/chromium-mv3');
+import {
+  launchExtensionContext,
+  resolveExtensionId,
+  HEADLESS_FIXME_MESSAGE,
+} from './launchExtensionContext.js';
 
 type PreviewFixtures = {
   context: ChromiumBrowserContext;
@@ -27,44 +27,24 @@ export const MASKED_CONTENT =
 
 export const test = base.extend<PreviewFixtures>({
   context: async ({}, use) => {
-    let context: ChromiumBrowserContext | null = null;
-    try {
-      context = await chromium.launchPersistentContext('', {
-        channel: 'chromium',
-        args: [
-          `--disable-extensions-except=${EXTENSION_PATH}`,
-          `--load-extension=${EXTENSION_PATH}`,
-        ],
-      });
-      const [serviceWorker] = context.serviceWorkers();
-      if (!serviceWorker) {
-        await Promise.race([
-          context.waitForEvent('serviceworker').then(() => true),
-          new Promise((resolve) => setTimeout(() => resolve(false), 5000)),
-        ]).then(async (started) => {
-          if (!started) {
-            await context?.close().catch(() => undefined);
-            context = null;
-          }
-        });
-      }
-    } catch {
-      context = null;
-    }
+    const context = await launchExtensionContext({
+      seedPolicy: {
+        consent: true,
+        settingsMigrated: true,
+        onboardingCompleted: true,
+      },
+    });
     if (!context) {
-      test.fixme(true, 'Extension tests require headed Chrome (Manifest V3 service workers unsupported in headless)');
+      test.fixme(true, HEADLESS_FIXME_MESSAGE);
       return;
     }
-    await use(context);
+    await use(context as ChromiumBrowserContext);
     await context.close();
   },
 
   extensionId: async ({ context }, use) => {
-    let [serviceWorker] = context.serviceWorkers();
-    if (!serviceWorker) {
-      serviceWorker = await context.waitForEvent('serviceworker', { timeout: 15000 });
-    }
-    await use(serviceWorker.url().split('/')[2] ?? '');
+    if (!context) return;
+    await use(await resolveExtensionId(context));
   },
 
   previewPage: async ({ context, extensionId }, use) => {
@@ -75,16 +55,12 @@ export const test = base.extend<PreviewFixtures>({
       (window as any).__saveRecordPayloads = [];
       (window as any).__previewRecordSeen = false;
 
-      chrome.storage.local.set({
-        privacyConsent: { accepted: true, timestamp: Date.now() },
-        settings_migrated: true,
-        // Not this spec's concern — the onboarding wizard now launches
-        // reactively right after the user accepts consent in the same
-        // session (PBI 0913a popup.ts fix), which would otherwise cover
-        // #recordBtn here. Mark onboarding done so this fixture's UI-driven
-        // consent acceptance below doesn't trigger it.
-        settings: { onboarding_wizard_completed: true },
-      });
+      // Not this spec's concern — the onboarding wizard now launches
+      // reactively right after the user accepts consent in the same
+      // session (PBI 0913a popup.ts fix), which would otherwise cover
+      // #recordBtn here. Mark onboarding done so this fixture's UI-driven
+      // consent acceptance below doesn't trigger it (seeded at launch via
+      // the seed policy).
 
       // Fixed page tab: the record target for this spec.
       chrome.tabs.query = (_queryInfo: any, callback?: (result: chrome.tabs.Tab[]) => void) => {
@@ -177,4 +153,3 @@ export const test = base.extend<PreviewFixtures>({
     await use(page);
   },
 });
-

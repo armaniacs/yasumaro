@@ -1,12 +1,11 @@
 import { test as base, expect, Page } from '@playwright/test';
-import { chromium, type ChromiumBrowserContext } from 'playwright';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import type { ChromiumBrowserContext } from 'playwright';
 import { dismissConsentModal } from './consentModal.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const EXTENSION_PATH = join(__dirname, '../../../dist/chromium-mv3');
+import {
+  launchExtensionContext,
+  resolveExtensionId,
+  HEADLESS_FIXME_MESSAGE,
+} from './launchExtensionContext.js';
 
 type Pbi27Fixtures = {
   context: ChromiumBrowserContext;
@@ -21,24 +20,24 @@ type Pbi27Fixtures = {
  */
 export const test = base.extend<Pbi27Fixtures>({
   context: async ({}, use) => {
-    const context = await chromium.launchPersistentContext('', {
-      channel: 'chromium',
-      args: [
-        `--disable-extensions-except=${EXTENSION_PATH}`,
-        `--load-extension=${EXTENSION_PATH}`,
-      ],
+    const context = await launchExtensionContext({
+      seedPolicy: {
+        consent: true,
+        settingsMigrated: true,
+        onboardingCompleted: true,
+      },
     });
+    if (!context) {
+      test.fixme(true, HEADLESS_FIXME_MESSAGE);
+      return;
+    }
     await use(context as ChromiumBrowserContext);
     await context.close();
   },
 
   extensionId: async ({ context }, use) => {
-    let [serviceWorker] = context.serviceWorkers();
-    if (!serviceWorker) {
-      serviceWorker = await context.waitForEvent('serviceworker');
-    }
-    const extensionId = serviceWorker.url().split('/')[2] ?? '';
-    await use(extensionId);
+    if (!context) return;
+    await use(await resolveExtensionId(context));
   },
 
   popupPage: async ({ context, extensionId }, use) => {
@@ -49,17 +48,12 @@ export const test = base.extend<Pbi27Fixtures>({
       (window as any).__createdTabUrls = [];
       (window as any).__closeCalled = false;
 
-      chrome.storage.local.set({
-        privacyConsent: { accepted: true, timestamp: Date.now() },
-        settings_migrated: true,
-        // Not this spec's concern — the onboarding wizard now launches
-        // reactively right after the user accepts consent in the same
-        // session (PBI 0913a popup.ts fix), which would otherwise cover
-        // #menuBtn here. Mark onboarding done so this fixture's UI-driven
-        // consent acceptance below doesn't trigger it.
-        settings: { onboarding_wizard_completed: true },
-      });
-
+      // Not this spec's concern — the onboarding wizard now launches
+      // reactively right after the user accepts consent in the same
+      // session (PBI 0913a popup.ts fix), which would otherwise cover
+      // #menuBtn here. Mark onboarding done so this fixture's UI-driven
+      // consent acceptance below doesn't trigger it (seeded at launch via
+      // the seed policy).
       window.close = () => {
         (window as any).__closeCalled = true;
       };

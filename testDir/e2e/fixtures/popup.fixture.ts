@@ -1,13 +1,15 @@
 import { test as base, expect, Page } from '@playwright/test';
-import { chromium, type ChromiumBrowserContext } from 'playwright';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import type { ChromiumBrowserContext } from 'playwright';
+import { join } from 'path';
 import { dismissConsentModal } from './consentModal.js';
+import {
+  EXTENSION_PATH,
+  launchExtensionContext,
+  resolveExtensionId,
+  HEADLESS_FIXME_MESSAGE,
+} from './launchExtensionContext.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const EXTENSION_PATH = join(__dirname, '../../../dist/chromium-mv3');
-const POPUP_PATH = join(__dirname, '../../../dist/chromium-mv3/popup.html');
+const POPUP_PATH = join(EXTENSION_PATH, 'popup.html');
 
 type PopupFixtures = {
   context: ChromiumBrowserContext;
@@ -28,24 +30,20 @@ export const test = base.extend<StaticPopupFixtures>({
 
 const testExt = base.extend<PopupFixtures>({
   context: async ({}, use) => {
-    const context = await chromium.launchPersistentContext('', {
-      channel: 'chromium',
-      args: [
-        `--disable-extensions-except=${EXTENSION_PATH}`,
-        `--load-extension=${EXTENSION_PATH}`,
-      ],
+    const context = await launchExtensionContext({
+      seedPolicy: { consent: true, settingsMigrated: true },
     });
+    if (!context) {
+      test.fixme(true, HEADLESS_FIXME_MESSAGE);
+      return;
+    }
     await use(context as ChromiumBrowserContext);
     await context.close();
   },
 
   extensionId: async ({ context }, use) => {
-    let [serviceWorker] = context.serviceWorkers();
-    if (!serviceWorker) {
-      serviceWorker = await context.waitForEvent('serviceworker');
-    }
-    const extensionId = serviceWorker.url().split('/')[2] ?? '';
-    await use(extensionId);
+    if (!context) return;
+    await use(await resolveExtensionId(context));
   },
 
   popupPage: async ({ context, extensionId }, use) => {
@@ -61,12 +59,6 @@ const testExt = base.extend<PopupFixtures>({
     // Mock chrome APIs on every page load to prevent popup from closing
     // This must be done with addInitScript to survive page.reload()
     await page.addInitScript(() => {
-      // Initialize storage flags BEFORE popup.ts initPopup runs
-      chrome.storage.local.set({
-        privacyConsent: { accepted: true, timestamp: Date.now() },
-        settings_migrated: true
-      });
-
       // Prevent popup from closing
       window.close = () => {};
 

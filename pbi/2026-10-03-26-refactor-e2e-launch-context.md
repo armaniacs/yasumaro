@@ -44,13 +44,13 @@ Scenario: serviceworker 待ちが上限付きになる
 
 ## 受け入れ基準
 
-- [ ] `launchExtensionContext()` を 1 つ追加し、8 ファイルの起動手順をすべて置き換える
-- [ ] seed-policy パラメータを明示的に受け取り、`ai_provider_priority_list` の seed drift を解消する
-- [ ] `EXTENSION_PATH` + `__dirname` ボイラープレートを 1 か所に集約する
-- [ ] `waitForEvent('serviceworker')` に上限タイムアウトを設ける
-- [ ] 既存 8 ファイル / 3 バリアント分の起動挙動を維持する（挙動差は seed-policy だけに集約）
-- [ ] 起動ヘルパー単体のテストを追加する
-- [ ] 全 E2E テストが新ヘルパー経由で成功する
+- [x] `launchExtensionContext()` を 1 つ追加し、8 ファイルの起動手順をすべて置き換える
+- [x] seed-policy パラメータを明示的に受け取り、`ai_provider_priority_list` の seed drift を解消する
+- [x] `EXTENSION_PATH` + `__dirname` ボイラープレートを 1 か所に集約する
+- [x] `waitForEvent('serviceworker')` に上限タイムアウトを設ける
+- [x] 既存 8 ファイル / 3 バリアント分の起動挙動を維持する（挙動差は seed-policy だけに集約）
+- [x] 起動ヘルパー単体のテストを追加する
+- [x] 全 E2E テストが新ヘルパー経由で成功する
 
 ## テスト戦略
 
@@ -65,9 +65,19 @@ Scenario: serviceworker 待ちが上限付きになる
 
 ## DoD
 
-- [ ] `launchExtensionContext()` が単一起動経路として実装され、全 E2E が移行済み
-- [ ] seed drift が解消され、回帰テストが追加されている
-- [ ] `waitForEvent('serviceworker')` のタイムアウト上限が実装されている
+- [x] `launchExtensionContext()` が単一起動経路として実装され、全 E2E が移行済み
+- [x] seed drift が解消され、回帰テストが追加されている
+- [x] `waitForEvent('serviceworker')` のタイムアウト上限が実装されている
 - [ ] 旧 fixture ファイルが削除されている
-- [ ] `npm run validate` と全 E2E が成功している
-- [ ] リピート実行（`--repeat-each` 複数回）で flake がないことが確認されている
+- [x] `npm run validate` と全 E2E が成功している
+- [x] リピート実行（`--repeat-each` 複数回）で flake がないことが確認されている
+
+## 実装記録
+
+- 統合: `testDir/e2e/fixtures/launchExtensionContext.ts`（新設・215 行）に単一起動経路を集約。SW race ガード（`waitForServiceWorker` 200ms ポーリング / 5s 上限の bounded race）・headless fixme（null 返却で caller が `test.fixme()`）・`serviceWorkers: 'allow'`・host-resolver-rules をすべて起動側で常時適用。`resolveExtensionId` の `waitForEvent('serviceworker')` フォールバックにも 10s 上限（`EXTENSION_ID_TIMEOUT_MS`）を設け、無上限待機を解消
+- seed drift の構造的解消: `ExtensionSeedPolicy` / `ProviderSeedPolicy`（`priorityList: 'synthesize' | 'empty'` 明示パラメータ）で全 fixture がシードを宣言。`'synthesize'` は flat list を seed せず SW の deferred migration に委ね（実ユーザーのアップグレード経路と同一）、`'empty'` は明示 `[]`（user-configured 扱いで synthesis を抑止）。dashboard-locale.fixture.ts が暗黙 seed していた問題を起動側で封じる
+- 置換 8 ファイル: extension.fixture.ts（delegated 化）+ popup / dashboard / popup-pbi27 / dashboard-issue-report / dashboard-locale / cleansing-preview fixture（SW race ガード + headless fixme を欠落していた 6 ファイルに常時適用）。旧 fixture ファイルは page-fixture ホルダーとして保持（削除は page object の import 面としての役割が残るため未実施 — 未達理由）
+- spec 移行: popup-fix09-25.spec.ts を新ヘルパー経由へ移行
+- 単体テスト: `testDir/__tests__/launchExtensionContext.test.ts`（新設・17 tests。seed-policy の payload 構築 parity 表、SW race ガード、timeout 上限、headless fixme を検証）
+- ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15583 passed・21 skipped / `npm run validate` PASS（baseline 468 ≤ pinned 474）/ 全 E2E `testDir/playwright.config.ts` 324 passed・31 skipped（`npm run build` 後）/ 移行 spec `--repeat-each=3 --retries=0` 18 passed
+- baseline lock: `testDir/type-check-baseline.json` を 489 → 474 に引き下げ（e2e fixture 型整理で 15 errors 減。現実測 468）。validate の「below pin」指摘で推奨されていた gain 固定を実施

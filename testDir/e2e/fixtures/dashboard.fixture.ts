@@ -1,11 +1,10 @@
 import { test as base, expect, Page } from '@playwright/test';
-import { chromium, type ChromiumBrowserContext } from 'playwright';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const EXTENSION_PATH = join(__dirname, '../../../dist/chromium-mv3');
+import type { ChromiumBrowserContext } from 'playwright';
+import {
+  launchExtensionContext,
+  resolveExtensionId,
+  HEADLESS_FIXME_MESSAGE,
+} from './launchExtensionContext.js';
 
 type DashboardFixtures = {
   context: ChromiumBrowserContext;
@@ -15,24 +14,27 @@ type DashboardFixtures = {
 
 const testExt = base.extend<DashboardFixtures>({
   context: async ({}, use) => {
-    const context = await chromium.launchPersistentContext('', {
-      channel: 'chromium',
-      args: [
-        `--disable-extensions-except=${EXTENSION_PATH}`,
-        `--load-extension=${EXTENSION_PATH}`,
-      ],
+    // 'synthesize': no flat ai_provider_priority_list here — the SW's
+    // deferred migration synthesizes the priority list from ai_provider
+    // (see ProviderPriorityListSeed in launchExtensionContext.ts).
+    const context = await launchExtensionContext({
+      seedPolicy: {
+        consent: true,
+        breakingChangesShown: true,
+        provider: { name: 'gemini', layout: 'a', priorityList: 'synthesize' },
+      },
     });
+    if (!context) {
+      testExt.fixme(true, HEADLESS_FIXME_MESSAGE);
+      return;
+    }
     await use(context as ChromiumBrowserContext);
     await context.close();
   },
 
   extensionId: async ({ context }, use) => {
-    let [serviceWorker] = context.serviceWorkers();
-    if (!serviceWorker) {
-      serviceWorker = await context.waitForEvent('serviceworker');
-    }
-    const extensionId = serviceWorker.url().split('/')[2] ?? '';
-    await use(extensionId);
+    if (!context) return;
+    await use(await resolveExtensionId(context));
   },
 
   dashboardPage: async ({ context, extensionId }, use) => {
@@ -41,24 +43,6 @@ const testExt = base.extend<DashboardFixtures>({
 
     page.on('console', msg => {
       console.log(`[Dashboard Console] ${msg.type()}: ${msg.text()}`);
-    });
-
-    await page.addInitScript(() => {
-      chrome.storage.local.set({
-        privacyConsent: { accepted: true, timestamp: Date.now() },
-        breaking_changes_v5_shown: true,
-        // Legacy flat keys. The SW's deferred migration folds them into the
-        // versioned `settings` blob on the first message and synthesizes the
-        // provider priority list from ai_provider — the same path a real
-        // upgrading user takes. Do NOT seed `settings_migrated` or an empty
-        // `ai_provider_priority_list` here: an explicitly empty priority list
-        // suppresses that synthesis (applyMigrationsCore treats it as
-        // "user-configured") and leaves every provider settings block hidden
-        // after the first settings write creates the blob — the failure that
-        // broke the domain-filter e2e on 2026-09-19.
-        ai_provider: 'gemini',
-        ai_provider_layout: 'a',  // Force layout A so #aiProvider select is visible
-      });
     });
 
     await page.goto(`chrome-extension://${extensionId}/options.html`, { waitUntil: 'networkidle' });

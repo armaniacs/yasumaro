@@ -1,12 +1,9 @@
-import { test, expect, test as base, Page } from '@playwright/test';
-import { chromium, type ChromiumBrowserContext } from 'playwright';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-// 本スペックは testDir/e2e/ 直下にあるため 2 レベル上 = リポジトリルート
-const EXTENSION_PATH = join(__dirname, '../../dist/chromium-mv3');
+import { test, expect, test as base, Page, type BrowserContext } from '@playwright/test';
+import {
+  launchExtensionContext,
+  resolveExtensionId,
+  HEADLESS_FIXME_MESSAGE,
+} from './fixtures/launchExtensionContext.js';
 
 /**
  * fix 09 (PBI 2026-09-05-09) / fix 25 (PBI 2026-09-05-25) の目視確認項目を
@@ -19,63 +16,53 @@ const EXTENSION_PATH = join(__dirname, '../../dist/chromium-mv3');
  *   trap/release 配線は単体テスト（privatePageDialog.test.ts）が担保する。
  */
 
-async function launchPopupContext(locale?: string): Promise<ChromiumBrowserContext> {
-  return chromium.launchPersistentContext('', {
-    channel: 'chromium',
-    locale,
-    args: [
-      `--disable-extensions-except=${EXTENSION_PATH}`,
-      `--load-extension=${EXTENSION_PATH}`,
-    ],
-  });
-}
-
 type PopupFixtures = {
   /** 拡張込みで起動した永続コンテキスト（テスト終了時に close） */
-  popupContext: ChromiumBrowserContext;
+  popupContext: BrowserContext;
   /** popup.html を開いたページ（consent は未セット → モーダルが表示される） */
   freshPopupPage: Page;
 };
 
 const testExt = base.extend<PopupFixtures>({
   popupContext: async ({}, use) => {
-    const context = await launchPopupContext();
+    const context = await launchExtensionContext();
+    if (!context) {
+      test.fixme(true, HEADLESS_FIXME_MESSAGE);
+      return;
+    }
     await use(context);
     await context.close();
   },
 
   freshPopupPage: async ({ popupContext }, use) => {
-    // service worker 起動を待ってから popup を開く（fixture パターン準拠）
-    let [serviceWorker] = popupContext.serviceWorkers();
-    if (!serviceWorker) {
-      serviceWorker = await popupContext.waitForEvent('serviceworker');
-    }
-    const extensionId = serviceWorker.url().split('/')[2];
+    if (!popupContext) return;
+    // service worker 起動待ち（上限付き）→ popup を開く
+    const extensionId = await resolveExtensionId(popupContext);
     const pages = popupContext.pages();
-    const page = pages.length > 0 ? pages[0] : await popupContext.newPage();
+    const page = pages[0] ?? (await popupContext.newPage());
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
     await use(page);
   },
 });
 
 test.describe('Popup width range & wrapping (fix 09) @extension', () => {
-  let context: ChromiumBrowserContext;
+  let context: BrowserContext;
   let page: Page;
 
   test.beforeAll(async () => {
-    context = await launchPopupContext('ja');
-    let [serviceWorker] = context.serviceWorkers();
-    if (!serviceWorker) {
-      serviceWorker = await context.waitForEvent('serviceworker');
+    const launched = await launchExtensionContext({
+      locale: 'ja',
+      seedPolicy: { consent: true, settingsMigrated: true },
+    });
+    if (!launched) {
+      test.skip(true, HEADLESS_FIXME_MESSAGE);
+      return;
     }
-    const extensionId = serviceWorker.url().split('/')[2];
+    context = launched;
+    const extensionId = await resolveExtensionId(context);
     const pages = context.pages();
-    page = pages.length > 0 ? pages[0] : await context.newPage();
+    page = pages[0] ?? (await context.newPage());
     await page.addInitScript(() => {
-      chrome.storage.local.set({
-        privacyConsent: { accepted: true, timestamp: Date.now() },
-        settings_migrated: true,
-      });
       window.close = () => {};
     });
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
@@ -87,7 +74,7 @@ test.describe('Popup width range & wrapping (fix 09) @extension', () => {
   });
 
   test.afterAll(async () => {
-    await context.close();
+    if (context) await context.close();
   });
 
   test('body width stays within the 360-420px allowance', async () => {
