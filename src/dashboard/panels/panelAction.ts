@@ -82,8 +82,15 @@ export async function runPanelAction<TData>(spec: PanelActionSpec<TData>): Promi
     if (data === ABORTED) return;
     onSuccess?.(data as TData);
   } catch (err) {
-    if (err instanceof PanelActionFailure) onError?.(err.reason, 'service', err.reason);
-    else onError?.(errorMessage(err), 'thrown', err);
+    // A failing onError must not replace the original failure with a new
+    // rejection: most callers `void` this promise, so a broken error handler
+    // is logged and swallowed instead of being rethrown.
+    try {
+      if (err instanceof PanelActionFailure) onError?.(err.reason, 'service', err.reason);
+      else onError?.(errorMessage(err), 'thrown', err);
+    } catch (handlerError) {
+      console.error('runPanelAction: onError handler threw', handlerError);
+    }
   } finally {
     for (const button of buttons) if (button) button.disabled = false;
     if (trigger && restoreLabel !== null) trigger.textContent = restoreLabel;

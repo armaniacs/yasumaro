@@ -89,6 +89,54 @@ describe('runPanelAction', () => {
     expect(button.disabled).toBe(false);
   });
 
+  it('swallows a throw from onError instead of rejecting, and still restores the buttons', async () => {
+    const button = makeButton();
+
+    await expect(
+      runPanelAction({
+        buttons: [button],
+        run: async () => {
+          throw new Error('gateway down');
+        },
+        onError: () => {
+          throw new Error('error display blew up');
+        },
+      }),
+    ).resolves.toBeUndefined();
+    expect(button.disabled).toBe(false);
+  });
+
+  it('swallows a throw from onError on the { error } path too', async () => {
+    const button = makeButton();
+
+    await expect(
+      runPanelAction({
+        buttons: [button],
+        run: async () => unwrapServiceResult({ error: 'db locked' }),
+        onError: () => {
+          throw new Error('error display blew up');
+        },
+      }),
+    ).resolves.toBeUndefined();
+    expect(button.disabled).toBe(false);
+  });
+
+  it('records a throw from onError through console.error', async () => {
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await runPanelAction({
+      run: async () => {
+        throw new Error('gateway down');
+      },
+      onError: () => {
+        throw new Error('error display blew up');
+      },
+    });
+
+    expect(logged).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
+    logged.mockRestore();
+  });
+
   it('swaps the first button label while busy and puts it back afterwards', async () => {
     const button = makeButton('Convert');
     const other = makeButton('Other');

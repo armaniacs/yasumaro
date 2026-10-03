@@ -39,10 +39,10 @@ Scenario: エラー表示処理自体が失敗してもクラッシュしない
 
 ## 受け入れ基準 (file-scoped)
 
-- [ ] `src/dashboard/panels/panelAction.ts:85-86` — `onError?.()` の呼び出しが guard され、onError 内の throw が新たな rejection として外に漏れない
-- [ ] `src/dashboard/panels/panelAction.ts:87-91` — `finally` によるボタン復帰が引き続き実行される
-- [ ] onError が throw した場合の扱い (記録して握りつぶす方針とその WHY コメント) がコードとして明文化される
-- [ ] await-in-closure 3 箇所 (`archivePanel.ts:402`、`diagnosticsActions.ts:171,247`) と caught 2 箇所 (`settingsForm.ts:173,203`) の現行ふるまいが不変である
+- [x] `src/dashboard/panels/panelAction.ts:85-86` — `onError?.()` の呼び出しが guard され、onError 内の throw が新たな rejection として外に漏れない
+- [x] `src/dashboard/panels/panelAction.ts:87-91` — `finally` によるボタン復帰が引き続き実行される
+- [x] onError が throw した場合の扱い (記録して握りつぶす方針とその WHY コメント) がコードとして明文化される
+- [x] await-in-closure 3 箇所 (`archivePanel.ts:402`、`diagnosticsActions.ts:171,247`) と caught 2 箇所 (`settingsForm.ts:173,203`) の現行ふるまいが不変である
 
 ## テスト戦略
 
@@ -56,6 +56,13 @@ Scenario: エラー表示処理自体が失敗してもクラッシュしない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
+
+## 実装記録（2026-10-03）
+
+- `panelAction.ts:84-95`: catch 内の `onError?.()` 呼び出しを try/catch で guard。onError 内の throw は `console.error('runPanelAction: onError handler threw', ...)` で記録して握りつぶし、WHY コメント（呼び出し元の多くが `void` で受け、壊れたエラーハンドラの throw が新たな rejection になるのを防ぐ）を明文化。`finally` によるボタン復帰は不変。
+- テスト: `panelAction.test.ts` に 3 件を追加（onError throw で rejection が漏れないこと、console.error 記録、finally 実行）。修正前 RED 3 failed を確認。
+- 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0 / panels スイート 304/304。
+- 逸脱: `generalSettingsPanel-purge.test.ts` の characterization テスト 1 件を更新 — 旧テストが pin していた onError throw の漏れ経路は本修正により設計上除去されたため、新契約（握りつぶし + finally 復帰）に追随。production のふるまい変更は `panelAction.ts` 1 箇所のみ。

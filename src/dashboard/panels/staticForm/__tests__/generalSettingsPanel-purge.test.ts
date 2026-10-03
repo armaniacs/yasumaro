@@ -62,15 +62,16 @@ describe('generalSettingsPanel — purge error boundary', () => {
     expect(btn.disabled).toBe(false);
   });
 
-  it('logs instead of rejecting when a throw escapes the handler itself', async () => {
+  it('records a throw from the failure path in runPanelAction without reaching the outer boundary', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(sqliteService.purgeOldRecordsNow).mockResolvedValue({ data: { purged: 1, skipped: false } } as never);
 
     await mountPanel();
     const btn = document.getElementById('purgeNowBtn') as HTMLButtonElement;
     const status = document.getElementById('purgeNowStatus')!;
-    // Throws from the pre-try status clear, so the handler's own catch cannot
-    // see it — only the click wrapper can.
+    // The onStart clear and the onError render both throw, so the failure path
+    // itself fails; runPanelAction records and swallows it instead of letting
+    // it escape as a new rejection.
     Object.defineProperty(status, 'textContent', {
       configurable: true,
       get: () => '',
@@ -80,8 +81,10 @@ describe('generalSettingsPanel — purge error boundary', () => {
     btn.click();
 
     await waitForMock(() =>
-      expect(errorSpy).toHaveBeenCalledWith('General settings: purge failed', expect.any(Error)),
+      expect(errorSpy).toHaveBeenCalledWith('runPanelAction: onError handler threw', expect.any(Error)),
     );
+    expect(errorSpy).not.toHaveBeenCalledWith('General settings: purge failed', expect.anything());
+    expect(btn.disabled).toBe(false);
     errorSpy.mockRestore();
   });
 });
