@@ -34,9 +34,15 @@ vi.mock('../../../utils/confirmDialog.js', () => ({
   showConfirmDialog: vi.fn(),
 }));
 
+vi.mock('../../../exportLogsService.js', () => ({
+  downloadBlob: vi.fn(),
+}));
+
 import { createArchivePanel } from '../archivePanel.js';
 import { showConfirmDialog } from '../../../utils/confirmDialog.js';
+import { downloadBlob } from '../../../exportLogsService.js';
 import { archivePreview, archiveCreate, archiveStatus } from '../../../dashboardSqliteService.js';
+import { MAX_ARCHIVE_EXPORT_CHUNK_BYTES } from '../../../../utils/limits.js';
 import { drainMacrotask } from '../../../../../testDir/waitPolicy.js';
 
 async function mountPanel(): Promise<{
@@ -78,6 +84,59 @@ async function mountPanel(): Promise<{
   };
 }
 
+async function stubOpfs(): Promise<void> {
+  const writable = { write: vi.fn(), close: vi.fn(), abort: vi.fn() };
+  (globalThis.navigator as unknown as { storage: unknown }).storage = {
+    getDirectory: async () => ({
+      getFileHandle: async () => ({ createWritable: async () => writable }),
+    }),
+  };
+}
+
+async function mountFullPanel(): Promise<{
+  container: HTMLElement;
+  dateInput: HTMLInputElement;
+  createBtn: HTMLButtonElement;
+  downloadBtn: HTMLButtonElement;
+  cleanupBtn: HTMLButtonElement;
+  statusEl: HTMLElement;
+}> {
+  const container = document.createElement('section');
+  container.innerHTML = `
+    <input type="date" id="archive-date">
+    <input type="checkbox" id="archive-include-deleted">
+    <button id="archive-preview-btn"></button>
+    <button id="archive-create-btn"></button>
+    <button id="archive-download-btn" hidden></button>
+    <button id="archive-cleanup-btn" hidden></button>
+    <button id="archive-purge-btn" hidden></button>
+    <div id="archive-preview-summary" hidden></div>
+    <div id="archive-status" aria-live="polite"></div>
+    <section id="archive-session-section" hidden>
+      <input id="archive-session-query">
+      <button id="archive-session-query-btn"></button>
+      <div id="archive-session-list"></div>
+      <button id="archive-session-save-btn"></button>
+      <button id="archive-session-close-btn"></button>
+    </section>
+    <input type="file" id="archive-restore-file">
+    <div id="archive-restore-preview-summary" hidden></div>
+    <button id="archive-restore-btn" hidden></button>
+  `;
+  document.body.appendChild(container);
+  const panel = createArchivePanel();
+  await panel.mount(container);
+  const q = <T extends Element>(sel: string): T => container.querySelector(sel) as T;
+  return {
+    container,
+    dateInput: q('#archive-date'),
+    createBtn: q('#archive-create-btn'),
+    downloadBtn: q('#archive-download-btn'),
+    cleanupBtn: q('#archive-cleanup-btn'),
+    statusEl: q('#archive-status'),
+  };
+}
+
 describe('archivePanel mount (PBI 2026-09-06-02)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -92,8 +151,25 @@ describe('archivePanel mount (PBI 2026-09-06-02)', () => {
         getMessage: (key: string, subs?: string | Record<string, string | number>) => {
           const templates: Record<string, string> = {
             archiveDateRequired: 'Choose a date first',
+            archiveStatusWorking: 'Working…',
             archivePreviewSummary: 'To archive: {total} (starred: {starred}). Deleted: {deleted}',
             archiveCreatedSummary: 'Archive created: {count} exported.',
+            archiveCreatedDownloadHint: 'Download ready',
+            archiveDownloadDone: 'Download done',
+            archiveCleanupDone: 'Cleaned up: {count}',
+            archiveSessionSaved: 'Session saved',
+            archiveSessionEmpty: 'No sessions',
+            archiveSessionEditBtn: 'Edit',
+            archiveModalTitle: 'Edit session',
+            archiveModalTitleLabel: 'Title',
+            archiveModalSave: 'Save',
+            archiveModalCancel: 'Cancel',
+            archiveModalTitleRequired: 'Title is required',
+            archiveModalTitleTooLong: 'Title is too long',
+            archiveRestorePreviewSummary: '{count} records from {date}',
+            archiveRestorePreviewReady: 'Restore preview ready',
+            archiveRestoreDone: 'Restored {restored} (deleted {deleted}, skipped {skipped}, invalid {invalid})',
+            archiveRestoreDoneStatus: 'Restore complete',
           };
           let text = templates[key] ?? '';
           if (subs && typeof subs === 'object' && !Array.isArray(subs)) {
@@ -395,5 +471,234 @@ describe('archivePanel mount (PBI 2026-09-06-02)', () => {
     await vi.waitFor(() => expect(closeBtn.disabled).toBe(false));
     expect(svc.archiveClose).not.toHaveBeenCalled();
     expect(sessionSection.hidden).toBe(false);
+  });
+
+  // ==========================================================================
+  // Parity tests (PBI 2026-10-03-28 lifecycle factory split): every factory
+  // flow pinned through the composed mount so the split stays observable-
+  // behavior identical.
+  // ==========================================================================
+
+  it('parity: download streams the staging db in export chunks and hands the blob to the downloader', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveCreate).mockResolvedValue({
+      data: { stagingName: 'archive_outgoing_dl.db', recordCount: 5 },
+    } as never);
+    vi.mocked(svc.archiveExportChunk).mockResolvedValueOnce({ data: { chunk: [1, 2, 3], nextOffset: 3, done: false } } as never);
+    vi.mocked(svc.archiveExportChunk).mockResolvedValueOnce({ data: { chunk: [4], nextOffset: 4, done: true } } as never);
+
+    const { createBtn, downloadBtn, dateInput } = await mountFullPanel();
+    createBtn.click();
+    await vi.waitFor(() => expect(downloadBtn.hidden).toBe(false));
+    downloadBtn.click();
+
+    await vi.waitFor(() => expect(downloadBlob).toHaveBeenCalledTimes(1));
+    expect(svc.archiveExportChunk).toHaveBeenNthCalledWith(1, 'archive_outgoing_dl.db', 0, MAX_ARCHIVE_EXPORT_CHUNK_BYTES);
+    expect(svc.archiveExportChunk).toHaveBeenNthCalledWith(2, 'archive_outgoing_dl.db', 3, MAX_ARCHIVE_EXPORT_CHUNK_BYTES);
+    const [blob, filename] = vi.mocked(downloadBlob).mock.calls[0] as [Blob, string];
+    expect(blob).toBeInstanceOf(Blob);
+    expect(blob.type).toBe('application/x-sqlite3');
+    expect(blob.size).toBe(4);
+    expect(filename).toBe(`yasumaro_archive_${dateInput.value}.db`);
+  });
+
+  it('parity: cleanup clears the staging and re-hides download/cleanup', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveCreate).mockResolvedValue({
+      data: { stagingName: 'archive_outgoing_cl.db', recordCount: 5 },
+    } as never);
+    vi.mocked(svc.archiveCleanup).mockResolvedValue({ data: { removed: ['archive_outgoing_cl.db'] } } as never);
+
+    const { createBtn, cleanupBtn, downloadBtn, statusEl } = await mountFullPanel();
+    createBtn.click();
+    await vi.waitFor(() => expect(cleanupBtn.hidden).toBe(false));
+    cleanupBtn.click();
+
+    await vi.waitFor(() => expect(statusEl.textContent).toContain('Cleaned up: 1'));
+    expect(svc.archiveCleanup).toHaveBeenCalledTimes(1);
+    expect(downloadBtn.hidden).toBe(true);
+    expect(cleanupBtn.hidden).toBe(true);
+  });
+
+  it('parity: session query renders rows and re-queries with the typed text', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveStatus).mockResolvedValue({ data: { open: true, stagingName: 'session_query.db', dirty: false } } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({
+      data: {
+        rows: [
+          { id: 1, created_at: 1727000000000, title: 'Row A', url: 'https://a.example.com' },
+          { id: 2, created_at: 1727000001000, title: null, url: 'https://b.example.com' },
+        ],
+        total: 2,
+      },
+    } as never);
+
+    const { container } = await mountFullPanel();
+    const list = container.querySelector('#archive-session-list') as HTMLElement;
+    await vi.waitFor(() => expect(list.querySelectorAll('.archive-session-row').length).toBe(2));
+    expect(list.querySelector('.archive-session-row[data-row-id="1"]')).not.toBeNull();
+
+    const queryInput = container.querySelector('#archive-session-query') as HTMLInputElement;
+    const queryBtn = container.querySelector('#archive-session-query-btn') as HTMLButtonElement;
+    queryInput.value = 'example';
+    queryBtn.click();
+
+    await vi.waitFor(() => expect(svc.archiveQuery).toHaveBeenNthCalledWith(2, 'session_query.db', 'example', 100, 0));
+    expect(list.querySelectorAll('.archive-session-row').length).toBe(2);
+  });
+
+  it('parity: session save persists the staging and lets close skip the discard dialog', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveStatus).mockResolvedValue({ data: { open: true, stagingName: 'session_save.db', dirty: true } } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({ data: { rows: [], total: 0 } } as never);
+    vi.mocked(svc.archiveSave).mockResolvedValue({ data: {} } as never);
+    vi.mocked(svc.archiveClose).mockResolvedValue({ data: {} } as never);
+
+    const { container, statusEl } = await mountFullPanel();
+    const saveBtn = container.querySelector('#archive-session-save-btn') as HTMLButtonElement;
+    const closeBtn = container.querySelector('#archive-session-close-btn') as HTMLButtonElement;
+    const sessionSection = container.querySelector('#archive-session-section') as HTMLElement;
+
+    saveBtn.click();
+    await vi.waitFor(() => expect(svc.archiveSave).toHaveBeenCalledWith('session_save.db'));
+    await vi.waitFor(() => expect(statusEl.textContent).toContain('Session saved'));
+
+    // markSaved resolved the dirty flag: close runs without the discard dialog.
+    closeBtn.click();
+    await vi.waitFor(() => expect(sessionSection.hidden).toBe(true));
+    expect(svc.archiveClose).toHaveBeenCalledWith('session_save.db');
+    expect(showConfirmDialog).not.toHaveBeenCalled();
+  });
+
+  it('parity: restore preview stages the picked file and create applies it to the main db', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(svc.archivePrepareIncoming).mockResolvedValue({ data: 'archive_incoming_apply.db' } as never);
+    vi.mocked(svc.archiveRestorePreview).mockResolvedValue({ data: { recordCount: 3, cutoffDate: '2026-09-01' } } as never);
+    vi.mocked(svc.archiveOpen).mockResolvedValue({ data: {} } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({ data: { rows: [], total: 0 } } as never);
+    vi.mocked(svc.archiveRestore).mockResolvedValue({ data: { restored: 2, restoredDeleted: 1, skipped: 0, skippedInvalid: 0 } } as never);
+    await stubOpfs();
+
+    const { container, statusEl } = await mountFullPanel();
+    const fileInput = container.querySelector('#archive-restore-file') as HTMLInputElement;
+    const restoreBtn = container.querySelector('#archive-restore-btn') as HTMLButtonElement;
+    const previewSummary = container.querySelector('#archive-restore-preview-summary') as HTMLElement;
+
+    Object.defineProperty(fileInput, 'files', { value: [new File(['sqlite-bytes'], 'backup.db')], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+
+    await vi.waitFor(() => expect(restoreBtn.hidden).toBe(false));
+    expect(previewSummary.hidden).toBe(false);
+    expect(previewSummary.textContent).toContain('3 records from 2026-09-01');
+
+    restoreBtn.click();
+    await vi.waitFor(() => expect(svc.archiveRestore).toHaveBeenCalledWith('archive_incoming_apply.db'));
+    await vi.waitFor(() => expect(statusEl.textContent).toContain('Restore complete'));
+    expect(restoreBtn.hidden).toBe(true);
+    expect(fileInput.value).toBe('');
+  });
+
+  it('parity: edit modal saves a new title and keeps focus on the re-rendered row', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveStatus).mockResolvedValue({ data: { open: true, stagingName: 'session_edit.db', dirty: false } } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({
+      data: { rows: [{ id: 7, created_at: 1727000000000, title: 'Old Title', url: 'https://a.example.com' }], total: 1 },
+    } as never);
+    vi.mocked(svc.archiveUpdate).mockResolvedValue({ data: {} } as never);
+
+    const { container } = await mountFullPanel();
+    const list = container.querySelector('#archive-session-list') as HTMLElement;
+    await vi.waitFor(() => expect(list.querySelectorAll('.archive-session-row').length).toBe(1));
+    const rowBtn = container.querySelector<HTMLElement>('.archive-session-row[data-row-id="7"] button') as HTMLElement;
+    rowBtn.click();
+    // Modal open focuses its input — the open sequence's exclusive effect.
+    await vi.waitFor(() => expect(document.activeElement?.id).toBe('archive-edit-input'));
+    expect(document.querySelector('.archive-modal[role="dialog"]')).not.toBeNull();
+    const input = document.querySelector('#archive-edit-input') as HTMLInputElement;
+    expect(input.value).toBe('Old Title');
+
+    input.value = 'New Title';
+    (document.querySelector('.archive-modal-save') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => expect(svc.archiveUpdate).toHaveBeenCalledWith('session_edit.db', 7, { title: 'New Title' }));
+    await vi.waitFor(() => expect(document.querySelector('.archive-modal-overlay')).toBeNull());
+    await vi.waitFor(() => {
+      const focusedRow = (document.activeElement as HTMLElement | null)?.closest('.archive-session-row');
+      expect(focusedRow?.getAttribute('data-row-id')).toBe('7');
+    });
+  });
+
+  it('parity: edit modal rejects an empty title without calling the service', async () => {
+    const svc = await import('../../../dashboardSqliteService.js');
+    vi.mocked(archiveStatus).mockResolvedValue({ data: { open: true, stagingName: 'session_edit2.db', dirty: false } } as never);
+    vi.mocked(svc.archiveQuery).mockResolvedValue({
+      data: { rows: [{ id: 3, created_at: 1727000000000, title: 'Keep', url: 'https://a.example.com' }], total: 1 },
+    } as never);
+
+    const { container } = await mountFullPanel();
+    const list = container.querySelector('#archive-session-list') as HTMLElement;
+    await vi.waitFor(() => expect(list.querySelectorAll('.archive-session-row').length).toBe(1));
+    const rowBtn = container.querySelector<HTMLElement>('.archive-session-row[data-row-id="3"] button') as HTMLElement;
+    rowBtn.click();
+    // Modal open focuses its input — the open sequence's exclusive effect.
+    await vi.waitFor(() => expect(document.activeElement?.id).toBe('archive-edit-input'));
+    expect(document.querySelector('.archive-modal[role="dialog"]')).not.toBeNull();
+
+    const input = document.querySelector('#archive-edit-input') as HTMLInputElement;
+    input.value = '   ';
+    (document.querySelector('.archive-modal-save') as HTMLButtonElement).click();
+
+    const errorEl = document.querySelector('.archive-modal-error') as HTMLElement;
+    await vi.waitFor(() => expect(errorEl.hidden).toBe(false));
+    expect(errorEl.textContent).toContain('Title is required');
+    expect(svc.archiveUpdate).not.toHaveBeenCalled();
+    expect(document.querySelector('.archive-modal-overlay')).not.toBeNull();
+  });
+
+  it('unit: each lifecycle factory mounts independently with only its own deps', async () => {
+    const { mountArchiveLifecycle } = await import('../archiveLifecyclePanel.js');
+    const { mountArchiveSessionViewer } = await import('../archiveSessionPanel.js');
+    const { mountArchiveRestore } = await import('../archiveRestorePanel.js');
+
+    const section = document.createElement('section');
+    section.innerHTML = `<input type="date" id="seam-date"><button id="seam-preview"></button>`;
+    document.body.appendChild(section);
+    const busy = { controls: [] as HTMLButtonElement[], setAriaBusy: (): void => {}, statusEl: null as HTMLElement | null };
+    const staging = { lastStagingName: null as string | null, lastFileName: '' };
+
+    expect(() => mountArchiveLifecycle({
+      dateInput: section.querySelector('#seam-date'),
+      includeDeletedInput: null,
+      previewBtn: section.querySelector('#seam-preview'),
+      createBtn: null,
+      downloadBtn: null,
+      cleanupBtn: null,
+      purgeBtn: null,
+      summaryEl: null,
+      busy,
+      staging,
+    })).not.toThrow();
+
+    const session = mountArchiveSessionViewer({
+      container: section,
+      sessionSection: null,
+      sessionQueryInput: null,
+      sessionListEl: null,
+      sessionSaveBtn: null,
+      sessionCloseBtn: null,
+      busy,
+    });
+    expect(typeof session.renderList).toBe('function');
+    expect(session.store.getState()).toBe('idle');
+
+    expect(() => mountArchiveRestore({
+      restoreFileInput: null,
+      restorePreviewEl: null,
+      restoreBtn: null,
+      sessionSection: null,
+      session,
+      busy,
+      staging,
+    })).not.toThrow();
   });
 });
