@@ -18,6 +18,11 @@ test.describe('Dashboard bug report link @extension', () => {
 
     const modal = page.locator('#bugReportPreviewModal');
     await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+    // open=true alone cannot catch a CSS regression that leaves the dialog
+    // invisible — the user-facing symptom is visibility, not the property.
+    await expect(modal).toBeVisible();
+    // "Open GitHub" stays disabled until the sanitized body is ready.
+    await expect(page.locator('#bugReportOpenBtn')).toBeEnabled();
 
     const previewText = await page.locator('#bugReportPreviewContent').inputValue();
     expect(previewText).not.toContain(SEEDED_API_KEY);
@@ -58,6 +63,8 @@ test.describe('Dashboard bug report link @extension', () => {
 
     const modal = page.locator('#bugReportPreviewModal');
     await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+    await expect(modal).toBeVisible();
+    await expect(page.locator('#bugReportOpenBtn')).toBeEnabled();
 
     const previewText = await page.locator('#bugReportPreviewContent').inputValue();
     expect(previewText).not.toContain(SEEDED_API_KEY);
@@ -85,10 +92,42 @@ test.describe('Dashboard bug report link @extension', () => {
     await page.locator('[data-panel="panel-general"]').click();
     await page.locator('#sidebarReportBugBtn').click();
     await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+    await expect(page.locator('#bugReportOpenBtn')).toBeEnabled();
     await page.locator('#bugReportOpenBtn').click();
     await expect(modal).toHaveJSProperty('open', false, { timeout: 15000 });
 
     const createdUrls = await page.evaluate(() => (window as any).__createdTabUrls as string[]);
     expect(createdUrls.length).toBe(2);
+  });
+
+  test('a hung on-device availability check still opens the report with data', async ({ context, extensionId }) => {
+    // The on-device LanguageModel.availability() has no timeout of its own;
+    // in a browser where the model service is stuck (observed in Edge) it
+    // never settles. The snapshot must degrade that probe to "unknown" and
+    // still open the report, not time out the whole collection.
+    const page = await context.newPage();
+    await page.addInitScript(() => {
+      const win = window as unknown as { LanguageModel?: { availability?: unknown } };
+      if (win.LanguageModel && typeof win.LanguageModel.availability === 'function') {
+        win.LanguageModel.availability = () => new Promise<never>(() => {});
+      } else {
+        win.LanguageModel = { availability: () => new Promise<never>(() => {}) };
+      }
+    });
+
+    await page.goto(`chrome-extension://${extensionId}/options.html?tab=history`, { waitUntil: 'networkidle' });
+    await expect(page.locator('#sidebarReportBugBtn')).toBeVisible();
+
+    await page.locator('#sidebarReportBugBtn').click();
+
+    const modal = page.locator('#bugReportPreviewModal');
+    await expect(modal).toHaveJSProperty('open', true, { timeout: 15000 });
+    await expect(modal).toBeVisible();
+    await expect(page.locator('#bugReportOpenBtn')).toBeEnabled({ timeout: 15000 });
+
+    const previewText = await page.locator('#bugReportPreviewContent').inputValue();
+    expect(previewText).toContain('## Diagnostic Information');
+    expect(previewText).not.toContain('Collecting diagnostics');
+    await page.close();
   });
 });

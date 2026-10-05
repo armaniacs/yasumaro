@@ -1699,6 +1699,12 @@
   "diagBugReportOpenBtn": {
     "message": "GitHubを開く"
   },
+  "diagBugReportCollecting": {
+    "message": "診断情報を収集しています..."
+  },
+  "diagBugReportError": {
+    "message": "レポートの準備に失敗しました。閉じてからもう一度お試しください。"
+  },
   "diagBuiltInAiDownloadStarting": {
     "message": "ダウンロードを開始しています... 0%"
   },

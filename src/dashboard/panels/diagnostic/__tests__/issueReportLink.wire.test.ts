@@ -1,7 +1,18 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useTimerClock } from '../../../../../testDir/waitPolicy.js';
 import { createIssueReportModalController } from '../issueReportLink.js';
 import type { DiagnosticsSnapshot } from '../DiagnosticsCollector.js';
+
+/**
+ * The click handler chains collectSnapshot → getLogs → Promise.race → DOM
+ * write, so settling the collection takes a fixed number of microtask turns.
+ * Draining a fixed tick count is deterministic (microtasks, not wall clock);
+ * the count only has to cover the chain's depth.
+ */
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 10; i++) await Promise.resolve();
+}
 
 vi.mock('../../../../utils/logger/core.js', () => ({
   getLogs: vi.fn().mockResolvedValue([]),
@@ -67,6 +78,9 @@ describe('createIssueReportModalController — multiple entry points sharing one
     document.body.innerHTML = '';
     (globalThis as unknown as { chrome: unknown }).chrome = {
       tabs: { create: vi.fn() },
+      // getMessageOr resolves user-facing text through chrome.i18n; an empty
+      // message makes the controller fall back to its literal text.
+      i18n: { getMessage: () => '' },
     };
   });
 
@@ -82,8 +96,7 @@ describe('createIssueReportModalController — multiple entry points sharing one
     controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.sidebarReportBtn.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(dom.previewModal.open).toBe(true);
     expect(dom.previewContent.value).toContain('0.0.0');
@@ -108,8 +121,7 @@ describe('createIssueReportModalController — multiple entry points sharing one
     controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.diagReportBtn.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(dom.previewModal.open).toBe(true);
 
@@ -130,8 +142,7 @@ describe('createIssueReportModalController — multiple entry points sharing one
     controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.sidebarReportBtn.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
     expect(dom.previewModal.open).toBe(true);
 
     dom.cancelBtn.click();
@@ -161,8 +172,7 @@ describe('createIssueReportModalController — multiple entry points sharing one
     controllerA.attachTrigger(dom.sidebarReportBtn);
 
     dom.sidebarReportBtn.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     dom.openBtn.click();
     const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
@@ -181,8 +191,7 @@ describe('createIssueReportModalController — multiple entry points sharing one
     controller.attachTrigger(dom.sidebarReportBtn);
 
     dom.sidebarReportBtn.click();
-    await Promise.resolve();
-    await Promise.resolve();
+    await flushMicrotasks();
 
     expect(collectSnapshot).toHaveBeenCalledTimes(1);
 
@@ -194,9 +203,118 @@ describe('createIssueReportModalController — multiple entry points sharing one
   it('attachTrigger(null) is a no-op and does not throw', () => {
     const dom = buildDom();
     const controller = createIssueReportModalController(
-      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      { previewModal: dom.previewModal, previewContent: dom.cancelBtn, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
       vi.fn().mockResolvedValue(makeSnapshot()),
     );
     expect(() => controller.attachTrigger(null)).not.toThrow();
+  });
+
+  it('opens the modal at click time with the collecting placeholder and Open GitHub disabled', async () => {
+    const dom = buildDom();
+    let resolveCollect!: (snapshot: DiagnosticsSnapshot) => void;
+    const collectSnapshot = vi.fn(
+      () => new Promise<DiagnosticsSnapshot>((resolve) => { resolveCollect = resolve; }),
+    );
+
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    controller.attachTrigger(dom.sidebarReportBtn);
+
+    dom.sidebarReportBtn.click();
+
+    // Feedback is synchronous: the press must never leave the user staring
+    // at an unresponsive button while collection spans awaits.
+    expect(dom.previewModal.open).toBe(true);
+    expect(dom.previewContent.value).toContain('Collecting diagnostics');
+    expect(dom.openBtn.disabled).toBe(true);
+
+    dom.openBtn.click();
+    const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
+    expect(create).not.toHaveBeenCalled();
+
+    resolveCollect(makeSnapshot());
+    await flushMicrotasks();
+    await Promise.resolve();
+
+    expect(dom.previewContent.value).toContain('0.0.0');
+    expect(dom.openBtn.disabled).toBe(false);
+
+    dom.openBtn.click();
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(dom.previewModal.open).toBe(false);
+  });
+
+  it('a hung collection lands in the error state at the timeout bound and the trigger recovers', async () => {
+    useTimerClock();
+    try {
+      const dom = buildDom();
+      // First press hangs forever (a wedged sub-probe); the recovery press
+      // resolves so the same controller can fill the report again.
+      const collectSnapshot = vi.fn()
+        .mockImplementationOnce(() => new Promise<DiagnosticsSnapshot>(() => {}))
+        .mockResolvedValue(makeSnapshot());
+
+      const controller = createIssueReportModalController(
+        { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+        collectSnapshot,
+        { collectionTimeoutMs: 15_000 },
+      );
+      controller.attachTrigger(dom.sidebarReportBtn);
+
+      dom.sidebarReportBtn.click();
+      expect(dom.previewModal.open).toBe(true);
+
+      vi.advanceTimersByTime(15_000);
+      await flushMicrotasks();
+
+      expect(dom.previewContent.value).toContain('Failed to prepare');
+      expect(dom.openBtn.disabled).toBe(true);
+
+      // inFlight was reset at the timeout, so Cancel + re-click starts a new
+      // collection instead of returning early forever. The re-click goes
+      // through the same controller — the production path re-wires nothing.
+      dom.cancelBtn.click();
+      expect(dom.previewModal.open).toBe(false);
+
+      dom.sidebarReportBtn.click();
+      await flushMicrotasks();
+
+      expect(collectSnapshot).toHaveBeenCalledTimes(2);
+      expect(dom.previewContent.value).toContain('0.0.0');
+      expect(dom.openBtn.disabled).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('cancelling during collection leaves the modal closed when the collection settles', async () => {
+    const dom = buildDom();
+    let resolveCollect!: (snapshot: DiagnosticsSnapshot) => void;
+    const collectSnapshot = vi.fn(
+      () => new Promise<DiagnosticsSnapshot>((resolve) => { resolveCollect = resolve; }),
+    );
+
+    const controller = createIssueReportModalController(
+      { previewModal: dom.previewModal, previewContent: dom.previewContent, cancelBtn: dom.cancelBtn, closeBtn: dom.closeBtn, openBtn: dom.openBtn },
+      collectSnapshot,
+    );
+    controller.attachTrigger(dom.sidebarReportBtn);
+
+    dom.sidebarReportBtn.click();
+    expect(dom.previewModal.open).toBe(true);
+
+    dom.cancelBtn.click();
+    expect(dom.previewModal.open).toBe(false);
+
+    resolveCollect(makeSnapshot());
+    await flushMicrotasks();
+    await Promise.resolve();
+
+    // The late result must not re-open the modal the user just dismissed.
+    expect(dom.previewModal.open).toBe(false);
+    const create = (globalThis as unknown as { chrome: { tabs: { create: ReturnType<typeof vi.fn> } } }).chrome.tabs.create;
+    expect(create).not.toHaveBeenCalled();
   });
 });

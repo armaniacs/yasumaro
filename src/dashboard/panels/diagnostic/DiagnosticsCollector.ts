@@ -21,6 +21,7 @@ import { checkBuiltInAiAvailability, type BuiltInAiDiagnosticsResult } from '../
 import { detectOpfsCapabilities, probeOpfsGlobals, selectVfsStrategy, type VfsStrategy } from '../../../utils/vfsCapabilities.js';
 
 import { pickDefined } from '../../../utils/objectUtils.js';
+import { withRuntimeTimeout } from '../../../messaging/withRuntimeTimeout.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getDebugMode } from './debugModeStore.js';
 import type { EncryptedData } from '../../../utils/crypto/types.js';
@@ -107,7 +108,26 @@ export interface DiagnosticsCollectorDeps {
   getDebugMode?: () => Promise<boolean>;
   getManifest?: () => { version: string; name: string };
   detectVfsStrategy?: () => { strategy: string };
+  /**
+   * Bounds checkBuiltInAiAvailability. The probe fans out to
+   * LanguageModel.availability(), which has no timeout of its own — in a
+   * browser where the on-device service is stuck (observed in Edge
+   * 2026-10-04: the whole snapshot wedged past the 15s report bound),
+   * that await never settles and the snapshot never completes. A timeout
+   * degrades the probe to "unknown" (builtInAi null), the same shape a
+   * probe failure already produces. Injectable so tests drive it with a
+   * fake clock instead of waiting in real time.
+   */
+  builtInAiTimeoutMs?: number;
 }
+
+/**
+ * The on-device availability check is a best-effort probe, not the data the
+ * snapshot exists for — it must never be the reason a snapshot takes longer
+ * than a few seconds. Well inside the report button's own 15s collection
+ * bound so a stuck on-device service still leaves a usable snapshot.
+ */
+const DEFAULT_BUILT_IN_AI_TIMEOUT_MS = 5_000;
 
 /**
  * Deep collector: one seam, one place to test.
@@ -117,8 +137,7 @@ export class DiagnosticsCollector {
   constructor(private deps: DiagnosticsCollectorDeps = {}) {}
 
   async collect(): Promise<DiagnosticsSnapshot> {
-    const getManyFn = this.deps.getMany ?? settingsRepository.getMany.bind(settingsRepository);
-    const getSqliteStatusFn = this.deps.getSqliteStatus
+    const getManyFn = this.deps.getMany ?? settingsRepository.getMany.bind(settingsRepository);    const getSqliteStatusFn = this.deps.getSqliteStatus
       ?? (async () =>
         retryWithExponentialBackoff(() => getSqliteStatus(), { label: 'diagSqliteStatus', maxAttempts: 4 })
       );
@@ -132,7 +151,7 @@ export class DiagnosticsCollector {
       try { return chrome.runtime.getManifest(); } catch { return { version: 'unknown', name: 'unknown' }; }
     });
     const detectVfsStrategyFn = this.deps.detectVfsStrategy ?? detectDashboardVfsStrategy;
-
+    const builtInAiTimeoutMs = this.deps.builtInAiTimeoutMs ?? DEFAULT_BUILT_IN_AI_TIMEOUT_MS;
     let settingsLoadFailed = false;
 
     // All settings keys needed by this collector — single getMany call.
@@ -157,7 +176,11 @@ export class DiagnosticsCollector {
       getLogCountFn()
         .then((result): LogCountValue => ('data' in result ? result.data : LOG_COUNT_UNAVAILABLE))
         .catch((): LogCountValue => LOG_COUNT_UNAVAILABLE),
-      checkBuiltInAiFn().catch(() => null),
+      withRuntimeTimeout(
+        checkBuiltInAiFn(),
+        builtInAiTimeoutMs,
+        new Error('built-in AI availability check timed out'),
+      ).catch(() => null),
       getBytesInUse().catch(() => 0),
       getDebugModeFn().catch(() => false),
     ]);
