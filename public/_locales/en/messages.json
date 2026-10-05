@@ -1756,6 +1756,12 @@
   "diagBugReportOpenBtn": {
     "message": "Open GitHub"
   },
+  "diagBugReportCollecting": {
+    "message": "Collecting diagnostics..."
+  },
+  "diagBugReportError": {
+    "message": "Failed to prepare the report. Close this dialog and try again."
+  },
   "diagBuiltInAiDownloadStarting": {
     "message": "Starting download... 0%"
   },

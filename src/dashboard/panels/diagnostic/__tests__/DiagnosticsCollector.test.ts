@@ -252,6 +252,34 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
       vi.useRealTimers();
     }
   });
+
+  it('a hung built-in AI probe degrades to null at the bound instead of wedging the snapshot', async () => {
+    // The on-device LanguageModel.availability() has no timeout of its own;
+    // in a browser where the model service is stuck it never settles
+    // (Edge 2026-10-04: the report collection hit its 15s bound). The probe
+    // is best-effort, so the snapshot must complete with builtInAi unknown.
+    useTimerClock();
+    try {
+      const collector = new DiagnosticsCollector({
+        ...baseDeps(),
+        getMany: mockGetMany({}),
+        getSqliteStatus: vi.fn().mockResolvedValue(null),
+        checkBuiltInAiAvailability: vi.fn(() => new Promise<never>(() => {})) as any,
+        builtInAiTimeoutMs: 100,
+      });
+
+      const pending = collector.collect();
+      await vi.runAllTimersAsync();
+      const snapshot = await pending;
+
+      expect(snapshot.builtInAi).toBeNull();
+      // Everything else still collected — the probe is not the snapshot.
+      expect(snapshot.extInfo.version).toBe('0.0.0');
+      expect(snapshot.sqlite).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('DiagnosticsCollector — honest local unions', () => {

@@ -85,6 +85,19 @@ export interface IssueReportModalElements {
   openBtn: HTMLButtonElement | null;
 }
 
+export interface IssueReportModalControllerOptions {
+  /**
+   * Bounds the diagnostic collection. The collection fans out to sub-probes
+   * (settings, SQLite status, logs) that have no timeout of their own, so a
+   * single hung probe would otherwise leave the trigger permanently in-flight
+   * and the report un-openable. The bound must stay injectable so tests drive
+   * it with a fake clock instead of waiting in real time.
+   */
+  collectionTimeoutMs?: number;
+}
+
+const DEFAULT_COLLECTION_TIMEOUT_MS = 15_000;
+
 export interface IssueReportModalController {
   /**
    * Wire one "Report a Bug" entry-point button (diagnostics panel, sidebar,
@@ -102,12 +115,18 @@ export interface IssueReportModalController {
  * sidebar, ...) attach to the SAME controller instance via attachTrigger()
  * so a click on any of them is visible to the one set of Cancel/Close/Open
  * listeners wired here, at controller-creation time.
+ *
+ * The modal opens at click time with a collecting placeholder — the press
+ * must always have visible feedback, and a collection that spans awaits must
+ * not leave the user staring at an unresponsive button.
  */
 export function createIssueReportModalController(
   modalEls: IssueReportModalElements,
   collectSnapshot: () => Promise<DiagnosticsSnapshot>,
+  options: IssueReportModalControllerOptions = {},
 ): IssueReportModalController {
   const { previewModal, previewContent, cancelBtn, closeBtn, openBtn } = modalEls;
+  const collectionTimeoutMs = options.collectionTimeoutMs ?? DEFAULT_COLLECTION_TIMEOUT_MS;
 
   let pendingUrl: string | null = null;
   // Re-entrancy: collectSnapshot spans awaits, so a rapid second click would
@@ -147,22 +166,49 @@ export function createIssueReportModalController(
         if (inFlight || previewModal.open) return;
         inFlight = true;
         reportBtn.disabled = true;
+        const startedAt = Date.now();
+        // Open before collecting, and keep "Open GitHub" disabled until the
+        // sanitized body exists — the send-later contract depends on
+        // pendingUrl, so a click during collection must not close the modal
+        // as if it had opened the issue.
+        previewContent.value = getMessageOr('diagBugReportCollecting', 'Collecting diagnostics...');
+        pendingUrl = null;
+        openBtn.disabled = true;
+        previewModal.showModal();
         void (async () => {
           try {
-            const snapshot = await collectSnapshot();
-            const recentLogs = await getLogs();
-            previewContent.value = buildIssueReportBody(snapshot, recentLogs);
-            pendingUrl = buildIssueReportUrl(snapshot, recentLogs);
-          } catch {
-            // Snapshot failures must stay user-visible but never leak error
-            // internals into outbound text (see module doc comment).
+            const collected = await Promise.race([
+              (async () => {
+                const snapshot = await collectSnapshot();
+                const recentLogs = await getLogs();
+                return { snapshot, recentLogs };
+              })(),
+              new Promise<never>((_, reject) => {
+                setTimeout(
+                  () => reject(new Error('diagnostics collection timed out')),
+                  collectionTimeoutMs,
+                );
+              }),
+            ]);
+            previewContent.value = buildIssueReportBody(collected.snapshot, collected.recentLogs);
+            pendingUrl = buildIssueReportUrl(collected.snapshot, collected.recentLogs);
+            openBtn.disabled = false;
+          } catch (err) {
+            // The reason must reach the developer's console but never the
+            // outbound body — the preview textarea is pasted into a public
+            // GitHub issue, so error internals stay out of it (see module
+            // doc comment). The elapsed time separates a timeout-bound hang
+            // (≈ collectionTimeoutMs) from a fast rejection.
+            console.error(
+              `[BugReport] diagnostics collection failed after ${Date.now() - startedAt}ms:`,
+              err,
+            );
             previewContent.value = getMessageOr(
-              'reportCleansingFeedbackError',
-              'Failed to report',
+              'diagBugReportError',
+              'Failed to prepare the report. Close this dialog and try again.',
             );
             pendingUrl = null;
           } finally {
-            if (!previewModal.open) previewModal.showModal();
             inFlight = false;
             reportBtn.disabled = false;
           }
