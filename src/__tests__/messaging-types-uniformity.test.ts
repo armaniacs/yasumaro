@@ -305,6 +305,7 @@ describe('Messaging Types Uniformity Tests', () => {
       { input: { type: 'VALID_VISIT' }, shape: false },
       { input: { type: 'VALID_VISIT', payload: { content: 'hi' } }, shape: true },
       { input: { type: 'VALID_VISIT', payload: 'hi' }, shape: false },
+      { input: { type: 'VALID_VISIT', payload: null }, shape: false },
     ];
     for (const { input, shape } of shapeCases) {
       it(`predicate and single source agree: ${JSON.stringify(input)} -> ${shape}`, () => {

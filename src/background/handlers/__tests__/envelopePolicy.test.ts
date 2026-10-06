@@ -150,6 +150,7 @@ describe('envelope shape agreement (PBI 2026-10-05-13)', () => {
     { input: { type: 'VALID_VISIT' }, accepted: false },
     { input: { type: 'VALID_VISIT', payload: { content: 'hi' } }, accepted: true },
     { input: { type: 'VALID_VISIT', payload: 'hi' }, accepted: false },
+    { input: { type: 'VALID_VISIT', payload: null }, accepted: false },
     { input: { type: 'NOPE', payload: {} }, accepted: false },
   ];
   for (const { input, accepted } of cases) {

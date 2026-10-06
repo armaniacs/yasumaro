@@ -54,7 +54,10 @@ function hasUsablePayload(type: string, payload: unknown): boolean {
   if (isOptionalPayloadType(type)) {
     return payload === undefined || (typeof payload === 'object' && payload !== null);
   }
-  return payload !== undefined && typeof payload === 'object';
+  // Review follow-up: `typeof null === 'object'`, so the null check must be
+  // explicit here too — otherwise the gate contradicts its own "non-null
+  // object is required" declaration above.
+  return payload !== undefined && typeof payload === 'object' && payload !== null;
 }
 
 /**
