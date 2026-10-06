@@ -61,6 +61,9 @@ export function evaluateDomainPolicy(
   }
 
   if (snapshot.mode === 'whitelist') {
+    if (!snapshot.simpleEnabled || snapshot.ublockEnabled) {
+      return { allowed: false, useCache: false };
+    }
     const allowed = isDomainInListShared(domain, snapshot.cachedWhitelist, snapshot.matchSubdomains);
     return { allowed, useCache: true };
   }

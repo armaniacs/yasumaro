@@ -214,26 +214,30 @@ describe('content path vs service-worker verdict parity (PBI 2026-09-12-03)', ()
   });
 
   /** Matrix row: [url, mode, list, matchSubdomains, expected allowed]. */
-  const matrix: Array<{ url: string; mode: string; entry: string; subdomains: boolean }> = [
+  const matrix: Array<{ url: string; mode: string; entry: string; subdomains: boolean; simple?: boolean; ublock?: boolean }> = [
     { url: 'https://sub.example.com', mode: 'whitelist', entry: 'example.com', subdomains: true },
     { url: 'https://sub.example.com', mode: 'whitelist', entry: 'example.com', subdomains: false },
     { url: 'https://example.com', mode: 'whitelist', entry: 'example.com', subdomains: false },
     { url: 'https://sub.blocked.com', mode: 'blacklist', entry: 'blocked.com', subdomains: true },
     { url: 'https://sub.blocked.com', mode: 'blacklist', entry: 'blocked.com', subdomains: false },
+    { url: 'https://other.com/page', mode: 'whitelist', entry: 'example.com', subdomains: false, simple: false },
+    { url: 'https://example.com/page', mode: 'whitelist', entry: 'example.com', subdomains: false, ublock: true },
   ];
 
   for (const row of matrix) {
-    it(`agrees on ${row.url} (mode=${row.mode}, matchSubdomains=${row.subdomains})`, async () => {
+    it(`agrees on ${row.url} (mode=${row.mode}, matchSubdomains=${row.subdomains}, simple=${row.simple ?? true}, ublock=${row.ublock ?? false})`, async () => {
       const { isDomainAllowed } = await import('../../utils/domainUtils.js');
       const listKey = row.mode === 'whitelist'
         ? StorageKeys.DOMAIN_WHITELIST
         : StorageKeys.DOMAIN_BLACKLIST;
+      const simple = row.simple ?? true;
+      const ublock = row.ublock ?? false;
       getAll.mockResolvedValue({
         [StorageKeys.DOMAIN_FILTER_MODE]: row.mode,
         [listKey]: [row.entry],
         [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: row.subdomains,
-        [StorageKeys.SIMPLE_FORMAT_ENABLED]: true,
-        [StorageKeys.UBLOCK_FORMAT_ENABLED]: false,
+        [StorageKeys.SIMPLE_FORMAT_ENABLED]: simple,
+        [StorageKeys.UBLOCK_FORMAT_ENABLED]: ublock,
       });
 
       const storage = new InMemoryStoragePort();
@@ -242,12 +246,20 @@ describe('content path vs service-worker verdict parity (PBI 2026-09-12-03)', ()
         [StorageKeys.DOMAIN_FILTER_CACHE]: [row.entry],
         [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: now,
         [StorageKeys.DOMAIN_BLACKLIST]: row.mode === 'blacklist' ? [row.entry] : [],
-        [StorageKeys.SIMPLE_FORMAT_ENABLED]: true,
-        [StorageKeys.UBLOCK_FORMAT_ENABLED]: false,
+        [StorageKeys.SIMPLE_FORMAT_ENABLED]: simple,
+        [StorageKeys.UBLOCK_FORMAT_ENABLED]: ublock,
         [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: row.subdomains,
       });
       const port = new ChromeDomainPolicyPort(storage, () => now);
       const contentVerdict = await port.checkDomainAllowedFromCache(row.url);
+
+      if (!simple || ublock) {
+        // Deferral: content must ask SW instead of deciding from the list.
+        expect(contentVerdict.useCache).toBe(false);
+        // The delegation target stays answerable without real-time waits.
+        expect(await isDomainAllowed(row.url)).toBe(true);
+        return;
+      }
 
       const swVerdict = await isDomainAllowed(row.url);
       expect(contentVerdict.allowed).toBe(swVerdict);

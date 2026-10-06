@@ -56,12 +56,14 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
         const matchSubdomains = result[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
 
-        // Second-stage read only in blacklist mode (storage call pattern
-        // unchanged); branching itself lives in the shared pure policy.
+        // Second-stage read in blacklist/whitelist modes (same two-stage
+        // pattern and keys; the whitelist branch needs the flags to defer
+        // to SW when simple is off or ublock is on). Branching itself lives
+        // in the shared pure policy.
         let blacklist: string[] = [];
         let simpleEnabled = true;
         let ublockEnabled = false;
-        if (mode === 'blacklist') {
+        if (mode === 'blacklist' || mode === 'whitelist') {
             const result2 = await this.storage.get([
                 StorageKeys.DOMAIN_BLACKLIST,
                 StorageKeys.SIMPLE_FORMAT_ENABLED,
