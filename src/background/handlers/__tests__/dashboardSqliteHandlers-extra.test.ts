@@ -360,7 +360,7 @@ describe('handleDashboardSqlite — toggle_star', () => {
   it('toggles star and returns is_starred', async () => {
     const mock = createMockSqliteClient();
     mock.mutate.mockResolvedValue({ success: true, data: { is_starred: 0 } });
-    const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     // Previously this response omitted `success`, so the dashboard's
     // `if (response.success)` check always took the failure branch even
     // when the star actually toggled — see PBI-21.
@@ -371,7 +371,7 @@ describe('handleDashboardSqlite — toggle_star', () => {
   it('returns error when toggleStar mutate fails', async () => {
     const mock = createMockSqliteClient();
     mock.mutate.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Toggle star failed', retriable: false } });
-    const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'toggle_star', id: 5, ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Toggle star failed', retriable: false });
   });
 });
@@ -380,7 +380,7 @@ describe('handleDashboardSqlite — delete', () => {
   it('deletes entry and returns success', async () => {
     const mock = createMockSqliteClient();
     mock.mutate.mockResolvedValue({ success: true, data: undefined });
-    const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: true });
     expect(mock.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'delete', id: 3 }));
   });
@@ -388,7 +388,7 @@ describe('handleDashboardSqlite — delete', () => {
   it('returns success:false when delete mutate fails', async () => {
     const mock = createMockSqliteClient();
     mock.mutate.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Delete failed', retriable: false } });
-    const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'delete', id: 3, ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Delete failed', retriable: false });
   });
 });
@@ -400,7 +400,7 @@ describe('handleDashboardSqlite — update', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'update', id: 1, changes: { title: 'New Title' }, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: true });
     expect(mock.mutate).toHaveBeenCalledWith(expect.objectContaining({ type: 'update', id: 1, changes: { title: 'New Title' } }));
@@ -411,7 +411,7 @@ describe('handleDashboardSqlite — update', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'update', id: 1, changes: { invalid_field: 'value' }, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('Invalid update fields') });
     expect(mock.mutate).not.toHaveBeenCalled();
@@ -422,7 +422,7 @@ describe('handleDashboardSqlite — update', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'update', id: 1, changes: { foo: 'a', bar: 'b' }, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: expect.stringContaining('foo') });
     expect(result).toEqual({ success: false, error: expect.stringContaining('bar') });
@@ -434,7 +434,7 @@ describe('handleDashboardSqlite — update', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'update', id: 1, changes: { title: 'Test' }, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'Update failed', retriable: false });
   });
@@ -468,7 +468,7 @@ describe('handleDashboardSqlite — import', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 3, skipped: 0, total: 3 });
     // One insertBatch round trip instead of one mutate per row.
@@ -481,7 +481,7 @@ describe('handleDashboardSqlite — import', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows: [], ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'No rows provided' });
   });
@@ -494,7 +494,7 @@ describe('handleDashboardSqlite — import', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows: 'not-an-array', ...TK() } as any,
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'No rows provided' });
   });
@@ -509,7 +509,7 @@ describe('handleDashboardSqlite — import', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 120, skipped: 0, total: 120 });
     expect(mock.mutate).toHaveBeenCalledTimes(1);
@@ -529,7 +529,7 @@ describe('handleDashboardSqlite — import', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, inserted: 1, skipped: 2, total: 3 });
   });
@@ -541,7 +541,7 @@ describe('handleDashboardSqlite — import', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'import', rows, ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     // The wire never leaks internal exception text (index.ts sanitizes).
     expect(result).toEqual({ success: false, error: 'An internal error occurred' });
@@ -556,7 +556,7 @@ describe('handleDashboardSqlite — purge_now', () => {
       sqlite_retention_days: 30,
       sqlite_max_records: 5000,
     } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 7, skipped: false });
     expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', retentionDays: 30, maxRecords: 5000 }));
   });
@@ -564,7 +564,7 @@ describe('handleDashboardSqlite — purge_now', () => {
   it('skips when both settings are null', async () => {
     const mock = createMockSqliteClient();
     mockGetAll.mockResolvedValue({} as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.maintain).not.toHaveBeenCalled();
   });
@@ -573,21 +573,21 @@ describe('handleDashboardSqlite — purge_now', () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Purge failed', retriable: false } });
     mockGetAll.mockResolvedValue({ sqlite_retention_days: 30 } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Purge failed', retriable: false });
   });
 
   it('purges with only days configured', async () => {
     const mock = createMockSqliteClient();
     mockGetAll.mockResolvedValue({ sqlite_retention_days: 60 } as any);
-    await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', retentionDays: 60 }));
   });
 
   it('purges with only max configured', async () => {
     const mock = createMockSqliteClient();
     mockGetAll.mockResolvedValue({ sqlite_max_records: 10000 } as any);
-    await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    await dispatchDashboardSqlite({ subtype: 'purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeOldRecords', maxRecords: 10000 }));
   });
 });
@@ -601,7 +601,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
       content_max_records: 1000,
       content_purge_include_starred: true,
     } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 3, skipped: false });
     expect(mock.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'purgeContent', retentionDays: 14, maxRecords: 1000, includeStarred: true }));
   });
@@ -609,7 +609,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
   it('skips when both content settings are null', async () => {
     const mock = createMockSqliteClient();
     mockGetAll.mockResolvedValue({} as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: true, purged: 0, skipped: true });
     expect(mock.maintain).not.toHaveBeenCalled();
   });
@@ -618,7 +618,7 @@ describe('handleDashboardSqlite — content_purge_now', () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Content purge failed', retriable: false } });
     mockGetAll.mockResolvedValue({ content_retention_days: 7 } as any);
-    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'content_purge_now', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Content purge failed', retriable: false });
   });
 });
@@ -635,14 +635,14 @@ describe('handleDashboardSqlite — backup_db', () => {
     const mock = createMockSqliteClient();
     const buffer = new Uint8Array([10, 20, 30]);
     mock.maintain.mockResolvedValue({ success: true, data: buffer });
-    const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: true, data: 'ChQe' });
   });
 
   it('returns error when backup maintain fails', async () => {
     const mock = createMockSqliteClient();
     mock.maintain.mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Backup failed', retriable: false } });
-    const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { getConfirmToken: async () => VALID_TOKEN });
+    const result = await dispatchDashboardSqlite({ subtype: 'backup_db', confirmToken: VALID_TOKEN }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN });
     expect(result).toEqual({ success: false, error: 'Backup failed', retriable: false });
   });
 });
@@ -652,7 +652,7 @@ describe('handleDashboardSqlite — backfill_metadata', () => {
     const mock = createMockSqliteClient();
     const runBackfill = vi.fn().mockResolvedValue({ updated: 5, total: 10 });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'backfill_metadata', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runBackfill }
+      { subtype: 'backfill_metadata', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN, runBackfill }
     );
     expect(result).toEqual({ success: true, updated: 5, total: 10 });
     expect(runBackfill).toHaveBeenCalled();
@@ -661,7 +661,7 @@ describe('handleDashboardSqlite — backfill_metadata', () => {
   it('returns error when runBackfill is not provided', async () => {
     const mock = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
-      { subtype: 'backfill_metadata', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN }
+      { subtype: 'backfill_metadata', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'Backfill not available' });
   });
@@ -672,7 +672,7 @@ describe('handleDashboardSqlite — resync_legacy', () => {
     const mock = createMockSqliteClient();
     const runLegacyResync = vi.fn().mockResolvedValue({ examined: 8, written: 7, skipped: 1, total: 8 });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'resync_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runLegacyResync }
+      { subtype: 'resync_legacy', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN, runLegacyResync }
     );
     expect(result).toEqual({ success: true, examined: 8, written: 7, skipped: 1, total: 8 });
     expect(runLegacyResync).toHaveBeenCalledWith(undefined);
@@ -682,7 +682,7 @@ describe('handleDashboardSqlite — resync_legacy', () => {
     const mock = createMockSqliteClient();
     const runLegacyResync = vi.fn().mockResolvedValue({ examined: 2, written: 2, skipped: 0, total: 9 });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'resync_legacy', maxRecords: 2, ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runLegacyResync }
+      { subtype: 'resync_legacy', maxRecords: 2, ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN, runLegacyResync }
     );
     expect(result).toEqual({ success: true, examined: 2, written: 2, skipped: 0, total: 9 });
     expect(runLegacyResync).toHaveBeenCalledWith({ maxRecords: 2 });
@@ -691,7 +691,7 @@ describe('handleDashboardSqlite — resync_legacy', () => {
   it('returns error when runLegacyResync is not provided', async () => {
     const mock = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
-      { subtype: 'resync_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN }
+      { subtype: 'resync_legacy', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'Resync not available' });
   });
@@ -702,7 +702,7 @@ describe('handleDashboardSqlite — cleanup_legacy', () => {
     const mock = createMockSqliteClient();
     const runCleanup = vi.fn().mockResolvedValue({ removed: ['key1', 'key2'], totalBytes: 512 });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'cleanup_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN, runCleanup }
+      { subtype: 'cleanup_legacy', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN, runCleanup }
     );
     expect(result).toEqual({ success: true, removed: ['key1', 'key2'], totalBytes: 512 });
     expect(runCleanup).toHaveBeenCalled();
@@ -711,7 +711,7 @@ describe('handleDashboardSqlite — cleanup_legacy', () => {
   it('returns error when runCleanup is not provided', async () => {
     const mock = createMockSqliteClient();
     const result = await dispatchDashboardSqlite(
-      { subtype: 'cleanup_legacy', ...TK() }, mock as any, { getConfirmToken: async () => VALID_TOKEN }
+      { subtype: 'cleanup_legacy', ...TK() }, mock as any, { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'Cleanup not available' });
   });
@@ -738,7 +738,7 @@ describe('handleDashboardSqlite — migrate', () => {
     const mock = createMockSqliteClient();
     const runMigration = vi.fn().mockResolvedValue({ success: true, count: 20, read: 25, inserted: 20 });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'migrate', ...TK() }, mock as any, { runMigration, getConfirmToken: async () => VALID_TOKEN }
+      { subtype: 'migrate', ...TK() }, mock as any, { runMigration, createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: true, count: 20, read: 25, inserted: 20 });
   });
@@ -747,7 +747,7 @@ describe('handleDashboardSqlite — migrate', () => {
     const mock = createMockSqliteClient();
     const runMigration = vi.fn().mockResolvedValue({ success: false, count: 0, error: 'DB locked' });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'migrate', ...TK() }, mock as any, { runMigration, getConfirmToken: async () => VALID_TOKEN }
+      { subtype: 'migrate', ...TK() }, mock as any, { runMigration, createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'DB locked' });
   });
@@ -757,7 +757,7 @@ describe('handleDashboardSqlite — migrate', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'migrate', ...TK() },
       mock as any,
-      { getConfirmToken: async () => VALID_TOKEN }
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN }
     );
     expect(result).toEqual({ success: false, error: 'Migration not available' });
   });

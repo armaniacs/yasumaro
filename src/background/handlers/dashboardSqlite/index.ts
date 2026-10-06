@@ -83,8 +83,8 @@ export function createDashboardSqliteHandler(deps: DashboardSqliteHandlerDeps) {
 /**
  * verifyRequestToken — the validation seam of the dashboard→offscreen route
  * (PBI 2026-09-11-07 spike slice). Previously inline in the router closure;
- * extracted so the three verification branches (scoped verify fn / legacy
- * getConfirmToken / absent token) are unit-testable without a full handler.
+ * extracted so the two verification branches (scoped verify fn /
+ * absent token) are unit-testable without a full handler.
  *
  * Security posture is unchanged: scopeHash is re-derived from the actual
  * incoming payload (PBI 2026-09-06-01), and a missing verifier fails closed.
@@ -103,10 +103,6 @@ export async function verifyRequestToken(
   const scopeHash = await deriveScopeHash(subtype, payload as Record<string, unknown> | undefined);
   if (typeof deps.verifyConfirmToken === 'function') {
     return deps.verifyConfirmToken(providedToken, subtype, (payload as unknown as { id?: number }).id, scopeHash);
-  }
-  if (typeof (deps as unknown as { getConfirmToken?: () => Promise<string> }).getConfirmToken === 'function') {
-    const valid = await (deps as unknown as { getConfirmToken: () => Promise<string> }).getConfirmToken();
-    return providedToken === valid;
   }
   return false;
 }

@@ -35,7 +35,7 @@ import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
-import { ensureConfirmToken, createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
+import { createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 import { lockSession } from '../utils/storage/encryptionSession.js';
 import { buildAllowedUrls } from '../utils/storage/urlWhitelist.js';
@@ -154,7 +154,6 @@ export const compositionManifest: readonly CompositionEntry[] = [
     singleton: true,
     factory: (c) => createDashboardSqliteMessageHandler({
       sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
-      ensureConfirmToken,
       createConfirmToken,
       verifyConfirmToken,
     }),

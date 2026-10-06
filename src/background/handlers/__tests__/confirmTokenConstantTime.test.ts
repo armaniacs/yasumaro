@@ -71,7 +71,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: VALID_TOKEN } as any,
       client as any,
-      { getConfirmToken: async () => VALID_TOKEN },
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN },
     );
     expect(result).toEqual({ success: true, data: undefined });
     expect(client.maintain).toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
@@ -82,7 +82,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: 'short' } as any,
       client as any,
-      { getConfirmToken: async () => VALID_TOKEN },
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN },
     );
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
     expect(client.maintain).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'clearAll' }));
@@ -94,7 +94,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: invalid } as any,
       client as any,
-      { getConfirmToken: async () => VALID_TOKEN },
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN },
     );
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
   });
@@ -105,7 +105,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all', confirmToken: invalid } as any,
       client as any,
-      { getConfirmToken: async () => VALID_TOKEN },
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN },
     );
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
   });
@@ -115,7 +115,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'clear_all' } as any,
       client as any,
-      { getConfirmToken: async () => VALID_TOKEN },
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN },
     );
     expect(result).toEqual({ success: false, error: 'Confirmation token mismatch' });
   });
@@ -125,7 +125,7 @@ describe('confirmToken constant-time comparison (CWE-208)', () => {
     const result = await dispatchDashboardSqlite(
       { subtype: 'query', query: {} } as any,
       client as any,
-      { getConfirmToken: async () => VALID_TOKEN },
+      { createConfirmToken: async () => VALID_TOKEN, verifyConfirmToken: async (token: string) => token === VALID_TOKEN },
     );
     expect(result).not.toEqual({ success: false, error: 'Confirmation token mismatch' });
     expect(client.query).toHaveBeenCalled();

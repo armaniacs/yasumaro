@@ -24,10 +24,10 @@ describe('verifyRequestToken — validation branches', () => {
     expect(verifyConfirmToken).toHaveBeenCalledWith('tok', 'delete', 7, undefined);
   });
 
-  it('falls back to the legacy getConfirmToken comparison', async () => {
+  it('ignores legacy getConfirmToken and fails closed', async () => {
     const getConfirmToken = vi.fn().mockResolvedValue('tok');
     const ok = await verifyRequestToken({ getConfirmToken } as never, 'delete', payload());
-    expect(ok).toBe(true);
+    expect(ok).toBe(false);
   });
 
   it('fails closed without a token', async () => {

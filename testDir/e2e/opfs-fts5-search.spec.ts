@@ -2,12 +2,10 @@
  * E2E test: OPFS+FTS5 search persists across reload
  *
  * Seeding approach:
- *   `import` subtype is TOKEN_REQUIRED. The SW generates a confirm token via
- *   ensureConfirmToken() and stores it in chrome.storage.session under
- *   'dashboardSqliteConfirmToken'. We trigger token generation by sending a
- *   no-token-required request first (status), then read the token from
- *   chrome.storage.session inside page.evaluate, and include it in the import
- *   payload. This mirrors what dashboardSqliteService.ts does internally.
+ *   `import` subtype is TOKEN_REQUIRED. The SW issues a confirm token via
+ *   the explicit `create_confirm_token` subtype and the test reads it from
+ *   the response (see step 2 below). This mirrors what
+ *   dashboardSqliteService.ts does internally.
  *
  * Dashboard HTML:
  *   WXT outputs dashboard under dist/chromium-mv3/. However, checking the

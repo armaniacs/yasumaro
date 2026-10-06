@@ -184,18 +184,6 @@ export async function computeScopeHash(
     .join('');
 }
 
-/**
- * Legacy single-token helper kept for backward wiring tests that mock getConfirmToken.
- * Delegates to create/verify map via a generic action. Not used in production path.
- */
-export async function ensureConfirmToken(): Promise<string> {
-  return createConfirmToken('__legacy__');
-}
-
-export async function ensureConfirmTokenLegacy(): Promise<string> {
-  return createConfirmToken('__legacy__');
-}
-
 /** Test helpers */
 export async function __resetConfirmTokensForTesting(): Promise<void> {
   try { await chrome.storage.session.remove(CONFIRM_TOKENS_SESSION_KEY); } catch (e) { await logTokenPersistFailure('reset', e); }

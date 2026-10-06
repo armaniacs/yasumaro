@@ -13,7 +13,6 @@ import { createConfirmToken as createConfirmTokenImpl, verifyConfirmToken as ver
 
 export interface DashboardSqliteWiringDeps {
   sqliteClient: SqliteClient;
-  ensureConfirmToken: () => Promise<string>;
   createConfirmToken?: (action: string, id?: number) => Promise<string>;
   verifyConfirmToken?: (token: string, action: string, id?: number) => Promise<boolean>;
 }
