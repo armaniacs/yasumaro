@@ -76,18 +76,10 @@ vi.mock('../../utils/permissionManager.js', () => ({
   isHostPermitted: vi.fn(() => Promise.resolve(false)),
 }));
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => key);
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-    (((subs === undefined ? getMessage(key) : getMessage(key, subs)) || fallback)) as string;
-  return {
-    getMessage,
-    getMessageOr,
-    getMessageWithSubstitutions: (key: string, _subs: Record<string, string | number>, fallback: string) =>
-      (getMessage(key) || fallback) as string,
-    getUserLocale: vi.fn(() => 'en'),
-    isRTL: vi.fn(() => false),
-  };
+  return { ...i18nMock(getMessage), getUserLocale: vi.fn(() => 'en'), isRTL: vi.fn(() => false) };
 });
 
 vi.mock('../../utils/logger/api.js', async () =>
@@ -487,7 +479,7 @@ describe('createRecordingConditionsSettings lifecycle', () => {
     // The second mount replaces the container, as a re-created page does.
     recordingConditionsDom();
     await second.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 22 }));
-    expect(valueOf('minVisitDuration')).toBe('22');
+    expect(valueOf('rc-minVisitDuration')).toBe('22');
 
     first.destroy();
     click('save-conditions-settings');
@@ -503,13 +495,13 @@ describe('createRecordingConditionsSettings lifecycle', () => {
     recordingConditionsDom();
     const panel = createRecordingConditionsSettings();
     await panel.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 11 }));
-    expect(valueOf('minVisitDuration')).toBe('11');
+    expect(valueOf('rc-minVisitDuration')).toBe('11');
 
     panel.destroy();
     recordingConditionsDom();
     await panel.init(makeRepo({ [StorageKeys.MIN_VISIT_DURATION]: 22 }));
 
-    expect(valueOf('minVisitDuration')).toBe('22');
+    expect(valueOf('rc-minVisitDuration')).toBe('22');
     click('save-conditions-settings');
     await waitForMock(() => expect(mockRepoSetAll).toHaveBeenCalledWith(
       expect.objectContaining({ [StorageKeys.MIN_VISIT_DURATION]: 22 })));

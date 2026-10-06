@@ -461,23 +461,12 @@ vi.mock('../settings/trustSettings.js', () => ({
     loadTrustSettings: vi.fn(),
 }));
 vi.mock('../settings/customPromptManager.js', () => ({ initCustomPromptManager: vi.fn() }));
-vi.mock('../../utils/i18n.js', () => {
-    const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) =>
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
+  const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) =>
         key === 'connectionStatusLabel' && subs && typeof subs.label === 'string' ? `${subs.label}: ` : key);
-    const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-    ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-    const getMessageWithSubstitutions = (
-    key: string,
-    subs: Record<string, string | number>,
-    fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-    fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-      subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-    return {
-    // Mirrors src/utils/i18n.ts named-substitution behavior for the connection
-    // label format key so label-rendering tests keep seeing `<label>: `.
-    getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
+  return i18nMock(getMessage);
+});
 vi.mock('./models-dev-dialog.js', () => ({
     ModelsDevDialog: class { show = vi.fn().mockResolvedValue(undefined) },
 }));

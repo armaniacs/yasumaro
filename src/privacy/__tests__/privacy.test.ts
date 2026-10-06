@@ -6,8 +6,9 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('../../utils/i18n.js', () => {
-    const getMessage = vi.fn((key: string) => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
+  const getMessage = vi.fn((key: string) => {
         const messages: Record<string, string> = {
             loading: 'Loading...',
             privacyPolicyTitle: 'Privacy Policy — Yasumaro',
@@ -15,21 +16,8 @@ vi.mock('../../utils/i18n.js', () => {
         };
         return messages[key] || key;
     });
-    const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-    ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-    const getMessageWithSubstitutions = (
-    key: string,
-    subs: Record<string, string | number>,
-    fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-    fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-      subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-    return {
-    applyI18n: vi.fn(),
-    setHtmlLangAndDir: vi.fn(),
-    translatePageTitle: vi.fn(),
-    getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
+  return { ...i18nMock(getMessage), applyI18n: vi.fn() };
+});
 
 import {
     escapeHtml,

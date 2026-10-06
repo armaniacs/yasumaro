@@ -6,12 +6,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { waitForMock } from '../../../testDir/waitPolicy.js';
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => `i18n_${key}`);
-  const getMessageOr = (key: string, fallback: string): string => getMessage(key) || fallback;
-  const getMessageWithSubstitutions = (key: string, _subs: unknown, fallback: string): string =>
-    getMessage(key) || fallback;
-  return { getMessage, getMessageOr, getMessageWithSubstitutions };
+  return i18nMock(getMessage);
 });
 vi.mock('../../utils/ui/settingsUiHelper.js', () => ({ showStatus: vi.fn() }));
 vi.mock('../../utils/ui/focusTrap.js', () => ({

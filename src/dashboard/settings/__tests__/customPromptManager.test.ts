@@ -110,7 +110,8 @@ vi.mock('../../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
-vi.mock('../../../utils/i18n.js', () => {
+vi.mock('../../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => {
     const messages: Record<string, string | undefined> = {
       locale: undefined,
@@ -131,19 +132,8 @@ vi.mock('../../../utils/i18n.js', () => {
     };
     return key in messages ? messages[key] : key;
   });
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-  key: string,
-  subs: Record<string, string | number>,
-  fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-  return {
-  applyI18n: vi.fn(),
-  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
+  return { ...i18nMock(getMessage), applyI18n: vi.fn() };
+});
 
 vi.mock('../../../popup/errorUtils.js', () => ({
   escapeHtml: vi.fn((s: unknown) => String(s)),

@@ -10,25 +10,16 @@
 import { vi } from 'vitest';
 
 // Mock i18n before importing spinner.js
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key, substitutions) => {
     if (key === 'processing') return '処理中...';
     if (key === 'countdownNumber' && substitutions?.count !== undefined) return `${substitutions.count}...`;
     if (key === 'autoClosing') return '自動閉じる';
     return key;
   });
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-  key: string,
-  subs: Record<string, string | number>,
-  fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-  return {
-  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions}; });
+  return i18nMock(getMessage);
+});
 
 import { showSpinner, hideSpinner } from '../spinner.js';
 

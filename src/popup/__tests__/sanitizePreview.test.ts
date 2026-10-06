@@ -9,7 +9,8 @@ import { describe, test, expect, beforeEach, afterEach } from 'vitest';
 // モジュールモック - jest.mock はファイル先頭にホイストされる
 // ファクトリ内で直接 vi.fn() を作成し、globalThis 経由で後からアクセスする
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string, substitutions?: Record<string, unknown>) => {
     const messages: Record<string, string> = {
       piiCreditCard: 'Credit Card Number',
@@ -46,19 +47,8 @@ vi.mock('../../utils/i18n.js', () => {
     }
     return message;
   });
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-  key: string,
-  subs: Record<string, string | number>,
-  fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-  return {
-  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
-}; });
+  return i18nMock(getMessage);
+});
 
 import {
   showPreview,
