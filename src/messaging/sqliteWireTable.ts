@@ -50,6 +50,14 @@ import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportR
 import type { BrowsingLogEntry, BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
+  emptyPayload,
+  emptyProject,
+  idArg,
+  noValidate,
+  trueDecode,
+  voidDecode,
+} from './wireLambdaFactories.js';
+import {
   requiredNonNegativeNumber,
   requiredBoolean,
   requiredString,
@@ -204,11 +212,11 @@ export const SQLITE_WIRE_TABLE = [
       const { id: _dropRoutingOverride, ...rest } = o.changes;
       return { id: o.id, ...rest };
     },
-    decodeGateway: () => undefined,
+    decodeGateway: voidDecode,
     dashboard: {
       subtype: 'update',
       defaultError: 'Update failed',
-      serviceDecode: () => undefined,
+      serviceDecode: voidDecode,
       // Explicit single attempt: the background coreCrud handler pins driven
       // rows with Required<> (validate/depsArgs/projectDeps must be present),
       // which also pins this field — absent and { retryAttempts: 1 } both
@@ -234,7 +242,7 @@ export const SQLITE_WIRE_TABLE = [
         return null;
       },
       depsArgs: (p) => [p.id as number, (p.changes as Record<string, unknown> | undefined) ?? {}],
-      projectDeps: () => ({}),
+      projectDeps: emptyProject,
     },
   }),
   defineSqliteWireOp({
@@ -245,16 +253,16 @@ export const SQLITE_WIRE_TABLE = [
     depsMethod: 'delete',
     encodeOp: (id: number): Extract<MutateOp, { type: 'delete' }> => ({ type: 'delete', id }),
     encodePayload: (op) => ({ id: (op as Extract<MutateOp, { type: 'delete' }>).id }),
-    decodeGateway: () => undefined,
+    decodeGateway: voidDecode,
     dashboard: {
       subtype: 'delete',
       defaultError: 'Delete failed',
-      serviceDecode: () => undefined,
+      serviceDecode: voidDecode,
       // Single attempt, explicit for the Required<> driven-row pin (see update).
       retry: { retryAttempts: 1 },
-      validate: () => null,
-      depsArgs: (p) => [p.id as number],
-      projectDeps: () => ({}),
+      validate: noValidate,
+      depsArgs: idArg,
+      projectDeps: emptyProject,
     },
   }),
   defineSqliteWireOp({
@@ -272,8 +280,8 @@ export const SQLITE_WIRE_TABLE = [
       serviceDecode: (response) => ({ is_starred: requiredNonNegativeNumber(response.is_starred, 'is_starred') }),
       // Single attempt, explicit for the Required<> driven-row pin (see update).
       retry: { retryAttempts: 1 },
-      validate: () => null,
-      depsArgs: (p) => [p.id as number],
+      validate: noValidate,
+      depsArgs: idArg,
       projectDeps: (data) => ({ is_starred: (data as { is_starred: number }).is_starred }),
     },
   }),
@@ -361,7 +369,7 @@ export const SQLITE_WIRE_TABLE = [
     repoMethod: 'count',
     depsMethod: 'getCount',
     encodeOp: (): Extract<QueryOp, { kind: 'count' }> => ({ kind: 'count' }),
-    encodePayload: () => ({}),
+    encodePayload: emptyPayload,
     decodeGateway: (response) => {
       if (!Number.isFinite(response.count as number)) throw new Error('SQLite count response was missing a numeric count');
       return response.count as number;
@@ -524,7 +532,7 @@ export const DASHBOARD_SERVICE_TABLE = [
     op: 'clearAll',
     subtype: 'clear_all',
     defaultError: 'Clear all failed',
-    serviceDecode: () => undefined,
+    serviceDecode: voidDecode,
   }),
   defineDashboardServiceOp({
     op: 'status',
@@ -583,7 +591,7 @@ export const DASHBOARD_SERVICE_TABLE = [
     op: 'restoreDb',
     subtype: 'restore_db',
     defaultError: 'Restore failed',
-    serviceDecode: () => undefined,
+    serviceDecode: voidDecode,
   }),
   defineDashboardServiceOp({
     op: 'import',
@@ -721,14 +729,14 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'init',
     family: 'maintain',
     messageType: 'SQLITE_INIT',
-    encodePayload: () => ({}),
-    decodeGateway: () => true,
+    encodePayload: emptyPayload,
+    decodeGateway: trueDecode,
   }),
   defineSqliteMaintainWireOp({
     op: 'backup',
     family: 'maintain',
     messageType: 'SQLITE_BACKUP',
-    encodePayload: () => ({}),
+    encodePayload: emptyPayload,
     decodeGateway: (response) => new Uint8Array(response.data as number[]),
   }),
   defineSqliteMaintainWireOp({
@@ -736,14 +744,14 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     family: 'maintain',
     messageType: 'SQLITE_RESTORE',
     encodePayload: (op) => ({ data: Array.from((op as Extract<MaintainOp, { type: 'restore' }>).data) }),
-    decodeGateway: () => undefined,
+    decodeGateway: voidDecode,
   }),
   defineSqliteMaintainWireOp({
     op: 'clearAll',
     family: 'maintain',
     messageType: 'SQLITE_CLEAR_ALL',
-    encodePayload: () => ({}),
-    decodeGateway: () => undefined,
+    encodePayload: emptyPayload,
+    decodeGateway: voidDecode,
   }),
   defineSqliteMaintainWireOp({
     op: 'purgeOldRecords',
@@ -781,8 +789,8 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'healthCheck',
     family: 'maintain',
     messageType: 'SQLITE_HEALTH_CHECK',
-    encodePayload: () => ({}),
-    decodeGateway: () => true,
+    encodePayload: emptyPayload,
+    decodeGateway: trueDecode,
   }),
 ];
 
