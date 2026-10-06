@@ -47,7 +47,7 @@ import type { SqliteStatusResult } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 import type { ArchiveOpType } from './archiveWireTable.js';
 import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportRetryPolicy.js';
-import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
+import type { BrowsingLogEntry, BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import {
   requiredNonNegativeNumber,
@@ -136,6 +136,22 @@ type SqliteWireOpRow = Omit<SqliteWireOpDescriptor<string, unknown, unknown>, 'r
 
 export function defineSqliteWireOp<const R extends SqliteWireOpRow>(row: R): R & { retryPolicy: TransportRetryPolicy } {
   return { ...row, retryPolicy: getTransportRetryPolicy(row.messageType) };
+}
+
+type WireSuccess = { success: true } & Record<string, unknown>;
+
+export function decodeQueryGateway(response: WireSuccess): { rows: BrowsingLogRecord[]; total: number } {
+  return {
+    rows: ((response.rows as unknown[] | undefined) || []) as BrowsingLogRecord[],
+    total: response.total as number,
+  };
+}
+
+export function decodeQueryService(response: WireSuccess): { rows: BrowsingLogEntry[]; total: number } {
+  return {
+    rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
+    total: requiredNonNegativeNumber(response.total, 'total'),
+  };
 }
 
 export const SQLITE_WIRE_TABLE = [
@@ -286,20 +302,14 @@ export const SQLITE_WIRE_TABLE = [
     encodeOp: (q?: StorageQuery): Extract<QueryOp, { kind: 'records' }> =>
       q === undefined ? { kind: 'records' } : { kind: 'records', q },
     encodePayload: (op) => ((op as Extract<QueryOp, { kind: 'records' }>).q ?? {}) as Record<string, unknown>,
-    decodeGateway: (response) => ({
-      rows: ((response.rows as unknown[] | undefined) || []) as BrowsingLogRecord[],
-      total: response.total as number,
-    }),
+    decodeGateway: decodeQueryGateway,
     dashboard: {
       subtype: 'query',
       defaultError: 'Query failed',
       // Read path tolerates one retry (SQLite init timing) — owned here so
       // callers cannot forget or misconfigure it.
       retry: { retryAttempts: 2, retryDelayMs: 1000 },
-      serviceDecode: (response) => ({
-        rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
-        total: requiredNonNegativeNumber(response.total, 'total'),
-      }),
+      serviceDecode: decodeQueryService,
     },
   }),
   defineSqliteWireOp({
@@ -335,19 +345,13 @@ export const SQLITE_WIRE_TABLE = [
       // wire — normalizeStorageQuery drops unknown keys.
       return { kind: 'search', text: o.text, ...pickDefined({ limit: o.limit, offset: o.offset, orderBy: o.orderBy, orderDir: o.orderDir }) } as Record<string, unknown>;
     },
-    decodeGateway: (response) => ({
-      rows: ((response.rows as unknown[] | undefined) || []) as BrowsingLogRecord[],
-      total: response.total as number,
-    }),
+    decodeGateway: decodeQueryGateway,
     dashboard: {
       subtype: 'search',
       defaultError: 'Query failed',
       // Same init-timing retry as the records read path (row-owned).
       retry: { retryAttempts: 2, retryDelayMs: 1000 },
-      serviceDecode: (response) => ({
-        rows: requiredRows(response.rows, 'rows', isBrowsingLogEntry),
-        total: requiredNonNegativeNumber(response.total, 'total'),
-      }),
+      serviceDecode: decodeQueryService,
     },
   }),
   defineSqliteWireOp({
