@@ -4,6 +4,7 @@ import {
   resolveExtensionId,
   HEADLESS_FIXME_MESSAGE,
 } from './fixtures/launchExtensionContext.js';
+import { dismissConsentModal } from './fixtures/consentModal.js';
 
 /**
  * fix 09 (PBI 2026-09-05-09) / fix 25 (PBI 2026-09-05-25) の目視確認項目を
@@ -25,7 +26,10 @@ type PopupFixtures = {
 
 const testExt = base.extend<PopupFixtures>({
   popupContext: async ({}, use) => {
-    const context = await launchExtensionContext();
+    // Fresh-consent launch: no storage is seeded (consent: false), so the
+    // privacy modal stays visible. Deliberately not createPopupFixture —
+    // that helper dismisses the modal, which these specs must observe.
+    const context = await launchExtensionContext({ seedPolicy: { consent: false } });
     if (!context) {
       test.fixme(true, HEADLESS_FIXME_MESSAGE);
       return;
@@ -66,11 +70,7 @@ test.describe('Popup width range & wrapping (fix 09) @extension', () => {
       window.close = () => {};
     });
     await page.goto(`chrome-extension://${extensionId}/popup.html`);
-    const consentModal = page.locator('#privacyConsentModal');
-    if (await consentModal.isVisible().catch(() => false)) {
-      await page.locator('#consentCheckbox').check();
-      await page.locator('#acceptConsentBtn').click();
-    }
+    await dismissConsentModal(page);
   });
 
   test.afterAll(async () => {
