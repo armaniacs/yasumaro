@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({
   hoistedMockGet: vi.fn().mockResolvedValue({ domain_whitelist: [] }),
   hoistedMockSave: vi.fn().mockResolvedValue(undefined),
@@ -229,37 +230,7 @@ vi.mock('../../utils/i18n.js', async () => {
  * does not implement them.
  */
 function setupDialogDOM() {
-  document.body.innerHTML = `
-    <dialog id="private-page-dialog">
-      <div id="dialog-message"></div>
-      <button id="dialog-cancel">Cancel</button>
-      <button id="dialog-save-once">Save Once</button>
-      <button id="dialog-save-domain">Save for Domain</button>
-      <button id="dialog-save-path">Save for Path</button>
-    </dialog>
-    <dialog id="recording-failed-dialog">
-      <div id="recording-failed-message"></div>
-      <button id="recording-failed-dismiss">Dismiss</button>
-      <button id="recording-failed-retry">Retry</button>
-    </dialog>
-    <div id="mainStatus"></div>
-  `;
-
-  // Polyfill HTMLDialogElement methods for jsdom.
-  // close() dispatches a real 'close' event like the native dialog, so the
-  // focus-trap release wired to the 'close' event is exercised too.
-  for (const id of ['private-page-dialog', 'recording-failed-dialog']) {
-    const dialog = document.getElementById(id) as any;
-    if (dialog) {
-      dialog.showModal = function () {
-        this.open = true;
-      };
-      dialog.close = function () {
-        this.open = false;
-        this.dispatchEvent(new Event('close'));
-      };
-    }
-  }
+  setupPopupDom({ includePending: false });
 }
 
 /**

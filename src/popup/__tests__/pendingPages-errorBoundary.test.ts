@@ -99,18 +99,10 @@ Object.defineProperty(global, 'chrome', {
 });
 
 import { saveSelectedPages, setupEventListeners } from '../pendingPages.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 function setupDom(): void {
-  document.body.innerHTML = [
-    '<div id="pending-section"></div>',
-    '<div id="pending-empty"></div>',
-    '<div id="pending-pages-list"></div>',
-    '<div id="mainStatus"></div>',
-    '<button id="btn-select-all"></button>',
-    '<button id="btn-save-selected"></button>',
-    '<button id="btn-save-whitelist"></button>',
-    '<button id="btn-discard"></button>',
-  ].join('\n');
+  setupPopupDom({ includeDialogs: false });
   setupEventListeners();
 }
 

@@ -11,6 +11,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { waitForMock } from '../../../testDir/waitPolicy.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 const MSG = 'the pending-record worker is asleep';
 
@@ -99,41 +100,7 @@ vi.mock('../../utils/permissionManager.js', () => ({
 vi.mock('../autoClose.js', () => ({ startAutoCloseTimer: mockStartAutoCloseTimer }));
 
 function setupDom(): void {
-  document.body.innerHTML = [
-    '<div id="pending-section"></div>',
-    '<div id="pending-empty"></div>',
-    '<div id="pending-pages-list"></div>',
-    '<div id="mainStatus"></div>',
-    '<button id="btn-select-all"></button>',
-    '<button id="btn-save-selected"></button>',
-    '<button id="btn-save-whitelist"></button>',
-    '<button id="btn-discard"></button>',
-    '<dialog id="private-page-dialog">',
-    '  <div id="dialog-message"></div>',
-    '  <button id="dialog-cancel">Cancel</button>',
-    '  <button id="dialog-save-once">Save Once</button>',
-    '  <button id="dialog-save-domain">Save for Domain</button>',
-    '  <button id="dialog-save-path">Save for Path</button>',
-    '</dialog>',
-    '<dialog id="recording-failed-dialog">',
-    '  <div id="recording-failed-message"></div>',
-    '  <button id="recording-failed-dismiss">Dismiss</button>',
-    '  <button id="recording-failed-retry">Retry</button>',
-    '</dialog>',
-    '<div id="allUrlsPermissionBanner" class="hidden"></div>',
-    '<button id="btnRequestAllUrls"></button>',
-  ].join('\n');
-  for (const id of ['private-page-dialog', 'recording-failed-dialog']) {
-    const dialog = document.getElementById(id) as HTMLDialogElement & {
-      showModal: () => void;
-      close: () => void;
-    };
-    dialog.showModal = function () { this.open = true; };
-    dialog.close = function () {
-      this.open = false;
-      this.dispatchEvent(new Event('close'));
-    };
-  }
+  setupPopupDom({ includePermissionBanner: true });
 }
 
 function pendingSave(): Record<string, unknown> {

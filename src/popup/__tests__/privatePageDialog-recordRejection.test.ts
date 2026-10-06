@@ -7,6 +7,7 @@
  * test of its own: nothing else in the suite would notice if it were dropped.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 const { mockRecordPendingPage, mockLogError } = vi.hoisted(() => ({
   mockRecordPendingPage: vi.fn(),
@@ -56,32 +57,7 @@ vi.mock('../../utils/i18n.js', async () => {
 });
 
 function setupDom(): void {
-  document.body.innerHTML = [
-    '<dialog id="private-page-dialog">',
-    '  <div id="dialog-message"></div>',
-    '  <button id="dialog-cancel">Cancel</button>',
-    '  <button id="dialog-save-once">Save Once</button>',
-    '  <button id="dialog-save-domain">Save for Domain</button>',
-    '  <button id="dialog-save-path">Save for Path</button>',
-    '</dialog>',
-    '<dialog id="recording-failed-dialog">',
-    '  <div id="recording-failed-message"></div>',
-    '  <button id="recording-failed-dismiss">Dismiss</button>',
-    '  <button id="recording-failed-retry">Retry</button>',
-    '</dialog>',
-    '<div id="mainStatus"></div>',
-  ].join('\n');
-  for (const id of ['private-page-dialog', 'recording-failed-dialog']) {
-    const dialog = document.getElementById(id) as HTMLDialogElement & {
-      showModal: () => void;
-      close: () => void;
-    };
-    dialog.showModal = function () { this.open = true; };
-    dialog.close = function () {
-      this.open = false;
-      this.dispatchEvent(new Event('close'));
-    };
-  }
+  setupPopupDom({ includePending: false });
 }
 
 // Must run before the module is imported: its listeners bind at load time.

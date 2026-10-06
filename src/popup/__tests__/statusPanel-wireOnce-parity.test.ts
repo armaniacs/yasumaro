@@ -93,6 +93,7 @@ vi.mock('../../utils/domainUtils.js', () => ({
 // NOTE: domUtils is NOT mocked — the real wireOnce is the subject of the pin.
 
 import { initStatusPanel } from '../statusPanel.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 const defaultMessages: Record<string, string> = {
   statusTrustLocked: 'LOCKED',
@@ -116,31 +117,7 @@ const defaultMessages: Record<string, string> = {
 };
 
 function setupDefaultDom(): void {
-  document.body.innerHTML = [
-    '<div id="statusPanel">',
-    '  <div id="statusDomainIcon"></div>',
-    '  <span id="statusDomainLabel" class="status-label"></span>',
-    '  <div id="statusPrivacyIcon"></div>',
-    '  <span id="statusPrivacyLabel" class="status-label"></span>',
-    '  <div id="statusDomainState"></div>',
-    '  <div id="statusDomainMode"></div>',
-    '  <div id="statusPrivacyContent"></div>',
-    '  <div id="statusCacheContent"></div>',
-    '  <div id="statusLastSavedContent"></div>',
-    '  <div id="statusCleansingContent"></div>',
-    '  <div id="statusTrustContent"></div>',
-    '  <div id="statusModeBadge"></div>',
-    '  <button id="statusToggleBtn" aria-expanded="false"></button>',
-    '  <div id="statusDetails"></div>',
-    '  <span id="statusToggleText"></span>',
-    '  <div id="permissionRequestArea" class="hidden"></div>',
-    '  <div id="permissionDeniedMessage" class="hidden"></div>',
-    '  <button id="recordBtn"></button>',
-    '  <button id="statusAddDomain"></button>',
-    '  <button id="statusAddPath"></button>',
-    '</div>',
-    '<div id="mainStatus"></div>',
-  ].join('\n');
+  setupPopupDom({ includePending: false, includeDialogs: false, includeStatusPanel: true });
 }
 
 function stubTabs(): void {
