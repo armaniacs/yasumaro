@@ -17,6 +17,9 @@ import {
   OPFS_WORKER_UNAVAILABLE_ERROR,
   OPFS_DEGRADE_FAILURE_THRESHOLD,
 } from '../OpfsWorkerBackend.js';
+import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+
+const deadWorkerRecord: BrowsingLogRecord = { url: 'https://example.com/', created_at: 1 };
 
 type Reply = (type: string) => unknown;
 
@@ -137,6 +140,30 @@ describe('OpfsWorkerBackend — consecutive-failure counter', () => {
 
     expect(onDegraded).toHaveBeenCalledOnce();
   });
+
+  it('counts mutation failures toward the degrade ladder too', async () => {
+    const onDegraded = vi.fn();
+    const { backend } = makeBackend(() => null, onDegraded);
+
+    for (let i = 0; i < OPFS_DEGRADE_FAILURE_THRESHOLD; i++) {
+      await expect(backend.insert(deadWorkerRecord)).resolves.toEqual({
+        success: false,
+        error: OPFS_WORKER_UNAVAILABLE_ERROR,
+      });
+    }
+    expect(onDegraded).toHaveBeenCalledOnce();
+  });
+
+  it('counts mutation failures across methods, not per method', async () => {
+    const onDegraded = vi.fn();
+    const { backend } = makeBackend(() => null, onDegraded);
+
+    await backend.insert(deadWorkerRecord);
+    await backend.update(1, { title: 'x' });
+    await backend.toggleStar(1);
+
+    expect(onDegraded).toHaveBeenCalledOnce();
+  });
 });
 
 describe('OpfsWorkerBackend — one unavailable-reason constant', () => {
@@ -157,6 +184,13 @@ describe('OpfsWorkerBackend — one unavailable-reason constant', () => {
     ['queryAuditLog', (b) => b.queryAuditLog({ limit: 10 })],
     ['archiveStatus', (b) => b.archiveStatus()],
     ['archiveCreate', (b) => b.archiveCreate({ cutoffDate: '2026-09-01', cutoffMs: 1, includeDeleted: false, yasumaroVersion: '1' })],
+    ['insert', (b) => b.insert(deadWorkerRecord)],
+    ['insertBatch', (b) => b.insertBatch([deadWorkerRecord])],
+    ['update', (b) => b.update(1, { title: 'x' })],
+    ['delete', (b) => b.delete(1)],
+    ['toggleStar', (b) => b.toggleStar(1)],
+    ['insertAuditLog', (b) => b.insertAuditLog({ provider: 'openai', url: 'https://example.com/', created_at: 1 })],
+    ['clearAll', (b) => b.clearAll()],
   ];
 
   it.each(proxyMethods)('%s reports the shared reason when the worker is gone', async (_name, call) => {

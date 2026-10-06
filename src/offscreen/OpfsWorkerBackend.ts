@@ -53,6 +53,11 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
    * through it is what makes the failure counter complete: the per-method
    * `if (result === null)` checks it replaces each saw only their own call, so
    * a mixed success/failure workload could never accumulate evidence.
+   *
+   * Mutation calls (insert/insertBatch/update/delete/toggleStar/insertAuditLog/
+   * clearAll) route through it too. `sendToOpfsWorker` throws raw rejections
+   * and never reaches this counter, so a mutation that bypasses this method
+   * fails forever without tripping the degrade ladder onto IDB.
    */
   private async callWorker<T>(type: string, payload?: unknown): Promise<T | null> {
     const result = await this.engine.tryOpfsProxy<T>(type, payload);
@@ -102,12 +107,14 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
-    const result = await this.engine.sendToOpfsWorker('INSERT', record) as { id: number };
+    const result = await this.callWorker<{ id: number }>('INSERT', record);
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, id: result.id };
   }
 
   async insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>> {
-    const result = await this.engine.sendToOpfsWorker('INSERT_BATCH', records) as { count: number; inserted: number; skipped: number };
+    const result = await this.callWorker<{ count: number; inserted: number; skipped: number }>('INSERT_BATCH', records);
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, inserted: result.inserted, skipped: result.skipped };
   }
 
@@ -125,17 +132,20 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>> {
-    await this.engine.sendToOpfsWorker('UPDATE', { id, changes });
+    const result = await this.callWorker<unknown>('UPDATE', { id, changes });
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true };
   }
 
   async delete(id: number): Promise<BackendOrError<MutationResult>> {
-    await this.engine.sendToOpfsWorker('DELETE', { id });
+    const result = await this.callWorker<unknown>('DELETE', { id });
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true };
   }
 
   async toggleStar(id: number): Promise<BackendOrError<StarResult>> {
-    const result = await this.engine.sendToOpfsWorker('TOGGLE_STAR', { id }) as { is_starred: number };
+    const result = await this.callWorker<{ is_starred: number }>('TOGGLE_STAR', { id });
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, is_starred: result.is_starred };
   }
 
@@ -244,7 +254,8 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
-    const result = await this.engine.sendToOpfsWorker('AUDIT_LOG_INSERT', record) as { id: number };
+    const result = await this.callWorker<{ id: number }>('AUDIT_LOG_INSERT', record);
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, id: result.id };
   }
 
@@ -269,7 +280,8 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async clearAll(): Promise<BackendOrError<MutationResult>> {
-    await this.engine.sendToOpfsWorker('CLEAR_ALL', {});
+    const result = await this.callWorker<unknown>('CLEAR_ALL', {});
+    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true };
   }
 }
