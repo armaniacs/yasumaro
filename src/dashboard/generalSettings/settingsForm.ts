@@ -8,7 +8,7 @@
  * the module it was meant to replace.
  */
 
-import { StorageKeys, ProviderSlot } from '../../utils/storage/types.js';
+import { StorageKeys, ProviderSlot, type Settings } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
@@ -82,8 +82,77 @@ export function applyProviderPrioritySlots(slots: ProviderSlot[]): void {
   }
 }
 
-export async function loadGeneralSettings(repo: SettingsReader = settingsRepository): Promise<void> {
-  const settings = await repo.getAll();
+/**
+ * Checkbox → visibility rules shared by load-time apply and change-time
+ * wiring. Adding a 4th rule is one row here — both timings loop this table
+ * so they cannot drift.
+ */
+export interface VisibilityRule {
+  readonly inputId: string;
+  readonly targetId: string;
+  readonly apply: (target: HTMLElement, checked: boolean) => void;
+}
+
+export const VISIBLE_WHEN: ReadonlyArray<VisibilityRule> = [
+  {
+    inputId: 'obsidianEnabled',
+    targetId: 'obsidianSettingsDetails',
+    apply: (target, checked) => {
+      (target as HTMLDetailsElement).open = checked;
+    },
+  },
+  {
+    inputId: 'localMarkdownExportEnabled',
+    targetId: 'localMarkdownExportSettings',
+    apply: (target, checked) => {
+      target.classList.toggle('hidden', !checked);
+    },
+  },
+  {
+    inputId: 'reviewSummaryEnabled',
+    targetId: 'reviewSummaryManualActions',
+    apply: (target, checked) => {
+      target.classList.toggle('hidden', !checked);
+    },
+  },
+];
+
+type QueryRoot = { querySelector(sel: string): Element | null };
+
+/** Apply every VISIBLE_WHEN rule once (load-time sync). */
+export function applyVisibilityToggles(root: QueryRoot = document): void {
+  for (const rule of VISIBLE_WHEN) {
+    const input = root.querySelector(`#${rule.inputId}`) as HTMLInputElement | null;
+    const target = root.querySelector(`#${rule.targetId}`) as HTMLElement | null;
+    if (input && target) rule.apply(target, input.checked);
+  }
+}
+
+/** Wire every VISIBLE_WHEN rule to its checkbox change event. */
+export function setupVisibilityToggles(root: QueryRoot = document): void {
+  for (const rule of VISIBLE_WHEN) {
+    const input = root.querySelector(`#${rule.inputId}`) as HTMLInputElement | null;
+    const target = root.querySelector(`#${rule.targetId}`) as HTMLElement | null;
+    if (input && target) input.addEventListener('change', () => rule.apply(target, input.checked));
+  }
+}
+
+function isSettingsReader(value: unknown): value is SettingsReader {
+  return !!value && typeof (value as SettingsReader).getAll === 'function';
+}
+
+export async function loadGeneralSettings(
+  repoOrSnapshot: SettingsReader | Settings = settingsRepository,
+  maybeSnapshot?: Settings,
+): Promise<void> {
+  let settings: Settings;
+  if (maybeSnapshot !== undefined) {
+    settings = maybeSnapshot;
+  } else if (isSettingsReader(repoOrSnapshot)) {
+    settings = await repoOrSnapshot.getAll();
+  } else {
+    settings = repoOrSnapshot;
+  }
   loadSettingsToInputs(document.querySelector(SETTINGS_FORM_SELECTOR) ?? document.body, settings, GENERAL_SETTINGS_SCHEMA);
   loadLocalMarkdownExportTiming(settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING]);
 
@@ -104,26 +173,10 @@ export async function loadGeneralSettings(repo: SettingsReader = settingsReposit
   updateAIProviderVisibilityMulti(getAiProviderElements(), selectedProviders);
   updateProviderSettingsLayout(selectedProviders);
 
-  // Sync Obsidian details open state with checkbox
-  const obsidianEnabledInput = document.getElementById('obsidianEnabled') as HTMLInputElement | null;
-  const details = document.getElementById('obsidianSettingsDetails') as HTMLDetailsElement | null;
-  if (details && obsidianEnabledInput) {
-    details.open = obsidianEnabledInput.checked;
-  }
-
-  // Sync Local Markdown Export settings visibility with checkbox
-  const localMarkdownExportEnabledInput = document.getElementById('localMarkdownExportEnabled') as HTMLInputElement | null;
-  const localExportSettingsDiv = document.getElementById('localMarkdownExportSettings') as HTMLElement | null;
-  if (localExportSettingsDiv && localMarkdownExportEnabledInput) {
-    localExportSettingsDiv.classList.toggle('hidden', !localMarkdownExportEnabledInput.checked);
-  }
-
-  // Sync Review Summary manual actions visibility with checkbox
-  const reviewSummaryManualActionsDiv = document.getElementById('reviewSummaryManualActions') as HTMLElement | null;
-  const reviewSummaryEnabledInput = document.getElementById('reviewSummaryEnabled') as HTMLInputElement | null;
-  if (reviewSummaryManualActionsDiv && reviewSummaryEnabledInput) {
-    reviewSummaryManualActionsDiv.classList.toggle('hidden', !reviewSummaryEnabledInput.checked);
-  }
+  // Sync checkbox-driven visibility (obsidian details, local export,
+  // review summary) — one loop over VISIBLE_WHEN so load-time and
+  // change-time apply the same rules.
+  applyVisibilityToggles(document);
 
   // Load openai-compatible provider selection
   const selectedProviderInfoDiv = document.getElementById('selectedProviderInfo') as HTMLElement | null;

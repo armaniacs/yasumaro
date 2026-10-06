@@ -7,6 +7,7 @@ import {
   loadGeneralSettings,
   handlePurgeNow, handleContentPurgeNow,
   setupRetentionUnlimitedWarning,
+  setupVisibilityToggles,
 } from '../../generalSettings/settingsForm.js';
 import {
   handleSaveOnly, handleTestObsidian, handleTestAi, handleTestLocalMarkdown,
@@ -34,24 +35,6 @@ async function handleGenerateReviewSummary(btnId: string, periodType: 'weekly' |
   await generateReviewSummary({ button: btn, statusElement: statusEl, periodType });
 }
 
-/**
- * The three show/hide follow-ups (obsidian details, local export, review
- * summary) share one change-listener shape: absent either element, no-op.
- */
-function wireVisibilityToggle(
-  input: HTMLInputElement | null,
-  target: HTMLElement | null,
-  apply: (target: HTMLElement, checked: boolean) => void,
-): void {
-  if (input && target) {
-    input.addEventListener('change', () => apply(target, input.checked));
-  }
-}
-
-const toggleHidden = (target: HTMLElement, checked: boolean): void => {
-  target.classList.toggle('hidden', !checked);
-};
-
 export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
   let panelContainer: HTMLElement | null = null;
   // One mutable snapshot shared by mount() and refresh(). The layout toggle
@@ -68,7 +51,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
     if (!container) return;
     currentSettings = await settingsRepository.getAll();
     loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
-    await loadGeneralSettings();
+    await loadGeneralSettings(currentSettings);
   };
   return {
     id: 'panel-general',
@@ -84,19 +67,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
 
       await reloadFromRepository();
 
-      const obsidianEnabled = container.querySelector('#obsidianEnabled') as HTMLInputElement | null;
-      const obsidianDetails = container.querySelector('#obsidianSettingsDetails') as HTMLDetailsElement | null;
-      wireVisibilityToggle(obsidianEnabled, obsidianDetails, (target, checked) => {
-        (target as HTMLDetailsElement).open = checked;
-      });
-
-      const localExportEnabled = container.querySelector('#localMarkdownExportEnabled') as HTMLInputElement | null;
-      const localExportSettingsDiv = container.querySelector('#localMarkdownExportSettings') as HTMLElement | null;
-      wireVisibilityToggle(localExportEnabled, localExportSettingsDiv, toggleHidden);
-
-      const reviewSummaryEnabled = container.querySelector('#reviewSummaryEnabled') as HTMLInputElement | null;
-      const reviewSummaryManualActions = container.querySelector('#reviewSummaryManualActions') as HTMLElement | null;
-      wireVisibilityToggle(reviewSummaryEnabled, reviewSummaryManualActions, toggleHidden);
+      setupVisibilityToggles(container);
 
       for (const { btnId, periodType } of REVIEW_SUMMARY_BUTTONS) {
         container.querySelector(`#${btnId}`)?.addEventListener('click', () => handleGenerateReviewSummary(btnId, periodType));

@@ -59,6 +59,64 @@ const SAVE_ERROR_MESSAGES: Readonly<Record<string, readonly [key: string, fallba
   aiProviderPriorityDuplicateWarning: ['aiProviderPriorityDuplicateWarning', 'Duplicate provider and model'],
 };
 
+/**
+ * Numeric retention keys whose form value coerces `''|undefined → null` and
+ * any other string via `Number()`. Adding a 5th key is one row here — the
+ * save path loops this table so coercion cannot be forgotten per key.
+ */
+export const NUMERIC_TO_NULL: ReadonlyArray<string> = [
+  StorageKeys.SQLITE_RETENTION_DAYS,
+  StorageKeys.SQLITE_MAX_RECORDS,
+  StorageKeys.CONTENT_RETENTION_DAYS,
+  StorageKeys.CONTENT_MAX_RECORDS,
+];
+
+/** Apply the NUMERIC_TO_NULL coercion to an extracted settings delta. */
+export function applyNumericNullCoercion(newSettings: Record<string, unknown>): void {
+  for (const key of NUMERIC_TO_NULL) {
+    const raw = newSettings[key];
+    newSettings[key] = raw === '' || raw === undefined ? null : Number(raw);
+  }
+}
+
+/**
+ * Render the B-layout priority warnings (duplicate + P1-required) into the
+ * B list container. Pure DOM sync extracted from saveDashboardSettings so
+ * the save path keeps only validate → render → return.
+ */
+export function renderBPriorityWarnings(bList: HTMLElement): { p1Empty: boolean } {
+  const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
+  // UIの重複警告を同期（row-aware）
+  const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
+  rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
+  let warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
+  if (!valid) {
+    if (!warn) {
+      warn = document.createElement('div');
+      warn.className = 'b-priority-warn field-error';
+      warn.setAttribute('role', 'alert');
+      bList.appendChild(warn);
+    }
+    warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
+  } else {
+    warn?.remove();
+  }
+  let reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
+  if (p1Empty) {
+    if (!reqWarn) {
+      reqWarn = document.createElement('div');
+      reqWarn.className = 'b-priority-req-warn field-error';
+      reqWarn.setAttribute('role', 'alert');
+      bList.appendChild(reqWarn);
+    }
+    reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
+    rows[0]?.classList.add('has-error');
+  } else {
+    reqWarn?.remove();
+  }
+  return { p1Empty };
+}
+
 /** Message for a saveDashboardSettings failure; unknown errors share one text. */
 export function saveErrorText(error: string | undefined): string {
   const entry = error ? SAVE_ERROR_MESSAGES[error] : undefined;
@@ -134,9 +192,12 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   }
 
   const newSettings = extractSettingsFromInputs(document.querySelector(formSelector) ?? document.body, GENERAL_SETTINGS_SCHEMA);
+  // Single snapshot shared by the layout gate and the empty-value guard
+  // below — one fetch per save instead of two reads of the same state.
+  const currentSettings = await settingsRepository.getAll();
   // A/B collection lives in collectCurrentProviderPrioritySlots; the gate
   // below only guards the B validation UI + P1 save block, not collection.
-  const layout = (await settingsRepository.getAll())[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
+  const layout = (currentSettings as Record<string, unknown>)[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
   const bList = document.getElementById('bPriorityList') as HTMLElement | null;
   // Throw semantics (PBI 2026-10-02-09; B-throw unified): any collector
   // failure (A or B) propagates out of collectCurrentProviderPrioritySlots.
@@ -151,40 +212,14 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   }
   if (isBPriorityListActive(layout, bList)) {
     // Bレイアウト時の保存ブロック: P1必須（Spec §6）。Aは従来通りフォールバックでgeminiのためブロックしない。
-    const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
-    // UIの重複警告を同期（row-aware）
-    const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
-    rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
-    let warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
-    if (!valid) {
-      if (!warn) {
-        warn = document.createElement('div');
-        warn.className = 'b-priority-warn field-error';
-        warn.setAttribute('role', 'alert');
-        bList.appendChild(warn);
-      }
-      warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-    } else {
-      warn?.remove();
-    }
-    let reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
+    const { p1Empty } = renderBPriorityWarnings(bList);
     if (p1Empty) {
-      if (!reqWarn) {
-        reqWarn = document.createElement('div');
-        reqWarn.className = 'b-priority-req-warn field-error';
-        reqWarn.setAttribute('role', 'alert');
-        bList.appendChild(reqWarn);
-      }
-      reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-      rows[0]?.classList.add('has-error');
       // status エリアにも表示して保存を中断
       const statusEl = document.getElementById('status') as HTMLElement | null;
       if (statusEl) {
         showStatus(statusEl, saveErrorText('aiProviderPriority1Required'), 'error', { autoClear: false });
       }
       return { success: false, error: 'aiProviderPriority1Required' };
-    } else {
-      reqWarn?.remove();
     }
   }
 
@@ -194,22 +229,7 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   }
 
   // Convert retention select values: "" → null, numeric string → number
-  const retentionDaysRaw = newSettings[StorageKeys.SQLITE_RETENTION_DAYS];
-  newSettings[StorageKeys.SQLITE_RETENTION_DAYS] =
-    retentionDaysRaw === '' || retentionDaysRaw === undefined ? null : Number(retentionDaysRaw);
-  const maxRecordsRaw = newSettings[StorageKeys.SQLITE_MAX_RECORDS];
-  newSettings[StorageKeys.SQLITE_MAX_RECORDS] =
-    maxRecordsRaw === '' || maxRecordsRaw === undefined ? null : Number(maxRecordsRaw);
-
-  // Content retention (PBI-3)
-  const contentDaysRaw = newSettings[StorageKeys.CONTENT_RETENTION_DAYS];
-  newSettings[StorageKeys.CONTENT_RETENTION_DAYS] =
-    contentDaysRaw === '' || contentDaysRaw === undefined ? null : Number(contentDaysRaw);
-  const contentMaxRaw = newSettings[StorageKeys.CONTENT_MAX_RECORDS];
-  newSettings[StorageKeys.CONTENT_MAX_RECORDS] =
-    contentMaxRaw === '' || contentMaxRaw === undefined ? null : Number(contentMaxRaw);
-
-  const currentSettings = await settingsRepository.getAll();
+  applyNumericNullCoercion(newSettings as Record<string, unknown>);
 
   // Guard: never blank a stored provider connection field (base URL / model /
   // API key) with an empty extracted value. An empty input on save means the

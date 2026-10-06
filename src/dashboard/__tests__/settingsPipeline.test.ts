@@ -87,7 +87,7 @@ vi.mock('../utils/confirmDialog.js', () => ({
   showConfirmDialog: vi.fn().mockResolvedValue(true),
 }));
 
-import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS } from '../settingsPipeline.js';
+import { saveDashboardSettings, GENERAL_SETTINGS_VALIDATION_FIELDS, NUMERIC_TO_NULL, applyNumericNullCoercion, renderBPriorityWarnings } from '../settingsPipeline.js';
 import { collectProviderPrioritySlots } from '../generalSettings/settingsForm.js';
 import { collectBProviderPrioritySlots } from '../aiProviderB/priorityListView.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
@@ -364,6 +364,70 @@ describe('saveDashboardSettings', () => {
         ai_provider_priority_list: [{ provider: 'openai', model: 'gpt-4o' }],
       }),
     );
+  });
+});
+
+describe('NUMERIC_TO_NULL coercion table', () => {
+  it('covers the four retention keys', () => {
+    expect([...NUMERIC_TO_NULL].sort()).toEqual(
+      ['content_max_records', 'content_retention_days', 'sqlite_max_records', 'sqlite_retention_days'].sort(),
+    );
+  });
+
+  it("maps '' and undefined to null and numeric strings via Number()", () => {
+    const delta: Record<string, unknown> = {
+      sqlite_retention_days: '',
+      sqlite_max_records: undefined,
+      content_retention_days: '30',
+      content_max_records: '0',
+    };
+    applyNumericNullCoercion(delta);
+    expect(delta).toEqual({
+      sqlite_retention_days: null,
+      sqlite_max_records: null,
+      content_retention_days: 30,
+      content_max_records: 0,
+    });
+  });
+
+  it('saves with a single pipeline snapshot read (plus downstream reads)', async () => {
+    setupInputs('https');
+    mockExtract.mockReturnValue({});
+    await saveDashboardSettings();
+    // Pipeline snapshot (layout + blank-guard share one getAll) plus the
+    // provider-origin confirmation and domain-filter cache reads — previously
+    // 4 (2 pipeline + 2 downstream).
+    expect(mockGetSettings).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('renderBPriorityWarnings', () => {
+  it('renders the duplicate warning and marks duplicate rows', () => {
+    setupBDom();
+    const bList = document.getElementById('bPriorityList') as HTMLElement;
+    bList.innerHTML += `
+    <div class="b-priority-row">
+      <select>
+        <option value="openai" selected>openai</option>
+      </select>
+      <input class="b-priority-model-input" value="gpt-4o" />
+    </div>
+    `;
+    const { p1Empty } = renderBPriorityWarnings(bList);
+    expect(p1Empty).toBe(false);
+    expect(bList.querySelector('.b-priority-warn')).not.toBeNull();
+    expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(2);
+  });
+
+  it('renders the P1-required warning and removes it once P1 is filled', () => {
+    setupBDom();
+    const bList = document.getElementById('bPriorityList') as HTMLElement;
+    bList.querySelector('.b-priority-row select')!.value = '';
+    expect(renderBPriorityWarnings(bList).p1Empty).toBe(true);
+    expect(bList.querySelector('.b-priority-req-warn')).not.toBeNull();
+    bList.querySelector('.b-priority-row select')!.value = 'openai';
+    expect(renderBPriorityWarnings(bList).p1Empty).toBe(false);
+    expect(bList.querySelector('.b-priority-req-warn')).toBeNull();
   });
 });
 
