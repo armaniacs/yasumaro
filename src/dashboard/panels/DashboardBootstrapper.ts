@@ -1,5 +1,5 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
-import { DEFAULT_PANEL_ID, PANEL_CATALOG, type PanelCatalogId } from './panelCatalog.js';
+import { DEFAULT_PANEL_ID, PANEL_CATALOG, CATALOG_ROWS, type PanelCatalogId } from './panelCatalog.js';
 import { type PanelLifecycle } from './types.js';
 
 /**
@@ -33,7 +33,7 @@ export class DashboardBootstrapper {
    * whywhy/pbi25-catalog.md「Why3」。
    */
   registerCatalog(createPanel: (id: PanelCatalogId) => PanelLifecycle): void {
-    for (const entry of PANEL_CATALOG) {
+    for (const entry of CATALOG_ROWS) {
       this.registry.register(createPanel(entry.id));
     }
   }

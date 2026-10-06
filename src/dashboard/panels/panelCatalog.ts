@@ -37,8 +37,12 @@ export interface PanelCatalogEntry {
 
 /**
  * カタログ順 = sidebar 表示順。
+ *
+ * リテラル保持は CATALOG_ROWS が担い (as const)、公開用の PANEL_CATALOG は
+ * widened view として同一参照を指す。PanelCatalogId は CATALOG_ROWS から
+ * 導出するため、アノテーションで上書きされない。
  */
-export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
+export const CATALOG_ROWS = [
   { id: 'panel-general', sidebarSection: 'settings', sidebarI18nKey: 'mainTabDashboard', deepLinkSections: ['obsidian', 'ai-provider', 'general'] },
   { id: 'panel-domain', sidebarSection: 'settings', sidebarI18nKey: 'domainTab', deepLinkSections: [] },
   { id: 'panel-prompt', sidebarSection: 'settings', sidebarI18nKey: 'promptTab', deepLinkSections: [] },
@@ -65,9 +69,11 @@ export const PANEL_CATALOG: readonly PanelCatalogEntry[] = [
   { id: 'panel-tag-cluster-time-slider', sidebarSection: 'data', sidebarI18nKey: 'tagClusterTimeSliderTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
-] as const;
+] as const satisfies readonly PanelCatalogEntry[];
 
-export type PanelCatalogId = (typeof PANEL_CATALOG)[number]['id'];
+export const PANEL_CATALOG: readonly PanelCatalogEntry[] = CATALOG_ROWS;
+
+export type PanelCatalogId = (typeof CATALOG_ROWS)[number]['id'];
 
 export const DEFAULT_PANEL_ID: PanelCatalogId = 'panel-general';
 
@@ -80,11 +86,13 @@ export const SIDEBAR_PANELS: readonly PanelCatalogEntry[] = PANEL_CATALOG.filter
 /** `?tab=` → panel id。該当なしは null (呼び出し側がデフォルトに倒す)。 */
 export function resolvePanelIdForTab(tab: string | null): PanelCatalogId | null {
   if (!tab) return null;
-  return PANEL_CATALOG.find((entry) => entry.tabParam === tab)?.id as PanelCatalogId ?? null;
+  // Widen to the declared entry type: `as const` rows omit optional keys
+  // (e.g. tabParam) and narrow arrays to tuples, which breaks direct access.
+  return CATALOG_ROWS.find((entry: PanelCatalogEntry) => entry.tabParam === tab)?.id ?? null;
 }
 
 /** `?section=` → panel id。該当なしは null (呼び出し側がデフォルトに倒す)。 */
 export function resolvePanelIdForSection(section: string | null): PanelCatalogId | null {
   if (!section) return null;
-  return PANEL_CATALOG.find((entry) => entry.deepLinkSections.includes(section))?.id as PanelCatalogId ?? null;
+  return CATALOG_ROWS.find((entry: PanelCatalogEntry) => entry.deepLinkSections.includes(section))?.id ?? null;
 }

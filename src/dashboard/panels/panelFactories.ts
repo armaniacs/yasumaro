@@ -6,7 +6,7 @@
  * DIRECT_FACTORIES のキーは `Exclude<PanelCatalogId, StaticFormPanelId>` なので、
  * カタログに行を足して factory も static spec も足さないと type-check が落ちる。
  */
-import { type PanelCatalogId, PANEL_CATALOG } from './panelCatalog.js';
+import { CATALOG_ROWS, type PanelCatalogId } from './panelCatalog.js';
 import { type PanelLifecycle } from './types.js';
 import { createDiagnosticsPanel } from './diagnostic/diagnosticsPanel.js';
 import { createExportLogsPanel } from './diagnostic/exportLogsPanel.js';
@@ -48,13 +48,13 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
 };
 
 export function createPanelById(id: PanelCatalogId): PanelLifecycle {
-  const direct = (DIRECT_FACTORIES as Record<string, (() => PanelLifecycle) | undefined>)[id];
-  if (direct) return direct();
   if (isStaticFormId(id)) return createStaticPanelById(id);
+  const direct: (() => PanelLifecycle) | undefined = DIRECT_FACTORIES[id];
+  if (direct) return direct();
   throw new Error(`No factory for panel "${id}"`);
 }
 
 /** Catalog order — the single registration sequence used by main.ts. */
 export function createAllPanelsInCatalogOrder(): PanelLifecycle[] {
-  return PANEL_CATALOG.map((entry) => createPanelById(entry.id));
+  return CATALOG_ROWS.map((entry) => createPanelById(entry.id));
 }

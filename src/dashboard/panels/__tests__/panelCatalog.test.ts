@@ -16,6 +16,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   PANEL_CATALOG,
+  CATALOG_ROWS,
   SIDEBAR_PANELS,
   DEFAULT_PANEL_ID,
   resolvePanelIdForTab,
@@ -238,7 +239,7 @@ describe('panelCatalog — factory 網羅', () => {
 
   it('covers every catalog id (static specs or direct factory)', () => {
     const staticIds = new Set(Object.keys(STATIC_FORM_SPECS));
-    for (const entry of PANEL_CATALOG) {
+    for (const entry of CATALOG_ROWS) {
       const panel = createPanelById(entry.id);
       expect(panel.id).toBe(entry.id);
       expect(panel.category).toMatch(/^(async-data|static-form|diagnostic)$/);
