@@ -269,16 +269,19 @@ describe('privatePageDialog', () => {
   describe('exports', () => {
     it('should export setCurrentPendingSave function', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       expect(typeof mod.setCurrentPendingSave).toBe('function');
     });
 
     it('should export showPrivatePageDialog function', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       expect(typeof mod.showPrivatePageDialog).toBe('function');
     });
 
     it('should export currentPendingSave variable', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       expect('currentPendingSave' in mod).toBe(true);
     });
   });
@@ -286,6 +289,7 @@ describe('privatePageDialog', () => {
   describe('setCurrentPendingSave', () => {
     it('should set currentPendingSave to the given value', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       const save = createPendingSave();
       mod.setCurrentPendingSave(save);
       expect(mod.currentPendingSave).toEqual(save);
@@ -293,6 +297,7 @@ describe('privatePageDialog', () => {
 
     it('should set currentPendingSave to null', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
       mod.setCurrentPendingSave(null);
       expect(mod.currentPendingSave).toBeNull();
@@ -312,6 +317,7 @@ describe('privatePageDialog', () => {
       );
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.showPrivatePageDialog(
         'https://example.com/private',
         'auth_required',
@@ -338,6 +344,7 @@ describe('privatePageDialog', () => {
       );
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.showPrivatePageDialog('https://example.com', 'no_reason', '');
 
       const messageEl = document.getElementById('dialog-message');
@@ -348,6 +355,7 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-message')!.remove();
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       // Should not throw when messageEl is null
       expect(() => {
         mod.showPrivatePageDialog('https://example.com', 'reason', 'header');
@@ -361,6 +369,7 @@ describe('privatePageDialog', () => {
       document.getElementById('private-page-dialog')!.remove();
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       // Should not throw when dialog is null
       expect(() => {
         mod.showPrivatePageDialog('https://example.com', 'reason', 'header');
@@ -375,6 +384,7 @@ describe('privatePageDialog', () => {
   describe('dialog-cancel button', () => {
     it('should close the dialog and clear currentPendingSave when cancel is clicked', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
@@ -393,6 +403,7 @@ describe('privatePageDialog', () => {
       (global.chrome.runtime.sendMessage as any).mockResolvedValue({ success: true });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       document.getElementById('dialog-save-once')!.click();
@@ -426,6 +437,7 @@ describe('privatePageDialog', () => {
       });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       document.getElementById('dialog-save-once')!.click();
@@ -446,6 +458,7 @@ describe('privatePageDialog', () => {
       );
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       // The gateway seam normalizes send failures into a failure result, so
@@ -465,6 +478,7 @@ describe('privatePageDialog', () => {
 
     it('should do nothing when currentPendingSave is null', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(null);
 
       document.getElementById('dialog-save-once')!.click();
@@ -483,6 +497,7 @@ describe('privatePageDialog', () => {
       (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(
         createPendingSave({ url: 'https://example.com/some-page' })
       );
@@ -509,6 +524,7 @@ describe('privatePageDialog', () => {
       });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(
         createPendingSave({ url: 'https://example.com/another-page' })
       );
@@ -530,6 +546,7 @@ describe('privatePageDialog', () => {
       (extractDomain as any).mockReturnValueOnce('');
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(
         createPendingSave({ url: 'invalid-url' })
       );
@@ -549,6 +566,7 @@ describe('privatePageDialog', () => {
       (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(
         createPendingSave({ url: 'https://example.com/private-path' })
       );
@@ -571,6 +589,7 @@ describe('privatePageDialog', () => {
       });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(
         createPendingSave({ url: 'https://example.com/private-path' })
       );
@@ -590,6 +609,7 @@ describe('privatePageDialog', () => {
   describe('recordWithForce (internal)', () => {
     it('should close the dialog before recording', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
@@ -612,6 +632,7 @@ describe('privatePageDialog', () => {
       document.getElementById('mainStatus')!.remove();
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       // Should not throw
@@ -628,6 +649,7 @@ describe('privatePageDialog', () => {
       });
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       document.getElementById('dialog-save-once')!.click();
@@ -642,6 +664,7 @@ describe('privatePageDialog', () => {
       const { startAutoCloseTimer } = await import('../autoClose.js');
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       document.getElementById('dialog-save-once')!.click();
@@ -659,6 +682,7 @@ describe('privatePageDialog', () => {
       const { startAutoCloseTimer } = await import('../autoClose.js');
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave());
 
       document.getElementById('dialog-save-once')!.click();
@@ -690,6 +714,7 @@ describe('privatePageDialog', () => {
       (settingsRepository.setAll as any).mockRejectedValueOnce(new Error('settings are locked'));
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.showPrivatePageDialog('https://example.com/private', 'auth_required', 'Basic Auth');
       mod.setCurrentPendingSave(createPendingSave({ url: 'https://example.com/some-page' }));
 
@@ -706,6 +731,7 @@ describe('privatePageDialog', () => {
       (settingsRepository.setAll as any).mockRejectedValueOnce(new Error('settings are locked'));
 
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       mod.setCurrentPendingSave(createPendingSave({ url: 'https://example.com/private-path' }));
 
       document.getElementById('dialog-save-path')!.click();
@@ -731,6 +757,7 @@ describe('privatePageDialog', () => {
 
     it('showPrivatePageDialog traps focus and cancel releases it', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       const focusTrapManager = await freshTrapManager();
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
@@ -754,6 +781,7 @@ describe('privatePageDialog', () => {
 
     it('save-once/save-domain/save-path each release the trap', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       const focusTrapManager = await freshTrapManager();
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
@@ -775,6 +803,7 @@ describe('privatePageDialog', () => {
 
     it('native close (Escape path) releases the trap', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       const focusTrapManager = await freshTrapManager();
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
@@ -791,6 +820,7 @@ describe('privatePageDialog', () => {
 
     it('re-open does not double-trap the private-page dialog', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       const focusTrapManager = await freshTrapManager();
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       try {
@@ -805,6 +835,7 @@ describe('privatePageDialog', () => {
 
     it('showRecordingFailedDialog traps focus and dismiss/retry release it', async () => {
       const mod = await import('../privatePageDialog.js');
+      mod.wireDialogButtons();
       const focusTrapManager = await freshTrapManager();
       const trapSpy = vi.spyOn(focusTrapManager, 'trap');
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');

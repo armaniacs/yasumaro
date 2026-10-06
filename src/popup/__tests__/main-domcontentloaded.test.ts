@@ -86,8 +86,9 @@ vi.stubGlobal('chrome', {
 
 const mainSource = readFileSync(resolve(process.cwd(), 'src/popup/main.ts'), 'utf-8');
 
-// Import main.ts for side effects (registers DOMContentLoaded listener)
-import '../main.js';
+// Import initMainScreen explicitly (PBI 2026-10-05-31 ended side-effect
+// DOMContentLoaded self-registration; the entrypoint calls it once).
+import { initMainScreen } from '../main.js';
 
 describe('main.ts DOMContentLoaded', () => {
     beforeEach(() => {
@@ -133,7 +134,7 @@ describe('main.ts DOMContentLoaded', () => {
         initStatusPanelMock.mockResolvedValue(undefined);
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await vi.waitFor(
             () => expect(initStatusPanelMock).toHaveBeenCalled(),
             { interval: 1 }
@@ -155,7 +156,7 @@ describe('main.ts DOMContentLoaded', () => {
         initStatusPanelMock.mockRejectedValue(new Error('status init fail'));
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await vi.waitFor(
             () => expect(logErrorMock).toHaveBeenCalledWith(
             expect.stringContaining('Failed to load current tab or init status panel'),
@@ -170,7 +171,7 @@ describe('main.ts DOMContentLoaded', () => {
         initStatusPanelMock.mockResolvedValue(undefined);
         initAllUrlsPermissionBannerMock.mockRejectedValue(new Error('banner fail'));
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await vi.waitFor(
             () => expect(logErrorMock).toHaveBeenCalledWith(
             expect.stringContaining('Failed to init all-urls permission banner'),
@@ -185,7 +186,7 @@ describe('main.ts DOMContentLoaded', () => {
         initStatusPanelMock.mockResolvedValue(undefined);
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await vi.waitFor(
             () => expect(getCurrentTabMock).toHaveBeenCalled(),
             { interval: 1 }
@@ -198,7 +199,7 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
         getCurrentTabMock.mockResolvedValue({ id: 123, url: 'https://example.com' });
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await vi.waitFor(
             () => expect(chrome.action.setBadgeText).toHaveBeenCalledWith({ text: '', tabId: 123 }),
             { interval: 1 }
@@ -211,7 +212,7 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
         getCurrentTabMock.mockResolvedValue({ url: 'https://example.com' });
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await drainMacrotask();
         expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
@@ -221,7 +222,7 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
         getCurrentTabMock.mockResolvedValue(null);
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await drainMacrotask();
         expect(chrome.action.setBadgeText).not.toHaveBeenCalled();
     });
@@ -231,7 +232,7 @@ describe('main.ts DOMContentLoaded', () => {
         initAllUrlsPermissionBannerMock.mockResolvedValue(undefined);
         getCurrentTabMock.mockRejectedValue(new Error('tabs unavailable'));
 
-        document.dispatchEvent(new Event('DOMContentLoaded'));
+        await initMainScreen();
         await vi.waitFor(
             () => expect(initStatusPanelMock).toHaveBeenCalled(),
             { interval: 1 }

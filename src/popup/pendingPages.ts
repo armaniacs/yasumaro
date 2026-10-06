@@ -215,6 +215,3 @@ export function setupEventListeners(): void {
     }
   });
 }
-
-// Set up event listeners on module load
-setupEventListeners();

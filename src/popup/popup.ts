@@ -12,9 +12,9 @@ import { logError } from '../utils/logger/api.js';
 import { init as initNavigation } from './navigation.js';
 import { initPrivacyConsent, setupPrivacyConsentListeners } from './privacyConsentController.js';
 import { initTrancoUpdateNotification } from './trancoNotification.js';
-import { loadPendingPages } from './pendingPages.js';
+import { loadPendingPages, setupEventListeners } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
-import { showPrivatePageDialog, showRecordingFailedDialog } from './privatePageDialog.js';
+import { showPrivatePageDialog, showRecordingFailedDialog, wireDialogButtons } from './privatePageDialog.js';
 import { getPrivacyConsent, subscribeConsentChanges } from '../utils/storage/privacyConsent.js';
 import { hasCompletedWizard, initOnboardingWizard } from '../utils/ui/onboardingWizard.js';
 
@@ -51,9 +51,19 @@ export async function initPopup(): Promise<void> {
         logError('[Popup] Error in initTrancoUpdateNotification', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 
+    // PBI 2026-10-05-31: dialog/pending-list wiring is explicit — no
+    // import-time side effects. Called from initPopup (the single entry
+    // point) instead of at module load.
+    try {
+        setupEventListeners();
+        wireDialogButtons();
+    } catch (error) {
+        logError('[Popup] Error in dialog wiring', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
     // Pending pages handling: load list and show dialog only if exactly one pending page
     try {
-        loadPendingPages();
+        await loadPendingPages();
         const pending = await getPendingPages();
         if (pending.length === 1) {
             const page = pending[0];

@@ -133,85 +133,97 @@ function reportDialogActionFailure(action: string, error: unknown): void {
   logError(`[privatePageDialog] ${action} failed`, { cause: error }, ErrorCode.INTERNAL_ERROR);
 }
 
-document.getElementById('dialog-cancel')?.addEventListener('click', () => {
-  const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
-  dialog?.close();
-  releasePrivatePageTrap();
-  currentPendingSave = null;
-});
+/**
+ * PBI 2026-10-05-31: dialog button wiring is explicit — initPopup calls this
+ * once instead of the module wiring buttons at import time. The once-guard
+ * keeps repeated init calls from double-wiring.
+ */
+let dialogButtonsWired = false;
 
-document.getElementById('dialog-save-once')?.addEventListener('click', async () => {
-  const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
-  dialog?.close();
-  releasePrivatePageTrap();
+export function wireDialogButtons(): void {
+  if (dialogButtonsWired) return;
+  dialogButtonsWired = true;
 
-  if (currentPendingSave) {
-    try {
-      await recordWithForce();
-    } catch (e) {
-      reportDialogActionFailure('Recording the private page', e);
-    }
-  }
-});
+  document.getElementById('dialog-cancel')?.addEventListener('click', () => {
+    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+    dialog?.close();
+    releasePrivatePageTrap();
+    currentPendingSave = null;
+  });
 
-document.getElementById('dialog-save-domain')?.addEventListener('click', async () => {
-  const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
-  dialog?.close();
-  releasePrivatePageTrap();
+  document.getElementById('dialog-save-once')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+    dialog?.close();
+    releasePrivatePageTrap();
 
-  if (currentPendingSave) {
-    try {
-      const domain = extractDomain(currentPendingSave.url);
-      if (domain) {
-        // PBI 2026-09-12-05: validated + deduped write through the shared seam.
-        await addDomainToWhitelist(domain);
+    if (currentPendingSave) {
+      try {
+        await recordWithForce();
+      } catch (e) {
+        reportDialogActionFailure('Recording the private page', e);
       }
-      await recordWithForce();
-    } catch (e) {
-      reportDialogActionFailure('Whitelisting the domain', e);
     }
-  }
-});
+  });
 
-document.getElementById('dialog-save-path')?.addEventListener('click', async () => {
-  const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
-  dialog?.close();
-  releasePrivatePageTrap();
+  document.getElementById('dialog-save-domain')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+    dialog?.close();
+    releasePrivatePageTrap();
 
-  // Snapshot before the first await: module state can be nulled while the
-  // settings read is in flight (cancel / auto-close), and reading it after
-  // the await was a TOCTOU crash.
-  const pending = currentPendingSave;
-  if (pending) {
-    try {
-      await addPathToWhitelist(pending.url);
-      await recordWithForce();
-    } catch (e) {
-      reportDialogActionFailure('Whitelisting the path', e);
+    if (currentPendingSave) {
+      try {
+        const domain = extractDomain(currentPendingSave.url);
+        if (domain) {
+          // PBI 2026-09-12-05: validated + deduped write through the shared seam.
+          await addDomainToWhitelist(domain);
+        }
+        await recordWithForce();
+      } catch (e) {
+        reportDialogActionFailure('Whitelisting the domain', e);
+      }
     }
-  }
-});
+  });
 
-document.getElementById('recording-failed-dismiss')?.addEventListener('click', () => {
-  const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
-  dialog?.close();
-  releaseRecordingFailedTrap();
-  currentPendingSave = null;
-});
+  document.getElementById('dialog-save-path')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+    dialog?.close();
+    releasePrivatePageTrap();
 
-document.getElementById('recording-failed-retry')?.addEventListener('click', async () => {
-  const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
-  dialog?.close();
-  releaseRecordingFailedTrap();
-
-  if (currentPendingSave) {
-    try {
-      // Not a privacy decision: retry the normal path so detection still applies.
-      await recordPendingSave(false);
-    } catch (e) {
-      reportDialogActionFailure('Retrying the recording', e);
+    // Snapshot before the first await: module state can be nulled while the
+    // settings read is in flight (cancel / auto-close), and reading it after
+    // the await was a TOCTOU crash.
+    const pending = currentPendingSave;
+    if (pending) {
+      try {
+        await addPathToWhitelist(pending.url);
+        await recordWithForce();
+      } catch (e) {
+        reportDialogActionFailure('Whitelisting the path', e);
+      }
     }
-  }
-});
+  });
+
+  document.getElementById('recording-failed-dismiss')?.addEventListener('click', () => {
+    const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
+    dialog?.close();
+    releaseRecordingFailedTrap();
+    currentPendingSave = null;
+  });
+
+  document.getElementById('recording-failed-retry')?.addEventListener('click', async () => {
+    const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
+    dialog?.close();
+    releaseRecordingFailedTrap();
+
+    if (currentPendingSave) {
+      try {
+        // Not a privacy decision: retry the normal path so detection still applies.
+        await recordPendingSave(false);
+      } catch (e) {
+        reportDialogActionFailure('Retrying the recording', e);
+      }
+    }
+  });
+}
 
 export { showPrivatePageDialog, showRecordingFailedDialog };

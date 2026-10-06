@@ -98,6 +98,7 @@ vi.mock('../../utils/pendingStorage.js', async (importOriginal) => {
 vi.mock('../privatePageDialog.js', () => ({
     showPrivatePageDialog: vi.fn(),
     showRecordingFailedDialog: vi.fn(),
+    wireDialogButtons: vi.fn(),
 }));
 
 // Mock privacyConsent
@@ -438,5 +439,13 @@ describe('initPopup coverage', () => {
         expect(document.documentElement.lang).toBe('en-US');
         expect(document.documentElement.dir).toBe('ltr');
         vi.unstubAllGlobals();
+    });
+
+    it('wires dialog buttons explicitly from initPopup (PBI 2026-10-05-31)', async () => {
+        const { wireDialogButtons } = await import('../privatePageDialog.js');
+        vi.mocked(wireDialogButtons).mockClear();
+        await initPopup();
+        await drainMacrotask();
+        expect(wireDialogButtons).toHaveBeenCalledTimes(1);
     });
 });

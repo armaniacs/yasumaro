@@ -6,13 +6,13 @@
 import './styles.css';
 import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../../src/utils/i18n-dom.js';
 import { getMessage } from '../../src/utils/i18n.js';
+import { initMainScreen } from '../../src/popup/main.js';
 import { initPopup } from '../../src/popup/popup.js';
-import '../../src/popup/navigation';
-import '../../src/popup/main';
 
 // PBI 2026-09-11-04 (round 7): single entry point — applyI18n first, then the
-// popup's own initialization (navigation / consent / pending dialogs /
-// onboarding). popup.ts no longer auto-runs at import time.
+// popup's own initialization (main screen + navigation / consent / pending
+// dialogs / onboarding). PBI 2026-10-05-31: no side-effect imports —
+// initMainScreen and initPopup are called explicitly once below.
 async function bootstrap(): Promise<void> {
   setHtmlLangAndDir();
   applyI18n();
@@ -21,6 +21,7 @@ async function bootstrap(): Promise<void> {
     historyButton.title = getMessage('openHistory');
   }
   translatePageTitle('popupTitle');
+  await initMainScreen();
   await initPopup();
 }
 

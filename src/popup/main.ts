@@ -24,17 +24,26 @@ async function clearActionBadge(): Promise<void> {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+/**
+ * PBI 2026-10-05-31: single entry point — the entrypoint
+ * (entrypoints/popup/main.ts) calls this once under its readyState guard
+ * instead of this module self-registering DOMContentLoaded.
+ */
+export async function initMainScreen(): Promise<void> {
   // PBI 2026-09-11-09 (round 6): recordBtn wiring is RecordSession's
   // (onclick sole-writer — PBI 2026-09-07-24). The addEventListener here
   // double-fired alongside it; the session's resetRecordButton wires the
   // initial state on load.
   initializeModalEvents();
-  loadCurrentTabAndInitStatus().catch((error) => {
+  try {
+    await loadCurrentTabAndInitStatus();
+  } catch (error) {
     logError('[Initialize] Failed to load current tab or init status panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
-  });
-  initAllUrlsPermissionBanner().catch((error) => {
+  }
+  try {
+    await initAllUrlsPermissionBanner();
+  } catch (error) {
     logError('[Initialize] Failed to init all-urls permission banner', { cause: error }, ErrorCode.INTERNAL_ERROR);
-  });
-  void clearActionBadge();
-});
+  }
+  await clearActionBadge();
+}

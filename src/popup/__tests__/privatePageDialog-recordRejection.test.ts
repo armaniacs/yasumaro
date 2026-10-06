@@ -102,6 +102,7 @@ afterEach(async () => {
 describe('privatePageDialog buttons — a rejected record seam', () => {
   it('reports the save-once failure on #mainStatus after the dialog closed', async () => {
     const mod = await import('../privatePageDialog.js');
+    mod.wireDialogButtons();
     mod.showPrivatePageDialog('https://example.com/private', 'auth_required', 'Basic Auth');
     mod.setCurrentPendingSave(pendingSave() as never);
 
@@ -114,6 +115,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
 
   it('reports the save-domain failure on #mainStatus', async () => {
     const mod = await import('../privatePageDialog.js');
+    mod.wireDialogButtons();
     mod.setCurrentPendingSave(pendingSave() as never);
 
     document.getElementById('dialog-save-domain')!.click();
@@ -124,6 +126,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
 
   it('reports the save-path failure on #mainStatus', async () => {
     const mod = await import('../privatePageDialog.js');
+    mod.wireDialogButtons();
     mod.setCurrentPendingSave(pendingSave() as never);
 
     document.getElementById('dialog-save-path')!.click();
@@ -134,6 +137,7 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
 
   it('reports the retry failure on #mainStatus', async () => {
     const mod = await import('../privatePageDialog.js');
+    mod.wireDialogButtons();
     mod.setCurrentPendingSave(pendingSave() as never);
     mod.showRecordingFailedDialog('https://example.com/test-page', 'Network error');
 

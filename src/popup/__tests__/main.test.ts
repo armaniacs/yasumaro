@@ -167,7 +167,7 @@ import { getCurrentTab } from '../tabUtils.js';
 import { isRecordableTab as isRecordableModule } from '../../utils/recordingGateTable.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { checkPageStatus as checkPageStatusModule } from '../statusChecker.js';
-import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus } from '../main.js';
+import { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus, initMainScreen } from '../main.js';
 import { loadPendingPages, saveSelectedPages } from '../pendingPages.js';
 import {
   showError as showErrorModule,
@@ -1124,8 +1124,8 @@ describe('main', () => {
         lastSaved: { exists: false, timeAgo: '', formatted: '' }
       });
 
-      // Trigger DOMContentLoaded
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      // Trigger init via the single entry point (PBI 2026-10-05-31)
+      void initMainScreen();
 
       // Wait for async operations
       const domainState = $el('statusDomainState');
@@ -1150,7 +1150,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const domainState = $el('statusDomainState');
       await vi.waitFor(
           () => expect(domainState.innerHTML).toContain('status-error'),
@@ -1173,7 +1173,7 @@ describe('main', () => {
         lastSaved: { exists: true, timeAgo: '5 minutes ago', formatted: '2026-03-31' }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const privacyContent = $el('statusPrivacyContent');
       await vi.waitFor(
           () => expect(privacyContent.innerHTML).toContain('status-warning'),
@@ -1196,7 +1196,7 @@ describe('main', () => {
         lastSaved: { exists: true, timeAgo: '10 minutes ago', formatted: '2026-03-31 12:00' }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const lastSavedContent = $el('statusLastSavedContent');
       await vi.waitFor(
           () => expect(lastSavedContent.innerHTML).toContain('10 minutes ago'),
@@ -1214,7 +1214,7 @@ describe('main', () => {
       mockChrome.tabs.query.mockResolvedValue([mockTab]);
       mockCheckPageStatus(null);
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const panel = $el('statusPanel');
       await vi.waitFor(
           () => expect(panel.innerHTML).toContain('statusPageNotRecordable'),
@@ -1225,7 +1225,7 @@ describe('main', () => {
     it('should handle tab without URL', async () => {
       mockChrome.tabs.query.mockResolvedValue([{ id: 1, title: 'No URL' }]);
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const panel = $el('statusPanel');
       await vi.waitFor(
           () => expect(panel.style.display).toBe('none'),
@@ -1248,7 +1248,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const cacheContent = $el('statusCacheContent');
       await vi.waitFor(
           () => expect(cacheContent.innerHTML).toContain('statusSetCookiePresent'),
@@ -1272,7 +1272,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const cacheContent = $el('statusCacheContent');
       await vi.waitFor(
           () => expect(cacheContent.innerHTML).toContain('statusNoCacheInfo'),
@@ -1463,7 +1463,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const domainMode = $el('statusDomainMode');
       await vi.waitFor(
           () => expect(domainMode.innerHTML).toContain('statusFilterModeBlacklist'),
@@ -1486,7 +1486,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const privacyContent = $el('statusPrivacyContent');
       await vi.waitFor(
           () => expect(privacyContent.innerHTML).toContain('statusSetCookieDetected'),
@@ -1509,7 +1509,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const privacyContent = $el('statusPrivacyContent');
       await vi.waitFor(
           () => expect(privacyContent.innerHTML).toContain('statusAuthDetected'),
@@ -1529,7 +1529,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const domainIcon = $el('statusDomainIcon');
       await vi.waitFor(
           () => expect(domainIcon.className).toContain('status-success'),
@@ -1547,7 +1547,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const privacyIcon = $el('statusPrivacyIcon');
       await vi.waitFor(
           () => expect(privacyIcon.className).toContain('status-warning'),
@@ -1565,7 +1565,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const privacyIcon = $el('statusPrivacyIcon');
       await vi.waitFor(
           () => expect(privacyIcon.className).toContain('status-muted'),
@@ -1585,7 +1585,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       // The click below needs the toggle's listener to be attached, and
       // wireOnce marks the element as wired before attaching it — so that
       // flag is the signal to wait for, not the initial aria-expanded value.
@@ -1791,7 +1791,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const cleansingContent = $el('statusCleansingContent');
       await vi.waitFor(
           () => expect(cleansingContent.innerHTML).toContain('status-muted'),
@@ -1814,7 +1814,7 @@ describe('main', () => {
         lastSaved: { exists: false }
       });
 
-      document.dispatchEvent(new Event('DOMContentLoaded'));
+      void initMainScreen();
       const banner = $el('allUrlsPermissionBanner');
       await vi.waitFor(
           () => expect(banner.classList.contains('hidden')).toBe(true),
