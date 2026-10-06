@@ -8,9 +8,9 @@
 
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
-import { errorMessage } from '../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
+import { measureFlush } from './pendingChromeStorageQueue.js';
 
 export { chunkArray } from './persistentRetryQueue.js';
 
@@ -77,24 +77,11 @@ export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<b
  * owner below this queue.
  */
 export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
-  // Same measurement shape as pendingChromeStorageQueue: take the pre-flush
-  // count from a load whose failure is distinguishable from "empty"
-  // (getQueueSize() re-reading storage after the flush let items enqueued
+  // Shared measurement shape with pendingChromeStorageQueue (PBI 2026-10-05-23):
+  // the pre-flush count comes from a load whose failure is distinguishable
+  // from "empty" (re-reading storage after the flush let items enqueued
   // mid-flush turn the recovered count negative or over-counted).
-  let before: QueuedRecord[];
-  try {
-    before = await queue.load();
-  } catch (error) {
-    // A failed load must not be mistaken for an empty queue; the persisted
-    // snapshot stays intact and the next flush cycle retries it.
-    addLog(LogType.ERROR, 'pendingSqliteQueue: failed to load queue for flush', {
-      error: errorMessage(error),
-    });
-    return;
-  }
-  if (before.length === 0) return;
-
-  const stillPending = await queue.flushBatch(async (items: QueuedRecord[]) => {
+  await measureFlush('pendingSqliteQueue', () => queue.load(), () => queue.flushBatch(async (items: QueuedRecord[]) => {
     // Unwrap metadata before passing to SQLite
     const records = items.map(({ createdAt: _c, retryCount: _r, ...rest }) => rest as BrowsingLogRecord);
     try {
@@ -111,13 +98,5 @@ export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promi
       url: record.url,
       reason,
     });
-  });
-
-  const recovered = before.length - stillPending.length;
-  if (recovered > 0) {
-    addLog(LogType.INFO, 'pendingSqliteQueue: flushed queued records', {
-      recovered,
-      remaining: stillPending.length,
-    });
-  }
+  }));
 }

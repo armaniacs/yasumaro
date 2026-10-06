@@ -21,6 +21,54 @@ import type { SavedUrlEntryMetadataPatch } from '../utils/storage/savedUrlReposi
 export const PENDING_CHROME_STORAGE_KEY = 'pending_chrome_storage_writes';
 
 /**
+ * Success-log action per queue label. The noun stays caller-specific so the
+ * logged wording is byte-identical to the pre-extraction messages; only the
+ * pre-flush measurement sequence is shared (PBI 2026-10-05-23).
+ */
+const FLUSH_SUCCESS_ACTIONS: Record<string, string> = {
+  pendingChromeStorageQueue: 'flushed queued writes',
+  pendingSqliteQueue: 'flushed queued records',
+};
+
+/**
+ * Shared pre-flush measurement: load whose failure is distinguishable from
+ * "empty" → empty check → flush → recovered log.
+ *
+ * PBI 2026-09-12-20: measure inside the flush, not from a pre-flush
+ * snapshot. `flush` reloads the queue under the lock, so items enqueued
+ * mid-flush made `writes.length - stillPending.length` go negative.
+ */
+export async function measureFlush<T>(
+  label: string,
+  load: () => Promise<T[]>,
+  flush: () => Promise<T[]>,
+): Promise<void> {
+  let before: T[];
+  try {
+    before = await load();
+  } catch (error) {
+    // A failed load must not be mistaken for an empty queue; the persisted
+    // snapshot stays intact and the next flush cycle retries it.
+    addLog(LogType.ERROR, `${label}: failed to load queue for flush`, {
+      error: errorMessage(error),
+    });
+    return;
+  }
+  if (before.length === 0) return;
+
+  const stillPending = await flush();
+
+  const recovered = before.length - stillPending.length;
+  if (recovered > 0) {
+    const action = FLUSH_SUCCESS_ACTIONS[label] ?? 'flushed queued items';
+    addLog(LogType.INFO, `${label}: ${action}`, {
+      recovered,
+      remaining: stillPending.length,
+    });
+  }
+}
+
+/**
  * Legacy payload: a raw chrome.storage write that failed. Kept so payloads
  * already queued by older versions are still understood by the retry handler.
  */
@@ -80,31 +128,7 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
     async flushPendingWrites(
       retryFn: (write: QueuedChromeStorageWrite) => Promise<boolean>
     ): Promise<void> {
-      // PBI 2026-09-12-20: measure inside the flush, not from a pre-flush
-      // snapshot. `flush` reloads the queue under the lock, so items enqueued
-      // mid-flush made `writes.length - stillPending.length` go negative.
-      let before: QueuedChromeStorageWrite[];
-      try {
-        before = await queue.load();
-      } catch (error) {
-        // A failed load must not be mistaken for an empty queue; the persisted
-        // snapshot stays intact and the next flush cycle retries it.
-        addLog(LogType.ERROR, 'pendingChromeStorageQueue: failed to load queue for flush', {
-          error: errorMessage(error),
-        });
-        return;
-      }
-      if (before.length === 0) return;
-
-      const stillPending = await queue.flush(retryFn);
-
-      const recovered = before.length - stillPending.length;
-      if (recovered > 0) {
-        addLog(LogType.INFO, 'pendingChromeStorageQueue: flushed queued writes', {
-          recovered,
-          remaining: stillPending.length,
-        });
-      }
+      await measureFlush('pendingChromeStorageQueue', () => queue.load(), () => queue.flush(retryFn));
     },
   };
 }

@@ -7,6 +7,7 @@
  * sides from drifting and lets either side explain a failure consistently.
  */
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
+import { isDisconnectMessage } from './disconnectPhrase.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from './sqliteMessages.js';
 export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData };
 
@@ -60,11 +61,12 @@ export function categorizeError(msg: string): SqliteError {
   // names neither "offscreen" nor the document, so matching only on those
   // words let the most common form of this failure fall through to `unknown`
   // and reach the user as raw browser prose (PBI 2026-09-16-01).
+  // The generic disconnect wording lives in disconnectPhrase.ts (SSOT);
+  // the offscreen-specific prefixes stay this caller's policy.
   if (
     msg.includes('offscreen') ||
     msg.includes('offscreenDocument') ||
-    msg.includes('Receiving end does not exist') ||
-    msg.includes('Could not establish connection')
+    isDisconnectMessage(msg)
   ) {
     return {
       kind: 'offscreen_lost',

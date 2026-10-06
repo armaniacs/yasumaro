@@ -26,6 +26,8 @@
  */
 
 import { validateUrl } from '../utils/ssrfGuard.js';
+import { errorMessage } from '../utils/errorUtils.js';
+import { isDisconnectMessage } from '../messaging/disconnectPhrase.js';
 import type { ContentResponse } from '../messaging/types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 
@@ -115,10 +117,8 @@ export class RegenerateContentFetcher {
         return await this.deps.sendMessage(tabId, message);
       } catch (e: unknown) {
         lastError = e;
-        const text = e instanceof Error ? e.message : String(e);
-        const injectionRace =
-          text.includes('receiving end does not exist') ||
-          text.includes('Could not establish connection');
+        const text = errorMessage(e);
+        const injectionRace = isDisconnectMessage(text);
         if (injectionRace && attempt < SEND_RETRY_ATTEMPTS - 1) {
           await new Promise((r) => setTimeout(r, SEND_RETRY_DELAY_MS));
           continue;
