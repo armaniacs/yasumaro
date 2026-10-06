@@ -112,11 +112,11 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockRejectedValue(new Error('fail'));
     await initRecordingConditionsSettings();
     // Should render defaults after catch
-    const minVisit = document.getElementById('minVisitDuration') as HTMLInputElement;
+    const minVisit = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
     expect(minVisit.value).toBe('5');
-    const minScroll = document.getElementById('minScrollDepth') as HTMLInputElement;
+    const minScroll = document.getElementById('rc-minScrollDepth') as HTMLInputElement;
     expect(minScroll.value).toBe('50');
-    const maxTokens = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
+    const maxTokens = document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement;
     expect(maxTokens.value).toBe('1000');
     // aiTimeout 0 renders empty string
     const aiTimeout = document.getElementById('aiTimeoutSeconds') as HTMLInputElement;
@@ -172,10 +172,10 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     // Remove minVisitDuration input to trigger fallback
-    document.getElementById('minVisitDuration')?.remove();
+    document.getElementById('rc-minVisitDuration')?.remove();
     // Need other inputs valid
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
@@ -192,10 +192,10 @@ describe('recordingConditionsSettings branches', () => {
     setupDOM(true);
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    const minScroll = document.getElementById('minScrollDepth') as HTMLInputElement;
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    const minScroll = document.getElementById('rc-minScrollDepth') as HTMLInputElement;
     minScroll.value = ''; // empty triggers fallback '50'
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
@@ -211,9 +211,9 @@ describe('recordingConditionsSettings branches', () => {
     setupDOM(true);
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
-    document.getElementById('maxTokensPerPrompt')?.remove();
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
+    document.getElementById('rc-maxTokensPerPrompt')?.remove();
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
@@ -230,9 +230,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '60';
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
@@ -249,9 +249,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     document.getElementById('maxMonthlyTokens')?.remove();
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
     (document.getElementById('geminiContentChars') as HTMLInputElement).value = '30000';
@@ -267,9 +267,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     document.getElementById('aiRateLimitMax')?.remove();
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
     (document.getElementById('geminiContentChars') as HTMLInputElement).value = '30000';
@@ -285,9 +285,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     document.getElementById('openaiContentChars')?.remove();
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('geminiContentChars') as HTMLInputElement).value = '30000';
@@ -303,9 +303,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     document.getElementById('geminiContentChars')?.remove();
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
@@ -326,9 +326,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     // set all to valid first
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('aiTimeoutSeconds') as HTMLInputElement).value = '';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
@@ -346,7 +346,7 @@ describe('recordingConditionsSettings branches', () => {
   it('validation: minScrollDepth invalid with fallback message (|| fallback)', async () => {
     chromeI18nMock.mockReturnValue(''); // ensures fallback branch
     await triggerValidation(() => {
-      (document.getElementById('minScrollDepth') as HTMLInputElement).value = '-1';
+      (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '-1';
     });
     const err = document.getElementById('conditions-validation-error') as HTMLElement;
     expect(err.style.display).toBe('');
@@ -357,7 +357,7 @@ describe('recordingConditionsSettings branches', () => {
   it('validation: minScrollDepth invalid with translated message (truthy branch)', async () => {
     chromeI18nMock.mockImplementation((key: string) => (key === 'minScrollDepthError' ? 'translated scroll error' : ''));
     await triggerValidation(() => {
-      (document.getElementById('minScrollDepth') as HTMLInputElement).value = '101';
+      (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '101';
     });
     const err = document.getElementById('conditions-validation-error') as HTMLElement;
     expect(err.style.display).toBe('');
@@ -368,7 +368,7 @@ describe('recordingConditionsSettings branches', () => {
   it('validation: maxTokens invalid (low)', async () => {
     chromeI18nMock.mockReturnValue('');
     await triggerValidation(() => {
-      (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '5';
+      (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '5';
     });
     const err = document.getElementById('conditions-validation-error') as HTMLElement;
     expect(err.style.display).toBe('');
@@ -378,7 +378,7 @@ describe('recordingConditionsSettings branches', () => {
   it('validation: maxTokens invalid with translated message (high)', async () => {
     chromeI18nMock.mockImplementation((key: string) => (key === 'maxTokensError' ? 'translated maxTokens' : ''));
     await triggerValidation(() => {
-      (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '20000';
+      (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '20000';
     });
     const err = document.getElementById('conditions-validation-error') as HTMLElement;
     expect(err.textContent).toBe('translated maxTokens');
@@ -388,7 +388,7 @@ describe('recordingConditionsSettings branches', () => {
   it('validation: maxTokens NaN (non-numeric)', async () => {
     chromeI18nMock.mockReturnValue('');
     await triggerValidation(() => {
-      const el = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
+      const el = document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement;
       Object.defineProperty(el, 'value', { value: 'abc', writable: true, configurable: true });
     });
     const err = document.getElementById('conditions-validation-error') as HTMLElement;
@@ -487,7 +487,7 @@ describe('recordingConditionsSettings branches', () => {
     // To exercise the isNaN branch we must bypass sanitization via defineProperty.
     chromeI18nMock.mockImplementation((key: string) => (key === 'minVisitDurationError' ? 'translated minVisit' : ''));
     await triggerValidation(() => {
-      const el = document.getElementById('minVisitDuration') as HTMLInputElement;
+      const el = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
       Object.defineProperty(el, 'value', { value: 'abc', writable: true, configurable: true });
     });
     const err = document.getElementById('conditions-validation-error') as HTMLElement;
@@ -499,9 +499,9 @@ describe('recordingConditionsSettings branches', () => {
     mockGetMany.mockResolvedValue({});
     await initRecordingConditionsSettings();
     // set valid values
-    (document.getElementById('minVisitDuration') as HTMLInputElement).value = '5';
-    (document.getElementById('minScrollDepth') as HTMLInputElement).value = '50';
-    (document.getElementById('maxTokensPerPrompt') as HTMLInputElement).value = '1000';
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '5';
+    (document.getElementById('rc-minScrollDepth') as HTMLInputElement).value = '50';
+    (document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement).value = '1000';
     (document.getElementById('maxMonthlyTokens') as HTMLInputElement).value = '1000';
     (document.getElementById('aiRateLimitMax') as HTMLInputElement).value = '10';
     (document.getElementById('openaiContentChars') as HTMLInputElement).value = '10000';
@@ -548,7 +548,7 @@ describe('recordingConditionsSettings branches', () => {
     };
     setupDOM(true);
     await initRecordingConditionsSettings(throwingRepo as any);
-    const minVisit = document.getElementById('minVisitDuration') as HTMLInputElement;
+    const minVisit = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
     expect(minVisit.value).toBe('5');
     expect(throwingRepo.getMany).toHaveBeenCalled();
   });

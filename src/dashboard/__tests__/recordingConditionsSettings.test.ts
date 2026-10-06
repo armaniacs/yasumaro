@@ -77,21 +77,21 @@ function setupDOM() {
         <h3 class="settings-section-title">記録条件</h3>
 
         <div class="form-group">
-          <label for="minVisitDuration">Min Visit Duration (seconds)</label>
-          <input type="number" id="minVisitDuration" min="1" value="5" />
-          <div id="minVisitDurationError" class="field-error" role="alert"></div>
+          <label for="rc-minVisitDuration">Min Visit Duration (seconds)</label>
+          <input type="number" id="rc-minVisitDuration" min="1" value="5" />
+          <div id="rc-minVisitDurationError" class="field-error" role="alert"></div>
         </div>
 
         <div class="form-group">
-          <label for="minScrollDepth">Min Scroll Depth (%)</label>
-          <input type="number" id="minScrollDepth" min="0" max="100" value="50" />
-          <div id="minScrollDepthError" class="field-error" role="alert"></div>
+          <label for="rc-minScrollDepth">Min Scroll Depth (%)</label>
+          <input type="number" id="rc-minScrollDepth" min="0" max="100" value="50" />
+          <div id="rc-minScrollDepthError" class="field-error" role="alert"></div>
         </div>
 
         <div class="form-group">
-          <label for="maxTokensPerPrompt">Max Tokens Per Prompt</label>
-          <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="1000" />
-          <div id="maxTokensError" class="field-error" role="alert"></div>
+          <label for="rc-maxTokensPerPrompt">Max Tokens Per Prompt</label>
+          <input type="number" id="rc-maxTokensPerPrompt" min="10" max="16000" step="100" value="1000" />
+          <div id="rc-maxTokensError" class="field-error" role="alert"></div>
         </div>
       </div>
 
@@ -117,9 +117,9 @@ describe('recordingConditionsSettings', () => {
     mockGetAll.mockResolvedValue({});
     await initRecordingConditionsSettings();
 
-    const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
-    const minScrollInput = document.getElementById('minScrollDepth') as HTMLInputElement;
-    const maxTokensInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
+    const minVisitInput = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
+    const minScrollInput = document.getElementById('rc-minScrollDepth') as HTMLInputElement;
+    const maxTokensInput = document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement;
 
     expect(minVisitInput?.value).toBe('5');
     expect(minScrollInput?.value).toBe('50');
@@ -149,9 +149,9 @@ describe('recordingConditionsSettings', () => {
     });
     await initRecordingConditionsSettings();
 
-    const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
-    const minScrollInput = document.getElementById('minScrollDepth') as HTMLInputElement;
-    const maxTokensInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
+    const minVisitInput = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
+    const minScrollInput = document.getElementById('rc-minScrollDepth') as HTMLInputElement;
+    const maxTokensInput = document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement;
     const aiTimeoutInput = document.getElementById('aiTimeoutSeconds') as HTMLInputElement;
     const maxMonthlyTokensInput = document.getElementById('maxMonthlyTokens') as HTMLInputElement;
     const aiRateLimitMaxInput = document.getElementById('aiRateLimitMax') as HTMLInputElement;
@@ -174,8 +174,8 @@ describe('recordingConditionsSettings', () => {
     mockSetAll.mockResolvedValue(undefined);
     await initRecordingConditionsSettings();
 
-    const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
-    const maxTokensInput = document.getElementById('maxTokensPerPrompt') as HTMLInputElement;
+    const minVisitInput = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
+    const maxTokensInput = document.getElementById('rc-maxTokensPerPrompt') as HTMLInputElement;
     minVisitInput.value = '15';
     maxTokensInput.value = '3000';
 
@@ -218,7 +218,7 @@ describe('recordingConditionsSettings', () => {
     mockGetAll.mockResolvedValue({});
     await initRecordingConditionsSettings();
 
-    const minVisitInput = document.getElementById('minVisitDuration') as HTMLInputElement;
+    const minVisitInput = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
     minVisitInput.value = '0';
 
     const saveBtn = document.getElementById('save-conditions-settings') as HTMLButtonElement;
@@ -269,7 +269,7 @@ describe('stale message reset on edit (fix 2026-09-22)', () => {
     });
 
     // Editing a field must reset it (saved-but-edited must not read as saved).
-    const input = document.getElementById('minVisitDuration') as HTMLInputElement;
+    const input = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
     input.value = '7';
     input.dispatchEvent(new Event('input', { bubbles: true }));
 
@@ -299,6 +299,85 @@ describe('stale message reset on edit (fix 2026-09-22)', () => {
     await vi.waitFor(() => {
       const successMsg = document.getElementById('conditions-save-success') as HTMLElement;
       expect(successMsg.style.display).toBe('');
+    });
+  });
+});
+
+describe('NN07 duplicate-id guard (PBI 2026-10-05-07)', () => {
+  beforeEach(() => {
+    setupDOM();
+    vi.clearAllMocks();
+    mockGetAll.mockResolvedValue({});
+    mockGetMany.mockResolvedValue({});
+    mockSetAll.mockResolvedValue(undefined);
+  });
+
+  it('renders no id that already exists in the Initial Setup panel', async () => {
+    // Simulate the options page: #panel-general mounts first with unprefixed ids.
+    document.body.insertAdjacentHTML('afterbegin', `
+      <div id="panel-general">
+        <input type="number" id="minVisitDuration" value="5" />
+        <div id="minVisitDurationError"></div>
+        <input type="number" id="minScrollDepth" value="50" />
+        <div id="minScrollDepthError"></div>
+        <input type="number" id="maxTokensPerPrompt" value="1000" />
+        <div id="maxTokensError"></div>
+      </div>
+    `);
+    await initRecordingConditionsSettings();
+
+    for (const id of ['minVisitDuration', 'minScrollDepth', 'maxTokensPerPrompt', 'minVisitDurationError', 'minScrollDepthError', 'maxTokensError']) {
+      expect(document.querySelectorAll(`#${CSS.escape(id)}`).length).toBe(1);
+    }
+    // The recording-conditions inputs live under the rc- prefix.
+    expect(document.getElementById('rc-minVisitDuration')).not.toBeNull();
+    expect(document.getElementById('rc-minScrollDepth')).not.toBeNull();
+    expect(document.getElementById('rc-maxTokensPerPrompt')).not.toBeNull();
+  });
+
+  it('label for and aria-describedby resolve inside the recording-conditions panel', async () => {
+    await initRecordingConditionsSettings();
+
+    const root = document.getElementById('recording-conditions-settings') as HTMLElement;
+    for (const [inputId, errorId] of [
+      ['rc-minVisitDuration', 'rc-minVisitDurationError'],
+      ['rc-minScrollDepth', 'rc-minScrollDepthError'],
+      ['rc-maxTokensPerPrompt', 'rc-maxTokensError'],
+    ] as Array<[string, string]>) {
+      const label = root.querySelector(`label[for="${inputId}"]`);
+      expect(label).not.toBeNull();
+      const inputEl = root.querySelector(`#${CSS.escape(inputId)}`) as HTMLInputElement;
+      expect(inputEl.getAttribute('aria-describedby') ?? '').toContain(errorId);
+      expect(root.querySelector(`#${CSS.escape(errorId)}`)).not.toBeNull();
+    }
+  });
+
+  it('boundary 0 is rejected on the recording-conditions side with a scoped error', async () => {
+    await initRecordingConditionsSettings();
+
+    const inputEl = document.getElementById('rc-minVisitDuration') as HTMLInputElement;
+    inputEl.value = '0';
+    (document.getElementById('save-conditions-settings') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => {
+      const errorMsg = document.getElementById('conditions-validation-error');
+      expect(errorMsg?.style.display).toBe('');
+    });
+
+    expect(mockSetAll).not.toHaveBeenCalled();
+    const scopedError = document.getElementById('rc-minVisitDurationError') as HTMLElement;
+    expect(scopedError.textContent ?? '').not.toBe('');
+    expect(inputEl.getAttribute('aria-invalid')).toBe('true');
+  });
+
+  it('boundary 1 is accepted (matches the shared SSOT floor)', async () => {
+    await initRecordingConditionsSettings();
+
+    (document.getElementById('rc-minVisitDuration') as HTMLInputElement).value = '1';
+    (document.getElementById('save-conditions-settings') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => {
+      expect(mockSetAll).toHaveBeenCalled();
     });
   });
 });

@@ -18,6 +18,12 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
+import { clearFieldError, setFieldError } from './settings/fieldValidation.js';
+import {
+  validateMaxTokensValue,
+  validateMinScrollDepthValue,
+  validateMinVisitDurationValue,
+} from './settings/fieldDescriptor.js';
 
 interface RecordingConditionsDom {
   container: HTMLElement;
@@ -110,25 +116,25 @@ export function createRecordingConditionsSettings(): RecordingConditionsSettings
       <h3 class="settings-section-title">${getMessageOr('recordingSection', '記録条件')}</h3>
 
       <div class="form-group">
-        <label for="minVisitDuration">${getMessageOr('minVisitDuration', 'Min Visit Duration (seconds)')}</label>
-        <input type="number" id="minVisitDuration" min="1" value="${minVisitDuration}" aria-invalid="false"
-          aria-describedby="minVisitDurationError">
-        <div id="minVisitDurationError" class="field-error" role="alert"></div>
+        <label for="rc-minVisitDuration">${getMessageOr('minVisitDuration', 'Min Visit Duration (seconds)')}</label>
+        <input type="number" id="rc-minVisitDuration" min="1" value="${minVisitDuration}" aria-invalid="false"
+          aria-describedby="rc-minVisitDurationError">
+        <div id="rc-minVisitDurationError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="minScrollDepth">${getMessageOr('minScrollDepth', 'Min Scroll Depth (%)')}</label>
-        <input type="number" id="minScrollDepth" min="0" max="100" value="${minScrollDepth}" aria-invalid="false"
-          aria-describedby="minScrollDepthError">
-        <div id="minScrollDepthError" class="field-error" role="alert"></div>
+        <label for="rc-minScrollDepth">${getMessageOr('minScrollDepth', 'Min Scroll Depth (%)')}</label>
+        <input type="number" id="rc-minScrollDepth" min="0" max="100" value="${minScrollDepth}" aria-invalid="false"
+          aria-describedby="rc-minScrollDepthError">
+        <div id="rc-minScrollDepthError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
-        <label for="maxTokensPerPrompt">${getMessageOr('label_max_tokens', 'Max Tokens Per Prompt')}</label>
-        <input type="number" id="maxTokensPerPrompt" min="10" max="16000" step="100" value="${maxTokensPerPrompt}" aria-invalid="false"
-          aria-describedby="maxTokensError maxTokensNote">
-        <p class="help-text" id="maxTokensNote">${getMessageOr('note_max_tokens_cost_control', '')}</p>
-        <div id="maxTokensError" class="field-error" role="alert"></div>
+        <label for="rc-maxTokensPerPrompt">${getMessageOr('label_max_tokens', 'Max Tokens Per Prompt')}</label>
+        <input type="number" id="rc-maxTokensPerPrompt" min="10" max="16000" step="100" value="${maxTokensPerPrompt}" aria-invalid="false"
+          aria-describedby="rc-maxTokensError rc-maxTokensNote">
+        <p class="help-text" id="rc-maxTokensNote">${getMessageOr('note_max_tokens_cost_control', '')}</p>
+        <div id="rc-maxTokensError" class="field-error" role="alert"></div>
       </div>
 
       <div class="form-group">
@@ -191,10 +197,13 @@ export function createRecordingConditionsSettings(): RecordingConditionsSettings
       successEl.classList.add('hidden');
       successEl.style.display = 'none';
 
-      // Validate recording conditions
-      const minVisitInput = root.querySelector('#minVisitDuration') as HTMLInputElement;
-      const minScrollInput = root.querySelector('#minScrollDepth') as HTMLInputElement;
-      const maxTokensInput = root.querySelector('#maxTokensPerPrompt') as HTMLInputElement;
+      // Validate recording conditions through the fieldDescriptor SSOT so both
+      // screens share one accept/reject decision. Lookups stay inside `root`
+      // (container scope), never the document, so the #panel-general inputs
+      // with the unprefixed ids can never steal the resolution.
+      const minVisitInput = root.querySelector('#rc-minVisitDuration') as HTMLInputElement;
+      const minScrollInput = root.querySelector('#rc-minScrollDepth') as HTMLInputElement;
+      const maxTokensInput = root.querySelector('#rc-maxTokensPerPrompt') as HTMLInputElement;
       const aiTimeoutInput = root.querySelector('#aiTimeoutSeconds') as HTMLInputElement;
       const maxMonthlyTokensInput = root.querySelector('#maxMonthlyTokens') as HTMLInputElement;
       const aiRateLimitMaxInput = root.querySelector('#aiRateLimitMax') as HTMLInputElement;
@@ -210,24 +219,38 @@ export function createRecordingConditionsSettings(): RecordingConditionsSettings
       const openaiContentCharsVal = parseInt(openaiContentCharsInput?.value ?? '10000', 10);
       const geminiContentCharsVal = parseInt(geminiContentCharsInput?.value ?? '30000', 10);
 
-      if (isNaN(minVisitVal) || minVisitVal < 1) {
-        errorEl.textContent = getMessageOr('minVisitDurationError', 'Min visit duration must be at least 1 second.');
+      for (const [el, errId] of [
+        [minVisitInput, 'rc-minVisitDurationError'],
+        [minScrollInput, 'rc-minScrollDepthError'],
+        [maxTokensInput, 'rc-maxTokensError'],
+      ] as Array<[HTMLInputElement | null, string]>) {
+        if (el) clearFieldError(el, errId, root);
+      }
+
+      if (validateMinVisitDurationValue(minVisitVal) !== null) {
+        const message = getMessageOr('minVisitDurationError', 'Min visit duration must be at least 1 second.');
+        errorEl.textContent = message;
         errorEl.classList.remove('hidden');
         errorEl.style.display = '';
+        if (minVisitInput) setFieldError(minVisitInput, 'rc-minVisitDurationError', message, root);
         return;
       }
 
-      if (isNaN(minScrollVal) || minScrollVal < 0 || minScrollVal > 100) {
-        errorEl.textContent = getMessageOr('minScrollDepthError', 'Min scroll depth must be between 0 and 100.');
+      if (validateMinScrollDepthValue(minScrollVal) !== null) {
+        const message = getMessageOr('minScrollDepthError', 'Min scroll depth must be between 0 and 100.');
+        errorEl.textContent = message;
         errorEl.classList.remove('hidden');
         errorEl.style.display = '';
+        if (minScrollInput) setFieldError(minScrollInput, 'rc-minScrollDepthError', message, root);
         return;
       }
 
-      if (isNaN(maxTokensVal) || maxTokensVal < 10 || maxTokensVal > 16000) {
-        errorEl.textContent = getMessageOr('maxTokensError', 'Max tokens must be between 10 and 16000.');
+      if (validateMaxTokensValue(maxTokensVal) !== null) {
+        const message = getMessageOr('maxTokensError', 'Max tokens must be between 10 and 16000.');
+        errorEl.textContent = message;
         errorEl.classList.remove('hidden');
         errorEl.style.display = '';
+        if (maxTokensInput) setFieldError(maxTokensInput, 'rc-maxTokensError', message, root);
         return;
       }
 
@@ -296,11 +319,19 @@ export function createRecordingConditionsSettings(): RecordingConditionsSettings
     // the current state (stale-message / doubled-text report 2026-09-22).
     listen(container, 'input', () => {
       if (!dom) return;
-      const { validationError: errorEl, successMsg: successEl } = dom;
+      const { container: root, validationError: errorEl, successMsg: successEl } = dom;
       errorEl.classList.add('hidden');
       errorEl.style.display = 'none';
       successEl.classList.add('hidden');
       successEl.style.display = 'none';
+      for (const [selector, errId] of [
+        ['#rc-minVisitDuration', 'rc-minVisitDurationError'],
+        ['#rc-minScrollDepth', 'rc-minScrollDepthError'],
+        ['#rc-maxTokensPerPrompt', 'rc-maxTokensError'],
+      ] as Array<[string, string]>) {
+        const el = root.querySelector(selector) as HTMLInputElement | null;
+        if (el) clearFieldError(el, errId, root);
+      }
     });
   }
 

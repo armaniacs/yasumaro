@@ -229,8 +229,8 @@ describe('fieldValidation', () => {
             },
             {
                 elementId: 'minVisitDuration',
-                valid: ['0', '30', '999999'],
-                invalid: ['-1', '', 'abc'],
+                valid: ['1', '30', '999999'],
+                invalid: ['0', '-1', '', 'abc'],
             },
             {
                 elementId: 'minScrollDepth',
@@ -582,6 +582,73 @@ describe('fieldValidation', () => {
 
             expect(result).toBe(false);
             expect(el.getAttribute('aria-invalid')).toBe('true');
+        });
+    });
+
+    describe('container-scoped resolution (NN07 duplicate-id guard)', () => {
+        test('setFieldError with a root writes to the scoped error element, not the document-first one', () => {
+            document.body.innerHTML = `
+                <div id="other-panel"><div id="portError">other</div></div>
+                <div id="scoped-panel"><input id="scoped-port" type="text" /><div id="scopedPortError"></div></div>
+            `;
+            const scopedInput = document.getElementById('scoped-port') as HTMLInputElement;
+            const scope = document.getElementById('scoped-panel') as HTMLElement;
+
+            setFieldError(scopedInput, 'scopedPortError', 'scoped message', scope);
+
+            expect(scopedInput.getAttribute('aria-invalid')).toBe('true');
+            expect((document.getElementById('scopedPortError') as HTMLElement).textContent).toBe('scoped message');
+            // The unrelated panel's error element is untouched.
+            expect((document.getElementById('portError') as HTMLElement).textContent).toBe('other');
+        });
+
+        test('descriptor.container scopes validateDescriptorField to the recording-conditions side', () => {
+            document.body.innerHTML = `
+                <input id="minVisitDuration" type="text" value="5" />
+                <div id="minVisitDurationError">general</div>
+                <div id="rc-panel">
+                    <input id="rc-minVisit" type="text" value="0" />
+                    <div id="rc-minVisitError"></div>
+                </div>
+            `;
+            const scope = document.getElementById('rc-panel') as HTMLElement;
+            const rcInput = document.getElementById('rc-minVisit') as HTMLInputElement;
+            const scopedRow = { ...descriptor('minVisitDuration'), elementId: 'rc-minVisit', errorId: 'rc-minVisitError', container: scope };
+
+            expect(validateDescriptorField(scopedRow, rcInput)).toBe(false);
+
+            expect(rcInput.getAttribute('aria-invalid')).toBe('true');
+            // Untranslated keys render an empty-but-visible box (getMessage contract).
+            expect((document.getElementById('rc-minVisitError') as HTMLElement).classList.contains('visible')).toBe(true);
+            // The document-first general panel error element keeps its content.
+            expect((document.getElementById('minVisitDurationError') as HTMLElement).textContent).toBe('general');
+        });
+
+        test('validateAllFields with a root resolves inputs inside the scope', () => {
+            document.body.innerHTML = `
+                <input id="port" type="text" value="0" />
+                <div id="portError"></div>
+                <div id="scoped-form">
+                    <input id="protocol" type="text" value="https" />
+                    <div id="protocolError"></div>
+                    <input id="port" type="text" value="8080" />
+                    <div id="portError"></div>
+                </div>
+            `;
+            const scope = document.getElementById('scoped-form') as HTMLElement;
+
+            // Scoped run sees the valid port 8080; the invalid document-level port is out of scope.
+            expect(validateAllFields(undefined, scope)).toBe(true);
+            // The out-of-scope invalid input is never validated: no aria flag, no error text.
+            expect((document.body.querySelector('#scoped-form #portError') as HTMLElement).textContent).toBe('');
+        });
+
+        test('minVisitDuration boundary 0 is rejected and 1 accepted on the shared SSOT', () => {
+            const row = descriptor('minVisitDuration');
+            input('minVisitDuration').value = '0';
+            expect(validateDescriptorField(row, input('minVisitDuration'))).toBe(false);
+            input('minVisitDuration').value = '1';
+            expect(validateDescriptorField(row, input('minVisitDuration'))).toBe(true);
         });
     });
 });

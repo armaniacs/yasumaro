@@ -43,6 +43,13 @@ export interface FieldDescriptor<T = unknown> {
   readonly storageKey: StorageKey;
   readonly elementId: string;
   readonly errorId: string;
+  /**
+   * Optional scope for container-scoped DOM resolution. When set,
+   * fieldValidation resolves the row's input/error elements via
+   * `container.querySelector` first and falls back to the document,
+   * so a duplicated id in another panel can never steal the lookup.
+   */
+  readonly container?: ParentNode | null;
   readonly parse: (raw: string) => T;
   readonly validate: (value: T, ctx?: ValidationContext) => string | null;
   readonly save: (value: T) => unknown;
@@ -99,12 +106,12 @@ export function validateObsidianHostValue(raw: string): string | null {
 }
 
 /**
- * Single owner of the min-visit-duration floor. No utils SSOT exists yet
- * (recordingConditionsSettings.ts mirrors `minVisitVal < 1` inline and is out
- * of this PBI's file scope), so this table holds the literal once.
+ * Single owner of the min-visit-duration floor. Both the Initial Setup panel
+ * and the recording-conditions panel call this validator, so the `< 1`
+ * rejection is consistent whichever screen saves.
  */
 export function validateMinVisitDurationValue(v: number): string | null {
-  if (isNaN(v) || v < 0) return 'errorDuration';
+  if (isNaN(v) || v < 1) return 'errorDuration';
   return null;
 }
 

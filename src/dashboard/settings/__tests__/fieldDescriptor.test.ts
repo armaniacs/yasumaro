@@ -148,9 +148,10 @@ describe('other validators preserve legacy UI decisions', () => {
     expect(validateObsidianHostValue('127.0.0.1@evil.com')).toBe('obsidianHostError');
   });
 
-  it('min visit duration keeps the v < 0 floor', () => {
-    expect(validateMinVisitDurationValue(0)).toBeNull();
+  it('min visit duration keeps the v < 1 floor shared with recording-conditions', () => {
+    expect(validateMinVisitDurationValue(1)).toBeNull();
     expect(validateMinVisitDurationValue(30)).toBeNull();
+    expect(validateMinVisitDurationValue(0)).toBe('errorDuration');
     expect(validateMinVisitDurationValue(-1)).toBe('errorDuration');
     expect(validateMinVisitDurationValue(NaN)).toBe('errorDuration');
   });

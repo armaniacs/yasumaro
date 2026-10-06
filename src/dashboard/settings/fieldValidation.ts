@@ -20,8 +20,30 @@ export type ErrorPair = [HTMLInputElement | null, string];
  * @param {string} errorId - エラーメッセージ表示要素のID
  * @param {string} message - エラーメッセージ
  */
-export function setFieldError(input: HTMLInputElement, errorId: string, message: string): void {
-    const errorEl = document.getElementById(errorId);
+/**
+ * Resolve an error element container-first: `scope.querySelector` wins so a
+ * duplicated id in another panel can never steal the lookup; the document is
+ * the fallback that keeps scopeless callers working. The null guard at the
+ * call site is preserved — a missing element only flips aria-invalid.
+ */
+function resolveErrorElement(errorId: string, scope?: ParentNode | null): HTMLElement | null {
+    if (scope && typeof scope.querySelector === 'function') {
+        const found = scope.querySelector<HTMLElement>(`#${errorId}`);
+        if (found) return found;
+    }
+    return document.getElementById(errorId) as HTMLElement | null;
+}
+
+function resolveInputElement(elementId: string, scope?: ParentNode | null): HTMLInputElement | null {
+    if (scope && typeof scope.querySelector === 'function') {
+        const found = scope.querySelector<HTMLInputElement>(`#${elementId}`);
+        if (found) return found;
+    }
+    return document.getElementById(elementId) as HTMLInputElement | null;
+}
+
+export function setFieldError(input: HTMLInputElement, errorId: string, message: string, root?: ParentNode | null): void {
+    const errorEl = resolveErrorElement(errorId, root);
     input.setAttribute('aria-invalid', 'true');
     if (errorEl) {
         errorEl.textContent = message;
@@ -34,8 +56,8 @@ export function setFieldError(input: HTMLInputElement, errorId: string, message:
  * @param {HTMLInputElement} input - 入力要素
  * @param {string} errorId - エラーメッセージ表示要素のID
  */
-export function clearFieldError(input: HTMLInputElement, errorId: string): void {
-    const errorEl = document.getElementById(errorId);
+export function clearFieldError(input: HTMLInputElement, errorId: string, root?: ParentNode | null): void {
+    const errorEl = resolveErrorElement(errorId, root);
     input.setAttribute('aria-invalid', 'false');
     if (errorEl) {
         errorEl.textContent = '';
@@ -112,15 +134,17 @@ function resolveErrorMessage(descriptor: FieldDescriptor<unknown>, errorKey: str
 export function validateDescriptorField(
     descriptor: FieldDescriptor<unknown>,
     input: HTMLInputElement,
-    ctx?: ValidationContext
+    ctx?: ValidationContext,
+    root?: ParentNode | null
 ): boolean {
     FIELD_SIDE_EFFECTS[descriptor.elementId]?.(input);
+    const scope = root ?? descriptor.container ?? undefined;
     const errorKey = descriptor.validate(descriptor.parse(input.value), ctx);
     if (errorKey !== null) {
-        setFieldError(input, descriptor.errorId, resolveErrorMessage(descriptor, errorKey));
+        setFieldError(input, descriptor.errorId, resolveErrorMessage(descriptor, errorKey), scope);
         return false;
     }
-    clearFieldError(input, descriptor.errorId);
+    clearFieldError(input, descriptor.errorId, scope);
     return true;
 }
 
@@ -133,7 +157,7 @@ export function setupDescriptorValidation(
     ctx?: ValidationContext
 ): () => void {
     if (!input) return () => {};
-    const handler = () => validateDescriptorField(descriptor, input, ctx);
+    const handler = () => validateDescriptorField(descriptor, input, ctx, descriptor.container ?? undefined);
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
 }
@@ -246,11 +270,12 @@ export function setupAllFieldValidations(
  * Save-time validation: every table row whose input is in the DOM, resolved by
  * element id. A new row is swept without an edit here.
  */
-export function validateAllFields(ctx?: ValidationContext): boolean {
+export function validateAllFields(ctx?: ValidationContext, root?: ParentNode | null): boolean {
     let hasError = false;
     for (const descriptor of GENERAL_SETTINGS_FIELDS) {
-        const input = document.getElementById(descriptor.elementId) as HTMLInputElement | null;
-        if (input && !validateDescriptorField(descriptor, input, ctx)) hasError = true;
+        const scope = root ?? descriptor.container ?? undefined;
+        const input = resolveInputElement(descriptor.elementId, scope);
+        if (input && !validateDescriptorField(descriptor, input, ctx, scope)) hasError = true;
     }
     return !hasError;
 }
