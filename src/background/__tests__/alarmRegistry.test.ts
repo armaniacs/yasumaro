@@ -6,10 +6,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 
-const { flushBufferedExportsMock, flushYesterdaysExportMock, addLogMock } = vi.hoisted(() => ({
+const { flushBufferedExportsMock, flushYesterdaysExportMock, addLogMock, initExportSchedulerMock } = vi.hoisted(() => ({
   flushBufferedExportsMock: vi.fn(async (..._args: unknown[]) => {}),
   flushYesterdaysExportMock: vi.fn(async (..._args: unknown[]) => {}),
   addLogMock: vi.fn(),
+  initExportSchedulerMock: vi.fn(async (..._args: unknown[]) => {}),
 }));
 
 vi.mock('../localMarkdownExportCore.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('../localMarkdownExportCore.js', () => ({
 }));
 vi.mock('../localMarkdownIdleFlusher.js', () => ({
   flushYesterdaysExport: (...args: unknown[]) => flushYesterdaysExportMock(...args),
+  initExportScheduler: (...args: unknown[]) => initExportSchedulerMock(...args),
 }));
 vi.mock('../dailyPurgeHandler.js', () => ({
   handleDailyPurgeAlarm: vi.fn(async () => {}),
@@ -228,6 +230,33 @@ describe('createAlarmRegistry', () => {
         expect(run).not.toHaveBeenCalled();
       } finally {
         globalRef.chrome = savedChrome;
+      }
+    });
+  });
+
+  describe('local-md install (ownership: initExportScheduler + one-shot no-op)', () => {
+    it('routes installAll through initExportScheduler for the standing local-md alarms', async () => {
+      const { create, restore } = stubChromeAlarms();
+      try {
+        const registry = createAlarmRegistry(makeDeps());
+        await registry.installAll();
+
+        // flush + daily rows share the scheduler install (idempotent).
+        expect(initExportSchedulerMock).toHaveBeenCalled();
+      } finally {
+        restore();
+      }
+    });
+
+    it('creates no standing immediate alarm at install time (per-recording one-shot)', async () => {
+      const { create, restore } = stubChromeAlarms();
+      try {
+        const registry = createAlarmRegistry(makeDeps());
+        await registry.installAll();
+
+        expect(create).not.toHaveBeenCalledWith('yasumaro-local-md-immediate', expect.anything());
+      } finally {
+        restore();
       }
     });
   });

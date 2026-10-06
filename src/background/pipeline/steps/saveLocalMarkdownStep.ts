@@ -99,7 +99,8 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
       // buffered entries download at most once per minute.
       scheduleImmediateFlush();
     } else {
-      markdownBuffer.scheduleDailyFlush();
+      // Arm-only: an already-armed daily alarm keeps its midnight `when`.
+      await markdownBuffer.scheduleDailyFlush();
     }
 
     addLog(LogType.INFO, 'Buffered to local Markdown (deferred export)', {

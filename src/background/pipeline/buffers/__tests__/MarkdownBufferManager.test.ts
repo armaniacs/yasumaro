@@ -19,6 +19,7 @@ const mockChrome = {
   },
   alarms: {
     create: vi.fn(),
+    get: vi.fn(async () => undefined),
   },
 };
 
@@ -132,24 +133,35 @@ describe('MarkdownBufferManager', () => {
     });
   });
 
-  describe('scheduleDailyFlush', () => {
-    it('creates a chrome alarm with daily period', () => {
-      manager.scheduleDailyFlush();
+  describe('scheduleDailyFlush (arm-only)', () => {
+    it('arms the daily alarm with a midnight when when unarmed', async () => {
+      mockChrome.alarms.get.mockResolvedValue(undefined);
 
+      await manager.scheduleDailyFlush();
+
+      expect(mockChrome.alarms.get).toHaveBeenCalledWith('yasumaro-local-md-daily-flush');
       expect(mockChrome.alarms.create).toHaveBeenCalledTimes(1);
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(
         'yasumaro-local-md-daily-flush',
-        { periodInMinutes: 1440 },
+        { when: expect.any(Number), periodInMinutes: 1440 },
       );
     });
 
-    it('uses custom alarm name when provided', () => {
-      manager.scheduleDailyFlush('custom-alarm');
+    it('does not recreate an already-armed daily alarm', async () => {
+      mockChrome.alarms.get.mockResolvedValue({ name: 'yasumaro-local-md-daily-flush' });
 
-      expect(mockChrome.alarms.create).toHaveBeenCalledWith(
-        'custom-alarm',
-        { periodInMinutes: 1440 },
-      );
+      await manager.scheduleDailyFlush();
+
+      expect(mockChrome.alarms.create).not.toHaveBeenCalled();
+    });
+
+    it('arms only once across repeated recordings', async () => {
+      mockChrome.alarms.get.mockResolvedValueOnce(undefined);
+      await manager.scheduleDailyFlush();
+      mockChrome.alarms.get.mockResolvedValue({ name: 'yasumaro-local-md-daily-flush' });
+      await manager.scheduleDailyFlush();
+
+      expect(mockChrome.alarms.create).toHaveBeenCalledTimes(1);
     });
   });
 });

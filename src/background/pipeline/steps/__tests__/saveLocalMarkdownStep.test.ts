@@ -385,7 +385,8 @@ describe('saveLocalMarkdownStep', () => {
       );
     });
 
-    it('creates a daily alarm when timing=idle', async () => {
+    it('arms the daily alarm once when timing=idle and it is not yet armed', async () => {
+      mockChrome.alarms.get.mockResolvedValue(undefined);
       const context = makeContext({
         settings: {
           local_markdown_export_enabled: true,
@@ -396,9 +397,29 @@ describe('saveLocalMarkdownStep', () => {
 
       await saveLocalMarkdownStep(context);
 
+      expect(mockChrome.alarms.get).toHaveBeenCalledWith('yasumaro-local-md-daily-flush');
       expect(mockChrome.alarms.create).toHaveBeenCalledWith(
         'yasumaro-local-md-daily-flush',
-        { periodInMinutes: 1440 }
+        { when: expect.any(Number), periodInMinutes: 1440 }
+      );
+    });
+
+    it('does not recreate the daily alarm when timing=idle and it is already armed', async () => {
+      mockChrome.alarms.get.mockResolvedValue({ name: 'yasumaro-local-md-daily-flush' });
+      const context = makeContext({
+        settings: {
+          local_markdown_export_enabled: true,
+          local_markdown_export_timing: 'idle',
+          local_markdown_export_path: 'Yasumaro',
+        } as any,
+      });
+
+      await saveLocalMarkdownStep(context);
+      await saveLocalMarkdownStep(context);
+
+      expect(mockChrome.alarms.create).not.toHaveBeenCalledWith(
+        'yasumaro-local-md-daily-flush',
+        expect.anything()
       );
     });
 

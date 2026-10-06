@@ -25,7 +25,7 @@ function getYesterdayDateString(): string {
   return formatLocalDateString(Date.now() - DAY_MS);
 }
 
-function getNextMidnightTimestamp(): number {
+export function getNextMidnightTimestamp(): number {
   const now = new Date();
   const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0, 0);
   return next.getTime();
@@ -39,6 +39,8 @@ function getNextMidnightTimestamp(): number {
  * Only the standing alarms this function owns — the idle fallback and the
  * daily flush — are cleared, and both clears are awaited so a mode switch
  * cannot end up with the previous mode's alarm alive next to the new one.
+ * This function is the sole creator of DAILY_FLUSH_ALARM: the recording side
+ * never creates it directly and only calls ensureDailyFlushArmed() (arm-only).
  * The idle listener follows the same re-registration discipline: it is a
  * module-level named function removed before re-adding, so repeated calls
  * never accumulate listeners (the shape manualContentFetcher had to fix once
@@ -84,6 +86,22 @@ export async function initExportScheduler(): Promise<void> {
   // 'manual' needs no standing alarm or listener. 'immediate' arms the
   // per-recording one-shot via scheduleImmediateFlush() and is never re-armed
   // or cleared here.
+}
+
+/**
+ * Arm-only helper for the recording side (saveLocalMarkdownStep via
+ * MarkdownBufferManager): if DAILY_FLUSH_ALARM is already armed its midnight
+ * `when` is left untouched, otherwise it is armed once with the same spec
+ * initExportScheduler uses. Never recreates an armed alarm, so recordings
+ * cannot shift the daily timing off midnight.
+ */
+export async function ensureDailyFlushArmed(): Promise<void> {
+  const existing = await chrome.alarms.get(DAILY_FLUSH_ALARM);
+  if (existing) return;
+  chrome.alarms.create(DAILY_FLUSH_ALARM, {
+    when: getNextMidnightTimestamp(),
+    periodInMinutes: 1440,
+  });
 }
 
 /**

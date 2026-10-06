@@ -1,6 +1,6 @@
 import type { MarkdownTemplateEntryData } from '../../../utils/types.js';
 import { withAtomicKeys } from '../../../utils/storage/storageTransaction.js';
-import { DAILY_FLUSH_ALARM } from '../../localMarkdownIdleFlusher.js';
+import { DAILY_FLUSH_ALARM, ensureDailyFlushArmed } from '../../localMarkdownIdleFlusher.js';
 import { formatLocalDateString } from '../../../utils/localDate.js';
 
 export interface MarkdownEntry {
@@ -71,10 +71,11 @@ export class MarkdownBufferManager {
     }
   }
 
-  scheduleDailyFlush(alarmName?: string): void {
-    chrome.alarms.create(alarmName ?? DEFAULT_DAILY_FLUSH_ALARM, {
-      periodInMinutes: 1440,
-    });
+  // Arm-only: the sole creator of the daily alarm is initExportScheduler
+  // (see localMarkdownIdleFlusher.ts). An armed alarm is never recreated,
+  // so recordings cannot shift the midnight timing.
+  async scheduleDailyFlush(): Promise<void> {
+    await ensureDailyFlushArmed();
   }
 }
 

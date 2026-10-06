@@ -13,6 +13,7 @@ const mockOnStateChangedRemoveListener = vi.hoisted(() => vi.fn());
 const mockIdle = vi.hoisted(() => ({ onStateChanged: { addListener: mockOnStateChangedAddListener, removeListener: mockOnStateChangedRemoveListener } }));
 const mockAlarmsCreate = vi.hoisted(() => vi.fn());
 const mockAlarmsClear = vi.hoisted(() => vi.fn());
+const mockAlarmsGet = vi.hoisted(() => vi.fn(async () => undefined));
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -182,12 +183,13 @@ vi.mock('../localMarkdownExportCore.js', () => ({
 
 vi.stubGlobal('chrome', {
   idle: mockIdle,
-  alarms: { create: mockAlarmsCreate, clear: mockAlarmsClear },
+  alarms: { create: mockAlarmsCreate, clear: mockAlarmsClear, get: mockAlarmsGet },
 });
 
 import {
   initExportScheduler,
   scheduleImmediateFlush,
+  ensureDailyFlushArmed,
   IDLE_FALLBACK_ALARM,
   DAILY_FLUSH_ALARM,
   IMMEDIATE_FLUSH_ALARM,
@@ -356,5 +358,35 @@ describe('initExportScheduler', () => {
       mockOnStateChangedAddListener.mock.calls[0]?.[0]
     );
     expect(mockOnStateChangedAddListener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ensureDailyFlushArmed (recording-side arm-only)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAlarmsClear.mockReset();
+    mockAlarmsGet.mockReset();
+    mockAlarmsGet.mockResolvedValue(undefined);
+  });
+
+  it('arms the daily alarm with a midnight when when unarmed', async () => {
+    mockAlarmsGet.mockResolvedValue(undefined);
+
+    await ensureDailyFlushArmed();
+
+    expect(mockAlarmsGet).toHaveBeenCalledWith(DAILY_FLUSH_ALARM);
+    expect(mockAlarmsCreate).toHaveBeenCalledTimes(1);
+    expect(mockAlarmsCreate).toHaveBeenCalledWith(
+      DAILY_FLUSH_ALARM,
+      expect.objectContaining({ when: expect.any(Number), periodInMinutes: 1440 })
+    );
+  });
+
+  it('leaves an armed daily alarm untouched so the midnight when survives recordings', async () => {
+    mockAlarmsGet.mockResolvedValue({ name: DAILY_FLUSH_ALARM } as chrome.alarms.Alarm);
+
+    await ensureDailyFlushArmed();
+
+    expect(mockAlarmsCreate).not.toHaveBeenCalled();
   });
 });

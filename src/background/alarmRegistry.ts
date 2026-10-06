@@ -70,6 +70,26 @@ async function runLocalMdDailyFlush(): Promise<void> {
   await flushYesterdaysExport();
 }
 
+/**
+ * Shared install for the standing local-md alarms. initExportScheduler is the
+ * sole creator of the idle-fallback and daily alarms; the table only routes
+ * installAll() through it so ownership is visible in one place. Idempotent:
+ * it clears both standing alarms before re-arming for the current timing.
+ */
+async function installLocalMdScheduler(): Promise<void> {
+  const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
+  await initExportScheduler();
+}
+
+/**
+ * Install for the immediate one-shot. There is no standing alarm to create:
+ * the one-shot is armed per recording via scheduleImmediateFlush() (Chrome
+ * replaces same-name alarms, giving the at-most-once-per-minute debounce),
+ * so install is intentionally a no-op that records table ownership.
+ */
+async function installLocalMdImmediate(): Promise<void> {
+}
+
 async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
   const offlineNetworkQueue = await deps.getOfflineNetworkQueue();
   const processOfflineNetworkQueue = createOfflineQueueProcessor({
@@ -122,9 +142,9 @@ function getNextMonthFirstDayAt(hour: number, minute: number): number {
 // (the review-summary jobs need deps.settingsReader to read the enabled flag).
 const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
   { name: 'yasumaro-daily-purge', staticSchedule: { periodInMinutes: 1440 }, run: runDailyPurge },
-  { name: 'yasumaro-local-md-flush', run: runLocalMdFlush },
-  { name: 'yasumaro-local-md-immediate', run: runLocalMdFlush },
-  { name: 'yasumaro-local-md-daily-flush', run: runLocalMdDailyFlush },
+  { name: 'yasumaro-local-md-flush', install: installLocalMdScheduler, run: runLocalMdFlush },
+  { name: 'yasumaro-local-md-immediate', install: installLocalMdImmediate, run: runLocalMdFlush },
+  { name: 'yasumaro-local-md-daily-flush', install: installLocalMdScheduler, run: runLocalMdDailyFlush },
   { name: 'yasumaro-offline-network-retry', staticSchedule: { periodInMinutes: 5 }, run: runOfflineNetworkRetry },
   {
     name: 'yasumaro-review-weekly',
