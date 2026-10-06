@@ -113,6 +113,7 @@ test.describe('Over-cut Guard Recording @extension', () => {
         const h = document.body.scrollHeight;
         for (let y = 0; y <= h; y += 400) {
           window.scrollTo(0, y);
+          // eslint-disable-next-line local/no-test-sleep -- browser-side scroll pacing inside page.evaluate (not a test wait); fires scroll listeners between steps
           await new Promise((r) => setTimeout(r, 30));
         }
         window.scrollTo(0, h);

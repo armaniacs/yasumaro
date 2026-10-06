@@ -12,8 +12,9 @@
  * Only member calls are matched, because that is the whole Playwright surface
  * (`Page`, `Frame`, `Locator`, `Worker`, `JSHandle` all expose the same
  * `waitForTimeout`). A bare `setTimeout` sleep is `no-test-sleep`'s business,
- * not this rule's, so the two can be enabled on different file sets without
- * double reporting.
+ * not this rule's: since PBI 2026-10-05-03 both rules are enabled on the same
+ * file sets (src tests, testDir, bench), so the two never double report and
+ * neither leaves a gap.
  *
  * Every call is reported, whatever the duration: unlike a sleep there is no
  * threshold to tune, because no duration of `waitForTimeout` expresses a

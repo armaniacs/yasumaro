@@ -142,12 +142,14 @@ export function waitForServiceWorker(context: BrowserContext): Promise<boolean> 
         if (context.serviceWorkers().length > 0) {
           resolve(true);
         } else {
+          // eslint-disable-next-line local/no-test-sleep -- condition poll for service-worker registration (resolves on presence); bounded by SERVICE_WORKER_TIMEOUT_MS, never hangs
           setTimeout(check, SERVICE_WORKER_POLL_INTERVAL_MS);
         }
       };
       check();
     }),
     new Promise<boolean>((resolve) =>
+      // eslint-disable-next-line local/no-test-sleep -- bounded external-process readiness cap (service-worker registration); the poll above is the condition, this only bounds it
       setTimeout(() => resolve(false), SERVICE_WORKER_TIMEOUT_MS),
     ),
   ]);

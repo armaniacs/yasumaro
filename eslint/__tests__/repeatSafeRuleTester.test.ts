@@ -62,7 +62,7 @@ describe('repeatSafeRuleTester', () => {
         // iterations makes the second round throw on its first case.
         for (const round of ['first', 'second']) {
             const bodies = rebuildRuleCaseBodiesForIteration();
-            expect(bodies, round).toHaveLength(3);
+            expect({ round, count: bodies.length }).toEqual({ round, count: 3 });
             for (const body of bodies) body();
         }
     });

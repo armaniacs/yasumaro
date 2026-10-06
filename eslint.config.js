@@ -155,7 +155,9 @@ export default [
   },
   {
     // dev-docs/TEST_RULE.md: AIが生成する無意味なテストの検出用。
-    files: ['src/**/__tests__/**/*.ts'],
+    // PBI 2026-10-05-03: vitest hygiene rules also cover the vitest suites
+    // outside src/** so fixed sleeps cannot accumulate unwatched there.
+    files: ['src/**/__tests__/**/*.test.ts', 'testDir/__tests__/**/*.test.ts', 'eslint/__tests__/**/*.test.ts'],
     languageOptions: {
       parser: tsParser,
     },
@@ -212,6 +214,10 @@ export default [
     },
     rules: {
       'local/no-fixed-wait': 'error',
+      // PBI 2026-10-05-03: no-fixed-wait covers member calls only
+      // (page.waitForTimeout). Bare setTimeout sleeps in E2E/bench are
+      // no-test-sleep's business — same rule as src/**/__tests__.
+      'local/no-test-sleep': 'error',
     },
   },
   {

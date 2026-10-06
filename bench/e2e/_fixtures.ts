@@ -38,9 +38,11 @@ async function tryLaunch(): Promise<BrowserContext | null> {
     });
     const started = await Promise.race([
       new Promise<boolean>((res) => {
+        // eslint-disable-next-line local/no-test-sleep -- condition poll for service-worker registration (resolves on presence); bounded by the 5000ms cap below, never hangs
         const check = () => (context.serviceWorkers().length ? res(true) : setTimeout(check, 200));
         check();
       }),
+      // eslint-disable-next-line local/no-test-sleep -- bounded external-process readiness cap (service-worker registration); the poll above is the condition, this only bounds it
       new Promise<boolean>((res) => setTimeout(() => res(false), 5000)),
     ]);
     if (started) return context;

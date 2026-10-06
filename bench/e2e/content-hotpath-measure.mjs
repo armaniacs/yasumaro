@@ -47,6 +47,7 @@ async function waitForPort(port, timeoutMs = 15000) {
       return;
     } catch {
       if (Date.now() - start > timeoutMs) throw new Error('fixture server did not start');
+      // eslint-disable-next-line local/no-test-sleep -- bounded external-process readiness poll (bench fixture server); aborts via timeoutMs, not a test assertion wait
       await new Promise((r) => setTimeout(r, 200));
     }
   }
