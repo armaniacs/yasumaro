@@ -9,7 +9,7 @@
 
 import { MessageTransport, ChromeTransport } from '../messaging/messageTransport.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
-import type { ServiceWorkerResponse, MessageSender } from './visitReporter.js';
+import { isServiceWorkerResponse, type MessageSender, type ServiceWorkerResponse } from './visitReporter.js';
 
 const CONTENT_RETRIES = 2;
 
@@ -20,9 +20,9 @@ const CONTENT_RETRIES = 2;
 export function createContentMessageSender(retries: number = CONTENT_RETRIES): MessageSender {
   const transport = new MessageTransport(new ChromeTransport());
   return {
-    async sendMessageWithRetry(message): Promise<ServiceWorkerResponse> {
+    async sendMessageWithRetry(message): Promise<ServiceWorkerResponse | undefined> {
       const response = await transport.send(message as ExtensionMessage, { retries });
-      return (response ?? undefined) as ServiceWorkerResponse;
+      return isServiceWorkerResponse(response) ? response : undefined;
     },
   };
 }

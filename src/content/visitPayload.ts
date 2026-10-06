@@ -13,7 +13,7 @@
  */
 
 import type { PageState } from './pageState.js';
-import type { RecordingData } from '../messaging/types.js';
+import type { RecordingData, ContentResponse } from '../messaging/types.js';
 import { buildVisitStats, type VisitStats } from './visitReporter.js';
 
 /** RecordingData の field サブセット — content script が送信できる部分。
@@ -47,22 +47,31 @@ export function toValidVisitPayload(
 }
 
 /**
+ * GET_CONTENT 応答 — ContentResponse からの Pick 派生（PBI 2026-10-05-30）。
+ * byte/ai 統計は buildVisitStats の undefined 正規化済み bag を運ぶため
+ * SSOT の必須形ではなく VisitStats 由来とする。scalar field の手書き
+ * コピーは置かない。
+ */
+export type GetContentReply = Pick<
+    ContentResponse,
+    'content' | 'cleansedReason' | 'cleanseStats' | 'fallbackTriggered'
+> & {
+    // Declared explicitly (not via Pick): with exactOptionalPropertyTypes,
+    // assigning an explicit `undefined` to the SSOT's optional field fails,
+    // and the stats bag always carries the key.
+    fallbackReason: string | undefined;
+    byteStats: VisitStats['byteStats'];
+    aiSummaryCleansedStats: VisitStats['aiStats'];
+};
+
+/**
  * GET_CONTENT 応答を構築する。VALID_VISIT ペイロードと同一の field 選別が
  * 適用される（一つの所有者、per-path drift なし）。
  */
 export function toGetContentReply(
     state: PageState,
     content: string
-): {
-    content: string;
-    cleansedReason: string | undefined;
-    cleanseStats: PageState['lastCleanseStats'];
-    byteStats: VisitStats['byteStats'];
-    aiSummaryCleansedStats: VisitStats['aiStats'];
-    fallbackTriggered: boolean;
-    /** PBI 05: 発動理由（未発動時は undefined） */
-    fallbackReason: string | undefined;
-} {
+): GetContentReply {
     const stats = buildVisitStats(state);
     return {
         content,

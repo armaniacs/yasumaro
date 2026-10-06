@@ -4,7 +4,7 @@
  * Preserves public API for existing callers while delegating to presenter.
  */
 
-import type { MaskedItem } from '../messaging/types.js';
+import type { StrippedMaskedItem } from '../messaging/types.js';
 import { PreviewPresenter } from './previewPresenter.js';
 import type { ConfirmationResult } from './previewPresenter.js';
 import { PreviewViewImpl } from './previewView.js';
@@ -47,7 +47,9 @@ export function cleanupModalEvents(): void {
 
 export function showPreview(
   content: string,
-  maskedItems: (string | MaskedItem)[] | null = null,
+  // PBI 2026-10-05-30: the preview path only reads `.type`, which exists
+  // on StrippedMaskedItem too, so the SSOT stripped form is accepted here.
+  maskedItems: (string | StrippedMaskedItem)[] | null = null,
   maskedCount: number = 0,
   cleansedReason?: 'hard' | 'keyword' | 'both' | 'none',
   cleanseStats?: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number }

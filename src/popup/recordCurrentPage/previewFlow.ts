@@ -3,10 +3,10 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
 import { getMessage } from '../../utils/i18n.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
-import type { PayloadForType } from '../../messaging/types.js';
+import type { PayloadForType, RecordingResult } from '../../messaging/types.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
-import type { ContentResponse, PreviewResponse } from '../mainTypes.js';
+import type { ContentResponse } from '../mainTypes.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { SpinnerScope } from '../spinner.js';
 
@@ -20,15 +20,14 @@ export interface PreviewSaveOptions {
   cleanseStats?: ContentResponse['cleanseStats'];
 }
 
-export interface SaveRecordResult {
-  success: boolean;
-  summary?: string;
-  tags?: string[];
-  aiDuration?: number;
-  aiProvider?: string;
-  obsidianDuration?: number;
-  error?: string;
-}
+/**
+ * 記録結果の要約 — SSOT の RecordingResult からの Pick 派生（PBI 2026-10-05-30）。
+ * field 追加は messaging/types.js のみで行い、ここに手書きコピーを置かない。
+ */
+export type SaveRecordResult = Pick<
+  RecordingResult,
+  'success' | 'summary' | 'tags' | 'aiDuration' | 'aiProvider' | 'obsidianDuration' | 'error'
+>;
 
 export interface PreviewSaveResult {
   success: boolean;
@@ -104,9 +103,20 @@ export function buildRecordPayload<Op extends RecordOp>(
   } as PayloadForType<Op>;
 }
 
+/**
+ * transport.send の unknown 応答を RecordingResult に窄める単一ガード。
+ * 応答側の `as` はここに集約し、各 call site ではキャストしない。
+ */
+function isRecordingResult(value: unknown): value is RecordingResult {
+  if (typeof value !== 'object' || value === null) return false;
+  return typeof (value as { success?: unknown }).success === 'boolean';
+}
+
 /** Popup → SW send with retry, via the unified MessageTransport. */
-function send(message: RecordRequest): Promise<SaveRecordResult | undefined> {
-  return messageTransport.send(message, { retries: 5 }) as Promise<SaveRecordResult | undefined>;
+function send(message: RecordRequest): Promise<RecordingResult | undefined> {
+  return messageTransport
+    .send(message, { retries: 5 })
+    .then((response) => (isRecordingResult(response) ? response : undefined));
 }
 
 /**
@@ -135,7 +145,7 @@ export class PreviewFlow {
       const previewResponse = await send({
         type: 'PREVIEW_RECORD',
         payload: buildRecordPayload('PREVIEW_RECORD', tab, content, force, stats),
-      }) as PreviewResponse;
+      });
 
       if (!previewResponse) {
         // PBI 2026-09-12-14: expected background failures return instead of
@@ -155,12 +165,13 @@ export class PreviewFlow {
       }
 
       const shouldShowPreview = (previewResponse.maskedCount || 0) > 0;
-      let finalContent = previewResponse.processedContent;
+      // SSOT では processedContent は optional。欠落時は空文字で継続する。
+      let finalContent = previewResponse.processedContent ?? '';
 
       if (shouldShowPreview) {
         scope.hide();
         const confirmation = await showPreview(
-          previewResponse.processedContent,
+          previewResponse.processedContent ?? '',
           previewResponse.maskedItems,
           previewResponse.maskedCount || 0,
           cleansedReason,

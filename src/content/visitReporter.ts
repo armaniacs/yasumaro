@@ -14,6 +14,7 @@ import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logWarn, logError, logDebug } from '../utils/logger/api.js';
 import { toValidVisitPayload } from './visitPayload.js';
+import type { RecordingResult } from '../messaging/types.js';
 
 /** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
 export interface VisitByteStats {
@@ -85,30 +86,22 @@ export interface Message {
 }
 
 /**
- * Service Worker response — the RecordingResult-derived fields a VALID_VISIT /
- * MANUAL_RECORD reply can carry.
+ * Service Worker response — RecordingResult の別名（PBI 2026-10-05-30:
+ * 応答契約 SSOT。手書きコピーを置かない）。
  */
-export interface ServiceWorkerResponse {
-    success: boolean;
-    error?: string;
-    skipped?: boolean;
-    reason?: string;
-    summary?: string;
-    title?: string;
-    url?: string;
-    preview?: boolean;
-    processedContent?: string;
-    mode?: string;
-    maskedCount?: number;
-    maskedItems?: unknown[];
-    aiDuration?: number;
-    obsidianDuration?: number;
-    confirmationRequired?: boolean;
-    headerValue?: string;
+export type ServiceWorkerResponse = RecordingResult;
+
+/**
+ * transport の unknown 応答を ServiceWorkerResponse に窄める単一ガード。
+ * content 側の応答 `as` はここに集約する。
+ */
+export function isServiceWorkerResponse(value: unknown): value is ServiceWorkerResponse {
+    if (typeof value !== 'object' || value === null) return false;
+    return typeof (value as { success?: unknown }).success === 'boolean';
 }
 
 export interface MessageSender {
-    sendMessageWithRetry(message: Message): Promise<ServiceWorkerResponse>;
+    sendMessageWithRetry(message: Message): Promise<ServiceWorkerResponse | undefined>;
 }
 
 export interface VisitReporterDeps {

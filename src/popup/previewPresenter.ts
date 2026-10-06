@@ -6,7 +6,7 @@
 import { getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { buildCleansingCountDetail, getCleansedBadgeText } from '../utils/cleansingBadge.js';
-import type { MaskedItem } from '../messaging/types.js';
+import type { StrippedMaskedItem } from '../messaging/types.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { MaskNavigator } from './maskNavigator.js';
@@ -29,13 +29,13 @@ const PII_TYPE_LABELS: Record<string, () => string> = {
 
 const DEFAULT_WIDTH = '320px';
 
-function buildMaskStatusText(maskedItems: (string | MaskedItem)[] | null, maskedCount: number): string {
+function buildMaskStatusText(maskedItems: (string | StrippedMaskedItem)[] | null, maskedCount: number): string {
   if (!Array.isArray(maskedItems) || maskedItems.length === 0) {
     return getMessage(getPluralKey('maskStatusCount', maskedCount), { count: maskedCount });
   }
   const typeCounts: Record<string, number> = {};
   for (const item of maskedItems) {
-    const type = typeof item === 'string' ? item : (item as MaskedItem).type;
+    const type = typeof item === 'string' ? item : item.type;
     const labelFunction = PII_TYPE_LABELS[type];
     const label = labelFunction ? labelFunction() : type;
     typeCounts[label] = (typeCounts[label] || 0) + 1;
@@ -163,7 +163,7 @@ export class PreviewPresenter {
 
   showPreview(
     content: string,
-    maskedItems: (string | MaskedItem)[] | null = null,
+    maskedItems: (string | StrippedMaskedItem)[] | null = null,
     maskedCount: number = 0,
     cleansedReason?: 'hard' | 'keyword' | 'both' | 'none',
     cleanseStats?: { hardStripRemoved: number; keywordStripRemoved: number; totalRemoved: number }
