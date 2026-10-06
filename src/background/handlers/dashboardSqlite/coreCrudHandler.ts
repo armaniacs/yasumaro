@@ -5,7 +5,7 @@ import { StorageKeys } from '../../../utils/storage/types.js';
 import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { CoreCrudDeps, DepsResult } from './deps.js';
-import { toFailure, DASHBOARD_MUTABLE_SUBSET, MAX_APPEND_IDS } from './deps.js';
+import { runTableDriven, toFailure, DASHBOARD_MUTABLE_SUBSET, MAX_APPEND_IDS } from './deps.js';
 import { SQLITE_WIRE_DESCRIPTORS, type SqliteWireDescriptor, type SqliteDashboardHop } from '../../../messaging/sqliteWireTable.js';
 
 /**
@@ -27,13 +27,9 @@ export async function runCoreCrud(
   deps: CoreCrudDeps,
 ): Promise<unknown> {
   const raw = payload as unknown as Record<string, unknown>;
-  const invalid = descriptor.dashboard.validate(raw);
-  if (invalid !== null) return { success: false, error: invalid };
   const invoke = (deps as unknown as Record<string, (...args: unknown[]) => Promise<DepsResult<unknown>>>)[descriptor.depsMethod as string];
   if (typeof invoke !== 'function') return { success: false, error: `Unknown coreCrud deps method: ${String(descriptor.depsMethod)}` };
-  const result = await invoke(...descriptor.dashboard.depsArgs(raw));
-  if (!result.success) return toFailure(result);
-  return { success: true, ...descriptor.dashboard.projectDeps(result.data) };
+  return runTableDriven(descriptor.dashboard, raw, invoke, descriptor.dashboard.projectDeps);
 }
 
 /**

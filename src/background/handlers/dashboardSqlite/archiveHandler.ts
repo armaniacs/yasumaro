@@ -14,7 +14,7 @@
 
 import type { DashboardSqliteRequest } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { ArchiveDeps, DepsResult } from './deps.js';
-import { toFailure } from './deps.js';
+import { runTableDriven } from './deps.js';
 import { ARCHIVE_SUBTYPES } from './archiveSubtypes.js';
 import { ARCHIVE_WIRE_TABLE, type ArchiveDescriptor, type ArchiveOpDescriptor } from '../../../messaging/archiveWireTable.js';
 
@@ -33,17 +33,13 @@ export async function runArchive<D extends ArchiveOpDescriptor>(
   deps: ArchiveHandlerDeps,
 ): Promise<unknown> {
   const raw = payload as unknown as Record<string, unknown>;
-  const invalid = descriptor.validate(raw);
-  if (invalid !== null) return { success: false, error: invalid };
   const invoke = (deps as unknown as Record<string, (...args: unknown[]) => Promise<DepsResult<unknown>>>)[descriptor.depsMethod];
   if (typeof invoke !== 'function') return { success: false, error: `Unknown archive deps method: ${descriptor.depsMethod}` };
   // PBI 2026-10-06-10: depsArgs is optional on the interface (defineArchiveOp
   // fills it from backendArgs), so fall back here too.
   const argsFn = descriptor.depsArgs ?? descriptor.backendArgs;
-  const result = await invoke(...argsFn(raw));
-  if (!result.success) return toFailure(result);
   const project = descriptor.projectDeps ?? descriptor.project;
-  return { success: true, ...project(result.data) };
+  return runTableDriven({ validate: descriptor.validate, depsArgs: argsFn }, raw, invoke, project);
 }
 
 export function createArchiveHandler(deps: ArchiveHandlerDeps) {

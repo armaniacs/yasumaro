@@ -36,6 +36,30 @@ export function toFailure(result: { success: false; error: SqliteError }): { suc
   return { success: false, error: result.error.message, retriable: result.error.retriable };
 }
 
+/**
+ * Shared table-driven skeleton (PBI 2026-10-06-19): validate -> invoke ->
+ * toFailure -> project. Adapters normalize their descriptor row into the
+ * narrow shape and resolve the deps method (with their own error prefix);
+ * layer policies stay in the adapters.
+ */
+export interface TableDrivenDescriptor {
+  validate: (raw: Record<string, unknown>) => string | null;
+  depsArgs: (raw: Record<string, unknown>) => unknown[];
+}
+
+export async function runTableDriven(
+  descriptor: TableDrivenDescriptor,
+  raw: Record<string, unknown>,
+  invoke: (...args: unknown[]) => Promise<DepsResult<unknown>>,
+  project: (data: unknown) => Record<string, unknown>,
+): Promise<unknown> {
+  const invalid = descriptor.validate(raw);
+  if (invalid !== null) return { success: false, error: invalid };
+  const result = await invoke(...descriptor.depsArgs(raw));
+  if (!result.success) return toFailure(result);
+  return { success: true, ...project(result.data) };
+}
+
 /** Deps consumed by the read-only subtype group (never mutates, never needs a confirmToken). */
 export interface ReadOnlyDeps {
   query: (params: Record<string, unknown>) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
