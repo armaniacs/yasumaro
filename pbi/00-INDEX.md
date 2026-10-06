@@ -14,6 +14,45 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-05 holistic ラウンド（holistic-1005） — ✅ 32件完了・アーカイブ済み 🔧非機能追加
+
+holistic-code-improvement skill による 6.9.36 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+offscreen+messaging / shared infra — 4 agents 並列発見、統合側が全指摘の実コード裏取り）を 32 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-32）。採点・同点の順位根拠・依存・バッチ計画（W1-W7）の詳細は [2026-10-05-00-backlog-holistic-1005.md](2026-10-05-00-backlog-holistic-1005.md)（live 台帳）。実行順は依存優先（11 → 17 / 22 → 26 / 13 → 23 / 07 → 19,20 / 18 → 29 / 09 → 28,32 / 21 → 28、他は並列可）。積み残し 8 テーマは台帳送り（次ラウンド予約）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 01 | [2026-10-05-01-fix-validate-docs-ssot-gates.md](2026-10-05-01-fix-validate-docs-ssot-gates.md) | fix | 12.0 | 1 | ✅。docs/SSOT 照合ゲートの validate / CI 未配線 |
+| 02 | [2026-10-05-02-fix-domain-policy-parity.md](2026-10-05-02-fix-domain-policy-parity.md) | fix | 10.5 | 2 | ✅。ドメイン判定の content/SW 逆転 |
+| 03 | [2026-10-05-03-fix-test-sleep-lint-coverage.md](2026-10-05-03-fix-test-sleep-lint-coverage.md) | fix | 10.0 | 1 | ✅。固定待ち lint の管轄穴 |
+| 04 | [2026-10-05-04-fix-sessionstore-flush-lost-write.md](2026-10-05-04-fix-sessionstore-flush-lost-write.md) | fix | 9.0 | 2 | ✅。SessionStore の flush 連動で書き込み消失 |
+| 05 | [2026-10-05-05-fix-unhandled-listener-rejections.md](2026-10-05-05-fix-unhandled-listener-rejections.md) | fix | 8.0 | 2 | ✅。リスナ/エントリの未処理リジェクション |
+| 06 | [2026-10-05-06-refactor-loopback-ports-ssot.md](2026-10-05-06-refactor-loopback-ports-ssot.md) | refactor | 8.0 | 1 | ✅。ループバックポート 3 重リテラル |
+| 07 | [2026-10-05-07-fix-duplicate-field-ids-validation-split.md](2026-10-05-07-fix-duplicate-field-ids-validation-split.md) | fix | 7.5 | 2 | ✅。重複 DOM id + 二重バリデーション。19・20 の先行 |
+| 08 | [2026-10-05-08-fix-privacy-dialog-settle.md](2026-10-05-08-fix-privacy-dialog-settle.md) | fix | 7.2 | 1 | ✅。privacyDialog の settle 不能経路 |
+| 09 | [2026-10-05-09-refactor-main-status-single-path.md](2026-10-05-09-refactor-main-status-single-path.md) | refactor | 6.0 | 2 | ✅。#mainStatus の 2 経路。28・32 の先行 |
+| 10 | [2026-10-05-10-fix-sensitive-mask-recursion-guard.md](2026-10-05-10-fix-sensitive-mask-recursion-guard.md) | fix | 6.0 | 1 | ✅。sensitiveDataMask の再帰防御欠如 |
+| 11 | [2026-10-05-11-fix-connection-test-button-guards.md](2026-10-05-11-fix-connection-test-button-guards.md) | fix | 4.0 | 2 | ✅。connectionTests 4ハンドラ規約不統一。17 の先行 |
+| 12 | [2026-10-05-12-fix-local-md-alarm-ownership.md](2026-10-05-12-fix-local-md-alarm-ownership.md) | fix | 4.0 | 2 | ✅。alarms 作成の表外分岐 + daily リセット |
+| 13 | [2026-10-05-13-refactor-envelope-shape-single-source.md](2026-10-05-13-refactor-envelope-shape-single-source.md) | refactor | 4.0 | 2 | ✅。envelope 検証 3 系統の乖離。23 の先行 |
+| 14 | [2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md](2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md) | refactor | 4.0 | 1 | ✅。dashboardGateway の手書き race |
+| 15 | [2026-10-05-15-refactor-injectable-sleep-trust-retry.md](2026-10-05-15-refactor-injectable-sleep-trust-retry.md) | refactor | 4.0 | 1 | ✅。本番リトライの sleep 注入 seam 不在 |
+| 16 | [2026-10-05-16-refactor-rate-limit-counter-read-merge.md](2026-10-05-16-refactor-rate-limit-counter-read-merge.md) | refactor | 4.0 | 1 | ✅。RateLimitService の読込+マージ 2 重 |
+| 17 | [2026-10-05-17-refactor-status-top-mirror-owner.md](2026-10-05-17-refactor-status-top-mirror-owner.md) | refactor | 5.0 | 1 | ✅。#statusTop ミラーの記憶依存。11 の後 |
+| 18 | [2026-10-05-18-refactor-panel-destroy-contract.md](2026-10-05-18-refactor-panel-destroy-contract.md) | refactor | 3.2 | 2 | ✅。destroy 到達不能。29 の先行 |
+| 19 | [2026-10-05-19-refactor-save-settings-pipeline-split.md](2026-10-05-19-refactor-save-settings-pipeline-split.md) | refactor | 2.0 | 2 | ✅。saveDashboardSettings 8関心。07 の後 |
+| 20 | [2026-10-05-20-refactor-field-descriptor-unwired-seams.md](2026-10-05-20-refactor-field-descriptor-unwired-seams.md) | refactor | 2.4 | 1 | ✅。fieldDescriptor の未配線シーム。07 の後 |
+| 21 | [2026-10-05-21-refactor-i18n-mock-single-factory.md](2026-10-05-21-refactor-i18n-mock-single-factory.md) | refactor | 2.7 | 2 | ✅。i18n モック手作りコピー。28 の先行 |
+| 22 | [2026-10-05-22-refactor-confirm-token-legacy-removal.md](2026-10-05-22-refactor-confirm-token-legacy-removal.md) | refactor | 3.2 | 2 | ✅。confirmToken レガシー経路。26 の先行 |
+| 23 | [2026-10-05-23-refactor-disconnect-phrase-ssot.md](2026-10-05-23-refactor-disconnect-phrase-ssot.md) | refactor | 3.0 | 1 | ✅。切断エラー文言 3 重。13 の後 |
+| 24 | [2026-10-05-24-refactor-popup-e2e-fixture-unify.md](2026-10-05-24-refactor-popup-e2e-fixture-unify.md) | refactor | 2.0 | 1.5 | ✅。E2E popup fixture 3 重 |
+| 25 | [2026-10-05-25-refactor-fetch-retry-residue.md](2026-10-05-25-refactor-fetch-retry-residue.md) | refactor | 2.0 | 2 | ✅。fetch リトライ残骸 4 点 |
+| 26 | [2026-10-05-26-refactor-settings-repository-single-instance.md](2026-10-05-26-refactor-settings-repository-single-instance.md) | refactor | 4.0 | 2 | ✅。SettingsRepository 2 インスタンス。22 の後 |
+| 27 | [2026-10-05-27-refactor-panel-catalog-id-union.md](2026-10-05-27-refactor-panel-catalog-id-union.md) | refactor | 3.0 | 1 | ✅。PanelCatalogId の string 退化 |
+| 28 | [2026-10-05-28-refactor-popup-test-dom-scaffold.md](2026-10-05-28-refactor-popup-test-dom-scaffold.md) | refactor | 2.25 | 2 | ✅。popup テスト DOM 脚手架。09・21 の後 |
+| 29 | [2026-10-05-29-refactor-dashboard-dom-binding-convention.md](2026-10-05-29-refactor-dashboard-dom-binding-convention.md) | refactor | 1.33 | 3 | ✅。旧 DOM 捕捉規約 + 死コード。18 の後 |
+| 30 | [2026-10-05-30-refactor-record-response-contract-ssot.md](2026-10-05-30-refactor-record-response-contract-ssot.md) | refactor | 1.6 | 2 | ✅。記録応答 wire 契約 4 重 |
+| 31 | [2026-10-05-31-refactor-popup-init-single-entry.md](2026-10-05-31-refactor-popup-init-single-entry.md) | refactor | 1.6 | 2 | ✅。popup 初期化 3 経路 |
+| 32 | [2026-10-05-32-refactor-record-normal-branch-split.md](2026-10-05-32-refactor-record-normal-branch-split.md) | refactor | 1.6 | 2 | ✅。runNormalBranch 8責務。09 の後 |
+
 ### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 20件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。全件実装・全ゲート green でアーカイブ（個別 PBI の行はアーカイブ履歴を参照）。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
@@ -529,7 +568,6 @@ DoD の手動確認とセキュリティレビューは未実施のまま残す�
 
 - [2026-09-26-01-feat-revisit-loop-time-capsule.md](../dev-docs/archived/pbi/2026-09-26-01-feat-revisit-loop-time-capsule.md)（✅ 完了 — コミット `da98b1c9`。4区分（ループ / 再訪ランキング / 休眠テーマ / 52週前の週）を1パネルで提示し、`## key` + `- YYYY-MM-DD [title](url)` 形式への Markdown コピーを提供。`domainAnalysisPanel` のローカル `fetchAllRows` を `fetchPeriodRows.ts` の `fetchAllPeriodRows` へ移設して keyset ページングを共通化（ページサイズは `QUERY_CAPS.plain` 参照で drift 不能）。集計は純関数 `revisitInsightsAggregate.ts`、閾値は `REVISIT_CONFIG` に集約。i18n 30 キー（ja/en）。新規テスト 33 件（集計 17・lifecycle 9・ページング 7）で validate 13,908 green / build PASS。コードレビューは未実施）
 
-### 2026-09-26 メタ認知分析ラウンド — ⬜ 未着手 3件 ✨機能追加
 ### 2026-09-25 Checking Team 残債ラウンド — ✅ 7件完了（01・03・04・05・08・09・20 アーカイブ済み）
 
 autonomous-task-closer による回収。01/03/04/05/08/09 は実装コミット・DoD チェックボックス・`npm run validate`（13,875 tests green）を実測確認した上でアーカイブした新規実装不要の DoD 反映漏れ。20 は未着手だったため ADR を作成して実装した。
@@ -582,9 +620,9 @@ autonomous-task-closer による実装。バッチ5 = 08（タグクラスタ時
 
 - 2026-09-24-08-feat-tag-cluster-time-slider.md（✅ 完了 — `c6bf8e00`。2時点指定（date input×2+明示 Compare）で前半/後半を side-by-side 2×SVG 表示＋diff 4 区画。FNV-1a 安定配色（両テーマ 4.5:1 超をテスト担保）・union ソート順安定配置・loadSeq 世代ガード・行 cap 通知×2・aria-live 完了サマリー（PBI 04 延期分を本 PBI で実装）。アニメーションはユーザー確定どおりスコープ外。71 tests 対象 green。RICE 0.20）
 
-### 2026-09-24 分析機能強化ラウンド バッチ4 — 🔶 PBI 07 実装完了（ユーザー検証 1 項目で live 維持）
+### 2026-09-24 分析機能強化ラウンド バッチ4 — ✅ PBI 07 実装完了（残りのユーザー検証 1 項目はバッチ6で解消・アーカイブ済み）
 
-autonomous-task-closer による実装。バッチ4 = 07（ワードクラスタ）単独。実装・自動テストは完了（`d80a5f8b`・69 tests 対象 green・統合側で行 cap 通知の BDD ギャップを検出修正）。STEP 0 の実データ手動プローブ（ストップワード/閾値チューニング）はユーザーの実 DB が必要なため未達 — PBI 07 は 🔶 部分実装として pbi/ に live 維持。なぜなぜ分析は /tmp/whywhy/（pbi-07-word-cluster）。統合検証: type-check PASS / lint 0 errors / test 13,747 green / build PASS。
+autonomous-task-closer による実装。バッチ4 = 07（ワードクラスタ）単独。実装・自動テストは完了（`d80a5f8b`・69 tests 対象 green・統合側で行 cap 通知の BDD ギャップを検出修正）。STEP 0 の実データ手動プローブはバッチ4時点ではユーザーの実 DB が必要なため未達だったが、バッチ6 でユーザー確認（実データで抽出品質に問題なし）を受けて解消し、07 をアーカイブ済み。なぜなぜ分析は /tmp/whywhy/（pbi-07-word-cluster）。統合検証: type-check PASS / lint 0 errors / test 13,747 green / build PASS。
 
 ### 2026-09-24 分析機能強化ラウンド バッチ3 — ✅ 2件完了（05-06 アーカイブ済み）RICE順: 05 → 06
 
