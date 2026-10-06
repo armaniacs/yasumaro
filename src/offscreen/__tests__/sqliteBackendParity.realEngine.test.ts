@@ -158,6 +158,31 @@ describe('search parity on a real engine', () => {
     }
   });
 
+  it('FTS rows carry the engine rank, not a shifted codec cell', async () => {
+    const b = await seeded(SEED);
+    try {
+      const q: StorageQuery = { text: 'rune', limit: 10 };
+      const idbRes = await b.idb.query(q);
+      expect(idbRes.success).toBe(true);
+      if (!idbRes.success) return;
+      const idbRow = idbRes.rows[0]!;
+
+      // The engine's own rank for the same match, straight from SQLite; the
+      // default FTS order is rank, so rows[0] and this LIMIT 1 are the same row.
+      const engineRank = await b.idbRaw.query(
+        'SELECT rank AS rank FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id WHERE browsing_logs_fts MATCH ? ORDER BY rank LIMIT 1',
+        ['rune'],
+      );
+      // A codec name list wider than the SELECT shifts the rank cell into
+      // nav_source_url and zeroes rank instead.
+      expect(idbRow.rank).toBe(Number(engineRank[0]!.rank));
+      expect(idbRow.rank).not.toBe(0);
+      expect((idbRow as unknown as Record<string, unknown>).nav_source_url).toBeUndefined();
+    } finally {
+      await b.close();
+    }
+  });
+
   it('plain filtered listings agree on the fields both projections share', async () => {
     const b = await seeded(SEED);
     try {

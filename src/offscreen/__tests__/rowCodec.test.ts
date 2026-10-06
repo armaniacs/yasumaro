@@ -7,7 +7,9 @@
  * on every FTS rows query) as a codec guarantee, the mapNamed/mapPositional
  * truth tables (NULLs, rank default, column reorder), and that the IDB
  * positional plain listing agrees with the OPFS named plain listing on a
- * shared fixture for the 13 canonical columns.
+ * shared fixture for the 16 canonical columns. The positional fixtures follow
+ * the real SELECT order (queryPlan builders), not the codec list order, so a
+ * name list drifting wider than its SELECT fails here.
  */
 import { describe, it, expect } from 'vitest';
 import Database from 'better-sqlite3';
@@ -70,10 +72,6 @@ describe('mapNamed truth table', () => {
     scroll_ratio: 0.5,
     is_starred: 1,
     fallback_reason: null,
-    // PBI 03: the trail columns are part of the list projection, so the search
-    // fixture carries them too.
-    nav_source_url: null,
-    search_query: null,
   };
 
   it('maps the search projection with rank from the row', () => {
@@ -96,15 +94,20 @@ describe('mapNamed truth table', () => {
 });
 
 describe('mapPositional truth table', () => {
-  it('agrees with mapNamed on a shared search fixture', () => {
+  it('agrees with mapNamed on the real FTS SELECT order (12 cells, rank last)', () => {
     const named: NamedRow = {
       id: 3, url: 'https://y.test/', title: 'T', summary: null, tags: '#a',
       created_at: 456, domain: 'y.test', visit_duration: 12, scroll_ratio: null,
-      is_starred: 0, fallback_reason: 'content_overcut', nav_source_url: null,
-      search_query: null, rank: -0.5,
+      is_starred: 0, fallback_reason: 'content_overcut',
+      // The FTS SELECT emits `rank AS rank`, so the named row carries it too.
+      rank: -0.5,
     };
+    // Real FTS rows SELECT order (queryPlan.buildFtsSearchStatements): the 11
+    // SEARCH_COLUMNS cells with the rank pseudo-column last. A hand-made
+    // codec-order fixture here is what let the name list drift wider than the
+    // SELECT without being caught.
     const positional: SqliteValue[] = [
-      3, 'https://y.test/', 'T', null, '#a', 456, 'y.test', 12, null, 0, 'content_overcut', null, null, -0.5,
+      3, 'https://y.test/', 'T', null, '#a', 456, 'y.test', 12, null, 0, 'content_overcut', -0.5,
     ];
     expect(mapPositional<SearchResult>(positional, SEARCH_COLUMNS_WITH_RANK)).toEqual(
       mapNamed<SearchResult>(named, SEARCH_COLUMNS_WITH_RANK),
@@ -113,7 +116,7 @@ describe('mapPositional truth table', () => {
 
   it('survives a column reorder (mapping follows the list, not schema order)', () => {
     const columns = ['url', 'id', ...SEARCH_COLUMNS.filter((c) => c !== 'id' && c !== 'url'), 'rank'];
-    const cells: SqliteValue[] = ['https://z.test/', 9, 'T', null, '#t', 1, 'z.test', null, null, 1, 'candidate_too_small', null, null, -2];
+    const cells: SqliteValue[] = ['https://z.test/', 9, 'T', null, '#t', 1, 'z.test', null, null, 1, 'candidate_too_small', -2];
     const mapped = mapPositional<SearchResult>(cells, columns);
     expect(mapped.id).toBe(9);
     expect(mapped.url).toBe('https://z.test/');
@@ -123,8 +126,10 @@ describe('mapPositional truth table', () => {
   });
 
   it('defaults rank to 0 when the LIKE row has no rank cell', () => {
-    const cells: SqliteValue[] = [1, 'https://l.test/', null, null, null, 10, null, null, null, 0];
-    expect(mapPositional<SearchResult>(cells, SEARCH_COLUMNS_WITH_RANK)).toMatchObject({ rank: 0 });
+    // Real LIKE rows SELECT order (queryPlan.buildLikeSearchStatements): the
+    // 11 SEARCH_COLUMNS cells, no rank cell.
+    const cells: SqliteValue[] = [1, 'https://l.test/', null, null, null, 10, null, null, null, 0, null];
+    expect(mapPositional<SearchResult>(cells, SEARCH_COLUMNS_WITH_RANK)).toMatchObject({ rank: 0, fallback_reason: null });
   });
 });
 
@@ -180,7 +185,7 @@ describe('backend mapping agreement on a shared fixture', () => {
     return db;
   }
 
-  it('IDB positional plain listing matches OPFS named plain listing on the 13 canonical columns', async () => {
+  it('IDB positional plain listing matches OPFS named plain listing on the 16 canonical columns', async () => {
     const db = seedDb();
     const host = {
       idbEngine: {},

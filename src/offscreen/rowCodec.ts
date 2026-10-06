@@ -3,16 +3,20 @@
  * Single owner of browsing_logs row shapes: the canonical column lists and
  * the named/positional cell coercions every backend maps through.
  *
- * IdbVfsBackend read positionally (33 full columns for plain listings, 11
- * for FTS/LIKE search) while the OPFS worker read by name (13 plain, 11
- * search); each had a private mapper, so a schema column insertion silently
- * broke the positional readers. Mappers now zip cells against these lists,
- * so SELECT order — not schema order — decides the mapping.
+ * IdbVfsBackend read positionally (36 full columns for plain listings, 11
+ * for LIKE search, 12 for FTS search with rank) while the OPFS worker read
+ * by name (16 plain, 11 search); each had a private mapper, so a schema
+ * column insertion silently broke the positional readers. Mappers now zip
+ * cells against these lists, so SELECT order — not schema order — decides
+ * the mapping. The lists must stay exactly as wide as their SELECTs: a name
+ * list wider than its SELECT shifts the trailing cells one position each.
  *
  * Response shapes are intentionally NOT unified here: the IDB plain listing
- * returns all 33 entry fields, the OPFS plain listing 13, search paths 11.
- * Unifying those would add/remove wire fields the dashboard already tolerates
- * as-is. The codec only guarantees each shape is coerced identically.
+ * returns all entry fields (id + the 35 schema columns), the OPFS plain
+ * listing the 16 canonical columns, the search paths the 11 search columns
+ * (FTS adds rank). Unifying those would add/remove wire fields the dashboard
+ * already tolerates as-is. The codec only guarantees each shape is coerced
+ * identically.
  */
 import { COLUMN_NAMES } from './schema.js';
 import type { SqliteValue } from './sqliteEngine.js';
@@ -20,7 +24,10 @@ import type { SqliteValue } from './sqliteEngine.js';
 export type NamedRow = Record<string, SqliteValue | null | undefined>;
 export type PositionalRow = readonly (SqliteValue | null | undefined)[];
 
-/** Shared search projection (FTS and LIKE select the same 11 columns). */
+/**
+ * Shared search projection: the LIKE SELECT selects exactly these 11 cells;
+ * the FTS SELECT adds the rank pseudo-column on top (SEARCH_COLUMNS_WITH_RANK).
+ */
 export const SEARCH_COLUMNS = [
   'id',
   'url',
@@ -36,10 +43,6 @@ export const SEARCH_COLUMNS = [
   // projections too — without this the column only ever reaches the UI via
   // the IDB full-listing path (backend-dependent display).
   'fallback_reason',
-  // PBI 03: the navigation trail renders in the dashboard from the list
-  // projection, so both columns must survive the OPFS path too.
-  'nav_source_url',
-  'search_query',
 ] as const;
 
 /** Search projection plus the relevance pseudo-column (see coerceCell). */
@@ -48,6 +51,12 @@ export const SEARCH_COLUMNS_WITH_RANK = [...SEARCH_COLUMNS, 'rank'] as const;
 /** Canonical plain-list projection shared by the SQL builders. */
 export const BROWSING_LOG_COLUMNS = [
   ...SEARCH_COLUMNS,
+  // PBI 03: the navigation trail renders in the dashboard from the list
+  // projection, so both columns must survive the OPFS path too. They stay
+  // OUT of SEARCH_COLUMNS on purpose: no search SELECT emits them, and a
+  // name wider than its SELECT misplaces the cells it zips against.
+  'nav_source_url',
+  'search_query',
   'is_deleted',
   'obsidian_synced',
   'gist_synced',

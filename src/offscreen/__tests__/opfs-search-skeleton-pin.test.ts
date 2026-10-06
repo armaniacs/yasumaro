@@ -33,10 +33,11 @@ function makeOpfsStub(countResult = 2) {
   return { engine, calls };
 }
 
-// Positional column order = SEARCH_COLUMNS_WITH_RANK.
+// Real FTS rows SELECT order (queryPlan.buildFtsSearchStatements): the 11
+// search projection cells with the rank pseudo-column last.
 const POSITIONAL_ROW = [
   7, 'https://example.com/a', 'Hello', 'sum', '#news',
-  1700000000000, 'example.com', 12, 0.5, 0, -1.5,
+  1700000000000, 'example.com', 12, 0.5, 0, null, -1.5,
 ];
 
 function makeIdbStub(fts5Available = true, countResult = 2) {
@@ -48,7 +49,7 @@ function makeIdbStub(fts5Available = true, countResult = 2) {
       if (callback && /SELECT COUNT/i.test(sql)) callback([countResult]);
       if (callback && /ORDER BY/i.test(sql) && !/COUNT/i.test(sql)) {
         callback([...POSITIONAL_ROW]);
-        callback([...POSITIONAL_ROW.slice(0, 10), 8, POSITIONAL_ROW[10]]);
+        callback([8, ...POSITIONAL_ROW.slice(1)]);
       }
     }),
   };
