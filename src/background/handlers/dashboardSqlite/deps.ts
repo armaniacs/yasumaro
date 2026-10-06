@@ -110,6 +110,29 @@ export interface ArchiveDeps {
 export type { ArchivePurgeData };
 
 /**
+ * Manifest-wired ObsidianClient singleton for the append path. The
+ * composition root injects its `obsidian` singleton once via onReady
+ * (compositionManifest.dashboardSqliteHandler); tests inject a fake via
+ * setObsidianClient. The lazy default keeps standalone use working.
+ */
+let obsidianSingleton: ObsidianClient | undefined;
+
+function getObsidianClient(): ObsidianClient {
+  if (!obsidianSingleton) {
+    obsidianSingleton = new ObsidianClient();
+  }
+  return obsidianSingleton;
+}
+
+/**
+ * Inject the ObsidianClient used by appendToDailyNote. Production wiring
+ * comes from the manifest's onReady; tests pass a fake.
+ */
+export function setObsidianClient(client: ObsidianClient): void {
+  obsidianSingleton = client;
+}
+
+/**
  * Every descriptor's deps method must name a real ArchiveDeps member: a
  * typo'd row fails here instead of throwing at request time.
  */
@@ -221,8 +244,7 @@ export function createSqliteClientDeps(
      formatEntriesToMarkdown: (entries) => formatEntriesToMarkdown(entries),
      queryAuditLog: (options) => sqliteClient.query(SQLITE_WIRE_DESCRIPTORS.auditLog.encodeOp(options)),
     appendToDailyNote: async (markdown) => {
-      const obsidianClient = new ObsidianClient();
-      await obsidianClient.appendToDailyNote(markdown);
+      await getObsidianClient().appendToDailyNote(markdown);
     },
     ...serviceWorkerDeps,
   };

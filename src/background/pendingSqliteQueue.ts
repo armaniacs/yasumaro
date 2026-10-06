@@ -10,6 +10,7 @@ import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
+import type { QueueStorageAdapter } from './queueStorageAdapter.js';
 import { measureFlush } from './pendingChromeStorageQueue.js';
 
 export { chunkArray } from './persistentRetryQueue.js';
@@ -44,14 +45,81 @@ const TTL_MS = 24 * 60 * 60 * 1000;
  */
 type QueuedRecord = BrowsingLogRecord & { createdAt: number; retryCount: number };
 
-const adapter = new ChromeStorageAdapter();
-const queue = new PersistentRetryQueue<QueuedRecord>(adapter, {
-  storageKey: PENDING_SQLITE_RECORDS_KEY,
-  maxSize: MAX_PENDING_RECORDS,
-  logLabel: 'pendingSqliteQueue',
-  maxRetryCount: MAX_RETRY_COUNT,
-  ttlMs: TTL_MS,
-});
+/**
+ * Create a pending SQLite-record queue over the given adapter.
+ * Production passes ChromeStorageAdapter; tests inject InMemoryAdapter.
+ */
+export function createPendingSqliteQueue(adapter: QueueStorageAdapter) {
+  const queue = new PersistentRetryQueue<QueuedRecord>(adapter, {
+    storageKey: PENDING_SQLITE_RECORDS_KEY,
+    maxSize: MAX_PENDING_RECORDS,
+    logLabel: 'pendingSqliteQueue',
+    maxRetryCount: MAX_RETRY_COUNT,
+    ttlMs: TTL_MS,
+  });
+
+  return {
+    /**
+     * Queue a record that failed to insert into SQLite. Best-effort: a queue
+     * write failure is logged but not thrown, so it never masks the original
+     * insert failure.
+     *
+     * @returns true when durably queued; false when dropped or persistence failed.
+     */
+    async enqueuePendingRecord(record: BrowsingLogRecord): Promise<boolean> {
+      const queued: QueuedRecord = {
+        ...record,
+        createdAt: Date.now(),
+        retryCount: 0,
+      };
+      return queue.enqueue(queued);
+    },
+
+    /**
+     * Retry every queued record in chunks. Records from chunks that succeed
+     * are removed from the queue; records from chunks that fail stay queued
+     * for the next flush. Records dropped as a terminal failure (over-retry
+     * or TTL-expired) are logged so the loss is visible — there is no fallback
+     * owner below this queue.
+     */
+    async flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
+      await flushWithQueue(queue, sqliteClient);
+    },
+  };
+}
+
+/**
+ * Module-level seam, exempted from the manifest-first policy: layer-crossing
+ * callers reach this facade without DI, and tests swap in an InMemoryAdapter
+ * via setPendingSqliteQueue. The lazy default keeps standalone use working;
+ * production wiring must inject once from the composition root before first use.
+ * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
+ */
+let activeQueue: ReturnType<typeof createPendingSqliteQueue> | undefined;
+
+function getActiveQueue(): ReturnType<typeof createPendingSqliteQueue> {
+  if (!activeQueue) {
+    activeQueue = createPendingSqliteQueue(new ChromeStorageAdapter());
+  }
+  return activeQueue;
+}
+
+/**
+ * Inject the queue used by enqueuePendingRecord/flushPendingRecords. The
+ * composition root wires this once via the manifest's onReady
+ * (compositionManifest.pendingSqliteQueue); tests call it with a queue built
+ * from InMemoryAdapter to avoid touching chrome.storage.
+ */
+export function setPendingSqliteQueue(queue: ReturnType<typeof createPendingSqliteQueue>): void {
+  activeQueue = queue;
+}
+
+/**
+ * Test alias for setPendingSqliteQueue (same injection seam, BDD-facing name).
+ */
+export function setQueueForTesting(queue: ReturnType<typeof createPendingSqliteQueue>): void {
+  setPendingSqliteQueue(queue);
+}
 
 /**
  * Queue a record that failed to insert into SQLite. Best-effort: a queue
@@ -61,22 +129,13 @@ const queue = new PersistentRetryQueue<QueuedRecord>(adapter, {
  * @returns true when durably queued; false when dropped or persistence failed.
  */
 export async function enqueuePendingRecord(record: BrowsingLogRecord): Promise<boolean> {
-  const queued: QueuedRecord = {
-    ...record,
-    createdAt: Date.now(),
-    retryCount: 0,
-  };
-  return queue.enqueue(queued);
+  return getActiveQueue().enqueuePendingRecord(record);
 }
 
-/**
- * Retry every queued record in chunks. Records from chunks that succeed
- * are removed from the queue; records from chunks that fail stay queued
- * for the next flush. Records dropped as a terminal failure (over-retry
- * or TTL-expired) are logged so the loss is visible — there is no fallback
- * owner below this queue.
- */
-export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
+async function flushWithQueue(
+  queue: PersistentRetryQueue<QueuedRecord>,
+  sqliteClient: SqliteClientLike,
+): Promise<void> {
   // Shared measurement shape with pendingChromeStorageQueue (PBI 2026-10-05-23):
   // the pre-flush count comes from a load whose failure is distinguishable
   // from "empty" (re-reading storage after the flush let items enqueued
@@ -99,4 +158,15 @@ export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promi
       reason,
     });
   }));
+}
+
+/**
+ * Retry every queued record in chunks. Records from chunks that succeed
+ * are removed from the queue; records from chunks that fail stay queued
+ * for the next flush. Records dropped as a terminal failure (over-retry
+ * or TTL-expired) are logged so the loss is visible — there is no fallback
+ * owner below this queue.
+ */
+export async function flushPendingRecords(sqliteClient: SqliteClientLike): Promise<void> {
+  return getActiveQueue().flushPendingRecords(sqliteClient);
 }

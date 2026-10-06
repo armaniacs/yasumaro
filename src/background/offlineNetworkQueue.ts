@@ -9,6 +9,7 @@ import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { generateId } from '../utils/generateId.js';
 import { PersistentRetryQueue, ChromeStorageAdapter, RetryableItem } from './persistentRetryQueue.js';
+import type { QueueStorageAdapter } from './queueStorageAdapter.js';
 import type { OfflineJobKind } from './pipeline/types.js';
 
 export interface OfflineJob extends RetryableItem {
@@ -33,17 +34,29 @@ const MAX_RETRY_COUNT = 3;
 // (PBI-2026-08-01-15). Jobs beyond the cap stay queued for the next cycle.
 const MAX_JOBS_PER_CYCLE = 20;
 
+function createPersistentQueue(adapter: QueueStorageAdapter): PersistentRetryQueue<OfflineJob> {
+  return new PersistentRetryQueue<OfflineJob>(adapter, {
+    storageKey: STORAGE_KEY,
+    maxSize: MAX_QUEUED_JOBS,
+    logLabel: 'offlineNetworkQueue',
+    ttlMs: JOB_TTL_MS,
+    maxRetryCount: MAX_RETRY_COUNT,
+    maxJobsPerCycle: MAX_JOBS_PER_CYCLE,
+    maxPayloadBytes: MAX_JOB_PAYLOAD_BYTES,
+    persistPerItem: true,
+  });
+}
+
 const adapter = new ChromeStorageAdapter();
-const queue = new PersistentRetryQueue<OfflineJob>(adapter, {
-  storageKey: STORAGE_KEY,
-  maxSize: MAX_QUEUED_JOBS,
-  logLabel: 'offlineNetworkQueue',
-  ttlMs: JOB_TTL_MS,
-  maxRetryCount: MAX_RETRY_COUNT,
-  maxJobsPerCycle: MAX_JOBS_PER_CYCLE,
-  maxPayloadBytes: MAX_JOB_PAYLOAD_BYTES,
-  persistPerItem: true,
-});
+const queue = createPersistentQueue(adapter);
+
+/**
+ * Create an OfflineNetworkQueue over the given adapter.
+ * Production passes ChromeStorageAdapter; tests inject InMemoryAdapter.
+ */
+export function createOfflineNetworkQueue(adapter: QueueStorageAdapter): OfflineNetworkQueue {
+  return new OfflineNetworkQueue(createPersistentQueue(adapter));
+}
 
 /**
  * Port that OfflineNetworkQueue depends on. Lets tests substitute a NoOp
@@ -155,8 +168,30 @@ export class OfflineNetworkQueue {
  * QueuePort param is the DI seam (NoOpQueuePort in tests). New SW-only deps
  * should resolve via the manifest instead of adding module singletons.
  * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
+ *
+ * Production wiring replaces this once from the composition root
+ * (compositionManifest.offlineNetworkQueue onReady); tests swap in an
+ * InMemoryAdapter-backed queue via setOfflineNetworkQueue so the shared
+ * facade never touches real storage.
  */
-export const sharedOfflineNetworkQueue = new OfflineNetworkQueue();
+export let sharedOfflineNetworkQueue = new OfflineNetworkQueue(queue);
+
+/**
+ * Inject the shared OfflineNetworkQueue. The composition root wires this once
+ * via the manifest's onReady (compositionManifest.offlineNetworkQueue); tests
+ * call it with a queue built from InMemoryAdapter to avoid touching
+ * chrome.storage.
+ */
+export function setOfflineNetworkQueue(next: OfflineNetworkQueue): void {
+  sharedOfflineNetworkQueue = next;
+}
+
+/**
+ * Test alias for setOfflineNetworkQueue (same injection seam, BDD-facing name).
+ */
+export function setQueueForTesting(next: OfflineNetworkQueue): void {
+  setOfflineNetworkQueue(next);
+}
 
 /**
  * NoOp QueuePort for tests: reports nothing pending, discards everything.

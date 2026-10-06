@@ -31,7 +31,9 @@ import { HeaderDetector } from './headerDetector.js';
 import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
 import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
-import { sharedOfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { createOfflineNetworkQueue, setOfflineNetworkQueue, type OfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { createPendingSqliteQueue, setPendingSqliteQueue } from './pendingSqliteQueue.js';
+import { setObsidianClient } from './handlers/dashboardSqlite/deps.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import { createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
@@ -50,7 +52,7 @@ import { RegenerateContentFetcher } from './regenerateContentFetcher.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { AutoSavedBadgeTabs } from './swStatePersistence.js';
 import { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
-import { SettingsRepository, ChromeStorageAdapter as SettingsChromeStorageAdapter, settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { settingsRepository, type SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
 import { SessionAlarmService } from './SessionAlarmService.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
@@ -109,7 +111,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
   // Resolved here so the wiring test — not just a direct import — proves it.
   { key: 'aiProviderBreaker', singleton: true, factory: (c) => new ProviderBreaker(c.resolve<SessionStorePort>('sessionStore')) },
   { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
-  { key: 'settingsRepository', singleton: true, factory: () => new SettingsRepository(new SettingsChromeStorageAdapter()) },
+  { key: 'settingsRepository', singleton: true, factory: () => settingsRepository },
   { key: 'perUrlMutexMap', singleton: true, factory: () => new PerUrlMutexMap() },
   {
     key: 'pendingWriteQueue',
@@ -119,6 +121,21 @@ export const compositionManifest: readonly CompositionEntry[] = [
     // DI; without this wiring the facade would lazily build a SECOND queue
     // over the same storage key with its own lock chain (lost-update shape).
     onReady: (c) => setPendingWriteQueue(c.resolve<ReturnType<typeof createPendingWriteQueue>>('pendingWriteQueue')),
+  },
+  {
+    key: 'pendingSqliteQueue',
+    singleton: true,
+    factory: () => createPendingSqliteQueue(new ChromeStorageAdapter()),
+    // Same facade seam as pendingWriteQueue: layer-crossing callers use the
+    // module facade, and this wiring makes it the container instance.
+    onReady: (c) => setPendingSqliteQueue(c.resolve<ReturnType<typeof createPendingSqliteQueue>>('pendingSqliteQueue')),
+  },
+  {
+    key: 'offlineNetworkQueue',
+    singleton: true,
+    factory: () => createOfflineNetworkQueue(new ChromeStorageAdapter()),
+    // Same facade seam: the shared instance becomes the container instance.
+    onReady: (c) => setOfflineNetworkQueue(c.resolve<OfflineNetworkQueue>('offlineNetworkQueue')),
   },
   {
     key: 'reviewSummaryGenerator',
@@ -140,7 +157,7 @@ export const compositionManifest: readonly CompositionEntry[] = [
         aiService: c.resolve<AIService>('aiService'),
         sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
         urlStore: { getSavedUrlsWithTimestamps },
-        offlineNetworkQueue: sharedOfflineNetworkQueue,
+        offlineNetworkQueue: c.resolve<OfflineNetworkQueue>('offlineNetworkQueue'),
         // Shared per-URL mutex map: all recordings serialize on the same URL
         // regardless of how many orchestrator instances exist. Without this the
         // orchestrator falls back to a private map and cross-instance
@@ -157,6 +174,8 @@ export const compositionManifest: readonly CompositionEntry[] = [
       createConfirmToken,
       verifyConfirmToken,
     }),
+    // The append path uses the manifest's obsidian singleton (no per-call new).
+    onReady: (c) => setObsidianClient(c.resolve<ObsidianClient>('obsidian')),
   },
   {
     key: 'autoSavedBadgeTabs',
