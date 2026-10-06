@@ -373,9 +373,10 @@ export class GeminiProvider extends HttpProviderStrategy {
                     success: false,
                     summary: "Error: AI response was truncated before producing text. Increase the max tokens setting.",
                     error,
+                    failure: createFailure(FailureKind.HTTP),
                 };
             }
-            return { success: false, summary: "Error: AI returned an empty response.", error };
+            return { success: false, summary: "Error: AI returned an empty response.", error, failure: createFailure(FailureKind.HTTP) };
         }
         const sentTokens = data.usageMetadata?.promptTokenCount;
         const receivedTokens = data.usageMetadata?.candidatesTokenCount;
