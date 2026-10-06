@@ -471,6 +471,14 @@ vi.mock('../localMarkdownExportCore.js', () => ({
 vi.mock('../pendingSqliteQueue.js', () => ({
     flushPendingRecords: vi.fn().mockResolvedValue(undefined),
     enqueuePendingRecord: vi.fn().mockResolvedValue(undefined),
+    // PBI 2026-10-05-26 wires the queue through the manifest factory, so the
+    // mock must provide the factory too (container resolve calls it).
+    createPendingSqliteQueue: vi.fn(() => ({
+        enqueuePendingRecord: vi.fn().mockResolvedValue(true),
+        flushPendingRecords: vi.fn().mockResolvedValue(undefined),
+    })),
+    setPendingSqliteQueue: vi.fn(),
+    setQueueForTesting: vi.fn(),
 }));
 vi.mock('../localMarkdownIdleFlusher.js', () => ({
     // The alarm-name constants stay importable through this mock:
@@ -1664,9 +1672,11 @@ describe('service-worker handlers', () => {
             expect(typeof serviceWorker.init).toBe('function');
         });
 
-        it('creates the daily-purge and offline-network-retry alarms', () => {
+        it('creates the daily-purge and offline-network-retry alarms', async () => {
             serviceWorker.init();
-
+            // PBI 2026-10-05-12: local-md rows gained async install hooks, so
+            // later static rows land after microtask turns — drain first.
+            await drainMacrotask();
             expect(chrome.alarms.create).toHaveBeenCalledWith(
                 'yasumaro-daily-purge',
                 { periodInMinutes: 1440 }
@@ -1677,11 +1687,12 @@ describe('service-worker handlers', () => {
             );
         });
 
-        it('installs all alarms via the registry (session-timeout + review-summary included)', () => {
+        it('installs all alarms via the registry (session-timeout + review-summary included)', async () => {
             // PBI 2026-09-15-15: alarm installation moved from the per-system
             // init functions to alarmRegistry.installAll() — the registry's
             // install hooks handle session-timeout and review-summary alarms.
             serviceWorker.init();
+            await drainMacrotask();
             expect(chrome.alarms.create).toHaveBeenCalledWith(
                 'yasumaro-offline-network-retry',
                 { periodInMinutes: 5 }
