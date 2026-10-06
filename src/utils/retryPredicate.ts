@@ -4,35 +4,32 @@
  *
  * Structured failure kinds are authoritative here too
  * (src/utils/failureTaxonomy.ts is the SSOT): anything the transport or the
- * Obsidian boundary already classified is decided by `kind`. The two marker
- * tables below are compatibility-only, for opaque thrown errors that carry no
- * `failure` metadata. fetch.ts's `defaultShouldRetry` used to keep a third copy
+ * Obsidian boundary already classified is decided by `kind`. The transport
+ * markers below are compatibility-only, for opaque thrown errors that carry no
+ * `failure` metadata: the list itself is the SSOT
+ * (`LEGACY_TRANSPORT_MARKERS_FULL` in `src/utils/failureTaxonomy.ts`) and this
+ * alias is the connection check's filtered view (TERMINAL exclusion first,
+ * then AbortError/timed-out special case, then the shared markers).
+ * fetch.ts's `defaultShouldRetry` used to keep a third copy
  * of the same transport markers; it now calls `shouldRetryTransportFailure`, so
  * there is exactly one transport table and one HTTP-status table left.
  */
 
 import {
   FailureKind,
+  LEGACY_TRANSPORT_MARKERS_FULL,
   allowsImmediateRetry,
   canResendSameRequest,
   resolveFailure,
 } from './failureTaxonomy.js';
 
-const RETRYABLE_NETWORK_MARKERS = [
-  'failed to fetch',
-  'fetch failed',
-  'network request failed',
-  'networkerror',
-  'connection reset',
-  'connection refused',
-  'connection closed',
-  'econnreset',
-  'econnrefused',
-  'econnaborted',
-  'enetunreach',
-  'ehostunreach',
-  'etimedout',
-];
+/**
+ * Compatibility only: the connection check's filtered view of the shared
+ * transport table (see SSOT `LEGACY_TRANSPORT_MARKERS_FULL`). Reached only
+ * for opaque errors without `failure` metadata, after the TERMINAL exclusion
+ * below. It must never become a string a new boundary is asked to produce.
+ */
+const RETRYABLE_NETWORK_MARKERS: readonly string[] = LEGACY_TRANSPORT_MARKERS_FULL;
 
 const TERMINAL_ERROR_MARKERS = [
   'api key',

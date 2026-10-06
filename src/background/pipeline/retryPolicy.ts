@@ -1,12 +1,16 @@
 // @layer 1 — Pipeline retry policy (deep seam for structured failure kinds)
-import { allowsOfflineRecoveryFor, resolveFailure } from '../../utils/failureTaxonomy.js';
+import { LEGACY_TRANSPORT_MARKERS_FULL, allowsOfflineRecoveryFor, resolveFailure } from '../../utils/failureTaxonomy.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 /**
- * Compatibility markers for inputs that predate structured failure metadata
+ * Compatibility markers for inputs that predate structured failure metadata.
+ * Compatibility only: the list itself is the SSOT
+ * (`LEGACY_TRANSPORT_MARKERS_FULL` in `src/utils/failureTaxonomy.ts`); this
+ * alias is the pipeline's filtered view for offline-enqueue breadth
  * (ADR 2026-08-27 enumeration: network/fetch/timeout/offline/econnrefused/
- * enotfound + connection/unavailable). Substring heuristics like `ai ` were
- * removed — they matched unrelated failures (e.g. "Failed for ai pipeline").
+ * enotfound + connection/unavailable, plus the unified transport errnos).
+ * Substring heuristics like `ai ` were removed — they matched unrelated
+ * failures (e.g. "Failed for ai pipeline").
  *
  * This table is NOT the contract. A carrier that carries a `failure` is decided
  * by its kind alone (see `src/utils/failureTaxonomy.ts`, the SSOT for the seven
@@ -14,17 +18,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
  * no structured kind to read. No current boundary may produce one of these
  * strings on purpose.
  */
-const LEGACY_NETWORK_MARKERS = [
-  'network',
-  'fetch',
-  'timeout',
-  'offline',
-  'econnrefused',
-  'enotfound',
-  'refused',
-  'connection',
-  'unavailable',
-];
+const LEGACY_NETWORK_MARKERS: readonly string[] = LEGACY_TRANSPORT_MARKERS_FULL;
 
 /**
  * RetryPolicy — owns offline-enqueue eligibility.

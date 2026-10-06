@@ -10,6 +10,7 @@ import {
   FAILURE_KINDS,
   FAILURE_KEY,
   FailureKind,
+  LEGACY_TRANSPORT_MARKERS_FULL,
   OFFLINE_RECOVERY_KINDS,
   UNSAFE_METHODS,
   allowsImmediateRetry,
@@ -270,5 +271,32 @@ describe('retry predicates', () => {
     expect(shouldRetryTransportFailure(new Error('fetch failed'), 1)).toBe(true);
     expect(shouldRetryTransportFailure(new Error('Request timed out after 30000ms'), 1)).toBe(true);
     expect(shouldRetryTransportFailure(new Error('nope'), 1)).toBe(false);
+  });
+
+  it('rejects unrelated failures even after the compat union', () => {
+    expect(shouldRetryTransportFailure(new Error('Failed for ai pipeline'), 1)).toBe(false);
+    expect(shouldRetryTransportFailure(new Error('DuplicateError: already saved'), 1)).toBe(false);
+  });
+});
+
+describe('LEGACY_TRANSPORT_MARKERS_FULL SSOT (PBI 2026-10-06-15)', () => {
+  it('unions every consumer table in one place', () => {
+    // From this module's original table.
+    for (const marker of ['networkerror', 'fetch failed', 'timed out']) {
+      expect(LEGACY_TRANSPORT_MARKERS_FULL).toContain(marker);
+    }
+    // From pipeline/retryPolicy.ts (offline-enqueue breadth).
+    for (const marker of ['network', 'fetch', 'timeout', 'offline', 'enotfound', 'unavailable']) {
+      expect(LEGACY_TRANSPORT_MARKERS_FULL).toContain(marker);
+    }
+    // From retryPredicate.ts (connection-check errnos, e.g. econnreset).
+    for (const marker of ['econnreset', 'econnaborted', 'enetunreach', 'ehostunreach', 'etimedout']) {
+      expect(LEGACY_TRANSPORT_MARKERS_FULL).toContain(marker);
+    }
+  });
+
+  it('repairs the econnreset asymmetry: the transport predicate now matches it', () => {
+    expect(shouldRetryTransportFailure(new Error('read ECONNRESET'), 1)).toBe(true);
+    expect(shouldRetryTransportFailure(new Error('offline mode'), 1)).toBe(true);
   });
 });

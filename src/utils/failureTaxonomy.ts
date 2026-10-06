@@ -256,8 +256,37 @@ export function resolveFailure(carrier: unknown): FailureMetadata | null {
  * only: every current boundary attaches `FailureMetadata`, so this list is
  * reachable just from callers that hand us a hand-built Error. It must never
  * become a string a new boundary is asked to produce.
+ *
+ * SSOT: the union of every compat marker the retry consumers still scan for
+ * (pipeline/retryPolicy.ts, retryPredicate.ts, and this module via fetch.ts
+ * delegation). A new transport errno is added here once; each consumer applies
+ * its own matching filter on top (offline breadth, TERMINAL exclusion,
+ * timeout single-retry).
  */
-const LEGACY_TRANSPORT_MARKERS = ['networkerror', 'fetch failed', 'timed out'] as const;
+export const LEGACY_TRANSPORT_MARKERS_FULL: readonly string[] = Object.freeze([
+  'networkerror',
+  'fetch failed',
+  'timed out',
+  'network',
+  'fetch',
+  'timeout',
+  'offline',
+  'econnrefused',
+  'enotfound',
+  'refused',
+  'connection',
+  'unavailable',
+  'failed to fetch',
+  'network request failed',
+  'connection reset',
+  'connection refused',
+  'connection closed',
+  'econnreset',
+  'econnaborted',
+  'enetunreach',
+  'ehostunreach',
+  'etimedout',
+]);
 
 /**
  * Immediate-retry decision for a failure that arrived without a response.
@@ -282,7 +311,7 @@ export function shouldRetryTransportFailure(carrier: unknown, attempt: number): 
   if (name === ABORT_ERROR_NAME || text.includes('timed out')) {
     return attempt <= 1;
   }
-  return LEGACY_TRANSPORT_MARKERS.some((marker) => text.includes(marker));
+  return LEGACY_TRANSPORT_MARKERS_FULL.some((marker) => text.includes(marker));
 }
 
 /**

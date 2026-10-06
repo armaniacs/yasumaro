@@ -84,4 +84,10 @@ describe('RetryPolicy — structured failure kinds are the contract (PBI 2026-09
     expect(policy.shouldEnqueueForOffline(new Error('connection refused'))).toBe(true);
     expect(policy.shouldEnqueueForOffline(new Error('Failed for ai pipeline'))).toBe(false);
   });
+
+  it('matches the unified transport errnos (PBI 2026-10-06-15 SSOT)', () => {
+    // Previously only in retryPredicate.ts; the shared table repairs the asymmetry.
+    expect(policy.shouldEnqueueForOffline(new Error('read ECONNRESET'))).toBe(true);
+    expect(policy.shouldEnqueueForOffline(new Error('connect ENETUNREACH 1.2.3.4'))).toBe(true);
+  });
 });
