@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
+import { logWarn } from '../../utils/logger/api.js';
+
+vi.mock('../../utils/logger/api.js', () => ({ logWarn: vi.fn(() => Promise.resolve()) }));
 
 const LOADER_PATH = '../loader.js';
 
@@ -22,7 +25,7 @@ describe('loader.ts', () => {
     const cleanSendMessage = vi.fn();
     (globalThis as any).chrome.runtime.sendMessage = cleanSendMessage;
     sendMessageSpy = cleanSendMessage;
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    warnSpy = vi.mocked(logWarn);
   });
 
   afterEach(() => {
@@ -301,8 +304,9 @@ describe('loader.ts', () => {
       expect(getURLSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Domain check failed: no response from service worker',
-        'https://example.com/page',
-        'unknown',
+        { url: 'https://example.com/page', detail: 'unknown' },
+        undefined,
+        'loader',
       );
     });
 
@@ -316,8 +320,9 @@ describe('loader.ts', () => {
       expect(getURLSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Domain check failed: no response from service worker',
-        'https://example.com/page',
-        'Connection failed',
+        { url: 'https://example.com/page', detail: 'Connection failed' },
+        undefined,
+        'loader',
       );
     });
   });
@@ -391,8 +396,9 @@ describe('loader.ts', () => {
       await vi.waitFor(
           () => expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Dynamic import blocked (e2e)',
-        'https://example.com/page',
-        'string error',
+        { url: 'https://example.com/page', detail: 'string error' },
+        undefined,
+        'loader',
       ),
           { interval: 1 }
       );
@@ -408,8 +414,9 @@ describe('loader.ts', () => {
       await importLoader('https://example.com/page');
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Dynamic import blocked',
-        'https://example.com/page',
-        'string error',
+        { url: 'https://example.com/page', detail: 'string error' },
+        undefined,
+        'loader',
       );
     });
 
@@ -420,8 +427,9 @@ describe('loader.ts', () => {
       await importLoader('https://example.com/page');
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Dynamic import blocked',
-        'https://example.com/page',
-        'string error',
+        { url: 'https://example.com/page', detail: 'string error' },
+        undefined,
+        'loader',
       );
     });
   });

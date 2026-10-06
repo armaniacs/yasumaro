@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest';
 import { showSpinner, hideSpinner } from '../spinner.js';
+import { logWarn } from '../../utils/logger/api.js';
 
 vi.mock('../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
@@ -8,9 +9,12 @@ vi.mock('../../utils/i18n.js', async () => {
   return i18nMock(getMessage);
 });
 
+vi.mock('../../utils/logger/api.js', () => ({ logWarn: vi.fn(() => Promise.resolve()) }));
+
 describe('spinner', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="loadingSpinner" style="display:none"><span class="spinner-text"></span></div>';
+    vi.clearAllMocks();
   });
 
   it('showSpinner shows element with custom text', () => {
@@ -35,10 +39,8 @@ describe('spinner', () => {
 
   it('showSpinner warns when element missing', () => {
     document.body.innerHTML = '';
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     showSpinner();
-    expect(consoleSpy).toHaveBeenCalledWith('loadingSpinner element not found');
-    consoleSpy.mockRestore();
+    expect(vi.mocked(logWarn)).toHaveBeenCalledWith('loadingSpinner element not found', {}, undefined, 'spinner');
   });
 
   it('showSpinner handles missing spinner-text element gracefully', () => {
@@ -52,10 +54,8 @@ describe('spinner', () => {
 
   it('hideSpinner warns when element missing', () => {
     document.body.innerHTML = '';
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     hideSpinner();
-    expect(consoleSpy).toHaveBeenCalledWith('loadingSpinner element not found');
-    consoleSpy.mockRestore();
+    expect(vi.mocked(logWarn)).toHaveBeenCalledWith('loadingSpinner element not found', {}, undefined, 'spinner');
   });
 
   it('showSpinner sets aria attributes', () => {

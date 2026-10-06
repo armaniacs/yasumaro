@@ -229,7 +229,7 @@ export class ContentKernel {
         }
 
         if (evaluation.reportable) {
-            console.info(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`);
+            void logInfo(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`, { duration, maxScrollPercentage: visitState.maxScrollPercentage }, 'contentKernel');
             void this.reportValidVisit();
             if (this.gating.isE2E) {
                 if (typeof window !== 'undefined') {

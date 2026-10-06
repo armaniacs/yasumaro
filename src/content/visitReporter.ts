@@ -162,7 +162,6 @@ export class VisitReporter {
     private async attempt(retryLeft = 1): Promise<void> {
         const { pageState, sender } = this.deps;
         void logInfo('Sending VALID_VISIT', {}, 'visitReporter');
-        console.info('[OWeave] VALID_VISIT 送信開始');
 
         // Benchmark instrumentation: the window between these two marks is the
         // content-script's synchronous extract + cleanse cost, which bench/e2e
@@ -181,7 +180,6 @@ export class VisitReporter {
                 payload: toValidVisitPayload(pageState, content),
             });
             void logDebug('VALID_VISIT response', { response }, 'visitReporter');
-            console.info('[OWeave] VALID_VISIT レスポンス:', JSON.stringify(response));
 
             if (response && !response.success) {
                 if (response.error === 'DOMAIN_BLOCKED') {

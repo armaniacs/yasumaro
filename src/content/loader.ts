@@ -20,6 +20,7 @@ import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { resolveVisitAdmission } from './visitAdmission.js';
 import type { CheckDomainResponse } from './visitAdmission.js';
 import { messageTransport } from '../messaging/messageTransport.js';
+import { logWarn } from '../utils/logger/api.js';
 
 // Content Script entry point runs without ESM module support, so we cannot
 // import CURRENT_PROTOCOL_VERSION statically. The value is injected at build
@@ -76,7 +77,7 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
             // ビルド後のパスを指定（distディレクトリ内）
             await import(chrome.runtime.getURL('content-extractor.js'));
         },
-        warn: (message, u, detail) => console.warn(message, u, detail),
+        warn: (message, u, detail) => { void logWarn(message, { url: u, detail }, undefined, 'loader'); },
     });
 })();
 

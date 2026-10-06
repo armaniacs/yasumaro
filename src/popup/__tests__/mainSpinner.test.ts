@@ -22,6 +22,9 @@ vi.mock('../../utils/i18n.js', async () => {
 });
 
 import { showSpinner, hideSpinner } from '../spinner.js';
+import { logWarn } from '../../utils/logger/api.js';
+
+vi.mock('../../utils/logger/api.js', () => ({ logWarn: vi.fn(() => Promise.resolve()) }));
 
 describe('ローディングスピナー制御', () => {
   // 【テストグループの目的】: showSpinner、hideSpinner関数の動作を検証
@@ -48,10 +51,6 @@ describe('ローディングスピナー制御', () => {
 
     // Clear all mocks before each test
     vi.clearAllMocks();
-
-    // 【モックキャプチャ】: console.warnの出力をキャプチャするモックを設定
-  
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -142,8 +141,8 @@ describe('ローディングスピナー制御', () => {
       showSpinner('処理中...');
     }).not.toThrow(); // 【確認内容】: 例外がスローされないこと（エラーハンドリング済み）
 
-    // 【結果検証】: console.warnが呼ばれたことを確認
-    expect(console.warn).toHaveBeenCalledWith('loadingSpinner element not found'); // 【確認内容】: 適切な警告メッセージが出力されたこと
+    // 【結果検証】: logWarnが呼ばれたことを確認
+    expect(vi.mocked(logWarn)).toHaveBeenCalledWith('loadingSpinner element not found', {}, undefined, 'spinner'); // 【確認内容】: 適切な警告メッセージが出力されたこと
   });
 
   test('warns when hideSpinner runs without the DOM element', () => {
@@ -160,8 +159,8 @@ describe('ローディングスピナー制御', () => {
       hideSpinner();
     }).not.toThrow(); // 【確認内容】: 例外がスローされないこと（エラーハンドリング済み）
 
-    // 【結果検証】: console.warnが呼ばれたことを確認
-    expect(console.warn).toHaveBeenCalledWith('loadingSpinner element not found'); // 【確認内容】: 適切な警告メッセージが出力されたこと
+    // 【結果検証】: logWarnが呼ばれたことを確認
+    expect(vi.mocked(logWarn)).toHaveBeenCalledWith('loadingSpinner element not found', {}, undefined, 'spinner'); // 【確認内容】: 適切な警告メッセージが出力されたこと
   });
 
   test('applies the latest text on repeated showSpinner calls', () => {

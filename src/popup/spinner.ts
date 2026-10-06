@@ -5,6 +5,7 @@
  */
 
 import { getMessage } from '../utils/i18n.js';
+import { logWarn } from '../utils/logger/api.js';
 
 /**
  * Show loading spinner
@@ -14,7 +15,7 @@ import { getMessage } from '../utils/i18n.js';
 export function showSpinner(text?: string): void {
   const spinner = document.getElementById('loadingSpinner');
   if (!spinner) {
-    console.warn('loadingSpinner element not found');
+    void logWarn('loadingSpinner element not found', {}, undefined, 'spinner');
     return;
   }
   spinner.setAttribute('role', 'status');
@@ -33,7 +34,7 @@ export function showSpinner(text?: string): void {
 export function hideSpinner(): void {
   const spinner = document.getElementById('loadingSpinner');
   if (!spinner) {
-    console.warn('loadingSpinner element not found');
+    void logWarn('loadingSpinner element not found', {}, undefined, 'spinner');
     return;
   }
   spinner.style.display = 'none';
