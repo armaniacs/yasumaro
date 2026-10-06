@@ -4,7 +4,8 @@
  * FEATURE-001: エラーハンドリングの一貫性の欠如と詳細な情報漏洩の検証
  */
 
-import { ObsidianClient } from '../obsidianClient.js';
+import { ObsidianClient, OBSIDIAN_CONNECTION_RETRY_POLICY } from '../obsidianClient.js';
+import { shouldRetryHttpResponse } from '../../utils/failureTaxonomy.js';
 import { vi } from 'vitest';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import * as storage from '../../utils/storage/types.js';
@@ -691,6 +692,15 @@ describe('ObsidianClient: connection check retry policy', () => {
 
     await expect(promise).resolves.toMatchObject({ success: true });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('pins retryableStatusCodes to the SSOT-derived legacy 4-code subset', () => {
+    expect([...OBSIDIAN_CONNECTION_RETRY_POLICY.retryableStatusCodes]).toEqual([500, 502, 503, 504]);
+    for (const status of OBSIDIAN_CONNECTION_RETRY_POLICY.retryableStatusCodes) {
+      expect(shouldRetryHttpResponse(status, 'GET')).toBe(true);
+    }
+    expect(OBSIDIAN_CONNECTION_RETRY_POLICY.retryableStatusCodes).not.toContain(501);
+    expect(OBSIDIAN_CONNECTION_RETRY_POLICY.retryableStatusCodes).not.toContain(505);
   });
 
   it.each([401, 403, 404, 501])('does not retry HTTP %s', async (status) => {

@@ -30,6 +30,7 @@ import {
     createFailure,
     failureFromHttpStatus,
     resolveFailure,
+    shouldRetryHttpResponse,
     tagFailure,
     withFailure,
     FailureKind,
@@ -45,11 +46,30 @@ import { truncateForLog } from '../utils/logTruncate.js';
  */
 const FETCH_TIMEOUT_MS = 15000; // 15秒
 
+/**
+ * SSOT-derived transient 5xx for GET (`failureTaxonomy.shouldRetryHttpResponse`).
+ * The full 500-599 range is the definition source; the connection check below
+ * intentionally narrows it to the legacy 4-code subset to keep behavior unchanged.
+ */
+const SSOT_RETRYABLE_5XX_FOR_GET: readonly number[] = Array.from(
+    { length: 100 },
+    (_, index) => 500 + index
+).filter((status) => shouldRetryHttpResponse(status, 'GET'));
+
+/**
+ * Legacy connection-check subset. 501/505-599 stay terminal on purpose:
+ * widening to the full SSOT range would change retry behavior, so it is out of
+ * scope. Expand this subset only with a behavior-change PBI.
+ */
+const CONNECTION_CHECK_RETRYABLE_SUBSET: readonly number[] = [500, 502, 503, 504];
+
 export const OBSIDIAN_CONNECTION_RETRY_POLICY = {
     initialDelayMs: 500,
     maxAttempts: 3,
     backoffMultiplier: 2,
-    retryableStatusCodes: [500, 502, 503, 504]
+    retryableStatusCodes: SSOT_RETRYABLE_5XX_FOR_GET.filter((status) =>
+        (CONNECTION_CHECK_RETRYABLE_SUBSET as readonly number[]).includes(status)
+    )
 } as const;
 
 /**
