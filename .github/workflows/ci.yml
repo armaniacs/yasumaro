@@ -130,6 +130,12 @@ jobs:
         run: npm run check-innerhtml-escape
       - name: deprecated alias guard
         run: npm run check-deprecated-aliases
+      - name: Layer docs consistency
+        run: npm run lint:layers-docs
+      - name: ADR link check
+        run: npm run lint:adr-links
+      - name: Privacy docs byte identity
+        run: node scripts/release-checks/check-privacy.mjs
       - name: Type Check
         run: npm run type-check
       # Test-type baseline gate (decision: wire into CI rather than stay

@@ -41,7 +41,7 @@
     "metrics:collect": "node scripts/metrics/updateHistory.mjs",
     "metrics:backfill": "node scripts/metrics/backfill.mjs",
     "validate:json": "node scripts/validate-json.mjs",
-    "validate": "npm run validate:json && npm run lint && npm run check-innerhtml-escape && npm run check-deprecated-aliases && npm run type-check && npm run type-check:test:baseline && npm test",
+    "validate": "npm run validate:json && npm run lint && npm run check-innerhtml-escape && npm run check-deprecated-aliases && npm run lint:layers-docs && npm run lint:adr-links && node scripts/release-checks/check-privacy.mjs && npm run type-check && npm run type-check:test:baseline && npm test",
     "validate:fast": "npm run validate:json && npm run lint && npm run type-check && vitest run --changed",
     "docs": "typedoc --options dev-docs/typedoc.json",
     "docs:watch": "typedoc --options dev-docs/typedoc.json --watch",
