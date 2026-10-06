@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { JSDOM } from 'jsdom';
 import { CURRENT_PROTOCOL_VERSION } from '../../messaging/protocol.js';
+import { logWarn } from '../../utils/logger/api.js';
+
+vi.mock('../../utils/logger/api.js', () => ({ logWarn: vi.fn(() => Promise.resolve()) }));
 
 const LOADER_PATH = '../loader.js';
 
@@ -23,7 +26,7 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
     const cleanSendMessage = vi.fn();
     (globalThis as any).chrome.runtime.sendMessage = cleanSendMessage;
     sendMessageSpy = cleanSendMessage;
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    warnSpy = vi.mocked(logWarn);
   });
 
   afterEach(() => {
@@ -88,8 +91,9 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
       expect(getURLSpy).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalledWith(
         '[OWeave] Domain check failed: no response from service worker',
-        'https://example.com/page',
-        'SW not ready',
+        { url: 'https://example.com/page', detail: 'SW not ready' },
+        undefined,
+        'loader',
       );
     });
 
