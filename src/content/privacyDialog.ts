@@ -108,7 +108,12 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
     setText('osh-cancel', cancelLabel);
     setText('osh-save', saveLabel);
 
+    let settled = false;
+    let observer: MutationObserver | undefined;
     const cleanup = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      observer?.disconnect();
       host.remove();
       resolve(result);
     };
@@ -120,6 +125,12 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
     });
 
     document.body.appendChild(host);
+    if (typeof MutationObserver !== 'undefined') {
+      observer = new MutationObserver(() => {
+        if (!document.body.contains(host)) cleanup(false);
+      });
+      observer.observe(document.body, { childList: true });
+    }
     setTimeout(() => (shadow.getElementById('osh-cancel') as HTMLElement)?.focus(), 0);
   });
 }
