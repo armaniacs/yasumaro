@@ -23,6 +23,29 @@ import {
 } from './navTrail/navTrailTracker.js';
 
 // ============================================================================
+// Listener guard
+// ============================================================================
+
+/**
+ * Fire-and-forget wrapper for Chrome event listeners.
+ * Async listener rejections are otherwise silent in MV3 (the event handling
+ * is lost with only an unhandled-rejection log). Existing try/catch inside
+ * each handler stays untouched; this is the outer safety net.
+ */
+export function guard<Args extends unknown[]>(
+  fn: (...args: Args) => unknown,
+  tag: string,
+): (...args: Args) => void {
+  return (...args: Args) => {
+    void Promise.resolve()
+      .then(() => fn(...args))
+      .catch((error: unknown) => {
+        void logError(`Listener failed: ${tag}`, { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+      });
+  };
+}
+
+// ============================================================================
 // Service Worker Initialization
 // ============================================================================
 
@@ -111,8 +134,12 @@ export const rateLimiterForTest = rateLimiter;
 SessionStore.registerSuspendHandler(sessionStore);
 
 // Initialize clients
-void headerDetector.initialize();
-rateLimiter.initialize();
+void headerDetector.initialize().catch((error: unknown) => {
+  void logError('HeaderDetector initialization failed', { error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+});
+void rateLimiter.initialize().catch((error: unknown) => {
+  void logError('RateLimiter initialization failed', { error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+});
 const isCacheInitialized = createCacheInitializedFlag();
 
 export function resetManualRecordCache(): void {
@@ -225,11 +252,11 @@ export function createMessageHandler(): (
 if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.runtime.onMessage.addListener(createMessageHandler());
 
-    chrome.tabs.onRemoved.addListener(handleTabRemoved);
-    chrome.tabs.onActivated.addListener(handleTabActivated);
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) =>
+    chrome.tabs.onRemoved.addListener(guard(handleTabRemoved, 'handleTabRemoved'));
+    chrome.tabs.onActivated.addListener(guard(handleTabActivated, 'handleTabActivated'));
+    chrome.tabs.onUpdated.addListener(guard((tabId, changeInfo, tab) =>
       handleTabUpdated(tabId, changeInfo, tab.url !== undefined ? { url: tab.url } : {}),
-    );
+    'handleTabUpdated'));
     // PBI 03: navigation-trail tracking. Registered at top level, beside the
     // other tab listeners, because MV3 discards listeners when the worker
     // stops and only a top-level registration is re-attached on wake.
@@ -262,20 +289,22 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     });
     registerNavTrailConsentWatcher();
 
-    chrome.runtime.onInstalled.addListener(handleInstalled);
-    chrome.runtime.onStartup.addListener(handleStartup);
+    chrome.runtime.onInstalled.addListener(guard(handleInstalled, 'handleInstalled'));
+    chrome.runtime.onStartup.addListener(guard(handleStartup, 'handleStartup'));
 
     settingsRepository.observe(createOllamaSettingsObserver(syncOllamaOriginRule));
 
     if (chrome.storage?.session) {
-      void restoreRecordingCacheOnWake(services?.recordingCache);
+      void restoreRecordingCacheOnWake(services?.recordingCache).catch((error: unknown) => {
+        void logError('Recording cache restore on wake failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'service-worker');
+      });
     }
 
-    chrome.runtime.onInstalled.addListener(_registerManualRecordContextMenu);
-    chrome.contextMenus.onClicked.addListener(_contextClickHandler);
+    chrome.runtime.onInstalled.addListener(guard(_registerManualRecordContextMenu, 'registerManualRecordContextMenu'));
+    chrome.contextMenus.onClicked.addListener(guard(_contextClickHandler, 'contextClick'));
 
-    chrome.notifications.onButtonClicked.addListener(handleNotificationButtonClicked);
-    chrome.notifications.onClicked.addListener(handleNotificationClicked);
+    chrome.notifications.onButtonClicked.addListener(guard(handleNotificationButtonClicked, 'notificationButtonClicked'));
+    chrome.notifications.onClicked.addListener(guard(handleNotificationClicked, 'notificationClicked'));
 
     chrome.alarms.onAlarm.addListener(handleAlarm);
 }

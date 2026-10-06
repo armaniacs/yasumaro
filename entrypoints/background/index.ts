@@ -11,8 +11,12 @@ export default defineBackground({
     // Firefox requires the background main() to be synchronous (the event
     // page warns "must be synchronous" for an async main), so the service
     // worker module load is fire-and-forget instead of awaited.
-    void import('../../src/background/service-worker.js').then(({ init }) => {
-      init();
-    });
+    void import('../../src/background/service-worker.js')
+      .then(({ init }) => {
+        init();
+      })
+      .catch((error: unknown) => {
+        console.error('[yasumaro] background service-worker load failed', error);
+      });
   },
 });

@@ -28,9 +28,8 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
 ) => boolean {
     return (rawMessage: unknown, sender, sendResponse) => {
         const process = async () => {
-            await Promise.all([deps.isCacheInitialized.restore(), deps.autoSavedBadgeTabs.restore()]);
-
             try {
+                await Promise.all([deps.isCacheInitialized.restore(), deps.autoSavedBadgeTabs.restore()]);
                 // Envelope policy (shape + version + migration-skip + sender
                 // special-cases) lives in one ordered pipeline; trust +
                 // handler lookup stay in the router dispatch seam.
@@ -95,7 +94,19 @@ export function createMessageHandler(deps: MessageHandlerDeps): (
             }
         };
 
-        process();
+        void process().catch((error: unknown) => {
+            void logError(
+                'Message handler dispatch failed',
+                { error: errorMessage(error) },
+                ErrorCode.INTERNAL_ERROR,
+                'service-worker'
+            );
+            try {
+                sendResponse(createErrorResponse(error));
+            } catch {
+                // Port already closed — nothing left to do.
+            }
+        });
         return true;
     };
 }

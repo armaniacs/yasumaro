@@ -1816,30 +1816,37 @@ describe('service-worker handlers', () => {
                 { result: { url: 'https://example.com', title: 'Example', content: 'body text' } },
             ]);
 
-            await contextMenuClickListener(
+            // NOTE: the registered listener is guard-wrapped (fire-and-forget),
+            // so awaiting it does not wait for the pipeline. Wait for the
+            // effect instead.
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
 
-            expect(executeScriptMock).toHaveBeenCalledWith(
-                expect.objectContaining({ target: { tabId: 1 } })
-            );
+            await vi.waitFor(() => {
+                expect(executeScriptMock).toHaveBeenCalledWith(
+                    expect.objectContaining({ target: { tabId: 1 } })
+                );
+            }, { interval: 1 });
 
             // The composition root built the pipeline once at SW module load;
             // the manual-record handler must reuse that instance rather than
             // constructing a new pipeline per message.
             expect(injectedRecordingPipeline).toBeDefined();
-            expect(injectedRecordingPipeline!.record).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: 'Example',
-                    url: 'https://example.com',
-                    content: 'body text',
-                    force: true,
-                    skipAi: false,
-                    recordType: 'manual',
-                }),
-                expect.any(Object)
-            );
+            await vi.waitFor(() => {
+                expect(injectedRecordingPipeline!.record).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        title: 'Example',
+                        url: 'https://example.com',
+                        content: 'body text',
+                        force: true,
+                        skipAi: false,
+                        recordType: 'manual',
+                    }),
+                    expect.any(Object)
+                );
+            }, { interval: 1 });
         });
 
         it('rejects insecure tab URLs without calling executeScript', async () => {
@@ -1848,19 +1855,23 @@ describe('service-worker handlers', () => {
             const handleManualRecordSpy = vi.spyOn(serviceWorker, 'handleManualRecord').mockResolvedValue(undefined);
             const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
 
-            await contextMenuClickListener(
+            // NOTE: guard-wrapped listener — wait for the positive effect,
+            // then assert the negatives.
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'javascript:alert(1)' } as chrome.tabs.Tab
             );
 
+            await vi.waitFor(() => {
+                expect(logWarn).toHaveBeenCalledWith(
+                    'Context menu ignored for insecure URL',
+                    expect.objectContaining({ url: 'javascript:alert(1)' }),
+                    undefined,
+                    'service-worker'
+                );
+            }, { interval: 1 });
             expect(executeScriptMock).not.toHaveBeenCalled();
             expect(handleManualRecordSpy).not.toHaveBeenCalled();
-            expect(logWarn).toHaveBeenCalledWith(
-                'Context menu ignored for insecure URL',
-                expect.objectContaining({ url: 'javascript:alert(1)' }),
-                undefined,
-                'service-worker'
-            );
 
             handleManualRecordSpy.mockRestore();
         });
@@ -1871,17 +1882,20 @@ describe('service-worker handlers', () => {
             const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
             executeScriptMock.mockRejectedValueOnce(new Error('Script injection failed'));
 
-            await contextMenuClickListener(
+            // NOTE: guard-wrapped listener — wait for the effect.
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
 
-            expect(logError).toHaveBeenCalledWith(
-                'Context menu manual record failed',
-                expect.objectContaining({ cause: expect.any(Error) }),
-                ErrorCode.INTERNAL_ERROR,
-                'service-worker'
-            );
+            await vi.waitFor(() => {
+                expect(logError).toHaveBeenCalledWith(
+                    'Context menu manual record failed',
+                    expect.objectContaining({ cause: expect.any(Error) }),
+                    ErrorCode.INTERNAL_ERROR,
+                    'service-worker'
+                );
+            }, { interval: 1 });
         });
 
         it('ignores invalid page data returned by executeScript', async () => {
@@ -1891,18 +1905,22 @@ describe('service-worker handlers', () => {
             const executeScriptMock = chrome.scripting.executeScript as ReturnType<typeof vi.fn>;
             executeScriptMock.mockResolvedValueOnce([{ result: null }]);
 
-            await contextMenuClickListener(
+            // NOTE: guard-wrapped listener — wait for the positive effect,
+            // then assert the negative.
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
 
+            await vi.waitFor(() => {
+                expect(logWarn).toHaveBeenCalledWith(
+                    'Context menu received invalid page data',
+                    expect.objectContaining({ url: 'https://example.com' }),
+                    undefined,
+                    'service-worker'
+                );
+            }, { interval: 1 });
             expect(handleManualRecordSpy).not.toHaveBeenCalled();
-            expect(logWarn).toHaveBeenCalledWith(
-                'Context menu received invalid page data',
-                expect.objectContaining({ url: 'https://example.com' }),
-                undefined,
-                'service-worker'
-            );
 
             handleManualRecordSpy.mockRestore();
         });
@@ -1918,30 +1936,45 @@ describe('service-worker handlers', () => {
                 { result: { url: 'https://other.com', title: 'Other', content: 'other body' } },
             ]);
 
-            const firstClick = contextMenuClickListener(
+            // NOTE: the registered listener is guard-wrapped (fire-and-forget),
+            // so its return carries no completion signal. Synchronize on
+            // effects instead.
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
+            // First run actually started → its SingleFlight slot is held.
+            await vi.waitFor(() => {
+                expect(executeScriptMock).toHaveBeenCalledTimes(1);
+            }, { interval: 1 });
 
             // Same tab while in flight → joins the existing run (no second
             // executeScript for tab 1).
-            await contextMenuClickListener(
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab
             );
+            // Negative on a timer-free path: one macrotask turn proves no
+            // second run started.
+            await drainMacrotask();
             expect(executeScriptMock).toHaveBeenCalledTimes(1);
 
-            // Different tab → keyed slot runs concurrently (not awaited: the
-            // full record pipeline is out of this test's scope; the run
-            // swallows its own errors).
-            void contextMenuClickListener(
+            // Different tab → keyed slot runs concurrently.
+            contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 2, url: 'https://other.com' } as chrome.tabs.Tab
             );
-            expect(executeScriptMock).toHaveBeenCalledTimes(2);
+            await vi.waitFor(() => {
+                expect(executeScriptMock).toHaveBeenCalledTimes(2);
+            }, { interval: 1 });
 
             resolveDeferred([{ result: { url: 'https://example.com', title: 'Example', content: 'body text' } }]);
-            await firstClick;
+            await vi.waitFor(() => {
+                expect(injectedRecordingPipeline!.record).toHaveBeenCalledWith(
+                    expect.objectContaining({ url: 'https://example.com' }),
+                    expect.any(Object)
+                );
+            }, { interval: 1 });
         });
     });
 

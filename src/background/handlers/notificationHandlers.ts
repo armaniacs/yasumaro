@@ -47,8 +47,8 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
         try {
             if (!notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) return;
 
-            chrome.notifications.clear(notificationId).catch(e => {
-                logWarn(
+            void chrome.notifications.clear(notificationId).catch(e => {
+                void logWarn(
                     'Failed to clear notification',
                     { notificationId, error: errorMessage(e) },
                     ErrorCode.UNKNOWN_ERROR,
@@ -126,7 +126,14 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
 
     function onClicked(notificationId: string): void {
         if (notificationId.startsWith(PRIVACY_CONFIRM_NOTIFICATION_PREFIX)) {
-            chrome.notifications.clear(notificationId);
+            void chrome.notifications.clear(notificationId).catch((error: unknown) => {
+                void logWarn(
+                    'Failed to clear notification',
+                    { notificationId, error: errorMessage(error) },
+                    ErrorCode.UNKNOWN_ERROR,
+                    'service-worker',
+                );
+            });
         }
     }
 

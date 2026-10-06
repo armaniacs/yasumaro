@@ -27,6 +27,23 @@ export class HeaderDetector {
   constructor(private readonly cache: RecordingCacheInstance) {}
 
   /**
+   * Fire-and-forget runner for diagnostic logging from the sync webRequest
+   * callback. onHeadersReceived cannot await, so logging runs detached;
+   * failures are diagnostic-only and must never surface as unhandled
+   * rejections.
+   */
+  private fireAndForget(task: () => Promise<unknown>, context: string): void {
+    void Promise.resolve()
+      .then(() => task())
+      .catch((error: unknown) => {
+        void logDebug('HeaderDetector fire-and-forget failed', {
+          context,
+          error: errorMessage(error),
+        });
+      });
+  }
+
+  /**
    * webRequest.onHeadersReceivedリスナーを初期化する
    */
   async initialize(): Promise<void> {
@@ -64,11 +81,11 @@ export class HeaderDetector {
    */
   private onHeadersReceived = (details: chrome.webRequest.OnHeadersReceivedDetails): chrome.webRequest.BlockingResponse | undefined => {
     // 【注意】webRequest.onHeadersReceived は同期コールバックのため async 関数にできない
-    // URLハッシュ化にはcrypto APIが必要なため、即時実行の非同期関数を経由してログ出力を行う
-    (async () => {
+    // URLハッシュ化にはcrypto APIが必要なため、fire-and-forget 経由でログ出力を行う
+    this.fireAndForget(async () => {
       const urlHash = await hashUrl(details.url);
       await logDebug('onHeadersReceived fired', { type: details.type, urlHash, source: 'headerDetector' });
-    })();
+    }, 'onHeadersReceived fired');
 
     try {
       // PBI 2026-09-19-08: main_frame + text/html の gate 判定は
@@ -77,21 +94,21 @@ export class HeaderDetector {
         (h: chrome.webRequest.HttpHeader) => h.name?.toLowerCase() === 'content-type'
       );
       const gate = shouldProcessHeadersResponse(details.type, contentType?.value);
-      (async () => await logDebug('Content-Type check', { contentType: contentType?.value || 'unknown', source: 'headerDetector' }))();
+      this.fireAndForget(async () => logDebug('Content-Type check', { contentType: contentType?.value || 'unknown', source: 'headerDetector' }), 'Content-Type check');
 
       if (!gate.process) {
         if (gate.reason === 'non-main_frame') {
-          (async () => await logDebug('Skipping non-main_frame', { type: details.type, source: 'headerDetector' }))();
+          this.fireAndForget(async () => logDebug('Skipping non-main_frame', { type: details.type, source: 'headerDetector' }), 'Skipping non-main_frame');
           return;
         }
-        (async () => {
+        this.fireAndForget(async () => {
           const urlHash = await hashUrl(details.url);
           await logDebug('Skipping non-HTML response', {
             urlHash,
             contentType: contentType?.value || 'unknown',
             source: 'headerDetector'
           });
-        })();
+        }, 'Skipping non-HTML response');
         return;
       }
 
@@ -99,7 +116,7 @@ export class HeaderDetector {
       const headers = details.responseHeaders || [];
       const privacyInfo = checkPrivacy(headers);
 
-      (async () => {
+      this.fireAndForget(async () => {
         const urlHash = await hashUrl(details.url);
         await logDebug('Privacy detection result', {
           urlHash,
@@ -110,7 +127,7 @@ export class HeaderDetector {
           hasAuth: privacyInfo.headers?.hasAuth,
           source: 'headerDetector'
         });
-      })();
+      }, 'Privacy detection result');
 
       // キャッシュに保存
       this.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch(() => {
@@ -118,20 +135,20 @@ export class HeaderDetector {
       });
 
       const cacheSize = this.cache.getPrivacyCacheSize();
-      (async () => {
+      this.fireAndForget(async () => {
         const urlHash = await hashUrl(details.url);
         await logDebug('Privacy info cached', { urlHash, isPrivate: privacyInfo.isPrivate, cacheSize, source: 'headerDetector' });
-      })();
+      }, 'Privacy info cached');
     } catch (error: unknown) {
       const msg = errorMessage(error);
-      (async () => {
+      this.fireAndForget(async () => {
         const urlHash = await hashUrl(details.url);
         await logError('HeaderDetector error', {
           error: msg,
           urlHash,
           source: 'headerDetector'
         }, ErrorCode.UNKNOWN_ERROR);
-      })();
+      }, 'HeaderDetector error');
     }
     return; // Return undefined (non-blocking)
   };
@@ -143,7 +160,13 @@ export class HeaderDetector {
   private async cachePrivacyInfo(url: string, info: PrivacyInfo, tabId?: number): Promise<void> {
     const cacheSize = this.cache.getPrivacyCacheSize();
     if (cacheSize >= MAX_CACHE_SIZE) {
-      this.evictOldestEntry();
+      // 同期開始を保つため直接呼び出す（fireAndForget は起動を microtask に遅延させるため、
+      // LRU 削除が後続の set より後に回って上限を一時的に超える）。reject はここで回収する。
+      void this.evictOldestEntry().catch((error: unknown) => {
+        void logDebug('HeaderDetector evictOldestEntry failed', {
+          error: errorMessage(error),
+        });
+      });
     }
 
     // URL正規化してインメモリキャッシュに保存
@@ -199,8 +222,12 @@ export class HeaderDetector {
       if (excess > 0) {
         await chrome.storage.session.remove(keys.slice(0, excess));
       }
-    } catch {
-      // session storage エラーは非致命的（インメモリキャッシュは機能する）
+    } catch (error: unknown) {
+      // session storage は補助（インメモリキャッシュが正本）のため失敗は非致命的。
+      // 握りつぶさず診断用に debug ログのみ残す。
+      await logDebug('Session privacy key cap failed, using in-memory only', {
+        error: errorMessage(error),
+      });
     }
   }
 

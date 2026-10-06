@@ -60,6 +60,9 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
             logInfo(`Service Worker updated from ${details.previousVersion}`, {}, 'service-worker');
 
             // 更新時はキャッシュをクリアして再初期化
+            // NOTE: ここは意図的に try の外に置く。既存テストが getSettings 失敗時の
+            // reject 伝播を期待しており、挙動不変のため guard（登録側の外側の網）での
+            // 記録に委ねる。既存 try/catch は変更しない。
             if (ctx.recordingCache) ctx.recordingCache.invalidateSettingsCache();
             const settings = await settingsRepository.getAll();
             await updateDomainFilterCache(settings);
@@ -80,7 +83,16 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
             }
         }
 
-        await updateConsentBadge();
+        try {
+            await updateConsentBadge();
+        } catch (error) {
+            await logWarn(
+                'Consent badge update failed on installed',
+                { error: errorMessage(error) },
+                ErrorCode.UNKNOWN_ERROR,
+                'service-worker'
+            );
+        }
     }
 
     /**
@@ -89,9 +101,27 @@ export function createLifecycleHandlers(ctx: LifecycleHandlerContext) {
     async function handleStartup(): Promise<void> {
         logInfo('Service Worker startup - rehydrating caches', {}, 'service-worker');
 
-        await ctx.isCacheInitialized.restore();
+        try {
+            await ctx.isCacheInitialized.restore();
+        } catch (error) {
+            await logWarn(
+                'Cache restore failed on startup',
+                { error: errorMessage(error) },
+                ErrorCode.UNKNOWN_ERROR,
+                'service-worker'
+            );
+        }
 
-        await updateConsentBadge();
+        try {
+            await updateConsentBadge();
+        } catch (error) {
+            await logWarn(
+                'Consent badge update failed on startup',
+                { error: errorMessage(error) },
+                ErrorCode.UNKNOWN_ERROR,
+                'service-worker'
+            );
+        }
 
         // Retry records that failed to insert while SQLite was unavailable (M14).
         // Runs regardless of cache-init state, since it's independent of it.
