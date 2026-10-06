@@ -39,7 +39,7 @@ Scenario: saveSqlite の二重ログが消える
 - [x] `saveSqliteStep` の 2 箇所が素投げになり、観測は executor/outcome 側に寄る
 - [x] 成功時 context 形状は不変
 - [x] 既存の parity / offline-policy テストが green
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,8 +52,8 @@ Scenario: saveSqlite の二重ログが消える
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

@@ -35,6 +35,20 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.37] - 2026-10-07
+
+### Fixed
+
+- **診断パネルの compileOptions 描画をエスケープ** — 同一データを textContent で描く箇所と異なり `<pre>` だけ未エスケープだった XSS 表面を除去
+- **Gemini 空応答に failure メタデータを付与** — OpenAI と対称化し breaker 冷却可能に。文言・policy は不変
+- **E2E の poll・seed を共有ヘルパーに寄せ固定値化** — リトライ時の別行挿入を防止
+- **envelope 通常分岐の null 通過を除去** — レビュー指摘の反映
+
+### Changed
+
+- **arch-delivery-loop ラウンド（積み残し L1–L8 の 23 件）** — pipeline 失敗処理の集約、wire 表・queryPlan の重複排除、dashboard 大型モジュールの責務整理、E2E fixture・spec の統一、ログ経路の統一など。外部挙動不変
+- **テスト型エラーのベースラインを 474→469 に引き下げ** — 新規 8 件を返済
+
 ## [6.9.36] - 2026-10-05
 
 ### Fixed

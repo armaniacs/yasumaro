@@ -38,7 +38,7 @@ Scenario: SavePhase 固有の分岐が残る
 - [x] `recordingOutcome.ts` に `handleStepFailure` 相当の薄いヘルパーがある
 - [x] 両 loop から呼ばれ、`outcomes.push` と absent 分岐は残っている
 - [x] 観測ログの文言・順序が不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,8 +51,8 @@ Scenario: SavePhase 固有の分岐が残る
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

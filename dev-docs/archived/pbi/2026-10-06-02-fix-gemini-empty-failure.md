@@ -39,7 +39,7 @@ Scenario: 文言と detail が変わらない
 - [x] 文言・`error` detail・`describeEmptyResponseDetail`（`:332-347`）は不変
 - [x] `testConnection` 空応答は触らない
 - [x] breaker 政策の変更なし
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,8 +52,8 @@ Scenario: 文言と detail が変わらない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

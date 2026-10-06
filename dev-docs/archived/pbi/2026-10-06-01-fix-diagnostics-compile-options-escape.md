@@ -38,7 +38,7 @@ Scenario: 正常系の表示が変わらない
 - [x] `All ${options.length}` の数値補間は触らない
 - [x] 既存の `makeStatRow` 行は変更しない
 - [x] markup 混入時の非解釈テストが 1 ケース追加されている
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,8 +51,8 @@ Scenario: 正常系の表示が変わらない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

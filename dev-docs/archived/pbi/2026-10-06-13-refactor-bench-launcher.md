@@ -37,7 +37,7 @@ Scenario: bench 固有部が残る
 - [x] `tryLaunch` 本体が委譲に置換され、`benchPage/cdp/throttleCpu` だけ残っている
 - [x] `test.skip` フォールバック行が維持されている
 - [x] 振る舞いは E2E 側に寄る（意図的統一）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -50,8 +50,8 @@ Scenario: bench 固有部が残る
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

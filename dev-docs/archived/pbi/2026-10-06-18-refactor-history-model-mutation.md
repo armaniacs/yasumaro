@@ -39,7 +39,7 @@ Scenario: 一括削除が委譲する
 - [x] `mutateWithInvalidation(fn)` 内部ヘルパーに早期復帰と成功時処理が寄っている
 - [x] 一括削除が委譲し、URL 回収（`:699-702`）のみ残っている
 - [x] `invalidateCache` の `reason` がログ用に保持されるか、引数ごと畳まれている（`void` 残しなし）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,8 +52,8 @@ Scenario: 一括削除が委譲する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

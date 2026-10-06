@@ -38,7 +38,7 @@ Scenario: 既存の回帰テストが green のまま
 - [x] `appendTag(baseSql, tagFilter)` と `withTagParams(baseParams, tagFilter)` の 2 ヘルパーに畳まれている
 - [x] 3 builder から呼ばれ、SQL 文字列・param 順は現行どおり
 - [x] `searchExecution.ts:94-110` の呼び出し側は不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,8 +51,8 @@ Scenario: 既存の回帰テストが green のまま
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

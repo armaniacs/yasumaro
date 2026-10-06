@@ -37,7 +37,7 @@ Scenario: 差分行が両方保持される
 - [x] 同一の行の `depsArgs` が省略可能になりフォールバックで解決されている（`archiveHandler.ts:40-42` と同形）
 - [x] 差分 3 行が両方保持されている
 - [x] wire 形状・振る舞い不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -50,8 +50,8 @@ Scenario: 差分行が両方保持される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

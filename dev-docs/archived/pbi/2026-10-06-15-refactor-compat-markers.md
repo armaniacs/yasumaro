@@ -40,7 +40,7 @@ Scenario: 除外層が残る
 - [x] TERMINAL 除外と特殊扱いは維持されている
 - [x] 各表頭の互換専用コメントが維持されている
 - [x] 既存 parity テストが green のまま
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -53,8 +53,8 @@ Scenario: 除外層が残る
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

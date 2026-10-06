@@ -44,7 +44,7 @@ Scenario: 空実装・無主張が整理される
 - [x] 空実装 2 件が実装または削除されている
 - [x] constant-time が `expect` 追加またはフォールバック契約の文書化のいずれかになっている
 - [x] 本番コード不変。E2E 実行は CI 範囲
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -57,8 +57,8 @@ Scenario: 空実装・無主張が整理される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

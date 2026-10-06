@@ -39,7 +39,7 @@ Scenario: 正常値の出力が変わらない
 - [x] `ruleValues` 往復が `getRuleFlag(settings,key)` に畳まれている
 - [x] `parseInt` 群に `Number.isNaN` フォールバックが付いている
 - [x] `dataset.category` に `isTrustCategory`、`data-id` に `Number.isInteger` ガードが付いている
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,8 +52,8 @@ Scenario: 正常値の出力が変わらない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

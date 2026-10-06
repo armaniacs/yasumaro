@@ -39,7 +39,7 @@ Scenario: 挙動が変わらない
 - [x] `retryableStatusCodes` が SSOT 由来（例: `filter(500..599, shouldRetryHttpResponse(s,'GET'))` で導出）になっている
 - [x] 現行 4 点維持の意図がコメント＋契約テストで固定されている
 - [x] `501,505-599` の新規リトライは含めない（挙動変化のため対象外）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,8 +52,8 @@ Scenario: 挙動が変わらない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

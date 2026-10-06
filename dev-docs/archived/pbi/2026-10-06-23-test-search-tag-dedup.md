@@ -38,7 +38,7 @@ Scenario: tag-cluster が一本化される
 - [x] UI 駆動の検索が `dashboard-search-results` に一本化されている
 - [x] tag-cluster が usability 版に一本化され、回帰ケースのみ旧 spec に残っている
 - [x] 振る舞い不変。E2E 実行は CI 範囲
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,8 +51,8 @@ Scenario: tag-cluster が一本化される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

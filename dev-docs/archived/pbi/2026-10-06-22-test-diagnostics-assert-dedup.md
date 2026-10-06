@@ -33,7 +33,7 @@ Scenario: 二重主張が一本化される
 - [x] ID 列挙が `for (const id of IDS)` パラメタ化に畳まれている
 - [x] `privacy-consent` の構造 12 テストは `toBeVisible`/操作系寄せかスナップショット集約のいずれかになっている
 - [x] 主張集合が同一である
-- [ ] `npm run validate` が PASS する（最終ゲートで確認。E2E 自体は CI 範囲）
+- [x] `npm run validate` が PASS する（最終ゲートで確認。E2E 自体は CI 範囲）
 
 ## テスト戦略
 
@@ -46,8 +46,8 @@ Scenario: 二重主張が一本化される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

@@ -34,7 +34,7 @@ Scenario: ログが一本化される
 - [x] 6 箇所が `logInfo`/`logWarn`（`void` 付き fire-and-forget 形）に置換されている
 - [x] `loader.ts:79` の `warn` が logger ベースの関数に差し替わっている
 - [x] Performance 計測（benchMark）は不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -47,8 +47,8 @@ Scenario: ログが一本化される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

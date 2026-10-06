@@ -33,7 +33,7 @@ Scenario: 骨格が共有される
 - [x] 両 handler が薄いアダプタ（メソッド名解決＋エラ prefix）に畳まれている
 - [x] 層ポリシー（事前検査・引き）が残っている
 - [x] 振る舞い不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -46,8 +46,8 @@ Scenario: 骨格が共有される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

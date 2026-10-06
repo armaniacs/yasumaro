@@ -33,7 +33,7 @@ Scenario: 一覧配線が region スコープになる
 - [x] 描画 HTML（`:181-262`）は不変
 - [x] destroy 契約は変えず、追跡対象を一覧 region の一括クリアに合わせている
 - [x] trustSettings 側の動的行が `listen` 経由またはコンテナ委譲に寄っている（既存 destroy 範囲は広げない）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -46,8 +46,8 @@ Scenario: 一覧配線が region スコープになる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

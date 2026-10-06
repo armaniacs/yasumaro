@@ -14,6 +14,36 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006） — ✅ 23件完了・アーカイブ済み 🔧非機能追加
+
+arch-delivery-loop の closed loop を holistic-1005 の台帳送り L1–L8 に対して実行するラウンド（スキル本体不在のため holistic-code-improvement と同手順で閉じる）。4 テーマ群の並列調査＋L8 直査を 23 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-23）。詳細は [2026-10-06-00-backlog-archloop-1006.md](2026-10-06-00-backlog-archloop-1006.md)（live 台帳）。実行順は依存優先（14 → 13 / 11 → 17 / 10 → 19 / 16 → 21 / 07 → 18、他は並列可）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 01 | [2026-10-06-01-fix-diagnostics-compile-options-escape.md](2026-10-06-01-fix-diagnostics-compile-options-escape.md) | fix | 9.0 | 1 | ✅。compileOptions の未エスケープ埋め込み |
+| 02 | [2026-10-06-02-fix-gemini-empty-failure.md](2026-10-06-02-fix-gemini-empty-failure.md) | fix | 8.0 | 1 | ✅。Gemini 空応答の failure 欠落 |
+| 03 | [2026-10-06-03-fix-e2e-poll-shared-seed.md](2026-10-06-03-fix-e2e-poll-shared-seed.md) | fix | 6.0 | 1 | ✅。poll 再定義＋seed 非冪等 |
+| 04 | [2026-10-06-04-refactor-queryplan-tag-params.md](2026-10-06-04-refactor-queryplan-tag-params.md) | refactor | 4.27 | 1.5 | ✅。queryPlan タグ付加の共通化 |
+| 05 | [2026-10-06-05-refactor-step-failure-helix.md](2026-10-06-05-refactor-step-failure-helix.md) | refactor | 4.0 | 1 | ✅。catch 継続ブロック写経 |
+| 06 | [2026-10-06-06-refactor-step-self-catch.md](2026-10-06-06-refactor-step-self-catch.md) | refactor | 4.0 | 2 | ✅。ステップ内自前 catch の迂回 |
+| 07 | [2026-10-06-07-refactor-boundary-guards.md](2026-10-06-07-refactor-boundary-guards.md) | refactor | 3.6 | 1 | ✅。境界ガード集約。18 の先行 |
+| 08 | [2026-10-06-08-test-e2e-skipped-paths.md](2026-10-06-08-test-e2e-skipped-paths.md) | test | 3.2 | 2 | ✅。skip/fixme/空実装の重要パス |
+| 09 | [2026-10-06-09-refactor-obsidian-retry-table.md](2026-10-06-09-refactor-obsidian-retry-table.md) | refactor | 3.0 | 1 | ✅。obsidian リトライ表の SSOT 化 |
+| 10 | [2026-10-06-10-refactor-archive-wire-args.md](2026-10-06-10-refactor-archive-wire-args.md) | refactor | 3.0 | 1 | ✅。backendArgs/depsArgs 集約。19 の先行 |
+| 11 | [2026-10-06-11-refactor-sqlite-decode-twins.md](2026-10-06-11-refactor-sqlite-decode-twins.md) | refactor | 3.0 | 1 | ✅。records/search デコード双子。17 の先行 |
+| 12 | [2026-10-06-12-refactor-masterpassword-modal.md](2026-10-06-12-refactor-masterpassword-modal.md) | refactor | 3.0 | 1 | ✅。モーダル開閉の重複 |
+| 13 | [2026-10-06-13-refactor-bench-launcher.md](2026-10-06-13-refactor-bench-launcher.md) | refactor | 2.4 | 1 | ✅。bench launcher 乖離。14 の後 |
+| 14 | [2026-10-06-14-refactor-dashboard-fixture.md](2026-10-06-14-refactor-dashboard-fixture.md) | refactor | 1.8 | 2 | ✅。dashboard fixture 3 重。13 の先行 |
+| 15 | [2026-10-06-15-refactor-compat-markers.md](2026-10-06-15-refactor-compat-markers.md) | refactor | 1.6 | 2 | ✅。compat マーカー 3 表集約 |
+| 16 | [2026-10-06-16-refactor-tag-chip-factory.md](2026-10-06-16-refactor-tag-chip-factory.md) | refactor | 1.6 | 2 | ✅。チップ工場。21 の先行 |
+| 17 | [2026-10-06-17-refactor-wire-lambda-consts.md](2026-10-06-17-refactor-wire-lambda-consts.md) | refactor | 1.5 | 1 | ✅。単要素ラムダ定数化。11 の後 |
+| 18 | [2026-10-06-18-refactor-history-model-mutation.md](2026-10-06-18-refactor-history-model-mutation.md) | refactor | 1.6 | 2 | ✅。mutation 後処理分散。07 の後 |
+| 19 | [2026-10-06-19-refactor-crud-archive-skeleton.md](2026-10-06-19-refactor-crud-archive-skeleton.md) | refactor | 1.6 | 2 | ✅。runCoreCrud/runArchive 共通化。10 の後 |
+| 20 | [2026-10-06-20-refactor-content-logger-unify.md](2026-10-06-20-refactor-content-logger-unify.md) | refactor | 1.5 | 1 | ✅。console 6 箇所の統一 |
+| 21 | [2026-10-06-21-refactor-prompt-list-wiring.md](2026-10-06-21-refactor-prompt-list-wiring.md) | refactor | 1.6 | 2 | ✅。一覧配線の region 化。16 の後 |
+| 22 | [2026-10-06-22-test-diagnostics-assert-dedup.md](2026-10-06-22-test-diagnostics-assert-dedup.md) | test | 1.35 | 2 | ✅。静的アサーション二重主張 |
+| 23 | [2026-10-06-23-test-search-tag-dedup.md](2026-10-06-23-test-search-tag-dedup.md) | test | 1.2 | 2 | ✅。検索・tag spec 重複 |
+
 ### 2026-10-05 holistic ラウンド（holistic-1005） — ✅ 32件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-improvement skill による 6.9.36 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+offscreen+messaging / shared infra — 4 agents 並列発見、統合側が全指摘の実コード裏取り）を 32 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-32）。採点・同点の順位根拠・依存・バッチ計画（W1-W7）の詳細は [2026-10-05-00-backlog-holistic-1005.md](2026-10-05-00-backlog-holistic-1005.md)（live 台帳）。実行順は依存優先（11 → 17 / 22 → 26 / 13 → 23 / 07 → 19,20 / 18 → 29 / 09 → 28,32 / 21 → 28、他は並列可）。積み残し 8 テーマは台帳送り（次ラウンド予約）。

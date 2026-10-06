@@ -32,7 +32,7 @@ Scenario: デコードが共有関数になる
 - [x] `decodeQueryGateway` / `decodeQueryService` の 2 関数が切り出されている
 - [x] 両行から参照され、`encodePayload` と `messageType` は行ごとに残っている
 - [x] 振る舞い不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -45,8 +45,8 @@ Scenario: デコードが共有関数になる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

@@ -33,7 +33,7 @@ Scenario: チップ組立が工場経由になる
 - [x] 各 render が配列→工場→append のみに痩せている
 - [x] `innerHTML=''` クリア・`hidden` 切替・`textContent` 代入は工場外に残っている
 - [x] i18n 文言・`dataset` キー差異が引数化されている
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -46,8 +46,8 @@ Scenario: チップ組立が工場経由になる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

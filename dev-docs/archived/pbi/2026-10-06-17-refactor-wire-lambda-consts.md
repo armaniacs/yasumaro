@@ -29,7 +29,7 @@ Scenario: 単要素ラムダが共有参照になる
 
 - [x] `messaging/` に共有ファクトリが置かれている
 - [x] 全該当行が参照に置換され、振る舞い不変である
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -42,8 +42,8 @@ Scenario: 単要素ラムダが共有参照になる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

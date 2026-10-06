@@ -39,7 +39,7 @@ Scenario: popup 変種が正規に寄る
 - [x] 3 fixture が seed 定義だけ残して委譲している
 - [x] `popup-fix09-25` の 2 箇所が正規に寄っている
 - [x] 同一 seed・同一 goto・同一待ちで振る舞い不変。E2E 実行は CI 範囲
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,8 +52,8 @@ Scenario: popup 変種が正規に寄る
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録

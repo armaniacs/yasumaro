@@ -38,7 +38,7 @@ Scenario: リトライで別行が挿入されない
 - [x] seed の `created_at` が `Date.UTC(...)` 固定値になり、一意性は URL 内の `Date.now()` トークンで担保されている
 - [x] no-test-sleep の扱いが正規品側に集約されている
 - [x] E2E の観測結果が無変更（実行は CI 範囲。静的検証まで）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,8 +51,8 @@ Scenario: リトライで別行が挿入されない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] コードレビュー完了
 
 ## 実装記録
