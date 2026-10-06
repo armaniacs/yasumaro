@@ -128,6 +128,38 @@ describe('checkEnvelope', () => {
   });
 });
 
+describe('envelope shape agreement (PBI 2026-10-05-13)', () => {
+  // 同一入力リテラルは messaging-types-uniformity.test.ts の shapeCases と
+  // 一字一句同じ（null / 非 object は既存テストが pin するため行列から除く）。
+  // checkEnvelope の受理は shape と一致する。唯一の例外は NO_PAYLOAD + payload
+  //（TEST_AI / ACTIVITY_UPDATE が `payload: {}` を送る legacy）のみ受理する。
+  const cases: Array<{ input: Record<string, unknown>; accepted: boolean }> = [
+    { input: { type: 'PING' }, accepted: true },
+    { input: { type: 'PING', payload: undefined }, accepted: true },
+    { input: { type: 'PING', payload: {} }, accepted: true },
+    { input: { type: 'TEST_OBSIDIAN' }, accepted: true },
+    { input: { type: 'TEST_OBSIDIAN', payload: undefined }, accepted: true },
+    { input: { type: 'TEST_OBSIDIAN', payload: {} }, accepted: true },
+    { input: { type: 'TEST_OBSIDIAN', payload: { apiKey: 'x' } }, accepted: true },
+    { input: { type: 'TEST_OBSIDIAN', payload: 'secret' }, accepted: false },
+    { input: { type: 'TEST_OBSIDIAN', payload: null }, accepted: false },
+    { input: { type: 'DASHBOARD_SQLITE' }, accepted: true },
+    { input: { type: 'DASHBOARD_SQLITE', payload: undefined }, accepted: true },
+    { input: { type: 'DASHBOARD_SQLITE', payload: { subtype: 'status' } }, accepted: true },
+    { input: { type: 'DASHBOARD_SQLITE', payload: 'query' }, accepted: false },
+    { input: { type: 'VALID_VISIT' }, accepted: false },
+    { input: { type: 'VALID_VISIT', payload: { content: 'hi' } }, accepted: true },
+    { input: { type: 'VALID_VISIT', payload: 'hi' }, accepted: false },
+    { input: { type: 'NOPE', payload: {} }, accepted: false },
+  ];
+  for (const { input, accepted } of cases) {
+    it(`checkEnvelope ${accepted ? 'accepts' : 'rejects'} ${JSON.stringify(input)}`, async () => {
+      const outcome = await checkEnvelope(input, sender(7), makeDeps());
+      expect(outcome.accepted).toBe(accepted);
+    });
+  }
+});
+
 describe('protocol version migration window', () => {
   it('derives the window from a single declaration (N-1 only)', () => {
     expect(PROTOCOL_VERSION_POLICY.current).toBe(CURRENT_PROTOCOL_VERSION);

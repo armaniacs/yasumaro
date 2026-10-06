@@ -6,7 +6,7 @@
 
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
-import { VALID_MESSAGE_TYPES } from './messageTypeRegistry.js';
+import { isKnownMessageType } from './envelopeShape.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
@@ -82,7 +82,7 @@ export class MessageTransport {
 
     // Attach protocol version and validate
     const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION } as M & { protocolVersion: number };
-    if (!VALID_MESSAGE_TYPES.includes(enriched.type as never)) {
+    if (!isKnownMessageType((enriched as Record<string, unknown>).type)) {
       throw new Error(`Invalid message type: ${String((enriched as Record<string, unknown>).type)}`);
     }
 

@@ -7,7 +7,6 @@
  * validating unknown messages. Handlers receive already-validated payloads.
  */
 
-import { isServiceWorkerRequest } from './types.js';
 import {
   MAX_BYTE_STAT_BYTES,
   MAX_CLEANSED_ELEMENTS,
@@ -80,18 +79,6 @@ function assertContentLength(text: string, validatorName: string): void {
       `payload.content exceeds ${VALIDATOR_LIMITS.MAX_CONTENT_LENGTH} chars`,
       'content',
     );
-  }
-}
-
-// ------------------------------------------------------------------
-// ServiceWorkerRequestValidator — generic ExtensionMessage validation
-// ------------------------------------------------------------------
-export class ServiceWorkerRequestValidator implements MessageValidator<ExtensionMessage> {
-  validate(msg: unknown): ExtensionMessage {
-    if (!isServiceWorkerRequest(msg)) {
-      throw new ValidationError('ServiceWorkerRequestValidator', 'Invalid message format', 'type');
-    }
-    return msg as ExtensionMessage;
   }
 }
 
@@ -669,7 +656,6 @@ export class TestObsidianValidator implements MessageValidator<ExtensionMessage>
 }
 
 // Convenience singletons for registry wiring
-export const serviceWorkerRequestValidator = new ServiceWorkerRequestValidator();
 export const validVisitValidator = new ValidVisitValidator();
 export const dashboardSqliteValidator = new DashboardSqliteValidator();
 export const fetchUrlValidator = new FetchUrlValidator();

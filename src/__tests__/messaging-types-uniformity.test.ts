@@ -13,6 +13,7 @@ import {
   isServiceWorkerRequest,
   PayloadForType
 } from '../messaging/types.js';
+import { isValidEnvelopeShape } from '../messaging/envelopeShape.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
 import { NO_PAYLOAD_TYPES } from '../background/messageTypes.js';
 
@@ -279,6 +280,38 @@ describe('Messaging Types Uniformity Tests', () => {
     expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE' })).toBe(true);
     expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE', payload: undefined })).toBe(true);
     expect(isServiceWorkerRequest({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'get_count' } })).toBe(true);
+  });
+
+  describe('envelope shape agreement (PBI 2026-10-05-13)', () => {
+    // 同一入力リテラルは envelopePolicy.test.ts の同名 matrix と一字一句同じ。
+    // shape は predicate と single source の一致を pin する。NO_PAYLOAD + payload
+    // のみ envelope が legacy 許可する例外で、そちらは envelopePolicy 側に pin する。
+    const shapeCases: Array<{ input: unknown; shape: boolean }> = [
+      { input: null, shape: false },
+      { input: { type: 'NOPE', payload: {} }, shape: false },
+      { input: { type: 'PING' }, shape: true },
+      { input: { type: 'PING', payload: undefined }, shape: true },
+      { input: { type: 'PING', payload: {} }, shape: false },
+      { input: { type: 'TEST_OBSIDIAN' }, shape: true },
+      { input: { type: 'TEST_OBSIDIAN', payload: undefined }, shape: true },
+      { input: { type: 'TEST_OBSIDIAN', payload: {} }, shape: true },
+      { input: { type: 'TEST_OBSIDIAN', payload: { apiKey: 'x' } }, shape: true },
+      { input: { type: 'TEST_OBSIDIAN', payload: 'secret' }, shape: false },
+      { input: { type: 'TEST_OBSIDIAN', payload: null }, shape: false },
+      { input: { type: 'DASHBOARD_SQLITE' }, shape: true },
+      { input: { type: 'DASHBOARD_SQLITE', payload: undefined }, shape: true },
+      { input: { type: 'DASHBOARD_SQLITE', payload: { subtype: 'status' } }, shape: true },
+      { input: { type: 'DASHBOARD_SQLITE', payload: 'query' }, shape: false },
+      { input: { type: 'VALID_VISIT' }, shape: false },
+      { input: { type: 'VALID_VISIT', payload: { content: 'hi' } }, shape: true },
+      { input: { type: 'VALID_VISIT', payload: 'hi' }, shape: false },
+    ];
+    for (const { input, shape } of shapeCases) {
+      it(`predicate and single source agree: ${JSON.stringify(input)} -> ${shape}`, () => {
+        expect(isServiceWorkerRequest(input)).toBe(shape);
+        expect(isValidEnvelopeShape(input)).toBe(shape);
+      });
+    }
   });
 
   test('all no-payload types accept undefined in type guard', () => {

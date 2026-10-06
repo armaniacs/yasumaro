@@ -1,25 +1,24 @@
 import { describe, it, expect } from 'vitest';
 import {
-  ServiceWorkerRequestValidator,
   ValidVisitValidator,
   DashboardSqliteValidator,
   FetchUrlValidator,
   ManualRecordValidator,
   CheckDomainValidator,
   ContentCleansingExecutedValidator,
+  TestObsidianValidator,
   ValidationError,
-  serviceWorkerRequestValidator,
   validVisitValidator,
   dashboardSqliteValidator,
   fetchUrlValidator,
   manualRecordValidator,
   checkDomainValidator,
   contentCleansingExecutedValidator,
+  testObsidianValidator,
 } from '../validators.js';
 
 describe('MessageValidator interface', () => {
   it('singletons are instances of correct classes', () => {
-    expect(serviceWorkerRequestValidator).toBeInstanceOf(ServiceWorkerRequestValidator);
     expect(validVisitValidator).toBeInstanceOf(ValidVisitValidator);
     expect(dashboardSqliteValidator).toBeInstanceOf(DashboardSqliteValidator);
   });
@@ -30,31 +29,6 @@ describe('MessageValidator interface', () => {
     expect(err.validatorName).toBe('TestValidator');
     expect(err.field).toBe('myField');
     expect(err.message).toBe('bad field');
-  });
-});
-
-describe('ServiceWorkerRequestValidator', () => {
-  const v = new ServiceWorkerRequestValidator();
-
-  it('accepts valid VALID_VISIT message', () => {
-    const msg = { type: 'VALID_VISIT', payload: { content: 'hello' }, protocolVersion: 1 };
-    expect(() => v.validate(msg)).not.toThrow();
-  });
-
-  it('rejects unknown type', () => {
-    expect(() => v.validate({ type: 'UNKNOWN', payload: {} })).toThrow(ValidationError);
-  });
-
-  it('rejects missing payload for types requiring it', () => {
-    expect(() => v.validate({ type: 'VALID_VISIT', protocolVersion: 1 })).toThrow(ValidationError);
-  });
-
-  it('accepts NO_PAYLOAD type without payload', () => {
-    expect(() => v.validate({ type: 'PING', protocolVersion: 1 })).not.toThrow();
-  });
-
-  it('rejects null', () => {
-    expect(() => v.validate(null)).toThrow(ValidationError);
   });
 });
 
@@ -286,6 +260,37 @@ describe('ContentCleansingExecutedValidator', () => {
   });
   it('rejects wrong type', () => {
     expect(() => v.validate({ type: 'CHECK_DOMAIN', payload: { hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3 } })).toThrow(ValidationError);
+  });
+});
+
+describe('TestObsidianValidator — optional-object裁定 (PBI 2026-10-05-13)', () => {
+  const v = new TestObsidianValidator();
+
+  it('accepts a missing payload (stored-settings fallback)', () => {
+    expect(() => v.validate({ type: 'TEST_OBSIDIAN', protocolVersion: 1 })).not.toThrow();
+  });
+
+  it('accepts an empty object payload', () => {
+    expect(() => v.validate({ type: 'TEST_OBSIDIAN', payload: {}, protocolVersion: 1 })).not.toThrow();
+  });
+
+  it('accepts form-value payloads', () => {
+    expect(() =>
+      v.validate({ type: 'TEST_OBSIDIAN', payload: { apiKey: 'k', protocol: 'https', port: '27124', host: '127.0.0.1' }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('rejects non-object payloads', () => {
+    expect(() => v.validate({ type: 'TEST_OBSIDIAN', payload: 'secret', protocolVersion: 1 })).toThrow(ValidationError);
+    expect(() => v.validate({ type: 'TEST_OBSIDIAN', payload: ['k'], protocolVersion: 1 })).toThrow(ValidationError);
+  });
+
+  it('rejects wrong type', () => {
+    expect(() => v.validate({ type: 'TEST_AI', protocolVersion: 1 })).toThrow(ValidationError);
+  });
+
+  it('testObsidianValidator singleton is an instance', () => {
+    expect(testObsidianValidator).toBeInstanceOf(TestObsidianValidator);
   });
 });
 

@@ -153,7 +153,7 @@ export interface RecordingResult {
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
 // protocolVersion stamping lives in MessageTransport.send (Checking Team
 // 2026-09-22: System Architect Medium — single owner for version stamping).
-import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from './messageTypeRegistry.js';
+import { isValidEnvelopeShape } from './envelopeShape.js';
 import type { ExtensionMessage, TestObsidianResponse } from '../background/messageTypes.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 
@@ -238,30 +238,12 @@ export interface ErrorResponse {
 
 /**
  * メッセージが ServiceWorkerRequest 型か判定する
+ *
+ * Thin wrapper over `isValidEnvelopeShape` (messaging/envelopeShape.js) —
+ * the single source of truth for the envelope shape branches.
  */
 export function isServiceWorkerRequest(message: unknown): message is ServiceWorkerRequest {
-  if (!message || typeof message !== 'object') {
-    return false;
-  }
-
-  const msg = message as { type?: string; payload?: unknown };
-
-  if (!msg.type || !VALID_MESSAGE_TYPES.includes(msg.type as typeof VALID_MESSAGE_TYPES[number])) {
-    return false;
-  }
-
-  const type = msg.type;
-
-  if (NO_PAYLOAD_TYPES.includes(type as typeof NO_PAYLOAD_TYPES[number])) {
-    return msg.payload === undefined;
-  }
-
-  // Types with optional object payloads
-  if (type === 'TEST_OBSIDIAN' || type === 'DASHBOARD_SQLITE') {
-    return msg.payload === undefined || (typeof msg.payload === 'object' && msg.payload !== null);
-  }
-
-  return msg.payload !== undefined && typeof msg.payload === 'object';
+  return isValidEnvelopeShape(message);
 }
 
 /**

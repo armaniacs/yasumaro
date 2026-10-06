@@ -16,15 +16,12 @@
  *   tab (untrusted page ping), instead of reaching dispatch.
  */
 
-import {
-  VALID_MESSAGE_TYPES,
-  NO_PAYLOAD_TYPES,
-  type ExtensionMessage,
-} from '../messageTypes.js';
+import type { ExtensionMessage } from '../messageTypes.js';
 import {
   CURRENT_PROTOCOL_VERSION,
   PROTOCOL_VERSION_WINDOW_SIZE,
 } from '../../messaging/protocol.js';
+import { isValidEnvelopeShape, isNoPayloadType } from '../../messaging/envelopeShape.js';
 import { logInfo } from '../../utils/logger/api.js';
 
 export const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
@@ -128,18 +125,21 @@ export async function checkEnvelope(
   sender: chrome.runtime.MessageSender,
   deps: EnvelopePipelineDeps,
 ): Promise<EnvelopeOutcome> {
-  if (!rawMessage || typeof rawMessage !== 'object') {
-    return { accepted: false, response: INVALID_MESSAGE_ERROR };
-  }
-  const msg = rawMessage as Record<string, unknown>;
-  if (typeof msg.type !== 'string' || !VALID_MESSAGE_TYPES.includes(msg.type as typeof VALID_MESSAGE_TYPES[number])) {
-    return { accepted: false, response: INVALID_MESSAGE_ERROR };
-  }
-  if (!NO_PAYLOAD_TYPES.includes(msg.type as typeof NO_PAYLOAD_TYPES[number])) {
-    if (msg.payload === undefined || typeof msg.payload !== 'object') {
+  // Shape gate is single-sourced in messaging/envelopeShape.js: the strict
+  // rule accepts TEST_OBSIDIAN / DASHBOARD_SQLITE without a payload
+  // (optional-object裁定). The NO_PAYLOAD legacy exception below stays:
+  // TEST_AI and ACTIVITY_UPDATE send `payload: {}` and must keep flowing
+  // until the senders are fixed.
+  if (!isValidEnvelopeShape(rawMessage)) {
+    const type = (rawMessage as { type?: unknown } | null | undefined)?.type;
+    if (!(typeof type === 'string' && isNoPayloadType(type))) {
       return { accepted: false, response: INVALID_MESSAGE_ERROR };
     }
   }
+  const msg = rawMessage as Record<string, unknown>;
+  // The shape gate above accepted the envelope, so type is a known string.
+  // Narrow once for the diagnostic echoes below (EnvelopeOutcome.type: string).
+  const msgType = typeof msg.type === 'string' ? msg.type : 'unknown';
 
   const versionVerdict = classifyProtocolVersion(msg.protocolVersion);
   if (versionVerdict === 'unsupported') {
@@ -149,7 +149,7 @@ export async function checkEnvelope(
       versionMismatch: {
         expected: CURRENT_PROTOCOL_VERSION,
         actual: msg.protocolVersion,
-        type: msg.type,
+        type: msgType,
       },
     };
   }
@@ -172,7 +172,7 @@ export async function checkEnvelope(
       deprecated: {
         expected: CURRENT_PROTOCOL_VERSION,
         actual: msg.protocolVersion,
-        type: msg.type,
+        type: msgType,
       },
     };
   }
@@ -193,7 +193,7 @@ export async function checkEnvelope(
       deprecated: {
         expected: CURRENT_PROTOCOL_VERSION,
         actual: msg.protocolVersion,
-        type: msg.type,
+        type: msgType,
       },
     };
   }
