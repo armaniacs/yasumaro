@@ -139,6 +139,30 @@ describe('settingsUiHelper', () => {
 
             expect(el.classList.contains('show')).toBe(false);
         });
+
+        test('mirrors a #status write to #statusTop without a hand call', () => {
+            useTimerClock();
+            document.body.innerHTML = `<div id="status"></div><div id="statusTop"></div>`;
+            showStatus('status', 'hello', 'success', { autoClear: false });
+            expect(document.getElementById('status')?.textContent).toBe('hello');
+            expect(document.getElementById('statusTop')?.textContent).toBe('hello');
+            expect(document.getElementById('statusTop')?.className)
+                .toBe(document.getElementById('status')?.className);
+        });
+
+        test('does not touch #statusTop for other element IDs', () => {
+            useTimerClock();
+            document.body.innerHTML = `<div id="status-message"></div><div id="statusTop">keep</div>`;
+            showStatus('status-message', 'hi', 'error', { autoClear: false });
+            expect(document.getElementById('statusTop')?.textContent).toBe('keep');
+        });
+
+        test('null-guards when #statusTop is missing', () => {
+            useTimerClock();
+            document.body.innerHTML = `<div id="status"></div>`;
+            expect(() => showStatus('status', 'hi', 'error', { autoClear: false })).not.toThrow();
+            expect(document.getElementById('status')?.textContent).toBe('hi');
+        });
     });
 
     describe('loadSettingsToInputs', () => {

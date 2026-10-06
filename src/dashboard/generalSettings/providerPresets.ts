@@ -1,7 +1,6 @@
 import { getMessageOr } from '../../utils/i18n.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { PROVIDER_DEFAULT_BASE_URLS } from '../../utils/storage/providerDefaultBaseUrls.js';
-import { syncStatusToTop } from '../statusView.js';
 
 type ProviderPresetId = keyof typeof PROVIDER_DEFAULT_BASE_URLS;
 
@@ -13,8 +12,7 @@ const PRESET_LABELS: Record<ProviderPresetId, { messageKey: string; fallback: st
 /**
  * Provider preset buttons live only on the general settings panel, so their
  * handlers do too. Each fills the provider base URL input and reports through
- * the showStatus contract + one-shot top mirror, the same pairing every other
- * dashboard status write uses.
+ * the showStatus contract (auto-mirrored to the top bar).
  *
  * The status write used to hand-roll `className = 'status-success'`, a class
  * only popup styles.css declares — dashboard.css keys the status contract off
@@ -29,7 +27,6 @@ function applyProviderPreset(presetId: ProviderPresetId): void {
   // autoClear false: the pre-helper render set no timer, so the message stays
   // until the next status write replaces it.
   showStatus('status', getMessageOr(messageKey, `${fallback} (${presetUrl})`), 'success', { autoClear: false });
-  syncStatusToTop();
 }
 
 export function handleLmStudioPreset(): void {

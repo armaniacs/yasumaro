@@ -3,30 +3,25 @@
  * 設定画面のステータス表示（上下2箇所）の同期
  */
 
-import { setElementHtml } from '../utils/htmlFragment.js';
-
 /**
- * Mirrors the bottom status element into the sticky top bar.
+ * Compatibility re-export: the implementation lives in
+ * utils/ui/settingsUiHelper.js (Layer 0) because showStatus owns the
+ * mirror and utils must not import from dashboard. Dashboard importers
+ * keep importing from here.
  *
  * Lives here rather than in dashboard.ts because both dashboard.ts and
  * generalSettingsPanel need it; leaving it there is what forced the panel
  * layer to import from the module it was meant to replace
  * (PBI 2026-08-09-24).
  *
- * The copy is one-shot: statusTop mirrors whatever status holds at the time
- * of the call, so callers re-invoke it after each status update rather than
- * relying on the two staying bound.
+ * Owner is showStatus (PBI 2026-10-05-17): writing to #status via
+ * settingsUiHelper mirrors automatically, so callers never hand-call this
+ * after showStatus. Direct DOM writes carrying rich HTML (innerHTML-built
+ * connection rows) still call it explicitly — showStatus(text) cannot
+ * transport nodes. The copy is one-shot and idempotent.
  */
-export function syncStatusToTop(): void {
-  const statusDiv = document.getElementById('status') as HTMLElement | null;
-  const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
-  if (statusTopDiv && statusDiv) {
-    setElementHtml(statusTopDiv, statusDiv.innerHTML);
-    statusTopDiv.className = statusDiv.className;
-  }
-}
+export { syncStatusToTop } from '../utils/ui/settingsUiHelper.js';
 
-// No 'status' binding is registered: dashboard reporters keep
-// `showStatus('status', …)` + `syncStatusToTop()` per call site, so nothing
-// reports through the channel yet. The binding returns when those call sites
-// migrate to `statusChannel.report`.
+// No 'status' channel binding is registered yet: dashboard reporters use
+// `showStatus('status', …)` (auto-mirrored). The binding returns when those
+// call sites migrate to `statusChannel.report`.

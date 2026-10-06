@@ -3,6 +3,8 @@ export {
   extractSettingsFromInputs,
 } from '../settingsFormBinding.js';
 
+import { setElementHtml } from '../htmlFragment.js';
+
 export type StatusType = 'success' | 'error';
 
 /**
@@ -49,6 +51,23 @@ export interface ShowStatusOptions {
 }
 
 /**
+ * Mirrors the bottom status element into the sticky top bar.
+ *
+ * Lives in this Layer 0 helper (not in dashboard/statusView) because
+ * showStatus owns the mirror and utils must not import from dashboard
+ * (see dev-docs/LAYERS.md). dashboard/statusView.js re-exports it for
+ * existing dashboard importers. The copy is one-shot and idempotent.
+ */
+export function syncStatusToTop(): void {
+  const statusDiv = document.getElementById('status') as HTMLElement | null;
+  const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
+  if (statusTopDiv && statusDiv) {
+    setElementHtml(statusTopDiv, statusDiv.innerHTML);
+    statusTopDiv.className = statusDiv.className;
+  }
+}
+
+/**
  * Single implementation of "show a status message" for the settings surfaces.
  *
  * The class list is written whole rather than patched with classList: patching
@@ -70,6 +89,15 @@ export function showStatus(
 
   el.textContent = message;
   el.className = `${STATUS_BASE_CLASS} ${type}`;
+
+  // Owner of the #status -> #statusTop mirror (PBI 2026-10-05-17): callers
+  // writing to #status never hand-call syncStatusToTop. Other element IDs
+  // are untouched. Idempotent: a leftover hand call changes nothing.
+  if (el.id === 'status') {
+    try {
+      syncStatusToTop();
+    } catch {}
+  }
 
   if (options.autoClear === false) return;
 

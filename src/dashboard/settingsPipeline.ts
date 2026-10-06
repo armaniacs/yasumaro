@@ -20,7 +20,6 @@ import { isLoopbackHost } from '../utils/obsidianConfigValidator.js';
 import { logInfo } from '../utils/logger/api.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
-import { syncStatusToTop } from './statusView.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 
 /**
@@ -182,9 +181,6 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
       const statusEl = document.getElementById('status') as HTMLElement | null;
       if (statusEl) {
         showStatus(statusEl, saveErrorText('aiProviderPriority1Required'), 'error', { autoClear: false });
-        try {
-          syncStatusToTop();
-        } catch {}
       }
       return { success: false, error: 'aiProviderPriority1Required' };
     } else {

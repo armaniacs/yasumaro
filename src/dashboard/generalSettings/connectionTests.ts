@@ -40,13 +40,12 @@ const FIREFOX_CERT_GUIDE_FALLBACK =
  * The wording comes from settingsPipeline (one definition for all four call
  * sites) and the message is not self-clearing: the next save or test replaces
  * it. The status area is the whole record of a failed save, so autoClear is off
- * here on purpose. The top mirror is always updated, so callers never pass a
- * sync flag.
+ * here on purpose. The top mirror is owned by showStatus, so callers never
+ * hand-call syncStatusToTop here.
  */
 function showSaveError(statusEl: HTMLElement | null, error: string | undefined): void {
   if (!statusEl) return;
   showStatus(statusEl, saveErrorText(error), 'error', { autoClear: false });
-  syncStatusToTop();
 }
 
 /**
