@@ -149,15 +149,20 @@ export function validateDescriptorField(
 }
 
 /**
- * Blur listener for one descriptor row.
+ * Blur listener for one descriptor row. `ctx` may be a static context or a
+ * thunk resolving it at blur time, so provider-dependent rows always judge
+ * with the currently selected provider.
  */
 export function setupDescriptorValidation(
     descriptor: FieldDescriptor<unknown>,
     input: HTMLInputElement | null,
-    ctx?: ValidationContext
+    ctx?: ValidationContext | (() => ValidationContext)
 ): () => void {
     if (!input) return () => {};
-    const handler = () => validateDescriptorField(descriptor, input, ctx, descriptor.container ?? undefined);
+    const handler = () => {
+        const resolved = typeof ctx === 'function' ? ctx() : ctx;
+        validateDescriptorField(descriptor, input, resolved, descriptor.container ?? undefined);
+    };
     input.addEventListener('blur', handler);
     return () => input.removeEventListener('blur', handler);
 }
@@ -242,6 +247,8 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
  * nodes it already resolved; matching them by element id keeps container-scoped
  * lookups working, and rows the caller did not supply are looked up by id —
  * which is what makes a newly added table row blur-validated with no line here.
+ * The provider id is resolved lazily through `getProviderId` at blur time, so
+ * the maxTokens row always judges with the currently selected provider.
  * @returns {Array.<() => void>} リスナー削除関数の配列
  */
 export function setupAllFieldValidations(
@@ -250,7 +257,7 @@ export function setupAllFieldValidations(
     minVisitDurationInput?: HTMLInputElement | null,
     minScrollDepthInput?: HTMLInputElement | null,
     maxTokensPerPromptInput?: HTMLInputElement | null,
-    providerId = ''
+    getProviderId: () => string = () => ''
 ): (() => void)[] {
     const supplied = new Map<string, HTMLInputElement>();
     for (const input of [protocolInput, portInput, minVisitDurationInput, minScrollDepthInput, maxTokensPerPromptInput]) {
@@ -261,7 +268,7 @@ export function setupAllFieldValidations(
     for (const descriptor of GENERAL_SETTINGS_FIELDS) {
         const input = supplied.get(descriptor.elementId)
             ?? (document.getElementById(descriptor.elementId) as HTMLInputElement | null);
-        if (input) listeners.push(setupDescriptorValidation(descriptor, input, { providerId }));
+        if (input) listeners.push(setupDescriptorValidation(descriptor, input, () => ({ providerId: getProviderId() })));
     }
     return listeners;
 }

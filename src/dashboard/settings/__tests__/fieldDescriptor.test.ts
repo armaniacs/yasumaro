@@ -50,11 +50,10 @@ describe('GENERAL_SETTINGS_FIELDS shape (DOM ids / storage keys are pinned)', ()
     ]);
   });
 
-  it('exposes parse/validate/save on every row so one row wires validation end to end', () => {
+  it('exposes parse/validate on every row so one row wires validation end to end', () => {
     for (const d of GENERAL_SETTINGS_FIELDS) {
       expect(typeof d.parse).toBe('function');
       expect(typeof d.validate).toBe('function');
-      expect(typeof d.save).toBe('function');
     }
   });
 

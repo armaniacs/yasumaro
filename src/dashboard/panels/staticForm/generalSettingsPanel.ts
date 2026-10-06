@@ -116,9 +116,14 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       bindTopButton('testLocalMarkdownBtnTop', handleTestLocalMarkdown);
       bindTopButton('localExportManualBtn', handleManualLocalMarkdownExport);
 
+      const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
       setupAllFieldValidations(
         document.getElementById('protocol') as HTMLInputElement | null,
         document.getElementById('port') as HTMLInputElement | null,
+        undefined,
+        undefined,
+        undefined,
+        () => aiProviderSelect?.value ?? '',
       );
       setupObsidianHostValidation(container.querySelector('#obsidianHost') as HTMLInputElement | null);
       setupGeminiApiVersionValidation(container.querySelector('#geminiApiVersion') as HTMLInputElement | null);

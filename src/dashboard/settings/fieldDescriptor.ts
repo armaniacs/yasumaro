@@ -1,14 +1,15 @@
 /**
  * fieldDescriptor.ts
  * General-settings field descriptor table — single source of truth for the
- * read→validate→save→error-display wiring of dashboard settings fields.
+ * read→validate→error-display wiring of dashboard settings fields.
  *
  * Each row maps a StorageKey to its DOM element/error IDs plus pure
- * value-level parse/validate/save functions. DOM glue (fieldValidation.ts)
+ * value-level parse/validate functions. DOM glue (fieldValidation.ts)
  * drives blur validation and save-time validation from this table, and the save
  * pipeline (settingsPipeline.ts) projects its error-clearing pairs from it, so
- * adding a field is one row here with no edits there. Reading the saved values
- * back is a separate concern owned by utils/settingsSchemas.ts.
+ * adding a field is one row here with no edits there. Persistence (save) is
+ * not owned by this table: the save SSOT is utils/settingsSchemas.ts
+ * (GENERAL_SETTINGS_SCHEMA).
  *
  * `validate` delegates to existing SSOTs only (aiLimits /
  * obsidianConfigValidator / urlWhitelist) and holds no independent range
@@ -36,8 +37,7 @@ export interface ValidationContext {
 
 /**
  * One settings field. `validate` returns an i18n error key on failure, null
- * when the value is valid. `save` maps the parsed value to the storage
- * payload (identity unless the field needs a transform).
+ * when the value is valid.
  */
 export interface FieldDescriptor<T = unknown> {
   readonly storageKey: StorageKey;
@@ -52,7 +52,6 @@ export interface FieldDescriptor<T = unknown> {
   readonly container?: ParentNode | null;
   readonly parse: (raw: string) => T;
   readonly validate: (value: T, ctx?: ValidationContext) => string | null;
-  readonly save: (value: T) => unknown;
   /**
    * English text shown when the error key is untranslated. Absent means the key
    * resolves through getMessage, which returns '' — the dashboard display
@@ -61,8 +60,6 @@ export interface FieldDescriptor<T = unknown> {
    */
   readonly errorFallback?: string;
 }
-
-const identitySave = <T>(value: T): unknown => value;
 
 // ---------------------------------------------------------------------------
 // Value-level validators (pure, no DOM). DOM validators in fieldValidation.ts
@@ -162,7 +159,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     errorId: 'protocolError',
     parse: (raw) => raw.trim().toLowerCase(),
     validate: (value) => validateProtocolValue(value as string),
-    save: identitySave,
   },
   {
     storageKey: StorageKeys.OBSIDIAN_PORT,
@@ -170,7 +166,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     errorId: 'portError',
     parse: (raw) => raw.trim(),
     validate: (value) => validatePortValue(value as string),
-    save: identitySave,
   },
   {
     storageKey: StorageKeys.OBSIDIAN_HOST,
@@ -180,7 +175,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     // Compound scheme+host+port decision: kept as a function reference because
     // the SSOT validator owns the whole endpoint shape, not a bare hostname.
     validate: (value) => validateObsidianHostValue(value as string),
-    save: identitySave,
     errorFallback: 'Obsidian host contains invalid characters.',
   },
   {
@@ -189,7 +183,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     errorId: 'geminiApiVersionError',
     parse: (raw) => raw,
     validate: (value) => validateGeminiApiVersionValue(value as string),
-    save: identitySave,
     errorFallback: 'Gemini API version must be like v1 or v1beta.',
   },
   {
@@ -198,7 +191,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     errorId: 'minVisitDurationError',
     parse: (raw) => parseInt(raw, 10),
     validate: (value) => validateMinVisitDurationValue(value as number),
-    save: identitySave,
   },
   {
     storageKey: StorageKeys.MIN_SCROLL_DEPTH,
@@ -206,7 +198,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     errorId: 'minScrollDepthError',
     parse: (raw) => parseInt(raw, 10),
     validate: (value) => validateMinScrollDepthValue(value as number),
-    save: identitySave,
   },
   {
     storageKey: StorageKeys.MAX_TOKENS_PER_PROMPT,
@@ -216,7 +207,6 @@ export const GENERAL_SETTINGS_FIELDS: ReadonlyArray<FieldDescriptor<unknown>> = 
     // Cross-field: the provider-specific cap arrives through ctx, so the row
     // hands every caller (blur and save-time) the same decision function.
     validate: (value, ctx) => validateMaxTokensValue(value as number, ctx?.providerId ?? ''),
-    save: identitySave,
   },
 ];
 
