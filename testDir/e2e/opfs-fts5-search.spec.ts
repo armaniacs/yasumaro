@@ -15,24 +15,7 @@
  */
 
 import { test, expect } from './fixtures/extension.fixture.js';
-
-/**
- * Poll a condition up to maxAttempts times with delayMs between attempts.
- */
-async function poll<T>(
-  fn: () => Promise<T>,
-  check: (v: T) => boolean,
-  maxAttempts = 6,
-  delayMs = 500
-): Promise<T> {
-  let last: T;
-  for (let i = 0; i < maxAttempts; i++) {
-    last = await fn();
-    if (check(last)) return last;
-    if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return last!;
-}
+import { poll } from './fixtures/dashboardSqliteHelpers.js';
 
 test.describe('OPFS+FTS5 search', () => {
   // Skip: OPFS is unreliable in headless Chrome and CI environments.
@@ -86,8 +69,9 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
   // Step 3: Seed a record via import (token-required).
   // Poll the import until a row is actually inserted: the SQLite worker inits
   // lazily, and when tests share the persistent context the DB may not be ready
-  // on the first attempt. A fresh created_at per attempt avoids a permanent
-  // INSERT OR IGNORE skip.
+  // on the first attempt. created_at stays fixed so a retry re-attempts the
+  // same row (INSERT OR IGNORE skips the duplicate); uniqueness comes from the
+  // URL token.
   const seed = await poll(
     () =>
       page.evaluate(
@@ -102,7 +86,7 @@ test('@extension OPFS+FTS5: seed -> FTS5 search hit -> persists across reload', 
                   url: `https://example.com/${tok}`,
                   title: tok,
                   summary: 'fts5 e2e seed',
-                  created_at: Date.now(),
+                  created_at: Date.UTC(2024, 0, 15, 12, 0, 0),
                   domain: 'example.com',
                 },
               ],
@@ -208,20 +192,23 @@ test('@extension OPFS+FTS5: CJK (Japanese) substring search', async ({
     500
   );
 
-  // seed Japanese title (poll until inserted — DB may init lazily / shared context)
+  // seed Japanese title (poll until inserted — DB may init lazily / shared context).
+  // created_at stays fixed so a retry re-attempts the same row; uniqueness
+  // comes from the stamp in the URL and title.
+  const jpUrl = `https://example.com/jp${stamp}`;
   const seed = await poll(
     () =>
       page.evaluate(
-        async ({ title, token }: { title: string; token: string }) => {
+        async ({ title, url, token }: { title: string; url: string; token: string }) => {
           return (await chrome.runtime.sendMessage({
             type: 'DASHBOARD_SQLITE',
             payload: {
               subtype: 'import', confirmToken: token,
-              rows: [{ url: `https://example.com/jp${Date.now()}-${Math.random()}`, title, summary: '日本語の本文テスト', created_at: Date.now(), domain: 'example.com' }],
+              rows: [{ url, title, summary: '日本語の本文テスト', created_at: Date.UTC(2024, 0, 16, 12, 0, 0), domain: 'example.com' }],
             },
           })) as Record<string, unknown>;
         },
-        { title: jpTitle, token: confirmToken as string }
+        { title: jpTitle, url: jpUrl, token: confirmToken as string }
       ),
     (r) => r?.success === true && Number(r?.inserted) >= 1,
     8,

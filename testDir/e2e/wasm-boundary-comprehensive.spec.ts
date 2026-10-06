@@ -12,27 +12,7 @@
  */
 
 import { test, expect } from './fixtures/extension.fixture.js';
-
-/**
- * Confirm token: use the new create_confirm_token flow (06b).
- * Tokens are stored in session as a map `{[token]: {token, action, expiresAt}}`
- * via the `create_confirm_token` subtype, not written directly.
- */
-
-async function poll<T>(
-  fn: () => Promise<T>,
-  check: (v: T) => boolean,
-  maxAttempts = 8,
-  delayMs = 500
-): Promise<T> {
-  let last: T;
-  for (let i = 0; i < maxAttempts; i++) {
-    last = await fn();
-    if (check(last)) return last;
-    if (i < maxAttempts - 1) await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return last!;
-}
+import { poll } from './fixtures/dashboardSqliteHelpers.js';
 
 test.describe('WASM boundary E2E', () => {
   test('@extension status reports initialized after WASM load', async ({ context, extensionId }) => {
@@ -113,7 +93,7 @@ test.describe('WASM boundary E2E', () => {
                     url: `https://e2e-wasm.example.com/${tok}`,
                     title: tok,
                     summary: 'wasm boundary e2e persistence test',
-                    created_at: Date.now(),
+                    created_at: Date.UTC(2024, 0, 17, 12, 0, 0),
                     domain: 'e2e-wasm.example.com',
                   },
                 ],
@@ -198,11 +178,12 @@ test.describe('WASM boundary E2E', () => {
     expect(confirmToken, `Expected confirmToken in response, got: ${JSON.stringify(tokenResult2)}`).toBeTruthy();
 
     const batchToken = `paginate${Date.now()}`;
+    const batchBase = Date.UTC(2024, 0, 18, 12, 0, 0);
     const rows = Array.from({ length: 3 }, (_, i) => ({
       url: `https://paginate.example.com/${batchToken}/${i}`,
       title: `${batchToken} ${i}`,
       summary: `pagination test ${i}`,
-      created_at: Date.now() + i,
+      created_at: batchBase + i * 1000,
       domain: 'paginate.example.com',
     }));
 
