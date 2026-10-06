@@ -584,26 +584,25 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
-  // Cache invalidation policy — every cache.clear() goes through here so the
-  // reason for each invalidation stays readable at the call site and new
-  // mutation paths cannot silently skip it. Three contracts:
-  // - 'unmount': panel is torn down; drop everything, in-flight queries are
-  //   already discarded via the generation bump at the same site.
-  // - 'fresh-load': entries may have been recorded while this panel was not
+  // Cache invalidation — every cache.clear() goes through here so new
+  // mutation paths cannot silently skip it. Callers:
+  // - unmount: panel is torn down; in-flight queries are already discarded
+  //   via the generation bump at the same site.
+  // - fresh-load: entries may have been recorded while this panel was not
   //   mounted (background auto-save, manual "record now"), so the unfiltered
   //   page-0 entry would otherwise keep serving a stale row set.
-  // - 'mutation': this panel changed rows itself (star/delete/append), so
-  //   cached pages no longer reflect storage. Mutation sites intentionally do
-  //   NOT invalidate the guard — only unmount discards in-flight queries.
-  function invalidateCache(reason: 'unmount' | 'fresh-load' | 'mutation'): void {
-    void reason;
+  // - mutation (via mutateWithInvalidation below): this panel changed rows
+  //   itself (star/delete/append), so cached pages no longer reflect storage.
+  //   Mutation sites intentionally do NOT invalidate the guard — only unmount
+  //   discards in-flight queries.
+  function invalidateCache(): void {
     cache.clear();
   }
 
   function bumpGenerationOnUnmount(): void {
     guard.invalidate();
     flushPendingPersist();
-    invalidateCache('unmount');
+    invalidateCache();
   }
 
   // Reset display filters (date/search/tag/page) so a fresh panel.load() shows
@@ -619,7 +618,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   // unfiltered page-0 cache entry would otherwise keep serving a stale row
   // set even after the filter reset above.
   function resetFiltersForFreshLoad(): void {
-    invalidateCache('fresh-load');
+    invalidateCache();
     const { sortBy, sortDir } = state;
     state = { ...createInitialHistoryState(), sortBy, sortDir };
   }
@@ -657,45 +656,84 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     clearEntrySelection();
   }
 
-  async function toggleStarImpl(id: number): Promise<void> {
-    const result = await toggleStar(id);
-    if (isServiceError(result)) {
-      dispatch({ type: 'operationError', error: result.error });
+  // Mutation post-processing funnel — every star/delete/append goes through
+  // here so dispatch → invalidation → notify cannot drift per call site.
+  // Error path early-returns before invalidation (storage is unchanged, so
+  // there is nothing to drop). Success with a null action still invalidates
+  // and notifies (row was not in the current page, but caches are stale).
+  type MutationOutcome =
+    | { kind: 'success'; action: SqliteHistoryAction | null }
+    | { kind: 'error'; error: string };
+
+  async function mutateWithInvalidation(
+    fn: () => Promise<MutationOutcome>,
+  ): Promise<MutationOutcome> {
+    const outcome = await fn();
+    if (outcome.kind === 'error') {
+      dispatch({ type: 'operationError', error: outcome.error });
       notify();
-      return;
+      return outcome;
     }
-    const entry = state.entries.find(e => e.id === id);
-    if (entry) {
-      dispatch({ type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 });
+    if (outcome.action) {
+      dispatch(outcome.action);
     }
-    invalidateCache('mutation');
+    invalidateCache();
     notify();
+    return outcome;
   }
 
-  async function deleteEntry(id: number): Promise<void> {
-    const entry = state.entries.find((candidate) => candidate.id === id);
+  // Single-row delete core shared by deleteEntry and deleteSelectedEntries:
+  // storage delete + legacy URL cleanup only, no dispatch/notify (callers
+  // funnel those through mutateWithInvalidation). Returns the error or null.
+  async function deleteSingleEntry(id: number, url?: string): Promise<string | null> {
     const result = await deleteLog(id);
     if (isServiceError(result)) {
-      dispatch({ type: 'operationError', error: result.error });
-      notify();
-      return;
+      return result.error;
     }
-    if (entry) {
+    if (url) {
       try {
-        await removeSavedUrl(entry.url);
+        await removeSavedUrl(url);
       } catch (error) {
         console.error('Failed to remove legacy history entry:', error);
       }
     }
-    dispatch({ type: 'deleteSuccess', id });
-    invalidateCache('mutation');
-    notify();
+    return null;
+  }
+
+  async function toggleStarImpl(id: number): Promise<void> {
+    await mutateWithInvalidation(async () => {
+      const result = await toggleStar(id);
+      if (isServiceError(result)) {
+        return { kind: 'error', error: result.error };
+      }
+      const entry = state.entries.find(e => e.id === id);
+      if (!entry) {
+        return { kind: 'success', action: null };
+      }
+      return {
+        kind: 'success',
+        action: { type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 },
+      };
+    });
+  }
+
+  async function deleteEntry(id: number): Promise<void> {
+    const entry = state.entries.find((candidate) => candidate.id === id);
+    await mutateWithInvalidation(async () => {
+      const failure = await deleteSingleEntry(id, entry?.url);
+      if (failure !== null) {
+        return { kind: 'error', error: failure };
+      }
+      return { kind: 'success', action: { type: 'deleteSuccess', id } };
+    });
   }
 
   /** Bulk delete of the checked rows — stops at the first failure, reports both counts. */
   async function deleteSelectedEntries(): Promise<BulkDeleteResult> {
     if (state.selectedIds.size === 0) return { deletedCount: 0, error: null };
     // Snapshot: deleteSuccess mutates selectedIds as we go.
+    // URL collection only — the per-row delete itself delegates to
+    // deleteSingleEntry so the error policy matches deleteEntry.
     const ids = Array.from(state.selectedIds);
     const urls = new Map<number, string>();
     for (const entry of state.entries) {
@@ -703,30 +741,21 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
     let deletedCount = 0;
     let error: string | null = null;
-    for (const id of ids) {
-      const result = await deleteLog(id);
-      if (isServiceError(result)) {
-        error = result.error;
-        break;
-      }
-      dispatch({ type: 'deleteSuccess', id });
-      deletedCount += 1;
-      const url = urls.get(id);
-      if (url) {
-        try {
-          await removeSavedUrl(url);
-        } catch (e) {
-          console.error('Failed to remove legacy history entry:', e);
+    await mutateWithInvalidation(async () => {
+      for (const id of ids) {
+        const failure = await deleteSingleEntry(id, urls.get(id));
+        if (failure !== null) {
+          error = failure;
+          break;
         }
+        dispatch({ type: 'deleteSuccess', id });
+        deletedCount += 1;
       }
-    }
-    if (deletedCount > 0) {
-      invalidateCache('mutation');
-      notify();
-    } else if (error) {
-      dispatch({ type: 'operationError', error });
-      notify();
-    }
+      if (deletedCount === 0 && error !== null) {
+        return { kind: 'error', error };
+      }
+      return { kind: 'success', action: null };
+    });
     return { deletedCount, error };
   }
 
@@ -734,13 +763,12 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     if (state.selectedIds.size === 0) return null;
     const ids = Array.from(state.selectedIds);
     const result = await appendToLogs(ids);
-    if ('data' in result) {
-      state.selectedIds.clear();
-      invalidateCache('mutation');
-      notify();
-      return { success: true, appendedCount: ids.length };
+    if (isServiceError(result)) {
+      await mutateWithInvalidation(async () => ({ kind: 'error', error: result.error }));
+      return { success: false, error: result.error };
     }
-    return { success: false, error: result.error };
+    await mutateWithInvalidation(async () => ({ kind: 'success', action: { type: 'appendSuccess' } }));
+    return { success: true, appendedCount: ids.length };
   }
 
   function search(query: string): void {
