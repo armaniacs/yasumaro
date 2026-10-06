@@ -14,6 +14,7 @@ import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import { QUERY_CAPS } from '../utils/limits.js';
+import { UPDATABLE_FIELDS } from './schema.js';
 
 // ============================================================================
 // Mode + cap policy (moved from queryPlanner, PBI 2026-09-15-03) — breaking
@@ -567,6 +568,98 @@ export function buildPlainListStatements(
 }
 
 // ---------------------------------------------------------------------------
+// CRUD assembly (PBI 2026-10-07-05) — update/delete/star/count/audit
+// statements in ONE place. IdbVfsBackend and the opfsWorker crud/audit
+// handlers previously hand-copied these, and the two UPDATE field loops
+// diverged on undefined values: idb wrote NULL for a key present with an
+// undefined value while the worker skipped it — the same op produced
+// different rows per backend. The builders here own the UPDATABLE_FIELDS
+// loop and the statement text; backends supply only the policy and keep
+// their own execution model.
+// ---------------------------------------------------------------------------
+
+/** DELETE-by-id statement shared by idb/opfs hard delete. */
+export const DELETE_BY_ID_SQL = 'DELETE FROM browsing_logs WHERE id = ?';
+
+/** Star-toggle UPDATE shared by idb/opfs toggleStar. */
+export const TOGGLE_STAR_SQL =
+  'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?';
+
+/**
+ * Live-row COUNT with the `AS c` alias: required by the opfs named-row reader
+ * (row.c), ignored by the idb positional reader (row[0]) — one text serves
+ * both (same rule as the COUNT in buildFtsSearchStatements).
+ */
+export const LIVE_COUNT_SQL = 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0';
+
+/**
+ * Audit-log INSERT shared by idb/opfs. provider/url/created_at only — the
+ * trail is metadata and never carries content or PII.
+ */
+export const AUDIT_INSERT_SQL =
+  'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)';
+
+/** Parameter array for AUDIT_INSERT_SQL, in column order (buildArchiveInsertParams convention). */
+export function buildAuditInsertParams(record: { provider: string; url: string; created_at: number }): SqliteValue[] {
+  return [record.provider, record.url, record.created_at];
+}
+
+/**
+ * Undefined-value policy for UPDATE SET assembly (PBI 2026-10-07-05).
+ *
+ * The two backends used to disagree here: idb treated a key present with an
+ * undefined value as NULL (the divergence), the worker skipped it.
+ * 'skip-undefined' is the unified policy — it matches the wire semantics,
+ * where structured clone drops undefined properties, so the SET clause is
+ * identical for a dropped key and a present-undefined key. 'write-null' is
+ * kept as the named former idb behavior so the divergence fix stays
+ * greppable and pinnable in tests.
+ */
+export type UpdateUndefinedPolicy = 'skip-undefined' | 'write-null';
+
+/** The assembled SET clause (no WHERE) and its bind values, in field order. */
+export interface UpdateSetParts {
+  setSql: string;
+  params: SqliteValue[];
+}
+
+/**
+ * Single owner of the UPDATABLE_FIELDS loop: fields not in `changes` are
+ * ignored (whitelist validation), and `policy` decides what a key present
+ * with an undefined value does. Every update path must assemble its SET
+ * clause through this builder — a hand-rolled loop reintroduces the
+ * per-backend divergence this PBI closed.
+ */
+export function buildUpdateSet(changes: Record<string, unknown>, policy: UpdateUndefinedPolicy): UpdateSetParts {
+  const clauses: string[] = [];
+  const params: SqliteValue[] = [];
+  for (const field of UPDATABLE_FIELDS) {
+    if (!(field in changes)) continue;
+    const val = changes[field];
+    if (policy === 'skip-undefined' && val === undefined) continue;
+    // `?? null` is load-bearing for the 'write-null' policy: an undefined
+    // value must bind as NULL there, never as undefined.
+    clauses.push(`${field} = ?`);
+    params.push((val ?? null) as SqliteValue);
+  }
+  return { setSql: clauses.join(', '), params };
+}
+
+/** Full UPDATE-by-id statement, or null when nothing would be set (no-op). */
+export function buildUpdateByIdStatements(
+  id: number,
+  changes: Record<string, unknown>,
+  policy: UpdateUndefinedPolicy,
+): { sql: string; params: SqliteValue[] } | null {
+  const set = buildUpdateSet(changes, policy);
+  if (!set.setSql) return null;
+  return {
+    sql: `UPDATE browsing_logs SET ${set.setSql} WHERE id = ?`,
+    params: [...set.params, id],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Purge assembly — retention cutoff and DELETE/UPDATE conditions in ONE place.
 // ---------------------------------------------------------------------------
 
@@ -585,7 +678,7 @@ export function buildPurgeOldRecordsStatements(cutoffMs: number): {
   return {
     deleteOldSql: 'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
     deleteOldParams: [cutoffMs],
-    countSql: 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0',
+    countSql: LIVE_COUNT_SQL,
     deleteExcessSql:
       'DELETE FROM browsing_logs WHERE id IN (' +
       'SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0 ' +

@@ -8,13 +8,15 @@ import type {
 } from './StorageBackend.js';
 import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
-import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams, UPDATABLE_FIELDS } from './schema.js';
+import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
   buildQuerySpec, buildPlainListStatements, buildFtsMatchQuery,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements, buildAuditLogPurgeStatements,
+  DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL,
+  AUDIT_INSERT_SQL, buildAuditInsertParams, buildUpdateByIdStatements,
   type AlreadyCappedQuery,
 } from './queryPlan.js';
 import { QUERY_CAPS } from '../utils/limits.js';
@@ -169,42 +171,29 @@ export class IdbVfsBackend implements StorageBackend {
 
   async update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>> {
     this.ensureDb();
-    const setClauses: string[] = [];
-    const params: SqliteValue[] = [];
-
-    for (const field of UPDATABLE_FIELDS) {
-      const f = field as keyof BrowsingLogRecord;
-      if (f in changes) {
-        setClauses.push(`${f} = ?`);
-        params.push((changes[f] ?? null) as SqliteValue);
-      }
-    }
-
-    if (setClauses.length === 0) {
+    // Single UPDATABLE_FIELDS loop shared with the OPFS worker (queryPlan).
+    // Skip-undefined: the same changes object must write the same row on
+    // every backend — the IDB loop used to write NULL for a key present with
+    // an undefined value, which the worker skipped (the data divergence).
+    const stmts = buildUpdateByIdStatements(id, changes, 'skip-undefined');
+    if (!stmts) {
       return { success: true };
     }
 
-    params.push(id);
-    await this.engine.execWithCache(
-      `UPDATE browsing_logs SET ${setClauses.join(', ')} WHERE id = ?`,
-      params
-    );
+    await this.engine.execWithCache(stmts.sql, stmts.params);
 
     return { success: true };
   }
 
   async delete(id: number): Promise<BackendOrError<MutationResult>> {
     this.ensureDb();
-    await this.engine.execWithCache('DELETE FROM browsing_logs WHERE id = ?', [id]);
+    await this.engine.execWithCache(DELETE_BY_ID_SQL, [id]);
     return { success: true };
   }
 
   async toggleStar(id: number): Promise<BackendOrError<StarResult>> {
     this.ensureDb();
-    await this.engine.execWithCache(
-      'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?',
-      [id]
-    );
+    await this.engine.execWithCache(TOGGLE_STAR_SQL, [id]);
     let newStarred = 0;
     await this.engine.execWithCache(
       'SELECT is_starred FROM browsing_logs WHERE id = ?',
@@ -355,8 +344,8 @@ export class IdbVfsBackend implements StorageBackend {
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
     this.ensureDb();
     await this.engine.execWithCache(
-      `INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)`,
-      [record.provider, record.url, record.created_at]
+      AUDIT_INSERT_SQL,
+      buildAuditInsertParams(record)
     );
     let newId = 0;
     await this.engine.execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => {
@@ -416,7 +405,7 @@ export class IdbVfsBackend implements StorageBackend {
     this.ensureDb();
     let count = 0;
     await this.engine.execWithCache(
-      'SELECT COUNT(*) FROM browsing_logs WHERE is_deleted = 0',
+      LIVE_COUNT_SQL,
       [],
       (row: SqliteValue[]) => { count = Number(row[0]); }
     );

@@ -6,8 +6,12 @@
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
-import { INSERT_SQL, INSERT_IGNORE_RETURNING_SQL, buildInsertParams, UPDATABLE_FIELDS } from '../schema.js';
-import { buildQuerySpec, buildPlainListStatements, type AlreadyCappedQuery } from '../queryPlan.js';
+import { INSERT_SQL, INSERT_IGNORE_RETURNING_SQL, buildInsertParams } from '../schema.js';
+import {
+  buildQuerySpec, buildPlainListStatements,
+  DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL, buildUpdateByIdStatements,
+  type AlreadyCappedQuery,
+} from '../queryPlan.js';
 import { QUERY_CAPS } from '../../utils/limits.js';
 import { BROWSING_LOG_COLUMNS, BROWSING_LOG_COLUMNS_SQL, mapNamed } from '../rowCodec.js';
 import type { QueryPayload } from './types.js';
@@ -59,39 +63,22 @@ export async function handleQuery(ctx: HandlerContext, payload: QueryPayload): P
 }
 
 export async function handleUpdate(ctx: HandlerContext, payload: { id: number; changes: Record<string, SqliteValue> }): Promise<void> {
-  const { id, changes } = payload;
-  const sets: string[] = [];
-  const vals: SqliteValue[] = [];
+  // Single UPDATABLE_FIELDS loop shared with IdbVfsBackend (queryPlan).
+  // Skip-undefined: the same changes object must write the same row on
+  // every backend — the IDB loop used to write NULL for a key present with
+  // an undefined value, which this handler skipped (the data divergence).
+  const stmts = buildUpdateByIdStatements(payload.id, payload.changes, 'skip-undefined');
+  if (!stmts) return;
 
-  // Whitelist validation — same as IdbVfsBackend.update() to prevent arbitrary field updates
-  for (const field of UPDATABLE_FIELDS) {
-    const val = changes[field];
-    if (val !== undefined) {
-      sets.push(`${field} = ?`);
-      vals.push(val);
-    }
-  }
-
-  if (sets.length === 0) return;
-  vals.push(id);
-
-  await sqlExec(
-    ctx,
-    `UPDATE browsing_logs SET ${sets.join(', ')} WHERE id = ?`,
-    vals
-  );
+  await sqlExec(ctx, stmts.sql, stmts.params);
 }
 
 export async function handleHardDelete(ctx: HandlerContext, id: number): Promise<void> {
-  await sqlExec(ctx, 'DELETE FROM browsing_logs WHERE id = ?', [id]);
+  await sqlExec(ctx, DELETE_BY_ID_SQL, [id]);
 }
 
 export async function handleToggleStar(ctx: HandlerContext, id: number): Promise<{ is_starred: number }> {
-  await sqlExec(
-    ctx,
-    'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?',
-    [id]
-  );
+  await sqlExec(ctx, TOGGLE_STAR_SQL, [id]);
   let isStarred = 0;
   await sqlQuery(ctx, 'SELECT is_starred AS is_starred FROM browsing_logs WHERE id = ?', [id], (row) => { isStarred = Number(row.is_starred); });
   return { is_starred: isStarred };
@@ -99,7 +86,7 @@ export async function handleToggleStar(ctx: HandlerContext, id: number): Promise
 
 export async function handleGetCount(ctx: HandlerContext): Promise<number> {
   let count = 0;
-  await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0', [], (row) => { count = Number(row.c); });
+  await sqlQuery(ctx, LIVE_COUNT_SQL, [], (row) => { count = Number(row.c); });
   return count;
 }
 

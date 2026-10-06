@@ -4,7 +4,7 @@
  */
 
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
-import { buildAuditLogStatements } from '../queryPlan.js';
+import { AUDIT_INSERT_SQL, buildAuditInsertParams, buildAuditLogStatements } from '../queryPlan.js';
 import { planAuditLog } from '../queryPlanner.js';
 import { AUDIT_CAP_OPFS } from '../../utils/limits.js';
 import type { AuditLogQueryPayload } from './types.js';
@@ -13,11 +13,7 @@ export async function handleAuditLogInsert(
   ctx: HandlerContext,
   record: { provider: string; url: string; created_at: number },
 ): Promise<{ id: number }> {
-  await sqlExec(
-    ctx,
-    'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)',
-    [record.provider, record.url, record.created_at],
-  );
+  await sqlExec(ctx, AUDIT_INSERT_SQL, buildAuditInsertParams(record));
   let id = 0;
   await sqlQuery(ctx, 'SELECT last_insert_rowid() AS id', [], (row) => { id = Number(row.id); });
   return { id };

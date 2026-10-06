@@ -242,6 +242,67 @@ describe('CRUD parity on a real engine', () => {
       await b.close();
     }
   });
+
+  // PBI 2026-10-07-05 fixture: undefined-valued keys next to defined ones.
+  // The wire cannot carry undefined (structured clone drops the property),
+  // but direct callers can, and the two UPDATE field loops used to disagree:
+  // IDB wrote NULL for a key present with an undefined value while the worker
+  // skipped it — the same op produced different rows per backend.
+  const updateCases: Array<{
+    name: string;
+    changes: Record<string, unknown>;
+    skippedColumn: string;
+    seededValue: SqliteValue;
+    applied: Record<string, SqliteValue>;
+  }> = [
+    {
+      name: '{ summary, tags: undefined }',
+      changes: { summary: 'updated summary', tags: undefined },
+      skippedColumn: 'tags',
+      seededValue: '#runes',
+      applied: { summary: 'updated summary' },
+    },
+    {
+      name: '{ title, is_starred, gist_synced: undefined }',
+      changes: { title: 'renamed', is_starred: 1, gist_synced: undefined },
+      skippedColumn: 'gist_synced',
+      seededValue: 0,
+      applied: { title: 'renamed', is_starred: 1 },
+    },
+    {
+      name: '{ content: undefined } (only undefined values)',
+      changes: { content: undefined },
+      skippedColumn: 'content',
+      seededValue: 'rune stone body',
+      applied: {},
+    },
+  ];
+
+  it.each(updateCases)('update with $name writes identical rows on both backends', async ({ changes, skippedColumn, seededValue, applied }) => {
+    const b = await seeded(SEED);
+    try {
+      await b.idb.update(1, changes);
+      await handleUpdate(b.ctx, { id: 1, changes: changes as never });
+
+      const cols = 'url, title, summary, tags, is_starred, gist_synced, content';
+      const idbRow = await b.idbRaw.query(`SELECT ${cols} FROM browsing_logs WHERE id = 1`);
+      const opfsRow = await b.workerRaw.query(`SELECT ${cols} FROM browsing_logs WHERE id = 1`);
+
+      // Same op, same row — the parity pin.
+      expect(idbRow).toEqual(opfsRow);
+      // The old IDB write-NULL behavior is gone: an undefined-valued key is
+      // skipped, so the seeded value survives on BOTH backends.
+      expect(idbRow[0]![skippedColumn]).toBe(seededValue);
+      expect(opfsRow[0]![skippedColumn]).toBe(seededValue);
+      // Defined keys still apply on both (guards against a vacuous skip).
+      for (const [col, val] of Object.entries(applied)) {
+        expect(idbRow[0]![col]).toBe(val);
+        expect(opfsRow[0]![col]).toBe(val);
+      }
+    } finally {
+      await b.close();
+    }
+  });
 });
 
 describe('purge parity on a real engine', () => {
