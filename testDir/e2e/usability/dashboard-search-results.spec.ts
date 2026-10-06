@@ -1,10 +1,11 @@
 /**
  * dashboard-search-results.spec.ts (PBI 2026-09-13-47)
  *
- * Usability angle on search: not just "does the debounce/filter pipeline
- * work" (dashboard-search-ui.spec.ts already covers that), but "does the
- * user get correct counts and a clear empty state" — the two things a user
- * actually looks at to decide whether search worked as expected.
+ * Canonical home for UI-driven search assertions: the user-visible result
+ * count, the clear-to-restore flow, and the empty state. The debounce →
+ * filter pipeline itself lives in dashboard-search-ui.spec.ts (debounce
+ * specialization) and keyboard-only driving in a11y-usability.spec.ts —
+ * neither of those repeats the count/empty assertions owned here.
  */
 import { testInteraction as test, expect } from '../fixtures/dashboard.fixture.js';
 import { createDashboardSqliteClient, migrationSettled, seedRows } from '../fixtures/dashboardSqliteHelpers.js';
@@ -49,5 +50,25 @@ test.describe('Dashboard search result usability @extension', () => {
     // A user seeing an empty panel with no message cannot tell "no results"
     // apart from "search is broken" — an explicit empty-state message is required.
     await expect(page.locator('#sqlite-entry-list .empty-state')).toBeVisible();
+  });
+
+  test('clearing the search box restores all rows', async ({ dashboardPage: page }) => {
+    const client = createDashboardSqliteClient(page);
+    await migrationSettled(page, client);
+    const clearToken = await client.tokenFor('clear_all', []);
+    await client.dashboardMsg({ subtype: 'clear_all', confirmToken: clearToken });
+    await seedRows(client, makeRows());
+
+    await page.locator('button[data-panel="panel-sqlite-history"]').click();
+    const searchInput = page.locator('#sqlite-search-input');
+    await expect(searchInput).toBeVisible({ timeout: 10000 });
+
+    // Search first to narrow.
+    await searchInput.fill('筑波大学');
+    await expect(page.locator('#sqlite-entry-list')).toContainText('筑波大学', { timeout: 15000 });
+
+    // Clear → all rows come back.
+    await searchInput.fill('');
+    await expect(page.locator('#sqlite-entry-list .sqlite-entry')).toHaveCount(2, { timeout: 10000 });
   });
 });

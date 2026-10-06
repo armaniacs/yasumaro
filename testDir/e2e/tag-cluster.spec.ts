@@ -2,6 +2,10 @@ import { test, expect } from './fixtures/extension.fixture.js';
 import { createDashboardSqliteClient, migrationSettled, seedRows } from './fixtures/dashboardSqliteHelpers.js';
 
 /**
+ * Regression-only spec: the 1500-row tag-cap case below. Node-count/label
+ * assertions and the untagged empty state live in the canonical
+ * usability/dashboard-tag-cluster.spec.ts and are not repeated here.
+ *
  * Regression for 6.8.12 hotfix: tagCluster plain cap 1000 → 10000.
  * The panel requests 10000 rows. With the old 1000-cap, the 1500-row seed
  * where hot tags live beyond the first 1000 produced an empty cloud.
@@ -53,25 +57,5 @@ test.describe('tag cluster @extension', () => {
     await expect(circles).not.toHaveCount(0);
     const texts = svg.locator('text.tag-cluster-text');
     await expect(texts.filter({ hasText: '#hot' }).first()).toBeVisible();
-  });
-
-  test('shows empty state when only untagged history exists (old-bug simulation)', async ({ context, extensionId }) => {
-    const page = await context.newPage();
-    await page.goto(`chrome-extension://${extensionId}/options.html`);
-    await page.waitForFunction(() => typeof chrome !== 'undefined' && typeof chrome.runtime !== 'undefined');
-    const client = createDashboardSqliteClient(page);
-    await migrationSettled(page, client);
-
-    const clearToken = await client.tokenFor('clear_all', []);
-    await client.dashboardMsg({ subtype: 'clear_all', confirmToken: clearToken });
-    const baseMs = Date.UTC(2025, 0, 2);
-    // Only 1000 untagged rows — cloud must be empty regardless of cap.
-    await seedRows(client, makeRows(1000, 1000, baseMs));
-
-    await page.locator('button[data-panel="panel-tag-cluster"]').click();
-    await expect(page.locator('#tagClusterSvg')).toBeVisible();
-    await expect(page.locator('.tag-cluster-loading-overlay')).toBeHidden({ timeout: 15000 });
-    await expect(page.locator('#tagClusterEmptyState')).toBeVisible();
-    await expect(page.locator('#tagClusterSvg circle.tag-cluster-node')).toHaveCount(0);
   });
 });

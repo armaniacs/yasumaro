@@ -1,10 +1,10 @@
 /**
  * dashboard-tag-cluster.spec.ts (PBI 2026-09-13-47)
  *
- * Usability angle on the tag cloud: not just "does at least one node render"
- * (tag-cluster.spec.ts already covers the 1000-row regression), but "does
- * the number of rendered nodes match the number of unique tags in the data"
- * — a user comparing the cloud to their own tag list needs that to hold.
+ * Canonical home for tag-cloud assertions: rendered node count matching the
+ * unique tags, per-tag label matching, and the untagged empty state. Only
+ * the 1500-row cap regression lives in tag-cluster.spec.ts and is not
+ * repeated here.
  */
 import { testInteraction as test, expect } from '../fixtures/dashboard.fixture.js';
 import { createDashboardSqliteClient, migrationSettled, seedRows } from '../fixtures/dashboardSqliteHelpers.js';
@@ -16,6 +16,16 @@ function makeRows(baseMs: number): Array<Record<string, unknown>> {
     url: `https://example.com/tag-cluster-${i}`,
     title: `Tag cluster row ${i}`,
     tags: tag,
+    created_at: baseMs + i * 1000,
+    domain: 'example.com',
+  }));
+}
+
+function makeUntaggedRows(total: number, baseMs: number): Array<Record<string, unknown>> {
+  return Array.from({ length: total }, (_, i) => ({
+    url: `https://example.com/untagged-${i}`,
+    title: `Untagged row ${i}`,
+    tags: null,
     created_at: baseMs + i * 1000,
     domain: 'example.com',
   }));
@@ -49,5 +59,21 @@ test.describe('Dashboard tag cluster node count @extension', () => {
     for (const tag of UNIQUE_TAGS) {
       await expect(texts.filter({ hasText: tag }).first()).toBeVisible();
     }
+  });
+
+  test('shows empty state when only untagged history exists', async ({ dashboardPage: page }) => {
+    const client = createDashboardSqliteClient(page);
+    await migrationSettled(page, client);
+    const clearToken = await client.tokenFor('clear_all', []);
+    await client.dashboardMsg({ subtype: 'clear_all', confirmToken: clearToken });
+    const baseMs = Date.UTC(2025, 0, 2);
+    // Only 1000 untagged rows — cloud must be empty regardless of cap.
+    await seedRows(client, makeUntaggedRows(1000, baseMs));
+
+    await page.locator('button[data-panel="panel-tag-cluster"]').click();
+    await expect(page.locator('#tagClusterSvg')).toBeVisible();
+    await expect(page.locator('.tag-cluster-loading-overlay')).toBeHidden({ timeout: 15000 });
+    await expect(page.locator('#tagClusterEmptyState')).toBeVisible();
+    await expect(page.locator('#tagClusterSvg circle.tag-cluster-node')).toHaveCount(0);
   });
 });

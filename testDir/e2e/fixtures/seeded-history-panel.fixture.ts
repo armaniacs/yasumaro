@@ -2,15 +2,19 @@
  * seeded-history-panel.fixture.ts — seeded SQLite history panel preparation.
  *
  * Encapsulates the preparation steps the panel specs repeated per test:
- * openOptionsPage → createDashboardSqliteClient → migrationSettled → seedRows
- * → panel click, plus the entry-visible wait — the single definition behind
- * the previously per-test waitFor({state:'visible', timeout:15000}) copies.
+ * openOptionsPage → createDashboardSqliteClient → migrationSettled →
+ * (optional clear_all) → seedRows → panel click, plus the entry-visible
+ * wait — the single definition behind the previously per-test
+ * waitFor({state:'visible', timeout:15000}) copies.
  *
  * Per-spec differences stay explicit via the panelSeedParams object (never
  * silently unified):
  * - rows        — rows the spec seeds (required)
  * - rowText     — entry text the visible-wait targets; absent = first entry
  * - seedConsent — seed privacy consent before the options page opens
+ * - clearBeforeSeed — send clear_all after migrationSettled and before
+ *                 seedRows, so the clear → seed → open-panel flow shared by
+ *                 the search specs is parameter-driven, not copy-pasted
  * - onPage      — page wiring right after it opens, so console capture does
  *                 not miss the load/bootstrap window
  * - beforeSeed  — seeds between migrationSettled and seedRows; settings writes
@@ -53,6 +57,7 @@ export type SeededPanelParams = {
   rows: Array<Record<string, unknown>>;
   rowText?: string | undefined;
   seedConsent?: boolean | undefined;
+  clearBeforeSeed?: boolean | undefined;
   onPage?: ((page: Page) => void) | undefined;
   beforeSeed?: ((page: Page) => Promise<void>) | undefined;
 };
@@ -79,6 +84,10 @@ export const test = extensionTest.extend<Fixtures>({
     const client = createDashboardSqliteClient(page);
     await migrationSettled(page, client);
     await panelSeedParams.beforeSeed?.(page);
+    if (panelSeedParams.clearBeforeSeed) {
+      const clearToken = await client.tokenFor('clear_all', []);
+      await client.dashboardMsg({ subtype: 'clear_all', confirmToken: clearToken });
+    }
     await seedRows(client, panelSeedParams.rows);
 
     await page.locator(PANEL_NAV).click();

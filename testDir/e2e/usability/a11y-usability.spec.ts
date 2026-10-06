@@ -76,6 +76,11 @@ test.describe('Dashboard accessibility @extension', () => {
   });
 
   test('user can run a search using only the keyboard', async ({ dashboardPage: page }) => {
+    // Keyboard-operability angle only: reaching the panel and the search
+    // field by keyboard and typing real keystrokes. Result counts and the
+    // empty state are owned by dashboard-search-results.spec.ts and are not
+    // re-asserted here beyond the single count that proves the typed query
+    // took effect.
     const client = createDashboardSqliteClient(page);
     await migrationSettled(page, client);
     const clearToken = await client.tokenFor('clear_all', []);
