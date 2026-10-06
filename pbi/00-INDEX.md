@@ -14,35 +14,59 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-07 arch-delivery-loop ラウンド（archloop-1007） — 🔧非機能追加
+
+arch-delivery-loop の closed loop をコードベース全体（差分スコープ）に対して実行する継続ラウンド。4 系統の並列調査（bench+background misc / query+codec 契約+offscreen / S5 残留モジュール / 設計約束乖離スイープ）を 17 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-17）。詳細は [2026-10-07-00-backlog-archloop-1007.md](2026-10-07-00-backlog-archloop-1007.md)（live 台帳）。実行順は依存優先（01 → 05 → 10、他は並列可）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 01 | [2026-10-07-01-fix-search-columns-drift.md](2026-10-07-01-fix-search-columns-drift.md) | fix | 12.0 | 1 | SEARCH_COLUMNS 乖離の cell 誤配置。05・10 の先行 |
+| 02 | [2026-10-07-02-fix-opfs-worker-callworker-bypass.md](2026-10-07-02-fix-opfs-worker-callworker-bypass.md) | fix | 10.0 | 1.5 | mutation 経路の失敗カウンタ迂回 |
+| 03 | [2026-10-07-03-fix-review-summary-marker-asymmetry.md](2026-10-07-03-fix-review-summary-marker-asymmetry.md) | fix | 9.0 | 1 | 生成済みマーカーの読み書き分離 |
+| 04 | [2026-10-07-04-fix-trustchecker-alert-keys-migration.md](2026-10-07-04-fix-trustchecker-alert-keys-migration.md) | fix | 8.0 | 1.5 | alert 4 キーの移行消失 |
+| 05 | [2026-10-07-05-fix-crud-update-drift-ssot.md](2026-10-07-05-fix-crud-update-drift-ssot.md) | fix | 6.0 | 2 | update undefined 語義乖離。01 の後 |
+| 06 | [2026-10-07-06-fix-sw-startup-bench-cold.md](2026-10-07-06-fix-sw-startup-bench-cold.md) | fix | 6.0 | 1 | bench warm/cold 計測 |
+| 07 | [2026-10-07-07-investigate-tab-url-permission-decision.md](2026-10-07-07-investigate-tab-url-permission-decision.md) | investigate | 4.8 | 1 | tabs 権限裁定 + ADR |
+| 08 | [2026-10-07-08-refactor-tabcache-factory-deletion.md](2026-10-07-08-refactor-tabcache-factory-deletion.md) | refactor | 4.0 | 0.5 | 死んだパイロット削除 |
+| 09 | [2026-10-07-09-refactor-sessionalarm-injectable-sleep.md](2026-10-07-09-refactor-sessionalarm-injectable-sleep.md) | refactor | 3.0 | 1 | リトライ待ちの注入化 |
+| 10 | [2026-10-07-10-refactor-audit-log-codec.md](2026-10-07-10-refactor-audit-log-codec.md) | refactor | 3.0 | 1 | audit_log デコード双子。05 の後 |
+| 11 | [2026-10-07-11-fix-masterpassword-selfverify-unify.md](2026-10-07-11-fix-masterpassword-selfverify-unify.md) | fix | 2.4 | 2 | 自己検証+rehash の一本化 |
+| 12 | [2026-10-07-12-test-dashboard-sqlite-subtype-asserts.md](2026-10-07-12-test-dashboard-sqlite-subtype-asserts.md) | test | 2.0 | 1.5 | response union / spec の fail-closed 化 |
+| 13 | [2026-10-07-13-refactor-popup-dom-scaffold-remainder.md](2026-10-07-13-refactor-popup-dom-scaffold-remainder.md) | refactor | 2.0 | 2 | S6 台帳送りの残り 4 ファイル |
+| 14 | [2026-10-07-14-refactor-getstatus-dead-count.md](2026-10-07-14-refactor-getstatus-dead-count.md) | refactor | 2.0 | 0.5 | STATUS の dead count 削除 |
+| 15 | [2026-10-07-15-refactor-f3-archive-source-import.md](2026-10-07-15-refactor-f3-archive-source-import.md) | refactor | 2.0 | 1 | bench の production 派生化 |
+| 16 | [2026-10-07-16-refactor-provider-allowlist-subdomain.md](2026-10-07-16-refactor-provider-allowlist-subdomain.md) | refactor | 1.6 | 1.5 | サブドメ規則の表派生化 |
+| 17 | [2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md](2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md) | refactor | 1.6 | 1.5 | 既定値の一意源化 |
+
 ### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006） — ✅ 23件完了・アーカイブ済み 🔧非機能追加
 
 arch-delivery-loop の closed loop を holistic-1005 の台帳送り L1–L8 に対して実行するラウンド（スキル本体不在のため holistic-code-improvement と同手順で閉じる）。4 テーマ群の並列調査＋L8 直査を 23 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-23）。詳細は [2026-10-06-00-backlog-archloop-1006.md](2026-10-06-00-backlog-archloop-1006.md)（live 台帳）。実行順は依存優先（14 → 13 / 11 → 17 / 10 → 19 / 16 → 21 / 07 → 18、他は並列可）。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| 01 | [2026-10-06-01-fix-diagnostics-compile-options-escape.md](2026-10-06-01-fix-diagnostics-compile-options-escape.md) | fix | 9.0 | 1 | ✅。compileOptions の未エスケープ埋め込み |
-| 02 | [2026-10-06-02-fix-gemini-empty-failure.md](2026-10-06-02-fix-gemini-empty-failure.md) | fix | 8.0 | 1 | ✅。Gemini 空応答の failure 欠落 |
-| 03 | [2026-10-06-03-fix-e2e-poll-shared-seed.md](2026-10-06-03-fix-e2e-poll-shared-seed.md) | fix | 6.0 | 1 | ✅。poll 再定義＋seed 非冪等 |
-| 04 | [2026-10-06-04-refactor-queryplan-tag-params.md](2026-10-06-04-refactor-queryplan-tag-params.md) | refactor | 4.27 | 1.5 | ✅。queryPlan タグ付加の共通化 |
-| 05 | [2026-10-06-05-refactor-step-failure-helix.md](2026-10-06-05-refactor-step-failure-helix.md) | refactor | 4.0 | 1 | ✅。catch 継続ブロック写経 |
-| 06 | [2026-10-06-06-refactor-step-self-catch.md](2026-10-06-06-refactor-step-self-catch.md) | refactor | 4.0 | 2 | ✅。ステップ内自前 catch の迂回 |
-| 07 | [2026-10-06-07-refactor-boundary-guards.md](2026-10-06-07-refactor-boundary-guards.md) | refactor | 3.6 | 1 | ✅。境界ガード集約。18 の先行 |
-| 08 | [2026-10-06-08-test-e2e-skipped-paths.md](2026-10-06-08-test-e2e-skipped-paths.md) | test | 3.2 | 2 | ✅。skip/fixme/空実装の重要パス |
-| 09 | [2026-10-06-09-refactor-obsidian-retry-table.md](2026-10-06-09-refactor-obsidian-retry-table.md) | refactor | 3.0 | 1 | ✅。obsidian リトライ表の SSOT 化 |
-| 10 | [2026-10-06-10-refactor-archive-wire-args.md](2026-10-06-10-refactor-archive-wire-args.md) | refactor | 3.0 | 1 | ✅。backendArgs/depsArgs 集約。19 の先行 |
-| 11 | [2026-10-06-11-refactor-sqlite-decode-twins.md](2026-10-06-11-refactor-sqlite-decode-twins.md) | refactor | 3.0 | 1 | ✅。records/search デコード双子。17 の先行 |
-| 12 | [2026-10-06-12-refactor-masterpassword-modal.md](2026-10-06-12-refactor-masterpassword-modal.md) | refactor | 3.0 | 1 | ✅。モーダル開閉の重複 |
-| 13 | [2026-10-06-13-refactor-bench-launcher.md](2026-10-06-13-refactor-bench-launcher.md) | refactor | 2.4 | 1 | ✅。bench launcher 乖離。14 の後 |
-| 14 | [2026-10-06-14-refactor-dashboard-fixture.md](2026-10-06-14-refactor-dashboard-fixture.md) | refactor | 1.8 | 2 | ✅。dashboard fixture 3 重。13 の先行 |
-| 15 | [2026-10-06-15-refactor-compat-markers.md](2026-10-06-15-refactor-compat-markers.md) | refactor | 1.6 | 2 | ✅。compat マーカー 3 表集約 |
-| 16 | [2026-10-06-16-refactor-tag-chip-factory.md](2026-10-06-16-refactor-tag-chip-factory.md) | refactor | 1.6 | 2 | ✅。チップ工場。21 の先行 |
-| 17 | [2026-10-06-17-refactor-wire-lambda-consts.md](2026-10-06-17-refactor-wire-lambda-consts.md) | refactor | 1.5 | 1 | ✅。単要素ラムダ定数化。11 の後 |
-| 18 | [2026-10-06-18-refactor-history-model-mutation.md](2026-10-06-18-refactor-history-model-mutation.md) | refactor | 1.6 | 2 | ✅。mutation 後処理分散。07 の後 |
-| 19 | [2026-10-06-19-refactor-crud-archive-skeleton.md](2026-10-06-19-refactor-crud-archive-skeleton.md) | refactor | 1.6 | 2 | ✅。runCoreCrud/runArchive 共通化。10 の後 |
-| 20 | [2026-10-06-20-refactor-content-logger-unify.md](2026-10-06-20-refactor-content-logger-unify.md) | refactor | 1.5 | 1 | ✅。console 6 箇所の統一 |
-| 21 | [2026-10-06-21-refactor-prompt-list-wiring.md](2026-10-06-21-refactor-prompt-list-wiring.md) | refactor | 1.6 | 2 | ✅。一覧配線の region 化。16 の後 |
-| 22 | [2026-10-06-22-test-diagnostics-assert-dedup.md](2026-10-06-22-test-diagnostics-assert-dedup.md) | test | 1.35 | 2 | ✅。静的アサーション二重主張 |
-| 23 | [2026-10-06-23-test-search-tag-dedup.md](2026-10-06-23-test-search-tag-dedup.md) | test | 1.2 | 2 | ✅。検索・tag spec 重複 |
+| 01 | [2026-10-06-01-fix-diagnostics-compile-options-escape.md](../dev-docs/archived/pbi/2026-10-06-01-fix-diagnostics-compile-options-escape.md) | fix | 9.0 | 1 | ✅。compileOptions の未エスケープ埋め込み |
+| 02 | [2026-10-06-02-fix-gemini-empty-failure.md](../dev-docs/archived/pbi/2026-10-06-02-fix-gemini-empty-failure.md) | fix | 8.0 | 1 | ✅。Gemini 空応答の failure 欠落 |
+| 03 | [2026-10-06-03-fix-e2e-poll-shared-seed.md](../dev-docs/archived/pbi/2026-10-06-03-fix-e2e-poll-shared-seed.md) | fix | 6.0 | 1 | ✅。poll 再定義＋seed 非冪等 |
+| 04 | [2026-10-06-04-refactor-queryplan-tag-params.md](../dev-docs/archived/pbi/2026-10-06-04-refactor-queryplan-tag-params.md) | refactor | 4.27 | 1.5 | ✅。queryPlan タグ付加の共通化 |
+| 05 | [2026-10-06-05-refactor-step-failure-helix.md](../dev-docs/archived/pbi/2026-10-06-05-refactor-step-failure-helix.md) | refactor | 4.0 | 1 | ✅。catch 継続ブロック写経 |
+| 06 | [2026-10-06-06-refactor-step-self-catch.md](../dev-docs/archived/pbi/2026-10-06-06-refactor-step-self-catch.md) | refactor | 4.0 | 2 | ✅。ステップ内自前 catch の迂回 |
+| 07 | [2026-10-06-07-refactor-boundary-guards.md](../dev-docs/archived/pbi/2026-10-06-07-refactor-boundary-guards.md) | refactor | 3.6 | 1 | ✅。境界ガード集約。18 の先行 |
+| 08 | [2026-10-06-08-test-e2e-skipped-paths.md](../dev-docs/archived/pbi/2026-10-06-08-test-e2e-skipped-paths.md) | test | 3.2 | 2 | ✅。skip/fixme/空実装の重要パス |
+| 09 | [2026-10-06-09-refactor-obsidian-retry-table.md](../dev-docs/archived/pbi/2026-10-06-09-refactor-obsidian-retry-table.md) | refactor | 3.0 | 1 | ✅。obsidian リトライ表の SSOT 化 |
+| 10 | [2026-10-06-10-refactor-archive-wire-args.md](../dev-docs/archived/pbi/2026-10-06-10-refactor-archive-wire-args.md) | refactor | 3.0 | 1 | ✅。backendArgs/depsArgs 集約。19 の先行 |
+| 11 | [2026-10-06-11-refactor-sqlite-decode-twins.md](../dev-docs/archived/pbi/2026-10-06-11-refactor-sqlite-decode-twins.md) | refactor | 3.0 | 1 | ✅。records/search デコード双子。17 の先行 |
+| 12 | [2026-10-06-12-refactor-masterpassword-modal.md](../dev-docs/archived/pbi/2026-10-06-12-refactor-masterpassword-modal.md) | refactor | 3.0 | 1 | ✅。モーダル開閉の重複 |
+| 13 | [2026-10-06-13-refactor-bench-launcher.md](../dev-docs/archived/pbi/2026-10-06-13-refactor-bench-launcher.md) | refactor | 2.4 | 1 | ✅。bench launcher 乖離。14 の後 |
+| 14 | [2026-10-06-14-refactor-dashboard-fixture.md](../dev-docs/archived/pbi/2026-10-06-14-refactor-dashboard-fixture.md) | refactor | 1.8 | 2 | ✅。dashboard fixture 3 重。13 の先行 |
+| 15 | [2026-10-06-15-refactor-compat-markers.md](../dev-docs/archived/pbi/2026-10-06-15-refactor-compat-markers.md) | refactor | 1.6 | 2 | ✅。compat マーカー 3 表集約 |
+| 16 | [2026-10-06-16-refactor-tag-chip-factory.md](../dev-docs/archived/pbi/2026-10-06-16-refactor-tag-chip-factory.md) | refactor | 1.6 | 2 | ✅。チップ工場。21 の先行 |
+| 17 | [2026-10-06-17-refactor-wire-lambda-consts.md](../dev-docs/archived/pbi/2026-10-06-17-refactor-wire-lambda-consts.md) | refactor | 1.5 | 1 | ✅。単要素ラムダ定数化。11 の後 |
+| 18 | [2026-10-06-18-refactor-history-model-mutation.md](../dev-docs/archived/pbi/2026-10-06-18-refactor-history-model-mutation.md) | refactor | 1.6 | 2 | ✅。mutation 後処理分散。07 の後 |
+| 19 | [2026-10-06-19-refactor-crud-archive-skeleton.md](../dev-docs/archived/pbi/2026-10-06-19-refactor-crud-archive-skeleton.md) | refactor | 1.6 | 2 | ✅。runCoreCrud/runArchive 共通化。10 の後 |
+| 20 | [2026-10-06-20-refactor-content-logger-unify.md](../dev-docs/archived/pbi/2026-10-06-20-refactor-content-logger-unify.md) | refactor | 1.5 | 1 | ✅。console 6 箇所の統一 |
+| 21 | [2026-10-06-21-refactor-prompt-list-wiring.md](../dev-docs/archived/pbi/2026-10-06-21-refactor-prompt-list-wiring.md) | refactor | 1.6 | 2 | ✅。一覧配線の region 化。16 の後 |
+| 22 | [2026-10-06-22-test-diagnostics-assert-dedup.md](../dev-docs/archived/pbi/2026-10-06-22-test-diagnostics-assert-dedup.md) | test | 1.35 | 2 | ✅。静的アサーション二重主張 |
+| 23 | [2026-10-06-23-test-search-tag-dedup.md](../dev-docs/archived/pbi/2026-10-06-23-test-search-tag-dedup.md) | test | 1.2 | 2 | ✅。検索・tag spec 重複 |
 
 ### 2026-10-05 holistic ラウンド（holistic-1005） — ✅ 32件完了・アーカイブ済み 🔧非機能追加
 
@@ -50,38 +74,38 @@ holistic-code-improvement skill による 6.9.36 時点の大局的レビュー�
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| 01 | [2026-10-05-01-fix-validate-docs-ssot-gates.md](2026-10-05-01-fix-validate-docs-ssot-gates.md) | fix | 12.0 | 1 | ✅。docs/SSOT 照合ゲートの validate / CI 未配線 |
-| 02 | [2026-10-05-02-fix-domain-policy-parity.md](2026-10-05-02-fix-domain-policy-parity.md) | fix | 10.5 | 2 | ✅。ドメイン判定の content/SW 逆転 |
-| 03 | [2026-10-05-03-fix-test-sleep-lint-coverage.md](2026-10-05-03-fix-test-sleep-lint-coverage.md) | fix | 10.0 | 1 | ✅。固定待ち lint の管轄穴 |
-| 04 | [2026-10-05-04-fix-sessionstore-flush-lost-write.md](2026-10-05-04-fix-sessionstore-flush-lost-write.md) | fix | 9.0 | 2 | ✅。SessionStore の flush 連動で書き込み消失 |
-| 05 | [2026-10-05-05-fix-unhandled-listener-rejections.md](2026-10-05-05-fix-unhandled-listener-rejections.md) | fix | 8.0 | 2 | ✅。リスナ/エントリの未処理リジェクション |
-| 06 | [2026-10-05-06-refactor-loopback-ports-ssot.md](2026-10-05-06-refactor-loopback-ports-ssot.md) | refactor | 8.0 | 1 | ✅。ループバックポート 3 重リテラル |
-| 07 | [2026-10-05-07-fix-duplicate-field-ids-validation-split.md](2026-10-05-07-fix-duplicate-field-ids-validation-split.md) | fix | 7.5 | 2 | ✅。重複 DOM id + 二重バリデーション。19・20 の先行 |
-| 08 | [2026-10-05-08-fix-privacy-dialog-settle.md](2026-10-05-08-fix-privacy-dialog-settle.md) | fix | 7.2 | 1 | ✅。privacyDialog の settle 不能経路 |
-| 09 | [2026-10-05-09-refactor-main-status-single-path.md](2026-10-05-09-refactor-main-status-single-path.md) | refactor | 6.0 | 2 | ✅。#mainStatus の 2 経路。28・32 の先行 |
-| 10 | [2026-10-05-10-fix-sensitive-mask-recursion-guard.md](2026-10-05-10-fix-sensitive-mask-recursion-guard.md) | fix | 6.0 | 1 | ✅。sensitiveDataMask の再帰防御欠如 |
-| 11 | [2026-10-05-11-fix-connection-test-button-guards.md](2026-10-05-11-fix-connection-test-button-guards.md) | fix | 4.0 | 2 | ✅。connectionTests 4ハンドラ規約不統一。17 の先行 |
-| 12 | [2026-10-05-12-fix-local-md-alarm-ownership.md](2026-10-05-12-fix-local-md-alarm-ownership.md) | fix | 4.0 | 2 | ✅。alarms 作成の表外分岐 + daily リセット |
-| 13 | [2026-10-05-13-refactor-envelope-shape-single-source.md](2026-10-05-13-refactor-envelope-shape-single-source.md) | refactor | 4.0 | 2 | ✅。envelope 検証 3 系統の乖離。23 の先行 |
-| 14 | [2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md](2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md) | refactor | 4.0 | 1 | ✅。dashboardGateway の手書き race |
-| 15 | [2026-10-05-15-refactor-injectable-sleep-trust-retry.md](2026-10-05-15-refactor-injectable-sleep-trust-retry.md) | refactor | 4.0 | 1 | ✅。本番リトライの sleep 注入 seam 不在 |
-| 16 | [2026-10-05-16-refactor-rate-limit-counter-read-merge.md](2026-10-05-16-refactor-rate-limit-counter-read-merge.md) | refactor | 4.0 | 1 | ✅。RateLimitService の読込+マージ 2 重 |
-| 17 | [2026-10-05-17-refactor-status-top-mirror-owner.md](2026-10-05-17-refactor-status-top-mirror-owner.md) | refactor | 5.0 | 1 | ✅。#statusTop ミラーの記憶依存。11 の後 |
-| 18 | [2026-10-05-18-refactor-panel-destroy-contract.md](2026-10-05-18-refactor-panel-destroy-contract.md) | refactor | 3.2 | 2 | ✅。destroy 到達不能。29 の先行 |
-| 19 | [2026-10-05-19-refactor-save-settings-pipeline-split.md](2026-10-05-19-refactor-save-settings-pipeline-split.md) | refactor | 2.0 | 2 | ✅。saveDashboardSettings 8関心。07 の後 |
-| 20 | [2026-10-05-20-refactor-field-descriptor-unwired-seams.md](2026-10-05-20-refactor-field-descriptor-unwired-seams.md) | refactor | 2.4 | 1 | ✅。fieldDescriptor の未配線シーム。07 の後 |
-| 21 | [2026-10-05-21-refactor-i18n-mock-single-factory.md](2026-10-05-21-refactor-i18n-mock-single-factory.md) | refactor | 2.7 | 2 | ✅。i18n モック手作りコピー。28 の先行 |
-| 22 | [2026-10-05-22-refactor-confirm-token-legacy-removal.md](2026-10-05-22-refactor-confirm-token-legacy-removal.md) | refactor | 3.2 | 2 | ✅。confirmToken レガシー経路。26 の先行 |
-| 23 | [2026-10-05-23-refactor-disconnect-phrase-ssot.md](2026-10-05-23-refactor-disconnect-phrase-ssot.md) | refactor | 3.0 | 1 | ✅。切断エラー文言 3 重。13 の後 |
-| 24 | [2026-10-05-24-refactor-popup-e2e-fixture-unify.md](2026-10-05-24-refactor-popup-e2e-fixture-unify.md) | refactor | 2.0 | 1.5 | ✅。E2E popup fixture 3 重 |
-| 25 | [2026-10-05-25-refactor-fetch-retry-residue.md](2026-10-05-25-refactor-fetch-retry-residue.md) | refactor | 2.0 | 2 | ✅。fetch リトライ残骸 4 点 |
-| 26 | [2026-10-05-26-refactor-settings-repository-single-instance.md](2026-10-05-26-refactor-settings-repository-single-instance.md) | refactor | 4.0 | 2 | ✅。SettingsRepository 2 インスタンス。22 の後 |
-| 27 | [2026-10-05-27-refactor-panel-catalog-id-union.md](2026-10-05-27-refactor-panel-catalog-id-union.md) | refactor | 3.0 | 1 | ✅。PanelCatalogId の string 退化 |
-| 28 | [2026-10-05-28-refactor-popup-test-dom-scaffold.md](2026-10-05-28-refactor-popup-test-dom-scaffold.md) | refactor | 2.25 | 2 | ✅。popup テスト DOM 脚手架。09・21 の後 |
-| 29 | [2026-10-05-29-refactor-dashboard-dom-binding-convention.md](2026-10-05-29-refactor-dashboard-dom-binding-convention.md) | refactor | 1.33 | 3 | ✅。旧 DOM 捕捉規約 + 死コード。18 の後 |
-| 30 | [2026-10-05-30-refactor-record-response-contract-ssot.md](2026-10-05-30-refactor-record-response-contract-ssot.md) | refactor | 1.6 | 2 | ✅。記録応答 wire 契約 4 重 |
-| 31 | [2026-10-05-31-refactor-popup-init-single-entry.md](2026-10-05-31-refactor-popup-init-single-entry.md) | refactor | 1.6 | 2 | ✅。popup 初期化 3 経路 |
-| 32 | [2026-10-05-32-refactor-record-normal-branch-split.md](2026-10-05-32-refactor-record-normal-branch-split.md) | refactor | 1.6 | 2 | ✅。runNormalBranch 8責務。09 の後 |
+| 01 | [2026-10-05-01-fix-validate-docs-ssot-gates.md](../dev-docs/archived/pbi/2026-10-05-01-fix-validate-docs-ssot-gates.md) | fix | 12.0 | 1 | ✅。docs/SSOT 照合ゲートの validate / CI 未配線 |
+| 02 | [2026-10-05-02-fix-domain-policy-parity.md](../dev-docs/archived/pbi/2026-10-05-02-fix-domain-policy-parity.md) | fix | 10.5 | 2 | ✅。ドメイン判定の content/SW 逆転 |
+| 03 | [2026-10-05-03-fix-test-sleep-lint-coverage.md](../dev-docs/archived/pbi/2026-10-05-03-fix-test-sleep-lint-coverage.md) | fix | 10.0 | 1 | ✅。固定待ち lint の管轄穴 |
+| 04 | [2026-10-05-04-fix-sessionstore-flush-lost-write.md](../dev-docs/archived/pbi/2026-10-05-04-fix-sessionstore-flush-lost-write.md) | fix | 9.0 | 2 | ✅。SessionStore の flush 連動で書き込み消失 |
+| 05 | [2026-10-05-05-fix-unhandled-listener-rejections.md](../dev-docs/archived/pbi/2026-10-05-05-fix-unhandled-listener-rejections.md) | fix | 8.0 | 2 | ✅。リスナ/エントリの未処理リジェクション |
+| 06 | [2026-10-05-06-refactor-loopback-ports-ssot.md](../dev-docs/archived/pbi/2026-10-05-06-refactor-loopback-ports-ssot.md) | refactor | 8.0 | 1 | ✅。ループバックポート 3 重リテラル |
+| 07 | [2026-10-05-07-fix-duplicate-field-ids-validation-split.md](../dev-docs/archived/pbi/2026-10-05-07-fix-duplicate-field-ids-validation-split.md) | fix | 7.5 | 2 | ✅。重複 DOM id + 二重バリデーション。19・20 の先行 |
+| 08 | [2026-10-05-08-fix-privacy-dialog-settle.md](../dev-docs/archived/pbi/2026-10-05-08-fix-privacy-dialog-settle.md) | fix | 7.2 | 1 | ✅。privacyDialog の settle 不能経路 |
+| 09 | [2026-10-05-09-refactor-main-status-single-path.md](../dev-docs/archived/pbi/2026-10-05-09-refactor-main-status-single-path.md) | refactor | 6.0 | 2 | ✅。#mainStatus の 2 経路。28・32 の先行 |
+| 10 | [2026-10-05-10-fix-sensitive-mask-recursion-guard.md](../dev-docs/archived/pbi/2026-10-05-10-fix-sensitive-mask-recursion-guard.md) | fix | 6.0 | 1 | ✅。sensitiveDataMask の再帰防御欠如 |
+| 11 | [2026-10-05-11-fix-connection-test-button-guards.md](../dev-docs/archived/pbi/2026-10-05-11-fix-connection-test-button-guards.md) | fix | 4.0 | 2 | ✅。connectionTests 4ハンドラ規約不統一。17 の先行 |
+| 12 | [2026-10-05-12-fix-local-md-alarm-ownership.md](../dev-docs/archived/pbi/2026-10-05-12-fix-local-md-alarm-ownership.md) | fix | 4.0 | 2 | ✅。alarms 作成の表外分岐 + daily リセット |
+| 13 | [2026-10-05-13-refactor-envelope-shape-single-source.md](../dev-docs/archived/pbi/2026-10-05-13-refactor-envelope-shape-single-source.md) | refactor | 4.0 | 2 | ✅。envelope 検証 3 系統の乖離。23 の先行 |
+| 14 | [2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md](../dev-docs/archived/pbi/2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md) | refactor | 4.0 | 1 | ✅。dashboardGateway の手書き race |
+| 15 | [2026-10-05-15-refactor-injectable-sleep-trust-retry.md](../dev-docs/archived/pbi/2026-10-05-15-refactor-injectable-sleep-trust-retry.md) | refactor | 4.0 | 1 | ✅。本番リトライの sleep 注入 seam 不在 |
+| 16 | [2026-10-05-16-refactor-rate-limit-counter-read-merge.md](../dev-docs/archived/pbi/2026-10-05-16-refactor-rate-limit-counter-read-merge.md) | refactor | 4.0 | 1 | ✅。RateLimitService の読込+マージ 2 重 |
+| 17 | [2026-10-05-17-refactor-status-top-mirror-owner.md](../dev-docs/archived/pbi/2026-10-05-17-refactor-status-top-mirror-owner.md) | refactor | 5.0 | 1 | ✅。#statusTop ミラーの記憶依存。11 の後 |
+| 18 | [2026-10-05-18-refactor-panel-destroy-contract.md](../dev-docs/archived/pbi/2026-10-05-18-refactor-panel-destroy-contract.md) | refactor | 3.2 | 2 | ✅。destroy 到達不能。29 の先行 |
+| 19 | [2026-10-05-19-refactor-save-settings-pipeline-split.md](../dev-docs/archived/pbi/2026-10-05-19-refactor-save-settings-pipeline-split.md) | refactor | 2.0 | 2 | ✅。saveDashboardSettings 8関心。07 の後 |
+| 20 | [2026-10-05-20-refactor-field-descriptor-unwired-seams.md](../dev-docs/archived/pbi/2026-10-05-20-refactor-field-descriptor-unwired-seams.md) | refactor | 2.4 | 1 | ✅。fieldDescriptor の未配線シーム。07 の後 |
+| 21 | [2026-10-05-21-refactor-i18n-mock-single-factory.md](../dev-docs/archived/pbi/2026-10-05-21-refactor-i18n-mock-single-factory.md) | refactor | 2.7 | 2 | ✅。i18n モック手作りコピー。28 の先行 |
+| 22 | [2026-10-05-22-refactor-confirm-token-legacy-removal.md](../dev-docs/archived/pbi/2026-10-05-22-refactor-confirm-token-legacy-removal.md) | refactor | 3.2 | 2 | ✅。confirmToken レガシー経路。26 の先行 |
+| 23 | [2026-10-05-23-refactor-disconnect-phrase-ssot.md](../dev-docs/archived/pbi/2026-10-05-23-refactor-disconnect-phrase-ssot.md) | refactor | 3.0 | 1 | ✅。切断エラー文言 3 重。13 の後 |
+| 24 | [2026-10-05-24-refactor-popup-e2e-fixture-unify.md](../dev-docs/archived/pbi/2026-10-05-24-refactor-popup-e2e-fixture-unify.md) | refactor | 2.0 | 1.5 | ✅。E2E popup fixture 3 重 |
+| 25 | [2026-10-05-25-refactor-fetch-retry-residue.md](../dev-docs/archived/pbi/2026-10-05-25-refactor-fetch-retry-residue.md) | refactor | 2.0 | 2 | ✅。fetch リトライ残骸 4 点 |
+| 26 | [2026-10-05-26-refactor-settings-repository-single-instance.md](../dev-docs/archived/pbi/2026-10-05-26-refactor-settings-repository-single-instance.md) | refactor | 4.0 | 2 | ✅。SettingsRepository 2 インスタンス。22 の後 |
+| 27 | [2026-10-05-27-refactor-panel-catalog-id-union.md](../dev-docs/archived/pbi/2026-10-05-27-refactor-panel-catalog-id-union.md) | refactor | 3.0 | 1 | ✅。PanelCatalogId の string 退化 |
+| 28 | [2026-10-05-28-refactor-popup-test-dom-scaffold.md](../dev-docs/archived/pbi/2026-10-05-28-refactor-popup-test-dom-scaffold.md) | refactor | 2.25 | 2 | ✅。popup テスト DOM 脚手架。09・21 の後 |
+| 29 | [2026-10-05-29-refactor-dashboard-dom-binding-convention.md](../dev-docs/archived/pbi/2026-10-05-29-refactor-dashboard-dom-binding-convention.md) | refactor | 1.33 | 3 | ✅。旧 DOM 捕捉規約 + 死コード。18 の後 |
+| 30 | [2026-10-05-30-refactor-record-response-contract-ssot.md](../dev-docs/archived/pbi/2026-10-05-30-refactor-record-response-contract-ssot.md) | refactor | 1.6 | 2 | ✅。記録応答 wire 契約 4 重 |
+| 31 | [2026-10-05-31-refactor-popup-init-single-entry.md](../dev-docs/archived/pbi/2026-10-05-31-refactor-popup-init-single-entry.md) | refactor | 1.6 | 2 | ✅。popup 初期化 3 経路 |
+| 32 | [2026-10-05-32-refactor-record-normal-branch-split.md](../dev-docs/archived/pbi/2026-10-05-32-refactor-record-normal-branch-split.md) | refactor | 1.6 | 2 | ✅。runNormalBranch 8責務。09 の後 |
 
 ### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 20件完了・アーカイブ済み 🔧非機能追加
 
@@ -321,6 +345,14 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006）アーカイブ — ✅ 23件完了（01-23 アーカイブ済み）
+
+23 件（01-23）を `git mv` で `dev-docs/archived/pbi/` へ移動し 6.9.37 に版上げ（アーカイブ `209770a8`）。実装コミットは `0b702c31`（01）〜 `c2ca080a`（23）、`git log --grep='pbi-1006'` で確認可。ラウンド表（RICE・SP・備考）は進行中セクションのラウンド履歴に残置。
+
+### 2026-10-05 holistic ラウンド（holistic-1005）アーカイブ — ✅ 32件完了（01-32 アーカイブ済み）
+
+32 件（01-32）を `git mv` で `dev-docs/archived/pbi/` へ移動（アーカイブ `e7b0edd7`）。実装コミットは NN19-32 が `git log --grep='pbi-1005'` で確認可（NN01-18 は個別コミットタグなし）。ラウンド表（RICE・SP・備考）は進行中セクションのラウンド履歴に残置。積み残し 8 テーマは archloop-1006 ラウンドで消化済み。
 
 ### 2026-10-03 holistic ラウンド（holistic-1003b）アーカイブ — ✅ 20件完了（16-35 アーカイブ済み）
 
