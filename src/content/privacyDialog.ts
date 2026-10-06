@@ -77,7 +77,7 @@ export function showPrivacyConfirmDialog(statusCode: string, reasonLabel: string
 
     setElementHtml(shadow, `
             <div class="overlay">
-                <div class="dialog" role="dialog" aria-modal="true">
+                <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="osh-title" aria-describedby="osh-body">
                     <div class="header">
                         <img src="${iconUrl}" alt="">
                         <span id="osh-title"></span>

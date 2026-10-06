@@ -94,6 +94,11 @@ export type ServiceWorkerResponse = RecordingResult;
 /**
  * transport の unknown 応答を ServiceWorkerResponse に窄める単一ガード。
  * content 側の応答 `as` はここに集約する。
+ *
+ * Review note (2026-10-06): 意図的な弱ガード — `success: boolean` の有無
+ * しか見ない（previewFlow の isRecordingResult と同一方針）。欠落 field
+ * は呼び出し側のデフォルトに委ねる。malformed 応答の振る舞いは
+ * visitReporter.test.ts の契約で pin する。
  */
 export function isServiceWorkerResponse(value: unknown): value is ServiceWorkerResponse {
     if (typeof value !== 'object' || value === null) return false;

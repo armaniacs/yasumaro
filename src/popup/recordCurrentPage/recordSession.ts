@@ -429,7 +429,9 @@ export class RecordSession {
     this.reportActivity();
     this.showSuccessMessage(statusDiv, startTime, result);
 
-    const copyButtonShown = await this.showCopyMarkdownButton(tab, result as SaveRecordResult);
+    // PBI 2026-10-05-30 follow-up (review): explicit null guard instead of
+    // `as` — showCopyMarkdownButton needs a non-null result.
+    const copyButtonShown = result ? await this.showCopyMarkdownButton(tab, result) : false;
     if (copyButtonShown) {
       // Keep the popup open so the user can click Copy Markdown.
       // Do not start the auto-close timer, but still show tag results.

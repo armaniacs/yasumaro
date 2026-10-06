@@ -6,7 +6,7 @@
  */
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { VisitReporter, buildVisitStats, type VisitReporterDeps } from '../visitReporter.js';
+import { VisitReporter, buildVisitStats, isServiceWorkerResponse, type VisitReporterDeps } from '../visitReporter.js';
 
 vi.mock('../../utils/logger/types.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
@@ -239,5 +239,21 @@ describe('VisitReporter policy matrix', () => {
       expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(1);
       expect(deps.pageState.isValidVisitReported).toBe(true);
     });
+  });
+});
+
+describe('isServiceWorkerResponse contract (review follow-up: weak guard is intentional)', () => {
+  it.each([
+    [null, false],
+    [undefined, false],
+    ['ok', false],
+    [{}, false],
+    [{ success: 'yes' }, false],
+    [{ success: true }, true],
+    // Malformed-but-success responses pass the guard; missing fields fall
+    // back to caller-side defaults (same policy as previewFlow).
+    [{ success: true, summary: undefined }, true],
+  ])('classifies %o as %s', (input, expected) => {
+    expect(isServiceWorkerResponse(input)).toBe(expected);
   });
 });

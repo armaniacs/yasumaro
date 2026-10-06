@@ -865,3 +865,31 @@ describe('privatePageDialog', () => {
     });
   });
 });
+
+describe('wireDialogButtons remount symmetry (review follow-up)', () => {
+  it('repeated wiring of the same DOM stays single-wired', async () => {
+    setupDialogDOM();
+    const mod = await import('../privatePageDialog.js');
+    mod.wireDialogButtons();
+    mod.wireDialogButtons();
+    mod.setCurrentPendingSave(createPendingSave());
+
+    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+    dialog.showModal();
+    document.getElementById('dialog-cancel')!.click();
+    expect(mod.currentPendingSave).toBeNull();
+  });
+
+  it('wires re-created DOM after a rebuild', async () => {
+    const mod = await import('../privatePageDialog.js');
+    mod.wireDialogButtons();
+    setupDialogDOM();
+    mod.wireDialogButtons();
+    mod.setCurrentPendingSave(createPendingSave());
+
+    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
+    dialog.showModal();
+    document.getElementById('dialog-cancel')!.click();
+    expect(mod.currentPendingSave).toBeNull();
+  });
+});

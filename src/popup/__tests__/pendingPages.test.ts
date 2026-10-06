@@ -18,13 +18,19 @@ vi.mock('../errorUtils.js', () => ({
     showError: vi.fn(),
 }));
 
-vi.mock('../domUtils.js', () => ({
-    escapeHtml: vi.fn((s: string) => s),
-    clearElement: vi.fn((el: Element | null) => {
-        if (!el) return;
-        while (el.firstChild) el.removeChild(el.firstChild);
-    }),
-}));
+vi.mock('../domUtils.js', async (importOriginal) => {
+    const actual = (await importOriginal()) as Record<string, unknown>;
+    return {
+        ...actual,
+        escapeHtml: vi.fn((s: string) => s),
+        clearElement: vi.fn((el: Element | null) => {
+            if (!el) return;
+            while (el.firstChild) el.removeChild(el.firstChild);
+        }),
+        // wireOnce stays real: the rewiring symmetry relies on per-element
+        // dataset markers, which the mock would otherwise swallow.
+    };
+});
 
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;

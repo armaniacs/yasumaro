@@ -9,6 +9,7 @@ import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { getUserErrorMessage } from './errorUtils.js';
+import { wireOnce } from './domUtils.js';
 
 export let currentPendingSave: PendingSave | null = null;
 
@@ -135,23 +136,23 @@ function reportDialogActionFailure(action: string, error: unknown): void {
 
 /**
  * PBI 2026-10-05-31: dialog button wiring is explicit — initPopup calls this
- * once instead of the module wiring buttons at import time. The once-guard
- * keeps repeated init calls from double-wiring.
+ * once instead of the module wiring buttons at import time.
+ * Review follow-up: per-element `dataset.wired` markers (shared wireOnce
+ * seam) instead of a module once-guard, so re-created DOM gets wired while
+ * repeated init on the same DOM stays single-wired — symmetric with
+ * pendingPages.setupEventListeners.
  */
-let dialogButtonsWired = false;
-
 export function wireDialogButtons(): void {
-  if (dialogButtonsWired) return;
-  dialogButtonsWired = true;
-
-  document.getElementById('dialog-cancel')?.addEventListener('click', () => {
+  wireOnce(document.getElementById('dialog-cancel'), (wiredEl) =>
+    wiredEl.addEventListener('click', () => {
     const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
     dialog?.close();
     releasePrivatePageTrap();
     currentPendingSave = null;
-  });
+  }));
 
-  document.getElementById('dialog-save-once')?.addEventListener('click', async () => {
+  wireOnce(document.getElementById('dialog-save-once'), (wiredEl) =>
+    wiredEl.addEventListener('click', async () => {
     const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
     dialog?.close();
     releasePrivatePageTrap();
@@ -163,9 +164,10 @@ export function wireDialogButtons(): void {
         reportDialogActionFailure('Recording the private page', e);
       }
     }
-  });
+  }));
 
-  document.getElementById('dialog-save-domain')?.addEventListener('click', async () => {
+  wireOnce(document.getElementById('dialog-save-domain'), (wiredEl) =>
+    wiredEl.addEventListener('click', async () => {
     const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
     dialog?.close();
     releasePrivatePageTrap();
@@ -182,9 +184,10 @@ export function wireDialogButtons(): void {
         reportDialogActionFailure('Whitelisting the domain', e);
       }
     }
-  });
+  }));
 
-  document.getElementById('dialog-save-path')?.addEventListener('click', async () => {
+  wireOnce(document.getElementById('dialog-save-path'), (wiredEl) =>
+    wiredEl.addEventListener('click', async () => {
     const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
     dialog?.close();
     releasePrivatePageTrap();
@@ -201,16 +204,18 @@ export function wireDialogButtons(): void {
         reportDialogActionFailure('Whitelisting the path', e);
       }
     }
-  });
+  }));
 
-  document.getElementById('recording-failed-dismiss')?.addEventListener('click', () => {
+  wireOnce(document.getElementById('recording-failed-dismiss'), (wiredEl) =>
+    wiredEl.addEventListener('click', () => {
     const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
     dialog?.close();
     releaseRecordingFailedTrap();
     currentPendingSave = null;
-  });
+  }));
 
-  document.getElementById('recording-failed-retry')?.addEventListener('click', async () => {
+  wireOnce(document.getElementById('recording-failed-retry'), (wiredEl) =>
+    wiredEl.addEventListener('click', async () => {
     const dialog = document.getElementById('recording-failed-dialog') as HTMLDialogElement;
     dialog?.close();
     releaseRecordingFailedTrap();
@@ -223,7 +228,7 @@ export function wireDialogButtons(): void {
         reportDialogActionFailure('Retrying the recording', e);
       }
     }
-  });
+  }));
 }
 
 export { showPrivatePageDialog, showRecordingFailedDialog };

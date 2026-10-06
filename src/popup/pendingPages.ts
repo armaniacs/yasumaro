@@ -5,7 +5,7 @@ import { logError } from '../utils/logger/api.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showSuccess, showError } from './errorUtils.js';
-import { escapeHtml, clearElement } from './domUtils.js';
+import { escapeHtml, clearElement, wireOnce } from './domUtils.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
 import {
   addDomainToWhitelist,
@@ -172,24 +172,28 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
 }
 
 export function setupEventListeners(): void {
-  document.getElementById('btn-select-all')?.addEventListener('click', () => {
+  wireOnce(document.getElementById('btn-select-all'), (wiredEl) =>
+    wiredEl.addEventListener('click', () => {
     const checkboxes = document.querySelectorAll('.pending-checkbox') as NodeListOf<HTMLInputElement>;
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
 
     checkboxes.forEach(cb => {
       cb.checked = !allChecked;
     });
-  });
+  }));
 
-  document.getElementById('btn-save-selected')?.addEventListener('click', () => {
+  wireOnce(document.getElementById('btn-save-selected'), (wiredEl) =>
+    wiredEl.addEventListener('click', () => {
     saveSelectedPages();
-  });
+  }));
 
-  document.getElementById('btn-save-whitelist')?.addEventListener('click', () => {
+  wireOnce(document.getElementById('btn-save-whitelist'), (wiredEl) =>
+    wiredEl.addEventListener('click', () => {
     saveSelectedPages('domain');
-  });
+  }));
 
-  document.getElementById('btn-discard')?.addEventListener('click', async () => {
+  wireOnce(document.getElementById('btn-discard'), (wiredEl) =>
+    wiredEl.addEventListener('click', async () => {
     const checkboxes = document.querySelectorAll('.pending-checkbox:checked') as NodeListOf<HTMLInputElement>;
     const urls = Array.from(checkboxes).map(cb => cb.value);
 
@@ -213,5 +217,5 @@ export function setupEventListeners(): void {
     } catch (error) {
       reportActionFailure('Failed to discard the selected pending pages', error, ErrorCode.STORAGE_WRITE_FAILURE);
     }
-  });
+  }));
 }

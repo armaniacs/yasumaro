@@ -106,6 +106,11 @@ export function buildRecordPayload<Op extends RecordOp>(
 /**
  * transport.send の unknown 応答を RecordingResult に窄める単一ガード。
  * 応答側の `as` はここに集約し、各 call site ではキャストしない。
+ *
+ * Review note (2026-10-06): 意図的な弱ガード — `success: boolean` の有無
+ * しか見ない。欠落 field は下流の `?? ''` / `|| 0` デフォルトに委ねる。
+ * 厳格化（全 field 必須化）は、正規の部分応答まで拒否しうるため採用
+ * しない。malformed 応答の振る舞いは previewFlow.test.ts の契約で pin する。
  */
 function isRecordingResult(value: unknown): value is RecordingResult {
   if (typeof value !== 'object' || value === null) return false;
