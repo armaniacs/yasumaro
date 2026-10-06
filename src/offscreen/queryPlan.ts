@@ -458,6 +458,20 @@ export interface SearchStatements {
 }
 
 /**
+ * Single append point for the tag condition suffix.
+ * Was copy-pasted ` AND ${condition}` in all 3 builders; param spreads were
+ * hand-synced next to it (same shape as the round-12 nested `ids` bind bug).
+ */
+export function appendTag(baseSql: string, tagFilter: TagFilterCondition | null | undefined): string {
+  return tagFilter ? `${baseSql} AND ${tagFilter.condition}` : baseSql;
+}
+
+/** Single append point for tag bind params — always trails `extraParams`. */
+export function withTagParams(baseParams: SqliteValue[], tagFilter: TagFilterCondition | null | undefined): SqliteValue[] {
+  return tagFilter ? [...baseParams, ...tagFilter.params] : baseParams;
+}
+
+/**
  * FTS5 search statements (browsing_logs_fts JOIN browsing_logs AS b).
  * `extra` comes from buildExtraWhereSql; `orderClause` from
  * buildSearchOrderClause({ fts: true }) or QuerySpec.order.
@@ -473,26 +487,26 @@ export function buildFtsSearchStatements(
   // the idb positional reader (row[0]) — one text serves both (PBI-34).
   // rowCodec.test.ts pins this: every COUNT emits `AS c`, every FTS rows
   // query emits `rank AS rank`, so the codec mappers never read bare names.
-  const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
-  const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
   // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (built from
   // the shared condition set) instead of a hardcoded `b.is_deleted = 0` —
   // `excludeDeleted: false` now reaches the FTS path like fallback/InMemory.
   const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
+  const suffix = appendTag(`${deletedCond}${extra.extraWhereSql}`, opts.tagFilter);
+  const baseParams = withTagParams([opts.ftsQuery, ...extra.extraParams], opts.tagFilter);
   const countSql =
     'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql}`;
+    `WHERE browsing_logs_fts MATCH ?${suffix}`;
   const rowsSql =
     'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank ' +
     'FROM browsing_logs_fts ' +
     'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}${tagSql} ` +
+    `WHERE browsing_logs_fts MATCH ?${suffix} ` +
     `ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`;
   return {
     countSql,
     rowsSql,
-    countParams: [opts.ftsQuery, ...extra.extraParams, ...tagParams],
-    rowsParams: [opts.ftsQuery, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],
+    countParams: baseParams,
+    rowsParams: [...baseParams, opts.limit, opts.offset],
   };
 }
 
@@ -512,19 +526,16 @@ export function buildLikeSearchStatements(
   const baseConds = extra.includeDeletedFilter
     ? 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)'
     : '(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const tagSql = opts.tagFilter ? ` AND ${opts.tagFilter.condition}` : '';
-  const tagParams = opts.tagFilter ? opts.tagFilter.params : [];
-  const conditions = extra.extraWhereSql
-    ? `${baseConds}${extra.extraWhereSql}${tagSql}`
-    : `${baseConds}${tagSql}`;
+  const conditions = appendTag(`${baseConds}${extra.extraWhereSql}`, opts.tagFilter);
   const likeParams: SqliteValue[] = [opts.likePattern, opts.likePattern, opts.likePattern, opts.likePattern];
+  const baseParams = withTagParams([...likeParams, ...extra.extraParams], opts.tagFilter);
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
     rowsSql:
       'SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason ' +
       `FROM browsing_logs WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
-    countParams: [...likeParams, ...extra.extraParams, ...tagParams],
-    rowsParams: [...likeParams, ...extra.extraParams, ...tagParams, opts.limit, opts.offset],
+    countParams: baseParams,
+    rowsParams: [...baseParams, opts.limit, opts.offset],
   };
 }
 
@@ -543,10 +554,9 @@ export function buildPlainListStatements(
   opts: { columns: string },
 ): SearchStatements {
   let where = spec.where;
-  const params: SqliteValue[] = [...spec.params];
+  const params: SqliteValue[] = withTagParams([...spec.params], spec.tagFilter);
   if (spec.tagFilter) {
-    where = where ? `${where} AND ${spec.tagFilter.condition}` : `WHERE ${spec.tagFilter.condition}`;
-    params.push(...spec.tagFilter.params);
+    where = where ? appendTag(where, spec.tagFilter) : `WHERE ${spec.tagFilter.condition}`;
   }
   return {
     countSql: `SELECT COUNT(*) AS c FROM browsing_logs ${where}`,
