@@ -492,11 +492,11 @@ describe('SessionStore', () => {
   });
 
   it('handles concurrent flush() calls by awaiting the in-flight flush', async () => {
-    let resolveSet!: () => void;
+    const resolvers: Array<() => void> = [];
     mockSession.set.mockImplementation(
       () =>
         new Promise<void>((resolve) => {
-          resolveSet = resolve;
+          resolvers.push(resolve);
         }),
     );
     store.set('key1', 'value1');
@@ -504,9 +504,16 @@ describe('SessionStore', () => {
     // Trigger a second overlapping flush while the first is still in-flight.
     store.set('key2', 'value2');
     const secondFlush = store.flushNow();
-    resolveSet();
+    expect(mockSession.set).toHaveBeenCalledTimes(1);
+    resolvers[0]!();
+    for (let i = 0; i < 100 && mockSession.set.mock.calls.length < 2; i++) {
+      await Promise.resolve();
+    }
+    expect(mockSession.set).toHaveBeenCalledTimes(2);
+    resolvers[1]!();
     await Promise.all([firstFlush, secondFlush]);
-    expect(mockSession.set).toHaveBeenCalled();
+    const written = mockSession.set.mock.calls.map((call) => call[0] as Record<string, unknown>);
+    expect(written.some((args) => args['key2'] === 'value2')).toBe(true);
   });
 
   it('emergencyFlushToLocal() does nothing when write queue is empty', () => {

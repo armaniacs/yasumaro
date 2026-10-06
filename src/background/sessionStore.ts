@@ -185,6 +185,9 @@ export class SessionStore implements SessionStorePort {
       await this.flushPromise;
       this.removeFromFlushQueue(promise);
       resolve();
+      if (!this.disposed && (this.writeQueue.size > 0 || this.deleteQueue.size > 0)) {
+        await this.flush();
+      }
       return;
     }
 
@@ -193,6 +196,7 @@ export class SessionStore implements SessionStorePort {
     let items = new Map<string, unknown>();
     let keysToDelete = new Set<string>();
     let shouldRetry = false;
+    let quotaExceeded = false;
 
     try {
       if (this.writeQueue.size === 0 && this.deleteQueue.size === 0) {
@@ -257,6 +261,7 @@ export class SessionStore implements SessionStorePort {
     } catch (error) {
       // chrome.storage.session unavailable or quota exceeded
       if (isQuotaError(error)) {
+        quotaExceeded = true;
         // Session storage quota (~1MB) exceeded. Keep data in memory for the
         // current service-worker lifetime, but do not retry the failed flush.
         addLog(LogType.WARN, 'SessionStore: session storage quota exceeded, keeping data in memory', {
@@ -282,7 +287,7 @@ export class SessionStore implements SessionStorePort {
       this.flushPromise = null;
       this.removeFromFlushQueue(promise);
       resolve();
-      if (shouldRetry) {
+      if (shouldRetry || (!quotaExceeded && (this.writeQueue.size > 0 || this.deleteQueue.size > 0))) {
         this.scheduleFlush();
       }
     }
