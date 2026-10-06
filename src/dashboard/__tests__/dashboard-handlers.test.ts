@@ -192,11 +192,17 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   };
 });
 
-vi.mock('../../utils/ui/settingsUiHelper.js', () => ({
+vi.mock('../../utils/ui/settingsUiHelper.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/ui/settingsUiHelper.js')>();
+  return {
+    ...actual,
     loadSettingsToInputs: vi.fn(),
     extractSettingsFromInputs: vi.fn().mockReturnValue({}),
     showStatus: vi.fn(),
-}));
+    // syncStatusToTop stays real (PBI 2026-10-05-17 moved it here):
+    // the AI-ticker tests rely on the one-shot #status -> #statusTop copy.
+  };
+});
 
 vi.mock('../settings/fieldValidation.js', () => ({
     clearAllFieldErrors: vi.fn(),
