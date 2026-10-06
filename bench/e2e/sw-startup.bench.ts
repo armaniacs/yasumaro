@@ -1,9 +1,10 @@
 /**
  * sw-startup.bench.ts
  *
- * MV3 service workers are terminated aggressively. This measures the round-trip
- * latency of a message to the background worker right after forcing it to stop,
- * approximating the cold-start cost that PBI-07 and the crypto path pay.
+ * MV3 service workers are terminated aggressively. Each sample stops every
+ * running service worker via CDP ServiceWorker.stopAllWorkers (Playwright's
+ * Worker API has no stop()), holds until the worker list is empty, then times
+ * the next message round-trip — the cost every first message after a stop pays.
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -21,33 +22,32 @@ test('service worker cold-start round-trip @bench', async ({ context, extensionI
   });
 
   const timings: number[] = [];
-  for (let i = 0; i < ITERATIONS; i++) {
-    // Force the SW to stop, then time the next message round-trip.
-    for (const sw of context.serviceWorkers()) {
-      await context.newCDPSession(page).then((s) =>
-        s.send('Runtime.evaluate', { expression: 'true' }).catch(() => {}),
-      );
-      void sw;
-    }
-    await context.newCDPSession(page).then((s) => s.send('ServiceWorker.enable').catch(() => {}));
+  // One CDP session for the whole run. ServiceWorker.stopAllWorkers requires
+  // the ServiceWorker domain enabled first, and Playwright's Worker API has no
+  // stop() method — CDP is the only way to terminate the worker from here.
+  const cdp = await context.newCDPSession(page);
+  try {
+    await cdp.send('ServiceWorker.enable');
+    for (let i = 0; i < ITERATIONS; i++) {
+      // Stop the worker for real, then time the next message round-trip.
+      // There is no "worker is gone" observable to await here: an MV3 SW
+      // restarts on the next event, so context.serviceWorkers() is 1 again
+      // before any poll could see 0 — the measured PING is itself the wake.
+      await cdp.send('ServiceWorker.stopAllWorkers');
 
-    const rt = await page.evaluate(async () => {
-      const t0 = performance.now();
-      try {
-        await chrome.runtime.sendMessage({ type: 'PING' });
-      } catch {
-        /* PING handler may not exist; the timing still reflects SW wake-up */
-      }
-      return performance.now() - t0;
-    });
-    timings.push(rt);
-    // Cooldown between iterations. The next round-trip is only a cold-start
-    // sample if the worker has been allowed to go idle again, and "idle" has
-    // no observable from the page — the absence of a message is exactly what
-    // cannot be awaited. Shortening or condition-gating it would silently
-    // change what the benchmark reports.
-    // eslint-disable-next-line local/no-fixed-wait -- cooldown with no observable idle state
-    await page.waitForTimeout(500);
+      const rt = await page.evaluate(async () => {
+        const t0 = performance.now();
+        try {
+          await chrome.runtime.sendMessage({ type: 'PING' });
+        } catch {
+          /* PING handler may not exist; the timing still reflects SW wake-up */
+        }
+        return performance.now() - t0;
+      });
+      timings.push(rt);
+    }
+  } finally {
+    await cdp.detach().catch(() => {});
   }
 
   expect(timings.length).toBe(ITERATIONS);
