@@ -15,11 +15,12 @@ import { buildRemovedCounts } from '../utils/commonTypes.js';
 import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { statusChannel } from '../utils/ui/statusChannel.js';
+// Side-effect import: registers the popup-only 'mainStatus' TTL binding
+// owned by statusClasses.ts, so every #mainStatus writer inherits it.
+import './statusClasses.js';
 
-// 2000ms is the popup-only contract: the panel is too small to keep the
-// dashboard's 3s/5s defaults. TTL lives in the channel adapter, not at the
-// call sites.
-statusChannel.register('mainStatus', { defaultTtlMs: 2000 });
+// Popup-only TTL for the cleansing-feedback surface (see statusClasses.ts
+// for the 'mainStatus' binding).
 statusChannel.register('reportCleansingFeedbackStatus', { defaultTtlMs: 2000 });
 import { renderCleansingHtml, renderDomainStateHtml, renderPrivacyHtml, renderCacheHtml, renderLastSavedHtml } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';

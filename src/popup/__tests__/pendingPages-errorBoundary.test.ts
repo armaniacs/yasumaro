@@ -140,7 +140,7 @@ describe('saveSelectedPages — rejected dependency', () => {
 
     const status = document.getElementById('mainStatus')!;
     expect(status.textContent).toContain('storage is locked');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to save the selected pending pages',
       expect.objectContaining({ cause: expect.any(Error) }),
@@ -159,7 +159,7 @@ describe('saveSelectedPages — rejected dependency', () => {
 
     const status = document.getElementById('mainStatus')!;
     expect(status.textContent).toContain('worker is asleep');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
   });
 
   it('shows the failure when the button is clicked, not only on a direct call', async () => {
@@ -171,7 +171,7 @@ describe('saveSelectedPages — rejected dependency', () => {
     await waitForMock(() => {
       expect(document.getElementById('mainStatus')!.textContent).toContain('quota exceeded');
     });
-    expect(document.getElementById('mainStatus')!.className).toBe('error');
+    expect(document.getElementById('mainStatus')!.className).toBe('status-message error');
   });
 });
 
@@ -201,7 +201,7 @@ describe('saveSelectedPages — one malformed URL must not abort the batch', () 
 
     const status = document.getElementById('mainStatus')!;
     expect(status.textContent).toContain('Invalid URL');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to read the hostname of a pending page URL',
       expect.objectContaining({ cause: expect.any(Error) }),
@@ -241,7 +241,7 @@ describe('saveSelectedPages — record result failures (PBI 2026-10-03-01)', () 
 
     const status = document.getElementById('mainStatus')!;
     expect(status.textContent).toContain('obsidian is unreachable');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to record a pending page',
       expect.objectContaining({ cause: expect.any(Error) }),
@@ -300,7 +300,7 @@ describe('saveSelectedPages — record result failures (PBI 2026-10-03-01)', () 
 
     const status = document.getElementById('mainStatus')!;
     expect(status.textContent).toContain('Invalid pattern');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to add a pending page URL to the whitelist',
       expect.objectContaining({ cause: expect.any(Error) }),
@@ -324,7 +324,7 @@ describe('saveSelectedPages — record result failures (PBI 2026-10-03-01)', () 
 
     const status = document.getElementById('mainStatus')!;
     expect(status.textContent).toContain('no-domain');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
   });
 });
 
@@ -367,7 +367,7 @@ describe('btn-discard — rejected dependency', () => {
     await waitForMock(() => {
       expect(document.getElementById('mainStatus')!.textContent).toBe('No items selected.');
     });
-    expect(document.getElementById('mainStatus')!.className).toBe('success');
+    expect(document.getElementById('mainStatus')!.className).toBe('status-message success');
     expect(mockShowConfirmDialog).not.toHaveBeenCalled();
   });
 });

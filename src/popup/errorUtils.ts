@@ -9,7 +9,7 @@
 // table, but it statically imports the provider strategies, so naming a
 // provider from here would pull background wiring into the popup bundle.
 import { tryResolveProviderDisplayMetadata } from '../utils/storage/providerAllowlist.js';
-import { STATUS_CLASS } from './statusClasses.js';
+import { statusChannel } from '../utils/ui/statusChannel.js';
 
 // エラータイプの定義
 /**
@@ -224,27 +224,36 @@ export function getUserErrorMessage(error: unknown): string {
 }
 
 /**
+ * Remove a stale force-record button left by a previous showError. The button
+ * lives on the status element's parent (outside the text surface), so later
+ * reports cannot clear it via textContent — it must be removed explicitly.
+ */
+function clearForceRecordButton(statusElement: HTMLElement): void {
+  statusElement.parentElement?.querySelector?.('.alert-btn')?.remove();
+}
+
+/**
  * エラーをステータス要素に表示
  * @param {HTMLElement} statusElement - ステータス要素
  * @param {unknown} error - エラーオブジェクト
  * @param {Function} onForceRecord - 強制記録コールバック
  */
 export function showError(statusElement: HTMLElement, error: unknown, onForceRecord: (() => void) | null = null): void {
-  // エラークラスを設定
-  statusElement.className = STATUS_CLASS.error;
-
-  // ステータス要素をクリア
-  statusElement.textContent = '';
+  clearForceRecordButton(statusElement);
 
   const type = getErrorType(error);
 
   if (type === ErrorType.DOMAIN_BLOCKED && onForceRecord) {
     // ドメインブロックエラー - 強制記録ボタンを表示
-    statusElement.textContent = ErrorMessages.DOMAIN_BLOCKED;
-    createForceRecordButton(statusElement, onForceRecord);
+    // Body goes through the single statusChannel path; the button is appended
+    // to the parent outside the status element so later reports replace the
+    // text without destroying (or duplicating) the button surface.
+    statusChannel.report(statusElement, ErrorMessages.DOMAIN_BLOCKED, 'error');
+    const host = statusElement.parentElement ?? statusElement;
+    createForceRecordButton(host, onForceRecord);
   } else {
     // その他のエラー - メッセージを表示
-    statusElement.textContent = getUserErrorMessage(error);
+    statusChannel.report(statusElement, getUserErrorMessage(error), 'error');
   }
 }
 
@@ -254,8 +263,8 @@ export function showError(statusElement: HTMLElement, error: unknown, onForceRec
  * @param {string} message - 成功メッセージ（オプション）
  */
 export function showSuccess(statusElement: HTMLElement, message: string = ErrorMessages.SUCCESS): void {
-  statusElement.textContent = message;
-  statusElement.className = STATUS_CLASS.success;
+  clearForceRecordButton(statusElement);
+  statusChannel.report(statusElement, message, 'success');
 }
 
 /**

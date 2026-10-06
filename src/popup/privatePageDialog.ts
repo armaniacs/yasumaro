@@ -9,7 +9,6 @@ import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { getUserErrorMessage } from './errorUtils.js';
-import { STATUS_CLASS } from './statusClasses.js';
 
 export let currentPendingSave: PendingSave | null = null;
 
@@ -105,14 +104,12 @@ async function recordPendingSave(force: boolean): Promise<void> {
   const statusDiv = document.getElementById('mainStatus');
   if (result.success) {
     if (statusDiv) {
-      statusDiv.textContent = getMessage('saveSuccess');
-      statusDiv.className = STATUS_CLASS.success;
+      statusChannel.report(statusDiv, getMessage('saveSuccess'), 'success');
     }
     startAutoCloseTimer();
   } else {
     if (statusDiv) {
-      statusDiv.textContent = `${getMessage('saveError')}: ${result.error || 'Unknown error'}`;
-      statusDiv.className = STATUS_CLASS.error;
+      statusChannel.report(statusDiv, `${getMessage('saveError')}: ${result.error || 'Unknown error'}`, 'error');
     }
   }
 

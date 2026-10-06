@@ -197,7 +197,7 @@ describe('showError', () => {
     const error = new Error('Some error');
     showError(statusElement, error);
 
-    expect(statusElement.className).toBe('error');
+    expect(statusElement.className).toBe('status-message error');
     expect(statusElement.textContent).toContain('Error:');
   });
 
@@ -237,14 +237,14 @@ describe('showSuccess', () => {
   test('renders the default success message', () => {
     showSuccess(statusElement);
 
-    expect(statusElement.className).toBe('success');
+    expect(statusElement.className).toBe('status-message success');
     expect(statusElement.textContent).toBe(MOCK_SUCCESS);
   });
 
   test('renders a custom message', () => {
     showSuccess(statusElement, 'Custom success message');
 
-    expect(statusElement.className).toBe('success');
+    expect(statusElement.className).toBe('status-message success');
     expect(statusElement.textContent).toBe('Custom success message');
   });
 });

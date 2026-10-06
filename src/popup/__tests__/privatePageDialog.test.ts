@@ -454,7 +454,7 @@ describe('privatePageDialog', () => {
       await vi.waitFor(() => {
         expect(statusDiv!.textContent).toBe('Saved to Obsidian');
       });
-      expect(statusDiv!.className).toBe('success');
+      expect(statusDiv!.className).toBe('status-message success');
       expect(mod.currentPendingSave).toBeNull();
     });
 
@@ -473,7 +473,7 @@ describe('privatePageDialog', () => {
         const statusDiv = document.getElementById('mainStatus');
         expect(statusDiv!.textContent).toContain('Save error');
         expect(statusDiv!.textContent).toContain('Connection failed');
-        expect(statusDiv!.className).toBe('error');
+        expect(statusDiv!.className).toBe('status-message error');
       });
 
       expect(mod.currentPendingSave).toBeNull();
@@ -496,7 +496,7 @@ describe('privatePageDialog', () => {
         const statusDiv = document.getElementById('mainStatus');
         expect(statusDiv!.textContent).toContain('Save error');
         expect(statusDiv!.textContent).toContain('Extension context invalidated');
-        expect(statusDiv!.className).toBe('error');
+        expect(statusDiv!.className).toBe('status-message error');
       });
 
       expect(mod.currentPendingSave).toBeNull();
