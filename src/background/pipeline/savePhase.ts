@@ -20,7 +20,7 @@ import {
   type RecordingContext,
   type StepDeps,
 } from './types.js';
-import { decideStepOutcome, type OutcomeAdapters, type StepOutcome } from './recordingOutcome.js';
+import { handleStepFailure, type OutcomeAdapters } from './recordingOutcome.js';
 import type { StepExecutor } from './stepExecutor.js';
 import type { RecordingResult } from '../../messaging/types.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
@@ -194,16 +194,10 @@ export async function save(
       // BEST_EFFORT continuation mirrors the orchestrator loop: the outcome
       // policy owns the taxonomy, the seam only records and continues — or
       // terminates when the policy says so (e.g. RegenerateUpdateError).
-      const outcome: StepOutcome = decideStepOutcome(error, step, ctx, env.outcomeAdapters);
-      if (outcome.done) {
-        return { terminated: true, context: ctx, outcomes, result: outcome.result };
+      const failure = handleStepFailure(error, step, ctx, env.outcomeAdapters);
+      if (failure.done) {
+        return { terminated: true, context: ctx, outcomes, result: failure.result };
       }
-      ctx.errors.push(outcome.pipelineError);
-      addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, {
-        error: (error as Error).message,
-        url: ctx.data.url,
-        traceId: ctx.traceId,
-      });
       outcomes.push({ name: sink.name, status: 'continued' });
     }
   }

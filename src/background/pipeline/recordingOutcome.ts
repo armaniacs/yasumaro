@@ -171,6 +171,34 @@ export function decideStepOutcome(
   return { done: false, pipelineError };
 }
 
+export type StepFailureDisposition =
+  | { done: true; result: RecordingResult }
+  | { done: false };
+
+/**
+ * Shared catch-continuation for the pre-save and save loops: resolves the
+ * outcome, records BEST_EFFORT errors and emits the WARN in one place.
+ * Terminal mapping stays with callers (orchestrator returns the result,
+ * SavePhase returns a receipt); `outcomes.push` and the sqlite-absent skip
+ * stay with callers too. Log wording/order matches the former inline blocks.
+ */
+export function handleStepFailure(
+  thrown: unknown,
+  step: OutcomeStep,
+  context: RecordingContext,
+  adapters: OutcomeAdapters = defaultOutcomeAdapters,
+): StepFailureDisposition {
+  const outcome = decideStepOutcome(thrown, step, context, adapters);
+  if (outcome.done) return outcome;
+  context.errors.push(outcome.pipelineError);
+  addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, {
+    error: (thrown as Error).message,
+    url: context.data.url,
+    traceId: context.traceId,
+  });
+  return { done: false };
+}
+
 /**
  * Build the success result and perform success-path side effects:
  * non-fatal error summary log, obsidian_sync recovery registration, and the

@@ -10,11 +10,9 @@
  * kernel to reappear in every caller. Deleting a shallow factory only moves one line.
  */
 
-import { LogType } from '../../utils/logger/types.js';
-import { addLog } from '../../utils/logger/core.js';
 import { generateId } from '../../utils/generateId.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
-import { decideStepOutcome, defaultOutcomeAdapters, finalizeSuccess, type OutcomeAdapters } from './recordingOutcome.js';
+import { defaultOutcomeAdapters, finalizeSuccess, handleStepFailure, type OutcomeAdapters } from './recordingOutcome.js';
 import { toExternalResult } from './piiBoundary.js';
 import { createRetryContext, createStepDeps } from './contextBuilder.js';
 import {
@@ -194,10 +192,8 @@ export class RecordingOrchestrator {
       } catch (error) {
         // Outcome policy owns the error taxonomy + pending + notice.
         // BEST_EFFORT returns { done: false } so the loop continues.
-        const outcome = decideStepOutcome(error, step, context, this.outcomeAdapters);
-        if (outcome.done) return outcome.result;
-        context.errors.push(outcome.pipelineError);
-        addLog(LogType.WARN, `Pipeline step ${step.name} failed with ${step.errorStrategy} strategy`, { error: (error as Error).message, url: data.url, traceId: context.traceId });
+        const failure = handleStepFailure(error, step, context, this.outcomeAdapters);
+        if (failure.done) return failure.result;
       }
     }
 
