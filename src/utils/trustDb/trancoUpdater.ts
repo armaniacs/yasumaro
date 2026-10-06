@@ -14,6 +14,7 @@ import { errorMessage } from '../errorUtils.js';
 import { fetchWithTimeout } from '../fetch.js';
 import { readBodyCapped } from '../readBodyCapped.js';
 import { backoffDelayMs } from '../backoff.js';
+import { waitForRetry, type SleepFn } from '../retryPredicate.js';
 
 // ===== 定数 =====
 
@@ -29,13 +30,23 @@ const TRANCO_FETCH_TIMEOUT = 60000; // 60秒
 
 // ===== Tranco Updater クラス =====
 
+export interface TrancoUpdaterOptions {
+  /** Retry wait between attempts. Defaults to setTimeout-backed wait. */
+  sleep?: SleepFn;
+}
+
 export class TrancoUpdater {
   private updateInProgress = false;
+  private readonly sleep: SleepFn;
+
+  constructor(opts?: TrancoUpdaterOptions) {
+    this.sleep = opts?.sleep ?? waitForRetry;
+  }
 
   /**
    * Tranco List を更新
    */
-  async updateTrancoList(tier: TrancoTier): Promise<TrancoUpdateResult> {
+  async updateTrancoList(tier: TrancoTier, opts?: { sleep?: SleepFn }): Promise<TrancoUpdateResult> {
     if (this.updateInProgress) {
       logWarn('Update already in progress', {}, undefined, 'TrancoUpdater');
       return {
@@ -48,6 +59,7 @@ export class TrancoUpdater {
 
     this.updateInProgress = true;
     const startTime = performance.now();
+    const sleep = opts?.sleep ?? this.sleep;
 
     // 指数バックオフでリトライ（最大3回）
     const maxRetries = 3;
@@ -92,7 +104,7 @@ export class TrancoUpdater {
 
         // 指数バックオフで待機（1秒 → 2秒 → 4秒）
         const delay = backoffDelayMs(attempt - 1, { baseMs: baseDelay });
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await sleep(delay);
       }
     }
 

@@ -10,6 +10,7 @@ import { TrustBloomFilter, bloomFilterFromData } from './bloomFilter.js';
 import { ErrorCode } from '../logger/types.js';
 import { logDebug, logInfo, logWarn, logError } from '../logger/api.js';
 import { backoffDelayMs } from '../backoff.js';
+import { waitForRetry, type SleepFn } from '../retryPredicate.js';
 import { withOptimisticLock } from '../storage/storageTransaction.js';
 import { mergeTrustDatabase } from './mergeTrustDatabase.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
@@ -30,6 +31,8 @@ export interface TrustDbKernelOptions {
     getAll(): Promise<Record<string, unknown>>;
     setAll(items: Record<string, unknown>): Promise<void>;
   };
+  /** Retry wait between init attempts. Defaults to setTimeout-backed wait. */
+  sleep?: SleepFn;
 }
 
 interface TrustDbState {
@@ -54,6 +57,7 @@ export class TrustDbKernel {
     getAll(): Promise<Record<string, unknown>>;
     setAll(items: Record<string, unknown>): Promise<void>;
   };
+  private readonly sleep: SleepFn;
 
   constructor(opts?: TrustDbKernelOptions) {
     const defaultReader = {
@@ -71,6 +75,7 @@ export class TrustDbKernel {
       },
     };
     this.settingsReader = opts?.settingsReader ?? defaultReader;
+    this.sleep = opts?.sleep ?? waitForRetry;
     this.policy = new TrustPolicy({ save: () => this.save() });
     this.trustDbVersion = new TrustDbVersion({ save: () => this.save() });
   }
@@ -81,7 +86,7 @@ export class TrustDbKernel {
   }
 
   // ---- Lifecycle ----
-  async initialize(): Promise<void> {
+  async initialize(opts?: { sleep?: SleepFn }): Promise<void> {
     if (this.state.initialized) {
       logDebug('TrustDb', {}, 'Already initialized');
       return;
@@ -89,7 +94,7 @@ export class TrustDbKernel {
     if (TrustDbKernel.initPromise) {
       return TrustDbKernel.initPromise;
     }
-    TrustDbKernel.initPromise = this.doInitializeWithRetry(3);
+    TrustDbKernel.initPromise = this.doInitializeWithRetry(3, opts?.sleep ?? this.sleep);
     try {
       await TrustDbKernel.initPromise;
     } finally {
@@ -97,7 +102,7 @@ export class TrustDbKernel {
     }
   }
 
-  private async doInitializeWithRetry(maxRetries: number): Promise<void> {
+  private async doInitializeWithRetry(maxRetries: number, sleep: SleepFn = this.sleep): Promise<void> {
     let lastError: Error | null = null;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
@@ -108,7 +113,7 @@ export class TrustDbKernel {
         logWarn('TrustDb initialization failed, retrying', { attempt: attempt + 1, maxRetries, error: lastError?.message });
         if (attempt < maxRetries - 1) {
           const delay = backoffDelayMs(attempt, { baseMs: 100 });
-          await new Promise((resolve) => setTimeout(resolve, delay));
+          await sleep(delay);
         }
       }
     }
