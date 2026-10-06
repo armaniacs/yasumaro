@@ -115,4 +115,52 @@ describe('dashboardGateway transport wiring (PBI 10)', () => {
       confirmToken: 'tok-injected',
     });
   });
+
+  it('clears the timeout timer when the send wins (no 10s residual)', async () => {
+    useTimerClock();
+    setDashboardTransportForTesting({
+      send: async () => ({ success: true, rows: [] as never[] }),
+    });
+    const result = await dashboardGateway.callDashboard(
+      { subtype: 'search', query: 'hi' } as never,
+      (r) => r as never,
+      'fallback',
+    );
+    expect(result.success).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('owns the late send rejection when the timeout wins (no unhandled rejection)', async () => {
+    useTimerClock();
+    let rejectSend!: (reason: Error) => void;
+    setDashboardTransportForTesting({
+      send: () =>
+        new Promise<unknown>((_, reject) => {
+          rejectSend = reject as (reason: Error) => void;
+        }),
+    });
+    const unhandled: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      const promise = dashboardGateway.callDashboard(
+        { subtype: 'search', query: 'hi' } as never,
+        (r) => r as never,
+        'fallback',
+      );
+      await vi.advanceTimersByTimeAsync(10000);
+      const result = await promise;
+      expect(result.success).toBe(false);
+      if (!result.success) expect(result.error.message).toContain('timed out');
+
+      rejectSend(new Error('late send failure'));
+      await vi.advanceTimersByTimeAsync(0);
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(unhandled.filter((e) => String((e as Error)?.message ?? e).includes('late send failure'))).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
 });

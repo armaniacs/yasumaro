@@ -8,6 +8,7 @@ import { logError, logWarn } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import { categorizeError } from './sqliteRpcClient.js';
+import { withRuntimeTimeout } from './withRuntimeTimeout.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
 import { MessageTransport, type TransportPort } from './messageTransport.js';
@@ -60,13 +61,15 @@ async function getDashboardConfirmToken(action: string, id?: number, scopeHash?:
 async function sendDashboardRaw<T extends DashboardSqliteRequest>(payload: T): Promise<DashboardSqliteResponseFor<T['subtype']>> {
   // retries: 0 keeps the attempt count identical: callDashboard owns retrying,
   // so the transport retry policy must not add a second layer. The contract
-  // send still stamps protocolVersion and validates the type.
-  return Promise.race([
+  // send still stamps protocolVersion and validates the type. The timeout
+  // race owns timer cleanup and late-rejection handling via withRuntimeTimeout.
+  return withRuntimeTimeout(
     dashboardTransport.send({ type: 'DASHBOARD_SQLITE', payload }, { retries: 0 }) as Promise<
       DashboardSqliteResponseFor<T['subtype']>
     >,
-    new Promise<never>((_, reject) => { setTimeout(() => reject(new Error('Dashboard SQLite request timed out')), DASHBOARD_SQLITE_TIMEOUT); }),
-  ]);
+    DASHBOARD_SQLITE_TIMEOUT,
+    new Error('Dashboard SQLite request timed out'),
+  );
 }
 
 /**
