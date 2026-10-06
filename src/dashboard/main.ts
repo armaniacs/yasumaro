@@ -12,10 +12,15 @@ const bootstrapper = new DashboardBootstrapper(registry);
 // registerCatalog (PBI 2026-09-07-25). No hand-written panel list here.
 bootstrapper.registerCatalog(createPanelById);
 
-const sidebar = document.getElementById('sidebar');
-if (sidebar) {
-  bootstrapper.wireSidebar(sidebar);
+// Sidebar wiring resolves the DOM at call time, never at module scope, so
+// this entry module holds no cached element binding (dashboard DOM convention).
+function wireSidebar(): void {
+  const sidebarEl = document.getElementById('sidebar');
+  if (sidebarEl) {
+    bootstrapper.wireSidebar(sidebarEl);
+  }
 }
+wireSidebar();
 
 // Page-level wiring (export buttons, "Report a Bug" entry points) targets
 // only static HTML, so it must not wait on navigation: a hung panel mount
