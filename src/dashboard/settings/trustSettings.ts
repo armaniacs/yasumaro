@@ -25,6 +25,15 @@ import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 export type TrustCategory = 'finance' | 'gaming' | 'sns';
 
+/** Boundary guard for `dataset.category` / select values: unknown strings fall back to caller default. */
+export function isTrustCategory(value: unknown): value is TrustCategory {
+    return value === 'finance' || value === 'gaming' || value === 'sns';
+}
+
+function asTrustCategory(value: unknown, fallback: TrustCategory = 'finance'): TrustCategory {
+    return isTrustCategory(value) ? value : fallback;
+}
+
 export interface TrustPermissionSuggestEntry {
     domain: string;
     count: number;
@@ -529,17 +538,16 @@ export function createTrustSettings(): TrustSettingsController {
         // Category tabs
         categoryTabs?.forEach(tab => {
             listen(tab, 'click', () => {
-                const category = tab.dataset.category as TrustCategory;
-                if (category) {
-                    switchCategory(category);
-                }
+                const raw = tab.dataset.category;
+                if (!isTrustCategory(raw)) return;
+                switchCategory(raw);
             });
         });
 
         // Sensitive Domain Add button
         listen(sensitiveAddBtn, 'click', () => {
             if (sensitiveAddInput && sensitiveCategorySelect) {
-                void addSensitiveDomain(sensitiveAddInput.value.trim(), sensitiveCategorySelect.value as TrustCategory);
+                void addSensitiveDomain(sensitiveAddInput.value.trim(), asTrustCategory(sensitiveCategorySelect.value));
             }
         });
 
@@ -549,7 +557,7 @@ export function createTrustSettings(): TrustSettingsController {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     if (sensitiveCategorySelect) {
-                        void addSensitiveDomain(sensitiveAddInput.value.trim(), sensitiveCategorySelect.value as TrustCategory);
+                        void addSensitiveDomain(sensitiveAddInput.value.trim(), asTrustCategory(sensitiveCategorySelect.value));
                     }
                 }
             }) as EventListener);
@@ -581,7 +589,7 @@ export function createTrustSettings(): TrustSettingsController {
         if (thresholdInput) {
             listen(thresholdInput, 'change', (async (e: Event) => {
                 const newValue = parseInt((e.target as HTMLInputElement).value, 10);
-                if (newValue >= 1 && newValue <= 50) {
+                if (!Number.isNaN(newValue) && newValue >= 1 && newValue <= 50) {
                     // PBI 27-04: canonical writer is SettingsRepository (delta write
                     // into the nested settings blob). The old raw top-level single-key
                     // write is removed — it forked from the blob the migration owns.
@@ -617,7 +625,8 @@ export function createTrustSettings(): TrustSettingsController {
             return [];
         }
 
-        const threshold = thresholdInput ? parseInt(thresholdInput.value, 10) : 3;
+        const rawThreshold = thresholdInput ? parseInt(thresholdInput.value, 10) : 3;
+        const threshold = Number.isNaN(rawThreshold) ? 3 : rawThreshold;
         const { getFrequentDeniedDomains, requestPermission, removeDeniedDomain, recordDomainDismissal, isHostPermitted } =
             await import('../../utils/permissionManager.js');
 

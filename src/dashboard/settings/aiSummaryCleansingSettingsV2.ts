@@ -43,6 +43,24 @@ function ruleOptionKey(rule: CleansingRule): string {
     return `${rule.key}Enabled`;
 }
 
+/**
+ * Boundary guard for rule flag reads. Non-boolean storage/UI values
+ * collapse to `false` instead of propagating. Normal booleans unchanged.
+ */
+export function getRuleFlag(settings: Record<string, unknown>, key: string): boolean {
+    const value = settings[key];
+    return typeof value === 'boolean' ? value : false;
+}
+
+/**
+ * `parseInt` with NaN fallback. Invalid input yields `fallback`
+ * instead of NaN propagating into settings/storage.
+ */
+export function parseIntOr(value: string | null | undefined, fallback: number): number {
+    const parsed = parseInt(value ?? '', 10);
+    return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 // ---------------------------------------------------------------------------
 // Preset handling — 32トグルの view として機能、保存形式は壊さない。
 // 順序制約（epoch・二重書き込み・busy 窓）は cleansingPresetStore.ts が所有。
@@ -119,7 +137,9 @@ export async function getAiSummaryCleansingSettings(): Promise<AiSummaryCleansin
     const ruleFlags: Record<string, boolean> = Object.fromEntries(
         CLEANSING_RULES.map(rule => [
             ruleOptionKey(rule),
-            ((settings as Record<string, unknown>)[rule.storageKey] as boolean | undefined) ?? rule.defaultEnabled,
+            typeof (settings as Record<string, unknown>)[rule.storageKey] === 'boolean'
+                ? (settings as Record<string, unknown>)[rule.storageKey] as boolean
+                : rule.defaultEnabled,
         ]),
     );
 
@@ -160,8 +180,7 @@ export async function saveAiSummaryCleansingSettings(settings: AiSummaryCleansin
     // WHY: dynamic property access on settings object; rule keys are generated at runtime
     const ruleValues: Record<string, unknown> = settings;
     for (const rule of CLEANSING_RULES) {
-        const value = ruleValues[ruleOptionKey(rule)];
-        delta[rule.storageKey] = typeof value === 'boolean' ? value : false;
+        delta[rule.storageKey] = getRuleFlag(ruleValues, ruleOptionKey(rule));
     }
     delta[StorageKeys.AI_SUMMARY_CLEANSING_LINK_RATIO_THRESHOLD] = settings.linkRatioThreshold;
     delta[StorageKeys.AI_SUMMARY_CLEANSING_SHORT_TEXT_THRESHOLD] = settings.shortTextThreshold;
@@ -211,8 +230,7 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const ruleValues: Record<string, unknown> = settings;
     for (const rule of CLEANSING_RULES) {
         const checkbox = document.getElementById(ruleHtmlId(rule)) as HTMLInputElement | null;
-        const value = ruleValues[ruleOptionKey(rule)];
-        if (checkbox) checkbox.checked = typeof value === 'boolean' ? value : false;
+        if (checkbox) checkbox.checked = getRuleFlag(ruleValues, ruleOptionKey(rule));
     }
     if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.checked = settings.whitelistExtractionEnabled;
     // Body protection (dashboard)
@@ -310,17 +328,17 @@ export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSetting
     return {
         enabled: enabledCheckbox?.checked ?? true,
         ...ruleFlags,
-        linkRatioThreshold: parseInt((document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement)?.value || '70', 10),
-        shortTextThreshold: parseInt((document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement)?.value || '30', 10),
-        shortSeqCount: parseInt((document.getElementById('ai-summary-cleansing-short-seq-count') as HTMLInputElement)?.value || '5', 10),
-        linkParaThreshold: parseInt((document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement)?.value || '50', 10),
+        linkRatioThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement)?.value, 70),
+        shortTextThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement)?.value, 30),
+        shortSeqCount: parseIntOr((document.getElementById('ai-summary-cleansing-short-seq-count') as HTMLInputElement)?.value, 5),
+        linkParaThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement)?.value, 50),
         whitelistExtractionEnabled: (document.getElementById('whitelist-extraction-enabled') as HTMLInputElement)?.checked ?? true,
         bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
-        bodyProtectionThreshold: parseInt((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value || '200', 10),
-        fallbackRatio: parseInt((document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement)?.value || '20', 10) / 100,
-        fallbackMinBytes: parseInt((document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement)?.value || '300', 10),
+        bodyProtectionThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value, 200),
+        fallbackRatio: parseIntOr((document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement)?.value, 20) / 100,
+        fallbackMinBytes: parseIntOr((document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement)?.value, 300),
         // PBI 05 overcut guards
-        fallbackMinChars: parseInt((document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement)?.value || '100', 10),
+        fallbackMinChars: parseIntOr((document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement)?.value, 100),
         candidateGuardEnabled: (document.getElementById('extraction-guard-candidate-enabled') as HTMLInputElement)?.checked ?? true,
         cleanseGuardEnabled: (document.getElementById('extraction-guard-content-cleanse-enabled') as HTMLInputElement)?.checked ?? true
     } as AiSummaryCleansingSettings;
@@ -501,7 +519,9 @@ export function setupAiSummaryCleansingEventListeners(): void {
                 });
             }
             input.addEventListener('change', async () => {
-                const delta: Record<string, unknown> = { [conf.storageKey]: parseInt(input.value, 10) / (conf.divisor ?? 1) };
+                const parsed = parseInt(input.value, 10);
+                if (Number.isNaN(parsed)) return;
+                const delta: Record<string, unknown> = { [conf.storageKey]: parsed / (conf.divisor ?? 1) };
                 await settingsRepository.setAll(delta);
             });
         }

@@ -667,6 +667,7 @@ export function wireEntryList(
 
   region.querySelectorAll('[data-action="select"]').forEach((el) => {
     const id = Number((el as HTMLElement).getAttribute('data-id'));
+    if (!Number.isInteger(id)) return;
     el.addEventListener('change', () => {
       const checkbox = el as HTMLInputElement;
       callbacks.onSelectionChange(id, checkbox.checked);
@@ -674,16 +675,18 @@ export function wireEntryList(
   });
   region.querySelectorAll('[data-action="star"]').forEach((el) => {
     const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
-    if (entryId) el.addEventListener('click', () => callbacks.onToggleStar(entryId));
+    if (!Number.isInteger(entryId)) return;
+    el.addEventListener('click', () => callbacks.onToggleStar(entryId));
   });
   region.querySelectorAll('[data-action="delete"]').forEach((el) => {
     const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
-    if (entryId) el.addEventListener('click', () => callbacks.onDelete(entryId));
+    if (!Number.isInteger(entryId)) return;
+    el.addEventListener('click', () => callbacks.onDelete(entryId));
   });
   region.querySelectorAll('[data-action="regenerate"]').forEach((el) => {
     const entryEl = (el as HTMLElement).closest('.sqlite-entry');
     const entryId = Number(entryEl?.getAttribute('data-id'));
-    if (!entryId) return;
+    if (!Number.isInteger(entryId)) return;
     el.addEventListener('click', () => {
       const select = entryEl?.querySelector('.regenerate-mode-select') as HTMLSelectElement | null;
       const raw = select?.value ?? 'current';
@@ -770,14 +773,17 @@ export function wireCalendarNav(
 
   region.querySelectorAll('[data-date]').forEach(el => {
     el.addEventListener('click', () => {
-      const date = (el as HTMLElement).dataset.date!;
+      const date = (el as HTMLElement).dataset.date;
+      if (!date) return;
       const range = (el as HTMLElement).dataset.range;
       if (range) {
+        const rangeDays = Number(range);
+        if (!Number.isInteger(rangeDays)) return;
         const dayStart = parseLocalDateStart(date);
         // WHY the end is a local end-of-day: the quick buttons mean "the last
         // N days up to and including the clicked day", and on a DST
         // transition that day is not 86_400_000 ms long.
-        const since = dayStart - (Number(range) * 86_400_000);
+        const since = dayStart - (rangeDays * 86_400_000);
         callbacks.onRangeSelect(since, endOfLocalDayMs(dayStart));
       } else {
         callbacks.onDateSelect(date);
@@ -807,7 +813,9 @@ export function wireCalendarNav(
 
   daysEl.querySelectorAll('.day:not(.empty)').forEach(el => {
     el.addEventListener('click', () => {
-      callbacks.onDateSelect((el as HTMLElement).dataset.date!);
+      const date = (el as HTMLElement).dataset.date;
+      if (!date) return;
+      callbacks.onDateSelect(date);
     });
   });
 }

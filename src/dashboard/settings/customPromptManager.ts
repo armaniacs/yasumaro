@@ -42,6 +42,23 @@ const PROMPT_ID = {
     PRESET_PREFIX: '__preset__'
 } as const;
 
+/**
+ * Boundary guard for CUSTOM_PROMPTS reads. Unvalidated casts
+ * (`as CustomPrompt[]`) let non-array storage values through as `undefined`;
+ * this collapses them to `[]` instead. Normal arrays pass through unchanged.
+ */
+export function asCustomPrompts(value: unknown): CustomPrompt[] {
+    return Array.isArray(value) ? (value as CustomPrompt[]) : [];
+}
+
+/** Boundary guard for the provider select: unknown option values fall back to 'all'. */
+export function asPromptProvider(value: unknown): CustomPrompt['provider'] {
+    return value === 'gemini' || value === 'openai' || value === 'openai2'
+        || value === 'lm-studio' || value === 'ollama' || value === 'all'
+        ? value
+        : 'all';
+}
+
 interface CustomPromptDom {
     promptList: HTMLElement | null;
     noPromptsMessage: HTMLElement | null;
@@ -96,7 +113,7 @@ export function createCustomPromptManager(): CustomPromptManager {
     function isDefaultActive(): boolean {
         if (!currentSettings) return true;
 
-        const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+        const prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
         return prompts.every(p => !p.isActive);
     }
 
@@ -107,7 +124,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         const { promptList, noPromptsMessage } = dom ?? {};
         if (!promptList || !noPromptsMessage || !currentSettings) return;
 
-        const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+        const prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
         const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
 
         // Always hide "no prompts" message since default is always shown
@@ -281,7 +298,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         if (!promptNameInput || !promptProviderSelect || !promptTextInput || !currentSettings) return;
 
         const name = promptNameInput.value.trim();
-        const provider = promptProviderSelect.value as CustomPrompt['provider'];
+        const provider = asPromptProvider(promptProviderSelect.value);
         const systemPrompt = promptSystemInput?.value.trim() || undefined;
         const promptText = promptTextInput.value.trim();
         const editingId = editingPromptIdInput?.value || '';
@@ -299,7 +316,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         }
 
         // Get current prompts
-        let prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+        let prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
 
         if (editingId) {
             // Update existing prompt
@@ -349,7 +366,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         const { promptNameInput, promptProviderSelect, promptSystemInput, promptTextInput, editingPromptIdInput } = dom ?? {};
         if (!currentSettings || !promptNameInput || !promptProviderSelect || !promptTextInput) return;
 
-        const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+        const prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
         const prompt = prompts.find(p => p.id === promptId);
 
         if (!prompt) return;
@@ -396,7 +413,7 @@ export function createCustomPromptManager(): CustomPromptManager {
             return;
         }
 
-        let prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+        let prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
         prompts = deletePrompt(prompts, promptId);
 
         // Save to settings — delta write (PBI 2026-09-17-17)
@@ -415,7 +432,7 @@ export function createCustomPromptManager(): CustomPromptManager {
     async function handleActivatePrompt(promptId: string, provider: string): Promise<void> {
         if (!currentSettings) return;
 
-        let prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+        let prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
 
         if (promptId === PROMPT_ID.DEFAULT) {
             // Deactivate all custom prompts to activate default
@@ -508,7 +525,7 @@ export function createCustomPromptManager(): CustomPromptManager {
             promptText = preset.userPrompt;
         } else {
             // Duplicate custom prompt
-            const prompts = (currentSettings[StorageKeys.CUSTOM_PROMPTS] as CustomPrompt[]) || [];
+            const prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
             const prompt = prompts.find(p => p.id === promptId);
 
             if (!prompt) {

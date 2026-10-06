@@ -552,11 +552,12 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     const init = pendingInit;
     pendingInit = null;
     if (!init) return null;
-    if (init.searchTag) {
-      return { ...pickDefined({ tagFilter: (init.searchTag as string) || undefined }), tagInitiated: true, limit: PAGE_SIZE };
+    if (typeof init.searchTag === 'string') {
+      const tag = init.searchTag;
+      return { ...pickDefined({ tagFilter: tag || undefined }), tagInitiated: true, limit: PAGE_SIZE };
     }
-    if (init.searchDomain) {
-      const q = (init.searchDomain as string).trim();
+    if (typeof init.searchDomain === 'string') {
+      const q = init.searchDomain.trim();
       if (q) return { search: q, limit: PAGE_SIZE };
     }
     return null;
