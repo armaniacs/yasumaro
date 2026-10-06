@@ -1,21 +1,9 @@
 import { test as base, expect, Page } from '@playwright/test';
-import type { ChromiumBrowserContext } from 'playwright';
 import { join } from 'path';
-import { dismissConsentModal } from './consentModal.js';
-import {
-  EXTENSION_PATH,
-  launchExtensionContext,
-  resolveExtensionId,
-  HEADLESS_FIXME_MESSAGE,
-} from './launchExtensionContext.js';
+import { EXTENSION_PATH } from './launchExtensionContext.js';
+import { createPopupFixture } from './popup-shared.fixture.js';
 
 const POPUP_PATH = join(EXTENSION_PATH, 'popup.html');
-
-type PopupFixtures = {
-  context: ChromiumBrowserContext;
-  extensionId: string;
-  popupPage: Page;
-};
 
 type StaticPopupFixtures = {
   popupPage: Page;
@@ -28,78 +16,24 @@ export const test = base.extend<StaticPopupFixtures>({
   },
 });
 
-const testExt = base.extend<PopupFixtures>({
-  context: async ({}, use) => {
-    const context = await launchExtensionContext({
-      seedPolicy: { consent: true, settingsMigrated: true },
-    });
-    if (!context) {
-      test.fixme(true, HEADLESS_FIXME_MESSAGE);
-      return;
+function popupInteractionInit(): void {
+  // Prevent popup from closing
+  window.close = () => {};
+
+  // Intercept chrome.tabs.create to prevent actually opening a new tab in tests.
+  // The popup now opens the dashboard (options.html) instead of showing an inline
+  // settings screen, so we just return a resolved promise/callback.
+  chrome.tabs.create = (_createProperties: any, callback?: (tab: chrome.tabs.Tab) => void) => {
+    if (callback) {
+      callback({ id: 999, index: 0, highlighted: false, active: false, pinned: false, incognito: false } as chrome.tabs.Tab);
     }
-    await use(context as ChromiumBrowserContext);
-    await context.close();
-  },
+    return Promise.resolve({ id: 999, index: 0, highlighted: false, active: false, pinned: false, incognito: false } as chrome.tabs.Tab);
+  };
+}
 
-  extensionId: async ({ context }, use) => {
-    if (!context) return;
-    await use(await resolveExtensionId(context));
-  },
-
-  popupPage: async ({ context, extensionId }, use) => {
-    // Use existing page or create new one
-    const pages = context.pages();
-    const page: Page = pages[0] ?? (await context.newPage());
-
-    // Capture console logs for debugging
-    page.on('console', msg => {
-      console.log(`[Popup Console] ${msg.type()}: ${msg.text()}`);
-    });
-
-    // Mock chrome APIs on every page load to prevent popup from closing
-    // This must be done with addInitScript to survive page.reload()
-    await page.addInitScript(() => {
-      // Prevent popup from closing
-      window.close = () => {};
-
-      // Intercept chrome.tabs.create to prevent actually opening a new tab in tests.
-      // The popup now opens the dashboard (options.html) instead of showing an inline
-      // settings screen, so we just return a resolved promise/callback.
-      chrome.tabs.create = (_createProperties: any, callback?: (tab: chrome.tabs.Tab) => void) => {
-        if (callback) {
-          callback({ id: 999, index: 0, highlighted: false, active: false, pinned: false, incognito: false } as chrome.tabs.Tab);
-        }
-        return Promise.resolve({ id: 999, index: 0, highlighted: false, active: false, pinned: false, incognito: false } as chrome.tabs.Tab);
-      };
-
-      // Mock chrome.runtime.sendMessage to handle connection test
-      const originalSendMessage = chrome.runtime.sendMessage as (
-        ...args: unknown[]
-      ) => unknown;
-      (chrome.runtime as { sendMessage: unknown }).sendMessage = (
-        message: any,
-        callback?: (response: any) => void
-      ) => {
-        if (message && message.type === 'TEST_CONNECTION') {
-          console.log('[Fixture Mock] TEST_CONNECTION intercepted, returning success');
-          // Always return success for connection test in test environment
-          if (callback) {
-            callback({ success: true, message: 'Test connection successful' });
-          }
-          return Promise.resolve({ success: true, message: 'Test connection successful' });
-        }
-        // For other messages, use original implementation
-        return originalSendMessage.call(chrome.runtime, message, callback);
-      };
-    });
-
-    await page.goto(`chrome-extension://${extensionId}/popup.html`);
-
-    await dismissConsentModal(page);
-
-    await use(page);
-  },
+export const testInteraction = createPopupFixture({
+  seedPolicy: { consent: true, settingsMigrated: true },
+  tabStub: 'none',
+  initScript: { script: popupInteractionInit },
 });
-
-export const testInteraction = testExt;
 export { expect };
