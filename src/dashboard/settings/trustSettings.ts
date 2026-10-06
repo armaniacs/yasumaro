@@ -599,6 +599,42 @@ export function createTrustSettings(): TrustSettingsController {
     // ============================================================================
 
     /**
+     * Delegate permission-suggest row clicks to the list container.
+     * Attached once per container element (not via listen/teardown):
+     * rows are discarded by the region clear in renderPermissionSuggestList
+     * while the container lives on, so per-row listeners would pile up
+     * across re-renders. destroy() range is unchanged.
+     */
+    function ensurePermissionSuggestDelegation(list: HTMLElement): void {
+        if (list.dataset.suggestDelegated === 'true') return;
+        list.dataset.suggestDelegated = 'true';
+        list.addEventListener('click', (e) => {
+            const btn = (e.target as HTMLElement | null)?.closest?.('button') ?? null;
+            if (!btn || !list.contains(btn)) return;
+            const domain = (btn.closest('.permission-suggest-row') as HTMLElement | null)?.dataset.domain;
+            if (!domain) return;
+            if (btn.classList.contains('permission-suggest-allow')) {
+                void (async () => {
+                    const { requestPermission, removeDeniedDomain } =
+                        await import('../../utils/permissionManager.js');
+                    const granted = await requestPermission(`https://${domain}`);
+                    if (granted) {
+                        await removeDeniedDomain(domain);
+                        await renderPermissionSuggestList(); // 再描画
+                    }
+                })();
+            } else if (btn.classList.contains('permission-suggest-dismiss')) {
+                void (async () => {
+                    const { recordDomainDismissal } =
+                        await import('../../utils/permissionManager.js');
+                    await recordDomainDismissal(domain);
+                    await renderPermissionSuggestList(); // 再描画
+                })();
+            }
+        });
+    }
+
+    /**
      * 許可を検討するサイトリストを描画
      * @returns 描画されたエントリの配列
      */
@@ -612,7 +648,7 @@ export function createTrustSettings(): TrustSettingsController {
 
         const rawThreshold = thresholdInput ? parseInt(thresholdInput.value, 10) : 3;
         const threshold = Number.isNaN(rawThreshold) ? 3 : rawThreshold;
-        const { getFrequentDeniedDomains, requestPermission, removeDeniedDomain, recordDomainDismissal, isHostPermitted } =
+        const { getFrequentDeniedDomains, removeDeniedDomain, isHostPermitted } =
             await import('../../utils/permissionManager.js');
 
         const denied = await getFrequentDeniedDomains(threshold);
@@ -622,6 +658,7 @@ export function createTrustSettings(): TrustSettingsController {
             section.classList.add('hidden');
         }
         list.textContent = '';
+        ensurePermissionSuggestDelegation(list);
 
         const entries: TrustPermissionSuggestEntry[] = [];
         for (const { domain, count } of denied) {
@@ -629,6 +666,7 @@ export function createTrustSettings(): TrustSettingsController {
 
             const row = document.createElement('div');
             row.className = 'permission-suggest-row';
+            row.dataset.domain = domain;
 
             const span = document.createElement('span');
             span.textContent = `${domain} — ${count}${getMessageOr('permissionSuggestCount', '回訪問')}`;
@@ -638,22 +676,11 @@ export function createTrustSettings(): TrustSettingsController {
                 const allowBtn = document.createElement('button');
                 allowBtn.className = 'btn-secondary btn-sm permission-suggest-allow';
                 allowBtn.textContent = getMessageOr('permissionSuggestAdd', '🔓 許可する');
-                allowBtn.addEventListener('click', async () => {
-                    const granted = await requestPermission(`https://${domain}`);
-                    if (granted) {
-                        await removeDeniedDomain(domain);
-                        await renderPermissionSuggestList(); // 再描画
-                    }
-                });
 
                 const dismissBtn = document.createElement('button');
                 dismissBtn.className = 'btn-icon permission-suggest-dismiss';
                 dismissBtn.textContent = '×';
                 dismissBtn.title = getMessageOr('permissionSuggestDismiss', '無視する（14日表示しない）');
-                dismissBtn.addEventListener('click', async () => {
-                    await recordDomainDismissal(domain);
-                    await renderPermissionSuggestList(); // 再描画
-                });
 
                 row.appendChild(span);
                 row.appendChild(allowBtn);

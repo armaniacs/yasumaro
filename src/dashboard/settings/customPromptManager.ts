@@ -143,48 +143,41 @@ export function createCustomPromptManager(): CustomPromptManager {
             .map(prompt => createPromptListItem(prompt)).join('');
         setElementHtml(promptList, presetItemsHtml + defaultItemHtml + customItemsHtml);
 
-        // Attach event listeners for preset prompts
-        PRESET_PROMPTS.filter(p => p.id !== 'default').forEach(preset => {
-            const activateBtn = document.getElementById(`activate-prompt-${PROMPT_ID.PRESET_PREFIX}${preset.id}`);
-            const duplicateBtn = document.getElementById(`duplicate-prompt-${PROMPT_ID.PRESET_PREFIX}${preset.id}`);
+        // Region-scoped wiring: listeners attach to the fresh nodes inside
+        // promptList, so a re-render (setElementHtml above) discards the old
+        // wiring with the old nodes. destroy() stays limited to the two
+        // editor buttons.
+        wirePromptListButtons(prompts);
+    }
 
-            if (activateBtn) {
-                activateBtn.addEventListener('click', () => handleActivatePrompt(`${PROMPT_ID.PRESET_PREFIX}${preset.id}`, 'all'));
-            }
-            if (duplicateBtn) {
-                duplicateBtn.addEventListener('click', () => handleDuplicatePrompt(`${PROMPT_ID.PRESET_PREFIX}${preset.id}`));
-            }
-        });
-
-        // Attach event listeners for default prompt
-        const defaultActivateBtn = document.getElementById(`activate-prompt-${PROMPT_ID.DEFAULT}`);
-        const defaultDuplicateBtn = document.getElementById(`duplicate-prompt-${PROMPT_ID.DEFAULT}`);
-
-        if (defaultActivateBtn) {
-            defaultActivateBtn.addEventListener('click', () => handleActivatePrompt(PROMPT_ID.DEFAULT, 'all'));
-        }
-        if (defaultDuplicateBtn) {
-            defaultDuplicateBtn.addEventListener('click', () => handleDuplicatePrompt(PROMPT_ID.DEFAULT));
-        }
-
-        // Attach event listeners to custom prompt items
-        prompts.forEach(prompt => {
-            const editBtn = document.getElementById(`edit-prompt-${prompt.id}`);
-            const deleteBtn = document.getElementById(`delete-prompt-${prompt.id}`);
-            const activateBtn = document.getElementById(`activate-prompt-${prompt.id}`);
-            const duplicateBtn = document.getElementById(`duplicate-prompt-${prompt.id}`);
-
-            if (editBtn) {
-                editBtn.addEventListener('click', () => handleEditPrompt(prompt.id));
-            }
-            if (deleteBtn) {
-                deleteBtn.addEventListener('click', () => handleDeletePrompt(prompt.id));
-            }
-            if (activateBtn) {
-                activateBtn.addEventListener('click', () => handleActivatePrompt(prompt.id, prompt.provider));
-            }
-            if (duplicateBtn) {
-                duplicateBtn.addEventListener('click', () => handleDuplicatePrompt(prompt.id));
+    /**
+     * Wire every row button inside the prompt list region in one pass.
+     * Scoped to promptList (never document) so a second mount or another
+     * region cannot be mis-wired, and preset-backed ids are wired once.
+     */
+    function wirePromptListButtons(prompts: CustomPrompt[]): void {
+        const list = dom?.promptList;
+        if (!list) return;
+        const byId = new Map(prompts.map(p => [p.id, p]));
+        list.querySelectorAll<HTMLButtonElement>('button[id]').forEach(btn => {
+            const id = btn.id;
+            if (id.startsWith('edit-prompt-')) {
+                const pid = id.slice('edit-prompt-'.length);
+                btn.addEventListener('click', () => handleEditPrompt(pid));
+            } else if (id.startsWith('delete-prompt-')) {
+                const pid = id.slice('delete-prompt-'.length);
+                btn.addEventListener('click', () => { void handleDeletePrompt(pid); });
+            } else if (id.startsWith('activate-prompt-')) {
+                const pid = id.slice('activate-prompt-'.length);
+                if (pid === PROMPT_ID.DEFAULT || pid.startsWith(PROMPT_ID.PRESET_PREFIX)) {
+                    btn.addEventListener('click', () => { void handleActivatePrompt(pid, 'all'); });
+                } else {
+                    const provider = byId.get(pid)?.provider ?? 'all';
+                    btn.addEventListener('click', () => { void handleActivatePrompt(pid, provider); });
+                }
+            } else if (id.startsWith('duplicate-prompt-')) {
+                const pid = id.slice('duplicate-prompt-'.length);
+                btn.addEventListener('click', () => handleDuplicatePrompt(pid));
             }
         });
     }
