@@ -1950,6 +1950,7 @@ describe('service-worker handlers', () => {
             // NOTE: the registered listener is guard-wrapped (fire-and-forget),
             // so its return carries no completion signal. Synchronize on
             // effects instead.
+            if (!contextMenuClickListener) throw new Error('Context menu listener not registered');
             contextMenuClickListener(
                 { menuItemId: 'yasumaro-manual-record' } as chrome.contextMenus.OnClickData,
                 { id: 1, url: 'https://example.com' } as chrome.tabs.Tab

@@ -46,13 +46,18 @@ describe('messaging/wireLambdaFactories: behavior', () => {
 });
 
 describe('messaging/wireLambdaFactories: shared references', () => {
+  const dashboardOf = (byOp: Map<string, unknown>, op: string) => {
+    const dashboard = (byOp.get(op) as { dashboard?: unknown } | undefined)?.dashboard;
+    expect(dashboard).toBeDefined();
+    return dashboard as { validate: unknown; depsArgs: unknown; projectDeps: unknown };
+  };
   it('sqlite query/mutate rows share validate/idArg/emptyProject', () => {
     const byOp = new Map(SQLITE_WIRE_TABLE.map((e) => [e.op, e]));
-    expect(byOp.get('delete')?.dashboard?.validate).toBe(noValidate);
-    expect(byOp.get('toggleStar')?.dashboard?.validate).toBe(noValidate);
-    expect(byOp.get('delete')?.dashboard?.depsArgs).toBe(idArg);
-    expect(byOp.get('toggleStar')?.dashboard?.depsArgs).toBe(idArg);
-    expect(byOp.get('delete')?.dashboard?.projectDeps).toBe(emptyProject);
+    expect(dashboardOf(byOp, 'delete').validate).toBe(noValidate);
+    expect(dashboardOf(byOp, 'toggleStar').validate).toBe(noValidate);
+    expect(dashboardOf(byOp, 'delete').depsArgs).toBe(idArg);
+    expect(dashboardOf(byOp, 'toggleStar').depsArgs).toBe(idArg);
+    expect(dashboardOf(byOp, 'delete').projectDeps).toBe(emptyProject);
   });
 
   it('sqlite count/maintain rows share emptyPayload/voidDecode/trueDecode', () => {
