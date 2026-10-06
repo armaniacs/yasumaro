@@ -150,6 +150,7 @@ export function maskSensitiveData(
   data: unknown,
   strategy: MaskStrategy = 'full',
   depth = 0,
+  visited: WeakSet<object> = new WeakSet(),
 ): unknown {
   if (depth > 100) {
     return strategy === 'full' ? '[REDACTED: too deep]' : '***';
@@ -159,14 +160,21 @@ export function maskSensitiveData(
     return data;
   }
 
+  if (visited.has(data)) {
+    return strategy === 'full' ? '[REDACTED: too deep]' : '***';
+  }
+  visited.add(data);
+
   if (Array.isArray(data)) {
-    return data.map(item => maskSensitiveData(item, strategy, depth + 1));
+    return data.map(item => maskSensitiveData(item, strategy, depth + 1, visited));
   }
 
-  const result: Record<string, unknown> = {};
+  // Null-prototype accumulator: plain `{}` would invoke the `__proto__`
+  // setter for attacker-controlled keys and re-point the prototype.
+  const result: Record<string, unknown> = Object.create(null);
   for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
     if (typeof value === 'object' && value !== null) {
-      result[key] = maskSensitiveData(value, strategy, depth + 1);
+      result[key] = maskSensitiveData(value, strategy, depth + 1, visited);
     } else {
       result[key] = maskValue(key, value, strategy);
     }
