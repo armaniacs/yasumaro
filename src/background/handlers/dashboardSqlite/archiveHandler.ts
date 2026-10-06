@@ -37,7 +37,10 @@ export async function runArchive<D extends ArchiveOpDescriptor>(
   if (invalid !== null) return { success: false, error: invalid };
   const invoke = (deps as unknown as Record<string, (...args: unknown[]) => Promise<DepsResult<unknown>>>)[descriptor.depsMethod];
   if (typeof invoke !== 'function') return { success: false, error: `Unknown archive deps method: ${descriptor.depsMethod}` };
-  const result = await invoke(...descriptor.depsArgs(raw));
+  // PBI 2026-10-06-10: depsArgs is optional on the interface (defineArchiveOp
+  // fills it from backendArgs), so fall back here too.
+  const argsFn = descriptor.depsArgs ?? descriptor.backendArgs;
+  const result = await invoke(...argsFn(raw));
   if (!result.success) return toFailure(result);
   const project = descriptor.projectDeps ?? descriptor.project;
   return { success: true, ...project(result.data) };

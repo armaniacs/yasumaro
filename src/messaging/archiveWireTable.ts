@@ -79,8 +79,8 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
   decodeResponse: (response: { success: true } & Record<string, unknown>) => R;
   /** Positional backend args the offscreen dispatch spreads. */
   backendArgs: (payload: Record<string, unknown>) => unknown[];
-  /** Deps args the background handler spreads (normalizes loose flags). */
-  depsArgs: (payload: Record<string, unknown>) => unknown[];
+  /** Deps args the background handler spreads (normalizes loose flags); defaults to backendArgs. */
+  depsArgs?: (payload: Record<string, unknown>) => unknown[];
   /** Projects a worker raw result into the wire field set. */
   project: (raw: unknown) => Record<string, unknown>;
   /** Projects deps data into the wire field set; defaults to project. */
@@ -89,8 +89,13 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
 
 type ArchiveOpRow = Omit<ArchiveOpDescriptor<string, unknown>, 'retryPolicy'>;
 
-export function defineArchiveOp<const R extends ArchiveOpRow>(row: R): R & { retryPolicy: TransportRetryPolicy } {
-  return { ...row, retryPolicy: getTransportRetryPolicy(row.messageType) };
+export function defineArchiveOp<const R extends ArchiveOpRow>(
+  row: R,
+): Omit<R, 'depsArgs'> & {
+  depsArgs: (payload: Record<string, unknown>) => unknown[];
+  retryPolicy: TransportRetryPolicy;
+} {
+  return { ...row, depsArgs: row.depsArgs ?? row.backendArgs, retryPolicy: getTransportRetryPolicy(row.messageType) };
 }
 
 export const ARCHIVE_WIRE_TABLE = [
@@ -183,7 +188,6 @@ export const ARCHIVE_WIRE_TABLE = [
     encodeRequest: (): Extract<MaintainOp, { type: 'archiveCleanup' }> => ({ type: 'archiveCleanup' }),
     decodeResponse: (response) => ({ removed: response.removed as string[] }),
     backendArgs: () => [],
-    depsArgs: () => [],
     project: (raw) => ({ removed: (raw as { removed: string[] }).removed }),
   }),
   defineArchiveOp({
@@ -217,7 +221,6 @@ export const ARCHIVE_WIRE_TABLE = [
       done: response.done as boolean,
     }),
     backendArgs: (p) => [p.stagingName as string, p.offset as number, p.length as number],
-    depsArgs: (p) => [p.stagingName as string, p.offset as number, p.length as number],
     project: (raw) => {
       const r = raw as ArchiveExportData;
       return { chunk: r.chunk, nextOffset: r.nextOffset, total: r.total, done: r.done };
@@ -266,7 +269,6 @@ export const ARCHIVE_WIRE_TABLE = [
       return preview;
     },
     backendArgs: (p) => [p.stagingName as string],
-    depsArgs: (p) => [p.stagingName as string],
     project: (raw) => ({ preview: raw as ArchiveRestorePreviewData }),
   }),
   defineArchiveOp({
@@ -291,7 +293,6 @@ export const ARCHIVE_WIRE_TABLE = [
       skippedInvalid: response.skippedInvalid as number,
     }),
     backendArgs: (p) => [p.stagingName as string],
-    depsArgs: (p) => [p.stagingName as string],
     project: (raw) => {
       const r = raw as ArchiveRestoreData;
       return { restored: r.restored, restoredDeleted: r.restoredDeleted, skipped: r.skipped, skippedInvalid: r.skippedInvalid };
@@ -320,7 +321,6 @@ export const ARCHIVE_WIRE_TABLE = [
       vacuumOk: response.vacuumOk as boolean,
     }),
     backendArgs: (p) => [p.stagingName as string],
-    depsArgs: (p) => [p.stagingName as string],
     project: (raw) => {
       const r = raw as ArchivePurgeData;
       return {
@@ -349,7 +349,6 @@ export const ARCHIVE_WIRE_TABLE = [
     }),
     decodeResponse: () => undefined,
     backendArgs: (p) => [p.stagingName as string],
-    depsArgs: (p) => [p.stagingName as string],
     project: () => ({}),
   }),
   defineArchiveOp({
@@ -383,7 +382,6 @@ export const ARCHIVE_WIRE_TABLE = [
       total: response.total as number,
     }),
     backendArgs: (p) => [p.stagingName as string, p.query as string, p.limit as number, p.offset as number],
-    depsArgs: (p) => [p.stagingName as string, p.query as string, p.limit as number, p.offset as number],
     project: (raw) => {
       const r = raw as { rows: ArchiveSessionRow[]; total: number };
       return { rows: r.rows, total: r.total };
@@ -415,7 +413,6 @@ export const ARCHIVE_WIRE_TABLE = [
     ): Extract<MaintainOp, { type: 'archiveUpdate' }> => ({ type: 'archiveUpdate', stagingName, id, changes }),
     decodeResponse: (response) => ({ dirty: response.dirty as boolean }),
     backendArgs: (p) => [p.stagingName as string, p.id as number, p.changes as Record<string, unknown>],
-    depsArgs: (p) => [p.stagingName as string, p.id as number, p.changes as Record<string, unknown>],
     project: (raw) => ({ dirty: (raw as { dirty: boolean }).dirty }),
   }),
   defineArchiveOp({
@@ -435,7 +432,6 @@ export const ARCHIVE_WIRE_TABLE = [
     }),
     decodeResponse: (response) => ({ dirty: response.dirty as boolean }),
     backendArgs: (p) => [p.stagingName as string],
-    depsArgs: (p) => [p.stagingName as string],
     project: (raw) => ({ dirty: (raw as { dirty: boolean }).dirty }),
   }),
   defineArchiveOp({
@@ -455,7 +451,6 @@ export const ARCHIVE_WIRE_TABLE = [
     }),
     decodeResponse: (response) => ({ dirty: response.dirty as boolean }),
     backendArgs: (p) => [p.stagingName as string],
-    depsArgs: (p) => [p.stagingName as string],
     project: (raw) => ({ dirty: (raw as { dirty: boolean }).dirty }),
   }),
   defineArchiveOp({
@@ -472,7 +467,6 @@ export const ARCHIVE_WIRE_TABLE = [
     encodeRequest: (): Extract<MaintainOp, { type: 'archiveStatus' }> => ({ type: 'archiveStatus' }),
     decodeResponse: (response) => response.status as ArchiveSessionStatusData,
     backendArgs: () => [],
-    depsArgs: () => [],
     project: (raw) => ({ status: raw as ArchiveSessionStatusData }),
   }),
 ];
