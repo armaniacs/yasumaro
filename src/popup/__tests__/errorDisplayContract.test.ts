@@ -158,6 +158,7 @@ describe('single display contract — derived, not fixed generic', () => {
     // Private-page dialog path: reportDialogActionFailure derives.
     setupDom();
     const dialogMod = await import('../privatePageDialog.js');
+    dialogMod.wireDialogButtons();
     dialogMod.showPrivatePageDialog('https://example.com/private', 'auth_required', 'Basic Auth');
     dialogMod.setCurrentPendingSave(pendingSave() as never);
     document.getElementById('dialog-save-once')!.click();
@@ -181,6 +182,7 @@ describe('single display contract — derived, not fixed generic', () => {
     const expectedException = `${chrome.i18n.getMessage('errorPrefix')} ${MSG}`;
     setupDom();
     const dialogMod = await import('../privatePageDialog.js');
+    dialogMod.wireDialogButtons();
     const statusDiv = document.getElementById('mainStatus')!;
 
     // Result-driven failure: the gateway envelope carries the sentence.
