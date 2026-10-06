@@ -134,4 +134,18 @@ export class NavigationRegistry {
   get activeId(): string | null {
     return this.activePanelId;
   }
+
+  /**
+   * Calls destroy on every mounted panel. Invoked once on pagehide;
+   * never called on navigation so display transitions stay unchanged.
+   */
+  destroyAll(): void {
+    for (const panelId of [...this.mountedPanels]) {
+      try {
+        this.panels.get(panelId)?.destroy?.();
+      } catch (err) {
+        console.error(`[NavigationRegistry] destroy failed for panel "${panelId}":`, err);
+      }
+    }
+  }
 }

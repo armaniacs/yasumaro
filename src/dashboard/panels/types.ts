@@ -4,8 +4,9 @@
  * All panels implement this directly.
  *
  * The interface is intentionally minimal: mount is the only required method.
- * activate/deactivate/destroy are optional hooks that the registry calls at
- * the appropriate lifecycle points.
+ * activate/deactivate are optional hooks that the registry calls on
+ * navigation. destroy is called only on page unload via
+ * NavigationRegistry.destroyAll (pagehide), never on navigation.
  */
 export interface PanelLifecycle {
   readonly id: string;

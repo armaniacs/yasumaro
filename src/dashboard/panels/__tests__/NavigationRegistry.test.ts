@@ -13,6 +13,7 @@ function mockPanel(overrides?: PanelOverrides): PanelLifecycle {
     activate: vi.fn(),
     load: vi.fn().mockResolvedValue(undefined),
     deactivate: vi.fn(),
+    destroy: vi.fn(),
   };
   for (const [key, value] of Object.entries(overrides ?? {})) {
     if (value === undefined) {
@@ -324,6 +325,66 @@ describe('NavigationRegistry', () => {
 
       document.body.removeChild(containerA);
       document.body.removeChild(containerB);
+    });
+  });
+
+  describe('destroyAll (pagehide contract)', () => {
+    it('calls destroy on every mounted panel', async () => {
+      const containerA = document.createElement('div');
+      containerA.id = 'panel-a';
+      document.body.appendChild(containerA);
+      const containerB = document.createElement('div');
+      containerB.id = 'panel-b';
+      document.body.appendChild(containerB);
+      try {
+        const panelA = mockPanel({ id: 'panel-a' });
+        const panelB = mockPanel({ id: 'panel-b' });
+        registry.register(panelA);
+        registry.register(panelB);
+
+        await registry.navigate('panel-a');
+        await registry.navigate('panel-b');
+
+        registry.destroyAll();
+
+        expect(panelA.destroy).toHaveBeenCalledTimes(1);
+        expect(panelB.destroy).toHaveBeenCalledTimes(1);
+      } finally {
+        document.body.removeChild(containerA);
+        document.body.removeChild(containerB);
+      }
+    });
+
+    it('does not call destroy for panels never mounted', async () => {
+      const container = document.createElement('div');
+      container.id = 'panel-a';
+      document.body.appendChild(container);
+      try {
+        const panelA = mockPanel({ id: 'panel-a' });
+        const panelB = mockPanel({ id: 'panel-b' });
+        registry.register(panelA);
+        registry.register(panelB);
+
+        await registry.navigate('panel-a');
+
+        registry.destroyAll();
+
+        expect(panelA.destroy).toHaveBeenCalledTimes(1);
+        expect(panelB.destroy).not.toHaveBeenCalled();
+      } finally {
+        document.body.removeChild(container);
+      }
+    });
+
+    it('navigation never calls destroy', async () => {
+      const panelA = mockPanel({ id: 'panel-a' });
+      const panelB = mockPanel({ id: 'panel-b' });
+      registry.register(panelA);
+      registry.register(panelB);
+      await registry.navigate('panel-a');
+      await registry.navigate('panel-b');
+      expect(panelA.destroy).not.toHaveBeenCalled();
+      expect(panelB.destroy).not.toHaveBeenCalled();
     });
   });
 });

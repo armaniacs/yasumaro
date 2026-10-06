@@ -27,3 +27,7 @@ void initDashboard();
 
 await bootstrapper.start(resolveInitialPanelId());
 applySectionDeepLink();
+
+// Cleanup mounted panels exactly once on page unload. Navigation never
+// calls destroy, so display transitions are unaffected.
+window.addEventListener('pagehide', () => registry.destroyAll(), { once: true });
