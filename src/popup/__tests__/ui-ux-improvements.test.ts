@@ -21,7 +21,11 @@ vi.mock('../../../src/popup/popup.js', () => ({
   initPopup: vi.fn(async () => {})
 }));
 vi.mock('../../../src/popup/navigation.js', () => ({}));
-vi.mock('../../../src/popup/main.js', () => ({}));
+// PBI 2026-10-05-31: entrypoints bootstrap awaits initMainScreen, so the
+// mock must provide it (no-op like the other init seams here).
+vi.mock('../../../src/popup/main.js', () => ({
+  initMainScreen: vi.fn(async () => {}),
+}));
 
 type PopupLocale = 'en' | 'ja';
 
