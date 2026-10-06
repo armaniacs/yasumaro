@@ -10,15 +10,9 @@ import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
  */
 
 test.describe('Recording traceId correlation @extension', () => {
-  // NOTE: This test relies on service worker logger buffer flush, which is timing-dependent.
-  // The pipeline runs and VALID_VISIT fires (verified by content-script-recording tests),
-  // but the sanitization_logs flush may not complete within the timeout.
-  // This is a pre-existing flaky issue unrelated to any recent changes.
-  test.skip('logs for a single recording share the same traceId', async ({ context }) => {
-    // Reason: logger buffer flush (BATCH_FLUSH_SIZE=10) may not complete before the test polls
-    // chrome.storage.local for sanitization_logs. The recording pipeline runs and
-    // VALID_VISIT fires (verified by content-script-recording tests), but the buffer
-    // entries haven't been persisted to storage yet. This is a flush timing issue.
+  // WHY: the SW logger buffers entries until BATCH_FLUSH_SIZE=10, so the spec
+  // polls the flush condition itself instead of a fixed timeout.
+  test('logs for a single recording share the same traceId', async ({ context }) => {
     await seedPrivacyConsent(context, {
       settings: {
         obsidian_protocol: 'http',
@@ -38,12 +32,18 @@ test.describe('Recording traceId correlation @extension', () => {
     });
 
     await test.step('Wait for content script extractor initialization', async () => {
-      await expect(async () => {
-        const attr = await page.evaluate(() => document.documentElement.getAttribute('data-ow-test-state'));
-        if (!attr) throw new Error('data-ow-test-state not yet set');
-        const state = JSON.parse(attr);
-        expect(state).toHaveProperty('minVisitDuration');
-      }).toPass({ timeout: 10000, intervals: [200] });
+      await expect.poll(
+        async () => {
+          const attr = await page.evaluate(() => document.documentElement.getAttribute('data-ow-test-state'));
+          if (!attr) return null;
+          try {
+            return JSON.parse(attr) as unknown;
+          } catch {
+            return null;
+          }
+        },
+        { timeout: 10000, intervals: [200] },
+      ).toHaveProperty('minVisitDuration');
     });
 
     await test.step('Scroll to 70% of page', async () => {
@@ -51,14 +51,18 @@ test.describe('Recording traceId correlation @extension', () => {
     });
 
     await test.step('Wait for VALID_VISIT to fire', async () => {
-      await expect(async () => {
-        const state = await page.evaluate(() => {
-          const attr = document.documentElement.getAttribute('data-ow-test-state');
-          return attr ? JSON.parse(attr) : null;
-        });
-        expect(state).not.toBeNull();
-        expect(state.isValidVisitReported).toBe(true);
-      }).toPass({ timeout: 15000, intervals: [1000] });
+      await expect.poll(
+        async () => {
+          const attr = await page.evaluate(() => document.documentElement.getAttribute('data-ow-test-state'));
+          if (!attr) return null;
+          try {
+            return JSON.parse(attr) as { isValidVisitReported?: boolean } | null;
+          } catch {
+            return null;
+          }
+        },
+        { timeout: 15000, intervals: [1000] },
+      ).toMatchObject({ isValidVisitReported: true });
     });
 
     // The pipeline generates logs across 10+ steps. Once the buffer hits
@@ -68,38 +72,40 @@ test.describe('Recording traceId correlation @extension', () => {
     await test.step('Verify all recent logs share the same traceId', async () => {
       const testUrl = 'http://localhost:8080/long-page.html';
 
-      // Poll for logs with retries — the pipeline may still be writing entries.
-      await expect(async () => {
-        const sw = context.serviceWorkers()[0];
-        const logs = await sw.evaluate(async () => {
-          const result = await chrome.storage.local.get('sanitization_logs');
-          return (result.sanitization_logs || []) as Array<{
-            message: string;
-            traceId?: string;
-            details?: Record<string, unknown>;
-            timestamp: number;
-          }>;
-        });
+      // Poll the flush condition itself: a single non-empty traceId across
+      // recent logs for the test URL. Returning null retries the poll.
+      await expect.poll(
+        async () => {
+          const sw = context.serviceWorkers()[0];
+          if (!sw) return null;
+          const logs = await sw.evaluate(async () => {
+            const result = await chrome.storage.local.get('sanitization_logs');
+            return (result.sanitization_logs || []) as Array<{
+              message: string;
+              traceId?: string;
+              details?: Record<string, unknown>;
+              timestamp: number;
+            }>;
+          });
 
-        // Keep only logs emitted in the last 30 seconds that relate to the test URL
-        const cutoff = Date.now() - 30000;
-        const recentLogs = logs.filter(
-          (log) =>
-            log.timestamp > cutoff &&
-            (log.details?.url === testUrl ||
-              log.message?.includes('long-page') ||
-              (log.details?.url as string)?.includes('localhost:8080'))
-        );
+          // Keep only logs emitted in the last 30 seconds that relate to the test URL
+          const cutoff = Date.now() - 30000;
+          const recentLogs = logs.filter(
+            (log) =>
+              log.timestamp > cutoff &&
+              (log.details?.url === testUrl ||
+                log.message?.includes('long-page') ||
+                (log.details?.url as string)?.includes('localhost:8080'))
+          );
 
-        expect(recentLogs.length, 'Expected at least one log entry for the recording').toBeGreaterThan(0);
-
-        const traceIds = new Set(recentLogs.map((log) => log.traceId).filter(Boolean));
-        expect(traceIds.size, 'Expected all recent logs to share a single traceId').toBe(1);
-
-        const traceId = Array.from(traceIds)[0];
-        expect(typeof traceId).toBe('string');
-        expect((traceId as string).length).toBeGreaterThan(0);
-      }).toPass({ timeout: 30000, intervals: [2000] });
+          if (recentLogs.length === 0) return null;
+          const traceIds = new Set(recentLogs.map((log) => log.traceId).filter(Boolean));
+          if (traceIds.size !== 1) return null;
+          const traceId = Array.from(traceIds)[0];
+          return typeof traceId === 'string' && traceId.length > 0 ? traceId : null;
+        },
+        { timeout: 30000, intervals: [2000] },
+      ).toBeTruthy();
     });
 
     await page.close();

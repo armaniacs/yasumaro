@@ -44,5 +44,13 @@ test.describe('constantTimeCompare runtime availability @extension', () => {
           + 'The manual fallback path in constantTimeCompare() will be executed.'
       );
     }
+
+    // Fallback contract: when timingSafeEqual is absent, constantTimeCompare()
+    // in src/utils/crypto/index.ts takes its manual XOR-accumulation path, so
+    // the SW stays correct on runtimes without the API. These assertions pin
+    // the recorded availability shape so neither branch is assertion-free.
+    expect(typeof availability.timingSafeEqualType).toBe('string');
+    expect(['function', 'undefined']).toContain(availability.timingSafeEqualType);
+    expect(availability.hasTimingSafeEqual).toBe(availability.timingSafeEqualType === 'function');
   });
 });

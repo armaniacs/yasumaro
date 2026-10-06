@@ -282,25 +282,4 @@ test.describe('Extension - Content Script @interaction @extension', () => {
     await page.goto('https://example.com');
     await expect(page.locator('[data-smart-history-marker]')).toHaveCount(0);
   });
-
-  test.fixme('should extract page content', async ({ popupPage: page }) => {
-    await page.goto('https://example.com');
-
-    const extractedContent = await page.evaluate(() => {
-      // @ts-expect-error - smartHistory is injected by content script
-      return window.smartHistory?.extractContent();
-    });
-
-    expect(extractedContent).toBeTruthy();
-  });
-});
-
-test.describe('Extension - Service Worker @interaction @extension', () => {
-  test('should handle messages from content script', async () => {
-    // Placeholder: requires service worker context
-  });
-
-  test('should store data in Chrome storage', async () => {
-    // Placeholder: requires chrome.storage mock
-  });
 });
