@@ -13,6 +13,7 @@ import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.
 import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
 import { formatGigabytes } from '../../../utils/browserSupport.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { type PanelLifecycle } from '../types.js';
 import { diagnosticsCollector } from './DiagnosticsCollector.js';
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
@@ -590,7 +591,7 @@ function renderCompileOptions(el: HTMLElement | null, snap: DiagnosticsSnapshot)
   setElementHtml(allOptionsDetails, `
     <summary class="advanced-details-summary">All ${options.length} options</summary>
     <div class="advanced-details-content">
-      <pre class="diag-compile-options-list">${options.join('\n')}</pre>
+      <pre class="diag-compile-options-list">${options.map(escapeHtml).join('\n')}</pre>
     </div>
   `);
   el.appendChild(allOptionsDetails);
