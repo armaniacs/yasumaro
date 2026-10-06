@@ -8,6 +8,7 @@
 
 import { ALL_LIST_SOURCES } from './listSources.js';
 import { deriveOptionalDomains, deriveRequiredDomains } from './storage/providerAllowlist.js';
+import { LOOPBACK_PORTS } from './loopbackPorts.js';
 
 // Permission pattern, not a provider domain, so it stays a constant instead
 // of a neutral-table row; anchored by value after the api.openai.com entry to
@@ -35,7 +36,7 @@ export const OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS: readonly string[] = [
 ];
 
 /** Local service ports that host_permissions and CSP connect-src must allow. */
-export const LOCAL_PORTS = [27123, 27124, 11434, 1234] as const;
+export const LOCAL_PORTS = LOOPBACK_PORTS;
 
 /** Hosts that pair with LOCAL_PORTS for local service access. */
 const LOCAL_HOSTS = ['127.0.0.1', 'localhost'] as const;

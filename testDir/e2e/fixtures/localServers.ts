@@ -17,9 +17,10 @@
  */
 
 import { createServer, type Server } from 'node:http';
+import { LOOPBACK_PORTS } from '../../../src/utils/loopbackPorts.js';
 
-/** Permitted loopback ports, preferred order (least contested first). */
-export const PERMITTED_LOOPBACK_PORTS = [11434, 27123, 27124, 1234] as const;
+/** Permitted loopback ports (SSOT: LOOPBACK_PORTS). */
+export const PERMITTED_LOOPBACK_PORTS = LOOPBACK_PORTS;
 
 export async function pickLoopbackPort(
   candidates: readonly number[] = PERMITTED_LOOPBACK_PORTS,

@@ -5,6 +5,7 @@
  */
 
 import { errorMessage } from './errorUtils.js';
+import { LOOPBACK_PORTS } from './loopbackPorts.js';
 
 // セキュリティ定数
 const ALLOWED_PROTOCOLS = new Set(['https:', 'http:']);
@@ -204,7 +205,7 @@ export function validateUrlForFilterImport(url: string): void {
 /**
  * VULN-013 fix: Allowed localhost ports (matching host_permissions in manifest)
  */
-export const ALLOWED_LOCALHOST_PORTS = new Set([27123, 27124, 11434, 1234]);
+export const ALLOWED_LOCALHOST_PORTS = new Set<number>(LOOPBACK_PORTS);
 
 /**
  * ローカルAI用ホスト名かどうか判定（localhost / 127.x.x.x / ::1）

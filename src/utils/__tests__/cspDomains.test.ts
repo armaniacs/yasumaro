@@ -16,6 +16,7 @@ import {
   LOCAL_PORTS,
   validateCspDomains,
 } from '../cspDomains.js';
+import { ALLOWED_LOCALHOST_PORTS } from '../ssrfGuard.js';
 
 describe('buildConnectSrcDomains', () => {
   it('strips the /* suffix from each host permission', () => {
@@ -69,6 +70,10 @@ describe('LOCAL_PORTS + buildLocalHostPermissions', () => {
     const perms = buildLocalHostPermissions();
     const src = buildLocalConnectSrc();
     expect(src).toEqual(perms.map((p) => p.replace(/\/\*$/, '')));
+  });
+  it('buildLocalHostPermissions ports match ALLOWED_LOCALHOST_PORTS (SSOT cross-check)', () => {
+    const ports = new Set(buildLocalHostPermissions().map((p) => Number(new URL(p).port)));
+    expect(ports).toEqual(new Set<number>(ALLOWED_LOCALHOST_PORTS));
   });
 });
 
