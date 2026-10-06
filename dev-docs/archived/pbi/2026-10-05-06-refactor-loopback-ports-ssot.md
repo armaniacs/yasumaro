@@ -66,3 +66,4 @@ Scenario: E2E fixture も同一ソースを参照する
 
 - 変更ファイル: 新規 `src/utils/loopbackPorts.ts`（Layer 0、`// @layer 0` 付きで LAYERS.md 配置ルールに適合）、`src/utils/cspDomains.ts` / `src/utils/ssrfGuard.ts`（既存名の再エクスポート化）、`testDir/e2e/fixtures/localServers.ts`（import 化）、`src/utils/__tests__/cspDomains.test.ts`（交差テスト 1 本追加）
 - ゲート: 対象 37 tests green（既存 36 + 交差 1）/ type-check PASS / lint 0 errors
+- レビュー裁定 (2026-10-06): SSOT の順序は manifest/CSP 生成順のまま維持し、fixture の probe 優先順（least contested first）は `localServers.ts` の `PROBE_PRIORITY` として明示分離（`satisfies` で SSOT の部分集合を保証）

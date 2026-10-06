@@ -22,8 +22,20 @@ import { LOOPBACK_PORTS } from '../../../src/utils/loopbackPorts.js';
 /** Permitted loopback ports (SSOT: LOOPBACK_PORTS). */
 export const PERMITTED_LOOPBACK_PORTS = LOOPBACK_PORTS;
 
+/**
+ * Probe priority: least contested first. Review裁定 (2026-10-06):
+ * `LOOPBACK_PORTS` order follows the manifest/CSP generation order and must
+ * stay untouched; the fixture's old priority (11434 first — 1234 is the real
+ * LM Studio desktop port, 27124 is Obsidian Local REST, both often occupied)
+ * is a separate concern, so it lives here explicitly. `satisfies` keeps the
+ * priority a subset of the SSOT — adding a port to one place without the
+ * other is a type error.
+ */
+const PROBE_PRIORITY = [11434, 27123, 27124, 1234] as const satisfies
+  readonly (typeof LOOPBACK_PORTS)[number][];
+
 export async function pickLoopbackPort(
-  candidates: readonly number[] = PERMITTED_LOOPBACK_PORTS,
+  candidates: readonly number[] = PROBE_PRIORITY,
   host = '127.0.0.1',
 ): Promise<number> {
   for (const port of candidates) {

@@ -60,3 +60,4 @@ Scenario: tabs.query スタブの有無が明示される
 - 変更ファイル: 新規 `testDir/e2e/fixtures/popup-shared.fixture.ts`、`popup.fixture.ts` / `popup-pbi27.fixture.ts` / `cleansing-preview.fixture.ts`（createPopupFixture への移行。spec は無変更）。`TEST_CONNECTION` 応答文言は `'Test connection successful'` に統一（応答文言を検証する spec が無いことを grep 確認済み）
 - ゲート: 対象 4 ファイルの eslint エラーなし、testDir tsconfig でエラーなし（vitest.setup 等の既存エラーは範囲外）。E2E 実行はブラウザ要のため未実行
 - ゲート: type-check PASS / lint 0 errors（全体）
+- レビュー証跡 (2026-10-06): E2E 実行環境にブラウザが無いため代替証跡を記録 — `testDir/e2e/*.spec.ts` に `TEST_CONNECTION` 応答文言（`'Test connection successful'`）を assert する spec は 0 件（grep 確認）。当該 3 fixture を使う spec（a11y / cleansing-preview-confirm / extension / pii-wasm-initialization / popup-pbi27 / privacy-consent / service-worker-orchestration）はいずれも応答文言を検証しないため、文言統一による break は構造的に起きない
