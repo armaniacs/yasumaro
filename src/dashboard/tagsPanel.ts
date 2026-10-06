@@ -12,6 +12,7 @@ import { settingsRepository, type SettingsReader } from '../utils/storage/Settin
 import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
+import { createTagChip } from './tagChip.js';
 
 /**
  * Initialize the tag settings panel.
@@ -45,12 +46,14 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     if (!defaultCategoriesList) return;
     defaultCategoriesList.innerHTML = '';
     DEFAULT_CATEGORIES.forEach((category) => {
-      const item = document.createElement('button');
-      item.className = 'default-category-item category-tag-btn';
-      item.textContent = `#${category}`;
-      item.title = `「#${category}」の履歴を表示`;
-      item.addEventListener('click', () => navigateToHistoryWithTag(category));
-      defaultCategoriesList.appendChild(item);
+      defaultCategoriesList.appendChild(
+        createTagChip({
+          label: `#${category}`,
+          containerClass: 'default-category-item category-tag-btn',
+          labelTitle: `「#${category}」の履歴を表示`,
+          onLabelClick: () => navigateToHistoryWithTag(category),
+        }),
+      );
     });
   }
 
@@ -71,27 +74,22 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     noUserCategoriesMsg.hidden = true;
 
     userCategories.forEach((category, index) => {
-      const item = document.createElement('div');
-      item.className = 'user-category-item';
-
-      const nameEl = document.createElement('button');
-      nameEl.className = 'user-category-name category-tag-btn';
-      nameEl.textContent = `#${category}`;
-      nameEl.title = `「#${category}」の履歴を表示`;
-      nameEl.addEventListener('click', () => navigateToHistoryWithTag(category));
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'user-category-delete';
-      deleteBtn.textContent = '×';
-      deleteBtn.setAttribute('aria-label', `Delete ${category}`);
-      deleteBtn.addEventListener('click', () => {
-        userCategories.splice(index, 1);
-        renderUserCategories();
-      });
-
-      item.appendChild(nameEl);
-      item.appendChild(deleteBtn);
-      userCategoriesListEl.appendChild(item);
+      userCategoriesListEl.appendChild(
+        createTagChip({
+          label: `#${category}`,
+          containerClass: 'user-category-item',
+          labelClass: 'user-category-name category-tag-btn',
+          labelTag: 'button',
+          labelTitle: `「#${category}」の履歴を表示`,
+          onLabelClick: () => navigateToHistoryWithTag(category),
+          removeClass: 'user-category-delete',
+          removeAriaLabel: `Delete ${category}`,
+          onRemove: () => {
+            userCategories.splice(index, 1);
+            renderUserCategories();
+          },
+        }),
+      );
     });
   }
 
@@ -152,25 +150,19 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     noNormEntriesMsg.hidden = true;
 
     normalizationEntries.forEach((entry, index) => {
-      const item = document.createElement('div');
-      item.className = 'norm-entry-item';
-
-      const label = document.createElement('span');
-      label.className = 'norm-entry-label';
-      label.textContent = `${entry.from} → ${entry.to}`;
-
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'norm-entry-delete';
-      deleteBtn.textContent = '×';
-      deleteBtn.setAttribute('aria-label', `Delete mapping ${entry.from}`);
-      deleteBtn.addEventListener('click', () => {
-        normalizationEntries.splice(index, 1);
-        renderNormalizationEntries();
-      });
-
-      item.appendChild(label);
-      item.appendChild(deleteBtn);
-      normEntriesList.appendChild(item);
+      normEntriesList.appendChild(
+        createTagChip({
+          label: `${entry.from} → ${entry.to}`,
+          containerClass: 'norm-entry-item',
+          labelClass: 'norm-entry-label',
+          removeClass: 'norm-entry-delete',
+          removeAriaLabel: `Delete mapping ${entry.from}`,
+          onRemove: () => {
+            normalizationEntries.splice(index, 1);
+            renderNormalizationEntries();
+          },
+        }),
+      );
     });
   }
 

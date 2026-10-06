@@ -22,6 +22,7 @@ import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getTrustChecker } from '../../utils/trustChecker.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { createTagChip } from '../tagChip.js';
 
 export type TrustCategory = 'finance' | 'gaming' | 'sns';
 
@@ -189,26 +190,18 @@ export function createTrustSettings(): TrustSettingsController {
         listDiv.textContent = '';
 
         tlds.forEach(tld => {
-            const div = document.createElement('div');
-            div.className = 'domain-tag';
-
-            // XSS-safe: Use createElement and textContent instead of innerHTML
-            const span = document.createElement('span');
-            span.textContent = tld;
-            div.appendChild(span);
-
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'domain-tag-remove';
-            removeBtn.textContent = '×';
-            removeBtn.dataset.tld = tld;
-            removeBtn.setAttribute('aria-label', `Remove ${tld}`);
-            div.appendChild(removeBtn);
-
-            listDiv.appendChild(div);
-
-            removeBtn.addEventListener('click', () => {
-                void removeJpAnchorTld(tld);
-            });
+            listDiv.appendChild(
+                createTagChip({
+                    label: tld,
+                    containerClass: 'domain-tag',
+                    removeClass: 'domain-tag-remove',
+                    removeAriaLabel: `Remove ${tld}`,
+                    removeDataset: { tld },
+                    onRemove: () => {
+                        void removeJpAnchorTld(tld);
+                    },
+                }),
+            );
         });
     }
 
@@ -249,30 +242,22 @@ export function createTrustSettings(): TrustSettingsController {
         container.textContent = '';
 
         domains.forEach(domain => {
-            const div = document.createElement('div');
-            div.className = 'domain-tag';
-
-            // XSS-safe: Use createElement and textContent instead of innerHTML
-            const span = document.createElement('span');
-            span.textContent = domain;
-            div.appendChild(span);
-
-            const removeBtn = document.createElement('button');
-            removeBtn.className = 'domain-tag-remove';
-            removeBtn.textContent = '×';
-            removeBtn.dataset.domain = domain;
-            removeBtn.setAttribute('aria-label', `Remove ${domain}`);
-            div.appendChild(removeBtn);
-
-            container.appendChild(div);
-
-            removeBtn.addEventListener('click', () => {
-                if (isWhitelist) {
-                    void removeWhitelistDomain(domain);
-                } else {
-                    void removeSensitiveDomain(domain, currentCategory);
-                }
-            });
+            container.appendChild(
+                createTagChip({
+                    label: domain,
+                    containerClass: 'domain-tag',
+                    removeClass: 'domain-tag-remove',
+                    removeAriaLabel: `Remove ${domain}`,
+                    removeDataset: { domain },
+                    onRemove: () => {
+                        if (isWhitelist) {
+                            void removeWhitelistDomain(domain);
+                        } else {
+                            void removeSensitiveDomain(domain, currentCategory);
+                        }
+                    },
+                }),
+            );
         });
     }
 
