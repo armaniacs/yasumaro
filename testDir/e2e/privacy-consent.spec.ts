@@ -27,9 +27,14 @@ test.describe('Privacy Consent Modal - Structure @ui @a11y', () => {
   test('modal has correct ARIA attributes for dialog', async ({ popupPage: page }) => {
     const modal = page.locator('#privacyConsentModal');
 
-    await expect(modal).toHaveAttribute('role', 'dialog');
-    await expect(modal).toHaveAttribute('aria-modal', 'true');
-    await expect(modal).toHaveAttribute('aria-labelledby', 'privacyConsentTitle');
+    const ariaAttrs: Array<[string, string]> = [
+      ['role', 'dialog'],
+      ['aria-modal', 'true'],
+      ['aria-labelledby', 'privacyConsentTitle'],
+    ];
+    for (const [name, value] of ariaAttrs) {
+      await expect(modal).toHaveAttribute(name, value);
+    }
   });
 
   test('modal is hidden initially', async ({ popupPage: page }) => {
@@ -58,9 +63,10 @@ test.describe('Privacy Consent Modal - Content @ui', () => {
     const content = page.locator('.privacy-consent-content');
 
     await expect(content).toHaveClass(/modal-content/);
-    await expect(content.locator('.modal-header')).toBeAttached();
-    await expect(content.locator('.modal-body')).toBeAttached();
-    await expect(content.locator('.modal-footer')).toBeAttached();
+    const parts = ['.modal-header', '.modal-body', '.modal-footer'];
+    for (const id of parts) {
+      await expect(content.locator(id)).toBeAttached();
+    }
   });
 
   test('modal has privacy summary with key points list', async ({ popupPage: page }) => {
@@ -117,8 +123,32 @@ test.describe('Privacy Consent Modal - Controls @ui', () => {
     const footer = page.locator('#privacyConsentModal .modal-footer');
 
     await expect(footer.locator('button')).toHaveCount(2);
-    await expect(page.locator('#declineConsentBtn')).toBeAttached();
-    await expect(page.locator('#acceptConsentBtn')).toBeAttached();
+    const buttonIds = ['#declineConsentBtn', '#acceptConsentBtn'];
+    for (const id of buttonIds) {
+      await expect(page.locator(id)).toBeAttached();
+    }
+  });
+});
+
+test.describe('Privacy Consent Modal - Visibility @ui', () => {
+  // Operation-oriented aggregation of the static structure assertions above:
+  // show the dialog via operation, then assert the same ID set is visible.
+  // No real-time waits; visibility follows the showModal operation.
+  test('key controls become visible when modal is shown', async ({ popupPage }) => {
+    await popupPage.evaluate(() => {
+      const modal = document.querySelector('#privacyConsentModal');
+      if (modal instanceof HTMLDialogElement && !modal.open) modal.showModal();
+    });
+    const visibleIds = [
+      '#privacyConsentTitle',
+      '#viewPrivacyPolicyBtn',
+      '#consentCheckbox',
+      '#declineConsentBtn',
+      '#acceptConsentBtn',
+    ];
+    for (const id of visibleIds) {
+      await expect(popupPage.locator(id)).toBeVisible();
+    }
   });
 });
 

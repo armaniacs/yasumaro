@@ -119,6 +119,20 @@ test.describe('Dashboard - Sidebar Navigation @ui', () => {
     const selectedTabs = page.locator('#sidebar .sidebar-nav-btn[role="tab"][aria-selected="true"]');
     await expect(selectedTabs).toHaveCount(1);
   });
+
+  test('has sidebar nav buttons for diagnostics and export logs', async ({ page }) => {
+    // Unified from dashboard-diagnostics.spec.ts: text assertions that the
+    // tab/panel loop above does not cover.
+    const sidebarLabels: Array<[string, RegExp]> = [
+      ['panel-diagnostics', /Diagnostics/],
+      ['panel-export-logs', /Export Logs/],
+    ];
+    for (const [panel, name] of sidebarLabels) {
+      const btn = page.locator(`[data-panel="${panel}"]`);
+      await expect(btn).toBeAttached();
+      await expect(btn).toHaveText(name);
+    }
+  });
 });
 
 // ========================================
@@ -302,42 +316,74 @@ test.describe('Dashboard - Diagnostics Panel @ui', () => {
     await page.goto(`file://${OPTIONS_PATH}`);
   });
 
+  // Unified assertion set from dashboard-diagnostics.spec.ts (deleted).
+  // OPFS spike entries must stay gone (PBI 2026-09-07-19).
+  const DIAG_SECTION_IDS = [
+    '#panel-diagnostics',
+    '#diagStorageStats',
+    '#diagSqliteStats',
+    '#diagExtInfo',
+    '#diagObsidianSettings',
+    '#diagAiSettings',
+    '#diagDeficiencyStats',
+  ];
+  const DIAG_BUTTON_IDS = [
+    '#diagTestObsidianBtn',
+    '#diagTestAiBtn',
+    '#diagTestSqliteBtn',
+    '#diagDebugModeToggle',
+    '#diagMigrateBtn',
+    '#diagBackfillBtn',
+    '#diagCleanupBtn',
+  ];
+  const DIAG_RESULT_IDS = [
+    '#diagConnectionResult',
+    '#diagSqliteResult',
+    '#diagMigrateResult',
+    '#diagBackfillResult',
+    '#diagCleanupResult',
+  ];
+  const DIAG_COMPILE_IDS = [
+    '#diagCompileOptionsSection',
+    '#diagCompileOptionsStats',
+    '#diagDivergenceWarning',
+  ];
+  const DIAG_ABSENT_IDS = ['#diagOpfsSpikeBtn', '#diagOpfsSpikeResult'];
+
   test('has diagnostics panel section with all key elements', async ({ page }) => {
-    await expect(page.locator('#panel-diagnostics')).toBeAttached();
-    await expect(page.locator('#diagStorageStats')).toBeAttached();
-    await expect(page.locator('#diagSqliteStats')).toBeAttached();
-    await expect(page.locator('#diagExtInfo')).toBeAttached();
-    await expect(page.locator('#diagObsidianSettings')).toBeAttached();
-    await expect(page.locator('#diagAiSettings')).toBeAttached();
-    await expect(page.locator('#diagDeficiencyStats')).toBeAttached();
+    for (const id of DIAG_SECTION_IDS) {
+      await expect(page.locator(id)).toBeAttached();
+    }
   });
 
   test('has diagnostic action buttons', async ({ page }) => {
-    await expect(page.locator('#diagTestObsidianBtn')).toBeAttached();
-    await expect(page.locator('#diagTestAiBtn')).toBeAttached();
-    await expect(page.locator('#diagTestSqliteBtn')).toBeAttached();
-    await expect(page.locator('#diagDebugModeToggle')).toBeAttached();
-    // OPFS spike removed (PBI 2026-09-07-19): the button must stay gone.
-    await expect(page.locator('#diagOpfsSpikeBtn')).toHaveCount(0);
-    await expect(page.locator('#diagMigrateBtn')).toBeAttached();
-    await expect(page.locator('#diagBackfillBtn')).toBeAttached();
-    await expect(page.locator('#diagCleanupBtn')).toBeAttached();
+    for (const id of DIAG_BUTTON_IDS) {
+      await expect(page.locator(id)).toBeAttached();
+    }
   });
 
   test('has diagnostic result areas', async ({ page }) => {
-    await expect(page.locator('#diagConnectionResult')).toBeAttached();
-    await expect(page.locator('#diagSqliteResult')).toBeAttached();
-    // OPFS spike removed (PBI 2026-09-07-19): the result area must stay gone.
-    await expect(page.locator('#diagOpfsSpikeResult')).toHaveCount(0);
-    await expect(page.locator('#diagMigrateResult')).toBeAttached();
-    await expect(page.locator('#diagBackfillResult')).toBeAttached();
-    await expect(page.locator('#diagCleanupResult')).toBeAttached();
+    for (const id of DIAG_RESULT_IDS) {
+      await expect(page.locator(id)).toBeAttached();
+    }
   });
 
   test('has compile options section', async ({ page }) => {
-    await expect(page.locator('#diagCompileOptionsSection')).toBeAttached();
-    await expect(page.locator('#diagCompileOptionsStats')).toBeAttached();
-    await expect(page.locator('#diagDivergenceWarning')).toBeAttached();
+    for (const id of DIAG_COMPILE_IDS) {
+      await expect(page.locator(id)).toBeAttached();
+    }
+    // Carried over from dashboard-diagnostics.spec.ts: migration stats and
+    // its guide link live in the diagnostics panel.
+    await expect(page.locator('#diagMigrationStats')).toBeAttached();
+    await expect(
+      page.locator('#diagMigrationStats').locator('..').locator('a[href*="MIGRATION_GUIDE"]'),
+    ).toBeAttached();
+  });
+
+  test('removed OPFS spike elements stay gone', async ({ page }) => {
+    for (const id of DIAG_ABSENT_IDS) {
+      await expect(page.locator(id)).toHaveCount(0);
+    }
   });
 });
 
@@ -349,15 +395,21 @@ test.describe('Dashboard - Export Logs Panel @ui', () => {
     await page.goto(`file://${OPTIONS_PATH}`);
   });
 
+  const EXPORT_LOGS_IDS = [
+    '#panel-export-logs',
+    '#export-logs-container',
+    '#export-json-btn',
+    '#export-markdown-btn',
+    '#export-csv-btn',
+    '#export-db-btn',
+    '#export-status',
+    '#exportLocalMarkdownBtn',
+  ];
+
   test('has export logs panel with all export buttons', async ({ page }) => {
-    await expect(page.locator('#panel-export-logs')).toBeAttached();
-    await expect(page.locator('#export-logs-container')).toBeAttached();
-    await expect(page.locator('#export-json-btn')).toBeAttached();
-    await expect(page.locator('#export-markdown-btn')).toBeAttached();
-    await expect(page.locator('#export-csv-btn')).toBeAttached();
-    await expect(page.locator('#export-db-btn')).toBeAttached();
-    await expect(page.locator('#export-status')).toBeAttached();
-    await expect(page.locator('#exportLocalMarkdownBtn')).toBeAttached();
+    for (const id of EXPORT_LOGS_IDS) {
+      await expect(page.locator(id)).toBeAttached();
+    }
   });
 });
 
