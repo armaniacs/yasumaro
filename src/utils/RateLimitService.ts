@@ -85,29 +85,29 @@ export class RateLimitService {
     });
   }
 
-  async checkRateLimit(): Promise<RateLimitResult> {
-    const sessionStorage = await this.storage.session.get<Record<string, number>>([
-      STORAGE_KEYS.FAILED_ATTEMPTS,
-      STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-      STORAGE_KEYS.LOCKED_UNTIL,
-    ]);
-    const localStorage =
-      (await this.storage.local.get<Record<string, number>>([
-        STORAGE_KEYS.FAILED_ATTEMPTS,
-        STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-        STORAGE_KEYS.LOCKED_UNTIL,
-      ])) || {};
+  private async readCounters(
+    extraKeys: readonly string[] = []
+  ): Promise<{ sessionData: Record<string, number>; localData: Record<string, number> }> {
+    const keys = [STORAGE_KEYS.FAILED_ATTEMPTS, STORAGE_KEYS.FIRST_ATTEMPT_TIME, ...extraKeys];
+    const sessionData = await this.storage.session.get<Record<string, number>>(keys);
+    const localData = (await this.storage.local.get<Record<string, number>>(keys)) || {};
+    return {
+      sessionData: sessionData as Record<string, number>,
+      localData: localData as Record<string, number>,
+    };
+  }
 
-    // M3: persist failedAttempts to local so session clear does not reset.
-    // Take max of both stores (attacker clearing session leaves local value).
-    // 未フラッシュの保留値があればメモリ上の最新を優先する (書き込み合体中の読み取り)。
+  private mergeCounters(
+    sessionData: Record<string, number>,
+    localData: Record<string, number>,
+    fallbackFirstAttempt: number
+  ): { attempts: number; effectiveFirstAttempt: number } {
     let attempts = Math.max(
-      sessionStorage[STORAGE_KEYS.FAILED_ATTEMPTS] || 0,
-      localStorage[STORAGE_KEYS.FAILED_ATTEMPTS] || 0
+      sessionData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0,
+      localData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0
     );
-    // First attempt time: earliest non-zero value across stores (keeps window tight).
-    const sessionFirst = sessionStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
-    const localFirst = localStorage[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
+    const sessionFirst = sessionData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
+    const localFirst = localData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
     const firstAttemptCandidates = [sessionFirst, localFirst].filter(v => v > 0);
     if (this.pendingCounters !== null) {
       attempts = Math.max(attempts, this.pendingCounters.attempts);
@@ -115,7 +115,16 @@ export class RateLimitService {
         firstAttemptCandidates.push(this.pendingCounters.firstAttempt);
       }
     }
-    const effectiveFirstAttempt = firstAttemptCandidates.length > 0 ? Math.min(...firstAttemptCandidates) : 0;
+    const effectiveFirstAttempt =
+      firstAttemptCandidates.length > 0 ? Math.min(...firstAttemptCandidates) : fallbackFirstAttempt;
+    return { attempts, effectiveFirstAttempt };
+  }
+
+  async checkRateLimit(): Promise<RateLimitResult> {
+    const { sessionData: sessionStorage, localData: localStorage } = await this.readCounters([
+      STORAGE_KEYS.LOCKED_UNTIL,
+    ]);
+    const { attempts, effectiveFirstAttempt } = this.mergeCounters(sessionStorage, localStorage, 0);
 
     const sessionLockedUntil = sessionStorage[STORAGE_KEYS.LOCKED_UNTIL] || 0;
     const localLockedUntil = localStorage[STORAGE_KEYS.LOCKED_UNTIL] || 0;
@@ -155,30 +164,12 @@ export class RateLimitService {
   }
 
   async recordFailedAttempt(): Promise<void> {
-    const sessionData = await this.storage.session.get<Record<string, number>>([
-      STORAGE_KEYS.FAILED_ATTEMPTS,
-      STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-    ]);
-    const localData =
-      (await this.storage.local.get<Record<string, number>>([
-        STORAGE_KEYS.FAILED_ATTEMPTS,
-        STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-      ])) || {};
-
-    const sessionAttempts = sessionData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0;
-    const localAttempts = localData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0;
-    let attempts = Math.max(sessionAttempts, localAttempts);
-    const sessionFirst = sessionData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
-    const localFirst = localData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
-    const firstAttemptCandidates = [sessionFirst, localFirst].filter(v => v > 0);
-    if (this.pendingCounters !== null) {
-      attempts = Math.max(attempts, this.pendingCounters.attempts);
-      if (this.pendingCounters.firstAttempt > 0) {
-        firstAttemptCandidates.push(this.pendingCounters.firstAttempt);
-      }
-    }
-    const firstAttempt =
-      firstAttemptCandidates.length > 0 ? Math.min(...firstAttemptCandidates) : this.clock.now();
+    const { sessionData, localData } = await this.readCounters();
+    const { attempts, effectiveFirstAttempt: firstAttempt } = this.mergeCounters(
+      sessionData,
+      localData,
+      this.clock.now()
+    );
 
     const nextAttempts = attempts + 1;
     this.pendingCounters = { attempts: nextAttempts, firstAttempt };
