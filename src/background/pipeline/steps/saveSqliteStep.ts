@@ -52,61 +52,42 @@ export async function saveSqliteStep(params: SaveSqliteStepParams): Promise<void
        });
        return;
      }
-     try {
-       const changes: Partial<Record<RegenerateUpdateFieldKey, unknown>> = buildRegenerateUpdateFields(params.record);
-       if (params.contentEnabled === false) {
-         delete changes.content;
-       }
-       const updateResult = await params.sqliteClient.mutate({
-         type: 'update',
-         id: params.targetEntryId,
-         changes,
-         traceId: params.traceId,
-       } as { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string });
-       if (!updateResult.success) {
-         throw new RegenerateUpdateError(`SQLite regenerate update failed for id=${params.targetEntryId}`);
-       }
-       addLog(LogType.INFO, 'saveSqliteStep: regenerated row updated', {
-         id: params.targetEntryId,
-         url: params.record.url,
-         traceId: params.traceId,
-       });
-     } catch (err) {
-       addLog(LogType.ERROR, 'saveSqliteStep: regenerate update failed', {
-         id: params.targetEntryId,
-         url: params.record.url,
-         error: String(err),
-         traceId: params.traceId,
-       });
-       throw err;
-     }
-     return;
+    const changes: Partial<Record<RegenerateUpdateFieldKey, unknown>> = buildRegenerateUpdateFields(params.record);
+    if (params.contentEnabled === false) {
+      delete changes.content;
+    }
+    const updateResult = await params.sqliteClient.mutate({
+      type: 'update',
+      id: params.targetEntryId,
+      changes,
+      traceId: params.traceId,
+    } as { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string });
+    if (!updateResult.success) {
+      throw new RegenerateUpdateError(`SQLite regenerate update failed for id=${params.targetEntryId}`);
+    }
+    addLog(LogType.INFO, 'saveSqliteStep: regenerated row updated', {
+      id: params.targetEntryId,
+      url: params.record.url,
+      traceId: params.traceId,
+    });
+    return;
    }
-   try {
-     const mutateResult = await params.sqliteClient.mutate({ type: 'insert', record: params.record, traceId: params.traceId } as { type: 'insert'; record: BrowsingLogRecord; traceId?: string });
-      if (!mutateResult.success) {
-        // SQLite unavailable/failing: queue the record instead of losing it (M14).
-        const queued = await enqueuePendingRecord(params.record);
-        if (!queued) {
-          // Double failure: the insert failed and even the fallback queue
-          // could not persist the record. Report it instead of pretending
-          // the record survived.
-          addLog(LogType.ERROR, 'saveSqliteStep: failed to queue record for retry', {
-            url: params.record.url,
-            traceId: params.traceId,
-          });
-        }
-        throw new Error(`SQLite insert failed for url=${params.record.url}`);
-}
-if (params.obsidianSynced !== undefined) {
-          await params.sqliteClient.mutate({ type: 'update', id: mutateResult.data.id, changes: { obsidian_synced: params.obsidianSynced ? 1 : 0 }, traceId: params.traceId } as { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string });
-        }
-    } catch (err) {
-     addLog(LogType.ERROR, 'saveSqliteStep: failed', {
-       url: params.record.url,
-       error: String(err),
-       traceId: params.traceId,
-     });
-    throw err;
-  }
+    const mutateResult = await params.sqliteClient.mutate({ type: 'insert', record: params.record, traceId: params.traceId } as { type: 'insert'; record: BrowsingLogRecord; traceId?: string });
+    if (!mutateResult.success) {
+      // SQLite unavailable/failing: queue the record instead of losing it (M14).
+      const queued = await enqueuePendingRecord(params.record);
+      if (!queued) {
+        // Double failure: the insert failed and even the fallback queue
+        // could not persist the record. Report it instead of pretending
+        // the record survived.
+        addLog(LogType.ERROR, 'saveSqliteStep: failed to queue record for retry', {
+          url: params.record.url,
+          traceId: params.traceId,
+        });
+      }
+      throw new Error(`SQLite insert failed for url=${params.record.url}`);
+    }
+    if (params.obsidianSynced !== undefined) {
+      await params.sqliteClient.mutate({ type: 'update', id: mutateResult.data.id, changes: { obsidian_synced: params.obsidianSynced ? 1 : 0 }, traceId: params.traceId } as { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string });
+    }
 }

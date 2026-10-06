@@ -14,14 +14,13 @@ import { StorageKeys } from '../../../utils/storage/types.js';
 import { getCompressionStats } from '../../../utils/sentenceExtractor.js';
 import { extractSentencesHybrid } from '../../../utils/sentenceExtractorHybrid.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
-import { ErrorStrategy } from '../types.js';
 import { selectExtractionInput } from '../pipelineText.js';
 import { decideL0 } from '../recordingDecision.js';
 
 /**
  * Extract important sentences from content using TextRank
  * Position: After privacyPipeline (uses PII-cleaned content)
- * Error Strategy: BEST_EFFORT — fallback to original content via internal catch
+ * Error Strategy: RETRY — failures propagate to StepExecutor/decideStepOutcome
  */
 export const extractSentencesStep: PipelineStepFunction = async (
   context: RecordingContext
@@ -59,95 +58,69 @@ export const extractSentencesStep: PipelineStepFunction = async (
   // Measure extraction performance
   const startTime = performance.now();
 
-  try {
-    // Extract sentences using TextRank (WASM core with TS fallback — see
-    // sentenceExtractorHybrid.ts)
-    const extracted = await extractSentencesHybrid(contentToExtract, options);
+  // Extract sentences using TextRank (WASM core with TS fallback — see
+  // sentenceExtractorHybrid.ts). Failures propagate to StepExecutor/
+  // decideStepOutcome (RETRY budget + outcome policy own recovery).
+  const extracted = await extractSentencesHybrid(contentToExtract, options);
 
-    // DEBUG: log content details
-    addLog(LogType.DEBUG, 'L0 extraction debug', {
+  // DEBUG: log content details
+  addLog(LogType.DEBUG, 'L0 extraction debug', {
+    url,
+    contentLength: contentToExtract.length,
+    extractedCount: extracted.length,
+    extractedPreview: extracted.slice(0, 2).join(' | ').substring(0, 200),
+    traceId: context.traceId
+  });
+
+  const endTime = performance.now();
+  const duration = endTime - startTime;
+
+  // Check performance threshold
+  const performanceThreshold = settings[StorageKeys.L0_EXTRACTIVE_PERFORMANCE_THRESHOLD] as number ?? 1000;
+
+  if (duration > performanceThreshold) {
+    addLog(LogType.WARN, 'L0 extraction exceeded performance threshold, using fallback', {
       url,
-      contentLength: contentToExtract.length,
-      extractedCount: extracted.length,
-      extractedPreview: extracted.slice(0, 2).join(' | ').substring(0, 200),
+      duration,
+      threshold: performanceThreshold,
       traceId: context.traceId
     });
-
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-
-    // Check performance threshold
-    const performanceThreshold = settings[StorageKeys.L0_EXTRACTIVE_PERFORMANCE_THRESHOLD] as number ?? 1000;
-    
-    if (duration > performanceThreshold) {
-      addLog(LogType.WARN, 'L0 extraction exceeded performance threshold, using fallback', {
-        url,
-        duration,
-        threshold: performanceThreshold,
-        traceId: context.traceId
-      });
-      // Still return extracted sentences but log warning
-    }
-
-    // Calculate compression stats
-    const stats = getCompressionStats(contentToExtract, extracted);
-
-    addLog(LogType.INFO, 'L0 extraction completed', {
-      url,
-      originalLength: stats.originalLength,
-      extractedLength: stats.extractedLength,
-      compressionRatio: stats.compressionRatio.toFixed(2),
-      sentenceCount: stats.sentenceCount,
-      extractedSentencesCount: stats.extractedCount,
-      duration: duration.toFixed(2),
-      traceId: context.traceId
-    });
-
-    // If extracted sentences is empty or very small, log warning
-    if (extracted.length === 0 || stats.extractedLength < 10) {
-      addLog(LogType.WARN, 'L0 extraction produced minimal output', {
-        url,
-        extractedSentencesCount: extracted.length,
-        extractedLength: stats.extractedLength,
-        contentLength: contentToExtract.length,
-        traceId: context.traceId
-      });
-    }
-
-    const encoder = new TextEncoder();
-    const originalBytes = encoder.encode(contentToExtract).length;
-
-    return {
-      ...context,
-      extractedSentences: extracted,
-      extractedSentencesBytes: stats.extractedLength,
-      extractedSentencesOriginalBytes: originalBytes,
-      extractionDuration: duration
-    };
-
-  } catch (error) {
-    // RETRY + fallback: Log error but continue with original content
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    addLog(LogType.ERROR, 'L0 extraction failed, using fallback', {
-      url,
-      error: errorMessage,
-      traceId: context.traceId
-    });
-
-    // Add to errors but don't fail the pipeline (RETRY strategy fallback)
-    return {
-      ...context,
-      errors: [
-        ...context.errors,
-        {
-          step: 'extractSentences',
-          error: error instanceof Error ? error : new Error(errorMessage),
-          strategy: ErrorStrategy.BEST_EFFORT,
-          timestamp: Date.now(),
-          context: { url }
-        }
-      ]
-    };
+    // Still return extracted sentences but log warning
   }
+
+  // Calculate compression stats
+  const stats = getCompressionStats(contentToExtract, extracted);
+
+  addLog(LogType.INFO, 'L0 extraction completed', {
+    url,
+    originalLength: stats.originalLength,
+    extractedLength: stats.extractedLength,
+    compressionRatio: stats.compressionRatio.toFixed(2),
+    sentenceCount: stats.sentenceCount,
+    extractedSentencesCount: stats.extractedCount,
+    duration: duration.toFixed(2),
+    traceId: context.traceId
+  });
+
+  // If extracted sentences is empty or very small, log warning
+  if (extracted.length === 0 || stats.extractedLength < 10) {
+    addLog(LogType.WARN, 'L0 extraction produced minimal output', {
+      url,
+      extractedSentencesCount: extracted.length,
+      extractedLength: stats.extractedLength,
+      contentLength: contentToExtract.length,
+      traceId: context.traceId
+    });
+  }
+
+  const encoder = new TextEncoder();
+  const originalBytes = encoder.encode(contentToExtract).length;
+
+  return {
+    ...context,
+    extractedSentences: extracted,
+    extractedSentencesBytes: stats.extractedLength,
+    extractedSentencesOriginalBytes: originalBytes,
+    extractionDuration: duration
+  };
 };

@@ -125,6 +125,13 @@ describe('extractSentencesStep', () => {
     const mockSentences = ['AI generated summary from privacy pipeline'];
 
     (extractSentencesHybrid as Mock).mockResolvedValue(mockSentences);
+    (getCompressionStats as Mock).mockReturnValue({
+      originalLength: 100,
+      extractedLength: 50,
+      compressionRatio: 2,
+      sentenceCount: 5,
+      extractedCount: 1,
+    });
 
     const result = await extractSentencesStep(mockContext);
 
@@ -155,7 +162,7 @@ describe('extractSentencesStep', () => {
     expect(result.extractedSentences).toBeUndefined();
   });
 
-  it('should handle extraction errors gracefully with fallback', async () => {
+  it('propagates extraction errors to the executor/outcome policy (RETRY owns recovery)', async () => {
     const mockContext: RecordingContext = {
       data: {
         url: 'https://example.com',
@@ -174,11 +181,8 @@ describe('extractSentencesStep', () => {
       throw new Error('Extraction failed');
     });
 
-    // Should not throw - should handle error gracefully
-    const result = await extractSentencesStep(mockContext);
-
-    // Should still return context with errors logged
-    expect(result.errors.length).toBeGreaterThan(0);
+    // No inner catch: the error propagates so StepExecutor RETRY + decideStepOutcome own recovery
+    await expect(extractSentencesStep(mockContext)).rejects.toThrow('Extraction failed');
   });
 
   it('should track extraction performance', async () => {
@@ -228,6 +232,15 @@ describe('extractSentencesStep', () => {
       // No extractedSentences set - should work with existing code
       truncatedContent: 'Original content',
     };
+
+    (extractSentencesHybrid as Mock).mockResolvedValue(['Original content']);
+    (getCompressionStats as Mock).mockReturnValue({
+      originalLength: 100,
+      extractedLength: 50,
+      compressionRatio: 2,
+      sentenceCount: 5,
+      extractedCount: 1,
+    });
 
     // Should not throw - just pass through
     const result = await extractSentencesStep(mockContext);
