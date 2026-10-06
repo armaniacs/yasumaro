@@ -10,7 +10,7 @@
  */
 
 import { textToBase64 } from '../utils/crypto/primitives.js';
-import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { settingsRepository, type SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import type { AIService } from './ai/AIService.js';
@@ -36,8 +36,8 @@ export interface CreateReviewSummaryGeneratorOptions {
   aiService: AIService;
   /** 対象期間の閲覧履歴を引くSQLite query。 */
   sqliteClient: Pick<SqliteClient, 'query'>;
-  /** 設定の読み取り先。テストでは InMemory repo を注入する。 */
-  repo?: SettingsReader;
+  /** 設定の読み書き先。テストでは InMemory repo を注入する。 */
+  repo?: Pick<SettingsRepository, 'getMany' | 'getAll' | 'set'>;
 }
 
 /**
@@ -314,9 +314,10 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
       const success = await downloadMarkdown(markdown, filename, exportPath);
 
       if (success) {
-        await chrome.storage.local.set({
-          [period.lastGeneratedKey]: period.storageKey
-        });
+        // Same seam as the getAll() read above: a raw chrome.storage.local.set
+        // here is invisible to blob-authoritative getAll() in migrated
+        // profiles, which re-ran the AI digest every alarm.
+        await repo.set(period.lastGeneratedKey, period.storageKey);
         addLog(LogType.INFO, `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} review summary generated`, {
           [`${period.kind}Key`]: period.storageKey,
           entryCount: result.rows.length

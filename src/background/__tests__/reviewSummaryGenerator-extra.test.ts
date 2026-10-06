@@ -214,6 +214,10 @@ import type { AIService } from '../ai/AIService.js';
 import type { AISummaryResult } from '../ai/AIService.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { addLog } from '../../utils/logger/core.js';
+import { StorageKeys } from '../../utils/storage/types.js';
+import { installTestSecretKek } from '../../utils/crypto/__tests__/secretKekHelper.js';
+
+type GeneratorRepo = NonNullable<Parameters<typeof createReviewSummaryGenerator>[0]['repo']>;
 
 function makeEntry(overrides: Record<string, unknown> = {}) {
   return {
@@ -232,7 +236,7 @@ function makeEntry(overrides: Record<string, unknown> = {}) {
 }
 
 /** AIService fake + fake SQLite queryを注入したgeneratorを組み立てる */
-function createHarness() {
+function createHarness(repo?: GeneratorRepo) {
   const generateSummary = vi.fn<(content: string) => Promise<AISummaryResult>>();
   const aiService = {
     generateSummary,
@@ -244,7 +248,7 @@ function createHarness() {
     queryMockFn,
     query: vi.fn().mockImplementation((op: any) => queryMockFn(op)),
   } as unknown as SqliteClient;
-  const generator = createReviewSummaryGenerator({ aiService, sqliteClient });
+  const generator = createReviewSummaryGenerator({ aiService, sqliteClient, ...(repo ? { repo } : {}) });
   return { generateSummary, queryMock: queryMockFn, sqliteClient, generator };
 }
 
@@ -315,7 +319,7 @@ describe('generateWeeklySummary', () => {
     expect(generateSummary).toHaveBeenCalledWith(
       expect.stringContaining('週次振り返りダイジェスト')
     );
-    expect((globalThis as any).chrome.storage.local.set).toHaveBeenCalled();
+    expect(mockSet).toHaveBeenCalled();
   });
 
   it('uses fallback digest when all entry summaries are null', async () => {
@@ -357,7 +361,7 @@ describe('generateWeeklySummary', () => {
 
     const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
-    expect((globalThis as any).chrome.storage.local.set).not.toHaveBeenCalled();
+    expect(mockSet).not.toHaveBeenCalled();
   });
 
   it('uses default export path when not configured', async () => {
@@ -428,9 +432,7 @@ describe('generateMonthlySummary', () => {
     expect(generateSummary).toHaveBeenCalledWith(
       expect.stringContaining('月次振り返りダイジェスト')
     );
-    expect((globalThis as any).chrome.storage.local.set).toHaveBeenCalledWith(
-      expect.objectContaining({ review_summary_last_generated_month: '2026-07' })
-    );
+    expect(mockSet).toHaveBeenCalledWith('review_summary_last_generated_month', '2026-07');
   });
 
   it('handles download failure correctly', async () => {
@@ -444,7 +446,47 @@ describe('generateMonthlySummary', () => {
 
     const result = await generator.generateMonthlySummary(new Date('2026-07-15'));
     expect(result).toBe(false);
-    expect((globalThis as any).chrome.storage.local.set).not.toHaveBeenCalled();
+    expect(mockSet).not.toHaveBeenCalled();
+  });
+});
+
+describe('generated marker round-trip (real SettingsRepository)', () => {
+  /** Real repo over InMemoryStorageAdapter; importActual bypasses the file-level mock. */
+  async function createRealRepo() {
+    const actual = await vi.importActual<typeof import('../../utils/storage/SettingsRepository.js')>(
+      '../../utils/storage/SettingsRepository.js'
+    );
+    const adapter = new actual.InMemoryStorageAdapter();
+    // Migrated-profile fixture: the settings blob is the authoritative source.
+    adapter.seed({ settings_migrated: { schemaVersion: 2, stage: 'completed' } });
+    return new actual.SettingsRepository(adapter);
+  }
+
+  beforeEach(() => {
+    (globalThis as any).chrome.downloads = {
+      download: vi.fn().mockResolvedValue({}),
+    };
+  });
+
+  it('short-circuits the second generate call for the same period without an AI call', async () => {
+    await installTestSecretKek();
+    const repo = await createRealRepo();
+    await repo.set(StorageKeys.REVIEW_SUMMARY_ENABLED, true);
+
+    const { generateSummary, queryMock, generator } = createHarness(repo);
+    queryMock.mockResolvedValue(mockRows([makeEntry()]));
+    generateSummary.mockResolvedValue({ success: true, summary: 'Digest' });
+
+    const first = await generator.generateWeeklySummary(new Date('2026-07-08'));
+    expect(first).toBe(true);
+    expect(generateSummary).toHaveBeenCalledTimes(1);
+
+    // The marker write must land where the getAll() read can see it.
+    expect(await repo.get(StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK)).toBe('2026-W28');
+
+    const second = await generator.generateWeeklySummary(new Date('2026-07-08'));
+    expect(second).toBe(false);
+    expect(generateSummary).toHaveBeenCalledTimes(1);
   });
 });
 

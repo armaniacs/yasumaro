@@ -7,6 +7,9 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
 
     const mockRepo = {
         getAll: vi.fn(),
+        set: vi.fn(async (key: string, value: unknown) => {
+            Object.assign(storageState, { [key]: value });
+        }),
     };
 
     const mockAiService = {
