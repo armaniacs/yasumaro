@@ -682,27 +682,6 @@ describe('RecordSession.recordCurrentPage', () => {
     expect(mocks3.previewFlow.run).toHaveBeenCalledWith(expect.objectContaining({ content: '' }));
   });
 
-  it('handles contentResponse null/undefined with force false vs true', async () => {
-    const mocks = createMocks();
-    mocks.tabContentFetcher.fetch.mockResolvedValueOnce(null as any);
-    const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);
-    await o.recordCurrentPage(false);
-    expect(mockShowError).toHaveBeenCalled();
-
-    const mocks2 = createMocks();
-    mocks2.tabContentFetcher.fetch.mockResolvedValueOnce(null as any);
-    mocks2.previewFlow.run.mockResolvedValue({ success: true, result: { success: true } });
-    const o2 = new RecordSession(mocks2.tabContentFetcher, mocks2.previewFlow);
-    await o2.recordCurrentPage(true);
-    expect(mocks2.previewFlow.run).toHaveBeenCalledWith(expect.objectContaining({ content: '' }));
-
-    const mocks3 = createMocks();
-    mocks3.tabContentFetcher.fetch.mockResolvedValueOnce(undefined as any);
-    const o3 = new RecordSession(mocks3.tabContentFetcher, mocks3.previewFlow);
-    await o3.recordCurrentPage(false);
-    expect(mockShowError).toHaveBeenCalled();
-  });
-
   it('calls updateCleansingStatus and updateTrustStatus when tab.url present vs missing', async () => {
     const mocks = createMocks();
     const o = new RecordSession(mocks.tabContentFetcher, mocks.previewFlow);

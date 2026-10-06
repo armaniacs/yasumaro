@@ -1,6 +1,4 @@
 import { loadActiveTabStatus, type ActiveTabStatusSnapshot } from '../statusStore.js';
-import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
-import { StorageKeys } from '../../utils/storage/types.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab } from '../tabUtils.js';
 import { isRecordableTab } from '../../utils/recordingGateTable.js';
@@ -388,6 +386,77 @@ export class RecordSession {
     return { statusDiv, recordBtn };
   }
 
+  /**
+   * Normal-branch step 1: fetch tab content. A fetch failure degrades to
+   * empty content only under force — the gateway never resolves null (its
+   * contract is `Promise<ContentResponse>`: content or throw), so there is
+   * no null branch here; the throw conversion lives in this catch.
+   */
+  private async fetchContent(tab: chrome.tabs.Tab, force: boolean): Promise<ContentResponse> {
+    if (!tab || !tab.id) throw new Error('No active tab found');
+    // Spinner ownership lives here (PBI 2026-09-11-04): the gateway is a
+    // pure data seam — show/hide pairs belong to the flow that owns the
+    // operation. hideSpinner() on the finish paths below closes the pair.
+    showSpinner(getMessage('fetchingContent'));
+    try {
+      return await this.tabContentFetcher.fetch(tab, force);
+    } catch (e: unknown) {
+      if (force) return { content: '' };
+      throw e instanceof Error ? e : new Error(String(e));
+    }
+  }
+
+  /** Normal-branch step 2: reflect extraction stats and trust. */
+  private applyExtractionStats(resp: ContentResponse, tab: chrome.tabs.Tab): void {
+    updateCleansingStatus(resp.cleanseStats, resp.cleansedReason);
+    if (tab.url) {
+      void updateTrustStatus(tab.url);
+    }
+  }
+
+  /**
+   * Normal-branch success tail. Status writes stay on the NN09 single path
+   * (statusChannel via showSuccessMessage); the button state is left to the
+   * caller so success/failure tails keep the same button → status order.
+   */
+  private async finishSuccess(
+    tab: chrome.tabs.Tab,
+    result: SaveRecordResult | null,
+    statusDiv: HTMLElement,
+    startTime: number
+  ): Promise<void> {
+    hideSpinner();
+    this.reportActivity();
+    this.showSuccessMessage(statusDiv, startTime, result);
+
+    const copyButtonShown = await this.showCopyMarkdownButton(tab, result as SaveRecordResult);
+    if (copyButtonShown) {
+      // Keep the popup open so the user can click Copy Markdown.
+      // Do not start the auto-close timer, but still show tag results.
+      await this.showTagResult(tab.url ?? '', true);
+    } else {
+      startAutoCloseTimer();
+      await this.showTagResult(tab.url ?? '');
+    }
+  }
+
+  /**
+   * Shared failure tail: button state first, then the error display — the
+   * normal-branch order, used by both branches.
+   */
+  private fail(
+    error: unknown,
+    recordBtn: HTMLButtonElement | null,
+    statusDiv: HTMLElement,
+    retry: () => void
+  ): void {
+    hideSpinner();
+    if (recordBtn) {
+      this.showButtonResultState(recordBtn, 'error');
+    }
+    showError(statusDiv, error, retry);
+  }
+
   /** Normal branch: fetch tab content, then preview + save. */
   private async runNormalBranch(force: boolean): Promise<void> {
     const startTime = performance.now();
@@ -407,37 +476,8 @@ export class RecordSession {
         throw new Error(getMessage('cannotRecordPage'));
       }
 
-      const settings = await settingsRepository.getAll();
-      const _usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
-
-      let contentResponse: ContentResponse;
-      try {
-        // Spinner ownership lives here (PBI 2026-09-11-04): the gateway is a
-        // pure data seam — show/hide pairs belong to the flow that owns the
-        // operation. hideSpinner() on the finish paths below closes the pair.
-        showSpinner(getMessage('fetchingContent'));
-        contentResponse = await this.tabContentFetcher.fetch(tab, force);
-      } catch (e: unknown) {
-        if (force) {
-          contentResponse = { content: '' };
-        } else {
-          throw e instanceof Error ? e : new Error(String(e));
-        }
-      }
-
-      if (!contentResponse) {
-        if (force) {
-          contentResponse = { content: '' };
-        } else {
-          throw new Error(getMessage('errorNoContentResponse'));
-        }
-      }
-
-      updateCleansingStatus(contentResponse.cleanseStats, contentResponse.cleansedReason);
-
-      if (tab.url) {
-        void updateTrustStatus(tab.url);
-      }
+      const contentResponse = await this.fetchContent(tab, force);
+      this.applyExtractionStats(contentResponse, tab);
 
       const previewSave = await this.previewFlow.run({
         tab,
@@ -463,28 +503,12 @@ export class RecordSession {
         throw new Error(previewSave.error || 'Save failed');
       }
 
-      hideSpinner();
-      this.reportActivity();
-      this.showSuccessMessage(statusDiv, startTime, result);
-
-      const copyButtonShown = await this.showCopyMarkdownButton(tab, result as SaveRecordResult);
-      if (copyButtonShown) {
-        // Keep the popup open so the user can click Copy Markdown.
-        // Do not start the auto-close timer, but still show tag results.
-        await this.showTagResult(tab.url ?? '', true);
-      } else {
-        startAutoCloseTimer();
-        await this.showTagResult(tab.url ?? '');
-      }
+      await this.finishSuccess(tab, result, statusDiv, startTime);
       if (recordBtn) {
         this.showButtonResultState(recordBtn, 'done');
       }
     } catch (error: unknown) {
-      hideSpinner();
-      if (recordBtn) {
-        this.showButtonResultState(recordBtn, 'error');
-      }
-      showError(statusDiv, error, () => this.recordCurrentPage(true));
+      this.fail(error, recordBtn, statusDiv, () => this.recordCurrentPage(true));
     }
   }
 
@@ -522,9 +546,7 @@ export class RecordSession {
         if (button) this.showButtonResultState(button, 'error');
       }
     } catch (error: unknown) {
-      hideSpinner();
-      showError(statusDiv, error, () => this.start(true, tab, content));
-      if (button) this.showButtonResultState(button, 'error');
+      this.fail(error, button, statusDiv, () => this.start(true, tab, content));
     }
   }
 }

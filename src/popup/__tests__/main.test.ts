@@ -981,53 +981,6 @@ describe('main', () => {
       expect(showError).toHaveBeenCalled();
     });
 
-    it('should handle contentResponse null with force=true', async () => {
-      const mockTab = {
-        id: 1,
-        title: 'Example Page',
-        url: 'https://example.com'
-      };
-
-      // @ts-expect-error
-      getCurrentTab.mockResolvedValue(mockTab);
-      isRecordable.mockReturnValue(true);
-      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
-
-      // Content script returns undefined/null
-      mockChrome.tabs.sendMessage.mockResolvedValue(null);
-      mockChrome.runtime.sendMessage.mockResolvedValue({ success: true });
-
-      sendMessageWithRetry.mockResolvedValue({ success: true });
-
-      const statusDiv = $el('mainStatus');
-
-      await recordCurrentPage(true);
-
-      expect(statusDiv.className).toBe(STATUS_CLASS.success);
-    });
-
-    it('should handle contentResponse null without force', async () => {
-      const mockTab = {
-        id: 1,
-        title: 'Example Page',
-        url: 'https://example.com'
-      };
-
-      // @ts-expect-error
-      getCurrentTab.mockResolvedValue(mockTab);
-      isRecordable.mockReturnValue(true);
-      mockGetAll.mockResolvedValue({ [StorageKeys.PII_CONFIRMATION_UI]: false });
-
-      // Content script returns null
-      mockChrome.tabs.sendMessage.mockResolvedValue(null);
-
-      const statusDiv = $el('mainStatus');
-
-      await recordCurrentPage();
-
-      expect(showError).toHaveBeenCalled();
-    });
-
     it('should handle save failure (result.success=false)', async () => {
       const mockTab = {
         id: 1,
