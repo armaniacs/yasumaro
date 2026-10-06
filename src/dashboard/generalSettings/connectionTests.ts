@@ -24,6 +24,7 @@ import { type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
 import { saveDashboardSettings, saveErrorText } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
+import { runPanelAction } from '../panels/panelAction.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { runAiConnectionTest } from '../aiTestRunner.js';
 import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
@@ -39,15 +40,32 @@ const FIREFOX_CERT_GUIDE_FALLBACK =
  * The wording comes from settingsPipeline (one definition for all four call
  * sites) and the message is not self-clearing: the next save or test replaces
  * it. The status area is the whole record of a failed save, so autoClear is off
- * here on purpose.
+ * here on purpose. The top mirror is always updated, so callers never pass a
+ * sync flag.
  */
-function showSaveError(
-  statusEl: HTMLElement,
-  error: string | undefined,
-  options: { syncTop?: boolean } = {},
-): void {
+function showSaveError(statusEl: HTMLElement | null, error: string | undefined): void {
+  if (!statusEl) return;
   showStatus(statusEl, saveErrorText(error), 'error', { autoClear: false });
-  if (options.syncTop) syncStatusToTop();
+  syncStatusToTop();
+}
+
+/**
+ * Top/bottom button pairs for the four connection-test actions. The outer
+ * wrapper disables both and takes the shared re-entry guard, so handlers
+ * never hand-write `disabled` and never write to `#statusTop` directly.
+ */
+const CONNECTION_TEST_BUTTON_PAIRS = {
+  save: ['saveTop', 'save'],
+  obsidian: ['testObsidianBtnTop', 'testObsidianBtn'],
+  ai: ['testAiBtnTop', 'testAiBtn'],
+  localMarkdown: ['testLocalMarkdownBtnTop', 'testLocalMarkdownBtnBottom'],
+} as const;
+
+function resolveButtonPair(ids: readonly [string, string]): [HTMLButtonElement | null, HTMLButtonElement | null] {
+  return [
+    document.getElementById(ids[0]) as HTMLButtonElement | null,
+    document.getElementById(ids[1]) as HTMLButtonElement | null,
+  ];
 }
 
 /** What the Dashboard needs from a TEST_OBSIDIAN answer: wording plus the
@@ -245,233 +263,257 @@ export async function testAiConnection(runId?: string): Promise<MultiProviderTes
 export async function handleSaveOnly(): Promise<void> {
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   if (!statusDiv) return;
-  statusDiv.textContent = '';
-  statusDiv.className = '';
+  const [saveTop, saveBtn] = resolveButtonPair(CONNECTION_TEST_BUTTON_PAIRS.save);
+  await runPanelAction({
+    buttons: [saveTop, saveBtn],
+    onStart: () => {
+      statusDiv.textContent = '';
+      statusDiv.className = '';
+    },
+    run: async () => {
+      const result = await saveDashboardSettings({
+        onSuccess: () => {
+          statusDiv.textContent = getMessageOr('saveSuccess', '設定を保存しました。');
+          statusDiv.className = 'success';
+          refreshLocalMarkdownScheduler();
+          syncStatusToTop();
+        },
+      });
 
-  const result = await saveDashboardSettings({
-    onSuccess: () => {
-      statusDiv.textContent = getMessageOr('saveSuccess', '設定を保存しました。');
-      statusDiv.className = 'success';
-      refreshLocalMarkdownScheduler();
-      syncStatusToTop();
+      if (!result.success) {
+        showSaveError(statusDiv, result.error);
+      }
     },
   });
-
-  if (!result.success) {
-    showSaveError(statusDiv, result.error, { syncTop: true });
-    return;
-  }
+  syncStatusToTop();
 }
 
 export async function handleTestObsidian(options?: Event | ObsidianConnectionTestDeps): Promise<void> {
-  const testObsidianBtn = document.getElementById('testObsidianBtn') as HTMLButtonElement | null;
   const statusDiv = document.getElementById('status') as HTMLElement | null;
-  if (!testObsidianBtn || !statusDiv) return;
+  if (!statusDiv) return;
+  const [testObsidianTop, testObsidianBtn] = resolveButtonPair(CONNECTION_TEST_BUTTON_PAIRS.obsidian);
+  if (!testObsidianTop && !testObsidianBtn) return;
 
   const deps = resolveConnectionTestDeps(options);
 
-  statusDiv.innerHTML = '';
-  statusDiv.className = '';
-  statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
+  await runPanelAction({
+    buttons: [testObsidianTop, testObsidianBtn],
+    onStart: () => {
+      statusDiv.innerHTML = '';
+      statusDiv.className = '';
+      statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
+    },
+    run: async () => {
+      const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
+      const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
+      const hostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
+      const portInput = document.getElementById('port') as HTMLInputElement | null;
+      const typedApiKey = apiKeyInput?.value?.trim();
+      const obsidianResult = await testObsidianConnection(typedApiKey || '');
 
-  testObsidianBtn.disabled = true;
-  try {
-    const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
-    const protocolInput = document.getElementById('protocol') as HTMLInputElement | null;
-    const hostInput = document.getElementById('obsidianHost') as HTMLInputElement | null;
-    const portInput = document.getElementById('port') as HTMLInputElement | null;
-    const typedApiKey = apiKeyInput?.value?.trim();
-    const obsidianResult = await testObsidianConnection(typedApiKey || '');
+      // Resolved before rendering: the guidance text differs per browser.
+      const isFirefox = await isFirefoxHost(deps.getBrowserInfo);
 
-    // Resolved before rendering: the guidance text differs per browser.
-    const isFirefox = await isFirefoxHost(deps.getBrowserInfo);
+      statusDiv.innerHTML = '';
+      statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
 
-    statusDiv.innerHTML = '';
-    statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
+      if (isCertificateFailure(obsidianResult, protocolInput?.value)) {
+        const form = {
+          host: hostInput?.value?.trim() ?? '',
+          port: portInput?.value?.trim() ?? '',
+        };
+        const saved = form.host !== '' && form.port !== ''
+          ? undefined
+          : await readSavedEndpointSafely(deps.readSavedEndpoint);
+        const url = buildCertificateUrl(form.host || saved?.host, form.port || saved?.port);
 
-    if (isCertificateFailure(obsidianResult, protocolInput?.value)) {
-      const form = {
-        host: hostInput?.value?.trim() ?? '',
-        port: portInput?.value?.trim() ?? '',
-      };
-      const saved = form.host !== '' && form.port !== ''
-        ? undefined
-        : await readSavedEndpointSafely(deps.readSavedEndpoint);
-      const url = buildCertificateUrl(form.host || saved?.host, form.port || saved?.port);
+        statusDiv.appendChild(document.createElement('br'));
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.textContent = getMessageOr('acceptCertificate', '証明書を承認する');
+        link.rel = 'noopener noreferrer';
+        statusDiv.appendChild(link);
 
-      statusDiv.appendChild(document.createElement('br'));
-      const link = document.createElement('a');
-      link.href = url;
-      link.target = '_blank';
-      link.textContent = getMessageOr('acceptCertificate', '証明書を承認する');
-      link.rel = 'noopener noreferrer';
-      statusDiv.appendChild(link);
-
-      if (isFirefox) {
-        const note = document.createElement('div');
-        note.className = 'diag-indent';
-        note.textContent = getMessageWithSubstitutions(
-          'certGuideFirefox',
-          { url },
-          FIREFOX_CERT_GUIDE_FALLBACK,
-        );
-        statusDiv.appendChild(note);
+        if (isFirefox) {
+          const note = document.createElement('div');
+          note.className = 'diag-indent';
+          note.textContent = getMessageWithSubstitutions(
+            'certGuideFirefox',
+            { url },
+            FIREFOX_CERT_GUIDE_FALLBACK,
+          );
+          statusDiv.appendChild(note);
+        }
       }
-    }
 
-    statusDiv.className = obsidianResult.success ? 'success' : 'error';
-    syncStatusToTop();
-  } catch (_e) {
-    statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
-    statusDiv.className = 'error';
-    syncStatusToTop();
-  } finally {
-    testObsidianBtn.disabled = false;
-  }
+      statusDiv.className = obsidianResult.success ? 'success' : 'error';
+      syncStatusToTop();
+    },
+    onError: () => {
+      statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
+      statusDiv.className = 'error';
+      syncStatusToTop();
+    },
+  });
+  syncStatusToTop();
 }
 
 export async function handleTestAi(): Promise<void> {
-  const testAiBtn = document.getElementById('testAiBtn') as HTMLButtonElement | null;
-  const testAiBtnTop = document.getElementById('testAiBtnTop') as HTMLButtonElement | null;
   const statusDiv = document.getElementById('status') as HTMLElement | null;
-  if (!testAiBtn || !statusDiv) return;
+  if (!statusDiv) return;
+  const [testAiTop, testAiBtn] = resolveButtonPair(CONNECTION_TEST_BUTTON_PAIRS.ai);
+  if (!testAiTop && !testAiBtn) return;
 
-  // The re-entrancy guard lives in the shared runner: the top button is not
-  // covered by testAiBtn's disabled state, and the diagnostics panel runs the
-  // same loop, so both buttons must be absorbed in one place.
-  await runAiConnectionTest({
-    target: statusDiv,
-    run: testAiConnection,
+  // The re-entrancy guard lives in the shared runner plus the outer panel
+  // guard: the top/bottom pair stays disabled for the whole run, and the
+  // diagnostics panel runs the same loop, so the runner still absorbs that
+  // cross-panel overlap.
+  await runPanelAction({
+    buttons: [testAiTop, testAiBtn],
+    run: async () => {
+      await runAiConnectionTest({
+        target: statusDiv,
+        run: testAiConnection,
+        prepare: async () => {
+          const saveResult = await saveDashboardSettings({
+            formSelector: SETTINGS_FORM_SELECTOR,
+            includeTiming: true,
+          });
+          if (!saveResult.success) {
+            showSaveError(statusDiv, saveResult.error);
+            return false;
+          }
+
+          refreshLocalMarkdownScheduler();
+          return true;
+        },
+        draw: {
+          // The one-shot syncStatusToTop copy only runs on a provider switch, so
+          // the elapsed ticker has to update #statusTop's node directly.
+          elapsedMirror: document.getElementById('statusTop'),
+          onProviderAnnounced: () => syncStatusToTop(),
+          onProgressStarted: () => syncStatusToTop(),
+          multiProviderSummary: (target, aiResult) => {
+            const container = document.createElement('div');
+            container.className = 'diag-indent';
+
+            const header = document.createElement('strong');
+            header.textContent = getMessageOr('aiResultHeader', 'AI: ');
+            container.appendChild(header);
+
+            const statusEl = document.createElement('span');
+            statusEl.textContent = aiResult.success
+              ? (getMessageOr('connectionSuccess', '接続成功'))
+              : (getMessageOr('connectionFailed', '接続失敗'));
+            statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
+            container.appendChild(statusEl);
+            target.appendChild(container);
+          },
+          singleProviderSummary: (target, aiResult) => {
+            target.appendChild(createConnectionStatusElement('AI', aiResult));
+          },
+          onResultRendered: (target, aiResult) => {
+            target.className = aiResult.success ? 'success' : 'error';
+            syncStatusToTop();
+          },
+          onError: (target) => {
+            target.textContent = getMessageOr('testError', '接続テストに失敗しました。');
+            target.className = 'error';
+            syncStatusToTop();
+          },
+        },
+      });
+    },
+    onError: () => {
+      statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
+      statusDiv.className = 'error';
+      syncStatusToTop();
+    },
+  });
+  syncStatusToTop();
+}
+
+export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRepository): Promise<void> {
+  const statusDiv = document.getElementById('status') as HTMLElement | null;
+  if (!statusDiv) return;
+  const [testLocalMarkdownTop, testLocalMarkdownBottom] = resolveButtonPair(
+    CONNECTION_TEST_BUTTON_PAIRS.localMarkdown,
+  );
+  if (!testLocalMarkdownTop && !testLocalMarkdownBottom) return;
+
+  await runPanelAction({
+    buttons: [testLocalMarkdownTop, testLocalMarkdownBottom],
     onStart: () => {
-      testAiBtn.disabled = true;
-      if (testAiBtnTop) testAiBtnTop.disabled = true;
+      statusDiv.innerHTML = '';
+      statusDiv.className = '';
+      statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
     },
-    onFinish: () => {
-      testAiBtn.disabled = false;
-      if (testAiBtnTop) testAiBtnTop.disabled = false;
-    },
-    prepare: async () => {
+    run: async () => {
+      // Save current settings first
       const saveResult = await saveDashboardSettings({
         formSelector: SETTINGS_FORM_SELECTOR,
         includeTiming: true,
       });
       if (!saveResult.success) {
-        showSaveError(statusDiv, saveResult.error, { syncTop: true });
-        return false;
+        showSaveError(statusDiv, saveResult.error);
+        return;
       }
 
       refreshLocalMarkdownScheduler();
-      return true;
+
+      // Check if enabled
+      const settings = await repo.getMany([StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED, StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]);
+      const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
+      if (!localExportEnabled) {
+        statusDiv.textContent = getMessageOr('testLocalMarkdownDisabled', 'ローカルMarkdown書き出しが無効です。まず有効にしてください。');
+        statusDiv.className = 'error';
+        syncStatusToTop();
+        return;
+      }
+
+      // Create test content
+      const now = new Date();
+      // PBI 2026-09-21-12: local date (was UTC via toISOString), matching the
+      // production export paths. Near midnight JST the stamped day shifts.
+      const date = getLocalDateString(now.getTime());
+      const time = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      // Test content with hardcoded markdown patterns (not user input)
+      const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
+
+      // Download test file
+      const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] ?? 'Yasumaro';
+      const blob = new Blob([testContent], { type: 'text/markdown' });
+      const blobUrl = URL.createObjectURL(blob);
+
+      try {
+        // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て時に
+        // sanitize し、失敗時は既定フォルダにフォールバックする。
+        await chrome.downloads.download({
+          url: blobUrl,
+          filename: `${resolveSafeExportDir(exportPath)}/test-${date}.md`,
+          saveAs: false,
+          // PBI 27 上書きガード方針: テスト書き出しの再実行は冪等な再書き込み
+          // が正しい動作のため明示 'overwrite'（全 4 箇所で統一）。
+          conflictAction: 'overwrite'
+        });
+
+        statusDiv.textContent = getMessageOr('testLocalMarkdownSuccess', 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
+        statusDiv.className = 'success';
+        syncStatusToTop();
+      } finally {
+        // Revoke on settle, not on a delay: the download promise resolving means
+        // Chromium already started the blob fetch, and the File API keeps a blob
+        // alive for fetches in progress — revoke only blocks later fetches. A
+        // timer-based revoke also leaked on every failure path.
+        URL.revokeObjectURL(blobUrl);
+      }
     },
-    draw: {
-      // The one-shot syncStatusToTop copy only runs on a provider switch, so
-      // the elapsed ticker has to update #statusTop's node directly.
-      elapsedMirror: document.getElementById('statusTop'),
-      onProviderAnnounced: () => syncStatusToTop(),
-      onProgressStarted: () => syncStatusToTop(),
-      multiProviderSummary: (target, aiResult) => {
-        const container = document.createElement('div');
-        container.className = 'diag-indent';
-
-        const header = document.createElement('strong');
-        header.textContent = getMessageOr('aiResultHeader', 'AI: ');
-        container.appendChild(header);
-
-        const statusEl = document.createElement('span');
-        statusEl.textContent = aiResult.success
-          ? (getMessageOr('connectionSuccess', '接続成功'))
-          : (getMessageOr('connectionFailed', '接続失敗'));
-        statusEl.className = aiResult.success ? 'diag-success' : 'diag-error';
-        container.appendChild(statusEl);
-        target.appendChild(container);
-      },
-      singleProviderSummary: (target, aiResult) => {
-        target.appendChild(createConnectionStatusElement('AI', aiResult));
-      },
-      onResultRendered: (target, aiResult) => {
-        target.className = aiResult.success ? 'success' : 'error';
-        syncStatusToTop();
-      },
-      onError: (target) => {
-        target.textContent = getMessageOr('testError', '接続テストに失敗しました。');
-        target.className = 'error';
-        syncStatusToTop();
-      },
+    onError: () => {
+      statusDiv.textContent = getMessageOr('testLocalMarkdownError', 'ローカルMarkdown書き出しテストに失敗しました');
+      statusDiv.className = 'error';
+      syncStatusToTop();
     },
   });
-}
-
-export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRepository): Promise<void> {
-  const testLocalMarkdownBtn = document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement | null;
-  const statusTopDiv = document.getElementById('statusTop') as HTMLElement | null;
-  if (!testLocalMarkdownBtn || !statusTopDiv) return;
-
-  statusTopDiv.innerHTML = '';
-  statusTopDiv.className = '';
-  statusTopDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
-
-  testLocalMarkdownBtn.disabled = true;
-  try {
-    // Save current settings first
-    const saveResult = await saveDashboardSettings({
-      formSelector: SETTINGS_FORM_SELECTOR,
-      includeTiming: true,
-    });
-    if (!saveResult.success) {
-      showSaveError(statusTopDiv, saveResult.error);
-      return;
-    }
-
-    refreshLocalMarkdownScheduler();
-
-    // Check if enabled
-    const settings = await repo.getMany([StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED, StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]);
-    const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
-    if (!localExportEnabled) {
-      statusTopDiv.textContent = getMessageOr('testLocalMarkdownDisabled', 'ローカルMarkdown書き出しが無効です。まず有効にしてください。');
-      statusTopDiv.className = 'error';
-      return;
-    }
-
-    // Create test content
-    const now = new Date();
-    // PBI 2026-09-21-12: local date (was UTC via toISOString), matching the
-    // production export paths. Near midnight JST the stamped day shifts.
-    const date = getLocalDateString(now.getTime());
-    const time = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
-    // Test content with hardcoded markdown patterns (not user input)
-    const testContent = `# ${date}\n\n- ${time} [Yasumaro Test](https://example.com)\n    - This is a test entry for local Markdown export. If you can see this file, the export is working correctly!`;
-
-    // Download test file
-    const exportPath = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH] ?? 'Yasumaro';
-    const blob = new Blob([testContent], { type: 'text/markdown' });
-    const blobUrl = URL.createObjectURL(blob);
-
-    try {
-      // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て時に
-      // sanitize し、失敗時は既定フォルダにフォールバックする。
-      await chrome.downloads.download({
-        url: blobUrl,
-        filename: `${resolveSafeExportDir(exportPath)}/test-${date}.md`,
-        saveAs: false,
-        // PBI 27 上書きガード方針: テスト書き出しの再実行は冪等な再書き込み
-        // が正しい動作のため明示 'overwrite'（全 4 箇所で統一）。
-        conflictAction: 'overwrite'
-      });
-
-      statusTopDiv.textContent = getMessageOr('testLocalMarkdownSuccess', 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
-      statusTopDiv.className = 'success';
-    } finally {
-      // Revoke on settle, not on a delay: the download promise resolving means
-      // Chromium already started the blob fetch, and the File API keeps a blob
-      // alive for fetches in progress — revoke only blocks later fetches. A
-      // timer-based revoke also leaked on every failure path.
-      URL.revokeObjectURL(blobUrl);
-    }
-  } catch (_e) {
-    statusTopDiv.textContent = getMessageOr('testLocalMarkdownError', 'ローカルMarkdown書き出しテストに失敗しました');
-    statusTopDiv.className = 'error';
-  } finally {
-    testLocalMarkdownBtn.disabled = false;
-  }
+  syncStatusToTop();
 }

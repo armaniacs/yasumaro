@@ -968,8 +968,11 @@ describe('handleTestAi', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK', providers: [] } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     mockedGetMessage.mockReturnValue('' as any);
-    // outer try has no catch for this region, so it rejects; finally still runs
-    await expect(handleTestAi()).rejects.toThrow('build fail');
+    // The outer panel guard absorbs the throw and renders the generic error
+    // instead of rejecting; the buttons are still restored.
+    await expect(handleTestAi()).resolves.toBeUndefined();
+    expect(document.getElementById('status')!.textContent).toBe('接続テストに失敗しました。');
+    expect(document.getElementById('status')!.className).toBe('error');
     // finally should have run and reset state despite rejection (the guard release allows next call)
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     // verify re-entrancy guard cleared
@@ -1037,7 +1040,7 @@ describe('handleTestLocalMarkdown', () => {
     };
     await handleTestLocalMarkdown(repo);
     // after disabled check, it should show disabled error fallback, not testing text
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('error');
   });
 
   it('shows saveError when save fails with fallback', async () => {
@@ -1046,8 +1049,8 @@ describe('handleTestLocalMarkdown', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('設定の保存に失敗しました。');
-    expect(document.getElementById('statusTop')!.className).toBe('status-message error');
+    expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -1057,7 +1060,7 @@ describe('handleTestLocalMarkdown', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('SAVE_ERR');
+    expect(document.getElementById('status')!.textContent).toBe('SAVE_ERR');
   });
 
   it('shows disabled error with truthy getMessage', async () => {
@@ -1069,8 +1072,8 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('DISABLED_MSG');
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.textContent).toBe('DISABLED_MSG');
+    expect(document.getElementById('status')!.className).toBe('error');
   });
 
   it('shows disabled error with fallback when getMessage falsy', async () => {
@@ -1082,7 +1085,7 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('ローカルMarkdown書き出しが無効です。まず有効にしてください。');
+    expect(document.getElementById('status')!.textContent).toBe('ローカルMarkdown書き出しが無効です。まず有効にしてください。');
   });
 
   it('treats falsy enabled (undefined) as disabled', async () => {
@@ -1093,7 +1096,7 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('error');
   });
 
   it('successful export with custom path and verifies download filename', async () => {
@@ -1115,8 +1118,8 @@ describe('handleTestLocalMarkdown', () => {
     expect((globalThis.URL as any).createObjectURL).toHaveBeenCalled();
     // filename should end with .md
     expect(downloadMock.mock.calls[0]?.[0].filename).toMatch(/\.md$/);
-    expect(document.getElementById('statusTop')!.textContent).toBe('SUCCESS_MSG');
-    expect(document.getElementById('statusTop')!.className).toBe('success');
+    expect(document.getElementById('status')!.textContent).toBe('SUCCESS_MSG');
+    expect(document.getElementById('status')!.className).toBe('success');
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
@@ -1131,7 +1134,7 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
+    expect(document.getElementById('status')!.textContent).toBe('ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalled();
   });
 
@@ -1183,7 +1186,7 @@ describe('handleTestLocalMarkdown', () => {
     await promise;
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
-    expect(document.getElementById('statusTop')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('success');
   });
 
   it('revokes the object url when the download rejects', async () => {
@@ -1198,7 +1201,7 @@ describe('handleTestLocalMarkdown', () => {
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     // the failure still reports the error and re-enables the button
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -1233,8 +1236,8 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('ローカルMarkdown書き出しテストに失敗しました');
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.textContent).toBe('ローカルMarkdown書き出しテストに失敗しました');
+    expect(document.getElementById('status')!.className).toBe('error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -1248,7 +1251,7 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('DL_ERR');
+    expect(document.getElementById('status')!.textContent).toBe('DL_ERR');
   });
 
   it('handles repo.getMany throwing', async () => {
@@ -1261,7 +1264,7 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.textContent).toBe('ローカルMarkdown書き出しテストに失敗しました');
+    expect(document.getElementById('status')!.textContent).toBe('ローカルMarkdown書き出しテストに失敗しました');
   });
 
   it('handles saveDashboardSettings throwing', async () => {
@@ -1269,7 +1272,7 @@ describe('handleTestLocalMarkdown', () => {
     mockedSaveDashboardSettings.mockRejectedValue(new Error('save err'));
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('error');
   });
 
   it('disables button during test and re-enables even on success', async () => {
@@ -1332,7 +1335,7 @@ describe('handleTestLocalMarkdown', () => {
     // We cannot easily test default repo without importing real storage, but we ensure branch 39 covered:
     // calling with explicit repo still counts; but we also call without param to hit default
     // The default repo will try chrome.storage.local.get -> returns {} => disabled path
-    document.body.innerHTML = `<button id="testLocalMarkdownBtnTop"></button><div id="statusTop"></div><form id="panel-general"></form>`;
+    document.body.innerHTML = `<button id="testLocalMarkdownBtnTop"></button><div id="status"></div><div id="statusTop"></div><form id="panel-general"></form>`;
     // ensure save succeeds, then getMany from real repo returns {} (disabled)
     // We already have chrome mock; the real settingsRepository will read from mocked chrome.storage
     // So calling without arg should hit disabled error branch
@@ -1340,7 +1343,89 @@ describe('handleTestLocalMarkdown', () => {
     // handleTestLocalMarkdown with no arg uses default settingsRepository
     // Need to ensure it doesn't throw for missing chrome storage keys
     await handleTestLocalMarkdown(); // default param
-    expect(document.getElementById('statusTop')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('error');
+  });
+});
+
+// ------------------------------------------------------------------
+// Button pair guards (PBI 2026-10-05-11)
+// ------------------------------------------------------------------
+describe('button pair guards', () => {
+  it('suppresses a second Save while the first is in flight and restores both buttons', async () => {
+    document.body.innerHTML = `<button id="saveTop"></button><button id="save"></button><div id="status"></div><div id="statusTop"></div>`;
+    let resolveSave: (v: any) => void;
+    mockedSaveDashboardSettings.mockReturnValue(new Promise((res) => { resolveSave = res; }));
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+
+    const first = handleSaveOnly();
+    await waitForMock(() => expect(mockedSaveDashboardSettings).toHaveBeenCalledTimes(1));
+    expect((document.getElementById('saveTop') as HTMLButtonElement).disabled).toBe(true);
+    expect((document.getElementById('save') as HTMLButtonElement).disabled).toBe(true);
+
+    await handleSaveOnly();
+    expect(mockedSaveDashboardSettings).toHaveBeenCalledTimes(1);
+
+    resolveSave!({ success: true });
+    await first;
+    expect((document.getElementById('saveTop') as HTMLButtonElement).disabled).toBe(false);
+    expect((document.getElementById('save') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('suppresses a second Test Obsidian from the paired button and mirrors status', async () => {
+    document.body.innerHTML = `<button id="testObsidianBtnTop"></button><button id="testObsidianBtn"></button><div id="status"></div><div id="statusTop"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="27124"/>`;
+    let releaseSend: (v: any) => void;
+    const sendMessage = vi.fn().mockImplementation(() => new Promise((res) => { releaseSend = res; }));
+    setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+
+    const first = handleTestObsidian();
+    await waitForMock(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    expect((document.getElementById('testObsidianBtnTop') as HTMLButtonElement).disabled).toBe(true);
+    expect((document.getElementById('testObsidianBtn') as HTMLButtonElement).disabled).toBe(true);
+
+    await handleTestObsidian();
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+
+    releaseSend!({ obsidian: { success: true, message: 'OK' } });
+    await first;
+    expect((document.getElementById('testObsidianBtnTop') as HTMLButtonElement).disabled).toBe(false);
+    expect((document.getElementById('testObsidianBtn') as HTMLButtonElement).disabled).toBe(false);
+    expect(document.getElementById('status')!.className).toBe('success');
+    expect(mockedSyncStatusToTop).toHaveBeenCalled();
+  });
+
+  it('suppresses a second Test Local Markdown while the first is in flight', async () => {
+    document.body.innerHTML = `<button id="testLocalMarkdownBtnTop"></button><button id="testLocalMarkdownBtnBottom"></button><div id="status"></div><div id="statusTop"></div><form id="panel-general"></form>`;
+    let resolveSave: (v: any) => void;
+    mockedSaveDashboardSettings.mockReturnValue(new Promise((res) => { resolveSave = res; }));
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
+    const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
+
+    const first = handleTestLocalMarkdown(repo);
+    await waitForMock(() => expect(mockedSaveDashboardSettings).toHaveBeenCalledTimes(1));
+
+    await handleTestLocalMarkdown(repo);
+    expect(mockedSaveDashboardSettings).toHaveBeenCalledTimes(1);
+
+    resolveSave!({ success: true });
+    await first;
+    expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
+    expect((document.getElementById('testLocalMarkdownBtnBottom') as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('writes Local Markdown results to #status and always mirrors to top', async () => {
+    resetDomForLocalMarkdown();
+    document.body.innerHTML += `<button id="testLocalMarkdownBtnBottom"></button>`;
+    setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({}), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } }, downloads: { download: vi.fn().mockResolvedValue('id') } });
+    mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
+    mockedGetMessage.mockImplementation((k: string) => k === 'testLocalMarkdownSuccess' ? 'SUCCESS_MSG' : k);
+    const repo: SettingsReader = {
+      getMany: vi.fn().mockResolvedValue({ [StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED]: true, [StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]: 'Yasumaro' }),
+      getAll: vi.fn(),
+    };
+    await handleTestLocalMarkdown(repo);
+    expect(document.getElementById('status')!.textContent).toBe('SUCCESS_MSG');
+    expect(document.getElementById('status')!.className).toBe('success');
+    expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 });
 
