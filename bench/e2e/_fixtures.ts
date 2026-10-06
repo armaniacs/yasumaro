@@ -8,12 +8,11 @@
  * Adds a `cdp` fixture (CDP session on a fresh page) and `throttleCpu` helper
  * so benches run under a fixed 4x CPU slowdown for machine-independent numbers.
  */
-import { test as base, chromium, type BrowserContext, type CDPSession, type Page } from '@playwright/test';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const EXTENSION_PATH = path.join(__dirname, '../../dist/chromium-mv3');
+import { test as base, type BrowserContext, type CDPSession, type Page } from '@playwright/test';
+import {
+  launchExtensionContext,
+  resolveExtensionId,
+} from '../../testDir/e2e/fixtures/launchExtensionContext.js';
 
 export const CPU_THROTTLE_RATE = 4;
 export const BENCH_FIXTURE_PORT = 8110;
@@ -26,31 +25,7 @@ type BenchFixtures = {
 };
 
 async function tryLaunch(): Promise<BrowserContext | null> {
-  try {
-    const context = await chromium.launchPersistentContext('', {
-      channel: 'chromium',
-      args: [
-        `--disable-extensions-except=${EXTENSION_PATH}`,
-        `--load-extension=${EXTENSION_PATH}`,
-        '--no-first-run',
-        '--no-default-browser-check',
-      ],
-    });
-    const started = await Promise.race([
-      new Promise<boolean>((res) => {
-        // eslint-disable-next-line local/no-test-sleep -- condition poll for service-worker registration (resolves on presence); bounded by the 5000ms cap below, never hangs
-        const check = () => (context.serviceWorkers().length ? res(true) : setTimeout(check, 200));
-        check();
-      }),
-      // eslint-disable-next-line local/no-test-sleep -- bounded external-process readiness cap (service-worker registration); the poll above is the condition, this only bounds it
-      new Promise<boolean>((res) => setTimeout(() => res(false), 5000)),
-    ]);
-    if (started) return context;
-    await context.close();
-    return null;
-  } catch {
-    return null;
-  }
+  return launchExtensionContext({ seedPolicy: { consent: true } });
 }
 
 export const test = base.extend<BenchFixtures>({
@@ -66,8 +41,7 @@ export const test = base.extend<BenchFixtures>({
 
   extensionId: async ({ context }, use) => {
     if (!context) return;
-    const sw = context.serviceWorkers()[0] || (await context.waitForEvent('serviceworker', { timeout: 10_000 }));
-    await use(sw.url().split('/')[2]);
+    await use(await resolveExtensionId(context));
   },
 
   benchPage: async ({ context }, use) => {
