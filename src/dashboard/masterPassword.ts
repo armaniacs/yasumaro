@@ -134,6 +134,24 @@ export class MasterPasswordController {
     );
   }
 
+  private setModalVisible(modal: HTMLElement, onCancel: () => void, focusTarget?: HTMLElement | null): string {
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+    void modal.offsetHeight;
+    modal.classList.add('show');
+    const trapId = focusTrapManager.trap(modal, onCancel);
+    focusTarget?.focus();
+    return trapId;
+  }
+
+  private hideModal(modal: HTMLElement, trapId: string | null): string | null {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+    if (trapId) { focusTrapManager.release(trapId); return null; }
+    return trapId;
+  }
+
   showPasswordModal(mode: 'set' | 'change' = 'set'): void {
     if (!this.dom.passwordModal) return;
     this.passwordModalMode = mode;
@@ -147,20 +165,12 @@ export class MasterPasswordController {
     if (this.dom.passwordStrengthError) this.dom.passwordStrengthError.textContent = '';
     if (this.dom.passwordMatchError) this.dom.passwordMatchError.textContent = '';
     this.updatePasswordStrength('');
-    this.dom.passwordModal.classList.remove('hidden');
-    this.dom.passwordModal.style.display = 'flex';
-    void this.dom.passwordModal.offsetHeight;
-    this.dom.passwordModal.classList.add('show');
-    this.passwordTrapId = focusTrapManager.trap(this.dom.passwordModal, () => this.cancelPasswordModal());
-    this.dom.masterPasswordInput?.focus();
+    this.passwordTrapId = this.setModalVisible(this.dom.passwordModal, () => this.cancelPasswordModal(), this.dom.masterPasswordInput);
   }
 
   closePasswordModal(): void {
     if (!this.dom.passwordModal) return;
-    this.dom.passwordModal.classList.remove('show');
-    this.dom.passwordModal.style.display = 'none';
-    this.dom.passwordModal.classList.add('hidden');
-    if (this.passwordTrapId) { focusTrapManager.release(this.passwordTrapId); this.passwordTrapId = null; }
+    this.passwordTrapId = this.hideModal(this.dom.passwordModal, this.passwordTrapId);
     if (this.dom.masterPasswordInput) this.dom.masterPasswordInput.value = '';
     if (this.dom.masterPasswordConfirm) this.dom.masterPasswordConfirm.value = '';
     if (this.dom.passwordStrengthError) this.dom.passwordStrengthError.textContent = '';
@@ -262,20 +272,12 @@ export class MasterPasswordController {
     this.pendingPasswordAction = action;
     if (this.dom.masterPasswordAuthInput) this.dom.masterPasswordAuthInput.value = '';
     if (this.dom.passwordAuthError) this.dom.passwordAuthError.textContent = '';
-    this.dom.passwordAuthModal.classList.remove('hidden');
-    this.dom.passwordAuthModal.style.display = 'flex';
-    void this.dom.passwordAuthModal.offsetHeight;
-    this.dom.passwordAuthModal.classList.add('show');
-    this.passwordAuthTrapId = focusTrapManager.trap(this.dom.passwordAuthModal, () => this.cancelPasswordAuthModal());
-    this.dom.masterPasswordAuthInput?.focus();
+    this.passwordAuthTrapId = this.setModalVisible(this.dom.passwordAuthModal, () => this.cancelPasswordAuthModal(), this.dom.masterPasswordAuthInput);
   }
 
   closePasswordAuthModal(): void {
     if (!this.dom.passwordAuthModal) return;
-    this.dom.passwordAuthModal.classList.remove('show');
-    this.dom.passwordAuthModal.style.display = 'none';
-    this.dom.passwordAuthModal.classList.add('hidden');
-    if (this.passwordAuthTrapId) { focusTrapManager.release(this.passwordAuthTrapId); this.passwordAuthTrapId = null; }
+    this.passwordAuthTrapId = this.hideModal(this.dom.passwordAuthModal, this.passwordAuthTrapId);
     if (this.dom.masterPasswordAuthInput) this.dom.masterPasswordAuthInput.value = '';
     if (this.dom.passwordAuthError) this.dom.passwordAuthError.textContent = '';
     this.pendingPasswordAction = null;
