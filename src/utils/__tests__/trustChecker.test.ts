@@ -10,6 +10,9 @@
 
 import { vi } from 'vitest';;
 import type { Mock } from 'vitest';
+import { settingsRepository, SettingsRepository, InMemoryStorageAdapter } from '../storage/SettingsRepository.js';
+import { StorageKeys } from '../storage/types.js';
+import { installTestSecretKek } from '../crypto/__tests__/secretKekHelper.js';
 
 // Mock chrome.storage.local - re-set in beforeEach to survive clearAllMocks
 const mockStorage = new Map();
@@ -147,10 +150,13 @@ describe('TrustChecker - Phase 2 - Default Alert Config', () => {
 });
 
 describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
+    // Writes go through SettingsRepository, whose write path resolves the
+    // encryption key — the KEK override stands in for IndexedDB (absent here).
+    await installTestSecretKek();
   });
 
   it('should load default alert config when storage is empty', async () => {
@@ -186,9 +192,12 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
 
     await checker.saveAlertSettings({ alertFinance: false });
 
+    // The write lands in the settings blob via SettingsRepository — no raw
+    // top-level key is recreated.
     expect(chrome.storage.local.set).toHaveBeenCalledWith(
-      expect.objectContaining({ 'alert_finance': false })
+      expect.objectContaining({ 'settings': expect.objectContaining({ 'alert_finance': false }) })
     );
+    expect(mockStorage.has('alert_finance')).toBe(false);
   });
 
   it('shouldSaveAbortedPages should reflect saveAbortedPages setting', async () => {
@@ -223,7 +232,7 @@ describe('TrustChecker - Phase 2 - Alert Settings Save/Load', () => {
     const config = await checker.getAlertConfig();
     expect(config.alertSensitive).toBe(false);
     expect(chrome.storage.local.set).toHaveBeenCalledWith(
-      expect.objectContaining({ 'alert_sensitive': false })
+      expect.objectContaining({ 'settings': expect.objectContaining({ 'alert_sensitive': false }) })
     );
   });
 
@@ -266,10 +275,13 @@ describe('TrustChecker - Phase 2 - Singleton', () => {
 });
 
 describe('TrustChecker - Phase 2 - getAlertConfig (async-only)', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
+    // Writes go through SettingsRepository, whose write path resolves the
+    // encryption key — the KEK override stands in for IndexedDB (absent here).
+    await installTestSecretKek();
   });
 
   it('should return default config after loadAlertSettings', async () => {
@@ -305,10 +317,13 @@ describe('TrustChecker - Phase 2 - getAlertConfig (async-only)', () => {
 });
 
 describe('TrustChecker - Phase 2 - checkDomain', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
     mockStorage.clear();
     setupChromeMocks();
+    // saveAlertSettings goes through SettingsRepository, whose write path
+    // resolves the encryption key — the KEK override stands in for IndexedDB.
+    await installTestSecretKek();
     mockDbInitialize.mockClear();
     mockIsDomainTrusted.mockReset();
   });
@@ -613,5 +628,72 @@ describe('TrustChecker - Phase 2 - Convenience Functions', () => {
     const display = await getTrustLevelDisplayFn('https://example.com');
     expect(display.level).toBe('TRUSTED');
     expect(display.color).toBe('#10b981');
+  });
+});
+
+describe('TrustChecker - settings migration (alert keys via SettingsRepository)', () => {
+  let adapter: InMemoryStorageAdapter;
+  let repo: SettingsRepository;
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    mockStorage.clear();
+    setupChromeMocks();
+    // The repository singleton is module-level; its 1s cache must not serve
+    // a blob read from one test into the next one after mockStorage.clear().
+    settingsRepository.clearCache();
+    // Fresh secret generation wraps with the dedicated KEK (PBI 25-25).
+    await installTestSecretKek();
+    adapter = new InMemoryStorageAdapter();
+    repo = new SettingsRepository(adapter);
+  });
+
+  /** Simulate the completed settings migration: the raw alert keys were folded
+   *  into the blob and deleted, so only the blob-side value survives. */
+  async function completeMigration(): Promise<void> {
+    await adapter.set({ settings_migrated: true });
+  }
+
+  it('reads alert settings from the settings blob when raw keys are deleted (post-migration)', async () => {
+    // Production construction path: checkTrustDomainStep.ts builds `new TrustChecker()`.
+    mockStorage.set('settings', { alert_finance: false });
+    mockStorage.set('settings_migrated', true);
+
+    const { TrustChecker } = await import('../trustChecker.js');
+    const checker = new TrustChecker();
+    await checker.loadAlertSettings();
+
+    const config = await checker.getAlertConfig();
+    expect(config.alertFinance).toBe(false);
+  });
+
+  it('reads alert settings written through the repository after migration (round-trip)', async () => {
+    await completeMigration();
+    await repo.set(StorageKeys.ALERT_FINANCE, false);
+
+    const { TrustChecker } = await import('../trustChecker.js');
+    const checker = new TrustChecker(repo);
+    await checker.loadAlertSettings();
+
+    expect((await checker.getAlertConfig()).alertFinance).toBe(false);
+  });
+
+  it('writes alert settings into the blob without recreating raw top-level keys', async () => {
+    await completeMigration();
+    const { TrustChecker } = await import('../trustChecker.js');
+    const checker = new TrustChecker(repo);
+    await checker.loadAlertSettings();
+
+    await checker.saveAlertSettings({ alertUnverified: true });
+
+    const dump = adapter.dump();
+    const blob = (dump['settings'] as Record<string, unknown> | undefined) ?? {};
+    expect(blob['alert_unverified']).toBe(true);
+    expect(dump['alert_unverified']).toBeUndefined();
+
+    // A fresh checker (new session) reads the value back from the blob.
+    const reloaded = new TrustChecker(repo);
+    await reloaded.loadAlertSettings();
+    expect((await reloaded.getAlertConfig()).alertUnverified).toBe(true);
   });
 });

@@ -6,6 +6,7 @@
 
 import type { TrustResult } from './trustDb/trustDbSchema.js';
 import { StorageKeys } from './storage/types.js';
+import { settingsRepository, SettingsRepository } from './storage/SettingsRepository.js';
 import { logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { pickDefined } from './objectUtils.js';
@@ -52,11 +53,15 @@ export interface TrustCheckResult {
  * TrustChecker クラス
  */
 export class TrustChecker {
+  private repo: SettingsRepository;
   private alertConfig: AlertConfig = DEFAULT_ALERT_CONFIG;
   private alertConfigInitialized = false;
   private initializationPromise: Promise<void> | null = null;
 
-  constructor() {
+  // The default repository keeps no-arg construction (checkTrustDomainStep,
+  // trustSettings via getTrustChecker) working; tests inject an InMemory-backed repo.
+  constructor(repo: SettingsRepository = settingsRepository) {
+    this.repo = repo;
     // 初期化時にAlert Settingsを読み込む
     this.initializationPromise = this.loadAlertSettings();
   }
@@ -66,19 +71,21 @@ export class TrustChecker {
    */
   async loadAlertSettings(): Promise<void> {
     try {
-      const settings = await chrome.storage.local.get({
-        [StorageKeys.ALERT_FINANCE]: DEFAULT_ALERT_CONFIG.alertFinance,
-        [StorageKeys.ALERT_SENSITIVE]: DEFAULT_ALERT_CONFIG.alertSensitive,
-        [StorageKeys.ALERT_UNVERIFIED]: DEFAULT_ALERT_CONFIG.alertUnverified,
-        [StorageKeys.SAVE_ABORTED_PAGES]: DEFAULT_ALERT_CONFIG.saveAbortedPages
-      });
+      // Destructuring defaults are type narrowing only: getMany fills missing
+      // values from DEFAULT_SETTINGS at runtime, so they never fire here.
+      const {
+        [StorageKeys.ALERT_FINANCE]: alertFinance = DEFAULT_ALERT_CONFIG.alertFinance,
+        [StorageKeys.ALERT_SENSITIVE]: alertSensitive = DEFAULT_ALERT_CONFIG.alertSensitive,
+        [StorageKeys.ALERT_UNVERIFIED]: alertUnverified = DEFAULT_ALERT_CONFIG.alertUnverified,
+        [StorageKeys.SAVE_ABORTED_PAGES]: saveAbortedPages = DEFAULT_ALERT_CONFIG.saveAbortedPages,
+      } = await this.repo.getMany([
+        StorageKeys.ALERT_FINANCE,
+        StorageKeys.ALERT_SENSITIVE,
+        StorageKeys.ALERT_UNVERIFIED,
+        StorageKeys.SAVE_ABORTED_PAGES
+      ]);
 
-      this.alertConfig = {
-        alertFinance: (settings[StorageKeys.ALERT_FINANCE] as boolean) ?? DEFAULT_ALERT_CONFIG.alertFinance,
-        alertSensitive: (settings[StorageKeys.ALERT_SENSITIVE] as boolean) ?? DEFAULT_ALERT_CONFIG.alertSensitive,
-        alertUnverified: (settings[StorageKeys.ALERT_UNVERIFIED] as boolean) ?? DEFAULT_ALERT_CONFIG.alertUnverified,
-        saveAbortedPages: (settings[StorageKeys.SAVE_ABORTED_PAGES] as boolean) ?? DEFAULT_ALERT_CONFIG.saveAbortedPages
-      };
+      this.alertConfig = { alertFinance, alertSensitive, alertUnverified, saveAbortedPages };
 
       this.alertConfigInitialized = true;
       await logDebug('TrustChecker', { alertConfig: this.alertConfig }, 'Alert settings loaded');
@@ -102,28 +109,31 @@ export class TrustChecker {
    * Alert Settingsを保存
    */
   async saveAlertSettings(config: Partial<AlertConfig>): Promise<void> {
-    const updates: Record<string, unknown> = {};
+    const changedKeys: string[] = [];
 
     if (config.alertFinance !== undefined) {
       this.alertConfig.alertFinance = config.alertFinance;
-      updates[StorageKeys.ALERT_FINANCE] = config.alertFinance;
+      changedKeys.push(StorageKeys.ALERT_FINANCE);
+      await this.repo.set(StorageKeys.ALERT_FINANCE, config.alertFinance);
     }
     if (config.alertSensitive !== undefined) {
       this.alertConfig.alertSensitive = config.alertSensitive;
-      updates[StorageKeys.ALERT_SENSITIVE] = config.alertSensitive;
+      changedKeys.push(StorageKeys.ALERT_SENSITIVE);
+      await this.repo.set(StorageKeys.ALERT_SENSITIVE, config.alertSensitive);
     }
     if (config.alertUnverified !== undefined) {
       this.alertConfig.alertUnverified = config.alertUnverified;
-      updates[StorageKeys.ALERT_UNVERIFIED] = config.alertUnverified;
+      changedKeys.push(StorageKeys.ALERT_UNVERIFIED);
+      await this.repo.set(StorageKeys.ALERT_UNVERIFIED, config.alertUnverified);
     }
     if (config.saveAbortedPages !== undefined) {
       this.alertConfig.saveAbortedPages = config.saveAbortedPages;
-      updates[StorageKeys.SAVE_ABORTED_PAGES] = config.saveAbortedPages;
+      changedKeys.push(StorageKeys.SAVE_ABORTED_PAGES);
+      await this.repo.set(StorageKeys.SAVE_ABORTED_PAGES, config.saveAbortedPages);
     }
 
-    if (Object.keys(updates).length > 0) {
-      await chrome.storage.local.set(updates);
-      logDebug('TrustChecker', { updates }, 'Alert settings saved');
+    if (changedKeys.length > 0) {
+      logDebug('TrustChecker', { keys: changedKeys }, 'Alert settings saved');
     }
   }
 
