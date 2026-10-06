@@ -14,6 +14,7 @@
 import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
+import type { Settings } from './storage/types.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger/api.js';
 import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
@@ -63,6 +64,7 @@ interface FetchOptions extends RequestInit {
   allowedUrls?: Set<string> | null;
   skipCspValidation?: boolean; // P1: CSP検証をスキップするフラグ
   timeoutMs?: number; // リクエストタイムアウト時間（ミリ秒）
+  resolveSettings?: () => Promise<Settings>;
 }
 
 /**
@@ -104,6 +106,7 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     allowedUrls = null, // 動的URL検証用オプション
     skipCspValidation = false, // CSP検証をスキップするフラグ（テスト等で使用）
     timeoutMs: optionTimeoutMs,
+    resolveSettings = () => settingsRepository.getAll(),
     ...fetchOptions
   } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
@@ -113,7 +116,7 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
 
   // P1: CSPValidatorによるAIプロバイダーURL検証
   if (!skipCspValidation) {
-    const settings = await settingsRepository.getAll();
+    const settings = await resolveSettings();
     const conditionalCspEnabled = settings[StorageKeys.CONDITIONAL_CSP_ENABLED] !== false; // デフォルトはtrue
 
     if (conditionalCspEnabled) {
@@ -286,6 +289,15 @@ export type SleepFn = (ms: number) => Promise<void>;
 
 const defaultSleep: SleepFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+export async function backoffWait(
+  sleepFn: SleepFn,
+  delay: number,
+  payload: { message: string; data: Record<string, unknown> },
+): Promise<void> {
+  logWarn(payload.message, payload.data, undefined, 'fetchWithRetry');
+  await sleepFn(delay);
+}
+
 /**
  * リトライ設定
  */
@@ -362,12 +374,10 @@ export async function fetchWithRetry(
   const requestMethod = retryOptions.method ?? options.method ?? 'GET';
 
   let lastError: Error | null = null;
-  let _lastResponse: Response | null = null;
 
   for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
     try {
       const response = await fetchWithTimeout(url, options, options.timeoutMs || 30000);
-      _lastResponse = response;
 
       // レスポンスが正常な場合は返却
       if (response.ok) {
@@ -393,15 +403,16 @@ export async function fetchWithRetry(
           multiplier: backoffMultiplier,
           maxMs: maxDelayMs,
         });
-        logWarn(`HTTP error, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, status: response.status }, undefined, 'fetchWithRetry');
-        await sleepFn(delay);
+        await backoffWait(sleepFn, delay, {
+          message: `HTTP error, retrying in ${delay}ms...`,
+          data: { url, attempt: attempt + 1, maxRetryCount, delay, status: response.status },
+        });
       } else {
         // リトライなしまたは全リトライ失敗
         logWarn(`HTTP error, no more retries`, { url, attempt, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
         throw attemptError;
       }
     } catch (error: unknown) {
-      _lastResponse = null;
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // リトライ条件チェック
@@ -412,8 +423,10 @@ export async function fetchWithRetry(
           multiplier: backoffMultiplier,
           maxMs: maxDelayMs,
         });
-        logWarn(`Request failed, retrying in ${delay}ms...`, { url, attempt: attempt + 1, maxRetryCount, delay, error: lastError.message }, undefined, 'fetchWithRetry');
-        await sleepFn(delay);
+        await backoffWait(sleepFn, delay, {
+          message: `Request failed, retrying in ${delay}ms...`,
+          data: { url, attempt: attempt + 1, maxRetryCount, delay, error: lastError.message },
+        });
       } else {
         // リトライなしまたは全リトライ失敗
         logWarn(`Request failed, no more retries`, { url, attempt, maxRetryCount, error: lastError.message }, undefined, 'fetchWithRetry');

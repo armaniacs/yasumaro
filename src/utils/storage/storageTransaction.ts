@@ -8,7 +8,7 @@
  *
  * Why microtask-only: timer-backed mutex does not progress under vi.useFakeTimers().
  * Why logger-independent: optimisticLock -> logger -> storageAdapter cycle is broken by keeping this free of logger barrel
- *         (logDebug is still used for retry diagnostics but not required for serialization).
+ *         (retry diagnostics use injected onRetryDiagnostic instead of importing logger).
  */
 
 import type { StoragePort } from './storagePort.js';
@@ -16,12 +16,13 @@ import { ChromeStoragePort } from './storagePort.js';
 import { backoffDelayMs } from '../backoff.js';
 import { waitForRetry, type SleepFn } from '../retryPredicate.js';
 
-// Lightweight debug helper — avoids importing logger to break the
-// storageAdapter -> transaction -> logger -> storageAdapter cycle.
+// Retry diagnostic seam — injected like sleep so production stays logger-free
+// (importing logger here would rebuild the storageAdapter -> transaction ->
+// logger -> storageAdapter cycle) and tests observe retries without spying console.
 // keySerializer was deliberately logger-free for the same reason.
-function logDebug(_msg: string, _data: unknown, _file: string): void {
-  // no-op in production; tests can spy on console if needed
-}
+export type OnRetryDiagnostic = (msg: string, data: unknown) => void;
+
+const noopDiagnostic: OnRetryDiagnostic = () => {};
 
 // ---------------------------------------------------------------------------
 // Internal seam: key-granular serialization (microtask chain)
@@ -117,6 +118,11 @@ export interface CasRetryOptions {
    * attempts passes a recorder so it never spends wall time sleeping.
    */
   sleep?: SleepFn;
+  /**
+   * Injected retry diagnostic. Defaults to no-op; a test passes a recorder
+   * to observe retry occurrences with msg and data.
+   */
+  onRetryDiagnostic?: OnRetryDiagnostic;
 }
 
 /** Per-method differences of the retry shell; the discipline itself is shared. */
@@ -128,6 +134,7 @@ interface CasRetryShell {
   maxRetries: number;
   initialDelay: number;
   sleep: SleepFn;
+  onRetryDiagnostic: OnRetryDiagnostic;
   /**
    * Retry-log payload. Each method builds its own because the two name the
    * attempt field differently (`attemptCount` / `attempt`) and the payload is
@@ -151,7 +158,7 @@ interface CasRetryShell {
  * in the work they run per attempt and in the fields they log.
  */
 async function runCasRetryLoop<R>(runAttempt: () => Promise<R>, shell: CasRetryShell): Promise<R> {
-  const { maxRetries, initialDelay, sleep, conflictKey, label } = shell;
+  const { maxRetries, initialDelay, sleep, conflictKey, label, onRetryDiagnostic } = shell;
   let attempt = 0;
   let lastError: Error | null = null;
 
@@ -161,7 +168,7 @@ async function runCasRetryLoop<R>(runAttempt: () => Promise<R>, shell: CasRetryS
     } catch (error) {
       const err = error as Error;
       if (!(error instanceof ConflictError)) {
-        logDebug(`${label} error`, { error: err.message, stack: err.stack }, 'storageTransaction.ts');
+        onRetryDiagnostic(`${label} error`, { error: err.message, stack: err.stack });
         throw error;
       }
       lastError = err;
@@ -169,7 +176,7 @@ async function runCasRetryLoop<R>(runAttempt: () => Promise<R>, shell: CasRetryS
       if (attempt > maxRetries) throw new ConflictError(conflictKey, -1, -1);
       const delay = backoffDelayMs(attempt - 1, { baseMs: initialDelay });
       await sleep(delay);
-      logDebug(`${label} retrying`, shell.retryLogData(attempt, delay), 'storageTransaction.ts');
+      onRetryDiagnostic(`${label} retrying`, shell.retryLogData(attempt, delay));
     }
   }
   throw lastError || new Error(shell.fallbackMessage);
@@ -241,7 +248,7 @@ export class StorageTransaction {
     updateFn: (currentValue: T) => T,
     options: CasRetryOptions = {}
   ): Promise<T> {
-    const { maxRetries = 5, initialDelay = 100, sleep = waitForRetry } = options;
+    const { maxRetries = 5, initialDelay = 100, sleep = waitForRetry, onRetryDiagnostic = noopDiagnostic } = options;
     const port = this.port;
 
     return runCasRetryLoop(
@@ -261,6 +268,7 @@ export class StorageTransaction {
         maxRetries,
         initialDelay,
         sleep,
+        onRetryDiagnostic,
         retryLogData: (attempt, delay) => ({ key, attemptCount: attempt, maxRetries, delay }),
         fallbackMessage: 'Unexpected error in withLock',
       }
@@ -272,7 +280,7 @@ export class StorageTransaction {
     updater: (currentValues: { [K in keyof T]: T[K] }) => { [K in keyof T]: T[K] },
     options: CasRetryOptions = {}
   ): Promise<{ [K in keyof T]: T[K] }> {
-    const { maxRetries = 5, initialDelay = 100, sleep = waitForRetry } = options;
+    const { maxRetries = 5, initialDelay = 100, sleep = waitForRetry, onRetryDiagnostic = noopDiagnostic } = options;
     const keyList = keys as readonly string[];
     const versionKeys = keyList.map((k) => `${k}_version`);
     const conflictKey = keyList.join('+');
@@ -310,6 +318,7 @@ export class StorageTransaction {
         maxRetries,
         initialDelay,
         sleep,
+        onRetryDiagnostic,
         retryLogData: (attempt, delay) => ({ keys, attempt, maxRetries, delay }),
         fallbackMessage: 'Unexpected error in withAtomic',
       }
