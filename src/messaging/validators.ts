@@ -313,8 +313,10 @@ function importBytesGuard(p: Record<string, unknown>): void {
  * Per-subtype wire-field schema for DASHBOARD_SQLITE payloads. One entry per
  * subtype; field rows are interpreted uniformly by DashboardSqliteValidator.
  * `query` is intentionally absent — it accepts arbitrary extra fields.
+ * Exported so the all-subtype coverage test can fail closed on a forgotten
+ * row (an undefined spec skips payload validation in validate() entirely).
  */
-const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSqliteSubtypeSpec>> = {
+export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSqliteSubtypeSpec>> = {
   toggle_star: { fields: [finiteNumber('id')] },
   delete: { fields: [finiteNumber('id')] },
   create_confirm_token: {

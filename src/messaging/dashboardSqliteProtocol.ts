@@ -175,3 +175,27 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'archive_status' ? { success: true; status: ArchiveSessionStatusData } :
       never
     );
+
+/**
+ * Compile-time guard that every canonical subtype also has a success-side
+ * mapping in `DashboardSqliteResponseFor` (the `:88-93` request-union guard's
+ * response twin). The conditional chain above ends in `never`, but nothing
+ * previously tied it to `ALL_DASHBOARD_SQLITE_SUBTYPES`: a subtype added to
+ * the canonical list without a success mapping made `DashboardSqliteResponseFor<S>`
+ * collapse to just `DashboardSqliteFailure`, and every downstream success-side
+ * `Extract<...>` on it silently became `never` — the gateway's handler switch
+ * would type-check while never matching. This folds the "missing" set over the
+ * whole subtype union (a missing subtype's response union is exactly
+ * `DashboardSqliteFailure`, so it survives the fold) and fails the const
+ * assignment whenever the set is not empty.
+ */
+type _SubtypeWithoutSuccessResponse<S extends DashboardSqliteSubtype> =
+  S extends DashboardSqliteSubtype
+    ? DashboardSqliteResponseFor<S> extends DashboardSqliteFailure ? S : never
+    : never;
+type _AssertSuccessResponsesCovered<T extends true> = T;
+type _SuccessResponsesCovered =
+  _AssertSuccessResponsesCovered<
+    _SubtypeWithoutSuccessResponse<DashboardSqliteSubtype> extends never ? true : never
+  >;
+const _successResponsesCoveredCheck: _SuccessResponsesCovered = true;
