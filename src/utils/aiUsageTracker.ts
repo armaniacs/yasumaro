@@ -4,12 +4,16 @@
  */
 
 import { StorageKeys } from './storage/types.js';
+import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
 
 // レート制限設定
 const RATE_LIMIT_WINDOW_MS = 60000; // 1分
-const DEFAULT_RATE_LIMIT_MAX = 10; // 1分間に最大10リクエスト（デフォルト）
+// Derived from DEFAULT_SETTINGS: defaults.ts is the single source of fallback
+// values, so a change there propagates without editing this constant.
+// `as number`: Settings is Partial, but DEFAULT_SETTINGS always populates this key.
+const DEFAULT_RATE_LIMIT_MAX = DEFAULT_SETTINGS[StorageKeys.AI_RATE_LIMIT_MAX] as number;
 
 // VULN-010 (CWE-362): a promise-chain mutex serializes the read-modify-write
 // of the rate-limit / monthly-usage counters. Without it, two concurrent calls
@@ -290,7 +294,7 @@ export function getRateLimitMessage(resetTime: number): string {
 }
 
 async function getMaxMonthlyTokens(): Promise<number> {
-  const DEFAULT_MAX = 1000000;
+  const DEFAULT_MAX = DEFAULT_SETTINGS[StorageKeys.MAX_MONTHLY_TOKENS] as number;
   const isValid = (v: unknown): v is number =>
     typeof v === 'number' && Number.isFinite(v) && v >= 0;
 
