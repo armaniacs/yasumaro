@@ -123,20 +123,14 @@ import { showSpinner } from '../spinner.js';
 import { checkPageStatus } from '../statusChecker.js';
 import { showPreview } from '../sanitizePreview.js';
 import { startAutoCloseTimer } from '../autoClose.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 vi.spyOn(chrome.runtime, 'getURL').mockImplementation((path: string) =>
   `chrome-extension://test-extension-id${path}`
 );
 
 function setupDom(): void {
-  document.body.innerHTML = [
-    '<div id="mainStatus"></div>',
-    '<button id="recordBtn"></button>',
-    '<div id="tagResultPanel"></div>',
-    '<img id="favicon" src="">',
-    '<div id="pageTitle"></div>',
-    '<div id="pageUrl"></div>',
-  ].join('\n');
+  setupPopupDom({ includePending: false, includeDialogs: false, includeCurrentPage: true });
 }
 
 beforeEach(() => {
@@ -432,12 +426,12 @@ describe('recordCurrentPage — preview flow', () => {
 // ──────────────────────────────────────────────
 describe('loadCurrentTab — edge cases', () => {
   beforeEach(() => {
-    document.body.innerHTML = [
-      '<img id="favicon" src="">',
-      '<div id="pageTitle"></div>',
-      '<div id="pageUrl"></div>',
-      '<button id="recordBtn"></button>',
-    ].join('\n');
+    setupPopupDom({
+      includePending: false,
+      includeDialogs: false,
+      includeMainStatus: false,
+      includeCurrentPage: true,
+    });
   });
 
   it('handles missing favicon element', async () => {

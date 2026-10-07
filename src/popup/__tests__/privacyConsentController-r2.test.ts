@@ -66,33 +66,15 @@ import {
   initPrivacyConsent,
   setupPrivacyConsentListeners,
 } from '../privacyConsentController.js';
-
-/**
- * M21: privacyConsentModal is now a native <dialog>. jsdom doesn't
- * implement showModal()/close(), so polyfill them.
- */
-function polyfillDialogMethods(): void {
-  const modal = document.getElementById('privacyConsentModal') as any;
-  if (!modal) return;
-  modal.showModal = function () { this.open = true; };
-  modal.close = function () {
-    this.open = false;
-    this.dispatchEvent(new Event('close'));
-  };
-}
+import { setupPopupDom } from './helpers/popupDom.js';
 
 function setupDom(): void {
-  document.body.innerHTML = `
-    <dialog id="privacyConsentModal">
-      <div id="privacyConsentTitle"></div>
-      <a id="viewPrivacyPolicyBtn" href="#"></a>
-      <input id="consentCheckbox" type="checkbox" />
-      <input id="contentStorageConsentCheckbox" type="checkbox" />
-      <button id="acceptConsentBtn" disabled>Accept</button>
-      <button id="declineConsentBtn">Decline</button>
-    </dialog>
-  `;
-  polyfillDialogMethods();
+  setupPopupDom({
+    includePending: false,
+    includeDialogs: false,
+    includeMainStatus: false,
+    includeConsentModal: true,
+  });
 }
 
 function getModal(): HTMLDialogElement | null {

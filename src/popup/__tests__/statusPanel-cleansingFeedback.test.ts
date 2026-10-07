@@ -50,13 +50,15 @@ vi.mock('../../utils/aiSummaryCleaner/feedbackQueue.js', () => ({
 }));
 
 import { initStatusPanel } from '../statusPanel.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 function setupDom(): void {
-  document.body.innerHTML = [
-    '<div id="statusPanel"></div>',
-    '<button id="reportCleansingFeedbackBtn"></button>',
-    '<span id="reportCleansingFeedbackStatus"></span>',
-  ].join('\n');
+  setupPopupDom({
+    includePending: false,
+    includeDialogs: false,
+    includeMainStatus: false,
+    includeStatusPanel: true,
+  });
 }
 
 async function clickReport(response: ContentResponse | null): Promise<void> {
@@ -78,6 +80,12 @@ beforeEach(() => {
     status: {
       domainFilter: { allowed: true, mode: 'whitelist' },
       privacy: { isPrivate: false, hasCache: false },
+      // The full status-panel skeleton makes renderStatusPanel render every
+      // section; renderCacheHtml/renderLastSavedHtml read status.cache /
+      // status.lastSaved unguarded, so a partial mock would throw mid-init
+      // and leave the feedback button unwired.
+      cache: { hasCache: false, hasCookie: false, hasAuth: false },
+      lastSaved: { exists: false },
     },
   });
 });

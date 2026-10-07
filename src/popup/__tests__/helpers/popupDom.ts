@@ -1,10 +1,12 @@
 /**
  * Shared DOM scaffold for popup unit tests.
  *
- * Consolidates the `#mainStatus` / 2-dialog / pending-section skeleton and the
- * `HTMLDialogElement` polyfill that each popup test used to duplicate in its
- * own `setupDom()`. Tests keep their mocks, `beforeEach` wiring, and all
- * assertions; only the fixture generation moves here.
+ * Consolidates the `#mainStatus` / 2-dialog / pending-section skeleton, the
+ * status panel (with its cleansing-feedback surface), the privacy consent
+ * modal, the current-page surface, and the `HTMLDialogElement` polyfill that
+ * each popup test used to duplicate in its own `setupDom()`. Tests keep their
+ * mocks, `beforeEach` wiring, and all assertions; only the fixture generation
+ * moves here.
  *
  * Production code must not import this module.
  */
@@ -15,6 +17,8 @@ export interface PopupDomOptions {
   includeMainStatus?: boolean;
   includeStatusPanel?: boolean;
   includePermissionBanner?: boolean;
+  includeConsentModal?: boolean;
+  includeCurrentPage?: boolean;
 }
 
 const PENDING_SKELETON: string[] = [
@@ -63,7 +67,28 @@ const STATUS_PANEL_SKELETON: string[] = [
   '  <div id="permissionDeniedMessage" class="hidden"></div>',
   '  <button id="statusAddDomain"></button>',
   '  <button id="statusAddPath"></button>',
+  '  <button id="reportCleansingFeedbackBtn"></button>',
+  '  <span id="reportCleansingFeedbackStatus"></span>',
   '</div>',
+];
+
+const CONSENT_MODAL_SKELETON: string[] = [
+  '<dialog id="privacyConsentModal">',
+  '  <div id="privacyConsentTitle"></div>',
+  '  <a id="viewPrivacyPolicyBtn" href="#"></a>',
+  '  <input id="consentCheckbox" type="checkbox" />',
+  '  <input id="contentStorageConsentCheckbox" type="checkbox" />',
+  '  <button id="acceptConsentBtn" disabled>Accept</button>',
+  '  <button id="declineConsentBtn">Decline</button>',
+  '</dialog>',
+];
+
+const CURRENT_PAGE_SKELETON: string[] = [
+  '<img id="favicon" src="">',
+  '<div id="pageTitle"></div>',
+  '<div id="pageUrl"></div>',
+  '<button id="recordBtn"></button>',
+  '<div id="tagResultPanel"></div>',
 ];
 
 const PERMISSION_BANNER_SKELETON: string[] = [
@@ -72,6 +97,7 @@ const PERMISSION_BANNER_SKELETON: string[] = [
 ];
 
 const DIALOG_IDS: string[] = ['private-page-dialog', 'recording-failed-dialog'];
+const CONSENT_MODAL_ID = 'privacyConsentModal';
 
 /**
  * jsdom has no `HTMLDialogElement.showModal` / `close`, so every dialog test
@@ -103,13 +129,20 @@ export function setupPopupDom(opts: PopupDomOptions = {}): void {
     includeMainStatus = true,
     includeStatusPanel = false,
     includePermissionBanner = false,
+    includeConsentModal = false,
+    includeCurrentPage = false,
   } = opts;
   const parts: string[] = [];
   if (includePending) parts.push(...PENDING_SKELETON);
   if (includeMainStatus) parts.push('<div id="mainStatus"></div>');
   if (includeDialogs) parts.push(...DIALOG_SKELETON);
   if (includeStatusPanel) parts.push(...STATUS_PANEL_SKELETON);
+  if (includeConsentModal) parts.push(...CONSENT_MODAL_SKELETON);
   if (includePermissionBanner) parts.push(...PERMISSION_BANNER_SKELETON);
+  if (includeCurrentPage) parts.push(...CURRENT_PAGE_SKELETON);
   document.body.innerHTML = parts.join('\n');
-  if (includeDialogs) polyfillDialogs();
+  const dialogIds: string[] = [];
+  if (includeDialogs) dialogIds.push(...DIALOG_IDS);
+  if (includeConsentModal) dialogIds.push(CONSENT_MODAL_ID);
+  if (dialogIds.length > 0) polyfillDialogs(dialogIds);
 }

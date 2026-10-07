@@ -78,39 +78,19 @@ import {
   setupPrivacyConsentListeners,
 } from '../privacyConsentController.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
+import { setupPopupDom } from './helpers/popupDom.js';
 
 // ============================================================================
 // Helpers
 // ============================================================================
 
-/**
- * M21: privacyConsentModal is now a native <dialog>. jsdom doesn't
- * implement showModal()/close(), so polyfill them (close() also fires a
- * real 'close' event; 'cancel' is polyfilled too so the ESC-key-blocking
- * listener in privacyConsentController.ts has something to attach to).
- */
-function polyfillDialogMethods(): void {
-  const modal = document.getElementById('privacyConsentModal') as any;
-  if (!modal) return;
-  modal.showModal = function () { this.open = true; };
-  modal.close = function () {
-    this.open = false;
-    this.dispatchEvent(new Event('close'));
-  };
-}
-
 function setupDom(): void {
-  document.body.innerHTML = `
-    <dialog id="privacyConsentModal">
-      <div id="privacyConsentTitle"></div>
-      <a id="viewPrivacyPolicyBtn" href="#"></a>
-      <input id="consentCheckbox" type="checkbox" />
-      <input id="contentStorageConsentCheckbox" type="checkbox" />
-      <button id="acceptConsentBtn" disabled>Accept</button>
-      <button id="declineConsentBtn">Decline</button>
-    </dialog>
-  `;
-  polyfillDialogMethods();
+  setupPopupDom({
+    includePending: false,
+    includeDialogs: false,
+    includeMainStatus: false,
+    includeConsentModal: true,
+  });
 }
 
 function getModal(): HTMLDialogElement | null {
