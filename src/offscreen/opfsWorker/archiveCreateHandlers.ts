@@ -45,7 +45,10 @@ import {
 } from '../../utils/archiveGuards.js';
 
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
-const ARCHIVE_INSERT_BATCH = 5000;
+// Exported so the f3 micro bench (bench/micro/f3-archive.bench.mjs) consumes
+// this constant via importFromSource instead of hand-copying the batch size —
+// a production change must propagate to what the bench measures.
+export const ARCHIVE_INSERT_BATCH = 5000;
 
 let archiveCreateInFlight = false;
 

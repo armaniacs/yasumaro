@@ -7,13 +7,19 @@
  * (memory storage — the wasm-level cost is what we validate here; OPFS I/O
  * overhead is out of scope, see spike-f2-two-engines.test.ts).
  *
- * The measured unit is one full archive pass (all pages). Batch size mirrors
- * archiveCreateHandlers.ARCHIVE_INSERT_BATCH (5000).
+ * The measured unit is one full archive pass (all pages). Batch size is
+ * consumed from archiveCreateHandlers.ARCHIVE_INSERT_BATCH via importFromSource
+ * (bench/harness/bundle.mjs — the same seam c5/c6 use), so a production
+ * batch-size change propagates here instead of being hand-copied. The local
+ * column projection is validated against schema.ARCHIVE_INSERT_COLUMN_NAMES in
+ * setup, so a production rename/removal fails the bench loudly. The DDL stays
+ * local: this bench runs a simplified memory-storage schema, not SCHEMA_SQL.
  */
 import { initSQLite, useMemoryStorage } from '@subframe7536/sqlite-wasm';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { importFromSource } from '../harness/bundle.mjs';
 
 const projectRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const wasmPath = path.resolve(
@@ -22,7 +28,42 @@ const wasmPath = path.resolve(
 );
 const wasmUrl = 'data:application/wasm;base64,' + fs.readFileSync(wasmPath).toString('base64');
 
-const INSERT_BATCH = 5000;
+// Production-derived batch size. Loaded lazily in setup (not at module scope)
+// so the bench smoke test never bundles the production handler graph.
+let INSERT_BATCH;
+
+// Local simplified schema: a subset of production's ARCHIVE_INSERT_COLUMN_NAMES,
+// in this local DDL's order. The projection cannot be taken wholesale from
+// production (the local DDL is narrower on purpose), so setup asserts every
+// column still exists in production's list — drift then surfaces as a bench
+// failure instead of silently measuring a stale pattern.
+const BENCH_COLUMNS = [
+  'id', 'url', 'title', 'summary', 'tags', 'domain',
+  'created_at', 'is_starred', 'is_deleted',
+];
+
+async function ensureProductionConstants() {
+  if (INSERT_BATCH != null) return;
+  const handlers = await importFromSource('src/offscreen/opfsWorker/archiveCreateHandlers.ts');
+  const schema = await importFromSource('src/offscreen/schema.ts');
+  const batch = handlers.ARCHIVE_INSERT_BATCH;
+  const prodColumns = schema.ARCHIVE_INSERT_COLUMN_NAMES;
+  if (typeof batch !== 'number' || batch <= 0) {
+    throw new Error(
+      `f3: ARCHIVE_INSERT_BATCH missing from archiveCreateHandlers (got ${String(batch)})`,
+    );
+  }
+  if (!Array.isArray(prodColumns) || prodColumns.length === 0) {
+    throw new Error('f3: ARCHIVE_INSERT_COLUMN_NAMES missing from src/offscreen/schema');
+  }
+  const drifted = BENCH_COLUMNS.filter((c) => !prodColumns.includes(c));
+  if (drifted.length > 0) {
+    throw new Error(
+      `f3: bench columns no longer exist in production ARCHIVE_INSERT_COLUMN_NAMES: ${drifted.join(', ')}`,
+    );
+  }
+  INSERT_BATCH = batch;
+}
 
 const MAIN_DDL =
   'CREATE TABLE browsing_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, url TEXT NOT NULL, title TEXT, summary TEXT, tags TEXT, domain TEXT, created_at INTEGER NOT NULL, is_starred INTEGER DEFAULT 0, is_deleted INTEGER DEFAULT 0)';
@@ -51,7 +92,7 @@ async function makeArchiveDb(name) {
 }
 
 async function archivePass(main, archive) {
-  const cols = 'id, url, title, summary, tags, domain, created_at, is_starred, is_deleted';
+  const cols = BENCH_COLUMNS.join(', ');
   let inserted = 0;
   let cursor = 0;
   for (;;) {
@@ -86,6 +127,7 @@ export const definition = {
   warmup: 0,
   measure: 1,
   async setup(size) {
+    await ensureProductionConstants();
     const main = await openMainWithRows(size.n);
     const archive = await makeArchiveDb(`f3-archive-${size.n}.db`);
     const count = Number(
