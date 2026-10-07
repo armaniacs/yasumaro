@@ -34,11 +34,11 @@ Scenario: 本番の既定 delay は不変
 
 ## 受け入れ基準
 
-- [ ] constructor に注入可能 delay（既定 = 実 timer）を追加（StepDelayFn 流儀）
-- [ ] 生 setTimeout のリトライ待ちを注入 seam 経由に置き換える
-- [ ] SESSION_LOCK_REQUEST のリトライ経路テストを追加（3-attempt ceiling を fake clock で assert）
-- [ ] 既存テストが green のまま（挙動不変）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] constructor に注入可能 delay（既定 = 実 timer）を追加（StepDelayFn 流儀）
+- [x] 生 setTimeout のリトライ待ちを注入 seam 経由に置き換える
+- [x] SESSION_LOCK_REQUEST のリトライ経路テストを追加（3-attempt ceiling を fake clock で assert）
+- [x] 既存テストが green のまま（挙動不変）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,5 +51,10 @@ Scenario: 本番の既定 delay は不変
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/background/SessionAlarmService.ts`（リトライ待ちを注入可能 stepDelay に置換）/ `src/background/__tests__/SessionAlarmService.test.ts`（SESSION_LOCK_REQUEST リトライケース追加）
+- ゲート: 対象 9 tests ×5 repeats green / type-check PASS / lint PASS / validate PASS

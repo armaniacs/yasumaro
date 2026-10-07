@@ -34,10 +34,10 @@ Scenario: spec 行の欠落がテストで落ちる
 
 ## 受け入れ基準
 
-- [ ] dashboardSqliteProtocol.ts に success 側欠落 subtype を集める compile-time assert を追加（既存 :88-93 流儀）
-- [ ] DASHBOARD_SQLITE_SUBTYPE_SPECS の全subtype 反復テストを追加（query 等の意図的未定義があれば明示 allowlist で pin）
-- [ ] 既存 subtype で assert / テストが green であること
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] dashboardSqliteProtocol.ts に success 側欠落 subtype を集める compile-time assert を追加（既存 :88-93 流儀）
+- [x] DASHBOARD_SQLITE_SUBTYPE_SPECS の全subtype 反復テストを追加（query 等の意図的未定義があれば明示 allowlist で pin）
+- [x] 既存 subtype で assert / テストが green であること
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -50,5 +50,10 @@ Scenario: spec 行の欠落がテストで落ちる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/messaging/dashboardSqliteProtocol.ts`（response union の compile-time assert）/ `src/messaging/validators.ts`（spec 表 export）/ `src/messaging/__tests__/dashboardSqliteSpecs-coverage.test.ts` 新設（34 subtype 反復、RED 確認込み）
+- ゲート: messaging 477 tests green / type-check PASS / lint PASS / validate PASS

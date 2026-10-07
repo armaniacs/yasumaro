@@ -14,29 +14,30 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-07 arch-delivery-loop ラウンド（archloop-1007） — 🔧非機能追加
+### 2026-10-07 arch-delivery-loop ラウンド（archloop-1007） — ✅ 17件完了・アーカイブ済み / NN18 未着手 🔧非機能追加
 
-arch-delivery-loop の closed loop をコードベース全体（差分スコープ）に対して実行する継続ラウンド。4 系統の並列調査（bench+background misc / query+codec 契約+offscreen / S5 残留モジュール / 設計約束乖離スイープ）を 17 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-17）。詳細は [2026-10-07-00-backlog-archloop-1007.md](2026-10-07-00-backlog-archloop-1007.md)（live 台帳）。実行順は依存優先（01 → 05 → 10、他は並列可）。
+arch-delivery-loop の closed loop をコードベース全体（差分スコープ）に対して実行する継続ラウンド。4 系統の並列調査（bench+background misc / query+codec 契約+offscreen / S5 残留モジュール / 設計約束乖離スイープ）を 17 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-17）。全件実装・全ゲート green（`npm run validate` PASS）でアーカイブし 6.9.38 に版上げ。詳細は [2026-10-07-00-backlog-archloop-1007.md](2026-10-07-00-backlog-archloop-1007.md)（live 台帳）。NN07 の裁定（案 B）に応じた実装 fix を後続 PBI として切り出し済み。実行順は依存優先（01 → 05 → 10、他は並列可）。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| 01 | [2026-10-07-01-fix-search-columns-drift.md](2026-10-07-01-fix-search-columns-drift.md) | fix | 12.0 | 1 | SEARCH_COLUMNS 乖離の cell 誤配置。05・10 の先行 |
-| 02 | [2026-10-07-02-fix-opfs-worker-callworker-bypass.md](2026-10-07-02-fix-opfs-worker-callworker-bypass.md) | fix | 10.0 | 1.5 | mutation 経路の失敗カウンタ迂回 |
-| 03 | [2026-10-07-03-fix-review-summary-marker-asymmetry.md](2026-10-07-03-fix-review-summary-marker-asymmetry.md) | fix | 9.0 | 1 | 生成済みマーカーの読み書き分離 |
-| 04 | [2026-10-07-04-fix-trustchecker-alert-keys-migration.md](2026-10-07-04-fix-trustchecker-alert-keys-migration.md) | fix | 8.0 | 1.5 | alert 4 キーの移行消失 |
-| 05 | [2026-10-07-05-fix-crud-update-drift-ssot.md](2026-10-07-05-fix-crud-update-drift-ssot.md) | fix | 6.0 | 2 | update undefined 語義乖離。01 の後 |
-| 06 | [2026-10-07-06-fix-sw-startup-bench-cold.md](2026-10-07-06-fix-sw-startup-bench-cold.md) | fix | 6.0 | 1 | bench warm/cold 計測 |
-| 07 | [2026-10-07-07-investigate-tab-url-permission-decision.md](2026-10-07-07-investigate-tab-url-permission-decision.md) | investigate | 4.8 | 1 | tabs 権限裁定 + ADR |
-| 08 | [2026-10-07-08-refactor-tabcache-factory-deletion.md](2026-10-07-08-refactor-tabcache-factory-deletion.md) | refactor | 4.0 | 0.5 | 死んだパイロット削除 |
-| 09 | [2026-10-07-09-refactor-sessionalarm-injectable-sleep.md](2026-10-07-09-refactor-sessionalarm-injectable-sleep.md) | refactor | 3.0 | 1 | リトライ待ちの注入化 |
-| 10 | [2026-10-07-10-refactor-audit-log-codec.md](2026-10-07-10-refactor-audit-log-codec.md) | refactor | 3.0 | 1 | audit_log デコード双子。05 の後 |
-| 11 | [2026-10-07-11-fix-masterpassword-selfverify-unify.md](2026-10-07-11-fix-masterpassword-selfverify-unify.md) | fix | 2.4 | 2 | 自己検証+rehash の一本化 |
-| 12 | [2026-10-07-12-test-dashboard-sqlite-subtype-asserts.md](2026-10-07-12-test-dashboard-sqlite-subtype-asserts.md) | test | 2.0 | 1.5 | response union / spec の fail-closed 化 |
-| 13 | [2026-10-07-13-refactor-popup-dom-scaffold-remainder.md](2026-10-07-13-refactor-popup-dom-scaffold-remainder.md) | refactor | 2.0 | 2 | S6 台帳送りの残り 4 ファイル |
-| 14 | [2026-10-07-14-refactor-getstatus-dead-count.md](2026-10-07-14-refactor-getstatus-dead-count.md) | refactor | 2.0 | 0.5 | STATUS の dead count 削除 |
-| 15 | [2026-10-07-15-refactor-f3-archive-source-import.md](2026-10-07-15-refactor-f3-archive-source-import.md) | refactor | 2.0 | 1 | bench の production 派生化 |
-| 16 | [2026-10-07-16-refactor-provider-allowlist-subdomain.md](2026-10-07-16-refactor-provider-allowlist-subdomain.md) | refactor | 1.6 | 1.5 | サブドメ規則の表派生化 |
-| 17 | [2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md](2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md) | refactor | 1.6 | 1.5 | 既定値の一意源化 |
+| 01 | [2026-10-07-01-fix-search-columns-drift.md](../dev-docs/archived/pbi/2026-10-07-01-fix-search-columns-drift.md) | fix | 12.0 | 1 | ✅ SEARCH_COLUMNS 乖離の cell 誤配置。05・10 の先行 |
+| 02 | [2026-10-07-02-fix-opfs-worker-callworker-bypass.md](../dev-docs/archived/pbi/2026-10-07-02-fix-opfs-worker-callworker-bypass.md) | fix | 10.0 | 1.5 | ✅ mutation 経路の失敗カウンタ迂回 |
+| 03 | [2026-10-07-03-fix-review-summary-marker-asymmetry.md](../dev-docs/archived/pbi/2026-10-07-03-fix-review-summary-marker-asymmetry.md) | fix | 9.0 | 1 | ✅ 生成済みマーカーの読み書き分離 |
+| 04 | [2026-10-07-04-fix-trustchecker-alert-keys-migration.md](../dev-docs/archived/pbi/2026-10-07-04-fix-trustchecker-alert-keys-migration.md) | fix | 8.0 | 1.5 | ✅ alert 4 キーの移行消失 |
+| 05 | [2026-10-07-05-fix-crud-update-drift-ssot.md](../dev-docs/archived/pbi/2026-10-07-05-fix-crud-update-drift-ssot.md) | fix | 6.0 | 2 | ✅ update undefined 語義乖離。01 の後 |
+| 06 | [2026-10-07-06-fix-sw-startup-bench-cold.md](../dev-docs/archived/pbi/2026-10-07-06-fix-sw-startup-bench-cold.md) | fix | 6.0 | 1 | ✅ bench warm/cold 計測。p50 0.8→18.8ms |
+| 07 | [2026-10-07-07-investigate-tab-url-permission-decision.md](../dev-docs/archived/pbi/2026-10-07-07-investigate-tab-url-permission-decision.md) | investigate | 4.8 | 1 | ✅ tabs 権限裁定 + ADR。案 B |
+| 08 | [2026-10-07-08-refactor-tabcache-factory-deletion.md](../dev-docs/archived/pbi/2026-10-07-08-refactor-tabcache-factory-deletion.md) | refactor | 4.0 | 0.5 | ✅ 死んだパイロット削除 |
+| 09 | [2026-10-07-09-refactor-sessionalarm-injectable-sleep.md](../dev-docs/archived/pbi/2026-10-07-09-refactor-sessionalarm-injectable-sleep.md) | refactor | 3.0 | 1 | ✅ リトライ待ちの注入化 |
+| 10 | [2026-10-07-10-refactor-audit-log-codec.md](../dev-docs/archived/pbi/2026-10-07-10-refactor-audit-log-codec.md) | refactor | 3.0 | 1 | ✅ audit_log デコード双子。05 の後 |
+| 11 | [2026-10-07-11-fix-masterpassword-selfverify-unify.md](../dev-docs/archived/pbi/2026-10-07-11-fix-masterpassword-selfverify-unify.md) | fix | 2.4 | 2 | ✅ 自己検証+rehash の一本化 |
+| 12 | [2026-10-07-12-test-dashboard-sqlite-subtype-asserts.md](../dev-docs/archived/pbi/2026-10-07-12-test-dashboard-sqlite-subtype-asserts.md) | test | 2.0 | 1.5 | ✅ response union / spec の fail-closed 化 |
+| 13 | [2026-10-07-13-refactor-popup-dom-scaffold-remainder.md](../dev-docs/archived/pbi/2026-10-07-13-refactor-popup-dom-scaffold-remainder.md) | refactor | 2.0 | 2 | ✅ S6 台帳送りの残り 4 ファイル |
+| 14 | [2026-10-07-14-refactor-getstatus-dead-count.md](../dev-docs/archived/pbi/2026-10-07-14-refactor-getstatus-dead-count.md) | refactor | 2.0 | 0.5 | ✅ STATUS の dead count 削除 |
+| 15 | [2026-10-07-15-refactor-f3-archive-source-import.md](../dev-docs/archived/pbi/2026-10-07-15-refactor-f3-archive-source-import.md) | refactor | 2.0 | 1 | ✅ bench の production 派生化 |
+| 16 | [2026-10-07-16-refactor-provider-allowlist-subdomain.md](../dev-docs/archived/pbi/2026-10-07-16-refactor-provider-allowlist-subdomain.md) | refactor | 1.6 | 1.5 | ✅ サブドメ規則の表派生化 |
+| 17 | [2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md](../dev-docs/archived/pbi/2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md) | refactor | 1.6 | 1.5 | ✅ 既定値の一意源化 |
+| 18 | [2026-10-07-18-fix-tab-url-nav-trail-rewire.md](2026-10-07-18-fix-tab-url-nav-trail-rewire.md) | fix | 4.0 | 1.5 | ⬜ NN07 裁定（案 B）の実装 fix。nav trail を VALID_VISIT 由来に再配線 |
 
 ### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006） — ✅ 23件完了・アーカイブ済み 🔧非機能追加
 
@@ -345,6 +346,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-07 arch-delivery-loop ラウンド（archloop-1007）アーカイブ — ✅ 17件完了（01-17 アーカイブ済み）
+
+17 件（NN01-17）を `git mv` で `dev-docs/archived/pbi/` へ移動し 6.9.38 に版上げ。実装コミットは `9e9667c3`（01）〜 `67da70a`（17）、個別の行は進行中セクションのラウンド表を参照。全件 `npm run validate` green（15797 tests・型債務 467 に引き下げ）。NN07 の裁定（案 B）に応じた後続 PBI NN18 を進行中に登録。
 
 ### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006）アーカイブ — ✅ 23件完了（01-23 アーカイブ済み）
 

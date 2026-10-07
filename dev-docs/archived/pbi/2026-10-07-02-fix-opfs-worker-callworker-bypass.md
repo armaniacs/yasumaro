@@ -33,11 +33,11 @@ Scenario: 3 連続 mutation 失敗で degrade が発火する
 
 ## 受け入れ基準
 
-- [ ] 全 proxy 呼び出し（insert/insertBatch/update/delete/toggleStar/insertAuditLog/clearAll）が callWorker 経由になる
-- [ ] 迂回系の生 rejection が消え、エラー語彙が OPFS_WORKER_UNAVAILABLE_ERROR に統一される
-- [ ] 既存 degradation テストを insert に拡張する
-- [ ] mutation 呼び出し元が BackendOrError を処理していることを確認（throw 前提の箇所があれば追従）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] 全 proxy 呼び出し（insert/insertBatch/update/delete/toggleStar/insertAuditLog/clearAll）が callWorker 経由になる
+- [x] 迂回系の生 rejection が消え、エラー語彙が OPFS_WORKER_UNAVAILABLE_ERROR に統一される
+- [x] 既存 degradation テストを insert に拡張する
+- [x] mutation 呼び出し元が BackendOrError を処理していることを確認（throw 前提の箇所があれば追従）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,5 +51,10 @@ Scenario: 3 連続 mutation 失敗で degrade が発火する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/offscreen/OpfsWorkerBackend.ts`（7 mutation を callWorker 経由に集約）/ `src/offscreen/__tests__/opfsWorkerBackend-degradation.test.ts`（mutation 失敗カウンタ拡張）
+- ゲート: 対象 59 tests green / type-check PASS / lint PASS / validate PASS

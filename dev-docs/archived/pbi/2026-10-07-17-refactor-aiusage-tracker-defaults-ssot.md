@@ -34,10 +34,10 @@ Scenario: 生読みの既存 fix 文脈が壊れない
 
 ## 受け入れ基準
 
-- [ ] 2 つのローカル既定定数を defaults.ts からの import に置き換える
-- [ ] 生読み経路と repo フォールバックの順序・文書化された理由（既存コメント）を維持する
-- [ ] 既存の aiUsageTracker / rate limit テストが green のまま（挙動不変）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] 2 つのローカル既定定数を defaults.ts からの import に置き換える
+- [x] 生読み経路と repo フォールバックの順序・文書化された理由（既存コメント）を維持する
+- [x] 既存の aiUsageTracker / rate limit テストが green のまま（挙動不変）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -50,5 +50,10 @@ Scenario: 生読みの既存 fix 文脈が壊れない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/utils/aiUsageTracker.ts`（ローカル既定複製を canonical DEFAULT_SETTINGS import に置換）
+- ゲート: utils 5594 tests green / type-check PASS / lint PASS / validate PASS

@@ -35,11 +35,11 @@ Scenario: マーカー書き込み先が読み取り側と同じ場所になる
 
 ## 受け入れ基準
 
-- [ ] 注入型を SettingsReader（getMany/getAll）から `repo.set` まで広げ、マーカーを `repo.set(period.lastGeneratedKey, ...)` で書く
-- [ ] 生 `chrome.storage.local.set` のマーカー書き込みを削除
-- [ ] 実 InMemoryStoragePort リポジトリによる往復テストを 1 本追加（flat getAll mock を pin のまま残さない）
-- [ ] ローカル markdown 出力パス等の他の読みは不変
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] 注入型を SettingsReader（getMany/getAll）から `repo.set` まで広げ、マーカーを `repo.set(period.lastGeneratedKey, ...)` で書く
+- [x] 生 `chrome.storage.local.set` のマーカー書き込みを削除
+- [x] 実 InMemoryStoragePort リポジトリによる往復テストを 1 本追加（flat getAll mock を pin のまま残さない）
+- [x] ローカル markdown 出力パス等の他の読みは不変
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -53,6 +53,11 @@ Scenario: マーカー書き込み先が読み取り側と同じ場所になる
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] 手動確認: 実アラーム発火（週次待ち）は DoD の手動確認項目とせず自動 pin のみで閉じる
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] 手動確認: 実アラーム発火（週次待ち）は DoD の手動確認項目とせず自動 pin のみで閉じる
+
+## 実装記録
+
+- 変更ファイル: `src/background/reviewSummaryGenerator.ts`（マーカー書き込みを repo.set に統一）/ `src/background/__tests__/reviewSummaryGenerator-extra.test.ts`（実リポジトリ往復テスト）/ `src/background/__tests__/reviewSummaryGenerator-concurrency.test.ts`
+- ゲート: type-check PASS / lint PASS / validate PASS

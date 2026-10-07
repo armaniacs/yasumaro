@@ -36,12 +36,12 @@ Scenario: dashboard が生 storage 関数を組み立てない
 
 ## 受け入れ基準
 
-- [ ] encryptionSession（keyring seam）に自己検証+rehash 関数を 1 本公開する
-- [ ] `src/utils/masterPassword.ts` の rehash 書込を seam 経由に寄せ、生文字列キー書込を削除
-- [ ] `buildGetStorageFn` を削除し `src/dashboard/masterPassword.ts:311,365` の消費を seam に追従させる
-- [ ] KDF iterations 更新の語義（ENVELOPE_ITERATIONS への更新）が canonical と一致する
-- [ ] set / change / remove / auth-modal の 4 経路で rehash 政策が同一であることを pin するテストを追加
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] encryptionSession（keyring seam）に自己検証+rehash 関数を 1 本公開する
+- [x] `src/utils/masterPassword.ts` の rehash 書込を seam 経由に寄せ、生文字列キー書込を削除
+- [x] `buildGetStorageFn` を削除し `src/dashboard/masterPassword.ts:311,365` の消費を seam に追従させる
+- [x] KDF iterations 更新の語義（ENVELOPE_ITERATIONS への更新）が canonical と一致する
+- [x] set / change / remove / auth-modal の 4 経路で rehash 政策が同一であることを pin するテストを追加
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -55,6 +55,11 @@ Scenario: dashboard が生 storage 関数を組み立てない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] 手動確認: 実ブラウザでマスターパスワードの auth-modal 検証（legacy hash → rehash → 再 verify）が成功する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] 手動確認: 実ブラウザでマスターパスワードの auth-modal 検証（legacy hash → rehash → 再 verify）が成功する
+
+## 実装記録
+
+- 変更ファイル: `src/utils/storage/encryptionSession.ts`（verifyMasterPasswordWithRehash 新設）/ `src/utils/masterPassword.ts` / `src/utils/masterPasswordUiCore.ts` / `src/dashboard/masterPassword.ts` / `src/utils/storage/__tests__/encryptionSession-rehash-policy-pin.test.ts` 新設
+- ゲート: utils+dashboard 8722 tests green / constantTimeCompare 88 tests / type-check PASS / lint PASS / validate PASS

@@ -28,10 +28,10 @@ Scenario: 死コードがリポジトリから消える
 
 ## 受け入れ基準
 
-- [ ] `src/background/tabCacheFactory.ts` を削除
-- [ ] `src/background/__tests__/tabCacheFactory.test.ts` を削除
-- [ ] リポジトリ全体で tabCacheFactory / getTabCacheInstance / resetTabCacheInstanceForTesting の参照が 0 になる
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `src/background/tabCacheFactory.ts` を削除
+- [x] `src/background/__tests__/tabCacheFactory.test.ts` を削除
+- [x] リポジトリ全体で tabCacheFactory / getTabCacheInstance / resetTabCacheInstanceForTesting の参照が 0 になる
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -43,5 +43,10 @@ Scenario: 死コードがリポジトリから消える
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/background/tabCacheFactory.ts` と `src/background/__tests__/tabCacheFactory.test.ts` を削除（DI 移行で代替済みの死コード）
+- ゲート: type-check PASS / lint PASS / validate PASS（参照 0 件を確認）

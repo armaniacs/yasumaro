@@ -35,12 +35,12 @@ Scenario: plain listing の 33 列投影は変わらない
 
 ## 受け入れ基準
 
-- [ ] `nav_source_url` / `search_query` を SEARCH_COLUMNS から外し、BROWSING_LOG_COLUMNS 側に置く（plain 投影は 33 列のまま）
-- [ ] SEARCH_COLUMNS_WITH_RANK が FTS SELECT 幅（12）と一致する
-- [ ] LIKE 既定 `rank=0` の pin は維持
-- [ ] rowCodec テストの期待値を実 SELECT 順に更新し、pin テストの古いコメントを直す
-- [ ] 実エンジン parity テストに `rows[0].rank !== 0`（FTS 経路）の pin を追加
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `nav_source_url` / `search_query` を SEARCH_COLUMNS から外し、BROWSING_LOG_COLUMNS 側に置く（plain 投影は 33 列のまま）
+- [x] SEARCH_COLUMNS_WITH_RANK が FTS SELECT 幅（12）と一致する
+- [x] LIKE 既定 `rank=0` の pin は維持
+- [x] rowCodec テストの期待値を実 SELECT 順に更新し、pin テストの古いコメントを直す
+- [x] 実エンジン parity テストに `rows[0].rank !== 0`（FTS 経路）の pin を追加
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -54,6 +54,11 @@ Scenario: plain listing の 33 列投影は変わらない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] 手動確認: 実ブラウザで IDB フォールバックは通常発生しないため自動 pin のみで DoD とする
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] 手動確認: 実ブラウザで IDB フォールバックは通常発生しないため自動 pin のみで DoD とする
+
+## 実装記録
+
+- 変更ファイル: `src/offscreen/rowCodec.ts`（SEARCH_COLUMNS を実 SELECT 幅 11 列に再構成）/ `src/offscreen/__tests__/rowCodec.test.ts`（実 SELECT 順 fixture）/ `src/offscreen/__tests__/sqliteBackendParity.realEngine.test.ts`（FTS rank pin）/ `src/offscreen/__tests__/opfs-search-skeleton-pin.test.ts`
+- ゲート: 対象 59 tests green / type-check PASS / lint PASS / validate PASS（15785 tests）

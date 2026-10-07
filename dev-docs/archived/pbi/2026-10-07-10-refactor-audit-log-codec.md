@@ -34,10 +34,10 @@ Scenario: 監査ログの既存 wire 形状は不変
 
 ## 受け入れ基準
 
-- [ ] AUDIT_LOG_COLUMNS を rowCodec.ts に追加し、両バックエンドが mapPositional / mapNamed を再利用する
-- [ ] `IdbVfsBackend.ts:376-388` と `auditHandlers.ts:36-49` のインラインデコーダを削除
-- [ ] coercion 語義（Number/String）が従来と同一であることを pin するテストを維持
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] AUDIT_LOG_COLUMNS を rowCodec.ts に追加し、両バックエンドが mapPositional / mapNamed を再利用する
+- [x] `IdbVfsBackend.ts:376-388` と `auditHandlers.ts:36-49` のインラインデコーダを削除
+- [x] coercion 語義（Number/String）が従来と同一であることを pin するテストを維持
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -50,5 +50,10 @@ Scenario: 監査ログの既存 wire 形状は不変
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/offscreen/rowCodec.ts`（AUDIT_LOG_COLUMNS 新設）/ `src/offscreen/IdbVfsBackend.ts` / `src/offscreen/opfsWorker/auditHandlers.ts`（デコード双子を codec に統一）/ `src/offscreen/__tests__/auditLogCodec.test.ts` 新設
+- ゲート: offscreen 1238 tests green / type-check PASS / lint PASS / validate PASS

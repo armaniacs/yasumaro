@@ -33,11 +33,11 @@ Scenario: CDP セッションが蓄積しない
 
 ## 受け入れ基準
 
-- [ ] ループ本体が実際に SW を停止する（`sw.stop()` または CDP `ServiceWorker.stopAllWorkers`）
-- [ ] 作成した CDP セッションを detach する
-- [ ] 既存の `local/no-fixed-wait` cooldown 例外コメント（:44-50）の意味を再評価し、必要なら更新
-- [ ] 再ベースライン: 既存 `bench/reports/e2e-sw-startup-*.json` が warm 数値であることを報告に明記
-- [ ] bench 計測は実ブラウザ領域のため自動 pin の対象外（`@bench` タグ維持）
+- [x] ループ本体が実際に SW を停止する（`sw.stop()` または CDP `ServiceWorker.stopAllWorkers`）
+- [x] 作成した CDP セッションを detach する
+- [x] 既存の `local/no-fixed-wait` cooldown 例外コメント（:44-50）の意味を再評価し、必要なら更新
+- [x] 再ベースライン: 既存 `bench/reports/e2e-sw-startup-*.json` が warm 数値であることを報告に明記
+- [x] bench 計測は実ブラウザ領域のため自動 pin の対象外（`@bench` タグ維持）
 
 ## テスト戦略
 
@@ -50,6 +50,11 @@ Scenario: CDP セッションが蓄積しない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する（bench は含まれないが build への影響を確認）
-- [ ] 手動確認: playwright bench の実行結果（cold-start 値の再計測）を実行報告に残す
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する（bench は含まれないが build への影響を確認）
+- [x] 手動確認: playwright bench の実行結果（cold-start 値の再計測）を実行報告に残す
+
+## 実装記録
+
+- 変更ファイル: `bench/e2e/sw-startup.bench.ts`（CDP stopAllWorkers で実停止 + セッション1本に集約）
+- ゲート: playwright bench 1 passed（再ベースライン p50 0.8ms warm → 18.8ms cold）/ type-check PASS / lint PASS / validate PASS

@@ -34,11 +34,11 @@ Scenario: 表示ヒントが表から投影される
 
 ## 受け入れ基準
 
-- [ ] ProviderAllowlistRow に subdomainWildcard / extraSubdomains を追加し cspValidator の 2 箇所が派生する
-- [ ] fieldValidation.ts のヒントリストを allowlist の投影（既存 PROVIDER_DISPLAY_METADATA 系）から派生させる
-- [ ] GeminiProvider の pinned origin を allowlist から派生させる（scheme 付けは派生側で）
-- [ ] 既存の CSP / provider テストが green のまま（挙動不変）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] ProviderAllowlistRow に subdomainWildcard / extraSubdomains を追加し cspValidator の 2 箇所が派生する
+- [x] fieldValidation.ts のヒントリストを allowlist の投影（既存 PROVIDER_DISPLAY_METADATA 系）から派生させる
+- [x] GeminiProvider の pinned origin を allowlist から派生させる（scheme 付けは派生側で）
+- [x] 既存の CSP / provider テストが green のまま（挙動不変）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,5 +52,10 @@ Scenario: 表示ヒントが表から投影される
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/utils/storage/providerAllowlist.ts`（subdomainWildcard / extraSubdomains フィールド）/ `src/utils/cspValidator.ts`（inline 規則 2 箇所を表派生に統一）/ `src/dashboard/settings/fieldValidation.ts` / `src/background/ai/providers/GeminiProvider.ts` / 3 テストファイル
+- ゲート: utils+dashboard+background 11727 tests green / type-check PASS / lint PASS / validate PASS

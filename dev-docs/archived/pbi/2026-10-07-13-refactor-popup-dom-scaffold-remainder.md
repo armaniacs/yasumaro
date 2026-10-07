@@ -35,12 +35,12 @@ Scenario: テストの期待値は不変
 
 ## 受け入れ基準
 
-- [ ] STATUS_PANEL_SKELETON に 2 feedback ID を追加
-- [ ] DIALOG_SKELETON / polyfillDialogs(ids) に `includeConsentModal`（`privacyConsentModal`）を追加
-- [ ] currentPage skeleton（#favicon/#pageTitle/#pageUrl/#recordBtn/#tagResultPanel）を追加
-- [ ] 4 ファイルを setupPopupDom(...) に移行し、r2 のバイト同一 polyfill 複製を削除
-- [ ] 4 テストスイートが green のまま（期待値不変）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] STATUS_PANEL_SKELETON に 2 feedback ID を追加
+- [x] DIALOG_SKELETON / polyfillDialogs(ids) に `includeConsentModal`（`privacyConsentModal`）を追加
+- [x] currentPage skeleton（#favicon/#pageTitle/#pageUrl/#recordBtn/#tagResultPanel）を追加
+- [x] 4 ファイルを setupPopupDom(...) に移行し、r2 のバイト同一 polyfill 複製を削除
+- [x] 4 テストスイートが green のまま（期待値不変）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -53,5 +53,10 @@ Scenario: テストの期待値は不変
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/popup/__tests__/helpers/popupDom.ts`（feedback / consentModal / currentPage skeleton 追加）/ 残留 4 テストファイルを setupPopupDom 経由に統一
+- ゲート: popup 902 tests green / type-check PASS / lint PASS / validate PASS

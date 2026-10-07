@@ -35,11 +35,11 @@ Scenario: 黙って no-op になる経路に根拠コメントが付く
 
 ## 受け入れ基準
 
-- [ ] 選択肢を比較した ADR を `dev-docs/ADR/` に作成（manifest 変更の影響: install ダイアログ文言・host_permissions 最小化 ADR との整合・privacy posture）
-- [ ] 裁定に応じて実装 fix の後続 PBI を起票する（manifest 追加 or VALID_VISIT payload 由来の再配線 + 語義変化の pin）
-- [ ] 裁定が manifest 変更でない場合、tab.url 参照箇所に制約の根拠コメントを追加
-- [ ] 記録: 誰が読み書きするか・どの経路が no-op かの一覧を ADR に残す
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] 選択肢を比較した ADR を `dev-docs/ADR/` に作成（manifest 変更の影響: install ダイアログ文言・host_permissions 最小化 ADR との整合・privacy posture）
+- [x] 裁定に応じて実装 fix の後続 PBI を起票する（manifest 追加 or VALID_VISIT payload 由来の再配線 + 語義変化の pin）
+- [x] 裁定が manifest 変更でない場合、tab.url 参照箇所に制約の根拠コメントを追加
+- [x] 記録: 誰が読み書きするか・どの経路が no-op かの一覧を ADR に残す
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -52,6 +52,11 @@ Scenario: 黙って no-op になる経路に根拠コメントが付く
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] 後続 fix PBI が pbi/ に起票されている（manifest 変更を選んだ場合も同様）
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] 後続 fix PBI が pbi/ に起票されている（manifest 変更を選んだ場合も同様）
+
+## 実装記録
+
+- 変更ファイル: `dev-docs/ADR/2026-10-07-tab-url-permission-decision.md`（案 B 採用の ADR 新設）/ `src/background/handlers/tabEventHandlers.ts` / `src/background/service-worker.ts`（根拠コメント）/ 後続 PBI `2026-10-07-18-fix-tab-url-nav-trail-rewire.md` を切り出し
+- ゲート: lint:adr-links PASS（61 ADRs valid）/ type-check PASS

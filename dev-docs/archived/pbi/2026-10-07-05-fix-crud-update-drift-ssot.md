@@ -33,11 +33,11 @@ Scenario: star toggle / live count の文が単一源から派生する
 
 ## 受け入れ基準
 
-- [ ] crudStatements ビルダー（toggleStar / delete / liveCount / auditInsert）を queryPlan.ts 系に追加し両バックエンドが消費する
-- [ ] buildUpdateSet（fields, changes, policy）が UPDATABLE_FIELDS ループを一意に所有する
-- [ ] undefined 語義を fixture で pin してから統一する（skip-undefined を推奨）。期待値を黙って合わせない
-- [ ] 両バックエンドの同入力同結果 parametric テストを追加（undefined キー含む）
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] crudStatements ビルダー（toggleStar / delete / liveCount / auditInsert）を queryPlan.ts 系に追加し両バックエンドが消費する
+- [x] buildUpdateSet（fields, changes, policy）が UPDATABLE_FIELDS ループを一意に所有する
+- [x] undefined 語義を fixture で pin してから統一する（skip-undefined を推奨）。期待値を黙って合わせない
+- [x] 両バックエンドの同入力同結果 parametric テストを追加（undefined キー含む）
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,5 +51,10 @@ Scenario: star toggle / live count の文が単一源から派生する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/offscreen/queryPlan.ts`（buildUpdateSet / crudStatements 新設）/ `src/offscreen/IdbVfsBackend.ts` / `src/offscreen/opfsWorker/crudHandlers.ts` / `src/offscreen/opfsWorker/auditHandlers.ts` / `src/offscreen/__tests__/sqliteBackendParity.realEngine.test.ts`（undefined 語義 fixture）
+- ゲート: 対象 65 tests green / offscreen 1235 tests / type-check PASS / lint PASS / validate PASS

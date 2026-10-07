@@ -35,12 +35,12 @@ Scenario: 警告設定の書き込みが blob に着地する
 
 ## 受け入れ基準
 
-- [ ] trustChecker の読み書きを SettingsRepository（getMany / set）経由に寄せる
-- [ ] 生 `chrome.storage.local.get/set` の 4 キー参照を削除
-- [ ] inline `?? DEFAULT` フォールバックを削除（DEFAULT_SETTINGS が唯一の既定源）
-- [ ] 既存の trustChecker / trustSettings テストを追従させる
-- [ ] 移行後も設定が生き残る往復テストを追加
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] trustChecker の読み書きを SettingsRepository（getMany / set）経由に寄せる
+- [x] 生 `chrome.storage.local.get/set` の 4 キー参照を削除
+- [x] inline `?? DEFAULT` フォールバックを削除（DEFAULT_SETTINGS が唯一の既定源）
+- [x] 既存の trustChecker / trustSettings テストを追従させる
+- [x] 移行後も設定が生き残る往復テストを追加
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -54,6 +54,11 @@ Scenario: 警告設定の書き込みが blob に着地する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] 手動確認: 実ブラウザでの移行シナリオ（旧プロファイルからの upgrade）は開発環境に旧データがないため自動 pin のみで DoD とする
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] 手動確認: 実ブラウザでの移行シナリオ（旧プロファイルからの upgrade）は開発環境に旧データがないため自動 pin のみで DoD とする
+
+## 実装記録
+
+- 変更ファイル: `src/utils/trustChecker.ts`（読み書きを SettingsRepository 経由に寄せ、getMany 結果は分割代入既定で型絞り）/ `src/utils/__tests__/trustChecker.test.ts`（移行往復テスト）
+- ゲート: 対象 36 tests green / type-check PASS / lint PASS / validate PASS

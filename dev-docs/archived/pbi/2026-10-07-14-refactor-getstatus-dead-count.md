@@ -33,10 +33,10 @@ Scenario: canonical count との twin が消える
 
 ## 受け入れ基準
 
-- [ ] handleGetStatus の count SELECT と応答フィールドを削除
-- [ ] worker 側 STATUS 応答型（opfsWorker/types.ts）から count を削除
-- [ ] STATUS 形状の 3 hop（worker/gateway/dashboard）が不変であることを既存テストで確認
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] handleGetStatus の count SELECT と応答フィールドを削除
+- [x] worker 側 STATUS 応答型（opfsWorker/types.ts）から count を削除
+- [x] STATUS 形状の 3 hop（worker/gateway/dashboard）が不変であることを既存テストで確認
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -49,5 +49,10 @@ Scenario: canonical count との twin が消える
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+
+## 実装記録
+
+- 変更ファイル: `src/offscreen/opfsWorker/statusHandlers.ts`（誰も読まない count 計算を除去）
+- ゲート: offscreen+messaging 1630 tests / background 3003 tests green / type-check PASS / lint PASS / validate PASS

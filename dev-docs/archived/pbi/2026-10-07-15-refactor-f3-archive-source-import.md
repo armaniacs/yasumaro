@@ -34,11 +34,11 @@ Scenario: bench の計測ループ自体は維持する
 
 ## 受け入れ基準
 
-- [ ] `ARCHIVE_INSERT_BATCH`（必要なら列名定数）を importFromSource で取り込む
-- [ ] 手書き `INSERT_BATCH = 5000` を production 派生に置き換える
-- [ ] DDL はローカル維持（エンジン差分）し、列リストは可能なら production 定数から派生
-- [ ] bench スモーク（`bench/__tests__/smoke.test.ts` 系・実在する smoke に追従）が green
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `ARCHIVE_INSERT_BATCH`（必要なら列名定数）を importFromSource で取り込む
+- [x] 手書き `INSERT_BATCH = 5000` を production 派生に置き換える
+- [x] DDL はローカル維持（エンジン差分）し、列リストは可能なら production 定数から派生
+- [x] bench スモーク（`bench/__tests__/smoke.test.ts` 系・実在する smoke に追従）が green
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -51,6 +51,11 @@ Scenario: bench の計測ループ自体は維持する
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
-- [ ] 手動確認: bench:micro の f3 実行（計測値の形が崩れない）を報告に残す
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
+- [x] 手動確認: bench:micro の f3 実行（計測値の形が崩れない）を報告に残す
+
+## 実装記録
+
+- 変更ファイル: `bench/micro/f3-archive.bench.mjs`（importFromSource 経由の production import + drift guard）/ `src/offscreen/opfsWorker/archiveCreateHandlers.ts`（ARCHIVE_INSERT_BATCH を export）
+- ゲート: micro f3 quick green（scaling 0.90）/ bench vitest 101 tests / type-check PASS / lint PASS / validate PASS

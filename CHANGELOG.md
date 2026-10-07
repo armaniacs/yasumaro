@@ -35,6 +35,21 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.38] - 2026-10-07
+
+### Fixed
+
+- **trustChecker の alert 設定を読み書きとも SettingsRepository 経由に寄せ移行での消失を塞ぐ** — 生 chrome.storage.local で移行対象キーを扱い、移行後にユーザーの警告トグルが黙って既定へ戻る実害を除去
+- **reviewSummaryGenerator の生成済みマーカーを読み書き同じ seam に統一** — 移行済みプロファイルで毎アラームが AI ダイジェストを再生成する重複トークン消費を除去
+- **masterPassword の自己検証 + rehash を keyring seam に一本化** — 認証モーダル経路の hash 単独書込が次の verify で正しいパスワードを拒否し得る乖離を原子書込で除去
+- **SEARCH_COLUMNS を実 SELECT 幅に一致させ IDB 経路の cell 誤配置を塞ぐ** — 位置 zip のズレで rank 値が nav_source_url に流れ込む実データ破壊を除去
+- **CRUD UPDATE 組立を共有ビルダーに集約し undefined 語義を両バックエンドで統一** — 同一 op が backend により異なる行を書く乖離を除去
+
+### Changed
+
+- **arch-delivery-loop ラウンド（archloop-1007 の 17 件）** — pipeline・wire・codec の重複排除（audit デコード双子・CRUD 文の複製除去）、SessionAlarmService の待ち注入化、dashboard sqlite プロトコルの双方向同期 assert、popup テスト scaffold の統一、provider allowlist 表の SSOT 化、sw-startup bench を実 cold-start 計測に変更、死んだパイロット tabCacheFactory の削除など。外部挙動不変
+- **テスト型エラーのベースラインを 469→467 に引き下げ** — wave 実装の行ズレ分と新規 4 件を返済
+
 ## [6.9.37] - 2026-10-07
 
 ### Fixed
