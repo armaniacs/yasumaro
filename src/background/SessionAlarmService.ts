@@ -30,12 +30,15 @@ export type SendMessageFn = (message: unknown) => Promise<unknown>;
 
 const defaultSendMessage: SendMessageFn = (message) => chrome.runtime.sendMessage(message);
 
+const realStepDelay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 export class SessionAlarmService {
   constructor(
     private readonly alarms: AlarmPort = CHROME_ALARM_PORT,
     private readonly clock: Clock = SYSTEM_CLOCK,
     private readonly storage: StoragePort = CHROME_STORAGE_PORT,
-    private readonly sendMessage: SendMessageFn = defaultSendMessage
+    private readonly sendMessage: SendMessageFn = defaultSendMessage,
+    private readonly stepDelay: (ms: number) => Promise<void> = realStepDelay
   ) {}
 
   async updateActivity(): Promise<void> {
@@ -166,7 +169,7 @@ export class SessionAlarmService {
         } catch {
           retries--;
           if (retries > 0) {
-            await new Promise((resolve) => setTimeout(resolve, LOCK_NOTIFICATION_RETRY_DELAY_MS));
+            await this.stepDelay(LOCK_NOTIFICATION_RETRY_DELAY_MS);
           }
         }
       }

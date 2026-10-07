@@ -79,6 +79,7 @@ describe('SessionAlarmService', () => {
   let storage: StoragePort;
   let alarms: FakeAlarmPort;
   let sendMessage: ReturnType<typeof vi.fn>;
+  let stepDelay: ReturnType<typeof vi.fn<ConstructorParameters<typeof SessionAlarmService>[4]>>;
   let service: SessionAlarmService;
 
   beforeEach(() => {
@@ -86,7 +87,14 @@ describe('SessionAlarmService', () => {
     storage = createInMemoryStoragePort();
     alarms = new FakeAlarmPort();
     sendMessage = vi.fn().mockResolvedValue(undefined);
-    service = new SessionAlarmService(alarms, clock, storage, sendMessage as unknown as ConstructorParameters<typeof SessionAlarmService>[3]);
+    stepDelay = vi.fn<ConstructorParameters<typeof SessionAlarmService>[4]>(async () => {});
+    service = new SessionAlarmService(
+      alarms,
+      clock,
+      storage,
+      sendMessage as unknown as ConstructorParameters<typeof SessionAlarmService>[3],
+      stepDelay
+    );
   });
 
   test('startTimeoutChecker creates the alarm and never registers its own alarm listener', async () => {
@@ -151,6 +159,37 @@ describe('SessionAlarmService', () => {
     await service.checkTimeout();
 
     expect(sendMessage).toHaveBeenCalledTimes(3);
+    expect(stepDelay).toHaveBeenCalledTimes(2);
+    expect(stepDelay).toHaveBeenNthCalledWith(1, 100);
+    expect(stepDelay).toHaveBeenNthCalledWith(2, 100);
+  });
+
+  test('drives the SESSION_LOCK_REQUEST retry wait through the injected delay and succeeds on the third attempt', async () => {
+    sendMessage
+      .mockRejectedValueOnce(new Error('no receiver'))
+      .mockRejectedValueOnce(new Error('no receiver'));
+    await storage.local.set({
+      [MASTER_PASSWORD_ENABLED_KEY]: true,
+      session_last_activity: clock.now(),
+    });
+    await service.startTimeoutChecker();
+
+    clock.advance(31 * 60 * 1000);
+    await service.checkTimeout();
+
+    expect(sendMessage).toHaveBeenCalledTimes(3);
+    expect(sendMessage).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ type: 'SESSION_LOCK_REQUEST' })
+    );
+    expect(sendMessage).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ type: 'SESSION_LOCK_REQUEST' })
+    );
+    // The ceiling itself schedules no timer: waits happen only between attempts.
+    expect(stepDelay).toHaveBeenCalledTimes(2);
+    expect(stepDelay).toHaveBeenNthCalledWith(1, 100);
+    expect(stepDelay).toHaveBeenNthCalledWith(2, 100);
   });
 
   test('does not lock when the timeout has not elapsed', async () => {
