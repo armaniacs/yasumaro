@@ -8,19 +8,15 @@ import { pickDefined } from '../../utils/objectUtils.js';
 import { DB_FILENAME } from '../dbFilename.js';
 
 export async function handleGetStatus(
-  ctx: HandlerContext,
+  _ctx: HandlerContext,
   fts5Available: boolean,
   cachedCompileOptions: string[] | null,
-): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; count: number; compileOptions?: string[]; compileOptionsSource: 'opfs-worker' }> {
-  let count = 0;
-  await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs', [], (row) => { count = Number(row.c); });
-
+): Promise<{ initialized: boolean; path: string; fallback: boolean; fts5: boolean; compileOptions?: string[]; compileOptionsSource: 'opfs-worker' }> {
   return {
     initialized: true,
     path: `OPFS:${DB_FILENAME}`,
     fallback: false,
     fts5: fts5Available,
-    count,
     compileOptionsSource: 'opfs-worker',
     ...pickDefined({ compileOptions: cachedCompileOptions ?? undefined }),
   };
