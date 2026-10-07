@@ -1,7 +1,8 @@
 /**
  * rowCodec.ts
- * Single owner of browsing_logs row shapes: the canonical column lists and
- * the named/positional cell coercions every backend maps through.
+ * Single owner of browsing_logs and audit_log row shapes: the canonical
+ * column lists and the named/positional cell coercions every backend maps
+ * through.
  *
  * IdbVfsBackend read positionally (36 full columns for plain listings, 11
  * for LIKE search, 12 for FTS search with rank) while the OPFS worker read
@@ -69,6 +70,13 @@ export const BROWSING_LOG_FULL_COLUMNS: readonly string[] = ['id', ...COLUMN_NAM
 
 export const BROWSING_LOG_FULL_COLUMNS_SQL = BROWSING_LOG_FULL_COLUMNS.join(', ');
 
+/**
+ * Audit-log listing projection: the exact SELECT order of
+ * buildAuditLogStatements — both backends zip against this list, so SELECT
+ * order decides the mapping and any SELECT change must land here too.
+ */
+export const AUDIT_LOG_COLUMNS = ['id', 'provider', 'url', 'created_at'] as const;
+
 function coerceCell(column: string, value: SqliteValue | null | undefined): SqliteValue | null {
   // LIKE search rows carry no rank column and FTS rows may lack it in
   // hand-built fixtures — default keeps both paths on one mapping.
@@ -83,6 +91,10 @@ function coerceCell(column: string, value: SqliteValue | null | undefined): Sqli
     case 'fallback_triggered':
       return Number(value);
     case 'url':
+    // Audit provider is TEXT and shares url's unconditional String coercion:
+    // without a case here the default branch would run Number() and blank
+    // every provider out in the audit trail.
+    case 'provider':
       return String(value);
     case 'title':
     case 'summary':

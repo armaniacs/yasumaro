@@ -28,7 +28,7 @@ import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
 import type { SerializeResult } from './StorageBackend.js';
 import {
   SEARCH_COLUMNS_WITH_RANK, BROWSING_LOG_FULL_COLUMNS, BROWSING_LOG_FULL_COLUMNS_SQL,
-  mapPositional,
+  AUDIT_LOG_COLUMNS, mapPositional,
 } from './rowCodec.js';
 import { runSearch, type SearchInput, type SearchRowSource } from './searchExecution.js';
 
@@ -367,12 +367,7 @@ export class IdbVfsBackend implements StorageBackend {
       stmts.rowsSql,
       stmts.rowsParams,
       (row: SqliteValue[]) => {
-        rows.push({
-          id: Number(row[0]),
-          provider: String(row[1]),
-          url: String(row[2]),
-          created_at: Number(row[3]),
-        });
+        rows.push(mapPositional<AuditLogEntry>(row, AUDIT_LOG_COLUMNS));
       }
     );
 
