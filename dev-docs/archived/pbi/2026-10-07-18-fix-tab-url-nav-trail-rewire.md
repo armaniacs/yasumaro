@@ -40,12 +40,12 @@ Scenario: consent off の間は供給しない
 
 ## 受け入れ基準
 
-- [ ] `src/background/service-worker.ts` の `changeInfo.url` writer を削除する（reader は `recordingHandlers.ts:122-124` に残す）
-- [ ] VALID_VISIT ハンドラから nav trail map への供給を追加する（admit 後・記録成否に依存しない位置。consent ゲート `isNavTrailActive` は `navTrailTracker` 内で維持）
-- [ ] 語義変化を pin: テストで「記録条件成立後のみ map 更新」を固定する
-- [ ] 同一タブ連続記録で `previous` が前回の `current` になる pin を維持（`navTrailTracker` の reload/fragment 判定は現状のまま）
-- [ ] badge URL 経路（`tabEventHandlers.ts` / `service-worker.ts`）は no-op のまま受容 — 既存の ADR 根拠コメントを維持し、挙動変更しない
-- [ ] `npm run validate` が PASS する（最終ゲートで確認）
+- [x] `src/background/service-worker.ts` の `changeInfo.url` writer を削除する（reader は `recordingHandlers.ts:122-124` に残す）
+- [x] VALID_VISIT ハンドラから nav trail map への供給を追加する（admit 後・記録成否に依存しない位置。consent ゲート `isNavTrailActive` は `navTrailTracker` 内で維持）
+- [x] 語義変化を pin: テストで「記録条件成立後のみ map 更新」を固定する
+- [x] 同一タブ連続記録で `previous` が前回の `current` になる pin を維持（`navTrailTracker` の reload/fragment 判定は現状のまま）
+- [x] badge URL 経路（`tabEventHandlers.ts` / `service-worker.ts`）は no-op のまま受容 — 既存の ADR 根拠コメントを維持し、挙動変更しない
+- [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略
 
@@ -59,6 +59,11 @@ Scenario: consent off の間は供給しない
 
 ## Definition of Done
 
-- [ ] 上記受け入れ基準をすべて満たす
-- [ ] `npm run validate` が PASS する
+- [x] 上記受け入れ基準をすべて満たす
+- [x] `npm run validate` が PASS する
 - [ ] 手動確認: 実ブラウザで通常サイトの記録後に履歴診断行に navSourceUrl が表示される（ADR の no-op 一覧と矛盾しないこと）
+
+## 実装記録
+
+- 変更ファイル: `src/background/service-worker.ts`（changeInfo.url writer を削除、ADR 参照コメントに置換）/ `src/background/handlers/recordingHandlers.ts`（VALID_VISIT ハンドラの admit 後に map 供給を追加）/ `src/background/__tests__/recordingHandlers-navTrailSupply.test.ts` 新設（6 pin テスト: 前回記録 URL・記録成非依存・未 admit・incognito・sender なし）
+- ゲート: 対象 6 tests green / background 229 files 3009 tests / validate PASS（15803 tests）

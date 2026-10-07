@@ -44,6 +44,7 @@ All notable changes to this project will be documented in this file.
 - **masterPassword の自己検証 + rehash を keyring seam に一本化** — 認証モーダル経路の hash 単独書込が次の verify で正しいパスワードを拒否し得る乖離を原子書込で除去
 - **SEARCH_COLUMNS を実 SELECT 幅に一致させ IDB 経路の cell 誤配置を塞ぐ** — 位置 zip のズレで rank 値が nav_source_url に流れ込む実データ破壊を除去
 - **CRUD UPDATE 組立を共有ビルダーに集約し undefined 語義を両バックエンドで統一** — 同一 op が backend により異なる行を書く乖離を除去
+- **nav trail を VALID_VISIT 由来に再配線し通常サイトでリファラー記録を復活** — changeInfo.url writer（tabs 権限なしで構造的 no-op、ADR 2026-10-07 裁定）を削除し、記録成立時に同一タブの前回記録 URL を referrer として供給
 
 ### Changed
 
