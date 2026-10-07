@@ -265,6 +265,10 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     // extension run in an incognito window and no incognito tab event reaches
     // us at all. If that permission is ever added, this guard becomes the thing
     // that keeps private-window URLs out of the referrer map.
+    // ADR 2026-10-07: `changeInfo.url` は `tabs` 権限か対象 URL の host
+    // permission があるときだけ配信される。manifest は通常サイトでどちらも
+    // 持たないため、この writer は通常サイトで一度も発火せず no-op である
+    // （裁定: manifest 変更なし。VALID_VISIT 由来への再配線は後続 fix PBI）。
     chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       if (changeInfo.url && !tab.incognito) {
         // WHY the catch: Mutex.acquire() rejects when its queue fills or its

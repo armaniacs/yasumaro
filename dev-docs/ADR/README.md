@@ -52,6 +52,7 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | - | [`withLock` の object 競合検知は version を唯一の durable signal とし、value-level CAS は採用しない](./2026-09-26-withlock-object-conflict-policy.md) | 2026-09-26 | 採用 |
 | - | [ユニットテストの実行時間を契約として管理する](./2026-09-26-test-suite-execution-time-contract.md) | 2026-09-26 | 採用 |
 | - | [ESLint ルールテストの `vitest --repeats` 対応は `RuleTester` の describe/it 注入点で行う](./2026-09-26-eslint-ruletester-vitest-repeats.md) | 2026-09-26 | 採用 |
+| - | [tabs 権限なしで参照される tab.url の制約 — manifest 変更なしで nav trail を記録由来に再配線する裁定](./2026-10-07-tab-url-permission-decision.md) | 2026-10-07 | 採用 |
 
 ---
 

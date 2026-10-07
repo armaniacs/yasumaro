@@ -207,7 +207,7 @@ if (!legacyDualWriteEnabled) {
 
 - `src/utils/storage/types.ts` (`LEGACY_DUAL_WRITE_ENABLED` キー)
 - `src/utils/storage/defaults.ts`
-- `src/utils/storage.ts`
+- `src/utils/storage/savedUrlRepository.ts` (`purgeLegacyStorage` 実装。旧集約ファイル `src/utils/storage.ts` は `src/utils/storage/` モジュール群に解体済み)
 - `src/background/pipeline/steps/saveMetadataStep.ts`
 - `src/utils/storageUrls.ts`
 - `src/offscreen/storageFallback.ts`

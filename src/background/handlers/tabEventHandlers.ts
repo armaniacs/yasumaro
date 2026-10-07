@@ -39,6 +39,11 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
     async function handleTabActivated(activeInfo: { tabId: number }): Promise<void> {
         await ctx.autoSavedBadgeTabs.restore();
         try {
+            // ADR 2026-10-07: manifest に `tabs` 権限がなく host_permissions も
+            // localhost/AI provider のみのため、通常サイトでは `tab.url` が黙って
+            // `undefined` になる（Chrome はエラーを返さない）。URL 由来の badge 状態
+            // （private / excluded / recording）は通常サイトで表示されないことが
+            // 裁定済み。recorded は isRecorded（URL 非依存）で維持される。
             const tab = await chrome.tabs.get(activeInfo.tabId);
             const tabId = activeInfo.tabId;
             const normalizedUrl = tab.url ? HeaderDetector.normalizeUrl(tab.url) : undefined;
@@ -69,6 +74,11 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
      */
     async function handleTabUpdated(tabId: number, changeInfo: { status?: string }, tab: { url?: string }): Promise<void> {
         await ctx.autoSavedBadgeTabs.restore();
+        // ADR 2026-10-07: `tabs` 権限なしでは通常サイトの `tab.url` が黙って
+        // undefined になり、この経路は遷移時に構造的に no-op になる（privacy /
+        // excluded / C{n} クリアも `autoSavedBadgeTabs.delete` も走らない）。
+        // 裁定は manifest 変更なしでこの欠落を受容するもの。ユーザー起因の表面
+        // （popup / context menu = activeTab 発火時）では URL が読める。
         if (changeInfo.status !== 'complete' || !tab.url) return;
         // ページ遷移完了時は自動保存バッジをクリア（新しいページのため）
         ctx.autoSavedBadgeTabs.delete(tabId);
