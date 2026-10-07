@@ -133,6 +133,8 @@ export interface SearchResult {
   is_starred: number;
   /** FTS5 rank (relevance score) */
   rank: number;
+  /** Diagnosis fallback reason — shared search projection (SEARCH_COLUMNS). */
+  fallback_reason?: string | null;
 }
 
 export interface AuditLogRecord {

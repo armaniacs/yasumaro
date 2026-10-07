@@ -195,8 +195,8 @@ describe('search parity on a real engine', () => {
       expect(idbRes.success && shared(idbRes.rows as unknown as Record<string, unknown>[]))
         .toEqual(shared(opfsRes.rows as unknown as Record<string, unknown>[]));
       // The projections themselves stay different widths on purpose.
-      expect(idbRes.success && Object.keys(idbRes.rows[0]).length)
-        .toBeGreaterThan(Object.keys(opfsRes.rows[0]).length);
+      expect(idbRes.success && Object.keys(idbRes.rows[0]!).length)
+        .toBeGreaterThan(Object.keys(opfsRes.rows[0]!).length);
     } finally {
       await b.close();
     }

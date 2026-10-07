@@ -140,7 +140,7 @@ describe('queryPlan alias guarantee (codec contract)', () => {
     const fts = buildFtsSearchStatements(extra, { ftsQuery: '"x"', orderClause: 'rank', limit: 10, offset: 0 });
     const like = buildLikeSearchStatements(extra, { likePattern: '%x%', orderClause: 'created_at DESC', limit: 10, offset: 0 });
     const plain = buildPlainListStatements(
-      { where: 'WHERE is_deleted = 0', order: 'ORDER BY created_at DESC', limit: 10, offset: 0, params: [] },
+      { where: 'WHERE is_deleted = 0', order: 'ORDER BY created_at DESC', limit: 10, offset: 0, params: [], tagFilter: null },
       { tag: null, columns: BROWSING_LOG_COLUMNS_SQL },
     );
     for (const sql of [fts.countSql, like.countSql, plain.countSql]) {
@@ -155,7 +155,7 @@ describe('queryPlan alias guarantee (codec contract)', () => {
 
   it('buildPlainListStatements emits exactly the passed canonical columns', () => {
     const plain = buildPlainListStatements(
-      { where: 'WHERE is_deleted = 0', order: 'ORDER BY created_at DESC', limit: 5, offset: 0, params: [] },
+      { where: 'WHERE is_deleted = 0', order: 'ORDER BY created_at DESC', limit: 5, offset: 0, params: [], tagFilter: null },
       { tag: null, columns: BROWSING_LOG_COLUMNS_SQL },
     );
     expect(plain.rowsSql.startsWith(`SELECT ${BROWSING_LOG_COLUMNS_SQL} FROM browsing_logs`)).toBe(true);

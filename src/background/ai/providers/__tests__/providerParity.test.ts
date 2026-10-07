@@ -89,6 +89,7 @@ import { OpenAIProvider } from '../OpenAIProvider.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../../../utils/storage/providerAllowlist.js';
 import { FAILURE_KINDS, FailureKind } from '../../../../utils/failureTaxonomy.js';
 import type { BuiltInAiSummarizer } from '../BuiltInAiProvider.js';
+import type { BuiltInAISummaryResult } from '../../../builtInAIClient.js';
 import type { AISummaryResult } from '../ProviderStrategy.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
@@ -112,7 +113,7 @@ const builtInSettings = {} as Settings;
 
 /** A successful on-device summarizer; the on-device provider takes no request. */
 function builtInProvider(
-  result: Record<string, unknown> = { success: true, summary: 'ok' },
+  result: BuiltInAISummaryResult = { success: true, summary: 'ok' },
 ): BuiltInAiProvider {
   const client: BuiltInAiSummarizer = { summarize: vi.fn(async () => result) };
   return new BuiltInAiProvider(builtInSettings, client);

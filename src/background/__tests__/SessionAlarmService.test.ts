@@ -79,7 +79,7 @@ describe('SessionAlarmService', () => {
   let storage: StoragePort;
   let alarms: FakeAlarmPort;
   let sendMessage: ReturnType<typeof vi.fn>;
-  let stepDelay: ReturnType<typeof vi.fn<ConstructorParameters<typeof SessionAlarmService>[4]>>;
+  let stepDelay: ReturnType<typeof vi.fn<NonNullable<ConstructorParameters<typeof SessionAlarmService>[4]>>>;
   let service: SessionAlarmService;
 
   beforeEach(() => {
