@@ -10,6 +10,7 @@ import {
   PROVIDER_ALLOWLIST_ROWS,
   PROVIDER_DISPLAY_METADATA,
   deriveProviderDisplayMetadata,
+  deriveSubdomainWildcardDomains,
   isAllowedProviderBaseUrl,
   tryResolveProviderDisplayMetadata,
 } from '../providerAllowlist.js';
@@ -95,6 +96,26 @@ describe('display metadata parity with the provider catalog', () => {
     for (const row of declared) {
       expect(tryResolveProviderDisplayMetadata(row.id)?.labelI18nKey).toBe(row.labelI18nKey);
     }
+  });
+});
+
+describe('deriveSubdomainWildcardDomains (CSP wildcard scope SSOT)', () => {
+  it('derives the wildcard bases from subdomainWildcard / extraSubdomains rows', () => {
+    // Adding a wildcard scope is one row field: a single-row addition is
+    // simulated through the rows param, mirroring the other derive functions.
+    const rows = [
+      { id: 'a', isLocal: false, label: 'A', domain: 'api.a.com', subdomainWildcard: 'a.com' },
+      { id: 'b', isLocal: false, label: 'B', domain: 'api.b.com', extraSubdomains: ['b.org', 'b.net'] },
+      { id: 'c', isLocal: false, label: 'C', domain: 'api.c.com' },
+    ];
+    expect(deriveSubdomainWildcardDomains(rows)).toEqual(['a.com', 'b.org', 'b.net']);
+  });
+
+  it('pins the openai rows as the only wildcard scope in the real table', () => {
+    // The inline `endsWith('.openai.com')` rule that used to be hand-spelled
+    // in cspValidator must be the table's sole derived scope — any new base
+    // shows up here and gets a deliberate look.
+    expect(deriveSubdomainWildcardDomains()).toEqual(['openai.com']);
   });
 });
 

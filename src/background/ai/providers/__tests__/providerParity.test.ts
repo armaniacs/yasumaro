@@ -86,6 +86,7 @@ import { HttpProviderStrategy } from '../HttpProviderStrategy.js';
 import { BuiltInAiProvider } from '../BuiltInAiProvider.js';
 import { GeminiProvider, GEMINI_PINNED_ORIGIN } from '../GeminiProvider.js';
 import { OpenAIProvider } from '../OpenAIProvider.js';
+import { PROVIDER_ALLOWLIST_ROWS } from '../../../../utils/storage/providerAllowlist.js';
 import { FAILURE_KINDS, FailureKind } from '../../../../utils/failureTaxonomy.js';
 import type { BuiltInAiSummarizer } from '../BuiltInAiProvider.js';
 import type { AISummaryResult } from '../ProviderStrategy.js';
@@ -390,13 +391,18 @@ describe('Gemini の接続先は pinned origin から導出される', () => {
   });
 
   // A behavioural assertion cannot tell an identical literal from a derived
-  // value, and the derivation IS the contract: the origin the constructor
-  // authorizes must be the only spelling of that origin in the file, or the
-  // two can drift apart again on the next edit.
-  it('pinned origin リテラルは定数の定義にしか現れない', () => {
+  // value, and the derivation IS the contract: the origin comes from the
+  // allowlist table's gemini row (the scheme is added at the derivation
+  // site), so the file must not spell the origin at all — a hand-copied
+  // literal would let the table row and this file drift apart on the next
+  // edit.
+  it('pinned origin は表の gemini 行から派生し、リテラルは出現しない', () => {
     const source = readFileSync(new URL('../GeminiProvider.ts', import.meta.url), 'utf8');
-    const occurrences = source.split(GEMINI_PINNED_ORIGIN).length - 1;
+    const occurrences = source.split('https://generativelanguage.googleapis.com').length - 1;
 
-    expect(occurrences).toBe(1);
+    expect(occurrences).toBe(0);
+
+    const geminiDomain = PROVIDER_ALLOWLIST_ROWS.find((row) => row.id === 'gemini')?.domain;
+    expect(GEMINI_PINNED_ORIGIN).toBe(`https://${geminiDomain}`);
   });
 });

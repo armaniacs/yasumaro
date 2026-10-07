@@ -5,6 +5,7 @@
  */
 
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
+import { PROVIDER_ALLOWLIST_ROWS } from '../../utils/storage/providerAllowlist.js';
 import {
     GENERAL_SETTINGS_FIELDS,
     getDescriptorByElementId,
@@ -13,6 +14,24 @@ import {
 } from './fieldDescriptor.js';
 
 export type ErrorPair = [HTMLInputElement | null, string];
+
+/**
+ * Example domains shown when the whitelist gate rejects a base URL. The ids
+ * pick which providers the hint highlights; the domains themselves are
+ * projected from the allowlist table rows, so a table change flows here
+ * without a hand edit (the gate derives from the same table).
+ */
+const MAJOR_PROVIDER_HINT_IDS = ['openai', 'anthropic', 'groq', 'openrouter', 'mistral', 'deepinfra'] as const;
+const SAKURA_PROVIDER_HINT_IDS = ['sakura'] as const;
+
+function deriveHintDomains(ids: readonly string[]): string[] {
+    return ids
+        .map((id) => PROVIDER_ALLOWLIST_ROWS.find((row) => row.id === id)?.domain)
+        .filter((domain): domain is string => typeof domain === 'string');
+}
+
+const MAJOR_PROVIDERS_HINT = deriveHintDomains(MAJOR_PROVIDER_HINT_IDS);
+const SAKURA_DOMAINS_HINT = deriveHintDomains(SAKURA_PROVIDER_HINT_IDS);
 
 /**
  * フィールドバリデーションの結果を表示
@@ -218,16 +237,9 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
         // ホワイトリストチェック
         const { isDomainInWhitelist, ALLOWED_AI_PROVIDER_DOMAINS } = await import('../../utils/storage/urlWhitelist.js');
         if (!isDomainInWhitelist(v)) {
-            // メジャープロバイダーとワイルドカードドメインを重点表示
-            const majorProviders = [
-                'api.openai.com', 'api.anthropic.com', 'api.groq.com',
-                'openrouter.ai', 'mistral.ai', 'deepinfra.com'
-            ];
-            const sakuraDomains = ['api.ai.sakura.ad.jp'];
-
             const message = `このドメインは許可リストにありません。\n\n` +
-                `主要プロバイダー: ${majorProviders.join(', ')}\n` +
-                `Sakuraクラウド: ${sakuraDomains.join(', ')}\n` +
+                `主要プロバイダー: ${MAJOR_PROVIDERS_HINT.join(', ')}\n` +
+                `Sakuraクラウド: ${SAKURA_DOMAINS_HINT.join(', ')}\n` +
                 `その他: LiteLLM対応プロバイダー（全${ALLOWED_AI_PROVIDER_DOMAINS.length}ドメイン）`;
 
             setFieldError(input, 'baseUrlError', message);

@@ -22,6 +22,7 @@ import {
 import {
   deriveConditionalCspEntries,
   deriveRequiredDomains,
+  deriveSubdomainWildcardDomains,
   isProviderOriginAuthorized,
   PROVIDER_ALLOWLIST_ROWS,
   type ProviderAllowlistRow,
@@ -54,6 +55,17 @@ const DEFAULT_ALLOWED_DOMAINS: string[] = deriveRequiredDomains();
 const PROVIDER_TO_DOMAIN: Record<string, string> = Object.fromEntries(
   deriveConditionalCspEntries().map((entry) => [entry.id, entry.domain]),
 );
+
+/**
+ * Base domains whose subdomains the CSP gates accept. Derived from the
+ * allowlist table's subdomainWildcard / extraSubdomains fields; the
+ * `endsWith('.openai.com')` rule used to be hand-spelled inline twice.
+ */
+const SUBDOMAIN_WILDCARD_DOMAINS: readonly string[] = deriveSubdomainWildcardDomains();
+
+function matchesSubdomainWildcard(domain: string): boolean {
+  return SUBDOMAIN_WILDCARD_DOMAINS.some((base) => domain.endsWith(`.${base}`));
+}
 
 /**
  * 除外ドメイン（CSPから削除したが、optionalで許可できる）
@@ -254,8 +266,8 @@ export class CSPValidator {
         return true;
       }
 
-      // *.openai.com マッチ
-      if (domain.endsWith('.openai.com')) {
+      // サブドメインワイルドカード（表の subdomainWildcard から派生）
+      if (matchesSubdomainWildcard(domain)) {
         return true;
       }
 
@@ -324,7 +336,7 @@ export class CSPValidator {
         return true;
       }
 
-      if (domain.endsWith('.openai.com')) {
+      if (matchesSubdomainWildcard(domain)) {
         return true;
       }
 

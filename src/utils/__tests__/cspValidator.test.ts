@@ -62,12 +62,17 @@ describe('CSPValidator - P1 - Default Domains', () => {
     expect(CSPValidator.isUrlAllowed('https://api.openai.com/v1/models')).toBe(true);
   });
 
-  it('should allow *.openai.com subdomains', async () => {
+  it('should allow *.openai.com subdomains derived from the allowlist table', async () => {
     const { CSPValidator } = await import('../cspValidator.js');
 
     expect(CSPValidator.isUrlAllowed('https://api.openai.com/v1/models')).toBe(true);
-    // subdomains（.endsWith('.openai.com')マッチ）
+    // subdomains derive from the table row's subdomainWildcard (openai.com),
+    // not from an inline endsWith
     expect(CSPValidator.isUrlAllowed('https://some.openai.com/v1/models')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://a.b.openai.com/v1/models')).toBe(true);
+    // bare registrable domain and lookalike hosts stay blocked
+    expect(CSPValidator.isUrlAllowed('https://openai.com/v1/models')).toBe(false);
+    expect(CSPValidator.isUrlAllowed('https://evil-openai.com/v1/models')).toBe(false);
   });
 
   it('should block non-default AI provider domains without settings', async () => {
@@ -206,6 +211,10 @@ describe('CSPValidator - P1 - isAProviderUrl', () => {
     // 中小プロバイダー（PROVIDER_TO_DOMAINマッピングに従う）
     expect(CSPValidator.isAProviderUrl('https://api-inference.huggingface.co/models')).toBe(true);
     expect(CSPValidator.isAProviderUrl('https://api.openrouter.ai/v1/chat/completions')).toBe(true);
+
+    // *.openai.com は表の subdomainWildcard から派生
+    expect(CSPValidator.isAProviderUrl('https://some.openai.com/v1/models')).toBe(true);
+    expect(CSPValidator.isAProviderUrl('https://evil-openai.com/v1')).toBe(false);
   });
 
   it('should not identify non-AI URLs as provider URLs', async () => {

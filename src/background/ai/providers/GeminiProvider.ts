@@ -22,8 +22,21 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { PROVIDER_ALLOWLIST_ROWS, isAllowedProviderBaseUrl, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
 import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedError.js';
 
-/** The only origin Gemini traffic may ever target (fixed-endpoint provider). */
-export const GEMINI_PINNED_ORIGIN = 'https://generativelanguage.googleapis.com';
+/**
+ * The only origin Gemini traffic may ever target (fixed-endpoint provider).
+ * Derived from the allowlist table's gemini row — the domain has one
+ * declaration site and the scheme is added here. A missing row is a table
+ * regression, so it fails loudly instead of falling back to a local literal.
+ */
+export const GEMINI_PINNED_ORIGIN = `https://${geminiRowDomain()}`;
+
+function geminiRowDomain(): string {
+    const domain = PROVIDER_ALLOWLIST_ROWS.find((row) => row.id === 'gemini')?.domain;
+    if (!domain) {
+        throw new Error('providerAllowlist.ts has no domain for provider id "gemini"');
+    }
+    return domain;
+}
 
 interface GeminiApiResponse {
     candidates?: Array<{

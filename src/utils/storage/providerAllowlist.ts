@@ -41,6 +41,16 @@ export interface ProviderAllowlistRow {
   readonly permissionTier?: ProviderPermissionTier | undefined;
   /** Listed in the conditional-CSP opt-in table (cspValidator PROVIDER_TO_DOMAIN). */
   readonly conditionalCsp?: boolean | undefined;
+  /**
+   * Base domain whose subdomains the CSP wildcard gates accept for this row
+   * (hostname.endsWith('.' + base)). Declaring it is what replaces an inline
+   * endsWith in cspValidator: the openai rows pin `api.openai.com` while the
+   * wildcard scope is the registrable `openai.com`, so the broader base is
+   * the row's subdomainWildcard.
+   */
+  readonly subdomainWildcard?: string | undefined;
+  /** Additional wildcard base domains beyond `subdomainWildcard`. */
+  readonly extraSubdomains?: readonly string[] | undefined;
   /** Legacy alias hostnames that only the urlWhitelist gate recognizes. */
   readonly extraWhitelistDomains?: readonly string[] | undefined;
   /** Legacy exclusion from the urlWhitelist gate (preserved byte-identical, not fixed here). */
@@ -73,6 +83,7 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     label: 'OpenAI Compatible',
     labelI18nKey: 'openaiCompatible',
     domain: 'api.openai.com',
+    subdomainWildcard: 'openai.com',
     permissionTier: 'required',
   },
   {
@@ -82,6 +93,7 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     label: 'OpenAI Compatible 2',
     labelI18nKey: 'openaiCompatible2',
     domain: 'api.openai.com',
+    subdomainWildcard: 'openai.com',
     permissionTier: 'required',
   },
   { id: 'anthropic', isLocal: false, label: 'Anthropic Claude', domain: 'api.anthropic.com', permissionTier: 'required' },
@@ -220,6 +232,22 @@ export function deriveWhitelistedDomains(
       if (!row.domain || row.excludeFromWhitelist === true) return [];
       return [row.domain, ...(row.extraWhitelistDomains ?? [])];
     }),
+  );
+}
+
+/**
+ * Base domains whose subdomains the CSP gates accept. Adding a wildcard
+ * scope is one row field here; cspValidator derives from this instead of
+ * spelling endsWith inline (was the only off-table wildcard rule).
+ */
+export function deriveSubdomainWildcardDomains(
+  rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS,
+): string[] {
+  return dedupeDomains(
+    rows.flatMap((row) => [
+      ...(row.subdomainWildcard ? [row.subdomainWildcard] : []),
+      ...(row.extraSubdomains ?? []),
+    ]),
   );
 }
 
