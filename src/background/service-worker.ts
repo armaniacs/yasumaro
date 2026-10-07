@@ -18,7 +18,6 @@ import { createOllamaSettingsObserver } from './net/ollamaSettingsObserver.js';
 import { initAllowedUrlsSync } from './allowedUrlsSync.js';
 import {
   onTabRemoved,
-  onTabUrlChanged,
   registerNavTrailConsentWatcher,
 } from './navTrail/navTrailTracker.js';
 
@@ -257,32 +256,13 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.tabs.onUpdated.addListener(guard((tabId, changeInfo, tab) =>
       handleTabUpdated(tabId, changeInfo, tab.url !== undefined ? { url: tab.url } : {}),
     'handleTabUpdated'));
-    // PBI 03: navigation-trail tracking. Registered at top level, beside the
-    // other tab listeners, because MV3 discards listeners when the worker
-    // stops and only a top-level registration is re-attached on wake.
-    // WHY the incognito guard is defence in depth, not the protection: the
-    // manifest declares no "incognito" permission, so Chrome never lets this
-    // extension run in an incognito window and no incognito tab event reaches
-    // us at all. If that permission is ever added, this guard becomes the thing
-    // that keeps private-window URLs out of the referrer map.
-    // ADR 2026-10-07: `changeInfo.url` は `tabs` 権限か対象 URL の host
-    // permission があるときだけ配信される。manifest は通常サイトでどちらも
-    // 持たないため、この writer は通常サイトで一度も発火せず no-op である
-    // （裁定: manifest 変更なし。VALID_VISIT 由来への再配線は後続 fix PBI）。
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (changeInfo.url && !tab.incognito) {
-        // WHY the catch: Mutex.acquire() rejects when its queue fills or its
-        // timeout elapses, and a rejected promise from a `void` call is an
-        // unhandled rejection that also silently drops the referrer. Same
-        // structured-log pattern as handleTabActivated.
-        void onTabUrlChanged(tabId, changeInfo.url).catch(async (error: unknown) => {
-          await logError('Failed to record nav trail for tab', {
-            tabId,
-            error: errorMessage(error),
-          }, ErrorCode.STORAGE_WRITE_FAILURE, 'service-worker.ts');
-        });
-      }
-    });
+    // NN18: the nav trail map is no longer supplied from a changeInfo.url
+    // listener — it was a structural no-op on normal sites (the manifest
+    // declares no "tabs" permission and host permissions are minimized, so
+    // Chrome never delivers the URL — ADR 2026-10-07-tab-url-permission-decision).
+    // The map is now supplied from the VALID_VISIT handler, the only surface
+    // that sees a URL; the consent gate and the reload/fragment judgment stay
+    // inside navTrailTracker.
     chrome.tabs.onRemoved.addListener((tabId) => {
       void onTabRemoved(tabId).catch(async (error: unknown) => {
         await logError('Failed to clear nav trail for closed tab', {

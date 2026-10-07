@@ -9,7 +9,7 @@ import { getMessage } from '../../utils/i18n.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { encodeUrlSafeBase64 } from './urlNotificationHandlers.js';
 import { resolveReasonLabel } from '../../utils/reasonLabel.js';
-import { resolveNavTrailFields } from '../navTrail/navTrailTracker.js';
+import { onTabUrlChanged, resolveNavTrailFields } from '../navTrail/navTrailTracker.js';
 import { NotificationHelper } from '../notificationHelper.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
 import { buildRecordRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
@@ -114,6 +114,21 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
     }
 
     deps.cacheTab(sender.tab);
+
+    // NN18: the nav trail map is supplied here — after admit, not dependent on
+    // recordVisit's success. The old writer (chrome.tabs.onUpdated +
+    // changeInfo.url) was a structural no-op on normal sites: the manifest
+    // declares no "tabs" permission and host permissions are minimized, so
+    // Chrome never delivers the URL (ADR 2026-10-07-tab-url-permission-decision).
+    // sender.tab on a VALID_VISIT is the only surface that sees it. The consent
+    // gate and the reload/fragment judgment stay inside navTrailTracker.
+    // WHY the incognito guard is defence in depth, not the protection: the
+    // manifest declares no "incognito" permission, so Chrome never lets this
+    // extension run in an incognito window. If that permission is ever added,
+    // this guard keeps private-window URLs out of the referrer map.
+    if (sender.tab.id !== undefined && sender.tab.url && !sender.tab.incognito) {
+      await onTabUrlChanged(sender.tab.id, sender.tab.url);
+    }
 
     // PBI 03: the opt-in navigation trail. Resolved here, at the only surface
     // that knows which tab the record came from, and passed through the normal
