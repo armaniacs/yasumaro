@@ -16,14 +16,11 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
   focusTrapManager: { trap: vi.fn().mockReturnValue('trap-id'), release: vi.fn() },
 }));
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn(),
-  isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn().mockReturnValue({ score: 50, level: 'medium', text: 'Medium' }),
 }));
 vi.mock('../../utils/masterPasswordUiCore.js', () => ({
   validateAndSetPasswordErrors: vi.fn().mockReturnValue(false),
   validateAndSetMatchErrors: vi.fn().mockReturnValue(false),
-  buildGetStorageFn: vi.fn(),
   updatePasswordStrengthDisplay: vi.fn(),
 }));
 vi.mock('../../utils/rateLimiter.js', () => ({
@@ -35,6 +32,8 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   setMasterPassword: vi.fn(),
   changeMasterPassword: vi.fn(),
   removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn(),
+  isMasterPasswordEnabled: vi.fn(),
   ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
     fields: readonly string[] = [];
   },
@@ -47,8 +46,11 @@ vi.stubGlobal('chrome', {
   storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn(), remove: vi.fn() } },
 });
 
-import { isMasterPasswordSet, verifyMasterPassword } from '../../utils/masterPassword.js';
-import { setMasterPassword as setMasterPasswordService } from '../../utils/storage/encryptionSession.js';
+import {
+  setMasterPassword as setMasterPasswordService,
+  verifyMasterPasswordWithRehash,
+  isMasterPasswordEnabled,
+} from '../../utils/storage/encryptionSession.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // Mirrors entrypoints/options/index.html initial classes: modals and options
@@ -103,7 +105,7 @@ describe('dashboard master password UI state', () => {
   });
 
   it('restores the checkbox to OFF when a set save fails', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     vi.mocked(setMasterPasswordService).mockRejectedValue(new Error('boom'));
     await initController();
     toggleCheckbox(true);
@@ -117,7 +119,7 @@ describe('dashboard master password UI state', () => {
   });
 
   it('restores the checkbox to ON after cancelling the remove auth modal', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     await initController();
     toggleCheckbox(false);
     await waitForMock(() => expect(isHidden('passwordAuthModal')).toBe(false));
@@ -129,7 +131,7 @@ describe('dashboard master password UI state', () => {
   });
 
   it('restores the checkbox to OFF after cancelling the set modal', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     await initController();
     toggleCheckbox(true);
     await waitForMock(() => expect(isHidden('passwordModal')).toBe(false));
@@ -140,8 +142,8 @@ describe('dashboard master password UI state', () => {
   });
 
   it('shows the confirm group in set mode and hides it (with its input) in change mode', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
     await initController();
     const { closePasswordModal } = await import('../masterPassword.js');
 
@@ -154,7 +156,7 @@ describe('dashboard master password UI state', () => {
     expect(isHidden('masterPasswordConfirm')).toBe(false);
 
     closePasswordModal();
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     toggleCheckbox(true);
     await waitForMock(() => expect(isHidden('passwordModal')).toBe(false));
 

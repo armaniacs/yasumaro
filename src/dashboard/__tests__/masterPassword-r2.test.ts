@@ -26,12 +26,24 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn(),
-  isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn(),
   validatePasswordRequirements: vi.fn(),
   validatePasswordMatch: vi.fn(),
   PasswordStrength: { WEAK: 'weak', MEDIUM: 'medium', STRONG: 'strong' },
+}));
+
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  setMasterPassword: vi.fn(),
+  changeMasterPassword: vi.fn(),
+  removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn(),
+  isMasterPasswordEnabled: vi.fn(),
+  ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
+    fields: readonly string[] = [];
+  },
+  MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
+  PendingRotationMismatchError: class PendingRotationMismatchError extends Error {},
+  RotationInProgressError: class RotationInProgressError extends Error {},
 }));
 
 const mockChromeGet = vi.fn();
@@ -55,13 +67,15 @@ vi.stubGlobal('chrome', {
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 import {
-  verifyMasterPassword,
-  isMasterPasswordSet,
   calculatePasswordStrength,
   validatePasswordRequirements,
   validatePasswordMatch,
   PasswordStrength,
 } from '../../utils/masterPassword.js';
+import {
+  verifyMasterPasswordWithRehash,
+  isMasterPasswordEnabled,
+} from '../../utils/storage/encryptionSession.js';
 
 function flushPromises(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
@@ -102,8 +116,8 @@ function setupDefaultMockValues(): void {
   vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: PasswordStrength.MEDIUM, text: 'Medium' });
   vi.mocked(validatePasswordRequirements).mockReturnValue(null);
   vi.mocked(validatePasswordMatch).mockReturnValue(null);
-  vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
-  vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+  vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
+  vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
 }
 
 describe('masterPassword-r2 — showPasswordModal change mode', () => {
@@ -184,8 +198,8 @@ describe('masterPassword-r2 — authenticatePassword error paths', () => {
     setupDefaultMockValues();
   });
 
-  it('shows error when verifyMasterPassword returns success=false with error', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: false, error: 'Wrong password' });
+  it('shows error when verifyMasterPasswordWithRehash returns success=false with error', async () => {
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: false, error: 'Wrong password' });
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings, showPasswordAuthModal } = await import('../masterPassword.js');
@@ -202,8 +216,8 @@ describe('masterPassword-r2 — authenticatePassword error paths', () => {
     expect(errorEl.classList.contains('visible')).toBe(true);
   });
 
-  it('shows generic error when verifyMasterPassword returns success=false with no error', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: false });
+  it('shows generic error when verifyMasterPasswordWithRehash returns success=false with no error', async () => {
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: false });
     setupFullDOM();
     vi.resetModules();
     const { initMasterPasswordSettings, showPasswordAuthModal } = await import('../masterPassword.js');
@@ -230,7 +244,7 @@ describe('masterPassword-r2 — authenticatePassword error paths', () => {
     showPasswordAuthModal('export', vi.fn());
     document.getElementById('submitPasswordAuthBtn')!.click();
     await flushPromises();
-    expect(verifyMasterPassword).not.toHaveBeenCalled();
+    expect(verifyMasterPasswordWithRehash).not.toHaveBeenCalled();
   });
 });
 
@@ -250,7 +264,7 @@ describe('masterPassword-r2 — Enter key handling on auth input', () => {
     authInput.value = 'secret';
     authInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Enter' }));
     await flushPromises();
-    expect(verifyMasterPassword).toHaveBeenCalledWith('secret', expect.any(Function));
+    expect(verifyMasterPasswordWithRehash).toHaveBeenCalledWith('secret');
   });
 
   it('ignores non-Enter keypress on auth input', async () => {
@@ -264,7 +278,7 @@ describe('masterPassword-r2 — Enter key handling on auth input', () => {
     authInput.value = 'secret';
     authInput.dispatchEvent(new KeyboardEvent('keypress', { key: 'Tab' }));
     await flushPromises();
-    expect(verifyMasterPassword).not.toHaveBeenCalled();
+    expect(verifyMasterPasswordWithRehash).not.toHaveBeenCalled();
   });
 });
 

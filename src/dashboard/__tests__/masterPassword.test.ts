@@ -20,8 +20,6 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn(),
-  isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn(),
   validatePasswordRequirements: vi.fn(),
   validatePasswordMatch: vi.fn(),
@@ -32,6 +30,8 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   setMasterPassword: vi.fn(),
   changeMasterPassword: vi.fn(),
   removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn(),
+  isMasterPasswordEnabled: vi.fn(),
   ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
     fields: readonly string[];
     constructor(fields: readonly string[]) {
@@ -66,8 +66,6 @@ vi.stubGlobal('chrome', {
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 import {
-  verifyMasterPassword,
-  isMasterPasswordSet,
   calculatePasswordStrength,
   validatePasswordRequirements,
   validatePasswordMatch,
@@ -77,6 +75,8 @@ import {
   setMasterPassword as setMasterPasswordService,
   changeMasterPassword as changeMasterPasswordService,
   removeMasterPassword as removeMasterPasswordService,
+  verifyMasterPasswordWithRehash,
+  isMasterPasswordEnabled,
   ReencryptionAbortedError,
 } from '../../utils/storage/encryptionSession.js';
 
@@ -119,8 +119,8 @@ function setupDefaultMockValues(): void {
   vi.mocked(calculatePasswordStrength).mockReturnValue({ score: 50, level: PasswordStrength.MEDIUM, text: 'Medium' });
   vi.mocked(validatePasswordRequirements).mockReturnValue(null);
   vi.mocked(validatePasswordMatch).mockReturnValue(null);
-  vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
-  vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+  vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
+  vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
   vi.mocked(setMasterPasswordService).mockResolvedValue(true);
   vi.mocked(changeMasterPasswordService).mockResolvedValue(true);
   vi.mocked(removeMasterPasswordService).mockResolvedValue(undefined);
@@ -129,7 +129,7 @@ function setupDefaultMockValues(): void {
 // Models the fresh-install path: with a password already set, enabling routes
 // to the auth (change) modal instead of the set modal.
 async function openModalViaCheckbox(): Promise<void> {
-  vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+  vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
   const checkbox = document.getElementById('masterPasswordEnabled') as HTMLInputElement;
   checkbox.checked = true;
   checkbox.dispatchEvent(new Event('change'));
@@ -144,7 +144,7 @@ describe('loadMasterPasswordSettings', () => {
   });
 
   it('should enable checkbox and show options when password is set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     document.body.innerHTML = [
       '<input type="checkbox" id="masterPasswordEnabled" />',
       '<div id="masterPasswordOptions"></div>',
@@ -161,7 +161,7 @@ describe('loadMasterPasswordSettings', () => {
   });
 
   it('should disable checkbox and hide options when password is not set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     document.body.innerHTML = [
       '<input type="checkbox" id="masterPasswordEnabled" />',
       '<div id="masterPasswordOptions"></div>',
@@ -181,7 +181,7 @@ describe('loadMasterPasswordSettings', () => {
   });
 
   it('should hide warning when password is set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     document.body.innerHTML = [
       '<input type="checkbox" id="masterPasswordEnabled" />',
       '<div id="masterPasswordOptions"></div>',
@@ -454,7 +454,7 @@ describe('initMasterPasswordSettings - change password flow', () => {
   });
 
   it('should show change password modal after successful authentication', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
 
     setupFullDOM();
     vi.resetModules();
@@ -479,7 +479,7 @@ describe('initMasterPasswordSettings - change password flow', () => {
   });
 
   it('should call the service change route with old and new passwords on save (PBI 2026-09-27)', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
 
     setupFullDOM();
     vi.resetModules();
@@ -695,7 +695,7 @@ describe('initMasterPasswordSettings - auth modal events', () => {
 
     await flushPromises();
 
-    expect(verifyMasterPassword).toHaveBeenCalledWith('mypassword', expect.any(Function));
+    expect(verifyMasterPasswordWithRehash).toHaveBeenCalledWith('mypassword');
   });
 
   it('should trigger authenticatePassword when Enter key is pressed on auth input', async () => {
@@ -713,7 +713,7 @@ describe('initMasterPasswordSettings - auth modal events', () => {
 
     await flushPromises();
 
-    expect(verifyMasterPassword).toHaveBeenCalledWith('mypassword', expect.any(Function));
+    expect(verifyMasterPasswordWithRehash).toHaveBeenCalledWith('mypassword');
   });
 
   it('should close auth modal when clicking on the modal backdrop', async () => {
@@ -911,11 +911,11 @@ describe('authenticatePassword flow', () => {
     const errorEl = document.getElementById('passwordAuthError')!;
     expect(errorEl.textContent).toBe('i18n_passwordRequired');
     expect(errorEl.classList.contains('visible')).toBe(true);
-    expect(verifyMasterPassword).not.toHaveBeenCalled();
+    expect(verifyMasterPasswordWithRehash).not.toHaveBeenCalled();
   });
 
-  it('should call verifyMasterPassword and close modal on success', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+  it('should call verifyMasterPasswordWithRehash and close modal on success', async () => {
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
 
     setupFullDOM();
     vi.resetModules();
@@ -930,7 +930,7 @@ describe('authenticatePassword flow', () => {
 
     await flushPromises();
 
-    expect(verifyMasterPassword).toHaveBeenCalledWith('correct-password', expect.any(Function));
+    expect(verifyMasterPasswordWithRehash).toHaveBeenCalledWith('correct-password');
 
     const authModal = document.getElementById('passwordAuthModal')!;
     expect(authModal.classList.contains('hidden')).toBe(true);
@@ -938,7 +938,7 @@ describe('authenticatePassword flow', () => {
   });
 
   it('should call the pending action on successful authentication', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
 
     setupFullDOM();
     vi.resetModules();
@@ -957,8 +957,8 @@ describe('authenticatePassword flow', () => {
     expect(action).toHaveBeenCalledWith('correct-password');
   });
 
-  it('should show error when verifyMasterPassword fails', async () => {
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: false, error: 'Incorrect password' });
+  it('should show error when verifyMasterPasswordWithRehash fails', async () => {
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: false, error: 'Incorrect password' });
 
     setupFullDOM();
     vi.resetModules();
@@ -993,7 +993,7 @@ describe('authenticatePassword flow', () => {
 
     await flushPromises();
 
-    expect(verifyMasterPassword).not.toHaveBeenCalled();
+    expect(verifyMasterPasswordWithRehash).not.toHaveBeenCalled();
   });
 });
 

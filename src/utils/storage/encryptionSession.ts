@@ -8,6 +8,7 @@
 import { logInfo, logDebug, logWarn } from '../logger/api.js';
 import { sendFromPopup } from '../../messaging/types.js';
 import { calculatePasswordStrength } from '../masterPassword.js';
+import { errorMessage } from '../errorUtils.js';
 import {
     generateSalt,
     deriveKey,
@@ -710,6 +711,65 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
     // VULN-018 fix: record failed attempt
     await recordFailedAttempt();
     return false;
+}
+
+/**
+ * Self-verify + rehash for the dashboard auth modal (no session unlock).
+ *
+ * The one canonical verify+rehash policy for every password path (set /
+ * change / remove / auth-modal): stored-iterations constant-time verify,
+ * then one atomic write of the regenerated hash and KDF iteration count
+ * when a legacy hash was accepted. The auth-modal path previously rehashed
+ * through a raw single-field `master_password_hash` write (no iterations
+ * update, not atomic), leaving the stored count stale — the next
+ * constant-time verify trusts the stored count and then rejected the
+ * correct password.
+ *
+ * Rate limiting is the caller's job — the dashboard checks it in the auth
+ * modal before calling (same contract as removeMasterPassword).
+ */
+export async function verifyMasterPasswordWithRehash(
+    password: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const result = await chrome.storage.local.get([
+            StorageKeys.MASTER_PASSWORD_ENABLED,
+            StorageKeys.MASTER_PASSWORD_HASH,
+            StorageKeys.MASTER_PASSWORD_SALT,
+            StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
+        ]);
+        if (!result[StorageKeys.MASTER_PASSWORD_ENABLED]) {
+            return { success: false, error: 'Master password not set' };
+        }
+        const storedHash = result[StorageKeys.MASTER_PASSWORD_HASH] as string | undefined;
+        const saltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined;
+        if (!storedHash || !saltBase64) {
+            return { success: false, error: 'Master password data corrupted' };
+        }
+        const storedIterations = validateStoredIterations(
+            result[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]
+        );
+        const salt = base64ToBytes(saltBase64);
+        // Stored iterations enable the constant-time verify (one PBKDF2 pass).
+        const verifyResult = await verifyPasswordWithPBKDF2(password, storedHash, salt, storedIterations);
+        if (!verifyResult.isValid) {
+            return { success: false, error: 'Incorrect password' };
+        }
+        // Same atomic rehash contract as unlockWithPassword: hash and KDF
+        // iteration count move together, so a stale stored count can never
+        // sit next to an envelope hash and reject the correct password.
+        if (verifyResult.needsRehash) {
+            const newHash = await hashPasswordWithPBKDF2(password, salt);
+            await chrome.storage.local.set({
+                [StorageKeys.MASTER_PASSWORD_HASH]: newHash,
+                [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
+            });
+            logInfo('Migrated master password hash to stronger KDF (600,000 iterations)');
+        }
+        return { success: true };
+    } catch (e: unknown) {
+        return { success: false, error: errorMessage(e) };
+    }
 }
 
 /**

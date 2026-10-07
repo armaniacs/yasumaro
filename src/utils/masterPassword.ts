@@ -1,16 +1,10 @@
 /**
  * masterPassword.ts
- * Master password verification, strength check, and validation helpers.
- * Setting and changing passwords live in utils/storage/encryptionSession.js,
- * the single canonical implementation.
+ * Master password strength check, validation, and flag helpers.
+ * Verification, setting, and changing passwords live in
+ * utils/storage/encryptionSession.js, the single canonical implementation.
  */
 
-import { errorMessage } from './errorUtils.js';
-import {
-    hashPasswordWithPBKDF2,
-    verifyPasswordWithPBKDF2,
-    base64ToBytes,
-} from './crypto/index.js';
 import { validatePasswordPolicy } from './crypto/cryptoParams.js';
 
 // パスワード強度レベル
@@ -89,47 +83,6 @@ export function validatePasswordMatch(password: string, confirmPassword: string)
         return 'Passwords do not match';
     }
     return null;
-}
-
-/**
- * マスターパスワードを検証
- * @param {string} password - パスワード
- * @param {(keys: string[]) => Promise<Record<string, unknown>>} getStorageFn - ストレージ取得関数
- * @returns {Promise<{success: boolean; error?: string}>} 結果
- */
-export async function verifyMasterPassword(
-    password: string,
-    getStorageFn: (keys: string[]) => Promise<Record<string, unknown>>
-): Promise<{ success: boolean; error?: string }> {
-    try {
-        const result = await getStorageFn(['master_password_salt', 'master_password_hash']);
-        const saltBase64 = result['master_password_salt'] as string | undefined;
-        const hash = result['master_password_hash'] as string | undefined;
-
-        if (!saltBase64 || !hash) {
-            return { success: false, error: 'Master password not set' };
-        }
-
-        // Base64デコード
-        const salt = base64ToBytes(saltBase64);
-
-        // パスワード検証（VULN-019: returns {isValid, needsRehash}）
-        const verifyResult = await verifyPasswordWithPBKDF2(password, hash, salt);
-
-        if (!verifyResult.isValid) {
-            return { success: false, error: 'Incorrect password' };
-        }
-
-        // VULN-019 fix: re-hash with new iteration count if legacy hash was used
-        if (verifyResult.needsRehash) {
-            const newHash = await hashPasswordWithPBKDF2(password, salt);
-            await chrome.storage.local.set({ master_password_hash: newHash });
-        }
-
-        return { success: true };
-    } catch (e: unknown) {
-        return { success: false, error: errorMessage(e) };
-    }
 }
 
 /**

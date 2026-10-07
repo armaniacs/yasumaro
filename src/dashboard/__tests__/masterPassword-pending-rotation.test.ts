@@ -17,14 +17,11 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
   focusTrapManager: { trap: vi.fn().mockReturnValue('trap-id'), release: vi.fn() },
 }));
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn(),
-  isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn().mockReturnValue({ score: 50, level: 'medium', text: 'Medium' }),
 }));
 vi.mock('../../utils/masterPasswordUiCore.js', () => ({
   validateAndSetPasswordErrors: vi.fn().mockReturnValue(false),
   validateAndSetMatchErrors: vi.fn().mockReturnValue(false),
-  buildGetStorageFn: vi.fn(),
   updatePasswordStrengthDisplay: vi.fn(),
 }));
 vi.mock('../../utils/rateLimiter.js', () => ({
@@ -36,6 +33,8 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   setMasterPassword: vi.fn(),
   changeMasterPassword: vi.fn(),
   removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn(),
+  isMasterPasswordEnabled: vi.fn(),
   ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
     fields: readonly string[] = [];
   },
@@ -47,9 +46,9 @@ vi.stubGlobal('chrome', {
   storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn(), remove: vi.fn() } },
 });
 
-import { isMasterPasswordSet } from '../../utils/masterPassword.js';
 import {
   setMasterPassword as setMasterPasswordService,
+  isMasterPasswordEnabled,
   PendingRotationMismatchError,
 } from '../../utils/storage/encryptionSession.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -97,7 +96,7 @@ describe('dashboard pending-rotation mismatch', () => {
   });
 
   it('shows the localized pending-rotation message when the service reports a mismatch', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     vi.mocked(setMasterPasswordService).mockRejectedValue(new PendingRotationMismatchError());
     await initController();
     checkCheckbox();
@@ -111,7 +110,7 @@ describe('dashboard pending-rotation mismatch', () => {
   });
 
   it('the mismatch message differs from the generic abort message', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     vi.mocked(setMasterPasswordService).mockRejectedValue(new PendingRotationMismatchError());
     await initController();
     checkCheckbox();

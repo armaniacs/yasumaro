@@ -7,7 +7,6 @@ import { describe, test, expect, vi } from 'vitest';
 import {
     validateAndSetPasswordErrors,
     validateAndSetMatchErrors,
-    buildGetStorageFn,
     updatePasswordStrengthDisplay,
 } from '../masterPasswordUiCore.js';
 
@@ -51,14 +50,6 @@ describe('masterPasswordUiCore', () => {
         test('sets no error when the error element is null', () => {
             const result = validateAndSetMatchErrors('password1', 'password2', null);
             expect(result).toBe(false);
-        });
-    });
-
-    describe('buildGetStorageFn', () => {
-        test('returns a function that calls chrome.storage.local.get', async () => {
-            const getFn = buildGetStorageFn();
-            await getFn(['test_key']);
-            expect(chrome.storage.local.get).toHaveBeenCalledWith(['test_key']);
         });
     });
 

@@ -43,15 +43,6 @@ export function validateAndSetMatchErrors(
 }
 
 /**
- * chrome.storage.local.get をラップする関数を生成
- */
-export function buildGetStorageFn() {
-    return async (keys: string[]) => {
-        return chrome.storage.local.get(keys);
-    };
-}
-
-/**
  * パスワード強度インジケータを更新する
  */
 export function updatePasswordStrengthDisplay(

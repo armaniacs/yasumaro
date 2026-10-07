@@ -19,15 +19,25 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn().mockResolvedValue({ success: true }),
-  isMasterPasswordSet: vi.fn().mockResolvedValue(true),
   calculatePasswordStrength: vi.fn().mockReturnValue({
     score: 80,
     level: 'strong',
     text: 'Strong',
   }),
-  validatePasswordRequirements: vi.fn().mockReturnValue(null),
-  validatePasswordMatch: vi.fn().mockReturnValue(null),
+}));
+
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  setMasterPassword: vi.fn(),
+  changeMasterPassword: vi.fn(),
+  removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn().mockResolvedValue({ success: true }),
+  isMasterPasswordEnabled: vi.fn().mockResolvedValue(true),
+  ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
+    fields: readonly string[] = [];
+  },
+  MasterPasswordAlreadySetError: class MasterPasswordAlreadySetError extends Error {},
+  PendingRotationMismatchError: class PendingRotationMismatchError extends Error {},
+  RotationInProgressError: class RotationInProgressError extends Error {},
 }));
 
 const mockChrome = {

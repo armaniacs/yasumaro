@@ -29,8 +29,6 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
 }));
 
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn(),
-  isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn(),
   validatePasswordRequirements: vi.fn(),
   validatePasswordMatch: vi.fn(),
@@ -47,6 +45,8 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   setMasterPassword: vi.fn(),
   changeMasterPassword: vi.fn(),
   removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn(),
+  isMasterPasswordEnabled: vi.fn(),
   ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
     fields: readonly string[];
     constructor(fields: readonly string[]) {
@@ -73,8 +73,6 @@ vi.stubGlobal('chrome', {
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
 import {
-  verifyMasterPassword,
-  isMasterPasswordSet,
   calculatePasswordStrength,
   validatePasswordRequirements,
   validatePasswordMatch,
@@ -85,6 +83,8 @@ import {
   setMasterPassword as setMasterPasswordService,
   changeMasterPassword as changeMasterPasswordService,
   removeMasterPassword as removeMasterPasswordService,
+  verifyMasterPasswordWithRehash,
+  isMasterPasswordEnabled,
 } from '../../utils/storage/encryptionSession.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';
 
@@ -355,7 +355,7 @@ describe('masterPassword-branches — authenticatePassword rate-limit and error 
     await new Promise((r) => setTimeout(r, 0));
     expect(refs.passwordAuthError!.textContent).toBe('Too many tries, wait 30s.');
     expect(refs.passwordAuthError!.classList.contains('visible')).toBe(true);
-    expect(verifyMasterPassword).not.toHaveBeenCalled();
+    expect(verifyMasterPasswordWithRehash).not.toHaveBeenCalled();
   });
 
   it('shows default rate-limit error when checkRateLimit fails without an error message', async () => {
@@ -388,7 +388,7 @@ describe('masterPassword-branches — authenticatePassword rate-limit and error 
 
   it('runs pending action after successful auth and resets attempts', async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ success: true });
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
     const action = vi.fn().mockResolvedValue(undefined);
     const { MasterPasswordController } = mod;
     const refs = authRefs();
@@ -405,7 +405,7 @@ describe('masterPassword-branches — authenticatePassword rate-limit and error 
 
   it('does not invoke a pending action when none is set after successful auth', async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ success: true });
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
     const { MasterPasswordController } = mod;
     const refs = authRefs();
     refs.submitPasswordAuthBtn = el('button') as HTMLButtonElement;
@@ -426,7 +426,7 @@ describe('masterPassword-branches — authenticatePassword rate-limit and error 
 
   it('records failed attempt and shows incorrect-password message on verify failure', async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ success: true });
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: false, error: 'bad hash' });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: false, error: 'bad hash' });
     const { MasterPasswordController } = mod;
     const refs = authRefs();
     refs.submitPasswordAuthBtn = el('button') as HTMLButtonElement;
@@ -443,7 +443,7 @@ describe('masterPassword-branches — authenticatePassword rate-limit and error 
 
   it('does not throw when verify fails but passwordAuthError element is absent', async () => {
     vi.mocked(checkRateLimit).mockResolvedValue({ success: true });
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: false, error: 'bad hash' });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: false, error: 'bad hash' });
     const { MasterPasswordController } = mod;
     const refs = authRefs();
     refs.passwordAuthError = null;
@@ -459,7 +459,7 @@ describe('masterPassword-branches — authenticatePassword rate-limit and error 
   it('falls back through getMessage then result.error then generic text on verify failure', async () => {
     vi.mocked(getMessage).mockReturnValue('' as unknown as string);
     vi.mocked(checkRateLimit).mockResolvedValue({ success: true });
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: false, error: '' });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: false, error: '' });
     const { MasterPasswordController } = mod;
     const refs = authRefs();
     refs.submitPasswordAuthBtn = el('button') as HTMLButtonElement;
@@ -481,7 +481,7 @@ describe('masterPassword-branches — initEventListeners: enabled-checkbox toggl
     vi.resetModules();
     mod = await import('../masterPassword.js');
     vi.mocked(checkRateLimit).mockResolvedValue({ success: true });
-    vi.mocked(verifyMasterPassword).mockResolvedValue({ success: true });
+    vi.mocked(verifyMasterPasswordWithRehash).mockResolvedValue({ success: true });
   });
 
   it('falls back to default removed-message when getMessage returns falsy', async () => {
@@ -522,7 +522,7 @@ describe('masterPassword-branches — initEventListeners: setMasterPasswordNowBt
   });
 
   it('skips setting checked state when masterPasswordEnabled is null', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     const { MasterPasswordController } = mod;
     const refs = emptyDomRefs();
     refs.masterPasswordEnabled = null;
@@ -547,7 +547,7 @@ describe('masterPassword-branches — loadSettings null-element branches', () =>
   });
 
   it('does not throw when masterPasswordEnabled and masterPasswordOptions are null', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     const { MasterPasswordController } = mod;
     const refs = emptyDomRefs();
     refs.masterPasswordWarning = el('div');
@@ -557,7 +557,7 @@ describe('masterPassword-branches — loadSettings null-element branches', () =>
   });
 
   it('adds hidden class to masterPasswordOptions when not set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     const { MasterPasswordController } = mod;
     const refs = emptyDomRefs();
     refs.masterPasswordEnabled = el('input') as HTMLInputElement;

@@ -17,14 +17,11 @@ vi.mock('../../utils/ui/focusTrap.js', () => ({
   focusTrapManager: { trap: vi.fn().mockReturnValue('trap-id'), release: vi.fn() },
 }));
 vi.mock('../../utils/masterPassword.js', () => ({
-  verifyMasterPassword: vi.fn(),
-  isMasterPasswordSet: vi.fn(),
   calculatePasswordStrength: vi.fn().mockReturnValue({ score: 50, level: 'medium', text: 'Medium' }),
 }));
 vi.mock('../../utils/masterPasswordUiCore.js', () => ({
   validateAndSetPasswordErrors: vi.fn().mockReturnValue(false),
   validateAndSetMatchErrors: vi.fn().mockReturnValue(false),
-  buildGetStorageFn: vi.fn(),
   updatePasswordStrengthDisplay: vi.fn(),
 }));
 vi.mock('../../utils/rateLimiter.js', () => ({
@@ -36,6 +33,8 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   setMasterPassword: vi.fn(),
   changeMasterPassword: vi.fn(),
   removeMasterPassword: vi.fn(),
+  verifyMasterPasswordWithRehash: vi.fn(),
+  isMasterPasswordEnabled: vi.fn(),
   ReencryptionAbortedError: class ReencryptionAbortedError extends Error {
     fields: readonly string[] = [];
   },
@@ -48,9 +47,9 @@ vi.stubGlobal('chrome', {
   storage: { local: { get: vi.fn().mockResolvedValue({}), set: vi.fn(), remove: vi.fn() } },
 });
 
-import { isMasterPasswordSet } from '../../utils/masterPassword.js';
 import {
   setMasterPassword as setMasterPasswordService,
+  isMasterPasswordEnabled,
   MasterPasswordAlreadySetError,
   RotationInProgressError,
 } from '../../utils/storage/encryptionSession.js';
@@ -99,7 +98,7 @@ describe('dashboard set-mode guard', () => {
   });
 
   it('routes checkbox ON to the auth modal, not the set modal, when a password is already set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     await initController();
 
     checkCheckbox();
@@ -109,7 +108,7 @@ describe('dashboard set-mode guard', () => {
   });
 
   it('routes the "set now" button to the auth modal when a password is already set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     await initController();
 
     document.getElementById('setMasterPasswordNowBtn')!.click();
@@ -119,7 +118,7 @@ describe('dashboard set-mode guard', () => {
   });
 
   it('opens the set modal when no password is set (fresh install)', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     await initController();
 
     checkCheckbox();
@@ -130,7 +129,7 @@ describe('dashboard set-mode guard', () => {
   });
 
   it('never calls the set service when the set flow is diverted', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(true);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
     await initController();
 
     checkCheckbox();
@@ -140,7 +139,7 @@ describe('dashboard set-mode guard', () => {
   });
 
   it('shows the localized already-set message when the service refuses a set', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     vi.mocked(setMasterPasswordService).mockRejectedValue(new MasterPasswordAlreadySetError());
     await initController();
     checkCheckbox();
@@ -154,7 +153,7 @@ describe('dashboard set-mode guard', () => {
   });
 
   it('shows the rotation-in-progress message when another tab holds the lock', async () => {
-    vi.mocked(isMasterPasswordSet).mockResolvedValue(false);
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
     vi.mocked(setMasterPasswordService).mockRejectedValue(new RotationInProgressError());
     await initController();
     checkCheckbox();

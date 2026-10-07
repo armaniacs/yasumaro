@@ -12,25 +12,9 @@ import {
     calculatePasswordStrength,
     validatePasswordRequirements,
     validatePasswordMatch,
-    verifyMasterPassword,
     isMasterPasswordSet,
     PasswordStrength
 } from '../masterPassword.js';
-
-// crypto モック
-// Stubs the key-derivation side only; the base64 codec stays real so the
-// salt encoding under test is the production one (PBI 2026-09-15-16).
-vi.mock('../crypto/index.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../crypto/index.js')>();
-  return {
-    ...actual,
-    hashPasswordWithPBKDF2: vi.fn(async (_password: string, _salt: Uint8Array) => 'hashed_value'),
-    verifyPasswordWithPBKDF2: vi.fn(async (password: string, hash: string, _salt: Uint8Array) => {
-        const isValid = password === 'correct_password' && hash === 'hashed_value';
-        return { isValid, needsRehash: false };
-    }),
-  };
-});
 
 describe('masterPassword', () => {
 
@@ -132,47 +116,6 @@ describe('masterPassword', () => {
 
         test('treats two empty strings as matching', () => {
             expect(validatePasswordMatch('', '')).toBeNull();
-        });
-    });
-
-    describe('verifyMasterPassword', () => {
-        test('succeeds with the correct password', async () => {
-            const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = vi.fn(async () => ({
-                'master_password_salt': saltBase64,
-                'master_password_hash': 'hashed_value'
-            }));
-
-            const result = await verifyMasterPassword('correct_password', mockGet);
-            expect(result.success).toBe(true);
-        });
-
-        test('returns an error for a wrong password', async () => {
-            const saltBase64 = btoa(String.fromCharCode(...new Uint8Array(16).fill(1)));
-            const mockGet = vi.fn(async () => ({
-                'master_password_salt': saltBase64,
-                'master_password_hash': 'hashed_value'
-            }));
-
-            const result = await verifyMasterPassword('wrong_password', mockGet);
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Incorrect password');
-        });
-
-        test('returns an error when no master password is set', async () => {
-            const mockGet = vi.fn(async () => ({}));
-
-            const result = await verifyMasterPassword('any_password', mockGet);
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Master password not set');
-        });
-
-        test('returns an error on storage failure', async () => {
-            const mockGet = vi.fn(async () => { throw new Error('Storage error'); });
-
-            const result = await verifyMasterPassword('any', mockGet);
-            expect(result.success).toBe(false);
-            expect(result.error).toBe('Storage error');
         });
     });
 

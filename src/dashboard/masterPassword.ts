@@ -10,14 +10,14 @@ import { getMessage, getMessageOr, getMessageWithSubstitutions } from '../utils/
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import {
-  verifyMasterPassword,
-  isMasterPasswordSet,
   calculatePasswordStrength
 } from '../utils/masterPassword.js';
 import {
   setMasterPassword as setMasterPasswordService,
   changeMasterPassword as changeMasterPasswordService,
   removeMasterPassword as removeMasterPasswordService,
+  verifyMasterPasswordWithRehash,
+  isMasterPasswordEnabled,
   ReencryptionAbortedError,
   MasterPasswordAlreadySetError,
   PendingRotationMismatchError,
@@ -26,7 +26,6 @@ import {
 import {
   validateAndSetPasswordErrors,
   validateAndSetMatchErrors,
-  buildGetStorageFn,
   updatePasswordStrengthDisplay
 } from '../utils/masterPasswordUiCore.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
@@ -308,7 +307,7 @@ export class MasterPasswordController {
       return;
     }
 
-    const result = await verifyMasterPassword(password, buildGetStorageFn());
+    const result = await verifyMasterPasswordWithRehash(password);
     if (result.success) {
       await resetFailedAttempts();
       const action = this.pendingPasswordAction;
@@ -362,7 +361,7 @@ export class MasterPasswordController {
   // leaves it unchecked while the password stays enabled), so storage decides
   // whether "enable" means set or change.
   private async beginSetOrChange(): Promise<void> {
-    const alreadySet = await isMasterPasswordSet(async (keys) => chrome.storage.local.get(keys));
+    const alreadySet = await isMasterPasswordEnabled();
     if (alreadySet) {
       this.beginChange();
     } else {
@@ -437,7 +436,7 @@ export class MasterPasswordController {
    * 設定をロードする。
    */
   async loadSettings(): Promise<void> {
-    const isSet = await isMasterPasswordSet(async (keys) => chrome.storage.local.get(keys));
+    const isSet = await isMasterPasswordEnabled();
     if (this.dom.masterPasswordEnabled) this.dom.masterPasswordEnabled.checked = isSet;
     if (this.dom.masterPasswordOptions) {
       if (isSet) {
