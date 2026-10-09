@@ -54,7 +54,7 @@ const STAGING = 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
 const CUTOFF_DATE = '2020-01-01';
 const CUTOFF_MS = cutoffMsFromLocalDate(CUTOFF_DATE);
 
-const BASE: Readonly<Record<DashboardArchiveSubtype, Record<string, unknown>>> = {
+const BASE: Readonly<Partial<Record<DashboardArchiveSubtype, Record<string, unknown>>>> = {
   archive_preview: {
     subtype: 'archive_preview',
     cutoffDate: CUTOFF_DATE,

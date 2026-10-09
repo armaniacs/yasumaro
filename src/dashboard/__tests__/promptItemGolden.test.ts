@@ -318,42 +318,42 @@ describe('prompt-item row HTML golden', () => {
   it('preset + default rows (no custom prompts)', () => {
     promptDom();
     createCustomPromptManager().init(asSettings({ custom_prompts: [] }));
-    const html = document.getElementById('promptList').innerHTML;
+    const html = document.getElementById('promptList')!.innerHTML;
     expect(html).toBe(GOLDEN.A);
   });
 
   it('active preset row (badge with 有効) + inactive default', () => {
     promptDom();
     createCustomPromptManager().init(asSettings({ custom_prompts: [cp('__preset__concise', 'Concise', 'all', true)] }));
-    const html = document.getElementById('promptList').innerHTML;
+    const html = document.getElementById('promptList')!.innerHTML;
     expect(html).toBe(GOLDEN.B);
   });
 
   it('inactive custom list row with edit/delete', () => {
     promptDom();
     createCustomPromptManager().init(asSettings({ custom_prompts: [cp('p1', 'Test Prompt', 'all', false)] }));
-    const html = document.getElementById('promptList').innerHTML;
+    const html = document.getElementById('promptList')!.innerHTML;
     expect(html).toBe(GOLDEN.C);
   });
 
   it('active custom list row with provider label', () => {
     promptDom();
     createCustomPromptManager().init(asSettings({ custom_prompts: [cp('p2', 'Active Prompt', 'gemini', true)] }));
-    const html = document.getElementById('promptList').innerHTML;
+    const html = document.getElementById('promptList')!.innerHTML;
     expect(html).toBe(GOLDEN.D);
   });
 
   it('template rows: active default + inactive custom', () => {
     templateDom();
     createMarkdownTemplateManager().init(asTplSettings([tpl('tpl1')], 'default'));
-    const html = document.getElementById('markdownTemplateList').innerHTML;
+    const html = document.getElementById('markdownTemplateList')!.innerHTML;
     expect(html).toBe(GOLDEN.E);
   });
 
   it('template rows: inactive default + active custom', () => {
     templateDom();
     createMarkdownTemplateManager().init(asTplSettings([tpl('tpl1')], 'tpl1'));
-    const html = document.getElementById('markdownTemplateList').innerHTML;
+    const html = document.getElementById('markdownTemplateList')!.innerHTML;
     expect(html).toBe(GOLDEN.F);
   });
 });

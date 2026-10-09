@@ -18,7 +18,7 @@ const GOLDEN: Array<{ parts: (string | number | undefined | null)[]; hex: string
   // "1774969199999|0" (the shape confirmTokenManager.test.ts uses)
   { parts: [1774969199999, 0], hex: '7a99168f1b445310510b7c821653f69df8387362f30c3e5b99042a22ec0c34b5' },
   { parts: [1774969199999, 1], hex: '3bae8ba4ab0a7285479ce7399f47dede71e60435c8890522d666ec3141d66345' },
-  { parts: [1774969199999, false], hex: '00d63617a617c6167346aeb5736dbb3151730ff26385f3c6f1f005d6008914f5' },
+  { parts: [1774969199999, 'false'], hex: '00d63617a617c6167346aeb5736dbb3151730ff26385f3c6f1f005d6008914f5' },
   // undefined/null fold to the empty segment, so ["|"] and arity are part of the scope
   { parts: [null, null], hex: 'cbe5cfdf7c2118a9c3d78ef1d684f3afa089201352886449a06a6511cfef74a7' },
   { parts: [undefined, 1], hex: 'b75c34545e8cb4d20f42b5ef4e2d12cecb6348ef2811351efde8e51ca6b31b80' },

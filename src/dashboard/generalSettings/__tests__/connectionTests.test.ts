@@ -1444,7 +1444,7 @@ describe('certificate guidance i18n', () => {
     } as const;
 
     for (const locale of ['ja', 'en'] as const) {
-      const text = readLocale(locale).certGuideFirefox.message;
+      const text = readLocale(locale).certGuideFirefox!.message;
       // The URL is substituted at render time, so a missing placeholder would
       // silently drop the endpoint the user is told to open.
       expect(text).toContain('{url}');

@@ -164,7 +164,7 @@ async function initPrivatePanel(): Promise<void> {
 
 /** report() calls aimed at the mainStatus surface, oldest first. */
 function mainStatusReports(): unknown[][] {
-  return reportSpy.mock.calls.filter((call) => call[0] === 'mainStatus');
+  return reportSpy.mock.calls.filter((call: unknown[]) => call[0] === 'mainStatus');
 }
 
 beforeEach(() => {
@@ -258,9 +258,9 @@ describe('whitelist buttons golden pin — statusAddDomain', () => {
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
     expect(mainStatusReports()).toHaveLength(1);
-    expect(mainStatusReports()[0][0]).toBe('mainStatus');
-    expect(mainStatusReports()[0][1]).toContain('settings are locked');
-    expect(mainStatusReports()[0][2]).toBe('error');
+    expect(mainStatusReports()[0]![0]).toBe('mainStatus');
+    expect(mainStatusReports()[0]![1]).toContain('settings are locked');
+    expect(mainStatusReports()[0]![2]).toBe('error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to add the domain to the whitelist',
       expect.objectContaining({ cause: expect.any(Error) }),
@@ -330,8 +330,8 @@ describe('whitelist buttons golden pin — statusAddPath', () => {
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
     expect(mainStatusReports()).toHaveLength(1);
-    expect(mainStatusReports()[0][1]).toContain('settings are locked');
-    expect(mainStatusReports()[0][2]).toBe('error');
+    expect(mainStatusReports()[0]![1]).toContain('settings are locked');
+    expect(mainStatusReports()[0]![2]).toBe('error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to add the path to the whitelist',
       expect.objectContaining({ cause: expect.any(Error) }),

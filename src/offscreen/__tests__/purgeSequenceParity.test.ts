@@ -139,7 +139,8 @@ describe('purge sequence parity at the backend layer (NN04 pin)', () => {
         const opfs = makeOpfsStub(100, [0]);
 
         await expect(idb.backend.purgeOldRecords(window, undefined)).resolves.toEqual({ success: true, purged: 0 });
-        await expect(handlePurgeOldRecords(ctxOf(opfs), { retentionDays: window }, { postLog: () => {} }))
+        const retentionPayload = window === undefined ? {} : { retentionDays: window };
+        await expect(handlePurgeOldRecords(ctxOf(opfs), retentionPayload, { postLog: () => {} }))
           .resolves.toEqual({ purged: 0 });
 
         const expected = [
@@ -225,7 +226,8 @@ describe('purge sequence parity at the backend layer (NN04 pin)', () => {
         const opfs = makeOpfsStub(10, [0]);
 
         await expect(idb.backend.purgeContent(undefined, max, false)).resolves.toEqual({ success: true, purged: 0 });
-        await expect(handleContentPurge(ctxOf(opfs), { maxRecords: max }))
+        const capPayload = max === undefined ? {} : { maxRecords: max };
+        await expect(handleContentPurge(ctxOf(opfs), capPayload))
           .resolves.toEqual({ purged: 0 });
 
         const expected = ['BEGIN IMMEDIATE', 'COMMIT'];
@@ -267,7 +269,8 @@ describe('purge sequence parity at the backend layer (NN04 pin)', () => {
         const opfs = makeOpfsStub(0, [0]);
 
         await expect(idb.backend.purgeAuditLog(window)).resolves.toEqual({ success: true, purged: 0 });
-        await expect(handleAuditLogPurge(ctxOf(opfs), { retentionDays: window })).resolves.toEqual({ purged: 0 });
+        const windowPayload = window === undefined ? {} : { retentionDays: window };
+        await expect(handleAuditLogPurge(ctxOf(opfs), windowPayload)).resolves.toEqual({ purged: 0 });
 
         expect(idb.calls).toEqual([]);
         expect(opfs.calls).toEqual([]);

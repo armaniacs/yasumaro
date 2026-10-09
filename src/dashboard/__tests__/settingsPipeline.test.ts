@@ -416,7 +416,7 @@ describe('renderBPriorityWarnings', () => {
   it('renders the P1-required warning and removes it once P1 is filled', () => {
     setupBDom();
     const bList = document.getElementById('bPriorityList') as HTMLElement;
-    bList.querySelector('.b-priority-row select')!.value = '';
+    (bList.querySelector('.b-priority-row select') as HTMLSelectElement).value = '';
     expect(renderBPriorityWarnings(bList).p1Empty).toBe(true);
     const reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
     expect(reqWarn).not.toBeNull();
@@ -424,7 +424,7 @@ describe('renderBPriorityWarnings', () => {
     expect(reqWarn!.getAttribute('role')).toBe('alert');
     expect(reqWarn!.textContent).toBe('aiProviderPriority1Required');
     expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(1);
-    bList.querySelector('.b-priority-row select')!.value = 'openai';
+    (bList.querySelector('.b-priority-row select') as HTMLSelectElement).value = 'openai';
     expect(renderBPriorityWarnings(bList).p1Empty).toBe(false);
     expect(bList.querySelector('.b-priority-req-warn')).toBeNull();
     expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(0);
