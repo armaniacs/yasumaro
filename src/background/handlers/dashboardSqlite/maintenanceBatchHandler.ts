@@ -1,7 +1,7 @@
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
-import type { MaintenanceBatchDeps } from './deps.js';
+import type { DepsResult, MaintenanceBatchDeps } from './deps.js';
 import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';
 
 /**
@@ -14,6 +14,37 @@ export const MAINTENANCE_BATCH_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = n
 ]);
 
 export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
+  /**
+   * Shared settings-purge flow: the two retention subtypes differ only in the
+   * settings keys and the deps call, so the read -> both-null skip -> invoke ->
+   * toFailure -> response projection lives here once. Kept as a single seam so a
+   * guard or response-shape fix cannot land on one twin and miss the other.
+   */
+  const runSettingsPurge = async (
+    readKeys: readonly [string, string],
+    purge: (
+      days: number | undefined,
+      max: number | undefined,
+      settings: Record<string, unknown>,
+    ) => Promise<DepsResult<{ purged: number }>>,
+  ): Promise<unknown> => {
+    const settings = await deps.getSettings();
+    const days = settings[readKeys[0]] ?? null;
+    const max  = settings[readKeys[1]] ?? null;
+    if (days === null && max === null) {
+      return { success: true, purged: 0, skipped: true };
+    }
+    const result = await purge(
+      days !== null ? Number(days) : undefined,
+      max  !== null ? Number(max)  : undefined,
+      settings,
+    );
+    if (!result.success) {
+      return toFailure(result);
+    }
+    return { success: true, purged: result.data.purged, skipped: false };
+  };
+
   return async (payload: DashboardSqliteRequest): Promise<unknown> => {
     const subtype = payload.subtype;
     switch (subtype) {
@@ -69,40 +100,20 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         }
         return { success: true };
       }
-      case 'purge_now': {
-        const settings = await deps.getSettings();
-        const days = settings[StorageKeys.SQLITE_RETENTION_DAYS] ?? null;
-        const max  = settings[StorageKeys.SQLITE_MAX_RECORDS]    ?? null;
-        if (days === null && max === null) {
-          return { success: true, purged: 0, skipped: true };
-        }
-        const result = await deps.purgeOldRecords(
-          days !== null ? Number(days) : undefined,
-          max  !== null ? Number(max)  : undefined,
+      case 'purge_now':
+        return runSettingsPurge(
+          [StorageKeys.SQLITE_RETENTION_DAYS, StorageKeys.SQLITE_MAX_RECORDS],
+          (days, max) => deps.purgeOldRecords(days, max),
         );
-        if (!result.success) {
-          return toFailure(result);
-        }
-        return { success: true, purged: result.data.purged, skipped: false };
-      }
-      case 'content_purge_now': {
-        const settings = await deps.getSettings();
-        const contentDays = settings[StorageKeys.CONTENT_RETENTION_DAYS] ?? null;
-        const contentMax  = settings[StorageKeys.CONTENT_MAX_RECORDS]    ?? null;
-        const includeStarred = settings[StorageKeys.CONTENT_PURGE_INCLUDE_STARRED] as boolean | undefined ?? false;
-        if (contentDays === null && contentMax === null) {
-          return { success: true, purged: 0, skipped: true };
-        }
-        const result = await deps.purgeContent(
-          contentDays !== null ? Number(contentDays) : undefined,
-          contentMax  !== null ? Number(contentMax)  : undefined,
-          includeStarred,
+      case 'content_purge_now':
+        return runSettingsPurge(
+          [StorageKeys.CONTENT_RETENTION_DAYS, StorageKeys.CONTENT_MAX_RECORDS],
+          (days, max, settings) => deps.purgeContent(
+            days,
+            max,
+            (settings[StorageKeys.CONTENT_PURGE_INCLUDE_STARRED] as boolean | undefined) ?? false,
+          ),
         );
-        if (!result.success) {
-          return toFailure(result);
-        }
-        return { success: true, purged: result.data.purged, skipped: false };
-      }
       case 'backup_db': {
         const result = await deps.backupDb();
         if (result.success) {
