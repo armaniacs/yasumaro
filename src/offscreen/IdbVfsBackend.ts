@@ -64,6 +64,20 @@ export class IdbVfsBackend implements StorageBackend {
   }
 
   /**
+   * Single-cell scalar read: runs `sql` with `params` and returns the first
+   * cell of the first row, Number-coerced. The engine seam hands rows back as
+   * positional arrays and yields nothing (Promise<void>), so this first-cell
+   * rule used to be re-spelled at every read site; the helper is its one owner.
+   * Semantics preserved from those sites: no row returns the 0 initialiser, a
+   * NULL cell coerces to 0, an absent cell to NaN.
+   */
+  private async scalar(sql: string, params: SqliteValue[] = []): Promise<number> {
+    let value = 0;
+    await this.engine.execWithCache(sql, params, (row: SqliteValue[]) => { value = Number(row[0]); });
+    return value;
+  }
+
+  /**
    * The host's half of the shared search skeleton: `execWithCache` yields
    * positional values in SELECT order, so rows decode positionally and a COUNT
    * row is its first cell. `per-path` qualification qualifies the FTS JOIN's
@@ -84,8 +98,7 @@ export class IdbVfsBackend implements StorageBackend {
     const domain = record.domain || extractDomain(record.url);
     const params = buildInsertParams(record, domain);
     await this.engine.execWithCache(INSERT_SQL, params);
-    let id = 0;
-    await this.engine.execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => { id = Number(row[0]); });
+    const id = await this.scalar('SELECT last_insert_rowid()');
     return { success: true, id };
   }
 
@@ -99,8 +112,7 @@ export class IdbVfsBackend implements StorageBackend {
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
         await this.engine.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-        let changed = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changed = Number(row[0]); });
+        const changed = await this.scalar('SELECT changes()');
         if (changed > 0) inserted++;
         else skipped++;
       }
@@ -159,12 +171,7 @@ export class IdbVfsBackend implements StorageBackend {
       (row: SqliteValue[]) => { rows.push({ ...mapPositional<BrowsingLogEntry>(row, BROWSING_LOG_FULL_COLUMNS), rank: 0 }); }
     );
 
-    let total = 0;
-    await this.engine.execWithCache(
-      stmts.countSql,
-      stmts.countParams,
-      (row: SqliteValue[]) => { total = Number(row[0]); }
-    );
+    const total = await this.scalar(stmts.countSql, stmts.countParams);
 
     return { success: true, rows, total };
   }
@@ -194,12 +201,7 @@ export class IdbVfsBackend implements StorageBackend {
   async toggleStar(id: number): Promise<BackendOrError<StarResult>> {
     this.ensureDb();
     await this.engine.execWithCache(TOGGLE_STAR_SQL, [id]);
-    let newStarred = 0;
-    await this.engine.execWithCache(
-      'SELECT is_starred FROM browsing_logs WHERE id = ?',
-      [id],
-      (row: SqliteValue[]) => { newStarred = Number(row[0]); }
-    );
+    const newStarred = await this.scalar('SELECT is_starred FROM browsing_logs WHERE id = ?', [id]);
     return { success: true, is_starred: newStarred };
   }
 
@@ -213,16 +215,8 @@ export class IdbVfsBackend implements StorageBackend {
   private get purgeExecutor(): PurgeExecutor {
     return {
       exec: (sql, params) => this.engine.execWithCache(sql, params),
-      count: async (sql, params) => {
-        let value = 0;
-        await this.engine.execWithCache(sql, params, (row: SqliteValue[]) => { value = Number(row[0]); });
-        return value;
-      },
-      changes: async () => {
-        let value = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { value = Number(row[0]); });
-        return value;
-      },
+      count: (sql, params) => this.scalar(sql, params),
+      changes: () => this.scalar('SELECT changes()'),
     };
   }
 
@@ -265,19 +259,14 @@ export class IdbVfsBackend implements StorageBackend {
     let purged = 0;
     await withTransaction(this.transaction, async () => {
       await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
-      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { purged = Number(row[0]); });
+      purged = await this.scalar('SELECT changes()');
     });
     return { success: true, purged };
   }
 
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
     this.ensureDb();
-    let count = 0;
-    await this.engine.execWithCache(
-      'SELECT COUNT(*) FROM browsing_logs_fts',
-      [],
-      (row: SqliteValue[]) => { count = Number(row[0]); }
-    );
+    const count = await this.scalar('SELECT COUNT(*) FROM browsing_logs_fts');
     return { success: true, count };
   }
 
@@ -316,10 +305,7 @@ export class IdbVfsBackend implements StorageBackend {
       AUDIT_INSERT_SQL,
       buildAuditInsertParams(record)
     );
-    let newId = 0;
-    await this.engine.execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => {
-      newId = Number(row[0]);
-    });
+    const newId = await this.scalar('SELECT last_insert_rowid()');
     return { success: true, id: newId };
   }
 
@@ -340,10 +326,7 @@ export class IdbVfsBackend implements StorageBackend {
       }
     );
 
-    let total = 0;
-    await this.engine.execWithCache(stmts.countSql, [], (row: SqliteValue[]) => {
-      total = Number(row[0]);
-    });
+    const total = await this.scalar(stmts.countSql);
 
     return { success: true, rows, total };
   }
@@ -367,12 +350,7 @@ export class IdbVfsBackend implements StorageBackend {
 
   async getCount(): Promise<BackendOrError<CountResult>> {
     this.ensureDb();
-    let count = 0;
-    await this.engine.execWithCache(
-      LIVE_COUNT_SQL,
-      [],
-      (row: SqliteValue[]) => { count = Number(row[0]); }
-    );
+    const count = await this.scalar(LIVE_COUNT_SQL);
     return { success: true, count };
   }
 
