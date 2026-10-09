@@ -54,6 +54,7 @@ src/utils/listSources.ts
 src/utils/cleansingBadge.ts
 src/utils/registrableDomain.ts
 src/utils/domClear.ts — Element クリアの共有 seam（popup から re-export、dashboard も直接利用。document/chrome 非依存の純関数）
+src/utils/scopeHash.ts — confirm token の scope SHA-256 計算（chrome 非依存の純関数。background と messaging が共有、PBI 2026-10-09-16）
 ```
 
 注記:

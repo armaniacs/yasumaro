@@ -71,6 +71,10 @@ const LAYER0_FILES = [
   // Element-clearing seam: pure over Element, shared by popup and dashboard
   // renderers so neither needs an upward sibling-layer import (PBI 2026-10-09-15).
   'src/utils/domClear.ts',
+  // Confirm-token scope SHA-256: chrome-independent pure function, shared by
+  // background (confirmTokenManager) and the neutral messaging layer so the
+  // latter keeps no dynamic edge to background (PBI 2026-10-09-16).
+  'src/utils/scopeHash.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md
