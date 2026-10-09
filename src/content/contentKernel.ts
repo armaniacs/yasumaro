@@ -157,8 +157,8 @@ export class ContentKernel {
 
     async loadSettings(): Promise<void> {
         // Decrypt-free snapshot from the storage side (PBI 2026-09-28-30):
-        // migration-folded and defaults-filled, ciphertext stays opaque.
-        const s = (await readSettingsSnapshot(this.storage)) as unknown as Record<string, unknown>;
+        // migration-folded, no default fill; ciphertext stays opaque.
+        const s = await readSettingsSnapshot(this.storage);
         applySettingsTable(this.pageState, s);
 
         void logInfo(
