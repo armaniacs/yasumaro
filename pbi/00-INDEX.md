@@ -14,6 +14,33 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-09 holistic-code-improvement ラウンド（holistic-1009） — ⬜ 未着手 20件 🔧非機能追加
+
+holistic-code-improvement skill によるコードベース全体（差分スコープ）の大局的レビュー。4 系統の並列調査（dashboard+popup / background+offscreen / content+utils+layer / drift sweep+test infra）を 20 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-20）。RICE 採点・同点根拠・依存・バッチ計画（W1-W5）の詳細は [2026-10-09-00-backlog-holistic-1009.md](2026-10-09-00-backlog-holistic-1009.md)（live 台帳）。実行順は依存優先（04 → 05 / 02 → 08、他は並列可）。台帳送り 24 件（F1-F24 + archloop-1007 L2-L8 維持）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 01 | [2026-10-09-01-fix-archive-payload-validation-drift.md](2026-10-09-01-fix-archive-payload-validation-drift.md) | fix | 6.0 | 2 | アーカイブ payload 検査の二重実装 + 厳格さ drift（8MB 上限/500 リテラル） |
+| 02 | [2026-10-09-02-refactor-settings-snapshot-honest-type.md](2026-10-09-02-refactor-settings-snapshot-honest-type.md) | refactor | 5.3 | 1.5 | settingsSnapshot 嘘型 → 正直な型。08 の先行 |
+| 03 | [2026-10-09-03-fix-layer-ssot-gate-coverage.md](2026-10-09-03-fix-layer-ssot-gate-coverage.md) | fix | 5.0 | 2 | レイヤー SSOT ゲート管轄穴（@layer 収載 + filesystem 検査 + Barrel stale） |
+| 04 | [2026-10-09-04-refactor-purge-sequence-ssot.md](2026-10-09-04-refactor-purge-sequence-ssot.md) | refactor | 4.0 | 2 | purge トランザクションスケルトン4重 → runPurgeSequence。05 の先行 |
+| 05 | [2026-10-09-05-refactor-idb-scalar-read-helper.md](2026-10-09-05-refactor-idb-scalar-read-helper.md) | refactor | 4.0 | 1 | IdbVfsBackend scalar read ×16 → scalar()。04 の後 |
+| 06 | [2026-10-09-06-fix-cleansing-offscreen-wire-contract.md](2026-10-09-06-fix-cleansing-offscreen-wire-contract.md) | fix | 3.0 | 1 | cleansingOffscreenDelegate 手書き wire 契約 → SSOT import |
+| 07 | [2026-10-09-07-refactor-cleansing-flag-prop-ssot.md](2026-10-09-07-refactor-cleansing-flag-prop-ssot.md) | refactor | 3.0 | 1 | cleansing flag prop 導出3重 → cleansingFlagProp |
+| 08 | [2026-10-09-08-refactor-content-kernel-e2e-state-publisher.md](2026-10-09-08-refactor-content-kernel-e2e-state-publisher.md) | refactor | 3.0 | 1 | contentKernel E2E 状態発行3重 → publisher。02 の後 |
+| 09 | [2026-10-09-09-refactor-maintenance-purge-twins.md](2026-10-09-09-refactor-maintenance-purge-twins.md) | refactor | 3.0 | 1 | maintenanceBatchHandler purge 双子 → runner |
+| 10 | [2026-10-09-10-refactor-popup-whitelist-button-wire.md](2026-10-09-10-refactor-popup-whitelist-button-wire.md) | refactor | 3.0 | 1 | popup whitelist ボタン双子 → wireWhitelistButton |
+| 11 | [2026-10-09-11-refactor-opfs-worker-null-fold.md](2026-10-09-11-refactor-opfs-worker-null-fold.md) | refactor | 2.7 | 1.5 | OpfsWorkerBackend null-fold ×17 → callWorkerOk |
+| 12 | [2026-10-09-12-refactor-b-priority-warning-single-path.md](2026-10-09-12-refactor-b-priority-warning-single-path.md) | refactor | 2.7 | 1.5 | B優先度 警告描画2実装 + 死蔵 validateBSlots → 一本化 |
+| 13 | [2026-10-09-13-test-dashboard-i18n-mock-factory-adoption.md](2026-10-09-13-test-dashboard-i18n-mock-factory-adoption.md) | test | 2.7 | 1.5 | dashboard i18n モック手作り5ファイル → ファクトリ移行 |
+| 14 | [2026-10-09-14-refactor-asyncdata-table-builder-unify.md](2026-10-09-14-refactor-asyncdata-table-builder-unify.md) | refactor | 2.0 | 1.5 | asyncData 表ビルダー双子2組 → render callback |
+| 15 | [2026-10-09-15-refactor-clearelement-consolidation.md](2026-10-09-15-refactor-clearelement-consolidation.md) | refactor | 2.0 | 2 | dashboard innerHTML='' → clearElement 統一（L1 消費） |
+| 16 | [2026-10-09-16-refactor-scope-hash-utils-move.md](2026-10-09-16-refactor-scope-hash-utils-move.md) | refactor | 2.0 | 1 | computeScopeHash → utils 移設（動的 import エッジ消滅） |
+| 17 | [2026-10-09-17-refactor-tagcluster-query-cap-ssot.md](2026-10-09-17-refactor-tagcluster-query-cap-ssot.md) | refactor | 2.0 | 0.5 | tagClusterPanel limit:10000 → MAX_QUERY_ROWS |
+| 18 | [2026-10-09-18-chore-recording-gate-doc-claim.md](2026-10-09-18-chore-recording-gate-doc-claim.md) | chore | 2.0 | 0.5 | recordingGateTable stale doc claim 修正 |
+| 19 | [2026-10-09-19-refactor-prompt-item-builder-ssot.md](2026-10-09-19-refactor-prompt-item-builder-ssot.md) | refactor | 1.5 | 2 | prompt-item 行ビルダー4重 → 共有ビルダー |
+| 20 | [2026-10-09-20-refactor-focus-cycle-helper.md](2026-10-09-20-refactor-focus-cycle-helper.md) | refactor | 1.1 | 1.5 | フォーカス Tab循環/Escape ヘルパー抽出 |
+
 ### 2026-10-07 arch-delivery-loop ラウンド（archloop-1007） — ✅ 18件完了・アーカイブ済み 🔧非機能追加
 
 arch-delivery-loop の closed loop をコードベース全体（差分スコープ）に対して実行する継続ラウンド。4 系統の並列調査（bench+background misc / query+codec 契約+offscreen / S5 残留モジュール / 設計約束乖離スイープ）を 17 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-17）。全件実装・全ゲート green（`npm run validate` PASS）でアーカイブし 6.9.38 に版上げ。詳細は [2026-10-07-00-backlog-archloop-1007.md](2026-10-07-00-backlog-archloop-1007.md)（live 台帳）。NN07 の裁定（案 B）に応じた後続 fix NN18 も実装・アーカイブ済み。実行順は依存優先（01 → 05 → 10、他は並列可）。
