@@ -1,4 +1,5 @@
 import { getFeedbackQueue, clearFeedbackQueue, removeFeedbackEntry } from '../utils/aiSummaryCleaner/feedbackQueue.js';
+import { clearElement } from '../utils/domClear.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { readRemovedCounts } from '../utils/commonTypes.js';
 import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
@@ -74,7 +75,7 @@ function renderReasonCell(
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
   const entries = await getFeedbackQueue();
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'cleansing-feedback-view';
 
   const header = document.createElement('div');

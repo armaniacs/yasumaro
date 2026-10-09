@@ -20,6 +20,7 @@
 
 import { MAX_TAG_TIMELINE_ROWS } from '../../../utils/computeLimits.js';
 import { SVG_NS } from '../../../utils/svgNamespace.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
@@ -103,9 +104,9 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
   }
 
   function clearOutput(): void {
-    if (chartWrap) chartWrap.innerHTML = '';
-    if (tableWrap) tableWrap.innerHTML = '';
-    if (legendWrap) legendWrap.innerHTML = '';
+    if (chartWrap) clearElement(chartWrap);
+    if (tableWrap) clearElement(tableWrap);
+    if (legendWrap) clearElement(legendWrap);
   }
 
   /** Re-aggregates cached rows (granularity/top-N switch) without a refetch. */

@@ -1,6 +1,7 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { clearElement } from '../utils/domClear.js';
 import { tOrKey as t } from '../utils/i18n.js';
 import { formatBytes } from './byteFormat.js';
 
@@ -259,7 +260,7 @@ export function renderRemovedByReason(
   container: HTMLElement,
   removedByReason?: Map<string, number> | Record<string, number> | null,
 ): void {
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'cleansing-removed-breakdown';
 
   if (!removedByReason) {
@@ -361,7 +362,7 @@ export function renderFunnelSummary(
   container: HTMLElement,
   funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number } | null,
 ): void {
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'cleansing-funnel-summary';
   if (!funnel) {
     container.textContent = t('cleansingStatsNoData') || 'データなし';

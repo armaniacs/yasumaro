@@ -53,6 +53,7 @@ src/utils/recordingGateTable.ts
 src/utils/listSources.ts
 src/utils/cleansingBadge.ts
 src/utils/registrableDomain.ts
+src/utils/domClear.ts — Element クリアの共有 seam（popup から re-export、dashboard も直接利用。document/chrome 非依存の純関数）
 ```
 
 注記:

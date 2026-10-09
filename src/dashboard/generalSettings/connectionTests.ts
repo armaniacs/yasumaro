@@ -20,6 +20,7 @@ import {
 } from '../../utils/obsidianConfigValidator.js';
 import type { FailureMetadata } from '../../utils/failureTaxonomy.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
+import { clearElement } from '../../utils/domClear.js';
 import { type MultiProviderTestResult } from '../../background/ai/AIService.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
 import { saveDashboardSettings, saveErrorText } from '../settingsPipeline.js';
@@ -298,7 +299,7 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
   await runPanelAction({
     buttons: [testObsidianTop, testObsidianBtn],
     onStart: () => {
-      statusDiv.innerHTML = '';
+      clearElement(statusDiv);
       statusDiv.className = '';
       statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
     },
@@ -313,7 +314,7 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
       // Resolved before rendering: the guidance text differs per browser.
       const isFirefox = await isFirefoxHost(deps.getBrowserInfo);
 
-      statusDiv.innerHTML = '';
+      clearElement(statusDiv);
       statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
 
       if (isCertificateFailure(obsidianResult, protocolInput?.value)) {
@@ -444,7 +445,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
   await runPanelAction({
     buttons: [testLocalMarkdownTop, testLocalMarkdownBottom],
     onStart: () => {
-      statusDiv.innerHTML = '';
+      clearElement(statusDiv);
       statusDiv.className = '';
       statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
     },

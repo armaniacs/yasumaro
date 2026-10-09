@@ -4,6 +4,7 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { clearElement } from '../../utils/domClear.js';
 import { readOverrides } from './presetSettingsAdapter.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
@@ -18,7 +19,7 @@ function ruleCheckboxId(key: string): string {
 }
 
 function buildToggles(container: HTMLElement): void {
-    container.innerHTML = '';
+    clearElement(container);
     for (const rule of CLEANSING_RULES) {
         const id = ruleCheckboxId(rule.key);
         const wrap = document.createElement('div');
@@ -79,7 +80,7 @@ async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
 }
 
 function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], onSelect: (d: string) => void): void {
-    listEl.innerHTML = '';
+    clearElement(listEl);
     if (overrides.length === 0) {
         listEl.textContent = getMessageOr('noPerSiteOverrides', 'No per-site overrides.');
         return;

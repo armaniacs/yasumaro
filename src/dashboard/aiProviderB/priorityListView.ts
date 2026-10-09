@@ -1,5 +1,6 @@
 import type { ProviderSlot } from '../../utils/storage/types.js';
 import { getMessageOr } from '../../utils/i18n.js';
+import { clearElement } from '../../utils/domClear.js';
 import { getRegistryEntry } from '../../background/ai/providerCatalog.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
 
@@ -174,7 +175,7 @@ export function createBPriorityListView(
   initialSlots: ProviderSlot[],
   settings?: ModelSettings,
 ): BPriorityListView {
-  container.innerHTML = '';
+  clearElement(container);
   // 3行固定、不足は空スロットで埋める
   const slots3: (ProviderSlot | undefined)[] = [0, 1, 2].map(i => initialSlots[i]);
   slots3.forEach((slot, i) => container.appendChild(createRow(i, slot, settings)));
@@ -202,7 +203,7 @@ export function createBPriorityListView(
       return collectBProviderPrioritySlots(container);
     },
     setSlots(slots) {
-      container.innerHTML = '';
+      clearElement(container);
       [0, 1, 2].forEach(i => container.appendChild(createRow(i, slots[i], settings)));
     },
   };

@@ -1,4 +1,5 @@
 export { escapeHtml } from '../utils/htmlEscape.js';
+export { clearElement } from '../utils/domClear.js';
 
 /**
  * Wire a click handler once per element (PBI 2026-09-12-20).
@@ -28,17 +29,6 @@ function createStatusCircle(svg: SVGSVGElement): SVGElement {
   circle.setAttribute('stroke-width', '2');
   svg.appendChild(circle);
   return circle;
-}
-
-/**
- * Remove all children of an element without raw `innerHTML = ''`.
- * Central seam so future sanitization policy changes apply in one place.
- */
-export function clearElement(el: Element | null): void {
-    if (!el) return;
-    while (el.firstChild) {
-        el.removeChild(el.firstChild);
-    }
 }
 
 export function updateStatusIcon(container: HTMLElement | null, type: 'success' | 'error' | 'warning' | 'muted'): void {

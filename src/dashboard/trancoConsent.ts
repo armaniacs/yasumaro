@@ -3,6 +3,7 @@
 // ============================================================================
 
 import { getMessage, getMessageOr } from '../utils/i18n.js';
+import { clearElement } from '../utils/domClear.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
@@ -128,7 +129,7 @@ function updateConsentUI(repo: SettingsReader, state: TrancoConsentState): void 
     denyBtn.textContent = getMessageOr('trancoUpdateModalDenyLabel', '拒否する');
     denyBtn.addEventListener('click', () => handleTrancoDeny(repo));
 
-    consentActionsEl!.innerHTML = '';
+    clearElement(consentActionsEl);
     consentActionsEl!.appendChild(grantBtn);
     consentActionsEl!.appendChild(denyBtn);
     consentActionsEl!.hidden = false;
