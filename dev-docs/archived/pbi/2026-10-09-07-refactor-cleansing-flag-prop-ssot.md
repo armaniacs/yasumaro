@@ -61,13 +61,13 @@ And 導出される prop 名・フラグ値は変更前と同一であること
 
 ## 6. 受け入れ基準
 
-- [ ] `cleansingConfig.ts` に単一の `cleansingFlagProp(rule)` がエクスポートされている（型付きヘルパーで、散在していた 2 箇所の `as` キャストが 1 つのヘルパーに折りたたまれている）
-- [ ] `optionBuilder.ts:21-23` の独自 `capitalize()` ヘルパーが削除されている
-- [ ] `optionBuilder.ts:45` の導出が `cleansingFlagProp(rule)` を使用している（`as unknown as Record<string, unknown>` の二重キャストが削除されている）
-- [ ] `visitGating.ts:175-178` の導出が `cleansingFlagProp(rule)` を使用している（`as BooleanCleansingKey` キャストが削除されている）
-- [ ] `cleansingConfig.ts:54-59` の `CLEANSING_RULE_PLACEHOLDER_DEFAULTS` 生成が同一インライン導出から `cleansingFlagProp(rule)` を使用している
-- [ ] `CLEANSING_RULES` 自体は SSOT のまま変更されない
-- [ ] 挙動が完全に不変である（導出 prop 名・フラグ値は変更前と同一、既存テスト全通過）
+- [x] `cleansingConfig.ts` に単一の `cleansingFlagProp(rule)` がエクスポートされている（型付きヘルパーで、散在していた 2 箇所の `as` キャストが 1 つのヘルパーに折りたたまれている）
+- [x] `optionBuilder.ts:21-23` の独自 `capitalize()` ヘルパーが削除されている
+- [x] `optionBuilder.ts:45` の導出が `cleansingFlagProp(rule)` を使用している（`as unknown as Record<string, unknown>` の二重キャストが削除されている）
+- [x] `visitGating.ts:175-178` の導出が `cleansingFlagProp(rule)` を使用している（`as BooleanCleansingKey` キャストが削除されている）
+- [x] `cleansingConfig.ts:54-59` の `CLEANSING_RULE_PLACEHOLDER_DEFAULTS` 生成が同一インライン導出から `cleansingFlagProp(rule)` を使用している
+- [x] `CLEANSING_RULES` 自体は SSOT のまま変更されない
+- [x] 挙動が完全に不変である（導出 prop 名・フラグ値は変更前と同一、既存テスト全通過）
 
 ## 7. テスト戦略
 
@@ -82,11 +82,11 @@ And 導出される prop 名・フラグ値は変更前と同一であること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 7 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] prop 名導出の golden pin が green（CLEANSING_RULES 全ルールに対する導出 prop 名の一致）
-- [ ] リポジトリ内に `aiSummaryCleansing${` による prop 名直書き導出が残っていない（grep で確認。`cleansingFlagProp` 実装内のみ許容）
-- [ ] 既存機能への影響ゼロ（挙動不変）
+- [x] 受け入れ基準 7 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] prop 名導出の golden pin が green（CLEANSING_RULES 全ルールに対する導出 prop 名の一致）
+- [x] リポジトリ内に `aiSummaryCleansing${` による prop 名直書き導出が残っていない（grep で確認。`cleansingFlagProp` 実装内のみ許容）
+- [x] 既存機能への影響ゼロ（挙動不変）
 
 ## 10. 出所
 

@@ -64,12 +64,12 @@ Feature: E2E テスト状態の発行（リファクタ後も挙動不変）
 
 ## 受け入れ基準
 
-- [ ] kernel に `publishE2eTestState(state: OWTestState): void` が抽出され、3 箇所（checkVisitConditions の状態構築 / reportable 時の再書き込み / init() の初期発行）から呼ばれている
-- [ ] `window.__OW_TEST_STATE` と `data-ow-test-state` 属性への書き込みはヘルパー内に統一されている
-- [ ] OWTestState 型が content 内で共有されており（extractor.ts からの export または content 内共有モジュール）、kernel 側の `as unknown as` キャスト（contentKernel.ts:224, :236）が排除されている
-- [ ] isE2E ガード（`this.gating.isE2E`）は各呼び出し元の現行位置に維持されている
-- [ ] 発行される window/document の値がリファクタ前と byte 同一である（golden pin で検証）
-- [ ] 既存の E2E 状態テストがすべて green
+- [x] kernel に `publishE2eTestState(state: OWTestState): void` が抽出され、3 箇所（checkVisitConditions の状態構築 / reportable 時の再書き込み / init() の初期発行）から呼ばれている
+- [x] `window.__OW_TEST_STATE` と `data-ow-test-state` 属性への書き込みはヘルパー内に統一されている
+- [x] OWTestState 型が content 内で共有されており（extractor.ts からの export または content 内共有モジュール）、kernel 側の `as unknown as` キャスト（contentKernel.ts:224, :236）が排除されている
+- [x] isE2E ガード（`this.gating.isE2E`）は各呼び出し元の現行位置に維持されている
+- [x] 発行される window/document の値がリファクタ前と byte 同一である（golden pin で検証）
+- [x] 既存の E2E 状態テストがすべて green
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -120,9 +120,9 @@ grep -rn "data-ow-test-state" src/
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 発行値の golden pin テストが追加され、リファクタ後も byte 同一であることが検証されている
-- [ ] contentKernel.ts の E2E state 経路から `as unknown as` キャストが排除されている
-- [ ] 既存の E2E 状態テストを含む全テストが green
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] コードレビュー完了
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 発行値の golden pin テストが追加され、リファクタ後も byte 同一であることが検証されている
+- [x] contentKernel.ts の E2E state 経路から `as unknown as` キャストが排除されている
+- [x] 既存の E2E 状態テストを含む全テストが green
+- [x] `npm run validate`（type-check + test）が green
+- [x] コードレビュー完了

@@ -71,12 +71,12 @@ Then toFailure(result) による変換が現行どおり行われること
 
 ## 6. 受け入れ基準
 
-- [ ] `runSettingsPurge(readKeys, purge)` の共通 runner が 1 本追加されている
-- [ ] `purge_now` / `content_purge_now` の両ケースが runner 経由に統合され、17 行の重複フローが解消されている
-- [ ] null → skipped ガード（両方 null なら `{ success: true, purged: 0, skipped: true }`）が runner 内に移動している
-- [ ] deps 呼び出しの引数構成（`purgeOldRecords`: days / max、`purgeContent`: days / max / includeStarred）が現行どおり維持されている
-- [ ] `toFailure` 変換と応答 shape（`{ success, purged, skipped }`）が現行どおり維持されている
-- [ ] 挙動が完全に不変である（既存ハンドラ parity テスト全通過、ロジック変更なし）
+- [x] `runSettingsPurge(readKeys, purge)` の共通 runner が 1 本追加されている
+- [x] `purge_now` / `content_purge_now` の両ケースが runner 経由に統合され、17 行の重複フローが解消されている
+- [x] null → skipped ガード（両方 null なら `{ success: true, purged: 0, skipped: true }`）が runner 内に移動している
+- [x] deps 呼び出しの引数構成（`purgeOldRecords`: days / max、`purgeContent`: days / max / includeStarred）が現行どおり維持されている
+- [x] `toFailure` 変換と応答 shape（`{ success, purged, skipped }`）が現行どおり維持されている
+- [x] 挙動が完全に不変である（既存ハンドラ parity テスト全通過、ロジック変更なし）
 
 ## 7. テスト戦略
 
@@ -91,11 +91,11 @@ Then toFailure(result) による変換が現行どおり行われること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 6 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 既存ハンドラ parity テストが pin 無変更（応答 shape・`toFailure` 変換・deps 引数）で通過
-- [ ] `maintenanceBatchHandler` 内にパージフローの複製が残っていない（両ケースが共通 runner 経由）
-- [ ] 挙動不変（deps 呼び出し回数・引数・応答に変化なし）
+- [x] 受け入れ基準 6 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] 既存ハンドラ parity テストが pin 無変更（応答 shape・`toFailure` 変換・deps 引数）で通過
+- [x] `maintenanceBatchHandler` 内にパージフローの複製が残っていない（両ケースが共通 runner 経由）
+- [x] 挙動不変（deps 呼び出し回数・引数・応答に変化なし）
 
 ## 10. 出所
 

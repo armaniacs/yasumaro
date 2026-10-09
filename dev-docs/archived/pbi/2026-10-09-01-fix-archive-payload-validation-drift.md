@@ -87,13 +87,13 @@ Scenario: リファクタ前後で許可/拒否の挙動は不変
 
 ## 受け入れ基準
 
-- [ ] wire table（`archiveWireTable.ts`）の validate ラムダが、validators.ts と同じ共有チェックヘルパー（中立モジュールの `nonNegativeInteger` 等）から構成されている
-- [ ] 数値上限はレジストリ定数参照に統一され、`archiveWireTable.ts:373` の生リテラル 500 が撤去されている
-- [ ] archive_export の length 上限（8MB）が wire table 側でも強制されるか、parity テストにより両ゲートの一致が宣言されている
-- [ ] untrusted 入力の拒否ゲート自体は validators.ts に残っている（envelope ゲートの移設・削除をしていない）
-- [ ] 既存の fail-closed ガードが移設先で保持され、全 subtype の許可/拒否挙動が変更前と同一である
-- [ ] spec 行と wire 行の同一フィールド比較の parity テストが 1 本追加され、drift が機械検出可能になっている
-- [ ] 既存のハンドラテストが追従更新のみで通っている（検査の緩和を伴わない）
+- [x] wire table（`archiveWireTable.ts`）の validate ラムダが、validators.ts と同じ共有チェックヘルパー（中立モジュールの `nonNegativeInteger` 等）から構成されている
+- [x] 数値上限はレジストリ定数参照に統一され、`archiveWireTable.ts:373` の生リテラル 500 が撤去されている
+- [x] archive_export の length 上限（8MB）が wire table 側でも強制されるか、parity テストにより両ゲートの一致が宣言されている
+- [x] untrusted 入力の拒否ゲート自体は validators.ts に残っている（envelope ゲートの移設・削除をしていない）
+- [x] 既存の fail-closed ガードが移設先で保持され、全 subtype の許可/拒否挙動が変更前と同一である
+- [x] spec 行と wire 行の同一フィールド比較の parity テストが 1 本追加され、drift が機械検出可能になっている
+- [x] 既存のハンドラテストが追従更新のみで通っている（検査の緩和を伴わない）
 
 ## テスト戦略
 
@@ -110,13 +110,13 @@ Scenario: リファクタ前後で許可/拒否の挙動は不変
 
 ## DoD
 
-- [ ] 受け入れ基準の全項目が完了している
-- [ ] golden pin + parity テストが追加され、drift が機械検出可能になっている
-- [ ] `npm run build` が成功している（コード変更後はテスト前に build）
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 検査の緩和（上限の撤廃・fail-closed ガードの削除・テスト期待値の緩め変更）が行われていない
-- [ ] 変更対象は `src/messaging/validators.ts`・`src/messaging/archiveWireTable.ts`・共有チェックヘルパー（中立モジュール）・テストファイルに留まっている
-- [ ] コード変更後に `graphify update .` を実行済み（AST-only・API コストなし）
+- [x] 受け入れ基準の全項目が完了している
+- [x] golden pin + parity テストが追加され、drift が機械検出可能になっている
+- [x] `npm run build` が成功している（コード変更後はテスト前に build）
+- [x] `npm run validate`（type-check + test）が green
+- [x] 検査の緩和（上限の撤廃・fail-closed ガードの削除・テスト期待値の緩め変更）が行われていない
+- [x] 変更対象は `src/messaging/validators.ts`・`src/messaging/archiveWireTable.ts`・共有チェックヘルパー（中立モジュール）・テストファイルに留まっている
+- [x] コード変更後に `graphify update .` を実行済み（AST-only・API コストなし）
 
 ## 出所
 

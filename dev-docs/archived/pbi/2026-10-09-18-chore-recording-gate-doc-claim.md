@@ -51,9 +51,9 @@ Then type-check とテストが green であること
 
 ## 6. 受け入れ基準
 
-- [ ] `src/utils/recordingGateTable.ts:250`（および `:247`）の実在しない `tabUtils.isRecordable` 参照が除去または実消費者参照に修正されている
-- [ ] コード（実行ロジック）に変更がない
-- [ ] `npm run validate` が green である
+- [x] `src/utils/recordingGateTable.ts:250`（および `:247`）の実在しない `tabUtils.isRecordable` 参照が除去または実消費者参照に修正されている
+- [x] コード（実行ロジック）に変更がない
+- [x] `npm run validate` が green である
 
 ## 7. テスト戦略
 
@@ -66,9 +66,9 @@ Then type-check とテストが green であること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 3 件すべて充足
-- [ ] 実在しない関数参照が残っていない
-- [ ] `npm run validate`（type-check + test）が green
+- [x] 受け入れ基準 3 件すべて充足
+- [x] 実在しない関数参照が残っていない
+- [x] `npm run validate`（type-check + test）が green
 
 ## 10. 出所
 

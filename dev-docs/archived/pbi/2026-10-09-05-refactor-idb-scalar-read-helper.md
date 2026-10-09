@@ -74,12 +74,12 @@ And NN04 着地後の purge 系 scalar 読み（~8 箇所が runPurgeSequence �
 
 ## 6. 受け入れ基準
 
-- [ ] `src/offscreen/IdbVfsBackend.ts` に `private async scalar(sql, params): Promise<number>`（先頭セルの Number 化）が 1 本追加されている
-- [ ] 16 箇所（背景の file:line 列挙、NN04 着地後は purge 系を除いた残り箇所）のスカラ読みが `scalar()` 呼び出し 1 行に置き換えられている
-- [ ] `Number` 変換が `scalar()` 内に集約され、呼び出しサイトから手書きの `Number(row[0])` コールバックが消えている
-- [ ] 「let 初期化 + execWithCache コールバック代入」の単一セル読みパターンが `IdbVfsBackend.ts` 内に残っていない（grep で確認）
-- [ ] 既存の parity pin（`sqliteBackendParity.realEngine.test.ts` など）が無変更で維持されている
-- [ ] 挙動が完全に不変である（SQL・パラメータ・戻り値の変更なし、既存テスト全通過）
+- [x] `src/offscreen/IdbVfsBackend.ts` に `private async scalar(sql, params): Promise<number>`（先頭セルの Number 化）が 1 本追加されている
+- [x] 16 箇所（背景の file:line 列挙、NN04 着地後は purge 系を除いた残り箇所）のスカラ読みが `scalar()` 呼び出し 1 行に置き換えられている
+- [x] `Number` 変換が `scalar()` 内に集約され、呼び出しサイトから手書きの `Number(row[0])` コールバックが消えている
+- [x] 「let 初期化 + execWithCache コールバック代入」の単一セル読みパターンが `IdbVfsBackend.ts` 内に残っていない（grep で確認）
+- [x] 既存の parity pin（`sqliteBackendParity.realEngine.test.ts` など）が無変更で維持されている
+- [x] 挙動が完全に不変である（SQL・パラメータ・戻り値の変更なし、既存テスト全通過）
 
 ## 7. テスト戦略
 
@@ -94,12 +94,12 @@ And NN04 着地後の purge 系 scalar 読み（~8 箇所が runPurgeSequence �
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 6 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] parity pin が無変更で通過
-- [ ] `IdbVfsBackend.ts` 内に手書きの単一セル読みパターンが残っていない（grep で確認）
-- [ ] NN04 の着地後に着手・完了している（同一ファイルの順序依存を遵守）
-- [ ] 既存機能への影響ゼロ（挙動不変）
+- [x] 受け入れ基準 6 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] parity pin が無変更で通過
+- [x] `IdbVfsBackend.ts` 内に手書きの単一セル読みパターンが残っていない（grep で確認）
+- [x] NN04 の着地後に着手・完了している（同一ファイルの順序依存を遵守）
+- [x] 既存機能への影響ゼロ（挙動不変）
 
 ## 10. 出所
 

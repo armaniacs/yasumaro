@@ -72,12 +72,12 @@ Then クリックハンドラは重複せず whitelist writer は 1 回だけ呼
 
 ## 6. 受け入れ基準
 
-- [ ] `src/popup/statusPanel.ts` に `wireWhitelistButton(btnId, writer, successKey, logMessage)` が 1 本追加されている
-- [ ] addDomainBtn（:248-275）と addPathBtn（:277-299）の wiring が `wireWhitelistButton` 呼び出しに置き換えられ、ほぼ同一の wireOnce ブロックが残っていない
-- [ ] wireOnce・try/catch・`reportHandlerError` 宛先（:271-273 / :295-297）が移動後も同一である
-- [ ] `statusChannel.report` のメッセージ構成（reason 分岐の `statusInvalidUrl` / `Invalid pattern: …` 含む）が現行どおりで、外部挙動は不変である
-- [ ] 既存 statusPanel テスト（`statusPanel.test.ts` ほか）が無変更で green である
-- [ ] `statusPanel-wireOnce-parity.test.ts` の pin（2x init + 1 click => exactly 1 write）が無変更で維持される
+- [x] `src/popup/statusPanel.ts` に `wireWhitelistButton(btnId, writer, successKey, logMessage)` が 1 本追加されている
+- [x] addDomainBtn（:248-275）と addPathBtn（:277-299）の wiring が `wireWhitelistButton` 呼び出しに置き換えられ、ほぼ同一の wireOnce ブロックが残っていない
+- [x] wireOnce・try/catch・`reportHandlerError` 宛先（:271-273 / :295-297）が移動後も同一である
+- [x] `statusChannel.report` のメッセージ構成（reason 分岐の `statusInvalidUrl` / `Invalid pattern: …` 含む）が現行どおりで、外部挙動は不変である
+- [x] 既存 statusPanel テスト（`statusPanel.test.ts` ほか）が無変更で green である
+- [x] `statusPanel-wireOnce-parity.test.ts` の pin（2x init + 1 click => exactly 1 write）が無変更で維持される
 
 ## 7. テスト戦略
 
@@ -92,11 +92,11 @@ Then クリックハンドラは重複せず whitelist writer は 1 回だけ呼
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 6 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] `statusPanel-wireOnce-parity.test.ts` の pin が無変更で通過
-- [ ] `statusPanel.ts` 内に addDomainBtn / addPathBtn の重複 wireOnce ブロックが残っていない
-- [ ] 既存機能への影響ゼロ（外部挙動不変）
+- [x] 受け入れ基準 6 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] `statusPanel-wireOnce-parity.test.ts` の pin が無変更で通過
+- [x] `statusPanel.ts` 内に addDomainBtn / addPathBtn の重複 wireOnce ブロックが残っていない
+- [x] 既存機能への影響ゼロ（外部挙動不変）
 
 ## 10. 出所
 

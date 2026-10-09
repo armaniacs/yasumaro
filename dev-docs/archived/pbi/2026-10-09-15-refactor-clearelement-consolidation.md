@@ -64,13 +64,13 @@ Then 変更なしで動作し、popup/privacy の既存テストが green であ
 
 ## 6. 受け入れ基準
 
-- [ ] `clearElement` の実装が `src/utils` の新規ファイルへ移設され、`src/popup/domUtils.ts` から re-export されている
-- [ ] dashboard の 13 箇所（`trancoConsent.ts:131` / `tagsPanel.ts:47,67,143` / `domainFilterTagUI.ts:78` / `aiTestProgressView.ts:24` / `cleansingStatsView.ts:262,364` / `cspSettings.ts:111` / `cleansingFeedbackView.ts:77` / `models-dev-dialog.ts:276,358`）が `clearElement` を使用している
-- [ ] `scripts/check-innerhtml-escape.mjs` の `TARGET_DIRS` に `src/dashboard` が追加され、dashboard を含めて gate が pass する
-- [ ] `src/dashboard/domainFilterTagUI.ts:173` の古い `setTimeout(0)` コメントが現状に合わせて修正されている
-- [ ] 新規 utils ファイルに `@layer` 宣言が付与され、SSOT リストに登録されている
-- [ ] popup / privacy の既存テストが無変更で green である
-- [ ] 空文字クリアと同一の挙動が維持されている（外部挙動不変）
+- [x] `clearElement` の実装が `src/utils` の新規ファイルへ移設され、`src/popup/domUtils.ts` から re-export されている
+- [x] dashboard の 13 箇所（`trancoConsent.ts:131` / `tagsPanel.ts:47,67,143` / `domainFilterTagUI.ts:78` / `aiTestProgressView.ts:24` / `cleansingStatsView.ts:262,364` / `cspSettings.ts:111` / `cleansingFeedbackView.ts:77` / `models-dev-dialog.ts:276,358`）が `clearElement` を使用している
+- [x] `scripts/check-innerhtml-escape.mjs` の `TARGET_DIRS` に `src/dashboard` が追加され、dashboard を含めて gate が pass する
+- [x] `src/dashboard/domainFilterTagUI.ts:173` の古い `setTimeout(0)` コメントが現状に合わせて修正されている
+- [x] 新規 utils ファイルに `@layer` 宣言が付与され、SSOT リストに登録されている
+- [x] popup / privacy の既存テストが無変更で green である
+- [x] 空文字クリアと同一の挙動が維持されている（外部挙動不変）
 
 ## 7. テスト戦略
 
@@ -85,12 +85,12 @@ Then 変更なしで動作し、popup/privacy の既存テストが green であ
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 7 件すべて充足
-- [ ] `npm run check-innerhtml-escape` が dashboard を含めて pass
-- [ ] dashboard に `innerHTML = ''` の直書きが残っていない
-- [ ] 新規 utils ファイルが `@layer` 宣言付きで SSOT に登録されている
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 外部挙動不変（クリア結果が現行と同一）
+- [x] 受け入れ基準 7 件すべて充足
+- [x] `npm run check-innerhtml-escape` が dashboard を含めて pass
+- [x] dashboard に `innerHTML = ''` の直書きが残っていない
+- [x] 新規 utils ファイルが `@layer` 宣言付きで SSOT に登録されている
+- [x] `npm run validate`（type-check + test）が green
+- [x] 外部挙動不変（クリア結果が現行と同一）
 
 ## 10. 出所
 

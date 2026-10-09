@@ -85,13 +85,13 @@ Then src/ およびテストに validateBSlots への参照が存在しないこ
 
 ## 6. 受け入れ基準
 
-- [ ] row-aware 重複検出が `validateBContainer` に一本化され、validate クロージャ内の重複ループ（`priorityListView.ts:216-235` 相当）が削除されている
-- [ ] validate クロージャは「`validateBContainer` 呼び出し → has-error/warn 描画」に縮小されている
-- [ ] warn/req-warn の生成・削除が priorityListView 側の 1 つの `renderPriorityWarnings(bList)` に寄せられている
-- [ ] `settingsPipeline.renderBPriorityWarnings` は `renderPriorityWarnings(bList)` を呼んで `{ p1Empty }` を返すだけになっている（検証→描画の順序・戻り値維持）
-- [ ] `validateBSlots` が削除され、src/テスト両方に参照が残っていない
-- [ ] has-error toggle、role=alert、i18n キー（`aiProviderPriorityDuplicateWarning` / `aiProviderPriority1Required`）が移動先で同一保持されている
-- [ ] 挙動が完全に不変である（ライブ validate・保存時警告の DOM 出力に変化なし）
+- [x] row-aware 重複検出が `validateBContainer` に一本化され、validate クロージャ内の重複ループ（`priorityListView.ts:216-235` 相当）が削除されている
+- [x] validate クロージャは「`validateBContainer` 呼び出し → has-error/warn 描画」に縮小されている
+- [x] warn/req-warn の生成・削除が priorityListView 側の 1 つの `renderPriorityWarnings(bList)` に寄せられている
+- [x] `settingsPipeline.renderBPriorityWarnings` は `renderPriorityWarnings(bList)` を呼んで `{ p1Empty }` を返すだけになっている（検証→描画の順序・戻り値維持）
+- [x] `validateBSlots` が削除され、src/テスト両方に参照が残っていない
+- [x] has-error toggle、role=alert、i18n キー（`aiProviderPriorityDuplicateWarning` / `aiProviderPriority1Required`）が移動先で同一保持されている
+- [x] 挙動が完全に不変である（ライブ validate・保存時警告の DOM 出力に変化なし）
 
 ## 7. テスト戦略
 
@@ -107,12 +107,12 @@ Then src/ およびテストに validateBSlots への参照が存在しないこ
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 7 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 警告 DOM の golden pin が無変更で通過（クラス・role=alert・i18n キー・has-error toggle）
-- [ ] 既存 provider settings テストが green
-- [ ] `validateBSlots` 削除後、src/テスト両方に参照が残っていない
-- [ ] ライブ validate と保存パスの検証→描画の順序および戻り値（`{ p1Empty }`）に変化がない
+- [x] 受け入れ基準 7 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] 警告 DOM の golden pin が無変更で通過（クラス・role=alert・i18n キー・has-error toggle）
+- [x] 既存 provider settings テストが green
+- [x] `validateBSlots` 削除後、src/テスト両方に参照が残っていない
+- [x] ライブ validate と保存パスの検証→描画の順序および戻り値（`{ p1Empty }`）に変化がない
 
 ## 10. 出所
 

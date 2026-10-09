@@ -63,11 +63,11 @@ Then 全テストが green であること
 
 ## 6. 受け入れ基準
 
-- [ ] 5 ファイルすべてで `getMessageOr` / `getMessageWithSubstitutions` の手作りコピーが削除され、`testDir/i18nMock.js` の `mockGetMessage` が使用されている
-- [ ] 各ファイル固有の `vi.mock('utils/i18n.js', ...)` のセットアップ（テスト対象モジュールに必要な `getMessage` 実装）は保持され、テストの断言は変更されていない
-- [ ] 移行後、5 ファイルの全テストが無変更の断言で green である
-- [ ] `testDir/i18nMock.ts`（ファクトリ本体）は無変更である
-- [ ] production コード（`src/**`）は一切変更されていない
+- [x] 5 ファイルすべてで `getMessageOr` / `getMessageWithSubstitutions` の手作りコピーが削除され、`testDir/i18nMock.js` の `mockGetMessage` が使用されている
+- [x] 各ファイル固有の `vi.mock('utils/i18n.js', ...)` のセットアップ（テスト対象モジュールに必要な `getMessage` 実装）は保持され、テストの断言は変更されていない
+- [x] 移行後、5 ファイルの全テストが無変更の断言で green である
+- [x] `testDir/i18nMock.ts`（ファクトリ本体）は無変更である
+- [x] production コード（`src/**`）は一切変更されていない
 
 ## 7. テスト戦略
 
@@ -82,11 +82,11 @@ Then 全テストが green であること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 5 件すべて充足
-- [ ] 移行対象 5 ファイルが無変更の断言で green
-- [ ] `npx vitest run <5 files> --repeats=20` が全 run green
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] production コードへの変更ゼロ
+- [x] 受け入れ基準 5 件すべて充足
+- [x] 移行対象 5 ファイルが無変更の断言で green
+- [x] `npx vitest run <5 files> --repeats=20` が全 run green
+- [x] `npm run validate`（type-check + test）が green
+- [x] production コードへの変更ゼロ
 
 ## 10. 出所
 

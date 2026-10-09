@@ -60,11 +60,11 @@ And 単一ヘルパーが参照されていること
 
 ## 6. 受け入れ基準
 
-- [ ] prompt-item 行の HTML 組立が単一ビルダーに統合され、4 箇所の重複が解消されている
-- [ ] 生成される HTML 文字列が現行と byte 同一である（escapeHtml 適用位置・`data-i18n` 属性・badge 条件・class）
-- [ ] locale 判定が 1 か所のヘルパーに集約され、4 箇所の重複が解消されている
-- [ ] render 後の `applyI18n` 呼び出しが現位置に保持されている
-- [ ] 既存の customPromptManager / markdownTemplateManager のテストが無変更で green である
+- [x] prompt-item 行の HTML 組立が単一ビルダーに統合され、4 箇所の重複が解消されている
+- [x] 生成される HTML 文字列が現行と byte 同一である（escapeHtml 適用位置・`data-i18n` 属性・badge 条件・class）
+- [x] locale 判定が 1 か所のヘルパーに集約され、4 箇所の重複が解消されている
+- [x] render 後の `applyI18n` 呼び出しが現位置に保持されている
+- [x] 既存の customPromptManager / markdownTemplateManager のテストが無変更で green である
 
 ## 7. テスト戦略
 
@@ -78,11 +78,11 @@ And 単一ヘルパーが参照されていること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 5 件すべて充足
-- [ ] 生成 HTML の golden pin が green（byte 同一）
-- [ ] locale 判定の重複が解消
-- [ ] 既存テストが無変更で green
-- [ ] `npm run validate`（type-check + test）が green
+- [x] 受け入れ基準 5 件すべて充足
+- [x] 生成 HTML の golden pin が green（byte 同一）
+- [x] locale 判定の重複が解消
+- [x] 既存テストが無変更で green
+- [x] `npm run validate`（type-check + test）が green
 
 ## 10. 出所
 

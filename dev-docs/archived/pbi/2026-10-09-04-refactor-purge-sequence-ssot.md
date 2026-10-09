@@ -71,13 +71,13 @@ And purgeAuditLog / handleAuditLogPurge ではトランザクションを開始�
 
 ## 受け入れ基準
 
-- [ ] `queryPlan.ts` に executor seam（exec / count / changes を取るオブジェクト）を受け取る `runPurgeSequence` が 1 本置かれている
-- [ ] `IdbVfsBackend.ts:217-251`（purgeOldRecords）と `IdbVfsBackend.ts:253-286`（purgeContent）が statements 構築＋呼び出し 1 行に縮約されている
-- [ ] `opfsWorker/purgeHandlers.ts:41-76`（handlePurgeOldRecords）と `opfsWorker/purgeHandlers.ts:78-109`（handleContentPurge）が同様に縮約されている
-- [ ] changes() 計数規則とトランザクションポリシーのコメント（skip ガード契約を含む）が `runPurgeSequence` へ移設されている
-- [ ] retention/maxRecords のゲート条件（retentionDays>0、maxRecords>0、count>maxRecords）と skip ガードが移設先で同一保持されている
-- [ ] 簡略版ツイン（purgeAuditLog / handleAuditLogPurge）を共通化の対象に含めるかを判断し、含めない場合はその理由が残されている
-- [ ] 挙動不変であることを parity/golden テストが示している
+- [x] `queryPlan.ts` に executor seam（exec / count / changes を取るオブジェクト）を受け取る `runPurgeSequence` が 1 本置かれている
+- [x] `IdbVfsBackend.ts:217-251`（purgeOldRecords）と `IdbVfsBackend.ts:253-286`（purgeContent）が statements 構築＋呼び出し 1 行に縮約されている
+- [x] `opfsWorker/purgeHandlers.ts:41-76`（handlePurgeOldRecords）と `opfsWorker/purgeHandlers.ts:78-109`（handleContentPurge）が同様に縮約されている
+- [x] changes() 計数規則とトランザクションポリシーのコメント（skip ガード契約を含む）が `runPurgeSequence` へ移設されている
+- [x] retention/maxRecords のゲート条件（retentionDays>0、maxRecords>0、count>maxRecords）と skip ガードが移設先で同一保持されている
+- [x] 簡略版ツイン（purgeAuditLog / handleAuditLogPurge）を共通化の対象に含めるかを判断し、含めない場合はその理由が残されている
+- [x] 挙動不変であることを parity/golden テストが示している
 
 ## テスト戦略
 
@@ -85,10 +85,10 @@ And purgeAuditLog / handleAuditLogPurge ではトランザクションを開始�
 
 ## DoD
 
-- [ ] parity/golden テストがリファクタ前に green、リファクタ後も green である
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] `IdbVfsBackend.ts` と `opfsWorker/purgeHandlers.ts` から重複したトランザクションスケルトン本体が除去されている
-- [ ] IdbVfsBackend ラングと OPFS ラングの差分挙動（カウント規則・skip ガード・トランザクション有無）がテストで検出可能になっている
+- [x] parity/golden テストがリファクタ前に green、リファクタ後も green である
+- [x] `npm run validate`（type-check + test）が green
+- [x] `IdbVfsBackend.ts` と `opfsWorker/purgeHandlers.ts` から重複したトランザクションスケルトン本体が除去されている
+- [x] IdbVfsBackend ラングと OPFS ラングの差分挙動（カウント規則・skip ガード・トランザクション有無）がテストで検出可能になっている
 
 ## 出所
 

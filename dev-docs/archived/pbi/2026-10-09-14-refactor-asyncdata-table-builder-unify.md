@@ -60,11 +60,11 @@ Then 生成される DOM 構造（要素種別・属性・テキスト・順序�
 
 ## 6. 受け入れ基準
 
-- [ ] `domainAnalysisPanel.ts` の `renderDomainRows`/`renderUrlRows` が cell 描画コールバック付きの単一ビルダーに統合され、`resetOutput` の二重クリアが単一経路になっている
-- [ ] `timeHeatmapPanel.ts` の `buildHeatmapTable`/`buildNumericTable` が cell 描画コールバック付きの単一ビルダーに統合されている
-- [ ] 生成される DOM（要素種別・`th scope=row` 等の属性・テキスト・順序）が現行と同一である
-- [ ] `resetOutput`/`isReady` の null-check（guard）が現位置に保持されている
-- [ ] 既存の両パネルテストが無変更で green である
+- [x] `domainAnalysisPanel.ts` の `renderDomainRows`/`renderUrlRows` が cell 描画コールバック付きの単一ビルダーに統合され、`resetOutput` の二重クリアが単一経路になっている
+- [x] `timeHeatmapPanel.ts` の `buildHeatmapTable`/`buildNumericTable` が cell 描画コールバック付きの単一ビルダーに統合されている
+- [x] 生成される DOM（要素種別・`th scope=row` 等の属性・テキスト・順序）が現行と同一である
+- [x] `resetOutput`/`isReady` の null-check（guard）が現位置に保持されている
+- [x] 既存の両パネルテストが無変更で green である
 
 ## 7. テスト戦略
 
@@ -78,11 +78,11 @@ Then 生成される DOM 構造（要素種別・属性・テキスト・順序�
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 5 件すべて充足
-- [ ] 生成 DOM の golden pin が green（統合前後で同一）
-- [ ] 既存の両パネルテストが無変更で green
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 外部挙動不変（生成 DOM が現行と同一）
+- [x] 受け入れ基準 5 件すべて充足
+- [x] 生成 DOM の golden pin が green（統合前後で同一）
+- [x] 既存の両パネルテストが無変更で green
+- [x] `npm run validate`（type-check + test）が green
+- [x] 外部挙動不変（生成 DOM が現行と同一）
 
 ## 10. 出所
 

@@ -78,14 +78,14 @@ And 宣言付きファイル群が適切なレイヤーの SSOT に収載され�
 
 ## 6. 受け入れ基準
 
-- [ ] `scripts/lint-layers-docs.mjs` に第 3 の検査が追加されている: リスト抽出後に全パスを existsSync で検証し、欠落を drift として報告する（`lint-adr-links.mjs` のパターン準拠）
-- [ ] `dev-docs/LAYERS.md` の Barrel 節（`:160-161`・`:165`・`:291`）と `BARREL_MODULES`（`utils-layer-boundary.mjs:116`）から削除済み 2 本（storage.ts・logger.ts）が除去され、`crypto/index.ts` のみが残る
-- [ ] 実在する `@layer` 宣言付きファイル群（背景 A の 12+）が適切なレイヤーの SSOT（LAYER0_FILES / LAYER1_FILES / LAYER2_MODULES / LAYERS.md 分類表）に収載されている
-- [ ] `src/utils/**` の先頭 `@layer` 宣言をパースしルールリスト/LAYERS.md と照合する検査が追加されている（宣言がゲート入力化される）
-- [ ] 収載時に各ファイルの実 import が宣言レイヤーの依存ルールに適合していることを確認している（ルールは error 配線のため、宣言と実依存の不一致は lint 失敗として顕在化する）
-- [ ] `npm run lint:layers-docs` が green（双方向照合 + filesystem 検査 + 宣言照合の全検査 pass）
-- [ ] `npm run validate` が green（`lint:layers-docs` は validate に配線済みのため、追加検査も validate 経由で走る）
-- [ ] 挙動が完全に不変である（production コードの変更なし、lint + ドキュメント修正のみ）
+- [x] `scripts/lint-layers-docs.mjs` に第 3 の検査が追加されている: リスト抽出後に全パスを existsSync で検証し、欠落を drift として報告する（`lint-adr-links.mjs` のパターン準拠）
+- [x] `dev-docs/LAYERS.md` の Barrel 節（`:160-161`・`:165`・`:291`）と `BARREL_MODULES`（`utils-layer-boundary.mjs:116`）から削除済み 2 本（storage.ts・logger.ts）が除去され、`crypto/index.ts` のみが残る
+- [x] 実在する `@layer` 宣言付きファイル群（背景 A の 12+）が適切なレイヤーの SSOT（LAYER0_FILES / LAYER1_FILES / LAYER2_MODULES / LAYERS.md 分類表）に収載されている
+- [x] `src/utils/**` の先頭 `@layer` 宣言をパースしルールリスト/LAYERS.md と照合する検査が追加されている（宣言がゲート入力化される）
+- [x] 収載時に各ファイルの実 import が宣言レイヤーの依存ルールに適合していることを確認している（ルールは error 配線のため、宣言と実依存の不一致は lint 失敗として顕在化する）
+- [x] `npm run lint:layers-docs` が green（双方向照合 + filesystem 検査 + 宣言照合の全検査 pass）
+- [x] `npm run validate` が green（`lint:layers-docs` は validate に配線済みのため、追加検査も validate 経由で走る）
+- [x] 挙動が完全に不変である（production コードの変更なし、lint + ドキュメント修正のみ）
 
 ## 7. テスト戦略
 
@@ -100,12 +100,12 @@ And 宣言付きファイル群が適切なレイヤーの SSOT に収載され�
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 8 件すべて充足
-- [ ] `npm run validate`（type-check + test + lint ゲート一式、`lint:layers-docs` 配線済み）が green
-- [ ] 追加検査の負例確認済み（欠落パス・未収載宣言が非ゼロ終了で報告される）
-- [ ] LAYERS.md に削除済み barrel（storage.ts / logger.ts）への現存前提の記述が残っていない（grep で確認）
-- [ ] `src/utils/**` の先頭 `@layer` 宣言付きファイルがすべて SSOT 収載または検査側の許可リスト化されており、宣言がゲート入力として機能している
-- [ ] production コードの挙動不変（lint + ドキュメント修正のみ）
+- [x] 受け入れ基準 8 件すべて充足
+- [x] `npm run validate`（type-check + test + lint ゲート一式、`lint:layers-docs` 配線済み）が green
+- [x] 追加検査の負例確認済み（欠落パス・未収載宣言が非ゼロ終了で報告される）
+- [x] LAYERS.md に削除済み barrel（storage.ts / logger.ts）への現存前提の記述が残っていない（grep で確認）
+- [x] `src/utils/**` の先頭 `@layer` 宣言付きファイルがすべて SSOT 収載または検査側の許可リスト化されており、宣言がゲート入力として機能している
+- [x] production コードの挙動不変（lint + ドキュメント修正のみ）
 
 ## 10. 出所
 

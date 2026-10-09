@@ -61,11 +61,11 @@ Then 上限 tripwire と release 挙動が現行どおりであること
 
 ## 6. 受け入れ基準
 
-- [ ] Tab 循環＋Escape が「フォーカス可能リストを引数に取る」単一ヘルパーに抽出され、confirmDialog と focusTrap の双方がそれを呼んでいる
-- [ ] confirmDialog の disabled 除外セレクタと focusTrap の disabled 包含セレクタの差が現行どおり維持されている（各呼び出し元が現行リストを渡す）
-- [ ] `focusTrapManager` の `FOCUS_TRAP_MAX_LIVE` tripwire と release 契約が無変更である
-- [ ] Tab 循環・Escape の外部挙動が現行と同一である
-- [ ] 既存の a11y / focus 関連テストが無変更で green である
+- [x] Tab 循環＋Escape が「フォーカス可能リストを引数に取る」単一ヘルパーに抽出され、confirmDialog と focusTrap の双方がそれを呼んでいる
+- [x] confirmDialog の disabled 除外セレクタと focusTrap の disabled 包含セレクタの差が現行どおり維持されている（各呼び出し元が現行リストを渡す）
+- [x] `focusTrapManager` の `FOCUS_TRAP_MAX_LIVE` tripwire と release 契約が無変更である
+- [x] Tab 循環・Escape の外部挙動が現行と同一である
+- [x] 既存の a11y / focus 関連テストが無変更で green である
 
 ## 7. テスト戦略
 
@@ -80,11 +80,11 @@ Then 上限 tripwire と release 挙動が現行どおりであること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 5 件すべて充足
-- [ ] Tab 循環・Escape の挙動 pin が green（統合前後で同一）
-- [ ] disabled 扱いの差が現行どおり維持されている
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 外部挙動不変
+- [x] 受け入れ基準 5 件すべて充足
+- [x] Tab 循環・Escape の挙動 pin が green（統合前後で同一）
+- [x] disabled 扱いの差が現行どおり維持されている
+- [x] `npm run validate`（type-check + test）が green
+- [x] 外部挙動不変
 
 ## 10. 出所
 

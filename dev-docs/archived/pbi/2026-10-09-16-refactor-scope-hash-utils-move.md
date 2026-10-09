@@ -60,12 +60,12 @@ And 新規 utils ファイルに @layer 宣言が付与され SSOT に登録さ�
 
 ## 6. 受け入れ基準
 
-- [ ] `computeScopeHash` が utils のモジュールへ移設され、`confirmTokenManager` と `deriveScopeHash` の双方がそれを参照している
-- [ ] `src/messaging/sqliteOperationSecurity.ts` から background 配下への import（動的含む）が存在しない
-- [ ] `crypto.subtle` の fail-closed チェックが移設先で保持されている
-- [ ] 同一入力に対する hash 値が移設前後で同一である
-- [ ] 新規 utils ファイルに `@layer` 宣言が付与され、SSOT リストに登録されている
-- [ ] `layer-boundary.test.ts` を含む既存テストが無変更で green である
+- [x] `computeScopeHash` が utils のモジュールへ移設され、`confirmTokenManager` と `deriveScopeHash` の双方がそれを参照している
+- [x] `src/messaging/sqliteOperationSecurity.ts` から background 配下への import（動的含む）が存在しない
+- [x] `crypto.subtle` の fail-closed チェックが移設先で保持されている
+- [x] 同一入力に対する hash 値が移設前後で同一である
+- [x] 新規 utils ファイルに `@layer` 宣言が付与され、SSOT リストに登録されている
+- [x] `layer-boundary.test.ts` を含む既存テストが無変更で green である
 
 ## 7. テスト戦略
 
@@ -80,12 +80,12 @@ And 新規 utils ファイルに @layer 宣言が付与され SSOT に登録さ�
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 6 件すべて充足
-- [ ] `sqliteOperationSecurity.ts` から background への import が消滅
-- [ ] hash 値の golden pin が移設前後で同一
-- [ ] 新規 utils ファイルが `@layer` 宣言付きで SSOT に登録されている
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 外部挙動不変
+- [x] 受け入れ基準 6 件すべて充足
+- [x] `sqliteOperationSecurity.ts` から background への import が消滅
+- [x] hash 値の golden pin が移設前後で同一
+- [x] 新規 utils ファイルが `@layer` 宣言付きで SSOT に登録されている
+- [x] `npm run validate`（type-check + test）が green
+- [x] 外部挙動不変
 
 ## 10. 出所
 

@@ -71,12 +71,12 @@ And 同期フォールバックのサイズ上限契約（MAX_CLEANSING_HTML_BYT
 
 ## 6. 受け入れ基準
 
-- [ ] `cleansingOffscreenDelegate.ts` が `CLEANSING_OFFSCREEN_TYPE` と `CleansingOffscreenResponse` を `../offscreen/cleansingOffscreen.js` から import している
-- [ ] `:87` の `type: 'CLEANSING_OFFSCREEN'` 文字列ハードコードが `CLEANSING_OFFSCREEN_TYPE` 定数に置き換えられている
-- [ ] `:85-92` の応答受信が `CleansingOffscreenResponse` 型で行われ、手書き弱 shape（`{ success: true; html: string } | { success: false; error: string } | undefined`）が削除されている
-- [ ] `:27` と `:80` の重複 `(globalThis as unknown as { chrome?: typeof chrome }).chrome` 取得が 1 つのローカルヘルパーにまとめられている
-- [ ] 既存ガードが同一位置に維持されている: `:97-105` の `TOO_LARGE_ERROR_PREFIX` チェック（サイズ上限拒否はローカルパースにフォールバックしない）、`:55-65` の同期フォールバック上限
-- [ ] 挙動が完全に不変である（既存テスト全通過、判定ロジック変更なし）
+- [x] `cleansingOffscreenDelegate.ts` が `CLEANSING_OFFSCREEN_TYPE` と `CleansingOffscreenResponse` を `../offscreen/cleansingOffscreen.js` から import している
+- [x] `:87` の `type: 'CLEANSING_OFFSCREEN'` 文字列ハードコードが `CLEANSING_OFFSCREEN_TYPE` 定数に置き換えられている
+- [x] `:85-92` の応答受信が `CleansingOffscreenResponse` 型で行われ、手書き弱 shape（`{ success: true; html: string } | { success: false; error: string } | undefined`）が削除されている
+- [x] `:27` と `:80` の重複 `(globalThis as unknown as { chrome?: typeof chrome }).chrome` 取得が 1 つのローカルヘルパーにまとめられている
+- [x] 既存ガードが同一位置に維持されている: `:97-105` の `TOO_LARGE_ERROR_PREFIX` チェック（サイズ上限拒否はローカルパースにフォールバックしない）、`:55-65` の同期フォールバック上限
+- [x] 挙動が完全に不変である（既存テスト全通過、判定ロジック変更なし）
 
 ## 7. テスト戦略
 
@@ -90,12 +90,12 @@ And 同期フォールバックのサイズ上限契約（MAX_CLEANSING_HTML_BYT
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 6 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] 既存デリゲートテスト（`contentKernel.offscreen.test.ts`）が pin 無変更で通過
-- [ ] `cleansingOffscreenDelegate.ts` 内に応答 shape の手書き複製が残っていない（grep で確認）
-- [ ] chrome 取得の重複キャストが解消（ローカルヘルパー 1 か所）
-- [ ] 既存機能への影響ゼロ（挙動不変）
+- [x] 受け入れ基準 6 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] 既存デリゲートテスト（`contentKernel.offscreen.test.ts`）が pin 無変更で通過
+- [x] `cleansingOffscreenDelegate.ts` 内に応答 shape の手書き複製が残っていない（grep で確認）
+- [x] chrome 取得の重複キャストが解消（ローカルヘルパー 1 か所）
+- [x] 既存機能への影響ゼロ（挙動不変）
 
 ## 10. 出所
 

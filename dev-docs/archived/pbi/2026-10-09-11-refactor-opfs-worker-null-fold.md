@@ -95,13 +95,13 @@ Then onDegraded が 1 回だけ呼ばれる現行挙動が維持されること
 
 ## 6. 受け入れ基準
 
-- [ ] `src/offscreen/OpfsWorkerBackend.ts` に `private async callWorkerOk<T>(type, payload, project)` が 1 本追加されている
-- [ ] 非アーカイブ 17 メソッド（:111, 117, 130, 136, 142, 148, 154, 161, 166, 172, 178, 252, 258, 264, 272, 278, 284）の 2 行畳み込みが `callWorkerOk` 呼び出しに置き換えられ、同形の畳み込みがメソッド内に残っていない
-- [ ] null → 既存定数 `OPFS_WORKER_UNAVAILABLE_ERROR`、非 null → `project` の構成が現行どおりで、外部挙動は不変である
-- [ ] guard（失敗カウンタ・degrade 信号）は既存 `callWorker` にそのまま置かれ、移動・変更されていない
-- [ ] `restoreDb`/`healthCheck`（:238-248）は対象外で、独自文言（`Binary restore failed` / `Health check failed`）が現行どおり維持される
-- [ ] `proxyArchive`（:100-107）とアーカイブ 14 op は無変更である
-- [ ] 既存バックエンドテスト（`opfsWorkerBackend-degradation.test.ts` ほか）が無変更で green である
+- [x] `src/offscreen/OpfsWorkerBackend.ts` に `private async callWorkerOk<T>(type, payload, project)` が 1 本追加されている
+- [x] 非アーカイブ 17 メソッド（:111, 117, 130, 136, 142, 148, 154, 161, 166, 172, 178, 252, 258, 264, 272, 278, 284）の 2 行畳み込みが `callWorkerOk` 呼び出しに置き換えられ、同形の畳み込みがメソッド内に残っていない
+- [x] null → 既存定数 `OPFS_WORKER_UNAVAILABLE_ERROR`、非 null → `project` の構成が現行どおりで、外部挙動は不変である
+- [x] guard（失敗カウンタ・degrade 信号）は既存 `callWorker` にそのまま置かれ、移動・変更されていない
+- [x] `restoreDb`/`healthCheck`（:238-248）は対象外で、独自文言（`Binary restore failed` / `Health check failed`）が現行どおり維持される
+- [x] `proxyArchive`（:100-107）とアーカイブ 14 op は無変更である
+- [x] 既存バックエンドテスト（`opfsWorkerBackend-degradation.test.ts` ほか）が無変更で green である
 
 ## 7. テスト戦略
 
@@ -116,11 +116,11 @@ Then onDegraded が 1 回だけ呼ばれる現行挙動が維持されること
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 7 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] `opfsWorkerBackend-degradation.test.ts` の pin（proxyMethods テーブル・restore/health 分離・連続失敗カウンタ）が無変更で通過
-- [ ] `OpfsWorkerBackend.ts` 内に手書きの null-fold 2 行畳み込みが非アーカイブメソッドに残っていない
-- [ ] 既存機能への影響ゼロ（外部挙動不変）
+- [x] 受け入れ基準 7 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] `opfsWorkerBackend-degradation.test.ts` の pin（proxyMethods テーブル・restore/health 分離・連続失敗カウンタ）が無変更で通過
+- [x] `OpfsWorkerBackend.ts` 内に手書きの null-fold 2 行畳み込みが非アーカイブメソッドに残っていない
+- [x] 既存機能への影響ゼロ（外部挙動不変）
 
 ## 10. 出所
 

@@ -65,14 +65,14 @@ And settingsSnapshot.ts:39-41 の実装と矛盾していないこと
 
 ## 6. 受け入れ基準
 
-- [ ] `readSettingsSnapshot` の戻り型が `Promise<Record<string, unknown>>`（または opaque な `SettingsSnapshot` 型）に変更されている
-- [ ] `settingsSnapshot.ts:42` の `as Settings` キャストが削除されている
-- [ ] `contentKernel.ts:161` の `as unknown as Record<string, unknown>` 二重キャストが削除されている
-- [ ] `settingsSnapshot-authority-parity.test.ts:35` と `:65` の二重キャストが削除されている
-- [ ] `contentKernel.ts:159-160` のコメントが「no default fill」に訂正され、`settingsSnapshot.ts:39-41` と矛盾しない
-- [ ] `isSnapshotAuthoritative`（settingsSnapshot.ts:20-25）の authority 判定ロジックはモジュール内にそのまま維持されている
-- [ ] parity テストの pin（state matrix、absence 保持、write なしの検証）が無変更で維持されている
-- [ ] 挙動が完全に不変である（既存テスト全通過、ロジック変更なし）
+- [x] `readSettingsSnapshot` の戻り型が `Promise<Record<string, unknown>>`（または opaque な `SettingsSnapshot` 型）に変更されている
+- [x] `settingsSnapshot.ts:42` の `as Settings` キャストが削除されている
+- [x] `contentKernel.ts:161` の `as unknown as Record<string, unknown>` 二重キャストが削除されている
+- [x] `settingsSnapshot-authority-parity.test.ts:35` と `:65` の二重キャストが削除されている
+- [x] `contentKernel.ts:159-160` のコメントが「no default fill」に訂正され、`settingsSnapshot.ts:39-41` と矛盾しない
+- [x] `isSnapshotAuthoritative`（settingsSnapshot.ts:20-25）の authority 判定ロジックはモジュール内にそのまま維持されている
+- [x] parity テストの pin（state matrix、absence 保持、write なしの検証）が無変更で維持されている
+- [x] 挙動が完全に不変である（既存テスト全通過、ロジック変更なし）
 
 ## 7. テスト戦略
 
@@ -87,12 +87,12 @@ And settingsSnapshot.ts:39-41 の実装と矛盾していないこと
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 8 件すべて充足
-- [ ] `npm run validate`（type-check + test）が green
-- [ ] parity テストが pin 無変更で通過
-- [ ] リポジトリ内に `as unknown as` による `readSettingsSnapshot` 戻り値の逆キャストが残っていない（grep で確認）
-- [ ] コメント drift 解消（kernel 側コメントとスナップショット側実装が一致）
-- [ ] 既存機能への影響ゼロ（挙動不変）
+- [x] 受け入れ基準 8 件すべて充足
+- [x] `npm run validate`（type-check + test）が green
+- [x] parity テストが pin 無変更で通過
+- [x] リポジトリ内に `as unknown as` による `readSettingsSnapshot` 戻り値の逆キャストが残っていない（grep で確認）
+- [x] コメント drift 解消（kernel 側コメントとスナップショット側実装が一致）
+- [x] 既存機能への影響ゼロ（挙動不変）
 
 ## 10. 出所
 

@@ -51,10 +51,10 @@ Then 上限値は 10000 のままで、既存テストの pin も不変である
 
 ## 6. 受け入れ基準
 
-- [ ] `src/dashboard/panels/asyncData/tagClusterPanel.ts:81` が `limit: MAX_QUERY_ROWS` になっている
-- [ ] `MAX_QUERY_ROWS` が `src/utils/computeLimits.ts` から import されている
-- [ ] `limit: 10000` のリテラルが tagClusterPanel から消えている
-- [ ] 既存の tagClusterPanel テストが無変更で green である
+- [x] `src/dashboard/panels/asyncData/tagClusterPanel.ts:81` が `limit: MAX_QUERY_ROWS` になっている
+- [x] `MAX_QUERY_ROWS` が `src/utils/computeLimits.ts` から import されている
+- [x] `limit: 10000` のリテラルが tagClusterPanel から消えている
+- [x] 既存の tagClusterPanel テストが無変更で green である
 
 ## 7. テスト戦略
 
@@ -68,10 +68,10 @@ Then 上限値は 10000 のままで、既存テストの pin も不変である
 
 ## 9. DoD
 
-- [ ] 受け入れ基準 4 件すべて充足
-- [ ] tagClusterPanel に `limit: 10000` のリテラルが残っていない
-- [ ] 既存テストが無変更で green
-- [ ] `npm run validate`（type-check + test）が green
+- [x] 受け入れ基準 4 件すべて充足
+- [x] tagClusterPanel に `limit: 10000` のリテラルが残っていない
+- [x] 既存テストが無変更で green
+- [x] `npm run validate`（type-check + test）が green
 
 ## 10. 出所
 
