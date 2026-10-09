@@ -2,7 +2,7 @@ import { StatusInfo } from './statusChecker.js';
 import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
+import { addDomainToWhitelist, addPathToWhitelist, type WhitelistWriteResult } from './whitelistWriter.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
@@ -241,62 +241,94 @@ export function renderSpecialUrlStatus(): void {
   }
 }
 
-function attachPrivacyActionListeners(): void {
+/**
+ * One whitelist-button click resolves to a single write outcome. `skip` marks
+ * the domain button's "URL has no extractable domain" case, which reports
+ * nothing; `write` carries the writer result plus the button-specific strings
+ * (the "Invalid pattern: <x>" identifier and the success i18n fallback).
+ */
+type WhitelistWriteOutcome =
+  | { kind: 'skip' }
+  | {
+      kind: 'write';
+      result: WhitelistWriteResult;
+      invalidPatternTarget: string;
+      successFallback: string;
+    };
+
+/**
+ * Single owner of the "tab -> whitelist writer -> result branch -> report"
+ * wiring shared by the domain and path buttons. Extracted from two hand-written
+ * copies so the message composition (the `statusInvalidUrl` vs
+ * `Invalid pattern: …` branch, the success key, the handler-error log text)
+ * lives in one place instead of drifting.
+ */
+function wireWhitelistButton(
+  btnId: string,
+  writer: (url: string) => Promise<WhitelistWriteOutcome>,
+  successKey: string,
+  logMessage: string,
+): void {
   // Wire once per element — same discipline as the toggle / permission /
   // feedback buttons. A bare addEventListener here stacks a duplicate
   // whitelist write on every re-init of a persistent button node.
-  const addDomainBtn = document.getElementById('statusAddDomain') as (HTMLElement & { dataset: DOMStringMap }) | null;
-  wireOnce(addDomainBtn, (el) => {
+  const btn = document.getElementById(btnId) as (HTMLElement & { dataset: DOMStringMap }) | null;
+  wireOnce(btn, (el) => {
     el.addEventListener('click', async () => {
       try {
         const tab = await getCurrentTab();
         if (tab?.url) {
-          const domain = extractDomain(tab.url);
-          if (domain) {
-            // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
-            // in the shared whitelist writer seam.
-            const result = await addDomainToWhitelist(domain);
-            if (result.ok && result.added) {
-              statusChannel.report('mainStatus', getMessageOr('domainAddedToWhitelist', `Added ${domain} to whitelist`), 'success');
-              await initStatusPanel();
-            } else if (!result.ok) {
-              statusChannel.report(
-                'mainStatus',
-                result.reason === 'no-domain' ? getMessageOr('statusInvalidUrl', 'Invalid URL') : `Invalid pattern: ${domain}`,
-                'error'
-              );
-            }
-          }
-        }
-      } catch (e) {
-        reportHandlerError('Failed to add the domain to the whitelist', e);
-      }
-    });
-  });
-
-  const addPathBtn = document.getElementById('statusAddPath') as (HTMLElement & { dataset: DOMStringMap }) | null;
-  wireOnce(addPathBtn, (el) => {
-    el.addEventListener('click', async () => {
-      try {
-        const tab = await getCurrentTab();
-        if (tab?.url) {
-          const result = await addPathToWhitelist(tab.url);
+          const outcome = await writer(tab.url);
+          if (outcome.kind === 'skip') return;
+          const { result, invalidPatternTarget, successFallback } = outcome;
           if (result.ok && result.added) {
-            statusChannel.report('mainStatus', getMessageOr('pathAddedToWhitelist', `Added path to whitelist`), 'success');
+            statusChannel.report('mainStatus', getMessageOr(successKey, successFallback), 'success');
             await initStatusPanel();
           } else if (!result.ok) {
             statusChannel.report(
               'mainStatus',
-              result.reason === 'no-domain' ? getMessageOr('statusInvalidUrl', 'Invalid URL') : `Invalid pattern: ${tab.url}`,
+              result.reason === 'no-domain' ? getMessageOr('statusInvalidUrl', 'Invalid URL') : `Invalid pattern: ${invalidPatternTarget}`,
               'error'
             );
           }
         }
       } catch (e) {
-        reportHandlerError('Failed to add the path to the whitelist', e);
+        reportHandlerError(logMessage, e);
       }
     });
   });
+}
+
+function attachPrivacyActionListeners(): void {
+  wireWhitelistButton(
+    'statusAddDomain',
+    async (url) => {
+      const domain = extractDomain(url);
+      if (!domain) return { kind: 'skip' };
+      // PBI 2026-09-12-05: validated, deduped, cache-refreshing writes live
+      // in the shared whitelist writer seam.
+      return {
+        kind: 'write',
+        result: await addDomainToWhitelist(domain),
+        invalidPatternTarget: domain,
+        successFallback: `Added ${domain} to whitelist`,
+      };
+    },
+    'domainAddedToWhitelist',
+    'Failed to add the domain to the whitelist',
+  );
+
+  wireWhitelistButton(
+    'statusAddPath',
+    async (url) => ({
+      kind: 'write',
+      result: await addPathToWhitelist(url),
+      invalidPatternTarget: url,
+      successFallback: 'Added path to whitelist',
+    }),
+    'pathAddedToWhitelist',
+    'Failed to add the path to the whitelist',
+  );
 }
 
 function initCleansingFeedbackButton(): void {
