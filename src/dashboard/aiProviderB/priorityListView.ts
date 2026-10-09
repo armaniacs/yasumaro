@@ -53,21 +53,6 @@ export function collectBProviderPrioritySlots(container: HTMLElement): ProviderS
   return slots;
 }
 
-export function validateBSlots(slots: ProviderSlot[]): { valid: boolean; duplicateIndices: number[] } {
-  const seen = new Map<string, number>();
-  const dup = new Set<number>();
-  slots.forEach((s, i) => {
-    const key = `${s.provider}::${s.model ?? ''}`;
-    if (seen.has(key)) {
-      dup.add(i);
-      dup.add(seen.get(key)!);
-    } else {
-      seen.set(key, i);
-    }
-  });
-  return { valid: dup.size === 0, duplicateIndices: [...dup].sort((a, b) => a - b) };
-}
-
 /**
  * Row-aware validation for B containers: returns duplicate row indices (not slot indices)
  * and P1 empty flag. Used by save pipeline to block saving correctly.
@@ -93,6 +78,45 @@ export function validateBContainer(container: HTMLElement): { valid: boolean; du
   const p1 = rows[0]?.querySelector<HTMLSelectElement>('select');
   const p1Empty = !p1 || !p1.value.trim();
   return { valid: dupSet.size === 0, duplicateRowIndices: [...dupSet].sort((a, b) => a - b), p1Empty };
+}
+
+/**
+ * Render the B-priority warning DOM for a container: duplicate provider+model rows
+ * (has-error + `.b-priority-warn`) and the P1-required hint (`.b-priority-req-warn`).
+ * Single render path shared by the live change/input validation and the save pipeline,
+ * so the warning classes, role, and i18n keys cannot drift between the two call sites.
+ * Returns the P1-empty flag the save pipeline needs to block saving.
+ */
+export function renderPriorityWarnings(bList: HTMLElement): { p1Empty: boolean } {
+  const { valid, duplicateRowIndices, p1Empty } = validateBContainer(bList);
+  const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
+  rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
+  let warn = bList.querySelector<HTMLElement>('.b-priority-warn');
+  if (!valid) {
+    if (!warn) {
+      warn = document.createElement('div');
+      warn.className = 'b-priority-warn field-error';
+      warn.setAttribute('role', 'alert');
+      bList.appendChild(warn);
+    }
+    warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
+  } else {
+    warn?.remove();
+  }
+  let reqWarn = bList.querySelector<HTMLElement>('.b-priority-req-warn');
+  if (p1Empty) {
+    if (!reqWarn) {
+      reqWarn = document.createElement('div');
+      reqWarn.className = 'b-priority-req-warn field-error';
+      reqWarn.setAttribute('role', 'alert');
+      bList.appendChild(reqWarn);
+    }
+    reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
+    rows[0]?.classList.add('has-error');
+  } else {
+    reqWarn?.remove();
+  }
+  return { p1Empty };
 }
 
 function createRow(index: number, slot: ProviderSlot | undefined, settings?: ModelSettings): HTMLElement {
@@ -212,57 +236,10 @@ export function createBPriorityListView(
     dragIndex = null;
   });
 
-  // validation on change — row-aware duplicate detection (fixes indexずれ when empty rows exist)
+  // validation on change — row-aware duplicate detection + warning render via the
+  // shared renderPriorityWarnings, the same path the save pipeline uses.
   const validate = () => {
-    const rows = [...container.querySelectorAll<HTMLElement>('.b-priority-row')];
-    const seen = new Map<string, number>();
-    const dupSet = new Set<number>();
-    rows.forEach((row, rowIdx) => {
-      const select = row.querySelector<HTMLSelectElement>('select');
-      const provider = (select?.value ?? '').trim();
-      if (!provider) return;
-      const input = row.querySelector<HTMLInputElement>('input.b-priority-model-input');
-      const model = (input?.value ?? '').trim();
-      const key = `${provider}::${model ?? ''}`;
-      if (seen.has(key)) {
-        dupSet.add(rowIdx);
-        dupSet.add(seen.get(key)!);
-      } else {
-        seen.set(key, rowIdx);
-      }
-    });
-    const duplicateRowIndices = [...dupSet].sort((a, b) => a - b);
-    const valid = dupSet.size === 0;
-    rows.forEach((r, i) => {
-      r.classList.toggle('has-error', duplicateRowIndices.includes(i));
-    });
-    let warn = container.querySelector('.b-priority-warn');
-    if (!valid) {
-      if (!warn) {
-        warn = document.createElement('div');
-        warn.className = 'b-priority-warn field-error';
-        warn.setAttribute('role', 'alert');
-        container.appendChild(warn);
-      }
-      warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-    } else {
-      warn?.remove();
-    }
-    // P1 required: first row must have a provider
-    const p1 = container.querySelector<HTMLElement>('.b-priority-row');
-    const p1Select = p1?.querySelector<HTMLSelectElement>('select');
-    let reqWarn = container.querySelector('.b-priority-req-warn');
-    if (p1Select && !p1Select.value) {
-      if (!reqWarn) {
-        reqWarn = document.createElement('div');
-        reqWarn.className = 'b-priority-req-warn field-error';
-        reqWarn.setAttribute('role', 'alert');
-        container.appendChild(reqWarn);
-      }
-      reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-    } else {
-      reqWarn?.remove();
-    }
+    renderPriorityWarnings(container);
   };
   container.addEventListener('change', validate);
   container.addEventListener('input', validate);

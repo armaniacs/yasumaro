@@ -12,7 +12,7 @@ import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domain
 import { extractSettingsFromInputs, extractLocalMarkdownExportTiming, isProviderConnectionField, type ValidationSchema } from '../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../utils/settingsSchemas.js';
 import { GENERAL_SETTINGS_FIELDS } from './settings/fieldDescriptor.js';
-import { validateBContainer } from './aiProviderB/priorityListView.js';
+import { renderPriorityWarnings } from './aiProviderB/priorityListView.js';
 import { collectCurrentProviderPrioritySlots, isBPriorityListActive } from './providerPrioritySlots.js';
 import { clearAllFieldErrors, validateAllFields, setFieldError, ErrorPair } from './settings/fieldValidation.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
@@ -81,40 +81,11 @@ export function applyNumericNullCoercion(newSettings: Record<string, unknown>): 
 
 /**
  * Render the B-layout priority warnings (duplicate + P1-required) into the
- * B list container. Pure DOM sync extracted from saveDashboardSettings so
- * the save path keeps only validate → render → return.
+ * B list container. Delegates to the single render path owned by the view
+ * module so the live validation and the save path cannot drift.
  */
 export function renderBPriorityWarnings(bList: HTMLElement): { p1Empty: boolean } {
-  const { p1Empty, duplicateRowIndices, valid } = validateBContainer(bList);
-  // UIの重複警告を同期（row-aware）
-  const rows = [...bList.querySelectorAll<HTMLElement>('.b-priority-row')];
-  rows.forEach((r, i) => r.classList.toggle('has-error', duplicateRowIndices.includes(i)));
-  let warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
-  if (!valid) {
-    if (!warn) {
-      warn = document.createElement('div');
-      warn.className = 'b-priority-warn field-error';
-      warn.setAttribute('role', 'alert');
-      bList.appendChild(warn);
-    }
-    warn.textContent = getMessageOr('aiProviderPriorityDuplicateWarning', 'Duplicate provider and model');
-  } else {
-    warn?.remove();
-  }
-  let reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
-  if (p1Empty) {
-    if (!reqWarn) {
-      reqWarn = document.createElement('div');
-      reqWarn.className = 'b-priority-req-warn field-error';
-      reqWarn.setAttribute('role', 'alert');
-      bList.appendChild(reqWarn);
-    }
-    reqWarn.textContent = getMessageOr('aiProviderPriority1Required', 'Priority 1 is required');
-    rows[0]?.classList.add('has-error');
-  } else {
-    reqWarn?.remove();
-  }
-  return { p1Empty };
+  return renderPriorityWarnings(bList);
 }
 
 /** Message for a saveDashboardSettings failure; unknown errors share one text. */

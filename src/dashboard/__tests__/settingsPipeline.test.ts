@@ -415,7 +415,11 @@ describe('renderBPriorityWarnings', () => {
     `;
     const { p1Empty } = renderBPriorityWarnings(bList);
     expect(p1Empty).toBe(false);
-    expect(bList.querySelector('.b-priority-warn')).not.toBeNull();
+    const warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
+    expect(warn).not.toBeNull();
+    expect(warn!.classList.contains('field-error')).toBe(true);
+    expect(warn!.getAttribute('role')).toBe('alert');
+    expect(warn!.textContent).toBe('aiProviderPriorityDuplicateWarning');
     expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(2);
   });
 
@@ -424,10 +428,16 @@ describe('renderBPriorityWarnings', () => {
     const bList = document.getElementById('bPriorityList') as HTMLElement;
     bList.querySelector('.b-priority-row select')!.value = '';
     expect(renderBPriorityWarnings(bList).p1Empty).toBe(true);
-    expect(bList.querySelector('.b-priority-req-warn')).not.toBeNull();
+    const reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
+    expect(reqWarn).not.toBeNull();
+    expect(reqWarn!.classList.contains('field-error')).toBe(true);
+    expect(reqWarn!.getAttribute('role')).toBe('alert');
+    expect(reqWarn!.textContent).toBe('aiProviderPriority1Required');
+    expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(1);
     bList.querySelector('.b-priority-row select')!.value = 'openai';
     expect(renderBPriorityWarnings(bList).p1Empty).toBe(false);
     expect(bList.querySelector('.b-priority-req-warn')).toBeNull();
+    expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(0);
   });
 });
 

@@ -132,3 +132,72 @@ describe('createBPriorityListView model display', () => {
     expect(collectBProviderPrioritySlots(container)).toEqual([]);
   });
 });
+
+describe('live validation warnings', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  const warnEl = (): HTMLElement | null => container.querySelector<HTMLElement>('.b-priority-warn');
+  const reqWarnEl = (): HTMLElement | null => container.querySelector<HTMLElement>('.b-priority-req-warn');
+
+  it('renders the duplicate warning (field-error, role=alert, i18n text) and marks duplicate rows', () => {
+    createBPriorityListView(
+      container,
+      [
+        { provider: 'gemini', model: 'dup-model' },
+        { provider: 'gemini', model: 'dup-model' },
+      ],
+      SETTINGS,
+    );
+    container.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const warn = warnEl();
+    expect(warn).not.toBeNull();
+    expect(warn!.classList.contains('field-error')).toBe(true);
+    expect(warn!.getAttribute('role')).toBe('alert');
+    expect(warn!.textContent).toBe('Duplicate provider and model');
+    expect(container.querySelectorAll('.b-priority-row.has-error')).toHaveLength(2);
+  });
+
+  it('removes the duplicate warning and has-error once the duplicate is resolved', () => {
+    createBPriorityListView(
+      container,
+      [
+        { provider: 'gemini', model: 'dup-model' },
+        { provider: 'gemini', model: 'dup-model' },
+      ],
+      SETTINGS,
+    );
+    container.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(warnEl()).not.toBeNull();
+
+    const inputs = container.querySelectorAll<HTMLInputElement>('input.b-priority-model-input');
+    inputs[1]!.value = 'other-model';
+    inputs[1]!.dispatchEvent(new Event('input', { bubbles: true }));
+
+    expect(warnEl()).toBeNull();
+    expect(container.querySelectorAll('.b-priority-row.has-error')).toHaveLength(0);
+  });
+
+  it('renders the P1-required warning (field-error, role=alert, i18n text) and removes it once P1 is filled', () => {
+    createBPriorityListView(container, [{ provider: 'gemini', model: 'x' }], SETTINGS);
+    const select0 = container.querySelector<HTMLSelectElement>('.b-priority-row select')!;
+
+    select0.value = '';
+    select0.dispatchEvent(new Event('change', { bubbles: true }));
+
+    const reqWarn = reqWarnEl();
+    expect(reqWarn).not.toBeNull();
+    expect(reqWarn!.classList.contains('field-error')).toBe(true);
+    expect(reqWarn!.getAttribute('role')).toBe('alert');
+    expect(reqWarn!.textContent).toBe('Priority 1 is required');
+
+    select0.value = 'openai';
+    select0.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(reqWarnEl()).toBeNull();
+  });
+});
