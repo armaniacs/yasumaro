@@ -63,13 +63,17 @@ const LAYER0_FILES = [
   'src/utils/visitThresholds.ts',
   // Cap registry: dependency-free constants.
   'src/utils/limits.ts',
+  'src/utils/loopbackPorts.ts',
+  'src/utils/recordingGateTable.ts',
+  'src/utils/listSources.ts',
+  'src/utils/cleansingBadge.ts',
+  'src/utils/registrableDomain.ts',
 ];
 
 // Layer 1 files enforced by this rule (v1 scope). Files listed in LAYERS.md
 // but deleted since (settingsStore.ts, optimisticLock.ts) are omitted; modules
-// not yet classified in LAYERS.md (domainUtils.ts, DomainFilter.ts,
-// SettingsRepository.ts, storageTransaction.ts, …) are out of scope until
-// classified — see LAYERS.md "Mechanical enforcement".
+// not yet classified in LAYERS.md (domainUtils.ts, DomainFilter.ts, …) are out
+// of scope until classified — see LAYERS.md "Mechanical enforcement".
 const LAYER1_FILES = [
   'src/utils/storage/types.ts',
   'src/utils/storage/defaults.ts',
@@ -89,6 +93,17 @@ const LAYER1_FILES = [
   // Reclassified 2026-09-17 (PBI 05): chrome.storage side effects, formerly
   // mislisted as Layer 0 in LAYERS.md.
   'src/utils/crypto/hmacKeyStore.ts',
+  'src/utils/trustDb/TrustDbAdmin.ts',
+  'src/utils/keySerializer.ts',
+  'src/utils/ui/confirmDialog.ts',
+  'src/utils/copyMarkdownButton.ts',
+  'src/utils/storage/trancoConsent.ts',
+  'src/utils/storage/providerAllowlist.ts',
+  'src/utils/storage/providerDefaultBaseUrls.ts',
+  'src/utils/storage/storagePort.ts',
+  'src/utils/storage/structuredCloneBoundary.ts',
+  'src/utils/storage/SettingsRepository.ts',
+  'src/utils/storage/storageTransaction.ts',
 ];
 
 // Layer 2 modules (High-level Utilities per LAYERS.md). Matched by path
@@ -108,12 +123,15 @@ const LAYER2_MODULES = [
   // Reclassified 2026-09-17 (PBI 05): depends on Layer 2 piiSanitizer,
   // formerly mislisted as Layer 0 in LAYERS.md.
   'src/utils/logger/sanitize.ts',
+  'src/utils/promptSafety.ts',
+  'src/utils/trustDb/TrustLookup.ts',
+  'src/utils/trustDb/TrustDecision.ts',
 ];
 
 // Barrel shims are excluded from this rule: new imports through them are
 // already discouraged by no-restricted-imports (warn) in eslint.config.js.
 // Double-reporting the same edge in two rules would obscure the layer signal.
-const BARREL_MODULES = ['src/utils/storage.ts', 'src/utils/logger.ts', 'src/utils/crypto/index.ts'];
+const BARREL_MODULES = ['src/utils/crypto/index.ts'];
 
 // Sibling layers a src/utils/ module must never reach, in any syntax: the
 // direction inverts utils' role as the lowest layer (LAYERS.md "依存ルール").

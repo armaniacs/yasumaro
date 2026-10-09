@@ -111,7 +111,7 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
     },
     {
       name: 'Layer 1 importing barrel is left to no-restricted-imports',
-      code: "import { logError } from '../logger.js';",
+      code: "import { encrypt } from '../crypto/index.js';",
       filename: LAYER1_FILE,
     },
     {
@@ -220,7 +220,7 @@ ruleTester.run('utils-layer-boundary', utilsLayerBoundary, {
     },
     {
       name: 'Layer 0 statically importing a barrel is a violation',
-      code: "import { logError } from './logger.js';",
+      code: "import { encrypt } from './crypto/index.js';",
       filename: LAYER0_FILE,
       errors: [{ messageId: 'layer0ForbiddenImport' }],
     },
