@@ -23,6 +23,43 @@ export function getFocusableElements(container: HTMLElement): HTMLElement[] {
 }
 
 /**
+ * Shared Tab-cycle + Escape handling for focus traps.
+ *
+ * The caller owns its focusable set: `getFocusables` returns the current list,
+ * so each component keeps its own selector and disabled-element policy
+ * (focusTrap passes a list captured at trap() time; confirmDialog re-queries
+ * per keydown). Escape is routed to `onEscape` when provided; Tab wraps focus
+ * from last to first (and first to last with Shift). Does nothing for other keys.
+ */
+export function handleFocusCycle(
+  event: KeyboardEvent,
+  getFocusables: () => HTMLElement[],
+  onEscape?: () => void,
+): void {
+  if (event.key === 'Escape') {
+    onEscape?.();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+
+  const focusables = getFocusables();
+  if (focusables.length === 0) return;
+
+  const first = focusables[0]!;
+  const last = focusables[focusables.length - 1]!;
+
+  if (event.shiftKey) {
+    if (document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  } else if (document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+/**
  * コンテナ内の最初のフォーカス可能要素を返す（非表示要素は除外）。
  * タブパネル切り替え時など、フォーカストラップ（Tab循環・Escキー処理）までは
  * 不要だが「最初の要素にフォーカスを移す」処理だけが必要な場面で使う。
@@ -100,23 +137,7 @@ class FocusTrapManager {
 
     // キーボードハンドラ
     const keydownHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && closeCallback) {
-        closeCallback();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-
-      if (e.shiftKey) {
-        if (document.activeElement === firstFocusable) {
-          e.preventDefault();
-          lastFocusable.focus();
-        }
-      } else {
-        if (document.activeElement === lastFocusable) {
-          e.preventDefault();
-          firstFocusable.focus();
-        }
-      }
+      handleFocusCycle(e, () => focusableElements, closeCallback);
     };
 
     modalElement.addEventListener('keydown', keydownHandler);

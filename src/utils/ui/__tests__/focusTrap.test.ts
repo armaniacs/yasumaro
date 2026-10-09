@@ -11,7 +11,8 @@ import {
     FocusTrapManager,
     focusTrapManager,
     trapFocus,
-    releaseFocusTrap
+    releaseFocusTrap,
+    getFocusableElements
 } from '../focusTrap.js';
 
 describe('focusTrap', () => {
@@ -195,6 +196,28 @@ describe('focusTrap', () => {
         });
     });
 });
+
+    describe('disabled element handling (pin)', () => {
+        // focusTrap keeps disabled controls in its focusable set. confirmDialog
+        // excludes them (see confirmDialog.test.ts "excludes disabled elements").
+        // This pin protects that documented divergence across the shared helper.
+        test('keeps disabled controls in the focusable set', () => {
+            document.body.innerHTML = `
+                <div id="modal">
+                    <button id="disabled1" disabled>Disabled</button>
+                    <button id="enabled1">Enabled</button>
+                </div>
+            `;
+            const modal = document.getElementById('modal') as HTMLElement;
+            const disabled = document.getElementById('disabled1') as HTMLElement;
+            const enabled = document.getElementById('enabled1') as HTMLElement;
+
+            const focusable = getFocusableElements(modal);
+
+            expect(focusable).toContain(enabled);
+            expect(focusable).toContain(disabled);
+        });
+    });
 
     describe('focusTrapManager シングルトン', () => {
         test('is a FocusTrapManager instance', () => {

@@ -10,6 +10,7 @@
  */
 
 import { getMessageOr } from '../i18n.js';
+import { handleFocusCycle } from './focusTrap.js';
 
 export interface ConfirmDialogOptions {
   /** Optional — when omitted the dialog renders the message only. */
@@ -35,24 +36,6 @@ const FOCUSABLE_SELECTOR = [
   'textarea:not([disabled])',
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
-
-function trapFocus(event: KeyboardEvent, dialog: HTMLElement): void {
-  if (event.key !== 'Tab') return;
-
-  const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-  if (focusable.length === 0) return;
-
-  const first = focusable[0]!;
-  const last = focusable[focusable.length - 1]!;
-
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
 
 interface ButtonSpec {
   label: string;
@@ -114,12 +97,14 @@ function openModalDialog(options: {
   overlay.append(dialog);
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      cleanup(false);
-      return;
-    }
-    trapFocus(event, dialog);
+    handleFocusCycle(
+      event,
+      () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)),
+      () => {
+        event.preventDefault();
+        cleanup(false);
+      },
+    );
   }
 
   function cleanup(confirmed: boolean): void {
