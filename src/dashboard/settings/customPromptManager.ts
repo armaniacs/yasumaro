@@ -59,6 +59,93 @@ export function asPromptProvider(value: unknown): CustomPrompt['provider'] {
         : 'all';
 }
 
+/** Ja/En UI locale detection, consolidated from the four inline copies. */
+export function getUiLocale(): string {
+    return navigator.language.startsWith('ja') ? 'ja' : 'en';
+}
+
+export interface PromptItemRowConfig {
+    /** Base indent width in spaces; every indentation level is a multiple of it. */
+    indentUnit: number;
+    /** Row identifier attribute name, e.g. 'data-prompt-id'. */
+    idAttribute: string;
+    /** Text before the action name in button ids, e.g. 'markdown-template-'. */
+    buttonIdPrefix: string;
+    /** Text after the action name in button ids, e.g. '-prompt'. */
+    buttonIdSuffix: string;
+    /** Row id; written into the id attribute and every button id. */
+    id: string;
+    /** Raw display name; escaped by the builder. */
+    displayName: string;
+    /** Provider label text. Omitted (no provider span) when undefined. */
+    providerLabel?: string | undefined;
+    isActive: boolean;
+    badgeI18nKey: string;
+    badgeText: string;
+    labels: { activate: string; duplicate: string; edit: string; delete: string };
+    /** Render an Edit/Delete pair after the Duplicate button. */
+    showEditDelete: boolean;
+    /** Indent level of the Edit/Delete buttons (default: same as the other actions). */
+    editDeleteLevel?: number | undefined;
+    /** Emit a blank indent-only line at this level before the Edit/Delete pair. */
+    editDeleteBlankBeforeLevel?: number | undefined;
+    /** Emit a blank indent-only line at this level after the last action. */
+    actionsBlankAfterLevel?: number | undefined;
+}
+
+/**
+ * Single `.prompt-item` row builder. Keeps the row skeleton (header / name /
+ * provider / badge / actions) in one place; the per-row differences arrive as
+ * config. Generated HTML is byte-identical to the four inline builders it
+ * replaces, so escapeHtml positions, data-i18n attributes, badge conditions
+ * and class names are unchanged.
+ */
+export function buildPromptItemRow(cfg: PromptItemRowConfig): string {
+    const indent = (level: number): string => ' '.repeat(cfg.indentUnit * level);
+    const button = (action: string, className: string, label: string): string =>
+        `<button id="${cfg.buttonIdPrefix}${action}${cfg.buttonIdSuffix}-${cfg.id}" class="btn-sm ${className}" data-i18n="${action}">${label}</button>`;
+    const badge = cfg.isActive
+        ? `<span class="badge badge-active" data-i18n="${cfg.badgeI18nKey}">${cfg.badgeText}</span>`
+        : '';
+    const providerLine = cfg.providerLabel === undefined
+        ? ''
+        : `${indent(4)}<span class="prompt-provider">(${cfg.providerLabel})</span>\n`;
+
+    const actions: string[] = [];
+    actions.push(`${indent(4)}${cfg.isActive ? '' : button('activate', 'btn-activate', cfg.labels.activate)}\n`);
+    actions.push(`${indent(4)}${button('duplicate', 'btn-duplicate', cfg.labels.duplicate)}\n`);
+    if (cfg.showEditDelete) {
+        if (cfg.editDeleteBlankBeforeLevel !== undefined) {
+            actions.push(`${indent(cfg.editDeleteBlankBeforeLevel)}\n`);
+        }
+        const level = cfg.editDeleteLevel ?? 4;
+        actions.push(`${indent(level)}${button('edit', 'btn-edit', cfg.labels.edit)}\n`);
+        actions.push(`${indent(level)}${button('delete', 'btn-delete', cfg.labels.delete)}\n`);
+    }
+    if (cfg.actionsBlankAfterLevel !== undefined) {
+        actions.push(`${indent(cfg.actionsBlankAfterLevel)}\n`);
+    }
+
+    return `${indent(0)}
+${indent(2)}<div class="prompt-item ${cfg.isActive ? 'active' : ''}" ${cfg.idAttribute}="${cfg.id}">
+${indent(3)}<div class="prompt-item-header">
+${indent(4)}<span class="prompt-name">${escapeHtml(cfg.displayName)}</span>
+${providerLine}${indent(4)}${badge}
+${indent(3)}</div>
+${indent(3)}<div class="prompt-item-actions">
+${actions.join('')}${indent(3)}</div>
+${indent(2)}</div>
+${indent(1)}`;
+}
+
+/** Action button labels shared by the three prompt rows. */
+const PROMPT_ROW_LABELS = {
+    activate: '有効化',
+    duplicate: '複製',
+    edit: '編集',
+    delete: '削除',
+} as const;
+
 interface CustomPromptDom {
     promptList: HTMLElement | null;
     noPromptsMessage: HTMLElement | null;
@@ -125,7 +212,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         if (!promptList || !noPromptsMessage || !currentSettings) return;
 
         const prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
-        const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
+        const locale = getUiLocale();
 
         // Always hide "no prompts" message since default is always shown
         noPromptsMessage.style.display = 'none';
@@ -196,23 +283,20 @@ export function createCustomPromptManager(): CustomPromptManager {
         const displayName = getPromptDisplayName(preset, locale);
         const presetId = `${PROMPT_ID.PRESET_PREFIX}${preset.id}`;
         const isActive = activePromptId === presetId;
-        const activeBadge = isActive
-            ? `<span class="badge badge-active" data-i18n="activePrompt">有効</span>`
-            : '';
-
-        return `
-        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="${presetId}">
-            <div class="prompt-item-header">
-                <span class="prompt-name">${escapeHtml(displayName)}</span>
-                <span class="prompt-provider">(${getMessageOr('promptProviderAll', 'All Providers')})</span>
-                ${activeBadge}
-            </div>
-            <div class="prompt-item-actions">
-                ${!isActive ? `<button id="activate-prompt-${presetId}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
-                <button id="duplicate-prompt-${presetId}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
-            </div>
-        </div>
-    `;
+        return buildPromptItemRow({
+            indentUnit: 4,
+            idAttribute: 'data-prompt-id',
+            buttonIdPrefix: '',
+            buttonIdSuffix: '-prompt',
+            id: presetId,
+            displayName,
+            providerLabel: getMessageOr('promptProviderAll', 'All Providers'),
+            isActive,
+            badgeI18nKey: 'activePrompt',
+            badgeText: '有効',
+            labels: PROMPT_ROW_LABELS,
+            showEditDelete: false,
+        });
     }
 
     /**
@@ -221,26 +305,23 @@ export function createCustomPromptManager(): CustomPromptManager {
      */
     function createDefaultPromptItem(): string {
         const isActive = isDefaultActive();
-        const activeBadge = isActive
-            ? `<span class="badge badge-active" data-i18n="activePrompt">Active</span>`
-            : '';
-        const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
+        const locale = getUiLocale();
         const defaultPreset = getPresetPrompt('default');
         const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessageOr('defaultPrompt', 'Default'));
-
-        return `
-        <div class="prompt-item ${isActive ? 'active' : ''}" data-prompt-id="${PROMPT_ID.DEFAULT}">
-            <div class="prompt-item-header">
-                <span class="prompt-name">${escapeHtml(displayName)}</span>
-                <span class="prompt-provider">(${getMessageOr('promptProviderAll', 'All Providers')})</span>
-                ${activeBadge}
-            </div>
-            <div class="prompt-item-actions">
-                ${!isActive ? `<button id="activate-prompt-${PROMPT_ID.DEFAULT}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
-                <button id="duplicate-prompt-${PROMPT_ID.DEFAULT}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
-            </div>
-        </div>
-    `;
+        return buildPromptItemRow({
+            indentUnit: 4,
+            idAttribute: 'data-prompt-id',
+            buttonIdPrefix: '',
+            buttonIdSuffix: '-prompt',
+            id: PROMPT_ID.DEFAULT,
+            displayName,
+            providerLabel: getMessageOr('promptProviderAll', 'All Providers'),
+            isActive,
+            badgeI18nKey: 'activePrompt',
+            badgeText: 'Active',
+            labels: PROMPT_ROW_LABELS,
+            showEditDelete: false,
+        });
     }
 
     /**
@@ -249,26 +330,21 @@ export function createCustomPromptManager(): CustomPromptManager {
      * @returns {string} HTML string
      */
     function createPromptListItem(prompt: CustomPrompt): string {
-        const providerLabel = getProviderLabel(prompt.provider);
-        const activeBadge = prompt.isActive
-            ? `<span class="badge badge-active" data-i18n="activePrompt">Active</span>`
-            : '';
-
-        return `
-        <div class="prompt-item ${prompt.isActive ? 'active' : ''}" data-prompt-id="${prompt.id}">
-            <div class="prompt-item-header">
-                <span class="prompt-name">${escapeHtml(prompt.name)}</span>
-                <span class="prompt-provider">(${providerLabel})</span>
-                ${activeBadge}
-            </div>
-            <div class="prompt-item-actions">
-                ${!prompt.isActive ? `<button id="activate-prompt-${prompt.id}" class="btn-sm btn-activate" data-i18n="activate">有効化</button>` : ''}
-                <button id="duplicate-prompt-${prompt.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">複製</button>
-                <button id="edit-prompt-${prompt.id}" class="btn-sm btn-edit" data-i18n="edit">編集</button>
-                <button id="delete-prompt-${prompt.id}" class="btn-sm btn-delete" data-i18n="delete">削除</button>
-            </div>
-        </div>
-    `;
+        return buildPromptItemRow({
+            indentUnit: 4,
+            idAttribute: 'data-prompt-id',
+            buttonIdPrefix: '',
+            buttonIdSuffix: '-prompt',
+            id: prompt.id,
+            displayName: prompt.name,
+            providerLabel: getProviderLabel(prompt.provider),
+            isActive: prompt.isActive,
+            badgeI18nKey: 'activePrompt',
+            badgeText: 'Active',
+            labels: PROMPT_ROW_LABELS,
+            showEditDelete: true,
+            editDeleteLevel: 4,
+        });
     }
 
     /**
@@ -447,7 +523,7 @@ export function createCustomPromptManager(): CustomPromptManager {
 
             // Upsert preset entry
             const existing = prompts.findIndex(p => p.id === promptId);
-            const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
+            const locale = getUiLocale();
             const name = getPromptDisplayName(preset, locale);
             const now = Date.now();
             if (existing >= 0) {
@@ -495,7 +571,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         let provider = 'all';
         let systemPrompt = '';
         let promptText = '';
-        const locale = navigator.language.startsWith('ja') ? 'ja' : 'en';
+        const locale = getUiLocale();
 
         if (promptId === PROMPT_ID.DEFAULT) {
             // Duplicate default prompt
