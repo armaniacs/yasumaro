@@ -67,21 +67,11 @@ vi.mock('../settings/fieldValidation.js', () => ({
   ErrorPair: class {},
 }));
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage } = await import('../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => key);
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-  key: string,
-  subs: Record<string, string | number>,
-  fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-  return {
-  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
-}; });
+  return mockGetMessage(getMessage);
+});
 
 vi.mock('../utils/confirmDialog.js', () => ({
   showConfirmDialog: vi.fn().mockResolvedValue(true),
