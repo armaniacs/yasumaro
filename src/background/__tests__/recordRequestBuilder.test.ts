@@ -16,7 +16,7 @@ describe('buildRecordRequest (PBI 2026-09-12-04)', () => {
     });
     expect(buildRecordRequest('save', base)).toEqual({
       title: 'T', url: 'https://example.com', content: 'c',
-      skipDuplicateCheck: true, alreadyProcessed: true, recordType: 'manual',
+      skipDuplicateCheck: true, recordType: 'manual',
     });
     expect(buildRecordRequest('offline-retry', base)).toEqual({
       title: 'T', url: 'https://example.com', content: 'c',
