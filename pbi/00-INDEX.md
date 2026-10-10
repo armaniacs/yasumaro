@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-10 Checking Team ラウンド（checking-team-1010） — 🔶 7件完了・アーカイブ済み / ⬜ 3件未着手 🔧非機能追加
+### 2026-10-10 Checking Team ラウンド（checking-team-1010） — 🔶 8件完了・アーカイブ済み / ⬜ 2件未着手 🔧非機能追加
 
 Checking Team skill（22観点・3 Wave）によるブランチ `1007z` vs `main` の差分レビュー（57 commits / 199 files / うちコード 137 files）。実行済み 17 観点の平均 **86/100（A）**、High 3 / Medium 15 / Low 6。High 3 件と Medium の主要部分を 10 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-10）。報告書は [dev-docs/archived/plans/2026-10-10-2320-review-1007z.md](../dev-docs/archived/plans/2026-10-10-2320-review-1007z.md)（live 台帳は [2026-10-11-00-backlog-checking-team-1010.md](2026-10-11-00-backlog-checking-team-1010.md)）。
 
@@ -30,10 +30,10 @@ High 3 件: (1) WASM チャンク境界クランプで非ASCII本文の継ぎ目
 | ✅ 06 | [2026-10-11-06-docs-release-notes-and-guides.md](../dev-docs/archived/pbi/2026-10-11-06-docs-release-notes-and-guides.md) | docs | 6.0 | 0.5 | ✅ 完了（`a088ec4f`）。CHANGELOG 6.9.40 の PII 修正記載 + PII ガイド日英更新 + sandbox バンドル再生成 + AGENTS.md 正典 |
 | ✅ 07 | [2026-10-11-07-fix-status-type-and-focus-trap.md](../dev-docs/archived/pbi/2026-10-11-07-fix-status-type-and-focus-trap.md) | fix | 5.3 | 1.5 | ✅ 完了（`541fead2`）。StatusType に updating 追加 + focusTrap の disabled 除外と再取得 + confirmDialog 初期フォーカス |
 | ⬜ 08 | [2026-10-11-08-fix-e2e-probe-exposure.md](2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3.6 | 1.5 | ページ側 `data-ow-e2e-test` でユーザー設定と記録状態がページ DOM に露出する経路を閉じる |
-| ⬜ 09 | [2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md](2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3.0 | 1.0 | wasm 成果物のサイズゲート + CI paths に `public/wasm/**`。**01 の後に実施**（01 の再ビルドで strip 相当は既に解消: 100,671 → 56,784 B） |
+| ✅ 09 | [2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md](../dev-docs/archived/pbi/2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3.0 | 1.0 | ✅ 完了（`beb98820`）。`maxBytes` 予算ゲート + CI の `public/wasm/**` フィルタ追加。肥大の原因は wasm-opt 未適用で、再ビルドにより 100,671 → 56,784 B |
 | ⬜ 10 | [2026-10-11-10-fix-archive-wire-validation-ssot.md](2026-10-11-10-fix-archive-wire-validation-ssot.md) | fix | 0.8 | 2.0 | archive wire 検証規則の二重定義解消 + 上限超過メッセージ修正 |
 
-実行順: W1（01/02/03/04 並列・✅ 完了）→ W2（05/06/07/08 並列・05/06/07 完了）→ W3（09/10）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C7（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ・PII 長トークン bench フィクスチャ）はトリガー管理。完了 7 件の検証はいずれも `npm run validate` exit 0（1055 files / 15933 tests passed）。
+実行順: W1（01/02/03/04 並列・✅ 完了）→ W2（05/06/07/08 並列・05/06/07 完了）→ W3（09/10・09 完了）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C7（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ・PII 長トークン bench フィクスチャ）はトリガー管理。完了 8 件の検証はいずれも `npm run validate` exit 0（1055 files / 15933 tests passed）。
 
 ### 2026-10-10 arch-delivery-loop ラウンド（archloop-1010） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
 

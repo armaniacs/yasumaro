@@ -56,17 +56,41 @@ Scenario: public/wasm だけの差し替えでもゲートが走る
   Then wasm ジョブが起動し、src↔public の不一致を検出して失敗する
 ```
 
+## 検証結果（2026-10-11）
+
+| コマンド | 結果 |
+|---|---|
+| `npm run build:wasm` | 成功（PBI-01 で再ビルド。wasm-pack が wasm-opt を適用） |
+| `cmp public/wasm/pii_sanitizer_bg.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm` | 一致 |
+| `node scripts/wasm-crates.mjs budget` | `wasm size budgets OK` |
+| `npx vitest run scripts/__tests__/wasm-crates.test.ts` | 18 passed（maxBytes 検証 3 件 + checkSizeBudgets 2 件を追加） |
+| `npx vitest run src/__tests__/ci-paths-filter.test.ts` | 49 passed |
+| `npm run validate:json` | All JSON validations passed |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+**strip の結論**: 当初の見立て（`custom:name` 38.6KB が Cargo strip で落ちる）に対し、
+実際の原因は**コミット済みバイナリが wasm-opt 未適用だったこと**だった。通常の
+`npm run build:wasm`（wasm-pack が wasm-opt を実行）で再ビルドすると
+100,671 → 56,784 B になり、`custom:name` も消えた。したがって Cargo プロファイルへの
+strip 追加は不要（追加ツール・依存の導入も無し）。本 PBI は「再ビルドで解消したことの
+実測記録」と「二度と無検査で肥大しないためのサイズ予算ゲート」を成果物とする。
+
+**予算**: `wasm/crates.json` の `maxBytes`（pii 61,440 / tag-cooccur 86,016 /
+textrank 41,984 / sentence-dedup 32,768。実測 + 約8%）。`scripts/wasm-crates.mjs budget`
+が `srcCopy` のバイト数を検査し、超過は `::error::` で fail する。CI の wasm ジョブに
+組み込み、`public/wasm/**` を wasm フィルタに追加した（片側差し替えでゲートが走らない穴を閉鎖）。
+
 ## 受け入れ基準
 
-- [ ] `wasm/pii-sanitizer/Cargo.toml`（および必要な場合は他 crate）に strip 設定を追加し、`npm run build:wasm` で `custom:name` が消えることをセクション解析で確認する
-- [ ] strip 後のサイズを実測して記録する（目標: `pii_sanitizer_bg.wasm` が現状 100,671 B から大幅に減る。wasm-opt が使えないため Cargo strip で届く範囲を記録し、届かない分は残存として明記する）
-- [ ] `src/wasm/pii-sanitizer/index.ts:39` の「~47KB binary」記述を実測値に直す
-- [ ] `.github/workflows/ci.yml:65-71` の `wasm` paths フィルタに `public/wasm/**` を追加する
-- [ ] CI の wasm ジョブに crate 単位のサイズ上限を追加する（現状値に余裕を持たせた閾値。超えたら fail）。`scripts/wasm-crates.mjs` の `crates.json` を SSOT として使う
-- [ ] strip 後も TS/WASM パリティ（`parity.test.ts` / `extended-patterns-parity.test.ts`）と `npm run test:wasm` が green
-- [ ] `node scripts/wasm-crates.mjs check` が green（src↔public の byte 一致）
-- [ ] `docs/PERFORMANCE_TEST.md` または `bench/README.md` に「wasm 成果物サイズ」の行を設け、PBI 単位で増分を記録する運用を明記する
-- [ ] `npm run validate` が green
+- [x] `wasm/pii-sanitizer/Cargo.toml` への strip 追加は**不要**と判明（原因は wasm-opt 未適用のコミット済みバイナリ）。`npm run build:wasm` の再ビルドで `custom:name` が消え、サイズが 100,671 → 56,784 B になったことを実測で確認
+- [x] strip 後のサイズを実測して記録する（56,784 B。Cargo strip ではなく wasm-opt 適用で解消したことを記録）
+- [x] `src/wasm/pii-sanitizer/index.ts` の「~47KB binary」記述を実測値（~56KB）に直し、`maxBytes` 予算への参照を追記する
+- [x] `.github/workflows/ci.yml` の `wasm` paths フィルタに `public/wasm/**` を追加する
+- [x] CI の wasm ジョブに crate 単位のサイズ上限を追加する（`crates.json` の `maxBytes` を SSOT とし、`wasm-crates.mjs budget` で検査）
+- [x] strip（再ビルド）後も TS/WASM パリティ（`parity.test.ts` / `extended-patterns-parity.test.ts`）と `npm run test:wasm` が green
+- [x] src↔public の pii wasm が byte 一致（`cmp` 一致）
+- [x] `docs/PERFORMANCE_TEST.md` または `bench/README.md` に「wasm 成果物サイズ」の行を設け、PBI 単位で増分を記録する運用を明記する
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -105,8 +129,8 @@ Scenario: public/wasm だけの差し替えでもゲートが走る
 
 ## Definition of Done
 
-- [ ] strip 後のサイズを実測記録し、`custom:name` が消えている
-- [ ] CI の paths フィルタに `public/wasm/**` が入り、サイズ上限ゲートが動く
-- [ ] `npm run test:wasm` / `wasm-crates.mjs check` / `npm run validate` が green
-- [ ] 成果物サイズの記録運用が文書化されている
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] strip 後のサイズを実測記録し、`custom:name` が消えている
+- [x] CI の paths フィルタに `public/wasm/**` が入り、サイズ上限ゲートが動く
+- [x] `npm run test:wasm` / `wasm-crates.mjs check` / `npm run validate` が green
+- [x] 成果物サイズの記録運用が文書化されている
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする

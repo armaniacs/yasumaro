@@ -94,7 +94,7 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 | 06 | docs-release-notes-and-guides | ✅ 完了・アーカイブ済み（`a088ec4f`） |
 | 07 | status-type-and-focus-trap | ✅ 完了・アーカイブ済み（`541fead2`） |
 | 08 | e2e-probe-exposure | 未着手 |
-| 09 | wasm-artifact-size-and-ci-gate | 未着手（01 の後。01 の再ビルドで strip 相当は解消: 100,671 → 56,784 B） |
+| 09 | wasm-artifact-size-and-ci-gate | ✅ 完了・アーカイブ済み（`beb98820`） |
 | 10 | archive-wire-validation-ssot | 未着手 |
 
 ### 完了分の検証（2026-10-11）
