@@ -5,7 +5,6 @@ import { registerManualRecordContextMenu as _registerManualRecordContextMenu, cr
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError } from '../utils/logger/api.js';
-import { setReviewSummaryGeneratorRef, setSessionTimeoutRefs } from './alarmRegistryRefs.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { createCacheInitializedFlag } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
@@ -64,15 +63,6 @@ export function init(): void {
     // schedules + conditional install hooks + uniform failure policy live in
     // alarmRegistry.ts's table. The session-timeout alarm is armed here and
     // nowhere else; arming it in two places would clear+create it twice.
-    // WHY `void` here is not just style: the check_session_timeout install
-    // hook calls sessionTimeoutInstallRef, a silent no-op until
-    // setSessionTimeoutRefs() runs at module level below. Nothing synchronizes
-    // installAll() with that injection — the guarantee is module-eval order
-    // (the entrypoint imports this module, which injects the refs, before
-    // calling init()) plus the loop's own awaits. If the ref injection ever
-    // moves to a lazy call site or the import/init order flips, the hook can
-    // execute un-injected and the session-timeout alarm is never armed
-    // (no error, no log).
     void alarmRegistry.installAll();
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
@@ -120,10 +110,8 @@ const {
     manualContentFetcher,
     sessionStore,
     headerDetector,
-    reviewSummaryGenerator,
     messageRouter,
     autoSavedBadgeTabs,
-    sessionAlarmService,
     alarmRegistry,
     deferredMigrationRunner,
 } = services;
@@ -213,20 +201,6 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({ handleManualRecord: handleManualRecordForContextMenu });
 
-// alarmRegistry is resolved via the manifest (deps include sessionAlarmService
-// and settingsReader). The refs (reviewSummaryGeneratorRef etc.) must be
-// injected after resolution so the registry's install/run hooks can reach the
-// generator. They are also the only wiring for the session-timeout job: the
-// registry's run hook is the single dispatch path for check_session_timeout.
-// These injections run at module evaluation, before the entrypoint's init()
-// call reaches `void alarmRegistry.installAll()` — that order is the only
-// thing keeping the check_session_timeout install hook from executing while
-// sessionTimeoutInstallRef is still unset (a silent no-op, no alarm, no log).
-setReviewSummaryGeneratorRef(reviewSummaryGenerator);
-setSessionTimeoutRefs(
-  async () => { await sessionAlarmService.startTimeoutChecker(); },
-  async () => { await sessionAlarmService.checkTimeout(); },
-);
 const handleAlarm = alarmRegistry.handleAlarm;
 
 // Re-export createMessageHandler for backward compatibility with tests

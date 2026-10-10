@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
+import { readFile } from 'node:fs/promises';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 const mockSettingsGetAll = vi.hoisted(() => vi.fn().mockResolvedValue({}));
@@ -1697,6 +1698,16 @@ describe('service-worker handlers', () => {
                 'yasumaro-offline-network-retry',
                 { periodInMinutes: 5 }
             );
+        });
+
+        it('does not reference the removed alarmRegistryRefs module (wiring is container deps)', async () => {
+            // Structural pin: alarm wiring is container-resolved deps, so a
+            // module-level ref import in the composition root must not
+            // reappear. Importing the deleted module would also fail this
+            // file outright; this keeps the pin visible even if someone
+            // recreates the module.
+            const src = await readFile(new URL('../service-worker.ts', import.meta.url), 'utf8');
+            expect(src).not.toContain('alarmRegistryRefs');
         });
     });
 
