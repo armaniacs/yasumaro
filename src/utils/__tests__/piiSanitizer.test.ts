@@ -806,6 +806,16 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems.some(item => item.type === 'phoneJp')).toBe(true);
     });
 
+    test('masks an email straddling the sampling window boundary in a long token', async () => {
+      // 【テスト目的】: サンプリング置換文字 `#` を跨ぐ位置のPIIも検出・マスキング
+      // されることを確認（PBI-16）。この配置では旧実装が未検出になる。
+      const input = 'a'.repeat(190) + 'user@example.com' + 'b'.repeat(200);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('user@example.com');
+      expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
+    });
+
     test('processes 64KB input within the timeout', async () => {
       // 【テスト目的】: 最大入力サイズ（64KB）の空白なしテキストが
       // タイムアウト内で完了することを確認（PBI-06、ReDoS対策の回帰防止）
