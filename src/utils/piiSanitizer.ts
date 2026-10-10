@@ -21,52 +21,16 @@ const DEFAULT_TIMEOUT = 5000; // 5秒
 const MAX_MATCH_COUNT = 1000; // マッチ件数制限（ReDoS対策）
 const TIMEOUT_CHECK_INTERVAL = 5; // タイムアウトチェック間隔（5マッチごと）
 
-// 【ReDoS対策】どのPIIパターンの実体も100文字を超えることはないため、区切り文字
-// （空白等）を含まない塊が100文字を大幅に超えて続く場合、その中間部分は
-// PIIパターンの大半がマッチしない区間として扱える。ただし中間にもPIIが含まれうる
-// （例: 長いURLや連続文字列の中央に埋め込まれた "user@example.com"）ため、
-// 中間を完全に無効化せず、一定間隔で元の文字を残す「サンプリング」を行う。
-// 残した文字の間は `#`（どのPIIパターンの文字クラスにも含まれない文字）で
-// パディングし、正規表現エンジンの O(n^2) 的な走査（開始位置ごとの再試行）を
-// サンプリングウィンドウ単位に限定する。
-// 出力長は入力長と完全に一致するため、scanText 上のマッチ位置（index）はそのまま
-// text 上の位置として使える（置換処理でインデックスがずれない）。
-// 検出自体は /\S+/（バックトラッキングしない単純な貪欲文字クラス）で行い、
-// 閾値判定・中間置換はコード側で行うことで、検出用正規表現自体の複雑化を避ける。
-const TOKEN_EDGE_KEEP_LENGTH = 100;
-const NON_WHITESPACE_RUN = /\S+/g;
-
-function neutralizeLongNonWhitespaceRuns(text: string): string {
-    return text.replace(NON_WHITESPACE_RUN, (token) => {
-        const threshold = TOKEN_EDGE_KEEP_LENGTH * 2;
-        if (token.length <= threshold) return token;
-        const head = token.slice(0, TOKEN_EDGE_KEEP_LENGTH);
-        const tail = token.slice(-TOKEN_EDGE_KEEP_LENGTH);
-        const middle = token.slice(TOKEN_EDGE_KEEP_LENGTH, -TOKEN_EDGE_KEEP_LENGTH);
-        return head + sampleMiddleForScan(middle) + tail;
-    });
-}
-
-/**
- * 長トークンの中間部分をスキャン可能な状態に保つ。
- * TOKEN_EDGE_KEEP_LENGTH 文字ごとのウィンドウで元の文字を残し、各ウィンドウの
- * 末尾1文字を `#` に置換することでウィンドウ間のバックトラッキングを遮断する。
- * 戻り値の長さは middle と完全に一致する（PIIパターンの実体は100文字以下なので
- * ウィンドウ内のPIIは検出可能）。
- */
-function sampleMiddleForScan(middle: string): string {
-    const sampleInterval = TOKEN_EDGE_KEEP_LENGTH;
-    let sampled = '';
-    for (let i = 0; i < middle.length; i += sampleInterval) {
-        const chunk = middle.slice(i, i + sampleInterval);
-        if (chunk.length === sampleInterval) {
-            sampled += chunk.slice(0, -1) + '#';
-        } else {
-            sampled += chunk;
-        }
-    }
-    return sampled;
-}
+// 重なり付きチャンク走査の定数。
+// 全チャンクは原文の slice であり置換文字を挿入しないため、検出位置は
+// チャンク先頭オフセットの加算で原文位置に1対1で写像できる。
+// OVERLAP=200 の根拠: 実体長200字未満のPIIは必ずいずれかのチャンクに
+// 完全包含される（bounded パターンの最長はFR/IT IBAN系の23字、emailは
+// 200字までカバー。emailの理論最大254字のうち200字超の極端例は残存
+// リスクとして受容する）。200字超の bounded パターンを追加する際は
+// OVERLAP を同時に見直すこと。
+const SCAN_CHUNK_SIZE = 400;
+const SCAN_CHUNK_OVERLAP = 200;
 
 interface PiiPattern {
     type: string;
@@ -280,12 +244,6 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         const _maskedItems: MaskedItem[] = [];
         const replacements: Replacement[] = [];
 
-        // 【ReDoS対策】区切り文字（空白等）を含まない異常に長い塊（100文字超）を
-        // 同じ長さのプレースホルダー文字に置換してからスキャンする。
-        // PIIパターンはいずれも100文字を超える連続した非空白文字にマッチしないため、
-        // 検出結果には影響しない。文字数を変えずに置換するためインデックスはずれない。
-        const scanText = neutralizeLongNonWhitespaceRuns(text);
-
         // 【パフォーマンス改善】: 全パターンを1つの正規表現に統合して1パスでスキャン
         // 同じタイプのパターンを統合して名前付きグループの重複を避ける
         const typeGroups: string[] = [];
@@ -298,29 +256,63 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 .map(p => `(?:${p.pattern.source})`);
             typeGroups.push(`(?<${type}>${patternsForType.join('|')})`);
         }
-        const combinedRegex = new RegExp(typeGroups.join('|'), 'g');
+        const combinedSource = typeGroups.join('|');
+        const combinedRegex = new RegExp(combinedSource, 'g');
+        const probeRegex = new RegExp(`(?:${combinedSource})`, 'y');
 
         let match: RegExpExecArray | null;
         let matchCount = 0;
-        while ((match = combinedRegex.exec(scanText)) !== null) {
-            matchCount++;
-            // 【ReDoS対策】タイムアウトチェックをより頻繁に実行（5マッチごと）
-            if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
-                throw new Error(`Operation timed out after ${timeout}ms`);
-            }
-            // 【ReDoS対策】マッチ件数制限を追加
-            if (matchCount > MAX_MATCH_COUNT) {
-                throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
-            }
+        const step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
+        for (let offset = 0; offset < text.length; offset += step) {
+            const chunk = text.slice(offset, offset + SCAN_CHUNK_SIZE);
+            combinedRegex.lastIndex = 0;
+            while ((match = combinedRegex.exec(chunk)) !== null) {
+                // 前チャンクと重なる領域 [0, OVERLAP) に完全収録されるマッチは
+                // 前チャンクで検出済みのため、カウント前にスキップする。
+                // 長さ200未満のPIIは前チャンクに完全包含される（OVERLAP前提）ため
+                // 検出漏れは生じない。これがないと重複検出が matchCount を浪費し
+                // MAX_MATCH_COUNT に誤到達する。
+                if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
+                    continue;
+                }
+                // チャンク先頭（ローカルindex 0）で長さOVERLAP以下のマッチは
+                // 前チャンクに完全包含されるため検出済みであり、カウント前に
+                // スキップする（エッジ断片ファントムの排除）。
+                if (offset > 0 && match.index === 0 && match[0].length <= SCAN_CHUNK_OVERLAP) {
+                    continue;
+                }
+                // 原文上の真のマッチ長をstickyプローブで確定させる。
+                // 真の長さが現マッチより長く200以下の場合、現マッチは
+                // 切断prefix/断片であり、完全形は別チャンクで数えられる
+                // ためここではスキップする（重複カウントの排除）。
+                // 真の長さが等しい場合は完全一致として数える。
+                // 真の長さが200超の場合は残存リスク枠として切断形を数える。
+                probeRegex.lastIndex = offset + match.index;
+                const fullProbe = probeRegex.exec(text);
+                if (fullProbe && fullProbe[0].length > match[0].length && fullProbe[0].length <= SCAN_CHUNK_OVERLAP) {
+                    continue;
+                }
+                // 原文上で何にもマッチしない開始位置は、チャンク端の
+                // `\b` 等が作った純粋なアーティファクトであり、真のPIIは
+                // その完全包含チャンクで数えられるためスキップする。
+                if (!fullProbe) {
+                    continue;
+                }
+                matchCount++;
+                // 【ReDoS対策】タイムアウトチェックをより頻繁に実行（5マッチごと）
+                if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
+                    throw new Error(`Operation timed out after ${timeout}ms`);
+                }
+                // 【ReDoS対策】マッチ件数制限を追加
+                if (matchCount > MAX_MATCH_COUNT) {
+                    throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
+                }
 
-            // マッチ自体はscanText（neutralizeLongNonWhitespaceRuns適用後）に対するもの。
-            // neutralizeLongNonWhitespaceRuns は出力長を入力長と完全に一致させるため
-            // （サンプリングウィンドウの長さを保ったまま `#` でパディング）、
-            // scanText 上の match.index / match[0].length は text 上の位置と1対1で一致する。
-            // また `#` はどのPIIパターンの文字クラスにも含まれないため、
-            // マッチは必ず元の文字列と同じ文字列を跨がない。よって実際の値は text から取得する。
-            const matchedValue = text.substring(match.index, match.index + match[0].length);
-            const startIndex = match.index;
+                // チャンクは原文の slice のため、チャンク内マッチ位置に
+                // チャンク先頭オフセットを加算すれば原文位置と1対1で一致する。
+                // 値は原文から取得する（従来の scanText 由来切り出しと同等）。
+                const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
+                const startIndex = offset + match.index;
 
             // どのグループがマッチしたか特定
             let matchedType = 'unknown';
@@ -345,6 +337,7 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 type: matchedType,
                 original: matchedValue
             });
+            }
         }
 
         // 念のため重複やオーバーラップを排除（1パスなら基本発生しないが、複雑なパターンの場合への備え）
