@@ -53,12 +53,11 @@ export async function readE2EProbeState(context: BrowserContext): Promise<E2EPro
 
 /** Wait until the probe published its initial state (content script init). */
 export async function waitForE2EProbeInit(context: BrowserContext, timeout = 10000): Promise<E2EProbeState> {
-  let state: E2EProbeState | null = null;
+  // Poll purely as a wait: its result cannot narrow the closure variable.
   await expect
-    .poll(async () => {
-      state = await readE2EProbeState(context);
-      return state;
-    }, { timeout, intervals: [200] })
+    .poll(async () => readE2EProbeState(context), { timeout, intervals: [200] })
     .not.toBeNull();
-  return state as unknown as E2EProbeState;
+  const state = await readE2EProbeState(context);
+  if (state === null) throw new Error('E2E probe state vanished after successful poll');
+  return state;
 }

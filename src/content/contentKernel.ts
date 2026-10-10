@@ -24,7 +24,7 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
-import { publishE2eTestState, isE2EProbeEnabled, type OWTestState } from './e2eTestState.js';
+import { publishE2eTestState, isE2EProbeEnabled, markE2eVisitReported, type OWTestState } from './e2eTestState.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.
@@ -223,6 +223,9 @@ export class ContentKernel {
             'contentKernel',
         );
 
+        // PBI 2026-10-11-14 (NN14): the window-global mutation lives in
+        // markE2eVisitReported (owned by e2eTestState.js) so strip builds
+        // keep no probe strings in this module.
         if (this.gating.isE2E) {
             const state: OWTestState = {
                 maxScrollPercentage: visitState.maxScrollPercentage,
@@ -238,9 +241,8 @@ export class ContentKernel {
         if (evaluation.reportable) {
             void logInfo(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`, { duration, maxScrollPercentage: visitState.maxScrollPercentage }, 'contentKernel');
             void this.reportValidVisit();
-            if (this.gating.isE2E && typeof window !== 'undefined' && window.__OW_TEST_STATE) {
-                window.__OW_TEST_STATE.isValidVisitReported = true;
-                publishE2eTestState(window.__OW_TEST_STATE);
+            if (this.gating.isE2E) {
+                markE2eVisitReported();
             }
             this.stopPeriodicCheck();
         }
@@ -283,13 +285,20 @@ export class ContentKernel {
     // -----------------------------------------------------------------------
 
     async init(): Promise<void> {
-        await this.loadSettings();
-
-        // Resolve the extension-side probe flag once before the gating caches
-        // it — only when the caller did not inject an explicit decision.
-        if (this.e2eSessionResolveNeeded) {
-            this.e2eSessionEnabled = await isE2EProbeEnabled();
-        }
+        // PBI 2026-10-11-12 (NN12): settings load and probe-flag resolve are
+        // independent — run them concurrently. loadSettings rejection still
+        // rejects init (Promise.all); the flag resolve is fail-safe inside
+        // isE2EProbeEnabled (never rejects), so error semantics are unchanged.
+        await Promise.all([
+            this.loadSettings(),
+            // Resolve the extension-side probe flag once before the gating caches
+            // it — only when the caller did not inject an explicit decision.
+            (async () => {
+                if (this.e2eSessionResolveNeeded) {
+                    this.e2eSessionEnabled = await isE2EProbeEnabled();
+                }
+            })(),
+        ]);
 
         // Build the owned gate/thresholds and resolve isE2ETest once — reused thereafter
         this.deadlineTimer.initialize();

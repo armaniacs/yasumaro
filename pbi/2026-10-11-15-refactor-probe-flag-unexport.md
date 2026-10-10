@@ -38,9 +38,9 @@ Scenario: 非 export 化しても壊れない
 
 ## 受け入れ基準
 
-- [ ] 外部参照ゼロを grep で確認する（NN14 実装後の状態で再確認すること）
-- [ ] `export` を外し、`npm run type-check`・`npm run lint`・対象テストが green
-- [ ] `npm run validate` が green
+- [x] 外部参照ゼロを grep で確認する（NN14 実装後の状態で再確認すること。→ NN14 最終形（mark 集約）により `src/content/e2eTestState.ts` 内部3箇所のみに確定。grep で外部ゼロを確認。取下げ条件は不発＝継続）
+- [x] `export` を外し、`npm run type-check`・`npm run lint`・対象テストが green（10件 green）
+- [x] `npm run validate` が green（1057 files / 15962 tests passed。最終フル検証で確認）
 
 ## テスト戦略
 
@@ -70,6 +70,11 @@ Scenario: 非 export 化しても壊れない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 autonomous-task-closer）
+
+- 外部参照ゼロを grep 確認（`src/content/e2eTestState.ts` 内部3箇所のみ。取下げ条件不発＝継続）
+- `e2eTestState.test.ts`＋契約テスト＝10件 green、`npx tsc --noEmit` exit 0、`npx eslint` exit 0

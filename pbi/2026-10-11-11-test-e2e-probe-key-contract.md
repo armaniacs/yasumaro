@@ -39,10 +39,10 @@ Scenario: 片方の文字列が変わる
 
 ## 受け入れ基準
 
-- [ ] `E2E_PROBE_ENABLE_KEY` / `E2E_PROBE_STATE_KEY` について、src 定義と fixture 定義の等価を pin するテストが存在する
-- [ ] 片方だけを変えた場合に red になることを確認する（実装時の手動確認で可、記録を残す）
-- [ ] `OWTestState` / `E2EProbeState` のフィールド集合の等価も同時に pin する（キー追加時の抜け防止。過剰ならキー2件のみに縮小可）
-- [ ] `npm run validate` が green
+- [x] `E2E_PROBE_ENABLE_KEY` / `E2E_PROBE_STATE_KEY` について、src 定義と fixture 定義の等価を pin するテストが存在する（`testDir/__tests__/e2eProbeContract.test.ts`、2件）
+- [x] 片方だけを変えた場合に red になることを確認する（実装時の手動確認で可、記録を残す。`owE2eProbeEnabled-REDCHECK` で enable 側1件のみ red になることを確認）
+- [x] `OWTestState` / `E2EProbeState` のフィールド集合の等価も同時に pin する（キー追加時の抜け防止。過剰ならキー2件のみに縮小可。→ 縮小を適用: 型は実行時消去のため比較不能。キー2件＋リテラル値 pin に限定した）
+- [x] `npm run validate` が green（1057 files / 15962 tests passed。最終フル検証で確認）
 
 ## テスト戦略
 
@@ -74,6 +74,13 @@ Scenario: 片方の文字列が変わる
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 autonomous-task-closer）
+
+- `npx vitest run testDir/__tests__/e2eProbeContract.test.ts` — 2 passed
+- Red 確認: fixture 側を一時変更で 1 failed / 1 passed（enable 側のみ red）→ revert 後 2 passed
+- `npx eslint testDir/__tests__/e2eProbeContract.test.ts` exit 0
+- 転記解消（fixture の src 直接 import）は見送り: E2E 実行時コードの変更で headed 検証不可のため。pin で閉じる判断を本節に記録する

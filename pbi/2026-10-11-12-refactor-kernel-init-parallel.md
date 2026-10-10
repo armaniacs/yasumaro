@@ -38,9 +38,9 @@ Scenario: どちらかが失敗しても初期化が壊れない
 
 ## 受け入れ基準
 
-- [ ] `loadSettings()` と `isE2EProbeEnabled()` が並列に走る（`Promise.all` 等）
-- [ ] フラグ on/off・session reject の既存テストが無変更で green（fail-safe 維持の証拠）
-- [ ] `npm run validate` が green
+- [x] `loadSettings()` と `isE2EProbeEnabled()` が並列に走る（`Promise.all` 等。`init()` 内を組替え）
+- [x] フラグ on/off・session reject の既存テストが無変更で green（fail-safe 維持の証拠。隔離3＋golden3＋extractor系187＝193件 green）
+- [x] `npm run validate` が green（1057 files / 15962 tests passed。最終フル検証で確認）
 
 ## テスト戦略
 
@@ -71,6 +71,11 @@ Scenario: どちらかが失敗しても初期化が壊れない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 autonomous-task-closer）
+
+- 隔離3＋golden3＋extractor系187＝193件 green（無変更・等価性の証拠）
+- `npx tsc --noEmit` exit 0、`npx eslint src/content/contentKernel.ts` exit 0

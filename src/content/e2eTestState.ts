@@ -21,7 +21,7 @@
 // suite runs against a plain `npm run build`. Unit tests (vitest) leave the
 // define undefined, which also keeps the probe enabled.
 declare const __OW_E2E_PROBE__: boolean | undefined;
-export const E2E_PROBE_COMPILED_IN: boolean =
+const E2E_PROBE_COMPILED_IN: boolean =
     typeof __OW_E2E_PROBE__ === 'undefined' || __OW_E2E_PROBE__ !== false;
 
 /** Session flag the harness (via the SW) sets to arm the probe. */
@@ -89,5 +89,19 @@ export function publishE2eTestState(state: OWTestState): void {
         void Promise.resolve(session.set({ [E2E_PROBE_STATE_KEY]: state })).catch(() => {});
     } catch {
         // Non-fatal — the window global still carries the state for unit tests.
+    }
+}
+
+/**
+ * Mark the latest published state as reported and republish it. Single owner
+ * of the window-global mutation so callers never touch __OW_TEST_STATE
+ * directly (keeps the probe's window route inside this module, which also
+ * lets OW_E2E_PROBE=0 builds eliminate every probe string).
+ */
+export function markE2eVisitReported(): void {
+    if (!E2E_PROBE_COMPILED_IN) return;
+    if (typeof window !== 'undefined' && window.__OW_TEST_STATE) {
+        window.__OW_TEST_STATE.isValidVisitReported = true;
+        publishE2eTestState(window.__OW_TEST_STATE);
     }
 }
