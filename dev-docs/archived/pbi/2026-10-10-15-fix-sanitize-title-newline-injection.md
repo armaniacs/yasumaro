@@ -67,6 +67,6 @@ Scenario: headingスタイルも割れない
 
 ## Definition of Done
 
-- [ ] 改行入りtitleが単一行化される（両style）
-- [ ] 再現テストがgreen
-- [ ] `npm run validate`がgreen
+- [x] 改行入りtitleが単一行化される（両style）
+- [x] 再現テストがgreen
+- [x] `npm run validate`がgreen
