@@ -90,7 +90,7 @@ function buildPanelDom(): HTMLElement {
       <input type="checkbox" id="extraction-guard-candidate-enabled">
       <input type="checkbox" id="extraction-guard-content-cleanse-enabled">
       <input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">
-      <input type="checkbox" id="popup-body-protection-enabled">${sliders}
+      ${sliders}
       <fieldset id="aiSummaryCleansingFieldset"></fieldset>
       <div id="aiSummaryCleansingSubGroup"></div>
       <button id="saveAiSummaryCleansingSettings"></button>
