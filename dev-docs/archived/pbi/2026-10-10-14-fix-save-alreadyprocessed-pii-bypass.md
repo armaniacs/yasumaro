@@ -71,7 +71,7 @@ Scenario: AI要約の有無は変わらない
 
 ## Definition of Done
 
-- [ ] saveポリシーから`alreadyProcessed`が消える
-- [ ] pinテスト2件が無変更でgreen
-- [ ] 再現テストがgreen
-- [ ] `npm run validate`がgreen
+- [x] saveポリシーから`alreadyProcessed`が消える
+- [x] pinテスト2件が無変更でgreen
+- [x] 再現テストがgreen
+- [x] `npm run validate`がgreen
