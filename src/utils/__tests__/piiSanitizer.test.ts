@@ -828,5 +828,16 @@ describe('piiSanitizer', () => {
       expect(result.error).toBeUndefined();
       expect(Date.now() - start).toBeLessThan(1000);
     });
+
+    test('masks PII centered exactly on a chunk step boundary', async () => {
+      // 【テスト目的】: チャンク境界（200文字刻み）を跨ぐPIIが重なりで拾われる
+      // ことを確認（PBI-16）。offset 195 開始のemailは chunk0 [0,400) と
+      // chunk1 [200,600) の両端に掛かるが、重なり200により chunk0 に完全包含される。
+      const input = 'c'.repeat(195) + 'user@example.com' + 'd'.repeat(220);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('user@example.com');
+      expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
+    });
   });
 });
