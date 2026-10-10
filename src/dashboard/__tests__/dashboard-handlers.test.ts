@@ -245,8 +245,22 @@ vi.mock('../../constants/appConstants.js', () => ({
 
 vi.mock('../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
-  const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) =>
-        key === 'connectionStatusLabel' && subs && typeof subs.label === 'string' ? `${subs.label}: ` : key);
+  const localMarkdownMessages: Record<string, string> = {
+    searching: 'Searching...',
+    localMarkdownExportEmptyRange: '指定期間に記録がありません。',
+    localMarkdownExportEmptyAll: 'エクスポートする記録がありません。',
+    localMarkdownExportSuccess: '{count}件の記録を{files}ファイルにエクスポートしました。',
+    localMarkdownExportFailed: 'エクスポートに失敗しました: {error}',
+  };
+  const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) => {
+    if (key === 'connectionStatusLabel' && subs && typeof subs.label === 'string') return `${subs.label}: `;
+    const message = localMarkdownMessages[key] ?? key;
+    if (subs && typeof subs === 'object') {
+      return message.replace(/\{(\w+)\}/g, (match, name: string) =>
+        name in subs ? String(subs[name]) : match);
+    }
+    return message;
+  });
   return i18nMock(getMessage);
 });
 
@@ -748,26 +762,37 @@ describe('handleTestAi', () => {
         // The i18n util is module-mocked to return keys; re-implement it for this
         // test so the interpolated provider value is observable in the label.
         const { getMessage } = await import('../../utils/i18n.js');
-        vi.mocked(getMessage).mockImplementation((key: string, substitutions?: unknown) => {
-            const subst = substitutions as Record<string, string> | undefined;
-            if (key === 'aiTestingProvider') return `Testing ${subst?.provider}...`;
-            if (key === 'aiTestElapsedTime') return `Elapsed ${subst?.seconds}s`;
-            return key;
-        });
+        const previousGetMessage = getMessage.getMockImplementation();
+        try {
+            vi.mocked(getMessage).mockImplementation((key: string, substitutions?: unknown) => {
+                const subst = substitutions as Record<string, string> | undefined;
+                if (key === 'aiTestingProvider') return `Testing ${subst?.provider}...`;
+                if (key === 'aiTestElapsedTime') return `Elapsed ${subst?.seconds}s`;
+                return key;
+            });
 
-        const handlePromise = handleTestAi();
-        const statusDiv = document.getElementById('status')!;
+            const handlePromise = handleTestAi();
+            const statusDiv = document.getElementById('status')!;
 
-        // "constructor" is a valid string provider but also an Object.prototype
-        // key. The catalog is a Map so the lookup is pollution-safe; the label
-        // must fall back to the raw value, not a function source or "[object Object]".
-        await vi.waitFor(() => {
-            expect(statusDiv.textContent).toContain('constructor');
-        });
-        expect(statusDiv.textContent).not.toContain('[object Object]');
+            // "constructor" is a valid string provider but also an Object.prototype
+            // key. The catalog is a Map so the lookup is pollution-safe; the label
+            // must fall back to the raw value, not a function source or "[object Object]".
+            await vi.waitFor(() => {
+                expect(statusDiv.textContent).toContain('constructor');
+            });
+            expect(statusDiv.textContent).not.toContain('[object Object]');
 
-        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
-        await handlePromise;
+            resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+            await handlePromise;
+        } finally {
+            // The echo override must not leak into later suites in this file,
+            // which assert translated localMarkdownExport strings.
+            if (previousGetMessage) {
+                vi.mocked(getMessage).mockImplementation(previousGetMessage);
+            } else {
+                vi.mocked(getMessage).mockReset();
+            }
+        }
     });
 
     it('ignores AI_TEST_PROGRESS from a different test run (concurrent Dashboard tab)', async () => {

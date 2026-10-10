@@ -8,7 +8,7 @@
  * forced the panel layer to import from it (PBI 2026-08-09-24).
  */
 
-import { getMessageOr } from '../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import {
   loadExportConfig,
@@ -71,10 +71,14 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
       return;
     }
 
-    statusEl.textContent = `${result.totalRows}件の記録を${result.totalFiles}ファイルにエクスポートしました。`;
+    statusEl.textContent = getMessageWithSubstitutions(
+      'localMarkdownExportSuccess',
+      { count: result.totalRows, files: result.totalFiles },
+      '{count}件の記録を{files}ファイルにエクスポートしました。',
+    );
     statusEl.className = 'success';
   } catch (e) {
-    statusEl.textContent = `エクスポートに失敗しました: ${errorMessage(e)}`;
+    statusEl.textContent = getMessageWithSubstitutions('localMarkdownExportFailed', { error: errorMessage(e) }, 'エクスポートに失敗しました: {error}');
     statusEl.className = 'error';
   } finally {
     exportBtn.disabled = false;
@@ -89,7 +93,7 @@ export async function handleManualLocalMarkdownExport(): Promise<void> {
     dateRange: { startDateId: 'localExportStartDate', endDateId: 'localExportEndDate' },
     exportBtnId: 'localExportManualBtn',
     statusElId: 'localExportManualStatus',
-    emptyMessage: '指定期間に記録がありません。',
+    emptyMessage: getMessageOr('localMarkdownExportEmptyRange', '指定期間に記録がありません。'),
   });
 }
 
@@ -101,7 +105,7 @@ export async function handleExportLocalMarkdown(): Promise<void> {
     dateRange: { startDateId: 'exportLocalStartDate', endDateId: 'exportLocalEndDate' },
     exportBtnId: 'exportLocalMarkdownBtn',
     statusElId: 'exportLocalMarkdownStatus',
-    emptyMessage: '指定期間に記録がありません。',
+    emptyMessage: getMessageOr('localMarkdownExportEmptyRange', '指定期間に記録がありません。'),
   });
 }
 
@@ -117,6 +121,6 @@ export async function handleHistoryExportLocalMarkdown(): Promise<void> {
     dateRange: null,
     exportBtnId: 'historyExportAllMarkdownBtn',
     statusElId: 'historyExportAllMarkdownStatus',
-    emptyMessage: 'エクスポートする記録がありません。',
+    emptyMessage: getMessageOr('localMarkdownExportEmptyAll', 'エクスポートする記録がありません。'),
   });
 }

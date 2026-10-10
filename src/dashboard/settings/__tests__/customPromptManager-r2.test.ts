@@ -104,29 +104,45 @@ vi.mock('../../../utils/customPromptUtils.js', () => ({
   ),
 }));
 
+const { promptI18nMessages } = vi.hoisted(() => ({
+  promptI18nMessages: {
+    locale: 'en',
+    promptProviderAll: 'All Providers',
+    activate: 'Activate',
+    duplicate: 'Duplicate',
+    savePrompt: 'Save Prompt',
+    updatePrompt: 'Update Prompt',
+    defaultPrompt: 'Default',
+    activePrompt: 'Active',
+    promptNameRequired: 'Prompt name is required',
+    promptUpdated: 'Prompt updated',
+    promptCreated: 'Prompt created',
+    promptDeleted: 'Prompt deleted',
+    promptActivated: 'Prompt activated',
+    promptDuplicated: 'Prompt copied to editor',
+    confirmDeletePrompt: 'Are you sure you want to delete this prompt?',
+    promptInvalid: 'Invalid prompt',
+    promptCannotEditDefault: 'Cannot edit default prompt. Use duplicate to create a custom version.',
+    promptCannotDeleteDefault: 'Cannot delete default prompt',
+    promptPresetNotFound: 'Preset not found',
+    promptNotFound: 'Prompt not found',
+  } as Record<string, string>,
+}));
+
 vi.mock('../../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../../testDir/i18nMock.js');
-  const getMessage = vi.fn((key: string) => {
-    const messages: Record<string, string> = {
-      locale: 'en',
-      promptProviderAll: 'All Providers',
-      activate: 'Activate',
-      duplicate: 'Duplicate',
-      savePrompt: 'Save Prompt',
-      updatePrompt: 'Update Prompt',
-      defaultPrompt: 'Default',
-      activePrompt: 'Active',
-      promptNameRequired: 'Prompt name is required',
-      promptUpdated: 'Prompt updated',
-      promptCreated: 'Prompt created',
-      promptDeleted: 'Prompt deleted',
-      promptActivated: 'Prompt activated',
-      promptDuplicated: 'Prompt copied to editor',
-      confirmDeletePrompt: 'Are you sure you want to delete this prompt?',
-    };
-    return key in messages ? messages[key] : key;
-  });
+  const getMessage = vi.fn((key: string) =>
+    key in promptI18nMessages ? promptI18nMessages[key] : key);
   return { ...i18nMock(getMessage), applyI18n: vi.fn() };
+});
+
+// Suites below re-implement the module-mocked getMessage with echo stubs for
+// their own assertions; restore the translation map after each test so those
+// stubs do not leak into later suites.
+afterEach(async () => {
+  const { getMessage } = await import('../../../utils/i18n.js');
+  (getMessage as any).mockImplementation((key: string) =>
+    key in promptI18nMessages ? promptI18nMessages[key] : key);
 });
 
 vi.mock('../../../popup/errorUtils.js', () => ({

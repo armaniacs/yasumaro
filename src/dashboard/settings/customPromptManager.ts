@@ -380,7 +380,7 @@ export function createCustomPromptManager(): CustomPromptManager {
 
         const validation = validatePrompt(promptText);
         if (!validation.valid) {
-            showStatus(promptStatusDiv ?? 'promptStatus', validation.error || 'Invalid prompt', 'error');
+            showStatus(promptStatusDiv ?? 'promptStatus', validation.error || getMessageOr('promptInvalid', 'Invalid prompt'), 'error');
             return;
         }
 
@@ -428,7 +428,7 @@ export function createCustomPromptManager(): CustomPromptManager {
     function handleEditPrompt(promptId: string): void {
         // Prevent editing default prompt
         if (promptId === PROMPT_ID.DEFAULT) {
-            showStatus(dom?.promptStatusDiv ?? 'promptStatus', 'Cannot edit default prompt. Use duplicate to create a custom version.', 'error');
+            showStatus(dom?.promptStatusDiv ?? 'promptStatus', getMessageOr('promptCannotEditDefault', 'Cannot edit default prompt. Use duplicate to create a custom version.'), 'error');
             return;
         }
 
@@ -467,7 +467,7 @@ export function createCustomPromptManager(): CustomPromptManager {
     async function handleDeletePrompt(promptId: string): Promise<void> {
         // Prevent deleting default prompt
         if (promptId === PROMPT_ID.DEFAULT) {
-            showStatus(dom?.promptStatusDiv ?? 'promptStatus', 'Cannot delete default prompt', 'error');
+            showStatus(dom?.promptStatusDiv ?? 'promptStatus', getMessageOr('promptCannotDeleteDefault', 'Cannot delete default prompt'), 'error');
             return;
         }
 
@@ -585,7 +585,7 @@ export function createCustomPromptManager(): CustomPromptManager {
             const presetId = promptId.replace(PROMPT_ID.PRESET_PREFIX, '');
             const preset = getPresetPrompt(presetId);
             if (!preset) {
-                showStatus(dom?.promptStatusDiv ?? 'promptStatus', 'Preset not found', 'error');
+                showStatus(dom?.promptStatusDiv ?? 'promptStatus', getMessageOr('promptPresetNotFound', 'Preset not found'), 'error');
                 return;
             }
             name = getPromptDisplayName(preset, locale);
@@ -598,7 +598,7 @@ export function createCustomPromptManager(): CustomPromptManager {
             const prompt = prompts.find(p => p.id === promptId);
 
             if (!prompt) {
-                showStatus(dom?.promptStatusDiv ?? 'promptStatus', 'Prompt not found', 'error');
+                showStatus(dom?.promptStatusDiv ?? 'promptStatus', getMessageOr('promptNotFound', 'Prompt not found'), 'error');
                 return;
             }
 
