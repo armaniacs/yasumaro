@@ -25,6 +25,10 @@ import {
   type DashboardSqliteClient,
 } from './fixtures/dashboardSqliteHelpers.js';
 import { collectArchiveChunks, openArchiveDb } from './fixtures/archiveDbReader.js';
+import {
+  enableE2EProbe,
+  readE2EProbeState,
+} from './fixtures/e2eProbe.js';
 
 // Archive Y5' reconnects the open session after reload — requires stable
 // service worker and display server. Skip in headless local runs where make
@@ -307,10 +311,13 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     const client = createDashboardSqliteClient(page);
 
     const recordingPage = await context.newPage();
+    // Probe is armed extension-side (session flag) — must precede navigation:
+    // the content script resolves the flag once at init.
+    await enableE2EProbe(context);
     await recordingPage.goto('http://localhost:8080/long-page.html');
     await expect(async () => {
-      const attr = await recordingPage.evaluate(() => document.documentElement.getAttribute('data-ow-test-state'));
-      if (!attr) throw new Error('extractor not ready');
+      const state = await readE2EProbeState(context);
+      if (!state) throw new Error('extractor not ready');
     }).toPass({ timeout: 10_000, intervals: [200] });
 
     // Trigger the engagement while archive_create is in flight: the worker
@@ -321,10 +328,7 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
 
     // VALID_VISIT fires after 50% scroll + 5s stay.
     await expect(async () => {
-      const state = await recordingPage.evaluate(() => {
-        const attr = document.documentElement.getAttribute('data-ow-test-state');
-        return attr ? JSON.parse(attr) : null;
-      });
+      const state = await readE2EProbeState(context);
       expect(state?.isValidVisitReported).toBe(true);
     }).toPass({ timeout: 15_000, intervals: [1000] });
 

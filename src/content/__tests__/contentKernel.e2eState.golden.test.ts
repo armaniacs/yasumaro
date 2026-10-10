@@ -2,11 +2,12 @@
 /**
  * Golden pin for the E2E test-state publication (PBI 2026-10-09-08).
  *
- * Pins the exact values written to both routes — window.__OW_TEST_STATE and
- * the data-ow-test-state attribute — so the publisher refactor is proven
- * behavior-preserving (byte-identical JSON). The expected strings below are
- * hardcoded, independent of the implementation, and field order is part of
- * the contract because JSON.stringify follows object insertion order.
+ * Pins the exact values published to the isolated window.__OW_TEST_STATE
+ * route. PBI 2026-10-11-08 (NN08) removed the second route (the
+ * data-ow-test-state page-DOM attribute) — the probe must never write
+ * page-shared DOM, so each case also pins the attribute's absence.
+ * Field order is part of the contract because JSON.stringify follows object
+ * insertion order.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ContentKernel } from '../contentKernel.js';
@@ -18,12 +19,22 @@ import type { MessageSender } from '../visitReporter.js';
 
 const BASE = 1_000_000;
 
-const GOLDEN_CHECK_VISIT =
-    '{"maxScrollPercentage":80,"isValidVisitReported":false,"startTime":1000000,"minVisitDuration":5,"minScrollDepth":50,"duration":2}';
-const GOLDEN_REPORTABLE =
-    '{"maxScrollPercentage":80,"isValidVisitReported":true,"startTime":1000000,"minVisitDuration":5,"minScrollDepth":50,"duration":6}';
-const GOLDEN_INIT =
-    '{"maxScrollPercentage":0,"isValidVisitReported":false,"startTime":1000000,"minVisitDuration":5,"minScrollDepth":50,"duration":0}';
+const GOLDEN_CHECK_VISIT = {
+    maxScrollPercentage: 80,
+    isValidVisitReported: false,
+    startTime: 1000000,
+    minVisitDuration: 5,
+    minScrollDepth: 50,
+    duration: 2,
+};
+const GOLDEN_REPORTABLE = {
+    maxScrollPercentage: 80,
+    isValidVisitReported: true,
+    startTime: 1000000,
+    minVisitDuration: 5,
+    minScrollDepth: 50,
+    duration: 6,
+};
 
 function makeKernel(pageState: PageState, clock: () => number) {
     const storage = new InMemoryStoragePort();
@@ -44,7 +55,7 @@ afterEach(() => {
 });
 
 describe('E2E test-state golden pin', () => {
-    it('checkVisitConditions publishes byte-identical state to both routes', () => {
+    it('checkVisitConditions publishes the golden state to the window route only', () => {
         const pageState = new PageState();
         pageState.startTime = BASE;
         pageState.maxScrollPercentage = 80;
@@ -53,14 +64,7 @@ describe('E2E test-state golden pin', () => {
         kernel.checkVisitConditions();
 
         const winState = window.__OW_TEST_STATE;
-        expect(winState).toEqual({
-            maxScrollPercentage: 80,
-            isValidVisitReported: false,
-            startTime: BASE,
-            minVisitDuration: 5,
-            minScrollDepth: 50,
-            duration: 2,
-        });
+        expect(winState).toEqual(GOLDEN_CHECK_VISIT);
         expect(Object.keys(winState!)).toEqual([
             'maxScrollPercentage',
             'isValidVisitReported',
@@ -69,12 +73,11 @@ describe('E2E test-state golden pin', () => {
             'minScrollDepth',
             'duration',
         ]);
-        const attr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(attr).toBe(GOLDEN_CHECK_VISIT);
-        expect(JSON.parse(attr!)).toEqual(winState);
+        // NN08: no page-shared DOM route anymore.
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 
-    it('reportable path updates isValidVisitReported and republishes byte-identically', () => {
+    it('reportable path updates isValidVisitReported and republishes goldens', () => {
         const pageState = new PageState();
         pageState.startTime = BASE;
         pageState.maxScrollPercentage = 80;
@@ -83,26 +86,25 @@ describe('E2E test-state golden pin', () => {
         kernel.checkVisitConditions();
 
         const winState = window.__OW_TEST_STATE;
-        expect(winState).toEqual({
-            maxScrollPercentage: 80,
-            isValidVisitReported: true,
-            startTime: BASE,
-            minVisitDuration: 5,
-            minScrollDepth: 50,
-            duration: 6,
-        });
-        const attr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(attr).toBe(GOLDEN_REPORTABLE);
-        expect(JSON.parse(attr!)).toEqual(winState);
+        expect(winState).toEqual(GOLDEN_REPORTABLE);
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 
-    it('init publishes the initial state (duration 0) byte-identically', async () => {
+    it('init publishes the initial state (duration 0) to the window route only', async () => {
         const pageState = new PageState();
         pageState.startTime = BASE;
         const { kernel } = makeKernel(pageState, () => BASE);
 
         await kernel.init();
 
-        expect(document.documentElement.getAttribute('data-ow-test-state')).toBe(GOLDEN_INIT);
+        expect(window.__OW_TEST_STATE).toEqual({
+            maxScrollPercentage: 0,
+            isValidVisitReported: false,
+            startTime: BASE,
+            minVisitDuration: 5,
+            minScrollDepth: 50,
+            duration: 0,
+        });
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 });

@@ -41,15 +41,43 @@ Scenario: E2E テストは従来どおり状態を観測できる
   Then 拡張側（storage / runtime メッセージ / 拡張ページ）から従来と同じ情報が得られる
 ```
 
+## 設計決定（2026-10-11 autonomous-task-closer 実装）
+
+C8 案を以下の形で確定した。`isE2E` はプローブ publish のゲートであることのみに使い、
+記録動作（VALID_VISIT 判定・report）には一切影響しないことを実コードで確認した
+（`deadlineTimer.isE2E` に外部消費者はいない）。
+
+1. **有効化**: `chrome.storage.session` の `owE2eProbeEnabled` フラグ
+   （`src/content/e2eTestState.ts` の `E2E_PROBE_ENABLE_KEY`）。
+   ページは chrome API を持たないため書けない。harness は SW 経由で書く。
+   kernel は `init()` で一度だけ解決し `VisitGating` に載せる（従来の once 契約を維持）。
+   明示注入（`opts.isE2ETest`）は単体テスト用に不変。
+2. **出力**: `owE2eTestState` session キー + isolated-world の `window.__OW_TEST_STATE`
+   のみ。`data-ow-test-state` 書き込みは削除（`publishE2eTestState` は session
+   書き込み失敗時も例外を出さない）。harness の読み取りは
+   `testDir/e2e/fixtures/e2eProbe.ts`（`enableE2EProbe` / `readE2EProbeState` /
+   `waitForE2EProbeInit`）経由の SW evaluate へ移行。4 spec を移行
+   （content-script-recording / recording-traceId / overcut-guard-recording /
+   archive-recommended-verification）。regenerate-summary は状態読みが無いため不変。
+   テストページ HTML の `data-ow-e2e-test` は残置（今は inert＝属性だけでは何も起きない
+   ことの E2E レベル回帰網になる）。
+3. **本番除去**: `__OW_E2E_PROBE__` define（`wxt.config.ts`、`__OW_BENCH__` と同一 pattern）。
+   既定 true（CI/ローカル E2E は `npm run build` のまま動く）。
+   ストア出荷は `OW_E2E_PROBE=0` で死滅させるよう `release.yml` の 3 zip 手順に env 追加。
+4. **変更ファイル**: `src/content/e2eTestState.ts` / `contentKernel.ts` / `loader.ts`、
+   `wxt.config.ts`、`testDir/e2e/fixtures/e2eProbe.ts`（新規）、4 spec、
+   単体 7 件更新 + `contentKernel.e2eProbeIsolation.test.ts`（新規）。
+   新規 content モジュールは作らないため manifest 変更なし。
+
 ## 受け入れ基準
 
-- [ ] E2E プローブの有効化を、ページ側 DOM 属性ではなく拡張側が制御する経路にする（例: `chrome.storage.session` のフラグ、またはテストハーネスからの `chrome.runtime` メッセージ）
-- [ ] プローブ出力をページ共有 DOM 以外へ移す（拡張側 storage、または `chrome.runtime.sendMessage`）。`data-ow-test-state` をページ DOM に書かない
-- [ ] 本番ビルドからテスト専用コードを落とす（`import.meta.env.MODE` 等のビルド時フラグ、または動的 import）
-- [ ] E2E ハーネス（`testDir/` 配下の該当ヘルパー）を新しい制御経路に合わせて更新する
+- [x] E2E プローブの有効化を、ページ側 DOM 属性ではなく拡張側が制御する経路にする（`chrome.storage.session` の `owE2eProbeEnabled` フラグ。kernel `init()` で一度だけ解決）
+- [x] プローブ出力をページ共有 DOM 以外へ移す（`owE2eTestState` session キー + isolated `window.__OW_TEST_STATE`）。`data-ow-test-state` をページ DOM に書かない（通常ビルドの bundle grep で文字列不在を確認）
+- [x] 本番ビルドからテスト専用コードを落とす（`__OW_E2E_PROBE__` define。`OW_E2E_PROBE=0` ビルドで probe 文字列が bundle から消えることを確認し、`release.yml` の 3 zip 手順に env を追加）
+- [x] E2E ハーネス（`testDir/e2e/fixtures/e2eProbe.ts` 新規 + 4 spec 移行）を新しい制御経路に合わせて更新する
 - [ ] 既存 E2E テスト（拡張 `@extension` / interaction / usability プロジェクト）が green のまま
-- [ ] 「ページ側 DOM に設定値と記録状態が現れない」ことを検証する回帰テストを追加する（ユニットまたは E2E）
-- [ ] `npm run validate` が green
+- [x] 「ページ側 DOM に設定値と記録状態が現れない」ことを検証する回帰テストを追加する（`contentKernel.e2eProbeIsolation.test.ts` 新規 + `e2eTestState.test.ts` 拡張）
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -87,10 +115,25 @@ Scenario: E2E テストは従来どおり状態を観測できる
 
 ## Definition of Done
 
-- [ ] ページ側 DOM にユーザー設定・記録状態が現れないことをテストで確認
+- [x] ページ側 DOM にユーザー設定・記録状態が現れないことをテストで確認
 - [ ] E2E が新経路で green
-- [ ] `npm run validate` が green
+- [x] `npm run validate` が green
 - [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 autonomous-task-closer）
+
+- `npx tsc --noEmit` exit 0
+- `npm run type-check:test:baseline` — 463（pinned 463、exit 0）
+- `npx eslint`（変更 18 ファイル） exit 0
+- `npm run validate` exit 0（Test Files 1056 passed / Tests 15960 passed）
+- `npm run build`（既定）exit 0 — bundle に `owE2eProbeEnabled` / `owE2eTestState`
+  あり、`data-ow-test-state` / `data-ow-e2e-test` 文字列なし
+- `OW_E2E_PROBE=0 npx wxt build` exit 0 — probe 文字列すべて不在（死滅確認）
+- E2E 再実行は未実施（当環境に display / Playwright ブラウザがなく headed 実行不可）。
+  実装手順: `npm run build` 後に headed 環境で
+  `npx playwright test --config testDir/playwright.config.ts --grep @extension`
+  （CI の extension/a11y/usability ジョブでも検証される）。green を確認したら
+  上の残り 2 項目を `[x]` にしてアーカイブすること。
 
 ## 着手メモ（2026-10-11 / 未着手の理由と手順）
 

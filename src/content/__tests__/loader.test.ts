@@ -34,14 +34,16 @@ describe('loader.ts', () => {
     (globalThis as any).document = undefined;
   });
 
-  async function importLoader(url: string, options: { e2eTest?: boolean } = {}) {
+  async function importLoader(url: string, options: { pageMarkup?: boolean } = {}) {
     const dom = new JSDOM('<!DOCTYPE html><html></html>');
     globalThis.window = {
       location: { href: url },
       document: dom.window.document,
     } as any;
     globalThis.document = dom.window.document as any;
-    if (options.e2eTest) {
+    // NN08: page-controlled markup must not change admission — tests set the
+    // former trigger attribute and assert identical behavior.
+    if (options.pageMarkup) {
       dom.window.document.documentElement.setAttribute('data-ow-e2e-test', 'true');
     }
     await import(LOADER_PATH);
@@ -114,15 +116,15 @@ describe('loader.ts', () => {
     });
   });
 
-  describe('E2E bypass', () => {
-    it('loads extractor with cache-based domain check when data-ow-e2e-test is present', async () => {
+  describe('page e2e markup is ignored (NN08)', () => {
+    it('loads extractor with cache-based domain check even when the page sets data-ow-e2e-test', async () => {
       // Seed a valid cache so the hot-path avoids SW round-trip (compat with E2E suites that pre-seed)
       setStorageData({
         domain_filter_cache: [],
         domain_filter_cache_timestamp: 999999,
         domain_filter_mode: 'disabled',
       });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
       // Cache-based domain check runs (avoids SW message round-trip for reliability)
       expect(storageGetSpy).toHaveBeenCalled();
@@ -377,7 +379,7 @@ describe('loader.ts', () => {
   });
 
   describe('dynamic import catch with non-Error', () => {
-    it('handles non-Error thrown from e2e dynamic import', async () => {
+    it('uses the plain warn label even when the page sets data-ow-e2e-test', async () => {
       const dom = new JSDOM('<!DOCTYPE html><html></html>');
       globalThis.window = {
         location: { href: 'https://example.com/page' },
@@ -385,7 +387,7 @@ describe('loader.ts', () => {
       } as any;
       globalThis.document = dom.window.document as any;
       dom.window.document.documentElement.setAttribute('data-ow-e2e-test', 'true');
-      // E2E path now checks cache-based domain filter; provide default data
+      // Admission no longer branches on page markup; provide default data
       setStorageData({
         domain_filter_cache: [],
         domain_filter_cache_timestamp: 999999,
@@ -395,7 +397,7 @@ describe('loader.ts', () => {
       await import(LOADER_PATH);
       await vi.waitFor(
           () => expect(warnSpy).toHaveBeenCalledWith(
-        '[OWeave] Dynamic import blocked (e2e)',
+        '[OWeave] Dynamic import blocked',
         { url: 'https://example.com/page', detail: 'string error' },
         undefined,
         'loader',

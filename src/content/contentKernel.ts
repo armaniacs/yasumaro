@@ -24,7 +24,7 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
-import { publishE2eTestState, type OWTestState } from './e2eTestState.js';
+import { publishE2eTestState, isE2EProbeEnabled, type OWTestState } from './e2eTestState.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.
@@ -44,6 +44,14 @@ export class ContentKernel {
     private readonly visitReporter: VisitReporter;
     private readonly sender: MessageSender;
     private readonly isE2ETest: () => boolean;
+    /**
+     * PBI 2026-10-11-08 (NN08): extension-side probe arming. Resolved once in
+     * init() from chrome.storage.session — never from page DOM, so a
+     * page-set `data-ow-e2e-test` attribute cannot enable the probe.
+     */
+    private e2eSessionEnabled = false;
+    /** True when no explicit isE2ETest was injected (session resolve needed). */
+    private readonly e2eSessionResolveNeeded: boolean;
     private readonly gating: VisitGating;
     private readonly deadlineTimer: DeadlineTimer;
 
@@ -61,9 +69,12 @@ export class ContentKernel {
         // Only override if clock is not the default Date.now reference and pageState is fresh.
         this.scrollMonitor = new ScrollMonitor(this.pageState, this.clock);
         this.sender = opts.sender ?? createContentMessageSender(2);
-        this.isE2ETest =
-            opts.isE2ETest ??
-            (() => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ow-e2e-test'));
+        this.e2eSessionResolveNeeded = opts.isE2ETest === undefined;
+        // PBI 2026-10-11-08 (NN08): the default no longer reads the page-writable
+        // `data-ow-e2e-test` DOM attribute. Arming comes from the
+        // extension-side session flag resolved in init(); explicit injection
+        // (unit tests) keeps working unchanged.
+        this.isE2ETest = opts.isE2ETest ?? (() => this.e2eSessionEnabled);
         this.visitReporter = new VisitReporter({
             pageState: this.pageState,
             extractAndCommit: (c) => this.extractAndCommit(c),
@@ -273,6 +284,12 @@ export class ContentKernel {
 
     async init(): Promise<void> {
         await this.loadSettings();
+
+        // Resolve the extension-side probe flag once before the gating caches
+        // it — only when the caller did not inject an explicit decision.
+        if (this.e2eSessionResolveNeeded) {
+            this.e2eSessionEnabled = await isE2EProbeEnabled();
+        }
 
         // Build the owned gate/thresholds and resolve isE2ETest once — reused thereafter
         this.deadlineTimer.initialize();

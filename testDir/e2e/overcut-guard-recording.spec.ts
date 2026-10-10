@@ -31,6 +31,11 @@ import { join, normalize, sep } from 'node:path';
  */
 
 import { pickLoopbackPort, listenHttp } from './fixtures/localServers.js';
+import {
+  enableE2EProbe,
+  readE2EProbeState,
+  waitForE2EProbeInit,
+} from './fixtures/e2eProbe.js';
 
 let FIXTURE_PORT: number;
 let FIXTURE_URL: string;
@@ -67,30 +72,13 @@ test.afterAll(() => {
   fixtureServer = undefined;
 });
 
-function readTestState(page: import('@playwright/test').Page) {
-  return page.evaluate(() => {
-    const attr = document.documentElement.getAttribute('data-ow-test-state');
-    if (!attr) return null;
-    return JSON.parse(attr) as {
-      maxScrollPercentage: number;
-      isValidVisitReported: boolean;
-      startTime: number;
-      minVisitDuration: number;
-      minScrollDepth: number;
-      duration: number;
-    };
-  });
+function readTestState(context: import('@playwright/test').BrowserContext) {
+  return readE2EProbeState(context);
 }
 
-/** extractor 初期化（data-ow-test-state 属性設定）を待機 */
-async function waitForExtractorInit(page: import('@playwright/test').Page, timeout = 10000) {
-  await expect(() =>
-    page.evaluate(() => {
-      const attr = document.documentElement.getAttribute('data-ow-test-state');
-      if (!attr) throw new Error('data-ow-test-state not yet set');
-      return JSON.parse(attr);
-    })
-  ).toPass({ timeout });
+/** extractor 初期化（プローブ初回 publish）を待機 */
+function waitForExtractorInit(context: import('@playwright/test').BrowserContext, timeout = 10000) {
+  return waitForE2EProbeInit(context, timeout);
 }
 
 test.describe('Over-cut Guard Recording @extension', () => {
@@ -102,11 +90,13 @@ test.describe('Over-cut Guard Recording @extension', () => {
     });
 
     const page = await context.newPage();
+    // Probe is armed extension-side (session flag) — must precede navigation.
+    await enableE2EProbe(context);
     page.on('console', (msg) => consoleLogs.push(`[page ${msg.type()}] ${msg.text()}`));
     page.on('pageerror', (err) => consoleLogs.push(`[PAGE_ERROR] ${err.message}`));
 
     await page.goto(FIXTURE_URL);
-    await waitForExtractorInit(page);
+    await waitForExtractorInit(context);
 
     await test.step('Scroll to bottom → isValidVisitReported', async () => {
       await page.evaluate(async () => {
@@ -119,7 +109,7 @@ test.describe('Over-cut Guard Recording @extension', () => {
         window.scrollTo(0, h);
       });
       await expect(async () => {
-        const state = await readTestState(page);
+        const state = await readTestState(context);
         expect(state).not.toBeNull();
         expect(state!.isValidVisitReported).toBe(true);
       }).toPass({ timeout: 20000, intervals: [500] });

@@ -9,7 +9,8 @@ const LOADER_PATH = '../loader.js';
 
 /**
  * Trust boundary tests for VULN-002.
- * e2e path (data-ow-e2e-test) must also await SW CHECK_DOMAIN when cache is cold (useCache:false).
+ * NN08: page markup (data-ow-e2e-test) no longer selects a separate path —
+ * every load awaits SW CHECK_DOMAIN when cache is cold (useCache:false).
  */
 describe('loader.ts - trust boundary (VULN-002/06a)', () => {
   let getURLSpy: ReturnType<typeof vi.spyOn>;
@@ -35,11 +36,11 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
     (globalThis as any).document = undefined;
   });
 
-  async function importLoader(url: string, options: { e2eTest?: boolean } = {}) {
+  async function importLoader(url: string, options: { pageMarkup?: boolean } = {}) {
     const dom = new JSDOM('<!DOCTYPE html><html></html>');
     globalThis.window = { location: { href: url }, document: dom.window.document } as any;
     globalThis.document = dom.window.document as any;
-    if (options.e2eTest) dom.window.document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    if (options.pageMarkup) dom.window.document.documentElement.setAttribute('data-ow-e2e-test', 'true');
     await import(LOADER_PATH);
     // The loader resolves its admission flow through a dynamic import whose
     // completion has no observable signal, and one macrotask turn is not enough
@@ -57,29 +58,29 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
     });
   }
 
-  describe('e2e cold cache → SW round-trip', () => {
-    it('e2e with cold cache (useCache:false) awaits SW CHECK_DOMAIN and imports when allowed', async () => {
+  describe('page-marked cold cache → SW round-trip', () => {
+    it('page-marked load with cold cache (useCache:false) awaits SW CHECK_DOMAIN and imports when allowed', async () => {
       // empty cache → useCache false
       setStorageData({});
       sendMessageSpy.mockResolvedValue({ allowed: true, success: true });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(sendMessageSpy).toHaveBeenCalledTimes(1);
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
 
-    it('e2e with cold cache blocks when SW returns allowed:false', async () => {
+    it('page-marked load with cold cache blocks when SW returns allowed:false', async () => {
       setStorageData({});
       sendMessageSpy.mockResolvedValue({ allowed: false });
-      await importLoader('https://blocked.example/page', { e2eTest: true });
+      await importLoader('https://blocked.example/page', { pageMarkup: true });
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).not.toHaveBeenCalled();
     });
 
-    it('e2e with cold cache retries on reject and blocks after 3 attempts', async () => {
+    it('page-marked load with cold cache retries on reject and blocks after 3 attempts', async () => {
       setStorageData({});
       sendMessageSpy.mockRejectedValue(new Error('SW not ready'));
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       // The admission ladder sleeps 200/400/600ms between its three attempts.
       // This file mocks Date.now to a fixed epoch, so pairing that with a fake
       // clock leaves the loader's deadlines an epoch apart and advancing the
@@ -97,42 +98,42 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
       );
     });
 
-    it('e2e with hot cache (useCache:true allowed) does NOT call SW', async () => {
+    it('page-marked load with hot cache (useCache:true allowed) does NOT call SW', async () => {
       setStorageData({
         domain_filter_cache: [],
         domain_filter_cache_timestamp: 999999,
         domain_filter_mode: 'disabled',
       });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(storageGetSpy).toHaveBeenCalled();
       expect(sendMessageSpy).not.toHaveBeenCalled();
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
 
-    it('e2e with hot cache (useCache:true blocked) blocks without SW call', async () => {
+    it('page-marked load with hot cache (useCache:true blocked) blocks without SW call', async () => {
       setStorageData({
         domain_filter_cache: ['other.com'],
         domain_filter_cache_timestamp: 999999,
         domain_filter_mode: 'whitelist',
       });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(sendMessageSpy).not.toHaveBeenCalled();
       expect(getURLSpy).not.toHaveBeenCalled();
     });
 
-    it('e2e with expired cache falls back to SW (uid consistency with normal branch)', async () => {
+    it('page-marked load with expired cache falls back to SW (uid consistency with normal branch)', async () => {
       setStorageData({
         domain_filter_cache: [],
         domain_filter_cache_timestamp: 1, // expired
         domain_filter_mode: 'disabled',
       });
       sendMessageSpy.mockResolvedValue({ allowed: true });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
 
-    it('e2e with uBlock enabled (blacklist uBlock) falls back to SW', async () => {
+    it('page-marked load with uBlock enabled (blacklist uBlock) falls back to SW', async () => {
       setStorageData({
         domain_filter_cache: [],
         domain_filter_cache_timestamp: 999999,
@@ -140,20 +141,20 @@ describe('loader.ts - trust boundary (VULN-002/06a)', () => {
         ublock_format_enabled: true,
       });
       sendMessageSpy.mockResolvedValue({ allowed: true });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
       expect(getURLSpy).toHaveBeenCalledWith('content-extractor.js');
     });
   });
 
   describe('protocolVersion invariant', () => {
-    it('both branches send CURRENT_PROTOCOL_VERSION', async () => {
+    it('marked and unmarked loads both send CURRENT_PROTOCOL_VERSION', async () => {
       setStorageData({});
       sendMessageSpy.mockResolvedValue({ allowed: true });
-      await importLoader('https://example.com/page', { e2eTest: true });
+      await importLoader('https://example.com/page', { pageMarkup: true });
       expect(sendMessageSpy).toHaveBeenCalledWith({ type: 'CHECK_DOMAIN', protocolVersion: CURRENT_PROTOCOL_VERSION });
 
-      // reset for normal branch
+      // reset for unmarked load
       vi.resetModules();
       vi.clearAllMocks();
       vi.spyOn(Date, 'now').mockReturnValue(1000000);

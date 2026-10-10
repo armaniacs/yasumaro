@@ -225,7 +225,7 @@ describe('kernel seam pins (PBI 2026-09-23-08 DoD)', () => {
             'minScrollDepth',
             'duration',
         ]);
-        expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('maxScrollPercentage');
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
         delete (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE;
         document.documentElement.removeAttribute('data-ow-test-state');
     });
