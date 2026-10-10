@@ -25,6 +25,28 @@ var PiiSandbox = (() => {
     sanitize: () => sanitize
   });
 
+  // src/utils/limits.ts
+  var MAX_ARCHIVE_EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
+  var MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
+  var MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
+  var MAX_LOG_FORWARD_SERIALIZED_CHARS = 256 * 1024;
+  var MAX_RECORD_SIZE = 64 * 1024;
+  var MAX_PII_INPUT_SIZE = 64 * 1024;
+  var MAX_PII_OUTPUT_SIZE = 128 * 1024;
+  var MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
+  var MAX_ERROR_BODY_SIZE = 1024 * 1024;
+  var MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+  var MAX_PAYLOAD_STRING_BYTES = 1024 * 1024;
+  var MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024;
+  var MAX_PAYLOAD_TOTAL_BYTES = 20 * 1024 * 1024;
+  var MAX_FILTER_LIST_SIZE = 10 * 1024 * 1024;
+  var MAX_BODY_SIZE = 10 * 1024 * 1024;
+  var DEFAULT_IMPORT_SIZE_CAP_BYTES = 10 * 1024 * 1024;
+  var MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
+  var MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
+  var STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
+  var MAX_BYTE_STAT_BYTES = 16 * 1024 * 1024;
+
   // src/utils/luhn.ts
   function validateLuhn(number) {
     const str = String(number).replace(/\D/g, "");
@@ -65,37 +87,14 @@ var PiiSandbox = (() => {
   }
 
   // src/utils/piiSanitizer.ts
-  var MAX_INPUT_SIZE = 64 * 1024;
+  var MAX_INPUT_SIZE = MAX_PII_INPUT_SIZE;
   var MAX_SKIP_SIZE = 512 * 1024;
-  var MAX_OUTPUT_SIZE = 128 * 1024;
+  var MAX_OUTPUT_SIZE = MAX_PII_OUTPUT_SIZE;
   var DEFAULT_TIMEOUT = 5e3;
   var MAX_MATCH_COUNT = 1e3;
   var TIMEOUT_CHECK_INTERVAL = 5;
-  var TOKEN_EDGE_KEEP_LENGTH = 100;
-  var NON_WHITESPACE_RUN = /\S+/g;
-  function neutralizeLongNonWhitespaceRuns(text) {
-    return text.replace(NON_WHITESPACE_RUN, (token) => {
-      const threshold = TOKEN_EDGE_KEEP_LENGTH * 2;
-      if (token.length <= threshold) return token;
-      const head = token.slice(0, TOKEN_EDGE_KEEP_LENGTH);
-      const tail = token.slice(-TOKEN_EDGE_KEEP_LENGTH);
-      const middle = token.slice(TOKEN_EDGE_KEEP_LENGTH, -TOKEN_EDGE_KEEP_LENGTH);
-      return head + sampleMiddleForScan(middle) + tail;
-    });
-  }
-  function sampleMiddleForScan(middle) {
-    const sampleInterval = TOKEN_EDGE_KEEP_LENGTH;
-    let sampled = "";
-    for (let i = 0; i < middle.length; i += sampleInterval) {
-      const chunk = middle.slice(i, i + sampleInterval);
-      if (chunk.length === sampleInterval) {
-        sampled += chunk.slice(0, -1) + "#";
-      } else {
-        sampled += chunk;
-      }
-    }
-    return sampled;
-  }
+  var SCAN_CHUNK_SIZE = 400;
+  var SCAN_CHUNK_OVERLAP = 200;
   var PII_PATTERNS = [
     // メールアドレス（最も具体的）
     {
@@ -107,7 +106,12 @@ var PiiSandbox = (() => {
     {
       type: "creditCard",
       pattern: /\b\d{4}(?:[-\s]\d{4}){3}\b/
-      // 16桁（4-4-4-4）
+      // 16桁（4-4-4-4、区切りあり）
+    },
+    {
+      type: "creditCard",
+      pattern: /\b\d{16}\b/
+      // 16桁（連続、Luhn検証で偽陽性抑制）
     },
     {
       type: "creditCard",
@@ -251,7 +255,6 @@ var PiiSandbox = (() => {
     try {
       const _maskedItems = [];
       const replacements = [];
-      const scanText = neutralizeLongNonWhitespaceRuns(text);
       const typeGroups = [];
       const seenTypes = /* @__PURE__ */ new Set();
       for (const { type } of PII_PATTERNS) {
@@ -260,38 +263,59 @@ var PiiSandbox = (() => {
         const patternsForType = PII_PATTERNS.filter((p) => p.type === type).map((p) => `(?:${p.pattern.source})`);
         typeGroups.push(`(?<${type}>${patternsForType.join("|")})`);
       }
-      const combinedRegex = new RegExp(typeGroups.join("|"), "g");
+      const combinedSource = typeGroups.join("|");
+      const combinedRegex = new RegExp(combinedSource, "g");
+      const probeRegex = new RegExp(`(?:${combinedSource})`, "y");
       let match;
       let matchCount = 0;
-      while ((match = combinedRegex.exec(scanText)) !== null) {
-        matchCount++;
-        if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
-          throw new Error(`Operation timed out after ${timeout}ms`);
-        }
-        if (matchCount > MAX_MATCH_COUNT) {
-          throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
-        }
-        const matchedValue = text.substring(match.index, match.index + match[0].length);
-        const startIndex = match.index;
-        let matchedType = "unknown";
-        if (match.groups) {
-          for (const type of Object.keys(match.groups)) {
-            if (match.groups[type]) {
-              matchedType = type;
-              break;
+      const step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
+      for (let offset = 0; offset < text.length; offset += step) {
+        const chunk = text.slice(offset, offset + SCAN_CHUNK_SIZE);
+        combinedRegex.lastIndex = 0;
+        while ((match = combinedRegex.exec(chunk)) !== null) {
+          if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
+            continue;
+          }
+          if (offset > 0 && match.index === 0 && match[0].length <= SCAN_CHUNK_OVERLAP) {
+            continue;
+          }
+          probeRegex.lastIndex = offset + match.index;
+          const fullProbe = probeRegex.exec(text);
+          if (fullProbe && fullProbe[0].length > match[0].length && fullProbe[0].length <= SCAN_CHUNK_OVERLAP) {
+            continue;
+          }
+          if (!fullProbe) {
+            continue;
+          }
+          matchCount++;
+          if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
+            throw new Error(`Operation timed out after ${timeout}ms`);
+          }
+          if (matchCount > MAX_MATCH_COUNT) {
+            throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
+          }
+          const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
+          const startIndex = offset + match.index;
+          let matchedType = "unknown";
+          if (match.groups) {
+            for (const type of Object.keys(match.groups)) {
+              if (match.groups[type]) {
+                matchedType = type;
+                break;
+              }
             }
           }
+          if (matchedType === "creditCard" && !validateLuhn(matchedValue)) {
+            continue;
+          }
+          replacements.push({
+            index: startIndex,
+            length: matchedValue.length,
+            mask: `[MASKED:${matchedType}]`,
+            type: matchedType,
+            original: matchedValue
+          });
         }
-        if (matchedType === "creditCard" && !validateLuhn(matchedValue)) {
-          continue;
-        }
-        replacements.push({
-          index: startIndex,
-          length: matchedValue.length,
-          mask: `[MASKED:${matchedType}]`,
-          type: matchedType,
-          original: matchedValue
-        });
       }
       replacements.sort((a, b) => b.length - a.length);
       const resolvedReplacements = [];
@@ -308,18 +332,12 @@ var PiiSandbox = (() => {
       resolvedReplacements.sort((a, b) => b.index - a.index);
       let processedText = text;
       const finalMaskedItems = [];
-      const textParts = processedText.split("");
+      resolvedReplacements.sort((a, b) => b.index - a.index);
       for (const r of resolvedReplacements) {
-        for (let i = 0; i < r.length; i++) {
-          if (i === 0) {
-            textParts[r.index] = r.mask;
-          } else {
-            textParts[r.index + i] = "";
-          }
-        }
+        processedText = processedText.substring(0, r.index) + r.mask + processedText.substring(r.index + r.length);
         finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
       }
-      processedText = textParts.join("");
+      finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
       finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
       const resultItems = finalMaskedItems.map(
         (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
@@ -339,13 +357,9 @@ var PiiSandbox = (() => {
         };
       }
       return { text: processedText, maskedItems: resultItems };
-} catch (error) {
-       return {
-         text: "[SANITIZATION_FAILED]",
-         maskedItems: [],
-         error: errorMessage(error)
-       };
-     }
+    } catch (error) {
+      throw error instanceof Error ? error : new Error(errorMessage(error));
+    }
   }
 
   // docs-src/pii-sandbox.ts

@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.40] - 2026-10-10
 
-アーキテクチャ診断ラウンドの修正版です。alarm 配線の DI 統合、dashboard i18n、監査ログ型 SSOT、contentCleaner の集計 drift、status 表示契約など 13 件を反映しました。
+アーキテクチャ診断ラウンドの修正版です。alarm 配線の DI 統合、dashboard i18n、監査ログ型 SSOT、contentCleaner の集計 drift、status 表示契約など 13 件を反映しました。あわせてプライバシー保護の修正（保存経路の PII マスク、タイトル正規化、長トークン内 PII 検出）を含みます。
 
 ### 修正・改善
 
@@ -46,6 +46,10 @@ All notable changes to this project will be documented in this file.
 - 監査ログ行型を `sqlite-types` に集約
 - contentCleaner の count/strip parity と SQLite order-dir 正規化を修正
 - dashboard status 表示、設定移行 allowlist、provider wire 契約を整理
+- 保存（SAVE_RECORD）経路でもクラウド AI 送信前に PII をマスクする（未マスク本文が送信されていた）
+- 長い連続文字列の中間にある PII を WASM コアの重なり付きチャンク走査で検出する（サンプリング走査を廃止）
+- タイトルの改行・CR・Unicode 行区切りを正規化し、Markdown の見出し／リンク行への注入を防ぐ（あわせて連続空白を 1 つに圧縮）
+- チャンク境界・長トークン・非ASCII 本文を対象に TS/Rust のパリティ検証を拡充
 
 ## [6.9.39] - 2026-10-07
 
