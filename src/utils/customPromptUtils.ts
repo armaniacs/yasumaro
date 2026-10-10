@@ -10,6 +10,7 @@ import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
 import { CustomPrompt } from './types.js';
 import { getAllCategories } from './tagUtils.js';
+import { getUiLanguage } from './localeUtils.js';
 
 // 型を再エクスポート
 export type { CustomPrompt } from './types.js';
@@ -54,7 +55,7 @@ Please summarize the content above.`;
  * @returns {string} デフォルトユーザープロンプト
  */
 export function getDefaultUserPrompt(locale?: string): string {
-    const effectiveLocale = locale ?? getBrowserLocale();
+    const effectiveLocale = locale ?? getUiLanguage();
     return effectiveLocale === 'ja' ? DEFAULT_USER_PROMPT_JA : DEFAULT_USER_PROMPT_EN;
 }
 
@@ -70,33 +71,17 @@ export const DEFAULT_SYSTEM_PROMPT_EN = 'You are a helpful assistant that summar
  * @returns {string} デフォルトシステムプロンプト
  */
 export function getDefaultSystemPrompt(locale?: string): string {
-    const effectiveLocale = locale ?? getBrowserLocale();
+    const effectiveLocale = locale ?? getUiLanguage();
     return effectiveLocale === 'ja' ? DEFAULT_SYSTEM_PROMPT_JA : DEFAULT_SYSTEM_PROMPT_EN;
 }
 
 /**
- * Get browser language setting
- * @returns Language code ('ja' or 'en', default is 'ja')
+ * @deprecated Use `getUiLanguage()` from `localeUtils.ts`. The previous
+ * `navigator.language`-based detection disagreed with `chrome.i18n` (which owns
+ * every label in the UI) and defaulted to 'ja' where the UI defaulted to 'en'.
  */
-export function getBrowserLocale(): string {
-    if (typeof navigator === 'undefined') return 'ja';
-    
-    try {
-        const lang = navigator.language || ('userLanguage' in navigator ? (navigator as Navigator & { userLanguage?: string }).userLanguage : null) || 'ja';
-        const locale = resolveLocaleWithFallback(lang);
-        return locale;
-    } catch (_e) {
-        console.warn('[customPromptUtils] Failed to detect browser locale, using default: ja');
-        return 'ja';
-    }
-}
-
-function resolveLocaleWithFallback(lang: string): string {
-    if (lang.startsWith('ja')) return 'ja';
-    if (lang.startsWith('ko')) return 'en';
-    if (lang.startsWith('zh')) return 'en';
-    if (lang.startsWith('es')) return 'en';
-    return 'en';
+export function getBrowserLocale(): 'ja' | 'en' {
+    return getUiLanguage();
 }
 
 /**
@@ -304,8 +289,8 @@ export function applyCustomPrompt(
     tagSummaryMode: boolean = false,
     locale?: string
 ): PromptResult {
-    // 言語が指定されていない場合はブラウザ設定から取得
-    const effectiveLocale = locale || getBrowserLocale();
+    // 言語が指定されていない場合は UI ロケールから取得
+    const effectiveLocale = locale || getUiLanguage();
     
     const customPrompt = getActivePrompt(settings, providerName);
 

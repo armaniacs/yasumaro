@@ -27,6 +27,20 @@ export function getUserLocale(): string {
 }
 
 /**
+ * Project the canonical UI locale onto the two supported document languages.
+ *
+ * This is the single owner of the ja/en decision for the whole extension. It is
+ * derived from `getUserLocale()` (`chrome.i18n.getUILanguage()`), the same source
+ * `getMessage()` uses, so prompt defaults can never disagree with the language of
+ * the surrounding labels. Do not re-derive it from `navigator.language`.
+ *
+ * @returns {'ja' | 'en'} Document language to use for prompt defaults and text
+ */
+export function getUiLanguage(): 'ja' | 'en' {
+  return getUserLocale().toLowerCase().startsWith('ja') ? 'ja' : 'en';
+}
+
+/**
  * RTL（右から左へ書く）言語かどうかを判定します
  *
  * @param {string} locale - 判定するロケールコード（省略時は現在のユーザーロケール）

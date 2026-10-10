@@ -12,6 +12,7 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { getUiLanguage } from '../../utils/localeUtils.js';
 import { Settings, StorageKeys } from '../../utils/storage/types.js';
 import {
     CustomPrompt,
@@ -57,11 +58,6 @@ export function asPromptProvider(value: unknown): CustomPrompt['provider'] {
         || value === 'lm-studio' || value === 'ollama' || value === 'all'
         ? value
         : 'all';
-}
-
-/** Ja/En UI locale detection, consolidated from the four inline copies. */
-export function getUiLocale(): string {
-    return navigator.language.startsWith('ja') ? 'ja' : 'en';
 }
 
 export interface PromptItemRowConfig {
@@ -212,7 +208,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         if (!promptList || !noPromptsMessage || !currentSettings) return;
 
         const prompts = asCustomPrompts(currentSettings[StorageKeys.CUSTOM_PROMPTS]);
-        const locale = getUiLocale();
+        const locale = getUiLanguage();
 
         // Always hide "no prompts" message since default is always shown
         noPromptsMessage.style.display = 'none';
@@ -305,7 +301,7 @@ export function createCustomPromptManager(): CustomPromptManager {
      */
     function createDefaultPromptItem(): string {
         const isActive = isDefaultActive();
-        const locale = getUiLocale();
+        const locale = getUiLanguage();
         const defaultPreset = getPresetPrompt('default');
         const displayName = defaultPreset ? getPromptDisplayName(defaultPreset, locale) : (getMessageOr('defaultPrompt', 'Default'));
         return buildPromptItemRow({
@@ -523,7 +519,7 @@ export function createCustomPromptManager(): CustomPromptManager {
 
             // Upsert preset entry
             const existing = prompts.findIndex(p => p.id === promptId);
-            const locale = getUiLocale();
+            const locale = getUiLanguage();
             const name = getPromptDisplayName(preset, locale);
             const now = Date.now();
             if (existing >= 0) {
@@ -571,7 +567,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         let provider = 'all';
         let systemPrompt = '';
         let promptText = '';
-        const locale = getUiLocale();
+        const locale = getUiLanguage();
 
         if (promptId === PROMPT_ID.DEFAULT) {
             // Duplicate default prompt

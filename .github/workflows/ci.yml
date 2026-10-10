@@ -128,6 +128,11 @@ jobs:
         run: npm run lint
       - name: innerHTML escape guard
         run: npm run check-innerhtml-escape
+      # i18n locale parity + source-key existence (PBI 2026-10-11-04: the gate
+      # existed but only ran at release time, so an undefined key like
+      # `domainRequired` shipped an English fallback into the Japanese UI).
+      - name: i18n completeness guard
+        run: npm run check-i18n
       - name: deprecated alias guard
         run: npm run check-deprecated-aliases
       - name: Layer docs consistency

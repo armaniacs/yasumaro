@@ -1906,6 +1906,9 @@
   "domainTagInvalidError": {
     "message": "Invalid domain format."
   },
+  "domainRequired": {
+    "message": "Domain is required"
+  },
   "domainTagDuplicateError": {
     "message": "Already registered."
   },
@@ -4507,6 +4510,12 @@
   },
   "noPerSiteOverrides": {
     "message": "No per-site overrides."
+  },
+  "perSiteOverrideDeleted": {
+    "message": "Per-site override deleted"
+  },
+  "perSiteOverrideNotFound": {
+    "message": "No override for this domain"
   },
   "notConsented": {
     "message": "Not consented"

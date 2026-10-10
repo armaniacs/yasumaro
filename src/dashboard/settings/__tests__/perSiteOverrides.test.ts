@@ -138,7 +138,9 @@ describe('perSiteOverrides — pinned observable storage behavior (PBI 2026-09-2
     expect(mockedSetAll).toHaveBeenCalledTimes(1);
     const delta = mockedSetAll.mock.calls[0]![0] as Record<string, unknown>;
     expect(delta[StorageKeys.DOMAIN_CLEANSING_OVERRIDES]).toEqual([]);
-    expect(statusText()).toBe('promptDeleted');
+    // PBI 2026-10-11-04: the delete confirmation no longer reuses the prompt key
+    // (ja rendered "プロンプトを削除しました" for a per-site override).
+    expect(statusText()).toBe('perSiteOverrideDeleted');
   });
 
   it('reader path: overrides listed from the repository settings object (contentKernel key)', async () => {
@@ -204,7 +206,7 @@ describe('perSiteOverrides — single writer + failure visibility (PBI 2026-09-2
 
     expect(mockedSetAll).toHaveBeenCalledTimes(1);
     expect(chromeSetMock).not.toHaveBeenCalled();
-    expect(statusText()).toBe('promptDeleted');
+    expect(statusText()).toBe('perSiteOverrideDeleted');
     expect(mockedLogError).not.toHaveBeenCalled();
   });
 

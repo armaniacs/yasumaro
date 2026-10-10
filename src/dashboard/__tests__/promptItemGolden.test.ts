@@ -76,7 +76,7 @@ vi.mock('../../utils/customPromptUtils.js', () => ({
 }));
 
 import { createCustomPromptManager } from '../settings/customPromptManager.js';
-import { buildPromptItemRow, getUiLocale } from '../settings/customPromptManager.js';
+import { buildPromptItemRow } from '../settings/customPromptManager.js';
 import { createMarkdownTemplateManager } from '../markdownTemplateManager.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 
@@ -434,17 +434,12 @@ describe('single prompt-item row builder (PBI NN19)', () => {
     expect(raw).toBe(`\n    ${segment}`);
   });
 
-  it('locale detection is consolidated in getUiLocale', () => {
-    vi.stubGlobal('navigator', { language: 'ja-JP' });
-    expect(getUiLocale()).toBe('ja');
-    vi.stubGlobal('navigator', { language: 'en-US' });
-    expect(getUiLocale()).toBe('en');
-    vi.unstubAllGlobals();
-  });
-
-  it('no duplicate startsWith("ja") locale expressions remain in customPromptManager.ts', () => {
+  it('locale detection is delegated to the shared localeUtils helper', () => {
     const source = readFileSync(path.join(process.cwd(), 'src/dashboard/settings/customPromptManager.ts'), 'utf8');
-    const matches = source.match(/navigator\.language\.startsWith\('ja'\)/g) ?? [];
-    expect(matches).toHaveLength(1);
+    // PBI 2026-10-11-04: the ja/en decision moved to localeUtils.getUiLanguage()
+    // so prompt defaults can never disagree with chrome.i18n, which owns every
+    // label in the UI. No navigator-based locale expression may come back.
+    expect(source).toContain('getUiLanguage');
+    expect(source.match(/navigator\.language/g) ?? []).toHaveLength(0);
   });
 });

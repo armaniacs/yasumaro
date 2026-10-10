@@ -507,9 +507,10 @@ describe('customPromptManager - r2 missed branches', () => {
         if (key === 'promptProviderAll') return 'All Providers';
         return key;
       });
-      // PBI 2026-09-11-04: the old code read a non-existent 'locale' key —
-      // UI language now comes straight from navigator.language.
-      vi.stubGlobal('navigator', { language: 'ja-JP' } as Navigator);
+      // PBI 2026-09-11-04: the old code read a non-existent 'locale' key.
+      // PBI 2026-10-11-04: UI language now comes from chrome.i18n via the shared
+      // getUiLanguage(), so it cannot disagree with the surrounding labels.
+      vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'ja-JP' } });
 
       const { initCustomPromptManager } = await import('../customPromptManager.js');
       initCustomPromptManager({ custom_prompts: [] });

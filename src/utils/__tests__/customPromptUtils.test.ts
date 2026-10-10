@@ -259,22 +259,16 @@ describe('customPromptUtils', () => {
             expect(getDefaultUserPrompt('en')).toBe(DEFAULT_USER_PROMPT_EN);
         });
 
-        test('uses the browser UI language (Japanese) when locale is omitted', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'ja-JP' },
-                configurable: true,
-                writable: true
-            });
+        test('uses the UI language (Japanese) when locale is omitted', () => {
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'ja-JP' } });
             expect(getDefaultUserPrompt()).toBe(DEFAULT_USER_PROMPT_JA);
+            vi.unstubAllGlobals();
         });
 
-        test('uses the browser UI language (English) when locale is omitted', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'en-US' },
-                configurable: true,
-                writable: true
-            });
+        test('uses the UI language (English) when locale is omitted', () => {
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'en-US' } });
             expect(getDefaultUserPrompt()).toBe(DEFAULT_USER_PROMPT_EN);
+            vi.unstubAllGlobals();
         });
     });
 
@@ -287,42 +281,37 @@ describe('customPromptUtils', () => {
             expect(getDefaultSystemPrompt('en')).toBe(DEFAULT_SYSTEM_PROMPT_EN);
         });
 
-        test('uses the browser UI language (Japanese) when locale is omitted', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'ja-JP' },
-                configurable: true,
-                writable: true
-            });
+        test('uses the UI language (Japanese) when locale is omitted', () => {
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'ja-JP' } });
             expect(getDefaultSystemPrompt()).toBe(DEFAULT_SYSTEM_PROMPT_JA);
+            vi.unstubAllGlobals();
         });
 
-        test('uses the browser UI language (English) when locale is omitted', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'en-US' },
-                configurable: true,
-                writable: true
-            });
+        test('uses the UI language (English) when locale is omitted', () => {
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'en-US' } });
             expect(getDefaultSystemPrompt()).toBe(DEFAULT_SYSTEM_PROMPT_EN);
+            vi.unstubAllGlobals();
         });
     });
 
-    describe('getBrowserLocale', () => {
-        test('returns ja for a Japanese locale', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'ja-JP' },
-                configurable: true,
-                writable: true
-            });
+    describe('getBrowserLocale (delegates to the canonical UI locale)', () => {
+        test('returns ja when chrome.i18n reports a Japanese UI locale', () => {
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'ja-JP' } });
             expect(getBrowserLocale()).toBe('ja');
+            vi.unstubAllGlobals();
         });
 
-        test('returns en for an English locale', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'en-US' },
-                configurable: true,
-                writable: true
-            });
+        test('returns en when chrome.i18n reports an English UI locale', () => {
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'en-US' } });
             expect(getBrowserLocale()).toBe('en');
+            vi.unstubAllGlobals();
+        });
+
+        test('ignores navigator.language (the previous, disagreeing basis)', () => {
+            vi.stubGlobal('navigator', { language: 'ja-JP' });
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'en-US' } });
+            expect(getBrowserLocale()).toBe('en');
+            vi.unstubAllGlobals();
         });
 
         test('returns a ja or en string', () => {
@@ -556,11 +545,9 @@ describe('customPromptUtils', () => {
         });
 
         test('uses the default when no system prompt exists', () => {
-            Object.defineProperty(global, 'navigator', {
-                value: { language: 'ja-JP' },
-                configurable: true,
-                writable: true
-            });
+            // PBI 2026-10-11-04: the default prompt language follows the UI
+            // locale (chrome.i18n), not navigator.language.
+            vi.stubGlobal('chrome', { i18n: { getUILanguage: () => 'ja-JP' } });
             const settings = {
                 custom_prompts: [
                     { id: '1', name: 'Custom', prompt: '{{content}}', isActive: true, provider: 'gemini', createdAt: 0, updatedAt: 0 }
@@ -569,6 +556,7 @@ describe('customPromptUtils', () => {
             const result = applyCustomPrompt(asSettings(settings), 'gemini', 'test');
 
             expect(result.systemPrompt).toBe(DEFAULT_SYSTEM_PROMPT_JA);
+            vi.unstubAllGlobals();
         });
 
         test('uses the default English prompt for the en locale', () => {

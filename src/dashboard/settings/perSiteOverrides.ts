@@ -181,7 +181,7 @@ export function initPerSiteOverrides(): void {
         const overrides = await loadOverrides();
         const next = upsertDomainOverride(overrides, domain, null);
         if (next.length === overrides.length) {
-            showStatus(statusEl, getMessageOr('noPerSiteOverrides', 'No override for domain'), 'error', { autoClear: false });
+            showStatus(statusEl, getMessageOr('perSiteOverrideNotFound', 'No override for this domain'), 'error', { autoClear: false });
             return;
         }
         try {
@@ -193,6 +193,6 @@ export function initPerSiteOverrides(): void {
         }
         clearToggles(togglesContainer);
         await refresh();
-        showStatus(statusEl, getMessageOr('promptDeleted', 'Deleted'), 'success');
+        showStatus(statusEl, getMessageOr('perSiteOverrideDeleted', 'Per-site override deleted'), 'success');
     });
 }

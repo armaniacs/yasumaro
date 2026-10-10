@@ -1843,6 +1843,9 @@
   "domainTagInvalidError": {
     "message": "無効なドメイン形式です。"
   },
+  "domainRequired": {
+    "message": "ドメインを入力してください"
+  },
   "domainTagDuplicateError": {
     "message": "すでに登録されています。"
   },
@@ -4489,6 +4492,12 @@
   },
   "noPerSiteOverrides": {
     "message": "サイト別の上書き設定はありません。"
+  },
+  "perSiteOverrideDeleted": {
+    "message": "サイト別の上書きを削除しました"
+  },
+  "perSiteOverrideNotFound": {
+    "message": "このドメインの上書き設定はありません"
   },
   "notConsented": {
     "message": "同意されていません"
