@@ -53,19 +53,22 @@ describe('archiveHandler — archive_preview', () => {
     expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_DATE, CUTOFF_MS, true);
   });
 
-  it('treats a non-boolean includeDeleted as false (strict flag)', async () => {
+  it('rejects a non-boolean includeDeleted (strict flag, matching the envelope gate)', async () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
     const result = await handler({ subtype: 'archive_preview', cutoffDate: CUTOFF_DATE, cutoffMs: CUTOFF_MS, includeDeleted: 1 } as never);
-    expect((result as { preview: { includeDeleted: boolean } }).preview.includeDeleted).toBe(false);
-    expect(deps.archivePreview).toHaveBeenCalledWith(CUTOFF_DATE, CUTOFF_MS, false);
+    // PBI 2026-10-11-10: the wire row now runs the same spec row as the
+    // envelope, so the handler-level coercion (=== true) is no longer reachable
+    // with a non-boolean flag — the payload is rejected before the deps call.
+    expect(result).toEqual({ success: false, error: 'archive_preview: includeDeleted must be boolean' });
+    expect(deps.archivePreview).not.toHaveBeenCalled();
   });
 
   it('rejects a missing cutoffDate without touching deps', async () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
     const result = await handler({ subtype: 'archive_preview', cutoffMs: 'x', includeDeleted: false } as never);
-    expect(result).toEqual({ success: false, error: 'archive_preview: cutoffDate is required' });
+    expect(result).toEqual({ success: false, error: 'archive_preview: cutoffDate must be string' });
     expect(deps.archivePreview).not.toHaveBeenCalled();
   });
 
@@ -115,7 +118,7 @@ describe('archiveHandler — archive_create', () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
     const result = await handler({ subtype: 'archive_create', cutoffMs: CUTOFF_MS, includeDeleted: false, yasumaroVersion: 'x' } as never);
-    expect(result).toEqual({ success: false, error: 'archive_create: cutoffDate is required' });
+    expect(result).toEqual({ success: false, error: 'archive_create: cutoffDate must be string' });
   });
 
   it('rejects an over-long yasumaroVersion at the validator (handler holds no duplicate)', () => {
@@ -199,7 +202,7 @@ describe('archiveHandler — archive_export', () => {
     const deps = makeDeps();
     const handler = createArchiveHandler(deps);
     const result = await handler({ subtype: 'archive_export', stagingName: 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 0, length: 0 } as never);
-    expect(result).toEqual({ success: false, error: 'archive_export: length must be a positive number' });
+    expect(result).toEqual({ success: false, error: 'archive_export: length must be 1..8388608' });
     expect(deps.archiveExportChunk).not.toHaveBeenCalled();
   });
 });
