@@ -40,110 +40,194 @@ pub fn scan(bytes: &[u8]) -> Result<Vec<(usize, usize, &'static str)>, MatchLimi
     let mut items = Vec::new();
     let mut i = 0;
 
-    macro_rules! try_match {
-        ($m:expr) => {
-            if let Some(m) = $m {
-                items.push((i, m.end, m.kind));
-                i = m.end;
-                continue;
-            }
-        };
-    }
-
     while i < len && items.len() <= MAX_MATCH_COUNT {
-        try_match!(core5::try_email(bytes, i));
-
-        let boundary_before = is_word_boundary_before(bytes, i);
-        let is_digit = bytes[i].is_ascii_digit();
-
-        if is_digit && boundary_before {
-            match core5::try_credit_card(bytes, i) {
-                CreditCardOutcome::Masked(m) => {
-                    items.push((i, m.end, m.kind));
-                    i = m.end;
-                    continue;
-                }
-                CreditCardOutcome::RejectedNoFallthrough { end } => {
-                    i = end;
-                    continue;
-                }
-                CreditCardOutcome::NoMatch => {}
+        match attempt_at(bytes, i) {
+            Attempt::Emit { end, kind } => {
+                items.push((i, end, kind));
+                i = end;
             }
-
-            try_match!(core5::try_my_number(bytes, i));
-
-            if bytes[i] == b'0' {
-                try_match!(core5::try_phone_jp(bytes, i));
+            Attempt::Consumed { end } => {
+                i = end;
             }
-
-            try_match!(core5::try_bank_account(bytes, i));
-            try_match!(extended::try_driver_license(bytes, i));
+            Attempt::NoMatch => {
+                i += 1;
+            }
         }
-
-        if boundary_before && bytes[i].is_ascii_uppercase() {
-            try_match!(extended::try_jp_passport(bytes, i));
-        }
-
-        if is_digit && boundary_before {
-            try_match!(extended::try_ipv4(bytes, i));
-            try_match!(extended::try_ssn(bytes, i));
-        }
-
-        // ipv6's TS char class starts with [0-9a-fA-F] — full-form addresses
-        // like fe80:0000:...:0001 begin with a hex letter, so gating on
-        // is_digit alone (as ipv4/ssn correctly can) misses them entirely.
-        if bytes[i].is_ascii_hexdigit() && boundary_before {
-            try_match!(extended::try_ipv6(bytes, i));
-        }
-
-        // phoneUs: no leading \b — try regardless of boundary_before, but
-        // only at positions that could plausibly start it (digit, '(', or
-        // '+') to avoid wasted work on every byte.
-        if is_digit || bytes[i] == b'(' || bytes[i] == b'+' {
-            try_match!(extended::try_phone_us(bytes, i));
-        }
-
-        // phoneCn: no leading \b.
-        if is_digit || bytes[i] == b'+' {
-            try_match!(extended::try_phone_cn(bytes, i));
-        }
-
-        if is_digit && boundary_before {
-            try_match!(extended::try_id_cn(bytes, i));
-            try_match!(extended::try_rrn_kr(bytes, i));
-        }
-
-        // phoneKr: no leading \b.
-        if is_digit || bytes[i] == b'+' {
-            try_match!(extended::try_phone_kr(bytes, i));
-        }
-
-        if boundary_before && bytes[i].is_ascii_uppercase() {
-            try_match!(extended::try_iban(bytes, i));
-        }
-
-        if is_digit && boundary_before {
-            try_match!(extended::try_de_tax_id(bytes, i));
-            try_match!(extended::try_fr_insee(bytes, i));
-        }
-
-        if boundary_before && bytes[i].is_ascii_uppercase() {
-            try_match!(extended::try_it_codice_fiscale(bytes, i));
-        }
-
-        if is_digit && boundary_before {
-            try_match!(extended::try_es_dni(bytes, i));
-        }
-
-        if boundary_before && matches!(bytes[i], b'X' | b'Y' | b'Z') {
-            try_match!(extended::try_es_nie(bytes, i));
-        }
-
-        i += 1;
     }
 
     if items.len() > MAX_MATCH_COUNT {
         return Err(MatchLimitExceeded);
     }
     Ok(items)
+}
+
+/// Outcome of the single-position alternation attempt at one byte offset.
+/// Extracted from the `scan` loop body so the chunk-scan port in `lib.rs`
+/// can reuse the exact same dispatch order as a sticky probe at an absolute
+/// position (the Rust equivalent of the TS `probeRegex` with the `y` flag
+/// executed against the full text).
+enum Attempt {
+    /// A pattern matched (Luhn-validated where applicable): emit a span.
+    Emit { end: usize, kind: &'static str },
+    /// A creditCard sub-pattern matched at the regex level but failed Luhn:
+    /// no span is emitted, yet the position is still consumed through `end`
+    /// (the regex engine already committed to the match; scanning resumes
+    /// there without fallthrough to lower-priority alternatives).
+    Consumed { end: usize },
+    /// No alternative matched at this position: advance by one byte.
+    NoMatch,
+}
+
+/// Runs the full alternation in source order at exactly `pos`, mirroring
+/// what the TS combined regex attempts at one `lastIndex`. Callers must
+/// guarantee `pos < bytes.len()` (all arms index `bytes[pos]`).
+fn attempt_at(bytes: &[u8], pos: usize) -> Attempt {
+    if let Some(m) = core5::try_email(bytes, pos) {
+        return Attempt::Emit { end: m.end, kind: m.kind };
+    }
+
+    let boundary_before = is_word_boundary_before(bytes, pos);
+    let is_digit = bytes[pos].is_ascii_digit();
+
+    if is_digit && boundary_before {
+        match core5::try_credit_card(bytes, pos) {
+            CreditCardOutcome::Masked(m) => {
+                return Attempt::Emit { end: m.end, kind: m.kind };
+            }
+            CreditCardOutcome::RejectedNoFallthrough { end } => {
+                return Attempt::Consumed { end };
+            }
+            CreditCardOutcome::NoMatch => {}
+        }
+
+        if let Some(m) = core5::try_my_number(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+
+        if bytes[pos] == b'0' {
+            if let Some(m) = core5::try_phone_jp(bytes, pos) {
+                return Attempt::Emit { end: m.end, kind: m.kind };
+            }
+        }
+
+        if let Some(m) = core5::try_bank_account(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+        if let Some(m) = extended::try_driver_license(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if boundary_before && bytes[pos].is_ascii_uppercase() {
+        if let Some(m) = extended::try_jp_passport(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if is_digit && boundary_before {
+        if let Some(m) = extended::try_ipv4(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+        if let Some(m) = extended::try_ssn(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    // ipv6's TS char class starts with [0-9a-fA-F] — full-form addresses
+    // like fe80:0000:...:0001 begin with a hex letter, so gating on
+    // is_digit alone (as ipv4/ssn correctly can) misses them entirely.
+    if bytes[pos].is_ascii_hexdigit() && boundary_before {
+        if let Some(m) = extended::try_ipv6(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    // phoneUs: no leading \b — try regardless of boundary_before, but
+    // only at positions that could plausibly start it (digit, '(', or
+    // '+') to avoid wasted work on every byte.
+    if is_digit || bytes[pos] == b'(' || bytes[pos] == b'+' {
+        if let Some(m) = extended::try_phone_us(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    // phoneCn: no leading \b.
+    if is_digit || bytes[pos] == b'+' {
+        if let Some(m) = extended::try_phone_cn(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if is_digit && boundary_before {
+        if let Some(m) = extended::try_id_cn(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+        if let Some(m) = extended::try_rrn_kr(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    // phoneKr: no leading \b.
+    if is_digit || bytes[pos] == b'+' {
+        if let Some(m) = extended::try_phone_kr(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if boundary_before && bytes[pos].is_ascii_uppercase() {
+        if let Some(m) = extended::try_iban(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if is_digit && boundary_before {
+        if let Some(m) = extended::try_de_tax_id(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+        if let Some(m) = extended::try_fr_insee(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if boundary_before && bytes[pos].is_ascii_uppercase() {
+        if let Some(m) = extended::try_it_codice_fiscale(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if is_digit && boundary_before {
+        if let Some(m) = extended::try_es_dni(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    if boundary_before && matches!(bytes[pos], b'X' | b'Y' | b'Z') {
+        if let Some(m) = extended::try_es_nie(bytes, pos) {
+            return Attempt::Emit { end: m.end, kind: m.kind };
+        }
+    }
+
+    Attempt::NoMatch
+}
+
+/// Sticky single-position probe: what the combined regex would match at
+/// exactly `pos` on these bytes, returned as the match length. This is the
+/// Rust equivalent of the TS `probeRegex` (`y`-flagged sticky exec against
+/// the full text): the caller passes the FULL input and an absolute start,
+/// and gets back the true text-level span length — or `None` when nothing
+/// matches there (a pure chunk-edge artifact, e.g. a `\b` that only holds
+/// because the chunk was severed).
+///
+/// Luhn is deliberately ignored here: the TS probe runs before Luhn
+/// validation, so a Luhn-rejected creditCard still counts as "something
+/// matches at this start" (`Consumed` maps to `Some`, same as `Emit`).
+/// Returns `None` for out-of-range positions.
+pub fn probe_match_len(bytes: &[u8], pos: usize) -> Option<usize> {
+    if pos >= bytes.len() {
+        return None;
+    }
+    match attempt_at(bytes, pos) {
+        Attempt::Emit { end, .. } | Attempt::Consumed { end } => Some(end - pos),
+        Attempt::NoMatch => None,
+    }
 }

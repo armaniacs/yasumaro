@@ -1,6 +1,5 @@
 import { StorageKeys } from './types.js';
 import type { StoragePort } from './storagePort.js';
-import type { Settings } from './types.js';
 
 /**
  * settingsSnapshot.ts — decrypt-free settings snapshot for contexts that
@@ -24,7 +23,7 @@ function isSnapshotAuthoritative(raw: unknown): boolean {
   return state.stage === 'completed' && typeof state.schemaVersion === 'number' && state.schemaVersion >= 2;
 }
 
-export async function readSettingsSnapshot(port: StoragePort): Promise<Settings> {
+export async function readSettingsSnapshot(port: StoragePort): Promise<Record<string, unknown>> {
   const raw = await port.get(['settings', 'settings_migrated']);
   const blob = (raw['settings'] as Record<string, unknown> | undefined) ?? {};
   let merged: Record<string, unknown>;
@@ -39,5 +38,5 @@ export async function readSettingsSnapshot(port: StoragePort): Promise<Settings>
   // No DEFAULT_SETTINGS fill: callers keep their own fallbacks (PageState
   // defaults, visitThresholds consts), and filling here would turn "absent"
   // into "present-but-default", breaking retain-previous logic downstream.
-  return merged as Settings;
+  return merged;
 }

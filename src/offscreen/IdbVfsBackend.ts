@@ -14,15 +14,15 @@ import {
   buildQuerySpec, buildPlainListStatements, buildFtsMatchQuery,
   purgeCutoffMs, buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
-  buildAuditLogStatements, buildAuditLogPurgeStatements,
+  buildAuditLogStatements, buildAuditLogPurgeStatements, runPurgeSequence,
   DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL,
   AUDIT_INSERT_SQL, buildAuditInsertParams, buildUpdateByIdStatements,
-  type AlreadyCappedQuery,
+  type AlreadyCappedQuery, type PurgeExecutor,
 } from './queryPlan.js';
 import { QUERY_CAPS } from '../utils/limits.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction, type TransactionExecutor } from './sqliteTransaction.js';
-import { planAuditLog, DEFAULT_RETENTION_DAYS as DEFAULT_PURGE_RETENTION_DAYS } from './queryPlanner.js';
+import { planAuditLog } from './queryPlanner.js';
 import { AUDIT_CAP_IDB } from '../utils/limits.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from './exportEnvelope.js';
 import type { SerializeResult } from './StorageBackend.js';
@@ -64,6 +64,20 @@ export class IdbVfsBackend implements StorageBackend {
   }
 
   /**
+   * Single-cell scalar read: runs `sql` with `params` and returns the first
+   * cell of the first row, Number-coerced. The engine seam hands rows back as
+   * positional arrays and yields nothing (Promise<void>), so this first-cell
+   * rule used to be re-spelled at every read site; the helper is its one owner.
+   * Semantics preserved from those sites: no row returns the 0 initialiser, a
+   * NULL cell coerces to 0, an absent cell to NaN.
+   */
+  private async scalar(sql: string, params: SqliteValue[] = []): Promise<number> {
+    let value = 0;
+    await this.engine.execWithCache(sql, params, (row: SqliteValue[]) => { value = Number(row[0]); });
+    return value;
+  }
+
+  /**
    * The host's half of the shared search skeleton: `execWithCache` yields
    * positional values in SELECT order, so rows decode positionally and a COUNT
    * row is its first cell. `per-path` qualification qualifies the FTS JOIN's
@@ -84,8 +98,7 @@ export class IdbVfsBackend implements StorageBackend {
     const domain = record.domain || extractDomain(record.url);
     const params = buildInsertParams(record, domain);
     await this.engine.execWithCache(INSERT_SQL, params);
-    let id = 0;
-    await this.engine.execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => { id = Number(row[0]); });
+    const id = await this.scalar('SELECT last_insert_rowid()');
     return { success: true, id };
   }
 
@@ -99,8 +112,7 @@ export class IdbVfsBackend implements StorageBackend {
       for (const record of records) {
         const domain = record.domain || extractDomain(record.url);
         await this.engine.execWithCache(INSERT_IGNORE_SQL, buildInsertParams(record, domain));
-        let changed = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changed = Number(row[0]); });
+        const changed = await this.scalar('SELECT changes()');
         if (changed > 0) inserted++;
         else skipped++;
       }
@@ -159,12 +171,7 @@ export class IdbVfsBackend implements StorageBackend {
       (row: SqliteValue[]) => { rows.push({ ...mapPositional<BrowsingLogEntry>(row, BROWSING_LOG_FULL_COLUMNS), rank: 0 }); }
     );
 
-    let total = 0;
-    await this.engine.execWithCache(
-      stmts.countSql,
-      stmts.countParams,
-      (row: SqliteValue[]) => { total = Number(row[0]); }
-    );
+    const total = await this.scalar(stmts.countSql, stmts.countParams);
 
     return { success: true, rows, total };
   }
@@ -194,101 +201,57 @@ export class IdbVfsBackend implements StorageBackend {
   async toggleStar(id: number): Promise<BackendOrError<StarResult>> {
     this.ensureDb();
     await this.engine.execWithCache(TOGGLE_STAR_SQL, [id]);
-    let newStarred = 0;
-    await this.engine.execWithCache(
-      'SELECT is_starred FROM browsing_logs WHERE id = ?',
-      [id],
-      (row: SqliteValue[]) => { newStarred = Number(row[0]); }
-    );
+    const newStarred = await this.scalar('SELECT is_starred FROM browsing_logs WHERE id = ?', [id]);
     return { success: true, is_starred: newStarred };
   }
 
   /**
-   * Transaction policy for the purge family, shared verbatim with
-   * opfsWorker/purgeHandlers.ts: a purge runs its whole sequence inside one
-   * `withTransaction`. Every purge here reads (`SELECT changes()` after a
-   * write, or a COUNT that decides the next write's LIMIT), and a purge
-   * interleaved with a recording would otherwise report a count taken from one
-   * snapshot while deleting rows selected from another. `clearAll` is the one
-   * deliberate exception: its statements are unconditional deletes with no
-   * read between writes, and its closing `wal_checkpoint` is rejected inside
-   * a transaction.
+   * Executor seam onto the shared purge sequence (queryPlan.runPurgeSequence,
+   * whose header owns the counting rule and the transaction policy). This
+   * adapter supplies the engine binding and the two scalar reads in the shape
+   * this backend's positional reader needs (a COUNT/changes row is its first
+   * cell).
    */
+  private get purgeExecutor(): PurgeExecutor {
+    return {
+      exec: (sql, params) => this.engine.execWithCache(sql, params),
+      count: (sql, params) => this.scalar(sql, params),
+      changes: () => this.scalar('SELECT changes()'),
+    };
+  }
+
   async purgeOldRecords(retentionDays?: number | undefined, maxRecords?: number | undefined): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    // PBI 2026-09-12-36: skip guards — same contract as purgeContent. Before
-    // this, (0,0) purged everything (cutoff = now) while content-purge(0,0)
-    // was a no-op. Statements are built unconditionally (plain SQL strings);
-    // only their EXECUTION is gated.
-    const stmts = buildPurgeOldRecordsStatements(purgeCutoffMs(retentionDays ?? DEFAULT_PURGE_RETENTION_DAYS));
-    let totalPurged = 0;
-
-    await withTransaction(this.transaction, async () => {
-      if (retentionDays != null && retentionDays > 0) {
-        await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
-        let changes1 = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
-        totalPurged += changes1;
-      }
-
-      let totalCount = 0;
-      await this.engine.execWithCache(
-        stmts.countSql,
-        [],
-        (row: SqliteValue[]) => { totalCount = Number(row[0]); }
-      );
-
-      if (maxRecords != null && maxRecords > 0 && totalCount > maxRecords) {
-        const excess = totalCount - maxRecords;
-        await this.engine.execWithCache(stmts.deleteExcessSql, [excess]);
-        let changes2 = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
-        totalPurged += changes2;
-      }
+    // Skip guards live in runPurgeSequence; the gate reads the RAW retentionDays
+    // (not a defaulted one), so an absent window still skips the retention
+    // delete. countPolicy 'always': purgeOldRecords has always run the cap
+    // COUNT even without a maxRecords cap.
+    const purged = await runPurgeSequence(this.purgeExecutor, buildPurgeOldRecordsStatements(), {
+      retentionDays, maxRecords, countPolicy: 'always',
     });
-
-    return { success: true, purged: totalPurged };
+    return { success: true, purged };
   }
 
   async purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    const stmts = buildContentPurgeStatements(contentPurgeStarredClause(includeStarred));
-    let totalPurged = 0;
-
-    await withTransaction(this.transaction, async () => {
-      if (retentionDays != null && retentionDays > 0) {
-        const cutoffMs = purgeCutoffMs(retentionDays);
-        await this.engine.execWithCache(stmts.deleteOldSql, [cutoffMs]);
-        let changes1 = 0;
-        await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes1 = Number(row[0]); });
-        totalPurged += changes1;
-      }
-
-      if (maxRecords != null && maxRecords > 0) {
-        let count = 0;
-        await this.engine.execWithCache(
-          stmts.countSql,
-          [],
-          (row: SqliteValue[]) => { count = Number(row[0]); }
-        );
-
-        if (count > maxRecords) {
-          const excess = count - maxRecords;
-          await this.engine.execWithCache(stmts.clearExcessSql, [excess]);
-          let changes2 = 0;
-          await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { changes2 = Number(row[0]); });
-          totalPurged += changes2;
-        }
-      }
-    });
-
-    return { success: true, purged: totalPurged };
+    // countPolicy 'when-max-records': content purge has always skipped the cap
+    // COUNT entirely unless a positive cap is present.
+    const purged = await runPurgeSequence(
+      this.purgeExecutor,
+      buildContentPurgeStatements(contentPurgeStarredClause(includeStarred)),
+      { retentionDays, maxRecords, countPolicy: 'when-max-records' },
+    );
+    return { success: true, purged };
   }
 
   async purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
     this.ensureDb();
-    // Same skip guard as the other purges: without a positive window there is
-    // no cutoff, and "no window" must not degrade into "cutoff = now".
+    // Not routed through runPurgeSequence: the trail has no cap dimension
+    // (no COUNT, no excess step) and its skip guard must return WITHOUT
+    // opening a transaction, whereas the shared runner always wraps its
+    // sequence in one. Same skip guard as the other purges: without a positive
+    // window there is no cutoff, and "no window" must not degrade into
+    // "cutoff = now".
     if (retentionDays == null || retentionDays <= 0) {
       return { success: true, purged: 0 };
     }
@@ -296,19 +259,14 @@ export class IdbVfsBackend implements StorageBackend {
     let purged = 0;
     await withTransaction(this.transaction, async () => {
       await this.engine.execWithCache(stmts.deleteOldSql, stmts.deleteOldParams);
-      await this.engine.execWithCache('SELECT changes()', [], (row: SqliteValue[]) => { purged = Number(row[0]); });
+      purged = await this.scalar('SELECT changes()');
     });
     return { success: true, purged };
   }
 
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
     this.ensureDb();
-    let count = 0;
-    await this.engine.execWithCache(
-      'SELECT COUNT(*) FROM browsing_logs_fts',
-      [],
-      (row: SqliteValue[]) => { count = Number(row[0]); }
-    );
+    const count = await this.scalar('SELECT COUNT(*) FROM browsing_logs_fts');
     return { success: true, count };
   }
 
@@ -347,10 +305,7 @@ export class IdbVfsBackend implements StorageBackend {
       AUDIT_INSERT_SQL,
       buildAuditInsertParams(record)
     );
-    let newId = 0;
-    await this.engine.execWithCache('SELECT last_insert_rowid()', [], (row: SqliteValue[]) => {
-      newId = Number(row[0]);
-    });
+    const newId = await this.scalar('SELECT last_insert_rowid()');
     return { success: true, id: newId };
   }
 
@@ -371,10 +326,7 @@ export class IdbVfsBackend implements StorageBackend {
       }
     );
 
-    let total = 0;
-    await this.engine.execWithCache(stmts.countSql, [], (row: SqliteValue[]) => {
-      total = Number(row[0]);
-    });
+    const total = await this.scalar(stmts.countSql);
 
     return { success: true, rows, total };
   }
@@ -398,12 +350,7 @@ export class IdbVfsBackend implements StorageBackend {
 
   async getCount(): Promise<BackendOrError<CountResult>> {
     this.ensureDb();
-    let count = 0;
-    await this.engine.execWithCache(
-      LIVE_COUNT_SQL,
-      [],
-      (row: SqliteValue[]) => { count = Number(row[0]); }
-    );
+    const count = await this.scalar(LIVE_COUNT_SQL);
     return { success: true, count };
   }
 

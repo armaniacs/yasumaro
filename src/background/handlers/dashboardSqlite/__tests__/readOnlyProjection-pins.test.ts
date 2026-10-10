@@ -23,14 +23,35 @@ describe('readOnly projection pins — projection-only (post PBI 2026-09-21-20)'
       expect(QUERY_CAPS.fts).toBe(100000);
     });
 
-    it('passes an absent limit through as undefined (planner applies its default)', () => {
+    it('passes absent order/paging params through raw (planner applies its defaults)', () => {
       const params = buildListParams({ subtype: 'query' } as ListPayload);
-      expect(params).toMatchObject({
-        limit: undefined,
-        offset: 0,
+      expect(params.limit).toBeUndefined();
+      expect(params.offset).toBeUndefined();
+      // PBI 2026-10-10-08: absent orderBy/orderDir are omitted (pickDefined) —
+      // `created_at` / `DESC` must not be baked into the wire payload; the
+      // planner (buildOrderByClause / resolveOrderDir) owns both defaults.
+      expect('orderBy' in params).toBe(false);
+      expect('orderDir' in params).toBe(false);
+    });
+
+    it('passes explicit order values through (planner resolves them unchanged)', () => {
+      const params = buildListParams({
+        subtype: 'query',
+        offset: 5,
         orderBy: 'created_at',
-        orderDir: 'DESC',
-      });
+        orderDir: 'ASC',
+      } as ListPayload);
+      expect(params.offset).toBe(5);
+      expect(params.orderBy).toBe('created_at');
+      expect(params.orderDir).toBe('ASC');
+    });
+
+    it('passes an out-of-whitelist orderDir through raw (planner resolveOrderDir rejects, unchanged)', () => {
+      const params = buildListParams({
+        subtype: 'query',
+        orderDir: 'BOGUS',
+      } as unknown as ListPayload);
+      expect(params.orderDir).toBe('BOGUS');
     });
 
     it('passes raw limits through untouched (over-cap included — planner clamps)', () => {

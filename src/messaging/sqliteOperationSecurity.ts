@@ -58,6 +58,8 @@
  * that PBI for why the current shape was kept.
  */
 
+import { computeScopeHash } from '../utils/scopeHash.js';
+
 /**
  * The receiver's reply when a confirmToken fails verification. Shared so the
  * sender can recognize it exactly rather than matching on a copied literal.
@@ -203,7 +205,6 @@ export async function deriveScopeHash(
 ): Promise<string | undefined> {
   const kind = ARCHIVE_SCOPE_BY_SUBTYPE[subtype];
   if (!kind) return undefined;
-  const { computeScopeHash } = await import('../background/confirmTokenManager.js');
   if (kind === 'cutoff') {
     return computeScopeHash([
       payload?.cutoffMs as number | undefined,

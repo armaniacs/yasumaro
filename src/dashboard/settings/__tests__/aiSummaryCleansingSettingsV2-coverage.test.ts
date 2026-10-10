@@ -85,11 +85,8 @@ function createFullCleansingDom(): void {
     ...createAllRuleCheckboxes(),
     '<input type="checkbox" id="whitelist-extraction-enabled">',
     '<input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">',
-    '<input type="checkbox" id="popup-body-protection-enabled">',
     '<input type="range" id="ai-summary-cleansing-body-protection-threshold" min="0" max="500">',
     '<span id="ai-summary-cleansing-body-protection-threshold-value"></span>',
-    '<input type="range" id="popup-body-protection-threshold" min="0" max="500">',
-    '<span id="popup-body-protection-threshold-value"></span>',
     '<input type="range" id="ai-summary-cleansing-link-ratio-threshold" min="0" max="100">',
     '<span id="link-ratio-threshold-value"></span>',
     '<input type="range" id="ai-summary-cleansing-short-text-threshold" min="0" max="500">',
@@ -116,7 +113,6 @@ function createPartialCleansingDomMissingOptional(): void {
     ...createAllRuleCheckboxes(),
     // whitelist-extraction-enabled omitted
     '<input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">',
-    // popup-body-protection-enabled omitted
     '<input type="range" id="ai-summary-cleansing-body-protection-threshold" min="0" max="500">',
     // ai-summary-cleansing-body-protection-threshold-value omitted
     '<input type="range" id="ai-summary-cleansing-link-ratio-threshold" min="0" max="100">',
@@ -300,7 +296,6 @@ describe('setupAiSummaryCleansingEventListeners — uncovered branches', () => {
     document.getElementById('short-seq-count-value')?.remove();
     document.getElementById('link-para-threshold-value')?.remove();
     document.getElementById('ai-summary-cleansing-body-protection-threshold-value')?.remove();
-    document.getElementById('popup-body-protection-threshold-value')?.remove();
     setupAiSummaryCleansingEventListeners();
     const slider = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
     slider.value = '90';
@@ -310,7 +305,6 @@ describe('setupAiSummaryCleansingEventListeners — uncovered branches', () => {
   it('handles missing body-protection checkboxes and still saves on rule change', async () => {
     createFullCleansingDom();
     document.getElementById('ai-summary-cleansing-body-protection-enabled')?.remove();
-    document.getElementById('popup-body-protection-enabled')?.remove();
     setupAiSummaryCleansingEventListeners();
     const cb = document.getElementById('ai-summary-cleansing-alt') as HTMLInputElement;
     cb.checked = false;

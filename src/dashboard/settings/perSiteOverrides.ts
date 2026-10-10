@@ -4,6 +4,7 @@
  */
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
+import { clearElement } from '../../utils/domClear.js';
 import { readOverrides } from './presetSettingsAdapter.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { StorageKeys, type DomainCleansingOverride } from '../../utils/storage/types.js';
@@ -12,13 +13,14 @@ import { normalizeDomain, upsertDomainOverride } from '../../utils/aiSummaryClea
 import { logError } from '../../utils/logger/api.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 function ruleCheckboxId(key: string): string {
     return `per-site-override-${key}`;
 }
 
 function buildToggles(container: HTMLElement): void {
-    container.innerHTML = '';
+    clearElement(container);
     for (const rule of CLEANSING_RULES) {
         const id = ruleCheckboxId(rule.key);
         const wrap = document.createElement('div');
@@ -79,7 +81,7 @@ async function saveOverrides(next: DomainCleansingOverride[]): Promise<void> {
 }
 
 function renderList(listEl: HTMLElement, overrides: DomainCleansingOverride[], onSelect: (d: string) => void): void {
-    listEl.innerHTML = '';
+    clearElement(listEl);
     if (overrides.length === 0) {
         listEl.textContent = getMessageOr('noPerSiteOverrides', 'No per-site overrides.');
         return;
@@ -114,14 +116,6 @@ export function initPerSiteOverrides(): void {
 
     buildToggles(togglesContainer);
 
-    const setStatus = (msg: string, isError = false) => {
-        if (!statusEl) return;
-        statusEl.textContent = msg;
-        statusEl.className = isError ? 'status-message error' : 'status-message success';
-        if (isError) return; // errors must not vanish: auto-clear hides the failure (Checking Team 2026-09-22, UI Medium)
-        if (msg) setTimeout(() => { statusEl.textContent = ''; statusEl.className = 'status-message'; }, 3000);
-    };
-
     const refresh = async (selectDomain?: string) => {
         const overrides = await loadOverrides();
         renderList(listEl, overrides, (d) => {
@@ -150,10 +144,14 @@ export function initPerSiteOverrides(): void {
     saveBtn.addEventListener('click', async () => {
         const rawDomain = domainInput.value;
         const domain = normalizeDomain(rawDomain);
-        if (!domain) { setStatus('Domain is required', true); return; }
+        if (!domain) {
+            showStatus(statusEl, getMessageOr('domainRequired', 'Domain is required'), 'error', { autoClear: false });
+            return;
+        }
         // very light validation — reject empty / spaces / protocol
         if (domain.includes('/') || domain.includes(':') || domain.includes(' ')) {
-            setStatus('Invalid domain', true); return;
+            showStatus(statusEl, getMessageOr('domainTagInvalidError', 'Invalid domain'), 'error', { autoClear: false });
+            return;
         }
         const patch = readToggles(togglesContainer);
         // Store the full checked map so a domain can force a rule OFF as well
@@ -166,29 +164,35 @@ export function initPerSiteOverrides(): void {
         try {
             await saveOverrides(next);
         } catch (error) {
-            setStatus(getMessageOr('settingsSaveError', 'Failed to save override'), true);
+            showStatus(statusEl, getMessageOr('settingsSaveError', 'Failed to save override'), 'error', { autoClear: false });
             await logError('Failed to save per-site override', { cause: errorMessage(error), domain }, ErrorCode.STORAGE_WRITE_FAILURE, 'perSiteOverrides');
             return;
         }
         await refresh(domain);
-        setStatus('Saved');
+        showStatus(statusEl, getMessageOr('settingsSaved', 'Saved'), 'success');
     });
 
     deleteBtn.addEventListener('click', async () => {
         const domain = normalizeDomain(domainInput.value);
-        if (!domain) { setStatus('Domain is required', true); return; }
+        if (!domain) {
+            showStatus(statusEl, getMessageOr('domainRequired', 'Domain is required'), 'error', { autoClear: false });
+            return;
+        }
         const overrides = await loadOverrides();
         const next = upsertDomainOverride(overrides, domain, null);
-        if (next.length === overrides.length) { setStatus('No override for domain', true); return; }
+        if (next.length === overrides.length) {
+            showStatus(statusEl, getMessageOr('noPerSiteOverrides', 'No override for domain'), 'error', { autoClear: false });
+            return;
+        }
         try {
             await saveOverrides(next);
         } catch (error) {
-            setStatus(getMessageOr('settingsSaveError', 'Failed to delete override'), true);
+            showStatus(statusEl, getMessageOr('settingsSaveError', 'Failed to delete override'), 'error', { autoClear: false });
             await logError('Failed to delete per-site override', { cause: errorMessage(error), domain }, ErrorCode.STORAGE_WRITE_FAILURE, 'perSiteOverrides');
             return;
         }
         clearToggles(togglesContainer);
         await refresh();
-        setStatus('Deleted');
+        showStatus(statusEl, getMessageOr('promptDeleted', 'Deleted'), 'success');
     });
 }

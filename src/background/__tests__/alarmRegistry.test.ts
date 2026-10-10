@@ -52,18 +52,35 @@ vi.mock('../../utils/logger/api.js', async () =>
 );
 
 import { createAlarmRegistry, type AlarmHandlerDeps } from '../alarmRegistry.js';
-import { setSessionTimeoutRefs } from '../alarmRegistryRefs.js';
 import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
+import type { ReviewSummaryGenerator } from '../reviewSummaryGenerator.js';
+import type { SessionAlarmService } from '../SessionAlarmService.js';
 import type { SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+
+function makeReviewGenerator(): ReviewSummaryGenerator {
+  return {
+    generateWeeklySummary: vi.fn(async () => false),
+    generateMonthlySummary: vi.fn(async () => false),
+  } as unknown as ReviewSummaryGenerator;
+}
+
+function makeSessionAlarmService(): SessionAlarmService {
+  return {
+    startTimeoutChecker: vi.fn(async () => {}),
+    checkTimeout: vi.fn(async () => {}),
+  } as unknown as SessionAlarmService;
+}
 
 function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
   return {
     sqliteClient: { maintain: vi.fn(async () => ({ success: true })) } as never,
     recordingPipeline: {} as never,
-    getOfflineNetworkQueue: async () => ({}) as never,
+    getOfflineNetworkQueue: () => ({}) as never,
     retryPendingChromeStorageWrite: vi.fn(async () => true),
+    reviewSummaryGenerator: makeReviewGenerator(),
+    sessionAlarmService: makeSessionAlarmService(),
     settingsReader: makeReader(false),
     ...overrides,
   };
@@ -138,7 +155,7 @@ describe('createAlarmRegistry', () => {
 
   it('logs job failure uniformly instead of void-firing', async () => {
     const failing = makeDeps({
-      getOfflineNetworkQueue: async () => {
+      getOfflineNetworkQueue: () => {
         throw new Error('queue gone');
       },
     });
@@ -188,23 +205,17 @@ describe('createAlarmRegistry', () => {
 
   describe('check_session_timeout (the only session-timeout dispatch path)', () => {
     it('runs checkTimeout exactly once per firing', async () => {
-      const install = vi.fn(async () => {});
-      const run = vi.fn(async () => {});
-      setSessionTimeoutRefs(install, run);
-
-      const registry = createAlarmRegistry(makeDeps());
+      const service = makeSessionAlarmService();
+      const registry = createAlarmRegistry(makeDeps({ sessionAlarmService: service }));
       registry.handleAlarm(alarm('check_session_timeout'));
-      await waitForMock(() => expect(run).toHaveBeenCalledTimes(1));
+      await waitForMock(() => expect(service.checkTimeout).toHaveBeenCalledTimes(1));
 
-      expect(run).toHaveBeenCalledTimes(1);
+      expect(service.checkTimeout).toHaveBeenCalledTimes(1);
     });
 
     it('does not run checkTimeout for other jobs', async () => {
-      const install = vi.fn(async () => {});
-      const run = vi.fn(async () => {});
-      setSessionTimeoutRefs(install, run);
-
-      const registry = createAlarmRegistry(makeDeps());
+      const service = makeSessionAlarmService();
+      const registry = createAlarmRegistry(makeDeps({ sessionAlarmService: service }));
       // Anchor: the routed job's handler landing proves the dispatch (and any
       // dynamic-import hop) completed for this alarm; the drain then gives a
       // macrotask boundary for the negative.
@@ -212,25 +223,43 @@ describe('createAlarmRegistry', () => {
       await waitForMock(() => expect(handleDailyPurgeAlarm).toHaveBeenCalledTimes(1));
       await drainMacrotask();
 
-      expect(run).not.toHaveBeenCalled();
+      expect(service.checkTimeout).not.toHaveBeenCalled();
     });
 
     it('installs the session alarm once per installAll', async () => {
       const globalRef = globalThis as unknown as { chrome?: unknown };
       const savedChrome = globalRef.chrome;
       globalRef.chrome = { alarms: { create: vi.fn(), clear: vi.fn() } };
-      const install = vi.fn(async () => {});
-      const run = vi.fn(async () => {});
-      setSessionTimeoutRefs(install, run);
+      const service = makeSessionAlarmService();
       try {
-        const registry = createAlarmRegistry(makeDeps());
+        const registry = createAlarmRegistry(makeDeps({ sessionAlarmService: service }));
         await registry.installAll();
 
-        expect(install).toHaveBeenCalledTimes(1);
-        expect(run).not.toHaveBeenCalled();
+        expect(service.startTimeoutChecker).toHaveBeenCalledTimes(1);
+        expect(service.checkTimeout).not.toHaveBeenCalled();
       } finally {
         globalRef.chrome = savedChrome;
       }
+    });
+  });
+
+  describe('review-summary run (pinned: deps-driven)', () => {
+    it('routes weekly firing to deps.reviewSummaryGenerator.generateWeeklySummary', async () => {
+      const generator = makeReviewGenerator();
+      const registry = createAlarmRegistry(makeDeps({ reviewSummaryGenerator: generator }));
+      registry.handleAlarm(alarm('yasumaro-review-weekly'));
+      await waitForMock(() => expect(generator.generateWeeklySummary).toHaveBeenCalledTimes(1));
+
+      expect(generator.generateMonthlySummary).not.toHaveBeenCalled();
+    });
+
+    it('routes monthly firing to deps.reviewSummaryGenerator.generateMonthlySummary', async () => {
+      const generator = makeReviewGenerator();
+      const registry = createAlarmRegistry(makeDeps({ reviewSummaryGenerator: generator }));
+      registry.handleAlarm(alarm('yasumaro-review-monthly'));
+      await waitForMock(() => expect(generator.generateMonthlySummary).toHaveBeenCalledTimes(1));
+
+      expect(generator.generateWeeklySummary).not.toHaveBeenCalled();
     });
   });
 

@@ -9,6 +9,7 @@ import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
@@ -437,7 +438,7 @@ export function renderPendingRegion(
   if (!region) return;
 
   if (pages.length === 0) {
-    region.innerHTML = '';
+    clearElement(region);
     return;
   }
 

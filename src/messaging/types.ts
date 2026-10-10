@@ -105,8 +105,6 @@ export function isMaskedItem(item: unknown): item is MaskedItem {
 /** PBI 04 の wire 応答。gate 拒否時のみ needsForce=true（強制再生成の提示用）。 */
 export type RegenerateSummaryResponse = RecordingResult & {
   needsForce?: boolean;
-  /** 試行したプロバイダーID（AI全滅時のみ。PBI 2026-09-22-04 follow-up）。 */
-  providersTried?: string[];
 };
 
 /**

@@ -24,6 +24,7 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
+import { publishE2eTestState, type OWTestState } from './e2eTestState.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.
@@ -157,8 +158,8 @@ export class ContentKernel {
 
     async loadSettings(): Promise<void> {
         // Decrypt-free snapshot from the storage side (PBI 2026-09-28-30):
-        // migration-folded and defaults-filled, ciphertext stays opaque.
-        const s = (await readSettingsSnapshot(this.storage)) as unknown as Record<string, unknown>;
+        // migration-folded, no default fill; ciphertext stays opaque.
+        const s = await readSettingsSnapshot(this.storage);
         applySettingsTable(this.pageState, s);
 
         void logInfo(
@@ -212,7 +213,7 @@ export class ContentKernel {
         );
 
         if (this.gating.isE2E) {
-            const state = {
+            const state: OWTestState = {
                 maxScrollPercentage: visitState.maxScrollPercentage,
                 isValidVisitReported: visitState.isValidVisitReported,
                 startTime: visitState.startTime,
@@ -220,25 +221,15 @@ export class ContentKernel {
                 minScrollDepth: thresholds.minScroll,
                 duration,
             };
-            if (typeof window !== 'undefined') {
-                (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE = state;
-            }
-            if (typeof document !== 'undefined') {
-                document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
-            }
+            publishE2eTestState(state);
         }
 
         if (evaluation.reportable) {
             void logInfo(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`, { duration, maxScrollPercentage: visitState.maxScrollPercentage }, 'contentKernel');
             void this.reportValidVisit();
-            if (this.gating.isE2E) {
-                if (typeof window !== 'undefined') {
-                    const w = window as unknown as { __OW_TEST_STATE?: { isValidVisitReported: boolean } };
-                    if (w.__OW_TEST_STATE) w.__OW_TEST_STATE.isValidVisitReported = true;
-                    if (typeof document !== 'undefined' && w.__OW_TEST_STATE) {
-                        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(w.__OW_TEST_STATE));
-                    }
-                }
+            if (this.gating.isE2E && typeof window !== 'undefined' && window.__OW_TEST_STATE) {
+                window.__OW_TEST_STATE.isValidVisitReported = true;
+                publishE2eTestState(window.__OW_TEST_STATE);
             }
             this.stopPeriodicCheck();
         }
@@ -324,18 +315,15 @@ export class ContentKernel {
 
         this.startPeriodicCheck();
 
-        if (this.gating.isE2E && typeof document !== 'undefined') {
-            document.documentElement.setAttribute(
-                'data-ow-test-state',
-                JSON.stringify({
-                    maxScrollPercentage: this.pageState.maxScrollPercentage,
-                    isValidVisitReported: this.pageState.isValidVisitReported,
-                    startTime: this.pageState.startTime,
-                    minVisitDuration: this.pageState.minVisitDuration,
-                    minScrollDepth: this.pageState.minScrollDepth,
-                    duration: 0,
-                }),
-            );
+        if (this.gating.isE2E) {
+            publishE2eTestState({
+                maxScrollPercentage: this.pageState.maxScrollPercentage,
+                isValidVisitReported: this.pageState.isValidVisitReported,
+                startTime: this.pageState.startTime,
+                minVisitDuration: this.pageState.minVisitDuration,
+                minScrollDepth: this.pageState.minScrollDepth,
+                duration: 0,
+            });
         }
     }
 

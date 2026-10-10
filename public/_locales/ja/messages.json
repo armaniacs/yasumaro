@@ -4970,5 +4970,131 @@
   "tagClusterTimeSliderError": {
     "message": "比較のこの半分の読み込みに失敗しました。再試行してください。",
     "description": "タグクラスタ時間比較の片側が失敗したときのエラー状態"
+  },
+  "exportLogsExportingJson": {
+    "message": "JSON をエクスポート中…"
+  },
+  "exportLogsJsonCompleted": {
+    "message": "JSON エクスポートが完了しました。"
+  },
+  "exportLogsExportFailed": {
+    "message": "エクスポートに失敗しました: {message}"
+  },
+  "exportLogsExportingMarkdown": {
+    "message": "Markdown をエクスポート中…"
+  },
+  "exportLogsMarkdownCompleted": {
+    "message": "Markdown エクスポートが完了しました。"
+  },
+  "exportLogsExportingCsv": {
+    "message": "CSV をエクスポート中…"
+  },
+  "exportLogsCsvCompleted": {
+    "message": "CSV エクスポートが完了しました。"
+  },
+  "exportLogsExportingDatabase": {
+    "message": "データベースをエクスポート中…"
+  },
+  "exportLogsDatabaseCompleted": {
+    "message": "データベースエクスポートが完了しました。"
+  },
+  "exportLogsBinaryRequiresOpfs": {
+    "message": "バイナリエクスポートには OPFS ストレージが必要です。JSON エクスポートをご利用ください。"
+  },
+  "exportLogsAuditLoading": {
+    "message": "取得中..."
+  },
+  "exportLogsAuditNoData": {
+    "message": "データがありません"
+  },
+  "exportLogsAuditPartial": {
+    "message": "監査ログは {shown} / {total} 件のみ取得できました（バックエンドの取得上限）。.db エクスポートをご利用ください。"
+  },
+  "exportLogsAuditDownloaded": {
+    "message": "{count} 件をダウンロードしました"
+  },
+  "exportLogsAuditError": {
+    "message": "エラー: {error}"
+  },
+  "cleansingFeedbackTitle": {
+    "message": "クレンジングフィードバック ({count})"
+  },
+  "cleansingFeedbackClearAll": {
+    "message": "全削除"
+  },
+  "cleansingFeedbackEmpty": {
+    "message": "報告はありません"
+  },
+  "cleansingFeedbackDelete": {
+    "message": "削除"
+  },
+  "cleansingDualPayloadSummary": {
+    "message": "原文 {original}字 → クレンジング後 {cleansed}字 (除去 {removed}字, {ratio}%)"
+  },
+  "cleansingDiffPreview": {
+    "message": "除去内容プレビュー: {preview}"
+  },
+  "cleansingFunnelReductionRate": {
+    "message": "削減率 {rate}%"
+  },
+  "promptInvalid": {
+    "message": "プロンプトが無効です"
+  },
+  "promptCannotEditDefault": {
+    "message": "デフォルトプロンプトは編集できません。複製してカスタム版を作成してください。"
+  },
+  "promptCannotDeleteDefault": {
+    "message": "デフォルトプロンプトは削除できません"
+  },
+  "promptPresetNotFound": {
+    "message": "プリセットが見つかりません"
+  },
+  "promptNotFound": {
+    "message": "プロンプトが見つかりません"
+  },
+  "encryptedBackupCreated": {
+    "message": "暗号化バックアップを作成しました"
+  },
+  "encryptedBackupCreateFailed": {
+    "message": "バックアップ作成に失敗しました: {error}"
+  },
+  "encryptedBackupFileTooLarge": {
+    "message": "バックアップファイルが大きすぎます"
+  },
+  "encryptedBackupInvalidFile": {
+    "message": "不正なバックアップファイルです"
+  },
+  "encryptedBackupRestoredSkipped": {
+    "message": "バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）"
+  },
+  "encryptedBackupRestored": {
+    "message": "バックアップから復元しました"
+  },
+  "encryptedBackupRestoreFailed": {
+    "message": "復元に失敗しました: {error}"
+  },
+  "encryptedBackupFileReadFailed": {
+    "message": "ファイルの読み込みに失敗しました: {error}"
+  },
+  "gistSettingsSaved": {
+    "message": "Gist 設定を保存しました"
+  },
+  "gistSaveFailed": {
+    "message": "保存に失敗しました: {error}"
+  },
+  "gistTestFailed": {
+    "message": "テストに失敗しました: {error}"
+  },
+  "localMarkdownExportSuccess": {
+    "message": "{count}件の記録を{files}ファイルにエクスポートしました。"
+  },
+  "localMarkdownExportFailed": {
+    "message": "エクスポートに失敗しました: {error}"
+  },
+  "localMarkdownExportEmptyRange": {
+    "message": "指定期間に記録がありません。"
+  },
+  "localMarkdownExportEmptyAll": {
+    "message": "エクスポートする記録がありません。"
   }
 }

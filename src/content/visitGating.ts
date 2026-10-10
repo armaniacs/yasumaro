@@ -25,6 +25,7 @@ import type { VisitGateThresholds, VisitState } from './visitGate.js';
 import { StorageKeys, type StorageKey } from '../utils/storage/types.js';
 import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
+import { cleansingFlagProp } from '../utils/cleansingConfig.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 
 export interface VisitEvaluation {
@@ -174,7 +175,7 @@ export function applySettingsTable(pageState: PageState, s: Record<string, unkno
 
     const cleansingRuleKeys: Array<[StorageKey, BooleanCleansingKey]> = CLEANSING_RULES.map((rule) => [
         rule.storageKey as StorageKey,
-        `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` as BooleanCleansingKey,
+        cleansingFlagProp(rule),
     ]);
 
     const booleanKeys: Array<[StorageKey, BooleanCleansingKey]> = [

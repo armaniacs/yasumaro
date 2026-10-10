@@ -6,7 +6,7 @@
  * result vocabulary. Keeping them in one neutral module prevents the two
  * sides from drifting and lets either side explain a failure consistently.
  */
-import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
+import type { AuditLogEntry, BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { isDisconnectMessage } from './disconnectPhrase.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from './sqliteMessages.js';
 export type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData };
@@ -107,13 +107,13 @@ export type SqliteRpcResult<T> =
  * call-site types precise without exposing the transport message types.
  */
 
-/** Audit log row shape shared by insert/query audit operations. */
-export interface AuditLogRecord {
-  id: number;
-  provider: string;
-  url: string;
-  created_at: number;
-}
+/**
+ * Backward-compat alias: sqliteWireTable.ts and offscreenGateway.ts import
+ * AuditLogRecord from this module for auditLog query rows, which carry id —
+ * the SSOT owns that shape as AuditLogEntry. The id-less insert payload
+ * below is derived from it via Omit.
+ */
+export type { AuditLogEntry as AuditLogRecord };
 
 export type MutateOp =
   | { type: 'insert'; record: BrowsingLogRecord; traceId?: string }
@@ -121,7 +121,7 @@ export type MutateOp =
   | { type: 'update'; id: number; changes: Partial<Record<string, unknown>>; traceId?: string }
   | { type: 'delete'; id: number }
   | { type: 'toggleStar'; id: number }
-  | { type: 'insertAuditLog'; record: Omit<AuditLogRecord, 'id'> };
+  | { type: 'insertAuditLog'; record: Omit<AuditLogEntry, 'id'> };
 
 export type QueryOp =
   | { kind: 'records'; q?: StorageQuery }
@@ -165,7 +165,7 @@ export interface SqliteRpcClient {
   query(q?: StorageQuery): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
   query(op: Extract<QueryOp, { kind: 'search' }>): Promise<SqliteRpcResult<{ rows: BrowsingLogRecord[]; total: number }>>;
   query(op: Extract<QueryOp, { kind: 'count' }>): Promise<SqliteRpcResult<number>>;
-  query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteRpcResult<{ rows: AuditLogRecord[]; total: number }>>;
+  query(op: Extract<QueryOp, { kind: 'auditLog' }>): Promise<SqliteRpcResult<{ rows: AuditLogEntry[]; total: number }>>;
   query(op: QueryOp | StorageQuery): Promise<SqliteRpcResult<unknown>>;
 
   mutate(op: Extract<MutateOp, { type: 'insert' }>): Promise<SqliteRpcResult<{ id: number }>>;

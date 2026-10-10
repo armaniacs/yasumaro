@@ -806,6 +806,16 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems.some(item => item.type === 'phoneJp')).toBe(true);
     });
 
+    test('masks an email straddling the sampling window boundary in a long token', async () => {
+      // 【テスト目的】: サンプリング置換文字 `#` を跨ぐ位置のPIIも検出・マスキング
+      // されることを確認（PBI-16）。この配置では旧実装が未検出になる。
+      const input = 'a'.repeat(190) + 'user@example.com' + 'b'.repeat(200);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('user@example.com');
+      expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
+    });
+
     test('processes 64KB input within the timeout', async () => {
       // 【テスト目的】: 最大入力サイズ（64KB）の空白なしテキストが
       // タイムアウト内で完了することを確認（PBI-06、ReDoS対策の回帰防止）
@@ -817,6 +827,17 @@ describe('piiSanitizer', () => {
       expect(result.maskedItems).toEqual([]);
       expect(result.error).toBeUndefined();
       expect(Date.now() - start).toBeLessThan(1000);
+    });
+
+    test('masks PII centered exactly on a chunk step boundary', async () => {
+      // 【テスト目的】: チャンク境界（200文字刻み）を跨ぐPIIが重なりで拾われる
+      // ことを確認（PBI-16）。offset 195 開始のemailは chunk0 [0,400) と
+      // chunk1 [200,600) の両端に掛かるが、重なり200により chunk0 に完全包含される。
+      const input = 'c'.repeat(195) + 'user@example.com' + 'd'.repeat(220);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('user@example.com');
+      expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
     });
   });
 });

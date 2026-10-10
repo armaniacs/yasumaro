@@ -17,6 +17,19 @@ function buildWhereFromConditions(conditions: FilterCondition[]): { where: strin
 const ALLOWED_ORDER_DIRECTIONS = ['ASC', 'DESC'] as const;
 
 /**
+ * Single owner of order-dir normalization: uppercases the requested direction
+ * (defaulting to DESC) and validates it against ALLOWED_ORDER_DIRECTIONS, so
+ * changing the allowed set never requires touching more than one place.
+ */
+function resolveOrderDir(q: StorageQuery): { dir: string; error?: undefined } | { dir?: undefined; error: string } {
+  const dir = (q.orderDir || 'DESC').toUpperCase();
+  if (!ALLOWED_ORDER_DIRECTIONS.includes(dir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
+    return { error: `Invalid orderDir: ${dir}` };
+  }
+  return { dir };
+}
+
+/**
  * Build a WHERE clause + params array from a StorageQuery.
  * When `excludeDeleted` is not explicitly false, filters out soft-deleted rows.
  *
@@ -83,10 +96,9 @@ export function buildOrderByClause(
   if (orderBy !== 'rank' && !ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
     return { orderClause: '', error: `Invalid orderBy: ${orderBy}` };
   }
-  const dir = (q.orderDir || 'DESC').toUpperCase();
-  if (!ALLOWED_ORDER_DIRECTIONS.includes(dir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
-    return { orderClause: '', error: `Invalid orderDir: ${dir}` };
-  }
+  const resolved = resolveOrderDir(q);
+  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
+  const dir = resolved.dir;
   // 'rank' for plain queries has no meaning — fall back to created_at
   const col = orderBy === 'rank' ? 'created_at' : orderBy;
   return { orderClause: `ORDER BY ${col} ${dir}` };
@@ -96,10 +108,9 @@ export function buildOrderByClause(
  * Build the ORDER BY clause for FTS5 search results.
  */
 export function buildFts5OrderClause(q: StorageQuery): { orderClause: string; error?: string } {
-  const dir = (q.orderDir || 'DESC').toUpperCase();
-  if (!ALLOWED_ORDER_DIRECTIONS.includes(dir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
-    return { orderClause: '', error: `Invalid orderDir: ${dir}` };
-  }
+  const resolved = resolveOrderDir(q);
+  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
+  const dir = resolved.dir;
   const orderClause = q.orderBy === 'created_at'
     ? `b.created_at ${dir}, b.id ${dir}`
     : 'rank';
@@ -110,10 +121,9 @@ export function buildFts5OrderClause(q: StorageQuery): { orderClause: string; er
  * Build the ORDER BY clause for LIKE fallback search.
  */
 export function buildLikeOrderClause(q: StorageQuery): { orderClause: string; error?: string } {
-  const dir = (q.orderDir || 'DESC').toUpperCase();
-  if (!ALLOWED_ORDER_DIRECTIONS.includes(dir as typeof ALLOWED_ORDER_DIRECTIONS[number])) {
-    return { orderClause: '', error: `Invalid orderDir: ${dir}` };
-  }
+  const resolved = resolveOrderDir(q);
+  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
+  const dir = resolved.dir;
   return { orderClause: q.orderBy === 'created_at' ? `created_at ${dir}` : `created_at DESC` };
 }
 

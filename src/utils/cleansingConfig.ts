@@ -26,6 +26,19 @@ type CleansingConfigRuleFlags = {
     [K in RuleKey as `aiSummaryCleansing${Capitalize<K>}`]: boolean;
 };
 
+/** A derived rule-flag property name on CleansingConfig. */
+export type CleansingFlagProp = keyof CleansingConfigRuleFlags;
+
+/**
+ * The single runtime derivation of a rule's CleansingConfig property name.
+ * CLEANSING_RULES stays the SSOT; the naming convention
+ * (`aiSummaryCleansing${Capitalize<key>}`) lives here once, folded together
+ * with the cast that the call sites used to spell out individually.
+ */
+export function cleansingFlagProp(rule: { key: RuleKey }): CleansingFlagProp {
+    return `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` as CleansingFlagProp;
+}
+
 // 【クレンジング設定】: コンテンツクレンジングとAI要約クレンジングの設定を一括管理
 // ThresholdProp (7 numeric thresholds) is intersected so that cfg[t.prop] is type-safe
 // without unsafe casts in extractor.ts. Fixed fields exclude the 7 threshold
@@ -53,7 +66,7 @@ export interface CleansingConfig extends CleansingConfigRuleFlags, Record<Thresh
  */
 const CLEANSING_RULE_PLACEHOLDER_DEFAULTS: CleansingConfigRuleFlags = Object.fromEntries(
     CLEANSING_RULES.map(rule => [
-        `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}`,
+        cleansingFlagProp(rule),
         rule.defaultEnabled,
     ]),
 ) as CleansingConfigRuleFlags;

@@ -4988,5 +4988,131 @@
   "tagClusterTimeSliderError": {
     "message": "Failed to load this half of the comparison. Try again.",
     "description": "Error state for a failed half of the tag-cluster time comparison"
+  },
+  "exportLogsExportingJson": {
+    "message": "Exporting JSON…"
+  },
+  "exportLogsJsonCompleted": {
+    "message": "JSON export completed."
+  },
+  "exportLogsExportFailed": {
+    "message": "Export failed: {message}"
+  },
+  "exportLogsExportingMarkdown": {
+    "message": "Exporting Markdown…"
+  },
+  "exportLogsMarkdownCompleted": {
+    "message": "Markdown export completed."
+  },
+  "exportLogsExportingCsv": {
+    "message": "Exporting CSV…"
+  },
+  "exportLogsCsvCompleted": {
+    "message": "CSV export completed."
+  },
+  "exportLogsExportingDatabase": {
+    "message": "Exporting database…"
+  },
+  "exportLogsDatabaseCompleted": {
+    "message": "Database export completed."
+  },
+  "exportLogsBinaryRequiresOpfs": {
+    "message": "Binary export requires OPFS storage. Use JSON export instead."
+  },
+  "exportLogsAuditLoading": {
+    "message": "Loading..."
+  },
+  "exportLogsAuditNoData": {
+    "message": "No audit log data"
+  },
+  "exportLogsAuditPartial": {
+    "message": "Only {shown} / {total} audit log entries were retrieved (backend retrieval limit). Use the .db export instead."
+  },
+  "exportLogsAuditDownloaded": {
+    "message": "Downloaded {count} entries"
+  },
+  "exportLogsAuditError": {
+    "message": "Error: {error}"
+  },
+  "cleansingFeedbackTitle": {
+    "message": "Cleansing Feedback ({count})"
+  },
+  "cleansingFeedbackClearAll": {
+    "message": "Delete all"
+  },
+  "cleansingFeedbackEmpty": {
+    "message": "No reports"
+  },
+  "cleansingFeedbackDelete": {
+    "message": "Delete"
+  },
+  "cleansingDualPayloadSummary": {
+    "message": "Original {original} chars → cleansed {cleansed} chars (removed {removed} chars, {ratio}%)"
+  },
+  "cleansingDiffPreview": {
+    "message": "Removed content preview: {preview}"
+  },
+  "cleansingFunnelReductionRate": {
+    "message": "Reduction rate {rate}%"
+  },
+  "promptInvalid": {
+    "message": "Invalid prompt"
+  },
+  "promptCannotEditDefault": {
+    "message": "Cannot edit default prompt. Use duplicate to create a custom version."
+  },
+  "promptCannotDeleteDefault": {
+    "message": "Cannot delete default prompt"
+  },
+  "promptPresetNotFound": {
+    "message": "Preset not found"
+  },
+  "promptNotFound": {
+    "message": "Prompt not found"
+  },
+  "encryptedBackupCreated": {
+    "message": "Encrypted backup created"
+  },
+  "encryptedBackupCreateFailed": {
+    "message": "Failed to create backup: {error}"
+  },
+  "encryptedBackupFileTooLarge": {
+    "message": "Backup file is too large"
+  },
+  "encryptedBackupInvalidFile": {
+    "message": "Invalid backup file"
+  },
+  "encryptedBackupRestoredSkipped": {
+    "message": "Restored from backup ({skipped} invalid settings items were skipped)"
+  },
+  "encryptedBackupRestored": {
+    "message": "Restored from backup"
+  },
+  "encryptedBackupRestoreFailed": {
+    "message": "Failed to restore: {error}"
+  },
+  "encryptedBackupFileReadFailed": {
+    "message": "Failed to read the file: {error}"
+  },
+  "gistSettingsSaved": {
+    "message": "Gist settings saved"
+  },
+  "gistSaveFailed": {
+    "message": "Save failed: {error}"
+  },
+  "gistTestFailed": {
+    "message": "Test failed: {error}"
+  },
+  "localMarkdownExportSuccess": {
+    "message": "Exported {count} records to {files} files."
+  },
+  "localMarkdownExportFailed": {
+    "message": "Export failed: {error}"
+  },
+  "localMarkdownExportEmptyRange": {
+    "message": "No records in the specified period."
+  },
+  "localMarkdownExportEmptyAll": {
+    "message": "No records to export."
   }
 }

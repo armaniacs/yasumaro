@@ -48,6 +48,13 @@ src/utils/storage/apiKeyTransition.ts
 src/utils/storage/apiKeyFields.ts
 src/utils/visitThresholds.ts
 src/utils/limits.ts
+src/utils/loopbackPorts.ts
+src/utils/recordingGateTable.ts
+src/utils/listSources.ts
+src/utils/cleansingBadge.ts
+src/utils/registrableDomain.ts
+src/utils/domClear.ts — Element クリアの共有 seam（popup から re-export、dashboard も直接利用。document/chrome 非依存の純関数）
+src/utils/scopeHash.ts — confirm token の scope SHA-256 計算（chrome 非依存の純関数。background と messaging が共有、PBI 2026-10-09-16）
 ```
 
 注記:
@@ -85,6 +92,15 @@ src/utils/Mutex.ts
 src/utils/rateLimiter.ts
 src/utils/trustDb/domainValidation.ts
 src/utils/trustDb/managedStringList.ts
+src/utils/trustDb/TrustDbAdmin.ts
+src/utils/keySerializer.ts
+src/utils/ui/confirmDialog.ts
+src/utils/copyMarkdownButton.ts
+src/utils/storage/trancoConsent.ts
+src/utils/storage/providerAllowlist.ts
+src/utils/storage/providerDefaultBaseUrls.ts
+src/utils/storage/storagePort.ts
+src/utils/storage/structuredCloneBoundary.ts
 src/utils/crypto/hmacKeyStore.ts — chrome.storage への副作用を持つため Layer 0 から移動（PBI 2026-09-17-05）
 src/utils/masterPassword.ts — chrome.storage への副作用を持つ Infrastructure として Layer 1 に分類（PBI 2026-09-17-05）
 src/utils/i18nPlural.ts — chrome.i18n を参照するため Layer 0 から移動（PBI 2026-09-17-05）
@@ -152,17 +168,18 @@ src/utils/ublockParser/
 src/utils/ublockMatcher.ts
 src/utils/domainUtils.ts — Layer 2 の ublockMatcher を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
 src/utils/logger/sanitize.ts — Layer 2 の piiSanitizer を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
+src/utils/promptSafety.ts
+src/utils/trustDb/TrustLookup.ts
+src/utils/trustDb/TrustDecision.ts
 ```
 
 ### Barrel — Re-export (retired)
 
 ```
-src/utils/storage.ts      — @deprecated re-export shim。production は全て直接 import に移行済み（PBI 2026-08-21-04）。テストのレガシー mock 経路のみが参照。eslint no-restricted-imports により新規利用は禁止
-src/utils/logger.ts       — 42行、logger/* からの再エクスポート。約120箇所から参照
 src/utils/crypto/index.ts — crypto/* からの再エクスポート
 ```
 
-新規コードは barrel 経由ではなく各モジュールから直接 import すること。`storage.ts` への import は lint が警告する。
+新規コードは barrel 経由ではなく各モジュールから直接 import すること。`storage.ts`・`logger.ts` の barrel は削除済み（下記「将来の移行計画」）。
 
 ## 依存ルール
 
@@ -269,6 +286,7 @@ comm -23 <(find src/utils -name '*.ts' -not -path '*__tests__*' | sort) <(grep -
 - [ ] `storage` / `trustDb` / `repositories` を import するか？ → Layer 2
 - [ ] どれにも当てはまらない純粋関数か？ → Layer 0
 - [ ] ファイル先頭に `// @layer N — <purpose>` コメントを付与したか？
+- [ ] 宣言レイヤーをルールリスト（`LAYER0_FILES` / `LAYER1_FILES` / `LAYER2_MODULES`）または本分類表に登録したか？（`lint:layers-docs` が宣言と収載を照合する。未収載の宣言は drift として報告される）
 - [ ] 循環が必要な場合は ADR に記録したか？
 
 例:
@@ -288,5 +306,4 @@ export function getDomainFilterCacheSync() { ... }
 
 * ADR 2026-08-20-utils-layer-circular-dependency — 循環依存の詳細と保護理由
 * ADR 2026-07-26-domain-filter-layer-map — ドメインフィルタ専用の4層モデル
-* src/utils/storage.ts ファイルヘッダ — barrel 分割の履歴
 

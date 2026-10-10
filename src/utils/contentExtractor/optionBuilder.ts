@@ -9,17 +9,13 @@
 import type { CleanseOptions } from '../contentCleaner.js';
 import type { AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
+import { cleansingFlagProp } from '../cleansingConfig.js';
 import type { CleansingConfig } from '../cleansingConfig.js';
 
 interface ExtractionOptions {
     cleanseOptions: CleanseOptions & { cleanseEnabled: boolean; whitelistExtractionEnabled: boolean };
     aiSummaryCleanseOptions: AiSummaryCleanseOptions & { aiSummaryCleanseEnabled: boolean };
     dedupOptions: { dedupEnabled: boolean; dedupThreshold: number };
-}
-
-/** Capitalize the first character for the CleansingConfig property name. */
-function capitalize(s: string): string {
-    return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /**
@@ -37,12 +33,11 @@ export function buildExtractionOptions(config: CleansingConfig): ExtractionOptio
 
     // Derive the 32 rule flags from CLEANSING_RULES instead of listing each
     // mapping by hand. Each rule `key` maps:
-    //   config[`aiSummaryCleansing${Capitalize<key>}`] → options[`${key}Enabled`]
+    //   config[cleansingFlagProp(rule)] → options[`${rule.key}Enabled`]
     const ruleFlags: Record<string, boolean> = Object.fromEntries(
         CLEANSING_RULES.map(rule => [
             `${rule.key}Enabled`,
-            // WHY: dynamic property access on config object; cleansing rule keys are generated at runtime
-            (config as unknown as Record<string, unknown>)[`aiSummaryCleansing${capitalize(rule.key)}`] as boolean,
+            config[cleansingFlagProp(rule)],
         ]),
     );
 

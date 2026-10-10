@@ -414,9 +414,7 @@ export function createRegenerateSummaryHandler(deps: RegenerateSummaryHandlerDep
           sendResponse({
             success: false,
             error: 'ai_failed',
-            ...(result.attemptedProviders !== undefined
-              ? { providersTried: result.attemptedProviders }
-              : {}),
+            ...(result.attemptedProviders !== undefined ? { attemptedProviders: result.attemptedProviders } : {}),
             ...(result.slotFailures !== undefined
               ? { slotFailures: result.slotFailures }
               : {}),

@@ -4,13 +4,13 @@
  * Fails when a raw `innerHTML = <interpolated>` assignment appears outside the
  * allowlisted renderer modules. Renderers must go through `escapeHtml`
  * (see src/utils/htmlEscape.ts) or `textContent`-based construction.
- * Element clearing must use `clearElement` from `src/popup/domUtils.ts`.
+ * Element clearing must use `clearElement` from `src/utils/domClear.ts`.
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, extname } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
-const TARGET_DIRS = ['src/popup', 'src/privacy'];
+const TARGET_DIRS = ['src/popup', 'src/privacy', 'src/dashboard'];
 const ALLOWLIST = new Set([
     // Central renderers that are reviewed for escapeHtml coverage.
     'src/popup/statusRenderers.ts',

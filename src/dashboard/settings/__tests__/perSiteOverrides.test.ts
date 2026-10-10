@@ -4,7 +4,8 @@
  * PBI 2026-09-05-24: 空リスト表示が i18n キー経由であることを検証する。
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock, waitForMock } from '../../../../testDir/waitPolicy.js';
 
 vi.mock('../../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../../testDir/i18nMock.js');
@@ -67,6 +68,10 @@ beforeEach(() => {
   buildDom();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 async function flush(times = 8): Promise<void> {
   for (let i = 0; i < times; i++) {
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -75,6 +80,10 @@ async function flush(times = 8): Promise<void> {
 
 function statusText(): string {
   return document.getElementById('perSiteOverrideStatus')!.textContent ?? '';
+}
+
+async function flushMicrotasks(times = 8): Promise<void> {
+  for (let i = 0; i < times; i++) await Promise.resolve();
 }
 
 describe('perSiteOverrides — 空リスト表示の i18n', () => {
@@ -111,7 +120,7 @@ describe('perSiteOverrides — pinned observable storage behavior (PBI 2026-09-2
     expect(stored).toHaveLength(1);
     expect(stored[0]!.domain).toBe('example.com');
     expect(stored[0]!.overrides['altEnabled']).toBe(true);
-    expect(statusText()).toBe('Saved');
+    expect(statusText()).toBe('settingsSaved');
   });
 
   it('delete persists the removal as a repository delta under DOMAIN_CLEANSING_OVERRIDES', async () => {
@@ -129,7 +138,7 @@ describe('perSiteOverrides — pinned observable storage behavior (PBI 2026-09-2
     expect(mockedSetAll).toHaveBeenCalledTimes(1);
     const delta = mockedSetAll.mock.calls[0]![0] as Record<string, unknown>;
     expect(delta[StorageKeys.DOMAIN_CLEANSING_OVERRIDES]).toEqual([]);
-    expect(statusText()).toBe('Deleted');
+    expect(statusText()).toBe('promptDeleted');
   });
 
   it('reader path: overrides listed from the repository settings object (contentKernel key)', async () => {
@@ -160,7 +169,7 @@ describe('perSiteOverrides — single writer + failure visibility (PBI 2026-09-2
 
     expect(mockedSetAll).toHaveBeenCalledTimes(1);
     expect(chromeSetMock).not.toHaveBeenCalled();
-    expect(statusText()).toBe('Saved');
+    expect(statusText()).toBe('settingsSaved');
     expect(statusClass()).toContain('success');
     expect(mockedLogError).not.toHaveBeenCalled();
   });
@@ -195,7 +204,7 @@ describe('perSiteOverrides — single writer + failure visibility (PBI 2026-09-2
 
     expect(mockedSetAll).toHaveBeenCalledTimes(1);
     expect(chromeSetMock).not.toHaveBeenCalled();
-    expect(statusText()).toBe('Deleted');
+    expect(statusText()).toBe('promptDeleted');
     expect(mockedLogError).not.toHaveBeenCalled();
   });
 
@@ -217,5 +226,43 @@ describe('perSiteOverrides — single writer + failure visibility (PBI 2026-09-2
     expect(statusClass()).toContain('error');
     expect(mockedLogError).toHaveBeenCalledTimes(1);
     expect(chromeSetMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('perSiteOverrides — status timer ownership', () => {
+  it('keeps the second save message until its own timer expires', async () => {
+    useTimerClock();
+    initPerSiteOverrides();
+    await waitForMock(() => expect(mockedGetAll).toHaveBeenCalled());
+
+    const domainInput = document.getElementById('perSiteOverrideDomain') as HTMLInputElement;
+    const saveButton = document.getElementById('perSiteOverrideSaveBtn') as HTMLButtonElement;
+    domainInput.value = 'example.com';
+    saveButton.click();
+    await waitForMock(() => expect(mockedSetAll).toHaveBeenCalledTimes(1));
+    await flushMicrotasks();
+    expect(statusText()).toBe('settingsSaved');
+
+    vi.advanceTimersByTime(2999);
+    saveButton.click();
+    await waitForMock(() => expect(mockedSetAll).toHaveBeenCalledTimes(2));
+    await flushMicrotasks();
+    expect(statusText()).toBe('settingsSaved');
+
+    vi.advanceTimersByTime(1);
+    expect(statusText()).toBe('settingsSaved');
+    vi.advanceTimersByTime(2999);
+    expect(statusText()).toBe('');
+  });
+
+  it('keeps validation errors visible after the success auto-clear duration', async () => {
+    useTimerClock();
+    initPerSiteOverrides();
+    await waitForMock(() => expect(mockedGetAll).toHaveBeenCalled());
+
+    (document.getElementById('perSiteOverrideSaveBtn') as HTMLButtonElement).click();
+    expect(statusText()).toBe('domainRequired');
+    vi.advanceTimersByTime(5000);
+    expect(statusText()).toBe('domainRequired');
   });
 });

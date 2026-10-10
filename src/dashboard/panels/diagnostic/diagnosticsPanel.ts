@@ -8,6 +8,7 @@
  */
 
 import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
 import type { BuiltInAiDiagnosticsResult } from '../../builtInAiDiagnosticsService.js';
@@ -32,7 +33,7 @@ export function renderBuiltInAiStatus(
   downloadBtn: HTMLButtonElement | null,
   result: BuiltInAiDiagnosticsResult
 ): void {
-  statsEl.innerHTML = '';
+  clearElement(statsEl);
 
   const statusLabels: Record<BuiltInAIAvailability, string> = {
     available: getMessageOr('diagBuiltInAiAvailable', 'Available'),

@@ -35,6 +35,18 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.40] - 2026-10-10
+
+アーキテクチャ診断ラウンドの修正版です。alarm 配線の DI 統合、dashboard i18n、監査ログ型 SSOT、contentCleaner の集計 drift、status 表示契約など 13 件を反映しました。
+
+### 修正・改善
+
+- alarmRegistry の module-level refs を削除し、composition root の DI に統合
+- dashboard の動的 UI 文言を i18n 契約へ統一
+- 監査ログ行型を `sqlite-types` に集約
+- contentCleaner の count/strip parity と SQLite order-dir 正規化を修正
+- dashboard status 表示、設定移行 allowlist、provider wire 契約を整理
+
 ## [6.9.39] - 2026-10-07
 
 v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応じた後続 fix 1 件のみを含みます。

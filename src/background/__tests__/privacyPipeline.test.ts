@@ -6,6 +6,7 @@ import { addLog } from '../../utils/logger/core.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 import type { AIService } from '../ai/AIService.js';
+import { buildRecordRequest } from '../recordRequestBuilder.js';
 
 // These suites stub only the two AIService methods the pipeline calls.
 const asAIService = (mock: Pick<AIService, 'getSupportedModes' | 'generateSummary'>): AIService =>
@@ -534,6 +535,32 @@ describe('PrivacyPipeline', () => {
 
       expect(mockCloudService.generateSummary).toHaveBeenCalled();
       expect(result.aiCallDurationMs).toBeGreaterThanOrEqual(DELAY_MS - 5);
+    });
+
+    it('masks PII before cloud AI on the save-equivalent path (no alreadyProcessed flag)', async () => {
+      const maskedCloudSettings = { [StorageKeys.PRIVACY_MODE]: 'masked_cloud' };
+      const mockCloudService = {
+        getSupportedModes: vi.fn().mockReturnValue(['full_pipeline']),
+        generateSummary: vi.fn().mockResolvedValue({ summary: 'Cloud summary' }),
+      } as any;
+      const sanitizers = { sanitizeRegex: vi.fn().mockReturnValue({ text: 'MASKED TEXT', maskedItems: [{ type: 'email', original: 'user@example.com' }] }) };
+      const pipeline = new PrivacyPipeline(maskedCloudSettings, asAIService(mockCloudService), sanitizers);
+
+      const promptSanitizerModule = await import('../../utils/promptSanitizer.js');
+      vi.mocked(promptSanitizerModule.sanitizePromptContent).mockReturnValue({
+        sanitized: 'Cloud summary', warnings: [], dangerLevel: 'low'
+      });
+
+      const request = buildRecordRequest('save', {
+        title: 'T', url: 'https://example.com', content: 'contact user@example.com',
+      });
+      expect('alreadyProcessed' in request).toBe(false);
+
+      const result = await pipeline.process(request.content, { alreadyProcessed: request.alreadyProcessed ?? false });
+
+      expect(sanitizers.sanitizeRegex).toHaveBeenCalledWith('contact user@example.com');
+      expect(mockCloudService.generateSummary).toHaveBeenCalledWith('MASKED TEXT', expect.anything());
+      expect(result.maskedCount).toBe(1);
     });
   });
 });

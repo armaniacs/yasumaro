@@ -1360,11 +1360,13 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const dir = dirname(fileURLToPath(import.meta.url));
     const source = readFileSync(join(dir, '..', 'statusPanel.ts'), 'utf-8');
     const trustSource = readFileSync(join(dir, '..', 'trustPanel.ts'), 'utf-8');
-    // 2 success renders (domain / path) + 2 validation-failure renders in the
-    // panel + the shared handler-failure report the async click handlers catch
-    // into. The trust/permission split (pbi/2026-10-03-25) moved that report
-    // into trustPanel.ts — the total across both files is unchanged.
-    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    // The whitelist buttons' report sites now live in the single
+    // wireWhitelistButton helper: 1 success + 1 validation-failure render.
+    // The shared handler-failure report the async click handlers catch into
+    // lives in trustPanel.ts. The trust/permission split (pbi/2026-10-03-25)
+    // moved that report into trustPanel.ts — the total across both files is
+    // unchanged.
+    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(2);
     expect(trustSource.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(1);
     expect(source).not.toMatch(/showStatus\(\s*'mainStatus'/);
     expect(source).not.toMatch(/className\s*=\s*'(success|error)'/);

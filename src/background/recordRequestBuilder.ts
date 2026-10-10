@@ -70,7 +70,7 @@ interface SourcePolicy {
 
 const SOURCE_POLICY: Record<RecordRequestSource, SourcePolicy> = {
   'manual': { skipDuplicateCheck: true, recordType: 'manual' },
-  'save': { skipDuplicateCheck: true, alreadyProcessed: true, recordType: 'manual' },
+  'save': { skipDuplicateCheck: true, recordType: 'manual' },
   // The full-pipeline retry re-runs the record as the user initiated it:
   // no force, duplicates skipped, manual semantics.
   'offline-retry': { force: false, skipDuplicateCheck: true, recordType: 'manual' },

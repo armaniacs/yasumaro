@@ -16,6 +16,7 @@ vi.mock('../../dashboardSqliteService.js', async (importOriginal) => {
 
 vi.mock('../../../utils/i18n.js', async (importOriginal) => {
   const orig = (await importOriginal()) as any;
+  const { mockGetMessage } = await import('../../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => {
     // default: return key for non-empty, to allow fallback testing we override per test
     // but for coverage we return a non-empty string for known keys
@@ -33,23 +34,9 @@ vi.mock('../../../utils/i18n.js', async (importOriginal) => {
     };
     return map[key] ?? `msg:${key}`;
   });
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-    ((subs === undefined
-      ? (getMessage as (...a: any[]) => unknown)(key)
-      : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-    key: string,
-    subs: Record<string, string | number>,
-    fallback: string,
-  ): string =>
-    ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-      fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-        subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
   return {
     ...orig,
-    getMessage,
-    getMessageOr,
-    getMessageWithSubstitutions,
+    ...mockGetMessage(getMessage),
   };
 });
 

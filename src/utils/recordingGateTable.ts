@@ -244,10 +244,10 @@ export function evaluateGates(inputs: RecordingGateInputs): GateEvaluation {
 }
 
 // ============================================================================
-// Scheme pre-check shared by popup (isRecordable) and content (visit gate).
-// This sits outside the ordered table on purpose: it is a URL-shape guard
-// with no settings input, so folding it into the precedence would renumber
-// the display order. It mirrors tabUtils.isRecordable byte-for-byte.
+// Scheme pre-check for the recording decision: used by isRecordableTab (the
+// popup guard) and by the background recording pipeline. This sits outside
+// the ordered table on purpose: it is a URL-shape guard with no settings
+// input, so folding it into the precedence would renumber the display order.
 // ============================================================================
 
 export function isHttpRecordableUrl(url: string | null | undefined): boolean {

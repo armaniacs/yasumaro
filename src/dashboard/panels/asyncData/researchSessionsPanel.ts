@@ -22,6 +22,7 @@ import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { MAX_RESEARCH_SESSION_ROWS } from '../../../utils/computeLimits.js';
 import {
   groupResearchSessions,
@@ -220,7 +221,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       notices.show('truncated');
     }
 
-    listEl.innerHTML = '';
+    clearElement(listEl);
     for (const session of agg.sessions) listEl.appendChild(renderSession(session));
 
     renderSearchToGoal(agg.sessions);
@@ -232,7 +233,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
    */
   function renderSearchToGoal(sessions: readonly ResearchSession[]): void {
     if (!searchToGoalBody || !searchToGoalTable || !searchToGoalOff) return;
-    searchToGoalBody.innerHTML = '';
+    clearElement(searchToGoalBody);
 
     if (!navTrailActive) {
       searchToGoalTable.hidden = true;
@@ -286,7 +287,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     autoApply: true,
     isReady: () => listEl !== null,
     resetOutput: () => {
-      if (listEl) listEl.innerHTML = '';
+      if (listEl) clearElement(listEl);
     },
     // WHY: isReady() already gated this load; the check narrows the captured
     // host for the body.
@@ -323,7 +324,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
         }
 
         if (res.rows.length === 0) {
-          listEl.innerHTML = '';
+          clearElement(listEl);
           notices.showEmpty();
           return;
         }

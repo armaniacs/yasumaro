@@ -219,7 +219,24 @@ interface DashboardSqliteSubtypeSpec {
   guardLast?: DashboardSqliteGuard;
 }
 
-const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+// Shared type/bound predicates (PBI 2026-10-09-01): the archive wire-table
+// handler gate composes its validate lambdas from these so a single bound
+// change cannot land on one gate only. Keep them pure and dependency-free.
+export function isFiniteNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+export function isNonNegativeInteger(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0;
+}
+
+export function isPositiveInteger(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v > 0;
+}
+
+export function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0;
+}
 
 const finiteNumber = (field: string): DashboardSqliteFieldSpec => ({
   field,
@@ -229,13 +246,13 @@ const finiteNumber = (field: string): DashboardSqliteFieldSpec => ({
 
 const nonNegativeInteger = (field: string): DashboardSqliteFieldSpec => ({
   field,
-  test: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0,
+  test: isNonNegativeInteger,
   message: (s) => `${s}: ${field} must be a non-negative integer`,
 });
 
 const nonEmptyString = (field: string): DashboardSqliteFieldSpec => ({
   field,
-  test: (v) => typeof v === 'string' && v.length > 0,
+  test: isNonEmptyString,
   message: (s) => `${s}: ${field} must be non-empty string`,
 });
 
@@ -369,7 +386,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
       nonNegativeInteger('offset'),
       {
         field: 'length',
-        test: (v) => typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
+        test: (v) => isPositiveInteger(v) && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
         message: (s) => `${s}: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`,
       },
     ],
@@ -387,7 +404,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
       stringLengthCap('query', VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH),
       {
         field: 'limit',
-        test: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT,
+        test: (v) => isPositiveInteger(v) && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT,
         message: (s) => `${s}: limit must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT}`,
       },
       nonNegativeInteger('offset'),
@@ -396,7 +413,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   archive_update: {
     guardFirst: stagingNameGuard,
     fields: [
-      { field: 'id', test: (v) => typeof v === 'number' && Number.isInteger(v) && v > 0, message: (s) => `${s}: id must be a positive integer` },
+      { field: 'id', test: isPositiveInteger, message: (s) => `${s}: id must be a positive integer` },
       { field: 'changes', test: (v) => v !== null && typeof v === 'object' && !Array.isArray(v), message: (s) => `${s}: changes must be an object` },
     ],
   },

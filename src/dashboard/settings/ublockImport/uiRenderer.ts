@@ -5,6 +5,7 @@
 
 import { isValidUrl } from './validation.js';
 import { getMessage } from '../../../utils/i18n.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 
 interface Source {
@@ -34,7 +35,7 @@ export function renderSourceList(sources: Source[], deleteCallback?: (index: num
 
   if (!container || !noSourcesMsg) return;
 
-  container.innerHTML = '';
+  clearElement(container);
 
   if (sources.length === 0) {
     noSourcesMsg.style.display = 'block';

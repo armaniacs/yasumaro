@@ -948,6 +948,74 @@ describe('contentCleaner', () => {
             testDom.window.close();
         });
     });
+
+    describe('hard-strip hidden elements (count/strip parity)', () => {
+        it('counts hidden elements so recount matches the strip contract', () => {
+            const testDom = new JSDOM(`
+                <html><body>
+                    <div id="container">
+                        <p>Visible content</p>
+                        <div hidden>Hidden template fragment</div>
+                        <span aria-hidden="true">Decorative fragment</span>
+                        <div style="display:none">Display-none fragment</div>
+                        <span style="display: none">Spaced display-none fragment</span>
+                        <input type="password" id="pw">
+                    </div>
+                </body></html>
+            `);
+            const container = testDom.window.document.getElementById('container')!;
+            const counted = countCleanseTargets(container, { keywordStripEnabled: false });
+            const stripped = stripHardStripElements(container);
+
+            expect(counted.hardStripRemoved).toBe(stripped);
+            // 4 hidden elements + 1 password input: a recount that misses the
+            // hidden path reports 1 and under-counts the strip contract
+            expect(counted.hardStripRemoved).toBe(5);
+            testDom.window.close();
+        });
+    });
+
+    describe('hidden selector variants', () => {
+        const hiddenVariants = [
+            { name: '[hidden]', html: '<div hidden id="hidden-el">frag</div>' },
+            { name: '[aria-hidden="true"]', html: '<div aria-hidden="true" id="hidden-el">frag</div>' },
+            { name: '[style*="display:none"]', html: '<div style="display:none" id="hidden-el">frag</div>' },
+            { name: '[style*="display: none"]', html: '<div style="display: none" id="hidden-el">frag</div>' }
+        ] as const;
+
+        for (const variant of hiddenVariants) {
+            it(`counts and strips ${variant.name} as a hard-strip target`, () => {
+                const testDom = new JSDOM(`
+                    <html><body><div id="container">
+                        <p>Visible content</p>
+                        ${variant.html}
+                    </div></body></html>
+                `);
+                const container = testDom.window.document.getElementById('container')!;
+                const counted = countCleanseTargets(container, { keywordStripEnabled: false });
+                expect(counted.hardStripRemoved).toBe(1);
+
+                const stripped = stripHardStripElements(container);
+                expect(stripped).toBe(1);
+                expect(container.querySelector('#hidden-el')).toBeNull();
+                testDom.window.close();
+            });
+        }
+
+        it('does not treat aria-hidden="false" or unrelated style values as hidden targets', () => {
+            const testDom = new JSDOM(`
+                <html><body><div id="container">
+                    <div aria-hidden="false" id="visible-aria">frag</div>
+                    <div style="display:flex" id="visible-style">frag</div>
+                </div></body></html>
+            `);
+            const container = testDom.window.document.getElementById('container')!;
+            const counted = countCleanseTargets(container, { keywordStripEnabled: false });
+            expect(counted.hardStripRemoved).toBe(0);
+            expect(stripHardStripElements(container)).toBe(0);
+            testDom.window.close();
+        });
+    });
 });
 
 // contentCleaner 関数をインポート

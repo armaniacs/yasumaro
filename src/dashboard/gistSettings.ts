@@ -19,6 +19,7 @@ import { settingsRepository, type SettingsReader } from '../utils/storage/Settin
 import type { EncryptedData } from '../utils/crypto/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 
 export interface GistConnectionTestResult {
   success: boolean;
@@ -80,9 +81,9 @@ export async function initGistSettings(
         [StorageKeys.GIST_ENABLED]: gistEnabled?.checked ?? false,
         [StorageKeys.GITHUB_PAT]: githubPat?.value ?? '',
       } as Settings);
-      setStatus('Gist settings saved', false);
+      setStatus(getMessageOr('gistSettingsSaved', 'Gist settings saved'), false);
     } catch (error) {
-      setStatus(`Save failed: ${errorMessage(error)}`, true);
+      setStatus(getMessageWithSubstitutions('gistSaveFailed', { error: errorMessage(error) }, 'Save failed: {error}'), true);
     }
   });
 
@@ -94,7 +95,7 @@ export async function initGistSettings(
       const result = await tester.testConnection();
       setStatus(result.message, !result.success);
     } catch (error) {
-      setStatus(`Test failed: ${errorMessage(error)}`, true);
+      setStatus(getMessageWithSubstitutions('gistTestFailed', { error: errorMessage(error) }, 'Test failed: {error}'), true);
     }
   });
 }
