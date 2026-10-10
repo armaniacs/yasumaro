@@ -60,12 +60,11 @@ interface SanitizedEntryParts {
 }
 
 function sanitizeTitle(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdownOptions): string {
-  if (opts?.titleFallback === false) {
-    return sanitizeForMarkdownLinkText(input.title as string);
-  }
-  return sanitizeForMarkdownLinkText(
-    input.title || input.url || (opts?.titleFallback ?? DEFAULT_TITLE_FALLBACK),
-  );
+  const raw = opts?.titleFallback === false
+    ? (input.title as string)
+    : (input.title || input.url || (opts?.titleFallback ?? DEFAULT_TITLE_FALLBACK));
+  const normalized = raw.replace(/\r?\n+/g, ' ').replace(/  +/g, ' ').trim();
+  return sanitizeForMarkdownLinkText(normalized);
 }
 
 function sanitizeUrl(url: string, opts?: BuildEntryMarkdownOptions): string {
