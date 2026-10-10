@@ -26,7 +26,7 @@
  *   node scripts/wasm-crates.mjs parity-args   # print the vitest parity arg list on one line
  */
 
-import { readFileSync, copyFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, copyFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { join, dirname, basename } from 'node:path';
@@ -48,6 +48,14 @@ const REQUIRED_FIELDS = [
     'dtsCopy',
     'publicShip',
 ];
+
+/**
+ * Optional per-crate fields. `maxBytes` is the shipped-binary size budget
+ * checked by `checkSizeBudgets` (PBI 2026-10-11-09): a rebuild that silently
+ * doubles the artifact used to pass every gate, because the only size check was
+ * the 15MB bundle cap at release time.
+ */
+const OPTIONAL_FIELDS = ['maxBytes'];
 
 /**
  * Validate a parsed manifest object. Throws with an explicit message on the
@@ -74,7 +82,7 @@ export function validateManifest(data, { root = ROOT } = {}) {
             }
         }
         for (const key of Object.keys(crate)) {
-            if (!REQUIRED_FIELDS.includes(key)) {
+            if (!REQUIRED_FIELDS.includes(key) && !OPTIONAL_FIELDS.includes(key)) {
                 throw new Error(`${where}: unknown field "${key}"`);
             }
         }
@@ -96,6 +104,9 @@ export function validateManifest(data, { root = ROOT } = {}) {
         }
         if (typeof crate.publicShip !== 'boolean') {
             throw new Error(`${where}: "publicShip" must be a boolean (STAGED crates use false)`);
+        }
+        if ('maxBytes' in crate && (!Number.isInteger(crate.maxBytes) || crate.maxBytes <= 0)) {
+            throw new Error(`${where}: "maxBytes" must be a positive integer`);
         }
         if (seen.has(crate.name)) {
             throw new Error(`${where}: duplicate crate name "${crate.name}"`);
@@ -342,6 +353,33 @@ export function checkGate(manifest, dir, { root = ROOT } = {}) {
     }
 }
 
+/**
+ * Check each crate's committed `srcCopy` binary against its declared
+ * `maxBytes` budget. Crates without `maxBytes` are skipped (opt-in), so adding
+ * a budget is a one-line manifest change.
+ *
+ * Returns a list of human-readable failures (empty = pass) instead of throwing
+ * so callers can report every offender at once.
+ */
+export function checkSizeBudgets(manifest, { root = ROOT } = {}) {
+    const failures = [];
+    for (const crate of manifest.crates) {
+        if (crate.maxBytes === undefined) continue;
+        const path = join(root, crate.srcCopy);
+        if (!existsSync(path)) {
+            failures.push(`${crate.name}: ${crate.srcCopy} is missing`);
+            continue;
+        }
+        const size = statSync(path).size;
+        if (size > crate.maxBytes) {
+            failures.push(
+                `${crate.name}: ${size} B exceeds the ${crate.maxBytes} B budget — shrink the crate or raise "maxBytes" in wasm/crates.json with a reason`
+            );
+        }
+    }
+    return failures;
+}
+
 const invokedAsScript =
     process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1];
 if (invokedAsScript) {
@@ -355,6 +393,13 @@ if (invokedAsScript) {
         checkGate(manifest, dir);
     } else if (command === 'test') {
         runCargoTests(manifest);
+    } else if (command === 'budget') {
+        const failures = checkSizeBudgets(manifest);
+        if (failures.length > 0) {
+            for (const failure of failures) console.error(`::error::wasm size budget: ${failure}`);
+            process.exit(1);
+        }
+        console.log('wasm size budgets OK');
     } else if (command === 'test-dirs') {
         console.log(testCrateDirs(manifest).join('\n'));
     } else if (command === 'cache-paths') {
@@ -363,7 +408,7 @@ if (invokedAsScript) {
         console.log(parityArgs(manifest).join(' '));
     } else {
         console.error(
-            'usage: node scripts/wasm-crates.mjs (stash|restore|check) <dir> | test | (test-dirs|cache-paths|parity-args)'
+            'usage: node scripts/wasm-crates.mjs (stash|restore|check) <dir> | test | budget | (test-dirs|cache-paths|parity-args)'
         );
         process.exit(1);
     }

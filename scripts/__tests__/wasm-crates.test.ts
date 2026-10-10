@@ -9,12 +9,15 @@
 import { describe, it, expect } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import {
     loadManifest,
     validateManifest,
     buildPlan,
     publicShipCrates,
     publicCopyOf,
+    checkSizeBudgets,
 } from '../wasm-crates.mjs';
 import { transformGlue } from '../postprocess-wasm-glue.mjs';
 
@@ -56,6 +59,27 @@ describe('wasm crate manifest', () => {
         expect(() => validateManifest({ crates: [withoutFlag] }, { root: ROOT })).toThrow(
             /missing required field "publicShip"/
         );
+    });
+
+    // PBI 2026-10-11-09: optional per-crate size budget.
+    it('accepts an optional positive integer maxBytes', () => {
+        expect(() =>
+            validateManifest({ crates: [validEntry({ maxBytes: 61440 })] }, { root: ROOT })
+        ).not.toThrow();
+    });
+
+    it('rejects a non-positive or non-integer maxBytes', () => {
+        for (const bad of [0, -1, 1.5, '61440']) {
+            expect(() =>
+                validateManifest({ crates: [validEntry({ maxBytes: bad })] }, { root: ROOT })
+            ).toThrow(/"maxBytes" must be a positive integer/);
+        }
+    });
+
+    it('still rejects genuinely unknown fields', () => {
+        expect(() =>
+            validateManifest({ crates: [validEntry({ maxByte: 1 })] }, { root: ROOT })
+        ).toThrow(/unknown field "maxByte"/);
     });
 
     it('fails explicitly on unknown field', () => {
@@ -213,5 +237,38 @@ describe('transformGlue', () => {
                 crateLabel: 'textrank',
             })
         ).toThrow(/expected default-URL branch not found/);
+    });
+});
+
+describe('checkSizeBudgets (PBI 2026-10-11-09)', () => {
+    it('flags over-budget and missing binaries, and skips crates without a budget', () => {
+        const dir = mkdtempSync(join(tmpdir(), 'wasm-budget-'));
+        try {
+            const bin = join(dir, 'src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm');
+            mkdirSync(dirname(bin), { recursive: true });
+            writeFileSync(bin, Buffer.alloc(100));
+
+            const failures = checkSizeBudgets(
+                {
+                    crates: [
+                        validEntry({ maxBytes: 200 }),
+                        validEntry({ name: 'over', srcCopy: 'src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm', maxBytes: 50 }),
+                        validEntry({ name: 'missing', srcCopy: 'src/wasm/missing/x.wasm', maxBytes: 50 }),
+                        validEntry({ name: 'nobudget', srcCopy: 'src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm' }),
+                    ],
+                },
+                { root: dir },
+            );
+
+            expect(failures).toHaveLength(2);
+            expect(failures[0]).toMatch(/over: 100 B exceeds the 50 B budget/);
+            expect(failures[1]).toMatch(/missing: src\/wasm\/missing\/x\.wasm is missing/);
+        } finally {
+            rmSync(dir, { recursive: true, force: true });
+        }
+    });
+
+    it('passes for the committed manifest', () => {
+        expect(checkSizeBudgets(loadManifest({ root: ROOT }), { root: ROOT })).toEqual([]);
     });
 });

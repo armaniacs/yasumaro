@@ -36,9 +36,10 @@ import { errorMessage } from '../../utils/errorUtils.js';
 /**
  * Initializes the wasm module. Safe to call repeatedly (idempotent) and
  * from multiple call sites — all callers share the same in-flight promise
- * (managed by initExtensionWasm) so the ~47KB binary is fetched/compiled
+ * (managed by initExtensionWasm) so the ~56KB binary is fetched/compiled
  * exactly once per worker lifetime, with reset-on-failure so a transient
- * fetch error can be retried.
+ * fetch error can be retried. The size is pinned by the `maxBytes` budget in
+ * `wasm/crates.json` (checked by `node scripts/wasm-crates.mjs budget`).
  */
 export function initPiiSanitizerWasm(): Promise<void> {
     return initExtensionWasm('pii_sanitizer_bg.wasm', (url) =>

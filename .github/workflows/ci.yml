@@ -64,6 +64,7 @@ jobs:
             # script that reads it, and the shared CI config.
             wasm:
               - 'wasm/**'
+              - 'public/wasm/**'
               - 'scripts/wasm-crates.mjs'
               - 'package.json'
               - 'package-lock.json'
@@ -263,6 +264,12 @@ jobs:
           echo "== parity suite against the COMMITTED binary =="
           npx vitest run $(node scripts/wasm-crates.mjs parity-args)
           node scripts/wasm-crates.mjs check /tmp/wasm-gate
+      - name: wasm artifact size budget
+        # PBI 2026-10-11-09: a rebuild that silently doubles a crate (the pii
+        # core went 46KB -> 100KB with a 38KB debug name section) passed every
+        # other gate, because the only size check was the 15MB bundle cap at
+        # release time. Budgets live in wasm/crates.json (maxBytes).
+        run: node scripts/wasm-crates.mjs budget
       - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
         # The byte-diff gate assumes reproducible builds across hosts. When
         # it fails, this artifact lets the maintainer diff the CI-built

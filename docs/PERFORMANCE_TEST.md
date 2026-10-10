@@ -86,6 +86,24 @@ warmup 5 · measure 30 · scaling exponent 1.98 (quadratic)
 | `c8-ts` / `c8-wasm` / `c8-hybrid` | PII サニタイズ（機能領域別。PBI 対応なし） | 抽出記事 HTML | wall p95（TS のみ / WASM のみ / 両者のハイブリッドの比較） |
 | `f3` | archive 作成（`pbi/2026-09-06-02` F-3） | 50k / 100k 行 SQLite | フル archive パスの wall 時間（warmup 0 / measure 1） |
 
+### WASM 成果物サイズ（PBI 2026-10-11-09）
+
+配布物に載る wasm のバイト数は `wasm/crates.json` の `maxBytes` を予算として
+`node scripts/wasm-crates.mjs budget` で検査する（CI の wasm ジョブが実行）。
+`npm run build:wasm` の後、予算超過は CI が fail する。
+
+| crate | 予算 (B) | 実測 (2026-10-11) |
+|---|---:|---:|
+| pii-sanitizer | 61,440 | 56,784 |
+| tag-cooccur | 86,016 | 79,453 |
+| textrank | 41,984 | 37,590 |
+| sentence-dedup（STAGED・非同梱） | 32,768 | 27,723 |
+
+予算は「実測 + 約8%」で設定している。正当な機能追加で超える場合は、削減するか
+`maxBytes` を理由つきで引き上げる（PBI 2026-10-11-09 の実例: 移植直後の
+pii-sanitizer は wasm-opt 未適用の `custom:name` を含んで 100,671 B だったが、
+再ビルドで 56,784 B に戻った）。
+
 ### 最適化 PBI 実装時のワークフロー
 
 最適化 PBI（02〜08）を実装するときの手順:
