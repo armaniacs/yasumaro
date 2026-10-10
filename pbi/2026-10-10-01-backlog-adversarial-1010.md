@@ -14,7 +14,7 @@
 |---|---|---|---|---|---|---|---:|
 | 1 | [2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md](../dev-docs/archived/pbi/2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md) | fix | 6 | 3 | 1.0 | 0.5 | 36.0 |
 | 2 | [2026-10-10-15-fix-sanitize-title-newline-injection.md](../dev-docs/archived/pbi/2026-10-10-15-fix-sanitize-title-newline-injection.md) | fix | 4 | 2 | 1.0 | 0.5 | 16.0 |
-| 3 | [2026-10-10-16-fix-pii-long-token-scan-evasion.md](../dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md) | fix | 3 | 2 | 0.9 | 1.0 | 5.4 |
+| 3 | [2026-10-10-16-fix-pii-long-token-scan-evasion.md](../dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md) | fix | 3 | 2 | 0.9 | 2.0 | 2.7 |
 
 RICE = R × I × C / E。値は各 PBI 内「見積もり」前の記載に基づく。
 

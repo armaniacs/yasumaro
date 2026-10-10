@@ -153,7 +153,6 @@ git commit -m "test: pin chunk-boundary PII detection"
 ```
 
 ### Task 4: Full validation gate
-
 - [ ] **Step 1: Run type check and validate**
 
 Run: `npm run type-check`
@@ -167,4 +166,60 @@ Expected: exit 0.
 ```bash
 git add dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md
 git commit -m "docs: record PBI-16 validation results"
+```
+
+### Task 5: Port overlapping-chunk scan to the Rust WASM core and rebuild (added 2026-10-10: Task 4 BLOCKED on WASM parity)
+
+Background:本番はWASM優先・TSフォールバック (`piiSanitizeHybrid.ts`) のため、TSのみの修正ではWASM経路に回避が残る。Task 4のvalidateは `src/wasm/pii-sanitizer/__tests__/parity.test.ts` 7件失敗でBLOCKEDとなった。Rustクレート `wasm/pii-sanitizer/` が旧サンプリング (`neutralize_long_runs` + `TOKEN_EDGE_KEEP_LEN=100` in `wasm/pii-sanitizer/src/lib.rs:34-90`) を保持していることが原因。
+
+- [ ] **Step 1: Port the chunk scan to Rust**
+
+In `wasm/pii-sanitizer/src/lib.rs`, replace the `neutralize_long_runs` sampling with an overlapping-chunk scan over the ORIGINAL bytes that mirrors the TS semantics exactly:
+- Constants: `SCAN_CHUNK_SIZE: usize = 400`, `SCAN_CHUNK_OVERLAP: usize = 200`, step 200.
+- Per chunk, call the existing `patterns::dispatch::scan` on the chunk slice and rebase spans by the chunk offset.
+- Exact-once counting before the match cap (mirror of the TS pre-count guards): skip spans fully inside the previous chunk's overlap; skip pure chunk-edge artifacts (a span that has no counterpart when probed at its absolute start on the full text); skip truncated prefixes whose true span (probed on the full text at the absolute start) is longer but within OVERLAP. True spans longer than OVERLAP are counted in truncated form (accepted residual, same as TS).
+- Keep `MAX 1000` match-count semantics and fail-closed limit behavior byte-identical (see `exactly_1000_matches_still_succeeds` / `exceeding_1000_matches_reports_match_limit` tests in `lib.rs:459+`).
+- Update the module doc comment (`:24-27`, sampling description) and the `neutralize_long_runs` doc comment to describe chunking. Delete `neutralize_long_runs` and `TOKEN_EDGE_KEEP_LEN` (verify no other references with grep first).
+- Add Rust unit tests mirroring the TS repro: long-token-mid email (`"a".repeat(190) + "user@example.com" + "b".repeat(200)`) must mask; keep all existing `cargo test` green.
+
+Run: `cargo test -p pii-sanitizer` (from `wasm/pii-sanitizer/`, or workspace root with `-p`)
+Expected: all Rust tests pass, including the new repro test.
+
+- [ ] **Step 2: Rebuild the WASM binary and glue**
+
+Run: `npm run build:wasm`
+Expected: exit 0. Verify `git status` shows the rebuilt artifacts (`src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm`, `piiSanitizerWasm.js`, and `wasm/pii-sanitizer/pkg/` outputs). If the script rebuilds other crates too, stage ONLY the pii-sanitizer outputs.
+
+- [ ] **Step 3: Run the parity and TS suites**
+
+Run: `npx vitest run src/wasm/pii-sanitizer/__tests__/parity.test.ts src/wasm/pii-sanitizer/__tests__/extended-patterns-parity.test.ts`
+Expected: PASS — the 7 previously failing inputs (#4/#22/#28/#33/#147/#149/#213) now match.
+
+Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts src/utils/__tests__/piiSanitizer-optimization.test.ts src/utils/__tests__/piiSanitizer-redos.test.ts src/utils/__tests__/piiSanitizer-security.test.ts`
+Expected: PASS (no TS changes in this task; regression check).
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add wasm/pii-sanitizer/src/ src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm src/wasm/pii-sanitizer/piiSanitizerWasm.js
+git commit -m "fix: port overlapping-chunk PII scan to Rust WASM core"
+```
+
+(Adjust staged paths to exactly what `npm run build:wasm` regenerated for pii-sanitizer; never stage other crates' outputs in this commit.)
+
+### Task 6: Full validation gate, second run (added 2026-10-10)
+
+- [ ] **Step 1: Run type check and validate**
+
+Run: `npm run type-check`
+Expected: exit 0.
+
+Run: `npm run validate`
+Expected: exit 0 (this time including the 7 parity tests).
+
+- [ ] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md`; check `validate green` only if exit 0), commit:
+
+```bash
+git add dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md
+git commit -m "docs: record PBI-16 validation results (WASM port)"
 ```
