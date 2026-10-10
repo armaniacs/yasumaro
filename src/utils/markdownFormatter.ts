@@ -63,7 +63,7 @@ function sanitizeTitle(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdown
   const raw = opts?.titleFallback === false
     ? (input.title as string)
     : (input.title || input.url || (opts?.titleFallback ?? DEFAULT_TITLE_FALLBACK));
-  const normalized = raw.replace(/\r?\n+/g, ' ').replace(/  +/g, ' ').trim();
+  const normalized = raw.replace(/[\r\n]+/g, ' ').replace(/  +/g, ' ').trim();
   return sanitizeForMarkdownLinkText(normalized);
 }
 
