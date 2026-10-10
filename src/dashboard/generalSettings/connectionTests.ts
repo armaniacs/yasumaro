@@ -42,7 +42,7 @@ const FIREFOX_CERT_GUIDE_FALLBACK =
  * sites) and the message is not self-clearing: the next save or test replaces
  * it. The status area is the whole record of a failed save, so autoClear is off
  * here on purpose. The top mirror is owned by showStatus, so callers never
- * hand-call syncStatusToTop here.
+ * perform a second mirror update here.
  */
 function showSaveError(statusEl: HTMLElement | null, error: string | undefined): void {
   if (!statusEl) return;
@@ -267,16 +267,13 @@ export async function handleSaveOnly(): Promise<void> {
   await runPanelAction({
     buttons: [saveTop, saveBtn],
     onStart: () => {
-      statusDiv.textContent = '';
-      statusDiv.className = '';
+      showStatus(statusDiv, '', 'success', { autoClear: false });
     },
     run: async () => {
       const result = await saveDashboardSettings({
         onSuccess: () => {
-          statusDiv.textContent = getMessageOr('saveSuccess', '設定を保存しました。');
-          statusDiv.className = 'success';
+          showStatus(statusDiv, getMessageOr('saveSuccess', '設定を保存しました。'), 'success', { autoClear: false });
           refreshLocalMarkdownScheduler();
-          syncStatusToTop();
         },
       });
 
@@ -285,7 +282,6 @@ export async function handleSaveOnly(): Promise<void> {
       }
     },
   });
-  syncStatusToTop();
 }
 
 export async function handleTestObsidian(options?: Event | ObsidianConnectionTestDeps): Promise<void> {
@@ -299,9 +295,7 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
   await runPanelAction({
     buttons: [testObsidianTop, testObsidianBtn],
     onStart: () => {
-      clearElement(statusDiv);
-      statusDiv.className = '';
-      statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
+      showStatus(statusDiv, getMessageOr('testingConnection', '接続テスト中...'), 'success', { autoClear: false });
     },
     run: async () => {
       const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
@@ -314,6 +308,7 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
       // Resolved before rendering: the guidance text differs per browser.
       const isFirefox = await isFirefoxHost(deps.getBrowserInfo);
 
+      showStatus(statusDiv, '', obsidianResult.success ? 'success' : 'error', { autoClear: false });
       clearElement(statusDiv);
       statusDiv.appendChild(createConnectionStatusElement('Obsidian', obsidianResult));
 
@@ -347,16 +342,15 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
         }
       }
 
-      statusDiv.className = obsidianResult.success ? 'success' : 'error';
+      const renderedContent = statusDiv.innerHTML;
+      showStatus(statusDiv, statusDiv.textContent ?? '', obsidianResult.success ? 'success' : 'error', { autoClear: false });
+      statusDiv.innerHTML = renderedContent;
       syncStatusToTop();
     },
     onError: () => {
-      statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
-      statusDiv.className = 'error';
-      syncStatusToTop();
+      showStatus(statusDiv, getMessageOr('testError', '接続テストに失敗しました。'), 'error', { autoClear: false });
     },
   });
-  syncStatusToTop();
 }
 
 export async function handleTestAi(): Promise<void> {
@@ -389,9 +383,11 @@ export async function handleTestAi(): Promise<void> {
           return true;
         },
         draw: {
-          // The one-shot syncStatusToTop copy only runs on a provider switch, so
-          // the elapsed ticker has to update #statusTop's node directly.
+          // The elapsed ticker updates #statusTop directly because it changes
+          // only the timer text, not the status message contract.
           elapsedMirror: document.getElementById('statusTop'),
+          // Rich progress markup is not owned by showStatus, so mirror it after
+          // provider changes and the initial progress frame.
           onProviderAnnounced: () => syncStatusToTop(),
           onProgressStarted: () => syncStatusToTop(),
           multiProviderSummary: (target, aiResult) => {
@@ -414,24 +410,21 @@ export async function handleTestAi(): Promise<void> {
             target.appendChild(createConnectionStatusElement('AI', aiResult));
           },
           onResultRendered: (target, aiResult) => {
-            target.className = aiResult.success ? 'success' : 'error';
+            const renderedContent = target.innerHTML;
+            showStatus(target, target.textContent ?? '', aiResult.success ? 'success' : 'error', { autoClear: false });
+            target.innerHTML = renderedContent;
             syncStatusToTop();
           },
           onError: (target) => {
-            target.textContent = getMessageOr('testError', '接続テストに失敗しました。');
-            target.className = 'error';
-            syncStatusToTop();
+            showStatus(target, getMessageOr('testError', '接続テストに失敗しました。'), 'error', { autoClear: false });
           },
         },
       });
     },
     onError: () => {
-      statusDiv.textContent = getMessageOr('testError', '接続テストに失敗しました。');
-      statusDiv.className = 'error';
-      syncStatusToTop();
+      showStatus(statusDiv, getMessageOr('testError', '接続テストに失敗しました。'), 'error', { autoClear: false });
     },
   });
-  syncStatusToTop();
 }
 
 export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRepository): Promise<void> {
@@ -445,9 +438,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
   await runPanelAction({
     buttons: [testLocalMarkdownTop, testLocalMarkdownBottom],
     onStart: () => {
-      clearElement(statusDiv);
-      statusDiv.className = '';
-      statusDiv.textContent = getMessageOr('testingConnection', '接続テスト中...');
+      showStatus(statusDiv, getMessageOr('testingConnection', '接続テスト中...'), 'success', { autoClear: false });
     },
     run: async () => {
       // Save current settings first
@@ -466,9 +457,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
       const settings = await repo.getMany([StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED, StorageKeys.LOCAL_MARKDOWN_EXPORT_PATH]);
       const localExportEnabled = settings[StorageKeys.LOCAL_MARKDOWN_EXPORT_ENABLED];
       if (!localExportEnabled) {
-        statusDiv.textContent = getMessageOr('testLocalMarkdownDisabled', 'ローカルMarkdown書き出しが無効です。まず有効にしてください。');
-        statusDiv.className = 'error';
-        syncStatusToTop();
+        showStatus(statusDiv, getMessageOr('testLocalMarkdownDisabled', 'ローカルMarkdown書き出しが無効です。まず有効にしてください。'), 'error', { autoClear: false });
         return;
       }
 
@@ -498,9 +487,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
           conflictAction: 'overwrite'
         });
 
-        statusDiv.textContent = getMessageOr('testLocalMarkdownSuccess', 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました');
-        statusDiv.className = 'success';
-        syncStatusToTop();
+        showStatus(statusDiv, getMessageOr('testLocalMarkdownSuccess', 'ローカルMarkdown書き出しテスト: ファイルのダウンロードに成功しました'), 'success', { autoClear: false });
       } finally {
         // Revoke on settle, not on a delay: the download promise resolving means
         // Chromium already started the blob fetch, and the File API keeps a blob
@@ -510,10 +497,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
       }
     },
     onError: () => {
-      statusDiv.textContent = getMessageOr('testLocalMarkdownError', 'ローカルMarkdown書き出しテストに失敗しました');
-      statusDiv.className = 'error';
-      syncStatusToTop();
+      showStatus(statusDiv, getMessageOr('testLocalMarkdownError', 'ローカルMarkdown書き出しテストに失敗しました'), 'error', { autoClear: false });
     },
   });
-  syncStatusToTop();
 }
