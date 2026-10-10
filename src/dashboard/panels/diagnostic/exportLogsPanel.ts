@@ -25,7 +25,7 @@ export function createExportLogsPanel(): PanelLifecycle {
       jsonBtn?.addEventListener('click', () => {
         void runPanelAction({
           buttons: [jsonBtn],
-          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingJson', 'Exporting JSON…'), 'success'),
+          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingJson', 'Exporting JSON…'), 'updating'),
           run: async () => downloadBlob(await exportJson(), exportToday('json')),
           onSuccess: () => showStatus(statusTarget, getMessageOr('exportLogsJsonCompleted', 'JSON export completed.'), 'success'),
           onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
@@ -35,7 +35,7 @@ export function createExportLogsPanel(): PanelLifecycle {
       mdBtn?.addEventListener('click', () => {
         void runPanelAction({
           buttons: [mdBtn],
-          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingMarkdown', 'Exporting Markdown…'), 'success'),
+          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingMarkdown', 'Exporting Markdown…'), 'updating'),
           run: async () => downloadText(await exportMarkdown(), exportToday('md'), 'text/markdown'),
           onSuccess: () => showStatus(statusTarget, getMessageOr('exportLogsMarkdownCompleted', 'Markdown export completed.'), 'success'),
           onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
@@ -45,7 +45,7 @@ export function createExportLogsPanel(): PanelLifecycle {
       csvBtn?.addEventListener('click', () => {
         void runPanelAction({
           buttons: [csvBtn],
-          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingCsv', 'Exporting CSV…'), 'success'),
+          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingCsv', 'Exporting CSV…'), 'updating'),
           run: async () => downloadBlob(await exportCsv(), exportToday('csv')),
           onSuccess: () => showStatus(statusTarget, getMessageOr('exportLogsCsvCompleted', 'CSV export completed.'), 'success'),
           onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
@@ -55,7 +55,7 @@ export function createExportLogsPanel(): PanelLifecycle {
       dbBtn?.addEventListener('click', () => {
         void runPanelAction({
           buttons: [dbBtn],
-          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingDatabase', 'Exporting database…'), 'success'),
+          onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingDatabase', 'Exporting database…'), 'updating'),
           run: async () => {
             const blob = await exportDb();
             if (blob) downloadBlob(blob, exportToday('db'));

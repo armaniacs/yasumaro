@@ -26,7 +26,7 @@ import { messageTransport } from '../../messaging/messageTransport.js';
 import { saveDashboardSettings, saveErrorText } from '../settingsPipeline.js';
 import { syncStatusToTop } from '../statusView.js';
 import { runPanelAction } from '../panels/panelAction.js';
-import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { showStatus, clearStatus } from '../../utils/ui/settingsUiHelper.js';
 import { runAiConnectionTest } from '../aiTestRunner.js';
 import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
 import { getLocalDateString } from '../markdownExport.js';
@@ -267,7 +267,8 @@ export async function handleSaveOnly(): Promise<void> {
   await runPanelAction({
     buttons: [saveTop, saveBtn],
     onStart: () => {
-      showStatus(statusDiv, '', 'success', { autoClear: false });
+      // Blank the previous message without an empty success box (PBI 2026-10-11-07).
+      clearStatus(statusDiv);
     },
     run: async () => {
       const result = await saveDashboardSettings({
@@ -295,7 +296,7 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
   await runPanelAction({
     buttons: [testObsidianTop, testObsidianBtn],
     onStart: () => {
-      showStatus(statusDiv, getMessageOr('testingConnection', '接続テスト中...'), 'success', { autoClear: false });
+      showStatus(statusDiv, getMessageOr('testingConnection', '接続テスト中...'), 'updating', { autoClear: false });
     },
     run: async () => {
       const apiKeyInput = document.getElementById('apiKey') as HTMLInputElement | null;
@@ -438,7 +439,7 @@ export async function handleTestLocalMarkdown(repo: SettingsReader = settingsRep
   await runPanelAction({
     buttons: [testLocalMarkdownTop, testLocalMarkdownBottom],
     onStart: () => {
-      showStatus(statusDiv, getMessageOr('testingConnection', '接続テスト中...'), 'success', { autoClear: false });
+      showStatus(statusDiv, getMessageOr('testingConnection', '接続テスト中...'), 'updating', { autoClear: false });
     },
     run: async () => {
       // Save current settings first

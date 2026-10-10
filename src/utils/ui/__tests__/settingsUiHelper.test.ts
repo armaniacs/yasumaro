@@ -9,6 +9,7 @@ const mockChrome = {
 
 import {
     showStatus,
+    clearStatus,
     loadSettingsToInputs,
     extractSettingsFromInputs
 } from '../settingsUiHelper.js';
@@ -65,6 +66,43 @@ describe('settingsUiHelper', () => {
             const el = document.getElementById('status-message');
             expect(el?.textContent).toBe('Error!');
             expect(el?.className).toBe('status-message error');
+        });
+
+        // PBI 2026-10-11-07: progress must not look like a success box, and it
+        // must not expire on its own (its result replaces it).
+        test('displays an updating message and never auto-clears it', () => {
+            useTimerClock();
+            showStatus('status-message', 'Testing…', 'updating');
+
+            const el = document.getElementById('status-message');
+            expect(el?.className).toBe('status-message updating');
+
+            vi.advanceTimersByTime(60_000);
+            expect(el?.textContent).toBe('Testing…');
+            expect(el?.className).toBe('status-message updating');
+        });
+
+        test('clearStatus blanks the message without leaving a type class', () => {
+            useTimerClock();
+            showStatus('status-message', 'Saved!', 'success');
+            clearStatus('status-message');
+
+            const el = document.getElementById('status-message');
+            expect(el?.textContent).toBe('');
+            // No `success` class: an empty success box still paints padding,
+            // border and background (min-height keeps it visible).
+            expect(el?.className).toBe('status-message');
+        });
+
+        test('clearStatus cancels a pending auto-clear of the same element', () => {
+            useTimerClock();
+            showStatus('status-message', 'Saved!', 'success');
+            clearStatus('status-message');
+            showStatus('status-message', 'Still here', 'error');
+
+            // The success timer (3s) must not blank the newer error message.
+            vi.advanceTimersByTime(3000);
+            expect(document.getElementById('status-message')?.textContent).toBe('Still here');
         });
 
         test('clears a success message after 3 seconds', () => {

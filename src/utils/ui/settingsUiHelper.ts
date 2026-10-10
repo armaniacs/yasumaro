@@ -5,7 +5,12 @@ export {
 
 import { setElementHtml } from '../htmlFragment.js';
 
-export type StatusType = 'success' | 'error';
+/**
+ * Status kinds. `updating` is the in-progress kind: the dashboard CSS already
+ * ships `.status-message.updating`, and using `success` for "testing…" made a
+ * progress message look like a green success box (PBI 2026-10-11-07).
+ */
+export type StatusType = 'success' | 'error' | 'updating';
 
 /**
  * Base class of the status class contract, defined in
@@ -18,6 +23,9 @@ const STATUS_BASE_CLASS = 'status-message';
 const DEFAULT_CLEAR_DELAY_MS: Record<StatusType, number> = {
   success: 3000,
   error: 5000,
+  // Never read: `showStatus` returns before scheduling a timer for `updating`
+  // (a progress message must stay until its result replaces it).
+  updating: 0,
 };
 
 /**
@@ -100,6 +108,8 @@ export function showStatus(
   }
 
   if (options.autoClear === false) return;
+  // Progress messages are replaced by their result, never expired by a timer.
+  if (type === 'updating') return;
 
   const timeout = options.durationMs ?? DEFAULT_CLEAR_DELAY_MS[type];
   pendingClearTimers.set(el, setTimeout(() => {
@@ -107,4 +117,27 @@ export function showStatus(
     el.textContent = '';
     el.className = STATUS_BASE_CLASS;
   }, timeout));
+}
+
+/**
+ * Clear a status element without leaving a type class behind.
+ *
+ * Callers that used `showStatus(el, '', 'success')` to blank a previous message
+ * got an empty green success box: `.status-message.success` carries padding,
+ * border and background, and `min-height: 20px` keeps it visible even when
+ * empty (PBI 2026-10-11-07).
+ */
+export function clearStatus(elementOrId: string | HTMLElement | null): void {
+  const el = typeof elementOrId === 'string' ? document.getElementById(elementOrId) : elementOrId;
+  if (!el) return;
+
+  cancelPendingClear(el);
+  el.textContent = '';
+  el.className = STATUS_BASE_CLASS;
+
+  if (el.id === 'status') {
+    try {
+      syncStatusToTop();
+    } catch {}
+  }
 }

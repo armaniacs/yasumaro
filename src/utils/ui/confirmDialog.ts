@@ -10,7 +10,7 @@
  */
 
 import { getMessageOr } from '../i18n.js';
-import { handleFocusCycle } from './focusTrap.js';
+import { FOCUSABLE_SELECTOR, handleFocusCycle } from './focusTrap.js';
 
 export interface ConfirmDialogOptions {
   /** Optional — when omitted the dialog renders the message only. */
@@ -27,15 +27,6 @@ export interface AlertDialogOptions {
   message: string;
   okLabel?: string;
 }
-
-const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
 
 interface ButtonSpec {
   label: string;
@@ -122,7 +113,10 @@ function openModalDialog(options: {
 
   document.addEventListener('keydown', handleKeydown);
   document.body.appendChild(overlay);
-  buttons[buttons.length - 1]!.focus();
+  // Focus the non-destructive button: the last button is the destructive
+  // confirm, so Enter straight after opening used to delete (PBI 2026-10-11-07).
+  const safeIndex = options.buttons.findIndex((spec) => spec.resolves === false);
+  (buttons[safeIndex >= 0 ? safeIndex : 0] ?? buttons[buttons.length - 1])?.focus();
 }
 
 export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolean> {
