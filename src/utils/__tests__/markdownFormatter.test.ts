@@ -171,4 +171,13 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     expect(md).toContain('[Line one - injected](https://example.com/article)');
     expect(md.split('\n')).toHaveLength(2);
   });
+
+  it('keeps the heading title line single-line for newline titles', () => {
+    const md = buildEntryMarkdown(
+      { title: 'Evil\n# Forged heading', url: 'https://example.com/article', summary: 's' },
+      'heading',
+    );
+    const firstLine = md.split('\n')[0];
+    expect(firstLine).toBe('# Evil # Forged heading');
+  });
 });
