@@ -14,6 +14,27 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-10 Checking Team ラウンド（checking-team-1010） — ⬜ 10件未着手 🔧非機能追加
+
+Checking Team skill（22観点・3 Wave）によるブランチ `1007z` vs `main` の差分レビュー（57 commits / 199 files / うちコード 137 files）。実行済み 17 観点の平均 **86/100（A）**、High 3 / Medium 15 / Low 6。High 3 件と Medium の主要部分を 10 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-10）。報告書は [dev-docs/archived/plans/2026-10-10-2320-review-1007z.md](../dev-docs/archived/plans/2026-10-10-2320-review-1007z.md)（live 台帳は [2026-10-11-00-backlog-checking-team-1010.md](2026-10-11-00-backlog-checking-team-1010.md)）。
+
+High 3 件: (1) WASM チャンク境界クランプで非ASCII本文の継ぎ目に落ちる ASCII PII が未マスク（本ブランチ regression、node で出荷 WASM を実行して再現） (2) Rust `try_email` の非バックトラックにより末尾 `.` / `-` 付き email が WASM 経路で未マスク（main からの既存バグ、parity 主張の穴） (3) `recording_triggers` / `snapshot_interval_minutes` の移行修正が既移行インストールに効かず自動保存トリガー設定が無言で既定値に巻き戻る。Red Team の chunk-seam teardown 指摘は System Architect の裁定 + Wave 3 の独立掃引で REFUTED（台帳送り C4）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---|---:|---|
+| ⬜ 01 | [2026-10-11-01-fix-pii-core-detection-parity.md](2026-10-11-01-fix-pii-core-detection-parity.md) | fix | 8.1 | 3.0 | 非ASCII シーム + email バックトラック + WASM timeout + 走査ループ構造 + parity コーパス再生成 + bench。wasm 再ビルドを伴う critical path |
+| ⬜ 02 | [2026-10-11-02-fix-privacy-mode-fail-closed.md](2026-10-11-02-fix-privacy-mode-fail-closed.md) | fix | 7.2 | 1.5 | `privacy_mode` 未知値の fail-open（マスク無効＋クラウド送信）を union 型 + 正規化で閉じる |
+| ⬜ 03 | [2026-10-11-03-fix-sanitize-title-line-separators.md](2026-10-11-03-fix-sanitize-title-line-separators.md) | fix | 7.2 | 0.5 | U+2028/2029/0085 の行区切り正規化 + 非文字列 title の例外化を塞ぐ |
+| ⬜ 04 | [2026-10-11-04-fix-i18n-keys-and-locale-ssot.md](2026-10-11-04-fix-i18n-keys-and-locale-ssot.md) | fix | 6.7 | 1.5 | `domainRequired` 未定義 + キー流用の意味反転 + ロケール判定三系統の統一 + 未定義キー検出ゲート |
+| ⬜ 05 | [2026-10-11-05-fix-settings-toplevel-repair.md](2026-10-11-05-fix-settings-toplevel-repair.md) | fix | 6.0 | 2.0 | 既移行インストール向けの冪等リペア（High 3 の本体） |
+| ⬜ 06 | [2026-10-11-06-docs-release-notes-and-guides.md](2026-10-11-06-docs-release-notes-and-guides.md) | docs | 6.0 | 0.5 | CHANGELOG 6.9.40 の PII 修正記載 + PII 機能ガイドの現行仕様化（日英）+ AGENTS.md の clearElement 正典 |
+| ⬜ 07 | [2026-10-11-07-fix-status-type-and-focus-trap.md](2026-10-11-07-fix-status-type-and-focus-trap.md) | fix | 5.3 | 1.5 | 進行中ステータスが success 型になる退行 + focusTrap の disabled 除外 + confirmDialog 初期フォーカス |
+| ⬜ 08 | [2026-10-11-08-fix-e2e-probe-exposure.md](2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3.6 | 1.5 | ページ側 `data-ow-e2e-test` でユーザー設定と記録状態がページ DOM に露出する経路を閉じる |
+| ⬜ 09 | [2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md](2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3.0 | 1.0 | wasm 成果物の strip（`custom:name` 38.6KB）+ crate 単位サイズ上限 + CI paths に `public/wasm/**`。**01 の後に実施** |
+| ⬜ 10 | [2026-10-11-10-fix-archive-wire-validation-ssot.md](2026-10-11-10-fix-archive-wire-validation-ssot.md) | fix | 0.8 | 2.0 | archive wire 検証規則の二重定義解消 + 上限超過メッセージ修正 |
+
+実行順: W1（01/02/03/04 並列）→ W2（05/06/07/08 並列）→ W3（09/10）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C6（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ）はトリガー管理。
+
 ### 2026-10-10 arch-delivery-loop ラウンド（archloop-1010） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
 
 arch-delivery-loop skill によるコードベース全体（差分スコープ）のアーキテクチャ診断と閉ループ実行。4 系統の並列調査（background+offscreen / dashboard+popup / content+utils+messaging / 設約スイープ）を 13 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-13）。台帳送り消費: F14（cleansingStatsView i18n → NN05）、F17（exportLogsPanel limit → NN05）、F19（connectionTests syncStatusToTop → NN13）。RICE 採点・同点根拠・依存・バッチ計画（W1-W4）・台帳送り G1-G17 の詳細は [2026-10-10-00-backlog-archloop-1010.md](2026-10-10-00-backlog-archloop-1010.md)（live 台帳）。
