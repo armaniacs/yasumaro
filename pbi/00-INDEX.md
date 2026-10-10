@@ -337,7 +337,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 ### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 29件完了・アーカイブ済み / 🔵 監視 2件 / ⛔ 1件 🔧非機能追加
 
-ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](2026-09-25-00-backlog-checking-team-0924.md)。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
+ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`、総合評価 88/100）の残存指摘を 31 候補に展開し、RICE 採点して 30 PBI を出力。採点・依存グラフ・5 Whys の詳細は [2026-09-25-00-backlog-checking-team-0924.md](../dev-docs/archived/pbi/2026-09-25-00-backlog-checking-team-0924.md)（2026-10-11 アーカイブ済み）。種別内訳は fix 6 / refactor 9 / doc 5 / investigate 8 / backlog 2。investigate 8 件は着手時の裁定後に `fix` PBI を起票する。
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
@@ -366,7 +366,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 ### 2026-09-24 arch-delivery-loop パネル基盤深化ラウンド — ✅ 全8件完了・アーカイブ済み
 
-分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](2026-09-24-00-backlog-archloop-0924.md) を参照。
+分析パネルラウンド（01-08 アーカイブ済み）後のアーキテクチャ診断（Phase 0・HTML レポート表示済み）で抽出した9候補を RICE 採点し、上位8件を実装。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点）。台帳送り2件（defineAnalysisPanel 単一登録シーム RICE 3.6・renderTagGraph 抽出 RICE 0.8）は [2026-09-24-00-backlog-archloop-0924.md](../dev-docs/archived/pbi/2026-09-24-00-backlog-archloop-0924.md)（2026-10-11 アーカイブ済み。renderTagGraph は PBI 17 へ昇格済み、defineAnalysisPanel は panelCatalog SSOT で解消として閉じた）を参照。
 
 ### 2026-09-24 分析機能強化ラウンド — ✅ 全8件完了・アーカイブ済み ✨機能追加
 
@@ -374,7 +374,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 ### 2026-09-22 VulnHunt 監査修正 — 🔵 監視 1件（11。06-10 は完了・アーカイブ済み）
 
-VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md)。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
+VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](../dev-docs/archived/pbi/2026-09-22-00-backlog-vuln-remediation.md)（2026-10-11 アーカイブ済み）。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
 
 - [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
 
@@ -403,7 +403,6 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 ### 将来候補の統合台帳（live）
 
 - [2026-09-05-00-backlog-future.md](2026-09-05-00-backlog-future.md) — 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）に散在していた見送り・トリガー付き・製品判断待ち候補の統合台帳（2026-09-05 整理・2026-09-23 に 0915〜0921 ラウンド台帳の未採番候補7件を統合）。着手はトリガー別に管理。次ラウンドの architecture review はこれを入力にする
-- [2026-09-22-00-backlog-vuln-remediation.md](2026-09-22-00-backlog-vuln-remediation.md) — VulnHunt 監査修正 6 PBI（06-11）の採点台帳（RICE 表・修正戦略・エクスプロイト実測）。ラウンド完遂時に随伴アーカイブ
 
 ## 運用ルール
 
