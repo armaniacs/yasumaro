@@ -2,7 +2,8 @@
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { Settings, StorageKeys } from '../utils/storage/types.js';
-import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
+import type { PrivacyMode } from '../utils/storage/types.js';
+import { normalizePrivacyMode } from '../utils/storage/defaults.js';
 import { parseTagsFromSummary, normalizeTags } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { checkPromptSafety } from '../utils/promptSafety.js';
@@ -87,15 +88,22 @@ export class PrivacyPipeline {
     private sanitizers: ISanitizers,
   ) {}
 
-  private get mode(): string {
-    return this.settings[StorageKeys.PRIVACY_MODE]
-      ?? (DEFAULT_SETTINGS[StorageKeys.PRIVACY_MODE] as string);
+  private get mode(): PrivacyMode {
+    // Fail closed: an unknown persisted value must not fall through to a mode
+    // where `useMasking` is false while `useCloudAi` is true.
+    return normalizePrivacyMode(this.settings[StorageKeys.PRIVACY_MODE]);
   }
 
   async process(
     content: string,
     options: {
       previewOnly?: boolean;
+      /**
+       * Skips masking for content the caller already masked. Reachable only from
+       * tests: no `source` policy sets it any more (SAVE_RECORD used to), and the
+       * flag is the pipeline's only masking kill-switch — a new source that sets
+       * it would reintroduce the fail-open this PBI closed.
+       */
       alreadyProcessed?: boolean;
       tagSummaryMode?: boolean;
       url?: string;

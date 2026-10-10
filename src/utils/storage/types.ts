@@ -298,6 +298,21 @@ export const StorageKeys = {
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
 
+/**
+ * Privacy modes. `cloud_only` intentionally sends raw text to cloud AI (the user
+ * picks it explicitly and the UI labels it as such), so it stays a legal value.
+ * *Unknown* values must never be treated as `cloud_only`: they fail closed to the
+ * default (`masked_cloud`) so PII masking is not silently disabled.
+ */
+export const PRIVACY_MODES = ['local_only', 'full_pipeline', 'masked_cloud', 'cloud_only'] as const;
+
+export type PrivacyMode = (typeof PRIVACY_MODES)[number];
+
+/** Type guard for a persisted/imported privacy mode value. */
+export function isPrivacyMode(value: unknown): value is PrivacyMode {
+    return typeof value === 'string' && (PRIVACY_MODES as readonly string[]).includes(value);
+}
+
 // 各 StorageKey に対応する値型
 export interface StorageKeyValues {
     [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
@@ -335,7 +350,7 @@ export interface StorageKeyValues {
     [StorageKeys.DOMAIN_BLACKLIST]: string[];
     [StorageKeys.DOMAIN_FILTER_MODE]: string;
     [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: boolean;
-    [StorageKeys.PRIVACY_MODE]: string;
+    [StorageKeys.PRIVACY_MODE]: PrivacyMode;
     [StorageKeys.PII_CONFIRMATION_UI]: boolean;
     [StorageKeys.PII_SANITIZE_LOGS]: boolean;
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save' | 'skip' | 'confirm';

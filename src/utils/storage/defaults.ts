@@ -5,9 +5,9 @@
  * storage.tsからDEFAULT_SETTINGSを分離したモジュール
  */
 
-import { StorageKeys } from './types.js';
+import { StorageKeys, isPrivacyMode } from './types.js';
 import { PROVIDER_DEFAULT_BASE_URLS } from './providerDefaultBaseUrls.js';
-import type { Settings } from './types.js';
+import type { PrivacyMode, Settings } from './types.js';
 import type { DeepReadonly } from '../typeUtils.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../aiSummaryCleaner/rules.js';
 import { INITIAL_KEYWORDS } from '../contentCleaner.js';
@@ -180,3 +180,17 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: [],
     [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: false,
 };
+
+/**
+ * Resolve a persisted or imported privacy mode defensively.
+ *
+ * An unknown/corrupted value must fail closed to the default (`masked_cloud`):
+ * `privacyPipeline` derives `useMasking` from this value, so treating garbage as
+ * "some other mode" would silently disable PII masking while still sending the
+ * page body to cloud AI. `cloud_only` remains a legal explicit user choice.
+ */
+export function normalizePrivacyMode(value: unknown): PrivacyMode {
+    return isPrivacyMode(value)
+        ? value
+        : (DEFAULT_SETTINGS[StorageKeys.PRIVACY_MODE] as PrivacyMode);
+}

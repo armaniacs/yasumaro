@@ -2,6 +2,7 @@ import { StatusInfo } from './statusChecker.js';
 import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { normalizePrivacyMode } from '../utils/storage/defaults.js';
 import { addDomainToWhitelist, addPathToWhitelist, type WhitelistWriteResult } from './whitelistWriter.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { ErrorCode } from '../utils/logger/types.js';
@@ -33,7 +34,7 @@ async function renderPrivacyModeBadge(): Promise<void> {
   try {
     const settings = await settingsRepository.getAll();
     if (settings) {
-      const mode = (settings[StorageKeys.PRIVACY_MODE] as string) || 'full_pipeline';
+      const mode = normalizePrivacyMode(settings[StorageKeys.PRIVACY_MODE]);
       const modeBadge = document.getElementById('statusModeBadge');
       if (modeBadge) {
         const modeKey = mode === 'local_only' ? 'privacyModeLocalOnlyShort' : mode === 'full_pipeline' ? 'privacyModeFullPipelineShort' : mode === 'masked_cloud' ? 'privacyModeMaskedCloudShort' : 'privacyModeCloudOnlyShort';

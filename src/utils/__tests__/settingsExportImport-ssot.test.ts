@@ -196,3 +196,33 @@ describe('saveJsonToFile', () => {
     removeSpy.mockRestore();
   });
 });
+
+describe('privacy_mode value-range validation (PBI 2026-10-11-02)', () => {
+  test.each(['local_only', 'full_pipeline', 'masked_cloud', 'cloud_only'])(
+    'accepts the selectable mode %s',
+    (mode) => {
+      const settings = fullNonApiSettings();
+      settings['privacy_mode'] = mode;
+      expect(validateExportData(exportData(settings, true))).toBe(true);
+    },
+  );
+
+  test.each(['cloud-only', 'CLOUD_ONLY', '', 'masked', 0, null, {}, ['masked_cloud']])(
+    'rejects the corrupted mode %s',
+    (mode) => {
+      const settings = fullNonApiSettings();
+      settings['privacy_mode'] = mode;
+      expect(validateExportData(exportData(settings, true))).toBe(false);
+    },
+  );
+
+  test('both current and legacy formats require the privacy_mode key', () => {
+    // The value-range check therefore never sees `undefined` for a valid
+    // payload; the guard in validateExportData stays as future-proofing.
+    for (const version of [EXPORT_VERSION, LEGACY_EXPORT_VERSION]) {
+      const settings = fullNonApiSettings();
+      delete settings['privacy_mode'];
+      expect(validateExportData(exportData(settings, true, version)), version).toBe(false);
+    }
+  });
+});

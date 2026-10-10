@@ -5,6 +5,7 @@
 
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+import { normalizePrivacyMode } from '../../utils/storage/defaults.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
@@ -120,7 +121,7 @@ export function createPrivacySettings(): PrivacySettingsController {
         const settings = await settingsRepository.getAll();
 
         // Mode
-        const mode = settings[StorageKeys.PRIVACY_MODE] || 'full_pipeline';
+        const mode = normalizePrivacyMode(settings[StorageKeys.PRIVACY_MODE]);
         const radio = document.querySelector(`input[name="privacyMode"][value="${mode}"]`) as HTMLInputElement | null;
         if (radio) {
             radio.checked = true;
@@ -172,7 +173,7 @@ export function createPrivacySettings(): PrivacySettingsController {
 
             const selectedBehavior = document.querySelector('input[name="autoSavePrivacyBehavior"]:checked') as HTMLInputElement | null;
             const newSettings = {
-                [StorageKeys.PRIVACY_MODE]: selectedMode.value,
+                [StorageKeys.PRIVACY_MODE]: normalizePrivacyMode(selectedMode.value),
                 [StorageKeys.PII_CONFIRMATION_UI]: dom?.confirmCheckbox ? dom.confirmCheckbox.checked : true,
                 [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: (selectedBehavior?.value || 'save') as 'save' | 'skip' | 'confirm'
             };
