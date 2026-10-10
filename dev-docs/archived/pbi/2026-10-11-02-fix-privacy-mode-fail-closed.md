@@ -41,15 +41,15 @@ Scenario: 不正な値の設定インポートを拒否する
 
 ## 受け入れ基準
 
-- [ ] `PRIVACY_MODE` を union 型（`full_pipeline | masked_cloud | local_only`）にし、`src/utils/storage/types.ts` の宣言を更新する
-- [ ] 読み出し時に既知値以外を `masked_cloud` へ倒す正規化関数を 1 箇所に置き、`privacyPipeline.ts` はそれを使う（各所で生の string 比較をしない）
-- [ ] `src/utils/settingsExportImport.ts` の `validateExportData` に `privacy_mode` の値域検証を追加する
-- [ ] `src/dashboard/exportImport.ts` の取り込み経路でも同じ検証を通す
-- [ ] `src/popup/statusPanel.ts:39` のフォールバック表示が「正規化後の値」と一致する（未知値で実態と違う表示にならない）
-- [ ] 未知値・壊れた値・旧版の値それぞれで「マスク有効 + クラウド判定が既定どおり」になることをテストで固定する
-- [ ] 既知3値の挙動が変わっていないことをテストで固定する
-- [ ] `src/background/privacyPipeline.ts:106,182,185` の `alreadyProcessed: true` マスク無効化スイッチについて、source policy から到達不能であることと「テスト専用」であることを明示する（削除するか doc コメントで明記）
-- [ ] `npm run validate` が green
+- [x] `PRIVACY_MODE` を union 型（`full_pipeline | masked_cloud | local_only`）にし、`src/utils/storage/types.ts` の宣言を更新する
+- [x] 読み出し時に既知値以外を `masked_cloud` へ倒す正規化関数を 1 箇所に置き、`privacyPipeline.ts` はそれを使う（各所で生の string 比較をしない）
+- [x] `src/utils/settingsExportImport.ts` の `validateExportData` に `privacy_mode` の値域検証を追加する
+- [x] `src/dashboard/exportImport.ts` の取り込み経路でも同じ検証を通す
+- [x] `src/popup/statusPanel.ts:39` のフォールバック表示が「正規化後の値」と一致する（未知値で実態と違う表示にならない）
+- [x] 未知値・壊れた値・旧版の値それぞれで「マスク有効 + クラウド判定が既定どおり」になることをテストで固定する
+- [x] 既知3値の挙動が変わっていないことをテストで固定する
+- [x] `src/background/privacyPipeline.ts:106,182,185` の `alreadyProcessed: true` マスク無効化スイッチについて、source policy から到達不能であることと「テスト専用」であることを明示する（削除するか doc コメントで明記）
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -87,7 +87,24 @@ Scenario: 不正な値の設定インポートを拒否する
 
 ## Definition of Done
 
-- [ ] 未知の `privacy_mode` でマスクが有効なままであることをテストで確認
-- [ ] インポート経路で不正値が拒否されることをテストで確認
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 未知の `privacy_mode` でマスクが有効なままであることをテストで確認
+- [x] インポート経路で不正値が拒否されることをテストで確認
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 / commit `481fc530`, `bd198de0`）
+
+| コマンド | 結果 |
+|---|---|
+| `npx vitest run src/utils/storage/__tests__/privacyMode.test.ts src/background/__tests__/privacyPipeline-privacyMode-failclosed.test.ts src/utils/__tests__/settingsExportImport-ssot.test.ts` | 34 passed |
+| 関連 13 ファイル（privacyPipeline / statusPanel / exportImport / settingsExportImport / storage-types ほか） | 256 passed |
+| `npm run type-check` | exit 0 |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+**実装時の設計判断**: `PRIVACY_MODES` / `PrivacyMode` は「解決後の型」とし、永続化された `Settings`
+側の `privacy_mode` は `string` のままとした（`bd198de0`）。ストレージは信頼できない入力
+（破損したバックアップ・旧版）を受けるため union で宣言するのは実態に反し、かつ既存テストの
+Settings リテラル 23 箇所が型エラーになる。読み出しは必ず `normalizePrivacyMode()` を通す。
+`statusPanel` の旧フォールバック `'full_pipeline'` は実挙動（`masked_cloud`）と食い違っていたため、
+表示も実挙動へ合わせた（テスト 2 件を意図的に更新）。
+

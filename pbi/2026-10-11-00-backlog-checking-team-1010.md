@@ -60,7 +60,8 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 | C3 | マッチ数上限 1000 到達時に記録全体が失敗し、理由がユーザーに見えない（`dispatch.rs:25,58-60` / `lib.rs:52,183-185` / `piiSanitizer.ts:21`） | 設計意図（部分マスク済みテキストを成功として出荷しない）は明記済みで本ブランチ由来ではない。UX 改善は別設計が必要 | 保存失敗の理由表示を触る時、または上限値を見直す時 |
 | C4 | `\b` 前提により「非単語文字に直接隣接する IBAN」が TS/WASM 両方で未検出（Red Team 提示例の真因） | パターン設計の受容判断であり chunk 走査とは別件。検出を広げると誤検出が増える | PII パターン定義（`PII_PATTERNS` / `patterns/`）を改訂する時 |
 | C5 | WASM バイナリの byte 再現性（toolchain / wasm-pack / Cargo.lock の固定） | 既存台帳 [2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) の監視対象。NN09 は strip を入れるが byte 来歴の保証は主張しない | 同台帳のトリガー（toolchain / Cargo.lock / wasm-pack / build script / ship manifest の変更、供給網監査で byte provenance が要求された時） |
-| C6 | `PrivacyPipeline.process(content, { alreadyProcessed: true })` のマスク無効化スイッチ本体（`privacyPipeline.ts:106,182,185`） | source policy からは到達不能。NN02 で「テスト専用」の明示までは行う。フラグ自体の削除は source 追加時に判断 | 次に `source` を追加する時 |
+| C6 | `PrivacyPipeline.process(content, { alreadyProcessed: true })` のマスク無効化スイッチ本体（`privacyPipeline.ts:106,182,185`） | source policy からは到達不能。NN02 で「テスト専用」の JSDoc 明示までは行った。フラグ自体の削除は source 追加時に判断 | 次に `source` を追加する時 |
+| C7 | `bench/micro/c8-pii-sanitize.bench.mjs` に「400文字超の空白なしトークン内部に email/電話を埋めた」フィクスチャを追加し、`docs/PERFORMANCE_TEST.md` の c8 数値を再計測して更新する（NN01 から分離） | 実測でチャンク重なり走査のコストが長トークン入力で WASM 2.8〜4.3 倍 / TS フォールバック最大 7.4 倍になるが、現行の記事フィクスチャでは +23% しか出ず回帰検知できない。`bench/baselines/micro.json` はマシン依存で `--update-baseline` は全指標を書き換えるため、性能 baseline の更新は性能専用の意図的な作業として行う必要がある（検出漏れ修正とは独立） | 次に性能 baseline を更新する時、または PII 走査の性能を再計測する時 |
 
 - `pbi/` に残る他ラウンドの台帳送り（backlog-future 統合台帳、holistic-1009 の F 系、archloop-1010 の G1-G17、archloop-1007 の L2-L8）はトリガー未発火のため維持。
 - 着手ゲート付きの未完了 PBI 2 件（`2026-09-05-32-refactor-wasqlite-sunset.md` は ADR-014 の 2026-12-17 ゲート、`2026-09-25-30-refactor-utils-namespace-reorg.md` は専用ブランチ + 着手トリガー）は未完了ではなく**ゲート待ち**であり、本ラウンドの対象外。
@@ -85,13 +86,24 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 
 | NN | PBI | 状態 |
 |---|---|---|
-| 01 | pii-core-detection-parity | 未着手 |
-| 02 | privacy-mode-fail-closed | 未着手 |
-| 03 | sanitize-title-line-separators | 未着手 |
-| 04 | i18n-keys-and-locale-ssot | 未着手 |
+| 01 | pii-core-detection-parity | ✅ 完了・アーカイブ済み（`bd09e5a2`） |
+| 02 | privacy-mode-fail-closed | ✅ 完了・アーカイブ済み（`481fc530`, `bd198de0`） |
+| 03 | sanitize-title-line-separators | ✅ 完了・アーカイブ済み（`df91afb2`） |
+| 04 | i18n-keys-and-locale-ssot | ✅ 完了・アーカイブ済み（`a8f1daba`, `bd198de0`） |
 | 05 | settings-toplevel-repair | 未着手 |
-| 06 | docs-release-notes-and-guides | 未着手 |
+| 06 | docs-release-notes-and-guides | ✅ 完了・アーカイブ済み（`a088ec4f`） |
 | 07 | status-type-and-focus-trap | 未着手 |
 | 08 | e2e-probe-exposure | 未着手 |
-| 09 | wasm-artifact-size-and-ci-gate | 未着手（01 の後） |
+| 09 | wasm-artifact-size-and-ci-gate | 未着手（01 の後。01 の再ビルドで strip 相当は解消: 100,671 → 56,784 B） |
 | 10 | archive-wire-validation-ssot | 未着手 |
+
+### 完了分の検証（2026-10-11）
+
+- 01: `cargo test` 54 passed / `npm run test:wasm` green / parity 223 + extended 59 green / `piiSanitizer.test.ts` 75 green / wasm src↔public byte 一致
+- 02: 関連 13 ファイル 256 passed / インポート値域検証 12 ケース / `type-check` exit 0
+- 03: `markdownFormatter.test.ts` 26 passed（新規 4 件）/ 関連 7 ファイル 108 passed
+- 04: `npm run check-i18n` ALL PASSED（ja/en 1566 一致、ソース 597 キー全て存在）/ 関連 6 ファイル 215 passed
+- 06: docs 系ゲート 4 種 green（JSON / layers / ADR / privacy）
+- すべて `npm run validate` exit 0（1055 files / 15933 tests passed）
+- 副次: closer の検証で露見した flaky 2 件（trustSettings の書き込み settle 漏れ・ReDoS 性能の単発サンプル）を `d44aa940` で原因側から修正。テスト型エラー baseline を 467 → 463 に返済（`bd198de0`）
+

@@ -58,13 +58,13 @@ Scenario: clearElement の正典が AGENTS.md と実装で一致する
 
 ## 受け入れ基準
 
-- [ ] `CHANGELOG.md` の 6.9.40 節に「保存（SAVE_RECORD）経路でもクラウド AI 送信前に PII をマスクする」「タイトルの改行・CR を正規化し Markdown リンクへの注入を防ぐ」「長トークン内に埋め込まれた PII を WASM コアの重なり付きチャンク走査で検出する」の 3 件を追記する（既にリリース済みなら次版エントリに移す）
-- [ ] `docs/PII_FEATURE_GUIDE.md:113` / `:326` の長トークンガード説明を、OVERLAP=200 の重なり付きチャンク走査（`wasm/pii-sanitizer/src/lib.rs`）＋ 200 字超の残存リスクの記述に書き換える（日英同時）
-- [ ] `docs/PII_FEATURE_GUIDE.md` の他の記述で本ブランチの変更（WASM 優先・TS フォールバックの経路、`[MASKED:type]` 形式）と食い違う箇所が無いか確認する
-- [ ] `AGENTS.md:116` の `clearElement` を `src/utils/domClear.ts`（canonical）/ `src/popup/domUtils.ts`（compatibility shim）に書き換える
-- [ ] `public/PRIVACY.md` と `docs/PRIVACY.md` が引き続き byte 一致している（本 PBI では触らないが確認する）
-- [ ] ドキュメント整合ゲート（`npm run lint:layers-docs` / `lint:adr-links` / `validate:json`）が green
-- [ ] `npm run validate` が green
+- [x] `CHANGELOG.md` の 6.9.40 節に「保存（SAVE_RECORD）経路でもクラウド AI 送信前に PII をマスクする」「タイトルの改行・CR を正規化し Markdown リンクへの注入を防ぐ」「長トークン内に埋め込まれた PII を WASM コアの重なり付きチャンク走査で検出する」の 3 件を追記する（既にリリース済みなら次版エントリに移す）
+- [x] `docs/PII_FEATURE_GUIDE.md:113` / `:326` の長トークンガード説明を、OVERLAP=200 の重なり付きチャンク走査（`wasm/pii-sanitizer/src/lib.rs`）＋ 200 字超の残存リスクの記述に書き換える（日英同時）
+- [x] `docs/PII_FEATURE_GUIDE.md` の他の記述で本ブランチの変更（WASM 優先・TS フォールバックの経路、`[MASKED:type]` 形式）と食い違う箇所が無いか確認する
+- [x] `AGENTS.md:116` の `clearElement` を `src/utils/domClear.ts`（canonical）/ `src/popup/domUtils.ts`（compatibility shim）に書き換える
+- [x] `public/PRIVACY.md` と `docs/PRIVACY.md` が引き続き byte 一致している（本 PBI では触らないが確認する）
+- [x] ドキュメント整合ゲート（`npm run lint:layers-docs` / `lint:adr-links` / `validate:json`）が green
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -100,8 +100,22 @@ Scenario: clearElement の正典が AGENTS.md と実装で一致する
 
 ## Definition of Done
 
-- [ ] 6.9.40 に 3 件の PII 修正が記載されている
-- [ ] PII 機能ガイドの日英が現行実装と一致している
-- [ ] AGENTS.md の clearElement 正典が実装と一致している
-- [ ] docs 系ゲートと `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 6.9.40 に 3 件の PII 修正が記載されている
+- [x] PII 機能ガイドの日英が現行実装と一致している
+- [x] AGENTS.md の clearElement 正典が実装と一致している
+- [x] docs 系ゲートと `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 / commit `a088ec4f`）
+
+| コマンド | 結果 |
+|---|---|
+| `npm run validate:json` | All JSON validations passed |
+| `npm run lint:layers-docs` | layer lists in sync |
+| `npm run lint:adr-links` | 61 ADRs — all implements references valid |
+| `node scripts/release-checks/check-privacy.mjs` | PASS（PRIVACY.md は未変更） |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+**追加で見つけた陳腐化**: `docs/assets/pii-sandbox.js`（追跡対象のビルド成果物）が削除済みの
+サンプリング走査を含んだままだったため、`npm run build:docs-pii` で再ビルドし残骸を除去した。
+

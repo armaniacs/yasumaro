@@ -62,14 +62,14 @@ Scenario: ロケール判定が chrome.i18n 基準で一致する
 
 ## 受け入れ基準
 
-- [ ] `domainRequired` を ja/en 両方に追加する（ja: 「ドメインを入力してください」/ en: "Domain is required"）
-- [ ] `perSiteOverrideDeleted` と `perSiteOverrideNotFound` を ja/en 両方に新設し、`promptDeleted` / `noPerSiteOverrides` の流用をやめる
-- [ ] `getUiLocale()` の実装を `getUserLocale()` / `chrome.i18n.getUILanguage()` 基準に寄せ、`startsWith('ja')` の正規化を 1 箇所に置く。既定値の不一致（`'ja'` vs `'en'`）を解消する
-- [ ] プロンプト本文の言語を意図的にコンテンツ言語へ合わせたい場合は、関数名（例 `getContentLocale()`）と JSDoc で UI ロケールと分離する
-- [ ] `docs/i18n-guide.md` の「ロケール判定」節に正典を 1 行追記する
-- [ ] ja/en のキー数が一致し、追加キーが全てコードから参照されている（未使用キー 0）
-- [ ] `getMessage*('key')` の第 1 引数が `messages.json` に存在することを検証する軽量ゲートを追加する（`scripts/` 配下、`lint:layers-docs` と同型の静的チェック。CI か `validate` に組み込む）
-- [ ] `npm run validate` が green
+- [x] `domainRequired` を ja/en 両方に追加する（ja: 「ドメインを入力してください」/ en: "Domain is required"）
+- [x] `perSiteOverrideDeleted` と `perSiteOverrideNotFound` を ja/en 両方に新設し、`promptDeleted` / `noPerSiteOverrides` の流用をやめる
+- [x] `getUiLocale()` の実装を `getUserLocale()` / `chrome.i18n.getUILanguage()` 基準に寄せ、`startsWith('ja')` の正規化を 1 箇所に置く。既定値の不一致（`'ja'` vs `'en'`）を解消する
+- [x] プロンプト本文の言語を意図的にコンテンツ言語へ合わせたい場合は、関数名（例 `getContentLocale()`）と JSDoc で UI ロケールと分離する
+- [x] `docs/i18n-guide.md` の「ロケール判定」節に正典を 1 行追記する
+- [x] ja/en のキー数が一致し、追加キーが全てコードから参照されている（未使用キー 0）
+- [x] `getMessage*('key')` の第 1 引数が `messages.json` に存在することを検証する軽量ゲートを追加する（`scripts/` 配下、`lint:layers-docs` と同型の静的チェック。CI か `validate` に組み込む）
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -108,9 +108,24 @@ Scenario: ロケール判定が chrome.i18n 基準で一致する
 
 ## Definition of Done
 
-- [ ] 3 経路の文言テストが green
-- [ ] ロケール判定が 1 系統に統一され、テストで固定されている
-- [ ] 未定義キー検出ゲートが `validate` に組み込まれ green
-- [ ] ja/en キー数一致・未使用キー 0
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 3 経路の文言テストが green
+- [x] ロケール判定が 1 系統に統一され、テストで固定されている
+- [x] 未定義キー検出ゲートが `validate` に組み込まれ green
+- [x] ja/en キー数一致・未使用キー 0
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 / commit `a8f1daba`, `bd198de0`）
+
+| コマンド | 結果 |
+|---|---|
+| `npm run check-i18n` | ALL CHECKS PASSED（ja/en 1566 キー一致、ソース参照 597 キーすべて存在） |
+| 関連 6 ファイル（customPromptUtils / localeUtils / promptItemGolden / privacySettings / perSiteOverrides / customPromptManager-r2） | 215 passed |
+| `npm run type-check` / `npm run validate:json` | exit 0 |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+**ゲートの根本原因**: 未定義キー検出（`checkSourceI18nKeys`）は既に実装されていたが
+`release:check` でしか走っておらず、`domainRequired` が通常の開発ゲートをすり抜けていた。
+新規ゲートを足すのではなく、`npm run check-i18n`（`--skip-unused` 付き）として `validate` と
+CI の lint ジョブへ配線した。release 時のみの未使用キー棚卸しは従来どおり warning-only。
+

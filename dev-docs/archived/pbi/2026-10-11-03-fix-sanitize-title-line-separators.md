@@ -42,14 +42,14 @@ Scenario: 非文字列 title でも例外にならない
 
 ## 受け入れ基準
 
-- [ ] 正規化対象を行終端の全集合（`\r` `\n` `\u2028` `\u2029` `\u0085`）に広げる
-- [ ] 行区切りに限らず、Markdown 行頭の意味を持つ制御文字をホワイトリスト方式（タブ・スペース以外の C0/C1 を空白化）で扱うか、少なくとも上記 5 文字を対象にする。どちらを採るか選定理由を PBI に記録する
-- [ ] `sanitizeSummary` の `/\n+/` と共通の `normalizeSingleLine()` を切り出して 1 箇所に寄せる（同じ契約を 2 実装で持たない）
-- [ ] `raw.replace()` より前に必ず文字列化する（非文字列は空文字またはフォールバックへ落とす）。`sanitizeForMarkdownLinkText` の非文字列許容に依存しない
-- [ ] `titleFallback: false` 経路（`formatMarkdownStep.ts:57`）で `title` が `undefined` でも例外にならないことをテストで固定する
-- [ ] 連続空白圧縮の仕様変更を CHANGELOG（および必要な場合は docs）に明示する
-- [ ] 既存の CR / LF テスト（`1bc43c2d` / `c7bd180c` で追加）が green のまま
-- [ ] `npm run validate` が green
+- [x] 正規化対象を行終端の全集合（`\r` `\n` `\u2028` `\u2029` `\u0085`）に広げる
+- [x] 行区切りに限らず、Markdown 行頭の意味を持つ制御文字をホワイトリスト方式（タブ・スペース以外の C0/C1 を空白化）で扱うか、少なくとも上記 5 文字を対象にする。どちらを採るか選定理由を PBI に記録する
+- [x] `sanitizeSummary` の `/\n+/` と共通の `normalizeSingleLine()` を切り出して 1 箇所に寄せる（同じ契約を 2 実装で持たない）
+- [x] `raw.replace()` より前に必ず文字列化する（非文字列は空文字またはフォールバックへ落とす）。`sanitizeForMarkdownLinkText` の非文字列許容に依存しない
+- [x] `titleFallback: false` 経路（`formatMarkdownStep.ts:57`）で `title` が `undefined` でも例外にならないことをテストで固定する
+- [x] 連続空白圧縮の仕様変更を CHANGELOG（および必要な場合は docs）に明示する
+- [x] 既存の CR / LF テスト（`1bc43c2d` / `c7bd180c` で追加）が green のまま
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -85,8 +85,21 @@ Scenario: 非文字列 title でも例外にならない
 
 ## Definition of Done
 
-- [ ] U+2028 / U+2029 / U+0085 の正規化テストが green
-- [ ] 非文字列 title で例外にならないテストが green
-- [ ] `npm run validate` が green
-- [ ] 実レンダラ（Obsidian）での行分割確認が手動確認項目として残っている旨を明記
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] U+2028 / U+2029 / U+0085 の正規化テストが green
+- [x] 非文字列 title で例外にならないテストが green
+- [x] `npm run validate` が green
+- [x] 実レンダラ（Obsidian）での行分割確認が手動確認項目として残っている旨を明記
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 / commit `df91afb2`）
+
+| コマンド | 結果 |
+|---|---|
+| `npx vitest run src/utils/__tests__/markdownFormatter.test.ts` | 26 passed（新規 4 件を含む） |
+| 関連 7 ファイル（formatMarkdownStep / markdownJoinSafety / recordOrchestrator / copyMarkdownButton ほか） | 108 passed |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+**ユーザー作業（自動化されない手動確認）**: 実レンダラ（Obsidian）が U+2028 / U+2029 を
+行区切りとして扱うかの目視確認は未実施。コード上の契約（`sanitizeTitle` の出力は単一行）は
+テストで固定済みで、実害の有無はこの手動確認で確定する。
+

@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-10 Checking Team ラウンド（checking-team-1010） — ⬜ 10件未着手 🔧非機能追加
+### 2026-10-10 Checking Team ラウンド（checking-team-1010） — 🔶 5件完了・アーカイブ済み / ⬜ 5件未着手 🔧非機能追加
 
 Checking Team skill（22観点・3 Wave）によるブランチ `1007z` vs `main` の差分レビュー（57 commits / 199 files / うちコード 137 files）。実行済み 17 観点の平均 **86/100（A）**、High 3 / Medium 15 / Low 6。High 3 件と Medium の主要部分を 10 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-10）。報告書は [dev-docs/archived/plans/2026-10-10-2320-review-1007z.md](../dev-docs/archived/plans/2026-10-10-2320-review-1007z.md)（live 台帳は [2026-10-11-00-backlog-checking-team-1010.md](2026-10-11-00-backlog-checking-team-1010.md)）。
 
@@ -22,18 +22,18 @@ High 3 件: (1) WASM チャンク境界クランプで非ASCII本文の継ぎ目
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---|---:|---|
-| ⬜ 01 | [2026-10-11-01-fix-pii-core-detection-parity.md](2026-10-11-01-fix-pii-core-detection-parity.md) | fix | 8.1 | 3.0 | 非ASCII シーム + email バックトラック + WASM timeout + 走査ループ構造 + parity コーパス再生成 + bench。wasm 再ビルドを伴う critical path |
-| ⬜ 02 | [2026-10-11-02-fix-privacy-mode-fail-closed.md](2026-10-11-02-fix-privacy-mode-fail-closed.md) | fix | 7.2 | 1.5 | `privacy_mode` 未知値の fail-open（マスク無効＋クラウド送信）を union 型 + 正規化で閉じる |
-| ⬜ 03 | [2026-10-11-03-fix-sanitize-title-line-separators.md](2026-10-11-03-fix-sanitize-title-line-separators.md) | fix | 7.2 | 0.5 | U+2028/2029/0085 の行区切り正規化 + 非文字列 title の例外化を塞ぐ |
-| ⬜ 04 | [2026-10-11-04-fix-i18n-keys-and-locale-ssot.md](2026-10-11-04-fix-i18n-keys-and-locale-ssot.md) | fix | 6.7 | 1.5 | `domainRequired` 未定義 + キー流用の意味反転 + ロケール判定三系統の統一 + 未定義キー検出ゲート |
+| ✅ 01 | [2026-10-11-01-fix-pii-core-detection-parity.md](../dev-docs/archived/pbi/2026-10-11-01-fix-pii-core-detection-parity.md) | fix | 8.1 | 3.0 | ✅ 完了（`bd09e5a2`）。非ASCII シーム + email バックトラック + WASM timeout + 走査ループ構造 + parity コーパス再生成。wasm 再ビルドで 100,671 → 56,784 B |
+| ✅ 02 | [2026-10-11-02-fix-privacy-mode-fail-closed.md](../dev-docs/archived/pbi/2026-10-11-02-fix-privacy-mode-fail-closed.md) | fix | 7.2 | 1.5 | ✅ 完了（`481fc530`, `bd198de0`）。`privacy_mode` 未知値の fail-open を正規化 + インポート値域検証で閉じる |
+| ✅ 03 | [2026-10-11-03-fix-sanitize-title-line-separators.md](../dev-docs/archived/pbi/2026-10-11-03-fix-sanitize-title-line-separators.md) | fix | 7.2 | 0.5 | ✅ 完了（`df91afb2`）。U+2028/2029/0085 の行区切り正規化 + 非文字列 title の例外化を塞ぐ |
+| ✅ 04 | [2026-10-11-04-fix-i18n-keys-and-locale-ssot.md](../dev-docs/archived/pbi/2026-10-11-04-fix-i18n-keys-and-locale-ssot.md) | fix | 6.7 | 1.5 | ✅ 完了（`a8f1daba`）。`domainRequired` 追加 + キー流用の是正 + ロケール判定統一 + 既存 i18n ゲートを validate/CI へ配線 |
 | ⬜ 05 | [2026-10-11-05-fix-settings-toplevel-repair.md](2026-10-11-05-fix-settings-toplevel-repair.md) | fix | 6.0 | 2.0 | 既移行インストール向けの冪等リペア（High 3 の本体） |
-| ⬜ 06 | [2026-10-11-06-docs-release-notes-and-guides.md](2026-10-11-06-docs-release-notes-and-guides.md) | docs | 6.0 | 0.5 | CHANGELOG 6.9.40 の PII 修正記載 + PII 機能ガイドの現行仕様化（日英）+ AGENTS.md の clearElement 正典 |
+| ✅ 06 | [2026-10-11-06-docs-release-notes-and-guides.md](../dev-docs/archived/pbi/2026-10-11-06-docs-release-notes-and-guides.md) | docs | 6.0 | 0.5 | ✅ 完了（`a088ec4f`）。CHANGELOG 6.9.40 の PII 修正記載 + PII ガイド日英更新 + sandbox バンドル再生成 + AGENTS.md 正典 |
 | ⬜ 07 | [2026-10-11-07-fix-status-type-and-focus-trap.md](2026-10-11-07-fix-status-type-and-focus-trap.md) | fix | 5.3 | 1.5 | 進行中ステータスが success 型になる退行 + focusTrap の disabled 除外 + confirmDialog 初期フォーカス |
 | ⬜ 08 | [2026-10-11-08-fix-e2e-probe-exposure.md](2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3.6 | 1.5 | ページ側 `data-ow-e2e-test` でユーザー設定と記録状態がページ DOM に露出する経路を閉じる |
-| ⬜ 09 | [2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md](2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3.0 | 1.0 | wasm 成果物の strip（`custom:name` 38.6KB）+ crate 単位サイズ上限 + CI paths に `public/wasm/**`。**01 の後に実施** |
+| ⬜ 09 | [2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md](2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3.0 | 1.0 | wasm 成果物のサイズゲート + CI paths に `public/wasm/**`。**01 の後に実施**（01 の再ビルドで strip 相当は既に解消: 100,671 → 56,784 B） |
 | ⬜ 10 | [2026-10-11-10-fix-archive-wire-validation-ssot.md](2026-10-11-10-fix-archive-wire-validation-ssot.md) | fix | 0.8 | 2.0 | archive wire 検証規則の二重定義解消 + 上限超過メッセージ修正 |
 
-実行順: W1（01/02/03/04 並列）→ W2（05/06/07/08 並列）→ W3（09/10）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C6（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ）はトリガー管理。
+実行順: W1（01/02/03/04 並列・✅ 完了）→ W2（05/06/07/08 並列・06 完了）→ W3（09/10）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C7（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ・PII 長トークン bench フィクスチャ）はトリガー管理。完了 5 件の検証はいずれも `npm run validate` exit 0（1055 files / 15933 tests passed）。
 
 ### 2026-10-10 arch-delivery-loop ラウンド（archloop-1010） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
 
