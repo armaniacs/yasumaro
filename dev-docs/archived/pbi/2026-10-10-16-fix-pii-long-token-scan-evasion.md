@@ -36,12 +36,13 @@ Scenario: ReDoS耐性が維持される
 
 ## 受け入れ基準
 
-- [ ] `neutralizeLongNonWhitespaceRuns`＋`sampleMiddleForScan`の`#`置換サンプリングを廃止する
-- [ ] 原文を重なり付きチャンク（`CHUNK_SIZE=400`・`OVERLAP=200`）で走査し、マッチ位置を原文オフセットにマップする
-- [ ] チャンク境界重複の二重検出をdedupeする
-- [ ] `timeout`・`MAX_MATCH_COUNT`チェックを維持する
-- [ ] 前提（200字未満の実体長を持つPIIは原理的に検出。emailの理論最大254字のうち200字超の極端例は残存リスクとして受容する。現行100字ウィンドウより大幅に改善）をコードコメントに明記する。将来200字超の bounded パターンを追加する際はOVERLAPを同時に見直す
-- [ ] 再現テスト（長トークン中間PIIの検出）を追加する
+- [x] `neutralizeLongNonWhitespaceRuns`＋`sampleMiddleForScan`の`#`置換サンプリングを廃止する
+- [x] 原文を重なり付きチャンク（`CHUNK_SIZE=400`・`OVERLAP=200`）で走査し、マッチ位置を原文オフセットにマップする
+- [x] チャンク境界重複の二重検出をdedupeする
+- [x] `timeout`・`MAX_MATCH_COUNT`チェックを維持する
+- [x] 前提（200字未満の実体長を持つPIIは原理的に検出。emailの理論最大254字のうち200字超の極端例は残存リスクとして受容する。現行100字ウィンドウより大幅に改善）をコードコメントに明記する。将来200字超の bounded パターンを追加する際はOVERLAPを同時に見直す
+- [x] 再現テスト（長トークン中間PIIの検出）を追加する
+（2026-10-10 Task 6で確認: 旧関数名の残存なし・`SCAN_CHUNK_SIZE=400`/`SCAN_CHUNK_OVERLAP=200`・dedupe分岐・`timeout`/`MAX_MATCH_COUNT`維持・前提コメント有り・`npm run validate` exit 0）
 
 ## テスト戦略
 
@@ -77,4 +78,4 @@ Scenario: ReDoS耐性が維持される
 
 - [x] 再現入力のPIIがマスクされる（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer.test.ts` 72/72 green — full `validate` run + targeted re-run）
 - [x] timeout系テストがgreen（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer-redos.test.ts` 18/18 green — full `validate` run + targeted re-run）
-- [ ] `npm run validate`がgreen（2026-10-10 Task 4: BLOCKED — exit 1。失敗は `src/wasm/pii-sanitizer/__tests__/parity.test.ts` の7件のみ：TS側チャンク走査化に対しWASMバイナリが旧サンプリング挙動のままでparity不一致。Tests 15886 passed / 7 failed。`npm run type-check` は exit 0）
+- [x] `npm run validate`がgreen（2026-10-10 Task 6 second run: exit 0。Test Files 1053 passed / 1 skipped、Tests 15893 passed / 21 skipped。Task 4で失敗したparity 7件を含む全件green — Task 5のRust移植＋WASM再ビルド 7e328646 による。`npm run type-check` も exit 0。Task 4のBLOCKED注記は本runで解消）
