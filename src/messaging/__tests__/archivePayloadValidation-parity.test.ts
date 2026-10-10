@@ -14,10 +14,10 @@
  * outcome of BOTH gates and that they agree — so a one-sided change to the
  * bound fails here instead of surviving unnoticed.
  *
- * Divergences that NN01 deliberately does not close (they sit outside the
- * bound-drift scope and carry domain semantics: cutoff-pair verification,
- * includeDeleted / yasumaroVersion presence, query length cap) are pinned
- * separately at the bottom so they cannot change silently either.
+ * Divergences that NN01 deliberately left open (cutoff-pair verification,
+ * includeDeleted / yasumaroVersion presence, query length cap) were closed by
+ * NN10 (PBI 2026-10-11-10): both gates now run the same spec row through
+ * `evaluateSubtypeSpec`, and the bottom block asserts they agree.
  */
 import { describe, it, expect } from 'vitest';
 import { dashboardSqliteValidator } from '../validators.js';
@@ -176,7 +176,9 @@ describe('archive payload validation: domain checks agree across both gates', ()
   });
 
   it('both gates accept the payloads the producers actually send', () => {
-    for (const [subtype, payload] of Object.entries(BASE)) {
+    for (const subtype of Object.keys(BASE) as DashboardArchiveSubtype[]) {
+      const payload = BASE[subtype];
+      if (!payload) continue;
       expect(envelopeGate(payload), `envelope ${subtype}`).toBe('accept');
       expect(wireGate(subtype, payload), `wire ${subtype}`).toBe('accept');
     }
