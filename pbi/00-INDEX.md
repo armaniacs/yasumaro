@@ -14,6 +14,28 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-10 arch-delivery-loop ラウンド（archloop-1010） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
+
+arch-delivery-loop skill によるコードベース全体（差分スコープ）のアーキテクチャ診断と閉ループ実行。4 系統の並列調査（background+offscreen / dashboard+popup / content+utils+messaging / 設約スイープ）を 13 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-13）。台帳送り消費: F14（cleansingStatsView i18n → NN05）、F17（exportLogsPanel limit → NN05）、F19（connectionTests syncStatusToTop → NN13）。RICE 採点・同点根拠・依存・バッチ計画（W1-W4）・台帳送り G1-G17 の詳細は [2026-10-10-00-backlog-archloop-1010.md](2026-10-10-00-backlog-archloop-1010.md)（live 台帳）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 01 | [2026-10-10-01-refactor-alarm-registry-wire-unification.md](../dev-docs/archived/pbi/2026-10-10-01-refactor-alarm-registry-wire-unification.md) | refactor | 9.6 | 2.5 | alarm 配線の DI 統合（refs 削除 + never 型 + .then() 解消） |
+| 02 | [2026-10-10-02-fix-contentcleaner-hardstrip-drift.md](../dev-docs/archived/pbi/2026-10-10-02-fix-contentcleaner-hardstrip-drift.md) | fix | 8.0 | 1.5 | count/strip 双子の hidden パス drift（実挙動差異あり） |
+| 03 | [2026-10-10-03-refactor-order-dir-resolve.md](../dev-docs/archived/pbi/2026-10-10-03-refactor-order-dir-resolve.md) | refactor | 8.0 | 0.5 | sqliteQueryBuilder order-dir 3重 → resolveOrderDir |
+| 04 | [2026-10-10-04-refactor-service-tokens-removal.md](../dev-docs/archived/pbi/2026-10-10-04-refactor-service-tokens-removal.md) | refactor | 7.0 | 1 | ServiceTokens 残骸 union 削除（設計規約が廃止明言） |
+| 05 | [2026-10-10-05-fix-dashboard-i18n-literals.md](../dev-docs/archived/pbi/2026-10-10-05-fix-dashboard-i18n-literals.md) | fix | 5.3 | 3 | dashboard i18n リテラル群（F14/F17 消費・messages.json 独占） |
+| 06 | [2026-10-10-06-fix-cleansing-popup-dom-deadpath.md](../dev-docs/archived/pbi/2026-10-10-06-fix-cleansing-popup-dom-deadpath.md) | fix | 5.0 | 1.5 | aiSummaryCleansing popup DOM デッドパス除去 |
+| 07 | [2026-10-10-07-refactor-auditlog-row-ssot.md](../dev-docs/archived/pbi/2026-10-10-07-refactor-auditlog-row-ssot.md) | refactor | 4.7 | 1.5 | 監査ログ行形状 8 重宣言 → sqlite-types SSOT |
+| 08 | [2026-10-10-08-refactor-readonly-list-params-planner.md](../dev-docs/archived/pbi/2026-10-10-08-refactor-readonly-list-params-planner.md) | refactor | 4.0 | 1 | readOnlyHandler list params の planner 集約 |
+| 09 | [2026-10-10-09-refactor-persite-override-status.md](../dev-docs/archived/pbi/2026-10-10-09-refactor-persite-override-status.md) | refactor | 4.0 | 1 | perSiteOverrides showStatus 統合。05 の後 |
+| 10 | [2026-10-10-10-fix-recording-trigger-allowlist.md](../dev-docs/archived/pbi/2026-10-10-10-fix-recording-trigger-allowlist.md) | fix | 3.2 | 1.5 | recordingTrigger 生キー × allowlist 不整合 |
+| 11 | [2026-10-10-11-refactor-attempted-providers-wire.md](../dev-docs/archived/pbi/2026-10-10-11-refactor-attempted-providers-wire.md) | refactor | 3.2 | 1 | providersTried/attemptedProviders wire 統一 |
+| 12 | [2026-10-10-12-refactor-opfs-resolver-dead-wrapper.md](../dev-docs/archived/pbi/2026-10-10-12-refactor-opfs-resolver-dead-wrapper.md) | refactor | 3.0 | 0.5 | detectOpfsCapabilitiesForResolver 死蔵ラッパー削除 |
+| 13 | [2026-10-10-13-refactor-connection-tests-status.md](../dev-docs/archived/pbi/2026-10-10-13-refactor-connection-tests-status.md) | refactor | 2.0 | 1 | connectionTests showStatus 統合（F19 消費）。05 の後 |
+
+実行順: 依存優先（05 → 09 / 05 → 13、他は並列可）。
+
 ### 2026-10-09 holistic-code-improvement ラウンド（holistic-1009） — ✅ 20件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-improvement skill によるコードベース全体（差分スコープ）の大局的レビュー。4 系統の並列調査（dashboard+popup / background+offscreen / content+utils+layer / drift sweep+test infra）を 20 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-20）。全 20 件を 5 バッチ（W1-W5）で実装・コミットし、`npm run validate`（15888 tests）と `npm run build` が green。テスト型エラー baseline は 467 → 464 に返済。NN15 は archloop-1007 台帳送り L1（dashboard innerHTML clearing）のトリガー発火を消費し、実態 49 箇所（PBI 見積もり 13 より多かった）を clearElement 化してゲート対象に dashboard を追加。RICE 採点・同点根拠・依存・バッチ計画（W1-W5）の詳細は [2026-10-09-00-backlog-holistic-1009.md](2026-10-09-00-backlog-holistic-1009.md)（live 台帳）。台帳送り 24 件（F1-F24 + archloop-1007 L2-L8 維持）。
