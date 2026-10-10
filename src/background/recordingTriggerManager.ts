@@ -8,6 +8,8 @@ import { StorageKeys } from '../utils/storage/types.js';
 import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { decideRecordingTrigger } from './pipeline/recordingDecision.js';
+import { readSettingsSnapshot } from '../utils/storage/settingsSnapshot.js';
+import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 
 // ============================================================================
 // Types
@@ -24,6 +26,34 @@ const DEFAULT_TRIGGERS: RecordingTriggers = {
   manualSave: true,
   periodicSnapshot: false,
 };
+
+/**
+ * Read a key that an older build folded into the `settings` blob (PBI
+ * 2026-10-11-05).
+ *
+ * Builds before the top-level allowlist change migrated `recording_triggers`
+ * and `snapshot_interval_minutes` into the blob and deleted the raw keys. Those
+ * installs are already past `isSettingsMigrationComplete()`, so the allowlist
+ * change cannot re-run and the values are reachable only from the blob — which
+ * is why the manager used to fall back to defaults and silently discard the
+ * user's auto-save triggers.
+ *
+ * The top-level key stays authoritative (it is what the UI writes); the blob is
+ * consulted only when it is absent, so this is idempotent and needs no repair
+ * marker. `readSettingsSnapshot` is decrypt-free and read-only, and the blob is
+ * a superset of the scattered keys.
+ */
+async function readTopLevelOrBlob(key: string): Promise<unknown> {
+  const result = await chrome.storage.local.get(key);
+  const raw = result[key];
+  if (raw !== undefined && raw !== null) return raw;
+  try {
+    const snapshot = await readSettingsSnapshot(new ChromeStoragePort());
+    return snapshot[key];
+  } catch {
+    return undefined;
+  }
+}
 
 export interface RecordingEvent {
   type: 'scroll_idle' | 'manual_save' | 'snapshot';
@@ -70,8 +100,7 @@ export class RecordingTriggerManager {
     if (this.cachedTriggers) return this.cachedTriggers;
 
     try {
-      const result = await chrome.storage.local.get(StorageKeys.RECORDING_TRIGGERS);
-      const raw = result[StorageKeys.RECORDING_TRIGGERS];
+      const raw = await readTopLevelOrBlob(StorageKeys.RECORDING_TRIGGERS);
       if (typeof raw === 'string') {
         const parsed = JSON.parse(raw) as Partial<RecordingTriggers>;
         this.cachedTriggers = { ...DEFAULT_TRIGGERS, ...parsed };
@@ -123,8 +152,8 @@ export class RecordingTriggerManager {
    */
   async getSnapshotIntervalMinutes(): Promise<number> {
     try {
-      const result = await chrome.storage.local.get(StorageKeys.SNAPSHOT_INTERVAL_MINUTES);
-      return (result[StorageKeys.SNAPSHOT_INTERVAL_MINUTES] as number) || 5;
+      const raw = await readTopLevelOrBlob(StorageKeys.SNAPSHOT_INTERVAL_MINUTES);
+      return typeof raw === 'number' && raw > 0 ? raw : 5;
     } catch {
       return 5;
     }

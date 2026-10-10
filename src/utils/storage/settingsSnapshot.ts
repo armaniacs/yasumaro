@@ -15,6 +15,12 @@ import type { StoragePort } from './storagePort.js';
  * into content bundles. `settingsSnapshot-authority-parity.test.ts` pins
  * their agreement on a state matrix, so a drift fails loudly instead of
  * silently forking the read path.
+ *
+ * The return type is `Record<string, unknown>`, not `Settings`: the snapshot is
+ * a partial, decrypt-free projection, so declaring it as `Settings` would be a
+ * lie callers act on (PBI 2026-10-09-02). Callers read the keys they need and
+ * apply their own fallbacks — `applySettingsTable` / `getMany` for the typed
+ * path, or an explicit `typeof` check for a single key.
  */
 function isSnapshotAuthoritative(raw: unknown): boolean {
   if (raw === true) return true;
