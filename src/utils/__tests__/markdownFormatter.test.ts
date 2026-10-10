@@ -162,4 +162,13 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     expect(md).not.toContain(`](${evil})`);
     expect(md).toContain('](https://example.com)');
   });
+
+  it('normalizes newlines in title to spaces (obsidianList injection safety)', () => {
+    const md = buildEntryMarkdown(
+      { title: 'Line one\n    - injected', url: 'https://example.com/article', summary: 's' },
+      'obsidianList',
+    );
+    expect(md).toContain('[Line one - injected](https://example.com/article)');
+    expect(md.split('\n')).toHaveLength(2);
+  });
 });
