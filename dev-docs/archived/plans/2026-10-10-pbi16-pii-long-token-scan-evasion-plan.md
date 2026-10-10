@@ -1,6 +1,8 @@
 # PII Long-Token Scan Evasion Fix Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: COMPLETED (2026-10-11).** 対応 PBI `2026-10-10-16-fix-pii-long-token-scan-evasion` は実装・検証済みで `dev-docs/archived/pbi/` にアーカイブ済み（WASM 移植分を含む）。本計画の全ステップは完了しており、チェックボックスは DoD 反映漏れの解消として 2026-10-11 に更新した。
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace the `#`-substitution sampling scan with an overlapping-chunk scan over the original text so PII inside long whitespace-free tokens cannot evade detection.
 
@@ -29,7 +31,7 @@
 
 Why this exact input: token length 406 > 200 triggers sampling; `middle` is 206 chars so `sampleMiddleForScan` places `#` deterministically at the email's offset 199/299 region, splitting `user@example.com` into `user@exam#le.com` on the scan text. The pre-existing `150/150` test does NOT straddle a `#` and keeps passing pre-fix — that is why a new test is needed.
 
-- [ ] **Step 1: Append the test in `describe('sanitizeRegex - 長トークン内部のPII')`**
+- [x] **Step 1: Append the test in `describe('sanitizeRegex - 長トークン内部のPII')`**
 
 ```ts
     test('masks an email straddling the sampling window boundary in a long token', async () => {
@@ -43,12 +45,12 @@ Why this exact input: token length 406 > 200 triggers sampling; `middle` is 206 
     });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts -t "straddling the sampling window"`
 Expected: FAIL — `result.text` still contains `user@example.com`, `maskedItems` has no email.
 
-- [ ] **Step 3: Commit the red test**
+- [x] **Step 3: Commit the red test**
 
 ```bash
 git add src/utils/__tests__/piiSanitizer.test.ts
@@ -60,7 +62,7 @@ git commit -m "test: pin straddling-alignment PII detection (red)"
 **Files:**
 - Modify: `src/utils/piiSanitizer.ts`
 
-- [ ] **Step 1: Delete the sampling helpers and add chunk constants**
+- [x] **Step 1: Delete the sampling helpers and add chunk constants**
 
 Delete lines 30-69 (`TOKEN_EDGE_KEEP_LENGTH`, `NON_WHITESPACE_RUN`, `neutralizeLongNonWhitespaceRuns`, `sampleMiddleForScan` and their comments) and replace with:
 
@@ -77,7 +79,7 @@ const SCAN_CHUNK_SIZE = 400;
 const SCAN_CHUNK_OVERLAP = 200;
 ```
 
-- [ ] **Step 2: Scan the original text in overlapping chunks**
+- [x] **Step 2: Scan the original text in overlapping chunks**
 
 Delete line 287 (`const scanText = neutralizeLongNonWhitespaceRuns(text);`) and its comment block (`:283-286`). Keep the `combinedRegex` construction (`:291-301`) exactly as is. Wrap the exec loop (`:303-348`) so each chunk is scanned with `lastIndex` reset and offsets rebased:
 
@@ -108,12 +110,12 @@ Delete line 287 (`const scanText = neutralizeLongNonWhitespaceRuns(text);`) and 
 
 The remainder of the loop body (`:325-348`: group identification, Luhn check, `replacements.push`) is kept verbatim — it already uses `matchedValue`/`startIndex`. Close the added `for` loop after the existing `while` loop's closing brace. Rewrite the stale comment (`:316-321`, scanText length-equality claims) — delete it, the new comment above replaces it. The existing overlap-resolution block (`:350-364`, `usedRanges` dedupe) is kept verbatim and now also absorbs cross-chunk duplicates.
 
-- [ ] **Step 3: Run the sanitizer tests**
+- [x] **Step 3: Run the sanitizer tests**
 
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts src/utils/__tests__/piiSanitizer-optimization.test.ts src/utils/__tests__/piiSanitizer-redos.test.ts src/utils/__tests__/piiSanitizer-security.test.ts`
 Expected: PASS — new repro test green, the `150/150` tests still green, the `64KB ... within the timeout` test still green (ReDoS pin).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/utils/piiSanitizer.ts src/utils/__tests__/piiSanitizer.test.ts
@@ -125,7 +127,7 @@ git commit -m "fix: overlapping-chunk PII scan closes long-token evasion"
 **Files:**
 - Modify: `src/utils/__tests__/piiSanitizer.test.ts`
 
-- [ ] **Step 1: Add a chunk-boundary test**
+- [x] **Step 1: Add a chunk-boundary test**
 
 ```ts
     test('masks PII centered exactly on a chunk step boundary', async () => {
@@ -140,12 +142,12 @@ git commit -m "fix: overlapping-chunk PII scan closes long-token evasion"
     });
 ```
 
-- [ ] **Step 2: Run to verify green**
+- [x] **Step 2: Run to verify green**
 
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts -t "長トークン内部のPII"`
 Expected: PASS, all tests in the block green.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/utils/__tests__/piiSanitizer.test.ts
@@ -153,7 +155,7 @@ git commit -m "test: pin chunk-boundary PII detection"
 ```
 
 ### Task 4: Full validation gate
-- [ ] **Step 1: Run type check and validate**
+- [x] **Step 1: Run type check and validate**
 
 Run: `npm run type-check`
 Expected: exit 0.
@@ -161,7 +163,7 @@ Expected: exit 0.
 Run: `npm run validate`
 Expected: exit 0.
 
-- [ ] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md`), commit:
+- [x] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md`), commit:
 
 ```bash
 git add dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md
@@ -172,7 +174,7 @@ git commit -m "docs: record PBI-16 validation results"
 
 Background:本番はWASM優先・TSフォールバック (`piiSanitizeHybrid.ts`) のため、TSのみの修正ではWASM経路に回避が残る。Task 4のvalidateは `src/wasm/pii-sanitizer/__tests__/parity.test.ts` 7件失敗でBLOCKEDとなった。Rustクレート `wasm/pii-sanitizer/` が旧サンプリング (`neutralize_long_runs` + `TOKEN_EDGE_KEEP_LEN=100` in `wasm/pii-sanitizer/src/lib.rs:34-90`) を保持していることが原因。
 
-- [ ] **Step 1: Port the chunk scan to Rust**
+- [x] **Step 1: Port the chunk scan to Rust**
 
 In `wasm/pii-sanitizer/src/lib.rs`, replace the `neutralize_long_runs` sampling with an overlapping-chunk scan over the ORIGINAL bytes that mirrors the TS semantics exactly:
 - Constants: `SCAN_CHUNK_SIZE: usize = 400`, `SCAN_CHUNK_OVERLAP: usize = 200`, step 200.
@@ -185,12 +187,12 @@ In `wasm/pii-sanitizer/src/lib.rs`, replace the `neutralize_long_runs` sampling 
 Run: `cargo test -p pii-sanitizer` (from `wasm/pii-sanitizer/`, or workspace root with `-p`)
 Expected: all Rust tests pass, including the new repro test.
 
-- [ ] **Step 2: Rebuild the WASM binary and glue**
+- [x] **Step 2: Rebuild the WASM binary and glue**
 
 Run: `npm run build:wasm`
 Expected: exit 0. Verify `git status` shows the rebuilt artifacts (`src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm`, `piiSanitizerWasm.js`, and `wasm/pii-sanitizer/pkg/` outputs). If the script rebuilds other crates too, stage ONLY the pii-sanitizer outputs.
 
-- [ ] **Step 3: Run the parity and TS suites**
+- [x] **Step 3: Run the parity and TS suites**
 
 Run: `npx vitest run src/wasm/pii-sanitizer/__tests__/parity.test.ts src/wasm/pii-sanitizer/__tests__/extended-patterns-parity.test.ts`
 Expected: PASS — the 7 previously failing inputs (#4/#22/#28/#33/#147/#149/#213) now match.
@@ -198,7 +200,7 @@ Expected: PASS — the 7 previously failing inputs (#4/#22/#28/#33/#147/#149/#21
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts src/utils/__tests__/piiSanitizer-optimization.test.ts src/utils/__tests__/piiSanitizer-redos.test.ts src/utils/__tests__/piiSanitizer-security.test.ts`
 Expected: PASS (no TS changes in this task; regression check).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add wasm/pii-sanitizer/src/ src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm src/wasm/pii-sanitizer/piiSanitizerWasm.js
@@ -209,7 +211,7 @@ git commit -m "fix: port overlapping-chunk PII scan to Rust WASM core"
 
 ### Task 6: Full validation gate, second run (added 2026-10-10)
 
-- [ ] **Step 1: Run type check and validate**
+- [x] **Step 1: Run type check and validate**
 
 Run: `npm run type-check`
 Expected: exit 0.
@@ -217,7 +219,7 @@ Expected: exit 0.
 Run: `npm run validate`
 Expected: exit 0 (this time including the 7 parity tests).
 
-- [ ] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md`; check `validate green` only if exit 0), commit:
+- [x] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md`; check `validate green` only if exit 0), commit:
 
 ```bash
 git add dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md

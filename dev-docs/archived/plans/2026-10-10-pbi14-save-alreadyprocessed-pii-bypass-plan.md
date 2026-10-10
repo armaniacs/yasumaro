@@ -1,6 +1,8 @@
 # Save alreadyProcessed PII Bypass Fix Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status: COMPLETED (2026-10-11).** 対応 PBI `2026-10-10-14-fix-save-alreadyprocessed-pii-bypass` は実装・検証済みで `dev-docs/archived/pbi/` にアーカイブ済み。本計画の全ステップは完了しており、チェックボックスは DoD 反映漏れの解消として 2026-10-11 に更新した。
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Remove `alreadyProcessed: true` from the `save` source policy so SAVE_RECORD masks PII before cloud AI summarization.
 
@@ -28,7 +30,7 @@
 - Modify: `src/background/__tests__/recordRequestBuilder.test.ts:17-20`
 - Test: `src/background/__tests__/recordRequestBuilder.test.ts`
 
-- [ ] **Step 1: Change the save expectation to the post-fix policy**
+- [x] **Step 1: Change the save expectation to the post-fix policy**
 
 Replace lines 17-20:
 
@@ -41,12 +43,12 @@ Replace lines 17-20:
 
 (Remove only `alreadyProcessed: true`. All other rows are untouched.)
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/background/__tests__/recordRequestBuilder.test.ts`
 Expected: FAIL on `applies the per-source policy table` — received object contains `alreadyProcessed: true`, expected object does not.
 
-- [ ] **Step 3: Commit the red test**
+- [x] **Step 3: Commit the red test**
 
 ```bash
 git add src/background/__tests__/recordRequestBuilder.test.ts
@@ -58,7 +60,7 @@ git commit -m "test: pin save policy without alreadyProcessed (red)"
 **Files:**
 - Modify: `src/background/recordRequestBuilder.ts:73`
 
-- [ ] **Step 1: Remove the flag**
+- [x] **Step 1: Remove the flag**
 
 Replace line 73:
 
@@ -68,12 +70,12 @@ Replace line 73:
 
 (Delete only `alreadyProcessed: true,` — the comma and spacing must leave valid syntax. Do NOT touch `_buildSanitizedSettings`, `privacyPipeline.ts`, or any other policy row.)
 
-- [ ] **Step 2: Run the test to verify it passes**
+- [x] **Step 2: Run the test to verify it passes**
 
 Run: `npx vitest run src/background/__tests__/recordRequestBuilder.test.ts`
 Expected: PASS, all tests in the file green.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/background/recordRequestBuilder.ts src/background/__tests__/recordRequestBuilder.test.ts
@@ -87,7 +89,7 @@ git commit -m "fix: drop alreadyProcessed from save policy so SAVE_RECORD masks 
 
 The existing pin test `actually calls cloud AI ... even when alreadyProcessed=true` (`:515-537`) stays untouched — it covers the mechanism as a direct input. The new test covers the save-equivalent path (no flag) end to end through `buildRecordRequest`.
 
-- [ ] **Step 1: Append the failing test**
+- [x] **Step 1: Append the failing test**
 
 Add the import at the top with the other imports:
 
@@ -125,12 +127,12 @@ Append this test after the `alreadyProcessed=true` test (after line 537, inside 
     });
 ```
 
-- [ ] **Step 2: Run the new test to verify it fails**
+- [x] **Step 2: Run the new test to verify it fails**
 
 Run: `npx vitest run src/background/__tests__/privacyPipeline.test.ts -t "save-equivalent path"`
 Expected: FAIL — `sanitizeRegex` is never called and `generateSummary` receives the raw content (pre-fix behavior), or the `alreadyProcessed in request` assertion fails.
 
-- [ ] **Step 3: Commit the red test**
+- [x] **Step 3: Commit the red test**
 
 ```bash
 git add src/background/__tests__/privacyPipeline.test.ts
@@ -141,12 +143,12 @@ git commit -m "test: pin save-equivalent masking before cloud AI (red)"
 
 The Task 2 fix already makes Task 3 pass (flag absent → `useMasking` true in `masked_cloud`).
 
-- [ ] **Step 1: Run both test files**
+- [x] **Step 1: Run both test files**
 
 Run: `npx vitest run src/background/__tests__/privacyPipeline.test.ts src/background/__tests__/recordRequestBuilder.test.ts`
 Expected: PASS, all green including the two untouched pin tests (`alreadyProcessed=true` direct-input tests).
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git add src/background/__tests__/privacyPipeline.test.ts
@@ -155,7 +157,7 @@ git commit -m "test: save-equivalent path masks PII before cloud AI (green)"
 
 ### Task 5: Full validation gate
 
-- [ ] **Step 1: Run type check and the wider background suite**
+- [x] **Step 1: Run type check and the wider background suite**
 
 Run: `npm run type-check`
 Expected: exit 0.
@@ -163,7 +165,7 @@ Expected: exit 0.
 Run: `npm run validate`
 Expected: exit 0.
 
-- [ ] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md`), commit:
+- [x] **Step 2: Record results in the PBI checkboxes** (`Definition of Done` in `dev-docs/archived/pbi/2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md`), commit:
 
 ```bash
 git add dev-docs/archived/pbi/2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md

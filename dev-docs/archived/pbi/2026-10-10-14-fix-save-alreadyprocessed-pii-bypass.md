@@ -34,11 +34,13 @@ Scenario: AI要約の有無は変わらない
 
 ## 受け入れ基準
 
-- [ ] `SOURCE_POLICY['save']`から`alreadyProcessed: true`を削除する
-- [ ] `_buildSanitizedSettings`・`alreadyProcessed`機構自体は変更しない（温存）
-- [ ] `privacyPipeline.test.ts:515`・`processPrivacyPipelineStep.test.ts:236`のpinテストは変更なしでgreen
-- [ ] `recordRequestBuilder.test.ts:17-19`のsave期待値を新ポリシーに更新する
-- [ ] 再現テスト（PII含有contentのsave経路→マスク済みAI送信）を追加する
+- [x] `SOURCE_POLICY['save']`から`alreadyProcessed: true`を削除する
+- [x] `_buildSanitizedSettings`・`alreadyProcessed`機構自体は変更しない（温存）
+- [x] `privacyPipeline.test.ts:515`・`processPrivacyPipelineStep.test.ts:236`のpinテストは変更なしでgreen
+- [x] `recordRequestBuilder.test.ts:17-19`のsave期待値を新ポリシーに更新する
+- [x] 再現テスト（PII含有contentのsave経路→マスク済みAI送信）を追加する
+
+（2026-10-11 DoD反映漏れの解消: `SOURCE_POLICY['save']` は `{ skipDuplicateCheck: true, recordType: 'manual' }` のみ（`recordRequestBuilder.ts:73`）、`alreadyProcessed` は `_buildSanitizedSettings` の機構として温存、`privacyPipeline.test.ts` に save 経路のマスク回帰テストが存在することを実コードで確認。`npm run validate` exit 0 — 1053 files / 15895 tests passed）
 
 ## テスト戦略
 

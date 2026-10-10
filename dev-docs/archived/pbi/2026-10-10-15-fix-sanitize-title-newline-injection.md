@@ -34,10 +34,12 @@ Scenario: headingスタイルも割れない
 
 ## 受け入れ基準
 
-- [ ] `sanitizeTitle`内で`\r\n`を空白に正規化する（summaryと同一規則）
-- [ ] `sanitizeForMarkdownLinkText`自体は変更しない（他用途への影響回避）
-- [ ] fallback挙動（`titleFallback`）は不変
-- [ ] 再現テスト（改行title→単一行化、両style）を追加する
+- [x] `sanitizeTitle`内で`\r\n`を空白に正規化する（summaryと同一規則）
+- [x] `sanitizeForMarkdownLinkText`自体は変更しない（他用途への影響回避）
+- [x] fallback挙動（`titleFallback`）は不変
+- [x] 再現テスト（改行title→単一行化、両style）を追加する
+
+（2026-10-11 DoD反映漏れの解消: `markdownFormatter.ts` の `sanitizeTitle` が `\r\n`（のち U+2028/U+2029/U+0085 も）を空白化し、`sanitizeForMarkdownLinkText` は未変更、`titleFallback` の分岐も不変であることを実コードで確認。改行 title の単一行化テストは `markdownFormatter.test.ts` に存在。`npm run validate` exit 0）
 
 ## テスト戦略
 
