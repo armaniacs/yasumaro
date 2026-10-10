@@ -303,6 +303,10 @@ export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
  * picks it explicitly and the UI labels it as such), so it stays a legal value.
  * *Unknown* values must never be treated as `cloud_only`: they fail closed to the
  * default (`masked_cloud`) so PII masking is not silently disabled.
+ *
+ * This is the type of the *resolved* mode, not of the persisted value: storage
+ * is untrusted (corrupt backups, older versions), so `StorageKeyValues` keeps
+ * `privacy_mode: string` and every reader goes through `normalizePrivacyMode()`.
  */
 export const PRIVACY_MODES = ['local_only', 'full_pipeline', 'masked_cloud', 'cloud_only'] as const;
 
@@ -350,7 +354,9 @@ export interface StorageKeyValues {
     [StorageKeys.DOMAIN_BLACKLIST]: string[];
     [StorageKeys.DOMAIN_FILTER_MODE]: string;
     [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: boolean;
-    [StorageKeys.PRIVACY_MODE]: PrivacyMode;
+    // Persisted values are untrusted: keep `string` here and resolve through
+    // `normalizePrivacyMode()` (see PRIVACY_MODES above).
+    [StorageKeys.PRIVACY_MODE]: string;
     [StorageKeys.PII_CONFIRMATION_UI]: boolean;
     [StorageKeys.PII_SANITIZE_LOGS]: boolean;
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save' | 'skip' | 'confirm';

@@ -19,6 +19,7 @@ describe('PRIVACY_MODES / isPrivacyMode', () => {
 
   it('accepts every selectable mode', () => {
     for (const mode of PRIVACY_MODES) {
+      // eslint-disable-next-line vitest/valid-expect -- assert the failing mode
       expect(isPrivacyMode(mode), mode).toBe(true);
     }
   });
@@ -36,6 +37,7 @@ describe('PRIVACY_MODES / isPrivacyMode', () => {
       {},
       ['masked_cloud'],
     ]) {
+      // eslint-disable-next-line vitest/valid-expect -- assert the failing value
       expect(isPrivacyMode(value), String(value)).toBe(false);
     }
   });
@@ -56,6 +58,7 @@ describe('normalizePrivacyMode', () => {
   it('fails closed to masked_cloud for unknown or missing values', async () => {
     const { normalizePrivacyMode } = await import('../defaults.js');
     for (const value of ['corrupt', '', undefined, null, 42, {}, ['local_only']]) {
+      // eslint-disable-next-line vitest/valid-expect -- assert the failing value
       expect(normalizePrivacyMode(value), String(value)).toBe('masked_cloud');
     }
   });

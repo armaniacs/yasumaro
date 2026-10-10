@@ -222,6 +222,7 @@ describe('privacy_mode value-range validation (PBI 2026-10-11-02)', () => {
     for (const version of [EXPORT_VERSION, LEGACY_EXPORT_VERSION]) {
       const settings = fullNonApiSettings();
       delete settings['privacy_mode'];
+      // eslint-disable-next-line vitest/valid-expect -- assert the failing version
       expect(validateExportData(exportData(settings, true, version)), version).toBe(false);
     }
   });

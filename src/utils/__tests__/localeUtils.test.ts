@@ -400,6 +400,7 @@ describe('localeUtils', () => {
     it('projects any non-Japanese UI locale to en', () => {
       for (const locale of ['en-US', 'de', 'zh-CN', 'ko-KR']) {
         mockGetUILanguage.mockReturnValue(locale);
+        // eslint-disable-next-line vitest/valid-expect -- assert the failing locale
         expect(getUiLanguage(), locale).toBe('en');
       }
     });
