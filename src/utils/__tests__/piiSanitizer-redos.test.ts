@@ -194,31 +194,38 @@ describe('ReDoSリスクの検証（問題点4）', () => {
   });
 
   describe('パフォーマンスベンチマーク', () => {
+    // Median of three runs. A single `performance.now()` sample is dominated by
+    // scheduler noise on a loaded machine (the 15 ms budget tripped at 15.18 ms
+    // in a full-suite run while passing in isolation), which makes the budget a
+    // measurement-lottery instead of a regression check. The median drops the
+    // outlier without moving the threshold, so a real slowdown still fails.
+    async function medianScanMs(input: string, runs = 3): Promise<number> {
+      const samples: number[] = [];
+      for (let i = 0; i < runs; i++) {
+        const start = performance.now();
+        await sanitizeRegex(input);
+        samples.push(performance.now() - start);
+      }
+      samples.sort((a, b) => a - b);
+      return samples[Math.floor(runs / 2)]!;
+    }
+
     it('processes small input (< 1KB) within 1ms', async () => {
       const smallInput = 'My email is test@example.com and phone is 090-1234-5678';
-      const startTime = performance.now();
-      await sanitizeRegex(smallInput);
-      const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(100); // CI（QEMU エミュレーション）での遅延を考慮
+      expect(await medianScanMs(smallInput)).toBeLessThan(100); // CI（QEMU エミュレーション）での遅延を考慮
     });
 
     it('processes medium input (1KB - 10KB) within 15ms', async () => {
       const mediumInput = 'Name: John Doe, Email: john@example.com, Phone: 090-1234-5678, Card: 4111-1111-1111-1111, MyNumber: 1234-5678-9012. '.repeat(50);
-      const startTime = performance.now();
-      await sanitizeRegex(mediumInput);
-      const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(15); // 10ms → 15ms に緩和
+      expect(await medianScanMs(mediumInput)).toBeLessThan(15); // 10ms → 15ms に緩和
     });
 
     it('processes large input (> 10KB) within 300ms', async () => {
       const largeInput = 'Contact: test@example.com, Phone: 090-1234-5678. '.repeat(500);
-      const startTime = performance.now();
-      await sanitizeRegex(largeInput);
-      const endTime = performance.now();
 
-      expect(endTime - startTime).toBeLessThan(300); // 100ms → 300ms に緩和
+      expect(await medianScanMs(largeInput)).toBeLessThan(300); // 100ms → 300ms に緩和
     });
   });
 });
