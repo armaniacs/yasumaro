@@ -74,6 +74,6 @@ Scenario: ReDoS耐性が維持される
 
 ## Definition of Done
 
-- [ ] 再現入力のPIIがマスクされる
-- [ ] timeout系テストがgreen
-- [ ] `npm run validate`がgreen
+- [x] 再現入力のPIIがマスクされる（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer.test.ts` 72/72 green — full `validate` run + targeted re-run）
+- [x] timeout系テストがgreen（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer-redos.test.ts` 18/18 green — full `validate` run + targeted re-run）
+- [ ] `npm run validate`がgreen（2026-10-10 Task 4: BLOCKED — exit 1。失敗は `src/wasm/pii-sanitizer/__tests__/parity.test.ts` の7件のみ：TS側チャンク走査化に対しWASMバイナリが旧サンプリング挙動のままでparity不一致。Tests 15886 passed / 7 failed。`npm run type-check` は exit 0）
