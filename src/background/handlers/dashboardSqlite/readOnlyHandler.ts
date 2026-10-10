@@ -22,19 +22,25 @@ export const READ_ONLY_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
  * (planQuery default 100 / planSearch default 50). The background previously
  * re-imported offscreen/queryPlan.js for clampLimit/QUERY_CAPS, which violated
  * the background→offscreen import ban and triple-clamped one limit.
+ *
+ * PBI 2026-10-10-08: buildListParams bakes nothing anymore — orderBy/orderDir
+ * pass through via pickDefined and offset rides raw, because the planner seam
+ * applies every default (buildOrderByClause `created_at` / resolveOrderDir
+ * `DESC`, buildQuerySpec clampOffset 0), so a default change is a one-place
+ * edit. buildSearchParams still keeps `offset ?? 0` (search route out of
+ * scope for that PBI) — redundant with the same planner-owned default.
  */
 export function buildListParams(
   payload: Extract<DashboardSqliteRequest, { subtype: 'query' }>,
 ): Record<string, unknown> {
   return {
     limit: payload.limit,
-    offset: payload.offset ?? 0,
+    offset: payload.offset,
     domain: payload.domain,
     isStarred: payload.isStarred,
     since: payload.since,
     until: payload.until,
-    orderBy: payload.orderBy || 'created_at',
-    orderDir: payload.orderDir || 'DESC',
+    ...pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
     tagFilter: payload.tagFilter,
   };
 }
