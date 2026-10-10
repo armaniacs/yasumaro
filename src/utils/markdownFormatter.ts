@@ -59,12 +59,29 @@ interface SanitizedEntryParts {
   tagPrefix: string;
 }
 
+/**
+ * Line terminators that must collapse to a single space so a value stays on one
+ * line. `\r`/`\n` are CommonMark's terminators, while U+2028/U+2029 are line
+ * breaks for CodeMirror-family editors (Obsidian) and U+0085 is NEL — leaving
+ * any of them in a title lets a hostile page forge a Markdown line.
+ */
+const LINE_TERMINATOR_PATTERN = /[\r\n\u2028\u2029\u0085]+/g;
+
+/**
+ * Single owner of the "one line, no run of spaces" normalization shared by title
+ * and summary. Non-string values collapse to '' so a caller passing
+ * `titleFallback: false` (no fallback chain) cannot turn a missing title into a
+ * TypeError that aborts Markdown generation.
+ */
+function normalizeSingleLine(value: string | null | undefined): string {
+  return (value ?? '').replace(LINE_TERMINATOR_PATTERN, ' ').replace(/  +/g, ' ').trim();
+}
+
 function sanitizeTitle(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdownOptions): string {
   const raw = opts?.titleFallback === false
-    ? (input.title as string)
+    ? (input.title ?? '')
     : (input.title || input.url || (opts?.titleFallback ?? DEFAULT_TITLE_FALLBACK));
-  const normalized = raw.replace(/[\r\n]+/g, ' ').replace(/  +/g, ' ').trim();
-  return sanitizeForMarkdownLinkText(normalized);
+  return sanitizeForMarkdownLinkText(normalizeSingleLine(raw));
 }
 
 function sanitizeUrl(url: string, opts?: BuildEntryMarkdownOptions): string {
@@ -74,8 +91,7 @@ function sanitizeUrl(url: string, opts?: BuildEntryMarkdownOptions): string {
 function sanitizeSummary(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdownOptions): string {
   const fallback = opts?.summaryFallback === undefined ? DEFAULT_SUMMARY_FALLBACK : opts.summaryFallback;
   const raw = fallback === null ? (input.summary ?? '') : (input.summary || fallback);
-  const normalized =
-    opts?.normalizeSummary === false ? raw : raw.replace(/\n+/g, ' ').replace(/  +/g, ' ').trim();
+  const normalized = opts?.normalizeSummary === false ? raw : normalizeSingleLine(raw);
   return sanitizeForObsidian(normalized);
 }
 

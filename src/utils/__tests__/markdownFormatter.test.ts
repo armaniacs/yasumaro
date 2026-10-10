@@ -198,4 +198,43 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     const firstLine = md.split('\n')[0];
     expect(firstLine).toBe('# Evil # Forged heading');
   });
+
+  // PBI 2026-10-11-03: Unicode line terminators are line breaks for CodeMirror-family
+  // editors (Obsidian), so the "title is a single line" contract must cover them too.
+  it('normalizes U+2028 in title to a space (obsidianList injection safety)', () => {
+    const md = buildEntryMarkdown(
+      { title: 'Line one\u2028    - injected', url: 'https://example.com/article', summary: 's' },
+      'obsidianList',
+    );
+    expect(md).toContain('[Line one - injected](https://example.com/article)');
+    expect(md.split('\n')).toHaveLength(2);
+  });
+
+  it('normalizes U+2029 and U+0085 in title to spaces', () => {
+    const md = buildEntryMarkdown(
+      { title: 'a\u2029b\u0085c\rd\ne', url: 'https://example.com/article', summary: 's' },
+      'obsidianList',
+    );
+    expect(md).toContain('[a b c d e](https://example.com/article)');
+    expect(md.split('\n')).toHaveLength(2);
+  });
+
+  it('keeps the heading title line single-line for U+2028 titles', () => {
+    const md = buildEntryMarkdown(
+      { title: 'Evil\u2028# Forged heading', url: 'https://example.com/article', summary: 's' },
+      'heading',
+    );
+    expect(md.split('\n')[0]).toBe('# Evil # Forged heading');
+  });
+
+  it('does not throw when a non-string title is passed with titleFallback false', () => {
+    expect(() =>
+      buildEntryMarkdown(
+        // Runtime shape from the background handler; the declared type is `string`.
+        { title: undefined as unknown as string, url: 'https://example.com/article', summary: 's' },
+        'obsidianList',
+        { titleFallback: false },
+      ),
+    ).not.toThrow();
+  });
 });
