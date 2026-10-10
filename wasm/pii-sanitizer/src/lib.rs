@@ -50,6 +50,31 @@ const SCAN_CHUNK_OVERLAP: usize = 200;
 /// The count is global across chunks (like the TS `matchCount`) and throws
 /// past the cap so the hybrid fails closed exactly like the TS pipeline.
 const MAX_MATCH_COUNT: usize = 1000;
+/// Wall-clock budget and check interval, mirroring `DEFAULT_TIMEOUT` and
+/// `TIMEOUT_CHECK_INTERVAL` in `src/utils/piiSanitizer.ts`.
+const TIMEOUT_MS: f64 = 5000.0;
+const TIMEOUT_CHECK_INTERVAL: usize = 5;
+
+/// `Date.now()` via wasm-bindgen's JS glue. Declared here instead of pulling in
+/// the `js-sys` crate so the crate's dependency set stays unchanged.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = Date, js_name = now)]
+    fn js_date_now() -> f64;
+}
+
+#[cfg(target_arch = "wasm32")]
+fn now_ms() -> f64 {
+    js_date_now()
+}
+
+/// Native (`cargo test`) builds have no JS clock: a constant makes the deadline
+/// check a no-op so the same code path compiles and runs under `cargo test`.
+#[cfg(not(target_arch = "wasm32"))]
+fn now_ms() -> f64 {
+    0.0
+}
 
 #[derive(Serialize, Clone)]
 pub struct MaskedItem {
@@ -122,16 +147,27 @@ fn ceil_char_boundary(text: &str, idx: usize) -> usize {
 /// the UTF-8 input, while `sanitizeRegex`'s `match.index` is a UTF-16 code
 /// unit offset — the two agree only when all preceding text is ASCII.
 ///
-/// Timeout: the TS reference also checks a wall-clock timeout every 5
-/// matches; the WASM core has no timeout concept (same as before this
-/// port) — the TS wrapper owns time-bounding.
-fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::MatchLimitExceeded> {
+/// Timeout: mirrors the TS reference's wall-clock budget (5 s, checked every 5
+/// matches) so the documented contract is actually implemented on both sides.
+/// On native (`cargo test`) builds `now_ms()` is a constant, so the check is a
+/// no-op there; the wasm32 build calls `Date.now()` through wasm-bindgen (no
+/// extra crate needed).
+fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::ScanError> {
     let bytes = text.as_bytes();
     let step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
+    let started_ms = now_ms();
 
     // Absolute (start, end, kind) spans that passed the pre-count guards.
     let mut counted: Vec<(usize, usize, &'static str)> = Vec::new();
     let mut match_count = 0usize;
+
+    // Absolute offset one past the previously scanned chunk. The overlap guards
+    // must compare against what the previous chunk ACTUALLY covered: `chunk_start`
+    // is clamped forward to a char boundary, so the assumed
+    // `chunk_start + SCAN_CHUNK_OVERLAP` threshold can sit up to 3 bytes past the
+    // previous chunk's real end. That window used to swallow a match no chunk then
+    // reported (non-ASCII seam, PBI 2026-10-11-01). ASCII grids are unchanged.
+    let mut prev_chunk_end: Option<usize> = None;
 
     let mut offset = 0usize;
     while offset < bytes.len() {
@@ -157,13 +193,14 @@ fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::Match
 
         for (rel_start, rel_end, kind) in spans {
             let span_len = rel_end - rel_start;
-            // Guard 1 (TS: `match.index + match[0].length <= SCAN_CHUNK_OVERLAP`).
-            if offset > 0 && rel_start + span_len <= SCAN_CHUNK_OVERLAP {
-                continue;
-            }
-            // Guard 2 (TS: `match.index === 0 && match[0].length <= OVERLAP`).
-            if offset > 0 && rel_start == 0 && span_len <= SCAN_CHUNK_OVERLAP {
-                continue;
+            // Guards 1-2: a span the previous chunk fully covered was already
+            // counted there, so skip it here. Comparing against the previous
+            // chunk's real end subsumes the TS `rel_start == 0` variant and is
+            // identical on the ASCII grid (previous chunk end == offset + OVERLAP).
+            if let Some(prev_end) = prev_chunk_end {
+                if chunk_start + rel_end <= prev_end {
+                    continue;
+                }
             }
             let abs_start = chunk_start + rel_start;
             // Guards 3-4 via the sticky probe on the full bytes (TS:
@@ -180,8 +217,12 @@ fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::Match
                 _ => {}
             }
             match_count += 1;
+            // Same order as the TS reference: timeout check, then the cap.
+            if match_count % TIMEOUT_CHECK_INTERVAL == 0 && now_ms() - started_ms > TIMEOUT_MS {
+                return Err(patterns::dispatch::ScanError::Timeout);
+            }
             if match_count > MAX_MATCH_COUNT {
-                return Err(patterns::dispatch::MatchLimitExceeded);
+                return Err(patterns::dispatch::ScanError::MatchLimitExceeded);
             }
             counted.push((abs_start, chunk_start + rel_end, kind));
         }
@@ -189,6 +230,7 @@ fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::Match
         if chunk_end == bytes.len() {
             break;
         }
+        prev_chunk_end = Some(chunk_end);
         offset += step;
     }
 
@@ -240,10 +282,18 @@ fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::Match
 /// Exceeding the match-count cap rejects with the same message the TS scan
 /// throws, so the hybrid's fallback lands in `sanitizeRegex` and fails closed
 /// exactly like the pre-WASM pipeline did.
+/// Rejecting with the same messages the TS scan throws keeps the hybrid's
+/// fallback landing in `sanitizeRegex`, which fails closed exactly like the
+/// pre-WASM pipeline did.
 #[wasm_bindgen(js_name = sanitizePii)]
 pub fn sanitize_pii(text: &str) -> Result<JsValue, JsValue> {
-    let result = sanitize_core(text).map_err(|_| {
-        JsValue::from_str("Operation exceeded maximum match count of 1000")
+    let result = sanitize_core(text).map_err(|e| match e {
+        patterns::dispatch::ScanError::MatchLimitExceeded => {
+            JsValue::from_str("Operation exceeded maximum match count of 1000")
+        }
+        patterns::dispatch::ScanError::Timeout => {
+            JsValue::from_str("Operation timed out after 5000ms")
+        }
     })?;
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -272,6 +322,65 @@ mod tests {
     fn masks_adjacent_emails_without_local_part_bleed() {
         let r = core("a@example.comb@example.comc@example.com");
         assert!(r.masked_items[0].original.starts_with("a@example.com"));
+    }
+
+    // PBI 2026-10-11-01: the domain matcher must backtrack like the TS regex.
+    // Before the fix the last dot was pinned as the TLD boundary, so any address
+    // followed by `.` or `-` went unmasked in the production WASM path.
+    #[test]
+    fn masks_email_followed_by_a_sentence_period() {
+        let r = core("Contact: user@example.com. Thanks");
+        assert_eq!(r.text, "Contact: [MASKED:email]. Thanks");
+        assert_eq!(r.masked_items.len(), 1);
+        assert_eq!(r.masked_items[0].original, "user@example.com");
+    }
+
+    #[test]
+    fn masks_email_with_a_hyphenated_suffix() {
+        let r = core("user@example.com-based service");
+        assert_eq!(r.text, "[MASKED:email]-based service");
+        assert_eq!(r.masked_items[0].original, "user@example.com");
+    }
+
+    #[test]
+    fn does_not_match_when_the_tld_is_absent() {
+        // Backtracking must not invent a match: no dot with >=2 trailing letters.
+        assert!(core("user@examplecom here").masked_items.is_empty());
+        assert!(core("user@example.c here").masked_items.is_empty());
+    }
+
+    // PBI 2026-10-11-01 (High): the chunk-overlap guards assumed the previous
+    // chunk reached `chunk_start + OVERLAP`, but the byte grid is clamped to a
+    // char boundary, leaving a <=6-byte window where a match was counted by no
+    // chunk. Non-ASCII text is the common trigger (Japanese pages).
+    #[test]
+    fn masks_ascii_pii_at_a_non_ascii_chunk_seam() {
+        let mut text = "a".repeat(199);
+        text.push('あ');
+        text.push_str(&"a".repeat(192));
+        text.push(' ');
+        text.push_str("1234567");
+        text.push(' ');
+        text.push_str(&"a".repeat(600));
+
+        let r = core(&text);
+        assert_eq!(r.masked_items.len(), 1, "seam PII must be masked");
+        assert_eq!(r.masked_items[0].kind, "bankAccount");
+        assert!(!r.text.contains("1234567"));
+    }
+
+    #[test]
+    fn masks_email_straddling_a_non_ascii_chunk_seam() {
+        let mut text = "b".repeat(198);
+        text.push('あ');
+        text.push(' ');
+        text.push_str("user@example.com");
+        text.push(' ');
+        text.push_str(&"c".repeat(500));
+
+        let r = core(&text);
+        assert_eq!(r.masked_items.len(), 1, "seam email must be masked");
+        assert_eq!(r.masked_items[0].kind, "email");
     }
 
     #[test]

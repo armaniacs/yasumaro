@@ -12,6 +12,13 @@ use super::common::*;
 /// shorter local part here (the local-part char class doesn't overlap with
 /// what would need to shrink) — the single failure point that matters is
 /// "local run doesn't end at '@'", so no `@` within reach means no match.
+///
+/// The domain DOES backtrack: JS gives up domain characters right-to-left
+/// until the literal `.` is followed by >=2 ASCII letters. Picking the last
+/// dot without that backtrack (the pre-2026-10-11 behavior) silently missed
+/// every address whose domain is followed by `.` or `-`
+/// (`user@example.com.`, `user@example.com-based`) — a fail-open in the
+/// production WASM path. See PBI 2026-10-11-01.
 pub fn try_email(bytes: &[u8], start: usize) -> Option<Match> {
     fn is_local(b: u8) -> bool {
         b.is_ascii_alphanumeric() || matches!(b, b'.' | b'_' | b'%' | b'+' | b'-')
@@ -37,16 +44,30 @@ pub fn try_email(bytes: &[u8], start: usize) -> Option<Match> {
         domain_end += 1;
     }
     let domain = &bytes[domain_start..domain_end];
-    let dot_rel = domain.iter().rposition(|&b| b == b'.')?;
-    let tld = &domain[dot_rel + 1..];
-    if tld.len() >= 2 && tld.iter().all(|b| b.is_ascii_alphabetic()) && dot_rel > 0 {
-        Some(Match {
-            end: domain_end,
-            kind: "email",
-        })
-    } else {
-        None
+
+    // Try candidate dots right-to-left (the regex's backtracking order) and
+    // accept the first one whose trailing label is >=2 ASCII letters. `dot_rel`
+    // starts at 1 because `[a-zA-Z0-9.-]+` needs at least one domain character
+    // before the literal dot.
+    for dot_rel in (1..domain.len()).rev() {
+        if domain[dot_rel] != b'.' {
+            continue;
+        }
+        let mut tld_end = dot_rel + 1;
+        while tld_end < domain.len() && domain[tld_end].is_ascii_alphabetic() {
+            tld_end += 1;
+        }
+        if tld_end - (dot_rel + 1) >= 2 {
+            // Greedy `[a-zA-Z]{2,}` stops at the end of the alpha run, so the
+            // match can end before the maximal domain run (e.g. the trailing
+            // `.` in "example.com.").
+            return Some(Match {
+                end: domain_start + tld_end,
+                kind: "email",
+            });
+        }
     }
+    None
 }
 
 fn try_cc_grouped(bytes: &[u8], start: usize) -> Option<usize> {

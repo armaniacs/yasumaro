@@ -272,13 +272,11 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 // 長さ200未満のPIIは前チャンクに完全包含される（OVERLAP前提）ため
                 // 検出漏れは生じない。これがないと重複検出が matchCount を浪費し
                 // MAX_MATCH_COUNT に誤到達する。
+                // TS は UTF-16 コード単位の slice でチャンクを切るため、この相対判定は
+                // 前チャンクの実カバー終端と厳密に一致する。Rust 側はバイト境界への
+                // クランプがあるため「前チャンクの実終端」基準で判定する（同じ条件に
+                // なるのは ASCII のみ。PBI 2026-10-11-01）。
                 if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
-                    continue;
-                }
-                // チャンク先頭（ローカルindex 0）で長さOVERLAP以下のマッチは
-                // 前チャンクに完全包含されるため検出済みであり、カウント前に
-                // スキップする（エッジ断片ファントムの排除）。
-                if (offset > 0 && match.index === 0 && match[0].length <= SCAN_CHUNK_OVERLAP) {
                     continue;
                 }
                 // 原文上の真のマッチ長をstickyプローブで確定させる。
@@ -314,29 +312,29 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
                 const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
                 const startIndex = offset + match.index;
 
-            // どのグループがマッチしたか特定
-            let matchedType = 'unknown';
-            if (match.groups) {
-                for (const type of Object.keys(match.groups)) {
-                    if (match.groups[type]) {
-                        matchedType = type;
-                        break;
+                // どのグループがマッチしたか特定
+                let matchedType = 'unknown';
+                if (match.groups) {
+                    for (const type of Object.keys(match.groups)) {
+                        if (match.groups[type]) {
+                            matchedType = type;
+                            break;
+                        }
                     }
                 }
-            }
 
-            // Luhn検証で偽陽性のクレジットカード番号を除外
-            if (matchedType === 'creditCard' && !validateLuhn(matchedValue)) {
-                continue;
-            }
+                // Luhn検証で偽陽性のクレジットカード番号を除外
+                if (matchedType === 'creditCard' && !validateLuhn(matchedValue)) {
+                    continue;
+                }
 
-            replacements.push({
-                index: startIndex,
-                length: matchedValue.length,
-                mask: `[MASKED:${matchedType}]`,
-                type: matchedType,
-                original: matchedValue
-            });
+                replacements.push({
+                    index: startIndex,
+                    length: matchedValue.length,
+                    mask: `[MASKED:${matchedType}]`,
+                    type: matchedType,
+                    original: matchedValue
+                });
             }
         }
 

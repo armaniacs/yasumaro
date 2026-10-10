@@ -839,5 +839,34 @@ describe('piiSanitizer', () => {
       expect(result.text).not.toContain('user@example.com');
       expect(result.maskedItems.some(item => item.type === 'email')).toBe(true);
     });
+
+    test('masks an email followed by a sentence period', async () => {
+      // 【テスト目的】: 末尾ピリオド付きメールの検出（PBI 2026-10-11-01）。
+      // TS 正規表現はバックトラックして最後のドットを捨てる。Rust 側が
+      // 追従していないと本番 WASM 経路だけ未マスクになる（fail-open）。
+      const result = await sanitizeRegex('Contact: user@example.com. Thanks') as SanitizeResult;
+
+      expect(result.text).toBe('Contact: [MASKED:email]. Thanks');
+      expect(result.maskedItems.map(i => i.type)).toEqual(['email']);
+    });
+
+    test('masks an email with a hyphenated suffix', async () => {
+      const result = await sanitizeRegex('user@example.com-based service') as SanitizeResult;
+
+      expect(result.text).toBe('[MASKED:email]-based service');
+      expect(result.maskedItems.map(i => i.type)).toEqual(['email']);
+    });
+
+    test('masks ASCII PII sitting on a non-ASCII chunk seam', async () => {
+      // 【テスト目的】: 非ASCII本文では Rust 側のチャンク開始が文字境界へ
+      // クランプされるため、重複スキップを「前チャンクの実カバー終端」基準で
+      // 判定しないと継ぎ目のPIIがどのチャンクでも数えられない
+      // （PBI 2026-10-11-01。TS は参照実装として正しい）。
+      const input = 'a'.repeat(199) + 'あ' + 'a'.repeat(192) + ' ' + '1234567' + ' ' + 'a'.repeat(600);
+      const result = await sanitizeRegex(input) as SanitizeResult;
+
+      expect(result.text).not.toContain('1234567');
+      expect(result.maskedItems.map(i => i.type)).toEqual(['bankAccount']);
+    });
   });
 });

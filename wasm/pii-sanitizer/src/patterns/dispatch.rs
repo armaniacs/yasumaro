@@ -24,18 +24,24 @@ use super::extended;
 
 const MAX_MATCH_COUNT: usize = 1000;
 
-/// The scan stopped because the match-count cap was reached. Mirrors the TS
-/// reference's `Operation exceeded maximum match count` behavior — the
-/// hybrid's catch block falls back to `sanitizeRegex`, which throws the same
-/// way, so the recording fails closed instead of shipping partially-masked
-/// text as a success (the TS reference aborts the pipeline on this input).
+/// Why the scan rejected the whole input. Both variants abort (fail closed)
+/// rather than shipping partially-masked text, matching the TS reference which
+/// throws on the same inputs — the hybrid's catch block then falls back to
+/// `sanitizeRegex`, which throws the same way.
 #[derive(Debug)]
-pub struct MatchLimitExceeded;
+pub enum ScanError {
+    /// More than `MAX_MATCH_COUNT` matches were found. Mirrors the TS
+    /// `Operation exceeded maximum match count` throw.
+    MatchLimitExceeded,
+    /// The wall-clock budget was exceeded. Only produced on wasm32 (the native
+    /// test build has no JS clock); mirrors `DEFAULT_TIMEOUT` on the TS side.
+    Timeout,
+}
 
-/// Returns `Err(MatchLimitExceeded)` once more than `MAX_MATCH_COUNT` matches
-/// have been found — the same threshold at which the TS combined-regex scan
-/// throws (`matchCount > MAX_MATCH_COUNT`).
-pub fn scan(bytes: &[u8]) -> Result<Vec<(usize, usize, &'static str)>, MatchLimitExceeded> {
+/// Returns `Err(ScanError::MatchLimitExceeded)` once more than `MAX_MATCH_COUNT`
+/// matches have been found — the same threshold at which the TS combined-regex
+/// scan throws (`matchCount > MAX_MATCH_COUNT`).
+pub fn scan(bytes: &[u8]) -> Result<Vec<(usize, usize, &'static str)>, ScanError> {
     let len = bytes.len();
     let mut items = Vec::new();
     let mut i = 0;
@@ -56,7 +62,7 @@ pub fn scan(bytes: &[u8]) -> Result<Vec<(usize, usize, &'static str)>, MatchLimi
     }
 
     if items.len() > MAX_MATCH_COUNT {
-        return Err(MatchLimitExceeded);
+        return Err(ScanError::MatchLimitExceeded);
     }
     Ok(items)
 }
