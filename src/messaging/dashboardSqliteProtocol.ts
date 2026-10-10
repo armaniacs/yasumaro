@@ -10,7 +10,7 @@
  * convention, with `payload.x as T` casts hiding any mismatch.
  */
 
-import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+import type { AuditLogEntry, BrowsingLogEntry } from '../utils/sqlite-types.js';
 import type { ArchivePreviewData, ArchiveRestorePreviewData, ArchiveSessionRow, ArchiveSessionStatusData } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 
@@ -158,7 +158,7 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'append_to_obsidian' ? { success: true; appended: number } :
       S extends 'purge_now' ? { success: true; purged: number; skipped: boolean } :
       S extends 'content_purge_now' ? { success: true; purged: number; skipped: boolean } :
-      S extends 'audit_log_query' ? { success: true; rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number } :
+      S extends 'audit_log_query' ? { success: true; rows: Array<AuditLogEntry>; total: number } :
       S extends 'archive_preview' ? { success: true; preview: ArchivePreviewData } :
       S extends 'archive_create' ? { success: true; stagingName: string; recordCount: number } :
       S extends 'archive_cleanup' ? { success: true; removed: string[] } :

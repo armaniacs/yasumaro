@@ -7,12 +7,7 @@
  * the NavigationRegistry. It is a pure formatter, so it belongs in utils.
  */
 
-interface AuditLogEntry {
-  id: number;
-  provider: string;
-  url: string;
-  created_at: number;
-}
+import type { AuditLogEntry } from '../../utils/sqlite-types.js';
 
 function toIsoDate(ms: number): string {
   return new Date(ms).toISOString();
