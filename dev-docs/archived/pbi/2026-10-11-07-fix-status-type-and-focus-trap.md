@@ -57,15 +57,15 @@ Scenario: 破壊的確認の初期フォーカスが破壊的ボタンに置か�
 
 ## 受け入れ基準
 
-- [ ] `StatusType`（`src/utils/ui/settingsUiHelper.ts:8`）に `'updating'` を追加する
-- [ ] `connectionTests.ts:270`, `:298`, `:441` の開始・進行中表示を `'updating'` にする。空メッセージで `success` を付けない（空なら `showStatus` を呼ばずクラス解除に留める）
-- [ ] `exportLogsPanel.ts:28,38,48,58` の `onStart` も同様に直す
-- [ ] `focusTrap.ts` の `FOCUSABLE_SELECTOR` に `:not([disabled])` を付け、`getFocusableElements` の filter に disabled 除外を足して `confirmDialog` と一致させる（selector を 1 本に統合するのが最小）
-- [ ] `trap()` の first/last 固定取得をやめ、`handleFocusCycle` の doc コメント（`:30-31`）どおり keydown ごとに再取得する（開いた後に disabled 化された要素に追随するため）
-- [ ] `focusTrap.test.ts:200-217` の pin テストを「disabled を除外する」期待に書き換える
-- [ ] `confirmDialog.ts:125` の初期フォーカスを非破壊的なボタン（キャンセル側）にする
-- [ ] Escape 処理・Tab/Shift+Tab の折り返し・復帰フォーカス・`role="dialog"` / `aria-modal` / `aria-labelledby` / `aria-describedby` に退行がない
-- [ ] `npm run validate` が green
+- [x] `StatusType`（`src/utils/ui/settingsUiHelper.ts:8`）に `'updating'` を追加する
+- [x] `connectionTests.ts:270`, `:298`, `:441` の開始・進行中表示を `'updating'` にする。空メッセージで `success` を付けない（空なら `showStatus` を呼ばずクラス解除に留める）
+- [x] `exportLogsPanel.ts:28,38,48,58` の `onStart` も同様に直す
+- [x] `focusTrap.ts` の `FOCUSABLE_SELECTOR` に `:not([disabled])` を付け、`getFocusableElements` の filter に disabled 除外を足して `confirmDialog` と一致させる（selector を 1 本に統合するのが最小）
+- [x] `trap()` の first/last 固定取得をやめ、`handleFocusCycle` の doc コメント（`:30-31`）どおり keydown ごとに再取得する（開いた後に disabled 化された要素に追随するため）
+- [x] `focusTrap.test.ts:200-217` の pin テストを「disabled を除外する」期待に書き換える
+- [x] `confirmDialog.ts:125` の初期フォーカスを非破壊的なボタン（キャンセル側）にする
+- [x] Escape 処理・Tab/Shift+Tab の折り返し・復帰フォーカス・`role="dialog"` / `aria-modal` / `aria-labelledby` / `aria-describedby` に退行がない
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -105,9 +105,30 @@ Scenario: 破壊的確認の初期フォーカスが破壊的ボタンに置か�
 
 ## Definition of Done
 
-- [ ] disabled 末尾でもフォーカスがモーダル外へ抜けないテストが green
-- [ ] 進行中・空メッセージで success 枠が出ないテストが green
-- [ ] confirmDialog の初期フォーカスが非破壊的なボタンになるテストが green
-- [ ] `npm run validate` が green
-- [ ] 手動確認項目（キーボード操作・見た目）を PBI に記録
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] disabled 末尾でもフォーカスがモーダル外へ抜けないテストが green
+- [x] 進行中・空メッセージで success 枠が出ないテストが green
+- [x] confirmDialog の初期フォーカスが非破壊的なボタンになるテストが green
+- [x] `npm run validate` が green
+- [x] 手動確認項目（キーボード操作・見た目）を PBI に記録
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 / commit `541fead2`）
+
+| コマンド | 結果 |
+|---|---|
+| `npx vitest run src/utils/ui/__tests__/` | 106 passed（focusTrap 23 / confirmDialog 18 / settingsUiHelper 34） |
+| `npx vitest run src/utils/ui/__tests__/ src/dashboard/generalSettings/__tests__/ src/dashboard/panels/diagnostic/__tests__/` | 26 files 423 passed |
+| `npm run type-check` | exit 0 |
+| `npm run lint` | 0 errors（生成 wasm .d.ts の既存 warning 8 件のみ） |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+追加テスト: disabled を集合から除外 / 遅延 disabled 化でも Tab が折り返して
+モーダル外へ抜けない / updating が自動消去されない / `clearStatus` が型クラスを
+残さない・保留中の自動消去をキャンセルする / confirmDialog の初期フォーカスが
+キャンセル側。
+
+**ユーザー作業（自動化されない手動確認）**: 実ブラウザでの
+(a) master password 保存中に Tab を押してモーダル外へ抜けないこと、
+(b) 接続テスト中・ログ書き出し中のステータスが緑の成功ボックスに見えないこと、
+の 2 点は目視確認が残る（テストは DOM 上のクラス契約までを固定）。
+

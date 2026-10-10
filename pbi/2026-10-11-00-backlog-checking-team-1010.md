@@ -90,9 +90,9 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 | 02 | privacy-mode-fail-closed | ✅ 完了・アーカイブ済み（`481fc530`, `bd198de0`） |
 | 03 | sanitize-title-line-separators | ✅ 完了・アーカイブ済み（`df91afb2`） |
 | 04 | i18n-keys-and-locale-ssot | ✅ 完了・アーカイブ済み（`a8f1daba`, `bd198de0`） |
-| 05 | settings-toplevel-repair | 未着手 |
+| 05 | settings-toplevel-repair | ✅ 完了・アーカイブ済み（`0f96cd4c`） |
 | 06 | docs-release-notes-and-guides | ✅ 完了・アーカイブ済み（`a088ec4f`） |
-| 07 | status-type-and-focus-trap | 未着手 |
+| 07 | status-type-and-focus-trap | ✅ 完了・アーカイブ済み（`541fead2`） |
 | 08 | e2e-probe-exposure | 未着手 |
 | 09 | wasm-artifact-size-and-ci-gate | 未着手（01 の後。01 の再ビルドで strip 相当は解消: 100,671 → 56,784 B） |
 | 10 | archive-wire-validation-ssot | 未着手 |

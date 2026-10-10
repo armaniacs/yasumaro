@@ -43,14 +43,35 @@ Scenario: 生キーが存在する新規環境では何もしない
 
 ## 受け入れ基準
 
-- [ ] 移行完了フラグと独立した一度きりの冪等リペアを追加する（生キー不在かつ blob 側に存在する場合のみ blob → 生キーへコピー。完了マーカーは別キーを使う）
-- [ ] または `RecordingTriggerManager` に blob 側リーダーをフォールバックとして持たせ、生キー不在時のみ blob を参照する（どちらを採るか実装時に1つ選び、選定理由を PBI に記録する）
-- [ ] 復旧経路が「既移行インストール」で実際に `loadTriggers()` / `getSnapshotIntervalMinutes()` の値を戻すことをテストで固定する
-- [ ] 復旧処理が冪等である（2 回目以降の起動で上書きしない）ことをテストで固定する
-- [ ] 生キーが存在する環境では復旧処理が書き込まないことをテストで固定する
-- [ ] `settingsMigration-completion-state.test.ts` の `isMigratableStorageKey(RECORDING_TRIGGERS)` の期待値（本ブランチで `false` に反転）と、復旧経路の役割分担がコメントで明示されている
-- [ ] `readSettingsSnapshot()`（`src/utils/storage/settingsSnapshot.ts:26`）の戻り型が `Record<string, unknown>` に変わった旨と、移行方法（`applySettingsTable` 等の緩い受け口を使う）を doc コメントに1行追記する
-- [ ] `npm run validate` が green
+- [x] 移行完了フラグと独立した一度きりの冪等リペアを追加する（生キー不在かつ blob 側に存在する場合のみ blob → 生キーへコピー。完了マーカーは別キーを使う）
+- [x] **採用: `RecordingTriggerManager` に blob 側リーダーをフォールバックとして持たせる**（生キー不在時のみ blob を参照）。選定理由は下記「設計判断」
+- [x] 復旧経路が「既移行インストール」で実際に `loadTriggers()` / `getSnapshotIntervalMinutes()` の値を戻すことをテストで固定する
+- [x] 復旧処理が冪等である（2 回目以降の起動で上書きしない）ことをテストで固定する
+- [x] 生キーが存在する環境では復旧処理が書き込まないことをテストで固定する（blob より生キーを優先するテストで固定）
+- [x] `settingsMigration-completion-state.test.ts` の `isMigratableStorageKey(RECORDING_TRIGGERS)` の期待値（本ブランチで `false` に反転）と、復旧経路の役割分担がコメントで明示されている
+- [x] `readSettingsSnapshot()`（`src/utils/storage/settingsSnapshot.ts`）の戻り型が `Record<string, unknown>` に変わった旨と、移行方法を doc コメントに追記する
+- [x] `npm run validate` が green
+
+## 設計判断（採用案と理由）
+
+**採用: blob リーダー・フォールバック（書き込みなし）**。理由:
+
+1. 状態を持たないため冪等性が構造的に保証される（完了マーカーの追加・管理が不要。新しい `StorageKeys` を足すと `StorageKeyValues` union と `isMigratableStorageKey` の allowlist も同時に触る必要があり、移行機構そのものへの影響が広がる）。
+2. 復旧が「読み取り時のフォールバック」なので、ユーザーが後から UI で設定を変えた場合に古い blob 値で上書きする経路が存在しない（生キーが常に優先）。
+3. 修正範囲が `recordingTriggerManager.ts` に閉じる（graphify で degree 14 と依存が狭いことを確認済み）。移行機構（degree 95 の god node）には触れない。
+4. `readSettingsSnapshot()` は復号を行わない read-only のスナップショットで、blob は scattered キーの上位集合。生の `chrome.storage.local.get('settings')` を直読みしない方針とも一致する。
+
+## 検証結果（2026-10-11 / commit `0f96cd4c`）
+
+| コマンド | 結果 |
+|---|---|
+| `npx vitest run src/background/__tests__/recordingTriggerManager.test.ts` | 22 passed（blob フォールバック 5 件を追加） |
+| `npx vitest run src/utils/storage/__tests__/ src/background/__tests__/recordingTriggerManager.test.ts` | 521 passed（60 files） |
+| `npm run type-check` | exit 0 |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
+追加テスト: blob からトリガーを復元 / 生キー優先 / blob から snapshot 間隔を復元 / 生キー優先 / どちらにも無い場合は既定値。
+
 
 ## テスト戦略
 
@@ -88,7 +109,7 @@ Scenario: 生キーが存在する新規環境では何もしない
 
 ## Definition of Done
 
-- [ ] 既移行インストールの再現テストで、トリガー設定が既定値へ巻き戻らないことが確認できる
-- [ ] 復旧の冪等性テストが green
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 既移行インストールの再現テストで、トリガー設定が既定値へ巻き戻らないことが確認できる
+- [x] 復旧の冪等性テストが green（書き込みを行わない読み取りフォールバックのため構造的に冪等）
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
