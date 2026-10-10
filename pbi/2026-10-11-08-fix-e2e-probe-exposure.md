@@ -91,3 +91,22 @@ Scenario: E2E テストは従来どおり状態を観測できる
 - [ ] E2E が新経路で green
 - [ ] `npm run validate` が green
 - [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 着手メモ（2026-10-11 / 未着手の理由と手順）
+
+本 PBI は 2026-10-11 のセッションでは**意図的に未着手**（他の NN01-NN07, NN09, NN10 は
+完了・アーカイブ済み）。理由と手順は live 台帳の **C8** に記録した。要点:
+
+- 変更規模: `data-ow-e2e-test` / `data-ow-test-state` の参照が **18 箇所**（E2E 仕様 6 ファイル、
+  テストページ HTML、単体テスト `extractor-comprehensive.test.ts`）に及び、出力先の移設は
+  E2E ハーネスの読み取り経路そのものの付け替えになる
+- 検証手段: 正しさは E2E スイートの再実行でしか確認できない（`npx playwright test
+  --repeat-each=10 --retries=0`）。部分実装は E2E を壊すリスクが利得を上回る
+- 残っている実害: ページ側から `minVisitDuration` / `minScrollDepth`（ユーザー設定）と
+  `isValidVisitReported` / `duration` / `maxScrollPercentage`（記録状態）が読める。本番でも
+  有効な経路なので優先度は高い
+- 進め方の案: (1) 発火を拡張側制御チャネル（`chrome.storage.session` のフラグを E2E が
+  service worker 経由で設定）へ移す (2) 出力をページ共有 DOM から拡張側へ移す
+  (3) E2E の読み取りを `context.serviceWorkers()[0].evaluate(...)` へ移行
+  （`minVisitDuration` を閾値に使う 2 箇所は既知定数 5 に置換可） (4) E2E 再検証 (5) 単体テスト更新
+

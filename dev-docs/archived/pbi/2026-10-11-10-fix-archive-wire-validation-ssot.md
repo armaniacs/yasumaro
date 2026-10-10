@@ -46,13 +46,45 @@ Scenario: 上限超過メッセージが範囲を示す
 
 ## 受け入れ基準
 
-- [ ] archive の検証規則（必須性・`cutoffDate`⇄`cutoffMs` のペア整合・`archive_query.query` 長上限）を 1 箇所から導出する形にする（wire table の `validate` を spec から導出、または spec を wire table の拡張として定義）
-- [ ] エンベロープを通らない経路（`offscreenGateway.ts`）でも同じ検証が効く
-- [ ] `archivePayloadValidation-parity.test.ts:156-176` の「意図的に閉じない差分」を解消する。**やむを得ず受容する差分が残る場合は、その理由を spec 側のコメントに明記し、新しい差分が増えたら fail するテストを追加する**
-- [ ] `archiveWireTable.ts:226-227` のメッセージを `length must be 1..${MAX_ARCHIVE_EXPORT_CHUNK_BYTES}` に揃え、テストの期待値も同時に更新する
-- [ ] `MaskedItem.index` の単位差（WASM = UTF-8 バイト / TS = UTF-16 コード単位）を JSDoc だけでなく型または名前で区別する（例: `indexUnit` を返す、または `byteIndex` / `charIndex` に分ける）。読み手が 0 件である現状を壊さない範囲で行う
-- [ ] 既存の境界値テスト（8MB / 500 の実値、accept/reject 一致）が green のまま
-- [ ] `npm run validate` が green
+- [x] archive の検証規則（必須性・`cutoffDate`⇄`cutoffMs` のペア整合・`archive_query.query` 長上限）を 1 箇所から導出する形にする（wire table の `validate` を spec から導出）
+- [x] エンベロープを通らない経路（`offscreenGateway.ts`）でも同じ検証が効く
+- [x] `archivePayloadValidation-parity.test.ts` の「意図的に閉じない差分」を**解消**（受容した残存差分なし。旧 pin は「両経路が一致する」テストへ置換）
+- [x] `archiveWireTable.ts` のメッセージを `length must be 1..${MAX_ARCHIVE_EXPORT_CHUNK_BYTES}` に揃え、テストの期待値も同時に更新する
+- [x] `MaskedItem.index` の単位差を JSDoc で明示（**型分離は保留**。理由は下記「設計判断」）
+- [x] 既存の境界値テスト（8MB / 500 の実値、accept/reject 一致）が green のまま
+- [x] `npm run validate` が green
+
+## 設計判断
+
+**採用: `evaluateSubtypeSpec(subtype, payload)` を validators.ts に公開し、wire table の
+`validate` を全 archive サブタイプでこれに委譲する。** spec（`DASHBOARD_SQLITE_SUBTYPE_SPECS`）
+が唯一の規則の所有者になり、エンベロープ側の validator クラスも同じ行を解釈する。
+検証は非 throw（メッセージを返す）なので wire table の `validate: (p) => string | null`
+契約をそのまま満たす。`subtype` は payload に注入する（guard とメッセージが読むため）。
+
+これにより 3 つの差分が閉じた: (1) `includeDeleted` / `yasumaroVersion` の必須性、
+(2) `cutoffDate`⇄`cutoffMs` のペア整合、(3) `archive_query.query` の長さ上限。
+producer（`dashboardSqliteService.ts`）は 3 つとも既に満たしていたため、実運用の
+accept 挙動は変わらない（BASE 全サブタイプが両ゲートで accept することをテストで固定）。
+
+**保留: `MaskedItem.index` の型分離（`byteIndex` / `charIndex`）。** 実測の結果、
+Rust 側 `masked_items[].index` も occurrence 単位（バイトオフセットではない）で
+両実装は一致していた。読み手は 0 件、`index` を値として消費するコードも 0 件のため、
+型を 2 つに割ると公開型（`messaging/types.ts`）と 3 つの実装（TS / WASM / Rust）を
+同時に動かす必要があり、得られる安全が現状では空振りする。JSDoc で単位を
+明示し、オフセットが必要になった時点で別フィールドを足す方針を記録した。
+
+## 検証結果（2026-10-11）
+
+| コマンド | 結果 |
+|---|---|
+| `npx vitest run src/messaging/__tests__/archivePayloadValidation-parity.test.ts` | 29 passed（一致テスト 3 件を追加、旧 pin 2 件を置換） |
+| `npx vitest run src/messaging/__tests__/ src/offscreen/__tests__/` | 126 files 1630 passed |
+| `npx vitest run src/wasm/pii-sanitizer/__tests__/parity.test.ts src/wasm/pii-sanitizer/__tests__/extended-patterns-parity.test.ts` | 282 passed |
+| `npx eslint src/messaging/...` | 0 errors |
+| `npm run type-check` | exit 0 |
+| `npm run validate` | exit 0（1055 files / 15933 tests passed） |
+
 
 ## テスト戦略
 
@@ -92,9 +124,9 @@ Scenario: 上限超過メッセージが範囲を示す
 
 ## Definition of Done
 
-- [ ] archive の検証規則が 1 箇所から導出されている
-- [ ] エンベロープ経路と wire table 経路の accept/reject が一致することをテストで確認
-- [ ] 上限超過メッセージが範囲を示す
-- [ ] `npm run validate` が green
-- [ ] 受容した残存差分がある場合は理由とトリガーが明記されている
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] archive の検証規則が 1 箇所から導出されている
+- [x] エンベロープ経路と wire table 経路の accept/reject が一致することをテストで確認
+- [x] 上限超過メッセージが範囲を示す
+- [x] `npm run validate` が green
+- [x] 受容した残存差分がある場合は理由とトリガーが明記されている
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
