@@ -181,6 +181,15 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     expect(md.split('\n')).toHaveLength(2);
   });
 
+  it('keeps the heading title line single-line for newline titles', () => {
+    const md = buildEntryMarkdown(
+      { title: 'Evil\n# Forged heading', url: 'https://example.com/article', summary: 's' },
+      'heading',
+    );
+    const firstLine = md.split('\n')[0];
+    expect(firstLine).toBe('# Evil # Forged heading');
+  });
+
   it('keeps the heading title line single-line for lone CR titles', () => {
     const md = buildEntryMarkdown(
       { title: 'Evil\r# Forged heading', url: 'https://example.com/article', summary: 's' },
