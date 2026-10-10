@@ -14,6 +14,20 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-11 code-review 指摘フォロー（review-followup） — ⬜ 5件未着手 🔧非機能追加
+
+`/code-review`（直近3コミット対象）の Suggestions 5 件を全件 PBI 化。同日 checking-team 番号（01–10）との衝突回避のため NN11–15 を使用（NN 昇順＝優先降順）。RICE 採点・依存・バッチ計画（W1–W3）の詳細は [2026-10-11-00-backlog-review-followup.md](2026-10-11-00-backlog-review-followup.md)（live 台帳）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 11 | [2026-10-11-11-test-e2e-probe-key-contract.md](2026-10-11-11-test-e2e-probe-key-contract.md) | test | 16.0 | 0.25 | ⬜ 未着手。session キー二重定義の契約テスト（転記解消の検証付き） |
+| 12 | [2026-10-11-12-refactor-kernel-init-parallel.md](2026-10-11-12-refactor-kernel-init-parallel.md) | refactor | 4.8 | 0.5 | ⬜ 未着手。`init()` の設定読み＋フラグ読み並列化 |
+| 13 | [2026-10-11-13-refactor-e2e-probe-wait-narrowing.md](2026-10-11-13-refactor-e2e-probe-wait-narrowing.md) | refactor | 4.0 | 0.25 | ⬜ 未着手。`waitForE2EProbeInit` の二段キャスト除去 |
+| 14 | [2026-10-11-14-chore-e2e-probe-strip-complete.md](2026-10-11-14-chore-e2e-probe-strip-complete.md) | chore | 2.4 | 0.5 | ⬜ 未着手。strip ビルド残存の完全除去。NN12 の後 |
+| 15 | [2026-10-11-15-refactor-probe-flag-unexport.md](2026-10-11-15-refactor-probe-flag-unexport.md) | refactor | 2.0 | 0.25 | ⬜ 未着手。`E2E_PROBE_COMPILED_IN` 非 export 化。NN14 の後（相互作用次第で取り下げあり） |
+
+実行順: RICE 順（NN11 → NN15）。W1（11/12/13 並列）→ W2（14）→ W3（15）。
+
 ### 2026-10-10 Checking Team ラウンド（checking-team-1010） — 🔶 9件完了・アーカイブ済み / 🔶 1件（NN08 のみ実装済み・E2E 再実行待ち） 🔧非機能追加
 
 Checking Team skill（22観点・3 Wave）によるブランチ `1007z` vs `main` の差分レビュー（57 commits / 199 files / うちコード 137 files）。実行済み 17 観点の平均 **86/100（A）**、High 3 / Medium 15 / Low 6。High 3 件と Medium の主要部分を 10 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-10）。報告書は [dev-docs/archived/plans/2026-10-10-2320-review-1007z.md](../dev-docs/archived/plans/2026-10-10-2320-review-1007z.md)（live 台帳は [2026-10-11-00-backlog-checking-team-1010.md](2026-10-11-00-backlog-checking-team-1010.md)）。
