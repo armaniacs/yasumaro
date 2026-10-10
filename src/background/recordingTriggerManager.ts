@@ -7,9 +7,6 @@
 import { StorageKeys } from '../utils/storage/types.js';
 import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { LogType } from '../utils/logger/types.js';
-import { addLog } from '../utils/logger/core.js';
-import { errorMessage } from '../utils/errorUtils.js';
 import { decideRecordingTrigger } from './pipeline/recordingDecision.js';
 
 // ============================================================================
@@ -89,32 +86,6 @@ export class RecordingTriggerManager {
   }
 
   /**
-   * Save trigger settings to chrome.storage.local.
-   * Validates that at least one trigger is enabled before saving.
-   */
-  async saveTriggers(triggers: RecordingTriggers): Promise<boolean> {
-    try {
-      // Validate before saving to prevent silent failure (all triggers OFF)
-      const validation = this.validate(triggers);
-      if (!validation.valid) {
-        addLog(LogType.WARN, 'Recording trigger validation failed', { error: validation.error });
-        return false;
-      }
-
-      const raw = JSON.stringify(triggers);
-      await chrome.storage.local.set({ [StorageKeys.RECORDING_TRIGGERS]: raw });
-      this.cachedTriggers = { ...triggers };
-      addLog(LogType.INFO, 'Recording triggers saved', { triggers });
-      return true;
-    } catch (error) {
-      addLog(LogType.ERROR, 'Failed to save recording triggers', {
-        error: errorMessage(error),
-      });
-      return false;
-    }
-  }
-
-  /**
    * Evaluate whether an event should trigger recording.
    * Verdict は pipeline/recordingDecision.decideRecordingTrigger に委譲
    * （storage 読みの I/O はここに残す）。
@@ -156,19 +127,6 @@ export class RecordingTriggerManager {
       return (result[StorageKeys.SNAPSHOT_INTERVAL_MINUTES] as number) || 5;
     } catch {
       return 5;
-    }
-  }
-
-  /**
-   * Save snapshot interval.
-   */
-  async saveSnapshotInterval(minutes: number): Promise<boolean> {
-    try {
-      const clamped = Math.max(1, Math.min(60, minutes));
-      await chrome.storage.local.set({ [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: clamped });
-      return true;
-    } catch {
-      return false;
     }
   }
 

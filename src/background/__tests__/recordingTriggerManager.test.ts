@@ -139,20 +139,6 @@ describe('RecordingTriggerManager', () => {
     });
   });
 
-  describe('saveTriggers', () => {
-    it('saves triggers to storage and updates cache', async () => {
-      const triggers = { scrollAndTime: true, manualSave: false, periodicSnapshot: false };
-      const result = await manager.saveTriggers(triggers);
-      expect(result).toBe(true);
-      expect(mockStorage['recording_triggers']).toBe(JSON.stringify(triggers));
-
-      // Cache should be updated
-      manager.invalidateCache(); // invalidate to test from storage
-      const loaded = await manager.loadTriggers();
-      expect(loaded.scrollAndTime).toBe(true);
-    });
-  });
-
   describe('getSnapshotIntervalMinutes', () => {
     it('returns default 5 when not set', async () => {
       expect(await manager.getSnapshotIntervalMinutes()).toBe(5);
@@ -161,23 +147,6 @@ describe('RecordingTriggerManager', () => {
     it('returns stored value', async () => {
       mockStorage['snapshot_interval_minutes'] = 15;
       expect(await manager.getSnapshotIntervalMinutes()).toBe(15);
-    });
-  });
-
-  describe('saveSnapshotInterval', () => {
-    it('saves and clamps to 1-60 range', async () => {
-      expect(await manager.saveSnapshotInterval(30)).toBe(true);
-      expect(mockStorage['snapshot_interval_minutes']).toBe(30);
-    });
-
-    it('clamps values below 1', async () => {
-      await manager.saveSnapshotInterval(0);
-      expect(mockStorage['snapshot_interval_minutes']).toBe(1);
-    });
-
-    it('clamps values above 60', async () => {
-      await manager.saveSnapshotInterval(100);
-      expect(mockStorage['snapshot_interval_minutes']).toBe(60);
     });
   });
 
