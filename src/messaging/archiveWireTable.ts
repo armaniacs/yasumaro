@@ -46,15 +46,9 @@ import {
   voidDecode,
 } from './wireLambdaFactories.js';
 import {
-  isFiniteNumber,
-  isNonEmptyString,
-  isNonNegativeInteger,
+  evaluateSubtypeSpec,
   isPositiveInteger,
 } from './validators.js';
-import {
-  MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
-  MAX_ARCHIVE_QUERY_LIMIT,
-} from '../utils/limits.js';
 
 /** Dashboard subtypes owned by the archive group. */
 export type DashboardArchiveSubtype = Extract<DashboardSqliteSubtype, `archive_${string}`>;
@@ -126,15 +120,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['preview'],
     emptyError: 'Archive preview returned no data',
     defaultError: 'Archive preview failed',
-    validate: (p) => {
-      if (!isNonEmptyString(p.cutoffDate)) {
-        return 'archive_preview: cutoffDate is required';
-      }
-      if (!isFiniteNumber(p.cutoffMs) || p.cutoffMs <= 0) {
-        return 'archive_preview: cutoffMs must be a positive number';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_preview', p),
     encodeRequest: (
       cutoffDate: string,
       cutoffMs: number,
@@ -159,15 +145,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['stagingName', 'recordCount'],
     emptyError: 'Archive create returned no staging file',
     defaultError: 'Archive creation failed',
-    validate: (p) => {
-      if (!isNonEmptyString(p.cutoffDate)) {
-        return 'archive_create: cutoffDate is required';
-      }
-      if (!isFiniteNumber(p.cutoffMs) || p.cutoffMs <= 0) {
-        return 'archive_create: cutoffMs must be a positive number';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_create', p),
     encodeRequest: (params: {
       cutoffDate: string;
       cutoffMs: number;
@@ -217,17 +195,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['chunk', 'nextOffset', 'total', 'done'],
     emptyError: 'Archive export returned no data',
     defaultError: 'Archive export failed',
-    validate: (p) => {
-      if (!isNonNegativeInteger(p.offset)) {
-        return 'archive_export: offset must be a non-negative integer';
-      }
-      // Bounds mirror DASHBOARD_SQLITE_SUBTYPE_SPECS.archive_export (PBI
-      // 2026-10-09-01): integer 1..MAX_ARCHIVE_EXPORT_CHUNK_BYTES.
-      if (!isPositiveInteger(p.length) || p.length > MAX_ARCHIVE_EXPORT_CHUNK_BYTES) {
-        return 'archive_export: length must be a positive number';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_export', p),
     encodeRequest: (
       stagingName: string,
       offset: number,
@@ -380,16 +348,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['rows', 'total'],
     emptyError: 'Archive query returned no data',
     defaultError: 'Archive query failed',
-    validate: (p) => {
-      if (typeof p.query !== 'string') return 'archive_query: query must be string';
-      if (!isPositiveInteger(p.limit) || p.limit > MAX_ARCHIVE_QUERY_LIMIT) {
-        return `archive_query: limit must be 1..${MAX_ARCHIVE_QUERY_LIMIT}`;
-      }
-      if (!isNonNegativeInteger(p.offset)) {
-        return 'archive_query: offset must be a non-negative integer';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_query', p),
     encodeRequest: (
       stagingName: string,
       query: string,

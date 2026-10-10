@@ -419,6 +419,38 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   },
 };
 
+/**
+ * Evaluate a subtype spec against a payload without throwing.
+ *
+ * Returns the first error message, or null when the payload passes. Single
+ * evaluator shared by the envelope validator (which throws ValidationError) and
+ * the archive wire table (PBI 2026-10-11-10): before this the wire rows
+ * hand-wrote their own field checks, so the two paths accepted different
+ * payloads and the divergence had to be pinned by a test instead of closed.
+ *
+ * `subtype` is injected into the payload because the guards and messages read it.
+ */
+export function evaluateSubtypeSpec(subtype: string, payload: Record<string, unknown>): string | null {
+  const spec = DASHBOARD_SQLITE_SUBTYPE_SPECS[subtype];
+  if (!spec) return null;
+  const p: Record<string, unknown> = { ...payload, subtype };
+  try {
+    spec.guardFirst?.(p, subtype);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  for (const f of spec.fields ?? []) {
+    if (f.optional && p[f.field] === undefined) continue;
+    if (!f.test(p[f.field], p)) return f.message(subtype);
+  }
+  try {
+    spec.guardLast?.(p, subtype);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  return null;
+}
+
 /** Subtypes whose payload carries a staging name — derived from the spec
  *  table so the set and the guard can never drift apart (PBI 2026-09-17-18). */
 export const STAGING_NAME_SUBTYPES: readonly string[] = Object.entries(DASHBOARD_SQLITE_SUBTYPE_SPECS)

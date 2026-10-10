@@ -143,34 +143,42 @@ describe('archive payload validation parity: envelope spec vs wire-table validat
     );
     expect(
       wireResult('archive_export', { ...BASE.archive_export, length: MAX_ARCHIVE_EXPORT_CHUNK_BYTES + 1 }),
-    ).toBe('archive_export: length must be a positive number');
+    ).toBe(`archive_export: length must be 1..${MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`);
   });
 });
 
 /**
- * Divergences NN01 does not close. They are domain checks (pair verification,
- * required-field presence, query text cap), not the numeric bounds the PBI
- * targets, and changing them would alter accept/reject outcomes outside the
- * declared scope. Pinned here so a silent change to either side fails.
+ * Domain checks the wire rows used to skip (required-field presence, cutoff pair
+ * verification, query text cap). PBI 2026-10-11-10 makes both paths run the same
+ * DASHBOARD_SQLITE_SUBTYPE_SPECS row through `evaluateSubtypeSpec`, so these
+ * payloads now get the same verdict on both sides; the old pin asserted the
+ * divergence instead. Kept as an agreement test so a future re-fork fails here.
  */
-describe('archive payload validation: known divergences outside NN01 scope (pinned)', () => {
-  it('envelope requires includeDeleted / yasumaroVersion presence; the wire row does not', () => {
+describe('archive payload validation: domain checks agree across both gates', () => {
+  it('both gates require includeDeleted / yasumaroVersion presence', () => {
     const previewNoFlag = { subtype: 'archive_preview', cutoffDate: CUTOFF_DATE, cutoffMs: CUTOFF_MS };
     expect(envelopeGate(previewNoFlag)).toBe('reject');
-    expect(wireGate('archive_preview', previewNoFlag)).toBe('accept');
+    expect(wireGate('archive_preview', previewNoFlag)).toBe('reject');
 
     const createNoVersion = { subtype: 'archive_create', cutoffDate: CUTOFF_DATE, cutoffMs: CUTOFF_MS, includeDeleted: false };
     expect(envelopeGate(createNoVersion)).toBe('reject');
-    expect(wireGate('archive_create', createNoVersion)).toBe('accept');
+    expect(wireGate('archive_create', createNoVersion)).toBe('reject');
   });
 
-  it('envelope verifies the cutoff pair and caps archive_query length; the wire row does not', () => {
+  it('both gates verify the cutoff pair and cap the archive_query text', () => {
     const forgedPair = { subtype: 'archive_preview', cutoffDate: CUTOFF_DATE, cutoffMs: CUTOFF_MS + 1, includeDeleted: false };
     expect(envelopeGate(forgedPair)).toBe('reject');
-    expect(wireGate('archive_preview', forgedPair)).toBe('accept');
+    expect(wireGate('archive_preview', forgedPair)).toBe('reject');
 
     const longQuery = { ...BASE.archive_query, query: 'q'.repeat(VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH + 1) };
     expect(envelopeGate(longQuery)).toBe('reject');
-    expect(wireGate('archive_query', longQuery)).toBe('accept');
+    expect(wireGate('archive_query', longQuery)).toBe('reject');
+  });
+
+  it('both gates accept the payloads the producers actually send', () => {
+    for (const [subtype, payload] of Object.entries(BASE)) {
+      expect(envelopeGate(payload), `envelope ${subtype}`).toBe('accept');
+      expect(wireGate(subtype, payload), `wire ${subtype}`).toBe('accept');
+    }
   });
 });
