@@ -30,6 +30,8 @@ Scenario: stripビルドにプローブ文字列が残らない
   Given OW_E2E_PROBE=0 でビルドする
   When bundle を grep する
   Then owE2eProbeEnabled / owE2eTestState / data-ow-test-state / data-ow-e2e-test / __OW_TEST_STATE のいずれも現れない
+  And OW_PROBE_QUERY / OW_PROBE_STATE は契約テーブル由来でのみ残る
+    （他メッセージ型と同等の inert な routing label。秘匿値なし・活性化なし）
 
 Scenario: 通常ビルドの挙動が変わらない
   Given 既定ビルドで E2E を実行する
@@ -84,3 +86,9 @@ Scenario: 通常ビルドの挙動が変わらない
 - `OW_E2E_PROBE=0 npx wxt build` exit 0 — 5文字列すべてゼロ件（完全除去達成）
 - 隔離・golden・extractor 系 193件 green（無変更・挙動不変の証拠）
 - headed E2E（Scenario 2）は未検証。NN08 の headed 実行時に 4 spec で併せて確認する
+- 追記（中継化後）: strip bundle に `OW_PROBE_QUERY` / `OW_PROBE_STATE` が
+  各1件残ることを確認。出所は `VALID_MESSAGE_TYPES` 配列リテラル（他型と同列の
+  routing label）で、secret でも活性化経路でもない。CS リレーは no-op 化、
+  SW は fail-closed（query→enabled:false 恒常）のため除去対象外と裁定し、
+  BDD Scenario 1 に明記した。契約テーブル自体の per-build 分岐は
+  wire 契約の分岐を招くため採用しない。
