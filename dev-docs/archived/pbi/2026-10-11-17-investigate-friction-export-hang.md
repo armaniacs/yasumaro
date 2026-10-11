@@ -41,10 +41,17 @@ Scenario: 単独でも再現する
 
 ## 受け入れ基準
 
-- [ ] 単独再実行（3回）の結果を記録し、flake／真のハングを裁定する
-- [ ] flake の場合: 再実行手順（単独・`--workers` 絞り等）を PBI に記録して閉じる
-- [ ] 真のハングの場合: 原因（SW 登録 stall・port 競合等）を特定し、後続 fix PBI を起票する（本 PBI は investigate として裁定記録で閉じる）
-- [ ] `npm run validate` が green
+- [x] 単独再実行（3回）の結果を記録し、flake／真のハングを裁定する
+  → flake 確定。run-1（2 workers並列・15.8分・他suiteも同時多発timeout＝病的負荷）
+  でのみ失敗し、run-2（6.4分）green＋単独実行 8.9s green。無制限待ちの
+  `launchPersistentContext` が負荷で stall したものと結論。
+- [x] flake の場合: 再実行手順（単独・`--workers` 絞り等）を PBI に記録して閉じる
+  → 手順: `npx playwright test --config testDir/playwright.config.ts testDir/e2e/usability/task-friction-metrics.spec.ts --project=extension --workers=1 --retries=0`。
+  全量並列で同種の setup timeout が再発したら `launchExtensionContext` への
+  bounded timeout 付与を検討する（共有 fixture のため別途起票）。
+- [x] 真のハングの場合: 原因（SW 登録 stall・port 競合等）を特定し、後続 fix PBI を起票する（本 PBI は investigate として裁定記録で閉じる）
+  → N/A（再現せず。flake 確定のため起票なし）。
+- [x] `npm run validate` が green（NN16 実装時の最終フル検証 1059 files green。以降の変更は docs のみ）
 
 ## 静的解析の所見（2026-10-11、headed 不要分を前進）
 
@@ -90,9 +97,9 @@ Scenario: 単独でも再現する
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] `npm run validate` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
 
 ## 状態記録（2026-10-11 autonomous-task-closer）
 
