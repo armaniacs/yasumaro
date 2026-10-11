@@ -134,6 +134,12 @@ C8 案を以下の形で確定した。`isE2E` はプローブ publish のゲー
   `npx playwright test --config testDir/playwright.config.ts --grep @extension`
   （CI の extension/a11y/usability ジョブでも検証される）。green を確認したら
   上の残り 2 項目を `[x]` にしてアーカイブすること。
+- 追記（2026-10-11 ユーザー実行分）: 初回 E2E でプローブ移行 7 件が失敗したが、
+  失敗時 DOM スナップショットに `data-ow-test-state` が残存＝旧コード実行であり、
+  NN08 以前の stale dist での実行と確定（新コードは当該属性を書かない）。
+  コード修正は不要。`npm run build` 後に再実行すること。usability 3 件の失敗は
+  本差分と無関係（dashboard/export/i18n 未接触。`/completed/i` 対日本語 UI の
+  ロケール不一致＋fixture setup ハング＝環境要因。main ベースライン未確認）。
 
 ## 着手メモ（2026-10-11 / 未着手の理由と手順）
 
