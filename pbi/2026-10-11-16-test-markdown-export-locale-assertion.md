@@ -50,9 +50,13 @@ Scenario: 英語 UI でも回帰しない
 
 - [ ] ja / en 両 UI 言語で `dashboard-markdown-export` が green（両 project）
 - [x] 修正方針を以下から裁定し PBI に記録する: (a) fixture/spec で locale を en-US に固定 (b) `.success` クラス＋非空テキスト等のロケール非依存アサーション (c) ブラウザ `--lang` 駆動
-  → (a) に決定。`dashboard-shared.fixture.ts` が `test.use({ locale })` 透過に
-  対応済み（`dashboard-locale.fixture.ts` 前例）で最短・既定路線のため。
-  `testInteraction` 共有 fixture には触らず、当該 describe スコープのみ。
+  → 当初 (a) で実装（`test.use({ locale: 'en-US' })`）したが headed 実行でも
+  UI が日本語のまま red 継続。`test.use`→shared→`--lang` 配線は正しいため、
+  Chromium 側で `--lang` が extension i18n に反映されないと確定。
+  よって **(b) に変更**: `toContainText(/completed/i)` を
+  `toHaveClass(/success/)` に置換し、無効と判明した locale pin は除去。
+  成功表示は 3 秒間出る（`showStatus` 実コード）ため poll で捕捉可能。
+  前回失敗 run でも success 状態を 10 回観測しており確度は高い。
 - [x] NN04 のロケール判定統一（`a8f1daba`）と矛盾しないこと（アプリ側の判定は不変。spec の実行条件のみ固定）
 - [x] `npm run validate` が green（最終フル検証で確認する→ 1059 files green で確認）
 
@@ -93,9 +97,9 @@ Scenario: 英語 UI でも回帰しない
 
 ## 検証結果（2026-10-11 autonomous-task-closer）
 
-- 実装: `dashboard-markdown-export.spec.ts` の describe に
-  `test.use({ locale: 'en-US' })` を追加（1行＋コメント）
+- 実装: `toContainText(/completed/i)` → `toHaveClass(/success/)` に置換
+  （経緯は受け入れ基準の方針裁定欄を参照。(a) 実装→headed で無効を確認→(b) へ）
 - `npm run type-check:test:baseline` — 463（pinned 463、exit 0）
 - `npx eslint` exit 0
-- headed E2E（ja/en 両条件）は未検証。ユーザー headed 実行待ち。
+- headed E2E は未検証。ユーザー headed 実行待ち。
   本 PBI は E2E green 確認後にアーカイブする（NN08 と同一基準）

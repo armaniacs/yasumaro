@@ -10,11 +10,6 @@ import { createDashboardSqliteClient, migrationSettled, seedRows } from '../fixt
 import { readFileSync } from 'node:fs';
 
 test.describe('Dashboard Markdown export @extension', () => {
-  // PBI 2026-10-11-16: status text is i18n-resolved, so the /completed/i
-  // assertion below needs a pinned UI locale (dashboard-locale.fixture.ts
-  // precedent). Without this, ja system locales fail deterministically.
-  test.use({ locale: 'en-US' });
-
   test('clicking Export Markdown downloads a .md file containing the seeded entry', async ({ dashboardPage: page }) => {
     const client = createDashboardSqliteClient(page);
     await migrationSettled(page, client);
@@ -38,6 +33,10 @@ test.describe('Dashboard Markdown export @extension', () => {
     const content = readFileSync(savedPath!, 'utf-8');
     expect(content).toContain('Markdown Export Target Page');
 
-    await expect(page.locator('#export-status')).toContainText(/completed/i, { timeout: 10000 });
+    // PBI 2026-10-11-16: status text is i18n-resolved, so assert the success
+    // state (class), not the English string — /completed/i can never match a
+    // Japanese UI. The class is written whole by showStatus and the success
+    // state shows for 3s, so polling catches it in any locale.
+    await expect(page.locator('#export-status')).toHaveClass(/success/, { timeout: 10000 });
   });
 });
