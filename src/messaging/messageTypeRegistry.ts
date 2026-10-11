@@ -44,6 +44,8 @@ export const VALID_MESSAGE_TYPES = [
     'DASHBOARD_SQLITE', // Dashboard SQLite query/update operations
     'GENERATE_REVIEW_SUMMARY', // Manually trigger weekly/monthly review summary generation
     'LOG_FORWARD', // Log relay from Offscreen Document / its Worker (no direct chrome.storage access)
+    'OW_PROBE_QUERY', // E2E probe arming query (content script cannot read chrome.storage.session)
+    'OW_PROBE_STATE', // E2E probe state relay (content script cannot write chrome.storage.session)
 ] as const;
 
 /**
@@ -57,6 +59,8 @@ export const CONTENT_SCRIPT_ALLOWED_TYPES = [
     'CONTENT_CLEANSING_EXECUTED',
     'CHECK_DOMAIN',
     'PING',
+    'OW_PROBE_QUERY',
+    'OW_PROBE_STATE',
 ] as const;
 
 export const NO_PAYLOAD_TYPES = [
@@ -66,6 +70,7 @@ export const NO_PAYLOAD_TYPES = [
     'ACTIVITY_UPDATE',
     'SESSION_LOCK_REQUEST',
     'PING',
+    'OW_PROBE_QUERY',
     'REFRESH_LOCAL_MARKDOWN_SCHEDULER',
     'CONSENT_STATE_CHANGED',
     'TEST_CONNECTIONS',

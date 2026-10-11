@@ -328,6 +328,8 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'GENERATE_REVIEW_SUMMARY' ? { success: true; generated: boolean } :
   T extends 'DASHBOARD_SQLITE' ? Record<string, unknown> :
   T extends 'LOG_FORWARD' ? { success: true } :
+  T extends 'OW_PROBE_QUERY' ? { success: true; enabled: boolean } :
+  T extends 'OW_PROBE_STATE' ? { success: true } :
   SuccessResponse;
 
 /**

@@ -135,4 +135,32 @@ describe('MessageRouter — validator integration', () => {
       expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
     });
   });
+
+  it('answers OW_PROBE_QUERY disarmed without session (fail-safe)', async () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const handled = router.dispatch({ type: 'OW_PROBE_QUERY', protocolVersion: 1 }, sender, sendResponse);
+    expect(handled).toBe(true);
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({ success: true, enabled: false });
+    });
+  });
+
+  it('rejects malformed OW_PROBE_STATE before the handler runs', () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const invalidMsg = {
+      type: 'OW_PROBE_STATE',
+      payload: { maxScrollPercentage: 80 },
+      protocolVersion: 1,
+    };
+    const result = router.dispatch(invalidMsg, sender, sendResponse);
+
+    expect(result).toBe(false);
+    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+  });
 });

@@ -22,6 +22,8 @@ import type {
   ManualRecordMessage,
   ContentCleansingExecutedMessage,
   RegenerateSummaryMessage,
+  OwE2eProbeQueryMessage,
+  OwE2EProbeStateMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
@@ -706,6 +708,63 @@ export class TestObsidianValidator implements MessageValidator<ExtensionMessage>
   }
 }
 
+// ------------------------------------------------------------------
+// E2EProbeQueryValidator — OW_PROBE_QUERY (no payload, mirror CheckDomain)
+// ------------------------------------------------------------------
+export class E2EProbeQueryValidator implements MessageValidator<OwE2eProbeQueryMessage> {
+  validate(msg: unknown): OwE2eProbeQueryMessage {
+    if (!msg || typeof msg !== 'object') {
+      throw new ValidationError('E2EProbeQueryValidator', 'Message must be an object');
+    }
+    const m = msg as Record<string, unknown>;
+    if (m.type !== 'OW_PROBE_QUERY') {
+      throw new ValidationError('E2EProbeQueryValidator', 'type must be OW_PROBE_QUERY', 'type');
+    }
+    // OW_PROBE_QUERY must not have payload (NO_PAYLOAD_TYPES), but tolerate undefined
+    if (m.payload !== undefined) {
+      throw new ValidationError('E2EProbeQueryValidator', 'OW_PROBE_QUERY must not have payload', 'payload');
+    }
+    return msg as OwE2eProbeQueryMessage;
+  }
+}
+
+// ------------------------------------------------------------------
+// E2EProbeStateValidator — OW_PROBE_STATE (strict probe-state shape)
+// ------------------------------------------------------------------
+const E2E_PROBE_STATE_NUMBER_FIELDS = [
+  'maxScrollPercentage',
+  'startTime',
+  'minVisitDuration',
+  'minScrollDepth',
+  'duration',
+] as const;
+
+export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateMessage> {
+  validate(msg: unknown): OwE2EProbeStateMessage {
+    if (!msg || typeof msg !== 'object') {
+      throw new ValidationError('E2EProbeStateValidator', 'Message must be an object');
+    }
+    const m = msg as Record<string, unknown>;
+    if (m.type !== 'OW_PROBE_STATE') {
+      throw new ValidationError('E2EProbeStateValidator', 'type must be OW_PROBE_STATE', 'type');
+    }
+    if (!m.payload || typeof m.payload !== 'object' || Array.isArray(m.payload)) {
+      throw new ValidationError('E2EProbeStateValidator', 'payload is required', 'payload');
+    }
+    const p = m.payload as Record<string, unknown>;
+    // duration is fractional seconds — finite check, not integer.
+    for (const field of E2E_PROBE_STATE_NUMBER_FIELDS) {
+      if (typeof p[field] !== 'number' || !Number.isFinite(p[field])) {
+        throw new ValidationError('E2EProbeStateValidator', `payload.${field} must be a finite number`, field);
+      }
+    }
+    if (typeof p.isValidVisitReported !== 'boolean') {
+      throw new ValidationError('E2EProbeStateValidator', 'payload.isValidVisitReported must be a boolean', 'isValidVisitReported');
+    }
+    return msg as OwE2EProbeStateMessage;
+  }
+}
+
 // Convenience singletons for registry wiring
 export const validVisitValidator = new ValidVisitValidator();
 export const dashboardSqliteValidator = new DashboardSqliteValidator();
@@ -715,3 +774,5 @@ export const regenerateSummaryValidator = new RegenerateSummaryValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();
 export const testObsidianValidator = new TestObsidianValidator();
+export const e2eProbeQueryValidator = new E2EProbeQueryValidator();
+export const e2eProbeStateValidator = new E2EProbeStateValidator();

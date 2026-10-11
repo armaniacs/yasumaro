@@ -14,10 +14,6 @@ import { PageState } from '../pageState.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../../utils/aiSummaryCleaner/rules.js';
 
 // ---- chrome mock must be before importing extractor ----
-// Controllable chrome.storage.session backing store for the E2E probe
-// (PBI NN08): the singleton kernel resolves the extension-side probe flag
-// from here.
-const e2eSessionStore: Record<string, unknown> = {};
 const chromeMock = {
   runtime: {
     getURL: vi.fn(() => 'chrome-extension://test/content-extractor.js'),
@@ -33,18 +29,6 @@ const chromeMock = {
         return Promise.resolve({});
       }),
       set: vi.fn(() => Promise.resolve()),
-    },
-    session: {
-      get: vi.fn((key?: string | string[] | null) => {
-        if (typeof key === 'string') {
-          return Promise.resolve(key in e2eSessionStore ? { [key]: e2eSessionStore[key] } : {});
-        }
-        return Promise.resolve({ ...e2eSessionStore });
-      }),
-      set: vi.fn((items: Record<string, unknown>) => {
-        Object.assign(e2eSessionStore, items);
-        return Promise.resolve();
-      }),
     },
   },
   i18n: {
@@ -128,13 +112,13 @@ import {
 } from '../extractor.js';
 import { getPageStateForTesting } from './helpers/contentTestkit.js';
 import { throttle } from '../throttle.js';
-import { E2E_PROBE_ENABLE_KEY } from '../e2eTestState.js';
 
-// File-level isolation for the E2E probe (PBI NN08): the singleton kernel
-// persists across describes, so every test starts disarmed with no leftover
-// window/DOM probe output. Runs before each describe-level beforeEach.
+// File-level isolation for the E2E probe: the singleton kernel persists
+// across describes, so every test starts disarmed (default sender response)
+// with no leftover window/DOM probe output. Runs before each
+// describe-level beforeEach.
 beforeEach(() => {
-  for (const key of Object.keys(e2eSessionStore)) delete e2eSessionStore[key];
+  sendMessageWithRetryMock.mockResolvedValue({ success: true });
   delete (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE;
   document.documentElement.removeAttribute('data-ow-e2e-test');
   document.documentElement.removeAttribute('data-ow-test-state');
@@ -287,7 +271,6 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
   beforeEach(() => {
     vi.clearAllMocks();
     document.body.innerHTML = '';
-    for (const key of Object.keys(e2eSessionStore)) delete e2eSessionStore[key];
     document.documentElement.removeAttribute('data-ow-e2e-test');
     document.documentElement.removeAttribute('data-ow-test-state');
     (globalThis as unknown as Record<string, unknown>).__OW_TEST_STATE = undefined;
@@ -346,7 +329,7 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
   });
 
   it('checkVisitConditions E2E hook sets window.__OW_TEST_STATE but never page DOM', async () => {
-    e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
     await init(); // isE2E is resolved once at init under the PBI 02 contract
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.maxScrollPercentage = 80;
@@ -575,7 +558,7 @@ describe('extractor-comprehensive: init and message handler', () => {
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
   });
   it('init registers scroll (isTrusted guard), beforeunload, visibilitychange and E2E state', async () => {
-    e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
     const addSpy = vi.spyOn(window, 'addEventListener');
     const docSpy = vi.spyOn(document, 'addEventListener');
     await init();
@@ -733,7 +716,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
   });
 
   it('checkVisitConditions E2E hook with __OW_TEST_STATE undefined then defined (covers 270)', async () => {
-    e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
     await init(); // re-resolve the session flag (singleton caches it at init)
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.maxScrollPercentage = 80;

@@ -24,7 +24,11 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
-import { publishE2eTestState, isE2EProbeEnabled, markE2eVisitReported, type OWTestState } from './e2eTestState.js';
+// Probe relay (PBI 2026-10-11-08 follow-up): content scripts cannot reach
+// chrome.storage.session, so arming/state travel as runtime messages via the
+// service worker. Only the state shape is imported (type-only, erased).
+import { queryProbeArmed, relayProbeState, markProbeVisitReported } from './e2eProbeRelay.js';
+import type { OWTestState } from './e2eTestState.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.
@@ -45,12 +49,12 @@ export class ContentKernel {
     private readonly sender: MessageSender;
     private readonly isE2ETest: () => boolean;
     /**
-     * PBI 2026-10-11-08 (NN08): extension-side probe arming. Resolved once in
-     * init() from chrome.storage.session — never from page DOM, so a
-     * page-set `data-ow-e2e-test` attribute cannot enable the probe.
+     * Extension-side probe arming. Resolved once in init() via the service
+     * worker relay — never from page DOM, so a page-set `data-ow-e2e-test`
+     * attribute cannot enable the probe.
      */
     private e2eSessionEnabled = false;
-    /** True when no explicit isE2ETest was injected (session resolve needed). */
+    /** True when no explicit isE2ETest was injected (relay resolve needed). */
     private readonly e2eSessionResolveNeeded: boolean;
     private readonly gating: VisitGating;
     private readonly deadlineTimer: DeadlineTimer;
@@ -70,9 +74,10 @@ export class ContentKernel {
         this.scrollMonitor = new ScrollMonitor(this.pageState, this.clock);
         this.sender = opts.sender ?? createContentMessageSender(2);
         this.e2eSessionResolveNeeded = opts.isE2ETest === undefined;
-        // PBI 2026-10-11-08 (NN08): the default no longer reads the page-writable
+        // The default no longer reads the page-writable
         // `data-ow-e2e-test` DOM attribute. Arming comes from the
-        // extension-side session flag resolved in init(); explicit injection
+        // extension-side session flag resolved in init() via the service
+        // worker relay; explicit injection
         // (unit tests) keeps working unchanged.
         this.isE2ETest = opts.isE2ETest ?? (() => this.e2eSessionEnabled);
         this.visitReporter = new VisitReporter({
@@ -223,9 +228,8 @@ export class ContentKernel {
             'contentKernel',
         );
 
-        // PBI 2026-10-11-14 (NN14): the window-global mutation lives in
-        // markE2eVisitReported (owned by e2eTestState.js) so strip builds
-        // keep no probe strings in this module.
+        // Probe relay: state travels to the service worker as a runtime
+        // message (content scripts cannot reach chrome.storage.session).
         if (this.gating.isE2E) {
             const state: OWTestState = {
                 maxScrollPercentage: visitState.maxScrollPercentage,
@@ -235,14 +239,14 @@ export class ContentKernel {
                 minScrollDepth: thresholds.minScroll,
                 duration,
             };
-            publishE2eTestState(state);
+            relayProbeState(this.sender, state);
         }
 
         if (evaluation.reportable) {
             void logInfo(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`, { duration, maxScrollPercentage: visitState.maxScrollPercentage }, 'contentKernel');
             void this.reportValidVisit();
             if (this.gating.isE2E) {
-                markE2eVisitReported();
+                markProbeVisitReported(this.sender);
             }
             this.stopPeriodicCheck();
         }
@@ -288,14 +292,16 @@ export class ContentKernel {
         // PBI 2026-10-11-12 (NN12): settings load and probe-flag resolve are
         // independent — run them concurrently. loadSettings rejection still
         // rejects init (Promise.all); the flag resolve is fail-safe inside
-        // isE2EProbeEnabled (never rejects), so error semantics are unchanged.
+        // queryProbeArmed (never rejects), so error semantics are unchanged.
         await Promise.all([
             this.loadSettings(),
             // Resolve the extension-side probe flag once before the gating caches
             // it — only when the caller did not inject an explicit decision.
+            // The service worker reads the session flag on our behalf: content
+            // scripts cannot reach chrome.storage.session directly.
             (async () => {
                 if (this.e2eSessionResolveNeeded) {
-                    this.e2eSessionEnabled = await isE2EProbeEnabled();
+                    this.e2eSessionEnabled = await queryProbeArmed(this.sender);
                 }
             })(),
         ]);
@@ -342,7 +348,7 @@ export class ContentKernel {
         this.startPeriodicCheck();
 
         if (this.gating.isE2E) {
-            publishE2eTestState({
+            relayProbeState(this.sender, {
                 maxScrollPercentage: this.pageState.maxScrollPercentage,
                 isValidVisitReported: this.pageState.isValidVisitReported,
                 startTime: this.pageState.startTime,

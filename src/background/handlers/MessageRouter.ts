@@ -31,6 +31,10 @@ import {
   createTestAiHandler,
 } from './testingHandlers.js';
 import {
+  createE2EProbeQueryHandler,
+  createE2EProbeStateHandler,
+} from './e2eProbeHandlers.js';
+import {
   createFetchUrlHandler,
   createContentCleansingExecutedHandler,
   createCheckDomainHandler,
@@ -52,6 +56,8 @@ import {
   contentCleansingExecutedValidator,
   regenerateSummaryValidator,
   testObsidianValidator,
+  e2eProbeQueryValidator,
+  e2eProbeStateValidator,
 } from '../../messaging/validators.js';
 import type { TabCache } from '../tabCache.js';
 import type { AIService, AiTestProgress } from '../ai/AIService.js';
@@ -221,6 +227,8 @@ export class MessageRouter {
       }),
       LOG_FORWARD: createLogForwardHandler(),
       DASHBOARD_SQLITE: deps.dashboardSqliteHandler,
+      OW_PROBE_QUERY: createE2EProbeQueryHandler(),
+      OW_PROBE_STATE: createE2EProbeStateHandler(),
     };
 
     const contentScriptAllowed = new Set<string>(CONTENT_SCRIPT_ALLOWED_TYPES as readonly string[]);
@@ -247,6 +255,8 @@ export class MessageRouter {
     this.setValidator('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator);
     this.setValidator('REGENERATE_SUMMARY', regenerateSummaryValidator);
     this.setValidator('TEST_OBSIDIAN', testObsidianValidator);
+    this.setValidator('OW_PROBE_QUERY', e2eProbeQueryValidator);
+    this.setValidator('OW_PROBE_STATE', e2eProbeStateValidator);
   }
 
   /**

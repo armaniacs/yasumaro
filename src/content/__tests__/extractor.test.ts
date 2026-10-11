@@ -7,10 +7,14 @@ import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 
-// Controllable chrome.storage.session backing store for the E2E probe
-// (PBI NN08): the singleton kernel resolves the extension-side probe flag
-// from here. Reset before every test by the file-level beforeEach below.
-const e2eSessionStore: Record<string, unknown> = {};
+// Controllable sender for the E2E probe relay (PBI NN08 follow-up): the
+// singleton kernel resolves arming via runtime message, so E2E tests arm it
+// with { success: true, enabled: true }. Default is disarmed.
+const { sendMessageWithRetryMock } = vi.hoisted(() => ({
+    sendMessageWithRetryMock: vi.fn(
+        (_message: { type: string }): Promise<unknown> => Promise.resolve({ success: true }),
+    ),
+}));
 
 // Mock chrome API before importing
 const chromeMock = {
@@ -32,18 +36,6 @@ const chromeMock = {
                 return Promise.resolve({});
             }),
             set: vi.fn(() => Promise.resolve()),
-        },
-        session: {
-            get: vi.fn((key?: string | string[] | null) => {
-                if (typeof key === 'string') {
-                    return Promise.resolve(key in e2eSessionStore ? { [key]: e2eSessionStore[key] } : {});
-                }
-                return Promise.resolve({ ...e2eSessionStore });
-            }),
-            set: vi.fn((items: Record<string, unknown>) => {
-                Object.assign(e2eSessionStore, items);
-                return Promise.resolve();
-            }),
         },
     },
     i18n: {
@@ -102,9 +94,7 @@ vi.mock('../utils/logger/api.js', async () =>
 );
 
 vi.mock('../contentMessageSender.js', () => ({
-    createContentMessageSender: vi.fn(() => ({
-        sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true })),
-    })),
+    createContentMessageSender: vi.fn(() => ({ sendMessageWithRetry: sendMessageWithRetryMock })),
 }));
 
 import {
@@ -123,13 +113,13 @@ import { getPageStateForTesting } from './helpers/contentTestkit.js';
 import { showPrivacyConfirmDialog } from '../privacyDialog.js';
 import { handleGetContentMessage, type GetContentHandlerDeps } from '../getContentHandler.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
-import { E2E_PROBE_ENABLE_KEY } from '../e2eTestState.js';
 
-// File-level isolation for the E2E probe (PBI NN08): the singleton kernel
-// persists across describes, so every test starts disarmed with no leftover
-// window/DOM probe output. Runs before each describe-level beforeEach.
+// File-level isolation for the E2E probe: the singleton kernel persists
+// across describes, so every test starts disarmed (default sender response)
+// with no leftover window/DOM probe output. Runs before each
+// describe-level beforeEach.
 beforeEach(() => {
-    for (const key of Object.keys(e2eSessionStore)) delete e2eSessionStore[key];
+    sendMessageWithRetryMock.mockResolvedValue({ success: true });
     delete (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE;
     document.documentElement.removeAttribute('data-ow-e2e-test');
     document.documentElement.removeAttribute('data-ow-test-state');
@@ -513,8 +503,8 @@ describe('init - E2E test mode', () => {
         );
     });
 
-    it('publishes window state when the session flag is set (never to DOM)', async () => {
-        e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    it('publishes window state when the SW arms the probe (never to DOM)', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
         expect(window.__OW_TEST_STATE).toBeDefined();
         expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
@@ -943,8 +933,8 @@ describe('checkVisitConditions - error handling paths', () => {
         expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 
-    it('handles E2E test hook when the session flag is set', async () => {
-        e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    it('handles E2E test hook when the SW arms the probe', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
         expect(window.__OW_TEST_STATE).toBeDefined();
         expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
@@ -1897,8 +1887,8 @@ describe('checkVisitConditions - E2E test state updates', () => {
         );
     });
 
-    it('window state is published when the session flag is set (never to DOM)', async () => {
-        e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    it('window state is published when the SW arms the probe (never to DOM)', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
         expect(window.__OW_TEST_STATE).toBeDefined();
@@ -1906,7 +1896,7 @@ describe('checkVisitConditions - E2E test state updates', () => {
     });
 
     it('published window state contains expected fields', async () => {
-        e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
         const state = window.__OW_TEST_STATE as unknown as Record<string, unknown>;
@@ -2005,8 +1995,8 @@ describe('checkVisitConditions - E2E test state updates', () => {
         );
     });
 
-    it('window state is published when the session flag is set (never to DOM)', async () => {
-        e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+    it('window state is published when the SW arms the probe (never to DOM)', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
         expect(window.__OW_TEST_STATE).toBeDefined();
@@ -2014,7 +2004,7 @@ describe('checkVisitConditions - E2E test state updates', () => {
     });
 
     it('published window state contains expected fields', async () => {
-        e2eSessionStore[E2E_PROBE_ENABLE_KEY] = true;
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
         const state = window.__OW_TEST_STATE as unknown as Record<string, unknown>;

@@ -41,6 +41,8 @@ describe('messaging parity: message type registry', () => {
             'DASHBOARD_SQLITE',
             'GENERATE_REVIEW_SUMMARY',
             'LOG_FORWARD',
+            'OW_PROBE_QUERY',
+            'OW_PROBE_STATE',
         ]);
     });
 
@@ -50,6 +52,8 @@ describe('messaging parity: message type registry', () => {
             'CONTENT_CLEANSING_EXECUTED',
             'CHECK_DOMAIN',
             'PING',
+            'OW_PROBE_QUERY',
+            'OW_PROBE_STATE',
         ]);
     });
 
@@ -61,6 +65,7 @@ describe('messaging parity: message type registry', () => {
             'ACTIVITY_UPDATE',
             'SESSION_LOCK_REQUEST',
             'PING',
+            'OW_PROBE_QUERY',
             'REFRESH_LOCAL_MARKDOWN_SCHEDULER',
             'CONSENT_STATE_CHANGED',
             'TEST_CONNECTIONS',
