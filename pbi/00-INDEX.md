@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-11 usability E2E 失敗フォロー（usability-followup） — ⬜ 2件未着手 🔧非機能追加
+
+NN08 中継化後の headed E2E で残った usability 3 件を切り分けて PBI 化（NN08 差分との無関係は実コードで確認済み）。同日番号（01–15）との衝突回避のため NN16–17 を使用（NN 昇順＝優先降順）。RICE 採点の詳細は [2026-10-11-00-backlog-usability-followup.md](2026-10-11-00-backlog-usability-followup.md)（live 台帳）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 16 | [2026-10-11-16-test-markdown-export-locale-assertion.md](2026-10-11-16-test-markdown-export-locale-assertion.md) | test | 2.4 | 1.0 | ⬜ 未着手。`/completed/i` 対日本語 UI の決定的不一致。spec/fixture 側の修正見込み |
+| 17 | [2026-10-11-17-investigate-friction-export-hang.md](2026-10-11-17-investigate-friction-export-hang.md) | investigate | 0.7 | 1.5 | ⬜ 未着手。fixture setup timeout＋9.1分の分類（flake 疑い）。単独再実行で裁定 |
+
+実行順: RICE 順（NN16 → NN17）。依存なし。いずれも headed 検証が必要。
+
 ### 2026-10-11 code-review 指摘フォロー（review-followup） — ✅ 5件完了・アーカイブ済み 🔧非機能追加
 
 `/code-review`（直近3コミット対象）の Suggestions 5 件を全件 PBI 化・実装。同日 checking-team 番号（01–10）との衝突回避のため NN11–15 を使用（NN 昇順＝優先降順）。RICE 採点・依存・バッチ計画（W1–W3）の詳細は [2026-10-11-00-backlog-review-followup.md](../dev-docs/archived/pbi/2026-10-11-00-backlog-review-followup.md)（アーカイブ済み）。
