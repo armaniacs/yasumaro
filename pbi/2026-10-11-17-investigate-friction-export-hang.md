@@ -46,6 +46,21 @@ Scenario: 単独でも再現する
 - [ ] 真のハングの場合: 原因（SW 登録 stall・port 競合等）を特定し、後続 fix PBI を起票する（本 PBI は investigate として裁定記録で閉じる）
 - [ ] `npm run validate` が green
 
+## 静的解析の所見（2026-10-11、headed 不要分を前進）
+
+失敗箇所はテスト本体ではなく `context` fixture の setup（`launchExtensionContext`）。
+同 fixture 内で無制限待ちしうるのは `chromium.launchPersistentContext(''...)`
+のみ（`waitForServiceWorker` は 5 秒上限、`resolveExtensionId` は別 fixture）。
+よって 60s setup timeout の第一容疑は **負荷時のブラウザ起動 stall**
+（当該 run は 2 workers 並列・15.8 分の全量実行中）。
+
+- ダウンロード未消費による teardown ハングではない（当該テストは
+  `await download.path()` で消費済み。失敗も setup 段階）。
+- 分類実行は `--workers=1 --retries=0` で負荷要因を除外すること。3 回とも
+  green なら flake 確定。単独でも再現するなら `launchPersistentContext` に
+  bounded timeout を付ける fix（全 E2E に効く fixture 堅牢化）を検討する。
+  ただし共有 fixture の変更は影響が大きいため、単独再現の確認後に着手する。
+
 ## テスト戦略
 
 - E2E: `npx playwright test --config testDir/playwright.config.ts testDir/e2e/usability/task-friction-metrics.spec.ts` を単独×3（headed 必須）。
