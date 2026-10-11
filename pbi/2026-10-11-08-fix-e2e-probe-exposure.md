@@ -69,6 +69,41 @@ C8 案を以下の形で確定した。`isE2E` はプローブ publish のゲー
    単体 7 件更新 + `contentKernel.e2eProbeIsolation.test.ts`（新規）。
    新規 content モジュールは作らないため manifest 変更なし。
 
+## 設計変更（2026-10-11 E2E 失敗の5 Whys に基づく中継化）
+
+初回 headed E2E（7件失敗）の原因切り分けで判明した事実:
+
+- 初回 run の失敗時 DOM には `data-ow-test-state` が残っていた＝旧コード実行
+  （stale dist）。rebuild 後の rerun でも同一 7 件が再発したためコード側を疑い、
+  一時診断 spec で確定させた: `owE2eProbeEnabled: true` が session に存在し
+  （enable 成功）、`data-ow-test-state` は null（新コード実行中: 旧コードなら
+  テストページの baked 属性により必ず書かれる）、それでも state が現れない。
+- content script の `init()` 自体は完走している（同ビルドで recording 系を
+  含む 160 tests が green）。SW evaluate の session 読み書きも成功する。
+- 消去法による結論: **content script コンテキストから `chrome.storage.session`
+  に到達できない**。新コードの session 接触は read・write の2箇所のみで、
+  どちらも fail-silent ガードのため「無言の null 永続」になる。
+
+解: content script と session の間の脚を runtime message 中継に替える。
+harness↔SW 間は session のまま（fixture・spec・E2E 側の変更なし）。
+
+1. **新メッセージ型**: `OW_PROBE_QUERY`（無 payload）/ `OW_PROBE_STATE`
+   （6 field 厳密検証）。`VALID_MESSAGE_TYPES`・`CONTENT_SCRIPT_ALLOWED_TYPES`・
+   `NO_PAYLOAD_TYPES`（QUERY のみ）・`ExtensionMessage`・`ResponseForType`・
+   validator・router 配線・trust 契約テストを一式追加。型名の数字なしは
+   message-types-consistency テストの `[A-Z_]+` 規約に合わせたもの。
+2. **CS 側**（`src/content/e2eProbeRelay.ts` 新規）: `queryProbeArmed`（応答の
+   `success===true && enabled===true` のみ armed、失敗時 fail-safe）/
+   `relayProbeState`（window 反映＋fire-and-forget 送信、DOM 書き込みなし）/
+   `markProbeVisitReported`（window 変異の単一所有者）。独自の
+   `__OW_E2E_PROBE__` ガードで strip 時は無操作（flag の非公開維持）。
+3. **SW 側**（`src/background/handlers/e2eProbeHandlers.ts` 新規・無依存）:
+   query は `isE2EProbeEnabled()` を回答、state は `publishE2eTestState()` で
+   session へ書く（単一 publisher を再利用）。manifest に
+   `externally_connectable` がないためページ JS は送信不可。
+4. **manifest 変更なし**: 新 content モジュールは静的 import で bundle 化
+   （`e2eTestState.js` の前例通り。WAR が要るのは `content-extractor.js` 本体のみ）。
+
 ## 受け入れ基準
 
 - [x] E2E プローブの有効化を、ページ側 DOM 属性ではなく拡張側が制御する経路にする（`chrome.storage.session` の `owE2eProbeEnabled` フラグ。kernel `init()` で一度だけ解決）
@@ -140,6 +175,15 @@ C8 案を以下の形で確定した。`isE2E` はプローブ publish のゲー
   コード修正は不要。`npm run build` 後に再実行すること。usability 3 件の失敗は
   本差分と無関係（dashboard/export/i18n 未接触。`/completed/i` 対日本語 UI の
   ロケール不一致＋fixture setup ハング＝環境要因。main ベースライン未確認）。
+- 追記（2026-10-11 中継化）: rebuild 後の rerun でも同一 7 件が再発したため、
+  一時診断 spec（`SESSION_DUMP` / `DOM_ATTR` 8回出力、実行後に削除）で確定させた:
+  flag あり・DOM null・state なし＝content script から session 到達不能。
+  runtime-message 中継（`OW_PROBE_QUERY` / `OW_PROBE_STATE`）に設計変更。
+  `npm run validate` exit 0（Test Files 1059 passed / Tests 15982 passed）。
+  両ビルド＋7文字列 grep 再検証済み（既定: 機能文字列あり・DOM 文字列なし、
+  strip: 5文字列ゼロ・契約型名のみ残存）。再実行手順は `npm run build` 後に
+  対象 4 spec（content-script-recording / recording-traceId /
+  overcut-guard-recording / archive-recommended-verification G5）から。
 
 ## 着手メモ（2026-10-11 / 未着手の理由と手順）
 
