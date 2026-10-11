@@ -91,9 +91,9 @@ Scenario: 英語 UI でも回帰しない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `npm run validate` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+- [x] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
 
 ## 検証結果（2026-10-11 autonomous-task-closer）
 
@@ -103,3 +103,5 @@ Scenario: 英語 UI でも回帰しない
 - `npx eslint` exit 0
 - headed E2E は未検証。ユーザー headed 実行待ち。
   本 PBI は E2E green 確認後にアーカイブする（NN08 と同一基準）
+- 追記（headed E2E green）: 当該 spec のみ実行し 2 passed（extension＋usability
+  両 project）。NN17（friction hang）は別件として残置。
