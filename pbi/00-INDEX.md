@@ -14,14 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-11 usability E2E 失敗フォロー（usability-followup） — ✅ 1件完了・アーカイブ済み / ⬜ 1件（headed必須のため未着手） 🔧非機能追加
+### 2026-10-11 usability E2E 失敗フォロー（usability-followup） — ✅ 2件完了・アーカイブ済み 🔧非機能追加
 
-NN08 中継化後の headed E2E で残った usability 3 件を切り分けて PBI 化（NN08 差分との無関係は実コードで確認済み）。同日番号（01–15）との衝突回避のため NN16–17 を使用（NN 昇順＝優先降順）。RICE 採点の詳細は [2026-10-11-00-backlog-usability-followup.md](2026-10-11-00-backlog-usability-followup.md)（live 台帳）。
+NN08 中継化後の headed E2E で残った usability 3 件を切り分けて PBI 化（NN08 差分との無関係は実コードで確認済み）。同日番号（01–15）との衝突回避のため NN16–17 を使用（NN 昇順＝優先降順）。RICE 採点の詳細は [2026-10-11-00-backlog-usability-followup.md](../dev-docs/archived/pbi/2026-10-11-00-backlog-usability-followup.md)（アーカイブ済み）。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
 | 16 | [2026-10-11-16-test-markdown-export-locale-assertion.md](../dev-docs/archived/pbi/2026-10-11-16-test-markdown-export-locale-assertion.md) | test | 2.4 | 1.0 | ✅ 完了。言語非依存の `.success` クラス断定に転換（locale固定は無効と実測）。headed 2 passed |
-| 17 | [2026-10-11-17-investigate-friction-export-hang.md](2026-10-11-17-investigate-friction-export-hang.md) | investigate | 0.7 | 1.5 | ⬜ 未着手。fixture setup timeout＋9.1分の分類（flake 疑い）。単独再実行で裁定 |
+| 17 | [2026-10-11-17-investigate-friction-export-hang.md](../dev-docs/archived/pbi/2026-10-11-17-investigate-friction-export-hang.md) | investigate | 0.7 | 1.5 | ✅ flake 確定（病的負荷runのみ失敗・通常＋単独green）。再実行手順を記録して閉じた |
 
 実行順: RICE 順（NN16 → NN17）。依存なし。いずれも headed 検証が必要。
 
