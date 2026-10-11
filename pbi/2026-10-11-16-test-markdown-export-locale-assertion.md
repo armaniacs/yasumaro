@@ -49,9 +49,12 @@ Scenario: 英語 UI でも回帰しない
 ## 受け入れ基準
 
 - [ ] ja / en 両 UI 言語で `dashboard-markdown-export` が green（両 project）
-- [ ] 修正方針を以下から裁定し PBI に記録する: (a) fixture/spec で locale を en-US に固定 (b) `.success` クラス＋非空テキスト等のロケール非依存アサーション (c) ブラウザ `--lang` 駆動
-- [ ] NN04 のロケール判定統一（`a8f1daba`）と矛盾しないこと
-- [ ] `npm run validate` が green
+- [x] 修正方針を以下から裁定し PBI に記録する: (a) fixture/spec で locale を en-US に固定 (b) `.success` クラス＋非空テキスト等のロケール非依存アサーション (c) ブラウザ `--lang` 駆動
+  → (a) に決定。`dashboard-shared.fixture.ts` が `test.use({ locale })` 透過に
+  対応済み（`dashboard-locale.fixture.ts` 前例）で最短・既定路線のため。
+  `testInteraction` 共有 fixture には触らず、当該 describe スコープのみ。
+- [x] NN04 のロケール判定統一（`a8f1daba`）と矛盾しないこと（アプリ側の判定は不変。spec の実行条件のみ固定）
+- [ ] `npm run validate` が green（最終フル検証で確認する）
 
 ## テスト戦略
 
@@ -87,3 +90,11 @@ Scenario: 英語 UI でも回帰しない
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] `npm run validate` が green
 - [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 検証結果（2026-10-11 autonomous-task-closer）
+
+- 実装: `dashboard-markdown-export.spec.ts` の describe に
+  `test.use({ locale: 'en-US' })` を追加（1行＋コメント）
+- `npm run type-check:test:baseline` — 463（pinned 463、exit 0）
+- `npx eslint` exit 0
+- headed E2E（ja/en 両条件）は未検証。ユーザー headed 実行待ち

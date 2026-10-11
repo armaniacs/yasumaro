@@ -10,6 +10,11 @@ import { createDashboardSqliteClient, migrationSettled, seedRows } from '../fixt
 import { readFileSync } from 'node:fs';
 
 test.describe('Dashboard Markdown export @extension', () => {
+  // PBI 2026-10-11-16: status text is i18n-resolved, so the /completed/i
+  // assertion below needs a pinned UI locale (dashboard-locale.fixture.ts
+  // precedent). Without this, ja system locales fail deterministically.
+  test.use({ locale: 'en-US' });
+
   test('clicking Export Markdown downloads a .md file containing the seeded entry', async ({ dashboardPage: page }) => {
     const client = createDashboardSqliteClient(page);
     await migrationSettled(page, client);

@@ -78,3 +78,9 @@ Scenario: 単独でも再現する
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] `npm run validate` が green
 - [ ] 検証結果（コマンドと結果）を PBI に記録し、アーカイブする
+
+## 状態記録（2026-10-11 autonomous-task-closer）
+
+本 PBI の第一手順（単独再実行×3による分類）は headed 必須のため、当環境では
+着手不可。コード変更を伴う作業も発生していないため live のまま残置する。
+headed 実行手順: `npx playwright test --config testDir/playwright.config.ts testDir/e2e/usability/task-friction-metrics.spec.ts` を単独で3回。
