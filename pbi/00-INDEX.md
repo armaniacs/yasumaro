@@ -28,7 +28,7 @@
 
 実行順: RICE 順（NN11 → NN15）。W1（11/12/13 を単独順次で実施）→ W2（14）→ W3（15）。全件 `npm run validate` exit 0（1057 files / 15962 tests passed）でアーカイブ。
 
-### 2026-10-10 Checking Team ラウンド（checking-team-1010） — 🔶 9件完了・アーカイブ済み / 🔶 1件（NN08 のみ実装済み・E2E 再実行待ち） 🔧非機能追加
+### 2026-10-10 Checking Team ラウンド（checking-team-1010） — ✅ 10件完了・アーカイブ済み 🔧非機能追加
 
 Checking Team skill（22観点・3 Wave）によるブランチ `1007z` vs `main` の差分レビュー（57 commits / 199 files / うちコード 137 files）。実行済み 17 観点の平均 **86/100（A）**、High 3 / Medium 15 / Low 6。High 3 件と Medium の主要部分を 10 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-10）。報告書は [dev-docs/archived/plans/2026-10-10-2320-review-1007z.md](../dev-docs/archived/plans/2026-10-10-2320-review-1007z.md)（live 台帳は [2026-10-11-00-backlog-checking-team-1010.md](2026-10-11-00-backlog-checking-team-1010.md)）。
 
@@ -43,11 +43,11 @@ High 3 件: (1) WASM チャンク境界クランプで非ASCII本文の継ぎ目
 | ✅ 05 | [2026-10-11-05-fix-settings-toplevel-repair.md](../dev-docs/archived/pbi/2026-10-11-05-fix-settings-toplevel-repair.md) | fix | 6.0 | 2.0 | ✅ 完了（`0f96cd4c`）。既移行インストール向けに blob リーダー・フォールバックを追加（High 3 の本体） |
 | ✅ 06 | [2026-10-11-06-docs-release-notes-and-guides.md](../dev-docs/archived/pbi/2026-10-11-06-docs-release-notes-and-guides.md) | docs | 6.0 | 0.5 | ✅ 完了（`a088ec4f`）。CHANGELOG 6.9.40 の PII 修正記載 + PII ガイド日英更新 + sandbox バンドル再生成 + AGENTS.md 正典 |
 | ✅ 07 | [2026-10-11-07-fix-status-type-and-focus-trap.md](../dev-docs/archived/pbi/2026-10-11-07-fix-status-type-and-focus-trap.md) | fix | 5.3 | 1.5 | ✅ 完了（`541fead2`）。StatusType に updating 追加 + focusTrap の disabled 除外と再取得 + confirmDialog 初期フォーカス |
-| 🔶 08 | [2026-10-11-08-fix-e2e-probe-exposure.md](2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3.6 | 1.5 | **実装済み・E2E 再実行待ち**。session フラグ有効化 + session 出力 + `__OW_E2E_PROBE__` 除去 + 4 spec 移行 + 回帰テスト。`npm run validate` exit 0（1056 files / 15960 tests）。残りは headed 環境での E2E green 確認（PBI 内「検証結果」節の手順）。E2E 仕様 6 ファイル中状態読みを使う 4 件を移行、テストページ HTML の属性は inert 化済み |
+| ✅ 08 | [2026-10-11-08-fix-e2e-probe-exposure.md](../dev-docs/archived/pbi/2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3.6 | 1.5 | ✅ 完了。中継化（CS→session 到達不能判明→`OW_PROBE_QUERY`/`OW_PROBE_STATE`）＋headed E2E 7 passed。archive 7 件（G5 含む）は DISPLAY 条件で CI 管轄 |
 | ✅ 09 | [2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md](../dev-docs/archived/pbi/2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3.0 | 1.0 | ✅ 完了（`beb98820`）。`maxBytes` 予算ゲート + CI の `public/wasm/**` フィルタ追加。肥大の原因は wasm-opt 未適用で、再ビルドにより 100,671 → 56,784 B |
 | ✅ 10 | [2026-10-11-10-fix-archive-wire-validation-ssot.md](../dev-docs/archived/pbi/2026-10-11-10-fix-archive-wire-validation-ssot.md) | fix | 0.8 | 2.0 | ✅ 完了（`d09560ba`）。`evaluateSubtypeSpec` で wire 検証を spec から導出し、pin されていた 3 差分を解消 |
 
-実行順: W1（01/02/03/04 並列・✅ 完了）→ W2（05/06/07/08 並列・05/06/07 完了、08 は実装済み・E2E 再実行待ち）→ W3（09/10・✅ 完了）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C8（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ・PII 長トークン bench フィクスチャ・E2E プローブ移行）はトリガー管理。完了 9 件の検証はいずれも `npm run validate` exit 0（1055 files / 15933 tests passed）。NN08 の実装検証は `npm run validate` exit 0（1056 files / 15960 tests passed）＋両ビルド確認済み。
+実行順: W1（01/02/03/04 並列・✅ 完了）→ W2（05/06/07/08 並列・✅ 完了）→ W3（09/10・✅ 完了）。09 は 01 の wasm 成果物に依存するため直列。台帳送り C1-C8（innerHTML ゲート拡張・レイヤーゲート盲点・マッチ上限 UX・`\b` 隣接 IBAN・wasm byte 再現性・`alreadyProcessed` スイッチ・PII 長トークン bench フィクスチャ・E2E プローブ移行）はトリガー管理。全 10 件 `npm run validate` exit 0（最終 1059 files / 15982 tests passed）＋両ビルド確認＋headed E2E 7 passed でアーカイブ。
 
 ### 2026-10-10 arch-delivery-loop ラウンド（archloop-1010） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
 

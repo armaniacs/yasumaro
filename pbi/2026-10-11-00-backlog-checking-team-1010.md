@@ -21,15 +21,15 @@ Effort: ストーリーポイント
 
 | NN | PBI | 種別 | R | I | C | E | RICE | SP | 依存 |
 |---|---|---|---:|---:|---:|---:|---:|---:|---|
-| 01 | [pii-core-detection-parity](2026-10-11-01-fix-pii-core-detection-parity.md) | fix | 9 | 3 | 0.9 | 3.0 | 8.1 | 3.0 | なし（09 の先行） |
-| 02 | [privacy-mode-fail-closed](2026-10-11-02-fix-privacy-mode-fail-closed.md) | fix | 4 | 3 | 0.9 | 1.5 | 7.2 | 1.5 | なし |
-| 03 | [sanitize-title-line-separators](2026-10-11-03-fix-sanitize-title-line-separators.md) | fix | 3 | 1.5 | 0.8 | 0.5 | 7.2 | 0.5 | なし |
-| 04 | [i18n-keys-and-locale-ssot](2026-10-11-04-fix-i18n-keys-and-locale-ssot.md) | fix | 5 | 2 | 1.0 | 1.5 | 6.7 | 1.5 | なし（messages.json 独占） |
-| 05 | [settings-toplevel-repair](2026-10-11-05-fix-settings-toplevel-repair.md) | fix | 5 | 3 | 0.8 | 2.0 | 6.0 | 2.0 | なし |
-| 06 | [docs-release-notes-and-guides](2026-10-11-06-docs-release-notes-and-guides.md) | docs | 3 | 1 | 1.0 | 0.5 | 6.0 | 0.5 | なし（CHANGELOG 独占） |
-| 07 | [status-type-and-focus-trap](2026-10-11-07-fix-status-type-and-focus-trap.md) | fix | 4 | 2 | 1.0 | 1.5 | 5.3 | 1.5 | なし（connectionTests 独占） |
-| 08 | [e2e-probe-exposure](2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3 | 2 | 0.9 | 1.5 | 3.6 | 1.5 | なし（testDir を触る唯一） |
-| 09 | [wasm-artifact-size-and-ci-gate](2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3 | 1 | 1.0 | 1.0 | 3.0 | 1.0 | **01 の後**（wasm 再ビルドの共有） |
+| 01 | [pii-core-detection-parity](../dev-docs/archived/pbi/2026-10-11-01-fix-pii-core-detection-parity.md) | fix | 9 | 3 | 0.9 | 3.0 | 8.1 | 3.0 | なし（09 の先行） |
+| 02 | [privacy-mode-fail-closed](../dev-docs/archived/pbi/2026-10-11-02-fix-privacy-mode-fail-closed.md) | fix | 4 | 3 | 0.9 | 1.5 | 7.2 | 1.5 | なし |
+| 03 | [sanitize-title-line-separators](../dev-docs/archived/pbi/2026-10-11-03-fix-sanitize-title-line-separators.md) | fix | 3 | 1.5 | 0.8 | 0.5 | 7.2 | 0.5 | なし |
+| 04 | [i18n-keys-and-locale-ssot](../dev-docs/archived/pbi/2026-10-11-04-fix-i18n-keys-and-locale-ssot.md) | fix | 5 | 2 | 1.0 | 1.5 | 6.7 | 1.5 | なし（messages.json 独占） |
+| 05 | [settings-toplevel-repair](../dev-docs/archived/pbi/2026-10-11-05-fix-settings-toplevel-repair.md) | fix | 5 | 3 | 0.8 | 2.0 | 6.0 | 2.0 | なし |
+| 06 | [docs-release-notes-and-guides](../dev-docs/archived/pbi/2026-10-11-06-docs-release-notes-and-guides.md) | docs | 3 | 1 | 1.0 | 0.5 | 6.0 | 0.5 | なし（CHANGELOG 独占） |
+| 07 | [status-type-and-focus-trap](../dev-docs/archived/pbi/2026-10-11-07-fix-status-type-and-focus-trap.md) | fix | 4 | 2 | 1.0 | 1.5 | 5.3 | 1.5 | なし（connectionTests 独占） |
+| 08 | [e2e-probe-exposure](../dev-docs/archived/pbi/2026-10-11-08-fix-e2e-probe-exposure.md) | fix | 3 | 2 | 0.9 | 1.5 | 3.6 | 1.5 | なし（testDir を触る唯一） |
+| 09 | [wasm-artifact-size-and-ci-gate](../dev-docs/archived/pbi/2026-10-11-09-chore-wasm-artifact-size-and-ci-gate.md) | chore | 3 | 1 | 1.0 | 1.0 | 3.0 | 1.0 | **01 の後**（wasm 再ビルドの共有） |
 | 10 | [archive-wire-validation-ssot](2026-10-11-10-fix-archive-wire-validation-ssot.md) | fix | 2 | 1 | 0.8 | 2.0 | 0.8 | 2.0 | なし |
 
 RICE = R × I × C / E。値は各 PBI 内「RICE」行と一致。
@@ -62,7 +62,7 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 | C5 | WASM バイナリの byte 再現性（toolchain / wasm-pack / Cargo.lock の固定） | 既存台帳 [2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md) の監視対象。NN09 は strip を入れるが byte 来歴の保証は主張しない | 同台帳のトリガー（toolchain / Cargo.lock / wasm-pack / build script / ship manifest の変更、供給網監査で byte provenance が要求された時） |
 | C6 | `PrivacyPipeline.process(content, { alreadyProcessed: true })` のマスク無効化スイッチ本体（`privacyPipeline.ts:106,182,185`） | source policy からは到達不能。NN02 で「テスト専用」の JSDoc 明示までは行った。フラグ自体の削除は source 追加時に判断 | 次に `source` を追加する時 |
 | C7 | `bench/micro/c8-pii-sanitize.bench.mjs` に「400文字超の空白なしトークン内部に email/電話を埋めた」フィクスチャを追加し、`docs/PERFORMANCE_TEST.md` の c8 数値を再計測して更新する（NN01 から分離） | 実測でチャンク重なり走査のコストが長トークン入力で WASM 2.8〜4.3 倍 / TS フォールバック最大 7.4 倍になるが、現行の記事フィクスチャでは +23% しか出ず回帰検知できない。`bench/baselines/micro.json` はマシン依存で `--update-baseline` は全指標を書き換えるため、性能 baseline の更新は性能専用の意図的な作業として行う必要がある（検出漏れ修正とは独立） | 次に性能 baseline を更新する時、または PII 走査の性能を再計測する時 |
-| C8 | NN08（E2E プローブ露出）の実装。手順: (1) プローブの発火をページ側 `data-ow-e2e-test` 属性から拡張側の制御チャネル（例: `chrome.storage.session` のフラグを E2E ハーネスが service worker 経由で設定）へ移す (2) `publishE2eTestState` の出力先をページ共有 DOM（`window.__OW_TEST_STATE` / `data-ow-test-state`）から拡張側（storage.session または runtime メッセージ）へ移す (3) `testDir/e2e/` の 6 仕様（`content-script-recording` / `recording-traceId` / `overcut-guard-recording` / `archive-recommended-verification` ほか）の読み取りを `context.serviceWorkers()[0].evaluate(...)` へ移行（`minVisitDuration` を閾値として使う 2 箇所は既知定数 5 に置換可）(4) `npx playwright test --repeat-each=10 --retries=0` で E2E を再検証 (5) 単体テスト（`extractor-comprehensive.test.ts` の属性期待）も同時更新 | 実装完了（2026-10-11 autonomous-task-closer）・`npm run validate` exit 0（1056 files / 15960 tests）。残りは headed 環境での E2E green 確認（PBI 内「検証結果」節の手順） | E2E 再実行時（CI の extension/a11y/usability ジョブまたは headed ローカル） |
+| C8 | NN08（E2E プローブ露出）の実装。手順: (1) プローブの発火をページ側 `data-ow-e2e-test` 属性から拡張側の制御チャネル（例: `chrome.storage.session` のフラグを E2E ハーネスが service worker 経由で設定）へ移す (2) `publishE2eTestState` の出力先をページ共有 DOM（`window.__OW_TEST_STATE` / `data-ow-test-state`）から拡張側（storage.session または runtime メッセージ）へ移す (3) `testDir/e2e/` の 6 仕様（`content-script-recording` / `recording-traceId` / `overcut-guard-recording` / `archive-recommended-verification` ほか）の読み取りを `context.serviceWorkers()[0].evaluate(...)` へ移行（`minVisitDuration` を閾値として使う 2 箇所は既知定数 5 に置換可）(4) `npx playwright test --repeat-each=10 --retries=0` で E2E を再検証 (5) 単体テスト（`extractor-comprehensive.test.ts` の属性期待）も同時更新 | 実装完了・中継化・headed E2E 7 passed（`npm run validate` exit 0: 1059 files / 15982 tests）。CS→session 到達不能が判明したため runtime-message 中継（`OW_PROBE_QUERY` / `OW_PROBE_STATE`）に設計変更。archive 7 件（G5 含む）は DISPLAY 条件で CI 管轄 | 完了（PBI アーカイブ済み） |
 
 - `pbi/` に残る他ラウンドの台帳送り（backlog-future 統合台帳、holistic-1009 の F 系、archloop-1010 の G1-G17、archloop-1007 の L2-L8）はトリガー未発火のため維持。
 - 着手ゲート付きの未完了 PBI 2 件（`2026-09-05-32-refactor-wasqlite-sunset.md` は ADR-014 の 2026-12-17 ゲート、`2026-09-25-30-refactor-utils-namespace-reorg.md` は専用ブランチ + 着手トリガー）は未完了ではなく**ゲート待ち**であり、本ラウンドの対象外。
@@ -94,7 +94,7 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 | 05 | settings-toplevel-repair | ✅ 完了・アーカイブ済み（`0f96cd4c`） |
 | 06 | docs-release-notes-and-guides | ✅ 完了・アーカイブ済み（`a088ec4f`） |
 | 07 | status-type-and-focus-trap | ✅ 完了・アーカイブ済み（`541fead2`） |
-| 08 | e2e-probe-exposure | 🔶 実装済み・E2E 再実行待ち（`npm run validate` exit 0。PBI 内「検証結果」節の手順で headed 確認後にアーカイブ） |
+| 08 | e2e-probe-exposure | ✅ 完了・アーカイブ済み（中継化＋headed E2E 7 passed。G5 等 archive 7 件は DISPLAY 条件で CI 管轄） |
 | 09 | wasm-artifact-size-and-ci-gate | ✅ 完了・アーカイブ済み（`beb98820`） |
 | 10 | archive-wire-validation-ssot | ✅ 完了・アーカイブ済み（`d09560ba`） |
 
