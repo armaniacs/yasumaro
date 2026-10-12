@@ -75,6 +75,14 @@ All notable changes to this project will be documented in this file.
 - wasm-bindgen 生成物（`src/wasm/*/*.d.ts`）の `/* eslint-disable */` バナーが手で削除されており、CI の wasm staleness ゲートが常時赤だったのを復元する。生成物は fresh build との byte 一致が要求されるため、lint 側で未使用 directive 警告を抑制する
 - 単体スイートの実行時間予算が導入時のスナップショット（fileCount 930、翌日に超過）のまま 15 日間赤だったのを実測へ改定し（1060）、固定コストの支配要因である **jsdom 環境のファイル数を第 2 のゲート**（360）として追加する。`validate` の常時赤が解消し、依存していた `build` ジョブが再び走る
 - ベンチの TreeWalker カウンタが jsdom のセレクタエンジン（`@asamuzakjp/dom-selector`）内部の走査まで数えており、セレクタ構文の変更だけで 9 指標が偽の回帰を示していたのを、計測対象モジュールの DOM 走査だけを数えるように修正する（baseline は再導出）
+- `RecordingPipeline` の obsidian 経路テストを注入形モックで再活性化し、宣言形 skip（`it.skip` / `describe.skip`）の死骸 21 か所を一掃して恒久 skip をゼロにする（E2E の 8 件は実行時条件形のため候補外と実測で確認）
+- 宣言形 skip を検出する `no-dead-test-skip` ルールを lint に導入する。実行時条件形（`test.skip(cond, reason)`）・skipIf・if ガード内・非テストオブジェクト・プロパティ参照・each 連結形を判別して誤検知しない
+- manifest 権限検証を jsdom 環境に依存して実行されなかったゲートから復旧する。`wxt.config.ts` ファクトリ直呼びのスイート（15 テスト）へ再設計し、生成物層は `check-manifest.mjs` に権限上限・WAR チェーン検証を追加して CI build job に配線する
+- manifest 最小権限ゲートの失敗側（SSOT 外ドメインの混入・localhost origin の欠落で throw）をスイートで pin し、外部消費者の無いゲートをモジュール内に限定する（de-export）。メッセージ断片の pin で `toEqual` を弱い判定に置き換えるリファクタも検出できる
+- 生成物層 manifest ゲートの manifest 読み込みを existsSync + try/catch に統一し、壊れた成果物（invalid JSON）でスタックトレースではなく fail メッセージで落とす。invalid JSON 時のクラッシュ点は main() が最初に実行する `checkManifestV3Compliance()` だったため同関数も含めて包む
+- ソース層（`manifest.test.ts`）と生成物層（`check-manifest.mjs`）で重複する getURL 抽出正規表現の一致を pin テスト（`geturl-extraction-sync.test.ts`）で保証し、片側だけの拡張で検証穴が隠れるのを防ぐ
+- `RecordingPipeline` テストの注入モックを実契約型（`Pick<ObsidianClient, 'appendToDailyNote'>`）へ寄せ、実シグネチャの変更を type-check で検出できるようにする
+- lint ルールの限界（シャドーイング）・WAR リゾルバの対応起源と拡張前提・`wxt.config.ts` import の規約逸脱理由をコメントに明記する（動作不変）
 
 ## [6.9.39] - 2026-10-07
 
