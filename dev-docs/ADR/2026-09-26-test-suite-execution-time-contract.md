@@ -313,3 +313,13 @@ isolated/node が 40ms/ファイル、isolated/jsdom が 147ms/ファイル
   引き上げる時。
 - ローカルで赤が見えない非対称（`validate` が `test:perf` を呼ばない）は、
   ファイル発見ロジックを二重実装するリスクがあるため今回は触らない。
+
+### 2026-10-13 の引き上げ（1060 → 1062）
+
+- **`gates.fileCount` を 1060 → 1062 に改定する**（決定 3 の手続きどおり本追記と
+  同時に改定）。clean checkout の実測は 1061 — review-followup2 で
+  `src/__tests__/geturl-extraction-sync.test.ts`（getURL 抽出ルールの二層同期 pin）
+  を新設したため。ローカルは gitignore された作業用ファイル込みで 1062。ゲートは
+  1062 なのでどちらも通る。CI は 1061 / 1060 で赤（run `38315624155`）。
+- 原因は suite の成長であり、欠陥や追加ゲートの必要はない。`jsdomFileCount` は
+  359 / 360 で余裕があるため据え置く。
