@@ -71,6 +71,10 @@ All notable changes to this project will be documented in this file.
 - 出荷ビルドに残っていたテスト用コードを完全に除去（プローブ文字列ゼロを確認）
 - プローブ判定フラグの公開をやめモジュール内に限定
 - Markdownエクスポート完了表示の E2E 判定を言語非依存にし、日本語 UI でも検証が通るようにする
+- URL 検証のホスト名正規化漏れを修正する。`new URL()` は `http://localhost./` のホスト名を `localhost.` のまま返すため、末尾ドット付きの localhost がブロック判定をすり抜けていた（AI リクエスト経路ではポート許可リストも回避できた）。正規化を `validateUrl` / フィルタ取り込み / AI リクエスト / 録画対象判定で統一し、NAT64 の埋め込み IPv4 も非公開判定に加える
+- wasm-bindgen 生成物（`src/wasm/*/*.d.ts`）の `/* eslint-disable */` バナーが手で削除されており、CI の wasm staleness ゲートが常時赤だったのを復元する。生成物は fresh build との byte 一致が要求されるため、lint 側で未使用 directive 警告を抑制する
+- 単体スイートの実行時間予算が導入時のスナップショット（fileCount 930、翌日に超過）のまま 15 日間赤だったのを実測へ改定し（1060）、固定コストの支配要因である **jsdom 環境のファイル数を第 2 のゲート**（360）として追加する。`validate` の常時赤が解消し、依存していた `build` ジョブが再び走る
+- ベンチの TreeWalker カウンタが jsdom のセレクタエンジン（`@asamuzakjp/dom-selector`）内部の走査まで数えており、セレクタ構文の変更だけで 9 指標が偽の回帰を示していたのを、計測対象モジュールの DOM 走査だけを数えるように修正する（baseline は再導出）
 
 ## [6.9.39] - 2026-10-07
 
