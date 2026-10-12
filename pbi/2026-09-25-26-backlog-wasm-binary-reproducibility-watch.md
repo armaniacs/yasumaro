@@ -1,6 +1,22 @@
 # PBI: wasm ship バイナリ再現性リスクの監視契約
 
-**状態: 着手トリガー待ち。現時点では実装しない。**
+**状態: 監視継続。2026-10-12 に gate 入力変更で再評価済み（下記）。次回は次の gate 入力変更または byte provenance 要求で発火する。**
+
+## 2026-10-12 再評価（トリガー発火: gate 入力の変更）
+
+`beb98820`（2026-10-11、PBI 2026-10-11-09）で gate 入力が変更されたため、発火条件を再評価した。
+
+- 発火入力:
+  - `wasm/crates.json`（ship manifest。`publicShip` を持つ crate に `maxBytes` を追加）
+  - `scripts/wasm-crates.mjs`（`budget` コマンド追加）
+  - `.github/workflows/ci.yml`（wasm サイズ予算ステップ追加 + paths フィルタへ `public/wasm/**` 追加）
+- 再評価結果: **基本契約は維持・強化**。raw binary diff は採用していない。
+  - `checkGate` は publicShip 3 crate の committed src/public byte 一致を従来どおり検証する（`scripts/wasm-crates.mjs:329-343`）。
+  - parity suite は 7 paths / 4 crate のまま（`wasm/crates.json`）。
+  - CI の `wasm-test` ジョブは保持され、サイズ予算ステップは追加のみ（`.github/workflows/ci.yml:189,267`）。
+  - `public/wasm/**` の paths フィルタ追加は、出荷側だけ差し替える片側コミットでゲートが走らない穴を閉じる方向の強化。
+- 判定: 防御範囲の記載（行動 parity + 3 組の src/public byte 一致 + glue/dts stale check）は変更不要。
+  host-crossing byte equality は引き続き非防御範囲であり、契約を弱めていない。
 
 ## ユーザーストーリー
 

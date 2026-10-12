@@ -9,14 +9,15 @@
 - 根拠: 実害は未確認だが、着手コストが最小で他の2件より確度の低下が小さい。依存なし。
 - 再検討トリガー: 同経路で握りつぶした失敗が原因の不具合報告が出た時。それまでは着手しない。
 
-## 背景（2026-09-22 時点の現状）
-非テストの `catch {}` が6箇所ある。
+## 背景（2026-09-22 時点の現状。2026-10-12 に一覧を再測）
+
+非テストの `catch {}` は 7 箇所ある（2026-10-12 の grep 実測）。当時の 6 箇所から移動・増減している。
 - `src/background/cache/PrivacyCache.ts:110`（clearSession）
-- `src/utils/storage/settingsMigration.ts:179`
-- `src/utils/aiSummaryCleaner/helpers.ts:252`
-- `src/dashboard/settingsPipeline.ts:176`
-- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:437`（listener notify）
-- `src/dashboard/panels/staticForm/aiSummaryCleansingPanel.ts:21`
+- `src/utils/ui/settingsUiHelper.ts:107` / `:141`
+- `src/utils/aiSummaryCleaner/helpers.ts:272`
+- `src/utils/storage/settingsMigration.ts:467`
+- `src/dashboard/panels/staticForm/aiSummaryCleansingPanel.ts:24`
+- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:445`（listener notify）
 
 いずれも best-effort 経路で、失敗しても機能は継続する。
 
@@ -32,10 +33,10 @@ Scenario: 意図的な握りつぶしは理由付きで残る
   Then  コードに握りつぶす理由が英語コメントで残り、裁定が PBI に記録される
 
 ## 受け入れ基準
-- [ ] 6箇所それぞれについて、失敗時の影響を調査し「記録する / 理由を残して握りつぶす」を裁定した
+- [ ] 上記 7 箇所それぞれについて、失敗時の影響を調査し「記録する / 理由を残して握りつぶす」を裁定した
 - [ ] 記録する経路は既存の logger（`logWarn` 等）を使い、例外の再送出はしない
 - [ ] 各経路に例外注入テストを追加し、機能継続と記録の両方を pin した
-- [ ] 6箇所以外に新規の空 catch がないことを grep で確認した
+- [ ] 上記 7 箇所以外に新規の空 catch がないことを grep で確認した
 
 ## テスト戦略
 - 単体: 各経路に例外を注入し、戻り値・後続処理・ログ呼び出しを検証

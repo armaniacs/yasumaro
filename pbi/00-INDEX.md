@@ -357,7 +357,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 ### 2026-09-25 ラウンドの着手トリガー待ち 2 件 — 🔵 監視 2件 🔧非機能追加
 
-- [2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md)（🔵 監視中 — RICE 0.4・0.5 SP・副作用🟢。wasm の host-crossing byte 再現性は未防御のまま意図的に維持し、防御範囲は「fresh と committed の行動 parity」「ship 対象 3 組の src/public byte 一致」「glue/dts stale check」。トリガー: Rust toolchain・`Cargo.lock`・`wasm-pack`・build/postprocess scripts・ship manifest の変更、または供給網監査で byte provenance が要求された時。再評価の軸は raw binary diff ではなく parity と公開 copy consistency。`dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の完全保持が必須）
+- [2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md](2026-09-25-26-backlog-wasm-binary-reproducibility-watch.md)（🔵 監視中 — RICE 0.4・0.5 SP・副作用🟢。wasm の host-crossing byte 再現性は未防御のまま意図的に維持し、防御範囲は「fresh と committed の行動 parity」「ship 対象 3 組の src/public byte 一致」「glue/dts stale check」。トリガー: Rust toolchain・`Cargo.lock`・`wasm-pack`・build/postprocess scripts・ship manifest の変更、または供給網監査で byte provenance が要求された時。再評価の軸は raw binary diff ではなく parity と公開 copy consistency。`dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の完全保持が必須。**2026-10-12 再評価: gate 入力変更（`beb98820` の `maxBytes`・budget コマンド・CI paths filter）でトリガー発火し、parity 7 paths / publicShip 3 組の byte 一致 / `wasm-test` 保持を実測して基本契約の維持・強化を確認。次回は次の gate 入力変更または byte provenance 要求で発火**）
 - [2026-09-25-29-backlog-offscreen-gateway-archive-split.md](2026-09-25-29-backlog-offscreen-gateway-archive-split.md)（🔵 監視中 — RICE 0.25・2 SP・副作用🟡。`OffscreenGateway` に 14 種の archive operation が query/mutate と同居している ownership 負債。実害は未確認。トリガー: archive subtype の追加、または `SqliteClient` façade / `SqliteRpcClient` archive overload / dashboard service の caller 契約の変更。`ArchiveGateway` 抽出は 28 caller を変更せずに内部だけを分離する前提）
 
 ### 2026-09-25 Checking Team 残債 PBI 化ラウンド — ✅ 29件完了・アーカイブ済み / 🔵 監視 2件 / ⛔ 1件 🔧非機能追加
@@ -401,7 +401,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`、confirmed 7件・エクスプロイトテスト 11/11 PASS・sweep 残件 0）の修正戦略を6 PBI 化。VULN-002+003（enabler 関係）と VULN-005+007（同一位相）を統合、Code Quality 4項は監視 PBI の 11 に束ねた。採点の詳細は [2026-09-22-00-backlog-vuln-remediation.md](../dev-docs/archived/pbi/2026-09-22-00-backlog-vuln-remediation.md)（2026-10-11 アーカイブ済み）。06-10 は 2026-09-23 の autonomous-task-closer で完了（アーカイブ履歴参照）。
 
-- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。ssrfGuard 正規化・senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset の発火条件監視。発火時に分割 PBI 化）
+- [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。**項目1（ssrfGuard ホスト名正規化）は 2026-10-12 に発火・実装済み（`c66a2cce`）: `normalizeHostname` による末尾ドット正規化・localhost 名ホストへのポート許可リスト適用・NAT64 埋め込み IPv4 判定**。残る senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset は発火条件を監視）
 
 ### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 2件 / 🔶 部分実装 1件 🔧非機能追加 RICE順: 01 → 02 → 03
 
@@ -452,6 +452,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-12 autonomous-task-closer — 🔵 トリガー再検証 + defense-in-depth 項目1 実装（アーカイブ 0 件）
+
+`/autonomous-task-closer` による機械的洗い出し。`pbi/` の残存 28 ファイルを全数走査し、トリガー待ち・ゲート待ち・監視のいずれでもない「着手可能な未完了」が無いことを確認した。発火済みトリガーは 2 件で、いずれも対応した。
+
+- **defense-in-depth 11 の項目1（ssrfGuard ホスト名正規化）** — 発火条件「allowedUrls 層なしで ssrfGuard を通る呼び出し元」は既に成立していた（`manualContentFetcher` / `recordingHandlers` / `regenerateContentFetcher`）。`c66a2cce` で `normalizeHostname`（DNS ルート末尾ドット除去）・localhost 名ホストへのポート許可リスト適用・NAT64 well-known prefix の埋め込み IPv4 判定を実装。
+- **wasm-watch 26** — gate 入力変更（`beb98820`: `maxBytes`・budget コマンド・CI paths filter）で発火。parity 7 paths / publicShip 3 組の byte 一致 / `wasm-test` ジョブ保持を実測し、基本契約の維持・強化を確認して PBI に記録。
+- 未発火を実測で確認: typescript-7（`@typescript-eslint/eslint-plugin` 8.71.1 の peer は `typescript >=4.8.4 <6.1.0` のまま）/ stryker-vitest5（vitest-runner の最新は導入済み 10.0.0）/ wasqlite サンセット（ゲート日 2026-12-17 未到達）/ tagcooccurrence 移設 / local-provider-origin / empty-catch 監査 / offscreen-gateway split / utils namespace reorg。
+- メタデータ・ドリフト補正: INDEX 集計（24→29 ファイル・1166→1333 アーカイブ PBI・153→187 計画）、empty-catch PBI の対象 6→7 箇所への再測、defense-in-depth の「唯一の本番呼び出し元」記載の訂正。
+- 検証: `npm run validate` exit 0（1059 files / 15982 tests passed / 21 skipped）。
 
 ### 2026-10-07 arch-delivery-loop ラウンド（archloop-1007）アーカイブ — ✅ 18件完了（01-18 アーカイブ済み）
 
@@ -2288,12 +2298,12 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 |---|---|
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。マスターパスワード後続 1 とファイル交差保留 3 は完了・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
-| 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。B 10 に内包） |
-| **`pbi/` 残存 PBI 合計** | **24 ファイル（B 10〔うち🔵 監視 5〕/ live 台帳 12 / 統合 PBI 1 = 非 INDEX 23 + INDEX）** |
-| アーカイブ済みPBI | 1166（`00-backlog` 台帳 78 件を含む） |
-| アーカイブ済み実装計画 | 153（旧目次 `00-index.md` 1 件を含む） |
+| 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
+| **`pbi/` 残存 PBI 合計** | **29 ファイル（B 10〔うち🔵 監視 5〕/ live 台帳 17 / 統合 PBI 1 = 非 INDEX 28 + INDEX）** |
+| アーカイブ済みPBI | 1333（`00-backlog` 台帳を含む） |
+| アーカイブ済み実装計画 | 187 |
 
-※ 数算（2026-10-03 検証）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`。旧 967 / 138 は 2026-09-28 までの加算式カウンタ（09-28 整理で 947 に当該ラウンドの 20 件を加算）であり実ファイル数と乖離していた（09-28 時点の実数は 1016）。数値は ls 実行時点の実数。
+※ 数算（2026-10-12 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。
 
 ※ 2026-09-28 整理: 全体リファクタリングラウンド 14 件（01/02/03/04/06/07/08/09/11/12/13/15/16/17）+ 追加ラウンド 6 件（18/19/20/21/22/23）の計 20 件を実装確認の上アーカイブ。確認内容は実装コミット 20 件の対応付け・3 ゲート green（type-check / lint 0 errors / npm test 14,668 passed）。ドリフト修正: (1) アーカイブ 20 件のファイル内 checkbox が未チェックのままだったため全 [x] 化（22 は元から完了）、(2) PBI 12 の box 文言「`dev-docs/plans/` 配下」が実態（ADR 記録）と不一致だったため [x] 化で解消、(3) 集計表の件数が実態と乖離していたため再同期（未着手 4→9・監視 1→5・残存 6→23・live 台帳 4→8・アーカイブ 947→967）、(4) CHANGELOG には 09-28 ラウンド分の記載なし（最新 6.9.27 は 09-26 リリース分。リリース時バッチ方式のため次回リリース時に記載要）、(5) PBI 18 の実ブラウザ手動確認（`getBytesInUse()`）は残存項目としてアーカイブファイル内の注記を維持。
 

@@ -13,10 +13,26 @@
 監査エビデンスは `obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/README.md` の Code Quality セクション。これらは脆弱性ではなくハードニング項目である。
 
 1. `src/utils/ssrfGuard.ts:91`（10進/8進 IPv4 表記）と `:199`（末尾ドット付き `localhost.`、`::a.b.c.d`、NAT64 形）のホスト名正規化欠落
-   - 現状: 唯一の本番呼び出し元 `systemHandlers.ts:85` が allowedUrls origin 許可リストで多層防御しており悪用不能。`fetchWithRedirectGuard`（`src/utils/fetch.ts:196-202`）は呼び出し元ゼロ。
+   - 現状（2026-09-22 時点の記載。2026-10-12 に訂正）: `systemHandlers.ts:85` の `validateUrlForFilterImport` が allowedUrls origin 許可リストで多層防御しているが、`validateUrl({ blockLocalhost: true })` を通る本番呼び出し元は当時から複数あった（`manualContentFetcher.ts` / `recordingHandlers.ts`、その後 `regenerateContentFetcher.ts`）。「唯一の呼び出し元」という記載は誤りだった。
    - 発火条件: allowedUrls 層なしで ssrfGuard を通る新しい呼び出し元が増えた時
    - 対策: 正規化（末尾ドット除去、数値 IP 形のパース、IPv4-mapped IPv6）を分類前に追加 + エンコード形の単体テスト
    - 関連（依存なし）: `pbi/2026-09-22-03-backlog-local-provider-origin-rule.md` が `ssrfGuard.ts:207` を参照
+   - ✅ 2026-10-12 実装（`c66a2cce`）。詳細は下記「2026-10-12 発火・実装」。
+
+## 2026-10-12 発火・実装（項目1）
+
+発火条件「allowedUrls 層なしで ssrfGuard を通る呼び出し元」は既に成立していたため、項目1の対策を実装した（`c66a2cce`）。
+
+- 実測した到達可能ギャップ: `new URL()` は `http://localhost./` の hostname を `localhost.` のまま返すため、既存の `=== 'localhost'` / `endsWith('.localhost')` 判定をすり抜けていた。`validateUrlForAIRequests` では `http://localhost.:9999` がポート許可リスト（VULN-013）を迂回していた。
+- 実装: `normalizeHostname`（IPv6 ブラケット除去・小文字化・DNS ルート末尾ドット除去）を追加し、`validateUrl` / `validateUrlForFilterImport` / `validateUrlForAIRequests` / `recordingValidator.isValidFetchUrl` を正規化後の hostname で判定するよう統一。localhost 名ホストにもポート許可リストを適用。
+- 数値 IP 表記（`2130706433` / `0x7f000001`）は `new URL()` が `127.0.0.1` へ正規化することを実測し、回帰テストで固定した（追加パースは不要）。`::a.b.c.d` は URL パーサが拒否する。NAT64 well-known prefix（`64:ff9b::/96`）の埋め込み IPv4 判定を `isPrivateIpAddress` に追加した。
+- 検証: ssrfGuard 33 passed / AI・fetch・recording 系 503 passed / `npm run validate` exit 0。
+
+残る項目2〜4（senderTrust fail-closed / `archive_update` 一貫性 / レガシー KDF sunset）は 2026-10-12 に発火条件を実測確認し、いずれも未発火のため監視を継続する。
+
+- 項目2: `src/background/InPageOffscreenTransport.ts`（Firefox の in-page transport）は存在するが、送信元として `id: chrome.runtime.id` を明示的に渡しており、Firefox WebExtensions でも `chrome.runtime.id` は定義される。`senderTrust` の `runtimeId` が未定義になる文脈は確認できなかった。
+- 項目3: ステージングエンジンに第2 principal / ロールゲート列は未導入（`DASHBOARD_MUTABLE_SUBSET` は `coreCrudHandler` 側の検証にのみ存在し、`dashboardMutableSubset.test.ts` が `UPDATABLE_FIELDS` との包含を固定している）。
+- 項目4: レガシー KDF 経路は健在（`src/utils/crypto/cryptoParams.ts:12` の `LEGACY_PBKDF2_ITERATIONS: 100_000`）。移行期間は終了していない。
 
 2. `src/background/handlers/senderTrust.ts:68` の `runtimeId !== undefined` ガード形状
    - 現状: 本番 service worker では `chrome.runtime.id` は常に定義され到達不能。`externally_connectable` も未使用。
