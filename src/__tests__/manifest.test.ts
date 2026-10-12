@@ -39,6 +39,9 @@ import {
   buildLocalHostPermissions,
 } from '../utils/cspDomains.js';
 import type { UserManifest } from 'wxt';
+// Intentional deviation from the ".js extensions on all imports" convention
+// (AGENTS.md): wxt.config.ts is the root build config, not a compiled module —
+// no .js form exists for it, and vitest (vite) resolves the .ts directly.
 import wxtConfig from '../../wxt.config.ts';
 
 /* -------------------------------------------------------- declared manifest */
@@ -145,11 +148,12 @@ const MAX_TOTAL_HOST_PERMISSIONS = 100;
 /* ------------------------------------------------------- the permission gate */
 
 /**
- * The permission gate over any manifest-shaped input. Exported so the Red
- * confirmation can run this exact gate against a tampered input and show a
- * broken permission failing instead of passing.
+ * The permission gate over any manifest-shaped input. The Red-side tests in
+ * this file run this exact gate against tampered inputs in the
+ * "permission gate over the declared manifest" describe, so it stays
+ * module-private: there are no external consumers to import it from.
  */
-export function assertLeastPrivilegePermissions(manifest: UserManifest): void {
+function assertLeastPrivilegePermissions(manifest: UserManifest): void {
   const host = manifest.host_permissions;
   const optional = manifest.optional_host_permissions;
   if (host === undefined || optional === undefined) {
@@ -242,6 +246,17 @@ function collectPageContextGetURLTargets(): string[] {
   return [...targets];
 }
 
+/**
+ * Resolves a declared web_accessible_resources entry at source level.
+ *
+ * Supported origins (PBI 2026-10-13-03): `.js` entries are content-script
+ * entrypoints built from `entrypoints/<name>.ts`, and every other entry ships
+ * from `public/`. These are the only two origins WXT composes into the WAR
+ * today (content-extractor.js, icons/icon48.png). A future module split that
+ * puts a src-built chunk into the WAR (the pre-WXT manifest carried
+ * `utils/*.js` entries) must extend this resolver — until then such an entry
+ * fails the stale check as a false positive.
+ */
 function warResourceResolves(resource: string): boolean {
   if (resource.endsWith('.js')) {
     // Built from entrypoints/<name>.ts — WXT emits <name>.js for a content
@@ -358,6 +373,33 @@ describe('Manifest - Host Permissions Minimization', () => {
       // The gate throws with the failing invariant's message; .not.toThrow()
       // surfaces that message as the test failure.
       expect(() => assertLeastPrivilegePermissions(declared)).not.toThrow();
+    });
+
+    it('throws when a host permission outside the SSOT composition is added', () => {
+      // Red side of the gate (PBI 2026-10-13-01): one host permission the
+      // SSOT never composes must fail the gate instead of drifting through.
+      const tampered: UserManifest = {
+        ...declared,
+        host_permissions: [...declaredHostPermissions(), 'https://tracker.example/*'],
+      };
+      // The gate fails at its SSOT equality check; pin that message fragment
+      // so a weakened gate (e.g. toEqual swapped for a subset check) cannot
+      // pass this test silently.
+      expect(() => assertLeastPrivilegePermissions(tampered)).toThrow(/to deeply equal/);
+    });
+
+    it('throws when a local service origin is dropped from host_permissions', () => {
+      // Red side of the gate: dropping the Obsidian Local REST origin must
+      // fail the gate instead of passing the remaining checks. The toContain
+      // guard fails with a clear message if the SSOT ever stops generating
+      // this origin, so the tampering below is never a silent no-op.
+      const host = declaredHostPermissions();
+      expect(host).toContain('http://127.0.0.1:27123/*');
+      const tampered: UserManifest = {
+        ...declared,
+        host_permissions: host.filter((permission) => permission !== 'http://127.0.0.1:27123/*'),
+      };
+      expect(() => assertLeastPrivilegePermissions(tampered)).toThrow(/to deeply equal/);
     });
   });
 });
