@@ -14,17 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-12 skipped test の棚卸しと再発防止（skipped-test-cleanup） — ⬜ 未着手 3件 🔧非機能追加 RICE順: 01 → 02 → 03
+### 2026-10-12 skipped test の棚卸しと再発防止（skipped-test-cleanup） — ⬜ 未着手 4件 🔧非機能追加 RICE順: 01 → 02 → 03 → 04
 
-autonomous-task-closer（2026-10-12）が残課題として報告した skipped test を `pbi-backlog-prioritizer` で再列挙・RICE 採点して 3 PBI 化。無条件の宣言形 skip は実測で **10 件 + 空 `describe.skip` 1 件**（当初報告の「4 箇所」はファイル数。うち 1 件を NN01 が再活性化、9 件 + 空 describe を NN02 が削除）。E2E の 8 件と `manifest.test.ts` の 11 件は形が異なるため候補から除外し台帳送りにした。RICE 採点・除外理由・台帳送り（S1–S3）の詳細は [2026-10-12-00-backlog-skipped-test-cleanup.md](2026-10-12-00-backlog-skipped-test-cleanup.md)（live 台帳）。
+autonomous-task-closer（2026-10-12）が残課題として報告した skipped test を `pbi-backlog-prioritizer` で再列挙・RICE 採点して PBI 化。無条件の宣言形 skip は実測で **10 件 + 空 `describe.skip` 1 件**（当初報告の「4 箇所」はファイル数。うち 1 件を NN01 が再活性化、9 件 + 空 describe を NN02 が削除）。E2E の 8 件は実行時条件形のため候補から除外。`manifest.test.ts` の 11 件は一度台帳送り S1 にしたが、恒久 skip（かつ WAR 検証が early return で空振り）を実測したため NN03 へ昇格し、RICE 1.8 > 1.6 で lint ゲートを NN04 へ繰り下げた。RICE 採点・除外理由・台帳送り（S1 消費・S2/S3）の詳細は [2026-10-12-00-backlog-skipped-test-cleanup.md](2026-10-12-00-backlog-skipped-test-cleanup.md)（live 台帳）。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
 | 01 | [2026-10-12-01-test-reenable-recording-pipeline-obsidian-skip.md](2026-10-12-01-test-reenable-recording-pipeline-obsidian-skip.md) | test | 8.0 | 0.25 | ⬜ 未着手。skip 理由コメントは stale（同 harness の 467 行が obsidian 経路に到達済み）。`makeOrchestrator` 第2引数へ注入して再活性化 |
 | 02 | [2026-10-12-02-test-remove-dead-test-skips.md](2026-10-12-02-test-remove-dead-test-skips.md) | test | 4.0 | 0.25 | ⬜ 未着手。`robustness-data-integrity` 7件＋空 describe 1件 / `recordingPipeline-full` 1件 / `recordingCache-settingsCache` 1件 |
-| 03 | [2026-10-12-03-refactor-no-dead-test-skip-lint.md](2026-10-12-03-refactor-no-dead-test-skip-lint.md) | refactor | 1.6 | 1.5 | ⛔ 02 の後。`local/no-dead-test-skip`（宣言形のみ報告、実行時条件形は許可） |
+| 03 | [2026-10-12-03-test-manifest-verification-permanently-skipped.md](2026-10-12-03-test-manifest-verification-permanently-skipped.md) | test | 1.8 | 2.0 | ⬜ 未着手（S1 から昇格）。権限最小化 11 件が恒久 skip。ソース層は validate、WAR/dist 層はビルド後ゲートへ。early return の静かな pass を除去 |
+| 04 | [2026-10-12-04-refactor-no-dead-test-skip-lint.md](2026-10-12-04-refactor-no-dead-test-skip-lint.md) | refactor | 1.6 | 1.5 | ⛔ 02 の後。`local/no-dead-test-skip`（宣言形のみ報告、実行時条件形は許可） |
 
-実行順: RICE 順（01 → 02 → 03）。01 と 02 はファイル非重複で並列可。03 は 02 の後（既存違反ゼロが前提。違反が残る場合は `warn` 導入＋昇格）。台帳送り S1: `manifest.test.ts` の権限最小化 11 件が恒久 skip（判定が `join(process.cwd(), 'manifest.json')` だが WXT 移行で生成先が `dist/` へ移動し常に false。host_permissions は AGENTS.md の高リスク領域）。
+実行順: RICE 順（01 → 02 → 03 → 04）。01 / 02 / 03 はファイル非重複で並列可。04 は 02 の後（既存違反ゼロが前提。違反が残る場合は `warn` 導入＋昇格）。03 と 04 は 1.8 対 1.6 のほぼ同点で、同点時の裁定基準（リスク軽減効果）により 03 を先とした。
 
 ### 2026-10-11 usability E2E 失敗フォロー（usability-followup） — ✅ 2件完了・アーカイブ済み 🔧非機能追加
 
@@ -2308,10 +2309,10 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手・保留 | 8（トリガー待ち 3 / 着手ゲート待ち 2 / skipped-test-cleanup 3: NN01・NN02 は着手可、NN03 は NN02 待ち） |
+| ⬜ 未着手・保留 | 9（トリガー待ち 3 / 着手ゲート待ち 2 / skipped-test-cleanup 4: NN01〜NN03 は着手可、NN04 は NN02 待ち） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **33 ファイル（B 13〔うち🔵 監視 5〕/ live 台帳 18 / 統合 PBI 1 = 非 INDEX 32 + INDEX）** |
+| **`pbi/` 残存 PBI 合計** | **34 ファイル（B 14〔うち🔵 監視 5〕/ live 台帳 18 / 統合 PBI 1 = 非 INDEX 33 + INDEX）** |
 | アーカイブ済みPBI | 1333（`00-backlog` 台帳を含む） |
 | アーカイブ済み実装計画 | 187 |
 

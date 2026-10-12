@@ -3,6 +3,7 @@
 - 種別: refactor
 - RICE: 1.6（R3 × I1.0 × C0.8 / E1.5）
 - 依存: **NN02 の後**（既存違反をゼロにしてからゲートを有効化する。NN01 の後でもある）
+- 採番補足: 2026-10-12 に NN03（manifest 権限テストの恒久 skip）を追加した際、RICE 2.4 > 1.6 のため NN03 と入れ替えて NN04 とした
 - 出所: autonomous-task-closer の残課題報告（2026-10-12）に対するなぜなぜ分析の結論
 - 台帳: `pbi/2026-10-12-00-backlog-skipped-test-cleanup.md`
 
@@ -12,7 +13,7 @@
 
 ## 優先度
 
-- 順位: 3 / 3
+- 順位: 4 / 4
 - RICEスコア: 1.6（Reach=3 / Impact=1.0 / Confidence=0.8 / Effort=1.5）
 - 根拠: 再発防止の Impact は中〜大だが、ルール実装＋誤検知の作り込みが必要で Effort が最大。かつ NN02 完了が前提のため最後。
 
