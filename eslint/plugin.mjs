@@ -7,6 +7,7 @@ import noFixedWait from './rules/no-fixed-wait.mjs';
 import noVacuousNegativeWait from './rules/no-vacuous-negative-wait.mjs';
 import noManualProtocolVersion from './rules/no-manual-protocol-version.mjs';
 import utilsLayerBoundary from './rules/utils-layer-boundary.mjs';
+import noDeadTestSkip from './rules/no-dead-test-skip.mjs';
 
 export default {
   rules: {
@@ -19,5 +20,6 @@ export default {
     'no-vacuous-negative-wait': noVacuousNegativeWait,
     'no-manual-protocol-version': noManualProtocolVersion,
     'utils-layer-boundary': utilsLayerBoundary,
+    'no-dead-test-skip': noDeadTestSkip,
   },
 };
