@@ -49,17 +49,19 @@ export function validateUrl(url: string, options: ValidateUrlOptions = {}): void
   if (blockLocalhost) {
     // 127.0.0.1 / ::1 等のループバックは isPrivateIpAddress で検出する。
     // isPrivateIpAddress('localhost') は false を返すため、localhost は明示的に判定が必要。
-    if (isPrivateIpAddress(parsedUrl.hostname)) {
+    // 判定は正規化した hostname（小文字・末尾ドット除去）に対して行う。末尾ドット付きの
+    // `localhost.` は同じアドレスに解決されるが、生の hostname ではどの分岐にも当たらない。
+    const hostname = normalizeHostname(parsedUrl.hostname);
+    if (isPrivateIpAddress(hostname)) {
       throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to private network is not allowed.`);
     }
     // ドメイン名形式の localhost は isPrivateIpAddress では検出できないため明示的にブロック
-    const lowerHostname = parsedUrl.hostname.toLowerCase();
-    if (lowerHostname === 'localhost' || lowerHostname.endsWith('.localhost')) {
+    if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
       throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to localhost is not allowed.`);
     }
     // 代替表現 (0x7f., ::1 bracket 等) は BLOCKED_PATTERNS でカバー
     for (const pattern of BLOCKED_PATTERNS) {
-      if (pattern.test(parsedUrl.hostname)) {
+      if (pattern.test(hostname)) {
         throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to localhost addresses is not allowed.`);
       }
     }
@@ -78,6 +80,19 @@ export function normalizeIpHostname(hostname: string): string {
     return hostname.slice(1, -1);
   }
   return hostname;
+}
+
+/**
+ * Canonicalize a URL hostname for policy checks: strip IPv6 brackets, lowercase,
+ * and remove the DNS root trailing dot(s).
+ *
+ * `new URL()` keeps the trailing dot (`http://localhost./` yields `localhost.`),
+ * which resolves to the same address but does not match the `localhost`
+ * equality/suffix checks. Canonicalizing first keeps every policy check on the
+ * same footing.
+ */
+export function normalizeHostname(hostname: string): string {
+  return normalizeIpHostname(hostname).toLowerCase().replace(/\.+$/, '');
 }
 
 /**
@@ -161,6 +176,27 @@ export function isPrivateIpAddress(hostname: string): boolean {
     return isPrivateIpAddress(`${a}.${b}.${c}.${d}`);
   }
 
+  // NAT64 well-known prefix (64:ff9b::/96)。末尾 32bit が NAT64 ゲートウェイの
+  // 変換先 IPv4 を表すため、埋め込み IPv4 を抽出して判定する。これにより
+  // `[64:ff9b::7f00:1]`（127.0.0.1）を public と誤分類しない。
+  const nat64Match = ipv6Lower.match(
+    /^64:ff9b::((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{1,4}:[0-9a-f]{1,4})$/
+  );
+  if (nat64Match) {
+    const embedded = nat64Match[1] ?? '';
+    if (embedded.includes('.')) {
+      return isPrivateIpAddress(embedded);
+    }
+    const [highStr, lowStr] = embedded.split(':');
+    const embeddedHex =
+      ((Number.parseInt(highStr ?? '', 16) << 16) | Number.parseInt(lowStr ?? '', 16)) >>> 0;
+    const a = (embeddedHex >>> 24) & 0xff;
+    const b = (embeddedHex >>> 16) & 0xff;
+    const c = (embeddedHex >>> 8) & 0xff;
+    const d = embeddedHex & 0xff;
+    return isPrivateIpAddress(`${a}.${b}.${c}.${d}`);
+  }
+
   // fe80::/10 - リンクローカルアドレス (fe80:: ~ febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
   if (/^fe[89ab][0-9a-f](:|$)/i.test(ipv6Lower)) {
     return true;
@@ -190,14 +226,15 @@ export function validateUrlForFilterImport(url: string): void {
   });
 
   const parsedUrl = new URL(url);
+  const hostname = normalizeHostname(parsedUrl.hostname);
 
   // プライベートIPチェック
-  if (isPrivateIpAddress(parsedUrl.hostname)) {
+  if (isPrivateIpAddress(hostname)) {
     throw new Error(`Access to private network address is not allowed: ${parsedUrl.hostname}`);
   }
 
   // ドメイン名形式のlocalhostチェック（フィルターインポートのみ）
-  if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname.endsWith('.localhost')) {
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
     throw new Error(`Access to localhost is not allowed for filter imports`);
   }
 }
@@ -213,11 +250,12 @@ export const ALLOWED_LOCALHOST_PORTS = new Set<number>(LOOPBACK_PORTS);
  * VULN-013 fix: ポート番号も検証し、許可されたポートのみ信頼する
  */
 export function isLocalhostAddress(hostname: string, port?: number): boolean {
-  const normalized = normalizeIpHostname(hostname).toLowerCase();
+  const normalized = normalizeHostname(hostname);
 
-  // localhost / 127.x.x.x (ループバックIPv4) / ::1 (IPv6ループバック) / ::ffff:127.x.x.x (IPv4マップ)
+  // localhost / *.localhost / 127.x.x.x (ループバックIPv4) / ::1 (IPv6ループバック) / ::ffff:127.x.x.x (IPv4マップ)
   const isLocalhost =
     normalized === 'localhost' ||
+    normalized.endsWith('.localhost') ||
     /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(normalized) ||
     normalized === '::1' ||
     /^::ffff:127\./.test(normalized);
@@ -248,15 +286,21 @@ export function validateUrlForAIRequests(url: string): void {
   });
 
   const parsedUrl = new URL(url);
+  const hostname = normalizeHostname(parsedUrl.hostname);
   const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (parsedUrl.protocol === 'https:' ? 443 : 80);
 
-  // ローカルAI用アドレス（127.x.x.x / ::1）は許可（ポート制限付き）
-  if (isLocalhostAddress(parsedUrl.hostname, port)) {
+  // ローカルAI用アドレス（127.x.x.x / ::1 / localhost）は許可（ポート制限付き）。
+  // isPrivateIpAddress('localhost') は false を返すため、ホスト名形式の localhost も
+  // ここでポート許可リストに掛ける（VULN-013 の対象を全ループバック表現へ揃える）。
+  if (isLocalhostAddress(hostname)) {
+    if (!ALLOWED_LOCALHOST_PORTS.has(port)) {
+      throw new Error(`Access to private network address is not allowed: ${parsedUrl.hostname}`);
+    }
     return;
   }
 
   // その他のプライベートIPチェック（10.x.x.x / 172.16-31.x.x / 192.168.x.x 等）
-  if (isPrivateIpAddress(parsedUrl.hostname)) {
+  if (isPrivateIpAddress(hostname)) {
     throw new Error(`Access to private network address is not allowed: ${parsedUrl.hostname}`);
   }
 }

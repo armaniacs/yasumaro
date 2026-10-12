@@ -7,6 +7,7 @@
 import {
   isPrivateIpAddress,
   normalizeIpHostname,
+  normalizeHostname,
   isLocalhostAddress,
   ALLOWED_LOCALHOST_PORTS,
   validateUrl,
@@ -22,6 +23,22 @@ describe('ssrfGuard', () => {
 
     it('leaves a bare hostname untouched', () => {
       expect(normalizeIpHostname('example.com')).toBe('example.com');
+    });
+  });
+
+  describe('normalizeHostname', () => {
+    it('strips the DNS root trailing dot so the host still matches policy checks', () => {
+      expect(normalizeHostname('localhost.')).toBe('localhost');
+      expect(normalizeHostname('sub.localhost.')).toBe('sub.localhost');
+    });
+
+    it('strips repeated trailing dots', () => {
+      expect(normalizeHostname('localhost..')).toBe('localhost');
+    });
+
+    it('lowercases and strips brackets', () => {
+      expect(normalizeHostname('Example.COM')).toBe('example.com');
+      expect(normalizeHostname('[::1]')).toBe('::1');
     });
   });
 
@@ -51,6 +68,12 @@ describe('ssrfGuard', () => {
     it('resolves an IPv4-mapped IPv6 address to its embedded IPv4 classification', () => {
       expect(isPrivateIpAddress('::ffff:10.0.0.1')).toBe(true);
       expect(isPrivateIpAddress('::ffff:8.8.8.8')).toBe(false);
+    });
+
+    it('resolves a NAT64 well-known-prefix address to its embedded IPv4 classification', () => {
+      expect(isPrivateIpAddress('64:ff9b::7f00:1')).toBe(true);   // 127.0.0.1
+      expect(isPrivateIpAddress('64:ff9b::a00:1')).toBe(true);    // 10.0.0.1
+      expect(isPrivateIpAddress('64:ff9b::808:808')).toBe(false); // 8.8.8.8
     });
 
     it('classifies fe80::/10 link-local addresses as private', () => {
@@ -99,6 +122,23 @@ describe('ssrfGuard', () => {
     it('does not throw for a normal hostname when blockLocalhost=true', () => {
       expect(() => validateUrl('https://example.com', { blockLocalhost: true })).not.toThrow();
     });
+
+    it('blocks localhost with a DNS root trailing dot when blockLocalhost=true', () => {
+      expect(() => validateUrl('http://localhost./', { blockLocalhost: true })).toThrow(/localhost/);
+      expect(() => validateUrl('http://localhost../', { blockLocalhost: true })).toThrow(/localhost/);
+      expect(() => validateUrl('http://sub.localhost./', { blockLocalhost: true })).toThrow(/localhost/);
+    });
+
+    it('blocks loopback written as a decimal or hex IPv4 literal when blockLocalhost=true', () => {
+      // `new URL()` canonicalizes these to 127.0.0.1, so the IP classification
+      // must catch them without any extra numeric-form parsing.
+      expect(() => validateUrl('http://2130706433/', { blockLocalhost: true })).toThrow(/private network/);
+      expect(() => validateUrl('http://0x7f000001/', { blockLocalhost: true })).toThrow(/private network/);
+    });
+
+    it('still allows a public hostname that ends with a trailing dot', () => {
+      expect(() => validateUrl('https://example.com./', { blockLocalhost: true })).not.toThrow();
+    });
   });
 
   describe('validateUrlForFilterImport', () => {
@@ -108,6 +148,10 @@ describe('ssrfGuard', () => {
 
     it('blocks localhost by hostname', () => {
       expect(() => validateUrlForFilterImport('http://localhost/filters.txt')).toThrow(/localhost is not allowed/);
+    });
+
+    it('blocks localhost by hostname with a trailing dot', () => {
+      expect(() => validateUrlForFilterImport('http://localhost./filters.txt')).toThrow(/localhost is not allowed/);
     });
 
     it('allows a public URL', () => {
@@ -122,6 +166,16 @@ describe('ssrfGuard', () => {
 
     it('blocks localhost on a non-allowed port', () => {
       expect(() => validateUrlForAIRequests('http://127.0.0.1:9999/api/generate')).toThrow(/private network/);
+    });
+
+    it('applies the port allowlist to the localhost hostname form too', () => {
+      expect(() => validateUrlForAIRequests('http://localhost:11434/api/generate')).not.toThrow();
+      expect(() => validateUrlForAIRequests('http://localhost:9999/api/generate')).toThrow(/private network/);
+    });
+
+    it('applies the port allowlist to a trailing-dot localhost host', () => {
+      expect(() => validateUrlForAIRequests('http://localhost.:11434/api/generate')).not.toThrow();
+      expect(() => validateUrlForAIRequests('http://localhost.:9999/api/generate')).toThrow(/private network/);
     });
 
     it('blocks a non-localhost private IP', () => {
