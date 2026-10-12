@@ -32,11 +32,19 @@ Scenario: テストの動作は変わらない
 
 ## 受け入れ基準
 
-- [ ] obsidian 経路 2 テスト（再活性化テスト + 空要約テスト）の注入モックが `Pick<ObsidianClient, 'appendToDailyNote'>` 形（または unknown 経由の狭い型）に寄せられている
-- [ ] vi.fn のシグネチャが実契約と一致しない場合、モック側を実シグネチャに寄せて型を通す（`as any` のまま残さない）。`any` を維持する判断をした場合は CLAUDE.local.md の許容を根拠に PBI に記録して閉じる
-- [ ] `npm run type-check` が green
-- [ ] `npx vitest run src/background/pipeline/__tests__/RecordingPipeline.test.ts --repeats=20` が green
-- [ ] `npm run validate` が green
+- [x] obsidian 経路 2 テスト（再活性化テスト + 空要約テスト）の注入モックが `Pick<ObsidianClient, 'appendToDailyNote'>` 形（または unknown 経由の狭い型）に寄せられている
+- [x] vi.fn のシグネチャが実契約と一致しない場合、モック側を実シグネチャに寄せて型を通す（`as any` のまま残さない）。`any` を維持する判断をした場合は CLAUDE.local.md の許容を根拠に PBI に記録して閉じる
+- [x] `npm run type-check` が green
+- [x] `npx vitest run src/background/pipeline/__tests__/RecordingPipeline.test.ts --repeats=20` が green
+- [x] `npm run validate` が green
+
+## 検証結果（2026-10-13 実施）
+
+- 実装: obsidian 経路 2 テスト（429 行・454 行、実装時点）の `{ appendToDailyNote: mockAppend } as any` → `as Pick<ObsidianClient, 'appendToDailyNote'>`（diff 2 行・`ObsidianClient` は既存 import を利用）。スコープ外の同パターン（`obsidian as any`、`makeAiClient() as any` 等）は変更せず。
+- 実契約の確認: `src/background/obsidianClient.ts:238-242` の `async appendToDailyNote(content: string, traceId: string = '', options: { dedupe?: boolean } = {}): Promise<void>`。後方 2 引数が省略可能なため、既存の `vi.fn<(content: string) => Promise<void>>()` と互換（引数が少ない関数は多い関数型に割当可能）→ **モック側は変更不要で Pick 形がそのまま type-check を通過**。`as any` 維持の判断には至らず。
+- 5 Whys の根本原因: `makeOrchestrator` の obsidian 引数が unknown 型のため `as any` で済ませ、「注入オブジェクトが本物のクライアントと部分的にしか一致しないなら完全な型では通らない」という誤解のまま確認コストを避けていた。実契約を確認すれば 1 引数 vi.fn は省略可能引数により互換で、型で契約を固定できた。
+- 検証: `npm run type-check` → exit 0。`npx vitest run src/background/pipeline/__tests__/RecordingPipeline.test.ts --repeats=20` → 23 passed（23 × 20 = 460 実行全 green）。`npm run validate` → exit 0（1062 files / 16032 tests）。
+- コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。
 
 ## テスト戦略
 
@@ -48,7 +56,7 @@ Scenario: テストの動作は変わらない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る（`npm run validate` green）
-- [ ] 検証結果（コマンドと結果）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る（`npm run validate` green）
+- [x] 検証結果（コマンドと結果）を PBI に記録する
+- [x] コードレビュー完了

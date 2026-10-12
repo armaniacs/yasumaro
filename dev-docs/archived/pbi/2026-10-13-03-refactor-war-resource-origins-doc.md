@@ -32,9 +32,15 @@ Scenario: 動作は変わらない
 
 ## 受け入れ基準
 
-- [ ] `warResourceResolves` の直上（または関数内）に、対応する 2 起源と拡張前提のコメントが追記されている
-- [ ] コードの動作は変わらない（`npx vitest run src/__tests__/manifest.test.ts` が green）
-- [ ] `npm run validate` が green
+- [x] `warResourceResolves` の直上（または関数内）に、対応する 2 起源と拡張前提のコメントが追記されている
+- [x] コードの動作は変わらない（`npx vitest run src/__tests__/manifest.test.ts` が green）
+- [x] `npm run validate` が green
+
+## 検証結果（2026-10-13 実施）
+
+- 実装: `warResourceResolves` の直上に対応起源の doc コメントを追記（`.js` は `entrypoints/<name>.ts` 由来の content-script entrypoint、それ以外は `public/` 由来。WXT が今日 WAR に合成するのはこの 2 起源のみ。src 由来のチャンクを WAR に入れる将来のモジュール分割（WXT 移行前の manifest は `utils/*.js` を持っていた）は、このリゾルバの拡張が必須 — それまでは stale チェックが偽陽性で fail する旨を明記）。
+- 動作不変: `npx vitest run src/__tests__/manifest.test.ts` → 17 passed（コメントのみの変更）。`npm run validate` → exit 0（1062 files / 16032 tests）。
+- コードレビュー: メインエージェントが実装（コメント 1 か所の差分のみ）を確認済み。
 
 ## テスト戦略
 
@@ -46,7 +52,7 @@ Scenario: 動作は変わらない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが検証されパスする（既存テストで動作不変を確認）
-- [ ] type-check / lint / test が通る（`npm run validate` green）
-- [ ] 検証結果（コマンドと結果）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが検証されパスする（既存テストで動作不変を確認）
+- [x] type-check / lint / test が通る（`npm run validate` green）
+- [x] 検証結果（コマンドと結果）を PBI に記録する
+- [x] コードレビュー完了

@@ -31,9 +31,16 @@ Scenario: ルール動作は変わらない
 
 ## 受け入れ基準
 
-- [ ] `eslint/rules/no-dead-test-skip.mjs` の Limitation 節にシャドーイングの制限が併記されている
-- [ ] コードの動作は変わらない（`npx vitest run eslint/__tests__ --repeats=20` が green）
-- [ ] `npm run validate` が green
+- [x] `eslint/rules/no-dead-test-skip.mjs` の Limitation 節にシャドーイングの制限が併記されている
+- [x] コードの動作は変わらない（`npx vitest run eslint/__tests__ --repeats=20` が green）
+- [x] `npm run validate` が green
+
+## 検証結果（2026-10-13 実施）
+
+- 実装: Limitation 節にシャドーイングを併記（"Local shadowing is the same kind of literal-name limitation: a variable named `it`, `test` or `describe` ... matches by name just the same, so a shadowed binding can draw a false report or hide a genuine skip."）+ 末尾文を "The repo imports test APIs under their literal names **and shadows none of them**; revisit if that changes." に拡張。diff は +4/-2 行すべてコメント行、コード動作は不変。
+- 5 Whys の根本原因: Limitation 節が「観測された逸脱（エイリアス import）の列挙」になっており、判定機構の性質（`TEST_API_ROOTS` のリテラル名照合）から導かれる限界の一般形を書いていなかった。解は同種の「リテラル名判定の限界」としてシャドーイングを併記すること。
+- 動作不変: `npx vitest run eslint/__tests__/no-dead-test-skip.test.ts --repeats=20` → 16 passed。編集ファイル単体の `npx eslint` → clean。`npm run validate` → exit 0（1062 files / 16032 tests）。
+- コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。
 
 ## テスト戦略
 
@@ -45,7 +52,7 @@ Scenario: ルール動作は変わらない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが検証されパスする（既存ルールテストで動作不変を確認）
-- [ ] type-check / lint / test が通る（`npm run validate` green）
-- [ ] 検証結果（コマンドと結果）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが検証されパスする（既存ルールテストで動作不変を確認）
+- [x] type-check / lint / test が通る（`npm run validate` green）
+- [x] 検証結果（コマンドと結果）を PBI に記録する
+- [x] コードレビュー完了

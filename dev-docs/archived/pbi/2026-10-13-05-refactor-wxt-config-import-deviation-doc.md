@@ -32,9 +32,15 @@ Scenario: 動作は変わらない
 
 ## 受け入れ基準
 
-- [ ] `import wxtConfig from '../../wxt.config.ts'` の直上に逸脱理由のコメントが追記されている
-- [ ] コードの動作は変わらない（`npm run type-check` が green）
-- [ ] `npm run validate` が green
+- [x] `import wxtConfig from '../../wxt.config.ts'` の直上に逸脱理由のコメントが追記されている
+- [x] コードの動作は変わらない（`npm run type-check` が green）
+- [x] `npm run validate` が green
+
+## 検証結果（2026-10-13 実施）
+
+- 実装: `wxtConfig` import 行の直上に逸脱理由のコメントを追記（"Intentional deviation from the '.js extensions on all imports' convention (AGENTS.md): wxt.config.ts is the root build config, not a compiled module — no .js form exists for it, and vitest (vite) resolves the .ts directly."）。コメントのみ、import 実装は無変更。
+- 動作不変: `npm run type-check` → exit 0。`npm run validate` → exit 0（1062 files / 16032 tests）。
+- コードレビュー: メインエージェントが実装（コメント 1 か所の差分のみ）を確認済み。
 
 ## テスト戦略
 
@@ -46,7 +52,7 @@ Scenario: 動作は変わらない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが検証されパスする（type-check で動作不変を確認）
-- [ ] type-check / lint / test が通る（`npm run validate` green）
-- [ ] 検証結果（コマンドと結果）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが検証されパスする（type-check で動作不変を確認）
+- [x] type-check / lint / test が通る（`npm run validate` green）
+- [x] 検証結果（コマンドと結果）を PBI に記録する
+- [x] コードレビュー完了
