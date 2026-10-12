@@ -426,7 +426,7 @@ describe('RecordingPipeline', () => {
 
       const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
-        { appendToDailyNote: mockAppend } as any,
+        { appendToDailyNote: mockAppend } as Pick<ObsidianClient, 'appendToDailyNote'>,
         makeAiClient() as any
       );
 
@@ -451,7 +451,7 @@ describe('RecordingPipeline', () => {
 
       const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
-        { appendToDailyNote: mockAppend } as any,
+        { appendToDailyNote: mockAppend } as Pick<ObsidianClient, 'appendToDailyNote'>,
         makeAiClient() as any
       );
 
