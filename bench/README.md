@@ -58,6 +58,13 @@ Sizes S/M/L map to a per-bench multiplier (`n`). The runner fits
   `createTreeWalker` traversal, `cloneNode(true)`, and layout-coupled getters
   (`getComputedStyle`, `getBoundingClientRect`; jsdom lacks `innerText`/`offset*`
   so those are not instrumentable here). Every wrap is restored on `teardown()`.
+  `createTreeWalker` counts only the measured module's traversals: jsdom
+  implements `querySelectorAll` on top of `@asamuzakjp/dom-selector`, whose
+  fallback path drives its own TreeWalker through the same public method, so
+  engine-internal creations are skipped — they scale with the selectors a rule
+  set uses, not with the module's DOM walking (measured 2026-10-12: a cleansing
+  refactor moved this counter +1813% while the module made 0 TreeWalker calls
+  and wall moved ~+23%).
 - **heap deltas** — `process.memoryUsage().heapUsed` before/after each measured
   iteration, with a forced `gc()` beforehand when `--expose-gc` is set.
 - **scaling exponent** — least-squares fit on `log(N)` vs `log(P50)`.
