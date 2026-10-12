@@ -14,6 +14,22 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-13 code-review 指摘フォロー（review-followup2） — ⬜ 未着手 7件 🔧非機能追加 RICE順: 01 → 07
+
+`/code-review`（コミット 70d9754b〜49ca0c62 対象・Approve 判定）の Suggestions 7 件を全件 PBI 化。Critical Issues は 0 件で全指摘が非ブロッキング。最高位の NN01 は NN03（2026-10-12）で復旧した manifest ゲートの「失敗側」がスイートで pin されておらず、`assertLeastPrivilegePermissions` が死にエクスポートになっている指摘。RICE 採点・同点タイブレーク・バッチ計画（W1-W3）の詳細は [2026-10-13-00-backlog-review-followup2.md](2026-10-13-00-backlog-review-followup2.md)（live 台帳）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 01 | [2026-10-13-01-test-pin-manifest-gate-red-side.md](2026-10-13-01-test-pin-manifest-gate-red-side.md) | test | 18.0 | 0.25 | ⬜ 未着手。改変入力（SSOT 外 +1 / localhost −1）→ throw を pin し、死にエクスポートの `assertLeastPrivilegePermissions` に存在理由を持たせる |
+| 02 | [2026-10-13-02-refactor-check-manifest-json-parse-guard.md](2026-10-13-02-refactor-check-manifest-json-parse-guard.md) | refactor | 4.0 | 0.25 | ⬜ 未着手。checkPermissionCaps / WAR chain の裸 JSON.parse を existsSync + クリーン fail パターンに統一 |
+| 03 | [2026-10-13-03-refactor-war-resource-origins-doc.md](2026-10-13-03-refactor-war-resource-origins-doc.md) | refactor | 2.0 | 0.25 | ⬜ 未着手。warResourceResolves の対応 2 起源と拡張前提をコメントに明記（将来のモジュール分割での偽 fail 防止） |
+| 04 | [2026-10-13-04-refactor-no-dead-test-skip-shadowing-doc.md](2026-10-13-04-refactor-no-dead-test-skip-shadowing-doc.md) | refactor | 2.0 | 0.25 | ⬜ 未着手。シャドーイングをエイリアス import と同種のリテラル名判定の限界として Limitation 節に併記 |
+| 05 | [2026-10-13-05-refactor-wxt-config-import-deviation-doc.md](2026-10-13-05-refactor-wxt-config-import-deviation-doc.md) | refactor | 2.0 | 0.25 | ⬜ 未着手。`import wxtConfig from '../../wxt.config.ts'` の .js 拡張子規約からの逸脱理由を import 直上に明記 |
+| 06 | [2026-10-13-06-refactor-sync-geturl-extraction-layers.md](2026-10-13-06-refactor-sync-geturl-extraction-layers.md) | refactor | 1.6 | 0.5 | ⬜ 未着手。ソース層と生成物層の getURL 抽出正規表現の一致を pin テスト（新規ファイル・ci-paths-filter と同型）で保証。NN02 の後 |
+| 07 | [2026-10-13-07-refactor-recording-pipeline-mock-typing.md](2026-10-13-07-refactor-recording-pipeline-mock-typing.md) | refactor | 1.6 | 0.25 | ⬜ 未着手。obsidian 経路 2 テストの `{ appendToDailyNote: mockAppend } as any` を `Pick<ObsidianClient, 'appendToDailyNote'>` 形へ寄せる（任意） |
+
+実行順: RICE 順。バッチ W1（01 / 02 / 04 / 07 並列・ファイル非重複）→ W2（03 / 06 並列）→ W3（05）。06 は 02 の後（pin 先の check-manifest.mjs が確定してから）。03 と 05 は同ファイル（manifest.test.ts）のため分離。
+
 ### 2026-10-12 skipped test の棚卸しと再発防止（skipped-test-cleanup） — ✅ 4件完了・アーカイブ済み 🔧非機能追加
 
 autonomous-task-closer（2026-10-12）が残課題として報告した skipped test を `pbi-backlog-prioritizer` で再列挙・RICE 採点して PBI 化。無条件の宣言形 skip は実測で **10 件 + 空 `describe.skip` 1 件**（当初報告の「4 箇所」はファイル数。うち 1 件を NN01 が再活性化、9 件 + 空 describe を NN02 が削除）。E2E の 8 件は実行時条件形のため候補から除外。`manifest.test.ts` の 11 件は一度台帳送り S1 にしたが、恒久 skip（かつ WAR 検証が early return で空振り）を実測したため NN03 へ昇格し、RICE 1.8 > 1.6 で lint ゲートを NN04 へ繰り下げた。RICE 採点・除外理由・台帳送り（S1 消費・S2/S3）の詳細は [2026-10-12-00-backlog-skipped-test-cleanup.md](2026-10-12-00-backlog-skipped-test-cleanup.md)（live 台帳）。全 4 件の実装・検証は autonomous-task-closer ラウンド2（2026-10-12）で完了。
@@ -2321,10 +2337,10 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。skipped-test-cleanup 4 件は 2026-10-12 ラウンド2 で完了・アーカイブ済み） |
+| ⬜ 未着手・保留 | 12（トリガー待ち 3 / 着手ゲート待ち 2 / review-followup2 7: NN01〜NN07 はすべて着手可） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **30 ファイル（B 10〔うち🔵 監視 5〕/ live 台帳 18 / 統合 PBI 1 = 非 INDEX 29 + INDEX）** |
+| **`pbi/` 残存 PBI 合計** | **38 ファイル（B 17〔うち🔵 監視 5〕/ live 台帳 19 / 統合 PBI 1 = 非 INDEX 37 + INDEX）** |
 | アーカイブ済みPBI | 1337（`00-backlog` 台帳を含む） |
 | アーカイブ済み実装計画 | 187 |
 
