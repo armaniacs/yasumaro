@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.41] - 2026-10-13
+
+テスト・CI 強化ラウンドの修正版です。恒久 skip の一掃（`no-dead-test-skip` ルール導入を含む）、manifest 権限検証ゲートの復旧と失敗側 pin、生成物層ゲートの JSON パース堅牢化、URL 検証のホスト名正規化漏れ修正、スイート実行時間予算の改定など 12 件を反映しました。
+
+### 修正・改善
+
+- URL 検証のホスト名正規化漏れを修正する。`new URL()` は `http://localhost./` のホスト名を `localhost.` のまま返すため、末尾ドット付きの localhost がブロック判定をすり抜けていた（AI リクエスト経路ではポート許可リストも回避できた）。正規化を `validateUrl` / フィルタ取り込み / AI リクエスト / 録画対象判定で統一し、NAT64 の埋め込み IPv4 も非公開判定に加える
+- wasm-bindgen 生成物（`src/wasm/*/*.d.ts`）の `/* eslint-disable */` バナーが手で削除されており、CI の wasm staleness ゲートが常時赤だったのを復元する。生成物は fresh build との byte 一致が要求されるため、lint 側で未使用 directive 警告を抑制する
+- 単体スイートの実行時間予算が導入時のスナップショット（fileCount 930、翌日に超過）のまま 15 日間赤だったのを実測へ改定し（1060）、固定コストの支配要因である **jsdom 環境のファイル数を第 2 のゲート**（360）として追加する。`validate` の常時赤が解消し、依存していた `build` ジョブが再び走る
+- ベンチの TreeWalker カウンタが jsdom のセレクタエンジン（`@asamuzakjp/dom-selector`）内部の走査まで数えており、セレクタ構文の変更だけで 9 指標が偽の回帰を示していたのを、計測対象モジュールの DOM 走査だけを数えるように修正する（baseline は再導出）
+- `RecordingPipeline` の obsidian 経路テストを注入形モックで再活性化し、宣言形 skip（`it.skip` / `describe.skip`）の死骸 21 か所を一掃して恒久 skip をゼロにする（E2E の 8 件は実行時条件形のため候補外と実測で確認）
+- 宣言形 skip を検出する `no-dead-test-skip` ルールを lint に導入する。実行時条件形（`test.skip(cond, reason)`）・skipIf・if ガード内・非テストオブジェクト・プロパティ参照・each 連結形を判別して誤検知しない
+- manifest 権限検証を jsdom 環境に依存して実行されなかったゲートから復旧する。`wxt.config.ts` ファクトリ直呼びのスイート（15 テスト）へ再設計し、生成物層は `check-manifest.mjs` に権限上限・WAR チェーン検証を追加して CI build job に配線する
+- manifest 最小権限ゲートの失敗側（SSOT 外ドメインの混入・localhost origin の欠落で throw）をスイートで pin し、外部消費者の無いゲートをモジュール内に限定する（de-export）。メッセージ断片の pin で `toEqual` を弱い判定に置き換えるリファクタも検出できる
+- 生成物層 manifest ゲートの manifest 読み込みを existsSync + try/catch に統一し、壊れた成果物（invalid JSON）でスタックトレースではなく fail メッセージで落とす。invalid JSON 時のクラッシュ点は main() が最初に実行する `checkManifestV3Compliance()` だったため同関数も含めて包む
+- ソース層（`manifest.test.ts`）と生成物層（`check-manifest.mjs`）で重複する getURL 抽出正規表現の一致を pin テスト（`geturl-extraction-sync.test.ts`）で保証し、片側だけの拡張で検証穴が隠れるのを防ぐ
+- `RecordingPipeline` テストの注入モックを実契約型（`Pick<ObsidianClient, 'appendToDailyNote'>`）へ寄せ、実シグネチャの変更を type-check で検出できるようにする
+- lint ルールの限界（シャドーイング）・WAR リゾルバの対応起源と拡張前提・`wxt.config.ts` import の規約逸脱理由をコメントに明記する（動作不変）
+
 ## [6.9.40] - 2026-10-10
 
 アーキテクチャ診断ラウンドの修正版です。alarm 配線の DI 統合、dashboard i18n、監査ログ型 SSOT、contentCleaner の集計 drift、status 表示契約など 13 件を反映しました。あわせてプライバシー保護の修正（保存経路の PII マスク、タイトル正規化、長トークン内 PII 検出）を含みます。同ブランチで実施した 22 観点レビュー（checking-team）の指摘のうち、High 3 件を含む 10 件も反映しています。
@@ -71,18 +90,6 @@ All notable changes to this project will be documented in this file.
 - 出荷ビルドに残っていたテスト用コードを完全に除去（プローブ文字列ゼロを確認）
 - プローブ判定フラグの公開をやめモジュール内に限定
 - Markdownエクスポート完了表示の E2E 判定を言語非依存にし、日本語 UI でも検証が通るようにする
-- URL 検証のホスト名正規化漏れを修正する。`new URL()` は `http://localhost./` のホスト名を `localhost.` のまま返すため、末尾ドット付きの localhost がブロック判定をすり抜けていた（AI リクエスト経路ではポート許可リストも回避できた）。正規化を `validateUrl` / フィルタ取り込み / AI リクエスト / 録画対象判定で統一し、NAT64 の埋め込み IPv4 も非公開判定に加える
-- wasm-bindgen 生成物（`src/wasm/*/*.d.ts`）の `/* eslint-disable */` バナーが手で削除されており、CI の wasm staleness ゲートが常時赤だったのを復元する。生成物は fresh build との byte 一致が要求されるため、lint 側で未使用 directive 警告を抑制する
-- 単体スイートの実行時間予算が導入時のスナップショット（fileCount 930、翌日に超過）のまま 15 日間赤だったのを実測へ改定し（1060）、固定コストの支配要因である **jsdom 環境のファイル数を第 2 のゲート**（360）として追加する。`validate` の常時赤が解消し、依存していた `build` ジョブが再び走る
-- ベンチの TreeWalker カウンタが jsdom のセレクタエンジン（`@asamuzakjp/dom-selector`）内部の走査まで数えており、セレクタ構文の変更だけで 9 指標が偽の回帰を示していたのを、計測対象モジュールの DOM 走査だけを数えるように修正する（baseline は再導出）
-- `RecordingPipeline` の obsidian 経路テストを注入形モックで再活性化し、宣言形 skip（`it.skip` / `describe.skip`）の死骸 21 か所を一掃して恒久 skip をゼロにする（E2E の 8 件は実行時条件形のため候補外と実測で確認）
-- 宣言形 skip を検出する `no-dead-test-skip` ルールを lint に導入する。実行時条件形（`test.skip(cond, reason)`）・skipIf・if ガード内・非テストオブジェクト・プロパティ参照・each 連結形を判別して誤検知しない
-- manifest 権限検証を jsdom 環境に依存して実行されなかったゲートから復旧する。`wxt.config.ts` ファクトリ直呼びのスイート（15 テスト）へ再設計し、生成物層は `check-manifest.mjs` に権限上限・WAR チェーン検証を追加して CI build job に配線する
-- manifest 最小権限ゲートの失敗側（SSOT 外ドメインの混入・localhost origin の欠落で throw）をスイートで pin し、外部消費者の無いゲートをモジュール内に限定する（de-export）。メッセージ断片の pin で `toEqual` を弱い判定に置き換えるリファクタも検出できる
-- 生成物層 manifest ゲートの manifest 読み込みを existsSync + try/catch に統一し、壊れた成果物（invalid JSON）でスタックトレースではなく fail メッセージで落とす。invalid JSON 時のクラッシュ点は main() が最初に実行する `checkManifestV3Compliance()` だったため同関数も含めて包む
-- ソース層（`manifest.test.ts`）と生成物層（`check-manifest.mjs`）で重複する getURL 抽出正規表現の一致を pin テスト（`geturl-extraction-sync.test.ts`）で保証し、片側だけの拡張で検証穴が隠れるのを防ぐ
-- `RecordingPipeline` テストの注入モックを実契約型（`Pick<ObsidianClient, 'appendToDailyNote'>`）へ寄せ、実シグネチャの変更を type-check で検出できるようにする
-- lint ルールの限界（シャドーイング）・WAR リゾルバの対応起源と拡張前提・`wxt.config.ts` import の規約逸脱理由をコメントに明記する（動作不変）
 
 ## [6.9.39] - 2026-10-07
 
