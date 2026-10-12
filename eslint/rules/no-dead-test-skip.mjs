@@ -27,8 +27,12 @@
  * be the `it` / `test` / `describe` root.
  *
  * Limitation: the receiver is matched by its literal name, so an aliased import
- * (`import { test as t }`) would slip past. The repo imports test APIs under
- * their literal names; revisit if that changes.
+ * (`import { test as t }`) would slip past. Local shadowing is the same kind of
+ * literal-name limitation: a variable named `it`, `test` or `describe` (e.g.
+ * `for (const it of items) { it.skip('x', fn); }`) matches by name just the
+ * same, so a shadowed binding can draw a false report or hide a genuine skip.
+ * The repo imports test APIs under their literal names and shadows none of
+ * them; revisit if that changes.
  *
  * To allow a genuine declaration-form skip at this site, opt out on the line
  * above the call:
