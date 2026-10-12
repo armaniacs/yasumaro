@@ -63,16 +63,16 @@ Scenario: 供給網監査から byte provenance を求められる
 
 ## 受け入れ基準
 
-- [ ] 本 PBI は着手トリガー待ちであり、トリガー到来まではコード、CI、manifest を変更しない。
-- [ ] 現在の基本契約が、fresh と committed の行動 parity、および ship 対象 3 組の src/public byte equality であることを明記する。
-- [ ] host を跨ぐ binary byte equality が保証されないこと、同じ host の double build でも path 正規化や banner の差で一致しない可能性があることを明記する。
-- [ ] Rust toolchain、Cargo lock、`wasm-pack`、build/postprocess scripts、manifest の `publicShip` を gate 入力として明記する。
-- [ ] Rust toolchain、Cargo lock、`wasm-pack`、build/postprocess scripts、ship manifest の変更、および供給網監査による byte provenance 要求を再評価トリガーとして明記する。
-- [ ] binary の大きな byte 差分を基本契約にせず、parity と公開 copy consistency を基本軸とすること。
-- [ ] build crate 4 件、ship binary 3 件、STAGED の `sentence-dedup`、Rust unit test 対象 5 crate directories、parity suite 7 suite paths、ship byte comparison 3 pairs、glue/dts gate 7 generated paths の現状を混同なく記載する。
-- [ ] `release:check` categories に wasm gate がなく、failure 時は 3 fresh binaries を artifact 化而已であること、継続的な byte reproducibility monitor ではないことを明記する。
-- [ ] `dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の job が完全保持されることを依存条件として明記する。`dev-docs/archived/pbi/2026-09-25-13-...` は依存先ではない。
-- [ ] lockfile または `.npmrc` の変更が `wasm-test` 内の `npm ci` に波及することを明記する。
+- [x] 本 PBI は着手トリガー待ちであり、トリガー到来まではコード、CI、manifest を変更しない。
+- [x] 現在の基本契約が、fresh と committed の行動 parity、および ship 対象 3 組の src/public byte equality であることを明記する。
+- [x] host を跨ぐ binary byte equality が保証されないこと、同じ host の double build でも path 正規化や banner の差で一致しない可能性があることを明記する。
+- [x] Rust toolchain、Cargo lock、`wasm-pack`、build/postprocess scripts、manifest の `publicShip` を gate 入力として明記する。
+- [x] Rust toolchain、Cargo lock、`wasm-pack`、build/postprocess scripts、ship manifest の変更、および供給網監査による byte provenance 要求を再評価トリガーとして明記する。
+- [x] binary の大きな byte 差分を基本契約にせず、parity と公開 copy consistency を基本軸とすること。
+- [x] build crate 4 件、ship binary 3 件、STAGED の `sentence-dedup`、Rust unit test 対象 5 crate directories、parity suite 7 suite paths、ship byte comparison 3 pairs、glue/dts gate 7 generated paths の現状を混同なく記載する。
+- [x] `release:check` categories に wasm gate がなく、failure 時は 3 fresh binaries を artifact 化而已であること、継続的な byte reproducibility monitor ではないことを明記する。
+- [x] `dev-docs/archived/pbi/2026-09-25-14-refactor-ci-paths-filter.md` 後も `wasm-test` の job が完全保持されることを依存条件として明記する。`dev-docs/archived/pbi/2026-09-25-13-...` は依存先ではない。
+- [x] lockfile または `.npmrc` の変更が `wasm-test` 内の `npm ci` に波及することを明記する。
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -162,12 +162,12 @@ Scenario: 供給網監査から byte provenance を求められる
 
 ## Definition of Done
 
-- [ ] 着手トリガー待ちである旨と、トリガー到来までは実装しない旨を明記している。
-- [ ] 現在の防御範囲を、7 suite paths の parity と 3 pairs の src/public byte equality として定義している。
-- [ ] host-crossing byte equality と同一 host double build の再現性を防御済みとして扱っていない。
-- [ ] すべての gate 入力と再評価トリガーを明記している。
-- [ ] binary diff ではなく parity と公開 copy consistency を基本軸としている。
-- [ ] byte provenance 要求時には hash manifest と parity の二軸で評価する。
-- [ ] manifest、build plan、unit test、stale check の現状と、release check および artifact の限界を記載している。
-- [ ] paths filter、lockfile、`.npmrc` に関する依存条件を記載している。
-- [ ] 採用済みの behavior parity と 3 組の src/public byte equality を弱めない方針を明記している。
+- [x] 着手トリガー待ちである旨と、トリガー到来までは実装しない旨を明記している。
+- [x] 現在の防御範囲を、7 suite paths の parity と 3 pairs の src/public byte equality として定義している。
+- [x] host-crossing byte equality と同一 host double build の再現性を防御済みとして扱っていない。
+- [x] すべての gate 入力と再評価トリガーを明記している。
+- [x] binary diff ではなく parity と公開 copy consistency を基本軸としている。
+- [x] byte provenance 要求時には hash manifest と parity の二軸で評価する。
+- [x] manifest、build plan、unit test、stale check の現状と、release check および artifact の限界を記載している。
+- [x] paths filter、lockfile、`.npmrc` に関する依存条件を記載している。
+- [x] 採用済みの behavior parity と 3 組の src/public byte equality を弱めない方針を明記している。

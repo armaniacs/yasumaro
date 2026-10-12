@@ -173,7 +173,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 ## Definition of Done
 
 - [ ] 依存 PBI `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` が完了し、同一 archive noRetry 契約が維持されている。
-- [ ] 着手トリガー待ちの条件と、実害未確認である backlog としての範囲が明記されている。
+- [x] 着手トリガー待ちの条件と、実害未確認である backlog としての範囲が明記されている。
 - [ ] `ArchiveGateway` が14種の archive routing を所有し、`OffscreenGateway` に archive routing 責務が残っていない。
 - [ ] `OffscreenGateway` は query、getStatus、mutate、maintain の責務を維持している。
 - [ ] 両 gateway は同じ `OffscreenTransport` singleton を共有し、mutex と message serialization が分裂していない。
