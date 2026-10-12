@@ -8,6 +8,18 @@ export default [
     ignores: ['node_modules/', 'dist/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
   },
   {
+    // wasm-bindgen emits `/* eslint-disable */` into the glue it generates, and
+    // the committed copies under src/wasm/ are byte-gated against a fresh build
+    // by CI's wasm-test job (node scripts/wasm-crates.mjs check). Editing that
+    // banner out — even to silence an unused-directive warning — makes the gate
+    // fail: 7f201080 removed it from textrank/sentence-dedup on 2026-10-03 and
+    // the job stayed red until it was restored on 2026-10-12. Generated files
+    // must round-trip, so the directive is left alone and unused-directive
+    // reporting is off for these two files only.
+    files: ['src/wasm/**/*.d.ts'],
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+  },
+  {
     files: ['src/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
     languageOptions: {

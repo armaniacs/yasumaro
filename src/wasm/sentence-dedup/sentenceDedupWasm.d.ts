@@ -1,4 +1,5 @@
 /* tslint:disable */
+/* eslint-disable */
 
 /**
  * Result of `deduplicateIndices`: the kept part indices (into the core's
