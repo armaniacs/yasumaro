@@ -42,7 +42,16 @@ function checkManifestV3Compliance() {
     return false;
   }
 
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  // First manifest read of the gate: a corrupt artifact must produce a clean
+  // fail verdict here, not an unhandled SyntaxError before main() can
+  // fail-fast on this section's result.
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    fail('Built manifest.json could not be parsed as JSON — the build artifact is corrupt');
+    return false;
+  }
 
   // manifest_version
   if (manifest.manifest_version === 3) {
@@ -157,7 +166,18 @@ function checkPermissionCaps() {
   info('Checking permission caps on the built manifest...');
 
   const manifestPath = join(DIST_DIR, 'manifest.json');
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  if (!existsSync(manifestPath)) {
+    fail('Built manifest.json not found — run build first');
+    return false;
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    fail('Built manifest.json could not be parsed as JSON — the build artifact is corrupt');
+    return false;
+  }
 
   const host = manifest.host_permissions || [];
   const optional = manifest.optional_host_permissions || [];
@@ -293,7 +313,18 @@ function checkWebAccessibleResourcesChain() {
   info('Checking web_accessible_resources covers the content script page-context fetches...');
 
   const manifestPath = join(DIST_DIR, 'manifest.json');
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  if (!existsSync(manifestPath)) {
+    fail('Built manifest.json not found — run build first');
+    return false;
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    fail('Built manifest.json could not be parsed as JSON — the build artifact is corrupt');
+    return false;
+  }
 
   const war = manifest.web_accessible_resources || [];
   if (war.length === 0) {
