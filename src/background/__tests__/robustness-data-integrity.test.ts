@@ -179,29 +179,6 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
       expect(result.success).toBe(true);
       expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
     });
-
-    // SKIPPED: Pre-existing test issues - mock setup incomplete for Vitest
-    it.skip('saves the URL only when the Obsidian write succeeds', async () => {
-      // Test expects result.success=true but RecordingPipeline mock not properly set up
-    });
-
-    // SKIPPED: Pre-existing test issues - error message mismatch
-    it.skip('does not save the URL on network errors', async () => {
-      // Test expects result.error='Network error' but actual error handling differs
-    });
-
-    it.skip('does not save the URL on API errors', async () => {
-      // Test expects result.error='API Error' but actual error handling differs
-    });
-
-    it.skip('does not save the URL on timeout', async () => {
-      // Test expects result.error='Request timeout' but actual error handling differs
-    });
-  });
-
-  // SKIPPED: Pre-existing test issues - moved to skip
-  describe.skip('エッジケース: 書き込み失敗時のURL整合性', () => {
-    // All tests in this block are skipped due to pre-existing mock/implementation mismatch
   });
 
   describe('エッジケース: 重複URLの処理', () => {
@@ -224,10 +201,6 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
       expect(result.success).toBe(true);
       expect(result.skipped).toBe(true);
       expect(setSavedUrlsWithTimestamps).not.toHaveBeenCalled();
-    });
-
-    // SKIPPED: Mock issues - need further investigation
-    it.skip('calls setSavedUrlsWithTimestamps only for new URLs', async () => {
     });
   });
 
@@ -252,13 +225,4 @@ describe('RecordingPipeline: データ整合性（P0）', () => {
     });
   });
 
-  describe('エッジケース: 並列呼び出し時の整合性', () => {
-    // SKIPPED: Mock issues - need further investigation
-    it.skip('saves URLs correctly for parallel calls', async () => {
-    });
-
-    // SKIPPED: Mock issues - need further investigation
-    it.skip('keeps consistency when some parallel requests fail', async () => {
-    });
-  });
 });

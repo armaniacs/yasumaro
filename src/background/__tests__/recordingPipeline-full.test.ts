@@ -279,12 +279,6 @@ describe('RecordingPipeline', () => {
 
       expect(mockAiClient.generateSummary).not.toHaveBeenCalled();
     });
-
-    it.skip('waits for the same-URL mutex before writing to Obsidian', async () => {
-      // SKIPPED: static mutex compat removed in PBI-02.
-      // PerUrlMutexMap is now instance-based via DI container.
-      // Same-URL serialization is covered by the "同一URLへの並行 record() の直列化" test above.
-    });
   });
 
   describe('同一URLへの並行 record() の直列化', () => {

@@ -413,14 +413,12 @@ describe('RecordingPipeline', () => {
   });
 
   describe('通常記録フロー', () => {
-    // Skip this test - RecordingPipeline doesn't pass obsidian through context to
-    // saveToObsidianStep, so MockedObsidianClient is never called. This is a test
-    // design issue, not a Vitest migration issue.
-    it.skip('saves the AI summary to Obsidian', async () => {
+    // saveToObsidianStep は deps.obsidian（makeOrchestrator 第2引数）で渡された
+    // ObsidianClient を呼ぶため、スパイは第2引数へ直接注入する
+    // （obsidian-write-failed 系テストと同じ配線。クラスモック MockedObsidianClient
+    // は makeOrchestrator に渡すインスタンスへは効かない）。
+    it('saves the AI summary to Obsidian', async () => {
       const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
-      MockedObsidianClient.mockImplementation(function(this: any) {
-        this.appendToDailyNote = mockAppend;
-      });
       mockProcess.mockResolvedValue({
         summary: 'Generated AI summary',
         maskedCount: 0,
@@ -428,7 +426,7 @@ describe('RecordingPipeline', () => {
 
       const pipeline = makeOrchestrator(
         makeGetPrivacyInfo(),
-        makeObsidian() as any,
+        { appendToDailyNote: mockAppend } as any,
         makeAiClient() as any
       );
 
@@ -439,9 +437,33 @@ describe('RecordingPipeline', () => {
       }, { settings: mockSettings });
 
       expect(result.success).toBe(true);
-      expect(mockAppend).toHaveBeenCalled();
+      expect(mockAppend).toHaveBeenCalledTimes(1);
       const callArg: string = mockAppend.mock.calls[0]?.[0] || '';
       expect(callArg).toContain('Generated AI summary');
+    });
+
+    it('keeps the Obsidian write path when the AI summary is empty', async () => {
+      const mockAppend = vi.fn<(content: string) => Promise<void>>().mockResolvedValue(undefined);
+      mockProcess.mockResolvedValue({
+        summary: '',
+        maskedCount: 0,
+      });
+
+      const pipeline = makeOrchestrator(
+        makeGetPrivacyInfo(),
+        { appendToDailyNote: mockAppend } as any,
+        makeAiClient() as any
+      );
+
+      const result = await pipeline.record({
+        title: 'Empty Summary Test',
+        url: 'https://example.com/empty-summary',
+        content: 'Page content',
+      }, { settings: mockSettings });
+
+      // 現行実装どおり: 空要約でも SUMMARY_EMPTY_FALLBACK 経由で書き込み経路は維持される
+      expect(result.success).toBe(true);
+      expect(mockAppend).toHaveBeenCalledTimes(1);
     });
 
     it('returns a DOMAIN_BLOCKED error when the domain is blocked', async () => {
