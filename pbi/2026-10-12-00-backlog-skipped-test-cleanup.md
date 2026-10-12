@@ -1,7 +1,9 @@
-# Backlog: skipped test の棚卸しと再発防止（skipped-test-cleanup）
+# Backlog: skipped test の棚卸しと再発防止（skipped-test-cleanup） — ✅ 4件完了（2026-10-12 ラウンド2 で実装・アーカイブ済み）
 
 autonomous-task-closer（2026-10-12）が残課題として報告した「skipped test 4 箇所」を入力に、
 pbi-backlog-prioritizer で候補を再列挙・RICE 採点して PBI 化したラウンド。
+
+**実行結果（2026-10-12 ラウンド2）**: W1（01 / 02 / 03）はサブエージェント3体で並列実行、W2（04）は 02 完了後の直列実行で完了。全 4 件 `npm run validate` exit 0（1061 files / 16029 tests passed・skipped 0）でアーカイブ。個別 PBI は `dev-docs/archived/pbi/` へ移動済み（INDEX 進行中セクションとアーカイブ履歴を参照）。
 
 - 入力: 2026-10-12 の残課題報告（`robustness-data-integrity.test.ts` / `RecordingPipeline.test.ts` /
   `recordingPipeline-full.test.ts` / `recordingCache-settingsCache.test.ts` の skip）
@@ -24,10 +26,10 @@ Effort: ストーリーポイント
 
 | NN | PBI | 種別 | R | I | C | E | RICE | SP | 依存 |
 |---|---|---|---|---:|---:|---:|---:|---:|---|
-| 01 | [recording-pipeline-obsidian-skip 再活性化](2026-10-12-01-test-reenable-recording-pipeline-obsidian-skip.md) | test | 2 | 1.0 | 1.0 | 0.25 | **8.0** | 0.25 | なし |
-| 02 | [死んだ無条件 skip スタブ 9 件 + 空 describe 1 件の削除](2026-10-12-02-test-remove-dead-test-skips.md) | test | 2 | 0.5 | 1.0 | 0.25 | **4.0** | 0.25 | なし |
-| 03 | [恒久 skip されている権限最小化テスト 11 件の復旧](2026-10-12-03-test-manifest-verification-permanently-skipped.md) | test | 3 | 1.5 | 0.8 | 2.0 | **1.8** | 2.0 | なし |
-| 04 | [恒久 skip を検出する lint ゲート](2026-10-12-04-refactor-no-dead-test-skip-lint.md) | refactor | 3 | 1.0 | 0.8 | 1.5 | **1.6** | 1.5 | **02 の後** |
+| 01 | [recording-pipeline-obsidian-skip 再活性化](../dev-docs/archived/pbi/2026-10-12-01-test-reenable-recording-pipeline-obsidian-skip.md) | test | 2 | 1.0 | 1.0 | 0.25 | **8.0** | 0.25 | なし |
+| 02 | [死んだ無条件 skip スタブ 9 件 + 空 describe 1 件の削除](../dev-docs/archived/pbi/2026-10-12-02-test-remove-dead-test-skips.md) | test | 2 | 0.5 | 1.0 | 0.25 | **4.0** | 0.25 | なし |
+| 03 | [恒久 skip されている権限最小化テスト 11 件の復旧](../dev-docs/archived/pbi/2026-10-12-03-test-manifest-verification-permanently-skipped.md) | test | 3 | 1.5 | 0.8 | 2.0 | **1.8** | 2.0 | なし |
+| 04 | [恒久 skip を検出する lint ゲート](../dev-docs/archived/pbi/2026-10-12-04-refactor-no-dead-test-skip-lint.md) | refactor | 3 | 1.0 | 0.8 | 1.5 | **1.6** | 1.5 | **02 の後** |
 
 RICE = R × I × C / E。値は各 PBI 内「RICE」行と一致。03 と 04 は 1.8 対 1.6 のほぼ同点で、
 同点時の裁定基準（リスク軽減効果 → 時間的緊急性）に従い 03 を先とした。

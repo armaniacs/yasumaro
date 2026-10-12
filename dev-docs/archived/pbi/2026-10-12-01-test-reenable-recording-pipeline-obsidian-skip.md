@@ -44,12 +44,12 @@ Scenario: 要約が空でも書き込み経路が維持される
 
 ## 受け入れ基準
 
-- [ ] `RecordingPipeline.test.ts:419` の `it.skip` が `it` になり、テストが実行されて green になる
-- [ ] obsidian クライアントは `MockedObsidianClient.mockImplementation` ではなく、`makeOrchestrator` の第2引数へ `{ appendToDailyNote: mockAppend }` を注入する形で渡している（467 行の active テストと同じ配線）
-- [ ] stale な skip 理由コメント（「context 経由で渡らない」旨）を削除または実態に合わせて更新している
-- [ ] 当該テストが red になりうることを確認している（例: `makeOrchestrator` へ渡す obsidian を `vi.fn()` のみにして失敗させ、戻して green。記録を残す）
-- [ ] `npx vitest run src/background/pipeline/__tests__/RecordingPipeline.test.ts --repeats=20` が安定して green
-- [ ] `npm run validate` が green
+- [x] `RecordingPipeline.test.ts:419` の `it.skip` が `it` になり、テストが実行されて green になる
+- [x] obsidian クライアントは `MockedObsidianClient.mockImplementation` ではなく、`makeOrchestrator` の第2引数へ `{ appendToDailyNote: mockAppend }` を注入する形で渡している（467 行の active テストと同じ配線）
+- [x] stale な skip 理由コメント（「context 経由で渡らない」旨）を削除または実態に合わせて更新している
+- [x] 当該テストが red になりうることを確認している（例: `makeOrchestrator` へ渡す obsidian を `vi.fn()` のみにして失敗させ、戻して green。記録を残す）
+- [x] `npx vitest run src/background/pipeline/__tests__/RecordingPipeline.test.ts --repeats=20` が安定して green
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -83,7 +83,15 @@ Scenario: 要約が空でも書き込み経路が維持される
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る（`npm run validate` green）
-- [ ] 検証結果（コマンドと結果）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る（`npm run validate` green）
+- [x] 検証結果（コマンドと結果）を PBI に記録する
+- [x] コードレビュー完了
+
+## 検証結果（2026-10-12 実施）
+
+- Red 確認: 注入を一時的に `{ appendToDailyNote: vi.fn() }`（実装なし）へ変更 → 対象のみ失敗（`AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times`、他 22 テストは green）→ 元に戻して green。テストが「常に green の飾り」でないことを実証。
+- `npx vitest run src/background/pipeline/__tests__/RecordingPipeline.test.ts --repeats=20` → Test Files 1 passed / Tests 23 passed（23 × 20 = 460 実行、全 green）。
+- 実時間待ちは未追加（`RecordingPipeline` は注入済み sleep を使う設計）。
+- 変更ファイル: `src/background/pipeline/__tests__/RecordingPipeline.test.ts` のみ（420 行で `it` 化、429 行で第2引数注入形、440 行で `toHaveBeenCalledTimes(1)` に強化、BDD シナリオ2 を新規テスト 1 件として自動化）。
+- コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。

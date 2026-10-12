@@ -61,13 +61,13 @@ Scenario: 実行時条件の skip は止めない
 
 ## 受け入れ基準
 
-- [ ] `eslint/rules/no-dead-test-skip.mjs` が追加され、上表の判別規則どおりに報告・許可する
-- [ ] `eslint/__tests__/no-dead-test-skip.test.ts` が `createRepeatSafeRuleTester` を使って有効・無効の両ケースを pin している（AGENTS.md の `--repeats` 規約に従う）
-- [ ] `eslint.config.js` の vitest 対象ブロックと `testDir/`（Playwright）対象ブロックの両方に配線されている
-- [ ] 正例（許可）として上記の条件付き skip 5 形がすべて valid ケースとしてテストに含まれている
-- [ ] ルールを有効化した状態で `npm run lint` が 0 errors（NN02 完了後の既存違反ゼロを前提。違反が残る場合は `warn` で導入し、解消後に `error` へ昇格する判断を記録する）
-- [ ] `npx vitest run eslint/__tests__ --repeats=20` が green
-- [ ] `npm run validate` が green
+- [x] `eslint/rules/no-dead-test-skip.mjs` が追加され、上表の判別規則どおりに報告・許可する
+- [x] `eslint/__tests__/no-dead-test-skip.test.ts` が `createRepeatSafeRuleTester` を使って有効・無効の両ケースを pin している（AGENTS.md の `--repeats` 規約に従う）
+- [x] `eslint.config.js` の vitest 対象ブロックと `testDir/`（Playwright）対象ブロックの両方に配線されている
+- [x] 正例（許可）として上記の条件付き skip 5 形がすべて valid ケースとしてテストに含まれている
+- [x] ルールを有効化した状態で `npm run lint` が 0 errors（NN02 完了後の既存違反ゼロを前提。違反が残る場合は `warn` で導入し、解消後に `error` へ昇格する判断を記録する）
+- [x] `npx vitest run eslint/__tests__ --repeats=20` が green
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -103,8 +103,18 @@ Scenario: 実行時条件の skip は止めない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / テストが通る（`npm run validate` green）
-- [ ] `npx vitest run eslint/__tests__ --repeats=20` が green
-- [ ] 検証結果（コマンドと結果）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / テストが通る（`npm run validate` green）
+- [x] `npx vitest run eslint/__tests__ --repeats=20` が green
+- [x] 検証結果（コマンドと結果）を PBI に記録する
+- [x] コードレビュー完了
+
+## 検証結果（2026-10-12 実施）
+
+- `eslint/rules/no-dead-test-skip.mjs` 追加: 宣言形（`it`/`test` は第1引数が文字列リテラル かつ 引数2以上、`describe` は文字列リテラル）のみ報告し、実行時条件形（`test.skip(cond, reason)`・`test.skip('reason')` 単一文字列・`skipIf`・if ガード内・非テストオブジェクトの `.skip()`・プロパティ参照）を許可。`each` 連結形（`it.skip.each([...])(...)`）は連結呼び出しを辿って検出（初版で未検出だったため修正済み）。
+- `eslint/__tests__/no-dead-test-skip.test.ts`: `createRepeatSafeRuleTester` 使用。valid 9 ケース（条件付き skip 5 形 + reasoned opt-out + 非テストオブジェクト + プロパティ参照 + bare runtime call）/ invalid 7 ケース（宣言形 4 種 + each 連結 + Playwright suite 宣言 + テンプレートリテラル）。
+- 配線: `eslint.config.js` の vitest 対象ブロック（`src/**/__tests__` / `testDir/__tests__` / `eslint/__tests__`）と `testDir/`（Playwright）対象ブロックの両方に `error` で導入（`--print-config` で両ブロックの severity 2 を確認）。
+- `npx vitest run eslint/__tests__ --repeats=20` → 11 files / 178 tests passed（全 green）。
+- `npm run lint` → 0 errors（NN02 完了後の既存違反ゼロを前提とした `error` 導入。E2E の条件付き skip 8 件・`skipIf` 2 件・`manifest.test.ts` のプロパティ参照が誤検知ゼロで通ることを実証）。
+- `npm run validate` exit 0（16029 tests passed）。
+- コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。

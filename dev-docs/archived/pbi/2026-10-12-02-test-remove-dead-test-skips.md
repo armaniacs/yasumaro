@@ -64,12 +64,12 @@ Scenario: 削除しても契約が無防備になっていない
 
 ## 受け入れ基準
 
-- [ ] 上記 9 件の `it.skip` と 1 件の空 `describe.skip` が削除されている（または pin 先が無い期待のみ active テストとして復元されている）
-- [ ] 削除前に「期待 → 現行の pin 先」の対応表を作り、pin 先が実在し green であることを実測している（対応表は PBI に記録）
-- [ ] 空になった `describe.skip` ブロックの跡に、削除理由を英語コメントで残していない（削除は削除として完結させる。理由は PBI 側に残す）
-- [ ] 対象 3 ファイルのテストが green（`npx vitest run src/background/__tests__/robustness-data-integrity.test.ts src/background/__tests__/recordingPipeline-full.test.ts src/background/__tests__/recordingCache-settingsCache.test.ts`）
-- [ ] スイート全体の skipped 件数が 21 → 11（`manifest.test.ts` の dist 依存 11 件を除き 0）になる
-- [ ] `npm run validate` が green
+- [x] 上記 9 件の `it.skip` と 1 件の空 `describe.skip` が削除されている（または pin 先が無い期待のみ active テストとして復元されている）
+- [x] 削除前に「期待 → 現行の pin 先」の対応表を作り、pin 先が実在し green であることを実測している（対応表は PBI に記録）
+- [x] 空になった `describe.skip` ブロックの跡に、削除理由を英語コメントで残していない（削除は削除として完結させる。理由は PBI 側に残す）
+- [x] 対象 3 ファイルのテストが green（`npx vitest run src/background/__tests__/robustness-data-integrity.test.ts src/background/__tests__/recordingPipeline-full.test.ts src/background/__tests__/recordingCache-settingsCache.test.ts`）
+- [x] スイート全体の skipped 件数が 21 → 11（`manifest.test.ts` の dist 依存 11 件を除き 0）になる
+- [x] `npm run validate` が green
 
 ## テスト戦略
 
@@ -105,7 +105,24 @@ Scenario: 削除しても契約が無防備になっていない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る（`npm run validate` green）
-- [ ] 検証結果（コマンドと結果・skipped 件数の変化）を PBI に記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る（`npm run validate` green）
+- [x] 検証結果（コマンドと結果・skipped 件数の変化）を PBI に記録する
+- [x] コードレビュー完了
+
+## 検証結果（2026-10-12 実施）
+
+削除前の pin 先実測（pin 先確認できない期待は 0 件 → 全 10 件削除、active への書き直し不要）:
+
+| 削除する期待 | pin 先（active・実在と green を実測） |
+|---|---|
+| 書き込み失敗時に URL を保存しない | `robustness-data-integrity.test.ts:167`（best-effort）・`:236`（force=true 変種） |
+| 書き込み失敗が pending に登録される | `pipeline/__tests__/RecordingPipeline.test.ts:467,502`・`recordingOutcome.test.ts:179` |
+| 重複 URL では保存をスキップ | `robustness-data-integrity.test.ts:208` |
+| 並行 record() の直列化・整合性 | `recordingPipeline-full.test.ts`「同一URLへの並行 record() の直列化」active 2 件 |
+| 設定キャッシュの再取得 | `recordingCache-settingsCache.test.ts` の TTL ベース active テスト群 |
+
+- 削除後: 対象 3 ファイル + `recordingOutcome.test.ts`（実パスは `src/background/pipeline/__tests__/`）で 69 passed / skipped 0 / failed 0。対象 3 ファイルで 53 passed / skipped 0。
+- `npx eslint <対象3ファイル>` 削除前後とも exit 0（未使用 import/変数なし）。削除跡に SKIPPED コメント 0 件（grep 確認）。
+- スイート全体の skipped: 21 → 0（NN03 の manifest 11 件解消と合わせて。最終フルスイートで skipped 0 を確認）。
+- コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。

@@ -68,15 +68,15 @@ Scenario: 生成物の検証が skip に落ちない
 
 ## 受け入れ基準
 
-- [ ] 11 件の skip が解消され、**いずれかの自動ゲートで実際に実行される**（`npm run validate` または CI のビルド後ゲート。実行されないまま緑にしない）
-- [ ] ソース層（ビルド不要）で表せる assertion は `npm run validate` で走る。`host_permissions` の入力 SSOT（`wxt.config.ts` が参照する `AI_PROVIDER_HOST_PERMISSIONS` / `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` / `buildLocalHostPermissions()`）を直接検証する
-- [ ] 生成物層の assertion（WAR と dist 実在）は CI のビルド後ゲートで走る。実現方法は「`check-manifest.mjs` を拡張して `release:check --category=manifest` を CI に配線」または「ビルド後に vitest を追加実行」のいずれかを選び、選択理由を PBI に記録する
-- [ ] `describeFn = manifestExists ? describe : describe.skip` と `if (!existsSync(...)) { console.warn; return; }` の**静かに skip / pass する経路を除去**し、前提の欠落は fail として現れる
-- [ ] WAR の assertion は現行バンドル（`content-extractor.js`）に合わせて**目的から再設計**されている（`utils/*.js` 前提の空振り assertion を残さない）。再発防止したい事象（WAR 漏れで Content Script の動的 import が失敗する）が fail として検出できることを Red 確認で示す
-- [ ] CI を変更した場合、`.github/workflows/ci.yml` の paths フィルタと `src/__tests__/ci-paths-filter.test.ts` の MATRIX を同時に更新し、テストで pin している
-- [ ] Red 確認: 権限を1つ壊す／WAR から必要資源を1つ外して、それぞれのゲートが fail することを実測し記録する
-- [ ] `npm run validate` が green、かつ追加した CI job が green（ローカルでは `npm run build` 後のゲートを実行して確認）
-- [ ] スイート全体の skip 件数が 21 → 10（`manifest.test.ts` の 11 件が 0 になる）
+- [x] 11 件の skip が解消され、**いずれかの自動ゲートで実際に実行される**（`npm run validate` または CI のビルド後ゲート。実行されないまま緑にしない）
+- [x] ソース層（ビルド不要）で表せる assertion は `npm run validate` で走る。`host_permissions` の入力 SSOT（`wxt.config.ts` が参照する `AI_PROVIDER_HOST_PERMISSIONS` / `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS` / `buildLocalHostPermissions()`）を直接検証する
+- [x] 生成物層の assertion（WAR と dist 実在）は CI のビルド後ゲートで走る。実現方法は「`check-manifest.mjs` を拡張して `release:check --category=manifest` を CI に配線」または「ビルド後に vitest を追加実行」のいずれかを選び、選択理由を PBI に記録する
+- [x] `describeFn = manifestExists ? describe : describe.skip` と `if (!existsSync(...)) { console.warn; return; }` の**静かに skip / pass する経路を除去**し、前提の欠落は fail として現れる
+- [x] WAR の assertion は現行バンドル（`content-extractor.js`）に合わせて**目的から再設計**されている（`utils/*.js` 前提の空振り assertion を残さない）。再発防止したい事象（WAR 漏れで Content Script の動的 import が失敗する）が fail として検出できることを Red 確認で示す
+- [x] CI を変更した場合、`.github/workflows/ci.yml` の paths フィルタと `src/__tests__/ci-paths-filter.test.ts` の MATRIX を同時に更新し、テストで pin している
+- [x] Red 確認: 権限を1つ壊す／WAR から必要資源を1つ外して、それぞれのゲートが fail することを実測し記録する
+- [x] `npm run validate` が green、かつ追加した CI job が green（ローカルでは `npm run build` 後のゲートを実行して確認）
+- [x] スイート全体の skip 件数が 21 → 10（`manifest.test.ts` の 11 件が 0 になる）
 
 ## テスト戦略
 
@@ -116,8 +116,23 @@ Scenario: 生成物の検証が skip に落ちない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] type-check / lint / test が通る（`npm run validate` green）＋追加したゲートが green
-- [ ] Red 確認の結果（何を壊すとどのゲートが落ちるか）を PBI に記録する
-- [ ] スイート全体の skip 件数の変化（21 → 10）を記録する
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] type-check / lint / test が通る（`npm run validate` green）＋追加したゲートが green
+- [x] Red 確認の結果（何を壊すとどのゲートが落ちるか）を PBI に記録する
+- [x] スイート全体の skip 件数の変化（21 → 10）を記録する
+- [x] コードレビュー完了
+
+## 検証結果（2026-10-12 実施）
+
+レイヤー設計: ソース層（`src/__tests__/manifest.test.ts` 再設計・15 テスト・`wxt.config.ts` の manifest ファクトリを直接呼び SSOT 合成と完全一致を検証・`npm test` に乗る）＋生成物層（`scripts/release-checks/check-manifest.mjs` 拡張）。ゲート配線の選択: 「`check-manifest.mjs` を拡張して `release:check --category=manifest` を CI build job に配線」。理由: (1) `index.mjs` が既に `--category=manifest` をサポートし package.json 編集不要、(2) dist 依存テストを vitest スイートに置くと include パターンが src と scripts の両方にマッチし dist 無しの `npm run validate` が壊れる、(3) 人間のリリースフロー `npm run release:check` にも同じ保護が乗る、(4) vitest 起動コストより速い。
+
+dist 実測値（build 前後で同一）: host_permissions 30 件（ローカルサービス origin 16 + 常時許可 AI プロバイダ 14）/ optional_host_permissions 32 件（オプトイン 26 + リストソース 6）/ permissions 12 件 / host+optional 合計 62 件 / `<all_urls>` 不在 / WAR 2 資源（`content-extractor.js`, `icons/icon48.png`）。
+
+- Red 確認: (a) ソース層ゲートに壊した入力（`https://tracker.example/*` を 1 つ追加 / `http://127.0.0.1:27123/*` を 1 つ削除）→ AssertionError で fail、実 manifest では同一ゲートが 15/15 green。(b) dist manifest の WAR から `content-extractor.js` を一時削除 → gate exit 1（`Page-context getURL() fetches missing from web_accessible_resources`）→ 復元 + `npm run build` で再生成し green。2026-04-15 の障害モード（WAR 漏れで動的 import 失敗）を fail として検出できることを実証。
+- `npx vitest run src/__tests__/manifest.test.ts src/__tests__/ci-paths-filter.test.ts` → 66 passed（manifest 15 件は全実行・skip 0。旧 11 件の skip は解消）。
+- `node scripts/release-checks/index.mjs --category=manifest`（build 後）→ exit 0（20 passed / 0 failed）。
+- `npm run type-check` / `npm run type-check:test:baseline`（463 = pinned 463、型エラー不変）/ `npm run lint`（0 errors）→ 全 green。
+- 静かに skip/pass する経路の除去: `describeFn = manifestExists ? describe : describe.skip` 分岐・beforeEach の early-return warn・WAR の `if (!existsSync) { console.warn; return; }` を全廃。前提欠落は throw / fail-fast で fail になる。
+- スイート全体の skip 件数: 21 → 0（NN01/NN02 の src/background 10 件解消と合わせて。最終フルスイートで skipped 0 を確認）。
+- CI: build job に Manifest artifact gate ステップ追加（`ci.yml`）、paths フィルタへ `scripts/release-checks/**` 追加、`ci-paths-filter.test.ts` の MATRIX と build 入力サブセット検査に pin。
+- コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。
