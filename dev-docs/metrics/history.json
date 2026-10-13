@@ -753,6 +753,17 @@
       "testCount": 14363,
       "functionCount": 4142,
       "dependencyCount": 30
+    },
+    {
+      "version": "6.9.41",
+      "tagVersion": "6.9.41",
+      "tag": "v6.9.41",
+      "date": "2026-10-14T05:31:40+09:00",
+      "linesOfCode": 343340,
+      "fileCount": 1685,
+      "testCount": 14374,
+      "functionCount": 4150,
+      "dependencyCount": 30
     }
   ]
 }
