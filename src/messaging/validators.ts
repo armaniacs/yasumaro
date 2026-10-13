@@ -22,6 +22,8 @@ import type {
   ManualRecordMessage,
   ContentCleansingExecutedMessage,
   RegenerateSummaryMessage,
+  OwE2eProbeQueryMessage,
+  OwE2EProbeStateMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
@@ -219,7 +221,24 @@ interface DashboardSqliteSubtypeSpec {
   guardLast?: DashboardSqliteGuard;
 }
 
-const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+// Shared type/bound predicates (PBI 2026-10-09-01): the archive wire-table
+// handler gate composes its validate lambdas from these so a single bound
+// change cannot land on one gate only. Keep them pure and dependency-free.
+export function isFiniteNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+export function isNonNegativeInteger(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0;
+}
+
+export function isPositiveInteger(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v > 0;
+}
+
+export function isNonEmptyString(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0;
+}
 
 const finiteNumber = (field: string): DashboardSqliteFieldSpec => ({
   field,
@@ -229,13 +248,13 @@ const finiteNumber = (field: string): DashboardSqliteFieldSpec => ({
 
 const nonNegativeInteger = (field: string): DashboardSqliteFieldSpec => ({
   field,
-  test: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0,
+  test: isNonNegativeInteger,
   message: (s) => `${s}: ${field} must be a non-negative integer`,
 });
 
 const nonEmptyString = (field: string): DashboardSqliteFieldSpec => ({
   field,
-  test: (v) => typeof v === 'string' && v.length > 0,
+  test: isNonEmptyString,
   message: (s) => `${s}: ${field} must be non-empty string`,
 });
 
@@ -369,7 +388,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
       nonNegativeInteger('offset'),
       {
         field: 'length',
-        test: (v) => typeof v === 'number' && Number.isInteger(v) && v > 0 && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
+        test: (v) => isPositiveInteger(v) && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
         message: (s) => `${s}: length must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES}`,
       },
     ],
@@ -387,7 +406,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
       stringLengthCap('query', VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH),
       {
         field: 'limit',
-        test: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT,
+        test: (v) => isPositiveInteger(v) && v <= VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT,
         message: (s) => `${s}: limit must be 1..${VALIDATOR_LIMITS.MAX_ARCHIVE_QUERY_LIMIT}`,
       },
       nonNegativeInteger('offset'),
@@ -396,11 +415,43 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   archive_update: {
     guardFirst: stagingNameGuard,
     fields: [
-      { field: 'id', test: (v) => typeof v === 'number' && Number.isInteger(v) && v > 0, message: (s) => `${s}: id must be a positive integer` },
+      { field: 'id', test: isPositiveInteger, message: (s) => `${s}: id must be a positive integer` },
       { field: 'changes', test: (v) => v !== null && typeof v === 'object' && !Array.isArray(v), message: (s) => `${s}: changes must be an object` },
     ],
   },
 };
+
+/**
+ * Evaluate a subtype spec against a payload without throwing.
+ *
+ * Returns the first error message, or null when the payload passes. Single
+ * evaluator shared by the envelope validator (which throws ValidationError) and
+ * the archive wire table (PBI 2026-10-11-10): before this the wire rows
+ * hand-wrote their own field checks, so the two paths accepted different
+ * payloads and the divergence had to be pinned by a test instead of closed.
+ *
+ * `subtype` is injected into the payload because the guards and messages read it.
+ */
+export function evaluateSubtypeSpec(subtype: string, payload: Record<string, unknown>): string | null {
+  const spec = DASHBOARD_SQLITE_SUBTYPE_SPECS[subtype];
+  if (!spec) return null;
+  const p: Record<string, unknown> = { ...payload, subtype };
+  try {
+    spec.guardFirst?.(p, subtype);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  for (const f of spec.fields ?? []) {
+    if (f.optional && p[f.field] === undefined) continue;
+    if (!f.test(p[f.field], p)) return f.message(subtype);
+  }
+  try {
+    spec.guardLast?.(p, subtype);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  return null;
+}
 
 /** Subtypes whose payload carries a staging name — derived from the spec
  *  table so the set and the guard can never drift apart (PBI 2026-09-17-18). */
@@ -657,6 +708,63 @@ export class TestObsidianValidator implements MessageValidator<ExtensionMessage>
   }
 }
 
+// ------------------------------------------------------------------
+// E2EProbeQueryValidator — OW_PROBE_QUERY (no payload, mirror CheckDomain)
+// ------------------------------------------------------------------
+export class E2EProbeQueryValidator implements MessageValidator<OwE2eProbeQueryMessage> {
+  validate(msg: unknown): OwE2eProbeQueryMessage {
+    if (!msg || typeof msg !== 'object') {
+      throw new ValidationError('E2EProbeQueryValidator', 'Message must be an object');
+    }
+    const m = msg as Record<string, unknown>;
+    if (m.type !== 'OW_PROBE_QUERY') {
+      throw new ValidationError('E2EProbeQueryValidator', 'type must be OW_PROBE_QUERY', 'type');
+    }
+    // OW_PROBE_QUERY must not have payload (NO_PAYLOAD_TYPES), but tolerate undefined
+    if (m.payload !== undefined) {
+      throw new ValidationError('E2EProbeQueryValidator', 'OW_PROBE_QUERY must not have payload', 'payload');
+    }
+    return msg as OwE2eProbeQueryMessage;
+  }
+}
+
+// ------------------------------------------------------------------
+// E2EProbeStateValidator — OW_PROBE_STATE (strict probe-state shape)
+// ------------------------------------------------------------------
+const E2E_PROBE_STATE_NUMBER_FIELDS = [
+  'maxScrollPercentage',
+  'startTime',
+  'minVisitDuration',
+  'minScrollDepth',
+  'duration',
+] as const;
+
+export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateMessage> {
+  validate(msg: unknown): OwE2EProbeStateMessage {
+    if (!msg || typeof msg !== 'object') {
+      throw new ValidationError('E2EProbeStateValidator', 'Message must be an object');
+    }
+    const m = msg as Record<string, unknown>;
+    if (m.type !== 'OW_PROBE_STATE') {
+      throw new ValidationError('E2EProbeStateValidator', 'type must be OW_PROBE_STATE', 'type');
+    }
+    if (!m.payload || typeof m.payload !== 'object' || Array.isArray(m.payload)) {
+      throw new ValidationError('E2EProbeStateValidator', 'payload is required', 'payload');
+    }
+    const p = m.payload as Record<string, unknown>;
+    // duration is fractional seconds — finite check, not integer.
+    for (const field of E2E_PROBE_STATE_NUMBER_FIELDS) {
+      if (typeof p[field] !== 'number' || !Number.isFinite(p[field])) {
+        throw new ValidationError('E2EProbeStateValidator', `payload.${field} must be a finite number`, field);
+      }
+    }
+    if (typeof p.isValidVisitReported !== 'boolean') {
+      throw new ValidationError('E2EProbeStateValidator', 'payload.isValidVisitReported must be a boolean', 'isValidVisitReported');
+    }
+    return msg as OwE2EProbeStateMessage;
+  }
+}
+
 // Convenience singletons for registry wiring
 export const validVisitValidator = new ValidVisitValidator();
 export const dashboardSqliteValidator = new DashboardSqliteValidator();
@@ -666,3 +774,5 @@ export const regenerateSummaryValidator = new RegenerateSummaryValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();
 export const testObsidianValidator = new TestObsidianValidator();
+export const e2eProbeQueryValidator = new E2EProbeQueryValidator();
+export const e2eProbeStateValidator = new E2EProbeStateValidator();

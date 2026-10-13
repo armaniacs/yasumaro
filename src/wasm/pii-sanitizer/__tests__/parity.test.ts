@@ -76,10 +76,10 @@ describe('WASM vs TS regex parity (all 21 pattern types)', () => {
                 // (see piiSanitizer.ts's catch block) rather than returning
                 // an `error` field for these cases. Timeout/match-count
                 // limits are exercised by the ReDoS/security suites
-                // deliberately; parity on those paths isn't meaningful here
-                // since the WASM core has no timeout concept yet (Phase 2
-                // will need to decide whether the TS wrapper enforces these
-                // limits before or instead of calling into WASM).
+                // deliberately; parity on those paths isn't meaningful here.
+                // The WASM core now implements both limits too (PBI
+                // 2026-10-11-01), but its clock is a constant under
+                // `cargo test`, so the timeout path cannot be compared here.
                 return;
             }
             if (tsFull.error) {

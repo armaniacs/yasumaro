@@ -25,7 +25,7 @@ import {
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
-import { escapeHtml } from '../utils/htmlEscape.js';
+import { buildPromptItemRow } from './settings/customPromptManager.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
@@ -158,30 +158,29 @@ export function createMarkdownTemplateManager(): MarkdownTemplateManager {
     const displayName = template.isDefault
       ? (getMessageOr('markdownTemplateDefaultName', template.name))
       : template.name;
-    const activeBadge = isActive
-      ? `<span class="badge badge-active" data-i18n="markdownTemplateActiveLabel">Active</span>`
-      : '';
+    const showEditDelete = !template.isDefault;
 
-    const editDeleteButtons = template.isDefault
-      ? ''
-      : `
-      <button id="markdown-template-edit-${template.id}" class="btn-sm btn-edit" data-i18n="edit">Edit</button>
-      <button id="markdown-template-delete-${template.id}" class="btn-sm btn-delete" data-i18n="delete">Delete</button>
-    `;
-
-    return `
-    <div class="prompt-item ${isActive ? 'active' : ''}" data-template-id="${template.id}">
-      <div class="prompt-item-header">
-        <span class="prompt-name">${escapeHtml(displayName)}</span>
-        ${activeBadge}
-      </div>
-      <div class="prompt-item-actions">
-        ${!isActive ? `<button id="markdown-template-activate-${template.id}" class="btn-sm btn-activate" data-i18n="activate">Activate</button>` : ''}
-        <button id="markdown-template-duplicate-${template.id}" class="btn-sm btn-duplicate" data-i18n="duplicate">Duplicate</button>
-        ${editDeleteButtons}
-      </div>
-    </div>
-  `;
+    return buildPromptItemRow({
+      indentUnit: 2,
+      idAttribute: 'data-template-id',
+      buttonIdPrefix: 'markdown-template-',
+      buttonIdSuffix: '',
+      id: template.id,
+      displayName,
+      isActive,
+      badgeI18nKey: 'markdownTemplateActiveLabel',
+      badgeText: 'Active',
+      labels: {
+        activate: 'Activate',
+        duplicate: 'Duplicate',
+        edit: 'Edit',
+        delete: 'Delete',
+      },
+      showEditDelete,
+      editDeleteLevel: 3,
+      editDeleteBlankBeforeLevel: showEditDelete ? 4 : undefined,
+      actionsBlankAfterLevel: showEditDelete ? 2 : 4,
+    });
   }
 
   /**

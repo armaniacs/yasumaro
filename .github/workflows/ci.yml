@@ -64,6 +64,7 @@ jobs:
             # script that reads it, and the shared CI config.
             wasm:
               - 'wasm/**'
+              - 'public/wasm/**'
               - 'scripts/wasm-crates.mjs'
               - 'package.json'
               - 'package-lock.json'
@@ -75,9 +76,12 @@ jobs:
               - 'scripts/check-pbi-dod.js'
               - '.github/workflows/**'
               - '.github/actions/**'
-            # Inputs to `npm run build`. Kept a strict subset of validate's
-            # inputs so an artifact is never produced for a change that did not
-            # pass lint / type-check / tests.
+            # Inputs to `npm run build` and to the manifest artifact gate that
+            # runs on its output (scripts/release-checks — the gate must be
+            # re-run when its own script changes, or a gate fix lands without
+            # ever running). Kept a strict subset of validate's inputs so an
+            # artifact is never produced for a change that did not pass lint /
+            # type-check / tests.
             build:
               - 'src/**'
               - 'entrypoints/**'
@@ -86,6 +90,7 @@ jobs:
               - 'package.json'
               - 'package-lock.json'
               - 'wxt.config.ts'
+              - 'scripts/release-checks/**'
               - '.github/workflows/**'
               - '.github/actions/**'
             # Byte-identical to the step-level filter bench-check used before
@@ -128,6 +133,11 @@ jobs:
         run: npm run lint
       - name: innerHTML escape guard
         run: npm run check-innerhtml-escape
+      # i18n locale parity + source-key existence (PBI 2026-10-11-04: the gate
+      # existed but only ran at release time, so an undefined key like
+      # `domainRequired` shipped an English fallback into the Japanese UI).
+      - name: i18n completeness guard
+        run: npm run check-i18n
       - name: deprecated alias guard
         run: npm run check-deprecated-aliases
       - name: Layer docs consistency
@@ -258,6 +268,12 @@ jobs:
           echo "== parity suite against the COMMITTED binary =="
           npx vitest run $(node scripts/wasm-crates.mjs parity-args)
           node scripts/wasm-crates.mjs check /tmp/wasm-gate
+      - name: wasm artifact size budget
+        # PBI 2026-10-11-09: a rebuild that silently doubles a crate (the pii
+        # core went 46KB -> 100KB with a 38KB debug name section) passed every
+        # other gate, because the only size check was the 15MB bundle cap at
+        # release time. Budgets live in wasm/crates.json (maxBytes).
+        run: node scripts/wasm-crates.mjs budget
       - name: Upload rebuilt wasm for cross-host diff diagnosis (on failure)
         # The byte-diff gate assumes reproducible builds across hosts. When
         # it fails, this artifact lets the maintainer diff the CI-built
@@ -303,6 +319,14 @@ jobs:
         run: npm ci
       - name: Build extension
         run: npm run build
+      # Manifest artifact gate (PBI 2026-10-12-03): the built manifest is the
+      # only place the shipped permission caps and WAR live, and this gate is
+      # the one that catches a WAR omission — the 2026-04-15 failure mode, where
+      # the content script's dynamic import of content-extractor.js died on
+      # every page. Runs in this job so the dist/chromium-mv3 it reads is always
+      # present; a missing artifact fails the gate instead of skipping it.
+      - name: Manifest artifact gate
+        run: node scripts/release-checks/index.mjs --category=manifest
       - name: Upload build artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

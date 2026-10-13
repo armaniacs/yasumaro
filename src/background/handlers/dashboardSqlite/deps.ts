@@ -1,7 +1,7 @@
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { formatEntriesToMarkdown } from '../../../utils/markdownFormatter.js';
 import { ObsidianClient } from '../../obsidianClient.js';
-import type { BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
+import type { AuditLogEntry, BrowsingLogEntry, BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { CallResult, SqliteError } from '../../sqlite/offscreenGateway.js';
 import type { ArchivePreviewData, ArchiveCreateData, ArchiveExportData, ArchiveRestorePreviewData, ArchiveRestoreData, ArchivePurgeData, ArchiveSessionRow, ArchiveSessionStatusData } from '../../../messaging/sqliteMessages.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor } from '../../../messaging/archiveWireTable.js';
@@ -72,7 +72,7 @@ export interface ReadOnlyDeps {
    * SqliteClient.getStatus().
    */
   getStatus: () => Promise<Record<string, unknown> | null>;
-  queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<DepsResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>>;
+  queryAuditLog: (options: { limit?: number; offset?: number }) => Promise<DepsResult<{ rows: Array<AuditLogEntry>; total: number }>>;
   createConfirmToken: (action: string, id?: number, scopeHash?: string) => Promise<string>;
   verifyConfirmToken: (token: string, action: string, id?: number, scopeHash?: string) => Promise<boolean>;
 }

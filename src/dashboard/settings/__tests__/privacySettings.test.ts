@@ -253,16 +253,21 @@ describe('privacySettings', () => {
       ).toBe(false);
     });
 
-    it('defaults to full_pipeline when mode is not set', async () => {
+    it('defaults to masked_cloud (SSOT default) when mode is not set', async () => {
       setupFullDOM();
       mockGetSettings.mockResolvedValue({});
 
       const { loadPrivacySettings } = await import('../privacySettings.js');
       await loadPrivacySettings();
 
+      // PBI 2026-10-11-04: the UI default must match what PrivacyPipeline
+      // resolves for a missing value (masked_cloud), not full_pipeline.
+      expect(
+        (document.querySelector('input[name="privacyMode"][value="masked_cloud"]') as HTMLInputElement)?.checked
+      ).toBe(true);
       expect(
         (document.querySelector('input[name="privacyMode"][value="full_pipeline"]') as HTMLInputElement)?.checked
-      ).toBe(true);
+      ).toBe(false);
     });
 
     it('sets PII confirmation checkbox based on settings', async () => {
@@ -494,8 +499,11 @@ describe('privacySettings', () => {
 
   describe('savePrivacySettings validation fallbacks', () => {
     it('shows modeRequired error when no privacy mode radio is selected', async () => {
+      // PBI 2026-10-11-04: an unknown stored mode now normalizes to
+      // masked_cloud, so the "no radio selected" case needs a DOM that lacks the
+      // radio for the resolved mode (otherwise the UI would just select it).
       document.body.innerHTML = `
-        <input type="radio" name="privacyMode" value="masked_cloud" />
+        <input type="radio" name="privacyMode" value="local_only" />
         <input type="radio" name="privacyMode" value="full_pipeline" />
         <button id="savePrivacySettings">Save</button>
         <div id="privacyStatus"></div>

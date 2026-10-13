@@ -113,7 +113,7 @@ Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_
 - **Manifest V3**: No background scripts, use service workers
 - **CSP**: Adhere to Content Security Policy
 - **Offscreen API**: Use offscreen documents for DOM operations that cannot run in service workers
-- **HTML escaping**: Use `escapeHtml` from `src/utils/htmlEscape.ts` (canonical). `src/popup/domUtils.ts` and `src/popup/errorUtils.ts` re-export it as compatibility shims. Markdown-link handling lives in `src/utils/markdownSanitizer.ts` (different responsibility). For element clearing, use `clearElement` from `src/popup/domUtils.ts`
+- **HTML escaping**: Use `escapeHtml` from `src/utils/htmlEscape.ts` (canonical). `src/popup/domUtils.ts` and `src/popup/errorUtils.ts` re-export it as compatibility shims. Markdown-link handling lives in `src/utils/markdownSanitizer.ts` (different responsibility). For element clearing, use `clearElement` from `src/utils/domClear.ts` (canonical); `src/popup/domUtils.ts` re-exports it as a compatibility shim
 
 ---
 

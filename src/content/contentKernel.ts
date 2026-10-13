@@ -24,6 +24,11 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
+// Probe relay (PBI 2026-10-11-08 follow-up): content scripts cannot reach
+// chrome.storage.session, so arming/state travel as runtime messages via the
+// service worker. Only the state shape is imported (type-only, erased).
+import { queryProbeArmed, relayProbeState, markProbeVisitReported } from './e2eProbeRelay.js';
+import type { OWTestState } from './e2eTestState.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.
@@ -43,6 +48,14 @@ export class ContentKernel {
     private readonly visitReporter: VisitReporter;
     private readonly sender: MessageSender;
     private readonly isE2ETest: () => boolean;
+    /**
+     * Extension-side probe arming. Resolved once in init() via the service
+     * worker relay — never from page DOM, so a page-set `data-ow-e2e-test`
+     * attribute cannot enable the probe.
+     */
+    private e2eSessionEnabled = false;
+    /** True when no explicit isE2ETest was injected (relay resolve needed). */
+    private readonly e2eSessionResolveNeeded: boolean;
     private readonly gating: VisitGating;
     private readonly deadlineTimer: DeadlineTimer;
 
@@ -60,9 +73,13 @@ export class ContentKernel {
         // Only override if clock is not the default Date.now reference and pageState is fresh.
         this.scrollMonitor = new ScrollMonitor(this.pageState, this.clock);
         this.sender = opts.sender ?? createContentMessageSender(2);
-        this.isE2ETest =
-            opts.isE2ETest ??
-            (() => typeof document !== 'undefined' && document.documentElement.hasAttribute('data-ow-e2e-test'));
+        this.e2eSessionResolveNeeded = opts.isE2ETest === undefined;
+        // The default no longer reads the page-writable
+        // `data-ow-e2e-test` DOM attribute. Arming comes from the
+        // extension-side session flag resolved in init() via the service
+        // worker relay; explicit injection
+        // (unit tests) keeps working unchanged.
+        this.isE2ETest = opts.isE2ETest ?? (() => this.e2eSessionEnabled);
         this.visitReporter = new VisitReporter({
             pageState: this.pageState,
             extractAndCommit: (c) => this.extractAndCommit(c),
@@ -157,8 +174,8 @@ export class ContentKernel {
 
     async loadSettings(): Promise<void> {
         // Decrypt-free snapshot from the storage side (PBI 2026-09-28-30):
-        // migration-folded and defaults-filled, ciphertext stays opaque.
-        const s = (await readSettingsSnapshot(this.storage)) as unknown as Record<string, unknown>;
+        // migration-folded, no default fill; ciphertext stays opaque.
+        const s = await readSettingsSnapshot(this.storage);
         applySettingsTable(this.pageState, s);
 
         void logInfo(
@@ -211,8 +228,10 @@ export class ContentKernel {
             'contentKernel',
         );
 
+        // Probe relay: state travels to the service worker as a runtime
+        // message (content scripts cannot reach chrome.storage.session).
         if (this.gating.isE2E) {
-            const state = {
+            const state: OWTestState = {
                 maxScrollPercentage: visitState.maxScrollPercentage,
                 isValidVisitReported: visitState.isValidVisitReported,
                 startTime: visitState.startTime,
@@ -220,25 +239,14 @@ export class ContentKernel {
                 minScrollDepth: thresholds.minScroll,
                 duration,
             };
-            if (typeof window !== 'undefined') {
-                (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE = state;
-            }
-            if (typeof document !== 'undefined') {
-                document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state));
-            }
+            relayProbeState(this.sender, state);
         }
 
         if (evaluation.reportable) {
             void logInfo(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`, { duration, maxScrollPercentage: visitState.maxScrollPercentage }, 'contentKernel');
             void this.reportValidVisit();
             if (this.gating.isE2E) {
-                if (typeof window !== 'undefined') {
-                    const w = window as unknown as { __OW_TEST_STATE?: { isValidVisitReported: boolean } };
-                    if (w.__OW_TEST_STATE) w.__OW_TEST_STATE.isValidVisitReported = true;
-                    if (typeof document !== 'undefined' && w.__OW_TEST_STATE) {
-                        document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(w.__OW_TEST_STATE));
-                    }
-                }
+                markProbeVisitReported(this.sender);
             }
             this.stopPeriodicCheck();
         }
@@ -281,7 +289,22 @@ export class ContentKernel {
     // -----------------------------------------------------------------------
 
     async init(): Promise<void> {
-        await this.loadSettings();
+        // PBI 2026-10-11-12 (NN12): settings load and probe-flag resolve are
+        // independent — run them concurrently. loadSettings rejection still
+        // rejects init (Promise.all); the flag resolve is fail-safe inside
+        // queryProbeArmed (never rejects), so error semantics are unchanged.
+        await Promise.all([
+            this.loadSettings(),
+            // Resolve the extension-side probe flag once before the gating caches
+            // it — only when the caller did not inject an explicit decision.
+            // The service worker reads the session flag on our behalf: content
+            // scripts cannot reach chrome.storage.session directly.
+            (async () => {
+                if (this.e2eSessionResolveNeeded) {
+                    this.e2eSessionEnabled = await queryProbeArmed(this.sender);
+                }
+            })(),
+        ]);
 
         // Build the owned gate/thresholds and resolve isE2ETest once — reused thereafter
         this.deadlineTimer.initialize();
@@ -324,18 +347,15 @@ export class ContentKernel {
 
         this.startPeriodicCheck();
 
-        if (this.gating.isE2E && typeof document !== 'undefined') {
-            document.documentElement.setAttribute(
-                'data-ow-test-state',
-                JSON.stringify({
-                    maxScrollPercentage: this.pageState.maxScrollPercentage,
-                    isValidVisitReported: this.pageState.isValidVisitReported,
-                    startTime: this.pageState.startTime,
-                    minVisitDuration: this.pageState.minVisitDuration,
-                    minScrollDepth: this.pageState.minScrollDepth,
-                    duration: 0,
-                }),
-            );
+        if (this.gating.isE2E) {
+            relayProbeState(this.sender, {
+                maxScrollPercentage: this.pageState.maxScrollPercentage,
+                isValidVisitReported: this.pageState.isValidVisitReported,
+                startTime: this.pageState.startTime,
+                minVisitDuration: this.pageState.minVisitDuration,
+                minScrollDepth: this.pageState.minScrollDepth,
+                duration: 0,
+            });
         }
     }
 

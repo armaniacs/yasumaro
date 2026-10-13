@@ -12,6 +12,7 @@ import { MAX_TIME_HEATMAP_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessage, getMessageOr } from '../../../utils/i18n.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import {
   aggregateTimeHeatmap,
@@ -70,8 +71,7 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
     autoApply: true,
     isReady: () => gridEl !== null && tableWrapEl !== null,
     resetOutput: () => {
-      if (gridEl) gridEl.innerHTML = '';
-      if (tableWrapEl) tableWrapEl.innerHTML = '';
+      for (const host of [gridEl, tableWrapEl]) if (host) clearElement(host);
     },
     // WHY: isReady() already gated this load; the check narrows the captured
     // hosts for the body.
@@ -98,8 +98,24 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
 
         const grid = aggregateTimeHeatmap(rows.map((r) => r.created_at));
         const max = gridMax(grid);
-        gridEl.appendChild(buildHeatmapTable(grid, max));
-        tableWrapEl.appendChild(buildNumericTable(grid));
+        gridEl.appendChild(buildTable(
+          grid,
+          {
+            className: 'time-heatmap-grid',
+            captionKey: 'dashboardTimeHeatmapTableCaption',
+            captionFallback: 'Browsing records by weekday and hour',
+          },
+          (w, h, count) => heatmapCell(w, h, count, max),
+        ));
+        tableWrapEl.appendChild(buildTable(
+          grid,
+          {
+            className: 'time-heatmap-numeric',
+            captionKey: 'dashboardTimeHeatmapNumericCaption',
+            captionFallback: 'Browsing record counts by weekday and hour',
+          },
+          numericCell,
+        ));
       } catch (error) {
         console.error('[timeHeatmapPanel] error:', error);
         if (isStale()) return;
@@ -141,11 +157,19 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
   };
 }
 
-function buildHeatmapTable(grid: TimeHeatmapGrid, max: number): HTMLTableElement {
+// One table skeleton shared by the heatmap and its numeric alternative:
+// caption, the 25-column header (corner th + hour th[scope=col]) and the 7
+// weekday rows (th[scope=row] + 24 cells). Only the cell rendering differs, so
+// the caller supplies it as a callback.
+function buildTable(
+  grid: TimeHeatmapGrid,
+  options: { className: string; captionKey: string; captionFallback: string },
+  renderCell: (w: number, h: number, count: number) => HTMLTableCellElement,
+): HTMLTableElement {
   const table = document.createElement('table');
-  table.className = 'time-heatmap-grid';
+  table.className = options.className;
   const caption = document.createElement('caption');
-  caption.textContent = getMessageOr('dashboardTimeHeatmapTableCaption', 'Browsing records by weekday and hour');
+  caption.textContent = getMessageOr(options.captionKey, options.captionFallback);
   table.appendChild(caption);
 
   const thead = document.createElement('thead');
@@ -168,15 +192,7 @@ function buildHeatmapTable(grid: TimeHeatmapGrid, max: number): HTMLTableElement
     rowHeader.textContent = weekdayLabel(w);
     tr.appendChild(rowHeader);
     for (let h = 0; h < TIME_HEATMAP_HOURS; h++) {
-      const count = grid[w]?.[h] ?? 0;
-      const td = document.createElement('td');
-      td.className = 'time-heatmap-cell';
-      td.tabIndex = 0;
-      td.dataset.intensity = String(intensityLevel(count, max));
-      const label = cellLabel(w, h, count);
-      td.title = label;
-      td.setAttribute('aria-label', label);
-      tr.appendChild(td);
+      tr.appendChild(renderCell(w, h, grid[w]?.[h] ?? 0));
     }
     tbody.appendChild(tr);
   }
@@ -184,39 +200,19 @@ function buildHeatmapTable(grid: TimeHeatmapGrid, max: number): HTMLTableElement
   return table;
 }
 
-function buildNumericTable(grid: TimeHeatmapGrid): HTMLTableElement {
-  const table = document.createElement('table');
-  table.className = 'time-heatmap-numeric';
-  const caption = document.createElement('caption');
-  caption.textContent = getMessageOr('dashboardTimeHeatmapNumericCaption', 'Browsing record counts by weekday and hour');
-  table.appendChild(caption);
+function heatmapCell(w: number, h: number, count: number, max: number): HTMLTableCellElement {
+  const td = document.createElement('td');
+  td.className = 'time-heatmap-cell';
+  td.tabIndex = 0;
+  td.dataset.intensity = String(intensityLevel(count, max));
+  const label = cellLabel(w, h, count);
+  td.title = label;
+  td.setAttribute('aria-label', label);
+  return td;
+}
 
-  const thead = document.createElement('thead');
-  const headRow = document.createElement('tr');
-  headRow.appendChild(document.createElement('th'));
-  for (let h = 0; h < TIME_HEATMAP_HOURS; h++) {
-    const th = document.createElement('th');
-    th.scope = 'col';
-    th.textContent = `${h}:00`;
-    headRow.appendChild(th);
-  }
-  thead.appendChild(headRow);
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
-  for (let w = 0; w < TIME_HEATMAP_WEEKDAYS; w++) {
-    const tr = document.createElement('tr');
-    const rowHeader = document.createElement('th');
-    rowHeader.scope = 'row';
-    rowHeader.textContent = weekdayLabel(w);
-    tr.appendChild(rowHeader);
-    for (let h = 0; h < TIME_HEATMAP_HOURS; h++) {
-      const td = document.createElement('td');
-      td.textContent = String(grid[w]?.[h] ?? 0);
-      tr.appendChild(td);
-    }
-    tbody.appendChild(tr);
-  }
-  table.appendChild(tbody);
-  return table;
+function numericCell(_w: number, _h: number, count: number): HTMLTableCellElement {
+  const td = document.createElement('td');
+  td.textContent = String(count);
+  return td;
 }

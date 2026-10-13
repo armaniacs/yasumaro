@@ -1,7 +1,8 @@
 import type { SavedUrlEntry } from '../utils/storageUrls.js';
 import { CLEANSING_GRAPH_COLORS_LIGHT, CLEANSING_GRAPH_COLORS_DARK } from '../constants/appConstants.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
-import { tOrKey as t } from '../utils/i18n.js';
+import { clearElement } from '../utils/domClear.js';
+import { tOrKey as t, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { formatBytes } from './byteFormat.js';
 
 export interface CleansingStats {
@@ -259,7 +260,7 @@ export function renderRemovedByReason(
   container: HTMLElement,
   removedByReason?: Map<string, number> | Record<string, number> | null,
 ): void {
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'cleansing-removed-breakdown';
 
   if (!removedByReason) {
@@ -323,7 +324,11 @@ export function makeDualPayloadDiff(
 
   const summary = document.createElement('div');
   summary.className = 'dual-payload-summary';
-  summary.textContent = `原文 ${originalLen}字 → クレンジング後 ${cleansedLen}字 (除去 ${removedChars}字, ${ratio.toFixed(1)}%)`;
+  summary.textContent = getMessageWithSubstitutions(
+    'cleansingDualPayloadSummary',
+    { original: originalLen, cleansed: cleansedLen, removed: removedChars, ratio: ratio.toFixed(1) },
+    '原文 {original}字 → クレンジング後 {cleansed}字 (除去 {removed}字, {ratio}%)',
+  );
   wrapper.appendChild(summary);
 
   if (ratio >= 80) {
@@ -346,7 +351,7 @@ export function makeDualPayloadDiff(
       diffText = original.length > cleansed.length ? original.slice(cleansed.length, cleansed.length + 500) : original.slice(0, 500);
       if (!diffText) diffText = original.slice(0, 500);
     }
-    preview.textContent = `除去内容プレビュー: ${diffText}`;
+    preview.textContent = getMessageWithSubstitutions('cleansingDiffPreview', { preview: diffText }, '除去内容プレビュー: {preview}');
     wrapper.appendChild(preview);
   }
 
@@ -361,7 +366,7 @@ export function renderFunnelSummary(
   container: HTMLElement,
   funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number } | null,
 ): void {
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'cleansing-funnel-summary';
   if (!funnel) {
     container.textContent = t('cleansingStatsNoData') || 'データなし';
@@ -375,6 +380,6 @@ export function renderFunnelSummary(
   const reduction = pageBytes > 0 ? ((pageBytes - cleansedBytes) / pageBytes) * 100 : 0;
   const rate = document.createElement('div');
   rate.className = 'funnel-rate';
-  rate.textContent = `削減率 ${reduction.toFixed(1)}%`;
+  rate.textContent = getMessageWithSubstitutions('cleansingFunnelReductionRate', { rate: reduction.toFixed(1) }, '削減率 {rate}%');
   container.appendChild(rate);
 }

@@ -7,6 +7,15 @@ import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 
+// Controllable sender for the E2E probe relay (PBI NN08 follow-up): the
+// singleton kernel resolves arming via runtime message, so E2E tests arm it
+// with { success: true, enabled: true }. Default is disarmed.
+const { sendMessageWithRetryMock } = vi.hoisted(() => ({
+    sendMessageWithRetryMock: vi.fn(
+        (_message: { type: string }): Promise<unknown> => Promise.resolve({ success: true }),
+    ),
+}));
+
 // Mock chrome API before importing
 const chromeMock = {
     runtime: {
@@ -85,9 +94,7 @@ vi.mock('../utils/logger/api.js', async () =>
 );
 
 vi.mock('../contentMessageSender.js', () => ({
-    createContentMessageSender: vi.fn(() => ({
-        sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true })),
-    })),
+    createContentMessageSender: vi.fn(() => ({ sendMessageWithRetry: sendMessageWithRetryMock })),
 }));
 
 import {
@@ -106,6 +113,17 @@ import { getPageStateForTesting } from './helpers/contentTestkit.js';
 import { showPrivacyConfirmDialog } from '../privacyDialog.js';
 import { handleGetContentMessage, type GetContentHandlerDeps } from '../getContentHandler.js';
 import { CLEANSING_RULES } from '../../utils/aiSummaryCleaner/rules.js';
+
+// File-level isolation for the E2E probe: the singleton kernel persists
+// across describes, so every test starts disarmed (default sender response)
+// with no leftover window/DOM probe output. Runs before each
+// describe-level beforeEach.
+beforeEach(() => {
+    sendMessageWithRetryMock.mockResolvedValue({ success: true });
+    delete (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE;
+    document.documentElement.removeAttribute('data-ow-e2e-test');
+    document.documentElement.removeAttribute('data-ow-test-state');
+});
 
 describe('shouldRecordVisit', () => {
     it('returns true when both duration and scroll meet thresholds', () => {
@@ -485,19 +503,24 @@ describe('init - E2E test mode', () => {
         );
     });
 
-    it('sets data-ow-test-state attribute in E2E mode', async () => {
+    it('publishes window state when the SW arms the probe (never to DOM)', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
+        await init();
+        expect(window.__OW_TEST_STATE).toBeDefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
+    });
+
+    it('a page-set attribute alone does not publish anything (NN08)', async () => {
         document.documentElement.setAttribute('data-ow-e2e-test', 'true');
         await init();
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(stateAttr).toBeTruthy();
-        document.documentElement.removeAttribute('data-ow-e2e-test');
+        expect(window.__OW_TEST_STATE).toBeUndefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 
     it('does not set test state without E2E flag', async () => {
         await init();
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        // May be null or a valid state string depending on initialization
-        expect(stateAttr === null || typeof stateAttr === 'string').toBe(true);
+        expect(window.__OW_TEST_STATE).toBeUndefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 });
 
@@ -910,12 +933,11 @@ describe('checkVisitConditions - error handling paths', () => {
         expect(getPageStateForTesting().isValidVisitReported).toBe(false);
     });
 
-    it('handles E2E test hook when data-ow-e2e-test is present', async () => {
-        document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    it('handles E2E test hook when the SW arms the probe', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(stateAttr).toBeTruthy();
-        document.documentElement.removeAttribute('data-ow-e2e-test');
+        expect(window.__OW_TEST_STATE).toBeDefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 });
 
@@ -1865,33 +1887,25 @@ describe('checkVisitConditions - E2E test state updates', () => {
         );
     });
 
-    it('data-ow-test-state attribute is set in E2E mode', async () => {
-        document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    it('window state is published when the SW arms the probe (never to DOM)', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(stateAttr).toBeTruthy();
-
-        document.documentElement.removeAttribute('data-ow-e2e-test');
+        expect(window.__OW_TEST_STATE).toBeDefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 
-    it('E2E state attribute contains expected fields', async () => {
-        document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    it('published window state contains expected fields', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
-        // The data-ow-test-state attribute should be set with JSON containing state fields
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(stateAttr).toBeTruthy();
-
-        // Verify it can be parsed as JSON
-        const parsed = JSON.parse(stateAttr || '{}');
-        expect(parsed).toHaveProperty('maxScrollPercentage');
-        expect(parsed).toHaveProperty('isValidVisitReported');
-        expect(parsed).toHaveProperty('startTime');
-        expect(parsed).toHaveProperty('minVisitDuration');
-        expect(parsed).toHaveProperty('minScrollDepth');
-
-        document.documentElement.removeAttribute('data-ow-e2e-test');
+        const state = window.__OW_TEST_STATE as unknown as Record<string, unknown>;
+        expect(state).toHaveProperty('maxScrollPercentage');
+        expect(state).toHaveProperty('isValidVisitReported');
+        expect(state).toHaveProperty('startTime');
+        expect(state).toHaveProperty('minVisitDuration');
+        expect(state).toHaveProperty('minScrollDepth');
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 });
 
@@ -1981,33 +1995,25 @@ describe('checkVisitConditions - E2E test state updates', () => {
         );
     });
 
-    it('data-ow-test-state attribute is set in E2E mode', async () => {
-        document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    it('window state is published when the SW arms the probe (never to DOM)', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(stateAttr).toBeTruthy();
-
-        document.documentElement.removeAttribute('data-ow-e2e-test');
+        expect(window.__OW_TEST_STATE).toBeDefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 
-    it('E2E state attribute contains expected fields', async () => {
-        document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    it('published window state contains expected fields', async () => {
+        sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
         await init();
 
-        // The data-ow-test-state attribute should be set with JSON containing state fields
-        const stateAttr = document.documentElement.getAttribute('data-ow-test-state');
-        expect(stateAttr).toBeTruthy();
-
-        // Verify it can be parsed as JSON
-        const parsed = JSON.parse(stateAttr || '{}');
-        expect(parsed).toHaveProperty('maxScrollPercentage');
-        expect(parsed).toHaveProperty('isValidVisitReported');
-        expect(parsed).toHaveProperty('startTime');
-        expect(parsed).toHaveProperty('minVisitDuration');
-        expect(parsed).toHaveProperty('minScrollDepth');
-
-        document.documentElement.removeAttribute('data-ow-e2e-test');
+        const state = window.__OW_TEST_STATE as unknown as Record<string, unknown>;
+        expect(state).toHaveProperty('maxScrollPercentage');
+        expect(state).toHaveProperty('isValidVisitReported');
+        expect(state).toHaveProperty('startTime');
+        expect(state).toHaveProperty('minVisitDuration');
+        expect(state).toHaveProperty('minScrollDepth');
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 });
 
@@ -2406,6 +2412,8 @@ describe('init - early guard conditions', () => {
         // Without the E2E flag init still starts normal visit tracking
         expect(getPageStateForTesting().checkIntervalId).not.toBeNull();
         expect(getPageStateForTesting().isValidVisitReported).toBe(false);
+        expect(window.__OW_TEST_STATE).toBeUndefined();
+        expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     });
 });
 

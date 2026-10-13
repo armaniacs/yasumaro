@@ -50,14 +50,14 @@ describe('verifyRequestToken — validation branches', () => {
 describe('buildListParams / buildSearchParams — read projection', () => {
   type ListPayload = Extract<DashboardSqliteRequest, { subtype: 'query' }>;
   type SearchPayload = Extract<DashboardSqliteRequest, { subtype: 'search' }>;
-  it('builds the dashboard-hop list shape with order defaults (limit passes through — planner owns defaults since 2026-09-21-20)', () => {
+  it('builds the dashboard-hop list shape (order/paging defaults pass through — the planner seam owns them)', () => {
     const params = buildListParams({ subtype: 'query' } as ListPayload);
-    expect(params).toMatchObject({
-      limit: undefined,
-      offset: 0,
-      orderBy: 'created_at',
-      orderDir: 'DESC',
-    });
+    expect(params.limit).toBeUndefined();
+    expect(params.offset).toBeUndefined();
+    // PBI 2026-10-10-08: absent orderBy/orderDir are omitted (pickDefined) —
+    // the offscreen planner applies created_at / DESC.
+    expect('orderBy' in params).toBe(false);
+    expect('orderDir' in params).toBe(false);
   });
 
   it('passes raw list limits through untouched (planner clamps)', () => {

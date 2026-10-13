@@ -5,7 +5,7 @@
  * No chrome API dependency — importable from any context.
  */
 
-import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+import type { AuditLogEntry, BrowsingLogEntry } from '../utils/sqlite-types.js';
 import type { SqliteStatusExtras } from './sqliteMessages.js';
 
 export function requiredFiniteNumber(value: unknown, field: string): number {
@@ -73,7 +73,7 @@ export function isBrowsingLogEntry(value: unknown): value is BrowsingLogEntry {
   return isRecord(value) && isFiniteNumber((value as Record<string, unknown>).id) && typeof (value as Record<string, unknown>).url === 'string' && isFiniteNumber((value as Record<string, unknown>).created_at);
 }
 
-export type AuditLogEntryView = { id: number; provider: string; url: string; created_at: number };
+export type AuditLogEntryView = AuditLogEntry;
 
 export function isAuditLogEntry(value: unknown): value is AuditLogEntryView {
   return isRecord(value) && isFiniteNumber((value as Record<string, unknown>).id) && typeof (value as Record<string, unknown>).provider === 'string' && typeof (value as Record<string, unknown>).url === 'string' && isFiniteNumber((value as Record<string, unknown>).created_at);

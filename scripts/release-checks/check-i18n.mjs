@@ -35,8 +35,15 @@ if (process.argv[1] && process.argv[1].endsWith('check-i18n.mjs')) {
   // PBI 2026-09-11-04 (round 6): unused-key inventory (warning-only — the
   // static scan over-approximates; see i18n-core.mjs). The full list is
   // written beside this script's output for a manual per-key pass.
+  //
+  // `--skip-unused` is for the pre-commit gate: the inventory is a release-time
+  // concern and its ~330 warnings would drown the validate output. The two
+  // failure-bearing checks (locale parity, source keys) always run.
+  const skipUnused = process.argv.includes('--skip-unused');
   const entrypointsDir = join(ROOT_DIR, 'entrypoints');
-  const unusedOk = checkUnusedLocaleKeys(SRC_DIR, entrypointsDir, LOCALES_DIR, reporter);
+  const unusedOk = skipUnused
+    ? true
+    : checkUnusedLocaleKeys(SRC_DIR, entrypointsDir, LOCALES_DIR, reporter);
 
   sectionBreak();
   const allPassed = summary() && i18nOk && sourceOk && unusedOk;

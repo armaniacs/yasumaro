@@ -7,7 +7,7 @@ import { exportHmacSigner } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
-import { Settings, StorageKeys } from './storage/types.js';
+import { Settings, StorageKeys, isPrivacyMode } from './storage/types.js';
 import { encrypt, deriveKey } from './crypto/index.js';
 import { generateSalt, bytesToBase64 } from './crypto/index.js';
 import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
@@ -497,6 +497,15 @@ export function validateExportData(data: unknown): boolean {
         return false;
       }
     }
+  }
+
+  // Value-range check: a corrupted `privacy_mode` would otherwise be carried into
+  // settings and fail open in the pipeline (masking off while cloud AI stays on).
+  // `cloud_only` is a legal explicit choice; unknown values are rejected instead
+  // of being silently repaired, so the user learns the backup is damaged.
+  const exportedPrivacyMode = settings['privacy_mode'];
+  if (exportedPrivacyMode !== undefined && !isPrivacyMode(exportedPrivacyMode)) {
+    return false;
   }
 
   return true;

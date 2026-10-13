@@ -1,4 +1,5 @@
 import { getMessageOr } from '../../utils/i18n.js';
+import { clearElement } from '../../utils/domClear.js';
 import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
 import { providerIdsInOrder, renderProviderSettings } from '../aiProviderCatalogView.js';
 
@@ -13,7 +14,7 @@ export interface BProviderAccordionView {
  * this view owns its DOM rather than borrowing static divs.
  */
 export function createBProviderAccordionView(container: HTMLElement): BProviderAccordionView {
-  container.innerHTML = '';
+  clearElement(container);
   const created: HTMLElement[] = [];
 
   for (const id of providerIdsInOrder()) {
@@ -40,7 +41,7 @@ export function createBProviderAccordionView(container: HTMLElement): BProviderA
     container,
     destroy() {
       created.forEach((d) => d.remove());
-      container.innerHTML = '';
+      clearElement(container);
     },
   };
 }

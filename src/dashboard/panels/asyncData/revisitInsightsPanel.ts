@@ -29,6 +29,7 @@ import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { copyTextToClipboard } from '../../../utils/clipboard.js';
 import { COPY_FEEDBACK_RESET_MS } from '../../../utils/copyMarkdownButton.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
@@ -140,7 +141,7 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
 
   function renderLoops(loops: LoopItem[]): void {
     if (!loopsBody) return;
-    loopsBody.innerHTML = '';
+    clearElement(loopsBody);
     if (loops.length === 0) {
       sectionEmptyRow(SECTION_EMPTY_COLSPAN, loopsBody);
       return;
@@ -181,7 +182,7 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
 
   function renderRanking(ranking: RevisitRankItem[]): void {
     if (!rankingBody) return;
-    rankingBody.innerHTML = '';
+    clearElement(rankingBody);
     if (ranking.length === 0) {
       sectionEmptyRow(3, rankingBody);
       return;
@@ -204,7 +205,7 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
 
   function renderDormant(dormant: DormantItem[]): void {
     if (!dormantBody) return;
-    dormantBody.innerHTML = '';
+    clearElement(dormantBody);
     if (dormant.length === 0) {
       sectionEmptyRow(SECTION_EMPTY_COLSPAN, dormantBody);
       return;
@@ -294,7 +295,7 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
 
   function renderCapsule(insights: RevisitInsights): void {
     if (!capsuleEl) return;
-    capsuleEl.innerHTML = '';
+    clearElement(capsuleEl);
     const { capsule } = insights;
     const isEmpty =
       capsule.topTags.length === 0 && capsule.topDomains.length === 0 && capsule.visits.length === 0;
@@ -339,10 +340,10 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
       dormantBody !== null &&
       capsuleEl !== null,
     resetOutput: () => {
-      if (loopsBody) loopsBody.innerHTML = '';
-      if (rankingBody) rankingBody.innerHTML = '';
-      if (dormantBody) dormantBody.innerHTML = '';
-      if (capsuleEl) capsuleEl.innerHTML = '';
+      if (loopsBody) clearElement(loopsBody);
+      if (rankingBody) clearElement(rankingBody);
+      if (dormantBody) clearElement(dormantBody);
+      if (capsuleEl) clearElement(capsuleEl);
     },
     // WHY: isReady() already gated this load; the check narrows the captured
     // hosts for the body.

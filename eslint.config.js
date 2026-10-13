@@ -8,6 +8,18 @@ export default [
     ignores: ['node_modules/', 'dist/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
   },
   {
+    // wasm-bindgen emits `/* eslint-disable */` into the glue it generates, and
+    // the committed copies under src/wasm/ are byte-gated against a fresh build
+    // by CI's wasm-test job (node scripts/wasm-crates.mjs check). Editing that
+    // banner out — even to silence an unused-directive warning — makes the gate
+    // fail: 7f201080 removed it from textrank/sentence-dedup on 2026-10-03 and
+    // the job stayed red until it was restored on 2026-10-12. Generated files
+    // must round-trip, so the directive is left alone and unused-directive
+    // reporting is off for these two files only.
+    files: ['src/wasm/**/*.d.ts'],
+    linterOptions: { reportUnusedDisableDirectives: 'off' },
+  },
+  {
     files: ['src/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
     languageOptions: {
@@ -193,6 +205,12 @@ export default [
       // import awaited under it. 124 pre-existing call sites still use it, so
       // promoting this to 'error' would break the build for untouched code.
       'local/no-greedy-fake-timers': 'warn',
+      // PBI 2026-10-12-04: a declaration-form skip (it.skip('name', fn)) never
+      // runs and keeps the suite green while its coverage disappears. Runtime-
+      // conditional forms (test.skip(cond, reason), skipIf, single-string
+      // Playwright test.skip('reason')) stay valid — see
+      // eslint/rules/no-dead-test-skip.mjs for the discriminator.
+      'local/no-dead-test-skip': 'error',
     },
   },
   {
@@ -218,6 +236,11 @@ export default [
       // (page.waitForTimeout). Bare setTimeout sleeps in E2E/bench are
       // no-test-sleep's business — same rule as src/**/__tests__.
       'local/no-test-sleep': 'error',
+      // PBI 2026-10-12-04: the Playwright counterpart of the vitest block's
+      // no-dead-test-skip. The E2E conditional skips
+      // (test.skip(cond, reason) / test.fixme(true, HEADLESS_FIXME_MESSAGE))
+      // are runtime-conditional and stay valid.
+      'local/no-dead-test-skip': 'error',
     },
   },
   {

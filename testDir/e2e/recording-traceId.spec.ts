@@ -1,5 +1,9 @@
 import { test, expect } from './fixtures/extension.fixture.js';
 import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
+import {
+  enableE2EProbe,
+  readE2EProbeState,
+} from './fixtures/e2eProbe.js';
 
 /**
  * PBI-21: Recording pipeline traceId correlation E2E test
@@ -26,6 +30,9 @@ test.describe('Recording traceId correlation @extension', () => {
     });
 
     const page = await context.newPage();
+    // Probe is armed extension-side (session flag) — must precede navigation:
+    // the content script resolves the flag once at init.
+    await enableE2EProbe(context);
 
     await test.step('Navigate to test page', async () => {
       await page.goto('http://localhost:8080/long-page.html');
@@ -33,15 +40,7 @@ test.describe('Recording traceId correlation @extension', () => {
 
     await test.step('Wait for content script extractor initialization', async () => {
       await expect.poll(
-        async () => {
-          const attr = await page.evaluate(() => document.documentElement.getAttribute('data-ow-test-state'));
-          if (!attr) return null;
-          try {
-            return JSON.parse(attr) as unknown;
-          } catch {
-            return null;
-          }
-        },
+        async () => readE2EProbeState(context),
         { timeout: 10000, intervals: [200] },
       ).toHaveProperty('minVisitDuration');
     });
@@ -52,15 +51,7 @@ test.describe('Recording traceId correlation @extension', () => {
 
     await test.step('Wait for VALID_VISIT to fire', async () => {
       await expect.poll(
-        async () => {
-          const attr = await page.evaluate(() => document.documentElement.getAttribute('data-ow-test-state'));
-          if (!attr) return null;
-          try {
-            return JSON.parse(attr) as { isValidVisitReported?: boolean } | null;
-          } catch {
-            return null;
-          }
-        },
+        async () => readE2EProbeState(context),
         { timeout: 15000, intervals: [1000] },
       ).toMatchObject({ isValidVisitReported: true });
     });

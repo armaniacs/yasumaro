@@ -7,6 +7,7 @@
  */
 
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
+import { clearElement } from '../utils/domClear.js';
 import { type AiTestProgress } from '../background/ai/AIService.js';
 import { providerLabel } from './aiTestResultView.js';
 
@@ -21,7 +22,7 @@ export interface AiTestProgressView {
  * restarted and the live region is not re-announced on every tick.
  */
 export function buildAiTestProgressView(container: HTMLElement): AiTestProgressView {
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'ai-test-progress';
 
   const spinner = document.createElement('span');

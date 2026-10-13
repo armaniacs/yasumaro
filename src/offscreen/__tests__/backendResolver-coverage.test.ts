@@ -2,19 +2,10 @@
 /**
  * backendResolver-coverage.test.ts
  * PBI 10: backendResolver の 4パターン (OPFS/IDB/Fallback/None) を
- * detectLiveVfsStrategy の mock でテーブル駆動テスト。
- * createBackend と detectOpfsCapabilitiesForResolver も 90% ゲートまでカバー。
+ * テーブル駆動テスト。
+ * createBackend も 90% ゲートまでカバー。
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// ── hoisted mocks ─────────────────────────────────────────────────────────
-const mockDetectLiveVfsStrategy = vi.hoisted(() =>
-  vi.fn().mockReturnValue({ caps: { opfsDirectory: true, syncAccessHandle: true, worker: true }, strategy: 'opfs-sync-worker' })
-);
-
-vi.mock('../opfsCapabilities.js', () => ({
-  detectLiveVfsStrategy: mockDetectLiveVfsStrategy,
-}));
 
 const mockOpfsBackend = vi.hoisted(() => ({ kind: 'opfs', healthCheck: () => Promise.resolve({ success: true }), getStatus: () => Promise.resolve({ success: true }) }));
 const mockIdbBackend = vi.hoisted(() => ({ kind: 'idb', healthCheck: () => Promise.resolve({ success: true }), getStatus: () => Promise.resolve({ success: true }) }));
@@ -61,16 +52,12 @@ vi.mock('../storageFallback.js', () => ({
 }));
 
 // Must import after mocks
-import { resolveBackend, detectOpfsCapabilitiesForResolver } from '../backendResolver.js';
+import { resolveBackend } from '../backendResolver.js';
 import { SqliteEngineHost } from '../sqliteEngineHost.js';
 
 describe('backendResolver — coverage 90% (PBI 10)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockDetectLiveVfsStrategy.mockReturnValue({
-      caps: { opfsDirectory: true, syncAccessHandle: true, worker: true },
-      strategy: 'opfs-sync-worker',
-    } as never);
   });
 
   // ── resolveBackend: 優先度 OPFS > IDB > Fallback > None のテーブル駆動 ──
@@ -88,24 +75,6 @@ describe('backendResolver — coverage 90% (PBI 10)', () => {
 
     it.each(table)('$name: returns $expected', ({ state, expected }) => {
       expect(resolveBackend(state)).toBe(expected);
-    });
-  });
-
-  // ── detectOpfsCapabilitiesForResolver: detectLiveVfsStrategy 委譲 ───────
-  describe('detectOpfsCapabilitiesForResolver — detectLiveVfsStrategy mock', () => {
-    type Caps = { opfsDirectory: boolean; syncAccessHandle: boolean; worker: boolean };
-    const capsTable: Array<{ caps: Caps; expected: Caps }> = [
-      { caps: { opfsDirectory: true, syncAccessHandle: true, worker: true }, expected: { opfsDirectory: true, syncAccessHandle: true, worker: true } },
-      { caps: { opfsDirectory: false, syncAccessHandle: false, worker: false }, expected: { opfsDirectory: false, syncAccessHandle: false, worker: false } },
-      { caps: { opfsDirectory: true, syncAccessHandle: false, worker: true }, expected: { opfsDirectory: true, syncAccessHandle: false, worker: true } },
-      { caps: { opfsDirectory: true, syncAccessHandle: true, worker: false }, expected: { opfsDirectory: true, syncAccessHandle: true, worker: false } },
-    ];
-
-    it.each(capsTable)('returns caps $caps as-is', ({ caps, expected }) => {
-      mockDetectLiveVfsStrategy.mockReturnValue({ caps, strategy: caps.opfsDirectory ? 'opfs-sync-worker' : 'fallback' } as never);
-      const result = detectOpfsCapabilitiesForResolver();
-      expect(result).toEqual(expected);
-      expect(mockDetectLiveVfsStrategy).toHaveBeenCalledOnce();
     });
   });
 

@@ -188,10 +188,6 @@ describe('RecordingLogic: 設定キャッシュ（タスク5）', () => {
       }
     });
 
-    // Problem #3: 2重キャッシュ構造を1段階に簡素化したため、バージョンチェック
-    // ロジック自体が存在しない（TTLに基づく期限切れチェックのみ行われる）。
-    it.skip('refetches when the cache version changes', () => {});
-
     it('uses the static cache when available', async () => {
       const firstInstance = makeRecordingLogic(mockObsidianClient, mockAiClient);
       await RecordingCache.getSettingsWithCache();

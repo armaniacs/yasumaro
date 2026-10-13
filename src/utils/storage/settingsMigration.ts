@@ -157,6 +157,10 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // consent / Tranco UI state the user already acknowledged.
     StorageKeys.PRIVACY_CONSENT_VERSION,
     StorageKeys.TRANCO_VERSION,
+    // RecordingTriggerManager reads these keys directly from top-level storage;
+    // moving them into the settings blob would hide them from their owner.
+    StorageKeys.RECORDING_TRIGGERS,
+    StorageKeys.SNAPSHOT_INTERVAL_MINUTES,
     // Device-local trust database owned by TrustDbKernel, which persists it
     // with its own withOptimisticLock on the raw key and has no blob-side reader.
     StorageKeys.TRUST_DB,

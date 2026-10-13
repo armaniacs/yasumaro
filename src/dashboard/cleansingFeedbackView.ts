@@ -1,5 +1,6 @@
 import { getFeedbackQueue, clearFeedbackQueue, removeFeedbackEntry } from '../utils/aiSummaryCleaner/feedbackQueue.js';
-import { getMessageOr } from '../utils/i18n.js';
+import { clearElement } from '../utils/domClear.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { readRemovedCounts } from '../utils/commonTypes.js';
 import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
 import { ruleLabelFallback, ruleMessageKey } from '../utils/aiSummaryCleaner/ruleLabels.js';
@@ -74,16 +75,16 @@ function renderReasonCell(
 
 export async function renderCleansingFeedback(container: HTMLElement): Promise<void> {
   const entries = await getFeedbackQueue();
-  container.innerHTML = '';
+  clearElement(container);
   container.className = 'cleansing-feedback-view';
 
   const header = document.createElement('div');
   header.className = 'cleansing-feedback-header';
   const title = document.createElement('h3');
-  title.textContent = `Cleansing Feedback (${entries.length})`;
+  title.textContent = getMessageWithSubstitutions('cleansingFeedbackTitle', { count: entries.length }, 'Cleansing Feedback ({count})');
   header.appendChild(title);
   const clearBtn = document.createElement('button');
-  clearBtn.textContent = '全削除';
+  clearBtn.textContent = getMessageOr('cleansingFeedbackClearAll', '全削除');
   clearBtn.className = 'btn-secondary btn-sm';
   clearBtn.id = 'cleansingFeedbackClearAll';
   clearBtn.disabled = entries.length === 0;
@@ -96,7 +97,7 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
 
   if (entries.length === 0) {
     const empty = document.createElement('p');
-    empty.textContent = '報告はありません';
+    empty.textContent = getMessageOr('cleansingFeedbackEmpty', '報告はありません');
     empty.className = 'cleansing-feedback-empty';
     container.appendChild(empty);
     return;
@@ -135,7 +136,7 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
     tdDate.textContent = new Date(e.createdAt).toLocaleString();
     const tdAction = document.createElement('td');
     const delBtn = document.createElement('button');
-    delBtn.textContent = '削除';
+    delBtn.textContent = getMessageOr('cleansingFeedbackDelete', '削除');
     delBtn.className = 'btn-secondary btn-sm';
     delBtn.dataset.feedbackId = e.id;
     delBtn.addEventListener('click', async () => {

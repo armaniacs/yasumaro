@@ -1,8 +1,9 @@
 {
-  "_comment": "Budget for `npm run test:perf`. `gates` fails the build; `reference` is printed for a human and does not. fileCount is the only gate because it is the only machine-independent one, and per-file fixed cost (environment, transform, import, the shared setup file) scales with it. The JSON reporter cannot measure that cost — both time columns cover the test phase only — so wall is the sole figure that includes it and wall is machine- and worker-count-dependent (76.9s at 6 workers, 184s at 3, 303s at 2 on one 8-core box). See dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md",
+  "_comment": "Budget for `npm run test:perf`. `gates` fails the build; `reference` is printed for a human and does not. Both gated metrics are counts, so both are machine-independent: `fileCount` caps the total, and `jsdomFileCount` caps the subset that pays ~106ms of jsdom construction per file (ADR: isolated/node 40ms vs isolated/jsdom 147ms per file, environment 81% of the jsdom figure). The JSON reporter cannot measure fixed cost — both time columns cover the test phase only — so wall is the sole figure that includes it and wall is machine- and worker-count-dependent (76.9s at 6 workers, 184s at 3, 303s at 2 on one 8-core box). Raising a gate requires an ADR note recording the trajectory and the cause, because a bare raise only resets the clock: 930 was sized as the 2026-09-26 count (910) plus 20, the suite crossed it the next day, reached 1059 by 2026-10-12, and 1061 by 2026-10-13 (the getURL extraction sync pin test added one file). See dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md (R4).",
   "budget": {
     "gates": {
-      "fileCount": 930
+      "fileCount": 1062,
+      "jsdomFileCount": 360
     },
     "reference": {
       "totalFileMs": 95000,

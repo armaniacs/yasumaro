@@ -106,16 +106,33 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     return { success: true, ...descriptor.project(result) } as DescriptorResponse<D>;
   }
 
-  async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
-    const result = await this.callWorker<{ id: number }>('INSERT', record);
+  /**
+   * The non-archive twin of `proxyArchive`: folds a null worker answer into the
+   * shared reason and hands a non-null answer to the caller's projection. The
+   * archive side reads its projection from a descriptor row; the ops here have
+   * no descriptor, so the project lambda is passed in. The failure counter and
+   * degrade signal stay in `callWorker` — this only folds its result.
+   */
+  private async callWorkerOk<T, R>(
+    type: string,
+    payload: unknown,
+    project: (result: T) => R,
+  ): Promise<BackendOrError<R>> {
+    const result = await this.callWorker<T>(type, payload);
     if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, id: result.id };
+    return project(result);
+  }
+
+  async insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>> {
+    return this.callWorkerOk<{ id: number }, InsertResult>('INSERT', record, (result) => ({ success: true, id: result.id }));
   }
 
   async insertBatch(records: BrowsingLogRecord[]): Promise<BackendOrError<InsertBatchResult>> {
-    const result = await this.callWorker<{ count: number; inserted: number; skipped: number }>('INSERT_BATCH', records);
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, inserted: result.inserted, skipped: result.skipped };
+    return this.callWorkerOk<{ count: number; inserted: number; skipped: number }, InsertBatchResult>(
+      'INSERT_BATCH',
+      records,
+      (result) => ({ success: true, inserted: result.inserted, skipped: result.skipped }),
+    );
   }
 
   async query(q: StorageQuery): Promise<BackendOrError<QuerySearchResult>> {
@@ -126,57 +143,59 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     // once by queryPlanner.planQueryMode (PBI 2026-09-14-01) and mirrored by
     // IdbVfsBackend.query's `spec.mode` check and FallbackStorage.query's.
     const workerType = planQueryMode(q) === 'search' ? 'SEARCH' : 'QUERY';
-    const result = await this.callWorker<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }>(workerType, q);
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total };
+    return this.callWorkerOk<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }, QuerySearchResult>(
+      workerType,
+      q,
+      (result) => ({ success: true, rows: result.rows as (BrowsingLogEntry & { rank: number })[], total: result.total }),
+    );
   }
 
   async update(id: number, changes: Record<string, unknown>): Promise<BackendOrError<MutationResult>> {
-    const result = await this.callWorker<unknown>('UPDATE', { id, changes });
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true };
+    return this.callWorkerOk<unknown, MutationResult>('UPDATE', { id, changes }, () => ({ success: true }));
   }
 
   async delete(id: number): Promise<BackendOrError<MutationResult>> {
-    const result = await this.callWorker<unknown>('DELETE', { id });
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true };
+    return this.callWorkerOk<unknown, MutationResult>('DELETE', { id }, () => ({ success: true }));
   }
 
   async toggleStar(id: number): Promise<BackendOrError<StarResult>> {
-    const result = await this.callWorker<{ is_starred: number }>('TOGGLE_STAR', { id });
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, is_starred: result.is_starred };
+    return this.callWorkerOk<{ is_starred: number }, StarResult>('TOGGLE_STAR', { id }, (result) => ({
+      success: true,
+      is_starred: result.is_starred,
+    }));
   }
 
   async purgeOldRecords(retentionDays: number, maxRecords: number): Promise<BackendOrError<PurgeResult>> {
-    const result = await this.callWorker<{ purged: number }>('PURGE', { retentionDays, maxRecords });
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, purged: result.purged };
+    return this.callWorkerOk<{ purged: number }, PurgeResult>('PURGE', { retentionDays, maxRecords }, (result) => ({
+      success: true,
+      purged: result.purged,
+    }));
   }
 
   async purgeContent(retentionDays?: number, maxRecords?: number, includeStarred?: boolean): Promise<BackendOrError<PurgeResult>> {
-    const result = await this.callWorker<{ purged: number }>('CONTENT_PURGE', { retentionDays, maxRecords, includeStarred });
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, purged: result.purged };
+    return this.callWorkerOk<{ purged: number }, PurgeResult>(
+      'CONTENT_PURGE',
+      { retentionDays, maxRecords, includeStarred },
+      (result) => ({ success: true, purged: result.purged }),
+    );
   }
 
   async purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
-    const result = await this.callWorker<{ purged: number }>('AUDIT_LOG_PURGE', { retentionDays });
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, purged: result.purged };
+    return this.callWorkerOk<{ purged: number }, PurgeResult>('AUDIT_LOG_PURGE', { retentionDays }, (result) => ({
+      success: true,
+      purged: result.purged,
+    }));
   }
 
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
-    const result = await this.callWorker<{ count: number }>('FTS_INDEX_SIZE');
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, count: result.count };
+    return this.callWorkerOk<{ count: number }, FtsSizeResult>('FTS_INDEX_SIZE', undefined, (result) => ({
+      success: true,
+      count: result.count,
+    }));
   }
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
-    const result = await this.callWorker<Uint8Array>('BACKUP');
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, data: result };
+    return this.callWorkerOk<Uint8Array, BackupResult>('BACKUP', undefined, (data) => ({ success: true, data }));
   }
 
   async archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>> {
@@ -248,40 +267,35 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   }
 
   async getStatus(): Promise<BackendOrError<StatusResult>> {
-    const result = await this.callWorker<StatusResult>('STATUS');
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return result;
+    return this.callWorkerOk<StatusResult, StatusResult>('STATUS', undefined, (result) => result);
   }
 
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
-    const result = await this.callWorker<{ id: number }>('AUDIT_LOG_INSERT', record);
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, id: result.id };
+    return this.callWorkerOk<{ id: number }, InsertResult>('AUDIT_LOG_INSERT', record, (result) => ({ success: true, id: result.id }));
   }
 
   async queryAuditLog(options: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
-    const result = await this.callWorker<{ rows: AuditLogRecord[]; total: number }>('AUDIT_LOG_QUERY', options);
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, rows: result.rows as AuditLogEntry[], total: result.total };
+    return this.callWorkerOk<{ rows: AuditLogRecord[]; total: number }, AuditLogQueryResult>(
+      'AUDIT_LOG_QUERY',
+      options,
+      (result) => ({ success: true, rows: result.rows as AuditLogEntry[], total: result.total }),
+    );
   }
 
   async serialize(): Promise<BackendOrError<SerializeResult>> {
     // PBI 2026-09-12-22: the worker handler now returns the shared envelope
     // (was a bare array over 13 hand-mapped columns).
-    const result = await this.callWorker<Uint8Array>('SERIALIZE');
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, data: result };
+    return this.callWorkerOk<Uint8Array, SerializeResult>('SERIALIZE', undefined, (data) => ({ success: true, data }));
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {
-    const result = await this.callWorker<{ count: number }>('GET_COUNT');
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true, count: result.count };
+    return this.callWorkerOk<{ count: number }, CountResult>('GET_COUNT', undefined, (result) => ({
+      success: true,
+      count: result.count,
+    }));
   }
 
   async clearAll(): Promise<BackendOrError<MutationResult>> {
-    const result = await this.callWorker<unknown>('CLEAR_ALL', {});
-    if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
-    return { success: true };
+    return this.callWorkerOk<unknown, MutationResult>('CLEAR_ALL', {}, () => ({ success: true }));
   }
 }

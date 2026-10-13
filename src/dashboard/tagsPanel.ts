@@ -5,6 +5,7 @@
 
 import { saveSettingsAndRefreshDomainFilterCache } from '../utils/storage/domainFilterCache.js';
 import { getMessageOr } from '../utils/i18n.js';
+import { clearElement } from '../utils/domClear.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -44,7 +45,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
 
   function renderDefaultCategories(): void {
     if (!defaultCategoriesList) return;
-    defaultCategoriesList.innerHTML = '';
+    clearElement(defaultCategoriesList);
     DEFAULT_CATEGORIES.forEach((category) => {
       defaultCategoriesList.appendChild(
         createTagChip({
@@ -64,7 +65,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   function renderUserCategories(): void {
     if (!userCategoriesListEl || !noUserCategoriesMsg) return;
 
-    userCategoriesListEl.innerHTML = '';
+    clearElement(userCategoriesListEl);
 
     if (userCategories.length === 0) {
       noUserCategoriesMsg.hidden = false;
@@ -140,7 +141,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   function renderNormalizationEntries(): void {
     if (!normEntriesList || !noNormEntriesMsg) return;
 
-    normEntriesList.innerHTML = '';
+    clearElement(normEntriesList);
 
     if (normalizationEntries.length === 0) {
       noNormEntriesMsg.hidden = false;

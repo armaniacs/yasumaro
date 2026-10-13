@@ -6,11 +6,21 @@
  * (LAYER0_FILES / LAYER1_FILES / LAYER2_MODULES / BARREL_MODULES, the SSOT)
  * agree with the classification tables in dev-docs/LAYERS.md.
  *
- * Two directions are checked:
+ * Four checks run:
  *   1. Every rule entry exists under the matching Layer heading in LAYERS.md.
  *   2. Every docs entry under a Layer heading is either in the matching rule
  *      list or in DOCS_ONLY_ALLOWLIST below (classified-but-unenforced or
  *      intentionally out-of-scope files). Anything else is drift.
+ *   3. Every path referenced by the rule lists, the docs classification tables
+ *      or the allowlists actually exists on disk (existsSync, same pattern as
+ *      scripts/lint-adr-links.mjs). A rule↔docs pair that shares a stale,
+ *      deleted-file entry would otherwise pass checks 1-2 forever.
+ *   4. Every `// @layer N` declaration at the top of a TypeScript file under
+ *      src/utils/ is registered in the SSOT for its declared layer (rule list
+ *      or docs classification table). The declaration alone is no longer enough; the
+ *      checklist step "register in the SSOT" is now enforced mechanically.
+ *      Files that are deliberately unregistered live in
+ *      DECLARED_LAYER_ALLOWLIST with a reason.
  *
  * Only fenced code blocks under the Layer headings are inspected, so prose
  * mentions (annotations, history, the unclassified follow-up list) never
@@ -23,12 +33,13 @@
  * success message otherwise.
  */
 
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { resolve, dirname, join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
+const UTILS_DIR = join(ROOT, 'src', 'utils');
 
 const args = process.argv.slice(2);
 function argValue(flag, fallback) {
@@ -45,8 +56,6 @@ const DOCS_ONLY_ALLOWLIST = {
   'Layer 0': [],
   'Layer 1': [
     // Classified in LAYERS.md but not yet enforced by the rule.
-    'src/utils/storage/SettingsRepository.ts',
-    'src/utils/storage/storageTransaction.ts',
     'src/utils/masterPassword.ts',
     'src/utils/i18nPlural.ts',
   ],
@@ -61,11 +70,34 @@ const DOCS_ONLY_ALLOWLIST = {
   Barrel: [],
 };
 
+// Files that carry a first-line `// @layer N` declaration but are deliberately
+// kept out of both the rule lists and the classification tables. Each needs a
+// written reason; registering the file in the SSOT removes the need for the
+// row. The declaration check (4) skips these paths.
+const DECLARED_LAYER_ALLOWLIST = {
+  'src/utils/domainFilter/DomainFilter.ts': {
+    declared: 'Layer 1',
+    reason:
+      'Declares // @layer 1 but reaches Layer 2 via domainUtils; documented as unclassified/out-of-scope in LAYERS.md "未分類・後続対応".',
+  },
+};
+
 const RULE_TO_DOCS_SECTION = {
   LAYER0_FILES: 'Layer 0',
   LAYER1_FILES: 'Layer 1',
   LAYER2_MODULES: 'Layer 2',
   BARREL_MODULES: 'Barrel',
+};
+
+const DOCS_TO_RULE_LIST = Object.fromEntries(
+  Object.entries(RULE_TO_DOCS_SECTION).map(([list, section]) => [section, list]),
+);
+
+const DECLARED_TO_SECTION = {
+  '0': 'Layer 0',
+  '1': 'Layer 1',
+  '2': 'Layer 2',
+  Barrel: 'Barrel',
 };
 
 function extractRuleLists(source) {
@@ -106,6 +138,30 @@ function extractDocsSections(source) {
   return sections;
 }
 
+function walkUtilsFiles(dir) {
+  const out = [];
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    const st = statSync(p);
+    if (st.isDirectory()) {
+      if (name === '__tests__') continue;
+      out.push(...walkUtilsFiles(p));
+    } else if (name.endsWith('.ts')) {
+      out.push(p);
+    }
+  }
+  return out;
+}
+
+// True when a file path is covered by a list entry: exact match for a file,
+// path prefix for a directory entry (trailing slash).
+function pathCoveredByEntries(filePath, entries) {
+  return entries.some((e) => {
+    if (e.endsWith('/')) return filePath.startsWith(e);
+    return filePath === e;
+  });
+}
+
 const ruleSource = readFileSync(RULE_PATH, 'utf-8');
 const docsSource = readFileSync(DOCS_PATH, 'utf-8');
 const ruleLists = extractRuleLists(ruleSource);
@@ -113,7 +169,7 @@ const docsSections = extractDocsSections(docsSource);
 
 let errors = 0;
 
-// Direction 1: every rule entry must sit under the matching docs heading.
+// Check 1: every rule entry must sit under the matching docs heading.
 for (const [listName, section] of Object.entries(RULE_TO_DOCS_SECTION)) {
   const docsEntries = docsSections[section];
   if (!docsEntries) {
@@ -129,7 +185,7 @@ for (const [listName, section] of Object.entries(RULE_TO_DOCS_SECTION)) {
   }
 }
 
-// Direction 2: every docs entry must be in the rule list or allowlisted.
+// Check 2: every docs entry must be in the rule list or allowlisted.
 for (const [listName, section] of Object.entries(RULE_TO_DOCS_SECTION)) {
   const docsEntries = docsSections[section] || [];
   const allowed = new Set([...ruleLists[listName], ...DOCS_ONLY_ALLOWLIST[section]]);
@@ -141,10 +197,57 @@ for (const [listName, section] of Object.entries(RULE_TO_DOCS_SECTION)) {
   }
 }
 
+// Check 3: every referenced path (rule lists, docs tables, allowlists, declared
+// allowlist) must exist on disk. Same existsSync pattern as lint-adr-links.mjs.
+const referencedPaths = new Set([
+  ...Object.values(ruleLists).flat(),
+  ...Object.values(docsSections).flat(),
+  ...Object.values(DOCS_ONLY_ALLOWLIST).flat(),
+  ...Object.keys(DECLARED_LAYER_ALLOWLIST),
+]);
+for (const relPath of referencedPaths) {
+  if (!existsSync(join(ROOT, relPath))) {
+    console.error(`[layers-docs:exists] MISSING FILE: ${relPath} (referenced by the SSOT or LAYERS.md)`);
+    errors++;
+  }
+}
+
+// Check 4: every first-line `// @layer N` declaration in src/utils/** must be
+// registered in the rule list or docs table for its declared layer. This makes
+// the declaration a gate input: annotating a file no longer exempts it.
+const declaredFiles = walkUtilsFiles(UTILS_DIR)
+  .map((filePath) => ({
+    relPath: relative(ROOT, filePath).split(sep).join('/'),
+    firstLine: readFileSync(filePath, 'utf-8').split('\n', 1)[0],
+  }))
+  .filter((f) => /^\/\/\s*@layer\s+(Barrel|\d+)\b/.test(f.firstLine));
+for (const { relPath, firstLine } of declaredFiles) {
+  const m = firstLine.match(/^\/\/\s*@layer\s+(Barrel|\d+)\b/);
+  const declared = DECLARED_TO_SECTION[m[1]];
+  if (!declared) {
+    console.error(`[layers-docs:@layer] UNKNOWN DECLARED LAYER: ${relPath} ("${firstLine.trim()}")`);
+    errors++;
+    continue;
+  }
+  if (DECLARED_LAYER_ALLOWLIST[relPath]) continue;
+  const section = declared;
+  const ruleList = DOCS_TO_RULE_LIST[section];
+  const registered = pathCoveredByEntries(relPath, ruleLists[ruleList]) ||
+    pathCoveredByEntries(relPath, docsSections[section] || []);
+  if (!registered) {
+    console.error(
+      `[layers-docs:@layer] UNREGISTERED DECLARATION: ${relPath} declares ${section} but is in neither ${ruleList} nor LAYERS.md ### ${section}`,
+    );
+    errors++;
+  }
+}
+
 if (errors > 0) {
   console.error(`\n${errors} layer list drift(s) found between rule and LAYERS.md.`);
   process.exit(1);
 }
 
 const ruleCount = Object.values(ruleLists).reduce((n, l) => n + l.length, 0);
-console.log(`Checked ${ruleCount} rule entries against LAYERS.md — layer lists in sync.`);
+console.log(
+  `Checked ${ruleCount} rule entries, ${referencedPaths.size} referenced paths and ${declaredFiles.length} @layer declarations against LAYERS.md — layer lists in sync.`,
+);

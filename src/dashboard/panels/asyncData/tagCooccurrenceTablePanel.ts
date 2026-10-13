@@ -33,6 +33,7 @@ import {
   MAX_TAG_CLUSTER_TAGS,
 } from '../../../utils/computeLimits.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
@@ -64,14 +65,14 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
   const notices = new PanelNotices();
 
   function clearOutput(): void {
-    if (tableWrap) tableWrap.innerHTML = '';
+    if (tableWrap) clearElement(tableWrap);
   }
 
   /** Rebuilds the select from the fetched node list, preserving the selection when possible. */
   function populateTagSelect(graph: CooccurrenceGraph): void {
     if (!tagSelect) return;
     const previous = tagSelect.value;
-    tagSelect.innerHTML = '';
+    clearElement(tagSelect);
     const allOption = document.createElement('option');
     allOption.value = '';
     allOption.textContent = getMessageOr('cooccurrenceTableTagFilterAll', 'All tags');

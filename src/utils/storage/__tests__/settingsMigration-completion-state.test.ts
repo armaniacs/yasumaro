@@ -236,7 +236,10 @@ describe('settings migration — key classification is by stored value, not by n
 
     it('migrates ordinary settings that merely live next to the version records', () => {
         expect(isMigratableStorageKey(StorageKeys.OBSIDIAN_PORT)).toBe(true);
-        expect(isMigratableStorageKey(StorageKeys.RECORDING_TRIGGERS)).toBe(true);
+        // These keys are intentionally excluded because RecordingTriggerManager
+        // reads them directly from top-level storage and has no blob-side reader.
+        expect(isMigratableStorageKey(StorageKeys.RECORDING_TRIGGERS)).toBe(false);
+        expect(isMigratableStorageKey(StorageKeys.SNAPSHOT_INTERVAL_MINUTES)).toBe(false);
     });
 });
 

@@ -67,21 +67,11 @@ vi.mock('../settings/fieldValidation.js', () => ({
   ErrorPair: class {},
 }));
 
-vi.mock('../../utils/i18n.js', () => {
+vi.mock('../../utils/i18n.js', async () => {
+  const { mockGetMessage } = await import('../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => key);
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-  key: string,
-  subs: Record<string, string | number>,
-  fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-  return {
-  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
-}; });
+  return mockGetMessage(getMessage);
+});
 
 vi.mock('../utils/confirmDialog.js', () => ({
   showConfirmDialog: vi.fn().mockResolvedValue(true),
@@ -415,19 +405,29 @@ describe('renderBPriorityWarnings', () => {
     `;
     const { p1Empty } = renderBPriorityWarnings(bList);
     expect(p1Empty).toBe(false);
-    expect(bList.querySelector('.b-priority-warn')).not.toBeNull();
+    const warn = bList.querySelector('.b-priority-warn') as HTMLElement | null;
+    expect(warn).not.toBeNull();
+    expect(warn!.classList.contains('field-error')).toBe(true);
+    expect(warn!.getAttribute('role')).toBe('alert');
+    expect(warn!.textContent).toBe('aiProviderPriorityDuplicateWarning');
     expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(2);
   });
 
   it('renders the P1-required warning and removes it once P1 is filled', () => {
     setupBDom();
     const bList = document.getElementById('bPriorityList') as HTMLElement;
-    bList.querySelector('.b-priority-row select')!.value = '';
+    (bList.querySelector('.b-priority-row select') as HTMLSelectElement).value = '';
     expect(renderBPriorityWarnings(bList).p1Empty).toBe(true);
-    expect(bList.querySelector('.b-priority-req-warn')).not.toBeNull();
-    bList.querySelector('.b-priority-row select')!.value = 'openai';
+    const reqWarn = bList.querySelector('.b-priority-req-warn') as HTMLElement | null;
+    expect(reqWarn).not.toBeNull();
+    expect(reqWarn!.classList.contains('field-error')).toBe(true);
+    expect(reqWarn!.getAttribute('role')).toBe('alert');
+    expect(reqWarn!.textContent).toBe('aiProviderPriority1Required');
+    expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(1);
+    (bList.querySelector('.b-priority-row select') as HTMLSelectElement).value = 'openai';
     expect(renderBPriorityWarnings(bList).p1Empty).toBe(false);
     expect(bList.querySelector('.b-priority-req-warn')).toBeNull();
+    expect(bList.querySelectorAll('.b-priority-row.has-error')).toHaveLength(0);
   });
 });
 

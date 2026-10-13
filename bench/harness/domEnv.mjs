@@ -119,6 +119,18 @@ export function setupDom(bodyHtml = '', opts = {}) {
     const origCreate = window.Document.prototype.createTreeWalker;
     window.Document.prototype.createTreeWalker = function patchedCreateTreeWalker(...args) {
       const walker = origCreate.apply(this, args);
+      // jsdom implements querySelectorAll on top of @asamuzakjp/dom-selector,
+      // whose fallback path drives its own TreeWalker through this same public
+      // method. That traversal belongs to the CSS engine, not to the measured
+      // module: it scales with the selectors a rule set uses, not with the
+      // module's own DOM walking. Counting it made the counter track selector
+      // syntax — measured 2026-10-12, a cleansing refactor moved
+      // counter_treeWalker by +1813% while the module itself made 0 TreeWalker
+      // calls and wall moved ~+23%. Skip engine-internal creations so the
+      // counter keeps measuring the code under test. The stack read costs
+      // nothing measurable: it runs once per walker creation (tens per run),
+      // not per visited node.
+      if (/@asamuzakjp/.test(new Error().stack ?? '')) return walker;
       const origNext = walker.nextNode.bind(walker);
       const origPrev = walker.previousNode.bind(walker);
       walker.nextNode = () => {

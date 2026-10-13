@@ -45,6 +45,10 @@ import {
   stagingNameArg,
   voidDecode,
 } from './wireLambdaFactories.js';
+import {
+  evaluateSubtypeSpec,
+  isPositiveInteger,
+} from './validators.js';
 
 /** Dashboard subtypes owned by the archive group. */
 export type DashboardArchiveSubtype = Extract<DashboardSqliteSubtype, `archive_${string}`>;
@@ -116,15 +120,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['preview'],
     emptyError: 'Archive preview returned no data',
     defaultError: 'Archive preview failed',
-    validate: (p) => {
-      if (typeof p.cutoffDate !== 'string' || p.cutoffDate.length === 0) {
-        return 'archive_preview: cutoffDate is required';
-      }
-      if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs) || p.cutoffMs <= 0) {
-        return 'archive_preview: cutoffMs must be a positive number';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_preview', p),
     encodeRequest: (
       cutoffDate: string,
       cutoffMs: number,
@@ -149,15 +145,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['stagingName', 'recordCount'],
     emptyError: 'Archive create returned no staging file',
     defaultError: 'Archive creation failed',
-    validate: (p) => {
-      if (typeof p.cutoffDate !== 'string' || p.cutoffDate.length === 0) {
-        return 'archive_create: cutoffDate is required';
-      }
-      if (typeof p.cutoffMs !== 'number' || !Number.isFinite(p.cutoffMs) || p.cutoffMs <= 0) {
-        return 'archive_create: cutoffMs must be a positive number';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_create', p),
     encodeRequest: (params: {
       cutoffDate: string;
       cutoffMs: number;
@@ -207,15 +195,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['chunk', 'nextOffset', 'total', 'done'],
     emptyError: 'Archive export returned no data',
     defaultError: 'Archive export failed',
-    validate: (p) => {
-      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
-        return 'archive_export: offset must be a non-negative integer';
-      }
-      if (typeof p.length !== 'number' || !Number.isFinite(p.length) || p.length < 1) {
-        return 'archive_export: length must be a positive number';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_export', p),
     encodeRequest: (
       stagingName: string,
       offset: number,
@@ -368,16 +348,7 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['rows', 'total'],
     emptyError: 'Archive query returned no data',
     defaultError: 'Archive query failed',
-    validate: (p) => {
-      if (typeof p.query !== 'string') return 'archive_query: query must be string';
-      if (typeof p.limit !== 'number' || !Number.isInteger(p.limit) || p.limit < 1 || p.limit > 500) {
-        return 'archive_query: limit must be 1..500';
-      }
-      if (typeof p.offset !== 'number' || !Number.isInteger(p.offset) || p.offset < 0) {
-        return 'archive_query: offset must be a non-negative integer';
-      }
-      return null;
-    },
+    validate: (p) => evaluateSubtypeSpec('archive_query', p),
     encodeRequest: (
       stagingName: string,
       query: string,
@@ -405,7 +376,7 @@ export const ARCHIVE_WIRE_TABLE = [
     emptyError: 'Archive update returned no data',
     defaultError: 'Archive update failed',
     validate: (p) => {
-      if (typeof p.id !== 'number' || !Number.isInteger(p.id) || p.id <= 0) {
+      if (!isPositiveInteger(p.id)) {
         return 'archive_update: id must be a positive integer';
       }
       if (!p.changes || typeof p.changes !== 'object' || Array.isArray(p.changes)) {

@@ -323,6 +323,15 @@ describe('isValidFetchUrl', () => {
     expect(isValidFetchUrl('http://LOCALHOST')).toBe(false);
   });
 
+  test('rejects localhost with a DNS root trailing dot', () => {
+    expect(isValidFetchUrl('http://localhost./')).toBe(false);
+    expect(isValidFetchUrl('http://sub.localhost.:3000/page')).toBe(false);
+  });
+
+  test('accepts a public hostname that ends with a trailing dot', () => {
+    expect(isValidFetchUrl('https://example.com./page')).toBe(true);
+  });
+
   test('rejects private IP addresses', () => {
     // isPrivateIpAddress mock returns false by default, need to override
     (isPrivateIpAddress as Mock).mockReturnValueOnce(true);

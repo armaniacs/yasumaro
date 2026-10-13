@@ -13,13 +13,11 @@
 
 import { logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import type { AuditLogEntry } from '../utils/sqlite-types.js';
 
-export interface AuditLogEntry {
-  id: number;
-  provider: string;
-  url: string;
-  created_at: number;
-}
+// Row shape owner is the SSOT. utils/auditLog.ts re-exports AuditLogEntry from
+// here, so the name stays part of this module's public surface.
+export type { AuditLogEntry };
 
 // Lazy gateway resolution: no static messaging → background runtime edge. Only
 // the module resolution is memoized here — instance identity belongs to

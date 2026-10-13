@@ -65,7 +65,7 @@ Scenario: 制約解除後に TEST_RULE.md を更新する
 
 ## 受け入れ基準
 
-- [ ] トリガー待ちである旨と、上流リリースまで実装しない旨が本 PBI に明記されている（起票済み）
+- [x] トリガー待ちである旨と、上流リリースまで実装しない旨が本 PBI に明記されている（起票済み）
 - [ ] `@stryker-mutator/core` と `@stryker-mutator/vitest-runner` を #6210 の修正を含むバージョンへ更新している（package.json / package-lock.json）
 - [ ] 採用検証で `npm run test:mutate` がミュータントごとにテストを実行している（testsCompleted > 0、Ran N tests per mutant > 0）ことを出力付きで記録している
 - [ ] ミューテーションスコアが実効値として変動し、0.00% 固定でないことを記録している

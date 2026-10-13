@@ -64,7 +64,7 @@ RICE = Reach（今後 1 年の関与頻度 1-10）× Impact（3=実害解消 / 2
 
 ## 既存台帳への反映
 
-- `pbi/2026-09-24-00-backlog-archloop-0924.md` の「renderTagGraph 抽出」: トリガー発火済みのため本ラウンド PBI 17 に昇格（行に昇格印を追記済み）。
+- `dev-docs/archived/pbi/2026-09-24-00-backlog-archloop-0924.md` の「renderTagGraph 抽出」（2026-10-11 アーカイブ済み）: トリガー発火済みのため本ラウンド PBI 17 に昇格（行に昇格印を追記済み）。
 - `pbi/2026-09-05-00-backlog-future.md` の「2 wire table の dashboard-hop codec 形状統合（P3）」: archiveWireTable 行内の `backendArgs`/`depsArgs` 双子（7 行 byte 同一・`archivePreview` のみ `includeDeleted` 正規化が乖離、`:219/220` 等対 `:126/127`）を P3 着手時の同梱対象として追記。
 
 ## クリーンと確認した領域（再レビュー不要）

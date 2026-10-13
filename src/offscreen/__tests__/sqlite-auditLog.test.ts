@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import type { AuditLogEntry, AuditLogRecord } from '../../utils/sqlite-types.js';
 
 interface WorkerMessage {
   id: number;
@@ -7,14 +8,8 @@ interface WorkerMessage {
   payload?: unknown;
 }
 
-interface AuditLogRecord {
-  provider: string;
-  url: string;
-  created_at: number;
-}
-
 const fakeWorkerMessages: WorkerMessage[] = [];
-const auditLogRecords: (AuditLogRecord & { id: number })[] = [];
+const auditLogRecords: AuditLogEntry[] = [];
 let nextAuditLogId = 1;
 
 class FakeWorker {

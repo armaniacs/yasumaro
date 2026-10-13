@@ -37,4 +37,11 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は影響する呼び出
 ## 台帳送り候補（着手トリガー）
 
 - **defineAnalysisPanel 単一登録シーム**（RICE 3.6・2pt）: カタログ+ファクトリー+pinned リストの二重管理解消。静的サイドバー HTML は CSP/初回描画/a11y の記録済み決定により維持。トリガー: 次回パネル追加ラウンドで登録ミスが起きた時、またはパネル数が 30 を超えた時
-- **renderTagGraph 抽出**（RICE 0.8・1pt）: tagCluster と timeSlider の SVG 描画重複。トリガー: 3つ目のクラスタグラフ系パネルを追加する時 → **トリガー発火済み（2026-09-28）**: wordClusterPanel が第 2 実装、tagClusterTimeSliderPanel が第 3 実装として存在し、MAX_NODES/SVG_NS も 3 重再宣言。PBI 化済み: [2026-09-28-17-refactor-render-tag-graph-extraction.md](../dev-docs/archived/pbi/2026-09-28-17-refactor-render-tag-graph-extraction.md)
+- **renderTagGraph 抽出**（RICE 0.8・1pt）: tagCluster と timeSlider の SVG 描画重複。トリガー: 3つ目のクラスタグラフ系パネルを追加する時 → **トリガー発火済み（2026-09-28）**: wordClusterPanel が第 2 実装、tagClusterTimeSliderPanel が第 3 実装として存在し、MAX_NODES/SVG_NS も 3 重再宣言。PBI 化済み: [2026-09-28-17-refactor-render-tag-graph-extraction.md](2026-09-28-17-refactor-render-tag-graph-extraction.md)
+
+## アーカイブ記録（2026-10-11）
+
+本台帳の役割は完了したため `dev-docs/archived/pbi/` へ移動する。PBI 09–16 は全件実装・アーカイブ済み、送り2件の扱いは以下:
+
+- renderTagGraph 抽出 → 2026-09-28 に PBI 17 へ昇格・実装済み（上記）。
+- defineAnalysisPanel 単一登録シーム → **別設計で解消済みとして閉じる**。`src/dashboard/panels/panelCatalog.ts`（PBI 2026-09-07-25）がパネル存在の SSOT となり「4箇所分散」は解消済み、HTML 同期は `panelCatalog.test.ts` で検証される。`defineAnalysisPanel` という関数は作られず、静的 sidebar HTML 維持は記録済み決定。よって本送りのトリガー（登録ミス／パネル数 30 超）は panelCatalog 側の責務に吸収された。

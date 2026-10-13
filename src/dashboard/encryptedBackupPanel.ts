@@ -13,6 +13,7 @@ import {
 import { downloadBlob } from './exportLogsService.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 
 /** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
 const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
@@ -52,9 +53,9 @@ export function initEncryptedBackupPanel(): void {
       try {
         const envelope = await exportEncryptedBackup(password);
         downloadJson(envelope, getExportFilename());
-        setStatus('暗号化バックアップを作成しました', false);
+        setStatus(getMessageOr('encryptedBackupCreated', '暗号化バックアップを作成しました'), false);
       } catch (error) {
-        setStatus(`バックアップ作成に失敗しました: ${errorMessage(error)}`, true);
+        setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
       }
     });
   });
@@ -71,7 +72,7 @@ export function initEncryptedBackupPanel(): void {
     // Size cap BEFORE reading/parsing: a forged multi-hundred-MB file must not
     // be pulled into memory or handed to JSON.parse (VULN-036).
     if (file.size > MAX_BACKUP_FILE_BYTES) {
-      setStatus('バックアップファイルが大きすぎます', true);
+      setStatus(getMessageOr('encryptedBackupFileTooLarge', 'バックアップファイルが大きすぎます'), true);
       if (importFileInput) importFileInput.value = '';
       return;
     }
@@ -81,7 +82,7 @@ export function initEncryptedBackupPanel(): void {
       const parsed = JSON.parse(text);
 
       if (!isEncryptedBackupFile(parsed)) {
-        setStatus('不正なバックアップファイルです', true);
+        setStatus(getMessageOr('encryptedBackupInvalidFile', '不正なバックアップファイルです'), true);
         if (importFileInput) importFileInput.value = '';
         return;
       }
@@ -92,7 +93,7 @@ export function initEncryptedBackupPanel(): void {
         typeof parsed.data === 'string' &&
         parsed.data.length > MAX_ENVELOPE_CIPHERTEXT_LENGTH
       ) {
-        setStatus('不正なバックアップファイルです', true);
+        setStatus(getMessageOr('encryptedBackupInvalidFile', '不正なバックアップファイルです'), true);
         if (importFileInput) importFileInput.value = '';
         return;
       }
@@ -103,17 +104,17 @@ export function initEncryptedBackupPanel(): void {
           const skippedCount = result.skippedKeys?.length ?? 0;
           setStatus(
             skippedCount > 0
-              ? `バックアップから復元しました（${skippedCount}件の設定項目は無効なためスキップされました）`
-              : 'バックアップから復元しました',
+              ? getMessageWithSubstitutions('encryptedBackupRestoredSkipped', { skipped: skippedCount }, 'バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）')
+              : getMessageOr('encryptedBackupRestored', 'バックアップから復元しました'),
             false
           );
           document.dispatchEvent(new CustomEvent('reload-general-settings'));
         } else {
-          setStatus(`復元に失敗しました: ${result.error}`, true);
+          setStatus(getMessageWithSubstitutions('encryptedBackupRestoreFailed', { error: String(result.error) }, '復元に失敗しました: {error}'), true);
         }
       });
     } catch (error) {
-      setStatus(`ファイルの読み込みに失敗しました: ${errorMessage(error)}`, true);
+      setStatus(getMessageWithSubstitutions('encryptedBackupFileReadFailed', { error: errorMessage(error) }, 'ファイルの読み込みに失敗しました: {error}'), true);
     }
 
     if (importFileInput) importFileInput.value = '';

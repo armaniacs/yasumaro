@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ServiceContainer, ServiceTokens } from '../serviceContainer.js';
+import { ServiceContainer } from '../serviceContainer.js';
 
 describe('ServiceContainer coverage — register/resolve/has/override 4分岐', () => {
   it('has: false for unregistered key, true after register', () => {
     const c = new ServiceContainer();
-    expect(c.has(ServiceTokens.sessionStore)).toBe(false);
+    expect(c.has('sessionStore')).toBe(false);
     expect(c.has('customKey')).toBe(false);
-    c.register(ServiceTokens.sessionStore, () => ({ id: 1 }));
-    expect(c.has(ServiceTokens.sessionStore)).toBe(true);
+    c.register('sessionStore', () => ({ id: 1 }));
+    expect(c.has('sessionStore')).toBe(true);
     expect(c.has('customKey')).toBe(false);
   });
 
@@ -53,7 +53,7 @@ describe('ServiceContainer coverage — register/resolve/has/override 4分岐', 
   it('resolve throws for unregistered key (branch)', () => {
     const c = new ServiceContainer();
     expect(() => c.resolve('missing')).toThrow('ServiceContainer: no registration for "missing"');
-    expect(() => c.resolve(ServiceTokens.obsidian)).toThrow('no registration');
+    expect(() => c.resolve('obsidian')).toThrow('no registration');
   });
 
   it('override replaces registration with fixed instance (singleton)', () => {
@@ -95,13 +95,13 @@ describe('ServiceContainer coverage — register/resolve/has/override 4分岐', 
 
   it('multiple tokens isolated', () => {
     const c = new ServiceContainer();
-    c.register(ServiceTokens.sessionStore, () => 'a');
-    c.register(ServiceTokens.obsidian, () => 'b', { singleton: true });
-    expect(c.resolve<string>(ServiceTokens.sessionStore)).toBe('a');
-    expect(c.resolve<string>(ServiceTokens.obsidian)).toBe('b');
-    expect(c.has(ServiceTokens.sessionStore)).toBe(true);
-    expect(c.has(ServiceTokens.obsidian)).toBe(true);
-    expect(c.has(ServiceTokens.aiService)).toBe(false);
+    c.register('sessionStore', () => 'a');
+    c.register('obsidian', () => 'b', { singleton: true });
+    expect(c.resolve<string>('sessionStore')).toBe('a');
+    expect(c.resolve<string>('obsidian')).toBe('b');
+    expect(c.has('sessionStore')).toBe(true);
+    expect(c.has('obsidian')).toBe(true);
+    expect(c.has('aiService')).toBe(false);
   });
 
   it('default opts singleton falsy branch vs truthy', () => {

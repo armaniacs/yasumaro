@@ -7,9 +7,20 @@
  * 1. Manifest V3 compliance (no V2 patterns)
  * 2. Permissions are minimal (no unnecessary permissions)
  * 3. host_permissions uses specific domains (no <all_urls> unless content_scripts requires it)
- * 4. No inline scripts or event handlers in HTML files
- * 5. Content scripts match are appropriate
- * 6. web_accessible_resources is minimal
+ * 4. Permission caps on the built manifest (host count, combined host+optional count,
+ *    localhost / 127.0.0.1 service origins present)
+ * 5. No inline scripts or event handlers in HTML files
+ * 6. Content scripts match are appropriate
+ * 7. web_accessible_resources is minimal
+ * 8. web_accessible_resources covers the content script's page-context fetches and
+ *    every registered resource exists in dist (PBI 2026-10-12-03 — the 2026-04-15
+ *    failure mode: a WAR omission broke the content script's dynamic import of
+ *    content-extractor.js on every page)
+ *
+ * The source-level counterpart (the manifest wxt.config.ts declares, build-free)
+ * lives in src/__tests__/manifest.test.ts. This script is the artifact layer: it
+ * reads dist/chromium-mv3 and must run after a build (CI's build job wires it;
+ * a missing artifact fails the gate instead of skipping it).
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
@@ -31,7 +42,16 @@ function checkManifestV3Compliance() {
     return false;
   }
 
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  // First manifest read of the gate: a corrupt artifact must produce a clean
+  // fail verdict here, not an unhandled SyntaxError before main() can
+  // fail-fast on this section's result.
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    fail('Built manifest.json could not be parsed as JSON — the build artifact is corrupt');
+    return false;
+  }
 
   // manifest_version
   if (manifest.manifest_version === 3) {
@@ -114,7 +134,7 @@ function checkHostPermissions() {
 
   // Check for <all_urls>
   if (allHostPerms.includes('<all_urls>')) {
-    warn('host_permissions includes <all_urls> — consider narrowing scope');
+    fail('host_permissions includes <all_urls> — least privilege requires specific origins');
   } else {
     pass('No <all_urls> in host_permissions');
   }
@@ -130,6 +150,58 @@ function checkHostPermissions() {
   }
 
   info(`Total host permissions: ${allHostPerms.length}`);
+  return true;
+}
+
+// host_permissions = 16 local service origins + 14 always-granted AI provider
+// domains = 30 today; the cap leaves headroom for a handful of provider
+// additions and fails on creep of 10 or more entries (the pre-WXT manifest
+// carried 2000+ domains).
+const MAX_HOST_PERMISSIONS = 40;
+// host_permissions + optional_host_permissions = 62 today.
+const MAX_TOTAL_HOST_PERMISSIONS = 100;
+
+function checkPermissionCaps() {
+  sectionBreak();
+  info('Checking permission caps on the built manifest...');
+
+  const manifestPath = join(DIST_DIR, 'manifest.json');
+  if (!existsSync(manifestPath)) {
+    fail('Built manifest.json not found — run build first');
+    return false;
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    fail('Built manifest.json could not be parsed as JSON — the build artifact is corrupt');
+    return false;
+  }
+
+  const host = manifest.host_permissions || [];
+  const optional = manifest.optional_host_permissions || [];
+
+  if (host.length < MAX_HOST_PERMISSIONS) {
+    pass(`host_permissions count ${host.length} < ${MAX_HOST_PERMISSIONS} cap`);
+  } else {
+    fail(`host_permissions count ${host.length} >= ${MAX_HOST_PERMISSIONS} cap — permission creep`);
+  }
+
+  const total = host.length + optional.length;
+  if (total < MAX_TOTAL_HOST_PERMISSIONS) {
+    pass(`total host permissions ${total} < ${MAX_TOTAL_HOST_PERMISSIONS} cap`);
+  } else {
+    fail(`total host permissions ${total} >= ${MAX_TOTAL_HOST_PERMISSIONS} cap — permission creep`);
+  }
+
+  const hasLocal = host.some((p) => p.includes('localhost') || p.includes('127.0.0.1'));
+  if (hasLocal) {
+    pass('localhost / 127.0.0.1 service origins present in host_permissions');
+  } else {
+    fail('no localhost / 127.0.0.1 origin in host_permissions — local service access dies');
+  }
+
   return true;
 }
 
@@ -236,6 +308,78 @@ function checkWebAccessibleResources() {
   return true;
 }
 
+function checkWebAccessibleResourcesChain() {
+  sectionBreak();
+  info('Checking web_accessible_resources covers the content script page-context fetches...');
+
+  const manifestPath = join(DIST_DIR, 'manifest.json');
+  if (!existsSync(manifestPath)) {
+    fail('Built manifest.json not found — run build first');
+    return false;
+  }
+
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    fail('Built manifest.json could not be parsed as JSON — the build artifact is corrupt');
+    return false;
+  }
+
+  const war = manifest.web_accessible_resources || [];
+  if (war.length === 0) {
+    fail(
+      'No web_accessible_resources declared — the content script fetches chrome-extension:// resources from the page context, which need WAR'
+    );
+    return false;
+  }
+
+  const resources = war.flatMap((group) => group.resources || []);
+
+  // 1. Every registered resource must exist in dist — a stale entry points at
+  //    a file the build no longer produces.
+  const missing = resources.filter((resource) => !existsSync(join(DIST_DIR, resource)));
+  if (missing.length > 0) {
+    fail(`web_accessible_resources entries missing from dist: ${missing.join(', ')}`);
+  } else {
+    pass(`All ${resources.length} web_accessible_resources exist in dist`);
+  }
+
+  // 2. Every chrome.runtime.getURL('...') literal in the built content script
+  //    must be WAR-declared: a fetch from the page context without WAR dies
+  //    (2026-04-15: the content script's dynamic import of
+  //    content-extractor.js failed on every page after a WAR omission).
+  const getURLPattern = /getURL\(\s*(['"`])((?:(?!\1).)*)\1\s*\)/g;
+  const contentScripts = (manifest.content_scripts || []).flatMap((cs) => cs.js || []);
+  const required = new Set();
+  for (const script of contentScripts) {
+    const scriptPath = join(DIST_DIR, script);
+    if (!existsSync(scriptPath)) {
+      fail(`Content script missing from dist: ${script}`);
+      continue;
+    }
+    const code = readFileSync(scriptPath, 'utf-8');
+    for (const match of code.matchAll(getURLPattern)) {
+      required.add(match[2]);
+    }
+  }
+
+  const undeclared = [...required].filter((target) => !resources.includes(target));
+  if (undeclared.length > 0) {
+    fail(
+      `Page-context getURL() fetches missing from web_accessible_resources: ${undeclared.join(', ')} — the content script's dynamic import dies without WAR`
+    );
+  } else if (required.size > 0) {
+    pass(
+      `All ${required.size} page-context getURL() fetches are WAR-declared: ${[...required].join(', ')}`
+    );
+  } else {
+    warn('No getURL() literals found in the built content scripts — verify the derivation still applies');
+  }
+
+  return true;
+}
+
 function checkHtmlNoInlineScripts() {
   sectionBreak();
   info('Checking HTML files for inline scripts...');
@@ -279,12 +423,22 @@ function checkHtmlNoInlineScripts() {
 function main() {
   const results = [];
 
-  results.push({ name: 'MV3 Compliance', ok: checkManifestV3Compliance() });
+  const mv3Ok = checkManifestV3Compliance();
+  results.push({ name: 'MV3 Compliance', ok: mv3Ok });
+  if (!mv3Ok) {
+    // Fail fast: the remaining sections read dist/chromium-mv3/manifest.json
+    // and would throw on a missing artifact instead of reporting a verdict.
+    // A missing build artifact must fail this gate, never skip it.
+    summary();
+    process.exit(1);
+  }
   results.push({ name: 'Permissions', ok: checkPermissions() });
   results.push({ name: 'Host Permissions', ok: checkHostPermissions() });
+  results.push({ name: 'Permission Caps', ok: checkPermissionCaps() });
   results.push({ name: 'CSP', ok: checkCSP() });
   results.push({ name: 'Icons', ok: checkIcons() });
   results.push({ name: 'WAR', ok: checkWebAccessibleResources() });
+  results.push({ name: 'WAR import chain', ok: checkWebAccessibleResourcesChain() });
   results.push({ name: 'No Inline Scripts', ok: checkHtmlNoInlineScripts() });
 
   sectionBreak();

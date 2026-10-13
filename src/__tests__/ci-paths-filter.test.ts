@@ -307,6 +307,10 @@ describe('behavioural matrix', () => {
     ['pbi/00-INDEX.md', ['dod-check', 'gitleaks'], false],
     ['wasm/pii-sanitizer/src/lib.rs', ['validate', 'wasm-test', 'build', 'gitleaks'], true],
     ['wasm/crates.json', ['validate', 'wasm-test', 'build', 'gitleaks'], false],
+    // The manifest artifact gate runs in the build job on the built
+    // dist/chromium-mv3 (PBI 2026-10-12-03), so the gate's own script must
+    // trigger the job that produces the artifact it reads.
+    ['scripts/release-checks/check-manifest.mjs', ['validate', 'build', 'gitleaks'], false],
   ];
 
   it.each(MATRIX)('%s runs %j', (file, expected, benchRuns) => {
@@ -363,6 +367,7 @@ describe('build inputs are a subset of validate inputs', () => {
     'package.json',
     'package-lock.json',
     'wxt.config.ts',
+    'scripts/release-checks/check-manifest.mjs',
     '.github/workflows/ci.yml',
     '.github/actions/x/action.yml',
   ];

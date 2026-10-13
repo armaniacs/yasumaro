@@ -35,6 +35,7 @@ import {
 import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import {
   aggregateDomainAnalysis,
@@ -70,47 +71,60 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   // fetch-scoped; the top-N truncation notices are re-decided per fetch.
   const notices = new PanelNotices();
 
-  function renderDomainRows(rows: DomainAnalysisRankRow[]): void {
-    if (!domainBody) return;
-    domainBody.innerHTML = '';
-    for (const row of rows) {
-      const tr = document.createElement('tr');
-      const nameCell = document.createElement('th');
-      nameCell.scope = 'row';
-      if (row.name === UNKNOWN_DOMAIN_LABEL) {
-        // WHY: the unknown bucket is not a navigable domain — it is rendered
-        // as localized plain text instead of a button.
-        nameCell.textContent = getMessageOr('domainAnalysis_unknownDomain', UNKNOWN_DOMAIN_LABEL);
-      } else {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'data-table-link-btn';
-        button.textContent = row.name;
-        button.addEventListener('click', () => navigateToHistoryWithDomain(row.name));
-        nameCell.appendChild(button);
-      }
-      tr.appendChild(nameCell);
-      const countCell = document.createElement('td');
-      countCell.textContent = String(row.count);
-      tr.appendChild(countCell);
-      domainBody.appendChild(tr);
-    }
+  // One row skeleton shared by both rankings (th[scope=row] name cell + count
+  // td); the caller supplies how the name cell renders (button for domains,
+  // plain text for URLs). Keeps the two tables' DOM identical to the former
+  // per-table loops.
+  function appendRankRow(
+    body: HTMLElement,
+    row: DomainAnalysisRankRow,
+    renderNameCell: (row: DomainAnalysisRankRow) => HTMLTableCellElement,
+  ): void {
+    const tr = document.createElement('tr');
+    tr.appendChild(renderNameCell(row));
+    const countCell = document.createElement('td');
+    countCell.textContent = String(row.count);
+    tr.appendChild(countCell);
+    body.appendChild(tr);
   }
 
-  function renderUrlRows(rows: DomainAnalysisRankRow[]): void {
-    if (!urlBody) return;
-    urlBody.innerHTML = '';
-    for (const row of rows) {
-      const tr = document.createElement('tr');
-      const nameCell = document.createElement('th');
-      nameCell.scope = 'row';
-      nameCell.textContent = row.name;
-      tr.appendChild(nameCell);
-      const countCell = document.createElement('td');
-      countCell.textContent = String(row.count);
-      tr.appendChild(countCell);
-      urlBody.appendChild(tr);
+  function renderRankRows(
+    body: HTMLElement,
+    rows: DomainAnalysisRankRow[],
+    renderNameCell: (row: DomainAnalysisRankRow) => HTMLTableCellElement,
+  ): void {
+    clearElement(body);
+    for (const row of rows) appendRankRow(body, row, renderNameCell);
+  }
+
+  function domainNameCell(row: DomainAnalysisRankRow): HTMLTableCellElement {
+    const nameCell = document.createElement('th');
+    nameCell.scope = 'row';
+    if (row.name === UNKNOWN_DOMAIN_LABEL) {
+      // WHY: the unknown bucket is not a navigable domain — it is rendered
+      // as localized plain text instead of a button.
+      nameCell.textContent = getMessageOr('domainAnalysis_unknownDomain', UNKNOWN_DOMAIN_LABEL);
+    } else {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'data-table-link-btn';
+      button.textContent = row.name;
+      button.addEventListener('click', () => navigateToHistoryWithDomain(row.name));
+      nameCell.appendChild(button);
     }
+    return nameCell;
+  }
+
+  function plainNameCell(row: DomainAnalysisRankRow): HTMLTableCellElement {
+    const nameCell = document.createElement('th');
+    nameCell.scope = 'row';
+    nameCell.textContent = row.name;
+    return nameCell;
+  }
+
+  function clearRankBodies(): void {
+    if (domainBody) clearElement(domainBody);
+    if (urlBody) clearElement(urlBody);
   }
 
   const lifecycle = createAsyncDataPanelLifecycle({
@@ -123,8 +137,7 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
     initialPreset: 'last30',
     isReady: () => domainBody !== null && urlBody !== null,
     resetOutput: () => {
-      if (domainBody) domainBody.innerHTML = '';
-      if (urlBody) urlBody.innerHTML = '';
+      clearRankBodies();
     },
     // WHY: isReady() already gated this load; the check narrows the captured
     // hosts for the body.
@@ -150,8 +163,8 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
         }
 
         const agg = aggregateDomainAnalysis(rows);
-        renderDomainRows(agg.domains);
-        renderUrlRows(agg.urls);
+        renderRankRows(domainBody, agg.domains, domainNameCell);
+        renderRankRows(urlBody, agg.urls, plainNameCell);
 
         if (agg.unknownDomainCount > 0 && unknownNotice) {
           unknownNotice.textContent = msg(

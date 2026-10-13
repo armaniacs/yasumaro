@@ -11,31 +11,9 @@
  * call instead of touching 3 type definitions.
  */
 
-export const ServiceTokens = {
-  sessionStore: 'sessionStore',
-  recordingCache: 'recordingCache',
-  headerDetector: 'headerDetector',
-  obsidian: 'obsidian',
-  sqliteClient: 'sqliteClient',
-  tabCache: 'tabCache',
-  rateLimiter: 'rateLimiter',
-  manualContentFetcher: 'manualContentFetcher',
-  remoteAiService: 'remoteAiService',
-  aiProviderBreaker: 'aiProviderBreaker',
-  aiService: 'aiService',
-  settingsRepository: 'settingsRepository',
-  pendingWriteQueue: 'pendingWriteQueue',
-  reviewSummaryGenerator: 'reviewSummaryGenerator',
-  recordingPipeline: 'recordingPipeline',
-  dashboardSqliteHandler: 'dashboardSqliteHandler',
-  autoSavedBadgeTabs: 'autoSavedBadgeTabs',
-  recordingAdmission: 'recordingAdmission',
-  regenerateContentFetcher: 'regenerateContentFetcher',
-  messageRouter: 'messageRouter',
-  perUrlMutexMap: 'perUrlMutexMap',
-} as const;
-
-export type ServiceKey = keyof typeof ServiceTokens | (string & {});
+// Service keys are plain strings so adding a manifest entry never requires
+// editing this file — there is no keys union to keep in sync.
+export type ServiceKey = string;
 
 export class ServiceContainer {
   private readonly entries = new Map<string, { factory: () => unknown; singleton: boolean; instance?: unknown; hasInstance: boolean }>();

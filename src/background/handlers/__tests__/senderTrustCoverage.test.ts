@@ -27,6 +27,10 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   CONTENT_CLEANSING_EXECUTED: 'content-script-allowed',
   CHECK_DOMAIN: 'tab-page-only',
   PING: 'content-script-allowed',
+  // PBI 2026-10-11-08 follow-up: probe relay (content scripts cannot reach
+  // chrome.storage.session, so the SW owns the session leg).
+  OW_PROBE_QUERY: 'content-script-allowed',
+  OW_PROBE_STATE: 'content-script-allowed',
 
   // Everything else is popup / dashboard / offscreen only.
   FETCH_URL: 'extension-only',

@@ -93,7 +93,7 @@ describe('initEncryptedBackupPanel', () => {
     await Promise.resolve();
 
     const status = document.getElementById('encryptedBackupStatus')!;
-    expect(status.textContent).toBe('バックアップから復元しました');
+    expect(status.textContent).toBe('Restored from backup');
   });
 
   it('shows a skipped-count status when some settings were skipped during restore', async () => {
@@ -118,7 +118,7 @@ describe('initEncryptedBackupPanel', () => {
     await Promise.resolve();
 
     const status = document.getElementById('encryptedBackupStatus')!;
-    expect(status.textContent).toContain('2件の設定項目は無効なためスキップされました');
+    expect(status.textContent).toContain('2 invalid settings items were skipped');
   });
 
   it('keeps the error visible: the panel status does not auto-clear', async () => {
@@ -137,7 +137,7 @@ describe('initEncryptedBackupPanel', () => {
       expect(status.className).toBe('status-message error');
 
       await vi.advanceTimersByTimeAsync(60000);
-      expect(status.textContent).toBe('バックアップファイルが大きすぎます');
+      expect(status.textContent).toBe('Backup file is too large');
       expect(status.className).toBe('status-message error');
     } finally {
       vi.useRealTimers();

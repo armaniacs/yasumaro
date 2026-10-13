@@ -6,6 +6,7 @@
  */
 
 import { isPrivateIpAddress } from '../utils/fetch.js';
+import { normalizeHostname } from '../utils/ssrfGuard.js';
 
 /**
  * Maximum content size for recording (64KB).
@@ -54,9 +55,10 @@ export function isValidFetchUrl(url: string): boolean {
       return false;
     }
 
-    // Reject localhost and loopback addresses
-    const hostname = parsed.hostname.toLowerCase();
-    if (hostname === 'localhost' || isPrivateIpAddress(hostname)) {
+    // Reject localhost and loopback addresses. normalizeHostname strips the DNS
+    // root trailing dot, so `localhost.` cannot slip past the equality check.
+    const hostname = normalizeHostname(parsed.hostname);
+    if (hostname === 'localhost' || hostname.endsWith('.localhost') || isPrivateIpAddress(hostname)) {
       return false;
     }
 

@@ -56,18 +56,16 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.getURL && typeof
 
     const url = window.location.href;
 
-    // E2E probe pages take the same admission flow; the warn label preserves
-    // the '(e2e)' greppability. Hot cache keeps the 0-round-trip optimization
-    // for E2E suites that pre-seed domain_filter_cache; cold cache waits for
-    // the SW verdict so the e2e attribute alone cannot bypass the domain filter.
-    const isE2E = document.documentElement.hasAttribute('data-ow-e2e-test');
-
+    // PBI 2026-10-11-08 (NN08): the page-writable `data-ow-e2e-test` attribute no
+    // longer influences admission. E2E probe pages take the same single
+    // admission flow as every other page; cold cache still waits for the SW
+    // verdict so no page markup can bypass the domain filter, and the probe
+    // itself is armed extension-side (chrome.storage.session) in the kernel.
     // Single admission seam: skip -> cache verdict -> retrying background
-    // verdict -> inject (was a triple branch with two near-identical retry
-    // loops; the e2e and normal paths were identical except warn labels).
+    // verdict -> inject.
     await resolveVisitAdmission({
         url,
-        warnLabel: isE2E ? ' (e2e)' : '',
+        warnLabel: '',
         shouldSkip: (u) => typeof window.location !== 'undefined' && shouldSkipUrl(u),
         checkCache: (u) => defaultPort.checkDomainAllowedFromCache(u),
         sendCheckDomain: () =>

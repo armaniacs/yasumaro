@@ -31,7 +31,7 @@ import { HeaderDetector } from './headerDetector.js';
 import { createPendingWriteQueue, setPendingWriteQueue } from './pendingChromeStorageQueue.js';
 import { ChromeStorageAdapter } from './persistentRetryQueue.js';
 import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
-import { createOfflineNetworkQueue, setOfflineNetworkQueue, type OfflineNetworkQueue } from './offlineNetworkQueue.js';
+import { createOfflineNetworkQueue, setOfflineNetworkQueue, sharedOfflineNetworkQueue, type OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createPendingSqliteQueue, setPendingSqliteQueue } from './pendingSqliteQueue.js';
 import { setObsidianClient } from './handlers/dashboardSqlite/deps.js';
 import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
@@ -56,7 +56,7 @@ import { settingsRepository, type SettingsRepository } from '../utils/storage/Se
 import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
 import { SessionAlarmService } from './SessionAlarmService.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
-import { createAlarmRegistry, type AlarmRegistry } from './alarmRegistry.js';
+import { createAlarmRegistry } from './alarmRegistry.js';
 import type { ServiceContainer } from './serviceContainer.js';
 
 export interface CompositionEntry {
@@ -209,18 +209,20 @@ export const compositionManifest: readonly CompositionEntry[] = [
   {
     key: 'alarmRegistry',
     singleton: true,
-    // PBI 2026-09-15-15: the unified alarm seam — install hooks + handleAlarm
-    // cover daily purge, local-md, offline retry, review-summary, and
-    // session-timeout. The refs (reviewSummaryGeneratorRef etc.) are set by
-    // service-worker.ts after createBackgroundServices resolves.
+    // The unified alarm seam — install hooks + handleAlarm cover daily purge,
+    // local-md, offline retry, review-summary, and session-timeout. Every dep
+    // resolves from this container so the alarm path observes the same shared
+    // instances as the message paths.
     factory: (c) => {
       return createAlarmRegistry({
         sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
         recordingPipeline: c.resolve<RecordingOrchestrator>('recordingPipeline'),
-        getOfflineNetworkQueue: () => import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue),
+        getOfflineNetworkQueue: () => sharedOfflineNetworkQueue,
         retryPendingChromeStorageWrite,
         settingsReader: c.resolve<SettingsRepository>('settingsRepository'),
-      }) as AlarmRegistry;
+        reviewSummaryGenerator: c.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator'),
+        sessionAlarmService: c.resolve<SessionAlarmService>('sessionAlarmService'),
+      });
     },
   },
   {

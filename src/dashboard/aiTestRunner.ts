@@ -14,6 +14,7 @@
 
 import { type AiTestProgress, type AiProviderTestResult, type MultiProviderTestResult } from '../background/ai/AIService.js';
 import { subscribeAiTestProgress, generateAiTestRunId } from './aiTestProgressClient.js';
+import { clearElement } from '../utils/domClear.js';
 import {
   buildAiTestProgressView,
   renderAiTestProgressLabel,
@@ -104,7 +105,7 @@ function renderResult(
   result: MultiProviderTestResult,
   draw: AiTestRunDraw,
 ): void {
-  target.innerHTML = '';
+  clearElement(target);
   const providers = result.providers ?? [];
   if (providers.length > 1) {
     draw.multiProviderSummary(target, result);

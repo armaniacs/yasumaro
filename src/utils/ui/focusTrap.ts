@@ -8,18 +8,71 @@ interface TrapInfo {
   handler: (e: KeyboardEvent) => void;
 }
 
-/** フォーカス可能要素のセレクタ（trap()と共有） */
-const FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+/**
+ * Focusable-element selector shared by `trap()` and `confirmDialog`.
+ *
+ * Disabled controls are excluded because they cannot receive focus: leaving
+ * them in the set made the Tab wrap-around condition (`activeElement === last`)
+ * unsatisfiable, so Tab escaped an `aria-modal` dialog (PBI 2026-10-11-07).
+ */
+export const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(',');
 
 /**
- * コンテナ内のフォーカス可能要素を全て返す（非表示要素は除外）。
+ * コンテナ内のフォーカス可能要素を全て返す（非表示・disabled 要素は除外）。
  * trap() と popup/dashboard 側のタブ・パネル切り替えロジックで共有する
  * 単一の非表示判定基準。
  */
 export function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => {
-    return !el.closest('.hidden, [hidden]');
+    if (el.closest('.hidden, [hidden]')) return false;
+    // `[tabindex]` / `a[href]` can match a control carrying `disabled`; the
+    // selector above covers the form controls, this covers anything else.
+    return !el.hasAttribute('disabled');
   });
+}
+
+/**
+ * Shared Tab-cycle + Escape handling for focus traps.
+ *
+ * The caller owns its focusable set: `getFocusables` returns the current list,
+ * so each component keeps its own selector and disabled-element policy
+ * (focusTrap passes a list captured at trap() time; confirmDialog re-queries
+ * per keydown). Escape is routed to `onEscape` when provided; Tab wraps focus
+ * from last to first (and first to last with Shift). Does nothing for other keys.
+ */
+export function handleFocusCycle(
+  event: KeyboardEvent,
+  getFocusables: () => HTMLElement[],
+  onEscape?: () => void,
+): void {
+  if (event.key === 'Escape') {
+    onEscape?.();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+
+  const focusables = getFocusables();
+  if (focusables.length === 0) return;
+
+  const first = focusables[0]!;
+  const last = focusables[focusables.length - 1]!;
+
+  if (event.shiftKey) {
+    if (document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    }
+  } else if (document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 }
 
 /**
@@ -98,25 +151,11 @@ class FocusTrapManager {
       console.warn(`focusTrap: ${this.handlers.size} live traps exceed ${FOCUS_TRAP_MAX_LIVE} — a release() is missing`);
     }
 
-    // キーボードハンドラ
+    // キーボードハンドラ。フォーカス可能集合は keydown ごとに取り直す:
+    // 開いた後に disabled 化された要素（保存中の submit 等）へ追随するため
+    // （PBI 2026-10-11-07。固定取得だと末尾が disabled のとき折り返しが成立しない）。
     const keydownHandler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && closeCallback) {
-        closeCallback();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-
-      if (e.shiftKey) {
-        if (document.activeElement === firstFocusable) {
-          e.preventDefault();
-          lastFocusable.focus();
-        }
-      } else {
-        if (document.activeElement === lastFocusable) {
-          e.preventDefault();
-          firstFocusable.focus();
-        }
-      }
+      handleFocusCycle(e, () => getFocusableElements(modalElement), closeCallback);
     };
 
     modalElement.addEventListener('keydown', keydownHandler);

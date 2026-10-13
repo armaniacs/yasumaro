@@ -16,25 +16,11 @@ vi.mock('../../settingsPipeline.js', async (importOriginal) => ({
   saveDashboardSettings: vi.fn().mockResolvedValue({ success: true }),
 }));
 
-vi.mock('../../../utils/i18n.js', () => {
+vi.mock('../../../utils/i18n.js', async () => {
+  const { mockGetMessage } = await import('../../../../testDir/i18nMock.js');
   const getMessage = vi.fn((key: string) => key);
-  const getMessageOr = (key: string, fallback: string, subs?: unknown): string =>
-  ((subs === undefined ? (getMessage as (...a: any[]) => unknown)(key) : (getMessage as (...a: any[]) => unknown)(key, subs)) || fallback) as string;
-  const getMessageWithSubstitutions = (
-  key: string,
-  subs: Record<string, string | number>,
-  fallback: string,
-      ): string =>
-      ((getMessage as (...a: any[]) => unknown)(key, subs) ||
-  fallback.replace(/\{(\w+)\}/g, (_m: string, n: string) =>
-    subs[n] !== undefined ? String(subs[n]) : `{${n}}`)) as string;
-  return {
-  getMessage: getMessage, getMessageOr, getMessageWithSubstitutions
-}; });
-
-vi.mock('../../statusView.js', () => ({
-  syncStatusToTop: vi.fn(),
-}));
+  return mockGetMessage(getMessage);
+});
 
 vi.mock('../../aiTestResultView.js', () => ({
   formatProviderHeadline: vi.fn((p: any) => `headline:${p.provider}`),
@@ -71,14 +57,12 @@ import {
 } from '../connectionTests.js';
 import { saveDashboardSettings } from '../../settingsPipeline.js';
 import { getMessage } from '../../../utils/i18n.js';
-import { syncStatusToTop } from '../../statusView.js';
 import { formatProviderHeadline, formatProviderDetailLines } from '../../aiTestResultView.js';
 import { subscribeAiTestProgress, generateAiTestRunId } from '../../aiTestProgressClient.js';
 import { buildAiTestProgressView, renderAiTestProgressLabel, renderAiTestProgressElapsed } from '../../aiTestProgressView.js';
 
 const mockedSaveDashboardSettings = vi.mocked(saveDashboardSettings);
 const mockedGetMessage = vi.mocked(getMessage);
-const mockedSyncStatusToTop = vi.mocked(syncStatusToTop);
 const mockedFormatHeadline = vi.mocked(formatProviderHeadline);
 const mockedFormatDetailLines = vi.mocked(formatProviderDetailLines);
 const mockedSubscribe = vi.mocked(subscribeAiTestProgress);
@@ -138,7 +122,6 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
   mockedGetMessage.mockImplementation(labelAwareGetMessage());
-  mockedSyncStatusToTop.mockClear();
   mockedFormatHeadline.mockImplementation((p: any) => `headline:${p.provider}`);
   mockedFormatDetailLines.mockReturnValue([]);
   mockedSubscribe.mockReturnValue(vi.fn());
@@ -345,8 +328,7 @@ describe('handleSaveOnly', () => {
     await handleSaveOnly();
     const status = document.getElementById('status')!;
     expect(status.textContent).toBe('保存しました');
-    expect(status.className).toBe('success');
-    expect(mockedSyncStatusToTop).toHaveBeenCalled();
+    expect(status.className).toBe('status-message success');
   });
 
   it('saves successfully with fallback when getMessage returns falsy', async () => {
@@ -365,7 +347,6 @@ describe('handleSaveOnly', () => {
     await handleSaveOnly();
     expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
     expect(document.getElementById('status')!.className).toBe('status-message error');
-    expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 
   it('shows saveError key when getMessage returns truthy', async () => {
@@ -389,7 +370,6 @@ describe('handleSaveOnly', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false, error } as any);
     await handleSaveOnly();
     expect(document.getElementById('status')!.textContent).toBe(expected);
-    expect(mockedSyncStatusToTop).toHaveBeenCalled();
   });
 
   it('refreshLocalMarkdownScheduler swallowed sync throw', async () => {
@@ -410,7 +390,7 @@ describe('handleSaveOnly', () => {
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await expect(handleSaveOnly()).resolves.toBeUndefined();
     // still success
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 });
 
@@ -434,7 +414,7 @@ describe('handleTestObsidian', () => {
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: true, message: 'OK' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     const status = document.getElementById('status')!;
-    expect(status.className).toBe('success');
+    expect(status.className).toBe('status-message success');
     expect(status.innerHTML).toContain('Obsidian');
     expect((document.getElementById('testObsidianBtn') as HTMLButtonElement).disabled).toBe(false);
   });
@@ -446,7 +426,7 @@ describe('handleTestObsidian', () => {
     // need to capture initial text before overwritten? The function sets then clears; final is success.
     // Instead verify fallback path exercised via coverage: ensure no throw
     await handleTestObsidian();
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 
   it('handles typedApiKey trimming and empty fallback', async () => {
@@ -650,7 +630,7 @@ describe('handleTestObsidian', () => {
     document.body.innerHTML = `<button id="testObsidianBtn"></button><div id="status"></div><input id="apiKey" value="k"/><input id="protocol" value="https"/><input id="port" value="27124"/>`;
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'fail' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('catches thrown error and shows testError fallback', async () => {
@@ -659,7 +639,7 @@ describe('handleTestObsidian', () => {
     setupChrome({ runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('boom')), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestObsidian();
     expect(document.getElementById('status')!.textContent).toBe('接続テストに失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('catches thrown error with truthy getMessage', async () => {
@@ -758,7 +738,7 @@ describe('handleTestAi', () => {
     // Provide truthy getMessage for connectionSuccess branch
     mockedGetMessage.mockImplementation(labelAwareGetMessage((k) => k === 'connectionSuccess' ? '成功' : k));
     await handleTestAi();
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
     // single provider renders via createConnectionStatusElement -> should contain AI label
     expect(document.getElementById('status')!.innerHTML).toContain('AI');
   });
@@ -770,7 +750,7 @@ describe('handleTestAi', () => {
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     mockedGetMessage.mockReturnValue('' as any);
     await handleTestAi();
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect(document.getElementById('status')!.innerHTML).toContain('AI');
   });
 
@@ -810,7 +790,7 @@ describe('handleTestAi', () => {
     expect(status.innerHTML).toContain('head:openai:false');
     expect(status.innerHTML).toContain('line1');
     expect(status.innerHTML).toContain('line2');
-    expect(status.className).toBe('error');
+    expect(status.className).toBe('status-message error');
   });
 
   it('renders multi-provider success true with fallback messages', async () => {
@@ -829,7 +809,7 @@ describe('handleTestAi', () => {
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestAi();
     expect(document.getElementById('status')!.innerHTML).toContain('接続成功');
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 
   it('renders multi-provider with connectionFailed fallback', async () => {
@@ -870,7 +850,7 @@ describe('handleTestAi', () => {
     mockedGetMessage.mockReturnValue('' as any);
     await handleTestAi();
     expect(document.getElementById('status')!.textContent).toBe('接続テストに失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('handles exception with truthy getMessage', async () => {
@@ -903,7 +883,7 @@ describe('handleTestAi', () => {
     setupChrome({ runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK', providers: [] } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestAi();
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 
   it('subscribes with runId and handles progress updates (changed provider)', async () => {
@@ -939,7 +919,7 @@ describe('handleTestAi', () => {
     await promise;
   });
 
-  it('calls syncStatusToTop on provider change and verifies elapsed timer ticks', async () => {
+  it('updates elapsed timer ticks without a manual status mirror', async () => {
     useTimerClock();
     buildDomWithTop();
     mockedSaveDashboardSettings.mockResolvedValue({ success: true } as any);
@@ -953,7 +933,6 @@ describe('handleTestAi', () => {
     const promise = handleTestAi();
     await vi.advanceTimersByTimeAsync(10);
     capturedCb({ provider: 'gemini', index: 0, total: 1 });
-    expect(mockedSyncStatusToTop).toHaveBeenCalled();
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 200);
     // Wait for interval tick to happen at least once before promise resolves (handle runs 350ms > 200ms)
     await vi.advanceTimersByTimeAsync(250);
@@ -972,7 +951,7 @@ describe('handleTestAi', () => {
     // instead of rejecting; the buttons are still restored.
     await expect(handleTestAi()).resolves.toBeUndefined();
     expect(document.getElementById('status')!.textContent).toBe('接続テストに失敗しました。');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     // finally should have run and reset state despite rejection (the guard release allows next call)
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     // verify re-entrancy guard cleared
@@ -1040,7 +1019,7 @@ describe('handleTestLocalMarkdown', () => {
     };
     await handleTestLocalMarkdown(repo);
     // after disabled check, it should show disabled error fallback, not testing text
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('shows saveError when save fails with fallback', async () => {
@@ -1073,7 +1052,7 @@ describe('handleTestLocalMarkdown', () => {
     };
     await handleTestLocalMarkdown(repo);
     expect(document.getElementById('status')!.textContent).toBe('DISABLED_MSG');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('shows disabled error with fallback when getMessage falsy', async () => {
@@ -1096,7 +1075,7 @@ describe('handleTestLocalMarkdown', () => {
       getAll: vi.fn(),
     };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('successful export with custom path and verifies download filename', async () => {
@@ -1119,7 +1098,7 @@ describe('handleTestLocalMarkdown', () => {
     // filename should end with .md
     expect(downloadMock.mock.calls[0]?.[0].filename).toMatch(/\.md$/);
     expect(document.getElementById('status')!.textContent).toBe('SUCCESS_MSG');
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
@@ -1186,7 +1165,7 @@ describe('handleTestLocalMarkdown', () => {
     await promise;
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
-    expect(document.getElementById('status')!.className).toBe('success');
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 
   it('revokes the object url when the download rejects', async () => {
@@ -1201,7 +1180,7 @@ describe('handleTestLocalMarkdown', () => {
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
     expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
     // the failure still reports the error and re-enables the button
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -1237,7 +1216,7 @@ describe('handleTestLocalMarkdown', () => {
     };
     await handleTestLocalMarkdown(repo);
     expect(document.getElementById('status')!.textContent).toBe('ローカルMarkdown書き出しテストに失敗しました');
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -1272,7 +1251,7 @@ describe('handleTestLocalMarkdown', () => {
     mockedSaveDashboardSettings.mockRejectedValue(new Error('save err'));
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
   it('disables button during test and re-enables even on success', async () => {
@@ -1343,7 +1322,7 @@ describe('handleTestLocalMarkdown', () => {
     // handleTestLocalMarkdown with no arg uses default settingsRepository
     // Need to ensure it doesn't throw for missing chrome storage keys
     await handleTestLocalMarkdown(); // default param
-    expect(document.getElementById('status')!.className).toBe('error');
+    expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 });
 
@@ -1389,8 +1368,7 @@ describe('button pair guards', () => {
     await first;
     expect((document.getElementById('testObsidianBtnTop') as HTMLButtonElement).disabled).toBe(false);
     expect((document.getElementById('testObsidianBtn') as HTMLButtonElement).disabled).toBe(false);
-    expect(document.getElementById('status')!.className).toBe('success');
-    expect(mockedSyncStatusToTop).toHaveBeenCalled();
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 
   it('suppresses a second Test Local Markdown while the first is in flight', async () => {
@@ -1424,8 +1402,7 @@ describe('button pair guards', () => {
     };
     await handleTestLocalMarkdown(repo);
     expect(document.getElementById('status')!.textContent).toBe('SUCCESS_MSG');
-    expect(document.getElementById('status')!.className).toBe('success');
-    expect(mockedSyncStatusToTop).toHaveBeenCalled();
+    expect(document.getElementById('status')!.className).toBe('status-message success');
   });
 });
 
@@ -1454,7 +1431,7 @@ describe('certificate guidance i18n', () => {
     } as const;
 
     for (const locale of ['ja', 'en'] as const) {
-      const text = readLocale(locale).certGuideFirefox.message;
+      const text = readLocale(locale).certGuideFirefox!.message;
       // The URL is substituted at render time, so a missing placeholder would
       // silently drop the endpoint the user is told to open.
       expect(text).toContain('{url}');

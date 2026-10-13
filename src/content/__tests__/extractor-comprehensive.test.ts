@@ -113,6 +113,17 @@ import {
 import { getPageStateForTesting } from './helpers/contentTestkit.js';
 import { throttle } from '../throttle.js';
 
+// File-level isolation for the E2E probe: the singleton kernel persists
+// across describes, so every test starts disarmed (default sender response)
+// with no leftover window/DOM probe output. Runs before each
+// describe-level beforeEach.
+beforeEach(() => {
+  sendMessageWithRetryMock.mockResolvedValue({ success: true });
+  delete (window as unknown as { __OW_TEST_STATE?: unknown }).__OW_TEST_STATE;
+  document.documentElement.removeAttribute('data-ow-e2e-test');
+  document.documentElement.removeAttribute('data-ow-test-state');
+});
+
 function setStorageSettings(settings: Record<string, unknown>) {
   (chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>).mockImplementation(
     (_keys: unknown, callback?: (r: Record<string, unknown>) => void) => {
@@ -317,8 +328,8 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     expect(ps.maxScrollPercentage).toBeCloseTo(50);
   });
 
-  it('checkVisitConditions E2E hook sets window.__OW_TEST_STATE and attribute', async () => {
-    document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+  it('checkVisitConditions E2E hook sets window.__OW_TEST_STATE but never page DOM', async () => {
+    sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
     await init(); // isE2E is resolved once at init under the PBI 02 contract
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.maxScrollPercentage = 80;
@@ -326,13 +337,24 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     ps.startTime = Date.now() - 6000;
     checkVisitConditions();
     expect(window.__OW_TEST_STATE).toBeDefined();
-    expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('maxScrollPercentage');
+    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     // second call when reportable => should trigger reportValidVisit and update isValidVisitReported true
     // PBI 2026-09-12-18: the flag commits AFTER the async send resolves
     // (success-only commit rule) — wait for the microtask chain to settle.
     await vi.waitFor(() => expect(ps.isValidVisitReported).toBe(true));
-    expect(document.documentElement.getAttribute('data-ow-test-state')).toContain('isValidVisitReported');
-    document.documentElement.removeAttribute('data-ow-e2e-test');
+    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
+  });
+
+  it('a page-set data-ow-e2e-test attribute alone publishes nothing (NN08)', async () => {
+    document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    await init();
+    const ps = getPageStateForTesting() as unknown as PageState;
+    ps.maxScrollPercentage = 80;
+    ps.isValidVisitReported = false;
+    ps.startTime = Date.now() - 6000;
+    checkVisitConditions();
+    expect(window.__OW_TEST_STATE).toBeUndefined();
+    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
   });
 
   it('checkVisitConditions does not report when already reported', () => {
@@ -536,14 +558,15 @@ describe('extractor-comprehensive: init and message handler', () => {
     Object.defineProperty(document, 'hidden', { value: false, configurable: true });
   });
   it('init registers scroll (isTrusted guard), beforeunload, visibilitychange and E2E state', async () => {
-    document.documentElement.setAttribute('data-ow-e2e-test', 'true');
+    sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
     const addSpy = vi.spyOn(window, 'addEventListener');
     const docSpy = vi.spyOn(document, 'addEventListener');
     await init();
     expect(addSpy).toHaveBeenCalledWith('scroll', expect.any(Function), expect.objectContaining({ passive: true }));
     expect(addSpy).toHaveBeenCalledWith('beforeunload', expect.any(Function));
     expect(docSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
-    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeTruthy();
+    expect(window.__OW_TEST_STATE).toBeDefined();
+    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     // trigger scroll with isTrusted false => should not call throttled fn
     const scrollHandlers = (addSpy.mock.calls.filter(c => (c[0] as string) === 'scroll').map(c => c[1]) as unknown as Array<(e: Event) => void>);
     const fakeEvent = { isTrusted: false } as unknown as Event;
@@ -692,17 +715,19 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     ps.isValidVisitReported = false;
   });
 
-  it('checkVisitConditions E2E hook with __OW_TEST_STATE undefined then defined (covers 270)', () => {
+  it('checkVisitConditions E2E hook with __OW_TEST_STATE undefined then defined (covers 270)', async () => {
+    sendMessageWithRetryMock.mockResolvedValue({ success: true, enabled: true });
+    await init(); // re-resolve the session flag (singleton caches it at init)
     const ps = getPageStateForTesting() as unknown as PageState;
     ps.maxScrollPercentage = 80;
     ps.isValidVisitReported = false;
     ps.startTime = Date.now() - 6000;
-    document.documentElement.setAttribute('data-ow-e2e-test', 'true');
     // Ensure __OW_TEST_STATE undefined initially
     (window as unknown as Record<string, unknown>).__OW_TEST_STATE = undefined;
     // First call should set it
     checkVisitConditions();
     expect(window.__OW_TEST_STATE).toBeDefined();
+    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     // Second call where __OW_TEST_STATE exists should hit true branch at 270
     // Reset reported to false to allow second report
     ps.isValidVisitReported = false;
@@ -710,8 +735,7 @@ describe('extractor-comprehensive: branch extras for 90% branches', () => {
     ps.startTime = Date.now() - 7000;
     checkVisitConditions();
     expect((window as unknown as Record<string, unknown>).__OW_TEST_STATE).toBeDefined();
-    document.documentElement.removeAttribute('data-ow-e2e-test');
-    document.documentElement.removeAttribute('data-ow-test-state');
+    expect(document.documentElement.getAttribute('data-ow-test-state')).toBeNull();
     (window as unknown as Record<string, unknown>).__OW_TEST_STATE = undefined;
     stopPeriodicCheck();
   });

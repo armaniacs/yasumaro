@@ -27,20 +27,8 @@ import type { VisitState, VisitGateThresholds } from './visitGate.js';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { StorageKey } from '../utils/storage/types.js';
 
-interface OWTestState {
-    maxScrollPercentage: number;
-    isValidVisitReported: boolean;
-    startTime: number;
-    minVisitDuration: number;
-    minScrollDepth: number;
-    duration: number;
-}
-
-declare global {
-    interface Window {
-        __OW_TEST_STATE?: OWTestState;
-    }
-}
+// OWTestState + the Window.__OW_TEST_STATE global augmentation live in
+// ./e2eTestState.js (single owner of the E2E probe shape and publisher).
 
 // 【状態管理】: Content Script単位の可変状態をPageStateインスタンスに集約
 const pageState = new PageState();

@@ -275,7 +275,7 @@ describe('createRegenerateSummaryHandler — AI-failure gate (PBI 2026-09-22-04 
   });
 });
 
-describe('createRegenerateSummaryHandler — providersTried passthrough (PBI 2026-09-22-04 follow-up)', () => {
+describe('createRegenerateSummaryHandler — attemptedProviders passthrough (PBI 2026-09-22-04 follow-up)', () => {
   it('aiSucceeded:false response carries the tried provider trail', async () => {
     const h = makeHarness();
     h.record.mockResolvedValue({
@@ -288,7 +288,7 @@ describe('createRegenerateSummaryHandler — providersTried passthrough (PBI 202
     expect(h.responses).toEqual([{
       success: false,
       error: 'ai_failed',
-      providersTried: ['lm-studio', 'gemini'],
+      attemptedProviders: ['lm-studio', 'gemini'],
     }]);
   });
 
@@ -296,7 +296,7 @@ describe('createRegenerateSummaryHandler — providersTried passthrough (PBI 202
     const h = makeHarness();
     h.record.mockResolvedValue({ success: true, aiSucceeded: true, summary: 'ok' });
     await h.handler(makeMessage(), sender, h.respond);
-    expect(h.responses[0]).not.toHaveProperty('providersTried');
+    expect(h.responses[0]).not.toHaveProperty('attemptedProviders');
   });
 });
 
@@ -316,7 +316,7 @@ describe('createRegenerateSummaryHandler — slotFailures passthrough (PBI follo
     expect(h.responses).toEqual([{
       success: false,
       error: 'ai_failed',
-      providersTried: ['openai', 'built-in-ai'],
+      attemptedProviders: ['openai', 'built-in-ai'],
       slotFailures: [
         { provider: 'openai', error: 'HTTP 401' },
         { provider: 'built-in-ai', error: 'Prompt failed: kErrorUnknown' },

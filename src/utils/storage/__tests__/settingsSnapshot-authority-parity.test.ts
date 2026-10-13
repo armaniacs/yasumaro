@@ -32,7 +32,7 @@ describe('snapshot authority parity', () => {
       // it (undefined — callers fall back), non-authoritative reads fold it in.
       const port = new InMemoryStoragePort();
       await port.set({ settings: {}, min_scroll_depth: 77, settings_migrated: raw });
-      const snapshot = (await readSettingsSnapshot(port)) as unknown as Record<string, unknown>;
+      const snapshot = await readSettingsSnapshot(port);
       expect(snapshot.min_scroll_depth, `${name}: snapshot`).toBe(foldsScattered ? 77 : undefined);
     }
   });
@@ -62,7 +62,7 @@ describe('snapshot authority parity', () => {
       setCalls.push(args);
       return origSet(...(args as [Record<string, unknown>]));
     };
-    const snapshot = (await readSettingsSnapshot(port)) as unknown as Record<string, unknown>;
+    const snapshot = await readSettingsSnapshot(port);
     // Absent stays absent: callers own their fallbacks, and filling here
     // would turn "absent" into "present-but-default".
     expect('min_scroll_depth' in snapshot).toBe(false);

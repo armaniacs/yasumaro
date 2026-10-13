@@ -11,7 +11,8 @@ import {
     FocusTrapManager,
     focusTrapManager,
     trapFocus,
-    releaseFocusTrap
+    releaseFocusTrap,
+    getFocusableElements
 } from '../focusTrap.js';
 
 describe('focusTrap', () => {
@@ -195,6 +196,49 @@ describe('focusTrap', () => {
         });
     });
 });
+
+    describe('disabled element handling (PBI 2026-10-11-07)', () => {
+        // Disabled controls cannot take focus, so keeping them in the set made
+        // the Tab wrap-around condition (`activeElement === last`) unreachable
+        // and let Tab escape an aria-modal dialog.
+        test('excludes disabled controls from the focusable set', () => {
+            document.body.innerHTML = `
+                <div id="modal">
+                    <button id="disabled1" disabled>Disabled</button>
+                    <button id="enabled1">Enabled</button>
+                </div>
+            `;
+            const modal = document.getElementById('modal') as HTMLElement;
+
+            expect(getFocusableElements(modal).map((el) => el.id)).toEqual(['enabled1']);
+        });
+
+        test('keeps focus inside the modal after the last element becomes disabled', () => {
+            document.body.innerHTML = `
+                <div id="modal">
+                    <button id="first">First</button>
+                    <button id="last">Last</button>
+                </div>
+            `;
+            const modal = document.getElementById('modal') as HTMLElement;
+            const first = document.getElementById('first') as HTMLElement;
+            const last = document.getElementById('last') as HTMLButtonElement;
+
+            manager.trap(modal);
+            // Save-in-progress path (masterPassword.ts): the last control is
+            // disabled after the trap was installed.
+            last.disabled = true;
+            first.focus();
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+            modal.dispatchEvent(event);
+
+            // `first` is now the only focusable element, so the cycle must wrap
+            // (preventDefault) instead of letting Tab leave the dialog.
+            expect(event.defaultPrevented).toBe(true);
+            expect(document.activeElement).toBe(first);
+        });
+    });
 
     describe('focusTrapManager シングルトン', () => {
         test('is a FocusTrapManager instance', () => {

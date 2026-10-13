@@ -21,17 +21,60 @@
 //! own test suites (see src/wasm/pii-sanitizer/__tests__/parity.test.ts in
 //! the main tree).
 //!
-//! Design mirrors the TS implementation's ReDoS mitigation: any run of
-//! non-whitespace bytes longer than `TOKEN_EDGE_KEEP_LEN * 2` has its middle
-//! section sampled (window boundaries replaced with `#`) before scanning, so
-//! scan cost stays linear in input length regardless of adversarial input.
+//! Design mirrors the TS implementation's ReDoS mitigation: the original
+//! bytes are scanned in overlapping chunks (`SCAN_CHUNK_SIZE = 400`,
+//! `SCAN_CHUNK_OVERLAP = 200`, step 200 — the same constants as
+//! `piiSanitizer.ts`), so scan cost stays linear in input length regardless
+//! of adversarial input, while any PII shorter than the overlap is
+//! guaranteed to be fully contained in at least one chunk. Cross-chunk
+//! duplicates are absorbed before the match-count cap by the same pre-count
+//! guards as the TS reference (overlap-containment skip, chunk-edge
+//! fragment skip, sticky-probe truncated-prefix skip, and sticky-probe
+//! null skip); see `sanitize_core` for the guard-by-guard mapping.
 
 mod patterns;
 
 use serde::Serialize;
 use wasm_bindgen::prelude::*;
 
-const TOKEN_EDGE_KEEP_LEN: usize = 100;
+/// Overlapping-chunk scan constants, mirroring `SCAN_CHUNK_SIZE` /
+/// `SCAN_CHUNK_OVERLAP` in `src/utils/piiSanitizer.ts` exactly.
+/// OVERLAP = 200 rationale (same as TS): every PII form under 200 bytes is
+/// fully contained in some chunk (the longest bounded pattern is ~23 bytes;
+/// email is covered up to 200; theoretical email maxima above 200 are an
+/// accepted residual risk on both sides). Revisit OVERLAP together with the
+/// TS side if a bounded pattern longer than 200 is ever added.
+const SCAN_CHUNK_SIZE: usize = 400;
+const SCAN_CHUNK_OVERLAP: usize = 200;
+/// Match-count cap, mirroring `MAX_MATCH_COUNT = 1000` in `piiSanitizer.ts`.
+/// The count is global across chunks (like the TS `matchCount`) and throws
+/// past the cap so the hybrid fails closed exactly like the TS pipeline.
+const MAX_MATCH_COUNT: usize = 1000;
+/// Wall-clock budget and check interval, mirroring `DEFAULT_TIMEOUT` and
+/// `TIMEOUT_CHECK_INTERVAL` in `src/utils/piiSanitizer.ts`.
+const TIMEOUT_MS: f64 = 5000.0;
+const TIMEOUT_CHECK_INTERVAL: usize = 5;
+
+/// `Date.now()` via wasm-bindgen's JS glue. Declared here instead of pulling in
+/// the `js-sys` crate so the crate's dependency set stays unchanged.
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = Date, js_name = now)]
+    fn js_date_now() -> f64;
+}
+
+#[cfg(target_arch = "wasm32")]
+fn now_ms() -> f64 {
+    js_date_now()
+}
+
+/// Native (`cargo test`) builds have no JS clock: a constant makes the deadline
+/// check a no-op so the same code path compiles and runs under `cargo test`.
+#[cfg(not(target_arch = "wasm32"))]
+fn now_ms() -> f64 {
+    0.0
+}
 
 #[derive(Serialize, Clone)]
 pub struct MaskedItem {
@@ -48,64 +91,170 @@ pub struct SanitizeResult {
     pub masked_items: Vec<MaskedItem>,
 }
 
-/// Replaces the middle of long non-whitespace runs with a byte class no
-/// pattern below can match ('#'), keeping the transformed text the same
-/// length as the input so indices from scanning line up 1:1 with `text`.
-/// Matches `neutralizeLongNonWhitespaceRuns` / `sampleMiddleForScan` in the
-/// TS original.
-fn neutralize_long_runs(bytes: &[u8]) -> Vec<u8> {
-    let mut out = bytes.to_vec();
-    let mut i = 0;
-    // Run boundaries follow JS \s (the TS reference tokenizes with /\S+/),
-    // which includes the multi-byte whitespace members (U+3000 etc.) — a
-    // full-width space must split the run exactly where the regex engine's
-    // \S+ does, or the sampled windows would diverge from the TS scan.
-    while i < out.len() {
-        let ws = patterns::common::js_ws_len(&out, i);
-        if ws > 0 {
-            i += ws;
-            continue;
-        }
-        let run_start = i;
-        while i < out.len() && patterns::common::js_ws_len(&out, i) == 0 {
-            i += 1;
-        }
-        let run_end = i;
-        let run_len = run_end - run_start;
-        let threshold = TOKEN_EDGE_KEEP_LEN * 2;
-        if run_len > threshold {
-            let middle_start = run_start + TOKEN_EDGE_KEEP_LEN;
-            let middle_end = run_end - TOKEN_EDGE_KEEP_LEN;
-            let mut w = middle_start;
-            while w < middle_end {
-                let window_end = (w + TOKEN_EDGE_KEEP_LEN).min(middle_end);
-                if window_end - w == TOKEN_EDGE_KEEP_LEN {
-                    out[window_end - 1] = b'#';
-                }
-                w = window_end;
-            }
-        }
+/// Rounds `idx` down to the nearest `str` char boundary at or below it
+/// (clamped to `text.len()`), so chunk slicing never panics on multibyte
+/// input. All PII patterns are ASCII, so boundaries only ever shift the
+/// chunk grid on non-ASCII text, where no match can start or end anyway.
+fn floor_char_boundary(text: &str, idx: usize) -> usize {
+    let mut i = idx.min(text.len());
+    while !text.is_char_boundary(i) {
+        i -= 1;
     }
-    out
+    i
+}
+
+/// Rounds `idx` up to the nearest `str` char boundary at or above it, so a
+/// chunk never starts mid-character.
+fn ceil_char_boundary(text: &str, idx: usize) -> usize {
+    let mut i = idx.min(text.len());
+    while !text.is_char_boundary(i) {
+        i += 1;
+    }
+    i
 }
 
 /// Runs the full scan/mask pipeline. `text` must be valid UTF-8; all patterns
 /// covered here are ASCII, so byte offsets equal char offsets for matched
 /// spans, and non-ASCII runs are simply never matched (safe to skip).
 ///
+/// The scan mirrors `sanitizeRegex`'s overlapping-chunk loop in
+/// `src/utils/piiSanitizer.ts` exactly: each chunk is a slice of the
+/// ORIGINAL bytes (no sampling/masking characters inserted), so chunk-local
+/// match positions rebase to absolute positions by adding the chunk offset.
+/// Before the global match count is incremented, each chunk-local span
+/// passes the same four pre-count guards as the TS reference:
+///  1. containment skip — for `offset > 0`, a span fully inside the
+///     previous chunk's overlap (`rel_start + len <= OVERLAP`) was already
+///     scanned in full by the previous chunk;
+///  2. chunk-start fragment skip — for `offset > 0`, a span starting at
+///     relative index 0 with length <= OVERLAP is fully contained in the
+///     previous chunk (with identical context) and was counted there;
+///  3. truncated-prefix skip — the sticky probe
+///     (`dispatch::probe_match_len` on the FULL bytes at the absolute
+///     start) finds a strictly longer true span within OVERLAP, so the
+///     current span is a severed prefix whose complete form is counted in
+///     its fully-containing chunk (true spans longer than OVERLAP are
+///     counted in truncated form — the accepted residual, same as TS);
+///  4. edge-artifact skip — the sticky probe finds nothing at the absolute
+///     start, so the span is a pure chunk-edge artifact (e.g. a `\b` that
+///     only holds because the chunk was severed) with no text-level
+///     counterpart.
+///
+/// Post-scan, overlapping survivors are resolved longest-first (mirroring
+/// the TS `usedRanges` dedupe) and applied back-to-front.
+///
 /// Note for JS consumers of `maskedItems[].index`: it is a byte offset into
 /// the UTF-8 input, while `sanitizeRegex`'s `match.index` is a UTF-16 code
 /// unit offset — the two agree only when all preceding text is ASCII.
-fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::MatchLimitExceeded> {
+///
+/// Timeout: mirrors the TS reference's wall-clock budget (5 s, checked every 5
+/// matches) so the documented contract is actually implemented on both sides.
+/// On native (`cargo test`) builds `now_ms()` is a constant, so the check is a
+/// no-op there; the wasm32 build calls `Date.now()` through wasm-bindgen (no
+/// extra crate needed).
+fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::ScanError> {
     let bytes = text.as_bytes();
-    let scan_bytes = neutralize_long_runs(bytes);
+    let step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
+    let started_ms = now_ms();
 
-    let spans = patterns::dispatch::scan(&scan_bytes)?;
+    // Absolute (start, end, kind) spans that passed the pre-count guards.
+    let mut counted: Vec<(usize, usize, &'static str)> = Vec::new();
+    let mut match_count = 0usize;
+
+    // Absolute offset one past the previously scanned chunk. The overlap guards
+    // must compare against what the previous chunk ACTUALLY covered: `chunk_start`
+    // is clamped forward to a char boundary, so the assumed
+    // `chunk_start + SCAN_CHUNK_OVERLAP` threshold can sit up to 3 bytes past the
+    // previous chunk's real end. That window used to swallow a match no chunk then
+    // reported (non-ASCII seam, PBI 2026-10-11-01). ASCII grids are unchanged.
+    let mut prev_chunk_end: Option<usize> = None;
+
+    let mut offset = 0usize;
+    while offset < bytes.len() {
+        // Char-boundary clamping: the TS `text.slice` operates on UTF-16
+        // code units and never panics; byte slicing must not split a
+        // multibyte sequence. For ASCII input (the only kind that can
+        // match) the grid is identical to the TS one.
+        let chunk_start = ceil_char_boundary(text, offset);
+        if chunk_start >= bytes.len() {
+            break;
+        }
+        let chunk_end = floor_char_boundary(text, (offset + SCAN_CHUNK_SIZE).min(bytes.len()));
+        if chunk_end <= chunk_start {
+            break;
+        }
+        let chunk = &bytes[chunk_start..chunk_end];
+
+        // Fail-closed like the TS throw: a per-chunk cap breach rejects the
+        // whole input (in practice unreachable — a 400-byte chunk holds at
+        // most a few dozen matches — the global `match_count` below is the
+        // operative guard, mirroring the TS `matchCount`).
+        let spans = patterns::dispatch::scan(chunk)?;
+
+        for (rel_start, rel_end, kind) in spans {
+            let span_len = rel_end - rel_start;
+            // Guards 1-2: a span the previous chunk fully covered was already
+            // counted there, so skip it here. Comparing against the previous
+            // chunk's real end subsumes the TS `rel_start == 0` variant and is
+            // identical on the ASCII grid (previous chunk end == offset + OVERLAP).
+            if let Some(prev_end) = prev_chunk_end {
+                if chunk_start + rel_end <= prev_end {
+                    continue;
+                }
+            }
+            let abs_start = chunk_start + rel_start;
+            // Guards 3-4 via the sticky probe on the full bytes (TS:
+            // `probeRegex.exec(text)` at `offset + match.index`).
+            match patterns::dispatch::probe_match_len(bytes, abs_start) {
+                Some(full_len)
+                    if full_len > span_len && full_len <= SCAN_CHUNK_OVERLAP =>
+                {
+                    continue;
+                }
+                None => {
+                    continue;
+                }
+                _ => {}
+            }
+            match_count += 1;
+            // Same order as the TS reference: timeout check, then the cap.
+            if match_count % TIMEOUT_CHECK_INTERVAL == 0 && now_ms() - started_ms > TIMEOUT_MS {
+                return Err(patterns::dispatch::ScanError::Timeout);
+            }
+            if match_count > MAX_MATCH_COUNT {
+                return Err(patterns::dispatch::ScanError::MatchLimitExceeded);
+            }
+            counted.push((abs_start, chunk_start + rel_end, kind));
+        }
+
+        if chunk_end == bytes.len() {
+            break;
+        }
+        prev_chunk_end = Some(chunk_end);
+        offset += step;
+    }
+
+    // Longest-first overlap resolution (TS `usedRanges`): the guards above
+    // already deduplicate every known duplicate class, but a severed-prefix
+    // survivor can still overlap the true span recorded from another chunk,
+    // so the surviving set is resolved exactly like the TS reference.
+    let mut by_len = counted;
+    by_len.sort_by(|a, b| (b.1 - b.0).cmp(&(a.1 - a.0)));
+    let mut used: Vec<(usize, usize)> = Vec::new();
+    let mut resolved: Vec<(usize, usize, &'static str)> = Vec::new();
+    for (start, end, kind) in by_len {
+        if used.iter().any(|&(s, e)| !(end <= s || start >= e)) {
+            continue;
+        }
+        used.push((start, end));
+        resolved.push((start, end, kind));
+    }
+    resolved.sort_by_key(|&(start, _, _)| start);
 
     let mut result_text = String::with_capacity(text.len());
-    let mut masked_items = Vec::with_capacity(spans.len());
+    let mut masked_items = Vec::with_capacity(resolved.len());
     let mut cursor = 0usize;
-    for (start, end, kind) in spans {
+    for (start, end, kind) in resolved {
         result_text.push_str(&text[cursor..start]);
         let original = text[start..end].to_string();
         result_text.push_str("[MASKED:");
@@ -133,10 +282,18 @@ fn sanitize_core(text: &str) -> Result<SanitizeResult, patterns::dispatch::Match
 /// Exceeding the match-count cap rejects with the same message the TS scan
 /// throws, so the hybrid's fallback lands in `sanitizeRegex` and fails closed
 /// exactly like the pre-WASM pipeline did.
+/// Rejecting with the same messages the TS scan throws keeps the hybrid's
+/// fallback landing in `sanitizeRegex`, which fails closed exactly like the
+/// pre-WASM pipeline did.
 #[wasm_bindgen(js_name = sanitizePii)]
 pub fn sanitize_pii(text: &str) -> Result<JsValue, JsValue> {
-    let result = sanitize_core(text).map_err(|_| {
-        JsValue::from_str("Operation exceeded maximum match count of 1000")
+    let result = sanitize_core(text).map_err(|e| match e {
+        patterns::dispatch::ScanError::MatchLimitExceeded => {
+            JsValue::from_str("Operation exceeded maximum match count of 1000")
+        }
+        patterns::dispatch::ScanError::Timeout => {
+            JsValue::from_str("Operation timed out after 5000ms")
+        }
     })?;
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
 }
@@ -165,6 +322,65 @@ mod tests {
     fn masks_adjacent_emails_without_local_part_bleed() {
         let r = core("a@example.comb@example.comc@example.com");
         assert!(r.masked_items[0].original.starts_with("a@example.com"));
+    }
+
+    // PBI 2026-10-11-01: the domain matcher must backtrack like the TS regex.
+    // Before the fix the last dot was pinned as the TLD boundary, so any address
+    // followed by `.` or `-` went unmasked in the production WASM path.
+    #[test]
+    fn masks_email_followed_by_a_sentence_period() {
+        let r = core("Contact: user@example.com. Thanks");
+        assert_eq!(r.text, "Contact: [MASKED:email]. Thanks");
+        assert_eq!(r.masked_items.len(), 1);
+        assert_eq!(r.masked_items[0].original, "user@example.com");
+    }
+
+    #[test]
+    fn masks_email_with_a_hyphenated_suffix() {
+        let r = core("user@example.com-based service");
+        assert_eq!(r.text, "[MASKED:email]-based service");
+        assert_eq!(r.masked_items[0].original, "user@example.com");
+    }
+
+    #[test]
+    fn does_not_match_when_the_tld_is_absent() {
+        // Backtracking must not invent a match: no dot with >=2 trailing letters.
+        assert!(core("user@examplecom here").masked_items.is_empty());
+        assert!(core("user@example.c here").masked_items.is_empty());
+    }
+
+    // PBI 2026-10-11-01 (High): the chunk-overlap guards assumed the previous
+    // chunk reached `chunk_start + OVERLAP`, but the byte grid is clamped to a
+    // char boundary, leaving a <=6-byte window where a match was counted by no
+    // chunk. Non-ASCII text is the common trigger (Japanese pages).
+    #[test]
+    fn masks_ascii_pii_at_a_non_ascii_chunk_seam() {
+        let mut text = "a".repeat(199);
+        text.push('あ');
+        text.push_str(&"a".repeat(192));
+        text.push(' ');
+        text.push_str("1234567");
+        text.push(' ');
+        text.push_str(&"a".repeat(600));
+
+        let r = core(&text);
+        assert_eq!(r.masked_items.len(), 1, "seam PII must be masked");
+        assert_eq!(r.masked_items[0].kind, "bankAccount");
+        assert!(!r.text.contains("1234567"));
+    }
+
+    #[test]
+    fn masks_email_straddling_a_non_ascii_chunk_seam() {
+        let mut text = "b".repeat(198);
+        text.push('あ');
+        text.push(' ');
+        text.push_str("user@example.com");
+        text.push(' ');
+        text.push_str(&"c".repeat(500));
+
+        let r = core(&text);
+        assert_eq!(r.masked_items.len(), 1, "seam email must be masked");
+        assert_eq!(r.masked_items[0].kind, "email");
     }
 
     #[test]
@@ -214,10 +430,40 @@ mod tests {
     }
 
     #[test]
-    fn neutralizes_long_adversarial_run_without_hanging() {
+    fn long_adversarial_run_completes_without_hanging() {
+        // Previously pinned the sampling mitigation; now pins the
+        // overlapping-chunk scan's linear cost on the same input shape.
         let long_run = "a".repeat(200_000);
         let r = core(&long_run);
         assert_eq!(r.text.len(), long_run.len());
+    }
+
+    // --- Overlapping-chunk scan (PBI-16): long-token середины PII must not
+    // be lost at chunk seams. Mirrors the TS straddling repro. ---
+
+    #[test]
+    fn masks_email_mid_long_token() {
+        // TS repro verbatim: `"a".repeat(190) + "user@example.com" +
+        // "b".repeat(200)` — the old sampling core destroyed the address
+        // with `#` replacement; the chunk scan must mask it.
+        let input = format!("{}user@example.com{}", "a".repeat(190), "b".repeat(200));
+        let r = core(&input);
+        assert!(!r.text.contains("user@example.com"));
+        assert!(r.masked_items.iter().any(|m| m.kind == "email"));
+    }
+
+    #[test]
+    fn masks_email_straddling_a_chunk_boundary() {
+        // The address crosses the end of chunk 0 ([0,400)): its truncated
+        // prefix must not double-count, and the full form in chunk 1 must
+        // be the one recorded exactly once.
+        let input = format!("{}user@example.com", "x".repeat(390));
+        let r = core(&input);
+        assert!(!r.text.contains("user@example.com"));
+        assert_eq!(
+            r.masked_items.iter().filter(|m| m.kind == "email").count(),
+            1
+        );
     }
 
     #[test]

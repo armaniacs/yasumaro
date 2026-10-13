@@ -12,7 +12,8 @@
       "srcCopy": "src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm",
       "pkgDts": null,
       "dtsCopy": null,
-      "publicShip": true
+      "publicShip": true,
+      "maxBytes": 61440
     },
     {
       "name": "textrank",
@@ -24,7 +25,8 @@
       "srcCopy": "src/wasm/textrank/textrank_bg.wasm",
       "pkgDts": "textrank.d.ts",
       "dtsCopy": "src/wasm/textrank/textrankWasm.d.ts",
-      "publicShip": true
+      "publicShip": true,
+      "maxBytes": 41984
     },
     {
       "name": "sentence-dedup",
@@ -36,7 +38,8 @@
       "srcCopy": "src/wasm/sentence-dedup/sentence_dedup_bg.wasm",
       "pkgDts": "sentence_dedup.d.ts",
       "dtsCopy": "src/wasm/sentence-dedup/sentenceDedupWasm.d.ts",
-      "publicShip": false
+      "publicShip": false,
+      "maxBytes": 32768
     },
     {
       "name": "tag-cooccur",
@@ -48,7 +51,8 @@
       "srcCopy": "src/wasm/tag-cooccur/tag_cooccur_bg.wasm",
       "pkgDts": "tag_cooccur.d.ts",
       "dtsCopy": "src/wasm/tag-cooccur/tagCooccurWasm.d.ts",
-      "publicShip": true
+      "publicShip": true,
+      "maxBytes": 86016
     }
   ],
   "libCrates": [

@@ -210,6 +210,14 @@ describe('messaging/types: isServiceWorkerRequest', () => {
             CONTENT_CLEANSING_EXECUTED: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 },
             GENERATE_REVIEW_SUMMARY: { periodType: 'weekly' },
             LOG_FORWARD: { level: 'warn', message: 'test', source: 'offscreen' },
+            OW_PROBE_STATE: {
+                maxScrollPercentage: 80,
+                isValidVisitReported: false,
+                startTime: 1,
+                minVisitDuration: 5,
+                minScrollDepth: 50,
+                duration: 2,
+            },
         };
         VALID_MESSAGE_TYPES.forEach((type) => {
             const payload = payloadForType[type];

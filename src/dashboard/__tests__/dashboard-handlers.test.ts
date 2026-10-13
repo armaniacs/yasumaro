@@ -198,7 +198,21 @@ vi.mock('../../utils/ui/settingsUiHelper.js', async (importOriginal) => {
     ...actual,
     loadSettingsToInputs: vi.fn(),
     extractSettingsFromInputs: vi.fn().mockReturnValue({}),
-    showStatus: vi.fn(),
+    showStatus: vi.fn((elementOrId: string | HTMLElement | null, message: string, type: string) => {
+      const element = typeof elementOrId === 'string'
+        ? document.getElementById(elementOrId)
+        : elementOrId;
+      if (!element) return;
+      element.textContent = message;
+      element.className = `status-message ${type}`;
+      if (element.id === 'status') {
+        const top = document.getElementById('statusTop');
+        if (top) {
+          top.textContent = element.textContent;
+          top.className = element.className;
+        }
+      }
+    }),
     // syncStatusToTop stays real (PBI 2026-10-05-17 moved it here):
     // the AI-ticker tests rely on the one-shot #status -> #statusTop copy.
   };
@@ -245,8 +259,22 @@ vi.mock('../../constants/appConstants.js', () => ({
 
 vi.mock('../../utils/i18n.js', async () => {
   const { mockGetMessage: i18nMock } = await import('../../../testDir/i18nMock.js');
-  const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) =>
-        key === 'connectionStatusLabel' && subs && typeof subs.label === 'string' ? `${subs.label}: ` : key);
+  const localMarkdownMessages: Record<string, string> = {
+    searching: 'Searching...',
+    localMarkdownExportEmptyRange: '指定期間に記録がありません。',
+    localMarkdownExportEmptyAll: 'エクスポートする記録がありません。',
+    localMarkdownExportSuccess: '{count}件の記録を{files}ファイルにエクスポートしました。',
+    localMarkdownExportFailed: 'エクスポートに失敗しました: {error}',
+  };
+  const getMessage = vi.fn((key: string, subs?: Record<string, string | number>) => {
+    if (key === 'connectionStatusLabel' && subs && typeof subs.label === 'string') return `${subs.label}: `;
+    const message = localMarkdownMessages[key] ?? key;
+    if (subs && typeof subs === 'object') {
+      return message.replace(/\{(\w+)\}/g, (match, name: string) =>
+        name in subs ? String(subs[name]) : match);
+    }
+    return message;
+  });
   return i18nMock(getMessage);
 });
 
@@ -357,7 +385,7 @@ describe('handleSaveOnly', () => {
         expect(lastSavedSettings).not.toBeNull();
         const status = document.getElementById('status')!;
         expect(status.textContent).toBe('saveSuccess');
-        expect(status.className).toBe('success');
+        expect(status.className).toBe('status-message success');
     });
 
     it('returns early when statusDiv is missing', async () => {
@@ -391,14 +419,14 @@ describe('handleTestObsidian', () => {
     it('success path', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: true, message: 'OK' } }) } });
         await handleTestObsidian();
-        expect(document.getElementById('status')!.className).toBe('success');
+        expect(document.getElementById('status')!.className).toBe('status-message success');
         expect(document.getElementById('status')!.innerHTML).toContain('Obsidian');
     });
 
     it('error path', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ obsidian: { success: false, message: 'Refused' } }) } });
         await handleTestObsidian();
-        expect(document.getElementById('status')!.className).toBe('error');
+        expect(document.getElementById('status')!.className).toBe('status-message error');
     });
 
     it('certificate link for an HTTPS network-kind failure', async () => {
@@ -423,7 +451,7 @@ describe('handleTestObsidian', () => {
     it('generic error on exception', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('net err')) } });
         await handleTestObsidian();
-        expect(document.getElementById('status')!.className).toBe('error');
+        expect(document.getElementById('status')!.className).toBe('status-message error');
         expect(document.getElementById('status')!.textContent).toBe('testError');
     });
 
@@ -455,7 +483,7 @@ describe('handleTestAi', () => {
     it('success', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
-        expect(document.getElementById('status')!.className).toBe('success');
+        expect(document.getElementById('status')!.className).toBe('status-message success');
     });
 
   it('saves settings before testing AI connection', async () => {
@@ -479,13 +507,13 @@ describe('handleTestAi', () => {
     it('error', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockResolvedValue({ ai: { success: false, message: 'API key invalid' } }), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
-        expect(document.getElementById('status')!.className).toBe('error');
+        expect(document.getElementById('status')!.className).toBe('status-message error');
     });
 
     it('exception', async () => {
         vi.stubGlobal('chrome', { ...chrome, runtime: { sendMessage: vi.fn().mockRejectedValue(new Error('Timeout')), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
         await handleTestAi();
-        expect(document.getElementById('status')!.className).toBe('error');
+        expect(document.getElementById('status')!.className).toBe('status-message error');
         expect(document.getElementById('status')!.textContent).toBe('testError');
     });
 
@@ -674,7 +702,7 @@ describe('handleTestAi', () => {
         resolveSendMessage!({ ai: { success: true, message: 'OK' } });
         await handlePromise;
 
-        expect(statusDiv.className).toBe('success');
+        expect(statusDiv.className).toBe('status-message success');
         expect(removeListener).toHaveBeenCalledTimes(1);
     });
 
@@ -748,26 +776,37 @@ describe('handleTestAi', () => {
         // The i18n util is module-mocked to return keys; re-implement it for this
         // test so the interpolated provider value is observable in the label.
         const { getMessage } = await import('../../utils/i18n.js');
-        vi.mocked(getMessage).mockImplementation((key: string, substitutions?: unknown) => {
-            const subst = substitutions as Record<string, string> | undefined;
-            if (key === 'aiTestingProvider') return `Testing ${subst?.provider}...`;
-            if (key === 'aiTestElapsedTime') return `Elapsed ${subst?.seconds}s`;
-            return key;
-        });
+        const previousGetMessage = getMessage.getMockImplementation();
+        try {
+            vi.mocked(getMessage).mockImplementation((key: string, substitutions?: unknown) => {
+                const subst = substitutions as Record<string, string> | undefined;
+                if (key === 'aiTestingProvider') return `Testing ${subst?.provider}...`;
+                if (key === 'aiTestElapsedTime') return `Elapsed ${subst?.seconds}s`;
+                return key;
+            });
 
-        const handlePromise = handleTestAi();
-        const statusDiv = document.getElementById('status')!;
+            const handlePromise = handleTestAi();
+            const statusDiv = document.getElementById('status')!;
 
-        // "constructor" is a valid string provider but also an Object.prototype
-        // key. The catalog is a Map so the lookup is pollution-safe; the label
-        // must fall back to the raw value, not a function source or "[object Object]".
-        await vi.waitFor(() => {
-            expect(statusDiv.textContent).toContain('constructor');
-        });
-        expect(statusDiv.textContent).not.toContain('[object Object]');
+            // "constructor" is a valid string provider but also an Object.prototype
+            // key. The catalog is a Map so the lookup is pollution-safe; the label
+            // must fall back to the raw value, not a function source or "[object Object]".
+            await vi.waitFor(() => {
+                expect(statusDiv.textContent).toContain('constructor');
+            });
+            expect(statusDiv.textContent).not.toContain('[object Object]');
 
-        resolveSendMessage!({ ai: { success: true, message: 'OK' } });
-        await handlePromise;
+            resolveSendMessage!({ ai: { success: true, message: 'OK' } });
+            await handlePromise;
+        } finally {
+            // The echo override must not leak into later suites in this file,
+            // which assert translated localMarkdownExport strings.
+            if (previousGetMessage) {
+                vi.mocked(getMessage).mockImplementation(previousGetMessage);
+            } else {
+                vi.mocked(getMessage).mockReset();
+            }
+        }
     });
 
     it('ignores AI_TEST_PROGRESS from a different test run (concurrent Dashboard tab)', async () => {

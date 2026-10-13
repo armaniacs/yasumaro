@@ -67,6 +67,9 @@ const files = (payload.testResults ?? [])
     const end = entry.endTime ?? 0;
     return {
       file: relative(ROOT, entry.name),
+      // Kept so the environment classifier below can read the file back from
+      // disk; the JSON reporter exposes no environment field.
+      abs: entry.name,
       // The reporter derives startTime/endTime from the individual test tasks
       // (min start, max start+duration), so this span is the test phase plus
       // inter-test gaps — NOT the file lifecycle. Measured: summed span 84.67ms
@@ -93,8 +96,34 @@ const sorted = files.map((f) => f.ms).sort((a, b) => a - b);
 const top10Ms = files.slice(0, 10).reduce((s, f) => s + f.ms, 0);
 const failures = (payload.numFailedTests ?? 0) + (payload.numFailedTestSuites ?? 0);
 
+// Fixed cost is not uniform per file: the ADR measures isolated/node at 40ms per
+// file and isolated/jsdom at 147ms (environment alone 81% of the jsdom figure,
+// ~106ms of it jsdom construction). A raw file count prices those the same, so
+// the jsdom subset is classified and gated on its own — also a count, so it
+// stays machine-independent like the total.
+//
+// The classifier mirrors testPartition.ts (an environment docblock is what makes
+// a file jsdom; the config default is node) and is deliberately over-inclusive
+// in the same way: any jsdom docblock anywhere in the file counts.
+const JSDOM_DOCBLOCK = /@(?:vitest|jest)-environment\s+jsdom/;
+
+function isJsdomFile(absPath) {
+  try {
+    return JSDOM_DOCBLOCK.test(readFileSync(absPath, 'utf8'));
+  } catch (e) {
+    // Every classified file just ran, so an unreadable one means the workspace
+    // changed under the run. Failing loudly beats silently under-counting the
+    // gate.
+    console.error(`test-perf: cannot read ${absPath} to classify its environment: ${e.message}`);
+    process.exit(1);
+  }
+}
+
+const jsdomFiles = files.filter((f) => isJsdomFile(f.abs)).length;
+
 const measured = {
   files: files.length,
+  jsdomFiles,
   tests: files.reduce((s, f) => s + f.tests, 0),
   totalMs: Math.round(totalMs),
   assertionTotalMs: Math.round(assertionTotalMs),
@@ -125,6 +154,7 @@ const report = [
   '## Totals',
   '',
   `- files: ${measured.files}`,
+  `- jsdom files: ${measured.jsdomFiles}`,
   `- tests: ${measured.tests}`,
   `- wall: ${(measured.wallMs / 1000).toFixed(2)}s (advisory; includes fixed cost, but is machine-dependent)`,
   `- summed per-file test phase: ${(measured.totalMs / 1000).toFixed(2)}s`,
@@ -151,13 +181,19 @@ if (failures > 0) {
 }
 
 const budget = JSON.parse(readFileSync(BUDGET_PATH, 'utf8')).budget;
-const budgetFileCount = budget.gates.fileCount;
+
+// Both gates are counts, so both are machine-independent and are judged even
+// when the machine is busy (see the R4 note below).
+const loadIndependentGates = [
+  ['file count', measured.files, budget.gates.fileCount],
+  ['jsdom files', measured.jsdomFiles, budget.gates.jsdomFileCount],
+];
 
 // ADR R4: refuse to judge on a busy machine. The per-file times inflate 3-5x
 // under contention, so comparing them to a budget here would fail a correct
 // implementation — and the only remedy left would be raising the budget, which
-// is the coping gradient R4 exists to prevent. The file-count gate below is
-// machine-independent and is judged either way.
+// is the coping gradient R4 exists to prevent. The count gates below are
+// machine-independent and are judged either way.
 //
 // Only the BEFORE sample decides. R5 asks for a before/after pair and to
 // discard on a delta >= 1, but a suite that saturates every core for its whole
@@ -172,20 +208,32 @@ if (contendedBefore) {
     `test-perf: load average was ${loadBefore.toFixed(1)} over ${cores} cores before the run (${loadAfter.toFixed(1)} after) — machine is busy, budget not judged`
   );
   console.log('test-perf: per-file times inflate 3-5x under load; re-run on an idle machine');
-  if (measured.files > budgetFileCount) {
-    console.error(`test-perf: file count ${measured.files} exceeds ${budgetFileCount} regardless of load`);
+  let breachedUnderLoad = false;
+  for (const [label, actual, limit] of loadIndependentGates) {
+    const over = actual > limit;
+    if (over) breachedUnderLoad = true;
+    console.log(
+      `  ${over ? 'OVER ' : 'ok   '}${label} (load-independent): ${Math.round(actual)} / ${limit} (${limit > 0 ? ((actual / limit) * 100).toFixed(0) : 'n/a'}%)`
+    );
+  }
+  if (breachedUnderLoad) {
+    console.error('test-perf: a load-independent budget is exceeded regardless of load');
     process.exit(1);
   }
-  console.log(`  ok   file count (load-independent): ${measured.files} / ${budgetFileCount}`);
   process.exit(0);
 }
 
-// Only the file count fails the build. The time figures are calibrated on one
+// Counts are the only gated metrics. The time figures are calibrated on one
 // 8-core laptop; a 4-vCPU CI runner at a pinned 3 workers has a different
 // per-core speed, and `p95`/`top10` additionally absorb shared-VM scheduling
 // noise. A routine runner difference would otherwise fail `validate`, and since
 // `build` declares `needs: validate` it would block the build artifact too.
-const gates = [['file count', measured.files, budget.gates.fileCount]];
+//
+// `file count` alone prices every file the same, but the ADR measures isolated
+// /node at 40ms and isolated/jsdom at 147ms per file. `jsdom files` puts the
+// ratchet on that difference so adding cheap node/shared tests stays free while
+// adding a DOM file is a deliberate decision.
+const gates = loadIndependentGates;
 const advisories = [
   ['total test phase', measured.totalMs, budget.reference.totalFileMs],
   ['p95 per file', measured.p95Ms, budget.reference.p95FileMs],
@@ -206,7 +254,7 @@ for (const [label, actual, limit] of advisories) {
 }
 
 console.log(`  info  wall: ${(measured.wallMs / 1000).toFixed(1)}s over ${cores} cores (advisory, machine-dependent)`);
-console.log('  info  per-file fixed cost is not measurable by the JSON reporter; file count stands in for it');
+console.log('  info  per-file fixed cost is not measurable by the JSON reporter; the count gates stand in for it');
 
 if (breached) {
   console.error('test-perf: budget exceeded. Either the suite grew, or the budget needs a deliberate raise.');

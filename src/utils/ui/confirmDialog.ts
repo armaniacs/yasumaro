@@ -10,6 +10,7 @@
  */
 
 import { getMessageOr } from '../i18n.js';
+import { FOCUSABLE_SELECTOR, handleFocusCycle } from './focusTrap.js';
 
 export interface ConfirmDialogOptions {
   /** Optional — when omitted the dialog renders the message only. */
@@ -25,33 +26,6 @@ export interface AlertDialogOptions {
   title?: string;
   message: string;
   okLabel?: string;
-}
-
-const FOCUSABLE_SELECTOR = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',');
-
-function trapFocus(event: KeyboardEvent, dialog: HTMLElement): void {
-  if (event.key !== 'Tab') return;
-
-  const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
-  if (focusable.length === 0) return;
-
-  const first = focusable[0]!;
-  const last = focusable[focusable.length - 1]!;
-
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
 }
 
 interface ButtonSpec {
@@ -114,12 +88,14 @@ function openModalDialog(options: {
   overlay.append(dialog);
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      cleanup(false);
-      return;
-    }
-    trapFocus(event, dialog);
+    handleFocusCycle(
+      event,
+      () => Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)),
+      () => {
+        event.preventDefault();
+        cleanup(false);
+      },
+    );
   }
 
   function cleanup(confirmed: boolean): void {
@@ -137,7 +113,10 @@ function openModalDialog(options: {
 
   document.addEventListener('keydown', handleKeydown);
   document.body.appendChild(overlay);
-  buttons[buttons.length - 1]!.focus();
+  // Focus the non-destructive button: the last button is the destructive
+  // confirm, so Enter straight after opening used to delete (PBI 2026-10-11-07).
+  const safeIndex = options.buttons.findIndex((spec) => spec.resolves === false);
+  (buttons[safeIndex >= 0 ? safeIndex : 0] ?? buttons[buttons.length - 1])?.focus();
 }
 
 export function showConfirmDialog(options: ConfirmDialogOptions): Promise<boolean> {

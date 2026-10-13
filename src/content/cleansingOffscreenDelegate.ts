@@ -6,8 +6,19 @@
  * 失敗・未対応環境では同期的にフォールバックする。
  */
 
-import { cleanseHtmlOffscreen, MAX_CLEANSING_HTML_BYTES, TOO_LARGE_ERROR_PREFIX } from '../offscreen/cleansingOffscreen.js';
+import {
+    cleanseHtmlOffscreen,
+    MAX_CLEANSING_HTML_BYTES,
+    TOO_LARGE_ERROR_PREFIX,
+    CLEANSING_OFFSCREEN_TYPE,
+} from '../offscreen/cleansingOffscreen.js';
+import type { CleansingOffscreenResponse } from '../offscreen/cleansingOffscreen.js';
 import { StorageKeys } from '../utils/storage/types.js';
+
+/** Chrome global accessor — typed once so the delegate does not repeat the cast. */
+function getChrome(): typeof chrome | undefined {
+    return (globalThis as unknown as { chrome?: typeof chrome }).chrome;
+}
 
 // PBI 2026-09-11-05 (round 7): module-level cache — the flag is read once,
 // invalidated by chrome.storage.onChanged. The old code hit storage on every
@@ -24,7 +35,7 @@ export function __resetCleansingFlagCacheForTesting(): void {
 async function isCleansingOffscreenEnabled(): Promise<boolean> {
     if (cachedFlag !== null) return cachedFlag;
     try {
-        const g = (globalThis as unknown as { chrome?: typeof chrome }).chrome;
+        const g = getChrome();
         if (g?.storage?.local?.get) {
             const result = await g.storage.local.get(StorageKeys.CLEANSING_OFFSCREEN_ENABLED);
             const v = (result as Record<string, unknown>)[StorageKeys.CLEANSING_OFFSCREEN_ENABLED];
@@ -77,29 +88,24 @@ export async function cleanseViaOffscreen(html: string): Promise<string> {
     }
 
     try {
-        const g = (globalThis as unknown as { chrome?: typeof chrome }).chrome;
+        const g = getChrome();
         if (!g?.runtime?.sendMessage) {
             return cleanseHtmlSync(html);
         }
 
-        const response = (await g.runtime.sendMessage({
+        const response: CleansingOffscreenResponse | undefined = await g.runtime.sendMessage({
             target: 'offscreen',
-            type: 'CLEANSING_OFFSCREEN',
+            type: CLEANSING_OFFSCREEN_TYPE,
             payload: { html },
-        } as unknown as never)) as unknown as
-            | { success: true; html: string }
-            | { success: false; error: string }
-            | undefined;
+        });
 
-        if (response && (response as { success: boolean }).success === true && typeof (response as { html: string }).html === 'string') {
-            return (response as { html: string }).html;
+        if (response && response.success === true && typeof response.html === 'string') {
+            return response.html;
         }
         // Size-limit rejections must not fall back to a local parse: the cap
         // exists to prevent the heavy parse anywhere, so re-parsing on the
         // main thread would defeat it. Return the original html instead.
-        const error = response && 'error' in (response as Record<string, unknown>)
-            ? String((response as { error: unknown }).error ?? '')
-            : '';
+        const error = response && 'error' in response ? String(response.error ?? '') : '';
         if (error.startsWith(TOO_LARGE_ERROR_PREFIX)) {
             return html;
         }

@@ -1,8 +1,6 @@
 /**
  * alarmRegistry.ts
  * Deep module owning the alarm registration table: name -> { install, run }.
- * Replaces the alarmHandler if-chain (PBI 2026-09-05-05) and unifies the
- * 3 onAlarm listeners (PBI 2026-09-15-15).
  *
  * Adding a timed job is one table row: the chrome.alarms.create spec (for
  * unconditional jobs), an install hook (for conditional jobs), the run
@@ -15,7 +13,7 @@
 
 import { handleDailyPurgeAlarm } from './dailyPurgeHandler.js';
 import { flushPendingRecords } from './pendingSqliteQueue.js';
-import { flushPendingWrites } from './pendingChromeStorageQueue.js';
+import { flushPendingWrites, type QueuedChromeStorageWrite } from './pendingChromeStorageQueue.js';
 import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import type { OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
@@ -23,21 +21,17 @@ import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
+import type { SessionAlarmService } from './SessionAlarmService.js';
 import { type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
-import {
-  reviewSummaryGeneratorRef,
-  sessionTimeoutInstallRef,
-  sessionTimeoutRunRef,
-} from './alarmRegistryRefs.js';
 
 export interface AlarmHandlerDeps {
   sqliteClient: SqliteClient;
   recordingPipeline: RecordingOrchestrator;
-  getOfflineNetworkQueue: () => Promise<OfflineNetworkQueue>;
-  retryPendingChromeStorageWrite: (write: never) => Promise<boolean>;
-  /** Injected for the review-summary job. */
-  reviewSummaryGenerator?: ReviewSummaryGenerator;
+  getOfflineNetworkQueue: () => OfflineNetworkQueue;
+  retryPendingChromeStorageWrite: (write: QueuedChromeStorageWrite) => Promise<boolean>;
+  reviewSummaryGenerator: ReviewSummaryGenerator;
+  sessionAlarmService: SessionAlarmService;
   settingsReader: SettingsReader;
 }
 
@@ -91,7 +85,7 @@ async function installLocalMdImmediate(): Promise<void> {
 }
 
 async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
-  const offlineNetworkQueue = await deps.getOfflineNetworkQueue();
+  const offlineNetworkQueue = deps.getOfflineNetworkQueue();
   const processOfflineNetworkQueue = createOfflineQueueProcessor({
     offlineNetworkQueue,
     recordingPipeline: deps.recordingPipeline,
@@ -99,7 +93,7 @@ async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
   await Promise.allSettled([
     processOfflineNetworkQueue(),
     flushPendingRecords(deps.sqliteClient),
-    flushPendingWrites(deps.retryPendingChromeStorageWrite as never),
+    flushPendingWrites(deps.retryPendingChromeStorageWrite),
     deps.sqliteClient.maintain({ type: 'healthCheck' }),
   ]);
 }
@@ -149,24 +143,17 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
   {
     name: 'yasumaro-review-weekly',
     install: () => installReviewSummary(deps.settingsReader),
-    run: async () => { await reviewSummaryGeneratorRef?.generateWeeklySummary(); },
+    run: async () => { await deps.reviewSummaryGenerator.generateWeeklySummary(); },
   },
   {
     name: 'yasumaro-review-monthly',
     install: () => installReviewSummary(deps.settingsReader),
-    run: async () => { await reviewSummaryGeneratorRef?.generateMonthlySummary(); },
+    run: async () => { await deps.reviewSummaryGenerator.generateMonthlySummary(); },
   },
   {
-    // WHY the optional-chained refs: both hooks are wired by
-    // setSessionTimeoutRefs() in service-worker.ts at module-eval time, after
-    // this table is built. Until injection each hook is a silent no-op — the
-    // session-timeout alarm is never armed and a stray firing is dropped
-    // without a log. installAll() is fired un-awaited from init(), so nothing
-    // here synchronizes with the injection; the ordering guarantee lives in
-    // service-worker.ts's module-eval order (refs injected before init()).
     name: 'check_session_timeout',
-    install: async () => { await sessionTimeoutInstallRef?.(); },
-    run: async () => { await sessionTimeoutRunRef?.(); },
+    install: async () => { await deps.sessionAlarmService.startTimeoutChecker(); },
+    run: async () => { await deps.sessionAlarmService.checkTimeout(); },
   },
 ];
 

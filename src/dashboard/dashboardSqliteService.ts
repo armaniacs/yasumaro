@@ -159,7 +159,7 @@ async function callClientRow<R>(
 // Public API
 // ============================================================================
 
-import type { BrowsingLogEntry } from '../utils/sqlite-types.js';
+import type { AuditLogEntry, BrowsingLogEntry } from '../utils/sqlite-types.js';
 export type { BrowsingLogEntry };
 
 export interface DateCount {
@@ -473,6 +473,6 @@ export function appendToLogs(ids: number[]): Promise<ServiceResult<{ appended: n
  */
 export function queryAuditLogs(
   options: { limit?: number; offset?: number } = {}
-): Promise<ServiceResult<{ rows: Array<{ id: number; provider: string; url: string; created_at: number }>; total: number }>> {
+): Promise<ServiceResult<{ rows: Array<AuditLogEntry>; total: number }>> {
   return sqliteClient.call('auditLog', { subtype: 'audit_log_query', ...options });
 }

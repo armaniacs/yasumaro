@@ -239,15 +239,6 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
         bodyProtectionThresholdSlider.value = settings.bodyProtectionThreshold.toString();
         if (bodyProtectionThresholdValue) bodyProtectionThresholdValue.textContent = settings.bodyProtectionThreshold.toString();
     }
-    // Body protection (popup-specific elements)
-    const popupBodyProtectionEnabledCheckbox = document.getElementById('popup-body-protection-enabled') as HTMLInputElement;
-    const popupBodyProtectionThresholdSlider = document.getElementById('popup-body-protection-threshold') as HTMLInputElement;
-    const popupBodyProtectionThresholdValue = document.getElementById('popup-body-protection-threshold-value') as HTMLSpanElement;
-    if (popupBodyProtectionEnabledCheckbox) popupBodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
-    if (popupBodyProtectionThresholdSlider) {
-        popupBodyProtectionThresholdSlider.value = settings.bodyProtectionThreshold.toString();
-        if (popupBodyProtectionThresholdValue) popupBodyProtectionThresholdValue.textContent = settings.bodyProtectionThreshold.toString();
-    }
 
     const linkRatioThresholdInput = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
     const shortTextThresholdInput = document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement;
@@ -362,12 +353,8 @@ export function updateAiSummaryCleansingCheckboxStates(enabled: boolean): void {
     // Body protection is independent of cleansing enabled/disabled
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
     const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
-    const popupBodyProtectionEnabledCheckbox = document.getElementById('popup-body-protection-enabled') as HTMLInputElement;
-    const popupBodyProtectionThresholdSlider = document.getElementById('popup-body-protection-threshold') as HTMLInputElement;
     if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.disabled = false;
     if (bodyProtectionThresholdSlider) bodyProtectionThresholdSlider.disabled = false;
-    if (popupBodyProtectionEnabledCheckbox) popupBodyProtectionEnabledCheckbox.disabled = false;
-    if (popupBodyProtectionThresholdSlider) popupBodyProtectionThresholdSlider.disabled = false;
 }
 
 export type CleansingThresholdRange = {
@@ -476,10 +463,9 @@ export function setupAiSummaryCleansingEventListeners(): void {
         }
     }
 
-    // Body protection checkboxes (dashboard + popup)
+    // Body protection checkboxes (dashboard)
     const bodyProtectionIds = [
-        'ai-summary-cleansing-body-protection-enabled',
-        'popup-body-protection-enabled'
+        'ai-summary-cleansing-body-protection-enabled'
     ];
     for (const id of bodyProtectionIds) {
         const checkbox = document.getElementById(id) as HTMLInputElement;

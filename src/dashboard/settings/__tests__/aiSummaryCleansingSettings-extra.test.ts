@@ -218,11 +218,8 @@ function createCleansingDom(): void {
     '<input type="checkbox" id="ai-summary-cleansing-jp-navigation">',
     '<input type="checkbox" id="ai-summary-cleansing-author">',
     '<input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">',
-    '<input type="checkbox" id="popup-body-protection-enabled">',
     '<input type="range" id="ai-summary-cleansing-body-protection-threshold" min="0" max="500">',
-    '<input type="range" id="popup-body-protection-threshold" min="0" max="500">',
     '<span id="ai-summary-cleansing-body-protection-threshold-value"></span>',
-    '<span id="popup-body-protection-threshold-value"></span>',
     '<input type="range" id="ai-summary-cleansing-link-ratio-threshold" min="0" max="100">',
     '<span id="link-ratio-threshold-value"></span>',
     '<input type="range" id="ai-summary-cleansing-short-text-threshold" min="0" max="500">',
@@ -452,17 +449,6 @@ describe('applyAiSummaryCleansingSettingsToUI', () => {
     expect(document.getElementById('ai-summary-cleansing-body-protection-threshold-value')!.textContent).toBe('180');
   });
 
-  it('sets popup body protection elements', () => {
-    applyAiSummaryCleansingSettingsToUI({ ...baseSettings, bodyProtectionEnabled: false });
-    expect((document.getElementById('popup-body-protection-enabled') as HTMLInputElement).checked).toBe(false);
-  });
-
-  it('sets popup body protection threshold', () => {
-    applyAiSummaryCleansingSettingsToUI({ ...baseSettings, bodyProtectionThreshold: 120 });
-    expect((document.getElementById('popup-body-protection-threshold') as HTMLInputElement).value).toBe('120');
-    expect(document.getElementById('popup-body-protection-threshold-value')!.textContent).toBe('120');
-  });
-
   it('sets link ratio threshold input and value display', () => {
     applyAiSummaryCleansingSettingsToUI({ ...baseSettings, linkRatioThreshold: 85 });
     expect((document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement).value).toBe('85');
@@ -568,13 +554,11 @@ describe('updateAiSummaryCleansingCheckboxStates', () => {
   it('keeps body protection checkboxes always enabled', () => {
     updateAiSummaryCleansingCheckboxStates(false);
     expect((document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement).disabled).toBe(false);
-    expect((document.getElementById('popup-body-protection-enabled') as HTMLInputElement).disabled).toBe(false);
   });
 
   it('keeps body protection sliders always enabled', () => {
     updateAiSummaryCleansingCheckboxStates(false);
     expect((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement).disabled).toBe(false);
-    expect((document.getElementById('popup-body-protection-threshold') as HTMLInputElement).disabled).toBe(false);
   });
 
   it('does not throw when elements are missing', () => {

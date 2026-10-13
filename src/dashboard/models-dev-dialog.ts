@@ -19,6 +19,7 @@ import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { clearElement } from '../utils/domClear.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;
@@ -273,7 +274,7 @@ export class ModelsDevDialog {
         }
 
         this.loadingEl.classList.remove('hidden');
-        this.listEl.innerHTML = '';
+        clearElement(this.listEl);
         this.countEl.textContent = '';
 
         try {
@@ -355,7 +356,7 @@ export class ModelsDevDialog {
     private renderProviders(): void {
         if (!this.listEl || !this.countEl) return;
 
-        this.listEl.innerHTML = '';
+        clearElement(this.listEl);
         this.countEl.textContent = `${this.filteredProviders.length} providers`;
 
         this.filteredProviders.forEach(provider => {

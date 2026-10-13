@@ -139,20 +139,6 @@ describe('RecordingTriggerManager', () => {
     });
   });
 
-  describe('saveTriggers', () => {
-    it('saves triggers to storage and updates cache', async () => {
-      const triggers = { scrollAndTime: true, manualSave: false, periodicSnapshot: false };
-      const result = await manager.saveTriggers(triggers);
-      expect(result).toBe(true);
-      expect(mockStorage['recording_triggers']).toBe(JSON.stringify(triggers));
-
-      // Cache should be updated
-      manager.invalidateCache(); // invalidate to test from storage
-      const loaded = await manager.loadTriggers();
-      expect(loaded.scrollAndTime).toBe(true);
-    });
-  });
-
   describe('getSnapshotIntervalMinutes', () => {
     it('returns default 5 when not set', async () => {
       expect(await manager.getSnapshotIntervalMinutes()).toBe(5);
@@ -161,23 +147,6 @@ describe('RecordingTriggerManager', () => {
     it('returns stored value', async () => {
       mockStorage['snapshot_interval_minutes'] = 15;
       expect(await manager.getSnapshotIntervalMinutes()).toBe(15);
-    });
-  });
-
-  describe('saveSnapshotInterval', () => {
-    it('saves and clamps to 1-60 range', async () => {
-      expect(await manager.saveSnapshotInterval(30)).toBe(true);
-      expect(mockStorage['snapshot_interval_minutes']).toBe(30);
-    });
-
-    it('clamps values below 1', async () => {
-      await manager.saveSnapshotInterval(0);
-      expect(mockStorage['snapshot_interval_minutes']).toBe(1);
-    });
-
-    it('clamps values above 60', async () => {
-      await manager.saveSnapshotInterval(100);
-      expect(mockStorage['snapshot_interval_minutes']).toBe(60);
     });
   });
 
@@ -212,6 +181,63 @@ describe('RecordingTriggerManager', () => {
       manager.invalidateCache();
       const triggers = await manager.loadTriggers();
       expect(triggers.scrollAndTime).toBe(false);
+    });
+  });
+
+  // PBI 2026-10-11-05: builds before the top-level allowlist change folded
+  // `recording_triggers` / `snapshot_interval_minutes` into the `settings` blob
+  // and deleted the raw keys. Those installs are already past
+  // isSettingsMigrationComplete(), so the allowlist change cannot re-run and the
+  // manager used to fall back to defaults — silently discarding the user's
+  // auto-save triggers.
+  describe('settings-blob fallback for already-migrated installs', () => {
+    beforeEach(() => {
+      mockStorage['settings_migrated'] = { stage: 'completed', schemaVersion: 2 };
+    });
+
+    it('loads triggers from the blob when the top-level key was migrated away', async () => {
+      mockStorage['settings'] = {
+        recording_triggers: JSON.stringify({ scrollAndTime: true, periodicSnapshot: true }),
+      };
+      manager.invalidateCache();
+
+      const triggers = await manager.loadTriggers();
+
+      expect(triggers).toEqual({ scrollAndTime: true, manualSave: true, periodicSnapshot: true });
+    });
+
+    it('prefers the top-level key over the blob (single writer stays authoritative)', async () => {
+      mockStorage['recording_triggers'] = JSON.stringify({ scrollAndTime: false });
+      mockStorage['settings'] = {
+        recording_triggers: JSON.stringify({ scrollAndTime: true, periodicSnapshot: true }),
+      };
+      manager.invalidateCache();
+
+      const triggers = await manager.loadTriggers();
+
+      expect(triggers.scrollAndTime).toBe(false);
+      expect(triggers.periodicSnapshot).toBe(false);
+    });
+
+    it('reads the snapshot interval from the blob when the top-level key is absent', async () => {
+      mockStorage['settings'] = { snapshot_interval_minutes: 15 };
+
+      expect(await manager.getSnapshotIntervalMinutes()).toBe(15);
+    });
+
+    it('prefers the top-level snapshot interval over the blob', async () => {
+      mockStorage['snapshot_interval_minutes'] = 30;
+      mockStorage['settings'] = { snapshot_interval_minutes: 15 };
+
+      expect(await manager.getSnapshotIntervalMinutes()).toBe(30);
+    });
+
+    it('keeps the defaults when neither the top level nor the blob has the keys', async () => {
+      mockStorage['settings'] = {};
+      manager.invalidateCache();
+
+      expect((await manager.loadTriggers()).scrollAndTime).toBe(false);
+      expect(await manager.getSnapshotIntervalMinutes()).toBe(5);
     });
   });
 });

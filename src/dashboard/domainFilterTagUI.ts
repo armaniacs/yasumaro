@@ -1,4 +1,5 @@
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
+import { clearElement } from '../utils/domClear.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
 import { loadDomainSettings, saveDomainLists } from './settings/domainFilter.js';
 import { normalizeDomainInput, validateDomainInput } from './domainInputPolicy.js';
@@ -75,7 +76,7 @@ export async function initDomainFilterTagUI(): Promise<void> {
       ? (getMessageWithSubstitutions(getPluralKey('domainTagCount', domains.length), { count: domains.length }, '{count} 件'))
       : '';
 
-    tagList.innerHTML = '';
+    clearElement(tagList);
     domains.forEach(domain => {
       const chip = document.createElement('span');
       chip.className = `domain-tag domain-tag-${mode}`;
@@ -170,7 +171,7 @@ export async function initDomainFilterTagUI(): Promise<void> {
     }
   }
 
-  // loadDomainSettings() 完了後にUIを同期（setTimeout(0) で非同期実行待ち）
+  // loadDomainSettings() を await した直後に UI を同期する（タイマー待ちは不要）
   function syncFromHidden(): void {
     const isEnabled = !radioDisabled!.checked;
     setEnabled(isEnabled);

@@ -6,6 +6,7 @@
 
 import {
   getUserLocale,
+  getUiLanguage,
   isRTL,
   formatDate,
   formatDateTime,
@@ -386,6 +387,28 @@ describe('localeUtils', () => {
       expect(result).toBe(date.toISOString());
 
       Date.prototype.toLocaleString = originalToLocaleString;
+    });
+  });
+
+  // PBI 2026-10-11-04: single owner of the ja/en decision for prompt defaults.
+  describe('getUiLanguage', () => {
+    it('projects a Japanese UI locale to ja', () => {
+      mockGetUILanguage.mockReturnValue('ja-JP');
+      expect(getUiLanguage()).toBe('ja');
+    });
+
+    it('projects any non-Japanese UI locale to en', () => {
+      for (const locale of ['en-US', 'de', 'zh-CN', 'ko-KR']) {
+        mockGetUILanguage.mockReturnValue(locale);
+        // eslint-disable-next-line vitest/valid-expect -- assert the failing locale
+        expect(getUiLanguage(), locale).toBe('en');
+      }
+    });
+
+    it('falls back to en when chrome.i18n is unavailable', () => {
+      // getUserLocale() returns 'en-US' without the Chrome API.
+      (global as unknown as { chrome: unknown }).chrome = undefined;
+      expect(getUiLanguage()).toBe('en');
     });
   });
 });

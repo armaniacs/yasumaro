@@ -20,7 +20,17 @@ export interface MaskedItem {
   type: string;       // マスク項目の種類（例: "email", "creditCard", "phoneJp", "myNumber", "bankAccount"）
   position?: string;  // コンテンツ内の一般的な位置（例: "header", "body"）
   original: string;   // 元の値（デバッグ用、本番環境では使用しない）@internal
-  index?: number;     // マスク項目の出現順序インデックス
+  /**
+   * マスク項目の出現順序インデックス。
+   *
+   * 単位は**マスク項目（occurrence）単位**で、`sanitizeRegex` / WASM の走査結果を
+   * 配列順に並べたときの通し番号。文字オフセットではない（Rust 側
+   * `masked_items` の `index` も occurrence 単位で、PBI 2026-10-11-10 で両実装の
+   * 一致を実測確認した）。読み手は現在 0 件で、値は E2E とデバッグ用。
+   * 文字/バイトオフセットが必要になった時点で別フィールド（例 `offset`）を足し、
+   * この `index` をオフセットとして流用しないこと。
+   */
+  index?: number;
 }
 
 /** stripPiiFromMaskedItem(s) 適用後の状態。original を型レベルで持たない。 */
@@ -105,8 +115,6 @@ export function isMaskedItem(item: unknown): item is MaskedItem {
 /** PBI 04 の wire 応答。gate 拒否時のみ needsForce=true（強制再生成の提示用）。 */
 export type RegenerateSummaryResponse = RecordingResult & {
   needsForce?: boolean;
-  /** 試行したプロバイダーID（AI全滅時のみ。PBI 2026-09-22-04 follow-up）。 */
-  providersTried?: string[];
 };
 
 /**
@@ -320,6 +328,8 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'GENERATE_REVIEW_SUMMARY' ? { success: true; generated: boolean } :
   T extends 'DASHBOARD_SQLITE' ? Record<string, unknown> :
   T extends 'LOG_FORWARD' ? { success: true } :
+  T extends 'OW_PROBE_QUERY' ? { success: true; enabled: boolean } :
+  T extends 'OW_PROBE_STATE' ? { success: true } :
   SuccessResponse;
 
 /**

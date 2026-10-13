@@ -104,6 +104,11 @@ export default defineConfig({
       // production builds get `false` so the check is dead-code eliminated.
       // Untrusted page content must never control extension behavior.
       __OW_BENCH__: JSON.stringify(process.env.OW_BENCH === '1'),
+      // E2E probe flag for src/content/e2eTestState.ts (PBI 2026-10-11-08 NN08).
+      // Store release builds set OW_E2E_PROBE=0 so the probe is dead-code
+      // eliminated from shipped artifacts; dev/CI builds keep it (default
+      // true) so the E2E suite runs against a plain `npm run build`.
+      __OW_E2E_PROBE__: JSON.stringify(process.env.OW_E2E_PROBE !== '0'),
     },
     plugins: stripInlinedWasmPlugins(env.browser),
     build: {

@@ -10,6 +10,7 @@ import { IdbVfsBackend } from '../IdbVfsBackend.js';
 import { handleAuditLogQuery } from '../opfsWorker/auditHandlers.js';
 import { AUDIT_LOG_COLUMNS } from '../rowCodec.js';
 import type { SqliteValue } from '../sqliteEngine.js';
+import type { AuditLogEntry } from '../../utils/sqlite-types.js';
 
 const EXPECTED_ROW = [
   { id: 7, provider: 'gemini', url: 'https://example.com/x', created_at: 1700000000000 },
@@ -23,7 +24,7 @@ function namedRow(): Record<string, SqliteValue> {
   return { id: 7, provider: 'gemini', url: 'https://example.com/x', created_at: 1700000000000 };
 }
 
-function assertCoercion(row: { id: number; provider: string; url: string; created_at: number }): void {
+function assertCoercion(row: AuditLogEntry): void {
   expect(typeof row.id).toBe('number');
   expect(typeof row.created_at).toBe('number');
   expect(typeof row.provider).toBe('string');

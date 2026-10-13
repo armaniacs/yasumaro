@@ -8,6 +8,7 @@
  */
 
 import { StorageKeys } from '../utils/storage/types.js';
+import { clearElement } from '../utils/domClear.js';
 import { CSPValidator } from '../utils/cspValidator.js';
 import { settingsRepository, SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { LogType } from '../utils/logger/types.js';
@@ -108,7 +109,7 @@ export class CspSettingsController {
       return a.localeCompare(b);
     });
 
-    container.innerHTML = '';
+    clearElement(container);
 
     for (const provider of sortedProviders) {
       const domain = CSPValidator.getProviderDomain(provider);

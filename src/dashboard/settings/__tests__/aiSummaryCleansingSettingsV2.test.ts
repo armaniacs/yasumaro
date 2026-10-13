@@ -99,9 +99,6 @@ function createFullDom(includeSubGroup = true): void {
     <input type="checkbox" id="ai-summary-cleansing-body-protection-enabled">
     <input type="range" id="ai-summary-cleansing-body-protection-threshold" min="0" max="500">
     <span id="ai-summary-cleansing-body-protection-threshold-value"></span>
-    <input type="checkbox" id="popup-body-protection-enabled">
-    <input type="range" id="popup-body-protection-threshold" min="0" max="500">
-    <span id="popup-body-protection-threshold-value"></span>
     <input type="range" id="ai-summary-cleansing-link-ratio-threshold" min="0" max="100">
     <span id="link-ratio-threshold-value"></span>
     <input type="range" id="ai-summary-cleansing-short-text-threshold" min="0" max="200">
@@ -378,21 +375,6 @@ describe('applyAiSummaryCleansingSettingsToUI', () => {
     expect((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement).value).toBe('180');
   });
 
-  it('handles popup body protection elements', () => {
-    createFullDom();
-    const s = makeFullSettings({ bodyProtectionEnabled: true, bodyProtectionThreshold: 210 });
-    applyAiSummaryCleansingSettingsToUI(s);
-    expect((document.getElementById('popup-body-protection-enabled') as HTMLInputElement).checked).toBe(true);
-    expect((document.getElementById('popup-body-protection-threshold') as HTMLInputElement).value).toBe('210');
-    expect(document.getElementById('popup-body-protection-threshold-value')!.textContent).toBe('210');
-  });
-
-  it('handles popup threshold value missing', () => {
-    createFullDom();
-    document.getElementById('popup-body-protection-threshold-value')!.remove();
-    expect(() => applyAiSummaryCleansingSettingsToUI(makeFullSettings())).not.toThrow();
-  });
-
   it('sets linkRatio threshold and handles missing valElem', () => {
     createFullDom();
     applyAiSummaryCleansingSettingsToUI(makeFullSettings({ linkRatioThreshold: 85 }));
@@ -472,7 +454,6 @@ describe('applyAiSummaryCleansingSettingsToUI', () => {
     document.getElementById('ai-summary-cleansing-short-seq-count')!.remove();
     document.getElementById('ai-summary-cleansing-link-para-threshold')!.remove();
     document.getElementById('ai-summary-cleansing-body-protection-threshold')!.remove();
-    document.getElementById('popup-body-protection-threshold')!.remove();
     expect(() => applyAiSummaryCleansingSettingsToUI(makeFullSettings())).not.toThrow();
   });
 
@@ -605,8 +586,6 @@ describe('updateAiSummaryCleansingCheckboxStates', () => {
     updateAiSummaryCleansingCheckboxStates(false);
     expect((document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement).disabled).toBe(false);
     expect((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement).disabled).toBe(false);
-    expect((document.getElementById('popup-body-protection-enabled') as HTMLInputElement).disabled).toBe(false);
-    expect((document.getElementById('popup-body-protection-threshold') as HTMLInputElement).disabled).toBe(false);
     updateAiSummaryCleansingCheckboxStates(true);
     expect((document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement).disabled).toBe(false);
   });
@@ -635,8 +614,6 @@ describe('updateAiSummaryCleansingCheckboxStates', () => {
     createFullDom();
     document.getElementById('ai-summary-cleansing-body-protection-enabled')!.remove();
     document.getElementById('ai-summary-cleansing-body-protection-threshold')!.remove();
-    document.getElementById('popup-body-protection-enabled')!.remove();
-    document.getElementById('popup-body-protection-threshold')!.remove();
     expect(() => updateAiSummaryCleansingCheckboxStates(false)).not.toThrow();
   });
 });
@@ -701,14 +678,6 @@ describe('setupAiSummaryCleansingEventListeners', () => {
     createFullDom();
     setupAiSummaryCleansingEventListeners();
     const cb = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
-    cb.dispatchEvent(new Event('change'));
-    await vi.waitFor(() => expect(mockSaveSettings).toHaveBeenCalled());
-  });
-
-  it('popup body protection checkbox change triggers save', async () => {
-    createFullDom();
-    setupAiSummaryCleansingEventListeners();
-    const cb = document.getElementById('popup-body-protection-enabled') as HTMLInputElement;
     cb.dispatchEvent(new Event('change'));
     await vi.waitFor(() => expect(mockSaveSettings).toHaveBeenCalled());
   });

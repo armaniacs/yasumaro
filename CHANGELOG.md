@@ -35,6 +35,62 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.41] - 2026-10-13
+
+テスト・CI 強化ラウンドの修正版です。恒久 skip の一掃（`no-dead-test-skip` ルール導入を含む）、manifest 権限検証ゲートの復旧と失敗側 pin、生成物層ゲートの JSON パース堅牢化、URL 検証のホスト名正規化漏れ修正、スイート実行時間予算の改定など 12 件を反映しました。
+
+### 修正・改善
+
+- URL 検証のホスト名正規化漏れを修正する。`new URL()` は `http://localhost./` のホスト名を `localhost.` のまま返すため、末尾ドット付きの localhost がブロック判定をすり抜けていた（AI リクエスト経路ではポート許可リストも回避できた）。正規化を `validateUrl` / フィルタ取り込み / AI リクエスト / 録画対象判定で統一し、NAT64 の埋め込み IPv4 も非公開判定に加える
+- wasm-bindgen 生成物（`src/wasm/*/*.d.ts`）の `/* eslint-disable */` バナーが手で削除されており、CI の wasm staleness ゲートが常時赤だったのを復元する。生成物は fresh build との byte 一致が要求されるため、lint 側で未使用 directive 警告を抑制する
+- 単体スイートの実行時間予算が導入時のスナップショット（fileCount 930、翌日に超過）のまま 15 日間赤だったのを実測へ改定し（1060）、固定コストの支配要因である **jsdom 環境のファイル数を第 2 のゲート**（360）として追加する。`validate` の常時赤が解消し、依存していた `build` ジョブが再び走る
+- ベンチの TreeWalker カウンタが jsdom のセレクタエンジン（`@asamuzakjp/dom-selector`）内部の走査まで数えており、セレクタ構文の変更だけで 9 指標が偽の回帰を示していたのを、計測対象モジュールの DOM 走査だけを数えるように修正する（baseline は再導出）
+- `RecordingPipeline` の obsidian 経路テストを注入形モックで再活性化し、宣言形 skip（`it.skip` / `describe.skip`）の死骸 21 か所を一掃して恒久 skip をゼロにする（E2E の 8 件は実行時条件形のため候補外と実測で確認）
+- 宣言形 skip を検出する `no-dead-test-skip` ルールを lint に導入する。実行時条件形（`test.skip(cond, reason)`）・skipIf・if ガード内・非テストオブジェクト・プロパティ参照・each 連結形を判別して誤検知しない
+- manifest 権限検証を jsdom 環境に依存して実行されなかったゲートから復旧する。`wxt.config.ts` ファクトリ直呼びのスイート（15 テスト）へ再設計し、生成物層は `check-manifest.mjs` に権限上限・WAR チェーン検証を追加して CI build job に配線する
+- manifest 最小権限ゲートの失敗側（SSOT 外ドメインの混入・localhost origin の欠落で throw）をスイートで pin し、外部消費者の無いゲートをモジュール内に限定する（de-export）。メッセージ断片の pin で `toEqual` を弱い判定に置き換えるリファクタも検出できる
+- 生成物層 manifest ゲートの manifest 読み込みを existsSync + try/catch に統一し、壊れた成果物（invalid JSON）でスタックトレースではなく fail メッセージで落とす。invalid JSON 時のクラッシュ点は main() が最初に実行する `checkManifestV3Compliance()` だったため同関数も含めて包む
+- ソース層（`manifest.test.ts`）と生成物層（`check-manifest.mjs`）で重複する getURL 抽出正規表現の一致を pin テスト（`geturl-extraction-sync.test.ts`）で保証し、片側だけの拡張で検証穴が隠れるのを防ぐ
+- `RecordingPipeline` テストの注入モックを実契約型（`Pick<ObsidianClient, 'appendToDailyNote'>`）へ寄せ、実シグネチャの変更を type-check で検出できるようにする
+- lint ルールの限界（シャドーイング）・WAR リゾルバの対応起源と拡張前提・`wxt.config.ts` import の規約逸脱理由をコメントに明記する（動作不変）
+
+## [6.9.40] - 2026-10-10
+
+アーキテクチャ診断ラウンドの修正版です。alarm 配線の DI 統合、dashboard i18n、監査ログ型 SSOT、contentCleaner の集計 drift、status 表示契約など 13 件を反映しました。あわせてプライバシー保護の修正（保存経路の PII マスク、タイトル正規化、長トークン内 PII 検出）を含みます。同ブランチで実施した 22 観点レビュー（checking-team）の指摘のうち、High 3 件を含む 10 件も反映しています。
+
+### 修正・改善
+
+- alarmRegistry の module-level refs を削除し、composition root の DI に統合
+- dashboard の動的 UI 文言を i18n 契約へ統一
+- 監査ログ行型を `sqlite-types` に集約
+- contentCleaner の count/strip parity と SQLite order-dir 正規化を修正
+- dashboard status 表示、設定移行 allowlist、provider wire 契約を整理
+- 保存（SAVE_RECORD）経路でもクラウド AI 送信前に PII をマスクする（未マスク本文が送信されていた）
+- 長い連続文字列の中間にある PII を WASM コアの重なり付きチャンク走査で検出する（サンプリング走査を廃止）
+- タイトルの改行・CR・Unicode 行区切りを正規化し、Markdown の見出し／リンク行への注入を防ぐ（あわせて連続空白を 1 つに圧縮）
+- チャンク境界・長トークン・非ASCII 本文を対象に TS/Rust のパリティ検証を拡充
+- 末尾に `.` や `-` が続くメールアドレス（例 `user@example.com.`）が WASM 経路で未マスクのまま保存・送信されていたのを修正
+- 非ASCII 本文のチャンク継ぎ目に落ちた ASCII の PII が、どのチャンクでも数えられず未マスクになっていたのを修正（重なり判定を前チャンクの実カバー終端基準へ変更）
+- WASM 走査に 5 秒の時間上限を追加し、病的な入力で走査が止まらないようにする（TS 側と同じ契約。件数上限とタイムアウトを別メッセージで通知）
+- `privacy_mode` が未知の値だった場合にマスクが無効なままクラウド送信され得たのを、既定（`masked_cloud`）へ倒すよう修正。設定インポートでも不正値を拒否する
+- 設定画面で未定義の i18n キー（`domainRequired` が生キーのまま表示）を追加し、キー流用で意味が反転していた文言と、ロケール判定の三系統を 1 系統に統一
+- 移行済みインストールで自動保存トリガー設定（`recording_triggers` / `snapshot_interval_minutes`）が既定値へ無言で巻き戻っていたのを、設定 blob 側からの読み戻しで復旧
+- 接続テスト・ログ書き出しの「進行中」メッセージが成功（緑）として描画されていたのを専用の進行中表示に修正し、空メッセージの成功枠も出さないようにする
+- モーダルで保存中にボタンが無効化されると Tab でフォーカスが外へ抜けていたのを修正し、確認ダイアログの初期フォーカスを破壊的でないボタンへ変更
+- archive のメッセージ検証規則を 1 箇所（サブタイプ仕様表）から導出し、エンベロープ経路とハンドラ経路で受け入れ判定が食い違わないようにする
+- WASM 成果物のサイズ予算を CI で検査する（`--no-opt` ビルドの混入を検出。pii-sanitizer は 100,671 B → 56,784 B に返済）
+- テスト型エラーのベースラインを 467→463 に引き下げ
+- 大局的コード改善ラウンド（holistic-1009）の 20 件を反映（内部整理。purge・scalar 読み・wire 契約・クレンジング設定・表ビルダー等の重複排除。外部挙動不変）
+- 接続テストの 4 ボタンの実行ガードを統一し、規約不統一による不整合をなくす
+- dashboard の動的描画 49 箇所の `innerHTML` クリアを共有ヘルパーに統一し、描画経路の markup 注入面を減らす
+- E2Eテスト用の状態通知がページ共有の DOM 属性に保存設定・記録状態を露出していたのを、拡張機能内部のメッセージ経路（`OW_PROBE_QUERY` / `OW_PROBE_STATE`）に移して読めなくする
+- E2Eプローブの session キー二重定義を契約テストで固定し、将来の食い違いを検出できるようにする
+- コンテンツスクリプト初期化時の設定読み込みとプローブ判定を並列化
+- E2E待機関数の型注釈の嘘（二段キャスト）を除去
+- 出荷ビルドに残っていたテスト用コードを完全に除去（プローブ文字列ゼロを確認）
+- プローブ判定フラグの公開をやめモジュール内に限定
+- Markdownエクスポート完了表示の E2E 判定を言語非依存にし、日本語 UI でも検証が通るようにする
+
 ## [6.9.39] - 2026-10-07
 
 v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応じた後続 fix 1 件のみを含みます。
@@ -66,10 +122,17 @@ v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応
 - **Gemini 空応答に failure メタデータを付与** — OpenAI と対称化し breaker 冷却可能に。文言・policy は不変
 - **E2E の poll・seed を共有ヘルパーに寄せ固定値化** — リトライ時の別行挿入を防止
 - **envelope 通常分岐の null 通過を除去** — レビュー指摘の反映
+- **ドメイン判定の content / SW 間の逆転を修正** — 同一 URL の記録可否が判定経路により食い違う不具合を解消
+- **SessionStore の flush 連動で設定書き込みが失われる不具合を修正** — flush 中の set を再スケジュールし消失を防止
+- **同一文書内の重複 DOM id と二系統バリデーションの不整合を修正** — dashboard 設定保存の検証を一本化
+- **privacyDialog が settle されない経路で自動保存が無言停止するのを修正** — ダイアログ未決着でも記録フローが詰まらないようにする
+- **connectionTests の 4 ハンドラの動作ガードを統一** — 接続確認ボタンの規約不統一を解消
+- **ローカル Markdown 書き出しのアラーム所有権と daily リセットを修正** — アラーム作成の表外分岐を正規化
 
 ### Changed
 
 - **arch-delivery-loop ラウンド（積み残し L1–L8 の 23 件）** — pipeline 失敗処理の集約、wire 表・queryPlan の重複排除、dashboard 大型モジュールの責務整理、E2E fixture・spec の統一、ログ経路の統一など。外部挙動不変
+- **大局的コード改善ラウンド（holistic-1005）の 32 PBI（内部整理）** — docs/SSOT 照合ゲートの配線、ループバックポート・レート制限・各種 wire 表の SSOT 化、popup/dashboard テスト足場の統一など。上記 Fixed 6 件を除き外部挙動不変
 - **テスト型エラーのベースラインを 474→469 に引き下げ** — 新規 8 件を返済
 
 ## [6.9.36] - 2026-10-05

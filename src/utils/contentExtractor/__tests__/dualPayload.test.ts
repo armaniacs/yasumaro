@@ -61,7 +61,7 @@ describe('dualPayload (30-11)', () => {
     };
     const el = makeDualPayloadDiff(entry as unknown as Parameters<typeof makeDualPayloadDiff>[0]);
     expect(el).not.toBeNull();
-    expect(el!.textContent).toContain('除去');
+    expect(el!.textContent).toMatch(/除去|removed/i);
     // 80%超なので警告が含まれる
     expect(el!.querySelector('.dual-payload-warning')).not.toBeNull();
   });

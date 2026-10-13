@@ -461,6 +461,13 @@ describe('trustSettings.ts', () => {
         () => expect(setSpy).toHaveBeenCalledWith('permission_notify_threshold', 5),
         { interval: 1 }
       );
+      // Await the repository write itself before the test ends: `set()` is the
+      // promise that signals the nested blob write landed. Without it the write
+      // can still be pending when the next test's `clearAllMocks()` runs and
+      // then land inside that test's assertion window — which is how
+      // "should ignore threshold above 50" became order-dependent under load
+      // (the waitFor poll above can time out and leave the write pending).
+      await setSpy.mock.results.at(-1)?.value;
       await vi.waitFor(
         () => expect(chrome.storage.local.set).toHaveBeenCalledWith(
           expect.objectContaining({

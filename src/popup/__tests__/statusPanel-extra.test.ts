@@ -272,11 +272,14 @@ describe('initStatusPanel — mode badge', () => {
     expect(badge.className).toContain('mode-full_pipeline');
   });
 
-  it('shows mode badge for unknown mode with fallback', async () => {
+  it('shows the masked_cloud badge for an unknown mode (fail-closed, PBI 2026-10-11-02)', async () => {
     mockGetAll.mockResolvedValue({ privacy_mode: 'unknown_mode' });
     await initStatusPanel();
     const badge = document.getElementById('statusModeBadge')!;
-    expect(badge.textContent).toBe('Cloud');
+    // An unknown persisted value must not be displayed as "Cloud Only": the
+    // pipeline resolves it to the masked_cloud default, so the badge follows.
+    expect(badge.textContent).toBe('Masked');
+    expect(badge.className).toContain('mode-masked_cloud');
   });
 
   it('handles missing mode badge element gracefully', async () => {
@@ -854,7 +857,9 @@ describe('initStatusPanel — additional branches', () => {
     });
     await initStatusPanel();
     const badge = document.getElementById('statusModeBadge')!;
-    expect(badge.className).toContain('mode-full_pipeline');
+    // Missing mode falls back to the SSOT default (masked_cloud), matching what
+    // PrivacyPipeline actually does — not to full_pipeline (PBI 2026-10-11-02).
+    expect(badge.className).toContain('mode-masked_cloud');
   });
 
   it('covers settings falsy branch (branch 0 else)', async () => {
@@ -1360,11 +1365,13 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const dir = dirname(fileURLToPath(import.meta.url));
     const source = readFileSync(join(dir, '..', 'statusPanel.ts'), 'utf-8');
     const trustSource = readFileSync(join(dir, '..', 'trustPanel.ts'), 'utf-8');
-    // 2 success renders (domain / path) + 2 validation-failure renders in the
-    // panel + the shared handler-failure report the async click handlers catch
-    // into. The trust/permission split (pbi/2026-10-03-25) moved that report
-    // into trustPanel.ts — the total across both files is unchanged.
-    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(4);
+    // The whitelist buttons' report sites now live in the single
+    // wireWhitelistButton helper: 1 success + 1 validation-failure render.
+    // The shared handler-failure report the async click handlers catch into
+    // lives in trustPanel.ts. The trust/permission split (pbi/2026-10-03-25)
+    // moved that report into trustPanel.ts — the total across both files is
+    // unchanged.
+    expect(source.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(2);
     expect(trustSource.match(/statusChannel\.report\(\s*'mainStatus'/g) ?? []).toHaveLength(1);
     expect(source).not.toMatch(/showStatus\(\s*'mainStatus'/);
     expect(source).not.toMatch(/className\s*=\s*'(success|error)'/);

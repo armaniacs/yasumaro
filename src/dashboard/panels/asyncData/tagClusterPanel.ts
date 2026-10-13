@@ -14,7 +14,10 @@ import {
     computeTagCooccurrenceHybrid,
     narrowEntriesToTopTagsHybrid,
 } from '../../tagCooccurrenceHybrid.js';
-import { MAX_TAG_CLUSTER_TAGS } from '../../../utils/computeLimits.js';
+import {
+  MAX_QUERY_ROWS,
+  MAX_TAG_CLUSTER_TAGS,
+} from '../../../utils/computeLimits.js';
 import { TagClusterLoadingManager } from '../../tagClusterLoading.js';
 import { TagClusterPanZoomController } from '../../tagClusterPanZoom.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
@@ -78,7 +81,7 @@ export function createTagClusterPanel(): PanelLifecycle {
       loadingManager.show();
 
       try {
-        const fetched = await fetchPeriodRows({ ...range, limit: 10000, label: 'tagCluster' });
+        const fetched = await fetchPeriodRows({ ...range, limit: MAX_QUERY_ROWS, label: 'tagCluster' });
         const rows = fetched.rows;
         if (isStale()) {
           loadingManager.cleanup();

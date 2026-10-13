@@ -161,11 +161,13 @@ describe('showConfirmDialog', () => {
       return [cancel, confirm];
     }
 
-    it('initially focuses confirm button', async () => {
+    it('initially focuses the cancel button, not the destructive confirm', async () => {
+      // PBI 2026-10-11-07: the last button is the destructive confirm, so
+      // focusing it made a stray Enter delete immediately.
       const promise = showConfirmDialog({ title: 'T', message: 'M' });
-      const [, confirm] = getButtons();
-      expect(document.activeElement).toBe(confirm);
-      confirm.click();
+      const [cancel] = getButtons();
+      expect(document.activeElement).toBe(cancel);
+      cancel.click();
       await promise;
     });
 
@@ -190,6 +192,27 @@ describe('showConfirmDialog', () => {
       expect(document.activeElement).toBe(cancel);
 
       cancel.click();
+      await promise;
+    });
+
+    it('excludes disabled elements from the Tab cycle (disabled is skipped)', async () => {
+      const promise = showConfirmDialog({ title: 'T', message: 'M' });
+      const actions = document.querySelector('.confirm-dialog-actions') as HTMLElement;
+      const disabled = document.createElement('button');
+      disabled.disabled = true;
+      disabled.textContent = 'Disabled';
+      actions.insertBefore(disabled, actions.firstChild);
+
+      const [cancel, confirm] = getButtons();
+      cancel.focus();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+
+      // The disabled button is excluded, so `first` stays cancel and Shift+Tab
+      // wraps to the last element (confirm). If disabled were included, cancel
+      // would not be `first` and focus would not move.
+      expect(document.activeElement).toBe(confirm);
+
+      confirm.click();
       await promise;
     });
   });

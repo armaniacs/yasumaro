@@ -8,6 +8,9 @@
  * Exceeding the match-count cap rejects with the same message the TS scan
  * throws, so the hybrid's fallback lands in `sanitizeRegex` and fails closed
  * exactly like the pre-WASM pipeline did.
+ * Rejecting with the same messages the TS scan throws keeps the hybrid's
+ * fallback landing in `sanitizeRegex`, which fails closed exactly like the
+ * pre-WASM pipeline did.
  * @param {string} text
  * @returns {any}
  */
@@ -43,6 +46,10 @@ function __wbg_get_imports() {
         },
         __wbg_new_ffa92086ea89f79c: function() {
             const ret = new Array();
+            return ret;
+        },
+        __wbg_now_f8eaab07b1fb0902: function() {
+            const ret = Date.now();
             return ret;
         },
         __wbg_set_13d25b81ab403f5e: function(arg0, arg1, arg2) {

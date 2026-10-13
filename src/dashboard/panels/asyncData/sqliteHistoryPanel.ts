@@ -34,13 +34,13 @@ export { formatDiagnosticMetadataHtml };
  * kErrorUnknown, masking why openai/gemini failed). Pure for unit tests.
  */
 export function formatRegenerateErrorDetail(
-  providersTried: string[],
+  attemptedProviders: string[],
   slotFailures: ReadonlyArray<{ provider: string; error: string }> | undefined,
   triedLabel: string,
 ): string | undefined {
   const lines: string[] = [];
-  if (providersTried.length > 0) {
-    lines.push(`${triedLabel}: ${providersTried.join(' → ')}`);
+  if (attemptedProviders.length > 0) {
+    lines.push(`${triedLabel}: ${attemptedProviders.join(' → ')}`);
   }
   for (const f of slotFailures ?? []) {
     lines.push(`${f.provider}: ${f.error}`);
@@ -202,11 +202,11 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       if (result.error === 'in_flight') return;
 
       const needsForce = result.needsForce === true;
-      const providersTried = Array.isArray(result.providersTried)
-        ? result.providersTried.filter((p): p is string => typeof p === 'string')
+      const attemptedProviders = Array.isArray(result.attemptedProviders)
+        ? result.attemptedProviders.filter((p): p is string => typeof p === 'string')
         : [];
       const detail = formatRegenerateErrorDetail(
-        providersTried,
+        attemptedProviders,
         result.slotFailures,
         t('historyRegenerateProvidersTried'),
       );

@@ -153,6 +153,32 @@ export type PingMessage = {
     type: 'PING';
 };
 
+/**
+ * PBI 2026-10-11-08 (NN08 follow-up): E2E probe relay. Content scripts
+ * cannot reach chrome.storage.session (empirically confirmed: armed flag set
+ * via SW, new code running, yet zero publishes), so arming queries and state
+ * reports travel as runtime messages; the SW owns the session leg.
+ * No externally_connectable in the manifest, so page JS cannot send these.
+ */
+export type OwE2eProbeQueryMessage = {
+    type: 'OW_PROBE_QUERY';
+};
+
+export type OwE2EProbeStateMessage = {
+    type: 'OW_PROBE_STATE';
+    // Inline shape (not `import type` from content/e2eTestState.ts): that
+    // would close a content→background→content type cycle. Drift is pinned
+    // by the runtime validator (validators.ts) and its tests instead.
+    payload: {
+        maxScrollPercentage: number;
+        isValidVisitReported: boolean;
+        startTime: number;
+        minVisitDuration: number;
+        minScrollDepth: number;
+        duration: number;
+    };
+};
+
 type RefreshLocalMarkdownSchedulerMessage = {
     type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
 };
@@ -223,6 +249,8 @@ export type ExtensionMessage = (
     | SessionLockRequestMessage
     | ContentCleansingExecutedMessage
     | PingMessage
+    | OwE2eProbeQueryMessage
+    | OwE2EProbeStateMessage
     | RefreshLocalMarkdownSchedulerMessage
     | ConsentStateChangedMessage
     | GenerateReviewSummaryMessage

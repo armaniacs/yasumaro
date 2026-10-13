@@ -133,51 +133,51 @@ export function isHardStripTarget(element: Element, attributes: AttributeSelecto
 export function stripHardStripElements(element: Element): number {
     let removedCount = 0;
 
-    // 削除対象の要素を収集（後から削除してDOM操作の問題を回避）
-    const elementsToRemove = new Set<Element>();
+    // Remove only after collection finishes: removing mid-scan invalidates DOM traversal
+    const elementsToRemove = collectHardStripTargets(element);
 
-    // タグセレクタをCSSセレクタ文字列に変換
-    const tagSelector = [...HARD_STRIP_TAGS].join(',');
-
-    // タグに一致する要素を取得
-    if (tagSelector) {
-        const tagElements = element.querySelectorAll(tagSelector);
-        tagElements.forEach(elem => elementsToRemove.add(elem));
-    }
-
-    // 属性に一致する要素を取得
-    for (const attr of HARD_STRIP_ATTRIBUTES) {
-        if (attr.value instanceof RegExp) {
-            // RegExp は CSS セレクタで表現できないため、要素を直接走査
-            element.querySelectorAll('*').forEach(elem => {
-                if (isHardStripTarget(elem, [attr]) && !elementsToRemove.has(elem)) {
-                    elementsToRemove.add(elem);
-                }
-            });
-        } else {
-            const selector = buildAttributeSelector(attr);
-            const attrElements = element.querySelectorAll(selector);
-            attrElements.forEach(elem => {
-                if (!elementsToRemove.has(elem)) {
-                    elementsToRemove.add(elem);
-                }
-            });
-        }
-    }
-
-    // 非表示要素を取得（hidden/display:noneの中にJS/テンプレート断片が
-    // 平文テキストとして埋め込まれるケースを除去）
-    element.querySelectorAll(HIDDEN_ELEMENT_SELECTOR).forEach(elem => {
-        elementsToRemove.add(elem);
-    });
-
-    // 削除実行
     for (const elem of elementsToRemove) {
         elem.remove();
         removedCount++;
     }
 
     return removedCount;
+}
+
+/**
+ * Collect all hard-strip targets: tag matches, attribute matches, and hidden elements.
+ * Shared by stripHardStripElements and countCleanseTargets; duplicating the match
+ * logic makes the recount drift from the strip contract, so this is the single
+ * source of truth for target detection
+ */
+function collectHardStripTargets(root: Element): Set<Element> {
+    const targets = new Set<Element>();
+
+    const tagSelector = [...HARD_STRIP_TAGS].join(',');
+
+    if (tagSelector) {
+        root.querySelectorAll(tagSelector).forEach(elem => targets.add(elem));
+    }
+
+    for (const attr of HARD_STRIP_ATTRIBUTES) {
+        if (attr.value instanceof RegExp) {
+            // RegExp values cannot be expressed as CSS selectors, so scan elements directly
+            root.querySelectorAll('*').forEach(elem => {
+                if (isHardStripTarget(elem, [attr])) {
+                    targets.add(elem);
+                }
+            });
+        } else {
+            const selector = buildAttributeSelector(attr);
+            root.querySelectorAll(selector).forEach(elem => targets.add(elem));
+        }
+    }
+
+    // Hidden elements: municipal CMS pages embed JS/template fragments as plain
+    // text inside hidden/display:none elements
+    root.querySelectorAll(HIDDEN_ELEMENT_SELECTOR).forEach(elem => targets.add(elem));
+
+    return targets;
 }
 
 /**
@@ -284,31 +284,7 @@ export function countCleanseTargets(element: Element, options: CleanseOptions = 
     let keywordStripCount = 0;
 
     if (hardStripEnabled) {
-        const elementsToCount = new Set<Element>();
-
-        // タグセレクタをCSSセレクタ文字列に変換
-        const tagSelector = [...HARD_STRIP_TAGS].join(',');
-
-        // タグに一致する要素をカウント
-        if (tagSelector) {
-            element.querySelectorAll(tagSelector).forEach(elem => elementsToCount.add(elem));
-        }
-
-        // 属性に一致する要素をカウント
-        for (const attr of HARD_STRIP_ATTRIBUTES) {
-            if (attr.value instanceof RegExp) {
-                // RegExp は CSS セレクタで表現できないため、要素を直接走査
-                element.querySelectorAll('*').forEach(elem => {
-                    if (isHardStripTarget(elem, [attr])) {
-                        elementsToCount.add(elem);
-                    }
-                });
-            } else {
-                const selector = buildAttributeSelector(attr);
-                element.querySelectorAll(selector).forEach(elem => elementsToCount.add(elem));
-            }
-        }
-        hardStripCount = elementsToCount.size;
+        hardStripCount = collectHardStripTargets(element).size;
     }
 
     if (keywordStripEnabled && keywords.length > 0) {
