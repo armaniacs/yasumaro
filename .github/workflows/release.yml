@@ -42,6 +42,18 @@ jobs:
         run: npx wxt zip -b chrome
       - name: Check bundle size (M26)
         run: npm run check-bundle-size -- chrome-mv3
+      - name: Sign CRX with private key
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          KEY_FILE="$(mktemp)"
+          trap 'rm -f "${KEY_FILE}"' EXIT
+          printf '%s\n' "${CRX_PRIVATE_KEY}" > "${KEY_FILE}"
+          node .github/workflows/build-crx3.mjs \
+            "dist/yasumaro-${VERSION}-chrome.zip" \
+            "${KEY_FILE}" \
+            "dist/yasumaro-${VERSION}-chrome.crx"
       - name: Build for Firefox
         env:
           OW_E2E_PROBE: '0'
@@ -53,7 +65,7 @@ jobs:
           OW_E2E_PROBE: '0'
         run: npx wxt zip -b edge
       - name: List output archives
-        run: ls -la dist/*.zip
+        run: ls -la dist/*.zip dist/*.crx
       - name: Create Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
@@ -65,10 +77,73 @@ jobs:
             See [CHANGELOG.md](https://github.com/armaniacs/Yasumaro/blob/main/CHANGELOG.md) for details.
           files: |
             dist/yasumaro-${{ steps.version.outputs.version }}-chrome.zip
+            dist/yasumaro-${{ steps.version.outputs.version }}-chrome.crx
             dist/yasumaro-${{ steps.version.outputs.version }}-firefox.zip
             dist/yasumaro-${{ steps.version.outputs.version }}-edge.zip
           draft: false
           prerelease: false
+      - name: Upload to Chrome Web Store
+        env:
+          CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          # Submit for review only when the repository variable is 'true'; otherwise the
+          # item stays as an uploaded draft and is published manually from the dashboard.
+          CWS_AUTO_PUBLISH: ${{ vars.CWS_AUTO_PUBLISH }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ITEM_PATH="publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}"
+
+          ACCESS_TOKEN=$(curl -sS --connect-timeout 10 --max-time 30 https://oauth2.googleapis.com/token \
+            --data-urlencode "client_id=${CHROME_CLIENT_ID}" \
+            --data-urlencode "client_secret=${CHROME_CLIENT_SECRET}" \
+            --data-urlencode "refresh_token=${CHROME_REFRESH_TOKEN}" \
+            --data-urlencode "grant_type=refresh_token" | jq -r '.access_token // empty')
+          if [ -z "${ACCESS_TOKEN}" ]; then
+            echo "OAuth token refresh failed"
+            exit 1
+          fi
+          echo "::add-mask::${ACCESS_TOKEN}"
+
+          UPLOAD_STATE=$(curl -sS --connect-timeout 10 --max-time 300 -X POST \
+            "https://chromewebstore.googleapis.com/upload/v2/${ITEM_PATH}:upload" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "X-Goog-Upload-Protocol: raw" \
+            -H "X-Goog-Upload-File-Name: extension.crx" \
+            -T "dist/yasumaro-${VERSION}-chrome.crx" | jq -r '.uploadState // "UNKNOWN"')
+          echo "Upload: ${UPLOAD_STATE}"
+
+          for i in $(seq 1 30); do
+            [ "${UPLOAD_STATE}" = "IN_PROGRESS" ] || break
+            sleep 10
+            UPLOAD_STATE=$(curl -sS --connect-timeout 10 --max-time 30 \
+              "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:fetchStatus" \
+              -H "Authorization: Bearer ${ACCESS_TOKEN}" | jq -r '.lastAsyncUploadState // "UNKNOWN"')
+            echo "Upload status check ${i}/30: ${UPLOAD_STATE}"
+          done
+
+          if [ "${UPLOAD_STATE}" != "SUCCEEDED" ]; then
+            echo "Upload failed with state: ${UPLOAD_STATE}"
+            exit 1
+          fi
+
+          if [ "${CWS_AUTO_PUBLISH}" != "true" ]; then
+            echo "CWS_AUTO_PUBLISH is not 'true'; skipping publish"
+            exit 0
+          fi
+
+          PUBLISH_ERROR=$(curl -sS --connect-timeout 10 --max-time 60 -X POST \
+            "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:publish" \
+            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"publishType":"DEFAULT_PUBLISH"}' | jq -r '.error.message // empty')
+          if [ -n "${PUBLISH_ERROR}" ]; then
+            echo "Publish failed: ${PUBLISH_ERROR}"
+            exit 1
+          fi
+          echo "Publish submitted"
 
   record-metrics:
     needs: release
