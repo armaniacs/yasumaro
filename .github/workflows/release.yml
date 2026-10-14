@@ -145,11 +145,25 @@ jobs:
             exit 0
           fi
 
-          PUBLISH_ERROR=$(curl -sS --connect-timeout 10 --max-time 60 -X POST \
+          # Transport failures abort via set -e (curl exit code is not swallowed by a
+          # pipe); an API-level rejection is a non-200 response. The Edge step uses the
+          # same -w '%{http_code}' pattern.
+          PUBLISH_RESP_FILE="$(mktemp)"
+          trap 'rm -f "${PUBLISH_RESP_FILE}"' EXIT
+          PUBLISH_HTTP=$(curl -sS --connect-timeout 10 --max-time 60 -X POST \
             "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:publish" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d '{"publishType":"DEFAULT_PUBLISH"}' | jq -r '.error.message // empty')
+            -d '{"publishType":"DEFAULT_PUBLISH"}' \
+            -o "${PUBLISH_RESP_FILE}" -w '%{http_code}')
+          if [ "${PUBLISH_HTTP}" != "200" ]; then
+            echo "Publish failed (HTTP ${PUBLISH_HTTP}):"
+            jq -c '{error: (.error // null), status: .status, message: .message}' "${PUBLISH_RESP_FILE}" 2>/dev/null \
+              || echo "Non-JSON response"
+            exit 1
+          fi
+          # Belt and suspenders: a 200 body that still carries an error object is a failure.
+          PUBLISH_ERROR=$(jq -r '.error.message // empty' "${PUBLISH_RESP_FILE}")
           if [ -n "${PUBLISH_ERROR}" ]; then
             echo "Publish failed: ${PUBLISH_ERROR}"
             exit 1
