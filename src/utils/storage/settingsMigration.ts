@@ -464,7 +464,12 @@ async function applyMigrationsCore(
                             const reEncryptedValue = await encryptApiKey(attempt.decrypted, key, field);
                             reEncrypted[field] = reEncryptedValue;
                             await logWarn(`Migrated ${field} from legacy 100k to 600k KDF`, { field }, undefined, 'settingsMigration');
-                        } catch {}
+                        } catch (error: unknown) {
+                            // Re-encryption is best-effort: the value stays
+                            // readable via the legacy path. The WARN keeps the
+                            // stalled migration visible (was silent).
+                            await logWarn(`Failed to re-encrypt ${field} with current KDF`, { field, error: errorMessage(error) }, undefined, 'settingsMigration');
+                        }
                     }
                 } else {
                     await logError(`Failed to decrypt ${field} (both current and legacy)`, { field }, ErrorCode.CRYPTO_DECRYPTION_FAILURE);

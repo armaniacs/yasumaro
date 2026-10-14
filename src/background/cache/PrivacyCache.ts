@@ -2,6 +2,7 @@
 
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import { isPrivacyInfo } from '../../utils/privacyChecker.js';
 
@@ -83,8 +84,10 @@ export class PrivacyCache {
             return cached;
           }
         }
-      } catch {
-        // non-fatal
+      } catch (error: unknown) {
+        // Fail-open: fall through to a fresh privacy check below. The WARN
+        // keeps the failure visible in diagnostic logs (was silent).
+        addLog(LogType.WARN, 'PrivacyCache: failed to restore from session storage', { error: errorMessage(error) });
       }
     }
 
@@ -107,7 +110,11 @@ export class PrivacyCache {
         const all = await chrome.storage.session.get(null);
         const privacyKeys = Object.keys(all).filter((k) => k.startsWith('privacyCache_'));
         if (privacyKeys.length > 0) await chrome.storage.session.remove(privacyKeys);
-      } catch {}
+      } catch (error: unknown) {
+        // Best-effort cleanup: keys stay until session end. The WARN keeps
+        // the failure visible in diagnostic logs (was silent).
+        addLog(LogType.WARN, 'PrivacyCache: failed to clear session keys', { error: errorMessage(error) });
+      }
     }
   }
 }

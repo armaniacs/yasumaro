@@ -1,5 +1,7 @@
 import { type PanelLifecycle, type PanelInitMap } from './types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { logError } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
 import { ReloadGuard } from './asyncData/reloadGuard.js';
 
 /**
@@ -77,7 +79,9 @@ export class NavigationRegistry {
       try {
         listener(panelId);
       } catch (err) {
-        console.error(`[NavigationRegistry] navigate listener failed for panel "${panelId}":`, err);
+        // Listener failures must not break other listeners; the cause goes
+        // through the structured-log seam instead of console.
+        void logError(`[NavigationRegistry] navigate listener failed for panel "${panelId}"`, { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'NavigationRegistry');
       }
     }
 
@@ -113,7 +117,9 @@ export class NavigationRegistry {
 
     if ((panel.category === 'async-data' || panel.category === 'diagnostic') && panel.load) {
       panel.load().catch((err: unknown) => {
-        console.error(`[NavigationRegistry] load failed for panel "${panelId}":`, err);
+        // DOM fallback below stays; the cause now also goes through the
+        // structured-log seam instead of console.
+        void logError(`[NavigationRegistry] load failed for panel "${panelId}"`, { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'NavigationRegistry');
         // UI feedback for load failure: panels handle their own errors internally,
         // but an unexpected rejection (e.g., programming error) should be visible
         // rather than leaving the panel empty.
@@ -144,7 +150,9 @@ export class NavigationRegistry {
       try {
         this.panels.get(panelId)?.destroy?.();
       } catch (err) {
-        console.error(`[NavigationRegistry] destroy failed for panel "${panelId}":`, err);
+        // destroyAll is best-effort (pagehide path); the cause goes through
+        // the structured-log seam instead of console.
+        void logError(`[NavigationRegistry] destroy failed for panel "${panelId}"`, { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'NavigationRegistry');
       }
     }
   }

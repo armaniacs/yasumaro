@@ -1,6 +1,9 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
 import { DEFAULT_PANEL_ID, PANEL_CATALOG, CATALOG_ROWS, type PanelCatalogId } from './panelCatalog.js';
 import { type PanelLifecycle } from './types.js';
+import { logError } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 /**
  * Settings panels shown only while the settings subgroup is expanded
@@ -214,6 +217,8 @@ export class DashboardBootstrapper {
   }
 
   #reportNavigateFailure(panelId: string, error: unknown): void {
-    console.error(`[DashboardBootstrapper] navigate failed for panel "${panelId}":`, error);
+    // The dashboard must initialise even when the default panel fails; the
+    // cause goes through the structured-log seam instead of console.
+    void logError(`[DashboardBootstrapper] navigate failed for panel "${panelId}"`, { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'DashboardBootstrapper');
   }
 }

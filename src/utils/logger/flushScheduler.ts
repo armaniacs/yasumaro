@@ -12,9 +12,16 @@ export interface LogFlushScheduler {
 /** Chrome runtime implementation — uses chrome.alarms + onSuspend */
 export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
   private handler: (() => Promise<void>) | null = null;
+  private listenersRegistered = false;
 
   onFlushRequested(handler: () => Promise<void>): void {
     this.handler = handler;
+    // Idempotent: re-init (e.g. repeated initLogger calls on one instance)
+    // must not stack duplicate alarm/suspend listeners that would flush N
+    // times per alarm. Multi-instance registration is unchanged — each
+    // instance still owns its own single pair.
+    if (this.listenersRegistered) return;
+    this.listenersRegistered = true;
     if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.onAlarm) {
       chrome.alarms.onAlarm.addListener((alarm) => {
         if (alarm.name === LOGGER_ALARM_NAME) void this.handler?.();

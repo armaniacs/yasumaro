@@ -418,6 +418,12 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
     },
     destroy() {
       lifecycle.destroy();
+      // Release pending copy-feedback timers: firing post-destroy would only
+      // touch detached nodes, but holding them is a leak across reloads.
+      for (const state of copyStates) {
+        if (state.timer !== null) clearTimeout(state.timer);
+        state.timer = null;
+      }
       emptyEl = null;
       rowCapEl = null;
       loopsBody = null;

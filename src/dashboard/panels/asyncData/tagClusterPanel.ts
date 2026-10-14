@@ -26,6 +26,9 @@ import { type PeriodRange } from '../../components/periodFilter.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { limitClusterNodes, renderClusterGraph } from './clusterGraphRenderer.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 export function createTagClusterPanel(): PanelLifecycle {
   let svg: SVGSVGElement | null = null;
@@ -131,7 +134,9 @@ export function createTagClusterPanel(): PanelLifecycle {
         loadingManager.cleanup();
       } catch (error) {
         loadingManager.cleanup();
-        console.error('[tagClusterPanel] error:', error);
+        // User notice via notices.showError stays; the cause now also goes
+        // through the structured-log seam instead of console.
+        void logError('[tagClusterPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'tagClusterPanel');
         // WHY: a persistent query failure must not render as an empty graph —
         // show a distinct error state (timeHeatmapPanel convention).
         if (isStale()) return;

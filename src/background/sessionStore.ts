@@ -380,8 +380,10 @@ export class SessionStore implements SessionStorePort {
 
     if (chrome?.storage?.local) {
       // Fire-and-forget: we cannot reliably await inside onSuspend.
-      chrome.storage.local.set(items).catch(() => {
-        // Ignore errors: this is best-effort emergency persistence.
+      // Best-effort persistence, but a lost emergency flush must stay visible
+      // in diagnostic logs (was silent).
+      chrome.storage.local.set(items).catch((error: unknown) => {
+        addLog(LogType.WARN, 'SessionStore: emergency flush to local storage failed', { error: errorMessage(error) });
       });
     }
   }

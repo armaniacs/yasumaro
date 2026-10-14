@@ -40,6 +40,9 @@ import {
   showRowCapNotice,
 } from './clusterGraphRenderer.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 // Keywords are longer than tags; the aria-label stays a compact summary.
 const ARIA_LABEL_MAX_KEYWORDS = 8;
@@ -187,7 +190,9 @@ export function createWordClusterPanel(): PanelLifecycle {
       } catch (error) {
         loadingManager.cleanup();
         notices.hide('loading');
-        console.error('[wordClusterPanel] error:', error);
+        // User notice via notices.showError stays; the cause now also goes
+        // through the structured-log seam instead of console.
+        void logError('[wordClusterPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'wordClusterPanel');
         if (isStale()) return;
         notices.showError('wordClusterError', 'Failed to load the word cluster. Try again.');
       }

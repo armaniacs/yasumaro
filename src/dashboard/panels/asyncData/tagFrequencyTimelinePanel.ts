@@ -34,6 +34,9 @@ import {
 } from '../../tagFrequencyTimeline.js';
 import type { BrowsingLogEntry } from '../../dashboardSqliteService.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 /** Number of token-based series color classes cycled through in CSS. */
@@ -408,7 +411,9 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
         });
         renderTimeline(timeline);
       } catch (error) {
-        console.error('[tagFrequencyTimelinePanel] error:', error);
+        // User notice via notices.showError stays; the cause now also goes
+        // through the structured-log seam instead of console.
+        void logError('[tagFrequencyTimelinePanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'tagFrequencyTimelinePanel');
         if (isStale()) return;
         notices.showError(
           'dashboardTagTimelineError',

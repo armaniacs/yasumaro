@@ -45,6 +45,9 @@ import {
 } from '../../domainAnalysisAggregate.js';
 import { tryNavigateTyped } from '../registryContext.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 function navigateToHistoryWithDomain(domain: string): void {
   tryNavigateTyped('panel-sqlite-history', { searchDomain: domain });
@@ -199,7 +202,9 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
           notices.show('urlTruncated');
         }
       } catch (error) {
-        console.error('[domainAnalysisPanel] error:', error);
+        // User notice via notices.showError stays; the cause now also goes
+        // through the structured-log seam instead of console.
+        void logError('[domainAnalysisPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'domainAnalysisPanel');
         if (isStale()) return;
         notices.showError(
           'domainAnalysisError',

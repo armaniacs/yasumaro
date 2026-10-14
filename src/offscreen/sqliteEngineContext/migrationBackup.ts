@@ -201,13 +201,22 @@ async function isIdbMigrationDone(): Promise<boolean> {
   try {
     const items = await chrome.storage.local.get(StorageKeys.IDB_MIGRATION_V2_DONE);
     return items[StorageKeys.IDB_MIGRATION_V2_DONE] === true;
-  } catch {
+  } catch (error: unknown) {
+    // Fail-safe: treated as not-done so the check retries. WARN keeps the
+    // storage failure visible in diagnostic logs (was silent).
+    void logWarn('migrationBackup: failed to read migration flag', { error: errorMessage(error) }, undefined, 'migrationBackup');
     return false;
   }
 }
 
 async function setIdbMigrationDone(): Promise<void> {
-  try { await chrome.storage.local.set({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true }); } catch { /* offscreen context */ }
+  try {
+    await chrome.storage.local.set({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+  } catch (error: unknown) {
+    // Flag write failed: migration re-runs next time (self-healing but
+    // wasteful), so keep the failure visible (was silent).
+    void logWarn('migrationBackup: failed to write migration flag', { error: errorMessage(error) }, undefined, 'migrationBackup');
+  }
 }
 
 /**
@@ -254,13 +263,19 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
     );
   } finally {
     if (dbHandle !== null) {
-      await sqlite3.close(dbHandle).catch(() => {});
+      await sqlite3.close(dbHandle).catch((error: unknown) => {
+        // Close failure risks the IDB-upgrade hang described below, so it
+        // must stay visible in diagnostic logs (was silent).
+        void logWarn('migrationBackup: failed to close old db handle', { error: errorMessage(error) }, undefined, 'migrationBackup');
+      });
     }
     // Critical: the old VFS's IndexedDB connection MUST be closed, or the
     // new engine's indexedDB.open(DB_FILENAME, N) upgrade below hangs
     // indefinitely (verified in the E2E spike for this PBI).
     // WHY: IDBBatchAtomicVFS `close()` not in TypeScript types; must close old IDB to prevent migration hang
-    await (vfs as unknown as { close: () => Promise<void> }).close().catch(() => {});
+    await (vfs as unknown as { close: () => Promise<void> }).close().catch((error: unknown) => {
+      void logWarn('migrationBackup: failed to close old VFS connection', { error: errorMessage(error) }, undefined, 'migrationBackup');
+    });
   }
 }
 

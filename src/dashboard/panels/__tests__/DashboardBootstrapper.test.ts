@@ -4,6 +4,18 @@ import { NavigationRegistry } from '../NavigationRegistry.js';
 import { DashboardBootstrapper } from '../DashboardBootstrapper.js';
 import { PANEL_CATALOG } from '../panelCatalog.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: 'fn',
+  }),
+);
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: 'internal',
+  }),
+);
 
 function mockPanel(overrides?: Partial<PanelLifecycle>): PanelLifecycle {
   return {
@@ -145,14 +157,8 @@ describe('DashboardBootstrapper', () => {
   });
 
   describe('navigate failures are recorded, not swallowed', () => {
-    let consoleError: ReturnType<typeof vi.spyOn>;
-
     beforeEach(() => {
-      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleError.mockRestore();
+      vi.mocked(logError).mockClear();
     });
 
     it('records a rejected navigation triggered by a sidebar click', async () => {
@@ -168,7 +174,12 @@ describe('DashboardBootstrapper', () => {
       await flush();
 
       expect(navigate).toHaveBeenCalledTimes(1);
-      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-missing'), failure);
+      expect(logError).toHaveBeenCalledWith(
+        expect.stringContaining('panel-missing'),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
     });
 
     it('records the initial navigate failure without rejecting start()', async () => {
@@ -177,7 +188,12 @@ describe('DashboardBootstrapper', () => {
 
       await expect(bootstrapper.start('panel-missing')).resolves.toBeUndefined();
 
-      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-missing'), failure);
+      expect(logError).toHaveBeenCalledWith(
+        expect.stringContaining('panel-missing'),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
     });
 
     it('says nothing when the navigation succeeds', async () => {
@@ -192,19 +208,13 @@ describe('DashboardBootstrapper', () => {
       await flush();
 
       expect(registry.activeId).toBe('panel-ok');
-      expect(consoleError).not.toHaveBeenCalled();
+      expect(logError).not.toHaveBeenCalled();
     });
   });
 
   describe('failed click navigation keeps the sidebar consistent with the displayed panel', () => {
-    let consoleError: ReturnType<typeof vi.spyOn>;
-
     beforeEach(() => {
-      consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-    });
-
-    afterEach(() => {
-      consoleError.mockRestore();
+      vi.mocked(logError).mockClear();
     });
 
     /** Tab A active (the displayed panel's tab) + tab B (the failed target). */
@@ -232,7 +242,12 @@ describe('DashboardBootstrapper', () => {
       await flush();
 
       expect(navigate).toHaveBeenCalledTimes(1);
-      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-b'), failure);
+      expect(logError).toHaveBeenCalledWith(
+        expect.stringContaining('panel-b'),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
       expect(btnB.classList.contains('active')).toBe(false);
       expect(btnB.getAttribute('aria-selected')).toBe('false');
       expect(btnB.getAttribute('tabindex')).toBe('-1');
@@ -263,8 +278,10 @@ describe('DashboardBootstrapper', () => {
         btnGhost.click();
         await flush();
 
-        expect(consoleError).toHaveBeenCalledWith(
+        expect(logError).toHaveBeenCalledWith(
           expect.stringContaining('panel-ghost'),
+          expect.anything(),
+          expect.anything(),
           expect.anything(),
         );
         expect(btnGhost.classList.contains('active')).toBe(false);
@@ -293,7 +310,12 @@ describe('DashboardBootstrapper', () => {
         btnB.click();
         await flush();
 
-        expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-b'), failure);
+        expect(logError).toHaveBeenCalledWith(
+          expect.stringContaining('panel-b'),
+          expect.anything(),
+          expect.anything(),
+          expect.anything(),
+        );
         expect(panelBEl.classList.contains('active')).toBe(true);
         expect(btnB.classList.contains('active')).toBe(true);
         expect(btnB.getAttribute('aria-selected')).toBe('true');
@@ -315,7 +337,12 @@ describe('DashboardBootstrapper', () => {
 
       await expect(bootstrapper.start('panel-missing')).resolves.toBeUndefined();
 
-      expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('panel-missing'), failure);
+      expect(logError).toHaveBeenCalledWith(
+        expect.stringContaining('panel-missing'),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
       expect(btnA.classList.contains('active')).toBe(true);
       expect(btnA.getAttribute('aria-selected')).toBe('true');
     });

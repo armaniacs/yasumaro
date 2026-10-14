@@ -1,4 +1,6 @@
 import { type PanelLifecycle } from '../types.js';
+import { logWarn } from '../../../utils/logger/api.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import {
   getAiSummaryCleansingSettings, applyAiSummaryCleansingSettingsToUI,
   setupAiSummaryCleansingEventListeners,
@@ -21,10 +23,21 @@ export function createAiSummaryCleansingPanel(): PanelLifecycle & { refresh?: ()
       // delta write are wired here too: binding them in this module as well
       // made one slider gesture run two writes, the whole-form one first.
       setupAiSummaryCleansingEventListeners();
-      try { initPerSiteOverrides(); } catch {}
+      // A failed per-site init must not break the whole panel mount, but it
+      // leaves the overrides UI dead — keep it visible in diagnostic logs
+      // (was silent).
+      try {
+        initPerSiteOverrides();
+      } catch (error: unknown) {
+        void logWarn('aiSummaryCleansingPanel: per-site overrides init failed', { error: errorMessage(error) }, undefined, 'aiSummaryCleansingPanel');
+      }
       const feedbackContainer = container.querySelector('#cleansingFeedbackContainer') as HTMLElement | null;
       if (feedbackContainer) {
-        renderCleansingFeedback(feedbackContainer).catch(() => {});
+        // Best-effort feedback render; NavigationRegistry's panel-load-error
+        // path stays the backstop for mount-level failures.
+        renderCleansingFeedback(feedbackContainer).catch((error: unknown) => {
+          void logWarn('aiSummaryCleansingPanel: feedback render failed', { error: errorMessage(error) }, undefined, 'aiSummaryCleansingPanel');
+        });
       }
     },
     async refresh() {

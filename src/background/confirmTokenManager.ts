@@ -18,6 +18,14 @@ export { computeScopeHash } from '../utils/scopeHash.js';
 export const CONFIRM_TOKENS_SESSION_KEY = 'dashboardSqliteConfirmTokens';
 export const CONFIRM_TOKEN_TTL_MS = 60_000;
 
+/**
+ * Hard cap on live (unexpired) tokens so create-spam cannot grow the session
+ * map unbounded (pruneExpired alone only runs on create/verify traffic).
+ * When full, the oldest-expiring entry is evicted: every entry has a 60s TTL,
+ * so eviction only discards a token the user was about to have to re-issue.
+ */
+export const MAX_CONFIRM_TOKENS = 100;
+
 // Serialises the load -> mutate -> save of the token map so a concurrent
 // create/verify pair cannot lose an entry to a last-write-wins overwrite
 // (VULN-039). All map mutations run through withTokenMap.
@@ -128,6 +136,12 @@ export async function createConfirmToken(
   };
   return withTokenMap(async (map) => {
     pruneExpired(map);
+    const live = Object.keys(map);
+    if (live.length >= MAX_CONFIRM_TOKENS) {
+      // Evict the oldest-expiring entry first (all entries die within 60s).
+      live.sort((a, b) => (map[a]?.expiresAt ?? 0) - (map[b]?.expiresAt ?? 0));
+      delete map[live[0]!];
+    }
     map[token] = record;
     await saveMap(map);
     return token;
@@ -165,6 +179,12 @@ export async function verifyConfirmToken(
     }
     // Single-use: consume
     delete map[token];
+    // Residual window (accepted): if this save fails, the persisted map still
+    // holds the token until TTL expiry, so a SW restart within the 60s TTL
+    // could allow one replay. Fail-closed (deny on save error) would instead
+    // brick the legitimate in-flight action on a transient session failure;
+    // the failure stays visible via logTokenPersistFailure and the 60s TTL
+    // bounds the replay window.
     try { await saveMap(map); } catch (e) { await logTokenPersistFailure('save after consume', e); }
     return true;
   });

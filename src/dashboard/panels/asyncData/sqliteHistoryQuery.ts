@@ -21,6 +21,9 @@ import { getSavedUrlEntries } from '../../../utils/storageUrls.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { shouldFallbackToTextSearch } from '../../historyFilters.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 export { isServiceError };
 export type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
@@ -226,8 +229,9 @@ async function enrichRows(
     storageMap = await loadLegacyLookup(fetchEntries);
   } catch (err) {
     // A legacy storage failure must never hide SQLite rows: fall back to the
-    // un-enriched rows instead of failing the query.
-    console.error('Failed to load chrome.storage entries for enrichment:', err);
+    // un-enriched rows instead of failing the query. The cause goes through
+    // the structured-log seam instead of console.
+    void logError('Failed to load chrome.storage entries for enrichment', { error: errorMessage(err) }, ErrorCode.STORAGE_READ_FAILURE, 'sqliteHistoryQuery');
     return rows;
   }
   return enrichRowsWithLegacyMetadata(rows, storageMap);

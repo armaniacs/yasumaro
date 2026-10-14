@@ -39,6 +39,9 @@ import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
 
 function countUniqueTags(rows: Array<{ tags?: string | null }>): number {
@@ -245,7 +248,9 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
 
         renderFromCache();
       } catch (error) {
-        console.error('[tagCooccurrenceTablePanel] error:', error);
+        // User notice stays; the cause now also goes through the
+        // structured-log seam instead of console.
+        void logError('[tagCooccurrenceTablePanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'tagCooccurrenceTablePanel');
         if (isStale()) return;
         cachedGraph = null;
         clearOutput();

@@ -378,6 +378,17 @@ type QueueTask = () => Promise<void>;
 const requestQueue: QueueTask[] = [];
 let queueProcessing = false;
 
+/**
+ * Hard cap on queued (not yet running) requests. Without it a message burst
+ * faster than SQLite can drain grows this array — and the matching
+ * `opfsPending` entry on the caller side — without limit. On shed, the
+ * caller gets a synthetic error response (same shape as handleRequest
+ * failures) so its pending entry resolves instead of lingering, plus a
+ * worker-log line so the shed is visible. Steady-state traffic never
+ * approaches this bound (one SQLite op at a time drains in ms).
+ */
+const MAX_QUEUED_REQUESTS = 200;
+
 async function processQueue(): Promise<void> {
   if (queueProcessing) return;
   queueProcessing = true;
@@ -391,7 +402,16 @@ async function processQueue(): Promise<void> {
   }
 }
 
-function enqueue(task: QueueTask): void {
+function enqueue(task: QueueTask, req: WorkerRequestMessage): void {
+  if (requestQueue.length >= MAX_QUEUED_REQUESTS) {
+    postWorkerLog('warn', 'opfsWorker: request queue full, shedding load', { type: req.type });
+    (self as unknown as DedicatedWorkerGlobalScope).postMessage({
+      id: req.id,
+      success: false,
+      error: 'worker overloaded, request shed',
+    } satisfies WorkerResponseMessage);
+    return;
+  }
   requestQueue.push(task);
   void processQueue();
 }
@@ -405,5 +425,5 @@ self.onmessage = (e: MessageEvent<WorkerRequestMessage>) => {
     const response = await handleRequest(e.data);
     // WHY: `self` is typed as `Window` in non-Worker contexts; cast is needed for Worker global scope
     (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);
-  });
+  }, e.data);
 };

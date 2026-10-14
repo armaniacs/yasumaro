@@ -6,6 +6,8 @@ import { formatSuccessMessage } from '../errorUtils.js';
 import { clearElement } from '../domUtils.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
+import { logWarn } from '../../utils/logger/api.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
@@ -320,7 +322,11 @@ export class RecordSession {
 
   /** Shared: report background activity fire-and-forget. */
   private reportActivity(): void {
-    messageTransport.send({ type: 'ACTIVITY_UPDATE', payload: {} }).catch(() => {});
+    // Activity loss means session tracking gaps; keep it visible in
+    // diagnostic logs (was silent).
+    messageTransport.send({ type: 'ACTIVITY_UPDATE', payload: {} }).catch((error: unknown) => {
+      void logWarn('recordSession: failed to report activity', { error: errorMessage(error) }, undefined, 'recordSession');
+    });
   }
 
   /** Shared: render the success message into the status div. */

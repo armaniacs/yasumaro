@@ -129,9 +129,11 @@ export class HeaderDetector {
         });
       }, 'Privacy detection result');
 
-      // キャッシュに保存
-      this.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch(() => {
-        // バッジ更新失敗は無視（非重要なUI操作）
+      // キャッシュに保存（失敗は診断ログに残す。was silent）
+      this.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch((error: unknown) => {
+        void logDebug('HeaderDetector: cache save failed', {
+          error: errorMessage(error),
+        });
       });
 
       const cacheSize = this.cache.getPrivacyCacheSize();

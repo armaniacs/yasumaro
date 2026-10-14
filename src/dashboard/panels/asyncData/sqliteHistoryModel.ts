@@ -29,6 +29,8 @@ import { removeSavedUrl } from '../../../utils/storageUrls.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
@@ -281,7 +283,9 @@ function createChromeSortPreferencePersistence(): SortPreferencePersistence {
             try {
                 await chrome.storage.local.set({ [HISTORY_SORT_STORAGE_KEY]: JSON.stringify({ sortBy, sortDir }) });
             } catch (error) {
-                console.error('Failed to persist history sort preference:', error);
+                // Sort falls back to in-memory state; the failure stays
+                // visible via the structured-log seam instead of console.
+                void logError('Failed to persist history sort preference', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqliteHistoryModel');
             }
         },
     };
@@ -442,7 +446,11 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     for (const l of listeners) {
       try {
         l();
-      } catch {}
+      } catch (error: unknown) {
+        // Observer rule: one bad listener must not break the rest. Listener
+        // exceptions are bugs, so keep them visible via the seam (was silent).
+        void logError('sqliteHistoryModel: subscriber threw during notify', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'sqliteHistoryModel');
+      }
     }
   }
 
@@ -652,6 +660,9 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function onNavigateOut(): void {
+    // Flush (not drop) the debounced sort persist: the timer would otherwise
+    // fire post-unmount. Flushing preserves the user's sort choice.
+    flushPendingPersist();
     bumpGenerationOnUnmount();
     clearEntrySelection();
   }
@@ -694,7 +705,9 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
       try {
         await removeSavedUrl(url);
       } catch (error) {
-        console.error('Failed to remove legacy history entry:', error);
+        // Legacy cleanup is best-effort (SQLite row is already gone); the
+        // failure stays visible via the structured-log seam instead of console.
+        void logError('Failed to remove legacy history entry', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'sqliteHistoryModel');
       }
     }
     return null;

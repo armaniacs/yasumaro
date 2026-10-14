@@ -156,7 +156,16 @@ export class ManualContentFetcher {
       );
     } finally {
       if (createdTabId !== undefined) {
-        chrome.tabs.remove(createdTabId).catch(() => {});
+        chrome.tabs.remove(createdTabId).catch((error: unknown) => {
+          // Helper-tab cleanup is best-effort, but a leaked background tab is
+          // user-visible, so keep the failure in diagnostic logs (was silent).
+          void logWarn(
+            'Failed to remove helper tab',
+            { error: errorMessage(error) },
+            undefined,
+            'manualContentFetcher'
+          );
+        });
       }
     }
 

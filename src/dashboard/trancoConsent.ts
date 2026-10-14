@@ -8,6 +8,9 @@ import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { evaluateTrancoConsent, persistTrancoConsentDeny, persistTrancoConsentGrant } from '../utils/storage/trancoConsent.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 interface TrancoConsentState {
   needsConsent: 'GRANTED' | 'DENIED' | 'PENDING' | 'ALREADY_GRANTED' | 'RETRY_NEEDED';
@@ -52,7 +55,9 @@ export async function initTrancoConsentPanel(repo: SettingsReader = settingsRepo
     const consentState = await getTrancoConsentState(repo, version || 'unknown');
     updateConsentUI(repo, consentState);
   } catch (e) {
-    console.error('[Dashboard] Error loading Tranco consent state:', e);
+    // User notification via showStatus stays; the cause now also goes through
+    // the structured-log seam instead of console (sanitizer + aggregation).
+    await logError('[Dashboard] Error loading Tranco consent state', { error: errorMessage(e) }, ErrorCode.API_REQUEST_FAILURE, 'trancoConsent');
     showStatus('trancoUpdateStatus', getMessageOr('errorLoadTrancoData', 'Trancoデータの読み込みに失敗しました'), 'error');
   }
 }
@@ -153,7 +158,7 @@ async function handleTrancoGrant(repo: SettingsReader, version: string): Promise
 
     await initTrancoConsentPanel(repo);
   } catch (e) {
-    console.error('[Dashboard] Error granting Tranco consent:', e);
+    await logError('[Dashboard] Error granting Tranco consent', { error: errorMessage(e) }, ErrorCode.API_REQUEST_FAILURE, 'trancoConsent');
     showStatus(
       'trancoStatus',
       getMessageOr('errorConsentData', '同意の保存中にエラーが発生しました'),
@@ -174,7 +179,7 @@ async function handleTrancoDeny(repo: SettingsReader): Promise<void> {
 
     await initTrancoConsentPanel(repo);
   } catch (e) {
-    console.error('[Dashboard] Error denying Tranco consent:', e);
+    await logError('[Dashboard] Error denying Tranco consent', { error: errorMessage(e) }, ErrorCode.API_REQUEST_FAILURE, 'trancoConsent');
     showStatus(
       'trancoStatus',
       getMessageOr('errorConsentData', '拒否の保存中にエラーが発生しました'),

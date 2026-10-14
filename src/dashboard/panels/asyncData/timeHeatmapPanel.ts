@@ -23,6 +23,9 @@ import {
   type TimeHeatmapGrid,
   } from '../../timeHeatmapAggregate.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 const WEEKDAY_KEYS = [
   'dashboardTimeHeatmapSun',
@@ -117,7 +120,9 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
           numericCell,
         ));
       } catch (error) {
-        console.error('[timeHeatmapPanel] error:', error);
+        // User notice via notices.showError stays; the cause now also goes
+        // through the structured-log seam instead of console.
+        void logError('[timeHeatmapPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'timeHeatmapPanel');
         if (isStale()) return;
         notices.showError(
           'dashboardTimeHeatmapError',
