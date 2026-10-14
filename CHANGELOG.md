@@ -35,6 +35,18 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.42] - 2026-10-14
+
+Chrome Web Store への自動アップロードを再開するリリースです。タグ（`v*`）の push ごとに、署名済み CRX を Chrome Web Store へ送ります。
+
+### 追加・変更
+
+- `release.yml` に CRX3 署名（`.github/workflows/build-crx3.mjs`）と `Upload to Chrome Web Store` ステップを追加する。GitHub Release の作成後に実行するため、ストア側の失敗が Release 作成を妨げない
+- 偶数 minor 判定を設けず、`v*` タグごとにアップロードする。審査への提出は repository variable `CWS_AUTO_PUBLISH` が `true` のときだけ行い、未設定ならアップロードのみでドラフトを更新する
+- アップロード状態の確認を v2 の `:fetchStatus`（`lastAsyncUploadState`）へ変更する。`IN_PROGRESS` と `NOT_FOUND` は 10 秒間隔で最大 30 回待つ
+- GitHub Release に `yasumaro-<version>-chrome.crx` を添付する
+- README / SETUP_GUIDE / FAQ / OBSIDIAN_SETUP_GUIDE / index.html / PERMISSIONS.md の配布案内を Chrome Web Store 対応に更新し、`check-docs.mjs` を Chrome Web Store と Edge Add-ons の両リンクを個別に確認するようにする
+
 ## [6.9.41] - 2026-10-13
 
 テスト・CI 強化ラウンドの修正版です。恒久 skip の一掃（`no-dead-test-skip` ルール導入を含む）、manifest 権限検証ゲートの復旧と失敗側 pin、生成物層ゲートの JSON パース堅牢化、URL 検証のホスト名正規化漏れ修正、スイート実行時間予算の改定など 12 件を反映しました。
