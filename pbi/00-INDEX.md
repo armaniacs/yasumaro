@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-15 rust-wasm-migration ラウンド（wasm-1015） — ⬜ 1件未着手 🔧非機能追加
+### 2026-10-15 rust-wasm-migration ラウンド（wasm-1015） — ✅ 1件完了・アーカイブ済み 🔧非機能追加
 
-rust-wasm-migration skill による自律発見 (STEP 0: 棚卸し → 候補走査 → プローブ実測)。既存 4 クレートは移植・配線済み (sentence-dedup は content-script CSP で配線不能確定) のため、新規 Rust 移植の P1 はなし。唯一の計算律速区間 (export render) は ICU ネイティブ支配のため TS 側メモ化へ転換。RICE 採点・実測・却下理由の詳細は [2026-10-15-00-backlog-rustwasm-1015.md](2026-10-15-00-backlog-rustwasm-1015.md)（live台帳）。
+rust-wasm-migration skill による自律発見 (STEP 0: 棚卸し → 候補走査 → プローブ実測)。既存 4 クレートは移植・配線済み (sentence-dedup は content-script CSP で配線不能確定) のため、新規 Rust 移植は見送り、唯一の計算律速区間 (export render) は TS 側メモ化へ転換して実装した。RICE 採点・実測・却下理由の詳細は [2026-10-15-00-backlog-rustwasm-1015.md](../dev-docs/archived/pbi/2026-10-15-00-backlog-rustwasm-1015.md)（アーカイブ済み）。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| ⬜ 02 | [2026-10-15-02-refactor-export-timestamp-memoize.md](2026-10-15-02-refactor-export-timestamp-memoize.md) | refactor | 12.0 | 0.5 | ⬜ 未着手。export 時刻整形の分単位メモ化 (10k 件 p50 339ms → 約 65ms 見込み)。WASM 化は実測で不適と確定 |
+| ✅ 02 | [2026-10-15-02-refactor-export-timestamp-memoize.md](../dev-docs/archived/pbi/2026-10-15-02-refactor-export-timestamp-memoize.md) | refactor | 12.0 | 0.5 | ✅ 完了（`fedb89b7`）。10k 件 p50 339.2ms → 46.0ms 実測。TDD Red 先行＋--repeats=20 で 30 green。`npm run validate` exit 0（1067 files / 16066 tests passed） |
 
 ### 2026-10-15 arch-delivery-loop ラウンド（archloop-1015） — ✅ 1件完了・アーカイブ済み 🔧非機能追加
 

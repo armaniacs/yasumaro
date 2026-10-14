@@ -33,12 +33,12 @@ Scenario: 明示 timestamp 指定はメモ化を迂回する
 
 ## 受け入れ基準
 
-- [ ] `resolveTimestamp` (`src/utils/markdownFormatter.ts:127-135`) の計算分岐のみを分キー (`Math.floor(ts / 60000)`) でメモ化している。`input.timestamp` 指定分岐は迂回している
-- [ ] キャッシュキーの上限は自然有界 (1440 通り/日以下の HH:MM 値のみ) であり、有界性の理由をコメントに明記している。TTL・eviction は不要なことをレビューで確認している
-- [ ] `bench/export-render-probe.ts` の 10,000 件ケースで total p50 がベースライン (339.2ms) の 1/3 以下になり、結果 JSON を更新している
-- [ ] 既存テスト (`markdownFormatter` / `markdownExport` 関連スイート) が全件 green。出力のバイト同一性は既存のテンプレート断定 + 新規の分境界ケースで pin している
-- [ ] `timestampLocale` オプションが指定された呼び出しはキーに locale を含めるか迂回している (ロケール混在で誤表示しない)
-- [ ] `npm run validate` が green
+- [x] `resolveTimestamp` (`src/utils/markdownFormatter.ts:127-135`) の計算分岐のみを分キー (`Math.floor(ts / 60000)`) でメモ化している。`input.timestamp` 指定分岐は迂回している
+- [x] キャッシュキーの上限は自然有界 (1440 通り/日以下の HH:MM 値のみ) であり、有界性の理由をコメントに明記している。TTL・eviction は不要なことをレビューで確認している
+- [x] `bench/export-render-probe.ts` の 10,000 件ケースで total p50 がベースライン (339.2ms) の 1/3 以下になり、結果 JSON を更新している
+- [x] 既存テスト (`markdownFormatter` / `markdownExport` 関連スイート) が全件 green。出力のバイト同一性は既存のテンプレート断定 + 新規の分境界ケースで pin している
+- [x] `timestampLocale` オプションが指定された呼び出しはキーに locale を含めるか迂回している (ロケール混在で誤表示しない)
+- [x] `npm run validate` が green
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -103,11 +103,11 @@ grep -rn "memoiz\|timestampCache\|Map<number, string>" src/utils/markdownFormatt
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] ベンチ JSON が更新され 1/3 以下が実測で確認できる
-- [ ] `npm run validate` が green
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み (CHANGELOG は版上げ時に記載)
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] ベンチ JSON が更新され 1/3 以下が実測で確認できる
+- [x] `npm run validate` が green
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み (CHANGELOG は版上げ時に記載)
 
 ## 優先度
 
