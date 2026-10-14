@@ -251,4 +251,4 @@ Graphify rules live in `AGENTS.local.md` (gitignored, local-only). Read it if pr
 
 ## arch-delivery-loop
 
-Closed loop: architecture diagnosis → PBI creation (RICE prioritization) → autonomous implementation → `make clean test` → version bump. Skill file: `.kilo/skills/arch-delivery-loop/SKILL.md` — read it and follow its phases before executing. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」, or when the user names `arch-delivery-loop`.
+Closed loop: architecture diagnosis → PBI creation (RICE prioritization) → autonomous implementation → `make clean test` → version bump. Skill file: `.agents/skills/arch-delivery-loop/SKILL.md` — read it and follow its phases before executing. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」, or when the user names `arch-delivery-loop`.
