@@ -11,8 +11,7 @@
 
 import type { ResponseForType } from './types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
-import { messageTransport } from './messageTransport.js';
-import { withRuntimeTimeout } from './withRuntimeTimeout.js';
+import { sendWithPolicy } from './sendWithPolicy.js';
 
 export const REGENERATE_TIMEOUT_MS = 60_000;
 /** Sentinel so callers can map the timeout to a localized message. */
@@ -31,28 +30,21 @@ type RegenerateSummaryResponse = ResponseForType<'REGENERATE_SUMMARY'>;
 export async function regenerateSummary(
   params: RegenerateSummaryParams,
 ): Promise<RegenerateSummaryResponse> {
-  try {
-    const raw = (await withRuntimeTimeout(
-      // Own timeout bounds the call; the seam adds version stamping and
-      // validation inside that budget. Retries stay off for the same reason
-      // as pendingRecordGateway (documented timeout contract + fake timers).
-      messageTransport.send(
-        {
-          type: 'REGENERATE_SUMMARY',
-          payload: params,
-        },
-        { retries: 0 },
-      ),
-      REGENERATE_TIMEOUT_MS,
-      new Error(REGENERATE_TIMEOUT_ERROR),
-    )) as unknown;
-    return normalizeRegenerateResponse(raw);
-  } catch (e: unknown) {
-    return {
-      success: false,
-      error: e instanceof Error ? e.message : String(e),
-    };
-  }
+  return sendWithPolicy(
+    // Own timeout bounds the call; the seam adds version stamping and
+    // validation inside that budget. Retries stay off for the same reason
+    // as pendingRecordGateway (documented timeout contract + fake timers).
+    {
+      type: 'REGENERATE_SUMMARY',
+      payload: params,
+    },
+    {
+      timeoutMs: REGENERATE_TIMEOUT_MS,
+      timeoutError: new Error(REGENERATE_TIMEOUT_ERROR),
+      retries: 0,
+      normalize: normalizeRegenerateResponse,
+    },
+  );
 }
 
 function normalizeRegenerateResponse(raw: unknown): RegenerateSummaryResponse {

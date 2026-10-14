@@ -15,9 +15,7 @@
  * behavior.
  */
 
-import { errorMessage } from '../utils/errorUtils.js';
-import { withRuntimeTimeout } from './withRuntimeTimeout.js';
-import { messageTransport } from './messageTransport.js';
+import { sendWithPolicy } from './sendWithPolicy.js';
 import type { ManualRecordMessage } from '../background/messageTypes.js';
 
 export interface PendingRecordRequest {
@@ -54,32 +52,26 @@ export async function recordPendingPage(
     payload.skipAi = request.skipAi;
   }
 
-  let response: { success?: boolean; error?: string } | undefined;
-  try {
-    response = (await withRuntimeTimeout(
-      // The gateway's own timeout bounds the call; the seam adds version
-      // stamping and validation inside that budget. Retries stay off: extra
-      // attempts would extend past the documented timeout contract (and stall
-      // under fake timers, which the timeout tests install).
-      messageTransport.send(
-        {
-          type: 'MANUAL_RECORD',
-          payload,
-        },
-        { retries: 0 },
-      ),
+  return sendWithPolicy(
+    // The gateway's own timeout bounds the call; the seam adds version
+    // stamping and validation inside that budget. Retries stay off: extra
+    // attempts would extend past the documented timeout contract (and stall
+    // under fake timers, which the timeout tests install).
+    {
+      type: 'MANUAL_RECORD',
+      payload,
+    },
+    {
       timeoutMs,
-      new Error(PENDING_RECORD_TIMEOUT_ERROR),
-    )) as { success?: boolean; error?: string } | undefined;
-
-    if (response?.success) {
-      return { success: true };
-    }
-    return { success: false, error: response?.error ?? '' };
-  } catch (error) {
-    return {
-      success: false,
-      error: errorMessage(error),
-    };
-  }
+      timeoutError: new Error(PENDING_RECORD_TIMEOUT_ERROR),
+      retries: 0,
+      normalize: (raw: unknown): PendingRecordResult => {
+        const normalized = raw as { success?: boolean; error?: string } | undefined;
+        if (normalized?.success) {
+          return { success: true };
+        }
+        return { success: false, error: normalized?.error ?? '' };
+      },
+    },
+  );
 }
