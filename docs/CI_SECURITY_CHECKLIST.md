@@ -156,7 +156,7 @@ CI 環境からのネットワーク呼び出しはタイムアウトがない�
       sleep 2
     done
     ```
-  - **関連インシデント:** PBI 04 発見 — Chrome Web Store アップロード後の `IN_PROGRESS` ポーリング欠如（過去の教訓。現在のワークフローに CWS アップロード処理は含まれず、release.yml は zip のビルドと GitHub Release の作成のみを行う）
+  - **関連インシデント:** PBI 04 発見 — Chrome Web Store アップロード後の `IN_PROGRESS` ポーリング欠如（release.yml の `Upload to Chrome Web Store` ステップは `:fetchStatus` を 10 秒間隔・最大 30 回ポーリングし、`SUCCEEDED` になるまで待つ）
 
 - [ ] エラー時の詳細情報を出力している（機密情報を除く）
   - **なぜ危険か:** エラー情報が不十分だと原因特定に時間がかかる。逆に full dump は機密情報漏洩のリスク。

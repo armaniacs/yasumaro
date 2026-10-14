@@ -3,6 +3,9 @@
 [日本語](#日本語) | [English](#english)
 
 <p align="center">
+  <a href="https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc" target="_blank" rel="noopener">
+    <img src="https://img.shields.io/badge/Chrome_Web_Store-Install-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Web Store" />
+  </a>
   <a href="https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep" target="_blank" rel="noopener">
     <img src="https://img.shields.io/badge/Edge_Add--ons-Install-0078D4?style=for-the-badge&logo=microsoftedge&logoColor=white" alt="Edge Add-ons" />
   </a>
@@ -121,23 +124,30 @@ flowchart LR
 
 ### インストール方法
 
-> **配布に関する注意**: Chrome Web Store での配布は現在停止しています（署名鍵の不整合により既存の拡張機能 ID を更新できなくなったため。将来的に別 ID で再開する可能性があります）。Chrome / Brave をお使いの場合は、方法2（GitHub Releases の zip を読み込む）または方法3（ソースからビルド）をご利用ください。
+#### 方法1: Chrome Web Store からインストール
 
-#### 方法1: Edge Add-ons からインストール
+1. [Chrome Web Store の Yasumaro ページ](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) を開きます。
+2. 「Chrome に追加」ボタンをクリックします。
+3. 確認ダイアログで「拡張機能を追加」をクリックします。
+4. ツールバーの Yasumaro アイコンをクリックして設定を開始します。
+
+ストア版は審査を経て公開されるため、GitHub Releases の最新版より反映が遅れる場合があります。
+
+#### 方法2: Edge Add-ons からインストール
 
 1. [Edge Add-ons の Yasumaro ページ](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep) を開きます。
 2. 「入手」ボタンをクリックします。
 3. 確認ダイアログで「拡張機能を追加」をクリックします。
 4. ツールバーの Yasumaro アイコンをクリックして設定を開始します。
 
-#### 方法2: GitHub Releases の zip を読み込む（Chrome / Brave など）
+#### 方法3: GitHub Releases の zip を読み込む（Chrome / Brave など）
 
 1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-chrome.zip` をダウンロードして展開します。
 2. Chrome を開き、`chrome://extensions` にアクセスします。
 3. 右上の「デベロッパーモード」を有効にします。
 4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、展開したフォルダを選択します。
 
-#### 方法2b: Firefox（実験的サポート）
+#### 方法3b: Firefox（実験的サポート）
 
 Firefox 版もビルドでき、記録・保存・検索（FTS5 含む）が動作します（2026-09 から）。ブラウザ内蔵 AI は非対応です（外部 AI プロバイダーは利用可）。
 
@@ -148,7 +158,7 @@ Firefox 版もビルドでき、記録・保存・検索（FTS5 含む）が動�
 
 > Firefox は実験的サポートのため、動作確認は Chromium 系ほど網羅されていません。不具合は GitHub issue で報告をお願いします。
 
-#### 方法3: ソースからビルド（開発者向け）
+#### 方法4: ソースからビルド（開発者向け）
 
 1. このリポジトリをクローンまたはダウンロードします:
    ```bash
@@ -350,23 +360,30 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 
 ### Installation
 
-> **Note on distribution**: Chrome Web Store distribution is currently paused (a signing-key mismatch made the existing extension ID impossible to update; it may resume later under a different ID). On Chrome / Brave, use Option 2 (load the GitHub Releases zip) or Option 3 (build from source).
+#### Option 1: Install from Chrome Web Store
 
-#### Option 1: Install from Edge Add-ons
+1. Open the [Yasumaro page on Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc).
+2. Click "Add to Chrome".
+3. Click "Add extension" in the confirmation dialog.
+4. Click the Yasumaro icon in your toolbar to start configuring.
+
+Store releases go through review, so they may lag behind the latest GitHub Releases build.
+
+#### Option 2: Install from Edge Add-ons
 
 1. Open the [Yasumaro page on Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep).
 2. Click "Get".
 3. Click "Add extension" in the confirmation dialog.
 4. Click the Yasumaro icon in your toolbar to start configuring.
 
-#### Option 2: Load the GitHub Releases zip (Chrome / Brave, etc.)
+#### Option 3: Load the GitHub Releases zip (Chrome / Brave, etc.)
 
 1. Download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it.
 2. Open Chrome and navigate to `chrome://extensions`.
 3. Enable "Developer mode" in the top right.
 4. Click "Load unpacked" and select the unzipped folder.
 
-#### Option 2b: Firefox (experimental support)
+#### Option 3b: Firefox (experimental support)
 
 The Firefox build works for recording, saving, and search (including FTS5) as of September 2026. Built-in AI is not supported (external AI providers work).
 
@@ -377,7 +394,7 @@ The Firefox build works for recording, saving, and search (including FTS5) as of
 
 > Firefox is experimental support — it is less thoroughly tested than Chromium-based builds. Please report issues via GitHub issues.
 
-#### Option 3: Build from Source (For Developers)
+#### Option 4: Build from Source (For Developers)
 
 1. Clone or download this repository:
    ```bash
