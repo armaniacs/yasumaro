@@ -28,35 +28,6 @@
 
 実行順: W1（01／02／04／05並列）→ W2（03）。フォローアップF1-F4は台帳送り。
 
-### 2026-10-14 holistic-code-improvement ラウンド（holistic-1014） — ✅ 4件完了・アーカイブ済み 🔧非機能追加 RICE順: 01 → 02 → 03 → 04
-
-差分スコープ（`49ca0c62..HEAD`、2026-10-14 の CI リリースパイプライン + 動的 import 統一）の大局的レビュー。過去 5 ラウンドで src/ 全域をレビュー済みのため、未レビュー material のみを対象に 4 候補を RICE 採点して PBI 化（NN01-04）。4 候補すべてが `release.yml` を触るため全員直列実行（hunk 分離コミットで PBI 毎に分割）。台帳送り新規なし（ポーリング共通化は過度な共通化として却下）、既存 F1-F24・L2-L8 のトリガー未発火を確認。RICE 採点・依存・バッチ計画・ユーザー作業（v6.9.43 CWS publish 拒否の Dashboard 対応）の詳細は [2026-10-14-00-backlog-holistic-1014.md](2026-10-14-00-backlog-holistic-1014.md)（live 台帳）。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---|---|---|
-| ✅ 01 | [2026-10-14-01-fix-release-job-timeout-budget.md](../dev-docs/archived/pbi/2026-10-14-01-fix-release-job-timeout-budget.md) | fix | 24.0 | 0.25 | ✅ 完了（`31b2c15`）。timeout-minutes 15→90 分 + 予算根拠コメント。ポーリング最悪ケース（CWS 26.5 分 + Edge 46 分）が 15 分を下回り、always() 独立設計がタイムアウトで崩れる問題を復旧。正常実行は実測 96 秒で影響なし |
-| ✅ 02 | [2026-10-14-02-fix-cws-publish-http-code-check.md](../dev-docs/archived/pbi/2026-10-14-02-fix-cws-publish-http-code-check.md) | fix | 20.0 | 0.5 | ✅ 完了（`0c864cc`）。CWS publish を Edge ステップと同型の `-w '%{http_code}'` パターンに統一。モック curl で 5 シナリオ実証（transport fail → exit 28 / 400 → exit 1 / 200+error → exit 1 / 200 ok → success / 200 非 JSON → exit 5）し false success 経路の閉鎖を確認 |
-| ✅ 03 | [2026-10-14-03-fix-edge-bundle-size-check.md](../dev-docs/archived/pbi/2026-10-14-03-fix-edge-bundle-size-check.md) | fix | 10.0 | 0.25 | ✅ 完了（`cb1bc53`）。Edge ビルド直後に check-bundle-size -- edge-mv3 を追加（chrome/firefox と同型） |
-| ✅ 04 | [2026-10-14-04-refactor-build-crx3-script-relocation.md](../dev-docs/archived/pbi/2026-10-14-04-refactor-build-crx3-script-relocation.md) | refactor | 4.0 | 0.25 | ✅ 完了（`4c48b33`）。CRX3 署名スクリプトを scripts/ へ移設（git mv）。pin テスト 4/4 green、release.yml と pin テストの参照パス更新で逆方向横断を解消 |
-
-実行順: RICE 順。全員 release.yml を触るため W1 直列（01 → 02 → 03 → 04、hunk 分離コミット）。全 4 件 `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS でアーカイブ。バッチ内境界検証: YAML パース（js-yaml）+ pin テスト + lint 0 errors。ユーザー作業（v6.9.43 CWS publish 拒否の Dashboard 対応）: ✅ 2026-10-14 ユーザー実施済みで完了。
-
-### 2026-10-13 code-review 指摘フォロー（review-followup2） — ✅ 7件完了・アーカイブ済み 🔧非機能追加
-
-`/code-review`（コミット 70d9754b〜49ca0c62 対象・Approve 判定）の Suggestions 7 件を全件 PBI 化し、同日の autonomous-task-closer ラウンド3 でバッチ実行（W1 = 01/02/04/07 をサブエージェント4体で並列、W2 = 03/06 をメインで処理、W3 = 05）。最高位の NN01 は NN03（2026-10-12）で復旧した manifest ゲートの「失敗側」をスイートで pin し、死にエクスポートを de-export で解消。RICE 採点・同点タイブレーク・バッチ計画（W1-W3）の詳細は [2026-10-13-00-backlog-review-followup2.md](2026-10-13-00-backlog-review-followup2.md)（live 台帳）。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---:|---:|---|
-| ✅ 01 | [2026-10-13-01-test-pin-manifest-gate-red-side.md](../dev-docs/archived/pbi/2026-10-13-01-test-pin-manifest-gate-red-side.md) | test | 18.0 | 0.25 | ✅ 完了。改変入力（SSOT 外 +1 / localhost −1）→ throw を pin（メッセージ断片 `/to deeply equal/` + toContain 前提ガード）。設計判断: PBI 基準の「import され」ではなく同ファイル内テスト + de-export（死にエクスポートの完全解消）。Red 確認: ゲート弱体化で Red 側 2 件のみ FAILED・既存テストは green のまま＝弱体化が検出できることの実証。repeats=20 340 実行全 green |
-| ✅ 02 | [2026-10-13-02-refactor-check-manifest-json-parse-guard.md](../dev-docs/archived/pbi/2026-10-13-02-refactor-check-manifest-json-parse-guard.md) | refactor | 4.0 | 0.25 | ✅ 完了。existsSync + try/catch クリーン fail パターンに統一。実測によるスコープ拡張: クラッシュ点は PBI が挙げた 2 関数ではなく main() が最初に実行する checkManifestV3Compliance()(:45) だったため含めた。invalid JSON → exit 1・クリーンメッセージ（スタックトレース無し）。dist 復元は checksum 一致で確認 |
-| ✅ 03 | [2026-10-13-03-refactor-war-resource-origins-doc.md](../dev-docs/archived/pbi/2026-10-13-03-refactor-war-resource-origins-doc.md) | refactor | 2.0 | 0.25 | ✅ 完了。warResourceResolves の対応 2 起源と拡張前提を doc コメントに明記（将来のモジュール分割での偽 fail 防止）。動作不変 |
-| ✅ 04 | [2026-10-13-04-refactor-no-dead-test-skip-shadowing-doc.md](../dev-docs/archived/pbi/2026-10-13-04-refactor-no-dead-test-skip-shadowing-doc.md) | refactor | 2.0 | 0.25 | ✅ 完了。シャドーイングをエイリアス import と同種のリテラル名判定の限界として Limitation 節に併記。repeats=20 green・動作不変 |
-| ✅ 05 | [2026-10-13-05-refactor-wxt-config-import-deviation-doc.md](../dev-docs/archived/pbi/2026-10-13-05-refactor-wxt-config-import-deviation-doc.md) | refactor | 2.0 | 0.25 | ✅ 完了。`.ts` import の規約逸脱理由（ルート設定はコンパイル対象モジュールでない）を import 直上に明記。type-check green |
-| ✅ 06 | [2026-10-13-06-refactor-sync-geturl-extraction-layers.md](../dev-docs/archived/pbi/2026-10-13-06-refactor-sync-geturl-extraction-layers.md) | refactor | 1.6 | 0.5 | ✅ 完了。geturl-extraction-sync.test.ts を新設（ci-paths-filter と同型の pin テスト・dist 依存なし）。Red 確認: 生成物層の正規表現だけ 1 文字変更 → pin FAILED → 復元 → green |
-| ✅ 07 | [2026-10-13-07-refactor-recording-pipeline-mock-typing.md](../dev-docs/archived/pbi/2026-10-13-07-refactor-recording-pipeline-mock-typing.md) | refactor | 1.6 | 0.25 | ✅ 完了。注入モックを `as Pick<ObsidianClient, 'appendToDailyNote'>` へ寄せる（diff 2 行）。実契約は後方 2 引数省略可能で 1 引数 vi.fn と互換 → モック側変更不要。repeats=20 460 実行全 green |
-
-実行順: RICE 順。W1（01 / 02 / 04 / 07 並列・ファイル非重複）→ W2（03 / 06 並列）→ W3（05）。06 は 02 の後（pin 先の確定後）。03 と 05 は同ファイルのため分離。全 7 件 `npm run validate` exit 0（1062 files / 16032 tests passed・skipped 0）でアーカイブ。検証中の失敗（型債務 463 → 464）は新規ファイルの配列分割代入によるもので、コード修正で 463 に復帰（返済ではなく修正）。
-
 ### 2026-10-12 skipped test の棚卸しと再発防止（skipped-test-cleanup） — ✅ 4件完了・アーカイブ済み 🔧非機能追加
 
 autonomous-task-closer（2026-10-12）が残課題として報告した skipped test を `pbi-backlog-prioritizer` で再列挙・RICE 採点して PBI 化。無条件の宣言形 skip は実測で **10 件 + 空 `describe.skip` 1 件**（当初報告の「4 箇所」はファイル数。うち 1 件を NN01 が再活性化、9 件 + 空 describe を NN02 が削除）。E2E の 8 件は実行時条件形のため候補から除外。`manifest.test.ts` の 11 件は一度台帳送り S1 にしたが、恒久 skip（かつ WAR 検証が early return で空振り）を実測したため NN03 へ昇格し、RICE 1.8 > 1.6 で lint ゲートを NN04 へ繰り下げた。RICE 採点・除外理由・台帳送り（S1 消費・S2/S3）の詳細は [2026-10-12-00-backlog-skipped-test-cleanup.md](2026-10-12-00-backlog-skipped-test-cleanup.md)（live 台帳）。全 4 件の実装・検証は autonomous-task-closer ラウンド2（2026-10-12）で完了。
@@ -138,18 +109,6 @@ arch-delivery-loop skill によるコードベース全体（差分スコープ�
 
 実行順: 依存優先（05 → 09 / 05 → 13、他は並列可）。
 
-### 2026-10-10 adversarial review ラウンド（adversarial-1010） — ✅ 3件完了・アーカイブ済み 🔧非機能追加
-
-adversarial-code-review skill による高リスク3領域の全体レビュー（hacker + maintainer の 2 視点を 6 agents で発見、5並列の反証裏取りで REFUTED 分を除外）から抽出した実残 3 件を RICE 採点して PBI 化（NN14-16）。全件実装・全ゲート green でアーカイブ。RICE 採点・依存・到達可能性証拠の詳細は [2026-10-10-01-backlog-adversarial-1010.md](2026-10-10-01-backlog-adversarial-1010.md)（live 台帳）。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---|---:|---|
-| 14 | [2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md](../dev-docs/archived/pbi/2026-10-10-14-fix-save-alreadyprocessed-pii-bypass.md) | fix | 36.0 | 0.5 | ✅ SAVE_RECORD 経路の PII 未マスク素通し（`alreadyProcessed` 除去） |
-| 15 | [2026-10-10-15-fix-sanitize-title-newline-injection.md](../dev-docs/archived/pbi/2026-10-10-15-fix-sanitize-title-newline-injection.md) | fix | 16.0 | 0.5 | ✅ 攻撃者制御 title の改行注入（単一行化） |
-| 16 | [2026-10-10-16-fix-pii-long-token-scan-evasion.md](../dev-docs/archived/pbi/2026-10-10-16-fix-pii-long-token-scan-evasion.md) | fix | 2.7 | 2.0 | ✅ 長トークン中間 PII の走査回避（重なり付きチャンク + WASM 移植） |
-
-実行順: RICE 順（14 → 15 → 16、ファイル非重複のため並列可）。
-
 ### 2026-10-09 holistic-code-improvement ラウンド（holistic-1009） — ✅ 20件完了・アーカイブ済み 🔧非機能追加
 
 holistic-code-improvement skill によるコードベース全体（差分スコープ）の大局的レビュー。4 系統の並列調査（dashboard+popup / background+offscreen / content+utils+layer / drift sweep+test infra）を 20 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-20）。全 20 件を 5 バッチ（W1-W5）で実装・コミットし、`npm run validate`（15888 tests）と `npm run build` が green。テスト型エラー baseline は 467 → 464 に返済。NN15 は archloop-1007 台帳送り L1（dashboard innerHTML clearing）のトリガー発火を消費し、実態 49 箇所（PBI 見積もり 13 より多かった）を clearElement 化してゲート対象に dashboard を追加。RICE 採点・同点根拠・依存・バッチ計画（W1-W5）の詳細は [2026-10-09-00-backlog-holistic-1009.md](2026-10-09-00-backlog-holistic-1009.md)（live 台帳）。台帳送り 24 件（F1-F24 + archloop-1007 L2-L8 維持）。
@@ -201,83 +160,6 @@ arch-delivery-loop の closed loop をコードベース全体（差分スコー
 | 16 | [2026-10-07-16-refactor-provider-allowlist-subdomain.md](../dev-docs/archived/pbi/2026-10-07-16-refactor-provider-allowlist-subdomain.md) | refactor | 1.6 | 1.5 | ✅ サブドメ規則の表派生化 |
 | 17 | [2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md](../dev-docs/archived/pbi/2026-10-07-17-refactor-aiusage-tracker-defaults-ssot.md) | refactor | 1.6 | 1.5 | ✅ 既定値の一意源化 |
 | 18 | [2026-10-07-18-fix-tab-url-nav-trail-rewire.md](../dev-docs/archived/pbi/2026-10-07-18-fix-tab-url-nav-trail-rewire.md) | fix | 7.2 | 1 | ✅ NN07 裁定（案 B）の実装 fix。nav trail を VALID_VISIT 由来に再配線 |
-
-### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006） — ✅ 23件完了・アーカイブ済み 🔧非機能追加
-
-arch-delivery-loop の closed loop を holistic-1005 の台帳送り L1–L8 に対して実行するラウンド（スキル本体不在のため holistic-code-improvement と同手順で閉じる）。4 テーマ群の並列調査＋L8 直査を 23 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-23）。詳細は [2026-10-06-00-backlog-archloop-1006.md](2026-10-06-00-backlog-archloop-1006.md)（live 台帳）。実行順は依存優先（14 → 13 / 11 → 17 / 10 → 19 / 16 → 21 / 07 → 18、他は並列可）。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---|---:|---|
-| 01 | [2026-10-06-01-fix-diagnostics-compile-options-escape.md](../dev-docs/archived/pbi/2026-10-06-01-fix-diagnostics-compile-options-escape.md) | fix | 9.0 | 1 | ✅。compileOptions の未エスケープ埋め込み |
-| 02 | [2026-10-06-02-fix-gemini-empty-failure.md](../dev-docs/archived/pbi/2026-10-06-02-fix-gemini-empty-failure.md) | fix | 8.0 | 1 | ✅。Gemini 空応答の failure 欠落 |
-| 03 | [2026-10-06-03-fix-e2e-poll-shared-seed.md](../dev-docs/archived/pbi/2026-10-06-03-fix-e2e-poll-shared-seed.md) | fix | 6.0 | 1 | ✅。poll 再定義＋seed 非冪等 |
-| 04 | [2026-10-06-04-refactor-queryplan-tag-params.md](../dev-docs/archived/pbi/2026-10-06-04-refactor-queryplan-tag-params.md) | refactor | 4.27 | 1.5 | ✅。queryPlan タグ付加の共通化 |
-| 05 | [2026-10-06-05-refactor-step-failure-helix.md](../dev-docs/archived/pbi/2026-10-06-05-refactor-step-failure-helix.md) | refactor | 4.0 | 1 | ✅。catch 継続ブロック写経 |
-| 06 | [2026-10-06-06-refactor-step-self-catch.md](../dev-docs/archived/pbi/2026-10-06-06-refactor-step-self-catch.md) | refactor | 4.0 | 2 | ✅。ステップ内自前 catch の迂回 |
-| 07 | [2026-10-06-07-refactor-boundary-guards.md](../dev-docs/archived/pbi/2026-10-06-07-refactor-boundary-guards.md) | refactor | 3.6 | 1 | ✅。境界ガード集約。18 の先行 |
-| 08 | [2026-10-06-08-test-e2e-skipped-paths.md](../dev-docs/archived/pbi/2026-10-06-08-test-e2e-skipped-paths.md) | test | 3.2 | 2 | ✅。skip/fixme/空実装の重要パス |
-| 09 | [2026-10-06-09-refactor-obsidian-retry-table.md](../dev-docs/archived/pbi/2026-10-06-09-refactor-obsidian-retry-table.md) | refactor | 3.0 | 1 | ✅。obsidian リトライ表の SSOT 化 |
-| 10 | [2026-10-06-10-refactor-archive-wire-args.md](../dev-docs/archived/pbi/2026-10-06-10-refactor-archive-wire-args.md) | refactor | 3.0 | 1 | ✅。backendArgs/depsArgs 集約。19 の先行 |
-| 11 | [2026-10-06-11-refactor-sqlite-decode-twins.md](../dev-docs/archived/pbi/2026-10-06-11-refactor-sqlite-decode-twins.md) | refactor | 3.0 | 1 | ✅。records/search デコード双子。17 の先行 |
-| 12 | [2026-10-06-12-refactor-masterpassword-modal.md](../dev-docs/archived/pbi/2026-10-06-12-refactor-masterpassword-modal.md) | refactor | 3.0 | 1 | ✅。モーダル開閉の重複 |
-| 13 | [2026-10-06-13-refactor-bench-launcher.md](../dev-docs/archived/pbi/2026-10-06-13-refactor-bench-launcher.md) | refactor | 2.4 | 1 | ✅。bench launcher 乖離。14 の後 |
-| 14 | [2026-10-06-14-refactor-dashboard-fixture.md](../dev-docs/archived/pbi/2026-10-06-14-refactor-dashboard-fixture.md) | refactor | 1.8 | 2 | ✅。dashboard fixture 3 重。13 の先行 |
-| 15 | [2026-10-06-15-refactor-compat-markers.md](../dev-docs/archived/pbi/2026-10-06-15-refactor-compat-markers.md) | refactor | 1.6 | 2 | ✅。compat マーカー 3 表集約 |
-| 16 | [2026-10-06-16-refactor-tag-chip-factory.md](../dev-docs/archived/pbi/2026-10-06-16-refactor-tag-chip-factory.md) | refactor | 1.6 | 2 | ✅。チップ工場。21 の先行 |
-| 17 | [2026-10-06-17-refactor-wire-lambda-consts.md](../dev-docs/archived/pbi/2026-10-06-17-refactor-wire-lambda-consts.md) | refactor | 1.5 | 1 | ✅。単要素ラムダ定数化。11 の後 |
-| 18 | [2026-10-06-18-refactor-history-model-mutation.md](../dev-docs/archived/pbi/2026-10-06-18-refactor-history-model-mutation.md) | refactor | 1.6 | 2 | ✅。mutation 後処理分散。07 の後 |
-| 19 | [2026-10-06-19-refactor-crud-archive-skeleton.md](../dev-docs/archived/pbi/2026-10-06-19-refactor-crud-archive-skeleton.md) | refactor | 1.6 | 2 | ✅。runCoreCrud/runArchive 共通化。10 の後 |
-| 20 | [2026-10-06-20-refactor-content-logger-unify.md](../dev-docs/archived/pbi/2026-10-06-20-refactor-content-logger-unify.md) | refactor | 1.5 | 1 | ✅。console 6 箇所の統一 |
-| 21 | [2026-10-06-21-refactor-prompt-list-wiring.md](../dev-docs/archived/pbi/2026-10-06-21-refactor-prompt-list-wiring.md) | refactor | 1.6 | 2 | ✅。一覧配線の region 化。16 の後 |
-| 22 | [2026-10-06-22-test-diagnostics-assert-dedup.md](../dev-docs/archived/pbi/2026-10-06-22-test-diagnostics-assert-dedup.md) | test | 1.35 | 2 | ✅。静的アサーション二重主張 |
-| 23 | [2026-10-06-23-test-search-tag-dedup.md](../dev-docs/archived/pbi/2026-10-06-23-test-search-tag-dedup.md) | test | 1.2 | 2 | ✅。検索・tag spec 重複 |
-
-### 2026-10-05 holistic ラウンド（holistic-1005） — ✅ 32件完了・アーカイブ済み 🔧非機能追加
-
-holistic-code-improvement skill による 6.9.36 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+offscreen+messaging / shared infra — 4 agents 並列発見、統合側が全指摘の実コード裏取り）を 32 個の独立実装単位に分解し RICE 採点して PBI 化（NN01-32）。採点・同点の順位根拠・依存・バッチ計画（W1-W7）の詳細は [2026-10-05-00-backlog-holistic-1005.md](2026-10-05-00-backlog-holistic-1005.md)（live 台帳）。実行順は依存優先（11 → 17 / 22 → 26 / 13 → 23 / 07 → 19,20 / 18 → 29 / 09 → 28,32 / 21 → 28、他は並列可）。積み残し 8 テーマは台帳送り（次ラウンド予約）。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---|---:|---|
-| 01 | [2026-10-05-01-fix-validate-docs-ssot-gates.md](../dev-docs/archived/pbi/2026-10-05-01-fix-validate-docs-ssot-gates.md) | fix | 12.0 | 1 | ✅。docs/SSOT 照合ゲートの validate / CI 未配線 |
-| 02 | [2026-10-05-02-fix-domain-policy-parity.md](../dev-docs/archived/pbi/2026-10-05-02-fix-domain-policy-parity.md) | fix | 10.5 | 2 | ✅。ドメイン判定の content/SW 逆転 |
-| 03 | [2026-10-05-03-fix-test-sleep-lint-coverage.md](../dev-docs/archived/pbi/2026-10-05-03-fix-test-sleep-lint-coverage.md) | fix | 10.0 | 1 | ✅。固定待ち lint の管轄穴 |
-| 04 | [2026-10-05-04-fix-sessionstore-flush-lost-write.md](../dev-docs/archived/pbi/2026-10-05-04-fix-sessionstore-flush-lost-write.md) | fix | 9.0 | 2 | ✅。SessionStore の flush 連動で書き込み消失 |
-| 05 | [2026-10-05-05-fix-unhandled-listener-rejections.md](../dev-docs/archived/pbi/2026-10-05-05-fix-unhandled-listener-rejections.md) | fix | 8.0 | 2 | ✅。リスナ/エントリの未処理リジェクション |
-| 06 | [2026-10-05-06-refactor-loopback-ports-ssot.md](../dev-docs/archived/pbi/2026-10-05-06-refactor-loopback-ports-ssot.md) | refactor | 8.0 | 1 | ✅。ループバックポート 3 重リテラル |
-| 07 | [2026-10-05-07-fix-duplicate-field-ids-validation-split.md](../dev-docs/archived/pbi/2026-10-05-07-fix-duplicate-field-ids-validation-split.md) | fix | 7.5 | 2 | ✅。重複 DOM id + 二重バリデーション。19・20 の先行 |
-| 08 | [2026-10-05-08-fix-privacy-dialog-settle.md](../dev-docs/archived/pbi/2026-10-05-08-fix-privacy-dialog-settle.md) | fix | 7.2 | 1 | ✅。privacyDialog の settle 不能経路 |
-| 09 | [2026-10-05-09-refactor-main-status-single-path.md](../dev-docs/archived/pbi/2026-10-05-09-refactor-main-status-single-path.md) | refactor | 6.0 | 2 | ✅。#mainStatus の 2 経路。28・32 の先行 |
-| 10 | [2026-10-05-10-fix-sensitive-mask-recursion-guard.md](../dev-docs/archived/pbi/2026-10-05-10-fix-sensitive-mask-recursion-guard.md) | fix | 6.0 | 1 | ✅。sensitiveDataMask の再帰防御欠如 |
-| 11 | [2026-10-05-11-fix-connection-test-button-guards.md](../dev-docs/archived/pbi/2026-10-05-11-fix-connection-test-button-guards.md) | fix | 4.0 | 2 | ✅。connectionTests 4ハンドラ規約不統一。17 の先行 |
-| 12 | [2026-10-05-12-fix-local-md-alarm-ownership.md](../dev-docs/archived/pbi/2026-10-05-12-fix-local-md-alarm-ownership.md) | fix | 4.0 | 2 | ✅。alarms 作成の表外分岐 + daily リセット |
-| 13 | [2026-10-05-13-refactor-envelope-shape-single-source.md](../dev-docs/archived/pbi/2026-10-05-13-refactor-envelope-shape-single-source.md) | refactor | 4.0 | 2 | ✅。envelope 検証 3 系統の乖離。23 の先行 |
-| 14 | [2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md](../dev-docs/archived/pbi/2026-10-05-14-refactor-dashboard-gateway-runtime-timeout.md) | refactor | 4.0 | 1 | ✅。dashboardGateway の手書き race |
-| 15 | [2026-10-05-15-refactor-injectable-sleep-trust-retry.md](../dev-docs/archived/pbi/2026-10-05-15-refactor-injectable-sleep-trust-retry.md) | refactor | 4.0 | 1 | ✅。本番リトライの sleep 注入 seam 不在 |
-| 16 | [2026-10-05-16-refactor-rate-limit-counter-read-merge.md](../dev-docs/archived/pbi/2026-10-05-16-refactor-rate-limit-counter-read-merge.md) | refactor | 4.0 | 1 | ✅。RateLimitService の読込+マージ 2 重 |
-| 17 | [2026-10-05-17-refactor-status-top-mirror-owner.md](../dev-docs/archived/pbi/2026-10-05-17-refactor-status-top-mirror-owner.md) | refactor | 5.0 | 1 | ✅。#statusTop ミラーの記憶依存。11 の後 |
-| 18 | [2026-10-05-18-refactor-panel-destroy-contract.md](../dev-docs/archived/pbi/2026-10-05-18-refactor-panel-destroy-contract.md) | refactor | 3.2 | 2 | ✅。destroy 到達不能。29 の先行 |
-| 19 | [2026-10-05-19-refactor-save-settings-pipeline-split.md](../dev-docs/archived/pbi/2026-10-05-19-refactor-save-settings-pipeline-split.md) | refactor | 2.0 | 2 | ✅。saveDashboardSettings 8関心。07 の後 |
-| 20 | [2026-10-05-20-refactor-field-descriptor-unwired-seams.md](../dev-docs/archived/pbi/2026-10-05-20-refactor-field-descriptor-unwired-seams.md) | refactor | 2.4 | 1 | ✅。fieldDescriptor の未配線シーム。07 の後 |
-| 21 | [2026-10-05-21-refactor-i18n-mock-single-factory.md](../dev-docs/archived/pbi/2026-10-05-21-refactor-i18n-mock-single-factory.md) | refactor | 2.7 | 2 | ✅。i18n モック手作りコピー。28 の先行 |
-| 22 | [2026-10-05-22-refactor-confirm-token-legacy-removal.md](../dev-docs/archived/pbi/2026-10-05-22-refactor-confirm-token-legacy-removal.md) | refactor | 3.2 | 2 | ✅。confirmToken レガシー経路。26 の先行 |
-| 23 | [2026-10-05-23-refactor-disconnect-phrase-ssot.md](../dev-docs/archived/pbi/2026-10-05-23-refactor-disconnect-phrase-ssot.md) | refactor | 3.0 | 1 | ✅。切断エラー文言 3 重。13 の後 |
-| 24 | [2026-10-05-24-refactor-popup-e2e-fixture-unify.md](../dev-docs/archived/pbi/2026-10-05-24-refactor-popup-e2e-fixture-unify.md) | refactor | 2.0 | 1.5 | ✅。E2E popup fixture 3 重 |
-| 25 | [2026-10-05-25-refactor-fetch-retry-residue.md](../dev-docs/archived/pbi/2026-10-05-25-refactor-fetch-retry-residue.md) | refactor | 2.0 | 2 | ✅。fetch リトライ残骸 4 点 |
-| 26 | [2026-10-05-26-refactor-settings-repository-single-instance.md](../dev-docs/archived/pbi/2026-10-05-26-refactor-settings-repository-single-instance.md) | refactor | 4.0 | 2 | ✅。SettingsRepository 2 インスタンス。22 の後 |
-| 27 | [2026-10-05-27-refactor-panel-catalog-id-union.md](../dev-docs/archived/pbi/2026-10-05-27-refactor-panel-catalog-id-union.md) | refactor | 3.0 | 1 | ✅。PanelCatalogId の string 退化 |
-| 28 | [2026-10-05-28-refactor-popup-test-dom-scaffold.md](../dev-docs/archived/pbi/2026-10-05-28-refactor-popup-test-dom-scaffold.md) | refactor | 2.25 | 2 | ✅。popup テスト DOM 脚手架。09・21 の後 |
-| 29 | [2026-10-05-29-refactor-dashboard-dom-binding-convention.md](../dev-docs/archived/pbi/2026-10-05-29-refactor-dashboard-dom-binding-convention.md) | refactor | 1.33 | 3 | ✅。旧 DOM 捕捉規約 + 死コード。18 の後 |
-| 30 | [2026-10-05-30-refactor-record-response-contract-ssot.md](../dev-docs/archived/pbi/2026-10-05-30-refactor-record-response-contract-ssot.md) | refactor | 1.6 | 2 | ✅。記録応答 wire 契約 4 重 |
-| 31 | [2026-10-05-31-refactor-popup-init-single-entry.md](../dev-docs/archived/pbi/2026-10-05-31-refactor-popup-init-single-entry.md) | refactor | 1.6 | 2 | ✅。popup 初期化 3 経路 |
-| 32 | [2026-10-05-32-refactor-record-normal-branch-split.md](../dev-docs/archived/pbi/2026-10-05-32-refactor-record-normal-branch-split.md) | refactor | 1.6 | 2 | ✅。runNormalBranch 8責務。09 の後 |
-
-### 2026-10-03 holistic ラウンド（holistic-1003b） — ✅ 20件完了・アーカイブ済み 🔧非機能追加
-
-holistic-code-improvement skill による 6.9.34 時点の大局的レビュー（4 領域の地図 — dashboard / popup+content / background+utils / infra — 4 agents 発見、テーマ TOP5）から抽出した 20 候補を RICE 採点して PBI 化（NN16-35）。全件実装・全ゲート green でアーカイブ（個別 PBI の行はアーカイブ履歴を参照）。採点・同点の順位根拠・依存・バッチ計画（W1-W6）の詳細は [2026-10-03-00-backlog-holistic-1003b.md](2026-10-03-00-backlog-holistic-1003b.md)（live 台帳として残置）。実行順は依存優先（17 → 20 → 23 → 29 直列 / 26 → 32 / 34 → 35 / 25 → 31、他は並列可）。
-
-### 2026-10-03 adversarial review ラウンド（adversarial-1003） — ✅ 15件完了・アーカイブ済み 🔧非機能追加
-
-adversarial-code-review skill による `7edc8c6d..HEAD`（37 commits / 163 files）の差分レビュー（hacker + maintainer の 6 agents 発見・独立検証で反証による裏取り。5 findings REFUTED 分は起票対象外）から抽出した 15 候補を RICE 採点して PBI 化。採点・依存・到達可能性証拠の詳細は [2026-10-03-00-backlog-adversarial-1003.md](2026-10-03-00-backlog-adversarial-1003.md)（live 台帳として残置）。実行順は依存優先（04 → 06 / 01 → 10 / 05 → 08、他は並列可）。個別 PBI の行はアーカイブ履歴を参照。
 
 ### 2026-10-01 大局的コード改善ラウンド（holistic-code-improvement） — ✅ 21件完了・アーカイブ済み 🔧非機能追加
 
@@ -334,29 +216,6 @@ arch-delivery-loop（Phase 0 並列診断 4 系統）で抽出した 14 候補�
 | 05 | [2026-10-01-05-refactor-engine-host-narrow-seam.md](../dev-docs/archived/pbi/2026-10-01-05-refactor-engine-host-narrow-seam.md) | refactor | 8.5 | 1.5 | ✅ 完了・アーカイブ済み。host 狭 seam + sqliteBoot 単一生成 seam |
 | 06 | [2026-10-01-06-refactor-retry-savephase-seam.md](../dev-docs/archived/pbi/2026-10-01-06-refactor-retry-savephase-seam.md) | refactor | 6.4 | 0.75 | ✅ 完了・アーカイブ済み。replay flag を SavePhase seam 内へ |
 | 07 | [2026-10-01-07-refactor-extractor-single-seam.md](../dev-docs/archived/pbi/2026-10-01-07-refactor-extractor-single-seam.md) | refactor | 4.8 | 1 | ✅ 完了・アーカイブ済み。preparePageContent 単一外部 seam |
-
-### 2026-09-30 adversarial code review ラウンド（encryption 関連） — ✅ 13件完了・アーカイブ済み 🔧非機能追加
-
-adversarial-code-review skill による encryption 関連モジュールの攻撃視点レビューから抽出した 13 候補を RICE 採点して PBI 化。全件実装・全ゲート green で 2026-09-30 にアーカイブ（アーカイブ履歴参照）。詳細は [2026-09-30-00-backlog-adversarial-review-0930.md](2026-09-30-00-backlog-adversarial-review-0930.md)（live 台帳として残置）。
-
-### 2026-09-29 大局的コードレビュー改善ラウンド第2弾 — ✅ 10件完了・アーカイブ済み 🔧非機能追加
-
-holistic-code-review skill による構造レビュー（並列サブエージェント調査 5 系統 + 実コード裏取り）から抽出した 10 候補を RICE 採点して PBI 化。全バッチ実装後 `make clean test-full`（build + validate + E2E 325 passed）でゲート通過。採点・依存・対象外・既存台帳反映の詳細は [2026-09-29-00-backlog-holistic-0929.md](2026-09-29-00-backlog-holistic-0929.md)（live 台帳として残置）。
-
-**全 10 件完了（2026-09-29 アーカイブ）**: 38（接続テスト runner）と 40（recordingConditionsSettings）は 2026-09-28 ラウンドの未コミット WIP とファイル交差のため部分実装で残したが、WIP 着地後に残部を実施し、validate 15,014 tests green を確認して完了とした。
-
-| 順位 | NN | PBI | 種別 | RICE | SP |
-|---|---|---|---|---:|---:|
-| 1 | 31 | fix-audit-log-retention-and-clear-all | fix | 36.0 | 0.5 |
-| 2 | 32 | fix-tag-panel-navigation-and-rtl-ssot | fix | 18.0 | 0.5 |
-| 3 | 33 | fix-logger-key-name-masking | fix | 16.0 | 0.5 |
-| 4 | 34 | fix-background-seam-residue-bundle | fix | 10.0 | 1.0 |
-| 5 | 35 | fix-ai-provider-failure-contract-unify | fix | 9.0 | 1.0 |
-| 6 | 36 | fix-opfs-worker-runtime-degradation | fix | 6.4 | 1.0 |
-| 7 | 37 | refactor-sqlite-backend-boot-purge-search-unify | refactor | 2.4 | 2.0 |
-| 8 | 38 | refactor-dashboard-duplicated-logic-consolidation | refactor | 2.4 | 1.5 |
-| 9 | 39 | refactor-provider-strategy-responsibility-split | refactor | 1.0 | 2.5 |
-| 10 | 40 | refactor-dashboard-legacy-module-factory-ization | refactor | 0.8 | 3.0 |
 
 ### 2026-09-28 大局的コードレビュー改善ラウンド — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 
@@ -509,6 +368,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-10-15 PBI 台帳アーカイブ — ✅ 9台帳アーカイブ（内容PBIはいずれも既にアーカイブ済み・着手候補ゼロ）
+
+完了ラウンドの台帳 9 件（holistic-1014 / review-followup2 / adversarial-1010 / holistic-1003b / adversarial-1003 / adversarial-review-0930 / holistic-0929 / holistic-1005 / archloop-1006）を `git mv` で `dev-docs/archived/pbi/` へ移動。いずれもラウンドの PBI は全件実装・アーカイブ済みで台帳送り候補は消費済み、実装コミットと CHANGELOG（6.9.28〜6.9.43）の記載を確認済み。ゲート: type-check 0 errors / lint 0 errors / test 16059 passed。台帳送りが残る台帳（1014b・checking-team-1010・archloop-1010・holistic-1009・archloop-1007・skipped-test-cleanup ほか）と将来台帳（backlog-future / analysis-features）は live 維持。
+
 ### 2026-10-13 autonomous-task-closer ラウンド3 — review-followup2 7件完了（NN01-07 アーカイブ済み）
 
 pbi-backlog-prioritizer が起票した review-followup2 NN01-07（code-review Suggestions 7 件・全件着手可）をバッチ実行で全件実装。W1（NN01 / NN02 / NN04 / NN07）はファイル非重複のためサブエージェント4体で並列実行、W2（NN03 / NN06）はメインで処理（NN06 は NN02 の pin 先確定後、Red 確認で pin テストの実効性を実証）、W3（NN05）は NN03 と同ファイルのため分離。実装中に検出された検証失敗（型債務 463 → 464）は新規ファイルの配列分割代入が原因で、コード修正で 463 に復帰（ベースライン引き上げでなく返済ではなく修正）。全 7 件 `npm run validate` exit 0（1062 files / 16032 tests passed・skipped 0）+ build exit 0 でアーカイブ。
@@ -549,11 +412,11 @@ pbi-backlog-prioritizer が起票した review-followup2 NN01-07（code-review S
 
 ### 2026-10-06 arch-delivery-loop ラウンド（archloop-1006）アーカイブ — ✅ 23件完了（01-23 アーカイブ済み）
 
-23 件（01-23）を `git mv` で `dev-docs/archived/pbi/` へ移動し 6.9.37 に版上げ（アーカイブ `209770a8`）。実装コミットは `0b702c31`（01）〜 `c2ca080a`（23）、`git log --grep='pbi-1006'` で確認可。ラウンド表（RICE・SP・備考）は進行中セクションのラウンド履歴に残置。
+23 件（01-23）を `git mv` で `dev-docs/archived/pbi/` へ移動し 6.9.37 に版上げ（アーカイブ `209770a8`）。実装コミットは `0b702c31`（01）〜 `c2ca080a`（23）、`git log --grep='pbi-1006'` で確認可。ラウンド表（RICE・SP・備考）はアーカイブ済み台帳 [2026-10-06-00-backlog-archloop-1006.md](../dev-docs/archived/pbi/2026-10-06-00-backlog-archloop-1006.md) に残置。
 
 ### 2026-10-05 holistic ラウンド（holistic-1005）アーカイブ — ✅ 32件完了（01-32 アーカイブ済み）
 
-32 件（01-32）を `git mv` で `dev-docs/archived/pbi/` へ移動（アーカイブ `e7b0edd7`）。実装コミットは NN19-32 が `git log --grep='pbi-1005'` で確認可（NN01-18 は個別コミットタグなし）。ラウンド表（RICE・SP・備考）は進行中セクションのラウンド履歴に残置。積み残し 8 テーマは archloop-1006 ラウンドで消化済み。
+32 件（01-32）を `git mv` で `dev-docs/archived/pbi/` へ移動（アーカイブ `e7b0edd7`）。実装コミットは NN19-32 が `git log --grep='pbi-1005'` で確認可（NN01-18 は個別コミットタグなし）。ラウンド表（RICE・SP・備考）はアーカイブ済み台帳 [2026-10-05-00-backlog-holistic-1005.md](../dev-docs/archived/pbi/2026-10-05-00-backlog-holistic-1005.md) に残置。積み残し 8 テーマは archloop-1006 ラウンドで消化済み。
 
 ### 2026-10-03 holistic ラウンド（holistic-1003b）アーカイブ — ✅ 20件完了（16-35 アーカイブ済み）
 
