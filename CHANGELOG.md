@@ -35,6 +35,15 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.43] - 2026-10-14
+
+このリリースは 6.9.42 の CI/pipeline 修正です。6.9.42 のタグでは Chrome Web Store への upload が署名検証で拒否されたため、CRX3 署名の不具合を修正しました。拡張機能本体の変更はありません。
+
+### 修正
+
+- CRX3 の署名対象の先頭を `"CRX3 SignedData"` から NUL 終端を含む `"CRX3 SignedData\0"`（16 バイト）に修正する。NUL が欠けていたため、Web Store が `PKG_CANNOT_VERIFY_CRX_SIGNATURE` で拒否していた。署名レイアウトを pin するテスト（`scripts/__tests__/build-crx3.test.ts`）を追加する
+- `Upload to Chrome Web Store` ステップが、upload 失敗時にレスポンスのエラーフィールド（`error` / `status` / `message`）をログへ出力するようにする
+
 ## [6.9.42] - 2026-10-14
 
 Chrome Web Store への自動アップロードを再開するリリースです。タグ（`v*`）の push ごとに、署名済み CRX を Chrome Web Store へ送ります。
