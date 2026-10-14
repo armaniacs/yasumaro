@@ -11,21 +11,22 @@ async function seedClaim(url: string, owner: string): Promise<void> {
 }
 
 /** Two-arg retryAll mock that feeds one job to the handler, like the real queue. */
+type RetryAllFn = (
+    handler: (job: OfflineJob) => Promise<boolean>,
+    reportDropped?: (job: OfflineJob, reason: 'max-retries' | 'ttl') => Promise<void> | void,
+) => Promise<void>;
 function retryAllFeeding(
     job: Partial<OfflineJob>,
     handlerResult: boolean,
     dropsAfterHandler: boolean,
-): { retryAll: ReturnType<typeof vi.fn>; onDropped: ReturnType<typeof vi.fn> } {
+): { retryAll: RetryAllFn; onDropped: ReturnType<typeof vi.fn> } {
     const onDropped = vi.fn().mockResolvedValue(undefined);
-    const retryAll = vi.fn(async (
-        handler: (job: OfflineJob) => Promise<boolean>,
-        reportDropped?: (job: OfflineJob, reason: string) => Promise<void> | void,
-    ) => {
+    const retryAll: RetryAllFn = async (handler, reportDropped) => {
         const result = await handler(job as OfflineJob);
         if (dropsAfterHandler && !result && reportDropped) {
             await reportDropped(job as OfflineJob, 'max-retries');
         }
-    });
+    };
     return { retryAll, onDropped };
 }
 
