@@ -86,45 +86,85 @@ export function buildTagFilterCondition(
 export type TagFilterCondition = { condition: string; params: SqliteValue[] };
 
 /**
+ * Column mapping for the unified ORDER BY builder: given the requested
+ * orderBy (undefined when absent) and the already-validated dir, produce the
+ * ORDER BY body (without the leading `ORDER BY` keyword, or the full clause
+ * for the search paths whose bodies differ in shape).
+ */
+type OrderBodyMapper = (orderBy: string | undefined, dir: string) => string;
+
+interface UnifiedOrderOptions {
+  /**
+   * When true, validate orderBy against ALLOWED_ORDER_COLUMNS (plus 'rank')
+   * BEFORE resolving the direction, so an invalid column wins over an invalid
+   * direction exactly as the former buildOrderByClause did. Search paths pass
+   * false: any non-created_at orderBy maps to the relevance/default body and
+   * only the direction can error.
+   */
+  validateOrderBy: boolean;
+  mapBody: OrderBodyMapper;
+}
+
+/**
+ * Single skeleton for the ORDER 3 brothers: column allow-list validation
+ * (plain path only) → shared resolveOrderDir → caller-supplied column mapping.
+ * The three public builders below differ ONLY in `validateOrderBy`/`mapBody`.
+ */
+function buildUnifiedOrderClause(
+  q: StorageQuery,
+  opts: UnifiedOrderOptions,
+): { orderClause: string; error?: string } {
+  if (opts.validateOrderBy) {
+    const orderBy = q.orderBy || 'created_at';
+    if (orderBy !== 'rank' && !ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
+      return { orderClause: '', error: `Invalid orderBy: ${orderBy}` };
+    }
+  }
+  const resolved = resolveOrderDir(q);
+  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
+  return { orderClause: opts.mapBody(q.orderBy, resolved.dir) };
+}
+
+/**
  * Validate and build an ORDER BY clause for plain (non-FTS) queries.
  * Returns an error string on invalid input, or the SQL clause on success.
  */
 export function buildOrderByClause(
   q: StorageQuery
 ): { orderClause: string; error?: string } {
-  const orderBy = q.orderBy || 'created_at';
-  if (orderBy !== 'rank' && !ALLOWED_ORDER_COLUMNS.includes(orderBy as typeof ALLOWED_ORDER_COLUMNS[number])) {
-    return { orderClause: '', error: `Invalid orderBy: ${orderBy}` };
-  }
-  const resolved = resolveOrderDir(q);
-  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
-  const dir = resolved.dir;
-  // 'rank' for plain queries has no meaning — fall back to created_at
-  const col = orderBy === 'rank' ? 'created_at' : orderBy;
-  return { orderClause: `ORDER BY ${col} ${dir}` };
+  return buildUnifiedOrderClause(q, {
+    validateOrderBy: true,
+    // 'rank' for plain queries has no meaning — fall back to created_at
+    mapBody: (orderBy, dir) => {
+      const requested = orderBy || 'created_at';
+      const col = requested === 'rank' ? 'created_at' : requested;
+      return `ORDER BY ${col} ${dir}`;
+    },
+  });
 }
 
 /**
  * Build the ORDER BY clause for FTS5 search results.
  */
 export function buildFts5OrderClause(q: StorageQuery): { orderClause: string; error?: string } {
-  const resolved = resolveOrderDir(q);
-  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
-  const dir = resolved.dir;
-  const orderClause = q.orderBy === 'created_at'
-    ? `b.created_at ${dir}, b.id ${dir}`
-    : 'rank';
-  return { orderClause };
+  return buildUnifiedOrderClause(q, {
+    validateOrderBy: false,
+    mapBody: (orderBy, dir) =>
+      orderBy === 'created_at' ? `b.created_at ${dir}, b.id ${dir}` : 'rank',
+  });
 }
 
 /**
  * Build the ORDER BY clause for LIKE fallback search.
  */
 export function buildLikeOrderClause(q: StorageQuery): { orderClause: string; error?: string } {
-  const resolved = resolveOrderDir(q);
-  if (resolved.dir === undefined) return { orderClause: '', error: resolved.error };
-  const dir = resolved.dir;
-  return { orderClause: q.orderBy === 'created_at' ? `created_at ${dir}` : `created_at DESC` };
+  return buildUnifiedOrderClause(q, {
+    validateOrderBy: false,
+    // INTENTIONAL: only an explicit created_at honours the direction; every
+    // other orderBy (including absent/rank) coerces to created_at DESC.
+    mapBody: (orderBy, dir) =>
+      orderBy === 'created_at' ? `created_at ${dir}` : 'created_at DESC',
+  });
 }
 
 /**

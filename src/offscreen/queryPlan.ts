@@ -460,6 +460,63 @@ export interface SearchStatements {
 }
 
 /**
+ * Search-statement column lists (PBI 2026-10-14-04): the ONLY per-path
+ * difference the FTS/LIKE skeleton parameterizes, kept next to the skeleton
+ * so a new column is one edit here instead of two synchronized SELECTs.
+ *
+ * INTENTIONAL divergence preserved: FTS projects the `b.`-qualified 11
+ * browsing_logs columns plus `rank AS rank` (12 items — the FTS5 relevance
+ * score has no LIKE counterpart), LIKE projects the 11 unqualified columns.
+ */
+export const FTS_SEARCH_SELECT_COLUMNS =
+  'b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank';
+
+export const LIKE_SEARCH_SELECT_COLUMNS =
+  'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason';
+
+/** FROM clause shared by the FTS COUNT and rows statements (JOIN path). */
+export const FTS_SEARCH_FROM =
+  'FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id';
+
+/** FROM clause shared by the LIKE COUNT and rows statements (single table). */
+export const LIKE_SEARCH_FROM = 'FROM browsing_logs';
+
+/**
+ * Single skeleton for the FTS/LIKE search-statement twins (PBI 2026-10-14-04).
+ *
+ * The twins shared everything except the SELECT column list, the FROM clause,
+ * and the WHERE core (MATCH-? + qualified deleted filter vs LIKE-OR + plain
+ * deleted filter): suffix assembly (appendTag), param assembly
+ * (withTagParams), COUNT aliasing (`AS c` for the opfs named-row reader),
+ * ORDER/LIMIT/OFFSET shape, and limit/offset bind order are identical and
+ * now live here. Callers supply ONLY the parameterized parts:
+ * `selectColumns` (FTS 12 incl. rank vs LIKE 11), `from`, the tag-unappended
+ * `whereCore` + its `whereCoreParams` (lead binds + extraParams), and the
+ * already-resolved `orderClause`.
+ */
+export function assembleSearchStatements(opts: {
+  selectColumns: string;
+  from: string;
+  whereCore: string;
+  whereCoreParams: SqliteValue[];
+  tagFilter?: TagFilterCondition | null | undefined;
+  orderClause: string;
+  limit: number;
+  offset: number;
+}): SearchStatements {
+  const conditions = appendTag(opts.whereCore, opts.tagFilter);
+  const baseParams = withTagParams([...opts.whereCoreParams], opts.tagFilter);
+  return {
+    countSql: `SELECT COUNT(*) AS c ${opts.from} WHERE ${conditions}`,
+    rowsSql:
+      `SELECT ${opts.selectColumns} ${opts.from} ` +
+      `WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
+    countParams: baseParams,
+    rowsParams: [...baseParams, opts.limit, opts.offset],
+  };
+}
+
+/**
  * Single append point for the tag condition suffix.
  * Was copy-pasted ` AND ${condition}` in all 3 builders; param spreads were
  * hand-synced next to it (same shape as the round-12 nested `ids` bind bug).
@@ -493,23 +550,16 @@ export function buildFtsSearchStatements(
   // the shared condition set) instead of a hardcoded `b.is_deleted = 0` —
   // `excludeDeleted: false` now reaches the FTS path like fallback/InMemory.
   const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
-  const suffix = appendTag(`${deletedCond}${extra.extraWhereSql}`, opts.tagFilter);
-  const baseParams = withTagParams([opts.ftsQuery, ...extra.extraParams], opts.tagFilter);
-  const countSql =
-    'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ?${suffix}`;
-  const rowsSql =
-    'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank ' +
-    'FROM browsing_logs_fts ' +
-    'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-    `WHERE browsing_logs_fts MATCH ?${suffix} ` +
-    `ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`;
-  return {
-    countSql,
-    rowsSql,
-    countParams: baseParams,
-    rowsParams: [...baseParams, opts.limit, opts.offset],
-  };
+  return assembleSearchStatements({
+    selectColumns: FTS_SEARCH_SELECT_COLUMNS,
+    from: FTS_SEARCH_FROM,
+    whereCore: `browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}`,
+    whereCoreParams: [opts.ftsQuery, ...extra.extraParams],
+    tagFilter: opts.tagFilter,
+    orderClause: opts.orderClause,
+    limit: opts.limit,
+    offset: opts.offset,
+  });
 }
 
 /**
@@ -528,17 +578,17 @@ export function buildLikeSearchStatements(
   const baseConds = extra.includeDeletedFilter
     ? 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)'
     : '(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const conditions = appendTag(`${baseConds}${extra.extraWhereSql}`, opts.tagFilter);
   const likeParams: SqliteValue[] = [opts.likePattern, opts.likePattern, opts.likePattern, opts.likePattern];
-  const baseParams = withTagParams([...likeParams, ...extra.extraParams], opts.tagFilter);
-  return {
-    countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE ${conditions}`,
-    rowsSql:
-      'SELECT id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason ' +
-      `FROM browsing_logs WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
-    countParams: baseParams,
-    rowsParams: [...baseParams, opts.limit, opts.offset],
-  };
+  return assembleSearchStatements({
+    selectColumns: LIKE_SEARCH_SELECT_COLUMNS,
+    from: LIKE_SEARCH_FROM,
+    whereCore: `${baseConds}${extra.extraWhereSql}`,
+    whereCoreParams: [...likeParams, ...extra.extraParams],
+    tagFilter: opts.tagFilter,
+    orderClause: opts.orderClause,
+    limit: opts.limit,
+    offset: opts.offset,
+  });
 }
 
 /**
