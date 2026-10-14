@@ -28,12 +28,12 @@ Scenario: ワークフローは移設後のパスでスクリプトを実行す�
   Then 署名ステップが従来どおり成功する
 
 ## 受け入れ基準
-- [ ] `build-crx3.mjs` が `scripts/build-crx3.mjs` に移設される（履歴保持のため git mv を使用）
-- [ ] `release.yml:53` の呼び出しパスが `node scripts/build-crx3.mjs` に更新される
-- [ ] `scripts/__tests__/build-crx3.test.ts:14` の SCRIPT 定数が `resolve(__dirname, '../build-crx3.mjs')` に更新される
-- [ ] pin テスト（`npx vitest run scripts/__tests__/build-crx3.test.ts`）が全件 green
-- [ ] スクリプト内容は byte-identical（変更は移設のみ）
-- [ ] eslint が移設後のファイルで green（eslint は .github/ と scripts/ の両方を対象にしており、同一内容のため変化しないことを確認）
+- [x] `build-crx3.mjs` が `scripts/build-crx3.mjs` に移設される（履歴保持のため git mv を使用）
+- [x] `release.yml:53` の呼び出しパスが `node scripts/build-crx3.mjs` に更新される
+- [x] `scripts/__tests__/build-crx3.test.ts:14` の SCRIPT 定数が `resolve(__dirname, '../build-crx3.mjs')` に更新される
+- [x] pin テスト（`npx vitest run scripts/__tests__/build-crx3.test.ts`）が全件 green
+- [x] スクリプト内容は byte-identical（変更は移設のみ）
+- [x] eslint が移設後のファイルで green（eslint は .github/ と scripts/ の両方を対象にしており、同一内容のため変化しないことを確認）
 
 ## テスト戦略
 - 単体: 既存 pin テスト（build-crx3.test.ts、署名検証・NUL 終端・zip 完全一致・crx_id 導出）をそのまま流用
@@ -42,7 +42,11 @@ Scenario: ワークフローは移設後のパスでスクリプトを実行す�
 ## 見積もり
 0.25 SP（移設 + パス更新 2 箇所）
 
+## 実行結果（2026-10-14）
+- `git mv` で `scripts/build-crx3.mjs` に移設（コミット `4c48b33`）。`release.yml` の呼び出しパス、pin テストの SCRIPT 定数と doc コメントの参照パスを更新。
+- pin テスト 4/4 green（234ms）、eslint 0 errors、最終ゲート `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS。
+
 ## Definition of Done
-- [ ] 受け入れ基準がすべて満たされている
-- [ ] lint / type-check / test / build が通る
-- [ ] コードレビュー完了
+- [x] 受け入れ基準がすべて満たされている
+- [x] lint / type-check / test / build が通る
+- [x] コードレビュー完了

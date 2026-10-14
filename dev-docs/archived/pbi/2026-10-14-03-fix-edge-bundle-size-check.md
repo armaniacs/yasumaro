@@ -27,10 +27,10 @@ Scenario: Edge ビルドの肥大化は早期に失敗する
   Then exit 1 で失敗し、リリースが停止する
 
 ## 受け入れ基準
-- [ ] Edge ビルド直後に `npm run check-bundle-size -- edge-mv3` が実行される
-- [ ] chrome / firefox と同じステップ形式で追加する（名前も同系に揃える）
-- [ ] 既存ステップの順序・内容は変更しない（diff は追記のみ）
-- [ ] release.yml の YAML 構文が有効である
+- [x] Edge ビルド直後に `npm run check-bundle-size -- edge-mv3` が実行される
+- [x] chrome / firefox と同じステップ形式で追加する（名前も同系に揃える）
+- [x] 既存ステップの順序・内容は変更しない（diff は追記のみ）
+- [x] release.yml の YAML 構文が有効である
 
 ## テスト戦略
 - ワークフロー定義は単体テスト対象外のため、検証は YAML 構文パースと diff の目視確認で行う
@@ -40,7 +40,11 @@ Scenario: Edge ビルドの肥大化は早期に失敗する
 ## 見積もり
 0.25 SP（1 行追記）
 
+## 実行結果（2026-10-14）
+- `Check edge bundle size` ステップを Edge ビルド直後に追加（`release.yml`、コミット `cb1bc53`）。chrome / firefox と同型のステップ名・形式。
+- YAML 構文は js-yaml パースで検証。最終ゲート `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS。
+
 ## Definition of Done
-- [ ] 受け入れ基準がすべて満たされている
-- [ ] lint / type-check が通る（リポジトリ全体が green のこと）
-- [ ] コードレビュー完了
+- [x] 受け入れ基準がすべて満たされている
+- [x] lint / type-check が通る（リポジトリ全体が green のこと）
+- [x] コードレビュー完了

@@ -42,6 +42,17 @@ RICE = R × I × C / E。Reach はリリースパイプラインへの関与頻�
 
 **共通ファイル（統合側がバッチ境界で 1 回だけ編集）**: `pbi/00-INDEX.md`、本台帳。
 
+## 実行結果（2026-10-14 ラウンド）
+
+W1（01 → 02 → 03 → 04）を統合側が逐次実装（全員 release.yml のため直列・hunk 分離コミットで PBI 毎に分割）。実装コミットは `31b2c15`（01）/ `0c864cc`（02）/ `cb1bc53`（03）/ `4c48b33`（04）。全 4 件最終ゲート `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS でアーカイブ。
+
+- **NN01** — `timeout-minutes: 15` → `90` + 予算根拠コメント（`release.yml:14-18`）。YAML パース検証。
+- **NN02** — publish ブロックを Edge 同型の `-w '%{http_code}'` パターンに統一。モック curl で 5 シナリオ（transport fail / 400 / 200+error / 200 ok / 200 非 JSON）を実証し、false success 経路の閉鎖を確認。
+- **NN03** — Edge ビルド直後に `check-bundle-size -- edge-mv3` を追加。
+- **NN04** — `git mv` で scripts/build-crx3.mjs に移設。pin テスト 4/4 green、release.yml と pin テスト（SCRIPT 定数 + doc コメント）の参照パス更新。
+
+PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリンクもアーカイブ先）。ユーザー作業: v6.9.43 の CWS publish 拒否（store 側要件事項、run 38525033887）は Developer Dashboard での対応が必要。
+
 ## 台帳送り（見送り・トリガー管理）
 
 | # | テーマ | 再検討トリガー |

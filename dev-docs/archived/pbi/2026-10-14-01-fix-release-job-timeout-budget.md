@@ -29,10 +29,10 @@ Scenario: ストア API 遅延時も独立性が保たれる
   Then ジョブタイムアウト（90 分）は Edge の完走（最悪約 46 分）を阻害しない
 
 ## 受け入れ基準
-- [ ] `timeout-minutes` が 15 から 90 になり、根拠（ポーリング最悪ケースの計算: CWS 26.5 分 + Edge 46 分 + ビルド余裕 ≈ 82.5 分をカバー）が行コメントで記録されている
-- [ ] ステップ順序・ステップ内容・他のフィールドは一切変更していない（diff は timeout-minutes 行のみ）
-- [ ] ポーリング最悪ケースの計算内訳が本 PBI に記録されている
-- [ ] release.yml の YAML 構文が有効である
+- [x] `timeout-minutes` が 15 から 90 になり、根拠（ポーリング最悪ケースの計算: CWS 26.5 分 + Edge 46 分 + ビルド余裕 ≈ 82.5 分をカバー）が行コメントで記録されている
+- [x] ステップ順序・ステップ内容・他のフィールドは一切変更していない（diff は timeout-minutes 行のみ）
+- [x] ポーリング最悪ケースの計算内訳が本 PBI に記録されている
+- [x] release.yml の YAML 構文が有効である
 
 ## テスト戦略
 - ワークフロー定義は単体テスト対象外のため、検証は YAML 構文パース（Node の js-yaml 等または actionlint 相当）と diff の目視確認で行う
@@ -41,7 +41,11 @@ Scenario: ストア API 遅延時も独立性が保たれる
 ## 見積もり
 0.25 SP（1 行変更）
 
+## 実行結果（2026-10-14）
+- `timeout-minutes: 15` → `90` + 予算根拠コメントを追加（`release.yml:14-18`、コミット `31b2c15`）。diff は timeout 関連のみ（hunk 分離コミット）。
+- YAML 構文は js-yaml パースで検証。最終ゲート `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS。
+
 ## Definition of Done
-- [ ] 受け入れ基準がすべて満たされている
-- [ ] lint / type-check が通る（release.yml は eslint 対象外だがリポジトリ全体が green のこと）
-- [ ] コードレビュー完了
+- [x] 受け入れ基準がすべて満たされている
+- [x] lint / type-check が通る（release.yml は eslint 対象外だがリポジトリ全体が green のこと）
+- [x] コードレビュー完了
