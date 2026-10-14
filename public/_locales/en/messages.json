@@ -278,6 +278,30 @@
   "ublockHelp": {
     "message": "Paste uBlock Origin or hosts format filters\nuBlock: ||hostname^, @@||hostname^, *, !Comments\nhosts: 0.0.0.0/127.0.0.1 hostname (#comments supported)"
   },
+  "ublockSourceDeleted": {
+    "message": "Source deleted"
+  },
+  "ublockInvalidIndex": {
+    "message": "Invalid index"
+  },
+  "ublockManualSourceNotReloadable": {
+    "message": "Manually entered sources cannot be reloaded"
+  },
+  "ublockNoValidRules": {
+    "message": "No valid rules found"
+  },
+  "ublockNoValidRulesWithDetail": {
+    "message": "Errors found: no valid rules found"
+  },
+  "ublockNoValidRulesAborted": {
+    "message": "Errors found: no valid rules found. Update aborted."
+  },
+  "ublockSourceSavedUpdated": {
+    "message": "Filter source updated ({ruleCount} rules)"
+  },
+  "ublockSourceSavedAdded": {
+    "message": "Filter source added ({ruleCount} rules)"
+  },
   "loadFromFile": {
     "message": "Load from file (.txt)"
   },

@@ -7,6 +7,9 @@ import { parseUblockFilterListWithErrors, isValidString } from '../../../utils/u
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
+import { logWarn } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
 import type { Source } from '../../../utils/types.js';
 
@@ -74,7 +77,7 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
   if (renderCallback) {
     renderCallback(sources);
   }
-  showStatus('domainStatus', 'ソースを削除しました', 'success');
+  showStatus('domainStatus', getMessageOr('ublockSourceDeleted', 'ソースを削除しました'), 'success');
 }
 
 /**
@@ -88,13 +91,13 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   if (index < 0 || index >= sources.length) {
-    throw new Error('無効なインデックス');
+    throw new Error(getMessageOr('ublockInvalidIndex', '無効なインデックス'));
   }
 
   const source = sources[index];
-  if (!source) throw new Error('無効なインデックス');
+  if (!source) throw new Error(getMessageOr('ublockInvalidIndex', '無効なインデックス'));
   if (source.url === 'manual') {
-    throw new Error('手動入力のソースは更新できません');
+    throw new Error(getMessageOr('ublockManualSourceNotReloadable', '手動入力のソースは更新できません'));
   }
 
   const filterText = await fetchFromUrlCallback(source.url);
@@ -104,12 +107,12 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 
   const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
   if (ruleCount === 0) {
-    throw new Error('エラーが見つかりました: 有効なルールが見つかりませんでした。更新中部止します。');
+    throw new Error(getMessageOr('ublockNoValidRulesAborted', 'エラーが見つかりました: 有効なルールが見つかりませんでした。更新を中止します。'));
   }
 
   // エラーがあっても、有効なルールが存在すれば更新を許可
   if (result.errors.length > 0) {
-    console.warn(`${result.errors.length}個のエラーがスキップされました（有効なルール: ${ruleCount}）`);
+    void logWarn('uBlock source reload skipped invalid lines', { skipped: result.errors.length, ruleCount }, ErrorCode.SETTINGS_IMPORT_FAILURE, 'sourceManager');
   }
 
   // ドメインリストのみを抽出（軽量化）
@@ -147,21 +150,21 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 export async function saveUblockSettings(text: string, url: string | null = null): Promise<SaveResult> {
   // 入力値検証: 空文字列は事前にチェック
   if (!isValidString(text)) {
-    throw new Error('有効なルールが見つかりませんでした');
+    throw new Error(getMessageOr('ublockNoValidRules', '有効なルールが見つかりませんでした'));
   }
 
   const result = parseUblockFilterListWithErrors(text);
 
   const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
   if (ruleCount === 0) {
-    showStatus('domainStatus', 'エラーが見つかりました: 有効なルールが見つかりませんでした', 'error');
-    throw new Error('エラーが見つかりました: 有効なルールが見つかりませんでした');
+    showStatus('domainStatus', getMessageOr('ublockNoValidRulesWithDetail', 'エラーが見つかりました: 有効なルールが見つかりませんでした'), 'error');
+    throw new Error(getMessageOr('ublockNoValidRulesWithDetail', 'エラーが見つかりました: 有効なルールが見つかりませんでした'));
   }
 
   // エラーがあっても、有効なルールが存在すれば保存を許可
   // (localhost, broadcasthost等の特殊ドメインは意図的にスキップされる)
   if (result.errors.length > 0) {
-    console.warn(`${result.errors.length}個のエラーがスキップされました（有効なルール: ${ruleCount}）`);
+    void logWarn('uBlock settings save skipped invalid lines', { skipped: result.errors.length, ruleCount }, ErrorCode.SETTINGS_IMPORT_FAILURE, 'sourceManager');
   }
 
   const settings = await settingsRepository.getAll();
@@ -198,7 +201,11 @@ export async function saveUblockSettings(text: string, url: string | null = null
   });
 
   const action = existingIndex >= 0 ? '更新' : '追加';
-  showStatus('domainStatus', `フィルターソースを${action}しました（${ruleCount}ルール）`, 'success');
+  showStatus('domainStatus', getMessageWithSubstitutions(
+    existingIndex >= 0 ? 'ublockSourceSavedUpdated' : 'ublockSourceSavedAdded',
+    { ruleCount },
+    existingIndex >= 0 ? 'フィルターソースを更新しました（{ruleCount}ルール）' : 'フィルターソースを追加しました（{ruleCount}ルール）'
+  ), 'success');
 
   return {
     sources,

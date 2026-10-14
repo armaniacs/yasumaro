@@ -262,6 +262,45 @@ describe('ublockImport - SourceManager Module', () => {
   });
 
   // ========================================================================
+  // i18n seam (PBI 2026-10-15-01): user-facing strings resolve via dictionary
+  // ========================================================================
+
+  describe('i18n seam', () => {
+    test('deleteSource resolves the success message through the dictionary', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [
+            { url: 'https://example.com/filters.txt', ruleCount: 1, blockDomains: ['example.com'], exceptionDomains: [] }
+          ],
+          ublock_rules: {},
+          ublock_format_enabled: true
+        }
+      });
+
+      document.body.innerHTML = '<div id="domainStatus"></div>';
+      await deleteSource(0);
+
+      // Test env resolves the en dictionary: EN users no longer see Japanese.
+      expect(document.getElementById('domainStatus')?.textContent).toBe('Source deleted');
+    });
+
+    test('saveUblockSettings resolves the added message with the rule count', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [],
+          ublock_rules: {},
+          ublock_format_enabled: false
+        }
+      });
+
+      document.body.innerHTML = '<div id="domainStatus"></div>';
+      await saveUblockSettings('||example.com^');
+
+      expect(document.getElementById('domainStatus')?.textContent).toBe('Filter source added (1 rules)');
+    });
+  });
+
+  // ========================================================================
   // reloadSource
   // ========================================================================
 
@@ -298,7 +337,7 @@ describe('ublockImport - SourceManager Module', () => {
 
       const fetchFromUrlCallback = vi.fn();
 
-      await expect(reloadSource(100, fetchFromUrlCallback)).rejects.toThrow('無効なインデックス');
+      await expect(reloadSource(100, fetchFromUrlCallback)).rejects.toThrow('Invalid index');
     });
 
     test('rejects reloading a manually entered source', async () => {
@@ -314,7 +353,7 @@ describe('ublockImport - SourceManager Module', () => {
 
       const fetchFromUrlCallback = vi.fn();
 
-      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('手動入力のソースは更新できません');
+      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('Manually entered sources cannot be reloaded');
     });
 
     test('throws when parse errors exist', async () => {
@@ -331,7 +370,7 @@ describe('ublockImport - SourceManager Module', () => {
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue('invalid line without caret');
 
-      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('エラーが見つかりました');
+      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('Errors found');
     });
 
     test('throws when the parse result has no rules', async () => {
@@ -349,7 +388,7 @@ describe('ublockImport - SourceManager Module', () => {
   
       const fetchFromUrlCallback = vi.fn().mockResolvedValue('');
 
-      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('有効なルールが見つかりませんでした');
+      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('Update aborted');
     });
   });
 
@@ -383,21 +422,21 @@ describe('ublockImport - SourceManager Module', () => {
     test('throws when parse errors exist', async () => {
       const filterText = 'invalid line without caret';
 
-      await expect(saveUblockSettings(filterText)).rejects.toThrow(/エラーが見つかりました/);
+      await expect(saveUblockSettings(filterText)).rejects.toThrow(/Errors found/);
     });
 
     test('throws when no valid rules exist', async () => {
       // 空文字列は入力バリデーションで早期リターン
       const filterText = '';
 
-      await expect(saveUblockSettings(filterText)).rejects.toThrow('有効なルールが見つかりませんでした');
+      await expect(saveUblockSettings(filterText)).rejects.toThrow('No valid rules found');
     });
 
     test('throws when the parsed rule count is zero', async () => {
       // コメントのみのフィルターテキスト - 有効な文字列だがルールは0
       const filterText = '! This is a comment\n! Another comment';
 
-      await expect(saveUblockSettings(filterText)).rejects.toThrow('有効なルールが見つかりませんでした');
+      await expect(saveUblockSettings(filterText)).rejects.toThrow('Errors found: no valid rules found');
     });
 
     test('saves a large rule set correctly', async () => {
@@ -469,7 +508,7 @@ describe('ublockImport - SourceManager Module', () => {
       storageMocks.setStorageState({ settings: { ublock_sources: undefined } });
 
       const fetchFromUrlCallback = vi.fn();
-      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('無効なインデックス');
+      await expect(reloadSource(0, fetchFromUrlCallback)).rejects.toThrow('Invalid index');
     });
 
     test('saveUblockSettings adds a new source when sources are unset', async () => {
@@ -495,26 +534,38 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const logger = await import('../../../../utils/logger/api.js');
+      const warnSpy = vi.spyOn(logger, 'logWarn').mockResolvedValue(undefined);
       try {
         const fetchFromUrlCallback = vi.fn().mockResolvedValue('||example.com^\ninvalid line without caret');
         const result = await reloadSource(0, fetchFromUrlCallback);
 
         expect(result.ruleCount).toBe(1);
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('skipped invalid lines'),
+          expect.objectContaining({ skipped: 1, ruleCount: 1 }),
+          expect.any(String),
+          'sourceManager',
+        );
       } finally {
         warnSpy.mockRestore();
       }
     });
 
     test('saveUblockSettings saves with a warning when valid rules exist', async () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const logger = await import('../../../../utils/logger/api.js');
+      const warnSpy = vi.spyOn(logger, 'logWarn').mockResolvedValue(undefined);
       try {
         const result = await saveUblockSettings('||example.com^\ninvalid line without caret');
 
         expect(result.action).toBe('追加');
         expect(result.ruleCount).toBe(1);
-        expect(warnSpy).toHaveBeenCalled();
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('skipped invalid lines'),
+          expect.objectContaining({ skipped: 1, ruleCount: 1 }),
+          expect.any(String),
+          'sourceManager',
+        );
       } finally {
         warnSpy.mockRestore();
       }

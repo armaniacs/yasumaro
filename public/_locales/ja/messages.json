@@ -278,6 +278,30 @@
   "ublockHelp": {
     "message": "uBlock Origin形式 または hosts形式のフィルターを貼り付け\nuBlock: ||hostname^, @@||hostname^, *, !Comments\nhosts: 0.0.0.0/127.0.0.1 hostname (#コメント対応)"
   },
+  "ublockSourceDeleted": {
+    "message": "ソースを削除しました"
+  },
+  "ublockInvalidIndex": {
+    "message": "無効なインデックス"
+  },
+  "ublockManualSourceNotReloadable": {
+    "message": "手動入力のソースは更新できません"
+  },
+  "ublockNoValidRules": {
+    "message": "有効なルールが見つかりませんでした"
+  },
+  "ublockNoValidRulesWithDetail": {
+    "message": "エラーが見つかりました: 有効なルールが見つかりませんでした"
+  },
+  "ublockNoValidRulesAborted": {
+    "message": "エラーが見つかりました: 有効なルールが見つかりませんでした。更新を中止します。"
+  },
+  "ublockSourceSavedUpdated": {
+    "message": "フィルターソースを更新しました（{ruleCount}ルール）"
+  },
+  "ublockSourceSavedAdded": {
+    "message": "フィルターソースを追加しました（{ruleCount}ルール）"
+  },
   "loadFromFile": {
     "message": "ファイルから読み込み (.txt)"
   },
