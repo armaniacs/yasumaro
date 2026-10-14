@@ -224,6 +224,30 @@ jobs:
           [ -n "${OP}" ] || { echo "No operation id in Location header"; exit 1; }
           wait_for_operation "${API}/submissions/operations/${OP}" "Publish"
           echo "Publish submitted"
+      - name: Submit to Firefox Add-ons (AMO)
+        # AMO has no draft state: a listed-channel upload is a submission for review, so the
+        # whole step is gated on the repository variable. Independent of the other store steps.
+        if: ${{ always() && hashFiles('dist/yasumaro-*-sources.zip') != '' }}
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          AMO_AUTO_SUBMIT: ${{ vars.AMO_AUTO_SUBMIT }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ "${AMO_AUTO_SUBMIT}" != "true" ]; then
+            echo "AMO_AUTO_SUBMIT is not 'true'; skipping AMO submission"
+            exit 0
+          fi
+          ARTIFACTS_DIR="$(mktemp -d)"
+          # The reviewer rebuilds from the sources archive, so it must travel with the bundle.
+          # --approval-timeout 0: review is manual and takes days; do not hold the runner.
+          npx --yes --package web-ext@10.7.0 web-ext sign \
+            --channel listed \
+            --source-dir dist/firefox-mv3 \
+            --artifacts-dir "${ARTIFACTS_DIR}" \
+            --upload-source-code "dist/yasumaro-${VERSION}-sources.zip" \
+            --approval-timeout 0 \
+            --no-input
 
   record-metrics:
     needs: release
