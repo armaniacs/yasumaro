@@ -14,6 +14,20 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-14 holistic-code-review ラウンド（holistic-1014b） — ✅ 5件完了・アーカイブ済み 🔧非機能追加 RICE順: 01 → 02 → 03 → 04 → 05
+
+コードベース全体の大局的レビュー（DRY／SoC／拡張性／堅牢性の4観点並列調査）。致命的コピペは解消済み、残るは層を跨ぐ手書き並列パターン。RICE採点・タイブレーク・依存・バッチ計画・なぜなぜ分析の詳細は [2026-10-14-00-backlog-holistic-1014b.md](2026-10-14-00-backlog-holistic-1014b.md)（live台帳）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---:|---|
+| ✅ 01 | [2026-10-14-01-fix-robustness-two-layer-errors-locks-logs.md](../dev-docs/archived/pbi/2026-10-14-01-fix-robustness-two-layer-errors-locks-logs.md) | fix | 10.0 | 1.0 | ✅ 完了（`1afa7b25`）。空catch可視化・confirm-token上限＋pin・opfsキュー上限・flush冪等・パネルタイマー・UI console寄せ。aiUsageTracker等は実測で対応済みと判断 |
+| ✅ 02 | [2026-10-14-02-refactor-gateway-send-policy-seam.md](../dev-docs/archived/pbi/2026-10-14-02-refactor-gateway-send-policy-seam.md) | refactor | 10.0 | 0.5 | ✅ 完了（`e7918862`）。sendWithPolicy新設＋2 gateway薄ラッパ化＋pin。新規4件・既存428件緑 |
+| ✅ 03 | [2026-10-14-03-refactor-popup-domain-separation.md](../dev-docs/archived/pbi/2026-10-14-03-refactor-popup-domain-separation.md) | refactor | 5.3 | 1.5 | ✅ 完了（`a07bcc19`）。payload組立をmessagingへ移管＋fetcher ports＋通知seam。PII分岐等はseam済み確認 |
+| ✅ 04 | [2026-10-14-04-refactor-sqlite-search-statement-twins.md](../dev-docs/archived/pbi/2026-10-14-04-refactor-sqlite-search-statement-twins.md) | refactor | 2.4 | 2.0 | ✅ 完了（`f23e91e3`）。2 seamに統一＋等価性pin10件。offscreen 1254件緑 |
+| ✅ 05 | [2026-10-14-05-refactor-sync-target-yagni-cleanup.md](../dev-docs/archived/pbi/2026-10-14-05-refactor-sync-target-yagni-cleanup.md) | refactor | 2.0 | 0.5 | ✅ 完了（`09833ffa`）。experimental明記＋view派生map＋dead alias削除。ai 387件緑 |
+
+実行順: W1（01／02／04／05並列）→ W2（03）。フォローアップF1-F4は台帳送り。
+
 ### 2026-10-14 holistic-code-improvement ラウンド（holistic-1014） — ✅ 4件完了・アーカイブ済み 🔧非機能追加 RICE順: 01 → 02 → 03 → 04
 
 差分スコープ（`49ca0c62..HEAD`、2026-10-14 の CI リリースパイプライン + 動的 import 統一）の大局的レビュー。過去 5 ラウンドで src/ 全域をレビュー済みのため、未レビュー material のみを対象に 4 候補を RICE 採点して PBI 化（NN01-04）。4 候補すべてが `release.yml` を触るため全員直列実行（hunk 分離コミットで PBI 毎に分割）。台帳送り新規なし（ポーリング共通化は過度な共通化として却下）、既存 F1-F24・L2-L8 のトリガー未発火を確認。RICE 採点・依存・バッチ計画・ユーザー作業（v6.9.43 CWS publish 拒否の Dashboard 対応）の詳細は [2026-10-14-00-backlog-holistic-1014.md](2026-10-14-00-backlog-holistic-1014.md)（live 台帳）。
