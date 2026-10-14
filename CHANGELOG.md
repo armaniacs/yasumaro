@@ -35,6 +35,13 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.44] - 2026-10-15
+
+### 修正
+
+- uBlock フィルター管理（削除・再読込・保存）の成功・失敗メッセージと throw 文言の日本語直書き 9 箇所を `getMessageOr` / `getMessageWithSubstitutions` 経由に寄せ、両ロケール辞書に `ublock*` 8 キーを追加する。英語ロケールで日本語が表示される実害を解消する。throw の `Error` インターフェースと `action` 戻り値は不変。`console.warn` 2 箇所は `logWarn`（`SETTINGS_IMPORT_FAILURE`）へ寄せる。テストの日本語断定は en 解決の英断定へ更新し、辞書解決の新規ケース 2 件を追加する。`ublockImport.test.ts` の `global.chrome` 部分モックがセットアップの `i18n` 契約を消していたため、実 en 辞書裏打ちの `getMessage` / `getUILanguage` を追加する（arch-delivery-loop archloop-1015、PBI 2026-10-15-01）
+- `AGENTS.md` の arch-delivery-loop skill パスを `.kilo/skills/...` から実配置の `.agents/skills/...` に修正する
+
 ## [6.9.43] - 2026-10-14
 
 このリリースは 6.9.42 の CI/pipeline 修正です。6.9.42 のタグでは Chrome Web Store への upload が署名検証で拒否されたため、CRX3 署名の不具合を修正しました。拡張機能の動作に変更はありません。
