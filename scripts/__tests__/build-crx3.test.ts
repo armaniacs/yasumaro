@@ -1,6 +1,6 @@
 /**
  * build-crx3.test.ts
- * Pins the CRX3 signature layout produced by .github/workflows/build-crx3.mjs.
+ * Pins the CRX3 signature layout produced by scripts/build-crx3.mjs.
  * The Web Store verifies the signature with Chromium's crx_verifier, so the signed
  * payload must be byte-exact: "CRX3 SignedData\0" + LE32(len) + signed_header_data + zip.
  */
@@ -11,7 +11,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
-const SCRIPT = resolve(__dirname, '../../.github/workflows/build-crx3.mjs');
+const SCRIPT = resolve(__dirname, '../build-crx3.mjs');
 const ZIP_BODY = Buffer.from('PK\u0003\u0004 not a real zip, signature does not care');
 
 interface ParsedCrx {

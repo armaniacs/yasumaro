@@ -54,7 +54,7 @@ jobs:
           KEY_FILE="$(mktemp)"
           trap 'rm -f "${KEY_FILE}"' EXIT
           printf '%s\n' "${CRX_PRIVATE_KEY}" > "${KEY_FILE}"
-          node .github/workflows/build-crx3.mjs \
+          node scripts/build-crx3.mjs \
             "dist/yasumaro-${VERSION}-chrome.zip" \
             "${KEY_FILE}" \
             "dist/yasumaro-${VERSION}-chrome.crx"
