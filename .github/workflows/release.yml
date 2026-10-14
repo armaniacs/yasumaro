@@ -107,13 +107,19 @@ jobs:
           fi
           echo "::add-mask::${ACCESS_TOKEN}"
 
-          UPLOAD_STATE=$(curl -sS --connect-timeout 10 --max-time 300 -X POST \
+          UPLOAD_RESP=$(curl -sS --connect-timeout 10 --max-time 300 -X POST \
             "https://chromewebstore.googleapis.com/upload/v2/${ITEM_PATH}:upload" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "X-Goog-Upload-Protocol: raw" \
             -H "X-Goog-Upload-File-Name: extension.crx" \
-            -T "dist/yasumaro-${VERSION}-chrome.crx" | jq -r '.uploadState // "UNKNOWN"')
+            -T "dist/yasumaro-${VERSION}-chrome.crx")
+          UPLOAD_STATE=$(echo "${UPLOAD_RESP}" | jq -r '.uploadState // "UNKNOWN"' 2>/dev/null || echo UNKNOWN)
           echo "Upload: ${UPLOAD_STATE}"
+          if [ "${UPLOAD_STATE}" = "UNKNOWN" ]; then
+            echo "Upload response (error fields only):"
+            echo "${UPLOAD_RESP}" | jq -c '{error: (.error // null), status: .status, message: .message}' 2>/dev/null \
+              || echo "Non-JSON response (${#UPLOAD_RESP} bytes)"
+          fi
 
           # NOT_FOUND is returned until the async upload is registered, so it is polled like IN_PROGRESS.
           for i in $(seq 1 30); do
