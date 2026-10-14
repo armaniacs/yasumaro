@@ -1,6 +1,6 @@
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList, buildEntryMarkdown } from '../markdownFormatter.js';
+import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList, buildEntryMarkdown, buildTemplateEntryData } from '../markdownFormatter.js';
 import type { BrowsingLogEntry } from '../sqlite-types.js';
 
 const baseEntry: BrowsingLogEntry = {
@@ -236,5 +236,77 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
         { titleFallback: false },
       ),
     ).not.toThrow();
+  });
+});
+
+describe('resolveTimestamp minute memoization (PBI 2026-10-15-02)', () => {
+  // Local-time construction: the minute bucket must hold regardless of TZ.
+  // Fresh hour per invocation: the module-level minute cache persists across
+  // repeats in one worker, so each invocation needs an unseen minute key to
+  // observe the miss-then-hit behavior deterministically (--repeats safe).
+  let minuteSalt = 0;
+  const freshBase = (): number => {
+    const base = new Date(2026, 9, 1, 9, 5, 12).getTime() + minuteSalt * 3_600_000;
+    minuteSalt += 1;
+    return base;
+  };
+  const entry = (createdAt: number, url = 'https://example.com/a') =>
+    buildTemplateEntryData({ title: 'T', url, createdAt }, { tagChain: 'obsidian' });
+
+  it('formats same-minute timestamps with a single ICU call', () => {
+    const spy = vi.spyOn(Date.prototype, 'toLocaleTimeString');
+    try {
+      const base = freshBase();
+      const a = entry(base);
+      const b = entry(base + 30_000, 'https://example.com/b');
+      expect(a.timestamp).toBe(b.timestamp);
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('formats across a minute boundary differently', () => {
+    const base = freshBase();
+    const a = entry(base + 47_999);
+    const b = entry(base + 48_000);
+    expect(a.timestamp).not.toBe(b.timestamp);
+  });
+
+  it('keeps an explicit timestamp out of the cache', () => {
+    const spy = vi.spyOn(Date.prototype, 'toLocaleTimeString');
+    try {
+      const explicit = buildTemplateEntryData(
+        { title: 'T', url: 'https://example.com/a', timestamp: 'custom' },
+        { tagChain: 'obsidian' },
+      );
+      expect(explicit.timestamp).toBe('custom');
+      expect(spy).not.toHaveBeenCalled();
+      // The computed path for the same minute is unaffected by the explicit value.
+      const base = freshBase();
+      const computed = entry(base);
+      expect(computed.timestamp).not.toBe('custom');
+      expect(computed.timestamp).toBe(entry(base + 45_000).timestamp);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('does not leak across timestampLocale values', () => {
+    const base = freshBase();
+    const ja1 = buildTemplateEntryData(
+      { title: 'T', url: 'https://example.com/a', createdAt: base },
+      { tagChain: 'obsidian', timestampLocale: 'ja-JP' },
+    ).timestamp;
+    const en = buildTemplateEntryData(
+      { title: 'T', url: 'https://example.com/a', createdAt: base },
+      { tagChain: 'obsidian', timestampLocale: 'en-US' },
+    ).timestamp;
+    const ja2 = buildTemplateEntryData(
+      { title: 'T', url: 'https://example.com/a', createdAt: base },
+      { tagChain: 'obsidian', timestampLocale: 'ja-JP' },
+    ).timestamp;
+    expect(ja2).toBe(ja1);
+    expect(typeof en).toBe('string');
   });
 });

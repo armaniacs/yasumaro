@@ -125,13 +125,29 @@ function sanitizeParts(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdown
   };
 }
 
+/**
+ * Minute-bucket cache for resolveTimestamp below. The display resolution is
+ * minutes, so every timestamp in the same minute formats identically — one ICU
+ * call per distinct minute instead of one per row (PBI 2026-10-15-02: ~80% of
+ * the 10k-row export render cost). The key space is naturally bounded (at most
+ * 1440 distinct HH:MM values), so no TTL or eviction is needed. Keyed by
+ * minute + locale so timestampLocale callers never cross-contaminate.
+ */
+const timestampByMinute = new Map<string, string>();
+
 function resolveTimestamp(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdownOptions): string {
   if (input.timestamp !== undefined) return input.timestamp;
   const source = input.appendedAt ?? input.createdAt ?? Date.now();
-  return new Date(source).toLocaleTimeString(opts?.timestampLocale ?? 'ja-JP', {
+  const locale = opts?.timestampLocale ?? 'ja-JP';
+  const key = `${locale}@${Math.floor(source / 60_000)}`;
+  const cached = timestampByMinute.get(key);
+  if (cached !== undefined) return cached;
+  const formatted = new Date(source).toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
+  timestampByMinute.set(key, formatted);
+  return formatted;
 }
 
 /**

@@ -264,6 +264,20 @@ describe('exportDateRange', () => {
     ).rejects.toThrow('Storage quota exceeded.');
     expect(dl.calls).toHaveLength(0);
   });
+
+  // PBI 2026-10-15-02: spec pin — same HH:MM on different days must render
+  // the identical timestamp string, before and after memoization.
+  it('renders the same timestamp for the same minute on different days', () => {
+    const a = toMarkdownTemplateEntryData({
+      url: 'https://example.com/1',
+      created_at: new Date(2026, 9, 1, 9, 5, 12).getTime(),
+    });
+    const b = toMarkdownTemplateEntryData({
+      url: 'https://example.com/2',
+      created_at: new Date(2026, 9, 15, 9, 5, 47).getTime(),
+    });
+    expect(a.timestamp).toBe(b.timestamp);
+  });
 });
 
 describe('exportFullHistoryInBatches', () => {
