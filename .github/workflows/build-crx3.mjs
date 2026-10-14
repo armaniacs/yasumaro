@@ -57,8 +57,10 @@ function buildCrx3(zipPath, keyPath, outputPath) {
   const crxId = crypto.createHash('sha256').update(publicKeyDer).digest().subarray(0, 16);
   const signedData = encodeSignedData(crxId);
 
-  // Signed payload: "CRX3 SignedData" + len(signedData, 4B LE) + signedData + zip content
-  const signatureContext = Buffer.from('CRX3 SignedData', 'utf8');
+  // Signed payload: "CRX3 SignedData\0" + len(signedData, 4B LE) + signedData + zip content.
+  // The context string includes its NUL terminator (16 bytes); omitting it yields a signature
+  // that the Web Store rejects as PKG_CANNOT_VERIFY_CRX_SIGNATURE.
+  const signatureContext = Buffer.from('CRX3 SignedData\0', 'utf8');
   const signedDataLenLE = Buffer.alloc(4);
   signedDataLenLE.writeUInt32LE(signedData.length, 0);
 
