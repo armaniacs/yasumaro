@@ -39,7 +39,7 @@
 | ✅ 03 | [2026-10-14-03-fix-edge-bundle-size-check.md](../dev-docs/archived/pbi/2026-10-14-03-fix-edge-bundle-size-check.md) | fix | 10.0 | 0.25 | ✅ 完了（`cb1bc53`）。Edge ビルド直後に check-bundle-size -- edge-mv3 を追加（chrome/firefox と同型） |
 | ✅ 04 | [2026-10-14-04-refactor-build-crx3-script-relocation.md](../dev-docs/archived/pbi/2026-10-14-04-refactor-build-crx3-script-relocation.md) | refactor | 4.0 | 0.25 | ✅ 完了（`4c48b33`）。CRX3 署名スクリプトを scripts/ へ移設（git mv）。pin テスト 4/4 green、release.yml と pin テストの参照パス更新で逆方向横断を解消 |
 
-実行順: RICE 順。全員 release.yml を触るため W1 直列（01 → 02 → 03 → 04、hunk 分離コミット）。全 4 件 `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS でアーカイブ。バッチ内境界検証: YAML パース（js-yaml）+ pin テスト + lint 0 errors。ユーザー作業: v6.9.43 の CWS publish 拒否（store 側要件事項）は Developer Dashboard での対応が必要。
+実行順: RICE 順。全員 release.yml を触るため W1 直列（01 → 02 → 03 → 04、hunk 分離コミット）。全 4 件 `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS でアーカイブ。バッチ内境界検証: YAML パース（js-yaml）+ pin テスト + lint 0 errors。ユーザー作業（v6.9.43 CWS publish 拒否の Dashboard 対応）: ✅ 2026-10-14 ユーザー実施済みで完了。
 
 ### 2026-10-13 code-review 指摘フォロー（review-followup2） — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 

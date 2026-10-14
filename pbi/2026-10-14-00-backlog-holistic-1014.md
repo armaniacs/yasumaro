@@ -51,7 +51,7 @@ W1（01 → 02 → 03 → 04）を統合側が逐次実装（全員 release.yml 
 - **NN03** — Edge ビルド直後に `check-bundle-size -- edge-mv3` を追加。
 - **NN04** — `git mv` で scripts/build-crx3.mjs に移設。pin テスト 4/4 green、release.yml と pin テスト（SCRIPT 定数 + doc コメント）の参照パス更新。
 
-PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリンクもアーカイブ先）。ユーザー作業: v6.9.43 の CWS publish 拒否（store 側要件事項、run 38525033887）は Developer Dashboard での対応が必要。
+PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリンクもアーカイブ先）。ユーザー作業（CWS publish 拒否の Dashboard 対応）は 2026-10-14 にユーザー実施済みで完了。
 
 ## 台帳送り（見送り・トリガー管理）
 
@@ -63,7 +63,7 @@ PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリン�
 
 ## ユーザー作業（自動化外の残項目）
 
-- **CWS publish 拒否（v6.9.43、run 38525033887）**: store 側要件事項による拒否でコード欠陥ではない。"Your submission does not meet the requirements to be published in the store. Check the Developer Dashboard for steps to resolve." — Developer Dashboard での対応が必要。本ラウンドの PBI 化対象外（外部サービス操作）。
+- **CWS publish 拒否（v6.9.43、run 38525033887）**: ✅ 完了（2026-10-14 ユーザー報告）。store 側要件事項による拒否でコード欠陥ではない。"Your submission does not meet the requirements to be published in the store. Check the Developer Dashboard for steps to resolve." — Developer Dashboard での対応で解決。本ラウンドの PBI 化対象外（外部サービス操作）。
 
 ## DoD 反映漏れ
 
