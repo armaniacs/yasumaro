@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-14 holistic-code-improvement ラウンド（holistic-1014） — ⬜ 未着手 4件 🔧非機能追加 RICE順: 01 → 02 → 03 → 04
+
+差分スコープ（`49ca0c62..HEAD`、2026-10-14 の CI リリースパイプライン + 動的 import 統一）の大局的レビュー。過去 5 ラウンドで src/ 全域をレビュー済みのため、未レビュー material のみを対象に 4 候補を RICE 採点して PBI 化（NN01-04）。4 候補すべてが `release.yml` を触るため全員直列実行。台帳送り新規なし（ポーリング共通化は過度な共通化として却下）、既存 F1-F24・L2-L8 のトリガー未発火を確認。RICE 採点・依存・バッチ計画・ユーザー作業（v6.9.43 CWS publish 拒否の Dashboard 対応）の詳細は [2026-10-14-00-backlog-holistic-1014.md](2026-10-14-00-backlog-holistic-1014.md)（live 台帳）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---|---|
+| ⬜ 01 | [2026-10-14-01-fix-release-job-timeout-budget.md](2026-10-14-01-fix-release-job-timeout-budget.md) | fix | 24.0 | 0.25 | timeout-minutes 15→90 分。ポーリング最悪ケース（CWS 26.5 分 + Edge 46 分）が 15 分を下回り、always() 独立設計がタイムアウトで崩れる。C=0.8 は最終値に設計判断が残るため |
+| ⬜ 02 | [2026-10-14-02-fix-cws-publish-http-code-check.md](2026-10-14-02-fix-cws-publish-http-code-check.md) | fix | 20.0 | 0.5 | CWS publish の curl 通信失敗が pipefail なしのシェルで「Publish submitted」false success になる。Edge ステップと同型の `-w '%{http_code}'` パターンに統一 |
+| ⬜ 03 | [2026-10-14-03-fix-edge-bundle-size-check.md](2026-10-14-03-fix-edge-bundle-size-check.md) | fix | 10.0 | 0.25 | Edge ビルド（:63-66）にバンドルサイズチェック欠落（chrome/firefox には実在）。check-bundle-size -- edge-mv3 を追加 |
+| ⬜ 04 | [2026-10-14-04-refactor-build-crx3-script-relocation.md](2026-10-14-04-refactor-build-crx3-script-relocation.md) | refactor | 4.0 | 0.25 | CRX3 署名スクリプトを .github/workflows/ から scripts/ へ移設（pin テストの逆方向横断を解消） |
+
+実行順: RICE 順。全員 release.yml を触るため W1 直列（01 → 02 → 03 → 04）。
+
 ### 2026-10-13 code-review 指摘フォロー（review-followup2） — ✅ 7件完了・アーカイブ済み 🔧非機能追加
 
 `/code-review`（コミット 70d9754b〜49ca0c62 対象・Approve 判定）の Suggestions 7 件を全件 PBI 化し、同日の autonomous-task-closer ラウンド3 でバッチ実行（W1 = 01/02/04/07 をサブエージェント4体で並列、W2 = 03/06 をメインで処理、W3 = 05）。最高位の NN01 は NN03（2026-10-12）で復旧した manifest ゲートの「失敗側」をスイートで pin し、死にエクスポートを de-export で解消。RICE 採点・同点タイブレーク・バッチ計画（W1-W3）の詳細は [2026-10-13-00-backlog-review-followup2.md](2026-10-13-00-backlog-review-followup2.md)（live 台帳）。
