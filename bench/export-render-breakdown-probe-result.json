@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "rows": 10000,
+    "iters": 7
+  },
+  "components": {
+    "toLocaleTimeString-ja-JP": {
+      "min": 252.66387499999996,
+      "p50": 275.488167,
+      "max": 307.04520799999995,
+      "perRowNs": 27549
+    },
+    "getHostname-new-URL": {
+      "min": 3.3100420000000668,
+      "p50": 3.3890840000003664,
+      "max": 40.6505830000001,
+      "perRowNs": 339
+    },
+    "sanitizeForObsidian-title+summary+url": {
+      "min": 12.767249999999876,
+      "p50": 12.797790999999961,
+      "max": 13.947916999999961,
+      "perRowNs": 1280
+    },
+    "sanitizeForMarkdownLinkText": {
+      "min": 3.9352499999999964,
+      "p50": 3.99087499999996,
+      "max": 4.3405830000001515,
+      "perRowNs": 399
+    },
+    "template-replace-callback": {
+      "min": 6.165750000000116,
+      "p50": 6.186500000000251,
+      "max": 6.4865420000000995,
+      "perRowNs": 619
+    }
+  }
+}
