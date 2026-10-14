@@ -115,8 +115,9 @@ jobs:
             -T "dist/yasumaro-${VERSION}-chrome.crx" | jq -r '.uploadState // "UNKNOWN"')
           echo "Upload: ${UPLOAD_STATE}"
 
+          # NOT_FOUND is returned until the async upload is registered, so it is polled like IN_PROGRESS.
           for i in $(seq 1 30); do
-            [ "${UPLOAD_STATE}" = "IN_PROGRESS" ] || break
+            case "${UPLOAD_STATE}" in IN_PROGRESS|NOT_FOUND) ;; *) break ;; esac
             sleep 10
             UPLOAD_STATE=$(curl -sS --connect-timeout 10 --max-time 30 \
               "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:fetchStatus" \
