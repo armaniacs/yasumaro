@@ -23,7 +23,7 @@ import { pickDefined } from '../utils/objectUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
-import { handleBackup, handleSerialize } from './opfsWorker/backupHandlers.js';
+import { handleBackup, handleSerialize, handleRestore as handleRestoreImpl } from './opfsWorker/backupHandlers.js';
 import {
   handleArchivePreview,
   handleArchiveCreate,
@@ -88,8 +88,7 @@ export async function handleSearchLike(
  * than re-exporting the 4-argument version.
  */
 export async function handleRestore(data: Uint8Array): Promise<{ restored: true }> {
-  const { handleRestore: restoreImpl } = await import('./opfsWorker/backupHandlers.js');
-  return restoreImpl(data, () => engine, (e) => { engine = e; }, initSqlite);
+  return handleRestoreImpl(data, () => engine, (e) => { engine = e; }, initSqlite);
 }
 
 // ---------------------------------------------------------------------------

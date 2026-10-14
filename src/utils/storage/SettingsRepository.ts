@@ -14,6 +14,9 @@ import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './
 import { STORAGE_KEY_VALUES, restoreLatestSettingsBackup } from './settingsBackup.js';
 import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './storagePort.js';
 import { StorageTransaction } from './storageTransaction.js';
+import { ErrorCode } from '../logger/types.js';
+import { logError } from '../logger/api.js';
+import { errorMessage } from '../errorUtils.js';
 
 /** Options forwarded to the storage write path. */
 export interface SettingsWriteOptions {
@@ -230,9 +233,6 @@ export class SettingsRepository {
         }
       }
     } catch (e) {
-      const { ErrorCode } = await import('../logger/types.js');
-const { logError } = await import('../logger/api.js');
-      const { errorMessage } = await import('../errorUtils.js');
       await logError('Failed to encrypt API keys', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
       throw e;
     }

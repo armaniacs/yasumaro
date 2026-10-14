@@ -19,6 +19,9 @@ import type { RecordType } from '../commonTypes.js';
 import { MAX_URL_SET_SIZE, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
 import type { SavedUrlEntry } from '../urlEntry.js';
 import { pickDefined } from '../objectUtils.js';
+import { ErrorCode } from '../logger/types.js';
+import { logWarn, logError } from '../logger/api.js';
+import { errorMessage } from '../errorUtils.js';
 
 export { MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
 export type { SavedUrlEntry } from '../urlEntry.js';
@@ -455,10 +458,6 @@ const LEGACY_MAX_ENTRIES = 500;
 export async function purgeLegacyStorage(
     sqliteHealthCheck?: () => Promise<boolean>
 ): Promise<number> {
-    const { ErrorCode } = await import('../logger/types.js');
-const { logWarn, logError } = await import('../logger/api.js');
-    const { errorMessage } = await import('../errorUtils.js');
-
     if (sqliteHealthCheck) {
         let healthy: boolean;
         try {

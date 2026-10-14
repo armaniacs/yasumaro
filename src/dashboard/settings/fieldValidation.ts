@@ -6,6 +6,7 @@
 
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../utils/storage/providerAllowlist.js';
+import { isDomainInWhitelist, ALLOWED_AI_PROVIDER_DOMAINS } from '../../utils/storage/urlWhitelist.js';
 import {
     GENERAL_SETTINGS_FIELDS,
     getDescriptorByElementId,
@@ -235,7 +236,6 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
         new URL(v);
 
         // ホワイトリストチェック
-        const { isDomainInWhitelist, ALLOWED_AI_PROVIDER_DOMAINS } = await import('../../utils/storage/urlWhitelist.js');
         if (!isDomainInWhitelist(v)) {
             const message = `このドメインは許可リストにありません。\n\n` +
                 `主要プロバイダー: ${MAJOR_PROVIDERS_HINT.join(', ')}\n` +

@@ -7,6 +7,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from '../exportEnvelope.js';
 import { DB_FILENAME } from '../dbFilename.js';
+import { createEngine } from '../sqliteBoot.js';
 import type { NamedRow } from '../rowCodec.js';
 
 const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
@@ -61,7 +62,6 @@ export async function handleRestore(
   setEngine: (e: import('../sqliteEngine.js').SqliteEngine | null) => void,
   initSqlite: () => Promise<void>,
 ): Promise<{ restored: true }> {
-  const { createEngine } = await import('../sqliteBoot.js');
   const root = await navigator.storage.getDirectory();
 
   // 1. Write to temp file
