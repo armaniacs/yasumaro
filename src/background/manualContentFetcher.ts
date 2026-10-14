@@ -7,6 +7,50 @@ import { validateUrl } from '../utils/ssrfGuard.js';
 const TAB_LOAD_TIMEOUT_MS = 10000;
 const MAX_EXTRACTED_TEXT_LENGTH = 10000;
 
+/**
+ * Tab-operation ports, mirroring RegenerateContentFetcherDeps. The class used
+ * to reach chrome.* directly while Regenerate took all six operations by
+ * injection — the same concern with DI on one side and globals on the other.
+ * Defaults bind chrome so production call sites are unchanged; tests inject
+ * memory fakes without chrome mocks.
+ */
+export interface ManualTabPorts {
+  queryTabs: (query: chrome.tabs.QueryInfo) => Promise<chrome.tabs.Tab[]>;
+  createTab: (createProperties: chrome.tabs.CreateProperties) => Promise<chrome.tabs.Tab>;
+  onUpdated: {
+    addListener: (cb: (tabId: number, info: { status?: string }) => void) => void;
+    removeListener: (cb: (tabId: number, info: { status?: string }) => void) => void;
+  };
+  /** Run the body-text extraction against the tab, returning trimmed text. */
+  executeScript: (tabId: number) => Promise<string>;
+  removeTab: (tabId: number) => Promise<void>;
+}
+
+const chromeManualTabPorts: ManualTabPorts = {
+  queryTabs: (query) => chrome.tabs.query(query),
+  createTab: (props) => chrome.tabs.create(props),
+  onUpdated: {
+    addListener: (cb) => chrome.tabs.onUpdated.addListener(cb),
+    removeListener: (cb) => chrome.tabs.onUpdated.removeListener(cb),
+  },
+  executeScript: async (tabId) => {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (maxLength: number) => {
+        const body = document.body;
+        if (!body) return '';
+        const clone = body.cloneNode(true) as HTMLElement;
+        const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
+        clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
+        return clone.innerText?.trim().substring(0, maxLength) || '';
+      },
+      args: [MAX_EXTRACTED_TEXT_LENGTH]
+    });
+    return results?.[0]?.result || '';
+  },
+  removeTab: (tabId) => chrome.tabs.remove(tabId),
+};
+
 interface CacheEntry {
   content: string;
   timestamp: number;
@@ -16,10 +60,12 @@ export class ManualContentFetcher {
   private cache = new Map<string, CacheEntry>();
   private readonly ttlMs: number;
   private readonly maxEntries: number;
+  private readonly ports: ManualTabPorts;
 
-  constructor(ttlMs = 5 * 60 * 1000, maxEntries = 20) {
+  constructor(ttlMs = 5 * 60 * 1000, maxEntries = 20, ports: ManualTabPorts = chromeManualTabPorts) {
     this.ttlMs = ttlMs;
     this.maxEntries = maxEntries;
+    this.ports = ports;
   }
 
   async fetchContent(url: string): Promise<string> {
@@ -91,13 +137,13 @@ export class ManualContentFetcher {
 
     try {
       validateUrl(url, { requireValidProtocol: true, blockLocalhost: true });
-      const allTabs = await chrome.tabs.query({});
+      const allTabs = await this.ports.queryTabs({});
       const existingTab = allTabs.find(t => t.url === url && t.id !== undefined);
       let targetTabId: number | undefined = existingTab?.id;
 
       if (!targetTabId) {
         try {
-          const newTab = await chrome.tabs.create({ url, active: false });
+          const newTab = await this.ports.createTab({ url, active: false });
           createdTabId = newTab.id;
           targetTabId = newTab.id;
         } catch (e) {
@@ -113,7 +159,7 @@ export class ManualContentFetcher {
           await new Promise<void>((resolve) => {
             const cleanup = (): void => {
               clearTimeout(timeout);
-              chrome.tabs.onUpdated.removeListener(listener);
+              this.ports.onUpdated.removeListener(listener);
             };
             const timeout = setTimeout(() => {
               // PBI 2026-09-17-16: the timeout path used to leave the listener
@@ -127,25 +173,13 @@ export class ManualContentFetcher {
                 resolve();
               }
             };
-            chrome.tabs.onUpdated.addListener(listener);
+            this.ports.onUpdated.addListener(listener);
           });
         }
       }
 
       if (targetTabId) {
-        const results = await chrome.scripting.executeScript({
-          target: { tabId: targetTabId },
-          func: (maxLength: number) => {
-            const body = document.body;
-            if (!body) return '';
-            const clone = body.cloneNode(true) as HTMLElement;
-            const excludedSelectors = 'script,style,nav,header,footer,aside,noscript,iframe,[role="navigation"],[role="banner"],[role="contentinfo"],[aria-hidden="true"]';
-            clone.querySelectorAll(excludedSelectors).forEach(el => el.remove());
-            return clone.innerText?.trim().substring(0, maxLength) || '';
-          },
-          args: [MAX_EXTRACTED_TEXT_LENGTH]
-        });
-        return results?.[0]?.result || '';
+        return await this.ports.executeScript(targetTabId);
       }
     } catch (err: unknown) {
       await logWarn(
@@ -156,7 +190,8 @@ export class ManualContentFetcher {
       );
     } finally {
       if (createdTabId !== undefined) {
-        chrome.tabs.remove(createdTabId).catch((error: unknown) => {
+        const tabId = createdTabId;
+        this.ports.removeTab(tabId).catch((error: unknown) => {
           // Helper-tab cleanup is best-effort, but a leaked background tab is
           // user-visible, so keep the failure in diagnostic logs (was silent).
           void logWarn(

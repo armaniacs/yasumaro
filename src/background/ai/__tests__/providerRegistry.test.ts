@@ -163,9 +163,13 @@ describe('PROVIDER_VIEW_METADATA (PBI 2026-10-14-05)', () => {
         const { PROVIDER_VIEW_METADATA } = await import('../providerCatalog.js');
         expect(PROVIDER_VIEW_METADATA.get('gemini')).toMatchObject({ cssClass: '', defaultOpen: true });
         expect(PROVIDER_VIEW_METADATA.get('gemini')?.extraFields).toHaveLength(1);
+        const offenders: Array<[string, unknown]> = [];
         for (const [id, meta] of PROVIDER_VIEW_METADATA) {
             if (id === 'gemini') continue;
-            expect(meta, id).toEqual({});
+            // Single assertion (vitest/valid-expect allows one arg): collect
+            // offenders so the failure diff names the provider ids.
+            if (Object.keys(meta).length > 0) offenders.push([id, meta]);
         }
+        expect(offenders).toEqual([]);
     });
 });

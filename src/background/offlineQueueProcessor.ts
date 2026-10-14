@@ -45,7 +45,10 @@ export interface TerminalFailureHandler {
     handOver(job: OfflineJob): Promise<void>;
 }
 
-const prodTerminalFailureHandler: TerminalFailureHandler = {
+function createProdTerminalFailureHandler(
+    notifyError: (title: string, message: string) => void,
+): TerminalFailureHandler {
+    return {
     async handOver(job: OfflineJob): Promise<void> {
         const payload = job.payload as OfflineJobPayload;
         // Without a URL there is nothing a pending page could recover.
@@ -61,21 +64,30 @@ const prodTerminalFailureHandler: TerminalFailureHandler = {
             errorMessage: 'Offline retry exhausted (max 3 attempts)',
             expiry: Date.now() + HANDOVER_PENDING_TTL_MS,
         });
-        notifyRecordingError(
+        notifyError(
             payload.title || payload.url,
             getMessageOr('pendingRecoveryReady', 'Automatic retries were exhausted. You can re-run this recording from the pending pages list.')
         );
     },
-};
+    };
+}
 
 export interface OfflineQueueProcessorDeps {
     offlineNetworkQueue: OfflineNetworkQueueLike;
     recordingPipeline: RecordingPipelineLike;
     terminalFailureHandler?: TerminalFailureHandler;
+    /**
+     * User-notification seam. Defaults to the outcome policy's notifier
+     * adapter (resultBuilder's notifyRecordingError) so the chrome
+     * notification side effect stays injectable in tests — the direct import
+     * used to hard-wire it here.
+     */
+    notifyError?: (title: string, message: string) => void;
 }
 
 export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): () => Promise<void> {
-    const terminalFailureHandler = deps.terminalFailureHandler ?? prodTerminalFailureHandler;
+    const notifyError = deps.notifyError ?? ((title, message) => notifyRecordingError(title, message));
+    const terminalFailureHandler = deps.terminalFailureHandler ?? createProdTerminalFailureHandler(notifyError);
     return async function processOfflineNetworkQueue(): Promise<void> {
         await deps.offlineNetworkQueue.retryAll(async (job: OfflineJob) => {
             // PBI 2026-09-12-11: the payload shape is owned by the shared

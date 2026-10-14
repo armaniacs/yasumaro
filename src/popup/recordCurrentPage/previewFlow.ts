@@ -3,7 +3,15 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
 import { getMessage } from '../../utils/i18n.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
-import type { PayloadForType, RecordingResult } from '../../messaging/types.js';
+import type { RecordingResult } from '../../messaging/types.js';
+import {
+  buildRecordPayload,
+  type RecordOp,
+  type RecordRequest,
+} from '../../messaging/recordPayload.js';
+// Re-exported for existing importers (PBI 2026-10-14-03 moved the owner to
+// messaging); new code imports from messaging/recordPayload.js directly.
+export { buildRecordPayload, type RecordOp, type RecordRequest };
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
 import type { ContentResponse } from '../mainTypes.js';
@@ -37,71 +45,7 @@ export interface PreviewSaveResult {
 }
 
 /** Stats bundle carried by every record envelope PreviewFlow sends. */
-export interface RecordPayloadStats {
-  byteStats?: PreviewSaveOptions['byteStats'];
-  aiSummaryCleansedStats?: PreviewSaveOptions['aiSummaryCleansedStats'];
-  maskedCount?: number | undefined;
-}
-
-/** The three record envelopes PreviewFlow sends. */
-type RecordOp = 'MANUAL_RECORD' | 'PREVIEW_RECORD' | 'SAVE_RECORD';
-
-/**
- * Send envelope for one record op, with the payload taken from the wire
- * contract instead of a hand-written `Record<string, unknown>`. A field the
- * contract does not declare for an op (maskedCount outside SAVE_RECORD) can no
- * longer be assembled here.
- */
-type RecordRequest = { [Op in RecordOp]: { type: Op; payload: PayloadForType<Op> } }[RecordOp];
-
-/** Stats an envelope may carry: only SAVE_RECORD owns maskedCount. */
-type RecordStats<Op extends RecordOp> = Op extends 'SAVE_RECORD'
-  ? RecordPayloadStats
-  : Omit<RecordPayloadStats, 'maskedCount'>;
-
-/**
- * Single builder for the ~12-field record payload (PBI 2026-09-12-14).
- * MANUAL / PREVIEW / SAVE used to hand-spell the same stat fields, so a new
- * field needed three synchronized edits. `content` and `force` stay explicit
- * per send; `maskedCount` rides only the SAVE envelope (preview responses
- * are the sole source).
- *
- * `op` names the envelope the payload is built for. It narrows the accepted
- * stat bundle (a stats literal carrying maskedCount for MANUAL / PREVIEW does
- * not type-check) and it gates the one envelope-exclusive field at runtime,
- * so a caller whose stats already hold the field cannot attach it to the wrong
- * envelope either.
- */
-export function buildRecordPayload<Op extends RecordOp>(
-  op: Op,
-  tab: chrome.tabs.Tab,
-  content: string,
-  force: boolean,
-  stats: RecordStats<Op> = {},
-): PayloadForType<Op> {
-  // One implementation serves three envelopes, so maskedCount is read through
-  // the wide bundle; tab.title / tab.url stay `string | undefined` because the
-  // popup has always forwarded whatever Chrome reported. This is the only
-  // place the wire contract is narrowed, instead of every send site casting
-  // its way past it.
-  const { maskedCount } = stats as RecordPayloadStats;
-  return {
-    title: tab.title,
-    url: tab.url,
-    content,
-    force,
-    pageBytes: stats.byteStats?.pageBytes,
-    candidateBytes: stats.byteStats?.candidateBytes,
-    originalBytes: stats.byteStats?.originalBytes,
-    cleansedBytes: stats.byteStats?.cleansedBytes,
-    aiSummaryOriginalBytes: stats.aiSummaryCleansedStats?.aiSummaryOriginalBytes,
-    aiSummaryCleansedBytes: stats.aiSummaryCleansedStats?.aiSummaryCleansedBytes,
-    aiSummaryCleansedElements: stats.aiSummaryCleansedStats?.aiSummaryCleansedElements,
-    aiSummaryCleansedReason: stats.aiSummaryCleansedStats?.aiSummaryCleansedReason,
-    aiSummaryCleansedReasons: stats.aiSummaryCleansedStats?.aiSummaryCleansedReasons,
-    ...(op === 'SAVE_RECORD' ? pickDefined({ maskedCount }) : {}),
-  } as PayloadForType<Op>;
-}
+export type { RecordPayloadStats } from '../../messaging/recordPayload.js';
 
 /**
  * transport.send の unknown 応答を RecordingResult に窄める単一ガード。

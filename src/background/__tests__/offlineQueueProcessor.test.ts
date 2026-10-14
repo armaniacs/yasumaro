@@ -436,5 +436,26 @@ describe('createOfflineQueueProcessor', () => {
             const stored = await global.chrome.storage.local.get(CLAIMS_KEY);
             expect(stored[CLAIMS_KEY]?.['https://example.com/throwing']).toBeUndefined();
         });
+
+        it('routes the prod handover notification through the injected notifyError seam (PBI 2026-10-14-03)', async () => {
+            const record = vi.fn().mockResolvedValue({ success: false });
+            const retryObsidianWrite = vi.fn();
+            const { retryAll } = retryAllFeeding(
+                { type: 'ai_summary', payload: { title: 't', url: 'https://example.com/notify', content: 'c' } },
+                false,
+                true,
+            );
+            const notifyError = vi.fn();
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite },
+                notifyError,
+            });
+
+            await processQueue();
+
+            expect(notifyError).toHaveBeenCalledTimes(1);
+            expect(notifyError).toHaveBeenCalledWith('t', expect.any(String));
+        });
     });
 });

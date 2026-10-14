@@ -62,8 +62,13 @@ vi.mock('../../../utils/i18n.js', async () => {
   return i18nMock(getMessage);
 });
 
-import { PreviewFlow, buildRecordPayload } from '../previewFlow.js';
-import type { PreviewSaveOptions, RecordPayloadStats } from '../previewFlow.js';
+import { PreviewFlow } from '../previewFlow.js';
+// Canonical owner (PBI 2026-10-14-03 moved the builder to messaging);
+// previewFlow re-exports it for compatibility.
+import { buildRecordPayload } from '../../../messaging/recordPayload.js';
+import { buildRecordPayload as previewFlowCompatBuilder } from '../previewFlow.js';
+import type { PreviewSaveOptions } from '../previewFlow.js';
+import type { RecordPayloadStats } from '../../../messaging/recordPayload.js';
 import { SpinnerScope } from '../../spinner.js';
 import type { PayloadForType } from '../../../messaging/types.js';
 
@@ -114,6 +119,10 @@ describe('buildRecordPayload (PBI 2026-09-12-14)', () => {
     const tab = makeTab();
     expect(buildRecordPayload('SAVE_RECORD', tab, 'c', true, {})).not.toHaveProperty('maskedCount');
     expect(buildRecordPayload('SAVE_RECORD', tab, 'c', true, { maskedCount: 3 })).toMatchObject({ maskedCount: 3 });
+  });
+
+  it('previewFlow re-exports the canonical builder (compat pin)', () => {
+    expect(previewFlowCompatBuilder).toBe(buildRecordPayload);
   });
 });
 
