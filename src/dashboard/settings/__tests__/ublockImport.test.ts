@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createRequire } from 'node:module';
 import type { renderSourceList as RenderSourceListFn } from '../ublockImport/uiRenderer.js';
 
 type UblockSource = Parameters<typeof RenderSourceListFn>[0][number];
@@ -84,10 +85,19 @@ describe('ublockImport/index.js - UI Component Tests', () => {
     };
     global.FileReader = vi.fn(() => mockReaderInstance) as unknown as typeof FileReader;
 
-    // Mock chrome.runtime.sendMessage
+    // Mock chrome.runtime.sendMessage.
+    // NOTE: the mock must keep the setup file's chrome.i18n contract (backed
+    // by the real en dictionary) — sourceManager resolves user-facing strings
+    // through getMessageOr/getMessageWithSubstitutions (PBI 2026-10-15-01).
+    const requireJson = createRequire(import.meta.url);
+    const enMessages = requireJson('../../../../public/_locales/en/messages.json') as Record<string, { message: string }>;
     global.chrome = {
       runtime: {
         sendMessage: vi.fn()
+      },
+      i18n: {
+        getMessage: vi.fn((key: string) => enMessages[key]?.message ?? key),
+        getUILanguage: vi.fn(() => 'en')
       }
     } as unknown as typeof chrome;
 
