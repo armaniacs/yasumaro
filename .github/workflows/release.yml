@@ -68,6 +68,8 @@ jobs:
         env:
           OW_E2E_PROBE: '0'
         run: npx wxt zip -b edge
+      - name: Check edge bundle size
+        run: npm run check-bundle-size -- edge-mv3
       - name: List output archives
         run: ls -la dist/*.zip dist/*.crx
       - name: Create Release
