@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-15 arch-delivery-loop ラウンド（archloop-1015） — ✅ 1件完了・アーカイブ済み 🔧非機能追加
+
+arch-delivery-loop skill によるコードベース全体（差分スコープ）のアーキテクチャ診断と閉ループ実行。診断レポートは `/tmp/architecture-review-20261015-053800.md`。直近 holistic-1014b が主要摩擦を解消済みのため新規候補は 1 件。RICE 採点・deferred 記録の詳細は [2026-10-15-00-backlog-archloop-1015.md](../dev-docs/archived/pbi/2026-10-15-00-backlog-archloop-1015.md)（アーカイブ済み）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| ✅ 01 | [2026-10-15-01-fix-ublock-import-i18n-seam.md](../dev-docs/archived/pbi/2026-10-15-01-fix-ublock-import-i18n-seam.md) | fix | 3.0 | 1.0 | ✅ 完了。sourceManager 直書き 9 箇所を getMessageOr seam へ＋辞書 8 キー＋console.warn 2 件を logWarn へ。F3 部分消費 |
+
+実行順: W1（NN01 実装＋AGENTS.md 1行修正コミット、ファイル非重複）。F2 は発火条件未成立で deferred 維持。
+
 ### 2026-10-14 holistic-code-review ラウンド（holistic-1014b） — ✅ 5件完了・アーカイブ済み 🔧非機能追加 RICE順: 01 → 02 → 03 → 04 → 05
 
 コードベース全体の大局的レビュー（DRY／SoC／拡張性／堅牢性の4観点並列調査）。致命的コピペは解消済み、残るは層を跨ぐ手書き並列パターン。RICE採点・タイブレーク・依存・バッチ計画・なぜなぜ分析の詳細は [2026-10-14-00-backlog-holistic-1014b.md](2026-10-14-00-backlog-holistic-1014b.md)（live台帳）。
