@@ -269,6 +269,10 @@ export function querySelectorAllDeep(
         if (shadow) {
             try {
                 result.push(...querySelectorAllDeep(shadow, selector));
+                // WHY (intentional silence, PBI 2026-09-22-01裁定): a closed
+                // or detached shadow root throws per-subtree — skipping it is
+                // the expected control flow (same as cross-origin iframes
+                // below), and logging per skipped subtree would spam per page.
             } catch {}
         }
     }

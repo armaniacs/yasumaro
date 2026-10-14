@@ -58,7 +58,10 @@ export function createAiSummaryCleansingPanel(): PanelLifecycle & { refresh?: ()
           chartEl.style.display = stats.count === 0 ? 'none' : 'block';
           if (stats.count > 0) renderFunnelChart(chartEl, stats);
         }
-      }).catch(() => {});
+        // Best-effort stats render; failures stay visible here (was silent).
+      }).catch((error: unknown) => {
+        void logWarn('aiSummaryCleansingPanel: stats render failed', { error: errorMessage(error) }, undefined, 'aiSummaryCleansingPanel');
+      });
     },
   };
 }

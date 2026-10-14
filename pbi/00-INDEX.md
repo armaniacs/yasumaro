@@ -459,11 +459,11 @@ VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`�
 
 - [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 — RICE 1.0・監視 0 SP・副作用🟢。**項目1（ssrfGuard ホスト名正規化）は 2026-10-12 に発火・実装済み（`c66a2cce`）: `normalizeHostname` による末尾ドット正規化・localhost 名ホストへのポート許可リスト適用・NAT64 埋め込み IPv4 判定**。残る senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset は発火条件を監視）
 
-### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 2件 / 🔶 部分実装 1件 🔧非機能追加 RICE順: 01 → 02 → 03
+### 2026-09-22 保留候補の PBI 化（トリガー待ち） — ⬜ 未着手 1件 / 🔶 部分実装 1件 🔧非機能追加 RICE順: 02 → 03
 
-holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台帳送りにした空 catch を PBI 化。いずれも再検討トリガーが未発火のため、トリガーが発火するまで着手しない。
+holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台帳送りにした空 catch を PBI 化。01は holistic-1014b NN01＋F4で吸収されアーカイブ済み（下記）。残りはいずれも再検討トリガーが未発火のため、トリガーが発火するまで着手しない。
 
-- [2026-09-22-01-backlog-empty-catch-audit.md](2026-09-22-01-backlog-empty-catch-audit.md)（⬜ 未着手 — RICE 2.0・1 SP・副作用🟢。非テストの空 catch 6箇所の監査と best-effort 経路の可観測化。トリガー: 握りつぶした失敗が原因の不具合報告）
+- ✅ [2026-09-22-01-backlog-empty-catch-audit.md](../dev-docs/archived/pbi/2026-09-22-01-backlog-empty-catch-audit.md)（✅ 完了・吸収 — 7箇所全件裁定：記録4件・理由付き沈黙3件。NN01 `1afa7b25`＋F4で実施。新規空catchは将来ラウンド送り）
 - [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（🔶 部分実装 — 実装チェック 1/8 達成（前提レビュー 1 項目・残り 7 項目未着手）— RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了（2026-09-24 アーカイブ済み — 前提は消化済みで着手可能）。トリガー: compute の offscreen/パイプライン移設）
 - [2026-09-22-03-backlog-local-provider-origin-rule.md](2026-09-22-03-backlog-local-provider-origin-rule.md)（⬜ 未着手 — RICE 1.0・調査1 SP / 実装3 SP・副作用🟢。ローカルプロバイダ向け Origin-strip の汎用化（investigate 込み）。トリガー: 2つ目のローカルプロバイダで CORS 対策が必要になった時）
 

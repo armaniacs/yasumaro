@@ -104,6 +104,9 @@ export function showStatus(
   if (el.id === 'status') {
     try {
       syncStatusToTop();
+      // WHY (intentional silence, PBI 2026-09-22-01裁定): the mirror is
+      // cosmetic best-effort — a missed mirror self-heals on the next
+      // showStatus, and logging every DOM mismatch would spam per status.
     } catch {}
   }
 
@@ -138,6 +141,8 @@ export function clearStatus(elementOrId: string | HTMLElement | null): void {
   if (el.id === 'status') {
     try {
       syncStatusToTop();
+      // WHY (intentional silence, PBI 2026-09-22-01裁定): same cosmetic
+      // best-effort mirror as showStatus above — self-heals next update.
     } catch {}
   }
 }
