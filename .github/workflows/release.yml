@@ -11,7 +11,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Budget covers the store-poll worst case (CWS ~26.5 min: OAuth 30s + upload
+    # 300s + 30 polls x 40s + publish 60s; Edge ~46 min: upload 300s + 2 wait
+    # loops x 1200s + publish 60s) plus build headroom, so the always() store
+    # steps are not killed mid-run. Normal runs finish in ~96s.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
