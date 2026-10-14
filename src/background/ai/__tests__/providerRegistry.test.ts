@@ -144,11 +144,28 @@ describe('GenericOpenAICompatibleProvider registry wiring', () => {
         expect((cloud as unknown as { isLocal: boolean }).isLocal).toBe(false);
     });
 
-    it('OpenAIProvider shim delegates to registry (isLocalUrl still works)', async () => {
-        const { OpenAIProvider } = await import('../providers/OpenAIProvider.js');
-        const provider = new OpenAIProvider({} as never, 'lm-studio');
+    it('GenericOpenAICompatibleProvider resolves registry values (isLocalUrl still works)', async () => {
+        const { GenericOpenAICompatibleProvider } = await import('../providers/OpenAIProvider.js');
+        const provider = new GenericOpenAICompatibleProvider({} as never, 'lm-studio');
         expect((provider as unknown as { isLocal: boolean }).isLocal).toBe(true);
-        expect(OpenAIProvider.isLocalUrl('http://localhost:11434/v1')).toBe(true);
-        expect(OpenAIProvider.isLocalUrl('https://api.openai.com/v1')).toBe(false);
+        expect(GenericOpenAICompatibleProvider.isLocalUrl('http://localhost:11434/v1')).toBe(true);
+        expect(GenericOpenAICompatibleProvider.isLocalUrl('https://api.openai.com/v1')).toBe(false);
+    });
+});
+
+describe('PROVIDER_VIEW_METADATA (PBI 2026-10-14-05)', () => {
+    it('derives exactly the catalog keys (no parallel id list)', async () => {
+        const { PROVIDER_VIEW_METADATA } = await import('../providerCatalog.js');
+        expect([...PROVIDER_VIEW_METADATA.keys()].sort()).toEqual([...PROVIDER_REGISTRY.keys()].sort());
+    });
+
+    it('carries the gemini view values and defaults everything else', async () => {
+        const { PROVIDER_VIEW_METADATA } = await import('../providerCatalog.js');
+        expect(PROVIDER_VIEW_METADATA.get('gemini')).toMatchObject({ cssClass: '', defaultOpen: true });
+        expect(PROVIDER_VIEW_METADATA.get('gemini')?.extraFields).toHaveLength(1);
+        for (const [id, meta] of PROVIDER_VIEW_METADATA) {
+            if (id === 'gemini') continue;
+            expect(meta, id).toEqual({});
+        }
     });
 });

@@ -1,6 +1,6 @@
 /**
- * OpenAIProvider.test.ts
- * OpenAIProvider.ts の単体テスト
+ * GenericOpenAICompatibleProvider.test.ts
+ * GenericOpenAICompatibleProvider.ts の単体テスト
  */
 
 import { Crypto } from '@peculiar/webcrypto';
@@ -240,7 +240,7 @@ vi.mock('../../utils/aiUsageTracker.js', () => ({
     getRateLimitMessage: vi.fn((t: number) => `Wait ${t}s.`)
 }));
 
-import { OpenAIProvider } from '../ai/providers/OpenAIProvider.js';
+import { GenericOpenAICompatibleProvider } from '../ai/providers/OpenAIProvider.js';
 import { fetchWithRetry } from '../../utils/fetch.js';
 import * as aiUsageTrackerModule from '../../utils/aiUsageTracker.js';
 import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
@@ -248,7 +248,7 @@ import * as promptSanitizerModule from '../../utils/promptSanitizer.js';
 const { checkHardLimit, checkRateLimit, checkUsageWarning, recordUsage } = vi.mocked(aiUsageTrackerModule);
 const { sanitizePromptContent } = vi.mocked(promptSanitizerModule);
 
-describe('OpenAIProvider', () => {
+describe('GenericOpenAICompatibleProvider', () => {
     const baseSettings = {
         openai_api_key: 'test-key',
         openai_base_url: 'https://api.openai.com/v1',
@@ -259,12 +259,12 @@ describe('OpenAIProvider', () => {
 
     describe('constructor', () => {
         test('creates the openai provider', () => {
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             expect(p.getName()).toBe('openai');
         });
 
         test('creates the openai2 provider', () => {
-            const p = new OpenAIProvider({
+            const p = new GenericOpenAICompatibleProvider({
                 ...baseSettings,
                 openai_2_api_key: 'key2',
                 openai_2_base_url: 'https://api2.openai.com/v1',
@@ -276,7 +276,7 @@ describe('OpenAIProvider', () => {
         });
 
         test('creates the openai-compatible provider', () => {
-            const p = new OpenAIProvider({
+            const p = new GenericOpenAICompatibleProvider({
                 ...baseSettings,
                 provider_base_url: 'https://custom.api.com/v1',
                 provider_api_key: 'custom-key',
@@ -294,7 +294,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
             });
 
-            const p = new OpenAIProvider({ ...baseSettings, openai_base_url: '' });
+            const p = new GenericOpenAICompatibleProvider({ ...baseSettings, openai_base_url: '' });
             await p.generateSummary('content');
 
             const url = (fetchWithRetry as Mock).mock.calls[0]![0];
@@ -304,7 +304,7 @@ describe('OpenAIProvider', () => {
         test('returns an error on rate limiting', async () => {
             checkRateLimit.mockResolvedValueOnce({ allowed: false, remaining: 0, resetTime: 30 });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('content');
             expect(result.summary).toContain('Wait');
         });
@@ -318,7 +318,7 @@ describe('OpenAIProvider', () => {
                 })
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('Test content');
 
             expect(result.summary).toBe('Summary result');
@@ -334,7 +334,7 @@ describe('OpenAIProvider', () => {
                 })
             });
 
-            const p = new OpenAIProvider({ ...baseSettings, openai_api_key: '' });
+            const p = new GenericOpenAICompatibleProvider({ ...baseSettings, openai_api_key: '' });
             await p.generateSummary('content');
 
             const headers = (fetchWithRetry as Mock).mock.calls[0]![1].headers;
@@ -344,7 +344,7 @@ describe('OpenAIProvider', () => {
         test('returns an error message on an API error', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 500 });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('content');
             expect(result.summary).toContain('Error');
         });
@@ -352,7 +352,7 @@ describe('OpenAIProvider', () => {
         test('returns a timeout message on a timeout error', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('timed out'));
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('content');
             expect(result.summary).toContain('timed out');
         });
@@ -362,7 +362,7 @@ describe('OpenAIProvider', () => {
                 sanitized: 'x', warnings: ['attack'], dangerLevel: 'high'
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('malicious');
             expect(result.summary).toContain('security risk');
         });
@@ -373,7 +373,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [] })
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('content');
             expect(result.success).toBe(false);
             expect(result.summary).toContain('Error: Invalid API response format');
@@ -386,7 +386,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { role: 'assistant' } }] })
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.generateSummary('content');
             expect(result.success).toBe(false);
             expect(result.summary).toContain('Error: Invalid API response format');
@@ -403,7 +403,7 @@ describe('OpenAIProvider', () => {
                 lm_studio_base_url: 'http://127.0.0.1:1234/v1',
                 lm_studio_model: 'test-model'
             };
-            const p = new OpenAIProvider(lmStudioSettings, 'lm-studio');
+            const p = new GenericOpenAICompatibleProvider(lmStudioSettings, 'lm-studio');
 
             // 10000文字のコンテンツを送る
             const longContent = 'あ'.repeat(10000);
@@ -421,7 +421,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
 
             // 15000文字のコンテンツを送る
             const longContent = 'a'.repeat(15000);
@@ -439,7 +439,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
             });
 
-            const p = new OpenAIProvider({
+            const p = new GenericOpenAICompatibleProvider({
                 ...baseSettings,
                 openai_content_chars: 15000
             });
@@ -461,7 +461,7 @@ describe('OpenAIProvider', () => {
                 })
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             await p.generateSummary('content');
 
             expect(recordUsage).toHaveBeenCalledWith(10, 5);
@@ -473,7 +473,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             await p.generateSummary('content');
 
             expect(recordUsage).not.toHaveBeenCalled();
@@ -485,7 +485,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] })
             });
 
-            const p = new OpenAIProvider({ ...baseSettings, openai_base_url: 'https://api.openai.com/v1/' });
+            const p = new GenericOpenAICompatibleProvider({ ...baseSettings, openai_base_url: 'https://api.openai.com/v1/' });
             await p.generateSummary('content');
 
             const url = (fetchWithRetry as Mock).mock.calls[0]![0];
@@ -502,7 +502,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] }),
             });
 
-            const p = new OpenAIProvider({ ...baseSettings, openai_base_url: '' });
+            const p = new GenericOpenAICompatibleProvider({ ...baseSettings, openai_base_url: '' });
             const result = await p.testConnection();
             expect(result.success).toBe(true);
         });
@@ -514,7 +514,7 @@ describe('OpenAIProvider', () => {
                 json: async () => ({ choices: [{ message: { content: 'OK' } }] }),
             });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(true);
         });
@@ -522,7 +522,7 @@ describe('OpenAIProvider', () => {
         test('returns an authentication error on 401', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 401 });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('Authentication failed');
@@ -531,7 +531,7 @@ describe('OpenAIProvider', () => {
         test('returns an endpoint-not-found error on 404', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 404 });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('not found');
@@ -540,7 +540,7 @@ describe('OpenAIProvider', () => {
         test('returns a rate-limit error on 429', async () => {
             (fetchWithRetry as Mock).mockResolvedValue({ ok: false, status: 429 });
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('Rate limit');
@@ -549,7 +549,7 @@ describe('OpenAIProvider', () => {
         test('returns Cannot connect on a network error', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('Failed to fetch'));
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('Cannot connect');
@@ -558,7 +558,7 @@ describe('OpenAIProvider', () => {
         test('returns a timeout error message on timeout', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('timeout'));
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('timeout');
@@ -569,7 +569,7 @@ describe('OpenAIProvider', () => {
             abortError.name = 'AbortError';
             (fetchWithRetry as Mock).mockRejectedValue(abortError);
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('timed out');
@@ -578,7 +578,7 @@ describe('OpenAIProvider', () => {
         test('returns an endpoint-not-found error on a thrown HTTP 404 error', async () => {
             (fetchWithRetry as Mock).mockRejectedValue(new Error('HTTP 404: Not Found'));
 
-            const p = new OpenAIProvider(baseSettings);
+            const p = new GenericOpenAICompatibleProvider(baseSettings);
             const result = await p.testConnection();
             expect(result.success).toBe(false);
             expect(result.message).toContain('not found');

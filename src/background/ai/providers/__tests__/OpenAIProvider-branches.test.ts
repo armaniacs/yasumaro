@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { GenericOpenAICompatibleProvider, OpenAIProvider } from '../OpenAIProvider.js';
+import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
@@ -48,7 +48,7 @@ vi.mock('../../../../utils/storage/quota.js', async () => {
   return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
 });
 
-describe('OpenAIProvider: branch coverage', () => {
+describe('GenericOpenAICompatibleProvider: branch coverage', () => {
   const baseSettings = {
     openai_base_url: 'https://api.openai.com/v1',
     openai_api_key: 'test_key',
@@ -91,8 +91,8 @@ describe('OpenAIProvider: branch coverage', () => {
       expect(GenericOpenAICompatibleProvider.isLocalUrl('not a url')).toBe(false);
     });
 
-    it('matches the same behavior in the OpenAIProvider static isLocalUrl', () => {
-      expect(OpenAIProvider.isLocalUrl('http://127.0.0.1:11434')).toBe(true);
+    it('matches the same behavior in the GenericOpenAICompatibleProvider static isLocalUrl', () => {
+      expect(GenericOpenAICompatibleProvider.isLocalUrl('http://127.0.0.1:11434')).toBe(true);
     });
   });
 
@@ -164,7 +164,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 'OK' } }] }),
       } as Response);
-      const provider = new OpenAIProvider(settings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(settings, 'openai');
       await provider.testConnection();
       const callArgs = vi.mocked(fetchModule.fetchWithRetry).mock.calls[0]!;
       const opts = callArgs[1] as { timeoutMs?: number };
@@ -178,7 +178,7 @@ describe('OpenAIProvider: branch coverage', () => {
       vi.mocked(fetchModule.validateUrlForAIRequests).mockImplementationOnce(() => {
         throw new Error('blocked url');
       });
-      expect(() => new OpenAIProvider(baseSettings, 'openai')).toThrow('Invalid baseUrl');
+      expect(() => new GenericOpenAICompatibleProvider(baseSettings, 'openai')).toThrow('Invalid baseUrl');
     });
 
     it('throws in the constructor for a URL rejected by the registry allowlist', () => {
@@ -187,7 +187,7 @@ describe('OpenAIProvider: branch coverage', () => {
         openai_api_key: 'test_key',
         openai_model: 'gpt-3.5-turbo',
       } as unknown as Settings;
-      expect(() => new OpenAIProvider(settings, 'openai')).toThrow('Invalid baseUrl');
+      expect(() => new GenericOpenAICompatibleProvider(settings, 'openai')).toThrow('Invalid baseUrl');
     });
   });
 
@@ -205,7 +205,7 @@ describe('OpenAIProvider: branch coverage', () => {
     it('returns an error when blocked by hardLimit', async () => {
       const usageTracker = await import('../../../../utils/aiUsageTracker.js');
       vi.mocked(usageTracker.checkHardLimit).mockResolvedValueOnce({ blocked: true, message: 'limit reached' } as never);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.summary).toContain('limit reached');
@@ -218,7 +218,7 @@ describe('OpenAIProvider: branch coverage', () => {
         warnings: ['dangerous pattern'],
         dangerLevel: 'high',
       } as never);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.summary).toContain('Content blocked');
@@ -232,7 +232,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 500,
         text: () => Promise.resolve('server error'),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.summary).toContain('Failed to generate summary');
@@ -243,7 +243,7 @@ describe('OpenAIProvider: branch coverage', () => {
       const abortError = new Error('aborted');
       abortError.name = 'AbortError';
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(abortError);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.summary).toContain('timed out');
     });
@@ -251,7 +251,7 @@ describe('OpenAIProvider: branch coverage', () => {
     it('treats a message containing "timed out" as a timeout', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('request timed out'));
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.summary).toContain('timed out');
     });
@@ -259,7 +259,7 @@ describe('OpenAIProvider: branch coverage', () => {
     it('returns a generic error for other errors', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('boom'));
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.summary).toContain('Failed to generate summary');
     });
@@ -308,7 +308,7 @@ describe('OpenAIProvider: branch coverage', () => {
           usage: { prompt_tokens: 10, completion_tokens: 20 },
         }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(true);
       expect(result.summary).toBe('a nice summary');
@@ -325,7 +325,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({}),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.summary).toContain('unexpected schema');
@@ -339,7 +339,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [] }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.error).toContain('choices is missing or empty');
@@ -352,7 +352,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{}] }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.error).toContain('message is missing');
@@ -365,7 +365,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 123 } }] }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.error).toContain('not a string');
@@ -379,7 +379,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 'no usage info' } }] }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(true);
       expect(result.sentTokens).toBeUndefined();
@@ -403,7 +403,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 401,
         text: () => Promise.resolve('unauthorized'),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(false);
       expect(result.message).toContain('Authentication failed');
@@ -436,7 +436,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 401,
         text: () => Promise.resolve('unauthorized'),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(false);
       // providerName is the lowercase registry id, so match case-insensitively.
@@ -451,7 +451,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 404,
         text: () => Promise.resolve('not found'),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.message).toContain('Endpoint not found');
     });
@@ -466,7 +466,7 @@ describe('OpenAIProvider: branch coverage', () => {
           usage: { prompt_tokens: 5, completion_tokens: 1 },
         }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(true);
       expect(result.message).toContain('Connected to AI API');
@@ -483,7 +483,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: '   ' } }] }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(false);
       expect(result.message).toContain('no content');
@@ -499,7 +499,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({}),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(false);
     });
@@ -511,7 +511,7 @@ describe('OpenAIProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 'OK' } }] }),
       } as Response);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.debug?.sentTokens).toBeUndefined();
       expect(result.debug?.receivedTokens).toBeUndefined();
@@ -522,7 +522,7 @@ describe('OpenAIProvider: branch coverage', () => {
       const abortError = new Error('aborted');
       abortError.name = 'AbortError';
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(abortError);
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.message).toContain('timed out');
     });
@@ -530,7 +530,7 @@ describe('OpenAIProvider: branch coverage', () => {
     it('returns an unreachable message for an error containing "Failed to fetch"', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('Failed to fetch'));
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.message).toContain('Cannot connect');
     });
@@ -570,7 +570,7 @@ describe('OpenAIProvider: branch coverage', () => {
     it('treats an HTTP 5xx message as a server error', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('HTTP 503: Service Unavailable'));
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.message).toContain('server error');
     });
@@ -578,7 +578,7 @@ describe('OpenAIProvider: branch coverage', () => {
     it('returns a generic connection error message for an unknown error', async () => {
       const fetchModule = await import('../../../../utils/fetch.js');
       vi.mocked(fetchModule.fetchWithRetry).mockRejectedValueOnce(new Error('mystery failure'));
-      const provider = new OpenAIProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.message).toContain('Connection error');
     });

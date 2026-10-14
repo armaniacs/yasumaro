@@ -5,7 +5,7 @@ vi.mock('../../utils/fetch.js', () => ({
   validateUrlForAIRequests: vi.fn(),
 }));
 
-import { GeminiProvider, OpenAIProvider } from '../ai/providers/index.js';
+import { GeminiProvider, GenericOpenAICompatibleProvider } from '../ai/providers/index.js';
 import { vi } from 'vitest';
 
 import { fetchWithRetry } from '../../utils/fetch.js';
@@ -84,7 +84,7 @@ describe('AI Provider timeout', () => {
     expect(result.summary).toMatch(/timed out/);
   });
 
-  test('OpenAIProvider passes the proper timeout to fetchWithRetry', async () => {
+  test('GenericOpenAICompatibleProvider passes the proper timeout to fetchWithRetry', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockResolvedValue({
@@ -105,7 +105,7 @@ describe('AI Provider timeout', () => {
       [StorageKeys.OPENAI_API_KEY]: 'test-key',
       [StorageKeys.OPENAI_MODEL]: 'gpt-3.5-turbo'
     };
-    const provider = new OpenAIProvider(settings, 'openai');
+    const provider = new GenericOpenAICompatibleProvider(settings, 'openai');
     const result = await provider.generateSummary('test');
 
     expect(result.summary).toBe('OpenAI要約');
@@ -120,7 +120,7 @@ describe('AI Provider timeout', () => {
     );
   });
 
-  test('OpenAIProvider handles timeout errors properly', async () => {
+  test('GenericOpenAICompatibleProvider handles timeout errors properly', async () => {
     // @ts-expect-error - vi.fn() type narrowing issue
 
     fetchWithRetry.mockRejectedValue(new Error('Request timed out after 30000ms'));
@@ -130,7 +130,7 @@ describe('AI Provider timeout', () => {
       [StorageKeys.OPENAI_API_KEY]: 'test-key',
       [StorageKeys.OPENAI_MODEL]: 'gpt-3.5-turbo'
     };
-    const provider = new OpenAIProvider(settings, 'openai');
+    const provider = new GenericOpenAICompatibleProvider(settings, 'openai');
     const result = await provider.generateSummary('test');
 
     expect(result.summary).toMatch(/timed out/);

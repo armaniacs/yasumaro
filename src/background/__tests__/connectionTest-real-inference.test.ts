@@ -235,7 +235,7 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
 });;
 
 import { fetchWithRetry } from '../../utils/fetch.js';
-import { OpenAIProvider } from '../ai/providers/OpenAIProvider.js';
+import { GenericOpenAICompatibleProvider } from '../ai/providers/OpenAIProvider.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ai/providers/ProviderStrategy.js';
 import type { Settings } from '../../utils/storage/types.js';
@@ -285,7 +285,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
     });
 
     it('requests inference via POST instead of fetching the model list via GET', async () => {
-      await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
+      await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').testConnection();
 
       const { url, init } = firstCall();
       expect(init.method).toBe('POST');
@@ -295,7 +295,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
     });
 
     it('includes the connection-test prompt in the body', async () => {
-      await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
+      await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').testConnection();
 
       const body = JSON.parse(String(firstCall().init.body));
       expect(body.messages[0].content).toBe(CONNECTION_TEST_PROMPT);
@@ -303,7 +303,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
     });
 
     it('records the sent and received content in debug', async () => {
-      const result = await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
+      const result = await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').testConnection();
 
       expect(result.success).toBe(true);
       expect(result.debug?.prompt).toBe(CONNECTION_TEST_PROMPT);
@@ -316,7 +316,7 @@ describe('AI接続テストは実際に推論を走らせる', () => {
     it('does not treat an empty response body as success', async () => {
       mockedFetchWithRetry.mockResolvedValue(jsonResponse({ choices: [{ message: { content: '   ' } }] }));
 
-      const result = await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
+      const result = await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').testConnection();
 
       expect(result.success).toBe(false);
       expect(result.debug?.hasContent).toBe(false);

@@ -1,12 +1,15 @@
 /**
  * SyncBatchRunner.ts
- * Shared batch-sync policy for SyncTarget implementations (Gist, Obsidian).
+ * EXPERIMENTAL shared batch-sync policy for SyncTarget implementations.
  * Centralizes BATCH_SIZE and the listPending -> sync -> markSynced loop so
  * individual targets only implement their own I/O (fetch pending rows, mark one row synced).
  *
- * NOTE: currently dedicated to GistSyncTarget, the only active implementation.
- * Re-evaluate this abstraction when adding a new sync destination
- * (Obsidian writes are owned by the pipeline's saveToObsidianStep).
+ * Status (PBI 2026-10-14-05): experimental — the only active consumer is
+ * GistSyncTarget (N=1). Do NOT assume Obsidian will ride this runner without
+ * a separate onboarding decision: Obsidian writes are owned by the pipeline's
+ * saveToObsidianStep → ObsidianClient.appendToDailyNote, a different route.
+ * Whether Obsidian can/should adopt this runner is a future decision kept
+ * apart from this file; behavior is unchanged by that question.
  */
 
 import { LogType } from '../../utils/logger/types.js';

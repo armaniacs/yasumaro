@@ -85,7 +85,7 @@ import { AIProviderStrategy } from '../ProviderStrategy.js';
 import { HttpProviderStrategy } from '../HttpProviderStrategy.js';
 import { BuiltInAiProvider } from '../BuiltInAiProvider.js';
 import { GeminiProvider, GEMINI_PINNED_ORIGIN } from '../GeminiProvider.js';
-import { OpenAIProvider } from '../OpenAIProvider.js';
+import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../../../utils/storage/providerAllowlist.js';
 import { FAILURE_KINDS, FailureKind } from '../../../../utils/failureTaxonomy.js';
 import type { BuiltInAiSummarizer } from '../BuiltInAiProvider.js';
@@ -152,13 +152,13 @@ const providers = [
   {
     name: 'OpenAI-compatible',
     reachesTransport: true,
-    create: (): AIProviderStrategy => new OpenAIProvider(openAiSettings, 'openai-compatible'),
+    create: (): AIProviderStrategy => new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible'),
     summarize: (withUsage: boolean): Promise<AISummaryResult> => {
       respondWith({
         choices: [{ message: { content: 'ok' } }],
         ...(withUsage ? { usage: { prompt_tokens: 11, completion_tokens: 3 } } : {}),
       });
-      return new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+      return new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').generateSummary('content');
     },
   },
   {
@@ -262,12 +262,12 @@ describe('失敗契約は全プロバイダーで揃っている', () => {
     },
     {
       name: 'OpenAI互換 要約',
-      run: () => new OpenAIProvider({ provider_model: 'm' } as unknown as Settings, 'openai-compatible').generateSummary('c'),
+      run: () => new GenericOpenAICompatibleProvider({ provider_model: 'm' } as unknown as Settings, 'openai-compatible').generateSummary('c'),
       kindOf: (r: { failure?: { kind: string } }) => r.failure?.kind,
     },
     {
       name: 'OpenAI互換 テスト',
-      run: () => new OpenAIProvider({ provider_model: 'm' } as unknown as Settings, 'openai-compatible').testConnection(),
+      run: () => new GenericOpenAICompatibleProvider({ provider_model: 'm' } as unknown as Settings, 'openai-compatible').testConnection(),
       kindOf: (r: { debug?: { failure?: { kind: string } } }) => r.debug?.failure?.kind,
     },
   ];
@@ -302,7 +302,7 @@ describe('失敗契約は全プロバイダーで揃っている', () => {
   it('OpenAI互換: 空文字の要約を schema 失敗と同じ kind で拒否する', async () => {
     respondWith({ choices: [{ message: { content: '   ' } }] });
 
-    const result = await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+    const result = await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').generateSummary('content');
 
     // Same condition and sentence as the test path, so the two flows cannot
     // disagree about whether an empty body is a summary.
@@ -314,8 +314,8 @@ describe('失敗契約は全プロバイダーで揃っている', () => {
   it('OpenAI互換: 空文字の要約は接続テストと同じ文面で拒否する', async () => {
     respondWith({ choices: [{ message: { content: '' } }] });
 
-    const summaryResult = await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('content');
-    const testResult = await new OpenAIProvider(openAiSettings, 'openai-compatible').testConnection();
+    const summaryResult = await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').generateSummary('content');
+    const testResult = await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').testConnection();
 
     const summarySentence = summaryResult.summary.replace(/^Error: /, '');
     expect(summarySentence).toBe(testResult.message);
@@ -353,11 +353,11 @@ describe('失敗契約は全プロバイダーで揃っている', () => {
     respondWith({});
     failures.push((await new GeminiProvider(geminiSettings).generateSummary('c')).failure);
     respondWith({});
-    failures.push((await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('c')).failure);
+    failures.push((await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').generateSummary('c')).failure);
     failures.push((await new GeminiProvider({ ...geminiSettings, gemini_api_key: '' } as unknown as Settings)
       .generateSummary('c')).failure);
     respondWith({ choices: [{ message: { content: '' } }] });
-    failures.push((await new OpenAIProvider(openAiSettings, 'openai-compatible').generateSummary('c')).failure);
+    failures.push((await new GenericOpenAICompatibleProvider(openAiSettings, 'openai-compatible').generateSummary('c')).failure);
     failures.push((await builtInProvider({ success: false, error: 'x' }).generateSummary('c')).failure);
 
     expect(failures.length).toBe(5);

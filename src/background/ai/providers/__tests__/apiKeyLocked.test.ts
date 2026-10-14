@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { OpenAIProvider } from '../OpenAIProvider.js';
+import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import { GeminiProvider } from '../GeminiProvider.js';
 import { EncryptionLockedError } from '../../../../utils/storage/encryptionLockedError.js';
 import type { Settings } from '../../../../utils/storage/types.js';
@@ -69,9 +69,9 @@ describe('providers reject undecrypted (object) API keys', () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRestore();
   });
 
-  it('OpenAIProvider rejects an undecrypted (object) API key', () => {
+  it('GenericOpenAICompatibleProvider rejects an undecrypted (object) API key', () => {
     expect(
-      () => new OpenAIProvider({ ...openaiBase, openai_api_key: { iv: 'a', ciphertext: 'b' } } as unknown as Settings),
+      () => new GenericOpenAICompatibleProvider({ ...openaiBase, openai_api_key: { iv: 'a', ciphertext: 'b' } } as unknown as Settings),
     ).toThrow(EncryptionLockedError);
   });
 

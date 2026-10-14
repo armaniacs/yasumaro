@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { OpenAIProvider } from '../OpenAIProvider.js';
+import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
@@ -48,7 +48,7 @@ vi.mock('../../../../utils/storage/quota.js', async () => {
   return { ...actual, getAllowedUrls: vi.fn(() => Promise.resolve([])) };
 });
 
-describe('OpenAIProvider: エラーハンドリング', () => {
+describe('GenericOpenAICompatibleProvider: エラーハンドリング', () => {
   const baseSettings = {
     openai_base_url: 'https://api.openai.com/v1',
     openai_api_key: 'test_key',
@@ -70,7 +70,7 @@ describe('OpenAIProvider: エラーハンドリング', () => {
   });
 
   it('omits the HTTP status code, response details, and provider name on an API error', async () => {
-    const provider = new OpenAIProvider(baseSettings, 'openai');
+    const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
     const result = await provider.generateSummary('content', false, '');
 
     expect(result.summary).toContain('Error:');
