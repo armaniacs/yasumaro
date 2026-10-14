@@ -151,6 +151,79 @@ jobs:
             exit 1
           fi
           echo "Publish submitted"
+      - name: Upload to Edge Add-ons
+        # Independent of the Chrome step: a Chrome Web Store failure must not skip Edge.
+        if: ${{ always() && hashFiles('dist/yasumaro-*-edge.zip') != '' }}
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          # Submit for certification only when the repository variable is 'true'; otherwise
+          # the package stays in the draft submission.
+          EDGE_AUTO_PUBLISH: ${{ vars.EDGE_AUTO_PUBLISH }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          API="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}"
+          AUTH=(-H "Authorization: ApiKey ${EDGE_API_KEY}" -H "X-ClientID: ${EDGE_CLIENT_ID}")
+          HEADERS_FILE="$(mktemp)"
+          trap 'rm -f "${HEADERS_FILE}"' EXIT
+
+          # Prints "Succeeded" once the operation finishes; any other terminal status fails the step.
+          wait_for_operation() {
+            local url="$1" label="$2" status resp
+            for i in $(seq 1 30); do
+              resp=$(curl -sS --connect-timeout 10 --max-time 30 "${AUTH[@]}" "${url}")
+              status=$(echo "${resp}" | jq -r '.status // "UNKNOWN"' 2>/dev/null || echo UNKNOWN)
+              echo "${label} status check ${i}/30: ${status}"
+              if [ "${status}" = "Succeeded" ]; then return 0; fi
+              if [ "${status}" != "InProgress" ]; then
+                echo "${label} failed:"
+                echo "${resp}" | jq -c '{status, errorCode, message}' 2>/dev/null || echo "Non-JSON response"
+                return 1
+              fi
+              sleep 10
+            done
+            echo "${label} did not finish in time"
+            return 1
+          }
+
+          operation_id() {
+            grep -i '^location:' "${HEADERS_FILE}" | tr -d '\r' | awk '{print $2}' | awk -F/ '{print $NF}'
+          }
+
+          HTTP=$(curl -sS --connect-timeout 10 --max-time 300 -X POST \
+            -D "${HEADERS_FILE}" -o /dev/null -w '%{http_code}' \
+            "${AUTH[@]}" -H "Content-Type: application/zip" \
+            -T "dist/yasumaro-${VERSION}-edge.zip" \
+            "${API}/submissions/draft/package")
+          echo "Upload: HTTP ${HTTP}"
+          if [ "${HTTP}" != "202" ]; then
+            echo "Edge upload was not accepted"
+            exit 1
+          fi
+          OP=$(operation_id)
+          [ -n "${OP}" ] || { echo "No operation id in Location header"; exit 1; }
+          wait_for_operation "${API}/submissions/draft/package/operations/${OP}" "Upload"
+
+          if [ "${EDGE_AUTO_PUBLISH}" != "true" ]; then
+            echo "EDGE_AUTO_PUBLISH is not 'true'; skipping publish"
+            exit 0
+          fi
+
+          HTTP=$(curl -sS --connect-timeout 10 --max-time 60 -X POST \
+            -D "${HEADERS_FILE}" -o /dev/null -w '%{http_code}' \
+            "${AUTH[@]}" -H "Content-Type: application/json" \
+            -d "{\"notes\":\"Automated release v${VERSION}\"}" \
+            "${API}/submissions")
+          echo "Publish: HTTP ${HTTP}"
+          if [ "${HTTP}" != "202" ]; then
+            echo "Edge publish was not accepted"
+            exit 1
+          fi
+          OP=$(operation_id)
+          [ -n "${OP}" ] || { echo "No operation id in Location header"; exit 1; }
+          wait_for_operation "${API}/submissions/operations/${OP}" "Publish"
+          echo "Publish submitted"
 
   record-metrics:
     needs: release
