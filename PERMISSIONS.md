@@ -165,5 +165,6 @@
 
 ## Update History / 更新履歴
 
-- **2026-09-08**: 対象バージョンを v6.8.0 に更新。`declarativeNetRequest`（Ollama への `Origin` ヘッダー削除）を文書化。`downloads` に閲覧履歴アーカイブファイルの書き出し用途を追記- **2026-07-12**: `downloads` パーミッションを追加（ローカル Markdown 書き出し機能、v6.5.14）。実装との乖離を修正
+- **2026-09-08**: 対象バージョンを v6.8.0 に更新。`declarativeNetRequest`（Ollama への `Origin` ヘッダー削除）を文書化。`downloads` に閲覧履歴アーカイブファイルの書き出し用途を追記。
+- **2026-07-12**: `downloads` パーミッションを追加（ローカル Markdown 書き出し機能、v6.5.14）。実装との乖離を修正
 - **2026-06-17**: 初版作成（v6.0.0 Chrome Web Store 初回公開向け）
