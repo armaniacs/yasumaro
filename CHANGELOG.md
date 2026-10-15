@@ -35,6 +35,13 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.45] - 2026-10-15
+
+### 修正
+
+- Markdown エクスポートの行レンダリング高速化: `resolveTimestamp` の計算分岐のみを locale+分キーでメモ化し、10,000 件の p50 を 339.2ms → 46.0ms（7.4x）に短縮する。キー空間は 1440 通り以下に自然有界のため eviction なし。`input.timestamp` 指定は迂回する。出力バイトは不変（rust-wasm-migration wasm-1015、PBI 2026-10-15-02。WASM 移植は転送 5%・ICU 81% 支配の実測で不適と確定）
+- `docs/version.json` の 6.9.44 同期漏れを回収する（`make build` 時の sync-version.mjs 生成物）
+
 ## [6.9.44] - 2026-10-15
 
 ### 修正
