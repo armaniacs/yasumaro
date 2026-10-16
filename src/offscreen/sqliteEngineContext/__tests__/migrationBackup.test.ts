@@ -164,6 +164,36 @@ describe('migrationBackup', () => {
       expect(mockExecWithCache).not.toHaveBeenCalled();
       expect(mockLogWarn).not.toHaveBeenCalled();
     });
+
+    it('keeps the backup for forensics but still ends the loop when the re-verify read fails', async () => {
+      const backup = JSON.stringify({
+        version: 1,
+        createdAt: 0,
+        records: [{ url: 'https://a.com' }],
+      });
+      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        [StorageKeys.IDB_MIGRATION_BACKUP]: backup,
+      });
+      let calls = 0;
+      mockExecWithCache.mockImplementation(async (_engine, sql, _params, callback) => {
+        calls += 1;
+        if (typeof sql === 'string' && sql.startsWith('SELECT COUNT')) {
+          if (calls === 1) {
+            callback?.([0]);
+            return;
+          }
+          throw new Error('engine unhealthy');
+        }
+      });
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      // Termination: done is set so the next launch does not replay...
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+      // ...but the backup is retained and the failure is loud, not silent.
+      expect(chrome.storage.local.remove).not.toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
+      expect(mockLogError).toHaveBeenCalled();
+    });
   });
 
   describe('runMigrationBackup', () => {

@@ -275,6 +275,27 @@ describe('focusTrap', () => {
 
             expect(document.activeElement).toBe(document.getElementById('btn1'));
         });
+
+        test('only the topmost trap answers Escape when two traps are live', () => {
+            document.body.innerHTML = `
+                <div id="modal1"><button id="m1btn">M1</button></div>
+                <div id="modal2"><button id="m2btn">M2</button></div>
+                <button id="outside">Outside</button>
+            `;
+            const close1 = vi.fn();
+            const close2 = vi.fn();
+            const id1 = manager.trap(document.getElementById('modal1') as HTMLElement, close1);
+            manager.trap(document.getElementById('modal2') as HTMLElement, close2);
+
+            document.getElementById('outside')!.dispatchEvent(
+                new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+            );
+
+            expect(close2).toHaveBeenCalledTimes(1);
+            expect(close1).not.toHaveBeenCalled();
+
+            manager.release(id1);
+        });
     });
 });
 

@@ -392,18 +392,26 @@ export async function runMigrationRestore(state: MigrationBackupState): Promise<
       ErrorCode.MIGRATION_ROLLBACK_FAILED,
       'sqlite'
     );
-    // Terminal guarantee: re-verify once after the restore, then clear the
-    // backup and set done either way. Rows that fail to insert are skipped
-    // above, so with uninsertable rows the counts can never converge —
-    // retrying every launch would only replay the full restore. Clearing
-    // here ends the loop; the warn above keeps the shortfall visible.
-    // The converged case still lands on remove + done, as before.
+    // Terminal guarantee: re-verify once after the restore, then set done.
+    // The backup is removed only when the re-verify read itself succeeded:
+    // if COUNT throws here the engine is unhealthy and the backup is kept
+    // for forensics (done still ends the replay loop; the error below keeps
+    // it visible instead of silently discarding the safety net).
+    let reverifyOk = true;
     try {
       await execWithCache(state.idbEngine!, 'SELECT COUNT(*) FROM browsing_logs', [], (row) => { actualCount = Number(row[0]); });
-    } catch {
-      // Keep the pre-restore count for the log; termination is unaffected.
+    } catch (error) {
+      reverifyOk = false;
+      logError(
+        'SQLite: IDB migration re-verify failed, backup retained for forensics',
+        { error: errorMessage(error), expectedCount, actualCount, restored },
+        ErrorCode.MIGRATION_ROLLBACK_FAILED,
+        'sqlite'
+      );
     }
-    await chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP);
+    if (reverifyOk) {
+      await chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP);
+    }
     await setIdbMigrationDone();
     if (actualCount >= expectedCount && expectedCount > 0) {
       logInfo('SQLite: IDB migration restored and verified, backup cleared', { expectedCount, actualCount, restored }, 'sqlite');

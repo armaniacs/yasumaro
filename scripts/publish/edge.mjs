@@ -58,6 +58,16 @@ export async function uploadAndPublishEdge(env, deps = {}) {
     log('EDGE_PRODUCT_ID is missing');
     throw new StepFailed();
   }
+  // Same fail-fast for credentials: an empty ApiKey/ClientID would otherwise
+  // travel into the headers and fail far from the cause.
+  if ((edgeApiKey ?? '') === '') {
+    log('EDGE_API_KEY is missing');
+    throw new StepFailed();
+  }
+  if ((edgeClientId ?? '') === '') {
+    log('EDGE_CLIENT_ID is missing');
+    throw new StepFailed();
+  }
   const api = `https://api.addons.microsoftedge.microsoft.com/v1/products/${productId}`;
   const authHeaders = {
     Authorization: `ApiKey ${edgeApiKey ?? ''}`,

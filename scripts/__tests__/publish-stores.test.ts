@@ -566,6 +566,23 @@ describe('edge', () => {
       expect(calls).toHaveLength(0);
     });
 
+    it('fails fast before any request when EDGE_API_KEY or EDGE_CLIENT_ID is missing', async () => {
+      for (const [key, message] of [
+        ['EDGE_API_KEY', 'EDGE_API_KEY is missing'],
+        ['EDGE_CLIENT_ID', 'EDGE_CLIENT_ID is missing'],
+      ] as const) {
+        const { fetchImpl, calls } = createFetch(edgeRoutes(['{"status":"Succeeded"}']));
+        const harness = createHarness();
+
+        await expect(
+          uploadAndPublishEdge({ ...EDGE_ENV, [key]: '' }, { fetch: fetchImpl, ...harness, cwd: tmpdir() })
+        ).rejects.toBeInstanceOf(StepFailed);
+
+        expect(harness.logs).toEqual([message]);
+        expect(calls).toHaveLength(0);
+      }
+    });
+
     it('extracts the operation id despite query strings and trailing slashes (P8)', async () => {
       const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-edge.zip']);
       const { fetchImpl, calls } = createFetch([

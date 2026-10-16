@@ -136,6 +136,16 @@ class FocusTrapManager {
   }
 
   /**
+   * 多重 trap 時の所有権: 最後に trap() された live trap のみが document
+   * イベントに応答する (topmost-wins)。Map は挿入順のため末尾キーが最前面。
+   * 下層 trap のハンドラが生きたままだと Escape 一発で全モーダルが閉じる。
+   */
+  private isTopmost(trapId: string): boolean {
+    const keys = [...this.handlers.keys()];
+    return keys[keys.length - 1] === trapId;
+  }
+
+  /**
    * モーダルにフォーカストラップを設定
    * @param {HTMLElement|String} modal - モーダル要素またはセレクタ
    * @param {Function} closeCallback - ESCキー押下時に呼び出すコールバック
@@ -182,9 +192,11 @@ class FocusTrapManager {
     // focusin 再捕捉は Tab を介さない外側フォーカス（programmatic focus 等）
     // をモーダルへ引き戻す。どちらも release() で解除する。
     const keydownHandler = (e: KeyboardEvent) => {
+      if (!this.isTopmost(trapId)) return;
       handleFocusCycle(e, () => getFocusableElements(modalElement), closeCallback);
     };
     const focusinHandler = (e: FocusEvent) => {
+      if (!this.isTopmost(trapId)) return;
       if (modalElement.contains(e.target as Node)) return;
       const current = getFocusableElements(modalElement);
       if (current.length === 0) return;
