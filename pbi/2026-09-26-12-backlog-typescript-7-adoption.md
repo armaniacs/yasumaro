@@ -45,6 +45,8 @@ npm view @typescript-eslint/eslint-plugin version peerDependencies
 - 本プロジェクト側の追加ブロッカー: `typedoc` 0.28.20 の peer は `typescript 5.0.x〜6.0.x` に明示 pin（6.1.x 以降も未対応）。TS 7 移行時は typescript-eslint と typedoc の同時更新が必要
 - `ts-node` 10.9.2 は peer `typescript >=2.7` でオープンだが、CJS exports 削除の影響を受ける可能性が未検証。移行手順で確認する
 
+2026-10-17 再調査の試み: `npm view` が環境の npm キャッシュ権限エラーで実行不能のため未確認のまま待機継続。次回はキャッシュ修復後に再試行する。
+
 ## 移行手順（トリガー発火後に実施）
 
 1. `typescript@^7.0.2` と TypeScript 7 対応の `@typescript-eslint/eslint-plugin` / `parser`、および TypeScript 7 対応の `typedoc` を同時に更新する

@@ -30,6 +30,8 @@ gh issue view 6210 --repo stryker-mutator/stryker-js --comments
 gh pr view 6220 --repo stryker-mutator/stryker-js
 ```
 
+2026-10-17 再調査の試み: `npm view` が環境の npm キャッシュ権限エラー（root-owned `~/.npm`）で実行不能のため未確認のまま待機継続。次回はキャッシュ修復後に再試行する。
+
 2026-09-26 時点: latest は 10.0.0、#6210 は open・メンテナ反応なし、#6220 未マージ。着手は不要。
 
 ## BDD受け入れシナリオ
